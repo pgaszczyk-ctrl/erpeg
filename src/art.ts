@@ -1,0 +1,354 @@
+import Phaser from 'phaser';
+import { rng } from './rng';
+
+// Placeholder art drawn in code, so the game runs without downloaded assets.
+// Every texture is registered under a key (see TEX); to switch to a real
+// asset pack, load PNGs under the same keys in BootScene and drop the
+// matching draw function here.
+
+export const TILE = 16;
+
+export const TEX = {
+  tiles: 'tiles',
+  hero: 'hero',
+  slime: 'slime',
+  slash: 'slash',
+  heart: 'heart',
+  heartEmpty: 'heart-empty',
+  coin: 'coin',
+  pickupHeart: 'pickup-heart',
+} as const;
+
+// Tile indices in the 'tiles' texture.
+export const T = {
+  GRASS: 0,
+  FLOWERS: 1,
+  PATH: 2,
+  SAND: 3,
+  WATER: 4,
+  TREE: 5,
+  ROCK: 6,
+  BUSH: 7,
+} as const;
+export const TILE_COUNT = 8;
+export const SOLID_TILES = [T.WATER, T.TREE, T.ROCK, T.BUSH];
+
+const OUTLINE = '#1e1a24';
+
+type Ctx = CanvasRenderingContext2D;
+
+function px(ctx: Ctx, x: number, y: number, w: number, h: number, color: string) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+
+function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: number) {
+  const tex = scene.textures.createCanvas(key, w, h)!;
+  const ctx = tex.getContext();
+  ctx.imageSmoothingEnabled = false;
+  return { tex, ctx };
+}
+
+// ---------------------------------------------------------------- tiles
+
+function grassBase(ctx: Ctx, ox: number, seed: number) {
+  px(ctx, ox, 0, TILE, TILE, '#6abe30');
+  const r = rng(seed);
+  for (let i = 0; i < 10; i++) {
+    const x = Math.floor(r() * 15);
+    const y = Math.floor(r() * 14);
+    px(ctx, ox + x, y, 1, 2, '#4b9a2a');
+    if (r() > 0.6) px(ctx, ox + x + 1, y + 1, 1, 1, '#4b9a2a');
+  }
+  for (let i = 0; i < 4; i++) {
+    px(ctx, ox + Math.floor(r() * 16), Math.floor(r() * 16), 1, 1, '#8fd44f');
+  }
+}
+
+function drawTiles(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.tiles, TILE * TILE_COUNT, TILE);
+  let o = 0;
+
+  // GRASS
+  o = T.GRASS * TILE;
+  grassBase(ctx, o, 11);
+
+  // FLOWERS
+  o = T.FLOWERS * TILE;
+  grassBase(ctx, o, 23);
+  const flower = (x: number, y: number, c: string) => {
+    px(ctx, o + x, y - 1, 1, 1, c);
+    px(ctx, o + x - 1, y, 3, 1, c);
+    px(ctx, o + x, y + 1, 1, 1, c);
+    px(ctx, o + x, y, 1, 1, '#fbf236');
+  };
+  flower(4, 4, '#ffffff');
+  flower(11, 7, '#ff6b9a');
+  flower(6, 12, '#ffffff');
+
+  // PATH
+  o = T.PATH * TILE;
+  px(ctx, o, 0, TILE, TILE, '#d9a066');
+  {
+    const r = rng(37);
+    for (let i = 0; i < 9; i++) {
+      const x = Math.floor(r() * 14);
+      const y = Math.floor(r() * 14);
+      px(ctx, o + x, y, 2, 1, '#b8834f');
+      if (r() > 0.5) px(ctx, o + x, y + 1, 1, 1, '#eec39a');
+    }
+  }
+
+  // SAND
+  o = T.SAND * TILE;
+  px(ctx, o, 0, TILE, TILE, '#eedc8f');
+  {
+    const r = rng(51);
+    for (let i = 0; i < 12; i++) {
+      px(ctx, o + Math.floor(r() * 16), Math.floor(r() * 16), 1, 1, '#d4bd6a');
+    }
+  }
+
+  // WATER
+  o = T.WATER * TILE;
+  px(ctx, o, 0, TILE, TILE, '#3f8fd8');
+  px(ctx, o + 2, 3, 5, 1, '#8ccaf7');
+  px(ctx, o + 9, 8, 5, 1, '#8ccaf7');
+  px(ctx, o + 3, 13, 4, 1, '#8ccaf7');
+  px(ctx, o + 7, 4, 2, 1, '#2f6fb3');
+  px(ctx, o + 1, 9, 3, 1, '#2f6fb3');
+
+  // TREE (round cartoon canopy on grass)
+  o = T.TREE * TILE;
+  grassBase(ctx, o, 67);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(o + 8, 14, 6, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  px(ctx, o + 6, 10, 4, 5, OUTLINE);
+  px(ctx, o + 7, 10, 2, 4, '#8a5a2b');
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.arc(o + 8, 7, 7.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2f7a2f';
+  ctx.beginPath();
+  ctx.arc(o + 8, 7, 6.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#44a044';
+  ctx.beginPath();
+  ctx.arc(o + 7, 6, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  px(ctx, o + 5, 3, 2, 2, '#7bd35f');
+
+  // ROCK
+  o = T.ROCK * TILE;
+  grassBase(ctx, o, 79);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.ellipse(o + 8, 9, 7, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8b8f9a';
+  ctx.beginPath();
+  ctx.ellipse(o + 8, 9, 6, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  px(ctx, o + 4, 6, 4, 2, '#c2c6cf');
+  px(ctx, o + 9, 11, 4, 1, '#6a6d77');
+
+  // BUSH
+  o = T.BUSH * TILE;
+  grassBase(ctx, o, 91);
+  ctx.fillStyle = OUTLINE;
+  for (const [x, y, r] of [[5, 9, 4.5], [11, 9, 4.5], [8, 6, 4.5]] as const) {
+    ctx.beginPath();
+    ctx.arc(o + x, y, r + 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#3d9a3d';
+  for (const [x, y, r] of [[5, 9, 4.5], [11, 9, 4.5], [8, 6, 4.5]] as const) {
+    ctx.beginPath();
+    ctx.arc(o + x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  px(ctx, o + 6, 4, 2, 2, '#7bd35f');
+  px(ctx, o + 10, 8, 1, 1, '#d83a3a');
+  px(ctx, o + 5, 10, 1, 1, '#d83a3a');
+
+  tex.refresh();
+}
+
+// ---------------------------------------------------------------- hero
+
+export type Dir = 'down' | 'up' | 'side';
+export const HERO_DIRS: Dir[] = ['down', 'up', 'side'];
+export const HERO_FRAMES = 3; // 0 = stand, 1/2 = walk steps
+
+function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number) {
+  const skin = '#f5c89a';
+  const hair = '#7a4a24';
+  const tunic = '#3fa34d';
+  const tunicDark = '#2b7a37';
+  const boots = '#5a3a22';
+  const p = (x: number, y: number, w: number, h: number, c: string) => px(ctx, ox + x, oy + y, w, h, c);
+
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(ox + 8, oy + 15, 5, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // legs (step animation)
+  const lUp = frame === 1 ? -1 : 0;
+  const rUp = frame === 2 ? -1 : 0;
+  p(5, 12 + lUp, 3, 3, OUTLINE);
+  p(8, 12 + rUp, 3, 3, OUTLINE);
+  p(6, 12 + lUp, 1, 2, boots);
+  p(9, 12 + rUp, 1, 2, boots);
+
+  // body
+  p(4, 8, 8, 5, OUTLINE);
+  p(5, 8, 6, 4, tunic);
+  p(5, 11, 6, 1, tunicDark);
+  p(5, 10, 6, 1, '#6b4423'); // belt
+  // arms
+  if (dir === 'side') {
+    p(7, 9, 2, 2, skin);
+  } else {
+    p(3, 9, 1, 2, OUTLINE);
+    p(12, 9, 1, 2, OUTLINE);
+    p(4, 9, 1, 2, skin);
+    p(11, 9, 1, 2, skin);
+  }
+
+  // head
+  p(3, 1, 10, 8, OUTLINE);
+  p(4, 2, 8, 6, skin);
+  if (dir === 'down') {
+    p(4, 2, 8, 2, hair);
+    p(4, 4, 1, 2, hair);
+    p(11, 4, 1, 2, hair);
+    p(6, 5, 1, 2, OUTLINE);
+    p(9, 5, 1, 2, OUTLINE);
+    p(5, 7, 1, 1, '#f09a8a');
+    p(10, 7, 1, 1, '#f09a8a');
+  } else if (dir === 'up') {
+    p(4, 2, 8, 6, hair);
+    p(5, 3, 2, 1, '#9a6434');
+  } else {
+    // facing left; right is drawn by flipping the sprite
+    p(4, 2, 8, 2, hair);
+    p(8, 4, 4, 3, hair);
+    p(5, 5, 1, 2, OUTLINE);
+    p(4, 7, 1, 1, '#f09a8a');
+  }
+  // little cap tip
+  p(12, 1, 2, 2, OUTLINE);
+  p(12, 2, 1, 1, tunic);
+}
+
+function drawHeroSheet(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.hero, TILE * HERO_FRAMES, TILE * HERO_DIRS.length);
+  HERO_DIRS.forEach((dir, row) => {
+    for (let f = 0; f < HERO_FRAMES; f++) {
+      drawHero(ctx, f * TILE, row * TILE, dir, f);
+      tex.add(`${dir}-${f}`, 0, f * TILE, row * TILE, TILE, TILE);
+    }
+  });
+  tex.refresh();
+}
+
+// ---------------------------------------------------------------- slime
+
+function drawSlimeSheet(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.slime, TILE * 2, TILE);
+  for (let f = 0; f < 2; f++) {
+    const ox = f * TILE;
+    const sq = f === 1 ? 1 : 0; // squashed frame: wider and lower
+    const blob = (grow: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(ox + 8, 10 + sq, 6 + sq + grow, 7 - sq * 1.5 + grow, 0, Math.PI, 0);
+      ctx.lineTo(ox + 14 + sq + grow, 14 + grow * 0.5);
+      ctx.lineTo(ox + 2 - sq - grow, 14 + grow * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    };
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(ox + 8, 14.5, 6 + sq, 1.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    blob(1, OUTLINE);
+    blob(0, '#b455d6');
+    px(ctx, ox + 3, 12, 10 + sq, 2, '#8f3cb0');
+    px(ctx, ox + 4, 5 + sq * 2, 2, 2, '#e3a6f5');
+    px(ctx, ox + 5, 8 + sq, 2, 3, OUTLINE);
+    px(ctx, ox + 9, 8 + sq, 2, 3, OUTLINE);
+    px(ctx, ox + 5, 8 + sq, 1, 1, '#ffffff');
+    px(ctx, ox + 9, 8 + sq, 1, 1, '#ffffff');
+    tex.add(`f${f}`, 0, ox, 0, TILE, TILE);
+  }
+  tex.refresh();
+}
+
+// ---------------------------------------------------------------- effects & items
+
+function drawSlash(scene: Phaser.Scene) {
+  // A crescent pointing right; rotated in code to match facing.
+  const { tex, ctx } = canvasTexture(scene, TEX.slash, 24, 24);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(6, 12, 11, -Math.PI / 2.4, Math.PI / 2.4);
+  ctx.stroke();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(6, 12, 11, -Math.PI / 2.6, Math.PI / 2.6);
+  ctx.stroke();
+  tex.refresh();
+}
+
+function heartPath(ctx: Ctx, ox: number, oy: number, fill: string) {
+  const rows = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
+  rows.forEach((row, y) => {
+    [...row].forEach((ch, x) => {
+      if (ch === 'X') px(ctx, ox + x + 1, oy + y + 1, 1, 1, fill);
+    });
+  });
+}
+
+function drawHeart(scene: Phaser.Scene, key: string, full: boolean) {
+  const { tex, ctx } = canvasTexture(scene, key, 9, 8);
+  // outline: draw the shape offset in 4 directions, then the fill
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) heartPath(ctx, dx, dy, OUTLINE);
+  heartPath(ctx, 0, 0, full ? '#e43b44' : '#4a3a4a');
+  if (full) px(ctx, 2, 2, 1, 1, '#ffb3b8');
+  tex.refresh();
+}
+
+function drawCoin(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.coin, 8, 8);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.arc(4, 4, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f7c531';
+  ctx.beginPath();
+  ctx.arc(4, 4, 3, 0, Math.PI * 2);
+  ctx.fill();
+  px(ctx, 4, 2, 1, 4, '#c98a1a');
+  px(ctx, 2, 2, 1, 1, '#fff2a8');
+  tex.refresh();
+}
+
+export function createArt(scene: Phaser.Scene) {
+  drawTiles(scene);
+  drawHeroSheet(scene);
+  drawSlimeSheet(scene);
+  drawSlash(scene);
+  drawHeart(scene, TEX.heart, true);
+  drawHeart(scene, TEX.heartEmpty, false);
+  drawHeart(scene, TEX.pickupHeart, true);
+  drawCoin(scene);
+}
