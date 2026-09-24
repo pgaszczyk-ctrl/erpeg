@@ -1,9 +1,7 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
-import { touchInput } from '../controls';
+import { touchInput, resetTouch, onTap, JOY_RADIUS } from '../controls';
 import type { HudState } from './GameScene';
-
-const JOY_RADIUS = 56;
 
 // HUD (hearts, coins), on-screen touch controls and the game-over screen.
 // Runs on top of GameScene with its own unzoomed camera.
@@ -18,8 +16,8 @@ export class UIScene extends Phaser.Scene {
   private joyKnob!: Phaser.GameObjects.Arc;
   private attackBtn!: Phaser.GameObjects.Arc;
   private attackLabel!: Phaser.GameObjects.Text;
-  private joyPointer = -1;
-  private joyOrigin = new Phaser.Math.Vector2();
+  private touch = false;
+  private joyHome = new Phaser.Math.Vector2();
 
   constructor() {
     super('ui');
@@ -46,8 +44,7 @@ export class UIScene extends Phaser.Scene {
     this.events.once('shutdown', () => {
       this.game.events.off('hud', onHud);
       this.scale.off('resize', this.layout, this);
-      touchInput.x = touchInput.y = 0;
-      touchInput.attack = false;
+      resetTouch();
     });
 
     if (!this.sys.game.device.input.touch) {
@@ -68,8 +65,7 @@ export class UIScene extends Phaser.Scene {
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
 
     const r = JOY_RADIUS;
-    this.joyBase.setPosition(pad + r + 16, height - pad - r - 16);
-    this.joyKnob.setPosition(this.joyBase.x, this.joyBase.y);
+    this.joyHome.set(pad + r + 16, height - pad - r - 16);
     this.attackBtn.setPosition(width - pad - 50, height - pad - 60);
     this.attackLabel.setPosition(this.attackBtn.x, this.attackBtn.y);
   }
@@ -89,54 +85,28 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createTouchControls() {
-    const touch = this.sys.game.device.input.touch;
-    this.input.addPointer(2);
-
+    this.touch = this.sys.game.device.input.touch;
     this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
     this.attackBtn = this.add.circle(0, 0, 38, 0xe43b44, 0.45).setStrokeStyle(3, 0xffffff, 0.5);
     this.attackLabel = this.add
       .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '34px', color: '#ffffff' })
       .setOrigin(0.5);
-    for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(touch);
-    if (!touch) return;
+    for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
+  }
 
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.overlay) return;
-      if (p.x > this.scale.width / 2) {
-        // Right half of the screen = attack.
-        touchInput.attack = true;
-        this.attackBtn.setFillStyle(0xe43b44, 0.8);
-        return;
-      }
-      if (this.joyPointer !== -1) return;
-      // Left half: the joystick jumps to where the thumb lands.
-      this.joyPointer = p.id;
-      this.joyOrigin.set(p.x, p.y);
-      this.joyBase.setPosition(p.x, p.y);
-      this.joyKnob.setPosition(p.x, p.y);
-    });
-
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (p.id !== this.joyPointer) return;
-      const d = new Phaser.Math.Vector2(p.x - this.joyOrigin.x, p.y - this.joyOrigin.y);
-      if (d.length() > JOY_RADIUS) d.setLength(JOY_RADIUS);
-      this.joyKnob.setPosition(this.joyOrigin.x + d.x, this.joyOrigin.y + d.y);
-      touchInput.x = d.x / JOY_RADIUS;
-      touchInput.y = d.y / JOY_RADIUS;
-    });
-
-    const release = (p: Phaser.Input.Pointer) => {
-      if (p.id === this.joyPointer) {
-        this.joyPointer = -1;
-        touchInput.x = touchInput.y = 0;
-        this.layout();
-      } else {
-        this.attackBtn.setFillStyle(0xe43b44, 0.45);
-      }
-    };
-    this.input.on('pointerup', release);
-    this.input.on('pointerupoutside', release);
+  // The touch state lives in controls.ts; here we only draw it.
+  update() {
+    if (!this.touch) return;
+    const t = touchInput;
+    if (t.joyActive) {
+      this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);
+      this.joyKnob.setPosition(t.joyX, t.joyY);
+    } else {
+      this.joyBase.setPosition(this.joyHome.x, this.joyHome.y);
+      this.joyKnob.setPosition(this.joyHome.x, this.joyHome.y);
+    }
+    this.attackBtn.setFillStyle(0xe43b44, t.attackHeld ? 0.8 : 0.45);
   }
 
   private showGameOver() {
@@ -151,9 +121,19 @@ export class UIScene extends Phaser.Scene {
     this.overlay = this.add.container(0, 0, [bg, title, sub]).setAlpha(0);
     this.tweens.add({ targets: this.overlay, alpha: 1, duration: 400 });
 
-    const restart = () => this.scene.get('game').scene.restart();
+    let done = false;
+    let offTap = () => {};
+    const restart = () => {
+      if (done) return;
+      done = true;
+      offTap();
+      resetTouch();
+      this.scene.get('game').scene.restart();
+    };
     this.time.delayedCall(700, () => {
-      this.input.once('pointerdown', restart);
+      offTap = onTap(restart);
+      this.events.once('shutdown', offTap);
+      this.input.once('pointerdown', restart); // mouse
       this.input.keyboard!.once('keydown-SPACE', restart);
     });
   }

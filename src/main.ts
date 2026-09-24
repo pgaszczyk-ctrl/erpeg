@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { installTouchControls } from './controls';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -17,9 +18,12 @@ const game = new Phaser.Game({
     default: 'arcade',
     arcade: { debug: false },
   },
-  input: { activePointers: 3 },
+  // Touch is handled natively in controls.ts (see there why).
+  input: { touch: false },
   scene: [BootScene, GameScene, UIScene],
 });
+
+installTouchControls(document.getElementById('game')!);
 
 // Handy for debugging from the browser console.
 (window as unknown as { __game: Phaser.Game }).__game = game;
