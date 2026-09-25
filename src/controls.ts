@@ -12,8 +12,10 @@
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
 export const JOY_RADIUS = 56;
-/** Where the joystick sits (set by UIScene's layout); only a touch there moves the hero. */
+/** Where the joystick is shown while idle (a hint; set by UIScene's layout). */
 export const joyHome = { x: 0, y: 0 };
+/** The attack button (set by UIScene's layout): only a touch on it attacks. */
+export const attackHome = { x: 0, y: 0, r: 40 };
 /** Last time the player steered (for the "use the joystick" hint). */
 export const activity = { last: 0 };
 
@@ -162,10 +164,9 @@ export function installTouchControls(el: HTMLElement) {
     e.preventDefault();
     touchInput.used = true;
     sync(e);
-    const half = el.getBoundingClientRect().width / 2;
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
-      if (p.x >= half) {
+      if (Math.hypot(p.x - attackHome.x, p.y - attackHome.y) < attackHome.r * 1.35) {
         attackIds.add(t.identifier);
         touchInput.attack = true;
         if (!hold.active) {
@@ -173,11 +174,12 @@ export function installTouchControls(el: HTMLElement) {
           holdOrigin.x = p.x;
           holdOrigin.y = p.y;
         }
-      } else if (joyId === null && Math.hypot(p.x - joyHome.x, p.y - joyHome.y) < JOY_RADIUS * 1.35) {
-        // The joystick stays in its place: only a thumb on it steers.
+      } else if (joyId === null && p.y > 70) {
+        // (the top band is the HUD: menu button, hearts, map)
+        // The joystick appears wherever the thumb lands, and goes when it lifts.
         joyId = t.identifier;
-        touchInput.joyOriginX = joyHome.x;
-        touchInput.joyOriginY = joyHome.y;
+        touchInput.joyOriginX = p.x;
+        touchInput.joyOriginY = p.y;
         steer(p);
       }
       // After the attack flag is set, so a HUD button can cancel the swing.

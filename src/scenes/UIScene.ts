@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
-import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, activity } from '../controls';
+import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -32,8 +32,9 @@ export class UIScene extends Phaser.Scene {
   private attackLabel!: Phaser.GameObjects.Text;
   private touch = false;
   private joyHome = new Phaser.Math.Vector2();
-  private joyArrows!: Phaser.GameObjects.Container;
+  private joyArrows!: Phaser.GameObjects.Graphics;
   private hintAt = 0;
+  private hintUntil = 0;
 
   private streetText!: Phaser.GameObjects.Text;
   private skillBar!: Phaser.GameObjects.Container;
@@ -205,6 +206,9 @@ export class UIScene extends Phaser.Scene {
     joyHome.y = this.joyHome.y;
     this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
     this.attackBtn.setPosition(width - pad - 50, height - pad - 60);
+    attackHome.x = this.attackBtn.x;
+    attackHome.y = this.attackBtn.y;
+    attackHome.r = this.attackBtn.radius;
     this.attackLabel.setPosition(this.attackBtn.x, this.attackBtn.y);
   }
 
@@ -246,7 +250,7 @@ export class UIScene extends Phaser.Scene {
       // Tip pointing out, base towards the centre.
       g.fillTriangle(tx + dx * w, ty + dy * w, tx - dy * w - dx * 2, ty + dx * w - dy * 2, tx + dy * w - dx * 2, ty - dx * w - dy * 2);
     }
-    this.joyArrows = this.add.container(0, 0, [g]);
+    this.joyArrows = g; // (a Graphics moved directly: inside a Container it stayed put)
     this.hintAt = 0;
     this.attackBtn = this.add.circle(0, 0, 38, 0xe43b44, 0.45).setStrokeStyle(3, 0xffffff, 0.5);
     this.attackLabel = this.add
@@ -262,6 +266,7 @@ export class UIScene extends Phaser.Scene {
     const idle = performance.now() - activity.last;
     if (this.hintAt !== 0 && idle < 9000) return;
     this.hintAt = now + 9000;
+    this.hintUntil = now + 1700;
     this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
@@ -420,11 +425,16 @@ export class UIScene extends Phaser.Scene {
     }
     this.joyHint();
     const t = touchInput;
+    // The joystick shows only while a thumb holds it (and as a blinking hint).
+    const hinting = this.time.now < this.hintUntil;
+    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive || hinting);
     if (t.joyActive) {
       this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);
+      this.joyArrows.setPosition(t.joyOriginX, t.joyOriginY);
       this.joyKnob.setPosition(t.joyX, t.joyY);
     } else {
       this.joyBase.setPosition(this.joyHome.x, this.joyHome.y);
+      this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
       this.joyKnob.setPosition(this.joyHome.x, this.joyHome.y);
     }
     this.attackBtn.setFillStyle(0xe43b44, t.attackHeld ? 0.8 : 0.45);

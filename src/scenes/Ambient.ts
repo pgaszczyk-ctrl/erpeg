@@ -157,6 +157,8 @@ export class StreetEnemies {
     private city: CityMap,
     private spawn: (s: StreetSpawn, cell: string) => unknown,
     private despawn: (e: unknown) => boolean,
+    /** More or fewer enemies (difficulty). */
+    private density = 1,
   ) {}
 
   private cellPlan(cx: number, cy: number): StreetSpawn[] {
@@ -169,7 +171,7 @@ export class StreetEnemies {
     };
     const lengths = lines.map(len);
     const total = lengths.reduce((a, b) => a + b, 0) / PX_PER_M;
-    const count = Math.min(20, Math.round(total / 350));
+    const count = Math.min(Math.round(20 * this.density), Math.round((total / 350) * this.density));
     const out: StreetSpawn[] = [];
     for (let tries = 0; out.length < count && tries < 200; tries++) {
       // A random spot on a narrow line (longer lines more likely)...

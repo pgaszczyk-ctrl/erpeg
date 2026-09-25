@@ -117,6 +117,8 @@ export class GameScene extends Phaser.Scene {
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
+  /** Part of a heart of damage not taken yet (easy levels). */
+  private damageCarry = 0;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   private glow!: Phaser.GameObjects.Graphics;
@@ -223,6 +225,7 @@ export class GameScene extends Phaser.Scene {
         e.destroy();
         return true;
       },
+      session.level.potwory,
     );
 
     // Fixed enemy spots.
@@ -318,7 +321,11 @@ export class GameScene extends Phaser.Scene {
       s.setDepth(s.y);
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         const blocked = Math.random() < blockChance();
-        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : s.kind.damage)) {
+        // Difficulty scales the damage; fractions add up over hits.
+        const pending = this.damageCarry + s.kind.damage * session.level.obrazenia;
+        const dmg = Math.floor(pending);
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : dmg)) {
+          if (!blocked) this.damageCarry = pending - dmg;
           if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
           this.emitHud();
           if (this.player.isDead) this.onPlayerDeath();
@@ -414,7 +421,7 @@ export class GameScene extends Phaser.Scene {
     // (written as !(<=) so the first frame, with NaN, always computes)
     if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
       this.seenNow = new Set();
-      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow);
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow, session.level.tyl);
       for (const b of this.seenNow) {
         if (this.seenEver.has(b)) continue;
         this.seenEver.add(b);
@@ -447,8 +454,22 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     let hits = 0;
+    // Easy levels: the sword sweeps a wide arc around the hero.
+    const arc = (session.level.miecz * Math.PI) / 180;
+    const aim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
+    const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach;
+    const inArc = (s: Enemy) => {
+      if (!arc) return false;
+      const dx = s.x - this.player.x;
+      const dy = s.y - (this.player.y + 2);
+      if (Math.hypot(dx, dy) > reach + s.size) return false;
+      const d = Math.abs(((Math.atan2(dy, dx) - aim + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      return d <= arc / 2;
+    };
+    if (arc) this.drawSweep(aim, arc, reach);
     for (const s of [...this.enemies]) {
-      if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size) continue;
+      if (s.isDead) continue;
+      if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s)) continue;
       hits++;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
     }
@@ -458,6 +479,22 @@ export class GameScene extends Phaser.Scene {
     if (tree && this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
     if (this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz')) hits++;
     if (hits) this.practiced('miecz');
+  }
+
+  /** A white swoosh along the sword's arc. */
+  private drawSweep(aim: number, arc: number, reach: number) {
+    const g = this.add.graphics().setDepth(this.player.depth + 1);
+    const cx = this.player.x;
+    const cy = this.player.y + 2;
+    g.lineStyle(4, 0xffffff, 0.35);
+    g.beginPath();
+    g.arc(cx, cy, reach * 0.8, aim - arc / 2, aim + arc / 2);
+    g.strokePath();
+    g.lineStyle(1.5, 0xffffff, 0.9);
+    g.beginPath();
+    g.arc(cx, cy, reach * 0.8, aim - arc / 2, aim + arc / 2);
+    g.strokePath();
+    this.tweens.add({ targets: g, alpha: 0, duration: 180, onComplete: () => g.destroy() });
   }
 
   private dropFruit(x: number, y: number, fruit: Owoc) {

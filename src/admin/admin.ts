@@ -4,6 +4,7 @@ import { drawCity } from '../map/drawCity';
 import { MISJE, type Misja, type RodzajWroga } from '../content/fabula';
 import { PRZEDMIOTY, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, type Umiejetnosc } from '../content/przedmioty';
 import { OWOCE, type Owoc } from '../content/sklepy';
+import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
 
 // The admin panel (admin.html): characters and their statistics, missions
@@ -208,7 +209,7 @@ function playerCard(p: Player) {
   const rows: [string, string][] = [
     ['Stan', p.dead ? `💀 zginął ${date(p.died_at)} (${p.death_place ?? '?'})` : p.online ? '🟢 gra teraz' : 'żyje'],
     ['Wskrzeszenia', String(p.resurrections)],
-    ['Wiek', p.age != null ? `${p.age} lat` : '—'],
+    ['Poziom trudności', p.age != null ? `${TRUDNOSCI[trudnoscZWieku(p.age)].nazwa} (zagadki jak dla ${p.age} lat)` : '—'],
     ['Punkt startowy (domek)', p.start_place ?? '—'],
     ['EXP / monety', `${p.exp} EXP · ${p.coins ?? 0} monet`],
     ['Przebył', `${km(p.stats?.m)} km`],

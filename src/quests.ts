@@ -7,6 +7,7 @@ import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
+import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -39,8 +40,10 @@ export const session = {
   extra: [] as Misja[],
   /** Mission ids where a secret code can be told. */
   secrets: new Set<string>(),
-  /** The player's age, for riddles. */
+  /** The player's age, for riddles (it also holds the difficulty level). */
   age: 7,
+  /** Difficulty level (content/trudnosc.ts). */
+  level: TRUDNOSCI[0],
   /** The chest at home: 100 slots and money kept there. */
   chest: freshChest(),
   /** Riddles answered: NPC id -> day. */
@@ -95,6 +98,7 @@ export function startSession(r: LoginResult) {
   session.name = p.name;
   session.idik = p.idik;
   session.age = p.age ?? 7;
+  session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
   const c = p.save.chest;
   session.chest = freshChest();
   if (c) {

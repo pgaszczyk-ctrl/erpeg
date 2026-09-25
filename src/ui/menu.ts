@@ -5,13 +5,13 @@ import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
 import { tx } from '../i18n';
+import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { drawLook, DEFAULT_LOOK, HEADS, BUILDS, OUTFITS, HAIRS, SKINS, HAIR_COLORS, CLOTHES, lookLimits, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
 
 const DEFAULT_START = 'Plac Zamkowy';
-const DEFAULT_AGE = 7;
 
 let root: HTMLDivElement | null = null;
 
@@ -81,7 +81,21 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const newCharacter = () => {
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
       const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
-      const age = input({ type: 'number', min: 3, max: 99, placeholder: '7', inputMode: 'numeric' });
+      // Difficulty: a slider from "Kids" to "Hardcore" (kept on the server as an age).
+      let level = DOMYSLNA_TRUDNOSC;
+      const levelRange = el('input', { type: 'range', min: 0, max: TRUDNOSCI.length - 1, step: 1, value: String(level), className: 'm-range' });
+      const levelName = el('span', { className: 'm-val' });
+      const levelInfo = el('small', {});
+      const showLevel = () => {
+        const t = TRUDNOSCI[level];
+        levelName.textContent = tx(t.nazwa, t.en);
+        levelInfo.textContent = t.opis;
+      };
+      levelRange.oninput = () => {
+        level = Number(levelRange.value);
+        showLevel();
+      };
+      showLevel();
       const err = error();
       const go: HTMLButtonElement = button('Stwórz postać', () =>
         busy(go, err, async () => {
@@ -89,9 +103,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const place = start.value.trim() || DEFAULT_START;
           const p = city.findStart(place);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
-          const years = age.value ? Math.round(Number(age.value)) : DEFAULT_AGE;
-          if (!(years >= 3 && years <= 99)) throw new Error('Podaj wiek od 3 do 99 lat (albo zostaw puste).');
-          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, years, look);
+          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
       // How the hero looks: a live preview next to the name, sliders below.
@@ -152,7 +164,11 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('div', { className: 'm-namerow' }, [preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
         lookBox,
         field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`),
-        field('Wiek gracza (nieobowiązkowo)', age, `Zagadki dopasujemy do wieku. Puste = ${DEFAULT_AGE} lat.`),
+        el('div', { className: 'm-field' }, [
+          el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
+          el('label', { className: 'm-slide m-level' }, [levelRange, levelName]),
+          levelInfo,
+        ]),
         err,
         go,
         button('Wstecz', main),

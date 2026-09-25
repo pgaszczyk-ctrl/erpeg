@@ -104,11 +104,12 @@ export class Explored {
 
 /**
  * Visible area as a polygon (flat x,y list) seen from (x, y) looking at `angle`.
- * `light` scales how far one sees (e.g. a glowing sword).
+ * `light` scales how far one sees (e.g. a glowing sword), `back` only around and behind.
  */
-export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1, seen?: Set<Building>) {
+export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1, seen?: Set<Building>, back = 1) {
   const VIEW_RANGE = BASE_VIEW_RANGE * light;
-  const NEAR_RANGE = BASE_NEAR_RANGE * light;
+  // `back`: how much further one sees around and behind (easier levels).
+  const NEAR_RANGE = BASE_NEAR_RANGE * light * back;
   const pts: number[] = [];
   for (let d = 0; d < 360; d += RAY_STEP_DEG) {
     const a = (d * Math.PI) / 180;
