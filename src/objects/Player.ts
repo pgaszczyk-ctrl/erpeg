@@ -21,9 +21,9 @@ export function createHeroAnims(scene: Phaser.Scene) {
   }
 }
 
-export class Player extends Phaser.Physics.Arcade.Sprite {
-  declare body: Phaser.Physics.Arcade.Body;
-
+export class Player extends Phaser.GameObjects.Sprite {
+  /** Velocity in px/s; GameScene moves the player with map collisions. */
+  vel = new Phaser.Math.Vector2();
   hp = PLAYER.maxHp;
   facing = new Phaser.Math.Vector2(0, 1);
   private lastAttack = -Infinity;
@@ -33,10 +33,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.hero, 'down-0');
     scene.add.existing(this);
-    scene.physics.add.existing(this);
-    // Small hitbox at the feet so the head can overlap trees, like in Zelda.
-    this.body.setSize(10, 7).setOffset(3, 8);
-    this.setCollideWorldBounds(true);
   }
 
   get dirName(): Dir {
@@ -57,11 +53,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (len > 0.15) {
       this.facing.set(v.x, v.y).normalize();
-      this.body.setVelocity(v.x * PLAYER.speed, v.y * PLAYER.speed);
+      this.vel.set(v.x * PLAYER.speed, v.y * PLAYER.speed);
       this.setFlipX(this.dirName === 'side' && this.facing.x > 0);
       this.anims.play(`hero-walk-${this.dirName}`, true);
     } else {
-      this.body.setVelocity(0, 0);
+      this.vel.set(0, 0);
       this.anims.stop();
       this.setFrame(`${this.dirName}-0`);
     }
@@ -99,7 +95,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.stunnedUntil = now + 180;
 
     const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(170);
-    this.body.setVelocity(push.x, push.y);
+    this.vel.set(push.x, push.y);
 
     this.scene.cameras.main.shake(120, 0.004);
     this.scene.tweens.add({

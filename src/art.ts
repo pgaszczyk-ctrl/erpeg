@@ -17,6 +17,9 @@ export const TEX = {
   heartEmpty: 'heart-empty',
   coin: 'coin',
   pickupHeart: 'pickup-heart',
+  marker: 'marker',
+  markerDone: 'marker-done',
+  arrow: 'arrow',
 } as const;
 
 // Tile indices in the 'tiles' texture.
@@ -342,7 +345,65 @@ function drawCoin(scene: Phaser.Scene) {
   tex.refresh();
 }
 
+// Floating "!" above mission doors (gold = new/active, green tick = done).
+function drawMarker(scene: Phaser.Scene, key: string, done: boolean) {
+  const { tex, ctx } = canvasTexture(scene, key, 14, 18);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.arc(7, 7, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4, 12);
+  ctx.lineTo(10, 12);
+  ctx.lineTo(7, 18);
+  ctx.fill();
+  ctx.fillStyle = done ? '#5ac85a' : '#f7c531';
+  ctx.beginPath();
+  ctx.arc(7, 7, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(5, 12);
+  ctx.lineTo(9, 12);
+  ctx.lineTo(7, 16);
+  ctx.fill();
+  if (done) {
+    px(ctx, 3, 7, 2, 2, OUTLINE);
+    px(ctx, 5, 9, 2, 2, OUTLINE);
+    px(ctx, 7, 7, 2, 2, OUTLINE);
+    px(ctx, 9, 5, 2, 2, OUTLINE);
+  } else {
+    px(ctx, 6, 2, 2, 7, OUTLINE);
+    px(ctx, 6, 10, 2, 2, OUTLINE);
+  }
+  tex.refresh();
+}
+
+// Arrow pointing right; rotated on screen towards the current goal.
+function drawArrow(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.arrow, 16, 16);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.moveTo(15, 8);
+  ctx.lineTo(1, 1);
+  ctx.lineTo(5, 8);
+  ctx.lineTo(1, 15);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#f7c531';
+  ctx.beginPath();
+  ctx.moveTo(13, 8);
+  ctx.lineTo(3, 3);
+  ctx.lineTo(6, 8);
+  ctx.lineTo(3, 13);
+  ctx.closePath();
+  ctx.fill();
+  tex.refresh();
+}
+
 export function createArt(scene: Phaser.Scene) {
+  drawMarker(scene, TEX.marker, false);
+  drawMarker(scene, TEX.markerDone, true);
+  drawArrow(scene);
   drawTiles(scene);
   drawHeroSheet(scene);
   drawSlimeSheet(scene);

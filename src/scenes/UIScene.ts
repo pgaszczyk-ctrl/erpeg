@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { touchInput, resetTouch, onTap, JOY_RADIUS } from '../controls';
-import type { HudState } from './GameScene';
+import type { HudState, DialogRequest, GameScene } from './GameScene';
 
-// HUD (hearts, coins), on-screen touch controls and the game-over screen.
+// HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
+// on-screen touch controls and the game-over screen.
 // Runs on top of GameScene with its own unzoomed camera.
 export class UIScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
@@ -19,6 +20,15 @@ export class UIScene extends Phaser.Scene {
   private touch = false;
   private joyHome = new Phaser.Math.Vector2();
 
+  private streetText!: Phaser.GameObjects.Text;
+  private goalText!: Phaser.GameObjects.Text;
+  private arrow!: Phaser.GameObjects.Image;
+  private toastText!: Phaser.GameObjects.Text;
+  private hud?: HudState;
+  private dialogBox?: Phaser.GameObjects.Container;
+  private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number }[] = [];
+  private dialogChoose?: (i: number) => void;
+
   constructor() {
     super('ui');
   }
@@ -33,16 +43,32 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${8 * this.ui}px`, color: '#fff2a8', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(1, 0);
 
+    const label = (size: number, color = '#ffffff') =>
+      this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
+    this.streetText = label(13).setOrigin(0.5, 0);
+    this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
+    this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
+    this.arrow = this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false);
+    this.dialogBox = undefined;
+
     this.createTouchControls();
     this.layout();
     this.scale.on('resize', this.layout, this);
 
     const onHud = (s: HudState) => this.updateHud(s);
     this.game.events.on('hud', onHud);
+    const onDialog = (d: DialogRequest) => this.showDialog(d);
+    const onToast = (t: string) => this.toast(t);
+    this.game.events.on('dialog', onDialog);
+    this.game.events.on('toast', onToast);
+    const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const initial = this.registry.get('hud') as HudState | undefined;
     if (initial) this.updateHud(initial);
     this.events.once('shutdown', () => {
       this.game.events.off('hud', onHud);
+      this.game.events.off('dialog', onDialog);
+      this.game.events.off('toast', onToast);
+      offTap();
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -55,6 +81,9 @@ export class UIScene extends Phaser.Scene {
         .setOrigin(0.5, 1);
       this.tweens.add({ targets: hint, alpha: 0, delay: 6000, duration: 1000 });
     }
+
+    const missing = (this.registry.get('missing') as string[] | undefined) ?? [];
+    if (missing.length) this.toast(`Nie znalazłem na mapie:\n${missing.join('\n')}`, 8000);
   }
 
   private layout() {
@@ -63,6 +92,10 @@ export class UIScene extends Phaser.Scene {
     this.hearts.forEach((h, i) => h.setPosition(pad + i * 10 * this.ui, pad));
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
+    const wrap = Math.min(width - 40, 520);
+    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, pad + 12 * this.ui);
+    this.streetText.setPosition(width / 2, pad + 2);
+    this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
 
     const r = JOY_RADIUS;
     this.joyHome.set(pad + r + 16, height - pad - r - 16);
@@ -80,6 +113,9 @@ export class UIScene extends Phaser.Scene {
       h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
     });
     this.coinText.setText(String(s.coins));
+    this.hud = s;
+    this.streetText.setText(s.street ?? '');
+    this.goalText.setText(s.goal ? `🎯 ${s.goal}` : '');
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
   }
@@ -96,8 +132,97 @@ export class UIScene extends Phaser.Scene {
     for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
   }
 
-  // The touch state lives in controls.ts; here we only draw it.
   update() {
+    this.updateArrow();
+    this.updateTouch();
+  }
+
+  /** Points at the mission goal: over it when visible, at the screen edge when not. */
+  private updateArrow() {
+    const pos = this.hud?.goalPos;
+    const game = this.scene.get('game') as GameScene;
+    if (!pos || !game.player || this.dialogBox) {
+      this.arrow.setVisible(false);
+      return;
+    }
+    const cam = game.cameras.main;
+    const sx = (pos.x - cam.worldView.x) * cam.zoom;
+    const sy = (pos.y - cam.worldView.y) * cam.zoom;
+    const { width, height } = this.scale;
+    const m = 40;
+    this.arrow.setVisible(true);
+    if (sx > m && sx < width - m && sy > m && sy < height - m) {
+      const bob = Math.sin(this.time.now / 150) * 4;
+      this.arrow.setPosition(sx, sy - 24 * this.ui / 2 - 10 + bob).setRotation(Math.PI / 2);
+      return;
+    }
+    const cx = width / 2;
+    const cy = height / 2;
+    const ang = Math.atan2(sy - cy, sx - cx);
+    const t = Math.min((width / 2 - m) / Math.abs(Math.cos(ang) || 1e-6), (height / 2 - m) / Math.abs(Math.sin(ang) || 1e-6));
+    this.arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
+  }
+
+  private toast(text: string, ms = 3000) {
+    this.toastText.setText(text).setAlpha(1);
+    this.tweens.killTweensOf(this.toastText);
+    this.tweens.add({ targets: this.toastText, alpha: 0, delay: ms, duration: 600 });
+  }
+
+  // ---------------------------------------------------------------- dialogs
+
+  private showDialog(d: DialogRequest) {
+    this.closeDialog();
+    const { width, height } = this.scale;
+    const w = Math.min(width - 24, 560);
+    const x = (width - w) / 2;
+    const title = this.add.text(x + 16, 0, d.title, { fontFamily: 'monospace', fontSize: '20px', color: '#f7c531', wordWrap: { width: w - 32 } });
+    const body = this.add.text(x + 16, 0, d.text, { fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', wordWrap: { width: w - 32 }, lineSpacing: 4 });
+    const btnH = 44;
+    const h = 16 + title.height + 10 + body.height + 18 + btnH + 16;
+    const y = Math.max(12, height - h - (this.touch ? 150 : 40));
+    title.setY(y + 16);
+    body.setY(title.y + title.height + 10);
+
+    const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
+    const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
+    this.dialogButtons = [];
+    const bw = (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
+    d.buttons.forEach((label, i) => {
+      const bx = x + 16 + i * (bw + 12);
+      const by = y + h - 16 - btnH;
+      const rect = this.add.rectangle(bx, by, bw, btnH, i === 0 ? 0x3fa34d : 0x4a4a55).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
+      const text = this.add.text(bx + bw / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: '17px', color: '#ffffff' }).setOrigin(0.5);
+      items.push(rect, text);
+      this.dialogButtons.push({ rect, index: i });
+    });
+    this.dialogBox = this.add.container(0, 0, items).setDepth(20);
+    this.dialogChoose = d.onChoose;
+    this.dialogOpenedAt = this.time.now;
+  }
+
+  private dialogOpenedAt = 0;
+
+  private onDialogTap(x: number, y: number) {
+    if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
+    let choice = -1;
+    if (x < 0) choice = 0; // keyboard: Space/Enter picks the first button
+    for (const b of this.dialogButtons) if (b.rect.getBounds().contains(x, y)) choice = b.index;
+    if (choice < 0) return;
+    const choose = this.dialogChoose;
+    this.closeDialog();
+    choose?.(choice);
+  }
+
+  private closeDialog() {
+    this.dialogBox?.destroy();
+    this.dialogBox = undefined;
+    this.dialogButtons = [];
+    this.dialogChoose = undefined;
+  }
+
+  // The touch state lives in controls.ts; here we only draw it.
+  private updateTouch() {
     if (!this.touch) {
       if (!touchInput.used) return;
       this.touch = true;

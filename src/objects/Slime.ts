@@ -18,10 +18,11 @@ export function createSlimeAnims(scene: Phaser.Scene) {
   });
 }
 
-export class Slime extends Phaser.Physics.Arcade.Sprite {
-  declare body: Phaser.Physics.Arcade.Body;
-
+export class Slime extends Phaser.GameObjects.Sprite {
+  vel = new Phaser.Math.Vector2();
   hp = SLIME.hp;
+  /** Where it was placed; it wanders around this spot. */
+  home: Phaser.Math.Vector2;
   private chasing = false;
   private nextThink = 0;
   private stunnedUntil = 0;
@@ -29,9 +30,7 @@ export class Slime extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEX.slime, 'f0');
     scene.add.existing(this);
-    scene.physics.add.existing(this);
-    this.body.setSize(12, 8).setOffset(2, 6);
-    this.setCollideWorldBounds(true);
+    this.home = new Phaser.Math.Vector2(x, y);
     this.anims.play({ key: 'slime-hop', startFrame: Phaser.Math.Between(0, 1) });
   }
 
@@ -48,16 +47,20 @@ export class Slime extends Phaser.Physics.Arcade.Sprite {
 
     if (this.chasing) {
       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
-      this.body.setVelocity(v.x * SLIME.chaseSpeed, v.y * SLIME.chaseSpeed);
+      this.vel.set(v.x * SLIME.chaseSpeed, v.y * SLIME.chaseSpeed);
       this.anims.timeScale = 2;
     } else if (now > this.nextThink) {
       this.nextThink = now + Phaser.Math.Between(800, 2200);
       this.anims.timeScale = 1;
       if (Math.random() < 0.35) {
-        this.body.setVelocity(0, 0);
+        this.vel.set(0, 0);
+      } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > 60) {
+        // Wandered too far: head back home.
+        const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
+        this.vel.set(v.x * SLIME.wanderSpeed, v.y * SLIME.wanderSpeed);
       } else {
         const a = Math.random() * Math.PI * 2;
-        this.body.setVelocity(Math.cos(a) * SLIME.wanderSpeed, Math.sin(a) * SLIME.wanderSpeed);
+        this.vel.set(Math.cos(a) * SLIME.wanderSpeed, Math.sin(a) * SLIME.wanderSpeed);
       }
     }
   }
@@ -69,13 +72,13 @@ export class Slime extends Phaser.Physics.Arcade.Sprite {
     this.chasing = true;
     this.stunnedUntil = now + 300;
     const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(200);
-    this.body.setVelocity(push.x, push.y);
+    this.vel.set(push.x, push.y);
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.scene.time.delayedCall(90, () => this.setTintMode(Phaser.TintModes.MULTIPLY).clearTint());
 
     if (this.isDead) {
-      this.body.enable = false;
+      this.vel.set(0, 0);
       this.scene.tweens.add({
         targets: this,
         scaleX: 1.6,
