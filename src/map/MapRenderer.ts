@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
+import { AREA_FILL, ROAD_FILL } from './drawCity';
+
+export { AREA_FILL, ROAD_FILL };
 
 // Draws the city in square chunks (canvas textures) around the camera, in a
 // cartoon top-down style. Chunks are drawn on demand and recycled.
@@ -8,16 +11,6 @@ const CHUNK = 512; // px
 const MAX_CHUNKS = 24;
 const OUTLINE = '#2a2430';
 
-export const AREA_FILL: Record<string, string> = {
-  water: '#3f8fd8', forest: '#3d8b3d', scrub: '#5e9e3a', wetland: '#6aa89a', park: '#7ccf45', grass: '#72c23a',
-  farmland: '#c8d77a', cemetery: '#6aa84f', allotments: '#8bc34a', pitch: '#4fb34f', playground: '#e0c070',
-  parking: '#d2ad7c', plaza: '#dccfb2',
-};
-// Plain earthen roads (no asphalt): wider = more trodden and darker.
-export const ROAD_FILL: Record<string, string> = {
-  major: '#c28a52', medium: '#c9935c', minor: '#d09d66', service: '#d6a771', track: '#d6a771',
-  pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a',
-};
 // One earthen track for roads, pavements and paths alike.
 const TRACK_FILL = '#d9ab72';
 const TRACK_EDGE = '#8f6034';
