@@ -1,13 +1,31 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { TEX, HERO_DIRS } from '../art';
+import type { RodzajWroga } from '../content/fabula';
 
-export const SLIME = {
-  hp: 3,
-  wanderSpeed: 22,
-  chaseSpeed: 42,
-  sightRange: 70,
-  loseRange: 110,
+// Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
+// `bandyta` a masked villain (police bounties).
+export interface EnemyKind {
+  name: string;
+  hp: number;
+  wanderSpeed: number;
+  chaseSpeed: number;
+  sightRange: number;
+  loseRange: number;
+  scale: number;
+  /** Hearts' halves taken per hit. */
+  damage: number;
+  exp: number;
+  tint?: number;
+}
+
+export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
+  glut: { name: 'Glut', hp: 3, wanderSpeed: 22, chaseSpeed: 42, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
+  wielki_glut: { name: 'Wielki glut', hp: 18, wanderSpeed: 14, chaseSpeed: 36, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
+  bandyta: { name: 'Bandyta', hp: 6, wanderSpeed: 30, chaseSpeed: 64, sightRange: 80, loseRange: 150, scale: 1, damage: 1, exp: 15 },
 };
+
+/** Kept for code that only knows slimes. */
+export const SLIME = ENEMY_KINDS.glut;
 
 export function createSlimeAnims(scene: Phaser.Scene) {
   scene.anims.create({
@@ -16,22 +34,57 @@ export function createSlimeAnims(scene: Phaser.Scene) {
     frameRate: 4,
     repeat: -1,
   });
+  for (const dir of HERO_DIRS) {
+    scene.anims.create({
+      key: `bandit-walk-${dir}`,
+      frames: [1, 0, 2, 0].map((f) => ({ key: TEX.bandit, frame: `${dir}-${f}` })),
+      frameRate: 10,
+      repeat: -1,
+    });
+  }
 }
 
 export class Slime extends Phaser.GameObjects.Sprite {
   vel = new Phaser.Math.Vector2();
-  hp = SLIME.hp;
+  hp: number;
+  readonly kind: EnemyKind;
+  readonly kindId: RodzajWroga;
   /** Where it was placed; it wanders around this spot. */
   home: Phaser.Math.Vector2;
   private chasing = false;
   private nextThink = 0;
   private stunnedUntil = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, TEX.slime, 'f0');
+  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
+    const k = ENEMY_KINDS[kind];
+    super(scene, x, y, kind === 'bandyta' ? TEX.bandit : TEX.slime, kind === 'bandyta' ? 'down-0' : 'f0');
     scene.add.existing(this);
+    this.kind = k;
+    this.kindId = kind;
+    this.hp = k.hp;
+    this.setScale(k.scale);
+    this.setOrigin(0.5, 1 - 0.5 / k.scale); // grow upwards from the feet
+    if (k.tint) this.setTint(k.tint);
     this.home = new Phaser.Math.Vector2(x, y);
-    this.anims.play({ key: 'slime-hop', startFrame: Phaser.Math.Between(0, 1) });
+    if (kind !== 'bandyta') this.anims.play({ key: 'slime-hop', startFrame: Phaser.Math.Between(0, 1) });
+  }
+
+  /** How far from its centre a sword swing or a touch reaches it. */
+  get size() {
+    return 6 * this.kind.scale;
+  }
+
+  /** Bandits turn to face where they walk. */
+  private face() {
+    if (this.kindId !== 'bandyta') return;
+    const v = this.vel;
+    if (v.lengthSq() < 1) {
+      this.anims.stop();
+      return;
+    }
+    const dir = Math.abs(v.x) > Math.abs(v.y) ? 'side' : v.y < 0 ? 'up' : 'down';
+    this.setFlipX(dir === 'side' && v.x > 0);
+    this.anims.play(`bandit-walk-${dir}`, true);
   }
 
   get isDead() {
@@ -42,12 +95,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (this.isDead || now < this.stunnedUntil) return;
 
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-    if (!this.chasing && dist < SLIME.sightRange) this.chasing = true;
-    if (this.chasing && dist > SLIME.loseRange) this.chasing = false;
+    if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
+    if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
 
     if (this.chasing) {
       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
-      this.vel.set(v.x * SLIME.chaseSpeed, v.y * SLIME.chaseSpeed);
+      this.vel.set(v.x * this.kind.chaseSpeed, v.y * this.kind.chaseSpeed);
       this.anims.timeScale = 2;
     } else if (now > this.nextThink) {
       this.nextThink = now + Phaser.Math.Between(800, 2200);
@@ -57,12 +110,17 @@ export class Slime extends Phaser.GameObjects.Sprite {
       } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > 60) {
         // Wandered too far: head back home.
         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
-        this.vel.set(v.x * SLIME.wanderSpeed, v.y * SLIME.wanderSpeed);
+        this.vel.set(v.x * this.kind.wanderSpeed, v.y * this.kind.wanderSpeed);
       } else {
         const a = Math.random() * Math.PI * 2;
-        this.vel.set(Math.cos(a) * SLIME.wanderSpeed, Math.sin(a) * SLIME.wanderSpeed);
+        this.vel.set(Math.cos(a) * this.kind.wanderSpeed, Math.sin(a) * this.kind.wanderSpeed);
       }
     }
+  }
+
+  /** Call after think(); keeps the sprite facing its movement. */
+  updateLook() {
+    this.face();
   }
 
   /** Returns true if this hit killed the slime. */
@@ -71,11 +129,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.hp -= damage;
     this.chasing = true;
     this.stunnedUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(200);
+    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(200 / this.kind.scale);
     this.vel.set(push.x, push.y);
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
-    this.scene.time.delayedCall(90, () => this.setTintMode(Phaser.TintModes.MULTIPLY).clearTint());
+    this.scene.time.delayedCall(90, () => {
+      this.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();
+      if (this.kind.tint) this.setTint(this.kind.tint);
+    });
 
     if (this.isDead) {
       this.vel.set(0, 0);

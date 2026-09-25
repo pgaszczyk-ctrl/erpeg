@@ -23,8 +23,9 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 - Z gry wychodzisz przez ☰ w lewym górnym rogu → „Wyjdź” (nie da się tego zrobić w trakcie walki). Jeśli zamkniesz okno bez wyjścia, postać zostaje bezbronna na ulicy przez 10 sekund.
 
 - Sklepy (niebieskie dachy, szyld z mieczem) w prawdziwych Biedronkach, Lidlach i Lewiatanach sprzedają lepsze miecze. Szkoły (czerwone dachy, szyld z książką) uczą walki mieczem: dłuższy zamach, a potem szybsze cięcia.
+- Kościoły (fioletowe dachy) i urzędy (szare) dają losowe zlecenia, a przy każdym uruchomieniu gry czeka tam nowe. Komendy policji (granatowe) dają listy gończe: złoczyńca ukryty gdzieś w okolicy albo wielki glut. Szpitale (białe) leczą za darmo.
 
-Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Ceny broni i nauki są w `src/content/sklepy.ts`.
+Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Ceny broni i nauki są w `src/content/sklepy.ts`, a szablony losowych zleceń w `src/content/zlecenia.ts`.
 
 ## Dla programisty
 

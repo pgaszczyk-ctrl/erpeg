@@ -6,11 +6,11 @@ import { Slime } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
-import { WROGOWIE } from '../content/fabula';
+import { WROGOWIE, type RodzajWroga } from '../content/fabula';
 import { BRONIE, WALKA_MIECZEM } from '../content/sklepy';
 import type { Place as CityPlace } from '../map/CityMap';
 import {
-  session, saveNow, currentSword, currentSwordSkill, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, currentSword, currentSwordSkill, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -20,11 +20,20 @@ const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
 const DOOR_RADIUS = 14;
 const GOAL_RADIUS = 40;
-const EXP_PER_ENEMY = 5;
 const HEARTBEAT_MS = 3000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
 const LINGER_MS = 10000;
 const HIDE_IN = new Set(['forest', 'scrub', 'wetland']);
+/** How far from the given spot a wanted villain may hide (px). */
+const SEARCH_RADIUS = 90;
+const PLACE_LOOK = {
+  shop: { roof: '#3f7fd8', wall: '#dbe6f5', sign: TEX.signShop },
+  school: { roof: '#b84a3a', wall: '#f0d9c8', sign: TEX.signSchool },
+  church: { roof: '#7a5ab8', wall: '#e6ddf3', sign: TEX.signChurch },
+  office: { roof: '#8d8f99', wall: '#eeeef2', sign: TEX.signOffice },
+  hospital: { roof: '#f2f2f2', wall: '#ffe6e6', sign: TEX.signHospital },
+  police: { roof: '#2b3f8a', wall: '#d7def2', sign: TEX.signPolice },
+} as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
 
@@ -95,24 +104,21 @@ export class GameScene extends Phaser.Scene {
 
     // Missions: gold roofs and "!" over their doors.
     const { missions, missing } = resolveMissions(this.city);
-    this.missions = missions;
-    for (const rm of missions) {
-      if (rm.door.building) this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
-      // Above the fog: mission doors are always shown.
-      const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(1_100_000);
-      this.tweens.add({ targets: img, y: img.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-      this.markers.set(rm.m.id, img);
-      if (missionState(rm.m) === 'active') this.startMissionGoal(rm);
+    this.missions = [];
+    for (const rm of missions) this.addMission(rm, true);
+    // Random missions taken earlier (churches, offices, police) and not finished.
+    for (const m of Object.values(session.gen)) {
+      const place = this.city.places.find((p) => p.id === m.placeId);
+      if (place) this.addMission({ m, door: { ...place.door, building: place.building ?? undefined }, target: resolvePlace(this.city, m.zadanie.miejsce) }, false);
     }
     this.refreshMarkers();
 
     // Shops and schools: coloured roofs and signs (under the fog, so they
     // are discovered by exploring).
     for (const p of this.city.places) {
-      if (p.building) {
-        this.mapView.highlight.set(p.building, p.kind === 'shop' ? { roof: '#3f7fd8', wall: '#dbe6f5' } : { roof: '#b84a3a', wall: '#f0d9c8' });
-      }
-      this.add.image(p.door.x, p.door.y - 10, p.kind === 'shop' ? TEX.signShop : TEX.signSchool).setDepth(900_000);
+      const look = PLACE_LOOK[p.kind];
+      if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
+      this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
     }
     this.applySkill();
 
@@ -123,7 +129,7 @@ export class GameScene extends Phaser.Scene {
         missing.push(typeof w.miejsce === 'string' ? w.miejsce : JSON.stringify(w.miejsce));
         continue;
       }
-      this.spawnGroup(p, w.ile);
+      this.spawnGroup(p, w.ile, undefined, w.wrog);
     }
     if (missing.length) console.warn('Nie znaleziono na mapie:', missing);
     this.registry.set('missing', missing);
@@ -191,9 +197,10 @@ export class GameScene extends Phaser.Scene {
       if (s.isDead) continue;
       s.think(target, now);
       this.moveActor(s, dt);
+      s.updateLook();
       s.setDepth(s.y);
-      if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 11) {
-        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now)) {
+      if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, s.kind.damage)) {
           this.emitHud();
           if (this.player.isDead) this.onPlayerDeath();
         }
@@ -246,7 +253,7 @@ export class GameScene extends Phaser.Scene {
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
     for (const s of [...this.enemies]) {
-      if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + 6) continue;
+      if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size) continue;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, currentSword().obrazenia)) this.onEnemyKilled(s);
     }
   }
@@ -254,7 +261,7 @@ export class GameScene extends Phaser.Scene {
   private onEnemyKilled(s: Enemy) {
     this.dropLoot(s.x, s.y);
     this.enemies = this.enemies.filter((e) => e !== s);
-    session.exp += EXP_PER_ENEMY;
+    session.exp += s.kind.exp;
     this.emitHud();
     if (s.temp) return;
     if (s.missionId) {
@@ -267,27 +274,28 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Fixed spots come back after a while.
       const home = s.home.clone();
-      this.time.delayedCall(RESPAWN_MS, () => this.spawnEnemy(home.x, home.y));
+      const kind = s.kindId;
+      this.time.delayedCall(RESPAWN_MS, () => this.spawnEnemy(home.x, home.y, undefined, kind));
     }
   }
 
-  private spawnGroup(p: Place, count: number, missionId?: string) {
+  private spawnGroup(p: Place, count: number, missionId?: string, kind: RodzajWroga = 'glut', spread = 40) {
     for (let i = 0; i < count; i++) {
       // Spread them around the spot, on free ground.
-      for (let t = 0; t < 40; t++) {
+      for (let t = 0; t < 60; t++) {
         const a = Math.random() * Math.PI * 2;
-        const r = 8 + Math.random() * 40;
+        const r = 8 + Math.random() * spread;
         const x = p.x + Math.cos(a) * r;
         const y = p.y + Math.sin(a) * r;
         if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
-        this.spawnEnemy(x, y, missionId);
+        this.spawnEnemy(x, y, missionId, kind);
         break;
       }
     }
   }
 
-  private spawnEnemy(x: number, y: number, missionId?: string) {
-    const s = new Slime(this, x, y) as Enemy;
+  spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
+    const s = new Slime(this, x, y, kind) as Enemy;
     s.missionId = missionId;
     this.enemies.push(s);
     return s;
@@ -342,7 +350,7 @@ export class GameScene extends Phaser.Scene {
       x: Math.round(this.player.x),
       y: Math.round(this.player.y),
       hp: this.player.hp,
-      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: e.hp })),
+      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, k: e.kindId })),
     };
   }
 
@@ -357,7 +365,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setPosition(a.x, a.y);
     this.player.hp = Math.max(1, Math.min(PLAYER.maxHp, a.hp));
     for (const e of a.enemies) {
-      const s = this.spawnEnemy(e.x, e.y);
+      const s = this.spawnEnemy(e.x, e.y, undefined, e.k ?? 'glut');
       s.temp = true;
       s.hp = e.hp;
     }
@@ -424,7 +432,8 @@ export class GameScene extends Phaser.Scene {
     if (z.typ === 'pokonaj' && rm.target) {
       this.enemies.filter((e) => e.missionId === rm.m.id).forEach((e) => e.destroy());
       this.enemies = this.enemies.filter((e) => e.missionId !== rm.m.id);
-      this.spawnGroup(rm.target, z.ile ?? 3, rm.m.id);
+      // A wanted villain hides somewhere around the spot, not right on it.
+      this.spawnGroup(rm.target, z.ile ?? 3, rm.m.id, z.wrog ?? 'glut', z.szukaj ? SEARCH_RADIUS : 40);
     }
   }
 
@@ -444,7 +453,7 @@ export class GameScene extends Phaser.Scene {
         if (Math.abs(p.door.x - fx) > DOOR_RADIUS || Math.abs(p.door.y - fy) > DOOR_RADIUS) continue;
         if (Phaser.Math.Distance.Between(p.door.x, p.door.y, fx, fy) < DOOR_RADIUS) {
           id = p.id;
-          open = () => (p.kind === 'shop' ? this.openShop(p) : this.openSchool(p));
+          open = () => this.openPlace(p);
         }
       }
     }
@@ -454,6 +463,51 @@ export class GameScene extends Phaser.Scene {
       this.save(); // entering a building is a save point
       open();
     }
+  }
+
+  /** Adds a mission to the game: gold "!" over its door, goal enemies. */
+  private addMission(rm: ResolvedMission, highlight: boolean) {
+    this.missions.push(rm);
+    if (highlight && rm.door.building) this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
+    // Above the fog: mission doors are always shown.
+    const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(1_100_000);
+    this.tweens.add({ targets: img, y: img.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.markers.set(rm.m.id, img);
+    if (missionState(rm.m) === 'active') this.startMissionGoal(rm);
+  }
+
+  private openPlace(p: CityPlace) {
+    if (p.kind === 'shop') return this.openShop(p);
+    if (p.kind === 'school') return this.openSchool(p);
+    if (p.kind === 'hospital') return this.openHospital(p);
+    // Church, office, police: a random mission.
+    const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
+    if (known) return this.openMissionDialog(known);
+    const m = missionForPlace(this.city, p);
+    if (!m) {
+      this.dialog({ title: p.name, text: 'Dziś nie mamy dla ciebie żadnego zadania.', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const rm: ResolvedMission = { m, door: { ...p.door, building: p.building ?? undefined }, target: resolvePlace(this.city, m.zadanie.miejsce) };
+    this.openMissionDialog(rm, () => {
+      session.gen[m.id] = m;
+      this.addMission(rm, false);
+      // Same door as the place we're standing in: not a new entrance.
+      this.nearDoor = m.id;
+    });
+  }
+
+  private openHospital(p: CityPlace) {
+    const hurt = this.player.hp < PLAYER.maxHp;
+    this.player.heal(PLAYER.maxHp);
+    this.emitHud();
+    this.dialog({
+      title: `🏥 ${p.name}`,
+      text: hurt ? 'Lekarz opatrzył twoje rany. Zdrowie w pełni – i to za darmo!' : 'Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.',
+      buttons: ['Dziękuję'],
+      onChoose: () => {},
+    });
+    if (hurt) this.save();
   }
 
   /** Swing speed and reach from the sword-fighting level. */
@@ -527,18 +581,20 @@ export class GameScene extends Phaser.Scene {
     return this.city.places.map((p) => ({ x: p.door.x, y: p.door.y, kind: p.kind }));
   }
 
-  private openMissionDialog(rm: ResolvedMission) {
+  /** `onAccept` is for random missions: they join the game only when taken. */
+  private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
     const m = rm.m;
     const st = missionState(m);
     if (st === 'new') {
       this.dialog({
         title: m.tytul,
-        text: m.opis,
+        text: `${m.opis}\n\nNagroda: ${m.nagroda} monet.`,
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
           if (i !== 0) return;
           setMissionState(m, 'active');
-          this.startMissionGoal(rm);
+          if (onAccept) onAccept(); // adds it, which also spawns its enemies
+          else this.startMissionGoal(rm);
           this.refreshMarkers();
           this.emitHud();
           this.save();
@@ -585,6 +641,12 @@ export class GameScene extends Phaser.Scene {
     return this.currentGoal()?.pos ?? null;
   }
 
+  /** Radius (px) of the area to search, for wanted villains; 0 otherwise. */
+  goalRadius() {
+    const rm = this.missions.find((r) => missionState(r.m) === 'active');
+    return rm?.m.zadanie.szukaj ? SEARCH_RADIUS + 10 : 0;
+  }
+
   /** The mission the arrow should point at, and where. */
   private currentGoal(): { text: string; pos: { x: number; y: number } } | null {
     const px = this.player.x;
@@ -594,7 +656,7 @@ export class GameScene extends Phaser.Scene {
       const st = missionState(rm.m);
       if (st === 'active' && rm.target) {
         // For fights, point at the nearest remaining enemy of that mission.
-        const foes = this.enemies.filter((e) => e.missionId === rm.m.id);
+        const foes = rm.m.zadanie.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
         const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : rm.target;
         return { text: rm.m.zadanie.cel, pos: { x: pos.x, y: pos.y } };
       }

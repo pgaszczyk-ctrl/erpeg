@@ -20,7 +20,12 @@ export const TEX = {
   marker: 'marker',
   markerDone: 'marker-done',
   arrow: 'arrow',
+  bandit: 'bandit',
   signShop: 'sign-shop',
+  signChurch: 'sign-church',
+  signOffice: 'sign-office',
+  signHospital: 'sign-hospital',
+  signPolice: 'sign-police',
   signSchool: 'sign-school',
 } as const;
 
@@ -188,12 +193,13 @@ export type Dir = 'down' | 'up' | 'side';
 export const HERO_DIRS: Dir[] = ['down', 'up', 'side'];
 export const HERO_FRAMES = 3; // 0 = stand, 1/2 = walk steps
 
-function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number) {
-  const skin = '#f5c89a';
-  const hair = '#7a4a24';
-  const tunic = '#3fa34d';
-  const tunicDark = '#2b7a37';
-  const boots = '#5a3a22';
+interface Outfit { skin: string; hair: string; tunic: string; tunicDark: string; boots: string; mask?: boolean }
+const HERO_OUTFIT: Outfit = { skin: '#f5c89a', hair: '#7a4a24', tunic: '#3fa34d', tunicDark: '#2b7a37', boots: '#5a3a22' };
+// A masked villain in a dark red coat.
+const BANDIT_OUTFIT: Outfit = { skin: '#e9b98c', hair: '#2a2228', tunic: '#8a2b2b', tunicDark: '#5e1c1c', boots: '#1e1a24', mask: true };
+
+function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number, o: Outfit = HERO_OUTFIT) {
+  const { skin, hair, tunic, tunicDark, boots } = o;
   const p = (x: number, y: number, w: number, h: number, c: string) => px(ctx, ox + x, oy + y, w, h, c);
 
   // shadow
@@ -249,13 +255,15 @@ function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number) {
   // little cap tip
   p(12, 1, 2, 2, OUTLINE);
   p(12, 2, 1, 1, tunic);
+  // bandit's eye mask
+  if (o.mask && dir !== 'up') p(dir === 'side' ? 4 : 5, 5, dir === 'side' ? 4 : 6, 1, OUTLINE);
 }
 
-function drawHeroSheet(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.hero, TILE * HERO_FRAMES, TILE * HERO_DIRS.length);
+function drawHeroSheet(scene: Phaser.Scene, key: string = TEX.hero, outfit: Outfit = HERO_OUTFIT) {
+  const { tex, ctx } = canvasTexture(scene, key, TILE * HERO_FRAMES, TILE * HERO_DIRS.length);
   HERO_DIRS.forEach((dir, row) => {
     for (let f = 0; f < HERO_FRAMES; f++) {
-      drawHero(ctx, f * TILE, row * TILE, dir, f);
+      drawHero(ctx, f * TILE, row * TILE, dir, f, outfit);
       tex.add(`${dir}-${f}`, 0, f * TILE, row * TILE, TILE, TILE);
     }
   });
@@ -432,8 +440,47 @@ function drawSigns(scene: Phaser.Scene) {
   }
 }
 
+// Small square signs for the other public buildings.
+function drawSign(scene: Phaser.Scene, key: string, bg: string, light: string, glyph: (p: (x: number, y: number, w: number, h: number, c: string) => void) => void) {
+  const { tex, ctx } = canvasTexture(scene, key, 14, 12);
+  const p = (x: number, y: number, w: number, h: number, c: string) => px(ctx, x, y, w, h, c);
+  p(0, 0, 14, 12, OUTLINE);
+  p(1, 1, 12, 10, bg);
+  p(2, 2, 10, 1, light);
+  glyph(p);
+  tex.refresh();
+}
+
+function drawMoreSigns(scene: Phaser.Scene) {
+  drawSign(scene, TEX.signChurch, '#7a5ab8', '#a88be0', (p) => {
+    p(6, 3, 2, 7, '#fff2a8');
+    p(4, 5, 6, 2, '#fff2a8');
+  });
+  drawSign(scene, TEX.signOffice, '#c8c8d0', '#ffffff', (p) => {
+    p(3, 4, 8, 1, '#8a2b2b');
+    p(4, 5, 1, 4, '#5a5a66');
+    p(6, 5, 1, 4, '#5a5a66');
+    p(8, 5, 1, 4, '#5a5a66');
+    p(10, 5, 1, 4, '#5a5a66');
+    p(3, 9, 8, 1, '#5a5a66');
+  });
+  drawSign(scene, TEX.signHospital, '#ffffff', '#ffffff', (p) => {
+    p(6, 3, 2, 7, '#e43b44');
+    p(3, 5, 8, 2, '#e43b44');
+  });
+  drawSign(scene, TEX.signPolice, '#2b3f8a', '#4f67c0', (p) => {
+    p(5, 3, 4, 1, '#f7c531');
+    p(4, 4, 6, 4, '#f7c531');
+    p(5, 8, 4, 1, '#f7c531');
+    p(6, 9, 2, 1, '#f7c531');
+    p(6, 5, 2, 2, '#2b3f8a');
+  });
+}
+
 export function createArt(scene: Phaser.Scene) {
   drawSigns(scene);
+  drawMoreSigns(scene);
+  drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);
   drawMarker(scene, TEX.marker, false);
   drawMarker(scene, TEX.markerDone, true);
   drawArrow(scene);

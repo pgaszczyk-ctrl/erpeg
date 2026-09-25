@@ -91,9 +91,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   }
 
   /** Returns true if damage was taken. */
-  hurt(from: Phaser.Math.Vector2, now: number): boolean {
+  hurt(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (now < this.invulnerableUntil || this.isDead) return false;
-    this.hp -= 1;
+    this.hp = Math.max(0, this.hp - damage);
     this.invulnerableUntil = now + PLAYER.hurtInvulnerable;
     this.stunnedUntil = now + 180;
 

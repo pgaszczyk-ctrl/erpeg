@@ -3,6 +3,9 @@ import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { BRONIE, WALKA_MIECZEM } from './content/sklepy';
+import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
+import type { Place as CityPlace } from './map/CityMap';
+import { rng } from './rng';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -24,6 +27,10 @@ export const session = {
   missions: {} as Record<string, MissionState>,
   fog: undefined as SaveData['fog'],
   sword: BRONIE[0].id,
+  /** Random missions taken in this or earlier sessions and not finished. */
+  gen: {} as Record<string, Misja>,
+  /** Changes every login, so each place offers a new random mission. */
+  nonce: 0,
   swordSkill: 0,
   /** Last known state of a session that was closed without "Wyjdź". */
   abandoned: null as Snapshot | null,
@@ -45,6 +52,9 @@ export function startSession(r: LoginResult) {
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
+  session.gen = {};
+  for (const m of p.save.gen ?? []) session.gen[m.id] = m;
+  session.nonce = Math.floor(Math.random() * 1e9);
   const a = r.abandoned ?? null;
   if (a) {
     const ka = PX_PER_M / (a.s ?? 4);
@@ -61,9 +71,15 @@ export function startSession(r: LoginResult) {
 /** Sends the current progress to the server. */
 export function saveNow(hp: number) {
   session.hp = hp;
+  // Keep states of story missions and of random ones still in progress.
+  const gen = Object.values(session.gen).filter((m) => ['active', 'goal'].includes(session.missions[m.id]));
+  const missions: Record<string, MissionState> = {};
+  for (const [id, st] of Object.entries(session.missions)) {
+    if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
+  }
   const data: SaveData = {
-    coins: session.coins, hp, missions: session.missions, fog: session.fog,
-    sword: session.sword, swordSkill: session.swordSkill,
+    coins: session.coins, hp, missions, fog: session.fog,
+    sword: session.sword, swordSkill: session.swordSkill, gen,
   };
   return api.save(session.token, data, session.exp);
 }
@@ -87,6 +103,72 @@ export function setMissionState(m: Misja, s: MissionState) {
 /** Experience for finishing a mission (defaults to its coin reward). */
 export function missionExp(m: Misja) {
   return m.doswiadczenie ?? m.nagroda;
+}
+
+function hash(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * The random mission a church, office or police station offers: the one
+ * already taken there, or a new one for this login.
+ */
+export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
+  const taken = Object.values(session.gen).find((m) => m.placeId === place.id);
+  if (taken) return taken;
+  const r = rng(hash(`${place.id}:${session.nonce}`));
+  const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
+  const police = place.kind === 'police';
+  const tpl = place.kind === 'church' ? KOSCIOL : URZAD;
+  const [dmin, dmax] = police ? POLICJA.odleglosc : tpl.odleglosc;
+
+  // A real address at a sensible distance.
+  let target: Building | null = null;
+  let distM = 0;
+  for (let i = 0; i < 400 && !target; i++) {
+    const b = city.buildings[Math.floor(r() * city.buildings.length)];
+    if (!b.addresses.length || b === place.building) continue;
+    const d = Math.hypot((b.x0 + b.x1) / 2 - place.door.x, (b.y0 + b.y1) / 2 - place.door.y) / PX_PER_M;
+    if (d >= dmin && d <= dmax) {
+      target = b;
+      distM = d;
+    }
+  }
+  if (!target) return null;
+  const adres = target.addresses[0];
+  const door = city.entranceOf(target);
+  const ulica = city.streetNear(door.x, door.y, 200) ?? adres.replace(/\s+\S+$/, '');
+  const id = `gen-${place.id}-${session.nonce}`;
+  const fill = (t: string, zl = '') => t.replace('{adres}', adres).replace('{ulica}', ulica).replace('{zloczynca}', zl);
+
+  if (police) {
+    const bandit = r() < 0.5;
+    const zl = pick(POLICJA.zloczyncy);
+    const nagroda = bandit ? POLICJA.nagrodaBandyta : POLICJA.nagrodaPotwor;
+    return {
+      id, placeId: place.id, adres: place.name, tytul: pick(POLICJA.tytuly), nagroda,
+      opis: fill(pick(bandit ? POLICJA.bandyta : POLICJA.potwor), zl),
+      zadanie: bandit
+        ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: `Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})` }
+        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: `Zabij wielkiego gluta przy ul. ${ulica}` },
+      zakonczenie: 'Dobra robota, łowco nagród! Oto obiecana nagroda.',
+    };
+  }
+  const fight = r() < 0.5;
+  const extra = Math.round(distM / 100) * NAGRODA.zaKazde100m;
+  return {
+    id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
+    opis: fill(pick(fight ? tpl.pokonaj : tpl.idz)),
+    zadanie: fight
+      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń gluty spod ${adres}` }
+      : { typ: 'idz', miejsce: adres, cel: `Idź pod ${adres}` },
+    zakonczenie: place.kind === 'church'
+      ? 'Bóg zapłać! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
+      : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
+    nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
+  };
 }
 
 export interface Place {

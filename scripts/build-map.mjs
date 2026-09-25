@@ -143,6 +143,10 @@ function poiOf(t) {
   if (t.amenity === 'school' && t.name && /szko|liceum|technikum|gimnazjum|zespół|zespol|school/i.test(t.name) && !/auto|jazd|język|jezyk|tańc|tanc|muzy/i.test(t.name)) {
     return ['school', t.name];
   }
+  if (t.amenity === 'place_of_worship' && t.name && (!t.religion || t.religion === 'christian') && /kości|kaplic|parafi|bazylik|katedr|cerk|klasztor|sanktuar/i.test(t.name)) return ['church', t.name];
+  if ((t.amenity === 'townhall' || t.office === 'government') && t.name) return ['office', t.name];
+  if (t.amenity === 'hospital' && t.name) return ['hospital', t.name];
+  if (t.amenity === 'police') return ['police', t.name || 'Komenda Policji'];
   return null;
 }
 function centroidLL(g) {
@@ -291,4 +295,4 @@ mkdirSync('public/map', { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, ${pois.filter((p) => p.kind === 'shop').length} shops, ${pois.filter((p) => p.kind === 'school').length} schools, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

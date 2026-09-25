@@ -9,7 +9,8 @@
 
 export type Miejsce = string | { lat: number; lon: number };
 
-export type RodzajWroga = 'glut';
+/** glut (3 życia), wielki_glut (18 życia, mocno bije), bandyta (6 życia, szybki). */
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta';
 
 export interface Zadanie {
   /** 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca. */
@@ -20,6 +21,8 @@ export interface Zadanie {
   wrog?: RodzajWroga;
   /** Krótki opis celu pokazywany na ekranie, np. "Pokonaj gluty pod Bramą". */
   cel: string;
+  /** Cel trzeba odszukać: strzałka pokazuje tylko okolicę (list gończy). */
+  szukaj?: boolean;
 }
 
 export interface Misja {
@@ -36,6 +39,8 @@ export interface Misja {
   nagroda: number;
   /** Punkty doświadczenia za misję (jeśli nie podane: tyle co monet). */
   doswiadczenie?: number;
+  /** Tylko zlecenia losowe: miejsce (kościół, urząd, komenda), które je dało. */
+  placeId?: string;
 }
 
 export interface Wrogowie {

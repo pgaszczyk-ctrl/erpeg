@@ -32,6 +32,8 @@ export interface SaveData {
   sword?: string;
   /** Level of the sword-fighting skill. */
   swordSkill?: number;
+  /** Random missions taken but not finished yet (see content/zlecenia.ts). */
+  gen?: import('./content/fabula').Misja[];
 }
 
 export interface PlayerInfo {
@@ -55,7 +57,7 @@ export interface Snapshot {
   x: number;
   y: number;
   hp: number;
-  enemies: { x: number; y: number; hp: number; missionId?: string }[];
+  enemies: { x: number; y: number; hp: number; missionId?: string; k?: import('./content/fabula').RodzajWroga }[];
 }
 
 export interface LoginResult {

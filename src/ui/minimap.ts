@@ -7,6 +7,14 @@ import { AREA_FILL, ROAD_FILL } from '../map/MapRenderer';
 // with unexplored places left black. Opened with the 🗺 button or M.
 
 const RADII_M = [250, 600, 1500];
+const PLACE_ICONS: Record<string, [string, string]> = {
+  shop: ['#3f7fd8', '⚔'],
+  school: ['#b84a3a', '✎'],
+  church: ['#7a5ab8', '✝'],
+  office: ['#8d8f99', '§'],
+  hospital: ['#ffffff', '✚'],
+  police: ['#2b3f8a', '★'],
+};
 let open: HTMLDivElement | null = null;
 let zoom = 0;
 
@@ -172,10 +180,11 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number) {
     if (p.x < box.x0 || p.x > box.x1 || p.y < box.y0 || p.y > box.y1) continue;
     if (!game.explored.hasCell(Math.floor(p.x / FOG_CELL), Math.floor(p.y / FOG_CELL))) continue;
     const [x, y] = toS(p.x, p.y);
-    ctx.fillStyle = p.kind === 'shop' ? '#3f7fd8' : '#b84a3a';
+    const [bg, glyph] = PLACE_ICONS[p.kind] ?? ['#666', '?'];
+    ctx.fillStyle = bg;
     ctx.fillRect(x - 8 * u, y - 8 * u, 16 * u, 16 * u);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(p.kind === 'shop' ? '⚔' : '✎', x, y + u);
+    ctx.fillStyle = p.kind === 'hospital' ? '#e43b44' : '#ffffff';
+    ctx.fillText(glyph, x, y + u);
   }
   ctx.font = `bold ${Math.round(16 * u)}px monospace`;
 
@@ -185,7 +194,7 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number) {
     ctx.strokeStyle = '#ff3b3b';
     ctx.lineWidth = 3 * u;
     ctx.beginPath();
-    ctx.arc(x, y, 11 * u, 0, Math.PI * 2);
+    ctx.arc(x, y, Math.max(11 * u, game.goalRadius() * s), 0, Math.PI * 2);
     ctx.stroke();
   }
   const [hx, hy] = toS(px, py);
