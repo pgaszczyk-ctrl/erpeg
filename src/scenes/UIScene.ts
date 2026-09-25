@@ -205,7 +205,7 @@ export class UIScene extends Phaser.Scene {
     joyHome.x = this.joyHome.x;
     joyHome.y = this.joyHome.y;
     this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
-    this.attackBtn.setPosition(width - pad - 50, height - pad - 60);
+    this.attackBtn.setPosition(width - pad - 34, height - pad - 44);
     attackHome.x = this.attackBtn.x;
     attackHome.y = this.attackBtn.y;
     attackHome.r = this.attackBtn.radius;
@@ -252,9 +252,10 @@ export class UIScene extends Phaser.Scene {
     }
     this.joyArrows = g; // (a Graphics moved directly: inside a Container it stayed put)
     this.hintAt = 0;
-    this.attackBtn = this.add.circle(0, 0, 38, 0xe43b44, 0.45).setStrokeStyle(3, 0xffffff, 0.5);
+    // Half size: a tap on the joystick attacks too (one hand), the button is for two hands.
+    this.attackBtn = this.add.circle(0, 0, 19, 0xe43b44, 0.45).setStrokeStyle(2, 0xffffff, 0.5);
     this.attackLabel = this.add
-      .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '34px', color: '#ffffff' })
+      .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '17px', color: '#ffffff' })
       .setOrigin(0.5);
     for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
   }

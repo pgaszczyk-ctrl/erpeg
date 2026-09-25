@@ -78,6 +78,10 @@ export function onTap(fn: TapListener) {
 }
 
 let joyId: number | null = null;
+/** A short touch that barely moves the joystick counts as an attack. */
+const JOY_TAP_MS = 260;
+const JOY_TAP_DRAG = 10;
+const joyTap = { start: 0, maxDrag: 0 };
 const holdOrigin = { x: 0, y: 0 };
 let attackIds = new Set<number>();
 
@@ -137,6 +141,7 @@ export function installTouchControls(el: HTMLElement) {
     let dx = p.x - touchInput.joyOriginX;
     let dy = p.y - touchInput.joyOriginY;
     const len = Math.hypot(dx, dy);
+    joyTap.maxDrag = Math.max(joyTap.maxDrag, len);
     if (len > JOY_RADIUS) {
       dx = (dx / len) * JOY_RADIUS;
       dy = (dy / len) * JOY_RADIUS;
@@ -153,6 +158,8 @@ export function installTouchControls(el: HTMLElement) {
     if (joyId !== null && !alive.has(joyId)) {
       joyId = null;
       touchInput.x = touchInput.y = 0;
+      // A quick tap on the joystick (no steering) is a sword swing: one-handed play.
+      if (performance.now() - joyTap.start < JOY_TAP_MS && joyTap.maxDrag < JOY_TAP_DRAG) touchInput.attack = true;
     }
     for (const id of attackIds) if (!alive.has(id)) attackIds.delete(id);
     if (hold.active && hold.mode === 'touch' && !alive.has(hold.id)) endHold();
@@ -180,6 +187,8 @@ export function installTouchControls(el: HTMLElement) {
         joyId = t.identifier;
         touchInput.joyOriginX = p.x;
         touchInput.joyOriginY = p.y;
+        joyTap.start = performance.now();
+        joyTap.maxDrag = 0;
         steer(p);
       }
       // After the attack flag is set, so a HUD button can cancel the swing.

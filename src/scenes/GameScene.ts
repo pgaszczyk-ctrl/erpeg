@@ -36,6 +36,8 @@ const RESPAWN_MS = 20000;
 const DOOR_RADIUS = 14;
 /** How close one has to come to a riddle-giver to talk. */
 const NPC_RADIUS = 12;
+/** Pause after any dialog before a character can be talked to again (ms). */
+const NPC_DELAY_MS = 5000;
 /** No enemies this close to home (metres). */
 const HOME_SAFE_M = 40;
 const GOAL_RADIUS = 40;
@@ -119,6 +121,7 @@ export class GameScene extends Phaser.Scene {
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
   private damageCarry = 0;
+  private npcReadyAt = 0;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   private glow!: Phaser.GameObjects.Graphics;
@@ -722,6 +725,12 @@ export class GameScene extends Phaser.Scene {
       id = npc.id;
       open = () => this.openRiddle(npc);
       savePoint = false; // saved after the answer
+    }
+    // Characters wait a few seconds after the last talk, so bumping into one
+    // right after a dialog doesn't start another by accident.
+    if (id && (fixed || npc) && performance.now() < this.npcReadyAt) {
+      this.nearDoor = id; // walk away and come back to talk
+      return;
     }
     for (const rm of this.missions) {
       if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
@@ -1344,6 +1353,7 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('dialog', {
       ...req,
       onChoose: (i: number) => {
+        this.npcReadyAt = performance.now() + NPC_DELAY_MS;
         consumeAttack(); // the tap/key that closed the dialog shouldn't swing the sword
         this.scene.resume();
         req.onChoose(i);
