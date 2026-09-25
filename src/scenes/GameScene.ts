@@ -546,13 +546,15 @@ export class GameScene extends Phaser.Scene {
 
   private spawnGroup(p: Place, count: number, missionId?: string, kind: RodzajWroga = 'glut', spread = 40) {
     for (let i = 0; i < count; i++) {
-      // Spread them around the spot, on free ground.
-      for (let t = 0; t < 60; t++) {
+      // Spread them around the spot on free ground, preferably on a street
+      // or path (so they can't end up shut in a courtyard).
+      for (let t = 0; t < 120; t++) {
         const a = Math.random() * Math.PI * 2;
         const r = 8 + Math.random() * spread;
         const x = p.x + Math.cos(a) * r;
         const y = p.y + Math.sin(a) * r;
         if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
+        if (t < 80 && !this.city.roadAt(x, y)) continue;
         this.spawnEnemy(x, y, missionId, kind);
         break;
       }

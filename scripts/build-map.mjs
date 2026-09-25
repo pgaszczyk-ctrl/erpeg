@@ -283,11 +283,11 @@ for (const n of addrNodes) {
 }
 
 // ---------------------------------------------------------------- merge buildings
-// Cartoon look: every building grows by GROW metres on each side, and
+// Cartoon look: every building grows by GROW_M metres on each side, and
 // buildings that then touch or overlap become one block (with all their
 // addresses). Collisions use these shapes too.
 
-const GROW_M = 1.2;
+const GROW_M = 0.7; // less than before (1.2) so narrow passages between houses stay open
 const CS = 4; // clipper works on integers: 1/4 of a half-metre
 function ringArea(r) {
   let a = 0;
