@@ -2,7 +2,9 @@
 // Holds all features in world pixels, a spatial grid for fast lookups,
 // collision tests, address search and spawn-point picking.
 
-export const PX_PER_M = 4;
+// World pixels per metre. Characters store the scale their start point was
+// saved in (map_scale on the server), so changing this is safe.
+export const PX_PER_M = 3.2;
 
 // Widths in metres of line features.
 const LINE_WIDTH_M: Record<string, number> = {

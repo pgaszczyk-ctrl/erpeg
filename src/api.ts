@@ -26,6 +26,8 @@ export interface SaveData {
   coins?: number;
   hp?: number;
   missions?: Record<string, 'new' | 'active' | 'goal' | 'done'>;
+  /** Explored map (fog of war), see Fog.serialize(). */
+  fog?: { s: number; chunks: Record<string, string> };
 }
 
 export interface PlayerInfo {
@@ -34,6 +36,8 @@ export interface PlayerInfo {
   start_place: string | null;
   start_x: number;
   start_y: number;
+  /** Pixels per metre the start point was saved in. */
+  map_scale?: number;
   save: SaveData;
   exp: number;
   dead: boolean;
@@ -42,6 +46,8 @@ export interface PlayerInfo {
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
 export interface Snapshot {
+  /** Pixels per metre the positions are in. */
+  s?: number;
   x: number;
   y: number;
   hp: number;
@@ -56,8 +62,8 @@ export interface LoginResult {
 }
 
 export const api = {
-  createCharacter: (name: string, password: string, startPlace: string, x: number, y: number) =>
-    rpc<LoginResult>('create_character', { p_name: name, p_password: password, p_start_place: startPlace, p_start_x: x, p_start_y: y }),
+  createCharacter: (name: string, password: string, startPlace: string, x: number, y: number, scale: number) =>
+    rpc<LoginResult>('create_character', { p_name: name, p_password: password, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale }),
   login: (name: string, idik: string, password: string) =>
     rpc<LoginResult>('login', { p_name: name, p_idik: idik, p_password: password }),
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),

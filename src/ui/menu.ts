@@ -1,6 +1,7 @@
 import type { CityMap } from '../map/CityMap';
 import { api, type LoginResult } from '../api';
 import { startSession } from '../quests';
+import { PX_PER_M } from '../map/CityMap';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -82,7 +83,7 @@ export function showMenu(city: CityMap): Promise<void> {
           const place = start.value.trim() || DEFAULT_START;
           const p = city.findStart(place);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
-          const r = await api.createCharacter(name.value.trim(), pass.value, place, p.x, p.y);
+          const r = await api.createCharacter(name.value.trim(), pass.value, place, p.x, p.y, PX_PER_M);
           showIdik(r);
         }), 'm-primary');
       screen(

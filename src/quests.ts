@@ -1,6 +1,7 @@
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot } from './api';
+import { PX_PER_M } from './map/CityMap';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -20,6 +21,7 @@ export const session = {
   exp: 0,
   hp: MAX_HP,
   missions: {} as Record<string, MissionState>,
+  fog: undefined as SaveData['fog'],
   /** Last known state of a session that was closed without "Wyjdź". */
   abandoned: null as Snapshot | null,
 };
@@ -29,19 +31,32 @@ export function startSession(r: LoginResult) {
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
-  session.startX = p.start_x;
-  session.startY = p.start_y;
+  // Convert from the map scale the start was stored in.
+  const k = PX_PER_M / (p.map_scale ?? 4);
+  session.startX = p.start_x * k;
+  session.startY = p.start_y * k;
+  session.fog = p.save.fog;
   session.coins = p.save.coins ?? 0;
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
-  session.abandoned = r.abandoned ?? null;
+  const a = r.abandoned ?? null;
+  if (a) {
+    const ka = PX_PER_M / (a.s ?? 4);
+    a.x *= ka;
+    a.y *= ka;
+    for (const e of a.enemies ?? []) {
+      e.x *= ka;
+      e.y *= ka;
+    }
+  }
+  session.abandoned = a;
 }
 
 /** Sends the current progress to the server. */
 export function saveNow(hp: number) {
   session.hp = hp;
-  const data: SaveData = { coins: session.coins, hp, missions: session.missions };
+  const data: SaveData = { coins: session.coins, hp, missions: session.missions, fog: session.fog };
   return api.save(session.token, data, session.exp);
 }
 

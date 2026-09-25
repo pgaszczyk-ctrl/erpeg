@@ -107,7 +107,6 @@ export function installTouchControls(el: HTMLElement) {
     const half = el.getBoundingClientRect().width / 2;
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
-      tapListeners.forEach((fn) => fn(p.x, p.y));
       if (p.x >= half) {
         attackIds.add(t.identifier);
         touchInput.attack = true;
@@ -118,6 +117,8 @@ export function installTouchControls(el: HTMLElement) {
         touchInput.joyOriginX = touchInput.joyX = p.x;
         touchInput.joyOriginY = touchInput.joyY = p.y;
       }
+      // After the attack flag is set, so a HUD button can cancel the swing.
+      tapListeners.forEach((fn) => fn(p.x, p.y));
     }
     sync(e);
   };

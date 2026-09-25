@@ -3,8 +3,9 @@ import { TEX } from '../art';
 import { touchInput, keyboardDir, consumeAttack } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
-import { CityMap } from '../map/CityMap';
+import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
+import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE } from '../content/fabula';
 import {
   session, saveNow, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
@@ -59,6 +60,11 @@ export class GameScene extends Phaser.Scene {
   private nearDoor: string | null = null;
   private hudTimer = 0;
   private lingerUntil = 0;
+  explored = new Explored();
+  private fogView!: FogView;
+  /** What the hero sees right now (world polygon). */
+  vision: number[] = [];
+  private lastVision = { x: NaN, y: NaN, a: NaN };
   private leaving = false;
 
   constructor() {
@@ -74,6 +80,11 @@ export class GameScene extends Phaser.Scene {
     this.leaving = false;
     this.lingerUntil = 0;
     this.mapView = new MapRenderer(this, this.city);
+    this.explored = new Explored();
+    this.explored.load(session.fog);
+    this.fogView = new FogView(this, this.explored);
+    this.vision = [];
+    this.lastVision = { x: NaN, y: NaN, a: NaN };
 
     this.player = new Player(this, session.startX, session.startY);
     this.player.hp = session.hp;
@@ -83,7 +94,8 @@ export class GameScene extends Phaser.Scene {
     this.missions = missions;
     for (const rm of missions) {
       if (rm.door.building) this.mapView.highlight.add(rm.door.building);
-      const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(100000);
+      // Above the fog: mission doors are always shown.
+      const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(1_100_000);
       this.tweens.add({ targets: img, y: img.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       this.markers.set(rm.m.id, img);
       if (missionState(rm.m) === 'active') this.startMissionGoal(rm);
@@ -174,6 +186,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.player.setDepth(this.player.y);
+    this.updateFog();
 
     for (const item of [...this.pickups]) {
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
@@ -189,6 +202,21 @@ export class GameScene extends Phaser.Scene {
       this.hudTimer = 400;
       this.emitHud();
     }
+  }
+
+  /** Recomputes what the hero sees and hides whatever is outside of it. */
+  private updateFog() {
+    const p = this.player;
+    const a = Math.atan2(p.facing.y, p.facing.x);
+    const lv = this.lastVision;
+    // (written as !(<=) so the first frame, with NaN, always computes)
+    if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a);
+      this.lastVision = { x: p.x, y: p.y, a };
+    }
+    this.fogView.update(this.cameras.main, this.vision);
+    for (const e of this.enemies) if (!e.isDead) e.setVisible(pointInPolygon(this.vision, e.x, e.y));
+    for (const i of this.pickups) i.setVisible(pointInPolygon(this.vision, i.x, i.y));
   }
 
   /** Moves a sprite by its velocity, sliding along walls, buildings and water. */
@@ -296,6 +324,7 @@ export class GameScene extends Phaser.Scene {
       (e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 200,
     );
     return {
+      s: PX_PER_M,
       x: Math.round(this.player.x),
       y: Math.round(this.player.y),
       hp: this.player.hp,
@@ -358,6 +387,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private save() {
+    session.fog = this.explored.serialize();
     saveNow(this.player.hp)
       .then(() => this.toast('Gra zapisana'))
       .catch((e: Error) => this.toast(`Nie udało się zapisać: ${e.message}`));
@@ -445,6 +475,15 @@ export class GameScene extends Phaser.Scene {
         this.toast(`Dotarłeś! Wróć do: ${rm.m.adres}`);
       }
     }
+  }
+
+  /** Mission doors for the map screen. */
+  missionMarkers() {
+    return this.missions.map((rm) => ({ x: rm.door.x, y: rm.door.y, done: missionState(rm.m) === 'done' }));
+  }
+
+  goalPosition() {
+    return this.currentGoal()?.pos ?? null;
   }
 
   /** The mission the arrow should point at, and where. */

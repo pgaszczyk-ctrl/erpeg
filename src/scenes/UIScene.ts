@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 import { touchInput, resetTouch, onTap, JOY_RADIUS } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
+import { toggleMinimap, closeMinimap } from '../ui/minimap';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -12,6 +13,7 @@ export class UIScene extends Phaser.Scene {
   private coinIcon!: Phaser.GameObjects.Image;
   private expText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
+  private mapBtn!: Phaser.GameObjects.Text;
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
@@ -51,6 +53,10 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
 
+    this.mapBtn = this.add
+      .text(0, 0, '🗺', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
+      .setOrigin(1, 0);
+
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
     this.streetText = label(13).setOrigin(0.5, 0);
@@ -71,6 +77,9 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('toast', onToast);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
+        this.openMap();
+      }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
         if (this.dialogBox) this.closeDialog();
         else this.openGameMenu();
@@ -85,6 +94,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('toast', onToast);
       offTap();
       window.removeEventListener('keydown', onKey);
+      closeMinimap();
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -109,6 +119,7 @@ export class UIScene extends Phaser.Scene {
     const hx = pad + this.menuBtn.width + 3 * this.ui;
     this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
     this.expText.setPosition(width - pad, pad + 9 * this.ui);
+    this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
     const wrap = Math.min(width - 40, 520);
@@ -230,6 +241,11 @@ export class UIScene extends Phaser.Scene {
       this.openGameMenu();
       return;
     }
+    const mb = this.mapBtn.getBounds();
+    if (!this.dialogBox && !this.overlay && x >= mb.x - 12 && x <= mb.right + 12 && y >= mb.y - 12 && y <= mb.bottom + 12) {
+      this.openMap();
+      return;
+    }
     if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
     let choice = -1;
     if (x < 0) choice = 0; // keyboard: Space/Enter picks the first button
@@ -238,6 +254,13 @@ export class UIScene extends Phaser.Scene {
     const choose = this.dialogChoose;
     this.closeDialog();
     choose?.(choice);
+  }
+
+  private openMap() {
+    const game = this.scene.get('game') as GameScene;
+    if (!game.player || this.overlay) return;
+    touchInput.attack = false; // the tap on the button isn't a sword swing
+    toggleMinimap(game);
   }
 
   /** Top-left menu: leave the game properly. */

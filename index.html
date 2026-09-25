@@ -13,6 +13,15 @@
       #game { width: 100vw; height: 100vh; height: 100dvh; }
       canvas { display: block; image-rendering: pixelated; }
 
+      /* Map screen */
+      #minimap { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 10px; background: rgba(0,0,0,0.75); font-family: ui-monospace, Menlo, Consolas, monospace; }
+      #minimap canvas { border: 3px solid #f7c531; border-radius: 6px; image-rendering: auto; }
+      .mm-bar { display: flex; gap: 10px; align-items: center; color: #fff; font-size: 16px; }
+      .mm-bar button { font: inherit; font-size: 22px; width: 52px; height: 44px; border: 2px solid rgba(255,255,255,0.6);
+        border-radius: 4px; background: #4a4a55; color: #fff; }
+      .mm-bar span { min-width: 70px; text-align: center; }
+
       /* Start screen */
       #menu { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
         background: rgba(15, 25, 15, 0.82); overflow-y: auto; touch-action: auto; padding: 16px; box-sizing: border-box;
