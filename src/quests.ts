@@ -61,7 +61,11 @@ export function spend(n: number) {
 /** Loads the missions made in the admin panel; the game works without them too. */
 export async function loadContent() {
   try {
-    const list = await api.content();
+    // Never hold up the start for long.
+    const list = await Promise.race([
+      api.content(),
+      new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000)),
+    ]);
     session.extra = list.map(({ sekret, ...m }) => m);
     session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
   } catch {

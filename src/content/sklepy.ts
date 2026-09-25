@@ -22,3 +22,6 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number }>
 
 /** Ile drzew na 1000 m² zieleni (i najwyżej ile na jeden trawnik/działki). */
 export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200 };
+
+/** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
+export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };

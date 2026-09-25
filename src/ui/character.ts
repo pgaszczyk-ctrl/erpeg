@@ -1,7 +1,7 @@
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, type Miejsce } from '../content/przedmioty';
-import { OWOCE } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import {
-  gear, item, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
+  gear, item, totalFruit, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
 } from '../inventory';
 import { session } from '../quests';
 
@@ -20,9 +20,9 @@ export function closeCharacter() {
   open = null;
 }
 
-export function toggleCharacter(hp: number, maxHp: number, onChange: () => void) {
+export function toggleCharacter(hp: number, maxHp: number, onChange: () => void, eat: () => number | null) {
   if (open) closeCharacter();
-  else show(hp, maxHp, onChange);
+  else show(hp, maxHp, onChange, eat);
 }
 
 function el(tag: string, cls = '', text = '') {
@@ -32,7 +32,7 @@ function el(tag: string, cls = '', text = '') {
   return e;
 }
 
-function show(hp: number, maxHp: number, onChange: () => void) {
+function show(hp: number, maxHp: number, onChange: () => void, eat: () => number | null) {
   const root = el('div') as HTMLDivElement;
   root.id = 'character';
   root.onclick = (e) => {
@@ -71,7 +71,19 @@ function show(hp: number, maxHp: number, onChange: () => void) {
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
-    box.append(el('div', 'c-stats', `💰 ${session.coins} monet   ⭐ ${session.exp} EXP   ❤ ${hp}/${maxHp}   🛡 ${defense()} (${Math.round(blockChance() * 100)}% bloku)`));
+    box.append(el('div', 'c-stats', `💰 ${session.coins} monet   ⭐ ${session.exp} EXP   ❤ ${hp / 2}/${maxHp / 2}   🛡 ${defense()} (${Math.round(blockChance() * 100)}% bloku)`));
+    // Eating fruit heals.
+    const n = LECZENIE_OWOCAMI.owocow;
+    const canEat = totalFruit() >= n && hp < maxHp;
+    const eatBtn = el('button', `c-btn c-eat${canEat ? '' : ' c-muted'}`, `🍎 Zjedz ${n} owoców → +1 ❤`) as HTMLButtonElement;
+    eatBtn.disabled = !canEat;
+    eatBtn.title = hp >= maxHp ? 'Masz pełne zdrowie' : `Masz ${totalFruit()} owoców`;
+    eatBtn.onclick = () => {
+      const now = eat();
+      if (now != null) hp = now;
+      render();
+    };
+    box.append(eatBtn);
 
     // Equipment
     box.append(el('h3', '', 'Założone'));

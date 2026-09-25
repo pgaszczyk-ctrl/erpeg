@@ -196,3 +196,23 @@ export function sellAllFruit() {
   gear.bag = gear.bag.filter((s) => !('fruit' in s));
   return v;
 }
+
+export function totalFruit() {
+  return gear.bag.reduce((n, s) => n + ('fruit' in s ? s.n : 0), 0);
+}
+
+/** Eats `n` fruit, cheapest first; false if there are not enough. */
+export function eatFruit(n: number): boolean {
+  if (totalFruit() < n) return false;
+  const stacks = gear.bag
+    .filter((s): s is { fruit: Owoc; n: number } => 'fruit' in s)
+    .sort((a, b) => OWOCE[a.fruit].cena - OWOCE[b.fruit].cena);
+  for (const st of stacks) {
+    const take = Math.min(n, st.n);
+    st.n -= take;
+    n -= take;
+    if (!n) break;
+  }
+  gear.bag = gear.bag.filter((s) => !('fruit' in s) || s.n > 0);
+  return true;
+}

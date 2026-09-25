@@ -8,11 +8,11 @@ import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
-import { OWOCE, type Owoc } from '../content/sklepy';
-import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
+import { OWOCE, LECZENIE_OWOCAMI, type Owoc } from '../content/sklepy';
+import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
-  gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel,
-  meleeDamage, rangedWeapon, weaponEffect, blockChance, availableSkills, owns,
+  gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns,
 } from '../inventory';
 import { hold, mouse, consumeRelease } from '../controls';
 import { Orchards, StreetEnemies, Training } from './Ambient';
@@ -686,6 +686,8 @@ export class GameScene extends Phaser.Scene {
   /** One use of a skill; tells the player when it levels up. */
   private practiced(skill: Umiejetnosc, points = 1) {
     const up = practice(skill, points);
+    const pr = skillProgress(skill);
+    this.game.events.emit('practice', { name: UMIEJETNOSCI[skill].nazwa, ...pr, max: pr.level >= MAKS_POZIOM });
     if (up) {
       this.toast(`${UMIEJETNOSCI[skill].nazwa}: poziom ${up}! Szybsze ataki.`, 2200);
       this.applySkill();
@@ -881,6 +883,16 @@ export class GameScene extends Phaser.Scene {
         if (o) this.buy(o);
       },
     });
+  }
+
+  /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
+  eatFruit(): number | null {
+    if (this.player.isDead || this.player.hp >= PLAYER.maxHp) return null;
+    if (!eatInventoryFruit(LECZENIE_OWOCAMI.owocow)) return null;
+    this.player.heal(2 * LECZENIE_OWOCAMI.serduszek);
+    this.emitHud();
+    this.toast('Mniam! +1 ❤', 1200);
+    return this.player.hp;
   }
 
   /** After things were put on or off in the character sheet. */

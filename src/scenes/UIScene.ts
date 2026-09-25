@@ -31,6 +31,10 @@ export class UIScene extends Phaser.Scene {
   private joyHome = new Phaser.Math.Vector2();
 
   private streetText!: Phaser.GameObjects.Text;
+  private skillBar!: Phaser.GameObjects.Container;
+  private skillFill!: Phaser.GameObjects.Rectangle;
+  private skillLabel!: Phaser.GameObjects.Text;
+  private skillHide?: Phaser.Time.TimerEvent;
   private goalText!: Phaser.GameObjects.Text;
   private arrow!: Phaser.GameObjects.Image;
   private toastText!: Phaser.GameObjects.Text;
@@ -75,6 +79,13 @@ export class UIScene extends Phaser.Scene {
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     this.arrow = this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false);
+    // Skill progress while training (shown for a moment after each practice hit).
+    const bw = 90 * this.ui;
+    const bh = 5 * this.ui;
+    this.skillLabel = label(13).setOrigin(0.5, 1).setPosition(0, -3);
+    const back = this.add.rectangle(0, 0, bw, bh, 0x1e1a24).setOrigin(0.5, 0).setStrokeStyle(2, 0x000000);
+    this.skillFill = this.add.rectangle(-bw / 2 + 1, 1, bw - 2, bh - 2, 0xf7c531).setOrigin(0, 0);
+    this.skillBar = this.add.container(0, 0, [this.skillLabel, back, this.skillFill]).setAlpha(0).setDepth(5);
     this.dialogBox = undefined;
 
     this.createTouchControls();
@@ -87,6 +98,8 @@ export class UIScene extends Phaser.Scene {
     const onToast = (t: string, ms?: number) => this.toast(t, ms);
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
+    const onPractice = (p: { name: string; level: number; into: number; need: number; max: boolean }) => this.showPractice(p);
+    this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
@@ -107,6 +120,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('hud', onHud);
       this.game.events.off('dialog', onDialog);
       this.game.events.off('toast', onToast);
+      this.game.events.off('practice', onPractice);
       offTap();
       window.removeEventListener('keydown', onKey);
       closeMinimap();
@@ -128,6 +142,17 @@ export class UIScene extends Phaser.Scene {
     if (missing.length) this.toast(`Nie znalazłem na mapie:\n${missing.join('\n')}`, 8000);
   }
 
+  /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
+  private showPractice(p: { name: string; level: number; into: number; need: number; max: boolean }) {
+    this.skillLabel.setText(p.max ? `${p.name} – poziom ${p.level} (maks.)` : `${p.name} – poziom ${p.level}  ${p.into}/${p.need}`);
+    const full = (this.skillBar.list[1] as Phaser.GameObjects.Rectangle).width - 2;
+    this.skillFill.setSize(Math.max(1, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
+    this.tweens.killTweensOf(this.skillBar);
+    this.skillBar.setAlpha(1);
+    this.skillHide?.remove();
+    this.skillHide = this.time.delayedCall(2500, () => this.tweens.add({ targets: this.skillBar, alpha: 0, duration: 500 }));
+  }
+
   private layout() {
     const { width, height } = this.scale;
     const pad = 4 * this.ui;
@@ -144,6 +169,7 @@ export class UIScene extends Phaser.Scene {
     this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, pad + 22 * this.ui + 18);
     this.streetText.setPosition(width / 2, pad + 22 * this.ui);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
+    this.skillBar.setPosition(width / 2, height * 0.66);
 
     const r = JOY_RADIUS;
     this.joyHome.set(pad + r + 16, height - pad - r - 16);
@@ -293,7 +319,7 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay) return;
     touchInput.attack = false;
-    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged());
+    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit());
   }
 
   private openMap() {
