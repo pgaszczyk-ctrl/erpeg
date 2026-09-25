@@ -9,14 +9,15 @@ Prosta gra RPG z widokiem z góry, w stylu Zeldy i Tibii z lat 90. Działa w prz
 
 Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 
-## Co jest w grze (wersja 0.1)
+## Co jest w grze
 
-- losowo wygenerowana mapa: łąki, ścieżki, jeziora, lasy, skały i krzaki,
-- postać, która chodzi swobodnie w 8 kierunkach i atakuje mieczem,
-- glutki, które krążą po mapie i gonią gracza, gdy się zbliży,
-- życie w serduszkach, licznik monet i ekran „Zginąłeś!” z restartem.
+- Mapa prawdziwego Lublina z OpenStreetMap: budynki z adresami, ulice, chodniki, Bystrzyca, parki i lasy. Nie da się wejść w budynki ani do wody, a przez most przejdziesz.
+- Bohater zaczyna w losowym miejscu miasta.
+- Budynki z misjami mają złote dachy i znak „!” nad wejściem. Wejdź w drzwi, żeby porozmawiać.
+- Cel misji jest wypisany u góry ekranu, a złota strzałka pokazuje, dokąd iść.
+- Postęp (monety i misje) zapisuje się w przeglądarce.
 
-Grafika jest tymczasowa, narysowana w kodzie. Później można ją podmienić na gotową paczkę, np. *Ninja Adventure* (CC0) z itch.io.
+Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”.
 
 ## Dla programisty
 
@@ -26,6 +27,7 @@ Gra używa silnika Phaser 4 z TypeScriptem i Vite.
 npm install
 npm run dev      # serwer deweloperski (adres pojawi się w terminalu)
 npm run build    # wersja produkcyjna w katalogu dist/
+npm run map      # przebudowanie mapy z data/ (robi się też samo)
 ```
 
 Po każdym pushu gra buduje się i publikuje na GitHub Pages (plik `.github/workflows/deploy.yml`). Trzeba to raz włączyć w repozytorium: **Settings → Pages → Source: GitHub Actions**.

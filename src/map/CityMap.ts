@@ -208,8 +208,24 @@ export class CityMap {
     };
   }
 
-  findBuilding(address: string): Building | undefined {
-    return this.byAddress.get(normAddress(address));
+  /**
+   * Finds a building by address ("Zamkowa 9", "al. Racławickie 1") or by its
+   * name ("Zamek w Lublinie"). Exact match first, then a looser one where the
+   * house number must match and every word of the street must appear.
+   */
+  findBuilding(query: string): Building | undefined {
+    const q = normAddress(query);
+    const exact = this.byAddress.get(q);
+    if (exact) return exact;
+    const m = q.match(/^(.*\D)\s+(\d+[a-z]?)$/);
+    if (m) {
+      const words = m[1].split(' ').filter((w) => w.length > 1);
+      for (const [addr, b] of this.byAddress) {
+        const am = addr.match(/^(.*\D)\s+(\S+)$/);
+        if (am && am[2] === m[2] && words.every((w) => am[1].includes(w))) return b;
+      }
+    }
+    return this.buildings.find((b) => b.name && normAddress(b.name) === q) ?? this.buildings.find((b) => b.name && normAddress(b.name).includes(q));
   }
 
   buildingAt(x: number, y: number): Building | undefined {

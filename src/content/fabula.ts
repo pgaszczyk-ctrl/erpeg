@@ -1,7 +1,9 @@
 // ============================================================================
 //  FABUŁA GRY: misje i wrogowie w Lublinie.
-//  Adresy wpisujemy tak jak na tabliczce: "Ulica numer", np. "Zamkowa 9".
-//  Zamiast adresu można podać współrzędne z mapy: { lat: 51.25, lon: 22.57 }.
+//  Adresy wpisujemy tak jak na tabliczce: "Ulica numer", np. "Zamkowa 9"
+//  (może być też "ul. Zamkowa 9" albo "al. Racławickie 1").
+//  Można też podać nazwę budynku z mapy, np. "Zamek w Lublinie",
+//  albo współrzędne: { lat: 51.25, lon: 22.57 }.
 // ============================================================================
 
 export type Miejsce = string | { lat: number; lon: number };
@@ -48,17 +50,17 @@ export const MISJE: Misja[] = [
     adres: 'Zamkowa 9',
     tytul: 'Kłopoty na Starym Mieście',
     opis: 'Witaj, wędrowcze! Pod Bramą Krakowską zalęgły się fioletowe gluty i straszą turystów. Przegoń je, a zamek sowicie cię wynagrodzi.',
-    zadanie: { typ: 'pokonaj', miejsce: 'Plac Władysława Łokietka 3', ile: 4, wrog: 'glut', cel: 'Pokonaj gluty przy Bramie Krakowskiej' },
+    zadanie: { typ: 'pokonaj', miejsce: 'Bramowa 1', ile: 4, wrog: 'glut', cel: 'Pokonaj gluty przy Bramie Krakowskiej' },
     zakonczenie: 'Brawo! Turyści znów mogą spokojnie robić zdjęcia. Oto twoja nagroda.',
     nagroda: 20,
   },
   {
     id: 'ratusz',
     adres: 'Plac Władysława Łokietka 1',
-    tytul: 'Poczta do Ogrodu Saskiego',
-    opis: 'Mamy pilną wiadomość dla ogrodnika. Zanieś ją do bramy Ogrodu Saskiego przy Alejach Racławickich.',
-    zadanie: { typ: 'idz', miejsce: 'Aleje Racławickie 1', cel: 'Dojdź do Ogrodu Saskiego' },
-    zakonczenie: 'Dziękujemy, ogrodnik dostał wiadomość na czas!',
+    tytul: 'List do Collegium Novum',
+    opis: 'Mamy pilny list do rektora. Zanieś go do Collegium Novum przy Alejach Racławickich.',
+    zadanie: { typ: 'idz', miejsce: 'Aleje Racławickie 1', cel: 'Zanieś list do Collegium Novum' },
+    zakonczenie: 'Dziękujemy, rektor dostał list na czas!',
     nagroda: 10,
   },
 ];
