@@ -72,6 +72,8 @@ export interface HudState {
   /** Sword name and skill level, for the HUD. */
   sword: string;
   fruits: string;
+  /** Apples, plums, grapes in the backpack (the HUD shows them with the fruit pictures). */
+  fruitN: [number, number, number];
   dead: boolean;
   /** Seconds left while the character is stuck after an unfinished session. */
   lingering: number | null;
@@ -163,6 +165,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     this.player.hp = session.hp;
     this.npcs = new Npcs(this, this.city, today());
+    this.orchards = new Orchards(this, this.city);
     this.fixed = new FixedNpcs(this, this.city, {
       dialog: (req) => this.dialog(req),
       toast: (t, ms) => this.toast(t, ms),
@@ -172,6 +175,7 @@ export class GameScene extends Phaser.Scene {
         this.emitHud();
       },
       save: () => this.save(),
+      trees: (x, y, r) => this.orchards.treesNear(x, y, r),
     });
 
     // Missions: gold roofs and "!" over their doors.
@@ -194,7 +198,6 @@ export class GameScene extends Phaser.Scene {
     }
     this.applySkill();
 
-    this.orchards = new Orchards(this, this.city);
     this.training = new Training(this, this.city);
     this.shots = [];
     this.aimLine = this.add.graphics().setDepth(1_050_000);
@@ -1323,7 +1326,8 @@ export class GameScene extends Phaser.Scene {
       coins: session.coins,
       exp: session.exp,
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
-      fruits: `🍎${fruitCount('jablko')} 🫐${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
+      fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
+      fruitN: [fruitCount('jablko'), fruitCount('sliwka'), fruitCount('winogrono')],
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),

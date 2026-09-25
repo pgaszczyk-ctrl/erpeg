@@ -13,7 +13,7 @@ import { PX_PER_M } from '../map/CityMap';
 interface Player {
   name: string; exp: number; dead: boolean; age?: number;
   chest?: { slots: ({ item: string } | { fruit: Owoc; n: number } | null)[]; coins: number } | null; died_at: string | null; death_place: string | null; resurrections: number;
-  created_at: string; last_seen: string | null; online: boolean; start_place: string | null; email: string | null; old: boolean;
+  created_at: string; last_seen: string | null; online: boolean; start_place: string | null; old: boolean;
   coins: number | null; missions: Record<string, string> | null; magic: boolean | null;
   stats: { m?: number; kills?: Record<string, number>; earned?: number; spent?: number; fruit?: number; missions?: number; codes?: number; riddles?: number } | null;
   equip: Record<string, string | null> | null; bag: ({ item: string } | { fruit: Owoc; n: number })[] | null; skills: Record<string, number> | null;
@@ -210,7 +210,6 @@ function playerCard(p: Player) {
     ['Wskrzeszenia', String(p.resurrections)],
     ['Wiek', p.age != null ? `${p.age} lat` : '—'],
     ['Punkt startowy (domek)', p.start_place ?? '—'],
-    ['E-mail', p.email ?? '—'],
     ['EXP / monety', `${p.exp} EXP · ${p.coins ?? 0} monet`],
     ['Przebył', `${km(p.stats?.m)} km`],
     ['Pokonał', kills],

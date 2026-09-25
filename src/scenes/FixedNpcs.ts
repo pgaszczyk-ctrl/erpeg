@@ -18,6 +18,8 @@ export interface FixedHost {
   riddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void): void;
   gainExp(n: number): void;
   save(): void;
+  /** Fruit trees near a point (x, y of the trunk, crown width). */
+  trees(x: number, y: number, r: number): { x: number; y: number; w: number }[];
 }
 
 type Pt = { x: number; y: number };
@@ -128,7 +130,7 @@ interface Walking {
 export class FixedNpcs {
   private list: Walking[] = [];
   private piggy: Phaser.GameObjects.Image | null = null;
-  private piggyAt: Pt | null = null;
+  private piggyAt: (Pt & { behind?: boolean }) | null = null;
   private barkAt = 0;
   private r = rng(hash(`fixed:${today()}`));
   private grandIndex = hash(`dziadkowie:${today()}`) % DZIADKOWIE.osoby.length;
@@ -184,7 +186,7 @@ export class FixedNpcs {
   }
 
   /** Bushes next to the playground between the dog's streets. */
-  private findPiggySpot(lines: number[][]): Pt | null {
+  private findPiggySpot(lines: number[][]): (Pt & { behind?: boolean }) | null {
     let sx = 0;
     let sy = 0;
     let n = 0;
@@ -198,6 +200,15 @@ export class FixedNpcs {
     const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
     const playground = this.city.areas.filter((a) => a.kind === 'playground').sort((a, b) => dist(centre(a), mid) - dist(centre(b), mid))[0];
     const at = playground ? centre(playground) : mid;
+    // Best: hidden behind the tree nearest the playground, only a third peeking out.
+    const tree = this.host.trees(at.x, at.y, 80 * PX_PER_M).sort((a, b) => dist(a, at) - dist(b, at))[0];
+    if (tree) {
+      // The crown is a circle of ~9 px around 13 px above the trunk's foot;
+      // the piggy sits behind its middle with a third of it sticking out.
+      const edge = tree.x + Math.min(9, tree.w / 2 - 2);
+      const w = this.scene.textures.getFrame(TEX.piggy).width;
+      return { x: edge - w / 2 + w / 3, y: tree.y - 12, behind: true };
+    }
     const r = rng(hash('piggy'));
     // Try bushes within ~60 m of the playground, then the playground's edge.
     for (const want of [true, false]) {
@@ -243,9 +254,10 @@ export class FixedNpcs {
     // The piggy: only once the dog asked for it.
     const st = this.state('npc-pies');
     if (this.piggyAt && st === 'active') {
-      if (!this.piggy) this.piggy = this.scene.add.image(this.piggyAt.x, this.piggyAt.y, TEX.piggy).setDepth(this.piggyAt.y);
+      // Behind a tree: drawn just under the tree (trees are drawn at their trunk's y).
+      if (!this.piggy) this.piggy = this.scene.add.image(this.piggyAt.x, this.piggyAt.y, TEX.piggy).setDepth(this.piggyAt.behind ? this.piggyAt.y + 11 : this.piggyAt.y);
       this.piggy.setVisible(visible(this.piggyAt.x, this.piggyAt.y));
-      if (Math.hypot(px - this.piggyAt.x, py + 5 - this.piggyAt.y) < 10) {
+      if (Math.hypot(px - this.piggyAt.x, py + 5 - this.piggyAt.y) < (this.piggyAt.behind ? 18 : 10)) {
         session.missions['npc-pies'] = 'goal';
         this.piggy.destroy();
         this.piggy = null;

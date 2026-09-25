@@ -164,9 +164,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       screen(
         el('h2', {}, [title]),
         el('p', {}, ['To Twój kod postaci. Imię i kod wystarczą, żeby wczytać postać na każdym urządzeniu.']),
-        codeCard(r.player.name, r.player.idik, r.token ?? null, r.player.email),
+        codeCard(r.player.name, r.player.idik),
         el('p', { className: 'm-warn' }, [
-          'Zapisz kod, zrób zdjęcie albo wyślij go sobie na maila! Bez niego nie wczytasz postaci. Kod znajdziesz też w grze w menu ☰.',
+          'Zapisz kod, zrób zdjęcie albo wyślij go sobie (np. na WhatsAppie)! Bez niego nie wczytasz postaci. Kod znajdziesz też w grze w menu ☰.',
         ]),
         rememberForm(r.player.name, r.player.idik),
         button('Mam kod – graj', () => {
@@ -268,7 +268,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       }
     };
 
-    // Opened from the QR code / e-mail link: load that character right away.
+    // Opened from the QR code / shared link: load that character right away.
     const fromLink = codeFromLink() ?? reopen;
     if (fromLink) {
       screen(el('p', {}, [`Wczytuję postać ${fromLink.name}…`]));

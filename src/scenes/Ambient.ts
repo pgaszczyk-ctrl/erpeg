@@ -90,6 +90,18 @@ export class Orchards {
     }
   }
 
+  /** Fruit trees near (x, y), with the width of their crown in px (sprites not needed). */
+  treesNear(x: number, y: number, r: number) {
+    const out: { x: number; y: number; w: number }[] = [];
+    for (const a of this.city.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).areas) {
+      if (!FRUIT_AREAS[a.kind]) continue;
+      for (const t of this.treesOf(a, this.city.areas.indexOf(a))) {
+        if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit], 'full').width });
+      }
+    }
+    return out;
+  }
+
   /** Is a point inside a tree trunk? (for collisions) */
   blocked(x: number, y: number) {
     for (const t of this.active) if (Math.abs(t.x - x) < 3 && Math.abs(t.y - y) < 2.5) return true;

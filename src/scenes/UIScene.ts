@@ -20,6 +20,9 @@ export class UIScene extends Phaser.Scene {
   private mapBtn!: Phaser.GameObjects.Text;
   private charBtn!: Phaser.GameObjects.Text;
   private swordText!: Phaser.GameObjects.Text;
+  /** Fruit in the backpack: the game's own fruit pictures (emoji plums are missing on some phones). */
+  private fruitIcons: Phaser.GameObjects.Image[] = [];
+  private fruitTexts: Phaser.GameObjects.Text[] = [];
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
@@ -71,6 +74,12 @@ export class UIScene extends Phaser.Scene {
     this.swordText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
+    for (const tex of [TEX.fruitApple, TEX.fruitPlum, TEX.fruitGrape]) {
+      this.fruitIcons.push(this.add.image(0, 0, tex).setScale(this.ui).setOrigin(0.5, 0.5));
+      this.fruitTexts.push(
+        this.add.text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 }).setOrigin(0, 0.5),
+      );
+    }
     this.mapBtn = this.add
       .text(0, 0, '🗺', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
       .setOrigin(1, 0);
@@ -174,6 +183,14 @@ export class UIScene extends Phaser.Scene {
     this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
     this.charBtn.setPosition(width - pad - this.mapBtn.width - 4 * this.ui, pad + 17 * this.ui);
     this.swordText.setPosition(hx, pad + 10 * this.ui);
+    const fy = pad + 10 * this.ui + this.swordText.height + 3 * this.ui;
+    let fx = hx + 2 * this.ui;
+    this.fruitIcons.forEach((ic, i) => {
+      ic.setPosition(fx, fy);
+      const t = this.fruitTexts[i];
+      t.setPosition(fx + 5 * this.ui, fy);
+      fx += 5 * this.ui + t.width + 5 * this.ui;
+    });
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
     const wrap = Math.min(width - 40, 520);
@@ -202,7 +219,8 @@ export class UIScene extends Phaser.Scene {
     });
     this.coinText.setText(String(s.coins));
     this.expText.setText(`${s.exp} EXP`);
-    this.swordText.setText(`⚔ ${s.sword}\n${s.fruits}`);
+    this.swordText.setText(`⚔ ${s.sword}`);
+    s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;
     this.streetText.setText(s.street ?? '');
     this.goalText.setText(
@@ -375,7 +393,7 @@ export class UIScene extends Phaser.Scene {
       text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
       buttons: ['Wyjdź', 'Mój kod postaci', 'Graj dalej'],
       onChoose: (i) => {
-        if (i === 1) showCodeOverlay(session.name, session.idik, session.token || null, session.email);
+        if (i === 1) showCodeOverlay(session.name, session.idik);
         if (i !== 0) return;
         if (game.inCombat()) {
           this.toast('Nie możesz wyjść w trakcie walki!');

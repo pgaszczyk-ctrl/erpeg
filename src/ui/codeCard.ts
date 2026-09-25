@@ -1,8 +1,8 @@
 import QRCode from 'qrcode';
-import { sendCodeByEmail } from '../api';
 
 // The character's code: shown big, as a QR code (a link that opens the game
-// and loads the character), as a picture to save, and sent by e-mail.
+// and loads the character), as a picture to save, and shared to any app
+// (WhatsApp, SMS…) with the phone's share menu.
 
 /** Link that opens the game and loads this character. */
 export function codeLink(name: string, code: string) {
@@ -30,11 +30,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   return e;
 }
 
-/**
- * Everything about one character's code. `token` (a logged-in session) is
- * needed to send the e-mail; without it the e-mail part is left out.
- */
-export function codeCard(name: string, code: string, token: string | null, email?: string | null): HTMLElement {
+/** Everything about one character's code. */
+export function codeCard(name: string, code: string): HTMLElement {
   const link = codeLink(name, code);
   const qr = el('canvas', { className: 'm-qr' });
   QRCode.toCanvas(qr, link, { margin: 2, width: 220, color: { dark: '#000000', light: '#ffffff' } }).catch(() => qr.remove());
@@ -50,42 +47,6 @@ export function codeCard(name: string, code: string, token: string | null, email
     save,
   ];
 
-  if (token) {
-    const mail = el('input', {
-      type: 'email', placeholder: 'twoj@email.pl', autocomplete: 'email', spellcheck: false, value: email ?? '',
-    });
-    const msg = el('p', { className: 'm-error' });
-    const send: HTMLButtonElement = el('button', {
-      type: 'button', className: 'm-btn',
-      onclick: async () => {
-        msg.className = 'm-error';
-        msg.textContent = '';
-        if (!/^\S+@\S+\.\S+$/.test(mail.value.trim())) {
-          msg.textContent = 'Wpisz adres e-mail.';
-          return;
-        }
-        send.disabled = true;
-        try {
-          await sendCodeByEmail(token, mail.value.trim());
-          msg.className = 'm-ok';
-          msg.textContent = `Wysłane na ${mail.value.trim()}. Sprawdź też folder „spam”.`;
-        } catch (e) {
-          msg.textContent = (e as Error).message;
-        } finally {
-          send.disabled = false;
-        }
-      },
-    }, ['✉ Wyślij na maila']);
-    parts.push(
-      el('label', { className: 'm-field' }, [
-        el('span', {}, ['E-mail (nieobowiązkowo)']),
-        mail,
-        el('small', {}, ['Wyślemy imię, kod i kod QR. Nie zakładasz konta, adres służy tylko do tego.']),
-      ]),
-      send,
-      msg,
-    );
-  }
   return el('div', { className: 'm-card' }, parts);
 }
 
@@ -155,7 +116,7 @@ export function isCodeOpen() {
 }
 
 /** The code card as an overlay during the game (from the ☰ menu). */
-export function showCodeOverlay(name: string, code: string, token: string | null, email?: string | null) {
+export function showCodeOverlay(name: string, code: string) {
   open?.remove();
   const root = el('div', { id: 'codecard', className: 'm-screen' });
   const close = () => {
@@ -168,7 +129,7 @@ export function showCodeOverlay(name: string, code: string, token: string | null
   const box = el('div', { className: 'm-box' }, [
     el('h2', {}, ['Twój kod postaci']),
     el('p', {}, ['Imię i ten kod wystarczą, żeby wczytać postać na każdym urządzeniu.']),
-    codeCard(name, code, token, email),
+    codeCard(name, code),
     el('button', { type: 'button', className: 'm-btn m-primary', onclick: close }, ['Zamknij']),
   ]);
   root.append(box);

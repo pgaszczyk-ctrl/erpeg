@@ -76,8 +76,6 @@ export interface PlayerInfo {
   exp: number;
   dead: boolean;
   died_at: string | null;
-  /** Where the code was last sent, if anywhere. */
-  email?: string | null;
   /** Where it died (in `death_scale` pixels per metre), for the ghost map. */
   death_x?: number | null;
   death_y?: number | null;
@@ -126,20 +124,3 @@ export const api = {
   redeem: (token: string, missionId: string, code: string) =>
     rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),
 };
-
-/** Sends the character's name, code and QR code to an e-mail address. */
-export async function sendCodeByEmail(token: string, email: string) {
-  let res: Response;
-  try {
-    res = await fetch('https://iiffchuhrhsjjgmstypx.supabase.co/functions/v1/send-code', {
-      method: 'POST',
-      headers: { apikey: KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, email }),
-    });
-  } catch {
-    throw new Error('Brak połączenia z serwerem gry. Sprawdź internet.');
-  }
-  const body = await res.json().catch(() => null);
-  if (body?.error) throw new Error(body.error);
-  if (!res.ok) throw new Error(`Błąd serwera (${res.status})`);
-}
