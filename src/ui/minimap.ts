@@ -166,6 +166,19 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number) {
     ctx.fillStyle = '#1e1a24';
     ctx.fillText(m.done ? '✓' : '!', x, y + u);
   }
+  // Shops and schools, only where already explored.
+  ctx.font = `${Math.round(13 * u)}px sans-serif`;
+  for (const p of game.placeMarkers()) {
+    if (p.x < box.x0 || p.x > box.x1 || p.y < box.y0 || p.y > box.y1) continue;
+    if (!game.explored.hasCell(Math.floor(p.x / FOG_CELL), Math.floor(p.y / FOG_CELL))) continue;
+    const [x, y] = toS(p.x, p.y);
+    ctx.fillStyle = p.kind === 'shop' ? '#3f7fd8' : '#b84a3a';
+    ctx.fillRect(x - 8 * u, y - 8 * u, 16 * u, 16 * u);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.kind === 'shop' ? '⚔' : '✎', x, y + u);
+  }
+  ctx.font = `bold ${Math.round(16 * u)}px monospace`;
+
   const goal = game.goalPosition();
   if (goal) {
     const [x, y] = toS(goal.x, goal.y);

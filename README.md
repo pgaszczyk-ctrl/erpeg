@@ -22,7 +22,9 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 - Śmierć jest ostateczna: postać trafia na Tablicę Pamięci razem ze zdobytym doświadczeniem (EXP).
 - Z gry wychodzisz przez ☰ w lewym górnym rogu → „Wyjdź” (nie da się tego zrobić w trakcie walki). Jeśli zamkniesz okno bez wyjścia, postać zostaje bezbronna na ulicy przez 10 sekund.
 
-Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”.
+- Sklepy (niebieskie dachy, szyld z mieczem) w prawdziwych Biedronkach, Lidlach i Lewiatanach sprzedają lepsze miecze. Szkoły (czerwone dachy, szyld z książką) uczą walki mieczem: dłuższy zamach, a potem szybsze cięcia.
+
+Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Ceny broni i nauki są w `src/content/sklepy.ts`.
 
 ## Dla programisty
 

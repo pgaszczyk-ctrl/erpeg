@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CityMap, type Area, type Line, type Building } from './CityMap';
+import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 
 // Draws the city in square chunks (canvas textures) around the camera, in a
 // cartoon top-down style. Chunks are drawn on demand and recycled.
@@ -22,6 +22,8 @@ const ROAD_EDGE: Record<string, string> = {
   major: '#8a5a2e', medium: '#8f6034', minor: '#96683b', service: '#9c6f42', track: '#9c6f42',
   pedestrian: '#a89878', path: '#b88c55', steps: '#9a7a55',
 };
+const CAR_ROADS = new Set(['major', 'medium', 'minor', 'service']);
+const SIDEWALK = 2 * PX_PER_M; // 2 m each side
 const ROAD_ORDER = ['path', 'steps', 'track', 'service', 'pedestrian', 'minor', 'medium', 'major'];
 const ROOFS = ['#c75b4a', '#b5553c', '#a9644a', '#8d6e63', '#a1887f', '#7b8794', '#9c6b4e', '#6d7b8a', '#b0714f'];
 
@@ -155,7 +157,8 @@ function linePath(ctx: CanvasRenderingContext2D, pts: number[]) {
 }
 
 export function wallHeight(b: Building) {
-  return 8 + Math.min(b.levels || 1, 8) * 2;
+  // ~2 m per storey, but never so flat that the 3D look disappears.
+  return Math.max(4, Math.round((4 + Math.min(b.levels || 1, 8) * 2) * PX_PER_M));
 }
 
 // Texture keys must be unique for the whole game, across scene restarts.
@@ -171,8 +174,8 @@ export class MapRenderer {
   private chunks = new Map<string, Chunk>();
   private free: Chunk[] = [];
   private patterns?: Patterns;
-  /** Building addresses to highlight (mission buildings). */
-  highlight = new Set<Building>();
+  /** Buildings with special roof/wall colours (missions, shops, schools). */
+  highlight = new Map<Building, { roof: string; wall: string }>();
 
   constructor(private scene: Phaser.Scene, private map: CityMap) {
     scene.events.once('shutdown', () => this.destroy());
@@ -276,10 +279,22 @@ export class MapRenderer {
       ctx.stroke();
     }
     const roads = lines.filter((l) => ROAD_FILL[l.kind]).sort((a, b) => ROAD_ORDER.indexOf(a.kind) - ROAD_ORDER.indexOf(b.kind));
+    // Roads for cars get a stone sidewalk on both sides, so the road and its
+    // pavement read as one street.
+    for (const l of roads) {
+      if (!CAR_ROADS.has(l.kind)) continue;
+      linePath(ctx, l.pts);
+      ctx.strokeStyle = '#8f8570';
+      ctx.lineWidth = l.width + SIDEWALK * 2 + 2;
+      ctx.stroke();
+      ctx.strokeStyle = '#c9bd9f';
+      ctx.lineWidth = l.width + SIDEWALK * 2;
+      ctx.stroke();
+    }
     for (const l of roads) {
       linePath(ctx, l.pts);
       ctx.strokeStyle = ROAD_EDGE[l.kind];
-      ctx.lineWidth = l.width + (l.bridge ? 6 : 2);
+      ctx.lineWidth = l.width + (l.bridge ? 6 : 1.5);
       ctx.stroke();
     }
     for (const l of roads) this.paintRoad(ctx, l);
@@ -363,7 +378,7 @@ export class MapRenderer {
 
   private paintBuilding(ctx: CanvasRenderingContext2D, b: Building) {
     const h = wallHeight(b);
-    const special = this.highlight.has(b);
+    const special = this.highlight.get(b);
     // Walls: the footprint dropped by h, plus the outline.
     ringsPath(ctx, b.rings, 0, h);
     ctx.fillStyle = OUTLINE;
@@ -372,12 +387,12 @@ export class MapRenderer {
     ctx.stroke();
     for (let s = h; s > 0; s -= 2) {
       ringsPath(ctx, b.rings, 0, s);
-      ctx.fillStyle = special ? '#f3e2a0' : s > h / 2 ? '#d9c9a3' : '#eadcb8';
+      ctx.fillStyle = special ? special.wall : s > h / 2 ? '#d9c9a3' : '#eadcb8';
       ctx.fill('evenodd');
     }
     // Roof.
     ringsPath(ctx, b.rings);
-    ctx.fillStyle = special ? '#e8b923' : ROOFS[b.seed % ROOFS.length];
+    ctx.fillStyle = special ? special.roof : ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
     ctx.lineWidth = 2;
     ctx.strokeStyle = OUTLINE;

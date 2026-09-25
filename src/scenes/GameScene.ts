@@ -7,8 +7,10 @@ import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE } from '../content/fabula';
+import { BRONIE, WALKA_MIECZEM } from '../content/sklepy';
+import type { Place as CityPlace } from '../map/CityMap';
 import {
-  session, saveNow, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, currentSword, currentSwordSkill, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -24,13 +26,15 @@ const HEARTBEAT_MS = 3000;
 const LINGER_MS = 10000;
 const HIDE_IN = new Set(['forest', 'scrub', 'wetland']);
 // Feet collision box (half sizes) relative to the sprite centre.
-const FEET = { dy: 5, hw: 3, hh: 2 };
+const FEET = { dy: 5, hw: 2, hh: 1.5 };
 
 export interface HudState {
   hp: number;
   maxHp: number;
   coins: number;
   exp: number;
+  /** Sword name and skill level, for the HUD. */
+  sword: string;
   dead: boolean;
   /** Seconds left while the character is stuck after an unfinished session. */
   lingering: number | null;
@@ -93,7 +97,7 @@ export class GameScene extends Phaser.Scene {
     const { missions, missing } = resolveMissions(this.city);
     this.missions = missions;
     for (const rm of missions) {
-      if (rm.door.building) this.mapView.highlight.add(rm.door.building);
+      if (rm.door.building) this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
       // Above the fog: mission doors are always shown.
       const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(1_100_000);
       this.tweens.add({ targets: img, y: img.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
@@ -101,6 +105,16 @@ export class GameScene extends Phaser.Scene {
       if (missionState(rm.m) === 'active') this.startMissionGoal(rm);
     }
     this.refreshMarkers();
+
+    // Shops and schools: coloured roofs and signs (under the fog, so they
+    // are discovered by exploring).
+    for (const p of this.city.places) {
+      if (p.building) {
+        this.mapView.highlight.set(p.building, p.kind === 'shop' ? { roof: '#3f7fd8', wall: '#dbe6f5' } : { roof: '#b84a3a', wall: '#f0d9c8' });
+      }
+      this.add.image(p.door.x, p.door.y - 10, p.kind === 'shop' ? TEX.signShop : TEX.signSchool).setDepth(900_000);
+    }
+    this.applySkill();
 
     // Fixed enemy spots.
     for (const w of WROGOWIE) {
@@ -232,8 +246,8 @@ export class GameScene extends Phaser.Scene {
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
     for (const s of [...this.enemies]) {
-      if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius + 6) continue;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now)) this.onEnemyKilled(s);
+      if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + 6) continue;
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, currentSword().obrazenia)) this.onEnemyKilled(s);
     }
   }
 
@@ -415,17 +429,102 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkDoors() {
-    let near: ResolvedMission | null = null;
+    const fx = this.player.x;
+    const fy = this.player.y + FEET.dy;
+    let id: string | null = null;
+    let open: (() => void) | null = null;
     for (const rm of this.missions) {
-      if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, this.player.x, this.player.y + FEET.dy) < DOOR_RADIUS) near = rm;
+      if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
+        id = rm.m.id;
+        open = () => this.openMissionDialog(rm);
+      }
     }
-    const id = near?.m.id ?? null;
+    if (!id) {
+      for (const p of this.city.places) {
+        if (Math.abs(p.door.x - fx) > DOOR_RADIUS || Math.abs(p.door.y - fy) > DOOR_RADIUS) continue;
+        if (Phaser.Math.Distance.Between(p.door.x, p.door.y, fx, fy) < DOOR_RADIUS) {
+          id = p.id;
+          open = () => (p.kind === 'shop' ? this.openShop(p) : this.openSchool(p));
+        }
+      }
+    }
     if (id === this.nearDoor) return;
     this.nearDoor = id;
-    if (near) {
+    if (open) {
       this.save(); // entering a building is a save point
-      this.openMissionDialog(near);
+      open();
     }
+  }
+
+  /** Swing speed and reach from the sword-fighting level. */
+  private applySkill() {
+    const sk = currentSwordSkill();
+    this.player.attackCooldown = sk.przerwa;
+    this.player.reach = sk.zasieg;
+  }
+
+  private openShop(p: CityPlace) {
+    const mine = currentSword();
+    const idx = BRONIE.indexOf(mine);
+    const better = BRONIE.slice(idx + 1);
+    const text =
+      `Kowal za ladą ${p.name} poleca swój towar.\n\n` +
+      `Twój miecz: ${mine.nazwa} (obrażenia ${mine.obrazenia}).\nMasz ${session.coins} monet.` +
+      (better.length ? '' : '\n\nMasz już najlepszy miecz, jaki tu mają!');
+    this.dialog({
+      title: `🛒 ${p.name}`,
+      text,
+      buttons: [...better.map((b) => `${b.nazwa} – ${b.cena} monet (obrażenia ${b.obrazenia})`), 'Wyjdź'],
+      onChoose: (i) => {
+        const b = better[i];
+        if (!b) return;
+        if (session.coins < b.cena) {
+          this.toast(`Za mało monet – ${b.nazwa} kosztuje ${b.cena}.`);
+          return;
+        }
+        session.coins -= b.cena;
+        session.sword = b.id;
+        this.emitHud();
+        this.toast(`Kupiłeś: ${b.nazwa}!`);
+        this.save();
+      },
+    });
+  }
+
+  private openSchool(p: CityPlace) {
+    const lvl = session.swordSkill;
+    const next = WALKA_MIECZEM[lvl + 1];
+    const text =
+      `Nauczyciel szermierki wita cię w szkole.\n\nWalka mieczem: poziom ${lvl} – ${WALKA_MIECZEM[lvl].opis}.\nMasz ${session.coins} monet.` +
+      (next ? `\n\nNastępny poziom (${lvl + 1}): ${next.opis}.` : '\n\nNauczyłeś się już wszystkiego, co tu uczą!');
+    this.dialog({
+      title: `🏫 ${p.name}`,
+      text,
+      buttons: next ? [`Ucz się – ${next.cena} monet`, 'Wyjdź'] : ['Wyjdź'],
+      onChoose: (i) => {
+        if (!next || i !== 0) return;
+        if (session.coins < next.cena) {
+          this.toast(`Za mało monet – nauka kosztuje ${next.cena}.`);
+          return;
+        }
+        session.coins -= next.cena;
+        session.swordSkill = lvl + 1;
+        this.applySkill();
+        this.emitHud();
+        this.toast(`Walka mieczem: poziom ${lvl + 1}! ${next.opis}.`);
+        this.save();
+      },
+    });
+  }
+
+  /** For automated browser checks. */
+  debugSession() {
+    return session;
+  }
+
+  /** Shops and schools for the map screen. */
+  placeMarkers() {
+    return this.city.places.map((p) => ({ x: p.door.x, y: p.door.y, kind: p.kind }));
   }
 
   private openMissionDialog(rm: ResolvedMission) {
@@ -529,6 +628,7 @@ export class GameScene extends Phaser.Scene {
       maxHp: PLAYER.maxHp,
       coins: session.coins,
       exp: session.exp,
+      sword: `${currentSword().nazwa} · walka ${session.swordSkill}`,
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),

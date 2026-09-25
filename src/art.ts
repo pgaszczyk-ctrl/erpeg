@@ -20,6 +20,8 @@ export const TEX = {
   marker: 'marker',
   markerDone: 'marker-done',
   arrow: 'arrow',
+  signShop: 'sign-shop',
+  signSchool: 'sign-school',
 } as const;
 
 // Tile indices in the 'tiles' texture.
@@ -400,7 +402,38 @@ function drawArrow(scene: Phaser.Scene) {
   tex.refresh();
 }
 
+// Hanging signs over shop and school doors.
+function drawSigns(scene: Phaser.Scene) {
+  {
+    // Shop: a sword on a blue sign.
+    const { tex, ctx } = canvasTexture(scene, TEX.signShop, 14, 12);
+    px(ctx, 0, 0, 14, 12, OUTLINE);
+    px(ctx, 1, 1, 12, 10, '#3f7fd8');
+    px(ctx, 2, 2, 10, 1, '#7fb4f0');
+    px(ctx, 6, 3, 2, 6, '#e8e8f0');
+    px(ctx, 4, 8, 6, 1, '#f7c531');
+    px(ctx, 6, 9, 2, 2, '#8a5a2b');
+    tex.refresh();
+  }
+  {
+    // School: an open book on a red sign.
+    const { tex, ctx } = canvasTexture(scene, TEX.signSchool, 14, 12);
+    px(ctx, 0, 0, 14, 12, OUTLINE);
+    px(ctx, 1, 1, 12, 10, '#b84a3a');
+    px(ctx, 2, 2, 10, 1, '#e07a66');
+    px(ctx, 3, 4, 4, 5, '#fff6e0');
+    px(ctx, 7, 4, 4, 5, '#f0e2c0');
+    px(ctx, 6, 4, 2, 5, OUTLINE);
+    px(ctx, 4, 5, 2, 1, '#888');
+    px(ctx, 8, 5, 2, 1, '#888');
+    px(ctx, 4, 7, 2, 1, '#888');
+    px(ctx, 8, 7, 2, 1, '#888');
+    tex.refresh();
+  }
+}
+
 export function createArt(scene: Phaser.Scene) {
+  drawSigns(scene);
   drawMarker(scene, TEX.marker, false);
   drawMarker(scene, TEX.markerDone, true);
   drawArrow(scene);

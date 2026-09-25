@@ -10,7 +10,7 @@ import { PX_PER_M } from './CityMap';
 // "Seen before" is kept in 8 px cells, grouped in 64x64-cell chunks, and
 // saved with the character.
 
-export const FOG_CELL = 8; // world px
+export const FOG_CELL = 4; // world px
 const CHUNK_CELLS = 64;
 
 const VIEW_RANGE = 125; // px, in the looking direction
@@ -149,10 +149,14 @@ export class FogView {
   update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[]) {
     const v = cam.worldView;
     // Cell-aligned area a bit larger than the view.
-    const gx0 = Math.floor(v.x / FOG_CELL) - 2;
-    const gy0 = Math.floor(v.y / FOG_CELL) - 2;
-    const gw = Math.ceil(v.width / FOG_CELL) + 5;
-    const gh = Math.ceil(v.height / FOG_CELL) + 5;
+    // Generous margin: the camera eases after the hero, so the view can be
+    // ahead of last frame's worldView.
+    const mx = Math.ceil(v.width / 3 / FOG_CELL) + 2;
+    const my = Math.ceil(v.height / 3 / FOG_CELL) + 2;
+    const gx0 = Math.floor(v.x / FOG_CELL) - mx;
+    const gy0 = Math.floor(v.y / FOG_CELL) - my;
+    const gw = Math.ceil(v.width / FOG_CELL) + 2 * mx + 1;
+    const gh = Math.ceil(v.height / FOG_CELL) + 2 * my + 1;
 
     // 1) Explored cells: grey; unexplored: black. One pixel per cell.
     if (this.cells.width !== gw || this.cells.height !== gh) {

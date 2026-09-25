@@ -14,6 +14,7 @@ export class UIScene extends Phaser.Scene {
   private expText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
   private mapBtn!: Phaser.GameObjects.Text;
+  private swordText!: Phaser.GameObjects.Text;
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
@@ -53,6 +54,9 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
 
+    this.swordText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
+      .setOrigin(0, 0);
     this.mapBtn = this.add
       .text(0, 0, '🗺', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
       .setOrigin(1, 0);
@@ -120,6 +124,7 @@ export class UIScene extends Phaser.Scene {
     this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
     this.expText.setPosition(width - pad, pad + 9 * this.ui);
     this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
+    this.swordText.setPosition(hx, pad + 10 * this.ui);
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
     const wrap = Math.min(width - 40, 520);
@@ -144,6 +149,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.coinText.setText(String(s.coins));
     this.expText.setText(`${s.exp} EXP`);
+    this.swordText.setText(`⚔ ${s.sword}`);
     this.hud = s;
     this.streetText.setText(s.street ?? '');
     this.goalText.setText(
@@ -212,7 +218,11 @@ export class UIScene extends Phaser.Scene {
     const title = this.add.text(x + 16, 0, d.title, { fontFamily: 'monospace', fontSize: '20px', color: '#f7c531', wordWrap: { width: w - 32 } });
     const body = this.add.text(x + 16, 0, d.text, { fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', wordWrap: { width: w - 32 }, lineSpacing: 4 });
     const btnH = 44;
-    const h = 16 + title.height + 10 + body.height + 18 + btnH + 16;
+    // Up to two buttons side by side; longer lists (a shop) one under another.
+    const stacked = d.buttons.length > 2;
+    const rows = stacked ? d.buttons.length : 1;
+    const btnsH = rows * btnH + (rows - 1) * 8;
+    const h = 16 + title.height + 10 + body.height + 18 + btnsH + 16;
     const y = Math.max(12, height - h - (this.touch ? 150 : 40));
     title.setY(y + 16);
     body.setY(title.y + title.height + 10);
@@ -220,12 +230,16 @@ export class UIScene extends Phaser.Scene {
     const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
     const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
     this.dialogButtons = [];
-    const bw = (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
+    const bw = stacked ? w - 32 : (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
+    const last = d.buttons.length - 1;
     d.buttons.forEach((label, i) => {
-      const bx = x + 16 + i * (bw + 12);
-      const by = y + h - 16 - btnH;
-      const rect = this.add.rectangle(bx, by, bw, btnH, i === 0 ? 0x3fa34d : 0x4a4a55).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
-      const text = this.add.text(bx + bw / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: '17px', color: '#ffffff' }).setOrigin(0.5);
+      const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
+      const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
+      const color = stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
+      const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
+      const text = this.add
+        .text(bx + bw / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: stacked ? '15px' : '17px', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 } })
+        .setOrigin(0.5);
       items.push(rect, text);
       this.dialogButtons.push({ rect, index: i });
     });
@@ -248,7 +262,8 @@ export class UIScene extends Phaser.Scene {
     }
     if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
     let choice = -1;
-    if (x < 0) choice = 0; // keyboard: Space/Enter picks the first button
+    // Keyboard: Space/Enter picks the first button, or "Wyjdź" in a long list.
+    if (x < 0) choice = this.dialogButtons.length > 2 ? this.dialogButtons.length - 1 : 0;
     for (const b of this.dialogButtons) if (b.rect.getBounds().contains(x, y)) choice = b.index;
     if (choice < 0) return;
     const choose = this.dialogChoose;

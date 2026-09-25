@@ -4,7 +4,7 @@
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
-export const PX_PER_M = 3.2;
+export const PX_PER_M = 1.6;
 
 // Widths in metres of line features.
 const LINE_WIDTH_M: Record<string, number> = {
@@ -36,7 +36,17 @@ type RawMap = {
   areas: [string, ...number[][]][];
   lines: [string, number, number[], string | 0][];
   buildings: [number[][], string | 0, string | 0, number][];
+  pois?: [string, string, number, number, string | 0][];
 };
+
+/** A shop or school on the map, with the building it is in and its door. */
+export interface Place {
+  kind: 'shop' | 'school';
+  name: string;
+  id: string;
+  building: Building | null;
+  door: { x: number; y: number };
+}
 
 const CELL = 256; // px
 
@@ -146,6 +156,7 @@ export class CityMap {
   private boundaryCells = new Map<number, 0 | 1 | 2>(); // 0 out, 1 in, 2 edge
   private byAddress = new Map<string, Building>();
   private bounds: RawMap['bounds'];
+  readonly places: Place[] = [];
 
   constructor(raw: RawMap) {
     this.bounds = raw.bounds;
@@ -174,7 +185,7 @@ export class CityMap {
         levels,
         seed: i * 2654435761 >>> 0,
         ...b,
-        y1: b.y1 + 40,
+        y1: b.y1 + 20,
       };
     });
 
@@ -184,6 +195,33 @@ export class CityMap {
     for (const b of this.buildings) for (const a of b.addresses) {
       const key = normAddress(a);
       if (!this.byAddress.has(key)) this.byAddress.set(key, b);
+    }
+
+    // Shops and schools: inside a building, or the nearest one close by.
+    const seen = new Set<Building>();
+    for (const [kind, name, ux, uy, addr] of raw.pois ?? []) {
+      const x = ux * k;
+      const y = uy * k;
+      let b = this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
+      if (!b) {
+        let best = 40 * PX_PER_M;
+        for (const c of this.buildingGrid.query({ x0: x - best, y0: y - best, x1: x + best, y1: y + best })) {
+          const d = Math.hypot((c.x0 + c.x1) / 2 - x, (c.y0 + c.y1 - 20) / 2 - y);
+          if (d < best) {
+            best = d;
+            b = c;
+          }
+        }
+      }
+      if (b && seen.has(b)) continue;
+      if (b) seen.add(b);
+      this.places.push({
+        kind: kind as Place['kind'],
+        name,
+        id: `${kind}:${Math.round(ux)}:${Math.round(uy)}`,
+        building: b,
+        door: b ? this.entranceOf(b) : { x, y },
+      });
     }
   }
 
@@ -309,7 +347,7 @@ export class CityMap {
       const t = rand();
       const x = l.pts[i] + (l.pts[i + 2] - l.pts[i]) * t;
       const y = l.pts[i + 1] + (l.pts[i + 3] - l.pts[i + 1]) * t;
-      if (this.isFree(x, y, 6, 6)) return { x, y };
+      if (this.isFree(x, y, 4, 4)) return { x, y };
     }
     return { x: this.width / 2, y: this.height / 2 };
   }
@@ -326,8 +364,8 @@ export class CityMap {
       const ny = r[i] - r[j];
       const nl = Math.hypot(nx, ny) || 1;
       for (const s of [1, -1]) {
-        const px = mx + (nx / nl) * 10 * s;
-        const py = my + (ny / nl) * 10 * s;
+        const px = mx + (nx / nl) * 6 * s;
+        const py = my + (ny / nl) * 6 * s;
         if (this.isBlocked(px, py)) continue;
         let d = Infinity;
         for (const l of this.lineGrid.at(px, py)) if (ROAD_KINDS.has(l.kind)) d = Math.min(d, distToPolyline(l.pts, px, py));
@@ -362,7 +400,7 @@ export class CityMap {
     const n = l.pts.length / 2;
     for (let k = 0; k < n; k++) {
       const i = ((Math.floor(n / 2) + k) % n) * 2;
-      if (this.isFree(l.pts[i], l.pts[i + 1], 6, 6)) return { x: l.pts[i], y: l.pts[i + 1] };
+      if (this.isFree(l.pts[i], l.pts[i + 1], 4, 4)) return { x: l.pts[i], y: l.pts[i + 1] };
     }
     return { x: l.pts[0], y: l.pts[1] };
   }

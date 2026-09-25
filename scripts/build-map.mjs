@@ -124,6 +124,34 @@ const areas = [];
 const lines = [];
 const buildings = [];
 const addrNodes = [];
+const pois = [];
+
+// Shops of these chains become in-game shops; schools become skill schools.
+const SHOP_CHAINS = [
+  ['Biedronka', /biedronka/i],
+  ['Lidl', /lidl/i],
+  ['Lewiatan', /lewiatan/i],
+  ['Delikatesy Centrum', /delikatesy\s*centrum/i],
+];
+function poiOf(t) {
+  if (t.shop && ['supermarket', 'convenience', 'discount'].includes(t.shop)) {
+    const label = `${t.brand || ''} ${t.name || ''}`;
+    const chain = SHOP_CHAINS.find(([, re]) => re.test(label));
+    if (chain) return ['shop', chain[0]];
+  }
+  // Real schools only: not driving or language schools.
+  if (t.amenity === 'school' && t.name && /szko|liceum|technikum|gimnazjum|zespół|zespol|school/i.test(t.name) && !/auto|jazd|język|jezyk|tańc|tanc|muzy/i.test(t.name)) {
+    return ['school', t.name];
+  }
+  return null;
+}
+function centroidLL(g) {
+  if (g.type === 'Point') return g.coordinates;
+  const r = g.type === 'LineString' ? g.coordinates : polygonRings(g)[0];
+  let x = 0, y = 0;
+  for (const [lon, lat] of r) { x += lon; y += lat; }
+  return [x / r.length, y / r.length];
+}
 
 const address = (t) => {
   const street = t['addr:street'] || t['addr:place'];
@@ -137,6 +165,9 @@ for (const f of features) {
   if (!g || t.boundary === 'administrative') continue;
   const fp = firstPoint(g);
   if (!fp || !insideCity(proj(fp))) continue;
+
+  const poi = poiOf(t);
+  if (poi) pois.push({ kind: poi[0], name: poi[1], p: proj(centroidLL(g)), a: address(t) });
 
   if (g.type === 'Point') {
     const a = address(t);
@@ -161,6 +192,9 @@ for (const f of features) {
       }
       continue;
     }
+    // Sidewalks and crossings drawn as separate paths along roads only make a
+    // mess at game scale: the road itself is drawn wide enough instead.
+    if (t.footway === 'sidewalk' || t.footway === 'crossing' || t.path === 'sidewalk' || t.cycleway === 'crossing') continue;
     const cls = ROAD[t.highway];
     if (!cls || t.tunnel === 'yes' || (t.access === 'private' && cls === 'service')) continue;
     const l = encode(g.coordinates, false);
@@ -250,9 +284,11 @@ const out = {
   areas: areas.map((a) => [a.kind, ...a.rings]),
   lines: lines.map((l) => [l.kind, l.bridge | (l.pass << 1), l.pts, l.name || 0]),
   buildings: buildings.map((b) => [b.rings, b.a || 0, b.name || 0, b.levels]),
+  // [kind, name, x, y, address]
+  pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0]),
 };
 mkdirSync('public/map', { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W}x${H} m, ${pois.filter((p) => p.kind === 'shop').length} shops, ${pois.filter((p) => p.kind === 'school').length} schools, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

@@ -27,6 +27,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   hp = PLAYER.maxHp;
   facing = new Phaser.Math.Vector2(0, 1);
   private lastAttack = -Infinity;
+  /** Set from the sword-fighting skill (content/sklepy.ts). */
+  attackCooldown = PLAYER.attackCooldown;
+  reach = 1;
   private invulnerableUntil = 0;
   private stunnedUntil = 0;
 
@@ -65,7 +68,7 @@ export class Player extends Phaser.GameObjects.Sprite {
 
   /** Returns the centre of the sword swing, or null if still on cooldown. */
   tryAttack(now: number): Phaser.Math.Vector2 | null {
-    if (now - this.lastAttack < PLAYER.attackCooldown || now < this.stunnedUntil) return null;
+    if (now - this.lastAttack < this.attackCooldown || now < this.stunnedUntil) return null;
     this.lastAttack = now;
 
     // Snap the swing to the 4 main directions so it matches the sprite.
@@ -73,14 +76,14 @@ export class Player extends Phaser.GameObjects.Sprite {
       this.dirName === 'side'
         ? new Phaser.Math.Vector2(Math.sign(this.facing.x), 0)
         : new Phaser.Math.Vector2(0, Math.sign(this.facing.y));
-    const hit = new Phaser.Math.Vector2(this.x, this.y + 2).add(snap.clone().scale(PLAYER.attackReach));
+    const hit = new Phaser.Math.Vector2(this.x, this.y + 2).add(snap.clone().scale(PLAYER.attackReach * this.reach));
 
     const slash = this.scene.add.image(hit.x, hit.y, TEX.slash).setDepth(this.depth + 1);
-    slash.setRotation(snap.angle());
+    slash.setRotation(snap.angle()).setScale(this.reach);
     this.scene.tweens.add({
       targets: slash,
       alpha: 0,
-      scale: 1.2,
+      scale: 1.2 * this.reach,
       duration: 160,
       onComplete: () => slash.destroy(),
     });

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 
 export const SLIME = {
-  hp: 2,
+  hp: 3,
   wanderSpeed: 22,
   chaseSpeed: 42,
   sightRange: 70,
@@ -66,9 +66,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
   }
 
   /** Returns true if this hit killed the slime. */
-  hit(from: Phaser.Math.Vector2, now: number): boolean {
+  hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (this.isDead) return false;
-    this.hp -= 1;
+    this.hp -= damage;
     this.chasing = true;
     this.stunnedUntil = now + 300;
     const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(200);

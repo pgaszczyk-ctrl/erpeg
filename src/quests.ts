@@ -2,6 +2,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot } from './api';
 import { PX_PER_M } from './map/CityMap';
+import { BRONIE, WALKA_MIECZEM } from './content/sklepy';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -22,6 +23,8 @@ export const session = {
   hp: MAX_HP,
   missions: {} as Record<string, MissionState>,
   fog: undefined as SaveData['fog'],
+  sword: BRONIE[0].id,
+  swordSkill: 0,
   /** Last known state of a session that was closed without "Wyjdź". */
   abandoned: null as Snapshot | null,
 };
@@ -37,6 +40,8 @@ export function startSession(r: LoginResult) {
   session.startY = p.start_y * k;
   session.fog = p.save.fog;
   session.coins = p.save.coins ?? 0;
+  session.sword = BRONIE.some((b) => b.id === p.save.sword) ? p.save.sword! : BRONIE[0].id;
+  session.swordSkill = Math.max(0, Math.min(WALKA_MIECZEM.length - 1, p.save.swordSkill ?? 0));
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
@@ -56,8 +61,19 @@ export function startSession(r: LoginResult) {
 /** Sends the current progress to the server. */
 export function saveNow(hp: number) {
   session.hp = hp;
-  const data: SaveData = { coins: session.coins, hp, missions: session.missions, fog: session.fog };
+  const data: SaveData = {
+    coins: session.coins, hp, missions: session.missions, fog: session.fog,
+    sword: session.sword, swordSkill: session.swordSkill,
+  };
   return api.save(session.token, data, session.exp);
+}
+
+export function currentSword() {
+  return BRONIE.find((b) => b.id === session.sword) ?? BRONIE[0];
+}
+
+export function currentSwordSkill() {
+  return WALKA_MIECZEM[session.swordSkill] ?? WALKA_MIECZEM[0];
 }
 
 export function missionState(m: Misja): MissionState {

@@ -28,6 +28,10 @@ export interface SaveData {
   missions?: Record<string, 'new' | 'active' | 'goal' | 'done'>;
   /** Explored map (fog of war), see Fog.serialize(). */
   fog?: { s: number; chunks: Record<string, string> };
+  /** Id of the sword in use (see content/sklepy.ts). */
+  sword?: string;
+  /** Level of the sword-fighting skill. */
+  swordSkill?: number;
 }
 
 export interface PlayerInfo {
