@@ -24,25 +24,27 @@ export interface Przedmiot {
   gdzie?: 'sklep' | 'biblioteka';
 }
 
+// Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
+// ok. 50×, żeby na dobry sprzęt trzeba było popracować (owoce, zlecenia).
 export const PRZEDMIOTY: Przedmiot[] = [
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
-  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 2, cena: 60 },
-  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 3, cena: 180 },
-  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 5, cena: 450 },
+  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 2, cena: 1500 },
+  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 3, cena: 6000 },
+  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 5, cena: 22500 },
   // Broń dystansowa (przytrzymaj i celuj)
-  { id: 'luk', nazwa: 'Łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 2, cena: 120 },
-  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 3, cena: 320 },
-  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'dystans', rodzaj: 'magia', moc: 2, cena: 90, gdzie: 'biblioteka' },
-  { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 260, gdzie: 'biblioteka' },
-  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 5, cena: 520, gdzie: 'biblioteka' },
+  { id: 'luk', nazwa: 'Łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 2, cena: 3000 },
+  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 3, cena: 12000 },
+  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'dystans', rodzaj: 'magia', moc: 2, cena: 2000, gdzie: 'biblioteka' },
+  { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka' },
+  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 5, cena: 26000, gdzie: 'biblioteka' },
   // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
-  { id: 'skorzana_zbroja', nazwa: 'Skórzana zbroja', miejsce: 'zbroja', moc: 2, cena: 80 },
-  { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 240 },
-  { id: 'skorzany_helm', nazwa: 'Skórzany hełm', miejsce: 'helm', moc: 1, cena: 40 },
-  { id: 'zelazny_helm', nazwa: 'Żelazny hełm', miejsce: 'helm', moc: 2, cena: 130 },
-  { id: 'skorzane_buty', nazwa: 'Skórzane buty', miejsce: 'buty', moc: 1, cena: 30 },
-  { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 110 },
+  { id: 'skorzana_zbroja', nazwa: 'Skórzana zbroja', miejsce: 'zbroja', moc: 2, cena: 1600 },
+  { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
+  { id: 'skorzany_helm', nazwa: 'Skórzany hełm', miejsce: 'helm', moc: 1, cena: 800 },
+  { id: 'zelazny_helm', nazwa: 'Żelazny hełm', miejsce: 'helm', moc: 2, cena: 5200 },
+  { id: 'skorzane_buty', nazwa: 'Skórzane buty', miejsce: 'buty', moc: 1, cena: 600 },
+  { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
 ];
 
 export const MIEJSCA: Record<Miejsce, string> = {
