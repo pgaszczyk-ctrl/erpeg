@@ -28,14 +28,17 @@ export interface SaveData {
   missions?: Record<string, 'new' | 'active' | 'goal' | 'done'>;
   /** Explored map (fog of war), see Fog.serialize(). */
   fog?: { s: number; chunks: Record<string, string> };
-  /** Id of the sword in use (see content/sklepy.ts). */
+  /** Old saves only: the sword in use and the school level. */
   sword?: string;
-  /** Level of the sword-fighting skill. */
   swordSkill?: number;
   /** Random missions taken but not finished yet (see content/zlecenia.ts). */
   gen?: import('./content/fabula').Misja[];
-  /** Fruit picked and not sold yet. */
+  /** Old saves only: fruit counts (now in the backpack). */
   fruits?: Partial<Record<import('./content/sklepy').Owoc, number>>;
+  equip?: import('./inventory').Gear['equip'];
+  bag?: import('./inventory').Slot[];
+  skills?: import('./inventory').Gear['skills'];
+  magic?: boolean;
 }
 
 export interface PlayerInfo {

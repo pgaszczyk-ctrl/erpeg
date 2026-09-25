@@ -26,8 +26,12 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 - Kościoły (fioletowe dachy) i urzędy (szare) dają losowe zlecenia, a przy każdym uruchomieniu gry czeka tam nowe. Komendy policji (granatowe) dają listy gończe: złoczyńca ukryty gdzieś w okolicy albo wielki glut. Szpitale (białe) leczą za darmo.
 - Na działkach, trawnikach i w parkach rosną jabłonie, śliwy i winorośl. Uderzenie mieczem strąca owoc (2–5 z drzewa), a owoce sprzedaje się w sklepie. Drzewa odrastają przy każdym uruchomieniu gry.
 - W wąskich uliczkach i na ścieżkach czają się wrogowie (do 20 na kilometr kwadratowy). Chodzą grupkami: gdy jeden zacznie gonić, dołączają sąsiedzi.
+- Postać zaczyna jako wojownik z kijkiem. Dotknięcie lub klik to atak bronią z ręki. Przytrzymanie i wycelowanie (przesunięcie palca albo myszka) to strzał z łuku albo zaklęcie.
+- Łuk i zbroje kupuje się w sklepach. W bibliotece (zielony dach) można nauczyć się magii i kupić różdżkę, kulę albo księgę.
+- Umiejętności (walka wręcz, łucznictwo, magia) rosną od trafień: 100 do poziomu 2, potem każdy poziom 1,5 raza więcej, maksimum 10. Każdy poziom to szybsze ataki. Na boiskach stoją lalka, tarcza i kryształ do treningu, a w szkołach można wykupić lekcje.
+- Karta postaci (👤 albo klawisz C) pokazuje pieniądze, założone rzeczy, plecak na 5 miejsc (owoce do 99 w jednym miejscu) i umiejętności.
 
-Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Ceny broni i nauki są w `src/content/sklepy.ts`, a szablony losowych zleceń w `src/content/zlecenia.ts`.
+Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Przedmioty i umiejętności są w `src/content/przedmioty.ts`, ceny owoców w `src/content/sklepy.ts`, a szablony losowych zleceń w `src/content/zlecenia.ts`.
 
 ## Dla programisty
 

@@ -60,6 +60,9 @@ export const POLICJA = {
   /** Nagrody w monetach (EXP tyle samo). */
   nagrodaBandyta: 60,
   nagrodaPotwor: 90,
+  /** Szansa, że policja da też przedmiot (np. łuk) i jakie przedmioty. */
+  szansaNaPrzedmiot: 0.35,
+  przedmioty: ['luk', 'skorzana_zbroja', 'skorzany_helm', 'skorzane_buty'],
 };
 
 /** Nagroda za zwykłe zlecenia: podstawa + dodatek za każde 100 m drogi. */

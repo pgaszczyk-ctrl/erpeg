@@ -7,11 +7,17 @@ import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE, type RodzajWroga } from '../content/fabula';
-import { BRONIE, WALKA_MIECZEM, OWOCE, type Owoc } from '../content/sklepy';
-import { Orchards, StreetEnemies } from './Ambient';
+import { OWOCE, type Owoc } from '../content/sklepy';
+import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
+import {
+  gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel,
+  meleeDamage, rangedWeapon, blockChance, availableSkills, owns,
+} from '../inventory';
+import { hold, mouse, consumeRelease } from '../controls';
+import { Orchards, StreetEnemies, Training } from './Ambient';
 import type { Place as CityPlace } from '../map/CityMap';
 import {
-  session, saveNow, currentSword, currentSwordSkill, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -25,6 +31,12 @@ const HEARTBEAT_MS = 3000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
 const LINGER_MS = 10000;
 const HIDE_IN = new Set(['forest', 'scrub', 'wetland']);
+/** Hold the attack this long (ms) to aim a ranged attack. */
+const AIM_DELAY = 250;
+const ARROW_SPEED = 260;
+const ARROW_RANGE = 170;
+const MAGIC_SPEED = 180;
+const MAGIC_RANGE = 140;
 /** How far from the given spot a wanted villain may hide (px). */
 const SEARCH_RADIUS = 90;
 const PLACE_LOOK = {
@@ -34,6 +46,7 @@ const PLACE_LOOK = {
   office: { roof: '#8d8f99', wall: '#eeeef2', sign: TEX.signOffice },
   hospital: { roof: '#f2f2f2', wall: '#ffe6e6', sign: TEX.signHospital },
   police: { roof: '#2b3f8a', wall: '#d7def2', sign: TEX.signPolice },
+  library: { roof: '#2f8a6a', wall: '#d9efe6', sign: TEX.signLibrary },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -62,6 +75,15 @@ export interface DialogRequest {
   onChoose: (index: number) => void;
 }
 
+interface Shot {
+  sprite: Phaser.GameObjects.Image;
+  vx: number;
+  vy: number;
+  left: number;
+  damage: number;
+  skill: 'luk' | 'magia';
+}
+
 type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean };
 
 export class GameScene extends Phaser.Scene {
@@ -76,6 +98,10 @@ export class GameScene extends Phaser.Scene {
   private hudTimer = 0;
   private lingerUntil = 0;
   private orchards!: Orchards;
+  private training!: Training;
+  private shots: Shot[] = [];
+  private aimLine!: Phaser.GameObjects.Graphics;
+  private lastShot = -Infinity;
   private streets!: StreetEnemies;
   explored = new Explored();
   private fogView!: FogView;
@@ -127,6 +153,9 @@ export class GameScene extends Phaser.Scene {
     this.applySkill();
 
     this.orchards = new Orchards(this, this.city);
+    this.training = new Training(this, this.city);
+    this.shots = [];
+    this.aimLine = this.add.graphics().setDepth(1_050_000);
     this.streets = new StreetEnemies(
       this.city,
       (sp) => {
@@ -214,9 +243,12 @@ export class GameScene extends Phaser.Scene {
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
     }
+    this.updateRanged(now, lingering);
+    this.updateShots(dt);
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
+    this.training.update(this.player.x, this.player.y, now);
     this.streets.update(this.player.x, this.player.y, now);
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
@@ -230,7 +262,9 @@ export class GameScene extends Phaser.Scene {
       s.updateLook();
       s.setDepth(s.y);
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
-        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, s.kind.damage)) {
+        const blocked = Math.random() < blockChance();
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : s.kind.damage)) {
+          if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
           this.emitHud();
           if (this.player.isDead) this.onPlayerDeath();
         }
@@ -275,7 +309,8 @@ export class GameScene extends Phaser.Scene {
     const dx = a.vel.x * dt;
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
-    const free = (x: number, y: number) => this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y);
+    const free = (x: number, y: number) =>
+      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.training.blocked(x, y);
     if (dx && free(a.x + dx, fy)) a.x += dx;
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }
@@ -283,13 +318,20 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ combat
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
+    let hits = 0;
     for (const s of [...this.enemies]) {
       if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size) continue;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, currentSword().obrazenia)) this.onEnemyKilled(s);
+      hits++;
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
     }
     // Fruit trees: each swing knocks one fruit down.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
-    if (tree && this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
+    if (tree) {
+      hits++;
+      if (this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
+    }
+    if (this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz')) hits++;
+    if (hits) this.practiced('miecz');
   }
 
   private dropFruit(x: number, y: number, fruit: Owoc) {
@@ -367,7 +409,12 @@ export class GameScene extends Phaser.Scene {
     if (kind === 'heart') this.player.heal(2);
     else if (kind.startsWith('fruit:')) {
       const f = kind.slice(6) as Owoc;
-      session.fruits[f] = (session.fruits[f] ?? 0) + 1;
+      if (!addFruit(f)) {
+        // Stays on the ground; don't keep complaining every frame.
+        if (!item.getData('warned')) this.toast('Plecak pełny!', 1200);
+        item.setData('warned', true);
+        return;
+      }
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
     } else session.coins += 1;
     this.removePickup(item);
@@ -529,6 +576,7 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'shop') return this.openShop(p);
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
+    if (p.kind === 'library') return this.openLibrary(p);
     // Church, office, police: a random mission.
     const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
     if (known) return this.openMissionDialog(known);
@@ -561,78 +609,228 @@ export class GameScene extends Phaser.Scene {
 
   /** Swing speed and reach from the sword-fighting level. */
   private applySkill() {
-    const sk = currentSwordSkill();
-    this.player.attackCooldown = sk.przerwa;
-    this.player.reach = sk.zasieg;
+    const lvl = skillLevel('miecz');
+    this.player.attackCooldown = cooldown('miecz');
+    this.player.reach = 1 + (lvl - 1) * 0.04;
+  }
+
+  /** One use of a skill; tells the player when it levels up. */
+  private practiced(skill: Umiejetnosc, points = 1) {
+    const up = practice(skill, points);
+    if (up) {
+      this.toast(`${UMIEJETNOSCI[skill].nazwa}: poziom ${up}! Szybsze ataki.`, 2200);
+      this.applySkill();
+      this.emitHud();
+    }
+  }
+
+  // ------------------------------------------------------------------ ranged
+
+  /** Direction of the current aim, or null when not aiming. */
+  private aimDirection(): { x: number; y: number } | null {
+    if (!hold.active) return null;
+    const held = performance.now() - hold.start;
+    if (held < AIM_DELAY && !hold.dragged) return null;
+    return this.dirFor(hold.mode, hold.dx, hold.dy, hold.dragged);
+  }
+
+  private dirFor(mode: 'touch' | 'mouse' | 'key', dx: number, dy: number, dragged: boolean) {
+    let v = { x: this.player.facing.x, y: this.player.facing.y };
+    if (mode === 'touch' && dragged) v = { x: dx, y: dy };
+    if (mode === 'mouse') {
+      const cam = this.cameras.main;
+      v = { x: mouse.x - (this.player.x - cam.worldView.x) * cam.zoom, y: mouse.y - (this.player.y - cam.worldView.y) * cam.zoom };
+    }
+    const l = Math.hypot(v.x, v.y) || 1;
+    return { x: v.x / l, y: v.y / l };
+  }
+
+  /** Press and hold to aim, let go to shoot (bow or magic). */
+  private updateRanged(now: number, lingering: boolean) {
+    const weapon = rangedWeapon();
+    const aim = weapon && !lingering ? this.aimDirection() : null;
+    this.aimLine.clear();
+    if (aim) {
+      // Dotted aim line.
+      const range = weapon!.rodzaj === 'magia' ? MAGIC_RANGE : ARROW_RANGE;
+      this.aimLine.fillStyle(weapon!.rodzaj === 'magia' ? 0x9be7ff : 0xffffff, 0.85);
+      for (let d = 10; d < range; d += 7) this.aimLine.fillRect(this.player.x + aim.x * d - 1, this.player.y + aim.y * d - 1, 2, 2);
+      this.player.facing.set(aim.x, aim.y);
+    }
+    const r = consumeRelease();
+    if (!r || !weapon || lingering) return;
+    if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only
+    const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+    if (now - this.lastShot < cooldown(skill)) return;
+    this.lastShot = now;
+    const dir = this.dirFor(r.mode, r.dx, r.dy, r.dragged);
+    const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
+    const sprite = this.add
+      .image(this.player.x + dir.x * 8, this.player.y + dir.y * 8, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
+      .setRotation(Math.atan2(dir.y, dir.x))
+      .setDepth(1_040_000);
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc, skill });
+  }
+
+  private updateShots(dt: number) {
+    const now = this.time.now;
+    for (const shot of [...this.shots]) {
+      const step = Math.hypot(shot.vx, shot.vy) * dt;
+      const sp = shot.sprite;
+      sp.x += shot.vx * dt;
+      sp.y += shot.vy * dt;
+      shot.left -= step;
+      let done = shot.left <= 0 || this.city.buildingAt(sp.x, sp.y) !== undefined;
+      if (!done) {
+        const foe = this.enemies.find((e) => !e.isDead && Math.hypot(e.x - sp.x, e.y - sp.y) < e.size + 3);
+        if (foe) {
+          done = true;
+          this.practiced(shot.skill);
+          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, shot.damage)) this.onEnemyKilled(foe);
+        } else if (this.training.hitAt(sp.x, sp.y, 8, shot.skill)) {
+          done = true;
+          this.practiced(shot.skill);
+        } else if (this.training.anyAt(sp.x, sp.y, 6)) done = true;
+      }
+      if (done) {
+        this.shots = this.shots.filter((x) => x !== shot);
+        this.tweens.add({ targets: sp, alpha: 0, duration: 120, onComplete: () => sp.destroy() });
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ shops, schools, library
+
+  /** Buys an item: pays, equips it or puts it in the backpack. */
+  private buy(p: Przedmiot) {
+    if (session.coins < p.cena) {
+      this.toast(`Za mało monet – ${p.nazwa} kosztuje ${p.cena}.`);
+      return;
+    }
+    const where = addItem(p.id);
+    if (!where) {
+      this.toast('Plecak pełny! Zrób miejsce w karcie postaci.');
+      return;
+    }
+    session.coins -= p.cena;
+    this.applySkill();
+    this.emitHud();
+    this.toast(where === 'equipped' ? `Kupiłeś i założyłeś: ${p.nazwa}!` : `Kupiłeś: ${p.nazwa} (w plecaku).`);
+    this.save();
+  }
+
+  /** The next better item of each kind this place sells. */
+  private offers(where: 'sklep' | 'biblioteka') {
+    const out: Przedmiot[] = [];
+    const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
+      where === 'biblioteka' ? [['dystans', 'magia']] : [['bron'], ['dystans', 'luk'], ['zbroja'], ['helm'], ['buty']];
+    for (const [miejsce, rodzaj] of groups) {
+      const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where);
+      const best = Math.max(0, ...all.filter((p) => owns(p.id)).map((p) => p.moc), miejsce === 'bron' ? meleeDamage() : 0);
+      const next = all.filter((p) => p.moc > best).sort((a, b) => a.moc - b.moc)[0];
+      if (next) out.push(next);
+    }
+    return out;
+  }
+
+  private label(p: Przedmiot) {
+    const what = p.miejsce === 'bron' || p.miejsce === 'dystans' ? `obrażenia ${p.moc}` : `obrona ${p.moc}`;
+    return `${p.nazwa} – ${p.cena} monet (${what})`;
   }
 
   private openShop(p: CityPlace) {
-    const mine = currentSword();
-    const idx = BRONIE.indexOf(mine);
-    const better = BRONIE.slice(idx + 1);
-    const text =
-      `Kowal za ladą ${p.name} poleca swój towar.\n\n` +
-      `Twój miecz: ${mine.nazwa} (obrażenia ${mine.obrazenia}).\nMasz ${session.coins} monet.` +
-      (better.length ? '' : '\n\nMasz już najlepszy miecz, jaki tu mają!');
-    const fruitValue = (Object.keys(OWOCE) as Owoc[]).reduce((sum, f) => sum + (session.fruits[f] ?? 0) * OWOCE[f].cena, 0);
-    const sell = fruitValue > 0 ? [`Sprzedaj owoce – ${fruitValue} monet`] : [];
+    const offers = this.offers('sklep');
+    const value = fruitValue();
+    const sell = value > 0 ? [`Sprzedaj owoce – ${value} monet`] : [];
     this.dialog({
       title: `🛒 ${p.name}`,
-      text,
-      buttons: [...sell, ...better.map((b) => `${b.nazwa} – ${b.cena} monet (obrażenia ${b.obrazenia})`), 'Wyjdź'],
-      onChoose: (choice) => {
-        if (sell.length && choice === 0) {
-          session.coins += fruitValue;
-          for (const f of Object.keys(OWOCE) as Owoc[]) session.fruits[f] = 0;
+      text: `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.` + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
+      onChoose: (i) => {
+        if (sell.length && i === 0) {
+          const v = sellAllFruit();
+          session.coins += v;
           this.emitHud();
-          this.toast(`Sprzedałeś owoce za ${fruitValue} monet!`);
+          this.toast(`Sprzedałeś owoce za ${v} monet!`);
           this.save();
           return;
         }
-        const b = better[choice - sell.length];
-        if (!b) return;
-        if (session.coins < b.cena) {
-          this.toast(`Za mało monet – ${b.nazwa} kosztuje ${b.cena}.`);
+        const o = offers[i - sell.length];
+        if (o) this.buy(o);
+      },
+    });
+  }
+
+  /** Schools give lessons: coins for practice in the skills you have. */
+  private openSchool(p: CityPlace) {
+    const skills = availableSkills();
+    const lines = skills.map((k) => `${UMIEJETNOSCI[k].nazwa}: poziom ${skillLevel(k)}`).join('\n');
+    this.dialog({
+      title: `🏫 ${p.name}`,
+      text: `Nauczyciel poprawi twoją technikę.\n\n${lines}\n\nMasz ${session.coins} monet.`,
+      buttons: [...skills.map((k) => `Lekcja: ${UMIEJETNOSCI[k].nazwa} – ${LEKCJA.cena} monet (+${LEKCJA.punkty})`), 'Wyjdź'],
+      onChoose: (i) => {
+        const k = skills[i];
+        if (!k) return;
+        if (session.coins < LEKCJA.cena) {
+          this.toast(`Za mało monet – lekcja kosztuje ${LEKCJA.cena}.`);
           return;
         }
-        session.coins -= b.cena;
-        session.sword = b.id;
+        session.coins -= LEKCJA.cena;
+        this.practiced(k, LEKCJA.punkty);
         this.emitHud();
-        this.toast(`Kupiłeś: ${b.nazwa}!`);
+        this.toast(`Lekcja zaliczona: +${LEKCJA.punkty} punktów (${UMIEJETNOSCI[k].nazwa}).`);
         this.save();
       },
     });
   }
 
-  private openSchool(p: CityPlace) {
-    const lvl = session.swordSkill;
-    const next = WALKA_MIECZEM[lvl + 1];
-    const text =
-      `Nauczyciel szermierki wita cię w szkole.\n\nWalka mieczem: poziom ${lvl} – ${WALKA_MIECZEM[lvl].opis}.\nMasz ${session.coins} monet.` +
-      (next ? `\n\nNastępny poziom (${lvl + 1}): ${next.opis}.` : '\n\nNauczyłeś się już wszystkiego, co tu uczą!');
+  /** Libraries teach magic and sell magic items. */
+  private openLibrary(p: CityPlace) {
+    const offers = gear.magic ? this.offers('biblioteka') : [];
+    const learn = gear.magic ? [] : [`Naucz się magii – ${NAUKA_MAGII} monet`];
     this.dialog({
-      title: `🏫 ${p.name}`,
-      text,
-      buttons: next ? [`Ucz się – ${next.cena} monet`, 'Wyjdź'] : ['Wyjdź'],
+      title: `📚 ${p.name}`,
+      text: gear.magic
+        ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
+        : `W starych księgach zapisano sztukę magii. Po nauce będziesz też magiem: przytrzymaj atak z różdżką, kulą albo księgą w ręce, by rzucać zaklęcia. Masz ${session.coins} monet.`,
+      buttons: [...learn, ...offers.map((o) => this.label(o)), 'Wyjdź'],
       onChoose: (i) => {
-        if (!next || i !== 0) return;
-        if (session.coins < next.cena) {
-          this.toast(`Za mało monet – nauka kosztuje ${next.cena}.`);
+        if (learn.length && i === 0) {
+          if (session.coins < NAUKA_MAGII) {
+            this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
+            return;
+          }
+          session.coins -= NAUKA_MAGII;
+          gear.magic = true;
+          this.emitHud();
+          this.toast('Jesteś teraz także magiem! Kup różdżkę, by rzucać zaklęcia.', 3000);
+          this.save();
           return;
         }
-        session.coins -= next.cena;
-        session.swordSkill = lvl + 1;
-        this.applySkill();
-        this.emitHud();
-        this.toast(`Walka mieczem: poziom ${lvl + 1}! ${next.opis}.`);
-        this.save();
+        const o = offers[i - learn.length];
+        if (o) this.buy(o);
       },
     });
+  }
+
+  /** After things were put on or off in the character sheet. */
+  gearChanged() {
+    this.applySkill();
+    this.emitHud();
   }
 
   /** For automated browser checks. */
   debugSession() {
     return session;
+  }
+
+  debugGear() {
+    return gear;
+  }
+
+  debugAddFruit(f: Owoc) {
+    return addFruit(f);
   }
 
   /** Shops and schools for the map screen. */
@@ -647,7 +845,7 @@ export class GameScene extends Phaser.Scene {
     if (st === 'new') {
       this.dialog({
         title: m.tytul,
-        text: `${m.opis}\n\nNagroda: ${m.nagroda} monet.`,
+        text: `${m.opis}\n\nNagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${item(m.przedmiot)?.nazwa}` : ''}.`,
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
           if (i !== 0) return;
@@ -664,11 +862,16 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'goal') {
       this.dialog({
         title: m.tytul,
-        text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP`,
+        text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : ''),
         buttons: ['Dziękuję!'],
         onChoose: () => {
           session.coins += m.nagroda;
           session.exp += missionExp(m);
+          if (m.przedmiot) {
+            const where = addItem(m.przedmiot);
+            this.toast(where ? `Dostałeś: ${item(m.przedmiot)?.nazwa}!` : `Plecak pełny – ${item(m.przedmiot)?.nazwa} przepadł.`, 2500);
+            this.applySkill();
+          }
           setMissionState(m, 'done');
           this.refreshMarkers();
           this.emitHud();
@@ -749,8 +952,8 @@ export class GameScene extends Phaser.Scene {
       maxHp: PLAYER.maxHp,
       coins: session.coins,
       exp: session.exp,
-      sword: `${currentSword().nazwa} · walka ${session.swordSkill}`,
-      fruits: `🍎${session.fruits.jablko} 🫐${session.fruits.sliwka} 🍇${session.fruits.winogrono}`,
+      sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
+      fruits: `🍎${fruitCount('jablko')} 🫐${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),

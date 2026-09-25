@@ -201,3 +201,87 @@ export class StreetEnemies {
     }
   }
 }
+
+// ---------------------------------------------------------------- training grounds
+
+export type StationKind = 'miecz' | 'luk' | 'magia';
+const STATION_TEX: Record<StationKind, string> = { miecz: TEX.dummy, luk: TEX.target, magia: TEX.crystal };
+
+export interface Station {
+  kind: StationKind;
+  x: number;
+  y: number;
+  sprite?: Phaser.GameObjects.Image;
+}
+
+/** On sports pitches: a dummy (sword), a target (bow) and a crystal (magic). */
+export class Training {
+  private generated = new Map<Area, Station[]>();
+  private active = new Set<Station>();
+  private next = 0;
+
+  constructor(private scene: Phaser.Scene, private city: CityMap) {}
+
+  private stationsOf(a: Area): Station[] {
+    let list = this.generated.get(a);
+    if (list) return list;
+    list = [];
+    const m2 = ringsArea(a.rings[0]) / (PX_PER_M * PX_PER_M);
+    if (m2 >= 300) {
+      // Centre of the pitch, nudged until the three stations stand free.
+      const cx = (a.x0 + a.x1) / 2;
+      const cy = (a.y0 + a.y1) / 2;
+      const kinds: StationKind[] = ['miecz', 'luk', 'magia'];
+      for (let tries = 0; tries < 30 && !list.length; tries++) {
+        const ox = cx + (tries ? (Math.sin(tries * 7.1) * (a.x1 - a.x0)) / 3 : 0);
+        const oy = cy + (tries ? (Math.cos(tries * 3.7) * (a.y1 - a.y0)) / 3 : 0);
+        const spots = kinds.map((k, i) => ({ kind: k, x: ox + (i - 1) * 18, y: oy }));
+        if (spots.every((p) => pointInRings(a.rings, p.x, p.y) && this.city.isFree(p.x, p.y, 5, 5))) list = spots;
+      }
+    }
+    this.generated.set(a, list);
+    return list;
+  }
+
+  update(px: number, py: number, now: number) {
+    if (now < this.next) return;
+    this.next = now + 600;
+    for (const s of [...this.active]) {
+      if (Math.hypot(s.x - px, s.y - py) > FAR) {
+        s.sprite?.destroy();
+        s.sprite = undefined;
+        this.active.delete(s);
+      }
+    }
+    const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
+    for (const a of areas) {
+      if (a.kind !== 'pitch') continue;
+      for (const s of this.stationsOf(a)) {
+        if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
+        s.sprite = this.scene.add.image(s.x, s.y, STATION_TEX[s.kind]).setOrigin(0.5, 0.92).setDepth(s.y);
+        this.active.add(s);
+      }
+    }
+  }
+
+  blocked(x: number, y: number) {
+    for (const s of this.active) if (Math.abs(s.x - x) < 4 && Math.abs(s.y - y) < 3) return true;
+    return false;
+  }
+
+  /** The station of that kind hit at (x, y), if any; it wobbles. */
+  hitAt(x: number, y: number, reach: number, kind: StationKind): Station | null {
+    for (const s of this.active) {
+      if (s.kind !== kind || Math.hypot(s.x - x, s.y - 7 - y) > reach) continue;
+      if (s.sprite) this.scene.tweens.add({ targets: s.sprite, angle: { from: -8, to: 8 }, duration: 50, yoyo: true, onComplete: () => s.sprite?.setAngle(0) });
+      return s;
+    }
+    return null;
+  }
+
+  /** Any station of any kind (projectiles hitting the wrong one just stop). */
+  anyAt(x: number, y: number, reach: number): Station | null {
+    for (const s of this.active) if (Math.hypot(s.x - x, s.y - 7 - y) <= reach) return s;
+    return null;
+  }
+}

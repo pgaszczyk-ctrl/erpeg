@@ -149,6 +149,7 @@ function poiOf(t) {
   if ((t.amenity === 'townhall' || t.office === 'government') && t.name) return ['office', t.name];
   if (t.amenity === 'hospital' && t.name) return ['hospital', t.name];
   if (t.amenity === 'police') return ['police', t.name || 'Komenda Policji'];
+  if (t.amenity === 'library') return ['library', t.name || 'Biblioteka'];
   return null;
 }
 function centroidLL(g) {
@@ -379,4 +380,4 @@ mkdirSync('public/map', { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

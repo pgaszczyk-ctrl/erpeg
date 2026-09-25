@@ -26,6 +26,40 @@ export const touchInput = {
   joyY: 0,
 };
 
+/**
+ * Press-and-hold for ranged attacks. A press already swings the weapon in
+ * hand; holding it longer (or dragging the finger) aims, and letting go
+ * shoots. `dx/dy` is the drag (touch), the mouse position is in `mouse`.
+ */
+export const hold = {
+  active: false,
+  start: 0,
+  mode: 'touch' as 'touch' | 'mouse' | 'key',
+  dx: 0,
+  dy: 0,
+  dragged: false,
+  id: -1,
+};
+export const mouse = { x: 0, y: 0 };
+/** Set when a hold ends; the game reads and clears it. */
+export let release: { mode: 'touch' | 'mouse' | 'key'; dx: number; dy: number; dragged: boolean; held: number } | null = null;
+
+export function consumeRelease() {
+  const r = release;
+  release = null;
+  return r;
+}
+
+function startHold(mode: 'touch' | 'mouse' | 'key', id = -1) {
+  Object.assign(hold, { active: true, start: performance.now(), mode, dx: 0, dy: 0, dragged: false, id });
+}
+
+function endHold() {
+  if (!hold.active) return;
+  hold.active = false;
+  release = { mode: hold.mode, dx: hold.dx, dy: hold.dy, dragged: hold.dragged, held: performance.now() - hold.start };
+}
+
 // Called on every new finger, mouse click (with coordinates) or attack
 // key (with -1, -1); used e.g. to leave the game-over screen.
 type TapListener = (x: number, y: number) => void;
@@ -38,6 +72,7 @@ export function onTap(fn: TapListener) {
 }
 
 let joyId: number | null = null;
+const holdOrigin = { x: 0, y: 0 };
 let attackIds = new Set<number>();
 
 const KEY_DIRS: Record<string, [number, number]> = {
@@ -75,6 +110,8 @@ export function resetKeys() {
 }
 
 export function resetTouch() {
+  hold.active = false;
+  release = null;
   joyId = null;
   attackIds = new Set();
   touchInput.x = touchInput.y = 0;
@@ -96,6 +133,7 @@ export function installTouchControls(el: HTMLElement) {
       touchInput.x = touchInput.y = 0;
     }
     for (const id of attackIds) if (!alive.has(id)) attackIds.delete(id);
+    if (hold.active && hold.mode === 'touch' && !alive.has(hold.id)) endHold();
     touchInput.joyActive = joyId !== null;
     touchInput.attackHeld = attackIds.size > 0;
   };
@@ -110,6 +148,11 @@ export function installTouchControls(el: HTMLElement) {
       if (p.x >= half) {
         attackIds.add(t.identifier);
         touchInput.attack = true;
+        if (!hold.active) {
+          startHold('touch', t.identifier);
+          holdOrigin.x = p.x;
+          holdOrigin.y = p.y;
+        }
       } else if (joyId === null && p.y > 70) {
         // (the top band is the HUD: menu button, hearts)
         // The joystick appears where the thumb lands.
@@ -127,6 +170,12 @@ export function installTouchControls(el: HTMLElement) {
     e.preventDefault();
     sync(e);
     for (const t of Array.from(e.touches)) {
+      if (hold.active && hold.mode === 'touch' && t.identifier === hold.id) {
+        const p = local(t);
+        hold.dx = p.x - holdOrigin.x;
+        hold.dy = p.y - holdOrigin.y;
+        if (Math.hypot(hold.dx, hold.dy) > 14) hold.dragged = true;
+      }
       if (t.identifier !== joyId) continue;
       const p = local(t);
       let dx = p.x - touchInput.joyOriginX;
@@ -177,6 +226,7 @@ export function installTouchControls(el: HTMLElement) {
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
+          if (code === 'Space' || code === 'KeyJ') startHold('key');
           tapListeners.forEach((fn) => fn(-1, -1));
         }
         e.preventDefault();
@@ -188,6 +238,7 @@ export function installTouchControls(el: HTMLElement) {
     'keyup',
     (e) => {
       heldKeys.delete(e.code || e.key);
+      if (hold.active && hold.mode === 'key' && (e.code === 'Space' || e.code === 'KeyJ')) endHold();
       // A released modifier or unknown key can hide other keyups on some
       // systems; with no direction keys reported down we start clean.
       if (e.key === 'Meta' || e.key === 'Alt' || e.key === 'Control') heldKeys.clear();
@@ -196,8 +247,18 @@ export function installTouchControls(el: HTMLElement) {
   );
 
   // Mouse: a left click on the game swings the sword too.
+  el.addEventListener('mousemove', (e) => {
+    mouse.x = e.offsetX;
+    mouse.y = e.offsetY;
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
+  });
   el.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
+    mouse.x = e.offsetX;
+    mouse.y = e.offsetY;
+    startHold('mouse');
     touchInput.attack = true;
     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
   });

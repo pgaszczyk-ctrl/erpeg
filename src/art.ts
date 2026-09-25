@@ -21,6 +21,12 @@ export const TEX = {
   markerDone: 'marker-done',
   arrow: 'arrow',
   bandit: 'bandit',
+  arrowShot: 'arrow-shot',
+  magicShot: 'magic-shot',
+  dummy: 'dummy',
+  target: 'target',
+  crystal: 'crystal',
+  signLibrary: 'sign-library',
   treeApple: 'tree-apple',
   treePlum: 'tree-plum',
   vine: 'vine',
@@ -564,7 +570,91 @@ function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: s
   tex.refresh();
 }
 
+// Projectiles (pointing right, rotated in flight) and training stations.
+function drawCombatExtras(scene: Phaser.Scene) {
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.arrowShot, 12, 5);
+    px(ctx, 0, 1, 2, 1, '#e8e8f0');
+    px(ctx, 0, 3, 2, 1, '#e8e8f0');
+    px(ctx, 1, 2, 9, 1, '#8a5a2b');
+    px(ctx, 9, 1, 2, 3, '#c0c4cc');
+    px(ctx, 11, 2, 1, 1, '#c0c4cc');
+    tex.refresh();
+  }
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.magicShot, 10, 10);
+    const g = ctx.createRadialGradient(5, 5, 0, 5, 5, 5);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.4, '#9be7ff');
+    g.addColorStop(1, 'rgba(90,120,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 10, 10);
+    tex.refresh();
+  }
+  {
+    // Straw training dummy on a pole.
+    const { tex, ctx } = canvasTexture(scene, TEX.dummy, 14, 20);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(3, 18, 8, 2);
+    px(ctx, 6, 10, 2, 9, OUTLINE);
+    px(ctx, 1, 7, 12, 3, OUTLINE);
+    px(ctx, 2, 8, 10, 1, '#c9a14a');
+    px(ctx, 3, 5, 8, 8, OUTLINE);
+    px(ctx, 4, 6, 6, 6, '#e0bd5c');
+    px(ctx, 4, 0, 6, 6, OUTLINE);
+    px(ctx, 5, 1, 4, 4, '#e8cc7a');
+    px(ctx, 6, 2, 1, 1, OUTLINE);
+    px(ctx, 8, 2, 1, 1, OUTLINE);
+    px(ctx, 4, 9, 6, 1, '#a33d3d');
+    tex.refresh();
+  }
+  {
+    // Archery target on a stand.
+    const { tex, ctx } = canvasTexture(scene, TEX.target, 16, 20);
+    px(ctx, 3, 12, 2, 8, OUTLINE);
+    px(ctx, 11, 12, 2, 8, OUTLINE);
+    for (const [r, c] of [[8, OUTLINE], [7, '#ffffff'], [5, '#e43b44'], [3, '#ffffff'], [1.5, '#e43b44']] as const) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(8, 8, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    tex.refresh();
+  }
+  {
+    // Magic practice crystal on a stone.
+    const { tex, ctx } = canvasTexture(scene, TEX.crystal, 14, 20);
+    px(ctx, 2, 15, 10, 5, OUTLINE);
+    px(ctx, 3, 16, 8, 3, '#8b8f9a');
+    ctx.fillStyle = OUTLINE;
+    ctx.beginPath();
+    ctx.moveTo(7, 0);
+    ctx.lineTo(12, 7);
+    ctx.lineTo(7, 16);
+    ctx.lineTo(2, 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#5fc8ff';
+    ctx.beginPath();
+    ctx.moveTo(7, 2);
+    ctx.lineTo(10.5, 7);
+    ctx.lineTo(7, 14);
+    ctx.lineTo(3.5, 7);
+    ctx.closePath();
+    ctx.fill();
+    px(ctx, 5, 5, 2, 3, '#d8f3ff');
+    tex.refresh();
+  }
+  drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
+    p(3, 3, 2, 7, '#fff6e0');
+    p(5, 4, 2, 6, '#f7c531');
+    p(7, 3, 2, 7, '#e07a66');
+    p(9, 5, 2, 5, '#9be7ff');
+  });
+}
+
 export function createArt(scene: Phaser.Scene) {
+  drawCombatExtras(scene);
   drawFruitTree(scene, TEX.treeApple, '#e43b44', '#ffb3b8');
   drawFruitTree(scene, TEX.treePlum, '#5b3a9a', '#a88be0');
   drawVine(scene);

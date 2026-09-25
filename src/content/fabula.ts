@@ -39,6 +39,8 @@ export interface Misja {
   nagroda: number;
   /** Punkty doświadczenia za misję (jeśli nie podane: tyle co monet). */
   doswiadczenie?: number;
+  /** Przedmiot w nagrodę (id z przedmioty.ts), np. 'luk'. */
+  przedmiot?: string;
   /** Tylko zlecenia losowe: miejsce (kościół, urząd, komenda), które je dało. */
   placeId?: string;
 }

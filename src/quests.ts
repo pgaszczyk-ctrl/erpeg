@@ -2,7 +2,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { BRONIE, WALKA_MIECZEM, type Owoc } from './content/sklepy';
+import { loadGear, saveGear } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
@@ -26,13 +26,10 @@ export const session = {
   hp: MAX_HP,
   missions: {} as Record<string, MissionState>,
   fog: undefined as SaveData['fog'],
-  sword: BRONIE[0].id,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
-  fruits: { jablko: 0, sliwka: 0, winogrono: 0 } as Record<Owoc, number>,
   /** Changes every login, so each place offers a new random mission. */
   nonce: 0,
-  swordSkill: 0,
   /** Last known state of a session that was closed without "Wyjdź". */
   abandoned: null as Snapshot | null,
 };
@@ -48,12 +45,10 @@ export function startSession(r: LoginResult) {
   session.startY = p.start_y * k;
   session.fog = p.save.fog;
   session.coins = p.save.coins ?? 0;
-  session.sword = BRONIE.some((b) => b.id === p.save.sword) ? p.save.sword! : BRONIE[0].id;
-  session.swordSkill = Math.max(0, Math.min(WALKA_MIECZEM.length - 1, p.save.swordSkill ?? 0));
+  loadGear(p.save);
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
-  session.fruits = { jablko: 0, sliwka: 0, winogrono: 0, ...(p.save.fruits ?? {}) };
   session.gen = {};
   for (const m of p.save.gen ?? []) session.gen[m.id] = m;
   session.nonce = Math.floor(Math.random() * 1e9);
@@ -81,17 +76,9 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    sword: session.sword, swordSkill: session.swordSkill, gen, fruits: session.fruits,
+    gen, ...saveGear(),
   };
   return api.save(session.token, data, session.exp);
-}
-
-export function currentSword() {
-  return BRONIE.find((b) => b.id === session.sword) ?? BRONIE[0];
-}
-
-export function currentSwordSkill() {
-  return WALKA_MIECZEM[session.swordSkill] ?? WALKA_MIECZEM[0];
 }
 
 export function missionState(m: Misja): MissionState {
@@ -149,8 +136,9 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
     const bandit = r() < 0.5;
     const zl = pick(POLICJA.zloczyncy);
     const nagroda = bandit ? POLICJA.nagrodaBandyta : POLICJA.nagrodaPotwor;
+    const przedmiot = r() < POLICJA.szansaNaPrzedmiot ? pick(POLICJA.przedmioty) : undefined;
     return {
-      id, placeId: place.id, adres: place.name, tytul: pick(POLICJA.tytuly), nagroda,
+      id, placeId: place.id, adres: place.name, tytul: pick(POLICJA.tytuly), nagroda, przedmiot,
       opis: fill(pick(bandit ? POLICJA.bandyta : POLICJA.potwor), zl),
       zadanie: bandit
         ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: `Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})` }

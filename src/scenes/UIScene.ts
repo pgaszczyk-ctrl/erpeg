@@ -3,6 +3,8 @@ import { TEX } from '../art';
 import { touchInput, resetTouch, onTap, JOY_RADIUS } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
+import { PLAYER } from '../objects/Player';
+import { toggleCharacter, closeCharacter } from '../ui/character';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -14,6 +16,7 @@ export class UIScene extends Phaser.Scene {
   private expText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
   private mapBtn!: Phaser.GameObjects.Text;
+  private charBtn!: Phaser.GameObjects.Text;
   private swordText!: Phaser.GameObjects.Text;
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
@@ -54,6 +57,9 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
 
+    this.charBtn = this.add
+      .text(0, 0, '👤', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
+      .setOrigin(1, 0);
     this.swordText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
@@ -84,6 +90,9 @@ export class UIScene extends Phaser.Scene {
       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
         this.openMap();
       }
+      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.dialogBox) {
+        this.openCharacter();
+      }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
         if (this.dialogBox) this.closeDialog();
         else this.openGameMenu();
@@ -99,6 +108,7 @@ export class UIScene extends Phaser.Scene {
       offTap();
       window.removeEventListener('keydown', onKey);
       closeMinimap();
+      closeCharacter();
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -124,6 +134,7 @@ export class UIScene extends Phaser.Scene {
     this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
     this.expText.setPosition(width - pad, pad + 9 * this.ui);
     this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
+    this.charBtn.setPosition(width - pad - this.mapBtn.width - 4 * this.ui, pad + 17 * this.ui);
     this.swordText.setPosition(hx, pad + 10 * this.ui);
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
@@ -255,6 +266,11 @@ export class UIScene extends Phaser.Scene {
       this.openGameMenu();
       return;
     }
+    const cb = this.charBtn.getBounds();
+    if (!this.dialogBox && !this.overlay && x >= cb.x - 8 && x <= cb.right + 6 && y >= cb.y - 12 && y <= cb.bottom + 12) {
+      this.openCharacter();
+      return;
+    }
     const mb = this.mapBtn.getBounds();
     if (!this.dialogBox && !this.overlay && x >= mb.x - 12 && x <= mb.right + 12 && y >= mb.y - 12 && y <= mb.bottom + 12) {
       this.openMap();
@@ -269,6 +285,13 @@ export class UIScene extends Phaser.Scene {
     const choose = this.dialogChoose;
     this.closeDialog();
     choose?.(choice);
+  }
+
+  private openCharacter() {
+    const game = this.scene.get('game') as GameScene;
+    if (!game.player || this.overlay) return;
+    touchInput.attack = false;
+    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged());
   }
 
   private openMap() {

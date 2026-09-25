@@ -41,7 +41,7 @@ type RawMap = {
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library';
   name: string;
   id: string;
   building: Building | null;
