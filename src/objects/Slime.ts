@@ -51,7 +51,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
   readonly kindId: RodzajWroga;
   /** Where it was placed; it wanders around this spot. */
   home: Phaser.Math.Vector2;
-  private chasing = false;
+  /** Chasing the hero (others nearby join in, see GameScene). */
+  chasing = false;
+  /** How far from home it wanders (px). */
+  roam = 60;
   private nextThink = 0;
   private stunnedUntil = 0;
 
@@ -107,7 +110,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
       this.anims.timeScale = 1;
       if (Math.random() < 0.35) {
         this.vel.set(0, 0);
-      } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > 60) {
+      } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > this.roam) {
         // Wandered too far: head back home.
         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
         this.vel.set(v.x * this.kind.wanderSpeed, v.y * this.kind.wanderSpeed);

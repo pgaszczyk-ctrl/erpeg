@@ -2,7 +2,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { BRONIE, WALKA_MIECZEM } from './content/sklepy';
+import { BRONIE, WALKA_MIECZEM, type Owoc } from './content/sklepy';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
@@ -29,6 +29,7 @@ export const session = {
   sword: BRONIE[0].id,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
+  fruits: { jablko: 0, sliwka: 0, winogrono: 0 } as Record<Owoc, number>,
   /** Changes every login, so each place offers a new random mission. */
   nonce: 0,
   swordSkill: 0,
@@ -52,6 +53,7 @@ export function startSession(r: LoginResult) {
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
+  session.fruits = { jablko: 0, sliwka: 0, winogrono: 0, ...(p.save.fruits ?? {}) };
   session.gen = {};
   for (const m of p.save.gen ?? []) session.gen[m.id] = m;
   session.nonce = Math.floor(Math.random() * 1e9);
@@ -79,7 +81,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    sword: session.sword, swordSkill: session.swordSkill, gen,
+    sword: session.sword, swordSkill: session.swordSkill, gen, fruits: session.fruits,
   };
   return api.save(session.token, data, session.exp);
 }

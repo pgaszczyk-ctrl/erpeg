@@ -21,6 +21,12 @@ export const TEX = {
   markerDone: 'marker-done',
   arrow: 'arrow',
   bandit: 'bandit',
+  treeApple: 'tree-apple',
+  treePlum: 'tree-plum',
+  vine: 'vine',
+  fruitApple: 'fruit-apple',
+  fruitPlum: 'fruit-plum',
+  fruitGrape: 'fruit-grape',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
   signOffice: 'sign-office',
@@ -477,7 +483,94 @@ function drawMoreSigns(scene: Phaser.Scene) {
   });
 }
 
+// Fruit trees (frame 'full' with fruit, 'bare' once picked) and fruit items.
+function drawFruitTree(scene: Phaser.Scene, key: string, fruit: string, fruitLight: string) {
+  const W = 22, H = 24;
+  const { tex, ctx } = canvasTexture(scene, key, W * 2, H);
+  for (let f = 0; f < 2; f++) {
+    const ox = f * W;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(ox + 11, 22, 7, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    px(ctx, ox + 9, 14, 4, 8, OUTLINE);
+    px(ctx, ox + 10, 14, 2, 7, '#8a5a2b');
+    for (const [c, r] of [[OUTLINE, 10], ['#2f7a2f', 9], ['#44a044', 6]] as const) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(ox + 11 - (r === 6 ? 2 : 0), 10 - (r === 6 ? 2 : 0), r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    px(ctx, ox + 6, 4, 3, 2, '#7bd35f');
+    if (f === 0) {
+      for (const [x, y] of [[6, 9], [13, 6], [15, 12], [9, 14], [11, 9]]) {
+        px(ctx, ox + x - 1, y - 1, 4, 4, OUTLINE);
+        px(ctx, ox + x, y, 2, 2, fruit);
+        px(ctx, ox + x, y, 1, 1, fruitLight);
+      }
+    }
+    tex.add(f === 0 ? 'full' : 'bare', 0, ox, 0, W, H);
+  }
+  tex.refresh();
+}
+
+function drawVine(scene: Phaser.Scene) {
+  const W = 20, H = 18;
+  const { tex, ctx } = canvasTexture(scene, TEX.vine, W * 2, H);
+  for (let f = 0; f < 2; f++) {
+    const ox = f * W;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(ox + 2, 15, 16, 2);
+    // trellis posts and wire
+    px(ctx, ox + 2, 3, 2, 13, OUTLINE);
+    px(ctx, ox + 16, 3, 2, 13, OUTLINE);
+    px(ctx, ox + 2, 5, 16, 1, '#6b4423');
+    // leaves
+    for (const [x, y] of [[5, 4], [9, 3], [13, 4], [7, 8], [11, 8]]) {
+      px(ctx, ox + x - 1, y - 1, 5, 5, OUTLINE);
+      px(ctx, ox + x, y, 3, 3, '#4f9a3a');
+    }
+    if (f === 0) {
+      for (const [x, y] of [[6, 11], [12, 11]]) {
+        for (const [dx, dy] of [[0, 0], [2, 0], [1, 2], [0, 1], [2, 1], [1, 3]]) px(ctx, ox + x + dx, y + dy, 1, 1, '#6a3f9a');
+        px(ctx, ox + x, y, 1, 1, '#b48be0');
+      }
+    }
+    tex.add(f === 0 ? 'full' : 'bare', 0, ox, 0, W, H);
+  }
+  tex.refresh();
+}
+
+function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: string, grape = false) {
+  const { tex, ctx } = canvasTexture(scene, key, 8, 8);
+  if (grape) {
+    for (const [x, y] of [[1, 1], [4, 1], [2, 3], [5, 3], [3, 5]]) {
+      px(ctx, x - 1, y - 1, 4, 4, OUTLINE);
+      px(ctx, x, y, 2, 2, color);
+    }
+    px(ctx, 1, 1, 1, 1, light);
+  } else {
+    ctx.fillStyle = OUTLINE;
+    ctx.beginPath();
+    ctx.arc(4, 4.5, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(4, 4.5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    px(ctx, 3, 3, 1, 1, light);
+    px(ctx, 4, 0, 1, 2, '#6b4423');
+  }
+  tex.refresh();
+}
+
 export function createArt(scene: Phaser.Scene) {
+  drawFruitTree(scene, TEX.treeApple, '#e43b44', '#ffb3b8');
+  drawFruitTree(scene, TEX.treePlum, '#5b3a9a', '#a88be0');
+  drawVine(scene);
+  drawFruitItem(scene, TEX.fruitApple, '#e43b44', '#ffb3b8');
+  drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
+  drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawSigns(scene);
   drawMoreSigns(scene);
   drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);

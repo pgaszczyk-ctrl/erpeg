@@ -7,6 +7,8 @@
 // Every polyline/ring is a flat [x0, y0, dx1, dy1, dx2, dy2, ...] array.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
+import { createRequire } from 'node:module';
+const ClipperLib = createRequire(import.meta.url)('clipper-lib');
 
 const SRC = 'data/lublin-osm.geojsonseq.gz';
 const OUT = 'public/map/lublin.json';
@@ -275,6 +277,88 @@ for (const n of addrNodes) {
   }
 }
 
+// ---------------------------------------------------------------- merge buildings
+// Cartoon look: every building grows by GROW metres on each side, and
+// buildings that then touch or overlap become one block (with all their
+// addresses). Collisions use these shapes too.
+
+const GROW_M = 1.2;
+const CS = 4; // clipper works on integers: 1/4 of a half-metre
+function ringArea(r) {
+  let a = 0;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += (r[j] + r[i]) * (r[j + 1] - r[i + 1]);
+  return a / 2;
+}
+const toPath = (r) => {
+  const p = [];
+  for (let i = 0; i < r.length; i += 2) p.push({ X: r[i] * CS, Y: r[i + 1] * CS });
+  return p;
+};
+const t0 = Date.now();
+const grown = [];
+for (const b of buildings) {
+  // Outer ring counter-clockwise, holes clockwise (what Clipper expects).
+  const rings = b.abs.slice().sort((a, c) => Math.abs(ringArea(c)) - Math.abs(ringArea(a)));
+  const paths = rings.map((r, i) => {
+    const p = toPath(r);
+    const outer = i === 0;
+    if (ClipperLib.Clipper.Orientation(p) !== outer) p.reverse();
+    return p;
+  });
+  const co = new ClipperLib.ClipperOffset(2, 0.25 * CS * UNITS_PER_M);
+  co.AddPaths(paths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+  const out = new ClipperLib.Paths();
+  co.Execute(out, GROW_M * UNITS_PER_M * CS);
+  for (const p of out) grown.push(p);
+}
+const clipper = new ClipperLib.Clipper();
+clipper.AddPaths(grown, ClipperLib.PolyType.ptSubject, true);
+const tree = new ClipperLib.PolyTree();
+clipper.Execute(ClipperLib.ClipType.ctUnion, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+const blocks = [];
+const walk = (node) => {
+  for (const outer of node.Childs()) {
+    if (outer.IsHole()) continue;
+    const clean = (p) => ClipperLib.Clipper.CleanPolygon(p, 0.5 * CS * UNITS_PER_M);
+    const outerPath = clean(outer.Contour());
+    if (outerPath.length < 3) continue;
+    const holes = outer.Childs().map((h) => clean(h.Contour())).filter((h) => h.length >= 3);
+    const toFlat = (p) => p.flatMap((pt) => [Math.round(pt.X / CS), Math.round(pt.Y / CS)]);
+    const abs = [toFlat(outerPath), ...holes.map(toFlat)];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < abs[0].length; i += 2) { x0 = Math.min(x0, abs[0][i]); x1 = Math.max(x1, abs[0][i]); y0 = Math.min(y0, abs[0][i + 1]); y1 = Math.max(y1, abs[0][i + 1]); }
+    blocks.push({ abs, x0, y0, x1, y1, addrs: [], name: null, levels: 0 });
+    // Islands inside courtyards.
+    for (const h of outer.Childs()) walk(h);
+  }
+};
+walk(tree);
+// Give every original building's data to the block it ended up in.
+const bgrid = new Map();
+blocks.forEach((k, i) => {
+  for (let cx = Math.floor(k.x0 / CELL); cx <= Math.floor(k.x1 / CELL); cx++)
+    for (let cy = Math.floor(k.y0 / CELL); cy <= Math.floor(k.y1 / CELL); cy++) {
+      const key = cx + ',' + cy;
+      if (!bgrid.has(key)) bgrid.set(key, []);
+      bgrid.get(key).push(i);
+    }
+});
+for (const b of buildings) {
+  const x = b.abs[0][0], y = b.abs[0][1];
+  const k = (bgrid.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || []).map((i) => blocks[i]).find((k) => inRings(k.abs, x, y));
+  if (!k) continue;
+  if (b.a) for (const a of b.a.split(' | ')) if (!k.addrs.includes(a)) k.addrs.push(a);
+  if (!k.name && b.name) k.name = b.name;
+  k.levels = Math.max(k.levels, b.levels);
+}
+const encodeAbs = (r) => {
+  const out = [r[0], r[1]];
+  for (let i = 2; i < r.length; i += 2) out.push(r[i] - r[i - 2], r[i + 1] - r[i - 1]);
+  return out;
+};
+const merged = blocks.map((k) => ({ rings: k.abs.map(encodeAbs), a: k.addrs.join(' | ') || null, name: k.name, levels: k.levels }));
+console.log(`map: ${buildings.length} buildings merged into ${merged.length} blocks in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+
 // ---------------------------------------------------------------- write
 
 areas.sort((a, b) => AREA_ORDER.indexOf(a.kind) - AREA_ORDER.indexOf(b.kind));
@@ -287,7 +371,7 @@ const out = {
   boundary: boundaryLL.map((r) => encode(r, true)).filter(Boolean),
   areas: areas.map((a) => [a.kind, ...a.rings]),
   lines: lines.map((l) => [l.kind, l.bridge | (l.pass << 1), l.pts, l.name || 0]),
-  buildings: buildings.map((b) => [b.rings, b.a || 0, b.name || 0, b.levels]),
+  buildings: merged.map((b) => [b.rings, b.a || 0, b.name || 0, b.levels]),
   // [kind, name, x, y, address]
   pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0]),
 };

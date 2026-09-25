@@ -34,6 +34,8 @@ export interface SaveData {
   swordSkill?: number;
   /** Random missions taken but not finished yet (see content/zlecenia.ts). */
   gen?: import('./content/fabula').Misja[];
+  /** Fruit picked and not sold yet. */
+  fruits?: Partial<Record<import('./content/sklepy').Owoc, number>>;
 }
 
 export interface PlayerInfo {

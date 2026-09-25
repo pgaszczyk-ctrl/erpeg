@@ -199,10 +199,8 @@ export class FogView {
       else ctx.lineTo(px, py);
     }
     ctx.closePath();
-    ctx.filter = 'blur(2px)';
     ctx.fillStyle = '#000';
     ctx.fill();
-    ctx.filter = 'none';
     ctx.globalCompositeOperation = 'source-over';
     this.tex.refresh();
     this.img.setPosition(ox, oy);

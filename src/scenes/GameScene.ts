@@ -7,7 +7,8 @@ import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE, type RodzajWroga } from '../content/fabula';
-import { BRONIE, WALKA_MIECZEM } from '../content/sklepy';
+import { BRONIE, WALKA_MIECZEM, OWOCE, type Owoc } from '../content/sklepy';
+import { Orchards, StreetEnemies } from './Ambient';
 import type { Place as CityPlace } from '../map/CityMap';
 import {
   session, saveNow, currentSword, currentSwordSkill, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
@@ -44,6 +45,7 @@ export interface HudState {
   exp: number;
   /** Sword name and skill level, for the HUD. */
   sword: string;
+  fruits: string;
   dead: boolean;
   /** Seconds left while the character is stuck after an unfinished session. */
   lingering: number | null;
@@ -60,7 +62,7 @@ export interface DialogRequest {
   onChoose: (index: number) => void;
 }
 
-type Enemy = Slime & { missionId?: string; temp?: boolean };
+type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean };
 
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
@@ -73,6 +75,8 @@ export class GameScene extends Phaser.Scene {
   private nearDoor: string | null = null;
   private hudTimer = 0;
   private lingerUntil = 0;
+  private orchards!: Orchards;
+  private streets!: StreetEnemies;
   explored = new Explored();
   private fogView!: FogView;
   /** What the hero sees right now (world polygon). */
@@ -121,6 +125,25 @@ export class GameScene extends Phaser.Scene {
       this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
     }
     this.applySkill();
+
+    this.orchards = new Orchards(this, this.city);
+    this.streets = new StreetEnemies(
+      this.city,
+      (sp) => {
+        const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
+        e.ambient = true;
+        e.roam = 150; // they come out of their alleys
+        return e;
+      },
+      (u) => {
+        const e = u as Enemy;
+        if (!e.active || e.isDead) return true;
+        if (e.chasing) return false;
+        this.enemies = this.enemies.filter((x) => x !== e);
+        e.destroy();
+        return true;
+      },
+    );
 
     // Fixed enemy spots.
     for (const w of WROGOWIE) {
@@ -193,8 +216,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
+    this.orchards.update(this.player.x, this.player.y, now);
+    this.streets.update(this.player.x, this.player.y, now);
+    const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
       if (s.isDead) continue;
+      // Far from the hero: asleep (saves work on phones).
+      if (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380) continue;
+      // Where one goes, its friends follow.
+      if (!s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
       s.think(target, now);
       this.moveActor(s, dt);
       s.updateLook();
@@ -245,8 +275,9 @@ export class GameScene extends Phaser.Scene {
     const dx = a.vel.x * dt;
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
-    if (dx && this.city.isFree(a.x + dx, fy, FEET.hw, FEET.hh)) a.x += dx;
-    if (dy && this.city.isFree(a.x, fy + dy, FEET.hw, FEET.hh)) a.y += dy;
+    const free = (x: number, y: number) => this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y);
+    if (dx && free(a.x + dx, fy)) a.x += dx;
+    if (dy && free(a.x, fy + dy)) a.y += dy;
   }
 
   // ------------------------------------------------------------------ combat
@@ -256,6 +287,19 @@ export class GameScene extends Phaser.Scene {
       if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size) continue;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, currentSword().obrazenia)) this.onEnemyKilled(s);
     }
+    // Fruit trees: each swing knocks one fruit down.
+    const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
+    if (tree && this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
+  }
+
+  private dropFruit(x: number, y: number, fruit: Owoc) {
+    const tex = fruit === 'jablko' ? TEX.fruitApple : fruit === 'sliwka' ? TEX.fruitPlum : TEX.fruitGrape;
+    const tx = x + (Math.random() - 0.5) * 16;
+    const ty = y + 4 + Math.random() * 8;
+    const item = this.add.image(x, y - 10, tex).setDepth(ty);
+    item.setData('kind', `fruit:${fruit}`);
+    // Falls from the crown to the ground, then can be picked up.
+    this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => this.pickups.push(item) });
   }
 
   private onEnemyKilled(s: Enemy) {
@@ -263,7 +307,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = this.enemies.filter((e) => e !== s);
     session.exp += s.kind.exp;
     this.emitHud();
-    if (s.temp) return;
+    if (s.temp || s.ambient) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
       if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) {
@@ -319,8 +363,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private collect(item: Phaser.GameObjects.Image) {
-    if (item.getData('kind') === 'heart') this.player.heal(2);
-    else session.coins += 1;
+    const kind = item.getData('kind') as string;
+    if (kind === 'heart') this.player.heal(2);
+    else if (kind.startsWith('fruit:')) {
+      const f = kind.slice(6) as Owoc;
+      session.fruits[f] = (session.fruits[f] ?? 0) + 1;
+      this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
+    } else session.coins += 1;
     this.removePickup(item);
     this.emitHud();
   }
@@ -525,12 +574,22 @@ export class GameScene extends Phaser.Scene {
       `Kowal za ladą ${p.name} poleca swój towar.\n\n` +
       `Twój miecz: ${mine.nazwa} (obrażenia ${mine.obrazenia}).\nMasz ${session.coins} monet.` +
       (better.length ? '' : '\n\nMasz już najlepszy miecz, jaki tu mają!');
+    const fruitValue = (Object.keys(OWOCE) as Owoc[]).reduce((sum, f) => sum + (session.fruits[f] ?? 0) * OWOCE[f].cena, 0);
+    const sell = fruitValue > 0 ? [`Sprzedaj owoce – ${fruitValue} monet`] : [];
     this.dialog({
       title: `🛒 ${p.name}`,
       text,
-      buttons: [...better.map((b) => `${b.nazwa} – ${b.cena} monet (obrażenia ${b.obrazenia})`), 'Wyjdź'],
-      onChoose: (i) => {
-        const b = better[i];
+      buttons: [...sell, ...better.map((b) => `${b.nazwa} – ${b.cena} monet (obrażenia ${b.obrazenia})`), 'Wyjdź'],
+      onChoose: (choice) => {
+        if (sell.length && choice === 0) {
+          session.coins += fruitValue;
+          for (const f of Object.keys(OWOCE) as Owoc[]) session.fruits[f] = 0;
+          this.emitHud();
+          this.toast(`Sprzedałeś owoce za ${fruitValue} monet!`);
+          this.save();
+          return;
+        }
+        const b = better[choice - sell.length];
         if (!b) return;
         if (session.coins < b.cena) {
           this.toast(`Za mało monet – ${b.nazwa} kosztuje ${b.cena}.`);
@@ -691,6 +750,7 @@ export class GameScene extends Phaser.Scene {
       coins: session.coins,
       exp: session.exp,
       sword: `${currentSword().nazwa} · walka ${session.swordSkill}`,
+      fruits: `🍎${session.fruits.jablko} 🫐${session.fruits.sliwka} 🍇${session.fruits.winogrono}`,
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),

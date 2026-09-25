@@ -149,7 +149,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.coinText.setText(String(s.coins));
     this.expText.setText(`${s.exp} EXP`);
-    this.swordText.setText(`⚔ ${s.sword}`);
+    this.swordText.setText(`⚔ ${s.sword}\n${s.fruits}`);
     this.hud = s;
     this.streetText.setText(s.street ?? '');
     this.goalText.setText(

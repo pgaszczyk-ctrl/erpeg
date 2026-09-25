@@ -18,13 +18,14 @@ export const ROAD_FILL: Record<string, string> = {
   major: '#c28a52', medium: '#c9935c', minor: '#d09d66', service: '#d6a771', track: '#d6a771',
   pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a',
 };
-const ROAD_EDGE: Record<string, string> = {
-  major: '#8a5a2e', medium: '#8f6034', minor: '#96683b', service: '#9c6f42', track: '#9c6f42',
-  pedestrian: '#a89878', path: '#b88c55', steps: '#9a7a55',
-};
-const CAR_ROADS = new Set(['major', 'medium', 'minor', 'service']);
-const SIDEWALK = 2 * PX_PER_M; // 2 m each side
-const ROAD_ORDER = ['path', 'steps', 'track', 'service', 'pedestrian', 'minor', 'medium', 'major'];
+// One earthen track for roads, pavements and paths alike.
+const TRACK_FILL = '#d9ab72';
+const TRACK_EDGE = '#8f6034';
+const TRACK_WORN = 'rgba(176, 124, 72, 0.45)';
+/** Drawn width: a bit wider than the real road so near-parallel paths merge. */
+function trackWidth(l: Line) {
+  return Math.max(l.width, 3 * PX_PER_M) + 3 * PX_PER_M;
+}
 const ROOFS = ['#c75b4a', '#b5553c', '#a9644a', '#8d6e63', '#a1887f', '#7b8794', '#9c6b4e', '#6d7b8a', '#b0714f'];
 
 function patternCanvas(size: number, draw: (c: CanvasRenderingContext2D) => void) {
@@ -278,26 +279,30 @@ export class MapRenderer {
       ctx.lineWidth = l.width;
       ctx.stroke();
     }
-    const roads = lines.filter((l) => ROAD_FILL[l.kind]).sort((a, b) => ROAD_ORDER.indexOf(a.kind) - ROAD_ORDER.indexOf(b.kind));
-    // Roads for cars get a stone sidewalk on both sides, so the road and its
-    // pavement read as one street.
+    // Roads, pavements and paths are all one kind of track: every outline
+    // first, then every fill in the same colour, so parallel and crossing
+    // pieces melt into one shape with a single outline.
+    const roads = lines.filter((l) => ROAD_FILL[l.kind]);
     for (const l of roads) {
-      if (!CAR_ROADS.has(l.kind)) continue;
       linePath(ctx, l.pts);
-      ctx.strokeStyle = '#8f8570';
-      ctx.lineWidth = l.width + SIDEWALK * 2 + 2;
-      ctx.stroke();
-      ctx.strokeStyle = '#c9bd9f';
-      ctx.lineWidth = l.width + SIDEWALK * 2;
+      ctx.strokeStyle = TRACK_EDGE;
+      ctx.lineWidth = trackWidth(l) + (l.bridge ? 7 : 3);
       ctx.stroke();
     }
     for (const l of roads) {
       linePath(ctx, l.pts);
-      ctx.strokeStyle = ROAD_EDGE[l.kind];
-      ctx.lineWidth = l.width + (l.bridge ? 6 : 1.5);
+      ctx.strokeStyle = TRACK_FILL;
+      ctx.lineWidth = trackWidth(l);
       ctx.stroke();
     }
-    for (const l of roads) this.paintRoad(ctx, l);
+    // A worn middle on the big roads, drawn over the merged shape.
+    for (const l of roads) {
+      if (l.kind !== 'major' && l.kind !== 'medium') continue;
+      linePath(ctx, l.pts);
+      ctx.strokeStyle = TRACK_WORN;
+      ctx.lineWidth = l.width * 0.45;
+      ctx.stroke();
+    }
     for (const l of lines) if (l.kind === 'rail' || l.kind === 'tram') this.paintRail(ctx, l);
 
     // Outside the city: dark forest.
@@ -335,30 +340,6 @@ export class MapRenderer {
     }
   }
 
-  private paintRoad(ctx: CanvasRenderingContext2D, l: Line) {
-    linePath(ctx, l.pts);
-    ctx.strokeStyle = ROAD_FILL[l.kind];
-    ctx.lineWidth = l.width;
-    ctx.stroke();
-    if (l.kind === 'major' || l.kind === 'medium') {
-      // Worn wheel tracks along bigger roads.
-      ctx.setLineDash([10, 6, 4, 12]);
-      ctx.strokeStyle = 'rgba(120, 78, 40, 0.35)';
-      ctx.lineWidth = l.width * 0.55;
-      ctx.stroke();
-      ctx.strokeStyle = ROAD_FILL[l.kind];
-      ctx.lineWidth = l.width * 0.4;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    } else if (l.kind === 'steps') {
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = '#9a7a55';
-      ctx.lineWidth = l.width;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
-
   private paintRail(ctx: CanvasRenderingContext2D, l: Line) {
     linePath(ctx, l.pts);
     ctx.lineCap = 'butt';
@@ -382,7 +363,7 @@ export class MapRenderer {
     // Walls: the footprint dropped by h, plus the outline.
     ringsPath(ctx, b.rings, 0, h);
     ctx.fillStyle = OUTLINE;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     for (let s = h; s > 0; s -= 2) {
@@ -394,7 +375,7 @@ export class MapRenderer {
     ringsPath(ctx, b.rings);
     ctx.fillStyle = special ? special.roof : ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     // A lighter inner edge gives the roof some volume.

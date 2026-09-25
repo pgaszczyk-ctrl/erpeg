@@ -24,6 +24,8 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 
 - Sklepy (niebieskie dachy, szyld z mieczem) w prawdziwych Biedronkach, Lidlach i Lewiatanach sprzedają lepsze miecze. Szkoły (czerwone dachy, szyld z książką) uczą walki mieczem: dłuższy zamach, a potem szybsze cięcia.
 - Kościoły (fioletowe dachy) i urzędy (szare) dają losowe zlecenia, a przy każdym uruchomieniu gry czeka tam nowe. Komendy policji (granatowe) dają listy gończe: złoczyńca ukryty gdzieś w okolicy albo wielki glut. Szpitale (białe) leczą za darmo.
+- Na działkach, trawnikach i w parkach rosną jabłonie, śliwy i winorośl. Uderzenie mieczem strąca owoc (2–5 z drzewa), a owoce sprzedaje się w sklepie. Drzewa odrastają przy każdym uruchomieniu gry.
+- W wąskich uliczkach i na ścieżkach czają się wrogowie (do 20 na kilometr kwadratowy). Chodzą grupkami: gdy jeden zacznie gonić, dołączają sąsiedzi.
 
 Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”. Ceny broni i nauki są w `src/content/sklepy.ts`, a szablony losowych zleceń w `src/content/zlecenia.ts`.
 
