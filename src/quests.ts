@@ -46,6 +46,8 @@ export const session = {
   chest: freshChest(),
   /** Riddles answered: NPC id -> day. */
   riddles: {} as Record<string, string>,
+  /** Daily talks with fixed characters: id -> { day, talks, riddles answered }. */
+  daily: {} as Record<string, { d: string; n: number; a: number }>,
 };
 
 export const CHEST_SLOTS = 100;
@@ -99,6 +101,7 @@ export function startSession(r: LoginResult) {
     c.slots?.slice(0, CHEST_SLOTS).forEach((s, i) => (session.chest.slots[i] = s ?? null));
   }
   session.riddles = { ...(p.save.riddles ?? {}) };
+  session.daily = { ...(p.save.daily ?? {}) };
   session.email = p.email ?? null;
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
@@ -138,7 +141,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles,
+    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily,
   };
   return api.save(session.token, data, session.exp);
 }

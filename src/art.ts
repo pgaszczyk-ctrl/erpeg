@@ -40,6 +40,8 @@ export const TEX = {
   signPolice: 'sign-police',
   signSchool: 'sign-school',
   home: 'home',
+  dog: 'dog',
+  piggy: 'piggy',
   bubble: 'bubble',
 } as const;
 
@@ -465,6 +467,39 @@ function drawHome(scene: Phaser.Scene) {
   }
 }
 
+/** A black-and-white dog (facing right) and its pink rubber piggy. */
+function drawDog(scene: Phaser.Scene) {
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.dog, 16, 12);
+    px(ctx, 2, 3, 11, 6, OUTLINE); // body outline
+    px(ctx, 3, 4, 9, 4, '#ffffff');
+    px(ctx, 5, 4, 3, 3, '#222');
+    px(ctx, 10, 1, 5, 5, OUTLINE); // head
+    px(ctx, 11, 2, 3, 3, '#ffffff');
+    px(ctx, 11, 1, 1, 2, '#222'); // ear
+    px(ctx, 13, 3, 1, 1, '#222'); // eye
+    px(ctx, 15, 4, 1, 1, '#222'); // nose
+    px(ctx, 0, 3, 3, 1, OUTLINE); // tail
+    px(ctx, 3, 9, 2, 3, OUTLINE); // legs
+    px(ctx, 9, 9, 2, 3, OUTLINE);
+    px(ctx, 3, 9, 1, 2, '#ffffff');
+    px(ctx, 9, 9, 1, 2, '#ffffff');
+    tex.refresh();
+  }
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.piggy, 10, 8);
+    px(ctx, 1, 1, 8, 6, OUTLINE);
+    px(ctx, 2, 2, 6, 4, '#ff9ecb');
+    px(ctx, 7, 3, 3, 2, OUTLINE);
+    px(ctx, 8, 3, 1, 1, '#ff7ab3');
+    px(ctx, 6, 2, 1, 1, '#222');
+    px(ctx, 2, 0, 2, 1, OUTLINE);
+    px(ctx, 2, 7, 1, 1, OUTLINE);
+    px(ctx, 6, 7, 1, 1, OUTLINE);
+    tex.refresh();
+  }
+}
+
 function drawSigns(scene: Phaser.Scene) {
   {
     // Shop: a sword on a blue sign.
@@ -705,6 +740,7 @@ export function createArt(scene: Phaser.Scene) {
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawSigns(scene);
   drawHome(scene);
+  drawDog(scene);
   drawMoreSigns(scene);
   drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);
   drawMarker(scene, TEX.marker, false);

@@ -44,6 +44,8 @@ export interface SaveData {
   chest?: { slots: (import('./inventory').Slot | null)[]; coins: number };
   /** Riddles answered: NPC id -> day (YYYY-MM-DD). */
   riddles?: Record<string, string>;
+  /** Daily talks with fixed characters (content/postacie.ts). */
+  daily?: Record<string, { d: string; n: number; a: number }>;
 }
 
 /** Counters for the admin panel. */

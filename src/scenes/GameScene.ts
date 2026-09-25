@@ -10,6 +10,10 @@ import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
+import { FixedNpcs } from './FixedNpcs';
+import type { ZagadkaPL } from '../content/postacie';
+import { tr, tx } from '../i18n';
+import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
@@ -111,6 +115,7 @@ export class GameScene extends Phaser.Scene {
   deathSaved: Promise<void> = Promise.resolve();
   private glow!: Phaser.GameObjects.Graphics;
   private npcs!: Npcs;
+  private fixed!: FixedNpcs;
   private lastBolt = 0;
   private streets!: StreetEnemies;
   explored = new Explored();
@@ -145,6 +150,16 @@ export class GameScene extends Phaser.Scene {
     this.player.hp = session.hp;
     this.nearDoor = 'home'; // we start in the doorway; leaving and coming back opens it
     this.npcs = new Npcs(this, this.city, today());
+    this.fixed = new FixedNpcs(this, this.city, {
+      dialog: (req) => this.dialog(req),
+      toast: (t, ms) => this.toast(t, ms),
+      riddle: (title, intro, z, exp, seed, after) => this.askRiddle(title, intro, z, exp, seed, after),
+      gainExp: (n) => {
+        session.exp += n;
+        this.emitHud();
+      },
+      save: () => this.save(),
+    });
 
     // Missions: gold roofs and "!" over their doors.
     const { missions, missing } = resolveMissions(this.city);
@@ -295,6 +310,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.setDepth(this.player.y);
     this.updateMythic(now);
+    this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
 
@@ -626,6 +642,12 @@ export class GameScene extends Phaser.Scene {
       id = 'home';
       open = () => this.openHome();
     }
+    const fixed = this.fixed.at(fx, fy - FEET.dy, NPC_RADIUS);
+    if (!id && fixed) {
+      id = `fixed-${fixed.id}`;
+      open = () => this.fixed.talk(fixed);
+      savePoint = false;
+    }
     const npc = this.npcs.at(fx, fy - FEET.dy, NPC_RADIUS);
     if (!id && npc) {
       id = npc.id;
@@ -706,6 +728,38 @@ export class GameScene extends Phaser.Scene {
           this.gearChanged();
           this.save();
         });
+      },
+    });
+  }
+
+  /** A riddle with one try (fixed characters); answers are shuffled by `seed`. */
+  private askRiddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void) {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+    const r = rng(h >>> 0);
+    const order = z.odpowiedzi.map((_, i) => i).sort(() => r() - 0.5);
+    const answers = order.map((i) => tr(z.odpowiedzi[i]));
+    const correct = order.indexOf(0);
+    this.dialog({
+      title,
+      text: `${intro}\n\n${tr(z.pytanie)}\n\n${tx(`Nagroda: ${exp} EXP. Tylko jedna próba!`, `Reward: ${exp} EXP. Only one try!`)}`,
+      buttons: [...answers, tx('Później', 'Later')],
+      onChoose: (i) => {
+        if (i >= answers.length) return;
+        const right = i === correct;
+        after(right);
+        if (right) {
+          session.exp += exp;
+          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
+          this.emitHud();
+        }
+        this.dialog({
+          title: right ? tx('🎉 Brawo!', '🎉 Well done!') : tx('😕 Niestety…', '😕 Not quite…'),
+          text: right ? `+${exp} EXP` : tx(`Dobra odpowiedź to: ${answers[correct]}.`, `The right answer is: ${answers[correct]}.`),
+          buttons: ['OK'],
+          onChoose: () => {},
+        });
+        this.save();
       },
     });
   }
