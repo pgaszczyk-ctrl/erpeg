@@ -25,7 +25,8 @@ osmium tags-filter "$WORK/lublin.pbf" \
   wr/amenity=parking \
   n/addr:housenumber \
   nwr/shop=supermarket,convenience,discount \
-  nwr/amenity=school \
+  nwr/amenity=school,place_of_worship,townhall,hospital,police \
+  nwr/office=government \
   -o "$WORK/filtered.pbf"
 
 osmium export "$WORK/filtered.pbf" -f geojsonseq -o "$WORK/lublin.geojsonseq"
