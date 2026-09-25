@@ -1,6 +1,6 @@
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
-import { api, type LoginResult, type SaveData, type Snapshot } from './api';
+import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
@@ -34,7 +34,41 @@ export const session = {
   nonce: 0,
   /** Last known state of a session that was closed without "Wyjdź". */
   abandoned: null as Snapshot | null,
+  /** Counters for the admin panel (km walked, kills, coins earned and spent…). */
+  stats: freshStats(),
+  /** Missions made in the admin panel (loaded at login). */
+  extra: [] as Misja[],
+  /** Mission ids where a secret code can be told. */
+  secrets: new Set<string>(),
 };
+
+export function freshStats(): Stats {
+  return { m: 0, kills: {}, earned: 0, spent: 0, fruit: 0, missions: 0, codes: 0 };
+}
+
+/** Coins in, counted for the statistics. */
+export function earn(n: number) {
+  session.coins += n;
+  session.stats.earned += n;
+}
+
+/** Coins out, counted for the statistics. */
+export function spend(n: number) {
+  session.coins -= n;
+  session.stats.spent += n;
+}
+
+/** Loads the missions made in the admin panel; the game works without them too. */
+export async function loadContent() {
+  try {
+    const list = await api.content();
+    session.extra = list.map(({ sekret, ...m }) => m);
+    session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
+  } catch {
+    session.extra = [];
+    session.secrets = new Set();
+  }
+}
 
 export function startSession(r: LoginResult) {
   const p = r.player;
@@ -52,6 +86,7 @@ export function startSession(r: LoginResult) {
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
   session.missions = { ...(p.save.missions ?? {}) };
+  session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
   session.gen = {};
   for (const m of p.save.gen ?? []) session.gen[m.id] = m;
   session.nonce = Math.floor(Math.random() * 1e9);
@@ -79,7 +114,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    gen, ...saveGear(),
+    gen, ...saveGear(), stats: session.stats,
   };
   return api.save(session.token, data, session.exp);
 }
@@ -191,11 +226,11 @@ export interface ResolvedMission {
 export function resolveMissions(city: CityMap) {
   const ok: ResolvedMission[] = [];
   const missing: string[] = [];
-  for (const m of MISJE) {
+  for (const m of [...MISJE, ...session.extra]) {
     const door = resolvePlace(city, m.adres);
-    const target = resolvePlace(city, m.zadanie.miejsce);
+    const target = m.zadanie.typ === 'brak' ? door : resolvePlace(city, m.zadanie.miejsce);
     if (!door) missing.push(m.adres);
-    if (!target) missing.push(typeof m.zadanie.miejsce === 'string' ? m.zadanie.miejsce : JSON.stringify(m.zadanie.miejsce));
+    else if (!target) missing.push(typeof m.zadanie.miejsce === 'string' ? m.zadanie.miejsce : JSON.stringify(m.zadanie.miejsce));
     if (door) ok.push({ m, door, target });
   }
   return { missions: ok, missing };

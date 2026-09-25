@@ -13,8 +13,11 @@ export type Miejsce = string | { lat: number; lon: number };
 export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta';
 
 export interface Zadanie {
-  /** 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca. */
-  typ: 'pokonaj' | 'idz';
+  /**
+   * 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca,
+   * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce).
+   */
+  typ: 'pokonaj' | 'idz' | 'brak';
   miejsce: Miejsce;
   /** Tylko dla 'pokonaj': ilu wrogów i jakich. */
   ile?: number;

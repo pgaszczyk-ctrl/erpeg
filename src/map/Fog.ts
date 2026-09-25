@@ -13,8 +13,8 @@ import { PX_PER_M } from './CityMap';
 export const FOG_CELL = 4; // world px
 const CHUNK_CELLS = 64;
 
-const VIEW_RANGE = 125; // px, in the looking direction
-const NEAR_RANGE = 22; // px, all around
+const BASE_VIEW_RANGE = 125; // px, in the looking direction
+const BASE_NEAR_RANGE = 22; // px, all around
 const CONE_HALF = (58 * Math.PI) / 180;
 const RAY_STEP_DEG = 2;
 const MARCH = 4; // px per ray step
@@ -89,8 +89,13 @@ export class Explored {
   }
 }
 
-/** Visible area as a polygon (flat x,y list) seen from (x, y) looking at `angle`. */
-export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number) {
+/**
+ * Visible area as a polygon (flat x,y list) seen from (x, y) looking at `angle`.
+ * `light` scales how far one sees (e.g. a glowing sword).
+ */
+export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1) {
+  const VIEW_RANGE = BASE_VIEW_RANGE * light;
+  const NEAR_RANGE = BASE_NEAR_RANGE * light;
   const pts: number[] = [];
   for (let d = 0; d < 360; d += RAY_STEP_DEG) {
     const a = (d * Math.PI) / 180;

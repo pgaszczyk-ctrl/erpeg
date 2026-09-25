@@ -4,7 +4,7 @@
 const URL = 'https://iiffchuhrhsjjgmstypx.supabase.co/rest/v1/rpc/';
 const KEY = 'sb_publishable_lvVeo1Qv3E_4wTQ2oUeI1Q_2_gAgUdA';
 
-async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false): Promise<T> {
+export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false): Promise<T> {
   let res: Response;
   try {
     res = await fetch(URL + fn, {
@@ -39,6 +39,19 @@ export interface SaveData {
   bag?: import('./inventory').Slot[];
   skills?: import('./inventory').Gear['skills'];
   magic?: boolean;
+  stats?: Stats;
+}
+
+/** Counters for the admin panel. */
+export interface Stats {
+  /** Metres walked. */
+  m: number;
+  kills: Record<string, number>;
+  earned: number;
+  spent: number;
+  fruit: number;
+  missions: number;
+  codes: number;
 }
 
 export interface PlayerInfo {
@@ -55,6 +68,12 @@ export interface PlayerInfo {
   died_at: string | null;
   /** Where the code was last sent, if anywhere. */
   email?: string | null;
+  /** Where it died (in `death_scale` pixels per metre), for the ghost map. */
+  death_x?: number | null;
+  death_y?: number | null;
+  death_scale?: number | null;
+  /** How many times it was brought back (the first time is free). */
+  resurrections?: number;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
@@ -85,8 +104,15 @@ export const api = {
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
-  die: (token: string, exp: number, place: string) => rpc<boolean>('die', { p_token: token, p_exp: exp, p_place: place }, true),
-  memorial: () => rpc<{ name: string; exp: number; died_at: string; death_place: string | null }[]>('memorial', { p_limit: 100 }),
+  die: (token: string, exp: number, place: string, x: number, y: number, scale: number, stats: Stats) =>
+    rpc<boolean>('die', { p_token: token, p_exp: exp, p_place: place, p_x: x, p_y: y, p_scale: scale, p_stats: stats }, true),
+  memorial: () =>
+    rpc<{ name: string; exp: number; died_at: string; death_place: string | null; resurrected: boolean }[]>('memorial', { p_limit: 100 }),
+  resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
+  /** Missions made in the admin panel. */
+  content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', {}),
+  redeem: (token: string, missionId: string, code: string) =>
+    rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),
 };
 
 /** Sends the character's name, code and QR code to an e-mail address. */

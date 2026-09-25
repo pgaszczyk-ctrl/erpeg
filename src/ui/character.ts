@@ -79,7 +79,7 @@ function show(hp: number, maxHp: number, onChange: () => void) {
     for (const m of Object.keys(MIEJSCA) as Miejsce[]) {
       const it = item(gear.equip[m]);
       const row = el('button', 'c-row') as HTMLButtonElement;
-      row.append(el('span', 'c-slot', MIEJSCA[m]), el('span', '', it ? `${it.nazwa} (${m === 'bron' || m === 'dystans' ? 'obr.' : 'obrona'} ${it.moc})` : '—'));
+      row.append(el('span', 'c-slot', MIEJSCA[m]), el('span', '', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa} (${m === 'bron' || m === 'dystans' ? 'obr.' : 'obrona'} ${it.moc})${it.opis ? ` – ${it.opis}` : ''}` : '—'));
       row.onclick = () => {
         if (!it || it.id === 'kijek') return;
         ask(it.nazwa, [['Zdejmij do plecaka', () => (unequip(m) ? undefined : (alertFull(), false))]]);
@@ -100,8 +100,8 @@ function show(hp: number, maxHp: number, onChange: () => void) {
         cell.onclick = () => ask(`${OWOCE[s.fruit].mnoga} ×${s.n} (sprzedasz w sklepie)`, [['Wyrzuć', () => dropFromBag(i)]]);
       } else {
         const it = item(s.item)!;
-        cell.append(el('span', 'c-name', it.nazwa));
-        cell.onclick = () => ask(it.nazwa, [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+        cell.append(el('span', 'c-name', `${it.efekt ? '✨ ' : ''}${it.nazwa}`));
+        cell.onclick = () => ask(it.opis ? `${it.nazwa}: ${it.opis}` : it.nazwa, [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       }
       bag.append(cell);
     }

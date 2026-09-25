@@ -22,6 +22,13 @@ export interface Przedmiot {
   rodzaj?: 'luk' | 'magia';
   /** Gdzie się go kupuje: sklep (domyślnie) albo biblioteka. */
   gdzie?: 'sklep' | 'biblioteka';
+  /**
+   * Moc specjalna (przedmioty mityczne, tylko z tajnych haseł):
+   * 'swiatlo' = świeci i widać dalej, 'pioruny' = sam razi pioruny wrogów w pobliżu.
+   */
+  efekt?: 'swiatlo' | 'pioruny';
+  /** Krótki opis pokazywany w karcie postaci. */
+  opis?: string;
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
@@ -45,7 +52,16 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'zelazny_helm', nazwa: 'Żelazny hełm', miejsce: 'helm', moc: 2, cena: 5200 },
   { id: 'skorzane_buty', nazwa: 'Skórzane buty', miejsce: 'buty', moc: 1, cena: 600 },
   { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
+  // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki
+  // w prawdziwym miejscu). Hasła i nagrody ustawia się w panelu admina.
+  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 4, cena: 0, efekt: 'swiatlo', opis: 'Świeci – widzisz o połowę dalej.' },
+  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 3, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
 ];
+
+/** Świetlisty miecz: o ile razy dalej widać. */
+export const SWIATLO = 1.5;
+/** Gromowładny miecz: co ile ms piorun, jak daleko (w metrach) i ile zabiera życia. */
+export const PIORUNY = { co: 2200, zasiegM: 60, obrazenia: 2 };
 
 export const MIEJSCA: Record<Miejsce, string> = {
   bron: 'Broń',

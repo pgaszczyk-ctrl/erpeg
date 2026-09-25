@@ -89,6 +89,16 @@
       .m-qr { align-self: center; border-radius: 4px; max-width: 100%; }
       .m-note { text-align: center; color: #b8c4b0; font-size: 13px; }
       .m-ok { color: #9be39b; }
+      .m-pass { display: flex; gap: 6px; }
+      .m-pass input { flex: 1; min-width: 0; }
+      .m-eye { font-size: 18px; width: 48px; border: 2px solid #4a4a55; border-radius: 4px; background: #0f0d13; color: #fff; }
+      .m-remember { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+      .m-input { font: inherit; font-size: 17px; padding: 10px; border: 2px solid #4a4a55; border-radius: 4px; background: #0f0d13; color: #fff; outline: none; }
+      .m-ghostwrap { position: relative; align-self: center; width: 300px; max-width: 100%; }
+      .m-deathmap { display: block; width: 100%; aspect-ratio: 1; border: 3px solid #8d8f99; border-radius: 6px; }
+      .m-ghost { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -70%); animation: m-float 2.4s ease-in-out infinite;
+        filter: drop-shadow(0 0 8px rgba(220,220,255,0.9)); }
+      @keyframes m-float { 0%, 100% { transform: translate(-50%, -70%); } 50% { transform: translate(-50%, -95%); } }
       .m-link { background: none; border: none; color: #9ac7ff; font: inherit; font-size: 14px; text-decoration: underline; padding: 0; }
     </style>
   </head>

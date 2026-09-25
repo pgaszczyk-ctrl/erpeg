@@ -6,18 +6,19 @@ import { Slime } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
-import { WROGOWIE, type RodzajWroga } from '../content/fabula';
+import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
+import { askText } from '../ui/prompt';
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
+import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel,
-  meleeDamage, rangedWeapon, blockChance, availableSkills, owns,
+  meleeDamage, rangedWeapon, weaponEffect, blockChance, availableSkills, owns,
 } from '../inventory';
 import { hold, mouse, consumeRelease } from '../controls';
 import { Orchards, StreetEnemies, Training } from './Ambient';
 import type { Place as CityPlace } from '../map/CityMap';
 import {
-  session, saveNow, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, earn, spend, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -102,6 +103,10 @@ export class GameScene extends Phaser.Scene {
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
+  /** Resolves once the server knows about the death. */
+  deathSaved: Promise<void> = Promise.resolve();
+  private glow!: Phaser.GameObjects.Graphics;
+  private lastBolt = 0;
   private streets!: StreetEnemies;
   explored = new Explored();
   private fogView!: FogView;
@@ -156,6 +161,12 @@ export class GameScene extends Phaser.Scene {
     this.training = new Training(this, this.city);
     this.shots = [];
     this.aimLine = this.add.graphics().setDepth(1_050_000);
+    this.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    for (let r = 26; r > 4; r -= 4) {
+      this.glow.fillStyle(0xfff3a0, 0.07);
+      this.glow.fillCircle(0, 0, r);
+    }
+    this.lastBolt = 0;
     this.streets = new StreetEnemies(
       this.city,
       (sp) => {
@@ -234,7 +245,10 @@ export class GameScene extends Phaser.Scene {
     const moving = kd.x !== 0 || kd.y !== 0;
     if (lingering) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
+    const bx = this.player.x;
+    const by = this.player.y;
     this.moveActor(this.player, dt);
+    session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     this.player.setAlpha(hidden ? 0.5 : 1);
@@ -271,6 +285,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.player.setDepth(this.player.y);
+    this.updateMythic(now);
     this.updateFog();
 
     for (const item of [...this.pickups]) {
@@ -289,6 +304,51 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Mythic weapons: the glowing sword shines, the thunder sword strikes by itself. */
+  private updateMythic(now: number) {
+    const fx = weaponEffect();
+    this.glow.setVisible(fx === 'swiatlo');
+    if (fx === 'swiatlo') {
+      this.glow.setPosition(this.player.x, this.player.y);
+      this.glow.setAlpha(0.55 + 0.15 * Math.sin(now / 250));
+      this.glow.setDepth(this.player.y - 1);
+    }
+    if (fx !== 'pioruny' || now - this.lastBolt < PIORUNY.co) return;
+    const range = PIORUNY.zasiegM * PX_PER_M;
+    let foe: Enemy | null = null;
+    let best = range;
+    for (const e of this.enemies) {
+      if (e.isDead || !e.visible) continue;
+      const d = Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y);
+      if (d < best) {
+        best = d;
+        foe = e;
+      }
+    }
+    if (!foe) return;
+    this.lastBolt = now;
+    this.drawBolt(foe.x, foe.y);
+    if (foe.hit(new Phaser.Math.Vector2(foe.x, foe.y - 10), now, PIORUNY.obrazenia)) this.onEnemyKilled(foe);
+  }
+
+  /** A zigzag of light from the sky onto (x, y). */
+  private drawBolt(x: number, y: number) {
+    const g = this.add.graphics().setDepth(1_060_000);
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= 7; i++) pts.push([x + (i === 7 ? 0 : (Math.random() - 0.5) * 14), y - 90 + (i * 90) / 7]);
+    for (const [w, c] of [[5, 0x6fb7ff], [2, 0xffffff]] as const) {
+      g.lineStyle(w, c, 1);
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (const p of pts.slice(1)) g.lineTo(p[0], p[1]);
+      g.strokePath();
+    }
+    g.fillStyle(0xcfe6ff, 0.7);
+    g.fillCircle(x, y, 7);
+    this.cameras.main.flash(60, 180, 210, 255, false);
+    this.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
+  }
+
   /** Recomputes what the hero sees and hides whatever is outside of it. */
   private updateFog() {
     const p = this.player;
@@ -296,7 +356,7 @@ export class GameScene extends Phaser.Scene {
     const lv = this.lastVision;
     // (written as !(<=) so the first frame, with NaN, always computes)
     if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
-      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a);
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1);
       this.lastVision = { x: p.x, y: p.y, a };
     }
     this.fogView.update(this.cameras.main, this.vision);
@@ -348,6 +408,7 @@ export class GameScene extends Phaser.Scene {
     this.dropLoot(s.x, s.y);
     this.enemies = this.enemies.filter((e) => e !== s);
     session.exp += s.kind.exp;
+    session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
     if (s.temp || s.ambient) return;
     if (s.missionId) {
@@ -415,8 +476,9 @@ export class GameScene extends Phaser.Scene {
         item.setData('warned', true);
         return;
       }
+      session.stats.fruit++;
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
-    } else session.coins += 1;
+    } else earn(1);
     this.removePickup(item);
     this.emitHud();
   }
@@ -429,9 +491,15 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     // Death is final: the character goes to the memorial board.
     const place = this.city.describe(this.player.x, this.player.y);
-    const report = () =>
-      api.die(session.token, session.exp, place).catch(() => this.time.delayedCall(3000, report));
-    report();
+    const x = Math.round(this.player.x);
+    const y = Math.round(this.player.y);
+    this.deathSaved = new Promise<void>((done) => {
+      const report = () =>
+        api.die(session.token, session.exp, place, x, y, PX_PER_M, session.stats)
+          .then(() => done())
+          .catch(() => setTimeout(report, 3000));
+      report();
+    });
   }
 
   // ------------------------------------------------------------------ sessions
@@ -497,11 +565,12 @@ export class GameScene extends Phaser.Scene {
     this.backToMenu();
   }
 
-  backToMenu() {
+  /** `reopen`: show this character right away (the ghost screen after dying). */
+  backToMenu(reopen?: { name: string; code: string }) {
     const game = this.game;
     game.scene.stop('ui');
     game.scene.stop('game');
-    showMenu(this.city).then(() => game.scene.start('game'));
+    showMenu(this.city, reopen).then(() => game.scene.start('game'));
   }
 
   private save() {
@@ -712,7 +781,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Plecak pełny! Zrób miejsce w karcie postaci.');
       return;
     }
-    session.coins -= p.cena;
+    spend(p.cena);
     this.applySkill();
     this.emitHud();
     this.toast(where === 'equipped' ? `Kupiłeś i założyłeś: ${p.nazwa}!` : `Kupiłeś: ${p.nazwa} (w plecaku).`);
@@ -749,7 +818,7 @@ export class GameScene extends Phaser.Scene {
       onChoose: (i) => {
         if (sell.length && i === 0) {
           const v = sellAllFruit();
-          session.coins += v;
+          earn(v);
           this.emitHud();
           this.toast(`Sprzedałeś owoce za ${v} monet!`);
           this.save();
@@ -776,7 +845,7 @@ export class GameScene extends Phaser.Scene {
           this.toast(`Za mało monet – lekcja kosztuje ${LEKCJA.cena}.`);
           return;
         }
-        session.coins -= LEKCJA.cena;
+        spend(LEKCJA.cena);
         this.practiced(k, LEKCJA.punkty);
         this.emitHud();
         this.toast(`Lekcja zaliczona: +${LEKCJA.punkty} punktów (${UMIEJETNOSCI[k].nazwa}).`);
@@ -801,7 +870,7 @@ export class GameScene extends Phaser.Scene {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
             return;
           }
-          session.coins -= NAUKA_MAGII;
+          spend(NAUKA_MAGII);
           gear.magic = true;
           this.emitHud();
           this.toast('Jesteś teraz także magiem! Kup różdżkę, by rzucać zaklęcia.', 3000);
@@ -817,6 +886,7 @@ export class GameScene extends Phaser.Scene {
   /** After things were put on or off in the character sheet. */
   gearChanged() {
     this.applySkill();
+    this.vision = []; // a glowing sword changes how far we see
     this.emitHud();
   }
 
@@ -842,8 +912,11 @@ export class GameScene extends Phaser.Scene {
   private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
     const m = rm.m;
     const st = missionState(m);
-    if (st === 'new') {
-      this.dialog({
+    if (m.zadanie.typ === 'brak') {
+      // Just a place (e.g. a partner with a secret code on a flyer).
+      this.missionDialog(m, { title: m.tytul, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
+    } else if (st === 'new') {
+      this.missionDialog(m, {
         title: m.tytul,
         text: `${m.opis}\n\nNagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${item(m.przedmiot)?.nazwa}` : ''}.`,
         buttons: ['Przyjmuję', 'Nie teraz'],
@@ -858,14 +931,15 @@ export class GameScene extends Phaser.Scene {
         },
       });
     } else if (st === 'active') {
-      this.dialog({ title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${m.zadanie.cel}`, buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${m.zadanie.cel}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
-      this.dialog({
+      this.missionDialog(m, {
         title: m.tytul,
         text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : ''),
         buttons: ['Dziękuję!'],
         onChoose: () => {
-          session.coins += m.nagroda;
+          earn(m.nagroda);
+          session.stats.missions++;
           session.exp += missionExp(m);
           if (m.przedmiot) {
             const where = addItem(m.przedmiot);
@@ -879,7 +953,51 @@ export class GameScene extends Phaser.Scene {
         },
       });
     } else {
-      this.dialog({ title: m.tytul, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: m.tytul, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
+    }
+  }
+
+  /** A mission dialog; where a secret code can be told, it gets one more button. */
+  private missionDialog(m: Misja, req: DialogRequest) {
+    if (!session.secrets.has(m.id)) return this.dialog(req);
+    const secret = '🤫 Psst, mam tajemne hasło';
+    this.dialog({
+      ...req,
+      buttons: [...req.buttons.slice(0, -1), secret, ...req.buttons.slice(-1)],
+      onChoose: (i) => {
+        const at = req.buttons.length - 1;
+        if (i === at) this.tellSecret(m);
+        else req.onChoose(i > at ? i - 1 : i);
+      },
+    });
+  }
+
+  /** Asks for a code (from a flyer in the real place) and gives its reward. */
+  private async tellSecret(m: Misja) {
+    if (gear.bag.length >= PLECAK.miejsc) {
+      this.toast('Zrób najpierw miejsce w plecaku – nagroda musi się zmieścić!', 3000);
+      return;
+    }
+    this.scene.pause();
+    const code = await askText('🤫 Tajemne hasło', 'Ktoś tu nachyla się i szepcze: „Znasz hasło?”', 'hasło z ulotki');
+    this.scene.resume();
+    consumeAttack();
+    if (!code) return;
+    try {
+      const { reward } = await api.redeem(session.token, m.id, code);
+      const p = item(reward);
+      if (!p || !addItem(reward)) throw new Error('Nie udało się odebrać nagrody.');
+      session.stats.codes++;
+      this.gearChanged();
+      this.dialog({
+        title: '✨ Hasło przyjęte!',
+        text: `Dostajesz: ${p.nazwa}!${p.opis ? `\n\n${p.opis}` : ''}`,
+        buttons: ['Wow, dzięki!'],
+        onChoose: () => {},
+      });
+      this.save();
+    } catch (e) {
+      this.toast((e as Error).message, 3000);
     }
   }
 

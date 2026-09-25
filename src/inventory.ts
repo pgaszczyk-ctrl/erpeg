@@ -101,6 +101,11 @@ export function availableSkills(): Umiejetnosc[] {
 
 // ---------------------------------------------------------------- equipment
 
+/** Special power of the weapon in hand (mythic items). */
+export function weaponEffect() {
+  return item(gear.equip.bron)?.efekt;
+}
+
 export function meleeDamage() {
   return item(gear.equip.bron)?.moc ?? 1;
 }
