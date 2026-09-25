@@ -45,6 +45,8 @@ export function createSlimeAnims(scene: Phaser.Scene) {
 }
 
 export class Slime extends Phaser.GameObjects.Sprite {
+  /** How fast enemies move on this difficulty level (1 = normal). */
+  static tempo = 1;
   vel = new Phaser.Math.Vector2();
   hp: number;
   readonly kind: EnemyKind;
@@ -102,8 +104,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
 
     if (this.chasing) {
+      // Stop at the hero's edge instead of pushing into them.
+      if (dist < this.size + 3) {
+        this.vel.set(0, 0);
+        return;
+      }
       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
-      this.vel.set(v.x * this.kind.chaseSpeed, v.y * this.kind.chaseSpeed);
+      const speed = this.kind.chaseSpeed * Slime.tempo;
+      this.vel.set(v.x * speed, v.y * speed);
       this.anims.timeScale = 2;
     } else if (now > this.nextThink) {
       this.nextThink = now + Phaser.Math.Between(800, 2200);
@@ -113,10 +121,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
       } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > this.roam) {
         // Wandered too far: head back home.
         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
-        this.vel.set(v.x * this.kind.wanderSpeed, v.y * this.kind.wanderSpeed);
+        this.vel.set(v.x * this.kind.wanderSpeed * Slime.tempo, v.y * this.kind.wanderSpeed * Slime.tempo);
       } else {
         const a = Math.random() * Math.PI * 2;
-        this.vel.set(Math.cos(a) * this.kind.wanderSpeed, Math.sin(a) * this.kind.wanderSpeed);
+        this.vel.set(Math.cos(a) * this.kind.wanderSpeed * Slime.tempo, Math.sin(a) * this.kind.wanderSpeed * Slime.tempo);
       }
     }
   }

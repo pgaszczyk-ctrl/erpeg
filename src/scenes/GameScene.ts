@@ -36,6 +36,15 @@ const RESPAWN_MS = 20000;
 const DOOR_RADIUS = 14;
 /** How close one has to come to a riddle-giver to talk. */
 const NPC_RADIUS = 12;
+
+/** Distance from (px, py) to the segment (ax, ay)–(bx, by). */
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const l2 = dx * dx + dy * dy;
+  const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
 /** Pause after any dialog before a character can be talked to again (ms). */
 const NPC_DELAY_MS = 5000;
 /** No enemies this close to home (metres). */
@@ -169,6 +178,7 @@ export class GameScene extends Phaser.Scene {
     // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
     this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     this.player.hp = session.hp;
+    Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
     this.orchards = new Orchards(this, this.city);
     this.fixed = new FixedNpcs(this, this.city, {
@@ -470,9 +480,11 @@ export class GameScene extends Phaser.Scene {
       return d <= arc / 2;
     };
     if (arc) this.drawSweep(aim, arc, reach);
+    // An enemy right on top of the hero is always hit too.
+    const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
     for (const s of [...this.enemies]) {
       if (s.isDead) continue;
-      if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s)) continue;
+      if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
     }
@@ -1005,8 +1017,9 @@ export class GameScene extends Phaser.Scene {
     this.lastShot = now;
     const dir = this.dirFor(r.mode, r.dx, r.dy, r.dragged);
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
+    // Starts at the hero, so nothing standing right next to them is skipped.
     const sprite = this.add
-      .image(this.player.x + dir.x * 8, this.player.y + dir.y * 8, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
+      .image(this.player.x, this.player.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
       .setRotation(Math.atan2(dir.y, dir.x))
       .setDepth(1_040_000);
     this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc, skill });
@@ -1017,12 +1030,19 @@ export class GameScene extends Phaser.Scene {
     for (const shot of [...this.shots]) {
       const step = Math.hypot(shot.vx, shot.vy) * dt;
       const sp = shot.sprite;
+      const ox = sp.x;
+      const oy = sp.y;
       sp.x += shot.vx * dt;
       sp.y += shot.vy * dt;
       shot.left -= step;
-      let done = shot.left <= 0 || this.city.buildingAt(sp.x, sp.y) !== undefined;
+      // Check the whole path of this frame (walls and enemies), so a shot
+      // never slips through.
+      let done = shot.left <= 0;
+      for (let t = 0.25; t <= 1 && !done; t += 0.25) {
+        if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
+      }
       if (!done) {
-        const foe = this.enemies.find((e) => !e.isDead && Math.hypot(e.x - sp.x, e.y - sp.y) < e.size + 3);
+        const foe = this.enemies.find((e) => !e.isDead && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
         if (foe) {
           done = true;
           this.practiced(shot.skill);
