@@ -19,6 +19,8 @@ export const session = {
   token: '',
   name: '',
   idik: '',
+  /** Where the code was last sent (to fill in the e-mail field again). */
+  email: null as string | null,
   startX: 0,
   startY: 0,
   coins: 0,
@@ -39,6 +41,7 @@ export function startSession(r: LoginResult) {
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
+  session.email = p.email ?? null;
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
   session.startX = p.start_x * k;

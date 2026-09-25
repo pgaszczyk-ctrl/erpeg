@@ -17,7 +17,7 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 - Mgła wojny: jasno widać tylko to, w którą stronę patrzy bohater (przez budynki nie widać), szaro to, co już widział, a czarno miejsca, gdzie jeszcze nie był.
 - 🗺 w prawym górnym rogu (albo klawisz M) otwiera mapkę okolicy.
 - Cel misji jest wypisany u góry ekranu, a złota strzałka pokazuje, dokąd iść.
-- Na start tworzysz postać (imię, hasło, adres startowy) i dostajesz 6-znakowy IDIK. Żeby wczytać postać, podajesz imię, hasło i IDIK.
+- Na start tworzysz postać (imię i adres startowy) i dostajesz 8-znakowy kod postaci z kodem QR. Żeby wczytać postać, podajesz imię i kod (albo skanujesz QR). Kod można wysłać sobie na maila (bez zakładania konta) i zobaczyć w grze w menu ☰. Stare postacie (6-znakowy IDIK + hasło) po jednym logowaniu dostają nowy kod.
 - Gra zapisuje się po wejściu do budynku z misją i po ukończeniu misji.
 - Śmierć jest ostateczna: postać trafia na Tablicę Pamięci razem ze zdobytym doświadczeniem (EXP).
 - Z gry wychodzisz przez ☰ w lewym górnym rogu → „Wyjdź” (nie da się tego zrobić w trakcie walki). Jeśli zamkniesz okno bez wyjścia, postać zostaje bezbronna na ulicy przez 10 sekund.

@@ -5,6 +5,8 @@ import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter } from '../ui/character';
+import { showCodeOverlay } from '../ui/codeCard';
+import { session } from '../quests';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -308,8 +310,9 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
-      buttons: ['Wyjdź', 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', 'Graj dalej'],
       onChoose: (i) => {
+        if (i === 1) showCodeOverlay(session.name, session.idik, session.token || null, session.email);
         if (i !== 0) return;
         if (game.inCombat()) {
           this.toast('Nie możesz wyjść w trakcie walki!');

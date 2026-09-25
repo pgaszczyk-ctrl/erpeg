@@ -53,6 +53,8 @@ export interface PlayerInfo {
   exp: number;
   dead: boolean;
   died_at: string | null;
+  /** Where the code was last sent, if anywhere. */
+  email?: string | null;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
@@ -70,16 +72,36 @@ export interface LoginResult {
   player: PlayerInfo;
   abandoned?: Snapshot | null;
   death_place?: string | null;
+  /** An old character just got its new 8-character code. */
+  new_code?: boolean;
 }
 
 export const api = {
-  createCharacter: (name: string, password: string, startPlace: string, x: number, y: number, scale: number) =>
-    rpc<LoginResult>('create_character', { p_name: name, p_password: password, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale }),
-  login: (name: string, idik: string, password: string) =>
-    rpc<LoginResult>('login', { p_name: name, p_idik: idik, p_password: password }),
+  createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number) =>
+    rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale }),
+  /** `password` only for old characters (6-character IDIK); they get a new code. */
+  login: (name: string, code: string, password?: string) =>
+    rpc<LoginResult>('login', { p_name: name, p_idik: code, p_password: password || null }),
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
   die: (token: string, exp: number, place: string) => rpc<boolean>('die', { p_token: token, p_exp: exp, p_place: place }, true),
   memorial: () => rpc<{ name: string; exp: number; died_at: string; death_place: string | null }[]>('memorial', { p_limit: 100 }),
 };
+
+/** Sends the character's name, code and QR code to an e-mail address. */
+export async function sendCodeByEmail(token: string, email: string) {
+  let res: Response;
+  try {
+    res = await fetch('https://iiffchuhrhsjjgmstypx.supabase.co/functions/v1/send-code', {
+      method: 'POST',
+      headers: { apikey: KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, email }),
+    });
+  } catch {
+    throw new Error('Brak połączenia z serwerem gry. Sprawdź internet.');
+  }
+  const body = await res.json().catch(() => null);
+  if (body?.error) throw new Error(body.error);
+  if (!res.ok) throw new Error(`Błąd serwera (${res.status})`);
+}

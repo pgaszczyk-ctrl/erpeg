@@ -214,7 +214,7 @@ export function installTouchControls(el: HTMLElement) {
   // Capture phase on window so we see keys before anything else can
   // swallow them; defaultPrevented is deliberately ignored.
   // While an HTML screen (start menu) is open, keys belong to it.
-  const menuOpen = () => !!document.getElementById('menu');
+  const menuOpen = () => !!document.getElementById('menu') || !!document.getElementById('codecard');
   window.addEventListener(
     'keydown',
     (e) => {

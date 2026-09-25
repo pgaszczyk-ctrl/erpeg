@@ -10,9 +10,11 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
-    "phaser": "^4.2.1"
+    "phaser": "^4.2.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "clipper-lib": "^6.4.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"

@@ -2,6 +2,7 @@ import type { CityMap } from '../map/CityMap';
 import { api, type LoginResult } from '../api';
 import { startSession } from '../quests';
 import { PX_PER_M } from '../map/CityMap';
+import { codeCard, codeFromLink } from './codeCard';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -73,23 +74,20 @@ export function showMenu(city: CityMap): Promise<void> {
 
     const newCharacter = () => {
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
-      const pass = input({ type: 'password', placeholder: 'co najmniej 4 znaki' });
       const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
       const err = error();
       const go: HTMLButtonElement = button('Stwórz postać', () =>
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
-          if (pass.value.length < 4) throw new Error('Hasło musi mieć co najmniej 4 znaki.');
           const place = start.value.trim() || DEFAULT_START;
           const p = city.findStart(place);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
-          const r = await api.createCharacter(name.value.trim(), pass.value, place, p.x, p.y, PX_PER_M);
-          showIdik(r);
+          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M);
+          showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
       screen(
         el('h2', {}, ['Nowa postać']),
         field('Imię', name, '⚠ Imienia nie można później zmienić.'),
-        field('Hasło', pass),
         field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu wracasz po każdym wyjściu z gry.`),
         err,
         go,
@@ -97,29 +95,40 @@ export function showMenu(city: CityMap): Promise<void> {
       );
     };
 
-    const showIdik = (r: LoginResult) =>
+    /** After creating a character (or when an old one got its new code). */
+    const showCode = (r: LoginResult, title: string) =>
       screen(
-        el('h2', {}, [`Witaj, ${r.player.name}!`]),
-        el('p', {}, ['Twój IDIK to:']),
-        el('div', { className: 'm-idik' }, [r.player.idik]),
+        el('h2', {}, [title]),
+        el('p', {}, ['To Twój kod postaci. Imię i kod wystarczą, żeby wczytać postać na każdym urządzeniu.']),
+        codeCard(r.player.name, r.player.idik, r.token ?? null, r.player.email),
         el('p', { className: 'm-warn' }, [
-          'Zapisz go! Imię, hasło i IDIK to jedyny sposób, żeby wczytać tę postać. Nie da się go odzyskać.',
+          'Zapisz kod, zrób zdjęcie albo wyślij go sobie na maila! Bez niego nie wczytasz postaci. Kod znajdziesz też w grze w menu ☰.',
         ]),
-        button('Zapisałem – graj', () => play(r), 'm-primary'),
+        button('Mam kod – graj', () => (r.player.dead ? dead(r) : play(r)), 'm-primary'),
       );
 
-    const load = () => {
-      const name = input({ maxLength: 20 });
-      const idik = input({ maxLength: 6, placeholder: '6 znaków', className: 'm-upper' });
+    const login = async (name: string, code: string, password?: string) => {
+      const r = await api.login(name, code.replace(/[^0-9a-z]/gi, ''), password);
+      if (r.new_code) showCode(r, 'Nowy kod postaci');
+      else if (r.player.dead) dead(r);
+      else play(r);
+    };
+
+    const load = (prefill?: { name: string; code: string }, prefillError?: string) => {
+      const name = input({ maxLength: 20, value: prefill?.name ?? '' });
+      const code = input({ maxLength: 9, placeholder: '8 znaków', className: 'm-upper', value: prefill?.code ?? '' });
       const pass = input({ type: 'password' });
+      // Old characters (a 6-character IDIK) still need their password once.
+      const passField = field('Hasło', pass, 'Tylko stare postacie z 6-znakowym IDIK-iem, ostatni raz – potem dostaniesz nowy kod.');
+      const oldCode = () => code.value.replace(/[^0-9a-z]/gi, '').length === 6;
+      const update = () => (passField.style.display = oldCode() ? '' : 'none');
+      code.oninput = update;
+      update();
       const err = error();
+      if (prefillError) err.textContent = prefillError;
       const go: HTMLButtonElement = button('Wczytaj', () =>
-        busy(go, err, async () => {
-          const r = await api.login(name.value.trim(), idik.value.trim(), pass.value);
-          if (r.player.dead) dead(r);
-          else play(r);
-        }), 'm-primary');
-      screen(el('h2', {}, ['Wczytaj postać']), field('Imię', name), field('IDIK', idik), field('Hasło', pass), err, go, button('Wstecz', main));
+        busy(go, err, () => login(name.value.trim(), code.value, oldCode() ? pass.value : undefined)), 'm-primary');
+      screen(el('h2', {}, ['Wczytaj postać']), field('Imię', name), field('Kod postaci', code), passField, err, go, button('Wstecz', main));
     };
 
     const dead = (r: LoginResult) =>
@@ -154,6 +163,11 @@ export function showMenu(city: CityMap): Promise<void> {
       }
     };
 
-    main();
+    // Opened from the QR code / e-mail link: load that character right away.
+    const fromLink = codeFromLink();
+    if (fromLink) {
+      screen(el('p', {}, [`Wczytuję postać ${fromLink.name}…`]));
+      login(fromLink.name, fromLink.code).catch((e) => load(fromLink, (e as Error).message));
+    } else main();
   });
 }
