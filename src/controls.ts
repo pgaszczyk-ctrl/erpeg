@@ -12,6 +12,10 @@
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
 export const JOY_RADIUS = 56;
+/** Where the joystick sits (set by UIScene's layout); only a touch there moves the hero. */
+export const joyHome = { x: 0, y: 0 };
+/** Last time the player steered (for the "use the joystick" hint). */
+export const activity = { last: 0 };
 
 export const touchInput = {
   x: 0, // -1..1
@@ -126,6 +130,22 @@ export function installTouchControls(el: HTMLElement) {
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   };
 
+  /** The knob follows the thumb (up to the rim); further out = faster. */
+  const steer = (p: { x: number; y: number }) => {
+    let dx = p.x - touchInput.joyOriginX;
+    let dy = p.y - touchInput.joyOriginY;
+    const len = Math.hypot(dx, dy);
+    if (len > JOY_RADIUS) {
+      dx = (dx / len) * JOY_RADIUS;
+      dy = (dy / len) * JOY_RADIUS;
+    }
+    touchInput.joyX = touchInput.joyOriginX + dx;
+    touchInput.joyY = touchInput.joyOriginY + dy;
+    touchInput.x = dx / JOY_RADIUS;
+    touchInput.y = dy / JOY_RADIUS;
+    activity.last = performance.now();
+  };
+
   const sync = (e: TouchEvent) => {
     const alive = new Set(Array.from(e.touches, (t) => t.identifier));
     if (joyId !== null && !alive.has(joyId)) {
@@ -153,12 +173,12 @@ export function installTouchControls(el: HTMLElement) {
           holdOrigin.x = p.x;
           holdOrigin.y = p.y;
         }
-      } else if (joyId === null && p.y > 70) {
-        // (the top band is the HUD: menu button, hearts)
-        // The joystick appears where the thumb lands.
+      } else if (joyId === null && Math.hypot(p.x - joyHome.x, p.y - joyHome.y) < JOY_RADIUS * 1.35) {
+        // The joystick stays in its place: only a thumb on it steers.
         joyId = t.identifier;
-        touchInput.joyOriginX = touchInput.joyX = p.x;
-        touchInput.joyOriginY = touchInput.joyY = p.y;
+        touchInput.joyOriginX = joyHome.x;
+        touchInput.joyOriginY = joyHome.y;
+        steer(p);
       }
       // After the attack flag is set, so a HUD button can cancel the swing.
       tapListeners.forEach((fn) => fn(p.x, p.y));
@@ -176,19 +196,7 @@ export function installTouchControls(el: HTMLElement) {
         hold.dy = p.y - holdOrigin.y;
         if (Math.hypot(hold.dx, hold.dy) > 14) hold.dragged = true;
       }
-      if (t.identifier !== joyId) continue;
-      const p = local(t);
-      let dx = p.x - touchInput.joyOriginX;
-      let dy = p.y - touchInput.joyOriginY;
-      const len = Math.hypot(dx, dy);
-      if (len > JOY_RADIUS) {
-        dx = (dx / len) * JOY_RADIUS;
-        dy = (dy / len) * JOY_RADIUS;
-      }
-      touchInput.joyX = touchInput.joyOriginX + dx;
-      touchInput.joyY = touchInput.joyOriginY + dy;
-      touchInput.x = dx / JOY_RADIUS;
-      touchInput.y = dy / JOY_RADIUS;
+      if (t.identifier === joyId) steer(local(t));
     }
   };
 
@@ -222,6 +230,7 @@ export function installTouchControls(el: HTMLElement) {
       const code = e.code || e.key;
       if (KEY_DIRS[code]) {
         heldKeys.add(code);
+        activity.last = performance.now();
         e.preventDefault();
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {

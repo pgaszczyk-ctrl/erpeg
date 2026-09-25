@@ -41,7 +41,7 @@ type RawMap = {
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant';
   name: string;
   id: string;
   building: Building | null;
@@ -202,8 +202,10 @@ export class CityMap {
     for (const [kind, name, ux, uy, addr] of raw.pois ?? []) {
       const x = ux * k;
       const y = uy * k;
-      let b = this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
-      if (!b) {
+      // Travelling merchants stand in the street, not in a building.
+      const street = kind === 'merchant';
+      let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
+      if (!b && !street) {
         let best = 40 * PX_PER_M;
         for (const c of this.buildingGrid.query({ x0: x - best, y0: y - best, x1: x + best, y1: y + best })) {
           const d = Math.hypot((c.x0 + c.x1) / 2 - x, (c.y0 + c.y1 - 20) / 2 - y);

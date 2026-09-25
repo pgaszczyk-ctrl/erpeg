@@ -40,11 +40,13 @@ export function codeCard(name: string, code: string, token: string | null, email
   QRCode.toCanvas(qr, link, { margin: 2, width: 220, color: { dark: '#000000', light: '#ffffff' } }).catch(() => qr.remove());
 
   const save = el('button', { type: 'button', className: 'm-btn', onclick: () => savePicture(name, code, link) }, ['📷 Zapisz jako obrazek']);
+  const share = el('button', { type: 'button', className: 'm-btn m-share', onclick: () => shareCode(name, code, link) }, ['📤 Wyślij sobie (WhatsApp, SMS…)']);
   const parts: (Node | string)[] = [
     el('div', { className: 'm-code-row' }, [el('span', {}, ['Imię:']), el('b', {}, [name])]),
     el('div', { className: 'm-idik' }, [prettyCode(code)]),
     qr,
     el('p', { className: 'm-note' }, ['Zeskanuj telefonem, żeby od razu wczytać postać.']),
+    share,
     save,
   ];
 
@@ -87,8 +89,43 @@ export function codeCard(name: string, code: string, token: string | null, email
   return el('div', { className: 'm-card' }, parts);
 }
 
+/**
+ * Sends the code with the phone's own share menu (WhatsApp, Messenger, SMS,
+ * e-mail…), with the QR picture where the phone allows files; without a
+ * share menu (most computers) it opens WhatsApp with the message ready.
+ */
+async function shareCode(name: string, code: string, link: string) {
+  const text = `Erpeg – moja postać\nImię: ${name}\nKod: ${prettyCode(code)}\nGraj: ${link}`;
+  try {
+    if (navigator.share) {
+      const file = new File([await picture(name, code, link)], `erpeg-${name}.png`, { type: 'image/png' });
+      const withFile = { title: 'Erpeg', text, files: [file] };
+      if (navigator.canShare?.(withFile)) await navigator.share(withFile);
+      else await navigator.share({ title: 'Erpeg', text });
+      return;
+    }
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') return; // closed the share menu
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
+
+/** The picture with name, code and QR code, as PNG. */
+async function picture(name: string, code: string, link: string): Promise<Blob> {
+  const c = await pictureCanvas(name, code, link);
+  return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('no image'))), 'image/png'));
+}
+
 /** Downloads a picture with the name, code and QR code (e.g. to keep in the phone gallery). */
 async function savePicture(name: string, code: string, link: string) {
+  const c = await pictureCanvas(name, code, link);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = `erpeg-${name}.png`;
+  a.click();
+}
+
+async function pictureCanvas(name: string, code: string, link: string) {
   const qr = document.createElement('canvas');
   await QRCode.toCanvas(qr, link, { margin: 2, width: 300 });
   const c = document.createElement('canvas');
@@ -108,10 +145,7 @@ async function savePicture(name: string, code: string, link: string) {
   g.fillStyle = '#fff2a8';
   g.font = 'bold 34px monospace';
   g.fillText(prettyCode(code), 180, 438);
-  const a = document.createElement('a');
-  a.href = c.toDataURL('image/png');
-  a.download = `erpeg-${name}.png`;
-  a.click();
+  return c;
 }
 
 let open: HTMLDivElement | null = null;

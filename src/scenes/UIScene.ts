@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
-import { touchInput, resetTouch, onTap, JOY_RADIUS } from '../controls';
+import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -29,6 +29,8 @@ export class UIScene extends Phaser.Scene {
   private attackLabel!: Phaser.GameObjects.Text;
   private touch = false;
   private joyHome = new Phaser.Math.Vector2();
+  private joyArrows!: Phaser.GameObjects.Container;
+  private hintAt = 0;
 
   private streetText!: Phaser.GameObjects.Text;
   private skillBar!: Phaser.GameObjects.Container;
@@ -80,12 +82,21 @@ export class UIScene extends Phaser.Scene {
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     this.arrow = this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false);
     // Skill progress while training (shown for a moment after each practice hit).
-    const bw = 90 * this.ui;
-    const bh = 5 * this.ui;
-    this.skillLabel = label(13).setOrigin(0.5, 1).setPosition(0, -3);
-    const back = this.add.rectangle(0, 0, bw, bh, 0x1e1a24).setOrigin(0.5, 0).setStrokeStyle(2, 0x000000);
-    this.skillFill = this.add.rectangle(-bw / 2 + 1, 1, bw - 2, bh - 2, 0xf7c531).setOrigin(0, 0);
-    this.skillBar = this.add.container(0, 0, [this.skillLabel, back, this.skillFill]).setAlpha(0).setDepth(5);
+    // Just an icon and a soft bar, no numbers.
+    const bw = 70 * this.ui;
+    const bh = 4 * this.ui;
+    this.skillLabel = this.add.text(-bw / 2 - 4, bh / 2, '⚔', { fontFamily: 'sans-serif', fontSize: `${8 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3 }).setOrigin(1, 0.5);
+    const back = this.add.rectangle(0, 0, bw, bh, 0x1e1a24, 0.55).setOrigin(0.5, 0);
+    this.skillFill = this.add.rectangle(-bw / 2, 0, bw, bh, 0xf7c531, 0.9).setOrigin(0, 0);
+    // The bar is soft (blurred), the icon stays sharp.
+    const bar = this.add.container(0, 0, [back, this.skillFill]);
+    try {
+      bar.enableFilters();
+      bar.filters?.internal.addBlur(0, 1, 1, 0.8);
+    } catch {
+      // No filters (e.g. canvas renderer): a sharp bar is fine too.
+    }
+    this.skillBar = this.add.container(0, 0, [bar, this.skillLabel]).setAlpha(0).setDepth(5);
     this.dialogBox = undefined;
 
     this.createTouchControls();
@@ -98,7 +109,7 @@ export class UIScene extends Phaser.Scene {
     const onToast = (t: string, ms?: number) => this.toast(t, ms);
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
-    const onPractice = (p: { name: string; level: number; into: number; need: number; max: boolean }) => this.showPractice(p);
+    const onPractice = (p: { skill: string; into: number; need: number; max: boolean }) => this.showPractice(p);
     this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
@@ -143,9 +154,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
-  private showPractice(p: { name: string; level: number; into: number; need: number; max: boolean }) {
-    this.skillLabel.setText(p.max ? `${p.name} – poziom ${p.level} (maks.)` : `${p.name} – poziom ${p.level}  ${p.into}/${p.need}`);
-    const full = (this.skillBar.list[1] as Phaser.GameObjects.Rectangle).width - 2;
+  private showPractice(p: { skill: string; into: number; need: number; max: boolean }) {
+    this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
+    const full = 70 * this.ui;
     this.skillFill.setSize(Math.max(1, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
     this.tweens.killTweensOf(this.skillBar);
     this.skillBar.setAlpha(1);
@@ -173,6 +184,9 @@ export class UIScene extends Phaser.Scene {
 
     const r = JOY_RADIUS;
     this.joyHome.set(pad + r + 16, height - pad - r - 16);
+    joyHome.x = this.joyHome.x;
+    joyHome.y = this.joyHome.y;
+    this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
     this.attackBtn.setPosition(width - pad - 50, height - pad - 60);
     this.attackLabel.setPosition(this.attackBtn.x, this.attackBtn.y);
   }
@@ -203,11 +217,34 @@ export class UIScene extends Phaser.Scene {
     this.touch = window.matchMedia('(pointer: coarse)').matches || touchInput.used;
     this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
+    // Four arrows on the rim, so it reads as a joystick.
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.55);
+    const a = JOY_RADIUS * 0.78;
+    const w = 9;
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const tx = dx * a;
+      const ty = dy * a;
+      // Tip pointing out, base towards the centre.
+      g.fillTriangle(tx + dx * w, ty + dy * w, tx - dy * w - dx * 2, ty + dx * w - dy * 2, tx + dy * w - dx * 2, ty - dx * w - dy * 2);
+    }
+    this.joyArrows = this.add.container(0, 0, [g]);
+    this.hintAt = 0;
     this.attackBtn = this.add.circle(0, 0, 38, 0xe43b44, 0.45).setStrokeStyle(3, 0xffffff, 0.5);
     this.attackLabel = this.add
       .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '34px', color: '#ffffff' })
       .setOrigin(0.5);
-    for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
+    for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
+  }
+
+  /** Blinks the joystick at the start and after a while without moving. */
+  private joyHint() {
+    const now = this.time.now;
+    if (now < this.hintAt) return;
+    const idle = performance.now() - activity.last;
+    if (this.hintAt !== 0 && idle < 9000) return;
+    this.hintAt = now + 9000;
+    this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
   update() {
@@ -361,8 +398,9 @@ export class UIScene extends Phaser.Scene {
     if (!this.touch) {
       if (!touchInput.used) return;
       this.touch = true;
-      for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(true);
+      for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(true);
     }
+    this.joyHint();
     const t = touchInput;
     if (t.joyActive) {
       this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);

@@ -6,7 +6,7 @@ import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
-import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
+import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
 import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
@@ -23,7 +23,7 @@ import {
 } from '../inventory';
 import { hold, mouse, consumeRelease } from '../controls';
 import { Orchards, StreetEnemies, Training } from './Ambient';
-import type { Place as CityPlace } from '../map/CityMap';
+import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
   session, saveNow, earn, spend, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
@@ -36,6 +36,8 @@ const RESPAWN_MS = 20000;
 const DOOR_RADIUS = 14;
 /** How close one has to come to a riddle-giver to talk. */
 const NPC_RADIUS = 12;
+/** No enemies this close to home (metres). */
+const HOME_SAFE_M = 40;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
@@ -57,6 +59,7 @@ const PLACE_LOOK = {
   hospital: { roof: '#f2f2f2', wall: '#ffe6e6', sign: TEX.signHospital },
   police: { roof: '#2b3f8a', wall: '#d7def2', sign: TEX.signPolice },
   library: { roof: '#2f8a6a', wall: '#d9efe6', sign: TEX.signLibrary },
+  merchant: { roof: '', wall: '', sign: TEX.cart },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -118,6 +121,11 @@ export class GameScene extends Phaser.Scene {
   private npcs!: Npcs;
   private fixed!: FixedNpcs;
   private wornKey = '';
+  private home: Building | null = null;
+  /** Buildings in sight now, and ever (so each is marked explored once). */
+  private seenNow = new Set<Building>();
+  private seenEver = new Set<Building>();
+  private homeAt = { x: 0, y: 0 };
   private lastBolt = 0;
   private streets!: StreetEnemies;
   explored = new Explored();
@@ -146,15 +154,14 @@ export class GameScene extends Phaser.Scene {
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
 
-    // Home at the start point: rest, a chest, money (and a save point).
-    this.add.image(session.startX, session.startY - 3, TEX.home).setOrigin(0.5, 1).setDepth(session.startY - 3);
+    // Home: the nearest real house to the start point (hit it to go in).
+    this.setUpHome();
     makePlayerTexture(this, session.look, this.worn());
     this.wornKey = JSON.stringify(this.worn());
     this.player = new Player(this, session.startX, session.startY, PLAYER_TEX, 'me');
     // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
     this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     this.player.hp = session.hp;
-    this.nearDoor = 'home'; // we start in the doorway; leaving and coming back opens it
     this.npcs = new Npcs(this, this.city, today());
     this.fixed = new FixedNpcs(this, this.city, {
       dialog: (req) => this.dialog(req),
@@ -294,6 +301,7 @@ export class GameScene extends Phaser.Scene {
     this.orchards.update(this.player.x, this.player.y, now);
     this.training.update(this.player.x, this.player.y, now);
     this.streets.update(this.player.x, this.player.y, now);
+    this.clearHomeArea();
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
       if (s.isDead) continue;
@@ -333,6 +341,17 @@ export class GameScene extends Phaser.Scene {
     if (this.hudTimer <= 0) {
       this.hudTimer = 400;
       this.emitHud();
+    }
+  }
+
+  /** No enemies around home: any that come near vanish in a puff (no loot, no harm). */
+  private clearHomeArea() {
+    const r = HOME_SAFE_M * PX_PER_M;
+    for (const e of this.enemies) {
+      if (e.isDead || e.missionId || Math.abs(e.x - session.startX) > r || Math.abs(e.y - session.startY) > r) continue;
+      if (Math.hypot(e.x - session.startX, e.y - session.startY) > r) continue;
+      this.enemies = this.enemies.filter((x) => x !== e);
+      this.tweens.add({ targets: e, alpha: 0, scale: 0.2, duration: 250, onComplete: () => e.destroy() });
     }
   }
 
@@ -391,10 +410,16 @@ export class GameScene extends Phaser.Scene {
     const lv = this.lastVision;
     // (written as !(<=) so the first frame, with NaN, always computes)
     if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
-      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1);
+      this.seenNow = new Set();
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow);
+      for (const b of this.seenNow) {
+        if (this.seenEver.has(b)) continue;
+        this.seenEver.add(b);
+        markBuilding(this.explored, this.city, b);
+      }
       this.lastVision = { x: p.x, y: p.y, a };
     }
-    this.fogView.update(this.cameras.main, this.vision);
+    this.fogView.update(this.cameras.main, this.vision, this.seenNow);
     for (const e of this.enemies) if (!e.isDead) e.setVisible(pointInPolygon(this.vision, e.x, e.y));
     for (const i of this.pickups) i.setVisible(pointInPolygon(this.vision, i.x, i.y));
   }
@@ -413,6 +438,11 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ combat
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
+    if (this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
+      this.save();
+      this.openHome();
+      return;
+    }
     let hits = 0;
     for (const s of [...this.enemies]) {
       if (s.isDead || Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size) continue;
@@ -420,11 +450,9 @@ export class GameScene extends Phaser.Scene {
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
     }
     // Fruit trees: each swing knocks one fruit down.
+    // Fruit trees don't count as sword practice.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
-    if (tree) {
-      hits++;
-      if (this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
-    }
+    if (tree && this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
     if (this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz')) hits++;
     if (hits) this.practiced('miecz');
   }
@@ -578,7 +606,6 @@ export class GameScene extends Phaser.Scene {
     this.enemies.filter((e) => e.temp).forEach((e) => e.destroy());
     this.enemies = this.enemies.filter((e) => !e.temp);
     this.player.setPosition(session.startX, session.startY);
-    this.nearDoor = 'home';
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.toast('Przetrwałeś! Wracasz do punktu startowego.');
     this.emitHud();
@@ -644,10 +671,6 @@ export class GameScene extends Phaser.Scene {
     let id: string | null = null;
     let open: (() => void) | null = null;
     let savePoint = true;
-    if (Phaser.Math.Distance.Between(session.startX, session.startY, fx, fy) < DOOR_RADIUS) {
-      id = 'home';
-      open = () => this.openHome();
-    }
     const fixed = this.fixed.at(fx, fy - FEET.dy, NPC_RADIUS);
     if (!id && fixed) {
       id = `fixed-${fixed.id}`;
@@ -695,7 +718,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openPlace(p: CityPlace) {
-    if (p.kind === 'shop') return this.openShop(p);
+    if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
@@ -714,6 +737,59 @@ export class GameScene extends Phaser.Scene {
       // Same door as the place we're standing in: not a new entrance.
       this.nearDoor = m.id;
     });
+  }
+
+  /** Finds the hero's house next to the start point and marks it. */
+  private setUpHome() {
+    const sx = session.startX;
+    const sy = session.startY;
+    const R = 40 * PX_PER_M;
+    let best: Building | null = null;
+    let bestD = Infinity;
+    for (const b of this.city.query({ x0: sx - R, y0: sy - R, x1: sx + R, y1: sy + R }).buildings) {
+      const d = this.city.entranceOf(b);
+      const dist = Math.hypot(d.x - sx, d.y - sy);
+      if (dist < bestD) {
+        bestD = dist;
+        best = b;
+      }
+    }
+    this.home = best;
+    let at = { x: sx, y: sy - 3 };
+    if (best) {
+      // A house-sized building gets a homely red roof; a big block keeps its own.
+      if (best.x1 - best.x0 < 30 * PX_PER_M && best.y1 - best.y0 < 30 * PX_PER_M) this.mapView.highlight.set(best, { roof: '#c75b4a', wall: '#f3e2a0' });
+      const cx = (best.x0 + best.x1) / 2;
+      const cy = (best.y0 + best.y1) / 2;
+      // On the roof: the middle of the house if that is inside it, else by the door.
+      // On the roof just inside the edge nearest the start point: walk from
+      // the start towards the house until we are over its roof.
+      let found = false;
+      for (const t of [{ x: cx, y: cy }, this.city.entranceOf(best)]) {
+        const dx = t.x - sx;
+        const dy = t.y - sy;
+        const len = Math.hypot(dx, dy) || 1;
+        for (let d = 0; d < len + 40 && !found; d += 2) {
+          const x = sx + (dx / len) * d;
+          const y = sy + (dy / len) * d;
+          if (this.city.buildingAt(x, y) === best) {
+            at = { x: x + (dx / len) * 5, y: y + (dy / len) * 5 };
+            if (this.city.buildingAt(at.x, at.y) !== best) at = { x, y };
+            found = true;
+          }
+        }
+        if (found) break;
+      }
+    }
+    this.homeAt = at;
+    // A small, soft house sign sitting on the roof.
+    this.add.image(at.x, at.y, TEX.home).setScale(0.55).setAlpha(0.85).setDepth(1_100_000);
+  }
+
+  /** A swing that lands on the house (or right by it) opens the door. */
+  private hitsHome(x: number, y: number) {
+    if (this.home && this.city.buildingAt(x, y) === this.home) return true;
+    return Math.hypot(x - this.homeAt.x, y - this.homeAt.y) < 12;
   }
 
   /** Home: full health, the chest and money kept there. */
@@ -831,7 +907,7 @@ export class GameScene extends Phaser.Scene {
   private practiced(skill: Umiejetnosc, points = 1) {
     const up = practice(skill, points);
     const pr = skillProgress(skill);
-    this.game.events.emit('practice', { name: UMIEJETNOSCI[skill].nazwa, ...pr, max: pr.level >= MAKS_POZIOM });
+    this.game.events.emit('practice', { skill, ...pr, max: pr.level >= MAKS_POZIOM });
     if (up) {
       this.toast(`${UMIEJETNOSCI[skill].nazwa}: poziom ${up}! Szybsze ataki.`, 2200);
       this.applySkill();
@@ -963,8 +1039,8 @@ export class GameScene extends Phaser.Scene {
     const value = fruitValue();
     const sell = value > 0 ? [`Sprzedaj owoce – ${value} monet`] : [];
     this.dialog({
-      title: `🛒 ${p.name}`,
-      text: `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.` + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
+      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
       onChoose: (i) => {
         if (sell.length && i === 0) {

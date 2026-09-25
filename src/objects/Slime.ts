@@ -19,8 +19,8 @@ export interface EnemyKind {
 }
 
 export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
-  glut: { name: 'Glut', hp: 3, wanderSpeed: 22, chaseSpeed: 42, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
-  wielki_glut: { name: 'Wielki glut', hp: 18, wanderSpeed: 14, chaseSpeed: 36, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
+  glut: { name: 'Glut', hp: 3, wanderSpeed: 20, chaseSpeed: 38, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
+  wielki_glut: { name: 'Wielki glut', hp: 18, wanderSpeed: 13, chaseSpeed: 33, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
   bandyta: { name: 'Bandyta', hp: 6, wanderSpeed: 30, chaseSpeed: 64, sightRange: 80, loseRange: 150, scale: 1, damage: 1, exp: 15 },
 };
 

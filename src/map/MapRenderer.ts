@@ -14,7 +14,6 @@ const OUTLINE = '#2a2430';
 // One earthen track for roads, pavements and paths alike.
 const TRACK_FILL = '#d9ab72';
 const TRACK_EDGE = '#8f6034';
-const TRACK_WORN = 'rgba(176, 124, 72, 0.45)';
 /** Drawn width: a bit wider than the real road so near-parallel paths merge. */
 function trackWidth(l: Line) {
   return Math.max(l.width, 3 * PX_PER_M) + 3 * PX_PER_M;
@@ -50,6 +49,22 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
     }
   };
   return {
+    // Soft cobblestones for the streets: staggered rows of rounded stones.
+    paved: p(16, (c) => {
+      c.fillStyle = '#b9ad98';
+      c.fillRect(0, 0, 16, 16);
+      const r = seeded(21);
+      for (let row = 0; row < 4; row++) {
+        for (let col = -1; col < 4; col++) {
+          const x = col * 4 + (row % 2 ? 2 : 0);
+          const y = row * 4;
+          c.fillStyle = ['#cbbfa8', '#c3b79f', '#d2c7b1'][Math.floor(r() * 3)];
+          c.fillRect(x + 0.5, y + 0.5, 3, 3);
+          c.fillStyle = 'rgba(255,255,255,0.18)';
+          c.fillRect(x + 0.5, y + 0.5, 3, 1);
+        }
+      }
+    }),
     grass: p(64, (c) => speckles(c, '#6abe30', ['#4b9a2a', '#8fd44f', '#5aad2c'], 70, 3, 64)),
     park: p(64, (c) => {
       speckles(c, '#7ccf45', ['#5aad2c', '#9be067'], 60, 5, 64);
@@ -259,7 +274,7 @@ export class MapRenderer {
 
     // Areas (already in draw order from the map build).
     areas.sort((a, b) => m.areas.indexOf(a) - m.areas.indexOf(b));
-    for (const a of areas) this.paintArea(ctx, a);
+    for (const a of areas) if (a.kind !== 'paved') this.paintArea(ctx, a);
 
     // Waterways, then roads (outlines first so crossings merge), then rails.
     for (const l of lines) {
@@ -288,13 +303,20 @@ export class MapRenderer {
       ctx.lineWidth = trackWidth(l);
       ctx.stroke();
     }
-    // A worn middle on the big roads, drawn over the merged shape.
-    for (const l of roads) {
-      if (l.kind !== 'major' && l.kind !== 'medium') continue;
-      linePath(ctx, l.pts);
-      ctx.strokeStyle = TRACK_WORN;
-      ctx.lineWidth = l.width * 0.45;
+    // Streets for cars: one cobbled surface (parallel carriageways merged
+    // in build-map), over the earthen tracks; paths stay earthen.
+    for (const a of areas) {
+      if (a.kind !== 'paved') continue;
+      ringsPath(ctx, a.rings);
+      ctx.strokeStyle = TRACK_EDGE;
+      ctx.lineWidth = 3;
       ctx.stroke();
+    }
+    for (const a of areas) {
+      if (a.kind !== 'paved') continue;
+      ringsPath(ctx, a.rings);
+      ctx.fillStyle = P.paved;
+      ctx.fill('evenodd');
     }
     for (const l of lines) if (l.kind === 'rail' || l.kind === 'tram') this.paintRail(ctx, l);
 

@@ -17,6 +17,7 @@ const PLACE_ICONS: Record<string, [string, string]> = {
   hospital: ['#ffffff', '✚'],
   police: ['#2b3f8a', '★'],
   library: ['#2f8a6a', '¶'],
+  merchant: ['#e43b44', '$'],
 };
 let open: HTMLDivElement | null = null;
 let zoom = 0;

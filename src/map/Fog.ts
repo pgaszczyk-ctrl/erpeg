@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import type { CityMap } from './CityMap';
+import type { CityMap, Building } from './CityMap';
+import { wallHeight } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
 
 // Fog of war:
@@ -33,6 +34,18 @@ const b64 = {
     return out;
   },
 };
+
+/** Marks a whole building (roof and walls) as seen. */
+export function markBuilding(explored: Explored, city: CityMap, b: Building) {
+  const h = wallHeight(b);
+  const n = ((b.x1 - b.x0) / FOG_CELL) * ((b.y1 - b.y0 + h) / FOG_CELL);
+  if (n > 40000) return; // huge blocks: only what the rays touch
+  for (let y = b.y0; y <= b.y1 + h; y += FOG_CELL) {
+    for (let x = b.x0; x <= b.x1; x += FOG_CELL) {
+      if (city.buildingAt(x, y) === b || city.buildingAt(x, y - h) === b) explored.mark(x, y);
+    }
+  }
+}
 
 export class Explored {
   private chunks = new Map<string, Uint8Array>(); // 1 byte per cell (0/1)
@@ -93,7 +106,7 @@ export class Explored {
  * Visible area as a polygon (flat x,y list) seen from (x, y) looking at `angle`.
  * `light` scales how far one sees (e.g. a glowing sword).
  */
-export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1) {
+export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1, seen?: Set<Building>) {
   const VIEW_RANGE = BASE_VIEW_RANGE * light;
   const NEAR_RANGE = BASE_NEAR_RANGE * light;
   const pts: number[] = [];
@@ -110,7 +123,9 @@ export function visionPolygon(city: CityMap, explored: Explored, x: number, y: n
       const px = x + dx * r;
       const py = y + dy * r;
       explored.mark(px, py);
-      if (city.buildingAt(px, py)) {
+      const hitB = city.buildingAt(px, py);
+      if (hitB) {
+        seen?.add(hitB);
         // Let a sliver of the wall show, then stop.
         explored.mark(px + dx * FOG_CELL, py + dy * FOG_CELL);
         r = Math.min(range, r + 3);
@@ -151,7 +166,7 @@ export class FogView {
     });
   }
 
-  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[]) {
+  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = []) {
     const v = cam.worldView;
     // Cell-aligned area a bit larger than the view.
     // Generous margin: the camera eases after the hero, so the view can be
@@ -206,6 +221,19 @@ export class FogView {
     ctx.closePath();
     ctx.fillStyle = '#000';
     ctx.fill();
+    // A building in sight is seen whole: its roof and walls.
+    for (const b of buildings) {
+      const h = wallHeight(b);
+      for (const dy of [0, h]) {
+        ctx.beginPath();
+        for (const r of b.rings) {
+          ctx.moveTo((r[0] - ox) / FOG_RES, (r[1] + dy - oy) / FOG_RES);
+          for (let i = 2; i < r.length; i += 2) ctx.lineTo((r[i] - ox) / FOG_RES, (r[i + 1] + dy - oy) / FOG_RES);
+          ctx.closePath();
+        }
+        ctx.fill('evenodd');
+      }
+    }
     ctx.globalCompositeOperation = 'source-over';
     this.tex.refresh();
     this.img.setPosition(ox, oy);

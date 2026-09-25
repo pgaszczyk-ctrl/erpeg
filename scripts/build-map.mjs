@@ -127,6 +127,7 @@ const lines = [];
 const buildings = [];
 const addrNodes = [];
 const pois = [];
+const roundabouts = [];
 
 // Shops of these chains become in-game shops; schools become skill schools.
 const SHOP_CHAINS = [
@@ -191,6 +192,9 @@ for (const f of features) {
     continue;
   }
 
+  if (t.highway && t.junction === 'roundabout' && g.type === 'LineString') {
+    roundabouts.push({ pts: g.coordinates.map((c) => proj(c)), name: t.name || null });
+  }
   if (t.highway) {
     if (isArea) {
       if (t.highway === 'pedestrian' || t.area === 'yes') {
@@ -399,6 +403,100 @@ const encodeAbs = (r) => {
 const merged = blocks.map((k) => ({ rings: k.abs.map(encodeAbs), a: k.addrs.join(' | ') || null, name: k.name, levels: k.levels }));
 console.log(`map: ${buildings.length} buildings merged into ${merged.length} blocks in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 
+// ---------------------------------------------------------------- paved streets
+// Car roads become one cobbled surface: every road as wide as the game draws
+// it, merged, then gaps narrower than PAVE_GAP_M between them (parallel
+// carriageways, tight corners) are closed, and buildings are cut back out.
+// Thin roads and paths stay earthen tracks (drawn from the lines).
+{
+  const t1 = Date.now();
+  const PAVED = { major: 14, medium: 11, minor: 7 };
+  const PAVE_GAP_M = 12;
+  const byHalf = new Map();
+  for (const l of lines) {
+    const w = PAVED[l.kind];
+    if (!w || l.pass) continue;
+    const half = (Math.max(w, 3) + 3) / 2;
+    const abs = decode(l.pts);
+    const path = [];
+    for (let i = 0; i < abs.length; i += 2) path.push({ X: abs[i] * CS, Y: abs[i + 1] * CS });
+    if (!byHalf.has(half)) byHalf.set(half, []);
+    byHalf.get(half).push(path);
+  }
+  let roads = new ClipperLib.Paths();
+  for (const [half, paths] of byHalf) {
+    const o = new ClipperLib.ClipperOffset(2, 0.25 * CS * UNITS_PER_M);
+    o.AddPaths(paths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etOpenRound);
+    const out = new ClipperLib.Paths();
+    o.Execute(out, half * UNITS_PER_M * CS);
+    for (const p of out) roads.push(p);
+  }
+  const union = (paths) => {
+    const c = new ClipperLib.Clipper();
+    c.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+    const out = new ClipperLib.Paths();
+    c.Execute(ClipperLib.ClipType.ctUnion, out, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+    return out;
+  };
+  const grow = (paths, m) => {
+    const o = new ClipperLib.ClipperOffset(2, 0.25 * CS * UNITS_PER_M);
+    o.AddPaths(paths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+    const out = new ClipperLib.Paths();
+    o.Execute(out, m * UNITS_PER_M * CS);
+    return out;
+  };
+  roads = union(roads);
+  const closed = grow(grow(roads, PAVE_GAP_M / 2), -PAVE_GAP_M / 2);
+  const blockPaths = [];
+  for (const k of blocks) for (const r of k.abs) blockPaths.push(toPath(r));
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(union([...closed, ...roads]), ClipperLib.PolyType.ptSubject, true);
+  c.AddPaths(blockPaths, ClipperLib.PolyType.ptClip, true);
+  const tree = new ClipperLib.PolyTree();
+  c.Execute(ClipperLib.ClipType.ctDifference, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftEvenOdd);
+  const toFlat = (p) => p.flatMap((pt) => [Math.round(pt.X / CS), Math.round(pt.Y / CS)]);
+  const minArea = 6 * CS * CS * UNITS_PER_M * UNITS_PER_M;
+  let n = 0;
+  const walkPaved = (node) => {
+    for (const outer of node.Childs()) {
+      if (outer.IsHole()) continue;
+      const clean = (p) => ClipperLib.Clipper.CleanPolygon(p, 0.4 * CS * UNITS_PER_M);
+      const o = clean(outer.Contour());
+      if (o.length < 3 || Math.abs(ClipperLib.Clipper.Area(o)) < minArea) continue;
+      const holes = outer.Childs().map((h) => clean(h.Contour())).filter((h) => h.length >= 3 && Math.abs(ClipperLib.Clipper.Area(h)) >= minArea);
+      areas.push({ kind: 'paved', rings: [o, ...holes].map((p) => encodeAbs(toFlat(p))) });
+      n++;
+      for (const h of outer.Childs()) walkPaved(h);
+    }
+  };
+  walkPaved(tree);
+  console.log(`map: ${n} paved street areas in ${((Date.now() - t1) / 1000).toFixed(1)} s`);
+}
+
+// ---------------------------------------------------------------- travelling merchants
+// One at every roundabout: its pieces are joined by shared ends, and the
+// merchant stands on the ring road.
+{
+  const groups = [];
+  for (const r of roundabouts) {
+    const ends = [r.pts[0], r.pts[r.pts.length - 1]];
+    const g = groups.find((g) => g.ends.some((e) => ends.some((f) => Math.hypot(e[0] - f[0], e[1] - f[1]) < 4)));
+    if (g) {
+      g.pts.push(...r.pts);
+      g.ends.push(...ends);
+      g.name ||= r.name;
+    } else groups.push({ pts: [...r.pts], ends, name: r.name });
+  }
+  let n = 0;
+  for (const g of groups) {
+    const p = g.pts[Math.floor(g.pts.length / 2)];
+    if (pois.some((q) => q.kind === 'merchant' && Math.hypot(q.p[0] - p[0], q.p[1] - p[1]) < 60 * UNITS_PER_M)) continue;
+    pois.push({ kind: 'merchant', name: g.name || 'Rondo', p, a: null });
+    n++;
+  }
+  console.log(`map: ${n} travelling merchants at roundabouts`);
+}
+
 // ---------------------------------------------------------------- write
 
 areas.sort((a, b) => AREA_ORDER.indexOf(a.kind) - AREA_ORDER.indexOf(b.kind));
@@ -419,4 +517,4 @@ mkdirSync('public/map', { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

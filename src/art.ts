@@ -42,6 +42,7 @@ export const TEX = {
   signSchool: 'sign-school',
   home: 'home',
   dog: 'dog',
+  cart: 'cart',
   piggy: 'piggy',
   bubble: 'bubble',
 } as const;
@@ -485,6 +486,25 @@ function drawHome(scene: Phaser.Scene) {
   }
 }
 
+/** The travelling merchant's cart: a striped canopy over a wooden wagon. */
+function drawCart(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.cart, 22, 20);
+  px(ctx, 1, 1, 20, 6, OUTLINE);
+  for (let i = 0; i < 5; i++) px(ctx, 2 + i * 4, 2, 4, 4, i % 2 ? '#fff6e0' : '#e43b44');
+  px(ctx, 3, 7, 1, 5, OUTLINE);
+  px(ctx, 18, 7, 1, 5, OUTLINE);
+  px(ctx, 1, 11, 20, 5, OUTLINE);
+  px(ctx, 2, 12, 18, 3, '#9c6b3e');
+  px(ctx, 5, 9, 3, 3, '#e43b44'); // apples on display
+  px(ctx, 9, 9, 3, 3, '#f7c531');
+  px(ctx, 13, 9, 3, 3, '#3fa34d');
+  px(ctx, 3, 15, 5, 5, OUTLINE);
+  px(ctx, 4, 16, 3, 3, '#6b4423');
+  px(ctx, 14, 15, 5, 5, OUTLINE);
+  px(ctx, 15, 16, 3, 3, '#6b4423');
+  tex.refresh();
+}
+
 /** A black-and-white dog (facing right) and its pink rubber piggy. */
 function drawDog(scene: Phaser.Scene) {
   {
@@ -759,6 +779,7 @@ export function createArt(scene: Phaser.Scene) {
   drawSigns(scene);
   drawHome(scene);
   drawDog(scene);
+  drawCart(scene);
   drawMoreSigns(scene);
   drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);
   drawMarker(scene, TEX.marker, false);

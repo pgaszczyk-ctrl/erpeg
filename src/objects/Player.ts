@@ -5,7 +5,7 @@ export const PLAYER = {
   speed: 85,
   maxHp: 6,
   attackCooldown: 320, // ms
-  attackReach: 13, // px from the centre to the middle of the swing
+  attackReach: 9, // px from the centre to the middle of the swing (close, easier to aim)
   attackRadius: 11,
   hurtInvulnerable: 1000, // ms
 };
