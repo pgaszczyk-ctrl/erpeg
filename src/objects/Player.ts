@@ -98,14 +98,13 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.vel.set(push.x, push.y);
 
     this.scene.cameras.main.shake(120, 0.004);
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0.2,
-      duration: 90,
-      yoyo: true,
-      repeat: Math.floor(PLAYER.hurtInvulnerable / 180) - 1,
-      onComplete: () => this.setAlpha(1),
+    // Blink by hiding (alpha is used for hiding in bushes).
+    this.scene.time.addEvent({
+      delay: 90,
+      repeat: Math.floor(PLAYER.hurtInvulnerable / 90) - 1,
+      callback: () => this.setVisible(!this.visible),
     });
+    this.scene.time.delayedCall(PLAYER.hurtInvulnerable + 10, () => this.setVisible(true));
     return true;
   }
 

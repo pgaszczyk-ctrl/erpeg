@@ -1,5 +1,6 @@
 // ============================================================================
 //  FABUŁA GRY: misje i wrogowie w Lublinie.
+//  Za pokonanie gluta gracz dostaje 5 punktów doświadczenia (EXP).
 //  Adresy wpisujemy tak jak na tabliczce: "Ulica numer", np. "Zamkowa 9"
 //  (może być też "ul. Zamkowa 9" albo "al. Racławickie 1").
 //  Można też podać nazwę budynku z mapy, np. "Zamek w Lublinie",
@@ -33,6 +34,8 @@ export interface Misja {
   zakonczenie: string;
   /** Nagroda w monetach. */
   nagroda: number;
+  /** Punkty doświadczenia za misję (jeśli nie podane: tyle co monet). */
+  doswiadczenie?: number;
 }
 
 export interface Wrogowie {

@@ -1,44 +1,61 @@
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
+import { api, type LoginResult, type SaveData, type Snapshot } from './api';
 
-// Mission progress and where things are on the map.
+// The logged-in character: progress lives here during play and is sent to the
+// server only at save points (entering a mission building, finishing a
+// mission). Dying or leaving without "Wyjdź" loses anything not yet saved.
 
 export type MissionState = 'new' | 'active' | 'goal' | 'done';
 
-interface Save {
-  coins: number;
-  missions: Record<string, MissionState>;
+export const MAX_HP = 6;
+
+export const session = {
+  token: '',
+  name: '',
+  idik: '',
+  startX: 0,
+  startY: 0,
+  coins: 0,
+  exp: 0,
+  hp: MAX_HP,
+  missions: {} as Record<string, MissionState>,
+  /** Last known state of a session that was closed without "Wyjdź". */
+  abandoned: null as Snapshot | null,
+};
+
+export function startSession(r: LoginResult) {
+  const p = r.player;
+  session.token = r.token ?? '';
+  session.name = p.name;
+  session.idik = p.idik;
+  session.startX = p.start_x;
+  session.startY = p.start_y;
+  session.coins = p.save.coins ?? 0;
+  session.exp = p.exp;
+  session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
+  session.missions = { ...(p.save.missions ?? {}) };
+  session.abandoned = r.abandoned ?? null;
 }
 
-const SAVE_KEY = 'erpeg-save-v1';
-
-function loadSave(): Save {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) return { coins: 0, missions: {}, ...JSON.parse(raw) };
-  } catch {
-    // private mode / blocked storage: start fresh
-  }
-  return { coins: 0, missions: {} };
-}
-
-export const progress = loadSave();
-
-export function saveProgress() {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
-  } catch {
-    // ignore: the game still works, it just won't remember
-  }
+/** Sends the current progress to the server. */
+export function saveNow(hp: number) {
+  session.hp = hp;
+  const data: SaveData = { coins: session.coins, hp, missions: session.missions };
+  return api.save(session.token, data, session.exp);
 }
 
 export function missionState(m: Misja): MissionState {
-  return progress.missions[m.id] ?? 'new';
+  return session.missions[m.id] ?? 'new';
 }
 
 export function setMissionState(m: Misja, s: MissionState) {
-  progress.missions[m.id] = s;
-  saveProgress();
+  session.missions[m.id] = s;
+}
+
+/** Experience for finishing a mission (defaults to its coin reward). */
+export function missionExp(m: Misja) {
+  return m.doswiadczenie ?? m.nagroda;
 }
 
 export interface Place {

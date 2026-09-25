@@ -10,6 +10,8 @@ export class UIScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
   private coinText!: Phaser.GameObjects.Text;
   private coinIcon!: Phaser.GameObjects.Image;
+  private expText!: Phaser.GameObjects.Text;
+  private menuBtn!: Phaser.GameObjects.Text;
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
@@ -42,6 +44,12 @@ export class UIScene extends Phaser.Scene {
     this.coinText = this.add
       .text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${8 * this.ui}px`, color: '#fff2a8', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(1, 0);
+    this.expText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${6 * this.ui}px`, color: '#bfe6ff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
+      .setOrigin(1, 0);
+    this.menuBtn = this.add
+      .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
+      .setOrigin(0, 0);
 
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
@@ -58,10 +66,17 @@ export class UIScene extends Phaser.Scene {
     const onHud = (s: HudState) => this.updateHud(s);
     this.game.events.on('hud', onHud);
     const onDialog = (d: DialogRequest) => this.showDialog(d);
-    const onToast = (t: string) => this.toast(t);
+    const onToast = (t: string, ms?: number) => this.toast(t, ms);
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.getElementById('menu')) {
+        if (this.dialogBox) this.closeDialog();
+        else this.openGameMenu();
+      }
+    };
+    window.addEventListener('keydown', onKey);
     const initial = this.registry.get('hud') as HudState | undefined;
     if (initial) this.updateHud(initial);
     this.events.once('shutdown', () => {
@@ -69,6 +84,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('dialog', onDialog);
       this.game.events.off('toast', onToast);
       offTap();
+      window.removeEventListener('keydown', onKey);
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -89,12 +105,15 @@ export class UIScene extends Phaser.Scene {
   private layout() {
     const { width, height } = this.scale;
     const pad = 4 * this.ui;
-    this.hearts.forEach((h, i) => h.setPosition(pad + i * 10 * this.ui, pad));
+    this.menuBtn.setPosition(pad, pad - 2 * this.ui);
+    const hx = pad + this.menuBtn.width + 3 * this.ui;
+    this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
+    this.expText.setPosition(width - pad, pad + 9 * this.ui);
     this.coinText.setPosition(width - pad, pad - this.ui);
     this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
     const wrap = Math.min(width - 40, 520);
-    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, pad + 12 * this.ui);
-    this.streetText.setPosition(width / 2, pad + 2);
+    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, pad + 22 * this.ui + 18);
+    this.streetText.setPosition(width / 2, pad + 22 * this.ui);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
 
     const r = JOY_RADIUS;
@@ -113,9 +132,12 @@ export class UIScene extends Phaser.Scene {
       h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
     });
     this.coinText.setText(String(s.coins));
+    this.expText.setText(`${s.exp} EXP`);
     this.hud = s;
     this.streetText.setText(s.street ?? '');
-    this.goalText.setText(s.goal ? `🎯 ${s.goal}` : '');
+    this.goalText.setText(
+      s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : s.goal ? `🎯 ${s.goal}` : '',
+    );
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
   }
@@ -204,6 +226,10 @@ export class UIScene extends Phaser.Scene {
   private dialogOpenedAt = 0;
 
   private onDialogTap(x: number, y: number) {
+    if (!this.dialogBox && !this.overlay && x >= 0 && x < 60 && y < 60) {
+      this.openGameMenu();
+      return;
+    }
     if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
     let choice = -1;
     if (x < 0) choice = 0; // keyboard: Space/Enter picks the first button
@@ -212,6 +238,25 @@ export class UIScene extends Phaser.Scene {
     const choose = this.dialogChoose;
     this.closeDialog();
     choose?.(choice);
+  }
+
+  /** Top-left menu: leave the game properly. */
+  private openGameMenu() {
+    const game = this.scene.get('game') as GameScene;
+    if (this.dialogBox || this.overlay || !game.player || game.player.isDead) return;
+    this.showDialog({
+      title: 'Menu',
+      text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
+      buttons: ['Wyjdź', 'Graj dalej'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        if (game.inCombat()) {
+          this.toast('Nie możesz wyjść w trakcie walki!');
+          return;
+        }
+        game.leave();
+      },
+    });
   }
 
   private closeDialog() {
@@ -241,27 +286,40 @@ export class UIScene extends Phaser.Scene {
 
   private showGameOver() {
     const { width, height } = this.scale;
-    const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0);
+    const s = this.hud;
+    const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
     const title = this.add
-      .text(width / 2, height / 2 - 30, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
-      .setOrigin(0.5);
+      .text(width / 2, 0, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
+      .setOrigin(0.5, 0);
+    const info = this.add
+      .text(width / 2, 0, `Śmierć jest ostateczna.\nTwoje imię trafia na Tablicę Pamięci.\n\nZdobyte doświadczenie: ${s?.exp ?? 0} EXP\n\nWskrzeszenie: 5 zł (wkrótce)`, {
+        fontFamily: 'monospace', fontSize: '17px', color: '#ffffff', align: 'center', wordWrap: { width: width - 40 }, lineSpacing: 4,
+      })
+      .setOrigin(0.5, 0);
     const sub = this.add
-      .text(width / 2, height / 2 + 30, 'Dotknij ekranu, kliknij lub naciśnij spację', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff' })
-      .setOrigin(0.5);
-    this.overlay = this.add.container(0, 0, [bg, title, sub]).setAlpha(0);
-    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 400 });
+      .text(width / 2, 0, 'Dotknij ekranu, kliknij lub naciśnij spację', { fontFamily: 'monospace', fontSize: '15px', color: '#bbbbbb', align: 'center', wordWrap: { width: width - 40 } })
+      .setOrigin(0.5, 0);
+    // Stack the three texts in the middle of the screen.
+    const gap = 24;
+    let y = (height - (title.height + info.height + sub.height + 2 * gap)) / 2;
+    for (const t of [title, info, sub]) {
+      t.setY(y);
+      y += t.height + gap;
+    }
+    this.overlay = this.add.container(0, 0, [bg, title, info, sub]).setAlpha(0).setDepth(30);
+    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 600 });
 
     let done = false;
     let offTap = () => {};
-    const restart = () => {
+    const toMenu = () => {
       if (done) return;
       done = true;
       offTap();
       resetTouch();
-      this.scene.get('game').scene.restart();
+      (this.scene.get('game') as GameScene).backToMenu();
     };
-    this.time.delayedCall(700, () => {
-      offTap = onTap(restart);
+    this.time.delayedCall(1200, () => {
+      offTap = onTap(toMenu);
       this.events.once('shutdown', offTap);
     });
   }

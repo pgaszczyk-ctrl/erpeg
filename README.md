@@ -15,7 +15,10 @@ Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).
 - Bohater zaczyna w losowym miejscu miasta.
 - Budynki z misjami mają złote dachy i znak „!” nad wejściem. Wejdź w drzwi, żeby porozmawiać.
 - Cel misji jest wypisany u góry ekranu, a złota strzałka pokazuje, dokąd iść.
-- Postęp (monety i misje) zapisuje się w przeglądarce.
+- Na start tworzysz postać (imię, hasło, adres startowy) i dostajesz 6-znakowy IDIK. Żeby wczytać postać, podajesz imię, hasło i IDIK.
+- Gra zapisuje się po wejściu do budynku z misją i po ukończeniu misji.
+- Śmierć jest ostateczna: postać trafia na Tablicę Pamięci razem ze zdobytym doświadczeniem (EXP).
+- Z gry wychodzisz przez ☰ w lewym górnym rogu → „Wyjdź” (nie da się tego zrobić w trakcie walki). Jeśli zamkniesz okno bez wyjścia, postać zostaje bezbronna na ulicy przez 10 sekund.
 
 Misje i wrogów ustawia się w pliku `src/content/fabula.ts`, podając adresy, np. „Zamkowa 9”.
 

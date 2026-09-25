@@ -335,11 +335,57 @@ export class CityMap {
     return { x: best.x, y: best.y };
   }
 
+  /**
+   * Start point for "Ulica" or "Ulica numer": a building's door if the
+   * address exists, otherwise a free spot on the named street.
+   */
+  findStart(query: string): { x: number; y: number } | null {
+    const q = normAddress(query);
+    if (!q) return null;
+    if (/\d/.test(q)) {
+      const b = this.findBuilding(query);
+      if (b) return this.entranceOf(b);
+    }
+    const street = q.replace(/\s+\d+[a-z]?$/, '');
+    const lines = this.lines.filter((l) => l.name && ROAD_KINDS.has(l.kind) && normAddress(l.name) === street);
+    const loose = lines.length ? lines : this.lines.filter((l) => l.name && ROAD_KINDS.has(l.kind) && normAddress(l.name).includes(street));
+    if (!loose.length) return null;
+    // Middle of the longest piece of that street, nudged until free.
+    const len = (l: Line) => {
+      let d = 0;
+      for (let i = 2; i < l.pts.length; i += 2) d += Math.hypot(l.pts[i] - l.pts[i - 2], l.pts[i + 1] - l.pts[i - 1]);
+      return d;
+    };
+    const l = loose.reduce((a, b) => (len(a) >= len(b) ? a : b));
+    const n = l.pts.length / 2;
+    for (let k = 0; k < n; k++) {
+      const i = ((Math.floor(n / 2) + k) % n) * 2;
+      if (this.isFree(l.pts[i], l.pts[i + 1], 6, 6)) return { x: l.pts[i], y: l.pts[i + 1] };
+    }
+    return { x: l.pts[0], y: l.pts[1] };
+  }
+
+  /** Kinds of areas covering a point (e.g. to hide the player in a forest). */
+  areaKindsAt(x: number, y: number): string[] {
+    const out: string[] = [];
+    for (const a of this.areaGrid.at(x, y)) {
+      if (x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1 && pointInRings(a.rings, x, y)) out.push(a.kind);
+    }
+    return out;
+  }
+
+  /** A human description of a place: street or nearest address. */
+  describe(x: number, y: number): string {
+    const b = this.buildingAt(x, y - 12) ?? this.buildingAt(x, y + 12);
+    return b?.addresses[0] ?? this.streetNear(x, y, 200) ?? 'bezdroża Lublina';
+  }
+
   /** Street name nearest to a point (for the HUD). */
-  streetNear(x: number, y: number): string | null {
+  streetNear(x: number, y: number, radius = 60): string | null {
     let best: string | null = null;
-    let bd = 60;
-    for (const l of this.lineGrid.at(x, y)) {
+    let bd = radius;
+    const near = radius > CELL / 2 ? this.lineGrid.query({ x0: x - radius, y0: y - radius, x1: x + radius, y1: y + radius }) : this.lineGrid.at(x, y);
+    for (const l of near) {
       if (!l.name || !ROAD_KINDS.has(l.kind)) continue;
       const d = distToPolyline(l.pts, x, y);
       if (d < bd) {

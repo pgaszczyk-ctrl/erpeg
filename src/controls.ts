@@ -111,7 +111,8 @@ export function installTouchControls(el: HTMLElement) {
       if (p.x >= half) {
         attackIds.add(t.identifier);
         touchInput.attack = true;
-      } else if (joyId === null) {
+      } else if (joyId === null && p.y > 70) {
+        // (the top band is the HUD: menu button, hearts)
         // The joystick appears where the thumb lands.
         joyId = t.identifier;
         touchInput.joyOriginX = touchInput.joyX = p.x;
@@ -142,7 +143,8 @@ export function installTouchControls(el: HTMLElement) {
   };
 
   const end = (e: TouchEvent) => {
-    if (e.cancelable) e.preventDefault();
+    // Only swallow touches on the game itself, so taps on HTML menus still click.
+    if (e.cancelable && el.contains(e.target as Node)) e.preventDefault();
     sync(e);
   };
 
@@ -161,9 +163,12 @@ export function installTouchControls(el: HTMLElement) {
 
   // Capture phase on window so we see keys before anything else can
   // swallow them; defaultPrevented is deliberately ignored.
+  // While an HTML screen (start menu) is open, keys belong to it.
+  const menuOpen = () => !!document.getElementById('menu');
   window.addEventListener(
     'keydown',
     (e) => {
+      if (menuOpen()) return;
       const code = e.code || e.key;
       if (KEY_DIRS[code]) {
         heldKeys.add(code);

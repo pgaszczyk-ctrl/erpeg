@@ -11,11 +11,16 @@ const OUTLINE = '#2a2430';
 const AREA_FILL: Record<string, string> = {
   water: '#3f8fd8', forest: '#3d8b3d', scrub: '#5e9e3a', wetland: '#6aa89a', park: '#7ccf45', grass: '#72c23a',
   farmland: '#c8d77a', cemetery: '#6aa84f', allotments: '#8bc34a', pitch: '#4fb34f', playground: '#e0c070',
-  parking: '#a3a3ab', plaza: '#dccfb2',
+  parking: '#d2ad7c', plaza: '#dccfb2',
 };
+// Plain earthen roads (no asphalt): wider = more trodden and darker.
 const ROAD_FILL: Record<string, string> = {
-  major: '#7d808a', medium: '#8b8f9a', minor: '#9a9ea8', service: '#a8acb4', track: '#c48f58',
-  pedestrian: '#dccfb2', path: '#d9a066', steps: '#c9a47a',
+  major: '#c28a52', medium: '#c9935c', minor: '#d09d66', service: '#d6a771', track: '#d6a771',
+  pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a',
+};
+const ROAD_EDGE: Record<string, string> = {
+  major: '#8a5a2e', medium: '#8f6034', minor: '#96683b', service: '#9c6f42', track: '#9c6f42',
+  pedestrian: '#a89878', path: '#b88c55', steps: '#9a7a55',
 };
 const ROAD_ORDER = ['path', 'steps', 'track', 'service', 'pedestrian', 'minor', 'medium', 'major'];
 const ROOFS = ['#c75b4a', '#b5553c', '#a9644a', '#8d6e63', '#a1887f', '#7b8794', '#9c6b4e', '#6d7b8a', '#b0714f'];
@@ -153,6 +158,9 @@ export function wallHeight(b: Building) {
   return 8 + Math.min(b.levels || 1, 8) * 2;
 }
 
+// Texture keys must be unique for the whole game, across scene restarts.
+let textureCounter = 0;
+
 interface Chunk {
   key: string;
   tex: Phaser.Textures.CanvasTexture;
@@ -163,11 +171,22 @@ export class MapRenderer {
   private chunks = new Map<string, Chunk>();
   private free: Chunk[] = [];
   private patterns?: Patterns;
-  private created = 0;
   /** Building addresses to highlight (mission buildings). */
   highlight = new Set<Building>();
 
-  constructor(private scene: Phaser.Scene, private map: CityMap) {}
+  constructor(private scene: Phaser.Scene, private map: CityMap) {
+    scene.events.once('shutdown', () => this.destroy());
+  }
+
+  /** Frees the chunk textures (the scene is going away). */
+  destroy() {
+    for (const c of [...this.chunks.values(), ...this.free]) {
+      c.img.destroy();
+      this.scene.textures.remove(c.tex);
+    }
+    this.chunks.clear();
+    this.free = [];
+  }
 
   /** Draws the chunks around the camera; call every frame. */
   update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2) {
@@ -211,7 +230,7 @@ export class MapRenderer {
   private draw(cx: number, cy: number) {
     let chunk = this.free.pop();
     if (!chunk) {
-      const key = `chunk-${this.created++}`;
+      const key = `chunk-${textureCounter++}`;
       const tex = this.scene.textures.createCanvas(key, CHUNK, CHUNK)!;
       const img = this.scene.add.image(0, 0, key).setOrigin(0).setDepth(-1000);
       chunk = { key: '', tex, img };
@@ -259,7 +278,7 @@ export class MapRenderer {
     const roads = lines.filter((l) => ROAD_FILL[l.kind]).sort((a, b) => ROAD_ORDER.indexOf(a.kind) - ROAD_ORDER.indexOf(b.kind));
     for (const l of roads) {
       linePath(ctx, l.pts);
-      ctx.strokeStyle = l.kind === 'path' || l.kind === 'track' ? '#a8703e' : '#4a4a55';
+      ctx.strokeStyle = ROAD_EDGE[l.kind];
       ctx.lineWidth = l.width + (l.bridge ? 6 : 2);
       ctx.stroke();
     }
@@ -295,7 +314,7 @@ export class MapRenderer {
       ctx.lineWidth = 2;
       ctx.stroke();
     } else if (a.kind === 'forest' || a.kind === 'pitch' || a.kind === 'parking') {
-      ctx.strokeStyle = a.kind === 'pitch' ? '#ffffff' : a.kind === 'parking' ? '#7d7d86' : '#24602a';
+      ctx.strokeStyle = a.kind === 'pitch' ? '#ffffff' : a.kind === 'parking' ? '#9c6f42' : '#24602a';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -307,9 +326,13 @@ export class MapRenderer {
     ctx.lineWidth = l.width;
     ctx.stroke();
     if (l.kind === 'major' || l.kind === 'medium') {
-      ctx.setLineDash([14, 14]);
-      ctx.strokeStyle = '#e8e8e8';
-      ctx.lineWidth = 2;
+      // Worn wheel tracks along bigger roads.
+      ctx.setLineDash([10, 6, 4, 12]);
+      ctx.strokeStyle = 'rgba(120, 78, 40, 0.35)';
+      ctx.lineWidth = l.width * 0.55;
+      ctx.stroke();
+      ctx.strokeStyle = ROAD_FILL[l.kind];
+      ctx.lineWidth = l.width * 0.4;
       ctx.stroke();
       ctx.setLineDash([]);
     } else if (l.kind === 'steps') {

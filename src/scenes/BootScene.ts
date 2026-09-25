@@ -3,6 +3,7 @@ import { createArt } from '../art';
 import { createHeroAnims } from '../objects/Player';
 import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
+import { showMenu } from '../ui/menu';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -22,7 +23,8 @@ export class BootScene extends Phaser.Scene {
     CityMap.load('map/lublin.json')
       .then((city) => {
         this.registry.set('city', city);
-        this.scene.start('game');
+        text.setText('');
+        return showMenu(city).then(() => this.scene.start('game'));
       })
       .catch((err: Error) => text.setText(`Nie udało się wczytać mapy.\n${err.message}\n\nOdśwież stronę.`));
   }
