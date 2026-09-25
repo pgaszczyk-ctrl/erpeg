@@ -47,9 +47,9 @@ export class UIScene extends Phaser.Scene {
       resetTouch();
     });
 
-    if (!this.sys.game.device.input.touch) {
+    if (!window.matchMedia('(pointer: coarse)').matches) {
       const hint = this.add
-        .text(this.scale.width / 2, this.scale.height - 12, 'WASD / strzałki – ruch    SPACJA – miecz', {
+        .text(this.scale.width / 2, this.scale.height - 12, 'WASD / strzałki – ruch    SPACJA lub klik – miecz', {
           fontFamily: 'monospace', fontSize: '14px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 4,
         })
         .setOrigin(0.5, 1);
@@ -85,7 +85,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createTouchControls() {
-    this.touch = this.sys.game.device.input.touch;
+    // Phones/tablets show the controls right away; touch laptops once touched.
+    this.touch = window.matchMedia('(pointer: coarse)').matches || touchInput.used;
     this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
     this.attackBtn = this.add.circle(0, 0, 38, 0xe43b44, 0.45).setStrokeStyle(3, 0xffffff, 0.5);
@@ -97,7 +98,11 @@ export class UIScene extends Phaser.Scene {
 
   // The touch state lives in controls.ts; here we only draw it.
   update() {
-    if (!this.touch) return;
+    if (!this.touch) {
+      if (!touchInput.used) return;
+      this.touch = true;
+      for (const o of [this.joyBase, this.joyKnob, this.attackBtn, this.attackLabel]) o.setVisible(true);
+    }
     const t = touchInput;
     if (t.joyActive) {
       this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);
@@ -116,7 +121,7 @@ export class UIScene extends Phaser.Scene {
       .text(width / 2, height / 2 - 30, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height / 2 + 30, 'Dotknij ekranu lub naciśnij spację', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff' })
+      .text(width / 2, height / 2 + 30, 'Dotknij ekranu, kliknij lub naciśnij spację', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff' })
       .setOrigin(0.5);
     this.overlay = this.add.container(0, 0, [bg, title, sub]).setAlpha(0);
     this.tweens.add({ targets: this.overlay, alpha: 1, duration: 400 });
@@ -133,8 +138,6 @@ export class UIScene extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       offTap = onTap(restart);
       this.events.once('shutdown', offTap);
-      this.input.once('pointerdown', restart); // mouse
-      this.input.keyboard!.once('keydown-SPACE', restart);
     });
   }
 }

@@ -18,8 +18,8 @@ const game = new Phaser.Game({
     default: 'arcade',
     arcade: { debug: false },
   },
-  // Touch is handled natively in controls.ts (see there why).
-  input: { touch: false },
+  // Touch, keyboard and mouse clicks are handled natively in controls.ts (see there why).
+  input: { touch: false, keyboard: false },
   scene: [BootScene, GameScene, UIScene],
 });
 

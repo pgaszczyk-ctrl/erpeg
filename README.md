@@ -4,7 +4,7 @@ Prosta gra RPG z widokiem z góry, w stylu Zeldy i Tibii z lat 90. Działa w prz
 
 ## Jak grać
 
-- **Komputer:** WASD albo strzałki to ruch, SPACJA (albo J) to cios mieczem.
+- **Komputer:** WASD albo strzałki to ruch, SPACJA (albo J, Enter albo kliknięcie myszą) to cios mieczem.
 - **Telefon:** lewa połowa ekranu działa jak joystick (połóż kciuk i przesuń), prawa połowa to cios mieczem.
 
 Pokonane glutki zostawiają monety albo serduszka (serduszko leczy).

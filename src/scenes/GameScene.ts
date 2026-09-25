@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TEX, TILE, SOLID_TILES } from '../art';
 import { generateWorld, isWalkable, MAP_W, MAP_H } from '../world';
-import { touchInput } from '../controls';
+import { touchInput, keyboardDir, consumeAttack } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
 
@@ -21,7 +21,6 @@ export class GameScene extends Phaser.Scene {
   private slimes!: Phaser.Physics.Arcade.Group;
   private pickups!: Phaser.Physics.Arcade.Group;
   private tiles!: number[][];
-  private keys!: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'attack' | 'attack2', Phaser.Input.Keyboard.Key>;
   private coins = 0;
 
   constructor() {
@@ -68,14 +67,6 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
 
-    const kb = this.input.keyboard!;
-    const K = Phaser.Input.Keyboard.KeyCodes;
-    this.keys = kb.addKeys({
-      up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT,
-      w: K.W, a: K.A, s: K.S, d: K.D,
-      attack: K.SPACE, attack2: K.J,
-    }) as typeof this.keys;
-
     this.scene.launch('ui');
     this.emitHud();
   }
@@ -92,19 +83,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const k = this.keys;
-    let ix = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
-    let iy = (k.down.isDown || k.s.isDown ? 1 : 0) - (k.up.isDown || k.w.isDown ? 1 : 0);
-    if (ix === 0 && iy === 0) {
-      ix = touchInput.x;
-      iy = touchInput.y;
-    }
-    this.player.move(ix, iy, now);
+    const kd = keyboardDir();
+    const moving = kd.x !== 0 || kd.y !== 0;
+    this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
 
-    const attackPressed =
-      Phaser.Input.Keyboard.JustDown(k.attack) || Phaser.Input.Keyboard.JustDown(k.attack2) || touchInput.attack;
-    touchInput.attack = false;
-    if (attackPressed) {
+    if (consumeAttack()) {
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
     }
