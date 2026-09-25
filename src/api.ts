@@ -46,6 +46,8 @@ export interface SaveData {
   riddles?: Record<string, string>;
   /** Daily talks with fixed characters (content/postacie.ts). */
   daily?: Record<string, { d: string; n: number; a: number }>;
+  /** How the hero looks (see look.ts). */
+  look?: import('./look').Look;
 }
 
 /** Counters for the admin panel. */
@@ -106,8 +108,8 @@ export interface LoginResult {
 }
 
 export const api = {
-  createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number, age: number) =>
-    rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale, p_age: age }),
+  createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number, age: number, look: import('./look').Look) =>
+    rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale, p_age: age, p_look: look }),
   /** `password` only for old characters (6-character IDIK); they get a new code. */
   login: (name: string, code: string, password?: string) =>
     rpc<LoginResult>('login', { p_name: name, p_idik: code, p_password: password || null }),

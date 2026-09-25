@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { rng } from './rng';
+import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
 // Every texture is registered under a key (see TEX); to switch to a real
@@ -273,6 +274,23 @@ function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number, o: 
   p(12, 2, 1, 1, tunic);
   // bandit's eye mask
   if (o.mask && dir !== 'up') p(dir === 'side' ? 4 : 5, 5, dir === 'side' ? 4 : 6, 1, OUTLINE);
+}
+
+/** The player's own hero, drawn from the look chosen at character creation. */
+export const PLAYER_TEX = 'hero-me';
+export function makePlayerTexture(scene: Phaser.Scene, look: Look, worn: Worn = {}) {
+  if (scene.textures.exists(PLAYER_TEX)) scene.textures.remove(PLAYER_TEX);
+  const { tex, ctx } = canvasTexture(scene, PLAYER_TEX, LOOK_W * HERO_FRAMES, LOOK_H * HERO_DIRS.length);
+  drawLookSheet(ctx, look, worn);
+  HERO_DIRS.forEach((dir, row) => {
+    for (let f = 0; f < HERO_FRAMES; f++) tex.add(`${dir}-${f}`, 0, f * LOOK_W, row * LOOK_H, LOOK_W, LOOK_H);
+  });
+  tex.refresh();
+  for (const dir of HERO_DIRS) {
+    const key = `me-walk-${dir}`;
+    if (scene.anims.exists(key)) scene.anims.remove(key);
+    scene.anims.create({ key, frames: [1, 0, 2, 0].map((f) => ({ key: PLAYER_TEX, frame: `${dir}-${f}` })), frameRate: 9, repeat: -1 });
+  }
 }
 
 function drawHeroSheet(scene: Phaser.Scene, key: string = TEX.hero, outfit: Outfit = HERO_OUTFIT) {

@@ -50,6 +50,10 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
   { id: 'skorzany_helm', nazwa: 'Skórzany hełm', miejsce: 'helm', moc: 1, cena: 800 },
   { id: 'zelazny_helm', nazwa: 'Żelazny hełm', miejsce: 'helm', moc: 2, cena: 5200 },
+  // Nakrycia głowy widać na ludziku (rysunki w look.ts).
+  { id: 'kapelusz', nazwa: 'Kapelusz Robin Hooda', miejsce: 'helm', moc: 1, cena: 900 },
+  { id: 'czapka_maga', nazwa: 'Magiczna czapka', miejsce: 'helm', moc: 1, cena: 2500, gdzie: 'biblioteka' },
+  { id: 'korona', nazwa: 'Korona', miejsce: 'helm', moc: 3, cena: 0, opis: 'Królewska! Tylko za tajne hasło albo w nagrodę.' },
   { id: 'skorzane_buty', nazwa: 'Skórzane buty', miejsce: 'buty', moc: 1, cena: 600 },
   { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
   // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki

@@ -33,8 +33,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   private invulnerableUntil = 0;
   private stunnedUntil = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, TEX.hero, 'down-0');
+  /** `texture`/`anim`: the player's own drawn hero ('hero-me' / 'me'), or the default one. */
+  constructor(scene: Phaser.Scene, x: number, y: number, texture: string = TEX.hero, private anim = 'hero') {
+    super(scene, x, y, texture, 'down-0');
     scene.add.existing(this);
   }
 
@@ -58,7 +59,7 @@ export class Player extends Phaser.GameObjects.Sprite {
       this.facing.set(v.x, v.y).normalize();
       this.vel.set(v.x * PLAYER.speed, v.y * PLAYER.speed);
       this.setFlipX(this.dirName === 'side' && this.facing.x > 0);
-      this.anims.play(`hero-walk-${this.dirName}`, true);
+      this.anims.play(`${this.anim}-walk-${this.dirName}`, true);
     } else {
       this.vel.set(0, 0);
       this.anims.stop();

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { TEX, PLAYER_TEX, makePlayerTexture } from '../art';
+import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
@@ -116,6 +117,7 @@ export class GameScene extends Phaser.Scene {
   private glow!: Phaser.GameObjects.Graphics;
   private npcs!: Npcs;
   private fixed!: FixedNpcs;
+  private wornKey = '';
   private lastBolt = 0;
   private streets!: StreetEnemies;
   explored = new Explored();
@@ -146,7 +148,11 @@ export class GameScene extends Phaser.Scene {
 
     // Home at the start point: rest, a chest, money (and a save point).
     this.add.image(session.startX, session.startY - 3, TEX.home).setOrigin(0.5, 1).setDepth(session.startY - 3);
-    this.player = new Player(this, session.startX, session.startY);
+    makePlayerTexture(this, session.look, this.worn());
+    this.wornKey = JSON.stringify(this.worn());
+    this.player = new Player(this, session.startX, session.startY, PLAYER_TEX, 'me');
+    // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
+    this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     this.player.hp = session.hp;
     this.nearDoor = 'home'; // we start in the doorway; leaving and coming back opens it
     this.npcs = new Npcs(this, this.city, today());
@@ -815,6 +821,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Swing speed and reach from the sword-fighting level. */
   private applySkill() {
+    this.refreshLook();
     const lvl = skillLevel('miecz');
     this.player.attackCooldown = cooldown('miecz');
     this.player.reach = 1 + (lvl - 1) * 0.04;
@@ -931,9 +938,14 @@ export class GameScene extends Phaser.Scene {
   private offers(where: 'sklep' | 'biblioteka') {
     const out: Przedmiot[] = [];
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
-      where === 'biblioteka' ? [['dystans', 'magia']] : [['bron'], ['dystans', 'luk'], ['zbroja'], ['helm'], ['buty']];
+      where === 'biblioteka' ? [['dystans', 'magia'], ['helm']] : [['bron'], ['dystans', 'luk'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
       const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where);
+      if (miejsce === 'helm') {
+        // Headwear is also about looks: every one not owned yet is on offer.
+        out.push(...all.filter((p) => !owns(p.id)));
+        continue;
+      }
       const best = Math.max(0, ...all.filter((p) => owns(p.id)).map((p) => p.moc), miejsce === 'bron' ? meleeDamage() : 0);
       const next = all.filter((p) => p.moc > best).sort((a, b) => a.moc - b.moc)[0];
       if (next) out.push(next);
@@ -1033,6 +1045,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** After things were put on or off in the character sheet. */
+  /** What the hero wears that shows on the sprite. */
+  private worn() {
+    return { helm: gear.equip.helm, armor: gear.equip.zbroja, boots: gear.equip.buty };
+  }
+
+  /** Redraws the hero when a helmet, armour or boots go on or off. */
+  private refreshLook() {
+    const w = JSON.stringify(this.worn());
+    if (w === this.wornKey) return;
+    this.wornKey = w;
+    const frame = this.player.frame.name;
+    makePlayerTexture(this, session.look, this.worn());
+    this.player.setTexture(PLAYER_TEX, frame);
+  }
+
   gearChanged() {
     this.applySkill();
     this.vision = []; // a glowing sword changes how far we see

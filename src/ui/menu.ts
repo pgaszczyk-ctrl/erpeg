@@ -4,6 +4,8 @@ import { startSession, loadContent } from '../quests';
 import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
+import { tx } from '../i18n';
+import { drawLook, DEFAULT_LOOK, HEADS, BUILDS, OUTFITS, HAIRS, SKINS, HAIR_COLORS, CLOTHES, lookLimits, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -89,12 +91,66 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
           const years = age.value ? Math.round(Number(age.value)) : DEFAULT_AGE;
           if (!(years >= 3 && years <= 99)) throw new Error('Podaj wiek od 3 do 99 lat (albo zostaw puste).');
-          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, years);
+          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, years, look);
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
+      // How the hero looks: a live preview next to the name, sliders below.
+      const look: Look = { ...DEFAULT_LOOK };
+      const preview = el('canvas', { className: 'm-hero', width: 48, height: LOOK_H });
+      let frame = 0;
+      const paint = () => {
+        const ctx = preview.getContext('2d')!;
+        ctx.clearRect(0, 0, 48, LOOK_H);
+        (['down', 'side', 'up'] as const).forEach((dir, i) => drawLook(ctx, i * 16, LOOK_TOP, dir, frame, look));
+      };
+      const timer = setInterval(() => {
+        if (!preview.isConnected) return clearInterval(timer);
+        frame = [1, 0, 2, 0][Math.floor(Date.now() / 220) % 4];
+        paint();
+      }, 110);
+      const sliders: (() => void)[] = [];
+      const slider = (label: string, key: keyof Look, names?: () => string[], colors?: string[]) => {
+        const max = lookLimits()[key] - 1;
+        const range = el('input', { type: 'range', min: 0, max, step: 1, value: String(look[key]), className: 'm-range' });
+        const value = el('span', { className: 'm-val' });
+        const show = () => {
+          range.value = String(look[key]);
+          if (names) value.textContent = names()[look[key]];
+          else {
+            value.textContent = '';
+            value.style.background = colors![look[key]];
+            value.className = 'm-val m-swatch';
+          }
+        };
+        range.oninput = () => {
+          look[key] = Number(range.value);
+          show();
+          paint();
+        };
+        sliders.push(show);
+        show();
+        return el('label', { className: 'm-slide' }, [el('span', {}, [label]), range, value]);
+      };
+      const lookBox = el('div', { className: 'm-look' }, [
+        slider(tx('Głowa', 'Head'), 'head', HEADS),
+        slider(tx('Sylwetka', 'Build'), 'build', BUILDS),
+        slider(tx('Strój', 'Outfit'), 'outfit', OUTFITS),
+        slider(tx('Fryzura', 'Hair'), 'hair', HAIRS),
+        slider(tx('Kolor skóry', 'Skin'), 'skin', undefined, SKINS),
+        slider(tx('Kolor włosów', 'Hair colour'), 'hairColor', undefined, HAIR_COLORS),
+        slider(tx('Kolor góry', 'Top colour'), 'top', undefined, CLOTHES),
+        slider(tx('Kolor dołu', 'Bottom colour'), 'bottom', undefined, CLOTHES),
+        button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
+          Object.assign(look, randomLook());
+          sliders.forEach((f) => f());
+          paint();
+        }),
+      ]);
+      paint();
       screen(
         el('h2', {}, ['Nowa postać']),
-        field('Imię', name, '⚠ Imienia nie można później zmienić.'),
+        el('div', { className: 'm-namerow' }, [preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
+        lookBox,
         field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`),
         field('Wiek gracza (nieobowiązkowo)', age, `Zagadki dopasujemy do wieku. Puste = ${DEFAULT_AGE} lat.`),
         err,

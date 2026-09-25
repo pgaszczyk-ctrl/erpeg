@@ -6,6 +6,7 @@ import { loadGear, saveGear } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
+import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -48,6 +49,8 @@ export const session = {
   riddles: {} as Record<string, string>,
   /** Daily talks with fixed characters: id -> { day, talks, riddles answered }. */
   daily: {} as Record<string, { d: string; n: number; a: number }>,
+  /** How the hero looks (chosen at character creation). */
+  look: { ...DEFAULT_LOOK } as Look,
 };
 
 export const CHEST_SLOTS = 100;
@@ -102,6 +105,7 @@ export function startSession(r: LoginResult) {
   }
   session.riddles = { ...(p.save.riddles ?? {}) };
   session.daily = { ...(p.save.daily ?? {}) };
+  session.look = cleanLook(p.save.look);
   session.email = p.email ?? null;
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
@@ -141,7 +145,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily,
+    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
   return api.save(session.token, data, session.exp);
 }
