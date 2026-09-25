@@ -8,6 +8,8 @@ import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon } from '../map/Fog';
 import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
+import { showChest } from '../ui/chest';
+import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { OWOCE, LECZENIE_OWOCAMI, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
@@ -27,6 +29,8 @@ import { showMenu } from '../ui/menu';
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
 const DOOR_RADIUS = 14;
+/** How close one has to come to a riddle-giver to talk. */
+const NPC_RADIUS = 12;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
@@ -106,6 +110,7 @@ export class GameScene extends Phaser.Scene {
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   private glow!: Phaser.GameObjects.Graphics;
+  private npcs!: Npcs;
   private lastBolt = 0;
   private streets!: StreetEnemies;
   explored = new Explored();
@@ -134,8 +139,12 @@ export class GameScene extends Phaser.Scene {
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
 
+    // Home at the start point: rest, a chest, money (and a save point).
+    this.add.image(session.startX, session.startY - 3, TEX.home).setOrigin(0.5, 1).setDepth(session.startY - 3);
     this.player = new Player(this, session.startX, session.startY);
     this.player.hp = session.hp;
+    this.nearDoor = 'home'; // we start in the doorway; leaving and coming back opens it
+    this.npcs = new Npcs(this, this.city, today());
 
     // Missions: gold roofs and "!" over their doors.
     const { missions, missing } = resolveMissions(this.city);
@@ -286,6 +295,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.setDepth(this.player.y);
     this.updateMythic(now);
+    this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
 
     for (const item of [...this.pickups]) {
@@ -546,6 +556,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies.filter((e) => e.temp).forEach((e) => e.destroy());
     this.enemies = this.enemies.filter((e) => !e.temp);
     this.player.setPosition(session.startX, session.startY);
+    this.nearDoor = 'home';
     this.cameras.main.centerOn(this.player.x, this.player.y);
     this.toast('Przetrwałeś! Wracasz do punktu startowego.');
     this.emitHud();
@@ -610,6 +621,17 @@ export class GameScene extends Phaser.Scene {
     const fy = this.player.y + FEET.dy;
     let id: string | null = null;
     let open: (() => void) | null = null;
+    let savePoint = true;
+    if (Phaser.Math.Distance.Between(session.startX, session.startY, fx, fy) < DOOR_RADIUS) {
+      id = 'home';
+      open = () => this.openHome();
+    }
+    const npc = this.npcs.at(fx, fy - FEET.dy, NPC_RADIUS);
+    if (!id && npc) {
+      id = npc.id;
+      open = () => this.openRiddle(npc);
+      savePoint = false; // saved after the answer
+    }
     for (const rm of this.missions) {
       if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
         id = rm.m.id;
@@ -628,7 +650,7 @@ export class GameScene extends Phaser.Scene {
     if (id === this.nearDoor) return;
     this.nearDoor = id;
     if (open) {
-      this.save(); // entering a building is a save point
+      if (savePoint) this.save(); // entering a building is a save point
       open();
     }
   }
@@ -663,6 +685,64 @@ export class GameScene extends Phaser.Scene {
       this.addMission(rm, false);
       // Same door as the place we're standing in: not a new entrance.
       this.nearDoor = m.id;
+    });
+  }
+
+  /** Home: full health, the chest and money kept there. */
+  private openHome() {
+    const hurt = this.player.hp < PLAYER.maxHp;
+    this.player.heal(PLAYER.maxHp);
+    this.emitHud();
+    this.dialog({
+      title: '🏠 Twój domek',
+      text: `${hurt ? 'Odpocząłeś w domu – zdrowie w pełni!' : 'Dom, słodki dom.'}\n\nW skrzyni masz ${session.chest.coins} monet i ${session.chest.slots.filter(Boolean).length} rzeczy.`,
+      buttons: ['📦 Otwórz skrzynię', 'Wyjdź'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        this.scene.pause();
+        showChest(() => {
+          this.scene.resume();
+          consumeAttack();
+          this.gearChanged();
+          this.save();
+        });
+      },
+    });
+  }
+
+  /** A riddle-giver: one riddle a day, one try. */
+  private openRiddle(n: Npc) {
+    const day = today();
+    if (session.riddles[n.id] === day) {
+      this.dialog({ title: n.name, text: 'Na dziś to wszystko! Wróć jutro po nową zagadkę.', buttons: ['Do jutra!'], onChoose: () => {} });
+      return;
+    }
+    const r = riddleFor(n, day, session.age);
+    this.dialog({
+      title: `❓ ${n.name}`,
+      text: `${n.greeting}\n\n${r.question}\n\nNagroda: ${r.reward} monet i ${r.reward} EXP. Tylko jedna próba!`,
+      buttons: [...r.answers, 'Później'],
+      onChoose: (i) => {
+        if (i >= r.answers.length) return;
+        // Remember only today's answers.
+        for (const [k, v] of Object.entries(session.riddles)) if (v !== day) delete session.riddles[k];
+        session.riddles[n.id] = day;
+        session.stats.riddles = (session.stats.riddles ?? 0) + (i === r.correct ? 1 : 0);
+        if (i === r.correct) {
+          earn(r.reward);
+          session.exp += r.reward;
+          this.emitHud();
+        }
+        this.dialog({
+          title: i === r.correct ? '🎉 Brawo!' : '😕 Niestety…',
+          text: i === r.correct
+            ? `Dobra odpowiedź! Dostajesz ${r.reward} monet i ${r.reward} EXP.`
+            : `Dobra odpowiedź to: ${r.answers[r.correct]}.\nWróć jutro po nową zagadkę!`,
+          buttons: ['OK'],
+          onChoose: () => {},
+        });
+        this.save();
+      },
     });
   }
 

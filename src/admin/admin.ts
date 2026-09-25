@@ -11,10 +11,11 @@ import { PX_PER_M } from '../map/CityMap';
 // carries the admin password; the server checks it.
 
 interface Player {
-  name: string; exp: number; dead: boolean; died_at: string | null; death_place: string | null; resurrections: number;
+  name: string; exp: number; dead: boolean; age?: number;
+  chest?: { slots: ({ item: string } | { fruit: Owoc; n: number } | null)[]; coins: number } | null; died_at: string | null; death_place: string | null; resurrections: number;
   created_at: string; last_seen: string | null; online: boolean; start_place: string | null; email: string | null; old: boolean;
   coins: number | null; missions: Record<string, string> | null; magic: boolean | null;
-  stats: { m?: number; kills?: Record<string, number>; earned?: number; spent?: number; fruit?: number; missions?: number; codes?: number } | null;
+  stats: { m?: number; kills?: Record<string, number>; earned?: number; spent?: number; fruit?: number; missions?: number; codes?: number; riddles?: number } | null;
   equip: Record<string, string | null> | null; bag: ({ item: string } | { fruit: Owoc; n: number })[] | null; skills: Record<string, number> | null;
 }
 interface DbMission { id: string; data: Misja; active: boolean; created_at: string; updated_at: string }
@@ -143,6 +144,7 @@ function summary(main: HTMLElement) {
     ['monet wydanych', st((p) => p.stats?.spent ?? 0)],
     ['owoców zebranych', st((p) => p.stats?.fruit ?? 0)],
     ['misji wykonanych', st((p) => p.stats?.missions ?? 0)],
+    ['zagadek rozwiązanych', st((p) => p.stats?.riddles ?? 0)],
     ['tajnych haseł użytych', data!.codes.reduce((a, c) => a + c.uses, 0)],
     ['nowych w 7 dni', ps.filter((p) => Date.now() - Date.parse(p.created_at) < 7 * 864e5).length],
   ];
@@ -206,7 +208,8 @@ function playerCard(p: Player) {
   const rows: [string, string][] = [
     ['Stan', p.dead ? `💀 zginął ${date(p.died_at)} (${p.death_place ?? '?'})` : p.online ? '🟢 gra teraz' : 'żyje'],
     ['Wskrzeszenia', String(p.resurrections)],
-    ['Punkt startowy', p.start_place ?? '—'],
+    ['Wiek', p.age != null ? `${p.age} lat` : '—'],
+    ['Punkt startowy (domek)', p.start_place ?? '—'],
     ['E-mail', p.email ?? '—'],
     ['EXP / monety', `${p.exp} EXP · ${p.coins ?? 0} monet`],
     ['Przebył', `${km(p.stats?.m)} km`],
@@ -216,6 +219,8 @@ function playerCard(p: Player) {
     ['Misje', `${done} ukończonych (${p.stats?.missions ?? 0} nagród)`],
     ['Założone', Object.entries(p.equip ?? {}).filter(([, v]) => v).map(([, v]) => itemName(v)).join(', ') || '—'],
     ['Plecak', bag],
+    ['Skrzynia w domku', `${p.chest?.coins ?? 0} monet · ${(p.chest?.slots ?? []).filter(Boolean).map((s) => ('item' in s! ? itemName(s!.item) : `${OWOCE[s!.fruit]?.mnoga ?? s!.fruit} ×${s!.n}`)).join(', ') || 'pusta'}`],
+    ['Zagadki', `${p.stats?.riddles ?? 0} rozwiązanych`],
     ['Umiejętności', skills + (p.magic ? ' · zna magię' : '')],
     ['Utworzona', date(p.created_at) + (p.old ? ' (stary IDIK – jeszcze nie przeszła na nowy kod)' : '')],
   ];

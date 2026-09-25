@@ -9,6 +9,7 @@ import { codeCard, codeFromLink } from './codeCard';
 // character, memorial board. Resolves once a character is ready to play.
 
 const DEFAULT_START = 'Plac Zamkowy';
+const DEFAULT_AGE = 7;
 
 let root: HTMLDivElement | null = null;
 
@@ -78,6 +79,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const newCharacter = () => {
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
       const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
+      const age = input({ type: 'number', min: 3, max: 99, placeholder: '7', inputMode: 'numeric' });
       const err = error();
       const go: HTMLButtonElement = button('Stwórz postać', () =>
         busy(go, err, async () => {
@@ -85,13 +87,16 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const place = start.value.trim() || DEFAULT_START;
           const p = city.findStart(place);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
-          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M);
+          const years = age.value ? Math.round(Number(age.value)) : DEFAULT_AGE;
+          if (!(years >= 3 && years <= 99)) throw new Error('Podaj wiek od 3 do 99 lat (albo zostaw puste).');
+          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, years);
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
       screen(
         el('h2', {}, ['Nowa postać']),
         field('Imię', name, '⚠ Imienia nie można później zmienić.'),
-        field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu wracasz po każdym wyjściu z gry.`),
+        field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`),
+        field('Wiek gracza (nieobowiązkowo)', age, `Zagadki dopasujemy do wieku. Puste = ${DEFAULT_AGE} lat.`),
         err,
         go,
         button('Wstecz', main),

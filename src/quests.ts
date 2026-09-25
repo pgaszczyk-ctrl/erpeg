@@ -40,7 +40,19 @@ export const session = {
   extra: [] as Misja[],
   /** Mission ids where a secret code can be told. */
   secrets: new Set<string>(),
+  /** The player's age, for riddles. */
+  age: 7,
+  /** The chest at home: 100 slots and money kept there. */
+  chest: freshChest(),
+  /** Riddles answered: NPC id -> day. */
+  riddles: {} as Record<string, string>,
 };
+
+export const CHEST_SLOTS = 100;
+
+export function freshChest(): NonNullable<SaveData['chest']> {
+  return { slots: Array(CHEST_SLOTS).fill(null), coins: 0 };
+}
 
 export function freshStats(): Stats {
   return { m: 0, kills: {}, earned: 0, spent: 0, fruit: 0, missions: 0, codes: 0 };
@@ -79,6 +91,14 @@ export function startSession(r: LoginResult) {
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
+  session.age = p.age ?? 7;
+  const c = p.save.chest;
+  session.chest = freshChest();
+  if (c) {
+    session.chest.coins = Math.max(0, c.coins | 0);
+    c.slots?.slice(0, CHEST_SLOTS).forEach((s, i) => (session.chest.slots[i] = s ?? null));
+  }
+  session.riddles = { ...(p.save.riddles ?? {}) };
   session.email = p.email ?? null;
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
@@ -118,7 +138,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog,
-    gen, ...saveGear(), stats: session.stats,
+    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles,
   };
   return api.save(session.token, data, session.exp);
 }

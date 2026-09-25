@@ -40,6 +40,10 @@ export interface SaveData {
   skills?: import('./inventory').Gear['skills'];
   magic?: boolean;
   stats?: Stats;
+  /** The chest at home (start point): 100 slots and money kept there. */
+  chest?: { slots: (import('./inventory').Slot | null)[]; coins: number };
+  /** Riddles answered: NPC id -> day (YYYY-MM-DD). */
+  riddles?: Record<string, string>;
 }
 
 /** Counters for the admin panel. */
@@ -52,6 +56,8 @@ export interface Stats {
   fruit: number;
   missions: number;
   codes: number;
+  /** Riddles answered right. */
+  riddles?: number;
 }
 
 export interface PlayerInfo {
@@ -74,6 +80,8 @@ export interface PlayerInfo {
   death_scale?: number | null;
   /** How many times it was brought back (the first time is free). */
   resurrections?: number;
+  /** The player's age (riddles are chosen for it); 7 when not given. */
+  age?: number;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
@@ -96,8 +104,8 @@ export interface LoginResult {
 }
 
 export const api = {
-  createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number) =>
-    rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale }),
+  createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number, age: number) =>
+    rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale, p_age: age }),
   /** `password` only for old characters (6-character IDIK); they get a new code. */
   login: (name: string, code: string, password?: string) =>
     rpc<LoginResult>('login', { p_name: name, p_idik: code, p_password: password || null }),

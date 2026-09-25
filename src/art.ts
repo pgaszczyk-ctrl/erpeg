@@ -39,6 +39,8 @@ export const TEX = {
   signHospital: 'sign-hospital',
   signPolice: 'sign-police',
   signSchool: 'sign-school',
+  home: 'home',
+  bubble: 'bubble',
 } as const;
 
 // Tile indices in the 'tiles' texture.
@@ -423,6 +425,46 @@ function drawArrow(scene: Phaser.Scene) {
 }
 
 // Hanging signs over shop and school doors.
+/** The hero's home at the start point, and the "?" over a riddle-giver. */
+function drawHome(scene: Phaser.Scene) {
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.home, 26, 24);
+    // Roof, drawn as widening rows.
+    for (let r = 0; r < 10; r++) {
+      const w = 6 + r * 2;
+      px(ctx, 13 - w / 2, r, w, 1, OUTLINE);
+      if (r > 0) px(ctx, 13 - w / 2 + 1, r, w - 2, 1, r % 3 === 0 ? '#a8432f' : '#c75b4a');
+    }
+    px(ctx, 18, 1, 3, 5, OUTLINE);
+    px(ctx, 19, 2, 1, 4, '#8d6e63');
+    // Walls, door and a window.
+    px(ctx, 3, 10, 20, 13, OUTLINE);
+    px(ctx, 4, 10, 18, 12, '#f3e2a0');
+    px(ctx, 10, 14, 6, 8, OUTLINE);
+    px(ctx, 11, 15, 4, 7, '#8a5a2b');
+    px(ctx, 14, 18, 1, 1, '#f7c531');
+    px(ctx, 5, 13, 4, 4, OUTLINE);
+    px(ctx, 6, 14, 2, 2, '#9be7ff');
+    px(ctx, 17, 13, 4, 4, OUTLINE);
+    px(ctx, 18, 14, 2, 2, '#9be7ff');
+    px(ctx, 2, 22, 22, 2, '#6d6560');
+    tex.refresh();
+  }
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.bubble, 9, 11);
+    px(ctx, 0, 0, 9, 9, OUTLINE);
+    px(ctx, 1, 1, 7, 7, '#ffffff');
+    px(ctx, 3, 9, 3, 2, OUTLINE);
+    px(ctx, 4, 8, 1, 1, '#ffffff');
+    // "?"
+    px(ctx, 3, 2, 3, 1, '#3f7fd8');
+    px(ctx, 5, 3, 1, 1, '#3f7fd8');
+    px(ctx, 4, 4, 1, 1, '#3f7fd8');
+    px(ctx, 4, 6, 1, 1, '#3f7fd8');
+    tex.refresh();
+  }
+}
+
 function drawSigns(scene: Phaser.Scene) {
   {
     // Shop: a sword on a blue sign.
@@ -662,6 +704,7 @@ export function createArt(scene: Phaser.Scene) {
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawSigns(scene);
+  drawHome(scene);
   drawMoreSigns(scene);
   drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);
   drawMarker(scene, TEX.marker, false);

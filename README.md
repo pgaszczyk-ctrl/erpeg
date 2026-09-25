@@ -45,3 +45,9 @@ npm run map      # przebudowanie mapy z data/ (robi się też samo)
 ```
 
 Po każdym pushu gra buduje się i publikuje na GitHub Pages (plik `.github/workflows/deploy.yml`). Trzeba to raz włączyć w repozytorium: **Settings → Pages → Source: GitHub Actions**.
+
+## Nowości
+
+- W punkcie startu stoi twój domek: leczy, zapisuje grę i ma skrzynię 10×10 na rzeczy i monety.
+- Mądrale na ulicach (ok. 500 m od szkół i kościołów) mają po jednej zagadce dziennie, dopasowanej do wieku gracza.
+- Panel admina: `admin.html` (postacie, statystyki, misje z podglądem na mapie, tajne hasła).
