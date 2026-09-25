@@ -166,8 +166,9 @@ function linePath(ctx: CanvasRenderingContext2D, pts: number[]) {
 }
 
 export function wallHeight(b: Building) {
-  // ~2 m per storey, but never so flat that the 3D look disappears.
-  return Math.max(4, Math.round((4 + Math.min(b.levels || 1, 8) * 2) * PX_PER_M));
+  // Low walls (they are drawn over the street to the south): a little per
+  // storey and never more than 10 px, so narrow Old Town streets stay visible.
+  return Math.max(4, Math.min(10, Math.round((2 + Math.min(b.levels || 1, 4)) * PX_PER_M)));
 }
 
 // Texture keys must be unique for the whole game, across scene restarts.
