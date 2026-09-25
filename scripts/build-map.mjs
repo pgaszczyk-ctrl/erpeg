@@ -187,7 +187,7 @@ for (const f of features) {
   if (t.building && t.building !== 'no') {
     if (!isArea || (t.layer || '').startsWith('-')) continue;
     const rings = areaRings();
-    if (rings.length) buildings.push({ rings, a: address(t), name: t.name || null, levels: +(t['building:levels'] || 0) || 0 });
+    if (rings.length) buildings.push({ rings, a: address(t), name: t.name || null, levels: +(t['building:levels'] || 0) || 0, kind: t.building });
     continue;
   }
 
@@ -296,8 +296,13 @@ const toPath = (r) => {
   return p;
 };
 const t0 = Date.now();
+// Roofs, shelters and tiny sheds only clutter the streets at game scale.
+const SKIP_KINDS = new Set(['roof', 'carport', 'shelter', 'transformer_tower', 'bicycle_parking', 'canopy']);
+const MIN_M2 = 25;
+const areaM2 = (r) => Math.abs(ringArea(r)) / (UNITS_PER_M * UNITS_PER_M);
+const kept = buildings.filter((b) => !SKIP_KINDS.has(b.kind) && (b.a || b.name || areaM2(b.abs[0]) >= MIN_M2));
 const grown = [];
-for (const b of buildings) {
+for (const b of kept) {
   // Outer ring counter-clockwise, holes clockwise (what Clipper expects).
   const rings = b.abs.slice().sort((a, c) => Math.abs(ringArea(c)) - Math.abs(ringArea(a)));
   const paths = rings.map((r, i) => {
@@ -312,10 +317,36 @@ for (const b of buildings) {
   co.Execute(out, GROW_M * UNITS_PER_M * CS);
   for (const p of out) grown.push(p);
 }
+// Streets stay clear: every road is cut out of the grown blocks, as wide as
+// the game draws it (MapRenderer.trackWidth) plus a little margin.
+const LINE_WIDTH_M = { major: 14, medium: 11, minor: 7, service: 4, track: 3, pedestrian: 6, path: 2.5, steps: 2.5 };
+// One offset per width class keeps it simple: use the drawn half-width of each line.
+const corridors = new ClipperLib.Paths();
+{
+  const byWidth = new Map();
+  for (const l of lines) {
+    const w = LINE_WIDTH_M[l.kind];
+    if (!w || l.pass) continue;
+    const half = (Math.max(w, 3) + 3) / 2 + 0.3;
+    if (!byWidth.has(half)) byWidth.set(half, []);
+    const abs = decode(l.pts);
+    const path = [];
+    for (let i = 0; i < abs.length; i += 2) path.push({ X: abs[i] * CS, Y: abs[i + 1] * CS });
+    byWidth.get(half).push(path);
+  }
+  for (const [half, paths] of byWidth) {
+    const o = new ClipperLib.ClipperOffset(2, 0.25 * CS * UNITS_PER_M);
+    o.AddPaths(paths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etOpenRound);
+    const out = new ClipperLib.Paths();
+    o.Execute(out, half * UNITS_PER_M * CS);
+    for (const p of out) corridors.push(p);
+  }
+}
 const clipper = new ClipperLib.Clipper();
 clipper.AddPaths(grown, ClipperLib.PolyType.ptSubject, true);
+clipper.AddPaths(corridors, ClipperLib.PolyType.ptClip, true);
 const tree = new ClipperLib.PolyTree();
-clipper.Execute(ClipperLib.ClipType.ctUnion, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+clipper.Execute(ClipperLib.ClipType.ctDifference, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
 const blocks = [];
 const walk = (node) => {
   for (const outer of node.Childs()) {
@@ -323,6 +354,8 @@ const walk = (node) => {
     const clean = (p) => ClipperLib.Clipper.CleanPolygon(p, 0.5 * CS * UNITS_PER_M);
     const outerPath = clean(outer.Contour());
     if (outerPath.length < 3) continue;
+    // Slivers left between two streets are not buildings.
+    if (Math.abs(ClipperLib.Clipper.Area(outerPath)) / (CS * CS * UNITS_PER_M * UNITS_PER_M) < 12) continue;
     const holes = outer.Childs().map((h) => clean(h.Contour())).filter((h) => h.length >= 3);
     const toFlat = (p) => p.flatMap((pt) => [Math.round(pt.X / CS), Math.round(pt.Y / CS)]);
     const abs = [toFlat(outerPath), ...holes.map(toFlat)];
@@ -344,9 +377,15 @@ blocks.forEach((k, i) => {
       bgrid.get(key).push(i);
     }
 });
-for (const b of buildings) {
-  const x = b.abs[0][0], y = b.abs[0][1];
-  const k = (bgrid.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || []).map((i) => blocks[i]).find((k) => inRings(k.abs, x, y));
+const blockAt = (x, y) => (bgrid.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || []).map((i) => blocks[i]).find((k) => inRings(k.abs, x, y));
+for (const b of kept) {
+  // The block it is in: try the middle, then its corners (a street may cut through it).
+  const r = b.abs[0];
+  let cx = 0, cy = 0;
+  for (let i = 0; i < r.length; i += 2) { cx += r[i]; cy += r[i + 1]; }
+  const n = r.length / 2;
+  let k = blockAt(cx / n, cy / n);
+  for (let i = 0; !k && i < r.length; i += 2) k = blockAt(r[i], r[i + 1]);
   if (!k) continue;
   if (b.a) for (const a of b.a.split(' | ')) if (!k.addrs.includes(a)) k.addrs.push(a);
   if (!k.name && b.name) k.name = b.name;

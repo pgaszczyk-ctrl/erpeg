@@ -315,13 +315,16 @@ export class GameScene extends Phaser.Scene {
     }
     if (fx !== 'pioruny' || now - this.lastBolt < PIORUNY.co) return;
     const range = PIORUNY.zasiegM * PX_PER_M;
+    // The weakest enemy in reach (so strikes finish foes off), nearest first on a tie.
     let foe: Enemy | null = null;
-    let best = range;
+    let best = Infinity;
     for (const e of this.enemies) {
       if (e.isDead || !e.visible) continue;
       const d = Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y);
-      if (d < best) {
-        best = d;
+      if (d > range) continue;
+      const score = e.hp * 1000 + d;
+      if (score < best) {
+        best = score;
         foe = e;
       }
     }
