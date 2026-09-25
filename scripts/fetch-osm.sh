@@ -25,7 +25,7 @@ osmium tags-filter "$WORK/lublin.pbf" \
   wr/amenity=parking \
   n/addr:housenumber \
   nwr/shop=supermarket,convenience,discount \
-  nwr/amenity=school,place_of_worship,townhall,hospital,police \
+  nwr/amenity=school,place_of_worship,townhall,hospital,police,library \
   nwr/office=government \
   -o "$WORK/filtered.pbf"
 
