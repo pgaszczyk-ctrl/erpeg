@@ -546,8 +546,15 @@ function drawMarker(scene: Phaser.Scene, key: string, done: boolean) {
 }
 
 // Arrow pointing right; rotated on screen towards the current goal.
-function drawArrow(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.arrow, 16, 16);
+/** The goal arrow; other colours as `arrow-<hex>` (one per quest colour). */
+export function arrowTexture(scene: Phaser.Scene, color: string) {
+  const key = color === '#f7c531' ? TEX.arrow : `arrow-${color.slice(1)}`;
+  if (!scene.textures.exists(key)) drawArrow(scene, key, color);
+  return key;
+}
+
+function drawArrow(scene: Phaser.Scene, key: string = TEX.arrow, color = '#f7c531') {
+  const { tex, ctx } = canvasTexture(scene, key, 16, 16);
   ctx.fillStyle = OUTLINE;
   ctx.beginPath();
   ctx.moveTo(15, 8);
@@ -556,7 +563,7 @@ function drawArrow(scene: Phaser.Scene) {
   ctx.lineTo(1, 15);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#f7c531';
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(13, 8);
   ctx.lineTo(3, 3);

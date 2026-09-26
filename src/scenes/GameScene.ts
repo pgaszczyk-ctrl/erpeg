@@ -10,7 +10,7 @@ import { Slime } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
-import { WROGOWIE, type RodzajWroga, type Misja } from '../content/fabula';
+import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
@@ -111,10 +111,21 @@ export interface HudState {
   /** Seconds left while the character is stuck after an unfinished session. */
   lingering: number | null;
   street: string | null;
-  goal: string | null;
-  /** World position the arrow points to, if any. */
-  goalPos: { x: number; y: number } | null;
+  /** Active quests (at most 3): goal line, where its arrow points, its colour. */
+  quests: { text: string; pos: { x: number; y: number } | null; color: string; main: boolean }[];
 }
+
+export interface QuestInfo {
+  id: string;
+  main: boolean;
+  title: string;
+  text: string;
+  pos: { x: number; y: number } | null;
+  color: string;
+}
+
+/** Arrow colours of the active side quests, kept across scene restarts. */
+const questColors = new Map<string, string>();
 
 export interface DialogRequest {
   title: string;
@@ -1121,7 +1132,7 @@ export class GameScene extends Phaser.Scene {
         text: T.wyzwanie.replace('{uderzen}', String(SPORT.uderzen)).replace('{czas}', secsTxt),
         buttons: ['Wchodzę!', 'Nie teraz'],
         onChoose: (i) => {
-          if (i !== 0) return;
+          if (i !== 0 || this.questsFull()) return;
           this.challenge = { kind: 'kukly', npc: n, a, b, step: 'a', hits: 0, start: this.time.now, until: this.time.now + secs * 1000 };
           this.toast(`⏱ Start! ${secsTxt}.`, 1500);
           this.emitHud();
@@ -1142,7 +1153,7 @@ export class GameScene extends Phaser.Scene {
       text: B.wyzwanie.replace('{cel}', name),
       buttons: ['Start!', 'Nie teraz'],
       onChoose: (i) => {
-        if (i !== 0) return;
+        if (i !== 0 || this.questsFull()) return;
         // She runs along the streets (the shortest way, like a navigation app);
         // her time: that way at the hero's speed, times the difficulty
         // (sometimes she has a lucky day).
@@ -2005,13 +2016,20 @@ export class GameScene extends Phaser.Scene {
     if (m.zadanie.typ === 'brak') {
       // Just a place (e.g. a partner with a secret code on a flyer).
       this.missionDialog(m, { title: m.tytul, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
+    } else if (st === 'new' && this.activeQuests().length >= ZADAN_NARAZ) {
+      this.missionDialog(m, {
+        title: m.tytul,
+        text: `${m.opis}\n\nMasz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`,
+        buttons: ['OK'],
+        onChoose: () => {},
+      });
     } else if (st === 'new') {
       this.missionDialog(m, {
         title: m.tytul,
         text: `${m.opis}\n\nNagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${item(m.przedmiot)?.nazwa}` : ''}.`,
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
-          if (i !== 0) return;
+          if (i !== 0 || this.questsFull()) return;
           setMissionState(m, 'active');
           if (onAccept) onAccept(); // adds it, which also spawns its enemies
           else this.startMissionGoal(rm);
@@ -2132,7 +2150,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   goalPosition() {
-    return this.currentGoal()?.pos ?? null;
+    return this.activeQuests().find((q) => q.pos)?.pos ?? null;
   }
 
   /** Radius (px) of the area to search, for wanted villains; 0 otherwise. */
@@ -2141,37 +2159,66 @@ export class GameScene extends Phaser.Scene {
     return rm?.m.zadanie.szukaj ? SEARCH_RADIUS + 10 : 0;
   }
 
-  /** The mission the arrow should point at, and where. */
-  private currentGoal(): { text: string; pos: { x: number; y: number } | null } | null {
+  /**
+   * Active quests (the story first, then challenges and missions), at most
+   * ZADAN_NARAZ, each with its arrow colour (kept while it stays active).
+   */
+  activeQuests(): QuestInfo[] {
+    const list: Omit<QuestInfo, 'color'>[] = [];
+    const main = this.story.goal();
+    if (main) list.push({ id: 'main', main: true, title: 'Cień smoka', ...main });
+    for (const q of this.sideQuests()) list.push({ ...q, main: false });
+    const ids = new Set(list.map((q) => q.id));
+    for (const k of [...questColors.keys()]) if (!ids.has(k)) questColors.delete(k);
+    return list.slice(0, ZADAN_NARAZ).map((q) => {
+      if (q.main) return { ...q, color: KOLOR_GLOWNEGO };
+      if (!questColors.has(q.id)) {
+        const used = new Set(questColors.values());
+        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[0]);
+      }
+      return { ...q, color: questColors.get(q.id)! };
+    });
+  }
+
+  /** No room for another quest? Then says so. */
+  private questsFull() {
+    if (this.activeQuests().length < ZADAN_NARAZ) return false;
+    this.toast(`Masz już ${ZADAN_NARAZ} zadania naraz. Skończ któreś, zanim weźmiesz kolejne.`, 3000);
+    return true;
+  }
+
+  /** Side quests: a sports challenge and missions in progress. */
+  private sideQuests(): { id: string; title: string; text: string; pos: { x: number; y: number } | null }[] {
+    const out: { id: string; title: string; text: string; pos: { x: number; y: number } | null }[] = [];
     const px = this.player.x;
     const py = this.player.y;
     const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
     const c = this.challenge;
     if (c?.kind === 'kukly') {
       const left = Math.max(0, (c.until - this.time.now) / 1000).toFixed(1).replace('.', ',');
-      if (c.step === 'a') return { text: `⏱ ${left} s · Uderz kukłę ${c.hits}/${SPORT.uderzen}`, pos: c.a };
-      if (c.step === 'b') return { text: `⏱ ${left} s · Biegnij do drugiej kukły i uderz ją`, pos: c.b };
-      return { text: `⏱ ${left} s · Wracaj do trenera!`, pos: c.npc };
+      const title = 'Trening u trenera';
+      if (c.step === 'a') out.push({ id: 'sport', title, text: `⏱ ${left} s · Uderz kukłę ${c.hits}/${SPORT.uderzen}`, pos: c.a });
+      else if (c.step === 'b') out.push({ id: 'sport', title, text: `⏱ ${left} s · Biegnij do drugiej kukły i uderz ją`, pos: c.b });
+      else out.push({ id: 'sport', title, text: `⏱ ${left} s · Wracaj do trenera!`, pos: c.npc });
     }
     if (c?.kind === 'wyscig') {
       const t = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
-      return { text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to };
+      out.push({ id: 'sport', title: 'Wyścig', text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to });
     }
     for (const rm of this.missions) {
       const st = missionState(rm.m);
+      const q = { id: rm.m.id, title: rm.m.tytul };
       if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
         const z = rm.m.zadanie;
-        return { text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target };
-      }
-      if (st === 'active' && rm.target) {
+        out.push({ ...q, text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
+      } else if (st === 'active' && rm.target) {
         // For fights, point at the nearest remaining enemy of that mission.
         const foes = rm.m.zadanie.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
         const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : rm.target;
-        return { text: rm.m.zadanie.cel, pos: { x: pos.x, y: pos.y } };
-      }
-      if (st === 'goal') return { text: `Wróć do: ${rm.m.adres}`, pos: rm.door };
+        out.push({ ...q, text: rm.m.zadanie.cel, pos: { x: pos.x, y: pos.y } });
+      } else if (st === 'goal') out.push({ ...q, text: `Wróć do: ${rm.m.adres}`, pos: rm.door });
     }
-    return this.story.goal();
+    return out;
   }
 
   private dialog(req: DialogRequest) {
@@ -2214,7 +2261,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitHud() {
-    const goal = this.currentGoal();
+    const quests = this.activeQuests();
     const state: HudState = {
       hp: this.player.hp,
       maxHp: PLAYER.maxHp,
@@ -2230,8 +2277,7 @@ export class GameScene extends Phaser.Scene {
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
-      goal: goal?.text ?? null,
-      goalPos: goal?.pos ?? null,
+      quests: quests.map(({ text, pos, color, main }) => ({ text, pos, color, main })),
     };
     this.registry.set('hud', state);
     this.game.events.emit('hud', state);

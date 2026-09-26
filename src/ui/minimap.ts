@@ -153,13 +153,14 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number) {
   }
   ctx.font = `bold ${Math.round(16 * u)}px monospace`;
 
-  const goal = game.goalPosition();
-  if (goal) {
-    const [x, y] = toS(goal.x, goal.y);
-    ctx.strokeStyle = '#ff3b3b';
+  // Every active quest's goal, in its arrow's colour.
+  for (const q of game.activeQuests()) {
+    if (!q.pos) continue;
+    const [x, y] = toS(q.pos.x, q.pos.y);
+    ctx.strokeStyle = q.color;
     ctx.lineWidth = 3 * u;
     ctx.beginPath();
-    ctx.arc(x, y, Math.max(11 * u, game.goalRadius() * s), 0, Math.PI * 2);
+    ctx.arc(x, y, Math.max(11 * u, q.main ? 0 : game.goalRadius() * s), 0, Math.PI * 2);
     ctx.stroke();
   }
   const [hx, hy] = toS(px, py);

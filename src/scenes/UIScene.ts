@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { report } from '../errlog';
-import { TEX, PLAYER_TEX } from '../art';
+import { TEX, PLAYER_TEX, arrowTexture } from '../art';
 import { expNaPoziom } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -50,7 +50,9 @@ export class UIScene extends Phaser.Scene {
   private skillLabel!: Phaser.GameObjects.Text;
   private skillHide?: Phaser.Time.TimerEvent;
   private goalText!: Phaser.GameObjects.Text;
-  private arrow!: Phaser.GameObjects.Image;
+  /** One line and one arrow per active quest (up to 3), in its colour. */
+  private questTexts: Phaser.GameObjects.Text[] = [];
+  private arrows: Phaser.GameObjects.Image[] = [];
   private toastText!: Phaser.GameObjects.Text;
   private hud?: HudState;
   private dialogBox?: Phaser.GameObjects.Container;
@@ -112,8 +114,9 @@ export class UIScene extends Phaser.Scene {
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
     this.streetText = label(13).setOrigin(0.5, 0);
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
+    this.questTexts = [0, 1, 2].map(() => label(13, '#ffffff').setOrigin(0.5, 0));
+    this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
-    this.arrow = this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false);
     // Skill progress while training (shown for a moment after each practice hit).
     // Just an icon and a soft bar, no numbers.
     const bw = 70 * this.ui;
@@ -262,6 +265,11 @@ export class UIScene extends Phaser.Scene {
     // Street and goal under both corners.
     const ty = Math.max(fy + 8 * u, this.titleText.text ? this.titleText.y + this.titleText.height : sy + 12 * u + this.expText.height) + 2 * u;
     this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, ty + 18);
+    let qy = ty + 18 + (this.goalText.text ? this.goalText.height + 2 : 0);
+    for (const t of this.questTexts) {
+      t.setWordWrapWidth(wrap).setPosition(width / 2, qy);
+      if (t.text) qy += t.height + 1;
+    }
     this.streetText.setPosition(width / 2, ty);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
     this.skillBar.setPosition(width / 2, height * 0.66);
@@ -313,9 +321,12 @@ export class UIScene extends Phaser.Scene {
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;
     this.streetText.setText(s.street ?? '');
-    this.goalText.setText(
-      s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : s.goal ? `🎯 ${s.goal}` : '',
-    );
+    this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
+    this.questTexts.forEach((t, i) => {
+      const q = s.lingering === null ? s.quests[i] : undefined;
+      t.setText(q ? `${q.main ? '⭐' : '🎯'} ${q.text}` : '').setColor(q ? q.color : '#ffffff');
+      if (q) this.arrows[i].setTexture(arrowTexture(this, q.color));
+    });
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
   }
@@ -386,29 +397,33 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Points at the mission goal: over it when visible, at the screen edge when not. */
+  /** Arrows to the quests: over the goal when on screen, at the screen edge when not. */
   private updateArrow() {
-    const pos = this.hud?.goalPos;
     const game = this.scene.get('game') as GameScene;
-    if (!pos || !game.player || this.dialogBox) {
-      this.arrow.setVisible(false);
-      return;
-    }
-    const cam = game.cameras.main;
-    const sx = (pos.x - cam.worldView.x) * cam.zoom;
-    const sy = (pos.y - cam.worldView.y) * cam.zoom;
-    const { width, height } = this.scale;
-    const m = 40;
-    this.arrow.setVisible(true);
-    if (sx > m && sx < width - m && sy > m && sy < height - m) {
-      const bob = Math.sin(this.time.now / 150) * 4;
-      this.arrow.setPosition(sx, sy - 24 * this.ui / 2 - 10 + bob).setRotation(Math.PI / 2);
-      return;
-    }
-    const cx = width / 2;
-    const cy = height / 2;
-    const ang = Math.atan2(sy - cy, sx - cx);
-    const t = Math.min((width / 2 - m) / Math.abs(Math.cos(ang) || 1e-6), (height / 2 - m) / Math.abs(Math.sin(ang) || 1e-6));
-    this.arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
+    const quests = this.hud?.quests ?? [];
+    this.arrows.forEach((arrow, i) => {
+      const pos = quests[i]?.pos;
+      if (!pos || !game.player || this.dialogBox) {
+        arrow.setVisible(false);
+        return;
+      }
+      const cam = game.cameras.main;
+      const sx = (pos.x - cam.worldView.x) * cam.zoom;
+      const sy = (pos.y - cam.worldView.y) * cam.zoom;
+      const { width, height } = this.scale;
+      const m = 40;
+      arrow.setVisible(true);
+      if (sx > m && sx < width - m && sy > m && sy < height - m) {
+        const bob = Math.sin(this.time.now / 150 + i) * 4;
+        arrow.setPosition(sx, sy - 24 * this.ui / 2 - 10 + bob).setRotation(Math.PI / 2);
+        return;
+      }
+      const cx = width / 2;
+      const cy = height / 2;
+      const ang = Math.atan2(sy - cy, sx - cx);
+      const t = Math.min((width / 2 - m) / Math.abs(Math.cos(ang) || 1e-6), (height / 2 - m) / Math.abs(Math.sin(ang) || 1e-6));
+      arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
+    });
   }
 
   private toast(text: string, ms = 3000) {
@@ -494,7 +509,7 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay) return;
     touchInput.attack = false;
-    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit());
+    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit(), game.activeQuests());
   }
 
   private openMap() {

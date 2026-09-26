@@ -1,9 +1,28 @@
 {
   "_comment": "The Lublin map: the city boundary plus circles around nearby places (walkable from the city). anchor = the projection origin of the original city map, kept fixed so saved positions stay valid (new areas get negative coordinates).",
-  "anchor": { "lon": 22.4537881, "lat": 51.2965553, "lat0": 51.21818255 },
+  "anchor": {
+    "lon": 22.4537881,
+    "lat": 51.2965553,
+    "lat0": 51.21818255
+  },
   "extra": [
-    { "name": "Motycz-Józefin", "lon": 22.4065, "lat": 51.2573, "km": 8 },
-    { "name": "Jastków", "lon": 22.4491, "lat": 51.3003, "km": 8 },
-    { "name": "Garbów", "lon": 22.345, "lat": 51.352, "km": 8 }
+    {
+      "name": "Motycz-Józefin",
+      "lon": 22.3926,
+      "lat": 51.2607,
+      "km": 8
+    },
+    {
+      "name": "Jastków",
+      "lon": 22.4478,
+      "lat": 51.3112,
+      "km": 8
+    },
+    {
+      "name": "Garbów",
+      "lon": 22.3327,
+      "lat": 51.3542,
+      "km": 8
+    }
   ]
 }

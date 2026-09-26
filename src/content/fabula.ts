@@ -64,6 +64,15 @@ export interface Wrogowie {
 // ----------------------------------------------------------------------------
 //  MISJE (przykładowe, do podmiany)
 // ----------------------------------------------------------------------------
+/**
+ * Ile zadań naraz: główne (historia) + poboczne (misje, zlecenia, wyścigi,
+ * trening). Nowego nie da się wziąć, gdy tyle jest aktywnych. Każde ma swój
+ * kolor strzałki: główne złote, poboczne z listy KOLORY_ZADAN.
+ */
+export const ZADAN_NARAZ = 3;
+export const KOLOR_GLOWNEGO = '#f7c531';
+export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b'];
+
 export const MISJE: Misja[] = [
   {
     id: 'zamek',

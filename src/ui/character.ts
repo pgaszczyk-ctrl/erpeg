@@ -22,9 +22,9 @@ export function closeCharacter() {
   open = null;
 }
 
-export function toggleCharacter(hp: number, maxHp: number, onChange: () => void, eat: () => number | null) {
+export function toggleCharacter(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[] = []) {
   if (open) closeCharacter();
-  else show(hp, maxHp, onChange, eat);
+  else show(hp, maxHp, onChange, eat, quests);
 }
 
 function el(tag: string, cls = '', text = '') {
@@ -34,7 +34,15 @@ function el(tag: string, cls = '', text = '') {
   return e;
 }
 
-function show(hp: number, maxHp: number, onChange: () => void, eat: () => number | null) {
+/** An active quest for the quest log: its arrow colour, name and current goal. */
+export interface QuestLine {
+  title: string;
+  text: string;
+  color: string;
+  main: boolean;
+}
+
+function show(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[]) {
   const root = el('div') as HTMLDivElement;
   root.id = 'character';
   root.onclick = (e) => {
@@ -73,6 +81,22 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
+    // Quest log: only the active ones, each in its arrow's colour.
+    box.append(el('h3', '', 'Zadania'));
+    const log = el('div', 'c-quests');
+    if (!quests.length) log.append(el('div', 'c-quest', 'Brak aktywnych zadań.'));
+    for (const q of quests) {
+      const row = el('div', 'c-quest');
+      const dot = el('span', 'c-qdot', q.main ? '⭐' : '');
+      dot.style.background = q.main ? 'transparent' : q.color;
+      const txt = el('div', 'c-qtext');
+      const name = el('b', '', q.title);
+      name.style.color = q.color;
+      txt.append(name, el('small', '', q.text));
+      row.append(dot, txt);
+      log.append(row);
+    }
+    box.append(log);
     // Statistics, one per line.
     const stats: [string, string][] = [
       ['⭐ Poziom postaci', String(poziomPostaci(session.exp))],
