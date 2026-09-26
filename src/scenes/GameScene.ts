@@ -272,6 +272,9 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('missing', missing);
 
     this.replayAbandoned();
+    // Starting in a doorway (a station after a ride, a hotel after loading):
+    // don't open it until the hero walks away and comes back.
+    this.nearDoor = this.city.places.find((p) => Math.hypot(p.door.x - this.player.x, p.door.y - (this.player.y + FEET.dy)) < DOOR_RADIUS)?.id ?? null;
     if (this.justRode) this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
     this.justRode = false;
 
