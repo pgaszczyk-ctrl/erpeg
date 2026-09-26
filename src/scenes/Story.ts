@@ -185,6 +185,20 @@ export class Story {
     }
   }
 
+  /** Where the dragon lies (on this map, until the story ends): people keep away. */
+  dragonAt() {
+    const d = this.state.dragon;
+    if (this.state.st !== 'smok' || !d || d.m !== this.city.id) return null;
+    const k = PX_PER_M / (d.s || PX_PER_M);
+    return { x: d.x * k, y: d.y * k };
+  }
+
+  /** Where the wizard stands, while he has something to tell (for the talk bubble). */
+  wizardSpot() {
+    const w = this.wizard;
+    return w?.visible && this.state.st === 'uczelnia' ? { x: w.x, y: w.y } : null;
+  }
+
   wizardAt(x: number, y: number, r: number) {
     const w = this.wizard;
     return !!w && Math.abs(w.x - x) < r && Math.abs(w.y - y) < r + 4;
@@ -219,24 +233,32 @@ export class Story {
     });
   }
 
-  /** A free spot far from houses (ideally 500 m), 0.5–3 km from the wizard. */
+  /**
+   * A free spot far from houses (ideally 500 m) and far from the town centre
+   * (where the shops, offices and churches are), 0.5–6 km from the wizard.
+   */
   private dragonSpot() {
     const w = this.wizard ?? this.host.player;
     const want = HISTORIA.smokOdBudynkow * PX_PER_M;
+    const places = this.city.places;
+    const centre = places.length
+      ? { x: places.reduce((a, p) => a + p.door.x, 0) / places.length, y: places.reduce((a, p) => a + p.door.y, 0) / places.length }
+      : { x: this.city.width / 2, y: this.city.height / 2 };
     let best = { x: w.x + 500 * PX_PER_M, y: w.y, score: -Infinity };
     const r = Math.random;
-    for (let i = 0; i < 700; i++) {
+    for (let i = 0; i < 900; i++) {
       const x = r() * this.city.width;
       const y = r() * this.city.height;
       const d = Math.hypot(x - w.x, y - w.y) / PX_PER_M;
-      if (d < 500 || d > 3000 || !this.city.isFree(x, y, 10, 6)) continue;
+      if (d < 500 || d > 6000 || !this.city.isFree(x, y, 10, 6)) continue;
+      const fromCentre = Math.hypot(x - centre.x, y - centre.y) / PX_PER_M;
       let near = want;
       for (const b of this.city.query({ x0: x - want, y0: y - want, x1: x + want, y1: y + want }).buildings) {
         const dx = Math.max(b.x0 - x, 0, x - b.x1);
         const dy = Math.max(b.y0 - y, 0, y - b.y1);
         near = Math.min(near, Math.hypot(dx, dy));
       }
-      const score = near * 10 - Math.abs(d - 900);
+      const score = near * 10 + fromCentre * 2 - Math.max(0, d - 3000);
       if (score > best.score) best = { x, y, score };
     }
     return best;

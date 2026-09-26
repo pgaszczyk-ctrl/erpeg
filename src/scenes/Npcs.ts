@@ -155,6 +155,8 @@ export class Npcs {
         n.sprite = this.scene.add.sprite(n.x, n.y, TEX.hero, 'down-0').setTint(0xc9a0ff).setDepth(n.y);
         n.bubble = this.scene.add.image(n.x, n.y - 13, TEX.bubble).setDepth(n.y + 1);
         this.scene.tweens.add({ targets: n.bubble, y: n.bubble.y - 2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        // It blinks, so a riddle waiting here catches the eye.
+        this.scene.tweens.add({ targets: n.bubble, alpha: 0.25, duration: 360, yoyo: true, repeat: -1 });
       }
       if (!n.sprite) continue;
       const v = near && isVisible(n.x, n.y);

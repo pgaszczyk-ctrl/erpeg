@@ -13,7 +13,7 @@ import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
-import { Townsfolk, type Folk } from './Townsfolk';
+import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { poziomPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
@@ -143,12 +143,15 @@ export class GameScene extends Phaser.Scene {
   private pickups: Phaser.GameObjects.Image[] = [];
   private missions: ResolvedMission[] = [];
   private markers = new Map<string, Phaser.GameObjects.Image>();
-  private nearDoor: string | null = null;
   private hudTimer = 0;
   private lingerUntil = 0;
   private orchards!: Orchards;
   private forest!: Forest;
   private story!: Story;
+  /** Blinking talk bubbles over characters with something to say (a pool). */
+  private bubbles: Phaser.GameObjects.Image[] = [];
+  /** Enemies don't hurt the hero until then (right after a dialog). */
+  private noHurtUntil = 0;
   /** Right after a dialog closes, a swing doesn't start another talk. */
   private talkReadyAt = 0;
   private folk!: Townsfolk;
@@ -197,7 +200,6 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.pickups = [];
     this.markers = new Map();
-    this.nearDoor = null;
     this.leaving = false;
     this.lingerUntil = 0;
     this.mapView = new MapRenderer(this, this.city);
@@ -253,6 +255,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.folk = new Townsfolk(this, this.city);
+    this.bubbles = [];
+    this.noHurtUntil = 0;
     this.challenge = null;
     this.duelHp = null;
     this.duelCarry = 0;
@@ -320,7 +324,8 @@ export class GameScene extends Phaser.Scene {
         e.destroy();
         return true;
       },
-      session.level.potwory,
+      // At night more monsters come out.
+      session.level.potwory * (isNight() ? MIESZKANCY.noc.potworow : 1),
     );
 
     // Fixed enemy spots.
@@ -336,9 +341,6 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('missing', missing);
 
     this.replayAbandoned();
-    // Starting in a doorway (a station after a ride, a hotel after loading):
-    // don't open it until the hero walks away and comes back.
-    this.nearDoor = this.city.places.find((p) => Math.hypot(p.door.x - this.player.x, p.door.y - (this.player.y + FEET.dy)) < DOOR_RADIUS)?.id ?? null;
     if (this.justRode) this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
     this.justRode = false;
 
@@ -407,6 +409,7 @@ export class GameScene extends Phaser.Scene {
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
     this.forest.update(this.player.x, this.player.y, now);
+    this.folk.fear = this.story.dragonAt();
     this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
     if (this.duelHp !== null) {
       // Walked away from the duel: the townsman gives up.
@@ -451,6 +454,7 @@ export class GameScene extends Phaser.Scene {
       this.moveActor(s, dt);
       s.updateLook();
       s.setDepth(s.y);
+      if (now < this.noHurtUntil) continue; // just back from a talk: a moment of peace
       if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         // A duel takes the purple hearts, never the real ones.
         if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, 0)) {
@@ -486,10 +490,8 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
     }
 
-    if (!lingering) {
-      this.checkDoors();
-      this.checkGoals();
-    }
+    if (!lingering) this.checkGoals();
+    this.updateBubbles();
 
     if (this.challenge) this.updateChallenge(now);
     this.hudTimer -= delta;
@@ -625,6 +627,8 @@ export class GameScene extends Phaser.Scene {
       if (performance.now() >= this.talkReadyAt) talk();
       return;
     }
+    // A swing at a building door (or while standing at one) goes in.
+    if (!foeNear && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy))) return;
     let hits = 0;
     // Easy levels: the sword sweeps a wide arc around the hero.
     const arc = (session.level.miecz * Math.PI) / 180;
@@ -933,9 +937,27 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private checkDoors() {
-    const fx = this.player.x;
-    const fy = this.player.y + FEET.dy;
+  /** Talk bubbles over characters with a riddle, a request or a challenge. */
+  private updateBubbles() {
+    const spots: { x: number; y: number }[] = [...this.fixed.important()];
+    const w = this.story.wizardSpot();
+    if (w) spots.push(w);
+    if (!this.challenge) for (const n of this.training.visibleNpcs()) spots.push(n);
+    const blink = 0.55 + 0.45 * Math.sin(this.time.now / 180);
+    spots.forEach((p, i) => {
+      const b = (this.bubbles[i] ??= this.add.image(0, 0, TEX.talkBubble).setDepth(1_150_000));
+      b.setPosition(Math.round(p.x + 6), Math.round(p.y - 20)).setAlpha(blink).setVisible(true);
+    });
+    for (let i = spots.length; i < this.bubbles.length; i++) this.bubbles[i].setVisible(false);
+  }
+
+  /**
+   * A building door a swing lands on (or the hero stands at): a shop, school,
+   * church, mission building… Buildings open with a swing, not by walking in.
+   */
+  private openDoorAt(x: number, y: number): boolean {
+    const fx = x;
+    const fy = y;
     let id: string | null = null;
     let open: (() => void) | null = null;
     let savePoint = true;
@@ -955,12 +977,10 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
-    if (id === this.nearDoor) return;
-    this.nearDoor = id;
-    if (open) {
-      if (savePoint) this.save(); // entering a building is a save point
-      open();
-    }
+    if (!open) return false;
+    if (savePoint) this.save(); // entering a building is a save point
+    open();
+    return true;
   }
 
   /** Adds a mission to the game: gold "!" over its door, goal enemies. */
@@ -1011,8 +1031,6 @@ export class GameScene extends Phaser.Scene {
     this.openMissionDialog(rm, () => {
       session.gen[m.id] = m;
       this.addMission(rm, false);
-      // Same door as the place we're standing in: not a new entrance.
-      this.nearDoor = m.id;
     });
   }
 
@@ -1212,6 +1230,14 @@ export class GameScene extends Phaser.Scene {
     for (const ch of f.id + today()) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const pick = (a: string[]) => a[(h >>> 0) % a.length];
     const hello = pick(M.powitania);
+    // Some tell where they are going – and go there along the streets.
+    if (f.role === 'wita' && !f.beaten && ((h >>> 3) % 100) / 100 < M.sprawunki) {
+      const errand = this.errandFor(f);
+      if (errand) {
+        this.dialog({ title: `🙂 ${f.name}`, text: errand.text, buttons: ['Miłego dnia!'], onChoose: () => this.folk.sendTo(f, errand.route) });
+        return;
+      }
+    }
     if (f.beaten || f.role === 'wita') {
       this.dialog({ title: `🙂 ${f.name}`, text: f.beaten ? 'Ech, dobra to była walka! Dzień dobry.' : hello, buttons: ['Dzień dobry!'], onChoose: () => {} });
       return;
@@ -1228,6 +1254,31 @@ export class GameScene extends Phaser.Scene {
         if (i === 1) this.dialog({ title: `⚔ ${f.name}`, text: pick(M.przyjmuje), buttons: ['Do dzieła!'], onChoose: () => this.startDuel(f) });
       },
     });
+  }
+
+  /** Where a passer-by is going today (by the day of the week) and the way there. */
+  private errandFor(f: Folk): { text: string; route: number[] } | null {
+    const M = MIESZKANCY.sprawa;
+    const day = new Date().getDay(); // 0 = Sunday
+    const DAYS = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę'];
+    const kind = day === 0 ? 'kosciol' : day === 5 ? 'boisko' : day === 6 ? 'sklep' : f.id.length % 2 ? 'bank' : 'sklep';
+    const R = 900 * PX_PER_M;
+    let to: { x: number; y: number; name: string } | null = null;
+    if (kind === 'boisko') {
+      const p = this.training.pitchesAround(f.x, f.y, 50 * PX_PER_M, R).sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y))[0];
+      if (p) to = { ...this.city.freeNear(p.x, p.y), name: this.city.streetNear(p.x, p.y, 200) ?? 'bez nazwy' };
+    } else {
+      const want = kind === 'kosciol' ? 'church' : kind === 'bank' ? 'bank' : 'shop';
+      const p = this.city.places.filter((q) => q.kind === want && Math.hypot(q.door.x - f.x, q.door.y - f.y) < R)
+        .sort((a, b) => Math.hypot(a.door.x - f.x, a.door.y - f.y) - Math.hypot(b.door.x - f.x, b.door.y - f.y))[0];
+      if (p) to = { x: p.door.x, y: p.door.y, name: p.name };
+    }
+    if (!to) return null;
+    const route = this.city.roadPath({ x: f.x, y: f.y }, to);
+    if (!route) return null;
+    const lines = M[kind];
+    const text = lines[f.id.length % lines.length].replace('{nazwa}', to.name).replace('{dzien}', DAYS[day]).replace('{ulica}', to.name);
+    return { text, route };
   }
 
   /**
@@ -2099,6 +2150,8 @@ export class GameScene extends Phaser.Scene {
         consumeAttack(); // the tap/key that closed the dialog shouldn't swing the sword
         // …nor, a moment later, start the same talk again.
         this.talkReadyAt = performance.now() + TALK_PAUSE_MS;
+        // Nobody attacks during a talk (the scene is paused), nor right after it.
+        this.noHurtUntil = this.game.loop.time + 1500;
         this.scene.resume();
         req.onChoose(i);
       },

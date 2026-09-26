@@ -36,6 +36,7 @@ export const TEX = {
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
   mushroom: 'mushroom',
+  talkBubble: 'talk-bubble',
   heartDuel: 'heart-duel',
   heartDuelEmpty: 'heart-duel-empty',
   dryad: 'dryad',
@@ -888,6 +889,16 @@ function drawDragon(scene: Phaser.Scene) {
       sh.tex.add(`f${f}`, 0, o, 0, S, S);
     }
     sh.tex.refresh();
+  }
+  // A speech bubble with three dots (over characters who have something to say).
+  {
+    const b = canvasTexture(scene, TEX.talkBubble, 12, 10);
+    px(b.ctx, 1, 0, 10, 1, OUTLINE); px(b.ctx, 0, 1, 12, 5, OUTLINE); px(b.ctx, 1, 6, 10, 1, OUTLINE);
+    px(b.ctx, 1, 1, 10, 5, '#ffffff');
+    px(b.ctx, 3, 7, 3, 1, OUTLINE); px(b.ctx, 3, 8, 2, 1, OUTLINE); px(b.ctx, 3, 9, 1, 1, OUTLINE); // tail
+    px(b.ctx, 4, 6, 1, 1, '#ffffff');
+    for (const x of [3, 6, 9]) px(b.ctx, x - 1, 3, 2, 2, '#3b5dc9');
+    b.tex.refresh();
   }
   const ex = canvasTexture(scene, TEX.exclaim, 8, 14);
   px(ex.ctx, 1, 0, 6, 14, OUTLINE);

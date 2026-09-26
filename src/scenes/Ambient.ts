@@ -486,6 +486,11 @@ export class Training {
     return null;
   }
 
+  /** Sports people the hero can see (for talk bubbles). */
+  visibleNpcs() {
+    return [...this.activeNpcs].filter((n) => n.sprite?.visible && n.sprite.alpha > 0);
+  }
+
   /** Hides a runner while it races (a racing copy runs instead). */
   setAway(n: SportNpc, away: boolean) {
     n.sprite?.setAlpha(away ? 0 : 1);

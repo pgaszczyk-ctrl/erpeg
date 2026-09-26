@@ -72,8 +72,24 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
-    box.append(el('div', 'c-stats', `⭐ Poziom postaci: ${poziomPostaci(session.exp)}   🚶 ${(session.stats.m / 1000).toFixed(1).replace('.', ',')} km przebytych   ⚔ Pokonani wojownicy: ${session.stats.duels ?? 0}${session.kamienie ? `   💎 Kamienie mocy: ${session.kamienie}` : ''}`));
-    box.append(el('div', 'c-stats', `💰 ${session.coins} monet   ⭐ ${session.exp} EXP   ❤ ${hp / 2}/${maxHp / 2}   🛡 ${defense()} (${Math.round(blockChance() * 100)}% bloku)`));
+    // Statistics, one per line.
+    const stats: [string, string][] = [
+      ['⭐ Poziom postaci', String(poziomPostaci(session.exp))],
+      ['✨ Doświadczenie', `${session.exp} EXP`],
+      ['❤ Zdrowie', `${hp / 2} / ${maxHp / 2}`],
+      ['🛡 Obrona', `${defense()} (${Math.round(blockChance() * 100)}% bloku)`],
+      ['💰 Monety', String(session.coins)],
+      ['🚶 Przebyte', `${(session.stats.m / 1000).toFixed(1).replace('.', ',')} km`],
+      ['⚔ Pokonani wojownicy', String(session.stats.duels ?? 0)],
+      ...(session.kamienie ? [['💎 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
+    ];
+    const list = el('div', 'c-statlist');
+    for (const [k, v] of stats) {
+      const row = el('div', 'c-stat');
+      row.append(el('span', 'c-stat-k', k), el('span', 'c-stat-v', v));
+      list.append(row);
+    }
+    box.append(list);
     // Eating fruit heals.
     const n = LECZENIE_OWOCAMI.owocow;
     const canEat = totalFruit() >= n && hp < maxHp;
@@ -89,18 +105,24 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
 
     // Equipment
     box.append(el('h3', '', 'Założone'));
-    const eq = el('div', 'c-eq');
-    for (const m of Object.keys(MIEJSCA) as Miejsce[]) {
+    // A cross of slots: helmet on top, weapon – armour – second weapon, boots below.
+    const eq = el('div', 'c-cross');
+    const ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🏹', zbroja: '🦺', helm: '⛑', buty: '🥾' };
+    for (const m of ['helm', 'bron', 'zbroja', 'dystans', 'buty'] as Miejsce[]) {
       const it = item(gear.equip[m]);
-      const row = el('button', 'c-row') as HTMLButtonElement;
-      row.append(el('span', 'c-slot', MIEJSCA[m]), el('span', '', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa} (${m === 'bron' || m === 'dystans' ? 'obr.' : 'obrona'} ${it.moc})${it.opis ? ` – ${it.opis}` : ''}` : '—'));
-      row.onclick = () => {
-        if (!it || it.id === 'kijek') return;
-        ask(it.nazwa, [['Zdejmij do plecaka', () => (unequip(m) ? undefined : (alertFull(), false))]]);
+      const cell = el('button', `c-xcell c-x-${m}${it ? '' : ' c-empty'}`) as HTMLButtonElement;
+      cell.append(el('span', 'c-xicon', ICON[m]), el('span', 'c-xname', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa}` : MIEJSCA[m]));
+      if (it) cell.append(el('span', 'c-xpow', `${m === 'bron' || m === 'dystans' ? 'atak' : 'obrona'} ${it.moc}`));
+      cell.title = it?.opis ?? MIEJSCA[m];
+      cell.onclick = () => {
+        if (!it) return;
+        const info = it.opis ? `${it.nazwa}: ${it.opis}` : it.nazwa;
+        if (it.id === 'kijek') return ask(info, []);
+        ask(info, [['Zdejmij do plecaka', () => (unequip(m) ? undefined : (alertFull(), false))]]);
       };
-      eq.append(row);
+      eq.append(cell);
     }
-    box.append(eq);
+    box.append(eq, actions);
 
     // Backpack
     box.append(el('h3', '', `Plecak (${gear.bag.length}/${PLECAK.miejsc})`));
@@ -119,7 +141,8 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
       }
       bag.append(cell);
     }
-    box.append(bag, actions);
+    box.append(bag);
+    if (!actions.parentElement) box.append(actions);
 
     // Skills (only the ones the character can use)
     box.append(el('h3', '', 'Umiejętności'));

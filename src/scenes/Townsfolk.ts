@@ -25,6 +25,19 @@ export interface Folk {
   beaten?: boolean;
   /** In a duel right now (the fighter stands in for it). */
   away?: boolean;
+  /** Off on an errand: a street route, its running lengths and how far along. */
+  route?: number[];
+  cum?: number[];
+  along?: number;
+  /** Arrived and went in (gone for this session). */
+  gone?: boolean;
+}
+
+/** Night by the phone's clock (fewer people, more monsters). */
+export function isNight(d = new Date()) {
+  const h = d.getHours();
+  const n = MIESZKANCY.noc;
+  return n.od > n.do ? h >= n.od || h < n.do : h >= n.od && h < n.do;
 }
 
 const PAVED = new Set(['major', 'medium', 'minor']);
@@ -49,6 +62,8 @@ export class Townsfolk {
   private cells = new Map<string, Folk[]>();
   private active = new Set<Folk>();
   private next = 0;
+  /** Where the story's dragon is: nobody goes near it. */
+  fear: { x: number; y: number } | null = null;
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {
     // A few looks to share (drawn like the hero).
@@ -82,10 +97,15 @@ export class Townsfolk {
     list = [];
     const box = { x0: cx * CELL, y0: cy * CELL, x1: (cx + 1) * CELL, y1: (cy + 1) * CELL };
     const r = rng(hash(`${this.city.id}:folk:${key}`));
+    // Busy centre or quiet housing estate: by how many places (shops, offices,
+    // churches…) the square has. At night even fewer.
+    const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
+    const district = MIESZKANCY.dzielnice.find((d) => places >= d.miejsc)?.mnoznik ?? 0.25;
+    const share = district * (isNight() ? MIESZKANCY.noc.ludzi : 1);
     for (const l of this.city.query(box).lines) {
       if (!PAVED.has(l.kind) || l.pts.length < 4) continue;
       if (l.pts[0] < box.x0 || l.pts[0] >= box.x1 || l.pts[1] < box.y0 || l.pts[1] >= box.y1) continue;
-      const want = (lengthM(l) / 200) * MIESZKANCY.na200m;
+      const want = (lengthM(l) / 200) * MIESZKANCY.na200m * share;
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const walker = new Walker([l.pts], SPEED * (0.7 + r() * 0.6), r);
@@ -123,15 +143,34 @@ export class Townsfolk {
         }
       }
     }
+    const fearR = MIESZKANCY.strachPrzedSmokiem * PX_PER_M;
     for (const f of this.active) {
-      if (f.away || !f.sprite) continue;
+      if (f.away || f.gone || !f.sprite) continue;
       const ox = f.x, oy = f.y;
-      f.walker.step(dt);
-      f.x = f.walker.x;
-      f.y = f.walker.y;
+      if (f.route && f.cum) {
+        // On an errand: along the streets to the place, then in through the door.
+        f.along = (f.along ?? 0) + SPEED * 1.4 * dt;
+        const total = f.cum[f.cum.length - 1];
+        let i = 1;
+        while (i < f.cum.length - 1 && f.cum[i] < f.along) i++;
+        const t = Math.max(0, Math.min(1, (f.along - f.cum[i - 1]) / ((f.cum[i] - f.cum[i - 1]) || 1)));
+        f.x = f.route[(i - 1) * 2] + (f.route[i * 2] - f.route[(i - 1) * 2]) * t;
+        f.y = f.route[(i - 1) * 2 + 1] + (f.route[i * 2 + 1] - f.route[(i - 1) * 2 + 1]) * t;
+        if (f.along >= total) {
+          f.gone = true;
+          const s = f.sprite;
+          this.scene.tweens.add({ targets: s, alpha: 0, duration: 500, onComplete: () => s.setVisible(false) });
+          continue;
+        }
+      } else {
+        f.walker.step(dt);
+        f.x = f.walker.x;
+        f.y = f.walker.y;
+      }
+      const scared = !!this.fear && Math.hypot(f.x - this.fear.x, f.y - this.fear.y) < fearR;
       const dx = f.x - ox, dy = f.y - oy;
       const s = f.sprite;
-      s.setPosition(f.x, f.y).setDepth(f.y).setVisible(visible(f.x, f.y));
+      s.setPosition(f.x, f.y).setDepth(f.y).setVisible(!scared && visible(f.x, f.y));
       if (Math.abs(dx) + Math.abs(dy) < 0.01) {
         s.anims.stop();
         s.setFrame('down-0');
@@ -145,8 +184,17 @@ export class Townsfolk {
 
   /** Someone to talk to near (x, y). */
   at(x: number, y: number, r: number): Folk | null {
-    for (const f of this.active) if (!f.away && f.sprite?.visible && Math.abs(f.x - x) < r && Math.abs(f.y - y) < r + 4) return f;
+    for (const f of this.active) if (!f.away && !f.gone && !f.route && f.sprite?.visible && Math.abs(f.x - x) < r && Math.abs(f.y - y) < r + 4) return f;
     return null;
+  }
+
+  /** Off to a place along the streets (after telling the hero about it). */
+  sendTo(f: Folk, route: number[]) {
+    const cum = [0];
+    for (let i = 2; i < route.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(route[i] - route[i - 2], route[i + 1] - route[i - 1]));
+    f.route = route;
+    f.cum = cum;
+    f.along = 0;
   }
 
   /** Steps out for a duel (a fighter takes its place) and back after it. */

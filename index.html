@@ -34,6 +34,17 @@
       .c-stats { font-size: 13px; color: #e8e8e8; line-height: 1.6; }
       .c-box h3 { margin: 8px 0 2px; font-size: 15px; color: #f7c531; }
       .c-eq { display: flex; flex-direction: column; gap: 4px; }
+      .c-statlist { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+      .c-stat { display: flex; justify-content: space-between; font-size: 14px; color: #e8e8e8; border-bottom: 1px solid #2c2834; padding: 2px 0; }
+      .c-stat-v { color: #fff2a8; }
+      .c-cross { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 300px; margin: 0 auto;
+        grid-template-areas: ". helm ." "bron zbroja dystans" ". buty ."; }
+      .c-xcell { font: inherit; aspect-ratio: 1; background: #0f0d13; color: #fff; border: 2px solid #f7c531; border-radius: 6px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; }
+      .c-xcell.c-empty { border-color: #4a4a55; border-style: dashed; opacity: 0.6; }
+      .c-x-helm { grid-area: helm; } .c-x-bron { grid-area: bron; } .c-x-zbroja { grid-area: zbroja; }
+      .c-x-dystans { grid-area: dystans; } .c-x-buty { grid-area: buty; }
+      .c-xicon { font-size: 22px; } .c-xname { font-size: 10px; line-height: 1.15; text-align: center; } .c-xpow { font-size: 10px; color: #9aa39a; }
       .c-row { font: inherit; font-size: 14px; display: flex; gap: 8px; text-align: left; background: #0f0d13; color: #fff;
         border: 1px solid #4a4a55; border-radius: 4px; padding: 7px 8px; }
       .c-slot { width: 78px; color: #9aa39a; flex: none; }

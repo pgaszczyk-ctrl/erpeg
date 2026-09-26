@@ -150,9 +150,38 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
 
 type Patterns = ReturnType<typeof makePatterns>;
 
+/** Bounding boxes of rings (cached), so a chunk skips the ones that miss it. */
+const ringBox = new WeakMap<number[], [number, number, number, number]>();
+/** The chunk being painted (with a margin); rings outside it are skipped. */
+let clip: { x0: number; y0: number; x1: number; y1: number } | null = null;
+
+function boxOf(r: number[]) {
+  let b = ringBox.get(r);
+  if (!b) {
+    b = [Infinity, Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < r.length; i += 2) {
+      if (r[i] < b[0]) b[0] = r[i];
+      if (r[i + 1] < b[1]) b[1] = r[i + 1];
+      if (r[i] > b[2]) b[2] = r[i];
+      if (r[i + 1] > b[3]) b[3] = r[i + 1];
+    }
+    ringBox.set(r, b);
+  }
+  return b;
+}
+
+/**
+ * Traces rings (an outline and its holes). Rings that don't reach the chunk
+ * being painted are skipped: they change nothing in it, and the merged street
+ * areas have thousands of building holes, which made each chunk slow to draw.
+ */
 function ringsPath(ctx: CanvasRenderingContext2D, rings: number[][], dx = 0, dy = 0) {
   ctx.beginPath();
   for (const r of rings) {
+    if (clip) {
+      const b = boxOf(r);
+      if (b[2] + dx < clip.x0 || b[0] + dx > clip.x1 || b[3] + dy < clip.y0 || b[1] + dy > clip.y1) continue;
+    }
     ctx.moveTo(r[0] + dx, r[1] + dy);
     for (let i = 2; i < r.length; i += 2) ctx.lineTo(r[i] + dx, r[i + 1] + dy);
     ctx.closePath();
@@ -272,6 +301,8 @@ export class MapRenderer {
 
     const box = { x0: x0 - 8, y0: y0 - 60, x1: x0 + CHUNK + 8, y1: y0 + CHUNK + 8 };
     const { areas, lines, buildings } = m.query(box);
+    // Wide enough for outlines, walls (drawn lower) and patterns.
+    clip = { x0: x0 - 40, y0: y0 - 80, x1: x0 + CHUNK + 40, y1: y0 + CHUNK + 80 };
 
     // Areas (already in draw order from the map build).
     areas.sort((a, b) => m.areas.indexOf(a) - m.areas.indexOf(b));
@@ -337,6 +368,7 @@ export class MapRenderer {
     // Buildings, north to south so southern walls overlap northern roofs.
     buildings.sort((a, b) => a.y1 - b.y1);
     for (const b of buildings) this.paintBuilding(ctx, b);
+    clip = null;
   }
 
   private paintArea(ctx: CanvasRenderingContext2D, a: Area) {

@@ -317,6 +317,20 @@ export class FixedNpcs {
     });
   }
 
+  /** Where to show a talk bubble: characters with something (a riddle, a request) for today. */
+  important(): { x: number; y: number }[] {
+    const day = today();
+    const out: { x: number; y: number }[] = [];
+    for (const w of this.list) {
+      if (w.gone || !w.sprite.visible) continue;
+      const d = session.daily[w.id];
+      const a = d && d.d === day ? d.a : 0;
+      const has = w.id === 'pies' ? this.state('npc-pies') !== 'done' : w.id === 'margo' ? a < MARGO.zagadekDziennie : a < 1;
+      if (has) out.push({ x: w.x, y: w.y });
+    }
+    return out;
+  }
+
   private daily(id: string) {
     const day = today();
     const d = session.daily[id];
