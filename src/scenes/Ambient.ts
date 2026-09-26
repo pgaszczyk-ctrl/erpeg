@@ -388,6 +388,7 @@ export const SPORTY_TEX = 'sporty';
 export class Training {
   private generated = new Map<Area, Station[]>();
   private people = new Map<Area, SportNpc | null>();
+  private runnerPitch = new Map<string, Area | null>();
   private active = new Set<Station>();
   private activeNpcs = new Set<SportNpc>();
   private next = 0;
@@ -439,6 +440,35 @@ export class Training {
     return list;
   }
 
+  /**
+   * At most one runner per 1 km square: of the small pitches whose centre lies
+   * in the square, the one nearest the square's middle (always the same one).
+   */
+  private runnerPitchOf(a: Area): Area | null {
+    const cell = 1000 * PX_PER_M;
+    const kx = Math.floor((a.x0 + a.x1) / 2 / cell);
+    const ky = Math.floor((a.y0 + a.y1) / 2 / cell);
+    const key = `${kx}:${ky}`;
+    if (this.runnerPitch.has(key)) return this.runnerPitch.get(key)!;
+    const mx = (kx + 0.5) * cell, my = (ky + 0.5) * cell;
+    let best: Area | null = null;
+    let bestD = Infinity;
+    for (const b of this.city.query({ x0: kx * cell, y0: ky * cell, x1: (kx + 1) * cell, y1: (ky + 1) * cell }).areas) {
+      if (b.kind !== 'pitch') continue;
+      const bx = (b.x0 + b.x1) / 2, by = (b.y0 + b.y1) / 2;
+      if (Math.floor(bx / cell) !== kx || Math.floor(by / cell) !== ky) continue;
+      const m2 = Training.sizeM2(b);
+      if (m2 < SPORT.maleBoiskoM2 || m2 >= SPORT.duzeBoiskoM2) continue;
+      const d = Math.hypot(bx - mx, by - my);
+      if (d < bestD) {
+        bestD = d;
+        best = b;
+      }
+    }
+    this.runnerPitch.set(key, best);
+    return best;
+  }
+
   private personOf(a: Area): SportNpc | null {
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
@@ -454,7 +484,7 @@ export class Training {
           }
         }
       }
-    } else if (m2 >= SPORT.maleBoiskoM2) {
+    } else if (m2 >= SPORT.maleBoiskoM2 && this.runnerPitchOf(a) === a) {
       const cx = (a.x0 + a.x1) / 2;
       const cy = (a.y0 + a.y1) / 2;
       const p = this.city.isFree(cx, cy + 5, 3, 2) ? { x: cx, y: cy } : this.city.freeNear(cx, cy);
