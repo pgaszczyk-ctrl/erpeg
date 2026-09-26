@@ -26,7 +26,7 @@ interface Code {
 }
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
-const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Glut (3 życia)', wielki_glut: 'Wielki glut (18 życia)', bandyta: 'Bandyta (6 życia, szybki)', smok: 'Smok' };
+const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (3 życia)', wielki_glut: 'Wielki chochlik (18 życia)', bandyta: 'Bandyta (6 życia, szybki)', driada: 'Driada (3 życia)', zombie: 'Zombiak (4 życia)', szkielet: 'Szkielet (3 życia)', smok: 'Smok' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';
@@ -284,7 +284,7 @@ function missionEditor(id: string | null) {
     miejsce: inp(typeof z.miejsce === 'string' ? z.miejsce : '', { placeholder: 'np. Bramowa 1' }),
     ile: inp(z.ile ?? 3, { type: 'number', min: 1, max: 30 }),
     wrog: el('select', {}, Object.entries(WROGOWIE).map(([k, v]) => el('option', { value: k, selected: z.wrog === k }, [v]))),
-    cel: inp(z.cel ?? '', { placeholder: 'krótko, np. Pokonaj gluty przy Bramie' }),
+    cel: inp(z.cel ?? '', { placeholder: 'krótko, np. Pokonaj chochliki przy Bramie' }),
     szukaj: el('input', { type: 'checkbox', checked: !!z.szukaj }),
     opis: el('textarea', { value: m.opis, placeholder: 'Co mówi zleceniodawca po wejściu' }),
     zakonczenie: el('textarea', { value: m.zakonczenie, placeholder: 'Co mówi po wykonaniu zadania' }),

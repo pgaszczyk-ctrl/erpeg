@@ -2,7 +2,7 @@
 //  SKLEPY, SZKOŁY I OWOCE
 //  Sklepy są w prawdziwych Biedronkach, Lidlach, Lewiatanach i Delikatesach
 //  Centrum (z mapy OpenStreetMap), szkoły umiejętności w prawdziwych szkołach.
-//  Glut ma 3 punkty życia: kijkiem potrzeba 3 uderzeń.
+//  Chochlik ma 3 punkty życia: kijkiem potrzeba 3 uderzeń.
 // ============================================================================
 
 // Broń, zbroje i umiejętności są teraz w przedmioty.ts.
@@ -35,6 +35,13 @@ export const LAS = { kratkaM: 30, szansaGrzyb: 0.3, szansaDrzewo: 0.45, uderzenN
 
 /** Ile drzew na 1000 m² zieleni (i najwyżej ile na jeden trawnik/działki). */
 export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200 };
+
+/**
+ * KAMIEŃ MOCY – do kupienia w świątyniach. Gdy bohater zginie, kamień się
+ * rozsypuje i wskrzesza go (w hotelu, w którym ostatnio spał, albo w domu),
+ * zamiast śmierci na zawsze. Cena w monetach albo w złotówkach (płatności wkrótce).
+ */
+export const KAMIEN_MOCY = { cena: 1_000_000_000, zlotych: 10 };
 
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
 export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };

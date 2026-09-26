@@ -9,7 +9,7 @@
 export interface SzablonZlecen {
   /** Tytuły do losowania. */
   tytuly: string[];
-  /** Zlecenia „pokonaj gluty pod adresem”. */
+  /** Zlecenia „pokonaj chochliki pod adresem”. */
   pokonaj: string[];
   /** Zlecenia „dojdź / zanieś coś pod adres”. */
   idz: string[];
@@ -22,8 +22,8 @@ export interface SzablonZlecen {
 export const KOSCIOL: SzablonZlecen = {
   tytuly: ['Prośba proboszcza', 'Sprawa parafialna', 'Pomoc dla sąsiada'],
   pokonaj: [
-    'Proboszcz prosi o pomoc: gluty oblazły ogródek przy {adres}. Przegoń je, a Bóg ci wynagrodzi.',
-    'Pani z chóru skarży się, że pod {adres} kręcą się fioletowe gluty. Zrób z nimi porządek.',
+    'Proboszcz prosi o pomoc: chochliki oblazły ogródek przy {adres}. Przegoń je, a Bóg ci wynagrodzi.',
+    'Pani z chóru skarży się, że pod {adres} kręcą się psotne chochliki. Zrób z nimi porządek.',
   ],
   idz: [
     'Zanieś pani Halinie spod {adres} ciasto z kiermaszu parafialnego.',
@@ -39,8 +39,8 @@ export const KOSCIOL: SzablonZlecen = {
 export const URZAD: SzablonZlecen = {
   tytuly: ['Sprawa urzędowa', 'Pilne pismo', 'Skarga mieszkańców'],
   pokonaj: [
-    'Mieszkańcy spod {adres} złożyli skargę na gluty. Urzędnik prosi o rozwiązanie problemu w trybie pilnym.',
-    'Wydział porządku publicznego zleca usunięcie glutów spod {adres}.',
+    'Mieszkańcy spod {adres} złożyli skargę na chochliki. Urzędnik prosi o rozwiązanie problemu w trybie pilnym.',
+    'Wydział porządku publicznego zleca usunięcie chochlików spod {adres}.',
   ],
   idz: [
     'Doręcz pismo urzędowe pod adres {adres}. Za potwierdzenie odbioru czeka nagroda.',
@@ -62,8 +62,8 @@ export const POLICJA = {
   ],
   /** Wielki stwór w danym miejscu. */
   potwor: [
-    'Przy ulicy {ulica} grasuje wielki glut. Zabij go, zanim kogoś połknie!',
-    'Mieszkańcy ulicy {ulica} widzieli ogromnego, fioletowego gluta. Potrzebny ktoś odważny.',
+    'Przy ulicy {ulica} grasuje wielki chochlik. Zabij go, zanim kogoś ugryzie!',
+    'Mieszkańcy ulicy {ulica} widzieli ogromnego, rogatego chochlika. Potrzebny ktoś odważny.',
   ],
   zloczyncy: ['Mietek Łom', 'Zdzichu Wytrych', 'Czarny Kazik', 'Heniek Fałszerz', 'Bolek Kieszonkowiec', 'Rudy Wiesiek'],
   odleglosc: [300, 1200] as [number, number],

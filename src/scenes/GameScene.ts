@@ -15,6 +15,7 @@ import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { poziomPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
+import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, enterWorld, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
 import type { ZagadkaPL } from '../content/postacie';
@@ -618,7 +619,7 @@ export class GameScene extends Phaser.Scene {
       this.story.dragonKilled();
       return;
     }
-    this.dropLoot(s.x, s.y);
+    this.dropLoot(s.x, s.y, s.kindId);
     this.enemies = this.enemies.filter((e) => e !== s);
     session.exp += s.kind.exp;
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
@@ -663,8 +664,25 @@ export class GameScene extends Phaser.Scene {
     return s;
   }
 
-  private dropLoot(x: number, y: number) {
-    const heart = Math.random() < HEART_DROP_CHANCE && this.player.hp < PLAYER.maxHp;
+  /**
+   * What a beaten enemy leaves: a coin or (sometimes) a heart. Dryads leave no
+   * gold, only hearts and fruit; skeletons no hearts but 2–3 coins.
+   */
+  private dropLoot(x: number, y: number, kind: RodzajWroga = 'glut') {
+    if (kind === 'driada') {
+      if (this.player.hp < PLAYER.maxHp && Math.random() < 0.5) this.dropPickup(x, y, true);
+      else this.dropFruit(x, y + 6, Math.random() < 0.5 ? 'jablko' : 'sliwka');
+      return;
+    }
+    if (kind === 'szkielet') {
+      const n = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < n; i++) this.dropPickup(x + (i - (n - 1) / 2) * 6, y + (i % 2) * 3, false);
+      return;
+    }
+    this.dropPickup(x, y, Math.random() < HEART_DROP_CHANCE && this.player.hp < PLAYER.maxHp);
+  }
+
+  private dropPickup(x: number, y: number, heart: boolean) {
     const item = this.add.image(x, y, heart ? TEX.pickupHeart : TEX.coin).setDepth(y - 8);
     item.setData('kind', heart ? 'heart' : 'coin');
     this.pickups.push(item);
@@ -701,6 +719,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPlayerDeath() {
+    if (session.kamienie > 0) return this.reviveWithStone();
     this.lingerUntil = 0;
     this.player.anims.stop();
     this.player.setFrame('down-0');
@@ -966,6 +985,58 @@ export class GameScene extends Phaser.Scene {
           return;
         }
         this.travel(t);
+      },
+    });
+  }
+
+  /** A power stone crumbles: back to life at the load point (last hotel, or home). */
+  private reviveWithStone() {
+    session.kamienie--;
+    this.lingerUntil = 0;
+    this.damageCarry = 0;
+    this.player.hp = PLAYER.maxHp;
+    session.hp = PLAYER.maxHp;
+    const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
+    this.toast('💎 Kamień mocy rozsypał się – wracasz do życia!', 4000);
+    if (at.m === this.city.id) {
+      this.player.setPosition(at.x, at.y);
+      this.cameras.main.centerOn(at.x, at.y);
+      this.enemies.forEach((e) => (e.chasing = false));
+      this.emitHud();
+      this.save();
+      return;
+    }
+    // The load point is on another map: go there.
+    this.travelling = true;
+    this.keepFog();
+    getMap(at.m).then((city) => {
+      session.arrive = { x: at.x, y: at.y };
+      this.game.registry.set('city', city);
+      saveNow(PLAYER.maxHp).catch(() => {});
+      this.scene.stop('ui');
+      this.scene.restart();
+    });
+  }
+
+  /** The power stone: brings the hero back once after dying. */
+  private openStone(p: CityPlace) {
+    const k = KAMIEN_MOCY;
+    const fmt = (n: number) => n.toLocaleString('pl-PL');
+    this.dialog({
+      title: `💎 Kamień mocy – ${p.name}`,
+      text: `Kapłan pokazuje lśniący kamień. „Gdy zginiesz, kamień się rozsypie i wrócisz do życia – w hotelu, w którym ostatnio spałeś, albo w domu.”\n\nCena: ${fmt(k.cena)} monet albo ${k.zlotych} zł. Masz ${fmt(session.coins)} monet i ${session.kamienie} ${session.kamienie === 1 ? 'kamień' : 'kamieni'}.`,
+      buttons: [`Kup za ${fmt(k.cena)} 💰`, `Kup za ${k.zlotych} zł`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i === 0) {
+          if (session.coins < k.cena) return this.toast(`Za mało monet – kamień kosztuje ${fmt(k.cena)}.`, 2500);
+          spend(k.cena);
+          session.kamienie++;
+          this.emitHud();
+          this.save();
+          this.toast('💎 Masz kamień mocy!', 2500);
+        } else if (i === 1) {
+          this.dialog({ title: '💎 Kamień mocy', text: `Płatności prawdziwymi pieniędzmi (${k.zlotych} zł) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
+        }
       },
     });
   }
@@ -1734,16 +1805,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dialog(req: DialogRequest) {
-    // At a school or church: "ask about the shadows" as one more option.
+    // At a school or church: "ask about the shadows" (and in churches the
+    // power stone) as more options, before the last button.
     const place = this.storyPlace;
+    const extras: [string, () => void][] = [];
     const ask = place && this.story.askLabel();
-    if (place && ask) {
+    if (place && ask) extras.push([ask, () => this.story.ask(place)]);
+    if (place?.kind === 'church') extras.push(['💎 Kamień mocy', () => this.openStone(place)]);
+    if (place && extras.length) {
       this.storyPlace = null;
       const at = req.buttons.length - 1;
+      const orig = req;
       req = {
         ...req,
-        buttons: [...req.buttons.slice(0, at), ask, ...req.buttons.slice(at)],
-        onChoose: (i) => (i === at ? this.story.ask(place) : req.onChoose(i > at ? i - 1 : i)),
+        buttons: [...req.buttons.slice(0, at), ...extras.map(([l]) => l), ...req.buttons.slice(at)],
+        onChoose: (i) => (i >= at && i < at + extras.length ? extras[i - at][1]() : orig.onChoose(i >= at + extras.length ? i - extras.length : i)),
       };
     }
     this.player.vel.set(0, 0);

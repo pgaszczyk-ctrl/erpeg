@@ -72,7 +72,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
-    box.append(el('div', 'c-stats', `⭐ Poziom postaci: ${poziomPostaci(session.exp)}`));
+    box.append(el('div', 'c-stats', `⭐ Poziom postaci: ${poziomPostaci(session.exp)}   🚶 ${(session.stats.m / 1000).toFixed(1).replace('.', ',')} km przebytych${session.kamienie ? `   💎 Kamienie mocy: ${session.kamienie}` : ''}`));
     box.append(el('div', 'c-stats', `💰 ${session.coins} monet   ⭐ ${session.exp} EXP   ❤ ${hp / 2}/${maxHp / 2}   🛡 ${defense()} (${Math.round(blockChance() * 100)}% bloku)`));
     // Eating fruit heals.
     const n = LECZENIE_OWOCAMI.owocow;

@@ -268,6 +268,25 @@ export class CityMap {
     return { x: (lon - minLon) * mLon * PX_PER_M, y: (maxLat - lat) * mLat * PX_PER_M };
   }
 
+  /** Is an area of this kind at (x, y) or up to `r` px away (checked in 8 directions)? */
+  areaNear(x: number, y: number, r: number, kind: string) {
+    for (let i = -1; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const px = i < 0 ? x : x + Math.cos(a) * r;
+      const py = i < 0 ? y : y + Math.sin(a) * r;
+      if (this.areaKindsAt(px, py).includes(kind)) return true;
+    }
+    return false;
+  }
+
+  /** A river, stream, pond or lake within `r` px. */
+  nearWater(x: number, y: number, r: number) {
+    for (const l of this.lineGrid.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })) {
+      if ((l.kind === 'river' || l.kind === 'stream') && distToPolyline(l.pts, x, y) <= r + l.width / 2) return true;
+    }
+    return this.areaNear(x, y, r, 'water');
+  }
+
   /** The other way round: world pixels to latitude and longitude. */
   toLatLon(x: number, y: number) {
     const { minLat, maxLat, minLon } = this.bounds;

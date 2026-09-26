@@ -47,7 +47,7 @@ export const HISTORIA = {
   rozmowa: [
     'Smok odzywa się głębokim głosem: „Nie bój się, mały człowieku. Od stu lat nikt nie odważył się ze mną porozmawiać.”',
     '„Kiedyś smoki i ludzie żyli razem. Pilnowaliśmy lasów i rzek, a ludzie przynosili nam jabłka i śliwki. Potem przyszła wielka wojna i zasnęliśmy głęboko pod ziemią.”',
-    '„Teraz się budzimy. Ale gluty, które widzisz na ulicach, też się obudziły… To one straszą ludzi, nie my.”',
+    '„Teraz się budzimy. Ale chochliki, które widzisz na ulicach, też się obudziły… To one straszą ludzi, nie my.”',
     '„Jeśli chcesz, zostań moim przyjacielem. Razem przywrócimy dawny porządek. A to dopiero początek naszej historii…”',
   ],
   wygrana: 'Smok pada z hukiem. Ziemia drży, a nad lasem unosi się dym. Pokonałeś smoka!',

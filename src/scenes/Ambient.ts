@@ -316,10 +316,19 @@ export class StreetEnemies {
       if (x < box.x0 || x > box.x1 || y < box.y0 || y > box.y1 || !this.city.isFree(x, y, 4, 4)) continue;
       // ...with a small group: when you meet one, another follows.
       const group = Math.min(count - out.length, 1 + Math.floor(Math.random() * 3));
-      const kind: RodzajWroga = Math.random() < 0.1 ? 'bandyta' : 'glut';
+      const kind = this.kindAt(x, y);
       for (let g = 0; g < group; g++) out.push({ x: x + (g ? (Math.random() - 0.5) * 16 : 0), y: y + (g ? (Math.random() - 0.5) * 16 : 0), kind });
     }
     return out;
+  }
+
+  /** Who lives here: dryads in forests, skeletons by cemeteries, zombies by water, else imps (and a few bandits). */
+  private kindAt(x: number, y: number): RodzajWroga {
+    if (Math.random() < 0.1) return 'bandyta';
+    if (this.city.areaKindsAt(x, y).includes('forest')) return 'driada';
+    if (this.city.areaNear(x, y, 30 * PX_PER_M, 'cemetery')) return 'szkielet';
+    if (this.city.nearWater(x, y, 30 * PX_PER_M)) return 'zombie';
+    return 'glut';
   }
 
   update(px: number, py: number, now: number) {

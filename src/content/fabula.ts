@@ -1,6 +1,6 @@
 // ============================================================================
 //  FABUŁA GRY: misje i wrogowie w Lublinie.
-//  Za pokonanie gluta gracz dostaje 5 punktów doświadczenia (EXP).
+//  Za pokonanie chochlika gracz dostaje 5 punktów doświadczenia (EXP).
 //  Adresy wpisujemy tak jak na tabliczce: "Ulica numer", np. "Zamkowa 9"
 //  (może być też "ul. Zamkowa 9" albo "al. Racławickie 1").
 //  Można też podać nazwę budynku z mapy, np. "Zamek w Lublinie",
@@ -9,8 +9,12 @@
 
 export type Miejsce = string | { lat: number; lon: number };
 
-/** glut (3 życia), wielki_glut (18 życia, mocno bije), bandyta (6 życia, szybki). */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok';
+/**
+ * glut = chochlik (3 życia), wielki_glut = wielki chochlik (18 życia, mocno bije),
+ * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
+ * szkielet (przy cmentarzach), smok (tylko w historii).
+ */
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet';
 
 export interface Zadanie {
   /**
@@ -25,7 +29,7 @@ export interface Zadanie {
   /** Tylko dla 'pokonaj': ilu wrogów i jakich. */
   ile?: number;
   wrog?: RodzajWroga;
-  /** Krótki opis celu pokazywany na ekranie, np. "Pokonaj gluty pod Bramą". */
+  /** Krótki opis celu pokazywany na ekranie, np. "Pokonaj chochliki pod Bramą". */
   cel: string;
   /** Cel trzeba odszukać: strzałka pokazuje tylko okolicę (list gończy). */
   szukaj?: boolean;
@@ -65,8 +69,8 @@ export const MISJE: Misja[] = [
     id: 'zamek',
     adres: 'Zamkowa 9',
     tytul: 'Kłopoty na Starym Mieście',
-    opis: 'Witaj, wędrowcze! Pod Bramą Krakowską zalęgły się fioletowe gluty i straszą turystów. Przegoń je, a zamek sowicie cię wynagrodzi.',
-    zadanie: { typ: 'pokonaj', miejsce: 'Bramowa 1', ile: 4, wrog: 'glut', cel: 'Pokonaj gluty przy Bramie Krakowskiej' },
+    opis: 'Witaj, wędrowcze! Pod Bramą Krakowską zalęgły się psotne chochliki i straszą turystów. Przegoń je, a zamek sowicie cię wynagrodzi.',
+    zadanie: { typ: 'pokonaj', miejsce: 'Bramowa 1', ile: 4, wrog: 'glut', cel: 'Pokonaj chochliki przy Bramie Krakowskiej' },
     zakonczenie: 'Brawo! Turyści znów mogą spokojnie robić zdjęcia. Oto twoja nagroda.',
     nagroda: 20,
   },

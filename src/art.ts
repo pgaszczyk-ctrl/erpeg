@@ -36,6 +36,9 @@ export const TEX = {
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
   mushroom: 'mushroom',
+  dryad: 'dryad',
+  zombie: 'zombie',
+  skeleton: 'skeleton',
   dragon: 'dragon',
   wizard: 'wizard',
   exclaim: 'exclaim',
@@ -327,34 +330,101 @@ function drawHeroSheet(scene: Phaser.Scene, key: string = TEX.hero, outfit: Outf
 
 // ---------------------------------------------------------------- slime
 
-function drawSlimeSheet(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.slime, TILE * 2, TILE);
+type Px = (x: number, y: number, w: number, h: number, c: string) => void;
+
+/** A two-frame little creature (16×16, 'f0' and 'f1' a step later). */
+function drawCritter(scene: Phaser.Scene, key: string, paint: (p: Px, f: number) => void) {
+  const { tex, ctx } = canvasTexture(scene, key, TILE * 2, TILE);
   for (let f = 0; f < 2; f++) {
     const ox = f * TILE;
-    const sq = f === 1 ? 1 : 0; // squashed frame: wider and lower
-    const blob = (grow: number, color: string) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.ellipse(ox + 8, 10 + sq, 6 + sq + grow, 7 - sq * 1.5 + grow, 0, Math.PI, 0);
-      ctx.lineTo(ox + 14 + sq + grow, 14 + grow * 0.5);
-      ctx.lineTo(ox + 2 - sq - grow, 14 + grow * 0.5);
-      ctx.closePath();
-      ctx.fill();
-    };
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(ox + 8, 14.5, 6 + sq, 1.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(ox + 8, 14.5, 5, 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    blob(1, OUTLINE);
-    blob(0, '#b455d6');
-    px(ctx, ox + 3, 12, 10 + sq, 2, '#8f3cb0');
-    px(ctx, ox + 4, 5 + sq * 2, 2, 2, '#e3a6f5');
-    px(ctx, ox + 5, 8 + sq, 2, 3, OUTLINE);
-    px(ctx, ox + 9, 8 + sq, 2, 3, OUTLINE);
-    px(ctx, ox + 5, 8 + sq, 1, 1, '#ffffff');
-    px(ctx, ox + 9, 8 + sq, 1, 1, '#ffffff');
+    paint((x, y, w, h, c) => px(ctx, ox + x, y, w, h, c), f);
     tex.add(`f${f}`, 0, ox, 0, TILE, TILE);
   }
+  tex.refresh();
+}
+
+/** Enemies: the imp (chochlik, TEX.slime for old saves' sake), dryad, zombie, skeleton. */
+function drawSlimeSheet(scene: Phaser.Scene) {
+  // Imp: a purple little devil with golden horns and a pointed tail.
+  drawCritter(scene, TEX.slime, (p, f) => {
+    const u = f; // hop
+    p(12, 9 - u, 3, 1, OUTLINE); p(14, 7 - u, 1, 3, OUTLINE); p(13, 6 - u, 3, 2, OUTLINE); // tail
+    p(3, 4 - u, 10, 10, OUTLINE);
+    p(4, 5 - u, 8, 8, '#8a3ab8');
+    p(5, 10 - u, 6, 3, '#c07ae0');
+    p(3, 1 - u, 2, 4, OUTLINE); p(11, 1 - u, 2, 4, OUTLINE); // horns
+    p(4, 2 - u, 1, 2, '#f7c531'); p(11, 2 - u, 1, 2, '#f7c531');
+    p(5, 6 - u, 2, 2, '#ffffff'); p(9, 6 - u, 2, 2, '#ffffff');
+    p(6, 7 - u, 1, 1, '#e02828'); p(9, 7 - u, 1, 1, '#e02828');
+    p(6, 9 - u, 4, 1, OUTLINE); // grin
+    p(4, 13, 2, 2, OUTLINE); p(10, 13, 2, 2, OUTLINE); // feet
+  });
+  // Dryad: a forest spirit with leafy hair and a pink flower.
+  drawCritter(scene, TEX.dryad, (p, f) => {
+    p(4, 1, 8, 7, OUTLINE); p(5, 2, 6, 5, '#2f7a2f'); // leafy hair
+    p(3, 3, 2, 4, '#44a044'); p(11, 3, 2, 4, '#44a044');
+    p(10, 1, 2, 2, '#f08ac0');
+    p(5, 4, 6, 4, OUTLINE); p(6, 4, 4, 3, '#b8e8a0'); // face
+    p(6, 5, 1, 1, OUTLINE); p(9, 5, 1, 1, OUTLINE);
+    p(4, 8, 8, 6, OUTLINE); p(5, 8, 6, 5, '#4f9a3a'); p(5, 11, 6, 2, '#7bd35f'); // leaf dress
+    p(2 + f, 8, 2, 4, OUTLINE); p(12 - f, 8, 2, 4, OUTLINE); // arms like branches
+    p(5, 13, 2, 2, '#8a5a2b'); p(9, 13, 2, 2, '#8a5a2b');
+  });
+  // Zombie: a blue-skinned shuffler with its arms stretched out.
+  drawCritter(scene, TEX.zombie, (p, f) => {
+    p(4, 1, 8, 7, OUTLINE); p(5, 2, 6, 5, '#5a8ad8');
+    p(5, 1, 6, 2, '#2b3f8a'); // hair
+    p(6, 4, 1, 1, '#ffffff'); p(9, 4, 1, 1, '#ffffff');
+    p(6, 6, 4, 1, '#2b3f8a');
+    p(4, 7, 8, 6, OUTLINE); p(5, 8, 6, 4, '#4a4a6a'); p(7, 10, 2, 1, '#6a6a8a');
+    p(0, 8 - f, 5, 2, OUTLINE); p(11, 8 + f, 5, 2, OUTLINE); // arms forward
+    p(1, 8 - f, 3, 1, '#5a8ad8'); p(12, 8 + f, 3, 1, '#5a8ad8');
+    p(5, 12, 2, 3, OUTLINE); p(9, 12, 2, 3, OUTLINE);
+  });
+  // Skeleton: white bones, dark eye holes, ribs.
+  drawCritter(scene, TEX.skeleton, (p, f) => {
+    p(4, 0, 8, 7, OUTLINE); p(5, 1, 6, 5, '#eeeedd');
+    p(6, 3, 2, 2, OUTLINE); p(9, 3, 2, 2, OUTLINE);
+    p(7, 5, 3, 1, '#9a9a88');
+    p(5, 7, 6, 5, OUTLINE); p(6, 7, 4, 4, '#eeeedd');
+    p(6, 8, 4, 1, OUTLINE); p(6, 10, 4, 1, OUTLINE); // ribs
+    p(3, 7 + f, 2, 5, OUTLINE); p(11, 7 - f, 2, 5, OUTLINE); // arms
+    p(3, 8 + f, 1, 3, '#eeeedd'); p(12, 8 - f, 1, 3, '#eeeedd');
+    p(5 + f, 12, 2, 3, OUTLINE); p(9 - f, 12, 2, 3, OUTLINE);
+    p(6 + f, 12, 1, 2, '#eeeedd'); p(9 - f, 12, 1, 2, '#eeeedd');
+  });
+}
+
+/**
+ * A red frame around every enemy, so they can't be mistaken for people: the
+ * outermost pixels of the picture turn red.
+ */
+function redOutline(scene: Phaser.Scene, key: string) {
+  const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
+  const ctx = tex.getContext?.();
+  if (!ctx) return;
+  const { width: w, height: h } = ctx.canvas;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const solid = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] >= 200;
+  const edge: number[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!solid(x, y)) continue;
+      if (!solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1)) edge.push((y * w + x) * 4);
+    }
+  }
+  for (const i of edge) {
+    d[i] = 225;
+    d[i + 1] = 40;
+    d[i + 2] = 40;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
   tex.refresh();
 }
 
@@ -966,4 +1036,5 @@ export function createArt(scene: Phaser.Scene) {
   drawHeart(scene, TEX.heartEmpty, false);
   drawHeart(scene, TEX.pickupHeart, true);
   drawCoin(scene);
+  for (const k of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.bandit, TEX.dragon]) redOutline(scene, k);
 }

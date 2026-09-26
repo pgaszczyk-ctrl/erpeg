@@ -97,7 +97,7 @@ export const POZIOMY: Poziom[] = [
       { pytanie: 'Kto sformułował teorię heliocentryczną?', odpowiedzi: ['Mikołaj Kopernik', 'Galileusz', 'Ptolemeusz', 'Kepler'] },
       { pytanie: 'Światło Słońca leci do Ziemi około…', odpowiedzi: ['8 minut', '8 sekund', '8 godzin', '8 dni'] },
       { pytanie: 'Pociąg jedzie 90 km/h. Ile przejedzie w 20 minut?', odpowiedzi: ['30 km', '45 km', '18 km', '20 km'] },
-      { pytanie: 'Jeśli wszystkie gluty są fioletowe, a Bob jest glutem, to Bob…', odpowiedzi: ['jest fioletowy', 'nie jest fioletowy', 'może być zielony', 'nie jest glutem'] },
+      { pytanie: 'Jeśli wszystkie chochliki są rogate, a Bob jest chochlikiem, to Bob…', odpowiedzi: ['jest rogaty', 'nie jest rogaty', 'może być bez rogów', 'nie jest chochlikiem'] },
       { pytanie: 'Kij i piłka kosztują razem 110 zł. Kij jest o 100 zł droższy. Ile kosztuje piłka?', odpowiedzi: ['5 zł', '10 zł', '1 zł', '15 zł'] },
       { pytanie: 'W którym roku Polska odzyskała niepodległość?', odpowiedzi: ['1918', '1945', '1989', '1791'] },
       { pytanie: 'Co oznacza „ironia”?', odpowiedzi: ['Mówienie odwrotnie niż się myśli', 'Mówienie bardzo cicho', 'Rymowanie', 'Kłamanie dla zysku'] },
@@ -118,7 +118,7 @@ export const MADRALA_ODLEGLOSC_M = 500;
 export const MADRALE: { imie: string; powitanie: string }[] = [
   { imie: 'Profesor Sowa', powitanie: 'Hu-hu! Rozwiążesz moją dzisiejszą zagadkę?' },
   { imie: 'Babcia Zosia', powitanie: 'Dzień dobry, dziecko! Mam dla ciebie zagadkę.' },
-  { imie: 'Pan Mądralski', powitanie: 'Sprawdźmy, czy jesteś bystrzejszy od gluta!' },
+  { imie: 'Pan Mądralski', powitanie: 'Sprawdźmy, czy jesteś bystrzejszy od chochlika!' },
   { imie: 'Kot Filozof', powitanie: 'Mrrr… Zagadka na dziś. Tylko jedna próba.' },
   { imie: 'Listonosz Heniek', powitanie: 'Zanim pobiegnę dalej – zagadka!' },
   { imie: 'Pani Bibliotekarka', powitanie: 'Ciii… Szeptem: znasz odpowiedź?' },

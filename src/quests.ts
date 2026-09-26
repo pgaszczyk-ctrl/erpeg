@@ -49,6 +49,8 @@ export const session = {
   /** Bank deposits (content/banki.ts). */
   lokaty: [] as NonNullable<SaveData['lokaty']>,
   story: { st: 'start', walked: 0 } as Story,
+  /** Power stones (content/sklepy.ts KAMIEN_MOCY). */
+  kamienie: 0,
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -139,6 +141,7 @@ export function startSession(r: LoginResult) {
   session.fogs = { ...(p.save.fogs ?? {}) };
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
+  session.kamienie = Math.max(0, p.save.kamienie ?? 0);
   session.mapId = 'lublin';
   session.arrive = null;
   const at = p.save.at;
@@ -175,7 +178,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
@@ -243,7 +246,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       opis: fill(pick(bandit ? POLICJA.bandyta : POLICJA.potwor), zl),
       zadanie: bandit
         ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: `Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})` }
-        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: `Zabij wielkiego gluta przy ul. ${ulica}` },
+        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: `Zabij wielkiego chochlika przy ul. ${ulica}` },
       zakonczenie: 'Dobra robota, łowco nagród! Oto obiecana nagroda.',
     };
   }
@@ -273,7 +276,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
     id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
     opis: fill(pick(fight ? tpl.pokonaj : tpl.idz)),
     zadanie: fight
-      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń gluty spod ${adres}` }
+      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń chochliki spod ${adres}` }
       : { typ: 'idz', miejsce: adres, cel: `Idź pod ${adres}` },
     zakonczenie: place.kind === 'church'
       ? 'Bóg zapłać! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'

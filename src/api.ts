@@ -33,6 +33,8 @@ export interface SaveData {
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
   story?: import('./quests').Story;
+  /** Power stones: each brings the hero back once after dying. */
+  kamienie?: number;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */
