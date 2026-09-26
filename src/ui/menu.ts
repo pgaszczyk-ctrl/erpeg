@@ -5,7 +5,8 @@ import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
 import { tx } from '../i18n';
-import { googleEnabled, googleSignIn, googleSignOut, googleToken, googleUser } from '../google';
+import { googleSignOut, googleToken, googleUser } from '../google';
+import { signInDialog } from './signin';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { drawLook, DEFAULT_LOOK, HEADS, BUILDS, OUTFITS, HAIRS, SKINS, HAIR_COLORS, CLOTHES, lookLimits, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
@@ -13,7 +14,7 @@ import { drawLook, DEFAULT_LOOK, HEADS, BUILDS, OUTFITS, HAIRS, SKINS, HAIR_COLO
 // character, memorial board. Resolves once a character is ready to play.
 
 const DEFAULT_START = 'Plac Zamkowy';
-/** Living characters per Google account (the server checks it too). */
+/** Living characters per account (the server checks it too). */
 const GOOGLE_LIMIT = 3;
 
 let root: HTMLDivElement | null = null;
@@ -100,14 +101,14 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       };
       showLevel();
       const err = error();
-      // Optionally assigned to a Google account (then loaded from a list, no code needed).
+      // Optionally assigned to an account (Google / Magicownia) (then loaded from a list, no code needed).
       const linkBox = el('div', { className: 'm-field' });
       const linkCheck = el('input', { type: 'checkbox', checked: true });
       const showLink = () => {
         const u = googleUser();
         linkBox.replaceChildren(u
-          ? el('label', { className: 'm-check' }, [linkCheck, ` Przypisz do konta Google (${u.email || 'zalogowano'})`])
-          : button('🔵 Zaloguj przez Google, żeby przypisać postać', () => signInThen(err, showLink)));
+          ? el('label', { className: 'm-check' }, [linkCheck, ` Przypisz do konta (${u.email || 'zalogowano'})`])
+          : button('🔵 Zaloguj się (Google / Magicownia), żeby przypisać postać', () => signInThen(err, showLink)));
       };
       showLink();
       const go: HTMLButtonElement = button('Stwórz postać', () =>
@@ -118,7 +119,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           if (token && (await api.myCharacters(token)).filter((c) => !c.dead).length >= GOOGLE_LIMIT) {
-            throw new Error(`Na jednym koncie Google mogą być najwyżej ${GOOGLE_LIMIT} żywe postacie. Odznacz przypisanie albo użyj innego konta.`);
+            throw new Error(`Na jednym koncie mogą być najwyżej ${GOOGLE_LIMIT} żywe postacie. Odznacz przypisanie albo użyj innego konta.`);
           }
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
@@ -194,23 +195,19 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       );
     };
 
-    /** Signs in with Google (if the server allows it), then runs `then`. */
+    /** Signs in (Google or a Magicownia account), then runs `then`. */
     const signInThen = async (err: HTMLElement, then: () => void) => {
       err.textContent = '';
-      if (!(await googleEnabled())) {
-        err.textContent = 'Logowanie przez Google nie jest jeszcze włączone na serwerze gry.';
-        return;
-      }
       try {
-        await googleSignIn();
-        then();
-      } catch (e) {
-        err.textContent = (e as Error).message;
+        await signInDialog();
+      } catch {
+        return; // cancelled
       }
+      then();
     };
 
     /**
-     * The Google account's characters: the last played on top, then "new
+     * The account's characters: the last played on top, then "new
      * character", then the others (the dead ones as ghosts).
      */
     const account = async () => {
@@ -221,7 +218,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('h2', {}, ['Twoje postacie']),
         el('p', { className: 'm-sub' }, [u?.email ?? '']),
         list, err,
-        button('Wyloguj z Google', () => {
+        button('Wyloguj się', () => {
           googleSignOut();
           load();
         }),
@@ -229,7 +226,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       );
       try {
         const token = await googleToken();
-        if (!token) return load(undefined, 'Sesja Google wygasła – zaloguj się ponownie.');
+        if (!token) return load(undefined, 'Sesja wygasła – zaloguj się ponownie.');
         const chars = await api.myCharacters(token);
         const alive = chars.filter((c) => !c.dead).length;
         const row = (c: (typeof chars)[number], first = false) => {
@@ -310,7 +307,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         busy(go, err, () => login(name.value.trim(), code.value, oldCode() ? pass.value : undefined, form));
       };
       const gErr = error();
-      const gBtn: HTMLButtonElement = button('🔵 Wczytaj z Google', () =>
+      const gBtn: HTMLButtonElement = button('🔵 Wczytaj z konta (Google / Magicownia)', () =>
         busy(gBtn, gErr, async () => {
           if (googleUser() && (await googleToken())) return account();
           await signInThen(gErr, account);

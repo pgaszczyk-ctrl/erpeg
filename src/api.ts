@@ -121,6 +121,22 @@ export interface LoginResult {
   new_code?: boolean;
 }
 
+/** Accounts (Magicownia sign-in): the Edge Function `konto` checks the token and reads/writes the characters. */
+async function konto<T>(body: Record<string, unknown>): Promise<T> {
+  const url = RPC.url.replace('/rest/v1/rpc/', '/functions/v1/konto');
+  let r: Response;
+  try {
+    r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: RPC.headers.apikey }, body: JSON.stringify(body) });
+  } catch {
+    throw new Error('Brak połączenia z serwerem gry.');
+  }
+  const b = await r.json().catch(() => null);
+  if (!r.ok || b?.error) throw new Error(String(b?.error ?? `Błąd serwera (${r.status})`));
+  // A refusal from the SQL (e.g. the limit of 3) comes through as {code, message}.
+  if (b && !Array.isArray(b) && b.code && b.message) throw new Error(String(b.message));
+  return b as T;
+}
+
 export const api = {
   createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number, age: number, look: import('./look').Look) =>
     rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale, p_age: age, p_look: look }),
@@ -130,11 +146,11 @@ export const api = {
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
-  /** Assigns a character (name + code) to the signed-in Google account (max 3 alive). */
-  linkGoogle: (name: string, code: string, token: string) => rpc<{ ok?: boolean }>('link_google', { p_name: name, p_idik: code }, false, token),
-  /** The Google account's characters, most recently played first. */
+  /** Assigns a character (name + code) to the signed-in account (max 3 alive). */
+  linkGoogle: (name: string, code: string, token: string) => konto<{ ok?: boolean }>({ action: 'link', token, name, idik: code }),
+  /** The account's characters, most recently played first. */
   myCharacters: (token: string) =>
-    rpc<{ name: string; idik: string; dead: boolean; exp: number; last_seen: string | null; created_at: string; look: import('./look').Look | null; age: number | null }[]>('my_characters', {}, false, token),
+    konto<{ name: string; idik: string; dead: boolean; exp: number; last_seen: string | null; created_at: string; look: import('./look').Look | null; age: number | null }[]>({ action: 'list', token }),
   /** The server's clock (banks count interest by it, not by the phone's). */
   now: () => rpc<string>('server_now', {}),
   die: (token: string, exp: number, place: string, x: number, y: number, scale: number, stats: Stats) =>
