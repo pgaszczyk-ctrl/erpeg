@@ -4,7 +4,10 @@ import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { installTouchControls } from './controls';
 import { installErrorLog } from './errlog';
+import { catchGoogleReturn } from './google';
 
+// The Google sign-in window only stores the login and closes (no game there).
+if (catchGoogleReturn()) throw new Error('google sign-in window');
 installErrorLog();
 
 const game = new Phaser.Game({

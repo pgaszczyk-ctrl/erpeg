@@ -6,12 +6,13 @@ const KEY = 'sb_publishable_lvVeo1Qv3E_4wTQ2oUeI1Q_2_gAgUdA';
 /** For the freeze watchdog (a worker calls the server on its own). */
 export const RPC = { url: URL, headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' } };
 
-export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false): Promise<T> {
+/** `bearer`: a signed-in Google user's access token (for account functions). */
+export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false, bearer?: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(URL + fn, {
       method: 'POST',
-      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+      headers: { apikey: KEY, Authorization: `Bearer ${bearer ?? KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(args),
       keepalive,
     });
@@ -129,6 +130,11 @@ export const api = {
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
+  /** Assigns a character (name + code) to the signed-in Google account (max 3 alive). */
+  linkGoogle: (name: string, code: string, token: string) => rpc<{ ok?: boolean }>('link_google', { p_name: name, p_idik: code }, false, token),
+  /** The Google account's characters, most recently played first. */
+  myCharacters: (token: string) =>
+    rpc<{ name: string; idik: string; dead: boolean; exp: number; last_seen: string | null; created_at: string; look: import('./look').Look | null; age: number | null }[]>('my_characters', {}, false, token),
   /** The server's clock (banks count interest by it, not by the phone's). */
   now: () => rpc<string>('server_now', {}),
   die: (token: string, exp: number, place: string, x: number, y: number, scale: number, stats: Stats) =>

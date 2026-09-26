@@ -1,4 +1,6 @@
 import QRCode from 'qrcode';
+import { api } from '../api';
+import { googleEnabled, googleSignIn, googleToken, googleUser } from '../google';
 
 // The character's code: shown big, as a QR code (a link that opens the game
 // and loads the character), as a picture to save, and shared to any app
@@ -17,6 +19,32 @@ export function codeFromLink(): { name: string; code: string } | null {
   if (!name || !code) return null;
   history.replaceState(null, '', location.pathname + location.search);
   return { name, code };
+}
+
+/** "Assign to Google": then the character can be loaded from the account's list. */
+function googleLink(name: string, code: string) {
+  const msg = el('p', { className: 'm-note' });
+  const btn = el('button', { type: 'button', className: 'm-btn m-google' }, ['🔵 Przypisz do konta Google']) as HTMLButtonElement;
+  btn.onclick = async () => {
+    msg.textContent = '';
+    btn.disabled = true;
+    try {
+      if (!(await googleEnabled())) throw new Error('Logowanie przez Google nie jest jeszcze włączone na serwerze gry.');
+      let token = googleUser() ? await googleToken() : null;
+      if (!token) {
+        await googleSignIn();
+        token = await googleToken();
+      }
+      if (!token) throw new Error('Nie udało się zalogować przez Google.');
+      await api.linkGoogle(name, code, token);
+      msg.textContent = `✅ Postać przypisana do ${googleUser()?.email ?? 'konta Google'}. Wczytasz ją przyciskiem „Wczytaj z Google”.`;
+    } catch (e) {
+      msg.textContent = `❌ ${(e as Error).message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  return el('div', { className: 'm-card' }, [btn, msg]);
 }
 
 /** The code with a space in the middle, easier to read and copy by hand. */
@@ -45,6 +73,7 @@ export function codeCard(name: string, code: string): HTMLElement {
     el('p', { className: 'm-note' }, ['Zeskanuj telefonem, żeby od razu wczytać postać.']),
     share,
     save,
+    googleLink(name, code),
   ];
 
   return el('div', { className: 'm-card' }, parts);
