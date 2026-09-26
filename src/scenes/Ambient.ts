@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { TEX, HERO_DIRS, makeLookTexture } from '../art';
 import { PX_PER_M, pointInRings, type CityMap, type Area, type Line } from '../map/CityMap';
 import { DRZEWA, LAS, type Owoc } from '../content/sklepy';
+import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
 import { rng } from '../rng';
 
@@ -364,22 +365,51 @@ export interface Station {
   x: number;
   y: number;
   sprite?: Phaser.GameObjects.Image;
+  /** The second dummy at the far end of a big pitch (the coach's challenge). */
+  far?: boolean;
 }
 
-/** On sports pitches: a dummy (sword), a target (bow) and a crystal (magic). */
+/** The sporty people: a coach by the dummies of big pitches, a runner on small ones. */
+export interface SportNpc {
+  id: string;
+  role: 'trener' | 'biegacz';
+  x: number;
+  y: number;
+  area: Area;
+  sprite?: Phaser.GameObjects.Sprite;
+}
+
+export const SPORTY_TEX = 'sporty';
+
+/**
+ * Big pitches (content/sport.ts): a dummy (sword), a target (bow), a crystal
+ * (magic), a second dummy far away and the coach. Small pitches: a runner.
+ */
 export class Training {
   private generated = new Map<Area, Station[]>();
+  private people = new Map<Area, SportNpc | null>();
   private active = new Set<Station>();
+  private activeNpcs = new Set<SportNpc>();
   private next = 0;
 
-  constructor(private scene: Phaser.Scene, private city: CityMap) {}
+  constructor(private scene: Phaser.Scene, private city: CityMap) {
+    // The sporty look: red shirt, white shorts.
+    makeLookTexture(scene, SPORTY_TEX, { head: 0, build: 2, outfit: 0, hair: 2, skin: 2, hairColor: 1, top: 2, bottom: 6 });
+    for (const dir of HERO_DIRS) {
+      const key = `${SPORTY_TEX}-walk-${dir}`;
+      if (!scene.anims.exists(key)) scene.anims.create({ key, frames: [1, 0, 2, 0].map((f) => ({ key: SPORTY_TEX, frame: `${dir}-${f}` })), frameRate: 12, repeat: -1 });
+    }
+  }
+
+  static sizeM2(a: Area) {
+    return ringsArea(a.rings[0]) / (PX_PER_M * PX_PER_M);
+  }
 
   private stationsOf(a: Area): Station[] {
     let list = this.generated.get(a);
     if (list) return list;
     list = [];
-    const m2 = ringsArea(a.rings[0]) / (PX_PER_M * PX_PER_M);
-    if (m2 >= 300) {
+    if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
       // Centre of the pitch, nudged until the three stations stand free.
       const cx = (a.x0 + a.x1) / 2;
       const cy = (a.y0 + a.y1) / 2;
@@ -390,9 +420,75 @@ export class Training {
         const spots = kinds.map((k, i) => ({ kind: k, x: ox + (i - 1) * 18, y: oy }));
         if (spots.every((p) => pointInRings(a.rings, p.x, p.y) && this.city.isFree(p.x, p.y, 5, 5))) list = spots;
       }
+      // The second dummy: as far along the pitch as fits (up to ~60 m).
+      if (list.length) {
+        const a0 = list[0];
+        let far: Station | null = null;
+        for (let d = 60 * PX_PER_M; d > 15 * PX_PER_M && !far; d -= 5 * PX_PER_M) {
+          for (let k = 0; k < 16 && !far; k++) {
+            const ang = (k / 16) * Math.PI * 2;
+            const x = a0.x + Math.cos(ang) * d;
+            const y = a0.y + Math.sin(ang) * d;
+            if (pointInRings(a.rings, x, y) && this.city.isFree(x, y, 6, 6)) far = { kind: 'miecz', x, y, far: true };
+          }
+        }
+        if (far) list.push(far);
+      }
     }
     this.generated.set(a, list);
     return list;
+  }
+
+  private personOf(a: Area): SportNpc | null {
+    if (this.people.has(a)) return this.people.get(a)!;
+    let npc: SportNpc | null = null;
+    const m2 = Training.sizeM2(a);
+    const id = `sport:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
+    if (m2 >= SPORT.duzeBoiskoM2) {
+      const st = this.stationsOf(a).find((s) => s.kind === 'miecz' && !s.far);
+      if (st) {
+        for (const [dx, dy] of [[0, 18], [0, -18], [24, 10], [-24, 10]]) {
+          if (this.city.isFree(st.x + dx, st.y + dy + 5, 3, 2)) {
+            npc = { id, role: 'trener', x: st.x + dx, y: st.y + dy, area: a };
+            break;
+          }
+        }
+      }
+    } else if (m2 >= SPORT.maleBoiskoM2) {
+      const cx = (a.x0 + a.x1) / 2;
+      const cy = (a.y0 + a.y1) / 2;
+      const p = this.city.isFree(cx, cy + 5, 3, 2) ? { x: cx, y: cy } : this.city.freeNear(cx, cy);
+      npc = { id, role: 'biegacz', x: p.x, y: p.y, area: a };
+    }
+    this.people.set(a, npc);
+    return npc;
+  }
+
+  /** The two dummies of a coach's pitch. */
+  dummiesOf(a: Area) {
+    const list = this.stationsOf(a);
+    return { a: list.find((s) => s.kind === 'miecz' && !s.far) ?? null, b: list.find((s) => s.far) ?? null };
+  }
+
+  /** Other pitches between `min` and `max` px from (x, y), for a race. */
+  pitchesAround(x: number, y: number, min: number, max: number) {
+    return this.city.query({ x0: x - max, y0: y - max, x1: x + max, y1: y + max }).areas
+      .filter((a) => a.kind === 'pitch')
+      .map((a) => ({ a, x: (a.x0 + a.x1) / 2, y: (a.y0 + a.y1) / 2 }))
+      .filter((p) => {
+        const d = Math.hypot(p.x - x, p.y - y);
+        return d >= min && d <= max;
+      });
+  }
+
+  npcAt(x: number, y: number, r: number): SportNpc | null {
+    for (const n of this.activeNpcs) if (n.sprite?.visible && n.sprite.alpha > 0 && Math.abs(n.x - x) < r && Math.abs(n.y - y) < r + 4) return n;
+    return null;
+  }
+
+  /** Hides a runner while it races (a racing copy runs instead). */
+  setAway(n: SportNpc, away: boolean) {
+    n.sprite?.setAlpha(away ? 0 : 1);
   }
 
   update(px: number, py: number, now: number) {
@@ -405,6 +501,12 @@ export class Training {
         this.active.delete(s);
       }
     }
+    for (const n of [...this.activeNpcs]) {
+      if (Math.hypot(n.x - px, n.y - py) <= FAR) continue;
+      n.sprite?.destroy();
+      n.sprite = undefined;
+      this.activeNpcs.delete(n);
+    }
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
     for (const a of areas) {
       if (a.kind !== 'pitch') continue;
@@ -412,6 +514,13 @@ export class Training {
         if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
         s.sprite = this.scene.add.image(s.x, s.y, STATION_TEX[s.kind]).setOrigin(0.5, 0.92).setDepth(s.y);
         this.active.add(s);
+      }
+      const n = this.personOf(a);
+      if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
+        n.sprite = this.scene.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6).setDepth(n.y);
+        // A little jog on the spot, so they look sporty.
+        this.scene.tweens.add({ targets: n.sprite, y: n.y - 1.5, duration: 260, yoyo: true, repeat: -1 });
+        this.activeNpcs.add(n);
       }
     }
   }

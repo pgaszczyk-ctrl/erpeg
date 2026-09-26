@@ -30,7 +30,8 @@ import {
   meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit,
 } from '../inventory';
 import { hold, mouse, consumeRelease } from '../controls';
-import { Forest, Orchards, StreetEnemies, Training } from './Ambient';
+import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station } from './Ambient';
+import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
   session, saveNow, earn, spend, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
@@ -128,6 +129,10 @@ interface Shot {
   skill: 'luk' | 'magia';
 }
 
+type Challenge =
+  | { kind: 'kukly'; npc: SportNpc; a: Station; b: Station; step: 'a' | 'b' | 'back'; hits: number; start: number; until: number }
+  | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number };
+
 type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
 
 export class GameScene extends Phaser.Scene {
@@ -145,6 +150,8 @@ export class GameScene extends Phaser.Scene {
   private forest!: Forest;
   private story!: Story;
   private folk!: Townsfolk;
+  /** A sports challenge in progress (coach's dummies or a race). */
+  private challenge: Challenge | null = null;
   /** A duel with a townsman: purple half-hearts left (null = no duel). */
   private duelHp: number | null = null;
   private duelCarry = 0;
@@ -245,6 +252,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.folk = new Townsfolk(this, this.city);
+    this.challenge = null;
     this.duelHp = null;
     this.duelCarry = 0;
     this.storyPlace = null;
@@ -482,9 +490,10 @@ export class GameScene extends Phaser.Scene {
       this.checkGoals();
     }
 
+    if (this.challenge) this.updateChallenge(now);
     this.hudTimer -= delta;
     if (this.hudTimer <= 0) {
-      this.hudTimer = 400;
+      this.hudTimer = this.challenge ? 100 : 400;
       this.emitHud();
     }
   }
@@ -622,7 +631,11 @@ export class GameScene extends Phaser.Scene {
       this.dropFruit(pine.x, pine.y, 'drewno');
       this.toast('🪓 Drzewo ścięte!', 1000);
     }
-    if (this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz')) hits++;
+    const dummy = this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz');
+    if (dummy) {
+      hits++;
+      this.dummyHit(dummy);
+    }
     if (hits) this.practiced('miecz');
   }
 
@@ -918,6 +931,12 @@ export class GameScene extends Phaser.Scene {
       open = () => this.talkToFolk(person);
       savePoint = false;
     }
+    const sporty = !id && !this.challenge ? this.training.npcAt(fx, fy - FEET.dy, NPC_RADIUS) : null;
+    if (sporty) {
+      id = sporty.id;
+      open = () => this.talkSport(sporty);
+      savePoint = false;
+    }
     const wizard = !id && this.story.wizardAt(fx, fy - FEET.dy, NPC_RADIUS);
     if (wizard) {
       id = 'story-wizard';
@@ -926,7 +945,7 @@ export class GameScene extends Phaser.Scene {
     }
     // Characters wait a few seconds after the last talk, so bumping into one
     // right after a dialog doesn't start another by accident.
-    if (id && (fixed || npc || wizard || person) && performance.now() < this.npcReadyAt) {
+    if (id && (fixed || npc || wizard || person || sporty) && performance.now() < this.npcReadyAt) {
       this.nearDoor = id; // walk away and come back to talk
       return;
     }
@@ -1062,6 +1081,129 @@ export class GameScene extends Phaser.Scene {
       this.scene.stop('ui');
       this.scene.restart();
     });
+  }
+
+  // ------------------------------------------------------------------ sports
+
+  /** The coach (dummies against the clock) or the runner (a race to another pitch). */
+  private talkSport(n: SportNpc) {
+    const now = this.time.now;
+    if (n.role === 'trener') {
+      const { a, b } = this.training.dummiesOf(n.area);
+      const T = SPORT.trener;
+      if (!a || !b) return this.dialog({ title: `🏋 ${T.imie}`, text: 'Dziś trenujemy luźno – pobij kukłę, ile chcesz!', buttons: ['OK'], onChoose: () => {} });
+      // Just enough time for the blows and two runs, times the difficulty's slack.
+      const run = (2 * Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(n.x - a.x, n.y - a.y)) / PLAYER.speed;
+      const secs = Math.ceil(((SPORT.uderzen + 1) * cooldown('miecz') / 1000 + run + 1) * session.level.wyzwanie);
+      const secsTxt = `${secs} ${secs % 10 >= 2 && secs % 10 <= 4 && (secs % 100 < 12 || secs % 100 > 14) ? 'sekundy' : 'sekund'}`;
+      this.dialog({
+        title: `🏋 ${T.imie}`,
+        text: T.wyzwanie.replace('{uderzen}', String(SPORT.uderzen)).replace('{czas}', secsTxt),
+        buttons: ['Wchodzę!', 'Nie teraz'],
+        onChoose: (i) => {
+          if (i !== 0) return;
+          this.challenge = { kind: 'kukly', npc: n, a, b, step: 'a', hits: 0, start: this.time.now, until: this.time.now + secs * 1000 };
+          this.toast(`⏱ Start! ${secsTxt}.`, 1500);
+          this.emitHud();
+        },
+      });
+      return;
+    }
+    const B = SPORT.biegacz;
+    const spots = this.training.pitchesAround(n.x, n.y, SPORT.wyscigOdM * PX_PER_M, SPORT.wyscigDoM * PX_PER_M);
+    if (!spots.length) return this.dialog({ title: `🏃 ${B.imie}`, text: 'Nie mam dziś z kim się ścigać – w okolicy nie ma innych boisk.', buttons: ['OK'], onChoose: () => {} });
+    let h = 2166136261;
+    for (const ch of n.id + Math.floor(now / 60000)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const t = spots[(h >>> 0) % spots.length];
+    const to = this.city.isFree(t.x, t.y + 5, 3, 2) ? { x: t.x, y: t.y } : this.city.freeNear(t.x, t.y);
+    const name = `przy ul. ${this.city.streetNear(to.x, to.y, 200) ?? 'bez nazwy'}`;
+    this.dialog({
+      title: `🏃 ${B.imie}`,
+      text: B.wyzwanie.replace('{cel}', name),
+      buttons: ['Start!', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        // The runner's time: the hero's rough time on the streets, times the
+        // difficulty (sometimes she has a lucky day).
+        const est = (Math.hypot(to.x - n.x, to.y - n.y) * 1.35) / PLAYER.speed;
+        const lucky = Math.random() < session.level.farta;
+        const rivalMs = est * (lucky ? 0.8 : session.level.rywal) * 1000;
+        const rival = this.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6);
+        this.training.setAway(n, true);
+        this.challenge = { kind: 'wyscig', npc: n, name, from: { x: n.x, y: n.y }, to, rival, start: this.time.now, rivalMs };
+        this.toast('🏃 Start! Biegnij za strzałką!', 1500);
+        this.emitHud();
+      },
+    });
+  }
+
+  private dummyHit(st: Station) {
+    const c = this.challenge;
+    if (c?.kind !== 'kukly') return;
+    if (c.step === 'a' && st === c.a) {
+      c.hits++;
+      if (c.hits >= SPORT.uderzen) {
+        c.step = 'b';
+        this.toast('Teraz biegnij do drugiej kukły!', 1500);
+      }
+    } else if (c.step === 'b' && st === c.b) {
+      c.step = 'back';
+      this.toast('Wracaj do trenera!', 1500);
+    }
+    this.emitHud();
+  }
+
+  private updateChallenge(now: number) {
+    const c = this.challenge!;
+    const t = this.time.now;
+    const p = this.player;
+    if (p.isDead) return this.endChallenge(false);
+    if (c.kind === 'kukly') {
+      if (c.step === 'back' && Math.hypot(p.x - c.npc.x, p.y - c.npc.y) < 24) return this.endChallenge(true);
+      if (t > c.until) return this.endChallenge(false);
+      return;
+    }
+    // The runner dashes to the other pitch (seen only where the hero can see).
+    const k = Math.min(1, (t - c.start) / c.rivalMs);
+    const x = c.from.x + (c.to.x - c.from.x) * k;
+    const y = c.from.y + (c.to.y - c.from.y) * k;
+    const dx = x - c.rival.x;
+    c.rival.setPosition(x, y).setDepth(y).setVisible(pointInPolygon(this.vision, x, y));
+    if (Math.abs(dx) > 0.01 || k < 1) {
+      const dir = Math.abs(c.to.x - c.from.x) > Math.abs(c.to.y - c.from.y) ? 'side' : c.to.y < c.from.y ? 'up' : 'down';
+      c.rival.setFlipX(dir === 'side' && c.to.x > c.from.x).anims.play(`${SPORTY_TEX}-walk-${dir}`, true);
+    }
+    if (Math.hypot(p.x - c.to.x, p.y - c.to.y) < 30) return this.endChallenge(true);
+    if (k >= 1) return this.endChallenge(false);
+    void now;
+  }
+
+  private endChallenge(won: boolean) {
+    const c = this.challenge!;
+    this.challenge = null;
+    const S = c.kind === 'kukly' ? SPORT.trener : SPORT.biegacz;
+    const reward = c.kind === 'kukly' ? SPORT.nagroda.trener : SPORT.nagroda.biegacz;
+    const secs = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
+    if (c.kind === 'wyscig') {
+      c.rival.anims.stop();
+      c.rival.setFrame('down-0');
+      // She walks back to her pitch later.
+      this.time.delayedCall(4000, () => {
+        c.rival.destroy();
+        this.training.setAway(c.npc, false);
+      });
+    }
+    if (won) {
+      earn(reward.monety);
+      session.exp += reward.exp;
+    }
+    this.dialog({
+      title: `${c.kind === 'kukly' ? '🏋' : '🏃'} ${S.imie}`,
+      text: `${won ? S.wygrana : S.przegrana}\n\nTwój czas: ${secs} s.${won ? `\nNagroda: ${reward.monety} monet i ${reward.exp} EXP.` : ''}`,
+      buttons: ['OK'],
+      onChoose: () => {},
+    });
+    this.emitHud();
   }
 
   /** A passer-by: says hello, and some want a duel. */
@@ -1903,6 +2045,17 @@ export class GameScene extends Phaser.Scene {
     const px = this.player.x;
     const py = this.player.y;
     const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
+    const c = this.challenge;
+    if (c?.kind === 'kukly') {
+      const left = Math.max(0, (c.until - this.time.now) / 1000).toFixed(1).replace('.', ',');
+      if (c.step === 'a') return { text: `⏱ ${left} s · Uderz kukłę ${c.hits}/${SPORT.uderzen}`, pos: c.a };
+      if (c.step === 'b') return { text: `⏱ ${left} s · Biegnij do drugiej kukły i uderz ją`, pos: c.b };
+      return { text: `⏱ ${left} s · Wracaj do trenera!`, pos: c.npc };
+    }
+    if (c?.kind === 'wyscig') {
+      const t = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
+      return { text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to };
+    }
     for (const rm of this.missions) {
       const st = missionState(rm.m);
       if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
