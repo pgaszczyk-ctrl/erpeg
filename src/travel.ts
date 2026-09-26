@@ -1,4 +1,7 @@
+import type Phaser from 'phaser';
 import { CityMap } from './map/CityMap';
+import { pickHotels } from './hotels';
+import { session } from './quests';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -45,6 +48,7 @@ export async function loadWorld() {
 }
 
 export function rememberMap(city: CityMap) {
+  pickHotels(city);
   maps.set(city.id, city);
 }
 
@@ -57,8 +61,27 @@ export async function getMap(id: string) {
   const known = maps.get(id);
   if (known) return known;
   const city = await CityMap.load(id === 'lublin' ? 'map/lublin.json' : `map/towns/${id}.json`, id);
-  maps.set(id, city);
+  rememberMap(city);
   return city;
+}
+
+/**
+ * Starts the game where the character was last saved: the last hotel (on
+ * its map), or home. There are no teleports.
+ */
+export async function enterWorld(game: Phaser.Game) {
+  let city = maps.get('lublin')!;
+  let at = session.at;
+  if (at) {
+    try {
+      city = await getMap(at.m);
+    } catch {
+      at = null; // that map is gone: home
+    }
+  }
+  session.arrive = at ? { x: at.x, y: at.y } : null;
+  game.registry.set('city', city);
+  game.scene.start('game');
 }
 
 export function mapName(id: string) {

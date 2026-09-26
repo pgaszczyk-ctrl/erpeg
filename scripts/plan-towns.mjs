@@ -39,6 +39,8 @@ for (const f of readSeq(readFileSync(stationsFile))) {
   if (!t.name || f.geometry.type !== 'Point') continue;
   if (!(t.railway === 'station' || t.railway === 'halt')) continue;
   if (t.station && t.station !== 'train') continue;
+  // Stations over the border (Ukraine, Belarus) are in the region file too.
+  if (/[\u0400-\u04FF]/.test(t.name)) continue;
   const [lon, lat] = f.geometry.coordinates;
   if (stations.some((s) => s.name === t.name && Math.hypot((s.lon - lon) * mLon(lat), (s.lat - lat) * M_LAT) < 300)) continue;
   stations.push({ name: t.name, lon, lat, kind: t.railway });

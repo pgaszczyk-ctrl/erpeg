@@ -34,6 +34,8 @@ export const session = {
   mapId: 'lublin',
   /** Where the hero appears after a coach ride (the station on the new map). */
   arrive: null as { x: number; y: number } | null,
+  /** Load point: the last hotel (map and position); null = home. */
+  at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
   /** Changes every login, so each place offers a new random mission. */
@@ -122,6 +124,8 @@ export function startSession(r: LoginResult) {
   session.fogs = { ...(p.save.fogs ?? {}) };
   session.mapId = 'lublin';
   session.arrive = null;
+  const at = p.save.at;
+  session.at = at ? { m: at.m, x: (at.x * PX_PER_M) / (at.s || PX_PER_M), y: (at.y * PX_PER_M) / (at.s || PX_PER_M) } : null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   session.exp = p.exp;
@@ -155,6 +159,7 @@ export function saveNow(hp: number) {
   }
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs,
+    at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
   return api.save(session.token, data, session.exp);

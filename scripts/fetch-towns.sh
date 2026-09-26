@@ -31,6 +31,7 @@ osmium tags-filter "$PBF" \
   n/addr:housenumber \
   nwr/shop=supermarket,convenience,discount \
   nwr/amenity=school,place_of_worship,townhall,hospital,police,library \
+  nwr/tourism=hotel,hostel,guest_house,motel \
   nwr/office=government \
   --overwrite -o "$WORK/filtered.pbf"
 
@@ -55,13 +56,8 @@ for f in "$WORK"/towns/*.pbf; do
 done
 du -sh data/towns
 
-# Railway timetables (open GTFS data for Polish trains); each one is optional.
-GTFS=()
-for op in polregio pkpic; do
-  if curl -sSfL -o "$WORK/$op.zip" "https://mkuran.pl/gtfs/$op.zip"; then
-    mkdir -p "$WORK/$op" && unzip -q -o "$WORK/$op.zip" -d "$WORK/$op" && GTFS+=("$WORK/$op")
-  else
-    echo "timetable $op not available"
-  fi
-done
-node scripts/rail-from-gtfs.mjs ${GTFS[@]+"${GTFS[@]}"}
+# Train lines (route=train relations list their stops in order): which
+# station follows which, for the coachmen.
+osmium tags-filter "$PBF" r/route=train --overwrite -o "$WORK/routes.pbf"
+osmium cat "$WORK/routes.pbf" -f opl --overwrite -o "$WORK/routes.opl"
+node scripts/rail-from-osm.mjs "$WORK/routes.opl"

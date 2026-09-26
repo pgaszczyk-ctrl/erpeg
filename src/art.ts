@@ -28,6 +28,7 @@ export const TEX = {
   target: 'target',
   crystal: 'crystal',
   signLibrary: 'sign-library',
+  signHotel: 'sign-hotel',
   treeApple: 'tree-apple',
   treePlum: 'tree-plum',
   vine: 'vine',
@@ -790,6 +791,13 @@ function drawCombatExtras(scene: Phaser.Scene) {
     px(ctx, 5, 5, 2, 3, '#d8f3ff');
     tex.refresh();
   }
+  drawSign(scene, TEX.signHotel, '#8a3a6a', '#c86aa0', (p) => {
+    // A bed with a pillow.
+    p(2, 5, 1, 6, '#fff6e0');
+    p(3, 6, 3, 2, '#ffffff');
+    p(3, 8, 8, 2, '#e07a66');
+    p(11, 7, 1, 4, '#fff6e0');
+  });
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');

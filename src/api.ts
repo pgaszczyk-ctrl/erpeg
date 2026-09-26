@@ -30,6 +30,8 @@ export interface SaveData {
   fog?: { s: number; chunks: Record<string, string> };
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
+  /** The last hotel slept in: the next login starts there (none: at home). */
+  at?: { m: string; x: number; y: number; s: number } | null;
   /** Old saves only: the sword in use and the school level. */
   sword?: string;
   swordSkill?: number;

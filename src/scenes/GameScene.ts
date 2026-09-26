@@ -12,7 +12,8 @@ import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
-import { cachedMap, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
+import { HOTEL_CENA } from '../content/hotele';
+import { cachedMap, enterWorld, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
 import type { ZagadkaPL } from '../content/postacie';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
@@ -73,6 +74,7 @@ const PLACE_LOOK = {
   library: { roof: '#2f8a6a', wall: '#d9efe6', sign: TEX.signLibrary },
   merchant: { roof: '', wall: '', sign: TEX.cart },
   station: { roof: '', wall: '', sign: TEX.coach },
+  hotel: { roof: '#8a3a6a', wall: '#f3dce9', sign: TEX.signHotel },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -153,6 +155,7 @@ export class GameScene extends Phaser.Scene {
   private lastVision = { x: NaN, y: NaN, a: NaN };
   private leaving = false;
   private travelling = false;
+  private justRode = false;
   private safeAt = { x: 0, y: 0 };
 
   constructor() {
@@ -268,8 +271,9 @@ export class GameScene extends Phaser.Scene {
     if (missing.length) console.warn('Nie znaleziono na mapie:', missing);
     this.registry.set('missing', missing);
 
-    if (inLublin) this.replayAbandoned();
-    else this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
+    this.replayAbandoned();
+    if (this.justRode) this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
+    this.justRode = false;
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
     const beat = () => {
@@ -479,6 +483,7 @@ export class GameScene extends Phaser.Scene {
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
     if (this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
+      session.at = null; // the next login starts at home
       this.save();
       this.openHome();
       return;
@@ -665,8 +670,8 @@ export class GameScene extends Phaser.Scene {
   private replayAbandoned() {
     const a = session.abandoned;
     session.abandoned = null;
-    // A session left in a town: the next one starts at home anyway.
-    if (!a || !a.enemies?.length || (a.m && a.m !== 'lublin')) return;
+    // Left on another map than the one we start on: nothing to replay.
+    if (!a || !a.enemies?.length || (a.m ?? 'lublin') !== this.city.id) return;
     this.player.setPosition(a.x, a.y);
     this.player.hp = Math.max(1, Math.min(PLAYER.maxHp, a.hp));
     for (const e of a.enemies) {
@@ -683,9 +688,11 @@ export class GameScene extends Phaser.Scene {
     // Survived: the lingering foes leave and the character goes home.
     this.enemies.filter((e) => e.temp).forEach((e) => e.destroy());
     this.enemies = this.enemies.filter((e) => !e.temp);
-    this.player.setPosition(session.startX, session.startY);
+    // Back to the last save point: the hotel slept in, or home.
+    const back = session.at && session.at.m === this.city.id ? session.at : { x: session.startX, y: session.startY };
+    this.player.setPosition(back.x, back.y);
     this.cameras.main.centerOn(this.player.x, this.player.y);
-    this.toast('Przetrwałeś! Wracasz do punktu startowego.');
+    this.toast(session.at ? 'Przetrwałeś! Wracasz do hotelu, w którym ostatnio spałeś.' : 'Przetrwałeś! Wracasz do domu.');
     this.emitHud();
   }
 
@@ -715,7 +722,7 @@ export class GameScene extends Phaser.Scene {
     // Every session starts in Lublin, at home.
     const lublin = cachedMap('lublin') ?? this.city;
     game.registry.set('city', lublin);
-    showMenu(lublin, reopen).then(() => game.scene.start('game'));
+    showMenu(lublin, reopen).then(() => enterWorld(game));
   }
 
   /** Puts what was explored on this map into the session (saved with the game). */
@@ -789,6 +796,7 @@ export class GameScene extends Phaser.Scene {
         if (Phaser.Math.Distance.Between(p.door.x, p.door.y, fx, fy) < DOOR_RADIUS) {
           id = p.id;
           open = () => this.openPlace(p);
+          savePoint = p.kind !== 'hotel'; // the hotel saves itself, with its spot
         }
       }
     }
@@ -814,6 +822,7 @@ export class GameScene extends Phaser.Scene {
   private openPlace(p: CityPlace) {
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
+    if (p.kind === 'hotel') return this.openHotel(p);
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
@@ -862,6 +871,30 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** A hotel: saves the game here, and the next login starts at this door. */
+  private openHotel(p: CityPlace) {
+    const here = session.at && session.at.m === this.city.id && Math.hypot(session.at.x - p.door.x, session.at.y - p.door.y) < 4;
+    const title = `🏨 ${p.name}`;
+    if (session.coins < HOTEL_CENA) {
+      this.dialog({ title, text: `Nocleg kosztuje ${HOTEL_CENA} monet, a masz ${session.coins}. Recepcjonista kręci głową.`, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    this.dialog({
+      title,
+      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.${here ? '\n\nTo twój obecny hotel.' : ''}`,
+      buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        spend(HOTEL_CENA);
+        session.at = { m: this.city.id, x: p.door.x, y: p.door.y };
+        this.player.heal(PLAYER.maxHp);
+        this.emitHud();
+        this.save();
+        this.toast('🛏 Wyspany! Gra zapisana w hotelu.', 3000);
+      },
+    });
+  }
+
   /** Rides to another station: loads its map and starts there. */
   private travel(t: Trip) {
     if (this.travelling) return;
@@ -877,6 +910,7 @@ export class GameScene extends Phaser.Scene {
         const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         session.arrive = st ? { ...st.door } : city.freeNear(city.fromLatLon(t.to.lat, t.to.lon).x, city.fromLatLon(t.to.lat, t.to.lon).y);
         session.hp = this.player.hp;
+        this.justRode = true;
         this.game.registry.set('city', city);
         this.scene.stop('ui');
         this.scene.restart();
