@@ -411,11 +411,29 @@ export class Training {
     return ringsArea(a.rings[0]) / (PX_PER_M * PX_PER_M);
   }
 
+  /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
+  private hasStations(a: Area) {
+    const m2 = Training.sizeM2(a);
+    if (m2 < SPORT.kuklyOdM2) return false;
+    const r = SPORT.sasiedziM * PX_PER_M;
+    const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+    for (const b of this.city.query({ x0: a.x0 - r, y0: a.y0 - r, x1: a.x1 + r, y1: a.y1 + r }).areas) {
+      if (b === a || b.kind !== 'pitch') continue;
+      // Near: the gap between the two pitches' boxes is under `sasiedziM`.
+      const gx = Math.max(0, b.x0 - a.x1, a.x0 - b.x1), gy = Math.max(0, b.y0 - a.y1, a.y0 - b.y1);
+      if (Math.hypot(gx, gy) > r) continue;
+      const bm2 = Training.sizeM2(b);
+      const bx = (b.x0 + b.x1) / 2, by = (b.y0 + b.y1) / 2;
+      if (bm2 > m2 || (bm2 === m2 && (bx < cx || (bx === cx && by < cy)))) return false;
+    }
+    return true;
+  }
+
   private stationsOf(a: Area): Station[] {
     let list = this.generated.get(a);
     if (list) return list;
     list = [];
-    if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
+    if (this.hasStations(a)) {
       // Centre of the pitch, nudged until the three stations stand free.
       const cx = (a.x0 + a.x1) / 2;
       const cy = (a.y0 + a.y1) / 2;
@@ -426,8 +444,8 @@ export class Training {
         const spots = kinds.map((k, i) => ({ kind: k, x: ox + (i - 1) * 18, y: oy }));
         if (spots.every((p) => pointInRings(a.rings, p.x, p.y) && this.city.isFree(p.x, p.y, 5, 5))) list = spots;
       }
-      // The second dummy: as far along the pitch as fits (up to ~60 m).
-      if (list.length) {
+      // The second dummy (the coach's challenge, big pitches only): as far along the pitch as fits (up to ~60 m).
+      if (list.length && Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
         const a0 = list[0];
         let far: Station | null = null;
         for (let d = 60 * PX_PER_M; d > 15 * PX_PER_M && !far; d -= 5 * PX_PER_M) {

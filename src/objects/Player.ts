@@ -72,11 +72,8 @@ export class Player extends Phaser.GameObjects.Sprite {
     if (now - this.lastAttack < this.attackCooldown || now < this.stunnedUntil) return null;
     this.lastAttack = now;
 
-    // Snap the swing to the 4 main directions so it matches the sprite.
-    const snap =
-      this.dirName === 'side'
-        ? new Phaser.Math.Vector2(Math.sign(this.facing.x), 0)
-        : new Phaser.Math.Vector2(0, Math.sign(this.facing.y));
+    // Exactly the way the hero was walking (diagonals too), not snapped to 4 sides.
+    const snap = this.facing.lengthSq() > 0 ? this.facing.clone().normalize() : new Phaser.Math.Vector2(0, 1);
     const hit = new Phaser.Math.Vector2(this.x, this.y + 2).add(snap.clone().scale(PLAYER.attackReach * this.reach));
 
     const slash = this.scene.add.image(hit.x, hit.y, TEX.slash).setDepth(this.depth + 1);

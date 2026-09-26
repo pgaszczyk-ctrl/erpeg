@@ -125,3 +125,6 @@ export const MADRALE: { imie: string; powitanie: string }[] = [
   { imie: 'Dziadek Józef', powitanie: 'Za moich czasów każdy to wiedział!' },
   { imie: 'Wróżka Ula', powitanie: 'Widzę w kuli… zagadkę dla ciebie!' },
 ];
+
+/** Biblioteki: zagadki bibliotekarki – najwyżej tyle na jedno wejście do gry, każda za tyle EXP. */
+export const BIBLIOTEKA_ZAGADKI = { naSesje: 3, exp: 10 };

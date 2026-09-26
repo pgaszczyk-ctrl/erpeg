@@ -5,11 +5,17 @@ import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
+import { ITEM_PICTURES } from '../ui/itemIcon';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
+  }
+
+  preload() {
+    // Item pictures (16×16 pixel art) for shop dialogs.
+    for (const id of ITEM_PICTURES) this.load.image(`item-${id}`, `items/${id}.png`);
   }
 
   create() {

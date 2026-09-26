@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { report } from '../errlog';
-import { TEX } from '../art';
+import { TEX, PLAYER_TEX } from '../art';
+import { expNaPoziom } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
@@ -21,7 +22,11 @@ export class UIScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
   private mapBtn!: Phaser.GameObjects.Text;
-  private charBtn!: Phaser.GameObjects.Text;
+  /** The hero's portrait (top right); tapping it opens the character sheet. */
+  private charBtn!: Phaser.GameObjects.Image;
+  private portraitBox!: Phaser.GameObjects.Graphics;
+  private stars: Phaser.GameObjects.Image[] = [];
+  private lastLevel = 0;
   private swordText!: Phaser.GameObjects.Text;
   /** Fruit in the backpack: the game's own fruit pictures (emoji plums are missing on some phones). */
   private fruitIcons: Phaser.GameObjects.Image[] = [];
@@ -81,9 +86,15 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
 
-    this.charBtn = this.add
-      .text(0, 0, '👤', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
-      .setOrigin(1, 0);
+    // Portrait: head and shoulders of the player's own hero, in a small frame.
+    // (a Graphics frame: a stroked Rectangle drew as a triangle here)
+    const fw = 18 * this.ui, fh = 15 * this.ui;
+    this.portraitBox = this.add.graphics();
+    this.portraitBox.fillStyle(0x1e1a24, 0.75).fillRect(-fw, 0, fw, fh).lineStyle(this.ui, 0xf7c531, 1).strokeRect(-fw, 0, fw, fh);
+    this.charBtn = this.add.image(0, 0, this.textures.exists(PLAYER_TEX) ? PLAYER_TEX : TEX.hero, 'down-0').setOrigin(0.5, 0).setScale(this.ui).setCrop(0, 0, 16, 13);
+    this.stars = [];
+    for (let i = 0; i < 5; i++) this.stars.push(this.add.image(0, 0, TEX.starEmpty).setOrigin(0).setScale(this.ui));
+    this.lastLevel = 0;
     this.swordText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
@@ -180,6 +191,29 @@ export class UIScene extends Phaser.Scene {
     if (missing.length) this.toast(`Nie znalazłem na mapie:\n${missing.join('\n')}`, 8000);
   }
 
+  /** A big "Poziom 2!" over the game after levelling up. */
+  private levelUp(level: number) {
+    const { width, height } = this.scale;
+    const big = this.add
+      .text(width / 2, height * 0.38, `Poziom ${level}!`, { fontFamily: 'monospace', fontSize: `${Math.round(Math.min(width, 560) / 7)}px`, color: '#f7c531', stroke: '#1e1a24', strokeThickness: 10 })
+      .setOrigin(0.5).setDepth(40).setScale(0.2).setAlpha(0);
+    const sub = this.add
+      .text(width / 2, height * 0.38 + big.height * 0.75, '⭐ Awans! ⭐', { fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 5 })
+      .setOrigin(0.5).setDepth(40).setAlpha(0);
+    // A burst of stars around it.
+    const burst: Phaser.GameObjects.Image[] = [];
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const st = this.add.image(width / 2, height * 0.38, TEX.star).setScale(this.ui).setDepth(39);
+      burst.push(st);
+      this.tweens.add({ targets: st, x: width / 2 + Math.cos(a) * width * 0.42, y: height * 0.38 + Math.sin(a) * width * 0.3, alpha: 0, angle: 180, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => st.destroy() });
+    }
+    this.tweens.add({ targets: big, scale: 1, alpha: 1, duration: 450, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: sub, alpha: 1, duration: 400, delay: 300 });
+    this.tweens.add({ targets: [big, sub], alpha: 0, delay: 2600, duration: 600, onComplete: () => { big.destroy(); sub.destroy(); } });
+    this.stars.forEach((st, i) => this.tweens.add({ targets: st, scale: this.ui * 1.4, yoyo: true, duration: 180, delay: i * 80 }));
+  }
+
   /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
   private showPractice(p: { skill: string; into: number; need: number; max: boolean }) {
     this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
@@ -195,16 +229,28 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const pad = 4 * this.ui;
     this.menuBtn.setPosition(pad, pad - 2 * this.ui);
-    const hx = pad + this.menuBtn.width + 3 * this.ui;
-    this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
-    // Duel hearts under the red ones (in place of the weapon line).
-    this.duelHearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad + 9 * this.ui));
-    this.expText.setPosition(width - pad, pad + 9 * this.ui);
-    this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
-    this.charBtn.setPosition(width - pad - this.mapBtn.width - 4 * this.ui, pad + 17 * this.ui);
-    this.titleText.setPosition(width - pad, pad + 17 * this.ui + this.mapBtn.height + this.ui);
-    this.swordText.setPosition(hx, pad + 10 * this.ui);
-    const fy = pad + 10 * this.ui + this.swordText.height + 3 * this.ui;
+    const u = this.ui;
+    const hx = pad + this.menuBtn.width + 3 * u;
+    // Right column: portrait, hearts under it, then 5 experience stars.
+    const right = width - pad;
+    this.portraitBox.setPosition(right, pad);
+    this.charBtn.setPosition(right - 9 * u, pad + u);
+    const hy = pad + 17 * u;
+    const n = this.hearts.length;
+    this.hearts.forEach((h, i) => h.setPosition(right - (n - i) * 10 * u + u, hy));
+    const sy = hy + 10 * u;
+    this.stars.forEach((st, i) => st.setPosition(right - (5 - i) * 11 * u + u, sy));
+    this.expText.setPosition(right, sy + 12 * u);
+    this.titleText.setPosition(right, sy + 12 * u + this.expText.height + u);
+    // Coins and the map button to the left of the portrait.
+    const lx = right - 18 * u - 4 * u;
+    this.coinText.setPosition(lx, pad - u);
+    this.coinIcon.setPosition(lx - this.coinText.width - 2 * u, pad);
+    this.mapBtn.setPosition(this.coinIcon.x - 10 * u - 4 * u, pad - u);
+    // Left: menu, weapon (or the purple duel hearts), fruit.
+    this.duelHearts.forEach((h, i) => h.setPosition(hx + i * 10 * u, pad + 2 * u));
+    this.swordText.setPosition(hx, pad + 2 * u);
+    const fy = pad + 2 * u + this.swordText.height + 5 * u;
     let fx = hx + 2 * this.ui;
     this.fruitIcons.forEach((ic, i) => {
       ic.setPosition(fx, fy);
@@ -212,11 +258,11 @@ export class UIScene extends Phaser.Scene {
       t.setPosition(fx + 5 * this.ui, fy);
       fx += 5 * this.ui + t.width + 5 * this.ui;
     });
-    this.coinText.setPosition(width - pad, pad - this.ui);
-    this.coinIcon.setPosition(width - pad - this.coinText.width - 2 * this.ui, pad);
     const wrap = Math.min(width - 40, 520);
-    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, pad + 22 * this.ui + 18);
-    this.streetText.setPosition(width / 2, pad + 22 * this.ui);
+    // Street and goal under both corners.
+    const ty = Math.max(fy + 8 * u, this.titleText.text ? this.titleText.y + this.titleText.height : sy + 12 * u + this.expText.height) + 2 * u;
+    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, ty + 18);
+    this.streetText.setPosition(width / 2, ty);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
     this.skillBar.setPosition(width / 2, height * 0.66);
 
@@ -236,6 +282,16 @@ export class UIScene extends Phaser.Scene {
     while (this.hearts.length < s.maxHp / 2) {
       this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.ui));
     }
+    while (this.hearts.length > s.maxHp / 2) this.hearts.pop()!.destroy();
+    // The hero's picture is redrawn (a new texture) when worn gear changes.
+    if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
+    // Experience towards the next level as 5 stars, filled by halves (like hearts).
+    const from = expNaPoziom(s.level);
+    const to = expNaPoziom(s.level + 1);
+    const halves = Math.floor(Math.max(0, Math.min(0.999, (s.exp - from) / (to - from))) * 10);
+    this.stars.forEach((st, i) => st.setTexture(halves >= i * 2 + 2 ? TEX.star : halves === i * 2 + 1 ? TEX.starHalf : TEX.starEmpty));
+    if (this.lastLevel && s.level > this.lastLevel) this.levelUp(s.level);
+    this.lastLevel = s.level;
     this.hearts.forEach((h, i) => {
       const filled = s.hp - i * 2; // 2 hp per heart
       h.setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty);
@@ -251,7 +307,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.swordText.setVisible(s.duel === null);
     this.coinText.setText(String(s.coins));
-    this.expText.setText(`poz. ${s.level} · ${s.exp} EXP`);
+    this.expText.setText(`poz. ${s.level} · ${s.exp}/${to} EXP`);
     this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
     this.swordText.setText(`⚔ ${s.sword}`);
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
@@ -390,10 +446,15 @@ export class UIScene extends Phaser.Scene {
       const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
       const color = stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
       const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
+      // A picture on the left (an item on sale), 2× its 16 px, crisp.
+      const key = d.icons?.[i];
+      const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setScale(2) : null;
+      const pad = pic ? 40 : 0;
       const text = this.add
-        .text(bx + bw / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: stacked ? '15px' : '17px', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 } })
+        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: stacked ? '15px' : '17px', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })
         .setOrigin(0.5);
       items.push(rect, text);
+      if (pic) items.push(pic);
       this.dialogButtons.push({ rect, index: i });
     });
     this.dialogBox = this.add.container(0, 0, items).setDepth(20);

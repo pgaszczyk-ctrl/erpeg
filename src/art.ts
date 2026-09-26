@@ -39,6 +39,9 @@ export const TEX = {
   talkBubble: 'talk-bubble',
   heartDuel: 'heart-duel',
   heartDuelEmpty: 'heart-duel-empty',
+  star: 'star',
+  starHalf: 'star-half',
+  starEmpty: 'star-empty',
   dryad: 'dryad',
   zombie: 'zombie',
   skeleton: 'skeleton',
@@ -466,6 +469,31 @@ function drawHeart(scene: Phaser.Scene, key: string, full: boolean, color = '#e4
   for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) heartPath(ctx, dx, dy, OUTLINE);
   heartPath(ctx, 0, 0, full ? color : '#4a3a4a');
   if (full) px(ctx, 2, 2, 1, 1, light);
+  tex.refresh();
+}
+
+// Experience stars in the HUD: gold up to column `fill` (9 = full, 5 = half, 0 = empty).
+const STAR = [
+  '....#....',
+  '...###...',
+  '...###...',
+  '#########',
+  '.#######.',
+  '..#####..',
+  '..#####..',
+  '.###.###.',
+  '.##...##.',
+];
+function drawStar(scene: Phaser.Scene, key: string, fill: number) {
+  const { tex, ctx } = canvasTexture(scene, key, 11, 11);
+  const on = (x: number, y: number) => STAR[y]?.[x] === '#';
+  for (let y = -1; y <= 9; y++) for (let x = -1; x <= 9; x++) {
+    if (on(x, y)) continue;
+    if (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1)) px(ctx, x + 1, y + 1, 1, 1, OUTLINE);
+  }
+  for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
+    if (on(x, y)) px(ctx, x + 1, y + 1, 1, 1, x < fill ? (y < 3 || (x < 3 && y < 5) ? '#fff2a8' : '#f7c531') : '#4a3a4a');
+  }
   tex.refresh();
 }
 
@@ -1081,6 +1109,9 @@ export function createArt(scene: Phaser.Scene) {
   drawSlimeSheet(scene);
   drawSlash(scene);
   drawHeart(scene, TEX.heart, true);
+  drawStar(scene, TEX.star, 9);
+  drawStar(scene, TEX.starHalf, 5);
+  drawStar(scene, TEX.starEmpty, 0);
   drawHeart(scene, TEX.heartEmpty, false);
   drawHeart(scene, TEX.pickupHeart, true);
   drawHeart(scene, TEX.heartDuel, true, '#9a4ad8', '#d8b0ff');

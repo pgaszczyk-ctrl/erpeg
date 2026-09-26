@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { itemTexture } from '../ui/itemIcon';
+import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack } from '../controls';
@@ -117,6 +119,8 @@ export interface DialogRequest {
   title: string;
   text: string;
   buttons: string[];
+  /** Optional picture (texture key) per button, e.g. the item on sale. */
+  icons?: (string | null)[];
   onChoose: (index: number) => void;
 }
 
@@ -1829,6 +1833,7 @@ export class GameScene extends Phaser.Scene {
       title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
       text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!') + noBuy,
       buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
+      icons: [...sell.map(() => null), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
         if (sell.length && i === 0) {
           const v = sellAllFruit();
@@ -1872,13 +1877,17 @@ export class GameScene extends Phaser.Scene {
   private openLibrary(p: CityPlace) {
     const offers = gear.magic ? this.offers('biblioteka') : [];
     const learn = gear.magic ? [] : [`Naucz się magii – ${NAUKA_MAGII} monet`];
+    const left = BIBLIOTEKA_ZAGADKI.naSesje - session.libRiddles;
+    const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (+${BIBLIOTEKA_ZAGADKI.exp} EXP, zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
     this.dialog({
       title: `📚 ${p.name}`,
       text: gear.magic
         ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
         : `W starych księgach zapisano sztukę magii. Po nauce będziesz też magiem: przytrzymaj atak z różdżką, kulą albo księgą w ręce, by rzucać zaklęcia. Masz ${session.coins} monet.`,
-      buttons: [...learn, ...offers.map((o) => this.label(o)), 'Wyjdź'],
+      buttons: [...learn, ...offers.map((o) => this.label(o)), riddleBtn, 'Wyjdź'],
+      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), null, null],
       onChoose: (i) => {
+        if (i === learn.length + offers.length) return this.libraryRiddle(p);
         if (learn.length && i === 0) {
           if (session.coins < NAUKA_MAGII) {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
@@ -1893,6 +1902,37 @@ export class GameScene extends Phaser.Scene {
         }
         const o = offers[i - learn.length];
         if (o) this.buy(o);
+      },
+    });
+  }
+
+  /** A librarian's riddle: at most BIBLIOTEKA_ZAGADKI.naSesje per session, one try each. */
+  private libraryRiddle(p: CityPlace) {
+    const { naSesje, exp } = BIBLIOTEKA_ZAGADKI;
+    if (session.libRiddles >= naSesje) {
+      this.dialog({ title: `📚 ${p.name}`, text: `Bibliotekarka uśmiecha się: „Na dziś wystarczy – zadałam ci już ${naSesje} zagadki. Wróć następnym razem!”`, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const n = session.libRiddles++;
+    const r = riddleFor({ id: `lib:${p.id}:${session.nonce}:${n}`, x: 0, y: 0, name: '', greeting: '', difficulty: 0 }, today(), session.age);
+    this.dialog({
+      title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
+      text: `${r.question}\n\nNagroda: ${exp} EXP. Tylko jedna próba!`,
+      buttons: [...r.answers],
+      onChoose: (i) => {
+        const right = i === r.correct;
+        if (right) {
+          session.exp += exp;
+          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
+          this.emitHud();
+        }
+        this.dialog({
+          title: right ? '🎉 Brawo!' : '😕 Niestety…',
+          text: right ? `Dobra odpowiedź! +${exp} EXP.` : `Dobra odpowiedź to: ${r.answers[r.correct]}.`,
+          buttons: ['OK'],
+          onChoose: () => {},
+        });
+        this.save();
       },
     });
   }

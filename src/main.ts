@@ -37,3 +37,4 @@ watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(sessio
 
 // Handy for debugging from the browser console.
 (window as unknown as { __game: Phaser.Game }).__game = game;
+(window as unknown as { __session: typeof session }).__session = session;

@@ -8,6 +8,7 @@ import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
+import { PLAYER } from './objects/Player';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -55,6 +56,8 @@ export const session = {
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
+  /** Library riddles answered this session (max BIBLIOTEKA_ZAGADKI.naSesje). */
+  libRiddles: 0,
   /** Changes every login, so each place offers a new random mission. */
   nonce: 0,
   /** Last known state of a session that was closed without "Wyjdź". */
@@ -124,6 +127,8 @@ export function startSession(r: LoginResult) {
   session.idik = p.idik;
   session.age = p.age ?? 7;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
+  // Hearts by difficulty (half-hearts count, like hp).
+  PLAYER.maxHp = session.level.serca * 2;
   const c = p.save.chest;
   session.chest = freshChest();
   if (c) {
@@ -149,10 +154,11 @@ export function startSession(r: LoginResult) {
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   session.exp = p.exp;
-  session.hp = Math.max(1, Math.min(MAX_HP, p.save.hp ?? MAX_HP));
+  session.hp = Math.max(1, Math.min(PLAYER.maxHp, p.save.hp ?? PLAYER.maxHp));
   session.missions = { ...(p.save.missions ?? {}) };
   session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
   session.gen = {};
+  session.libRiddles = 0;
   for (const m of p.save.gen ?? []) session.gen[m.id] = m;
   session.nonce = Math.floor(Math.random() * 1e9);
   const a = r.abandoned ?? null;
