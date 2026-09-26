@@ -136,5 +136,9 @@ export function tripsFrom(from: Stop): Trip[] {
     const near = [...stops.values()].filter((s) => s.mapId !== from.mapId).sort((a, b) => km(from, a) - km(from, b)).slice(0, 3);
     for (const s of near) add(s, null);
   }
-  return [...out.values()].sort((a, b) => a.km - b.km).slice(0, MAX_TRIPS);
+  // Mostly other towns: at most two stations on the map we are on.
+  const sorted = [...out.values()].sort((a, b) => a.km - b.km);
+  const same = sorted.filter((t) => t.to.mapId === from.mapId).slice(0, 2);
+  const other = sorted.filter((t) => t.to.mapId !== from.mapId).slice(0, MAX_TRIPS - same.length);
+  return [...other, ...same].sort((a, b) => a.km - b.km);
 }
