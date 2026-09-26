@@ -30,7 +30,7 @@ osmium tags-filter "$PBF" \
   wr/amenity=parking \
   n/addr:housenumber \
   nwr/shop=supermarket,convenience,discount \
-  nwr/amenity=school,place_of_worship,townhall,hospital,police,library,bank \
+  nwr/amenity=school,place_of_worship,townhall,hospital,police,library,bank,university,college \
   nwr/tourism=hotel,hostel,guest_house,motel \
   nwr/office=government \
   --overwrite -o "$WORK/filtered.pbf"
