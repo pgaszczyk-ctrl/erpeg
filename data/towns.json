@@ -1,0 +1,2502 @@
+{
+ "lublin": [
+  {
+   "name": "Lublin Północny",
+   "lon": 22.5995426,
+   "lat": 51.2422757
+  },
+  {
+   "name": "Stasin Polny",
+   "lon": 22.4736992,
+   "lat": 51.2132592
+  },
+  {
+   "name": "Lublin Ponikwoda",
+   "lon": 22.6059708,
+   "lat": 51.266083
+  },
+  {
+   "name": "Lublin Zadębie",
+   "lon": 22.6100445,
+   "lat": 51.2579286
+  },
+  {
+   "name": "Rudnik",
+   "lon": 22.622535,
+   "lat": 51.2876442
+  },
+  {
+   "name": "Lublin Zemborzyce",
+   "lon": 22.5028874,
+   "lat": 51.1715012
+  },
+  {
+   "name": "Lublin Główny",
+   "lon": 22.5689637,
+   "lat": 51.231292
+  },
+  {
+   "name": "Lublin Zachodni",
+   "lon": 22.508927,
+   "lat": 51.2189337
+  }
+ ],
+ "towns": [
+  {
+   "id": "wilkolaz",
+   "name": "Wilkołaz",
+   "bbox": [
+    22.31088,
+    50.97442,
+    22.35456,
+    51.01872
+   ],
+   "stations": [
+    {
+     "name": "Wilkołaz",
+     "lon": 22.3294289,
+     "lat": 50.986117
+    },
+    {
+     "name": "Wilkołaz Wieś",
+     "lon": 22.3359988,
+     "lat": 51.0070183
+    }
+   ]
+  },
+  {
+   "id": "stacja",
+   "name": "Дубіца",
+   "bbox": [
+    23.62533,
+    51.79295,
+    23.6631,
+    51.81635
+   ],
+   "stations": [
+    {
+     "name": "Дубіца",
+     "lon": 23.6442187,
+     "lat": 51.8046473
+    }
+   ]
+  },
+  {
+   "id": "wlodawa",
+   "name": "Włodawa",
+   "bbox": [
+    23.56697,
+    51.50438,
+    23.6045,
+    51.52777
+   ],
+   "stations": [
+    {
+     "name": "Włodawa",
+     "lon": 23.5857364,
+     "lat": 51.5160756
+    }
+   ]
+  },
+  {
+   "id": "pulawy-azoty",
+   "name": "Puławy Azoty",
+   "bbox": [
+    21.93034,
+    51.46333,
+    21.96784,
+    51.48672
+   ],
+   "stations": [
+    {
+     "name": "Puławy Azoty",
+     "lon": 21.9490895,
+     "lat": 51.4750247
+    }
+   ]
+  },
+  {
+   "id": "zawadowka",
+   "name": "Zawadówka",
+   "bbox": [
+    23.33642,
+    51.11241,
+    23.37364,
+    51.13581
+   ],
+   "stations": [
+    {
+     "name": "Zawadówka",
+     "lon": 23.3550312,
+     "lat": 51.1241097
+    }
+   ]
+  },
+  {
+   "id": "zamosc",
+   "name": "Zamość",
+   "bbox": [
+    23.18691,
+    50.69629,
+    23.29387,
+    50.73434
+   ],
+   "stations": [
+    {
+     "name": "Zamość",
+     "lon": 23.2385958,
+     "lat": 50.7135833
+    },
+    {
+     "name": "Zamość Starówka",
+     "lon": 23.2624526,
+     "lat": 50.7166155
+    },
+    {
+     "name": "Zamość Wschód",
+     "lon": 23.2754199,
+     "lat": 50.7226463
+    },
+    {
+     "name": "Mokre",
+     "lon": 23.2053556,
+     "lat": 50.7079915
+    }
+   ]
+  },
+  {
+   "id": "hrebenne",
+   "name": "Hrebenne",
+   "bbox": [
+    23.55774,
+    50.28668,
+    23.59431,
+    50.31007
+   ],
+   "stations": [
+    {
+     "name": "Hrebenne",
+     "lon": 23.5760254,
+     "lat": 50.2983736
+    }
+   ]
+  },
+  {
+   "id": "trawniki",
+   "name": "Trawniki",
+   "bbox": [
+    22.97397,
+    51.12467,
+    23.0112,
+    51.14807
+   ],
+   "stations": [
+    {
+     "name": "Trawniki",
+     "lon": 22.9925855,
+     "lat": 51.1363715
+    }
+   ]
+  },
+  {
+   "id": "minkowice",
+   "name": "Minkowice",
+   "bbox": [
+    22.74542,
+    51.19798,
+    22.80606,
+    51.22903
+   ],
+   "stations": [
+    {
+     "name": "Minkowice",
+     "lon": 22.7640633,
+     "lat": 51.2173349
+    },
+    {
+     "name": "Podzamcze",
+     "lon": 22.7874155,
+     "lat": 51.2096811
+    }
+   ]
+  },
+  {
+   "id": "dorohusk",
+   "name": "Dorohusk",
+   "bbox": [
+    23.76555,
+    51.16038,
+    23.8028,
+    51.18378
+   ],
+   "stations": [
+    {
+     "name": "Dorohusk",
+     "lon": 23.7841784,
+     "lat": 51.1720784
+    }
+   ]
+  },
+  {
+   "id": "krasnik",
+   "name": "Kraśnik",
+   "bbox": [
+    22.26446,
+    50.91796,
+    22.30152,
+    50.94135
+   ],
+   "stations": [
+    {
+     "name": "Kraśnik",
+     "lon": 22.282992,
+     "lat": 50.9296529
+    }
+   ]
+  },
+  {
+   "id": "zawada",
+   "name": "Zawada",
+   "bbox": [
+    23.10672,
+    50.70419,
+    23.14361,
+    50.72758
+   ],
+   "stations": [
+    {
+     "name": "Zawada",
+     "lon": 23.1251667,
+     "lat": 50.7158851
+    }
+   ]
+  },
+  {
+   "id": "belzec",
+   "name": "Bełżec",
+   "bbox": [
+    23.43122,
+    50.3652,
+    23.46784,
+    50.3886
+   ],
+   "stations": [
+    {
+     "name": "Bełżec",
+     "lon": 23.4495326,
+     "lat": 50.3768989
+    }
+   ]
+  },
+  {
+   "id": "opole-lubelskie-waskotorowe",
+   "name": "Opole Lubelskie Wąskotorowe",
+   "bbox": [
+    21.9607,
+    51.13894,
+    21.99793,
+    51.16233
+   ],
+   "stations": [
+    {
+     "name": "Opole Lubelskie Wąskotorowe",
+     "lon": 21.9793126,
+     "lat": 51.1506361
+    }
+   ]
+  },
+  {
+   "id": "karczmiska-waskotorowe",
+   "name": "Karczmiska Wąskotorowe",
+   "bbox": [
+    21.97884,
+    51.19075,
+    22.02422,
+    51.22761
+   ],
+   "stations": [
+    {
+     "name": "Karczmiska Wąskotorowe",
+     "lon": 21.997481,
+     "lat": 51.2159089
+    },
+    {
+     "name": "Głusko",
+     "lon": 22.0055811,
+     "lat": 51.2024476
+    }
+   ]
+  },
+  {
+   "id": "jaszczow",
+   "name": "Jaszczów",
+   "bbox": [
+    22.89197,
+    51.19043,
+    22.92925,
+    51.21382
+   ],
+   "stations": [
+    {
+     "name": "Jaszczów",
+     "lon": 22.9106093,
+     "lat": 51.2021235
+    }
+   ]
+  },
+  {
+   "id": "motycz",
+   "name": "Motycz",
+   "bbox": [
+    22.40486,
+    51.20973,
+    22.44215,
+    51.23312
+   ],
+   "stations": [
+    {
+     "name": "Motycz",
+     "lon": 22.4235028,
+     "lat": 51.2214247
+    }
+   ]
+  },
+  {
+   "id": "okrzeja",
+   "name": "Okrzeja",
+   "bbox": [
+    22.11706,
+    51.71993,
+    22.15477,
+    51.74332
+   ],
+   "stations": [
+    {
+     "name": "Okrzeja",
+     "lon": 22.135915,
+     "lat": 51.7316231
+    }
+   ]
+  },
+  {
+   "id": "susiec",
+   "name": "Susiec",
+   "bbox": [
+    23.20786,
+    50.40443,
+    23.24452,
+    50.42783
+   ],
+   "stations": [
+    {
+     "name": "Susiec",
+     "lon": 23.2261884,
+     "lat": 50.4161308
+    }
+   ]
+  },
+  {
+   "id": "szastarka",
+   "name": "Szastarka",
+   "bbox": [
+    22.31334,
+    50.84163,
+    22.35033,
+    50.86502
+   ],
+   "stations": [
+    {
+     "name": "Szastarka",
+     "lon": 22.3318351,
+     "lat": 50.853323
+    }
+   ]
+  },
+  {
+   "id": "niedrzwica",
+   "name": "Niedrzwica",
+   "bbox": [
+    22.35801,
+    51.10235,
+    22.39522,
+    51.12575
+   ],
+   "stations": [
+    {
+     "name": "Niedrzwica",
+     "lon": 22.3766144,
+     "lat": 51.1140498
+    }
+   ]
+  },
+  {
+   "id": "krasnystaw-fabryczny",
+   "name": "Krasnystaw Fabryczny",
+   "bbox": [
+    23.16416,
+    51.01272,
+    23.20129,
+    51.03612
+   ],
+   "stations": [
+    {
+     "name": "Krasnystaw Fabryczny",
+     "lon": 23.1827257,
+     "lat": 51.0244189
+    }
+   ]
+  },
+  {
+   "id": "rejowiec",
+   "name": "Rejowiec",
+   "bbox": [
+    23.21974,
+    51.106,
+    23.25695,
+    51.12939
+   ],
+   "stations": [
+    {
+     "name": "Rejowiec",
+     "lon": 23.2383437,
+     "lat": 51.117695
+    }
+   ]
+  },
+  {
+   "id": "sobibor",
+   "name": "Sobibór",
+   "bbox": [
+    23.57831,
+    51.43252,
+    23.61579,
+    51.45592
+   ],
+   "stations": [
+    {
+     "name": "Sobibór",
+     "lon": 23.5970514,
+     "lat": 51.4442181
+    }
+   ]
+  },
+  {
+   "id": "ruda-opalin",
+   "name": "Ruda-Opalin",
+   "bbox": [
+    23.57013,
+    51.22387,
+    23.61977,
+    51.25961
+   ],
+   "stations": [
+    {
+     "name": "Ruda-Opalin",
+     "lon": 23.6011101,
+     "lat": 51.2479134
+    },
+    {
+     "name": "Ruda-Huta",
+     "lon": 23.5887785,
+     "lat": 51.2355654
+    }
+   ]
+  },
+  {
+   "id": "uhrusk",
+   "name": "Uhrusk",
+   "bbox": [
+    23.60062,
+    51.3078,
+    23.63799,
+    51.3312
+   ],
+   "stations": [
+    {
+     "name": "Uhrusk",
+     "lon": 23.6193023,
+     "lat": 51.3195
+    }
+   ]
+  },
+  {
+   "id": "poniatowa",
+   "name": "Poniatowa",
+   "bbox": [
+    22.04692,
+    51.16774,
+    22.08418,
+    51.19113
+   ],
+   "stations": [
+    {
+     "name": "Poniatowa",
+     "lon": 22.0655463,
+     "lat": 51.1794339
+    }
+   ]
+  },
+  {
+   "id": "zyczyn",
+   "name": "Życzyn",
+   "bbox": [
+    21.74158,
+    51.63601,
+    21.77922,
+    51.65941
+   ],
+   "stations": [
+    {
+     "name": "Życzyn",
+     "lon": 21.7603993,
+     "lat": 51.6477105
+    }
+   ]
+  },
+  {
+   "id": "lukow-lapiguz",
+   "name": "Łuków Łapiguz",
+   "bbox": [
+    22.34087,
+    51.91281,
+    22.37874,
+    51.93621
+   ],
+   "stations": [
+    {
+     "name": "Łuków Łapiguz",
+     "lon": 22.3598062,
+     "lat": 51.924509
+    }
+   ]
+  },
+  {
+   "id": "pulawy",
+   "name": "Puławy",
+   "bbox": [
+    21.9927,
+    51.39876,
+    22.03014,
+    51.42215
+   ],
+   "stations": [
+    {
+     "name": "Puławy",
+     "lon": 22.0114222,
+     "lat": 51.4104568
+    }
+   ]
+  },
+  {
+   "id": "naleczow",
+   "name": "Nałęczów",
+   "bbox": [
+    22.1945,
+    51.30635,
+    22.23187,
+    51.32974
+   ],
+   "stations": [
+    {
+     "name": "Nałęczów",
+     "lon": 22.2131809,
+     "lat": 51.3180443
+    }
+   ]
+  },
+  {
+   "id": "rzeczyca",
+   "name": "Rzeczyca",
+   "bbox": [
+    22.18977,
+    50.82832,
+    22.22675,
+    50.85171
+   ],
+   "stations": [
+    {
+     "name": "Rzeczyca",
+     "lon": 22.2082603,
+     "lat": 50.8400142
+    }
+   ]
+  },
+  {
+   "id": "bystrzyca-kolo-lublina",
+   "name": "Bystrzyca koło Lublina",
+   "bbox": [
+    22.61996,
+    51.33769,
+    22.66523,
+    51.37434
+   ],
+   "stations": [
+    {
+     "name": "Bystrzyca koło Lublina",
+     "lon": 22.6386602,
+     "lat": 51.3493926
+    },
+    {
+     "name": "Niemce",
+     "lon": 22.6465252,
+     "lat": 51.3626462
+    }
+   ]
+  },
+  {
+   "id": "lubartow",
+   "name": "Lubartów",
+   "bbox": [
+    22.58077,
+    51.43395,
+    22.62697,
+    51.48494
+   ],
+   "stations": [
+    {
+     "name": "Lubartów",
+     "lon": 22.6082295,
+     "lat": 51.4456431
+    },
+    {
+     "name": "Lubartów Lipowa",
+     "lon": 22.5995145,
+     "lat": 51.4642177
+    },
+    {
+     "name": "Lubartów Słowackiego",
+     "lon": 22.6052042,
+     "lat": 51.4732458
+    }
+   ]
+  },
+  {
+   "id": "lukow",
+   "name": "Łuków",
+   "bbox": [
+    22.37392,
+    51.92027,
+    22.43353,
+    51.95218
+   ],
+   "stations": [
+    {
+     "name": "Łuków",
+     "lon": 22.3928588,
+     "lat": 51.9404823
+    },
+    {
+     "name": "Łuków Zapowiednik",
+     "lon": 22.4145881,
+     "lat": 51.9319719
+    }
+   ]
+  },
+  {
+   "id": "parczew",
+   "name": "Parczew",
+   "bbox": [
+    22.85279,
+    51.61451,
+    22.89978,
+    51.64619
+   ],
+   "stations": [
+    {
+     "name": "Parczew",
+     "lon": 22.8716065,
+     "lat": 51.6262047
+    },
+    {
+     "name": "Parczew Kolejowa",
+     "lon": 22.8809691,
+     "lat": 51.6344928
+    }
+   ]
+  },
+  {
+   "id": "miedzyrzec-podlaski",
+   "name": "Międzyrzec Podlaski",
+   "bbox": [
+    22.76664,
+    51.96434,
+    22.80455,
+    51.98773
+   ],
+   "stations": [
+    {
+     "name": "Międzyrzec Podlaski",
+     "lon": 22.7855957,
+     "lat": 51.9760347
+    }
+   ]
+  },
+  {
+   "id": "biala-podlaska",
+   "name": "Biała Podlaska",
+   "bbox": [
+    23.11143,
+    52.00856,
+    23.18051,
+    52.03234
+   ],
+   "stations": [
+    {
+     "name": "Biała Podlaska",
+     "lon": 23.1304101,
+     "lat": 52.0202547
+    },
+    {
+     "name": "Biała Podlaska Wschodnia",
+     "lon": 23.1615334,
+     "lat": 52.0206409
+    }
+   ]
+  },
+  {
+   "id": "chotylow",
+   "name": "Chotyłów",
+   "bbox": [
+    23.33686,
+    51.98515,
+    23.37479,
+    52.00854
+   ],
+   "stations": [
+    {
+     "name": "Chotyłów",
+     "lon": 23.355823,
+     "lat": 51.9968432
+    }
+   ]
+  },
+  {
+   "id": "terespol",
+   "name": "Terespol",
+   "bbox": [
+    23.58225,
+    52.06263,
+    23.62025,
+    52.08603
+   ],
+   "stations": [
+    {
+     "name": "Terespol",
+     "lon": 23.601254,
+     "lat": 52.0743321
+    }
+   ]
+  },
+  {
+   "id": "sadurki",
+   "name": "Sadurki",
+   "bbox": [
+    22.26573,
+    51.27458,
+    22.30308,
+    51.29797
+   ],
+   "stations": [
+    {
+     "name": "Sadurki",
+     "lon": 22.284403,
+     "lat": 51.2862738
+    }
+   ]
+  },
+  {
+   "id": "chelm",
+   "name": "Chełm",
+   "bbox": [
+    23.47559,
+    51.12962,
+    23.51281,
+    51.15301
+   ],
+   "stations": [
+    {
+     "name": "Chełm",
+     "lon": 23.4942003,
+     "lat": 51.1413165
+    }
+   ]
+  },
+  {
+   "id": "werbkowice",
+   "name": "Werbkowice",
+   "bbox": [
+    23.74927,
+    50.73382,
+    23.78618,
+    50.75722
+   ],
+   "stations": [
+    {
+     "name": "Werbkowice",
+     "lon": 23.7677255,
+     "lat": 50.7455184
+    }
+   ]
+  },
+  {
+   "id": "bilgoraj",
+   "name": "Biłgoraj",
+   "bbox": [
+    22.71342,
+    50.53972,
+    22.75018,
+    50.56312
+   ],
+   "stations": [
+    {
+     "name": "Biłgoraj",
+     "lon": 22.7318019,
+     "lat": 50.5514214
+    }
+   ]
+  },
+  {
+   "id": "hrubieszow-miasto",
+   "name": "Hrubieszów Miasto",
+   "bbox": [
+    23.8901,
+    50.78497,
+    23.92705,
+    50.80837
+   ],
+   "stations": [
+    {
+     "name": "Hrubieszów Miasto",
+     "lon": 23.9085737,
+     "lat": 50.7966686
+    }
+   ]
+  },
+  {
+   "id": "deblin",
+   "name": "Dęblin",
+   "bbox": [
+    21.81298,
+    51.56808,
+    21.85056,
+    51.59147
+   ],
+   "stations": [
+    {
+     "name": "Dęblin",
+     "lon": 21.8317701,
+     "lat": 51.5797762
+    }
+   ]
+  },
+  {
+   "id": "-2",
+   "name": "Лудин",
+   "bbox": [
+    23.95801,
+    50.7958,
+    23.99497,
+    50.81919
+   ],
+   "stations": [
+    {
+     "name": "Лудин",
+     "lon": 23.9764873,
+     "lat": 50.8074966
+    }
+   ]
+  },
+  {
+   "id": "-3",
+   "name": "Ізов",
+   "bbox": [
+    24.04021,
+    50.81685,
+    24.07719,
+    50.84025
+   ],
+   "stations": [
+    {
+     "name": "Ізов",
+     "lon": 24.0587017,
+     "lat": 50.8285477
+    }
+   ]
+  },
+  {
+   "id": "rozalin",
+   "name": "Rozalin",
+   "bbox": [
+    21.98865,
+    51.16695,
+    22.02591,
+    51.19035
+   ],
+   "stations": [
+    {
+     "name": "Rozalin",
+     "lon": 22.0072767,
+     "lat": 51.17865
+    }
+   ]
+  },
+  {
+   "id": "polanowka",
+   "name": "Polanówka",
+   "bbox": [
+    21.92237,
+    51.22136,
+    21.95967,
+    51.24476
+   ],
+   "stations": [
+    {
+     "name": "Polanówka",
+     "lon": 21.9410199,
+     "lat": 51.2330581
+    }
+   ]
+  },
+  {
+   "id": "-4",
+   "name": "Прылукі",
+   "bbox": [
+    23.6812,
+    51.97413,
+    23.71912,
+    51.99752
+   ],
+   "stations": [
+    {
+     "name": "Прылукі",
+     "lon": 23.7001625,
+     "lat": 51.9858267
+    }
+   ]
+  },
+  {
+   "id": "-5",
+   "name": "Страдзеч",
+   "bbox": [
+    23.64461,
+    51.92982,
+    23.6825,
+    51.95322
+   ],
+   "stations": [
+    {
+     "name": "Страдзеч",
+     "lon": 23.6635557,
+     "lat": 51.9415218
+    }
+   ]
+  },
+  {
+   "id": "-6",
+   "name": "Знаменка",
+   "bbox": [
+    23.62176,
+    51.86941,
+    23.6596,
+    51.89281
+   ],
+   "stations": [
+    {
+     "name": "Знаменка",
+     "lon": 23.6406818,
+     "lat": 51.8811107
+    }
+   ]
+  },
+  {
+   "id": "swidnik-wschod",
+   "name": "Świdnik Wschód",
+   "bbox": [
+    22.67627,
+    51.20935,
+    22.73407,
+    51.24666
+   ],
+   "stations": [
+    {
+     "name": "Świdnik Wschód",
+     "lon": 22.7143765,
+     "lat": 51.2210444
+    },
+    {
+     "name": "Świdnik Miasto",
+     "lon": 22.6949188,
+     "lat": 51.2238003
+    },
+    {
+     "name": "Lublin AIRPORT",
+     "lon": 22.715419,
+     "lat": 51.2349589
+    }
+   ]
+  },
+  {
+   "id": "kreznica-jara",
+   "name": "Krężnica Jara",
+   "bbox": [
+    22.44772,
+    51.14149,
+    22.48496,
+    51.16489
+   ],
+   "stations": [
+    {
+     "name": "Krężnica Jara",
+     "lon": 22.4663407,
+     "lat": 51.1531894
+    }
+   ]
+  },
+  {
+   "id": "belzec-drugi",
+   "name": "Bełżec Drugi",
+   "bbox": [
+    23.38535,
+    50.36907,
+    23.42198,
+    50.39247
+   ],
+   "stations": [
+    {
+     "name": "Bełżec Drugi",
+     "lon": 23.4036669,
+     "lat": 50.3807697
+    }
+   ]
+  },
+  {
+   "id": "lopatki",
+   "name": "Łopatki",
+   "bbox": [
+    22.13284,
+    51.31801,
+    22.17022,
+    51.34141
+   ],
+   "stations": [
+    {
+     "name": "Łopatki",
+     "lon": 22.1515295,
+     "lat": 51.3297113
+    }
+   ]
+  },
+  {
+   "id": "siedliska-tomaszowskie",
+   "name": "Siedliska Tomaszowskie",
+   "bbox": [
+    23.5361,
+    50.2499,
+    23.57264,
+    50.2733
+   ],
+   "stations": [
+    {
+     "name": "Siedliska Tomaszowskie",
+     "lon": 23.5543712,
+     "lat": 50.2615995
+    }
+   ]
+  },
+  {
+   "id": "biskupice",
+   "name": "Biskupice",
+   "bbox": [
+    22.92885,
+    51.14886,
+    22.9661,
+    51.17226
+   ],
+   "stations": [
+    {
+     "name": "Biskupice",
+     "lon": 22.9474752,
+     "lat": 51.1605614
+    }
+   ]
+  },
+  {
+   "id": "konskowola",
+   "name": "Końskowola",
+   "bbox": [
+    22.02959,
+    51.38677,
+    22.06703,
+    51.41016
+   ],
+   "stations": [
+    {
+     "name": "Końskowola",
+     "lon": 22.0483079,
+     "lat": 51.3984665
+    }
+   ]
+  },
+  {
+   "id": "porosiuki",
+   "name": "Porosiuki",
+   "bbox": [
+    23.04318,
+    52.00013,
+    23.08113,
+    52.02353
+   ],
+   "stations": [
+    {
+     "name": "Porosiuki",
+     "lon": 23.0621532,
+     "lat": 52.0118315
+    }
+   ]
+  },
+  {
+   "id": "szczebrzeszyn",
+   "name": "Szczebrzeszyn",
+   "bbox": [
+    22.96906,
+    50.66914,
+    23.00592,
+    50.69253
+   ],
+   "stations": [
+    {
+     "name": "Szczebrzeszyn",
+     "lon": 22.9874897,
+     "lat": 50.680835
+    }
+   ]
+  },
+  {
+   "id": "mazily",
+   "name": "Maziły",
+   "bbox": [
+    23.29635,
+    50.39335,
+    23.33299,
+    50.41675
+   ],
+   "stations": [
+    {
+     "name": "Maziły",
+     "lon": 23.3146702,
+     "lat": 50.4050482
+    }
+   ]
+  },
+  {
+   "id": "dominow",
+   "name": "Dominów",
+   "bbox": [
+    22.82495,
+    51.20062,
+    22.86223,
+    51.22402
+   ],
+   "stations": [
+    {
+     "name": "Dominów",
+     "lon": 22.8435885,
+     "lat": 51.2123202
+    }
+   ]
+  },
+  {
+   "id": "grodek",
+   "name": "Gródek",
+   "bbox": [
+    22.77541,
+    51.56801,
+    22.81299,
+    51.59141
+   ],
+   "stations": [
+    {
+     "name": "Gródek",
+     "lon": 22.7942006,
+     "lat": 51.5797108
+    }
+   ]
+  },
+  {
+   "id": "motycz-lesny",
+   "name": "Motycz Leśny",
+   "bbox": [
+    22.35351,
+    51.2261,
+    22.39082,
+    51.24949
+   ],
+   "stations": [
+    {
+     "name": "Motycz Leśny",
+     "lon": 22.3721635,
+     "lat": 51.2377944
+    }
+   ]
+  },
+  {
+   "id": "rokitnia-stara",
+   "name": "Rokitnia Stara",
+   "bbox": [
+    21.77948,
+    51.60032,
+    21.81709,
+    51.62372
+   ],
+   "stations": [
+    {
+     "name": "Rokitnia Stara",
+     "lon": 21.7982828,
+     "lat": 51.6120199
+    }
+   ]
+  },
+  {
+   "id": "zulin",
+   "name": "Żulin",
+   "bbox": [
+    23.1534,
+    51.05019,
+    23.209,
+    51.09023
+   ],
+   "stations": [
+    {
+     "name": "Żulin",
+     "lon": 23.1719769,
+     "lat": 51.0618835
+    },
+    {
+     "name": "Zagrody Kościół",
+     "lon": 23.1904113,
+     "lat": 51.0785319
+    }
+   ]
+  },
+  {
+   "id": "borowina",
+   "name": "Borowina",
+   "bbox": [
+    22.25137,
+    51.81332,
+    22.28916,
+    51.83672
+   ],
+   "stations": [
+    {
+     "name": "Borowina",
+     "lon": 22.2702606,
+     "lat": 51.8250173
+    }
+   ]
+  },
+  {
+   "id": "tereszpol-bilgorajski",
+   "name": "Tereszpol Biłgorajski",
+   "bbox": [
+    22.86691,
+    50.56272,
+    22.90369,
+    50.58611
+   ],
+   "stations": [
+    {
+     "name": "Tereszpol Biłgorajski",
+     "lon": 22.8853001,
+     "lat": 50.5744144
+    }
+   ]
+  },
+  {
+   "id": "dlugi-kat",
+   "name": "Długi Kąt",
+   "bbox": [
+    23.08485,
+    50.47054,
+    23.12155,
+    50.49394
+   ],
+   "stations": [
+    {
+     "name": "Długi Kąt",
+     "lon": 23.1032003,
+     "lat": 50.4822426
+    }
+   ]
+  },
+  {
+   "id": "lubycza-krolewska",
+   "name": "Lubycza Królewska",
+   "bbox": [
+    23.51242,
+    50.32744,
+    23.54901,
+    50.35084
+   ],
+   "stations": [
+    {
+     "name": "Lubycza Królewska",
+     "lon": 23.5307154,
+     "lat": 50.3391394
+    }
+   ]
+  },
+  {
+   "id": "majdan",
+   "name": "Majdan",
+   "bbox": [
+    22.40785,
+    51.13669,
+    22.44508,
+    51.16008
+   ],
+   "stations": [
+    {
+     "name": "Majdan",
+     "lon": 22.4264672,
+     "lat": 51.1483852
+    }
+   ]
+  },
+  {
+   "id": "niedrzwica-koscielna",
+   "name": "Niedrzwica Kościelna",
+   "bbox": [
+    22.34512,
+    51.06807,
+    22.3823,
+    51.09147
+   ],
+   "stations": [
+    {
+     "name": "Niedrzwica Kościelna",
+     "lon": 22.3637081,
+     "lat": 51.0797728
+    }
+   ]
+  },
+  {
+   "id": "czeslawice",
+   "name": "Czesławice",
+   "bbox": [
+    22.24432,
+    51.29595,
+    22.28169,
+    51.31934
+   ],
+   "stations": [
+    {
+     "name": "Czesławice",
+     "lon": 22.2630048,
+     "lat": 51.3076439
+    }
+   ]
+  },
+  {
+   "id": "krzywda",
+   "name": "Krzywda",
+   "bbox": [
+    22.18676,
+    51.78357,
+    22.22453,
+    51.80697
+   ],
+   "stations": [
+    {
+     "name": "Krzywda",
+     "lon": 22.2056436,
+     "lat": 51.7952727
+    }
+   ]
+  },
+  {
+   "id": "pulankowice",
+   "name": "Pułankowice",
+   "bbox": [
+    22.28785,
+    50.94739,
+    22.32493,
+    50.97078
+   ],
+   "stations": [
+    {
+     "name": "Pułankowice",
+     "lon": 22.306388,
+     "lat": 50.9590837
+    }
+   ]
+  },
+  {
+   "id": "tarzymiechy",
+   "name": "Tarzymiechy",
+   "bbox": [
+    23.10358,
+    50.84287,
+    23.14058,
+    50.86627
+   ],
+   "stations": [
+    {
+     "name": "Tarzymiechy",
+     "lon": 23.1220821,
+     "lat": 50.8545719
+    }
+   ]
+  },
+  {
+   "id": "wolka-niedzieliska",
+   "name": "Wólka Niedzieliska",
+   "bbox": [
+    23.06829,
+    50.69701,
+    23.10517,
+    50.72041
+   ],
+   "stations": [
+    {
+     "name": "Wólka Niedzieliska",
+     "lon": 23.0867324,
+     "lat": 50.7087127
+    }
+   ]
+  },
+  {
+   "id": "krasnystaw-miasto",
+   "name": "Krasnystaw Miasto",
+   "bbox": [
+    23.1644,
+    50.97334,
+    23.2015,
+    50.99673
+   ],
+   "stations": [
+    {
+     "name": "Krasnystaw Miasto",
+     "lon": 23.1829473,
+     "lat": 50.9850354
+    }
+   ]
+  },
+  {
+   "id": "izbica",
+   "name": "Izbica",
+   "bbox": [
+    23.13694,
+    50.87887,
+    23.17397,
+    50.90227
+   ],
+   "stations": [
+    {
+     "name": "Izbica",
+     "lon": 23.1554521,
+     "lat": 50.8905686
+    }
+   ]
+  },
+  {
+   "id": "kanie",
+   "name": "Kanie",
+   "bbox": [
+    23.08546,
+    51.11295,
+    23.12268,
+    51.13634
+   ],
+   "stations": [
+    {
+     "name": "Kanie",
+     "lon": 23.1040689,
+     "lat": 51.1246459
+    }
+   ]
+  },
+  {
+   "id": "zalesie-krasienskie",
+   "name": "Zalesie Krasieńskie",
+   "bbox": [
+    23.14786,
+    51.11,
+    23.18507,
+    51.1334
+   ],
+   "stations": [
+    {
+     "name": "Zalesie Krasieńskie",
+     "lon": 23.1664614,
+     "lat": 51.121702
+    }
+   ]
+  },
+  {
+   "id": "wolka-kanska",
+   "name": "Wólka Kańska",
+   "bbox": [
+    23.0478,
+    51.11671,
+    23.08501,
+    51.14011
+   ],
+   "stations": [
+    {
+     "name": "Wólka Kańska",
+     "lon": 23.066406,
+     "lat": 51.1284122
+    }
+   ]
+  },
+  {
+   "id": "nowiny",
+   "name": "Nowiny",
+   "bbox": [
+    23.1231,
+    50.43739,
+    23.15978,
+    50.46078
+   ],
+   "stations": [
+    {
+     "name": "Nowiny",
+     "lon": 23.1414367,
+     "lat": 50.4490854
+    }
+   ]
+  },
+  {
+   "id": "zwierzyniec",
+   "name": "Zwierzyniec",
+   "bbox": [
+    22.96562,
+    50.5977,
+    23.00243,
+    50.6211
+   ],
+   "stations": [
+    {
+     "name": "Zwierzyniec",
+     "lon": 22.9840234,
+     "lat": 50.6094016
+    }
+   ]
+  },
+  {
+   "id": "stulno",
+   "name": "Stulno",
+   "bbox": [
+    23.59234,
+    51.34507,
+    23.63084,
+    51.38801
+   ],
+   "stations": [
+    {
+     "name": "Stulno",
+     "lon": 23.6121312,
+     "lat": 51.3763146
+    },
+    {
+     "name": "Majdan Stuleński",
+     "lon": 23.6110391,
+     "lat": 51.3567678
+    }
+   ]
+  },
+  {
+   "id": "uhrusk-przystanek",
+   "name": "Uhrusk Przystanek",
+   "bbox": [
+    23.60025,
+    51.28391,
+    23.6376,
+    51.30731
+   ],
+   "stations": [
+    {
+     "name": "Uhrusk Przystanek",
+     "lon": 23.6189241,
+     "lat": 51.2956096
+    }
+   ]
+  },
+  {
+   "id": "krynka-lukowska",
+   "name": "Krynka Łukowska",
+   "bbox": [
+    22.35681,
+    51.99501,
+    22.39475,
+    52.0184
+   ],
+   "stations": [
+    {
+     "name": "Krynka Łukowska",
+     "lon": 22.3757786,
+     "lat": 52.006707
+    }
+   ]
+  },
+  {
+   "id": "matysy",
+   "name": "Matysy",
+   "bbox": [
+    22.4749,
+    51.92829,
+    22.51279,
+    51.95169
+   ],
+   "stations": [
+    {
+     "name": "Matysy",
+     "lon": 22.4938478,
+     "lat": 51.9399913
+    }
+   ]
+  },
+  {
+   "id": "misie",
+   "name": "Misie",
+   "bbox": [
+    22.66925,
+    51.94762,
+    22.70715,
+    51.97101
+   ],
+   "stations": [
+    {
+     "name": "Misie",
+     "lon": 22.6882004,
+     "lat": 51.9593134
+    }
+   ]
+  },
+  {
+   "id": "sitno",
+   "name": "Sitno",
+   "bbox": [
+    22.84709,
+    51.97409,
+    22.88501,
+    51.99748
+   ],
+   "stations": [
+    {
+     "name": "Sitno",
+     "lon": 22.8660503,
+     "lat": 51.9857848
+    }
+   ]
+  },
+  {
+   "id": "szachy",
+   "name": "Szachy",
+   "bbox": [
+    22.89158,
+    51.98002,
+    22.92951,
+    52.00342
+   ],
+   "stations": [
+    {
+     "name": "Szachy",
+     "lon": 22.910541,
+     "lat": 51.9917224
+    }
+   ]
+  },
+  {
+   "id": "sokule",
+   "name": "Sokule",
+   "bbox": [
+    22.93823,
+    51.98624,
+    22.97616,
+    52.00963
+   ],
+   "stations": [
+    {
+     "name": "Sokule",
+     "lon": 22.9571939,
+     "lat": 51.9979351
+    }
+   ]
+  },
+  {
+   "id": "ogrodniki",
+   "name": "Ogrodniki",
+   "bbox": [
+    23.22074,
+    51.9891,
+    23.25868,
+    52.01249
+   ],
+   "stations": [
+    {
+     "name": "Ogrodniki",
+     "lon": 23.2397077,
+     "lat": 52.0007939
+    }
+   ]
+  },
+  {
+   "id": "dobrynka",
+   "name": "Dobrynka",
+   "bbox": [
+    23.42241,
+    51.98687,
+    23.46035,
+    52.01027
+   ],
+   "stations": [
+    {
+     "name": "Dobrynka",
+     "lon": 23.4413808,
+     "lat": 51.9985697
+    }
+   ]
+  },
+  {
+   "id": "malaszewicze",
+   "name": "Małaszewicze",
+   "bbox": [
+    23.51269,
+    52.01565,
+    23.57997,
+    52.04936
+   ],
+   "stations": [
+    {
+     "name": "Małaszewicze",
+     "lon": 23.5316725,
+     "lat": 52.0273444
+    },
+    {
+     "name": "Kobylany",
+     "lon": 23.5609897,
+     "lat": 52.0376649
+    }
+   ]
+  },
+  {
+   "id": "klementowice",
+   "name": "Klementowice",
+   "bbox": [
+    22.09146,
+    51.35101,
+    22.12887,
+    51.37441
+   ],
+   "stations": [
+    {
+     "name": "Klementowice",
+     "lon": 22.1101676,
+     "lat": 51.3627122
+    }
+   ]
+  },
+  {
+   "id": "chelm-cementownia",
+   "name": "Chełm Cementownia",
+   "bbox": [
+    23.52372,
+    51.12926,
+    23.56095,
+    51.15266
+   ],
+   "stations": [
+    {
+     "name": "Chełm Cementownia",
+     "lon": 23.5423366,
+     "lat": 51.1409603
+    }
+   ]
+  },
+  {
+   "id": "lesniczowka",
+   "name": "Leśniczówka",
+   "bbox": [
+    22.33807,
+    51.03784,
+    22.37522,
+    51.06124
+   ],
+   "stations": [
+    {
+     "name": "Leśniczówka",
+     "lon": 22.3566479,
+     "lat": 51.0495381
+    }
+   ]
+  },
+  {
+   "id": "ciecierzyn",
+   "name": "Ciecierzyn",
+   "bbox": [
+    22.58945,
+    51.29371,
+    22.63579,
+    51.33064
+   ],
+   "stations": [
+    {
+     "name": "Ciecierzyn",
+     "lon": 22.6081345,
+     "lat": 51.3189376
+    },
+    {
+     "name": "Łagiewniki",
+     "lon": 22.6171099,
+     "lat": 51.3054087
+    }
+   ]
+  },
+  {
+   "id": "milocin-lubelski",
+   "name": "Miłocin Lubelski",
+   "bbox": [
+    22.2936,
+    51.25723,
+    22.33093,
+    51.28062
+   ],
+   "stations": [
+    {
+     "name": "Miłocin Lubelski",
+     "lon": 22.312265,
+     "lat": 51.2689265
+    }
+   ]
+  },
+  {
+   "id": "-7",
+   "name": "Заказанка",
+   "bbox": [
+    23.6633,
+    51.95262,
+    23.70121,
+    51.97601
+   ],
+   "stations": [
+    {
+     "name": "Заказанка",
+     "lon": 23.682252,
+     "lat": 51.9643143
+    }
+   ]
+  },
+  {
+   "id": "brzeznica-bychawska",
+   "name": "Brzeźnica Bychawska",
+   "bbox": [
+    22.70276,
+    51.50252,
+    22.78202,
+    51.55507
+   ],
+   "stations": [
+    {
+     "name": "Brzeźnica Bychawska",
+     "lon": 22.7425499,
+     "lat": 51.5289046
+    },
+    {
+     "name": "Zabiele",
+     "lon": 22.7632464,
+     "lat": 51.5433726
+    },
+    {
+     "name": "Berejów",
+     "lon": 22.7215248,
+     "lat": 51.5142192
+    }
+   ]
+  },
+  {
+   "id": "tarlo",
+   "name": "Tarło",
+   "bbox": [
+    22.66777,
+    51.49467,
+    22.7053,
+    51.51807
+   ],
+   "stations": [
+    {
+     "name": "Tarło",
+     "lon": 22.6865331,
+     "lat": 51.5063702
+    }
+   ]
+  },
+  {
+   "id": "skoki-borowa",
+   "name": "Skoki-Borowa",
+   "bbox": [
+    21.82964,
+    51.52844,
+    21.86719,
+    51.55184
+   ],
+   "stations": [
+    {
+     "name": "Skoki-Borowa",
+     "lon": 21.8484147,
+     "lat": 51.5401372
+    }
+   ]
+  },
+  {
+   "id": "wandzin",
+   "name": "Wandzin",
+   "bbox": [
+    22.61118,
+    51.38678,
+    22.64861,
+    51.41018
+   ],
+   "stations": [
+    {
+     "name": "Wandzin",
+     "lon": 22.6298966,
+     "lat": 51.3984808
+    }
+   ]
+  },
+  {
+   "id": "hordziezka",
+   "name": "Hordzieżka",
+   "bbox": [
+    22.14207,
+    51.74294,
+    22.1798,
+    51.76634
+   ],
+   "stations": [
+    {
+     "name": "Hordzieżka",
+     "lon": 22.1609371,
+     "lat": 51.7546384
+    }
+   ]
+  },
+  {
+   "id": "jozefow-roztoczanski",
+   "name": "Józefów Roztoczański",
+   "bbox": [
+    23.0214,
+    50.50649,
+    23.05814,
+    50.52989
+   ],
+   "stations": [
+    {
+     "name": "Józefów Roztoczański",
+     "lon": 23.0397708,
+     "lat": 50.5181888
+    }
+   ]
+  },
+  {
+   "id": "perkowice",
+   "name": "Perkowice",
+   "bbox": [
+    23.26091,
+    51.98492,
+    23.29884,
+    52.00831
+   ],
+   "stations": [
+    {
+     "name": "Perkowice",
+     "lon": 23.2798734,
+     "lat": 51.9966141
+    }
+   ]
+  },
+  {
+   "id": "pulawy-chemia",
+   "name": "Puławy Chemia",
+   "bbox": [
+    21.94953,
+    51.41609,
+    22.00296,
+    51.45821
+   ],
+   "stations": [
+    {
+     "name": "Puławy Chemia",
+     "lon": 21.9682653,
+     "lat": 51.4465088
+    },
+    {
+     "name": "Puławy Miasto",
+     "lon": 21.9842322,
+     "lat": 51.4277854
+    }
+   ]
+  },
+  {
+   "id": "sarnow",
+   "name": "Sarnów",
+   "bbox": [
+    22.27696,
+    51.83115,
+    22.31477,
+    51.85454
+   ],
+   "stations": [
+    {
+     "name": "Sarnów",
+     "lon": 22.2958669,
+     "lat": 51.8428429
+    }
+   ]
+  },
+  {
+   "id": "grabow-szlachecki",
+   "name": "Grabów Szlachecki",
+   "bbox": [
+    22.07779,
+    51.69213,
+    22.11548,
+    51.71552
+   ],
+   "stations": [
+    {
+     "name": "Grabów Szlachecki",
+     "lon": 22.0966378,
+     "lat": 51.7038252
+    }
+   ]
+  },
+  {
+   "id": "leopoldow",
+   "name": "Leopoldów",
+   "bbox": [
+    21.99374,
+    51.65655,
+    22.0314,
+    51.67995
+   ],
+   "stations": [
+    {
+     "name": "Leopoldów",
+     "lon": 22.0125677,
+     "lat": 51.6682485
+    }
+   ]
+  },
+  {
+   "id": "aleksandrow",
+   "name": "Aleksandrów",
+   "bbox": [
+    22.46334,
+    51.89256,
+    22.50119,
+    51.91596
+   ],
+   "stations": [
+    {
+     "name": "Aleksandrów",
+     "lon": 22.4822646,
+     "lat": 51.9042578
+    }
+   ]
+  },
+  {
+   "id": "jaski",
+   "name": "Jaski",
+   "bbox": [
+    22.57206,
+    51.84795,
+    22.60988,
+    51.87135
+   ],
+   "stations": [
+    {
+     "name": "Jaski",
+     "lon": 22.5909733,
+     "lat": 51.8596515
+    }
+   ]
+  },
+  {
+   "id": "radzyn-podlaski",
+   "name": "Radzyń Podlaski",
+   "bbox": [
+    22.64993,
+    51.81542,
+    22.68772,
+    51.83881
+   ],
+   "stations": [
+    {
+     "name": "Radzyń Podlaski",
+     "lon": 22.6688263,
+     "lat": 51.8271136
+    }
+   ]
+  },
+  {
+   "id": "ustrzesz",
+   "name": "Ustrzesz",
+   "bbox": [
+    22.71066,
+    51.79065,
+    22.74843,
+    51.81404
+   ],
+   "stations": [
+    {
+     "name": "Ustrzesz",
+     "lon": 22.7295456,
+     "lat": 51.8023448
+    }
+   ]
+  },
+  {
+   "id": "bezwola",
+   "name": "Bezwola",
+   "bbox": [
+    22.78536,
+    51.76016,
+    22.8231,
+    51.78356
+   ],
+   "stations": [
+    {
+     "name": "Bezwola",
+     "lon": 22.8042282,
+     "lat": 51.7718584
+    }
+   ]
+  },
+  {
+   "id": "milanow",
+   "name": "Milanów",
+   "bbox": [
+    22.85632,
+    51.69039,
+    22.894,
+    51.71378
+   ],
+   "stations": [
+    {
+     "name": "Milanów",
+     "lon": 22.8751599,
+     "lat": 51.7020863
+    }
+   ]
+  },
+  {
+   "id": "palecznica",
+   "name": "Pałecznica",
+   "bbox": [
+    22.64037,
+    51.47871,
+    22.67788,
+    51.50211
+   ],
+   "stations": [
+    {
+     "name": "Pałecznica",
+     "lon": 22.6591241,
+     "lat": 51.4904108
+    }
+   ]
+  },
+  {
+   "id": "szaniawy",
+   "name": "Szaniawy",
+   "bbox": [
+    22.52594,
+    51.93523,
+    22.56383,
+    51.95862
+   ],
+   "stations": [
+    {
+     "name": "Szaniawy",
+     "lon": 22.5448868,
+     "lat": 51.9469265
+    }
+   ]
+  },
+  {
+   "id": "golab",
+   "name": "Gołąb",
+   "bbox": [
+    21.89119,
+    51.49359,
+    21.92871,
+    51.51699
+   ],
+   "stations": [
+    {
+     "name": "Gołąb",
+     "lon": 21.9099476,
+     "lat": 51.5052883
+    }
+   ]
+  },
+  {
+   "id": "chelm-miasto",
+   "name": "Chełm Miasto",
+   "bbox": [
+    23.43971,
+    51.12636,
+    23.47693,
+    51.14975
+   ],
+   "stations": [
+    {
+     "name": "Chełm Miasto",
+     "lon": 23.458321,
+     "lat": 51.1380549
+    }
+   ]
+  },
+  {
+   "id": "sulow",
+   "name": "Sulów",
+   "bbox": [
+    22.31476,
+    50.8937,
+    22.35179,
+    50.91709
+   ],
+   "stations": [
+    {
+     "name": "Sulów",
+     "lon": 22.3332742,
+     "lat": 50.9053964
+    }
+   ]
+  },
+  {
+   "id": "potok-krasnicki",
+   "name": "Potok Kraśnicki",
+   "bbox": [
+    22.14484,
+    50.78491,
+    22.18179,
+    50.8083
+   ],
+   "stations": [
+    {
+     "name": "Potok Kraśnicki",
+     "lon": 22.1633143,
+     "lat": 50.7966033
+    }
+   ]
+  },
+  {
+   "id": "krzak",
+   "name": "Krzak",
+   "bbox": [
+    23.07707,
+    50.78995,
+    23.11403,
+    50.81335
+   ],
+   "stations": [
+    {
+     "name": "Krzak",
+     "lon": 23.0955525,
+     "lat": 50.8016498
+    }
+   ]
+  },
+  {
+   "id": "karolinowka",
+   "name": "Karolinówka",
+   "bbox": [
+    23.53198,
+    51.17813,
+    23.56924,
+    51.20153
+   ],
+   "stations": [
+    {
+     "name": "Karolinówka",
+     "lon": 23.5506086,
+     "lat": 51.1898305
+    }
+   ]
+  },
+  {
+   "id": "ryki",
+   "name": "Ryki",
+   "bbox": [
+    21.90375,
+    51.59465,
+    21.94136,
+    51.61804
+   ],
+   "stations": [
+    {
+     "name": "Ryki",
+     "lon": 21.9225525,
+     "lat": 51.6063468
+    }
+   ]
+  },
+  {
+   "id": "okuninka-biale",
+   "name": "Okuninka Białe",
+   "bbox": [
+    23.57111,
+    51.48003,
+    23.60862,
+    51.50342
+   ],
+   "stations": [
+    {
+     "name": "Okuninka Białe",
+     "lon": 23.589867,
+     "lat": 51.4917267
+    }
+   ]
+  },
+  {
+   "id": "polichna-krasnicka",
+   "name": "Polichna Kraśnicka",
+   "bbox": [
+    22.28799,
+    50.81936,
+    22.32497,
+    50.84276
+   ],
+   "stations": [
+    {
+     "name": "Polichna Kraśnicka",
+     "lon": 22.3064774,
+     "lat": 50.8310601
+    }
+   ]
+  },
+  {
+   "id": "rzeczyca-kolonia",
+   "name": "Rzeczyca-Kolonia",
+   "bbox": [
+    22.24865,
+    50.82998,
+    22.28564,
+    50.85337
+   ],
+   "stations": [
+    {
+     "name": "Rzeczyca-Kolonia",
+     "lon": 22.2671427,
+     "lat": 50.8416758
+    }
+   ]
+  },
+  {
+   "id": "laski",
+   "name": "Laski",
+   "bbox": [
+    22.8224,
+    51.59626,
+    22.86001,
+    51.61965
+   ],
+   "stations": [
+    {
+     "name": "Laski",
+     "lon": 22.8412082,
+     "lat": 51.6079537
+    }
+   ]
+  },
+  {
+   "id": "zlojec",
+   "name": "Złojec",
+   "bbox": [
+    23.08253,
+    50.75684,
+    23.11945,
+    50.78023
+   ],
+   "stations": [
+    {
+     "name": "Złojec",
+     "lon": 23.1009898,
+     "lat": 50.7685363
+    }
+   ]
+  },
+  {
+   "id": "wolka-orlowska",
+   "name": "Wólka Orłowska",
+   "bbox": [
+    23.16491,
+    50.91527,
+    23.20197,
+    50.93866
+   ],
+   "stations": [
+    {
+     "name": "Wólka Orłowska",
+     "lon": 23.1834418,
+     "lat": 50.9269656
+    }
+   ]
+  },
+  {
+   "id": "brzozowica",
+   "name": "Brzozowica",
+   "bbox": [
+    22.58859,
+    51.94201,
+    22.62649,
+    51.96541
+   ],
+   "stations": [
+    {
+     "name": "Brzozowica",
+     "lon": 22.6075372,
+     "lat": 51.9537091
+    }
+   ]
+  },
+  {
+   "id": "zurawnica",
+   "name": "Żurawnica",
+   "bbox": [
+    22.94138,
+    50.63072,
+    22.97821,
+    50.65411
+   ],
+   "stations": [
+    {
+     "name": "Żurawnica",
+     "lon": 22.9597963,
+     "lat": 50.6424163
+    }
+   ]
+  },
+  {
+   "id": "niedzieliska-kolonia",
+   "name": "Niedzieliska-Kolonia",
+   "bbox": [
+    23.02593,
+    50.6866,
+    23.06281,
+    50.70999
+   ],
+   "stations": [
+    {
+     "name": "Niedzieliska-Kolonia",
+     "lon": 23.0443688,
+     "lat": 50.6982971
+    }
+   ]
+  }
+ ]
+}
