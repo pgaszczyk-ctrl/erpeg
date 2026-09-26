@@ -55,6 +55,11 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.hearts = [];
+    // The scene object is reused when it starts again (after a coach ride):
+    // drop the old, destroyed objects.
+    this.fruitIcons = [];
+    this.fruitTexts = [];
+    this.dialogButtons = [];
     this.overlay = undefined;
     this.ui = Math.max(2, Math.round(Math.min(this.scale.width, this.scale.height) / 220));
 

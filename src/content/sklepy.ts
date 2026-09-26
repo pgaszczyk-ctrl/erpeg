@@ -12,13 +12,26 @@
 //  mieczem: każde uderzenie zrzuca jeden owoc (2–5 na drzewo). Owoce
 //  sprzedaje się w sklepie. Po ponownym uruchomieniu gry drzewa odrastają.
 // ----------------------------------------------------------------------------
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono';
+// Grzyby i drewno leżą w plecaku tak jak owoce i też sprzedaje się je w sklepie.
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'grzyb' | 'drewno';
 
-export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number }> = {
-  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', cena: 2 },
-  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', cena: 3 },
-  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', cena: 5 },
+/** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
+export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; jadalne: boolean }> = {
+  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', cena: 2, jadalne: true },
+  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', cena: 3, jadalne: true },
+  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', cena: 5, jadalne: true },
+  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 6, jadalne: true },
+  drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false },
 };
+
+// ----------------------------------------------------------------------------
+//  LAS – w lasach rosną grzyby (zbiera się je, wchodząc na nie) i drzewa do
+//  ścięcia (kilka uderzeń bronią = jedno drewno). Po ponownym uruchomieniu
+//  gry wszystko odrasta.
+//  kratka – las dzieli się na kratki o takim boku (metry); w każdej może być
+//  grzyb i drzewo do ścięcia, z podaną szansą.
+// ----------------------------------------------------------------------------
+export const LAS = { kratkaM: 30, szansaGrzyb: 0.3, szansaDrzewo: 0.45, uderzenNaDrzewo: 4 };
 
 /** Ile drzew na 1000 m² zieleni (i najwyżej ile na jeden trawnik/działki). */
 export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200 };

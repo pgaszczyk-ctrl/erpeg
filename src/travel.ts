@@ -26,8 +26,8 @@ export interface Trip {
 }
 
 /** Coins for a ride: a fixed fee plus a bit per kilometre. */
-export const COACH_FEE = 10;
-export const COACH_PER_KM = 3;
+export const COACH_FEE = 100;
+export const COACH_PER_KM = 30;
 /** How many destinations a coachman offers. */
 const MAX_TRIPS = 5;
 

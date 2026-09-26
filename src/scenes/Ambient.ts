@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, pointInRings, type CityMap, type Area, type Line } from '../map/CityMap';
-import { DRZEWA, type Owoc } from '../content/sklepy';
+import { DRZEWA, LAS, type Owoc } from '../content/sklepy';
 import type { RodzajWroga } from '../content/fabula';
 import { rng } from '../rng';
 
@@ -15,7 +15,7 @@ const FRUIT_AREAS: Record<string, Owoc[]> = {
   grass: ['jablko', 'sliwka', 'winogrono'],
   farmland: ['jablko', 'sliwka'],
 };
-const TREE_TEX: Record<Owoc, string> = { jablko: TEX.treeApple, sliwka: TEX.treePlum, winogrono: TEX.vine };
+const TREE_TEX: Partial<Record<Owoc, string>> = { jablko: TEX.treeApple, sliwka: TEX.treePlum, winogrono: TEX.vine };
 const NEAR = 520; // px: create things closer than this
 const FAR = 900; // px: remove things farther than this
 
@@ -82,7 +82,7 @@ export class Orchards {
       for (const t of this.treesOf(a, this.city.areas.indexOf(a))) {
         if (t.sprite || Math.hypot(t.x - px, t.y - py) > NEAR) continue;
         t.sprite = this.scene.add
-          .image(t.x, t.y, TREE_TEX[t.fruit], t.left > 0 ? 'full' : 'bare')
+          .image(t.x, t.y, TREE_TEX[t.fruit]!, t.left > 0 ? 'full' : 'bare')
           .setOrigin(0.5, 0.92)
           .setDepth(t.y);
         this.active.add(t);
@@ -96,7 +96,7 @@ export class Orchards {
     for (const a of this.city.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).areas) {
       if (!FRUIT_AREAS[a.kind]) continue;
       for (const t of this.treesOf(a, this.city.areas.indexOf(a))) {
-        if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit], 'full').width });
+        if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit]!, 'full').width });
       }
     }
     return out;
@@ -130,6 +130,135 @@ export class Orchards {
     if (t.left <= 0) return false;
     t.left--;
     if (t.left === 0) t.sprite?.setFrame('bare');
+    return true;
+  }
+}
+
+// ---------------------------------------------------------------- forest
+
+export interface ForestSpot {
+  id: string;
+  x: number;
+  y: number;
+  kind: 'grzyb' | 'drzewo';
+  /** Hits left for a tree. */
+  left: number;
+  sprite?: Phaser.GameObjects.Image;
+}
+
+function hashStr(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * Mushrooms and pines to cut in forests: the forest is split into small
+ * squares and each may hold one of each, always in the same places. Picked
+ * mushrooms and felled trees come back at the next login.
+ */
+export class Forest {
+  private cells = new Map<string, ForestSpot[]>();
+  private active = new Set<ForestSpot>();
+  private gone = new Set<string>();
+  private next = 0;
+  private cell = LAS.kratkaM * PX_PER_M;
+
+  /** `spawn` puts a mushroom on the ground as a pickup, `remove` takes it away. */
+  constructor(
+    private scene: Phaser.Scene,
+    private city: CityMap,
+    private spawn: (s: ForestSpot) => Phaser.GameObjects.Image,
+    private remove: (img: Phaser.GameObjects.Image) => void,
+  ) {}
+
+  private spotsOf(cx: number, cy: number): ForestSpot[] {
+    const key = `${cx}:${cy}`;
+    let list = this.cells.get(key);
+    if (list) return list;
+    list = [];
+    const r = rng(hashStr(`${this.city.id}:${key}`));
+    for (const [kind, chance] of [['grzyb', LAS.szansaGrzyb], ['drzewo', LAS.szansaDrzewo]] as const) {
+      const roll = r();
+      const x = (cx + 0.1 + r() * 0.8) * this.cell;
+      const y = (cy + 0.1 + r() * 0.8) * this.cell;
+      if (roll >= chance) continue;
+      if (!this.city.areaKindsAt(x, y).includes('forest')) continue;
+      if (!this.city.isFree(x, y, 5, 5) || this.city.roadAt(x, y)) continue;
+      list.push({ id: `${kind}:${key}`, x, y, kind, left: LAS.uderzenNaDrzewo });
+    }
+    this.cells.set(key, list);
+    return list;
+  }
+
+  update(px: number, py: number, now: number) {
+    if (now < this.next) return;
+    this.next = now + 500;
+    for (const s of [...this.active]) {
+      if (Math.hypot(s.x - px, s.y - py) <= FAR) continue;
+      if (s.sprite) (s.kind === 'grzyb' ? this.remove(s.sprite) : s.sprite.destroy());
+      s.sprite = undefined;
+      this.active.delete(s);
+    }
+    const c0x = Math.floor((px - NEAR) / this.cell);
+    const c1x = Math.floor((px + NEAR) / this.cell);
+    const c0y = Math.floor((py - NEAR) / this.cell);
+    const c1y = Math.floor((py + NEAR) / this.cell);
+    // Only where there is forest at all.
+    const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
+    if (!areas.some((a) => a.kind === 'forest')) return;
+    for (let cy = c0y; cy <= c1y; cy++) {
+      for (let cx = c0x; cx <= c1x; cx++) {
+        for (const s of this.spotsOf(cx, cy)) {
+          if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
+          if (s.kind === 'grzyb') {
+            if (this.gone.has(s.id)) continue;
+            s.sprite = this.spawn(s);
+          } else {
+            s.sprite = this.scene.add.image(s.x, s.y, TEX.pine, this.gone.has(s.id) ? 'stump' : 'full').setOrigin(0.5, 0.92).setDepth(s.y);
+          }
+          this.active.add(s);
+        }
+      }
+    }
+  }
+
+  /** A mushroom was picked up: it stays gone until the next login. */
+  picked(id: string) {
+    this.gone.add(id);
+    for (const s of this.active) if (s.id === id) {
+      s.sprite = undefined;
+      this.active.delete(s);
+    }
+  }
+
+  /** Is a point inside a standing trunk? (for collisions) */
+  blocked(x: number, y: number) {
+    for (const s of this.active) if (s.kind === 'drzewo' && !this.gone.has(s.id) && Math.abs(s.x - x) < 3 && Math.abs(s.y - y) < 2.5) return true;
+    return false;
+  }
+
+  /** The nearest standing tree a swing at (x, y) hits. */
+  hitAt(x: number, y: number, reach: number): ForestSpot | null {
+    let best: ForestSpot | null = null;
+    let bd = reach;
+    for (const s of this.active) {
+      if (s.kind !== 'drzewo' || this.gone.has(s.id)) continue;
+      const d = Math.hypot(s.x - x, s.y - 8 - y);
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /** One axe blow; true when the tree falls (and gives wood). */
+  chop(s: ForestSpot): boolean {
+    if (s.sprite) this.scene.tweens.add({ targets: s.sprite, angle: { from: -5, to: 5 }, duration: 50, yoyo: true, repeat: 1, onComplete: () => s.sprite?.setAngle(0) });
+    if (--s.left > 0) return false;
+    this.gone.add(s.id);
+    s.sprite?.setFrame('stump');
     return true;
   }
 }

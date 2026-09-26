@@ -35,6 +35,10 @@ export const TEX = {
   fruitApple: 'fruit-apple',
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
+  mushroom: 'mushroom',
+  log: 'log',
+  pine: 'pine',
+  signBank: 'sign-bank',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
   signOffice: 'sign-office',
@@ -716,6 +720,57 @@ function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: s
   tex.refresh();
 }
 
+/** A red toadstool-like bolete (to pick up) and a log of wood. */
+function drawForestItems(scene: Phaser.Scene) {
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.mushroom, 8, 8);
+    px(ctx, 1, 1, 6, 4, OUTLINE);
+    px(ctx, 0, 2, 8, 2, OUTLINE);
+    px(ctx, 1, 2, 6, 2, '#a0522d');
+    px(ctx, 2, 1, 4, 1, '#c8743f');
+    px(ctx, 2, 2, 1, 1, '#e8a060');
+    px(ctx, 2, 4, 4, 4, OUTLINE);
+    px(ctx, 3, 4, 2, 3, '#f3e2c0');
+    tex.refresh();
+  }
+  {
+    const { tex, ctx } = canvasTexture(scene, TEX.log, 10, 6);
+    px(ctx, 0, 0, 10, 6, OUTLINE);
+    px(ctx, 1, 1, 7, 4, '#8a5a2b');
+    px(ctx, 1, 2, 7, 1, '#6b4423');
+    px(ctx, 8, 1, 1, 4, '#e8c890');
+    px(ctx, 8, 2, 1, 2, '#c8a060');
+    tex.refresh();
+  }
+  {
+    // A pine to cut down: 'full' and a 'stump'.
+    const W = 16, H = 26;
+    const { tex, ctx } = canvasTexture(scene, TEX.pine, W * 2, H);
+    for (let f = 0; f < 2; f++) {
+      const ox = f * W;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(ox + 8, 24, 5, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (f === 0) {
+        px(ctx, ox + 6, 18, 4, 6, OUTLINE);
+        px(ctx, ox + 7, 18, 2, 5, '#6b4423');
+        for (const [y, w] of [[1, 4], [5, 8], [9, 12], [13, 14]]) {
+          px(ctx, ox + 8 - w / 2 - 1, y, w + 2, 6, OUTLINE);
+          px(ctx, ox + 8 - w / 2, y + 1, w, 4, '#2a6a3a');
+          px(ctx, ox + 8 - w / 2, y + 1, w / 2, 1, '#3f8f4f');
+        }
+      } else {
+        px(ctx, ox + 5, 20, 6, 4, OUTLINE);
+        px(ctx, ox + 6, 21, 4, 2, '#8a5a2b');
+        px(ctx, ox + 6, 20, 4, 1, '#e8c890');
+      }
+      tex.add(f === 0 ? 'full' : 'stump', 0, ox, 0, W, H);
+    }
+    tex.refresh();
+  }
+}
+
 // Projectiles (pointing right, rotated in flight) and training stations.
 function drawCombatExtras(scene: Phaser.Scene) {
   {
@@ -791,6 +846,14 @@ function drawCombatExtras(scene: Phaser.Scene) {
     px(ctx, 5, 5, 2, 3, '#d8f3ff');
     tex.refresh();
   }
+  drawSign(scene, TEX.signBank, '#b8902a', '#f0cc5a', (p) => {
+    // A gold coin.
+    p(4, 3, 6, 8, '#1e1a24');
+    p(3, 4, 8, 6, '#1e1a24');
+    p(4, 4, 6, 6, '#f7c531');
+    p(5, 5, 1, 4, '#fff3a0');
+    p(7, 5, 1, 4, '#b8902a');
+  });
   drawSign(scene, TEX.signHotel, '#8a3a6a', '#c86aa0', (p) => {
     // A bed with a pillow.
     p(2, 5, 1, 6, '#fff6e0');
@@ -812,6 +875,7 @@ export function createArt(scene: Phaser.Scene) {
   drawFruitTree(scene, TEX.treePlum, '#5b3a9a', '#a88be0');
   drawVine(scene);
   drawFruitItem(scene, TEX.fruitApple, '#e43b44', '#ffb3b8');
+  drawForestItems(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawSigns(scene);

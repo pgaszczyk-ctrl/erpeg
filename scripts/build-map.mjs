@@ -144,21 +144,12 @@ const addrNodes = [];
 const pois = [];
 const roundabouts = [];
 
-// Shops of these chains become in-game shops; schools become skill schools.
-const SHOP_CHAINS = [
-  ['Biedronka', /biedronka/i],
-  ['Lidl', /lidl/i],
-  ['Lewiatan', /lewiatan/i],
-  ['Delikatesy Centrum', /delikatesy\s*centrum/i],
-];
+// Every supermarket is an in-game shop, whatever the chain (Biedronka, Lidl,
+// and abroad Albert Heijn, Edeka…); schools become skill schools.
 function poiOf(t) {
-  if (t.shop && ['supermarket', 'convenience', 'discount'].includes(t.shop)) {
-    const label = `${t.brand || ''} ${t.name || ''}`;
-    const chain = SHOP_CHAINS.find(([, re]) => re.test(label));
-    if (chain) return ['shop', chain[0]];
-    // Towns and villages: any named grocery is a shop (few chain stores there).
-    if (BBOX && t.name) return ['shop', t.name];
-  }
+  if (t.shop === 'supermarket' || t.shop === 'discount') return ['shop', t.brand || t.name || 'Supermarket'];
+  // Towns and villages: a named grocery counts too (few supermarkets there).
+  if (BBOX && t.shop === 'convenience' && t.name) return ['shop', t.name];
   // Real schools only: not driving or language schools.
   if (t.amenity === 'school' && t.name && /szko|liceum|technikum|gimnazjum|zespół|zespol|school/i.test(t.name) && !/auto|jazd|język|jezyk|tańc|tanc|muzy/i.test(t.name)) {
     return ['school', t.name];

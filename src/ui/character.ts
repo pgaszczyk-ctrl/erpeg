@@ -8,7 +8,7 @@ import { session } from '../quests';
 // The character sheet (an HTML overlay): money, equipment, a 5-slot backpack
 // and the skills the character can use. Opened with 👤 or C.
 
-const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇' } as const;
+const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇', grzyb: '🍄', drewno: '🪵' } as const;
 let open: HTMLDivElement | null = null;
 
 export function isCharacterOpen() {

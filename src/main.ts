@@ -3,6 +3,9 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { installTouchControls } from './controls';
+import { installErrorLog } from './errlog';
+
+installErrorLog();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

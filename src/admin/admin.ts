@@ -109,7 +109,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['ERPEG admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -128,6 +128,7 @@ function render() {
   else if (tab === 'players') players(main);
   else if (tab === 'missions') missions(main);
   else if (tab === 'codes') codes(main);
+  else if (tab === 'errors') void errorsTab(main);
   else settings(main);
 }
 
@@ -250,7 +251,7 @@ function missions(main: HTMLElement) {
     return el('tr', { className: fromCode ? '' : 'click', onclick: fromCode ? undefined : () => editor.replaceChildren(missionEditor(id)) }, [
       el('td', {}, [m.tytul, ' ', fromCode ? el('span', { className: 'badge' }, ['w kodzie gry']) : null, !active ? el('span', { className: 'badge bad' }, ['wyłączona']) : null]),
       el('td', {}, [el('span', { className: found ? 'ok' : 'bad' }, [found ? '✓ ' : '✗ ']), m.adres]),
-      el('td', {}, [TYPY[m.zadanie.typ] ?? m.zadanie.typ]),
+      el('td', {}, [(TYPY as Record<string, string>)[m.zadanie.typ] ?? (m.zadanie.typ === 'zbierz' ? 'Przynieś rzeczy' : m.zadanie.typ)]),
       el('td', { className: 'num' }, [m.zadanie.typ === 'brak' ? '—' : String(c.taken)]),
       el('td', { className: 'num' }, [m.zadanie.typ === 'brak' ? '—' : String(c.done)]),
       el('td', { className: 'num' }, [String(nCodes)]),
@@ -501,6 +502,41 @@ function codeEditor(c: Code | null) {
     el('div', { className: 'row' }, [save, btn('Anuluj', () => card.remove())]),
   ]);
   return card;
+}
+
+interface ClientError { id: number; at: string; player: string | null; kind: string; message: string; stack: string | null; ctx: Record<string, unknown> | null }
+
+/** Errors and freezes reported by players' devices (src/errlog.ts). */
+async function errorsTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['Błędy z urządzeń graczy']), el('p', { className: 'muted' }, ['Ostatnie 200 zgłoszeń: błędy w grze i zawieszenia („freeze”). Kliknij wiersz, żeby zobaczyć szczegóły.']));
+  let list: ClientError[];
+  try {
+    list = await call<ClientError[]>('admin_errors', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  if (!list.length) {
+    main.append(el('p', {}, ['Brak zgłoszeń. 🎉']));
+    return;
+  }
+  const detail = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const rows = list.map((e) => {
+    const c = e.ctx ?? {};
+    return el('tr', { className: 'click', onclick: () => {
+      detail.style.display = 'block';
+      detail.textContent = `${e.at}\n${e.player ?? '(bez postaci)'} – ${e.kind}\n${e.message}\n\n${JSON.stringify(c, null, 1)}\n\n${e.stack ?? ''}`;
+      detail.scrollIntoView({ behavior: 'smooth' });
+    } }, [
+      el('td', {}, [new Date(e.at).toLocaleString('pl-PL')]),
+      el('td', {}, [e.player ?? '—']),
+      el('td', {}, [el('span', { className: e.kind === 'freeze' ? 'badge bad' : 'badge' }, [e.kind])]),
+      el('td', {}, [e.message.slice(0, 120)]),
+      el('td', {}, [`${c.map ?? ''} ${c.x ?? ''},${c.y ?? ''}`]),
+    ]);
+  });
+  const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['Kiedy', 'Postać', 'Rodzaj', 'Opis', 'Mapa, miejsce'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
+  main.append(detail, el('div', { className: 'scroll' }, [table]));
 }
 
 function settings(main: HTMLElement) {

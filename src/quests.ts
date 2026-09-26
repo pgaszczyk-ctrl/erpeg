@@ -3,7 +3,7 @@ import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear } from './inventory';
-import { KOSCIOL, URZAD, POLICJA, NAGRODA } from './content/zlecenia';
+import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
@@ -34,6 +34,8 @@ export const session = {
   mapId: 'lublin',
   /** Where the hero appears after a coach ride (the station on the new map). */
   arrive: null as { x: number; y: number } | null,
+  /** Bank deposits (content/banki.ts). */
+  lokaty: [] as NonNullable<SaveData['lokaty']>,
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -122,6 +124,7 @@ export function startSession(r: LoginResult) {
   session.startY = p.start_y * k;
   session.fog = p.save.fog;
   session.fogs = { ...(p.save.fogs ?? {}) };
+  session.lokaty = [...(p.save.lokaty ?? [])];
   session.mapId = 'lublin';
   session.arrive = null;
   const at = p.save.at;
@@ -158,7 +161,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
@@ -230,7 +233,27 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       zakonczenie: 'Dobra robota, łowco nagród! Oto obiecana nagroda.',
     };
   }
-  const fight = r() < 0.5;
+  const roll = r();
+  // A third of them: bring things from a forest nearby (the church wants
+  // mushrooms, the office wood).
+  if (roll < 0.34) {
+    const forest = forestNear(city, place.door.x, place.door.y, ZBIERANIE.lasDo * PX_PER_M, r);
+    if (forest) {
+      const towar = place.kind === 'church' ? 'grzyb' : 'drewno';
+      const z = ZBIERANIE[towar];
+      const ile = z.ile[0] + Math.floor(r() * (z.ile[1] - z.ile[0] + 1));
+      const ilu = `${ile} ${ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? z.formy[0] : z.formy[1]}`;
+      const at = city.toLatLon(forest.x, forest.y);
+      return {
+        id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
+        opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu),
+        zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: `Przynieś ${ilu} z lasu` },
+        zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Bóg zapłać.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
+        nagroda: ZBIERANIE.premia + ile * z.zaSztuke,
+      };
+    }
+  }
+  const fight = roll < 0.67;
   const extra = Math.round(distM / 100) * NAGRODA.zaKazde100m;
   return {
     id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
@@ -243,6 +266,24 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
     nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
   };
+}
+
+/** A walkable spot inside the nearest forest within `maxR` px, if any. */
+function forestNear(city: CityMap, x: number, y: number, maxR: number, r: () => number) {
+  let best: { x: number; y: number } | null = null;
+  let bd = maxR;
+  for (const a of city.query({ x0: x - maxR, y0: y - maxR, x1: x + maxR, y1: y + maxR }).areas) {
+    if (a.kind !== 'forest') continue;
+    for (let i = 0; i < 12; i++) {
+      const px = a.x0 + r() * (a.x1 - a.x0);
+      const py = a.y0 + r() * (a.y1 - a.y0);
+      const d = Math.hypot(px - x, py - y);
+      if (d >= bd || !city.areaKindsAt(px, py).includes('forest') || !city.isFree(px, py, 4, 4)) continue;
+      bd = d;
+      best = { x: px, y: py };
+    }
+  }
+  return best;
 }
 
 export interface Place {

@@ -15,9 +15,12 @@ export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta';
 export interface Zadanie {
   /**
    * 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca,
-   * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce).
+   * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce),
+   * 'zbierz' = przynieś rzeczy (np. grzyby, drewno); miejsce = gdzie ich szukać.
    */
-  typ: 'pokonaj' | 'idz' | 'brak';
+  typ: 'pokonaj' | 'idz' | 'brak' | 'zbierz';
+  /** Tylko dla 'zbierz': co przynieść (id z sklepy.ts, np. 'grzyb', 'drewno') i ile. */
+  towar?: import('./sklepy').Owoc;
   miejsce: Miejsce;
   /** Tylko dla 'pokonaj': ilu wrogów i jakich. */
   ile?: number;

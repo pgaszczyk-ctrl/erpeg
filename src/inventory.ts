@@ -197,15 +197,29 @@ export function sellAllFruit() {
   return v;
 }
 
+/** Things one can eat (fruit and mushrooms, not wood). */
 export function totalFruit() {
-  return gear.bag.reduce((n, s) => n + ('fruit' in s ? s.n : 0), 0);
+  return gear.bag.reduce((n, s) => n + ('fruit' in s && OWOCE[s.fruit].jadalne ? s.n : 0), 0);
+}
+
+/** Takes `n` of one kind out of the backpack; false if there are not enough. */
+export function takeFruit(f: Owoc, n: number): boolean {
+  if (fruitCount(f) < n) return false;
+  for (const s of gear.bag) {
+    if (!('fruit' in s) || s.fruit !== f || !n) continue;
+    const take = Math.min(n, s.n);
+    s.n -= take;
+    n -= take;
+  }
+  gear.bag = gear.bag.filter((s) => !('fruit' in s) || s.n > 0);
+  return true;
 }
 
 /** Eats `n` fruit, cheapest first; false if there are not enough. */
 export function eatFruit(n: number): boolean {
   if (totalFruit() < n) return false;
   const stacks = gear.bag
-    .filter((s): s is { fruit: Owoc; n: number } => 'fruit' in s)
+    .filter((s): s is { fruit: Owoc; n: number } => 'fruit' in s && OWOCE[s.fruit].jadalne)
     .sort((a, b) => OWOCE[a.fruit].cena - OWOCE[b.fruit].cena);
   for (const st of stacks) {
     const take = Math.min(n, st.n);

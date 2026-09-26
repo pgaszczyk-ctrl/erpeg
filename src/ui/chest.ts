@@ -7,7 +7,7 @@ import { session, CHEST_SLOTS } from '../quests';
 // and the backpack by dragging (mouse or finger) or by a tap (goes to the
 // other side). Fruit stacks up to 99 per slot, like in the backpack.
 
-const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇' } as const;
+const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇', grzyb: '🍄', drewno: '🪵' } as const;
 const SLOT_ICON = { bron: '⚔️', dystans: '🏹', zbroja: '🦺', helm: '⛑️', buty: '🥾' } as const;
 
 type Side = 'chest' | 'bag';

@@ -13,6 +13,8 @@ export interface SzablonZlecen {
   pokonaj: string[];
   /** Zlecenia „dojdź / zanieś coś pod adres”. */
   idz: string[];
+  /** Zlecenia „przynieś z lasu”: {ile} i {towar} gra podmienia (np. „5 grzybów”). */
+  zbierz: string[];
   /** Jak daleko (w metrach) może być cel. */
   odleglosc: [number, number];
 }
@@ -27,6 +29,10 @@ export const KOSCIOL: SzablonZlecen = {
     'Zanieś pani Halinie spod {adres} ciasto z kiermaszu parafialnego.',
     'Trzeba doręczyć zaproszenie na odpust pod adres {adres}.',
   ],
+  zbierz: [
+    'Siostry gotują zupę dla ubogich. Przynieś z lasu {ile} {towar}.',
+    'Na kiermasz parafialny brakuje {ile} {towar}. Las jest niedaleko – pomożesz?',
+  ],
   odleglosc: [150, 700],
 };
 
@@ -39,6 +45,10 @@ export const URZAD: SzablonZlecen = {
   idz: [
     'Doręcz pismo urzędowe pod adres {adres}. Za potwierdzenie odbioru czeka nagroda.',
     'Zanieś decyzję w sprawie ogródka działkowego do mieszkańca spod {adres}.',
+  ],
+  zbierz: [
+    'Gmina naprawia ławki w parku i potrzebuje {ile} {towar}. Zetnij drzewa w lesie.',
+    'Stołówka urzędu zamawia {ile} {towar}. Zbierz je w pobliskim lesie.',
   ],
   odleglosc: [200, 900],
 };
@@ -67,3 +77,16 @@ export const POLICJA = {
 
 /** Nagroda za zwykłe zlecenia: podstawa + dodatek za każde 100 m drogi. */
 export const NAGRODA = { pokonaj: 15, idz: 6, zaKazde100m: 2 };
+
+/**
+ * Zlecenia „przynieś z lasu”: co można zamówić, ile sztuk (od–do), nagroda za
+ * sztukę (więcej niż w sklepie) i jak daleko może być las (metry).
+ * Kościół zamawia grzyby, urząd drewno.
+ */
+export const ZBIERANIE = {
+  // formy: 2–4 sztuki, 5 i więcej sztuk
+  grzyb: { ile: [3, 6] as [number, number], zaSztuke: 12, formy: ['grzyby', 'grzybów'] },
+  drewno: { ile: [2, 4] as [number, number], zaSztuke: 25, formy: ['kawałki drewna', 'kawałków drewna'] },
+  premia: 10,
+  lasDo: 2000,
+};

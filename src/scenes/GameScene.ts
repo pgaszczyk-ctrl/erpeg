@@ -13,6 +13,7 @@ import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
 import { HOTEL_CENA } from '../content/hotele';
+import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, enterWorld, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
 import type { ZagadkaPL } from '../content/postacie';
 import { tr, tx } from '../i18n';
@@ -21,10 +22,10 @@ import { OWOCE, LECZENIE_OWOCAMI, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit,
 } from '../inventory';
 import { hold, mouse, consumeRelease } from '../controls';
-import { Orchards, StreetEnemies, Training } from './Ambient';
+import { Forest, Orchards, StreetEnemies, Training } from './Ambient';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
   session, saveNow, earn, spend, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
@@ -75,6 +76,7 @@ const PLACE_LOOK = {
   merchant: { roof: '', wall: '', sign: TEX.cart },
   station: { roof: '', wall: '', sign: TEX.coach },
   hotel: { roof: '#8a3a6a', wall: '#f3dce9', sign: TEX.signHotel },
+  bank: { roof: '#b8902a', wall: '#f5ecd0', sign: TEX.signBank },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -128,6 +130,7 @@ export class GameScene extends Phaser.Scene {
   private hudTimer = 0;
   private lingerUntil = 0;
   private orchards!: Orchards;
+  private forest!: Forest;
   private training!: Training;
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
@@ -198,6 +201,18 @@ export class GameScene extends Phaser.Scene {
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
     this.orchards = new Orchards(this, this.city);
+    this.forest = new Forest(
+      this,
+      this.city,
+      (sp) => {
+        const img = this.add.image(sp.x, sp.y, TEX.mushroom).setDepth(sp.y - 8);
+        img.setData('kind', 'fruit:grzyb');
+        img.setData('spot', sp.id);
+        this.pickups.push(img);
+        return img;
+      },
+      (img) => this.removePickup(img),
+    );
     this.fixed = new FixedNpcs(this, this.city, {
       dialog: (req) => this.dialog(req),
       toast: (t, ms) => this.toast(t, ms),
@@ -341,6 +356,7 @@ export class GameScene extends Phaser.Scene {
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
+    this.forest.update(this.player.x, this.player.y, now);
     this.training.update(this.player.x, this.player.y, now);
     this.streets.update(this.player.x, this.player.y, now);
     this.clearHomeArea();
@@ -477,7 +493,7 @@ export class GameScene extends Phaser.Scene {
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
     const free = (x: number, y: number) =>
-      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.training.blocked(x, y);
+      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.training.blocked(x, y);
     if (dx && free(a.x + dx, fy)) a.x += dx;
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }
@@ -517,6 +533,12 @@ export class GameScene extends Phaser.Scene {
     // Fruit trees don't count as sword practice.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
     if (tree && this.orchards.shake(tree)) this.dropFruit(tree.x, tree.y, tree.fruit);
+    // Pines in the forest: a few blows fell one and give wood.
+    const pine = this.forest.hitAt(hit.x, hit.y, 12 * this.player.reach);
+    if (pine && this.forest.chop(pine)) {
+      this.dropFruit(pine.x, pine.y, 'drewno');
+      this.toast('🪓 Drzewo ścięte!', 1000);
+    }
     if (this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz')) hits++;
     if (hits) this.practiced('miecz');
   }
@@ -538,7 +560,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dropFruit(x: number, y: number, fruit: Owoc) {
-    const tex = fruit === 'jablko' ? TEX.fruitApple : fruit === 'sliwka' ? TEX.fruitPlum : TEX.fruitGrape;
+    const tex = { jablko: TEX.fruitApple, sliwka: TEX.fruitPlum, winogrono: TEX.fruitGrape, grzyb: TEX.mushroom, drewno: TEX.log }[fruit];
     const tx = x + (Math.random() - 0.5) * 16;
     const ty = y + 4 + Math.random() * 8;
     const item = this.add.image(x, y - 10, tex).setDepth(ty);
@@ -622,6 +644,8 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       session.stats.fruit++;
+      const spot = item.getData('spot') as string | undefined;
+      if (spot) this.forest.picked(spot);
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
     } else earn(1);
     this.removePickup(item);
@@ -826,6 +850,7 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
     if (p.kind === 'hotel') return this.openHotel(p);
+    if (p.kind === 'bank') return void this.openBank(p);
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
@@ -870,6 +895,114 @@ export class GameScene extends Phaser.Scene {
           return;
         }
         this.travel(t);
+      },
+    });
+  }
+
+  /** A bank: deposits for a few days that come back with interest. */
+  private async openBank(p: CityPlace) {
+    const title = `🏦 ${p.name}`;
+    let now: number;
+    try {
+      now = new Date(await api.now()).getTime();
+    } catch {
+      this.dialog({ title, text: 'Bank chwilowo nieczynny (brak połączenia z serwerem).', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const DAY = 86_400_000;
+    const ends = (l: (typeof session.lokaty)[number]) => l.od + l.dni * DAY;
+    const interest = (l: (typeof session.lokaty)[number]) => Math.floor((l.kwota * l.procent) / 100);
+    const ready = session.lokaty.filter((l) => ends(l) <= now);
+    const waiting = session.lokaty.filter((l) => ends(l) > now);
+    const left = (l: (typeof session.lokaty)[number]) => {
+      const h = Math.ceil((ends(l) - now) / 3_600_000);
+      return h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${h} h`;
+    };
+    const lines = [
+      ...ready.map((l) => `• ${l.kwota} monet (+${l.procent}%) – gotowa, odbierzesz ${l.kwota + interest(l)}`),
+      ...waiting.map((l) => `• ${l.kwota} monet (+${l.procent}%) – zostało ${left(l)}`),
+    ];
+    const buttons: string[] = [];
+    const acts: (() => void)[] = [];
+    if (ready.length) {
+      const sum = ready.reduce((s, l) => s + l.kwota + interest(l), 0);
+      buttons.push(`💰 Odbierz ${sum} monet`);
+      acts.push(() => {
+        for (const l of ready) {
+          session.coins += l.kwota;
+          earn(interest(l));
+        }
+        session.lokaty = waiting;
+        this.emitHud();
+        this.save();
+        this.toast(`Odebrałeś ${sum} monet z odsetkami!`, 2500);
+      });
+    }
+    if (session.lokaty.length < BANK.maksLokat && session.coins >= BANK.minKwota) {
+      buttons.push('📈 Załóż lokatę');
+      acts.push(() => this.newDeposit(title));
+    }
+    if (waiting.length) {
+      buttons.push('Zerwij lokatę (bez odsetek)');
+      acts.push(() => this.breakDeposit(title, waiting, left));
+    }
+    buttons.push('Wyjdź');
+    this.dialog({
+      title,
+      text: `Masz ${session.coins} monet.${lines.length ? `\n\nTwoje lokaty:\n${lines.join('\n')}` : '\n\nOddaj nam monety na kilka dni, a oddamy więcej! Odebrać możesz w każdym banku.'}`,
+      buttons,
+      onChoose: (i) => acts[i]?.(),
+    });
+  }
+
+  private newDeposit(title: string) {
+    this.dialog({
+      title,
+      text: `Na jak długo? Lokatę można założyć od ${BANK.minKwota} do ${BANK.maksKwota} monet.`,
+      buttons: [...LOKATY.map((l) => `${l.nazwa}: +${l.procent}%`), 'Anuluj'],
+      onChoose: async (i) => {
+        const l = LOKATY[i];
+        if (!l) return;
+        this.scene.pause();
+        const max = Math.min(session.coins, BANK.maksKwota);
+        const txt = await askText('🏦 Lokata ' + l.nazwa, `Ile monet wpłacasz? Masz ${session.coins}. Po ${l.dni} ${l.dni === 1 ? 'dniu' : 'dniach'} dostaniesz ${l.procent}% więcej.`, String(max), { value: String(max), ok: 'Wpłacam', number: true });
+        this.scene.resume();
+        consumeAttack();
+        if (txt === null) return;
+        const kwota = Math.floor(Number(txt.replace(/\s/g, '')) || max);
+        if (kwota < BANK.minKwota || kwota > max) {
+          this.toast(`Kwota musi być od ${BANK.minKwota} do ${max} monet.`, 2500);
+          return;
+        }
+        let now: number;
+        try {
+          now = new Date(await api.now()).getTime();
+        } catch {
+          this.toast('Brak połączenia z bankiem – spróbuj za chwilę.', 2500);
+          return;
+        }
+        session.coins -= kwota;
+        session.lokaty.push({ kwota, od: now, dni: l.dni, procent: l.procent });
+        this.emitHud();
+        this.save();
+        this.toast(`Wpłaciłeś ${kwota} monet ${l.nazwa}. Odbierzesz ${kwota + Math.floor((kwota * l.procent) / 100)}.`, 3000);
+      },
+    });
+  }
+
+  private breakDeposit(title: string, waiting: typeof session.lokaty, left: (l: (typeof session.lokaty)[number]) => string) {
+    this.dialog({
+      title,
+      text: 'Którą lokatę zerwać? Dostaniesz z powrotem same monety, bez odsetek.',
+      buttons: [...waiting.map((l) => `${l.kwota} monet (zostało ${left(l)})`), 'Anuluj'],
+      onChoose: (i) => {
+        const l = waiting[i];
+        if (!l) return;
+        session.lokaty = session.lokaty.filter((x) => x !== l);
+        session.coins += l.kwota;
+        this.emitHud();
+        this.save();
+        this.toast(`Zerwałeś lokatę: wraca ${l.kwota} monet.`, 2500);
       },
     });
   }
@@ -1236,7 +1369,7 @@ export class GameScene extends Phaser.Scene {
   private openShop(p: CityPlace) {
     const offers = this.offers('sklep');
     const value = fruitValue();
-    const sell = value > 0 ? [`Sprzedaj owoce – ${value} monet`] : [];
+    const sell = value > 0 ? [`Sprzedaj zbiory – ${value} monet`] : [];
     this.dialog({
       title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
       text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
@@ -1246,7 +1379,7 @@ export class GameScene extends Phaser.Scene {
           const v = sellAllFruit();
           earn(v);
           this.emitHud();
-          this.toast(`Sprzedałeś owoce za ${v} monet!`);
+          this.toast(`Sprzedałeś zbiory za ${v} monet!`);
           this.save();
           return;
         }
@@ -1382,13 +1515,22 @@ export class GameScene extends Phaser.Scene {
         },
       });
     } else if (st === 'active') {
-      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${m.zadanie.cel}`, buttons: ['OK'], onChoose: () => {} });
+      const z = m.zadanie;
+      const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
+      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
       this.missionDialog(m, {
         title: m.tytul,
         text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : ''),
         buttons: ['Dziękuję!'],
         onChoose: () => {
+          const z = m.zadanie;
+          if (z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
+            setMissionState(m, 'active');
+            this.refreshMarkers();
+            this.toast('Czegoś jednak brakuje w plecaku!');
+            return;
+          }
           earn(m.nagroda);
           session.stats.missions++;
           session.exp += missionExp(m);
@@ -1454,6 +1596,21 @@ export class GameScene extends Phaser.Scene {
 
   private checkGoals() {
     for (const rm of this.missions) {
+      const z = rm.m.zadanie;
+      if (z.typ === 'zbierz' && z.towar) {
+        // Enough in the backpack: take it back. (Sold or eaten meanwhile: not yet.)
+        const st = missionState(rm.m);
+        const have = fruitCount(z.towar) >= (z.ile ?? 1);
+        if (st === 'active' && have) {
+          setMissionState(rm.m, 'goal');
+          this.refreshMarkers();
+          this.toast(`Masz wszystko! Wróć do: ${rm.m.adres}`);
+        } else if (st === 'goal' && !have) {
+          setMissionState(rm.m, 'active');
+          this.refreshMarkers();
+        }
+        continue;
+      }
       if (rm.m.zadanie.typ !== 'idz' || missionState(rm.m) !== 'active' || !rm.target) continue;
       if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
         setMissionState(rm.m, 'goal');
@@ -1485,6 +1642,10 @@ export class GameScene extends Phaser.Scene {
     const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
     for (const rm of this.missions) {
       const st = missionState(rm.m);
+      if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
+        const z = rm.m.zadanie;
+        return { text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target };
+      }
       if (st === 'active' && rm.target) {
         // For fights, point at the nearest remaining enemy of that mission.
         const foes = rm.m.zadanie.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);

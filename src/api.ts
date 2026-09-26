@@ -3,6 +3,8 @@
 
 const URL = 'https://iiffchuhrhsjjgmstypx.supabase.co/rest/v1/rpc/';
 const KEY = 'sb_publishable_lvVeo1Qv3E_4wTQ2oUeI1Q_2_gAgUdA';
+/** For the freeze watchdog (a worker calls the server on its own). */
+export const RPC = { url: URL, headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' } };
 
 export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false): Promise<T> {
   let res: Response;
@@ -30,6 +32,8 @@ export interface SaveData {
   fog?: { s: number; chunks: Record<string, string> };
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
+  /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
+  lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */
   at?: { m: string; x: number; y: number; s: number } | null;
   /** Old saves only: the sword in use and the school level. */
@@ -120,6 +124,8 @@ export const api = {
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
+  /** The server's clock (banks count interest by it, not by the phone's). */
+  now: () => rpc<string>('server_now', {}),
   die: (token: string, exp: number, place: string, x: number, y: number, scale: number, stats: Stats) =>
     rpc<boolean>('die', { p_token: token, p_exp: exp, p_place: place, p_x: x, p_y: y, p_scale: scale, p_stats: stats }, true),
   memorial: () =>
