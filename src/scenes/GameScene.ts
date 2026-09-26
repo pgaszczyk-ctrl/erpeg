@@ -71,6 +71,7 @@ const PLACE_LOOK = {
   police: { roof: '#2b3f8a', wall: '#d7def2', sign: TEX.signPolice },
   library: { roof: '#2f8a6a', wall: '#d9efe6', sign: TEX.signLibrary },
   merchant: { roof: '', wall: '', sign: TEX.cart },
+  station: { roof: '', wall: '', sign: TEX.coach },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -782,6 +783,7 @@ export class GameScene extends Phaser.Scene {
 
   private openPlace(p: CityPlace) {
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
+    if (p.kind === 'station') return this.dialog({ title: `🐴 ${p.name}`, text: 'Woźnica karmi konia.', buttons: ['OK'], onChoose: () => {} });
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
