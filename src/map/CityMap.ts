@@ -268,6 +268,116 @@ export class CityMap {
     return { x: (lon - minLon) * mLon * PX_PER_M, y: (maxLat - lat) * mLat * PX_PER_M };
   }
 
+  /**
+   * The shortest way from `a` to `b` along streets and paths (A* over the road
+   * lines around both points), as a flat [x0, y0, x1, y1, …] polyline from a
+   * to b, or null when they are not connected.
+   */
+  roadPath(a: { x: number; y: number }, b: { x: number; y: number }): number[] | null {
+    const m = 400;
+    const box = { x0: Math.min(a.x, b.x) - m, y0: Math.min(a.y, b.y) - m, x1: Math.max(a.x, b.x) + m, y1: Math.max(a.y, b.y) + m };
+    // Nodes are line points rounded to 2 px, so crossing streets share them.
+    const key = (x: number, y: number) => `${Math.round(x / 2)}:${Math.round(y / 2)}`;
+    const pos = new Map<string, [number, number]>();
+    const adj = new Map<string, { k: string; d: number }[]>();
+    const link = (k1: string, k2: string, d: number) => {
+      if (!adj.has(k1)) adj.set(k1, []);
+      adj.get(k1)!.push({ k: k2, d });
+    };
+    for (const l of this.lineGrid.query(box)) {
+      if (!ROAD_KINDS.has(l.kind)) continue;
+      for (let i = 0; i + 3 < l.pts.length; i += 2) {
+        const x1 = l.pts[i], y1 = l.pts[i + 1], x2 = l.pts[i + 2], y2 = l.pts[i + 3];
+        const k1 = key(x1, y1), k2 = key(x2, y2);
+        if (k1 === k2) continue;
+        pos.set(k1, [x1, y1]);
+        pos.set(k2, [x2, y2]);
+        const d = Math.hypot(x2 - x1, y2 - y1);
+        link(k1, k2, d);
+        link(k2, k1, d);
+      }
+    }
+    const nearest = (p: { x: number; y: number }) => {
+      let best: string | null = null;
+      let bd = Infinity;
+      for (const [k, [x, y]] of pos) {
+        const d = Math.hypot(x - p.x, y - p.y);
+        if (d < bd) {
+          bd = d;
+          best = k;
+        }
+      }
+      return best;
+    };
+    const s = nearest(a);
+    const t = nearest(b);
+    if (!s || !t) return null;
+    const [tx, ty] = pos.get(t)!;
+    const h = (k: string) => {
+      const [x, y] = pos.get(k)!;
+      return Math.hypot(x - tx, y - ty);
+    };
+    // A* with a small binary heap.
+    const g = new Map<string, number>([[s, 0]]);
+    const from = new Map<string, string>();
+    const heap: [number, string][] = [[h(s), s]];
+    const push = (item: [number, string]) => {
+      heap.push(item);
+      let i = heap.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (heap[p][0] <= heap[i][0]) break;
+        [heap[p], heap[i]] = [heap[i], heap[p]];
+        i = p;
+      }
+    };
+    const pop = () => {
+      const top = heap[0];
+      const last = heap.pop()!;
+      if (heap.length) {
+        heap[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = i * 2 + 1, r = l + 1;
+          let m2 = i;
+          if (l < heap.length && heap[l][0] < heap[m2][0]) m2 = l;
+          if (r < heap.length && heap[r][0] < heap[m2][0]) m2 = r;
+          if (m2 === i) break;
+          [heap[m2], heap[i]] = [heap[i], heap[m2]];
+          i = m2;
+        }
+      }
+      return top;
+    };
+    const done = new Set<string>();
+    while (heap.length) {
+      const [, k] = pop();
+      if (k === t) break;
+      if (done.has(k)) continue;
+      done.add(k);
+      const gk = g.get(k)!;
+      for (const e of adj.get(k) ?? []) {
+        const ng = gk + e.d;
+        if (ng < (g.get(e.k) ?? Infinity)) {
+          g.set(e.k, ng);
+          from.set(e.k, k);
+          push([ng + h(e.k), e.k]);
+        }
+      }
+    }
+    if (!g.has(t)) return null;
+    const pts: number[] = [b.x, b.y];
+    for (let k: string | undefined = t; k; k = from.get(k)) {
+      const [x, y] = pos.get(k)!;
+      pts.push(x, y);
+    }
+    pts.push(a.x, a.y);
+    // Reverse into a → b order.
+    const out: number[] = [];
+    for (let i = pts.length - 2; i >= 0; i -= 2) out.push(pts[i], pts[i + 1]);
+    return out;
+  }
+
   /** Is an area of this kind at (x, y) or up to `r` px away (checked in 8 directions)? */
   areaNear(x: number, y: number, r: number, kind: string) {
     for (let i = -1; i < 8; i++) {

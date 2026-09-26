@@ -131,7 +131,7 @@ interface Shot {
 
 type Challenge =
   | { kind: 'kukly'; npc: SportNpc; a: Station; b: Station; step: 'a' | 'b' | 'back'; hits: number; start: number; until: number }
-  | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number };
+  | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number; path: number[]; cum: number[] };
 
 type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
 
@@ -1123,14 +1123,18 @@ export class GameScene extends Phaser.Scene {
       buttons: ['Start!', 'Nie teraz'],
       onChoose: (i) => {
         if (i !== 0) return;
-        // The runner's time: the hero's rough time on the streets, times the
-        // difficulty (sometimes she has a lucky day).
-        const est = (Math.hypot(to.x - n.x, to.y - n.y) * 1.35) / PLAYER.speed;
+        // She runs along the streets (the shortest way, like a navigation app);
+        // her time: that way at the hero's speed, times the difficulty
+        // (sometimes she has a lucky day).
+        const path = this.city.roadPath({ x: n.x, y: n.y }, to) ?? [n.x, n.y, to.x, to.y];
+        const cum = [0];
+        for (let i = 2; i < path.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(path[i] - path[i - 2], path[i + 1] - path[i - 1]));
+        const est = cum[cum.length - 1] / PLAYER.speed;
         const lucky = Math.random() < session.level.farta;
         const rivalMs = est * (lucky ? 0.8 : session.level.rywal) * 1000;
         const rival = this.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6);
         this.training.setAway(n, true);
-        this.challenge = { kind: 'wyscig', npc: n, name, from: { x: n.x, y: n.y }, to, rival, start: this.time.now, rivalMs };
+        this.challenge = { kind: 'wyscig', npc: n, name, from: { x: n.x, y: n.y }, to, rival, start: this.time.now, rivalMs, path, cum };
         this.toast('🏃 Start! Biegnij za strzałką!', 1500);
         this.emitHud();
       },
@@ -1163,15 +1167,20 @@ export class GameScene extends Phaser.Scene {
       if (t > c.until) return this.endChallenge(false);
       return;
     }
-    // The runner dashes to the other pitch (seen only where the hero can see).
+    // The runner dashes along the streets (seen only where the hero can see).
     const k = Math.min(1, (t - c.start) / c.rivalMs);
-    const x = c.from.x + (c.to.x - c.from.x) * k;
-    const y = c.from.y + (c.to.y - c.from.y) * k;
-    const dx = x - c.rival.x;
+    const along = k * c.cum[c.cum.length - 1];
+    let i = 1;
+    while (i < c.cum.length - 1 && c.cum[i] < along) i++;
+    const seg = c.cum[i] - c.cum[i - 1] || 1;
+    const f = Math.max(0, Math.min(1, (along - c.cum[i - 1]) / seg));
+    const ax = c.path[(i - 1) * 2], ay = c.path[(i - 1) * 2 + 1], bx = c.path[i * 2], by = c.path[i * 2 + 1];
+    const x = ax + (bx - ax) * f;
+    const y = ay + (by - ay) * f;
     c.rival.setPosition(x, y).setDepth(y).setVisible(pointInPolygon(this.vision, x, y));
-    if (Math.abs(dx) > 0.01 || k < 1) {
-      const dir = Math.abs(c.to.x - c.from.x) > Math.abs(c.to.y - c.from.y) ? 'side' : c.to.y < c.from.y ? 'up' : 'down';
-      c.rival.setFlipX(dir === 'side' && c.to.x > c.from.x).anims.play(`${SPORTY_TEX}-walk-${dir}`, true);
+    if (k < 1) {
+      const dir = Math.abs(bx - ax) > Math.abs(by - ay) ? 'side' : by < ay ? 'up' : 'down';
+      c.rival.setFlipX(dir === 'side' && bx > ax).anims.play(`${SPORTY_TEX}-walk-${dir}`, true);
     }
     if (Math.hypot(p.x - c.to.x, p.y - c.to.y) < 30) return this.endChallenge(true);
     if (k >= 1) return this.endChallenge(false);
