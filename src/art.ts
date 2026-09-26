@@ -42,6 +42,7 @@ export const TEX = {
   zombie: 'zombie',
   skeleton: 'skeleton',
   dragon: 'dragon',
+  dragonShadow: 'dragon-shadow',
   wizard: 'wizard',
   exclaim: 'exclaim',
   log: 'log',
@@ -854,6 +855,40 @@ function drawDragon(scene: Phaser.Scene) {
     tex.add(`f${f}`, 0, o, 0, W, H);
   }
   tex.refresh();
+  // Its shadow seen from above: body, neck and head pointing right (the way
+  // it flies), a long tail, wings spread ('f0') and half folded ('f1').
+  {
+    const S = 48;
+    const sh = canvasTexture(scene, TEX.dragonShadow, S * 2, S);
+    const c = sh.ctx;
+    for (let f = 0; f < 2; f++) {
+      const o = f * S;
+      c.fillStyle = '#000000';
+      const poly = (pts: number[]) => {
+        c.beginPath();
+        c.moveTo(o + pts[0], pts[1]);
+        for (let i = 2; i < pts.length; i += 2) c.lineTo(o + pts[i], pts[i + 1]);
+        c.closePath();
+        c.fill();
+      };
+      c.beginPath();
+      c.ellipse(o + 24, 24, 11, 4.5, 0, 0, Math.PI * 2); // body
+      c.fill();
+      poly([33, 22, 40, 22.5, 40, 25.5, 33, 26]); // neck
+      c.beginPath();
+      c.ellipse(o + 42, 24, 4, 3, 0, 0, Math.PI * 2); // head
+      c.fill();
+      poly([45, 22.5, 48, 24, 45, 25.5]); // snout
+      poly([14, 22, 2, 23, 0, 24, 2, 25, 14, 26]); // tail
+      poly([0, 24, -2, 21, -2, 27]); // tail tip
+      const span = f === 0 ? 22 : 13;
+      // Wings: from the shoulders, swept back, with a jagged trailing edge.
+      poly([30, 21, 24, 24 - span, 20, 24 - span + 3, 17, 24 - span * 0.55, 14, 24 - span * 0.35, 18, 21]);
+      poly([30, 27, 24, 24 + span, 20, 24 + span - 3, 17, 24 + span * 0.55, 14, 24 + span * 0.35, 18, 27]);
+      sh.tex.add(`f${f}`, 0, o, 0, S, S);
+    }
+    sh.tex.refresh();
+  }
   const ex = canvasTexture(scene, TEX.exclaim, 8, 14);
   px(ex.ctx, 1, 0, 6, 14, OUTLINE);
   px(ex.ctx, 2, 1, 4, 8, '#f7c531');

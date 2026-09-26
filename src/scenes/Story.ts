@@ -97,8 +97,10 @@ export class Story {
       screech();
       this.host.scare(p.x, p.y);
       const view = this.scene.cameras.main.worldView;
-      const shadow = this.scene.add.image(view.x - 150, p.y - 70, TEX.dragon, 'f0')
-        .setTint(0x000000).setTintMode(Phaser.TintModes.FILL).setAlpha(0.6).setScale(6).setDepth(1_250_000);
+      // Seen from above, head first in the direction of flight (left to right).
+      const shadow = this.scene.add.image(view.x - 150, p.y - 70, TEX.dragonShadow, 'f0')
+        .setAlpha(0.55).setScale(5).setDepth(1_250_000);
+      shadow.setRotation(Math.atan2(p.y + 30 - (p.y - 70), view.right + 150 - (view.x - 150)));
       const flap = this.scene.time.addEvent({ delay: 220, loop: true, callback: () => shadow.setFrame(shadow.frame.name === 'f0' ? 'f1' : 'f0') });
       this.scene.tweens.add({
         targets: shadow, x: view.right + 150, y: p.y + 30, duration: 2600, ease: 'Sine.inOut',

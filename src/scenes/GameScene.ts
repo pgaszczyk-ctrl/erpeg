@@ -54,10 +54,10 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
   const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
   return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
 }
-/** Pause after any dialog before a character can be talked to again (ms). */
-const NPC_DELAY_MS = 5000;
 /** No enemies this close to home (metres). */
 const HOME_SAFE_M = 40;
+/** After a dialog closes, swings don't start a talk for this long (ms). */
+const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
@@ -149,6 +149,8 @@ export class GameScene extends Phaser.Scene {
   private orchards!: Orchards;
   private forest!: Forest;
   private story!: Story;
+  /** Right after a dialog closes, a swing doesn't start another talk. */
+  private talkReadyAt = 0;
   private folk!: Townsfolk;
   /** A sports challenge in progress (coach's dummies or a race). */
   private challenge: Challenge | null = null;
@@ -163,7 +165,6 @@ export class GameScene extends Phaser.Scene {
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
   private damageCarry = 0;
-  private npcReadyAt = 0;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   private glow!: Phaser.GameObjects.Graphics;
@@ -592,11 +593,36 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ combat
 
+  /**
+   * A character a swing lands on (or who stands right by the hero): the dog,
+   * Margo, grandparents, riddle-givers, townsfolk, sports people, the wizard.
+   * Talking starts with a swing, not by bumping into them.
+   */
+  private talkableAt(x: number, y: number, r: number): (() => void) | null {
+    const fixed = this.fixed.at(x, y, r);
+    if (fixed) return () => this.fixed.talk(fixed);
+    const npc = this.npcs.at(x, y, r);
+    if (npc) return () => this.openRiddle(npc);
+    const person = this.duelHp === null ? this.folk.at(x, y, r) : null;
+    if (person) return () => this.talkToFolk(person);
+    const sporty = !this.challenge ? this.training.npcAt(x, y, r) : null;
+    if (sporty) return () => this.talkSport(sporty);
+    if (this.story.wizardAt(x, y, r)) return () => this.story.talkToWizard();
+    return null;
+  }
+
   private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
     if (this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
       this.save();
       this.openHome();
+      return;
+    }
+    // A swing at a character (with no enemy in the way) starts a talk.
+    const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
+    const talk = foeNear ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
+    if (talk) {
+      if (performance.now() >= this.talkReadyAt) talk();
       return;
     }
     let hits = 0;
@@ -913,42 +939,6 @@ export class GameScene extends Phaser.Scene {
     let id: string | null = null;
     let open: (() => void) | null = null;
     let savePoint = true;
-    const fixed = this.fixed.at(fx, fy - FEET.dy, NPC_RADIUS);
-    if (!id && fixed) {
-      id = `fixed-${fixed.id}`;
-      open = () => this.fixed.talk(fixed);
-      savePoint = false;
-    }
-    const npc = this.npcs.at(fx, fy - FEET.dy, NPC_RADIUS);
-    if (!id && npc) {
-      id = npc.id;
-      open = () => this.openRiddle(npc);
-      savePoint = false; // saved after the answer
-    }
-    const person = !id && this.duelHp === null ? this.folk.at(fx, fy - FEET.dy, NPC_RADIUS) : null;
-    if (person) {
-      id = `folk-${person.id}`;
-      open = () => this.talkToFolk(person);
-      savePoint = false;
-    }
-    const sporty = !id && !this.challenge ? this.training.npcAt(fx, fy - FEET.dy, NPC_RADIUS) : null;
-    if (sporty) {
-      id = sporty.id;
-      open = () => this.talkSport(sporty);
-      savePoint = false;
-    }
-    const wizard = !id && this.story.wizardAt(fx, fy - FEET.dy, NPC_RADIUS);
-    if (wizard) {
-      id = 'story-wizard';
-      open = () => this.story.talkToWizard();
-      savePoint = false;
-    }
-    // Characters wait a few seconds after the last talk, so bumping into one
-    // right after a dialog doesn't start another by accident.
-    if (id && (fixed || npc || wizard || person || sporty) && performance.now() < this.npcReadyAt) {
-      this.nearDoor = id; // walk away and come back to talk
-      return;
-    }
     for (const rm of this.missions) {
       if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
         id = rm.m.id;
@@ -2106,8 +2096,9 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('dialog', {
       ...req,
       onChoose: (i: number) => {
-        this.npcReadyAt = performance.now() + NPC_DELAY_MS;
         consumeAttack(); // the tap/key that closed the dialog shouldn't swing the sword
+        // …nor, a moment later, start the same talk again.
+        this.talkReadyAt = performance.now() + TALK_PAUSE_MS;
         this.scene.resume();
         req.onChoose(i);
       },
