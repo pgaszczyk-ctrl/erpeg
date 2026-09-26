@@ -558,7 +558,7 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay) return;
     touchInput.attack = false;
-    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit(), game.activeQuests());
+    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit(), game.activeQuests(), { ...game.tentSpot(), pitch: () => game.pitchTent() });
   }
 
   private openMap() {

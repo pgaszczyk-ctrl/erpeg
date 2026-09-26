@@ -53,6 +53,8 @@ export const TEX = {
   pine: 'pine',
   signBank: 'sign-bank',
   signAlchemist: 'sign-alchemist',
+  signGear: 'sign-gear',
+  tent: 'tent',
   heartBonus: 'heart-bonus',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
@@ -548,6 +550,29 @@ function drawMarker(scene: Phaser.Scene, key: string, done: boolean) {
 }
 
 // Arrow pointing right; rotated on screen towards the current goal.
+/** A green tent with a small campfire (camp sites and the own tent). */
+function drawTent(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.tent, 20, 16);
+  const tri = (x0: number, x1: number, top: number, bottom: number, color: string) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo((x0 + x1) / 2, top);
+    ctx.lineTo(x1, bottom);
+    ctx.lineTo(x0, bottom);
+    ctx.closePath();
+    ctx.fill();
+  };
+  tri(0, 16, 1, 14, OUTLINE);
+  tri(1.5, 14.5, 3, 13, '#3fa34d');
+  tri(6, 10, 7, 13, '#1e1a24');
+  px(ctx, 3, 5, 1, 6, '#6fcf6f');
+  // Campfire.
+  px(ctx, 15, 13, 5, 2, '#6b4423');
+  px(ctx, 16, 10, 3, 3, '#e07a2e');
+  px(ctx, 17, 9, 1, 2, '#f7e27a');
+  tex.refresh();
+}
+
 /** The goal arrow; other colours as `arrow-<hex>` (one per quest colour). */
 export function arrowTexture(scene: Phaser.Scene, color: string) {
   const key = color === '#f7c531' ? TEX.arrow : `arrow-${color.slice(1)}`;
@@ -1092,6 +1117,15 @@ function drawCombatExtras(scene: Phaser.Scene) {
     p(5, 6, 4, 4, '#7be07b');
     p(5, 6, 1, 1, '#d8ffd8');
   });
+  drawSign(scene, TEX.signGear, '#c8702a', '#f0a060', (p) => {
+    // A small tent.
+    p(6, 3, 2, 1, '#1e1a24');
+    p(5, 4, 4, 2, '#3fa34d');
+    p(4, 6, 6, 2, '#3fa34d');
+    p(3, 8, 8, 2, '#2f8a3d');
+    p(6, 7, 2, 3, '#1e1a24');
+  });
+  drawTent(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');

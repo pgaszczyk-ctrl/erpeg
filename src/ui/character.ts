@@ -22,9 +22,9 @@ export function closeCharacter() {
   open = null;
 }
 
-export function toggleCharacter(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[] = []) {
+export function toggleCharacter(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[] = [], tent?: TentAction) {
   if (open) closeCharacter();
-  else show(hp, maxHp, onChange, eat, quests);
+  else show(hp, maxHp, onChange, eat, quests, tent);
 }
 
 function el(tag: string, cls = '', text = '') {
@@ -42,7 +42,14 @@ export interface QuestLine {
   main: boolean;
 }
 
-function show(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[]) {
+/** The own tent: can it go up here (why not), and pitching it. */
+export interface TentAction {
+  ok: boolean;
+  why: string;
+  pitch: () => void;
+}
+
+function show(hp: number, maxHp: number, onChange: () => void, eat: () => number | null, quests: QuestLine[], tent?: TentAction) {
   const root = el('div') as HTMLDivElement;
   root.id = 'character';
   root.onclick = (e) => {
@@ -100,6 +107,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     // Statistics, one per line.
     const stats: [string, string][] = [
       ['🧪 Mikstury lecznicze', String(session.mikstury)],
+      ['⛺ Namiot', session.namiot ? 'masz' : 'brak (sklep budowlany lub sportowy)'],
       ['⭐ Poziom postaci', `${poziomPostaci(session.exp)}${poziomPostaci(session.exp) >= MAKS_POZIOM_POSTACI ? ' (max)' : ''}`],
       ['📈 Premia za poziom', `+${Math.round(czescPremii(poziomPostaci(session.exp)) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['✨ Doświadczenie', `${session.exp} EXP`],
@@ -129,6 +137,17 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
       render();
     };
     box.append(eatBtn);
+    // The own tent (bought in a DIY or sports shop): sleep here, in a forest or a field.
+    if (session.namiot && tent) {
+      const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
+      tb.disabled = !tent.ok;
+      tb.onclick = () => {
+        closeCharacter();
+        tent.pitch();
+      };
+      box.append(tb);
+      if (!tent.ok && tent.why) box.append(el('div', 'c-note', tent.why));
+    }
 
     // Equipment
     box.append(el('h3', '', 'Założone'));

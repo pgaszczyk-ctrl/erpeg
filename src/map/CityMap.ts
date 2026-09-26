@@ -68,7 +68,7 @@ type RawTile = {
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp';
   name: string;
   id: string;
   building: Building | null;

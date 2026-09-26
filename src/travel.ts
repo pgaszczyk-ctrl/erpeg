@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { CityMap, PX_PER_M } from './map/CityMap';
 import { PIES, MARGO, DZIADKOWIE } from './content/postacie';
-import { pickHotels } from './hotels';
+import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
@@ -50,6 +50,7 @@ export async function loadWorld() {
 
 export function rememberMap(city: CityMap) {
   pickHotels(city);
+  addVillageCamps(city);
   maps.set(city.id, city);
 }
 

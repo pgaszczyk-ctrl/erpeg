@@ -19,7 +19,7 @@ import { Story } from './Story';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
-import { HOTEL_CENA } from '../content/hotele';
+import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
@@ -88,6 +88,8 @@ const PLACE_LOOK = {
   bank: { roof: '#b8902a', wall: '#f5ecd0', sign: TEX.signBank },
   university: { roof: '#4a5ab8', wall: '#e2e6f5', sign: TEX.signSchool },
   alchemist: { roof: '#3f8f7a', wall: '#dff2ec', sign: TEX.signAlchemist },
+  gear: { roof: '#c8702a', wall: '#f5e4d6', sign: TEX.signGear },
+  camp: { roof: '', wall: '', sign: TEX.tent },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -1059,6 +1061,8 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
     if (p.kind === 'alchemist') return this.openAlchemist(p);
+    if (p.kind === 'camp') return this.openCamp(p);
+    if (p.kind === 'gear') return this.openGearShop(p);
     // Church, office, police: a random mission.
     const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
     if (known) return this.openMissionDialog(known);
@@ -1508,18 +1512,89 @@ export class GameScene extends Phaser.Scene {
     }
     this.dialog({
       title,
-      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.${here ? '\n\nTo twój obecny hotel.' : ''}`,
+      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\nWyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.${here ? '\n\nTo twój obecny hotel.' : ''}`,
       buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, 'Nie teraz'],
       onChoose: (i) => {
         if (i !== 0) return;
         spend(HOTEL_CENA);
         session.at = { m: this.city.id, x: p.door.x, y: p.door.y };
         this.player.heal(PLAYER.maxHp);
+        // Well rested: blue hearts and faster walking for a while.
+        const until = Date.now() + HOTEL_PREMIA.minut * 60_000;
+        this.player.extra = HOTEL_PREMIA.niebieskichSerc * 2;
+        this.player.extraUntil = until;
+        this.player.boost = HOTEL_PREMIA.szybciej;
+        this.player.boostUntil = until;
         this.emitHud();
         this.save();
-        this.toast('🛏 Wyspany! Gra zapisana w hotelu.', 3000);
+        this.toast(`🛏 Wyspany! Gra zapisana. ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i szybszy krok na ${HOTEL_PREMIA.minut} minut.`, 3500);
       },
     });
+  }
+
+  /** A night under canvas: save, load point here, half the health back. */
+  private sleepInTent(x: number, y: number, what: string) {
+    session.at = { m: this.city.id, x, y };
+    this.player.heal(Math.round(PLAYER.maxHp / 2));
+    this.emitHud();
+    this.save();
+    this.toast(`⛺ ${what} Gra zapisana – tu zaczniesz po wczytaniu.`, 3000);
+  }
+
+  /** A camp site (a real one, or one in a village). */
+  private openCamp(p: CityPlace) {
+    const title = `⛺ ${p.name}`;
+    const price = session.namiot ? 0 : NAMIOT.cenaPola;
+    this.dialog({
+      title,
+      text: `Trawa, ognisko i miejsce na namiot. Nocleg ${price ? `kosztuje ${price} monet (masz ${session.coins})` : 'jest za darmo – masz własny namiot'}: zapis gry i tu zaczniesz po wczytaniu. Na ziemi śpi się gorzej niż w hotelu – odzyskasz połowę zdrowia.`,
+      buttons: [price ? `⛺ Śpię tu (${price} 💰)` : '⛺ Rozbijam namiot', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        if (price && session.coins < price) return this.toast(`Za mało monet – nocleg kosztuje ${price}.`, 2500);
+        if (price) spend(price);
+        this.sleepInTent(p.door.x, p.door.y, 'Dobranoc przy ognisku!');
+      },
+    });
+  }
+
+  /** DIY and sports shops: the tent. */
+  private openGearShop(p: CityPlace) {
+    const cena = NAMIOT.cenaNamiotu;
+    if (session.namiot) {
+      return this.dialog({ title: `🏕 ${p.name}`, text: 'Masz już namiot. Rozłożysz go w lesie albo na polu z karty postaci (👤).', buttons: ['OK'], onChoose: () => {} });
+    }
+    this.dialog({
+      title: `🏕 ${p.name}`,
+      text: `Na półce leży porządny namiot: ${cena} monet (masz ${session.coins}). Kupujesz raz, na zawsze. Rozłożysz go w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu, jak na polu namiotowym.`,
+      buttons: [`⛺ Kupuję namiot (${cena} 💰)`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        if (session.coins < cena) return this.toast(`Za mało monet – namiot kosztuje ${cena}.`, 2500);
+        spend(cena);
+        session.namiot = true;
+        this.emitHud();
+        this.save();
+        this.toast('⛺ Masz namiot! Rozłożysz go w lesie albo na polu z karty postaci.', 3000);
+      },
+    });
+  }
+
+  /** Where the own tent can go: in a forest or a field, not in a fight. */
+  tentSpot(): { ok: boolean; why: string } {
+    if (!session.namiot) return { ok: false, why: '' };
+    if (this.inCombat()) return { ok: false, why: 'Nie w trakcie walki!' };
+    const kinds = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy);
+    if (!kinds.some((k) => NAMIOT.gdzie.includes(k))) return { ok: false, why: 'Namiot rozłożysz tylko w lesie albo na polu.' };
+    return { ok: true, why: '' };
+  }
+
+  /** Pitch the own tent here and sleep. */
+  pitchTent() {
+    const t = this.tentSpot();
+    if (!t.ok) return this.toast(t.why, 2500);
+    this.add.image(this.player.x + 10, this.player.y - 4, TEX.tent).setDepth(this.player.y - 1);
+    this.sleepInTent(this.player.x, this.player.y, 'Namiot rozbity, dobranoc!');
   }
 
   /** Rides to another station: loads its map and starts there. */

@@ -34,6 +34,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   extraUntil = 0;
   /** Walking speed in px/s (grows with the character level). */
   speed = PLAYER.speed;
+  /** Faster walking after a night in a hotel, until this time (Date.now ms). */
+  boostUntil = 0;
+  boost = 0;
   reach = 1;
   private invulnerableUntil = 0;
   private stunnedUntil = 0;
@@ -62,7 +65,8 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     if (len > 0.15) {
       this.facing.set(v.x, v.y).normalize();
-      this.vel.set(v.x * this.speed, v.y * this.speed);
+      const sp = this.speed * (Date.now() < this.boostUntil ? 1 + this.boost : 1);
+      this.vel.set(v.x * sp, v.y * sp);
       this.setFlipX(this.dirName === 'side' && this.facing.x > 0);
       this.anims.play(`${this.anim}-walk-${this.dirName}`, true);
     } else {

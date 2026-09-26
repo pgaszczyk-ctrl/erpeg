@@ -38,6 +38,8 @@ export interface SaveData {
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;
+  /** Owns a tent (bought once). */
+  namiot?: boolean;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */

@@ -55,6 +55,8 @@ export const session = {
   kamienie: 0,
   /** Healing potions (alchemist at petrol stations). */
   mikstury: 0,
+  /** Owns a tent. */
+  namiot: false,
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -151,6 +153,7 @@ export function startSession(r: LoginResult) {
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   session.kamienie = Math.max(0, p.save.kamienie ?? 0);
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
+  session.namiot = !!p.save.namiot;
   session.mapId = 'lublin';
   session.arrive = null;
   const at = p.save.at;
@@ -188,7 +191,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namiot: session.namiot,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };

@@ -48,3 +48,19 @@ export function pickHotels(city: CityMap) {
   city.places.length = 0;
   city.places.push(...rest, ...keep);
 }
+
+/**
+ * A camp site in every village (unless a real one is near): a cheap save
+ * point outside the city. Villages: CityMap.settlements().
+ */
+export function addVillageCamps(city: CityMap) {
+  if (campsDone.has(city)) return;
+  campsDone.add(city);
+  const real = city.places.filter((p) => p.kind === 'camp');
+  const near = 1500 * PX_PER_M;
+  for (const s of city.settlements()) {
+    if (real.some((p) => Math.hypot(p.door.x - s.x, p.door.y - s.y) < near)) continue;
+    city.places.push({ kind: 'camp', name: `Pole namiotowe – ${s.name}`, id: `${city.id === 'lublin' ? '' : `${city.id}/`}camp:${s.name}`, building: null, door: { x: s.x, y: s.y } });
+  }
+}
+const campsDone = new WeakSet<CityMap>();
