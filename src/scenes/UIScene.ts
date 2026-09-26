@@ -16,6 +16,7 @@ export class UIScene extends Phaser.Scene {
   private coinText!: Phaser.GameObjects.Text;
   private coinIcon!: Phaser.GameObjects.Image;
   private expText!: Phaser.GameObjects.Text;
+  private titleText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
   private mapBtn!: Phaser.GameObjects.Text;
   private charBtn!: Phaser.GameObjects.Text;
@@ -69,6 +70,9 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(1, 0);
     this.expText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${6 * this.ui}px`, color: '#bfe6ff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
+      .setOrigin(1, 0);
+    this.titleText = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${6 * this.ui}px`, color: '#ffd27a', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(1, 0);
     this.menuBtn = this.add
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
@@ -188,6 +192,7 @@ export class UIScene extends Phaser.Scene {
     this.expText.setPosition(width - pad, pad + 9 * this.ui);
     this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
     this.charBtn.setPosition(width - pad - this.mapBtn.width - 4 * this.ui, pad + 17 * this.ui);
+    this.titleText.setPosition(width - pad, pad + 17 * this.ui + this.mapBtn.height + this.ui);
     this.swordText.setPosition(hx, pad + 10 * this.ui);
     const fy = pad + 10 * this.ui + this.swordText.height + 3 * this.ui;
     let fx = hx + 2 * this.ui;
@@ -227,7 +232,8 @@ export class UIScene extends Phaser.Scene {
       h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
     });
     this.coinText.setText(String(s.coins));
-    this.expText.setText(`${s.exp} EXP`);
+    this.expText.setText(`poz. ${s.level} · ${s.exp} EXP`);
+    this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
     this.swordText.setText(`⚔ ${s.sword}`);
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;

@@ -26,7 +26,7 @@ interface Code {
 }
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
-const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Glut (3 życia)', wielki_glut: 'Wielki glut (18 życia)', bandyta: 'Bandyta (6 życia, szybki)' };
+const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Glut (3 życia)', wielki_glut: 'Wielki glut (18 życia)', bandyta: 'Bandyta (6 życia, szybki)', smok: 'Smok' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';

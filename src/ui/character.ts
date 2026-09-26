@@ -1,5 +1,6 @@
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, type Miejsce } from '../content/przedmioty';
 import { OWOCE, LECZENIE_OWOCAMI } from '../content/sklepy';
+import { poziomPostaci } from '../content/historia';
 import {
   gear, item, totalFruit, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
 } from '../inventory';
@@ -66,11 +67,12 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     box.replaceChildren();
     actions.replaceChildren();
     const head = el('div', 'c-head');
-    head.append(el('h2', '', session.name), el('div', 'c-sub', gear.magic ? 'Wojownik · Mag' : 'Wojownik'));
+    head.append(el('h2', '', session.story.title ? `${session.name}, ${session.story.title}` : session.name), el('div', 'c-sub', gear.magic ? 'Wojownik · Mag' : 'Wojownik'));
     const close = el('button', 'c-close', '✕') as HTMLButtonElement;
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
+    box.append(el('div', 'c-stats', `⭐ Poziom postaci: ${poziomPostaci(session.exp)}`));
     box.append(el('div', 'c-stats', `💰 ${session.coins} monet   ⭐ ${session.exp} EXP   ❤ ${hp / 2}/${maxHp / 2}   🛡 ${defense()} (${Math.round(blockChance() * 100)}% bloku)`));
     // Eating fruit heals.
     const n = LECZENIE_OWOCAMI.owocow;

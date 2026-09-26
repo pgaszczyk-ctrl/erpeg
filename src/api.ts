@@ -32,6 +32,7 @@ export interface SaveData {
   fog?: { s: number; chunks: Record<string, string> };
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
+  story?: import('./quests').Story;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */

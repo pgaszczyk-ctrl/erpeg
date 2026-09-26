@@ -12,6 +12,8 @@ import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
+import { Story } from './Story';
+import { poziomPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, enterWorld, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
@@ -77,6 +79,7 @@ const PLACE_LOOK = {
   station: { roof: '', wall: '', sign: TEX.coach },
   hotel: { roof: '#8a3a6a', wall: '#f3dce9', sign: TEX.signHotel },
   bank: { roof: '#b8902a', wall: '#f5ecd0', sign: TEX.signBank },
+  university: { roof: '#4a5ab8', wall: '#e2e6f5', sign: TEX.signSchool },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -86,6 +89,9 @@ export interface HudState {
   maxHp: number;
   coins: number;
   exp: number;
+  /** Character level (from EXP) and the story title line, if any. */
+  level: number;
+  title: string | null;
   /** Sword name and skill level, for the HUD. */
   sword: string;
   fruits: string;
@@ -116,7 +122,7 @@ interface Shot {
   skill: 'luk' | 'magia';
 }
 
-type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean };
+type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number };
 
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
@@ -131,6 +137,9 @@ export class GameScene extends Phaser.Scene {
   private lingerUntil = 0;
   private orchards!: Orchards;
   private forest!: Forest;
+  private story!: Story;
+  /** The school or church whose dialog gets the story question. */
+  private storyPlace: CityPlace | null = null;
   private training!: Training;
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
@@ -223,6 +232,24 @@ export class GameScene extends Phaser.Scene {
       },
       save: () => this.save(),
       trees: (x, y, r) => this.orchards.treesNear(x, y, r),
+    });
+
+    this.storyPlace = null;
+    this.story = new Story(this, this.city, {
+      player: this.player,
+      dialog: (req) => this.dialog(req),
+      toast: (t, ms) => this.toast(t, ms),
+      save: () => this.save(),
+      hud: () => this.emitHud(),
+      visible: (x, y) => pointInPolygon(this.vision, x, y),
+      spawnDragon: (x, y) => this.spawnEnemy(x, y, undefined, 'smok'),
+      scare: (x, y) => {
+        for (const e of this.enemies) {
+          if (e.isDead || e.kindId === 'smok' || Math.hypot(e.x - x, e.y - y) > 320) continue;
+          e.fleeUntil = this.time.now + 7000;
+          e.chasing = false;
+        }
+      },
     });
 
     // Missions: gold roofs and "!" over their doors.
@@ -337,17 +364,18 @@ export class GameScene extends Phaser.Scene {
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
-    if (lingering) this.player.move(0, 0, now);
+    if (lingering || this.story.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
     const bx = this.player.x;
     const by = this.player.y;
     this.moveActor(this.player, dt);
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
+    this.story.update(dt, this.player.x !== bx || this.player.y !== by);
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     this.player.setAlpha(hidden ? 0.5 : 1);
 
-    if (consumeAttack() && !lingering) {
+    if (consumeAttack() && !lingering && !this.story.busy) {
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
     }
@@ -363,6 +391,21 @@ export class GameScene extends Phaser.Scene {
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
       if (s.isDead) continue;
+      // Scared by the dragon's shadow: running away.
+      if (s.fleeUntil && now < s.fleeUntil) {
+        const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3);
+        s.vel.set(away.x, away.y);
+        this.moveActor(s, dt);
+        s.updateLook();
+        s.setDepth(s.y);
+        continue;
+      }
+      // The story's dragon before the fight (or a friendly one): stays put.
+      if (s.peaceful) {
+        s.vel.set(0, 0);
+        s.setDepth(s.y);
+        continue;
+      }
       // Far from the hero: asleep (saves work on phones).
       if (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380) continue;
       // Where one goes, its friends follow.
@@ -570,6 +613,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(s: Enemy) {
+    if (s === this.story.dragonSprite) {
+      this.enemies = this.enemies.filter((e) => e !== s);
+      this.story.dragonKilled();
+      return;
+    }
     this.dropLoot(s.x, s.y);
     this.enemies = this.enemies.filter((e) => e !== s);
     session.exp += s.kind.exp;
@@ -805,9 +853,15 @@ export class GameScene extends Phaser.Scene {
       open = () => this.openRiddle(npc);
       savePoint = false; // saved after the answer
     }
+    const wizard = !id && this.story.wizardAt(fx, fy - FEET.dy, NPC_RADIUS);
+    if (wizard) {
+      id = 'story-wizard';
+      open = () => this.story.talkToWizard();
+      savePoint = false;
+    }
     // Characters wait a few seconds after the last talk, so bumping into one
     // right after a dialog doesn't start another by accident.
-    if (id && (fixed || npc) && performance.now() < this.npcReadyAt) {
+    if (id && (fixed || npc || wizard) && performance.now() < this.npcReadyAt) {
       this.nearDoor = id; // walk away and come back to talk
       return;
     }
@@ -847,6 +901,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openPlace(p: CityPlace) {
+    // Schools, churches and universities: the story question joins their dialog.
+    if (p.kind === 'school' || p.kind === 'church' || p.kind === 'university') {
+      this.storyPlace = p;
+      try {
+        this.openPlaceInner(p);
+      } finally {
+        this.storyPlace = null;
+      }
+      return;
+    }
+    this.openPlaceInner(p);
+  }
+
+  private openPlaceInner(p: CityPlace) {
+    if (p.kind === 'university') {
+      return this.dialog({ title: `🎓 ${p.name}`, text: 'Studenci spieszą na zajęcia, a profesorowie dyskutują przy tablicy.', buttons: ['Wyjdź'], onChoose: () => {} });
+    }
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
     if (p.kind === 'hotel') return this.openHotel(p);
@@ -1369,10 +1440,15 @@ export class GameScene extends Phaser.Scene {
   private openShop(p: CityPlace) {
     const offers = this.offers('sklep');
     const value = fruitValue();
-    const sell = value > 0 ? [`Sprzedaj zbiory – ${value} monet`] : [];
+    // Easier levels: every shop buys fruit; harder ones: only some (always the same ones).
+    let h = 2166136261;
+    for (const ch of `skup:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const buys = ((h >>> 0) % 1000) / 1000 < session.level.skup;
+    const sell = value > 0 && buys ? [`Sprzedaj zbiory – ${value} monet`] : [];
+    const noBuy = value > 0 && !buys ? '\n\nTu nie skupujemy owoców, grzybów ani drewna – spróbuj w innym sklepie.' : '';
     this.dialog({
       title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
-      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!') + noBuy,
       buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
       onChoose: (i) => {
         if (sell.length && i === 0) {
@@ -1636,7 +1712,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** The mission the arrow should point at, and where. */
-  private currentGoal(): { text: string; pos: { x: number; y: number } } | null {
+  private currentGoal(): { text: string; pos: { x: number; y: number } | null } | null {
     const px = this.player.x;
     const py = this.player.y;
     const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
@@ -1654,10 +1730,22 @@ export class GameScene extends Phaser.Scene {
       }
       if (st === 'goal') return { text: `Wróć do: ${rm.m.adres}`, pos: rm.door };
     }
-    return null;
+    return this.story.goal();
   }
 
   private dialog(req: DialogRequest) {
+    // At a school or church: "ask about the shadows" as one more option.
+    const place = this.storyPlace;
+    const ask = place && this.story.askLabel();
+    if (place && ask) {
+      this.storyPlace = null;
+      const at = req.buttons.length - 1;
+      req = {
+        ...req,
+        buttons: [...req.buttons.slice(0, at), ask, ...req.buttons.slice(at)],
+        onChoose: (i) => (i === at ? this.story.ask(place) : req.onChoose(i > at ? i - 1 : i)),
+      };
+    }
     this.player.vel.set(0, 0);
     this.player.anims.stop();
     this.scene.pause();
@@ -1683,6 +1771,8 @@ export class GameScene extends Phaser.Scene {
       maxHp: PLAYER.maxHp,
       coins: session.coins,
       exp: session.exp,
+      level: poziomPostaci(session.exp),
+      title: session.story.title ? `${session.name}, ${session.story.title}` : null,
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [fruitCount('jablko'), fruitCount('sliwka'), fruitCount('winogrono')],

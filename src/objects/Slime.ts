@@ -22,6 +22,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   glut: { name: 'Glut', hp: 3, wanderSpeed: 20, chaseSpeed: 38, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
   wielki_glut: { name: 'Wielki glut', hp: 18, wanderSpeed: 13, chaseSpeed: 33, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
   bandyta: { name: 'Bandyta', hp: 6, wanderSpeed: 30, chaseSpeed: 64, sightRange: 80, loseRange: 150, scale: 1, damage: 1, exp: 15 },
+  // The story's dragon (its reward comes from content/historia.ts).
+  smok: { name: 'Smok', hp: 60, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
 
 /** Kept for code that only knows slimes. */
@@ -34,6 +36,7 @@ export function createSlimeAnims(scene: Phaser.Scene) {
     frameRate: 4,
     repeat: -1,
   });
+  scene.anims.create({ key: 'dragon-flap', frames: [{ key: TEX.dragon, frame: 'f0' }, { key: TEX.dragon, frame: 'f1' }], frameRate: 3, repeat: -1 });
   for (const dir of HERO_DIRS) {
     scene.anims.create({
       key: `bandit-walk-${dir}`,
@@ -62,7 +65,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
-    super(scene, x, y, kind === 'bandyta' ? TEX.bandit : TEX.slime, kind === 'bandyta' ? 'down-0' : 'f0');
+    super(scene, x, y, kind === 'bandyta' ? TEX.bandit : kind === 'smok' ? TEX.dragon : TEX.slime, kind === 'bandyta' ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
@@ -71,16 +74,22 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.setOrigin(0.5, 1 - 0.5 / k.scale); // grow upwards from the feet
     if (k.tint) this.setTint(k.tint);
     this.home = new Phaser.Math.Vector2(x, y);
-    if (kind !== 'bandyta') this.anims.play({ key: 'slime-hop', startFrame: Phaser.Math.Between(0, 1) });
+    if (kind === 'smok') this.anims.play('dragon-flap');
+    else if (kind !== 'bandyta') this.anims.play({ key: 'slime-hop', startFrame: Phaser.Math.Between(0, 1) });
   }
 
   /** How far from its centre a sword swing or a touch reaches it. */
   get size() {
+    if (this.kindId === 'smok') return 14;
     return 6 * this.kind.scale;
   }
 
   /** Bandits turn to face where they walk. */
   private face() {
+    if (this.kindId === 'smok') {
+      if (Math.abs(this.vel.x) > 1) this.setFlipX(this.vel.x > 0);
+      return;
+    }
     if (this.kindId !== 'bandyta') return;
     const v = this.vel;
     if (v.lengthSq() < 1) {
@@ -140,7 +149,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.hp -= damage;
     this.chasing = true;
     this.stunnedUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(200 / this.kind.scale);
+    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.kindId === 'smok' ? 30 : 200 / this.kind.scale);
     this.vel.set(push.x, push.y);
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);

@@ -10,7 +10,7 @@
 export type Miejsce = string | { lat: number; lon: number };
 
 /** glut (3 życia), wielki_glut (18 życia, mocno bije), bandyta (6 życia, szybki). */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok';
 
 export interface Zadanie {
   /**

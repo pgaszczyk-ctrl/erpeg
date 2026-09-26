@@ -17,6 +17,18 @@ export type MissionState = 'new' | 'active' | 'goal' | 'done';
 
 export const MAX_HP = 6;
 
+/** The main story (content/historia.ts, scenes/Story.ts); positions carry their scale `s`. */
+export interface Story {
+  st: 'start' | 'cien' | 'uczelnia' | 'smok' | 'koniec';
+  /** Seconds walked before the dragon's shadow. */
+  walked: number;
+  target?: { m: string; id: string; name: string; x: number; y: number; s: number };
+  dragon?: { m: string; x: number; y: number; s: number };
+  choice?: 'zabij' | 'zbadaj';
+  /** Shown under the name, e.g. "Pogromca smoka". */
+  title?: string;
+}
+
 export const session = {
   token: '',
   name: '',
@@ -36,6 +48,7 @@ export const session = {
   arrive: null as { x: number; y: number } | null,
   /** Bank deposits (content/banki.ts). */
   lokaty: [] as NonNullable<SaveData['lokaty']>,
+  story: { st: 'start', walked: 0 } as Story,
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -125,6 +138,7 @@ export function startSession(r: LoginResult) {
   session.fog = p.save.fog;
   session.fogs = { ...(p.save.fogs ?? {}) };
   session.lokaty = [...(p.save.lokaty ?? [])];
+  session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   session.mapId = 'lublin';
   session.arrive = null;
   const at = p.save.at;
@@ -161,7 +175,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };

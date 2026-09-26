@@ -36,6 +36,9 @@ export const TEX = {
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
   mushroom: 'mushroom',
+  dragon: 'dragon',
+  wizard: 'wizard',
+  exclaim: 'exclaim',
   log: 'log',
   pine: 'pine',
   signBank: 'sign-bank',
@@ -285,6 +288,17 @@ function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number, o: 
 
 /** The player's own hero, drawn from the look chosen at character creation. */
 export const PLAYER_TEX = 'hero-me';
+/** A character drawn like the hero (frames `down-0`… like PLAYER_TEX), e.g. the wizard. */
+export function makeLookTexture(scene: Phaser.Scene, key: string, look: Look, worn: Worn = {}) {
+  if (scene.textures.exists(key)) return;
+  const { tex, ctx } = canvasTexture(scene, key, LOOK_W * HERO_FRAMES, LOOK_H * HERO_DIRS.length);
+  drawLookSheet(ctx, look, worn);
+  HERO_DIRS.forEach((dir, row) => {
+    for (let f = 0; f < HERO_FRAMES; f++) tex.add(`${dir}-${f}`, 0, f * LOOK_W, row * LOOK_H, LOOK_W, LOOK_H);
+  });
+  tex.refresh();
+}
+
 export function makePlayerTexture(scene: Phaser.Scene, look: Look, worn: Worn = {}) {
   if (scene.textures.exists(PLAYER_TEX)) scene.textures.remove(PLAYER_TEX);
   const { tex, ctx } = canvasTexture(scene, PLAYER_TEX, LOOK_W * HERO_FRAMES, LOOK_H * HERO_DIRS.length);
@@ -720,6 +734,61 @@ function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: s
   tex.refresh();
 }
 
+/** The dragon (facing left, wings up 'f0' and down 'f1') and a big "!" over a head. */
+function drawDragon(scene: Phaser.Scene) {
+  const W = 40, H = 30;
+  const { tex, ctx } = canvasTexture(scene, TEX.dragon, W * 2, H);
+  for (let f = 0; f < 2; f++) {
+    const o = f * W;
+    const body = '#3f9a4a', light = '#6fd06a', belly = '#e8d27a';
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(o + 21, 27, 13, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // wing
+    if (f === 0) {
+      px(ctx, o + 16, 1, 16, 12, OUTLINE);
+      px(ctx, o + 17, 2, 14, 10, '#2f7a3a');
+      px(ctx, o + 20, 2, 1, 10, OUTLINE);
+      px(ctx, o + 25, 2, 1, 10, OUTLINE);
+    } else {
+      px(ctx, o + 16, 11, 18, 7, OUTLINE);
+      px(ctx, o + 17, 12, 16, 5, '#2f7a3a');
+    }
+    // tail
+    px(ctx, o + 29, 17, 10, 4, OUTLINE);
+    px(ctx, o + 30, 18, 8, 2, body);
+    px(ctx, o + 36, 15, 3, 3, OUTLINE);
+    // body
+    px(ctx, o + 13, 13, 18, 11, OUTLINE);
+    px(ctx, o + 14, 14, 16, 9, body);
+    px(ctx, o + 15, 19, 13, 4, belly);
+    px(ctx, o + 15, 14, 8, 2, light);
+    // neck and head
+    px(ctx, o + 8, 9, 8, 8, OUTLINE);
+    px(ctx, o + 9, 10, 6, 6, body);
+    px(ctx, o + 1, 6, 11, 8, OUTLINE);
+    px(ctx, o + 2, 7, 9, 6, body);
+    px(ctx, o + 2, 11, 4, 2, belly);
+    px(ctx, o + 5, 8, 2, 2, '#fff3a0');
+    px(ctx, o + 6, 8, 1, 1, OUTLINE);
+    px(ctx, o + 8, 4, 2, 3, OUTLINE); // horn
+    px(ctx, o + 2, 12, 1, 1, OUTLINE); // nostril
+    // legs
+    px(ctx, o + 15, 23, 4, 4, OUTLINE);
+    px(ctx, o + 25, 23, 4, 4, OUTLINE);
+    px(ctx, o + 16, 23, 2, 3, body);
+    px(ctx, o + 26, 23, 2, 3, body);
+    tex.add(`f${f}`, 0, o, 0, W, H);
+  }
+  tex.refresh();
+  const ex = canvasTexture(scene, TEX.exclaim, 8, 14);
+  px(ex.ctx, 1, 0, 6, 14, OUTLINE);
+  px(ex.ctx, 2, 1, 4, 8, '#f7c531');
+  px(ex.ctx, 2, 10, 4, 3, '#f7c531');
+  ex.tex.refresh();
+}
+
 /** A red toadstool-like bolete (to pick up) and a log of wood. */
 function drawForestItems(scene: Phaser.Scene) {
   {
@@ -876,6 +945,7 @@ export function createArt(scene: Phaser.Scene) {
   drawVine(scene);
   drawFruitItem(scene, TEX.fruitApple, '#e43b44', '#ffb3b8');
   drawForestItems(scene);
+  drawDragon(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawSigns(scene);
