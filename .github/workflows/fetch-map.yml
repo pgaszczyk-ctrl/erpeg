@@ -25,4 +25,4 @@ jobs:
           git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
           git add data/lublin-osm.geojsonseq.gz data/towns data/towns.json data/rail.json
           git commit -m "Update Lublin region OpenStreetMap data and train timetables" || echo "No changes"
-          git push
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push
