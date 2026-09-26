@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "map": "node scripts/build-map.mjs",
-    "dev": "node scripts/build-map.mjs && vite --host",
-    "build": "node scripts/build-map.mjs && tsc --noEmit && vite build",
+    "map": "node scripts/build-maps.mjs",
+    "dev": "node scripts/build-maps.mjs && vite --host",
+    "build": "node scripts/build-maps.mjs && tsc --noEmit && vite build",
     "preview": "vite preview --host"
   },
   "dependencies": {

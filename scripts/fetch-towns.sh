@@ -16,29 +16,40 @@ osmium export "$WORK/stations.pbf" -f geojsonseq -o "$WORK/stations.geojsonseq"
 mkdir -p "$WORK/towns"
 node scripts/plan-towns.mjs "$WORK/stations.geojsonseq" "$WORK/towns" "$WORK/extracts.json"
 
-# One pass over the region cuts out every town.
-osmium extract -c "$WORK/extracts.json" -s smart --overwrite "$PBF"
+# Keep only what the game draws (the same list as for Lublin), once for the
+# whole region, so the cut-outs below are small and quick.
+osmium tags-filter "$PBF" \
+  wr/building \
+  w/highway \
+  w/railway=rail,tram,light_rail \
+  n/railway=station,halt \
+  w/waterway=river,stream,canal,ditch,drain \
+  wr/natural=water,wood,scrub,grassland,wetland \
+  wr/landuse=grass,forest,meadow,recreation_ground,cemetery,allotments,village_green,farmland,orchard,reservoir,basin \
+  wr/leisure=park,garden,pitch,playground,stadium,track \
+  wr/amenity=parking \
+  n/addr:housenumber \
+  nwr/shop=supermarket,convenience,discount \
+  nwr/amenity=school,place_of_worship,townhall,hospital,police,library \
+  nwr/office=government \
+  --overwrite -o "$WORK/filtered.pbf"
+
+# Cut the towns out in batches of 15 (all at once runs out of memory).
+node -e '
+  const fs = require("fs");
+  const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  for (let i = 0; i * 15 < c.extracts.length; i++)
+    fs.writeFileSync(`${process.argv[1]}.${i}`, JSON.stringify({ ...c, extracts: c.extracts.slice(i * 15, i * 15 + 15) }));
+' "$WORK/extracts.json"
+for cfg in "$WORK"/extracts.json.*; do
+  osmium extract -c "$cfg" -s complete_ways --overwrite "$WORK/filtered.pbf"
+done
 
 rm -rf data/towns
 mkdir -p data/towns
 for f in "$WORK"/towns/*.pbf; do
   id=$(basename "$f" .pbf)
-  osmium tags-filter "$f" \
-    wr/building \
-    w/highway \
-    w/railway=rail,tram,light_rail \
-    n/railway=station,halt \
-    w/waterway=river,stream,canal,ditch,drain \
-    wr/natural=water,wood,scrub,grassland,wetland \
-    wr/landuse=grass,forest,meadow,recreation_ground,cemetery,allotments,village_green,farmland,orchard,reservoir,basin \
-    wr/leisure=park,garden,pitch,playground,stadium,track \
-    wr/amenity=parking \
-    n/addr:housenumber \
-    nwr/shop=supermarket,convenience,discount \
-    nwr/amenity=school,place_of_worship,townhall,hospital,police,library \
-    nwr/office=government \
-    --overwrite -o "$WORK/f-$id.pbf"
-  osmium export "$WORK/f-$id.pbf" -f geojsonseq --overwrite -o "$WORK/$id.geojsonseq"
+  osmium export "$f" -f geojsonseq --overwrite -o "$WORK/$id.geojsonseq"
   gzip -9 -c "$WORK/$id.geojsonseq" > "data/towns/$id.geojsonseq.gz"
 done
 du -sh data/towns
@@ -52,4 +63,4 @@ for op in polregio pkpic; do
     echo "timetable $op not available"
   fi
 done
-node scripts/rail-from-gtfs.mjs "${GTFS[@]}"
+node scripts/rail-from-gtfs.mjs ${GTFS[@]+"${GTFS[@]}"}
