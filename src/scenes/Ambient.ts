@@ -80,7 +80,7 @@ export class Orchards {
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
     for (const a of areas) {
       if (!FRUIT_AREAS[a.kind]) continue;
-      for (const t of this.treesOf(a, this.city.areas.indexOf(a))) {
+      for (const t of this.treesOf(a, a.id)) {
         if (t.sprite || Math.hypot(t.x - px, t.y - py) > NEAR) continue;
         t.sprite = this.scene.add
           .image(t.x, t.y, TREE_TEX[t.fruit]!, t.left > 0 ? 'full' : 'bare')
@@ -96,7 +96,7 @@ export class Orchards {
     const out: { x: number; y: number; w: number }[] = [];
     for (const a of this.city.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).areas) {
       if (!FRUIT_AREAS[a.kind]) continue;
-      for (const t of this.treesOf(a, this.city.areas.indexOf(a))) {
+      for (const t of this.treesOf(a, a.id)) {
         if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit]!, 'full').width });
       }
     }
@@ -177,6 +177,8 @@ export class Forest {
     const key = `${cx}:${cy}`;
     let list = this.cells.get(key);
     if (list) return list;
+    // Not loaded yet: nothing now, and don't remember it.
+    if (!this.city.ready({ x0: cx * this.cell, y0: cy * this.cell, x1: (cx + 1) * this.cell, y1: (cy + 1) * this.cell })) return [];
     list = [];
     const r = rng(hashStr(`${this.city.id}:${key}`));
     // The tree first (same spots as before), then several tries for mushrooms.
@@ -354,6 +356,8 @@ export class StreetEnemies {
       for (let cy = pcy - 1; cy <= pcy + 1; cy++) {
         const key = `${cx},${cy}`;
         if (this.spawned.has(key)) continue;
+        // That part of the map isn't loaded yet: try again later.
+        if (!this.city.ready({ x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM })) continue;
         this.spawned.set(key, this.cellPlan(cx, cy).map((s) => this.spawn(s, key)));
       }
     }

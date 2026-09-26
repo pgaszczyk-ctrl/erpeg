@@ -35,7 +35,7 @@ export function drawCity(canvas: HTMLCanvasElement, city: CityMap, box: { x0: nu
       ctx.closePath();
     }
   };
-  areas.sort((a, b) => city.areas.indexOf(a) - city.areas.indexOf(b));
+  areas.sort((a, b) => a.id - b.id);
   for (const a of areas) {
     path(a.rings);
     ctx.fillStyle = AREA_FILL[a.kind] ?? '#72c23a';

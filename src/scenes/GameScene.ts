@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { itemTexture } from '../ui/itemIcon';
+import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
@@ -21,7 +22,7 @@ import { poziomPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
-import { cachedMap, enterWorld, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
+import { cachedMap, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
 import type { ZagadkaPL } from '../content/postacie';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
@@ -151,6 +152,7 @@ export class GameScene extends Phaser.Scene {
   private lingerUntil = 0;
   private orchards!: Orchards;
   private forest!: Forest;
+  private nextTiles = 0;
   private story!: Story;
   /** Blinking talk bubbles over characters with something to say (a pool). */
   private bubbles: Phaser.GameObjects.Image[] = [];
@@ -386,6 +388,11 @@ export class GameScene extends Phaser.Scene {
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
     this.mapView.update(this.cameras.main);
+    // Tiled maps: keep the map loaded around the hero.
+    if (now >= this.nextTiles && this.player) {
+      this.nextTiles = now + 700;
+      this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
+    }
     if (this.player.isDead || this.leaving || this.travelling) return;
 
     const lingering = now < this.lingerUntil;
@@ -1086,8 +1093,9 @@ export class GameScene extends Phaser.Scene {
     // The load point is on another map: go there.
     this.travelling = true;
     this.keepFog();
-    getMap(at.m).then((city) => {
+    getMap(at.m).then(async (city) => {
       session.arrive = { x: at.x, y: at.y };
+      await prepareMap(city);
       this.game.registry.set('city', city);
       saveNow(PLAYER.maxHp).catch(() => {});
       this.scene.stop('ui');
@@ -1496,9 +1504,12 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.fadeOut(900, 0, 0, 0);
     Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
-      .then(([city]) => {
+      .then(async ([city]) => {
         const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
-        session.arrive = st ? { ...st.door } : city.freeNear(city.fromLatLon(t.to.lat, t.to.lon).x, city.fromLatLon(t.to.lat, t.to.lon).y);
+        const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
+        await city.ensure(to.x, to.y, LOAD_RADIUS);
+        session.arrive = st ? { ...st.door } : city.freeNear(to.x, to.y);
+        await prepareMap(city);
         session.hp = this.player.hp;
         this.justRode = true;
         this.game.registry.set('city', city);

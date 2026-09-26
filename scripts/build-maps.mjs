@@ -15,7 +15,12 @@ const run = (args) =>
     p.on('close', (code) => (code === 0 ? ok(out) : no(new Error(`build-map ${args.join(' ')} failed (${code})`))));
   });
 
-process.stdout.write(await run([]));
+// Lublin: the whole map, then cut into an index and 1 km tiles for the game.
+process.stdout.write(await run(['--out', '.cache/lublin-full.json']));
+await new Promise((ok, no) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/split-map.mjs'], { stdio: 'inherit' });
+  p.on('close', (code) => (code === 0 ? ok() : no(new Error(`split-map failed (${code})`))));
+});
 
 mkdirSync('public/map', { recursive: true });
 if (!existsSync('data/towns.json')) {

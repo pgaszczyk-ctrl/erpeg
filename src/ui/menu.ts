@@ -453,14 +453,19 @@ function ghostMap(city: CityMap, p: LoginResult['player']) {
   const size = 300;
   const canvas = el('canvas', { className: 'm-deathmap' });
   canvas.width = canvas.height = size * Math.min(2, window.devicePixelRatio || 1);
-  drawCity(canvas, city, { x0: x - R, y0: y - R, x1: x + R, y1: y + R });
-  const ctx = canvas.getContext('2d')!;
-  // A soft grey mist over the place.
-  const g = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width * 0.12, canvas.width / 2, canvas.height / 2, canvas.width * 0.7);
-  g.addColorStop(0, 'rgba(30,26,36,0)');
-  g.addColorStop(1, 'rgba(30,26,36,0.75)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const paint = () => {
+    drawCity(canvas, city, { x0: x - R, y0: y - R, x1: x + R, y1: y + R });
+    const ctx = canvas.getContext('2d')!;
+    // A soft grey mist over the place.
+    const g = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width * 0.12, canvas.width / 2, canvas.height / 2, canvas.width * 0.7);
+    g.addColorStop(0, 'rgba(30,26,36,0)');
+    g.addColorStop(1, 'rgba(30,26,36,0.75)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+  // Tiled map: that part may not be loaded yet (paint again once it is).
+  if (city.ready({ x0: x - R, y0: y - R, x1: x + R, y1: y + R })) paint();
+  else city.ensure(x, y, R).then(paint, paint);
   return el('div', { className: 'm-ghostwrap' }, [canvas, el('div', { className: 'm-ghost' }, [ghostSvg()])]);
 }
 

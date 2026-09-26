@@ -226,8 +226,9 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
   // A real address at a sensible distance.
   let target: Building | null = null;
   let distM = 0;
+  const all = city.addressed();
   for (let i = 0; i < 400 && !target; i++) {
-    const b = city.buildings[Math.floor(r() * city.buildings.length)];
+    const b = all[Math.floor(r() * all.length)];
     if (!b.addresses.length || b === place.building) continue;
     const d = Math.hypot((b.x0 + b.x1) / 2 - place.door.x, (b.y0 + b.y1) / 2 - place.door.y) / PX_PER_M;
     if (d >= dmin && d <= dmax) {

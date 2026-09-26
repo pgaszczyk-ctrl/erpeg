@@ -216,8 +216,20 @@ export class MapRenderer {
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
 
+  /** Chunks drawn before a map tile arrived: redrawn in place (kept visible meanwhile). */
+  private stale = new Set<string>();
+
   constructor(private scene: Phaser.Scene, private map: CityMap) {
-    scene.events.once('shutdown', () => this.destroy());
+    const off = map.onTile((b) => {
+      // Walls hang up to ~60 px below a footprint: one chunk of margin.
+      for (let cx = Math.floor(b.x0 / CHUNK) - 1; cx <= Math.floor(b.x1 / CHUNK) + 1; cx++)
+        for (let cy = Math.floor(b.y0 / CHUNK) - 1; cy <= Math.floor(b.y1 / CHUNK) + 1; cy++)
+          if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
+    });
+    scene.events.once('shutdown', () => {
+      off();
+      this.destroy();
+    });
   }
 
   /** Frees the chunk textures (the scene is going away). */
@@ -248,13 +260,14 @@ export class MapRenderer {
       if (x < cx0 - 1 || x > cx1 + 1 || y < cy0 - 1 || y > cy1 + 1 || this.chunks.size > MAX_CHUNKS) {
         c.img.setVisible(false);
         this.chunks.delete(k);
+        this.stale.delete(k);
         this.free.push(c);
       }
     }
 
     for (const [x, y] of want) {
       const k = `${x},${y}`;
-      if (this.chunks.has(k)) continue;
+      if (this.chunks.has(k) && !this.stale.has(k)) continue;
       if (budget-- <= 0) break;
       this.draw(x, y);
     }
@@ -267,10 +280,13 @@ export class MapRenderer {
       this.free.push(c);
     }
     this.chunks.clear();
+    this.stale.clear();
   }
 
   private draw(cx: number, cy: number) {
-    let chunk = this.free.pop();
+    const k = `${cx},${cy}`;
+    this.stale.delete(k);
+    let chunk = this.chunks.get(k) ?? this.free.pop();
     if (!chunk) {
       const key = `chunk-${textureCounter++}`;
       const tex = this.scene.textures.createCanvas(key, CHUNK, CHUNK)!;
@@ -305,7 +321,7 @@ export class MapRenderer {
     clip = { x0: x0 - 40, y0: y0 - 80, x1: x0 + CHUNK + 40, y1: y0 + CHUNK + 80 };
 
     // Areas (already in draw order from the map build).
-    areas.sort((a, b) => m.areas.indexOf(a) - m.areas.indexOf(b));
+    areas.sort((a, b) => a.id - b.id);
     for (const a of areas) if (a.kind !== 'paved') this.paintArea(ctx, a);
 
     // Waterways, then roads (outlines first so crossings merge), then rails.

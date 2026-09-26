@@ -219,8 +219,14 @@ export class Story {
       title: `🧙 ${m.imie}`,
       text: m.tekst,
       buttons: ['Ruszam na smoka!'],
-      onChoose: () => {
+      onChoose: async () => {
         if (st.st !== 'smok' || !st.dragon || st.dragon.m !== this.city.id) {
+          // Tiled maps: load the land away from the town centre, where the dragon will lie.
+          const w = this.wizard ?? this.host.player;
+          const c = this.townCentre();
+          const d = Math.hypot(w.x - c.x, w.y - c.y) || 1;
+          const far = 3000 * PX_PER_M;
+          await this.city.ensure(w.x + ((w.x - c.x) / d) * far, w.y + ((w.y - c.y) / d) * far, far).catch(() => {});
           const spot = this.dragonSpot();
           st.dragon = { m: this.city.id, x: Math.round(spot.x), y: Math.round(spot.y), s: PX_PER_M };
           st.choice = undefined;
@@ -237,13 +243,18 @@ export class Story {
    * A free spot far from houses (ideally 500 m) and far from the town centre
    * (where the shops, offices and churches are), 0.5–6 km from the wizard.
    */
+  /** The middle of the town: the mean of all places (shops, offices, churches…). */
+  private townCentre() {
+    const places = this.city.places;
+    return places.length
+      ? { x: places.reduce((a, p) => a + p.door.x, 0) / places.length, y: places.reduce((a, p) => a + p.door.y, 0) / places.length }
+      : { x: this.city.width / 2, y: this.city.height / 2 };
+  }
+
   private dragonSpot() {
     const w = this.wizard ?? this.host.player;
     const want = HISTORIA.smokOdBudynkow * PX_PER_M;
-    const places = this.city.places;
-    const centre = places.length
-      ? { x: places.reduce((a, p) => a + p.door.x, 0) / places.length, y: places.reduce((a, p) => a + p.door.y, 0) / places.length }
-      : { x: this.city.width / 2, y: this.city.height / 2 };
+    const centre = this.townCentre();
     let best = { x: w.x + 500 * PX_PER_M, y: w.y, score: -Infinity };
     const r = Math.random;
     for (let i = 0; i < 900; i++) {

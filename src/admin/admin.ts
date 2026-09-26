@@ -402,7 +402,9 @@ function missionPreview(m: Misja) {
     const cy = (a.y + b.y) / 2;
     const R = Math.max(80 * PX_PER_M, Math.hypot(a.x - b.x, a.y - b.y) / 2 + 40 * PX_PER_M);
     const canvas = el('canvas', { className: 'map', width: 600, height: 600 });
-    drawCity(canvas, city, { x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R });
+    const map = city;
+    const paint = () => {
+    drawCity(canvas, map, { x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R });
     const ctx = canvas.getContext('2d')!;
     const s = canvas.width / (2 * R);
     const dot = (p: { x: number; y: number }, color: string, glyph: string) => {
@@ -424,6 +426,10 @@ function missionPreview(m: Misja) {
     };
     if (target) dot(b, '#ff4b4b', m.zadanie.typ === 'idz' ? '⚑' : '⚔');
     dot(a, '#f7c531', '!');
+    };
+    // The map is loaded in tiles: draw now and again once that part is in.
+    paint();
+    if (!map.ready({ x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R })) map.ensure(cx, cy, R).then(paint, () => {});
     out.append(canvas, el('div', { className: 'legend' }, ['🟡 wejście (tu się dostaje misję)', target ? '  🔴 cel zadania' : '']));
   } else if (!city) out.append(el('p', { className: 'muted' }, ['Wczytuję mapę…']));
   return out;

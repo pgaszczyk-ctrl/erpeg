@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { CityMap } from './map/CityMap';
+import { CityMap, PX_PER_M } from './map/CityMap';
+import { PIES, MARGO, DZIADKOWIE } from './content/postacie';
 import { pickHotels } from './hotels';
 import { session } from './quests';
 
@@ -65,6 +66,31 @@ export async function getMap(id: string) {
   return city;
 }
 
+/** How far around the hero the map is loaded (tiled maps). */
+export const LOAD_RADIUS = 2000 * PX_PER_M;
+
+/**
+ * Loads the map tiles the scene needs right away: around where the hero
+ * appears, home, an unfinished session's spot and the fixed characters'
+ * streets (nothing to do for small maps without tiles).
+ */
+export async function prepareMap(city: CityMap) {
+  // Around the hero now (the rest comes while playing, see GameScene.update).
+  const near = 1000 * PX_PER_M;
+  const pts: { x: number; y: number; r: number }[] = [];
+  if (session.arrive) pts.push({ ...session.arrive, r: near });
+  if (city.id === 'lublin') {
+    pts.push({ x: session.startX, y: session.startY, r: near });
+    for (const street of [...PIES.ulice, MARGO.ulica, DZIADKOWIE.ulica]) {
+      const p = city.findStart(street);
+      if (p) pts.push({ ...p, r: 400 * PX_PER_M });
+    }
+  }
+  const a = session.abandoned;
+  if (a && (a.m ?? 'lublin') === city.id) pts.push({ x: a.x, y: a.y, r: near });
+  await Promise.all(pts.map((p) => city.ensure(p.x, p.y, p.r)));
+}
+
 /**
  * Starts the game where the character was last saved: the last hotel (on
  * its map), or home. There are no teleports.
@@ -80,6 +106,7 @@ export async function enterWorld(game: Phaser.Game) {
     }
   }
   session.arrive = at ? { x: at.x, y: at.y } : null;
+  await prepareMap(city);
   game.registry.set('city', city);
   game.scene.start('game');
 }

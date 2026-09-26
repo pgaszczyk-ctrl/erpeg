@@ -17,14 +17,18 @@ const BLOCKING_AREAS = new Set(['water']);
 
 interface Box { x0: number; y0: number; x1: number; y1: number }
 
-export interface Area extends Box { kind: string; rings: number[][] }
-export interface Line extends Box { kind: string; pts: number[]; width: number; bridge: boolean; pass: boolean; name: string | null }
+/** `id`: the feature's index in the whole map (stable across tiles; seeds use it). */
+export interface Area extends Box { kind: string; rings: number[][]; id: number }
+export interface Line extends Box { kind: string; pts: number[]; width: number; bridge: boolean; pass: boolean; name: string | null; id: number }
 export interface Building extends Box {
   rings: number[][];
   addresses: string[];
   name: string | null;
   levels: number;
   seed: number;
+  id: number;
+  /** Precomputed entrance (tiled maps: known before the building's tile is loaded). */
+  door?: { x: number; y: number };
 }
 
 type RawMap = {
@@ -42,6 +46,24 @@ type RawMap = {
   lines: [string, number, number[], string | 0][];
   buildings: [number[][], string | 0, string | 0, number][];
   pois?: [string, string, number, number, string | 0][];
+  /**
+   * Tiled map (Lublin): only an index is loaded up front; the features are in
+   * tiles of `tile` metres (map/<id>/<cx>_<cy>.json), fetched around the hero.
+   * areas then carry their id first; `bld` lists buildings with an address or
+   * a name [id, x0, y0, x1, y1, doorX, doorY, addresses, name] (px), `places`
+   * [kind, name, placeId, buildingId, doorX, doorY], `streets` [name, x, y].
+   */
+  tile?: number;
+  tiles?: string[];
+  bld?: [number, number, number, number, number, number, number, string | 0, string | 0][];
+  places?: [string, string, string, number, number, number][];
+  streets?: [string, number, number][];
+};
+
+type RawTile = {
+  a: [number, string, ...number[][]][];
+  l: [number, string, number, number[], string | 0][];
+  b: [number, number[][], string | 0, string | 0, number][];
 };
 
 /** A shop or school on the map, with the building it is in and its door. */
@@ -124,15 +146,16 @@ export function normAddress(s: string) {
 class Grid<T extends Box> {
   private cells = new Map<number, T[]>();
   constructor(items: T[]) {
-    for (const it of items) {
-      for (let cx = Math.floor(it.x0 / CELL); cx <= Math.floor(it.x1 / CELL); cx++)
-        for (let cy = Math.floor(it.y0 / CELL); cy <= Math.floor(it.y1 / CELL); cy++) {
-          const k = cx * 100000 + cy;
-          let c = this.cells.get(k);
-          if (!c) this.cells.set(k, (c = []));
-          c.push(it);
-        }
-    }
+    for (const it of items) this.add(it);
+  }
+  add(it: T) {
+    for (let cx = Math.floor(it.x0 / CELL); cx <= Math.floor(it.x1 / CELL); cx++)
+      for (let cy = Math.floor(it.y0 / CELL); cy <= Math.floor(it.y1 / CELL); cy++) {
+        const k = cx * 100000 + cy;
+        let c = this.cells.get(k);
+        if (!c) this.cells.set(k, (c = []));
+        c.push(it);
+      }
   }
   at(x: number, y: number): T[] {
     return this.cells.get(Math.floor(x / CELL) * 100000 + Math.floor(y / CELL)) ?? [];
@@ -165,6 +188,22 @@ export class CityMap {
   readonly minX: number;
   readonly minY: number;
   readonly places: Place[] = [];
+  /** Buildings with a name (for address search by name). */
+  private named: Building[] = [];
+
+  // Tiled maps (see RawMap.tile).
+  private k = 1;
+  private tilePx = 0;
+  private tileSet: Set<number> | null = null;
+  private loadedTiles = new Set<number>();
+  private pendingTiles = new Map<number, Promise<void>>();
+  private tileBase = '';
+  private stubs = new Map<number, Building>();
+  private haveArea = new Set<number>();
+  private haveLine = new Set<number>();
+  private haveBuilding = new Set<number>();
+  private streets = new Map<string, { x: number; y: number }>();
+  private tileListeners = new Set<(box: Box) => void>();
 
   /** 'lublin' or a town id (public/map/towns/<id>.json). */
   readonly id: string;
@@ -178,37 +217,27 @@ export class CityMap {
     this.minX = (raw.x0 ?? 0) * PX_PER_M;
     this.minY = (raw.y0 ?? 0) * PX_PER_M;
     this.boundary = raw.boundary.map((r) => decode(r, k));
+    this.k = k;
+    this.areas = [];
+    this.lines = [];
+    this.buildings = [];
+    this.areaGrid = new Grid<Area>([]);
+    this.lineGrid = new Grid<Line>([]);
+    this.buildingGrid = new Grid<Building>([]);
 
-    this.areas = raw.areas.map(([kind, ...rings]) => {
-      const abs = rings.map((r) => decode(r, k));
-      return { kind, rings: abs, ...bbox(abs[0]) };
-    });
-    this.lines = raw.lines.map(([kind, flags, pts, name]) => {
-      const abs = decode(pts, k);
-      const width = (LINE_WIDTH_M[kind] ?? 3) * PX_PER_M;
-      return { kind, pts: abs, width, bridge: !!(flags & 1), pass: !!(flags & 2), name: name || null, ...bbox(abs, width / 2 + 2) };
-    });
-    this.buildings = raw.buildings.map(([rings, addr, name, levels], i) => {
-      const abs = rings.map((r) => decode(r, k));
-      // Pad the box downwards: walls are drawn below the footprint.
-      const b = bbox(abs[0], 2);
-      return {
-        rings: abs,
-        addresses: addr ? addr.split(' | ') : [],
-        name: name || null,
-        levels,
-        seed: i * 2654435761 >>> 0,
-        ...b,
-        y1: b.y1 + 20,
-      };
-    });
-
-    this.areaGrid = new Grid(this.areas);
-    this.lineGrid = new Grid(this.lines);
-    this.buildingGrid = new Grid(this.buildings);
-    for (const b of this.buildings) for (const a of b.addresses) {
-      const key = normAddress(a);
-      if (!this.byAddress.has(key)) this.byAddress.set(key, b);
+    if (raw.tiles) {
+      this.initTiled(raw, id);
+      return;
+    }
+    raw.areas.forEach(([kind, ...rings], i) => this.addArea(i, kind, rings));
+    raw.lines.forEach(([kind, flags, pts, name], i) => this.addLine(i, kind, flags, pts, name));
+    raw.buildings.forEach(([rings, addr, name, levels], i) => this.addBuilding(i, rings, addr, name, levels));
+    for (const b of this.buildings) {
+      for (const a of b.addresses) {
+        const key = normAddress(a);
+        if (!this.byAddress.has(key)) this.byAddress.set(key, b);
+      }
+      if (b.name) this.named.push(b);
     }
 
     // Shops and schools: inside a building, or the nearest one close by.
@@ -239,6 +268,127 @@ export class CityMap {
         door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y },
       });
     }
+  }
+
+  private addArea(id: number, kind: string, rings: number[][]) {
+    if (this.haveArea.has(id)) return;
+    this.haveArea.add(id);
+    const abs = rings.map((r) => decode(r, this.k));
+    const a: Area = { kind, rings: abs, id, ...bbox(abs[0]) };
+    this.areas.push(a);
+    this.areaGrid.add(a);
+  }
+
+  private addLine(id: number, kind: string, flags: number, pts: number[], name: string | 0) {
+    if (this.haveLine.has(id)) return;
+    this.haveLine.add(id);
+    const abs = decode(pts, this.k);
+    const width = (LINE_WIDTH_M[kind] ?? 3) * PX_PER_M;
+    const l: Line = { kind, pts: abs, width, bridge: !!(flags & 1), pass: !!(flags & 2), name: name || null, id, ...bbox(abs, width / 2 + 2) };
+    this.lines.push(l);
+    this.lineGrid.add(l);
+  }
+
+  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number) {
+    if (this.haveBuilding.has(id)) return;
+    this.haveBuilding.add(id);
+    const abs = rings.map((r) => decode(r, this.k));
+    // Pad the box downwards: walls are drawn below the footprint.
+    const bb = bbox(abs[0], 2);
+    const stub = this.stubs.get(id);
+    const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: (id * 2654435761) >>> 0, id, ...bb, y1: bb.y1 + 20 };
+    if (stub) Object.assign(stub, { rings: abs, levels, ...bb, y1: bb.y1 + 20 });
+    this.buildings.push(b);
+    this.buildingGrid.add(b);
+  }
+
+  /** A tiled map: the index (boundary, big areas, addresses, places, streets). */
+  private initTiled(raw: RawMap, id: string) {
+    this.tilePx = raw.tile! * PX_PER_M;
+    this.tileSet = new Set(raw.tiles!.map((t) => {
+      const [cx, cy] = t.split(',').map(Number);
+      return cx * 100000 + cy;
+    }));
+    for (const [aid, kind, ...rings] of raw.areas as unknown as [number, string, ...number[][]][]) this.addArea(aid, kind, rings);
+    for (const [bid, x0, y0, x1, y1, dx, dy, addr, name] of raw.bld ?? []) {
+      const b: Building = { rings: [], addresses: addr ? addr.split(' | ') : [], name: name || null, levels: 1, seed: (bid * 2654435761) >>> 0, id: bid, x0, y0, x1, y1, door: { x: dx, y: dy } };
+      this.stubs.set(bid, b);
+      for (const a of b.addresses) {
+        const key = normAddress(a);
+        if (!this.byAddress.has(key)) this.byAddress.set(key, b);
+      }
+      if (b.name) this.named.push(b);
+    }
+    for (const [kind, name, pid, bid, dx, dy] of raw.places ?? []) {
+      this.places.push({ kind: kind as Place['kind'], name, id: pid, building: this.stubs.get(bid) ?? null, door: { x: dx, y: dy } });
+    }
+    for (const [name, x, y] of raw.streets ?? []) this.streets.set(normAddress(name), { x, y });
+    this.tileBase = `map/${id}/`;
+  }
+
+  private tileKey(x: number, y: number) {
+    return Math.floor(x / this.tilePx) * 100000 + Math.floor(y / this.tilePx);
+  }
+
+  /** Is everything inside `box` loaded? (always true for maps without tiles) */
+  ready(box: Box) {
+    if (!this.tileSet) return true;
+    for (let cx = Math.floor(box.x0 / this.tilePx); cx <= Math.floor(box.x1 / this.tilePx); cx++)
+      for (let cy = Math.floor(box.y0 / this.tilePx); cy <= Math.floor(box.y1 / this.tilePx); cy++) {
+        const k = cx * 100000 + cy;
+        if (this.tileSet.has(k) && !this.loadedTiles.has(k)) return false;
+      }
+    return true;
+  }
+
+  /** Loads the tiles within `r` px of (x, y) (nothing to do for maps without tiles). */
+  ensure(x: number, y: number, r: number): Promise<void> {
+    if (!this.tileSet) return Promise.resolve();
+    const jobs: Promise<void>[] = [];
+    for (let cx = Math.floor((x - r) / this.tilePx); cx <= Math.floor((x + r) / this.tilePx); cx++)
+      for (let cy = Math.floor((y - r) / this.tilePx); cy <= Math.floor((y + r) / this.tilePx); cy++) {
+        const k = cx * 100000 + cy;
+        if (this.loadedTiles.has(k)) continue;
+        if (!this.tileSet.has(k)) {
+          this.loadedTiles.add(k); // nothing there
+          continue;
+        }
+        let job = this.pendingTiles.get(k);
+        if (!job) {
+          job = fetch(`${this.tileBase}${cx}_${cy}.json`)
+            .then((res) => {
+              if (!res.ok) throw new Error(`Nie udało się wczytać kawałka mapy (${res.status})`);
+              return res.json() as Promise<RawTile>;
+            })
+            .then((t) => this.addTile(cx, cy, t))
+            .finally(() => this.pendingTiles.delete(k));
+          this.pendingTiles.set(k, job);
+        }
+        jobs.push(job);
+      }
+    return Promise.all(jobs).then(() => undefined);
+  }
+
+  private addTile(cx: number, cy: number, t: RawTile) {
+    for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
+    for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
+    for (const [bid, rings, addr, name, levels] of t.b) this.addBuilding(bid, rings, addr, name, levels);
+    this.loadedTiles.add(cx * 100000 + cy);
+    const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
+    for (const f of this.tileListeners) f(box);
+  }
+
+  /** Every building with an address (the whole map, loaded or not). */
+  addressed(): Building[] {
+    this.addressedCache ??= (this.tileSet ? [...this.stubs.values()] : this.buildings).filter((b) => b.addresses.length);
+    return this.addressedCache;
+  }
+  private addressedCache?: Building[];
+
+  /** Called with the box of every tile that arrives (to redraw the map there). */
+  onTile(f: (box: Box) => void) {
+    this.tileListeners.add(f);
+    return () => this.tileListeners.delete(f);
   }
 
   static async load(url: string, id = 'lublin') {
@@ -445,7 +595,7 @@ export class CityMap {
         if (am && am[2] === m[2] && words.every((w) => am[1].includes(w))) return b;
       }
     }
-    return this.buildings.find((b) => b.name && normAddress(b.name) === q) ?? this.buildings.find((b) => b.name && normAddress(b.name).includes(q));
+    return this.named.find((b) => normAddress(b.name!) === q) ?? this.named.find((b) => normAddress(b.name!).includes(q));
   }
 
   buildingAt(x: number, y: number): Building | undefined {
@@ -489,6 +639,8 @@ export class CityMap {
 
   isBlocked(x: number, y: number): boolean {
     if (x < this.minX || y < this.minY || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
+    // Not loaded yet: nobody walks there until it is.
+    if (this.tileSet && !this.loadedTiles.has(this.tileKey(x, y)) && this.tileSet.has(this.tileKey(x, y))) return true;
     const lines = this.lineGrid.at(x, y);
     let onBridge = false;
     let onPassage = false;
@@ -534,6 +686,7 @@ export class CityMap {
 
   /** Point on the building outline closest to a street: where its door is. */
   entranceOf(b: Building): { x: number; y: number } {
+    if (b.door) return b.door;
     const r = b.rings[0];
     let best = { x: (b.x0 + b.x1) / 2, y: b.y1 - 40, d: Infinity };
     for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
@@ -567,6 +720,12 @@ export class CityMap {
       if (b) return this.entranceOf(b);
     }
     const street = q.replace(/\s+\d+[a-z]?$/, '');
+    if (this.tileSet) {
+      const exact = this.streets.get(street);
+      if (exact) return exact;
+      for (const [n, p] of this.streets) if (n.includes(street)) return p;
+      return null;
+    }
     const lines = this.lines.filter((l) => l.name && ROAD_KINDS.has(l.kind) && normAddress(l.name) === street);
     const loose = lines.length ? lines : this.lines.filter((l) => l.name && ROAD_KINDS.has(l.kind) && normAddress(l.name).includes(street));
     if (!loose.length) return null;

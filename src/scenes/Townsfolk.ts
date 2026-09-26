@@ -96,6 +96,8 @@ export class Townsfolk {
     if (list) return list;
     list = [];
     const box = { x0: cx * CELL, y0: cy * CELL, x1: (cx + 1) * CELL, y1: (cy + 1) * CELL };
+    // Not loaded yet: nobody now, and don't remember it.
+    if (!this.city.ready(box)) return [];
     const r = rng(hash(`${this.city.id}:folk:${key}`));
     // Busy centre or quiet housing estate: by how many places (shops, offices,
     // churches…) the square has. At night even fewer.

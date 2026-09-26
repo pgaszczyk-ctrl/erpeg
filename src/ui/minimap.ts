@@ -78,7 +78,16 @@ function showMinimap(game: GameScene) {
   const draw = () => {
     const radiusM = RADII_M[zoom];
     label.textContent = `${radiusM * 2 >= 1000 ? `${(radiusM * 2) / 1000} km` : `${radiusM * 2} m`}`;
-    render(game, canvas, radiusM * PX_PER_M);
+    const R = radiusM * PX_PER_M;
+    render(game, canvas, R);
+    // Tiled map: fetch what's missing in view, then draw again.
+    const { x, y } = game.player;
+    if (!game.city.ready({ x0: x - R, y0: y - R, x1: x + R, y1: y + R })) {
+      const z = zoom;
+      game.city.ensure(x, y, R).then(() => {
+        if (open === root && z === zoom) render(game, canvas, R);
+      }, () => {});
+    }
   };
   draw();
 }
