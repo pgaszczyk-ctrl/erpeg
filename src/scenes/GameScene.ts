@@ -37,7 +37,7 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, earn, spend, missionForPlace, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -1900,16 +1900,33 @@ export class GameScene extends Phaser.Scene {
     const offers = gear.magic ? this.offers('biblioteka') : [];
     const learn = gear.magic ? [] : [`Naucz się magii – ${NAUKA_MAGII} monet`];
     const left = BIBLIOTEKA_ZAGADKI.naSesje - session.libRiddles;
+    // The learned society's survey: the way to a village (one per library per login).
+    const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
+    const survey = known ? null : mapMissionForLibrary(this.city, p);
+    // A finished survey from any library can be handed in here.
+    const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
+    const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
     const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (+${BIBLIOTEKA_ZAGADKI.exp} EXP, zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
     this.dialog({
       title: `📚 ${p.name}`,
       text: gear.magic
         ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
         : `W starych księgach zapisano sztukę magii. Po nauce będziesz też magiem: przytrzymaj atak z różdżką, kulą albo księgą w ręce, by rzucać zaklęcia. Masz ${session.coins} monet.`,
-      buttons: [...learn, ...offers.map((o) => this.label(o)), riddleBtn, 'Wyjdź'],
-      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), null, null],
+      buttons: [...learn, ...offers.map((o) => this.label(o)), ...(surveyBtn ? [surveyBtn] : []), riddleBtn, 'Wyjdź'],
+      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), ...(surveyBtn ? [null] : []), null, null],
       onChoose: (i) => {
-        if (i === learn.length + offers.length) return this.libraryRiddle(p);
+        const at = learn.length + offers.length;
+        if (surveyBtn && i === at) {
+          if (report) return this.openMissionDialog(report);
+          if (known) return this.openMissionDialog(known);
+          const m = survey!;
+          const rm: ResolvedMission = { m, door: { ...p.door, building: p.building ?? undefined }, target: resolvePlace(this.city, m.zadanie.miejsce) };
+          return this.openMissionDialog(rm, () => {
+            session.gen[m.id] = m;
+            this.addMission(rm, false);
+          });
+        }
+        if (i === at + (surveyBtn ? 1 : 0)) return this.libraryRiddle(p);
         if (learn.length && i === 0) {
           if (session.coins < NAUKA_MAGII) {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
@@ -2139,7 +2156,9 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
         setMissionState(rm.m, 'goal');
         this.refreshMarkers();
-        this.toast(`Dotarłeś! Wróć do: ${rm.m.adres}`);
+        const note = rm.m.zadanie.komunikat;
+        if (note) this.dialog({ title: `🗺 ${rm.m.tytul}`, text: note, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
+        else this.toast(`Dotarłeś! Wróć do: ${rm.m.adres}`);
       }
     }
   }
@@ -2216,6 +2235,9 @@ export class GameScene extends Phaser.Scene {
         const foes = rm.m.zadanie.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
         const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : rm.target;
         out.push({ ...q, text: rm.m.zadanie.cel, pos: { x: pos.x, y: pos.y } });
+      } else if (st === 'goal' && rm.m.dowolnaBiblioteka) {
+        const lib = this.city.places.filter((p) => p.kind === 'library').reduce<CityPlace | null>((a, p) => (!a || dist(p.door) < dist(a.door) ? p : a), null);
+        out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });
       } else if (st === 'goal') out.push({ ...q, text: `Wróć do: ${rm.m.adres}`, pos: rm.door });
     }
     return out;

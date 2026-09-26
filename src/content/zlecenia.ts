@@ -90,3 +90,23 @@ export const ZBIERANIE = {
   premia: 10,
   lasDo: 2000,
 };
+
+/**
+ * BIBLIOTEKI – towarzystwa naukowe zbierają mapy okolic: „Pomóż zbadać drogę
+ * do X”. X to wieś z mapy (domy z adresem bez ulicy, np. „Jastków 12”), od–do
+ * kilometrów od biblioteki w linii prostej. Nagroda za każdy kilometr –
+ * szczodra, bo to długa wyprawa. Jedno takie zlecenie na bibliotekę na wejście do gry.
+ * Relację można oddać w dowolnej bibliotece (strzałka pokazuje najbliższą).
+ */
+export const BIBLIOTEKA_MAPA = {
+  odKm: 2,
+  doKm: 30,
+  monetZaKm: 25,
+  expZaKm: 60,
+  tytuly: ['Mapa drogi: {cel}', 'Wyprawa badawcza: {cel}', 'Atlas okolic: {cel}'],
+  opisy: [
+    'Bibliotekarka rozkłada starą mapę: „Nasze towarzystwo naukowe tworzy atlas okolic Lublina. Brakuje nam drogi do miejscowości {cel} – to ok. {km} km stąd. Dojdź tam, zapamiętaj drogę i wróć z relacją!”',
+    '„Profesor z towarzystwa naukowego prosi o pomoc: potrzebujemy zbadać drogę do miejscowości {cel} (ok. {km} km w linii prostej). Dotrzyj tam i wróć – zapłacimy za każdy kilometr!”',
+  ],
+  zakonczenie: 'Wspaniale! Twoja relacja trafi do atlasu towarzystwa naukowego. Oto obiecana nagroda.',
+};

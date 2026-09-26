@@ -385,6 +385,36 @@ export class CityMap {
   }
   private addressedCache?: Building[];
 
+  /**
+   * Villages on the map: addresses without a street ("Jastków 12"), at least
+   * 8 buildings, each at the door nearest the middle of its houses.
+   */
+  settlements(): { name: string; x: number; y: number }[] {
+    if (this.settlementsCache) return this.settlementsCache;
+    const streets = this.tileSet ? new Set(this.streets.keys()) : new Set(this.lines.filter((l) => l.name).map((l) => normAddress(l.name!)));
+    const groups = new Map<string, { x: number; y: number }[]>();
+    for (const b of this.addressed()) {
+      const m = b.addresses[0].match(/^(.*\D)\s+\d+\S*$/);
+      if (!m) continue;
+      const name = m[1].trim();
+      if (streets.has(normAddress(name))) continue;
+      let g = groups.get(name);
+      if (!g) groups.set(name, (g = []));
+      g.push(this.entranceOf(b));
+    }
+    const out: { name: string; x: number; y: number }[] = [];
+    for (const [name, pts] of groups) {
+      if (pts.length < 8) continue;
+      const cx = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+      const cy = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+      const mid = pts.reduce((a, p) => (Math.hypot(p.x - cx, p.y - cy) < Math.hypot(a.x - cx, a.y - cy) ? p : a));
+      out.push({ name, x: mid.x, y: mid.y });
+    }
+    this.settlementsCache = out;
+    return out;
+  }
+  private settlementsCache?: { name: string; x: number; y: number }[];
+
   /** Called with the box of every tile that arrives (to redraw the map there). */
   onTile(f: (box: Box) => void) {
     this.tileListeners.add(f);

@@ -3,7 +3,7 @@ import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear } from './inventory';
-import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE } from './content/zlecenia';
+import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
@@ -289,6 +289,38 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       ? 'Bóg zapłać! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
       : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
     nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
+  };
+}
+
+/**
+ * A library's (a learned society's) survey: find the way to a village some
+ * kilometres away and come back. One per library per login.
+ */
+export function mapMissionForLibrary(city: CityMap, place: CityPlace): Misja | null {
+  const id = `gen-${place.id}-${session.nonce}`;
+  const taken = session.gen[id];
+  if (taken) return taken;
+  const B = BIBLIOTEKA_MAPA;
+  const r = rng(hash(`${place.id}:${session.nonce}:mapa`));
+  const km = (p: { x: number; y: number }) => Math.hypot(p.x - place.door.x, p.y - place.door.y) / PX_PER_M / 1000;
+  const far = city.settlements().filter((s) => km(s) >= B.odKm && km(s) <= B.doKm);
+  if (!far.length) return null;
+  const cel = far[Math.floor(r() * far.length)];
+  const d = Math.max(B.odKm, Math.round(km(cel)));
+  const at = city.toLatLon(cel.x, cel.y);
+  const fill = (t: string) => t.replace('{cel}', cel.name).replace('{km}', String(d));
+  return {
+    id, placeId: place.id, adres: place.name,
+    tytul: fill(B.tytuly[Math.floor(r() * B.tytuly.length)]),
+    opis: fill(B.opisy[Math.floor(r() * B.opisy.length)]),
+    zadanie: {
+      typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: `Zbadaj drogę do miejscowości ${cel.name}`,
+      komunikat: `Droga do miejscowości ${cel.name} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: ${place.name}).`,
+    },
+    dowolnaBiblioteka: true,
+    zakonczenie: B.zakonczenie,
+    nagroda: d * B.monetZaKm,
+    doswiadczenie: d * B.expZaKm,
   };
 }
 

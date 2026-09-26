@@ -33,6 +33,8 @@ export interface Zadanie {
   cel: string;
   /** Cel trzeba odszukać: strzałka pokazuje tylko okolicę (list gończy). */
   szukaj?: boolean;
+  /** Tylko dla 'idz': okienko po dotarciu na miejsce (zamiast krótkiego napisu). */
+  komunikat?: string;
 }
 
 export interface Misja {
@@ -53,6 +55,8 @@ export interface Misja {
   przedmiot?: string;
   /** Tylko zlecenia losowe: miejsce (kościół, urząd, komenda), które je dało. */
   placeId?: string;
+  /** Wykonane zadanie można oddać w dowolnej bibliotece (zlecenia towarzystw naukowych). */
+  dowolnaBiblioteka?: boolean;
 }
 
 export interface Wrogowie {
