@@ -1,10 +1,9 @@
-import QRCode from 'qrcode';
 import { api } from '../api';
 import { googleEnabled, googleSignIn, googleToken, googleUser } from '../google';
 
-// The character's code: shown big, as a QR code (a link that opens the game
-// and loads the character), as a picture to save, and shared to any app
-// (WhatsApp, SMS…) with the phone's share menu.
+// The character's code: shown big as text, as a picture to save, and shared
+// to any app (WhatsApp, SMS…) with the phone's share menu (with a link that
+// opens the game and loads the character). No QR code: nothing to scan it with.
 
 /** Link that opens the game and loads this character. */
 export function codeLink(name: string, code: string) {
@@ -61,16 +60,12 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
 /** Everything about one character's code. */
 export function codeCard(name: string, code: string): HTMLElement {
   const link = codeLink(name, code);
-  const qr = el('canvas', { className: 'm-qr' });
-  QRCode.toCanvas(qr, link, { margin: 2, width: 220, color: { dark: '#000000', light: '#ffffff' } }).catch(() => qr.remove());
 
   const save = el('button', { type: 'button', className: 'm-btn', onclick: () => savePicture(name, code, link) }, ['📷 Zapisz jako obrazek']);
   const share = el('button', { type: 'button', className: 'm-btn m-share', onclick: () => shareCode(name, code, link) }, ['📤 Wyślij sobie (WhatsApp, SMS…)']);
   const parts: (Node | string)[] = [
     el('div', { className: 'm-code-row' }, [el('span', {}, ['Imię:']), el('b', {}, [name])]),
     el('div', { className: 'm-idik' }, [prettyCode(code)]),
-    qr,
-    el('p', { className: 'm-note' }, ['Zeskanuj telefonem, żeby od razu wczytać postać.']),
     share,
     save,
     googleLink(name, code),
@@ -81,7 +76,7 @@ export function codeCard(name: string, code: string): HTMLElement {
 
 /**
  * Sends the code with the phone's own share menu (WhatsApp, Messenger, SMS,
- * e-mail…), with the QR picture where the phone allows files; without a
+ * e-mail…), with the code picture where the phone allows files; without a
  * share menu (most computers) it opens WhatsApp with the message ready.
  */
 async function shareCode(name: string, code: string, link: string) {
@@ -100,13 +95,13 @@ async function shareCode(name: string, code: string, link: string) {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
 }
 
-/** The picture with name, code and QR code, as PNG. */
+/** The picture with name and code, as PNG. */
 async function picture(name: string, code: string, link: string): Promise<Blob> {
   const c = await pictureCanvas(name, code, link);
   return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('no image'))), 'image/png'));
 }
 
-/** Downloads a picture with the name, code and QR code (e.g. to keep in the phone gallery). */
+/** Downloads a picture with the name and code (e.g. to keep in the phone gallery). */
 async function savePicture(name: string, code: string, link: string) {
   const c = await pictureCanvas(name, code, link);
   const a = document.createElement('a');
@@ -115,12 +110,10 @@ async function savePicture(name: string, code: string, link: string) {
   a.click();
 }
 
-async function pictureCanvas(name: string, code: string, link: string) {
-  const qr = document.createElement('canvas');
-  await QRCode.toCanvas(qr, link, { margin: 2, width: 300 });
+async function pictureCanvas(name: string, code: string, _link: string) {
   const c = document.createElement('canvas');
   c.width = 360;
-  c.height = 470;
+  c.height = 200;
   const g = c.getContext('2d')!;
   g.fillStyle = '#1e1a24';
   g.fillRect(0, 0, c.width, c.height);
@@ -131,10 +124,12 @@ async function pictureCanvas(name: string, code: string, link: string) {
   g.fillStyle = '#ffffff';
   g.font = '20px monospace';
   g.fillText(name, 180, 76);
-  g.drawImage(qr, 30, 92);
   g.fillStyle = '#fff2a8';
-  g.font = 'bold 34px monospace';
-  g.fillText(prettyCode(code), 180, 438);
+  g.font = 'bold 40px monospace';
+  g.fillText(prettyCode(code), 180, 140);
+  g.fillStyle = '#9aa39a';
+  g.font = '14px monospace';
+  g.fillText('imię + kod = twoja postać', 180, 178);
   return c;
 }
 
