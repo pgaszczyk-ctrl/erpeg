@@ -14,12 +14,15 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool unzip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - run: scripts/fetch-osm.sh
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
-          git add data/lublin-osm.geojsonseq.gz
-          git commit -m "Update Lublin OpenStreetMap data" || echo "No changes"
+          git add data/lublin-osm.geojsonseq.gz data/towns data/towns.json data/rail.json
+          git commit -m "Update Lublin region OpenStreetMap data and train timetables" || echo "No changes"
           git push

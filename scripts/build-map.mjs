@@ -10,8 +10,17 @@ import { gunzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
 const ClipperLib = createRequire(import.meta.url)('clipper-lib');
 
-const SRC = 'data/lublin-osm.geojsonseq.gz';
-const OUT = 'public/map/lublin.json';
+// Arguments (all optional; the default builds Lublin):
+//   --src <file.geojsonseq.gz> --out <file.json> --bbox minLon,minLat,maxLon,maxLat
+// With --bbox the map is that rectangle (towns by railway stations, see
+// scripts/build-maps.mjs); without it, the Lublin city boundary.
+const arg = (name) => {
+  const i = process.argv.indexOf(`--${name}`);
+  return i > 0 ? process.argv[i + 1] : undefined;
+};
+const SRC = arg('src') ?? 'data/lublin-osm.geojsonseq.gz';
+const OUT = arg('out') ?? 'public/map/lublin.json';
+const BBOX = arg('bbox')?.split(',').map(Number);
 const UNITS_PER_M = 2;
 
 if (existsSync(OUT) && statSync(OUT).mtimeMs > Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs)) {
@@ -36,10 +45,16 @@ function polygonRings(g) {
 
 // ---------------------------------------------------------------- projection
 
-const isCity = (t) => t.boundary === 'administrative' && t.name === 'Lublin' && ['6', '7', '8'].includes(t.admin_level);
-const cityFeature = features.find((f) => isCity(f.properties || {}) && f.geometry && polygonRings(f.geometry).length);
-if (!cityFeature) throw new Error('City boundary of Lublin not found in the data');
-const boundaryLL = polygonRings(cityFeature.geometry);
+let boundaryLL;
+if (BBOX) {
+  const [x0, y0, x1, y1] = BBOX;
+  boundaryLL = [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]];
+} else {
+  const isCity = (t) => t.boundary === 'administrative' && t.name === 'Lublin' && ['6', '7', '8'].includes(t.admin_level);
+  const cityFeature = features.find((f) => isCity(f.properties || {}) && f.geometry && polygonRings(f.geometry).length);
+  if (!cityFeature) throw new Error('City boundary of Lublin not found in the data');
+  boundaryLL = polygonRings(cityFeature.geometry);
+}
 let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
 for (const r of boundaryLL) for (const [lon, lat] of r) {
   minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
@@ -141,6 +156,8 @@ function poiOf(t) {
     const label = `${t.brand || ''} ${t.name || ''}`;
     const chain = SHOP_CHAINS.find(([, re]) => re.test(label));
     if (chain) return ['shop', chain[0]];
+    // Towns and villages: any named grocery is a shop (few chain stores there).
+    if (BBOX && t.name) return ['shop', t.name];
   }
   // Real schools only: not driving or language schools.
   if (t.amenity === 'school' && t.name && /szko|liceum|technikum|gimnazjum|zespół|zespol|school/i.test(t.name) && !/auto|jazd|język|jezyk|tańc|tanc|muzy/i.test(t.name)) {
@@ -151,6 +168,8 @@ function poiOf(t) {
   if (t.amenity === 'hospital' && t.name) return ['hospital', t.name];
   if (t.amenity === 'police') return ['police', t.name || 'Komenda Policji'];
   if (t.amenity === 'library') return ['library', t.name || 'Biblioteka'];
+  // Railway stations and halts: the coachman waits there.
+  if ((t.railway === 'station' || t.railway === 'halt') && t.name && (!t.station || t.station === 'train')) return ['station', t.name];
   return null;
 }
 function centroidLL(g) {
@@ -513,8 +532,8 @@ const out = {
   // [kind, name, x, y, address]
   pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0]),
 };
-mkdirSync('public/map', { recursive: true });
+mkdirSync(OUT.replace(/\/[^/]*$/, ''), { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant', 'station'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

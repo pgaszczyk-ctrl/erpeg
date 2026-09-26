@@ -18,6 +18,7 @@ osmium tags-filter "$WORK/lublin.pbf" \
   wr/building \
   w/highway \
   w/railway=rail,tram,light_rail \
+  n/railway=station,halt \
   w/waterway=river,stream,canal,ditch,drain \
   wr/natural=water,wood,scrub,grassland,wetland \
   wr/landuse=grass,forest,meadow,recreation_ground,cemetery,allotments,village_green,farmland,orchard,reservoir,basin \
@@ -35,3 +36,6 @@ ls -lh "$WORK/lublin.geojsonseq"
 mkdir -p data
 gzip -9 -c "$WORK/lublin.geojsonseq" > data/lublin-osm.geojsonseq.gz
 ls -lh data/lublin-osm.geojsonseq.gz
+
+# Towns by the railway stations of the region, and the train timetables.
+scripts/fetch-towns.sh "$WORK/lubelskie.pbf"
