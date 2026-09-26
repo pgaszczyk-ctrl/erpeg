@@ -29,9 +29,9 @@ osmium tags-filter "$PBF" \
   wr/leisure=park,garden,pitch,playground,stadium,track \
   wr/amenity=parking \
   n/addr:housenumber \
-  nwr/shop=supermarket,convenience,discount \
+  nwr/shop=supermarket,convenience,discount,doityourself,hardware,sports,outdoor \
   nwr/amenity=school,place_of_worship,townhall,hospital,police,library,bank,university,college,fuel \
-  nwr/tourism=hotel,hostel,guest_house,motel \
+  nwr/tourism=hotel,hostel,guest_house,motel,camp_site,caravan_site \
   nwr/office=government \
   --overwrite -o "$WORK/filtered.pbf"
 
