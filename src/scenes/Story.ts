@@ -247,8 +247,8 @@ export class Story {
     let best = { x: w.x + 500 * PX_PER_M, y: w.y, score: -Infinity };
     const r = Math.random;
     for (let i = 0; i < 900; i++) {
-      const x = r() * this.city.width;
-      const y = r() * this.city.height;
+      const x = this.city.minX + r() * (this.city.width - this.city.minX);
+      const y = this.city.minY + r() * (this.city.height - this.city.minY);
       const d = Math.hypot(x - w.x, y - w.y) / PX_PER_M;
       if (d < 500 || d > 6000 || !this.city.isFree(x, y, 10, 6)) continue;
       const fromCentre = Math.hypot(x - centre.x, y - centre.y) / PX_PER_M;

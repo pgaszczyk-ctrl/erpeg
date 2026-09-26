@@ -16,7 +16,11 @@ const lublin = readSeq(gunzipSync(readFileSync('data/lublin-osm.geojsonseq.gz'))
   return t.boundary === 'administrative' && t.name === 'Lublin' && ['6', '7', '8'].includes(t.admin_level);
 });
 const rings = lublin ? (lublin.geometry.type === 'Polygon' ? lublin.geometry.coordinates : lublin.geometry.coordinates.flat()) : [];
+// The Lublin map also covers circles around nearby places (scripts/lublin-area.json).
+const AREA = JSON.parse(readFileSync(new URL('./lublin-area.json', import.meta.url), 'utf8'));
+const inCircles = (lon, lat) => AREA.extra.some((e) => Math.hypot((lon - e.lon) * 111320 * Math.cos((e.lat * Math.PI) / 180), (lat - e.lat) * 111132) < e.km * 1000);
 const inLublin = (lon, lat) => {
+  if (inCircles(lon, lat)) return true;
   let inside = false;
   for (const r of rings) {
     for (let i = 0, j = r.length - 1; i < r.length; j = i++) {

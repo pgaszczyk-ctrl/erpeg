@@ -32,6 +32,11 @@ type RawMap = {
   bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   w: number;
   h: number;
+  /** Where the map starts (metres, ≤ 0): Lublin reaches west/north of its original corner. */
+  x0?: number;
+  y0?: number;
+  /** Projection origin (Lublin: fixed, so saved positions stay valid). */
+  origin?: { lon: number; lat: number; lat0: number };
   boundary: number[][];
   areas: [string, ...number[][]][];
   lines: [string, number, number[], string | 0][];
@@ -155,7 +160,10 @@ export class CityMap {
   private buildingGrid: Grid<Building>;
   private boundaryCells = new Map<number, 0 | 1 | 2>(); // 0 out, 1 in, 2 edge
   private byAddress = new Map<string, Building>();
-  private bounds: RawMap['bounds'];
+  private origin: { lon: number; lat: number; lat0: number };
+  /** The map spans minX..width and minY..height (px); minX/minY are ≤ 0. */
+  readonly minX: number;
+  readonly minY: number;
   readonly places: Place[] = [];
 
   /** 'lublin' or a town id (public/map/towns/<id>.json). */
@@ -163,10 +171,12 @@ export class CityMap {
 
   constructor(raw: RawMap, id = 'lublin') {
     this.id = id;
-    this.bounds = raw.bounds;
+    this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;
     this.height = raw.h * PX_PER_M;
+    this.minX = (raw.x0 ?? 0) * PX_PER_M;
+    this.minY = (raw.y0 ?? 0) * PX_PER_M;
     this.boundary = raw.boundary.map((r) => decode(r, k));
 
     this.areas = raw.areas.map(([kind, ...rings]) => {
@@ -261,11 +271,16 @@ export class CityMap {
 
   /** Same projection as scripts/build-map.mjs, in world pixels. */
   fromLatLon(lat: number, lon: number) {
-    const { minLat, maxLat, minLon } = this.bounds;
-    const lat0 = (minLat + maxLat) / 2;
+    const { lon: oLon, lat: oLat, lat0 } = this.origin;
     const mLat = 111132.954 - 559.822 * Math.cos((2 * lat0 * Math.PI) / 180);
     const mLon = 111412.84 * Math.cos((lat0 * Math.PI) / 180);
-    return { x: (lon - minLon) * mLon * PX_PER_M, y: (maxLat - lat) * mLat * PX_PER_M };
+    return { x: (lon - oLon) * mLon * PX_PER_M, y: (oLat - lat) * mLat * PX_PER_M };
+  }
+
+  /** Is this latitude/longitude on this map (inside its boundary)? */
+  hasLatLon(lat: number, lon: number) {
+    const p = this.fromLatLon(lat, lon);
+    return p.x >= this.minX && p.y >= this.minY && p.x <= this.width && p.y <= this.height && this.insideCity(p.x, p.y);
   }
 
   /**
@@ -399,11 +414,10 @@ export class CityMap {
 
   /** The other way round: world pixels to latitude and longitude. */
   toLatLon(x: number, y: number) {
-    const { minLat, maxLat, minLon } = this.bounds;
-    const lat0 = (minLat + maxLat) / 2;
+    const { lon: oLon, lat: oLat, lat0 } = this.origin;
     const mLat = 111132.954 - 559.822 * Math.cos((2 * lat0 * Math.PI) / 180);
     const mLon = 111412.84 * Math.cos((lat0 * Math.PI) / 180);
-    return { lat: maxLat - y / PX_PER_M / mLat, lon: minLon + x / PX_PER_M / mLon };
+    return { lat: oLat - y / PX_PER_M / mLat, lon: oLon + x / PX_PER_M / mLon };
   }
 
   query(box: Box) {
@@ -474,7 +488,7 @@ export class CityMap {
   }
 
   isBlocked(x: number, y: number): boolean {
-    if (x < 0 || y < 0 || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
+    if (x < this.minX || y < this.minY || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
     const lines = this.lineGrid.at(x, y);
     let onBridge = false;
     let onPassage = false;

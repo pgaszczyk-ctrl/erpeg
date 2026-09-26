@@ -358,7 +358,7 @@ export class GameScene extends Phaser.Scene {
     beat();
 
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, this.city.width, this.city.height);
+    cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
     cam.startFollow(this.player, true, 0.15, 0.15);
     cam.setRoundPixels(true);
     cam.setBackgroundColor('#1f4d24');

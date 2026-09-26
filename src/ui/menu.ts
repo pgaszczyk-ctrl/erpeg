@@ -84,6 +84,44 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const newCharacter = () => {
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
       const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
+      // "📍": the phone's location as the start, if the game has a map of it.
+      let geoStart: { x: number; y: number } | null = null;
+      const geoInfo = el('small', { className: 'm-geo' });
+      start.addEventListener('input', () => {
+        geoStart = null;
+        geoInfo.textContent = '';
+      });
+      const geoBtn = el('button', { type: 'button', className: 'm-eye', title: 'Użyj mojej lokalizacji' }, ['📍']) as HTMLButtonElement;
+      geoBtn.onclick = () => {
+        if (!navigator.geolocation) {
+          geoInfo.textContent = 'Ten telefon nie podaje lokalizacji.';
+          return;
+        }
+        geoBtn.disabled = true;
+        geoInfo.textContent = 'Szukam, gdzie jesteś…';
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            geoBtn.disabled = false;
+            const { latitude: lat, longitude: lon } = pos.coords;
+            if (!city.hasLatLon(lat, lon)) {
+              geoStart = null;
+              start.value = '';
+              geoInfo.textContent = `Niestety nie znamy jeszcze tej lokalizacji. Zaczniesz na placu Zamkowym w Lublinie.`;
+              return;
+            }
+            const p = city.fromLatLon(lat, lon);
+            geoStart = city.freeNear(p.x, p.y);
+            const here = city.describe(geoStart.x, geoStart.y);
+            start.value = here === 'bezdroża Lublina' ? city.streetNear(geoStart.x, geoStart.y, 1500) ?? 'okolice Lublina' : here;
+            geoInfo.textContent = `✅ Twój domek stanie tutaj: ${start.value}`;
+          },
+          (e) => {
+            geoBtn.disabled = false;
+            geoInfo.textContent = e.code === e.PERMISSION_DENIED ? 'Nie pozwoliłeś sprawdzić lokalizacji – wpisz adres.' : 'Nie udało się ustalić lokalizacji – spróbuj jeszcze raz albo wpisz adres.';
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        );
+      };
       // Difficulty: a slider from "Kids" to "Hardcore" (kept on the server as an age).
       let level = DOMYSLNA_TRUDNOSC;
       const levelRange = el('input', { type: 'range', min: 0, max: TRUDNOSCI.length - 1, step: 1, value: String(level), className: 'm-range' });
@@ -114,7 +152,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
           const place = start.value.trim() || DEFAULT_START;
-          const p = city.findStart(place);
+          const p = geoStart ?? city.findStart(place);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           if (token && (await api.myCharacters(token)).filter((c) => !c.dead).length >= GOOGLE_LIMIT) {
@@ -181,7 +219,12 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('h2', {}, ['Nowa postać']),
         el('div', { className: 'm-namerow' }, [preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
         lookBox,
-        field('Adres startowy', start, `Ulica albo ulica i numer. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`),
+        el('label', { className: 'm-field' }, [
+          el('span', {}, ['Adres startowy']),
+          el('div', { className: 'm-pass' }, [start, geoBtn]),
+          geoInfo,
+          el('small', {}, [`Ulica albo ulica i numer, albo 📍 – twoja lokalizacja. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`]),
+        ]),
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
           el('label', { className: 'm-slide m-level' }, [levelRange, levelName]),

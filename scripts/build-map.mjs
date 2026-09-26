@@ -23,7 +23,7 @@ const OUT = arg('out') ?? 'public/map/lublin.json';
 const BBOX = arg('bbox')?.split(',').map(Number);
 const UNITS_PER_M = 2;
 
-if (existsSync(OUT) && statSync(OUT).mtimeMs > Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs)) {
+if (existsSync(OUT) && statSync(OUT).mtimeMs > Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs, statSync(new URL('./lublin-area.json', import.meta.url)).mtimeMs)) {
   console.log('map: up to date');
   process.exit(0);
 }
@@ -45,6 +45,31 @@ function polygonRings(g) {
 
 // ---------------------------------------------------------------- projection
 
+const AREA = BBOX ? null : JSON.parse(readFileSync(new URL('./lublin-area.json', import.meta.url), 'utf8'));
+
+/** The union of polygon rings (lon/lat) and circles of `km` around points. */
+function withCircles(rings, extra) {
+  const S = 1e7;
+  const toPath = (r) => r.map(([lon, lat]) => ({ X: Math.round(lon * S), Y: Math.round(lat * S) }));
+  const paths = rings.map(toPath);
+  for (const e of extra) {
+    const mLat = 111132.954 - 559.822 * Math.cos(2 * e.lat * Math.PI / 180);
+    const mLon = 111412.84 * Math.cos(e.lat * Math.PI / 180);
+    const circle = [];
+    for (let i = 0; i < 96; i++) {
+      const a = (i / 96) * Math.PI * 2;
+      circle.push([e.lon + (Math.cos(a) * e.km * 1000) / mLon, e.lat + (Math.sin(a) * e.km * 1000) / mLat]);
+    }
+    paths.push(toPath(circle));
+  }
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+  const out = [];
+  c.Execute(ClipperLib.ClipType.ctUnion, out, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  console.log(`map: city + ${extra.map((e) => `${e.name} (${e.km} km)`).join(', ')} → ${out.length} ring(s)`);
+  return out.map((p) => { const r = p.map((q) => [q.X / S, q.Y / S]); r.push(r[0]); return r; });
+}
+
 let boundaryLL;
 if (BBOX) {
   const [x0, y0, x1, y1] = BBOX;
@@ -54,21 +79,30 @@ if (BBOX) {
   const cityFeature = features.find((f) => isCity(f.properties || {}) && f.geometry && polygonRings(f.geometry).length);
   if (!cityFeature) throw new Error('City boundary of Lublin not found in the data');
   boundaryLL = polygonRings(cityFeature.geometry);
+  // Plus circles around nearby places (scripts/lublin-area.json), all as one area.
+  if (AREA) boundaryLL = withCircles(boundaryLL, AREA.extra);
 }
 let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
 for (const r of boundaryLL) for (const [lon, lat] of r) {
   minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
   minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
 }
-const lat0 = (minLat + maxLat) / 2;
+// The projection origin: the north-west corner, or for Lublin the fixed
+// anchor of the original city map (so saved positions stay where they were;
+// areas west/north of it get negative coordinates).
+const ORIGIN = AREA ? AREA.anchor : { lon: minLon, lat: maxLat, lat0: (minLat + maxLat) / 2 };
+const lat0 = ORIGIN.lat0;
 const M_PER_DEG_LAT = 111132.954 - 559.822 * Math.cos(2 * lat0 * Math.PI / 180);
 const M_PER_DEG_LON = 111412.84 * Math.cos(lat0 * Math.PI / 180);
 const proj = ([lon, lat]) => [
-  Math.round((lon - minLon) * M_PER_DEG_LON * UNITS_PER_M),
-  Math.round((maxLat - lat) * M_PER_DEG_LAT * UNITS_PER_M),
+  Math.round((lon - ORIGIN.lon) * M_PER_DEG_LON * UNITS_PER_M),
+  Math.round((ORIGIN.lat - lat) * M_PER_DEG_LAT * UNITS_PER_M),
 ];
-const W = Math.ceil((maxLon - minLon) * M_PER_DEG_LON);
-const H = Math.ceil((maxLat - minLat) * M_PER_DEG_LAT);
+// The map spans x0..w and y0..h metres (x0, y0 ≤ 0).
+const X0 = Math.floor((minLon - ORIGIN.lon) * M_PER_DEG_LON);
+const Y0 = Math.floor((ORIGIN.lat - maxLat) * M_PER_DEG_LAT);
+const W = Math.ceil((maxLon - ORIGIN.lon) * M_PER_DEG_LON);
+const H = Math.ceil((ORIGIN.lat - minLat) * M_PER_DEG_LAT);
 
 function encode(geom, closed) {
   const pts = [];
@@ -523,7 +557,10 @@ const out = {
   unitsPerM: UNITS_PER_M,
   w: W,
   h: H,
+  x0: X0,
+  y0: Y0,
   bounds: { minLat, maxLat, minLon, maxLon },
+  origin: ORIGIN,
   boundary: boundaryLL.map((r) => encode(r, true)).filter(Boolean),
   areas: areas.map((a) => [a.kind, ...a.rings]),
   lines: lines.map((l) => [l.kind, l.bridge | (l.pass << 1), l.pts, l.name || 0]),
@@ -535,4 +572,4 @@ mkdirSync(OUT.replace(/\/[^/]*$/, ''), { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W}x${H} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant', 'station', 'hotel', 'bank', 'university'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W - X0}x${H - Y0} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant', 'station', 'hotel', 'bank', 'university'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
