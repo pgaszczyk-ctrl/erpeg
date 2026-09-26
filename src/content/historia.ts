@@ -61,8 +61,35 @@ export function expNaPoziom(poziom: number) {
   return 50 * (poziom - 1) * poziom;
 }
 
+/** Najwyższy poziom postaci. */
+export const MAKS_POZIOM_POSTACI = 20;
+
 export function poziomPostaci(exp: number) {
   let p = 1;
-  while (exp >= expNaPoziom(p + 1)) p++;
+  while (p < MAKS_POZIOM_POSTACI && exp >= expNaPoziom(p + 1)) p++;
   return p;
+}
+
+/**
+ * PREMIA ZA POZIOM: na poziomie 20 bohater ma 2× więcej życia (zycie: 1 =
+ * +100%) i chodzi o 30% szybciej. Wzrost: ((poziom − 1) / 19) ^ wykladnik –
+ * przy 0,77 poziomy 1→5 dają ok. 30% premii, 5→15 kolejne ok. 50%, 15→20
+ * resztę (ok. 20%). Mniejszy wykładnik = więcej na początku.
+ */
+export const PREMIA_POZIOMU = { zycie: 1, szybkosc: 0.3, wykladnik: 0.77 };
+
+/** Jaka część pełnej premii należy się na danym poziomie (0 na 1., 1 na 20.). */
+export function czescPremii(poziom: number) {
+  const t = Math.min(1, Math.max(0, (poziom - 1) / (MAKS_POZIOM_POSTACI - 1)));
+  return Math.pow(t, PREMIA_POZIOMU.wykladnik);
+}
+
+/** Życie (w połówkach serduszek) przy danej liczbie serduszek z poziomu trudności i danym EXP. */
+export function zyciePostaci(serca: number, exp: number) {
+  return serca * 2 + Math.round(serca * 2 * PREMIA_POZIOMU.zycie * czescPremii(poziomPostaci(exp)));
+}
+
+/** Mnożnik szybkości chodzenia przy danym EXP. */
+export function szybkoscPostaci(exp: number) {
+  return 1 + PREMIA_POZIOMU.szybkosc * czescPremii(poziomPostaci(exp));
 }

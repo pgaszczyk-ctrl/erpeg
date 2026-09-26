@@ -9,6 +9,7 @@ import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
+import { zyciePostaci } from './content/historia';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -127,8 +128,8 @@ export function startSession(r: LoginResult) {
   session.idik = p.idik;
   session.age = p.age ?? 7;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
-  // Hearts by difficulty (half-hearts count, like hp).
-  PLAYER.maxHp = session.level.serca * 2;
+  // Hearts by difficulty, plus the level bonus (half-hearts count, like hp).
+  PLAYER.maxHp = zyciePostaci(session.level.serca, p.exp);
   const c = p.save.chest;
   session.chest = freshChest();
   if (c) {

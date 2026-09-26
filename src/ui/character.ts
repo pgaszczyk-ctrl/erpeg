@@ -1,7 +1,7 @@
 import { itemIcon } from './itemIcon';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, type Miejsce } from '../content/przedmioty';
 import { OWOCE, LECZENIE_OWOCAMI } from '../content/sklepy';
-import { poziomPostaci } from '../content/historia';
+import { poziomPostaci, czescPremii, szybkoscPostaci, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, totalFruit, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
 } from '../inventory';
@@ -99,7 +99,8 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     box.append(log);
     // Statistics, one per line.
     const stats: [string, string][] = [
-      ['⭐ Poziom postaci', String(poziomPostaci(session.exp))],
+      ['⭐ Poziom postaci', `${poziomPostaci(session.exp)}${poziomPostaci(session.exp) >= MAKS_POZIOM_POSTACI ? ' (max)' : ''}`],
+      ['📈 Premia za poziom', `+${Math.round(czescPremii(poziomPostaci(session.exp)) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['✨ Doświadczenie', `${session.exp} EXP`],
       ['❤ Zdrowie', `${hp / 2} / ${maxHp / 2}`],
       ['🛡 Obrona', `${defense()} (${Math.round(blockChance() * 100)}% bloku)`],

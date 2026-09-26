@@ -29,6 +29,8 @@ export class Player extends Phaser.GameObjects.Sprite {
   private lastAttack = -Infinity;
   /** Set from the sword-fighting skill (content/sklepy.ts). */
   attackCooldown = PLAYER.attackCooldown;
+  /** Walking speed in px/s (grows with the character level). */
+  speed = PLAYER.speed;
   reach = 1;
   private invulnerableUntil = 0;
   private stunnedUntil = 0;
@@ -57,7 +59,7 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     if (len > 0.15) {
       this.facing.set(v.x, v.y).normalize();
-      this.vel.set(v.x * PLAYER.speed, v.y * PLAYER.speed);
+      this.vel.set(v.x * this.speed, v.y * this.speed);
       this.setFlipX(this.dirName === 'side' && this.facing.x > 0);
       this.anims.play(`${this.anim}-walk-${this.dirName}`, true);
     } else {

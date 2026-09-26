@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { report } from '../errlog';
 import { TEX, PLAYER_TEX, arrowTexture } from '../art';
-import { expNaPoziom } from '../content/historia';
+import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
@@ -239,9 +239,14 @@ export class UIScene extends Phaser.Scene {
     this.portraitBox.setPosition(right, pad);
     this.charBtn.setPosition(right - 9 * u, pad + u);
     const hy = pad + 17 * u;
-    const n = this.hearts.length;
-    this.hearts.forEach((h, i) => h.setPosition(right - (n - i) * 10 * u + u, hy));
-    const sy = hy + 10 * u;
+    // Up to 5 hearts a row (the level bonus can double them).
+    const rows = Math.ceil(this.hearts.length / 5);
+    this.hearts.forEach((h, i) => {
+      const row = Math.floor(i / 5);
+      const inRow = Math.min(5, this.hearts.length - row * 5);
+      h.setPosition(right - (inRow - (i % 5)) * 10 * u + u, hy + row * 9 * u);
+    });
+    const sy = hy + Math.max(1, rows) * 9 * u + u;
     this.stars.forEach((st, i) => st.setPosition(right - (5 - i) * 11 * u + u, sy));
     this.expText.setPosition(right, sy + 12 * u);
     this.titleText.setPosition(right, sy + 12 * u + this.expText.height + u);
@@ -296,7 +301,8 @@ export class UIScene extends Phaser.Scene {
     // Experience towards the next level as 5 stars, filled by halves (like hearts).
     const from = expNaPoziom(s.level);
     const to = expNaPoziom(s.level + 1);
-    const halves = Math.floor(Math.max(0, Math.min(0.999, (s.exp - from) / (to - from))) * 10);
+    const maxed = s.level >= MAKS_POZIOM_POSTACI;
+    const halves = maxed ? 10 : Math.floor(Math.max(0, Math.min(0.999, (s.exp - from) / (to - from))) * 10);
     this.stars.forEach((st, i) => st.setTexture(halves >= i * 2 + 2 ? TEX.star : halves === i * 2 + 1 ? TEX.starHalf : TEX.starEmpty));
     if (this.lastLevel && s.level > this.lastLevel) this.levelUp(s.level);
     this.lastLevel = s.level;
@@ -315,7 +321,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.swordText.setVisible(s.duel === null);
     this.coinText.setText(String(s.coins));
-    this.expText.setText(`poz. ${s.level} · ${s.exp}/${to} EXP`);
+    this.expText.setText(maxed ? `poz. ${s.level} (max) · ${s.exp} EXP` : `poz. ${s.level} · ${s.exp}/${to} EXP`);
     this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
     this.swordText.setText(`⚔ ${s.sword}`);
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));

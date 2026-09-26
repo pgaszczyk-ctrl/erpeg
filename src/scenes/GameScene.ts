@@ -18,7 +18,7 @@ import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { MIESZKANCY } from '../content/mieszkancy';
-import { poziomPostaci } from '../content/historia';
+import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
@@ -1124,7 +1124,7 @@ export class GameScene extends Phaser.Scene {
       const T = SPORT.trener;
       if (!a || !b) return this.dialog({ title: `🏋 ${T.imie}`, text: 'Dziś trenujemy luźno – pobij kukłę, ile chcesz!', buttons: ['OK'], onChoose: () => {} });
       // Just enough time for the blows and two runs, times the difficulty's slack.
-      const run = (2 * Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(n.x - a.x, n.y - a.y)) / PLAYER.speed;
+      const run = (2 * Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(n.x - a.x, n.y - a.y)) / this.player.speed;
       const secs = Math.ceil(((SPORT.uderzen + 1) * cooldown('miecz') / 1000 + run + 1) * session.level.wyzwanie);
       const secsTxt = `${secs} ${secs % 10 >= 2 && secs % 10 <= 4 && (secs % 100 < 12 || secs % 100 > 14) ? 'sekundy' : 'sekund'}`;
       this.dialog({
@@ -1160,7 +1160,7 @@ export class GameScene extends Phaser.Scene {
         const path = this.city.roadPath({ x: n.x, y: n.y }, to) ?? [n.x, n.y, to.x, to.y];
         const cum = [0];
         for (let i = 2; i < path.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(path[i] - path[i - 2], path[i + 1] - path[i - 1]));
-        const est = cum[cum.length - 1] / PLAYER.speed;
+        const est = cum[cum.length - 1] / this.player.speed;
         const lucky = Math.random() < session.level.farta;
         const rivalMs = est * (lucky ? 0.8 : session.level.rywal) * 1000;
         const rival = this.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6);
@@ -2178,6 +2178,20 @@ export class GameScene extends Phaser.Scene {
     return rm?.m.zadanie.szukaj ? SEARCH_RADIUS + 10 : 0;
   }
 
+  private appliedLevel = 0;
+
+  /** The level bonus: more life (the new part comes filled) and faster walking. */
+  private applyLevel() {
+    const lvl = poziomPostaci(session.exp);
+    if (lvl === this.appliedLevel && this.player.speed !== PLAYER.speed) return;
+    this.appliedLevel = lvl;
+    const max = zyciePostaci(session.level.serca, session.exp);
+    if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
+    PLAYER.maxHp = max;
+    this.player.hp = Math.min(this.player.hp, max);
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp);
+  }
+
   /**
    * Active quests (the story first, then challenges and missions), at most
    * ZADAN_NARAZ, each with its arrow colour (kept while it stays active).
@@ -2283,6 +2297,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitHud() {
+    this.applyLevel();
     const quests = this.activeQuests();
     const state: HudState = {
       hp: this.player.hp,
