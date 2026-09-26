@@ -43,6 +43,7 @@ export const TEX = {
   home: 'home',
   dog: 'dog',
   cart: 'cart',
+  coach: 'coach',
   piggy: 'piggy',
   bubble: 'bubble',
 } as const;
@@ -505,6 +506,35 @@ function drawCart(scene: Phaser.Scene) {
   tex.refresh();
 }
 
+/** The coachman's horse and cart at a railway station (horse facing left). */
+function drawCoach(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.coach, 30, 20);
+  // Horse
+  px(ctx, 1, 4, 5, 4, OUTLINE); // head
+  px(ctx, 2, 5, 3, 2, '#8a5a2b');
+  px(ctx, 4, 3, 2, 2, OUTLINE); // ear
+  px(ctx, 5, 6, 3, 3, OUTLINE); // neck
+  px(ctx, 5, 7, 2, 2, '#8a5a2b');
+  px(ctx, 6, 8, 10, 6, OUTLINE); // body
+  px(ctx, 7, 9, 8, 4, '#a0683a');
+  px(ctx, 6, 7, 3, 2, '#3a2416'); // mane
+  px(ctx, 7, 14, 2, 5, OUTLINE); // legs
+  px(ctx, 13, 14, 2, 5, OUTLINE);
+  px(ctx, 16, 9, 2, 4, '#3a2416'); // tail
+  // Cart with the coachman
+  px(ctx, 16, 11, 3, 1, OUTLINE); // shaft
+  px(ctx, 18, 8, 11, 7, OUTLINE);
+  px(ctx, 19, 9, 9, 5, '#9c6b3e');
+  px(ctx, 22, 2, 5, 7, OUTLINE); // coachman
+  px(ctx, 23, 3, 3, 2, '#f2c39b');
+  px(ctx, 22, 1, 5, 2, '#1e1a24'); // hat
+  px(ctx, 23, 5, 3, 3, '#3b5dc9');
+  px(ctx, 19, 14, 6, 6, OUTLINE); // wheel
+  px(ctx, 20, 15, 4, 4, '#6b4423');
+  px(ctx, 21, 16, 2, 2, OUTLINE);
+  tex.refresh();
+}
+
 /** A black-and-white dog (facing right) and its pink rubber piggy. */
 function drawDog(scene: Phaser.Scene) {
   {
@@ -780,6 +810,7 @@ export function createArt(scene: Phaser.Scene) {
   drawHome(scene);
   drawDog(scene);
   drawCart(scene);
+  drawCoach(scene);
   drawMoreSigns(scene);
   drawHeroSheet(scene, TEX.bandit, BANDIT_OUTFIT);
   drawMarker(scene, TEX.marker, false);

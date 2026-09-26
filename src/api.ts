@@ -28,6 +28,8 @@ export interface SaveData {
   missions?: Record<string, 'new' | 'active' | 'goal' | 'done'>;
   /** Explored map (fog of war), see Fog.serialize(). */
   fog?: { s: number; chunks: Record<string, string> };
+  /** Explored parts of the town maps (by town id), same format as fog. */
+  fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
   /** Old saves only: the sword in use and the school level. */
   sword?: string;
   swordSkill?: number;

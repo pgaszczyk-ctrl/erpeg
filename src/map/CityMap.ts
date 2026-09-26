@@ -41,7 +41,7 @@ type RawMap = {
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station';
   name: string;
   id: string;
   building: Building | null;
@@ -158,7 +158,11 @@ export class CityMap {
   private bounds: RawMap['bounds'];
   readonly places: Place[] = [];
 
-  constructor(raw: RawMap) {
+  /** 'lublin' or a town id (public/map/towns/<id>.json). */
+  readonly id: string;
+
+  constructor(raw: RawMap, id = 'lublin') {
+    this.id = id;
     this.bounds = raw.bounds;
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;
@@ -202,8 +206,8 @@ export class CityMap {
     for (const [kind, name, ux, uy, addr] of raw.pois ?? []) {
       const x = ux * k;
       const y = uy * k;
-      // Travelling merchants stand in the street, not in a building.
-      const street = kind === 'merchant';
+      // Travelling merchants and coachmen stand in the street, not in a building.
+      const street = kind === 'merchant' || kind === 'station';
       let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
       if (!b && !street) {
         let best = 40 * PX_PER_M;
@@ -220,17 +224,39 @@ export class CityMap {
       this.places.push({
         kind: kind as Place['kind'],
         name,
-        id: `${kind}:${Math.round(ux)}:${Math.round(uy)}`,
+        id: `${id === 'lublin' ? '' : `${id}/`}${kind}:${Math.round(ux)}:${Math.round(uy)}`,
         building: b,
-        door: b ? this.entranceOf(b) : { x, y },
+        door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y },
       });
     }
   }
 
-  static async load(url: string) {
+  static async load(url: string, id = 'lublin') {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Nie udało się wczytać mapy (${res.status})`);
-    return new CityMap(await res.json());
+    return new CityMap(await res.json(), id);
+  }
+
+  /** The walkable spot on a street or path nearest to (x, y). */
+  freeNear(x: number, y: number): { x: number; y: number } {
+    let best = { x, y, d: Infinity };
+    for (let r = 20 * PX_PER_M; r <= 320 * PX_PER_M && best.d === Infinity; r *= 2) {
+      for (const l of this.lineGrid.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })) {
+        if (!ROAD_KINDS.has(l.kind)) continue;
+        for (let i = 0; i + 3 < l.pts.length; i += 2) {
+          const ax = l.pts[i], ay = l.pts[i + 1], bx = l.pts[i + 2], by = l.pts[i + 3];
+          const len = Math.hypot(bx - ax, by - ay) || 1;
+          const steps = Math.ceil(len / 4);
+          for (let s = 0; s <= steps; s++) {
+            const px = ax + ((bx - ax) * s) / steps;
+            const py = ay + ((by - ay) * s) / steps;
+            const d = Math.hypot(px - x, py - y);
+            if (d < best.d && d <= r && this.isFree(px, py, 4, 4)) best = { x: px, y: py, d };
+          }
+        }
+      }
+    }
+    return { x: best.x, y: best.y };
   }
 
   /** Same projection as scripts/build-map.mjs, in world pixels. */

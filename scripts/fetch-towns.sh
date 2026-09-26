@@ -34,16 +34,17 @@ osmium tags-filter "$PBF" \
   nwr/office=government \
   --overwrite -o "$WORK/filtered.pbf"
 
-# Cut the towns out in batches of 15 (all at once runs out of memory).
+# Cut the towns out one by one (many at once runs the runner out of memory).
+ls -lh "$WORK/filtered.pbf"
+free -m || true
 node -e '
-  const fs = require("fs");
-  const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  for (let i = 0; i * 15 < c.extracts.length; i++)
-    fs.writeFileSync(`${process.argv[1]}.${i}`, JSON.stringify({ ...c, extracts: c.extracts.slice(i * 15, i * 15 + 15) }));
-' "$WORK/extracts.json"
-for cfg in "$WORK"/extracts.json.*; do
-  osmium extract -c "$cfg" -s complete_ways --overwrite "$WORK/filtered.pbf"
-done
+  const c = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  for (const e of c.extracts) console.log(e.output.replace(/\.pbf$/, ""), e.bbox.join(","));
+' "$WORK/extracts.json" > "$WORK/boxes.txt"
+while read -r id box; do
+  osmium extract -b "$box" -s complete_ways --overwrite -o "$WORK/towns/$id.pbf" "$WORK/filtered.pbf"
+done < "$WORK/boxes.txt"
+echo "cut $(ls "$WORK"/towns/*.pbf | wc -l) towns"
 
 rm -rf data/towns
 mkdir -p data/towns

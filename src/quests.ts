@@ -28,6 +28,12 @@ export const session = {
   hp: MAX_HP,
   missions: {} as Record<string, MissionState>,
   fog: undefined as SaveData['fog'],
+  /** Explored parts of the town maps (by town id). */
+  fogs: {} as NonNullable<SaveData['fogs']>,
+  /** The map the hero is on: 'lublin' or a town id (a coachman takes them there). */
+  mapId: 'lublin',
+  /** Where the hero appears after a coach ride (the station on the new map). */
+  arrive: null as { x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
   /** Changes every login, so each place offers a new random mission. */
@@ -113,6 +119,9 @@ export function startSession(r: LoginResult) {
   session.startX = p.start_x * k;
   session.startY = p.start_y * k;
   session.fog = p.save.fog;
+  session.fogs = { ...(p.save.fogs ?? {}) };
+  session.mapId = 'lublin';
+  session.arrive = null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   session.exp = p.exp;
@@ -145,7 +154,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs,
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
   return api.save(session.token, data, session.exp);
