@@ -109,9 +109,16 @@ export function keyboardDir() {
 }
 
 /** True once per attack press (key, click or tap on the right side). */
+/** Where the mouse clicked for the pending swing (screen px), if it was a click. */
+let pendingAim: { x: number; y: number } | null = null;
+/** After consumeAttack: the click position of that swing, or null (keyboard, touch). */
+export let attackAim: { x: number; y: number } | null = null;
+
 export function consumeAttack() {
   const a = touchInput.attack;
   touchInput.attack = false;
+  attackAim = a ? pendingAim : null;
+  pendingAim = null;
   return a;
 }
 
@@ -280,6 +287,7 @@ export function installTouchControls(el: HTMLElement) {
     mouse.y = e.offsetY;
     startHold('mouse');
     touchInput.attack = true;
+    pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
   });
   document.addEventListener('contextmenu', (e) => e.preventDefault());

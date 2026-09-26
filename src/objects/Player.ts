@@ -69,6 +69,16 @@ export class Player extends Phaser.GameObjects.Sprite {
     }
   }
 
+  /** Turns to face a direction (e.g. towards a mouse click). */
+  face(dx: number, dy: number) {
+    const l = Math.hypot(dx, dy);
+    if (l < 1e-6) return;
+    this.facing.set(dx / l, dy / l);
+    this.setFlipX(this.dirName === 'side' && this.facing.x > 0);
+    if (this.vel.lengthSq() > 0) this.anims.play(`${this.anim}-walk-${this.dirName}`, true);
+    else this.setFrame(`${this.dirName}-0`);
+  }
+
   /** Returns the centre of the sword swing, or null if still on cooldown. */
   tryAttack(now: number): Phaser.Math.Vector2 | null {
     if (now - this.lastAttack < this.attackCooldown || now < this.stunnedUntil) return null;

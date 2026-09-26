@@ -4,7 +4,7 @@ import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
-import { touchInput, keyboardDir, consumeAttack } from '../controls';
+import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
@@ -422,6 +422,11 @@ export class GameScene extends Phaser.Scene {
     this.player.setAlpha(hidden ? 0.5 : 1);
 
     if (consumeAttack() && !lingering && !this.story.busy) {
+      // A mouse click swings towards where it clicked (the hero turns there).
+      if (attackAim) {
+        const cam = this.cameras.main;
+        this.player.face(attackAim.x / cam.zoom + cam.worldView.x - this.player.x, attackAim.y / cam.zoom + cam.worldView.y - (this.player.y + 2));
+      }
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
     }
