@@ -12,9 +12,9 @@ export type Miejsce = string | { lat: number; lon: number };
 /**
  * glut = chochlik (3 życia), wielki_glut = wielki chochlik (18 życia, mocno bije),
  * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
- * szkielet (przy cmentarzach), smok (tylko w historii).
+ * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik';
 
 export interface Zadanie {
   /**

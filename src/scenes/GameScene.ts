@@ -13,6 +13,8 @@ import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
+import { Townsfolk, type Folk } from './Townsfolk';
+import { MIESZKANCY } from '../content/mieszkancy';
 import { poziomPostaci } from '../content/historia';
 import { HOTEL_CENA } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
@@ -90,6 +92,9 @@ export interface HudState {
   maxHp: number;
   coins: number;
   exp: number;
+  /** Purple half-hearts in a duel with a townsman (null = no duel). */
+  duel: number | null;
+  duelMax: number;
   /** Character level (from EXP) and the story title line, if any. */
   level: number;
   title: string | null;
@@ -123,7 +128,7 @@ interface Shot {
   skill: 'luk' | 'magia';
 }
 
-type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number };
+type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
 
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
@@ -139,6 +144,10 @@ export class GameScene extends Phaser.Scene {
   private orchards!: Orchards;
   private forest!: Forest;
   private story!: Story;
+  private folk!: Townsfolk;
+  /** A duel with a townsman: purple half-hearts left (null = no duel). */
+  private duelHp: number | null = null;
+  private duelCarry = 0;
   /** The school or church whose dialog gets the story question. */
   private storyPlace: CityPlace | null = null;
   private training!: Training;
@@ -235,6 +244,9 @@ export class GameScene extends Phaser.Scene {
       trees: (x, y, r) => this.orchards.treesNear(x, y, r),
     });
 
+    this.folk = new Townsfolk(this, this.city);
+    this.duelHp = null;
+    this.duelCarry = 0;
     this.storyPlace = null;
     this.story = new Story(this, this.city, {
       player: this.player,
@@ -386,6 +398,21 @@ export class GameScene extends Phaser.Scene {
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
     this.forest.update(this.player.x, this.player.y, now);
+    this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
+    if (this.duelHp !== null) {
+      // Walked away from the duel: the townsman gives up.
+      const d = this.enemies.find((e) => e.duel);
+      if (!d || Math.hypot(d.x - this.player.x, d.y - this.player.y) > 320) {
+        if (d) {
+          this.folk.away(d.duel!.folk, false);
+          d.destroy();
+          this.enemies = this.enemies.filter((e) => e !== d);
+        }
+        this.duelHp = null;
+        this.toast('Przeciwnik zrezygnował z pojedynku.', 2000);
+        this.emitHud();
+      }
+    }
     this.training.update(this.player.x, this.player.y, now);
     this.streets.update(this.player.x, this.player.y, now);
     this.clearHomeArea();
@@ -415,6 +442,18 @@ export class GameScene extends Phaser.Scene {
       this.moveActor(s, dt);
       s.updateLook();
       s.setDepth(s.y);
+      if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
+        // A duel takes the purple hearts, never the real ones.
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, 0)) {
+          const pending = this.duelCarry + s.duel.dmg;
+          const dmg = Math.floor(pending);
+          this.duelCarry = pending - dmg;
+          this.duelHp = Math.max(0, (this.duelHp ?? 0) - dmg);
+          this.emitHud();
+          if (this.duelHp <= 0) this.endDuel(s, false);
+        }
+        continue;
+      }
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         const blocked = Math.random() < blockChance();
         // Difficulty scales the damage; fractions add up over hits.
@@ -614,6 +653,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(s: Enemy) {
+    if (s.duel) return this.endDuel(s, true);
     if (s === this.story.dragonSprite) {
       this.enemies = this.enemies.filter((e) => e !== s);
       this.story.dragonKilled();
@@ -872,6 +912,12 @@ export class GameScene extends Phaser.Scene {
       open = () => this.openRiddle(npc);
       savePoint = false; // saved after the answer
     }
+    const person = !id && this.duelHp === null ? this.folk.at(fx, fy - FEET.dy, NPC_RADIUS) : null;
+    if (person) {
+      id = `folk-${person.id}`;
+      open = () => this.talkToFolk(person);
+      savePoint = false;
+    }
     const wizard = !id && this.story.wizardAt(fx, fy - FEET.dy, NPC_RADIUS);
     if (wizard) {
       id = 'story-wizard';
@@ -880,7 +926,7 @@ export class GameScene extends Phaser.Scene {
     }
     // Characters wait a few seconds after the last talk, so bumping into one
     // right after a dialog doesn't start another by accident.
-    if (id && (fixed || npc || wizard) && performance.now() < this.npcReadyAt) {
+    if (id && (fixed || npc || wizard || person) && performance.now() < this.npcReadyAt) {
       this.nearDoor = id; // walk away and come back to talk
       return;
     }
@@ -1016,6 +1062,76 @@ export class GameScene extends Phaser.Scene {
       this.scene.stop('ui');
       this.scene.restart();
     });
+  }
+
+  /** A passer-by: says hello, and some want a duel. */
+  private talkToFolk(f: Folk) {
+    const M = MIESZKANCY;
+    let h = 2166136261;
+    for (const ch of f.id + today()) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const pick = (a: string[]) => a[(h >>> 0) % a.length];
+    const hello = pick(M.powitania);
+    if (f.beaten || f.role === 'wita') {
+      this.dialog({ title: `🙂 ${f.name}`, text: f.beaten ? 'Ech, dobra to była walka! Dzień dobry.' : hello, buttons: ['Dzień dobry!'], onChoose: () => {} });
+      return;
+    }
+    if (f.role === 'wyzywa') {
+      this.dialog({ title: `⚔ ${f.name}`, text: pick(M.wyzwanie), buttons: ['⚔ Walczymy!', 'Nie dziś'], onChoose: (i) => i === 0 && this.startDuel(f) });
+      return;
+    }
+    this.dialog({
+      title: `🙂 ${f.name}`,
+      text: hello,
+      buttons: ['Dzień dobry!', '⚔ Wyzwij na pojedynek'],
+      onChoose: (i) => {
+        if (i === 1) this.dialog({ title: `⚔ ${f.name}`, text: pick(M.przyjmuje), buttons: ['Do dzieła!'], onChoose: () => this.startDuel(f) });
+      },
+    });
+  }
+
+  /**
+   * The townsman becomes a fighter: his life and blows are a share of the
+   * hero's (difficulty `pojedynek`); the hero fights on 3 purple hearts.
+   */
+  private startDuel(f: Folk) {
+    if (this.duelHp !== null) return;
+    const k = session.level.pojedynek;
+    const hearts = MIESZKANCY.serduszka * 2;
+    const e = this.spawnEnemy(f.x, f.y, 'duel', 'wojownik');
+    e.setTexture(`${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
+    e.walkAnim = `${f.tex}-red-walk`;
+    // As many of the hero's blows as he has hearts, times the difficulty share.
+    e.hp = Math.max(1, Math.round(hearts * k * meleeDamage()));
+    e.chasing = true;
+    e.duel = { folk: f, dmg: k };
+    this.folk.away(f, true);
+    this.duelHp = hearts;
+    this.duelCarry = 0;
+    this.toast(`⚔ Pojedynek! Masz ${MIESZKANCY.serduszka} fioletowe serduszka.`, 2500);
+    this.emitHud();
+  }
+
+  private endDuel(e: Enemy, won: boolean) {
+    const f = e.duel!.folk;
+    this.enemies = this.enemies.filter((x) => x !== e);
+    if (!won) e.destroy();
+    this.duelHp = null;
+    this.duelCarry = 0;
+    f.x = f.walker.x;
+    f.y = f.walker.y;
+    this.folk.away(f, false);
+    const M = MIESZKANCY;
+    if (won) {
+      f.beaten = true;
+      session.exp += M.nagrodaExp;
+      session.stats.duels = (session.stats.duels ?? 0) + 1;
+      this.dialog({ title: `🏆 ${f.name}`, text: `${M.wygrana[session.stats.duels % M.wygrana.length]}\n\n+${M.nagrodaExp} EXP`, buttons: ['Dziękuję za walkę!'], onChoose: () => {} });
+    } else {
+      // No death in a duel: just one real heart lost.
+      this.player.hp = Math.max(1, this.player.hp - 2);
+      this.dialog({ title: `😵 ${f.name}`, text: `${M.przegrana[Math.floor(Math.random() * M.przegrana.length)]}\n\nTracisz jedno serduszko.`, buttons: ['Następnym razem…'], onChoose: () => {} });
+    }
+    this.emitHud();
   }
 
   /** The power stone: brings the hero back once after dying. */
@@ -1848,6 +1964,8 @@ export class GameScene extends Phaser.Scene {
       coins: session.coins,
       exp: session.exp,
       level: poziomPostaci(session.exp),
+      duel: this.duelHp,
+      duelMax: MIESZKANCY.serduszka * 2,
       title: session.story.title ? `${session.name}, ${session.story.title}` : null,
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,

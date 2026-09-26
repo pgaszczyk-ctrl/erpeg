@@ -73,6 +73,8 @@ export interface Stats {
   codes: number;
   /** Riddles answered right. */
   riddles?: number;
+  /** Duels won against townsfolk. */
+  duels?: number;
 }
 
 export interface PlayerInfo {

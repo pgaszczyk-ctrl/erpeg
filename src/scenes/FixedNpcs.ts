@@ -32,7 +32,7 @@ function hash(s: string) {
 }
 
 /** Walks slowly back and forth along a set of polylines, with little stops. */
-class Walker {
+export class Walker {
   li = 0;
   seg = 0;
   t = 0;

@@ -26,7 +26,7 @@ interface Code {
 }
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
-const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (3 życia)', wielki_glut: 'Wielki chochlik (18 życia)', bandyta: 'Bandyta (6 życia, szybki)', driada: 'Driada (3 życia)', zombie: 'Zombiak (4 życia)', szkielet: 'Szkielet (3 życia)', smok: 'Smok' };
+const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (3 życia)', wielki_glut: 'Wielki chochlik (18 życia)', bandyta: 'Bandyta (6 życia, szybki)', driada: 'Driada (3 życia)', zombie: 'Zombiak (4 życia)', szkielet: 'Szkielet (3 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';

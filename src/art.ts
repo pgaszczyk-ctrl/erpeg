@@ -36,6 +36,8 @@ export const TEX = {
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
   mushroom: 'mushroom',
+  heartDuel: 'heart-duel',
+  heartDuelEmpty: 'heart-duel-empty',
   dryad: 'dryad',
   zombie: 'zombie',
   skeleton: 'skeleton',
@@ -403,7 +405,7 @@ function drawSlimeSheet(scene: Phaser.Scene) {
  * A red frame around every enemy, so they can't be mistaken for people: the
  * outermost pixels of the picture turn red.
  */
-function redOutline(scene: Phaser.Scene, key: string) {
+export function redOutline(scene: Phaser.Scene, key: string) {
   const tex = scene.textures.get(key) as Phaser.Textures.CanvasTexture;
   const ctx = tex.getContext?.();
   if (!ctx) return;
@@ -456,12 +458,12 @@ function heartPath(ctx: Ctx, ox: number, oy: number, fill: string) {
   });
 }
 
-function drawHeart(scene: Phaser.Scene, key: string, full: boolean) {
+function drawHeart(scene: Phaser.Scene, key: string, full: boolean, color = '#e43b44', light = '#ffb3b8') {
   const { tex, ctx } = canvasTexture(scene, key, 9, 8);
   // outline: draw the shape offset in 4 directions, then the fill
   for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) heartPath(ctx, dx, dy, OUTLINE);
-  heartPath(ctx, 0, 0, full ? '#e43b44' : '#4a3a4a');
-  if (full) px(ctx, 2, 2, 1, 1, '#ffb3b8');
+  heartPath(ctx, 0, 0, full ? color : '#4a3a4a');
+  if (full) px(ctx, 2, 2, 1, 1, light);
   tex.refresh();
 }
 
@@ -1035,6 +1037,8 @@ export function createArt(scene: Phaser.Scene) {
   drawHeart(scene, TEX.heart, true);
   drawHeart(scene, TEX.heartEmpty, false);
   drawHeart(scene, TEX.pickupHeart, true);
+  drawHeart(scene, TEX.heartDuel, true, '#9a4ad8', '#d8b0ff');
+  drawHeart(scene, TEX.heartDuelEmpty, false);
   drawCoin(scene);
   for (const k of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.bandit, TEX.dragon]) redOutline(scene, k);
 }

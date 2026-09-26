@@ -13,6 +13,7 @@ import { session } from '../quests';
 // Runs on top of GameScene with its own unzoomed camera.
 export class UIScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
+  private duelHearts: Phaser.GameObjects.Image[] = [];
   private coinText!: Phaser.GameObjects.Text;
   private coinIcon!: Phaser.GameObjects.Image;
   private expText!: Phaser.GameObjects.Text;
@@ -56,6 +57,7 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.hearts = [];
+    this.duelHearts = [];
     // The scene object is reused when it starts again (after a coach ride):
     // drop the old, destroyed objects.
     this.fruitIcons = [];
@@ -189,6 +191,8 @@ export class UIScene extends Phaser.Scene {
     this.menuBtn.setPosition(pad, pad - 2 * this.ui);
     const hx = pad + this.menuBtn.width + 3 * this.ui;
     this.hearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad));
+    // Duel hearts under the red ones (in place of the weapon line).
+    this.duelHearts.forEach((h, i) => h.setPosition(hx + i * 10 * this.ui, pad + 9 * this.ui));
     this.expText.setPosition(width - pad, pad + 9 * this.ui);
     this.mapBtn.setPosition(width - pad, pad + 17 * this.ui);
     this.charBtn.setPosition(width - pad - this.mapBtn.width - 4 * this.ui, pad + 17 * this.ui);
@@ -231,6 +235,15 @@ export class UIScene extends Phaser.Scene {
       h.setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty);
       h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
     });
+    while (this.duelHearts.length < s.duelMax / 2) {
+      this.duelHearts.push(this.add.image(0, 0, TEX.heartDuel).setOrigin(0).setScale(this.ui).setVisible(false));
+      this.layout();
+    }
+    this.duelHearts.forEach((h, i) => {
+      const filled = (s.duel ?? 0) - i * 2;
+      h.setVisible(s.duel !== null).setTexture(filled > 0 ? TEX.heartDuel : TEX.heartDuelEmpty).setAlpha(filled === 1 ? 0.55 : 1);
+    });
+    this.swordText.setVisible(s.duel === null);
     this.coinText.setText(String(s.coins));
     this.expText.setText(`poz. ${s.level} · ${s.exp} EXP`);
     this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
