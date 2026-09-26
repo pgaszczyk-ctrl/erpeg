@@ -92,6 +92,8 @@ export interface PlayerInfo {
 export interface Snapshot {
   /** Pixels per metre the positions are in. */
   s?: number;
+  /** The map: 'lublin' (or missing) or a town id. */
+  m?: string;
   x: number;
   y: number;
   hp: number;

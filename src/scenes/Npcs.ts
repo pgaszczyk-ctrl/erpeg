@@ -128,7 +128,7 @@ export class Npcs {
   readonly list: Npc[] = [];
 
   constructor(private scene: Phaser.Scene, city: CityMap, day: string) {
-    const r = rng(hash(`npcs:${day}`));
+    const r = rng(hash(`npcs:${city.id === 'lublin' ? '' : city.id}${day}`));
     const spots = city.places.filter((p) => p.kind === 'school' || p.kind === 'church');
     const dist = MADRALA_ODLEGLOSC_M * PX_PER_M;
     spots.forEach((p, i) => {
@@ -141,7 +141,7 @@ export class Npcs {
         const y = p.door.y + Math.sin(a) * d;
         if (!city.roadAt(x, y) || city.isBlocked(x, y) || city.isBlocked(x, y + 5)) continue;
         const who = MADRALE[Math.floor(r() * MADRALE.length)];
-        this.list.push({ id: `npc-${i}`, x, y, name: who.imie, greeting: who.powitanie, difficulty: Math.floor(r() * 3) - 1 });
+        this.list.push({ id: `${city.id === 'lublin' ? '' : `${city.id}/`}npc-${i}`, x, y, name: who.imie, greeting: who.powitanie, difficulty: Math.floor(r() * 3) - 1 });
         break;
       }
     });

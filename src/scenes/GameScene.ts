@@ -12,6 +12,7 @@ import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
+import { cachedMap, getMap, mapName, stopFor, tripsFrom, type Trip } from '../travel';
 import type { ZagadkaPL } from '../content/postacie';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
@@ -151,6 +152,8 @@ export class GameScene extends Phaser.Scene {
   vision: number[] = [];
   private lastVision = { x: NaN, y: NaN, a: NaN };
   private leaving = false;
+  private travelling = false;
+  private safeAt = { x: 0, y: 0 };
 
   constructor() {
     super('game');
@@ -166,16 +169,26 @@ export class GameScene extends Phaser.Scene {
     this.lingerUntil = 0;
     this.mapView = new MapRenderer(this, this.city);
     this.explored = new Explored();
-    this.explored.load(session.fog);
+    const inLublin = this.city.id === 'lublin';
+    session.mapId = this.city.id;
+    this.explored.load(inLublin ? session.fog : session.fogs[this.city.id]);
     this.fogView = new FogView(this, this.explored);
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
 
     // Home: the nearest real house to the start point (hit it to go in).
-    this.setUpHome();
+    this.home = null;
+    this.homeAt = { x: -1e6, y: -1e6 };
+    if (inLublin) this.setUpHome();
     makePlayerTexture(this, session.look, this.worn());
     this.wornKey = JSON.stringify(this.worn());
-    this.player = new Player(this, session.startX, session.startY, PLAYER_TEX, 'me');
+    // After a coach ride: at the station of the new map.
+    const at = session.arrive ?? { x: session.startX, y: session.startY };
+    session.arrive = null;
+    this.travelling = false;
+    // No enemies by home (or, in a town, by the station the coach stopped at).
+    this.safeAt = inLublin ? { x: session.startX, y: session.startY } : { ...at };
+    this.player = new Player(this, at.x, at.y, PLAYER_TEX, 'me');
     // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
     this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     this.player.hp = session.hp;
@@ -195,7 +208,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Missions: gold roofs and "!" over their doors.
-    const { missions, missing } = resolveMissions(this.city);
+    // Story and admin missions are written for Lublin's addresses.
+    const { missions, missing } = inLublin ? resolveMissions(this.city) : { missions: [], missing: [] as string[] };
     this.missions = [];
     for (const rm of missions) this.addMission(rm, true);
     // Random missions taken earlier (churches, offices, police) and not finished.
@@ -243,7 +257,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     // Fixed enemy spots.
-    for (const w of WROGOWIE) {
+    for (const w of inLublin ? WROGOWIE : []) {
       const p = resolvePlace(this.city, w.miejsce);
       if (!p) {
         missing.push(typeof w.miejsce === 'string' ? w.miejsce : JSON.stringify(w.miejsce));
@@ -254,7 +268,8 @@ export class GameScene extends Phaser.Scene {
     if (missing.length) console.warn('Nie znaleziono na mapie:', missing);
     this.registry.set('missing', missing);
 
-    this.replayAbandoned();
+    if (inLublin) this.replayAbandoned();
+    else this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
     const beat = () => {
@@ -294,7 +309,7 @@ export class GameScene extends Phaser.Scene {
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
     this.mapView.update(this.cameras.main);
-    if (this.player.isDead || this.leaving) return;
+    if (this.player.isDead || this.leaving || this.travelling) return;
 
     const lingering = now < this.lingerUntil;
     if (this.lingerUntil && !lingering) this.endLinger();
@@ -372,8 +387,9 @@ export class GameScene extends Phaser.Scene {
   private clearHomeArea() {
     const r = HOME_SAFE_M * PX_PER_M;
     for (const e of this.enemies) {
-      if (e.isDead || e.missionId || Math.abs(e.x - session.startX) > r || Math.abs(e.y - session.startY) > r) continue;
-      if (Math.hypot(e.x - session.startX, e.y - session.startY) > r) continue;
+      const { x, y } = this.safeAt;
+      if (e.isDead || e.missionId || Math.abs(e.x - x) > r || Math.abs(e.y - y) > r) continue;
+      if (Math.hypot(e.x - x, e.y - y) > r) continue;
       this.enemies = this.enemies.filter((x) => x !== e);
       this.tweens.add({ targets: e, alpha: 0, scale: 0.2, duration: 250, onComplete: () => e.destroy() });
     }
@@ -611,9 +627,11 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
     this.emitHud();
     // Death is final: the character goes to the memorial board.
-    const place = this.city.describe(this.player.x, this.player.y);
-    const x = Math.round(this.player.x);
-    const y = Math.round(this.player.y);
+    const inLublin = this.city.id === 'lublin';
+    const place = inLublin ? this.city.describe(this.player.x, this.player.y) : `${mapName(this.city.id)}, ${this.city.describe(this.player.x, this.player.y)}`;
+    // The ghost screen shows Lublin: someone who died in a town haunts home.
+    const x = Math.round(inLublin ? this.player.x : session.startX);
+    const y = Math.round(inLublin ? this.player.y : session.startY);
     this.deathSaved = new Promise<void>((done) => {
       const report = () =>
         api.die(session.token, session.exp, place, x, y, PX_PER_M, session.stats)
@@ -632,6 +650,7 @@ export class GameScene extends Phaser.Scene {
     );
     return {
       s: PX_PER_M,
+      m: this.city.id,
       x: Math.round(this.player.x),
       y: Math.round(this.player.y),
       hp: this.player.hp,
@@ -646,7 +665,8 @@ export class GameScene extends Phaser.Scene {
   private replayAbandoned() {
     const a = session.abandoned;
     session.abandoned = null;
-    if (!a || !a.enemies?.length) return;
+    // A session left in a town: the next one starts at home anyway.
+    if (!a || !a.enemies?.length || (a.m && a.m !== 'lublin')) return;
     this.player.setPosition(a.x, a.y);
     this.player.hp = Math.max(1, Math.min(PLAYER.maxHp, a.hp));
     for (const e of a.enemies) {
@@ -689,13 +709,23 @@ export class GameScene extends Phaser.Scene {
   /** `reopen`: show this character right away (the ghost screen after dying). */
   backToMenu(reopen?: { name: string; code: string }) {
     const game = this.game;
+    this.keepFog();
     game.scene.stop('ui');
     game.scene.stop('game');
-    showMenu(this.city, reopen).then(() => game.scene.start('game'));
+    // Every session starts in Lublin, at home.
+    const lublin = cachedMap('lublin') ?? this.city;
+    game.registry.set('city', lublin);
+    showMenu(lublin, reopen).then(() => game.scene.start('game'));
+  }
+
+  /** Puts what was explored on this map into the session (saved with the game). */
+  private keepFog() {
+    if (this.city.id === 'lublin') session.fog = this.explored.serialize();
+    else session.fogs[this.city.id] = this.explored.serialize();
   }
 
   private save() {
-    session.fog = this.explored.serialize();
+    this.keepFog();
     saveNow(this.player.hp)
       .then(() => this.toast('Gra zapisana'))
       .catch((e: Error) => this.toast(`Nie udało się zapisać: ${e.message}`));
@@ -783,7 +813,7 @@ export class GameScene extends Phaser.Scene {
 
   private openPlace(p: CityPlace) {
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
-    if (p.kind === 'station') return this.dialog({ title: `🐴 ${p.name}`, text: 'Woźnica karmi konia.', buttons: ['OK'], onChoose: () => {} });
+    if (p.kind === 'station') return this.openCoach(p);
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
@@ -802,6 +832,69 @@ export class GameScene extends Phaser.Scene {
       // Same door as the place we're standing in: not a new entrance.
       this.nearDoor = m.id;
     });
+  }
+
+  /** The coachman at a railway station: rides to the next stations for coins. */
+  private openCoach(p: CityPlace) {
+    const lat = this.city.toLatLon(p.door.x, p.door.y);
+    const from = stopFor(this.city.id, p.name, lat.lat, lat.lon);
+    const d = new Date();
+    const trips = from ? tripsFrom(from, d.getHours() * 60 + d.getMinutes()) : [];
+    const title = `🐴 Woźnica – ${p.name}`;
+    if (!trips.length) {
+      this.dialog({ title, text: 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
+    const lines = trips.map((t) => {
+      const how = t.dep ? `pociąg jedzie ${t.min} min, najbliższy o ${t.dep}` : `koniem ok. ${t.min} min`;
+      return `• ${where(t)}${t.via ? ` przez ${t.via}` : ''}: ${t.km.toFixed(0)} km, ${how} – ${t.price} monet`;
+    });
+    this.dialog({
+      title,
+      text: `„Wio, koniku! Zawiozę cię tam, gdzie jeżdżą pociągi.” Masz ${session.coins} monet.\n\n${lines.join('\n')}`,
+      buttons: [...trips.map((t) => `${where(t)} – ${t.price} 💰`), 'Zostaję'],
+      onChoose: (i) => {
+        const t = trips[i];
+        if (!t) return;
+        if (session.coins < t.price) {
+          this.toast(`Za mało monet: przejazd kosztuje ${t.price}.`);
+          return;
+        }
+        this.travel(t);
+      },
+    });
+  }
+
+  /** Rides to another station: loads its map and starts there. */
+  private travel(t: Trip) {
+    if (this.travelling) return;
+    this.travelling = true;
+    spend(t.price);
+    this.emitHud();
+    this.keepFog();
+    this.toast(`🐴 Jedziemy do: ${t.to.name}…`, 3000);
+    const cam = this.cameras.main;
+    cam.fadeOut(900, 0, 0, 0);
+    Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
+      .then(([city]) => {
+        const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
+        session.arrive = st ? { ...st.door } : city.freeNear(city.fromLatLon(t.to.lat, t.to.lon).x, city.fromLatLon(t.to.lat, t.to.lon).y);
+        session.hp = this.player.hp;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      })
+      .catch((e: Error) => {
+        // Could not load that map: the money comes back.
+        earn(t.price);
+        session.stats.earned -= t.price;
+        session.stats.spent -= t.price;
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`Woźnica nie znalazł drogi: ${e.message}`);
+        this.emitHud();
+      });
   }
 
   /** Finds the hero's house next to the start point and marks it. */

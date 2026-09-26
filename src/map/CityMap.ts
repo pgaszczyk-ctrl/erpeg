@@ -268,6 +268,15 @@ export class CityMap {
     return { x: (lon - minLon) * mLon * PX_PER_M, y: (maxLat - lat) * mLat * PX_PER_M };
   }
 
+  /** The other way round: world pixels to latitude and longitude. */
+  toLatLon(x: number, y: number) {
+    const { minLat, maxLat, minLon } = this.bounds;
+    const lat0 = (minLat + maxLat) / 2;
+    const mLat = 111132.954 - 559.822 * Math.cos((2 * lat0 * Math.PI) / 180);
+    const mLon = 111412.84 * Math.cos((lat0 * Math.PI) / 180);
+    return { lat: maxLat - y / PX_PER_M / mLat, lon: minLon + x / PX_PER_M / mLon };
+  }
+
   query(box: Box) {
     return {
       areas: [...this.areaGrid.query(box)],

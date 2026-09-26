@@ -136,6 +136,8 @@ export class FixedNpcs {
   private grandIndex = hash(`dziadkowie:${today()}`) % DZIADKOWIE.osoby.length;
 
   constructor(private scene: Phaser.Scene, private city: CityMap, private host: FixedHost) {
+    // They all live in Lublin.
+    if (city.id !== 'lublin') return;
     const streetLines = (names: string[]) =>
       city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
 
