@@ -35,6 +35,9 @@ export const TEX = {
   fruitApple: 'fruit-apple',
   fruitPlum: 'fruit-plum',
   fruitGrape: 'fruit-grape',
+  vegCarrot: 'veg-carrot',
+  vegBroccoli: 'veg-broccoli',
+  vegLettuce: 'veg-lettuce',
   mushroom: 'mushroom',
   talkBubble: 'talk-bubble',
   heartDuel: 'heart-duel',
@@ -847,6 +850,35 @@ function drawVine(scene: Phaser.Scene) {
   tex.refresh();
 }
 
+/** Vegetables (8×8): a carrot, a broccoli, a lettuce. */
+function drawVeg(scene: Phaser.Scene) {
+  let c = canvasTexture(scene, TEX.vegCarrot, 8, 8);
+  px(c.ctx, 3, 2, 3, 6, OUTLINE);
+  px(c.ctx, 4, 3, 1, 4, '#e07a2e');
+  px(c.ctx, 3, 0, 1, 2, '#3fa34d');
+  px(c.ctx, 5, 0, 1, 2, '#3fa34d');
+  c.tex.refresh();
+  c = canvasTexture(scene, TEX.vegBroccoli, 8, 8);
+  px(c.ctx, 0, 0, 8, 5, OUTLINE);
+  px(c.ctx, 1, 1, 6, 3, '#2f8a3d');
+  px(c.ctx, 2, 1, 1, 1, '#6fcf6f');
+  px(c.ctx, 3, 4, 2, 4, OUTLINE);
+  px(c.ctx, 3, 4, 2, 3, '#9bd08a');
+  c.tex.refresh();
+  c = canvasTexture(scene, TEX.vegLettuce, 8, 8);
+  px(c.ctx, 0, 1, 8, 7, OUTLINE);
+  px(c.ctx, 1, 2, 6, 5, '#7be07b');
+  px(c.ctx, 3, 3, 2, 3, '#b8f0a0');
+  c.tex.refresh();
+}
+
+/** The picture of each kind of goods (pickups, the HUD). */
+export const GOODS_TEX = {
+  jablko: TEX.fruitApple, sliwka: TEX.fruitPlum, winogrono: TEX.fruitGrape,
+  marchewka: TEX.vegCarrot, brokul: TEX.vegBroccoli, salata: TEX.vegLettuce,
+  grzyb: TEX.mushroom, drewno: TEX.log,
+} as const;
+
 function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: string, grape = false) {
   const { tex, ctx } = canvasTexture(scene, key, 8, 8);
   if (grape) {
@@ -1144,6 +1176,7 @@ export function createArt(scene: Phaser.Scene) {
   drawDragon(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
+  drawVeg(scene);
   drawSigns(scene);
   drawHome(scene);
   drawDog(scene);

@@ -1,14 +1,13 @@
 import { itemIcon } from './itemIcon';
-import { gear, item, type Slot } from '../inventory';
+import { gear, item, goodsN, goodsLabel, mergeGoods, type Slot } from '../inventory';
 import { PLECAK } from '../content/przedmioty';
-import { OWOCE } from '../content/sklepy';
+import { GRUPY } from '../content/sklepy';
 import { session, CHEST_SLOTS } from '../quests';
 
 // The chest at home: 10×10 slots and money. Things are moved between the chest
 // and the backpack by dragging (mouse or finger) or by a tap (goes to the
 // other side). Fruit stacks up to 99 per slot, like in the backpack.
 
-const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇', grzyb: '🍄', drewno: '🪵' } as const;
 const SLOT_ICON = { bron: '⚔️', dystans: '🏹', zbroja: '🦺', helm: '⛑️', buty: '🥾' } as const;
 
 type Side = 'chest' | 'bag';
@@ -20,14 +19,14 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
 }
 
 function icon(s: Slot): Node | string {
-  if ('fruit' in s) return FRUIT_ICON[s.fruit];
+  if ('goods' in s) return GRUPY[s.goods].ikona;
   const p = item(s.item);
   if (!p) return '?';
   return itemIcon(p.id, 'item-ico ch-ico') ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
 }
 
 function label(s: Slot) {
-  if ('fruit' in s) return `${OWOCE[s.fruit].mnoga} ×${s.n}`;
+  if ('goods' in s) return goodsLabel(s);
   const p = item(s.item);
   return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}` : s.item;
 }
@@ -60,11 +59,9 @@ export function showChest(onClose: () => void) {
     if (!b) {
       sides[to][j] = a;
       sides[from][i] = null;
-    } else if ('fruit' in a && 'fruit' in b && a.fruit === b.fruit) {
-      const take = Math.min(a.n, PLECAK.owocowNaMiejsce - b.n);
-      b.n += take;
-      a.n -= take;
-      if (!a.n) sides[from][i] = null;
+    } else if ('goods' in a && 'goods' in b && a.goods === b.goods) {
+      mergeGoods(a, b);
+      if (!goodsN(a)) sides[from][i] = null;
     } else {
       sides[to][j] = a;
       sides[from][i] = b;
@@ -76,10 +73,10 @@ export function showChest(onClose: () => void) {
     if (!a) return;
     const to: Side = from === 'chest' ? 'bag' : 'chest';
     const list = sides[to];
-    if ('fruit' in a) {
+    if ('goods' in a) {
       for (let j = 0; j < list.length && sides[from][i]; j++) {
         const b = list[j];
-        if (b && 'fruit' in b && b.fruit === a.fruit && b.n < PLECAK.owocowNaMiejsce) move(from, i, to, j);
+        if (b && 'goods' in b && b.goods === a.goods && goodsN(b) < PLECAK.owocowNaMiejsce) move(from, i, to, j);
       }
       if (!sides[from][i]) return;
     }
@@ -117,7 +114,7 @@ export function showChest(onClose: () => void) {
     c.dataset.i = String(i);
     if (s) {
       c.append(el('span', { className: 'ch-icon' }, [icon(s)]));
-      if ('fruit' in s) c.append(el('span', { className: 'ch-n' }, [String(s.n)]));
+      if ('goods' in s) c.append(el('span', { className: 'ch-n' }, [String(goodsN(s))]));
       c.title = label(s);
       c.onpointerdown = (e) => startDrag(e, side, i, c);
     }

@@ -27,8 +27,16 @@ export const HOTEL_PREMIA = { niebieskichSerc: 2, minut: 30, szybciej: 0.2 };
 
 /**
  * NAMIOTY – pola namiotowe (prawdziwe z mapy i jedno w każdej wsi) oraz
- * własny namiot (kupiony w sklepie budowlanym lub sportowym, na zawsze),
- * który rozkłada się w lesie albo na polu. Nocleg pod namiotem zapisuje grę
- * i ustawia miejsce wczytania, ale leczy tylko połowę zdrowia.
+ * własne namioty (sklepy budowlane i sportowe), które rozkłada się w lesie
+ * albo na polu. Nocleg pod namiotem zapisuje grę i ustawia miejsce
+ * wczytania, ale leczy tylko połowę zdrowia. Własny namiot zużywa się: każdy
+ * nocleg w nim to jeden z `noclegow`. Można mieć kilka namiotów naraz.
  */
-export const NAMIOT = { cenaPola: 50, cenaNamiotu: 2000, gdzie: ['forest', 'farmland', 'grass', 'scrub', 'wetland'] };
+export const NAMIOT = {
+  cenaPola: 50,
+  gdzie: ['forest', 'farmland', 'grass', 'scrub', 'wetland'],
+  rodzaje: [
+    { nazwa: 'Namiot', cena: 2000, noclegow: 20 },
+    { nazwa: 'Super namiot', cena: 40000, noclegow: 500 },
+  ],
+};

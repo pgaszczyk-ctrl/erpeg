@@ -1,16 +1,15 @@
 import { itemIcon } from './itemIcon';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, type Miejsce } from '../content/przedmioty';
-import { OWOCE, LECZENIE_OWOCAMI } from '../content/sklepy';
+import { GRUPY, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { poziomPostaci, czescPremii, szybkoscPostaci, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
+  gear, item, totalFruit, goodsN, goodsLabel, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
 } from '../inventory';
 import { session } from '../quests';
 
 // The character sheet (an HTML overlay): money, equipment, a 5-slot backpack
 // and the skills the character can use. Opened with 👤 or C.
 
-const FRUIT_ICON = { jablko: '🍎', sliwka: '🟣', winogrono: '🍇', grzyb: '🍄', drewno: '🪵' } as const;
 let open: HTMLDivElement | null = null;
 
 export function isCharacterOpen() {
@@ -107,7 +106,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     // Statistics, one per line.
     const stats: [string, string][] = [
       ['🧪 Mikstury lecznicze', String(session.mikstury)],
-      ['⛺ Namiot', session.namiot ? 'masz' : 'brak (sklep budowlany lub sportowy)'],
+      ['⛺ Namioty', session.namioty.length ? session.namioty.map((t) => `${t.left}/${t.max}`).join(', ') + ' nocy' : 'brak (sklep budowlany lub sportowy)'],
       ['⭐ Poziom postaci', `${poziomPostaci(session.exp)}${poziomPostaci(session.exp) >= MAKS_POZIOM_POSTACI ? ' (max)' : ''}`],
       ['📈 Premia za poziom', `+${Math.round(czescPremii(poziomPostaci(session.exp)) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['✨ Doświadczenie', `${session.exp} EXP`],
@@ -138,7 +137,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     };
     box.append(eatBtn);
     // The own tent (bought in a DIY or sports shop): sleep here, in a forest or a field.
-    if (session.namiot && tent) {
+    if (session.namioty.length && tent) {
       const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
       tb.disabled = !tent.ok;
       tb.onclick = () => {
@@ -179,9 +178,9 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
       const s = gear.bag[i];
       const cell = el('button', 'c-cell') as HTMLButtonElement;
       if (!s) cell.classList.add('c-empty');
-      else if ('fruit' in s) {
-        cell.append(el('span', 'c-icon', FRUIT_ICON[s.fruit]), el('span', 'c-n', `×${s.n}`));
-        cell.onclick = () => ask(`${OWOCE[s.fruit].mnoga} ×${s.n} (sprzedasz w sklepie)`, [['Wyrzuć', () => dropFromBag(i)]]);
+      else if ('goods' in s) {
+        cell.append(el('span', 'c-icon', GRUPY[s.goods].ikona), el('span', 'c-n', `×${goodsN(s)}`));
+        cell.onclick = () => ask(`${goodsLabel(s)} – sprzedasz w sklepie${s.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
       } else {
         const it = item(s.item)!;
         const pic = itemIcon(it.id);

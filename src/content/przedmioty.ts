@@ -79,7 +79,8 @@ export const OBRONA_ZA_PUNKT = 0.06;
 export const OBRONA_MAKS = 0.6;
 
 /** Plecak: ile miejsc i ile owoców mieści się w jednym miejscu. */
-export const PLECAK = { miejsc: 5, owocowNaMiejsce: 99 };
+/** Plecak: tyle miejsc; jedna grupa (owoce, warzywa…) mieści tyle sztuk na miejsce. */
+export const PLECAK = { miejsc: 5, owocowNaMiejsce: 200 };
 
 // ----------------------------------------------------------------------------
 //  UMIEJĘTNOŚCI rosną od używania: każde trafienie (wroga, drzewa, lalki,

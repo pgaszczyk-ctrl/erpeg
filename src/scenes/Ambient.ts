@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TEX, HERO_DIRS, makeLookTexture } from '../art';
 import { PX_PER_M, pointInRings, type CityMap, type Area, type Line } from '../map/CityMap';
-import { DRZEWA, LAS, type Owoc } from '../content/sklepy';
+import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
 import { rng } from '../rng';
@@ -141,7 +141,9 @@ export interface ForestSpot {
   id: string;
   x: number;
   y: number;
-  kind: 'grzyb' | 'drzewo';
+  kind: 'grzyb' | 'drzewo' | 'warzywo';
+  /** Which vegetable (kind 'warzywo'). */
+  veg?: Owoc;
   /** Hits left for a tree. */
   left: number;
   sprite?: Phaser.GameObjects.Image;
@@ -195,6 +197,17 @@ export class Forest {
       if (list.some((o) => Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8)) continue;
       list.push({ id, x, y, kind, left: LAS.uderzenNaDrzewo });
     }
+    // Vegetables on allotments and fields.
+    {
+      const roll = r();
+      const x = (cx + 0.1 + r() * 0.8) * this.cell;
+      const y = (cy + 0.1 + r() * 0.8) * this.cell;
+      const veg = WARZYWA.rodzaje[Math.floor(r() * WARZYWA.rodzaje.length)];
+      const kinds = this.city.areaKindsAt(x, y);
+      if (roll < WARZYWA.szansa && (kinds.includes('allotments') || kinds.includes('farmland')) && this.city.isFree(x, y, 5, 5) && !this.city.roadAt(x, y)) {
+        list.push({ id: `warzywo:${key}`, x, y, kind: 'warzywo', veg, left: 1 });
+      }
+    }
     this.cells.set(key, list);
     return list;
   }
@@ -204,7 +217,7 @@ export class Forest {
     this.next = now + 500;
     for (const s of [...this.active]) {
       if (Math.hypot(s.x - px, s.y - py) <= FAR) continue;
-      if (s.sprite) (s.kind === 'grzyb' ? this.remove(s.sprite) : s.sprite.destroy());
+      if (s.sprite) (s.kind !== 'drzewo' ? this.remove(s.sprite) : s.sprite.destroy());
       s.sprite = undefined;
       this.active.delete(s);
     }
@@ -214,12 +227,12 @@ export class Forest {
     const c1y = Math.floor((py + NEAR) / this.cell);
     // Only where there is forest at all.
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
-    if (!areas.some((a) => a.kind === 'forest')) return;
+    if (!areas.some((a) => a.kind === 'forest' || a.kind === 'allotments' || a.kind === 'farmland')) return;
     for (let cy = c0y; cy <= c1y; cy++) {
       for (let cx = c0x; cx <= c1x; cx++) {
         for (const s of this.spotsOf(cx, cy)) {
           if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
-          if (s.kind === 'grzyb') {
+          if (s.kind !== 'drzewo') {
             if (this.gone.has(s.id)) continue;
             s.sprite = this.spawn(s);
           } else {

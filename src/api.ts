@@ -38,7 +38,8 @@ export interface SaveData {
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;
-  /** Owns a tent (bought once). */
+  /** Own tents: nights left of each (old saves: `namiot: true`). */
+  namioty?: { max: number; left: number }[];
   namiot?: boolean;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];

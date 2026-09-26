@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
-import { TEX, PLAYER_TEX, makePlayerTexture } from '../art';
+import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -30,7 +30,7 @@ import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, type Owoc } from '../content/sklepy'
 import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit, totalFruit,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit, totalFruit, groupCount,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station } from './Ambient';
@@ -113,6 +113,7 @@ export interface HudState {
   sword: string;
   fruits: string;
   /** Apples, plums, grapes in the backpack (the HUD shows them with the fruit pictures). */
+  /** Fruit, vegetables and mushrooms in the backpack (the HUD shows them with pictures). */
   fruitN: [number, number, number];
   dead: boolean;
   /** Seconds left while the character is stuck after an unfinished session. */
@@ -258,8 +259,9 @@ export class GameScene extends Phaser.Scene {
       this,
       this.city,
       (sp) => {
-        const img = this.add.image(sp.x, sp.y, TEX.mushroom).setDepth(sp.y - 8);
-        img.setData('kind', 'fruit:grzyb');
+        const what = sp.veg ?? 'grzyb';
+        const img = this.add.image(sp.x, sp.y, GOODS_TEX[what]).setDepth(sp.y - 8);
+        img.setData('kind', `fruit:${what}`);
         img.setData('spot', sp.id);
         this.pickups.push(img);
         return img;
@@ -727,7 +729,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dropFruit(x: number, y: number, fruit: Owoc) {
-    const tex = { jablko: TEX.fruitApple, sliwka: TEX.fruitPlum, winogrono: TEX.fruitGrape, grzyb: TEX.mushroom, drewno: TEX.log }[fruit];
+    const tex = GOODS_TEX[fruit];
     const tx = x + (Math.random() - 0.5) * 16;
     const ty = y + 4 + Math.random() * 8;
     const item = this.add.image(x, y - 10, tex).setDepth(ty);
@@ -1544,45 +1546,64 @@ export class GameScene extends Phaser.Scene {
   /** A camp site (a real one, or one in a village). */
   private openCamp(p: CityPlace) {
     const title = `⛺ ${p.name}`;
-    const price = session.namiot ? 0 : NAMIOT.cenaPola;
+    const price = session.namioty.length ? 0 : NAMIOT.cenaPola;
     this.dialog({
       title,
-      text: `Trawa, ognisko i miejsce na namiot. Nocleg ${price ? `kosztuje ${price} monet (masz ${session.coins})` : 'jest za darmo – masz własny namiot'}: zapis gry i tu zaczniesz po wczytaniu. Na ziemi śpi się gorzej niż w hotelu – odzyskasz połowę zdrowia.`,
+      text: `Trawa, ognisko i miejsce na namiot. Nocleg ${price ? `kosztuje ${price} monet (masz ${session.coins})` : 'jest za darmo – masz własny namiot (zużyje się o jeden nocleg)'}: zapis gry i tu zaczniesz po wczytaniu. Na ziemi śpi się gorzej niż w hotelu – odzyskasz połowę zdrowia.`,
       buttons: [price ? `⛺ Śpię tu (${price} 💰)` : '⛺ Rozbijam namiot', 'Nie teraz'],
       onChoose: (i) => {
         if (i !== 0) return;
         if (price && session.coins < price) return this.toast(`Za mało monet – nocleg kosztuje ${price}.`, 2500);
         if (price) spend(price);
+        else this.wearTent();
         this.sleepInTent(p.door.x, p.door.y, 'Dobranoc przy ognisku!');
       },
     });
   }
 
-  /** DIY and sports shops: the tent. */
+  /** DIY and sports shops: tents (a small one for 20 nights, a super one for 500). */
   private openGearShop(p: CityPlace) {
-    const cena = NAMIOT.cenaNamiotu;
-    if (session.namiot) {
-      return this.dialog({ title: `🏕 ${p.name}`, text: 'Masz już namiot. Rozłożysz go w lesie albo na polu z karty postaci (👤).', buttons: ['OK'], onChoose: () => {} });
-    }
+    const kinds = NAMIOT.rodzaje;
+    const have = session.namioty.length ? `\n\nTwoje namioty: ${this.tentsText()}.` : '';
     this.dialog({
       title: `🏕 ${p.name}`,
-      text: `Na półce leży porządny namiot: ${cena} monet (masz ${session.coins}). Kupujesz raz, na zawsze. Rozłożysz go w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu, jak na polu namiotowym.`,
-      buttons: [`⛺ Kupuję namiot (${cena} 💰)`, 'Nie teraz'],
+      text: `Na półkach leżą namioty. Rozłożysz je w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot. Masz ${session.coins} monet.${have}`,
+      buttons: [...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
       onChoose: (i) => {
-        if (i !== 0) return;
-        if (session.coins < cena) return this.toast(`Za mało monet – namiot kosztuje ${cena}.`, 2500);
-        spend(cena);
-        session.namiot = true;
+        const k = kinds[i];
+        if (!k) return;
+        if (session.coins < k.cena) return this.toast(`Za mało monet – ${k.nazwa.toLowerCase()} kosztuje ${k.cena}.`, 2500);
+        spend(k.cena);
+        session.namioty.push({ max: k.noclegow, left: k.noclegow });
         this.emitHud();
         this.save();
-        this.toast('⛺ Masz namiot! Rozłożysz go w lesie albo na polu z karty postaci.', 3000);
+        this.toast(`⛺ Kupiony: ${k.nazwa} (${k.noclegow} noclegów). Rozłożysz go w lesie albo na polu z karty postaci.`, 3000);
       },
     });
   }
 
+  /** "Namiot 19/20, Super namiot 480/500". */
+  tentsText() {
+    return session.namioty.map((t) => `${t.max > 20 ? 'Super namiot' : 'Namiot'} ${t.left}/${t.max}`).join(', ');
+  }
+
+  /** A night in an own tent wears it: the most worn one first. Tells how much is left. */
+  private wearTent() {
+    const t = session.namioty.filter((x) => x.left > 0).sort((a, b) => a.left - b.left)[0];
+    if (!t) return;
+    t.left--;
+    const name = t.max > 20 ? 'Super namiot' : 'Namiot';
+    if (t.left <= 0) {
+      session.namioty = session.namioty.filter((x) => x !== t);
+      this.dialog({ title: '⛺ Namiot się podarł', text: `${name} służył ci ${t.max} nocy i właśnie się rozpadł. ${session.namioty.length ? `Zostały ci: ${this.tentsText()}.` : 'Nowy kupisz w sklepie budowlanym albo sportowym.'}`, buttons: ['OK'], onChoose: () => {} });
+    } else {
+      this.time.delayedCall(3200, () => this.toast(`⛺ ${name} trochę się zużył: zostało ${t.left} z ${t.max} noclegów.`, 3000));
+    }
+  }
+
   /** Where the own tent can go: in a forest or a field, not in a fight. */
   tentSpot(): { ok: boolean; why: string } {
-    if (!session.namiot) return { ok: false, why: '' };
+    if (!session.namioty.length) return { ok: false, why: '' };
     if (this.inCombat()) return { ok: false, why: 'Nie w trakcie walki!' };
     const kinds = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy);
     if (!kinds.some((k) => NAMIOT.gdzie.includes(k))) return { ok: false, why: 'Namiot rozłożysz tylko w lesie albo na polu.' };
@@ -1595,6 +1616,7 @@ export class GameScene extends Phaser.Scene {
     if (!t.ok) return this.toast(t.why, 2500);
     this.add.image(this.player.x + 10, this.player.y - 4, TEX.tent).setDepth(this.player.y - 1);
     this.sleepInTent(this.player.x, this.player.y, 'Namiot rozbity, dobranoc!');
+    this.wearTent();
   }
 
   /** Rides to another station: loads its map and starts there. */
@@ -2457,7 +2479,7 @@ export class GameScene extends Phaser.Scene {
       title: session.story.title ? `${session.name}, ${session.story.title}` : null,
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
-      fruitN: [fruitCount('jablko'), fruitCount('sliwka'), fruitCount('winogrono')],
+      fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),

@@ -12,17 +12,35 @@
 //  mieczem: każde uderzenie zrzuca jeden owoc (2–5 na drzewo). Owoce
 //  sprzedaje się w sklepie. Po ponownym uruchomieniu gry drzewa odrastają.
 // ----------------------------------------------------------------------------
-// Grzyby i drewno leżą w plecaku tak jak owoce i też sprzedaje się je w sklepie.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'grzyb' | 'drewno';
+// Grzyby, warzywa i drewno leżą w plecaku tak jak owoce i też sprzedaje się je
+// w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
+// grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
+// (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'grzyb' | 'drewno';
+export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
-export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; jadalne: boolean }> = {
-  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', cena: 2, jadalne: true },
-  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', cena: 3, jadalne: true },
-  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', cena: 5, jadalne: true },
-  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 6, jadalne: true },
-  drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false },
+export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; jadalne: boolean; grupa: Grupa }> = {
+  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', cena: 2, jadalne: true, grupa: 'owoce' },
+  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', cena: 3, jadalne: true, grupa: 'owoce' },
+  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', cena: 5, jadalne: true, grupa: 'owoce' },
+  marchewka: { nazwa: 'marchewka', mnoga: 'marchewki', cena: 2, jadalne: true, grupa: 'warzywa' },
+  brokul: { nazwa: 'brokuł', mnoga: 'brokuły', cena: 3, jadalne: true, grupa: 'warzywa' },
+  salata: { nazwa: 'sałata', mnoga: 'sałata', cena: 3, jadalne: true, grupa: 'warzywa' },
+  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 6, jadalne: true, grupa: 'grzyby' },
+  drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false, grupa: 'drewno' },
 };
+
+/** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
+export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {
+  owoce: { nazwa: 'Owoce', ikona: '🍎🍇' },
+  warzywa: { nazwa: 'Warzywa', ikona: '🥕🥦' },
+  grzyby: { nazwa: 'Grzyby', ikona: '🍄' },
+  drewno: { nazwa: 'Drewno', ikona: '🪵' },
+};
+
+/** WARZYWA rosną na działkach i polach (zbiera się je, wchodząc na nie), odrastają przy każdym wejściu do gry. */
+export const WARZYWA = { szansa: 0.25, rodzaje: ['marchewka', 'brokul', 'salata'] as Owoc[] };
 
 // ----------------------------------------------------------------------------
 //  LAS – w lasach rosną grzyby (zbiera się je, wchodząc na nie) i drzewa do

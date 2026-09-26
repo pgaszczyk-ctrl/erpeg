@@ -3,7 +3,7 @@ import { CityMap } from '../map/CityMap';
 import { drawCity } from '../map/drawCity';
 import { MISJE, type Misja, type RodzajWroga } from '../content/fabula';
 import { PRZEDMIOTY, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, type Umiejetnosc } from '../content/przedmioty';
-import { OWOCE, type Owoc } from '../content/sklepy';
+import { normalizeSlot, goodsLabel } from '../inventory';
 import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
 
@@ -13,11 +13,11 @@ import { PX_PER_M } from '../map/CityMap';
 
 interface Player {
   name: string; exp: number; dead: boolean; age?: number;
-  chest?: { slots: ({ item: string } | { fruit: Owoc; n: number } | null)[]; coins: number } | null; died_at: string | null; death_place: string | null; resurrections: number;
+  chest?: { slots: unknown[]; coins: number } | null; died_at: string | null; death_place: string | null; resurrections: number;
   created_at: string; last_seen: string | null; online: boolean; start_place: string | null; old: boolean;
   coins: number | null; missions: Record<string, string> | null; magic: boolean | null;
   stats: { m?: number; kills?: Record<string, number>; earned?: number; spent?: number; fruit?: number; missions?: number; codes?: number; riddles?: number } | null;
-  equip: Record<string, string | null> | null; bag: ({ item: string } | { fruit: Owoc; n: number })[] | null; skills: Record<string, number> | null;
+  equip: Record<string, string | null> | null; bag: unknown[] | null; skills: Record<string, number> | null;
 }
 interface DbMission { id: string; data: Misja; active: boolean; created_at: string; updated_at: string }
 interface Code {
@@ -205,7 +205,11 @@ function players(main: HTMLElement) {
 function playerCard(p: Player) {
   const kills = Object.entries(p.stats?.kills ?? {}).map(([k, n]) => `${WROGOWIE[k as RodzajWroga]?.split(' (')[0] ?? k}: ${n}`).join(', ') || '—';
   const skills = Object.entries(p.skills ?? {}).map(([k, v]) => `${UMIEJETNOSCI[k as Umiejetnosc]?.nazwa ?? k}: poz. ${skillLevel(v)} (${v} pkt)`).join(', ') || '—';
-  const bag = (p.bag ?? []).map((s) => ('item' in s ? itemName(s.item) : `${OWOCE[s.fruit]?.mnoga ?? s.fruit} ×${s.n}`)).join(', ') || 'pusty';
+  const slotText = (raw: unknown) => {
+    const s = normalizeSlot(raw);
+    return !s ? '' : 'item' in s ? itemName(s.item) : goodsLabel(s);
+  };
+  const bag = (p.bag ?? []).map(slotText).filter(Boolean).join(', ') || 'pusty';
   const done = Object.entries(p.missions ?? {}).filter(([, v]) => v === 'done').length;
   const rows: [string, string][] = [
     ['Stan', p.dead ? `💀 zginął ${date(p.died_at)} (${p.death_place ?? '?'})` : p.online ? '🟢 gra teraz' : 'żyje'],
@@ -220,7 +224,7 @@ function playerCard(p: Player) {
     ['Misje', `${done} ukończonych (${p.stats?.missions ?? 0} nagród)`],
     ['Założone', Object.entries(p.equip ?? {}).filter(([, v]) => v).map(([, v]) => itemName(v)).join(', ') || '—'],
     ['Plecak', bag],
-    ['Skrzynia w domku', `${p.chest?.coins ?? 0} monet · ${(p.chest?.slots ?? []).filter(Boolean).map((s) => ('item' in s! ? itemName(s!.item) : `${OWOCE[s!.fruit]?.mnoga ?? s!.fruit} ×${s!.n}`)).join(', ') || 'pusta'}`],
+    ['Skrzynia w domku', `${p.chest?.coins ?? 0} monet · ${(p.chest?.slots ?? []).filter(Boolean).map(slotText).filter(Boolean).join(', ') || 'pusta'}`],
     ['Zagadki', `${p.stats?.riddles ?? 0} rozwiązanych`],
     ['Umiejętności', skills + (p.magic ? ' · zna magię' : '')],
     ['Utworzona', date(p.created_at) + (p.old ? ' (stary IDIK – jeszcze nie przeszła na nowy kod)' : '')],

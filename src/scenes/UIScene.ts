@@ -104,7 +104,7 @@ export class UIScene extends Phaser.Scene {
     this.swordText = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
-    for (const tex of [TEX.fruitApple, TEX.fruitPlum, TEX.fruitGrape]) {
+    for (const tex of [TEX.fruitApple, TEX.vegCarrot, TEX.mushroom]) {
       this.fruitIcons.push(this.add.image(0, 0, tex).setScale(this.ui).setOrigin(0.5, 0.5));
       this.fruitTexts.push(
         this.add.text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 }).setOrigin(0, 0.5),

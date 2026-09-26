@@ -2,12 +2,48 @@ import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
   type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
-import { OWOCE, type Owoc } from './content/sklepy';
+import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 
-// The character's things: equipped items, a 5-slot backpack (fruit stacks up
-// to 99 per slot), skill practice and whether they learned magic.
+// The character's things: equipped items, a 5-slot backpack, skill practice
+// and whether they learned magic. Fruit, vegetables, mushrooms and wood lie in
+// the backpack by group (one slot each, up to PLECAK.owocowNaMiejsce); how
+// many of each kind is kept only for selling (the prices differ).
 
-export type Slot = { item: string } | { fruit: Owoc; n: number };
+export type Goods = { goods: Grupa; counts: Partial<Record<Owoc, number>> };
+export type Slot = { item: string } | Goods;
+
+/** How many things are in a goods slot. */
+export function goodsN(s: Goods) {
+  return Object.values(s.counts).reduce((a, b) => a + (b ?? 0), 0);
+}
+
+/** A slot from an old save ({ fruit, n }) or a new one. */
+export function normalizeSlot(s: unknown): Slot | null {
+  const o = s as { item?: string; fruit?: Owoc; n?: number; goods?: Grupa; counts?: Goods['counts'] } | null;
+  if (!o) return null;
+  if (o.item) return item(o.item) ? { item: o.item } : null;
+  if (o.goods && GRUPY[o.goods]) return { goods: o.goods, counts: { ...o.counts } };
+  if (o.fruit && OWOCE[o.fruit] && o.n) return { goods: OWOCE[o.fruit].grupa, counts: { [o.fruit]: o.n } };
+  return null;
+}
+
+/** Icon and description of a slot (backpack, chest). */
+export function goodsLabel(s: Goods) {
+  const parts = (Object.entries(s.counts) as [Owoc, number][]).filter(([, n]) => n > 0).map(([f, n]) => `${OWOCE[f].mnoga} ${n}`);
+  return `${GRUPY[s.goods].nazwa} ×${goodsN(s)}${parts.length > 1 ? ` (${parts.join(', ')})` : ''}`;
+}
+
+/** Moves as much as fits from goods slot `a` onto `b` (same group). */
+export function mergeGoods(a: Goods, b: Goods) {
+  let room = PLECAK.owocowNaMiejsce - goodsN(b);
+  for (const f of Object.keys(a.counts) as Owoc[]) {
+    const take = Math.min(room, a.counts[f] ?? 0);
+    if (!take) continue;
+    b.counts[f] = (b.counts[f] ?? 0) + take;
+    a.counts[f]! -= take;
+    room -= take;
+  }
+}
 
 export interface Gear {
   equip: Record<Miejsce, string | null>;
@@ -39,11 +75,20 @@ export function loadGear(save: {
   const g = freshGear();
   if (save.equip) Object.assign(g.equip, save.equip);
   else if (save.sword && item(save.sword)) g.equip.bron = save.sword; // old "sword" field
-  if (save.bag) g.bag = save.bag.filter((s) => ('item' in s ? item(s.item) : OWOCE[s.fruit])).slice(0, PLECAK.miejsc);
+  // Old saves kept one slot per fruit kind: now they merge by group.
+  const old: Goods[] = [];
+  for (const raw of save.bag ?? []) {
+    const s = normalizeSlot(raw);
+    if (!s) continue;
+    if ('item' in s) g.bag.push(s);
+    else old.push(s);
+  }
+  g.bag = g.bag.slice(0, PLECAK.miejsc);
   if (save.skills) Object.assign(g.skills, save.skills);
   else if (save.swordSkill) g.skills.miecz = pointsForLevel(1 + save.swordSkill * 2); // old school levels
   g.magic = !!save.magic;
   Object.assign(gear, g);
+  for (const s of old) for (const [f, n] of Object.entries(s.counts) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
   for (const [f, n] of Object.entries(save.fruits ?? {}) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
 }
 
@@ -171,62 +216,68 @@ export function dropFromBag(index: number) {
 
 // ---------------------------------------------------------------- fruit
 
+const goodsSlots = () => gear.bag.filter((s): s is Goods => 'goods' in s);
+const dropEmpty = () => (gear.bag = gear.bag.filter((s) => !('goods' in s) || goodsN(s) > 0));
+
 export function addFruit(f: Owoc): boolean {
-  const stack = gear.bag.find((s) => 'fruit' in s && s.fruit === f && s.n < PLECAK.owocowNaMiejsce) as { fruit: Owoc; n: number } | undefined;
-  if (stack) {
-    stack.n++;
+  const g = OWOCE[f].grupa;
+  const slot = goodsSlots().find((s) => s.goods === g && goodsN(s) < PLECAK.owocowNaMiejsce);
+  if (slot) {
+    slot.counts[f] = (slot.counts[f] ?? 0) + 1;
     return true;
   }
   if (gear.bag.length >= PLECAK.miejsc) return false;
-  gear.bag.push({ fruit: f, n: 1 });
+  gear.bag.push({ goods: g, counts: { [f]: 1 } });
   return true;
 }
 
 export function fruitCount(f: Owoc) {
-  return gear.bag.reduce((n, s) => n + ('fruit' in s && s.fruit === f ? s.n : 0), 0);
+  return goodsSlots().reduce((n, s) => n + (s.counts[f] ?? 0), 0);
+}
+
+/** How many things of one group (all fruit, all vegetables…). */
+export function groupCount(g: Grupa) {
+  return goodsSlots().reduce((n, s) => n + (s.goods === g ? goodsN(s) : 0), 0);
 }
 
 export function fruitValue() {
-  return gear.bag.reduce((v, s) => v + ('fruit' in s ? s.n * OWOCE[s.fruit].cena : 0), 0);
+  return goodsSlots().reduce((v, s) => v + (Object.entries(s.counts) as [Owoc, number][]).reduce((a, [f, n]) => a + n * OWOCE[f].cena, 0), 0);
 }
 
-/** Removes all fruit from the backpack; returns its value in coins. */
+/** Removes all goods from the backpack; returns their value in coins. */
 export function sellAllFruit() {
   const v = fruitValue();
-  gear.bag = gear.bag.filter((s) => !('fruit' in s));
+  gear.bag = gear.bag.filter((s) => !('goods' in s));
   return v;
 }
 
-/** Things one can eat (fruit and mushrooms, not wood). */
+/** Things one can eat (fruit, vegetables, mushrooms – not wood). */
 export function totalFruit() {
-  return gear.bag.reduce((n, s) => n + ('fruit' in s && OWOCE[s.fruit].jadalne ? s.n : 0), 0);
+  return goodsSlots().reduce((n, s) => n + (Object.entries(s.counts) as [Owoc, number][]).reduce((a, [f, c]) => a + (OWOCE[f].jadalne ? c : 0), 0), 0);
 }
 
 /** Takes `n` of one kind out of the backpack; false if there are not enough. */
 export function takeFruit(f: Owoc, n: number): boolean {
   if (fruitCount(f) < n) return false;
-  for (const s of gear.bag) {
-    if (!('fruit' in s) || s.fruit !== f || !n) continue;
-    const take = Math.min(n, s.n);
-    s.n -= take;
-    n -= take;
-  }
-  gear.bag = gear.bag.filter((s) => !('fruit' in s) || s.n > 0);
-  return true;
-}
-
-/** Eats `n` fruit, cheapest first; false if there are not enough. */
-export function eatFruit(n: number): boolean {
-  if (totalFruit() < n) return false;
-  const stacks = gear.bag
-    .filter((s): s is { fruit: Owoc; n: number } => 'fruit' in s && OWOCE[s.fruit].jadalne)
-    .sort((a, b) => OWOCE[a.fruit].cena - OWOCE[b.fruit].cena);
-  for (const st of stacks) {
-    const take = Math.min(n, st.n);
-    st.n -= take;
+  for (const s of goodsSlots()) {
+    const take = Math.min(n, s.counts[f] ?? 0);
+    if (take) s.counts[f]! -= take;
     n -= take;
     if (!n) break;
   }
-  gear.bag = gear.bag.filter((s) => !('fruit' in s) || s.n > 0);
+  dropEmpty();
+  return true;
+}
+
+/** Eats `n` edible things, cheapest first; false if there are not enough. */
+export function eatFruit(n: number): boolean {
+  if (totalFruit() < n) return false;
+  const kinds = (Object.keys(OWOCE) as Owoc[]).filter((f) => OWOCE[f].jadalne).sort((a, b) => OWOCE[a].cena - OWOCE[b].cena);
+  for (const f of kinds) {
+    const take = Math.min(n, fruitCount(f));
+    if (take) takeFruit(f, take);
+    n -= take;
+    if (!n) break;
+  }
   return true;
 }

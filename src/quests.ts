@@ -2,7 +2,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { loadGear, saveGear } from './inventory';
+import { loadGear, saveGear, normalizeSlot } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
@@ -55,8 +55,8 @@ export const session = {
   kamienie: 0,
   /** Healing potions (alchemist at petrol stations). */
   mikstury: 0,
-  /** Owns a tent. */
-  namiot: false,
+  /** Own tents: nights left of each. */
+  namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -138,7 +138,7 @@ export function startSession(r: LoginResult) {
   session.chest = freshChest();
   if (c) {
     session.chest.coins = Math.max(0, c.coins | 0);
-    c.slots?.slice(0, CHEST_SLOTS).forEach((s, i) => (session.chest.slots[i] = s ?? null));
+    c.slots?.slice(0, CHEST_SLOTS).forEach((s, i) => (session.chest.slots[i] = normalizeSlot(s)));
   }
   session.riddles = { ...(p.save.riddles ?? {}) };
   session.daily = { ...(p.save.daily ?? {}) };
@@ -153,7 +153,7 @@ export function startSession(r: LoginResult) {
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   session.kamienie = Math.max(0, p.save.kamienie ?? 0);
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
-  session.namiot = !!p.save.namiot;
+  session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
   session.mapId = 'lublin';
   session.arrive = null;
   const at = p.save.at;
@@ -191,7 +191,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namiot: session.namiot,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
   };
