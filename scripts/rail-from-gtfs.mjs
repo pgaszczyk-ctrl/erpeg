@@ -1,6 +1,5 @@
 // Turns railway timetables (GTFS, e.g. POLREGIO and PKP Intercity) into the
-// small data/rail.json the coachmen use: which station comes next along a
-// line, how many minutes the train takes and at what times it leaves.
+// small data/rail.json the coachmen use: which station comes next along a line.
 // Stations are matched to the game's stations (data/towns.json) by position.
 // Usage: node scripts/rail-from-gtfs.mjs <gtfs-dir> [<gtfs-dir> ...]
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -89,11 +88,7 @@ for (const dir of dirs) {
   console.log(`rail: ${dir}: ${match.size} stops matched, ${trips.size} trips`);
 }
 
-const out = [...edges.values()].map((e) => ({
-  from: e.from,
-  to: e.to,
-  min: e.min.sort((a, b) => a - b)[Math.floor(e.min.length / 2)],
-  dep: [...e.dep].sort(),
-}));
+// Only which station follows which: the coachman always waits, no hours.
+const out = [...edges.values()].map((e) => ({ from: e.from, to: e.to }));
 writeFileSync('data/rail.json', JSON.stringify({ source: dirs.length ? 'gtfs' : 'none', edges: out }));
 console.log(`rail: ${out.length} connections between game stations`);

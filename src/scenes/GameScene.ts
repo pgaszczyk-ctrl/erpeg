@@ -838,21 +838,17 @@ export class GameScene extends Phaser.Scene {
   private openCoach(p: CityPlace) {
     const lat = this.city.toLatLon(p.door.x, p.door.y);
     const from = stopFor(this.city.id, p.name, lat.lat, lat.lon);
-    const d = new Date();
-    const trips = from ? tripsFrom(from, d.getHours() * 60 + d.getMinutes()) : [];
+    const trips = from ? tripsFrom(from) : [];
     const title = `🐴 Woźnica – ${p.name}`;
     if (!trips.length) {
       this.dialog({ title, text: 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => {
-      const how = t.dep ? `pociąg jedzie ${t.min} min, najbliższy o ${t.dep}` : `koniem ok. ${t.min} min`;
-      return `• ${where(t)}${t.via ? ` przez ${t.via}` : ''}: ${t.km.toFixed(0)} km, ${how} – ${t.price} monet`;
-    });
+    const lines = trips.map((t) => `• ${where(t)}${t.via ? ` (przez ${t.via})` : ''}: ${t.km.toFixed(0)} km – ${t.price} monet`);
     this.dialog({
       title,
-      text: `„Wio, koniku! Zawiozę cię tam, gdzie jeżdżą pociągi.” Masz ${session.coins} monet.\n\n${lines.join('\n')}`,
+      text: `„Wio, koniku! Zawiozę cię do następnej stacji albo jeszcze dalej.” Masz ${session.coins} monet.\n\n${lines.join('\n')}`,
       buttons: [...trips.map((t) => `${where(t)} – ${t.price} 💰`), 'Zostaję'],
       onChoose: (i) => {
         const t = trips[i];
