@@ -19,6 +19,8 @@ function context() {
     y: Math.round(s?.player?.y ?? 0),
     frame: g?.loop.frame ?? 0,
     scenes: g ? g.scene.getScenes(true).map((x) => x.sys.settings.key).join(',') : '',
+    paused: g ? g.scene.isPaused('game') : false,
+    gl: (g?.renderer as { contextLost?: boolean } | undefined)?.contextLost ?? false,
     screen: `${innerWidth}x${innerHeight}`,
     ua: navigator.userAgent.slice(0, 160),
     build: document.querySelector('script[type=module]')?.getAttribute('src')?.slice(-20) ?? '',
@@ -80,4 +82,40 @@ export function installErrorLog() {
   } catch {
     // No workers: errors are still reported.
   }
+}
+
+/**
+ * Phones can take the graphics away from a page in the background ("WebGL
+ * context lost"). The game keeps running but the picture no longer changes,
+ * so it looks frozen. Report it, and if the picture doesn't come back soon
+ * after the page is visible again, offer to reload straight into the game.
+ */
+export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string | null) {
+  let lostAt = 0;
+  let offer: HTMLDivElement | null = null;
+  canvas.addEventListener('webglcontextlost', () => {
+    lostAt = Date.now();
+    report('gl', `Utrata grafiki (WebGL context lost), ${document.hidden ? 'w tle' : 'na ekranie'}`);
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    report('gl', `Grafika wróciła po ${Math.round((Date.now() - lostAt) / 1000)} s`);
+    lostAt = 0;
+    offer?.remove();
+    offer = null;
+  });
+  setInterval(() => {
+    if (!lostAt || document.hidden || offer) return;
+    if (Date.now() - lostAt < 4000) return;
+    offer = document.createElement('div');
+    offer.className = 'm-screen';
+    offer.style.zIndex = '50';
+    offer.innerHTML = '<div class="m-box"><h2>Obraz gry się zatrzymał</h2><p>Telefon zabrał grze grafikę, gdy była w tle. Dotknij, żeby wczytać grę od nowa – wrócisz tam, gdzie byłeś.</p><button class="m-btn m-primary" type="button">Wczytaj ponownie</button></div>';
+    offer.querySelector('button')!.onclick = () => {
+      report('gl', 'Gracz przeładował grę po utracie grafiki');
+      const link = relogin();
+      if (link) location.href = link;
+      location.reload();
+    };
+    document.body.append(offer);
+  }, 1000);
 }

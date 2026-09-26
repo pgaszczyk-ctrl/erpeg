@@ -29,9 +29,10 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; j
 //  ścięcia (kilka uderzeń bronią = jedno drewno). Po ponownym uruchomieniu
 //  gry wszystko odrasta.
 //  kratka – las dzieli się na kratki o takim boku (metry); w każdej może być
-//  grzyb i drzewo do ścięcia, z podaną szansą.
+//  kilka grzybów (grzybowNaKratke prób, każda z szansą szansaGrzyb) i drzewo
+//  do ścięcia, z podaną szansą.
 // ----------------------------------------------------------------------------
-export const LAS = { kratkaM: 30, szansaGrzyb: 0.3, szansaDrzewo: 0.45, uderzenNaDrzewo: 4 };
+export const LAS = { kratkaM: 30, grzybowNaKratke: 3, szansaGrzyb: 0.45, szansaDrzewo: 0.45, uderzenNaDrzewo: 4 };
 
 /** Ile drzew na 1000 m² zieleni (i najwyżej ile na jeden trawnik/działki). */
 export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200 };

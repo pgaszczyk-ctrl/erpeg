@@ -1,3 +1,4 @@
+import { itemIcon } from './itemIcon';
 import { gear, item, type Slot } from '../inventory';
 import { PLECAK } from '../content/przedmioty';
 import { OWOCE } from '../content/sklepy';
@@ -18,11 +19,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   return e;
 }
 
-function icon(s: Slot) {
+function icon(s: Slot): Node | string {
   if ('fruit' in s) return FRUIT_ICON[s.fruit];
   const p = item(s.item);
   if (!p) return '?';
-  return p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce];
+  return itemIcon(p.id, 'item-ico ch-ico') ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
 }
 
 function label(s: Slot) {

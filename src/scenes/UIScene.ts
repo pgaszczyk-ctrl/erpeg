@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { report } from '../errlog';
 import { TEX } from '../art';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -141,8 +142,13 @@ export class UIScene extends Phaser.Scene {
         this.openCharacter();
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
-        if (this.dialogBox) this.closeDialog();
-        else this.openGameMenu();
+        if (this.dialogBox) {
+          // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
+          const choose = this.dialogChoose;
+          const last = this.dialogButtons.length - 1;
+          this.closeDialog();
+          choose?.(Math.max(0, last));
+        } else this.openGameMenu();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -295,9 +301,32 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
-  update() {
+  update(time: number) {
     this.updateArrow();
     this.updateTouch();
+    this.unstick(time);
+  }
+
+  private pausedAlone = 0;
+
+  /**
+   * A safety net: the game stays paused only while a dialog or a window
+   * (prompt, chest) is open. If it is paused with nothing on screen for over
+   * 1.5 s, something lost its way back: resume, and report it.
+   */
+  private unstick(time: number) {
+    const game = this.scene.get('game');
+    const waiting = !!this.dialogBox || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest');
+    if (!game.scene.isPaused() || waiting) {
+      this.pausedAlone = 0;
+      return;
+    }
+    if (!this.pausedAlone) this.pausedAlone = time;
+    else if (time - this.pausedAlone > 1500) {
+      this.pausedAlone = 0;
+      report('stuck', 'Gra wstrzymana bez okienka – wznowiona');
+      game.scene.resume();
+    }
   }
 
   /** Points at the mission goal: over it when visible, at the screen edge when not. */

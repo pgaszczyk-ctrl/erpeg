@@ -179,14 +179,19 @@ export class Forest {
     if (list) return list;
     list = [];
     const r = rng(hashStr(`${this.city.id}:${key}`));
-    for (const [kind, chance] of [['grzyb', LAS.szansaGrzyb], ['drzewo', LAS.szansaDrzewo]] as const) {
+    // The tree first (same spots as before), then several tries for mushrooms.
+    const tries: ['grzyb' | 'drzewo', number, string][] = [['drzewo', LAS.szansaDrzewo, `drzewo:${key}`]];
+    for (let i = 0; i < LAS.grzybowNaKratke; i++) tries.push(['grzyb', LAS.szansaGrzyb, i ? `grzyb:${key}:${i}` : `grzyb:${key}`]);
+    for (const [kind, chance, id] of tries) {
       const roll = r();
       const x = (cx + 0.1 + r() * 0.8) * this.cell;
       const y = (cy + 0.1 + r() * 0.8) * this.cell;
       if (roll >= chance) continue;
       if (!this.city.areaKindsAt(x, y).includes('forest')) continue;
       if (!this.city.isFree(x, y, 5, 5) || this.city.roadAt(x, y)) continue;
-      list.push({ id: `${kind}:${key}`, x, y, kind, left: LAS.uderzenNaDrzewo });
+      // Not right on top of another mushroom or the tree.
+      if (list.some((o) => Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8)) continue;
+      list.push({ id, x, y, kind, left: LAS.uderzenNaDrzewo });
     }
     this.cells.set(key, list);
     return list;

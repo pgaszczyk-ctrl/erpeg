@@ -1,3 +1,4 @@
+import { itemIcon } from './itemIcon';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, type Miejsce } from '../content/przedmioty';
 import { OWOCE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { poziomPostaci } from '../content/historia';
@@ -111,7 +112,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     for (const m of ['helm', 'bron', 'zbroja', 'dystans', 'buty'] as Miejsce[]) {
       const it = item(gear.equip[m]);
       const cell = el('button', `c-xcell c-x-${m}${it ? '' : ' c-empty'}`) as HTMLButtonElement;
-      cell.append(el('span', 'c-xicon', ICON[m]), el('span', 'c-xname', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa}` : MIEJSCA[m]));
+      cell.append((it && itemIcon(it.id)) || el('span', 'c-xicon', ICON[m]), el('span', 'c-xname', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa}` : MIEJSCA[m]));
       if (it) cell.append(el('span', 'c-xpow', `${m === 'bron' || m === 'dystans' ? 'atak' : 'obrona'} ${it.moc}`));
       cell.title = it?.opis ?? MIEJSCA[m];
       cell.onclick = () => {
@@ -136,6 +137,8 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
         cell.onclick = () => ask(`${OWOCE[s.fruit].mnoga} ×${s.n} (sprzedasz w sklepie)`, [['Wyrzuć', () => dropFromBag(i)]]);
       } else {
         const it = item(s.item)!;
+        const pic = itemIcon(it.id);
+        if (pic) cell.append(pic);
         cell.append(el('span', 'c-name', `${it.efekt ? '✨ ' : ''}${it.nazwa}`));
         cell.onclick = () => ask(it.opis ? `${it.nazwa}: ${it.opis}` : it.nazwa, [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       }
