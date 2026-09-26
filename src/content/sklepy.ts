@@ -44,5 +44,12 @@ export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200
  */
 export const KAMIEN_MOCY = { cena: 1_000_000_000, zlotych: 10 };
 
+/**
+ * ALCHEMIK – na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw
+ * najtańsze) na miksturę leczącą: całe zdrowie i dodatkowe serduszko w innym
+ * kolorze na kilka minut. Miksturę pije się przyciskiem leczenia (🧪, klawisz H).
+ */
+export const ALCHEMIK = { owocow: 50, premiaSerc: 1, premiaMinut: 10 };
+
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
 export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };

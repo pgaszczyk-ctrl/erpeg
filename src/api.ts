@@ -36,6 +36,8 @@ export interface SaveData {
   story?: import('./quests').Story;
   /** Power stones: each brings the hero back once after dying. */
   kamienie?: number;
+  /** Healing potions from the alchemist. */
+  mikstury?: number;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */

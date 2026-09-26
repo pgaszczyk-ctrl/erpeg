@@ -26,13 +26,13 @@ import { cachedMap, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, stopFo
 import type { ZagadkaPL } from '../content/postacie';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit, totalFruit,
 } from '../inventory';
-import { hold, mouse, consumeRelease } from '../controls';
+import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station } from './Ambient';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
@@ -87,6 +87,7 @@ const PLACE_LOOK = {
   hotel: { roof: '#8a3a6a', wall: '#f3dce9', sign: TEX.signHotel },
   bank: { roof: '#b8902a', wall: '#f5ecd0', sign: TEX.signBank },
   university: { roof: '#4a5ab8', wall: '#e2e6f5', sign: TEX.signSchool },
+  alchemist: { roof: '#3f8f7a', wall: '#dff2ec', sign: TEX.signAlchemist },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -94,6 +95,10 @@ const FEET = { dy: 5, hw: 2, hh: 1.5 };
 export interface HudState {
   hp: number;
   maxHp: number;
+  /** Bonus half-hearts from a potion (blue). */
+  extra: number;
+  /** What the heal button would use (null: nothing to heal with, or healthy). */
+  heal: { icon: string; n: number } | null;
   coins: number;
   exp: number;
   /** Purple half-hearts in a duel with a townsman (null = no duel). */
@@ -421,6 +426,13 @@ export class GameScene extends Phaser.Scene {
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     this.player.setAlpha(hidden ? 0.5 : 1);
 
+    if (consumeHeal()) this.quickHeal();
+    // The potion's bonus heart runs out.
+    if (this.player.extra && Date.now() > this.player.extraUntil) {
+      this.player.extra = 0;
+      this.toast('Dodatkowe serduszko z mikstury znikło.', 2000);
+      this.emitHud();
+    }
     if (consumeAttack() && !lingering && !this.story.busy) {
       // A mouse click swings towards where it clicked (the hero turns there).
       if (attackAim) {
@@ -1046,6 +1058,7 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'school') return this.openSchool(p);
     if (p.kind === 'hospital') return this.openHospital(p);
     if (p.kind === 'library') return this.openLibrary(p);
+    if (p.kind === 'alchemist') return this.openAlchemist(p);
     // Church, office, police: a random mission.
     const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
     if (known) return this.openMissionDialog(known);
@@ -1981,6 +1994,52 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * The heal button (🧪/🍎, key H): a potion when 2+ hearts are missing (or
+   * there isn't enough fruit), else 20 fruit for one heart.
+   */
+  quickHeal() {
+    if (this.player.isDead) return;
+    const missing = PLAYER.maxHp - this.player.hp;
+    if (missing <= 0) return this.toast('Masz pełne zdrowie.', 1200);
+    const fruit = totalFruit() >= LECZENIE_OWOCAMI.owocow;
+    if (session.mikstury > 0 && (missing >= 4 || !fruit)) return this.drinkPotion();
+    if (fruit) {
+      this.eatFruit();
+      return;
+    }
+    this.toast(`Nie masz czym się uleczyć: zbierz ${LECZENIE_OWOCAMI.owocow} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
+  }
+
+  /** A potion: full health and a bonus (blue) heart for a while. */
+  private drinkPotion() {
+    session.mikstury--;
+    this.player.heal(PLAYER.maxHp);
+    this.player.extra = ALCHEMIK.premiaSerc * 2;
+    this.player.extraUntil = Date.now() + ALCHEMIK.premiaMinut * 60_000;
+    this.toast(`🧪 Glup, glup! Pełne zdrowie i dodatkowe serduszko na ${ALCHEMIK.premiaMinut} minut.`, 2500);
+    this.emitHud();
+  }
+
+  /** The alchemist at a petrol station: 50 fruit → a healing potion. */
+  private openAlchemist(p: CityPlace) {
+    const n = ALCHEMIK.owocow;
+    const have = totalFruit();
+    this.dialog({
+      title: `⚗️ Alchemik – ${p.name}`,
+      text: `Na zapleczu stacji bulgocze kociołek. Alchemik mruczy: „Daj mi ${n} owoców albo grzybów, a uwarzę ci miksturę: wyleczy cię całego i przez ${ALCHEMIK.premiaMinut} minut da ci dodatkowe serduszko.”\n\nMasz ${have} owoców i ${session.mikstury} ${session.mikstury === 1 ? 'miksturę' : 'mikstur'}. Miksturę wypijesz przyciskiem 🧪 (klawisz H).`,
+      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, 'Wyjdź'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        if (!eatInventoryFruit(n)) return this.toast(`Za mało owoców – potrzeba ${n}, masz ${have}.`, 2500);
+        session.mikstury++;
+        this.toast('🧪 Masz nową miksturę!', 1800);
+        this.emitHud();
+        this.save();
+      },
+    });
+  }
+
   /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
   eatFruit(): number | null {
     if (this.player.isDead || this.player.hp >= PLAYER.maxHp) return null;
@@ -2307,6 +2366,14 @@ export class GameScene extends Phaser.Scene {
     const state: HudState = {
       hp: this.player.hp,
       maxHp: PLAYER.maxHp,
+      extra: this.player.extra,
+      heal: this.player.hp >= PLAYER.maxHp || this.player.isDead
+        ? null
+        : session.mikstury > 0 && (PLAYER.maxHp - this.player.hp >= 4 || totalFruit() < LECZENIE_OWOCAMI.owocow)
+          ? { icon: '🧪', n: session.mikstury }
+          : totalFruit() >= LECZENIE_OWOCAMI.owocow
+            ? { icon: '🍎', n: Math.floor(totalFruit() / LECZENIE_OWOCAMI.owocow) }
+            : null,
       coins: session.coins,
       exp: session.exp,
       level: poziomPostaci(session.exp),

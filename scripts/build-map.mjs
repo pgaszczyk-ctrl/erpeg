@@ -197,6 +197,8 @@ function poiOf(t) {
   if ((t.amenity === 'university' || t.amenity === 'college') && t.name) return ['university', t.name];
   // Town halls (for the story when a town has no university).
   if (t.amenity === 'townhall' && t.name) return ['office', t.name];
+  // Petrol stations: the alchemist brews healing potions there.
+  if (t.amenity === 'fuel') return ['alchemist', t.brand || t.name || 'Stacja paliw'];
   // Banks: deposits with interest.
   if (t.amenity === 'bank') return ['bank', t.name || t.brand || 'Bank'];
   // Hotels: save and load points (the game keeps one per 300 m square).
@@ -572,4 +574,4 @@ mkdirSync(OUT.replace(/\/[^/]*$/, ''), { recursive: true });
 const json = JSON.stringify(out);
 writeFileSync(OUT, json);
 const withAddr = buildings.filter((b) => b.a).length;
-console.log(`map: ${W - X0}x${H - Y0} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant', 'station', 'hotel', 'bank', 'university'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);
+console.log(`map: ${W - X0}x${H - Y0} m, pois: ${JSON.stringify(Object.fromEntries(['shop', 'school', 'church', 'office', 'hospital', 'police', 'library', 'merchant', 'station', 'hotel', 'bank', 'university', 'alchemist'].map((k) => [k, pois.filter((p) => p.kind === k).length])))}, ${buildings.length} buildings (${withAddr} with address, ${matched} address nodes matched), ${lines.length} lines, ${areas.length} areas, ${(json.length / 1e6).toFixed(1)} MB`);

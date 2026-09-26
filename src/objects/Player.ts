@@ -29,6 +29,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   private lastAttack = -Infinity;
   /** Set from the sword-fighting skill (content/sklepy.ts). */
   attackCooldown = PLAYER.attackCooldown;
+  /** Bonus half-hearts from a potion (blue, lost first), until `extraUntil` (Date.now ms). */
+  extra = 0;
+  extraUntil = 0;
   /** Walking speed in px/s (grows with the character level). */
   speed = PLAYER.speed;
   reach = 1;
@@ -103,7 +106,10 @@ export class Player extends Phaser.GameObjects.Sprite {
   /** Returns true if damage was taken. */
   hurt(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (now < this.invulnerableUntil || this.isDead) return false;
-    this.hp = Math.max(0, this.hp - damage);
+    // The potion's bonus heart goes first.
+    const fromExtra = Math.min(this.extra, damage);
+    this.extra -= fromExtra;
+    this.hp = Math.max(0, this.hp - (damage - fromExtra));
     this.invulnerableUntil = now + PLAYER.hurtInvulnerable;
     this.stunnedUntil = now + 180;
 

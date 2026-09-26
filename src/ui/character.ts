@@ -99,6 +99,7 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     box.append(log);
     // Statistics, one per line.
     const stats: [string, string][] = [
+      ['🧪 Mikstury lecznicze', String(session.mikstury)],
       ['⭐ Poziom postaci', `${poziomPostaci(session.exp)}${poziomPostaci(session.exp) >= MAKS_POZIOM_POSTACI ? ' (max)' : ''}`],
       ['📈 Premia za poziom', `+${Math.round(czescPremii(poziomPostaci(session.exp)) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['✨ Doświadczenie', `${session.exp} EXP`],

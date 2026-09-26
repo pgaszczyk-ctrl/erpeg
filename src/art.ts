@@ -52,6 +52,8 @@ export const TEX = {
   log: 'log',
   pine: 'pine',
   signBank: 'sign-bank',
+  signAlchemist: 'sign-alchemist',
+  heartBonus: 'heart-bonus',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
   signOffice: 'sign-office',
@@ -1083,6 +1085,13 @@ function drawCombatExtras(scene: Phaser.Scene) {
     p(3, 8, 8, 2, '#e07a66');
     p(11, 7, 1, 4, '#fff6e0');
   });
+  drawSign(scene, TEX.signAlchemist, '#3f8f7a', '#6fc9b0', (p) => {
+    // A round flask with a green potion.
+    p(6, 2, 2, 3, '#e8eaf0');
+    p(4, 5, 6, 6, '#1e1a24');
+    p(5, 6, 4, 4, '#7be07b');
+    p(5, 6, 1, 1, '#d8ffd8');
+  });
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');
@@ -1116,6 +1125,7 @@ export function createArt(scene: Phaser.Scene) {
   drawSlimeSheet(scene);
   drawSlash(scene);
   drawHeart(scene, TEX.heart, true);
+  drawHeart(scene, TEX.heartBonus, true, '#3f9fe8', '#b8e2ff');
   drawStar(scene, TEX.star, 9);
   drawStar(scene, TEX.starHalf, 5);
   drawStar(scene, TEX.starEmpty, 0);

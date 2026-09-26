@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { report } from '../errlog';
 import { TEX, PLAYER_TEX, arrowTexture } from '../art';
 import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
-import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, activity } from '../controls';
+import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -15,6 +15,10 @@ import { session } from '../quests';
 // Runs on top of GameScene with its own unzoomed camera.
 export class UIScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
+  /** Heal button (🧪 potion / 🍎 20 fruit), shown when hurt and there is something to heal with. */
+  private healBtn!: Phaser.GameObjects.Arc;
+  private healIcon!: Phaser.GameObjects.Text;
+  private healCount!: Phaser.GameObjects.Text;
   private duelHearts: Phaser.GameObjects.Image[] = [];
   private coinText!: Phaser.GameObjects.Text;
   private coinIcon!: Phaser.GameObjects.Image;
@@ -112,9 +116,10 @@ export class UIScene extends Phaser.Scene {
 
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
-    this.streetText = label(13).setOrigin(0.5, 0);
+    const small = Math.max(13, 5 * this.ui);
+    this.streetText = label(small).setOrigin(0.5, 0);
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
-    this.questTexts = [0, 1, 2].map(() => label(13, '#ffffff').setOrigin(0.5, 0));
+    this.questTexts = [0, 1, 2].map(() => label(small, '#ffffff').setOrigin(0.5, 0));
     this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit).
@@ -174,6 +179,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('toast', onToast);
       this.game.events.off('practice', onPractice);
       offTap();
+      healHome.on = false;
       window.removeEventListener('keydown', onKey);
       closeMinimap();
       closeCharacter();
@@ -239,14 +245,15 @@ export class UIScene extends Phaser.Scene {
     this.portraitBox.setPosition(right, pad);
     this.charBtn.setPosition(right - 9 * u, pad + u);
     const hy = pad + 17 * u;
-    // Up to 5 hearts a row (the level bonus can double them).
+    // Up to 5 hearts a row (the level bonus can double them), a bit bigger than the rest.
+    const hs = this.heartScale();
     const rows = Math.ceil(this.hearts.length / 5);
     this.hearts.forEach((h, i) => {
       const row = Math.floor(i / 5);
       const inRow = Math.min(5, this.hearts.length - row * 5);
-      h.setPosition(right - (inRow - (i % 5)) * 10 * u + u, hy + row * 9 * u);
+      h.setScale(hs).setPosition(right - (inRow - (i % 5)) * 10 * hs + hs, hy + row * 9 * hs);
     });
-    const sy = hy + Math.max(1, rows) * 9 * u + u;
+    const sy = hy + Math.max(1, rows) * 9 * hs + u;
     this.stars.forEach((st, i) => st.setPosition(right - (5 - i) * 11 * u + u, sy));
     this.expText.setPosition(right, sy + 12 * u);
     this.titleText.setPosition(right, sy + 12 * u + this.expText.height + u);
@@ -289,13 +296,25 @@ export class UIScene extends Phaser.Scene {
     attackHome.y = this.attackBtn.y;
     attackHome.r = this.attackBtn.radius;
     this.attackLabel.setPosition(this.attackBtn.x, this.attackBtn.y);
+    const hbx = this.touch ? this.attackBtn.x : width - pad - 30;
+    const hby = this.touch ? this.attackBtn.y - 58 : height - pad - 30;
+    this.healBtn.setPosition(hbx, hby);
+    this.healIcon.setPosition(hbx, hby + 1);
+    this.healCount.setPosition(hbx + 12, hby + 8);
+    healHome.x = hbx;
+    healHome.y = hby;
+    healHome.r = 22;
+  }
+
+  private heartScale() {
+    return this.ui + 1;
   }
 
   private updateHud(s: HudState) {
-    while (this.hearts.length < s.maxHp / 2) {
-      this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.ui));
-    }
-    while (this.hearts.length > s.maxHp / 2) this.hearts.pop()!.destroy();
+    // Red hearts, then the potion's blue ones.
+    const total = s.maxHp / 2 + Math.ceil(s.extra / 2);
+    while (this.hearts.length < total) this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.heartScale()));
+    while (this.hearts.length > total) this.hearts.pop()!.destroy();
     // The hero's picture is redrawn (a new texture) when worn gear changes.
     if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
     // Experience towards the next level as 5 stars, filled by halves (like hearts).
@@ -307,10 +326,24 @@ export class UIScene extends Phaser.Scene {
     if (this.lastLevel && s.level > this.lastLevel) this.levelUp(s.level);
     this.lastLevel = s.level;
     this.hearts.forEach((h, i) => {
+      if (i >= s.maxHp / 2) {
+        const left = s.extra - (i - s.maxHp / 2) * 2;
+        h.setTexture(TEX.heartBonus).setAlpha(left === 1 ? 0.55 : 1);
+        return;
+      }
       const filled = s.hp - i * 2; // 2 hp per heart
       h.setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty);
       h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
     });
+    // Heal button: only when hurt and there is something to heal with.
+    const heal = s.heal;
+    healHome.on = !!heal && !s.dead;
+    for (const o of [this.healBtn, this.healIcon, this.healCount]) o.setVisible(healHome.on);
+    if (heal) {
+      this.healIcon.setText(heal.icon);
+      this.healCount.setText(heal.n > 1 ? `×${heal.n}` : '');
+    }
+    this.healLow = s.hp * 2 <= s.maxHp;
     while (this.duelHearts.length < s.duelMax / 2) {
       this.duelHearts.push(this.add.image(0, 0, TEX.heartDuel).setOrigin(0).setScale(this.ui).setVisible(false));
       this.layout();
@@ -361,6 +394,12 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '17px', color: '#ffffff' })
       .setOrigin(0.5);
     for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
+    // Heal (phones: above the attack button; computers: bottom-right, or key H).
+    this.healBtn = this.add.circle(0, 0, 22, 0x3fa34d, 0.75).setStrokeStyle(3, 0xffffff, 0.85).setVisible(false).setDepth(6);
+    this.healIcon = this.add.text(0, 0, '🧪', { fontFamily: 'sans-serif', fontSize: '22px' }).setOrigin(0.5).setVisible(false).setDepth(7);
+    this.healCount = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3 })
+      .setOrigin(0, 0).setVisible(false).setDepth(7);
   }
 
   /** Blinks the joystick at the start and after a while without moving. */
@@ -374,7 +413,11 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
+  private healLow = false;
+
   update(time: number) {
+    // The heal button blinks below half health.
+    if (this.healBtn?.visible) this.healBtn.setAlpha(this.healLow ? 0.55 + 0.45 * Math.abs(Math.sin(time / 220)) : 0.85);
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);

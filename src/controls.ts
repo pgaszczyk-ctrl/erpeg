@@ -16,6 +16,16 @@ export const JOY_RADIUS = 56;
 export const joyHome = { x: 0, y: 0 };
 /** The attack button (set by UIScene's layout): only a touch on it attacks. */
 export const attackHome = { x: 0, y: 0, r: 40 };
+/** The heal button (drawn by UIScene when there is something to heal with). */
+export const healHome = { x: 0, y: 0, r: 20, on: false };
+let healRequest = false;
+/** A tap/click on the heal button or the H key since the last call. */
+export function consumeHeal() {
+  const h = healRequest;
+  healRequest = false;
+  return h;
+}
+const onHeal = (x: number, y: number) => healHome.on && Math.hypot(x - healHome.x, y - healHome.y) < healHome.r * 1.3;
 /** Last time the player steered (for the "use the joystick" hint). */
 export const activity = { last: 0 };
 
@@ -180,7 +190,9 @@ export function installTouchControls(el: HTMLElement) {
     sync(e);
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
-      if (Math.hypot(p.x - attackHome.x, p.y - attackHome.y) < attackHome.r * 1.35) {
+      if (onHeal(p.x, p.y)) {
+        healRequest = true;
+      } else if (Math.hypot(p.x - attackHome.x, p.y - attackHome.y) < attackHome.r * 1.35) {
         attackIds.add(t.identifier);
         touchInput.attack = true;
         if (!hold.active) {
@@ -250,6 +262,8 @@ export function installTouchControls(el: HTMLElement) {
         heldKeys.add(code);
         activity.last = performance.now();
         e.preventDefault();
+      } else if (code === 'KeyH') {
+        if (!e.repeat) healRequest = true;
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
@@ -285,6 +299,10 @@ export function installTouchControls(el: HTMLElement) {
     if (e.button !== 0) return;
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (onHeal(e.offsetX, e.offsetY)) {
+      healRequest = true;
+      return;
+    }
     startHold('mouse');
     touchInput.attack = true;
     pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
