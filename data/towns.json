@@ -11,6 +11,21 @@
    "lat": 51.2132592
   },
   {
+   "name": "Motycz Leśny",
+   "lon": 22.3721635,
+   "lat": 51.2377944
+  },
+  {
+   "name": "Motycz",
+   "lon": 22.4235028,
+   "lat": 51.2214247
+  },
+  {
+   "name": "Czesławice",
+   "lon": 22.2630048,
+   "lat": 51.3076439
+  },
+  {
    "name": "Lublin Ponikwoda",
    "lon": 22.6059708,
    "lat": 51.266083
@@ -24,6 +39,11 @@
    "name": "Rudnik",
    "lon": 22.622535,
    "lat": 51.2876442
+  },
+  {
+   "name": "Miłocin Lubelski",
+   "lon": 22.312265,
+   "lat": 51.2689265
   },
   {
    "name": "Lublin Zemborzyce",
@@ -324,23 +344,6 @@
      "name": "Jaszczów",
      "lon": 22.9106093,
      "lat": 51.2021235
-    }
-   ]
-  },
-  {
-   "id": "motycz",
-   "name": "Motycz",
-   "bbox": [
-    22.40486,
-    51.20973,
-    22.44215,
-    51.23312
-   ],
-   "stations": [
-    {
-     "name": "Motycz",
-     "lon": 22.4235028,
-     "lat": 51.2214247
     }
    ]
   },
@@ -1121,23 +1124,6 @@
    ]
   },
   {
-   "id": "motycz-lesny",
-   "name": "Motycz Leśny",
-   "bbox": [
-    22.35351,
-    51.2261,
-    22.39082,
-    51.24949
-   ],
-   "stations": [
-    {
-     "name": "Motycz Leśny",
-     "lon": 22.3721635,
-     "lat": 51.2377944
-    }
-   ]
-  },
-  {
    "id": "rokitnia-stara",
    "name": "Rokitnia Stara",
    "bbox": [
@@ -1275,23 +1261,6 @@
      "name": "Niedrzwica Kościelna",
      "lon": 22.3637081,
      "lat": 51.0797728
-    }
-   ]
-  },
-  {
-   "id": "czeslawice",
-   "name": "Czesławice",
-   "bbox": [
-    22.24432,
-    51.29595,
-    22.28169,
-    51.31934
-   ],
-   "stations": [
-    {
-     "name": "Czesławice",
-     "lon": 22.2630048,
-     "lat": 51.3076439
     }
    ]
   },
@@ -1749,23 +1718,6 @@
      "name": "Łagiewniki",
      "lon": 22.6171099,
      "lat": 51.3054087
-    }
-   ]
-  },
-  {
-   "id": "milocin-lubelski",
-   "name": "Miłocin Lubelski",
-   "bbox": [
-    22.2936,
-    51.25723,
-    22.33093,
-    51.28062
-   ],
-   "stations": [
-    {
-     "name": "Miłocin Lubelski",
-     "lon": 22.312265,
-     "lat": 51.2689265
     }
    ]
   },
