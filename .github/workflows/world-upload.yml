@@ -24,13 +24,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check the keys
         run: |
-          if [ -z "$ACCOUNT" ] || [ -z "$R2_KEY" ] || [ -z "$R2_SECRET" ]; then
+          if [ -z "$R2_KEY" ] || [ -z "$R2_SECRET" ]; then
             echo "::error::Brak kluczy Cloudflare R2 w Settings → Secrets (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)"; exit 1
           fi
           # Whatever was pasted: just the account id, a whole endpoint address, with spaces or new lines.
           A=$(printf '%s' "$ACCOUNT" | tr -d '[:space:]' | sed -E 's#^https?://##; s#\.r2\.cloudflarestorage\.com.*$##; s#^.*dash\.cloudflare\.com/##; s#/.*$##')
           # Something around it (a label, a link): take the 32-character id out of it.
           printf '%s' "$A" | grep -Eq '^[0-9a-f]{32}$' || A=$(printf '%s' "$ACCOUNT" | grep -oiE '[0-9a-f]{32}' | head -1 | tr 'A-F' 'a-f' || true)
+          # The owner's account (not secret: it is in every Cloudflare dashboard address).
+          printf '%s' "$A" | grep -Eq '^[0-9a-f]{32}$' || A=f27c6c377e117ece848fa5bbecaa19d4
           if ! printf '%s' "$A" | grep -Eq '^[0-9a-f]{32}$'; then
             echo "::error::R2_ACCOUNT_ID nie wygląda na Account ID z Cloudflare (32 znaki 0-9 a-f). Skopiuj go z R2 → Account Details."; exit 1
           fi
