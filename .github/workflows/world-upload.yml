@@ -73,10 +73,7 @@ jobs:
           if $S3 ls "s3://$BUCKET/world-$B" | grep -q "world-$B"; then
             echo "Already there"
           else
-            SIZE=$(curl -sfI "$URL" | grep -i '^content-length' | tr -dc '0-9')
-            echo "Size: $SIZE bytes"
-            # Streamed straight through: the runner's disk is far too small for the file.
-            curl -sfL --retry 5 "$URL" | $S3 cp - "s3://$BUCKET/world-$B" --expected-size "$SIZE" --no-progress
+            scripts/world-upload.sh "$B"
           fi
           echo "{\"file\":\"world-$B\",\"build\":\"${B%.pmtiles}\"}" > world.json
           $S3 cp world.json "s3://$BUCKET/world.json" --cache-control no-cache --content-type application/json
