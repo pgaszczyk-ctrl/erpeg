@@ -221,7 +221,7 @@ export class FixedNpcs {
     const tries = [{ x: e.x, y: e.y + 7 }, { x: e.x + 12, y: e.y + 6 }, { x: e.x - 12, y: e.y + 6 }, { x: e.x + ((e.x - cx) / len) * 8, y: e.y + ((e.y - cy) / len) * 8 }];
     const d = tries.find((p) => this.city.isFree(p.x, p.y, 3, 3) && this.city.isFree(p.x, p.y + 5, 2, 1.5)) ?? e;
     const w = new Walker([[d.x, d.y, d.x + 0.1, d.y]], 0, this.r);
-    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0x6fcf6f);
+    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xd0463c);
     this.list.push({ id: 'luigi', walker: w, sprite, x: w.x, y: w.y });
   }
 
@@ -548,12 +548,12 @@ export class FixedNpcs {
     const title = `♟ ${tr(LUIGI.imie)}`;
     const opts: [string, () => void][] = [];
     if (d.a < 3) opts.push([tx('🧩 Zagadka', '🧩 A riddle'), () => this.luigiRiddle()]);
-    if (this.host.storyOn()) opts.push([tx('🐉 Zapytaj o cień', '🐉 Ask about the shadow'), () => this.host.dialog({ title, text: tr(LUIGI.cien), buttons: [tx('Dzięki, Luigi!', 'Thanks, Luigi!')], onChoose: () => {} })]);
-    opts.push([tx('🍺 Co słychać?', '🍺 What is new?'), () => this.host.dialog({ title, text: tr(LUIGI.tawerna), buttons: ['Ciao!'], onChoose: () => {} })]);
+    if (this.host.storyOn()) opts.push([tx('🐉 Zapytaj o cień', '🐉 Ask about the shadow'), () => this.host.dialog({ title, text: tr(LUIGI.cien), buttons: [tx('Gracias, Luigi!', 'Gracias, Luigi!')], onChoose: () => {} })]);
+    opts.push([tx('🍺 Co słychać?', '🍺 What is new?'), () => this.host.dialog({ title, text: tr(LUIGI.tawerna), buttons: ['¡Adiós!'], onChoose: () => {} })]);
     this.host.dialog({
       title,
       text: d.a < 3 ? tr(LUIGI.powitanie) : tr(LUIGI.koniec),
-      buttons: [...opts.map(([l]) => l), 'Ciao!'],
+      buttons: [...opts.map(([l]) => l), '¡Adiós!'],
       onChoose: (i) => opts[i]?.[1](),
     });
   }
@@ -574,7 +574,7 @@ export class FixedNpcs {
         if (d.a === 3 && d.n === 3) {
           this.host.gainExp(LUIGI.premiaZaTrzy);
           this.host.save();
-          this.host.dialog({ title, text: `${tr(LUIGI.brawoTrzy)}\n\n+${LUIGI.premiaZaTrzy} EXP`, buttons: ['Grazie!'], onChoose: () => {} });
+          this.host.dialog({ title, text: `${tr(LUIGI.brawoTrzy)}\n\n+${LUIGI.premiaZaTrzy} EXP`, buttons: ['¡Gracias!'], onChoose: () => {} });
         }
       },
     });

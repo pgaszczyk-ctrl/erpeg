@@ -214,7 +214,7 @@ export const GRAZYNKA = {
 };
 
 // ----------------------------------------------------------------------------
-//  LUIGI – siedzi przed domem przy Nałęczowskiej 18 (nie chodzi). Codziennie
+//  LUIGI – hiszpańskojęzyczny macho, siedzi przed domem przy Nałęczowskiej 18 (nie chodzi). Codziennie
 //  3 zagadki: pierwsza o szachach, druga o Pokémonach albo Magic: the
 //  Gathering (na zmianę dniami), trzecia z tego, co zostało. Jedna próba na
 //  zagadkę. Za każdą dobrą 1 EXP, za wszystkie trzy dobre dodatkowo 20 EXP.
@@ -225,17 +225,17 @@ export const LUIGI = {
   ulica: 'Nałęczowska',
   expZaZagadke: 1,
   premiaZaTrzy: 20,
-  powitanie: { pl: 'Ciao! Siadaj, amico. Mam dla ciebie zagadkę!', en: 'Ciao! Sit down, amico. I have a riddle for you!' },
-  koniec: { pl: 'Basta na dziś! Wróć jutro po nowe zagadki, amico.', en: 'Basta for today! Come back tomorrow for new riddles, amico.' },
-  brawoTrzy: { pl: 'Mamma mia! Wszystkie trzy! Jesteś mistrzem!', en: 'Mamma mia! All three! You are a master!' },
+  powitanie: { pl: '¡Hola, amigo! Siadaj, siadaj. Luigi ma dla ciebie zagadkę – tylko dla twardzieli!', en: '¡Hola, amigo! Sit down, sit down. Luigi has a riddle for you – only for tough guys!' },
+  koniec: { pl: '¡Basta! Na dziś koniec, amigo. Luigi musi odpocząć… i poprawić fryzurę. ¡Hasta mañana!', en: '¡Basta! That is all for today, amigo. Luigi must rest… and fix his hair. ¡Hasta mañana!' },
+  brawoTrzy: { pl: '¡Caramba! Wszystkie trzy! Prawie tak dobry jak Luigi. ¡Olé!', en: '¡Caramba! All three! Almost as good as Luigi. ¡Olé!' },
   /** Gdy bohater widział już cień smoka. */
   cien: {
-    pl: 'Tak, to mi przypomina Ur-Dragona z Magica… Nie grałem taką talią, ale ekspertem od smoków jest Martin. Może coś wie, ale musiałbyś iść na Irysową. Jak nie masz co robić, to leć. Albo chodź, zagramy w karty.',
-    en: 'Yes, it reminds me of the Ur-Dragon from Magic… I never played that deck, but the dragon expert is Martin. He may know something, but you would have to go to Irysowa Street. If you have nothing to do, off you go. Or come, let us play cards.',
+    pl: 'Sí, sí… to mi przypomina Ur-Dragona z Magica. Nie grałem taką talią, amigo, ale ekspertem od smoków jest Martin. Może coś wie, ale musiałbyś iść na Irysową. Jak nie masz co robić, to leć. Albo chodź, zagramy w karty – Luigi nie przegrywa. ¡Nunca!',
+    en: 'Sí, sí… it reminds me of the Ur-Dragon from Magic. I never played that deck, amigo, but the dragon expert is Martin. He may know something, but you would have to go to Irysowa Street. If you have nothing to do, off you go. Or come, let us play cards – Luigi never loses. ¡Nunca!',
   },
   tawerna: {
-    pl: 'Słyszałeś o tej tawernie, co ostatnio powstała na Guliwera? Nazwali ją dziwacznie – magicownia.pl – ale lubię tam chodzić i pograć w karty.',
-    en: 'Have you heard of the tavern that opened lately on Guliwera Street? They gave it a strange name – magicownia.pl – but I like going there to play cards.',
+    pl: '¡Oye, amigo! Słyszałeś o tej tawernie, co ostatnio powstała na Guliwera? Nazwali ją dziwacznie – magicownia.pl – ale Luigi lubi tam chodzić i pograć w karty. Señoritas patrzą, jak wygrywam!',
+    en: '¡Oye, amigo! Have you heard of the tavern that opened lately on Guliwera Street? They gave it a strange name – magicownia.pl – but Luigi likes going there to play cards. The señoritas watch me win!',
   },
   szachy: [
     { pytanie: { pl: 'Która figura szachowa porusza się „w kształcie litery L”?', en: 'Which chess piece moves in an "L" shape?' }, odpowiedzi: [{ pl: 'Skoczek', en: 'The knight' }, { pl: 'Goniec', en: 'The bishop' }, { pl: 'Wieża', en: 'The rook' }] },
