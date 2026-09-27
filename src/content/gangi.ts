@@ -33,4 +33,6 @@ export const GANG_CZLONEK_OD_DRZWI_M = 50;
 /** Po tylu sekundach od rozbicia gangu wracają mieszkańcy. */
 export const GANG_POWROT_S = 60;
 /** Czerwona mgiełka: kolor i przezroczystość. */
-export const GANG_MGLA = { kolor: 0xe43b44, alfa: 0.18 };
+export const GANG_MGLA = { kolor: 0xe43b44, alfa: 0.3 };
+/** Muszki latające nad terenem gangu: co ile pikseli świata jedna (mniej = więcej muszek), kolor. */
+export const GANG_MUSZKI = { coPx: 22, kolor: 0x1e1a24 };

@@ -4,7 +4,7 @@ import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap'
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
 
 // Things that fill the city around the hero as they walk: fruit trees on
@@ -445,6 +445,7 @@ export class StreetEnemies {
   }
 
   update(px: number, py: number, now: number) {
+    this.drawFlies(now);
     if (now < this.next) return;
     this.next = now + 700;
     const pcx = Math.floor(px / KM);
@@ -459,7 +460,7 @@ export class StreetEnemies {
         if (!g.fog) {
           g.fog = this.scene.add.graphics().setDepth(-999);
           g.fog.fillStyle(GANG_MGLA.kolor, GANG_MGLA.alfa).fillCircle(g.x, g.y, g.r);
-          g.fog.lineStyle(3, GANG_MGLA.kolor, GANG_MGLA.alfa * 2.5).strokeCircle(g.x, g.y, g.r);
+          g.fog.lineStyle(4, GANG_MGLA.kolor, Math.min(1, GANG_MGLA.alfa * 2.5)).strokeCircle(g.x, g.y, g.r);
         }
       } else if (g.fog) {
         g.fog.destroy();
@@ -481,6 +482,32 @@ export class StreetEnemies {
         for (const [i, m] of g.members) if (this.despawn(m)) g.members.delete(i);
       }
     }
+  }
+
+  private flies?: Phaser.GameObjects.Graphics;
+
+  /** One-pixel flies buzzing over the misty territories in view (fixed spots on a grid, so they don't follow the hero). */
+  private drawFlies(now: number) {
+    const misty = this.gangs.filter((g) => g.fog);
+    if (!misty.length) {
+      this.flies?.clear();
+      return;
+    }
+    const f = (this.flies ??= this.scene.add.graphics().setDepth(-998));
+    f.clear().fillStyle(GANG_MUSZKI.kolor, 1);
+    const v = this.scene.cameras.main.worldView;
+    const c = GANG_MUSZKI.coPx;
+    const t = now / 1000;
+    for (let gx = Math.floor(v.x / c); gx <= Math.floor(v.right / c); gx++)
+      for (let gy = Math.floor(v.y / c); gy <= Math.floor(v.bottom / c); gy++) {
+        const h = hashStr2(`${gx},${gy}`);
+        if (h % 3) continue;
+        const ph = (h >>> 8) % 628 / 100;
+        const sp = 1.5 + ((h >>> 4) % 20) / 10;
+        const x = Math.round(gx * c + ((h >>> 12) % c) + Math.sin(t * sp + ph) * 7 + Math.sin(t * sp * 2.7) * 2);
+        const y = Math.round(gy * c + ((h >>> 20) % c) + Math.cos(t * sp * 1.3 + ph) * 5);
+        if (misty.some((g) => (x - g.x) ** 2 + (y - g.y) ** 2 < g.r * g.r)) f.fillRect(x, y, 1, 1);
+      }
   }
 }
 
