@@ -761,7 +761,7 @@ export class Training {
       }
       const n = this.personOf(a);
       if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
-        n.sprite = this.scene.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6).setDepth(n.y);
+        n.sprite = this.scene.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setDepth(n.y);
         // A little jog on the spot, so they look sporty.
         this.scene.tweens.add({ targets: n.sprite, y: n.y - 1.5, duration: 260, yoyo: true, repeat: -1 });
         n.sprite.setVisible(!hide(n.x, n.y));

@@ -47,7 +47,7 @@ jobs:
         continue-on-error: true
         run: |
           cat > cors.json <<'JSON'
-          {"CORSRules":[{"AllowedOrigins":["https://pgaszczyk-ctrl.github.io","http://localhost:5173","http://localhost:4173"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["range","if-match"],"ExposeHeaders":["etag","content-length","content-range"],"MaxAgeSeconds":86400}]}
+          {"CORSRules":[{"AllowedOrigins":["https://exp-lore.app","https://www.exp-lore.app","https://pgaszczyk-ctrl.github.io","http://localhost:5173","http://localhost:4173"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["range","if-match"],"ExposeHeaders":["etag","content-length","content-range"],"MaxAgeSeconds":86400}]}
           JSON
           aws s3api put-bucket-cors --endpoint-url "$ENDPOINT" --bucket "$BUCKET" --cors-configuration file://cors.json
       - name: Check that the key may write

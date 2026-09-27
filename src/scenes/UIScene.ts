@@ -116,7 +116,7 @@ export class UIScene extends Phaser.Scene {
     const fw = 18 * this.ui, fh = 15 * this.ui;
     this.portraitBox = this.add.graphics();
     this.portraitBox.fillStyle(0x1e1a24, 0.75).fillRect(-fw, 0, fw, fh).lineStyle(this.ui, 0xf7c531, 1).strokeRect(-fw, 0, fw, fh);
-    this.charBtn = this.add.image(0, 0, this.textures.exists(PLAYER_TEX) ? PLAYER_TEX : TEX.hero, 'down-0').setOrigin(0.5, 0).setScale(this.ui).setCrop(0, 0, 16, 13);
+    this.charBtn = this.add.image(0, 0, this.textures.exists(PLAYER_TEX) ? PLAYER_TEX : TEX.hero, 'down-0').setOrigin(0.5, 0).setScale(this.ui).setCrop(4, 1, 16, 15);
     this.stars = [];
     for (let i = 0; i < 5; i++) this.stars.push(this.add.image(0, 0, TEX.starEmpty).setOrigin(0).setScale(this.ui));
     this.lastLevel = 0;
@@ -331,7 +331,7 @@ export class UIScene extends Phaser.Scene {
     while (this.hearts.length < total) this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.heartScale()));
     while (this.hearts.length > total) this.hearts.pop()!.destroy();
     // The hero's picture is redrawn (a new texture) when worn gear changes.
-    if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
+    if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setOrigin(0.5, 0).setCrop(4, 1, 16, 15);
     // Experience towards the next level as 5 stars, filled by halves (like hearts).
     const from = expNaPoziom(s.level);
     const to = expNaPoziom(s.level + 1);

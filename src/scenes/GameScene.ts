@@ -3,7 +3,7 @@ import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
-import { LOOK_TOP, LOOK_H } from '../look';
+import { LOOK_PIVOT_Y } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS } from '../objects/Slime';
@@ -266,8 +266,8 @@ export class GameScene extends Phaser.Scene {
     // No enemies by home (or, in a town, by the station the coach stopped at).
     this.safeAt = inLublin ? { x: session.startX, y: session.startY } : { ...at };
     this.player = new Player(this, at.x, at.y, PLAYER_TEX, 'me');
-    // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
-    this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
+    // 24×30 frames: stand on the feet (8 px under the hero's position, as before).
+    this.player.setOrigin(0.5, LOOK_PIVOT_Y);
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
@@ -1382,7 +1382,7 @@ export class GameScene extends Phaser.Scene {
         const est = cum[cum.length - 1] / this.player.speed;
         const lucky = Math.random() < session.level.farta;
         const rivalMs = est * (lucky ? 0.8 : session.level.rywal) * 1000;
-        const rival = this.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6);
+        const rival = this.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0');
         this.training.setAway(n, true);
         this.challenge = { kind: 'wyscig', npc: n, name, from: { x: n.x, y: n.y }, to, rival, start: this.time.now, rivalMs, path, cum };
         this.toast('🏃 Start! Biegnij za strzałką!', 1500);
@@ -1643,7 +1643,7 @@ export class GameScene extends Phaser.Scene {
     const k = session.level.pojedynek;
     const hearts = MIESZKANCY.serduszka * 2;
     const e = this.spawnEnemy(f.x, f.y, 'duel', 'wojownik');
-    e.setTexture(`${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
+    e.setTexture(`${f.tex}-red`, 'down-0');
     e.walkAnim = `${f.tex}-red-walk`;
     // As many of the hero's blows as he has hearts, times the difficulty share.
     e.hp = Math.max(1, Math.round(hearts * k * meleeDamage()));

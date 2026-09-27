@@ -82,7 +82,7 @@ function loginScreen(error = '') {
   const pass = el('input', { type: 'password', placeholder: 'hasło admina', autocomplete: 'current-password', name: 'password' });
   const msg = el('p', { className: 'msg bad' }, [error]);
   const form = el('form', { className: 'card', id: 'login' }, [
-    el('h2', {}, ['🔐 Panel admina Erpeg']),
+    el('h2', {}, ['🔐 Panel admina Exp-lore']),
     el('input', { type: 'text', name: 'username', value: 'admin', autocomplete: 'username', hidden: true }),
     el('label', { className: 'f' }, [el('span', {}, ['Hasło']), pass]),
     msg,
@@ -111,7 +111,7 @@ function loginScreen(error = '') {
 function render() {
   const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
-    el('h1', {}, ['ERPEG admin']),
+    el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
       tab = id;
       render();

@@ -15,7 +15,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE=https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev
-          ORIGIN=https://pgaszczyk-ctrl.github.io
+          ORIGIN=https://exp-lore.app
           curl -sS -D - -H "Origin: $ORIGIN" "$BASE/world.json" | tee head.txt
           FILE=$(tail -1 head.txt | sed -E 's/.*"file":"([^"]+)".*/\1/')
           echo; echo "File: $FILE"

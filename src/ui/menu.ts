@@ -7,8 +7,9 @@ import { codeCard, codeFromLink } from './codeCard';
 import { tx } from '../i18n';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
+import { pixelLogo } from './logo';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
-import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
+import { drawLook, randomLook, LOOK_H, LOOK_W, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -52,7 +53,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, ['ERPEG']), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children);
+      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children);
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });
@@ -163,12 +164,12 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         }), 'm-primary');
       // How the hero looks: random (a new roll with the dice button), shown next to the name.
       const look: Look = randomLook();
-      const preview = el('canvas', { className: 'm-hero', width: 48, height: LOOK_H });
+      const preview = el('canvas', { className: 'm-hero', width: 3 * LOOK_W, height: LOOK_H });
       let frame = 0;
       const paint = () => {
         const ctx = preview.getContext('2d')!;
-        ctx.clearRect(0, 0, 48, LOOK_H);
-        (['down', 'side', 'up'] as const).forEach((dir, i) => drawLook(ctx, i * 16, LOOK_TOP, dir, frame, look));
+        ctx.clearRect(0, 0, 3 * LOOK_W, LOOK_H);
+        (['down', 'side', 'up'] as const).forEach((dir, i) => drawLook(ctx, i * LOOK_W, 0, dir, frame, look));
       };
       const timer = setInterval(() => {
         if (!preview.isConnected) return clearInterval(timer);

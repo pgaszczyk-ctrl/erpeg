@@ -205,7 +205,7 @@ export class Story {
     // On the street by the door (where the hero can see and reach him).
     const at = this.city.freeNear(tx, ty + 6);
     const pace = this.city.isFree(at.x + 8, at.y + 5, 3, 2) ? 8 : this.city.isFree(at.x - 8, at.y + 5, 3, 2) ? -8 : 0;
-    this.wizard = this.scene.add.sprite(at.x, at.y, TEX.wizard, 'down-0').setOrigin(0.5, 0.6).setDepth(at.y);
+    this.wizard = this.scene.add.sprite(at.x, at.y, TEX.wizard, 'down-0').setDepth(at.y);
     this.wizardLabel = this.scene.add.text(at.x, at.y - 16, HISTORIA.mag.imie, { fontFamily: 'monospace', fontSize: '8px', color: '#e8d8ff', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
       .setOrigin(0.5, 1).setDepth(1_100_000).setVisible(false);
     // He paces a little, looking around.

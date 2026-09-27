@@ -1,6 +1,7 @@
 import { api } from '../api';
 import { googleToken } from '../google';
 import { askAccount } from './account';
+import { pixelLogo } from './logo';
 
 // The character's code: shown big as text, as a picture to save, and shared
 // to any app (WhatsApp, SMS…) with the phone's share menu (with a link that
@@ -77,13 +78,13 @@ export function codeCard(name: string, code: string): HTMLElement {
  * share menu (most computers) it opens WhatsApp with the message ready.
  */
 async function shareCode(name: string, code: string, link: string) {
-  const text = `Erpeg – moja postać\nImię: ${name}\nKod: ${prettyCode(code)}\nGraj: ${link}`;
+  const text = `Exp-lore – moja postać\nImię: ${name}\nKod: ${prettyCode(code)}\nGraj: ${link}`;
   try {
     if (navigator.share) {
-      const file = new File([await picture(name, code, link)], `erpeg-${name}.png`, { type: 'image/png' });
-      const withFile = { title: 'Erpeg', text, files: [file] };
+      const file = new File([await picture(name, code, link)], `exp-lore-${name}.png`, { type: 'image/png' });
+      const withFile = { title: 'Exp-lore', text, files: [file] };
       if (navigator.canShare?.(withFile)) await navigator.share(withFile);
-      else await navigator.share({ title: 'Erpeg', text });
+      else await navigator.share({ title: 'Exp-lore', text });
       return;
     }
   } catch (e) {
@@ -103,7 +104,7 @@ async function savePicture(name: string, code: string, link: string) {
   const c = await pictureCanvas(name, code, link);
   const a = document.createElement('a');
   a.href = c.toDataURL('image/png');
-  a.download = `erpeg-${name}.png`;
+  a.download = `exp-lore-${name}.png`;
   a.click();
 }
 
@@ -114,10 +115,10 @@ async function pictureCanvas(name: string, code: string, _link: string) {
   const g = c.getContext('2d')!;
   g.fillStyle = '#1e1a24';
   g.fillRect(0, 0, c.width, c.height);
-  g.fillStyle = '#f7c531';
+  const logo = pixelLogo(undefined, 3);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(logo, (c.width - logo.width) / 2, 12);
   g.textAlign = 'center';
-  g.font = 'bold 30px monospace';
-  g.fillText('ERPEG', 180, 42);
   g.fillStyle = '#ffffff';
   g.font = '20px monospace';
   g.fillText(name, 180, 76);
