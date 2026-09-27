@@ -122,21 +122,14 @@ export class UIScene extends Phaser.Scene {
     this.questTexts = [0, 1, 2].map(() => label(small, '#ffffff').setOrigin(0.5, 0));
     this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
-    // Skill progress while training (shown for a moment after each practice hit).
-    // Just an icon and a soft bar, no numbers.
+    // Skill progress while training (shown for a moment after each practice hit):
+    // an icon and a clear bar with a light frame (the soft blurred one was too faint on the map).
     const bw = 70 * this.ui;
-    const bh = 4 * this.ui;
-    this.skillLabel = this.add.text(-bw / 2 - 4, bh / 2, '⚔', { fontFamily: 'sans-serif', fontSize: `${8 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3 }).setOrigin(1, 0.5);
-    const back = this.add.rectangle(0, 0, bw, bh, 0x1e1a24, 0.55).setOrigin(0.5, 0);
-    this.skillFill = this.add.rectangle(-bw / 2, 0, bw, bh, 0xf7c531, 0.9).setOrigin(0, 0);
-    // The bar is soft (blurred), the icon stays sharp.
+    const bh = 5 * this.ui;
+    this.skillLabel = this.add.text(-bw / 2 - 6, bh / 2, '⚔', { fontFamily: 'sans-serif', fontSize: `${9 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: 4 }).setOrigin(1, 0.5);
+    const back = this.add.rectangle(0, 0, bw, bh, 0x1e1a24, 0.85).setOrigin(0.5, 0).setStrokeStyle(2, 0xffffff, 0.8);
+    this.skillFill = this.add.rectangle(-bw / 2, 0, bw, bh, 0xf7c531, 1).setOrigin(0, 0);
     const bar = this.add.container(0, 0, [back, this.skillFill]);
-    try {
-      bar.enableFilters();
-      bar.filters?.internal.addBlur(0, 1, 1, 0.8);
-    } catch {
-      // No filters (e.g. canvas renderer): a sharp bar is fine too.
-    }
     this.skillBar = this.add.container(0, 0, [bar, this.skillLabel]).setAlpha(0).setDepth(5);
     this.dialogBox = undefined;
 
@@ -227,7 +220,7 @@ export class UIScene extends Phaser.Scene {
   private showPractice(p: { skill: string; into: number; need: number; max: boolean }) {
     this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
     const full = 70 * this.ui;
-    this.skillFill.setSize(Math.max(1, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
+    this.skillFill.setSize(Math.max(2 * this.ui, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
     this.tweens.killTweensOf(this.skillBar);
     this.skillBar.setAlpha(1);
     this.skillHide?.remove();
