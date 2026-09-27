@@ -764,12 +764,21 @@ export class CityMap {
     if (!onPassage && this.buildingAt(x, y)) return true;
     if (onBridge) return false;
     if (this.terrain && this.roughOffPath(x, y)) return true;
+    // Water blocks, but a road or path over it always wins: many bridges,
+    // footbridges and culverts aren't marked as bridges in the map data, and
+    // paths on river banks brush the (drawn wider) river.
     for (const a of this.areaGrid.at(x, y)) {
-      if (BLOCKING_AREAS.has(a.kind) && x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1 && pointInRings(a.rings, x, y)) return true;
+      if (BLOCKING_AREAS.has(a.kind) && x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1 && pointInRings(a.rings, x, y)) return !this.onRoad(lines, x, y);
     }
     for (const l of lines) {
-      if (BLOCKING_LINES.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2) return true;
+      if (BLOCKING_LINES.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2) return !this.onRoad(lines, x, y);
     }
+    return false;
+  }
+
+  /** Is (x, y) on a road or path (one of `lines`)? */
+  private onRoad(lines: Line[], x: number, y: number) {
+    for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + PX_PER_M) return true;
     return false;
   }
 
