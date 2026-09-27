@@ -1,0 +1,136 @@
+BBOX 19.80,49.15,20.15,49.33
+-rw-r--r-- 1 runner runner 4.6M Sep 27 09:44 data/tatry-osm.geojsonseq.gz
+hiking routes: 29680
+paths: 50492
+paths with trail_visibility: 5785
+paths with sac_scale: 28285
+peaks: 482
+nodes with ele: 624
+saddles: 300
+alpine huts: 105
+aerialways: 476
+scree: 94387
+bare_rock: 129125
+shrub (kosodrzewina): 0
+
+== hiking route colours ==
+     51 colour=red
+     50 osmc:symbol=red:white:red_bar
+     47 colour=green
+     46 osmc:symbol=green:white:green_bar
+     36 osmc:symbol=yellow:white:yellow_bar
+     36 colour=yellow
+     35 osmc:symbol=blue:white:blue_bar
+     35 colour=blue
+     33 osmc:symbol=black:white:black_bar
+     31 colour=black
+      3 osmc:symbol=red:white::EB
+      2 osmc:symbol=blue:blue::E3:yellow
+      1 osmc:symbol=red:red:white_corner
+      1 osmc:symbol=green:white:green_backslash
+      1 osmc:symbol=blue:white::SzM:blue
+      1 osmc:symbol=blue:blue::M02:white
+      1 osmc:symbol=:blue::E3:yellow
+
+== peaks ==
+name=Cubryna%20%/%20%Čubrina	name=Kościelec
+name=Kôprovský%20%štít	name=Vysoká
+name=Mengusovský%20%Volovec	name=Ganek
+ele=2462	name=Gánok
+name=Mięguszowiecki%20%Szczyt%20%Czarny%20%/%20%Východný%20%Mengusovský%20%štít	name=Volia%20%veža%20%/%20%Wołowa%20%Turnia
+name=Veľký%20%Žabí%20%štít%20%/%20%Żabi%20%Szczyt%20%Wyżni	name=Valentková%20%/%20%Walentkowy%20%Wierch
+name=Malé%20%Rysy%20%/%20%Niżnie%20%Rysy	name=Krajná%20%Kopa%20%/%20%Skrajna%20%Turnia
+name=Gładki%20%Wierch%20%/%20%Hladký%20%štít	name=Druhý%20%Mních%20%/%20%Zadni%20%Mnich
+name=Beskid%20%/%20%Beskyd	name=Hrubý%20%štít%20%/%20%Szpiglasowy%20%Wierch
+name=Niżni%20%Kostur%20%/%20%Nižný%20%kostúr	name=Mały%20%Kozi%20%Wierch
+ele=https://geoforum.pl/news/32818/wysokosc-rysow-zweryfikowana%20%https://www.igig.up.wroc.pl/?menu%3d%Aktualnosci&id%3d%538	name=Kozi%20%Wierch
+name=Sarnia%20%Skałka	name=Sarnia%20%Skała
+name=Mała%20%Świnica	name=Ostredok
+name=Jakubina	name=Blyšť%20%/%20%Błyszcz
+name=Bystrá	name=Ciemniak%20%/%20%Temniak
+name=Malolučniak%20%/%20%Małołączniak	name=Zlobivá
+name=Snežné%20%kopy	ele=2327
+name=Snežná%20%kopa	name=skgeodesy.sk
+name=skgeodesy.sk%2c%%20%P-42/1988	name=Tichý%20%vrch
+name=Ťažký%20%štít	name=Rumanov%20%štít
+name=Mnich	name=Ťažká%20%veža
+name=Malý%20%Mlynár	name=Mięguszowiecki%20%Szczyt%20%Wielki%20%/%20%Veľký%20%Mengusovský%20%štít
+name=Niżne%20%Rysy%2c%%20%Zadnia%20%Turnia%20%/%20%Malé%20%Rysy%2c%%20%Zadná%20%veža	name=Bobrowiec%20%/%20%Bobrovec
+name=Gęsia%20%Szyja	name=Nosal
+name=Nieborak	name=Miedziane
+name=Opalony%20%Wierch	name=Vyšný%20%kostúr%20%/%20%Wyżni%20%Kostur
+name=Zmarzłe%20%Czuby	name=Niedźwiedź
+name=Zamarła%20%Turnia	name=Niebieska%20%Turnia
+name=Kozie%20%Czuby	name=Buczynowa%20%Strażnica
+name=Vyšný%20%Prostredný%20%chrbát	name=Mały%20%Kopieniec
+name=Czubik	name=Trzydniowiański%20%Wierch
+name=Klin%20%/%20%Starorobociański%20%Wierch	name=Končistá%20%/%20%Kończysty%20%Wierch
+name=Wielki%20%Kopieniec	name=Sivá%20%veža%20%/%20%Siwy%20%Zwornik
+name=Ornak	name=Pośredni%20%Goryczkowy%20%Wierch%20%/%20%Prostredný%20%Goričkový%20%vrch
+name=Kalacka%20%Turnia	name=Sucha%20%Czuba
+name=Długi%20%Giewont	name=Goričkova%20%kopa%20%/%20%Goryczkowa%20%Czuba
+name=Wielki%20%Giewont	name=Giewont
+name=Kalacka%20%Kopa	name=Suchy%20%Wierch%20%Kondracki%20%/%20%Suchá%20%kopa
+name=Suchy%20%Wierch	name=Myślenickie%20%Turnie
+name=Upłazkowa%20%Turnia	name=Poľská%20%Tomanová%20%/%20%Tomanowy%20%Wierch%20%Polski
+name=Upłaziańska%20%Kopa	name=Smreczyński%20%Wierch%20%/%20%Smrečiny
+name=Wysoka%20%Turnia	name=Twarda%20%Kopa
+name=Suchy%20%Wierch%20%Tomanowy%20%/%20%Suchý%20%vrch	name=Słupy
+ele=1434	name=Zameczki
+name=Veľká%20%Kamenistá%20%/%20%Kamienista	name=pl:Babie%20%Nogi
+name=Chuda%20%Turnia	name=Kresanica%20%/%20%Krzesanica
+name=Łysanki	name=Kotłowa%20%Czuba
+ele=1840	name=Kotłowa%20%Czubka
+name=Hrubas	name=Zadni%20%Ornak
+name=Wielkie%20%Turnie	name=Kominiarski%20%Wierch
+name=Igła	name=Mała%20%Kopka
+name=Pańszczycka%20%Turnia	name=Skrajna%20%Pańszczycka%20%Czuba
+name=Wielka%20%Kopka	name=Wierch%20%pod%20%Fajki
+name=Żółta%20%Turnia	name=Skrajny%20%Granat
+name=Zadni%20%Granat	name=Koziniec
+name=Rysy	name=Pośredni%20%Granat
+name=Piec	name=Upłaziańska%20%Kopka
+name=Ratusz%20%Litworowy	name=Upłaziański%20%Wierszyk
+name=Kopieniec%20%Wielki	ele=1328
+name=Wielki%20%Kopieniec	name=Hruby%20%Regiel
+name=Krokiew	name=Opalony%20%Wierzch
+name=Samkowa%20%Czuba	name=Goły%20%Wierch%20%Rusinowy
+ele=1206	name=Goły%20%Wierch
+name=Ostry%20%Wierch%20%Waksmundzki	ele=1475
+name=Ostry%20%Wierch	name=Suchy%20%Wierch%20%Waksmundzki
+name=Pośredni%20%Wołoszyn	name=Skrajny%20%Wołoszyn
+name=Turnia%20%nad%20%Dziadem	name=Turnia%20%nad%20%Szczotami
+name=Waksmundzki%20%Wierch	name=Wielka%20%Koszysta
+name=Wielki%20%Wołoszyn	name=Pośrednia%20%Kopka
+name=Przednia%20%Kopka	name=Suchy%20%Wierch
+name=Zadnia%20%Kopka	name=Diabliniec
+name=Wierch%20%Spalenisko	name=Mały%20%Opalony%20%Wierch
+name=Spalona%20%Czuba	name=Wielki%20%Opalony%20%Wierch
+name=Kryta%20%Czuba	name=Kryta
+name=Mały%20%Regiel	name=Antałówka
+name=Butorowski%20%Wierch	ele=1160
+name=Butorowy%20%Wierch	name=Gubałówka
+name=Mała%20%Zawiesista%20%Turnia	ele=1180
+name=Niżnia%20%Zawiesista%20%Turnia	name=Kończysta%20%Turnia
+name=Zawiesista%20%Turnia	name=Zadnia%20%Kończysta
+paste: write error: Broken pipe
+
+== huts ==
+name=Schronisko%20%PTTK%20%Hala%20%Kondratowa
+name=Schronisko%20%PTTK%20%na%20%Hali%20%Ornak
+name=Schronisko%20%PTTK%20%w%20%Dolinie%20%Pięciu%20%Stawów%20%Polskich
+name=Schronisko%20%w%20%Starej%20%Roztoce
+name=Schronisko%20%Roztockie
+name=Schronisko%20%PTTK%20%w%20%Dolinie%20%Roztoki
+name=Schronisko%20%PTTK%20%im.%20%Wincentego%20%Pola%20%w%20%Dolinie%20%Roztoki
+name=Schronisko%20%Roztoka
+name=wikipedia
+name=Morskie%20%Oko
+name=Schronisko%20%PTTK%20%Morskie%20%Oko
+name=Stare%20%Schronisko%20%PTTK%20%Morskie%20%Oko
+name=Schronisko%20%Głodówka
+name=Murowaniec
+name=Chata%20%pod%20%Rysmi
+
+== aerialways ==
+aerialway=station aerialway=pylon x19.9927824 y49.2351386 aerialway=pylon x19.9891727 y49.2342315 aerialway=pylon x19.9839204 y49.2329174 aerialway=station aerialway=pylon x19.9758811 y49.2472869 aerialway=pylon x19.9773712 y49.2441867 aerialway=pylon x19.9793381 y49.2400547 aerialway=pylon x19.976571 y49.2607109 aerialway=pylon x19.9778561 y49.2649274 aerialway=pylon x19.9788734 y49.2682375 aerialway=station x19.9630701 y49.2771135 aerialway=station x19.962878 y49.279968 aerialway=station name=Stacja%20%górna%20%Zgorzelisko%20%Express x20.0895778 y49.3065126 aerialway=station name=Stacja%20%dolna%20%Zgorzelisko%20%Express x20.074393 y49.3021363 aerialway=station aerialway=station aerialway=station x19.9302555 y49.2930074 aerialway=station aerialway=station aerialway=pylon x19.9759581 y49.2378705 aerialway=station aerialway=pylon x19.9787603 y49.2348567 aerialway=pylon x19.9750383 y49.2388414 aerialway=pylon x19.9803681 y49.2331194 aerialway=pylon x19.9766474 y49.2371297 aerialway=pylon x19.9778484 y49.2358392 aerialway=pylon x19.9795427 y49.2340112 aerialway=pylon x19.8177464 y49.3197271 aerialway=station aerialway=station aerialway=station aerialway=station aerialway=pylon x19.9224406 y49.3043836 aerialway=pylon x19.9223803 y49.3047824 aerialway=pylon x19.9223245 y49.3052539 aerialway=pylon x19.9222651 y49.305681 aerialway=pylon x19.9222002 y49.306145 aerialway=pylon x19.9850848 y49.2332083 aerialway=pylon x19.9867131 y49.2336181 aerialway=pylon x19.9902141 y49.2344946 aerialway=pylon x19.9917235 y49.2348653 aerialway=pylon x19.9934243 y49.2352959 aerialway=pylon x19.9947312 y49.2356231 aerialway=pylon x19.9963882 y49.2360434 aerialway=pylon x19.921158 y49.2914412 aerialway=pylon x19.9201786 y49.2920201 aerialway=pylon x19.9192114 y49.2925917 aerialway=pylon x19.9183545 y49.2930981 aerialway=pylon x19.9300567 y49.2931804 aerialway=station aerialway=pylon x19.9291446 y49.2934643 aerialway=pylon x19.9296057 y49.2936175 aerialway=pylon x19.9172169 y49.2937705 aerialway=pylon x19.9288209 y49.2938166 aerialway=pylon x19.929115 y49.2940931 aerialway=pylon x19.9284282 y49.2941952 aerialway=pylon x19.9286693 y49.2945251 aerialway=pylon x19.9156557 y49.2946932 aerialway=pylon x19.9279126 y49.2947213 aerialway=pylon x19.9283024 y49.2948808 aerialway=pylon x19.9279963 y49.2951774 aerialway=pylon x19.9272068 y49.2954414 aerialway=pylon x19.9142595 y49.2955184 aerialway=pylon x19.9130153 y49.2962537 aerialway=pylon x19.9262548 y49.2964128 aerialway=pylon x19.9118614 y49.2969356 aerialway=pylon x19.9252595 y49.2974282 aerialway=pylon x19.9110254 y49.2974296 aerialway=pylon x19.910119 y49.2979653 aerialway=pylon x19.9244076 y49.2982973 aerialway=pylon x19.9090938 y49.2985712 aerialway=pylon x19.9080509 y49.2991875 aerialway=pylon x19.9234926 y49.2992308 aerialway=pylon x19.9071989 y49.2996909 aerialway=pylon x19.9227399 y49.2999987 aerialway=pylon x19.9064485 y49.3001344 aerialway=pylon x19.9060333 y49.3003798 aerialway=pylon x19.9220726 y49.3006795 aerialwa
