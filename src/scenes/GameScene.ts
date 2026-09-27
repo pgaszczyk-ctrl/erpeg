@@ -474,6 +474,7 @@ export class GameScene extends Phaser.Scene {
     // Protected after a fresh start: the hero blinks.
     this.player.setAlpha(now < this.protectUntil ? 0.45 + 0.55 * Math.abs(Math.sin(now / 120)) : hidden ? 0.5 : 1);
 
+    this.unstickHero(now);
     if (consumeHeal()) this.quickHeal();
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
@@ -1024,6 +1025,25 @@ export class GameScene extends Phaser.Scene {
       // A wanted villain hides somewhere around the spot, not right on it.
       this.spawnGroup(rm.target, z.ile ?? 3, rm.m.id, z.wrog ?? 'glut', z.szukaj ? SEARCH_RADIUS : 40);
     }
+  }
+
+  private stuckCheckAt = 0;
+
+  /**
+   * Standing inside a wall (the map data changed under an old start point, a
+   * hotel door drawn inside its building…): step out to the nearest street.
+   */
+  private unstickHero(now: number) {
+    if (now < this.stuckCheckAt) return;
+    this.stuckCheckAt = now + 500;
+    const p = this.player;
+    const fy = p.y + FEET.dy;
+    const box = { x0: p.x - 40, y0: fy - 40, x1: p.x + 40, y1: fy + 40 };
+    if (!this.city.ready(box) || this.city.isFree(p.x, fy, FEET.hw, FEET.hh)) return;
+    const q = this.city.freeNear(p.x, fy);
+    if (!this.city.isFree(q.x, q.y, FEET.hw, FEET.hh)) return;
+    p.setPosition(q.x, q.y - FEET.dy);
+    this.toast('Wychodzisz na ulicę.', 1500);
   }
 
   /** The road sign the hero last read (shown again only after walking away). */
