@@ -1,6 +1,6 @@
 name: World map to Cloudflare
 
-# Copies the newest Protomaps world map (~120 GB, one file read in small
+# Streams the newest Protomaps world map (~120 GB, one file read in small
 # pieces by the game) into the Cloudflare R2 bucket erpeg-mapy, then points
 # world.json at it and removes older copies. Needs the repository secrets
 # R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY. Runs by hand and
@@ -42,7 +42,6 @@ jobs:
           K=$(printf '%s' "$R2_KEY" | tr -d '[:space:]'); S=$(printf '%s' "$R2_SECRET" | tr -d '[:space:]')
           echo "::add-mask::$K"; echo "::add-mask::$S"
           echo "AWS_ACCESS_KEY_ID=$K" >> "$GITHUB_ENV"; echo "AWS_SECRET_ACCESS_KEY=$S" >> "$GITHUB_ENV"
-      - run: sudo -v && curl -sfL https://rclone.org/install.sh | sudo bash
       - name: Let the game's pages read the bucket
         # Needs an Admin token; with Object Read & Write the owner sets CORS in the dashboard instead.
         continue-on-error: true
@@ -51,22 +50,38 @@ jobs:
           {"CORSRules":[{"AllowedOrigins":["https://pgaszczyk-ctrl.github.io","http://localhost:5173","http://localhost:4173"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["range","if-match"],"ExposeHeaders":["etag","content-length","content-range"],"MaxAgeSeconds":86400}]}
           JSON
           aws s3api put-bucket-cors --endpoint-url "$ENDPOINT" --bucket "$BUCKET" --cors-configuration file://cors.json
+      - name: Check that the key may write
+        env:
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          date -u > probe.txt
+          if ! aws s3 cp probe.txt "s3://$BUCKET/probe.txt" --endpoint-url "$ENDPOINT"; then
+            echo "::error::Klucz R2 nie może zapisywać w erpeg-mapy. W Cloudflare: R2 → Manage API tokens → utwórz klucz z uprawnieniem Object Read & Write dla erpeg-mapy i wpisz jego Access Key ID i Secret Access Key do sekretów GitHuba."; exit 1
+          fi
+          aws s3 rm "s3://$BUCKET/probe.txt" --endpoint-url "$ENDPOINT" || true
       - name: Copy the newest world map
+        env:
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
         run: |
           set -euo pipefail
           B=$(scripts/world-latest.sh)
+          URL="https://build.protomaps.com/$B"
           echo "Build: $B"
-          export RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true RCLONE_CONFIG_R2_ENDPOINT="$ENDPOINT" \
-                 RCLONE_CONFIG_R2_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
-          if rclone lsf "r2:$BUCKET/world-$B" 2>/dev/null | grep -q .; then
+          S3="aws s3 --endpoint-url $ENDPOINT"
+          if $S3 ls "s3://$BUCKET/world-$B" | grep -q "world-$B"; then
             echo "Already there"
           else
-            rclone copyurl "https://build.protomaps.com/$B" "r2:$BUCKET/world-$B" --s3-chunk-size 64M --s3-upload-concurrency 8 --stats 60s --stats-one-line -v
+            SIZE=$(curl -sfI "$URL" | grep -i '^content-length' | tr -dc '0-9')
+            echo "Size: $SIZE bytes"
+            # Streamed straight through: the runner's disk is far too small for the file.
+            curl -sfL --retry 5 "$URL" | $S3 cp - "s3://$BUCKET/world-$B" --expected-size "$SIZE" --no-progress
           fi
           echo "{\"file\":\"world-$B\",\"build\":\"${B%.pmtiles}\"}" > world.json
-          rclone copyto world.json "r2:$BUCKET/world.json" --header-upload "Cache-Control: no-cache"
+          $S3 cp world.json "s3://$BUCKET/world.json" --cache-control no-cache --content-type application/json
           # Older copies (keep the new one only).
-          for f in $(rclone lsf "r2:$BUCKET" --include 'world-*.pmtiles'); do
-            [ "$f" = "world-$B" ] || rclone deletefile "r2:$BUCKET/$f"
+          for f in $($S3 ls "s3://$BUCKET/" | awk '{print $4}' | grep '^world-.*\.pmtiles$' || true); do
+            [ "$f" = "world-$B" ] || $S3 rm "s3://$BUCKET/$f"
           done
-          rclone lsl "r2:$BUCKET"
+          $S3 ls "s3://$BUCKET/"
