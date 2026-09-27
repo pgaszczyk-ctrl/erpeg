@@ -6,8 +6,8 @@
 set -euo pipefail
 
 WORK=$(mktemp -d)
-# The city plus 8 km around Motycz-Józefin, Jastków and Garbów (scripts/lublin-area.json).
-BBOX=22.21,51.12,22.72,51.43
+# The city plus 8 km around Motycz-Józefin, Jastków, Garbów and Nałęczów (scripts/lublin-area.json).
+BBOX=22.09,51.12,22.72,51.43
 
 curl -sSfL -o "$WORK/lubelskie.pbf" https://download.geofabrik.de/europe/poland/lubelskie-latest.osm.pbf
 ls -lh "$WORK/lubelskie.pbf"
