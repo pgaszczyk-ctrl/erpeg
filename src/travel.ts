@@ -3,6 +3,8 @@ import { CityMap, PX_PER_M } from './map/CityMap';
 import { PIES, MARGO, DZIADKOWIE, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
+import { worldMap, worldOrigin } from './map/world';
+import { POCIAGI, POWROT } from './content/pociagi';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -62,6 +64,13 @@ export function cachedMap(id: string) {
 export async function getMap(id: string) {
   const known = maps.get(id);
   if (known) return known;
+  const w = worldOrigin(id);
+  if (w) {
+    // Made from the world map as the hero walks (places come with the tiles).
+    const city = worldMap(w.lat, w.lon);
+    maps.set(id, city);
+    return city;
+  }
   const city = await CityMap.load(id === 'lublin' ? 'map/lublin.json' : `map/towns/${id}.json`, id);
   rememberMap(city);
   return city;
@@ -113,7 +122,25 @@ export async function enterWorld(game: Phaser.Game) {
 }
 
 export function mapName(id: string) {
+  if (worldOrigin(id)) return worldNames.get(id) ?? 'Daleko';
   return id === 'lublin' ? 'Lublin' : world.towns.find((t) => t.id === id)?.name ?? id;
+}
+const worldNames = new Map<string, string>(POCIAGI.map((p) => [`w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`, p.nazwa]));
+
+/** Long-distance trains (content/pociagi.ts): from Lublin to far places, and back from them. */
+export function longTrips(mapId: string): (Trip & { level: number })[] {
+  const lublin = world.lublin[0];
+  if (mapId === 'lublin') {
+    return POCIAGI.map((p) => {
+      const to: Stop = { name: p.nazwa, lat: p.lat, lon: p.lon, key: `w|${p.nazwa}`, mapId: `w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`, mapName: p.nazwa };
+      return { to, km: lublin ? km(lublin, to) : 0, via: null, price: p.cena, level: p.odPoziomu };
+    });
+  }
+  const here = worldOrigin(mapId);
+  if (!here || !lublin) return [];
+  const main = world.lublin.find((s) => /główny/i.test(s.name)) ?? lublin;
+  const to: Stop = { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa };
+  return [{ to, km: km({ name: '', ...here }, main), via: null, price: POWROT.cena, level: 0 }];
 }
 
 const km = (a: Station, b: Station) => {

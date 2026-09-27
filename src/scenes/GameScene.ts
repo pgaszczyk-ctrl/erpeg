@@ -22,7 +22,7 @@ import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/histori
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
-import { cachedMap, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
+import { cachedMap, enterWorld, getMap, LOAD_RADIUS, longTrips, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
@@ -341,11 +341,12 @@ export class GameScene extends Phaser.Scene {
 
     // Shops and schools: coloured roofs and signs (under the fog, so they
     // are discovered by exploring).
-    for (const p of this.city.places) {
+    const showPlace = (p: CityPlace) => {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
-    }
+    };
+    for (const p of this.city.places) showPlace(p);
     // Road signs on the ways out of town (split-map): read when walking past.
     for (const sg of this.city.signs) this.add.image(sg.x, sg.y - 8, TEX.signpost).setDepth(sg.y);
     this.signRead = -1;
@@ -363,6 +364,14 @@ export class GameScene extends Phaser.Scene {
     // Monster gangs: territories away from places (and from home), a boss at the end.
     const avoid = this.city.places.map((p) => p.door);
     if (inLublin) avoid.push({ x: session.startX, y: session.startY });
+    // World maps: places arrive with their tiles (gangs keep away from them too).
+    const offPlaces = this.city.onPlaces((list) => {
+      for (const p of list) {
+        showPlace(p);
+        avoid.push(p.door);
+      }
+    });
+    this.events.once('shutdown', () => offPlaces());
     this.streets = new StreetEnemies(
       this,
       this.city,
@@ -1232,14 +1241,16 @@ export class GameScene extends Phaser.Scene {
   private openCoach(p: CityPlace) {
     const lat = this.city.toLatLon(p.door.x, p.door.y);
     const from = stopFor(this.city.id, p.name, lat.lat, lat.lon);
-    const trips = from ? tripsFrom(from) : [];
+    // Long-distance trains (content/pociagi.ts) go from Lublin and back to it.
+    const long = longTrips(this.city.id);
+    const trips: (Trip & { level?: number })[] = [...(from ? tripsFrom(from) : []), ...long];
     const title = `🐴 Woźnica – ${p.name}`;
     if (!trips.length) {
       this.dialog({ title, text: 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => `• ${where(t)}${t.via ? ` (przez ${t.via})` : ''}: ${t.km.toFixed(0)} km – ${t.price} monet`);
+    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}${t.via ? ` (przez ${t.via})` : ''}: ${t.km.toFixed(0)} km – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
     this.dialog({
       title,
       text: `„Wio, koniku! Zawiozę cię do następnej stacji albo jeszcze dalej.” Masz ${session.coins} monet.\n\n${lines.join('\n')}`,
@@ -1247,6 +1258,10 @@ export class GameScene extends Phaser.Scene {
       onChoose: (i) => {
         const t = trips[i];
         if (!t) return;
+        if (t.level && poziomPostaci(session.exp) < t.level) {
+          this.toast(`🚂 Do ${t.to.name} jeździ się od ${t.level}. poziomu postaci.`);
+          return;
+        }
         if (session.coins < t.price) {
           this.toast(`Za mało monet: przejazd kosztuje ${t.price}.`);
           return;

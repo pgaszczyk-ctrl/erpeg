@@ -64,11 +64,16 @@ type RawMap = {
   signs?: (number | string)[][];
 };
 
-type RawTile = {
+export type RawTile = {
   a: [number, string, ...number[][]][];
   l: [number, string, number, number[], string | 0][];
   b: [number, number[][], string | 0, string | 0, number][];
+  /** World map tiles only: places found there [kind, name, x, y] (px). */
+  p?: [Place['kind'], string, number, number][];
 };
+
+/** Loads the features of one tile of a world map (see map/world.ts). */
+export type WorldLoader = (box: Box) => Promise<RawTile>;
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
@@ -80,6 +85,9 @@ export interface Place {
 }
 
 const CELL = 256; // px
+
+/** A building's look seed from its id (world map ids go past 2^32). */
+const seedOf = (id: number) => Math.imul((id % 2 ** 32) ^ Math.floor(id / 2 ** 32), 2654435761) >>> 0;
 
 function decode(flat: number[], k: number) {
   const out = new Array<number>(flat.length);
@@ -198,7 +206,10 @@ export class CityMap {
   // Tiled maps (see RawMap.tile).
   private k = 1;
   private tilePx = 0;
-  private tileSet: Set<number> | null = null;
+  private tileSet: { has(k: number): boolean } | null = null;
+  /** World maps (map/world.ts): every tile exists and is made from the world map. */
+  private world: WorldLoader | null = null;
+  private placeListeners = new Set<(p: Place[]) => void>();
   private loadedTiles = new Set<number>();
   private pendingTiles = new Map<number, Promise<void>>();
   private tileBase = '';
@@ -251,33 +262,40 @@ export class CityMap {
     }
 
     // Shops and schools: inside a building, or the nearest one close by.
-    const seen = new Set<Building>();
-    for (const [kind, name, ux, uy, addr] of raw.pois ?? []) {
-      const x = ux * k;
-      const y = uy * k;
-      // Travelling merchants and coachmen stand in the street, not in a building.
-      const street = kind === 'merchant' || kind === 'station';
-      let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
-      if (!b && !street) {
-        let best = 40 * PX_PER_M;
-        for (const c of this.buildingGrid.query({ x0: x - best, y0: y - best, x1: x + best, y1: y + best })) {
-          const d = Math.hypot((c.x0 + c.x1) / 2 - x, (c.y0 + c.y1 - 20) / 2 - y);
-          if (d < best) {
-            best = d;
-            b = c;
-          }
+    for (const [kind, name, ux, uy, addr] of raw.pois ?? []) this.addPlace(kind as Place['kind'], name, ux * k, uy * k, addr, `${kind}:${Math.round(ux)}:${Math.round(uy)}`);
+  }
+
+  private placeBuildings = new Set<Building>();
+  /** A place at (x, y) px: in the building there, or the nearest one close by. */
+  private addPlace(kind: Place['kind'], name: string, x: number, y: number, addr: string | 0 | undefined, key: string) {
+    const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
+    if (this.placeIds.has(id)) return null;
+    // Travelling merchants and coachmen stand in the street, not in a building.
+    const street = kind === 'merchant' || kind === 'station';
+    let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
+    if (!b && !street) {
+      let best = 40 * PX_PER_M;
+      for (const c of this.buildingGrid.query({ x0: x - best, y0: y - best, x1: x + best, y1: y + best })) {
+        const d = Math.hypot((c.x0 + c.x1) / 2 - x, (c.y0 + c.y1 - 20) / 2 - y);
+        if (d < best) {
+          best = d;
+          b = c;
         }
       }
-      if (b && seen.has(b)) continue;
-      if (b) seen.add(b);
-      this.places.push({
-        kind: kind as Place['kind'],
-        name,
-        id: `${id === 'lublin' ? '' : `${id}/`}${kind}:${Math.round(ux)}:${Math.round(uy)}`,
-        building: b,
-        door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y },
-      });
     }
+    if (b && this.placeBuildings.has(b)) return null;
+    if (b) this.placeBuildings.add(b);
+    this.placeIds.add(id);
+    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y } };
+    this.places.push(place);
+    return place;
+  }
+  private placeIds = new Set<string>();
+
+  /** World maps: called with the places each new tile brings. */
+  onPlaces(f: (p: Place[]) => void) {
+    this.placeListeners.add(f);
+    return () => this.placeListeners.delete(f);
   }
 
   private addArea(id: number, kind: string, rings: number[][]) {
@@ -306,7 +324,7 @@ export class CityMap {
     // Pad the box downwards: walls are drawn below the footprint.
     const bb = bbox(abs[0], 2);
     const stub = this.stubs.get(id);
-    const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: (id * 2654435761) >>> 0, id, ...bb, y1: bb.y1 + 20 };
+    const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: seedOf(id), id, ...bb, y1: bb.y1 + 20 };
     if (stub) Object.assign(stub, { rings: abs, levels, ...bb, y1: bb.y1 + 20 });
     this.buildings.push(b);
     this.buildingGrid.add(b);
@@ -321,7 +339,7 @@ export class CityMap {
     }));
     for (const [aid, kind, ...rings] of raw.areas as unknown as [number, string, ...number[][]][]) this.addArea(aid, kind, rings);
     for (const [bid, x0, y0, x1, y1, dx, dy, addr, name] of raw.bld ?? []) {
-      const b: Building = { rings: [], addresses: addr ? addr.split(' | ') : [], name: name || null, levels: 1, seed: (bid * 2654435761) >>> 0, id: bid, x0, y0, x1, y1, door: { x: dx, y: dy } };
+      const b: Building = { rings: [], addresses: addr ? addr.split(' | ') : [], name: name || null, levels: 1, seed: seedOf(bid), id: bid, x0, y0, x1, y1, door: { x: dx, y: dy } };
       this.stubs.set(bid, b);
       for (const a of b.addresses) {
         const key = normAddress(a);
@@ -365,11 +383,13 @@ export class CityMap {
         }
         let job = this.pendingTiles.get(k);
         if (!job) {
-          job = fetch(`${this.tileBase}${cx}_${cy}.json`)
-            .then((res) => {
-              if (!res.ok) throw new Error(`Nie udało się wczytać kawałka mapy (${res.status})`);
-              return res.json() as Promise<RawTile>;
-            })
+          const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
+          job = (this.world
+            ? this.world(box)
+            : fetch(`${this.tileBase}${cx}_${cy}.json`).then((res) => {
+                if (!res.ok) throw new Error(`Nie udało się wczytać kawałka mapy (${res.status})`);
+                return res.json() as Promise<RawTile>;
+              }))
             .then((t) => this.addTile(cx, cy, t))
             .finally(() => this.pendingTiles.delete(k));
           this.pendingTiles.set(k, job);
@@ -382,7 +402,17 @@ export class CityMap {
   private addTile(cx: number, cy: number, t: RawTile) {
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
-    for (const [bid, rings, addr, name, levels] of t.b) this.addBuilding(bid, rings, addr, name, levels);
+    for (const [bid, rings, addr, name, levels] of t.b) {
+      this.addBuilding(bid, rings, addr, name, levels);
+      if (this.world && addr) {
+        const b = this.buildings[this.buildings.length - 1];
+        for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
+      }
+    }
+    if (t.p?.length) {
+      const added = t.p.map(([kind, name, x, y]) => this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`)).filter((p): p is Place => !!p);
+      if (added.length) for (const f of this.placeListeners) f(added);
+    }
     this.loadedTiles.add(cx * 100000 + cy);
     const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
     for (const f of this.tileListeners) f(box);
@@ -390,6 +420,7 @@ export class CityMap {
 
   /** Every building with an address (the whole map, loaded or not). */
   addressed(): Building[] {
+    if (this.world) return this.buildings.filter((b) => b.addresses.length); // grows as tiles come
     this.addressedCache ??= (this.tileSet ? [...this.stubs.values()] : this.buildings).filter((b) => b.addresses.length);
     return this.addressedCache;
   }
@@ -429,6 +460,30 @@ export class CityMap {
   onTile(f: (box: Box) => void) {
     this.tileListeners.add(f);
     return () => this.tileListeners.delete(f);
+  }
+
+  /**
+   * A map of any place on Earth made from the world map as the hero walks
+   * (map/world.ts): projected around `origin`, tiles of 1 km.
+   */
+  static world(id: string, origin: { lat: number; lon: number }, loader: (map: CityMap) => WorldLoader) {
+    const far = 3_000_000; // metres each way: as good as endless
+    const d = 0.01;
+    const m = new CityMap({
+      unitsPerM: 2, w: far, h: far, x0: -far, y0: -far,
+      bounds: { minLat: origin.lat - d, maxLat: origin.lat + d, minLon: origin.lon - d, maxLon: origin.lon + d },
+      origin: { lon: origin.lon, lat: origin.lat, lat0: origin.lat },
+      boundary: [], areas: [], lines: [], buildings: [],
+    }, id);
+    m.tilePx = 1000 * PX_PER_M;
+    m.tileSet = { has: () => true };
+    m.world = loader(m);
+    return m;
+  }
+
+  /** Map pixels per stored unit (half-metres). */
+  get unitPx() {
+    return this.k;
   }
 
   static async load(url: string, id = 'lublin') {
@@ -646,6 +701,7 @@ export class CityMap {
   }
 
   insideCity(x: number, y: number) {
+    if (this.world) return true;
     const k = Math.floor(x / CELL) * 100000 + Math.floor(y / CELL);
     let s = this.boundaryCells.get(k);
     if (s === undefined) {
@@ -858,7 +914,7 @@ export class CityMap {
       if (b) return this.entranceOf(b);
     }
     const street = q.replace(/\s+\d+[a-z]?$/, '');
-    if (this.tileSet) {
+    if (this.tileSet && !this.world) {
       const exact = this.streets.get(street);
       if (exact) return exact;
       for (const [n, p] of this.streets) if (n.includes(street)) return p;
