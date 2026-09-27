@@ -212,3 +212,52 @@ export const GRAZYNKA = {
     ],
   ] as ZagadkaPL[][],
 };
+
+// ----------------------------------------------------------------------------
+//  LUIGI – siedzi przed domem przy Nałęczowskiej 18 (nie chodzi). Codziennie
+//  3 zagadki: pierwsza o szachach, druga o Pokémonach albo Magic: the
+//  Gathering (na zmianę dniami), trzecia z tego, co zostało. Jedna próba na
+//  zagadkę. Za każdą dobrą 1 EXP, za wszystkie trzy dobre dodatkowo 20 EXP.
+// ----------------------------------------------------------------------------
+export const LUIGI = {
+  imie: { pl: 'Luigi', en: 'Luigi' },
+  adres: 'Nałęczowska 18',
+  ulica: 'Nałęczowska',
+  expZaZagadke: 1,
+  premiaZaTrzy: 20,
+  powitanie: { pl: 'Ciao! Siadaj, amico. Mam dla ciebie zagadkę!', en: 'Ciao! Sit down, amico. I have a riddle for you!' },
+  koniec: { pl: 'Basta na dziś! Wróć jutro po nowe zagadki, amico.', en: 'Basta for today! Come back tomorrow for new riddles, amico.' },
+  brawoTrzy: { pl: 'Mamma mia! Wszystkie trzy! Jesteś mistrzem!', en: 'Mamma mia! All three! You are a master!' },
+  szachy: [
+    { pytanie: { pl: 'Która figura szachowa porusza się „w kształcie litery L”?', en: 'Which chess piece moves in an "L" shape?' }, odpowiedzi: [{ pl: 'Skoczek', en: 'The knight' }, { pl: 'Goniec', en: 'The bishop' }, { pl: 'Wieża', en: 'The rook' }] },
+    { pytanie: { pl: 'Ile pól ma szachownica?', en: 'How many squares does a chessboard have?' }, odpowiedzi: [{ pl: '64', en: '64' }, { pl: '100', en: '100' }, { pl: '49', en: '49' }] },
+    { pytanie: { pl: 'Który kolor zaczyna partię szachów?', en: 'Which colour moves first in chess?' }, odpowiedzi: [{ pl: 'Białe', en: 'White' }, { pl: 'Czarne', en: 'Black' }, { pl: 'Losowo', en: 'Chosen at random' }] },
+    { pytanie: { pl: 'Jak nazywa się ruch, w którym król i wieża zmieniają się miejscami?', en: 'What is the move where the king and rook swap places?' }, odpowiedzi: [{ pl: 'Roszada', en: 'Castling' }, { pl: 'Promocja', en: 'Promotion' }, { pl: 'Bicie w przelocie', en: 'En passant' }] },
+    { pytanie: { pl: 'W co zwykle zamienia się pionek, który dojdzie do końca szachownicy?', en: 'What does a pawn usually become when it reaches the far end?' }, odpowiedzi: [{ pl: 'W hetmana', en: 'A queen' }, { pl: 'W króla', en: 'A king' }, { pl: 'W nic – zostaje pionkiem', en: 'Nothing – it stays a pawn' }] },
+    { pytanie: { pl: 'Która figura porusza się tylko po skosie?', en: 'Which piece moves only diagonally?' }, odpowiedzi: [{ pl: 'Goniec', en: 'The bishop' }, { pl: 'Wieża', en: 'The rook' }, { pl: 'Skoczek', en: 'The knight' }] },
+    { pytanie: { pl: 'Co oznacza „mat” w szachach?', en: 'What does "checkmate" mean?' }, odpowiedzi: [{ pl: 'Król jest atakowany i nie ma ucieczki – koniec gry', en: 'The king is attacked and cannot escape – game over' }, { pl: 'Remis', en: 'A draw' }, { pl: 'Utrata hetmana', en: 'Losing the queen' }] },
+    { pytanie: { pl: 'Ile pionków ma każdy gracz na początku partii?', en: 'How many pawns does each player start with?' }, odpowiedzi: [{ pl: '8', en: '8' }, { pl: '6', en: '6' }, { pl: '10', en: '10' }] },
+    { pytanie: { pl: 'Która figura jest najsilniejsza w szachach?', en: 'Which chess piece is the most powerful?' }, odpowiedzi: [{ pl: 'Hetman', en: 'The queen' }, { pl: 'Król', en: 'The king' }, { pl: 'Wieża', en: 'The rook' }] },
+    { pytanie: { pl: 'Jak nazywa się sytuacja, gdy gracz nie ma żadnego ruchu, ale jego król nie jest szachowany?', en: 'What is it called when a player has no legal move but is not in check?' }, odpowiedzi: [{ pl: 'Pat (remis)', en: 'Stalemate (a draw)' }, { pl: 'Mat', en: 'Checkmate' }, { pl: 'Gambit', en: 'Gambit' }] },
+  ],
+  pokemony: [
+    { pytanie: { pl: 'Jakiego typu jest Pikachu?', en: 'What type is Pikachu?' }, odpowiedzi: [{ pl: 'Elektryczny', en: 'Electric' }, { pl: 'Ognisty', en: 'Fire' }, { pl: 'Wodny', en: 'Water' }] },
+    { pytanie: { pl: 'W co ewoluuje Charmander?', en: 'What does Charmander evolve into?' }, odpowiedzi: [{ pl: 'Charmeleon', en: 'Charmeleon' }, { pl: 'Wartortle', en: 'Wartortle' }, { pl: 'Ivysaur', en: 'Ivysaur' }] },
+    { pytanie: { pl: 'Czym łapie się Pokémony?', en: 'What do you catch Pokémon with?' }, odpowiedzi: [{ pl: 'Poké Ballem', en: 'A Poké Ball' }, { pl: 'Siatką na motyle', en: 'A butterfly net' }, { pl: 'Wędką', en: 'A fishing rod' }] },
+    { pytanie: { pl: 'Który typ jest silny przeciwko typowi ognistemu?', en: 'Which type is strong against Fire?' }, odpowiedzi: [{ pl: 'Wodny', en: 'Water' }, { pl: 'Trawiasty', en: 'Grass' }, { pl: 'Robaczy', en: 'Bug' }] },
+    { pytanie: { pl: 'Jak ma na imię chłopiec, który podróżuje z Pikachu w anime?', en: 'What is the name of the boy who travels with Pikachu in the anime?' }, odpowiedzi: [{ pl: 'Ash', en: 'Ash' }, { pl: 'Gary', en: 'Gary' }, { pl: 'Brock', en: 'Brock' }] },
+    { pytanie: { pl: 'Jakiego typu jest Bulbasaur?', en: 'What type is Bulbasaur?' }, odpowiedzi: [{ pl: 'Trawiasty i trujący', en: 'Grass and Poison' }, { pl: 'Wodny', en: 'Water' }, { pl: 'Kamienny', en: 'Rock' }] },
+    { pytanie: { pl: 'Który Pokémon ciągle śpi i blokuje drogi?', en: 'Which Pokémon is always sleeping and blocking roads?' }, odpowiedzi: [{ pl: 'Snorlax', en: 'Snorlax' }, { pl: 'Jigglypuff', en: 'Jigglypuff' }, { pl: 'Psyduck', en: 'Psyduck' }] },
+    { pytanie: { pl: 'Który typ jest silny przeciwko typowi wodnemu?', en: 'Which type is strong against Water?' }, odpowiedzi: [{ pl: 'Elektryczny', en: 'Electric' }, { pl: 'Ognisty', en: 'Fire' }, { pl: 'Normalny', en: 'Normal' }] },
+  ],
+  magic: [
+    { pytanie: { pl: 'Ile kolorów many jest w Magic: the Gathering?', en: 'How many colours of mana are there in Magic: the Gathering?' }, odpowiedzi: [{ pl: '5', en: '5' }, { pl: '3', en: '3' }, { pl: '7', en: '7' }] },
+    { pytanie: { pl: 'Z ilu punktów życia zaczyna gracz w zwykłej grze Magic?', en: 'How much life does a player start with in a normal game of Magic?' }, odpowiedzi: [{ pl: '20', en: '20' }, { pl: '10', en: '10' }, { pl: '40', en: '40' }] },
+    { pytanie: { pl: 'Jaki kolor many daje karta „Forest” (Las)?', en: 'What colour of mana does a Forest give?' }, odpowiedzi: [{ pl: 'Zielony', en: 'Green' }, { pl: 'Niebieski', en: 'Blue' }, { pl: 'Czarny', en: 'Black' }] },
+    { pytanie: { pl: 'Jak nazywa się obrócenie karty bokiem, żeby jej użyć?', en: 'What is turning a card sideways to use it called?' }, odpowiedzi: [{ pl: 'Tap (tapnięcie)', en: 'Tapping' }, { pl: 'Flip', en: 'Flipping' }, { pl: 'Discard', en: 'Discarding' }] },
+    { pytanie: { pl: 'Jaki kolor many daje karta „Island” (Wyspa)?', en: 'What colour of mana does an Island give?' }, odpowiedzi: [{ pl: 'Niebieski', en: 'Blue' }, { pl: 'Czerwony', en: 'Red' }, { pl: 'Biały', en: 'White' }] },
+    { pytanie: { pl: 'Jak nazywa się miejsce, do którego trafiają zniszczone karty?', en: 'Where do destroyed cards go?' }, odpowiedzi: [{ pl: 'Cmentarz (graveyard)', en: 'The graveyard' }, { pl: 'Ręka', en: 'The hand' }, { pl: 'Biblioteka', en: 'The library' }] },
+    { pytanie: { pl: 'Który kolor many kojarzy się z ogniem i smokami?', en: 'Which mana colour is linked with fire and dragons?' }, odpowiedzi: [{ pl: 'Czerwony', en: 'Red' }, { pl: 'Biały', en: 'White' }, { pl: 'Niebieski', en: 'Blue' }] },
+    { pytanie: { pl: 'Jak w Magic nazywa się talia, z której dobiera się karty?', en: 'In Magic, what is the deck you draw from called?' }, odpowiedzi: [{ pl: 'Biblioteka (library)', en: 'The library' }, { pl: 'Stos', en: 'The pile' }, { pl: 'Skarbiec', en: 'The vault' }] },
+  ],
+};

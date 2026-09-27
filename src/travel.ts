@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { CityMap, PX_PER_M } from './map/CityMap';
-import { PIES, MARGO, DZIADKOWIE } from './content/postacie';
+import { PIES, MARGO, DZIADKOWIE, LUIGI } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 
@@ -82,7 +82,7 @@ export async function prepareMap(city: CityMap) {
   if (session.arrive) pts.push({ ...session.arrive, r: near });
   if (city.id === 'lublin') {
     pts.push({ x: session.startX, y: session.startY, r: near });
-    for (const street of [...PIES.ulice, MARGO.ulica, DZIADKOWIE.ulica]) {
+    for (const street of [...PIES.ulice, MARGO.ulica, DZIADKOWIE.ulica, LUIGI.ulica]) {
       const p = city.findStart(street);
       if (p) pts.push({ ...p, r: 400 * PX_PER_M });
     }

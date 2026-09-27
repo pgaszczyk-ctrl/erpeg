@@ -4,7 +4,7 @@ import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { rng } from '../rng';
 import { tr, tx } from '../i18n';
-import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, type ZagadkaPL } from '../content/postacie';
+import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, LUIGI, type ZagadkaPL } from '../content/postacie';
 import { session, earn, type MissionState } from '../quests';
 import { groupCount, takeGroup, groupValue, sellGroup } from '../inventory';
 import { levelForAge } from './Npcs';
@@ -152,6 +152,7 @@ export class FixedNpcs {
     // They all live in Lublin (Garbów is part of its map).
     if (city.id !== 'lublin') return;
     this.grazynkaHome = city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
+    this.placeLuigi();
     const streetLines = (names: string[]) =>
       city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
 
@@ -195,6 +196,21 @@ export class FixedNpcs {
       const sprite = scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(this.grandIndex === 0 ? 0xb8c8e0 : 0xf2b8d8);
       this.list.push({ id: 'dziadkowie', walker: w, sprite, x: w.x, y: w.y });
     }
+  }
+
+  private placeLuigi() {
+    const b = this.city.findBuilding(LUIGI.adres);
+    if (!b) return;
+    const e = this.city.entranceOf(b);
+    // He sits a step outside his door (away from the house), on a walker that never gets anywhere.
+    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    const len = Math.hypot(e.x - cx, e.y - cy) || 1;
+    // Beside the door rather than in it (a shop sign may hang over the door).
+    const tries = [{ x: e.x, y: e.y + 7 }, { x: e.x + 12, y: e.y + 6 }, { x: e.x - 12, y: e.y + 6 }, { x: e.x + ((e.x - cx) / len) * 8, y: e.y + ((e.y - cy) / len) * 8 }];
+    const d = tries.find((p) => this.city.isFree(p.x, p.y, 3, 3) && this.city.isFree(p.x, p.y + 5, 2, 1.5)) ?? e;
+    const w = new Walker([[d.x, d.y, d.x + 0.1, d.y]], 0, this.r);
+    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0x6fcf6f);
+    this.list.push({ id: 'luigi', walker: w, sprite, x: w.x, y: w.y });
   }
 
   private state(id: string): MissionState {
@@ -318,6 +334,7 @@ export class FixedNpcs {
     if (w.id === 'pies') return this.talkDog(w);
     if (w.id === 'margo') return this.talkMargo();
     if (w.id === 'grazynka') return this.talkGrazynka();
+    if (w.id === 'luigi') return this.talkLuigi();
     return this.talkGrand();
   }
 
@@ -362,6 +379,7 @@ export class FixedNpcs {
         w.id === 'pies' ? this.state('npc-pies') !== 'done'
         : w.id === 'margo' ? a < MARGO.zagadekDziennie
         : w.id === 'grazynka' ? this.grazynkaStep() !== 'done' && this.grazynkaStep() !== 'sklep'
+        : w.id === 'luigi' ? a < 3
         : a < 1;
       if (has) out.push({ x: w.x, y: w.y });
     }
@@ -506,6 +524,33 @@ export class FixedNpcs {
         this.host.gainExp(GRAZYNKA.nagroda.exp);
         this.host.save();
         this.host.dialog({ title, text: `${tr(GRAZYNKA.koniec)}\n\n+${GRAZYNKA.nagroda.monety} ${tx('monet', 'coins')}, +${GRAZYNKA.nagroda.exp} EXP`, buttons: ['OK'], onChoose: () => {} });
+      },
+    });
+  }
+
+  /** Luigi: 3 riddles a day (chess, then Pokémon or Magic, then the other one), one try each. */
+  private talkLuigi() {
+    const d = this.daily('luigi');
+    const title = `♟ ${tr(LUIGI.imie)}`;
+    if (d.a >= 3) {
+      this.host.dialog({ title, text: tr(LUIGI.koniec), buttons: ['Ciao!'], onChoose: () => {} });
+      return;
+    }
+    const h = hash(`luigi:${d.d}`);
+    const cards = h % 2 ? [LUIGI.pokemony, LUIGI.magic] : [LUIGI.magic, LUIGI.pokemony];
+    const pools = [LUIGI.szachy, cards[0], cards[1]];
+    const pool = pools[d.a];
+    const z = pool[(h >>> 3) % pool.length];
+    this.host.riddle(title, `${tr(LUIGI.powitanie)} (${d.a + 1}/3)`, z, LUIGI.expZaZagadke, `luigi:${d.d}:${d.a}`, (right) => {
+      d.a++;
+      if (right) d.n++; // d.n = right answers today
+    }, {
+      then: () => {
+        if (d.a === 3 && d.n === 3) {
+          this.host.gainExp(LUIGI.premiaZaTrzy);
+          this.host.save();
+          this.host.dialog({ title, text: `${tr(LUIGI.brawoTrzy)}\n\n+${LUIGI.premiaZaTrzy} EXP`, buttons: ['Grazie!'], onChoose: () => {} });
+        }
       },
     });
   }
