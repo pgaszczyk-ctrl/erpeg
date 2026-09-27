@@ -947,6 +947,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPlayerDeath() {
+    if (session.immortal) {
+      this.damageCarry = 0;
+      this.player.hp = PLAYER.maxHp;
+      session.hp = PLAYER.maxHp;
+      this.protect(this.time.now);
+      this.toast('✨ Nieśmiertelny – serca wracają!', 2500);
+      this.emitHud();
+      return;
+    }
     if (session.kamienie > 0) return this.reviveWithStone();
     this.lingerUntil = 0;
     this.player.anims.stop();

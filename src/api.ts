@@ -105,6 +105,8 @@ export interface PlayerInfo {
   resurrections?: number;
   /** The player's age (riddles are chosen for it); 7 when not given. */
   age?: number;
+  /** Test characters: can't die (set by hand in the database). */
+  immortal?: boolean;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */

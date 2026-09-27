@@ -54,6 +54,8 @@ export const session = {
   story: { st: 'start', walked: 0 } as Story,
   /** Power stones (content/sklepy.ts KAMIEN_MOCY). */
   kamienie: 0,
+  /** Test characters (players.immortal): hearts refill instead of dying. */
+  immortal: false,
   /** Healing potions (alchemist at petrol stations). */
   mikstury: 0,
   /** Own tents: nights left of each. */
@@ -157,6 +159,7 @@ export function startSession(r: LoginResult) {
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   session.kamienie = Math.max(0, p.save.kamienie ?? 0);
+  session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
   session.mapId = 'lublin';
