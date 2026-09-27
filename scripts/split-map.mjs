@@ -69,6 +69,11 @@ for (const l of city.lines) {
 // Road signs every 5 km out of the city (towards the places of lublin-area.json and villages).
 const area = JSON.parse(readFileSync(new URL('./lublin-area.json', import.meta.url), 'utf8'));
 const signs = signposts(city, area.centre, area.extra);
+// Towns a start address can name (villages come from the addresses in the game).
+const towns = [['Lublin', area.centre], ...area.extra.map((t) => [t.name, t])].map(([name, t]) => {
+  const p = city.fromLatLon(t.lat, t.lon);
+  return [name, r(p.x), r(p.y)];
+});
 
 rmSync(DIR, { recursive: true, force: true });
 mkdirSync(DIR, { recursive: true });
@@ -97,6 +102,7 @@ const index = {
   places,
   streets,
   signs,
+  towns,
 };
 const json = JSON.stringify(index);
 writeFileSync(OUT, json);

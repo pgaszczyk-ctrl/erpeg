@@ -152,8 +152,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
           const place = start.value.trim() || DEFAULT_START;
-          const p = geoStart ?? city.findStart(place);
-          if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę albo ulicę i numer.`);
+          const p = geoStart ?? city.findAnyStart(place, DEFAULT_START);
+          if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę, ulicę i numer albo miejscowość, np. „Kościelna 5, Garbów”.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           if (token && (await api.myCharacters(token)).filter((c) => !c.dead).length >= GOOGLE_LIMIT) {
             throw new Error(`Na jednym koncie Google mogą być najwyżej ${GOOGLE_LIMIT} żywe postacie. Odznacz przypisanie albo użyj innego konta.`);
@@ -223,7 +223,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           el('span', {}, ['Adres startowy']),
           el('div', { className: 'm-pass' }, [start, geoBtn]),
           geoInfo,
-          el('small', {}, [`Ulica albo ulica i numer, albo 📍 – twoja lokalizacja. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`]),
+          el('small', {}, [`Ulica (w Lublinie), ulica i numer, miejscowość albo „ulica, miejscowość” – np. „Kościelna 5, Garbów”; albo 📍 – twoja lokalizacja. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`]),
         ]),
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),

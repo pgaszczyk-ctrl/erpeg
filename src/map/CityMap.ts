@@ -58,6 +58,8 @@ type RawMap = {
   bld?: [number, number, number, number, number, number, number, string | 0, string | 0][];
   places?: [string, string, string, number, number, number][];
   streets?: [string, number, number][];
+  /** Named towns on the map (split-map: Lublin's centre and lublin-area places): name, x, y. */
+  towns?: [string, number, number][];
   /** Road signs (split-map): x, y, then 'Name|km' (the first is the way back to Lublin). */
   signs?: (number | string)[][];
 };
@@ -207,6 +209,7 @@ export class CityMap {
   private streets = new Map<string, { x: number; y: number }>();
   /** Road signs on the roads out of town: where to and how many km along the roads. */
   readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
+  private namedTowns: { name: string; x: number; y: number }[] = [];
   private tileListeners = new Set<(box: Box) => void>();
 
   /** 'lublin' or a town id (public/map/towns/<id>.json). */
@@ -214,6 +217,7 @@ export class CityMap {
 
   constructor(raw: RawMap, id = 'lublin') {
     this.id = id;
+    for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x, y });
     for (const [x, y, ...to] of raw.signs ?? [])
       this.signs.push({ x: x as number, y: y as number, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
@@ -748,6 +752,74 @@ export class CityMap {
    * Start point for "Ulica" or "Ulica numer": a building's door if the
    * address exists, otherwise a free spot on the named street.
    */
+  /** Towns and villages a start address can name: the index's towns plus the villages. */
+  townList(): { name: string; x: number; y: number }[] {
+    const out = [...this.namedTowns];
+    for (const s of this.settlements()) if (!out.some((t) => normAddress(t.name) === normAddress(s.name))) out.push(s);
+    return out;
+  }
+
+  /**
+   * A start address that may name a town: "Garbów", "Kościelna 5, Garbów",
+   * "Garbów, Kościelna" or "Kościelna Garbów". Without a town it is Lublin
+   * (`fallback` when nothing else is given). Streets are looked up nearest
+   * the town, so the same street name in two places is not mixed up.
+   */
+  findAnyStart(query: string, fallback: string): { x: number; y: number } | null {
+    const q = query.trim();
+    if (/\d/.test(q)) {
+      const b = this.findBuilding(q);
+      if (b) return this.entranceOf(b);
+    }
+    const towns = this.townList();
+    // Town names match without Polish letters too ("garbow").
+    const fold = (t: string) => normAddress(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
+    const parts = q.split(',').map((p) => p.trim()).filter(Boolean);
+    let town: { name: string; x: number; y: number } | null = null;
+    const rest: string[] = [];
+    for (const p of parts) {
+      const t: { name: string; x: number; y: number } | false | undefined = !town && towns.find((t) => fold(t.name) === fold(p));
+      if (t) town = t;
+      else rest.push(p);
+    }
+    if (!town) {
+      // "Kościelna 5 Garbów": the town at the end, without a comma.
+      const nq = fold(q);
+      const t = towns.filter((t) => nq.endsWith(` ${fold(t.name)}`)).sort((a, b) => b.name.length - a.name.length)[0];
+      if (t) {
+        town = t;
+        rest.length = 0;
+        rest.push(q.slice(0, q.length - t.name.length).replace(/[,\s]+$/, ''));
+      }
+    }
+    const street = rest.join(' ').trim();
+    if (!town || fold(town.name) === 'lublin') return this.findStart(street || (town ? fallback : q) || fallback);
+    if (!street) return { x: town.x, y: town.y };
+    // The nearest building on that street (and with that number, if given) within 6 km of the town.
+    const want = normAddress(street);
+    const bare = want.replace(/\s+\d+[a-z]?$/, '');
+    let best: Building | null = null;
+    let bd = 6000 * PX_PER_M;
+    let exact = false;
+    for (const b of this.addressed()) {
+      const hit = b.addresses.map(normAddress).find((a) => a === want || a.startsWith(`${bare} `));
+      if (!hit) continue;
+      const e = this.entranceOf(b);
+      const d = Math.hypot(e.x - town.x, e.y - town.y);
+      const isExact = hit === want;
+      if (d < bd && (isExact || !exact)) {
+        best = b;
+        bd = d;
+        exact = isExact;
+      } else if (isExact && !exact && d < 6000 * PX_PER_M) {
+        best = b;
+        bd = d;
+        exact = true;
+      }
+    }
+    return best ? this.entranceOf(best) : null;
+  }
+
   findStart(query: string): { x: number; y: number } | null {
     const q = normAddress(query);
     if (!q) return null;
