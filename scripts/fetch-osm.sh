@@ -21,7 +21,7 @@ osmium tags-filter "$WORK/lublin.pbf" \
   w/railway=rail,tram,light_rail \
   n/railway=station,halt \
   w/waterway=river,stream,canal,ditch,drain \
-  wr/natural=water,wood,scrub,grassland,wetland \
+  wr/natural=water,wood,scrub,grassland,wetland,sand,beach \
   wr/landuse=grass,forest,meadow,recreation_ground,cemetery,allotments,village_green,farmland,orchard,reservoir,basin \
   wr/leisure=park,garden,pitch,playground,stadium,track \
   wr/amenity=parking \

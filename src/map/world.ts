@@ -79,7 +79,7 @@ const LANDUSE: Record<string, string> = {
   cemetery: 'cemetery', allotments: 'allotments', farmland: 'farmland', orchard: 'farmland', vineyard: 'farmland',
   pitch: 'pitch', stadium: 'pitch', track: 'pitch', playground: 'playground', parking: 'parking',
   pedestrian: 'plaza', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
-  bare_rock: 'rock', scree: 'rock', shingle: 'rock', glacier: 'glacier',
+  bare_rock: 'rock', scree: 'rock', shingle: 'rock', glacier: 'glacier', sand: 'sand', beach: 'sand', dune: 'sand',
 };
 
 const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', canal: 'stream', ditch: 'ditch', drain: 'ditch' };

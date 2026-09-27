@@ -154,6 +154,7 @@ function areaKind(t) {
   if (t.natural === 'wetland') return 'wetland';
   if (t.natural === 'wood' || t.landuse === 'forest') return 'forest';
   if (t.natural === 'scrub') return 'scrub';
+  if (t.natural === 'sand' || t.natural === 'beach' || t.leisure === 'beach_resort') return 'sand';
   if (t.landuse === 'cemetery') return 'cemetery';
   if (t.landuse === 'allotments') return 'allotments';
   if (t.landuse === 'farmland' || t.landuse === 'orchard') return 'farmland';
@@ -167,7 +168,7 @@ function areaKind(t) {
 }
 
 // Draw order: big soft areas first, small detailed ones last.
-const AREA_ORDER = ['farmland', 'grass', 'scrub', 'wetland', 'forest', 'park', 'allotments', 'cemetery', 'pitch', 'playground', 'parking', 'plaza', 'water'];
+const AREA_ORDER = ['farmland', 'grass', 'sand', 'scrub', 'wetland', 'forest', 'park', 'allotments', 'cemetery', 'pitch', 'playground', 'parking', 'plaza', 'water'];
 
 // ---------------------------------------------------------------- collect
 

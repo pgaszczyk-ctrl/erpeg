@@ -4,7 +4,8 @@ import { PIES, MARGO, DZIADKOWIE, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
-import { POCIAGI, POWROT } from './content/pociagi';
+import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
+import { rng } from './rng';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -52,6 +53,7 @@ export async function loadWorld() {
 
 export function rememberMap(city: CityMap) {
   pickHotels(city);
+  addSecondCoachmen(city);
   addVillageCamps(city);
   maps.set(city.id, city);
 }
@@ -125,22 +127,63 @@ export function mapName(id: string) {
   if (worldOrigin(id)) return worldNames.get(id) ?? 'Daleko';
   return id === 'lublin' ? 'Lublin' : world.towns.find((t) => t.id === id)?.name ?? id;
 }
-const worldNames = new Map<string, string>(POCIAGI.map((p) => [`w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`, p.nazwa]));
+const cityMapId = (c: { lat: number; lon: number }) => `w:${c.lat.toFixed(4)},${c.lon.toFixed(4)}`;
+const worldNames = new Map<string, string>(DUZE_MIASTA.map((c) => [cityMapId(c), c.nazwa]));
 
-/** Long-distance trains (content/pociagi.ts): from Lublin to far places, and back from them. */
-export function longTrips(mapId: string): (Trip & { level: number })[] {
-  const lublin = world.lublin[0];
-  if (mapId === 'lublin') {
-    return POCIAGI.map((p) => {
-      const to: Stop = { name: p.nazwa, lat: p.lat, lon: p.lon, key: `w|${p.nazwa}`, mapId: `w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`, mapName: p.nazwa };
-      return { to, km: lublin ? km(lublin, to) : 0, via: null, price: p.cena, level: p.odPoziomu };
-    });
+export type Offer = Trip & { level?: number };
+
+function hashStr(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * A coachman's three rides (content/pociagi.ts WOZNICA), drawn again every
+ * half hour: one of the nearest stations, one 10–50 km away and a long-distance
+ * train to a big city 100+ km away. On a far city's map: back to Lublin and
+ * another big city. `who` tells coachmen apart (a big station has two).
+ */
+export function coachOffers(mapId: string, at: { lat: number; lon: number }, stationName: string, who: string): Offer[] {
+  const slot = Math.floor(Date.now() / (WOZNICA.zmianaCoMin * 60_000));
+  const r = rng(hashStr(`${mapId}|${who}|${slot}`));
+  const pick = <T,>(list: T[]) => (list.length ? list[Math.floor(r() * list.length)] : undefined);
+  const here: Station = { name: stationName, ...at };
+  const price = (d: number) => COACH_FEE + Math.round(d * COACH_PER_KM);
+  const out: Offer[] = [];
+  const far = (not?: string) => {
+    const cities = DUZE_MIASTA.filter((c) => c.nazwa !== not && km(here, { name: c.nazwa, ...c }) >= WOZNICA.dalekoOdKm);
+    const c = pick(cities);
+    if (!c) return;
+    const to: Stop = { name: c.nazwa, lat: c.lat, lon: c.lon, key: `w|${c.nazwa}`, mapId: cityMapId(c), mapName: c.nazwa };
+    out.push({ to, km: km(here, to), via: null, price: WOZNICA.cenaDalekobiezny, level: WOZNICA.odPoziomu });
+  };
+  if (worldOrigin(mapId)) {
+    const main = world.lublin.find((s) => /główny/i.test(s.name)) ?? world.lublin[0];
+    if (main) out.push({ to: { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa }, km: km(here, main), via: null, price: POWROT.cena });
+    far(worldNames.get(mapId));
+    return out;
   }
-  const here = worldOrigin(mapId);
-  if (!here || !lublin) return [];
-  const main = world.lublin.find((s) => /główny/i.test(s.name)) ?? lublin;
-  const to: Stop = { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa };
-  return [{ to, km: km({ name: '', ...here }, main), via: null, price: POWROT.cena, level: 0 }];
+  const others = [...stops.values()].filter((s) => !(s.mapId === mapId && s.name === stationName) && km(here, s) > 0.3).sort((a, b) => km(here, a) - km(here, b));
+  const near = pick(others.slice(0, WOZNICA.bliskichDoWyboru));
+  if (near) out.push({ to: near, km: km(here, near), via: null, price: price(km(here, near)) });
+  const mid = pick(others.filter((s) => s !== near && km(here, s) >= WOZNICA.srednioOdKm && km(here, s) <= WOZNICA.srednioDoKm));
+  if (mid) out.push({ to: mid, km: km(here, mid), via: null, price: price(km(here, mid)) });
+  far();
+  return out;
+}
+
+/** Big stations get a second coachman (with other rides): "Główny" in the name or 3+ neighbouring stations. */
+export function addSecondCoachmen(city: CityMap) {
+  for (const p of [...city.places]) {
+    if (p.kind !== 'station' || p.id.endsWith('#2')) continue;
+    const key = `${city.id}|${p.name}`;
+    const ways = world.edges.filter((e) => e.from === key || e.to === key).length;
+    if (!/główn/i.test(p.name) && ways < 3) continue;
+    if (city.places.some((q) => q.id === `${p.id}#2`)) continue;
+    const door = city.freeNear(p.door.x + 14 * PX_PER_M, p.door.y + 4 * PX_PER_M);
+    city.places.push({ ...p, id: `${p.id}#2`, building: null, door });
+  }
 }
 
 const km = (a: Station, b: Station) => {

@@ -18,11 +18,12 @@ import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
+import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
-import { cachedMap, enterWorld, getMap, LOAD_RADIUS, longTrips, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
+import { cachedMap, coachOffers, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
@@ -481,9 +482,13 @@ export class GameScene extends Phaser.Scene {
     const moving = kd.x !== 0 || kd.y !== 0;
     if (lingering || this.story.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
-    // Mountains (world maps): slower uphill and down steep slopes.
-    const tr = this.city.terrain;
-    if (tr && (this.player.vel.x || this.player.vel.y)) this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+    if (this.player.vel.x || this.player.vel.y) {
+      // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
+      this.player.vel.scale(PODLOZE[this.city.surfaceAt(this.player.x, this.player.y)]);
+      // Mountains (world maps): slower uphill and down steep slopes.
+      const tr = this.city.terrain;
+      if (tr) this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+    }
     const bx = this.player.x;
     const by = this.player.y;
     this.moveActor(this.player, dt);
@@ -1265,22 +1270,22 @@ export class GameScene extends Phaser.Scene {
 
   /** The coachman at a railway station: rides to the next stations for coins. */
   private openCoach(p: CityPlace) {
-    const lat = this.city.toLatLon(p.door.x, p.door.y);
-    const from = stopFor(this.city.id, p.name, lat.lat, lat.lon);
-    // Long-distance trains (content/pociagi.ts) go from Lublin and back to it.
-    const long = longTrips(this.city.id);
-    const trips: (Trip & { level?: number })[] = [...(from ? tripsFrom(from) : []), ...long];
+    const at = this.city.toLatLon(p.door.x, p.door.y);
+    // Three rides, drawn again every half hour (content/pociagi.ts); a big station's second coachman has others.
+    const trips: Offer[] = coachOffers(this.city.id, at, p.name, p.id);
     const title = `🐴 Woźnica – ${p.name}`;
     if (!trips.length) {
       this.dialog({ title, text: 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}${t.via ? ` (przez ${t.via})` : ''}: ${t.km.toFixed(0)} km – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
+    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
+    const next = new Date(Math.ceil(Date.now() / 1_800_000) * 1_800_000);
+    const hh = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
     this.dialog({
       title,
-      text: `„Wio, koniku! Zawiozę cię do następnej stacji albo jeszcze dalej.” Masz ${session.coins} monet.\n\n${lines.join('\n')}`,
-      buttons: [...trips.map((t) => `${where(t)} – ${t.price} 💰`), 'Zostaję'],
+      text: `„Wio, koniku! Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nNowe kursy od ${hh}.`,
+      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), 'Zostaję'],
       onChoose: (i) => {
         const t = trips[i];
         if (!t) return;

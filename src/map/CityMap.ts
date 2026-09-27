@@ -14,7 +14,10 @@ const LINE_WIDTH_M: Record<string, number> = {
   major: 14, medium: 11, minor: 7, service: 4, track: 3, pedestrian: 6, path: 2.5, steps: 2.5,
   rail: 3, tram: 2.5, river: 14, stream: 3, ditch: 1.5,
 };
+export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek';
 export const ROAD_KINDS = new Set(['major', 'medium', 'minor', 'service', 'track', 'pedestrian', 'path', 'steps']);
+/** Roads walked at full speed (the rest are paths and dirt tracks). */
+const PAVED_ROADS = new Set(['major', 'medium', 'minor', 'service', 'pedestrian']);
 const BLOCKING_LINES = new Set(['river']);
 const BLOCKING_AREAS = new Set(['water']);
 /** World maps: only along paths (content/gory.ts skalyTylkoSzlakiem). */
@@ -428,6 +431,7 @@ export class CityMap {
       if (added.length) for (const f of this.placeListeners) f(added);
     }
     this.loadedTiles.add(cx * 100000 + cy);
+    this.surfaces.clear();
     const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
     for (const f of this.tileListeners) f(box);
   }
@@ -677,6 +681,44 @@ export class CityMap {
     const mLat = 111132.954 - 559.822 * Math.cos((2 * lat0 * Math.PI) / 180);
     const mLon = 111412.84 * Math.cos((lat0 * Math.PI) / 180);
     return { lat: oLat - y / PX_PER_M / mLat, lon: oLon + x / PX_PER_M / mLon };
+  }
+
+  /**
+   * What the hero walks on at (x, y), for the walking speed (content/podloze.ts):
+   * a road for cars or a paved square, a path or dirt track, or else the
+   * topmost area there (forest, sand, or grass for everything else).
+   */
+  surfaceAt(x: number, y: number): Surface {
+    // Remembered on a 2 m grid (the big paved areas are slow to test); cleared when tiles arrive.
+    const k = Math.floor(x / 4) * 4_000_000 + Math.floor(y / 4);
+    let v = this.surfaces.get(k);
+    if (!v) {
+      v = this.surfaceNow(x, y);
+      if (this.surfaces.size > 200_000) this.surfaces.clear();
+      this.surfaces.set(k, v);
+    }
+    return v;
+  }
+  private surfaces = new Map<number, Surface>();
+
+  private surfaceNow(x: number, y: number): Surface {
+    let path = false;
+    for (const l of this.lineGrid.at(x, y)) {
+      if (!ROAD_KINDS.has(l.kind) || distToPolyline(l.pts, x, y) > l.width / 2) continue;
+      if (PAVED_ROADS.has(l.kind)) return 'asfalt';
+      path = true;
+    }
+    let top: Area | null = null;
+    for (const a of this.areaGrid.at(x, y)) {
+      if (x < a.x0 || x > a.x1 || y < a.y0 || y > a.y1 || !pointInRings(a.rings, x, y)) continue;
+      // Paved streets and squares win wherever they are in the draw order.
+      if (a.kind === 'paved' || a.kind === 'plaza' || a.kind === 'parking') return 'asfalt';
+      if (!top || a.id > top.id) top = a;
+    }
+    if (path) return 'sciezka';
+    if (top && (top.kind === 'forest' || top.kind === 'scrub')) return 'las';
+    if (top && top.kind === 'sand') return 'piasek';
+    return 'trawa';
   }
 
   query(box: Box) {
