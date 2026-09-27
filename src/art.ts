@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { rng } from './rng';
-import { drawLookSheet, LOOK_W, LOOK_H, LOOK_PIVOT_Y, type Look, type Worn } from './look';
+import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
 // Every texture is registered under a key (see TEX); to switch to a real
@@ -307,20 +307,6 @@ function drawHero(ctx: Ctx, ox: number, oy: number, dir: Dir, frame: number, o: 
   if (o.mask && dir !== 'up') p(dir === 'side' ? 4 : 5, 5, dir === 'side' ? 4 : 6, 1, OUTLINE);
 }
 
-/** Look frames stand on their feet: every sprite using them gets that origin by itself. */
-function lookFrames(tex: Phaser.Textures.CanvasTexture) {
-  HERO_DIRS.forEach((dir, row) => {
-    for (let f = 0; f < HERO_FRAMES; f++) {
-      const fr = tex.add(`${dir}-${f}`, 0, f * LOOK_W, row * LOOK_H, LOOK_W, LOOK_H);
-      if (fr) {
-        fr.customPivot = true;
-        fr.pivotX = 0.5;
-        fr.pivotY = LOOK_PIVOT_Y;
-      }
-    }
-  });
-}
-
 /** The player's own hero, drawn from the look chosen at character creation. */
 export const PLAYER_TEX = 'hero-me';
 /** A character drawn like the hero (frames `down-0`… like PLAYER_TEX), e.g. the wizard. */
@@ -328,7 +314,9 @@ export function makeLookTexture(scene: Phaser.Scene, key: string, look: Look, wo
   if (scene.textures.exists(key)) return;
   const { tex, ctx } = canvasTexture(scene, key, LOOK_W * HERO_FRAMES, LOOK_H * HERO_DIRS.length);
   drawLookSheet(ctx, look, worn);
-  lookFrames(tex);
+  HERO_DIRS.forEach((dir, row) => {
+    for (let f = 0; f < HERO_FRAMES; f++) tex.add(`${dir}-${f}`, 0, f * LOOK_W, row * LOOK_H, LOOK_W, LOOK_H);
+  });
   tex.refresh();
 }
 
@@ -336,7 +324,9 @@ export function makePlayerTexture(scene: Phaser.Scene, look: Look, worn: Worn = 
   if (scene.textures.exists(PLAYER_TEX)) scene.textures.remove(PLAYER_TEX);
   const { tex, ctx } = canvasTexture(scene, PLAYER_TEX, LOOK_W * HERO_FRAMES, LOOK_H * HERO_DIRS.length);
   drawLookSheet(ctx, look, worn);
-  lookFrames(tex);
+  HERO_DIRS.forEach((dir, row) => {
+    for (let f = 0; f < HERO_FRAMES; f++) tex.add(`${dir}-${f}`, 0, f * LOOK_W, row * LOOK_H, LOOK_W, LOOK_H);
+  });
   tex.refresh();
   for (const dir of HERO_DIRS) {
     const key = `me-walk-${dir}`;
@@ -1276,8 +1266,7 @@ export function createArt(scene: Phaser.Scene) {
   drawMarker(scene, TEX.markerDone, true);
   drawArrow(scene);
   drawTiles(scene);
-  // Characters without a look of their own (tinted per character): light clothes so the tint shows.
-  makeLookTexture(scene, TEX.hero, { head: 0, build: 0, outfit: 0, hair: 0, skin: 0, hairColor: 0, top: 6, bottom: 6 });
+  drawHeroSheet(scene);
   drawSlimeSheet(scene);
   drawSlash(scene);
   drawHeart(scene, TEX.heart, true);

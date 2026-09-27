@@ -144,7 +144,7 @@ export class Townsfolk {
         for (let cx = c0x; cx <= c1x; cx++) {
           for (const f of this.folkOf(cx, cy)) {
             if (this.active.has(f) || Math.abs(f.x - px) > NEAR || Math.abs(f.y - py) > NEAR) continue;
-            f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0');
+            f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0').setOrigin(0.5, 0.6);
             this.active.add(f);
           }
         }
