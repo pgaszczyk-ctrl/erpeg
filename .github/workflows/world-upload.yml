@@ -70,7 +70,11 @@ jobs:
           URL="https://build.protomaps.com/$B"
           echo "Build: $B"
           S3="aws s3 --endpoint-url $ENDPOINT"
-          if $S3 ls "s3://$BUCKET/world-$B" | grep -q "world-$B"; then
+          # Already there only if whole (a broken upload once left an 8 GB piece).
+          SIZE=$(curl -sfI --http1.1 "$URL" | grep -i '^content-length' | tr -dc '0-9')
+          HAVE=$(aws s3api head-object --endpoint-url "$ENDPOINT" --bucket "$BUCKET" --key "world-$B" --query ContentLength --output text 2>/dev/null || echo 0)
+          echo "Expected $SIZE bytes, bucket has $HAVE"
+          if [ -n "$SIZE" ] && [ "$HAVE" = "$SIZE" ]; then
             echo "Already there"
           else
             scripts/world-upload.sh "$B"

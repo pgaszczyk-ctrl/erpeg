@@ -40,4 +40,6 @@ if ! seq 1 "$N" | xargs -P 4 -I{} bash -c 'part {}'; then
 fi
 { echo '{"Parts":['; for n in $(seq 1 "$N"); do cat "$WORK/e$n.json"; [ "$n" -lt "$N" ] && echo ','; done; echo ']}'; } > "$WORK/parts.json"
 $API complete-multipart-upload --bucket "$BUCKET" --key "$KEY" --upload-id "$UPLOAD" --multipart-upload "file://$WORK/parts.json"
+GOT=$($API head-object --bucket "$BUCKET" --key "$KEY" --query ContentLength --output text)
+[ "$GOT" = "$SIZE" ] || { echo "Uploaded $GOT bytes, expected $SIZE"; exit 1; }
 echo "Done: $KEY"
