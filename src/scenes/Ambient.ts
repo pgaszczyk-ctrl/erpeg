@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { TEX, HERO_DIRS, makeLookTexture } from '../art';
-import { PX_PER_M, pointInRings, type CityMap, type Area, type Line } from '../map/CityMap';
+import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
 
 // Things that fill the city around the hero as they walk: fruit trees on
@@ -284,9 +285,8 @@ export class Forest {
   }
 }
 
-// ---------------------------------------------------------------- street enemies
+// ---------------------------------------------------------------- monster gangs
 
-const NARROW = new Set(['service', 'path', 'steps', 'track']);
 const KM = 1000 * PX_PER_M;
 
 export interface StreetSpawn {
@@ -295,52 +295,102 @@ export interface StreetSpawn {
   kind: RodzajWroga;
 }
 
+/** One gang: its territory, where its members stand, who is still alive, its boss. */
+export interface Gang {
+  id: string;
+  kind: RodzajGangu;
+  x: number;
+  y: number;
+  /** Territory radius (px). */
+  r: number;
+  /** Member spots, made once the territory is loaded. */
+  spots: StreetSpawn[] | null;
+  /** Indexes of spots whose member is still alive. */
+  alive: Set<number>;
+  /** Spawned members (spot index → enemy). */
+  members: Map<number, unknown>;
+  boss: 'none' | 'out' | 'dead';
+  bossObj?: unknown;
+  /** When it was broken up (scene time), 0 while active. */
+  clearedAt: number;
+  fog?: Phaser.GameObjects.Graphics;
+}
+
+function hashStr2(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
 /**
- * Decides where enemies live: per 1×1 km square, 0–20 of them depending on
- * how many narrow streets and paths it has, in small groups.
+ * Monsters live in gangs (content/gangi.ts): random territories per 1 km
+ * square (new each login), away from important places; members stand at
+ * their spots and come out when they see the hero. The last one falling
+ * brings out the boss; beating him breaks the gang up.
  */
 export class StreetEnemies {
-  private spawned = new Map<string, unknown[]>();
+  private gangs: Gang[] = [];
+  private planned = new Set<string>();
   private next = 0;
 
   constructor(
+    private scene: Phaser.Scene,
     private city: CityMap,
-    private spawn: (s: StreetSpawn, cell: string) => unknown,
+    /** Places to keep gangs away from (doors, home). */
+    private avoid: { x: number; y: number }[],
+    private spawn: (s: StreetSpawn, gang: Gang) => unknown,
     private despawn: (e: unknown) => boolean,
-    /** More or fewer enemies (difficulty). */
+    /** More or fewer gangs (difficulty, night). */
     private density = 1,
+    /** Per-login seed: new gangs every time. */
+    private seed = 0,
+    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void } = { bossOut: () => {}, cleared: () => {} },
   ) {}
 
-  private cellPlan(cx: number, cy: number): StreetSpawn[] {
-    const box = { x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM };
-    const lines = this.city.query(box).lines.filter((l) => NARROW.has(l.kind));
-    const len = (l: Line) => {
-      let d = 0;
-      for (let i = 2; i < l.pts.length; i += 2) d += Math.hypot(l.pts[i] - l.pts[i - 2], l.pts[i + 1] - l.pts[i - 1]);
-      return d;
-    };
-    const lengths = lines.map(len);
-    const total = lengths.reduce((a, b) => a + b, 0) / PX_PER_M;
-    const count = Math.min(Math.round(20 * this.density), Math.round((total / 350) * this.density));
-    const out: StreetSpawn[] = [];
-    for (let tries = 0; out.length < count && tries < 200; tries++) {
-      // A random spot on a narrow line (longer lines more likely)...
-      let pick = Math.random() * lengths.reduce((a, b) => a + b, 0);
-      let li = 0;
-      while (li < lines.length - 1 && pick > lengths[li]) pick -= lengths[li++];
-      const l = lines[li];
-      if (!l) break;
-      const seg = Math.floor(Math.random() * (l.pts.length / 2 - 1)) * 2;
-      const t = Math.random();
-      const x = l.pts[seg] + (l.pts[seg + 2] - l.pts[seg]) * t;
-      const y = l.pts[seg + 1] + (l.pts[seg + 3] - l.pts[seg + 1]) * t;
-      if (x < box.x0 || x > box.x1 || y < box.y0 || y > box.y1 || !this.city.isFree(x, y, 4, 4)) continue;
-      // ...with a small group: when you meet one, another follows.
-      const group = Math.min(count - out.length, 1 + Math.floor(Math.random() * 3));
-      const kind = this.kindAt(x, y);
-      for (let g = 0; g < group; g++) out.push({ x: x + (g ? (Math.random() - 0.5) * 16 : 0), y: y + (g ? (Math.random() - 0.5) * 16 : 0), kind });
+  private nearAvoid(x: number, y: number, m: number) {
+    const d = m * PX_PER_M;
+    return this.avoid.some((p) => Math.abs(p.x - x) < d && Math.abs(p.y - y) < d && Math.hypot(p.x - x, p.y - y) < d);
+  }
+
+  /** The gangs whose centre lies in one 1 km square. */
+  private planCell(cx: number, cy: number) {
+    const key = `${cx},${cy}`;
+    if (this.planned.has(key)) return;
+    this.planned.add(key);
+    const r = rng(hashStr2(`${this.city.id}:gangs:${this.seed}:${key}`));
+    GANGI.forEach((kind, ki) => {
+      const want = kind.naKm2 * this.density;
+      const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        for (let t = 0; t < 12; t++) {
+          const x = (cx + r()) * KM;
+          const y = (cy + r()) * KM;
+          if (this.city.isBlocked(x, y) || this.nearAvoid(x, y, GANG_OD_MIEJSC_M)) continue;
+          // Not on top of another gang.
+          if (this.gangs.some((g) => Math.hypot(g.x - x, g.y - y) < (g.r + kind.promienM * PX_PER_M) * 0.6)) continue;
+          this.gangs.push({ id: `${key}:${ki}:${i}`, kind, x, y, r: kind.promienM * PX_PER_M, spots: null, alive: new Set(), members: new Map(), boss: 'none', clearedAt: 0 });
+          break;
+        }
+      }
+    });
+  }
+
+  /** Where the members stand, once the territory is loaded. */
+  private makeSpots(g: Gang) {
+    const r = rng(hashStr2(`${g.id}:${this.seed}:spots`));
+    const [lo, hi] = g.kind.czlonkow;
+    const want = lo + Math.floor(r() * (hi - lo + 1));
+    const spots: StreetSpawn[] = [];
+    for (let t = 0; spots.length < want && t < want * 40; t++) {
+      const a = r() * Math.PI * 2;
+      const d = Math.sqrt(r()) * g.r * 0.9;
+      const x = g.x + Math.cos(a) * d;
+      const y = g.y + Math.sin(a) * d;
+      if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+      spots.push({ x, y, kind: this.kindAt(x, y) });
     }
-    return out;
+    g.spots = spots;
+    spots.forEach((_, i) => g.alive.add(i));
   }
 
   /** Who lives here: dryads in forests, skeletons by cemeteries, zombies by water, else imps (and a few bandits). */
@@ -352,26 +402,83 @@ export class StreetEnemies {
     return 'glut';
   }
 
+  /** Is this point inside a gang's territory where people shouldn't be (active, or broken up less than a minute ago)? */
+  blocks(x: number, y: number) {
+    const now = this.scene.time.now;
+    for (const g of this.gangs) {
+      if (g.clearedAt && now - g.clearedAt > GANG_POWROT_S * 1000) continue;
+      if (Math.abs(g.x - x) < g.r && Math.abs(g.y - y) < g.r && Math.hypot(g.x - x, g.y - y) < g.r) return true;
+    }
+    return false;
+  }
+
+  /** The active gang whose territory the point is in, if any. */
+  gangAt(x: number, y: number) {
+    return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
+  }
+
+  /** A gang member or boss was killed. */
+  killed(e: unknown) {
+    for (const g of this.gangs) {
+      if (g.bossObj === e) {
+        g.boss = 'dead';
+        g.bossObj = undefined;
+        g.clearedAt = this.scene.time.now;
+        g.fog?.destroy();
+        g.fog = undefined;
+        this.events.cleared(g);
+        return;
+      }
+      for (const [i, m] of g.members) {
+        if (m !== e) continue;
+        g.members.delete(i);
+        g.alive.delete(i);
+        if (!g.alive.size && g.boss === 'none') {
+          g.boss = 'out';
+          const p = this.city.isFree(g.x, g.y, 6, 6) ? { x: g.x, y: g.y } : this.city.freeNear(g.x, g.y);
+          g.bossObj = this.spawn({ x: p.x, y: p.y, kind: g.kind.herszt }, g);
+          this.events.bossOut(g);
+        }
+        return;
+      }
+    }
+  }
+
   update(px: number, py: number, now: number) {
     if (now < this.next) return;
-    this.next = now + 1000;
+    this.next = now + 700;
     const pcx = Math.floor(px / KM);
     const pcy = Math.floor(py / KM);
-    for (const [key, list] of this.spawned) {
-      const [cx, cy] = key.split(',').map(Number);
-      if (Math.abs(cx - pcx) <= 2 && Math.abs(cy - pcy) <= 2) continue;
-      // Far away: let them go (unless they are chasing the hero).
-      const kept = list.filter((e) => !this.despawn(e));
-      if (kept.length) this.spawned.set(key, kept);
-      else this.spawned.delete(key);
+    for (let cx = pcx - 2; cx <= pcx + 2; cx++) for (let cy = pcy - 2; cy <= pcy + 2; cy++) {
+      if (this.city.ready({ x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM })) this.planCell(cx, cy);
     }
-    for (let cx = pcx - 1; cx <= pcx + 1; cx++) {
-      for (let cy = pcy - 1; cy <= pcy + 1; cy++) {
-        const key = `${cx},${cy}`;
-        if (this.spawned.has(key)) continue;
-        // That part of the map isn't loaded yet: try again later.
-        if (!this.city.ready({ x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM })) continue;
-        this.spawned.set(key, this.cellPlan(cx, cy).map((s) => this.spawn(s, key)));
+    for (const g of this.gangs) {
+      const d = Math.hypot(g.x - px, g.y - py);
+      // The red mist over an active territory near the hero.
+      if (!g.clearedAt && d < g.r + 1500 * PX_PER_M) {
+        if (!g.fog) {
+          g.fog = this.scene.add.graphics().setDepth(-999);
+          g.fog.fillStyle(GANG_MGLA.kolor, GANG_MGLA.alfa).fillCircle(g.x, g.y, g.r);
+          g.fog.lineStyle(3, GANG_MGLA.kolor, GANG_MGLA.alfa * 2.5).strokeCircle(g.x, g.y, g.r);
+        }
+      } else if (g.fog) {
+        g.fog.destroy();
+        g.fog = undefined;
+      }
+      if (g.clearedAt) continue;
+      const near = d < g.r + 350 * PX_PER_M;
+      if (near) {
+        if (!g.spots) {
+          if (!this.city.ready({ x0: g.x - g.r, y0: g.y - g.r, x1: g.x + g.r, y1: g.y + g.r })) continue;
+          this.makeSpots(g);
+        }
+        for (const i of g.alive) {
+          if (g.members.has(i)) continue;
+          g.members.set(i, this.spawn(g.spots![i], g));
+        }
+      } else if (d > g.r + 700 * PX_PER_M) {
+        // Far away: the members go home (unless chasing), still alive for later.
+        for (const [i, m] of g.members) if (this.despawn(m)) g.members.delete(i);
       }
     }
   }

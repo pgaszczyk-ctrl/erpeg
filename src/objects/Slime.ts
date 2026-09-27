@@ -28,6 +28,9 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   szkielet: { name: 'Szkielet', hp: 3, wanderSpeed: 20, chaseSpeed: 40, sightRange: 75, loseRange: 120, scale: 1, damage: 1, exp: 6 },
   // A townsman in a duel (his strength and life are set by the duel itself).
   wojownik: { name: 'Wojownik', hp: 6, wanderSpeed: 20, chaseSpeed: 44, sightRange: 250, loseRange: 500, scale: 1, damage: 1, exp: 0 },
+  // Gang bosses: come out when the last gang member falls (content/gangi.ts).
+  herszt: { name: 'Herszt gangu', hp: 14, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
+  wielki_herszt: { name: 'Wielki herszt', hp: 36, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
   // The story's dragon (its reward comes from content/historia.ts).
   smok: { name: 'Smok', hp: 60, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
@@ -36,7 +39,7 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
 export const SLIME = ENEMY_KINDS.glut;
 
 /** Pictures of the little creatures (all but the bandit). */
-const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
+const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
 
 export function createSlimeAnims(scene: Phaser.Scene) {
   for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton]) {

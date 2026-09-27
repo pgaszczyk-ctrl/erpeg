@@ -81,6 +81,8 @@ export interface Stats {
   riddles?: number;
   /** Duels won against townsfolk. */
   duels?: number;
+  /** Monster gangs broken up. */
+  gangs?: number;
 }
 
 export interface PlayerInfo {

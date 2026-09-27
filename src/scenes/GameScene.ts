@@ -6,7 +6,7 @@ import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
-import { Slime } from '../objects/Slime';
+import { Slime, ENEMY_KINDS } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
@@ -334,12 +334,18 @@ export class GameScene extends Phaser.Scene {
       this.glow.fillCircle(0, 0, r);
     }
     this.lastBolt = 0;
+    // Monster gangs: territories away from places (and from home), a boss at the end.
+    const avoid = this.city.places.map((p) => p.door);
+    if (inLublin) avoid.push({ x: session.startX, y: session.startY });
     this.streets = new StreetEnemies(
+      this,
       this.city,
-      (sp) => {
+      avoid,
+      (sp, g) => {
         const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
         e.ambient = true;
-        e.roam = 150; // they come out of their alleys
+        // They stand at their spot; they only come out when they see the hero.
+        e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
         return e;
       },
       (u) => {
@@ -352,6 +358,17 @@ export class GameScene extends Phaser.Scene {
       },
       // At night more monsters come out.
       session.level.potwory * (isNight() ? MIESZKANCY.noc.potworow : 1),
+      session.nonce,
+      {
+        bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
+        cleared: (g) => {
+          earn(g.kind.nagroda.monety);
+          session.exp += g.kind.nagroda.exp;
+          session.stats.gangs = (session.stats.gangs ?? 0) + 1;
+          this.emitHud();
+          this.toast(`🏆 ${g.kind.nazwa} rozbity! +${g.kind.nagroda.monety} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
+        },
+      },
     );
 
     // Fixed enemy spots.
@@ -453,7 +470,7 @@ export class GameScene extends Phaser.Scene {
     this.orchards.update(this.player.x, this.player.y, now);
     this.forest.update(this.player.x, this.player.y, now);
     this.folk.fear = this.story.dragonAt();
-    this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
+    this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     if (this.duelHp !== null) {
       // Walked away from the duel: the townsman gives up.
       const d = this.enemies.find((e) => e.duel);
@@ -525,8 +542,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.setDepth(this.player.y);
     this.updateMythic(now);
-    this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
-    this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y), (n) => session.riddles[n.id] === today());
+    this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
+    this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
 
     for (const item of [...this.pickups]) {
@@ -750,6 +767,7 @@ export class GameScene extends Phaser.Scene {
     session.exp += s.kind.exp;
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
+    if (s.ambient) this.streets.killed(s);
     if (s.temp || s.ambient) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
