@@ -10,7 +10,8 @@
 import { PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
-import { CityMap, type Place, type RawTile, type WorldLoader } from './CityMap';
+import { Terrain } from './terrain';
+import { CityMap, PX_PER_M, type Place, type RawTile, type WorldLoader } from './CityMap';
 
 /** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
 export const WORLD_BASE = 'https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev';
@@ -42,7 +43,10 @@ export type { Source, RangeResponse };
 /** A world map around (lat, lon). Its id carries the place, so saves can find it again. */
 export function worldMap(lat: number, lon: number) {
   const id = `w:${lat.toFixed(4)},${lon.toFixed(4)}`;
-  return CityMap.world(id, { lat, lon }, (map) => worldLoader(map));
+  return CityMap.world(id, { lat, lon }, (map) => {
+    map.terrain = new Terrain((x, y) => map.toLatLon(x, y), PX_PER_M);
+    return worldLoader(map);
+  });
 }
 
 /** The place a world map id stands for ('w:lat,lon'), or null for our own maps. */
@@ -75,6 +79,7 @@ const LANDUSE: Record<string, string> = {
   cemetery: 'cemetery', allotments: 'allotments', farmland: 'farmland', orchard: 'farmland', vineyard: 'farmland',
   pitch: 'pitch', stadium: 'pitch', track: 'pitch', playground: 'playground', parking: 'parking',
   pedestrian: 'plaza', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
+  bare_rock: 'rock', scree: 'rock', shingle: 'rock', glacier: 'glacier',
 };
 
 const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', canal: 'stream', ditch: 'ditch', drain: 'ditch' };
@@ -135,7 +140,7 @@ function worldLoader(map: CityMap): WorldLoader {
   const done = new Map<number, Promise<RawTile>>();
 
   const convert = async (tx: number, ty: number): Promise<RawTile> => {
-    const out: RawTile = { a: [], l: [], b: [], p: [] };
+    const out: RawTile = { a: [], l: [], b: [], p: [], k: [] };
     const file = await worldFile();
     const t = await file.getZxy(Z, tx, ty);
     if (!t) return out;
@@ -234,6 +239,12 @@ function worldLoader(map: CityMap): WorldLoader {
     // Places (shops, schools, …) in map pixels.
     each('pois', (f, _i, pr) => {
       if (f.type !== 1) return;
+      const nm = (f.properties['name:pl'] as string) || (f.properties.name as string);
+      if (f.properties.kind === 'peak' && nm && f.properties.elevation) {
+        const [x, y] = pr(f.loadGeometry()[0][0]);
+        out.k!.push([nm, Math.round(Number(f.properties.elevation)), x * k, y * k]);
+        return;
+      }
       const kind = placeKind(f.properties);
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
@@ -258,7 +269,7 @@ function worldLoader(map: CityMap): WorldLoader {
         }
         parts.push(job);
       }
-    const all = await Promise.all(parts);
+    const [all] = await Promise.all([Promise.all(parts), map.terrain?.load(box)]);
     // Places belong to the game tile they stand in (each is added once).
     const inBox = (x: number, y: number) => x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1;
     return {
@@ -266,6 +277,7 @@ function worldLoader(map: CityMap): WorldLoader {
       l: all.flatMap((t) => t.l),
       b: all.flatMap((t) => t.b),
       p: all.flatMap((t) => t.p!.filter(([, , x, y]) => inBox(x, y))),
+      k: all.flatMap((t) => t.k!),
     };
   };
 }

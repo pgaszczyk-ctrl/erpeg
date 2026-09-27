@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
+import { GORY } from '../content/gory';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -381,10 +382,114 @@ export class MapRenderer {
       ctx.fill('evenodd');
     }
 
+    // Mountains (world maps): hill shading and contour lines over the ground.
+    if (m.terrain) this.paintRelief(ctx, x0, y0);
+
     // Buildings, north to south so southern walls overlap northern roofs.
     buildings.sort((a, b) => a.y1 - b.y1);
     for (const b of buildings) this.paintBuilding(ctx, b);
     clip = null;
+  }
+
+  private reliefShade?: HTMLCanvasElement;
+  private reliefLines?: HTMLCanvasElement;
+
+  /**
+   * Light from the north-west on slopes (darker away from it) and a brown
+   * contour line every GORY.poziomice metres (every fifth one stronger).
+   */
+  private paintRelief(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
+    const t = this.map.terrain!;
+    const S = 4; // px between height samples
+    const M = 10; // extra samples around the chunk, so the smoothing matches across chunks
+    const n = CHUNK / S + 1 + 2 * M;
+    const h = new Float32Array(n * n);
+    let any = false;
+    for (let j = 0; j < n; j++)
+      for (let i = 0; i < n; i++) {
+        const v = t.heightAt(x0 + (i - M) * S, y0 + (j - M) * S);
+        h[j * n + i] = v;
+        if (!Number.isNaN(v)) any = true;
+      }
+    if (!any) return;
+    const at = (i: number, j: number) => h[Math.min(n - 1, Math.max(0, j)) * n + Math.min(n - 1, Math.max(0, i))];
+    // The heights come in ~12 m steps: smooth them for the shading (two box
+    // blurs each way), or every step shows as a square.
+    const g = Float32Array.from(h);
+    const tmp = new Float32Array(n * n);
+    const R = 4;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let j = 0; j < n; j++)
+        for (let i = 0; i < n; i++) {
+          let sum = 0;
+          for (let k = -R; k <= R; k++) sum += g[j * n + Math.min(n - 1, Math.max(0, i + k))];
+          tmp[j * n + i] = sum / (2 * R + 1);
+        }
+      for (let j = 0; j < n; j++)
+        for (let i = 0; i < n; i++) {
+          let sum = 0;
+          for (let k = -R; k <= R; k++) sum += tmp[Math.min(n - 1, Math.max(0, j + k)) * n + i];
+          g[j * n + i] = sum / (2 * R + 1);
+        }
+    }
+    const sm = (i: number, j: number) => g[Math.min(n - 1, Math.max(0, j)) * n + Math.min(n - 1, Math.max(0, i))];
+    // Shading, drawn smooth.
+    const m = CHUNK / S + 1;
+    this.reliefShade ??= Object.assign(document.createElement('canvas'), { width: m, height: m });
+    const sctx = this.reliefShade.getContext('2d')!;
+    const img = sctx.createImageData(m, m);
+    const dist = (2 * S) / PX_PER_M; // metres between the samples of a difference
+    const sun = { x: -Math.SQRT1_2, y: -Math.SQRT1_2 }; // from the north-west
+    const flat = Math.SQRT1_2;
+    for (let j = 0; j < m; j++)
+      for (let i = 0; i < m; i++) {
+        const dx = (sm(i + M + 1, j + M) - sm(i + M - 1, j + M)) / dist;
+        const dy = (sm(i + M, j + M + 1) - sm(i + M, j + M - 1)) / dist;
+        if (Number.isNaN(dx) || Number.isNaN(dy)) continue;
+        // Surface normal (−dx, −dy, 1), sun 45° up.
+        const len = Math.hypot(dx, dy, 1);
+        const light = (Math.SQRT1_2 * (-dx * sun.x - dy * sun.y) + Math.SQRT1_2) / len;
+        const d = (light - flat) * GORY.cien;
+        const o = (j * m + i) * 4;
+        if (d < 0) img.data[o + 3] = Math.min(210, -d * 640);
+        else {
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = 255;
+          img.data[o + 3] = Math.min(130, d * 420);
+        }
+      }
+    sctx.putImageData(img, 0, 0);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this.reliefShade, x0 - S / 2, y0 - S / 2, m * S, m * S);
+    // Contour lines, crisp, on a 2 px grid (heights in between interpolated).
+    const L = CHUNK / 2;
+    this.reliefLines ??= Object.assign(document.createElement('canvas'), { width: L, height: L });
+    const lctx = this.reliefLines.getContext('2d')!;
+    const li = lctx.createImageData(L, L);
+    const step = GORY.poziomice;
+    const hh = (u: number, v: number) => {
+      // u, v in 2 px units from the chunk corner.
+      const fx = u / 2 + M, fy = v / 2 + M, ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy;
+      return (at(ix, iy) * (1 - ax) + at(ix + 1, iy) * ax) * (1 - ay) + (at(ix, iy + 1) * (1 - ax) + at(ix + 1, iy + 1) * ax) * ay;
+    };
+    const band = new Float32Array((L + 1) * (L + 1));
+    for (let v = 0; v <= L; v++) for (let u = 0; u <= L; u++) band[v * (L + 1) + u] = Math.floor(hh(u, v) / step);
+    for (let v = 0; v < L; v++)
+      for (let u = 0; u < L; u++) {
+        const b = band[v * (L + 1) + u], r = band[v * (L + 1) + u + 1], d = band[(v + 1) * (L + 1) + u];
+        if (Number.isNaN(b) || (b === r && b === d)) continue;
+        const top = Math.max(b, r, d);
+        const o = (v * L + u) * 4;
+        const major = top % 5 === 0;
+        li.data[o] = major ? 70 : 90;
+        li.data[o + 1] = major ? 40 : 60;
+        li.data[o + 2] = major ? 20 : 35;
+        li.data[o + 3] = major ? 210 : 130;
+      }
+    lctx.putImageData(li, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.reliefLines, x0, y0, CHUNK, CHUNK);
+    ctx.restore();
   }
 
   private paintArea(ctx: CanvasRenderingContext2D, a: Area) {

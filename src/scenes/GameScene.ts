@@ -64,6 +64,8 @@ const HOME_SAFE_M = 40;
 /** After a dialog closes, swings don't start a talk for this long (ms). */
 /** How close (m) the hero reads a road sign. */
 const SIGN_READ_M = 25;
+/** How near a mountain top counts as standing on it (world maps). */
+const PEAK_REACH_M = 30;
 /** Protection after a fresh start (ms). */
 const OCHRONA_MS = 10_000;
 const TALK_PAUSE_MS = 700;
@@ -479,6 +481,9 @@ export class GameScene extends Phaser.Scene {
     const moving = kd.x !== 0 || kd.y !== 0;
     if (lingering || this.story.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
+    // Mountains (world maps): slower uphill and down steep slopes.
+    const tr = this.city.terrain;
+    if (tr && (this.player.vel.x || this.player.vel.y)) this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
     const bx = this.player.x;
     const by = this.player.y;
     this.moveActor(this.player, dt);
@@ -597,6 +602,7 @@ export class GameScene extends Phaser.Scene {
     if (!lingering) this.checkGoals();
     this.updateBubbles();
     this.readSign();
+    if (this.city.peaks.length) this.updatePeaks();
 
     if (this.challenge) this.updateChallenge(now);
     this.hudTimer -= delta;
@@ -1132,6 +1138,26 @@ export class GameScene extends Phaser.Scene {
     const [back, ...ahead] = this.city.signs[i].to;
     const lines = [...ahead.map((t) => `➜ ${t.name} – ${t.km} km`), `↩ ${back.name} (centrum) – ${back.km} km`];
     this.toast(`🪧 Kierunkowskaz\n${lines.join('\n')}`, 5000);
+  }
+
+  /** Mountain peaks (world maps): their names on the map, and a cheer on reaching the top. */
+  private peaksShown = 0;
+  private peaksClimbed = new Set<string>();
+  private updatePeaks() {
+    const list = this.city.peaks;
+    for (; this.peaksShown < list.length; this.peaksShown++) {
+      const k = list[this.peaksShown];
+      this.add.image(k.x, k.y, TEX.peak).setDepth(900_000);
+      this.add.text(k.x, k.y - 7, `${k.name}\n${k.ele} m`, { fontFamily: 'monospace', fontSize: '7px', color: '#fff8e0', stroke: '#2a2430', strokeThickness: 3, align: 'center', resolution: 4 }).setOrigin(0.5, 1).setDepth(900_000);
+    }
+    const r = PEAK_REACH_M * PX_PER_M;
+    for (const k of list) {
+      if (Math.abs(k.x - this.player.x) > r || Math.abs(k.y - this.player.y) > r) continue;
+      const key = `${k.name}:${Math.round(k.x)}`;
+      if (this.peaksClimbed.has(key)) continue;
+      this.peaksClimbed.add(key);
+      this.toast(`⛰ ${k.name} – ${k.ele} m n.p.m.\nJesteś na szczycie!`, 5000);
+    }
   }
 
   /** Talk bubbles over characters with a riddle, a request or a challenge. */

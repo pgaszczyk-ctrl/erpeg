@@ -1,6 +1,9 @@
 // The city map built from OpenStreetMap (see scripts/build-map.mjs).
+// Only type imports here: scripts/split-map.mjs runs this file in Node as is.
 // Holds all features in world pixels, a spatial grid for fast lookups,
 // collision tests, address search and spawn-point picking.
+
+import type { Terrain } from './terrain';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
@@ -14,6 +17,8 @@ const LINE_WIDTH_M: Record<string, number> = {
 export const ROAD_KINDS = new Set(['major', 'medium', 'minor', 'service', 'track', 'pedestrian', 'path', 'steps']);
 const BLOCKING_LINES = new Set(['river']);
 const BLOCKING_AREAS = new Set(['water']);
+/** World maps: only along paths (content/gory.ts skalyTylkoSzlakiem). */
+const ROUGH_AREAS = new Set(['rock', 'glacier']);
 
 interface Box { x0: number; y0: number; x1: number; y1: number }
 
@@ -70,6 +75,8 @@ export type RawTile = {
   b: [number, number[][], string | 0, string | 0, number][];
   /** World map tiles only: places found there [kind, name, x, y] (px). */
   p?: [Place['kind'], string, number, number][];
+  /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
+  k?: [string, number, number, number][];
 };
 
 /** Loads the features of one tile of a world map (see map/world.ts). */
@@ -209,6 +216,8 @@ export class CityMap {
   private tileSet: { has(k: number): boolean } | null = null;
   /** World maps (map/world.ts): every tile exists and is made from the world map. */
   private world: WorldLoader | null = null;
+  /** World maps: heights of the ground (hill shading, steep slopes, slower uphill). */
+  terrain: Terrain | null = null;
   private placeListeners = new Set<(p: Place[]) => void>();
   private loadedTiles = new Set<number>();
   private pendingTiles = new Map<number, Promise<void>>();
@@ -220,6 +229,8 @@ export class CityMap {
   private streets = new Map<string, { x: number; y: number }>();
   /** Road signs on the roads out of town: where to and how many km along the roads. */
   readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
+  /** World maps: named mountain peaks with their height (they come with the tiles). */
+  readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];
   private namedTowns: { name: string; x: number; y: number }[] = [];
   private tileListeners = new Set<(box: Box) => void>();
 
@@ -408,6 +419,9 @@ export class CityMap {
         const b = this.buildings[this.buildings.length - 1];
         for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
       }
+    }
+    for (const [name, ele, x, y] of t.k ?? []) {
+      if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });
     }
     if (t.p?.length) {
       const added = t.p.map(([kind, name, x, y]) => this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`)).filter((p): p is Place => !!p);
@@ -749,6 +763,7 @@ export class CityMap {
     }
     if (!onPassage && this.buildingAt(x, y)) return true;
     if (onBridge) return false;
+    if (this.terrain && this.roughOffPath(x, y)) return true;
     for (const a of this.areaGrid.at(x, y)) {
       if (BLOCKING_AREAS.has(a.kind) && x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1 && pointInRings(a.rings, x, y)) return true;
     }
@@ -756,6 +771,23 @@ export class CityMap {
       if (BLOCKING_LINES.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2) return true;
     }
     return false;
+  }
+
+  /** World maps: too steep, or rock/ice, and not on (or right by) a path or road. */
+  private roughOffPath(x: number, y: number) {
+    const t = this.terrain!;
+    let rough = t.slopeAt(x, y) > t.maxSlope;
+    if (!rough && t.rockOnlyPaths)
+      for (const a of this.areaGrid.at(x, y))
+        if (ROUGH_AREAS.has(a.kind) && x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1 && pointInRings(a.rings, x, y)) {
+          rough = true;
+          break;
+        }
+    if (!rough) return false;
+    const m = 3 * PX_PER_M; // the hero's feet may stick out of a narrow path
+    for (const l of this.lineGrid.query({ x0: x - m, y0: y - m, x1: x + m, y1: y + m }))
+      if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + m) return false;
+    return true;
   }
 
   /** Is a feet box of the given half size free at (x, y)? */
@@ -950,7 +982,7 @@ export class CityMap {
   /** A human description of a place: street or nearest address. */
   describe(x: number, y: number): string {
     const b = this.buildingAt(x, y - 12) ?? this.buildingAt(x, y + 12);
-    return b?.addresses[0] ?? this.streetNear(x, y, 200) ?? 'bezdroża Lublina';
+    return b?.addresses[0] ?? this.streetNear(x, y, 200) ?? (this.id === 'lublin' ? 'bezdroża Lublina' : 'bezdroża');
   }
 
   /** Street name nearest to a point (for the HUD). */

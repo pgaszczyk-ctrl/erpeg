@@ -59,6 +59,7 @@ export const TEX = {
   signGear: 'sign-gear',
   tent: 'tent',
   signpost: 'signpost',
+  peak: 'peak',
   heartBonus: 'heart-bonus',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
@@ -608,6 +609,19 @@ function drawSignpost(scene: Phaser.Scene) {
   };
   board(1, true);
   board(7, false);
+  tex.refresh();
+}
+
+/** A mountain top: a small cairn with a red-and-white flag (world map peaks). */
+function drawPeak(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.peak, 12, 12);
+  px(ctx, 1, 8, 10, 4, OUTLINE);
+  px(ctx, 3, 6, 6, 3, OUTLINE);
+  px(ctx, 2, 9, 8, 2, '#9a968c');
+  px(ctx, 4, 7, 4, 2, '#b8b3a6');
+  px(ctx, 6, 0, 1, 7, OUTLINE);
+  px(ctx, 7, 0, 4, 2, '#ffffff');
+  px(ctx, 7, 2, 4, 2, '#d8323c');
   tex.refresh();
 }
 
@@ -1195,6 +1209,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
   drawTent(scene);
   drawQuestItem(scene);
   drawSignpost(scene);
+  drawPeak(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');
