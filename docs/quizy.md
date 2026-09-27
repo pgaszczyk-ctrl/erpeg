@@ -43,3 +43,7 @@ Dobrze jest wgrywać codziennie ok. 50–100 pytań na każdy poziom. Każda szk
 ## Gotowe polecenie dla innego AI (uruchamianego codziennie)
 
 > Przygotuj 300 nowych pytań quizowych po polsku do gry dla dzieci i dorosłych: po 75 na poziom 0 (5–7 lat), 1 (8–9 lat), 2 (10–12 lat) i 3 (nastolatki i dorośli). Mieszaj kategorie: matematyka i łamigłówki logiczne, zagadki słowne, przyroda, geografia (także Lubelszczyzna i Polska), historia Polski, język polski, nauka. Każde pytanie ma 3–4 krótkie odpowiedzi, pierwsza jest dobra, pozostałe są wiarygodne, ale jednoznacznie złe. Sprawdź każdą dobrą odpowiedź. Nie powtarzaj pytań z poprzednich dni. Wyślij je jednym zapytaniem POST na adres powyżej jako `p_quizzes` (format JSON jak w przykładzie), z `p_key` = [KLUCZ] i `p_days` = 2, a potem podaj, co odpowiedział serwer.
+
+## Codzienny generator (Claude)
+
+Routine „Quizy do szkół (Erpeg)” (claude.ai → Routines) uruchamia się codziennie o 2:45 czasu polskiego, pisze 200 nowych pytań (po 50 na poziom) i wgrywa je przez Supabase (`select public._insert_quizzes('[…]'::jsonb, 2)`). Potrzebuje podpiętego łącznika Supabase w ustawieniach routine'a. Tabela `quiz_history` pamięta każde pytanie, jakie kiedykolwiek wgrano, więc powtórki są odrzucane.
