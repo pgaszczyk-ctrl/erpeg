@@ -289,6 +289,8 @@ export class GameScene extends Phaser.Scene {
       toast: (t, ms) => this.toast(t, ms),
       riddle: (title, intro, z, exp, seed, after, opts) => this.askRiddle(title, intro, z, exp, seed, after, opts),
       questsFull: () => this.questsFull(),
+      storyOn: () => this.story?.askLabel() != null,
+      storyExpert: (title, text, later) => this.story.expert(title, text, later),
       hud: () => this.emitHud(),
       gainExp: (n) => {
         session.exp += n;

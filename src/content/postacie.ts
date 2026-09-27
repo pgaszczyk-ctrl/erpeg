@@ -228,6 +228,15 @@ export const LUIGI = {
   powitanie: { pl: 'Ciao! Siadaj, amico. Mam dla ciebie zagadkę!', en: 'Ciao! Sit down, amico. I have a riddle for you!' },
   koniec: { pl: 'Basta na dziś! Wróć jutro po nowe zagadki, amico.', en: 'Basta for today! Come back tomorrow for new riddles, amico.' },
   brawoTrzy: { pl: 'Mamma mia! Wszystkie trzy! Jesteś mistrzem!', en: 'Mamma mia! All three! You are a master!' },
+  /** Gdy bohater widział już cień smoka. */
+  cien: {
+    pl: 'Tak, to mi przypomina Ur-Dragona z Magica… Nie grałem taką talią, ale ekspertem od smoków jest Martin. Może coś wie, ale musiałbyś iść na Irysową. Jak nie masz co robić, to leć. Albo chodź, zagramy w karty.',
+    en: 'Yes, it reminds me of the Ur-Dragon from Magic… I never played that deck, but the dragon expert is Martin. He may know something, but you would have to go to Irysowa Street. If you have nothing to do, off you go. Or come, let us play cards.',
+  },
+  tawerna: {
+    pl: 'Słyszałeś o tej tawernie, co ostatnio powstała na Guliwera? Nazwali ją dziwacznie – magicownia.pl – ale lubię tam chodzić i pograć w karty.',
+    en: 'Have you heard of the tavern that opened lately on Guliwera Street? They gave it a strange name – magicownia.pl – but I like going there to play cards.',
+  },
   szachy: [
     { pytanie: { pl: 'Która figura szachowa porusza się „w kształcie litery L”?', en: 'Which chess piece moves in an "L" shape?' }, odpowiedzi: [{ pl: 'Skoczek', en: 'The knight' }, { pl: 'Goniec', en: 'The bishop' }, { pl: 'Wieża', en: 'The rook' }] },
     { pytanie: { pl: 'Ile pól ma szachownica?', en: 'How many squares does a chessboard have?' }, odpowiedzi: [{ pl: '64', en: '64' }, { pl: '100', en: '100' }, { pl: '49', en: '49' }] },
@@ -260,4 +269,25 @@ export const LUIGI = {
     { pytanie: { pl: 'Który kolor many kojarzy się z ogniem i smokami?', en: 'Which mana colour is linked with fire and dragons?' }, odpowiedzi: [{ pl: 'Czerwony', en: 'Red' }, { pl: 'Biały', en: 'White' }, { pl: 'Niebieski', en: 'Blue' }] },
     { pytanie: { pl: 'Jak w Magic nazywa się talia, z której dobiera się karty?', en: 'In Magic, what is the deck you draw from called?' }, odpowiedzi: [{ pl: 'Biblioteka (library)', en: 'The library' }, { pl: 'Stos', en: 'The pile' }, { pl: 'Skarbiec', en: 'The vault' }] },
   ],
+};
+
+// ----------------------------------------------------------------------------
+//  MARTIN – ekspert od smoków, chodzi ulicą Irysową. Zaprasza do tawerny
+//  magicownia.pl, a zapytany o cień wie, że to na pewno smok, i wysyła
+//  bohatera do maga (popycha główną historię).
+// ----------------------------------------------------------------------------
+export const MARTIN = {
+  imie: { pl: 'Martin', en: 'Martin' },
+  ulica: 'Irysowa',
+  predkosc: 0.6,
+  powitanie: { pl: 'Witaj, wędrowcze! Martin jestem – od smoków, kart i dobrych opowieści.', en: 'Greetings, traveller! I am Martin – dragons, cards and good tales are my trade.' },
+  tawerna: {
+    pl: 'Karty, piwo korzenne i dobre towarzystwo! Zajrzyj do tawerny magicownia.pl na Guliwera – bywają tam czarodzieje, a ja zawsze wygrywam smokami!',
+    en: 'Cards, root beer and good company! Drop in at the magicownia.pl tavern on Guliwera Street – wizards go there, and I always win with dragons!',
+  },
+  cien: {
+    pl: 'Cień z długim ogonem, szerokie skrzydła, ryk jak grzmot? To na pewno smok – żaden ptak tak nie rzuca cienia! Idź do: {cel}. Tam urzęduje mag Albrecht, on ci powie więcej.',
+    en: 'A shadow with a long tail, wide wings, a roar like thunder? That is surely a dragon – no bird casts a shadow like that! Go to: {cel}. Wizard Albrecht works there, he will tell you more.',
+  },
+  pozniej: { pl: 'Słyszałem, że już tropisz tego smoka. Powodzenia – i opowiedz mi potem w tawernie!', en: 'I hear you are already on the dragon\'s trail. Good luck – and tell me all about it at the tavern!' },
 };

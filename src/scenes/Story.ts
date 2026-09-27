@@ -152,6 +152,36 @@ export class Story {
     } });
   }
 
+  /** Where the story stands, for characters who comment on it. */
+  get stage() {
+    return this.state.st;
+  }
+
+  /**
+   * Someone who surely knows (Martin): sends the hero to the wizard like a
+   * knowing school would. `text` may use {cel} for the place.
+   */
+  expert(title: string, text: string, later: string) {
+    const st = this.state;
+    if (st.st !== 'cien' && st.st !== 'uczelnia') {
+      this.host.dialog({ title, text: later, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const target = this.findTarget();
+    if (!target) {
+      this.host.dialog({ title, text: text.replace('{cel}', 'mag Albrecht, jak go znajdziesz'), buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const again = st.target?.m === this.city.id && st.target.id === target.id;
+    st.target = { m: this.city.id, id: target.id, name: target.name, x: target.door.x, y: target.door.y, s: PX_PER_M };
+    if (st.st === 'cien') st.st = 'uczelnia';
+    if (!again) this.placeWizard();
+    this.host.dialog({ title, text: text.replace('{cel}', target.name), buttons: ['Idę tam!'], onChoose: () => {
+      this.host.hud();
+      this.host.save();
+    } });
+  }
+
   /** A university on this map (the nearest), else the town hall. */
   private findTarget(): Place | null {
     const p = this.host.player;

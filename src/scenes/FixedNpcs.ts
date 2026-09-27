@@ -4,7 +4,7 @@ import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { rng } from '../rng';
 import { tr, tx } from '../i18n';
-import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, LUIGI, type ZagadkaPL } from '../content/postacie';
+import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, LUIGI, MARTIN, type ZagadkaPL } from '../content/postacie';
 import { session, earn, type MissionState } from '../quests';
 import { groupCount, takeGroup, groupValue, sellGroup } from '../inventory';
 import { levelForAge } from './Npcs';
@@ -25,6 +25,10 @@ export interface FixedHost {
   riddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void, opts?: { coins?: number; then?: (right: boolean) => void; retry?: boolean }): void;
   /** No room for another quest? (says so) */
   questsFull(): boolean;
+  /** The main story: has the hero seen the dragon's shadow (and not finished)? */
+  storyOn(): boolean;
+  /** Martin sends the hero to the wizard. */
+  storyExpert(title: string, text: string, later: string): void;
   hud(): void;
   gainExp(n: number): void;
   save(): void;
@@ -155,6 +159,14 @@ export class FixedNpcs {
     this.placeLuigi();
     const streetLines = (names: string[]) =>
       city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
+
+    // Martin, the dragon expert, on Irysowa.
+    const martinLines = streetLines([MARTIN.ulica]);
+    if (martinLines.length) {
+      const w = new Walker(martinLines, MARTIN.predkosc * PX_PER_M, this.r);
+      const sprite = scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xd08050);
+      this.list.push({ id: 'martin', walker: w, sprite, x: w.x, y: w.y });
+    }
 
     // The dog (unless it already got its piggy back).
     const dogLines = streetLines(PIES.ulice);
@@ -335,6 +347,7 @@ export class FixedNpcs {
     if (w.id === 'margo') return this.talkMargo();
     if (w.id === 'grazynka') return this.talkGrazynka();
     if (w.id === 'luigi') return this.talkLuigi();
+    if (w.id === 'martin') return this.talkMartin();
     return this.talkGrand();
   }
 
@@ -379,7 +392,8 @@ export class FixedNpcs {
         w.id === 'pies' ? this.state('npc-pies') !== 'done'
         : w.id === 'margo' ? a < MARGO.zagadekDziennie
         : w.id === 'grazynka' ? this.grazynkaStep() !== 'done' && this.grazynkaStep() !== 'sklep'
-        : w.id === 'luigi' ? a < 3
+        : w.id === 'luigi' ? a < 3 || this.host.storyOn()
+        : w.id === 'martin' ? this.host.storyOn()
         : a < 1;
       if (has) out.push({ x: w.x, y: w.y });
     }
@@ -532,10 +546,21 @@ export class FixedNpcs {
   private talkLuigi() {
     const d = this.daily('luigi');
     const title = `♟ ${tr(LUIGI.imie)}`;
-    if (d.a >= 3) {
-      this.host.dialog({ title, text: tr(LUIGI.koniec), buttons: ['Ciao!'], onChoose: () => {} });
-      return;
-    }
+    const opts: [string, () => void][] = [];
+    if (d.a < 3) opts.push([tx('🧩 Zagadka', '🧩 A riddle'), () => this.luigiRiddle()]);
+    if (this.host.storyOn()) opts.push([tx('🐉 Zapytaj o cień', '🐉 Ask about the shadow'), () => this.host.dialog({ title, text: tr(LUIGI.cien), buttons: [tx('Dzięki, Luigi!', 'Thanks, Luigi!')], onChoose: () => {} })]);
+    opts.push([tx('🍺 Co słychać?', '🍺 What is new?'), () => this.host.dialog({ title, text: tr(LUIGI.tawerna), buttons: ['Ciao!'], onChoose: () => {} })]);
+    this.host.dialog({
+      title,
+      text: d.a < 3 ? tr(LUIGI.powitanie) : tr(LUIGI.koniec),
+      buttons: [...opts.map(([l]) => l), 'Ciao!'],
+      onChoose: (i) => opts[i]?.[1](),
+    });
+  }
+
+  private luigiRiddle() {
+    const d = this.daily('luigi');
+    const title = `♟ ${tr(LUIGI.imie)}`;
     const h = hash(`luigi:${d.d}`);
     const cards = h % 2 ? [LUIGI.pokemony, LUIGI.magic] : [LUIGI.magic, LUIGI.pokemony];
     const pools = [LUIGI.szachy, cards[0], cards[1]];
@@ -553,6 +578,14 @@ export class FixedNpcs {
         }
       },
     });
+  }
+
+  private talkMartin() {
+    const title = `🐉 ${tr(MARTIN.imie)}`;
+    const opts: [string, () => void][] = [];
+    if (this.host.storyOn()) opts.push([tx('🐉 Zapytaj o cień', '🐉 Ask about the shadow'), () => this.host.storyExpert(title, tr(MARTIN.cien), tr(MARTIN.pozniej))]);
+    opts.push([tx('🍺 O tawernie', '🍺 About the tavern'), () => this.host.dialog({ title, text: tr(MARTIN.tawerna), buttons: [tx('Zajrzę!', 'I will drop in!')], onChoose: () => {} })]);
+    this.host.dialog({ title, text: tr(MARTIN.powitanie), buttons: [...opts.map(([l]) => l), tx('Bywaj', 'Farewell')], onChoose: (i) => opts[i]?.[1]() });
   }
 
   private talkMargo() {
