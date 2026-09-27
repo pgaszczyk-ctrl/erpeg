@@ -46,4 +46,4 @@ Dobrze jest wgrywać codziennie ok. 50–100 pytań na każdy poziom. Każda szk
 
 ## Codzienny generator (Claude)
 
-Routine „Quizy do szkół (Erpeg)” (claude.ai → Routines) uruchamia się codziennie o 2:45 czasu polskiego, pisze 200 nowych pytań (po 50 na poziom) i wgrywa je przez Supabase (`select public._insert_quizzes('[…]'::jsonb, 2)`). Potrzebuje podpiętego łącznika Supabase w ustawieniach routine'a. Tabela `quiz_history` pamięta każde pytanie, jakie kiedykolwiek wgrano, więc powtórki są odrzucane.
+Routine „Quizy do szkół (Erpeg)” (claude.ai → Routines) uruchamia się codziennie o 2:45 czasu polskiego, uruchamia się w rozmowie Claude, która ma dostęp do bazy, pisze 200 nowych pytań (po 50 na poziom) i wgrywa je przez Supabase (`select public._insert_quizzes(…, 2)`). Tabela `quiz_history` pamięta każde pytanie, jakie kiedykolwiek wgrano, więc powtórki są odrzucane.
