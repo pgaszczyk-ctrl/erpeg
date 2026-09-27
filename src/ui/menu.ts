@@ -126,11 +126,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       let level = DOMYSLNA_TRUDNOSC;
       const levelRange = el('input', { type: 'range', min: 0, max: TRUDNOSCI.length - 1, step: 1, value: String(level), className: 'm-range' });
       const levelName = el('span', { className: 'm-val' });
-      const levelInfo = el('small', {});
       const showLevel = () => {
         const t = TRUDNOSCI[level];
         levelName.textContent = tx(t.nazwa, t.en);
-        levelInfo.textContent = t.opis;
       };
       levelRange.oninput = () => {
         level = Number(levelRange.value);
@@ -196,7 +194,6 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
           el('label', { className: 'm-slide m-level' }, [levelRange, levelName]),
-          levelInfo,
         ]),
         linkBox,
         err,
