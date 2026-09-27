@@ -44,6 +44,8 @@ jobs:
           echo "AWS_ACCESS_KEY_ID=$K" >> "$GITHUB_ENV"; echo "AWS_SECRET_ACCESS_KEY=$S" >> "$GITHUB_ENV"
       - run: sudo -v && curl -sfL https://rclone.org/install.sh | sudo bash
       - name: Let the game's pages read the bucket
+        # Needs an Admin token; with Object Read & Write the owner sets CORS in the dashboard instead.
+        continue-on-error: true
         run: |
           cat > cors.json <<'JSON'
           {"CORSRules":[{"AllowedOrigins":["https://pgaszczyk-ctrl.github.io","http://localhost:5173","http://localhost:4173"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["range","if-match"],"ExposeHeaders":["etag","content-length","content-range"],"MaxAgeSeconds":86400}]}
