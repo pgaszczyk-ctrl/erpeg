@@ -17,7 +17,7 @@ import { Npcs, riddleFor, today, type Npc } from './Npcs';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
-import { MIESZKANCY } from '../content/mieszkancy';
+import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
@@ -163,7 +163,7 @@ type Challenge =
   | { kind: 'kukly'; npc: SportNpc; a: Station; b: Station; step: 'a' | 'b' | 'back'; hits: number; start: number; until: number }
   | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number; path: number[]; cum: number[] };
 
-type Enemy = Slime & { missionId?: string; temp?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
+type Enemy = Slime & { missionId?: string; temp?: boolean; folkQuest?: boolean; carrier?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
 
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
@@ -301,6 +301,7 @@ export class GameScene extends Phaser.Scene {
     this.folk = new Townsfolk(this, this.city);
     this.bubbles = [];
     this.harvests = [];
+    this.folkQuest = null;
     this.noHurtUntil = 0;
     this.protectUntil = -1; // set on the first frame (unless the character must linger)
     this.challenge = null;
@@ -390,7 +391,7 @@ export class GameScene extends Phaser.Scene {
           session.exp += g.kind.nagroda.exp;
           session.stats.gangs = (session.stats.gangs ?? 0) + 1;
           this.emitHud();
-          this.toast(`🏆 ${g.kind.nazwa} rozbity! +${g.kind.nagroda.monety} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
+          this.toast(`🏆 ${g.kind.nazwa} ${g.kind.zenska ? 'rozbita' : 'rozbity'}! +${g.kind.nagroda.monety} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
         },
       },
     );
@@ -838,6 +839,7 @@ export class GameScene extends Phaser.Scene {
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
+    if (s.folkQuest) this.folkQuestKill(s);
     if (s.temp || s.ambient) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
@@ -914,6 +916,16 @@ export class GameScene extends Phaser.Scene {
 
   private collect(item: Phaser.GameObjects.Image) {
     const kind = item.getData('kind') as string;
+    if (kind === 'quest') {
+      const q = this.folkQuest;
+      this.removePickup(item);
+      if (!q) return;
+      q.got = true;
+      q.item = undefined;
+      this.toast(`${q.zguba.ikona} Odzyskane: ${q.zguba.nazwa}! Zanieś to do: ${q.folk.name}.`, 3500);
+      this.emitHud();
+      return;
+    }
     if (kind === 'heart') this.player.heal(2);
     else if (kind.startsWith('fruit:')) {
       const f = kind.slice(6) as Owoc;
@@ -1108,6 +1120,9 @@ export class GameScene extends Phaser.Scene {
     const w = this.story.wizardSpot();
     if (w) spots.push(w);
     if (!this.challenge) for (const n of this.training.visibleNpcs()) spots.push(n);
+    // Whoever is waiting for their stolen thing.
+    const fq = this.folkQuest?.folk;
+    if (fq?.sprite?.visible) spots.push(fq);
     const blink = 0.55 + 0.45 * Math.sin(this.time.now / 180);
     spots.forEach((p, i) => {
       const b = (this.bubbles[i] ??= this.add.image(0, 0, TEX.talkBubble).setDepth(1_150_000));
@@ -1400,6 +1415,10 @@ export class GameScene extends Phaser.Scene {
     for (const ch of f.id + today()) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const pick = (a: string[]) => a[(h >>> 0) % a.length];
     const hello = pick(M.powitania);
+    // Imps stole something: an errand into the fields (one at a time).
+    const q = this.folkQuest;
+    if (q && q.folk === f) return this.folkQuestTalk();
+    if (!q && f.role === 'wita' && !f.beaten && ((h >>> 9) % 1000) / 1000 < PROSBY.szansa && this.offerFolkQuest(f, h)) return;
     // Some tell where they are going – and go there along the streets.
     if (f.role === 'wita' && !f.beaten && ((h >>> 3) % 100) / 100 < M.sprawunki) {
       const errand = this.errandFor(f);
@@ -1424,6 +1443,113 @@ export class GameScene extends Phaser.Scene {
         if (i === 1) this.dialog({ title: `⚔ ${f.name}`, text: pick(M.przyjmuje), buttons: ['Do dzieła!'], onChoose: () => this.startDuel(f) });
       },
     });
+  }
+
+  /** Imps stole something from a passer-by: what, where they ran, the thieves, who is waiting. */
+  private folkQuest: {
+    folk: Folk;
+    zguba: (typeof PROSBY.zguby)[number];
+    target: { x: number; y: number };
+    gdzie: string;
+    kierunek: string;
+    enemies: Enemy[];
+    item?: Phaser.GameObjects.Image;
+    got: boolean;
+  } | null = null;
+
+  /** A quiet spot in the fields, meadows or a wood 300–900 m from (x, y), away from places and gangs. */
+  private questSpot(x: number, y: number): { x: number; y: number; kind: string } | null {
+    const [lo, hi] = PROSBY.odlegloscM;
+    for (let t = 0; t < 200; t++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = (lo + Math.random() * (hi - lo)) * PX_PER_M;
+      const px = x + Math.cos(a) * d;
+      const py = y + Math.sin(a) * d;
+      const box = { x0: px - 60, y0: py - 60, x1: px + 60, y1: py + 60 };
+      if (!this.city.ready(box) || !this.city.isFree(px, py + FEET.dy, 6, 6) || this.streets.blocks(px, py)) continue;
+      const kinds = this.city.areaKindsAt(px, py);
+      const kind = ['forest', 'farmland', 'scrub', 'grass'].find((k) => kinds.includes(k));
+      if (!kind && t < 150) continue;
+      if (this.city.places.some((p) => Math.hypot(p.door.x - px, p.door.y - py) < 150 * PX_PER_M)) continue;
+      return { x: px, y: py, kind: kind ?? '' };
+    }
+    return null;
+  }
+
+  private offerFolkQuest(f: Folk, h: number): boolean {
+    const spot = this.questSpot(f.x, f.y);
+    if (!spot) return false;
+    const P = PROSBY;
+    const zguba = P.zguby[(h >>> 4) % P.zguby.length];
+    const gdzie = spot.kind === 'forest' ? 'do lasu' : spot.kind === 'farmland' ? 'w pole' : spot.kind === 'scrub' ? 'w zarośla' : spot.kind === 'grass' ? 'na łąkę' : 'za zabudowania';
+    const ang = Math.atan2(spot.y - f.y, spot.x - f.x);
+    const kierunek = ['wschód', 'południowy wschód', 'południe', 'południowy zachód', 'zachód', 'północny zachód', 'północ', 'północny wschód'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+    const m = Math.round(Math.hypot(spot.x - f.x, spot.y - f.y) / PX_PER_M / 50) * 50;
+    const text = P.prosba[(h >>> 7) % P.prosba.length].replace('{co}', zguba.co).replace('{gdzie}', gdzie).replace('{m}', String(m)).replace('{kierunek}', kierunek);
+    this.dialog({
+      title: `😟 ${f.name}`,
+      text: `${text}\n\nNagroda: ${P.nagroda.monety} monet i ${P.nagroda.exp} EXP.`,
+      buttons: ['Pomogę! ⚔', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0 || this.folkQuest || this.questsFull()) return;
+        const enemies: Enemy[] = [];
+        for (let k = 0; k < P.ile; k++) {
+          for (let t = 0; t < 60; t++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 6 + Math.random() * 30;
+            const x = spot.x + Math.cos(a) * r;
+            const y = spot.y + Math.sin(a) * r;
+            if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
+            const e = this.spawnEnemy(x, y, undefined, 'glut');
+            e.temp = true;
+            e.folkQuest = true;
+            e.roam = 30;
+            enemies.push(e);
+            break;
+          }
+        }
+        if (!enemies.length) return;
+        enemies[Math.floor(Math.random() * enemies.length)].carrier = true;
+        f.waiting = true;
+        this.folkQuest = { folk: f, zguba, target: { x: spot.x, y: spot.y }, gdzie, kierunek, enemies, got: false };
+        this.emitHud();
+      },
+    });
+    return true;
+  }
+
+  /** One of the thieves fell; the one carrying the loot drops it. */
+  private folkQuestKill(e: Enemy) {
+    const q = this.folkQuest;
+    if (!q) return;
+    q.enemies = q.enemies.filter((x) => x !== e);
+    if (e.carrier && !q.got && !q.item) {
+      const item = this.add.image(e.x, e.y, TEX.questItem).setDepth(e.y - 8);
+      item.setData('kind', 'quest');
+      this.pickups.push(item);
+      q.item = item;
+      this.toast(`${q.zguba.ikona} Chochlik upuścił: ${q.zguba.nazwa}!`, 2500);
+    }
+    this.emitHud();
+  }
+
+  private folkQuestTalk() {
+    const q = this.folkQuest!;
+    const f = q.folk;
+    if (!q.got) {
+      this.dialog({ title: `😟 ${f.name}`, text: PROSBY.czekam.replace('{gdzie}', q.gdzie).replace('{kierunek}', q.kierunek), buttons: ['Już idę!'], onChoose: () => {} });
+      return;
+    }
+    const r = PROSBY.nagroda;
+    earn(r.monety);
+    session.exp += r.exp;
+    session.stats.missions++;
+    f.waiting = false;
+    for (const e of q.enemies) e.temp = true;
+    this.folkQuest = null;
+    this.dialog({ title: `😊 ${f.name}`, text: `${PROSBY.dziekuje.replace('{nazwa}', q.zguba.nazwa)}\n\n+${r.monety} monet, +${r.exp} EXP`, buttons: ['Nie ma za co!'], onChoose: () => {} });
+    this.emitHud();
+    this.save();
   }
 
   /** Where a passer-by is going today (by the day of the week) and the way there. */
@@ -2554,6 +2680,17 @@ export class GameScene extends Phaser.Scene {
     if (c?.kind === 'wyscig') {
       const t = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
       out.push({ id: 'sport', title: 'Wyścig', text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to });
+    }
+    const fq = this.folkQuest;
+    if (fq) {
+      const title = `${fq.zguba.ikona} ${fq.zguba.nazwa}`;
+      if (fq.got) out.push({ id: 'folk-quest', title, text: `Oddaj: ${fq.zguba.nazwa} – ${fq.folk.name}`, pos: { x: fq.folk.x, y: fq.folk.y } });
+      else if (fq.item) out.push({ id: 'folk-quest', title, text: `Podnieś: ${fq.zguba.nazwa}`, pos: { x: fq.item.x, y: fq.item.y } });
+      else {
+        const foes = fq.enemies.filter((e) => e.active && !e.isDead);
+        const near = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : null;
+        out.push({ id: 'folk-quest', title, text: `Odbij: ${fq.zguba.nazwa} (chochliki ${PROSBY.ile - foes.length}/${PROSBY.ile})`, pos: near ? { x: near.x, y: near.y } : fq.target });
+      }
     }
     const gq = this.fixed.grazynkaQuest();
     if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', ...gq });

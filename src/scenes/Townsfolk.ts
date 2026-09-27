@@ -31,6 +31,8 @@ export interface Folk {
   along?: number;
   /** Arrived and went in (gone for this session). */
   gone?: boolean;
+  /** Waiting for the hero to bring back what imps stole (stands still). */
+  waiting?: boolean;
 }
 
 /** Night by the phone's clock (fewer people, more monsters). */
@@ -167,7 +169,7 @@ export class Townsfolk {
           this.scene.tweens.add({ targets: s, alpha: 0, duration: 500, onComplete: () => s.setVisible(false) });
           continue;
         }
-      } else {
+      } else if (!f.waiting) {
         f.walker.step(dt);
         f.x = f.walker.x;
         f.y = f.walker.y;

@@ -20,11 +20,14 @@ export interface RodzajGangu {
   naKm2: number;
   herszt: RodzajWroga;
   nagroda: { monety: number; exp: number };
+  /** Nazwa rodzaju żeńskiego („Banda rozbita”). */
+  zenska?: boolean;
 }
 
 export const GANGI: RodzajGangu[] = [
-  { nazwa: 'Mały gang', promienM: 300, czlonkow: [5, 8], naKm2: 0.35, herszt: 'herszt', nagroda: { monety: 40, exp: 60 } },
-  { nazwa: 'Wielki gang', promienM: 700, czlonkow: [12, 18], naKm2: 0.08, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
+  { nazwa: 'Banda', promienM: 110, czlonkow: [4, 6], naKm2: 0.45, herszt: 'herszt', nagroda: { monety: 25, exp: 40 }, zenska: true },
+  { nazwa: 'Mały gang', promienM: 220, czlonkow: [6, 9], naKm2: 0.25, herszt: 'herszt', nagroda: { monety: 40, exp: 60 } },
+  { nazwa: 'Wielki gang', promienM: 450, czlonkow: [12, 18], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
 ];
 
 /** Bez gangów: środek gangu co najmniej tyle metrów od ważnych miejsc, członkowie tyle od drzwi. */

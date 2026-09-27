@@ -71,6 +71,7 @@ export const TEX = {
   cart: 'cart',
   coach: 'coach',
   piggy: 'piggy',
+  questItem: 'questItem',
   bubble: 'bubble',
 } as const;
 
@@ -574,6 +575,18 @@ function drawTent(scene: Phaser.Scene) {
   px(ctx, 15, 13, 5, 2, '#6b4423');
   px(ctx, 16, 10, 3, 3, '#e07a2e');
   px(ctx, 17, 9, 1, 2, '#f7e27a');
+  tex.refresh();
+}
+
+/** A stolen thing a townsperson wants back: a little bundle with a yellow "!". */
+function drawQuestItem(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.questItem, 12, 12);
+  px(ctx, 2, 4, 8, 8, OUTLINE);
+  px(ctx, 3, 5, 6, 6, '#b07a3c');
+  px(ctx, 4, 3, 4, 2, OUTLINE);
+  px(ctx, 5, 2, 2, 1, '#e8c170');
+  px(ctx, 5, 6, 2, 3, '#f7c531');
+  px(ctx, 5, 10, 2, 1, '#f7c531');
   tex.refresh();
 }
 
@@ -1180,6 +1193,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
     p(6, 7, 2, 3, '#1e1a24');
   });
   drawTent(scene);
+  drawQuestItem(scene);
   drawSignpost(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');

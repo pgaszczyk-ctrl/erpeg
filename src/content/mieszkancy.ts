@@ -45,3 +45,38 @@ export const MIESZKANCY = {
   wygrana: ['Uff… Wygrałeś. Szacunek, wojowniku!', 'Dobra walka! Jesteś lepszy, niż myślałem.'],
   przegrana: ['Ha! Tym razem wygrałem ja. Wróć, gdy potrenujesz!', 'Nie tym razem, przyjacielu!'],
 };
+
+// ----------------------------------------------------------------------------
+//  PROŚBY MIESZKAŃCÓW – czasem ktoś się żali, że chochliki coś mu ukradły
+//  i uciekły w pole albo do lasu. Trzeba tam pójść, pokonać je (ile) – jeden
+//  z nich upuści zgubę – i oddać ją właścicielowi (czeka tam, gdzie z nim
+//  rozmawiałeś). Naraz jedna taka prośba.
+// ----------------------------------------------------------------------------
+export const PROSBY = {
+  /** Jaka część witających się ma prośbę (reszta tylko się wita). */
+  szansa: 0.1,
+  ile: 5,
+  /** Jak daleko od proszącego (metry). */
+  odlegloscM: [300, 900] as [number, number],
+  nagroda: { monety: 20, exp: 40 },
+  zguby: [
+    { co: 'kota', nazwa: 'Kot Mruczek', ikona: '🐈' },
+    { co: 'wałek do ciasta', nazwa: 'Wałek do ciasta', ikona: '🥖' },
+    { co: 'okulary', nazwa: 'Okulary', ikona: '👓' },
+    { co: 'pluszowego misia wnuczka', nazwa: 'Pluszowy miś', ikona: '🧸' },
+    { co: 'kurę Zosię', nazwa: 'Kura Zosia', ikona: '🐔' },
+    { co: 'klucze do domu', nazwa: 'Klucze', ikona: '🔑' },
+    { co: 'kapelusz dziadka', nazwa: 'Kapelusz dziadka', ikona: '🎩' },
+    { co: 'słoik konfitur', nazwa: 'Słoik konfitur', ikona: '🍯' },
+    { co: 'piłkę syna', nazwa: 'Piłka', ikona: '⚽' },
+    { co: 'portfel', nazwa: 'Portfel', ikona: '👛' },
+  ],
+  /** {co} – co ukradły, {gdzie} – dokąd uciekły, {kierunek}, {m} – ile metrów. */
+  prosba: [
+    'Ojej, pomóż! Chochliki ukradły mi {co} i uciekły {gdzie}, jakieś {m} m na {kierunek}! Odzyskasz?',
+    'Dzień dobry… Mam kłopot: banda chochlików porwała {co}. Widziałem, jak biegły {gdzie}, tak {m} m na {kierunek}.',
+    'Te przeklęte chochliki! Zabrały {co} i uciekły {gdzie} – ze {m} m stąd, na {kierunek}. Pomożesz?',
+  ],
+  czekam: 'Czekam tutaj! Chochliki są {gdzie}, na {kierunek}.',
+  dziekuje: 'Jest! {nazwa}! Dziękuję z całego serca! Weź to w podzięce.',
+};
