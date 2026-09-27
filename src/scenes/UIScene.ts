@@ -13,6 +13,9 @@ import { session } from '../quests';
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
 // Runs on top of GameScene with its own unzoomed camera.
+/** How long the big quest lines stay after login or a new quest. */
+const QUESTS_SHOWN_MS = 10_000;
+
 export class UIScene extends Phaser.Scene {
   private hearts: Phaser.GameObjects.Image[] = [];
   /** Heal button (🧪 potion / 🍎 20 fruit), shown when hurt and there is something to heal with. */
@@ -25,7 +28,7 @@ export class UIScene extends Phaser.Scene {
   private expText!: Phaser.GameObjects.Text;
   private titleText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
-  private mapBtn!: Phaser.GameObjects.Text;
+  private mapBtn!: Phaser.GameObjects.Image;
   /** The hero's portrait (top right); tapping it opens the character sheet. */
   private charBtn!: Phaser.GameObjects.Image;
   private portraitBox!: Phaser.GameObjects.Graphics;
@@ -56,6 +59,22 @@ export class UIScene extends Phaser.Scene {
   private goalText!: Phaser.GameObjects.Text;
   /** One line and one arrow per active quest (up to 3), in its colour. */
   private questTexts: Phaser.GameObjects.Text[] = [];
+  private questSmall: Phaser.GameObjects.Text[] = [];
+  /** The quests shown last (a new one shows the big lines again). */
+  private questKey = '';
+  private questTimer?: Phaser.Time.TimerEvent;
+
+  /** Big quest lines for QUESTS_SHOWN_MS (after login, or a new quest), then only small ones on a computer. */
+  private showQuests() {
+    this.questTimer?.remove();
+    this.tweens.killTweensOf([...this.questTexts, ...this.questSmall]);
+    for (const t of this.questTexts) t.setAlpha(1);
+    for (const t of this.questSmall) t.setAlpha(0);
+    this.questTimer = this.time.delayedCall(QUESTS_SHOWN_MS, () => {
+      this.tweens.add({ targets: this.questTexts, alpha: 0, duration: 1200 });
+      if (!window.matchMedia('(pointer: coarse)').matches) this.tweens.add({ targets: this.questSmall, alpha: 0.9, duration: 1200, delay: 600 });
+    });
+  }
   private arrows: Phaser.GameObjects.Image[] = [];
   private toastText!: Phaser.GameObjects.Text;
   private hud?: HudState;
@@ -110,9 +129,7 @@ export class UIScene extends Phaser.Scene {
         this.add.text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 }).setOrigin(0, 0.5),
       );
     }
-    this.mapBtn = this.add
-      .text(0, 0, '🗺', { fontFamily: 'sans-serif', fontSize: `${11 * this.ui}px` })
-      .setOrigin(1, 0);
+    this.mapBtn = this.add.image(0, 0, TEX.mapIcon).setScale(this.ui).setOrigin(1, 0);
 
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
@@ -120,6 +137,12 @@ export class UIScene extends Phaser.Scene {
     this.streetText = label(small).setOrigin(0.5, 0);
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
     this.questTexts = [0, 1, 2].map(() => label(small, '#ffffff').setOrigin(0.5, 0));
+    // After a while the quest lines fade (they cover the map); a computer keeps them small on the right.
+    this.questSmall = [0, 1, 2].map(() =>
+      this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '10px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3, align: 'right' }).setOrigin(1, 0).setAlpha(0),
+    );
+    this.questKey = '';
+    this.showQuests();
     this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit):
@@ -254,7 +277,7 @@ export class UIScene extends Phaser.Scene {
     const lx = right - 18 * u - 4 * u;
     this.coinText.setPosition(lx, pad - u);
     this.coinIcon.setPosition(lx - this.coinText.width - 2 * u, pad);
-    this.mapBtn.setPosition(this.coinIcon.x - 10 * u - 4 * u, pad - u);
+    this.mapBtn.setPosition(this.coinIcon.x - 10 * u, pad);
     // Left: menu, weapon (or the purple duel hearts), fruit.
     this.duelHearts.forEach((h, i) => h.setPosition(hx + i * 10 * u, pad + 2 * u));
     this.swordText.setPosition(hx, pad + 2 * u);
@@ -276,6 +299,12 @@ export class UIScene extends Phaser.Scene {
       if (t.text) qy += t.height + 1;
     }
     this.streetText.setPosition(width / 2, ty);
+    // Small quest lines on the right, under the level and title.
+    let sqy = (this.titleText.text ? this.titleText.y + this.titleText.height : this.expText.y + this.expText.height) + 3 * u;
+    for (const t of this.questSmall) {
+      t.setWordWrapWidth(Math.min(260, width / 3)).setPosition(right, sqy);
+      if (t.text) sqy += t.height + 1;
+    }
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
     this.skillBar.setPosition(width / 2, height * 0.66);
 
@@ -349,9 +378,15 @@ export class UIScene extends Phaser.Scene {
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
     this.questTexts.forEach((t, i) => {
       const q = s.lingering === null ? s.quests[i] : undefined;
-      t.setText(q ? `${q.main ? '⭐' : '🎯'} ${q.text}` : '').setColor(q ? q.color : '#ffffff');
+      const text = q ? `${q.main ? '⭐' : '🎯'} ${q.text}` : '';
+      t.setText(text).setColor(q ? q.color : '#ffffff');
+      this.questSmall[i].setText(text).setColor(q ? q.color : '#ffffff');
       if (q) this.arrows[i].setTexture(arrowTexture(this, q.color));
     });
+    // A quest that wasn't there before: show the big lines again for a while.
+    const ids = s.quests.map((q) => q.color); // each quest keeps its colour while active
+    if (ids.some((id) => !this.questKey.split('\n').includes(id)) && this.questKey !== '') this.showQuests();
+    this.questKey = ids.join('\n') || ' ';
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
   }

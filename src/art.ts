@@ -60,6 +60,7 @@ export const TEX = {
   tent: 'tent',
   signpost: 'signpost',
   peak: 'peak',
+  mapIcon: 'map-icon',
   heartBonus: 'heart-bonus',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
@@ -622,6 +623,30 @@ function drawPeak(scene: Phaser.Scene) {
   px(ctx, 6, 0, 1, 7, OUTLINE);
   px(ctx, 7, 0, 4, 2, '#ffffff');
   px(ctx, 7, 2, 4, 2, '#d8323c');
+  tex.refresh();
+}
+
+/** The map button: a folded paper map with a red route and a cross. */
+function drawMapIcon(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.mapIcon, 14, 12);
+  // Three folded panels, the middle one a little lower.
+  px(ctx, 0, 0, 5, 11, OUTLINE);
+  px(ctx, 4, 1, 6, 11, OUTLINE);
+  px(ctx, 9, 0, 5, 11, OUTLINE);
+  px(ctx, 1, 1, 3, 9, '#e9d8a6');
+  px(ctx, 5, 2, 4, 9, '#d8c48e');
+  px(ctx, 10, 1, 3, 9, '#e9d8a6');
+  // Green land, blue water.
+  px(ctx, 1, 6, 3, 4, '#6abe30');
+  px(ctx, 5, 8, 4, 3, '#6abe30');
+  px(ctx, 10, 1, 3, 3, '#5b9bd5');
+  // Dotted red route to a cross.
+  for (const [x, y] of [[2, 3], [4, 4], [6, 5], [8, 5]]) px(ctx, x, y, 1, 1, '#d8323c');
+  px(ctx, 10, 6, 1, 1, '#d8323c');
+  px(ctx, 12, 6, 1, 1, '#d8323c');
+  px(ctx, 11, 7, 1, 1, '#d8323c');
+  px(ctx, 10, 8, 1, 1, '#d8323c');
+  px(ctx, 12, 8, 1, 1, '#d8323c');
   tex.refresh();
 }
 
@@ -1210,6 +1235,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
   drawQuestItem(scene);
   drawSignpost(scene);
   drawPeak(scene);
+  drawMapIcon(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');
