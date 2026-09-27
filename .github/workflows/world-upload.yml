@@ -16,15 +16,15 @@ jobs:
     timeout-minutes: 360
     env:
       BUCKET: erpeg-mapy
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: auto
       ACCOUNT: ${{ secrets.R2_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - name: Check the keys
         run: |
-          if [ -z "$ACCOUNT" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+          if [ -z "$ACCOUNT" ] || [ -z "$R2_KEY" ] || [ -z "$R2_SECRET" ]; then
             echo "::error::Brak kluczy Cloudflare R2 w Settings → Secrets (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)"; exit 1
           fi
           # Whatever was pasted: just the account id, a whole endpoint address, with spaces or new lines.
@@ -35,7 +35,7 @@ jobs:
           echo "::add-mask::$A"
           echo "ENDPOINT=https://$A.r2.cloudflarestorage.com" >> "$GITHUB_ENV"
           # Keys pasted with a stray space or new line.
-          K=$(printf '%s' "$AWS_ACCESS_KEY_ID" | tr -d '[:space:]'); S=$(printf '%s' "$AWS_SECRET_ACCESS_KEY" | tr -d '[:space:]')
+          K=$(printf '%s' "$R2_KEY" | tr -d '[:space:]'); S=$(printf '%s' "$R2_SECRET" | tr -d '[:space:]')
           echo "::add-mask::$K"; echo "::add-mask::$S"
           echo "AWS_ACCESS_KEY_ID=$K" >> "$GITHUB_ENV"; echo "AWS_SECRET_ACCESS_KEY=$S" >> "$GITHUB_ENV"
       - run: sudo -v && curl -sfL https://rclone.org/install.sh | sudo bash
