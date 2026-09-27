@@ -1,0 +1,25 @@
+name: World map check
+
+# Checks that the game's pages can read the world map from Cloudflare R2:
+# world.json, the CORS header for the game's address and a byte range of the file.
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/world-check.yml]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read world.json and a piece of the map
+        run: |
+          set -euo pipefail
+          BASE=https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev
+          ORIGIN=https://pgaszczyk-ctrl.github.io
+          curl -sS -D - -H "Origin: $ORIGIN" "$BASE/world.json" | tee head.txt
+          FILE=$(tail -1 head.txt | sed -E 's/.*"file":"([^"]+)".*/\1/')
+          echo; echo "File: $FILE"
+          grep -qi '^access-control-allow-origin' head.txt && echo "CORS OK" || { echo "::error::No CORS header for $ORIGIN"; exit 1; }
+          curl -sS -D - -H "Origin: $ORIGIN" -H "Range: bytes=0-15" "$BASE/$FILE" -o piece.bin | grep -iE '^(HTTP|content-range|access-control)'
+          head -c 7 piece.bin; echo
+          [ "$(head -c 7 piece.bin)" = "PMTiles" ] && echo "Map file OK" || { echo "::error::Not a PMTiles file"; exit 1; }
