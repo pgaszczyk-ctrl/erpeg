@@ -1,0 +1,56 @@
+name: World map to Cloudflare
+
+# Copies the newest Protomaps world map (~120 GB, one file read in small
+# pieces by the game) into the Cloudflare R2 bucket erpeg-mapy, then points
+# world.json at it and removes older copies. Needs the repository secrets
+# R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY. Runs by hand and
+# once a month.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 3 * *'
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      BUCKET: erpeg-mapy
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      ACCOUNT: ${{ secrets.R2_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the keys
+        run: |
+          if [ -z "$ACCOUNT" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Brak kluczy Cloudflare R2 w Settings → Secrets (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)"; exit 1
+          fi
+          echo "ENDPOINT=https://$ACCOUNT.r2.cloudflarestorage.com" >> "$GITHUB_ENV"
+      - run: sudo -v && curl -sfL https://rclone.org/install.sh | sudo bash
+      - name: Let the game's pages read the bucket
+        run: |
+          cat > cors.json <<'JSON'
+          {"CORSRules":[{"AllowedOrigins":["https://pgaszczyk-ctrl.github.io","http://localhost:5173","http://localhost:4173"],"AllowedMethods":["GET","HEAD"],"AllowedHeaders":["range","if-match"],"ExposeHeaders":["etag","content-length","content-range"],"MaxAgeSeconds":86400}]}
+          JSON
+          aws s3api put-bucket-cors --endpoint-url "$ENDPOINT" --bucket "$BUCKET" --cors-configuration file://cors.json
+      - name: Copy the newest world map
+        run: |
+          set -euo pipefail
+          B=$(scripts/world-latest.sh)
+          echo "Build: $B"
+          export RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare RCLONE_CONFIG_R2_ENDPOINT="$ENDPOINT" \
+                 RCLONE_CONFIG_R2_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+          if rclone lsf "r2:$BUCKET/world-$B" 2>/dev/null | grep -q .; then
+            echo "Already there"
+          else
+            rclone copyurl "https://build.protomaps.com/$B" "r2:$BUCKET/world-$B" --s3-chunk-size 64M --s3-upload-concurrency 8 --stats 60s --stats-one-line -v
+          fi
+          echo "{\"file\":\"world-$B\",\"build\":\"${B%.pmtiles}\"}" > world.json
+          rclone copyto world.json "r2:$BUCKET/world.json" --header-upload "Cache-Control: no-cache"
+          # Older copies (keep the new one only).
+          for f in $(rclone lsf "r2:$BUCKET" --include 'world-*.pmtiles'); do
+            [ "$f" = "world-$B" ] || rclone deletefile "r2:$BUCKET/$f"
+          done
+          rclone lsl "r2:$BUCKET"
