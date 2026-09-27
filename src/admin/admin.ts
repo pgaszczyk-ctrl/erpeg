@@ -575,7 +575,7 @@ function settings(main: HTMLElement) {
         msg.textContent = (e as Error).message;
       }
     }, 'b p'),
-  ]), btn('Wyloguj', () => {
+  ]), quizCard(), btn('Wyloguj', () => {
     key = '';
     try {
       sessionStorage.removeItem('erpeg-admin');
@@ -584,6 +584,42 @@ function settings(main: HTMLElement) {
     }
     loginScreen();
   }));
+}
+
+/** School quizzes: counts and the upload key for an outside program (add_quizzes). */
+function quizCard() {
+  type Q = { today: number; tomorrow: number; byLevel: Record<string, number>; hasKey: boolean; last: string | null; sample: { level: number; category: string; question: string; answers: string[] }[] };
+  const info = el('div', {}, ['Wczytuję…']);
+  const keyOut = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const LEVELS = ['maluch', 'uczeń', 'odkrywca', 'mędrzec'];
+  const load = () =>
+    call<Q>('admin_quizzes', {}).then((q) => {
+      info.replaceChildren(
+        el('p', {}, [`Na dziś: ${q.today} pytań, na jutro: ${q.tomorrow}. ${LEVELS.map((l, i) => `${l}: ${q.byLevel[i] ?? 0}`).join(', ')}.`]),
+        el('p', {}, [q.last ? `Ostatnia paczka: ${new Date(q.last).toLocaleString('pl-PL')}` : 'Jeszcze nic nie wgrano – gra używa pytań wbudowanych i sama układa rachunki.']),
+        el('p', {}, [q.hasKey ? 'Klucz do wgrywania jest ustawiony.' : 'Brak klucza do wgrywania.']),
+        ...q.sample.slice(0, 5).map((s) => el('p', { className: 'msg' }, [`[${LEVELS[s.level]}, ${s.category}] ${s.question} → ${s.answers[0]}`])),
+      );
+    }).catch((e: Error) => info.replaceChildren(e.message));
+  load();
+  return el('div', { className: 'card', style: 'max-width: 640px' }, [
+    el('h3', {}, ['🧠 Quizy w szkołach']),
+    info,
+    el('p', {}, ['Zewnętrzny program (np. inny AI na harmonogramie) wgrywa pytania funkcją add_quizzes z kluczem poniżej; każda paczka jest ważna 2 dni, stare same znikają. Opis: docs/quizy.md w repozytorium.']),
+    btn('Wygeneruj nowy klucz', async () => {
+      if (!confirm('Stary klucz przestanie działać. Wygenerować nowy?')) return;
+      try {
+        const r = await call<{ key: string }>('admin_new_quiz_key', {});
+        keyOut.style.display = 'block';
+        keyOut.textContent = `Nowy klucz (pokazany tylko raz – skopiuj go do programu):\n${r.key}`;
+        load();
+      } catch (e) {
+        keyOut.style.display = 'block';
+        keyOut.textContent = (e as Error).message;
+      }
+    }, 'b'),
+    keyOut,
+  ]);
 }
 
 // ------------------------------------------------------------------ start

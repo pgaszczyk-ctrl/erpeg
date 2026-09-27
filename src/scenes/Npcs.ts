@@ -49,7 +49,7 @@ export function levelForAge(age: number) {
 }
 
 /** Sums the game makes up, harder for older players. */
-function sum(level: number, r: () => number): Zagadka {
+export function rachunek(level: number, r: () => number): Zagadka {
   const n = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
   const near = (v: number, spread: number) => {
     const set = new Set<number>([v]);
@@ -108,7 +108,7 @@ export function riddleFor(npc: Npc, day: string, age: number): Riddle {
   const level = Phaser.Math.Clamp(levelForAge(age) + npc.difficulty, 0, POZIOMY.length - 1);
   const r = rng(hash(`${npc.id}:${day}:${level}`));
   const pool = POZIOMY[level].zagadki;
-  const z = r() < SZANSA_NA_RACHUNEK || !pool.length ? sum(level, r) : pool[Math.floor(r() * pool.length)];
+  const z = r() < SZANSA_NA_RACHUNEK || !pool.length ? rachunek(level, r) : pool[Math.floor(r() * pool.length)];
   // Shuffle, remembering where the right answer went.
   const order = z.odpowiedzi.map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {

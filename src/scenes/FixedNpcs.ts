@@ -4,18 +4,28 @@ import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { rng } from '../rng';
 import { tr, tx } from '../i18n';
-import { PIES, MARGO, DZIADKOWIE, type ZagadkaPL } from '../content/postacie';
-import { session, type MissionState } from '../quests';
+import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, type ZagadkaPL } from '../content/postacie';
+import { session, earn, type MissionState } from '../quests';
+import { groupCount, takeGroup, groupValue, sellGroup } from '../inventory';
+import { levelForAge } from './Npcs';
+import type { Place } from '../map/CityMap';
 import { today } from './Npcs';
 
 // The fixed characters from content/postacie.ts: a dog on Guliwera/Cyda that
 // lost its piggy, Sister Margo on Orlanda and Grandpa Marek or Grandma Iwonka
-// by Śnieżyńskiego 19–27. They stroll slowly along their streets.
+// by Śnieżyńskiego 19–27, Grandma Grażynka on Kościelna in Garbów. They
+// stroll slowly along their streets.
+
+/** Grandma Grażynka's quest steps (saved in session.missions / session.daily). */
+export type GrazynkaStep = 'new' | 'owoce' | 'sklep' | 'powrot' | 'zagadki' | 'done';
 
 export interface FixedHost {
   dialog(req: { title: string; text: string; buttons: string[]; onChoose: (i: number) => void }): void;
   toast(text: string, ms?: number): void;
-  riddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void): void;
+  riddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void, opts?: { coins?: number; then?: (right: boolean) => void; retry?: boolean }): void;
+  /** No room for another quest? (says so) */
+  questsFull(): boolean;
+  hud(): void;
   gainExp(n: number): void;
   save(): void;
   /** Fruit trees near a point (x, y of the trunk, crown width). */
@@ -134,10 +144,14 @@ export class FixedNpcs {
   private barkAt = 0;
   private r = rng(hash(`fixed:${today()}`));
   private grandIndex = hash(`dziadkowie:${today()}`) % DZIADKOWIE.osoby.length;
+  /** Grandma Grażynka's village centre; she appears once her street is loaded. */
+  private grazynkaHome: Pt | null = null;
+  private grazynkaTry = 0;
 
   constructor(private scene: Phaser.Scene, private city: CityMap, private host: FixedHost) {
-    // They all live in Lublin.
+    // They all live in Lublin (Garbów is part of its map).
     if (city.id !== 'lublin') return;
+    this.grazynkaHome = city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
     const streetLines = (names: string[]) =>
       city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
 
@@ -227,7 +241,25 @@ export class FixedNpcs {
     return at;
   }
 
+  /** Grandma Grażynka walks Kościelna nearest her village centre (made when its tiles are there). */
+  private placeGrazynka(px: number, py: number, now: number) {
+    const home = this.grazynkaHome;
+    if (!home || now < this.grazynkaTry) return;
+    this.grazynkaTry = now + 1000;
+    const r = GRAZYNKA.miejscowosc.promienKm * 1000 * PX_PER_M;
+    if (Math.hypot(px - home.x, py - home.y) > r + 1500 * PX_PER_M) return;
+    const lines = this.city.lines
+      .filter((l) => l.name === GRAZYNKA.ulica && l.pts.length >= 4 && Math.hypot(l.pts[0] - home.x, l.pts[1] - home.y) < r)
+      .map((l) => l.pts);
+    if (!lines.length) return;
+    this.grazynkaHome = null;
+    const w = new Walker(lines, GRAZYNKA.predkosc * PX_PER_M, this.r);
+    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xc8e6a0);
+    this.list.push({ id: 'grazynka', walker: w, sprite, x: w.x, y: w.y });
+  }
+
   update(dt: number, px: number, py: number, now: number, visible: (x: number, y: number) => boolean) {
+    this.placeGrazynka(px, py, now);
     for (const w of this.list) {
       if (w.gone || !w.walker) continue;
       const near = Math.abs(w.x - px) < 500 && Math.abs(w.y - py) < 500;
@@ -285,6 +317,7 @@ export class FixedNpcs {
   talk(w: Walking) {
     if (w.id === 'pies') return this.talkDog(w);
     if (w.id === 'margo') return this.talkMargo();
+    if (w.id === 'grazynka') return this.talkGrazynka();
     return this.talkGrand();
   }
 
@@ -325,7 +358,11 @@ export class FixedNpcs {
       if (w.gone || !w.sprite.visible) continue;
       const d = session.daily[w.id];
       const a = d && d.d === day ? d.a : 0;
-      const has = w.id === 'pies' ? this.state('npc-pies') !== 'done' : w.id === 'margo' ? a < MARGO.zagadekDziennie : a < 1;
+      const has =
+        w.id === 'pies' ? this.state('npc-pies') !== 'done'
+        : w.id === 'margo' ? a < MARGO.zagadekDziennie
+        : w.id === 'grazynka' ? this.grazynkaStep() !== 'done' && this.grazynkaStep() !== 'sklep'
+        : a < 1;
       if (has) out.push({ x: w.x, y: w.y });
     }
     return out;
@@ -336,6 +373,141 @@ export class FixedNpcs {
     const d = session.daily[id];
     if (!d || d.d !== day) session.daily[id] = { d: day, n: 0, a: 0 };
     return session.daily[id];
+  }
+
+  // ---------------------------------------------------------------- Grandma Grażynka
+
+  /** Where her quest stands. */
+  grazynkaStep(): GrazynkaStep {
+    const m = this.state('npc-grazynka');
+    if (m === 'new') return 'new';
+    if (m === 'done') return 'done';
+    const t = session.missions['npc-grazynka-narzedzia'];
+    if (!t) return 'owoce';
+    return t === 'active' ? 'sklep' : t === 'goal' ? 'powrot' : 'zagadki';
+  }
+
+  /** A counter kept in the save for good (not reset daily). */
+  private counter(id: string) {
+    return (session.daily[id] ??= { d: '', n: 0, a: 0 });
+  }
+
+  /** Fruit she already got (they can be brought a bit at a time). */
+  grazynkaFruit() {
+    return this.counter('grazynka-owoce').n;
+  }
+
+  /** The shop with her garden tools: the one nearest her village centre. */
+  grazynkaShop(): Place | null {
+    const c = this.city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
+    const shops = this.city.places.filter((p) => p.kind === 'shop');
+    return shops.reduce<Place | null>((a, p) => (!a || Math.hypot(p.door.x - c.x, p.door.y - c.y) < Math.hypot(a.door.x - c.x, a.door.y - c.y) ? p : a), null);
+  }
+
+  /** At the shop: take the tools (true if they were waiting there). */
+  pickUpTools(): boolean {
+    if (this.grazynkaStep() !== 'sklep') return false;
+    session.missions['npc-grazynka-narzedzia'] = 'goal';
+    this.host.save();
+    return true;
+  }
+
+  /** Her quest for the quest log and arrows (null when there is nothing to do). */
+  grazynkaQuest(): { text: string; pos: Pt | null } | null {
+    const step = this.grazynkaStep();
+    if (step === 'new' || step === 'done') return null;
+    const her = this.list.find((w) => w.id === 'grazynka');
+    const pos = her ? { x: her.x, y: her.y } : this.city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
+    if (step === 'owoce') {
+      const n = this.grazynkaFruit() + groupCount('owoce');
+      return { text: tx(`Owoce dla babci (${Math.min(n, GRAZYNKA.owocow)}/${GRAZYNKA.owocow})`, `Fruit for grandma (${Math.min(n, GRAZYNKA.owocow)}/${GRAZYNKA.owocow})`), pos: n >= GRAZYNKA.owocow ? pos : null };
+    }
+    if (step === 'sklep') {
+      const shop = this.grazynkaShop();
+      return { text: tx(`Odbierz narzędzia w sklepie${shop ? `: ${shop.name}` : ''}`, `Pick up the tools at the shop${shop ? `: ${shop.name}` : ''}`), pos: shop ? shop.door : pos };
+    }
+    if (step === 'powrot') return { text: tx('Zanieś narzędzia babci Grażynce', 'Take the tools to Grandma Grażynka'), pos };
+    return { text: tx(`Zagadki babci (${this.counter('grazynka-zagadki').n}/${GRAZYNKA.zagadek})`, `Grandma's riddles (${this.counter('grazynka-zagadki').n}/${GRAZYNKA.zagadek})`), pos };
+  }
+
+  private talkGrazynka() {
+    const title = `👵 ${tr(GRAZYNKA.imie)}`;
+    const step = this.grazynkaStep();
+    const say = (text: string, buttons = ['OK'], onChoose: (i: number) => void = () => {}) => this.host.dialog({ title, text, buttons, onChoose });
+    if (step === 'new') {
+      say(tr(GRAZYNKA.prosba), [tx('Przyniosę! 🍎', 'I will bring it! 🍎'), tx('Nie teraz', 'Not now')], (i) => {
+        if (i !== 0 || this.host.questsFull()) return;
+        session.missions['npc-grazynka'] = 'active';
+        this.host.save();
+        this.host.hud();
+      });
+      return;
+    }
+    if (step === 'owoce') {
+      const got = this.counter('grazynka-owoce');
+      const need = GRAZYNKA.owocow - got.n;
+      const have = groupCount('owoce');
+      if (!have) return say(`${tr(GRAZYNKA.jeszczeNie)} (${got.n}/${GRAZYNKA.owocow})`);
+      const give = takeGroup('owoce', Math.min(need, have));
+      got.n += give;
+      if (got.n < GRAZYNKA.owocow) {
+        this.host.save();
+        this.host.hud();
+        return say(tx(`Dziękuję za ${give} owoców! Mam już ${got.n} z ${GRAZYNKA.owocow}. Przynieś resztę, kochanie.`, `Thank you for ${give} pieces of fruit! I have ${got.n} of ${GRAZYNKA.owocow} now. Bring the rest, sweetie.`));
+      }
+      session.missions['npc-grazynka-narzedzia'] = 'active';
+      this.host.gainExp(GRAZYNKA.expOwoce);
+      this.host.save();
+      return say(`${tr(GRAZYNKA.dziekujeOwoce)}\n\n+${GRAZYNKA.expOwoce} EXP`);
+    }
+    if (step === 'sklep') {
+      const shop = this.grazynkaShop();
+      return say(`${tr(GRAZYNKA.czekaNaNarzedzia)}${shop ? `\n\n🛒 ${shop.name}` : ''}`);
+    }
+    if (step === 'powrot') {
+      session.missions['npc-grazynka-narzedzia'] = 'done';
+      this.host.gainExp(GRAZYNKA.expNarzedzia);
+      this.host.save();
+      return say(`${tr(GRAZYNKA.dziekujeNarzedzia)}\n\n+${GRAZYNKA.expNarzedzia} EXP`, [tx('Pytaj, babciu!', 'Ask away, grandma!'), tx('Później', 'Later')], (i) => {
+        if (i === 0) this.grazynkaRiddle();
+      });
+    }
+    if (step === 'zagadki') return this.grazynkaRiddle();
+    // Done: she buys fruit.
+    const value = groupValue('owoce');
+    if (!value) return say(tr(GRAZYNKA.brakOwocow));
+    say(tr(GRAZYNKA.skup), [tx(`Sprzedaj owoce – ${value} monet`, `Sell fruit – ${value} coins`), tx('Nie teraz', 'Not now')], (i) => {
+      if (i !== 0) return;
+      const v = sellGroup('owoce');
+      earn(v);
+      this.host.save();
+      this.host.hud();
+      this.host.toast(tx(`Babcia Grażynka kupiła owoce za ${v} monet!`, `Grandma Grażynka bought your fruit for ${v} coins!`));
+    });
+  }
+
+  /** Her next botany riddle (a wrong answer: another one next time). */
+  private grazynkaRiddle() {
+    const c = this.counter('grazynka-zagadki');
+    const pool = GRAZYNKA.zagadki[levelForAge(session.age)];
+    const order = [...pool.keys()].sort((a, b) => hash(`grazynka:${session.idik}:${a}`) - hash(`grazynka:${session.idik}:${b}`));
+    const z = pool[order[(c.n + c.a) % pool.length]];
+    const title = `👵 ${tr(GRAZYNKA.imie)}`;
+    this.host.riddle(title, `${tr(GRAZYNKA.zagadkaWstep)} (${c.n + 1}/${GRAZYNKA.zagadek})`, z, 0, `grazynka:${c.n}:${c.a}`, (right) => {
+      if (right) c.n++;
+      else c.a++;
+    }, {
+      retry: true,
+      then: (right) => {
+        if (!right) return;
+        if (c.n < GRAZYNKA.zagadek) return this.grazynkaRiddle();
+        session.missions['npc-grazynka'] = 'done';
+        earn(GRAZYNKA.nagroda.monety);
+        this.host.gainExp(GRAZYNKA.nagroda.exp);
+        this.host.save();
+        this.host.dialog({ title, text: `${tr(GRAZYNKA.koniec)}\n\n+${GRAZYNKA.nagroda.monety} ${tx('monet', 'coins')}, +${GRAZYNKA.nagroda.exp} EXP`, buttons: ['OK'], onChoose: () => {} });
+      },
+    });
   }
 
   private talkMargo() {

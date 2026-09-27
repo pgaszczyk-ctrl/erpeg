@@ -1,3 +1,4 @@
+import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
@@ -111,6 +112,10 @@ export function spend(n: number) {
 
 /** Loads the missions made in the admin panel; the game works without them too. */
 export async function loadContent() {
+  // Today's school quizzes (no waiting for them: the built-in ones fill in).
+  Promise.race([api.quizzes(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+    .then(setServerQuizzes)
+    .catch(() => {});
   try {
     // Never hold up the start for long.
     const list = await Promise.race([

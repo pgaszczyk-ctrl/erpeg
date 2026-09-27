@@ -281,3 +281,28 @@ export function eatFruit(n: number): boolean {
   }
   return true;
 }
+
+/** Takes up to `n` things of one group (cheapest kinds first); returns how many were taken. */
+export function takeGroup(g: Grupa, n: number): number {
+  let taken = 0;
+  const kinds = (Object.keys(OWOCE) as Owoc[]).filter((f) => OWOCE[f].grupa === g).sort((a, b) => OWOCE[a].cena - OWOCE[b].cena);
+  for (const f of kinds) {
+    const take = Math.min(n - taken, fruitCount(f));
+    if (take) takeFruit(f, take);
+    taken += take;
+    if (taken >= n) break;
+  }
+  return taken;
+}
+
+/** What all the things of one group in the backpack are worth. */
+export function groupValue(g: Grupa) {
+  return goodsSlots().reduce((v, s) => v + (s.goods === g ? (Object.entries(s.counts) as [Owoc, number][]).reduce((a, [f, c]) => a + c * OWOCE[f].cena, 0) : 0), 0);
+}
+
+/** Sells every thing of one group from the backpack; returns the coins. */
+export function sellGroup(g: Grupa) {
+  const v = groupValue(g);
+  gear.bag = gear.bag.filter((s) => !('goods' in s) || s.goods !== g);
+  return v;
+}

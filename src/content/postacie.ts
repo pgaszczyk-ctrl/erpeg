@@ -7,8 +7,8 @@
 import type { Txt } from '../i18n';
 
 export interface ZagadkaPL {
-  pytanie: Txt;
-  odpowiedzi: Txt[];
+  pytanie: Txt | string;
+  odpowiedzi: (Txt | string)[];
 }
 
 // ----------------------------------------------------------------------------
@@ -133,4 +133,82 @@ export const DZIADKOWIE = {
     { pytanie: { pl: 'Co jest źródłem energii dla Ziemi?', en: 'What is the main source of energy for the Earth?' }, odpowiedzi: [{ pl: 'Słońce', en: 'The Sun' }, { pl: 'Księżyc', en: 'The Moon' }, { pl: 'Gwiazda Polarna', en: 'The North Star' }] },
     { pytanie: { pl: 'Dźwięk najszybciej rozchodzi się w…', en: 'Sound travels fastest through…' }, odpowiedzi: [{ pl: 'ciałach stałych (np. stali)', en: 'solids (like steel)' }, { pl: 'powietrzu', en: 'air' }, { pl: 'próżni', en: 'a vacuum' }] },
   ] as ZagadkaPL[],
+};
+
+// ----------------------------------------------------------------------------
+//  BABCIA GRAŻYNKA – chodzi ulicą Kościelną w Garbowie. Najpierw prosi
+//  o dużo owoców (razem 500 sztuk, dowolne), za co daje 20 EXP. Potem od
+//  razu wysyła do najbliższego sklepu po narzędzia ogrodnicze – po powrocie
+//  znów 20 EXP. Na koniec 3 zagadki botaniczne (trudność wg poziomu gry;
+//  zła odpowiedź = inna zagadka przy następnej rozmowie). Za wszystkie:
+//  200 monet i 500 EXP. Potem można jej sprzedawać owoce.
+// ----------------------------------------------------------------------------
+export const GRAZYNKA = {
+  imie: { pl: 'Babcia Grażynka', en: 'Grandma Grażynka' },
+  ulica: 'Kościelna',
+  /** Środek Garbowa (jej ulica to Kościelna najbliżej tego miejsca). */
+  miejscowosc: { lat: 51.3542, lon: 22.3327, promienKm: 3 },
+  predkosc: 0.45,
+  owocow: 500,
+  expOwoce: 20,
+  expNarzedzia: 20,
+  zagadek: 3,
+  nagroda: { monety: 200, exp: 500 },
+  prosba: {
+    pl: 'Oj, dziecko drogie! Chcę narobić przetworów na zimę – dżemów, kompotów, powideł – a nogi już nie te. Przyniesiesz mi owoce? Wszystko jedno jakie, byle dużo: 500 sztuk.',
+    en: 'Oh, my dear child! I want to make preserves for winter – jams, compotes, butters – but my legs are not what they were. Will you bring me fruit? Any kind, just lots of it: 500 pieces.',
+  },
+  jeszczeNie: { pl: 'Jeszcze za mało, kochanie. Potrzebuję 500 owoców.', en: 'Not enough yet, sweetie. I need 500 pieces of fruit.' },
+  dziekujeOwoce: {
+    pl: 'Ależ tego! Dziękuję, złotko! Ale wiesz co? Zostawiłam narzędzia ogrodnicze w sklepie – sekator, grabki i konewkę. Skoczysz po nie? To niedaleko.',
+    en: 'Look at all that! Thank you, darling! But you know what? I left my garden tools at the shop – the pruner, the rake and the watering can. Will you run and get them? It is not far.',
+  },
+  wSklepie: { pl: 'Sprzedawca podaje ci worek: sekator, grabki i konewkę babci Grażynki. Zanieś je do niej!', en: 'The shopkeeper hands you a sack: Grandma Grażynka\'s pruner, rake and watering can. Take them to her!' },
+  czekaNaNarzedzia: { pl: 'Sklep jest niedaleko, kochanie. Narzędzia czekają u sprzedawcy.', en: 'The shop is close by, sweetie. The tools are waiting with the shopkeeper.' },
+  dziekujeNarzedzia: {
+    pl: 'Moje narzędzia! Jesteś kochany. A teraz sprawdzę, czy znasz się na roślinach – odpowiesz na trzy moje pytania?',
+    en: 'My tools! You are a treasure. Now let me see if you know your plants – will you answer my three questions?',
+  },
+  zagadkaWstep: { pl: 'Posłuchaj, dziecko…', en: 'Listen, child…' },
+  koniec: {
+    pl: 'Brawo! Prawdziwy z ciebie ogrodnik. Masz tu coś na drogę – i pamiętaj: owoce zawsze od ciebie odkupię!',
+    en: 'Well done! You are a real gardener. Here is something for the road – and remember: I will always buy fruit from you!',
+  },
+  skup: { pl: 'Masz owoce? Chętnie je odkupię na przetwory!', en: 'Got fruit? I will gladly buy it for my preserves!' },
+  brakOwocow: { pl: 'Przyjdź, jak nazbierasz owoców – odkupię je na przetwory.', en: 'Come back when you have picked some fruit – I will buy it for my preserves.' },
+  /** Zagadki botaniczne po poziomach (0 maluch … 3 mędrzec). */
+  zagadki: [
+    [
+      { pytanie: { pl: 'Z czego wyrasta jabłoń?', en: 'What does an apple tree grow from?' }, odpowiedzi: [{ pl: 'Z pestki (nasionka)', en: 'From a pip (seed)' }, { pl: 'Z liścia', en: 'From a leaf' }, { pl: 'Z kamyka', en: 'From a pebble' }] },
+      { pytanie: { pl: 'Czego potrzebuje kwiatek w doniczce?', en: 'What does a potted flower need?' }, odpowiedzi: [{ pl: 'Wody i światła', en: 'Water and light' }, { pl: 'Soku i ciemności', en: 'Juice and darkness' }, { pl: 'Cukierków', en: 'Sweets' }] },
+      { pytanie: { pl: 'Jakiego koloru są dojrzałe truskawki?', en: 'What colour are ripe strawberries?' }, odpowiedzi: [{ pl: 'Czerwone', en: 'Red' }, { pl: 'Niebieskie', en: 'Blue' }, { pl: 'Białe w kropki', en: 'White with dots' }] },
+      { pytanie: { pl: 'Która roślina ma kolce?', en: 'Which plant has thorns?' }, odpowiedzi: [{ pl: 'Róża', en: 'A rose' }, { pl: 'Stokrotka', en: 'A daisy' }, { pl: 'Tulipan', en: 'A tulip' }] },
+      { pytanie: { pl: 'Na czym rosną żołędzie?', en: 'What do acorns grow on?' }, odpowiedzi: [{ pl: 'Na dębie', en: 'On an oak' }, { pl: 'Na brzozie', en: 'On a birch' }, { pl: 'Na sośnie', en: 'On a pine' }] },
+      { pytanie: { pl: 'Co robimy z konewką?', en: 'What do we do with a watering can?' }, odpowiedzi: [{ pl: 'Podlewamy rośliny', en: 'Water plants' }, { pl: 'Kopiemy dołki', en: 'Dig holes' }, { pl: 'Tniemy gałęzie', en: 'Cut branches' }] },
+    ],
+    [
+      { pytanie: { pl: 'Która część rośliny pobiera wodę z ziemi?', en: 'Which part of a plant takes water from the soil?' }, odpowiedzi: [{ pl: 'Korzeń', en: 'The root' }, { pl: 'Kwiat', en: 'The flower' }, { pl: 'Owoc', en: 'The fruit' }] },
+      { pytanie: { pl: 'Które drzewo zrzuca na zimę igły?', en: 'Which tree drops its needles for winter?' }, odpowiedzi: [{ pl: 'Modrzew', en: 'The larch' }, { pl: 'Sosna', en: 'The pine' }, { pl: 'Świerk', en: 'The spruce' }] },
+      { pytanie: { pl: 'Kto zapyla kwiaty jabłoni?', en: 'Who pollinates apple blossoms?' }, odpowiedzi: [{ pl: 'Pszczoły i inne owady', en: 'Bees and other insects' }, { pl: 'Krety', en: 'Moles' }, { pl: 'Ryby', en: 'Fish' }] },
+      { pytanie: { pl: 'Z którego drzewa zbieramy kasztany?', en: 'Which tree gives us conkers?' }, odpowiedzi: [{ pl: 'Z kasztanowca', en: 'The horse chestnut' }, { pl: 'Z lipy', en: 'The lime tree' }, { pl: 'Z wierzby', en: 'The willow' }] },
+      { pytanie: { pl: 'Które warzywo rośnie pod ziemią?', en: 'Which vegetable grows underground?' }, odpowiedzi: [{ pl: 'Marchewka', en: 'The carrot' }, { pl: 'Pomidor', en: 'The tomato' }, { pl: 'Groszek', en: 'The pea' }] },
+      { pytanie: { pl: 'Jak nazywa się kwiat, który obraca się za słońcem?', en: 'Which flower turns to follow the sun?' }, odpowiedzi: [{ pl: 'Słonecznik', en: 'The sunflower' }, { pl: 'Mak', en: 'The poppy' }, { pl: 'Bratek', en: 'The pansy' }] },
+    ],
+    [
+      { pytanie: { pl: 'Jak nazywa się zielony barwnik w liściach?', en: 'What is the green pigment in leaves called?' }, odpowiedzi: [{ pl: 'Chlorofil', en: 'Chlorophyll' }, { pl: 'Hemoglobina', en: 'Haemoglobin' }, { pl: 'Melanina', en: 'Melanin' }] },
+      { pytanie: { pl: 'Botanicznie pomidor to…', en: 'Botanically, a tomato is…' }, odpowiedzi: [{ pl: 'owoc', en: 'a fruit' }, { pl: 'korzeń', en: 'a root' }, { pl: 'łodyga', en: 'a stem' }] },
+      { pytanie: { pl: 'Dlaczego liście jesienią zmieniają kolor?', en: 'Why do leaves change colour in autumn?' }, odpowiedzi: [{ pl: 'Rozkłada się w nich chlorofil', en: 'Their chlorophyll breaks down' }, { pl: 'Bo marzną', en: 'Because they freeze' }, { pl: 'Bo ktoś je maluje', en: 'Because someone paints them' }] },
+      { pytanie: { pl: 'Które z nich to grzyb, a nie roślina?', en: 'Which of these is a fungus, not a plant?' }, odpowiedzi: [{ pl: 'Borowik', en: 'A porcini' }, { pl: 'Paproć', en: 'A fern' }, { pl: 'Mech', en: 'Moss' }] },
+      { pytanie: { pl: 'Paprocie rozmnażają się przez…', en: 'Ferns reproduce by…' }, odpowiedzi: [{ pl: 'zarodniki', en: 'spores' }, { pl: 'nasiona', en: 'seeds' }, { pl: 'bulwy', en: 'tubers' }] },
+      { pytanie: { pl: 'Która roślina jest trująca?', en: 'Which plant is poisonous?' }, odpowiedzi: [{ pl: 'Konwalia', en: 'Lily of the valley' }, { pl: 'Mięta', en: 'Mint' }, { pl: 'Rumianek', en: 'Chamomile' }] },
+    ],
+    [
+      { pytanie: { pl: 'Jak nazywa się przenoszenie pyłku na znamię słupka?', en: 'What do we call moving pollen onto the stigma?' }, odpowiedzi: [{ pl: 'Zapylenie', en: 'Pollination' }, { pl: 'Kiełkowanie', en: 'Germination' }, { pl: 'Transpiracja', en: 'Transpiration' }] },
+      { pytanie: { pl: 'Parowanie wody przez liście to…', en: 'Water evaporating from leaves is called…' }, odpowiedzi: [{ pl: 'transpiracja', en: 'transpiration' }, { pl: 'fotosynteza', en: 'photosynthesis' }, { pl: 'fermentacja', en: 'fermentation' }] },
+      { pytanie: { pl: 'Które rośliny wiążą azot z powietrza dzięki bakteriom w korzeniach?', en: 'Which plants fix nitrogen from the air with bacteria in their roots?' }, odpowiedzi: [{ pl: 'Motylkowe (np. groch, koniczyna)', en: 'Legumes (e.g. peas, clover)' }, { pl: 'Trawy', en: 'Grasses' }, { pl: 'Kaktusy', en: 'Cacti' }] },
+      { pytanie: { pl: 'Co jest produktem fotosyntezy obok tlenu?', en: 'Besides oxygen, what does photosynthesis produce?' }, odpowiedzi: [{ pl: 'Glukoza (cukier)', en: 'Glucose (sugar)' }, { pl: 'Białko', en: 'Protein' }, { pl: 'Tłuszcz', en: 'Fat' }] },
+      { pytanie: { pl: 'Szczepienie drzewka owocowego to…', en: 'Grafting a fruit tree means…' }, odpowiedzi: [{ pl: 'łączenie zrazu jednej odmiany z podkładką', en: 'joining a scion of one variety to a rootstock' }, { pl: 'podlewanie go szczepionką', en: 'watering it with a vaccine' }, { pl: 'przycinanie korzeni', en: 'cutting its roots' }] },
+      { pytanie: { pl: 'Które drzewo w Polsce żyje najdłużej?', en: 'Which tree lives longest in Poland?' }, odpowiedzi: [{ pl: 'Cis', en: 'The yew' }, { pl: 'Brzoza', en: 'The birch' }, { pl: 'Topola', en: 'The poplar' }] },
+    ],
+  ] as ZagadkaPL[][],
 };

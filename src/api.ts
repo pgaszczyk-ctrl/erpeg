@@ -150,6 +150,7 @@ export const api = {
     rpc<{ name: string; exp: number; died_at: string; death_place: string | null; resurrected: boolean }[]>('memorial', { p_limit: 100 }),
   resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
   /** Missions made in the admin panel. */
+  quizzes: () => rpc<[number, number, string, string, string[]][]>('school_quizzes', {}),
   content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', {}),
   redeem: (token: string, missionId: string, code: string) =>
     rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),

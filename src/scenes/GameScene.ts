@@ -23,14 +23,16 @@ import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, stopFor, tripsFrom, type Trip } from '../travel';
-import type { ZagadkaPL } from '../content/postacie';
+import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
+import { SZKOLA_QUIZ } from '../content/quizy';
+import { schoolQuiz } from '../quizzes';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, type Owoc } from '../content/sklepy';
-import { PRZEDMIOTY, NAUKA_MAGII, LEKCJA, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
+import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, availableSkills, owns, takeFruit, totalFruit, groupCount,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station } from './Ambient';
@@ -273,7 +275,9 @@ export class GameScene extends Phaser.Scene {
     this.fixed = new FixedNpcs(this, this.city, {
       dialog: (req) => this.dialog(req),
       toast: (t, ms) => this.toast(t, ms),
-      riddle: (title, intro, z, exp, seed, after) => this.askRiddle(title, intro, z, exp, seed, after),
+      riddle: (title, intro, z, exp, seed, after, opts) => this.askRiddle(title, intro, z, exp, seed, after, opts),
+      questsFull: () => this.questsFull(),
+      hud: () => this.emitHud(),
       gainExp: (n) => {
         session.exp += n;
         this.emitHud();
@@ -1769,16 +1773,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** A riddle with one try (fixed characters); answers are shuffled by `seed`. */
-  private askRiddle(title: string, intro: string, z: ZagadkaPL, exp: number, seed: string, after: (right: boolean) => void) {
+  private askRiddle(
+    title: string,
+    intro: string,
+    z: ZagadkaPL,
+    exp: number,
+    seed: string,
+    after: (right: boolean) => void,
+    opts: { coins?: number; then?: (right: boolean) => void; retry?: boolean } = {},
+  ) {
     let h = 2166136261;
     for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
     const r = rng(h >>> 0);
     const order = z.odpowiedzi.map((_, i) => i).sort(() => r() - 0.5);
     const answers = order.map((i) => tr(z.odpowiedzi[i]));
     const correct = order.indexOf(0);
+    const coins = opts.coins ?? 0;
+    const prize = [exp ? `${exp} EXP` : '', coins ? tx(`${coins} monet`, `${coins} coins`) : ''].filter(Boolean).join(' + ');
+    const rule = opts.retry ? '' : tx('Tylko jedna próba!', 'Only one try!');
+    const foot = [prize ? tx(`Nagroda: ${prize}.`, `Reward: ${prize}.`) : '', rule].filter(Boolean).join(' ');
     this.dialog({
       title,
-      text: `${intro}\n\n${tr(z.pytanie)}\n\n${tx(`Nagroda: ${exp} EXP. Tylko jedna próba!`, `Reward: ${exp} EXP. Only one try!`)}`,
+      text: `${intro}\n\n${tr(z.pytanie)}${foot ? `\n\n${foot}` : ''}`,
       buttons: [...answers, tx('Później', 'Later')],
       onChoose: (i) => {
         if (i >= answers.length) return;
@@ -1786,14 +1802,15 @@ export class GameScene extends Phaser.Scene {
         after(right);
         if (right) {
           session.exp += exp;
+          if (coins) earn(coins);
           session.stats.riddles = (session.stats.riddles ?? 0) + 1;
           this.emitHud();
         }
         this.dialog({
           title: right ? tx('🎉 Brawo!', '🎉 Well done!') : tx('😕 Niestety…', '😕 Not quite…'),
-          text: right ? `+${exp} EXP` : tx(`Dobra odpowiedź to: ${answers[correct]}.`, `The right answer is: ${answers[correct]}.`),
+          text: right ? (prize ? `+${prize}` : tx('Dobra odpowiedź!', 'Right answer!')) : opts.retry ? tx('To nie to. Pomyśl jeszcze i spróbuj ponownie.', 'That is not it. Think again and try once more.') : tx(`Dobra odpowiedź to: ${answers[correct]}.`, `The right answer is: ${answers[correct]}.`),
           buttons: ['OK'],
-          onChoose: () => {},
+          onChoose: () => opts.then?.(right),
         });
         this.save();
       },
@@ -2003,7 +2020,9 @@ export class GameScene extends Phaser.Scene {
     let h = 2166136261;
     for (const ch of `skup:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const buys = ((h >>> 0) % 1000) / 1000 < session.level.skup;
-    const sell = value > 0 && buys ? [`Sprzedaj zbiory – ${value} monet`] : [];
+    // Grandma Grażynka's garden tools wait at the shop nearest her village.
+    const tools = this.fixed.grazynkaStep() === 'sklep' && this.fixed.grazynkaShop()?.id === p.id ? ['🧺 Odbierz narzędzia babci Grażynki'] : [];
+    const sell = [...tools, ...(value > 0 && buys ? [`Sprzedaj zbiory – ${value} monet`] : [])];
     const noBuy = value > 0 && !buys ? '\n\nTu nie skupujemy owoców, grzybów ani drewna – spróbuj w innym sklepie.' : '';
     this.dialog({
       title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
@@ -2011,7 +2030,12 @@ export class GameScene extends Phaser.Scene {
       buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...sell.map(() => null), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
-        if (sell.length && i === 0) {
+        if (tools.length && i === 0) {
+          if (this.fixed.pickUpTools()) this.dialog({ title: '🧺 Narzędzia', text: tr(GRAZYNKA.wSklepie), buttons: ['OK'], onChoose: () => {} });
+          this.emitHud();
+          return;
+        }
+        if (sell.length > tools.length && i === tools.length) {
           const v = sellAllFruit();
           earn(v);
           this.emitHud();
@@ -2025,28 +2049,36 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Schools give lessons: coins for practice in the skills you have. */
+  /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
   private openSchool(p: CityPlace) {
-    const skills = availableSkills();
-    const lines = skills.map((k) => `${UMIEJETNOSCI[k].nazwa}: poziom ${skillLevel(k)}`).join('\n');
+    const d = this.dailyCount(`szkola:${p.id}`);
+    const left = SZKOLA_QUIZ.naSzkoleDziennie - d.a;
+    const quizBtn = left > 0 ? `🧠 Quiz (+${SZKOLA_QUIZ.exp} EXP, +${SZKOLA_QUIZ.monety} monet · zostało ${left})` : '🧠 Quizy na dziś wyczerpane';
     this.dialog({
       title: `🏫 ${p.name}`,
-      text: `Nauczyciel poprawi twoją technikę.\n\n${lines}\n\nMasz ${session.coins} monet.`,
-      buttons: [...skills.map((k) => `Lekcja: ${UMIEJETNOSCI[k].nazwa} – ${LEKCJA.cena} monet (+${LEKCJA.punkty})`), 'Wyjdź'],
+      text: left > 0
+        ? `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie. Dziś w tej szkole ${left} ${left === 1 ? 'pytanie' : left < 5 ? 'pytania' : 'pytań'} dla ciebie.`
+        : 'Na dziś koniec lekcji w tej szkole. Wróć jutro albo zajrzyj do innej szkoły!',
+      buttons: [quizBtn, 'Wyjdź'],
       onChoose: (i) => {
-        const k = skills[i];
-        if (!k) return;
-        if (session.coins < LEKCJA.cena) {
-          this.toast(`Za mało monet – lekcja kosztuje ${LEKCJA.cena}.`);
-          return;
-        }
-        spend(LEKCJA.cena);
-        this.practiced(k, LEKCJA.punkty);
-        this.emitHud();
-        this.toast(`Lekcja zaliczona: +${LEKCJA.punkty} punktów (${UMIEJETNOSCI[k].nazwa}).`);
-        this.save();
+        if (i !== 0 || left <= 0) return;
+        const z = schoolQuiz(p.id, d.d, d.a, session.age);
+        const nth = d.a;
+        this.askRiddle(`🏫 ${p.name}`, `📝 Pytanie ${nth + 1} z ${SZKOLA_QUIZ.naSzkoleDziennie} (${z.kategoria})`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, () => {
+          d.a++;
+        }, { coins: SZKOLA_QUIZ.monety, then: () => this.openSchool(p) });
       },
     });
+  }
+
+  /** A per-day counter kept in the save (session.daily). */
+  private dailyCount(id: string) {
+    const day = today();
+    // Yesterday's school counters are not needed any more.
+    for (const k of Object.keys(session.daily)) if (k.startsWith('szkola:') && session.daily[k].d !== day) delete session.daily[k];
+    const d = session.daily[id];
+    if (!d || d.d !== day) session.daily[id] = { d: day, n: 0, a: 0 };
+    return session.daily[id];
   }
 
   /** Libraries teach magic and sell magic items. */
@@ -2438,6 +2470,8 @@ export class GameScene extends Phaser.Scene {
       const t = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
       out.push({ id: 'sport', title: 'Wyścig', text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to });
     }
+    const gq = this.fixed.grazynkaQuest();
+    if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', ...gq });
     for (const rm of this.missions) {
       const st = missionState(rm.m);
       const q = { id: rm.m.id, title: rm.m.tytul };
