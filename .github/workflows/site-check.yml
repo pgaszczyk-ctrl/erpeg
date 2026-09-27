@@ -1,0 +1,40 @@
+name: Site check
+
+# Checks that the game answers at https://exp-lore.app: DNS, the HTTPS certificate,
+# www and the old github.io address redirecting there, and the game files loading.
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/site-check.yml]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS
+        run: |
+          echo "exp-lore.app A:"; dig +short exp-lore.app A
+          echo "exp-lore.app AAAA:"; dig +short exp-lore.app AAAA
+          echo "www CNAME/A:"; dig +short www.exp-lore.app
+      - name: Addresses
+        run: |
+          set +e
+          ok=1
+          for u in https://exp-lore.app/ https://www.exp-lore.app/ http://exp-lore.app/ https://pgaszczyk-ctrl.github.io/erpeg/; do
+            echo "== $u"
+            curl -sS -m 30 -o /dev/null -D - "$u" | grep -iE '^(HTTP|location|server)'
+            final=$(curl -sS -m 30 -L -o /dev/null -w '%{http_code} %{url_effective}' "$u")
+            echo "   -> $final"
+            case "$final" in "200 https://exp-lore.app/"*) ;; *) echo "::error::$u does not end at https://exp-lore.app/"; ok=0;; esac
+          done
+          echo "== certificate"
+          echo | openssl s_client -connect exp-lore.app:443 -servername exp-lore.app 2>/dev/null | openssl x509 -noout -subject -issuer -dates
+          echo "== game files"
+          curl -sS -m 30 https://exp-lore.app/ -o index.html
+          grep -o '<title>[^<]*' index.html
+          js=$(grep -oE 'assets/[^"]+\.js' index.html | head -1)
+          echo "script: $js"
+          curl -sS -m 60 -o /dev/null -w 'script %{http_code} %{size_download} B\n' "https://exp-lore.app/$js"
+          curl -sS -m 60 -o /dev/null -w 'map index %{http_code} %{size_download} B\n' https://exp-lore.app/map/lublin.json
+          curl -sS -m 60 -o /dev/null -w 'sprite %{http_code}\n' https://exp-lore.app/postacie/heads_kaptur.png
+          [ $ok = 1 ] || exit 1
