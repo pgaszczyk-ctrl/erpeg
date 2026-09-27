@@ -752,6 +752,36 @@ export class CityMap {
    * Start point for "Ulica" or "Ulica numer": a building's door if the
    * address exists, otherwise a free spot on the named street.
    */
+  /**
+   * The address of the house nearest (x, y) (works without map tiles: the index
+   * knows every address and its door), with the nearby town added outside
+   * Lublin – e.g. "Paryska 5" or "Kościelna 12, Garbów".
+   */
+  nearestAddress(x: number, y: number, maxM = 3000): string | null {
+    let best: Building | null = null;
+    let bd = maxM * PX_PER_M;
+    for (const b of this.addressed()) {
+      const e = this.entranceOf(b);
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < bd) {
+        bd = d;
+        best = b;
+      }
+    }
+    if (!best) return null;
+    const addr = best.addresses[0];
+    const town = this.namedTowns
+      .filter((t) => t.name !== 'Lublin')
+      .map((t) => ({ t, d: Math.hypot(t.x - x, t.y - y) }))
+      .sort((a, b) => a.d - b.d)[0];
+    // Street addresses near a named town get its name (village addresses already carry one).
+    if (town && town.d < 4000 * PX_PER_M && !addr.startsWith(town.t.name) && /\D\s+\d/.test(addr)) {
+      const lub = this.namedTowns.find((t) => t.name === 'Lublin');
+      if (!lub || Math.hypot(lub.x - x, lub.y - y) > town.d) return `${addr}, ${town.t.name}`;
+    }
+    return addr;
+  }
+
   /** Towns and villages a start address can name: the index's towns plus the villages. */
   townList(): { name: string; x: number; y: number }[] {
     const out = [...this.namedTowns];

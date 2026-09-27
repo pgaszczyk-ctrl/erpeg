@@ -112,7 +112,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
             const p = city.fromLatLon(lat, lon);
             geoStart = city.freeNear(p.x, p.y);
             const here = city.describe(geoStart.x, geoStart.y);
-            start.value = here === 'bezdroża Lublina' ? city.streetNear(geoStart.x, geoStart.y, 1500) ?? 'okolice Lublina' : here;
+            start.value = city.nearestAddress(geoStart.x, geoStart.y) ?? (here === 'bezdroża Lublina' ? city.streetNear(geoStart.x, geoStart.y, 1500) ?? 'okolice Lublina' : here);
             geoInfo.textContent = `✅ Twój domek stanie tutaj: ${start.value}`;
           },
           (e) => {
@@ -189,7 +189,6 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           el('span', {}, ['Adres startowy']),
           el('div', { className: 'm-pass' }, [start, geoBtn]),
           geoInfo,
-          el('small', {}, [`Ulica (w Lublinie), ulica i numer, miejscowość albo „ulica, miejscowość” – np. „Kościelna 5, Garbów”; albo 📍 – twoja lokalizacja. Puste = ${DEFAULT_START}. Tu stoi twój domek i tu wracasz po każdym wyjściu z gry.`]),
         ]),
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
