@@ -60,6 +60,8 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
 /** No enemies this close to home (metres). */
 const HOME_SAFE_M = 40;
 /** After a dialog closes, swings don't start a talk for this long (ms). */
+/** How close (m) the hero reads a road sign. */
+const SIGN_READ_M = 25;
 const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
@@ -323,6 +325,9 @@ export class GameScene extends Phaser.Scene {
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
     }
+    // Road signs on the ways out of town (split-map): read when walking past.
+    for (const sg of this.city.signs) this.add.image(sg.x, sg.y - 8, TEX.signpost).setDepth(sg.y);
+    this.signRead = -1;
     this.applySkill();
 
     this.training = new Training(this, this.city);
@@ -552,6 +557,7 @@ export class GameScene extends Phaser.Scene {
 
     if (!lingering) this.checkGoals();
     this.updateBubbles();
+    this.readSign();
 
     if (this.challenge) this.updateChallenge(now);
     this.hudTimer -= delta;
@@ -996,6 +1002,21 @@ export class GameScene extends Phaser.Scene {
       // A wanted villain hides somewhere around the spot, not right on it.
       this.spawnGroup(rm.target, z.ile ?? 3, rm.m.id, z.wrog ?? 'glut', z.szukaj ? SEARCH_RADIUS : 40);
     }
+  }
+
+  /** The road sign the hero last read (shown again only after walking away). */
+  private signRead = -1;
+
+  /** Walking past a road sign shows where the road leads and how far. */
+  private readSign() {
+    const r = SIGN_READ_M * PX_PER_M;
+    const i = this.city.signs.findIndex((sg) => Math.abs(sg.x - this.player.x) < r && Math.abs(sg.y - this.player.y) < r && Math.hypot(sg.x - this.player.x, sg.y - this.player.y) < r);
+    if (i === this.signRead) return;
+    this.signRead = i;
+    if (i < 0) return;
+    const [back, ...ahead] = this.city.signs[i].to;
+    const lines = [...ahead.map((t) => `➜ ${t.name} – ${t.km} km`), `↩ ${back.name} (centrum) – ${back.km} km`];
+    this.toast(`🪧 Kierunkowskaz\n${lines.join('\n')}`, 5000);
   }
 
   /** Talk bubbles over characters with a riddle, a request or a challenge. */

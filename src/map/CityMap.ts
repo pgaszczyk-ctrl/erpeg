@@ -58,6 +58,8 @@ type RawMap = {
   bld?: [number, number, number, number, number, number, number, string | 0, string | 0][];
   places?: [string, string, string, number, number, number][];
   streets?: [string, number, number][];
+  /** Road signs (split-map): x, y, then 'Name|km' (the first is the way back to Lublin). */
+  signs?: (number | string)[][];
 };
 
 type RawTile = {
@@ -203,6 +205,8 @@ export class CityMap {
   private haveLine = new Set<number>();
   private haveBuilding = new Set<number>();
   private streets = new Map<string, { x: number; y: number }>();
+  /** Road signs on the roads out of town: where to and how many km along the roads. */
+  readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
   private tileListeners = new Set<(box: Box) => void>();
 
   /** 'lublin' or a town id (public/map/towns/<id>.json). */
@@ -210,6 +214,8 @@ export class CityMap {
 
   constructor(raw: RawMap, id = 'lublin') {
     this.id = id;
+    for (const [x, y, ...to] of raw.signs ?? [])
+      this.signs.push({ x: x as number, y: y as number, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;

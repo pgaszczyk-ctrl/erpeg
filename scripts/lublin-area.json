@@ -5,6 +5,11 @@
     "lat": 51.2965553,
     "lat0": 51.21818255
   },
+  "centre": {
+    "_comment": "Lublin centre (Plac Zamkowy): road signs count km from here",
+    "lat": 51.2478,
+    "lon": 22.5686
+  },
   "extra": [
     {
       "name": "Motycz-Józefin",

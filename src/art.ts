@@ -58,6 +58,7 @@ export const TEX = {
   signAlchemist: 'sign-alchemist',
   signGear: 'sign-gear',
   tent: 'tent',
+  signpost: 'signpost',
   heartBonus: 'heart-bonus',
   signShop: 'sign-shop',
   signChurch: 'sign-church',
@@ -573,6 +574,27 @@ function drawTent(scene: Phaser.Scene) {
   px(ctx, 15, 13, 5, 2, '#6b4423');
   px(ctx, 16, 10, 3, 3, '#e07a2e');
   px(ctx, 17, 9, 1, 2, '#f7e27a');
+  tex.refresh();
+}
+
+/** A wooden road sign: a post with two arrow boards (kierunkowskaz). */
+function drawSignpost(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.signpost, 16, 20);
+  px(ctx, 6, 3, 4, 17, OUTLINE);
+  px(ctx, 7, 4, 2, 15, '#8a5a2b');
+  const board = (y: number, right: boolean) => {
+    const x0 = right ? 2 : 3;
+    const tip = right ? 13 : 2;
+    const end = right ? 14 : 1;
+    px(ctx, x0, y, 11, 5, OUTLINE);
+    px(ctx, tip, y + 1, 1, 3, OUTLINE);
+    px(ctx, end, y + 2, 1, 1, OUTLINE);
+    px(ctx, x0 + 1, y + 1, 9, 3, '#e8c170');
+    px(ctx, right ? 12 : 3, y + 2, 2, 1, '#e8c170');
+    px(ctx, x0 + 2, y + 2, 6, 1, '#8a5a2b');
+  };
+  board(1, true);
+  board(7, false);
   tex.refresh();
 }
 
@@ -1158,6 +1180,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
     p(6, 7, 2, 3, '#1e1a24');
   });
   drawTent(scene);
+  drawSignpost(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
     p(5, 4, 2, 6, '#f7c531');

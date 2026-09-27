@@ -6,13 +6,14 @@
 // with: node --experimental-strip-types scripts/split-map.mjs
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { CityMap, PX_PER_M } from '../src/map/CityMap.ts';
+import { signposts } from './signposts.mjs';
 
 const SRC = '.cache/lublin-full.json';
 const OUT = 'public/map/lublin.json';
 const DIR = 'public/map/lublin';
 const TILE_M = 1000;
 
-const newest = Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs, statSync(new URL('../src/map/CityMap.ts', import.meta.url)).mtimeMs);
+const newest = Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs, statSync(new URL('./signposts.mjs', import.meta.url)).mtimeMs, statSync(new URL('../src/map/CityMap.ts', import.meta.url)).mtimeMs);
 if (existsSync(OUT) && statSync(OUT).mtimeMs > newest) {
   console.log('tiles: up to date');
   process.exit(0);
@@ -65,6 +66,10 @@ for (const l of city.lines) {
   if (p) streets.push([l.name, r(p.x), r(p.y)]);
 }
 
+// Road signs every 5 km out of the city (towards the places of lublin-area.json and villages).
+const area = JSON.parse(readFileSync(new URL('./lublin-area.json', import.meta.url), 'utf8'));
+const signs = signposts(city, area.centre, area.extra);
+
 rmSync(DIR, { recursive: true, force: true });
 mkdirSync(DIR, { recursive: true });
 let bytes = 0;
@@ -91,6 +96,7 @@ const index = {
   bld,
   places,
   streets,
+  signs,
 };
 const json = JSON.stringify(index);
 writeFileSync(OUT, json);
