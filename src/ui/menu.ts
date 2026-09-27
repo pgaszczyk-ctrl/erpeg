@@ -7,7 +7,7 @@ import { codeCard, codeFromLink } from './codeCard';
 import { tx } from '../i18n';
 import { googleEnabled, googleSignIn, googleSignOut, googleToken, googleUser } from '../google';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
-import { drawLook, DEFAULT_LOOK, HEADS, BUILDS, OUTFITS, HAIRS, SKINS, HAIR_COLORS, CLOTHES, lookLimits, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
+import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -162,8 +162,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
-      // How the hero looks: a live preview next to the name, sliders below.
-      const look: Look = { ...DEFAULT_LOOK };
+      // How the hero looks: random (a new roll with the dice button), shown next to the name.
+      const look: Look = randomLook();
       const preview = el('canvas', { className: 'm-hero', width: 48, height: LOOK_H });
       let frame = 0;
       const paint = () => {
@@ -176,41 +176,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         frame = [1, 0, 2, 0][Math.floor(Date.now() / 220) % 4];
         paint();
       }, 110);
-      const sliders: (() => void)[] = [];
-      const slider = (label: string, key: keyof Look, names?: () => string[], colors?: string[]) => {
-        const max = lookLimits()[key] - 1;
-        const range = el('input', { type: 'range', min: 0, max, step: 1, value: String(look[key]), className: 'm-range' });
-        const value = el('span', { className: 'm-val' });
-        const show = () => {
-          range.value = String(look[key]);
-          if (names) value.textContent = names()[look[key]];
-          else {
-            value.textContent = '';
-            value.style.background = colors![look[key]];
-            value.className = 'm-val m-swatch';
-          }
-        };
-        range.oninput = () => {
-          look[key] = Number(range.value);
-          show();
-          paint();
-        };
-        sliders.push(show);
-        show();
-        return el('label', { className: 'm-slide' }, [el('span', {}, [label]), range, value]);
-      };
       const lookBox = el('div', { className: 'm-look' }, [
-        slider(tx('Głowa', 'Head'), 'head', HEADS),
-        slider(tx('Sylwetka', 'Build'), 'build', BUILDS),
-        slider(tx('Strój', 'Outfit'), 'outfit', OUTFITS),
-        slider(tx('Fryzura', 'Hair'), 'hair', HAIRS),
-        slider(tx('Kolor skóry', 'Skin'), 'skin', undefined, SKINS),
-        slider(tx('Kolor włosów', 'Hair colour'), 'hairColor', undefined, HAIR_COLORS),
-        slider(tx('Kolor góry', 'Top colour'), 'top', undefined, CLOTHES),
-        slider(tx('Kolor dołu', 'Bottom colour'), 'bottom', undefined, CLOTHES),
         button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
           Object.assign(look, randomLook());
-          sliders.forEach((f) => f());
           paint();
         }),
       ]);
