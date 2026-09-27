@@ -102,7 +102,10 @@ export class Townsfolk {
     // Busy centre or quiet housing estate: by how many places (shops, offices,
     // churches…) the square has. At night even fewer.
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
-    const district = MIESZKANCY.dzielnice.find((d) => places >= d.miejsc)?.mnoznik ?? 0.25;
+    // Villages have few places but many houses: count those too.
+    const houses = this.city.addressed().filter((b) => b.x0 >= box.x0 && b.x0 < box.x1 && b.y0 >= box.y0 && b.y0 < box.y1).length;
+    const village = MIESZKANCY.wsie.find((d) => houses >= d.domow)?.mnoznik ?? 0;
+    const district = Math.max(village, MIESZKANCY.dzielnice.find((d) => places >= d.miejsc)?.mnoznik ?? 0.25);
     const share = district * (isNight() ? MIESZKANCY.noc.ludzi : 1);
     for (const l of this.city.query(box).lines) {
       if (!PAVED.has(l.kind) || l.pts.length < 4) continue;

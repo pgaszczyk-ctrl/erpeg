@@ -4,7 +4,7 @@ import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap'
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
 
 // Things that fill the city around the hero as they walk: fruit trees on
@@ -198,15 +198,21 @@ export class Forest {
       if (list.some((o) => Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8)) continue;
       list.push({ id, x, y, kind, left: LAS.uderzenNaDrzewo });
     }
-    // Vegetables on allotments and fields.
+    // Vegetables on allotments and fields: a bed of rows of one kind.
     {
       const roll = r();
-      const x = (cx + 0.1 + r() * 0.8) * this.cell;
-      const y = (cy + 0.1 + r() * 0.8) * this.cell;
+      const x = (cx + 0.15 + r() * 0.3) * this.cell;
+      const y = (cy + 0.15 + r() * 0.4) * this.cell;
       const veg = WARZYWA.rodzaje[Math.floor(r() * WARZYWA.rodzaje.length)];
-      const kinds = this.city.areaKindsAt(x, y);
-      if (roll < WARZYWA.szansa && (kinds.includes('allotments') || kinds.includes('farmland')) && this.city.isFree(x, y, 5, 5) && !this.city.roadAt(x, y)) {
-        list.push({ id: `warzywo:${key}`, x, y, kind: 'warzywo', veg, left: 1 });
+      if (roll < WARZYWA.szansa) {
+        for (let row = 0; row < WARZYWA.rzedow; row++)
+          for (let i = 0; i < WARZYWA.wRzedzie; i++) {
+            const vx = x + i * 8;
+            const vy = y + row * 9;
+            const kinds = this.city.areaKindsAt(vx, vy);
+            if (!(kinds.includes('allotments') || kinds.includes('farmland')) || !this.city.isFree(vx, vy, 3, 3) || this.city.roadAt(vx, vy)) continue;
+            list.push({ id: `warzywo:${key}:${row}:${i}`, x: vx, y: vy, kind: 'warzywo', veg, left: 1 });
+          }
       }
     }
     this.cells.set(key, list);
@@ -252,6 +258,21 @@ export class Forest {
       s.sprite = undefined;
       this.active.delete(s);
     }
+  }
+
+  /** The nearest vegetable (not picked, not being picked) a swing at (x, y) reaches. */
+  vegAt(x: number, y: number, reach: number, busy: Set<string>): ForestSpot | null {
+    let best: ForestSpot | null = null;
+    let bd = reach;
+    for (const s of this.active) {
+      if (s.kind !== 'warzywo' || this.gone.has(s.id) || busy.has(s.id)) continue;
+      const d = Math.hypot(s.x - x, s.y - 3 - y);
+      if (d < bd) {
+        bd = d;
+        best = s;
+      }
+    }
+    return best;
   }
 
   /** Is a point inside a standing trunk? (for collisions) */
@@ -358,14 +379,20 @@ export class StreetEnemies {
     if (this.planned.has(key)) return;
     this.planned.add(key);
     const r = rng(hashStr2(`${this.city.id}:gangs:${this.seed}:${key}`));
+    // Out in the villages and fields (few places) more gangs, or walks there are empty.
+    const box = { x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM };
+    const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
+    const extra = places < GANG_WIES.miejscMniejNiz ? GANG_WIES.mnoznik : 1;
     GANGI.forEach((kind, ki) => {
-      const want = kind.naKm2 * this.density;
+      const want = kind.naKm2 * this.density * extra;
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         for (let t = 0; t < 12; t++) {
           const x = (cx + r()) * KM;
           const y = (cy + r()) * KM;
           if (this.city.isBlocked(x, y) || this.nearAvoid(x, y, GANG_OD_MIEJSC_M)) continue;
+          // Mostly by a road, so walkers come across them.
+          if (t < 9 && !this.nearRoad(x, y, GANG_WIES.odDrogiM * PX_PER_M)) continue;
           // Not on top of another gang.
           if (this.gangs.some((g) => Math.hypot(g.x - x, g.y - y) < (g.r + kind.promienM * PX_PER_M) * 0.6)) continue;
           this.gangs.push({ id: `${key}:${ki}:${i}`, kind, x, y, r: kind.promienM * PX_PER_M, spots: null, alive: new Set(), members: new Map(), boss: 'none', clearedAt: 0 });
@@ -373,6 +400,10 @@ export class StreetEnemies {
         }
       }
     });
+  }
+
+  private nearRoad(x: number, y: number, r: number) {
+    return this.city.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).lines.some((l) => l.kind === 'major' || l.kind === 'medium' || l.kind === 'minor' || l.kind === 'track');
   }
 
   /** Where the members stand, once the territory is loaded. */

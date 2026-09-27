@@ -36,3 +36,6 @@ export const GANG_POWROT_S = 60;
 export const GANG_MGLA = { kolor: 0xe43b44, alfa: 0.3 };
 /** Muszki nad terenem gangu: siatka co coPx pikseli świata, muszka w co coIleKratek-tej kratce (więcej = mniej muszek), kolor. */
 export const GANG_MUSZKI = { coPx: 22, kolor: 0xb3202c, coIleKratek: 8 };
+
+/** Poza miastem (kratka 1 km z mniej niż miejscMniejNiz ważnymi miejscami) gangów jest tyle razy więcej; środek gangu zwykle najwyżej odDrogiM od drogi. */
+export const GANG_WIES = { miejscMniejNiz: 3, mnoznik: 2, odDrogiM: 150 };

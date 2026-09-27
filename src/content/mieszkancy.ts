@@ -19,6 +19,8 @@ export const MIESZKANCY = {
    * miejsc – od ilu miejsc w kwadracie 1×1 km, mnoznik – jaka część ludzi.
    */
   dzielnice: [{ miejsc: 20, mnoznik: 1 }, { miejsc: 8, mnoznik: 0.5 }, { miejsc: 0, mnoznik: 0.25 }],
+  /** Wsie: mało miejsc, ale dużo domów – kratka z tyloma domami z adresem ma co najmniej taki mnożnik. */
+  wsie: [{ domow: 40, mnoznik: 0.7 }, { domow: 15, mnoznik: 0.45 }],
   /** Noc (od–do, godziny w telefonie): mniej ludzi, więcej potworów. */
   noc: { od: 21, do: 6, ludzi: 0.3, potworow: 1.5 },
   /** Ludzie boją się smoka: w tej odległości (metry) od niego nikogo nie ma. */

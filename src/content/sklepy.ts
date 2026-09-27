@@ -27,7 +27,7 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; j
   marchewka: { nazwa: 'marchewka', mnoga: 'marchewki', cena: 2, jadalne: true, grupa: 'warzywa' },
   brokul: { nazwa: 'brokuł', mnoga: 'brokuły', cena: 3, jadalne: true, grupa: 'warzywa' },
   salata: { nazwa: 'sałata', mnoga: 'sałata', cena: 3, jadalne: true, grupa: 'warzywa' },
-  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 6, jadalne: true, grupa: 'grzyby' },
+  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 1, jadalne: true, grupa: 'grzyby' },
   drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false, grupa: 'drewno' },
 };
 
@@ -39,8 +39,12 @@ export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {
   drewno: { nazwa: 'Drewno', ikona: '🪵' },
 };
 
-/** WARZYWA rosną na działkach i polach (zbiera się je, wchodząc na nie), odrastają przy każdym wejściu do gry. */
-export const WARZYWA = { szansa: 0.25, rodzaje: ['marchewka', 'brokul', 'salata'] as Owoc[] };
+/**
+ * WARZYWA rosną na działkach i polach grządkami: rzedow × wRzedzie sztuk jednego gatunku
+ * (w kratce z szansą `szansa`). Uderz warzywo – pasek zapełnia się przez zbiorSekund
+ * i dopiero wtedy jest zebrane. Odrastają przy każdym wejściu do gry.
+ */
+export const WARZYWA = { szansa: 0.25, rzedow: 3, wRzedzie: 4, zbiorSekund: 2, rodzaje: ['marchewka', 'brokul', 'salata'] as Owoc[] };
 
 // ----------------------------------------------------------------------------
 //  LAS – w lasach rosną grzyby (zbiera się je, wchodząc na nie) i drzewa do

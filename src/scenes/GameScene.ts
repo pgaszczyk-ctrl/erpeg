@@ -28,14 +28,14 @@ import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
-import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station } from './Ambient';
+import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -274,6 +274,8 @@ export class GameScene extends Phaser.Scene {
       this.city,
       (sp) => {
         const what = sp.veg ?? 'grzyb';
+        // Vegetables are picked with a swing (a bar fills up), not by walking over them.
+        if (sp.veg) return this.add.image(sp.x, sp.y, GOODS_TEX[what]).setDepth(sp.y - 8);
         const img = this.add.image(sp.x, sp.y, GOODS_TEX[what]).setDepth(sp.y - 8);
         img.setData('kind', `fruit:${what}`);
         img.setData('spot', sp.id);
@@ -298,6 +300,7 @@ export class GameScene extends Phaser.Scene {
 
     this.folk = new Townsfolk(this, this.city);
     this.bubbles = [];
+    this.harvests = [];
     this.noHurtUntil = 0;
     this.protectUntil = -1; // set on the first frame (unless the character must linger)
     this.challenge = null;
@@ -497,6 +500,7 @@ export class GameScene extends Phaser.Scene {
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
     this.forest.update(this.player.x, this.player.y, now);
+    this.updateHarvests(now);
     this.folk.fear = this.story.dragonAt();
     this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     if (this.duelHp !== null) {
@@ -750,12 +754,49 @@ export class GameScene extends Phaser.Scene {
       this.dropFruit(pine.x, pine.y, 'drewno');
       this.toast('🪓 Drzewo ścięte!', 1000);
     }
+    // Vegetables: a swing starts picking one (a bar fills up).
+    const veg = this.forest.vegAt(hit.x, hit.y, 12 * this.player.reach, new Set(this.harvests.map((h) => h.spot.id)));
+    if (veg) this.startHarvest(veg, now);
     const dummy = this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz');
     if (dummy) {
       hits++;
       this.dummyHit(dummy);
     }
     if (hits) this.practiced('miecz');
+  }
+
+  /** Vegetables being picked: a bar over each fills up in WARZYWA.zbiorSekund. */
+  private harvests: { spot: ForestSpot; start: number; bar: Phaser.GameObjects.Graphics }[] = [];
+
+  private startHarvest(spot: ForestSpot, now: number) {
+    this.harvests.push({ spot, start: now, bar: this.add.graphics().setDepth(1_050_000) });
+  }
+
+  private updateHarvests(now: number) {
+    const ms = WARZYWA.zbiorSekund * 1000;
+    this.harvests = this.harvests.filter((h) => {
+      const { spot, bar } = h;
+      // Walked away: picking stops.
+      if (Math.hypot(spot.x - this.player.x, spot.y - this.player.y) > 30 * PX_PER_M) {
+        bar.destroy();
+        return false;
+      }
+      const t = Math.min(1, (now - h.start) / ms);
+      bar.clear().fillStyle(0x1e1a24, 0.8).fillRect(spot.x - 7, spot.y - 14, 14, 3).fillStyle(0x7fd35a, 1).fillRect(spot.x - 6.5, spot.y - 13.5, 13 * t, 2);
+      if (t < 1) return true;
+      bar.destroy();
+      const f = spot.veg!;
+      if (!addFruit(f)) {
+        this.toast('Plecak pełny!', 1200);
+        return false;
+      }
+      session.stats.fruit++;
+      spot.sprite?.destroy();
+      this.forest.picked(spot.id);
+      this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
+      this.emitHud();
+      return false;
+    });
   }
 
   /** A white swoosh along the sword's arc. */
