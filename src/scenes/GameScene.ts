@@ -2257,24 +2257,39 @@ export class GameScene extends Phaser.Scene {
 
   /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
   private openSchool(p: CityPlace) {
+    // d.a = questions answered today, d.n = when the break ends (minutes after midnight).
     const d = this.dailyCount(`szkola:${p.id}`);
-    const left = SZKOLA_QUIZ.naSzkoleDziennie - d.a;
+    const title = `🏫 ${p.name}`;
+    const now = new Date();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    if (d.a >= SZKOLA_QUIZ.naSzkoleDziennie) {
+      this.dialog({ title, text: 'Na dziś koniec lekcji w tej szkole. Wróć jutro albo zajrzyj do innej szkoły!', buttons: ['Do jutra!'], onChoose: () => {} });
+      return;
+    }
+    if (d.a > 0 && d.a % SZKOLA_QUIZ.naLekcje === 0 && mins < d.n) {
+      const hh = Math.floor(d.n / 60) % 24;
+      const mm = String(d.n % 60).padStart(2, '0');
+      this.dialog({ title, text: `🔔 Przerwa! Nauczyciele piją herbatę. Kolejne lekcje o ${hh}:${mm} – wróć wtedy.`, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
     const prize = [`+${SZKOLA_QUIZ.exp} EXP`, SZKOLA_QUIZ.monety ? `+${SZKOLA_QUIZ.monety} monet` : '', gear.magic ? 'ćwiczy magię' : ''].filter(Boolean).join(', ');
-    const quizBtn = left > 0 ? `🧠 Quiz (${left})` : '🧠 Koniec na dziś';
     this.dialog({
-      title: `🏫 ${p.name}`,
-      text: left > 0
-        ? `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie. Dziś w tej szkole zostało ${left} ${left === 1 ? 'pytanie' : left % 10 >= 2 && left % 10 <= 4 && (left % 100 < 12 || left % 100 > 14) ? 'pytania' : 'pytań'} – im dalej, tym trudniejsze.\n\nZa dobrą odpowiedź: ${prize}.`
-        : 'Na dziś koniec lekcji w tej szkole. Wróć jutro albo zajrzyj do innej szkoły!',
-      buttons: [quizBtn, 'Wyjdź'],
+      title,
+      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie – im dalej, tym trudniejsze.\n\nZa dobrą odpowiedź: ${prize}.`,
+      buttons: ['🧠 Quiz', 'Wyjdź'],
       onChoose: (i) => {
-        if (i !== 0 || left <= 0) return;
+        if (i !== 0) return;
         const z = schoolQuiz(p.id, d.d, d.a, session.age);
         const nth = d.a;
         const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
         const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
-        this.askRiddle(`🏫 ${p.name}`, `📝 Pytanie ${nth + 1} z ${SZKOLA_QUIZ.naSzkoleDziennie} (${z.kategoria})${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
+        this.askRiddle(title, `📝 ${z.kategoria}${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
           d.a++;
+          // After a lesson (naLekcje questions) a break: back in przerwaMin minutes, rounded up to :x0/:x5.
+          if (d.a % SZKOLA_QUIZ.naLekcje === 0) {
+            const t = new Date();
+            d.n = Math.ceil((t.getHours() * 60 + t.getMinutes() + SZKOLA_QUIZ.przerwaMin) / 5) * 5;
+          }
           // A wizard also gets better at magic by thinking hard.
           if (right && gear.magic && SZKOLA_QUIZ.magia) this.practiced('magia', SZKOLA_QUIZ.magia);
         }, { coins: SZKOLA_QUIZ.monety, then: () => this.openSchool(p) });

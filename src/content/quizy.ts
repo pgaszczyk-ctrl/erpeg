@@ -17,8 +17,12 @@ export interface PytanieQuizu {
 }
 
 export const SZKOLA_QUIZ = {
-  /** Ile pytań dziennie w jednej szkole. */
+  /** Ile pytań dziennie w jednej szkole (gracz tego nie widzi). */
   naSzkoleDziennie: 50,
+  /** Pytań na jedną lekcję, potem przerwa. */
+  naLekcje: 10,
+  /** Przerwa: tyle minut, zaokrąglone w górę do pełnych 5 minut (10:41 → 10:45). */
+  przerwaMin: 3,
   /** EXP za dobrą odpowiedź. */
   exp: 10,
   /** Monety za dobrą odpowiedź (0 = bez monet). */
