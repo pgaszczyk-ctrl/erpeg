@@ -494,7 +494,7 @@ export class GameScene extends Phaser.Scene {
         this.emitHud();
       }
     }
-    this.training.update(this.player.x, this.player.y, now);
+    this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
     this.streets.update(this.player.x, this.player.y, now);
     this.clearHomeArea();
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);

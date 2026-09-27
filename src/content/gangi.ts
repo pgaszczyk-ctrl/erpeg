@@ -34,5 +34,5 @@ export const GANG_CZLONEK_OD_DRZWI_M = 50;
 export const GANG_POWROT_S = 60;
 /** Czerwona mgiełka: kolor i przezroczystość. */
 export const GANG_MGLA = { kolor: 0xe43b44, alfa: 0.3 };
-/** Muszki latające nad terenem gangu: co ile pikseli świata jedna (mniej = więcej muszek), kolor. */
-export const GANG_MUSZKI = { coPx: 22, kolor: 0x1e1a24 };
+/** Muszki nad terenem gangu: siatka co coPx pikseli świata, muszka w co coIleKratek-tej kratce (więcej = mniej muszek), kolor. */
+export const GANG_MUSZKI = { coPx: 22, kolor: 0xb3202c, coIleKratek: 8 };
