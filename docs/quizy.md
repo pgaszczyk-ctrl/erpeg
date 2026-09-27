@@ -38,7 +38,7 @@ Zasady:
 - `question`: do 300 znaków, `category`: krótko (np. matematyka, łamigłówka, przyroda, geografia, historia, język, nauka),
 - najwyżej 1000 pytań naraz, `p_days` od 1 do 7 (domyślnie 2).
 
-Dobrze jest wgrywać codziennie ok. 50–100 pytań na każdy poziom. Każda szkoła zadaje 5 pytań dziennie (`SZKOLA_QUIZ` w `src/content/quizy.ts`).
+Dobrze jest wgrywać codziennie ok. 50–100 pytań na każdy poziom. Każda szkoła zadaje 50 pytań dziennie (od 31. trudniejsze o poziom, od 41. o dwa) (`SZKOLA_QUIZ` w `src/content/quizy.ts`).
 
 ## Gotowe polecenie dla innego AI (uruchamianego codziennie)
 

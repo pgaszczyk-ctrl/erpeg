@@ -97,10 +97,20 @@ function puzzle(level: number, r: () => number): PytanieQuizu {
  * (always the same for that school, day and number).
  */
 export function schoolQuiz(schoolId: string, day: string, nth: number, age: number): PytanieQuizu {
-  const level = levelForAge(age);
+  // Later questions of the day get harder (content/quizy.ts trudniejOd).
+  const harder = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+  const level = Math.min(3, levelForAge(age) + harder);
   const r = rng(hash(`quiz:${schoolId}:${day}:${nth}:${level}`));
   if (r() < SZKOLA_QUIZ.szansaNaRachunek) return puzzle(level, r);
   // Server questions first (new every day), then the built-in ones.
   const pool = fromServer[level].length >= 10 && r() < 0.85 ? fromServer[level] : [...fromServer[level], ...QUIZY[level]];
-  return pool[Math.floor(r() * pool.length)] ?? puzzle(level, r);
+  if (!pool.length) return puzzle(level, r);
+  // The same school walks through a shuffled list, so questions don't repeat within a day.
+  const pr = rng(hash(`quizorder:${schoolId}:${day}:${level}:${pool.length}`));
+  const order = pool.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(pr() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return pool[order[nth % order.length]];
 }

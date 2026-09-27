@@ -2053,19 +2053,24 @@ export class GameScene extends Phaser.Scene {
   private openSchool(p: CityPlace) {
     const d = this.dailyCount(`szkola:${p.id}`);
     const left = SZKOLA_QUIZ.naSzkoleDziennie - d.a;
-    const quizBtn = left > 0 ? `🧠 Quiz (+${SZKOLA_QUIZ.exp} EXP, +${SZKOLA_QUIZ.monety} monet · zostało ${left})` : '🧠 Quizy na dziś wyczerpane';
+    const prize = [`+${SZKOLA_QUIZ.exp} EXP`, SZKOLA_QUIZ.monety ? `+${SZKOLA_QUIZ.monety} monet` : '', gear.magic ? 'ćwiczy magię' : ''].filter(Boolean).join(', ');
+    const quizBtn = left > 0 ? `🧠 Quiz (${left})` : '🧠 Koniec na dziś';
     this.dialog({
       title: `🏫 ${p.name}`,
       text: left > 0
-        ? `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie. Dziś w tej szkole ${left} ${left === 1 ? 'pytanie' : left < 5 ? 'pytania' : 'pytań'} dla ciebie.`
+        ? `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie. Dziś w tej szkole zostało ${left} ${left === 1 ? 'pytanie' : left % 10 >= 2 && left % 10 <= 4 && (left % 100 < 12 || left % 100 > 14) ? 'pytania' : 'pytań'} – im dalej, tym trudniejsze.\n\nZa dobrą odpowiedź: ${prize}.`
         : 'Na dziś koniec lekcji w tej szkole. Wróć jutro albo zajrzyj do innej szkoły!',
       buttons: [quizBtn, 'Wyjdź'],
       onChoose: (i) => {
         if (i !== 0 || left <= 0) return;
         const z = schoolQuiz(p.id, d.d, d.a, session.age);
         const nth = d.a;
-        this.askRiddle(`🏫 ${p.name}`, `📝 Pytanie ${nth + 1} z ${SZKOLA_QUIZ.naSzkoleDziennie} (${z.kategoria})`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, () => {
+        const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+        const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
+        this.askRiddle(`🏫 ${p.name}`, `📝 Pytanie ${nth + 1} z ${SZKOLA_QUIZ.naSzkoleDziennie} (${z.kategoria})${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
           d.a++;
+          // A wizard also gets better at magic by thinking hard.
+          if (right && gear.magic && SZKOLA_QUIZ.magia) this.practiced('magia', SZKOLA_QUIZ.magia);
         }, { coins: SZKOLA_QUIZ.monety, then: () => this.openSchool(p) });
       },
     });

@@ -18,11 +18,15 @@ export interface PytanieQuizu {
 
 export const SZKOLA_QUIZ = {
   /** Ile pytań dziennie w jednej szkole. */
-  naSzkoleDziennie: 5,
+  naSzkoleDziennie: 50,
   /** EXP za dobrą odpowiedź. */
   exp: 10,
-  /** Monety za dobrą odpowiedź. */
-  monety: 5,
+  /** Monety za dobrą odpowiedź (0 = bez monet). */
+  monety: 0,
+  /** Mag za dobrą odpowiedź ćwiczy też władanie magią (tyle punktów). */
+  magia: 2,
+  /** Od którego pytania (licząc od 1) robi się trudniej: o 1 poziom, potem o 2. */
+  trudniejOd: [31, 41],
   /** Jak często rachunek lub łamigłówka liczbowa zamiast pytania z bazy (0–1). */
   szansaNaRachunek: 0.35,
 };
