@@ -1,5 +1,6 @@
 import { api } from '../api';
-import { googleEnabled, googleSignIn, googleToken, googleUser } from '../google';
+import { googleToken } from '../google';
+import { askAccount } from './account';
 
 // The character's code: shown big as text, as a picture to save, and shared
 // to any app (WhatsApp, SMS…) with the phone's share menu (with a link that
@@ -20,23 +21,19 @@ export function codeFromLink(): { name: string; code: string } | null {
   return { name, code };
 }
 
-/** "Assign to Google": then the character can be loaded from the account's list. */
+/** "Assign to the account" (e-mail or Google): then the character loads from the account's list. */
 function googleLink(name: string, code: string) {
   const msg = el('p', { className: 'm-note' });
-  const btn = el('button', { type: 'button', className: 'm-btn m-google' }, ['🔵 Przypisz do konta Google']) as HTMLButtonElement;
+  const btn = el('button', { type: 'button', className: 'm-btn m-google' }, ['👤 Przypisz do konta']) as HTMLButtonElement;
   btn.onclick = async () => {
     msg.textContent = '';
     btn.disabled = true;
     try {
-      if (!(await googleEnabled())) throw new Error('Logowanie przez Google nie jest jeszcze włączone na serwerze gry.');
-      let token = googleUser() ? await googleToken() : null;
-      if (!token) {
-        await googleSignIn();
-        token = await googleToken();
-      }
-      if (!token) throw new Error('Nie udało się zalogować przez Google.');
+      const u = await askAccount('Zaloguj się albo załóż konto – postać przypisana do konta wczytasz z listy, bez kodu.');
+      const token = u ? await googleToken() : null;
+      if (!token) return;
       await api.linkGoogle(name, code, token);
-      msg.textContent = `✅ Postać przypisana do ${googleUser()?.email ?? 'konta Google'}. Wczytasz ją przyciskiem „Wczytaj z Google”.`;
+      msg.textContent = `✅ Postać przypisana do ${u?.email || 'konta'}. Wczytasz ją przyciskiem „Wczytaj z konta”.`;
     } catch (e) {
       msg.textContent = `❌ ${(e as Error).message}`;
     } finally {

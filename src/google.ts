@@ -1,6 +1,10 @@
 import { RPC } from './api';
 
-// Signing in with Google (Supabase Auth). It opens in a separate window (a new
+// Player accounts (Supabase Auth): e-mail + password, or Google. One account
+// holds up to 3 characters (link_google / my_characters on the server work
+// for any account, whatever the sign-in). The session is kept in localStorage.
+//
+// Signing in with Google opens in a separate window (a new
 // tab on phones), so the game keeps running: the window comes back to this
 // site with `?google=1` and the tokens in the address, stores them and closes
 // itself (see catchGoogleReturn, called first thing in main.ts); this tab
@@ -52,6 +56,11 @@ export function catchGoogleReturn(): boolean {
   const error = h.get('error_description') ?? h.get('error');
   if (token) {
     store({ access_token: token, refresh_token: h.get('refresh_token') ?? '', expires_at: Math.floor(Date.now() / 1000) + Number(h.get('expires_in') ?? 3600), email: emailOf(token) });
+    // The "forgot password" link: set a new one here.
+    if (h.get('type') === 'recovery') {
+      newPasswordPage(token);
+      return true;
+    }
   } else {
     try {
       localStorage.setItem(`${KEY}-error`, error ?? 'Logowanie przerwane');
@@ -59,7 +68,7 @@ export function catchGoogleReturn(): boolean {
       // nothing to report back
     }
   }
-  document.body.innerHTML = `<div style="font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center">${token ? '✅ Zalogowano przez Google. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`}</div>`;
+  document.body.innerHTML = `<div style="font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center">${token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`}</div>`;
   setTimeout(() => window.close(), 600);
   return true;
 }
@@ -153,4 +162,83 @@ export async function googleToken(): Promise<string | null> {
     store(null);
     return null;
   }
+}
+
+// ---------------------------------------------------------------- e-mail + password
+
+/** Where links in account e-mails lead back to (this page, caught by catchGoogleReturn). */
+const backUrl = () => `${location.origin}${location.pathname}?google=1`;
+
+const POLISH: [RegExp, string][] = [
+  [/invalid login credentials/i, 'Zły e-mail albo hasło.'],
+  [/email not confirmed/i, 'Najpierw potwierdź e-mail – kliknij link, który wysłaliśmy.'],
+  [/already registered|already been registered|user already exists/i, 'To konto już istnieje – zaloguj się.'],
+  [/password should be at least|weak password/i, 'Hasło jest za krótkie (co najmniej 8 znaków).'],
+  [/unable to validate email|invalid.*email|email address .* is invalid/i, 'To nie wygląda na poprawny adres e-mail.'],
+  [/rate limit|too many/i, 'Za dużo prób – spróbuj za kilka minut.'],
+  [/signups not allowed|signup is disabled/i, 'Zakładanie kont jest wyłączone na serwerze gry.'],
+];
+
+async function auth(path: string, body: unknown, method = 'POST', bearer?: string) {
+  let r: Response;
+  try {
+    r = await fetch(`${AUTH}${path}`, {
+      method,
+      headers: { apikey: RPC.headers.apikey, 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Brak połączenia z serwerem gry. Sprawdź internet.');
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = String(j.error_description ?? j.msg ?? j.message ?? j.error ?? `Błąd serwera (${r.status})`);
+    throw new Error(POLISH.find(([re]) => re.test(msg))?.[1] ?? msg);
+  }
+  return j;
+}
+
+function keep(t: { access_token: string; refresh_token?: string; expires_in?: number }) {
+  const s = { access_token: t.access_token, refresh_token: t.refresh_token ?? '', expires_at: Math.floor(Date.now() / 1000) + (t.expires_in ?? 3600), email: emailOf(t.access_token) };
+  store(s);
+  return s;
+}
+
+/** Signs in with e-mail and password. */
+export async function emailSignIn(email: string, password: string): Promise<GoogleSession> {
+  return keep(await auth('/token?grant_type=password', { email: email.trim(), password }));
+}
+
+/**
+ * Creates an account. Signed in right away when the server doesn't ask to
+ * confirm e-mails; otherwise null (a confirmation link was sent).
+ */
+export async function emailSignUp(email: string, password: string): Promise<GoogleSession | null> {
+  const j = await auth(`/signup?redirect_to=${encodeURIComponent(backUrl())}`, { email: email.trim(), password });
+  return j.access_token ? keep(j) : null;
+}
+
+/** Sends a "set a new password" link. */
+export async function emailReset(email: string) {
+  await auth(`/recover?redirect_to=${encodeURIComponent(backUrl())}`, { email: email.trim() });
+}
+
+/** The page the reset link opens: a form for the new password. */
+function newPasswordPage(token: string) {
+  const css = 'font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center;min-height:100vh;box-sizing:border-box';
+  document.body.innerHTML = `<form style="${css}"><p>🔑 Nowe hasło do konta gry</p>
+    <input type="password" autocomplete="new-password" minlength="8" required style="font:18px monospace;padding:8px;width:260px"><br><br>
+    <button style="font:18px monospace;padding:8px 20px">Zapisz</button><p class="msg"></p></form>`;
+  const form = document.querySelector('form')!;
+  const msg = form.querySelector('.msg')!;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await auth('/user', { password: form.querySelector('input')!.value }, 'PUT', token);
+      msg.textContent = '✅ Hasło zmienione. Wróć do gry.';
+      setTimeout(() => window.close(), 1500);
+    } catch (err) {
+      msg.textContent = `❌ ${(err as Error).message}`;
+    }
+  };
 }
