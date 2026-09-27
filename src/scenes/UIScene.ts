@@ -296,14 +296,7 @@ export class UIScene extends Phaser.Scene {
     attackHome.y = this.attackBtn.y;
     attackHome.r = this.attackBtn.radius;
     this.attackLabel.setPosition(this.attackBtn.x, this.attackBtn.y);
-    const hbx = this.touch ? this.attackBtn.x : width - pad - 30;
-    const hby = this.touch ? this.attackBtn.y - 58 : height - pad - 30;
-    this.healBtn.setPosition(hbx, hby);
-    this.healIcon.setPosition(hbx, hby + 1);
-    this.healCount.setPosition(hbx + 12, hby + 8);
-    healHome.x = hbx;
-    healHome.y = hby;
-    healHome.r = 22;
+    // The heal button follows the hero (placeHeroWidgets).
   }
 
   private heartScale() {
@@ -395,8 +388,21 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5);
     for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
     // Heal (phones: above the attack button; computers: bottom-right, or key H).
-    this.healBtn = this.add.circle(0, 0, 22, 0x3fa34d, 0.75).setStrokeStyle(3, 0xffffff, 0.85).setVisible(false).setDepth(6);
-    this.healIcon = this.add.text(0, 0, '🧪', { fontFamily: 'sans-serif', fontSize: '22px' }).setOrigin(0.5).setVisible(false).setDepth(7);
+    this.healBtn = this.add.circle(0, 0, 26, 0x3fa34d, 0.5).setStrokeStyle(3, 0xffffff, 0.6).setVisible(false).setDepth(6);
+    this.healIcon = this.add.text(0, 0, '🧪', { fontFamily: 'sans-serif', fontSize: '28px' }).setOrigin(0.5).setVisible(false).setDepth(7);
+    this.arcHearts = [];
+    this.lowWarned = false;
+    if (!this.textures.exists('lowhp-vignette')) {
+      const t = this.textures.createCanvas('lowhp-vignette', 256, 256)!;
+      const ctx = t.getContext();
+      const g = ctx.createRadialGradient(128, 128, 70, 128, 128, 182);
+      g.addColorStop(0, 'rgba(200,0,20,0)');
+      g.addColorStop(1, 'rgba(200,0,20,0.9)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 256, 256);
+      t.refresh();
+    }
+    this.vignette = this.add.image(0, 0, 'lowhp-vignette').setDepth(-1).setVisible(false);
     this.healCount = this.add
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3 })
       .setOrigin(0, 0).setVisible(false).setDepth(7);
@@ -414,10 +420,65 @@ export class UIScene extends Phaser.Scene {
   }
 
   private healLow = false;
+  /** Hearts in an arc under the hero while hurt, and a red edge when life is low. */
+  private arcHearts: Phaser.GameObjects.Image[] = [];
+  private vignette!: Phaser.GameObjects.Image;
+  private lowWarned = false;
+
+  /** Keeps the arc of hearts and the heal button just under the hero. */
+  private placeHeroWidgets(time: number) {
+    const game = this.scene.get('game') as GameScene;
+    const s = this.hud;
+    const show = !!s && !!game.player && !s.dead && !this.dialogBox;
+    const hurt = show && s!.hp < s!.maxHp;
+    if (!show) {
+      for (const h of this.arcHearts) h.setVisible(false);
+      this.vignette?.setVisible(false);
+      return;
+    }
+    const cam = game.cameras.main;
+    const z = cam.zoom;
+    const sx = (game.player.x - cam.worldView.x) * z;
+    const sy = (game.player.y - cam.worldView.y) * z;
+    const n = s!.maxHp / 2;
+    while (this.arcHearts.length < n) this.arcHearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0.5).setDepth(5).setScale(this.ui));
+    while (this.arcHearts.length > n) this.arcHearts.pop()!.destroy();
+    const R = 15 * z;
+    this.arcHearts.forEach((h, i) => {
+      const a = n > 1 ? Phaser.Math.DegToRad(150 - (120 * i) / (n - 1)) : Math.PI / 2;
+      const filled = s!.hp - i * 2;
+      h.setPosition(sx + Math.cos(a) * R, sy + 4 * z + Math.sin(a) * R * 0.75)
+        .setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty)
+        .setAlpha(filled >= 2 ? 0.6 : filled === 1 ? 0.4 : 0.3)
+        .setVisible(hurt);
+    });
+    // The heal button (fruit or potion) right under the arc: easy to hit when in trouble.
+    const hx = sx;
+    const hy = sy + 4 * z + R * 0.75 + 14 + 24;
+    this.healBtn.setPosition(hx, hy);
+    this.healIcon.setPosition(hx, hy + 1);
+    this.healCount.setPosition(hx + 12, hy + 8);
+    healHome.x = hx;
+    healHome.y = hy;
+    healHome.r = 26;
+    // Low life: the screen edges pulse red (and a hint, once per time).
+    const low = s!.hp * 3 <= s!.maxHp;
+    if (this.vignette) {
+      const { width, height } = this.scale;
+      this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
+      if (low) this.vignette.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(time / 260)));
+    }
+    if (low && !this.lowWarned) {
+      this.lowWarned = true;
+      this.toast(healHome.on ? '❤ Mało życia! Dotknij ikonki pod bohaterem, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
+    } else if (!low) this.lowWarned = false;
+  }
 
   update(time: number) {
     // The heal button blinks below half health.
-    if (this.healBtn?.visible) this.healBtn.setAlpha(this.healLow ? 0.55 + 0.45 * Math.abs(Math.sin(time / 220)) : 0.85);
+    if (this.healBtn?.visible) this.healBtn.setAlpha(this.healLow ? 0.4 + 0.45 * Math.abs(Math.sin(time / 220)) : 0.5);
+    for (const o of [this.healIcon, this.healCount]) if (o?.visible) o.setAlpha(this.healLow ? 0.95 : 0.7);
+    this.placeHeroWidgets(time);
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);

@@ -69,6 +69,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   chasing = false;
   /** How far from home it wanders (px). */
   roam = 60;
+  /** A gang member never leaves its territory: it gives up once the hero (or it) is outside. */
+  leash: { x: number; y: number; r: number } | null = null;
   private nextThink = 0;
   private stunnedUntil = 0;
 
@@ -124,6 +126,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
     if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
     if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
+    const l = this.leash;
+    if (this.chasing && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
+      // Past the border of its gang's land: back home.
+      this.chasing = false;
+      this.nextThink = 0;
+    }
 
     if (this.chasing) {
       // Stop at the hero's edge instead of pushing into them.

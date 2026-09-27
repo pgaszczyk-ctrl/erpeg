@@ -64,6 +64,8 @@ const HOME_SAFE_M = 40;
 /** After a dialog closes, swings don't start a talk for this long (ms). */
 /** How close (m) the hero reads a road sign. */
 const SIGN_READ_M = 25;
+/** Protection after a fresh start (ms). */
+const OCHRONA_MS = 10_000;
 const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
@@ -181,6 +183,14 @@ export class GameScene extends Phaser.Scene {
   private bubbles: Phaser.GameObjects.Image[] = [];
   /** Enemies don't hurt the hero until then (right after a dialog). */
   private noHurtUntil = 0;
+  /** A fresh start (login, resurrection, the power stone): enemies can't hurt for OCHRONA_MS; the hero blinks. */
+  private protectUntil = 0;
+
+  private protect(now: number) {
+    this.protectUntil = now + OCHRONA_MS;
+    this.noHurtUntil = Math.max(this.noHurtUntil, this.protectUntil);
+    this.toast(`🛡 Ochrona na ${OCHRONA_MS / 1000} sekund – rozejrzyj się spokojnie.`, 2500);
+  }
   /** Right after a dialog closes, a swing doesn't start another talk. */
   private talkReadyAt = 0;
   private folk!: Townsfolk;
@@ -289,6 +299,7 @@ export class GameScene extends Phaser.Scene {
     this.folk = new Townsfolk(this, this.city);
     this.bubbles = [];
     this.noHurtUntil = 0;
+    this.protectUntil = -1; // set on the first frame (unless the character must linger)
     this.challenge = null;
     this.duelHp = null;
     this.duelCarry = 0;
@@ -355,6 +366,7 @@ export class GameScene extends Phaser.Scene {
         e.ambient = true;
         // They stand at their spot; they only come out when they see the hero.
         e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
+        e.leash = { x: g.x, y: g.y, r: g.r };
         return e;
       },
       (u) => {
@@ -442,6 +454,11 @@ export class GameScene extends Phaser.Scene {
     if (this.player.isDead || this.leaving || this.travelling) return;
 
     const lingering = now < this.lingerUntil;
+    if (this.protectUntil < 0) {
+      if (this.lingerUntil) this.protectUntil = 0;
+      else this.protect(now);
+    }
+
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
@@ -454,7 +471,8 @@ export class GameScene extends Phaser.Scene {
     this.story.update(dt, this.player.x !== bx || this.player.y !== by);
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
-    this.player.setAlpha(hidden ? 0.5 : 1);
+    // Protected after a fresh start: the hero blinks.
+    this.player.setAlpha(now < this.protectUntil ? 0.45 + 0.55 * Math.abs(Math.sin(now / 120)) : hidden ? 0.5 : 1);
 
     if (consumeHeal()) this.quickHeal();
     // The potion's bonus heart runs out.
@@ -1164,6 +1182,7 @@ export class GameScene extends Phaser.Scene {
       this.player.setPosition(at.x, at.y);
       this.cameras.main.centerOn(at.x, at.y);
       this.enemies.forEach((e) => (e.chasing = false));
+      this.protect(this.time.now);
       this.emitHud();
       this.save();
       return;
