@@ -13,8 +13,11 @@ osmium tags-filter "$WORK/t.pbf" \
   w/aerialway nwr/aerialway=station w/landuse=forest,meadow \
   -o "$WORK/f.pbf"
 osmium export "$WORK/f.pbf" -f geojsonseq -o "$WORK/f.geojsonseq" --add-unique-id=type_id
+osmium fileinfo -e "$WORK/f.pbf" | head -40
 gzip -9c "$WORK/f.geojsonseq" > data/tatry-osm.geojsonseq.gz
 OUT=data/tatry-probe.txt
+# Empty greps are fine in the summary.
+set +e +o pipefail
 {
   echo "BBOX $BBOX"; ls -lh data/tatry-osm.geojsonseq.gz
   count() { echo "$1: $(osmium tags-filter "$WORK/t.pbf" "$2" -o - -f opl 2>/dev/null | wc -l)"; }
