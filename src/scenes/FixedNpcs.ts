@@ -151,12 +151,15 @@ export class FixedNpcs {
   /** Grandma Grażynka's village centre; she appears once her street is loaded. */
   private grazynkaHome: Pt | null = null;
   private grazynkaTry = 0;
+  private luigiHome: Pt | null = null;
+  private luigiTry = 0;
 
   constructor(private scene: Phaser.Scene, private city: CityMap, private host: FixedHost) {
     // They all live in Lublin (Garbów is part of its map).
     if (city.id !== 'lublin') return;
     this.grazynkaHome = city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
-    this.placeLuigi();
+    const lb = city.findBuilding(LUIGI.adres);
+    this.luigiHome = lb ? city.entranceOf(lb) : null;
     const streetLines = (names: string[]) =>
       city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
 
@@ -210,17 +213,58 @@ export class FixedNpcs {
     }
   }
 
-  private placeLuigi() {
-    const b = this.city.findBuilding(LUIGI.adres);
-    if (!b) return;
-    const e = this.city.entranceOf(b);
-    // He sits a step outside his door (away from the house), on a walker that never gets anywhere.
-    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-    const len = Math.hypot(e.x - cx, e.y - cy) || 1;
-    // Beside the door rather than in it (a shop sign may hang over the door).
-    const tries = [{ x: e.x, y: e.y + 7 }, { x: e.x + 12, y: e.y + 6 }, { x: e.x - 12, y: e.y + 6 }, { x: e.x + ((e.x - cx) / len) * 8, y: e.y + ((e.y - cy) / len) * 8 }];
-    const d = tries.find((p) => this.city.isFree(p.x, p.y, 3, 3) && this.city.isFree(p.x, p.y + 5, 2, 1.5)) ?? e;
-    const w = new Walker([[d.x, d.y, d.x + 0.1, d.y]], 0, this.r);
+  /**
+   * Luigi strolls Nałęczowska between Aleja Kraśnicka and Morwowa (made once
+   * the tiles around there are loaded: the street's start is kilometres away).
+   */
+  private placeLuigi(px: number, py: number, now: number) {
+    const home = this.luigiHome;
+    if (!home || now < this.luigiTry) return;
+    this.luigiTry = now + 1000;
+    if (Math.hypot(px - home.x, py - home.y) > 1500 * PX_PER_M) return;
+    const near = 800 * PX_PER_M;
+    const around = (l: { pts: number[] }) => Math.hypot(l.pts[0] - home.x, l.pts[1] - home.y) < near + l.pts.length * 20;
+    const street = this.city.lines.filter((l) => l.name === LUIGI.ulica && l.pts.length >= 4 && around(l));
+    // Where each cross street meets it.
+    const ends = LUIGI.miedzy.map((name) => {
+      let best: Pt | null = null;
+      let bd = 12 * PX_PER_M;
+      for (const c of this.city.lines) {
+        if (c.name !== name || !around(c)) continue;
+        for (const a of street) {
+          for (let i = 0; i < a.pts.length; i += 2) {
+            for (let k = 0; k < c.pts.length; k += 2) {
+              const d = Math.hypot(a.pts[i] - c.pts[k], a.pts[i + 1] - c.pts[k + 1]);
+              if (d < bd) [bd, best] = [d, { x: a.pts[i], y: a.pts[i + 1] }];
+            }
+          }
+        }
+      }
+      return best;
+    });
+    const [A, B] = ends;
+    if (!A || !B) return;
+    // Runs of the street's points that lie between the two crossings.
+    const dx = B.x - A.x, dy = B.y - A.y, len2 = dx * dx + dy * dy || 1;
+    const between = (x: number, y: number) => {
+      const t = ((x - A.x) * dx + (y - A.y) * dy) / len2;
+      const off = Math.abs((x - A.x) * dy - (y - A.y) * dx) / Math.sqrt(len2);
+      return t >= -0.01 && t <= 1.01 && off < 60 * PX_PER_M;
+    };
+    const lines: number[][] = [];
+    for (const a of street) {
+      let run: number[] = [];
+      for (let i = 0; i <= a.pts.length; i += 2) {
+        if (i < a.pts.length && between(a.pts[i], a.pts[i + 1])) run.push(a.pts[i], a.pts[i + 1]);
+        else {
+          if (run.length >= 4) lines.push(run);
+          run = [];
+        }
+      }
+    }
+    if (!lines.length) return;
+    this.luigiHome = null;
+    const w = new Walker(lines, LUIGI.predkosc * PX_PER_M, this.r);
     const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xd0463c);
     this.list.push({ id: 'luigi', walker: w, sprite, x: w.x, y: w.y });
   }
@@ -288,6 +332,7 @@ export class FixedNpcs {
 
   update(dt: number, px: number, py: number, now: number, visible: (x: number, y: number) => boolean) {
     this.placeGrazynka(px, py, now);
+    this.placeLuigi(px, py, now);
     for (const w of this.list) {
       if (w.gone || !w.walker) continue;
       const near = Math.abs(w.x - px) < 500 && Math.abs(w.y - py) < 500;

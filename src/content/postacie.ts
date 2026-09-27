@@ -214,7 +214,7 @@ export const GRAZYNKA = {
 };
 
 // ----------------------------------------------------------------------------
-//  LUIGI – hiszpańskojęzyczny macho, siedzi przed domem przy Nałęczowskiej 18 (nie chodzi). Codziennie
+//  LUIGI – hiszpańskojęzyczny macho, spaceruje Nałęczowską między Aleją Kraśnicką a Morwową. Codziennie
 //  3 zagadki: pierwsza o szachach, druga o Pokémonach albo Magic: the
 //  Gathering (na zmianę dniami), trzecia z tego, co zostało. Jedna próba na
 //  zagadkę. Za każdą dobrą 1 EXP, za wszystkie trzy dobre dodatkowo 20 EXP.
@@ -223,6 +223,9 @@ export const LUIGI = {
   imie: { pl: 'Luigi', en: 'Luigi' },
   adres: 'Nałęczowska 18',
   ulica: 'Nałęczowska',
+  /** Chodzi tylko po kawałku ulicy między tymi przecznicami. */
+  miedzy: ['Aleja Kraśnicka', 'Morwowa'],
+  predkosc: 0.5,
   expZaZagadke: 1,
   premiaZaTrzy: 20,
   powitanie: { pl: '¡Hola, amigo! Siadaj, siadaj. Luigi ma dla ciebie zagadkę – tylko dla twardzieli!', en: '¡Hola, amigo! Sit down, sit down. Luigi has a riddle for you – only for tough guys!' },
