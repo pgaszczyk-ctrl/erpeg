@@ -1,0 +1,25 @@
+name: Probe Tatra map data
+
+on:
+  workflow_dispatch:
+  push:
+    paths: [scripts/probe-tatry.sh, .github/workflows/probe-tatry.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - run: scripts/probe-tatry.sh
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
+          git add data/tatry-osm.geojsonseq.gz data/tatry-probe.txt
+          git commit -m "Tatra OpenStreetMap probe data" || echo "No changes"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push
