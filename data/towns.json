@@ -1,6 +1,11 @@
 {
  "lublin": [
   {
+   "name": "Łopatki",
+   "lon": 22.1515295,
+   "lat": 51.3297113
+  },
+  {
    "name": "Lublin Północny",
    "lon": 22.5995426,
    "lat": 51.2422757
@@ -26,6 +31,11 @@
    "lat": 51.3076439
   },
   {
+   "name": "Nałęczów",
+   "lon": 22.2131809,
+   "lat": 51.3180443
+  },
+  {
    "name": "Lublin Ponikwoda",
    "lon": 22.6059708,
    "lat": 51.266083
@@ -49,6 +59,11 @@
    "name": "Lublin Zemborzyce",
    "lon": 22.5028874,
    "lat": 51.1715012
+  },
+  {
+   "name": "Sadurki",
+   "lon": 22.284403,
+   "lat": 51.2862738
   },
   {
    "name": "Lublin Główny",
@@ -574,23 +589,6 @@
    ]
   },
   {
-   "id": "naleczow",
-   "name": "Nałęczów",
-   "bbox": [
-    22.1945,
-    51.30635,
-    22.23187,
-    51.32974
-   ],
-   "stations": [
-    {
-     "name": "Nałęczów",
-     "lon": 22.2131809,
-     "lat": 51.3180443
-    }
-   ]
-  },
-  {
    "id": "rzeczyca",
    "name": "Rzeczyca",
    "bbox": [
@@ -774,23 +772,6 @@
    ]
   },
   {
-   "id": "sadurki",
-   "name": "Sadurki",
-   "bbox": [
-    22.26573,
-    51.27458,
-    22.30308,
-    51.29797
-   ],
-   "stations": [
-    {
-     "name": "Sadurki",
-     "lon": 22.284403,
-     "lat": 51.2862738
-    }
-   ]
-  },
-  {
    "id": "chelm",
    "name": "Chełm",
    "bbox": [
@@ -967,23 +948,6 @@
      "name": "Bełżec Drugi",
      "lon": 23.4036669,
      "lat": 50.3807697
-    }
-   ]
-  },
-  {
-   "id": "lopatki",
-   "name": "Łopatki",
-   "bbox": [
-    22.13284,
-    51.31801,
-    22.17022,
-    51.34141
-   ],
-   "stations": [
-    {
-     "name": "Łopatki",
-     "lon": 22.1515295,
-     "lat": 51.3297113
     }
    ]
   },
