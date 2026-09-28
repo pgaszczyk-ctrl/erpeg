@@ -25,7 +25,7 @@ jobs:
             curl -sS -m 30 -o /dev/null -D - "$u" | grep -iE '^(HTTP|location|server)'
             final=$(curl -sS -m 30 -L -o /dev/null -w '%{http_code} %{url_effective}' "$u")
             echo "   -> $final"
-            case "$final" in "200 https://exp-lore.app/"*) ;; *) echo "::error::$u does not end at https://exp-lore.app/"; ok=0;; esac
+            case "$final" in "200 https://exp-lore.app/"*|"200 http://exp-lore.app/"*) ;; *) echo "::error::$u does not end at exp-lore.app"; ok=0;; esac
           done
           echo "== certificate"
           echo | openssl s_client -connect exp-lore.app:443 -servername exp-lore.app 2>/dev/null | openssl x509 -noout -subject -issuer -dates
@@ -37,4 +37,9 @@ jobs:
           curl -sS -m 60 -o /dev/null -w 'script %{http_code} %{size_download} B\n' "https://exp-lore.app/$js"
           curl -sS -m 60 -o /dev/null -w 'map index %{http_code} %{size_download} B\n' https://exp-lore.app/map/lublin.json
           curl -sS -m 60 -o /dev/null -w 'sprite %{http_code}\n' https://exp-lore.app/postacie/heads_kaptur.png
+          echo "== test server"
+          curl -sS -m 30 https://exp-lore.app/test/ -o test.html -w 'test %{http_code}\n'
+          tjs=$(grep -oE 'assets/[^"]+\.js' test.html | head -1)
+          curl -sS -m 60 "https://exp-lore.app/test/$tjs" -o test.js -w 'test script %{http_code} %{size_download} B\n'
+          grep -q 'SERWER TESTOWY' test.js && echo "test build OK" || { echo "::error::/test/ is not the test build"; ok=0; }
           [ $ok = 1 ] || exit 1
