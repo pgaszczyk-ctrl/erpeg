@@ -54,6 +54,10 @@ export const session = {
   story: { st: 'start', walked: 0 } as Story,
   /** Power stones (content/sklepy.ts KAMIEN_MOCY). */
   kamienie: 0,
+  /** Diamonds (premium, content/sklepy.ts DIAMENT). */
+  diamenty: 0,
+  /** Stations reached by coach or train: a diamond takes the hero back to any of them. */
+  byl: [] as import('./travel').Stop[],
   /** Test characters (players.immortal): hearts refill instead of dying. */
   immortal: false,
   /** Healing potions (alchemist at petrol stations). */
@@ -164,6 +168,8 @@ export function startSession(r: LoginResult) {
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   session.kamienie = Math.max(0, p.save.kamienie ?? 0);
+  session.diamenty = Math.max(0, p.save.diamenty ?? 0);
+  session.byl = Array.isArray(p.save.byl) ? p.save.byl.slice(-40) : [];
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
@@ -205,7 +211,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namioty: session.namioty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, byl: session.byl, mikstury: session.mikstury, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };

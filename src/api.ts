@@ -43,6 +43,10 @@ export interface SaveData {
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;
+  /** Diamonds (premium currency, content/sklepy.ts DIAMENT). */
+  diamenty?: number;
+  /** Stations the hero has arrived at by coach/train (for premium rides back). */
+  byl?: import('./travel').Stop[];
   /** Own tents: nights left of each (old saves: `namiot: true`). */
   namioty?: { max: number; left: number }[];
   namiot?: boolean;

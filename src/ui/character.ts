@@ -141,7 +141,8 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
       ['🚶 Przebyte', `${(session.stats.m / 1000).toFixed(1).replace('.', ',')} km`],
       ['⚔ Pokonani wojownicy', String(session.stats.duels ?? 0)],
       ['🏆 Rozbite gangi', String(session.stats.gangs ?? 0)],
-      ...(session.kamienie ? [['💎 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
+      ...(session.kamienie ? [['🔮 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
+      ...(session.diamenty ? [['💎 Diamenty', String(session.diamenty)] as [string, string]] : []),
     ];
     const list = el('div', 'c-statlist');
     for (const [k, v] of stats) {

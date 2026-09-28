@@ -193,7 +193,8 @@ function sideOf(a: { lat: number; lon: number }, b: { lat: number; lon: number }
  * half hour: one of the nearest stations, one 10–50 km away and a long-distance
  * train to a big city 100–400 km away, all priced by the km. With `side` only
  * destinations that way. On a far city's map: back to Lublin and another big
- * city. `who` tells coachmen apart (a big station has three).
+, or the nearest one
+ * if none is within reach. `who` tells coachmen apart (a big station has three).
  */
 export function coachOffers(mapId: string, at: { lat: number; lon: number }, stationName: string, who: string, side: Strona | null = null): Offer[] {
   const r = rng(hashStr(`${mapId}|${who}|${slotNow()}`));
@@ -213,13 +214,21 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
     out.push({ to, km: d, via: null, price: ridePrice(d), level: WOZNICA.odPoziomu });
   };
   if (worldOrigin(mapId)) {
-    // Home is always on offer (also from a city farther than the limit, reached before it).
-    const main = world.lublin.find((s) => /główny/i.test(s.name)) ?? world.lublin[0];
-    if (main) {
-      const d = km(here, main);
-      out.push({ to: { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa }, km: d, via: null, price: ridePrice(d) });
+    // A far city: rides to other cities within reach (Lublin is just one of them); no forced way home.
+    const here2 = worldNames.get(mapId);
+    const lublin = world.lublin.find((s) => /główny/i.test(s.name)) ?? world.lublin[0];
+    const cands: Stop[] = DUZE_MIASTA.filter((c) => c.nazwa !== here2).map((c) => ({ name: c.nazwa, lat: c.lat, lon: c.lon, key: `w|${c.nazwa}`, mapId: cityMapId(c), mapName: c.nazwa }));
+    if (lublin) cands.push({ ...lublin, key: `lublin|${lublin.name}`, mapId: 'lublin', mapName: POWROT.nazwa });
+    const ok = cands.filter((c) => km(here, c) <= WOZNICA.maksKm && way(c)).sort((a, b) => km(here, a) - km(here, b));
+    // Nobody within reach (a city beyond the limit, reached before it): the nearest one anyway.
+    const list = ok.length ? ok : [...cands].sort((a, b) => km(here, a) - km(here, b)).slice(0, 1);
+    const nearest = list[0];
+    const other = pick(list.slice(1));
+    for (const to of [nearest, other]) {
+      if (!to) continue;
+      const d = km(here, to);
+      out.push({ to, km: d, via: null, price: ridePrice(d), level: to.mapId === 'lublin' ? undefined : WOZNICA.odPoziomu });
     }
-    far(worldNames.get(mapId));
     return out;
   }
   const others = [...stops.values()].filter((s) => !(s.mapId === mapId && s.name === stationName) && km(here, s) > 0.3 && way(s)).sort((a, b) => km(here, a) - km(here, b));

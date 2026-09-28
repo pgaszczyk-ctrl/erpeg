@@ -24,9 +24,9 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { KAMIEN_MOCY } from '../content/sklepy';
+import { KAMIEN_MOCY, DIAMENT } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
-import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip } from '../travel';
+import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
@@ -1374,8 +1374,9 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title,
       text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
-      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), 'Zostaję'],
+      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), `💎 Dowolne miasto, w którym byłeś`, 'Zostaję'],
       onChoose: (i) => {
+        if (i === trips.length) return this.diamondRide(title);
         const t = trips[i];
         if (!t) return;
         if (t.level && poziomPostaci(session.exp) < t.level) {
@@ -1386,9 +1387,56 @@ export class GameScene extends Phaser.Scene {
           this.toast(`Za mało monet: przejazd kosztuje ${t.price}.`);
           return;
         }
-        this.travel(t);
+        this.chooseSpeed(title, t, 0);
       },
     });
+  }
+
+  /** Premium: a diamond takes the hero to any station they have already arrived at. */
+  private diamondRide(title: string) {
+    const d = DIAMENT;
+    const here = this.city.toLatLon(this.player.x, this.player.y);
+    const dist = (s: { lat: number; lon: number }) => Math.hypot((s.lat - here.lat) * 111.13, (s.lon - here.lon) * 111.32 * Math.cos((here.lat * Math.PI) / 180));
+    const list = session.byl.filter((s) => s.mapId !== this.city.id || dist(s) > 1).slice(-8).reverse();
+    if (!list.length) {
+      this.dialog({ title, text: '„Za diament zawiozę cię do każdego miasta, w którym już byłeś – ale jeszcze nigdzie ze mną nie jeździłeś.”', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    this.dialog({
+      title,
+      text: `„Za ${d.dowolneMiasto} 💎 zawiozę cię, dokąd chcesz – byle tam, gdzie już byłeś.” Masz ${session.diamenty} 💎.`,
+      buttons: [...list.map((s) => `💎 ${s.mapName === s.name || s.name.startsWith(s.mapName) ? s.name : `${s.name} (${s.mapName})`}`), 'Wróć'],
+      onChoose: (i) => {
+        const to = list[i];
+        if (!to) return;
+        if (session.diamenty < d.dowolneMiasto) {
+          this.dialog({ title, text: `Brak diamentów (potrzebny ${d.dowolneMiasto} 💎). Kupisz je w każdym banku.`, buttons: ['OK'], onChoose: () => {} });
+          return;
+        }
+        const k = dist(to);
+        this.chooseSpeed(title, { to, km: k, via: null, price: 0 }, d.dowolneMiasto);
+      },
+    });
+  }
+
+  /** With diamonds to spare: ask whether to go twice as fast for one more. */
+  private chooseSpeed(title: string, t: Offer, diamonds: number) {
+    const d = DIAMENT;
+    if (session.immortal || session.diamenty < diamonds + d.szybciej) {
+      this.payAndTravel(t, diamonds, 1);
+      return;
+    }
+    this.dialog({
+      title,
+      text: `Zwykle: ${rideText(t.km)}. Za ${d.szybciej} 💎 więcej: ${rideText(t.km, d.razySzybciej)}.`,
+      buttons: ['Zwykle', `⚡ ${d.razySzybciej}× szybciej (+${d.szybciej} 💎)`],
+      onChoose: (i) => this.payAndTravel(t, diamonds + (i === 1 ? d.szybciej : 0), i === 1 ? d.razySzybciej : 1),
+    });
+  }
+
+  private payAndTravel(t: Offer, diamonds: number, times: number) {
+    session.diamenty -= diamonds;
+    this.travel(t, times, diamonds);
   }
 
   /** A power stone crumbles: back to life at the load point (last hotel, or home). */
@@ -1399,7 +1447,7 @@ export class GameScene extends Phaser.Scene {
     this.player.hp = PLAYER.maxHp;
     session.hp = PLAYER.maxHp;
     const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
-    this.toast('💎 Kamień mocy rozsypał się – wracasz do życia!', 4000);
+    this.toast('🔮 Kamień mocy rozsypał się – wracasz do życia!', 4000);
     if (at.m === this.city.id) {
       this.player.setPosition(at.x, at.y);
       this.cameras.main.centerOn(at.x, at.y);
@@ -1774,7 +1822,7 @@ export class GameScene extends Phaser.Scene {
     const k = KAMIEN_MOCY;
     const fmt = (n: number) => n.toLocaleString('pl-PL');
     this.dialog({
-      title: `💎 Kamień mocy – ${p.name}`,
+      title: `🔮 Kamień mocy – ${p.name}`,
       text: `Kapłan pokazuje lśniący kamień. „Gdy zginiesz, kamień się rozsypie i wrócisz do życia – w hotelu, w którym ostatnio spałeś, albo w domu.”\n\nCena: ${fmt(k.cena)} monet albo ${k.zlotych} zł. Masz ${fmt(session.coins)} monet i ${session.kamienie} ${session.kamienie === 1 ? 'kamień' : 'kamieni'}.`,
       buttons: [`Kup za ${fmt(k.cena)} 💰`, `Kup za ${k.zlotych} zł`, 'Nie teraz'],
       onChoose: (i) => {
@@ -1784,9 +1832,9 @@ export class GameScene extends Phaser.Scene {
           session.kamienie++;
           this.emitHud();
           this.save();
-          this.toast('💎 Masz kamień mocy!', 2500);
+          this.toast('🔮 Masz kamień mocy!', 2500);
         } else if (i === 1) {
-          this.dialog({ title: '💎 Kamień mocy', text: `Płatności prawdziwymi pieniędzmi (${k.zlotych} zł) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
+          this.dialog({ title: '🔮 Kamień mocy', text: `Płatności prawdziwymi pieniędzmi (${k.zlotych} zł) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
         }
       },
     });
@@ -1839,12 +1887,37 @@ export class GameScene extends Phaser.Scene {
       buttons.push('Zerwij lokatę (bez odsetek)');
       acts.push(() => this.breakDeposit(title, waiting, left));
     }
+    buttons.push('💎 Diamenty');
+    acts.push(() => this.buyDiamond(title));
     buttons.push('Wyjdź');
     this.dialog({
       title,
       text: `Masz ${session.coins} monet.${lines.length ? `\n\nTwoje lokaty:\n${lines.join('\n')}` : '\n\nOddaj nam monety na kilka dni, a oddamy więcej! Odebrać możesz w każdym banku.'}`,
       buttons,
       onChoose: (i) => acts[i]?.(),
+    });
+  }
+
+  /** Diamonds (premium currency): for coins now, for real money later. */
+  private buyDiamond(title: string) {
+    const d = DIAMENT;
+    const fmt = (n: number) => n.toLocaleString('pl-PL');
+    this.dialog({
+      title,
+      text: `💎 Diament to waluta premium. U woźnicy za ${d.dowolneMiasto} 💎 pojedziesz do dowolnego miasta, w którym już byłeś, a za kolejny ${d.szybciej} 💎 dojedziesz ${d.razySzybciej}× szybciej.\n\nCena: ${fmt(d.monet)} monet albo ${d.euro} €. Masz ${fmt(session.coins)} monet i ${session.diamenty} 💎.`,
+      buttons: [`Kup za ${fmt(d.monet)} 💰`, `Kup za ${d.euro} €`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i === 0) {
+          if (session.coins < d.monet) return this.toast(`Za mało monet – diament kosztuje ${fmt(d.monet)}.`, 2500);
+          spend(d.monet);
+          session.diamenty++;
+          this.emitHud();
+          this.save();
+          this.toast(`💎 Masz ${session.diamenty} ${session.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500);
+        } else if (i === 1) {
+          this.dialog({ title: '💎 Diamenty', text: `Płatności prawdziwymi pieniędzmi (${d.euro} €) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
+        }
+      },
     });
   }
 
@@ -2017,6 +2090,11 @@ export class GameScene extends Phaser.Scene {
 
   /** Rides to another station: loads its map and starts there. */
   /** The station the hero leaves from (for the ride screen). */
+  /** Adds a station to the places a diamond ride can go back to. */
+  private remember(s: Stop) {
+    session.byl = [...session.byl.filter((b) => b.key !== s.key), s].slice(-40);
+  }
+
   private stationHere() {
     let best: CityPlace | null = null;
     for (const p of this.city.places) {
@@ -2026,10 +2104,14 @@ export class GameScene extends Phaser.Scene {
     return best?.name ?? mapName(this.city.id);
   }
 
-  private travel(t: Offer) {
+  private travel(t: Offer, times = 1, diamonds = 0) {
     if (this.travelling) return;
     this.travelling = true;
-    spend(t.price);
+    if (t.price) spend(t.price);
+    // Remember where we set off from and where we go: a diamond takes the hero back later.
+    const from = this.city.toLatLon(this.player.x, this.player.y);
+    this.remember({ name: this.stationHere(), ...from, key: `${this.city.id}|${this.stationHere()}`, mapId: this.city.id, mapName: mapName(this.city.id) });
+    this.remember(t.to);
     this.emitHud();
     this.keepFog();
     this.toast(`🐴 Jedziemy do: ${t.to.name}…`, 3000);
@@ -2047,7 +2129,7 @@ export class GameScene extends Phaser.Scene {
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();
-          session.jazda = { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km), train: !!t.level || t.to.mapId.startsWith('w:') };
+          session.jazda = { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
           saveNow(this.player.hp).catch(() => {});
           await Promise.all([prepareMap(city), showJourney(session.jazda)]);
           session.jazda = null;
@@ -2060,10 +2142,13 @@ export class GameScene extends Phaser.Scene {
         this.scene.restart();
       })
       .catch((e: Error) => {
-        // Could not load that map: the money comes back.
-        earn(t.price);
-        session.stats.earned -= t.price;
-        session.stats.spent -= t.price;
+        // Could not load that map: the money (and diamonds) come back.
+        if (t.price) {
+          earn(t.price);
+          session.stats.earned -= t.price;
+          session.stats.spent -= t.price;
+        }
+        session.diamenty += diamonds;
         this.travelling = false;
         cam.fadeIn(300);
         this.toast(`Woźnica nie znalazł drogi: ${e.message}`);
@@ -2932,7 +3017,7 @@ export class GameScene extends Phaser.Scene {
     const extras: [string, () => void][] = [];
     const ask = place && this.story.askLabel();
     if (place && ask) extras.push([ask, () => this.story.ask(place)]);
-    if (place?.kind === 'church') extras.push(['💎 Kamień mocy', () => this.openStone(place)]);
+    if (place?.kind === 'church') extras.push(['🔮 Kamień mocy', () => this.openStone(place)]);
     if (place && extras.length) {
       this.storyPlace = null;
       const at = req.buttons.length - 1;

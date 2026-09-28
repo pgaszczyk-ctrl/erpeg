@@ -67,6 +67,14 @@ export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200
 export const KAMIEN_MOCY = { cena: 1_000_000_000, zlotych: 10 };
 
 /**
+ * DIAMENT – waluta premium (kupowana w banku: za monety albo prawdziwe
+ * pieniądze, płatności wkrótce). Za diamenty woźnica zawiezie do dowolnego
+ * miasta, w którym już się było (`dowolneMiasto`), a za kolejne dojedzie
+ * `razySzybciej` razy szybciej (`szybciej`).
+ */
+export const DIAMENT = { monet: 1_000_000, euro: 2, dowolneMiasto: 1, szybciej: 1, razySzybciej: 2 };
+
+/**
  * ALCHEMIK – na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw
  * najtańsze) na miksturę leczącą: całe zdrowie i dodatkowe serduszko w innym
  * kolorze na kilka minut. Miksturę pije się przyciskiem leczenia (🧪, klawisz H).

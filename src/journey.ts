@@ -23,8 +23,9 @@ export interface Journey {
   train?: boolean;
 }
 
-export function rideMs(km: number) {
-  return Math.round((km / PODROZ_KMH) * 3_600_000);
+/** `times`: a diamond ride goes this many times faster. */
+export function rideMs(km: number, times = 1) {
+  return Math.round((km / PODROZ_KMH / times) * 3_600_000);
 }
 
 /** Server time minus the phone's (so the phone clock can't shorten a ride). */
@@ -54,8 +55,8 @@ function fmtClock(t: number) {
 }
 
 /** Ride time for the coachman's list, e.g. "ok. 19 min". */
-export function rideText(km: number) {
-  const ms = rideMs(km);
+export function rideText(km: number, times = 1) {
+  const ms = rideMs(km, times);
   const min = Math.round(ms / 60_000);
   return min >= 60 ? `ok. ${Math.floor(min / 60)} godz. ${min % 60 ? `${min % 60} min` : ''}`.trim() : `ok. ${Math.max(1, min)} min`;
 }

@@ -11,7 +11,8 @@
 //  Każdy kurs kosztuje tyle samo za kilometr (opłata + stawka za km).
 //  Na dużych stacjach (z „Główny/Główna” w nazwie albo z 3+ kierunkami) stoi
 //  3 woźniców, każdy jedzie tylko w swoją stronę świata.
-//  Z każdej stacji w dalekim mieście można wrócić do Lublina (POWROT).
+//  Z dalekiego miasta woźnica wozi do najbliższych miast w zasięgu (Lublin jest
+//  jednym z nich, jeśli jest blisko) – nie ma obowiązkowego powrotu.
 // ----------------------------------------------------------------------------
 
 export const WOZNICA = {
@@ -77,5 +78,5 @@ export const DUZE_MIASTA: Miasto[] = [
   { nazwa: 'Kołobrzeg', wojewodztwo: 'zachodniopomorskie', lat: 54.1840, lon: 15.5760 },
 ];
 
-/** Powrót z dalekiego miasta na Lublin Główny. */
+/** Nazwa Lublina jako celu pociągu z dalekiego miasta. */
 export const POWROT = { nazwa: 'Lublin' };
