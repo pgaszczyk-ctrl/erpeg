@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOHATEROWIE, CHOCHLIK, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
+import { BOHATEROWIE, CHOCHLIK, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
 
 // The new detailed characters (content/wyglad.ts). Every sheet becomes a
@@ -97,7 +97,7 @@ export function heroSkin(postac: number | undefined, name: string): Postac {
   if (postac !== undefined && BOHATEROWIE[postac]) return BOHATEROWIE[postac];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return BOHATEROWIE[h % BOHATEROWIE.length];
+  return BOHATEROWIE[h % PIERWSI_BOHATEROWIE];
 }
 
 // ------------------------------------------------------------------ making the sheets

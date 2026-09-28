@@ -10,6 +10,7 @@ import { askAccount } from './account';
 import { pixelLogo } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
+import { BOHATEROWIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
@@ -165,7 +166,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
       // How the hero looks: random (a new roll with the dice button), shown next to the name.
-      const look: Look = randomLook();
+      // A new hero also gets one of all the drawn heroes (changeable in the character sheet).
+      const newLook = (): Look => ({ ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length) });
+      const look: Look = newLook();
       const preview = el('canvas', { className: 'm-hero', width: 48, height: LOOK_H });
       let frame = 0;
       const paint = () => {
@@ -180,7 +183,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       }, 110);
       const lookBox = el('div', { className: 'm-look' }, [
         button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
-          Object.assign(look, randomLook());
+          Object.assign(look, newLook());
           paint();
         }),
       ]);

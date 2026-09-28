@@ -31,7 +31,18 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
+  // Pack „bohaterowie 04–10”.
+  { id: 'podrozniczka', nazwa: 'Podróżniczka w szaliku', plik: 'bohater_04', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
+  { id: 'obiezyswiat', nazwa: 'Obieżyświat', plik: 'bohater_05', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
+  { id: 'zielarka', nazwa: 'Dziewczyna z warkoczami', plik: 'bohater_06', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko' },
+  { id: 'wloczega', nazwa: 'Włóczęga w bezrękawniku', plik: 'bohater_07', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
+  { id: 'wojowniczka', nazwa: 'Wojowniczka z kucykiem', plik: 'bohater_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
+  { id: 'zwiadowca', nazwa: 'Chłopiec w pelerynie', plik: 'bohater_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
+  { id: 'srebrna', nazwa: 'Srebrnowłosa', plik: 'bohater_10', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
 ];
+
+/** Characters made before the pack 04–10 got one of the first three by their name: they keep it. */
+export const PIERWSI_BOHATEROWIE = 3;
 
 /** Townsfolk drawn by the artist (packs „mieszkańcy 01–05” with v3 masks, „06–10” and „11–15” from the style fix v5); each also in the STROJE colours. Ids: letters only. */
 export const MIESZKANCY_HD: Postac[] = [
