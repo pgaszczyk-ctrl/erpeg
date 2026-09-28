@@ -1,7 +1,7 @@
 name: World map sample
 
 # Cuts small samples out of the Protomaps world map (Zakopane with the Tatras,
-# and central Lublin to compare with our own map) into data/world-sample/,
+# Wawel in Kraków and central Lublin to compare with our own map) into data/world-sample/,
 # for building and testing the world map reader offline.
 on:
   workflow_dispatch:
@@ -26,6 +26,8 @@ jobs:
           mkdir -p data/world-sample
           pmtiles extract "https://build.protomaps.com/$B" data/world-sample/zakopane.pmtiles --bbox=19.80,49.15,20.15,49.33 --maxzoom=15
           pmtiles extract "https://build.protomaps.com/$B" data/world-sample/lublin.pmtiles --bbox=22.54,51.23,22.59,51.26 --maxzoom=15
+          # Wawel (the QR demo's dream).
+          pmtiles extract "https://build.protomaps.com/$B" data/world-sample/krakow.pmtiles --bbox=19.915,50.045,19.955,50.065 --maxzoom=15
           { echo "build $B"; ls -l data/world-sample; pmtiles show data/world-sample/zakopane.pmtiles; } > data/world-sample/info.txt 2>&1
           cat data/world-sample/info.txt
       - name: Commit
