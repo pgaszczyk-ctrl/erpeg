@@ -12,3 +12,7 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
    - bohaterowie 04–10 do wyboru przez gracza, dziewczyny i chłopcy, bardziej „przygodowi”;
    - wrogowie: driada, zombie, szkielet, bandyta, herszt (bez czerwonego obrysu, gra dodaje poświatę sama).
 7. Pełne wytyczne i lista wszystkiego do narysowania są w pliku `CZYTAJ_MNIE.html` w tej paczce.
+
+## Do poprawy w paczce v5 (mieszkańcy 11 i 15)
+
+8. **Mieszkańcy 11 (dziewczynka z kucykami) i 15 (kobieta w spódnicy) mają zepsute klatki kroku.** W krokach A i B, najbardziej w widoku z boku, spódnica jest narysowana jako płaski poziomy pasek, a nogi wystrzelone do przodu. W grze postać wygląda przy chodzeniu, jakby była przepołowiona. Proszę przerysować krok A i krok B w każdym kierunku tak, żeby spódnica miała ten sam kształt co w klatce „stoi” (najwyżej lekko się kołysze), a spod niej wychodziły tylko nogi, jedna trochę do przodu, druga do tyłu. Do czasu poprawki obie postacie są w grze wyłączone.

@@ -541,13 +541,13 @@ export class CityMap {
    * Can the hero walk from (x, y) at least `m` metres away? (A railway
    * platform between tracks or a fenced yard can look free but lead nowhere.)
    */
-  reachesFar(x: number, y: number, m = 120): boolean {
-    const step = 2 * PX_PER_M;
+  reachesFar(x: number, y: number, m = 400): boolean {
+    const step = 3 * PX_PER_M;
     const R = m * PX_PER_M;
     const seen = new Set<string>();
     const queue: [number, number][] = [[0, 0]];
     seen.add('0,0');
-    while (queue.length && seen.size < 40000) {
+    while (queue.length && seen.size < 60000) {
       const [i, j] = queue.shift()!;
       if (Math.hypot(i, j) * step >= R) return true;
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -579,9 +579,26 @@ export class CityMap {
     for (const c of cands) {
       if (!this.isFree(c.x, c.y, 4, 4)) continue;
       if (this.reachesFar(c.x, c.y)) return { x: c.x, y: c.y };
-      if (++tries > 40) break;
+      if (++tries > 25) break;
     }
     return this.freeNear(x, y);
+  }
+
+  /**
+   * Where a long train drops the hero in a far city: its real station nearest
+   * the city's point (within 2 km; the point itself can be a river island),
+   * else that point, moved to a spot he can walk away from.
+   */
+  arrivalNear(x: number, y: number): { x: number; y: number } {
+    let best: { x: number; y: number } | null = null;
+    let bd = 2000 * PX_PER_M;
+    for (const p of this.places) {
+      if (p.kind !== 'station') continue;
+      const d = Math.hypot(p.door.x - x, p.door.y - y);
+      if (d < bd) { bd = d; best = p.door; }
+    }
+    const at = best ?? { x, y };
+    return this.reachableNear(at.x, at.y);
   }
 
   /** Same projection as scripts/build-map.mjs, in world pixels. */

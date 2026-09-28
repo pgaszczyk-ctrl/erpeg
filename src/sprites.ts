@@ -85,7 +85,7 @@ export function hdFolkLooks(): string[] {
   const out: string[] = [];
   // The artist's townsfolk when there are any, else the heroes recoloured.
   const who = MIESZKANCY_HD.length ? MIESZKANCY_HD : BOHATEROWIE;
-  for (const p of who) STROJE.forEach((_, i) => {
+  for (const p of who.filter((q) => !q.wylaczona)) STROJE.forEach((_, i) => {
     if (i === 0) out.push(`hd-${p.id}`);
     else if (p.przebarwiaj !== false) out.push(`hd-${p.id}-s${i}`);
   });

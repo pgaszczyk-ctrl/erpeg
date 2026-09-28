@@ -19,6 +19,8 @@ export interface Postac {
   skala: number;
   /** Make the STROJE colour variants from the mask (false: the mask is wrong, only the drawn colours). */
   przebarwiaj?: boolean;
+  /** Kept off the streets until the artist redraws it (e.g. broken walking frames). */
+  wylaczona?: boolean;
   /** Who it is, so the townsfolk get a fitting name: k = woman/girl, m = man/boy. */
   plec?: 'k' | 'm';
   wiek?: 'dziecko' | 'dorosly' | 'starszy';
@@ -43,11 +45,11 @@ export const MIESZKANCY_HD: Postac[] = [
   { id: 'pani', nazwa: 'Kobieta', plik: 'mieszkaniec_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'pan', nazwa: 'Mężczyzna', plik: 'mieszkaniec_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'dziadek', nazwa: 'Starszy pan', plik: 'mieszkaniec_10', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
-  { id: 'panienka', nazwa: 'Dziewczynka', plik: 'mieszkaniec_11', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko' },
+  { id: 'panienka', nazwa: 'Dziewczynka', plik: 'mieszkaniec_11', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko', wylaczona: true }, // same broken step frames as 15
   { id: 'urwis', nazwa: 'Chłopiec', plik: 'mieszkaniec_12', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
   { id: 'staruszka', nazwa: 'Starsza pani', plik: 'mieszkaniec_13', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'starszy' },
   { id: 'staruszek', nazwa: 'Starszy pan w kapeluszu', plik: 'mieszkaniec_14', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
-  { id: 'mieszczka', nazwa: 'Kobieta', plik: 'mieszkaniec_15', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
+  { id: 'mieszczka', nazwa: 'Kobieta', plik: 'mieszkaniec_15', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly', wylaczona: true }, // step frames: the skirt is a flat strip and the legs fly forward (owner: "przepołowiona")
 ];
 
 /** The imp (chochlik): smaller than a person. */

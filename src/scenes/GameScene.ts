@@ -2123,7 +2123,7 @@ export class GameScene extends Phaser.Scene {
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
         // A spot on the platform/street the hero can walk away from (not an island between the tracks).
-        session.arrive = city.reachableNear(to.x, to.y);
+        session.arrive = st ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
         // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         if (!session.immortal) {
