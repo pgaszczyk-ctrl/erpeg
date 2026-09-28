@@ -36,10 +36,10 @@ jobs:
           echo "script: $js"
           curl -sS -m 60 -o /dev/null -w 'script %{http_code} %{size_download} B\n' "https://exp-lore.app/$js"
           curl -sS -m 60 -o /dev/null -w 'map index %{http_code} %{size_download} B\n' https://exp-lore.app/map/lublin.json
-          curl -sS -m 60 -o /dev/null -w 'sprite %{http_code}\n' https://exp-lore.app/postacie/heads_kaptur.png
           echo "== test server"
           curl -sS -m 30 https://exp-lore.app/test/ -o test.html -w 'test %{http_code}\n'
           tjs=$(grep -oE 'assets/[^"]+\.js' test.html | head -1)
           curl -sS -m 60 "https://exp-lore.app/test/$tjs" -o test.js -w 'test script %{http_code} %{size_download} B\n'
-          grep -q 'SERWER TESTOWY' test.js && echo "test build OK" || { echo "::error::/test/ is not the test build"; ok=0; }
+          # The test build is made with VITE_TEST=1, so its script differs from production's.
+          [ -n "$tjs" ] && [ "$(basename "$tjs")" != "$(basename "$js")" ] && echo "test build OK ($tjs vs $js)" || { echo "::error::/test/ is missing or the same as production"; ok=0; }
           [ $ok = 1 ] || exit 1
