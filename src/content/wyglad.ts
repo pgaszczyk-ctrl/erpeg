@@ -19,6 +19,8 @@ export interface Postac {
   skala: number;
   /** Make the STROJE colour variants from the mask (false: the mask is wrong, only the drawn colours). */
   przebarwiaj?: boolean;
+  /** Has a clothes mask file (`<plik>_maska.png`); the enemies don't. */
+  maska?: boolean;
   /** Kept off the streets until the artist redraws it (e.g. broken walking frames). */
   wylaczona?: boolean;
   /** Who it is, so the townsfolk get a fitting name: k = woman/girl, m = man/boy. */
@@ -56,15 +58,25 @@ export const MIESZKANCY_HD: Postac[] = [
   { id: 'pani', nazwa: 'Kobieta', plik: 'mieszkaniec_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'pan', nazwa: 'Mężczyzna', plik: 'mieszkaniec_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'dziadek', nazwa: 'Starszy pan', plik: 'mieszkaniec_10', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
-  { id: 'panienka', nazwa: 'Dziewczynka', plik: 'mieszkaniec_11', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko', wylaczona: true }, // same broken step frames as 15
+  { id: 'panienka', nazwa: 'Dziewczynka', plik: 'mieszkaniec_11', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko' }, // redrawn in the enemies pack v1
   { id: 'urwis', nazwa: 'Chłopiec', plik: 'mieszkaniec_12', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
   { id: 'staruszka', nazwa: 'Starsza pani', plik: 'mieszkaniec_13', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'starszy' },
   { id: 'staruszek', nazwa: 'Starszy pan w kapeluszu', plik: 'mieszkaniec_14', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
-  { id: 'mieszczka', nazwa: 'Kobieta', plik: 'mieszkaniec_15', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly', wylaczona: true }, // step frames: the skirt is a flat strip and the legs fly forward (owner: "przepołowiona")
+  { id: 'mieszczka', nazwa: 'Kobieta', plik: 'mieszkaniec_15', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' }, // redrawn in the enemies pack v1 (the first v5 step frames were "halved")
 ];
 
 /** The imp (chochlik): smaller than a person. */
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'slime', bokWPrawo: false, skala: 0.28 };
+
+/** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */
+export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
+  { postac: { id: 'driada', nazwa: 'Driada', plik: 'driada', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['driada'] },
+  { postac: { id: 'zombie', nazwa: 'Zombiak', plik: 'zombie', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['zombie'] },
+  { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet'] },
+  { postac: { id: 'bandyta', nazwa: 'Bandyta', plik: 'bandyta', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['bandyta'] },
+  // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).
+  { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt'] },
+];
 
 /** Townsfolk: each hero in these clothes colours (hue in degrees, saturation ×, lightness ×) – red and green mask parts. */
 export const STROJE: { ubranie: [number, number, number]; drugi: [number, number, number] }[] = [

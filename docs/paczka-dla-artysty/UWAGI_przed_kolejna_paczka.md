@@ -22,3 +22,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 9. **Bohaterowie 04–10 są przyjęci** i są już w grze, maski też. Dzięki!
 10. **Mieszkańcy 11 i 15 nadal do poprawy.** Pliki w folderze `poprawki_mieszkancow_11_15` są piksel w piksel takie same jak poprzednie (sprawdzone programem), więc poprawka nie trafiła do paczki. Problem z punktu 8 dalej jest: w krokach A i B (zwłaszcza z boku) spódnica jest płaskim paskiem, a nogi wystrzelone do przodu. Proszę narysować te klatki od nowa: spódnica w tym samym kształcie co w klatce „stoi”, spod niej widać tylko nogi.
 11. **Następna paczka: wrogowie** – driada, zombie, szkielet, bandyta, herszt (ten sam format 3×3 po 64×64, bez czerwonego obrysu, gra dodaje poświatę sama; herszt też 64×64, gra go powiększa).
+
+## Po paczce „wrogowie v1”
+
+12. **Wrogowie przyjęci** (driada, zombie, szkielet, bandyta, herszt) i są w grze. Herszt jest powiększany 1,8×, a wielki herszt 2,5× i dodatkowo zaczerwieniony. Dzięki!
+13. **Mieszkańcy 11 i 15 poprawieni, są z powrotem na ulicach.** Drobiazg: u 11 w widoku od tyłu kucyki są ścięte płasko u góry – przy okazji warto je domknąć.

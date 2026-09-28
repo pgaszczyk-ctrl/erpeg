@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOHATEROWIE, CHOCHLIK, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
+import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
 
 // The new detailed characters (content/wyglad.ts). Every sheet becomes a
@@ -26,11 +26,21 @@ const ROW = { down: 0, side: 1, up: 2 } as const;
 
 export const hdOn = NOWE_POSTACIE;
 
+const ENEMIES = WROGOWIE_HD.map((w) => w.postac);
+const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES];
+
+/** The detailed picture (with the red glow) of an enemy kind, when the artist drew one. */
+export function enemyTexture(kind: string): string | null {
+  if (kind === 'glut' || kind === 'wielki_glut') return 'hd-chochlik-red';
+  const w = WROGOWIE_HD.find((q) => q.rodzaje.includes(kind));
+  return w ? `hd-${w.postac.id}-red` : null;
+}
+
 export function loadHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
-  for (const p of [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK]) {
+  for (const p of ALL()) {
     scene.load.image(`hdsrc-${p.id}`, `postacie/${p.plik}.png`);
-    scene.load.image(`hdmask-${p.id}`, `postacie/${p.plik}_maska.png`);
+    if (p.maska !== false) scene.load.image(`hdmask-${p.id}`, `postacie/${p.plik}_maska.png`);
   }
 }
 
@@ -62,7 +72,7 @@ function baseOf(key: string) {
 
 export function createHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
-  for (const p of [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK]) {
+  for (const p of ALL()) {
     if (!scene.textures.exists(`hdsrc-${p.id}`)) continue;
     const src = sheetPixels(scene, p);
     const mask = maskPixels(scene, p);
@@ -70,7 +80,7 @@ export function createHdSprites(scene: Phaser.Scene) {
     skala.set(key, p.skala);
     addSheet(scene, key, src);
     addSheet(scene, `${key}-red`, glow(src));
-    if (p === CHOCHLIK || p.przebarwiaj === false) continue;
+    if (p === CHOCHLIK || ENEMIES.includes(p) || p.przebarwiaj === false) continue;
     STROJE.forEach((s, i) => {
       if (i === 0) return;
       const c = recolour(src, mask, s);

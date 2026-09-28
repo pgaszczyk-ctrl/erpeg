@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
-import { hdOn, fitHd } from '../sprites';
+import { hdOn, fitHd, enemyTexture } from '../sprites';
 import { PLAYER } from './Player';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
@@ -43,9 +43,6 @@ export const SLIME = ENEMY_KINDS.glut;
 /** Enemy speeds above were set for a hero walking 60 px/s; they keep the same proportion to the hero's speed now. */
 export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
-/** Imps drawn as the new detailed goblin (content/wyglad.ts), with a red glow. */
-const HD_IMP = 'hd-chochlik-red';
-const HD_KINDS = new Set<RodzajWroga>(['glut', 'wielki_glut', 'herszt', 'wielki_herszt']);
 
 /** Pictures of the little creatures (all but the bandit). */
 const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
@@ -90,8 +87,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
     const person = kind === 'bandyta' || kind === 'wojownik';
-    const hd = hdOn && HD_KINDS.has(kind) && scene.textures.exists(HD_IMP);
-    super(scene, x, y, hd ? HD_IMP : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
+    // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
+    const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(kind) : null;
+    const hd = !!hdTex && scene.textures.exists(hdTex);
+    super(scene, x, y, hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
@@ -99,12 +98,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.hd = hd;
     if (hd) {
       fitHd(this, k.scale);
-      this.walkAnim = `${HD_IMP}-walk`;
+      this.walkAnim = `${hdTex}-walk`;
     } else {
       this.setScale(k.scale);
       this.setOrigin(0.5, 1 - 0.5 / k.scale); // grow upwards from the feet
     }
-    if (k.tint) this.setTint(k.tint);
+    if (k.tint && !(hd && kind === 'herszt')) this.setTint(k.tint); // the drawn boss has his own look; the big one stays redder
     this.home = new Phaser.Math.Vector2(x, y);
     if (hd) this.setFrame('down-0');
     else if (kind === 'smok') this.anims.play('dragon-flap');
