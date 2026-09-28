@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOHATEROWIE, CHOCHLIK, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
+import { BOHATEROWIE, CHOCHLIK, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
 
 // The new detailed characters (content/wyglad.ts). Every sheet becomes a
@@ -19,7 +19,8 @@ const COL = [1, 0, 2];
  * The standing frame is used when the character stands still.
  */
 const WALK = [1, 2];
-const WALK_FPS = 5;
+/** ~165 ms a step (the artist suggests 140–180 ms). */
+const WALK_FPS = 6;
 /** Sheet row of each direction (the artist's order: down, side, up). */
 const ROW = { down: 0, side: 1, up: 2 } as const;
 
@@ -27,7 +28,7 @@ export const hdOn = NOWE_POSTACIE;
 
 export function loadHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
-  for (const p of [...BOHATEROWIE, CHOCHLIK]) {
+  for (const p of [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK]) {
     scene.load.image(`hdsrc-${p.id}`, `postacie/${p.plik}.png`);
     scene.load.image(`hdmask-${p.id}`, `postacie/${p.plik}_maska.png`);
   }
@@ -55,7 +56,7 @@ function baseOf(key: string) {
 
 export function createHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
-  for (const p of [...BOHATEROWIE, CHOCHLIK]) {
+  for (const p of [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK]) {
     if (!scene.textures.exists(`hdsrc-${p.id}`)) continue;
     const src = sheetPixels(scene, p);
     const mask = maskPixels(scene, p);
@@ -63,7 +64,7 @@ export function createHdSprites(scene: Phaser.Scene) {
     skala.set(key, p.skala);
     addSheet(scene, key, src);
     addSheet(scene, `${key}-red`, glow(src));
-    if (p === CHOCHLIK) continue;
+    if (p === CHOCHLIK || p.przebarwiaj === false) continue;
     STROJE.forEach((s, i) => {
       if (i === 0) return;
       const c = recolour(src, mask, s);
@@ -73,10 +74,15 @@ export function createHdSprites(scene: Phaser.Scene) {
   }
 }
 
-/** Keys of all townsfolk looks (every hero in every clothes colour). */
+/** Keys of all townsfolk looks (every townsperson in every clothes colour). */
 export function hdFolkLooks(): string[] {
   const out: string[] = [];
-  for (const p of BOHATEROWIE) STROJE.forEach((_, i) => out.push(i === 0 ? `hd-${p.id}` : `hd-${p.id}-s${i}`));
+  // The artist's townsfolk when there are any, else the heroes recoloured.
+  const who = MIESZKANCY_HD.length ? MIESZKANCY_HD : BOHATEROWIE;
+  for (const p of who) STROJE.forEach((_, i) => {
+    if (i === 0) out.push(`hd-${p.id}`);
+    else if (p.przebarwiaj !== false) out.push(`hd-${p.id}-s${i}`);
+  });
   return out;
 }
 

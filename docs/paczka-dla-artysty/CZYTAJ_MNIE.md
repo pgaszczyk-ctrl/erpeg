@@ -56,6 +56,13 @@ Wzór: `1_format/wzor_arkusza_192x192.png` (i objaśnienie `wzor_arkusza_objasni
 
 Gra część z tego poprawia sama, ale w nowych postaciach proszę tego unikać.
 
+### Uwagi do paczki „mieszkańcy 01–05 v2”
+Arkusze są bardzo dobre (wyrównane, stopy na y = 62, marginesy – wszystko się zgadza) i są już w grze.
+**Maski są do poprawy:** zamiast samego ubrania zaznaczają kontury całej postaci (czerwony), a u
+mieszkańca 01 także włosy (zielony), u 03 twarz i czapkę. Maska ma obejmować **tylko ubranie**
+(czerwony = główne ubranie, zielony = spodnie/pas/drugi kolor), bez konturu, skóry, włosów i czapki.
+Dopóki maski są złe, gra nie robi wariantów kolorystycznych tych postaci.
+
 ## D. Lista do narysowania
 
 ### D1. Postacie (arkusz 3 × 3 po 64 × 64 + maska)

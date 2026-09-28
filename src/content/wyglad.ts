@@ -17,6 +17,8 @@ export interface Postac {
   bokWPrawo: boolean;
   /** Size on the map: how much of the 64 px frame (0.36 ≈ as tall as the old hero). */
   skala: number;
+  /** Make the STROJE colour variants from the mask (false: the mask is wrong, only the drawn colours). */
+  przebarwiaj?: boolean;
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
@@ -24,6 +26,18 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36 },
   { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36 },
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36 },
+];
+
+/**
+ * Townsfolk drawn by the artist (pack „mieszkańcy 01–05 v2”). Ids: letters only.
+ * Their masks mark the outlines (and the woman's hair) instead of the clothes, so no colour variants until fixed masks come.
+ */
+export const MIESZKANCY_HD: Postac[] = [
+  { id: 'kobieta', nazwa: 'Młoda kobieta', plik: 'mieszkaniec_01', bokWPrawo: false, skala: 0.36, przebarwiaj: false },
+  { id: 'chlopiec', nazwa: 'Chłopiec', plik: 'mieszkaniec_02', bokWPrawo: false, skala: 0.36, przebarwiaj: false },
+  { id: 'wasacz', nazwa: 'Pan z wąsem', plik: 'mieszkaniec_03', bokWPrawo: false, skala: 0.36, przebarwiaj: false },
+  { id: 'babcia', nazwa: 'Babcia', plik: 'mieszkaniec_04', bokWPrawo: false, skala: 0.36, przebarwiaj: false },
+  { id: 'mlodzieniec', nazwa: 'Młody mężczyzna', plik: 'mieszkaniec_05', bokWPrawo: false, skala: 0.36, przebarwiaj: false },
 ];
 
 /** The imp (chochlik): smaller than a person. */
