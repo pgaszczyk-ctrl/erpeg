@@ -6,6 +6,7 @@ import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
 import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
 import { rng } from './rng';
+import { showJourney, serverNow, syncClock } from './journey';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -108,6 +109,12 @@ export async function prepareMap(city: CityMap) {
  * its map), or home. There are no teleports.
  */
 export async function enterWorld(game: Phaser.Game) {
+  // Still on the way: the ride screen until the cart arrives (the load point is its station already).
+  if (session.jazda) {
+    await syncClock();
+    if (serverNow() < session.jazda.end) await showJourney(session.jazda);
+    session.jazda = null;
+  }
   let city = maps.get('lublin')!;
   let at = session.at;
   if (at) {

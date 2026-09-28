@@ -62,6 +62,8 @@ export const session = {
   namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
+  /** A ride under way (journey.ts), shown until it arrives. */
+  jazda: null as import('./journey').Journey | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
   /** Library riddles answered this session (max BIBLIOTEKA_ZAGADKI.naSesje). */
@@ -169,6 +171,7 @@ export function startSession(r: LoginResult) {
   session.arrive = null;
   const at = p.save.at;
   session.at = at ? { m: at.m, x: (at.x * PX_PER_M) / (at.s || PX_PER_M), y: (at.y * PX_PER_M) / (at.s || PX_PER_M) } : null;
+  session.jazda = p.save.jazda ?? null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   session.exp = p.exp;
@@ -204,7 +207,7 @@ export function saveNow(hp: number) {
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
-    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
+    jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };
   return api.save(session.token, data, session.exp);
 }

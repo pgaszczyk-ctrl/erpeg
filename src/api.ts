@@ -50,6 +50,8 @@ export interface SaveData {
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */
   at?: { m: string; x: number; y: number; s: number } | null;
+  /** A ride under way (journey.ts): the load point `at` is already its arrival station. */
+  jazda?: import('./journey').Journey | null;
   /** Old saves only: the sword in use and the school level. */
   sword?: string;
   swordSkill?: number;

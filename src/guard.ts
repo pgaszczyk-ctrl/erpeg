@@ -13,6 +13,8 @@ const TEXT = () => tx('Jesteś w trakcie exp-lorowania. Na pewno chcesz wyłącz
 function exploring(game: Phaser.Game) {
   const s = game.scene.getScene('game') as (Phaser.Scene & { leaving?: boolean; player?: { isDead: boolean } }) | null;
   if (!s || !s.sys.settings.active && !game.scene.isPaused('game')) return false;
+  // On a ride the game may be closed: the ride goes on.
+  if (document.getElementById('journey')) return false;
   return !document.getElementById('menu') && !s.leaving && !!s.player && !s.player.isDead;
 }
 

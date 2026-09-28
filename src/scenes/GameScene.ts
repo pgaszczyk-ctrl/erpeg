@@ -49,6 +49,7 @@ import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
+import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
 import { SEN } from '../content/demo';
 
 const HEART_DROP_CHANCE = 0.25;
@@ -1356,12 +1357,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
+    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km, ${session.immortal ? 'od razu' : rideText(t.km)} – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
     const next = new Date(Math.ceil(Date.now() / 1_800_000) * 1_800_000);
     const hh = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
     this.dialog({
       title,
-      text: `„Wio, koniku! Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nNowe kursy od ${hh}.`,
+      text: `„Wio, koniku! Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
       buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), 'Zostaję'],
       onChoose: (i) => {
         const t = trips[i];
@@ -2003,7 +2004,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Rides to another station: loads its map and starts there. */
-  private travel(t: Trip) {
+  /** The station the hero leaves from (for the ride screen). */
+  private stationHere() {
+    let best: CityPlace | null = null;
+    for (const p of this.city.places) {
+      if (p.kind !== 'station') continue;
+      if (!best || Math.hypot(p.door.x - this.player.x, p.door.y - this.player.y) < Math.hypot(best.door.x - this.player.x, best.door.y - this.player.y)) best = p;
+    }
+    return best?.name ?? mapName(this.city.id);
+  }
+
+  private travel(t: Offer) {
     if (this.travelling) return;
     this.travelling = true;
     spend(t.price);
@@ -2018,7 +2029,17 @@ export class GameScene extends Phaser.Scene {
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
         session.arrive = st ? { ...st.door } : city.freeNear(to.x, to.y);
-        await prepareMap(city);
+        // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
+        session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
+        if (!session.immortal) {
+          await syncClock();
+          const start = serverNow();
+          session.jazda = { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km), train: !!t.level || t.to.mapId.startsWith('w:') };
+          saveNow(this.player.hp).catch(() => {});
+          await Promise.all([prepareMap(city), showJourney(session.jazda)]);
+          session.jazda = null;
+        } else await prepareMap(city);
+        saveNow(this.player.hp).catch(() => {});
         session.hp = this.player.hp;
         this.justRode = true;
         this.game.registry.set('city', city);
