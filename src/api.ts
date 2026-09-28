@@ -110,6 +110,8 @@ export interface PlayerInfo {
   death_scale?: number | null;
   /** How many times it was brought back (the first time is free). */
   resurrections?: number;
+  /** Test characters: resurrections without limit. */
+  infinite_resurrect?: boolean;
   /** The player's age (riddles are chosen for it); 7 when not given. */
   age?: number;
   /** Test characters: can't die (set by hand in the database). */

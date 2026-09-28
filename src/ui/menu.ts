@@ -8,7 +8,7 @@ import { tx } from '../i18n';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
 import { pixelLogo } from './logo';
-import { wersjaNapis } from '../version';
+import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
@@ -77,8 +77,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       resolve();
     };
 
+    // The test server: only loading the test characters.
     const main = () =>
-      screen(
+      TEST ? load() : screen(
         button('Nowa postać', newCharacter, 'm-primary'),
         button('Wczytaj postać', load),
         button('Tablica pamięci', memorial),
@@ -273,6 +274,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       );
 
     const login = async (name: string, code: string, password?: string, form?: HTMLFormElement) => {
+      if (TEST && !TEST_POSTACIE.some((n) => n.toLowerCase() === name.toLowerCase())) {
+        throw new Error(`Na serwerze testowym grają tylko postacie testowe: ${TEST_POSTACIE.join(', ')}.`);
+      }
       const r = await api.login(name, code.replace(/[^0-9a-z]/gi, ''), password);
       if (r.new_code) return showCode(r, 'Nowy kod postaci');
       remember(r.player.name, r.player.idik, form);
@@ -316,6 +320,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (googleUser() && (await googleToken())) return account();
           await signInThen(gErr, account);
         }), 'm-google');
+      if (TEST) return screen(el('h2', {}, ['Wczytaj postać testową']), el('p', { className: 'm-or' }, [`Postacie: ${TEST_POSTACIE.join(', ')}`]), form);
       screen(el('h2', {}, ['Wczytaj postać']), gBtn, gErr, el('p', { className: 'm-or' }, ['albo imieniem i kodem:']), form, button('Wstecz', main));
     };
 
@@ -323,9 +328,10 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const dead = (r: LoginResult) => {
       const p = r.player;
       const err = error();
-      const free = (p.resurrections ?? 0) < 1;
+      const endless = !!p.infinite_resurrect;
+      const free = endless || (p.resurrections ?? 0) < 1;
       const rise: HTMLButtonElement = free
-        ? button('✨ Wskrześ – pierwszy raz za darmo', () =>
+        ? button(endless ? '✨ Wskrześ (postać testowa – bez limitu)' : '✨ Wskrześ – pierwszy raz za darmo', () =>
             busy(rise, err, async () => {
               const back = await api.resurrect(p.name, p.idik);
               await play(back);
@@ -336,7 +342,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         ghostMap(city, p),
         el('p', {}, [
           `Postać zginęła ${formatDate(p.died_at)}${r.death_place ? ` (${r.death_place})` : ''}. `,
-          `Zdobyte doświadczenie: ${p.exp} EXP. Jej imię jest na Tablicy Pamięci.`,
+          `Zdobyte doświadczenie: ${p.exp} EXP. ${endless ? 'To postać testowa – nie trafia na Tablicę Pamięci.' : 'Jej imię jest na Tablicy Pamięci.'}`,
         ]),
         el('p', { className: 'm-warn' }, [
           free

@@ -10,3 +10,6 @@ export const WERSJA = '1.001';
 export const TEST = import.meta.env.VITE_TEST === '1';
 
 export const wersjaNapis = () => (TEST ? `🧪 SERWER TESTOWY · po wersji ${WERSJA}` : `wersja ${WERSJA}`);
+
+/** The only characters that can play on the test server (names). */
+export const TEST_POSTACIE = ['Arceus', 'Jam'];
