@@ -1,10 +1,12 @@
-build 20260927.pmtiles
-total 17964
--rw-r--r-- 1 runner runner      23 Sep 28 06:48 info.txt
--rw-r--r-- 1 runner runner 4684810 Sep 28 06:48 krakow.pmtiles
--rw-r--r-- 1 runner runner 3896212 Sep 28 06:48 lublin.pmtiles
-drwxr-xr-x 3 runner runner    4096 Sep 28 06:48 terrarium
--rw-r--r-- 1 runner runner 9799725 Sep 28 06:48 zakopane.pmtiles
+build 20260928.pmtiles
+total 25396
+-rw-r--r-- 1 runner runner 3619163 Sep 28 15:57 gorzow.pmtiles
+-rw-r--r-- 1 runner runner      23 Sep 28 15:57 info.txt
+-rw-r--r-- 1 runner runner 4684870 Sep 28 15:57 krakow.pmtiles
+-rw-r--r-- 1 runner runner 3896164 Sep 28 15:57 lublin.pmtiles
+-rw-r--r-- 1 runner runner 3985507 Sep 28 15:57 szczecin.pmtiles
+drwxr-xr-x 3 runner runner    4096 Sep 28 15:57 terrarium
+-rw-r--r-- 1 runner runner 9799783 Sep 28 15:57 zakopane.pmtiles
 pmtiles spec version: 3
 tile type: mvt
 bounds: (long: 19.800000, lat: 49.150000) (long: 20.150000, lat: 49.330000)
@@ -18,17 +20,17 @@ tile contents count: 1216
 clustered: true
 internal compression: gzip
 tile compression: gzip
-attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
+vector_layers <object, use --metadata to view full JSON metadata>
 description Basemap layers derived from OpenStreetMap and Natural Earth
 name Protomaps Basemap
-planetiler:buildtime 2026-03-28T14:41:39.524Z
-planetiler:osm:osmosisreplicationtime 2026-09-27T04:00:00Z
-planetiler:osm:osmosisreplicationurl https://planet.osm.org/replication/hour/
-type baselayer
 pgf:devanagari:name NotoSansDevanagari-Regular
-pgf:devanagari:version 1
 planetiler:githash 0e5588c4a6e8c29a270a33afe8df62027d889604
-planetiler:osm:osmosisreplicationseq 123069
+planetiler:osm:osmosisreplicationseq 123093
+planetiler:osm:osmosisreplicationtime 2026-09-28T04:00:00Z
+type baselayer
+attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
+pgf:devanagari:version 1
+planetiler:buildtime 2026-03-28T14:41:39.524Z
+planetiler:osm:osmosisreplicationurl https://planet.osm.org/replication/hour/
 planetiler:version 0.10.2
 version 4.15.2
-vector_layers <object, use --metadata to view full JSON metadata>
