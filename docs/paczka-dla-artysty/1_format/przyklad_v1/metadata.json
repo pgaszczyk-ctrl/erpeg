@@ -1,0 +1,60 @@
+{
+  "frame": {
+    "width": 64,
+    "height": 64
+  },
+  "sheet": {
+    "columns": 3,
+    "rows": 3,
+    "width": 192,
+    "height": 192
+  },
+  "rows": [
+    "down",
+    "left",
+    "up"
+  ],
+  "columns": [
+    "walk_a",
+    "idle",
+    "walk_b"
+  ],
+  "display": {
+    "recommended_css_width": 24,
+    "recommended_css_height": 24,
+    "alternative_width": 28,
+    "alternative_height": 28
+  },
+  "anchor": {
+    "normalized_x": 0.5,
+    "normalized_y": 0.96875,
+    "pixel_x": 32,
+    "pixel_y": 62
+  },
+  "characters": [
+    {
+      "id": "traveler",
+      "label": "Wędrowiec",
+      "sprite": "sprites/traveler.png",
+      "mask": "recolor_masks/traveler_mask.png"
+    },
+    {
+      "id": "knight",
+      "label": "Rycerz",
+      "sprite": "sprites/knight.png",
+      "mask": "recolor_masks/knight_mask.png"
+    },
+    {
+      "id": "ranger",
+      "label": "Łuczniczka",
+      "sprite": "sprites/ranger.png",
+      "mask": "recolor_masks/ranger_mask.png"
+    },
+    {
+      "id": "slime",
+      "label": "Chochlik",
+      "sprite": "sprites/slime.png",
+      "mask": "recolor_masks/slime_mask.png"
+    }
+  ]
+}

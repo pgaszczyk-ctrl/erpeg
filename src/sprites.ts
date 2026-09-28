@@ -12,6 +12,14 @@ import { HERO_DIRS } from './art';
 const F = 64;
 /** Sheet column for frame 0 (standing), 1 and 2 (steps). */
 const COL = [1, 0, 2];
+/**
+ * Walking shows only the two steps (A, B): the artist's standing frame is drawn
+ * differently (the ranger's ponytail on the other side from behind, the
+ * knight's helmet), so step–stand–step jittered even with the frames lined up.
+ * The standing frame is used when the character stands still.
+ */
+const WALK = [1, 2];
+const WALK_FPS = 5;
 /** Sheet row of each direction (the artist's order: down, side, up). */
 const ROW = { down: 0, side: 1, up: 2 } as const;
 
@@ -283,7 +291,7 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
   tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
-    if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: [1, 0, 2, 0].map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: 8, repeat: -1 });
+    if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FPS, repeat: -1 });
   }
 }
 
@@ -316,7 +324,7 @@ export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name:
   for (const dir of HERO_DIRS) {
     const anim = `me-walk-${dir}`;
     if (scene.anims.exists(anim)) scene.anims.remove(anim);
-    scene.anims.create({ key: anim, frames: [1, 0, 2, 0].map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: 9, repeat: -1 });
+    scene.anims.create({ key: anim, frames: WALK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FPS + 1, repeat: -1 });
   }
   return key;
 }

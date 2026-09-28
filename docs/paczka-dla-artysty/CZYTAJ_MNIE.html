@@ -1,0 +1,592 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – paczka dla grafika</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Exp-lore – paczka dla grafika</h1>
+<p>Exp-lore to przygodowa gra na telefon (i komputer), grana na prawdziwej mapie miasta, widok z góry.
+Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest <strong>paczka v1</strong> (wędrowiec, rycerz,
+łuczniczka, goblin-chochlik) – styl się podoba i jest już w grze na serwerze testowym
+(https://exp-lore.app/test/). Zrzuty: <code>5_zrzuty_z_gry/</code>.</p>
+<p>Co jest w tej paczce:</p>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1_format/</code></td>
+<td>wzór arkusza postaci (z liniami pomocniczymi) i paczka v1 jako przykład</td>
+</tr>
+<tr>
+<td><code>2_uwagi_do_v1/</code></td>
+<td>co w v1 trzeba poprawić w kolejnych postaciach</td>
+</tr>
+<tr>
+<td><code>3_obecne_grafiki/</code></td>
+<td>wszystkie obecne obrazki z gry, powiększone ×4, <strong>nazwane tak, jak ma się nazywać nowy plik</strong></td>
+</tr>
+<tr>
+<td><code>4_przedmioty_obecne/</code></td>
+<td>obecne ikony przedmiotów (16 × 16, powiększone ×4)</td>
+</tr>
+<tr>
+<td><code>5_zrzuty_z_gry/</code></td>
+<td>jak nowe postacie wyglądają w grze</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>A. Styl</h2>
+<ul>
+<li>Jak paczka v1: sympatyczne postacie „chibi” (duża głowa), czytelne z daleka, ciemny kontur,
+  światło z lewej-góry.</li>
+<li>Odrzucone wcześniej: postacie składane z części 24 × 30 px („fatalnie wyglądają”) – nie idziemy w tę stronę.</li>
+<li>Wszystko <strong>na przezroczystym tle</strong>, bez cienia pod nogami (gra dorysuje sama).</li>
+<li><strong>Wrogów nie obrysowujemy na czerwono</strong> – gra sama dodaje wrogom czerwoną poświatę.</li>
+</ul>
+<h2>B. Skala</h2>
+<p>Na mapie 1 metr ≈ 2 punkty. Postać 64 × 64 px w pliku jest w grze zmniejszana do ok. 23 punktów.
+Dlatego <strong>każdą nową grafikę rysujemy ok. 3 razy większą niż jej obecny rozmiar na mapie</strong>
+(w tabelach niżej jest i obecny, i proponowany rozmiar pliku). Obecny wygląd każdej rzeczy
+widać w <code>3_obecne_grafiki/</code> (plik <code>&lt;nazwa&gt;__teraz_x4.png</code> → nowy plik to <code>&lt;nazwa&gt;.png</code>).</p>
+<h2>C. Arkusz postaci (ludzie i stworki, które chodzą)</h2>
+<p>Wzór: <code>1_format/wzor_arkusza_192x192.png</code> (i objaśnienie <code>wzor_arkusza_objasnienie.png</code>).</p>
+<ul>
+<li><strong>192 × 192 px = 3 × 3 klatki po 64 × 64.</strong></li>
+<li>Rzędy: 1 = w dół (przodem), 2 = w bok <strong>patrząc w lewo</strong> (w prawo gra odbija sama), 3 = w górę (tyłem).</li>
+<li>Kolumny: krok A · stoi · krok B. Gra chodzi na zmianę krok A / krok B, a „stoi” pokazuje, gdy postać stoi.</li>
+<li><strong>Stopy zawsze na linii y = 62</strong> (liczone od góry, z 64).</li>
+<li><strong>Środek postaci zawsze na x = 32</strong>, w każdej klatce w tym samym miejscu.</li>
+<li><strong>Margines ok. 5 px</strong> z każdej strony wolny (tam idzie poświata; nic nie może wchodzić do sąsiedniej klatki).</li>
+<li>Klatki jednego kierunku mają się różnić <strong>tylko nogami i rękami</strong> – włosy, hełm, twarz takie same.</li>
+<li><strong>Maska</strong> (osobny plik tej samej wielkości, <code>&lt;nazwa&gt;_maska.png</code>): czerwony = główne ubranie,
+  zielony = drugi kolor (spodnie, pas), niebieski = drobne dodatki, reszta przezroczysta.
+  Z maski gra robi kilka wersji kolorystycznych tej samej postaci (mieszkańcy w różnych strojach).</li>
+<li>Założonego sprzętu (hełm, zbroja) na postaci <strong>nie pokazujemy</strong> – bohater wygląda zawsze tak samo.</li>
+</ul>
+<h3>Uwagi do paczki v1 (<code>2_uwagi_do_v1/</code>)</h3>
+<ol>
+<li>Rycerz i łuczniczka w klatce „stoi” są <strong>przesunięci o 4–6 px</strong> względem klatek kroku – postać „skakała” w bok.</li>
+<li>Klatka „stoi” jest narysowana <strong>inaczej niż kroki</strong>: łuczniczka od tyłu ma kucyk raz po lewej,
+   raz po prawej; rycerz od tyłu ma inaczej narysowany hełm.</li>
+<li>Pod wędrowcem i łuczniczką <strong>kreski cienia wchodzą do klatki niżej</strong>; goblin dotyka brzegów kwadratu.</li>
+</ol>
+<p>Gra część z tego poprawia sama, ale w nowych postaciach proszę tego unikać.</p>
+<h2>D. Lista do narysowania</h2>
+<h3>D1. Postacie (arkusz 3 × 3 po 64 × 64 + maska)</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Uwagi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bohaterowie – 10 wyglądów</td>
+<td><code>bohater_01</code> … <code>bohater_10</code></td>
+<td>3 już są (wędrowiec, rycerz, łuczniczka); dziewczyny i chłopcy, różne fryzury</td>
+</tr>
+<tr>
+<td>Mieszkańcy – 15 wyglądów</td>
+<td><code>mieszkaniec_01</code> … <code>mieszkaniec_15</code></td>
+<td>zwykli ludzie z miasta: dzieci, dorośli, starsi, różne ubrania</td>
+</tr>
+<tr>
+<td>Mag Albrecht</td>
+<td><code>mag</code></td>
+<td>stary czarodziej w szpiczastej czapce</td>
+</tr>
+<tr>
+<td>Siostra Margo</td>
+<td><code>siostra_margo</code></td>
+<td>zakonnica</td>
+</tr>
+<tr>
+<td>Dziadek Marek</td>
+<td><code>dziadek_marek</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Babcia Iwonka</td>
+<td><code>babcia_iwonka</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Babcia Grażynka</td>
+<td><code>babcia_grazynka</code></td>
+<td>wiejska, z koszykiem</td>
+</tr>
+<tr>
+<td>Luigi</td>
+<td><code>luigi</code></td>
+<td>hiszpański macho (nie ten z Mario)</td>
+</tr>
+<tr>
+<td>Martin</td>
+<td><code>martin</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Trener Zbyszek</td>
+<td><code>trener</code></td>
+<td>dres, gwizdek</td>
+</tr>
+<tr>
+<td>Biegaczka Ania</td>
+<td><code>biegaczka</code></td>
+<td>strój do biegania</td>
+</tr>
+<tr>
+<td>Mądrale (dają zagadki)</td>
+<td><code>madrala_m</code>, <code>madrala_k</code></td>
+<td>mężczyzna i kobieta, „mądry” wygląd (okulary, książka)</td>
+</tr>
+<tr>
+<td>Woźnica</td>
+<td><code>woznica</code></td>
+<td>stoi przy wozie na stacji</td>
+</tr>
+</tbody>
+</table>
+<h3>D2. Wrogowie (arkusz 3 × 3 po 64 × 64, bez czerwonego obrysu)</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Teraz na mapie</th>
+<th>Uwagi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chochlik</td>
+<td><code>chochlik</code></td>
+<td>16 × 16</td>
+<td>✅ jest (goblin z v1)</td>
+</tr>
+<tr>
+<td>Herszt gangu</td>
+<td><code>herszt</code></td>
+<td>chochlik × 2</td>
+<td>większy goblin z hełmem/maczugą; plik też 64 × 64 (gra powiększa)</td>
+</tr>
+<tr>
+<td>Driada (las)</td>
+<td><code>driada</code></td>
+<td>16 × 16</td>
+<td>duszek lasu, liściaste włosy</td>
+</tr>
+<tr>
+<td>Zombiak (przy wodzie)</td>
+<td><code>zombie</code></td>
+<td>16 × 16</td>
+<td>niebieskawy, ręce przed sobą</td>
+</tr>
+<tr>
+<td>Szkielet (przy cmentarzu)</td>
+<td><code>szkielet</code></td>
+<td>16 × 16</td>
+<td></td>
+</tr>
+<tr>
+<td>Bandyta</td>
+<td><code>bandyta</code></td>
+<td>16 × 16</td>
+<td>człowiek w masce na oczach</td>
+</tr>
+<tr>
+<td>Smok</td>
+<td><code>smok</code></td>
+<td>40 × 30</td>
+<td>arkusz 3 × 3 po <strong>128 × 128</strong>; może być tylko rząd „w bok” + 2 klatki machania skrzydłami</td>
+</tr>
+<tr>
+<td>Cień smoka (widziany z góry, w locie)</td>
+<td><code>smok_cien</code></td>
+<td>48 × 48</td>
+<td>2 klatki po 128 × 128: skrzydła rozłożone / złożone, głową w prawo, jednolita czarna sylwetka</td>
+</tr>
+</tbody>
+</table>
+<h3>D3. Zwierzęta</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Teraz</th>
+<th>Nowy plik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pies</td>
+<td><code>pies</code></td>
+<td>16 × 12</td>
+<td>arkusz 3 × 3 po 64 × 64</td>
+</tr>
+<tr>
+<td>Świnka-zabawka w krzakach</td>
+<td><code>swinka</code></td>
+<td>10 × 8</td>
+<td>32 × 24</td>
+</tr>
+</tbody>
+</table>
+<h3>D4. Rzeczy na mapie (kilka klatek = obok siebie w jednym pliku)</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Teraz</th>
+<th>Nowy plik</th>
+<th>Klatki</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jabłoń</td>
+<td><code>drzewo_jablon</code></td>
+<td>22 × 24</td>
+<td>64 × 72</td>
+<td>2: z owocami / bez</td>
+</tr>
+<tr>
+<td>Śliwa</td>
+<td><code>drzewo_sliwa</code></td>
+<td>22 × 24</td>
+<td>64 × 72</td>
+<td>2: z owocami / bez</td>
+</tr>
+<tr>
+<td>Winorośl</td>
+<td><code>winorosl</code></td>
+<td>20 × 18</td>
+<td>60 × 54</td>
+<td>2: z winogronami / bez</td>
+</tr>
+<tr>
+<td>Sosna</td>
+<td><code>sosna</code></td>
+<td>16 × 26</td>
+<td>48 × 78</td>
+<td>2: drzewo / pieniek</td>
+</tr>
+<tr>
+<td>Grzyb</td>
+<td><code>grzyb</code></td>
+<td>8 × 8</td>
+<td>24 × 24</td>
+<td></td>
+</tr>
+<tr>
+<td>Kłoda drewna</td>
+<td><code>kloda</code></td>
+<td>10 × 6</td>
+<td>30 × 18</td>
+<td></td>
+</tr>
+<tr>
+<td>Marchewka, brokuł, sałata (na grządce)</td>
+<td><code>warzywo_marchewka</code>, <code>warzywo_brokul</code>, <code>warzywo_salata</code></td>
+<td>8 × 8</td>
+<td>24 × 24</td>
+<td></td>
+</tr>
+<tr>
+<td>Jabłko, śliwka, winogrono</td>
+<td><code>owoc_jablko</code>, <code>owoc_sliwka</code>, <code>owoc_winogrono</code></td>
+<td>8 × 8</td>
+<td>24 × 24</td>
+<td></td>
+</tr>
+<tr>
+<td>Serduszko do podniesienia</td>
+<td><code>serce_podnies</code></td>
+<td>9 × 8</td>
+<td>27 × 24</td>
+<td></td>
+</tr>
+<tr>
+<td>Moneta</td>
+<td><code>moneta</code></td>
+<td>8 × 8</td>
+<td>24 × 24</td>
+<td></td>
+</tr>
+<tr>
+<td>Zguba (rzecz odbita chochlikom)</td>
+<td><code>zguba</code></td>
+<td>12 × 12</td>
+<td>36 × 36</td>
+<td></td>
+</tr>
+<tr>
+<td>Namiot</td>
+<td><code>namiot</code></td>
+<td>20 × 16</td>
+<td>60 × 48</td>
+<td></td>
+</tr>
+<tr>
+<td>Drogowskaz</td>
+<td><code>drogowskaz</code></td>
+<td>16 × 20</td>
+<td>48 × 60</td>
+<td></td>
+</tr>
+<tr>
+<td>Szczyt góry (znacznik)</td>
+<td><code>szczyt</code></td>
+<td>12 × 12</td>
+<td>36 × 36</td>
+<td></td>
+</tr>
+<tr>
+<td>Domek (ikonka na dachu domu bohatera)</td>
+<td><code>dom</code></td>
+<td>26 × 24</td>
+<td>78 × 72</td>
+<td></td>
+</tr>
+<tr>
+<td>Wózek kupca (na rondzie)</td>
+<td><code>woz_kupca</code></td>
+<td>22 × 20</td>
+<td>66 × 60</td>
+<td></td>
+</tr>
+<tr>
+<td>Powóz z koniem (stacja)</td>
+<td><code>powoz</code></td>
+<td>30 × 20</td>
+<td>90 × 60</td>
+<td>koń patrzy w lewo</td>
+</tr>
+<tr>
+<td>Kukła treningowa</td>
+<td><code>kukla</code></td>
+<td>14 × 20</td>
+<td>42 × 60</td>
+<td></td>
+</tr>
+<tr>
+<td>Tarcza strzelnicza</td>
+<td><code>tarcza</code></td>
+<td>16 × 20</td>
+<td>48 × 60</td>
+<td></td>
+</tr>
+<tr>
+<td>Kryształ (trening magii)</td>
+<td><code>krysztal</code></td>
+<td>14 × 20</td>
+<td>42 × 60</td>
+<td></td>
+</tr>
+<tr>
+<td>Znacznik misji (drzwi)</td>
+<td><code>znacznik</code>, <code>znacznik_zrobione</code></td>
+<td>14 × 18</td>
+<td>42 × 54</td>
+<td>wykrzyknik / ptaszek</td>
+</tr>
+</tbody>
+</table>
+<h3>D5. Szyldy nad drzwiami (teraz 14 × 12 → nowe 42 × 36)</h3>
+<p><code>szyld_sklep</code>, <code>szyld_szkola</code>, <code>szyld_kosciol</code>, <code>szyld_urzad</code>, <code>szyld_szpital</code>, <code>szyld_policja</code>,
+<code>szyld_bank</code>, <code>szyld_hotel</code>, <code>szyld_alchemik</code> (stacja benzynowa – mikstury), <code>szyld_budowlany</code>
+(sklep budowlany/sportowy – namioty), <code>szyld_biblioteka</code>.</p>
+<h3>D6. Efekty</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Teraz</th>
+<th>Nowy plik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cięcie miecza (łuk)</td>
+<td><code>ciecie</code></td>
+<td>24 × 24</td>
+<td>72 × 72</td>
+</tr>
+<tr>
+<td>Strzała w locie</td>
+<td><code>strzala</code></td>
+<td>12 × 5</td>
+<td>36 × 15</td>
+</tr>
+<tr>
+<td>Pocisk magii</td>
+<td><code>pocisk_magii</code></td>
+<td>10 × 10</td>
+<td>30 × 30</td>
+</tr>
+<tr>
+<td>Kula ognia smoka</td>
+<td><code>kula_ognia</code></td>
+<td>10 × 10</td>
+<td>30 × 30</td>
+</tr>
+<tr>
+<td>Dymek „chcę pogadać”</td>
+<td><code>dymek</code></td>
+<td>12 × 10</td>
+<td>36 × 30</td>
+</tr>
+<tr>
+<td>Dymek z „?” (mądrale)</td>
+<td><code>dymek_pytanie</code></td>
+<td>9 × 11</td>
+<td>27 × 33</td>
+</tr>
+<tr>
+<td>Wykrzyknik nad głową</td>
+<td><code>wykrzyknik</code></td>
+<td>8 × 14</td>
+<td>24 × 42</td>
+</tr>
+</tbody>
+</table>
+<h3>D7. Ekran (HUD)</h3>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Nazwa pliku</th>
+<th>Teraz</th>
+<th>Nowy plik</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Serce: pełne, puste</td>
+<td><code>serce</code>, <code>serce_puste</code></td>
+<td>9 × 8</td>
+<td>27 × 24</td>
+</tr>
+<tr>
+<td>Serce niebieskie (z mikstury)</td>
+<td><code>serce_niebieskie</code></td>
+<td>9 × 8</td>
+<td>27 × 24</td>
+</tr>
+<tr>
+<td>Serce fioletowe (pojedynek)</td>
+<td><code>serce_pojedynek</code>, <code>serce_pojedynek_puste</code></td>
+<td>9 × 8</td>
+<td>27 × 24</td>
+</tr>
+<tr>
+<td>Gwiazdka doświadczenia: pełna, pół, pusta</td>
+<td><code>gwiazda</code>, <code>gwiazda_pol</code>, <code>gwiazda_pusta</code></td>
+<td>11 × 11</td>
+<td>33 × 33</td>
+</tr>
+<tr>
+<td>Ikona mapy</td>
+<td><code>ikona_mapy</code></td>
+<td>14 × 12</td>
+<td>42 × 36</td>
+</tr>
+<tr>
+<td>Strzałka do celu</td>
+<td><code>strzalka</code></td>
+<td>16 × 16</td>
+<td>48 × 48 – biała/szara, gra nada jej kolor</td>
+</tr>
+</tbody>
+</table>
+<h3>D8. Przedmioty (ikony w plecaku, skrzyni i sklepie) – <code>4_przedmioty_obecne/</code></h3>
+<p>Teraz 16 × 16. Nowe: <strong>48 × 48</strong>, przezroczyste tło, te same nazwy plików:</p>
+<p><code>kijek</code>, <code>zelazny</code> (miecz), <code>stalowy</code>, <code>rycerski</code>, <code>swietlisty</code>, <code>gromowladny</code>, <code>luk</code>, <code>dlugi_luk</code>,
+<code>rozdzka</code>, <code>kula</code>, <code>ksiega</code>, <code>skorzana_zbroja</code>, <code>kolczuga</code>, <code>skorzany_helm</code>, <code>zelazny_helm</code>,
+<code>kapelusz</code>, <code>czapka_maga</code>, <code>korona</code>, <code>skorzane_buty</code>, <code>zelazne_buty</code>.</p>
+<h3>D9. Budynki (po postaciach, gdy zobaczymy nowy styl na mapie)</h3>
+<p>Teraz dachy i ściany rysuje sam program kolorami. Mają dostać tekstury.
+Budynki mają najwyżej 3 wysokości: parter, budynek wyższy, bardzo duży (max ok. 3 piętra) –
+ściany frontowe są niskie, bo nic nie może zasłaniać ulic.</p>
+<ul>
+<li>Tekstury dachów i ścian <strong>bez konturu i bez przezroczystości</strong> – gra dorysuje ciemny kontur budynku.
+  Muszą się <strong>kafelkować</strong> (lewa krawędź pasuje do prawej, górna do dolnej).</li>
+<li>Ozdoby (krzak, beczka…) – przezroczyste tło, z konturem.</li>
+</ul>
+<p><strong>Dachy – 48 × 48, kafelkujące się w obie strony</strong>, każdy w dwóch wersjach: <code>_jasna</code> (połać od słońca)
+i <code>_ciemna</code> (ten sam wzór, w cieniu). Rzędy dachówek poziomo – gra obraca je wzdłuż kalenicy.</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Co to</th>
+<th>Gdzie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dach_dachowka_czerwona_jasna</code> / <code>_ciemna</code></td>
+<td>czerwona dachówka</td>
+<td>miasta, domy murowane</td>
+</tr>
+<tr>
+<td><code>dach_dachowka_brazowa_jasna</code> / <code>_ciemna</code></td>
+<td>brązowa dachówka</td>
+<td>wsie, stare domy</td>
+</tr>
+<tr>
+<td><code>dach_lupek_jasna</code> / <code>_ciemna</code></td>
+<td>szary łupek</td>
+<td>kamienice, kościoły</td>
+</tr>
+<tr>
+<td><code>dach_gont_jasna</code> / <code>_ciemna</code></td>
+<td>drewniany gont</td>
+<td>drewniane domy na wsi</td>
+</tr>
+<tr>
+<td><code>dach_strzecha_jasna</code> / <code>_ciemna</code></td>
+<td>słomiana strzecha</td>
+<td>chaty, zagrody</td>
+</tr>
+<tr>
+<td><code>dach_plaski</code> (jedna wersja)</td>
+<td>płaski dach (papa, żwir)</td>
+<td>bloki, hale, duże budynki</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Kalenica</strong> – pasek 48 × 9, kafelkujący się poziomo, po jednym na materiał:
+<code>kalenica_dachowka_czerwona</code>, <code>kalenica_dachowka_brazowa</code>, <code>kalenica_lupek</code>, <code>kalenica_gont</code>, <code>kalenica_strzecha</code>.</p>
+<p><strong>Ściany frontowe – paski 48 × 24, kafelkujące się poziomo.</strong> Dół obrazka = ziemia. Przy niskich
+budynkach gra utnie górę (zostanie 12 lub 18 px), więc okna i drzwi trzymaj w dolnych 18 px.
+Każdy materiał w 3 wersjach: <code>_gladka</code> (sama ściana), <code>_okno</code> (jedno okno na środku),
+<code>_drzwi</code> (drzwi na środku, stoją na dolnej krawędzi).
+Materiały: <code>sciana_deski</code>, <code>sciana_bale</code>, <code>sciana_mur_pruski</code>, <code>sciana_cegla</code>, <code>sciana_tynk_bialy</code>,
+<code>sciana_tynk_kremowy</code>, <code>sciana_kamien</code> (np. <code>sciana_cegla_okno.png</code>).</p>
+<p><strong>Ozdoby:</strong> <code>ozdoba_krzak</code> (24 × 18), <code>ozdoba_plot</code> (48 × 18, kafelkuje się poziomo), <code>ozdoba_beczka</code>
+(15 × 18), <code>ozdoba_studnia</code> (36 × 36), <code>ozdoba_stog</code> (36 × 30), <code>sciezka_kamienna</code> (24 × 24, kafelkuje się, bez konturu).</p>
+<p>Na start budynków wystarczy: dachówka czerwona, gont, łupek, płaski + 3 kalenice; ściany: deski,
+cegła, tynk biały (po 3 wersje); ozdoby: krzak i płot. Później: inne kraje (dachówka japońska,
+dach tajski, glina), zamki (ok. 144 × 144) i pomniki (wieża z zegarem, łuk, obelisk, fontanna, posąg; 48–96 px).</p>
+<hr />
+<h2>E. Kolejność</h2>
+<ol>
+<li>Mieszkańcy 1–15 + bohaterowie 4–10 (tych na mapie widać najwięcej).</li>
+<li>Wrogowie: driada, zombie, szkielet, bandyta, herszt.</li>
+<li>Stałe postacie (mag, Margo, dziadkowie, Grażynka, Luigi, Martin, trener, biegaczka, mądrale, woźnica, pies).</li>
+<li>Drzewa, grzyby, owoce, szyldy.</li>
+<li>Smok i cień smoka.</li>
+<li>Efekty, ekran, przedmioty.</li>
+<li>Budynki.</li>
+</ol>
+<h2>F. Jak oddać</h2>
+<ul>
+<li>PNG, nazwy plików dokładnie jak w tabelach (małe litery, bez polskich znaków), postacie razem z maską.</li>
+<li>Najlepiej partiami (np. 5 postaci naraz) – od razu wstawiamy je do gry testowej i odsyłamy uwagi.</li>
+</ul>

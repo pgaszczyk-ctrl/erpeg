@@ -1,5 +1,8 @@
 # Kafelki budynków – lista do wygenerowania
 
+> **Aktualna, pełna wersja wytycznych dla grafika: `docs/paczka-dla-artysty/CZYTAJ_MNIE.md`** (ta sama treść + rozmiary w nowej skali, wzór arkusza i obecne grafiki). Ten plik zostaje jako historia.
+
+
 Skala gry: 1 metr = ok. 2 piksele. Dom 10 × 8 m ma na mapie ok. 20 × 16 pikseli,
 ściana frontowa ma 4–8 pikseli wysokości. Kafelki są więc **małe** – liczy się
 czytelny wzór, nie drobne detale.

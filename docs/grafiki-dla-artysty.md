@@ -1,5 +1,8 @@
 # Grafiki do przerysowania w nowym stylu – lista dla artysty
 
+> **Aktualna, pełna wersja wytycznych dla grafika: `docs/paczka-dla-artysty/CZYTAJ_MNIE.md`** (ta sama treść + rozmiary w nowej skali, wzór arkusza i obecne grafiki). Ten plik zostaje jako historia.
+
+
 Punkt wyjścia: paczka „exp_lore_pretty_postacie_v1” (wędrowiec, rycerz, łuczniczka, goblin-chochlik)
 jest już w grze na serwerze testowym (exp-lore.app/test/). Pliki leżą w `public/postacie/`.
 
