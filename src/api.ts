@@ -6,8 +6,13 @@ const KEY = 'sb_publishable_lvVeo1Qv3E_4wTQ2oUeI1Q_2_gAgUdA';
 /** For the freeze watchdog (a worker calls the server on its own). */
 export const RPC = { url: URL, headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' } };
 
+/** The QR demo (src/demo.ts) plays without a character: nothing is written on the server. */
+export const offline = { demo: false };
+const WRITES = new Set(['create_character', 'save_game', 'heartbeat', 'logout', 'die', 'redeem_code', 'link_google']);
+
 /** `bearer`: a signed-in Google user's access token (for account functions). */
 export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false, bearer?: string): Promise<T> {
+  if (offline.demo && WRITES.has(fn)) return true as T;
   let res: Response;
   try {
     res = await fetch(URL + fn, {

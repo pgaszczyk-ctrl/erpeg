@@ -6,6 +6,7 @@ import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES } from '../ui/itemIcon';
+import { demoFromLink, startDemo } from '../demo';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -31,6 +32,12 @@ export class BootScene extends Phaser.Scene {
       .then(([city]) => {
         rememberMap(city);
         this.registry.set('city', city);
+        // A QR code's demo link: straight into the game, no menu, no character.
+        const qr = demoFromLink();
+        if (qr) {
+          text.setText('Budzisz się…');
+          return startDemo(this.game, qr);
+        }
         text.setText('');
         return showMenu(city).then(() => enterWorld(this.game));
       })

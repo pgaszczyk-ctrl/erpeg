@@ -41,7 +41,17 @@ export class Orchards {
   private active = new Set<FruitTree>();
   private next = 0;
 
+  /** Trees planted by hand (the QR demo), shown whatever the ground. */
+  private planted: FruitTree[] = [];
+
   constructor(private scene: Phaser.Scene, private city: CityMap) {}
+
+  plant(x: number, y: number, fruit: Owoc, left: number): FruitTree {
+    const t: FruitTree = { id: `p:${this.planted.length}`, x, y, fruit, left };
+    this.planted.push(t);
+    this.next = 0;
+    return t;
+  }
 
   /** Trees on one green area, always in the same places. */
   private treesOf(a: Area, index: number): FruitTree[] {
@@ -79,9 +89,10 @@ export class Orchards {
       }
     }
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
-    for (const a of areas) {
-      if (!FRUIT_AREAS[a.kind]) continue;
-      for (const t of this.treesOf(a, a.id)) {
+    const lists = areas.filter((a) => FRUIT_AREAS[a.kind]).map((a) => this.treesOf(a, a.id));
+    lists.push(this.planted);
+    for (const list of lists) {
+      for (const t of list) {
         if (t.sprite || Math.hypot(t.x - px, t.y - py) > NEAR) continue;
         t.sprite = this.scene.add
           .image(t.x, t.y, TREE_TEX[t.fruit]!, t.left > 0 ? 'full' : 'bare')

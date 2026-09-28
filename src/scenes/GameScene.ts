@@ -45,6 +45,9 @@ import {
 } from '../quests';
 import { api, type Snapshot } from '../api';
 import { showMenu } from '../ui/menu';
+import { demo } from '../demo';
+import { DemoRun } from './Demo';
+import { SEN } from '../content/demo';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -232,6 +235,8 @@ export class GameScene extends Phaser.Scene {
   private travelling = false;
   private justRode = false;
   private safeAt = { x: 0, y: 0 };
+  /** The QR demo (null in a normal game). */
+  private demoRun: DemoRun | null = null;
 
   constructor() {
     super('game');
@@ -449,6 +454,25 @@ export class GameScene extends Phaser.Scene {
     cam.preRender();
     this.mapView.update(cam, 16);
 
+    this.demoRun = null;
+    if (demo.on) {
+      this.demoRun = new DemoRun(this, {
+        player: this.player,
+        city: this.city,
+        orchards: this.orchards,
+        dialog: (req) => this.dialog(req),
+        toast: (t, ms) => this.toast(t, ms),
+        spawnDragon: (x, y) => this.spawnEnemy(x, y, undefined, 'smok'),
+        hurt: (from, dmg) => {
+          if (!this.player.hurt(from, this.time.now, dmg)) return;
+          this.emitHud();
+          if (this.player.isDead) this.onPlayerDeath();
+        },
+        hud: () => this.emitHud(),
+      });
+      this.demoRun.start();
+    }
+
     this.scene.launch('ui');
     this.emitHud();
   }
@@ -470,6 +494,10 @@ export class GameScene extends Phaser.Scene {
       this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
     }
     if (this.player.isDead || this.leaving || this.travelling) return;
+    if (this.demoRun) {
+      this.demoRun.update(now, dt);
+      if (this.demoRun.frozen) return;
+    }
 
     const lingering = now < this.lingerUntil;
     if (this.protectUntil < 0) {
@@ -480,7 +508,7 @@ export class GameScene extends Phaser.Scene {
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
-    if (lingering || this.story.busy) this.player.move(0, 0, now);
+    if (lingering || this.story.busy || this.demoRun?.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
     if (this.player.vel.x || this.player.vel.y) {
       // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
@@ -507,7 +535,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Dodatkowe serduszko z mikstury znikło.', 2000);
       this.emitHud();
     }
-    if (consumeAttack() && !lingering && !this.story.busy) {
+    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy) {
       // A mouse click swings towards where it clicked (the hero turns there).
       if (attackAim) {
         const cam = this.cameras.main;
@@ -564,7 +592,8 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380) continue;
       // Where one goes, its friends follow.
       if (!s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
-      s.think(target, now);
+      if (s.brain) s.brain(now);
+      else s.think(target, now);
       this.moveActor(s, dt);
       s.updateLook();
       s.setDepth(s.y);
@@ -850,6 +879,11 @@ export class GameScene extends Phaser.Scene {
 
   private onEnemyKilled(s: Enemy) {
     if (s.duel) return this.endDuel(s, true);
+    if (this.demoRun?.isDragon(s)) {
+      this.enemies = this.enemies.filter((e) => e !== s);
+      this.demoRun.onDragonKilled();
+      return;
+    }
     if (s === this.story.dragonSprite) {
       this.enemies = this.enemies.filter((e) => e !== s);
       this.story.dragonKilled();
@@ -967,6 +1001,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPlayerDeath() {
+    // The demo's dream: dying only wakes the hero up.
+    if (this.demoRun?.onDeath()) {
+      this.player.anims.stop();
+      this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
+      this.emitHud();
+      return;
+    }
     if (session.immortal) {
       this.damageCarry = 0;
       this.player.hp = PLAYER.maxHp;
@@ -1056,6 +1097,11 @@ export class GameScene extends Phaser.Scene {
   async leave() {
     if (this.leaving) return;
     this.leaving = true;
+    // The QR demo: out to the ordinary start screen (without the demo link).
+    if (demo.on) {
+      location.href = location.origin + location.pathname;
+      return;
+    }
     try {
       await api.logout(session.token);
     } catch {
@@ -2449,17 +2495,22 @@ export class GameScene extends Phaser.Scene {
    * The heal button (🧪/🍎, key H): a potion when 2+ hearts are missing (or
    * there isn't enough fruit), else 20 fruit for one heart.
    */
+  /** Fruit eaten for one heart (fewer in the QR demo). */
+  private fruitPerHeart() {
+    return demo.on ? SEN.owocowNaSerce : LECZENIE_OWOCAMI.owocow;
+  }
+
   quickHeal() {
     if (this.player.isDead) return;
     const missing = PLAYER.maxHp - this.player.hp;
     if (missing <= 0) return this.toast('Masz pełne zdrowie.', 1200);
-    const fruit = totalFruit() >= LECZENIE_OWOCAMI.owocow;
+    const fruit = totalFruit() >= this.fruitPerHeart();
     if (session.mikstury > 0 && (missing >= 4 || !fruit)) return this.drinkPotion();
     if (fruit) {
       this.eatFruit();
       return;
     }
-    this.toast(`Nie masz czym się uleczyć: zbierz ${LECZENIE_OWOCAMI.owocow} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
+    this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
   }
 
   /** A potion: full health and a bonus (blue) heart for a while. */
@@ -2494,7 +2545,7 @@ export class GameScene extends Phaser.Scene {
   /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
   eatFruit(): number | null {
     if (this.player.isDead || this.player.hp >= PLAYER.maxHp) return null;
-    if (!eatInventoryFruit(LECZENIE_OWOCAMI.owocow)) return null;
+    if (!eatInventoryFruit(this.fruitPerHeart())) return null;
     this.player.heal(2 * LECZENIE_OWOCAMI.serduszek);
     this.emitHud();
     this.toast('Mniam! +1 ❤', 1200);
@@ -2713,6 +2764,10 @@ export class GameScene extends Phaser.Scene {
    */
   activeQuests(): QuestInfo[] {
     const list: Omit<QuestInfo, 'color'>[] = [];
+    if (this.demoRun) {
+      const g = this.demoRun.goal();
+      return g ? [{ id: 'demo', main: true, title: 'Demo', ...g, color: KOLOR_GLOWNEGO }] : [];
+    }
     const main = this.story.goal();
     if (main) list.push({ id: 'main', main: true, title: 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
@@ -2833,10 +2888,10 @@ export class GameScene extends Phaser.Scene {
       extra: this.player.extra,
       heal: this.player.hp >= PLAYER.maxHp || this.player.isDead
         ? null
-        : session.mikstury > 0 && (PLAYER.maxHp - this.player.hp >= 4 || totalFruit() < LECZENIE_OWOCAMI.owocow)
+        : session.mikstury > 0 && (PLAYER.maxHp - this.player.hp >= 4 || totalFruit() < this.fruitPerHeart())
           ? { icon: '🧪', n: session.mikstury }
-          : totalFruit() >= LECZENIE_OWOCAMI.owocow
-            ? { icon: '🍎', n: Math.floor(totalFruit() / LECZENIE_OWOCAMI.owocow) }
+          : totalFruit() >= this.fruitPerHeart()
+            ? { icon: '🍎', n: Math.floor(totalFruit() / this.fruitPerHeart()) }
             : null,
       coins: session.coins,
       exp: session.exp,

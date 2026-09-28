@@ -71,6 +71,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
   roam = 60;
   /** A gang member never leaves its territory: it gives up once the hero (or it) is outside. */
   leash: { x: number; y: number; r: number } | null = null;
+  /** Not pushed back by blows (the demo's Wawel dragon). */
+  heavy = false;
+  /** Its own way of moving, called instead of think() (the demo's Wawel dragon). */
+  brain?: (now: number) => void;
   private nextThink = 0;
   private stunnedUntil = 0;
 
@@ -170,7 +174,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.hp -= damage;
     this.chasing = true;
     this.stunnedUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.kindId === 'smok' ? 30 : 200 / this.kind.scale);
+    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 30 : 200 / this.kind.scale);
     this.vel.set(push.x, push.y);
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
