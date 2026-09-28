@@ -92,6 +92,9 @@ export function installErrorLog() {
  */
 export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string | null) {
   let lostAt = 0;
+  // Back after a loss: Phaser reloads the image files, but everything the game drew itself
+  // (the map chunks, texts, hearts) comes back empty – only a fresh load fixes the picture.
+  let broken = false;
   let offer: HTMLDivElement | null = null;
   canvas.addEventListener('webglcontextlost', () => {
     lostAt = Date.now();
@@ -100,20 +103,21 @@ export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string |
   canvas.addEventListener('webglcontextrestored', () => {
     report('gl', `Grafika wróciła po ${Math.round((Date.now() - lostAt) / 1000)} s`);
     lostAt = 0;
-    offer?.remove();
-    offer = null;
+    broken = true;
   });
   setInterval(() => {
-    if (!lostAt || document.hidden || offer) return;
-    if (Date.now() - lostAt < 4000) return;
+    if ((!lostAt && !broken) || document.hidden || offer) return;
+    if (!broken && Date.now() - lostAt < 4000) return;
     offer = document.createElement('div');
+    offer.id = 'gl-reload'; // the leave guard lets this reload through
     offer.className = 'm-screen';
     offer.style.zIndex = '50';
-    offer.innerHTML = '<div class="m-box"><h2>Obraz gry się zatrzymał</h2><p>Telefon zabrał grze grafikę, gdy była w tle. Dotknij, żeby wczytać grę od nowa – wrócisz tam, gdzie byłeś.</p><button class="m-btn m-primary" type="button">Wczytaj ponownie</button></div>';
+    offer.innerHTML = `<div class="m-box"><h2>${broken ? 'Obraz gry się zepsuł' : 'Obraz gry się zatrzymał'}</h2><p>Telefon zabrał grze grafikę, gdy była w tle. Dotknij, żeby wczytać grę od nowa – wrócisz tam, gdzie byłeś.</p><button class="m-btn m-primary" type="button">Wczytaj ponownie</button></div>`;
     offer.querySelector('button')!.onclick = () => {
       report('gl', 'Gracz przeładował grę po utracie grafiki');
       const link = relogin();
-      if (link) location.href = link;
+      // Keep the address (?lang, /test/), add the character's code: the page opens straight into the game.
+      if (link) location.hash = new URL(link).hash;
       location.reload();
     };
     document.body.append(offer);

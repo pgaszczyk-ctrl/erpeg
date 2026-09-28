@@ -15,6 +15,8 @@ function exploring(game: Phaser.Game) {
   if (!s || !s.sys.settings.active && !game.scene.isPaused('game')) return false;
   // On a ride the game may be closed: the ride goes on.
   if (document.getElementById('journey')) return false;
+  // The picture broke (errlog.ts watchGraphics): its reload button must not be asked about.
+  if (document.getElementById('gl-reload')) return false;
   return !document.getElementById('menu') && !s.leaving && !!s.player && !s.player.isDead;
 }
 
