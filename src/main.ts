@@ -7,6 +7,7 @@ import { installErrorLog, watchGraphics } from './errlog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
 import { catchGoogleReturn } from './google';
+import { installLeaveGuard } from './guard';
 import { TEST, WERSJA } from './version';
 
 // The Google sign-in window only stores the login and closes (no game there).
@@ -36,10 +37,13 @@ const game = new Phaser.Game({
   },
   // Touch, keyboard and mouse clicks are handled natively in controls.ts (see there why).
   input: { touch: false, keyboard: false },
+  // Phaser's own sound is not used (sfx.ts makes the few sounds); without it iPhones don't fail to start an audio device.
+  audio: { noAudio: true },
   scene: [BootScene, GameScene, UIScene],
 });
 
 installTouchControls(document.getElementById('game')!);
+installLeaveGuard(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).
 watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
 
