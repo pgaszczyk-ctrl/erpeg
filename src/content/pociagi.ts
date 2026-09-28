@@ -5,11 +5,12 @@
 //  godzinie i o wpół do (co `zmianaCoMin` minut):
 //   1. jedna z `bliskichDoWyboru` najbliższych stacji,
 //   2. jedna stacja od `srednioOdKm` do `srednioDoKm` km,
-//   3. jedno z DUZYCH_MIAST co najmniej `dalekoOdKm` km dalej – pociąg
-//      dalekobieżny (od `odPoziomu`, cena `cenaDalekobiezny`); mapa na miejscu
-//      powstaje z mapy świata w trakcie chodzenia (src/map/world.ts).
+//   3. jedno z DUZYCH_MIAST od `dalekoOdKm` do `maksKm` km – pociąg
+//      dalekobieżny (od `odPoziomu`); mapa na miejscu powstaje z mapy świata
+//      w trakcie chodzenia (src/map/world.ts).
+//  Każdy kurs kosztuje tyle samo za kilometr (opłata + stawka za km).
 //  Na dużych stacjach (z „Główny/Główna” w nazwie albo z 3+ kierunkami) stoi
-//  dwóch woźniców, każdy z innymi kursami.
+//  3 woźniców, każdy jedzie tylko w swoją stronę świata.
 //  Z każdej stacji w dalekim mieście można wrócić do Lublina (POWROT).
 // ----------------------------------------------------------------------------
 
@@ -19,8 +20,17 @@ export const WOZNICA = {
   srednioOdKm: 10,
   srednioDoKm: 50,
   dalekoOdKm: 100,
-  cenaDalekobiezny: 5000,
+  /** Najdalej, dokąd woźnica/pociąg jedzie (km w linii prostej). */
+  maksKm: 400,
+  /** Cena każdego kursu: opłata + za każdy km (travel.ts COACH_FEE / COACH_PER_KM), zaokrąglona w górę do tylu monet. */
+  zaokraglenie: 10,
   odPoziomu: 7,
+  /**
+   * Na dużych stacjach stoi tylu woźniców (każdy w inną stronę świata:
+   * północ, południe, wschód, zachód – losowo; jedna strona zostaje bez
+   * woźnicy aż do następnej zmiany kursów).
+   */
+  woznicNaDuzejStacji: 3,
 };
 
 export interface Miasto {
@@ -66,4 +76,4 @@ export const DUZE_MIASTA: Miasto[] = [
 ];
 
 /** Powrót z dalekiego miasta na Lublin Główny. */
-export const POWROT = { nazwa: 'Lublin', cena: 5000 };
+export const POWROT = { nazwa: 'Lublin' };

@@ -398,12 +398,15 @@ export class CityMap {
         let job = this.pendingTiles.get(k);
         if (!job) {
           const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
-          job = (this.world
-            ? this.world(box)
-            : fetch(`${this.tileBase}${cx}_${cy}.json`).then((res) => {
-                if (!res.ok) throw new Error(`Nie udało się wczytać kawałka mapy (${res.status})`);
-                return res.json() as Promise<RawTile>;
-              }))
+          // Phones on mobile data sometimes drop a request ("Failed to fetch"): try again twice.
+          const get = () =>
+            this.world
+              ? this.world(box)
+              : fetch(`${this.tileBase}${cx}_${cy}.json`).then((res) => {
+                  if (!res.ok) throw new Error(`Nie udało się wczytać kawałka mapy (${res.status})`);
+                  return res.json() as Promise<RawTile>;
+                });
+          job = retry(get, 3)
             .then((t) => this.addTile(cx, cy, t))
             .finally(() => this.pendingTiles.delete(k));
           this.pendingTiles.set(k, job);
@@ -530,6 +533,53 @@ export class CityMap {
       }
     }
     return { x: best.x, y: best.y };
+  }
+
+  /**
+   * Can the hero walk from (x, y) at least `m` metres away? (A railway
+   * platform between tracks or a fenced yard can look free but lead nowhere.)
+   */
+  reachesFar(x: number, y: number, m = 120): boolean {
+    const step = 2 * PX_PER_M;
+    const R = m * PX_PER_M;
+    const seen = new Set<string>();
+    const queue: [number, number][] = [[0, 0]];
+    seen.add('0,0');
+    while (queue.length && seen.size < 40000) {
+      const [i, j] = queue.shift()!;
+      if (Math.hypot(i, j) * step >= R) return true;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = i + di, nj = j + dj;
+        const k = `${ni},${nj}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        if (this.isFree(x + ni * step, y + nj * step, 3, 3)) queue.push([ni, nj]);
+      }
+    }
+    return false;
+  }
+
+  /** Like freeNear, but a spot the hero can walk away from (the nearest road point that isn't a dead-end island). */
+  reachableNear(x: number, y: number): { x: number; y: number } {
+    if (this.isFree(x, y, 4, 4) && this.reachesFar(x, y)) return { x, y };
+    const cands: { x: number; y: number; d: number }[] = [];
+    const r = 400 * PX_PER_M;
+    for (const l of this.lineGrid.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })) {
+      if (!ROAD_KINDS.has(l.kind)) continue;
+      for (let i = 0; i + 1 < l.pts.length; i += 2) {
+        const px = l.pts[i], py = l.pts[i + 1];
+        const d = Math.hypot(px - x, py - y);
+        if (d <= r) cands.push({ x: px, y: py, d });
+      }
+    }
+    cands.sort((a, b) => a.d - b.d);
+    let tries = 0;
+    for (const c of cands) {
+      if (!this.isFree(c.x, c.y, 4, 4)) continue;
+      if (this.reachesFar(c.x, c.y)) return { x: c.x, y: c.y };
+      if (++tries > 40) break;
+    }
+    return this.freeNear(x, y);
   }
 
   /** Same projection as scripts/build-map.mjs, in world pixels. */
@@ -1051,4 +1101,12 @@ export class CityMap {
     }
     return best;
   }
+}
+
+/** Runs `fn` up to `times` times, waiting a bit longer after each failure. */
+function retry<T>(fn: () => Promise<T>, times: number): Promise<T> {
+  return fn().catch((e) => {
+    if (times <= 1) throw e;
+    return new Promise<T>((ok, bad) => setTimeout(() => retry(fn, times - 1).then(ok, bad), 700));
+  });
 }

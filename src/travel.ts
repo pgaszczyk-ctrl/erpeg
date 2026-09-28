@@ -126,6 +126,8 @@ export async function enterWorld(game: Phaser.Game) {
   }
   session.arrive = at ? { x: at.x, y: at.y } : null;
   await prepareMap(city);
+  // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
+  if (at && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
   game.registry.set('city', city);
   game.scene.start('game');
 }
@@ -145,51 +147,100 @@ function hashStr(s: string) {
   return h >>> 0;
 }
 
+/** The four sides of the world a coachman can drive to. */
+export type Strona = 'N' | 'S' | 'E' | 'W';
+export const STRONY: Record<Strona, string> = { N: 'na północ', S: 'na południe', E: 'na wschód', W: 'na zachód' };
+
+/** Price of a ride: the fee + per km, rounded up (content/pociagi.ts). */
+export const ridePrice = (d: number) => Math.ceil((COACH_FEE + d * COACH_PER_KM) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie;
+
+const slotNow = () => Math.floor(Date.now() / (WOZNICA.zmianaCoMin * 60_000));
+
+/**
+ * At a big station each coachman drives one side of the world (drawn again
+ * with the rides every half hour; one side stays without a coachman).
+ * null = an ordinary station's only coachman, who goes anywhere.
+ */
+export function coachSide(mapId: string, who: string, big: boolean): Strona | null {
+  if (!big) return null;
+  const base = who.replace(/#\d+$/, '');
+  const n = /#(\d+)$/.exec(who);
+  const i = n ? Number(n[1]) - 1 : 0;
+  const r = rng(hashStr(`${mapId}|${base}|strony|${slotNow()}`));
+  const sides: Strona[] = ['N', 'S', 'E', 'W'];
+  for (let k = sides.length - 1; k > 0; k--) {
+    const j = Math.floor(r() * (k + 1));
+    [sides[k], sides[j]] = [sides[j], sides[k]];
+  }
+  return sides[i] ?? null;
+}
+
+/** Which side of the world `b` lies from `a`. */
+function sideOf(a: { lat: number; lon: number }, b: { lat: number; lon: number }): Strona {
+  const dy = b.lat - a.lat;
+  const dx = (b.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180);
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : dy > 0 ? 'N' : 'S';
+}
+
 /**
  * A coachman's three rides (content/pociagi.ts WOZNICA), drawn again every
  * half hour: one of the nearest stations, one 10–50 km away and a long-distance
- * train to a big city 100+ km away. On a far city's map: back to Lublin and
- * another big city. `who` tells coachmen apart (a big station has two).
+ * train to a big city 100–400 km away, all priced by the km. With `side` only
+ * destinations that way. On a far city's map: back to Lublin and another big
+ * city. `who` tells coachmen apart (a big station has three).
  */
-export function coachOffers(mapId: string, at: { lat: number; lon: number }, stationName: string, who: string): Offer[] {
-  const slot = Math.floor(Date.now() / (WOZNICA.zmianaCoMin * 60_000));
-  const r = rng(hashStr(`${mapId}|${who}|${slot}`));
+export function coachOffers(mapId: string, at: { lat: number; lon: number }, stationName: string, who: string, side: Strona | null = null): Offer[] {
+  const r = rng(hashStr(`${mapId}|${who}|${slotNow()}`));
   const pick = <T,>(list: T[]) => (list.length ? list[Math.floor(r() * list.length)] : undefined);
   const here: Station = { name: stationName, ...at };
-  const price = (d: number) => COACH_FEE + Math.round(d * COACH_PER_KM);
+  const way = (s: { lat: number; lon: number }) => !side || sideOf(here, s) === side;
   const out: Offer[] = [];
   const far = (not?: string) => {
-    const cities = DUZE_MIASTA.filter((c) => c.nazwa !== not && km(here, { name: c.nazwa, ...c }) >= WOZNICA.dalekoOdKm);
+    const cities = DUZE_MIASTA.filter((c) => {
+      const d = km(here, { name: c.nazwa, ...c });
+      return c.nazwa !== not && d >= WOZNICA.dalekoOdKm && d <= WOZNICA.maksKm && way(c);
+    });
     const c = pick(cities);
     if (!c) return;
     const to: Stop = { name: c.nazwa, lat: c.lat, lon: c.lon, key: `w|${c.nazwa}`, mapId: cityMapId(c), mapName: c.nazwa };
-    out.push({ to, km: km(here, to), via: null, price: WOZNICA.cenaDalekobiezny, level: WOZNICA.odPoziomu });
+    const d = km(here, to);
+    out.push({ to, km: d, via: null, price: ridePrice(d), level: WOZNICA.odPoziomu });
   };
   if (worldOrigin(mapId)) {
+    // Home is always on offer (also from a city farther than the limit, reached before it).
     const main = world.lublin.find((s) => /główny/i.test(s.name)) ?? world.lublin[0];
-    if (main) out.push({ to: { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa }, km: km(here, main), via: null, price: POWROT.cena });
+    if (main) {
+      const d = km(here, main);
+      out.push({ to: { ...main, key: `lublin|${main.name}`, mapId: 'lublin', mapName: POWROT.nazwa }, km: d, via: null, price: ridePrice(d) });
+    }
     far(worldNames.get(mapId));
     return out;
   }
-  const others = [...stops.values()].filter((s) => !(s.mapId === mapId && s.name === stationName) && km(here, s) > 0.3).sort((a, b) => km(here, a) - km(here, b));
+  const others = [...stops.values()].filter((s) => !(s.mapId === mapId && s.name === stationName) && km(here, s) > 0.3 && way(s)).sort((a, b) => km(here, a) - km(here, b));
   const near = pick(others.slice(0, WOZNICA.bliskichDoWyboru));
-  if (near) out.push({ to: near, km: km(here, near), via: null, price: price(km(here, near)) });
+  if (near) out.push({ to: near, km: km(here, near), via: null, price: ridePrice(km(here, near)) });
   const mid = pick(others.filter((s) => s !== near && km(here, s) >= WOZNICA.srednioOdKm && km(here, s) <= WOZNICA.srednioDoKm));
-  if (mid) out.push({ to: mid, km: km(here, mid), via: null, price: price(km(here, mid)) });
+  if (mid) out.push({ to: mid, km: km(here, mid), via: null, price: ridePrice(km(here, mid)) });
   far();
   return out;
 }
 
-/** Big stations get a second coachman (with other rides): "Główny" in the name or 3+ neighbouring stations. */
+/** Is this a big station ("Główny" in the name or 3+ neighbouring stations)? */
+export function bigStation(mapId: string, name: string) {
+  const key = `${mapId}|${name}`;
+  return /główn/i.test(name) || world.edges.filter((e) => e.from === key || e.to === key).length >= 3;
+}
+
+/** Big stations get more coachmen (WOZNICA.woznicNaDuzejStacji), each driving one side of the world. */
 export function addSecondCoachmen(city: CityMap) {
   for (const p of [...city.places]) {
-    if (p.kind !== 'station' || p.id.endsWith('#2')) continue;
-    const key = `${city.id}|${p.name}`;
-    const ways = world.edges.filter((e) => e.from === key || e.to === key).length;
-    if (!/główn/i.test(p.name) && ways < 3) continue;
-    if (city.places.some((q) => q.id === `${p.id}#2`)) continue;
-    const door = city.freeNear(p.door.x + 14 * PX_PER_M, p.door.y + 4 * PX_PER_M);
-    city.places.push({ ...p, id: `${p.id}#2`, building: null, door });
+    if (p.kind !== 'station' || /#\d+$/.test(p.id)) continue;
+    if (!bigStation(city.id, p.name)) continue;
+    for (let n = 2; n <= WOZNICA.woznicNaDuzejStacji; n++) {
+      if (city.places.some((q) => q.id === `${p.id}#${n}`)) continue;
+      const door = city.freeNear(p.door.x + (n - 1) * 14 * PX_PER_M, p.door.y + (n % 2 ? -4 : 4) * PX_PER_M);
+      city.places.push({ ...p, id: `${p.id}#${n}`, building: null, door });
+    }
   }
 }
 
@@ -214,7 +265,7 @@ export function stopFor(mapId: string, name: string, lat?: number, lon?: number)
  * without timetable data, the nearest stations.
  */
 export function tripsFrom(from: Stop): Trip[] {
-  const price = (d: number) => COACH_FEE + Math.round(d * COACH_PER_KM);
+  const price = ridePrice;
   const out = new Map<string, Trip>();
   const add = (to: Stop | undefined, via: string | null) => {
     if (!to || to.key === from.key) return;

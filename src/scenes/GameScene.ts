@@ -26,7 +26,7 @@ import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/histori
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY } from '../content/sklepy';
 import { BANK, LOKATY } from '../content/banki';
-import { cachedMap, coachOffers, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip } from '../travel';
+import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
@@ -1357,11 +1357,14 @@ export class GameScene extends Phaser.Scene {
   /** The coachman at a railway station: rides to the next stations for coins. */
   private openCoach(p: CityPlace) {
     const at = this.city.toLatLon(p.door.x, p.door.y);
-    // Three rides, drawn again every half hour (content/pociagi.ts); a big station's second coachman has others.
-    const trips: Offer[] = coachOffers(this.city.id, at, p.name, p.id);
-    const title = `🐴 Woźnica – ${p.name}`;
+    // Three rides, drawn again every half hour (content/pociagi.ts); at a big station each coachman drives one side of the world.
+    const base = p.id.replace(/#\d+$/, '');
+    const big = this.city.places.some((q) => q.id === `${base}#2`);
+    const side = coachSide(this.city.id, p.id, big);
+    const trips: Offer[] = coachOffers(this.city.id, at, p.name, p.id, side);
+    const title = `🐴 Woźnica – ${p.name}${side ? ` (${STRONY[side]})` : ''}`;
     if (!trips.length) {
-      this.dialog({ title, text: 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
+      this.dialog({ title, text: side ? `Woźnica karmi konia. „${STRONY[side][0].toUpperCase()}${STRONY[side].slice(1)} teraz nic nie jeżdżę. Spytaj innego woźnicę albo przyjdź po zmianie kursów.”` : 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
@@ -1370,7 +1373,7 @@ export class GameScene extends Phaser.Scene {
     const hh = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
     this.dialog({
       title,
-      text: `„Wio, koniku! Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
+      text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
       buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), 'Zostaję'],
       onChoose: (i) => {
         const t = trips[i];
@@ -2037,7 +2040,8 @@ export class GameScene extends Phaser.Scene {
         const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
-        session.arrive = st ? { ...st.door } : city.freeNear(to.x, to.y);
+        // A spot on the platform/street the hero can walk away from (not an island between the tracks).
+        session.arrive = city.reachableNear(to.x, to.y);
         // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         if (!session.immortal) {
