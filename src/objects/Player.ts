@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { TEX, HERO_DIRS, type Dir } from '../art';
 
 export const PLAYER = {
-  speed: 60, // 30% slower than it was (85)
+  // ~60 km/h at 1.92 px per metre (it was 60 px/s ≈ 110 km/h: far too fast for the map's scale).
+  speed: 32,
   maxHp: 6,
   attackCooldown: 320, // ms
   attackReach: 9, // px from the centre to the middle of the swing (close, easier to aim)

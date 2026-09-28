@@ -38,6 +38,9 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
 /** Kept for code that only knows slimes. */
 export const SLIME = ENEMY_KINDS.glut;
 
+/** Enemy speeds above were set for a hero walking 60 px/s; the hero now walks 32, so they keep the same proportion. */
+export const PREDKOSC_WROGOW = 32 / 60;
+
 /** Pictures of the little creatures (all but the bandit). */
 const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
 
@@ -144,7 +147,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
         return;
       }
       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
-      const speed = this.kind.chaseSpeed * Slime.tempo;
+      const speed = this.kind.chaseSpeed * Slime.tempo * PREDKOSC_WROGOW;
       this.vel.set(v.x * speed, v.y * speed);
       this.anims.timeScale = 2;
     } else if (now > this.nextThink) {
@@ -155,10 +158,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
       } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > this.roam) {
         // Wandered too far: head back home.
         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
-        this.vel.set(v.x * this.kind.wanderSpeed * Slime.tempo, v.y * this.kind.wanderSpeed * Slime.tempo);
+        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
+        this.vel.set(v.x * w, v.y * w);
       } else {
         const a = Math.random() * Math.PI * 2;
-        this.vel.set(Math.cos(a) * this.kind.wanderSpeed * Slime.tempo, Math.sin(a) * this.kind.wanderSpeed * Slime.tempo);
+        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
+        this.vel.set(Math.cos(a) * w, Math.sin(a) * w);
       }
     }
   }

@@ -1,0 +1,87 @@
+diff --git a/src/objects/Player.ts b/src/objects/Player.ts
+index 1eca69b..6344ec0 100644
+--- a/src/objects/Player.ts
++++ b/src/objects/Player.ts
+@@ -2,7 +2,8 @@ import Phaser from 'phaser';
+ import { TEX, HERO_DIRS, type Dir } from '../art';
+ 
+ export const PLAYER = {
+-  speed: 60, // 30% slower than it was (85)
++  // ~60 km/h at 1.92 px per metre (it was 60 px/s ≈ 110 km/h: far too fast for the map's scale).
++  speed: 32,
+   maxHp: 6,
+   attackCooldown: 320, // ms
+   attackReach: 9, // px from the centre to the middle of the swing (close, easier to aim)
+diff --git a/src/objects/Slime.ts b/src/objects/Slime.ts
+index 219cbcb..de4b832 100644
+--- a/src/objects/Slime.ts
++++ b/src/objects/Slime.ts
+@@ -38,6 +38,9 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
+ /** Kept for code that only knows slimes. */
+ export const SLIME = ENEMY_KINDS.glut;
+ 
++/** Enemy speeds above were set for a hero walking 60 px/s; the hero now walks 32, so they keep the same proportion. */
++export const PREDKOSC_WROGOW = 32 / 60;
++
+ /** Pictures of the little creatures (all but the bandit). */
+ const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
+ 
+@@ -144,7 +147,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
+         return;
+       }
+       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
+-      const speed = this.kind.chaseSpeed * Slime.tempo;
++      const speed = this.kind.chaseSpeed * Slime.tempo * PREDKOSC_WROGOW;
+       this.vel.set(v.x * speed, v.y * speed);
+       this.anims.timeScale = 2;
+     } else if (now > this.nextThink) {
+@@ -155,10 +158,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
+       } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > this.roam) {
+         // Wandered too far: head back home.
+         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
+-        this.vel.set(v.x * this.kind.wanderSpeed * Slime.tempo, v.y * this.kind.wanderSpeed * Slime.tempo);
++        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
++        this.vel.set(v.x * w, v.y * w);
+       } else {
+         const a = Math.random() * Math.PI * 2;
+-        this.vel.set(Math.cos(a) * this.kind.wanderSpeed * Slime.tempo, Math.sin(a) * this.kind.wanderSpeed * Slime.tempo);
++        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
++        this.vel.set(Math.cos(a) * w, Math.sin(a) * w);
+       }
+     }
+   }
+diff --git a/src/scenes/GameScene.ts b/src/scenes/GameScene.ts
+index 11fd486..3a79792 100644
+--- a/src/scenes/GameScene.ts
++++ b/src/scenes/GameScene.ts
+@@ -6,7 +6,7 @@ import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
+ import { LOOK_TOP, LOOK_H } from '../look';
+ import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
+ import { Player, PLAYER } from '../objects/Player';
+-import { Slime, ENEMY_KINDS } from '../objects/Slime';
++import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
+ import { CityMap, PX_PER_M } from '../map/CityMap';
+ import { MapRenderer } from '../map/MapRenderer';
+ import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
+@@ -576,7 +576,7 @@ export class GameScene extends Phaser.Scene {
+       if (s.isDead) continue;
+       // Scared by the dragon's shadow: running away.
+       if (s.fleeUntil && now < s.fleeUntil) {
+-        const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3);
++        const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3 * PREDKOSC_WROGOW);
+         s.vel.set(away.x, away.y);
+         this.moveActor(s, dt);
+         s.updateLook();
+diff --git a/src/version.ts b/src/version.ts
+index 4d5f792..3edb945 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -4,7 +4,7 @@
+ // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
+ // code with VITE_TEST=1 and says so on screen.
+ 
+-export const WERSJA = '1.001';
++export const WERSJA = '1.002';
+ 
+ /** Built for the test server? */
+ export const TEST = import.meta.env.VITE_TEST === '1';

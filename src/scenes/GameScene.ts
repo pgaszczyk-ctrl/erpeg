@@ -6,7 +6,7 @@ import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
-import { Slime, ENEMY_KINDS } from '../objects/Slime';
+import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
@@ -583,7 +583,7 @@ export class GameScene extends Phaser.Scene {
       if (s.isDead) continue;
       // Scared by the dragon's shadow: running away.
       if (s.fleeUntil && now < s.fleeUntil) {
-        const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3);
+        const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3 * PREDKOSC_WROGOW);
         s.vel.set(away.x, away.y);
         this.moveActor(s, dt);
         s.updateLook();

@@ -9,15 +9,15 @@ import type { Player } from './Player';
 
 export const SMOK = {
   /** Walking up (px/s) – a bit slower than before. */
-  predkosc: 26,
+  predkosc: 15,
   /** Backing off after two blows: speed (px/s) and how long (ms). */
-  ucieczka: { predkosc: 150, ms: 600 },
+  ucieczka: { predkosc: 85, ms: 800 },
   /** Blows it takes before backing off. */
   ciosyDoOgnia: 2,
   /** Claw: reach beyond its body (px), wind-up (ms) and pause between strikes (ms), damage in half-hearts. */
   pazur: { zasieg: 8, zamach: 380, przerwa: 900, obrazenia: 2 },
   /** Fire: volleys, balls per volley, spread (degrees), gap between volleys (ms), speed (px/s), damage in half-hearts. */
-  ogien: { serii: 3, kul: 3, rozrzut: 18, przerwa: 550, predkosc: 125, obrazenia: 2 },
+  ogien: { serii: 3, kul: 3, rozrzut: 18, przerwa: 550, predkosc: 80, obrazenia: 2 },
 };
 
 export interface DragonHost {

@@ -3,7 +3,8 @@ name: Deploy to GitHub Pages
 # Two games on one site:
 #   https://exp-lore.app/       production – built from the commit named in PRODUKCJA
 #   https://exp-lore.app/test/  the test server – the newest code (VITE_TEST=1)
-# A release to production = bump WERSJA in src/version.ts (+0.001) and point PRODUKCJA at that commit.
+# A release to production = bump WERSJA in src/version.ts (+0.001) and point PRODUKCJA at that commit
+# (and empty produkcja/). A single small fix can go live alone as produkcja/<version>-<name>.patch.
 
 on:
   push:
@@ -31,7 +32,10 @@ jobs:
           set -euo pipefail
           SHA=$(tr -d ' \n\r' < PRODUKCJA)
           echo "Production commit: $SHA"
+          # Small fixes released on their own (produkcja/*.patch, in name order) go on top of it.
+          mkdir -p /tmp/patches && cp produkcja/*.patch /tmp/patches/ 2>/dev/null || true
           git checkout --quiet "$SHA"
+          for p in $(ls /tmp/patches/*.patch 2>/dev/null | sort); do echo "Applying $p"; git apply "$p"; done
       - uses: actions/setup-node@v4
         with:
           node-version: 22
