@@ -14,6 +14,11 @@ jest już w grze na serwerze testowym (exp-lore.app/test/). Pliki leżą w `publ
   (poświata potrzebuje miejsca; w paczce v1 goblin dotyka brzegów, a pod wędrowcem i łuczniczką
   „przeciekały” kreski cienia do rzędu niżej – gra je teraz wycina, ale lepiej, żeby ich nie było).
 - Stopy postaci zawsze na tej samej wysokości (w paczce v1: 62. piksel od góry z 64).
+- Postać w każdej klatce **w tym samym miejscu w poziomie** (środek ciała na środku kwadratu). W paczce v1
+  rycerz i łuczniczka w klatce „stoi” byli przesunięci o 4–6 px względem klatek kroku – przy chodzeniu
+  postać „ząbkowała”. Gra teraz to wyrównuje sama, ale lepiej rysować równo.
+- Klatki jednego kierunku mają się różnić tylko nogami/rękami: w paczce v1 łuczniczka od tyłu ma kucyk
+  raz po lewej, raz po prawej stronie – tego gra nie poprawi.
 
 ### Arkusz postaci (ludzie i stworki, które chodzą)
 Jak w paczce v1: 192 × 192 px = 3 × 3 klatki po 64 × 64.

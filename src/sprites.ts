@@ -89,7 +89,10 @@ function canvas(w: number, h: number) {
   return c;
 }
 
-/** The sheet with stray pixels removed and the side row turned to look left. */
+/** How far each frame is moved sideways so the head stands in the middle (see centreShifts); per character id. */
+const shifts = new Map<string, number[]>();
+
+/** The sheet with stray pixels removed, the side row turned to look left and every frame centred. */
 function sheetPixels(scene: Phaser.Scene, p: Postac) {
   const img = scene.textures.get(`hdsrc-${p.id}`).getSourceImage() as HTMLImageElement;
   const c = canvas(F * 3, F * 3);
@@ -99,6 +102,9 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
   const data = ctx.getImageData(0, 0, c.width, c.height);
   for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
   ctx.putImageData(data, 0, 0);
+  const s = centreShifts(data);
+  shifts.set(p.id, s);
+  shiftFrames(c, s);
   return c;
 }
 
@@ -108,7 +114,64 @@ function maskPixels(scene: Phaser.Scene, p: Postac) {
   const ctx = c.getContext('2d')!;
   ctx.drawImage(scene.textures.get(`hdmask-${p.id}`).getSourceImage() as HTMLImageElement, 0, 0);
   if (p.bokWPrawo) mirrorRow(c, 1);
+  const s = shifts.get(p.id);
+  if (s) shiftFrames(c, s);
   return c;
+}
+
+/**
+ * The artist's frames don't all stand in the same place (the standing frame is
+ * drawn 4–6 px right of the steps for the knight and the ranger), so walking
+ * jitters, and turning left/right jumps. Per row: each step frame is moved to
+ * where its outline best covers the standing frame's, then the whole row so
+ * the standing figure's body (lower half: no plume or ponytail) is in the middle.
+ */
+function centreShifts(img: ImageData): number[] {
+  const W = img.width;
+  const d = img.data;
+  const solid = (r: number, col: number, x: number, y: number) => x >= 0 && x < F && d[((r * F + y) * W + col * F + x) * 4 + 3] >= 20;
+  const out: number[] = [];
+  for (let r = 0; r < 3; r++) {
+    // The standing frame's body: mean x of the lower half of the figure.
+    let top = F, bottom = -1;
+    for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) if (solid(r, 1, x, y)) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
+    let sx = 0, n = 0;
+    for (let y = Math.round((top + bottom) / 2); y <= bottom; y++) for (let x = 0; x < F; x++) if (solid(r, 1, x, y)) { sx += x; n++; }
+    const row = n ? Math.round(F / 2 - 0.5 - sx / n) : 0;
+    for (let col = 0; col < 3; col++) {
+      let best = 0, bestScore = -1;
+      if (col !== 1) {
+        for (let dx = -12; dx <= 12; dx++) {
+          let score = 0;
+          for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) if (solid(r, col, x, y) && solid(r, 1, x + dx, y)) score++;
+          if (score > bestScore || (score === bestScore && Math.abs(dx) < Math.abs(best))) { bestScore = score; best = dx; }
+        }
+      }
+      out.push(row + best);
+    }
+  }
+  return out;
+}
+
+/** Moves every frame sideways by its shift (row by row, 3 frames each). */
+function shiftFrames(c: HTMLCanvasElement, s: number[]) {
+  const ctx = c.getContext('2d')!;
+  for (let r = 0; r < 3; r++) {
+    for (let col = 0; col < 3; col++) {
+      const dx = s[r * 3 + col];
+      if (!dx) continue;
+      const cell = ctx.getImageData(col * F, r * F, F, F);
+      const tmp = canvas(F, F);
+      tmp.getContext('2d')!.putImageData(cell, 0, 0);
+      ctx.clearRect(col * F, r * F, F, F);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(col * F, r * F, F, F);
+      ctx.clip();
+      ctx.drawImage(tmp, col * F + dx, r * F);
+      ctx.restore();
+    }
+  }
 }
 
 function mirrorRow(c: HTMLCanvasElement, row: number) {
