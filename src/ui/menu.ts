@@ -275,7 +275,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
 
     const login = async (name: string, code: string, password?: string, form?: HTMLFormElement) => {
       if (TEST && !TEST_POSTACIE.some((n) => n.toLowerCase() === name.toLowerCase())) {
-        throw new Error(`Na serwerze testowym grają tylko postacie testowe: ${TEST_POSTACIE.join(', ')}.`);
+        throw new Error('Na serwerze testowym grają tylko postacie testowe.');
       }
       const r = await api.login(name, code.replace(/[^0-9a-z]/gi, ''), password);
       if (r.new_code) return showCode(r, 'Nowy kod postaci');
@@ -320,7 +320,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (googleUser() && (await googleToken())) return account();
           await signInThen(gErr, account);
         }), 'm-google');
-      if (TEST) return screen(el('h2', {}, ['Wczytaj postać testową']), el('p', { className: 'm-or' }, [`Postacie: ${TEST_POSTACIE.join(', ')}`]), form);
+      // (the test characters' names are not shown: they are only for the owner)
+      if (TEST) return screen(el('h2', {}, ['Wczytaj postać testową']), form);
       screen(el('h2', {}, ['Wczytaj postać']), gBtn, gErr, el('p', { className: 'm-or' }, ['albo imieniem i kodem:']), form, button('Wstecz', main));
     };
 
