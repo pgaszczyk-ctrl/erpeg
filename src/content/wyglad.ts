@@ -68,6 +68,15 @@ export const MIESZKANCY_HD: Postac[] = [
 /** The imp (chochlik): smaller than a person. */
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'slime', bokWPrawo: false, skala: 0.28 };
 
+/** Fixed characters (pack „postacie stałe 01”): each has one look (no recolouring). Key = who in FixedNpcs/Story. */
+export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka', Postac> = {
+  mag: { id: 'mag', nazwa: 'Mag Albrecht', plik: 'mag', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
+  margo: { id: 'margo', nazwa: 'Siostra Margo', plik: 'siostra_margo', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'dorosly' },
+  marek: { id: 'marek', nazwa: 'Dziadek Marek', plik: 'dziadek_marek', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
+  iwonka: { id: 'iwonka', nazwa: 'Babcia Iwonka', plik: 'babcia_iwonka', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'starszy' },
+  grazynka: { id: 'grazynka', nazwa: 'Babcia Grażynka', plik: 'babcia_grazynka', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'starszy' },
+};
+
 /** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */
 export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   { postac: { id: 'driada', nazwa: 'Driada', plik: 'driada', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['driada'] },

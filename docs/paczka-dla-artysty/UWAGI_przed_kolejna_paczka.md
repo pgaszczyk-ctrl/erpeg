@@ -27,3 +27,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 
 12. **Wrogowie przyjęci** (driada, zombie, szkielet, bandyta, herszt) i są w grze. Herszt jest powiększany 1,8×, a wielki herszt 2,5× i dodatkowo zaczerwieniony. Dzięki!
 13. **Mieszkańcy 11 i 15 poprawieni, są z powrotem na ulicach.** Drobiazg: u 11 w widoku od tyłu kucyki są ścięte płasko u góry – przy okazji warto je domknąć.
+
+## Po paczce „postacie stałe 01”
+
+14. **Mag, Siostra Margo, Dziadek Marek, Babcia Iwonka i Babcia Grażynka przyjęci** i chodzą już po swoich ulicach. Poprawka czubka włosów u mieszkańca 11 też jest. Dzięki!
+15. **Następna paczka: świat** – `ZAMOWIENIE_swiat_01.md` (podłoże, drogi, dachy). Na start 3 pliki na próbę: `podloze_trawa`, `podloze_bruk`, `dach_dachowka_czerwona_jasna`.

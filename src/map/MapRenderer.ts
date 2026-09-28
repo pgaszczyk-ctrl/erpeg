@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
+import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW } from '../content/swiat';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -149,7 +150,22 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
   };
 }
 
-type Patterns = ReturnType<typeof makePatterns>;
+type Patterns = ReturnType<typeof makePatterns> & Record<string, CanvasPattern>;
+
+/** The artist's texture `swiat-<file>` shrunk to the map's size, as a repeating pattern (null when there is no file). */
+function artPattern(scene: Phaser.Scene, ctx: CanvasRenderingContext2D, file: string): CanvasPattern | null {
+  const key = `swiat-${file}`;
+  if (!scene.textures.exists(key)) return null;
+  const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.width / SKALA_PLIKOW));
+  c.height = Math.max(1, Math.round(img.height / SKALA_PLIKOW));
+  const g = c.getContext('2d')!;
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(img, 0, 0, c.width, c.height);
+  return ctx.createPattern(c, 'repeat');
+}
 
 /** Bounding boxes of rings (cached), so a chunk skips the ones that miss it. */
 const ringBox = new WeakMap<number[], [number, number, number, number]>();
@@ -302,11 +318,28 @@ export class MapRenderer {
     const x0 = cx * CHUNK;
     const y0 = cy * CHUNK;
     const ctx = chunk.tex.getContext();
-    this.patterns ??= makePatterns(ctx);
+    this.patterns ??= this.withArt(ctx, makePatterns(ctx));
     this.paint(ctx, x0, y0);
     chunk.tex.refresh();
     chunk.img.setPosition(x0, y0).setVisible(true);
     this.chunks.set(chunk.key, chunk);
+  }
+
+  /** Roof patterns from the artist's files (empty until they arrive). */
+  private roofArt: CanvasPattern[] = [];
+  private trackArt: CanvasPattern | null = null;
+
+  /** The drawn patterns, with the artist's textures in place of those that have a file (content/swiat.ts). */
+  private withArt(ctx: CanvasRenderingContext2D, drawn: ReturnType<typeof makePatterns>): Patterns {
+    const out = { ...drawn } as Patterns;
+    for (const [kind, file] of Object.entries(PODLOZE_PLIKI)) {
+      const pat = artPattern(this.scene, ctx, file);
+      if (!pat) continue;
+      if (kind === 'track') this.trackArt = pat;
+      else out[kind] = pat;
+    }
+    this.roofArt = DACHY_PLIKI.map((f) => artPattern(this.scene, ctx, f)).filter((p): p is CanvasPattern => !!p);
+    return out;
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
@@ -352,7 +385,7 @@ export class MapRenderer {
     }
     for (const l of roads) {
       linePath(ctx, l.pts);
-      ctx.strokeStyle = TRACK_FILL;
+      ctx.strokeStyle = this.trackArt ?? TRACK_FILL;
       ctx.lineWidth = trackWidth(l);
       ctx.stroke();
     }
@@ -499,7 +532,7 @@ export class MapRenderer {
   private paintArea(ctx: CanvasRenderingContext2D, a: Area) {
     const P = this.patterns!;
     ringsPath(ctx, a.rings);
-    const pat = (P as Record<string, CanvasPattern>)[a.kind];
+    const pat = P[a.kind];
     ctx.fillStyle = pat ?? AREA_FILL[a.kind] ?? '#72c23a';
     ctx.fill('evenodd');
     if (a.kind === 'water') {
@@ -546,7 +579,8 @@ export class MapRenderer {
     }
     // Roof.
     ringsPath(ctx, b.rings);
-    ctx.fillStyle = special ? special.roof : ROOFS[b.seed % ROOFS.length];
+    const art = this.roofArt.length ? this.roofArt[b.seed % this.roofArt.length] : null;
+    ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = OUTLINE;

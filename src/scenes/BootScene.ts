@@ -9,6 +9,7 @@ import { ITEM_PICTURES } from '../ui/itemIcon';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
+import { MAMY } from '../content/swiat';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -20,6 +21,8 @@ export class BootScene extends Phaser.Scene {
     // Item pictures (16×16 pixel art) for shop dialogs.
     for (const id of ITEM_PICTURES) this.load.image(`item-${id}`, `items/${id}.png`);
     loadHdSprites(this);
+    // The artist's ground and roof textures (content/swiat.ts).
+    for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
   }
 
   create() {

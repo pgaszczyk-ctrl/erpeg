@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
+import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
 
 // The new detailed characters (content/wyglad.ts). Every sheet becomes a
@@ -27,7 +27,31 @@ const ROW = { down: 0, side: 1, up: 2 } as const;
 export const hdOn = NOWE_POSTACIE;
 
 const ENEMIES = WROGOWIE_HD.map((w) => w.postac);
-const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES];
+const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES, ...Object.values(STALE_HD)];
+
+/**
+ * A fixed character (FixedNpcs, the wizard) as the artist drew them, walking
+ * by direction; the old tinted look-drawn person when the picture is missing.
+ */
+export function fixedSprite(scene: Phaser.Scene, x: number, y: number, who: keyof typeof STALE_HD, fallback: string, tint?: number) {
+  const key = `hd-${STALE_HD[who].id}`;
+  if (hdOn && scene.textures.exists(key)) return fitHd(scene.add.sprite(x, y, key, 'down-0'));
+  const s = scene.add.sprite(x, y, fallback, 'down-0');
+  return tint === undefined ? s : s.setTint(tint);
+}
+
+/** Turns a detailed character to where it moved and plays its walk (standing when it didn't). */
+export function walkHd(s: Phaser.GameObjects.Sprite, dx: number, dy: number) {
+  const key = s.texture.key;
+  if (Math.abs(dx) + Math.abs(dy) < 0.01) {
+    s.anims.stop();
+    s.setFrame(`${s.frame.name.split('-')[0]}-0`);
+    return;
+  }
+  const dir = Math.abs(dx) > Math.abs(dy) ? 'side' : dy < 0 ? 'up' : 'down';
+  s.setFlipX(dir === 'side' && dx > 0);
+  s.anims.play(`${key}-walk-${dir}`, true);
+}
 
 /** The detailed picture (with the red glow) of an enemy kind, when the artist drew one. */
 export function enemyTexture(kind: string): string | null {

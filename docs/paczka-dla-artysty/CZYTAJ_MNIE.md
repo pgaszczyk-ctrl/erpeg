@@ -5,6 +5,8 @@ Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest **paczka v1*
 łuczniczka, goblin-chochlik) – styl się podoba i jest już w grze na serwerze testowym
 (https://exp-lore.app/test/). Zrzuty: `5_zrzuty_z_gry/`.
 
+**TERAZ NAJWAŻNIEJSZE: `ZAMOWIENIE_swiat_01.md` – podłoże, drogi i dachy** (postacie chodzą po płaskich kolorach).
+
 **Nowe (wrzesień 2026): styl świata – lekki baśniowy steampunk.** Domy, ulice i ozdoby rysujemy w klimacie opisanym w `STYL_SWIATA_steampunk.md` (tam też nowe pliki: latarnie, parowóz, kominy z parą…).
 
 Co jest w tej paczce:
@@ -211,9 +213,9 @@ dach tajski, glina), zamki (ok. 144 × 144) i pomniki (wieża z zegarem, łuk, o
 
 ## E. Kolejność
 
-1. Mieszkańcy 1–15 + bohaterowie 4–10 (tych na mapie widać najwięcej).
-2. Wrogowie: driada, zombie, szkielet, bandyta, herszt.
-3. Stałe postacie (mag, Margo, dziadkowie, Grażynka, Luigi, Martin, trener, biegaczka, mądrale, woźnica, pies).
+1. ✅ Mieszkańcy 1–15, bohaterowie 4–10, wrogowie, stałe postacie partia 1 (mag, Margo, dziadkowie, Grażynka) – są w grze.
+2. **Teraz: świat – `ZAMOWIENIE_swiat_01.md`** (podłoże, drogi, dachy), potem ściany, latarnie, kominy, parowóz (`STYL_SWIATA_steampunk.md`).
+3. Reszta stałych postaci (Luigi, Martin, trener, biegaczka, mądrale, woźnica, pies).
 4. Drzewa, grzyby, owoce, szyldy.
 5. Smok i cień smoka.
 6. Efekty, ekran, przedmioty.

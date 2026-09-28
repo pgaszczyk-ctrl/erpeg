@@ -10,6 +10,7 @@ import { groupCount, takeGroup, groupValue, sellGroup } from '../inventory';
 import { levelForAge } from './Npcs';
 import type { Place } from '../map/CityMap';
 import { today } from './Npcs';
+import { fixedSprite, isHd, walkHd } from '../sprites';
 
 // The fixed characters from content/postacie.ts: a dog on Guliwera/Cyda that
 // lost its piggy, Sister Margo on Orlanda and Grandpa Marek or Grandma Iwonka
@@ -185,7 +186,7 @@ export class FixedNpcs {
     const nunLines = streetLines([MARGO.ulica]);
     if (nunLines.length) {
       const w = new Walker(nunLines, MARGO.predkosc * PX_PER_M, this.r);
-      const sprite = scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0x9a9aa6);
+      const sprite = fixedSprite(scene, w.x, w.y, 'margo', TEX.hero, 0x9a9aa6);
       this.list.push({ id: 'margo', walker: w, sprite, x: w.x, y: w.y });
     }
 
@@ -208,7 +209,7 @@ export class FixedNpcs {
       }).filter((l) => l.length >= 4);
       const lines = near.length ? near : [[door.x, door.y, door.x + 1, door.y]];
       const w = new Walker(lines, DZIADKOWIE.predkosc * PX_PER_M, this.r);
-      const sprite = scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(this.grandIndex === 0 ? 0xb8c8e0 : 0xf2b8d8);
+      const sprite = fixedSprite(scene, w.x, w.y, this.grandIndex === 0 ? 'marek' : 'iwonka', TEX.hero, this.grandIndex === 0 ? 0xb8c8e0 : 0xf2b8d8);
       this.list.push({ id: 'dziadkowie', walker: w, sprite, x: w.x, y: w.y });
     }
   }
@@ -326,7 +327,7 @@ export class FixedNpcs {
     if (!lines.length) return;
     this.grazynkaHome = null;
     const w = new Walker(lines, GRAZYNKA.predkosc * PX_PER_M, this.r);
-    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xc8e6a0);
+    const sprite = fixedSprite(this.scene, w.x, w.y, 'grazynka', TEX.hero, 0xc8e6a0);
     this.list.push({ id: 'grazynka', walker: w, sprite, x: w.x, y: w.y });
   }
 
@@ -341,11 +342,13 @@ export class FixedNpcs {
         continue;
       }
       const dx = w.walker.step(dt);
+      const my = w.walker.y - w.y;
       w.x = w.walker.x;
       w.y = w.walker.y;
       w.sprite.setPosition(w.x, w.y).setDepth(w.y);
-      // The dog is drawn facing right, people's side frame faces left.
-      if (dx && w.sprite instanceof Phaser.GameObjects.Sprite) w.sprite.setFrame('side-0').setFlipX(dx > 0);
+      // The dog is drawn facing right, people's side frame faces left; the artist's people walk by direction.
+      if (w.sprite instanceof Phaser.GameObjects.Sprite && isHd(w.sprite.texture.key)) walkHd(w.sprite, dx, my);
+      else if (dx && w.sprite instanceof Phaser.GameObjects.Sprite) w.sprite.setFrame('side-0').setFlipX(dx > 0);
       else if (dx) w.sprite.setFlipX(dx < 0);
       const v = visible(w.x, w.y);
       w.sprite.setVisible(v);

@@ -1,0 +1,163 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie: świat 1</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie: ŚWIAT, partia 1 – podłoże, drogi, dachy</h1>
+<blockquote>
+<p>Najważniejsza paczka teraz. Postacie są piękne, ale chodzą po płaskich kolorach (zobacz <code>5_zrzuty_z_gry/swiat_dzis_plaskie_kolory.png</code>). Ta partia zmienia wygląd całej mapy. Klimat opisuje <code>STYL_SWIATA_steampunk.md</code>: lekki, baśniowy, ciepły, z nutą pary i mosiądzu.</p>
+</blockquote>
+<h2>Jak gra to używa</h2>
+<ul>
+<li>Mapę widać <strong>z góry</strong>. Gra wypełnia każdy kawałek terenu (trawnik, las, plac, ulicę…) twoją teksturą, <strong>powtarzając ją jak tapetę</strong>. Dlatego każda tekstura <strong>musi się kafelkować</strong>: lewa krawędź pasuje do prawej, a górna do dolnej, bez widocznych szwów i bez jednego rzucającego się w oczy elementu, który będzie się powtarzał co kawałek.</li>
+<li>Rysujesz <strong>3× większe</strong>, niż widać na mapie (1 m ≈ 6 px w pliku). Gra zmniejsza plik 3× z wygładzaniem.</li>
+<li>Tekstury podłoża: <strong>bez konturu, bez przezroczystości</strong>, pełny kwadrat.</li>
+<li>Światło z lewej-góry, paleta ciepła jak w postaciach.</li>
+<li>Pliki wstawiamy od razu po otrzymaniu: gra podmienia rysowany kolor na twoją teksturę, a brakujący plik zostaje po staremu. Można więc oddawać po kilka.</li>
+</ul>
+<h2>1. Podłoże – 192 × 192 px (albo 96 × 96 dla drobnych wzorów), kafelkujące się</h2>
+<p>W kolejności ważności (tego jest najwięcej na mapie):</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Co to</th>
+<th>Uwagi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podloze_trawa</code></td>
+<td>zwykły trawnik, tło całego miasta</td>
+<td>spokojna, nie za jaskrawa, drobne kępki i kwiatki rzadko</td>
+</tr>
+<tr>
+<td><code>podloze_bruk</code></td>
+<td>ulice dla wozów (kocie łby / kostka)</td>
+<td>96 × 96; kamienie ok. 10–12 px, ciepła szarość z beżem</td>
+</tr>
+<tr>
+<td><code>podloze_droga</code></td>
+<td>drogi gruntowe, chodniki i ścieżki</td>
+<td>ubita ziemia, jasny brąz, drobne kamyki; gra kładzie ją pasami wzdłuż dróg</td>
+</tr>
+<tr>
+<td><code>podloze_las</code></td>
+<td>poszycie lasu</td>
+<td>ciemna zieleń, mech, igliwie (drzewa gra dorysuje osobno)</td>
+</tr>
+<tr>
+<td><code>podloze_park</code></td>
+<td>parki</td>
+<td>trawa staranniej przystrzyżona, trochę kwiatów</td>
+</tr>
+<tr>
+<td><code>podloze_plac</code></td>
+<td>place, deptaki, rynki</td>
+<td>płyty kamienne większe niż bruk (ok. 18–24 px)</td>
+</tr>
+<tr>
+<td><code>podloze_woda</code></td>
+<td>rzeki, stawy</td>
+<td>spokojna woda, delikatne fale; bez brzegu (gra dorysuje brzeg)</td>
+</tr>
+<tr>
+<td><code>podloze_pole</code></td>
+<td>pola uprawne</td>
+<td>bruzdy <strong>poziomo</strong></td>
+</tr>
+<tr>
+<td><code>podloze_zarosla</code></td>
+<td>krzaki, nieużytki</td>
+<td></td>
+</tr>
+<tr>
+<td><code>podloze_dzialki</code></td>
+<td>ogródki działkowe</td>
+<td>drobne grządki, ścieżki</td>
+</tr>
+<tr>
+<td><code>podloze_cmentarz</code></td>
+<td>cmentarze</td>
+<td>trawa + malutkie płyty/krzyżyki, spokojnie</td>
+</tr>
+<tr>
+<td><code>podloze_parking</code></td>
+<td>place postojowe dla wozów</td>
+<td>ubita ziemia albo drobny żwir</td>
+</tr>
+<tr>
+<td><code>podloze_boisko</code></td>
+<td>boiska</td>
+<td>równa, jasna trawa (linie gra dorysuje)</td>
+</tr>
+<tr>
+<td><code>podloze_plac_zabaw</code></td>
+<td>place zabaw</td>
+<td>piasek/kora</td>
+</tr>
+<tr>
+<td><code>podloze_piasek</code></td>
+<td>plaże, piaski</td>
+<td></td>
+</tr>
+<tr>
+<td><code>podloze_mokradlo</code></td>
+<td>podmokłe łąki</td>
+<td>trawa z kałużami</td>
+</tr>
+<tr>
+<td><code>podloze_puszcza</code></td>
+<td>dzika puszcza za granicą mapy</td>
+<td>bardzo ciemny, gęsty las (widać ją na brzegach mapy)</td>
+</tr>
+<tr>
+<td><code>podloze_skala</code>, <code>podloze_lodowiec</code></td>
+<td>góry (tylko mapy w górach)</td>
+<td>później, niski priorytet</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Dachy – 48 × 48 px, kafelkujące się (jak D9 w CZYTAJ_MNIE)</h2>
+<p>Rzędy dachówek biegną <strong>poziomo</strong>. Na start wystarczy wersja <code>_jasna</code>, a <code>_ciemna</code> (ten sam wzór w cieniu) można dorobić później.</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dach_dachowka_czerwona_jasna</code></td>
+<td>czerwona dachówka – najczęstszy dach</td>
+</tr>
+<tr>
+<td><code>dach_dachowka_brazowa_jasna</code></td>
+<td>brązowa dachówka</td>
+</tr>
+<tr>
+<td><code>dach_lupek_jasna</code></td>
+<td>szary łupek (kamienice)</td>
+</tr>
+<tr>
+<td><code>dach_gont_jasna</code></td>
+<td>drewniany gont (wieś)</td>
+</tr>
+<tr>
+<td><code>dach_strzecha_jasna</code></td>
+<td>strzecha (chaty)</td>
+</tr>
+<tr>
+<td><code>dach_miedz_jasna</code></td>
+<td>zielonkawa miedziana blacha (wieże, ratusze) – steampunkowy akcent</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Kolejność oddawania</h2>
+<ol>
+<li><strong>Na próbę 3 pliki:</strong> <code>podloze_trawa</code>, <code>podloze_bruk</code>, <code>dach_dachowka_czerwona_jasna</code>. Wstawimy je od razu i odeślemy zrzut, jak wygląda miasto.</li>
+<li>Reszta podłoża z tabeli 1, od góry.</li>
+<li>Pozostałe dachy.</li>
+<li>Potem partia 2: ściany frontowe (D9), latarnie, kominy z parą, parowóz (<code>STYL_SWIATA_steampunk.md</code>).</li>
+</ol>
+<h2>4. Nazwy i oddanie</h2>
+<ul>
+<li>PNG, nazwy dokładnie jak w tabelach (małe litery, bez polskich znaków), bez folderów w środku albo w folderze <code>swiat/</code>.</li>
+<li>Przy każdej teksturze dobrze sprawdzić ułożenie 3 × 3 obok siebie: czy nie widać szwów ani powtarzającego się wzoru.</li>
+</ul>
