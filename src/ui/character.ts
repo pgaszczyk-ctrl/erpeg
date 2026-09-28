@@ -6,6 +6,27 @@ import {
   gear, item, totalFruit, goodsN, goodsLabel, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
 } from '../inventory';
 import { session } from '../quests';
+import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
+import { heroSkin } from '../sprites';
+
+/** Choosing which of the new heroes to be (saved with the look at the next save). */
+function skinPicker(changed: () => void) {
+  const now = heroSkin(session.look.postac, session.name);
+  const i = BOHATEROWIE.indexOf(now);
+  const row = el('div', 'c-skin');
+  const pic = el('div', 'c-skin-pic');
+  pic.style.backgroundImage = `url(postacie/${now.plik}.png)`;
+  const go = (d: number) => {
+    session.look = { ...session.look, postac: (i + d + BOHATEROWIE.length) % BOHATEROWIE.length };
+    changed();
+  };
+  const prev = el('button', 'c-btn', '◀') as HTMLButtonElement;
+  prev.onclick = () => go(-1);
+  const next = el('button', 'c-btn', '▶') as HTMLButtonElement;
+  next.onclick = () => go(1);
+  row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
+  return row;
+}
 
 // The character sheet (an HTML overlay): money, equipment, a 5-slot backpack
 // and the skills the character can use. Opened with 👤 or C.
@@ -87,6 +108,10 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     close.onclick = closeCharacter;
     head.append(close);
     box.append(head);
+    if (NOWE_POSTACIE) box.append(skinPicker(() => {
+      onChange();
+      render();
+    }));
     // Quest log: only the active ones, each in its arrow's colour.
     box.append(el('h3', '', 'Zadania'));
     const log = el('div', 'c-quests');

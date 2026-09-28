@@ -3,6 +3,8 @@ import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
+import { OSTROSC } from '../screen';
+import { hdOn, fitHd, useHdHero, heroSkin, isHd } from '../sprites';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -278,9 +280,15 @@ export class GameScene extends Phaser.Scene {
     this.travelling = false;
     // No enemies by home (or, in a town, by the station the coach stopped at).
     this.safeAt = inLublin ? { x: session.startX, y: session.startY } : { ...at };
-    this.player = new Player(this, at.x, at.y, PLAYER_TEX, 'me');
-    // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
-    this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
+    if (hdOn) {
+      // The new detailed heroes (content/wyglad.ts): worn gear doesn't show on them.
+      this.player = new Player(this, at.x, at.y, useHdHero(this, session.look.postac, session.name), 'me');
+      fitHd(this.player);
+    } else {
+      this.player = new Player(this, at.x, at.y, PLAYER_TEX, 'me');
+      // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
+      this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
+    }
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
@@ -487,8 +495,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Integer zoom so pixels stay crisp; aims for ~11 tiles on the short screen side. */
   private fitZoom() {
-    const short = Math.min(this.scale.width, this.scale.height);
-    this.cameras.main.setZoom(Math.max(2, Math.floor(short / 176)));
+    const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
+    this.cameras.main.setZoom(Math.max(2, Math.floor(short / 176)) * OSTROSC);
   }
 
   // ------------------------------------------------------------------ loop
@@ -547,7 +555,7 @@ export class GameScene extends Phaser.Scene {
       // A mouse click swings towards where it clicked (the hero turns there).
       if (attackAim) {
         const cam = this.cameras.main;
-        this.player.face(attackAim.x / cam.zoom + cam.worldView.x - this.player.x, attackAim.y / cam.zoom + cam.worldView.y - (this.player.y + 2));
+        this.player.face((attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x - this.player.x, (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y - (this.player.y + 2));
       }
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
@@ -1722,6 +1730,7 @@ export class GameScene extends Phaser.Scene {
     const hearts = MIESZKANCY.serduszka * 2;
     const e = this.spawnEnemy(f.x, f.y, 'duel', 'wojownik');
     e.setTexture(`${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
+    if (isHd(f.tex)) fitHd(e);
     e.walkAnim = `${f.tex}-red-walk`;
     // As many of the hero's blows as he has hearts, times the difficulty share.
     e.hp = Math.max(1, Math.round(hearts * k * meleeDamage()));
@@ -2271,7 +2280,7 @@ export class GameScene extends Phaser.Scene {
     if (mode === 'touch' && dragged) v = { x: dx, y: dy };
     if (mode === 'mouse') {
       const cam = this.cameras.main;
-      v = { x: mouse.x - (this.player.x - cam.worldView.x) * cam.zoom, y: mouse.y - (this.player.y - cam.worldView.y) * cam.zoom };
+      v = { x: mouse.x * OSTROSC - (this.player.x - cam.worldView.x) * cam.zoom, y: mouse.y * OSTROSC - (this.player.y - cam.worldView.y) * cam.zoom };
     }
     const l = Math.hypot(v.x, v.y) || 1;
     return { x: v.x / l, y: v.y / l };
@@ -2621,6 +2630,17 @@ export class GameScene extends Phaser.Scene {
 
   /** Redraws the hero when a helmet, armour or boots go on or off. */
   private refreshLook() {
+    if (hdOn) {
+      // The new heroes: only the chosen character (character sheet) changes the picture.
+      const key = `hd-${heroSkin(session.look.postac, session.name).id}`;
+      if (this.player.texture.key === key) return;
+      const frame = this.player.frame.name;
+      this.player.anims.stop();
+      this.player.setTexture(useHdHero(this, session.look.postac, session.name), frame);
+      fitHd(this.player);
+      this.game.events.emit('hero-look');
+      return;
+    }
     const w = JSON.stringify(this.worn());
     if (w === this.wornKey) return;
     this.wornKey = w;

@@ -15,6 +15,8 @@ export interface Look {
   hairColor: number;
   top: number;
   bottom: number;
+  /** Which of the new detailed heroes (content/wyglad.ts BOHATEROWIE); none = picked by the name. */
+  postac?: number;
 }
 
 export const HEADS = () => [tx('Kwadratowa', 'Square'), tx('Okrągła', 'Round'), tx('Pociągła', 'Long')];
@@ -27,7 +29,7 @@ export const CLOTHES = ['#3fa34d', '#3f7fd8', '#e43b44', '#f7c531', '#7a5ab8', '
 
 export const DEFAULT_LOOK: Look = { head: 0, build: 1, outfit: 0, hair: 1, skin: 0, hairColor: 0, top: 0, bottom: 7 };
 
-const LIMITS: Record<keyof Look, number> = {
+const LIMITS: Record<Exclude<keyof Look, 'postac'>, number> = {
   head: 3, build: 4, outfit: 6, hair: 6, skin: SKINS.length, hairColor: HAIR_COLORS.length, top: CLOTHES.length, bottom: CLOTHES.length,
 };
 
@@ -35,10 +37,12 @@ const LIMITS: Record<keyof Look, number> = {
 export function cleanLook(v: unknown): Look {
   const out = { ...DEFAULT_LOOK };
   if (v && typeof v === 'object') {
-    for (const k of Object.keys(LIMITS) as (keyof Look)[]) {
+    for (const k of Object.keys(LIMITS) as (keyof typeof LIMITS)[]) {
       const n = (v as Record<string, unknown>)[k];
       if (typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < LIMITS[k]) out[k] = n;
     }
+    const p = (v as Record<string, unknown>).postac;
+    if (typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < 100) out.postac = p;
   }
   return out;
 }

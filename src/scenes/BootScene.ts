@@ -7,6 +7,8 @@ import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES } from '../ui/itemIcon';
 import { demoFromLink, startDemo } from '../demo';
+import { OSTROSC } from '../screen';
+import { loadHdSprites, createHdSprites } from '../sprites';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -17,16 +19,18 @@ export class BootScene extends Phaser.Scene {
   preload() {
     // Item pictures (16×16 pixel art) for shop dialogs.
     for (const id of ITEM_PICTURES) this.load.image(`item-${id}`, `items/${id}.png`);
+    loadHdSprites(this);
   }
 
   create() {
     createArt(this);
     createHeroAnims(this);
+    createHdSprites(this);
     createSlimeAnims(this);
 
     const { width, height } = this.scale;
     const text = this.add
-      .text(width / 2, height / 2, 'Wczytuję mapę Lublina…', { fontFamily: 'monospace', fontSize: '18px', color: '#ffffff', align: 'center', wordWrap: { width: width - 40 } })
+      .text(width / 2, height / 2, 'Wczytuję mapę Lublina…', { fontFamily: 'monospace', fontSize: `${18 * OSTROSC}px`, color: '#ffffff', align: 'center', wordWrap: { width: width - 40 * OSTROSC } })
       .setOrigin(0.5);
     Promise.all([CityMap.load('map/lublin.json'), loadWorld()])
       .then(([city]) => {

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
+import { hdOn, fitHd } from '../sprites';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -40,6 +41,10 @@ export const SLIME = ENEMY_KINDS.glut;
 
 /** Enemy speeds above were set for a hero walking 60 px/s; the hero now walks 32, so they keep the same proportion. */
 export const PREDKOSC_WROGOW = 32 / 60;
+
+/** Imps drawn as the new detailed goblin (content/wyglad.ts), with a red glow. */
+const HD_IMP = 'hd-chochlik-red';
+const HD_KINDS = new Set<RodzajWroga>(['glut', 'wielki_glut', 'herszt', 'wielki_herszt']);
 
 /** Pictures of the little creatures (all but the bandit). */
 const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
@@ -84,16 +89,24 @@ export class Slime extends Phaser.GameObjects.Sprite {
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
     const person = kind === 'bandyta' || kind === 'wojownik';
-    super(scene, x, y, person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person ? 'down-0' : 'f0');
+    const hd = hdOn && HD_KINDS.has(kind) && scene.textures.exists(HD_IMP);
+    super(scene, x, y, hd ? HD_IMP : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
     this.hp = k.hp;
-    this.setScale(k.scale);
-    this.setOrigin(0.5, 1 - 0.5 / k.scale); // grow upwards from the feet
+    this.hd = hd;
+    if (hd) {
+      fitHd(this, k.scale);
+      this.walkAnim = `${HD_IMP}-walk`;
+    } else {
+      this.setScale(k.scale);
+      this.setOrigin(0.5, 1 - 0.5 / k.scale); // grow upwards from the feet
+    }
     if (k.tint) this.setTint(k.tint);
     this.home = new Phaser.Math.Vector2(x, y);
-    if (kind === 'smok') this.anims.play('dragon-flap');
+    if (hd) this.setFrame('down-0');
+    else if (kind === 'smok') this.anims.play('dragon-flap');
     else if (kind !== 'bandyta' && kind !== 'wojownik') this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
   }
 
@@ -104,18 +117,21 @@ export class Slime extends Phaser.GameObjects.Sprite {
   }
 
   /** Bandits turn to face where they walk. */
-  /** Walk animations for people (bandits, townsfolk in duels). */
+  /** Walk animations for people (bandits, townsfolk in duels) and the new imps. */
   walkAnim = 'bandit-walk';
+  /** Drawn as one of the new detailed characters (walks in 4 directions). */
+  hd = false;
 
   private face() {
     if (this.kindId === 'smok') {
       if (Math.abs(this.vel.x) > 1) this.setFlipX(this.vel.x > 0);
       return;
     }
-    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik') return;
+    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik' && !this.hd) return;
     const v = this.vel;
     if (v.lengthSq() < 1) {
       this.anims.stop();
+      if (this.hd) this.setFrame(`${this.frame.name.split('-')[0]}-0`);
       return;
     }
     const dir = Math.abs(v.x) > Math.abs(v.y) ? 'side' : v.y < 0 ? 'up' : 'down';
@@ -192,8 +208,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
       this.vel.set(0, 0);
       this.scene.tweens.add({
         targets: this,
-        scaleX: 1.6,
-        scaleY: 0.3,
+        scaleX: this.scaleX * 1.6,
+        scaleY: this.scaleY * 0.3,
         alpha: 0,
         delay: 120,
         duration: 220,

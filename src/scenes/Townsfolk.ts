@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { hdOn, isHd, fitHd, hdFolkLooks } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
@@ -44,6 +45,8 @@ export function isNight(d = new Date()) {
 
 const PAVED = new Set(['major', 'medium', 'minor']);
 const LOOKS = 10;
+/** With the new characters: every hero in every clothes colour. */
+const HD_LOOKS = hdOn ? hdFolkLooks() : [];
 const CELL = 1000 * PX_PER_M;
 const NEAR = 460;
 const SPEED = 14; // px/s, an easy stroll
@@ -68,7 +71,8 @@ export class Townsfolk {
   fear: { x: number; y: number } | null = null;
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {
-    // A few looks to share (drawn like the hero).
+    // A few looks to share (drawn like the hero). The new characters are made in sprites.ts.
+    if (hdOn) return;
     const r = rng(12345);
     for (let i = 0; i < LOOKS; i++) {
       const key = `folk${i}`;
@@ -121,7 +125,7 @@ export class Townsfolk {
         list.push({
           id: `${key}:${list.length}`, role, walker, x: walker.x, y: walker.y,
           name: MIESZKANCY.imiona[Math.floor(r() * MIESZKANCY.imiona.length)],
-          tex: `folk${Math.floor(r() * LOOKS)}`,
+          tex: hdOn ? HD_LOOKS[Math.floor(r() * HD_LOOKS.length)] : `folk${Math.floor(r() * LOOKS)}`,
         });
       }
     }
@@ -145,6 +149,7 @@ export class Townsfolk {
           for (const f of this.folkOf(cx, cy)) {
             if (this.active.has(f) || Math.abs(f.x - px) > NEAR || Math.abs(f.y - py) > NEAR) continue;
             f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0').setOrigin(0.5, 0.6);
+            if (isHd(f.tex)) fitHd(f.sprite);
             this.active.add(f);
           }
         }

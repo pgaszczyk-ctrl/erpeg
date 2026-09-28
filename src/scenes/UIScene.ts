@@ -8,6 +8,8 @@ import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
+import { OSTROSC } from '../screen';
+import { heroPortrait } from '../sprites';
 import { session } from '../quests';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
@@ -86,7 +88,25 @@ export class UIScene extends Phaser.Scene {
     super('ui');
   }
 
+  /** The screen in CSS pixels (the canvas has OSTROSC times more, see screen.ts). */
+  private get view() {
+    return { width: this.scale.width / OSTROSC, height: this.scale.height / OSTROSC };
+  }
+
   create() {
+    // Lay everything out in CSS pixels; the camera enlarges it to the sharper canvas.
+    // (centred, not with origin 0: Graphics were drawn off their place that way)
+    const fitCam = () => this.cameras.main.setZoom(OSTROSC).centerOn(this.view.width / 2, this.view.height / 2);
+    fitCam();
+    this.scale.on('resize', fitCam);
+    this.events.once('shutdown', () => this.scale.off('resize', fitCam));
+    if (OSTROSC > 1 && !(this.add as unknown as { sharp?: boolean }).sharp) {
+      // Texts get as many pixels as the canvas has, or they'd look blurry.
+      const add = this.add as unknown as { sharp?: boolean; text: (...a: unknown[]) => Phaser.GameObjects.Text };
+      const text = add.text.bind(this.add);
+      add.text = (...a: unknown[]) => text(...a).setResolution(OSTROSC);
+      add.sharp = true;
+    }
     this.hearts = [];
     this.duelHearts = [];
     // The scene object is reused when it starts again (after a coach ride):
@@ -95,7 +115,7 @@ export class UIScene extends Phaser.Scene {
     this.fruitTexts = [];
     this.dialogButtons = [];
     this.overlay = undefined;
-    this.ui = Math.max(2, Math.round(Math.min(this.scale.width, this.scale.height) / 220));
+    this.ui = Math.max(2, Math.round(Math.min(this.view.width, this.view.height) / 220));
 
     this.coinIcon = this.add.image(0, 0, TEX.coin).setScale(this.ui).setOrigin(1, 0);
     this.coinText = this.add
@@ -117,6 +137,7 @@ export class UIScene extends Phaser.Scene {
     this.portraitBox = this.add.graphics();
     this.portraitBox.fillStyle(0x1e1a24, 0.75).fillRect(-fw, 0, fw, fh).lineStyle(this.ui, 0xf7c531, 1).strokeRect(-fw, 0, fw, fh);
     this.charBtn = this.add.image(0, 0, this.textures.exists(PLAYER_TEX) ? PLAYER_TEX : TEX.hero, 'down-0').setOrigin(0.5, 0).setScale(this.ui).setCrop(0, 0, 16, 13);
+    this.setPortrait();
     this.stars = [];
     for (let i = 0; i < 5; i++) this.stars.push(this.add.image(0, 0, TEX.starEmpty).setOrigin(0).setScale(this.ui));
     this.lastLevel = 0;
@@ -205,7 +226,7 @@ export class UIScene extends Phaser.Scene {
 
     if (!window.matchMedia('(pointer: coarse)').matches) {
       const hint = this.add
-        .text(this.scale.width / 2, this.scale.height - 12, 'WASD / strzałki – ruch    SPACJA lub klik – miecz', {
+        .text(this.view.width / 2, this.view.height - 12, 'WASD / strzałki – ruch    SPACJA lub klik – miecz', {
           fontFamily: 'monospace', fontSize: '14px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 4,
         })
         .setOrigin(0.5, 1);
@@ -218,7 +239,7 @@ export class UIScene extends Phaser.Scene {
 
   /** A big "Poziom 2!" over the game after levelling up. */
   private levelUp(level: number) {
-    const { width, height } = this.scale;
+    const { width, height } = this.view;
     const big = this.add
       .text(width / 2, height * 0.38, `Poziom ${level}!`, { fontFamily: 'monospace', fontSize: `${Math.round(Math.min(width, 560) / 7)}px`, color: '#f7c531', stroke: '#1e1a24', strokeThickness: 10 })
       .setOrigin(0.5).setDepth(40).setScale(0.2).setAlpha(0);
@@ -251,7 +272,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private layout() {
-    const { width, height } = this.scale;
+    const { width, height } = this.view;
     const pad = 4 * this.ui;
     this.menuBtn.setPosition(pad, pad - 2 * this.ui);
     const u = this.ui;
@@ -325,13 +346,22 @@ export class UIScene extends Phaser.Scene {
     return this.ui + 1;
   }
 
+  /** The hero's head in the portrait frame (the new detailed heroes or the drawn one). */
+  private setPortrait() {
+    const hd = heroPortrait();
+    if (hd) {
+      const [x, y, w, h] = hd.crop;
+      this.charBtn.setTexture(hd.key, 'down-0').setCrop(x, y, w, h).setScale((16 * this.ui) / w).setOrigin(0.5, y / 64);
+    } else if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
+  }
+
   private updateHud(s: HudState) {
     // Red hearts, then the potion's blue ones.
     const total = s.maxHp / 2 + Math.ceil(s.extra / 2);
     while (this.hearts.length < total) this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.heartScale()));
     while (this.hearts.length > total) this.hearts.pop()!.destroy();
     // The hero's picture is redrawn (a new texture) when worn gear changes.
-    if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
+    this.setPortrait();
     // Experience towards the next level as 5 stars, filled by halves (like hearts).
     const from = expNaPoziom(s.level);
     const to = expNaPoziom(s.level + 1);
@@ -465,7 +495,7 @@ export class UIScene extends Phaser.Scene {
       return;
     }
     const cam = game.cameras.main;
-    const z = cam.zoom;
+    const z = cam.zoom / OSTROSC;
     const sx = (game.player.x - cam.worldView.x) * z;
     const sy = (game.player.y - cam.worldView.y) * z;
     // Always 3 hearts under the hero, standing for the share of life left
@@ -495,7 +525,7 @@ export class UIScene extends Phaser.Scene {
     // Low life: the screen edges pulse red (and a hint, once per time).
     const low = s!.hp * 3 <= s!.maxHp;
     if (this.vignette) {
-      const { width, height } = this.scale;
+      const { width, height } = this.view;
       this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
       if (low) this.vignette.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(time / 260)));
     }
@@ -549,9 +579,9 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       const cam = game.cameras.main;
-      const sx = (pos.x - cam.worldView.x) * cam.zoom;
-      const sy = (pos.y - cam.worldView.y) * cam.zoom;
-      const { width, height } = this.scale;
+      const sx = ((pos.x - cam.worldView.x) * cam.zoom) / OSTROSC;
+      const sy = ((pos.y - cam.worldView.y) * cam.zoom) / OSTROSC;
+      const { width, height } = this.view;
       const m = 40;
       arrow.setVisible(true);
       if (sx > m && sx < width - m && sy > m && sy < height - m) {
@@ -577,7 +607,7 @@ export class UIScene extends Phaser.Scene {
 
   private showDialog(d: DialogRequest) {
     this.closeDialog();
-    const { width, height } = this.scale;
+    const { width, height } = this.view;
     const w = Math.min(width - 24, 560);
     const x = (width - w) / 2;
     const title = this.add.text(x + 16, 0, d.title, { fontFamily: 'monospace', fontSize: '20px', color: '#f7c531', wordWrap: { width: w - 32 } });
@@ -712,7 +742,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private showGameOver() {
-    const { width, height } = this.scale;
+    const { width, height } = this.view;
     const s = this.hud;
     const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
     const title = this.add

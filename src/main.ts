@@ -9,6 +9,7 @@ import { codeLink } from './ui/codeCard';
 import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
 import { TEST, WERSJA } from './version';
+import { OSTROSC, cssSize, watchSpeed } from './screen';
 
 // The Google sign-in window only stores the login and closes (no game there).
 if (catchGoogleReturn()) throw new Error('google sign-in window');
@@ -26,10 +27,12 @@ const game = new Phaser.Game({
   parent: 'game',
   backgroundColor: '#1b2a1b',
   pixelArt: true,
+  // The canvas has OSTROSC pixels per CSS pixel (screen.ts); it is resized by hand below.
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    mode: Phaser.Scale.NONE,
+    width: cssSize(document.getElementById('game')!).w * OSTROSC,
+    height: cssSize(document.getElementById('game')!).h * OSTROSC,
+    zoom: 1 / OSTROSC,
   },
   physics: {
     default: 'arcade',
@@ -43,6 +46,16 @@ const game = new Phaser.Game({
 });
 
 installTouchControls(document.getElementById('game')!);
+// Follow the window (what Scale.RESIZE did), keeping OSTROSC canvas pixels per CSS pixel.
+const fit = () => {
+  const { w, h } = cssSize(document.getElementById('game')!);
+  if (game.scale.width !== w * OSTROSC || game.scale.height !== h * OSTROSC) game.scale.resize(w * OSTROSC, h * OSTROSC);
+};
+window.addEventListener('resize', fit);
+window.visualViewport?.addEventListener('resize', fit);
+watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
+// A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
+if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
 installLeaveGuard(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).
 watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
