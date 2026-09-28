@@ -195,10 +195,14 @@ function linePath(ctx: CanvasRenderingContext2D, pts: number[]) {
   for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
 }
 
+/** Wall heights (px) of the three kinds of buildings: a ground floor, a taller one, a very big one. */
+export const WYSOKOSCI_SCIAN = { parter: 4, wyzszy: 6, duzy: 8 };
+
 export function wallHeight(b: Building) {
-  // Low walls (they are drawn over the street to the south): a little per
-  // storey and never more than 10 px, so narrow Old Town streets stay visible.
-  return Math.max(4, Math.min(10, Math.round((2 + Math.min(b.levels || 1, 4)) * PX_PER_M)));
+  // Low walls (they are drawn over the street to the south), whatever the
+  // map says about storeys: only three heights, so nothing hides the streets.
+  const l = b.levels || 1;
+  return l <= 1 ? WYSOKOSCI_SCIAN.parter : l === 2 ? WYSOKOSCI_SCIAN.wyzszy : WYSOKOSCI_SCIAN.duzy;
 }
 
 // Texture keys must be unique for the whole game, across scene restarts.
