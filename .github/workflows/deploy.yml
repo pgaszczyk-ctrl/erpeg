@@ -1,5 +1,10 @@
 name: Deploy to GitHub Pages
 
+# Two games on one site:
+#   https://exp-lore.app/       production – built from the commit named in PRODUKCJA
+#   https://exp-lore.app/test/  the test server – the newest code (VITE_TEST=1)
+# A release to production = bump WERSJA in src/version.ts (+0.001) and point PRODUKCJA at that commit.
+
 on:
   push:
     branches: [main, claude/bold-gauss-peehzd]
@@ -15,7 +20,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Switch to the production commit
+        run: |
+          set -euo pipefail
+          SHA=$(tr -d ' \n\r' < PRODUKCJA)
+          echo "Production commit: $SHA"
+          git checkout --quiet "$SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production
+          path: dist
+          retention-days: 1
+
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,15 +54,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+        env:
+          VITE_TEST: '1'
+      - uses: actions/upload-artifact@v4
         with:
+          name: test
           path: dist
-  deploy:
-    needs: build
+          retention-days: 1
+
+  publish:
+    needs: [production, test]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: production
+          path: site
+      - uses: actions/download-artifact@v4
+        with:
+          name: test
+          path: site/test
+      - run: du -sh site site/test
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -8,6 +8,7 @@ import { tx } from '../i18n';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
 import { pixelLogo } from './logo';
+import { wersjaNapis } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
@@ -53,7 +54,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children);
+      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]));
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });

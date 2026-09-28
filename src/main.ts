@@ -7,10 +7,18 @@ import { installErrorLog, watchGraphics } from './errlog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
 import { catchGoogleReturn } from './google';
+import { TEST, WERSJA } from './version';
 
 // The Google sign-in window only stores the login and closes (no game there).
 if (catchGoogleReturn()) throw new Error('google sign-in window');
 installErrorLog();
+// The test server says so all the time, so nobody mistakes it for the real game.
+if (TEST) {
+  const b = document.createElement('div');
+  b.id = 'test-badge';
+  b.textContent = `SERWER TESTOWY · po ${WERSJA}`;
+  document.body.append(b);
+}
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
