@@ -284,6 +284,8 @@ export class CityMap {
   private addPlace(kind: Place['kind'], name: string, x: number, y: number, addr: string | 0 | undefined, key: string) {
     const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
     if (this.placeIds.has(id)) return null;
+    // One station once (OSM often has it as a node, an area and a building).
+    if (kind === 'station' && this.places.some((q) => q.kind === 'station' && q.name === name && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
     // Travelling merchants and coachmen stand in the street, not in a building.
     const street = kind === 'merchant' || kind === 'station';
     let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;

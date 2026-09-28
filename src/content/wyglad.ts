@@ -31,7 +31,7 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
 ];
 
-/** Townsfolk drawn by the artist (packs „mieszkańcy 01–05” with v3 masks and „06–10”); each also in the STROJE colours. Ids: letters only. */
+/** Townsfolk drawn by the artist (packs „mieszkańcy 01–05” with v3 masks, „06–10” and „11–15” from the style fix v5); each also in the STROJE colours. Ids: letters only. */
 export const MIESZKANCY_HD: Postac[] = [
   { id: 'kobieta', nazwa: 'Młoda kobieta', plik: 'mieszkaniec_01', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'chlopiec', nazwa: 'Chłopiec', plik: 'mieszkaniec_02', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
@@ -43,6 +43,11 @@ export const MIESZKANCY_HD: Postac[] = [
   { id: 'pani', nazwa: 'Kobieta', plik: 'mieszkaniec_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'pan', nazwa: 'Mężczyzna', plik: 'mieszkaniec_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'dziadek', nazwa: 'Starszy pan', plik: 'mieszkaniec_10', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
+  { id: 'panienka', nazwa: 'Dziewczynka', plik: 'mieszkaniec_11', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dziecko' },
+  { id: 'urwis', nazwa: 'Chłopiec', plik: 'mieszkaniec_12', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
+  { id: 'staruszka', nazwa: 'Starsza pani', plik: 'mieszkaniec_13', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'starszy' },
+  { id: 'staruszek', nazwa: 'Starszy pan w kapeluszu', plik: 'mieszkaniec_14', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'starszy' },
+  { id: 'mieszczka', nazwa: 'Kobieta', plik: 'mieszkaniec_15', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
 ];
 
 /** The imp (chochlik): smaller than a person. */

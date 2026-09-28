@@ -53,6 +53,9 @@ export async function loadWorld() {
 }
 
 export function rememberMap(city: CityMap) {
+  // The same station twice (a bus station is both a building and its outline in OSM): keep one.
+  const keep = city.places.filter((p, i, all) => p.kind !== 'station' || !all.some((q, j) => j < i && q.kind === 'station' && q.name === p.name && Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 300 * PX_PER_M));
+  if (keep.length !== city.places.length) city.places.splice(0, city.places.length, ...keep);
   // Stations on the map that the railway list doesn't know (bus stations): coachmen can drive there too.
   for (const p of city.places) {
     if (p.kind !== 'station' || /#\d+$/.test(p.id) || stops.has(`${city.id}|${p.name}`)) continue;
