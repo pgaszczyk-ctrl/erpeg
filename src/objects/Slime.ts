@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd } from '../sprites';
+import { PLAYER } from './Player';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -39,8 +40,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
 /** Kept for code that only knows slimes. */
 export const SLIME = ENEMY_KINDS.glut;
 
-/** Enemy speeds above were set for a hero walking 60 px/s; the hero now walks 32, so they keep the same proportion. */
-export const PREDKOSC_WROGOW = 32 / 60;
+/** Enemy speeds above were set for a hero walking 60 px/s; they keep the same proportion to the hero's speed now. */
+export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
 /** Imps drawn as the new detailed goblin (content/wyglad.ts), with a red glow. */
 const HD_IMP = 'hd-chochlik-red';

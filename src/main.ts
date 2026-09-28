@@ -8,7 +8,7 @@ import { session } from './quests';
 import { codeLink } from './ui/codeCard';
 import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
-import { TEST, WERSJA } from './version';
+import { TEST, WERSJA_TEST } from './version';
 import { OSTROSC, cssSize, watchSpeed } from './screen';
 
 // The Google sign-in window only stores the login and closes (no game there).
@@ -18,7 +18,7 @@ installErrorLog();
 if (TEST) {
   const b = document.createElement('div');
   b.id = 'test-badge';
-  b.textContent = `SERWER TESTOWY · po ${WERSJA}`;
+  b.textContent = `SERWER TESTOWY · ${WERSJA_TEST}-test`;
   document.body.append(b);
 }
 
