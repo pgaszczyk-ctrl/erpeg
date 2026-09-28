@@ -61,7 +61,7 @@ Arkusze są bardzo dobre (wyrównane, stopy na y = 62, marginesy – wszystko si
 **Maski są do poprawy:** zamiast samego ubrania zaznaczają kontury całej postaci (czerwony), a u
 mieszkańca 01 także włosy (zielony), u 03 twarz i czapkę. Maska ma obejmować **tylko ubranie**
 (czerwony = główne ubranie, zielony = spodnie/pas/drugi kolor), bez konturu, skóry, włosów i czapki.
-Dopóki maski są złe, gra nie robi wariantów kolorystycznych tych postaci.
+**Poprawione w paczce v3** – maski są teraz dobre, gra robi z nich warianty kolorystyczne (`5_zrzuty_z_gry/mieszkancy_warianty_kolorow.png`). Tak robić maski dla kolejnych postaci.
 
 ## D. Lista do narysowania
 
