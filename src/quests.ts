@@ -84,6 +84,8 @@ export const session = {
   chest: freshChest(),
   /** Riddles answered: NPC id -> day. */
   riddles: {} as Record<string, string>,
+  /** Mądrale's requests heard lately: key → day number (content/prosby.ts). */
+  seen: {} as Record<string, number>,
   /** Daily talks with fixed characters: id -> { day, talks, riddles answered }. */
   daily: {} as Record<string, { d: string; n: number; a: number }>,
   /** How the hero looks (chosen at character creation). */
@@ -148,6 +150,7 @@ export function startSession(r: LoginResult) {
     c.slots?.slice(0, CHEST_SLOTS).forEach((s, i) => (session.chest.slots[i] = normalizeSlot(s)));
   }
   session.riddles = { ...(p.save.riddles ?? {}) };
+  session.seen = { ...(p.save.seen ?? {}) };
   session.daily = { ...(p.save.daily ?? {}) };
   session.look = cleanLook(p.save.look);
   // Convert from the map scale the start was stored in.
@@ -201,7 +204,7 @@ export function saveNow(hp: number) {
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, mikstury: session.mikstury, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
-    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, daily: session.daily, look: session.look,
+    gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };
   return api.save(session.token, data, session.exp);
 }

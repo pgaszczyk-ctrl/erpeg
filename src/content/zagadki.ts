@@ -115,15 +115,16 @@ export const MADRALA_CO_ILE_MIEJSC = 4;
 /** Jak daleko od szkoły lub kościoła stoi mądrala (w metrach). */
 export const MADRALA_ODLEGLOSC_M = 500;
 
-export const MADRALE: { imie: string; powitanie: string }[] = [
-  { imie: 'Profesor Sowa', powitanie: 'Hu-hu! Rozwiążesz moją dzisiejszą zagadkę?' },
-  { imie: 'Babcia Zosia', powitanie: 'Dzień dobry, dziecko! Mam dla ciebie zagadkę.' },
-  { imie: 'Pan Mądralski', powitanie: 'Sprawdźmy, czy jesteś bystrzejszy od chochlika!' },
-  { imie: 'Kot Filozof', powitanie: 'Mrrr… Zagadka na dziś. Tylko jedna próba.' },
-  { imie: 'Listonosz Heniek', powitanie: 'Zanim pobiegnę dalej – zagadka!' },
-  { imie: 'Pani Bibliotekarka', powitanie: 'Ciii… Szeptem: znasz odpowiedź?' },
-  { imie: 'Dziadek Józef', powitanie: 'Za moich czasów każdy to wiedział!' },
-  { imie: 'Wróżka Ula', powitanie: 'Widzę w kuli… zagadkę dla ciebie!' },
+/** Mądrale: kto prosi o pomoc (`k` – kobieta, do form typu „miałam/miałem”). Prośby są w content/prosby.ts. */
+export const MADRALE: { imie: string; powitanie: string; k: boolean }[] = [
+  { imie: 'Pani Krysia', powitanie: 'Och, dobrze, że jesteś! Pomożesz mi?', k: true },
+  { imie: 'Pan Zbyszek', powitanie: 'Przepraszam, mogę o coś zapytać?', k: false },
+  { imie: 'Babcia Zosia', powitanie: 'Dziecko drogie, pomóż starszej pani…', k: true },
+  { imie: 'Listonosz Heniek', powitanie: 'Zanim pobiegnę dalej – mam pytanie!', k: false },
+  { imie: 'Sąsiadka Ela', powitanie: 'Hej! Masz chwilkę?', k: true },
+  { imie: 'Dziadek Józef', powitanie: 'Młody człowieku, pomóż dziadkowi!', k: false },
+  { imie: 'Pani Bibliotekarka', powitanie: 'Ciii… Szeptem: pomożesz mi?', k: true },
+  { imie: 'Student Kuba', powitanie: 'Siema! Ratuj, mam zagwozdkę.', k: false },
 ];
 
 /** Biblioteki: zagadki bibliotekarki – najwyżej tyle na jedno wejście do gry, każda za tyle EXP. */

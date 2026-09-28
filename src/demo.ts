@@ -59,7 +59,7 @@ export async function startDemo(game: Phaser.Game, p: Pobudka) {
     age: 6, level: { ...TRUDNOSCI[0], potwory: 0 }, exp: SEN.exp, coins: 0, missions: {}, fog: undefined, fogs: {},
     lokaty: [], story: { st: 'koniec', walked: 0 }, kamienie: 0, immortal: false, mikstury: 0, namioty: [], at: null,
     gen: {}, libRiddles: 0, nonce: Math.floor(Math.random() * 1e9), abandoned: null, stats: freshStats(), extra: [],
-    secrets: new Set<string>(), chest: freshChest(), riddles: {}, daily: {}, look: randomLook(),
+    secrets: new Set<string>(), chest: freshChest(), riddles: {}, seen: {}, daily: {}, look: randomLook(),
   });
   const pts = pointsForLevel(MAKS_POZIOM);
   loadGear({ equip: { ...SEN.ekwipunek } as Gear['equip'], skills: { miecz: pts, luk: pts, magia: pts }, magic: true });

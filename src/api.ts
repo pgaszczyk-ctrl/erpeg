@@ -66,6 +66,8 @@ export interface SaveData {
   chest?: { slots: (import('./inventory').Slot | null)[]; coins: number };
   /** Riddles answered: NPC id -> day (YYYY-MM-DD). */
   riddles?: Record<string, string>;
+  /** Mądrale's requests heard: key → day number (not asked again within 60 days). */
+  seen?: Record<string, number>;
   /** Daily talks with fixed characters (content/postacie.ts). */
   daily?: Record<string, { d: string; n: number; a: number }>;
   /** How the hero looks (see look.ts). */

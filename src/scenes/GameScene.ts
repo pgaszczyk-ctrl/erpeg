@@ -13,7 +13,8 @@ import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
-import { Npcs, riddleFor, today, type Npc } from './Npcs';
+import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
+import { NIE_POWTARZAJ_DNI } from '../content/prosby';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
@@ -2130,30 +2131,39 @@ export class GameScene extends Phaser.Scene {
   private openRiddle(n: Npc) {
     const day = today();
     if (session.riddles[n.id] === day) {
-      this.dialog({ title: n.name, text: 'Na dziś to wszystko! Wróć jutro po nową zagadkę.', buttons: ['Do jutra!'], onChoose: () => {} });
+      this.dialog({ title: n.name, text: 'Dziękuję za pomoc! Na dziś to wszystko – wpadnij jutro.', buttons: ['Do jutra!'], onChoose: () => {} });
       return;
     }
-    const r = riddleFor(n, day, session.age);
+    // A request "from life" (content/prosby.ts), never the same one within 60 days.
+    const where = this.city.toLatLon(n.x, n.y);
+    const r = requestFor(n, day, session.age, session.seen, Number.isFinite(where.lat) ? where : null);
+    const prize = r.coins ? `${r.coins} monet` : `${r.apples} jabłka`;
     this.dialog({
       title: `❓ ${n.name}`,
-      text: `${n.greeting}\n\n${r.question}\n\nNagroda: ${r.reward} monet i ${r.reward} EXP. Tylko jedna próba!`,
+      text: `${n.greeting}\n\n${r.question}\n\nNagroda: ${prize} i ${r.exp} EXP. Tylko jedna próba!`,
       buttons: [...r.answers, 'Później'],
       onChoose: (i) => {
         if (i >= r.answers.length) return;
-        // Remember only today's answers.
+        // Remember only today's answers; requests heard stay for 60 days.
         for (const [k, v] of Object.entries(session.riddles)) if (v !== day) delete session.riddles[k];
         session.riddles[n.id] = day;
-        session.stats.riddles = (session.stats.riddles ?? 0) + (i === r.correct ? 1 : 0);
-        if (i === r.correct) {
-          earn(r.reward);
-          session.exp += r.reward;
+        const dn = dayNumber(day);
+        session.seen[r.key] = dn;
+        for (const [k, v] of Object.entries(session.seen)) if (dn - v >= NIE_POWTARZAJ_DNI) delete session.seen[k];
+        const ok = i === r.correct;
+        session.stats.riddles = (session.stats.riddles ?? 0) + (ok ? 1 : 0);
+        let got = prize;
+        if (ok) {
+          if (r.coins) earn(r.coins);
+          let added = 0;
+          for (let k = 0; k < r.apples; k++) if (addFruit('jablko')) added++;
+          if (r.apples && added < r.apples) got = added ? `${added} jabłko (plecak pełny)` : 'nic – plecak pełny';
+          session.exp += r.exp;
           this.emitHud();
         }
         this.dialog({
-          title: i === r.correct ? '🎉 Brawo!' : '😕 Niestety…',
-          text: i === r.correct
-            ? `Dobra odpowiedź! Dostajesz ${r.reward} monet i ${r.reward} EXP.`
-            : `Dobra odpowiedź to: ${r.answers[r.correct]}.\nWróć jutro po nową zagadkę!`,
+          title: ok ? '🎉 Dziękuję!' : '😕 Hmm…',
+          text: ok ? `Bardzo mi pomogłeś! Proszę: ${got} i ${r.exp} EXP.` : `Chyba jednak nie… Dobra odpowiedź to: ${r.answers[r.correct]}.\nWpadnij jutro!`,
           buttons: ['OK'],
           onChoose: () => {},
         });
