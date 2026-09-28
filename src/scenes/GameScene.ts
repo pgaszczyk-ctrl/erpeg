@@ -48,6 +48,7 @@ import { api, type Snapshot } from '../api';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
 import { DemoRun } from './Demo';
+import { DragonBrain } from '../objects/Dragon';
 import { SEN } from '../content/demo';
 
 const HEART_DROP_CHANCE = 0.25;
@@ -238,6 +239,10 @@ export class GameScene extends Phaser.Scene {
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
   private demoRun: DemoRun | null = null;
+  /** Dragons fighting the hero (content: objects/Dragon.ts). */
+  private dragons = new Map<Enemy, DragonBrain>();
+  /** Blows that beat the story's dragon (its life is set when the fight starts). */
+  static readonly SMOK_CIOSOW = 10;
 
   constructor() {
     super('game');
@@ -246,6 +251,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.city = this.registry.get('city') as CityMap;
     this.enemies = [];
+    this.dragons = new Map();
     this.pickups = [];
     this.markers = new Map();
     this.leaving = false;
@@ -593,12 +599,17 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380) continue;
       // Where one goes, its friends follow.
       if (!s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
-      if (s.brain) s.brain(now);
+      // A dragon in a fight has its own way (claws, backing off, fire).
+      if (s.kindId === 'smok' && !this.dragons.has(s)) this.dragonFight(s);
+      const dragon = this.dragons.get(s);
+      if (dragon) dragon.update(now, dt);
+      else if (s.brain) s.brain(now);
       else s.think(target, now);
       this.moveActor(s, dt);
       s.updateLook();
       s.setDepth(s.y);
       if (now < this.noHurtUntil) continue; // just back from a talk: a moment of peace
+      if (dragon) continue; // its claws hurt, not touching it
       if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         // A duel takes the purple hearts, never the real ones.
         if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, 0)) {
@@ -878,7 +889,26 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => this.pickups.push(item) });
   }
 
+  /** A dragon starts fighting: strong (SMOK_CIOSOW blows of the hero's sword), claws and fire. */
+  private dragonFight(s: Enemy) {
+    const demoDragon = this.demoRun?.isDragon(s);
+    if (!demoDragon) s.hp = Math.max(s.hp, GameScene.SMOK_CIOSOW * meleeDamage());
+    this.dragons.set(s, new DragonBrain(this, s, {
+      player: this.player,
+      blocked: (x, y) => this.city.isBlocked(x, y),
+      hurt: (from, half) => {
+        if (this.time.now < this.noHurtUntil) return;
+        const dmg = Math.max(1, Math.round(half * session.level.obrazenia));
+        if (!this.player.hurt(from, this.time.now, Math.random() < blockChance() ? 0 : dmg)) return;
+        this.emitHud();
+        if (this.player.isDead) this.onPlayerDeath();
+      },
+    }));
+  }
+
   private onEnemyKilled(s: Enemy) {
+    this.dragons.get(s)?.destroy();
+    this.dragons.delete(s);
     if (s.duel) return this.endDuel(s, true);
     if (this.demoRun?.isDragon(s)) {
       this.enemies = this.enemies.filter((e) => e !== s);

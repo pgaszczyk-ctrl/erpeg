@@ -468,13 +468,16 @@ export class UIScene extends Phaser.Scene {
     const z = cam.zoom;
     const sx = (game.player.x - cam.worldView.x) * z;
     const sy = (game.player.y - cam.worldView.y) * z;
-    const n = s!.maxHp / 2;
+    // Always 3 hearts under the hero, standing for the share of life left
+    // (any wound shows at least the last heart gone: 9 of 10 = 2 red + 1 empty).
+    const n = 3;
+    const halves = Math.max(s!.hp > 0 ? 1 : 0, Math.min(2 * n - 2, Math.floor((s!.hp / s!.maxHp) * 2 * n)));
     while (this.arcHearts.length < n) this.arcHearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0.5).setDepth(5).setScale(this.ui));
     while (this.arcHearts.length > n) this.arcHearts.pop()!.destroy();
     const R = 15 * z;
     this.arcHearts.forEach((h, i) => {
       const a = n > 1 ? Phaser.Math.DegToRad(150 - (120 * i) / (n - 1)) : Math.PI / 2;
-      const filled = s!.hp - i * 2;
+      const filled = halves - i * 2;
       h.setPosition(sx + Math.cos(a) * R, sy + 4 * z + Math.sin(a) * R * 0.75)
         .setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty)
         .setAlpha(filled >= 2 ? 0.6 : filled === 1 ? 0.4 : 0.3)

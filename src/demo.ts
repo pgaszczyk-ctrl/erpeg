@@ -81,7 +81,7 @@ export async function wakeUp(scene: Phaser.Scene) {
   loadGear({});
   PLAYER.maxHp = zyciePostaci(session.level.serca, 0);
   session.hp = PLAYER.maxHp;
-  const city = await getMap('adres' in p ? 'lublin' : mapId(p));
+  const city = await getMap('mapa' in p ? 'lublin' : mapId(p));
   const at = 'adres' in p ? city.findAnyStart(p.adres, p.adres) : city.fromLatLon(p.lat, p.lon);
   await arriveAt(scene.game, city, at ?? { x: session.startX, y: session.startY });
   demo.phase = 'jawa';

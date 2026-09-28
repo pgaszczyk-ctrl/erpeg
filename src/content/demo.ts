@@ -9,11 +9,12 @@
 /** Where the hero wakes up after the dream: an address on our Lublin map, or any place on Earth (a world map). */
 export type Pobudka =
   | { miasto: string; mapa: 'lublin'; adres: string }
+  | { miasto: string; mapa: 'lublin'; lat: number; lon: number }
   | { miasto: string; lat: number; lon: number };
 
 /** QR codes: code → where the hero wakes up. Printed codes must keep working, so never reuse or change a code. */
 export const DEMO_KODY: Record<string, Pobudka> = {
-  ShgD6aib8: { miasto: 'Lublin', mapa: 'lublin', adres: 'Nałęczowska 16' },
+  ShgD6aib8: { miasto: 'Lublin', mapa: 'lublin', lat: 51.248833, lon: 22.51734 },
 };
 
 /** Names given at random to the demo hero. */
@@ -31,18 +32,14 @@ export const SEN = {
   owocowNaSerce: 5,
   /** Hero's experience in the dream (level 20). */
   exp: 19000,
-  /** Sword blows that beat the dragon. */
-  ciosow: 4,
-  /** After this many blows the dragon backs off and spits fire. */
-  ciosyDoOgnia: 2,
-  /** Fireballs at once, their speed (px/s) and damage (half-hearts). */
-  kule: { ile: 3, rozrzutStopni: 18, predkosc: 120, obrazenia: 2 },
+  /** Sword blows that beat the dragon (how it fights: SMOK in objects/Dragon.ts). */
+  ciosow: 6,
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', dystans: 'dlugi_luk', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
 
-/** After waking up: seconds to walk around, then the invitation. */
-export const JAWA_SEKUND = 50;
+/** After waking up: a walk without a timer; past `koniecM` from where the hero woke up the demo ends, and nobody gets further than `granicaM`. */
+export const JAWA = { koniecM: 500, granicaM: 1000 };
 
 export const DEMO_TEKSTY = {
   przebudzenieTytul: '…',
@@ -56,7 +53,6 @@ export const DEMO_TEKSTY = {
   smokPokonany: 'Smok pokonany!',
   pobudkaTytul: '💤 Pobudka',
   pobudka: (miasto: string) => `To dopiero ekscytujący sen…\n\nDobrze znowu być w domu. ${miasto} – tu wszystko wygląda znajomo. Rozejrzę się po okolicy.`,
-  celJawa: (s: number) => `Rozejrzyj się po okolicy (${s} s)`,
   koniec: 'Zacznij własną przygodę',
   koniecPodpis: 'Za darmo, nawet bez konta.',
 };

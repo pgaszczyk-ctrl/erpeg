@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
-import { SEN, JAWA_SEKUND, DEMO_TEKSTY } from '../content/demo';
+import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
 import { demo, dreamPlaces, blackout, bigText, finale, wakeUp } from '../demo';
 import { session } from '../quests';
 import { meleeDamage, totalFruit } from '../inventory';
@@ -27,7 +27,6 @@ export interface DemoHost {
   hud: () => void;
 }
 
-const FIRE_TEX = 'demo-fireball';
 
 export class DemoRun {
   /** The hero stands still (a big moment on screen). */
@@ -38,17 +37,12 @@ export class DemoRun {
   private healTo = 0;
   private dragon: Slime | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
-  private hpSeen = 0;
-  private blows = 0;
-  private mode: 'czeka' | 'idzie' | 'cofa' | 'pauza' = 'czeka';
-  private modeUntil = 0;
-  private balls: { img: Phaser.GameObjects.Image; vx: number; vy: number; left: number }[] = [];
-  private endsAt = 0;
+  /** Where the hero woke up (the walk after waking is measured from here). */
+  private wokeAt: { x: number; y: number } | null = null;
 
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
 
   start() {
-    this.fireTexture();
     const p = this.host.player;
     if (demo.phase === 'jedzenie') {
       this.plantTrees();
@@ -64,7 +58,7 @@ export class DemoRun {
           title: DEMO_TEKSTY.pobudkaTytul,
           text: DEMO_TEKSTY.pobudka(miasto),
           buttons: ['Rozejrzę się'],
-          onChoose: () => (this.endsAt = this.scene.time.now + JAWA_SEKUND * 1000),
+          onChoose: () => (this.wokeAt = { x: p.x, y: p.y }),
         }),
       );
     }
@@ -85,18 +79,23 @@ export class DemoRun {
       const d = this.dragon;
       return { text: DEMO_TEKSTY.celSmok, pos: d && d.active && !d.isDead ? { x: d.x, y: d.y } : this.dragonSpot };
     }
-    if (demo.phase === 'jawa' && this.endsAt) {
-      return { text: DEMO_TEKSTY.celJawa(Math.max(0, Math.ceil((this.endsAt - this.scene.time.now) / 1000))), pos: null };
-    }
     return null;
   }
 
   update(now: number, dt: number) {
+    void now;
+    void dt;
     if (this.frozen) return;
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
-    if (this.dragon) this.dragonFight(now);
-    this.updateBalls(now, dt);
-    if (demo.phase === 'jawa' && this.endsAt && now >= this.endsAt) {
+    const w = this.wokeAt;
+    const p = this.host.player;
+    if (demo.phase === 'jawa' && w) {
+      // A walk around after waking: never further than JAWA.granicaM; past JAWA.koniecM the demo ends.
+      const d = Math.hypot(p.x - w.x, p.y - w.y);
+      const max = JAWA.granicaM * PX_PER_M;
+      if (d > max) p.setPosition(w.x + ((p.x - w.x) * max) / d, w.y + ((p.y - w.y) * max) / d);
+    }
+    if (demo.phase === 'jawa' && w && Math.hypot(p.x - w.x, p.y - w.y) > JAWA.koniecM * PX_PER_M) {
       demo.phase = 'koniec';
       this.frozen = true;
       this.host.player.vel.set(0, 0);
@@ -118,8 +117,6 @@ export class DemoRun {
 
   onDragonKilled() {
     this.dragon = null;
-    for (const b of this.balls) b.img.destroy();
-    this.balls = [];
     bigText(DEMO_TEKSTY.smokPokonany, 1800);
     this.scene.time.delayedCall(2000, () => this.sleep());
   }
@@ -168,78 +165,9 @@ export class DemoRun {
     const spot = this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
     const d = this.host.spawnDragon(spot.x, spot.y);
+    // Its way of fighting is objects/Dragon.ts (GameScene gives it to every dragon).
     d.hp = SEN.ciosow * meleeDamage();
-    d.heavy = true;
-    d.brain = () => {};
-    this.hpSeen = d.hp;
     this.dragon = d;
-  }
-
-  /** Stays at sword's length; after every two blows backs off and spits fireballs. */
-  private dragonFight(now: number) {
-    const d = this.dragon!;
-    if (!d.active || d.isDead) return;
-    const p = this.host.player;
-    const dx = p.x - d.x;
-    const dy = p.y - d.y;
-    const dist = Math.hypot(dx, dy) || 1;
-    if (d.hp < this.hpSeen) {
-      this.hpSeen = d.hp;
-      this.blows++;
-      if (this.blows % SEN.ciosyDoOgnia === 0) {
-        this.mode = 'cofa';
-        this.modeUntil = now + 650;
-      }
-    }
-    const speed = d.kind.chaseSpeed * 1.2;
-    if (this.mode === 'czeka') {
-      d.vel.set(0, 0);
-      if (dist < 160) this.mode = 'idzie';
-    } else if (this.mode === 'idzie') {
-      if (dist > d.size + 4) d.vel.set((dx / dist) * speed, (dy / dist) * speed);
-      else d.vel.set(0, 0);
-    } else if (this.mode === 'cofa') {
-      d.vel.set((-dx / dist) * 110, (-dy / dist) * 110);
-      if (now >= this.modeUntil) {
-        d.vel.set(0, 0);
-        this.spit(d, dx / dist, dy / dist);
-        this.mode = 'pauza';
-        this.modeUntil = now + 800;
-      }
-    } else if (now >= this.modeUntil) this.mode = 'idzie';
-    else d.vel.set(0, 0);
-  }
-
-  private spit(d: Slime, ux: number, uy: number) {
-    const { ile, rozrzutStopni, predkosc } = SEN.kule;
-    const base = Math.atan2(uy, ux);
-    for (let i = 0; i < ile; i++) {
-      const a = base + (((i - (ile - 1) / 2) * rozrzutStopni) * Math.PI) / 180;
-      const img = this.scene.add.image(d.x, d.y - 8, FIRE_TEX).setDepth(1_200_000);
-      this.balls.push({ img, vx: Math.cos(a) * predkosc, vy: Math.sin(a) * predkosc, left: 2.2 });
-    }
-    this.scene.cameras.main.shake(150, 0.004);
-  }
-
-  private updateBalls(now: number, dt: number) {
-    const p = this.host.player;
-    this.balls = this.balls.filter((b) => {
-      b.img.x += b.vx * dt;
-      b.img.y += b.vy * dt;
-      b.img.rotation += dt * 8;
-      b.left -= dt;
-      if (Math.hypot(b.img.x - p.x, b.img.y - (p.y - 2)) < 8) {
-        this.host.hurt(new Phaser.Math.Vector2(b.img.x, b.img.y), SEN.kule.obrazenia);
-        b.img.destroy();
-        return false;
-      }
-      if (b.left <= 0 || this.host.city.isBlocked(b.img.x, b.img.y)) {
-        b.img.destroy();
-        return false;
-      }
-      return true;
-    });
-    void now;
   }
 
   /** Blackout, then waking up for real where the QR code sends. */
@@ -258,14 +186,5 @@ export class DemoRun {
     });
   }
 
-  private fireTexture() {
-    if (this.scene.textures.exists(FIRE_TEX)) return;
-    const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0x1e1a24, 1).fillCircle(5, 5, 5);
-    g.fillStyle(0xe43b44, 1).fillCircle(5, 5, 4);
-    g.fillStyle(0xf7a531, 1).fillCircle(5, 5, 2.8);
-    g.fillStyle(0xfff3a0, 1).fillCircle(5, 5, 1.4);
-    g.generateTexture(FIRE_TEX, 10, 10);
-    g.destroy();
-  }
+
 }
