@@ -19,22 +19,25 @@ export interface Postac {
   skala: number;
   /** Make the STROJE colour variants from the mask (false: the mask is wrong, only the drawn colours). */
   przebarwiaj?: boolean;
+  /** Who it is, so the townsfolk get a fitting name: k = woman/girl, m = man/boy. */
+  plec?: 'k' | 'm';
+  wiek?: 'dziecko' | 'dorosly' | 'starszy';
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
 export const BOHATEROWIE: Postac[] = [
-  { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36 },
-  { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36 },
-  { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36 },
+  { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
+  { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
+  { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
 ];
 
 /** Townsfolk drawn by the artist (pack „mieszkańcy 01–05”, masks from v3); each also in the STROJE colours. Ids: letters only. */
 export const MIESZKANCY_HD: Postac[] = [
-  { id: 'kobieta', nazwa: 'Młoda kobieta', plik: 'mieszkaniec_01', bokWPrawo: false, skala: 0.36 },
-  { id: 'chlopiec', nazwa: 'Chłopiec', plik: 'mieszkaniec_02', bokWPrawo: false, skala: 0.36 },
-  { id: 'wasacz', nazwa: 'Pan z wąsem', plik: 'mieszkaniec_03', bokWPrawo: false, skala: 0.36 },
-  { id: 'babcia', nazwa: 'Babcia', plik: 'mieszkaniec_04', bokWPrawo: false, skala: 0.36 },
-  { id: 'mlodzieniec', nazwa: 'Młody mężczyzna', plik: 'mieszkaniec_05', bokWPrawo: false, skala: 0.36 },
+  { id: 'kobieta', nazwa: 'Młoda kobieta', plik: 'mieszkaniec_01', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
+  { id: 'chlopiec', nazwa: 'Chłopiec', plik: 'mieszkaniec_02', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
+  { id: 'wasacz', nazwa: 'Pan z wąsem', plik: 'mieszkaniec_03', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
+  { id: 'babcia', nazwa: 'Babcia', plik: 'mieszkaniec_04', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'starszy' },
+  { id: 'mlodzieniec', nazwa: 'Młody mężczyzna', plik: 'mieszkaniec_05', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
 ];
 
 /** The imp (chochlik): smaller than a person. */

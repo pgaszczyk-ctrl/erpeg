@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { hdOn, isHd, fitHd, hdFolkLooks } from '../sprites';
+import { hdOn, isHd, fitHd, hdFolkLooks, personOf } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
@@ -122,10 +122,14 @@ export class Townsfolk {
         const walker = new Walker([l.pts], SPEED * (0.7 + r() * 0.6), r);
         const roll = r();
         const role: FolkRole = roll < MIESZKANCY.tylkoWita ? 'wita' : roll < MIESZKANCY.tylkoWita + MIESZKANCY.wyzywa ? 'wyzywa' : 'przyjmuje';
+        const tex = hdOn ? HD_LOOKS[Math.floor(r() * HD_LOOKS.length)] : `folk${Math.floor(r() * LOOKS)}`;
+        // A name that fits the look (a woman isn't "Pan Rysiek", a boy isn't "Pani Ewa").
+        const who = personOf(tex);
+        const names = who?.plec ? MIESZKANCY.imionaWg[who.plec][who.wiek ?? 'dorosly'] : MIESZKANCY.imiona;
         list.push({
           id: `${key}:${list.length}`, role, walker, x: walker.x, y: walker.y,
-          name: MIESZKANCY.imiona[Math.floor(r() * MIESZKANCY.imiona.length)],
-          tex: hdOn ? HD_LOOKS[Math.floor(r() * HD_LOOKS.length)] : `folk${Math.floor(r() * LOOKS)}`,
+          name: names[Math.floor(r() * names.length)],
+          tex,
         });
       }
     }

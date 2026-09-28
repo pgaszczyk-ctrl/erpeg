@@ -38,7 +38,21 @@ export const MIESZKANCY = {
   serduszka: 3,
   /** EXP za wygrany pojedynek. */
   nagrodaExp: 15,
+  /** Names for the old pixel people (look unknown: any of them). */
   imiona: ['Pan Zenek', 'Pani Krysia', 'Pan Staszek', 'Pani Basia', 'Student Kuba', 'Pani Ola', 'Pan Mirek', 'Pani Jadzia', 'Pan Rysiek', 'Pani Ewa', 'Pan Tadek', 'Pani Gosia'],
+  /** Names by who the new characters are (content/wyglad.ts plec + wiek). */
+  imionaWg: {
+    k: {
+      dziecko: ['Zosia', 'Hania', 'Julka', 'Lena', 'Kasia', 'Ola'],
+      dorosly: ['Pani Ewa', 'Pani Ola', 'Pani Gosia', 'Pani Kasia', 'Pani Magda', 'Pani Ania', 'Studentka Marta'],
+      starszy: ['Pani Krysia', 'Pani Basia', 'Pani Jadzia', 'Pani Halinka', 'Babcia Stasia', 'Pani Zosia'],
+    },
+    m: {
+      dziecko: ['Kuba', 'Franek', 'Antek', 'Staś', 'Tymek', 'Jaś'],
+      dorosly: ['Pan Rysiek', 'Pan Mirek', 'Pan Tadek', 'Pan Marek', 'Pan Paweł', 'Student Kuba', 'Pan Tomek'],
+      starszy: ['Pan Zenek', 'Pan Staszek', 'Pan Henio', 'Dziadek Józek', 'Pan Władek', 'Pan Kazio'],
+    },
+  } as Record<'k' | 'm', Record<'dziecko' | 'dorosly' | 'starszy', string[]>>,
   powitania: ['Dzień dobry!', 'Dzień dobry, piękna dziś pogoda.', 'Witam, witam!', 'Dzień dobry! Uważaj na chochliki.', 'O, dzień dobry! Spieszę się do sklepu.', 'Dzień dobry. Widziałeś może mojego kota?'],
   wyzwanie: ['Hej, ty z mieczem! Zmierzysz się ze mną?', 'Wyglądasz na silnego… Sprawdzimy? Pojedynek!', 'Stawaj! Nikt w tej dzielnicy mnie jeszcze nie pokonał!'],
   przyjmuje: ['Pojedynek? Z przyjemnością!', 'Ha! Myślisz, że dasz mi radę? Dawaj!', 'No dobrze, ale nie płacz potem!'],

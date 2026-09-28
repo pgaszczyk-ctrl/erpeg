@@ -49,6 +49,12 @@ export function fitHd(s: Phaser.GameObjects.Sprite, times = 1) {
   return s;
 }
 
+/** Which of the new characters a texture shows (for its gender and age), if any. */
+export function personOf(key: string): Postac | undefined {
+  const id = baseOf(key).slice(3);
+  return [...BOHATEROWIE, ...MIESZKANCY_HD].find((p) => p.id === id);
+}
+
 function baseOf(key: string) {
   const m = /^hd-[a-z]+/.exec(key);
   return m ? m[0] : key;

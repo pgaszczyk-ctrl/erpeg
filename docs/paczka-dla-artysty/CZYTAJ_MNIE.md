@@ -219,5 +219,9 @@ dach tajski, glina), zamki (ok. 144 × 144) i pomniki (wieża z zegarem, łuk, o
 
 ## F. Jak oddać
 
+- Przy każdej postaci napisz w `metadata.json` (albo w README), **kim jest**: płeć (`"plec": "k"` – kobieta/dziewczynka,
+  `"m"` – mężczyzna/chłopiec) i wiek (`"wiek": "dziecko" | "dorosly" | "starszy"`). Po tym gra dobiera imię
+  (np. babcia nie będzie „Pan Rysiek”). Nazw plików nie trzeba zmieniać.
+
 - PNG, nazwy plików dokładnie jak w tabelach (małe litery, bez polskich znaków), postacie razem z maską.
 - Najlepiej partiami (np. 5 postaci naraz) – od razu wstawiamy je do gry testowej i odsyłamy uwagi.
