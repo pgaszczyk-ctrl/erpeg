@@ -208,6 +208,8 @@ function poiOf(t) {
   if (t.amenity === 'bank') return ['bank', t.name || t.brand || 'Bank'];
   // Hotels: save and load points (the game keeps one per 300 m square).
   if (['hotel', 'hostel', 'guest_house', 'motel'].includes(t.tourism)) return ['hotel', t.name || 'Hotel'];
+  // Bus stations (big coach terminals): coachmen wait there too (the game treats them as big stations).
+  if (t.amenity === 'bus_station' && t.name) return ['station', t.name];
   // Railway stations and halts: the coachman waits there.
   if ((t.railway === 'station' || t.railway === 'halt') && t.name && (!t.station || t.station === 'train')) return ['station', t.name];
   return null;

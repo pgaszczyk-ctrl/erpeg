@@ -104,7 +104,7 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'doityourself': case 'hardware': case 'sports': case 'outdoor': return 'gear';
     case 'hotel': case 'hostel': case 'guest_house': case 'motel': return 'hotel';
     case 'camp_site': case 'caravan_site': return 'camp';
-    case 'station': return named ? 'station' : null;
+    case 'station': case 'bus_station': return named ? 'station' : null;
     default: return null;
   }
 }

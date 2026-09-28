@@ -31,6 +31,8 @@ export const WOZNICA = {
    * woźnicy aż do następnej zmiany kursów).
    */
   woznicNaDuzejStacji: 3,
+  /** Dworce autobusowe (po nazwie) też są „duże”: trzech woźniców. */
+  dworzecAutobusowy: /dworzec|autobus|pks/i,
 };
 
 export interface Miasto {

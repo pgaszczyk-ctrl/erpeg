@@ -53,6 +53,12 @@ export async function loadWorld() {
 }
 
 export function rememberMap(city: CityMap) {
+  // Stations on the map that the railway list doesn't know (bus stations): coachmen can drive there too.
+  for (const p of city.places) {
+    if (p.kind !== 'station' || /#\d+$/.test(p.id) || stops.has(`${city.id}|${p.name}`)) continue;
+    const ll = city.toLatLon(p.door.x, p.door.y);
+    stops.set(`${city.id}|${p.name}`, { name: p.name, ...ll, key: `${city.id}|${p.name}`, mapId: city.id, mapName: mapName(city.id) });
+  }
   pickHotels(city);
   addSecondCoachmen(city);
   addVillageCamps(city);
@@ -228,7 +234,7 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
 /** Is this a big station ("Główny" in the name or 3+ neighbouring stations)? */
 export function bigStation(mapId: string, name: string) {
   const key = `${mapId}|${name}`;
-  return /główn/i.test(name) || world.edges.filter((e) => e.from === key || e.to === key).length >= 3;
+  return /główn/i.test(name) || WOZNICA.dworzecAutobusowy.test(name) || world.edges.filter((e) => e.from === key || e.to === key).length >= 3;
 }
 
 /** Big stations get more coachmen (WOZNICA.woznicNaDuzejStacji), each driving one side of the world. */
