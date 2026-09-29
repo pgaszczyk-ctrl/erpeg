@@ -125,6 +125,9 @@ export function poziomPostaci(exp: number) {
  * przy 0,77 poziomy 1→5 dają ok. 30% premii, 5→15 kolejne ok. 50%, 15→20
  * resztę (ok. 20%). Mniejszy wykładnik = więcej na początku.
  */
+/** Postać administratora (players.immortal, dziś Arceus) chodzi tyle razy szybciej – do sprawdzania miejsc na mapie. */
+export const ADMIN_SZYBKOSC = 5;
+
 export const PREMIA_POZIOMU = { zycie: 1, szybkosc: 0.3, wykladnik: 0.77 };
 
 /** Jaka część pełnej premii należy się na danym poziomie (0 na 1., 1 na 20.). */

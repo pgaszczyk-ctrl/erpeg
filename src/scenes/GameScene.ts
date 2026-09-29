@@ -24,7 +24,7 @@ import { Landmarks } from './Landmarks';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
-import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
+import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY, DIAMENT } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
@@ -2953,7 +2953,7 @@ export class GameScene extends Phaser.Scene {
     if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
     PLAYER.maxHp = max;
     this.player.hp = Math.min(this.player.hp, max);
-    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp);
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (session.immortal ? ADMIN_SZYBKOSC : 1);
   }
 
   /**

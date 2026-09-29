@@ -36,7 +36,10 @@ function onOtherRoad(m: CityMap, own: Line, x: number, y: number) {
 }
 /** Snaps a map coordinate to the chunk's canvas pixels. */
 const snap = (v: number) => Math.round(v * DOTS) / DOTS;
-const OUTLINE = '#2a2430';
+/** The characters' outline colour (1 px #1e1a24 in the artist's sheets): map edges use it too, thin, so it all looks one style. */
+const OUTLINE = '#1e1a24';
+/** Outline widths in map px (a character's outline pixel is ~0.36 map px). */
+const EDGE = { dach: 0.7, podstawa: 1, sciany: 0.6, droga: 0.8, obszar: 0.7 };
 
 // One earthen track for roads, pavements and paths alike.
 const TRACK_FILL = '#d9ab72';
@@ -494,7 +497,7 @@ export class MapRenderer {
     for (const l of roads) {
       linePath(ctx, l.pts);
       ctx.strokeStyle = TRACK_EDGE;
-      ctx.lineWidth = trackWidth(l) + (l.bridge ? 5 : 1.5);
+      ctx.lineWidth = trackWidth(l) + (l.bridge ? 5 : EDGE.droga);
       ctx.stroke();
     }
     for (const l of roads) {
@@ -509,7 +512,7 @@ export class MapRenderer {
       if (a.kind !== 'paved') continue;
       ringsPath(ctx, a.rings);
       ctx.strokeStyle = TRACK_EDGE;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = EDGE.droga;
       ctx.stroke();
     }
     for (const a of areas) {
@@ -654,11 +657,11 @@ export class MapRenderer {
     ctx.fill('evenodd');
     if (a.kind === 'water') {
       ctx.strokeStyle = '#2f6fb3';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = EDGE.obszar;
       ctx.stroke();
     } else if (a.kind === 'forest' || a.kind === 'pitch' || a.kind === 'parking') {
       ctx.strokeStyle = a.kind === 'pitch' ? '#ffffff' : a.kind === 'parking' ? '#9c6f42' : '#24602a';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = EDGE.obszar;
       ctx.stroke();
     }
   }
@@ -686,7 +689,7 @@ export class MapRenderer {
     // Walls: the footprint dropped by h, plus the outline.
     ringsPath(ctx, b.rings, 0, h);
     ctx.fillStyle = OUTLINE;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = EDGE.podstawa;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     for (let s = h; s > 0; s -= 2) {
@@ -704,13 +707,13 @@ export class MapRenderer {
     if (art && !special) art.setTransform(roofTransform(b).scale(1 / DOTS));
     ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = EDGE.dach;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     // A lighter inner edge gives the roof some volume.
-    ringsPath(ctx, b.rings, 1, 1);
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = 2;
+    ringsPath(ctx, b.rings, 0.8, 0.8);
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 0.8;
     ctx.stroke();
     if (this.chimneyArt && !special) this.paintChimney(ctx, b);
   }
@@ -748,7 +751,7 @@ export class MapRenderer {
     }
     // Keep the outline crisp over the texture.
     ringsPath(ctx, b.rings, 0, h);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = EDGE.sciany;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
   }
