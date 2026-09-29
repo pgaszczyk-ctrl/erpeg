@@ -442,7 +442,7 @@ export class MapRenderer {
       if (l.kind !== 'river' && l.kind !== 'stream' && l.kind !== 'ditch') continue;
       linePath(ctx, l.pts);
       ctx.strokeStyle = '#2f6fb3';
-      ctx.lineWidth = l.width + 2;
+      ctx.lineWidth = l.width + 1;
       ctx.stroke();
       ctx.strokeStyle = P.water;
       ctx.lineWidth = l.width;
@@ -455,7 +455,7 @@ export class MapRenderer {
     for (const l of roads) {
       linePath(ctx, l.pts);
       ctx.strokeStyle = TRACK_EDGE;
-      ctx.lineWidth = trackWidth(l) + (l.bridge ? 7 : 3);
+      ctx.lineWidth = trackWidth(l) + (l.bridge ? 5 : 1.5);
       ctx.stroke();
     }
     for (const l of roads) {
@@ -470,7 +470,7 @@ export class MapRenderer {
       if (a.kind !== 'paved') continue;
       ringsPath(ctx, a.rings);
       ctx.strokeStyle = TRACK_EDGE;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
     for (const a of areas) {
@@ -613,11 +613,11 @@ export class MapRenderer {
     ctx.fill('evenodd');
     if (a.kind === 'water') {
       ctx.strokeStyle = '#2f6fb3';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       ctx.stroke();
     } else if (a.kind === 'forest' || a.kind === 'pitch' || a.kind === 'parking') {
       ctx.strokeStyle = a.kind === 'pitch' ? '#ffffff' : a.kind === 'parking' ? '#9c6f42' : '#24602a';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
   }
@@ -645,7 +645,7 @@ export class MapRenderer {
     // Walls: the footprint dropped by h, plus the outline.
     ringsPath(ctx, b.rings, 0, h);
     ctx.fillStyle = OUTLINE;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 2;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     for (let s = h; s > 0; s -= 2) {
@@ -663,7 +663,7 @@ export class MapRenderer {
     if (art && !special) art.setTransform(roofTransform(b));
     ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 1.2;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
     // A lighter inner edge gives the roof some volume.
@@ -707,7 +707,7 @@ export class MapRenderer {
     }
     // Keep the outline crisp over the texture.
     ringsPath(ctx, b.rings, 0, h);
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
   }
