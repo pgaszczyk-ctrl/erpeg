@@ -1,6 +1,6 @@
 # Zamówienie 06 – poprawka chodzenia i wszystko, co zostało
 
-> Zasady ogólne bez zmian (`CZYTAJ_MNIE`, `STYL_SWIATA_steampunk.md`). To zamówienie zbiera **wszystko, co jeszcze jest do zrobienia** (zastępuje 05 – kocioł, fontanna, wieża i drogowskaz z paczki 04d już są w grze, dzięki!).
+> Zasady ogólne bez zmian (`CZYTAJ_MNIE`, `STYL_SWIATA_steampunk.md`). To zamówienie zbiera **wszystko, co jeszcze jest do zrobienia** (zastępuje 05). Paczka 04d (kocioł, fontanna, wieża, drogowskaz) i „postacie stałe 02” (Luigi, Martin, woźnica) są już w grze – dzięki!
 
 ## A. Chodzenie – najważniejsze (poprawka istniejących arkuszy)
 
@@ -15,7 +15,7 @@ Na razie gra wstawia pomiędzy kroki klatkę „stoi” (krok A – stoi – kro
 - przy spódnicach i habitach: spod spodu wyraźnie wychodzi raz jedna, raz druga stopa, a rąbek lekko się kołysze;
 - sprawdzaj wszystkie trzy rzędy (dół, bok, góra) – najczęściej zawodzi **bok**.
 
-**Do poprawy w pierwszej kolejności** (najmniejsza różnica między A i B): Siostra Margo, Babcia Iwonka, Dziadek Marek (bok), mieszkaniec 15, mieszkańcy 09 i 10 (bok), bandyta (bok), traveler, bohater 05, bohater 10 (bok). Potem przejrzyj pozostałych mieszkańców 01–14, bohaterów 04–10, Babcię Grażynkę i maga. Nazwy plików, format i maski bez zmian – podmienimy arkusze 1 : 1.
+**Do poprawy w pierwszej kolejności** (najmniejsza różnica między A i B): Siostra Margo, Babcia Iwonka, Dziadek Marek (bok), mieszkaniec 15, mieszkańcy 09 i 10 (bok), bandyta (bok), traveler, bohater 05, bohater 10 (bok). W nowej paczce „postacie stałe 02” to samo: **Luigi i Martin w widoku z boku** mają kroki A i B prawie takie same – przy okazji też do poprawy. W kolejnych postaciach pilnuj tego od razu. Potem przejrzyj pozostałych mieszkańców 01–14, bohaterów 04–10, Babcię Grażynkę i maga. Nazwy plików, format i maski bez zmian – podmienimy arkusze 1 : 1.
 
 ## B. Latarnie i krawędzie dachów
 
@@ -24,6 +24,14 @@ Właściciel zauważył, że przy pięknych postaciach **latarnie i krawędzie d
 1. `latarnia_gazowa` – **nowa wersja 24 × 72, 2 klatki (dzień / noc)**: smuklejszy słup, wyraźna mosiężna głowica z szybkami, nocą ciepły blask narysowany wokół szybek (nie cała klatka). Kontur 1 px, bez rozmytych pikseli.
 2. `dach_okap` – **pasek krawędzi dachu 48 × 9, kafelkujący się poziomo**: rynna / okap z dachówek (krawędź od strony patrzącego). Gra położy go wzdłuż dolnych krawędzi każdego dachu zamiast obecnej rysowanej kreski. Jeden wariant ciemny, pasujący do wszystkich dachów.
 3. `dach_kalenica` – (opcjonalnie) pasek 48 × 6 kalenicy (grzbietu dachu), kafelkujący się poziomo.
+
+## B2. Wóz woźnicy – `woz_konny`
+
+Na każdej stacji stoi już Twój woźnica, ale obok niego wciąż nasz prosty, rysowany programem wózek z koniem (zrzut `5_zrzuty_z_gry/woznica_przy_wozie.png`) – wygląda przy nim bardzo słabo.
+
+- **Plik:** `woz_konny`, **arkusz 2 klatek obok siebie po 96 × 72** (razem 192 × 72): koń + wóz/dyliżans w stylu lekkiego steampunku (mosiężne latarenki, skrzynia na bagaże, może mały kominek z parą), widok z góry-z przodu jak reszta świata, **zwrócony w lewo** (gra odbija w prawo).
+- Klatka 1: koń stoi; klatka 2: koń lekko przestępuje / macha ogonem (gra będzie je zmieniać powoli).
+- Kotwica: środek dolnej krawędzi; kontur 1 px `#1e1a24`, margines 3 px, przezroczyste tło.
 
 ## C. Miejsca i postacie (z zamówienia 05)
 
@@ -39,8 +47,8 @@ Właściciel zauważył, że przy pięknych postaciach **latarnie i krawędzie d
 - ściany: biały tynk, deski, kamień, mur pruski, wersje z rurą, witryna sklepu;
 - podłoża: działki, cmentarz, parking, boisko, plac zabaw, piasek, mokradło, puszcza;
 - dachy: gont, strzecha, miedź;
-- postacie: Luigi, Martin, woźnica, trener, biegaczka, mądrale, pies.
+- postacie: trener Zbyszek, biegaczka Ania, mądrale (kilka osób: uczeni, zielarka, bibliotekarka), pies (osobny format – zapytaj, jeśli nie wiesz jaki).
 
 ## Kolejność
 
-1. **A – poprawione kroki** (najpierw lista „w pierwszej kolejności”), 2. **B – latarnia i okap**, 3. kocioł rozpalony i mędrczyni, 4. reszta w dowolnej kolejności.
+1. **A – poprawione kroki** (najpierw lista „w pierwszej kolejności”), 2. **B – latarnia i okap** oraz **B2 – wóz woźnicy**, 3. kocioł rozpalony i mędrczyni, 4. reszta w dowolnej kolejności.

@@ -76,3 +76,10 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 
 33. **Dekoracje przyjęte i już w grze:** ławki z koszami przy alejkach w parkach, studzienki z parą w jezdniach (3 klatki – różne studzienki pokazują różną ilość pary), hydranty przy ulicach, słupy ogłoszeniowe przy większych ulicach, zegar na środku większych placów, donice przy drzwiach sklepów, szkół, kościołów, bibliotek, hoteli i urzędów, skrzynie przy sklepach i wozach kupców, welocypedy przy szkołach i bibliotekach, a **poczta pneumatyczna stoi tam, gdzie na prawdziwej mapie jest poczta, skrzynka pocztowa albo paczkomat**. Działa to też na mapach świata (sprawdzone w Berlinie i Madrycie). Zrzut `5_zrzuty_z_gry/swiat_04b_dekoracje.png` (od lewej: Plac Litewski, Berlin, Madryt). Płotów gra jeszcze nie stawia. Dzięki!
 34. **Dalej:** `ZAMOWIENIE_05_miejsca_i_postacie.md` – smoczy kocioł (2 klatki: zgaszony / rozpalony), mędrczyni, fontanna, wieża zegarowa, drogowskaz, ikona Podkowy Szczęścia.
+
+## Po paczkach „świat 04d” i „postacie stałe 02”
+
+35. **Kocioł, fontanna, wieża zegarowa i drogowskaz przyjęte.** Fontanna ze smokiem stoi na większych placach, wieża zegarowa na placach przy ratuszach, smoczy kocioł na lubelskim Rynku przy Trybunale (po misji Martina zaczyna świecić – na razie blask dorysowuje gra) i na co trzecim mniejszym placu, a Twój drogowskaz stoi przy wszystkich drogach za miastem. Postać może przejść „za” nimi, twarda jest tylko podstawa.
+36. **Luigi, Martin i woźnica przyjęci** – Luigi chodzi po Nałęczowskiej, Martin po Irysowej, a woźnica stoi przy każdym wozie na stacji. Zrzut `5_zrzuty_z_gry/swiat_04d_i_postacie_stale_02.png`. Dzięki!
+37. **Ważne – chodzenie:** postacie „lewitowały”, bo w wielu arkuszach krok A i krok B są prawie takie same. Szczegóły i lista w `ZAMOWIENIE_06_chodzenie_i_reszta.md`, sekcja A (zestawienie `2_uwagi_do_v1/kroki_A_B_za_podobne.png`).
+38. **Dalej:** `ZAMOWIENIE_06_chodzenie_i_reszta.md` – poprawione kroki, nowa latarnia, okap dachu, **wóz woźnicy**, rozpalony kocioł, mędrczyni i zaległości.

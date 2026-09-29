@@ -1,6 +1,6 @@
 <!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 06</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie 06 – poprawka chodzenia i wszystko, co zostało</h1>
 <blockquote>
-<p>Zasady ogólne bez zmian (<code>CZYTAJ_MNIE</code>, <code>STYL_SWIATA_steampunk.md</code>). To zamówienie zbiera <strong>wszystko, co jeszcze jest do zrobienia</strong> (zastępuje 05 – kocioł, fontanna, wieża i drogowskaz z paczki 04d już są w grze, dzięki!).</p>
+<p>Zasady ogólne bez zmian (<code>CZYTAJ_MNIE</code>, <code>STYL_SWIATA_steampunk.md</code>). To zamówienie zbiera <strong>wszystko, co jeszcze jest do zrobienia</strong> (zastępuje 05). Paczka 04d (kocioł, fontanna, wieża, drogowskaz) i „postacie stałe 02” (Luigi, Martin, woźnica) są już w grze – dzięki!</p>
 </blockquote>
 <h2>A. Chodzenie – najważniejsze (poprawka istniejących arkuszy)</h2>
 <p>W grze postacie „lewitują”: przy chodzeniu ruszają tylko ręką, a nogi stoją. Powód: w wielu arkuszach <strong>krok A i krok B są prawie identyczne</strong> (zwłaszcza w widoku z boku), a gra przy chodzeniu pokazuje na zmianę właśnie te dwie klatki. Zestawienie: <code>2_uwagi_do_v1/kroki_A_B_za_podobne.png</code>.</p>
@@ -13,7 +13,7 @@
 <li>przy spódnicach i habitach: spod spodu wyraźnie wychodzi raz jedna, raz druga stopa, a rąbek lekko się kołysze;</li>
 <li>sprawdzaj wszystkie trzy rzędy (dół, bok, góra) – najczęściej zawodzi <strong>bok</strong>.</li>
 </ul>
-<p><strong>Do poprawy w pierwszej kolejności</strong> (najmniejsza różnica między A i B): Siostra Margo, Babcia Iwonka, Dziadek Marek (bok), mieszkaniec 15, mieszkańcy 09 i 10 (bok), bandyta (bok), traveler, bohater 05, bohater 10 (bok). Potem przejrzyj pozostałych mieszkańców 01–14, bohaterów 04–10, Babcię Grażynkę i maga. Nazwy plików, format i maski bez zmian – podmienimy arkusze 1 : 1.</p>
+<p><strong>Do poprawy w pierwszej kolejności</strong> (najmniejsza różnica między A i B): Siostra Margo, Babcia Iwonka, Dziadek Marek (bok), mieszkaniec 15, mieszkańcy 09 i 10 (bok), bandyta (bok), traveler, bohater 05, bohater 10 (bok). W nowej paczce „postacie stałe 02” to samo: <strong>Luigi i Martin w widoku z boku</strong> mają kroki A i B prawie takie same – przy okazji też do poprawy. W kolejnych postaciach pilnuj tego od razu. Potem przejrzyj pozostałych mieszkańców 01–14, bohaterów 04–10, Babcię Grażynkę i maga. Nazwy plików, format i maski bez zmian – podmienimy arkusze 1 : 1.</p>
 <h2>B. Latarnie i krawędzie dachów</h2>
 <p>Właściciel zauważył, że przy pięknych postaciach <strong>latarnie i krawędzie dachów wyglądają słabo</strong>. Po naszej stronie mapa jest już rysowana dwa razy dokładniej (Twoje grafiki tracą mniej szczegółów). Od Ciebie:</p>
 <ol>
@@ -21,6 +21,13 @@
 <li><code>dach_okap</code> – <strong>pasek krawędzi dachu 48 × 9, kafelkujący się poziomo</strong>: rynna / okap z dachówek (krawędź od strony patrzącego). Gra położy go wzdłuż dolnych krawędzi każdego dachu zamiast obecnej rysowanej kreski. Jeden wariant ciemny, pasujący do wszystkich dachów.</li>
 <li><code>dach_kalenica</code> – (opcjonalnie) pasek 48 × 6 kalenicy (grzbietu dachu), kafelkujący się poziomo.</li>
 </ol>
+<h2>B2. Wóz woźnicy – <code>woz_konny</code></h2>
+<p>Na każdej stacji stoi już Twój woźnica, ale obok niego wciąż nasz prosty, rysowany programem wózek z koniem (zrzut <code>5_zrzuty_z_gry/woznica_przy_wozie.png</code>) – wygląda przy nim bardzo słabo.</p>
+<ul>
+<li><strong>Plik:</strong> <code>woz_konny</code>, <strong>arkusz 2 klatek obok siebie po 96 × 72</strong> (razem 192 × 72): koń + wóz/dyliżans w stylu lekkiego steampunku (mosiężne latarenki, skrzynia na bagaże, może mały kominek z parą), widok z góry-z przodu jak reszta świata, <strong>zwrócony w lewo</strong> (gra odbija w prawo).</li>
+<li>Klatka 1: koń stoi; klatka 2: koń lekko przestępuje / macha ogonem (gra będzie je zmieniać powoli).</li>
+<li>Kotwica: środek dolnej krawędzi; kontur 1 px <code>#1e1a24</code>, margines 3 px, przezroczyste tło.</li>
+</ul>
 <h2>C. Miejsca i postacie (z zamówienia 05)</h2>
 <table>
 <thead>
@@ -58,9 +65,9 @@
 <li>ściany: biały tynk, deski, kamień, mur pruski, wersje z rurą, witryna sklepu;</li>
 <li>podłoża: działki, cmentarz, parking, boisko, plac zabaw, piasek, mokradło, puszcza;</li>
 <li>dachy: gont, strzecha, miedź;</li>
-<li>postacie: Luigi, Martin, woźnica, trener, biegaczka, mądrale, pies.</li>
+<li>postacie: trener Zbyszek, biegaczka Ania, mądrale (kilka osób: uczeni, zielarka, bibliotekarka), pies (osobny format – zapytaj, jeśli nie wiesz jaki).</li>
 </ul>
 <h2>Kolejność</h2>
 <ol>
-<li><strong>A – poprawione kroki</strong> (najpierw lista „w pierwszej kolejności”), 2. <strong>B – latarnia i okap</strong>, 3. kocioł rozpalony i mędrczyni, 4. reszta w dowolnej kolejności.</li>
+<li><strong>A – poprawione kroki</strong> (najpierw lista „w pierwszej kolejności”), 2. <strong>B – latarnia i okap</strong> oraz <strong>B2 – wóz woźnicy</strong>, 3. kocioł rozpalony i mędrczyni, 4. reszta w dowolnej kolejności.</li>
 </ol>

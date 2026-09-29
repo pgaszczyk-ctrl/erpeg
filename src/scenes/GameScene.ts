@@ -4,7 +4,8 @@ import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art';
 import { OSTROSC } from '../screen';
-import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed } from '../sprites';
+import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
+import { STALE_HD } from '../content/wyglad';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -374,6 +375,14 @@ export class GameScene extends Phaser.Scene {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
+      // The coachman himself stands by his cart (pack „postacie stałe 02”).
+      if (p.kind === 'station' && hdOn) {
+        const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
+        if (this.textures.exists(key)) {
+          // Right by the cart sign (the door itself can be on the tracks, where freeNear went far away).
+          fitHd(this.add.sprite(p.door.x + 10, p.door.y - 2, key, 'down-0')).setDepth(p.door.y - 2);
+        }
+      }
     };
     for (const p of this.city.places) showPlace(p);
     // Road signs on the ways out of town (split-map): read when walking past.

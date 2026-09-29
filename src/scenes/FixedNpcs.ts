@@ -168,7 +168,7 @@ export class FixedNpcs {
     const martinLines = streetLines([MARTIN.ulica]);
     if (martinLines.length) {
       const w = new Walker(martinLines, MARTIN.predkosc * PX_PER_M, this.r);
-      const sprite = scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xd08050);
+      const sprite = fixedSprite(scene, w.x, w.y, 'martin', TEX.hero, 0xd08050);
       this.list.push({ id: 'martin', walker: w, sprite, x: w.x, y: w.y });
     }
 
@@ -266,7 +266,7 @@ export class FixedNpcs {
     if (!lines.length) return;
     this.luigiHome = null;
     const w = new Walker(lines, LUIGI.predkosc * PX_PER_M, this.r);
-    const sprite = this.scene.add.sprite(w.x, w.y, TEX.hero, 'down-0').setTint(0xd0463c);
+    const sprite = fixedSprite(this.scene, w.x, w.y, 'luigi', TEX.hero, 0xd0463c);
     this.list.push({ id: 'luigi', walker: w, sprite, x: w.x, y: w.y });
   }
 
