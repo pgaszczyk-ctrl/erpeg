@@ -1,0 +1,107 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie: świat 2</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie: ŚWIAT, partia 2 – reszta dachów i podłoża</h1>
+<blockquote>
+<p>Próba (trawa, bruk, czerwona dachówka) jest w grze i wygląda świetnie – zrzuty: <code>5_zrzuty_z_gry/swiat_proba_01_w_grze.png</code> i <code>swiat_dachy_obracane.png</code>. Teraz reszta, żeby całe miasto miało teksturę. Zasady (rozmiary, kafelkowanie, skala 3×, bez konturu) jak w <code>ZAMOWIENIE_swiat_01.md</code>, klimat jak w <code>STYL_SWIATA_steampunk.md</code>.</p>
+</blockquote>
+<h2>Co się zmieniło w grze</h2>
+<ul>
+<li><strong>Dachówki obracają się wzdłuż najdłuższej ściany budynku</strong> i każdy dom ma wzór trochę przesunięty. Rysuj dalej rzędy <strong>poziomo</strong>, gra sama je obróci.</li>
+<li>Każdy dom ma swoją „rodzinę” koloru dachu: czerwoną, brązową albo szarą. Dopóki nie ma pliku danej rodziny, dom ma płaski kolor – dlatego brązowa dachówka i łupek są teraz najważniejsze.</li>
+</ul>
+<h2>Dwie poprawki z próby (proszę pilnować)</h2>
+<ol>
+<li><strong>Nie powtarzaj krawędzi.</strong> W próbie ostatni rząd i ostatnia kolumna były takie same jak pierwsze – przy układaniu wychodzi podwójny rząd. Następny piksel po prawej ma być pierwszym pikselem z lewej.</li>
+<li><strong>Bez równej siatki drobiazgów.</strong> Kwiatki, kamyki, kępki rozsiewaj nieregularnie, żeby przy powtarzaniu nie było widać wzoru.</li>
+</ol>
+<h2>1. Dachy – 48 × 48, rzędy poziomo (najpierw pierwsze dwa!)</h2>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Co to</th>
+<th>Na które domy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dach_dachowka_brazowa_jasna</code></td>
+<td>brązowa dachówka</td>
+<td>domy z brązowym dachem (dziś płaski kolor)</td>
+</tr>
+<tr>
+<td><code>dach_lupek_jasna</code></td>
+<td>szary łupek</td>
+<td>kamienice, szare dachy (dziś płaski kolor)</td>
+</tr>
+<tr>
+<td><code>dach_gont_jasna</code></td>
+<td>drewniany gont</td>
+<td>wieś (później)</td>
+</tr>
+<tr>
+<td><code>dach_strzecha_jasna</code></td>
+<td>strzecha</td>
+<td>chaty (później)</td>
+</tr>
+<tr>
+<td><code>dach_miedz_jasna</code></td>
+<td>zielonkawa miedź</td>
+<td>wieże, ratusze (później)</td>
+</tr>
+</tbody>
+</table>
+<p>Wersje <code>_ciemna</code> (ta sama tekstura w cieniu) – jeszcze nie potrzebne.</p>
+<h2>2. Podłoże – w tej kolejności</h2>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podloze_droga</code></td>
+<td>96 × 96</td>
+<td>ubita ziemia dróg gruntowych, chodników i ścieżek (dziś najbardziej „płaska” rzecz na mapie – jasnobrązowe pasy)</td>
+</tr>
+<tr>
+<td><code>podloze_plac</code></td>
+<td>192 × 192</td>
+<td>duże kamienne płyty placów i deptaków</td>
+</tr>
+<tr>
+<td><code>podloze_park</code></td>
+<td>192 × 192</td>
+<td>staranna trawa parków, trochę kwiatów</td>
+</tr>
+<tr>
+<td><code>podloze_las</code></td>
+<td>192 × 192</td>
+<td>poszycie lasu: mech, igliwie, ciemna zieleń</td>
+</tr>
+<tr>
+<td><code>podloze_woda</code></td>
+<td>192 × 192</td>
+<td>spokojna woda, delikatne fale</td>
+</tr>
+<tr>
+<td><code>podloze_pole</code></td>
+<td>192 × 192</td>
+<td>pole z bruzdami poziomo</td>
+</tr>
+<tr>
+<td><code>podloze_zarosla</code>, <code>podloze_dzialki</code>, <code>podloze_cmentarz</code>, <code>podloze_parking</code>, <code>podloze_boisko</code>, <code>podloze_plac_zabaw</code>, <code>podloze_piasek</code>, <code>podloze_mokradlo</code>, <code>podloze_puszcza</code></td>
+<td>192 × 192</td>
+<td>opisy w <code>ZAMOWIENIE_swiat_01.md</code>, tabela 1</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Kolejność oddawania</h2>
+<ol>
+<li><code>dach_dachowka_brazowa_jasna</code>, <code>dach_lupek_jasna</code>, <code>podloze_droga</code> – to zmieni najwięcej.</li>
+<li><code>podloze_plac</code>, <code>podloze_park</code>, <code>podloze_las</code>, <code>podloze_woda</code>, <code>podloze_pole</code>.</li>
+<li>Reszta podłoża, potem gont, strzecha, miedź.</li>
+<li>Następna partia (3): ściany frontowe (D9 w CZYTAJ_MNIE), latarnie gazowe, kominy z parą, parowóz.</li>
+</ol>
+<p>Nazwy plików dokładnie jak w tabelach, PNG, folder <code>swiat/</code>.</p>

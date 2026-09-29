@@ -10,7 +10,7 @@ import { askAccount } from './account';
 import { pixelLogo } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
-import { BOHATEROWIE } from '../content/wyglad';
+import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 
 // The start screen (an HTML overlay above the game): new character, load
@@ -169,24 +169,63 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       // A new hero also gets one of all the drawn heroes (changeable in the character sheet).
       const newLook = (): Look => ({ ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length) });
       const look: Look = newLook();
-      const preview = el('canvas', { className: 'm-hero', width: 48, height: LOOK_H });
+      // The new heroes: the preview shows the artist's hero the game will use (it used to show the old
+      // pixel figure while another hero walked in the game), with ◀ ▶ to pick one.
+      const hd = NOWE_POSTACIE && BOHATEROWIE.length > 0;
+      const preview = el('canvas', { className: 'm-hero', width: hd ? 144 : 48, height: hd ? 60 : LOOK_H });
+      const sheet = new Image();
+      sheet.onload = () => paint();
+      const loadSheet = () => {
+        if (hd) sheet.src = `postacie/${BOHATEROWIE[look.postac ?? 0].plik}.png`;
+      };
       let frame = 0;
       const paint = () => {
         const ctx = preview.getContext('2d')!;
+        if (hd) {
+          ctx.clearRect(0, 0, 144, 60);
+          if (!sheet.complete || !sheet.naturalWidth) return;
+          ctx.imageSmoothingEnabled = true;
+          // Standing frames: down, side (turned to face right), up.
+          for (let row = 0; row < 3; row++) {
+            ctx.save();
+            if (row === 1) {
+              ctx.translate(144, 0);
+              ctx.scale(-1, 1);
+            }
+            ctx.drawImage(sheet, 64, row * 64, 64, 64, row === 1 ? 48 : row * 48, 4, 48, 48);
+            ctx.restore();
+          }
+          return;
+        }
         ctx.clearRect(0, 0, 48, LOOK_H);
         (['down', 'side', 'up'] as const).forEach((dir, i) => drawLook(ctx, i * 16, LOOK_TOP, dir, frame, look));
       };
       const timer = setInterval(() => {
         if (!preview.isConnected) return clearInterval(timer);
+        if (hd) return;
         frame = [1, 0, 2, 0][Math.floor(Date.now() / 220) % 4];
         paint();
       }, 110);
-      const lookBox = el('div', { className: 'm-look' }, [
-        button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
-          Object.assign(look, newLook());
-          paint();
-        }),
-      ]);
+      const pick = (d: number) => {
+        look.postac = ((look.postac ?? 0) + d + BOHATEROWIE.length) % BOHATEROWIE.length;
+        loadSheet();
+        paint();
+      };
+      const lookBox = el('div', { className: 'm-look' }, hd
+        ? [el('div', { className: 'm-skinrow' }, [
+            button('◀', () => pick(-1)),
+            button(tx('🎲 Losuj', '🎲 Random'), () => {
+              Object.assign(look, newLook());
+              loadSheet();
+              paint();
+            }),
+            button('▶', () => pick(1)),
+          ])]
+        : [button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
+            Object.assign(look, newLook());
+            paint();
+          })]);
+      loadSheet();
       paint();
       screen(
         el('h2', {}, ['Nowa postać']),

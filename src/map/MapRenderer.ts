@@ -150,6 +150,24 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
   };
 }
 
+/** Where a roof texture sits on a building: turned to its longest wall, offset by its seed (cached per building). */
+const roofTf = new WeakMap<Building, DOMMatrix>();
+function roofTransform(b: Building): DOMMatrix {
+  let m = roofTf.get(b);
+  if (m) return m;
+  const r = b.rings[0];
+  let best = -1, ang = 0;
+  for (let i = 0; i < r.length; i += 2) {
+    const j = (i + 2) % r.length;
+    const dx = r[j] - r[i], dy = r[j + 1] - r[i + 1];
+    const len = dx * dx + dy * dy;
+    if (len > best) [best, ang] = [len, Math.atan2(dy, dx)];
+  }
+  m = new DOMMatrix().translateSelf(r[0], r[1]).rotateSelf((ang * 180) / Math.PI).translateSelf(b.seed % 17, (b.seed >> 5) % 13);
+  roofTf.set(b, m);
+  return m;
+}
+
 type Patterns = ReturnType<typeof makePatterns> & Record<string, CanvasPattern>;
 
 /** The artist's texture `swiat-<file>` shrunk to the map's size, as a repeating pattern (null when there is no file). */
@@ -584,6 +602,8 @@ export class MapRenderer {
     // Roof.
     ringsPath(ctx, b.rings);
     const art = this.roofArt[b.seed % ROOFS.length] ?? null;
+    // Tile rows run along the building's longest wall, shifted per building, so neighbours don't share one grid.
+    if (art && !special) art.setTransform(roofTransform(b));
     ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
     ctx.lineWidth = 2.5;
