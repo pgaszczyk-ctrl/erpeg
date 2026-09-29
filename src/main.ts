@@ -3,7 +3,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { installTouchControls } from './controls';
-import { installErrorLog, watchGraphics } from './errlog';
+import { installErrorLog, watchGraphics, report } from './errlog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
 import { catchGoogleReturn } from './google';
@@ -59,6 +59,12 @@ if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelR
 installLeaveGuard(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).
 watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
+// Graphics errors (e.g. out of GPU memory: new pictures stay invisible) go to the error log.
+setInterval(() => {
+  const gl = (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl;
+  const e = gl?.getError?.();
+  if (e) report('gl', `Błąd grafiki WebGL ${e}${e === 0x0505 ? ' (brak pamięci)' : ''}, tekstur: ${game.textures.getTextureKeys().length}`);
+}, 5000);
 
 // Handy for debugging from the browser console.
 (window as unknown as { __game: Phaser.Game }).__game = game;

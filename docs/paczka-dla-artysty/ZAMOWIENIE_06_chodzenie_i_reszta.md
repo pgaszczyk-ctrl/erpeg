@@ -6,6 +6,8 @@
 
 Właściciel: „wygląda to jak zlepek 4 różnych stylów” (zrzut `5_zrzuty_z_gry/styl_zlepek_stylow_uwaga_wlasciciela.png`). **Wzorem jest styl ludzików** (mieszkańcy, bohaterowie, stałe postacie) i **przygaszone tekstury podłoża i dachów** – te zostają. Resztę trzeba do nich dopasować, zarówno „w dół”, jak i „w górę”:
 
+> **Uwaga – „uprościć” NIE znaczy „narysować prościej”.** Poziom jakości ma zostać taki jak w najlepszych Twoich pracach (ludziki, zaakceptowany podgląd koni z wozem). Chodzi tylko o to, żeby obiekty nie miały **drobniejszego** piksela i **więcej** refleksów niż ludziki. Pliki produkcyjne robisz **z zaakceptowanego obrazka** (wycięcie, przezroczyste tło, zmniejszenie „najbliższym sąsiadem”), a nie rysujesz ich od nowa programem – rysunki zrobione skryptem wyglądają dziecinnie. Nie dodawaj grubszego konturu, niż ma obrazek.
+
 **Za dokładne, za jaskrawe (do uproszczenia):** smoczy kocioł (najbardziej), fontanna, wieża zegarowa, w mniejszym stopniu drogowskaz i dekoracje z 04b.
 - Mniej kolorów: **ok. 8–12 na obiekt**, bez miękkich przejść i drobnych refleksów; cieniowanie 2–3 tonami, tak jak na ubraniach ludzików.
 - **Przygaszone barwy** jak dachy i bruk: mosiądz ciepły i matowy, nie złoty; kamień szary jak bruk, nie jasnobiały.

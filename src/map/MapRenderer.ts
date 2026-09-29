@@ -19,7 +19,7 @@ const CHUNK = 512; // px
  * aren't blown-up blocks next to the detailed characters; 1 on slow phones.
  */
 const DOTS = OSTROSC;
-const MAX_CHUNKS = DOTS > 1 ? 16 : 24;
+const MAX_CHUNKS = DOTS > 1 ? 12 : 24;
 const CAR_ROADS = new Set(['major', 'medium', 'minor', 'pedestrian', 'service']);
 /**
  * Does a street object at (x, y) beside line `own` stand on (or right by)

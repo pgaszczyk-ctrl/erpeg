@@ -4,7 +4,7 @@ import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap'
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, stanGangu, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
 
 // Things that fill the city around the hero as they walk: fruit trees on
@@ -347,6 +347,8 @@ export interface Gang {
   /** When it was broken up (scene time), 0 while active. */
   clearedAt: number;
   fog?: Phaser.GameObjects.Graphics;
+  /** The last descriptive counter shown (content/gangi.ts stanGangu). */
+  said?: string;
 }
 
 function hashStr2(s: string) {
@@ -377,7 +379,7 @@ export class StreetEnemies {
     private density = 1,
     /** Per-login seed: new gangs every time. */
     private seed = 0,
-    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void } = { bossOut: () => {}, cleared: () => {} },
+    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void; stan?: (g: Gang, text: string) => void } = { bossOut: () => {}, cleared: () => {} },
   ) {}
 
   private nearAvoid(x: number, y: number, m: number) {
@@ -476,6 +478,7 @@ export class StreetEnemies {
         if (m !== e) continue;
         g.members.delete(i);
         g.alive.delete(i);
+        this.tell(g);
         if (!g.alive.size && g.boss === 'none') {
           g.boss = 'out';
           const p = this.city.isFree(g.x, g.y, 6, 6) ? { x: g.x, y: g.y } : this.city.freeNear(g.x, g.y);
@@ -485,6 +488,14 @@ export class StreetEnemies {
         return;
       }
     }
+  }
+
+  /** The descriptive counter: says how the gang is doing when that changes. */
+  private tell(g: Gang) {
+    const t = stanGangu(g.alive.size, g.spots?.length ?? g.alive.size);
+    if (!t || t === g.said) return;
+    g.said = t;
+    this.events.stan?.(g, t);
   }
 
   update(px: number, py: number, now: number) {
@@ -510,6 +521,8 @@ export class StreetEnemies {
         g.fog = undefined;
       }
       if (g.clearedAt) continue;
+      // Walking into a territory: say how many are there.
+      if (d < g.r && g.spots && !g.said) this.tell(g);
       const near = d < g.r + 350 * PX_PER_M;
       if (near) {
         if (!g.spots) {

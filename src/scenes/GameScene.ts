@@ -13,6 +13,7 @@ import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
+import { LUP_HERSZTA } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
@@ -435,6 +436,7 @@ export class GameScene extends Phaser.Scene {
       session.level.potwory * (isNight() ? MIESZKANCY.noc.potworow : 1),
       session.nonce,
       {
+        stan: (_g, text) => this.toast(`⚔ ${text}`, 2500),
         bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
         cleared: (g) => {
           const coins = luckyCoins(g.kind.nagroda.monety);
@@ -998,6 +1000,7 @@ export class GameScene extends Phaser.Scene {
    * gold, only hearts and fruit; skeletons no hearts but 2–3 coins.
    */
   private dropLoot(x: number, y: number, kind: RodzajWroga = 'glut') {
+    if (kind === 'herszt' || kind === 'wielki_herszt') return this.dropBossLoot(x, y);
     if (kind === 'driada') {
       if (this.player.hp < PLAYER.maxHp && Math.random() < 0.5) this.dropPickup(x, y, true);
       else this.dropFruit(x, y + 6, Math.random() < 0.5 ? 'jablko' : 'sliwka');
@@ -1011,9 +1014,27 @@ export class GameScene extends Phaser.Scene {
     this.dropPickup(x, y, Math.random() < HEART_DROP_CHANCE && this.player.hp < PLAYER.maxHp);
   }
 
-  private dropPickup(x: number, y: number, heart: boolean) {
+  /** A gang boss spills coins (in a few piles) and fruit on the ground (content/gangi.ts LUP_HERSZTA). */
+  private dropBossLoot(x: number, y: number) {
+    const L = LUP_HERSZTA;
+    const roll = ([a, b]: [number, number]) => a + Math.floor(Math.random() * (b - a + 1));
+    let coins = roll(L.monety);
+    const piles = Math.min(6, coins);
+    for (let i = 0; i < piles; i++) {
+      const n = i === piles - 1 ? coins : Math.max(1, Math.round(coins / (piles - i)));
+      coins -= n;
+      const a = (i / piles) * Math.PI * 2;
+      this.dropPickup(x + Math.cos(a) * 9, y + Math.sin(a) * 6, false, n);
+    }
+    const fruit = roll(L.owoce);
+    for (let i = 0; i < fruit; i++) this.dropFruit(x + (Math.random() - 0.5) * 24, y + (Math.random() - 0.5) * 12, Math.random() < 0.6 ? 'jablko' : 'sliwka');
+  }
+
+  private dropPickup(x: number, y: number, heart: boolean, coins = 1) {
     const item = this.add.image(x, y, heart ? TEX.pickupHeart : TEX.coin).setDepth(y - 8);
     item.setData('kind', heart ? 'heart' : 'coin');
+    item.setData('n', coins);
+    if (coins > 1) item.setScale(1.3);
     this.pickups.push(item);
     this.tweens.add({ targets: item, y: y - 3, duration: 400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.time.delayedCall(15000, () => {
@@ -1052,7 +1073,11 @@ export class GameScene extends Phaser.Scene {
       const spot = item.getData('spot') as string | undefined;
       if (spot) this.forest.picked(spot);
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
-    } else earn(luckyCoins(1));
+    } else {
+      const n = luckyCoins((item.getData('n') as number | undefined) ?? 1);
+      earn(n);
+      if (n > 1) this.toast(`+${n} monet`, 900);
+    }
     this.removePickup(item);
     this.emitHud();
   }

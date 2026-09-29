@@ -24,10 +24,11 @@ export interface RodzajGangu {
   zenska?: boolean;
 }
 
+// Promienie zmniejszone tak, żeby teren miał o 30% mniejszą powierzchnię (×0,84).
 export const GANGI: RodzajGangu[] = [
-  { nazwa: 'Banda', promienM: 110, czlonkow: [4, 6], naKm2: 0.45, herszt: 'herszt', nagroda: { monety: 25, exp: 40 }, zenska: true },
-  { nazwa: 'Mały gang', promienM: 220, czlonkow: [6, 9], naKm2: 0.25, herszt: 'herszt', nagroda: { monety: 40, exp: 60 } },
-  { nazwa: 'Wielki gang', promienM: 450, czlonkow: [12, 18], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
+  { nazwa: 'Banda', promienM: 92, czlonkow: [4, 6], naKm2: 0.45, herszt: 'herszt', nagroda: { monety: 25, exp: 40 }, zenska: true },
+  { nazwa: 'Mały gang', promienM: 184, czlonkow: [6, 9], naKm2: 0.25, herszt: 'herszt', nagroda: { monety: 40, exp: 60 } },
+  { nazwa: 'Wielki gang', promienM: 376, czlonkow: [12, 18], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
 ];
 
 /** Bez gangów: środek gangu co najmniej tyle metrów od ważnych miejsc, członkowie tyle od drzwi. */
@@ -42,3 +43,19 @@ export const GANG_MUSZKI = { coPx: 22, kolor: 0xb3202c, coIleKratek: 8 };
 
 /** Poza miastem (kratka 1 km z mniej niż miejscMniejNiz ważnymi miejscami) gangów jest tyle razy więcej; środek gangu zwykle najwyżej odDrogiM od drogi. */
 export const GANG_WIES = { miejscMniejNiz: 3, mnoznik: 2, odDrogiM: 150 };
+
+/** Łup z herszta (oprócz nagrody za rozbicie gangu): monety i owoce wysypują się na ziemię. */
+export const LUP_HERSZTA = { monety: [10, 50] as [number, number], owoce: [0, 20] as [number, number] };
+
+/**
+ * Licznik opisowy: co słychać na terenie gangu, zależnie od tego, ilu członków
+ * jeszcze żyje (zostalo) z wszystkich (razem). Gra pokazuje napis, gdy się zmieni.
+ */
+export function stanGangu(zostalo: number, razem: number): string {
+  if (zostalo <= 0) return '';
+  if (zostalo === 1) return 'Gdzieś tu jeszcze jest niedobitek…';
+  if (zostalo === 2) return 'Gdzieś tu jeszcze są dwa niedobitki…';
+  if (zostalo <= razem / 2) return 'No, chyba już niewielu…';
+  if (zostalo < razem) return 'Jeszcze sporo ich tu zostało.';
+  return 'Pełno ich tu – uważaj!';
+}
