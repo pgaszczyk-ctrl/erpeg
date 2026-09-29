@@ -62,9 +62,10 @@ export function stanGangu(zostalo: number, razem: number): string {
 
 /**
  * Berserker: w niektórych gangach (szansa) jeden członek ma mrugającą czerwoną
- * aurę. Uderza `szybciej` razy częściej, ale ma tylko `zycie` zwykłego życia.
+ * aurę. Uderza `szybciej` razy częściej i biega `predkosc` razy szybciej, ale ma
+ * tylko `zycie` zwykłego życia.
  */
-export const BERSERKER = { szansa: 0.4, szybciej: 1.5, zycie: 0.7, auraKolor: 0xff3b1f, mrugMs: 260 };
+export const BERSERKER = { szansa: 0.4, szybciej: 1.5, zycie: 0.7, predkosc: 2, auraKolor: 0xff3b1f, mrugMs: 260 };
 
 /**
  * Obstawa herszta: gdy herszt wychodzi, obok niego staje tyle dodatkowych

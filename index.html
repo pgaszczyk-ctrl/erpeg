@@ -143,12 +143,12 @@
       @keyframes m-float { 0%, 100% { transform: translate(-50%, -70%); } 50% { transform: translate(-50%, -95%); } }
       .ch-box { max-width: 420px; gap: 6px; touch-action: none; }
       /* Item grids (ui/slots.ts): equipment 3×3, backpack and chest 4×5, all the same cell size. */
-      .sl-wrap { --sl: min(56px, 13vw, calc((100vh - 250px) / 8.8)); display: flex; flex-direction: column; align-items: center; gap: 10px; touch-action: none; }
-      #chest .sl-wrap { --sl: min(50px, 12vw, calc((100vh - 300px) / 10.6)); gap: 4px; }
+      .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 250px) / 7.8)); display: flex; flex-direction: column; align-items: center; gap: 10px; touch-action: none; }
+      #chest .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 290px) / 8.6)); gap: 4px; }
       #chest .sl-wrap h3 { margin: 4px 0 0; font-size: 14px; color: #f7c531; align-self: flex-start; }
       .sl-grid { display: grid; gap: 5px; }
       .sl-eq { grid-template-columns: repeat(3, var(--sl)); }
-      .sl-bag { grid-template-columns: repeat(4, var(--sl)); }
+      .sl-bag { grid-template-columns: repeat(5, var(--sl)); }
       .sl-cell { position: relative; width: var(--sl); height: var(--sl); box-sizing: border-box; background: #0f0d13; border: 2px solid #f7c531; border-radius: 5px;
         display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: grab; }
       .sl-bag .sl-cell { border-color: #6a6a78; }

@@ -439,7 +439,7 @@ export class GameScene extends Phaser.Scene {
         // They stand at their spot; they only come out when they see the hero.
         e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
         e.leash = { x: g.x, y: g.y, r: g.r };
-        if (sp.berserk) e.makeBerserk(BERSERKER.zycie, BERSERKER.auraKolor, BERSERKER.mrugMs);
+        if (sp.berserk) e.makeBerserk(BERSERKER.zycie, BERSERKER.auraKolor, BERSERKER.mrugMs, BERSERKER.predkosc);
         return e;
       },
       (u) => {

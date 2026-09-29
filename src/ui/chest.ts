@@ -4,7 +4,7 @@ import { session } from '../quests';
 import { slotCell, slotDrag, slotLabel } from './slots';
 
 // The chest (at home, or at the hotel where the hero sleeps): the same grids as
-// the equipment page – the chest's 4×5 on top, the 4×5 backpack below – plus
+// the equipment page – the chest on top, the backpack below (both 5 columns × 4 rows) – plus
 // money. Things move by dragging, or a tap sends one to the other side. Old
 // chests held 100 things: pages appear only when something lies beyond the
 // first 20 slots.

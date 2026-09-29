@@ -9,6 +9,8 @@ export const PLAYER = {
   attackReach: 9, // px from the centre to the middle of the swing (close, easier to aim)
   attackRadius: 11,
   hurtInvulnerable: 1000, // ms
+  /** How hard a monster's blow throws the hero back (px/s for 180 ms); was 170, the owner found the two drifting too far apart. */
+  odrzut: 60,
 };
 
 export function createHeroAnims(scene: Phaser.Scene) {
@@ -119,7 +121,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     this.invulnerableUntil = now + PLAYER.hurtInvulnerable;
     this.stunnedUntil = now + 180;
 
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(170);
+    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(PLAYER.odrzut);
     this.vel.set(push.x, push.y);
 
     this.scene.cameras.main.shake(120, 0.004);

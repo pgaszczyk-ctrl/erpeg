@@ -211,7 +211,7 @@ function show(host: CharacterHost) {
   };
 
   const pageEkwipunek = () => {
-    // The owner's drawing: amulet – weapon – second hand on the left, helmet – armour – boots in the middle, three talismans on the right; the 4×5 backpack below.
+    // The owner's drawing: amulet – weapon – second hand on the left, helmet – armour – boots in the middle, three talismans on the right; the backpack below (5 columns × 4 rows).
     const eq = el('div', 'sl-grid sl-eq');
     for (const m of ['amulet', 'helm', 'talizman', 'bron', 'zbroja', 'talizman2', 'dystans', 'buty', 'talizman3'] as Miejsce[]) {
       const id = gear.equip[m];

@@ -37,8 +37,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   smok: { name: 'Smok', hp: 60, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
 
-/** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); halved on the owner's request. */
-export const ODRZUT = 100;
+/** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); was 200, the owner wants them to stay close. */
+export const ODRZUT = 50;
 
 /** Kept for code that only knows slimes. */
 export const SLIME = ENEMY_KINDS.glut;
@@ -93,6 +93,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   private dazeMark?: Phaser.GameObjects.Text;
   /** A berserker (content/gangi.ts BERSERKER): a blinking aura, hits faster, less life. */
   berserk = false;
+  /** Its own speed factor (a berserker runs faster). */
+  pace = 1;
   private aura?: Phaser.GameObjects.Sprite;
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
@@ -155,8 +157,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
   }
 
   /** Turns it into a berserker: less life and a blinking red aura behind it. */
-  makeBerserk(zycie: number, auraKolor: number, mrugMs: number) {
+  makeBerserk(zycie: number, auraKolor: number, mrugMs: number, predkosc = 1) {
     this.berserk = true;
+    this.pace = predkosc;
     this.hp = Math.max(1, Math.round(this.kind.hp * zycie)); // whole blows: 3 → 2 for an imp
     const a = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
     a.setOrigin(this.originX, this.originY).setTint(auraKolor).setTintMode(Phaser.TintModes.FILL);
@@ -230,7 +233,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
         return;
       }
       const v = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize();
-      const speed = this.kind.chaseSpeed * Slime.tempo * PREDKOSC_WROGOW;
+      const speed = this.kind.chaseSpeed * Slime.tempo * PREDKOSC_WROGOW * this.pace;
       this.vel.set(v.x * speed, v.y * speed);
       this.anims.timeScale = 2;
     } else if (now > this.nextThink) {
@@ -241,11 +244,11 @@ export class Slime extends Phaser.GameObjects.Sprite {
       } else if (Phaser.Math.Distance.Between(this.x, this.y, this.home.x, this.home.y) > this.roam) {
         // Wandered too far: head back home.
         const v = new Phaser.Math.Vector2(this.home.x - this.x, this.home.y - this.y).normalize();
-        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
+        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW * this.pace;
         this.vel.set(v.x * w, v.y * w);
       } else {
         const a = Math.random() * Math.PI * 2;
-        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW;
+        const w = this.kind.wanderSpeed * Slime.tempo * PREDKOSC_WROGOW * this.pace;
         this.vel.set(Math.cos(a) * w, Math.sin(a) * w);
       }
     }
