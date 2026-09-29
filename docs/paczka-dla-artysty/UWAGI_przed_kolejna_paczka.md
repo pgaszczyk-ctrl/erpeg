@@ -48,3 +48,9 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 ## Po paczce „świat 03a – podłoża”
 
 22. **Plac, park, las, woda, pole i zarośla przyjęte** – krawędzie idealne. W grze (zmniejszone 3×) wyglądają dobrze, nie są za drobne: zrzuty `5_zrzuty_z_gry/swiat_02_w_grze.png` (park, las, pole, zarośla) i `swiat_03a_woda.png`. Dalej wg `ZAMOWIENIE_03_duza_partia.md`, sekcja C (ściany + latarnia + komin).
+
+## Po paczce „świat 03c – ściany i ulica”
+
+23. **Ściany (tynk kremowy, cegła), latarnia gazowa i komin z parą przyjęte** – są w grze: ściany na frontach domów (niskie domy pokazują dolną część tekstury, jak ustaliliśmy), latarnie co ok. 30 m wzdłuż ulic (nocą świecą), kominy na co trzecim większym dachu. Zrzut: `5_zrzuty_z_gry/swiat_03c_sciany_latarnie.png`.
+24. Na mapie ściany są niskie (4–8 punktów), więc najlepiej działają **duże, wyraźne okna i kontrastowe fugi** – drobne detale znikają. Przy kolejnych materiałach (biały tynk, deski, kamień) można śmiało rysować grubiej.
+25. **Dalej:** sekcja D (drzewa, grzyb, kłoda, ławka, zegar, słup ogłoszeniowy, studzienka z parą), potem E (Luigi, Martin, woźnica…), potem reszta ścian z C.

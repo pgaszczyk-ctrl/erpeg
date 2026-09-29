@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
-import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW } from '../content/swiat';
+import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY } from '../content/swiat';
+import { MIESZKANCY } from '../content/mieszkancy';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -148,6 +149,47 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
       }
     }),
   };
+}
+
+/** An artist's object sheet (lamp, chimney) shrunk to map size, smoothed (null when there is no file). */
+function artSheet(scene: Phaser.Scene, file: string): HTMLCanvasElement | null {
+  const key = `swiat-${file}`;
+  if (!scene.textures.exists(key)) return null;
+  const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width / SKALA_PLIKOW);
+  c.height = Math.round(img.height / SKALA_PLIKOW);
+  const g = c.getContext('2d')!;
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+/** Is (x, y) inside the ring (even–odd rule)? */
+function pointIn(r: number[], x: number, y: number) {
+  let inside = false;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+    const xi = r[i], yi = r[i + 1], xj = r[j], yj = r[j + 1];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function night() {
+  const h = new Date().getHours();
+  const n = MIESZKANCY.noc;
+  return n.od > n.do ? h >= n.od || h < n.do : h >= n.od && h < n.do;
+}
+
+/** Signed area of a ring (> 0: its outward normal of edge (dx, dy) is (dy, −dx) in screen coordinates). */
+function ringArea(r: number[]) {
+  let a = 0;
+  for (let i = 0; i < r.length; i += 2) {
+    const j = (i + 2) % r.length;
+    a += r[i] * r[j + 1] - r[j] * r[i + 1];
+  }
+  return a / 2;
 }
 
 /** Where a roof texture sits on a building: turned to its longest wall, offset by its seed (cached per building). */
@@ -345,6 +387,11 @@ export class MapRenderer {
 
   /** Roof patterns from the artist's files (empty until they arrive). */
   private roofArt: (CanvasPattern | null)[] = [];
+  /** Front wall patterns per material (the window version, else the plain one). */
+  private wallArt: { pat: CanvasPattern; udzial: number }[] = [];
+  /** The artist's lamp and chimney sheets (shrunk to map size), when present. */
+  private lampArt: HTMLCanvasElement | null = null;
+  private chimneyArt: HTMLCanvasElement | null = null;
   private trackArt: CanvasPattern | null = null;
 
   /** The drawn patterns, with the artist's textures in place of those that have a file (content/swiat.ts). */
@@ -357,6 +404,12 @@ export class MapRenderer {
       else out[kind] = pat;
     }
     const made = new Map<string, CanvasPattern | null>();
+    for (const w of SCIANY) {
+      const pat = artPattern(this.scene, ctx, `${w.plik}_okno`) ?? artPattern(this.scene, ctx, `${w.plik}_gladka`);
+      if (pat) this.wallArt.push({ pat, udzial: w.udzial });
+    }
+    this.lampArt = artSheet(this.scene, LATARNIE.plik);
+    this.chimneyArt = artSheet(this.scene, KOMINY.plik);
     this.roofArt = DACHY_PLIKI.map((f) => {
       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
       return made.get(f)!;
@@ -447,6 +500,7 @@ export class MapRenderer {
     // Buildings, north to south so southern walls overlap northern roofs.
     buildings.sort((a, b) => a.y1 - b.y1);
     for (const b of buildings) this.paintBuilding(ctx, b);
+    if (this.lampArt) this.paintLamps(ctx, lines);
     clip = null;
   }
 
@@ -599,6 +653,9 @@ export class MapRenderer {
       ctx.fillStyle = special ? special.wall : s > h / 2 ? '#d9c9a3' : '#eadcb8';
       ctx.fill('evenodd');
     }
+    // The artist's front walls: on every wall of the outline that faces the viewer (south), the texture
+    // runs along the wall with its bottom on the ground; low buildings show only its lower part.
+    if (!special && this.wallArt.length) this.paintWalls(ctx, b, h);
     // Roof.
     ringsPath(ctx, b.rings);
     const art = this.roofArt[b.seed % ROOFS.length] ?? null;
@@ -614,5 +671,88 @@ export class MapRenderer {
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 2;
     ctx.stroke();
+    if (this.chimneyArt && !special) this.paintChimney(ctx, b);
+  }
+
+  private paintWalls(ctx: CanvasRenderingContext2D, b: Building, h: number) {
+    let pick = ((b.seed >>> 3) % 1000) / 1000;
+    let art = this.wallArt[0];
+    for (const w of this.wallArt) {
+      if (pick < w.udzial) { art = w; break; }
+      pick -= w.udzial;
+    }
+    const r = b.rings[0];
+    const out = ringArea(r) > 0 ? 1 : -1;
+    const tileH = 24 / SKALA_PLIKOW;
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const ax = r[i], ay = r[i + 1], dx = r[j] - ax, dy = r[j + 1] - ay;
+      const L = Math.hypot(dx, dy);
+      // Facing the viewer: the outward normal points down the screen.
+      if (L < 1 || out * -dx <= 0.2 * L) continue;
+      art.pat.setTransform(new DOMMatrix([dx / L, dy / L, 0, 1, ax, ay + h - tileH]));
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + dx, ay + dy);
+      ctx.lineTo(ax + dx, ay + dy + h);
+      ctx.lineTo(ax, ay + h);
+      ctx.closePath();
+      ctx.fillStyle = art.pat;
+      ctx.fill();
+      // Walls turned away from the light (to the right) a little darker.
+      if (dy < 0) {
+        ctx.fillStyle = 'rgba(30,20,40,0.12)';
+        ctx.fill();
+      }
+    }
+    // Keep the outline crisp over the texture.
+    ringsPath(ctx, b.rings, 0, h);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = OUTLINE;
+    ctx.stroke();
+  }
+
+  /** A chimney with steam on some roofs (every KOMINY.naIleDomow-th house big enough), inside the footprint. */
+  private paintChimney(ctx: CanvasRenderingContext2D, b: Building) {
+    const c = this.chimneyArt!;
+    if (b.seed % KOMINY.naIleDomow !== 0) return;
+    const w = b.x1 - b.x0, hgt = b.y1 - b.y0;
+    if (w * hgt < KOMINY.odM2 * PX_PER_M * PX_PER_M) return;
+    const r = b.rings[0];
+    // A spot a third of the way in from the upper left, if it is on the roof.
+    const x = b.x0 + w * (0.3 + ((b.seed >> 4) % 40) / 100), y = b.y0 + hgt * 0.4;
+    if (!pointIn(r, x, y)) return;
+    const fw = c.width / KOMINY.klatki;
+    const f = (b.seed >> 7) % KOMINY.klatki;
+    ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+  }
+
+  /** Gas lamps along the town streets, every LATARNIE.coM metres, alternating sides, lit at night. */
+  private paintLamps(ctx: CanvasRenderingContext2D, lines: Line[]) {
+    const c = this.lampArt!;
+    const fw = c.width / LATARNIE.klatki;
+    const f = night() && LATARNIE.klatki > 1 ? 1 : 0;
+    const step = LATARNIE.coM * PX_PER_M;
+    const m = this.map;
+    for (const l of lines) {
+      if (!LATARNIE.ulice.includes(l.kind) || l.bridge) continue;
+      let carry = step / 2 + (l.id % 7) * PX_PER_M;
+      let side = l.id % 2 ? 1 : -1;
+      for (let i = 0; i + 3 < l.pts.length; i += 2) {
+        const ax = l.pts[i], ay = l.pts[i + 1], dx = l.pts[i + 2] - ax, dy = l.pts[i + 3] - ay;
+        const L = Math.hypot(dx, dy);
+        if (L < 0.01) continue;
+        let t = carry;
+        while (t < L) {
+          const off = l.width / 2 + 2 * PX_PER_M;
+          const x = ax + (dx * t) / L + (-dy / L) * off * side;
+          const y = ay + (dy * t) / L + (dx / L) * off * side;
+          if (!m.buildingAt(x, y) && !m.buildingAt(x, y - 6)) ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+          side = -side;
+          t += step;
+        }
+        carry = t - L;
+      }
+    }
   }
 }
