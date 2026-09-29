@@ -3,7 +3,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { loadGear, saveGear, normalizeSlot } from './inventory';
+import { loadGear, saveGear, normalizeSlot, addEssence } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
@@ -64,10 +64,6 @@ export const session = {
   immortal: false,
   /** Healing potions (alchemist at petrol stations). */
   mikstury: 0,
-  /** Flasks of the stunning essence (alchemist, content/sklepy.ts ESENCJA). */
-  esencje: 0,
-  /** What is rubbed into the weapon now (the imbuement square) and for how many more blows. */
-  nasycenie: null as { id: 'oglusz'; left: number } | null,
   /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
   bezStrzalki: [] as string[],
   /** Own tents: nights left of each. */
@@ -181,8 +177,6 @@ export function startSession(r: LoginResult) {
   session.byl = Array.isArray(p.save.byl) ? p.save.byl.slice(-40) : [];
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
-  session.esencje = Math.max(0, p.save.esencje ?? 0);
-  session.nasycenie = p.save.nasycenie?.left ? { id: 'oglusz', left: p.save.nasycenie.left } : null;
   session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
   session.mapId = 'lublin';
@@ -192,6 +186,8 @@ export function startSession(r: LoginResult) {
   session.jazda = p.save.jazda ?? null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
+  // The test server's first essences were a count and a blow counter: now flasks in the backpack.
+  for (let i = 0; i < Math.min(20, p.save.esencje ?? 0); i++) addEssence('dab');
   session.exp = p.exp;
   session.hp = Math.max(1, Math.min(PLAYER.maxHp, p.save.hp ?? PLAYER.maxHp));
   session.missions = { ...(p.save.missions ?? {}) };
@@ -223,7 +219,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, esencje: session.esencje, nasycenie: session.nasycenie, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };

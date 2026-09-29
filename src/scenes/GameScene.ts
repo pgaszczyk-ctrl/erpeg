@@ -16,6 +16,7 @@ import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, mark
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
 import type { QuestLine } from '../ui/character';
+import { ESENCJE, type Esencja } from '../content/esencje';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
@@ -40,11 +41,11 @@ import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, ESENCJA, WARZYWA, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -180,6 +181,8 @@ interface Shot {
   left: number;
   damage: number;
   skill: 'luk' | 'magia';
+  /** The weapon it came from (its essence works on the hit). */
+  weapon: string;
 }
 
 type Challenge =
@@ -868,17 +871,9 @@ export class GameScene extends Phaser.Scene {
       if (s.isDead) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
-      else if (session.nasycenie?.id === 'oglusz') s.daze(now, ESENCJA.ogluszenieMs);
-    }
-    // The stunning essence on the blade wears off with each swing that lands.
-    const imb = session.nasycenie;
-    if (imb && this.enemies.length && hits) {
-      imb.left--;
-      if (imb.left <= 0) {
-        session.nasycenie = null;
-        this.toast(`${ESENCJA.ikona} Esencja ogłuszająca na broni się wyczerpała.`, 2200);
-      }
+      const imb = imbueOf(gear.equip.bron)?.e;
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
+      else this.essenceHit(imb, s, now);
     }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
@@ -2126,15 +2121,21 @@ export class GameScene extends Phaser.Scene {
   private openHotel(p: CityPlace) {
     const here = session.at && session.at.m === this.city.id && Math.hypot(session.at.x - p.door.x, session.at.y - p.door.y) < 4;
     const title = `🏨 ${p.name}`;
+    // In the hotel where the hero sleeps the chest (the same one as at home) is in the room.
+    const chest = here ? ['📦 Skrzynia w pokoju'] : [];
     if (session.coins < HOTEL_CENA) {
-      this.dialog({ title, text: `Nocleg kosztuje ${HOTEL_CENA} monet, a masz ${session.coins}. Recepcjonista kręci głową.`, buttons: ['OK'], onChoose: () => {} });
+      this.dialog({
+        title, text: `Nocleg kosztuje ${HOTEL_CENA} monet, a masz ${session.coins}. Recepcjonista kręci głową.`, buttons: [...chest, 'OK'],
+        onChoose: (i) => (chest.length && i === 0 ? this.openChest('w pokoju hotelowym') : undefined),
+      });
       return;
     }
     this.dialog({
       title,
-      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\nWyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.${here ? '\n\nTo twój obecny hotel.' : ''}`,
-      buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, 'Nie teraz'],
+      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\nWyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.${here ? '\n\nTo twój obecny hotel – w pokoju czeka twoja skrzynia.' : ''}`,
+      buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, ...chest, 'Nie teraz'],
       onChoose: (i) => {
+        if (chest.length && i === 1) return this.openChest('w pokoju hotelowym');
         if (i !== 0) return;
         spend(HOTEL_CENA);
         session.at = { m: this.city.id, x: p.door.x, y: p.door.y };
@@ -2368,16 +2369,20 @@ export class GameScene extends Phaser.Scene {
       text: `${hurt ? 'Odpocząłeś w domu – zdrowie w pełni!' : 'Dom, słodki dom.'}\n\nW skrzyni masz ${session.chest.coins} monet i ${session.chest.slots.filter(Boolean).length} rzeczy.`,
       buttons: ['📦 Otwórz skrzynię', 'Wyjdź'],
       onChoose: (i) => {
-        if (i !== 0) return;
-        this.scene.pause();
-        showChest(() => {
-          this.scene.resume();
-          consumeAttack();
-          this.gearChanged();
-          this.save();
-        });
+        if (i === 0) this.openChest();
       },
     });
+  }
+
+  /** The chest (home, or the room of the hotel the hero sleeps in). */
+  private openChest(where?: string) {
+    this.scene.pause();
+    showChest(() => {
+      this.scene.resume();
+      consumeAttack();
+      this.gearChanged();
+      this.save();
+    }, where);
   }
 
   /** A riddle with one try (fixed characters); answers are shuffled by `seed`. */
@@ -2549,7 +2554,7 @@ export class GameScene extends Phaser.Scene {
       .image(this.player.x, this.player.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
       .setRotation(Math.atan2(dir.y, dir.x))
       .setDepth(1_040_000);
-    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc, skill });
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc, skill, weapon: weapon.id });
   }
 
   private updateShots(dt: number) {
@@ -2573,7 +2578,9 @@ export class GameScene extends Phaser.Scene {
         if (foe) {
           done = true;
           this.practiced(shot.skill);
-          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, shot.damage)) this.onEnemyKilled(foe);
+          const imb = imbueOf(shot.weapon)?.e;
+          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, shot.damage * this.essenceBoost(imb, foe))) this.onEnemyKilled(foe);
+          else this.essenceHit(imb, foe, now);
         } else if (this.training.hitAt(sp.x, sp.y, 8, shot.skill)) {
           done = true;
           this.practiced(shot.skill);
@@ -2858,9 +2865,9 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title: `⚗️ Alchemik – ${p.name}`,
       text: `Na zapleczu stacji bulgocze kociołek. Alchemik mruczy: „Daj mi ${n} owoców albo grzybów, a uwarzę ci miksturę: wyleczy cię całego i przez ${ALCHEMIK.premiaMinut} minut da ci dodatkowe serduszko.”\n\nMasz ${have} owoców i ${session.mikstury} ${session.mikstury === 1 ? 'miksturę' : 'mikstur'}. Miksturę wypijesz przyciskiem 🧪 (klawisz H).`,
-      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, `${ESENCJA.ikona} ${ESENCJA.nazwa} (${ESENCJA.grzybow} grzybów, ${ESENCJA.drewna} drewna)`, 'Wyjdź'],
+      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, ...ESENCJE.map((e) => `${e.ikona} ${e.nazwa} (${this.recipeText(e)})`), 'Wyjdź'],
       onChoose: (i) => {
-        if (i === 1) return this.brewEssence();
+        if (i >= 1 && i <= ESENCJE.length) return this.brewEssence(ESENCJE[i - 1]);
         if (i !== 0) return;
         if (!eatInventoryFruit(n)) return this.toast(`Za mało owoców – potrzeba ${n}, masz ${have}.`, 2500);
         session.mikstury++;
@@ -2871,17 +2878,33 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** The stunning essence: mushrooms and wood → one flask, rubbed into the weapon from the character sheet. */
-  private brewEssence() {
-    const E = ESENCJA;
-    const g = groupCount('grzyby'), w = groupCount('drewno');
-    if (g < E.grzybow || w < E.drewna) return this.toast(`Alchemik kręci głową: „Potrzebuję ${E.grzybow} grzybów i ${E.drewna} drewna” (masz ${g} i ${w}).`, 3000);
-    takeGroup('grzyby', E.grzybow);
-    takeGroup('drewno', E.drewna);
-    session.esencje++;
-    this.toast(`${E.ikona} Masz flakonik esencji ogłuszającej! Wetrzyj go w broń: karta postaci → Ekwipunek → kwadrat obok broni.`, 4000);
+  private recipeText(e: Esencja) {
+    return (Object.entries(e.przepis) as [Grupa, number][]).map(([g, n]) => `${n} ${GRUPY[g].nazwa.toLowerCase()}`).join(', ');
+  }
+
+  /** An essence (content/esencje.ts): the alchemist brews a flask into the backpack from what the recipe asks. */
+  private brewEssence(e: Esencja) {
+    const need = Object.entries(e.przepis) as [Grupa, number][];
+    const short = need.filter(([g, n]) => groupCount(g) < n);
+    if (short.length) return this.toast(`Alchemik kręci głową: „Potrzebuję: ${this.recipeText(e)}” (masz ${need.map(([g]) => `${GRUPY[g].nazwa.toLowerCase()} ${groupCount(g)}`).join(', ')}).`, 3500);
+    if (gear.bag.length >= PLECAK.miejsc) return this.toast('Plecak pełny – nie ma gdzie schować flakonika.', 2500);
+    for (const [g, n] of need) takeGroup(g, n);
+    addEssence(e.id);
+    this.toast(`${e.ikona} ${e.nazwa} jest w plecaku. Przeciągnij ją na broń (karta postaci → Ekwipunek): działa ${e.minut} minut.`, 4000);
     this.emitHud();
     this.save();
+  }
+
+  /** How much harder a blow lands with the weapon's essence (frost on the creatures sensitive to it). */
+  private essenceBoost(e: Esencja | undefined, s: Enemy) {
+    return e?.wrazliwe?.includes(s.kindId) ? e.mnoznik ?? 1 : 1;
+  }
+
+  /** The essence's side effect on a creature that survived the blow: stunned (oak) or frozen (frost). */
+  private essenceHit(e: Esencja | undefined, s: Enemy, now: number) {
+    if (!e || s.isDead || Math.random() >= e.szansa) return;
+    if (e.efekt === 'oglusz') s.daze(now, e.ms);
+    else s.daze(now, e.ms, '❄️', 0x9be7ff);
   }
 
   /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
@@ -3155,15 +3178,6 @@ export class GameScene extends Phaser.Scene {
     const off = session.bezStrzalki;
     session.bezStrzalki = off.includes(id) ? off.filter((x) => x !== id) : [...off, id];
     this.emitHud();
-  }
-
-  /** Rubs a flask of the stunning essence into the weapon (the imbuement square). */
-  imbueWeapon(): boolean {
-    if (session.esencje <= 0) return false;
-    session.esencje--;
-    session.nasycenie = { id: 'oglusz', left: (session.nasycenie?.left ?? 0) + ESENCJA.ciosow };
-    this.toast(`${ESENCJA.ikona} Broń nasmarowana: przez ${session.nasycenie.left} trafnych ciosów potwory będą ogłuszone.`, 3000);
-    return true;
   }
 
   /** No room for another quest? Then says so. */

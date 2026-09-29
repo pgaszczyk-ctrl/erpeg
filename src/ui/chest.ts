@@ -1,16 +1,16 @@
-import { itemIcon } from './itemIcon';
-import { gear, item, goodsN, goodsLabel, mergeGoods, type Slot } from '../inventory';
+import { gear, goodsN, moveThing, type Slot, type Place } from '../inventory';
 import { PLECAK } from '../content/przedmioty';
-import { GRUPY } from '../content/sklepy';
-import { session, CHEST_SLOTS } from '../quests';
+import { session } from '../quests';
+import { slotCell, slotDrag, slotLabel } from './slots';
 
-// The chest at home: 10×10 slots and money. Things are moved between the chest
-// and the backpack by dragging (mouse or finger) or by a tap (goes to the
-// other side). Fruit stacks up to 99 per slot, like in the backpack.
+// The chest (at home, or at the hotel where the hero sleeps): the same grids as
+// the equipment page – the chest's 4×5 on top, the 4×5 backpack below – plus
+// money. Things move by dragging, or a tap sends one to the other side. Old
+// chests held 100 things: pages appear only when something lies beyond the
+// first 20 slots.
 
-const SLOT_ICON = { bron: '⚔️', dystans: '🏹', zbroja: '🦺', helm: '⛑️', buty: '🥾', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' } as const;
-
-type Side = 'chest' | 'bag';
+/** Chest slots shown at once (one page). */
+export const SKRZYNIA_NA_STRONE = 20;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, children: (Node | string)[] = []) {
   const e = Object.assign(document.createElement(tag), props);
@@ -18,32 +18,18 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   return e;
 }
 
-function icon(s: Slot): Node | string {
-  if ('goods' in s) return GRUPY[s.goods].ikona;
-  const p = item(s.item);
-  if (!p) return '?';
-  return itemIcon(p.id, 'item-ico ch-ico') ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
-}
-
-function label(s: Slot) {
-  if ('goods' in s) return goodsLabel(s);
-  const p = item(s.item);
-  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}` : s.item;
-}
-
-export function showChest(onClose: () => void) {
-  // The backpack as 5 fixed slots while the chest is open.
-  const bag: (Slot | null)[] = Array.from({ length: PLECAK.miejsc }, (_, i) => gear.bag[i] ?? null);
+export function showChest(onClose: () => void, where = 'w twoim domku') {
   const chest = session.chest.slots;
-  const sides: Record<Side, (Slot | null)[]> = { chest, bag };
+  let page = 0;
 
   const root = el('div', { id: 'chest', className: 'm-screen' });
   const box = el('div', { className: 'm-box ch-box' });
   root.append(box);
   document.body.append(root);
 
+  let dispose = () => {};
   const close = () => {
-    gear.bag = bag.filter((s): s is Slot => !!s);
+    dispose();
     root.remove();
     onClose();
   };
@@ -51,41 +37,27 @@ export function showChest(onClose: () => void) {
     if (e.target === root) close();
   };
 
-  /** Moves one slot's content onto another: fills, merges fruit or swaps. */
-  const move = (from: Side, i: number, to: Side, j: number) => {
-    const a = sides[from][i];
-    if (!a || (from === to && i === j)) return;
-    const b = sides[to][j];
-    if (!b) {
-      sides[to][j] = a;
-      sides[from][i] = null;
-    } else if ('goods' in a && 'goods' in b && a.goods === b.goods) {
-      mergeGoods(a, b);
-      if (!goodsN(a)) sides[from][i] = null;
-    } else {
-      sides[to][j] = a;
-      sides[from][i] = b;
-    }
-  };
-  /** A tap: to the other side, onto a matching fruit stack or the first free slot. */
-  const send = (from: Side, i: number) => {
-    const a = sides[from][i];
+  /** A tap: to the other side, onto a matching goods stack or the first free slot. */
+  const send = (at: Place) => {
+    if (at.zone === 'eq') return;
+    const from = at.zone;
+    const a = from === 'bag' ? gear.bag[at.i] : chest[at.i];
     if (!a) return;
-    const to: Side = from === 'chest' ? 'bag' : 'chest';
-    const list = sides[to];
+    const to: 'bag' | 'chest' = from === 'chest' ? 'bag' : 'chest';
+    const n = to === 'bag' ? PLECAK.miejsc : chest.length;
+    const at2 = (j: number): Slot | null => (to === 'bag' ? gear.bag[j] ?? null : chest[j]);
     if ('goods' in a) {
-      for (let j = 0; j < list.length && sides[from][i]; j++) {
-        const b = list[j];
-        if (b && 'goods' in b && b.goods === a.goods && goodsN(b) < PLECAK.owocowNaMiejsce) move(from, i, to, j);
+      for (let j = 0; j < n; j++) {
+        const b = at2(j);
+        if (b && 'goods' in b && b.goods === a.goods && goodsN(b) < PLECAK.owocowNaMiejsce) moveThing(at, { zone: to, i: j }, chest);
+        const still = from === 'bag' ? gear.bag[at.i] : chest[at.i];
+        if (!still || still !== a) return;
       }
-      if (!sides[from][i]) return;
     }
-    const free = list.findIndex((s) => !s);
-    if (free < 0) {
-      info.textContent = to === 'bag' ? 'Plecak pełny.' : 'Skrzynia pełna.';
-      return;
-    }
-    move(from, i, to, free);
+    let free = -1;
+    for (let j = 0; j < n && free < 0; j++) if (!at2(j)) free = j;
+    if (free < 0) return void (info.textContent = to === 'bag' ? 'Plecak pełny.' : 'Skrzynia pełna.');
+    moveThing(at, { zone: to, i: free }, chest);
   };
 
   const info = el('p', { className: 'ch-info' }, ['Przeciągnij albo stuknij rzecz, żeby ją przełożyć.']);
@@ -104,81 +76,45 @@ export function showChest(onClose: () => void) {
     render();
   };
   const btn = (text: string, fn: () => void, cls = 'c-btn') => el('button', { type: 'button', className: cls, onclick: fn }, [text]);
-  const chestGrid = el('div', { className: 'ch-grid' });
-  const bagGrid = el('div', { className: 'ch-grid ch-bag' });
-
-  const cell = (side: Side, i: number) => {
-    const s = sides[side][i];
-    const c = el('div', { className: `ch-cell${s ? '' : ' ch-empty'}` });
-    c.dataset.side = side;
-    c.dataset.i = String(i);
-    if (s) {
-      c.append(el('span', { className: 'ch-icon' }, [icon(s)]));
-      if ('goods' in s) c.append(el('span', { className: 'ch-n' }, [String(goodsN(s))]));
-      c.title = label(s);
-      c.onpointerdown = (e) => startDrag(e, side, i, c);
-    }
-    return c;
-  };
-
-  // Dragging with pointer events (works for mouse and fingers alike).
-  let drag: { side: Side; i: number; ghost: HTMLElement | null; x: number; y: number; id: number } | null = null;
-  const startDrag = (e: PointerEvent, side: Side, i: number, c: HTMLElement) => {
-    e.preventDefault();
-    drag = { side, i, ghost: null, x: e.clientX, y: e.clientY, id: e.pointerId };
-    info.textContent = label(sides[side][i]!);
-    c.setPointerCapture?.(e.pointerId);
-  };
-  const onMove = (e: PointerEvent) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    if (!drag.ghost && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
-      drag.ghost = el('div', { className: 'ch-ghost' }, [icon(sides[drag.side][drag.i]!)]);
-      document.body.append(drag.ghost);
-    }
-    if (drag.ghost) {
-      drag.ghost.style.left = `${e.clientX}px`;
-      drag.ghost.style.top = `${e.clientY}px`;
-    }
-  };
-  const onUp = (e: PointerEvent) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const d = drag;
-    drag = null;
-    if (d.ghost) {
-      d.ghost.remove();
-      const target = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('.ch-cell');
-      if (target?.dataset.side) move(d.side, d.i, target.dataset.side as Side, Number(target.dataset.i));
-    } else send(d.side, d.i);
-    render();
-  };
-  window.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onUp);
-  window.addEventListener('pointercancel', onUp);
-  const cleanup = new MutationObserver(() => {
-    if (root.isConnected) return;
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onUp);
-    cleanup.disconnect();
-  });
-  cleanup.observe(document.body, { childList: true });
+  const tabs = el('div', { className: 'c-tabs ch-pages' });
+  const chestGrid = el('div', { className: 'sl-grid sl-bag' });
+  const bagGrid = el('div', { className: 'sl-grid sl-bag' });
+  const wrap = el('div', { className: 'sl-wrap' }, [tabs, chestGrid, el('h3', {}, ['🎒 Plecak']), bagGrid]);
 
   const render = () => {
     coinsLine.textContent = `💰 W skrzyni: ${session.chest.coins}   Przy sobie: ${session.coins}`;
-    chestGrid.replaceChildren(...Array.from({ length: CHEST_SLOTS }, (_, i) => cell('chest', i)));
-    bagGrid.replaceChildren(...Array.from({ length: PLECAK.miejsc }, (_, i) => cell('bag', i)));
+    // Pages only when an old, bigger chest has things further on.
+    const pages = Math.max(1, Math.ceil((chest.reduce((last, s, i) => (s ? i : last), -1) + 1) / SKRZYNIA_NA_STRONE));
+    tabs.replaceChildren(...(pages > 1 ? Array.from({ length: pages }, (_, p) => btn(`Strona ${p + 1}`, () => {
+      page = p;
+      render();
+    }, `c-tab${p === page ? ' c-tab-on' : ''}`)) : []));
+    tabs.style.gridTemplateColumns = `repeat(${Math.min(pages, 5)}, 1fr)`;
+    const first = page * SKRZYNIA_NA_STRONE;
+    chestGrid.replaceChildren(...Array.from({ length: SKRZYNIA_NA_STRONE }, (_, k) => slotCell(chest[first + k] ?? null, { zone: 'chest', i: first + k })));
+    bagGrid.replaceChildren(...Array.from({ length: PLECAK.miejsc }, (_, i) => slotCell(gear.bag[i] ?? null, { zone: 'bag', i })));
   };
+  dispose = slotDrag(wrap, {
+    drop: (from, to) => {
+      const msg = moveThing(from, to, chest);
+      info.textContent = msg || 'Przeciągnij albo stuknij rzecz, żeby ją przełożyć.';
+      render();
+    },
+    tap: (at) => {
+      const s = at.zone === 'bag' ? gear.bag[at.i] : at.zone === 'chest' ? chest[at.i] : null;
+      if (s) info.textContent = slotLabel(s);
+      send(at);
+      render();
+    },
+  });
 
   box.append(
-    el('div', { className: 'c-head' }, [el('h2', {}, ['📦 Skrzynia']), el('div', { className: 'c-sub' }, ['w twoim domku']), btn('✕', close, 'c-close')]),
+    el('div', { className: 'c-head' }, [el('h2', {}, ['📦 Skrzynia']), el('div', { className: 'c-sub' }, [where]), btn('✕', close, 'c-close')]),
     coinsLine,
-    el('div', { className: 'ch-money' }, [amount, btn('Włóż', () => money(1)), btn('Wyjmij', () => money(-1)), btn('Włóż wszystko', () => money(1, true), 'c-btn c-muted')]),
+    el('div', { className: 'ch-money' }, [amount, btn('Włóż', () => money(1)), btn('Wyjmij', () => money(-1)), btn('Wszystko', () => money(1, true), 'c-btn c-muted')]),
     moneyMsg,
-    chestGrid,
-    el('h3', {}, ['Plecak']),
-    bagGrid,
+    wrap,
     info,
-    btn('Zamknij skrzynię', close, 'm-btn m-primary'),
   );
   render();
 }

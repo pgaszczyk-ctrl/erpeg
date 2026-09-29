@@ -43,8 +43,10 @@ export interface SaveData {
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;
+  /** Old test-server essence count (now flasks in the backpack). */
   esencje?: number;
-  nasycenie?: { id: 'oglusz'; left: number } | null;
+  /** Imbued weapons (inventory.ts gear.imbue). */
+  nasycenia?: Record<string, { e: string; until: number }>;
   bezStrzalki?: string[];
   /** Diamonds (premium currency, content/sklepy.ts DIAMENT). */
   diamenty?: number;

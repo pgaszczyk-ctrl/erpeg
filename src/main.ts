@@ -1,3 +1,4 @@
+import { gear } from './inventory';
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
@@ -69,3 +70,4 @@ setInterval(() => {
 // Handy for debugging from the browser console.
 (window as unknown as { __game: Phaser.Game }).__game = game;
 (window as unknown as { __session: typeof session }).__session = session;
+(window as unknown as { __gear: typeof gear }).__gear = gear;

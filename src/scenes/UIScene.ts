@@ -700,7 +700,7 @@ export class UIScene extends Phaser.Scene {
     touchInput.attack = false;
     toggleCharacter({
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
-      quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id), imbue: () => game.imbueWeapon(),
+      quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
   }

@@ -1,9 +1,9 @@
-import { itemIcon } from './itemIcon';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce } from '../content/przedmioty';
-import { GRUPY, LECZENIE_OWOCAMI, ESENCJA } from '../content/sklepy';
+import { LECZENIE_OWOCAMI } from '../content/sklepy';
+import { slotCell, slotDrag, slotLabel } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, goodsN, goodsLabel, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag,
+  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf,
 } from '../inventory';
 import { session } from '../quests';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
@@ -36,8 +36,10 @@ function skinPicker(changed: () => void) {
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'postac' | 'ekwipunek' | 'plecak' | 'zadania';
-const PAGES: [Page, string][] = [['postac', '👤 Postać'], ['ekwipunek', '🛡 Ekwipunek'], ['plecak', '🎒 Plecak'], ['zadania', '📜 Zadania']];
+type Page = 'postac' | 'ekwipunek' | 'zadania';
+const PAGES: [Page, string][] = [['postac', '👤 Postać'], ['ekwipunek', '🎒 Ekwipunek'], ['zadania', '📜 Zadania']];
+/** Removes the drag listeners of the equipment page. */
+let dispose: (() => void) | null = null;
 /** The page shown last (the sheet opens there again). */
 let page: Page = 'postac';
 
@@ -46,6 +48,8 @@ export function isCharacterOpen() {
 }
 
 export function closeCharacter() {
+  dispose?.();
+  dispose = null;
   open?.remove();
   open = null;
 }
@@ -79,7 +83,6 @@ export interface CharacterHost {
   eat: () => number | null;
   quests: () => QuestLine[];
   toggleArrow: (id: string) => void;
-  imbue: () => boolean;
   tent?: TentAction;
 }
 
@@ -95,8 +98,6 @@ function el(tag: string, cls = '', text = '') {
   return e;
 }
 
-const EMPTY_PIC: Record<Miejsce, string> = { bron: 'zelazny', dystans: 'luk', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
-const ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🏹', zbroja: '🦺', helm: '⛑', buty: '🥾', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' };
 
 function show(host: CharacterHost) {
   let hp = host.hp;
@@ -203,71 +204,51 @@ function show(host: CharacterHost) {
       ['⚔ Pokonani wojownicy', String(session.stats.duels ?? 0)],
       ['🏆 Rozbite gangi', String(session.stats.gangs ?? 0)],
       ['🧪 Mikstury lecznicze', String(session.mikstury)],
-      [`${ESENCJA.ikona} Esencje ogłuszające`, String(session.esencje)],
       ['⛺ Namioty', session.namioty.length ? session.namioty.map((t) => `${t.left}/${t.max}`).join(', ') + ' nocy' : 'brak (sklep budowlany lub sportowy)'],
       ...(session.kamienie ? [['🔮 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
       ...(session.diamenty ? [['💎 Diamenty', String(session.diamenty)] as [string, string]] : []),
     ]));
   };
 
-  const slotCell = (m: Miejsce) => {
-    const it = item(gear.equip[m]);
-    const cell = el('button', `c-xcell c-x-${m}${it ? '' : ' c-empty'}`) as HTMLButtonElement;
-    // Empty slot: a greyed picture of what goes there.
-    cell.append((it ? itemIcon(it.id) : itemIcon(EMPTY_PIC[m], 'item-ico item-ghost')) || el('span', 'c-xicon', ICON[m]), el('span', 'c-xname', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa}` : MIEJSCA[m]));
-    if (it && !TALIZMANY.includes(m)) cell.append(el('span', 'c-xpow', `${m === 'bron' || m === 'dystans' ? 'atak' : 'obrona'} ${it.moc}`));
-    cell.title = it?.opis ?? MIEJSCA[m];
-    cell.onclick = () => {
-      if (!it) return ask(TALIZMANY.includes(m) ? 'Miejsce na talizman. Talizmany zdobywa się w zadaniach i za tajne hasła.' : `${MIEJSCA[m]}: pusto.`, []);
-      const info = it.opis ? `${it.nazwa}: ${it.opis}` : it.nazwa;
-      if (it.id === 'kijek') return ask(info, []);
-      ask(info, [['Zdejmij do plecaka', () => (unequip(m) ? undefined : (alertFull(), false))]]);
-    };
-    return cell;
-  };
-
   const pageEkwipunek = () => {
-    // A cross of slots: helmet on top, weapon – armour – second weapon, boots below; the imbuement square left of the weapon.
-    const eq = el('div', 'c-cross');
-    for (const m of ['helm', 'bron', 'zbroja', 'dystans', 'buty'] as Miejsce[]) eq.append(slotCell(m));
-    const imb = session.nasycenie;
-    const nas = el('button', `c-xcell c-x-nas${imb ? '' : ' c-empty'}`) as HTMLButtonElement;
-    nas.append(el('span', 'c-xicon', imb ? ESENCJA.ikona : '💧'), el('span', 'c-xname', imb ? `${ESENCJA.nazwa}` : 'Nasycenie broni'));
-    if (imb) nas.append(el('span', 'c-xpow', `${imb.left} ciosów`));
-    nas.onclick = () => {
-      const about = `Wetrzyj w broń esencję ogłuszającą: przez ${ESENCJA.ciosow} trafnych ciosów każdy trafiony potwór stoi ogłuszony i nie może uderzyć.`;
-      if (session.esencje > 0) ask(`${about} Masz ${session.esencje} ${session.esencje === 1 ? 'flakonik' : 'flakoniki'}.${imb ? ` Teraz na broni: ${imb.left} ciosów (dojdzie ${ESENCJA.ciosow}).` : ''}`, [[`${ESENCJA.ikona} Wetrzyj esencję`, () => host.imbue()]]);
-      else ask(`${imb ? `Na broni: ${ESENCJA.nazwa}, jeszcze ${imb.left} ciosów. ` : ''}${about} Flakonik uwarzy alchemik na stacji benzynowej z ${ESENCJA.grzybow} grzybów i ${ESENCJA.drewna} drewna.`, []);
-    };
-    eq.append(nas);
-    box.append(eq);
-    box.append(el('h3', '', 'Talizmany'));
-    const tal = el('div', 'c-talismans');
-    for (const m of TALIZMANY) tal.append(slotCell(m));
-    box.append(tal, actions);
-  };
-
-  const pagePlecak = () => {
-    box.append(el('div', 'c-note', `Zajęte ${gear.bag.length} z ${PLECAK.miejsc} miejsc. Stuknij rzecz, żeby ją założyć albo wyrzucić.`));
-    const bag = el('div', 'c-bag');
-    for (let i = 0; i < PLECAK.miejsc; i++) {
-      const s = gear.bag[i];
-      const cell = el('button', 'c-cell') as HTMLButtonElement;
-      if (!s) cell.classList.add('c-empty');
-      else if ('goods' in s) {
-        cell.append(el('span', 'c-icon', GRUPY[s.goods].ikona), el('span', 'c-n', `×${goodsN(s)}`));
-        cell.onclick = () => ask(`${goodsLabel(s)} – sprzedasz w sklepie${s.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
-      } else {
-        const it = item(s.item)!;
-        const pic = itemIcon(it.id);
-        if (pic) cell.append(pic);
-        else cell.append(el('span', 'c-name', `${it.efekt ? '✨ ' : ''}${it.nazwa}`));
-        cell.title = it.nazwa;
-        cell.onclick = () => ask(it.opis ? `${it.nazwa}: ${it.opis}` : it.nazwa, [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
-      }
-      bag.append(cell);
+    // The owner's drawing: amulet – weapon – second hand on the left, helmet – armour – boots in the middle, three talismans on the right; the 4×5 backpack below.
+    const eq = el('div', 'sl-grid sl-eq');
+    for (const m of ['amulet', 'helm', 'talizman', 'bron', 'zbroja', 'talizman2', 'dystans', 'buty', 'talizman3'] as Miejsce[]) {
+      const id = gear.equip[m];
+      eq.append(slotCell(id ? { item: id } : null, { zone: 'eq', m }, TALIZMANY.includes(m) ? 'sl-tal' : ''));
     }
-    box.append(bag, actions);
+    const bag = el('div', 'sl-grid sl-bag');
+    for (let i = 0; i < PLECAK.miejsc; i++) bag.append(slotCell(gear.bag[i] ?? null, { zone: 'bag', i }));
+    const note = el('div', 'c-note', `Plecak: ${gear.bag.length}/${PLECAK.miejsc}. Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.`);
+    const wrap = el('div', 'sl-wrap');
+    wrap.append(eq, bag);
+    box.append(wrap, actions, note);
+    dispose?.();
+    dispose = slotDrag(wrap, {
+      drop: (from, to) => {
+        const msg = moveThing(from, to);
+        onChange();
+        render();
+        if (msg) actions.replaceChildren(el('div', 'c-actions-title', msg));
+      },
+      tap: (at) => {
+        if (at.zone === 'eq') {
+          const it = item(gear.equip[at.m]);
+          if (!it) return ask(TALIZMANY.includes(at.m) ? 'Miejsce na talizman: przeciągnij tu talizman z plecaka, wtedy działa.' : `${MIEJSCA[at.m]}: pusto.`, []);
+          const imb = imbueOf(it.id);
+          const info = `${it.nazwa}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}`;
+          if (it.id === 'kijek') return ask(info, []);
+          return ask(info, [['Zdejmij do plecaka', () => (unequip(at.m) ? undefined : (alertFull(), false))]]);
+        }
+        if (at.zone !== 'bag') return;
+        const i = at.i;
+        const sl = gear.bag[i];
+        if (!sl) return;
+        if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
+        if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
+        ask(slotLabel(sl), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+      },
+    });
   };
 
   const pageZadania = () => {
@@ -320,7 +301,6 @@ function show(host: CharacterHost) {
     box.append(tabs);
     if (page === 'postac') pagePostac();
     else if (page === 'ekwipunek') pageEkwipunek();
-    else if (page === 'plecak') pagePlecak();
     else pageZadania();
   };
 

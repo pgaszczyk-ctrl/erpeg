@@ -167,14 +167,22 @@ export class Slime extends Phaser.GameObjects.Sprite {
   }
 
   /** Dazed: stands still for `ms` with little stars over its head. */
-  daze(now: number, ms: number) {
+  daze(now: number, ms: number, mark = '💫', tint?: number) {
     if (this.heavy || this.kindId === 'smok' || this.isDead) return;
     this.dazedUntil = Math.max(this.dazedUntil, now + ms);
     this.stunnedUntil = Math.max(this.stunnedUntil, now + ms);
-    if (!this.dazeMark) {
-      const t = this.scene.add.text(this.x, this.y, '💫', { fontSize: '6px' }).setOrigin(0.5, 1).setResolution(4);
-      this.dazeMark = t;
-      this.once('destroy', () => t.destroy());
+    this.dazeMark?.destroy();
+    const t = this.scene.add.text(this.x, this.y, mark, { fontSize: '6px' }).setOrigin(0.5, 1).setResolution(4);
+    this.dazeMark = t;
+    this.once('destroy', () => t.destroy());
+    // Frozen: icy blue until it thaws (the white hit flash comes first).
+    if (tint != null) {
+      this.scene.time.delayedCall(100, () => this.active && !this.isDead && this.setTint(tint));
+      this.scene.time.delayedCall(ms, () => {
+        if (!this.active) return;
+        this.clearTint();
+        if (this.kind.tint) this.setTint(this.kind.tint);
+      });
     }
   }
 

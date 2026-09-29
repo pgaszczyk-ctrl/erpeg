@@ -208,7 +208,7 @@ function playerCard(p: Player) {
   const skills = Object.entries(p.skills ?? {}).map(([k, v]) => `${UMIEJETNOSCI[k as Umiejetnosc]?.nazwa ?? k}: poz. ${skillLevel(v)} (${v} pkt)`).join(', ') || '—';
   const slotText = (raw: unknown) => {
     const s = normalizeSlot(raw);
-    return !s ? '' : 'item' in s ? itemName(s.item) : goodsLabel(s);
+    return !s ? '' : 'item' in s ? itemName(s.item) : 'esencja' in s ? `esencja ${s.esencja}` : goodsLabel(s);
   };
   const bag = (p.bag ?? []).map(slotText).filter(Boolean).join(', ') || 'pusty';
   const done = Object.entries(p.missions ?? {}).filter(([, v]) => v === 'done').length;

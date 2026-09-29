@@ -25,7 +25,7 @@
       /* Character sheet */
       #character { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0.7); font-family: ui-monospace, Menlo, Consolas, monospace; color: #fff; padding: 12px; box-sizing: border-box; }
-      .c-box { width: 100%; max-width: 420px; max-height: 100%; overflow-y: auto; background: #1e1a24; border: 3px solid #f7c531;
+      .c-box { width: 100%; max-width: 420px; height: min(100%, 720px); overflow-y: auto; background: #1e1a24; border: 3px solid #f7c531;
         border-radius: 6px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
       .c-head { display: flex; align-items: baseline; gap: 10px; }
       .c-head h2 { margin: 0; color: #f7c531; font-size: 22px; }
@@ -141,10 +141,34 @@
       .m-ghost { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -70%); animation: m-float 2.4s ease-in-out infinite;
         filter: drop-shadow(0 0 8px rgba(220,220,255,0.9)); }
       @keyframes m-float { 0%, 100% { transform: translate(-50%, -70%); } 50% { transform: translate(-50%, -95%); } }
-      .ch-box { max-width: 460px; gap: 8px; touch-action: none; }
+      .ch-box { max-width: 420px; gap: 6px; touch-action: none; }
+      /* Item grids (ui/slots.ts): equipment 3×3, backpack and chest 4×5, all the same cell size. */
+      .sl-wrap { --sl: min(56px, 13vw, calc((100vh - 250px) / 8.8)); display: flex; flex-direction: column; align-items: center; gap: 10px; touch-action: none; }
+      #chest .sl-wrap { --sl: min(50px, 12vw, calc((100vh - 300px) / 10.6)); gap: 4px; }
+      #chest .sl-wrap h3 { margin: 4px 0 0; font-size: 14px; color: #f7c531; align-self: flex-start; }
+      .sl-grid { display: grid; gap: 5px; }
+      .sl-eq { grid-template-columns: repeat(3, var(--sl)); }
+      .sl-bag { grid-template-columns: repeat(4, var(--sl)); }
+      .sl-cell { position: relative; width: var(--sl); height: var(--sl); box-sizing: border-box; background: #0f0d13; border: 2px solid #f7c531; border-radius: 5px;
+        display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: grab; }
+      .sl-bag .sl-cell { border-color: #6a6a78; }
+      .sl-cell.sl-empty { border-style: dashed; border-color: #4a4a55; cursor: default; }
+      .sl-tal { border-color: #4fc3f7; } .sl-tal.sl-empty { border-color: #2f6d8a; }
+      .sl-pic { font-size: calc(var(--sl) * 0.46); line-height: 1; pointer-events: none; display: flex; }
+      .sl-ico { width: calc(var(--sl) * 0.66); height: calc(var(--sl) * 0.66); }
+      .sl-ghost { opacity: 0.45; filter: grayscale(1); }
+      .sl-cell[data-full] .sl-tag { display: none; }
+      .sl-tag { position: absolute; left: 0; right: 0; bottom: 1px; font-size: 8px; text-align: center; color: #9aa39a; pointer-events: none; line-height: 1; }
+      .sl-n { position: absolute; right: 2px; bottom: 1px; font-size: 11px; color: #fff; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+      .sl-flask { position: absolute; left: 1px; top: 0; font-size: 10px; pointer-events: none; }
+      .sl-imb { position: absolute; right: -4px; top: -4px; font-size: 9px; background: #0f0d13; border: 2px solid; border-radius: 8px; padding: 0 2px; line-height: 1.2; pointer-events: none; }
+      .sl-lifted { opacity: 0.35; }
+      .sl-drag { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -60%); filter: drop-shadow(0 2px 3px #000); --sl: 56px; }
       .ch-coins { font-size: 15px; color: #fff2a8; }
-      .ch-money { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-      .ch-amount { width: 90px; padding: 7px; font-size: 15px; }
+      .ch-money { display: flex; gap: 5px; flex-wrap: nowrap; align-items: center; }
+      .ch-amount { width: 70px; padding: 6px; font-size: 14px; }
+      .ch-money .c-btn { padding: 6px 9px; font-size: 13px; }
+      .ch-box .ch-info { min-height: 0; margin: 0; }
       .ch-msg { color: #ff8a8a; font-size: 13px; min-height: 1em; }
       .ch-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
       .ch-bag { grid-template-columns: repeat(8, 1fr); max-width: 370px; }

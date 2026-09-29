@@ -3,6 +3,7 @@ import {
   PODKOWA, TALIZMANY, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
+import { esencja } from './content/esencje';
 
 // The character's things: equipped items, a 5-slot backpack, skill practice
 // and whether they learned magic. Fruit, vegetables, mushrooms and wood lie in
@@ -10,7 +11,9 @@ import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 // many of each kind is kept only for selling (the prices differ).
 
 export type Goods = { goods: Grupa; counts: Partial<Record<Owoc, number>> };
-export type Slot = { item: string } | Goods;
+/** An essence flask (content/esencje.ts): dragged onto a weapon it imbues it for a while. */
+export type Flask = { esencja: string };
+export type Slot = { item: string } | Goods | Flask;
 
 /** How many things are in a goods slot. */
 export function goodsN(s: Goods) {
@@ -19,8 +22,9 @@ export function goodsN(s: Goods) {
 
 /** A slot from an old save ({ fruit, n }) or a new one. */
 export function normalizeSlot(s: unknown): Slot | null {
-  const o = s as { item?: string; fruit?: Owoc; n?: number; goods?: Grupa; counts?: Goods['counts'] } | null;
+  const o = s as { item?: string; fruit?: Owoc; n?: number; goods?: Grupa; counts?: Goods['counts']; esencja?: string } | null;
   if (!o) return null;
+  if (o.esencja) return esencja(o.esencja) ? { esencja: o.esencja } : null;
   if (o.item) return item(o.item) ? { item: o.item } : null;
   if (o.goods && GRUPY[o.goods]) return { goods: o.goods, counts: { ...o.counts } };
   if (o.fruit && OWOCE[o.fruit] && o.n) return { goods: OWOCE[o.fruit].grupa, counts: { [o.fruit]: o.n } };
@@ -50,16 +54,19 @@ export interface Gear {
   bag: Slot[];
   skills: Record<Umiejetnosc, number>;
   magic: boolean;
+  /** Imbued weapons: item id → essence and until when (Date.now ms). */
+  imbue: Record<string, { e: string; until: number }>;
 }
 
 export const gear: Gear = freshGear();
 
 export function freshGear(): Gear {
   return {
-    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null, talizman: null, talizman2: null, talizman3: null },
+    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null, amulet: null, talizman: null, talizman2: null, talizman3: null },
     bag: [],
     skills: { miecz: 0, luk: 0, magia: 0 },
     magic: false,
+    imbue: {},
   };
 }
 
@@ -69,7 +76,7 @@ export function item(id: string | null | undefined): Przedmiot | undefined {
 
 /** Loads gear from a save, converting saves from before the backpack. */
 export function loadGear(save: {
-  equip?: Gear['equip']; bag?: Slot[]; skills?: Gear['skills']; magic?: boolean;
+  equip?: Gear['equip']; bag?: Slot[]; skills?: Gear['skills']; magic?: boolean; nasycenia?: Gear['imbue'];
   sword?: string; swordSkill?: number; fruits?: Partial<Record<Owoc, number>>;
 }) {
   const g = freshGear();
@@ -80,20 +87,21 @@ export function loadGear(save: {
   for (const raw of save.bag ?? []) {
     const s = normalizeSlot(raw);
     if (!s) continue;
-    if ('item' in s) g.bag.push(s);
-    else old.push(s);
+    if ('goods' in s) old.push(s);
+    else g.bag.push(s);
   }
   g.bag = g.bag.slice(0, PLECAK.miejsc);
   if (save.skills) Object.assign(g.skills, save.skills);
   else if (save.swordSkill) g.skills.miecz = pointsForLevel(1 + save.swordSkill * 2); // old school levels
   g.magic = !!save.magic;
+  for (const [id, v] of Object.entries(save.nasycenia ?? {})) if (v && esencja(v.e) && v.until > Date.now()) g.imbue[id] = { e: v.e, until: v.until };
   Object.assign(gear, g);
   for (const s of old) for (const [f, n] of Object.entries(s.counts) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
   for (const [f, n] of Object.entries(save.fruits ?? {}) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
 }
 
 export function saveGear() {
-  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic };
+  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic, nasycenia: gear.imbue };
 }
 
 // ---------------------------------------------------------------- skills
@@ -190,6 +198,11 @@ export function owns(id: string) {
 export function addItem(id: string): 'equipped' | 'bag' | false {
   const p = item(id);
   if (!p) return false;
+  // Talismans always go into the backpack first: they work once dragged onto a talisman place.
+  if (TALIZMANY.includes(p.miejsce) && gear.bag.length < PLECAK.miejsc) {
+    gear.bag.push({ item: id });
+    return 'bag';
+  }
   const m = slotFor(p.miejsce);
   if (!gear.equip[m] || gear.equip[m] === 'kijek') {
     // A stick is not worth keeping when a real weapon comes along.
@@ -323,4 +336,105 @@ export function sellGroup(g: Grupa) {
   const v = groupValue(g);
   gear.bag = gear.bag.filter((s) => !('goods' in s) || s.goods !== g);
   return v;
+}
+
+// ---------------------------------------------------------------- essences and moving things around
+
+/** Puts an essence flask into the backpack; false if it is full. */
+export function addEssence(id: string): boolean {
+  if (gear.bag.length >= PLECAK.miejsc) return false;
+  gear.bag.push({ esencja: id });
+  return true;
+}
+
+/** The essence working on that weapon now, with minutes left. */
+export function imbueOf(id: string | null | undefined) {
+  const v = id ? gear.imbue[id] : undefined;
+  if (!v) return null;
+  const left = v.until - Date.now();
+  if (left <= 0) {
+    delete gear.imbue[id!];
+    return null;
+  }
+  const e = esencja(v.e);
+  return e ? { e, minutes: Math.ceil(left / 60_000) } : null;
+}
+
+/** Can things of this kind be imbued (weapons in hand or the second hand)? */
+export function canImbue(id: string | null | undefined) {
+  const p = item(id);
+  return !!p && (p.miejsce === 'bron' || p.miejsce === 'dystans');
+}
+
+/** Can this item be worn in that place? */
+export function fits(id: string, m: Miejsce) {
+  const p = item(id);
+  if (!p) return false;
+  return TALIZMANY.includes(p.miejsce) ? TALIZMANY.includes(m) : p.miejsce === m;
+}
+
+/** A place in the equipment, the backpack or the chest (grids in the character sheet and the chest). */
+export type Place = { zone: 'eq'; m: Miejsce } | { zone: 'bag' | 'chest'; i: number };
+
+/**
+ * Drags the thing at `from` onto `to`: puts it on (if it fits), takes it off,
+ * swaps, merges goods, or rubs an essence into a weapon. `chest` is the chest's
+ * slots when it is open. Returns a message for the player ('' = done quietly).
+ */
+export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): string {
+  const bag: (Slot | null)[] = Array.from({ length: PLECAK.miejsc }, (_, i) => gear.bag[i] ?? null);
+  const list = (z: 'bag' | 'chest') => (z === 'bag' ? bag : chest!);
+  const get = (p: Place): Slot | null => {
+    if (p.zone === 'eq') {
+      const id = gear.equip[p.m];
+      return id && id !== 'kijek' ? { item: id } : null;
+    }
+    return list(p.zone)[p.i] ?? null;
+  };
+  const put = (p: Place, s: Slot | null) => {
+    if (p.zone === 'eq') gear.equip[p.m] = s && 'item' in s ? s.item : p.m === 'bron' ? 'kijek' : null;
+    else list(p.zone)[p.i] = s;
+  };
+  const done = (msg = '') => {
+    gear.bag = bag.filter((s): s is Slot => !!s);
+    return msg;
+  };
+  const a = get(from);
+  if (!a || (from.zone === to.zone && (from.zone === 'eq' ? from.m === (to as { m: Miejsce }).m : from.i === (to as { i: number }).i))) return '';
+  // An essence onto a weapon: the weapon is imbued, the flask is used up.
+  const targetId = to.zone === 'eq' ? gear.equip[to.m] : ((b) => (b && 'item' in b ? b.item : null))(get(to));
+  if ('esencja' in a && (to.zone === 'eq' || (targetId && canImbue(targetId)))) {
+    if (!targetId || !canImbue(targetId)) return 'Esencję przeciągnij na broń.';
+    const e = esencja(a.esencja)!;
+    gear.imbue[targetId] = { e: e.id, until: Date.now() + e.minut * 60_000 };
+    put(from, null);
+    return done(`${e.ikona} ${item(targetId)!.nazwa}: ${e.nazwa} działa przez ${e.minut} minut.`);
+  }
+  const b = get(to);
+  if (to.zone === 'eq') {
+    if (!('item' in a) || !fits(a.item, to.m)) return 'To tu nie pasuje.';
+    if (from.zone === 'eq') {
+      put(to, a);
+      put(from, b);
+      return done();
+    }
+    put(to, a);
+    put(from, b);
+    return done();
+  }
+  if (from.zone === 'eq') {
+    // Taking something off: onto an empty cell, or swapping with a thing that fits there.
+    if (b && !('item' in b && fits(b.item, from.m))) return 'Połóż to na wolnym miejscu.';
+    put(to, a);
+    put(from, b);
+    return done();
+  }
+  if (b && 'goods' in a && 'goods' in b && a.goods === b.goods) {
+    mergeGoods(a, b);
+    if (!goodsN(a)) put(from, null);
+    return done();
+  }
+  put(to, a);
+  put(from, b);
+  return done();
 }
