@@ -12,7 +12,7 @@ import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
-import { Explored, FogView, visionPolygon, pointInPolygon, markBuilding } from '../map/Fog';
+import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
 import { LUP_HERSZTA } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, type RodzajWroga, type Misja } from '../content/fabula';
 import { askText } from '../ui/prompt';
@@ -28,6 +28,7 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
+import { WIDOK } from '../content/trudnosc';
 import { KAMIEN_MOCY, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY } from '../content/swiat';
@@ -762,6 +763,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Recomputes what the hero sees and hides whatever is outside of it. */
+  /**
+   * The cone by difficulty (`widok`): its angle, and on "ekran" levels a reach to the screen's edge
+   * (half its diagonal, at least WIDOK.ekranMin× the old range, at most WIDOK.maks px).
+   */
+  private viewCone() {
+    const w = session.level.widok ?? { stopnie: 116, ekran: false };
+    const v = this.cameras.main.worldView;
+    const edge = Math.hypot(v.width, v.height) / 2;
+    const range = w.ekran ? Math.min(WIDOK.maks, Math.max(BASE_VIEW_RANGE * WIDOK.ekranMin, edge)) : BASE_VIEW_RANGE;
+    return { half: (w.stopnie / 2) * (Math.PI / 180), range };
+  }
+
   private updateFog() {
     const p = this.player;
     const a = Math.atan2(p.facing.y, p.facing.x);
@@ -769,7 +782,7 @@ export class GameScene extends Phaser.Scene {
     // (written as !(<=) so the first frame, with NaN, always computes)
     if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
       this.seenNow = new Set();
-      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow, session.level.tyl);
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow, session.level.tyl, this.viewCone());
       for (const b of this.seenNow) {
         if (this.seenEver.has(b)) continue;
         this.seenEver.add(b);

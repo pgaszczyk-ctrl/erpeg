@@ -16,7 +16,7 @@ import { SKALA_PLIKOW } from '../content/swiat';
 export const FOG_CELL = 4; // world px
 const CHUNK_CELLS = 64;
 
-const BASE_VIEW_RANGE = 125; // px, in the looking direction
+export const BASE_VIEW_RANGE = 125; // px, in the looking direction (the old default; see WIDOK in content/trudnosc.ts)
 const BASE_NEAR_RANGE = 22; // px, all around
 const CONE_HALF = (58 * Math.PI) / 180;
 const RAY_STEP_DEG = 2;
@@ -108,8 +108,13 @@ export class Explored {
  * Visible area as a polygon (flat x,y list) seen from (x, y) looking at `angle`.
  * `light` scales how far one sees (e.g. a glowing sword), `back` only around and behind.
  */
-export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1, seen?: Set<Building>, back = 1) {
-  const VIEW_RANGE = BASE_VIEW_RANGE * light;
+/**
+ * The field of view: a cone of `view.half` radians each side of `angle`, reaching `view.range` px
+ * (by difficulty, content/trudnosc.ts `widok`; later goggles may widen it), and a small circle all around.
+ */
+export function visionPolygon(city: CityMap, explored: Explored, x: number, y: number, angle: number, light = 1, seen?: Set<Building>, back = 1, view: { half: number; range: number } = { half: CONE_HALF, range: BASE_VIEW_RANGE }) {
+  const half = view.half;
+  const VIEW_RANGE = view.range * light;
   // `back`: how much further one sees around and behind (easier levels).
   const NEAR_RANGE = BASE_NEAR_RANGE * light * back;
   const pts: number[] = [];
@@ -117,7 +122,7 @@ export function visionPolygon(city: CityMap, explored: Explored, x: number, y: n
     const a = (d * Math.PI) / 180;
     const diff = Math.abs(((a - angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
     // Soften the cone edge a little.
-    const range = diff < CONE_HALF ? VIEW_RANGE : diff < CONE_HALF + 0.2 ? NEAR_RANGE + (VIEW_RANGE - NEAR_RANGE) * 0.35 : NEAR_RANGE;
+    const range = diff < half ? VIEW_RANGE : diff < half + 0.2 ? NEAR_RANGE + (VIEW_RANGE - NEAR_RANGE) * 0.35 : NEAR_RANGE;
     const dx = Math.cos(a);
     const dy = Math.sin(a);
     let r = 0;
