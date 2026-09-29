@@ -34,7 +34,7 @@ const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES, ...Ob
  * by direction; the old tinted look-drawn person when the picture is missing.
  */
 export function fixedSprite(scene: Phaser.Scene, x: number, y: number, who: keyof typeof STALE_HD, fallback: string, tint?: number) {
-  const key = `hd-${STALE_HD[who].id}`;
+  const key = hdOn ? ensureHd(scene, `hd-${STALE_HD[who].id}`) : '';
   if (hdOn && scene.textures.exists(key)) return fitHd(scene.add.sprite(x, y, key, 'down-0'));
   const s = scene.add.sprite(x, y, fallback, 'down-0');
   return tint === undefined ? s : s.setTint(tint);
@@ -53,11 +53,10 @@ export function walkHd(s: Phaser.GameObjects.Sprite, dx: number, dy: number) {
   s.anims.play(`${key}-walk-${dir}`, true);
 }
 
-/** The detailed picture (with the red glow) of an enemy kind, when the artist drew one. */
-export function enemyTexture(kind: string): string | null {
-  if (kind === 'glut' || kind === 'wielki_glut') return 'hd-chochlik-red';
-  const w = WROGOWIE_HD.find((q) => q.rodzaje.includes(kind));
-  return w ? `hd-${w.postac.id}-red` : null;
+/** The detailed picture (with the red glow, made on first use) of an enemy kind, when the artist drew one. */
+export function enemyTexture(scene: Phaser.Scene, kind: string): string | null {
+  const w = kind === 'glut' || kind === 'wielki_glut' ? 'hd-chochlik' : WROGOWIE_HD.find((q) => q.rodzaje.includes(kind)) && `hd-${WROGOWIE_HD.find((q) => q.rodzaje.includes(kind))!.postac.id}`;
+  return w && scene.textures.exists(ensureHd(scene, w)) ? ensureRed(scene, w) : null;
 }
 
 export function loadHdSprites(scene: Phaser.Scene) {
@@ -94,24 +93,65 @@ function baseOf(key: string) {
   return m ? m[0] : key;
 }
 
+/** Every made sheet by texture key, so its red-glow copy can be made when first needed (ensureRed). */
+const sheets = new Map<string, HTMLCanvasElement>();
+
+/**
+ * Readies the detailed characters. Each sheet (stray specks removed, frames
+ * lined up, clothes colours, red glow) is painted the first time something
+ * shows it (ensureHd/ensureRed): doing all ~36 sheets × colours × glow at the
+ * start froze phones for seconds on a blank screen.
+ */
 export function createHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
   for (const p of ALL()) {
     if (!scene.textures.exists(`hdsrc-${p.id}`)) continue;
-    const src = sheetPixels(scene, p);
-    const mask = maskPixels(scene, p);
     const key = `hd-${p.id}`;
     skala.set(key, p.skala);
-    addSheet(scene, key, src);
-    addSheet(scene, `${key}-red`, glow(src));
-    if (p === CHOCHLIK || ENEMIES.includes(p) || p.przebarwiaj === false) continue;
-    STROJE.forEach((s, i) => {
-      if (i === 0) return;
-      const c = recolour(src, mask, s);
-      addSheet(scene, `${key}-s${i}`, c);
-      addSheet(scene, `${key}-s${i}-red`, glow(c));
-    });
+    pending.set(key, p);
   }
+}
+
+/** Characters whose sheet is loaded but not painted yet. */
+const pending = new Map<string, Postac>();
+const masks = new Map<string, HTMLCanvasElement>();
+
+/** Makes a detailed character's texture (`hd-<id>`, or a townsperson's clothes colour `hd-<id>-s<n>`) the first time it is needed. */
+export function ensureHd(scene: Phaser.Scene, key: string): string {
+  if (scene.textures.exists(key)) return key;
+  const m = /^(hd-[a-z]+)(?:-s(\d+))?$/.exec(key);
+  if (!m) return key;
+  const base = m[1];
+  const p = pending.get(base);
+  if (p && !scene.textures.exists(base)) {
+    const src = sheetPixels(scene, p);
+    addSheet(scene, base, src);
+    sheets.set(base, src);
+    // Heroes get clothes colours only when they stand in for missing townsfolk.
+    const recolourable = !(p === CHOCHLIK || ENEMIES.includes(p) || p.przebarwiaj === false || (BOHATEROWIE.includes(p) && MIESZKANCY_HD.length));
+    if (recolourable) masks.set(base, maskPixels(scene, p));
+  }
+  const n = m[2] === undefined ? -1 : +m[2];
+  const src = sheets.get(base);
+  const mask = masks.get(base);
+  if (n > 0 && src && mask && STROJE[n]) {
+    const c = recolour(src, mask, STROJE[n]);
+    addSheet(scene, key, c);
+    sheets.set(key, c);
+    return key;
+  }
+  return scene.textures.exists(key) ? key : scene.textures.exists(base) ? base : key;
+}
+
+/** The red-glowing copy of a detailed character's texture (enemies, duel opponents), made the first time it is asked for. */
+export function ensureRed(scene: Phaser.Scene, key: string): string {
+  key = ensureHd(scene, key);
+  const red = `${key}-red`;
+  if (!scene.textures.exists(red)) {
+    const c = sheets.get(key);
+    if (c) addSheet(scene, red, glow(c));
+  }
+  return red;
 }
 
 /** Keys of all townsfolk looks (every townsperson in every clothes colour). */
@@ -365,7 +405,7 @@ let heroKeyNow = '';
 
 /** Makes the player's walk animations (`me-walk-*`) use the chosen new hero; returns its texture. */
 export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name: string) {
-  const key = `hd-${heroSkin(postac, name).id}`;
+  const key = ensureHd(scene, `hd-${heroSkin(postac, name).id}`);
   heroKeyNow = key;
   for (const dir of HERO_DIRS) {
     const anim = `me-walk-${dir}`;

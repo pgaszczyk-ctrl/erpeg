@@ -88,7 +88,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     const k = ENEMY_KINDS[kind];
     const person = kind === 'bandyta' || kind === 'wojownik';
     // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
-    const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(kind) : null;
+    const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(scene, kind) : null;
     const hd = !!hdTex && scene.textures.exists(hdTex);
     super(scene, x, y, hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);

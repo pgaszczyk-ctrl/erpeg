@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX, makeLookTexture } from '../art';
-import { fitHd } from '../sprites';
+import { fitHd, ensureHd } from '../sprites';
 import { PX_PER_M, type CityMap, type Place } from '../map/CityMap';
 import { HISTORIA, poziomPostaci } from '../content/historia';
 import { session, earn, type Story as StoryState } from '../quests';
@@ -206,7 +206,7 @@ export class Story {
     // On the street by the door (where the hero can see and reach him).
     const at = this.city.freeNear(tx, ty + 6);
     const pace = this.city.isFree(at.x + 8, at.y + 5, 3, 2) ? 8 : this.city.isFree(at.x - 8, at.y + 5, 3, 2) ? -8 : 0;
-    const hd = this.scene.textures.exists('hd-mag');
+    const hd = this.scene.textures.exists(ensureHd(this.scene, 'hd-mag'));
     this.wizard = (hd ? fitHd(this.scene.add.sprite(at.x, at.y, 'hd-mag', 'down-0')) : this.scene.add.sprite(at.x, at.y, TEX.wizard, 'down-0').setOrigin(0.5, 0.6)).setDepth(at.y);
     this.wizardLabel = this.scene.add.text(at.x, at.y - 16, HISTORIA.mag.imie, { fontFamily: 'monospace', fontSize: '8px', color: '#e8d8ff', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
       .setOrigin(0.5, 1).setDepth(1_100_000).setVisible(false);

@@ -4,7 +4,7 @@ import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
 import { OSTROSC } from '../screen';
-import { hdOn, fitHd, useHdHero, heroSkin, isHd } from '../sprites';
+import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed } from '../sprites';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -1780,7 +1780,7 @@ export class GameScene extends Phaser.Scene {
     const k = session.level.pojedynek;
     const hearts = MIESZKANCY.serduszka * 2;
     const e = this.spawnEnemy(f.x, f.y, 'duel', 'wojownik');
-    e.setTexture(`${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
+    e.setTexture(isHd(f.tex) ? ensureRed(this, f.tex) : `${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
     if (isHd(f.tex)) fitHd(e);
     e.walkAnim = `${f.tex}-red-walk`;
     // As many of the hero's blows as he has hearts, times the difficulty share.

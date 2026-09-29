@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { hdOn, isHd, fitHd, hdFolkLooks, personOf } from '../sprites';
+import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
@@ -152,6 +152,7 @@ export class Townsfolk {
         for (let cx = c0x; cx <= c1x; cx++) {
           for (const f of this.folkOf(cx, cy)) {
             if (this.active.has(f) || Math.abs(f.x - px) > NEAR || Math.abs(f.y - py) > NEAR) continue;
+            if (isHd(f.tex)) f.tex = ensureHd(this.scene, f.tex);
             f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0').setOrigin(0.5, 0.6);
             if (isHd(f.tex)) fitHd(f.sprite);
             this.active.add(f);
