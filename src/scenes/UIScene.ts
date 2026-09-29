@@ -202,7 +202,7 @@ export class UIScene extends Phaser.Scene {
         if (this.dialogBox) {
           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
           const choose = this.dialogChoose;
-          const last = this.dialogButtons.length - 1;
+          const last = this.dialogButtons.filter((b) => b.index >= 0).length - 1;
           this.closeDialog();
           choose?.(Math.max(0, last));
         } else this.openGameMenu();
@@ -618,14 +618,29 @@ export class UIScene extends Phaser.Scene {
     const stacked = d.buttons.length > 2;
     const rows = stacked ? d.buttons.length : 1;
     const btnsH = rows * btnH + (rows - 1) * 8;
-    const h = 16 + title.height + 10 + body.height + 18 + btnsH + 16;
+    const tabH = d.tabs ? 38 : 0;
+    const h = 16 + title.height + 10 + (tabH ? tabH + 10 : 0) + body.height + 18 + btnsH + 16;
     const y = Math.max(12, height - h - (this.touch ? 150 : 40));
     title.setY(y + 16);
-    body.setY(title.y + title.height + 10);
+    body.setY(title.y + title.height + 10 + (tabH ? tabH + 10 : 0));
 
     const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
     const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
     this.dialogButtons = [];
+    // Tabs (shop: buy / sell): the active one filled, the others only outlined; a tap gives onChoose(-1 - tab).
+    if (d.tabs) {
+      const n = d.tabs.labels.length;
+      const tw = (w - 32 - (n - 1) * 10) / n;
+      const ty = title.y + title.height + 10;
+      d.tabs.labels.forEach((label, t) => {
+        const c = d.tabs!.colors?.[t] ?? 0x2f6f9f;
+        const on = t === d.tabs!.active;
+        const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, on ? c : 0x2a2632).setOrigin(0).setStrokeStyle(on ? 3 : 2, on ? 0xffffff : c, on ? 0.9 : 1);
+        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: 'monospace', fontSize: '16px', color: on ? '#ffffff' : '#c8c8d0', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
+        items.push(rect, text);
+        if (!on) this.dialogButtons.push({ rect, index: -1 - t });
+      });
+    }
     const bw = stacked ? w - 32 : (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
     const last = d.buttons.length - 1;
     d.buttons.forEach((label, i) => {
@@ -667,11 +682,13 @@ export class UIScene extends Phaser.Scene {
       return;
     }
     if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
-    let choice = -1;
+    // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
+    let choice: number | null = null;
+    const real = this.dialogButtons.filter((b) => b.index >= 0);
     // Keyboard: Space/Enter picks the first button, or "Wyjdź" in a long list.
-    if (x < 0) choice = this.dialogButtons.length > 2 ? this.dialogButtons.length - 1 : 0;
+    if (x < 0) choice = real.length > 2 ? real.length - 1 : 0;
     for (const b of this.dialogButtons) if (b.rect.getBounds().contains(x, y)) choice = b.index;
-    if (choice < 0) return;
+    if (choice === null) return;
     const choose = this.dialogChoose;
     this.closeDialog();
     choose?.(choice);

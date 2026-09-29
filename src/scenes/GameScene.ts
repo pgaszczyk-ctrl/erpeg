@@ -28,7 +28,7 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { KAMIEN_MOCY, DIAMENT } from '../content/sklepy';
+import { KAMIEN_MOCY, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
@@ -42,7 +42,7 @@ import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../conten
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount, luckyCoins,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount, luckyCoins, groupValue, sellGroup,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -164,6 +164,8 @@ export interface DialogRequest {
   buttons: string[];
   /** Optional picture (texture key) per button, e.g. the item on sale. */
   icons?: (string | null)[];
+  /** Tabs under the title (e.g. a shop: buy / sell); tapping tab t calls onChoose(-1 - t). */
+  tabs?: { labels: string[]; active: number; colors?: number[] };
   onChoose: (index: number) => void;
 }
 
@@ -2599,37 +2601,57 @@ export class GameScene extends Phaser.Scene {
     return `${p.nazwa} – ${p.cena} monet (${what})`;
   }
 
-  private openShop(p: CityPlace) {
+  private openShop(p: CityPlace, tab = 0) {
     const offers = this.offers('sklep');
-    const value = fruitValue();
     // Easier levels: every shop buys fruit; harder ones: only some (always the same ones).
     let h = 2166136261;
     for (const ch of `skup:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const buys = ((h >>> 0) % 1000) / 1000 < session.level.skup;
+    const title = p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`;
+    const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
+    const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);
+    if (tab === 1) {
+      // Selling: each kind of goods in the backpack separately, and everything at once.
+      const groups = (Object.keys(GRUPY) as Grupa[]).filter((g) => groupCount(g) > 0);
+      const total = fruitValue();
+      const lines = buys ? groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`) : [];
+      const all = buys && groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
+      const text = !buys
+        ? 'Tu nie skupujemy owoców, grzybów ani drewna – spróbuj w innym sklepie.'
+        : groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
+      this.dialog({
+        title, text, tabs,
+        buttons: [...all, ...lines, 'Wyjdź'],
+        onChoose: (i) => {
+          if (i < 0) return switchTab(i);
+          let v = 0;
+          if (all.length && i === 0) v = sellAllFruit();
+          else if (groups[i - all.length]) v = sellGroup(groups[i - all.length]);
+          else return;
+          earn(v);
+          this.emitHud();
+          this.toast(`Sprzedane za ${v} monet!`);
+          this.save();
+          this.openShop(p, 1);
+        },
+      });
+      return;
+    }
     // Grandma Grażynka's garden tools wait at the shop nearest her village.
     const tools = this.fixed.grazynkaStep() === 'sklep' && this.fixed.grazynkaShop()?.id === p.id ? ['🧺 Odbierz narzędzia babci Grażynki'] : [];
-    const sell = [...tools, ...(value > 0 && buys ? [`Sprzedaj zbiory – ${value} monet`] : [])];
-    const noBuy = value > 0 && !buys ? '\n\nTu nie skupujemy owoców, grzybów ani drewna – spróbuj w innym sklepie.' : '';
     this.dialog({
-      title: p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`,
-      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!') + noBuy,
-      buttons: [...sell, ...offers.map((o) => this.label(o)), 'Wyjdź'],
-      icons: [...sell.map(() => null), ...offers.map((o) => itemTexture(o.id)), null],
+      title, tabs,
+      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      buttons: [...tools, ...offers.map((o) => this.label(o)), 'Wyjdź'],
+      icons: [...tools.map(() => null), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
+        if (i < 0) return switchTab(i);
         if (tools.length && i === 0) {
           if (this.fixed.pickUpTools()) this.dialog({ title: '🧺 Narzędzia', text: tr(GRAZYNKA.wSklepie), buttons: ['OK'], onChoose: () => {} });
           this.emitHud();
           return;
         }
-        if (sell.length > tools.length && i === tools.length) {
-          const v = sellAllFruit();
-          earn(v);
-          this.emitHud();
-          this.toast(`Sprzedałeś zbiory za ${v} monet!`);
-          this.save();
-          return;
-        }
-        const o = offers[i - sell.length];
+        const o = offers[i - tools.length];
         if (o) this.buy(o);
       },
     });
