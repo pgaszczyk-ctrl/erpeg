@@ -326,7 +326,7 @@ export class MapRenderer {
   }
 
   /** Roof patterns from the artist's files (empty until they arrive). */
-  private roofArt: CanvasPattern[] = [];
+  private roofArt: (CanvasPattern | null)[] = [];
   private trackArt: CanvasPattern | null = null;
 
   /** The drawn patterns, with the artist's textures in place of those that have a file (content/swiat.ts). */
@@ -338,7 +338,11 @@ export class MapRenderer {
       if (kind === 'track') this.trackArt = pat;
       else out[kind] = pat;
     }
-    this.roofArt = DACHY_PLIKI.map((f) => artPattern(this.scene, ctx, f)).filter((p): p is CanvasPattern => !!p);
+    const made = new Map<string, CanvasPattern | null>();
+    this.roofArt = DACHY_PLIKI.map((f) => {
+      if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
+      return made.get(f)!;
+    });
     return out;
   }
 
@@ -579,7 +583,7 @@ export class MapRenderer {
     }
     // Roof.
     ringsPath(ctx, b.rings);
-    const art = this.roofArt.length ? this.roofArt[b.seed % this.roofArt.length] : null;
+    const art = this.roofArt[b.seed % ROOFS.length] ?? null;
     ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
     ctx.lineWidth = 2.5;

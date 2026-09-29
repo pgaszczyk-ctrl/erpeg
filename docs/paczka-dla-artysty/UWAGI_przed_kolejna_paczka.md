@@ -32,3 +32,10 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 
 14. **Mag, Siostra Margo, Dziadek Marek, Babcia Iwonka i Babcia Grażynka przyjęci** i chodzą już po swoich ulicach. Poprawka czubka włosów u mieszkańca 11 też jest. Dzięki!
 15. **Następna paczka: świat** – `ZAMOWIENIE_swiat_01.md` (podłoże, drogi, dachy). Na start 3 pliki na próbę: `podloze_trawa`, `podloze_bruk`, `dach_dachowka_czerwona_jasna`.
+
+## Po paczce „świat 01 – próba”
+
+16. **Trawa, bruk i czerwona dachówka przyjęte** – są w grze, zrzut: `5_zrzuty_z_gry/swiat_proba_01_w_grze.png`. Miasto od razu wygląda lepiej!
+17. **Kafelkowanie – jedna poprawka na przyszłość:** w plikach ostatni rząd i ostatnia kolumna są takie same jak pierwsze. Przy powtarzaniu daje to podwójny rząd pikseli na łączeniu (tym razem przycięliśmy je sami). Kafel powinien kończyć się tak, żeby **następny piksel po prawej był pierwszym pikselem z lewej** – czyli bez powtarzania krawędzi.
+18. W trawie żółte kwiatki leżą w równej siatce i przy powtarzaniu widać wzór. Przy kolejnych teksturach lepiej rozsiewać drobiazgi nieregularnie (albo wcale).
+19. **Dalej:** brązowa dachówka i łupek (dziś te domy mają jeszcze płaski kolor), potem reszta podłoża z tabeli 1 w `ZAMOWIENIE_swiat_01.md`: `podloze_droga`, `podloze_las`, `podloze_park`, `podloze_plac`, `podloze_woda`, `podloze_pole`…

@@ -29,11 +29,19 @@ export const PODLOZE_PLIKI: Record<string, string> = {
   outside: 'podloze_puszcza',
 };
 
-/** Roof textures (the sunny side); a building gets one of those present, by its seed. */
-export const DACHY_PLIKI = ['dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'dach_gont_jasna', 'dach_strzecha_jasna', 'dach_miedz_jasna'];
+/**
+ * Roof textures (the sunny side) in place of the drawn roof colours, in the
+ * same order as ROOFS in MapRenderer (reds, browns, greys): a building keeps
+ * its colour family, and one without its file yet stays a plain colour.
+ */
+export const DACHY_PLIKI = [
+  'dach_dachowka_czerwona_jasna', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_czerwona_jasna',
+  'dach_dachowka_brazowa_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna',
+  'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'dach_dachowka_czerwona_jasna',
+];
 
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
-export const MAMY: string[] = [];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna'];
