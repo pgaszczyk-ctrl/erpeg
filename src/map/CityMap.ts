@@ -441,11 +441,13 @@ export class CityMap {
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });
     }
+    // Loaded before its places are added: a door is picked among free spots, and an
+    // unloaded tile counts as blocked – so every door fell back into the middle of its roof.
+    this.loadedTiles.add(cx * 100000 + cy);
     if (t.p?.length) {
       const added = t.p.map(([kind, name, x, y]) => this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`)).filter((p): p is Place => !!p);
       if (added.length) for (const f of this.placeListeners) f(added);
     }
-    this.loadedTiles.add(cx * 100000 + cy);
     this.surfaces.clear();
     const box = { x0: cx * this.tilePx, y0: cy * this.tilePx, x1: (cx + 1) * this.tilePx, y1: (cy + 1) * this.tilePx };
     for (const f of this.tileListeners) f(box);
@@ -947,6 +949,10 @@ export class CityMap {
     if (b.door) return b.door;
     const r = b.rings[0];
     let best = { x: (b.x0 + b.x1) / 2, y: b.y1 - 40, d: Infinity };
+    // Nothing free around it yet (its neighbours not loaded, or walled in): at least a spot just
+    // outside a wall, nearest a road – never the middle of the roof.
+    let outside: { x: number; y: number; d: number } | null = null;
+    let found = false;
     for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
       const mx = (r[i] + r[j]) / 2;
       const my = (r[i + 1] + r[j + 1]) / 2;
@@ -957,12 +963,17 @@ export class CityMap {
       for (const s of [1, -1]) {
         const px = mx + (nx / nl) * 6 * s;
         const py = my + (ny / nl) * 6 * s;
-        if (this.isBlocked(px, py)) continue;
         let d = Infinity;
         for (const l of this.lineGrid.at(px, py)) if (ROAD_KINDS.has(l.kind)) d = Math.min(d, distToPolyline(l.pts, px, py));
-        if (d < best.d) best = { x: px, y: py, d };
+        if (this.isBlocked(px, py)) {
+          if (!this.buildingAt(px, py) && (!outside || d < outside.d)) outside = { x: px, y: py, d };
+          continue;
+        }
+        if (!found || d < best.d) best = { x: px, y: py, d };
+        found = true;
       }
     }
+    if (!found && outside) return { x: outside.x, y: outside.y };
     return { x: best.x, y: best.y };
   }
 
