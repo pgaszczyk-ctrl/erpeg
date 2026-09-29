@@ -1,0 +1,239 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 03</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie 03 – duża partia (świat, ulice, drzewa, reszta postaci)</h1>
+<blockquote>
+<p>Paczka „świat 02” (brązowa dachówka, łupek, droga) przyjęta – krawędzie tym razem idealne, dziękujemy! To zamówienie jest większe, żebyś miał zajęcie na dłużej. <strong>Oddawaj partiami, w kolejności sekcji A → E</strong> – każdą gotową partię od razu wstawiamy do gry i odsyłamy zrzut.</p>
+<p>Zasady ogólne bez zmian: skala 3× (1 m ≈ 6 px w pliku), światło z lewej-góry, klimat lekkiego baśniowego steampunku (<code>STYL_SWIATA_steampunk.md</code>), nazwy plików małymi literami bez polskich znaków, PNG.</p>
+<p><strong>Tekstury</strong> (podłoże, dachy, ściany): pełne, bez przezroczystości, bez konturu, kafelkujące się, <strong>bez powtarzania pierwszego rzędu/kolumny na końcu</strong>, drobiazgi rozsiane nieregularnie.
+<strong>Obiekty</strong> (ozdoby, drzewa, pojazdy): przezroczyste tło, kontur 1 px <code>#1e1a24</code>, margines ok. 3 px.
+<strong>Postacie</strong>: jak dotąd – arkusz 192×192 (3×3 po 64), rzędy dół / bok patrzy w lewo / góra, kolumny krok A / stoi / krok B, stopy na y=62, maska ubrań (czerwony/zielony), płeć i wiek w <code>metadata.json</code>.</p>
+</blockquote>
+<hr />
+<h2>A. Reszta podłoża (tekstury, folder <code>swiat/</code>)</h2>
+<p>Najpierw sześć najważniejszych – widać je na mapie wszędzie:</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podloze_plac</code></td>
+<td>192 × 192</td>
+<td>place i deptaki: duże kamienne płyty (ok. 18–24 px), ciepła szarość</td>
+</tr>
+<tr>
+<td><code>podloze_park</code></td>
+<td>192 × 192</td>
+<td>staranna trawa parków, jaśniejsza niż zwykła, trochę kwiatów</td>
+</tr>
+<tr>
+<td><code>podloze_las</code></td>
+<td>192 × 192</td>
+<td>poszycie lasu: mech, igliwie, ciemna zieleń (drzewa gra rysuje osobno)</td>
+</tr>
+<tr>
+<td><code>podloze_woda</code></td>
+<td>192 × 192</td>
+<td>spokojna woda rzek i stawów, delikatne fale; bez brzegu</td>
+</tr>
+<tr>
+<td><code>podloze_pole</code></td>
+<td>192 × 192</td>
+<td>pole uprawne, bruzdy <strong>poziomo</strong></td>
+</tr>
+<tr>
+<td><code>podloze_zarosla</code></td>
+<td>192 × 192</td>
+<td>krzaki, nieużytki, wyższa, dzika trawa</td>
+</tr>
+</tbody>
+</table>
+<p>Potem reszta (po 192 × 192): <code>podloze_dzialki</code> (ogródki, drobne grządki), <code>podloze_cmentarz</code> (trawa z malutkimi płytami, spokojnie), <code>podloze_parking</code> (ubita ziemia lub drobny żwir), <code>podloze_boisko</code> (równa jasna trawa, bez linii), <code>podloze_plac_zabaw</code> (piasek / kora), <code>podloze_piasek</code> (plaże), <code>podloze_mokradlo</code> (trawa z kałużami), <code>podloze_puszcza</code> (bardzo ciemny, gęsty las za brzegiem mapy).</p>
+<h2>B. Reszta dachów (tekstury 48 × 48, rzędy poziomo – gra je obraca)</h2>
+<p><code>dach_gont_jasna</code> (drewniany gont, wieś), <code>dach_strzecha_jasna</code> (strzecha, chaty), <code>dach_miedz_jasna</code> (zielonkawa miedziana blacha: wieże, ratusze, uczelnie).</p>
+<h2>C. Ściany frontowe (tekstury 48 × 24, kafelkują się <strong>tylko poziomo</strong>)</h2>
+<p>Widzimy je z przodu, pod dachem. Dół obrazka = ziemia. Budynki mają tylko 3 wysokości, więc gra <strong>ucina górę</strong>: zostaje 12, 18 albo 24 px – dlatego okna i drzwi trzymaj w <strong>dolnych 18 px</strong>, a na górze najwyżej gzyms.</p>
+<p>Każdy materiał w 3 wersjach: <code>_gladka</code> (sama ściana), <code>_okno</code> (jedno okno na środku, ok. 9 × 9 px, nocą gra może je rozświetlić), <code>_drzwi</code> (drzwi na środku, ok. 12 × 18 px, stoją na dolnej krawędzi).</p>
+<table>
+<thead>
+<tr>
+<th>Materiał</th>
+<th>Gdzie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sciana_tynk_kremowy</code></td>
+<td>najczęstsza: kamienice, domy (zacznij od niej)</td>
+</tr>
+<tr>
+<td><code>sciana_cegla</code></td>
+<td>kamienice, fabryki, stare domy</td>
+</tr>
+<tr>
+<td><code>sciana_tynk_bialy</code></td>
+<td>bloki, nowsze domy</td>
+</tr>
+<tr>
+<td><code>sciana_deski</code></td>
+<td>drewniane domy na wsi</td>
+</tr>
+<tr>
+<td><code>sciana_kamien</code></td>
+<td>kościoły, zamek, mury</td>
+</tr>
+<tr>
+<td><code>sciana_mur_pruski</code></td>
+<td>stare domy (później)</td>
+</tr>
+</tbody>
+</table>
+<p>Steampunkowe warianty (po jednym, bez okna/drzwi): <code>sciana_cegla_rury</code> i <code>sciana_tynk_kremowy_rury</code> – mosiężna rura biegnąca poziomo po murze. Oraz <code>sciana_sklep_witryna</code> – parter sklepu: witryna w drewnianej ramie z mosiężnym szyldem bez napisu.</p>
+<p>Przykład nazw: <code>sciana_cegla_gladka.png</code>, <code>sciana_cegla_okno.png</code>, <code>sciana_cegla_drzwi.png</code>.</p>
+<h2>D. Ozdoby ulic i drzewa (obiekty z przezroczystym tłem)</h2>
+<p>Widok jak postacie: z góry i trochę z przodu, „stoją” na dolnej krawędzi.</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar</th>
+<th>Co to</th>
+<th>Klatki (obok siebie w jednym pliku)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>latarnia_gazowa</code></td>
+<td>24 × 72</td>
+<td>żeliwna latarnia z mosiężną głowicą</td>
+<td>2: dzień (zgaszona) / noc (świeci ciepłym światłem)</td>
+</tr>
+<tr>
+<td><code>lawka</code></td>
+<td>42 × 24</td>
+<td>ławka z żeliwnymi bokami</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>komin_para</code></td>
+<td>18 × 30</td>
+<td>komin na dach z obłoczkiem pary</td>
+<td>3: obłoczek mały / większy / rozwiany</td>
+</tr>
+<tr>
+<td><code>zegar_uliczny</code></td>
+<td>24 × 78</td>
+<td>zegar na słupie</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>slup_ogloszeniowy</code></td>
+<td>30 × 60</td>
+<td>okrągły słup z kolorowymi afiszami (bez czytelnych napisów)</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>studzienka_para</code></td>
+<td>24 × 24</td>
+<td>kratka w bruku, czasem bucha para</td>
+<td>3: bez pary / mały obłoczek / duży</td>
+</tr>
+<tr>
+<td><code>drzewo_jablon</code></td>
+<td>64 × 72</td>
+<td>jabłoń</td>
+<td>2: z owocami / bez</td>
+</tr>
+<tr>
+<td><code>drzewo_sliwa</code></td>
+<td>64 × 72</td>
+<td>śliwa</td>
+<td>2: z owocami / bez</td>
+</tr>
+<tr>
+<td><code>winorosl</code></td>
+<td>60 × 54</td>
+<td>krzak winorośli</td>
+<td>2: z winogronami / bez</td>
+</tr>
+<tr>
+<td><code>sosna</code></td>
+<td>48 × 78</td>
+<td>sosna w lesie</td>
+<td>2: drzewo / pieniek</td>
+</tr>
+<tr>
+<td><code>grzyb</code></td>
+<td>24 × 24</td>
+<td>grzyb do zebrania</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>kloda</code></td>
+<td>30 × 18</td>
+<td>kłoda drewna</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Obecny wygląd drzew i grzybów: <code>3_obecne_grafiki/</code> (pliki <code>…__teraz_x4.png</code>).</p>
+<h2>E. Reszta postaci stałych (arkusze 3 × 3 po 64 × 64 + maska)</h2>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Kto</th>
+<th>Wygląd</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>luigi</code></td>
+<td>Luigi, hiszpańskojęzyczny macho (nie ten z Mario!)</td>
+<td>pewny siebie, rozpięta koszula, złoty łańcuszek, wąsik, uśmiech</td>
+</tr>
+<tr>
+<td><code>martin</code></td>
+<td>Martin, znawca smoków i gier karcianych</td>
+<td>okulary, kamizelka, talia kart albo księga o smokach w dłoni</td>
+</tr>
+<tr>
+<td><code>trener</code></td>
+<td>Trener Zbyszek (boiska)</td>
+<td>dres, gwizdek na szyi, czapka z daszkiem</td>
+</tr>
+<tr>
+<td><code>biegaczka</code></td>
+<td>Biegaczka Ania (boiska)</td>
+<td>strój do biegania, opaska na włosach</td>
+</tr>
+<tr>
+<td><code>madrala_m</code>, <code>madrala_k</code></td>
+<td>Mądrale – ludzie z zagadkami</td>
+<td>„mądry” wygląd: okulary, książka, może gogle na czole (steampunk)</td>
+</tr>
+<tr>
+<td><code>woznica</code></td>
+<td>Woźnica na stacjach</td>
+<td>płaszcz, kapelusz, bat, mosiężne gogle na kapeluszu</td>
+</tr>
+<tr>
+<td><code>pies</code></td>
+<td>Biało-czarny pies (zadanie ze świnką)</td>
+<td>arkusz jak u postaci, ale pies na czterech łapach; stopy na y=62</td>
+</tr>
+</tbody>
+</table>
+<p><code>metadata.json</code>: płeć i wiek jak zawsze (pies: <code>"plec": "m"</code>, <code>"wiek": "dorosly"</code>).</p>
+<hr />
+<h2>Kolejność oddawania (partie)</h2>
+<ol>
+<li><strong>A</strong> – sześć najważniejszych podłoży (plac, park, las, woda, pole, zarośla).</li>
+<li><strong>C</strong> – <code>sciana_tynk_kremowy</code> i <code>sciana_cegla</code> (po 3 wersje) + <code>latarnia_gazowa</code>, <code>komin_para</code>.</li>
+<li><strong>D</strong> – drzewa, grzyb, kłoda, reszta ozdób.</li>
+<li><strong>E</strong> – postacie: najpierw <code>luigi</code>, <code>martin</code>, <code>woznica</code>, potem reszta.</li>
+<li>Reszta A i C, potem B.</li>
+</ol>
+<p>Dziękujemy – każda partia od razu trafia do gry testowej!</p>

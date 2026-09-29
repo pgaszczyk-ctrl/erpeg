@@ -39,3 +39,12 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 17. **Kafelkowanie – jedna poprawka na przyszłość:** w plikach ostatni rząd i ostatnia kolumna są takie same jak pierwsze. Przy powtarzaniu daje to podwójny rząd pikseli na łączeniu (tym razem przycięliśmy je sami). Kafel powinien kończyć się tak, żeby **następny piksel po prawej był pierwszym pikselem z lewej** – czyli bez powtarzania krawędzi.
 18. W trawie żółte kwiatki leżą w równej siatce i przy powtarzaniu widać wzór. Przy kolejnych teksturach lepiej rozsiewać drobiazgi nieregularnie (albo wcale).
 19. **Dalej:** brązowa dachówka i łupek (dziś te domy mają jeszcze płaski kolor), potem reszta podłoża z tabeli 1 w `ZAMOWIENIE_swiat_01.md`: `podloze_droga`, `podloze_las`, `podloze_park`, `podloze_plac`, `podloze_woda`, `podloze_pole`…
+
+## Po paczce „świat 02”
+
+20. **Brązowa dachówka, łupek i droga gruntowa przyjęte** – krawędzie tym razem idealne, bez podwójnych rzędów. Wszystkie dachy i drogi w mieście mają już teksturę, zrzut: `5_zrzuty_z_gry/swiat_02_w_grze.png`. Dzięki!
+21. **Dalej, wg `ZAMOWIENIE_swiat_02.md` punkt 3.2:** `podloze_plac`, `podloze_park`, `podloze_las`, `podloze_woda`, `podloze_pole`, potem reszta podłoża oraz gont, strzecha i miedź.
+
+## Po paczce „świat 03a – podłoża”
+
+22. **Plac, park, las, woda, pole i zarośla przyjęte** – krawędzie idealne. W grze (zmniejszone 3×) wyglądają dobrze, nie są za drobne: zrzuty `5_zrzuty_z_gry/swiat_02_w_grze.png` (park, las, pole, zarośla) i `swiat_03a_woda.png`. Dalej wg `ZAMOWIENIE_03_duza_partia.md`, sekcja C (ściany + latarnia + komin).
