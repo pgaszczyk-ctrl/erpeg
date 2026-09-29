@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEX, HERO_DIRS, makeLookTexture } from '../art';
+import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
@@ -97,6 +97,7 @@ export class Orchards {
         t.sprite = this.scene.add
           .image(t.x, t.y, TREE_TEX[t.fruit]!, t.left > 0 ? 'full' : 'bare')
           .setOrigin(0.5, 0.92)
+          .setScale(artScale(TREE_TEX[t.fruit]!))
           .setDepth(t.y);
         this.active.add(t);
       }
@@ -109,7 +110,7 @@ export class Orchards {
     for (const a of this.city.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).areas) {
       if (!FRUIT_AREAS[a.kind]) continue;
       for (const t of this.treesOf(a, a.id)) {
-        if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit]!, 'full').width });
+        if (Math.hypot(t.x - x, t.y - y) <= r) out.push({ x: t.x, y: t.y, w: this.scene.textures.getFrame(TREE_TEX[t.fruit]!, 'full').width * artScale(TREE_TEX[t.fruit]!) });
       }
     }
     return out;
@@ -254,7 +255,7 @@ export class Forest {
             if (this.gone.has(s.id)) continue;
             s.sprite = this.spawn(s);
           } else {
-            s.sprite = this.scene.add.image(s.x, s.y, TEX.pine, this.gone.has(s.id) ? 'stump' : 'full').setOrigin(0.5, 0.92).setDepth(s.y);
+            s.sprite = this.scene.add.image(s.x, s.y, TEX.pine, this.gone.has(s.id) ? 'stump' : 'full').setOrigin(0.5, 0.92).setScale(artScale(TEX.pine)).setDepth(s.y);
           }
           this.active.add(s);
         }

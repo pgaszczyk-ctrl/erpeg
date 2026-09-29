@@ -1244,6 +1244,42 @@ function drawCombatExtras(scene: Phaser.Scene) {
   });
 }
 
+/** Textures replaced by the artist's pictures (drawn 3× bigger): shown at this scale. */
+const ART_SCALE = new Map<string, number>();
+/** How much to shrink a sprite of this texture (1/3 for the artist's big pictures, else 1). */
+export function artScale(key: string) {
+  return ART_SCALE.get(key) ?? 1;
+}
+
+/**
+ * Puts the artist's picture (public/swiat/<file>.png, loaded in BootScene) in
+ * place of a drawn texture, keeping its frame names (frames side by side);
+ * sprites of it are shown at 1/3 (artScale) so it stays sharp.
+ */
+/** The artist's nature pictures (pack 04c) over the drawn trees, pine, mushroom and log. */
+export function useArtistArt(scene: Phaser.Scene) {
+  useArtist(scene, TEX.treeApple, 'drzewo_jablon', ['full', 'bare']);
+  useArtist(scene, TEX.treePlum, 'drzewo_sliwa', ['full', 'bare']);
+  useArtist(scene, TEX.vine, 'winorosl', ['full', 'bare']);
+  useArtist(scene, TEX.pine, 'sosna', ['full', 'stump']);
+  useArtist(scene, TEX.mushroom, 'grzyb', null);
+  useArtist(scene, TEX.log, 'kloda', null);
+}
+
+function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null) {
+  const src = `swiat-${file}`;
+  if (!scene.textures.exists(src)) return;
+  const img = scene.textures.get(src).getSourceImage() as HTMLImageElement;
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const tex = scene.textures.addImage(key, img)!;
+  if (frames) {
+    const fw = img.width / frames.length;
+    frames.forEach((f, i) => tex.add(f, 0, i * fw, 0, fw, img.height));
+  }
+  tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  ART_SCALE.set(key, 1 / 3);
+}
+
 export function createArt(scene: Phaser.Scene) {
   drawCombatExtras(scene);
   drawFruitTree(scene, TEX.treeApple, '#e43b44', '#ffb3b8');

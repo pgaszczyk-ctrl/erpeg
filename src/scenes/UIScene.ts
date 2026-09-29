@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { report } from '../errlog';
-import { TEX, PLAYER_TEX, arrowTexture } from '../art';
+import { TEX, PLAYER_TEX, arrowTexture, artScale } from '../art';
 import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -145,7 +145,7 @@ export class UIScene extends Phaser.Scene {
       .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
     for (const tex of [TEX.fruitApple, TEX.vegCarrot, TEX.mushroom]) {
-      this.fruitIcons.push(this.add.image(0, 0, tex).setScale(this.ui).setOrigin(0.5, 0.5));
+      this.fruitIcons.push(this.add.image(0, 0, tex).setScale(this.ui * artScale(tex)).setOrigin(0.5, 0.5));
       this.fruitTexts.push(
         this.add.text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 }).setOrigin(0, 0.5),
       );

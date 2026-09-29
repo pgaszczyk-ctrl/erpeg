@@ -66,3 +66,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 
 29. **Pergamin przyjęty – w grze jest wariant z rzadszą siatką** (gęstszy też jest w grze do przełączenia). Zrzut `5_zrzuty_z_gry/mgla_pergamin_04a_w_grze.png`: od lewej rzadsza siatka w dzień, gęstsza w dzień, zmierzch, noc. Ręczna siatka wygląda świetnie, zupełnie inaczej niż „cerata” z programu. Dzięki!
 30. **Dalej wg `ZAMOWIENIE_04_mgla_i_dekoracje.md`:** C (drzewa, grzyb, kłoda), potem B (ławka, donica, skrzynie, studzienka, hydrant, kosz…), potem D (fontanna, kocioł, wieża, drogowskaz).
+
+## Po paczce „świat 04c – przyroda”
+
+31. **Przyroda przyjęta i już w grze:** jabłonie, śliwy, winorośl (drzewa do otrząsania), sosny w lasach (do ścinania, z pieńkiem), grzyby i kłody (do zbierania, też jako ikony na ekranie), a duże drzewa liściaste i krzaki rosną jako ozdoba w parkach, na trawnikach i cmentarzach. Zrzut z parku: `5_zrzuty_z_gry/swiat_04c_przyroda_park.png`. Dzięki!
+32. **Dalej wg `ZAMOWIENIE_04_mgla_i_dekoracje.md`:** B (ławka, donica, skrzynie, studzienka z parą, hydrant, kosz, płoty, welocyped, poczta pneumatyczna), potem D (fontanna ze smokiem, smoczy kocioł, wieża zegarowa, drogowskaz).

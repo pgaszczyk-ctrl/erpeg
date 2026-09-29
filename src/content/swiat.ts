@@ -50,10 +50,20 @@ export const SCIANY = [
 export const LATARNIE = { plik: 'latarnia_gazowa', klatki: 2, coM: 32, ulice: ['major', 'medium', 'minor', 'pedestrian'] };
 export const KOMINY = { plik: 'komin_para', klatki: 3, naIleDomow: 3, odM2: 60 };
 
+/**
+ * Ozdobne drzewa i krzaki na trawnikach i w parkach (nie da się ich ściąć ani zerwać): siatka co `coM`
+ * metrów, w każdym oczku z taką szansą coś rośnie; `drzew` = jaka część to duże drzewa (reszta krzaki).
+ */
+export const ZIELEN = {
+  drzewo: 'drzewo_lisciaste', krzak: 'krzak', klatki: 2, coM: 16,
+  szansa: { park: 0.45, grass: 0.12, cemetery: 0.3 } as Record<string, number>,
+  drzew: 0.55,
+};
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
 import { MGLA } from './mgla';
 
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak'];

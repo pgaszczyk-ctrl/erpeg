@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createArt } from '../art';
+import { createArt, useArtistArt } from '../art';
 import { createHeroAnims } from '../objects/Player';
 import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
@@ -27,6 +27,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     createArt(this);
+    useArtistArt(this);
     createHeroAnims(this);
     createHdSprites(this);
     createSlimeAnims(this);

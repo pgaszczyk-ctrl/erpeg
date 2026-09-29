@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
-import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX } from '../art';
+import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art';
 import { OSTROSC } from '../screen';
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed } from '../sprites';
 import { LOOK_TOP, LOOK_H } from '../look';
@@ -301,8 +301,8 @@ export class GameScene extends Phaser.Scene {
       (sp) => {
         const what = sp.veg ?? 'grzyb';
         // Vegetables are picked with a swing (a bar fills up), not by walking over them.
-        if (sp.veg) return this.add.image(sp.x, sp.y, GOODS_TEX[what]).setDepth(sp.y - 8);
-        const img = this.add.image(sp.x, sp.y, GOODS_TEX[what]).setDepth(sp.y - 8);
+        if (sp.veg) return this.add.image(sp.x, sp.y, GOODS_TEX[what]).setScale(artScale(GOODS_TEX[what])).setDepth(sp.y - 8);
+        const img = this.add.image(sp.x, sp.y, GOODS_TEX[what]).setScale(artScale(GOODS_TEX[what])).setDepth(sp.y - 8);
         img.setData('kind', `fruit:${what}`);
         img.setData('spot', sp.id);
         this.pickups.push(img);
@@ -894,7 +894,7 @@ export class GameScene extends Phaser.Scene {
     const tex = GOODS_TEX[fruit];
     const tx = x + (Math.random() - 0.5) * 16;
     const ty = y + 4 + Math.random() * 8;
-    const item = this.add.image(x, y - 10, tex).setDepth(ty);
+    const item = this.add.image(x, y - 10, tex).setScale(artScale(tex)).setDepth(ty);
     item.setData('kind', `fruit:${fruit}`);
     // Falls from the crown to the ground, then can be picked up.
     this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => this.pickups.push(item) });

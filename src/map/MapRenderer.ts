@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
-import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY } from '../content/swiat';
+import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN } from '../content/swiat';
 import { MIESZKANCY } from '../content/mieszkancy';
 
 export { AREA_FILL, ROAD_FILL };
@@ -392,6 +392,8 @@ export class MapRenderer {
   /** The artist's lamp and chimney sheets (shrunk to map size), when present. */
   private lampArt: HTMLCanvasElement | null = null;
   private chimneyArt: HTMLCanvasElement | null = null;
+  private treeArt: HTMLCanvasElement | null = null;
+  private bushArt: HTMLCanvasElement | null = null;
   private trackArt: CanvasPattern | null = null;
 
   /** The drawn patterns, with the artist's textures in place of those that have a file (content/swiat.ts). */
@@ -410,6 +412,8 @@ export class MapRenderer {
     }
     this.lampArt = artSheet(this.scene, LATARNIE.plik);
     this.chimneyArt = artSheet(this.scene, KOMINY.plik);
+    this.treeArt = artSheet(this.scene, ZIELEN.drzewo);
+    this.bushArt = artSheet(this.scene, ZIELEN.krzak);
     this.roofArt = DACHY_PLIKI.map((f) => {
       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
       return made.get(f)!;
@@ -500,6 +504,7 @@ export class MapRenderer {
     // Buildings, north to south so southern walls overlap northern roofs.
     buildings.sort((a, b) => a.y1 - b.y1);
     for (const b of buildings) this.paintBuilding(ctx, b);
+    if (this.treeArt || this.bushArt) this.paintGreenery(ctx, x0, y0);
     if (this.lampArt) this.paintLamps(ctx, lines);
     clip = null;
   }
@@ -725,6 +730,43 @@ export class MapRenderer {
     const fw = c.width / KOMINY.klatki;
     const f = (b.seed >> 7) % KOMINY.klatki;
     ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+  }
+
+  /**
+   * Leafy trees and bushes on lawns and in parks (ZIELEN): one spot per grid
+   * cell, seeded by the cell, on grass away from paths, walls and roofs south of it.
+   * Painted into the chunk (they don't block walking).
+   */
+  private paintGreenery(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
+    const m = this.map;
+    const G = ZIELEN.coM * PX_PER_M;
+    const pad = 30;
+    // Spots reach past the chunk (trees overhang it): look at every area there, in draw order.
+    const areas = m.query({ x0: x0 - pad - G, y0: y0 - pad - G, x1: x0 + CHUNK + pad + G, y1: y0 + CHUNK + 2 * pad + G }).areas.slice().sort((a, b) => a.id - b.id);
+    for (let gx = Math.floor((x0 - pad) / G); gx * G < x0 + CHUNK + pad; gx++) {
+      for (let gy = Math.floor((y0 - pad) / G); gy * G < y0 + CHUNK + pad * 2; gy++) {
+        let h = Math.imul(gx * 73856093 ^ gy * 19349663, 2654435761) >>> 0;
+        const r = () => ((h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0) / 4294967296);
+        const x = (gx + 0.2 + r() * 0.6) * G, y = (gy + 0.2 + r() * 0.6) * G;
+        // The topmost area there decides (areas come in draw order): no trees on a pitch in a park.
+        let kind: string | null = null;
+        for (const a of areas) {
+          if (x < a.x0 || x > a.x1 || y < a.y0 || y > a.y1) continue;
+          if (a.kind !== 'paved' && pointIn(a.rings[0], x, y)) kind = a.kind;
+        }
+        if (!kind || ZIELEN.szansa[kind] === undefined || r() > ZIELEN.szansa[kind]) continue;
+        const tree = r() < ZIELEN.drzew;
+        const c = tree ? this.treeArt ?? this.bushArt : this.bushArt ?? this.treeArt;
+        if (!c) continue;
+        if (m.surfaceAt(x, y) !== 'trawa' || m.surfaceAt(x - 6, y) !== 'trawa' || m.surfaceAt(x + 6, y) !== 'trawa' || m.surfaceAt(x, y + 5) !== 'trawa') continue;
+        let clear = !m.buildingAt(x, y);
+        for (let k = 6; clear && k <= 30; k += 6) if (m.buildingAt(x, y + k) || m.buildingAt(x, y - k)) clear = false;
+        if (!clear) continue;
+        const fw = c.width / ZIELEN.klatki;
+        const f = Math.floor(r() * ZIELEN.klatki);
+        ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+      }
+    }
   }
 
   /** Gas lamps along the town streets, every LATARNIE.coM metres, alternating sides, lit at night. */
