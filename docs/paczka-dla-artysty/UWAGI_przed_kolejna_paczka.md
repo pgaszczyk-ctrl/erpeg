@@ -54,3 +54,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 23. **Ściany (tynk kremowy, cegła), latarnia gazowa i komin z parą przyjęte** – są w grze: ściany na frontach domów (niskie domy pokazują dolną część tekstury, jak ustaliliśmy), latarnie co ok. 30 m wzdłuż ulic (nocą świecą), kominy na co trzecim większym dachu. Zrzut: `5_zrzuty_z_gry/swiat_03c_sciany_latarnie.png`.
 24. Na mapie ściany są niskie (4–8 punktów), więc najlepiej działają **duże, wyraźne okna i kontrastowe fugi** – drobne detale znikają. Przy kolejnych materiałach (biały tynk, deski, kamień) można śmiało rysować grubiej.
 25. **Dalej:** sekcja D (drzewa, grzyb, kłoda, ławka, zegar, słup ogłoszeniowy, studzienka z parą), potem E (Luigi, Martin, woźnica…), potem reszta ścian z C.
+
+## Mgła nieznanych miejsc – pergamin (nowe, do zrobienia przy okazji)
+
+26. Nieodkryte miejsca nie są już czarne: gra zakrywa je **starą mapą – pergaminem**, jasnym w dzień, ciemniejszym o zmierzchu i nocą (według prawdziwego wschodu/zachodu słońca). Na razie pergamin rysuje program – zrzut `5_zrzuty_z_gry/mgla_pergamin_dzien_zmierzch_noc.png`.
+27. Prośba: **`mgla_pergamin`** – 384 × 384 px, kafelkujący się (bez powtarzania krawędzi), pełny, bez przezroczystości. Ciepły, jasny pergamin (dzień – nocą gra sama go przyciemni): **duże, miękkie plamy i przebarwienia, delikatne włókna, rzadko rozsiane wyblakłe znaczki starej mapy** (krzyżyki, kropki, fragmenty nieregularnej kratki) w kolorze wyblakłego atramentu. Gra zmniejsza go ok. 6×, więc drobne szczegóły znikną – rysuj duże i miękkie, bez napisów, bez niczego, co wygląda jak konkretny kształt (drzewo, dom). Plik do folderu `swiat/`.

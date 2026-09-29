@@ -264,7 +264,9 @@ export class GameScene extends Phaser.Scene {
     const inLublin = this.city.id === 'lublin';
     session.mapId = this.city.id;
     this.explored.load(inLublin ? session.fog : session.fogs[this.city.id]);
-    this.fogView = new FogView(this, this.explored);
+    // Where the map lies (sunrise/sunset for the fog's parchment); world maps are endless: their origin.
+    const mid = this.city.toLatLon(this.city.width / 2, this.city.height / 2);
+    this.fogView = new FogView(this, this.explored, Number.isFinite(mid.lat) && Number.isFinite(mid.lon) && Math.abs(mid.lat) <= 90 ? mid : this.city.toLatLon(0, 0));
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
 

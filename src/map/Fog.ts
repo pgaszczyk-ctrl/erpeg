@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { CityMap, Building } from './CityMap';
 import { wallHeight } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
+import { MGLA } from '../content/mgla';
+import { SKALA_PLIKOW } from '../content/swiat';
 
 // Fog of war:
 // - clear: what the hero sees right now (a cone where they look, a small
@@ -148,6 +150,84 @@ export function pointInPolygon(pts: number[], x: number, y: number) {
   return inside;
 }
 
+/**
+ * Daylight 0 (night) … 1 (day) now at latitude/longitude, from the real
+ * sunrise and sunset (sun declination; solar noon from the longitude and the
+ * device's time zone), with MGLA.szarowkaGodzin of twilight on each side.
+ */
+export function daylight(lat: number, lon: number, d = new Date()): number {
+  const start = new Date(d.getFullYear(), 0, 0);
+  const doy = Math.floor((d.getTime() - start.getTime()) / 86400000);
+  const decl = (-23.44 * Math.PI / 180) * Math.cos((2 * Math.PI / 365) * (doy + 10));
+  const phi = (lat * Math.PI) / 180;
+  const c = -Math.tan(phi) * Math.tan(decl);
+  if (c <= -1) return 1; // midnight sun
+  if (c >= 1) return 0; // polar night
+  const half = (Math.acos(c) * 180) / Math.PI / 15; // hours from noon to sunset
+  const tz = -d.getTimezoneOffset() / 60;
+  const noon = 12 + tz - lon / 15;
+  const h = d.getHours() + d.getMinutes() / 60;
+  const fromNoon = Math.abs(((h - noon + 36) % 24) - 12);
+  const edge = half - fromNoon; // hours of sun left (< 0: after sunset)
+  const t = MGLA.szarowkaGodzin;
+  return Math.max(0, Math.min(1, (edge + t) / (2 * t)));
+}
+
+/** The parchment the unknown lands are drawn with: the artist's file, else a made-up one (soft stains, fibres, faint ink marks). */
+function parchment(scene: Phaser.Scene): HTMLCanvasElement {
+  const key = `swiat-${MGLA.plik}`;
+  if (scene.textures.exists(key)) {
+    const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
+    const k = SKALA_PLIKOW * FOG_RES;
+    const c = document.createElement('canvas');
+    c.width = Math.max(8, Math.round(img.width / k));
+    c.height = Math.max(8, Math.round(img.height / k));
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
+  const S = 160;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d')!;
+  const [r, gr, b] = MGLA.dzien;
+  g.fillStyle = `rgb(${r},${gr},${b})`;
+  g.fillRect(0, 0, S, S);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  // Wrapped drawing so the pattern tiles.
+  const wrap = (f: (dx: number, dy: number) => void) => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) f(dx, dy); };
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * S, y = rnd() * S, rad = 6 + rnd() * 26, dark = rnd() < 0.6;
+    const a = 0.05 + rnd() * 0.09;
+    wrap((dx, dy) => {
+      const grd = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
+      grd.addColorStop(0, dark ? `rgba(90,62,30,${a})` : `rgba(255,240,205,${a})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd;
+      g.fillRect(x + dx - rad, y + dy - rad, rad * 2, rad * 2);
+    });
+  }
+  // Faint fibres.
+  g.lineWidth = 1;
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * S, y = rnd() * S, l = 4 + rnd() * 10, ang = rnd() * Math.PI;
+    g.strokeStyle = `rgba(110,80,45,${0.05 + rnd() * 0.06})`;
+    wrap((dx, dy) => { g.beginPath(); g.moveTo(x + dx, y + dy); g.lineTo(x + dx + Math.cos(ang) * l, y + dy + Math.sin(ang) * l); g.stroke(); });
+  }
+  // A few ink marks of an old map: small crosses and dots.
+  for (let i = 0; i < 9; i++) {
+    const x = Math.round(rnd() * S), y = Math.round(rnd() * S), cross = rnd() < 0.5;
+    g.fillStyle = 'rgba(95,68,40,0.28)';
+    wrap((dx, dy) => {
+      if (cross) { g.fillRect(x + dx - 1, y + dy, 3, 1); g.fillRect(x + dx, y + dy - 1, 1, 3); } else g.fillRect(x + dx, y + dy, 1, 1);
+    });
+  }
+  return c;
+}
+
 /** Draws the fog over the camera view. */
 export class FogView {
   private tex: Phaser.Textures.CanvasTexture;
@@ -156,7 +236,14 @@ export class FogView {
   private cellCtx = this.cells.getContext('2d')!;
   private static counter = 0;
 
-  constructor(scene: Phaser.Scene, private explored: Explored) {
+  private paper: CanvasPattern | null = null;
+  /** Where the map lies on Earth, for the sunrise and sunset. */
+  private where = { lat: 51.25, lon: 22.57 };
+  private lightAt = 0;
+  private light = 1;
+
+  constructor(private scene: Phaser.Scene, private explored: Explored, where?: { lat: number; lon: number }) {
+    if (where) this.where = where;
     const key = `fog-${FogView.counter++}`;
     this.tex = scene.textures.createCanvas(key, 64, 64)!;
     this.tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -190,10 +277,8 @@ export class FogView {
       for (let i = 0; i < gw; i++) {
         const o = (j * gw + i) * 4;
         const seen = this.explored.hasCell(gx0 + i, gy0 + j);
-        d[o] = seen ? 28 : 6;
-        d[o + 1] = seen ? 30 : 6;
-        d[o + 2] = seen ? 40 : 10;
-        d[o + 3] = seen ? 165 : 255;
+        d[o] = d[o + 1] = d[o + 2] = 0;
+        d[o + 3] = seen ? MGLA.poznaneKrycie : 255;
       }
     }
     this.cellCtx.putImageData(data, 0, 0);
@@ -209,6 +294,24 @@ export class FogView {
     ctx.globalCompositeOperation = 'copy';
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(this.cells, 0, 0, W, H);
+    // The fog's shape painted as old parchment, darker at night (daylight checked once a minute).
+    this.paper ??= ctx.createPattern(parchment(this.scene), 'repeat');
+    const now = Date.now();
+    if (now - this.lightAt > 60_000) {
+      this.lightAt = now;
+      this.light = daylight(this.where.lat, this.where.lon);
+    }
+    ctx.globalCompositeOperation = 'source-atop';
+    if (this.paper) {
+      this.paper.setTransform(new DOMMatrix([1, 0, 0, 1, -gx0 * FOG_CELL / FOG_RES, -gy0 * FOG_CELL / FOG_RES]));
+      ctx.fillStyle = this.paper;
+      ctx.fillRect(0, 0, W, H);
+    }
+    const dark = MGLA.nocCiemnosc * (1 - this.light);
+    if (dark > 0.01) {
+      ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
     ctx.globalCompositeOperation = 'destination-out';
     const ox = gx0 * FOG_CELL;
     const oy = gy0 * FOG_CELL;
