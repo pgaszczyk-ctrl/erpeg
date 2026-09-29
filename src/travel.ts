@@ -256,7 +256,7 @@ export function addSecondCoachmen(city: CityMap) {
     if (!bigStation(city.id, p.name)) continue;
     for (let n = 2; n <= WOZNICA.woznicNaDuzejStacji; n++) {
       if (city.places.some((q) => q.id === `${p.id}#${n}`)) continue;
-      const door = city.freeNear(p.door.x + (n - 1) * 14 * PX_PER_M, p.door.y + (n % 2 ? -4 : 4) * PX_PER_M);
+      const door = city.freeNear(p.door.x + (n - 1) * 26 * PX_PER_M, p.door.y + (n % 2 ? -4 : 4) * PX_PER_M);
       city.places.push({ ...p, id: `${p.id}#${n}`, building: null, door });
     }
   }

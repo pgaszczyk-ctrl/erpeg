@@ -29,6 +29,7 @@ import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '..
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY, DIAMENT } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
+import { WOZY } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -375,13 +376,14 @@ export class GameScene extends Phaser.Scene {
     const showPlace = (p: CityPlace) => {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
-      this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
+      if (p.kind === 'station') this.placeCarts([p]);
+      else this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
       if (p.kind === 'station' && hdOn) {
         const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
         if (this.textures.exists(key)) {
           // Right by the cart sign (the door itself can be on the tracks, where freeNear went far away).
-          fitHd(this.add.sprite(p.door.x + 10, p.door.y - 2, key, 'down-0')).setDepth(p.door.y - 2);
+          fitHd(this.add.sprite(p.door.x + 19, p.door.y + 1, key, 'down-0')).setDepth(p.door.y + 3);
         }
       }
     };
@@ -1012,6 +1014,46 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.dropPickup(x, y, Math.random() < HEART_DROP_CHANCE && this.player.hp < PLAYER.maxHp);
+  }
+
+  /**
+   * The coachmen's carts (content/swiat.ts WOZY): loaded in the background after the start,
+   * one per station (load and horse colour by the station's id); until they arrive, the drawn cart sign.
+   */
+  private placeCarts(stations: CityPlace[]) {
+    const W = WOZY;
+    const file = (p: CityPlace) => {
+      let h = 0;
+      for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) >>> 0;
+      return `woz_konny_${W.ladunki[h % W.ladunki.length]}_${W.masci[(h >>> 4) % W.masci.length]}`;
+    };
+    const signs = stations.map((p) => this.add.image(p.door.x, p.door.y - 10, TEX.coach).setDepth(900_000));
+    const put = () => {
+      stations.forEach((p, i) => {
+        const key = `swiat-${file(p)}`;
+        if (!this.textures.exists(key)) return;
+        signs[i].destroy();
+        const tex = this.textures.get(key);
+        if (!tex.has('f0')) {
+          const src = tex.getSourceImage() as HTMLImageElement;
+          tex.add('f0', 0, 0, 0, src.width / 2, src.height);
+          tex.add('f1', 0, src.width / 2, 0, src.width / 2, src.height);
+        }
+        const img = this.add.image(p.door.x - 8, p.door.y + 2, key, 'f0').setOrigin(0.5, 0.92);
+        img.setScale(W.wysokosc / img.height).setDepth(p.door.y + 2);
+        const swap = () => {
+          if (!img.active) return;
+          img.setFrame(img.frame.name === 'f0' ? 'f1' : 'f0');
+          this.time.delayedCall(W.klatkaMs[0] + Math.random() * (W.klatkaMs[1] - W.klatkaMs[0]), swap);
+        };
+        this.time.delayedCall(Math.random() * W.klatkaMs[1], swap);
+      });
+    };
+    const want = [...new Set(stations.map(file))].filter((f) => !this.textures.exists(`swiat-${f}`));
+    if (!want.length) return put();
+    for (const f of want) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
+    this.load.once('complete', put);
+    this.load.start();
   }
 
   /** A gang boss spills coins (in a few piles) and fruit on the ground (content/gangi.ts LUP_HERSZTA). */

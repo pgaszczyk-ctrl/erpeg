@@ -91,6 +91,19 @@ export const MIEJSCA = {
   kociolLublin: { lat: 51.24787, lon: 22.56818, przy: 'Rynek 1' },
 };
 
+/**
+ * Wozy woźniców (paczka „wozy konne final”): ładunek × maść, każdy plik 2 klatki
+ * (koń stoi / przestępuje) po 248 × 198, pokazane tak, żeby klatka miała
+ * `wysokosc` punktów mapy (koń trochę wyższy od ludzika). Wóz stoi przy stacji,
+ * wybierany po id stacji; klatki zmieniają się co `klatkaMs`.
+ */
+export const WOZY = {
+  ladunki: ['pusty', 'beczki', 'worki'],
+  masci: ['brazowy', 'czarny', 'szary'],
+  wysokosc: 34,
+  klatkaMs: [1400, 2600] as [number, number],
+};
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
