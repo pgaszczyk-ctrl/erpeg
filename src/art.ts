@@ -1264,6 +1264,7 @@ export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.pine, 'sosna', ['full', 'stump']);
   useArtist(scene, TEX.mushroom, 'grzyb', null);
   useArtist(scene, TEX.log, 'kloda', null);
+  useArtist(scene, TEX.signpost, 'drogowskaz', null);
 }
 
 function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null) {

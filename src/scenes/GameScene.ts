@@ -19,6 +19,7 @@ import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs'
 import { NIE_POWTARZAJ_DNI } from '../content/prosby';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
+import { Landmarks } from './Landmarks';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
@@ -214,6 +215,7 @@ export class GameScene extends Phaser.Scene {
   /** The school or church whose dialog gets the story question. */
   private storyPlace: CityPlace | null = null;
   private training!: Training;
+  private landmarks!: Landmarks;
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
@@ -375,11 +377,12 @@ export class GameScene extends Phaser.Scene {
     };
     for (const p of this.city.places) showPlace(p);
     // Road signs on the ways out of town (split-map): read when walking past.
-    for (const sg of this.city.signs) this.add.image(sg.x, sg.y - 8, TEX.signpost).setDepth(sg.y);
+    for (const sg of this.city.signs) this.add.image(sg.x, sg.y + 2, TEX.signpost).setOrigin(0.5, 1).setScale(artScale(TEX.signpost)).setDepth(sg.y);
     this.signRead = -1;
     this.applySkill();
 
     this.training = new Training(this, this.city);
+    this.landmarks = new Landmarks(this, this.city);
     this.shots = [];
     this.aimLine = this.add.graphics().setDepth(1_050_000);
     this.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
@@ -570,6 +573,7 @@ export class GameScene extends Phaser.Scene {
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
     this.forest.update(this.player.x, this.player.y, now);
+    this.landmarks.update(this.player.x, this.player.y);
     this.updateHarvests(now);
     this.folk.fear = this.story.dragonAt();
     this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
@@ -758,7 +762,7 @@ export class GameScene extends Phaser.Scene {
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
     const free = (x: number, y: number) =>
-      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.training.blocked(x, y);
+      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
     if (dx && free(a.x + dx, fy)) a.x += dx;
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }

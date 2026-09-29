@@ -76,10 +76,25 @@ export const DEKORACJE = {
   poczta: { plik: 'automat_pneumatyczny' },   // przy pocztach, skrzynkach pocztowych i paczkomatach
 };
 
+/**
+ * Miejsca szczególne (paczka 04d): najwyżej jedno na plac. Wieża zegarowa na placu
+ * co najmniej `odM2` m² z ratuszem/urzędem miasta w promieniu `przyRatuszuM`,
+ * fontanna na placach od `odM2`, smoczy kocioł na co trzecim mniejszym placu od
+ * `odM2` (i zawsze na lubelskim Rynku). `podstawa` = twarda podstawa w punktach
+ * mapy (szer. × gł.), reszta obrazka nie zatrzymuje bohatera, tylko go zasłania.
+ */
+export const MIEJSCA = {
+  fontanna: { plik: 'fontanna_smok', odM2: 3000, podstawa: [18, 5] as [number, number] },
+  kociol: { plik: 'kociol_publiczny', odM2: 1500, podstawa: [15, 4] as [number, number] },
+  wieza: { plik: 'wieza_zegarowa', odM2: 1500, przyRatuszuM: 150, podstawa: [19, 5] as [number, number] },
+  /** Smoczy kocioł na lubelskim Rynku (misja Martina „Zmarznięty smok” go rozpala). */
+  kociolLublin: { lat: 51.24787, lon: 22.56818, przy: 'Rynek 1' },
+};
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
 import { MGLA } from './mgla';
 
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny'];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny', 'fontanna_smok', 'kociol_publiczny', 'wieza_zegarowa', 'drogowskaz'];

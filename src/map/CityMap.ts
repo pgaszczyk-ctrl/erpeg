@@ -144,7 +144,7 @@ export function pointInRings(rings: number[][], x: number, y: number) {
   return inside;
 }
 
-function distToPolyline(pts: number[], x: number, y: number) {
+export function distToPolyline(pts: number[], x: number, y: number) {
   let best = Infinity;
   for (let i = 0; i < pts.length - 2; i += 2) {
     const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3];

@@ -19,6 +19,13 @@ const COL = [1, 0, 2];
  * The standing frame is used when the character stands still.
  */
 const WALK = [1, 2];
+/**
+ * Townsfolk, fixed characters and enemies: step A – stand – step B – stand.
+ * On many of their sheets steps A and B look almost the same (above all from
+ * the side), so A–B alone looked like floating with only an arm moving.
+ */
+const WALK_FOLK = [1, 0, 2, 0];
+const WALK_FOLK_FPS = 8;
 /** ~165 ms a step (the artist suggests 140–180 ms). */
 const WALK_FPS = 6;
 /** Sheet row of each direction (the artist's order: down, side, up). */
@@ -377,7 +384,7 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
   tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
-    if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FPS, repeat: -1 });
+    if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });
   }
 }
 

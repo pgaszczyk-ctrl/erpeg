@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
+import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
 import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
 import { MIESZKANCY } from '../content/mieszkancy';
+import { plazaLandmark } from './landmarks';
+import { OSTROSC } from '../screen';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -11,7 +13,29 @@ export { AREA_FILL, ROAD_FILL };
 // cartoon top-down style. Chunks are drawn on demand and recycled.
 
 const CHUNK = 512; // px
-const MAX_CHUNKS = 24;
+/**
+ * Canvas pixels per map pixel in the map chunks: 2 on sharp screens (OSTROSC),
+ * so the artist's 3× graphics keep twice the detail and roof edges and lamps
+ * aren't blown-up blocks next to the detailed characters; 1 on slow phones.
+ */
+const DOTS = OSTROSC;
+const MAX_CHUNKS = DOTS > 1 ? 16 : 24;
+const CAR_ROADS = new Set(['major', 'medium', 'minor', 'pedestrian', 'service']);
+/**
+ * Does a street object at (x, y) beside line `own` stand on (or right by)
+ * another road? Dual carriageways are two parallel lines merged into one
+ * paved road: their inner edges are the middle of the road, not a pavement.
+ */
+function onOtherRoad(m: CityMap, own: Line, x: number, y: number) {
+  const r = 12 * PX_PER_M;
+  for (const l of m.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r }).lines) {
+    if (l === own || !CAR_ROADS.has(l.kind) || l.bridge) continue;
+    if (distToPolyline(l.pts, x, y) <= l.width / 2 + 2.5 * PX_PER_M) return true;
+  }
+  return false;
+}
+/** Snaps a map coordinate to the chunk's canvas pixels. */
+const snap = (v: number) => Math.round(v * DOTS) / DOTS;
 const OUTLINE = '#2a2430';
 
 // One earthen track for roads, pavements and paths alike.
@@ -157,14 +181,17 @@ function artSheet(scene: Phaser.Scene, file: string): HTMLCanvasElement | null {
   if (!scene.textures.exists(key)) return null;
   const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
   const c = document.createElement('canvas');
-  c.width = Math.round(img.width / SKALA_PLIKOW);
-  c.height = Math.round(img.height / SKALA_PLIKOW);
+  c.width = Math.round((img.width * DOTS) / SKALA_PLIKOW);
+  c.height = Math.round((img.height * DOTS) / SKALA_PLIKOW);
   const g = c.getContext('2d')!;
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = 'high';
   g.drawImage(img, 0, 0, c.width, c.height);
   return c;
 }
+
+/** Pattern transform from the chunk's canvas pixels back to map pixels. */
+const UNDOTS = new DOMMatrix().scaleSelf(1 / DOTS);
 
 /** Is (x, y) inside the ring (even–odd rule)? */
 function pointIn(r: number[], x: number, y: number) {
@@ -218,13 +245,15 @@ function artPattern(scene: Phaser.Scene, ctx: CanvasRenderingContext2D, file: st
   if (!scene.textures.exists(key)) return null;
   const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
   const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.round(img.width / SKALA_PLIKOW));
-  c.height = Math.max(1, Math.round(img.height / SKALA_PLIKOW));
+  c.width = Math.max(1, Math.round((img.width * DOTS) / SKALA_PLIKOW));
+  c.height = Math.max(1, Math.round((img.height * DOTS) / SKALA_PLIKOW));
   const g = c.getContext('2d')!;
   g.imageSmoothingEnabled = true;
   g.imageSmoothingQuality = 'high';
   g.drawImage(img, 0, 0, c.width, c.height);
-  return ctx.createPattern(c, 'repeat');
+  const pat = ctx.createPattern(c, 'repeat');
+  pat?.setTransform(UNDOTS);
+  return pat;
 }
 
 /** Bounding boxes of rings (cached), so a chunk skips the ones that miss it. */
@@ -370,8 +399,8 @@ export class MapRenderer {
     let chunk = this.chunks.get(k) ?? this.free.pop();
     if (!chunk) {
       const key = `chunk-${textureCounter++}`;
-      const tex = this.scene.textures.createCanvas(key, CHUNK, CHUNK)!;
-      const img = this.scene.add.image(0, 0, key).setOrigin(0).setDepth(-1000);
+      const tex = this.scene.textures.createCanvas(key, CHUNK * DOTS, CHUNK * DOTS)!;
+      const img = this.scene.add.image(0, 0, key).setOrigin(0).setScale(1 / DOTS).setDepth(-1000);
       chunk = { key: '', tex, img };
     }
     chunk.key = `${cx},${cy}`;
@@ -430,7 +459,7 @@ export class MapRenderer {
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
     const P = this.patterns!;
     const m = this.map;
-    ctx.setTransform(1, 0, 0, 1, -x0, -y0);
+    ctx.setTransform(DOTS, 0, 0, DOTS, -x0 * DOTS, -y0 * DOTS);
     ctx.imageSmoothingEnabled = false;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -672,7 +701,7 @@ export class MapRenderer {
     ringsPath(ctx, b.rings);
     const art = this.roofArt[b.seed % ROOFS.length] ?? null;
     // Tile rows run along the building's longest wall, shifted per building, so neighbours don't share one grid.
-    if (art && !special) art.setTransform(roofTransform(b));
+    if (art && !special) art.setTransform(roofTransform(b).scale(1 / DOTS));
     ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
     ctx.fill('evenodd');
     ctx.lineWidth = 1.2;
@@ -702,7 +731,7 @@ export class MapRenderer {
       const L = Math.hypot(dx, dy);
       // Facing the viewer: the outward normal points down the screen.
       if (L < 1 || out * -dx <= 0.2 * L) continue;
-      art.pat.setTransform(new DOMMatrix([dx / L, dy / L, 0, 1, ax, ay + h - tileH]));
+      art.pat.setTransform(new DOMMatrix([dx / L, dy / L, 0, 1, ax, ay + h - tileH]).scaleSelf(1 / DOTS));
       ctx.beginPath();
       ctx.moveTo(ax, ay);
       ctx.lineTo(ax + dx, ay + dy);
@@ -736,7 +765,7 @@ export class MapRenderer {
     if (!pointIn(r, x, y)) return;
     const fw = c.width / KOMINY.klatki;
     const f = (b.seed >> 7) % KOMINY.klatki;
-    ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+    ctx.drawImage(c, f * fw, 0, fw, c.height, snap(x - fw / 2 / DOTS), snap(y - c.height / DOTS), fw / DOTS, c.height / DOTS);
   }
 
   /**
@@ -771,7 +800,7 @@ export class MapRenderer {
         if (!clear) continue;
         const fw = c.width / ZIELEN.klatki;
         const f = Math.floor(r() * ZIELEN.klatki);
-        ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+        ctx.drawImage(c, f * fw, 0, fw, c.height, snap(x - fw / 2 / DOTS), snap(y - c.height / DOTS), fw / DOTS, c.height / DOTS);
       }
     }
   }
@@ -782,7 +811,7 @@ export class MapRenderer {
     if (!c) return;
     const n = ('klatki' in DEKORACJE[key] ? (DEKORACJE[key] as { klatki: number }).klatki : 1);
     const fw = c.width / n;
-    ctx.drawImage(c, (frame % n) * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+    ctx.drawImage(c, (frame % n) * fw, 0, fw, c.height, snap(x - fw / 2 / DOTS), snap(y - c.height / DOTS), fw / DOTS, c.height / DOTS);
   }
 
   /** Walks along a line every `step` px (starting at a seeded offset), calling f with the spot, the unit direction and the side (±1). */
@@ -834,13 +863,13 @@ export class MapRenderer {
         if (this.deco.hydrant) {
           this.along(l, D.hydrant.coM * PX_PER_M, (x, y, ux, uy, side) => {
             const hx = x - uy * (off + PX_PER_M) * side, hy = y + ux * (off + PX_PER_M) * side;
-            if (free(hx, hy)) this.stand(ctx, 'hydrant', hx, hy);
+            if (free(hx, hy) && !onOtherRoad(m, l, hx, hy)) this.stand(ctx, 'hydrant', hx, hy);
           });
         }
         if (this.deco.slup && l.kind !== 'minor') {
           this.along(l, D.slup.coM * PX_PER_M, (x, y, ux, uy, side) => {
             const px = x + uy * (off + 2 * PX_PER_M) * side, py = y - ux * (off + 2 * PX_PER_M) * side;
-            if (free(px, py)) this.stand(ctx, 'slup', px, py);
+            if (free(px, py) && !onOtherRoad(m, l, px, py)) this.stand(ctx, 'slup', px, py);
           });
         }
       }
@@ -848,7 +877,7 @@ export class MapRenderer {
     // A street clock in the middle of bigger squares.
     if (this.deco.zegar) {
       for (const a of areas) {
-        if (a.kind !== 'plaza' || (a.x1 - a.x0) * (a.y1 - a.y0) < D.zegar.odM2 * PX_PER_M * PX_PER_M) continue;
+        if (a.kind !== 'plaza' || (a.x1 - a.x0) * (a.y1 - a.y0) < D.zegar.odM2 * PX_PER_M * PX_PER_M || plazaLandmark(m, a)) continue;
         const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
         if (pointIn(a.rings[0], cx, cy) && free(cx, cy)) this.stand(ctx, 'zegar', cx, cy);
       }
@@ -903,7 +932,10 @@ export class MapRenderer {
           const off = l.width / 2 + 2 * PX_PER_M;
           const x = ax + (dx * t) / L + (-dy / L) * off * side;
           const y = ay + (dy * t) / L + (dx / L) * off * side;
-          if (!m.buildingAt(x, y) && !m.buildingAt(x, y - 6)) ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+          // At the road's edge: a little further out there is no more road (a dual carriageway's middle or a wide junction).
+          const ox = x + (-dy / L) * 3 * PX_PER_M * side, oy = y + (dx / L) * 3 * PX_PER_M * side;
+          const edge = m.buildingAt(ox, oy) || m.surfaceAt(ox, oy) !== 'asfalt';
+          if (edge && !m.buildingAt(x, y) && !m.buildingAt(x, y - 6) && !onOtherRoad(m, l, x, y)) ctx.drawImage(c, f * fw, 0, fw, c.height, snap(x - fw / 2 / DOTS), snap(y - c.height / DOTS), fw / DOTS, c.height / DOTS);
           side = -side;
           t += step;
         }
