@@ -864,7 +864,7 @@ export class MapRenderer {
         });
       }
       if (l.kind === 'major' || l.kind === 'medium' || l.kind === 'minor') {
-        if (this.deco.studzienka) {
+        if (this.deco.studzienka && D.studzienka.ulice.includes(l.kind)) {
           this.along(l, D.studzienka.coM * PX_PER_M, (x, y, _ux, _uy, _s, n) => {
             if (free(x, y) && m.surfaceAt(x, y) === 'asfalt') this.stand(ctx, 'studzienka', x, y + 4, (l.id + n) % 3);
           });

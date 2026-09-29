@@ -189,7 +189,9 @@ function worldLoader(map: CityMap): WorldLoader {
     each('roads', (f, i, pr) => {
       if (f.type !== 2 || f.properties.is_tunnel) return;
       const p = f.properties;
-      const kind = p.kind === 'rail' ? (p.kind_detail === 'tram' ? 'tram' : p.kind_detail === 'rail' ? 'rail' : null) : ROAD[String(p.kind_detail ?? p.kind)];
+      // Rails: only the main lines – sidings, yards and spurs made freight yards look like a giant station.
+      const side = p.service === 'yard' || p.service === 'siding' || p.service === 'spur' || p.service === 'crossover';
+      const kind = p.kind === 'rail' ? (p.kind_detail === 'tram' ? 'tram' : p.kind_detail === 'rail' && !side ? 'rail' : null) : ROAD[String(p.kind_detail ?? p.kind)];
       if (!kind) return;
       const flags = p.is_bridge ? 1 : 0;
       f.loadGeometry().forEach((g, j) => {

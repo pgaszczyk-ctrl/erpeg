@@ -385,7 +385,8 @@ export class GameScene extends Phaser.Scene {
         const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
         if (this.textures.exists(key)) {
           // Right by the cart sign (the door itself can be on the tracks, where freeNear went far away).
-          fitHd(this.add.sprite(p.door.x + 19, p.door.y + 1, key, 'down-0')).setDepth(p.door.y + 3);
+          const at = this.cartSpot(p);
+          fitHd(this.add.sprite(at.x + 19, at.y + 1, key, 'down-0')).setDepth(at.y + 3);
         }
       }
     };
@@ -1027,6 +1028,22 @@ export class GameScene extends Phaser.Scene {
    * The coachmen's carts (content/swiat.ts WOZY): loaded in the background after the start,
    * one per station (load and horse colour by the station's id); until they arrive, the drawn cart sign.
    */
+  /**
+   * Where a station's cart and coachman stand: at its door, or – when the door lies in a building
+   * (world maps put the station inside it; the owner saw the coachman on a roof) – the nearest spot
+   * with no building under the cart and coachman. Rails don't count, carts stand by the platforms.
+   */
+  private cartSpot(p: CityPlace) {
+    const clear = (x: number, y: number) => [[-30, 0], [-8, -6], [14, 0], [19, 1], [-8, 3]].every(([dx, dy]) => !this.city.buildingAt(x + dx, y + dy));
+    for (let r = 0; r <= 80; r += 4) {
+      for (const [dx, dy] of [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1]]) {
+        if (clear(p.door.x + dx * r, p.door.y + dy * r)) return { x: p.door.x + dx * r, y: p.door.y + dy * r };
+        if (!r) break;
+      }
+    }
+    return p.door;
+  }
+
   private placeCarts(stations: CityPlace[]) {
     const W = WOZY;
     const file = (p: CityPlace) => {
@@ -1046,8 +1063,9 @@ export class GameScene extends Phaser.Scene {
           tex.add('f0', 0, 0, 0, src.width / 2, src.height);
           tex.add('f1', 0, src.width / 2, 0, src.width / 2, src.height);
         }
-        const img = this.add.image(p.door.x - 8, p.door.y + 2, key, 'f0').setOrigin(0.5, 0.92);
-        img.setScale(W.wysokosc / img.height).setDepth(p.door.y + 2);
+        const at = this.cartSpot(p);
+        const img = this.add.image(at.x - 8, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
+        img.setScale(W.wysokosc / img.height).setDepth(at.y + 2);
         const swap = () => {
           if (!img.active) return;
           img.setFrame(img.frame.name === 'f0' ? 'f1' : 'f0');

@@ -59,6 +59,9 @@ export class Orchards {
   private treesOf(a: Area, index: number): FruitTree[] {
     let list = this.generated.get(a);
     if (list) return list;
+    // Not before the pitch and its surroundings have loaded: spots tested against missing
+    // buildings came out "not free" and the pitch stayed empty for good (Katowice, a world map).
+    if (!this.city.ready({ x0: a.x0 - 40, y0: a.y0 - 40, x1: a.x1 + 40, y1: a.y1 + 40 })) return [];
     list = [];
     const kinds = FRUIT_AREAS[a.kind];
     const m2 = ringsArea(a.rings[0]) / (PX_PER_M * PX_PER_M);

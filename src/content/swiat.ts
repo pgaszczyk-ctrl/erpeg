@@ -68,7 +68,7 @@ export const DEKORACJE = {
   kosz: { plik: 'kosz_mosiezny' },           // przy co drugiej ławce
   hydrant: { plik: 'hydrant_parowy', coM: 95 },       // chodniki ulic
   slup: { plik: 'slup_ogloszeniowy', coM: 170 },       // większe ulice
-  studzienka: { plik: 'studzienka_para', klatki: 3, coM: 75 }, // w bruku ulic
+  studzienka: { plik: 'studzienka_para', klatki: 3, coM: 260, ulice: ['major', 'medium'] }, // w bruku większych ulic (rzadko – właściciel: było za gęsto)
   zegar: { plik: 'zegar_uliczny', odM2: 1500 },     // na placach (większych niż odM2)
   donica: { plik: 'donica_kwiaty', klatki: 2 },     // przy drzwiach sklepów, szkół, kościołów, bibliotek, hoteli, urzędów
   skrzynie: { plik: 'skrzynie_beczki' },      // przy sklepach i wozach kupców
