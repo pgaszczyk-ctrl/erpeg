@@ -19,6 +19,12 @@ const CHUNK = 512; // px
  * aren't blown-up blocks next to the detailed characters; 1 on slow phones.
  */
 const DOTS = OSTROSC;
+/**
+ * The map lies under everything. Sprites are sorted by their y, and parts of
+ * the Lublin map (around Jastków, Nałęczów…) have negative y: at −1000 the
+ * hero and townsfolk slipped under the map there and vanished.
+ */
+export const GROUND_DEPTH = -1e8;
 const MAX_CHUNKS = DOTS > 1 ? 12 : 24;
 const CAR_ROADS = new Set(['major', 'medium', 'minor', 'pedestrian', 'service']);
 /**
@@ -403,7 +409,7 @@ export class MapRenderer {
     if (!chunk) {
       const key = `chunk-${textureCounter++}`;
       const tex = this.scene.textures.createCanvas(key, CHUNK * DOTS, CHUNK * DOTS)!;
-      const img = this.scene.add.image(0, 0, key).setOrigin(0).setScale(1 / DOTS).setDepth(-1000);
+      const img = this.scene.add.image(0, 0, key).setOrigin(0).setScale(1 / DOTS).setDepth(GROUND_DEPTH);
       chunk = { key: '', tex, img };
     }
     chunk.key = `${cx},${cy}`;

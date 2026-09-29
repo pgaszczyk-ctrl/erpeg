@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GROUND_DEPTH } from '../map/MapRenderer';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
@@ -512,7 +513,7 @@ export class StreetEnemies {
       // The red mist over an active territory near the hero.
       if (!g.clearedAt && d < g.r + 1500 * PX_PER_M) {
         if (!g.fog) {
-          g.fog = this.scene.add.graphics().setDepth(-999);
+          g.fog = this.scene.add.graphics().setDepth(GROUND_DEPTH + 1);
           g.fog.fillStyle(GANG_MGLA.kolor, GANG_MGLA.alfa).fillCircle(g.x, g.y, g.r);
           g.fog.lineStyle(4, GANG_MGLA.kolor, Math.min(1, GANG_MGLA.alfa * 2.5)).strokeCircle(g.x, g.y, g.r);
         }
@@ -550,7 +551,7 @@ export class StreetEnemies {
       this.flies?.clear();
       return;
     }
-    const f = (this.flies ??= this.scene.add.graphics().setDepth(-998));
+    const f = (this.flies ??= this.scene.add.graphics().setDepth(GROUND_DEPTH + 2));
     f.clear().fillStyle(GANG_MUSZKI.kolor, 1);
     const v = this.scene.cameras.main.worldView;
     const c = GANG_MUSZKI.coPx;
