@@ -25,13 +25,13 @@ Exp-lore to gra przygodowa na telefon (pixel-art, widok z góry), rozgrywana na 
 4. **Mag Albrecht** (spiczasta czapka, kręci się przy uczelni). Od 5. poziomu postaci mówi: *„Smoki wróciły! Po wiekach snu znów latają nad naszą ziemią… Tylko pamiętaj: nie każdy smok jest zły.”* Wskazuje smoka za miastem, z dala od domów (0,5–6 km).
 5. **Spotkanie ze smokiem.** Wybór:
    - **„Zabij bestię”**: walka, tytuł **„Pogromca smoka”**;
-   - **„Zbadaj to cudo”**: rozmowa, tytuł **„Brat smoków”**. Smok opowiada: *„Kiedyś smoki i ludzie żyli razem. Pilnowaliśmy lasów i rzek, a ludzie przynosili nam jabłka i śliwki. Potem przyszła wielka wojna i zasnęliśmy głęboko pod ziemią. Teraz się budzimy. Ale chochliki, które widzisz na ulicach, też się obudziły… To one straszą ludzi, nie my. Jeśli chcesz, zostań moim przyjacielem. Razem przywrócimy dawny porządek. A to dopiero początek naszej historii…”*
+   - **„Zbadaj to cudo”**: rozmowa, tytuł **„Brat smoków”**. Smok opowiada (lore v1.1): *„Blask komety wyrwał mnie z ziemi… Wasz świat się zmienił. Pełno tu gryzącego dymu i ryczących maszyn parowych. Gdzie podziały się spokojne lasy, których strzegliśmy? Gdzie jabłka, które przynosili nam wasi przodkowie? Jeśli naprawdę pamiętasz dawny pakt, udowodnij to. Zagraj naszą melodię, a znów staniemy się waszymi strażnikami…”* Potem smocza melodia: nutki na pięciolinii do powtórzenia na fujarce.
 6. Na tym historia się dziś **kończy**. Tytuł wyświetla się pod imieniem.
 
 ## 4. Wątki otwarte (do wymyślenia w lore)
 
 - **Kim jest bohater?** Dziś nic o tym nie wiadomo. W demo (kod QR) bohater budzi się pod Wawelem bez pamięci (*„Gdzie ja jestem…? I kim ja właściwie jestem?”*), je owoce, nagle mówi *„OOooo, już wiem kim jestem!”*, walczy ze smokiem wawelskim i… budzi się naprawdę, w prawdziwym miejscu. To był sen. Można z tego zrobić motyw przewodni: sny o smokach, zapomniana tożsamość, bohater związany ze smokami.
-- **„Wielka wojna”**, po której smoki zasnęły: kto z kim walczył, dlaczego.
+- **Wielka Wojna o Tryby** (v1.1: ludzka chciwość wygnała smoki w mrok) – szczegóły: kto z kim walczył.
 - **Dlaczego budzą się chochliki** i kto nimi kieruje (herszci gangów, może ktoś wyżej).
 - **Dawny porządek**, który smok chce przywrócić: pakt ludzi i smoków, strażnicy lasów i rzek.
 - **Dwie drogi:** dalsza historia powinna się rozgałęziać zależnie od tytułu („Pogromca smoka” i „Brat smoków”).

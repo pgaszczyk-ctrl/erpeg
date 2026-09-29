@@ -53,6 +53,11 @@ export interface Misja {
   doswiadczenie?: number;
   /** Przedmiot w nagrodę (id z przedmioty.ts), np. 'luk'. */
   przedmiot?: string;
+  /**
+   * Trwała nagroda: 'znizka_woznica' = u woźniców na zawsze taniej (WOZNICA.znizka)
+   * i jeden darmowy przejazd u woźnicy na dworcu WOZNICA.gratisNaStacji.
+   */
+  flaga?: 'znizka_woznica';
   /** Tylko zlecenia losowe: miejsce (kościół, urząd, komenda), które je dało. */
   placeId?: string;
   /** Wykonane zadanie można oddać w dowolnej bibliotece (zlecenia towarzystw naukowych). */
@@ -88,13 +93,26 @@ export const MISJE: Misja[] = [
     nagroda: 20,
   },
   {
-    id: 'ratusz',
+    id: 'rury_na_ratuszu',
     adres: 'Plac Władysława Łokietka 1',
-    tytul: 'List do Collegium Novum',
-    opis: 'Mamy pilny list do rektora. Zanieś go do Collegium Novum przy Alejach Racławickich.',
-    zadanie: { typ: 'idz', miejsce: 'Aleje Racławickie 1', cel: 'Zanieś list do Collegium Novum' },
-    zakonczenie: 'Dziękujemy, rektor dostał list na czas!',
-    nagroda: 10,
+    tytul: 'Rury na ratuszu',
+    opis: 'Słuchaj no, wędrowcze! Chochliki dorwały się do naszych nowych, mosiężnych rur na tyłach ratusza i spuszczają całą parę! Zegary na mieście zaraz staną. Przegoń je, tylko szybko!',
+    zadanie: { typ: 'pokonaj', miejsce: 'Plac Władysława Łokietka 1', ile: 4, wrog: 'glut', cel: 'Przegoń chochliki od rur za ratuszem' },
+    zakonczenie: 'Uff, zawory dokręcone. Masz tu parę monet, tylko nie mów nikomu, że to z miejskiego skarbca!',
+    nagroda: 30,
+    doswiadczenie: 20,
+  },
+  {
+    id: 'tajemnica_stacji',
+    adres: 'Plac Dworcowy 1',
+    tytul: 'Tajemnica stacji',
+    opis: 'Woźnica rwie włosy z głowy! Ktoś porwał jego najlepszego konia, a obok wozu znaleźliśmy ślady wielkich, rogatych stóp. Idź za dworzec i odzyskaj zgubę.',
+    zadanie: { typ: 'pokonaj', miejsce: 'Plac Dworcowy 1', ile: 1, wrog: 'wielki_glut', cel: 'Odbij konia z rąk wielkiego chochlika za dworcem' },
+    zakonczenie: 'Koń cały i zdrowy, a ty masz krzepę! Jak będziesz chciał ruszyć w daleki świat, u mnie masz jeden przejazd gratis.',
+    nagroda: 50,
+    doswiadczenie: 40,
+    przedmiot: 'podkowa_szczescia',
+    flaga: 'znizka_woznica',
   },
 ];
 

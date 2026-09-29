@@ -55,10 +55,10 @@ Właściciel gry podsunął kierunek, który wszystko spina. Poniżej jest szkic
 4. **Mag Albrecht** kręci się przy uczelni, nosi spiczastą czapkę. Od 5. poziomu postaci mówi: *„Smoki wróciły! Po wiekach snu znów latają nad naszą ziemią… Tylko pamiętaj: nie każdy smok jest zły.”* Wskazuje smoka za miastem.
 5. **Spotkanie ze smokiem**, do wyboru:
    - walka i tytuł **„Pogromca smoka”**;
-   - rozmowa i tytuł **„Brat smoków”**. Smok mówi: *„Kiedyś smoki i ludzie żyli razem… Potem przyszła wielka wojna i zasnęliśmy głęboko pod ziemią. Teraz się budzimy. Ale chochliki, które widzisz na ulicach, też się obudziły… To one straszą ludzi, nie my. Jeśli chcesz, zostań moim przyjacielem. A to dopiero początek naszej historii…”*
+   - rozmowa i tytuł **„Brat smoków”**. Smok mówi: *„Blask komety wyrwał mnie z ziemi… Wasz świat się zmienił. Pełno tu gryzącego dymu i ryczących maszyn parowych. Gdzie podziały się spokojne lasy, których strzegliśmy? Gdzie jabłka, które przynosili nam wasi przodkowie? Jeśli naprawdę pamiętasz dawny pakt, udowodnij to. Zagraj naszą melodię, a znów staniemy się waszymi strażnikami…”* (potem smocza melodia)
 6. Na tym historia się dziś kończy.
 
-**Do uzgodnienia:** smok mówi dziś o „wielkiej wojnie”. Jeśli przyjmiemy Kometę, ten tekst przepiszemy (albo wojna wybuchła po Komecie, między dzikimi smokami a ludźmi). Dalszy ciąg powinien się rozgałęziać według tytułu.
+**Ustalone w lore v1.1 (już w grze):** dawna **Wielka Wojna o Tryby** (ludzka chciwość) wygnała smoki w mrok i uśpiła je. **Kometa** obudziła je i wywołała **Pęknięcie Magii**; część smoków po tak długim śnie zapadła na **Rdzę Umysłu** i postradała zmysły. Nowe teksty maga i smoka są w grze, a ścieżka „Brat smoków” kończy się **smoczą melodią**: smok nuci nutki (widać je na pięciolinii), gracz powtarza je na fujarce. Poza Lublinem zamiast maga Albrechta czeka **Wędrowny Mędrzec** z imieniem zależnym od kraju (lista w `src/content/historia.ts`, z imionami kobiecymi na czas, gdy będzie obrazek mędrczyni). Nowe misje: „Rury na ratuszu”, „Tajemnica stacji” (Podkowa Szczęścia: +10% monet z potworów i band; zniżka −25% u woźniców na zawsze i jeden kurs gratis na dworcu Lublin Główny) i „Zmarznięty smok” u Martina (15 drewna). Na później: Tępy Miecz (potwory ×3 życia dalej niż 5 km od domu), smary u Alchemika, regiony (strefa domu 5 km ma pierwszeństwo przed regionem Wschód). Dalszy ciąg powinien się rozgałęziać według tytułu.
 
 **Postacie stałe** (każda ma swoje miejsce w Lublinie):
 - biało-czarny **pies**, który zgubił świnkę-zabawkę;

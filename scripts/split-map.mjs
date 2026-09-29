@@ -100,6 +100,7 @@ const index = {
   tiles: [...tiles.keys()],
   bld,
   places,
+  postsPx: city.posts.map((p) => [r(p.x), r(p.y)]),
   streets,
   signs,
   towns,

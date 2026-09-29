@@ -6,7 +6,7 @@ import { rng } from '../rng';
 import { tr, tx } from '../i18n';
 import { PIES, MARGO, DZIADKOWIE, GRAZYNKA, LUIGI, MARTIN, type ZagadkaPL } from '../content/postacie';
 import { session, earn, type MissionState } from '../quests';
-import { groupCount, takeGroup, groupValue, sellGroup } from '../inventory';
+import { groupCount, takeGroup, groupValue, sellGroup, fruitCount, takeFruit } from '../inventory';
 import { levelForAge } from './Npcs';
 import type { Place } from '../map/CityMap';
 import { today } from './Npcs';
@@ -441,7 +441,7 @@ export class FixedNpcs {
         : w.id === 'margo' ? a < MARGO.zagadekDziennie
         : w.id === 'grazynka' ? this.grazynkaStep() !== 'done' && this.grazynkaStep() !== 'sklep'
         : w.id === 'luigi' ? a < 3 || this.host.storyOn()
-        : w.id === 'martin' ? this.host.storyOn()
+        : w.id === 'martin' ? this.host.storyOn() || this.state(MARTIN.zadanie.id) !== 'done'
         : a < 1;
       if (has) out.push({ x: w.x, y: w.y });
     }
@@ -628,9 +628,51 @@ export class FixedNpcs {
     });
   }
 
+  /** Martin's quest for the quest log (null when not taken or done). */
+  martinQuest(): { text: string; pos: Pt | null } | null {
+    const z = MARTIN.zadanie;
+    if (this.state(z.id) !== 'active') return null;
+    const n = fruitCount(z.towar);
+    const him = this.list.find((w) => w.id === 'martin');
+    return {
+      text: n >= z.ile ? tx(`Zanieś drewno Martinowi (Irysowa)`, 'Take the wood to Martin (Irysowa)') : tx(`Drewno na smoczy kocioł (${n}/${z.ile})`, `Wood for the dragon cauldron (${n}/${z.ile})`),
+      pos: n >= z.ile && him ? { x: him.x, y: him.y } : null,
+    };
+  }
+
+  private martinTask(title: string) {
+    const z = MARTIN.zadanie;
+    const st = this.state(z.id);
+    const t = `${title} – ${tr(z.tytul)}`;
+    if (st === 'new') {
+      this.host.dialog({
+        title: t, text: `${tr(z.opis)}\n\n${tx('Nagroda', 'Reward')}: ${z.monety} ${tx('monet', 'coins')}, ${z.exp} EXP.`,
+        buttons: [tx('Przyniosę drewno! 🪵', 'I will bring the wood! 🪵'), tx('Nie teraz', 'Not now')],
+        onChoose: (i) => {
+          if (i !== 0 || this.host.questsFull()) return;
+          session.missions[z.id] = 'active';
+          this.host.hud();
+          this.host.save();
+        },
+      });
+      return;
+    }
+    if (!takeFruit(z.towar, z.ile)) {
+      this.host.dialog({ title: t, text: tx(`Potrzebuję ${z.ile} drewna – masz ${fruitCount(z.towar)}. Sosny w lesie dają kłody po kilku ciosach.`, `I need ${z.ile} wood – you have ${fruitCount(z.towar)}. Pines in the forest give logs after a few blows.`), buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    session.missions[z.id] = 'done';
+    earn(z.monety);
+    session.stats.missions++;
+    this.host.gainExp(z.exp);
+    this.host.save();
+    this.host.dialog({ title: t, text: `${tr(z.zakonczenie)}\n\n+${z.monety} ${tx('monet', 'coins')}, +${z.exp} EXP`, buttons: [tx('Dziękuję!', 'Thank you!')], onChoose: () => {} });
+  }
+
   private talkMartin() {
     const title = `🐉 ${tr(MARTIN.imie)}`;
     const opts: [string, () => void][] = [];
+    if (this.state(MARTIN.zadanie.id) !== 'done') opts.push([`❄ ${tr(MARTIN.zadanie.tytul)}`, () => this.martinTask(title)]);
     if (this.host.storyOn()) opts.push([tx('🐉 Zapytaj o cień', '🐉 Ask about the shadow'), () => this.host.storyExpert(title, tr(MARTIN.cien), tr(MARTIN.pozniej))]);
     opts.push([tx('🍺 O tawernie', '🍺 About the tavern'), () => this.host.dialog({ title, text: tr(MARTIN.tawerna), buttons: [tx('Zajrzę!', 'I will drop in!')], onChoose: () => {} })]);
     this.host.dialog({ title, text: tr(MARTIN.powitanie), buttons: [...opts.map(([l]) => l), tx('Bywaj', 'Farewell')], onChoose: (i) => opts[i]?.[1]() });

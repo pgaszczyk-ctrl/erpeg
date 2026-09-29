@@ -45,6 +45,8 @@ export interface SaveData {
   mikstury?: number;
   /** Diamonds (premium currency, content/sklepy.ts DIAMENT). */
   diamenty?: number;
+  /** Lasting mission rewards (quests.ts session.flagi). */
+  flagi?: Record<string, number>;
   /** Stations the hero has arrived at by coach/train (for premium rides back). */
   byl?: import('./travel').Stop[];
   /** Own tents: nights left of each (old saves: `namiot: true`). */

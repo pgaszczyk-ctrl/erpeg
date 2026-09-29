@@ -71,3 +71,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 
 31. **Przyroda przyjęta i już w grze:** jabłonie, śliwy, winorośl (drzewa do otrząsania), sosny w lasach (do ścinania, z pieńkiem), grzyby i kłody (do zbierania, też jako ikony na ekranie), a duże drzewa liściaste i krzaki rosną jako ozdoba w parkach, na trawnikach i cmentarzach. Zrzut z parku: `5_zrzuty_z_gry/swiat_04c_przyroda_park.png`. Dzięki!
 32. **Dalej wg `ZAMOWIENIE_04_mgla_i_dekoracje.md`:** B (ławka, donica, skrzynie, studzienka z parą, hydrant, kosz, płoty, welocyped, poczta pneumatyczna), potem D (fontanna ze smokiem, smoczy kocioł, wieża zegarowa, drogowskaz).
+
+## Po paczce „świat 04b – dekoracje”
+
+33. **Dekoracje przyjęte i już w grze:** ławki z koszami przy alejkach w parkach, studzienki z parą w jezdniach (3 klatki – różne studzienki pokazują różną ilość pary), hydranty przy ulicach, słupy ogłoszeniowe przy większych ulicach, zegar na środku większych placów, donice przy drzwiach sklepów, szkół, kościołów, bibliotek, hoteli i urzędów, skrzynie przy sklepach i wozach kupców, welocypedy przy szkołach i bibliotekach, a **poczta pneumatyczna stoi tam, gdzie na prawdziwej mapie jest poczta, skrzynka pocztowa albo paczkomat**. Działa to też na mapach świata (sprawdzone w Berlinie i Madrycie). Zrzut `5_zrzuty_z_gry/swiat_04b_dekoracje.png` (od lewej: Plac Litewski, Berlin, Madryt). Płotów gra jeszcze nie stawia. Dzięki!
+34. **Dalej:** `ZAMOWIENIE_05_miejsca_i_postacie.md` – smoczy kocioł (2 klatki: zgaszony / rozpalony), mędrczyni, fontanna, wieża zegarowa, drogowskaz, ikona Podkowy Szczęścia.

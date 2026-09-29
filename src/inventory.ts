@@ -1,6 +1,6 @@
 import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
-  type Miejsce, type Przedmiot, type Umiejetnosc,
+  PODKOWA, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 
@@ -56,7 +56,7 @@ export const gear: Gear = freshGear();
 
 export function freshGear(): Gear {
   return {
-    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null },
+    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null, talizman: null },
     bag: [],
     skills: { miecz: 0, luk: 0, magia: 0 },
     magic: false,
@@ -145,6 +145,16 @@ export function availableSkills(): Umiejetnosc[] {
 }
 
 // ---------------------------------------------------------------- equipment
+
+let luckCarry = 0;
+/** Coins from monsters and gangs: 10% more while the Podkowa Szczęścia is worn (fractions add up). */
+export function luckyCoins(n: number) {
+  if (item(gear.equip.talizman)?.efekt !== 'szczescie') return n;
+  const v = n * PODKOWA + luckCarry;
+  const whole = Math.floor(v);
+  luckCarry = v - whole;
+  return whole;
+}
 
 /** Special power of the weapon in hand (mythic items). */
 export function weaponEffect() {

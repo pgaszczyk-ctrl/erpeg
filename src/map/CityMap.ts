@@ -54,6 +54,9 @@ type RawMap = {
   lines: [string, number, number[], string | 0][];
   buildings: [number[][], string | 0, string | 0, number][];
   pois?: [string, string, number, number, string | 0][];
+  /** Post offices, post boxes, parcel lockers (map units; the tiled index has them in px as postsPx). */
+  posts?: [number, number][];
+  postsPx?: [number, number][];
   /**
    * Tiled map (Lublin): only an index is loaded up front; the features are in
    * tiles of `tile` metres (map/<id>/<cx>_<cy>.json), fetched around the hero.
@@ -80,6 +83,8 @@ export type RawTile = {
   p?: [Place['kind'], string, number, number][];
   /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
   k?: [string, number, number, number][];
+  /** World maps: post offices, post boxes, parcel lockers (px). */
+  q?: [number, number][];
 };
 
 /** Loads the features of one tile of a world map (see map/world.ts). */
@@ -230,6 +235,8 @@ export class CityMap {
   private haveLine = new Set<number>();
   private haveBuilding = new Set<number>();
   private streets = new Map<string, { x: number; y: number }>();
+  /** Post offices, post boxes and parcel lockers (decorations: the pneumatic post pillar). */
+  readonly posts: { x: number; y: number }[] = [];
   /** Road signs on the roads out of town: where to and how many km along the roads. */
   readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
   /** World maps: named mountain peaks with their height (they come with the tiles). */
@@ -260,6 +267,8 @@ export class CityMap {
     this.lineGrid = new Grid<Line>([]);
     this.buildingGrid = new Grid<Building>([]);
 
+    for (const [ux, uy] of raw.posts ?? []) this.posts.push({ x: ux * k, y: uy * k });
+    for (const [px, py] of raw.postsPx ?? []) this.posts.push({ x: px, y: py });
     if (raw.tiles) {
       this.initTiled(raw, id);
       return;
@@ -428,6 +437,7 @@ export class CityMap {
         for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
       }
     }
+    for (const [x, y] of t.q ?? []) this.posts.push({ x, y });
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });
     }

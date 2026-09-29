@@ -140,7 +140,7 @@ function worldLoader(map: CityMap): WorldLoader {
   const done = new Map<number, Promise<RawTile>>();
 
   const convert = async (tx: number, ty: number): Promise<RawTile> => {
-    const out: RawTile = { a: [], l: [], b: [], p: [], k: [] };
+    const out: RawTile = { a: [], l: [], b: [], p: [], k: [], q: [] };
     const file = await worldFile();
     const t = await file.getZxy(Z, tx, ty);
     if (!t) return out;
@@ -245,6 +245,11 @@ function worldLoader(map: CityMap): WorldLoader {
         out.k!.push([nm, Math.round(Number(f.properties.elevation)), x * k, y * k]);
         return;
       }
+      if (['post_office', 'post_box', 'parcel_locker'].includes(String(f.properties.kind))) {
+        const [qx, qy] = pr(f.loadGeometry()[0][0]);
+        out.q!.push([qx * k, qy * k]);
+        return;
+      }
       const kind = placeKind(f.properties);
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
@@ -278,6 +283,7 @@ function worldLoader(map: CityMap): WorldLoader {
       b: all.flatMap((t) => t.b),
       p: all.flatMap((t) => t.p!.filter(([, , x, y]) => inBox(x, y))),
       k: all.flatMap((t) => t.k!),
+      q: all.flatMap((t) => t.q!.filter(([x, y]) => inBox(x, y))),
     };
   };
 }

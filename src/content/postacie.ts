@@ -293,4 +293,21 @@ export const MARTIN = {
     en: 'A shadow with a long tail, wide wings, a roar like thunder? That is surely a dragon – no bird casts a shadow like that! Go to: {cel}. Wizard Albrecht works there, he will tell you more.',
   },
   pozniej: { pl: 'Słyszałem, że już tropisz tego smoka. Powodzenia – i opowiedz mi potem w tawernie!', en: 'I hear you are already on the dragon\'s trail. Good luck – and tell me all about it at the tavern!' },
+  /** Misja od Martina (typ „postać”: daje ją i odbiera on sam, stan w session.missions[id]). */
+  zadanie: {
+    id: 'zmarzniety_smok',
+    tytul: { pl: 'Zmarznięty smok', en: 'The frozen dragon' },
+    opis: {
+      pl: 'Widziałem dzisiaj cień smoka… ale on dziwnie lśnił, jakby był ze szronu! Musi mu być potwornie zimno. Przynieś mi dużo drewna z lasu, spróbujemy rozpalić stary smoczy kocioł na rynku, żeby go ogrzać.',
+      en: 'I saw a dragon\'s shadow today… but it glittered strangely, as if it were made of frost! It must be terribly cold. Bring me plenty of wood from the forest, we will try to light the old dragon cauldron in the market square to warm it.',
+    },
+    towar: 'drewno' as const,
+    ile: 15,
+    zakonczenie: {
+      pl: 'Doskonale! Kiedy kocioł zapłonie miodowym światłem, smok na pewno to z góry zauważy i poczuje się bezpieczniej.',
+      en: 'Excellent! When the cauldron glows with honey-coloured light, the dragon will surely see it from above and feel safer.',
+    },
+    monety: 40,
+    exp: 25,
+  },
 };

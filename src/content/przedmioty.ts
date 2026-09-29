@@ -6,7 +6,7 @@
 //  (łuk albo przedmiot magiczny).
 // ============================================================================
 
-export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty';
+export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'talizman';
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
 export interface Przedmiot {
@@ -24,9 +24,10 @@ export interface Przedmiot {
   gdzie?: 'sklep' | 'biblioteka';
   /**
    * Moc specjalna (przedmioty mityczne, tylko z tajnych haseł):
-   * 'swiatlo' = świeci i widać dalej, 'pioruny' = sam razi pioruny wrogów w pobliżu.
+   * 'swiatlo' = świeci i widać dalej, 'pioruny' = sam razi pioruny wrogów w pobliżu,
+   * 'szczescie' = więcej monet za potwory i rozbite bandy (PODKOWA).
    */
-  efekt?: 'swiatlo' | 'pioruny';
+  efekt?: 'swiatlo' | 'pioruny' | 'szczescie';
   /** Krótki opis pokazywany w karcie postaci. */
   opis?: string;
 }
@@ -59,6 +60,8 @@ export const PRZEDMIOTY: Przedmiot[] = [
   // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki
   // w prawdziwym miejscu). Hasła i nagrody ustawia się w panelu admina.
   { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 4, cena: 0, efekt: 'swiatlo', opis: 'Świeci – widzisz o połowę dalej.' },
+  // Talizmany (miejsce na szyi): tylko w nagrodę za misje.
+  { id: 'podkowa_szczescia', nazwa: 'Podkowa Szczęścia', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szczescie', opis: 'Dopóki ją nosisz, każdy potwór i każda rozbita banda dają 10% więcej monet.' },
   { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 3, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
 ];
 
@@ -66,6 +69,8 @@ export const PRZEDMIOTY: Przedmiot[] = [
 export const SWIATLO = 1.5;
 /** Gromowładny miecz: co ile ms piorun, jak daleko (w metrach) i ile zabiera życia. */
 export const PIORUNY = { co: 2200, zasiegM: 60, obrazenia: 2 };
+/** Podkowa Szczęścia: mnożnik monet za potwory i bandy. */
+export const PODKOWA = 1.1;
 
 export const MIEJSCA: Record<Miejsce, string> = {
   bron: 'Broń',
@@ -73,6 +78,7 @@ export const MIEJSCA: Record<Miejsce, string> = {
   zbroja: 'Zbroja',
   helm: 'Hełm',
   buty: 'Buty',
+  talizman: 'Talizman',
 };
 
 export const OBRONA_ZA_PUNKT = 0.06;

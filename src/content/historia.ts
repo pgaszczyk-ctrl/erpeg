@@ -35,8 +35,26 @@ export const HISTORIA = {
     /** Z jakiego poziomu postaci mag zdradzi tajemnicę. */
     wymaganyPoziom: 5,
     zaSlaby: 'Hmm… Czuję, że widziałeś cień. Ale jesteś jeszcze za słaby na tę opowieść. Wróć, gdy osiągniesz {poziom}. poziom.',
-    tekst: 'Więc i ty go widziałeś… Smoki wróciły! Po wiekach snu znów latają nad naszą ziemią. Jednego widziano niedawno za miastem, z dala od domów. Idź tam, jeśli się odważysz – strzałka pokaże ci drogę. Tylko pamiętaj: nie każdy smok jest zły.',
+    tekst: 'Smoki wróciły! Kometa, która niedawno przecięła niebo, obudziła je z wiekowego snu. Kiedyś żyliśmy w zgodzie, ale ludzka chciwość w dawnej Wojnie o Tryby wygnała je w mrok. Teraz wracają, lecz uważaj – od tak długiego snu niektóre z nich zapadły na Rdzę Umysłu i postradały zmysły. Znalazłem leże za miastem. Musisz tam iść, zanim bestia zrobi krzywdę sobie lub komuś z nas.',
   },
+  /**
+   * WĘDROWNY MĘDRZEC: poza Lublinem zamiast maga Albrechta. Imię zależy od
+   * kraju, w którym jest mapa (prostokąty lat/lon, sprawdzane po kolei), a z
+   * dwóch imion wybiera się jedno stałe dla danej mapy. Kobiece imiona gra
+   * weźmie, gdy grafik narysuje mędrczynię (MEDRCZYNI_JEST = true).
+   */
+  medrcy: [
+    { kraj: 'CH/IT', lat: [45.8, 47.8], lon: [5.95, 10.5], m: ['Badacz Leonardo', 'Inżynier Lorenzo'], k: ['Badaczka Beatrycze', 'Inżynierka Katarzyna'] },
+    { kraj: 'DE/AT', lat: [46.4, 49.0], lon: [9.5, 17.2], m: ['Alchemik Fryderyk', 'Uczony Otton'], k: ['Alchemiczka Matylda', 'Uczona Hildegarda'] },
+    { kraj: 'PL', lat: [49.0, 54.9], lon: [14.1, 24.2], m: ['Mędrzec Kazimierz', 'Uczony Zygmunt'], k: ['Mędrczyni Jadwiga', 'Uczona Anna'] },
+    { kraj: 'DE/AT', lat: [47.3, 55.1], lon: [5.9, 15.0], m: ['Alchemik Fryderyk', 'Uczony Otton'], k: ['Alchemiczka Matylda', 'Uczona Hildegarda'] },
+    { kraj: 'UK', lat: [49.9, 60.9], lon: [-8.2, 1.8], m: ['Kronikarz Edward', 'Mag Artur'], k: ['Kronikarka Eleonora', 'Czarodziejka Elżbieta'] },
+    { kraj: 'FR', lat: [42.3, 51.1], lon: [-4.8, 8.2], m: ['Filozof Filip', 'Astrolog Ludwik'], k: ['Filozofka Blanka', 'Astrolożka Joanna'] },
+    { kraj: 'ES', lat: [36.0, 43.8], lon: [-9.3, 3.3], m: ['Nawigator Ferdynand', 'Kartograf Alfons'], k: ['Nawigatorka Izabela', 'Kartografka Urraka'] },
+    { kraj: 'CH/IT', lat: [36.6, 47.1], lon: [6.6, 18.5], m: ['Badacz Leonardo', 'Inżynier Lorenzo'], k: ['Badaczka Beatrycze', 'Inżynierka Katarzyna'] },
+  ],
+  /** Gdzie indziej na świecie. */
+  medrzecInnych: { m: ['Wędrowny Mędrzec'], k: ['Wędrowna Mędrczyni'] },
   /** Jak daleko od budynków (metry) najlepiej, żeby siedział smok. */
   smokOdBudynkow: 500,
 
@@ -45,15 +63,46 @@ export const HISTORIA = {
   zbadaj: '🔍 Zbadaj to cudo',
   poZbadaj: 'Smok przekrzywia głowę i nie atakuje. Podejdź bliżej, może da się z nim porozmawiać.',
   rozmowa: [
-    'Smok odzywa się głębokim głosem: „Nie bój się, mały człowieku. Od stu lat nikt nie odważył się ze mną porozmawiać.”',
-    '„Kiedyś smoki i ludzie żyli razem. Pilnowaliśmy lasów i rzek, a ludzie przynosili nam jabłka i śliwki. Potem przyszła wielka wojna i zasnęliśmy głęboko pod ziemią.”',
-    '„Teraz się budzimy. Ale chochliki, które widzisz na ulicach, też się obudziły… To one straszą ludzi, nie my.”',
-    '„Jeśli chcesz, zostań moim przyjacielem. Razem przywrócimy dawny porządek. A to dopiero początek naszej historii…”',
+    'Smok odzywa się głębokim głosem: „Blask komety wyrwał mnie z ziemi… Wasz świat się zmienił. Pełno tu gryzącego dymu i ryczących maszyn parowych.”',
+    '„Gdzie podziały się spokojne lasy, których strzegliśmy? Gdzie jabłka, które przynosili nam wasi przodkowie?”',
+    '„Jeśli naprawdę pamiętasz dawny pakt, udowodnij to. Zagraj naszą melodię, a znów staniemy się waszymi strażnikami…”',
   ],
-  wygrana: 'Smok pada z hukiem. Ziemia drży, a nad lasem unosi się dym. Pokonałeś smoka!',
+  /** Po zagraniu melodii (ui/melody.ts). */
+  poMelodii: 'Smok przymyka ślepia i mruczy z zadowoleniem: „Tak… to nasza pieśń. Pamiętasz pakt. Od dziś znów będziemy strzec waszych lasów i rzek – a ty, Bracie smoków, nie zapomnij o jabłkach.”',
+  wygrana: 'Smok pada z hukiem. Ziemia drży, a nad lasem unosi się dym. W jego oczach gaśnie mętny blask Rdzy Umysłu – już nikogo nie skrzywdzi. Pokonałeś smoka!',
   tytulPogromca: 'Pogromca smoka',
   tytulBrat: 'Brat smoków',
   nagroda: { exp: 300, monety: 200 },
+};
+
+/** Czy jest już obrazek mędrczyni (wtedy połowa map dostaje kobietę). */
+export const MEDRCZYNI_JEST = false;
+
+/** The wizard's name on a map: Mag Albrecht in Lublin, else a travelling sage by country (stable per map id). */
+export function imieMedrca(mapId: string, lat: number, lon: number) {
+  if (mapId === 'lublin') return HISTORIA.mag.imie;
+  let h = 2166136261;
+  for (let i = 0; i < mapId.length; i++) h = Math.imul(h ^ mapId.charCodeAt(i), 16777619);
+  h >>>= 0;
+  const c = HISTORIA.medrcy.find((r) => lat >= r.lat[0] && lat <= r.lat[1] && lon >= r.lon[0] && lon <= r.lon[1]) ?? HISTORIA.medrzecInnych;
+  const list = MEDRCZYNI_JEST && h % 2 ? c.k : c.m;
+  return list[(h >>> 1) % list.length];
+}
+
+/**
+ * SMOCZA MELODIA (ścieżka „Brat smoków”): smok nuci nutki, widać je na
+ * pięciolinii, a gracz powtarza je na fujarce (5 kolorowych klawiszy).
+ * `nut` = ile nutek na danym poziomie trudności (Dziecięcy … Hardkor).
+ */
+export const MELODIA = {
+  nut: [3, 4, 5, 6, 6],
+  tytul: '🎵 Smocza melodia',
+  wstep: 'Smok nuci cichą, starą melodię. Zagraj ją na fujarce – te same nutki po kolei.',
+  smokNuci: 'Smok nuci:',
+  twojaFujarka: 'Twoja fujarka:',
+  jeszczeRaz: '🔁 Posłuchaj jeszcze raz',
+  zle: 'Smok kręci łbem… Posłuchaj jeszcze raz.',
+  dobrze: '✨ Pięknie! Smok nuci razem z tobą.',
 };
 
 /** Ile EXP trzeba na dany poziom postaci: 2 = 100, 3 = 300, 4 = 600, 5 = 1000… */

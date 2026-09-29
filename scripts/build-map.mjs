@@ -177,6 +177,8 @@ const lines = [];
 const buildings = [];
 const addrNodes = [];
 const pois = [];
+// Post offices, post boxes and parcel lockers: only decorations (the pneumatic post pillar).
+const posts = [];
 const roundabouts = [];
 
 // Every supermarket is an in-game shop, whatever the chain (Biedronka, Lidl,
@@ -237,6 +239,7 @@ for (const f of features) {
 
   const poi = poiOf(t);
   if (poi) pois.push({ kind: poi[0], name: poi[1], p: proj(centroidLL(g)), a: address(t) });
+  if (t.amenity === 'post_office' || t.amenity === 'post_box' || t.amenity === 'parcel_locker') posts.push(proj(centroidLL(g)));
 
   if (g.type === 'Point') {
     const a = address(t);
@@ -576,6 +579,7 @@ const out = {
   buildings: merged.map((b) => [b.rings, b.a || 0, b.name || 0, b.levels]),
   // [kind, name, x, y, address]
   pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0]),
+  posts: posts.map((p) => [p[0], p[1]]),
 };
 mkdirSync(OUT.replace(/\/[^/]*$/, ''), { recursive: true });
 const json = JSON.stringify(out);

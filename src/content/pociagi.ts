@@ -26,6 +26,10 @@ export const WOZNICA = {
   /** Cena każdego kursu: opłata + za każdy km (travel.ts COACH_FEE / COACH_PER_KM), zaokrąglona w górę do tylu monet. */
   zaokraglenie: 10,
   odPoziomu: 7,
+  /** Zniżka u woźniców na zawsze (flaga `znizka_woznica` z misji „Tajemnica stacji”): tyle taniej. */
+  znizka: 0.25,
+  /** Darmowy przejazd z tej samej misji: u woźnicy na tym dworcu (nazwa stacji zawiera ten tekst). */
+  gratisNaStacji: 'Lublin Główny',
   /**
    * Na dużych stacjach stoi tylu woźniców (każdy w inną stronę świata:
    * północ, południe, wschód, zachód – losowo; jedna strona zostaje bez

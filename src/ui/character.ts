@@ -179,14 +179,14 @@ function show(hp: number, maxHp: number, onChange: () => void, eat: () => number
     box.append(el('h3', '', 'Założone'));
     // A cross of slots: helmet on top, weapon – armour – second weapon, boots below.
     const eq = el('div', 'c-cross');
-    const EMPTY_PIC: Record<Miejsce, string> = { bron: 'zelazny', dystans: 'luk', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty' };
-    const ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🏹', zbroja: '🦺', helm: '⛑', buty: '🥾' };
-    for (const m of ['helm', 'bron', 'zbroja', 'dystans', 'buty'] as Miejsce[]) {
+    const EMPTY_PIC: Record<Miejsce, string> = { bron: 'zelazny', dystans: 'luk', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia' };
+    const ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🏹', zbroja: '🦺', helm: '⛑', buty: '🥾', talizman: '🧿' };
+    for (const m of ['helm', 'bron', 'zbroja', 'dystans', 'buty', 'talizman'] as Miejsce[]) {
       const it = item(gear.equip[m]);
       const cell = el('button', `c-xcell c-x-${m}${it ? '' : ' c-empty'}`) as HTMLButtonElement;
       // Empty slot: a greyed picture of what goes there.
       cell.append((it ? itemIcon(it.id) : itemIcon(EMPTY_PIC[m], 'item-ico item-ghost')) || el('span', 'c-xicon', ICON[m]), el('span', 'c-xname', it ? `${it.efekt ? '✨ ' : ''}${it.nazwa}` : MIEJSCA[m]));
-      if (it) cell.append(el('span', 'c-xpow', `${m === 'bron' || m === 'dystans' ? 'atak' : 'obrona'} ${it.moc}`));
+      if (it && m !== 'talizman') cell.append(el('span', 'c-xpow', `${m === 'bron' || m === 'dystans' ? 'atak' : 'obrona'} ${it.moc}`));
       cell.title = it?.opis ?? MIEJSCA[m];
       cell.onclick = () => {
         if (!it) return;

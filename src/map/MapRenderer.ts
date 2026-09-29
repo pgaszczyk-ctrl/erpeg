@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
-import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN } from '../content/swiat';
+import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
 import { MIESZKANCY } from '../content/mieszkancy';
 
 export { AREA_FILL, ROAD_FILL };
@@ -393,6 +393,8 @@ export class MapRenderer {
   private lampArt: HTMLCanvasElement | null = null;
   private chimneyArt: HTMLCanvasElement | null = null;
   private treeArt: HTMLCanvasElement | null = null;
+  /** The artist's street decorations (pack 04b), by DEKORACJE key. */
+  private deco: Partial<Record<keyof typeof DEKORACJE, HTMLCanvasElement>> = {};
   private bushArt: HTMLCanvasElement | null = null;
   private trackArt: CanvasPattern | null = null;
 
@@ -413,6 +415,10 @@ export class MapRenderer {
     this.lampArt = artSheet(this.scene, LATARNIE.plik);
     this.chimneyArt = artSheet(this.scene, KOMINY.plik);
     this.treeArt = artSheet(this.scene, ZIELEN.drzewo);
+    for (const [k, d] of Object.entries(DEKORACJE)) {
+      const c = artSheet(this.scene, d.plik);
+      if (c) this.deco[k as keyof typeof DEKORACJE] = c;
+    }
     this.bushArt = artSheet(this.scene, ZIELEN.krzak);
     this.roofArt = DACHY_PLIKI.map((f) => {
       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
@@ -505,6 +511,7 @@ export class MapRenderer {
     buildings.sort((a, b) => a.y1 - b.y1);
     for (const b of buildings) this.paintBuilding(ctx, b);
     if (this.treeArt || this.bushArt) this.paintGreenery(ctx, x0, y0);
+    if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
     if (this.lampArt) this.paintLamps(ctx, lines);
     clip = null;
   }
@@ -765,6 +772,113 @@ export class MapRenderer {
         const fw = c.width / ZIELEN.klatki;
         const f = Math.floor(r() * ZIELEN.klatki);
         ctx.drawImage(c, f * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+      }
+    }
+  }
+
+  /** One frame of a decoration sheet standing with its bottom middle at (x, y). */
+  private stand(ctx: CanvasRenderingContext2D, key: keyof typeof DEKORACJE, x: number, y: number, frame = 0) {
+    const c = this.deco[key];
+    if (!c) return;
+    const n = ('klatki' in DEKORACJE[key] ? (DEKORACJE[key] as { klatki: number }).klatki : 1);
+    const fw = c.width / n;
+    ctx.drawImage(c, (frame % n) * fw, 0, fw, c.height, Math.round(x - fw / 2), Math.round(y - c.height), fw, c.height);
+  }
+
+  /** Walks along a line every `step` px (starting at a seeded offset), calling f with the spot, the unit direction and the side (±1). */
+  private along(l: Line, step: number, f: (x: number, y: number, ux: number, uy: number, side: number, n: number) => void) {
+    let carry = step * (0.3 + ((l.id * 7919) % 100) / 200);
+    let side = l.id % 2 ? 1 : -1;
+    let n = 0;
+    for (let i = 0; i + 3 < l.pts.length; i += 2) {
+      const ax = l.pts[i], ay = l.pts[i + 1], dx = l.pts[i + 2] - ax, dy = l.pts[i + 3] - ay;
+      const L = Math.hypot(dx, dy);
+      if (L < 0.01) continue;
+      let t = carry;
+      while (t < L) {
+        f(ax + (dx * t) / L, ay + (dy * t) / L, dx / L, dy / L, side, n++);
+        side = -side;
+        t += step;
+      }
+      carry = t - L;
+    }
+  }
+
+  /**
+   * The artist's street decorations (DEKORACJE): benches and bins along park
+   * paths, steam hydrants and poster columns by streets, steam grates in the
+   * cobbles, clocks on squares, flower pots / crates / penny-farthings by
+   * doors, the pneumatic post pillar at post offices, boxes and lockers.
+   */
+  private paintDecorations(ctx: CanvasRenderingContext2D, lines: Line[], areas: Area[], x0: number, y0: number) {
+    const m = this.map;
+    const D = DEKORACJE;
+    const free = (x: number, y: number) => !m.buildingAt(x, y) && !m.buildingAt(x, y - 6) && !m.buildingAt(x, y + 6);
+    for (const l of lines) {
+      if (l.bridge) continue;
+      const off = l.width / 2 + 1.5 * PX_PER_M;
+      if (this.deco.lawka && (l.kind === 'path' || l.kind === 'pedestrian')) {
+        this.along(l, D.lawka.coM * PX_PER_M, (x, y, ux, uy, side, n) => {
+          const bx = x - uy * off * side, by = y + ux * off * side;
+          if (!free(bx, by) || m.surfaceAt(bx, by) !== 'trawa' || !m.areaKindsAt(bx, by).includes('park')) return;
+          this.stand(ctx, 'lawka', bx, by);
+          if (n % 2 === 0) this.stand(ctx, 'kosz', bx + 11, by);
+        });
+      }
+      if (l.kind === 'major' || l.kind === 'medium' || l.kind === 'minor') {
+        if (this.deco.studzienka) {
+          this.along(l, D.studzienka.coM * PX_PER_M, (x, y, _ux, _uy, _s, n) => {
+            if (free(x, y) && m.surfaceAt(x, y) === 'asfalt') this.stand(ctx, 'studzienka', x, y + 4, (l.id + n) % 3);
+          });
+        }
+        if (this.deco.hydrant) {
+          this.along(l, D.hydrant.coM * PX_PER_M, (x, y, ux, uy, side) => {
+            const hx = x - uy * (off + PX_PER_M) * side, hy = y + ux * (off + PX_PER_M) * side;
+            if (free(hx, hy)) this.stand(ctx, 'hydrant', hx, hy);
+          });
+        }
+        if (this.deco.slup && l.kind !== 'minor') {
+          this.along(l, D.slup.coM * PX_PER_M, (x, y, ux, uy, side) => {
+            const px = x + uy * (off + 2 * PX_PER_M) * side, py = y - ux * (off + 2 * PX_PER_M) * side;
+            if (free(px, py)) this.stand(ctx, 'slup', px, py);
+          });
+        }
+      }
+    }
+    // A street clock in the middle of bigger squares.
+    if (this.deco.zegar) {
+      for (const a of areas) {
+        if (a.kind !== 'plaza' || (a.x1 - a.x0) * (a.y1 - a.y0) < D.zegar.odM2 * PX_PER_M * PX_PER_M) continue;
+        const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+        if (pointIn(a.rings[0], cx, cy) && free(cx, cy)) this.stand(ctx, 'zegar', cx, cy);
+      }
+    }
+    // By the doors of places.
+    const pad = 40;
+    for (const p of m.places) {
+      const { x, y } = p.door;
+      if (x < x0 - pad || x > x0 + CHUNK + pad || y < y0 - pad || y > y0 + CHUNK + pad * 2) continue;
+      const h = (Math.abs(Math.round(x * 13 + y * 7)) >>> 0) % 12;
+      const potOk = ['shop', 'school', 'church', 'library', 'hotel', 'office', 'bank'].includes(p.kind);
+      if (potOk && free(x - 8, y + 3)) this.stand(ctx, 'donica', x - 8, y + 3, h);
+      if (potOk && free(x + 8, y + 3)) this.stand(ctx, 'donica', x + 8, y + 3, h + 1);
+      if ((p.kind === 'shop' || p.kind === 'merchant' || p.kind === 'gear') && h % 2 === 0 && free(x + 16, y + 4)) this.stand(ctx, 'skrzynie', x + 16, y + 4);
+      if ((p.kind === 'school' || p.kind === 'library') && h % 3 === 0 && free(x - 17, y + 4)) this.stand(ctx, 'welocyped', x - 17, y + 4);
+    }
+    // The pneumatic post pillar where the map has a post office, a post box or a parcel locker.
+    if (this.deco.poczta) {
+      for (const p of m.posts) {
+        if (p.x < x0 - pad || p.x > x0 + CHUNK + pad || p.y < y0 - pad || p.y > y0 + CHUNK + pad * 2) continue;
+        // A post office inside a building: the nearest free spot outside it (south first, towards the viewer).
+        let spot: { x: number; y: number } | null = null;
+        for (let r = 0; r <= 70 && !spot; r += 4) {
+          for (const [dx, dy] of [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [1, -1], [-1, -1], [0, -1]]) {
+            const qx = p.x + dx * r, qy = p.y + dy * r;
+            if (free(qx, qy)) { spot = { x: qx, y: qy }; break; }
+            if (!r) break;
+          }
+        }
+        if (spot) this.stand(ctx, 'poczta', spot.x, spot.y + 2);
       }
     }
   }

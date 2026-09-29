@@ -6,7 +6,7 @@ export const ITEM_PICTURES = [
   'kijek', 'zelazny', 'stalowy', 'rycerski', 'swietlisty', 'gromowladny',
   'luk', 'dlugi_luk', 'rozdzka', 'kula', 'ksiega',
   'skorzana_zbroja', 'kolczuga', 'skorzany_helm', 'zelazny_helm', 'kapelusz', 'czapka_maga', 'korona',
-  'skorzane_buty', 'zelazne_buty',
+  'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
 ];
 const HAVE = new Set(ITEM_PICTURES);
 

@@ -25,6 +25,7 @@ import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { KAMIEN_MOCY, DIAMENT } from '../content/sklepy';
+import { WOZNICA } from '../content/pociagi';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -36,7 +37,7 @@ import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../conten
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount, luckyCoins,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -424,11 +425,12 @@ export class GameScene extends Phaser.Scene {
       {
         bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
         cleared: (g) => {
-          earn(g.kind.nagroda.monety);
+          const coins = luckyCoins(g.kind.nagroda.monety);
+          earn(coins);
           session.exp += g.kind.nagroda.exp;
           session.stats.gangs = (session.stats.gangs ?? 0) + 1;
           this.emitHud();
-          this.toast(`🏆 ${g.kind.nazwa} ${g.kind.zenska ? 'rozbita' : 'rozbity'}! +${g.kind.nagroda.monety} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
+          this.toast(`🏆 ${g.kind.nazwa} ${g.kind.zenska ? 'rozbita' : 'rozbity'}! +${coins} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
         },
       },
     );
@@ -1037,7 +1039,7 @@ export class GameScene extends Phaser.Scene {
       const spot = item.getData('spot') as string | undefined;
       if (spot) this.forest.picked(spot);
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
-    } else earn(1);
+    } else earn(luckyCoins(1));
     this.removePickup(item);
     this.emitHud();
   }
@@ -1363,20 +1365,25 @@ export class GameScene extends Phaser.Scene {
     const base = p.id.replace(/#\d+$/, '');
     const big = this.city.places.some((q) => q.id === `${base}#2`);
     const side = coachSide(this.city.id, p.id, big);
-    const trips: Offer[] = coachOffers(this.city.id, at, p.name, p.id, side);
+    // Mission reward: a lasting discount, and one free ride (not a long train) at the station that gave it.
+    const free = (session.flagi.przejazd ?? 0) > 0 && this.city.id === 'lublin' && p.name.includes(WOZNICA.gratisNaStacji);
+    const cut = session.flagi.znizka_woznica ? 1 - WOZNICA.znizka : 1;
+    const trips: (Offer & { gratis?: boolean })[] = coachOffers(this.city.id, at, p.name, p.id, side).map((t) =>
+      free && !t.level ? { ...t, price: 0, gratis: true } : { ...t, price: Math.ceil((t.price * cut) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie },
+    );
     const title = `🐴 Woźnica – ${p.name}${side ? ` (${STRONY[side]})` : ''}`;
     if (!trips.length) {
       this.dialog({ title, text: side ? `Woźnica karmi konia. „${STRONY[side][0].toUpperCase()}${STRONY[side].slice(1)} teraz nic nie jeżdżę. Spytaj innego woźnicę albo przyjdź po zmianie kursów.”` : 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km, ${session.immortal ? 'od razu' : rideText(t.km)} – ${t.price} monet${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
+    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km, ${session.immortal ? 'od razu' : rideText(t.km)} – ${t.gratis ? 'gratis 🎟' : `${t.price} monet`}${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
     const next = new Date(Math.ceil(Date.now() / 1_800_000) * 1_800_000);
     const hh = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
     this.dialog({
       title,
-      text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}Dziś jadę tam:” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
-      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.price} 💰`), `💎 Dowolne miasto, w którym byłeś`, 'Zostaję'],
+      text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}${free ? 'Za odzyskanego konia jeden kurs masz u mnie gratis! ' : ''}Dziś jadę tam:” Masz ${session.coins} monet.${cut < 1 ? ` Twoja zniżka: −${Math.round(WOZNICA.znizka * 100)}%.` : ''}\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
+      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, 'Zostaję'],
       onChoose: (i) => {
         if (i === trips.length) return this.diamondRide(title);
         const t = trips[i];
@@ -1389,6 +1396,7 @@ export class GameScene extends Phaser.Scene {
           this.toast(`Za mało monet: przejazd kosztuje ${t.price}.`);
           return;
         }
+        if (t.gratis) session.flagi.przejazd = Math.max(0, (session.flagi.przejazd ?? 0) - 1);
         this.chooseSpeed(title, t, 0);
       },
     });
@@ -2800,7 +2808,7 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'goal') {
       this.missionDialog(m, {
         title: m.tytul,
-        text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : ''),
+        text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : '') + (m.flaga === 'znizka_woznica' ? ` i zniżka u woźniców` : ''),
         buttons: ['Dziękuję!'],
         onChoose: () => {
           const z = m.zadanie;
@@ -2817,6 +2825,11 @@ export class GameScene extends Phaser.Scene {
             const where = addItem(m.przedmiot);
             this.toast(where ? `Dostałeś: ${item(m.przedmiot)?.nazwa}!` : `Plecak pełny – ${item(m.przedmiot)?.nazwa} przepadł.`, 2500);
             this.applySkill();
+          }
+          if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
+            session.flagi.znizka_woznica = 1;
+            session.flagi.przejazd = (session.flagi.przejazd ?? 0) + 1;
+            this.time.delayedCall(2600, () => this.toast(`🐴 Zniżka u woźniców: −${Math.round(WOZNICA.znizka * 100)}% na zawsze, a na dworcu ${WOZNICA.gratisNaStacji} jeden kurs gratis!`, 4000));
           }
           setMissionState(m, 'done');
           this.refreshMarkers();
@@ -2993,6 +3006,8 @@ export class GameScene extends Phaser.Scene {
     }
     const gq = this.fixed.grazynkaQuest();
     if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', ...gq });
+    const mq = this.fixed.martinQuest();
+    if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', ...mq });
     for (const rm of this.missions) {
       const st = missionState(rm.m);
       const q = { id: rm.m.id, title: rm.m.tytul };

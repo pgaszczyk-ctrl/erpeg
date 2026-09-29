@@ -40,3 +40,21 @@ export function screech() {
     lfo.stop(t + 1.5);
   }
 }
+
+/** One soft pipe note (the dragons' melody), `freq` in Hz. */
+export function pipe(freq: number, ms = 420) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime;
+  const gain = a.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.16, t + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
+  gain.connect(a.destination);
+  const o = a.createOscillator();
+  o.type = 'triangle';
+  o.frequency.value = freq;
+  o.connect(gain);
+  o.start(t);
+  o.stop(t + ms / 1000 + 0.05);
+}

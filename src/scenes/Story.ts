@@ -2,7 +2,10 @@ import Phaser from 'phaser';
 import { TEX, makeLookTexture } from '../art';
 import { fitHd, ensureHd } from '../sprites';
 import { PX_PER_M, type CityMap, type Place } from '../map/CityMap';
-import { HISTORIA, poziomPostaci } from '../content/historia';
+import { HISTORIA, MELODIA, poziomPostaci, imieMedrca } from '../content/historia';
+import { TRUDNOSCI } from '../content/trudnosc';
+import { playMelody } from '../ui/melody';
+import { consumeAttack } from '../controls';
 import { session, earn, type Story as StoryState } from '../quests';
 import { screech } from '../sfx';
 import type { Slime } from '../objects/Slime';
@@ -170,7 +173,7 @@ export class Story {
     }
     const target = this.findTarget();
     if (!target) {
-      this.host.dialog({ title, text: text.replace('{cel}', 'mag Albrecht, jak go znajdziesz'), buttons: ['OK'], onChoose: () => {} });
+      this.host.dialog({ title, text: text.replace('{cel}', `${this.sageName()}, jak go znajdziesz`), buttons: ['OK'], onChoose: () => {} });
       return;
     }
     const again = st.target?.m === this.city.id && st.target.id === target.id;
@@ -208,7 +211,7 @@ export class Story {
     const pace = this.city.isFree(at.x + 8, at.y + 5, 3, 2) ? 8 : this.city.isFree(at.x - 8, at.y + 5, 3, 2) ? -8 : 0;
     const hd = this.scene.textures.exists(ensureHd(this.scene, 'hd-mag'));
     this.wizard = (hd ? fitHd(this.scene.add.sprite(at.x, at.y, 'hd-mag', 'down-0')) : this.scene.add.sprite(at.x, at.y, TEX.wizard, 'down-0').setOrigin(0.5, 0.6)).setDepth(at.y);
-    this.wizardLabel = this.scene.add.text(at.x, at.y - 16, HISTORIA.mag.imie, { fontFamily: 'monospace', fontSize: '8px', color: '#e8d8ff', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
+    this.wizardLabel = this.scene.add.text(at.x, at.y - 16, this.sageName(), { fontFamily: 'monospace', fontSize: '8px', color: '#e8d8ff', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
       .setOrigin(0.5, 1).setDepth(1_100_000).setVisible(false);
     // He paces a little, looking around.
     if (pace) {
@@ -236,9 +239,16 @@ export class Story {
     return !!w && Math.abs(w.x - x) < r && Math.abs(w.y - y) < r + 4;
   }
 
+  /** Mag Albrecht in Lublin, a travelling sage elsewhere (named by the country). */
+  private sageName() {
+    const c = this.city.toLatLon((this.city.minX + this.city.width) / 2, (this.city.minY + this.city.height) / 2);
+    const w = this.city.id.startsWith('w:') ? this.city.id.slice(2).split(',').map(Number) : null;
+    return imieMedrca(this.city.id, w ? w[0] : c.lat, w ? w[1] : c.lon);
+  }
+
   talkToWizard() {
     const st = this.state;
-    const m = HISTORIA.mag;
+    const m = { ...HISTORIA.mag, imie: this.sageName() };
     if (st.st === 'koniec') {
       this.host.dialog({ title: `🧙 ${m.imie}`, text: `Słyszałem o tobie, ${session.name}, ${st.title}! Smoki jeszcze o tobie usłyszą.`, buttons: ['Do zobaczenia'], onChoose: () => {} });
       return;
@@ -356,10 +366,20 @@ export class Story {
     const show = (i: number) => this.host.dialog({
       title: '🐉 Smok',
       text: pages[i],
-      buttons: [i < pages.length - 1 ? 'Słucham dalej…' : 'Zostańmy przyjaciółmi!'],
-      onChoose: () => (i < pages.length - 1 ? show(i + 1) : this.finish(HISTORIA.tytulBrat, true)),
+      buttons: [i < pages.length - 1 ? 'Słucham dalej…' : '🎵 Zagram waszą melodię'],
+      onChoose: () => (i < pages.length - 1 ? show(i + 1) : this.melody()),
     });
     show(0);
+  }
+
+  /** The dragons' melody: repeat the notes, then the pact is renewed. */
+  private async melody() {
+    const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    this.scene.scene.pause();
+    await playMelody(MELODIA.nut[lvl] ?? 4);
+    this.scene.scene.resume();
+    consumeAttack();
+    this.host.dialog({ title: '🐉 Smok', text: HISTORIA.poMelodii, buttons: ['Zostańmy przyjaciółmi!'], onChoose: () => this.finish(HISTORIA.tytulBrat, true) });
   }
 
   /** The dragon fell in battle. */

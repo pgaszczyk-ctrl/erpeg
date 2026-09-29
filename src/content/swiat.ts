@@ -60,10 +60,26 @@ export const ZIELEN = {
   drzew: 0.55,
 };
 
+/**
+ * Dekoracje ulic (paczka 04b): pliki i gdzie gra je stawia. `coM` = co ile metrów wzdłuż drogi.
+ */
+export const DEKORACJE = {
+  lawka: { plik: 'lawka', coM: 38 },          // przy ścieżkach w parkach
+  kosz: { plik: 'kosz_mosiezny' },           // przy co drugiej ławce
+  hydrant: { plik: 'hydrant_parowy', coM: 95 },       // chodniki ulic
+  slup: { plik: 'slup_ogloszeniowy', coM: 170 },       // większe ulice
+  studzienka: { plik: 'studzienka_para', klatki: 3, coM: 75 }, // w bruku ulic
+  zegar: { plik: 'zegar_uliczny', odM2: 1500 },     // na placach (większych niż odM2)
+  donica: { plik: 'donica_kwiaty', klatki: 2 },     // przy drzwiach sklepów, szkół, kościołów, bibliotek, hoteli, urzędów
+  skrzynie: { plik: 'skrzynie_beczki' },      // przy sklepach i wozach kupców
+  welocyped: { plik: 'welocyped' },           // przy szkołach i bibliotekach
+  poczta: { plik: 'automat_pneumatyczny' },   // przy pocztach, skrzynkach pocztowych i paczkomatach
+};
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
 import { MGLA } from './mgla';
 
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak'];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny'];
