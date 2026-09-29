@@ -379,7 +379,10 @@ export class GameScene extends Phaser.Scene {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.placeCarts([p]);
-      else this.add.image(p.door.x, p.door.y - 10, look.sign).setDepth(900_000);
+      else {
+        const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
+        this.add.image(p.door.x, p.door.y - 10, sign).setScale(artScale(sign)).setDepth(900_000);
+      }
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
       if (p.kind === 'station' && hdOn) {
         const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);

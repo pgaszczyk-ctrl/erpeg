@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TRENING } from './content/swiat';
+import { TRENING, SZYLDY } from './content/swiat';
 import { rng } from './rng';
 import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 
@@ -61,6 +61,8 @@ export const TEX = {
   signAlchemist: 'sign-alchemist',
   signGear: 'sign-gear',
   tent: 'tent',
+  /** The campsite's sign (artist's picture only; else the drawn tent). */
+  signCamp: 'sign-camp',
   signpost: 'signpost',
   peak: 'peak',
   mapIcon: 'map-icon',
@@ -1274,6 +1276,11 @@ export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k);
   useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k);
   useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k);
+  // Signboards over the places' doors (cut from the artist's board).
+  const signs: [string, string][] = [[TEX.signShop, 'sklep'], [TEX.signSchool, 'szkola'], [TEX.signChurch, 'kosciol'], [TEX.signOffice, 'urzad'],
+    [TEX.signHospital, 'szpital'], [TEX.signPolice, 'policja'], [TEX.signLibrary, 'biblioteka'], [TEX.signHotel, 'hotel'], [TEX.signBank, 'bank'],
+    [TEX.signAlchemist, 'alchemik'], [TEX.signGear, 'sklep_sportowy'], [TEX.signCamp, 'kemping']];
+  for (const [key, file] of signs) useArtist(scene, key, `szyld_${file}`, null, SZYLDY.szerokosc / 86);
 }
 
 function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3) {

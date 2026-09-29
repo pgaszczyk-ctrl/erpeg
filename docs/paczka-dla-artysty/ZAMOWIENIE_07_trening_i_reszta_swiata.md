@@ -51,7 +51,7 @@ Trener i biegaczka zostali na razie usunięci z gry (nie pasowali do klimatu). N
 
 ## B. Pozostałe rzeczy, które dziś rysuje program (w tej kolejności)
 
-1. **Znaczki miejsc nad drzwiami** (dziś małe kolorowe kwadraty): szyldy w nowym stylu – drewniana tabliczka w mosiężnej ramce, na łańcuszkach, z jednym prostym symbolem. Wielkość w grze: **ok. 1/3 ludzika**, wszystkie tej samej wielkości: sklep (koszyk/waga), szkoła (książka i pióro), kościół (krzyż), urząd (pieczęć), szpital (czerwony krzyż), policja (odznaka), biblioteka (stos książek), hotel (łóżko), bank (moneta), alchemik (kolba), sklep budowlano-sportowy (młotek i namiot), kemping (namiot). Plik: `szyld_<nazwa>`.
+1. ✅ **ZROBIONE – szyldy są w grze** (wycięte z Twojej planszy 12 szyldów). ~~**Znaczki miejsc nad drzwiami** (dziś małe kolorowe kwadraty):~~ szyldy w nowym stylu – drewniana tabliczka w mosiężnej ramce, na łańcuszkach, z jednym prostym symbolem. Wielkość w grze: **ok. 1/3 ludzika**, wszystkie tej samej wielkości: sklep (koszyk/waga), szkoła (książka i pióro), kościół (krzyż), urząd (pieczęć), szpital (czerwony krzyż), policja (odznaka), biblioteka (stos książek), hotel (łóżko), bank (moneta), alchemik (kolba), sklep budowlano-sportowy (młotek i namiot), kemping (namiot). Plik: `szyld_<nazwa>`.
 2. **Stragan kupca** na rondach (`stragan_kupca`): wózek z pasiastym daszkiem i skrzynkami towaru, w stylu wozów (może z tym samym koniem), 2 klatki (koń stoi / przestępuje).
 3. **Rzeczy do podniesienia** (leżą na ziemi, **ok. 1/4 ludzika**): moneta, serduszko, jabłko, śliwka, kiść winogron, marchewka, brokuł, sałata, zguba z zadania (skórzana sakiewka). Każda 1 klatka.
 4. **Smok** (najważniejsza postać historii!): arkusz jak u wrogów (3 × 3, dół/bok/góra), **ok. 2,5 ludzika wysokości**; łuskowaty, szlachetny, trochę baśniowy (nie potwór z horroru), zielono-mosiężny, z oczami, w których może się tlić Rdza Umysłu (bursztynowy blask). Do tego **cień smoka widziany z góry** (`cien_smoka`), 2 klatki: skrzydła w górze / w dole – sama sylwetka, półprzezroczysta czerń.
@@ -63,6 +63,6 @@ Trener i biegaczka zostali na razie usunięci z gry (nie pasowali do klimatu). N
 
 ## Kolejność
 
-1. **B1–B3** (szyldy, stragan kupca, rzeczy do podniesienia). 2. **B4 smok i cień**. 3. reszta.
+1. **B2–B3** (stragan kupca, rzeczy do podniesienia). 2. **B4 smok i cień**. 3. reszta.
 
 Zamówienie 06 nadal obowiązuje (poprawione kroki postaci, latarnia, okap dachu, mędrczyni, zaległości).

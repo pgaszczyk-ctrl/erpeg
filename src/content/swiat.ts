@@ -107,10 +107,13 @@ export const WOZY = {
 /** Przyrządy treningowe (paczka 07): 3 klatki (stoi, trafiony, wraca); kukła ma w grze `wysokosc` punktów mapy (jak mieszkaniec), reszta w tej samej skali. */
 export const TRENING = { wysokosc: 22, klatkaMs: 110 };
 
+/** Szyldy nad drzwiami miejsc (wycięte z planszy grafika, 86 × 84): szerokość w grze w punktach mapy (dawne znaczki miały 14). */
+export const SZYLDY = { szerokosc: 16 };
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
 import { MGLA } from './mgla';
 
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny', 'fontanna_smok', 'kociol_publiczny', 'wieza_zegarowa', 'drogowskaz', 'kukla_treningowa', 'kukla_treningowa_druga', 'tarcza_strzelnicza', 'krysztal_magii'];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny', 'fontanna_smok', 'kociol_publiczny', 'wieza_zegarowa', 'drogowskaz', 'kukla_treningowa', 'kukla_treningowa_druga', 'tarcza_strzelnicza', 'krysztal_magii', ...['sklep', 'szkola', 'kosciol', 'urzad', 'szpital', 'policja', 'biblioteka', 'hotel', 'bank', 'alchemik', 'sklep_sportowy', 'kemping'].map((n) => `szyld_${n}`)];
