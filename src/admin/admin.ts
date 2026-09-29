@@ -109,7 +109,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -129,6 +129,7 @@ function render() {
   else if (tab === 'missions') missions(main);
   else if (tab === 'codes') codes(main);
   else if (tab === 'errors') void errorsTab(main);
+  else if (tab === 'bugs') void bugsTab(main);
   else settings(main);
 }
 
@@ -546,6 +547,49 @@ async function errorsTab(main: HTMLElement) {
     ]);
   });
   const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['Kiedy', 'Postać', 'Rodzaj', 'Opis', 'Mapa, miejsce'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
+  main.append(detail, el('div', { className: 'scroll' }, [table]));
+}
+
+interface BugReport { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; log: string[] | null; done: boolean }
+
+/** Bugs described by players (game menu → "🐞 Znalazłem buga", src/ui/bug.ts), with where they were and their recent log. */
+async function bugsTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['Zgłoszenia graczy']), el('p', { className: 'muted' }, ['„Znalazłem buga” z menu gry: opis gracza, miejsce i ostatni log postaci. Kliknij wiersz, żeby zobaczyć szczegóły; ✔ oznacza zgłoszenie jako załatwione.']));
+  let list: BugReport[];
+  try {
+    list = await call<BugReport[]>('admin_bugs', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  if (!list.length) {
+    main.append(el('p', {}, ['Brak zgłoszeń. 🎉']));
+    return;
+  }
+  const detail = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const rows = list.map((b) => {
+    const c = b.ctx ?? {};
+    const done = btn(b.done ? '✔' : '○', async () => {
+      await call('admin_bug_done', { p_id: b.id, p_done: !b.done });
+      b.done = !b.done;
+      done.textContent = b.done ? '✔' : '○';
+      row.style.opacity = b.done ? '0.5' : '1';
+    });
+    const row = el('tr', { className: 'click', style: `opacity: ${b.done ? 0.5 : 1}`, onclick: (e: Event) => {
+      if (e.target === done) return;
+      detail.style.display = 'block';
+      detail.textContent = `${b.at}\n${b.player ?? '(bez postaci)'}\n\n${b.text}\n\n${JSON.stringify(c, null, 1)}\n\nLog:\n${(b.log ?? []).join('\n')}`;
+      detail.scrollIntoView({ behavior: 'smooth' });
+    } }, [
+      el('td', {}, [done]),
+      el('td', {}, [new Date(b.at).toLocaleString('pl-PL')]),
+      el('td', {}, [b.player ?? '—']),
+      el('td', {}, [b.text.slice(0, 140)]),
+      el('td', {}, [`${c.map ?? ''} ${c.street ?? ''}`]),
+    ]);
+    return row;
+  });
+  const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['', 'Kiedy', 'Postać', 'Opis', 'Gdzie'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
   main.append(detail, el('div', { className: 'scroll' }, [table]));
 }
 

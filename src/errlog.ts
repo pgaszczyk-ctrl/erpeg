@@ -1,5 +1,6 @@
 import { rpc, RPC } from './api';
 import { session } from './quests';
+import { note } from './log';
 
 // Sends errors from players' devices to the server (table client_errors, seen
 // in the admin panel under "Błędy"): uncaught errors, failed promises, and a
@@ -28,6 +29,7 @@ function context() {
 }
 
 export function report(kind: string, message: string, stack?: string) {
+  note(`błąd ${kind}: ${message}`);
   const key = `${kind}:${message}`;
   if (seen.has(key) || sent >= MAX_REPORTS) return;
   seen.add(key);

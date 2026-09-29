@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { askBug } from '../ui/bug';
 import { report } from '../errlog';
 import { TEX, PLAYER_TEX, arrowTexture, artScale } from '../art';
 import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
@@ -697,9 +698,16 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
-      buttons: ['Wyjdź', 'Mój kod postaci', 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', 'Graj dalej'],
       onChoose: (i) => {
         if (i === 1) showCodeOverlay(session.name, session.idik);
+        if (i === 2) {
+          game.scene.pause();
+          askBug(game.bugContext()).then((sent) => {
+            game.scene.resume();
+            if (sent) this.toast('Dzięki! Zgłoszenie wysłane – przejrzymy je rano.');
+          });
+        }
         if (i !== 0) return;
         if (game.inCombat()) {
           this.toast('Nie możesz wyjść w trakcie walki!');

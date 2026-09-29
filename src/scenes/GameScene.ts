@@ -22,6 +22,7 @@ import { NIE_POWTARZAJ_DNI } from '../content/prosby';
 import { FixedNpcs } from './FixedNpcs';
 import { Story } from './Story';
 import { Landmarks } from './Landmarks';
+import { note } from '../log';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
@@ -219,6 +220,7 @@ export class GameScene extends Phaser.Scene {
   private storyPlace: CityPlace | null = null;
   private training!: Training;
   private landmarks!: Landmarks;
+  private trailAt = 0;
   private shots: Shot[] = [];
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
@@ -679,6 +681,11 @@ export class GameScene extends Phaser.Scene {
     this.updateBubbles();
     this.readSign();
     if (this.city.peaks.length) this.updatePeaks();
+    if (now > this.trailAt) {
+      // Where the hero walks, for bug reports (log.ts).
+      this.trailAt = now + 20_000;
+      note(`jestem: ${this.whereText()}`);
+    }
 
     if (this.challenge) this.updateChallenge(now);
     this.hudTimer -= delta;
@@ -3128,9 +3135,11 @@ export class GameScene extends Phaser.Scene {
     this.player.vel.set(0, 0);
     this.player.anims.stop();
     this.scene.pause();
+    note(`okno: ${req.title} | ${req.text.slice(0, 70)}`);
     this.game.events.emit('dialog', {
       ...req,
       onChoose: (i: number) => {
+        note(`→ ${req.buttons[i] ?? i}`);
         consumeAttack(); // the tap/key that closed the dialog shouldn't swing the sword
         // …nor, a moment later, start the same talk again.
         this.talkReadyAt = performance.now() + TALK_PAUSE_MS;
@@ -3142,7 +3151,28 @@ export class GameScene extends Phaser.Scene {
     } satisfies DialogRequest);
   }
 
+  /** Where the hero is, in words and numbers (bug reports). */
+  whereText() {
+    const p = this.player;
+    const ll = this.city.toLatLon(p.x, p.y);
+    return `${this.city.id} ${Math.round(p.x)},${Math.round(p.y)}${ll ? ` (${ll.lat.toFixed(5)}, ${ll.lon.toFixed(5)})` : ''} ${this.city.streetNear(p.x, p.y) ?? ''}`.trim();
+  }
+
+  /** What a bug report carries besides the player's words. */
+  bugContext() {
+    const p = this.player;
+    const ll = this.city.toLatLon(p.x, p.y);
+    return {
+      map: this.city.id, x: Math.round(p.x), y: Math.round(p.y), lat: ll?.lat, lon: ll?.lon,
+      street: this.city.streetNear(p.x, p.y), hp: p.hp, maxHp: PLAYER.maxHp, coins: session.coins, exp: session.exp,
+      level: session.level.nazwa, story: session.story.st, quests: this.activeQuests().map((q) => q.title),
+      tex: p.texture.key, visible: p.visible, alpha: p.alpha, depth: Math.round(p.depth),
+      fps: Math.round(this.game.loop.actualFps), zoom: this.cameras.main.zoom,
+    };
+  }
+
   private toast(text: string, ms?: number) {
+    note(`napis: ${text}`);
     this.game.events.emit('toast', text, ms);
   }
 
