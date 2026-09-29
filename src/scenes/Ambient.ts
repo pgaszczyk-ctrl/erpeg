@@ -6,7 +6,7 @@ import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap'
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, stanGangu, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
 
 // Things that fill the city around the hero as they walk: fruit trees on
@@ -331,6 +331,8 @@ export interface StreetSpawn {
   x: number;
   y: number;
   kind: RodzajWroga;
+  /** A berserker (content/gangi.ts BERSERKER). */
+  berserk?: boolean;
 }
 
 /** One gang: its territory, where its members stand, who is still alive, its boss. */
@@ -384,7 +386,7 @@ export class StreetEnemies {
     private density = 1,
     /** Per-login seed: new gangs every time. */
     private seed = 0,
-    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void; stan?: (g: Gang, text: string) => void } = { bossOut: () => {}, cleared: () => {} },
+    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void; stan?: (g: Gang, text: string) => void; heroLevel?: () => number } = { bossOut: () => {}, cleared: () => {} },
   ) {}
 
   private nearAvoid(x: number, y: number, m: number) {
@@ -439,6 +441,8 @@ export class StreetEnemies {
       if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
       spots.push({ x, y, kind: this.kindAt(x, y) });
     }
+    // Some gangs have one berserker.
+    if (spots.length && r() < BERSERKER.szansa) spots[Math.floor(r() * spots.length)].berserk = true;
     g.spots = spots;
     spots.forEach((_, i) => g.alive.add(i));
   }
@@ -488,10 +492,25 @@ export class StreetEnemies {
           g.boss = 'out';
           const p = this.city.isFree(g.x, g.y, 6, 6) ? { x: g.x, y: g.y } : this.city.freeNear(g.x, g.y);
           g.bossObj = this.spawn({ x: p.x, y: p.y, kind: g.kind.herszt }, g);
+          this.spawnEscort(g, p);
           this.events.bossOut(g);
         }
         return;
       }
+    }
+  }
+
+  /** The boss's guards: one more per level threshold the hero has passed; from a higher level one may be a berserker. */
+  private spawnEscort(g: Gang, at: { x: number; y: number }) {
+    const lvl = this.events.heroLevel?.() ?? 1;
+    const O = OBSTAWA_HERSZTA;
+    const n = O.progi.filter((p) => lvl >= p).length;
+    const berserk = lvl >= O.berserkerOd && Math.random() < O.szansaBerserkera ? Math.floor(Math.random() * n) : -1;
+    for (let i = 0; i < n; i++) {
+      const a = (i / Math.max(1, n)) * Math.PI * 2 + Math.PI / 4;
+      const x = at.x + Math.cos(a) * 16, y = at.y + Math.sin(a) * 12;
+      const p = this.city.isFree(x, y, 4, 4) ? { x, y } : this.city.freeNear(x, y);
+      this.spawn({ x: p.x, y: p.y, kind: this.kindAt(p.x, p.y), berserk: i === berserk }, g);
     }
   }
 

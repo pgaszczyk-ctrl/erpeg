@@ -64,6 +64,12 @@ export const session = {
   immortal: false,
   /** Healing potions (alchemist at petrol stations). */
   mikstury: 0,
+  /** Flasks of the stunning essence (alchemist, content/sklepy.ts ESENCJA). */
+  esencje: 0,
+  /** What is rubbed into the weapon now (the imbuement square) and for how many more blows. */
+  nasycenie: null as { id: 'oglusz'; left: number } | null,
+  /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
+  bezStrzalki: [] as string[],
   /** Own tents: nights left of each. */
   namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
@@ -175,6 +181,9 @@ export function startSession(r: LoginResult) {
   session.byl = Array.isArray(p.save.byl) ? p.save.byl.slice(-40) : [];
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
+  session.esencje = Math.max(0, p.save.esencje ?? 0);
+  session.nasycenie = p.save.nasycenie?.left ? { id: 'oglusz', left: p.save.nasycenie.left } : null;
+  session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
   session.mapId = 'lublin';
   session.arrive = null;
@@ -214,7 +223,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, namioty: session.namioty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, esencje: session.esencje, nasycenie: session.nasycenie, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };

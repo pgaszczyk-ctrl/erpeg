@@ -109,8 +109,9 @@ export class Player extends Phaser.GameObjects.Sprite {
   }
 
   /** Returns true if damage was taken. */
-  hurt(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
-    if (now < this.invulnerableUntil || this.isDead) return false;
+  /** `pace` < 1: the attacker may strike again sooner (a berserker's 1/1.5). */
+  hurt(from: Phaser.Math.Vector2, now: number, damage = 1, pace = 1): boolean {
+    if (now < this.invulnerableUntil - PLAYER.hurtInvulnerable * (1 - pace) || this.isDead) return false;
     // The potion's bonus heart goes first.
     const fromExtra = Math.min(this.extra, damage);
     this.extra -= fromExtra;

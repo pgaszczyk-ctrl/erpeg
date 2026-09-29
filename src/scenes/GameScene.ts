@@ -13,8 +13,9 @@ import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
-import { LUP_HERSZTA } from '../content/gangi';
-import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, type RodzajWroga, type Misja } from '../content/fabula';
+import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
+import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
+import type { QuestLine } from '../ui/character';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
@@ -39,11 +40,11 @@ import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz } from '../quizzes';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, ESENCJA, WARZYWA, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, totalFruit, groupCount, luckyCoins, groupValue, sellGroup,
+  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -154,6 +155,8 @@ export interface QuestInfo {
   text: string;
   pos: { x: number; y: number } | null;
   color: string;
+  /** Where the quest was taken (for the quest log). */
+  start?: string;
 }
 
 /** Arrow colours of the active side quests, kept across scene restarts. */
@@ -433,6 +436,7 @@ export class GameScene extends Phaser.Scene {
         // They stand at their spot; they only come out when they see the hero.
         e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
         e.leash = { x: g.x, y: g.y, r: g.r };
+        if (sp.berserk) e.makeBerserk(BERSERKER.zycie, BERSERKER.auraKolor, BERSERKER.mrugMs);
         return e;
       },
       (u) => {
@@ -448,6 +452,7 @@ export class GameScene extends Phaser.Scene {
       session.nonce,
       {
         stan: (_g, text) => this.toast(`⚔ ${text}`, 2500),
+        heroLevel: () => poziomPostaci(session.exp),
         bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
         cleared: (g) => {
           const coins = luckyCoins(g.kind.nagroda.monety);
@@ -661,12 +666,13 @@ export class GameScene extends Phaser.Scene {
         }
         continue;
       }
+      if (s.isDazed(now)) continue; // dazed by the stunning essence: can't strike
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         const blocked = Math.random() < blockChance();
         // Difficulty scales the damage; fractions add up over hits.
         const pending = this.damageCarry + s.kind.damage * session.level.obrazenia;
         const dmg = Math.floor(pending);
-        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : dmg)) {
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : dmg, s.berserk ? 1 / BERSERKER.szybciej : 1)) {
           if (!blocked) this.damageCarry = pending - dmg;
           if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
           this.emitHud();
@@ -863,6 +869,16 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage())) this.onEnemyKilled(s);
+      else if (session.nasycenie?.id === 'oglusz') s.daze(now, ESENCJA.ogluszenieMs);
+    }
+    // The stunning essence on the blade wears off with each swing that lands.
+    const imb = session.nasycenie;
+    if (imb && this.enemies.length && hits) {
+      imb.left--;
+      if (imb.left <= 0) {
+        session.nasycenie = null;
+        this.toast(`${ESENCJA.ikona} Esencja ogłuszająca na broni się wyczerpała.`, 2200);
+      }
     }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
@@ -2842,8 +2858,9 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title: `⚗️ Alchemik – ${p.name}`,
       text: `Na zapleczu stacji bulgocze kociołek. Alchemik mruczy: „Daj mi ${n} owoców albo grzybów, a uwarzę ci miksturę: wyleczy cię całego i przez ${ALCHEMIK.premiaMinut} minut da ci dodatkowe serduszko.”\n\nMasz ${have} owoców i ${session.mikstury} ${session.mikstury === 1 ? 'miksturę' : 'mikstur'}. Miksturę wypijesz przyciskiem 🧪 (klawisz H).`,
-      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, 'Wyjdź'],
+      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, `${ESENCJA.ikona} ${ESENCJA.nazwa} (${ESENCJA.grzybow} grzybów, ${ESENCJA.drewna} drewna)`, 'Wyjdź'],
       onChoose: (i) => {
+        if (i === 1) return this.brewEssence();
         if (i !== 0) return;
         if (!eatInventoryFruit(n)) return this.toast(`Za mało owoców – potrzeba ${n}, masz ${have}.`, 2500);
         session.mikstury++;
@@ -2852,6 +2869,19 @@ export class GameScene extends Phaser.Scene {
         this.save();
       },
     });
+  }
+
+  /** The stunning essence: mushrooms and wood → one flask, rubbed into the weapon from the character sheet. */
+  private brewEssence() {
+    const E = ESENCJA;
+    const g = groupCount('grzyby'), w = groupCount('drewno');
+    if (g < E.grzybow || w < E.drewna) return this.toast(`Alchemik kręci głową: „Potrzebuję ${E.grzybow} grzybów i ${E.drewna} drewna” (masz ${g} i ${w}).`, 3000);
+    takeGroup('grzyby', E.grzybow);
+    takeGroup('drewno', E.drewna);
+    session.esencje++;
+    this.toast(`${E.ikona} Masz flakonik esencji ogłuszającej! Wetrzyj go w broń: karta postaci → Ekwipunek → kwadrat obok broni.`, 4000);
+    this.emitHud();
+    this.save();
   }
 
   /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
@@ -3111,6 +3141,31 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** The quest log for the character sheet: where each began, what now, how far (in words) and its arrow. */
+  questLog(): QuestLine[] {
+    return this.activeQuests().map((q) => ({
+      id: q.id, title: q.title, text: q.text, color: q.color, main: q.main, start: q.start,
+      far: q.pos ? jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M) : null,
+      arrow: !session.bezStrzalki.includes(q.id),
+    }));
+  }
+
+  /** Switches a quest's guiding arrow on or off (character sheet). */
+  toggleArrow(id: string) {
+    const off = session.bezStrzalki;
+    session.bezStrzalki = off.includes(id) ? off.filter((x) => x !== id) : [...off, id];
+    this.emitHud();
+  }
+
+  /** Rubs a flask of the stunning essence into the weapon (the imbuement square). */
+  imbueWeapon(): boolean {
+    if (session.esencje <= 0) return false;
+    session.esencje--;
+    session.nasycenie = { id: 'oglusz', left: (session.nasycenie?.left ?? 0) + ESENCJA.ciosow };
+    this.toast(`${ESENCJA.ikona} Broń nasmarowana: przez ${session.nasycenie.left} trafnych ciosów potwory będą ogłuszone.`, 3000);
+    return true;
+  }
+
   /** No room for another quest? Then says so. */
   private questsFull() {
     if (this.activeQuests().length < ZADAN_NARAZ) return false;
@@ -3119,8 +3174,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Side quests: a sports challenge and missions in progress. */
-  private sideQuests(): { id: string; title: string; text: string; pos: { x: number; y: number } | null }[] {
-    const out: { id: string; title: string; text: string; pos: { x: number; y: number } | null }[] = [];
+  private sideQuests(): { id: string; title: string; text: string; pos: { x: number; y: number } | null; start?: string }[] {
+    const out: { id: string; title: string; text: string; pos: { x: number; y: number } | null; start?: string }[] = [];
     const px = this.player.x;
     const py = this.player.y;
     const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
@@ -3137,6 +3192,7 @@ export class GameScene extends Phaser.Scene {
       out.push({ id: 'sport', title: 'Wyścig', text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to });
     }
     const fq = this.folkQuest;
+    const n0 = out.length;
     if (fq) {
       const title = `${fq.zguba.ikona} ${fq.zguba.nazwa}`;
       if (fq.got) out.push({ id: 'folk-quest', title, text: `Oddaj: ${fq.zguba.nazwa} – ${fq.folk.name}`, pos: { x: fq.folk.x, y: fq.folk.y } });
@@ -3147,13 +3203,17 @@ export class GameScene extends Phaser.Scene {
         out.push({ id: 'folk-quest', title, text: `Odbij: ${fq.zguba.nazwa} (chochliki ${PROSBY.ile - foes.length}/${PROSBY.ile})`, pos: near ? { x: near.x, y: near.y } : fq.target });
       }
     }
+    if (fq && out.length > n0) {
+      const st = this.city.streetNear(fq.folk.x, fq.folk.y);
+      out[out.length - 1].start = `${fq.folk.name}${st ? `, ${st}` : ''}`;
+    }
     const gq = this.fixed.grazynkaQuest();
-    if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', ...gq });
+    if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', start: 'Kościelna, Garbów', ...gq });
     const mq = this.fixed.martinQuest();
-    if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', ...mq });
+    if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', start: 'Martin, Irysowa', ...mq });
     for (const rm of this.missions) {
       const st = missionState(rm.m);
-      const q = { id: rm.m.id, title: rm.m.tytul };
+      const q = { id: rm.m.id, title: rm.m.tytul, start: rm.m.adres };
       if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
         const z = rm.m.zadanie;
         out.push({ ...q, text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
@@ -3258,7 +3318,7 @@ export class GameScene extends Phaser.Scene {
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
-      quests: quests.map(({ text, pos, color, main }) => ({ text, pos, color, main })),
+      quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
     };
     this.registry.set('hud', state);
     this.game.events.emit('hud', state);

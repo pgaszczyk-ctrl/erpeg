@@ -698,7 +698,11 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay) return;
     touchInput.attack = false;
-    toggleCharacter(game.player.hp, PLAYER.maxHp, () => game.gearChanged(), () => game.eatFruit(), game.activeQuests(), { ...game.tentSpot(), pitch: () => game.pitchTent() });
+    toggleCharacter({
+      hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
+      quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id), imbue: () => game.imbueWeapon(),
+      tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
+    });
   }
 
   private openMap() {

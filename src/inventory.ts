@@ -1,6 +1,6 @@
 import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
-  PODKOWA, type Miejsce, type Przedmiot, type Umiejetnosc,
+  PODKOWA, TALIZMANY, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 
@@ -56,7 +56,7 @@ export const gear: Gear = freshGear();
 
 export function freshGear(): Gear {
   return {
-    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null, talizman: null },
+    equip: { bron: 'kijek', dystans: null, zbroja: null, helm: null, buty: null, talizman: null, talizman2: null, talizman3: null },
     bag: [],
     skills: { miecz: 0, luk: 0, magia: 0 },
     magic: false,
@@ -149,7 +149,7 @@ export function availableSkills(): Umiejetnosc[] {
 let luckCarry = 0;
 /** Coins from monsters and gangs: 10% more while the Podkowa Szczęścia is worn (fractions add up). */
 export function luckyCoins(n: number) {
-  if (item(gear.equip.talizman)?.efekt !== 'szczescie') return n;
+  if (!TALIZMANY.some((m) => item(gear.equip[m])?.efekt === 'szczescie')) return n;
   const v = n * PODKOWA + luckCarry;
   const whole = Math.floor(v);
   luckCarry = v - whole;
@@ -190,9 +190,10 @@ export function owns(id: string) {
 export function addItem(id: string): 'equipped' | 'bag' | false {
   const p = item(id);
   if (!p) return false;
-  if (!gear.equip[p.miejsce] || gear.equip[p.miejsce] === 'kijek') {
+  const m = slotFor(p.miejsce);
+  if (!gear.equip[m] || gear.equip[m] === 'kijek') {
     // A stick is not worth keeping when a real weapon comes along.
-    gear.equip[p.miejsce] = id;
+    gear.equip[m] = id;
     return 'equipped';
   }
   if (gear.bag.length >= PLECAK.miejsc) return false;
@@ -200,13 +201,20 @@ export function addItem(id: string): 'equipped' | 'bag' | false {
   return 'bag';
 }
 
+/** Where an item of that kind goes: a talisman takes the first free of the three talisman places. */
+function slotFor(m: Miejsce): Miejsce {
+  if (!TALIZMANY.includes(m)) return m;
+  return TALIZMANY.find((t) => !gear.equip[t]) ?? 'talizman';
+}
+
 /** Swaps a backpack item with what is worn in its place. */
 export function equipFromBag(index: number) {
   const s = gear.bag[index];
   if (!s || !('item' in s)) return;
   const p = item(s.item)!;
-  const worn = gear.equip[p.miejsce];
-  gear.equip[p.miejsce] = s.item;
+  const m = slotFor(p.miejsce);
+  const worn = gear.equip[m];
+  gear.equip[m] = s.item;
   if (worn && worn !== 'kijek') gear.bag[index] = { item: worn };
   else gear.bag.splice(index, 1);
 }

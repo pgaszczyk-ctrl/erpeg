@@ -59,3 +59,16 @@ export function stanGangu(zostalo: number, razem: number): string {
   if (zostalo < razem) return 'Jeszcze sporo ich tu zostało.';
   return 'Pełno ich tu – uważaj!';
 }
+
+/**
+ * Berserker: w niektórych gangach (szansa) jeden członek ma mrugającą czerwoną
+ * aurę. Uderza `szybciej` razy częściej, ale ma tylko `zycie` zwykłego życia.
+ */
+export const BERSERKER = { szansa: 0.4, szybciej: 1.5, zycie: 0.7, auraKolor: 0xff3b1f, mrugMs: 260 };
+
+/**
+ * Obstawa herszta: gdy herszt wychodzi, obok niego staje tyle dodatkowych
+ * potworów, ile progów poziomu postaci bohater osiągnął (2 → jeden, 4 → drugi).
+ * Od poziomu `berserkerOd` jeden z obstawy bywa berserkerem (z szansą `szansaBerserkera`).
+ */
+export const OBSTAWA_HERSZTA = { progi: [2, 4], berserkerOd: 7, szansaBerserkera: 0.5 };

@@ -37,6 +37,9 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   smok: { name: 'Smok', hp: 60, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
 
+/** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); halved on the owner's request. */
+export const ODRZUT = 100;
+
 /** Kept for code that only knows slimes. */
 export const SLIME = ENEMY_KINDS.glut;
 
@@ -83,6 +86,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
   brain?: (now: number) => void;
   private nextThink = 0;
   private stunnedUntil = 0;
+  /** Knocked back until then (after that a stunned enemy stands still). */
+  private knockUntil = 0;
+  /** Dazed by the stunning essence (content/sklepy.ts ESENCJA): stands and can't hurt. */
+  dazedUntil = 0;
+  private dazeMark?: Phaser.GameObjects.Text;
+  /** A berserker (content/gangi.ts BERSERKER): a blinking aura, hits faster, less life. */
+  berserk = false;
+  private aura?: Phaser.GameObjects.Sprite;
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
@@ -143,8 +154,56 @@ export class Slime extends Phaser.GameObjects.Sprite {
     return this.hp <= 0;
   }
 
+  /** Turns it into a berserker: less life and a blinking red aura behind it. */
+  makeBerserk(zycie: number, auraKolor: number, mrugMs: number) {
+    this.berserk = true;
+    this.hp = Math.max(1, Math.round(this.kind.hp * zycie)); // whole blows: 3 → 2 for an imp
+    const a = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
+    a.setOrigin(this.originX, this.originY).setTint(auraKolor).setTintMode(Phaser.TintModes.FILL);
+    a.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.scene.tweens.add({ targets: a, alpha: 0.75, duration: mrugMs, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.aura = a;
+    this.once('destroy', () => a.destroy());
+  }
+
+  /** Dazed: stands still for `ms` with little stars over its head. */
+  daze(now: number, ms: number) {
+    if (this.heavy || this.kindId === 'smok' || this.isDead) return;
+    this.dazedUntil = Math.max(this.dazedUntil, now + ms);
+    this.stunnedUntil = Math.max(this.stunnedUntil, now + ms);
+    if (!this.dazeMark) {
+      const t = this.scene.add.text(this.x, this.y, '💫', { fontSize: '6px' }).setOrigin(0.5, 1).setResolution(4);
+      this.dazeMark = t;
+      this.once('destroy', () => t.destroy());
+    }
+  }
+
+  isDazed(now: number) {
+    return now < this.dazedUntil;
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    const a = this.aura;
+    if (a) {
+      a.setPosition(this.x, this.y).setFrame(this.frame.name).setFlipX(this.flipX).setDepth(this.depth - 0.01);
+      a.setScale(this.scaleX * 1.14, this.scaleY * 1.1).setVisible(this.visible && this.alpha > 0.5);
+    }
+    const m = this.dazeMark;
+    if (m) {
+      if (time >= this.dazedUntil || this.isDead) {
+        m.destroy();
+        this.dazeMark = undefined;
+      } else m.setPosition(this.x + Math.sin(time / 120) * 2, this.y - 13 * this.kind.scale).setDepth(this.depth + 1).setVisible(this.visible);
+    }
+  }
+
   think(target: Phaser.Math.Vector2, now: number) {
-    if (this.isDead || now < this.stunnedUntil) return;
+    if (this.isDead) return;
+    if (now < this.stunnedUntil) {
+      if (now > this.knockUntil) this.vel.set(0, 0);
+      return;
+    }
 
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
     if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
@@ -194,8 +253,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (this.isDead) return false;
     this.hp -= damage;
     this.chasing = true;
-    this.stunnedUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 30 : 200 / this.kind.scale);
+    this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
+    this.knockUntil = now + 300;
+    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
     this.vel.set(push.x, push.y);
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);

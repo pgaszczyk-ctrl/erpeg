@@ -42,8 +42,15 @@
       .c-statlist { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
       .c-stat { display: flex; justify-content: space-between; font-size: 14px; color: #e8e8e8; border-bottom: 1px solid #2c2834; padding: 2px 0; }
       .c-stat-v { color: #fff2a8; }
-      .c-cross { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 300px; margin: 0 auto;
-        grid-template-areas: ". helm ." "bron zbroja dystans" ". buty talizman"; }
+      .c-cross { display: grid; width: 100%; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 360px; margin: 6px auto 0;
+        grid-template-areas: ". . helm ." "nas bron zbroja dystans" ". . buty ."; }
+      .c-x-nas { grid-area: nas; border-color: #9be7ff; }
+      .c-talismans .c-xcell { grid-area: auto; }
+      .c-talismans { display: grid; width: 100%; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 270px; margin: 0 auto; }
+      .c-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0 8px; }
+      .c-tab { font: inherit; font-size: 12px; padding: 7px 2px; border: 2px solid #4a4a55; border-radius: 4px; background: #0f0d13; color: #d8d8d8; }
+      .c-tab-on { border-color: #f7c531; background: #3a2f12; color: #fff2a8; }
+      .c-arrow { align-self: flex-start; margin-top: 4px; font-size: 13px; padding: 5px 10px; }
       .c-xcell { font: inherit; aspect-ratio: 1; background: #0f0d13; color: #fff; border: 2px solid #f7c531; border-radius: 6px;
         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; }
       .c-xcell.c-empty { border-color: #4a4a55; border-style: dashed; opacity: 0.6; }
@@ -53,7 +60,7 @@
       .c-row { font: inherit; font-size: 14px; display: flex; gap: 8px; text-align: left; background: #0f0d13; color: #fff;
         border: 1px solid #4a4a55; border-radius: 4px; padding: 7px 8px; }
       .c-slot { width: 78px; color: #9aa39a; flex: none; }
-      .c-bag { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+      .c-bag { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; max-width: 320px; margin: 6px auto; box-sizing: border-box; }
       .c-cell { font: inherit; aspect-ratio: 1; background: #0f0d13; color: #fff; border: 2px solid #4a4a55; border-radius: 4px;
         display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; font-size: 11px; }
       .c-empty { border-style: dashed; opacity: 0.5; }
@@ -140,7 +147,7 @@
       .ch-amount { width: 90px; padding: 7px; font-size: 15px; }
       .ch-msg { color: #ff8a8a; font-size: 13px; min-height: 1em; }
       .ch-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
-      .ch-bag { grid-template-columns: repeat(5, 1fr); max-width: 230px; }
+      .ch-bag { grid-template-columns: repeat(8, 1fr); max-width: 370px; }
       .ch-cell { position: relative; aspect-ratio: 1; background: #0f0d13; border: 2px solid #4a4a55; border-radius: 4px;
         display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: grab; }
       .ch-empty { border-style: dashed; opacity: 0.55; cursor: default; }

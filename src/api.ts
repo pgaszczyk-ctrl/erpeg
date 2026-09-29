@@ -43,6 +43,9 @@ export interface SaveData {
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;
+  esencje?: number;
+  nasycenie?: { id: 'oglusz'; left: number } | null;
+  bezStrzalki?: string[];
   /** Diamonds (premium currency, content/sklepy.ts DIAMENT). */
   diamenty?: number;
   /** Lasting mission rewards (quests.ts session.flagi). */

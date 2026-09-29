@@ -82,6 +82,20 @@ export const ZADAN_NARAZ = 3;
 export const KOLOR_GLOWNEGO = '#f7c531';
 export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b'];
 
+/** Jak daleko jest cel zadania – słownie (karta postaci → Zadania). Progi w kilometrach. */
+export const ODLEGLOSCI: [number, string][] = [
+  [1, 'blisko'],
+  [2, 'nie tak blisko'],
+  [7, 'dość daleko'],
+  [20, 'daleko'],
+  [100, 'bardzo daleko'],
+  [Infinity, 'hen za morzem'],
+];
+
+export function jakDaleko(metry: number) {
+  return ODLEGLOSCI.find(([km]) => metry <= km * 1000)![1];
+}
+
 export const MISJE: Misja[] = [
   {
     id: 'zamek',

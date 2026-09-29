@@ -81,5 +81,13 @@ export const DIAMENT = { monet: 1_000_000, euro: 2, dowolneMiasto: 1, szybciej: 
  */
 export const ALCHEMIK = { owocow: 50, premiaSerc: 1, premiaMinut: 10 };
 
+/**
+ * ESENCJA OGŁUSZAJĄCA – też u alchemika: z grzybów i drewna robi flakonik smaru.
+ * Wciera się go w broń (karta postaci → Ekwipunek → kwadrat obok broni). Wtedy
+ * przez `ciosow` trafnych ciosów każdy trafiony potwór stoi ogłuszony
+ * `ogluszenieMs` i w tym czasie nie może uderzyć.
+ */
+export const ESENCJA = { nazwa: 'Esencja ogłuszająca', ikona: '🌀', grzybow: 15, drewna: 5, ciosow: 25, ogluszenieMs: 1500 };
+
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
 export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };

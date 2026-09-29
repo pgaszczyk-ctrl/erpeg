@@ -6,7 +6,9 @@
 //  (łuk albo przedmiot magiczny).
 // ============================================================================
 
-export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'talizman';
+export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'talizman' | 'talizman2' | 'talizman3';
+/** Trzy miejsca na talizmany (przedmioty z miejsce: 'talizman' idą do pierwszego wolnego). */
+export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
 export interface Przedmiot {
@@ -79,6 +81,8 @@ export const MIEJSCA: Record<Miejsce, string> = {
   helm: 'Hełm',
   buty: 'Buty',
   talizman: 'Talizman',
+  talizman2: 'Talizman',
+  talizman3: 'Talizman',
 };
 
 export const OBRONA_ZA_PUNKT = 0.06;
@@ -86,7 +90,7 @@ export const OBRONA_MAKS = 0.6;
 
 /** Plecak: ile miejsc i ile owoców mieści się w jednym miejscu. */
 /** Plecak: tyle miejsc; jedna grupa (owoce, warzywa…) mieści tyle sztuk na miejsce. */
-export const PLECAK = { miejsc: 5, owocowNaMiejsce: 200 };
+export const PLECAK = { miejsc: 16, owocowNaMiejsce: 200 };
 
 // ----------------------------------------------------------------------------
 //  UMIEJĘTNOŚCI rosną od używania: każde trafienie (wroga, drzewa, lalki,
