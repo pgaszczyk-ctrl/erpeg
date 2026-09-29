@@ -12,6 +12,8 @@
 // ============================================================================
 
 export const SPORT = {
+  /** Trener Zbyszek i Biegaczka Ania (i ich wyzwania): wyłączeni – nie pasowali do klimatu, może wrócą przerobieni. */
+  ludzie: false,
   /** Od ilu m² boisko jest „duże” (kukły + Trener); mniejsze dostają Biegacza. */
   duzeBoiskoM2: 2500,
   /** Od ilu m² na boisku mogą stać kukły treningowe. */

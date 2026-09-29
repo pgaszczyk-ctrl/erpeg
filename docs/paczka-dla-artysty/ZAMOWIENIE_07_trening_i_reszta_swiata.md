@@ -12,7 +12,7 @@ Wozy konne wyszły **świetnie** – dokładnie tak ma wyglądać cała gra. Są
 
 Zestawienie wszystkiego, co dziś rysuje program (do zastąpienia): `5_zrzuty_z_gry/do_przerysowania_grafiki_z_programu.png`.
 
-## A. Trening na boiskach – NAJWAŻNIEJSZE
+## A. Trening na boiskach – ✅ ZROBIONE (paczka „07 trening przyrządy final”, już w grze – dzięki!)
 
 Na dużych boiskach stoją trzy przyrządy do ćwiczeń (miecz, łuk, magia), a na drugim końcu boiska druga kukła do zadania trenera. Bohater uderza w nie mieczem albo strzela – przy każdym trafieniu przyrząd się **kiwa**. Każdy przyrząd: **3 klatki obok siebie** – (1) stoi spokojnie, (2) trafiony: odchylony ok. 10–15° do tyłu, (3) wraca, lekko przechylony w drugą stronę.
 
@@ -45,11 +45,9 @@ Na dużych boiskach stoją trzy przyrządy do ćwiczeń (miecz, łuk, magia), a 
 - Szpony trzymają **unoszący się niebieski kryształ** (ostre ściany, jaśniejszy środek), wokół delikatna niebieska poświata.
 - Klatka 1: spokojny, lekko świeci; klatka 2: trafiony – **jasny błysk**, drobne iskierki i małe łuki błyskawic między szponami; klatka 3: blask gaśnie, kryształ lekko obrócony.
 
-### Postacie do boisk (arkusze jak ludziki: 3 × 3 klatki, rzędy dół/bok w lewo/góra, kolumny krok A/stoi/krok B, + maska)
+### Postacie do boisk – NIE RYSOWAĆ
 
-- **Trener Zbyszek:** krępy pan w średnim wieku, dres/sportowa kurtka w przygaszonych barwach z mosiężnym gwizdkiem na sznurku, notes w ręce, czapka z daszkiem. `plec: m`, `wiek: dorosly`.
-- **Biegaczka Ania:** szczupła młoda kobieta w stroju do biegania (koszulka, spodenki/legginsy), kucyk, opaska na czole, na nadgarstku mosiężny stoper. `plec: k`, `wiek: dorosly`.
-- Pamiętaj o **wyraźnie różnych krokach A i B** (patrz `ZAMOWIENIE_06`, punkt A).
+Trener i biegaczka zostali na razie usunięci z gry (nie pasowali do klimatu). Nie rysuj ich.
 
 ## B. Pozostałe rzeczy, które dziś rysuje program (w tej kolejności)
 
@@ -65,6 +63,6 @@ Na dużych boiskach stoją trzy przyrządy do ćwiczeń (miecz, łuk, magia), a 
 
 ## Kolejność
 
-1. **A** – kukła, druga kukła, tarcza, kryształ (podgląd do akceptacji, potem pliki), potem trener i biegaczka. 2. **B1–B3**. 3. **B4 smok i cień**. 4. reszta.
+1. **B1–B3** (szyldy, stragan kupca, rzeczy do podniesienia). 2. **B4 smok i cień**. 3. reszta.
 
 Zamówienie 06 nadal obowiązuje (poprawione kroki postaci, latarnia, okap dachu, mędrczyni, zaległości).

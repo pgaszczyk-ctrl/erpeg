@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TRENING } from './content/swiat';
 import { rng } from './rng';
 import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 
@@ -25,6 +26,8 @@ export const TEX = {
   arrowShot: 'arrow-shot',
   magicShot: 'magic-shot',
   dummy: 'dummy',
+  /** The second dummy (artist's picture only; else the plain dummy). */
+  dummyFar: 'dummy-far',
   target: 'target',
   crystal: 'crystal',
   signLibrary: 'sign-library',
@@ -1265,9 +1268,15 @@ export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.mushroom, 'grzyb', null);
   useArtist(scene, TEX.log, 'kloda', null);
   useArtist(scene, TEX.signpost, 'drogowskaz', null);
+  // Training stations (pack 07): the dummy stands as tall as a townsperson, the others in the same scale.
+  const k = TRENING.wysokosc / 100;
+  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k);
+  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k);
+  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k);
+  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k);
 }
 
-function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null) {
+function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3) {
   const src = `swiat-${file}`;
   if (!scene.textures.exists(src)) return;
   const img = scene.textures.get(src).getSourceImage() as HTMLImageElement;
@@ -1278,7 +1287,7 @@ function useArtist(scene: Phaser.Scene, key: string, file: string, frames: strin
     frames.forEach((f, i) => tex.add(f, 0, i * fw, 0, fw, img.height));
   }
   tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
-  ART_SCALE.set(key, 1 / 3);
+  ART_SCALE.set(key, scale);
 }
 
 export function createArt(scene: Phaser.Scene) {

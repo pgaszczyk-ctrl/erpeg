@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GROUND_DEPTH } from '../map/MapRenderer';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
+import { TRENING } from '../content/swiat';
 import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
@@ -703,6 +704,7 @@ export class Training {
   }
 
   private personOf(a: Area): SportNpc | null {
+    if (!SPORT.ludzie) return null;
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
     const m2 = Training.sizeM2(a);
@@ -782,7 +784,9 @@ export class Training {
       if (a.kind !== 'pitch') continue;
       for (const s of this.stationsOf(a)) {
         if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
-        s.sprite = this.scene.add.image(s.x, s.y, STATION_TEX[s.kind]).setOrigin(0.5, 0.92).setDepth(s.y);
+        const key = s.far && this.scene.textures.exists(TEX.dummyFar) ? TEX.dummyFar : STATION_TEX[s.kind];
+        const art = this.scene.textures.get(key).has('0');
+        s.sprite = this.scene.add.image(s.x, s.y + (art ? 3 : 0), key, art ? '0' : undefined).setOrigin(0.5, art ? 1 : 0.92).setScale(artScale(key)).setDepth(s.y);
         this.active.add(s);
       }
       const n = this.personOf(a);
@@ -805,7 +809,13 @@ export class Training {
   hitAt(x: number, y: number, reach: number, kind: StationKind): Station | null {
     for (const s of this.active) {
       if (s.kind !== kind || Math.hypot(s.x - x, s.y - 7 - y) > reach) continue;
-      if (s.sprite) this.scene.tweens.add({ targets: s.sprite, angle: { from: -8, to: 8 }, duration: 50, yoyo: true, onComplete: () => s.sprite?.setAngle(0) });
+      const img = s.sprite;
+      if (img?.texture.has('1')) {
+        // The artist's frames: hit (leans back) → coming back → standing.
+        img.setFrame('1');
+        this.scene.time.delayedCall(TRENING.klatkaMs * 2, () => img.active && img.setFrame('2'));
+        this.scene.time.delayedCall(TRENING.klatkaMs * 4, () => img.active && img.setFrame('0'));
+      } else if (img) this.scene.tweens.add({ targets: img, angle: { from: -8, to: 8 }, duration: 50, yoyo: true, onComplete: () => img.setAngle(0) });
       return s;
     }
     return null;
