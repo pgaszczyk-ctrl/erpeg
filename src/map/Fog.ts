@@ -307,6 +307,27 @@ export class FogView {
       ctx.fillStyle = this.paper;
       ctx.fillRect(0, 0, W, H);
     }
+    // A cartographer's grid pinned to the map (it doesn't swim with the hero), a stronger line every few.
+    const G = MGLA.siatka.coM * PX_PER_M;
+    const ox0 = gx0 * FOG_CELL, oy0 = gy0 * FOG_CELL;
+    ctx.lineWidth = 1;
+    for (const strong of [false, true]) {
+      ctx.strokeStyle = `rgba(${MGLA.siatka.kolor},${strong ? MGLA.siatka.mocnaKrycie : MGLA.siatka.krycie})`;
+      ctx.beginPath();
+      for (let k = Math.ceil(ox0 / G); k * G < ox0 + W * FOG_RES; k++) {
+        if ((k % MGLA.siatka.mocnaCo === 0) !== strong) continue;
+        const x = Math.round((k * G - ox0) / FOG_RES) + 0.5;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+      }
+      for (let k = Math.ceil(oy0 / G); k * G < oy0 + H * FOG_RES; k++) {
+        if ((k % MGLA.siatka.mocnaCo === 0) !== strong) continue;
+        const y = Math.round((k * G - oy0) / FOG_RES) + 0.5;
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+      }
+      ctx.stroke();
+    }
     const dark = MGLA.nocCiemnosc * (1 - this.light);
     if (dark > 0.01) {
       ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;

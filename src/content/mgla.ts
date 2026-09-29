@@ -8,13 +8,15 @@
 
 export const MGLA = {
   /** Kolor pergaminu w pełnym dniu (R, G, B). */
-  dzien: [176, 152, 112],
+  dzien: [206, 200, 178],
   /** Jak bardzo przyciemnić pergamin nocą (0 = wcale, 1 = czarno). */
   nocCiemnosc: 0.78,
   /** Ile godzin przed wschodem / po zachodzie trwa szarówka. */
   szarowkaGodzin: 1,
   /** Poznane, ale teraz niewidoczne miejsca: jak mocno je przykryć pergaminem (0–255). */
   poznaneKrycie: 150,
+  /** Siatka kartograficzna na pergaminie: co ile metrów linia, co która linia mocniejsza, jak wyraźne. */
+  siatka: { coM: 25, mocnaCo: 4, krycie: 0.2, mocnaKrycie: 0.4, kolor: '60,52,44' },
   /** Plik grafika z teksturą pergaminu (w public/swiat/), jeśli jest. */
   plik: 'mgla_pergamin',
 };
