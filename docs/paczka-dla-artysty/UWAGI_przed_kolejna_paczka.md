@@ -61,3 +61,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 27. Prośba: **`mgla_pergamin`** – 384 × 384 px, kafelkujący się (bez powtarzania krawędzi), pełny, bez przezroczystości. Jasny, raczej chłodny, szarawo-kremowy papier (nie żółto-brązowy – ciepły pergamin zlewał się z dachami i drogami; dzień – nocą gra sama go przyciemni): **duże, miękkie plamy i przebarwienia, delikatne włókna, rzadko rozsiane wyblakłe znaczki** (krzyżyki, kropki) w kolorze wyblakłego atramentu. **Bez siatki** – siatkę kartograficzną (co 25 m, mocniej co 100 m) gra rysuje sama, przypiętą do mapy. Gra zmniejsza go ok. 6×, więc drobne szczegóły znikną – rysuj duże i miękkie, bez napisów, bez niczego, co wygląda jak konkretny kształt (drzewo, dom). Plik do folderu `swiat/`.
 
 28. **Zmiana:** prośba o `mgla_pergamin` przeniesiona do `ZAMOWIENIE_04_mgla_i_dekoracje.md` (sekcja A) – z siatką kartograficzną rysowaną ręką przez Ciebie (równa siatka z programu wyglądała jak cerata), papier przesuwa się powoli z bohaterem (1/20 jego prędkości). Punkt 27 nieaktualny.
+
+## Po paczce „świat 04a – mgła-pergamin”
+
+29. **Pergamin przyjęty – w grze jest wariant z rzadszą siatką** (gęstszy też jest w grze do przełączenia). Zrzut `5_zrzuty_z_gry/mgla_pergamin_04a_w_grze.png`: od lewej rzadsza siatka w dzień, gęstsza w dzień, zmierzch, noc. Ręczna siatka wygląda świetnie, zupełnie inaczej niż „cerata” z programu. Dzięki!
+30. **Dalej wg `ZAMOWIENIE_04_mgla_i_dekoracje.md`:** C (drzewa, grzyb, kłoda), potem B (ławka, donica, skrzynie, studzienka, hydrant, kosz…), potem D (fontanna, kocioł, wieża, drogowskaz).

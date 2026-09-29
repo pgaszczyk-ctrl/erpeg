@@ -54,4 +54,6 @@ export const KOMINY = { plik: 'komin_para', klatki: 3, naIleDomow: 3, odM2: 60 }
 export const SKALA_PLIKOW = 3;
 
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para'];
+import { MGLA } from './mgla';
+
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik];

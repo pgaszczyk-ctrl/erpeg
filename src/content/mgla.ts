@@ -17,6 +17,6 @@ export const MGLA = {
   poznaneKrycie: 150,
   /** Pergamin przesuwa się razem z bohaterem o taką część jego drogi (0 = przypięty do mapy, 1 = jedzie z graczem). */
   paralaksa: 1 / 20,
-  /** Plik grafika z teksturą pergaminu (w public/swiat/), jeśli jest. */
+  /** Plik grafika z teksturą pergaminu (w public/swiat/): 'mgla_pergamin' (rzadsza siatka, polecana) albo 'mgla_pergamin_gestsza'. */
   plik: 'mgla_pergamin',
 };
