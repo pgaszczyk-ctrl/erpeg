@@ -15,8 +15,8 @@ export const MGLA = {
   szarowkaGodzin: 1,
   /** Poznane, ale teraz niewidoczne miejsca: jak mocno je przykryć pergaminem (0–255). */
   poznaneKrycie: 150,
-  /** Siatka kartograficzna na pergaminie: co ile metrów linia, co która linia mocniejsza, jak wyraźne. */
-  siatka: { coM: 25, mocnaCo: 4, krycie: 0.2, mocnaKrycie: 0.4, kolor: '60,52,44' },
+  /** Pergamin przesuwa się razem z bohaterem o taką część jego drogi (0 = przypięty do mapy, 1 = jedzie z graczem). */
+  paralaksa: 1 / 20,
   /** Plik grafika z teksturą pergaminu (w public/swiat/), jeśli jest. */
   plik: 'mgla_pergamin',
 };

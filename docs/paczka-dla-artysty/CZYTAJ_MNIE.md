@@ -5,7 +5,7 @@ Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest **paczka v1*
 łuczniczka, goblin-chochlik) – styl się podoba i jest już w grze na serwerze testowym
 (https://exp-lore.app/test/). Zrzuty: `5_zrzuty_z_gry/`.
 
-**TERAZ NAJWAŻNIEJSZE: `ZAMOWIENIE_03_duza_partia.md`** – reszta podłoża, ściany, ozdoby ulic, drzewa i pozostałe postacie (świat 01, 02 i 03a są już w grze).
+**TERAZ NAJWAŻNIEJSZE: `ZAMOWIENIE_04_mgla_i_dekoracje.md`** (mgła-pergamin, dekoracje ulic, drzewa, miejsca szczególne), obok niego wciąż `ZAMOWIENIE_03_duza_partia.md` – reszta podłoża, ściany, ozdoby ulic, drzewa i pozostałe postacie (świat 01, 02 i 03a są już w grze).
 
 **Nowe (wrzesień 2026): styl świata – lekki baśniowy steampunk.** Domy, ulice i ozdoby rysujemy w klimacie opisanym w `STYL_SWIATA_steampunk.md` (tam też nowe pliki: latarnie, parowóz, kominy z parą…).
 
