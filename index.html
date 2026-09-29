@@ -25,7 +25,7 @@
       /* Character sheet */
       #character { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0.7); font-family: ui-monospace, Menlo, Consolas, monospace; color: #fff; padding: 12px; box-sizing: border-box; }
-      .c-box { width: 100%; max-width: 420px; height: min(100%, 720px); overflow-y: auto; background: #1e1a24; border: 3px solid #f7c531;
+      .c-box { width: 100%; max-width: 420px; height: min(100%, 680px); overflow-y: auto; background: #1e1a24; border: 3px solid #f7c531;
         border-radius: 6px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
       .c-head { display: flex; align-items: baseline; gap: 10px; }
       .c-head h2 { margin: 0; color: #f7c531; font-size: 22px; }
@@ -47,7 +47,7 @@
       .c-x-nas { grid-area: nas; border-color: #9be7ff; }
       .c-talismans .c-xcell { grid-area: auto; }
       .c-talismans { display: grid; width: 100%; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 270px; margin: 0 auto; }
-      .c-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0 8px; }
+      .c-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 4px 0 8px; }
       .c-tab { font: inherit; font-size: 12px; padding: 7px 2px; border: 2px solid #4a4a55; border-radius: 4px; background: #0f0d13; color: #d8d8d8; }
       .c-tab-on { border-color: #f7c531; background: #3a2f12; color: #fff2a8; }
       .c-arrow { align-self: flex-start; margin-top: 4px; font-size: 13px; padding: 5px 10px; }
@@ -143,8 +143,8 @@
       @keyframes m-float { 0%, 100% { transform: translate(-50%, -70%); } 50% { transform: translate(-50%, -95%); } }
       .ch-box { max-width: 420px; gap: 6px; touch-action: none; }
       /* Item grids (ui/slots.ts): equipment 3×3, backpack and chest 4×5, all the same cell size. */
-      .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 250px) / 7.8)); display: flex; flex-direction: column; align-items: center; gap: 10px; touch-action: none; }
-      #chest .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 290px) / 8.6)); gap: 4px; }
+      .sl-wrap { --sl: min(66px, 16.5vw, calc((min(100vh, 680px) - 185px) / 7.6)); display: flex; flex-direction: column; align-items: center; gap: 22px; margin-top: 12px; touch-action: none; }
+      #chest .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 290px) / 8.6)); gap: 4px; margin-top: 0; }
       #chest .sl-wrap h3 { margin: 4px 0 0; font-size: 14px; color: #f7c531; align-self: flex-start; }
       .sl-grid { display: grid; gap: 5px; }
       .sl-eq { grid-template-columns: repeat(3, var(--sl)); }
