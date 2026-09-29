@@ -85,3 +85,8 @@ Dzięki za mieszkańców 01–10. Są już w grze, maski z v3 i z 06–10 dział
 38. **Dalej:** `ZAMOWIENIE_06_chodzenie_i_reszta.md` – poprawione kroki, nowa latarnia, okap dachu, **wóz woźnicy**, rozpalony kocioł, mędrczyni i zaległości.
 39. **Jeden styl (najważniejsze teraz):** właściciel widzi w grze „zlepek 4 stylów”. Wzorem są ludziki i przygaszone podłoża/dachy; kocioł, fontanna i wieża są za dokładne i za jaskrawe, a plansza (krawędzie, obrysy) za mało „pikselowa”. U nas obrysy mapy są już cieńsze i w kolorze konturu postaci (`5_zrzuty_z_gry/obrysy_przed_po.png`: lewo przed, prawo po). Od Ciebie: `ZAMOWIENIE_06`, punkt 0.
 40. **Wozy:** 3 wersje (pusty, beczki, worki) i 3 maści koni (czarny, brązowy, szary – najlepiej przez maskę) – `ZAMOWIENIE_06`, punkt B2.
+
+## Po paczce „wozy konne final”
+
+41. **Wozy przyjęte – są dokładnie takie, jak trzeba.** Stoją przy każdej stacji (ładunek i maść losowane dla stacji, koń co chwilę przestępuje), obok woźnica. Zrzut `5_zrzuty_z_gry/wozy_w_grze.png`. Ten sposób pracy (podgląd → pliki z zaakceptowanego obrazka, duże, bez rysowania od nowa) zostaje na stałe.
+42. **Dalej:** `ZAMOWIENIE_07_trening_i_reszta_swiata.md` – kukły treningowe (dokładny opis), potem wszystko, co w grze wciąż rysuje program (zestawienie `5_zrzuty_z_gry/do_przerysowania_grafiki_z_programu.png`). Zamówienie 06 nadal obowiązuje.

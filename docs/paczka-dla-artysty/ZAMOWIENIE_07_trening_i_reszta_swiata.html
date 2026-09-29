@@ -1,0 +1,65 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 07</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie 07 – kukły treningowe i wszystko, co jeszcze rysuje program</h1>
+<p>Wozy konne wyszły <strong>świetnie</strong> – dokładnie tak ma wyglądać cała gra. Są już na każdej stacji, w 3 ładunkach i 3 maściach. Dzięki!</p>
+<h2>Jak pracujemy (tak jak przy wozach – to zadziałało)</h2>
+<ol>
+<li>Najpierw <strong>podgląd</strong> do akceptacji. Pliki produkcyjne robisz <strong>z zaakceptowanego obrazka</strong>: wycinasz, dajesz przezroczyste tło, nic nie rysujesz od nowa i nie dorysowujesz programem.</li>
+<li><strong>Styl jak wozy i ludziki:</strong> miękkie, ładne cieniowanie, światło z lewej-góry, cienki ciemny kontur jak na podglądzie wozu, przygaszone barwy (mosiądz matowy, drewno ciepłe), lekki steampunk (mosiężne okucia, nity, trybiki) jako ozdoba, nie na siłę.</li>
+<li><strong>Rozmiar pliku dowolny, byle duży i równy</strong> (np. klatka 400–1000 px wysokości, wszystkie klatki jednego obiektu tej samej wielkości). Zmniejszamy sami. W opisie niżej podaję <strong>wielkość w grze w porównaniu z ludzikiem</strong> – to jest ważne, a nie piksele.</li>
+<li>Widok jak u ludzików i wozów: <strong>z przodu, lekko z góry</strong>, obiekt stoi na dolnej krawędzi obrazka, środek podstawy na środku.</li>
+<li>Przed wysłaniem połóż obiekt obok ludzika i wozu w tej samej skali – mają wyglądać jak z jednej gry.</li>
+</ol>
+<p>Zestawienie wszystkiego, co dziś rysuje program (do zastąpienia): <code>5_zrzuty_z_gry/do_przerysowania_grafiki_z_programu.png</code>.</p>
+<h2>A. Trening na boiskach – NAJWAŻNIEJSZE</h2>
+<p>Na dużych boiskach stoją trzy przyrządy do ćwiczeń (miecz, łuk, magia), a na drugim końcu boiska druga kukła do zadania trenera. Bohater uderza w nie mieczem albo strzela – przy każdym trafieniu przyrząd się <strong>kiwa</strong>. Każdy przyrząd: <strong>3 klatki obok siebie</strong> – (1) stoi spokojnie, (2) trafiony: odchylony ok. 10–15° do tyłu, (3) wraca, lekko przechylony w drugą stronę.</p>
+<h3><code>kukla_treningowa</code> – do ćwiczeń mieczem</h3>
+<ul>
+<li><strong>Wysokość w grze: jak dorosły mieszkaniec</strong> (głowa kukły na wysokości głowy ludzika).</li>
+<li>Gruby drewniany <strong>słup wbity w ziemię</strong>, u dołu mały kopczyk ziemi i kępka trawy (albo krzyżak z desek).</li>
+<li><strong>Tułów:</strong> worek z juty wypchany słomą, ściśnięty w pasie sznurkiem; spod sznurka i szwów wystają źdźbła słomy.</li>
+<li><strong>Ramiona:</strong> poziomy drewniany drąg przełożony przez tułów, na końcach owinięty szmatą i sznurkiem.</li>
+<li><strong>Na piersi:</strong> stary, połatany skórzany napierśnik z <strong>mosiężnymi nitami</strong> i jedną mosiężną płytką (lekki steampunk), porysowany od cięć.</li>
+<li><strong>Głowa:</strong> mniejszy worek ze słomą, zawiązany u szyi; <strong>twarz</strong> – dwa krzyżyki z grubej nici zamiast oczu i zszyty uśmiech (sympatycznie, nie strasznie – grają dzieci).</li>
+<li>Kolory: jasne, ciepłe drewno i juta, przygaszony brąz skóry, matowy mosiądz.</li>
+<li>Klatka 2 (trafiony): odchylona do tyłu, <strong>kilka źdźbeł słomy odlatuje</strong>.</li>
+</ul>
+<h3><code>kukla_treningowa_druga</code> – druga kukła (zadanie trenera)</h3>
+<ul>
+<li>Ta sama kukła, ale z <strong>czerwoną wstążką</strong> zawiązaną na ramieniu drąga i <strong>czerwoną chorągiewką</strong> wbitą obok w ziemię – żeby było widać z daleka, że to ta, do której trzeba dobiec. 3 klatki jak wyżej.</li>
+</ul>
+<h3><code>tarcza_strzelnicza</code> – do ćwiczeń z łuku</h3>
+<ul>
+<li><strong>Wysokość w grze: ok. 0,9 ludzika.</strong></li>
+<li>Okrągła <strong>mata ze sprasowanej słomy</strong> (widać zwinięte pasy słomy), na niej <strong>namalowane koła</strong>: przygaszona czerwień, kremowa biel, środek czerwony; farba trochę spękana.</li>
+<li>Stoi na <strong>drewnianym stojaku-trójnogu</strong> (litera A z podpórką z tyłu), mata przywiązana sznurkiem, w rogach <strong>mosiężne klamry</strong>.</li>
+<li>Klatka 1: czysta tarcza; klatka 2: <strong>w tarczy tkwi strzała</strong> (drzewce + lotki), tarcza drgnęła; klatka 3: strzała tkwi, tarcza się uspokaja.</li>
+</ul>
+<h3><code>krysztal_magii</code> – do ćwiczeń magii</h3>
+<ul>
+<li><strong>Wysokość w grze: jak ludzik.</strong></li>
+<li><strong>Mosiężny postument</strong> na kamiennej podstawie: kolumienka z <strong>trybikami i rurkami</strong>, u góry trzy mosiężne szpony.</li>
+<li>Szpony trzymają <strong>unoszący się niebieski kryształ</strong> (ostre ściany, jaśniejszy środek), wokół delikatna niebieska poświata.</li>
+<li>Klatka 1: spokojny, lekko świeci; klatka 2: trafiony – <strong>jasny błysk</strong>, drobne iskierki i małe łuki błyskawic między szponami; klatka 3: blask gaśnie, kryształ lekko obrócony.</li>
+</ul>
+<h3>Postacie do boisk (arkusze jak ludziki: 3 × 3 klatki, rzędy dół/bok w lewo/góra, kolumny krok A/stoi/krok B, + maska)</h3>
+<ul>
+<li><strong>Trener Zbyszek:</strong> krępy pan w średnim wieku, dres/sportowa kurtka w przygaszonych barwach z mosiężnym gwizdkiem na sznurku, notes w ręce, czapka z daszkiem. <code>plec: m</code>, <code>wiek: dorosly</code>.</li>
+<li><strong>Biegaczka Ania:</strong> szczupła młoda kobieta w stroju do biegania (koszulka, spodenki/legginsy), kucyk, opaska na czole, na nadgarstku mosiężny stoper. <code>plec: k</code>, <code>wiek: dorosly</code>.</li>
+<li>Pamiętaj o <strong>wyraźnie różnych krokach A i B</strong> (patrz <code>ZAMOWIENIE_06</code>, punkt A).</li>
+</ul>
+<h2>B. Pozostałe rzeczy, które dziś rysuje program (w tej kolejności)</h2>
+<ol>
+<li><strong>Znaczki miejsc nad drzwiami</strong> (dziś małe kolorowe kwadraty): szyldy w nowym stylu – drewniana tabliczka w mosiężnej ramce, na łańcuszkach, z jednym prostym symbolem. Wielkość w grze: <strong>ok. 1/3 ludzika</strong>, wszystkie tej samej wielkości: sklep (koszyk/waga), szkoła (książka i pióro), kościół (krzyż), urząd (pieczęć), szpital (czerwony krzyż), policja (odznaka), biblioteka (stos książek), hotel (łóżko), bank (moneta), alchemik (kolba), sklep budowlano-sportowy (młotek i namiot), kemping (namiot). Plik: <code>szyld_&lt;nazwa&gt;</code>.</li>
+<li><strong>Stragan kupca</strong> na rondach (<code>stragan_kupca</code>): wózek z pasiastym daszkiem i skrzynkami towaru, w stylu wozów (może z tym samym koniem), 2 klatki (koń stoi / przestępuje).</li>
+<li><strong>Rzeczy do podniesienia</strong> (leżą na ziemi, <strong>ok. 1/4 ludzika</strong>): moneta, serduszko, jabłko, śliwka, kiść winogron, marchewka, brokuł, sałata, zguba z zadania (skórzana sakiewka). Każda 1 klatka.</li>
+<li><strong>Smok</strong> (najważniejsza postać historii!): arkusz jak u wrogów (3 × 3, dół/bok/góra), <strong>ok. 2,5 ludzika wysokości</strong>; łuskowaty, szlachetny, trochę baśniowy (nie potwór z horroru), zielono-mosiężny, z oczami, w których może się tlić Rdza Umysłu (bursztynowy blask). Do tego <strong>cień smoka widziany z góry</strong> (<code>cien_smoka</code>), 2 klatki: skrzydła w górze / w dole – sama sylwetka, półprzezroczysta czerń.</li>
+<li><strong>Pies</strong> (<code>pies</code>, arkusz 3 × 3 jak ludziki, ok. 0,5 ludzika) i <strong>świnka</strong> (<code>swinka</code>, mała, 1–2 klatki) z zadania psa.</li>
+<li><strong>Dom bohatera</strong> – mały znaczek na dachu (<code>znak_domu</code>): mosiężna tabliczka z domkiem albo chorągiewka.</li>
+<li><strong>Ekran (HUD)</strong>, na końcu: serduszka (pełne, puste, niebieskie – premia, fioletowe – pojedynek), gwiazdki doświadczenia (pełna, połówka, pusta), ikona mapy, dymek rozmowy, dymek „?”, wykrzyknik „!”, znaczniki misji (żółty z „!”, zielony – wykonane), strzałka celu. Te mogą zostać prostsze i bardzo czytelne – ale w tej samej kresce.</li>
+<li><strong>Efekty walki:</strong> łuk cięcia mieczem (biały półksiężyc), strzała w locie, pocisk magii (niebieska kula z iskrami).</li>
+<li><strong>Szczyt góry</strong> – chorągiewka na kopczyku kamieni (<code>szczyt</code>).</li>
+</ol>
+<h2>Kolejność</h2>
+<ol>
+<li><strong>A</strong> – kukła, druga kukła, tarcza, kryształ (podgląd do akceptacji, potem pliki), potem trener i biegaczka. 2. <strong>B1–B3</strong>. 3. <strong>B4 smok i cień</strong>. 4. reszta.</li>
+</ol>
+<p>Zamówienie 06 nadal obowiązuje (poprawione kroki postaci, latarnia, okap dachu, mędrczyni, zaległości).</p>
