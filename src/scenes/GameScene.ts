@@ -392,7 +392,7 @@ export class GameScene extends Phaser.Scene {
         if (this.textures.exists(key)) {
           // Right by the cart sign (the door itself can be on the tracks, where freeNear went far away).
           const at = this.cartSpot(p);
-          fitHd(this.add.sprite(at.x + 19, at.y + 1, key, 'down-0')).setDepth(at.y + 3);
+          fitHd(this.add.sprite(at.x + 28, at.y + 1, key, 'down-0')).setDepth(at.y + 3);
         }
       }
     };
@@ -1052,7 +1052,7 @@ export class GameScene extends Phaser.Scene {
    * with no building under the cart and coachman. Rails don't count, carts stand by the platforms.
    */
   private cartSpot(p: CityPlace) {
-    const clear = (x: number, y: number) => [[-30, 0], [-8, -6], [14, 0], [19, 1], [-8, 3]].every(([dx, dy]) => !this.city.buildingAt(x + dx, y + dy));
+    const clear = (x: number, y: number) => [[-44, 0], [-12, -9], [21, 0], [28, 1], [-12, 4]].every(([dx, dy]) => !this.city.buildingAt(x + dx, y + dy));
     for (let r = 0; r <= 80; r += 4) {
       for (const [dx, dy] of [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1]]) {
         if (clear(p.door.x + dx * r, p.door.y + dy * r)) return { x: p.door.x + dx * r, y: p.door.y + dy * r };
@@ -1082,7 +1082,7 @@ export class GameScene extends Phaser.Scene {
           tex.add('f1', 0, src.width / 2, 0, src.width / 2, src.height);
         }
         const at = this.cartSpot(p);
-        const img = this.add.image(at.x - 8, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
+        const img = this.add.image(at.x - 10, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
         img.setScale(W.wysokosc / img.height).setDepth(at.y + 2);
         const swap = () => {
           if (!img.active) return;
