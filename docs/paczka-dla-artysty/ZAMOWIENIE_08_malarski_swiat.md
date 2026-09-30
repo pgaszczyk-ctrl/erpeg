@@ -99,6 +99,24 @@ Ikony przedmiotów (miecze, łuki, zbroje, hełmy, buty, talizmany, esencje, owo
 
 **Kolejność:** najpierw jedna postać (np. obecny `knight`) w nowym stylu, na scenie-podglądzie obok wozu i domów. Po akceptacji reszta: 10 bohaterów, 15 mieszkańców, postacie stałe, wrogowie.
 
+## G. Pogoda i nowe potwory (gra już pobiera prawdziwą pogodę)
+
+Gra zna pogodę za oknem w miejscu gracza (deszcz, ulewa, burza, śnieg, mgła, mróz, śnieg leżący na ziemi). Deszcz, płatki, mgłę i błyski rysuje program. Od Ciebie potrzebujemy:
+
+**1. Śnieg na ziemi, 2 poziomy** (dla każdej tekstury z części A i dachów z C, te same zasady: 512×512, bez szwów, 3 warianty):
+- `_snieg1` – **drobny śnieg**: biały puch w zagłębieniach, trawa i kostka brukowa przebijają spod spodu (widać ok. połowę podłoża),
+- `_snieg2` – **duży śnieg**: wszystko białe, miękkie zaspy; na drogach (`droga`, `bruk`, `chodnik`) śnieg **odgarnięty**, tylko przyprószony, z koleinami i wałami śniegu na brzegach (pasek krawędzi `krawedz_zaspa`),
+- dachy ze śniegiem (dwa poziomy) i ośnieżone wersje drzew, krzaków, sosen, latarni, ławek.
+
+**2. Kałuże** – 3 rodzaje małych kałuż (widok z góry, z odbiciem nieba), gra rozkłada je na drogach w deszczu i po deszczu.
+
+**3. Parasole** dla mieszkańców – osobny obrazek parasola do „założenia” nad głowę (widok jak ludziki: z przodu, lekko z góry), 4 kolory w jednym arkuszu, 2 klatki (lekkie kołysanie). Dziś rysuje go program (prosty półokrąg).
+
+**4. Nowe potwory** (arkusze jak postacie: 3×3 klatki, maniera kukieł, bez czarnego konturu):
+- **wodny blob** – mała, galaretowata kropla wody z oczkami, półprzezroczysta, niebieska; skacze (2 klatki podskoku wystarczą). W deszczu zastępuje chochliki. Wielkość: do kolan dorosłego ludzika.
+- **wodnik** – „pan” blobów, jak właściciel prowadzący 1–2 psy: wodny czarodziej w pelerynie z wodorostów, z laską z muszlą albo kulą wody; mokre włosy, lekko niebieskawa skóra, trochę straszny, ale nie za bardzo (grają dzieci). Klatki: chód (3 kierunki) + **2 klatki czarowania** (unosi laskę, z której płynie niebieska nić magii). Dziś zastępuje go przebarwiony zombiak.
+- **smok ognisty** i **smok wodny** – dwa kolejne smoki obok obecnego (ognisty słabnie i znika w ulewie, wodny jest wtedy mocniejszy o 20%): ta sama wielkość co obecny smok, lot 2–4 klatki, widok jak cień smoka (z góry, głowa w kierunku lotu) i jak postać (z boku) do walki.
+
 ## Czego nie trzeba
 
 - **Mgły wojny** (pergamin) – zostaje jak jest. Program zmiękcza jej krawędź i odsuwa ją od ścian.

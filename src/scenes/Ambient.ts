@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SKLAD_GANGOW } from '../content/pogoda';
 import { GROUND_DEPTH } from '../map/MapRenderer';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { TRENING } from '../content/swiat';
@@ -386,7 +387,7 @@ export class StreetEnemies {
     private density = 1,
     /** Per-login seed: new gangs every time. */
     private seed = 0,
-    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void; stan?: (g: Gang, text: string) => void; heroLevel?: () => number } = { bossOut: () => {}, cleared: () => {} },
+    private events: { bossOut: (g: Gang) => void; cleared: (g: Gang) => void; stan?: (g: Gang, text: string) => void; heroLevel?: () => number; pora?: () => { noc: boolean; mokro: boolean } } = { bossOut: () => {}, cleared: () => {} },
   ) {}
 
   private nearAvoid(x: number, y: number, m: number) {
@@ -449,11 +450,24 @@ export class StreetEnemies {
 
   /** Who lives here: dryads in forests, skeletons by cemeteries, zombies by water, else imps (and a few bandits). */
   private kindAt(x: number, y: number): RodzajWroga {
-    if (Math.random() < 0.1) return 'bandyta';
     if (this.city.areaKindsAt(x, y).includes('forest')) return 'driada';
     if (this.city.areaNear(x, y, 30 * PX_PER_M, 'cemetery')) return 'szkielet';
     if (this.city.nearWater(x, y, 30 * PX_PER_M)) return 'zombie';
     return 'glut';
+  }
+
+  /**
+   * Who stands on an imp's spot right now (content/pogoda.ts SKLAD_GANGOW): at night mostly bandits;
+   * in the rain water blobs, and every few of them their master, a wodnik. Fixed per spot (no reshuffling on every respawn).
+   */
+  private forNow(s: StreetSpawn, i: number, g: Gang): StreetSpawn {
+    if (s.kind !== 'glut') return s;
+    const pora = this.events.pora?.() ?? { noc: false, mokro: false };
+    const h = hashStr2(`${g.id}:${i}:kto`) / 4294967296;
+    const S = SKLAD_GANGOW;
+    if (h < (pora.noc ? S.bandyciNoc : S.bandyciDzien)) return { ...s, kind: 'bandyta' };
+    if (pora.mokro) return { ...s, kind: i % S.blobowNaWodnika === 0 ? 'wodnik' : 'blob' };
+    return s;
   }
 
   /** Is this point inside a gang's territory where people shouldn't be (active, or broken up less than a minute ago)? */
@@ -510,7 +524,7 @@ export class StreetEnemies {
       const a = (i / Math.max(1, n)) * Math.PI * 2 + Math.PI / 4;
       const x = at.x + Math.cos(a) * 16, y = at.y + Math.sin(a) * 12;
       const p = this.city.isFree(x, y, 4, 4) ? { x, y } : this.city.freeNear(x, y);
-      this.spawn({ x: p.x, y: p.y, kind: this.kindAt(p.x, p.y), berserk: i === berserk }, g);
+      this.spawn(this.forNow({ x: p.x, y: p.y, kind: this.kindAt(p.x, p.y), berserk: i === berserk }, 1000 + i, g), g);
     }
   }
 
@@ -555,7 +569,7 @@ export class StreetEnemies {
         }
         for (const i of g.alive) {
           if (g.members.has(i)) continue;
-          g.members.set(i, this.spawn(g.spots![i], g));
+          g.members.set(i, this.spawn(this.forNow(g.spots![i], i, g), g));
         }
       } else if (d > g.r + 700 * PX_PER_M) {
         // Far away: the members go home (unless chasing), still alive for later.

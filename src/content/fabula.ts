@@ -14,7 +14,7 @@ export type Miejsce = string | { lat: number; lon: number };
  * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
  * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik';
 
 export interface Zadanie {
   /**

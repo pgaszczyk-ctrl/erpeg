@@ -63,6 +63,9 @@ import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
 import { SEN } from '../content/demo';
+import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
+import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
+import { WeatherFx } from './WeatherFx';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -146,6 +149,8 @@ export interface HudState {
   /** Seconds left while the character is stuck after an unfinished session. */
   lingering: number | null;
   street: string | null;
+  /** The weather now, e.g. "🌧 8°C" (empty until known). */
+  pogoda?: string;
   /** Active quests (at most 3): goal line, where its arrow points, its colour. */
   quests: { text: string; pos: { x: number; y: number } | null; color: string; main: boolean }[];
 }
@@ -194,7 +199,13 @@ type Challenge =
   | { kind: 'kukly'; npc: SportNpc; a: Station; b: Station; step: 'a' | 'b' | 'back'; hits: number; start: number; until: number }
   | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number; path: number[]; cum: number[] };
 
-type Enemy = Slime & { missionId?: string; temp?: boolean; folkQuest?: boolean; carrier?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number } };
+type Enemy = Slime & {
+  missionId?: string; temp?: boolean; folkQuest?: boolean; carrier?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number };
+  /** Weather's effect on its strength (content/pogoda.ts WPLYW_NA_POTWORY): life and damage × this. */
+  power?: number;
+  /** A wodnik's conjured blobs, and a blob's wodnik. */
+  minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
+};
 
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
@@ -349,6 +360,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.folk = new Townsfolk(this, this.city);
+    this.folk.wet = isWet;
+    this.weatherFx = new WeatherFx(this);
+    this.magicG = this.add.graphics().setDepth(1_030_000);
+    this.watchWeather();
     this.bubbles = [];
     this.harvests = [];
     this.folkQuest = null;
@@ -462,6 +477,7 @@ export class GameScene extends Phaser.Scene {
       {
         stan: (_g, text) => this.toast(`⚔ ${text}`, 2500),
         heroLevel: () => poziomPostaci(session.exp),
+        pora: () => ({ noc: isNight(), mokro: isWet() }),
         bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
         cleared: (g) => {
           const coins = luckyCoins(g.kind.nagroda.monety);
@@ -679,7 +695,7 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         const blocked = Math.random() < blockChance();
         // Difficulty scales the damage; fractions add up over hits.
-        const pending = this.damageCarry + s.kind.damage * session.level.obrazenia;
+        const pending = this.damageCarry + s.kind.damage * (s.power ?? 1) * session.level.obrazenia;
         const dmg = Math.floor(pending);
         if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : dmg, s.berserk ? 1 / BERSERKER.szybciej : 1)) {
           if (!blocked) this.damageCarry = pending - dmg;
@@ -694,6 +710,8 @@ export class GameScene extends Phaser.Scene {
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
+    this.weatherFx.update(dt, this.cameras.main, this.player, now);
+    this.drawMagic(now);
 
     for (const item of [...this.pickups]) {
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
@@ -1035,7 +1053,7 @@ export class GameScene extends Phaser.Scene {
   /** A dragon starts fighting: strong (SMOK_CIOSOW blows of the hero's sword), claws and fire. */
   private dragonFight(s: Enemy) {
     const demoDragon = this.demoRun?.isDragon(s);
-    if (!demoDragon) s.hp = Math.max(s.hp, GameScene.SMOK_CIOSOW * meleeDamage());
+    if (!demoDragon) s.hp = Math.max(s.hp, Math.round(GameScene.SMOK_CIOSOW * meleeDamage() * (s.power ?? 1)));
     this.dragons.set(s, new DragonBrain(this, s, {
       player: this.player,
       blocked: (x, y) => this.city.isBlocked(x, y),
@@ -1050,6 +1068,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(s: Enemy) {
+    if (s.minions && WODNIK.blobyZnikajaZNim) for (const m of s.minions) this.dissolve(m);
     this.dragons.get(s)?.destroy();
     this.dragons.delete(s);
     if (s.duel) return this.endDuel(s, true);
@@ -1106,6 +1125,12 @@ export class GameScene extends Phaser.Scene {
   spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
     const s = new Slime(this, x, y, kind) as Enemy;
     s.missionId = missionId;
+    const w = WPLYW_NA_POTWORY[kind]?.[weather.kind];
+    if (w?.sila) {
+      s.power = w.sila;
+      s.hp = Math.max(1, Math.round(s.hp * w.sila));
+    }
+    if (kind === 'wodnik') s.brain = (now) => this.wodnikThink(s, now);
     this.enemies.push(s);
     return s;
   }
@@ -1208,6 +1233,86 @@ export class GameScene extends Phaser.Scene {
     for (const f of want) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
     this.load.once('complete', put);
     this.load.start();
+  }
+
+  private weatherFx!: WeatherFx;
+  private magicG!: Phaser.GameObjects.Graphics;
+  private weatherShown = '';
+
+  /** The real weather where the hero is: asks the server now and then, re-reads the hour every minute. */
+  private watchWeather() {
+    const ask = () => {
+      const ll = this.city.toLatLon(this.player?.x ?? 0, this.player?.y ?? 0);
+      void loadWeather(ll.lat, ll.lon).then(() => this.onWeather());
+    };
+    this.time.delayedCall(300, ask);
+    this.time.addEvent({ delay: 60_000, loop: true, callback: () => { ask(); if (tickWeather()) this.onWeather(); } });
+  }
+
+  private onWeather() {
+    tickWeather();
+    const k = weather.kind;
+    if (this.weatherShown && this.weatherShown !== k) {
+      const o = POGODA.opis[k];
+      this.toast(`${o.ikona} Pogoda się zmienia: ${o.nazwa}.`, 2500);
+    }
+    if (this.weatherShown !== k) this.folk.rethink();
+    this.weatherShown = k;
+    this.emitHud();
+  }
+
+  /** A wodnik (rain): keeps his distance, conjures blobs a few metres from the hero (at most WODNIK.maksBlobow), then stands and casts. */
+  private wodnikThink(s: Enemy, now: number) {
+    const W = WODNIK;
+    const dx = this.player.x - s.x, dy = this.player.y - s.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (!s.chasing && d < s.kind.sightRange) s.chasing = true;
+    if (s.chasing && d > s.kind.loseRange) s.chasing = false;
+    if (!s.chasing || s.isDazed(now)) return s.think(new Phaser.Math.Vector2(this.player.x, this.player.y), now);
+    const keep = W.dystansM * PX_PER_M;
+    const sp = s.kind.chaseSpeed * PREDKOSC_WROGOW * Slime.tempo;
+    if (d < keep * 0.8) s.vel.set((-dx / d) * sp, (-dy / d) * sp);
+    else if (d > keep * 1.6) s.vel.set((dx / d) * sp * 0.6, (dy / d) * sp * 0.6);
+    else s.vel.set(0, 0);
+    s.minions = new Set([...(s.minions ?? [])].filter((m) => m.active && !m.isDead));
+    if (s.minions.size >= W.maksBlobow || now < (s.nextSummon ?? 0) || this.player.isDead) return;
+    s.nextSummon = now + W.przerwaMs;
+    for (let t = 0; t < 8; t++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = (W.blobOdBohateraM[0] + Math.random() * (W.blobOdBohateraM[1] - W.blobOdBohateraM[0])) * PX_PER_M;
+      const x = this.player.x + Math.cos(a) * r, y = this.player.y + Math.sin(a) * r;
+      if (!this.city.isFree(x, y, 3, 3)) continue;
+      const b = this.spawnEnemy(x, y, undefined, 'blob');
+      b.temp = true;
+      b.owner = s;
+      b.chasing = true;
+      s.minions.add(b);
+      // A splash where it rises from the puddle.
+      const ring = this.add.circle(x, y + 2, 2, W.kolorMagii, 0.6).setDepth(y);
+      this.tweens.add({ targets: ring, radius: 9, alpha: 0, duration: 400, onComplete: () => ring.destroy() });
+      break;
+    }
+  }
+
+  /** The threads of a wodnik's magic to the blobs he keeps alive. */
+  private drawMagic(now: number) {
+    const g = this.magicG.clear();
+    for (const s of this.enemies) {
+      if (!s.minions?.size || s.isDead || !s.visible) continue;
+      for (const m of s.minions) {
+        if (!m.active || m.isDead) continue;
+        g.lineStyle(1, WODNIK.kolorMagii, 0.3 + 0.25 * Math.sin(now / 120 + m.x));
+        g.lineBetween(s.x, s.y - 8, m.x, m.y - 3);
+      }
+    }
+  }
+
+  /** A conjured blob melts away (its wodnik is gone): no reward. */
+  private dissolve(m: Enemy) {
+    if (!m.active || m.isDead) return;
+    m.hp = 0;
+    this.enemies = this.enemies.filter((e) => e !== m);
+    this.tweens.add({ targets: m, alpha: 0, scaleY: m.scaleY * 0.3, duration: 350, onComplete: () => m.destroy() });
   }
 
   /** A gang boss spills coins (in a few piles) and fruit on the ground (content/gangi.ts LUP_HERSZTA). */
@@ -3485,6 +3590,7 @@ export class GameScene extends Phaser.Scene {
       dead: this.player.isDead,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
+      pogoda: weatherLabel(isNight()),
       quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
     };
     this.registry.set('hud', state);

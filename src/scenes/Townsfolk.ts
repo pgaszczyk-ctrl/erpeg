@@ -3,6 +3,7 @@ import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
+import { LUDZIE_W_DESZCZU } from '../content/pogoda';
 import { rng } from '../rng';
 import { Walker } from './FixedNpcs';
 
@@ -34,6 +35,8 @@ export interface Folk {
   gone?: boolean;
   /** Waiting for the hero to bring back what imps stole (stands still). */
   waiting?: boolean;
+  /** An umbrella over the head in the rain (drawn by code until the artist's one). */
+  umbrella?: Phaser.GameObjects.Graphics;
 }
 
 /** Night by the phone's clock (fewer people, more monsters). */
@@ -137,6 +140,35 @@ export class Townsfolk {
     return list;
   }
 
+  /** The weather changed: people strolling around are made again (fewer and with umbrellas in the rain, or back out after it). */
+  rethink() {
+    for (const f of [...this.active]) {
+      if (f.away || f.waiting || f.route || f.gone) continue;
+      f.sprite?.destroy();
+      f.sprite = undefined;
+      f.umbrella?.destroy();
+      f.umbrella = undefined;
+      this.active.delete(f);
+    }
+    this.next = 0;
+  }
+
+  /** Is it raining now (set by GameScene from the weather). */
+  wet: () => boolean = () => false;
+
+  /** A simple open umbrella seen a little from above (placeholder until the artist's picture). */
+  private makeUmbrella(seed: number) {
+    const C = LUDZIE_W_DESZCZU.kolory;
+    const col = C[seed % C.length];
+    const g = this.scene.add.graphics();
+    g.lineStyle(0.8, 0x2a2430, 1).lineBetween(3, 0, 5, 10); // handle, down to the hand at the side
+    g.fillStyle(col, 1).slice(0, 0, 9, Math.PI, 0, false).fillPath();
+    g.fillStyle(0x1e1a24, 0.25).slice(0, 0, 9, Math.PI * 1.5, 0, false).fillPath(); // shade on the right
+    g.lineStyle(0.7, 0x1e1a24, 0.9).beginPath().arc(0, 0, 9, Math.PI, 0, false).strokePath().lineBetween(-9, 0, 9, 0);
+    g.fillStyle(0xe8e0d0, 1).fillRect(-0.5, -10, 1, 1.5); // tip
+    return g;
+  }
+
   update(dt: number, px: number, py: number, now: number, visible: (x: number, y: number) => boolean) {
     if (now >= this.next) {
       this.next = now + 500;
@@ -144,17 +176,25 @@ export class Townsfolk {
         if (Math.abs(f.x - px) < NEAR * 1.5 && Math.abs(f.y - py) < NEAR * 1.5) continue;
         f.sprite?.destroy();
         f.sprite = undefined;
+        f.umbrella?.destroy();
+        f.umbrella = undefined;
         this.active.delete(f);
       }
+      // The rain stopped: umbrellas closed.
+      if (!this.wet()) for (const f of this.active) if (f.umbrella) { f.umbrella.destroy(); f.umbrella = undefined; }
       const c0x = Math.floor((px - NEAR) / CELL), c1x = Math.floor((px + NEAR) / CELL);
       const c0y = Math.floor((py - NEAR) / CELL), c1y = Math.floor((py + NEAR) / CELL);
       for (let cy = c0y; cy <= c1y; cy++) {
         for (let cx = c0x; cx <= c1x; cx++) {
           for (const f of this.folkOf(cx, cy)) {
             if (this.active.has(f) || Math.abs(f.x - px) > NEAR || Math.abs(f.y - py) > NEAR) continue;
+            // In the rain fewer people are out (always the same ones stay at home).
+            const wet = this.wet();
+            if (wet && (hash(`${f.id}:deszcz`) % 1000) / 1000 >= LUDZIE_W_DESZCZU.ilu && !f.waiting) continue;
             if (isHd(f.tex)) f.tex = ensureHd(this.scene, f.tex);
             f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0').setOrigin(0.5, 0.6);
             if (isHd(f.tex)) fitHd(f.sprite);
+            if (wet && (hash(`${f.id}:parasol`) % 1000) / 1000 < LUDZIE_W_DESZCZU.parasol) f.umbrella = this.makeUmbrella(hash(f.id));
             this.active.add(f);
           }
         }
@@ -162,7 +202,10 @@ export class Townsfolk {
     }
     const fearR = MIESZKANCY.strachPrzedSmokiem * PX_PER_M;
     for (const f of this.active) {
-      if (f.away || f.gone || !f.sprite) continue;
+      if (f.away || f.gone || !f.sprite) {
+        f.umbrella?.setVisible(false);
+        continue;
+      }
       const ox = f.x, oy = f.y;
       if (f.route && f.cum) {
         // On an errand: along the streets to the place, then in through the door.
@@ -188,6 +231,7 @@ export class Townsfolk {
       const dx = f.x - ox, dy = f.y - oy;
       const s = f.sprite;
       s.setPosition(f.x, f.y).setDepth(f.y).setVisible(!scared && visible(f.x, f.y));
+      f.umbrella?.setPosition(f.x, f.y - s.displayHeight * s.originY - 1).setDepth(f.y + 0.5).setVisible(s.visible && s.alpha > 0.5);
       if (Math.abs(dx) + Math.abs(dy) < 0.01) {
         s.anims.stop();
         s.setFrame('down-0');

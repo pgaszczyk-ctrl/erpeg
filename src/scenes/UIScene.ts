@@ -407,7 +407,7 @@ export class UIScene extends Phaser.Scene {
     this.swordText.setText(`⚔ ${s.sword}`);
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;
-    this.streetText.setText(s.street ?? '');
+    this.streetText.setText([s.street, s.pogoda].filter(Boolean).join('  ·  '));
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
     this.questTexts.forEach((t, i) => {
       const q = s.lingering === null ? s.quests[i] : undefined;

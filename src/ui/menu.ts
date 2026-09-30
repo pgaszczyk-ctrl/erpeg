@@ -55,7 +55,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]));
+      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });

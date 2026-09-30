@@ -51,6 +51,7 @@ export const TEX = {
   dryad: 'dryad',
   zombie: 'zombie',
   skeleton: 'skeleton',
+  blob: 'blob',
   dragon: 'dragon',
   dragonShadow: 'dragon-shadow',
   wizard: 'wizard',
@@ -407,6 +408,14 @@ function drawSlimeSheet(scene: Phaser.Scene) {
     p(0, 8 - f, 5, 2, OUTLINE); p(11, 8 + f, 5, 2, OUTLINE); // arms forward
     p(1, 8 - f, 3, 1, '#5a8ad8'); p(12, 8 + f, 3, 1, '#5a8ad8');
     p(5, 12, 2, 3, OUTLINE); p(9, 12, 2, 3, OUTLINE);
+  });
+  // Water blob (rain; a placeholder until the artist's one): a wobbling blue drop with two eyes.
+  drawCritter(scene, TEX.blob, (p, f) => {
+    const u = f;
+    p(6, 2 + u, 4, 1, OUTLINE); p(4, 3 + u, 8, 1, OUTLINE); p(3, 4 + u, 10, 9 - u, OUTLINE); p(4, 13, 8, 1, OUTLINE);
+    p(5, 3 + u, 6, 1, '#7fc8ff'); p(4, 4 + u, 8, 9 - u, '#3f8fd8'); p(5, 11, 6, 2, '#2c6fb4');
+    p(5, 5 + u, 2, 2, '#d8f0ff'); // shine
+    p(6, 7 + u, 1, 2, OUTLINE); p(9, 7 + u, 1, 2, OUTLINE);
   });
   // Skeleton: white bones, dark eye holes, ribs.
   drawCritter(scene, TEX.skeleton, (p, f) => {
@@ -1332,5 +1341,5 @@ export function createArt(scene: Phaser.Scene) {
   drawHeart(scene, TEX.heartDuel, true, '#9a4ad8', '#d8b0ff');
   drawHeart(scene, TEX.heartDuelEmpty, false);
   drawCoin(scene);
-  for (const k of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.bandit, TEX.dragon]) redOutline(scene, k);
+  for (const k of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.blob, TEX.bandit, TEX.dragon]) redOutline(scene, k);
 }

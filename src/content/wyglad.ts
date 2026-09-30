@@ -84,7 +84,7 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
 /** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */
 export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   { postac: { id: 'driada', nazwa: 'Driada', plik: 'driada', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['driada'] },
-  { postac: { id: 'zombie', nazwa: 'Zombiak', plik: 'zombie', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['zombie'] },
+  { postac: { id: 'zombie', nazwa: 'Zombiak', plik: 'zombie', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['zombie', 'wodnik'] },
   { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet'] },
   { postac: { id: 'bandyta', nazwa: 'Bandyta', plik: 'bandyta', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['bandyta'] },
   // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).

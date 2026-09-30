@@ -83,6 +83,18 @@
 5. <strong>Lekki steampunk</strong> tylko w drobiazgach (mosiężny guzik, klamra, gogle na czapce), jak w <code>STYL_SWIATA_steampunk.md</code>.</p>
 <p><strong>Format bez zmian, tylko większy:</strong> arkusz 3×3 (wiersze: przód, bok patrzący w lewo, tył; kolumny: krok A, stoi, krok B), <strong>klatka 192×192 px</strong> (cały arkusz 576×576), stopy 6 px nad dolną krawędzią klatki, postać na środku klatki. We wszystkich klatkach głowa na tej samej wysokości (±2 px), a stojąca klatka dokładnie w tym samym miejscu co kroki (dziś u rycerza i łuczniczki była przesunięta o kilka pikseli i chodzenie drgało). Do każdej postaci, jak dotąd, <strong>maska ubrania</strong> <code>&lt;nazwa&gt;_maska.png</code> (czerwony = ubranie, zielony = drugi kolor), żeby program mógł zmieniać kolory strojów.</p>
 <p><strong>Kolejność:</strong> najpierw jedna postać (np. obecny <code>knight</code>) w nowym stylu, na scenie-podglądzie obok wozu i domów. Po akceptacji reszta: 10 bohaterów, 15 mieszkańców, postacie stałe, wrogowie.</p>
+<h2>G. Pogoda i nowe potwory (gra już pobiera prawdziwą pogodę)</h2>
+<p>Gra zna pogodę za oknem w miejscu gracza (deszcz, ulewa, burza, śnieg, mgła, mróz, śnieg leżący na ziemi). Deszcz, płatki, mgłę i błyski rysuje program. Od Ciebie potrzebujemy:</p>
+<p><strong>1. Śnieg na ziemi, 2 poziomy</strong> (dla każdej tekstury z części A i dachów z C, te same zasady: 512×512, bez szwów, 3 warianty):
+- <code>_snieg1</code> – <strong>drobny śnieg</strong>: biały puch w zagłębieniach, trawa i kostka brukowa przebijają spod spodu (widać ok. połowę podłoża),
+- <code>_snieg2</code> – <strong>duży śnieg</strong>: wszystko białe, miękkie zaspy; na drogach (<code>droga</code>, <code>bruk</code>, <code>chodnik</code>) śnieg <strong>odgarnięty</strong>, tylko przyprószony, z koleinami i wałami śniegu na brzegach (pasek krawędzi <code>krawedz_zaspa</code>),
+- dachy ze śniegiem (dwa poziomy) i ośnieżone wersje drzew, krzaków, sosen, latarni, ławek.</p>
+<p><strong>2. Kałuże</strong> – 3 rodzaje małych kałuż (widok z góry, z odbiciem nieba), gra rozkłada je na drogach w deszczu i po deszczu.</p>
+<p><strong>3. Parasole</strong> dla mieszkańców – osobny obrazek parasola do „założenia” nad głowę (widok jak ludziki: z przodu, lekko z góry), 4 kolory w jednym arkuszu, 2 klatki (lekkie kołysanie). Dziś rysuje go program (prosty półokrąg).</p>
+<p><strong>4. Nowe potwory</strong> (arkusze jak postacie: 3×3 klatki, maniera kukieł, bez czarnego konturu):
+- <strong>wodny blob</strong> – mała, galaretowata kropla wody z oczkami, półprzezroczysta, niebieska; skacze (2 klatki podskoku wystarczą). W deszczu zastępuje chochliki. Wielkość: do kolan dorosłego ludzika.
+- <strong>wodnik</strong> – „pan” blobów, jak właściciel prowadzący 1–2 psy: wodny czarodziej w pelerynie z wodorostów, z laską z muszlą albo kulą wody; mokre włosy, lekko niebieskawa skóra, trochę straszny, ale nie za bardzo (grają dzieci). Klatki: chód (3 kierunki) + <strong>2 klatki czarowania</strong> (unosi laskę, z której płynie niebieska nić magii). Dziś zastępuje go przebarwiony zombiak.
+- <strong>smok ognisty</strong> i <strong>smok wodny</strong> – dwa kolejne smoki obok obecnego (ognisty słabnie i znika w ulewie, wodny jest wtedy mocniejszy o 20%): ta sama wielkość co obecny smok, lot 2–4 klatki, widok jak cień smoka (z góry, głowa w kierunku lotu) i jak postać (z boku) do walki.</p>
 <h2>Czego nie trzeba</h2>
 <ul>
 <li><strong>Mgły wojny</strong> (pergamin) – zostaje jak jest. Program zmiękcza jej krawędź i odsuwa ją od ścian.</li>

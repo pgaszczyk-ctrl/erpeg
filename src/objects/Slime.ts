@@ -34,6 +34,10 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   // Gang bosses: come out when the last gang member falls (content/gangi.ts).
   herszt: { name: 'Herszt gangu', hp: 45, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
   wielki_herszt: { name: 'Wielki herszt', hp: 120, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
+  // In the rain (content/pogoda.ts): water blobs instead of imps (small, one arrow is enough) and their master,
+  // the wodnik, who conjures more blobs next to the hero and keeps them alive with his magic.
+  blob: { name: 'Wodny blob', hp: 5, wanderSpeed: 22, chaseSpeed: 46, sightRange: 90, loseRange: 140, scale: 0.8, damage: 1, exp: 3 },
+  wodnik: { name: 'Wodnik', hp: 30, wanderSpeed: 12, chaseSpeed: 30, sightRange: 120, loseRange: 220, scale: 1.05, damage: 1, exp: 25, tint: 0x9fe8ff },
   // The story's dragon (its reward comes from content/historia.ts).
   smok: { name: 'Smok', hp: 200, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
@@ -49,10 +53,10 @@ export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
 
 /** Pictures of the little creatures (all but the bandit). */
-const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon };
+const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
 
 export function createSlimeAnims(scene: Phaser.Scene) {
-  for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton]) {
+  for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.blob]) {
     scene.anims.create({ key: `${key}-hop`, frames: [{ key, frame: 'f0' }, { key, frame: 'f1' }], frameRate: 4, repeat: -1 });
   }
   scene.anims.create({ key: 'dragon-flap', frames: [{ key: TEX.dragon, frame: 'f0' }, { key: TEX.dragon, frame: 'f1' }], frameRate: 3, repeat: -1 });
