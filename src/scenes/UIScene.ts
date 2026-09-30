@@ -3,7 +3,7 @@ import { askBug } from '../ui/bug';
 import { report } from '../errlog';
 import { TEX, PLAYER_TEX, arrowTexture, artScale } from '../art';
 import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
-import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity } from '../controls';
+import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -445,7 +445,10 @@ export class UIScene extends Phaser.Scene {
     this.attackLabel = this.add
       .text(0, 0, '⚔', { fontFamily: 'sans-serif', fontSize: '17px', color: '#ffffff' })
       .setOrigin(0.5);
-    for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(this.touch);
+    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(this.touch);
+    // The attack button is gone (a tap on the joystick or a second finger swings).
+    this.attackBtn.setVisible(false);
+    this.attackLabel.setVisible(false);
     // Heal (phones: above the attack button; computers: bottom-right, or key H).
     this.healBtn = this.add.circle(0, 0, 26, 0x3fa34d, 0.5).setStrokeStyle(3, 0xffffff, 0.6).setVisible(false).setDepth(6);
     this.healIcon = this.add.text(0, 0, '🧪', { fontFamily: 'sans-serif', fontSize: '28px' }).setOrigin(0.5).setVisible(false).setDepth(7);
@@ -470,6 +473,9 @@ export class UIScene extends Phaser.Scene {
   /** Blinks the joystick at the start and after a while without moving. */
   private joyHint() {
     const now = this.time.now;
+    // A thumb held still on the joystick (or a key held down) is walking too: no touchmove comes, but it isn't idle.
+    const k = keyboardDir();
+    if (touchInput.joyActive || touchInput.x || touchInput.y || k.x || k.y) activity.last = performance.now();
     if (now < this.hintAt) return;
     const idle = performance.now() - activity.last;
     if (this.hintAt !== 0 && idle < 9000) return;
@@ -751,7 +757,7 @@ export class UIScene extends Phaser.Scene {
     if (!this.touch) {
       if (!touchInput.used) return;
       this.touch = true;
-      for (const o of [this.joyBase, this.joyKnob, this.joyArrows, this.attackBtn, this.attackLabel]) o.setVisible(true);
+      for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(true);
     }
     this.joyHint();
     const t = touchInput;

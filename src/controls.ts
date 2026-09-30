@@ -192,7 +192,9 @@ export function installTouchControls(el: HTMLElement) {
       const p = local(t);
       if (onHeal(p.x, p.y)) {
         healRequest = true;
-      } else if (Math.hypot(p.x - attackHome.x, p.y - attackHome.y) < attackHome.r * 1.35) {
+      } else if (joyId !== null && p.y > 70) {
+        // No attack button any more (owner): a second finger anywhere is the old button –
+        // a tap swings, holding it aims and shoots (bow, magic).
         attackIds.add(t.identifier);
         touchInput.attack = true;
         if (!hold.active) {
