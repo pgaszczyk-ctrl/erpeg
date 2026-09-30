@@ -148,7 +148,8 @@
       #chest .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 290px) / 8.6)); gap: 4px; margin-top: 0; }
       #chest .sl-wrap h3 { margin: 4px 0 0; font-size: 14px; color: #f7c531; align-self: flex-start; }
       .sl-grid { display: grid; gap: 5px; }
-      .sl-eq { grid-template-columns: repeat(3, var(--sl)); }
+      .sl-eq { grid-template-columns: var(--sl) var(--sl) calc(var(--sl) * 1.5); }
+      .sl-eq .sl-tal { justify-self: end; } /* talizmany osobno, pół kratki dalej */
       .sl-bag { grid-template-columns: repeat(5, var(--sl)); }
       .sl-cell { position: relative; width: var(--sl); height: var(--sl); box-sizing: border-box; background: #0f0d13; border: 2px solid #f7c531; border-radius: 5px;
         display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: grab; }

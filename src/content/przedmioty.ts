@@ -17,7 +17,7 @@ export interface Przedmiot {
   nazwa: string;
   /** Gdzie się go zakłada. */
   miejsce: Miejsce;
-  /** Obrażenia (broń) albo obrona (zbroja, hełm, buty). */
+  /** Obrażenia (broń; kijek na 10. poziomie ≈ stalowy miecz 7 na 1.) albo obrona (zbroja, hełm, buty). */
   moc: number;
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
@@ -40,15 +40,15 @@ export interface Przedmiot {
 export const PRZEDMIOTY: Przedmiot[] = [
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
-  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 2, cena: 1500 },
-  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 3, cena: 6000 },
-  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 5, cena: 22500 },
+  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500 },
+  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 7, cena: 6000 },
+  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 12, cena: 22500 },
   // Broń dystansowa (przytrzymaj i celuj)
-  { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 2, cena: 3000 },
-  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 3, cena: 12000 },
-  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 2, cena: 2000, gdzie: 'biblioteka' },
+  { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 4, cena: 3000 },
+  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 7, cena: 12000 },
+  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
-  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 5, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
+  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
   // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
   { id: 'skorzana_zbroja', nazwa: 'Skórzana zbroja', miejsce: 'zbroja', moc: 2, cena: 1600 },
   { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
@@ -62,10 +62,10 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
   // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki
   // w prawdziwym miejscu). Hasła i nagrody ustawia się w panelu admina.
-  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 4, cena: 0, efekt: 'swiatlo', opis: 'Świeci – widzisz o połowę dalej.' },
+  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 9, cena: 0, efekt: 'swiatlo', opis: 'Świeci – widzisz o połowę dalej.' },
   // Talizmany (miejsce na szyi): tylko w nagrodę za misje.
   { id: 'podkowa_szczescia', nazwa: 'Podkowa Szczęścia', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szczescie', opis: 'Dopóki ją nosisz, każdy potwór i każda rozbita banda dają 10% więcej monet.' },
-  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 3, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
+  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 7, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
 ];
 
 /** Świetlisty miecz: o ile razy dalej widać. */
@@ -97,7 +97,8 @@ export const PLECAK = { miejsc: 20, owocowNaMiejsce: 200 };
 // ----------------------------------------------------------------------------
 //  UMIEJĘTNOŚCI rosną od używania: każde trafienie (wroga, drzewa, lalki,
 //  tarczy, kryształu) to 1 punkt. Poziom 2 wymaga 100 punktów, każdy kolejny
-//  do 10. 1,5 raza więcej, a od 11. już tylko MNOZNIK_PO_10 (1,15) raza więcej.
+//  do 10. 1,5 raza więcej, a od 11. każdy kolejny MNOZNIK_PO_10 (1,25) raza więcej niż
+//  poprzedni (poziom 10 ≈ 7 500 trafień, poziom 20 ≈ 114 000).
 //  Najwyżej poziom 20. Przerwy, celność i obrażenia: content/walka.ts
 //  (magia na razie po staremu: `przerwa` − poziom × `szybciejNaPoziom`).
 // ----------------------------------------------------------------------------
@@ -108,7 +109,7 @@ export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; przerwa: number;
 };
 export const PIERWSZY_POZIOM = 100;
 export const MNOZNIK_POZIOMU = 1.5;
-export const MNOZNIK_PO_10 = 1.15;
+export const MNOZNIK_PO_10 = 1.25;
 export const MAKS_POZIOM = 20;
 /** Points needed to go from level `level - 1` to `level` (level ≥ 2). */
 export function kosztPoziomu(level: number) {
