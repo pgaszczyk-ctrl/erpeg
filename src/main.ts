@@ -7,6 +7,7 @@ import { installTouchControls } from './controls';
 import { installErrorLog, watchGraphics, report } from './errlog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
+import { watchUpdates } from './update';
 import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
 import { TEST, WERSJA_TEST } from './version';
@@ -58,6 +59,8 @@ watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
 // A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
 if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
 installLeaveGuard(game);
+// A new version went live: a bar offers to save and reload (every 30 min).
+watchUpdates(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).
 watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
 // Graphics errors (e.g. out of GPU memory: new pictures stay invisible) go to the error log.

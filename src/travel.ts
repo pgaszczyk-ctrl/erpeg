@@ -7,6 +7,7 @@ import { worldMap, worldOrigin } from './map/world';
 import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
+import { takeResume } from './update';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -125,7 +126,9 @@ export async function enterWorld(game: Phaser.Game) {
     session.jazda = null;
   }
   let city = maps.get('lublin')!;
-  let at = session.at;
+  // Reloaded for a new version (update.ts): back where the hero stood, once.
+  const back = takeResume(session.name);
+  let at = back ?? session.at;
   if (at) {
     try {
       city = await getMap(at.m);
@@ -136,7 +139,7 @@ export async function enterWorld(game: Phaser.Game) {
   session.arrive = at ? { x: at.x, y: at.y } : null;
   await prepareMap(city);
   // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
-  if (at && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
+  if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
   game.registry.set('city', city);
   game.scene.start('game');
 }

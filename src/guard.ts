@@ -9,10 +9,17 @@ import { tx } from './i18n';
 
 const TEXT = () => tx('Jesteś w trakcie exp-lorowania. Na pewno chcesz wyłączyć?', 'Ooops, you are currently exp-loring. Are you sure you want to quit?');
 
+let leaving = false;
+/** The game is being reloaded on purpose (new version, update.ts): don't ask. */
+export function letGo() {
+  leaving = true;
+}
+
 /** A character is out in the world (not in the menu, not after "Wyjdź"). */
 function exploring(game: Phaser.Game) {
   const s = game.scene.getScene('game') as (Phaser.Scene & { leaving?: boolean; player?: { isDead: boolean } }) | null;
   if (!s || !s.sys.settings.active && !game.scene.isPaused('game')) return false;
+  if (leaving) return false;
   // On a ride the game may be closed: the ride goes on.
   if (document.getElementById('journey')) return false;
   // The picture broke (errlog.ts watchGraphics): its reload button must not be asked about.

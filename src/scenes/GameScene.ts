@@ -59,6 +59,8 @@ import {
 import { api, type Snapshot } from '../api';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
+import { codeLink } from '../ui/codeCard';
+import { keepResume } from '../update';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
@@ -1499,6 +1501,26 @@ export class GameScene extends Phaser.Scene {
   /** Is any enemy close enough to be fighting us? */
   inCombat() {
     return this.enemies.some((e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 120);
+  }
+
+  /**
+   * The new-version bar (update.ts): save here, close the session properly and
+   * come back to this very spot after the reload. Returns why not, or null.
+   */
+  async reloadForUpdate(): Promise<string | null> {
+    if (this.inCombat()) return 'Najpierw skończ walkę!';
+    if (this.player.isDead || this.leaving || demo.on) return null;
+    this.leaving = true;
+    this.keepFog();
+    try {
+      await saveNow(this.player.hp);
+      keepResume(session.name, this.city.id, this.player.x, this.player.y);
+      await api.logout(session.token);
+    } catch {
+      // Not saved: the reload still brings the new version, from the last save.
+    }
+    if (session.name && session.idik) location.hash = new URL(codeLink(session.name, session.idik)).hash;
+    return null;
   }
 
   /** "Wyjdź": close the session properly and go back to the start screen. */
