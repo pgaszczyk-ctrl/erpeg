@@ -33,7 +33,7 @@ import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK } from '../content/trudnosc';
 import { KAMIEN_MOCY, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
-import { WOZY } from '../content/swiat';
+import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -390,7 +390,8 @@ export class GameScene extends Phaser.Scene {
       if (p.kind === 'station') this.placeCarts([p]);
       else {
         const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
-        this.add.image(p.door.x, p.door.y - 10, sign).setScale(artScale(sign)).setDepth(900_000);
+        const img = this.add.image(p.door.x, p.door.y - 10, sign).setScale(artScale(sign)).setDepth(900_000);
+        this.signGlow(img);
       }
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
       if (p.kind === 'station' && hdOn) {
@@ -1071,6 +1072,30 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return p.door;
+  }
+
+  /** A soft golden glow behind a place's sign (content/swiat.ts POSWIATA_SZYLDU), so shops are easy to spot. */
+  private signGlow(sign: Phaser.GameObjects.Image) {
+    const P = POSWIATA_SZYLDU;
+    const key = 'sign-glow';
+    if (!this.textures.exists(key)) {
+      const n = 64;
+      const tex = this.textures.createCanvas(key, n, n)!;
+      const ctx = tex.getContext();
+      const [r, g, b] = P.kolor;
+      const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
+      grd.addColorStop(0.5, `rgba(${r},${g},${b},0.7)`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, n, n);
+      tex.refresh();
+      tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    const glow = this.add.image(sign.x, sign.y, key).setBlendMode(Phaser.BlendModes.ADD).setDepth(sign.depth - 1);
+    glow.setDisplaySize(P.promien * 2.2, P.promien * 1.7).setAlpha(P.mocno);
+    if (P.pulsMs) this.tweens.add({ targets: glow, alpha: P.mocno * 0.75, duration: P.pulsMs, yoyo: true, repeat: -1, ease: 'Sine.inOut', delay: Math.random() * P.pulsMs });
+    return glow;
   }
 
   private placeCarts(stations: CityPlace[]) {

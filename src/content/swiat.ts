@@ -110,6 +110,13 @@ export const TRENING = { wysokosc: 22, klatkaMs: 110 };
 /** Szyldy nad drzwiami miejsc (wycięte z planszy grafika, 86 × 84): szerokość w grze w punktach mapy (dawne znaczki miały 14). */
 export const SZYLDY = { szerokosc: 16 };
 
+/**
+ * Złota poświata pod szyldami (żeby było widać, gdzie sklep itp.): delikatniejsza
+ * niż czerwona pod wrogami. `promien` w punktach mapy, `mocno` 0–1, `kolor`,
+ * `pulsMs` – powolne falowanie (0 = stała).
+ */
+export const POSWIATA_SZYLDU = { promien: 17, mocno: 0.85, kolor: [255, 206, 84] as [number, number, number], pulsMs: 1600 };
+
 /** How many times bigger the artist draws than the map shows. */
 export const SKALA_PLIKOW = 3;
 
