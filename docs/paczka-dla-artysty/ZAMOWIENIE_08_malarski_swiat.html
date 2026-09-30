@@ -69,8 +69,20 @@
 </ul>
 <h2>E. Przedmioty i ikony</h2>
 <p>Ikony przedmiotów (miecze, łuki, zbroje, hełmy, buty, talizmany, esencje, owoce, grzyby, drewno…) są dziś <strong>pikselowe 16×16</strong> i najbardziej odstają od reszty. Prosimy o <strong>wszystkie w stylu kukieł</strong>, kwadrat <strong>256×256 px</strong>, przezroczyste tło, kontur jak na kukłach. Lista obecnych: <code>4_przedmioty_obecne/</code>. Nowe, do drugiej ręki: <strong>tarcza drewniana</strong>, <strong>tarcza okuta</strong>, <strong>kołczan ze strzałami</strong>.</p>
-<h2>F. Postacie – na koniec</h2>
-<p>Bohaterowie i mieszkańcy są dziś rysowani drobnym pikselem. Kiedy mapa będzie gotowa i zaakceptowana, <strong>przemalujemy ich w tej samej manierze</strong> (jak wozy: miękkie cieniowanie, cienki kontur). To duża praca, więc dopiero po teście mapy. Na razie wystarczy na scenie-podglądzie pokazać <strong>jednego ludzika w nowym stylu</strong> obok obecnego.</p>
+<h2>F. Postacie – na koniec, po teście mapy</h2>
+<p><strong>Wzór stylu:</strong> <code>1_format/wzor_stylu_postaci_trener_biegaczka.png</code> (trener i biegaczka, z których zrezygnowaliśmy w grze, ale ich wygląd jest dokładnie tym kierunkiem). Bierzemy z nich:
+- <strong>proporcje:</strong> duża głowa (ok. 40–45% wysokości postaci), krótkie ciało, wyraźna sylwetka, czytelna z daleka;
+- <strong>kroki:</strong> w klatkach kroku nogi są wyraźnie rozstawione, a ręce idą na zmianę. Dziś u wielu mieszkańców kroki A i B są prawie takie same i ludzie wyglądają, jakby lewitowali;
+- <strong>charakter:</strong> każda postać ma 1–2 znaki rozpoznawcze (czapka i gwizdek, kucyk i opaska);
+- <strong>trzy kierunki</strong> (przód, bok, tył) jak dotąd.</p>
+<p><strong>Co zmieniamy względem wzoru</strong> (bo mapa nie jest pikselowa):
+1. <strong>Rysujemy dokładniej, bez widocznych pikseli:</strong> miękkie cieniowanie jak na kukłach i wozach, 3–4 odcienie na każdy kolor przechodzące płynnie, delikatny połysk na włosach i metalu.
+2. <strong>Kontur cienki i nie czarny:</strong> ciemniejsza wersja koloru, który obrysowuje (ciemny granat przy granatowej kurtce, ciemny brąz przy włosach, ciemny róż przy skórze). Grubość około 1/60 wysokości postaci, czyli mniej niż połowa konturu wzoru. Kontur zewnętrzny może być odrobinę mocniejszy od wewnętrznych linii.
+3. <strong>Kolory przygaszone</strong> o mniej więcej 20% względem wzoru: czerwień bardziej ceglana, żółć bardziej miodowa, granat szarawy. Zasada: postać ma być o krok jaśniejsza i żywsza od ziemi, ale z tej samej palety (patrz punkt 6 wyżej).
+4. <strong>Światło z lewej-góry</strong>, tak jak na mapie i kukłach. Bez cienia na ziemi (ten dokłada program).
+5. <strong>Lekki steampunk</strong> tylko w drobiazgach (mosiężny guzik, klamra, gogle na czapce), jak w <code>STYL_SWIATA_steampunk.md</code>.</p>
+<p><strong>Format bez zmian, tylko większy:</strong> arkusz 3×3 (wiersze: przód, bok patrzący w lewo, tył; kolumny: krok A, stoi, krok B), <strong>klatka 192×192 px</strong> (cały arkusz 576×576), stopy 6 px nad dolną krawędzią klatki, postać na środku klatki. We wszystkich klatkach głowa na tej samej wysokości (±2 px), a stojąca klatka dokładnie w tym samym miejscu co kroki (dziś u rycerza i łuczniczki była przesunięta o kilka pikseli i chodzenie drgało). Do każdej postaci, jak dotąd, <strong>maska ubrania</strong> <code>&lt;nazwa&gt;_maska.png</code> (czerwony = ubranie, zielony = drugi kolor), żeby program mógł zmieniać kolory strojów.</p>
+<p><strong>Kolejność:</strong> najpierw jedna postać (np. obecny <code>knight</code>) w nowym stylu, na scenie-podglądzie obok wozu i domów. Po akceptacji reszta: 10 bohaterów, 15 mieszkańców, postacie stałe, wrogowie.</p>
 <h2>Czego nie trzeba</h2>
 <ul>
 <li><strong>Mgły wojny</strong> (pergamin) – zostaje jak jest. Program zmiękcza jej krawędź i odsuwa ją od ścian.</li>
