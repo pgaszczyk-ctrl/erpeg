@@ -94,20 +94,14 @@ export class Player extends Phaser.GameObjects.Sprite {
     if (now - this.lastAttack < this.attackCooldown || now < this.stunnedUntil) return null;
     this.lastAttack = now;
 
-    // Exactly the way the hero was walking (diagonals too), not snapped to 4 sides.
-    const snap = this.facing.lengthSq() > 0 ? this.facing.clone().normalize() : new Phaser.Math.Vector2(0, 1);
-    const hit = new Phaser.Math.Vector2(this.x, this.y + 2).add(snap.clone().scale(PLAYER.attackReach * this.reach));
+    // The weapon itself flies across (GameScene.swingWeapon), no more white slash.
+    return this.hitPoint();
+  }
 
-    const slash = this.scene.add.image(hit.x, hit.y, TEX.slash).setDepth(this.depth + 1);
-    slash.setRotation(snap.angle()).setScale(this.reach);
-    this.scene.tweens.add({
-      targets: slash,
-      alpha: 0,
-      scale: 1.2 * this.reach,
-      duration: 160,
-      onComplete: () => slash.destroy(),
-    });
-    return hit;
+  /** Where a blow lands: exactly the way the hero was walking (diagonals too), `far` × the usual reach. */
+  hitPoint(far = 1) {
+    const snap = this.facing.lengthSq() > 0 ? this.facing.clone().normalize() : new Phaser.Math.Vector2(0, 1);
+    return new Phaser.Math.Vector2(this.x, this.y + 2).add(snap.clone().scale(PLAYER.attackReach * this.reach * far));
   }
 
   /** Returns true if damage was taken. */

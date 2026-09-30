@@ -17,6 +17,7 @@ import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
 import type { QuestLine } from '../ui/character';
 import { ESENCJE, type Esencja } from '../content/esencje';
+import { WALKA } from '../content/walka';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
@@ -836,8 +837,12 @@ export class GameScene extends Phaser.Scene {
     return null;
   }
 
-  private resolveAttack(hit: Phaser.Math.Vector2, now: number) {
-    if (this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
+  /** `power` > 1: a strong attack (held WALKA.mocnyPoMs): harder, further, and never a talk or a door. */
+  private resolveAttack(hit: Phaser.Math.Vector2, now: number, power = 1) {
+    const strong = power > 1;
+    const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
+    this.swingWeapon(swingAim, strong);
+    if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
       this.save();
       this.openHome();
@@ -845,18 +850,18 @@ export class GameScene extends Phaser.Scene {
     }
     // A swing at a character (with no enemy in the way) starts a talk.
     const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
-    const talk = foeNear ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
+    const talk = foeNear || strong ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
     if (talk) {
       if (performance.now() >= this.talkReadyAt) talk();
       return;
     }
     // A swing at a building door (or while standing at one) goes in.
-    if (!foeNear && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy))) return;
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy))) return;
     let hits = 0;
     // Easy levels: the sword sweeps a wide arc around the hero.
     const arc = (session.level.miecz * Math.PI) / 180;
     const aim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
-    const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach;
+    const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach * (strong ? WALKA.zasiegMiecz : 1);
     const inArc = (s: Enemy) => {
       if (!arc) return false;
       const dx = s.x - this.player.x;
@@ -870,10 +875,10 @@ export class GameScene extends Phaser.Scene {
     const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
     for (const s of [...this.enemies]) {
       if (s.isDead) continue;
-      if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach + s.size && !inArc(s) && !onHero(s)) continue;
+      if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
       const imb = imbueOf(gear.equip.bron)?.e;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * power * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
       else this.essenceHit(imb, s, now);
     }
     // Fruit trees: each swing knocks one fruit down.
@@ -928,6 +933,41 @@ export class GameScene extends Phaser.Scene {
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
       this.emitHud();
       return false;
+    });
+  }
+
+  private swingSide = 1;
+
+  /**
+   * The weapon in hand flies across in front of the hero, from left to right
+   * and next time from right to left (content/walka.ts WALKA). A strong
+   * attack: a bigger, golden-edged, slower and wider swing.
+   */
+  private swingWeapon(aim: number, strong: boolean) {
+    const key = itemTexture(gear.equip.bron ?? 'kijek');
+    if (!key || !this.textures.exists(key)) return;
+    const W = WALKA;
+    const half = ((W.lukStopnie * Math.PI) / 180 / 2) * (strong ? 1.3 : 1);
+    const side = this.swingSide;
+    this.swingSide = -side;
+    const img = this.add.image(this.player.x, this.player.y, key).setOrigin(0.2, 0.8);
+    const size = W.wielkoscBroni * (strong ? 1.35 : 1);
+    img.setDisplaySize(size, size);
+    if (strong) img.setTint(0xfff0b0);
+    const st = { a: aim - half * side };
+    const place = () => {
+      // The hilt in the hero's hand, the blade pointing out along the swing (the pictures point up-right).
+      const cx = this.player.x + Math.cos(st.a) * 3;
+      const cy = this.player.y - 3 + Math.sin(st.a) * 3;
+      img.setPosition(cx, cy).setRotation(st.a + Math.PI / 4);
+      // In front of the hero when swinging down, behind when up.
+      img.setDepth(this.player.depth + (Math.sin(st.a) > -0.3 ? 1 : -1));
+    };
+    place();
+    this.tweens.add({
+      targets: st, a: aim + half * side, duration: W.ciosMs * (strong ? 1.6 : 1), ease: 'Cubic.Out',
+      onUpdate: place,
+      onComplete: () => this.tweens.add({ targets: img, alpha: 0, duration: 90, onComplete: () => img.destroy() }),
     });
   }
 
@@ -2559,6 +2599,19 @@ export class GameScene extends Phaser.Scene {
     const weapon = rangedWeapon();
     const aim = weapon && !lingering ? this.aimDirection() : null;
     this.aimLine.clear();
+    // Holding: a golden ring fills around the hero; full = the strong attack is ready.
+    if (hold.active && !lingering) {
+      const held = performance.now() - hold.start;
+      if (held > AIM_DELAY) {
+        const t = Math.min(1, held / WALKA.mocnyPoMs);
+        const cx = this.player.x, cy = this.player.y - 4;
+        this.aimLine.lineStyle(2, 0x1e1a24, 0.5).strokeCircle(cx, cy, 13);
+        this.aimLine.lineStyle(1.5, 0xffd84a, t >= 1 ? 0.6 + 0.4 * Math.sin(now / 80) : 0.9);
+        this.aimLine.beginPath();
+        this.aimLine.arc(cx, cy, 13, -Math.PI / 2, -Math.PI / 2 + t * Math.PI * 2);
+        this.aimLine.strokePath();
+      }
+    }
     if (aim) {
       // Dotted aim line.
       const range = weapon!.rodzaj === 'magia' ? MAGIC_RANGE : ARROW_RANGE;
@@ -2567,7 +2620,13 @@ export class GameScene extends Phaser.Scene {
       this.player.facing.set(aim.x, aim.y);
     }
     const r = consumeRelease();
-    if (!r || !weapon || lingering) return;
+    if (!r || lingering) return;
+    const strong = r.held >= WALKA.mocnyPoMs;
+    // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
+    if (!weapon) {
+      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, WALKA.mnoznikMiecz);
+      return;
+    }
     if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     if (now - this.lastShot < cooldown(skill)) return;
@@ -2579,7 +2638,9 @@ export class GameScene extends Phaser.Scene {
       .image(this.player.x, this.player.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
       .setRotation(Math.atan2(dir.y, dir.x))
       .setDepth(1_040_000);
-    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc, skill, weapon: weapon.id });
+    // Held long enough: a strong shot (bigger, golden, harder).
+    if (strong) sprite.setScale(1.5).setTint(0xffd84a);
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc * (strong ? WALKA.mnoznikStrzal : 1), skill, weapon: weapon.id });
   }
 
   private updateShots(dt: number) {
