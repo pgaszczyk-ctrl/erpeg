@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { askBug } from '../ui/bug';
+import { gameShotJpeg } from '../ui/snapshot';
+import { showBrag } from '../ui/brag';
 import { report } from '../errlog';
 import { TEX, PLAYER_TEX, arrowTexture, artScale } from '../art';
-import { expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
+import { expNaPoziom, MAKS_POZIOM_POSTACI, poziomPostaci } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
@@ -707,6 +709,15 @@ export class UIScene extends Phaser.Scene {
     toggleCharacter({
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
+      brag: () => {
+        game.scene.pause();
+        const lvl = poziomPostaci(session.exp);
+        const title = session.story.title ?? `Poziom ${lvl}`;
+        void showBrag(this.game, session.name, { top: session.story.title ? 'Mój tytuł' : 'Osiągnąłem', title, sub: `poziom ${lvl} · ${session.exp} EXP` }).then(() => {
+          game.scene.resume();
+          resetTouch();
+        });
+      },
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
   }
@@ -730,7 +741,8 @@ export class UIScene extends Phaser.Scene {
         if (i === 1) showCodeOverlay(session.name, session.idik);
         if (i === 2) {
           game.scene.pause();
-          askBug(game.bugContext()).then((sent) => {
+          // The picture first (the menu is already gone from it), then the window.
+          gameShotJpeg(this.game).then((shot) => askBug(game.bugContext(), shot)).then((sent) => {
             game.scene.resume();
             if (sent) this.toast('Dzięki! Zgłoszenie wysłane – przejrzymy je rano.');
           });

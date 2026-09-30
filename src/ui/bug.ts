@@ -1,7 +1,8 @@
 // "🐞 Znalazłem buga" (game menu): the player describes a bug in their own words
 // (up to MAX characters); the report goes to the server (RPC report_bug →
 // table bug_reports, admin panel "🐞 Zgłoszenia") with where the hero is, the
-// game's state and the character's recent log (log.ts).
+// game's state, the character's recent log (log.ts) and, if the player keeps
+// it ticked, a small screenshot of the game (ui/snapshot.ts).
 
 import { rpc, offline } from '../api';
 import { session } from '../quests';
@@ -11,7 +12,8 @@ import { WERSJA, WERSJA_TEST, BUILD, TEST } from '../version';
 export const MAX_ZNAKOW = 300;
 
 /** Asks for the description and sends it. Resolves true when sent. */
-export function askBug(context: Record<string, unknown>): Promise<boolean> {
+/** `shot`: a small screenshot of the game (data URL) the player may attach. */
+export function askBug(context: Record<string, unknown>, shot: string | null = null): Promise<boolean> {
   return new Promise((resolve) => {
     const root = document.createElement('div');
     root.className = 'm-screen';
@@ -33,7 +35,16 @@ export function askBug(context: Record<string, unknown>): Promise<boolean> {
     note.style.cssText = 'min-height:1.2em;color:#fff2a8;margin:4px 0';
     const ok = Object.assign(document.createElement('button'), { type: 'submit', className: 'm-btn m-primary', textContent: 'Wyślij' });
     const cancel = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: 'Anuluj' });
-    box.append(h, p, area, count, note, ok, cancel);
+    // The screenshot (taken just before this window opened), attached unless the player unticks it.
+    const attach = Object.assign(document.createElement('input'), { type: 'checkbox', checked: !!shot });
+    const shotRow = document.createElement('label');
+    shotRow.style.cssText = 'display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:14px';
+    if (shot) {
+      const img = Object.assign(document.createElement('img'), { src: shot, alt: 'zrzut ekranu' });
+      img.style.cssText = 'width:84px;border:2px solid #4a4a55;border-radius:4px';
+      shotRow.append(attach, img, document.createTextNode('Dołącz zrzut ekranu'));
+    }
+    box.append(h, p, area, count, ...(shot ? [shotRow] : []), note, ok, cancel);
     root.append(box);
     document.body.append(root);
     area.focus();
@@ -58,7 +69,7 @@ export function askBug(context: Record<string, unknown>): Promise<boolean> {
       };
       if (offline.demo) return done(true);
       try {
-        const sent = await rpc<boolean>('report_bug', { p_player: session.name || null, p_text: text.slice(0, MAX_ZNAKOW), p_ctx: ctx, p_log: recentLog() });
+        const sent = await rpc<boolean>('report_bug', { p_player: session.name || null, p_text: text.slice(0, MAX_ZNAKOW), p_ctx: ctx, p_log: recentLog(), p_shot: shot && attach.checked ? shot : null });
         if (!sent) {
           note.textContent = 'Za dużo zgłoszeń naraz – spróbuj za godzinę.';
           ok.disabled = false;

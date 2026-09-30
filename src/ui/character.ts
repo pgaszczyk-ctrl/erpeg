@@ -83,6 +83,8 @@ export interface CharacterHost {
   eat: () => number | null;
   quests: () => QuestLine[];
   toggleArrow: (id: string) => void;
+  /** Opens the "📸 Pochwal się" card (ui/brag.ts). */
+  brag?: () => void;
   tent?: TentAction;
 }
 
@@ -168,6 +170,16 @@ function show(host: CharacterHost) {
       render();
     };
     box.append(eatBtn);
+    // A square picture with the title (or the level) to share.
+    if (host.brag) {
+      const bb = el('button', 'c-btn', '📸 Pochwal się') as HTMLButtonElement;
+      bb.onclick = () => {
+        const b = host.brag!;
+        closeCharacter();
+        b();
+      };
+      box.append(bb);
+    }
     // The own tent (bought in a DIY or sports shop): sleep here, in a forest or a field.
     if (session.namioty.length && tent) {
       const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;

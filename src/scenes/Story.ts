@@ -5,6 +5,7 @@ import { PX_PER_M, type CityMap, type Place } from '../map/CityMap';
 import { HISTORIA, MELODIA, poziomPostaci, imieMedrca } from '../content/historia';
 import { TRUDNOSCI } from '../content/trudnosc';
 import { playMelody } from '../ui/melody';
+import { showBrag } from '../ui/brag';
 import { consumeAttack } from '../controls';
 import { session, earn, type Story as StoryState } from '../quests';
 import { screech } from '../sfx';
@@ -403,11 +404,19 @@ export class Story {
     this.host.dialog({
       title: '🏅 Nowy tytuł!',
       text: `Od dziś jesteś: ${session.name}, ${title}!\n\nNagroda: ${HISTORIA.nagroda.monety} monet i ${HISTORIA.nagroda.exp} EXP.\n\nCiąg dalszy historii nastąpi…`,
-      buttons: ['Wspaniale!'],
-      onChoose: () => {
+      buttons: ['Wspaniale!', '📸 Pochwal się'],
+      onChoose: (i) => {
         this.busy = false;
         this.host.hud();
         this.host.save();
+        if (i === 1) {
+          // A square picture of this moment for Instagram / WhatsApp.
+          this.scene.scene.pause();
+          void showBrag(this.scene.game, session.name, { top: 'Gratulacje!', title, sub: `poziom ${poziomPostaci(session.exp)}` }).then(() => {
+            this.scene.scene.resume();
+            consumeAttack();
+          });
+        }
       },
     });
   }

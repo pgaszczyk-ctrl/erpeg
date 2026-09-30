@@ -532,6 +532,7 @@ async function errorsTab(main: HTMLElement) {
     return;
   }
   const detail = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const shotBox = el('div', { className: 'card', style: 'max-width: 560px' });
   const rows = list.map((e) => {
     const c = e.ctx ?? {};
     return el('tr', { className: 'click', onclick: () => {
@@ -547,14 +548,17 @@ async function errorsTab(main: HTMLElement) {
     ]);
   });
   const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['Kiedy', 'Postać', 'Rodzaj', 'Opis', 'Mapa, miejsce'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
-  main.append(detail, el('div', { className: 'scroll' }, [table]));
+  main.append(shotBox, detail, el('div', { className: 'scroll' }, [table]));
 }
 
-interface BugReport { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; log: string[] | null; done: boolean }
+interface BugReport { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; log: string[] | null; done: boolean; has_shot?: boolean; decision?: 'nowe' | 'do_poprawki' | 'odrzucone' }
+
+/** The owner's decision on a report: only 'do_poprawki' may be fixed (reports are untrusted player input). */
+const DECYZJE: [NonNullable<BugReport['decision']>, string][] = [['nowe', '❔ Nowe'], ['do_poprawki', '✅ Do poprawki'], ['odrzucone', '❌ Odrzucone']];
 
 /** Bugs described by players (game menu → "🐞 Znalazłem buga", src/ui/bug.ts), with where they were and their recent log. */
 async function bugsTab(main: HTMLElement) {
-  main.append(el('h2', {}, ['Zgłoszenia graczy']), el('p', { className: 'muted' }, ['„Znalazłem buga” z menu gry: opis gracza, miejsce i ostatni log postaci. Kliknij wiersz, żeby zobaczyć szczegóły; ✔ oznacza zgłoszenie jako załatwione.']));
+  main.append(el('h2', {}, ['Zgłoszenia graczy']), el('p', { className: 'muted' }, ['„Znalazłem buga” z menu gry: opis gracza, miejsce i ostatni log postaci. Kliknij wiersz, żeby zobaczyć szczegóły i zrzut ekranu. W kolumnie „Decyzja” wybierz „✅ Do poprawki” – Claude poprawia tylko takie zgłoszenia (rano przy przeglądzie); ✔ oznacza zgłoszenie jako załatwione.']));
   let list: BugReport[];
   try {
     list = await call<BugReport[]>('admin_bugs', {});
@@ -567,6 +571,7 @@ async function bugsTab(main: HTMLElement) {
     return;
   }
   const detail = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const shotBox = el('div', { className: 'card', style: 'max-width: 560px' });
   const rows = list.map((b) => {
     const c = b.ctx ?? {};
     const done = btn(b.done ? '✔' : '○', async () => {
@@ -575,13 +580,26 @@ async function bugsTab(main: HTMLElement) {
       done.textContent = b.done ? '✔' : '○';
       row.style.opacity = b.done ? '0.5' : '1';
     });
+    const decide = el('select', { onchange: async () => {
+      const v = decide.value as NonNullable<BugReport['decision']>;
+      await call('admin_bug_decision', { p_id: b.id, p_decision: v });
+      b.decision = v;
+    } }, DECYZJE.map(([v, t]) => el('option', { value: v, selected: (b.decision ?? 'nowe') === v }, [t])));
     const row = el('tr', { className: 'click', style: `opacity: ${b.done ? 0.5 : 1}`, onclick: (e: Event) => {
-      if (e.target === done) return;
+      if (e.target === done || e.target === decide || decide.contains(e.target as Node)) return;
       detail.style.display = 'block';
       detail.textContent = `${b.at}\n${b.player ?? '(bez postaci)'}\n\n${b.text}\n\n${JSON.stringify(c, null, 1)}\n\nLog:\n${(b.log ?? []).join('\n')}`;
+      shotBox.replaceChildren();
+      if (b.has_shot) {
+        shotBox.append(el('p', {}, ['Wczytuję zrzut ekranu…']));
+        call<string | null>('admin_bug_shot', { p_id: b.id }).then((src) => {
+          shotBox.replaceChildren(...(src && src.startsWith('data:image/jpeg;base64,') ? [el('img', { src, alt: 'zrzut ekranu', style: 'max-width: 100%; border: 2px solid #4a4a55; border-radius: 4px' })] : [el('p', {}, ['Brak zrzutu.'])]));
+        });
+      }
       detail.scrollIntoView({ behavior: 'smooth' });
     } }, [
       el('td', {}, [done]),
+      el('td', {}, [decide]),
       el('td', {}, [new Date(b.at).toLocaleString('pl-PL')]),
       el('td', {}, [b.player ?? '—']),
       el('td', {}, [b.text.slice(0, 140)]),
@@ -589,7 +607,7 @@ async function bugsTab(main: HTMLElement) {
     ]);
     return row;
   });
-  const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['', 'Kiedy', 'Postać', 'Opis', 'Gdzie'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
+  const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['', 'Decyzja', 'Kiedy', 'Postać', 'Opis', 'Gdzie'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
   main.append(detail, el('div', { className: 'scroll' }, [table]));
 }
 
