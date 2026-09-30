@@ -20,9 +20,15 @@ Mapy **nie da się namalować w całości**. Gra rysuje ją sama z prawdziwych d
 2. Po akceptacji **wycinasz z tej sceny** klocki z listy niżej. Nic nie rysujesz od nowa i nic nie dorysowujesz programem.
 3. **Tekstury powtarzalne bez szwów** (lewa krawędź pasuje do prawej, górna do dolnej), kwadrat **512×512 px**, w skali „3 razy większej niż w grze”, jak dotychczasowe `podloze_*`.
 4. **Na teksturach bez kierunkowego światła i bez cieni rzucanych.** Dachy są obracane przez program wzdłuż budynku, więc światło w pliku obracałoby się razem z nimi. Światło i cienie dokłada program.
-5. **Na obiektach (drzewa, latarnie, ludziki, wozy) nie maluj cienia na ziemi.** Program kładzie go sam, pod każdym tak samo. Samo cieniowanie obiektu (światło z lewej-góry) jak najbardziej.
+5. **Na obiektach (drzewa, latarnie, ludziki, wozy) nie maluj cienia na ziemi na samym obrazku.** Zamiast tego do każdego obiektu, który stoi na ziemi, dołącz **osobny plik z jego cieniem**: `<nazwa>_cien.png`, tej samej wielkości co obiekt, czarna plama na przezroczystym tle. Namaluj go tak, jak cień leży płasko na ziemi w widoku gry: od punktów, którymi obiekt dotyka ziemi (kopyta, oba koła wozu, stopy, podstawa), w prawo-w dół. Program go zmiękczy, przyciemni i położy pod obiektem. Sam program nie wie, gdzie są koła i nogi, i to wychodzi śmiesznie: w próbie cień był tylko pod jednym kołem wozu. Samo cieniowanie obiektu (światło z lewej-góry) jak najbardziej.
 6. **Jedna paleta dla wszystkiego:** przygaszone, ciepłe barwy jak na kukłach. Prosimy o kartę palety (12–16 głównych kolorów). Ziemia ma być **trochę ciemniejsza i mniej nasycona** niż postacie, żeby postacie się czytały, ale nie wyskakiwały z obrazu.
-7. **Kontur:** cienki, ciemny (#1e1a24, lekko przezroczysty), taki sam na budynkach, obiektach i postaciach.
+7. **Kontur:** cienki i **nie czarny**: ciemniejsza wersja koloru tego, co obrysowuje (brąz przy drewnie, ciemna zieleń przy liściach, ciemny fiolet przy ubraniu), taki sam na budynkach, obiektach i **postaciach**. Właściciel ocenił próbę: nieczarne obrysy mapy są super, a postacie z czarnym konturem za mocno z niej wyskakują.
+8. **Perspektywa obiektów musi pasować do mapy.** Mapa jest widziana **prawie z góry**: ziemia i dachy są pokazane jak na planie, bez skrótu, a pionowe ściany tylko jako niski pasek (dom piętrowy ma ścianę wysokości około 2/3 szerokości drzwi). Dlatego:
+   - coś okrągłego leżącego na ziemi (podstawa fontanny, brzeg kotła, studzienka, kwietnik) rysujemy **prawie jako koło**, nie jako płaską elipsę,
+   - widzimy **górę** przedmiotów: wnętrze kotła, wodę w fontannie, siedzisko ławki, blat stołu,
+   - wysokość rzeczy pionowych (słupy, latarnie, pnie, wieża) jest skrócona do około 2/3.
+   
+   Na próbie **kocioł na Rynku zupełnie nie pasuje**: jest narysowany z boku, na wysokości oczu, więc wygląda na doklejony. Tak samo fontanna, wieża zegarowa i przyrządy treningowe; przy przemalowaniu trzeba je obrócić „pod mapę”. Ludziki mogą zostać w widoku „z przodu, lekko z góry” jak dziś, bo tak jest przyjęte w grach tego typu i przy ich wielkości to nie razi.
 
 ## A. Podłoże – tekstury 512×512, bez szwów, po 3 warianty
 
