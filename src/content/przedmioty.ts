@@ -2,8 +2,9 @@
 //  PRZEDMIOTY I UMIEJĘTNOŚCI
 //  Gracz zaczyna jako wojownik z kijkiem. W bibliotece może nauczyć się
 //  magii. Łuk można kupić w sklepie (albo dostać w nagrodę od policji).
-//  Klik = atak bronią z ręki; przytrzymanie i celowanie = atak z dystansu
-//  (łuk albo przedmiot magiczny).
+//  Ręka główna: miecz, łuk albo różdżka (klik = szybki atak, przytrzymanie
+//  = celowanie i mocny atak). Druga ręka: tylko rzeczy do obrony i wsparcia –
+//  szklana kula / księga (mocniejsze czary), później tarcza i kołczan.
 // ============================================================================
 
 export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet' | 'talizman' | 'talizman2' | 'talizman3';
@@ -20,7 +21,7 @@ export interface Przedmiot {
   moc: number;
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
-  /** Tylko broń dystansowa: łuk czy magia. */
+  /** Łuk albo magia (różdżka w ręce; kula/księga w drugiej ręce wzmacniają czary). */
   rodzaj?: 'luk' | 'magia';
   /** Gdzie się go kupuje: sklep (domyślnie) albo biblioteka. */
   gdzie?: 'sklep' | 'biblioteka';
@@ -43,11 +44,11 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 3, cena: 6000 },
   { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 5, cena: 22500 },
   // Broń dystansowa (przytrzymaj i celuj)
-  { id: 'luk', nazwa: 'Łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 2, cena: 3000 },
-  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'dystans', rodzaj: 'luk', moc: 3, cena: 12000 },
-  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'dystans', rodzaj: 'magia', moc: 2, cena: 2000, gdzie: 'biblioteka' },
-  { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka' },
-  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 5, cena: 26000, gdzie: 'biblioteka' },
+  { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 2, cena: 3000 },
+  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 3, cena: 12000 },
+  { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 2, cena: 2000, gdzie: 'biblioteka' },
+  { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
+  { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 5, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
   // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
   { id: 'skorzana_zbroja', nazwa: 'Skórzana zbroja', miejsce: 'zbroja', moc: 2, cena: 1600 },
   { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
@@ -70,7 +71,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
 /** Świetlisty miecz: o ile razy dalej widać. */
 export const SWIATLO = 1.5;
 /** Gromowładny miecz: co ile ms piorun, jak daleko (w metrach) i ile zabiera życia. */
-export const PIORUNY = { co: 2200, zasiegM: 60, obrazenia: 2 };
+export const PIORUNY = { co: 2200, zasiegM: 60, obrazenia: 8 };
 /** Podkowa Szczęścia: mnożnik monet za potwory i bandy. */
 export const PODKOWA = 1.1;
 
@@ -96,8 +97,9 @@ export const PLECAK = { miejsc: 20, owocowNaMiejsce: 200 };
 // ----------------------------------------------------------------------------
 //  UMIEJĘTNOŚCI rosną od używania: każde trafienie (wroga, drzewa, lalki,
 //  tarczy, kryształu) to 1 punkt. Poziom 2 wymaga 100 punktów, każdy kolejny
-//  1,5 raza więcej. Najwyżej poziom 10. Każdy poziom skraca przerwę między
-//  atakami.
+//  do 10. 1,5 raza więcej, a od 11. już tylko MNOZNIK_PO_10 (1,15) raza więcej.
+//  Najwyżej poziom 20. Przerwy, celność i obrażenia: content/walka.ts
+//  (magia na razie po staremu: `przerwa` − poziom × `szybciejNaPoziom`).
 // ----------------------------------------------------------------------------
 export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; przerwa: number; szybciejNaPoziom: number }> = {
   miecz: { nazwa: 'Walka wręcz', przerwa: 320, szybciejNaPoziom: 18 },
@@ -106,7 +108,13 @@ export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; przerwa: number;
 };
 export const PIERWSZY_POZIOM = 100;
 export const MNOZNIK_POZIOMU = 1.5;
-export const MAKS_POZIOM = 10;
+export const MNOZNIK_PO_10 = 1.15;
+export const MAKS_POZIOM = 20;
+/** Points needed to go from level `level - 1` to `level` (level ≥ 2). */
+export function kosztPoziomu(level: number) {
+  const early = Math.min(level, 10) - 2;
+  return Math.round(PIERWSZY_POZIOM * MNOZNIK_POZIOMU ** early * MNOZNIK_PO_10 ** Math.max(0, level - 10));
+}
 
 /** Nauka magii w bibliotece. */
 export const NAUKA_MAGII = 150;

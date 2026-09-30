@@ -1,5 +1,6 @@
+import { WALKA, zTabeli } from './content/walka';
 import {
-  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
+  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
   PODKOWA, TALIZMANY, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
@@ -95,6 +96,12 @@ export function loadGear(save: {
   else if (save.swordSkill) g.skills.miecz = pointsForLevel(1 + save.swordSkill * 2); // old school levels
   g.magic = !!save.magic;
   for (const [id, v] of Object.entries(save.nasycenia ?? {})) if (v && esencja(v.e) && v.until > Date.now()) g.imbue[id] = { e: v.e, until: v.until };
+  // Bows and wands used to go in the second hand; now they are held in the main hand.
+  const off = item(g.equip.dystans);
+  if (off && off.miejsce === 'bron' && g.bag.length < PLECAK.miejsc) {
+    g.bag.push({ item: off.id });
+    g.equip.dystans = null;
+  }
   Object.assign(gear, g);
   for (const s of old) for (const [f, n] of Object.entries(s.counts) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
   for (const [f, n] of Object.entries(save.fruits ?? {}) as [Owoc, number][]) for (let i = 0; i < n; i++) addFruit(f);
@@ -109,7 +116,7 @@ export function saveGear() {
 /** Total practice needed to reach `level` (level 1 needs 0). */
 export function pointsForLevel(level: number) {
   let total = 0;
-  for (let l = 2; l <= level; l++) total += Math.round(PIERWSZY_POZIOM * MNOZNIK_POZIOMU ** (l - 2));
+  for (let l = 2; l <= level; l++) total += kosztPoziomu(l);
   return total;
 }
 
@@ -138,14 +145,38 @@ export function practice(skill: Umiejetnosc, points = 1): number | null {
 
 /** Time between attacks of that kind, in ms. */
 export function cooldown(skill: Umiejetnosc) {
+  const lvl = skillLevel(skill);
+  if (skill === 'miecz') return Math.round(zTabeli(WALKA.miecz.przerwa, lvl));
+  if (skill === 'luk') return Math.round(Math.max(WALKA.luk.najkrotszaPrzerwa, zTabeli(WALKA.luk.przerwa, lvl)));
   const u = UMIEJETNOSCI[skill];
-  return u.przerwa - (skillLevel(skill) - 1) * u.szybciejNaPoziom;
+  return Math.max(300, u.przerwa - (lvl - 1) * u.szybciejNaPoziom);
+}
+
+/** Chance (0–1) that an attack lands: the skill's table plus the difficulty's bonus. */
+export function hitChance(skill: Umiejetnosc, strong: boolean, bonus = 0) {
+  const lvl = skillLevel(skill);
+  let pct = 100;
+  if (skill === 'miecz') pct = strong ? 100 : zTabeli(WALKA.miecz.trafienie, lvl);
+  else if (skill === 'luk') pct = zTabeli(strong ? WALKA.luk.mocnyTrafienie : WALKA.luk.trafienie, lvl);
+  return Math.min(100, pct + bonus) / 100;
+}
+
+/** How many times harder a strong attack of that kind hits. */
+export function strongFactor(skill: Umiejetnosc) {
+  if (skill === 'miecz') return zTabeli(WALKA.miecz.mocnyMnoznik, skillLevel('miecz'));
+  if (skill === 'luk') return WALKA.luk.mocnyMnoznik;
+  return WALKA.mnoznikCzaru;
+}
+
+/** Chance (0–1) that an arrow kills an ordinary monster at once. */
+export function instaKillChance() {
+  return zTabeli(WALKA.luk.natychmiast, skillLevel('luk')) / 100;
 }
 
 /** Skills the character can use (shown on the character sheet). */
 export function availableSkills(): Umiejetnosc[] {
   const out: Umiejetnosc[] = ['miecz'];
-  const hasBow = gear.equip.dystans && item(gear.equip.dystans)?.rodzaj === 'luk';
+  const hasBow = item(gear.equip.bron)?.rodzaj === 'luk';
   const bagBow = gear.bag.some((s) => 'item' in s && item(s.item)?.rodzaj === 'luk');
   if (hasBow || bagBow || gear.skills.luk > 0) out.push('luk');
   if (gear.magic) out.push('magia');
@@ -169,14 +200,25 @@ export function weaponEffect() {
   return item(gear.equip.bron)?.efekt;
 }
 
+/** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */
 export function meleeDamage() {
-  return item(gear.equip.bron)?.moc ?? 1;
+  const p = item(gear.equip.bron);
+  const moc = p && !p.rodzaj ? p.moc : 1; // a bow or wand used as a club is no better than a stick
+  return skillLevel('miecz') + WALKA.zaMoc * moc;
+}
+
+/** A shot of the bow / a spell of the wand in hand (a magic item in the other hand adds its power to spells). */
+export function shotDamage(weapon: Przedmiot) {
+  const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+  const off = item(gear.equip.dystans);
+  const extra = skill === 'magia' && off?.rodzaj === 'magia' ? off.moc : 0;
+  return skillLevel(skill) + WALKA.zaMoc * (weapon.moc + extra);
 }
 
 /** The equipped ranged weapon, if it can be used (magic needs the skill). */
 export function rangedWeapon(): Przedmiot | null {
-  const r = item(gear.equip.dystans);
-  if (!r) return null;
+  const r = item(gear.equip.bron);
+  if (!r?.rodzaj || r.miejsce !== 'bron') return null;
   if (r.rodzaj === 'magia' && !gear.magic) return null;
   return r;
 }
@@ -205,7 +247,8 @@ export function addItem(id: string): 'equipped' | 'bag' | false {
   }
   const m = slotFor(p.miejsce);
   if (!gear.equip[m] || gear.equip[m] === 'kijek') {
-    // A stick is not worth keeping when a real weapon comes along.
+    // A stick is not worth keeping when a real sword comes along (with a bow or wand it goes to the backpack).
+    if (gear.equip[m] === 'kijek' && p.rodzaj && gear.bag.length < PLECAK.miejsc) gear.bag.push({ item: 'kijek' });
     gear.equip[m] = id;
     return 'equipped';
   }

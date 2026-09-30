@@ -35,7 +35,7 @@ export const SEN = {
   /** Sword blows that beat the dragon (how it fights: SMOK in objects/Dragon.ts). */
   ciosow: 6,
   /** Best gear (equip slots of inventory.ts). */
-  ekwipunek: { bron: 'rycerski', dystans: 'dlugi_luk', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
+  ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
 
 /** After waking up: a walk without a timer; past `koniecM` from where the hero woke up the demo ends, and nobody gets further than `granicaM`. */

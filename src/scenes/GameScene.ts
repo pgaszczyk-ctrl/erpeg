@@ -46,7 +46,7 @@ import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../conten
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
+  meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -184,6 +184,10 @@ interface Shot {
   skill: 'luk' | 'magia';
   /** The weapon it came from (its essence works on the hit). */
   weapon: string;
+  /** Held long enough (WALKA.mocnyPoMs): its own hit chance. */
+  strong: boolean;
+  /** Enemies it already flew past (missed). */
+  missed: Set<Enemy>;
 }
 
 type Challenge =
@@ -837,11 +841,28 @@ export class GameScene extends Phaser.Scene {
     return null;
   }
 
-  /** `power` > 1: a strong attack (held WALKA.mocnyPoMs): harder, further, and never a talk or a door. */
-  private resolveAttack(hit: Phaser.Math.Vector2, now: number, power = 1) {
-    const strong = power > 1;
+  /** The skill of the weapon in the main hand (sword, bow or wand). */
+  private handSkill(): Umiejetnosc {
+    const r = rangedWeapon();
+    return r ? (r.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz';
+  }
+
+  /** "pudło!" floating up over an enemy that was missed. */
+  private missText(x: number, y: number) {
+    const t = this.add
+      .text(x, y - 12, 'pudło!', { fontFamily: 'monospace', fontSize: '7px', color: '#e8e4f0', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
+      .setOrigin(0.5, 1)
+      .setDepth(1_060_000);
+    this.tweens.add({ targets: t, y: y - 22, alpha: 0, duration: 650, onComplete: () => t.destroy() });
+  }
+
+  /** `strong`: a strong attack (held WALKA.mocnyPoMs): harder, further, sure to land, and never a talk or a door. */
+  private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
-    this.swingWeapon(swingAim, strong);
+    const ranged = rangedWeapon();
+    // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
+    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    if (!ranged || gathering) this.swingWeapon(swingAim, strong);
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
       this.save();
@@ -857,11 +878,17 @@ export class GameScene extends Phaser.Scene {
     }
     // A swing at a building door (or while standing at one) goes in.
     if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy))) return;
+    if (ranged && !gathering) {
+      if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
+      return;
+    }
     let hits = 0;
     // Easy levels: the sword sweeps a wide arc around the hero.
     const arc = (session.level.miecz * Math.PI) / 180;
     const aim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach * (strong ? WALKA.zasiegMiecz : 1);
+    const power = strong ? strongFactor('miecz') : 1;
+    const chance = hitChance('miecz', strong, session.level.celnosc);
     const inArc = (s: Enemy) => {
       if (!arc) return false;
       const dx = s.x - this.player.x;
@@ -877,9 +904,17 @@ export class GameScene extends Phaser.Scene {
       if (s.isDead) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
+      if (Math.random() >= chance) {
+        this.missText(s.x, s.y - 4 * s.kind.scale);
+        continue;
+      }
       const imb = imbueOf(gear.equip.bron)?.e;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * power * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
-      else this.essenceHit(imb, s, now);
+      else {
+        this.essenceHit(imb, s, now);
+        // A strong blow stuns for a moment (not dragons).
+        if (strong && s.kindId !== 'smok') s.daze(now, WALKA.miecz.ogluszenieMs);
+      }
     }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
@@ -2556,9 +2591,9 @@ export class GameScene extends Phaser.Scene {
   /** Swing speed and reach from the sword-fighting level. */
   private applySkill() {
     this.refreshLook();
-    const lvl = skillLevel('miecz');
-    this.player.attackCooldown = cooldown('miecz');
-    this.player.reach = 1 + (lvl - 1) * 0.04;
+    // The reach no longer grows with the level (owner): only speed and accuracy do.
+    this.player.attackCooldown = cooldown(this.handSkill());
+    this.player.reach = 1;
   }
 
   /** One use of a skill; tells the player when it levels up. */
@@ -2624,14 +2659,20 @@ export class GameScene extends Phaser.Scene {
     const strong = r.held >= WALKA.mocnyPoMs;
     // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
     if (!weapon) {
-      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, WALKA.mnoznikMiecz);
+      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
       return;
     }
     if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     if (now - this.lastShot < cooldown(skill)) return;
+    this.fireShot(weapon, this.dirFor(r.mode, r.dx, r.dy, r.dragged), strong, now);
+  }
+
+  /** An arrow or a spell from the weapon in hand, flying in `dir`. */
+  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
+    const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     this.lastShot = now;
-    const dir = this.dirFor(r.mode, r.dx, r.dy, r.dragged);
+    this.player.facing.set(dir.x, dir.y);
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
     // Starts at the hero, so nothing standing right next to them is skipped.
     const sprite = this.add
@@ -2640,7 +2681,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(1_040_000);
     // Held long enough: a strong shot (bigger, golden, harder).
     if (strong) sprite.setScale(1.5).setTint(0xffd84a);
-    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: weapon.moc * (strong ? WALKA.mnoznikStrzal : 1), skill, weapon: weapon.id });
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon) * (strong ? strongFactor(skill) : 1), skill, weapon: weapon.id, strong, missed: new Set() });
   }
 
   private updateShots(dt: number) {
@@ -2660,12 +2701,19 @@ export class GameScene extends Phaser.Scene {
         if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
       }
       if (!done) {
-        const foe = this.enemies.find((e) => !e.isDead && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
-        if (foe) {
+        const foe = this.enemies.find((e) => !e.isDead && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
+        if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc)) {
+          // Missed: the arrow flies on past it.
+          shot.missed.add(foe);
+          this.practiced(shot.skill);
+          this.missText(foe.x, foe.y - 4 * foe.kind.scale);
+        } else if (foe) {
           done = true;
           this.practiced(shot.skill);
           const imb = imbueOf(shot.weapon)?.e;
-          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, shot.damage * this.essenceBoost(imb, foe))) this.onEnemyKilled(foe);
+          // An arrow may kill an ordinary monster at once.
+          const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();
+          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe))) this.onEnemyKilled(foe);
           else this.essenceHit(imb, foe, now);
         } else if (this.training.hitAt(sp.x, sp.y, 8, shot.skill)) {
           done = true;
@@ -2703,7 +2751,7 @@ export class GameScene extends Phaser.Scene {
   private offers(where: 'sklep' | 'biblioteka') {
     const out: Przedmiot[] = [];
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
-      where === 'biblioteka' ? [['dystans', 'magia'], ['helm']] : [['bron'], ['dystans', 'luk'], ['zbroja'], ['helm'], ['buty']];
+      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
       const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where);
       if (miejsce === 'helm') {
@@ -2711,7 +2759,7 @@ export class GameScene extends Phaser.Scene {
         out.push(...all.filter((p) => !owns(p.id)));
         continue;
       }
-      const best = Math.max(0, ...all.filter((p) => owns(p.id)).map((p) => p.moc), miejsce === 'bron' ? meleeDamage() : 0);
+      const best = Math.max(0, ...all.filter((p) => owns(p.id)).map((p) => p.moc), miejsce === 'bron' && !rodzaj ? 1 : 0);
       const next = all.filter((p) => p.moc > best).sort((a, b) => a.moc - b.moc)[0];
       if (next) out.push(next);
     }
@@ -2719,7 +2767,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private label(p: Przedmiot) {
-    const what = p.miejsce === 'bron' || p.miejsce === 'dystans' ? `obrażenia ${p.moc}` : `obrona ${p.moc}`;
+    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `obrona ${p.moc}`;
     return `${p.nazwa} – ${p.cena} monet (${what})`;
   }
 
@@ -3431,7 +3479,7 @@ export class GameScene extends Phaser.Scene {
       duel: this.duelHp,
       duelMax: MIESZKANCY.serduszka * 2,
       title: session.story.title ? `${session.name}, ${session.story.title}` : null,
-      sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel('miecz')}` + (rangedWeapon() ? `  🏹 ${rangedWeapon()!.nazwa}` : ''),
+      sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel(this.handSkill())}` + (item(gear.equip.dystans) ? `  ✋ ${item(gear.equip.dystans)!.nazwa}` : ''),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
       dead: this.player.isDead,

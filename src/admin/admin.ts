@@ -2,7 +2,7 @@ import { rpc } from '../api';
 import { CityMap } from '../map/CityMap';
 import { drawCity } from '../map/drawCity';
 import { MISJE, type Misja, type RodzajWroga } from '../content/fabula';
-import { PRZEDMIOTY, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM, type Umiejetnosc } from '../content/przedmioty';
+import { PRZEDMIOTY, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, type Umiejetnosc } from '../content/przedmioty';
 import { normalizeSlot, goodsLabel } from '../inventory';
 import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
@@ -61,7 +61,7 @@ function skillLevel(points: number) {
   let l = 1;
   let need = 0;
   while (l < MAKS_POZIOM) {
-    need += Math.round(PIERWSZY_POZIOM * MNOZNIK_POZIOMU ** (l - 1));
+    need += kosztPoziomu(l + 1);
     if (points < need) break;
     l++;
   }

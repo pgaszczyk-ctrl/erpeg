@@ -11,7 +11,7 @@ import { esencja } from '../content/esencje';
 
 export const SLOT_ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🛡', zbroja: '🦺', helm: '⛑', buty: '🥾', amulet: '📿', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' };
 /** Greyed pictures in empty equipment places (what goes there). */
-const EMPTY_PIC: Partial<Record<Miejsce, string>> = { bron: 'zelazny', dystans: 'luk', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
+const EMPTY_PIC: Partial<Record<Miejsce, string>> = { bron: 'zelazny', dystans: 'kula', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
 
 function el(tag: string, cls = '', text = '') {
   const e = document.createElement(tag);

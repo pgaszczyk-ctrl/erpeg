@@ -3,7 +3,7 @@ import { LECZENIE_OWOCAMI } from '../content/sklepy';
 import { slotCell, slotDrag, slotLabel } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, cooldown, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf,
+  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf,
 } from '../inventory';
 import { session } from '../quests';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
@@ -199,7 +199,7 @@ function show(host: CharacterHost) {
       const max = pr.level >= MAKS_POZIOM;
       row.append(
         el('div', 'c-skill-name', `${UMIEJETNOSCI[k].nazwa} – poziom ${pr.level}${max ? ' (maks.)' : ''}`),
-        el('div', 'c-skill-info', max ? `przerwa ${cooldown(k)} ms` : `${pr.into}/${pr.need} do następnego · przerwa ${cooldown(k)} ms`),
+        el('div', 'c-skill-info', `${max ? '' : `${pr.into}/${pr.need} do następnego · `}przerwa ${cooldown(k)} ms${k === 'magia' ? '' : ` · trafia ${Math.round(hitChance(k, false, session.level.celnosc) * 100)}%`}`),
       );
       const bar = el('div', 'c-bar');
       const fill = el('div', 'c-fill');

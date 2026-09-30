@@ -20,21 +20,22 @@ export interface EnemyKind {
   tint?: number;
 }
 
+/** Life in the same units as the hero's blows (content/walka.ts: skill level + 1.5 × the weapon's power; a stick at level 1 = 2.5). Not scaled by level. */
 export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
-  glut: { name: 'Chochlik', hp: 3, wanderSpeed: 20, chaseSpeed: 38, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
-  wielki_glut: { name: 'Wielki chochlik', hp: 18, wanderSpeed: 13, chaseSpeed: 33, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
-  bandyta: { name: 'Bandyta', hp: 6, wanderSpeed: 30, chaseSpeed: 64, sightRange: 80, loseRange: 150, scale: 1, damage: 1, exp: 15 },
+  glut: { name: 'Chochlik', hp: 10, wanderSpeed: 20, chaseSpeed: 38, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
+  wielki_glut: { name: 'Wielki chochlik', hp: 60, wanderSpeed: 13, chaseSpeed: 33, sightRange: 90, loseRange: 180, scale: 2.2, damage: 2, exp: 40 },
+  bandyta: { name: 'Bandyta', hp: 20, wanderSpeed: 30, chaseSpeed: 64, sightRange: 80, loseRange: 150, scale: 1, damage: 1, exp: 15 },
   // By place: dryads in forests, blue zombies by water, skeletons by cemeteries.
-  driada: { name: 'Driada', hp: 3, wanderSpeed: 18, chaseSpeed: 36, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
-  zombie: { name: 'Zombiak', hp: 4, wanderSpeed: 14, chaseSpeed: 32, sightRange: 65, loseRange: 110, scale: 1, damage: 1, exp: 6 },
-  szkielet: { name: 'Szkielet', hp: 3, wanderSpeed: 20, chaseSpeed: 40, sightRange: 75, loseRange: 120, scale: 1, damage: 1, exp: 6 },
+  driada: { name: 'Driada', hp: 10, wanderSpeed: 18, chaseSpeed: 36, sightRange: 70, loseRange: 110, scale: 1, damage: 1, exp: 5 },
+  zombie: { name: 'Zombiak', hp: 13, wanderSpeed: 14, chaseSpeed: 32, sightRange: 65, loseRange: 110, scale: 1, damage: 1, exp: 6 },
+  szkielet: { name: 'Szkielet', hp: 10, wanderSpeed: 20, chaseSpeed: 40, sightRange: 75, loseRange: 120, scale: 1, damage: 1, exp: 6 },
   // A townsman in a duel (his strength and life are set by the duel itself).
-  wojownik: { name: 'Wojownik', hp: 6, wanderSpeed: 20, chaseSpeed: 44, sightRange: 250, loseRange: 500, scale: 1, damage: 1, exp: 0 },
+  wojownik: { name: 'Wojownik', hp: 20, wanderSpeed: 20, chaseSpeed: 44, sightRange: 250, loseRange: 500, scale: 1, damage: 1, exp: 0 },
   // Gang bosses: come out when the last gang member falls (content/gangi.ts).
-  herszt: { name: 'Herszt gangu', hp: 14, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
-  wielki_herszt: { name: 'Wielki herszt', hp: 36, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
+  herszt: { name: 'Herszt gangu', hp: 45, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
+  wielki_herszt: { name: 'Wielki herszt', hp: 120, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
   // The story's dragon (its reward comes from content/historia.ts).
-  smok: { name: 'Smok', hp: 60, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
+  smok: { name: 'Smok', hp: 200, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
 };
 
 /** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); was 200, the owner wants them to stay close. */
