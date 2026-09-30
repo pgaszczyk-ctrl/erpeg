@@ -3254,9 +3254,28 @@ export class GameScene extends Phaser.Scene {
   questLog(): QuestLine[] {
     return this.activeQuests().map((q) => ({
       id: q.id, title: q.title, text: q.text, color: q.color, main: q.main, start: q.start,
-      far: q.pos ? jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M) : null,
+      far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
       arrow: !session.bezStrzalki.includes(q.id),
     }));
+  }
+
+  /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
+  private whereIs(x: number, y: number) {
+    // A street line if that part of the map is loaded, else the nearest known address without its number.
+    const addr = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '') ?? null;
+    if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
+    const street = addr;
+    let town = mapName(this.city.id);
+    if (this.city.id === 'lublin') {
+      // The Lublin map also holds Garbów, Jastków, Nałęczów and the villages around.
+      const towns = this.city.townList();
+      const d = (t: { x: number; y: number }) => Math.hypot(t.x - x, t.y - y);
+      const lub = towns.find((t) => t.name === 'Lublin');
+      const near = towns.filter((t) => t.name !== 'Lublin').sort((a, b) => d(a) - d(b))[0];
+      if (near && d(near) < 1500 * PX_PER_M && (!lub || d(near) < d(lub))) town = near.name;
+      else if (!lub || d(lub) > 12_000 * PX_PER_M) town = near?.name ?? town;
+    }
+    return street ? `${street}, ${town}` : town;
   }
 
   /** Switches a quest's guiding arrow on or off (character sheet). */

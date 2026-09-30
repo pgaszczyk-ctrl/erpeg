@@ -63,7 +63,7 @@ export interface QuestLine {
   main: boolean;
   /** Where it was taken. */
   start?: string;
-  /** How far the goal is, in words (content/fabula.ts ODLEGLOSCI); null = no place. */
+  /** Where the goal is and how far, e.g. "Jana Pawła II, Lublin (nie tak blisko)"; null = no place. */
   far: string | null;
   /** Its guiding arrow is on. */
   arrow: boolean;
@@ -234,7 +234,10 @@ function show(host: CharacterHost) {
     const note = el('div', 'c-note', `Plecak: ${gear.bag.length}/${PLECAK.miejsc}. Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.`);
     const wrap = el('div', 'sl-wrap');
     wrap.append(eq, bag);
-    box.append(wrap, actions, note);
+    // All of it in the middle of the free space: the same gap under the tabs as above the bottom edge.
+    const page = el('div', 'c-eqpage');
+    page.append(wrap, actions, note);
+    box.append(page);
     dispose?.();
     dispose = slotDrag(wrap, {
       drop: (from, to) => {
