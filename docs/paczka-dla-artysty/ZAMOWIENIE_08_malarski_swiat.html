@@ -1,0 +1,76 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 08</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Zamówienie 08 – cała mapa w stylu kukieł treningowych</h1>
+<p>Kukły, tarcza i kryształ (paczka 07) oraz wozy konne to <strong>wzorzec dla całej gry</strong>: miękkie, malarskie cieniowanie, światło z lewej-góry, cienki ciemny kontur, przygaszone ciepłe barwy. Dziś obok nich stoi mapa, która wygląda płasko i „programowo”, więc ładne rzeczy wyglądają na niej jak naklejki. Chcemy, żeby <strong>cała mapa była namalowana w tej samej manierze</strong>.</p>
+<p>Z pikseli rezygnujemy: budynki, szyldy, wozy i wiele innych rzeczy już nie są pikselowe.</p>
+<h2>Najważniejsze: jak powstaje mapa</h2>
+<p>Mapy <strong>nie da się namalować w całości</strong>. Gra rysuje ją sama z prawdziwych danych o mieście (każda ulica, budynek, park w Lublinie i w każdym innym mieście na świecie). Dlatego potrzebujemy od Ciebie <strong>klocków</strong>, z których program składa mapę:</p>
+<ul>
+<li>tekstur, które się powtarzają bez szwów,</li>
+<li>pasków na krawędzie (tam, gdzie trawa styka się z drogą),</li>
+<li>pojedynczych obiektów (drzewa, latarnie, ławki…).</li>
+</ul>
+<p><strong>Cienie i światło na ziemi robi program</strong>, żeby wszystko miało jedno słońce: cień budynku, drzewa, ludzika i wozu pada zawsze w tę samą stronę (w prawo-w dół). Program ma już działającą próbę: miękkie cienie budynków i drzew, cień pod stopami i kołami, jaśniejszy lewy-górny róg dachu, duże jasne i ciemne plamy na trawie, żeby tekstura się nie powtarzała. Zrzuty przed i po próbie są w <code>5_zrzuty_z_gry/proba_malarska_*.jpg (po lewej przed, po prawej po)</code>.</p>
+<h2>Jak pracujemy (tak jak przy wozach – to zadziałało)</h2>
+<ol>
+<li><strong>Najpierw jedna scena-podgląd do akceptacji:</strong> kawałek miasta widziany tak jak w grze (z góry, lekko z przodu; zrzuty z gry w <code>5_zrzuty_z_gry/</code>): ulica z brukiem, chodnik, trawnik z drzewem, dwa-trzy domy z dachami i ścianą frontową, ścieżka ziemna, kawałek wody, ludzik i wóz dla skali. To jest „jak ma wyglądać gra”.</li>
+<li>Po akceptacji <strong>wycinasz z tej sceny</strong> klocki z listy niżej. Nic nie rysujesz od nowa i nic nie dorysowujesz programem.</li>
+<li><strong>Tekstury powtarzalne bez szwów</strong> (lewa krawędź pasuje do prawej, górna do dolnej), kwadrat <strong>512×512 px</strong>, w skali „3 razy większej niż w grze”, jak dotychczasowe <code>podloze_*</code>.</li>
+<li><strong>Na teksturach bez kierunkowego światła i bez cieni rzucanych.</strong> Dachy są obracane przez program wzdłuż budynku, więc światło w pliku obracałoby się razem z nimi. Światło i cienie dokłada program.</li>
+<li><strong>Na obiektach (drzewa, latarnie, ludziki, wozy) nie maluj cienia na ziemi.</strong> Program kładzie go sam, pod każdym tak samo. Samo cieniowanie obiektu (światło z lewej-góry) jak najbardziej.</li>
+<li><strong>Jedna paleta dla wszystkiego:</strong> przygaszone, ciepłe barwy jak na kukłach. Prosimy o kartę palety (12–16 głównych kolorów). Ziemia ma być <strong>trochę ciemniejsza i mniej nasycona</strong> niż postacie, żeby postacie się czytały, ale nie wyskakiwały z obrazu.</li>
+<li><strong>Kontur:</strong> cienki, ciemny (#1e1a24, lekko przezroczysty), taki sam na budynkach, obiektach i postaciach.</li>
+</ol>
+<h2>A. Podłoże – tekstury 512×512, bez szwów, po 3 warianty</h2>
+<p>Trzy warianty tej samej tekstury (A, B, C, w tej samej palecie i jasności) pozwolą programowi mieszać je, żeby nie było widać powtórzeń. Nazwy jak dotąd: <code>podloze_&lt;rodzaj&gt;_a/_b/_c.png</code>.</p>
+<ul>
+<li><code>trawa</code> – krótka, miejska, z drobnymi kępkami i pojedynczymi kwiatkami,</li>
+<li><code>laka</code> – wyższa trawa, więcej kwiatów (łąki, pola za miastem),</li>
+<li><code>bruk</code> – kostka brukowa ulic, lekko nierówna, z ciemnymi szparami,</li>
+<li><code>chodnik</code> – płyty chodnikowe, jaśniejsze od bruku,</li>
+<li><code>plac</code> – duże kamienne płyty rynków i placów,</li>
+<li><code>droga</code> – ubita ziemia ścieżek i polnych dróg, z koleinami i kamyczkami,</li>
+<li><code>park</code> – trawa parkowa, staranniejsza od zwykłej,</li>
+<li><code>las</code> – ściółka: igły, liście, mech, korzenie (pod drzewami lasu),</li>
+<li><code>pole</code> – zaorana ziemia albo zboże (dwa rodzaje: <code>pole_orka</code>, <code>pole_zboze</code>),</li>
+<li><code>zarosla</code> – gęste krzaki od góry,</li>
+<li><code>woda</code> – rzeka i staw: spokojna, z lekkimi refleksami; <strong>3 klatki</strong> delikatnego falowania,</li>
+<li><code>piasek</code> – plaża, piaskownica,</li>
+<li><code>parking</code> – asfalt/żwir z ledwo widocznymi liniami,</li>
+<li><code>tory</code> – podsypka z kamieni pod torami (same szyny rysuje program),</li>
+<li><code>cmentarz</code> – trawa z alejkami (nagrobki osobno, patrz D).</li>
+</ul>
+<h2>B. Krawędzie – paski, które program kładzie wzdłuż granic</h2>
+<p>Dziś trawa i droga stykają się ostrą linią i to najbardziej psuje wrażenie. Każdy pasek: <strong>poziomy, powtarzalny w poziomie, 512 px długości, 48–96 px wysokości</strong>, z jednej strony przezroczysty (program układa go wzdłuż krawędzi i zagina na łukach).</p>
+<ul>
+<li><code>krawedz_trawa_droga</code> – kępki trawy i kamyki nachodzące na ziemną drogę,</li>
+<li><code>krawedz_trawa_bruk</code> – krawężnik z kamienia z trawą przy nim,</li>
+<li><code>krawedz_chodnik_jezdnia</code> – krawężnik między chodnikiem a jezdnią,</li>
+<li><code>brzeg_wody</code> – brzeg: trzciny, kamienie, mokry piasek (strona wody przezroczysta),</li>
+<li><code>skraj_lasu</code> – krzaki i paprocie na skraju lasu,</li>
+<li><code>okap_dachu</code> – krawędź dachu (rynna, dachówki na brzegu) – była już w zamówieniu 06 (<code>dach_okap</code>),</li>
+<li><code>cokol_sciany</code> – dół ściany przy ziemi (kamienny cokół, trochę mchu).</li>
+</ul>
+<h2>C. Budynki</h2>
+<ul>
+<li><strong>Dachy w stylu kukieł</strong>, tekstury 512×512 bez szwów i bez kierunkowego światła, wszystkie rodziny kolorów: dachówka czerwona, dachówka brązowa, łupek, blacha zielona, papa szara, miedź z patyną (zielonkawa). Dotychczasowe <code>dach_*</code> zostają, jeśli pasują do sceny-podglądu.</li>
+<li><strong>Ściany frontowe</strong> jak w paczce 03c (<code>sciana_&lt;materiał&gt;_gladka/okno/drzwi</code>), ale w nowej manierze: tynk kremowy, cegła, tynk żółty, tynk szary, drewno.</li>
+<li><strong>Dachy ważnych miejsc</strong> (sklep, szkoła, kościół…) są dziś płaską farbą w jednym kolorze. Program może zabarwić zwykłe dachówki kolorem miejsca. Jeśli masz pomysł na coś ładniejszego (np. wieżyczka, flaga, szyld na dachu), pokaż go na podglądzie.</li>
+</ul>
+<h2>D. Obiekty na mapie (każdy: jeden obraz albo kilka klatek obok siebie, obiekt na dolnej krawędzi, środek podstawy na środku)</h2>
+<p>Część już jest (latarnia, ławka, kosz, hydrant, słup ogłoszeniowy, studzienka, zegar, donica, skrzynie, welocyped, automat pocztowy, fontanna, kocioł, wieża, drogowskaz, drzewa, krzak, sosna, grzyb, kłoda). Prosimy o <strong>przemalowanie ich w manierze kukieł</strong>, żeby miały tę samą dokładność: dziś każdy ma inną wielkość piksela. Nowe:</p>
+<ul>
+<li><code>nagrobek</code> (3 rodzaje), <code>krzyz_przydrozny</code>, <code>plot_drewniany</code> i <code>plot_kuty</code> (już są – do sprawdzenia w nowym stylu), <code>murek</code>,</li>
+<li><code>trzciny</code> (kępa przy wodzie), <code>kamienie</code> (2 rodzaje), <code>kwiaty</code> (kępa, 3 kolory),</li>
+<li><code>drzewo_lisciaste</code> w <strong>3 odmianach i 2 wielkościach</strong> (dziś jedno drzewo powtarza się w całym parku).</li>
+</ul>
+<h2>E. Przedmioty i ikony</h2>
+<p>Ikony przedmiotów (miecze, łuki, zbroje, hełmy, buty, talizmany, esencje, owoce, grzyby, drewno…) są dziś <strong>pikselowe 16×16</strong> i najbardziej odstają od reszty. Prosimy o <strong>wszystkie w stylu kukieł</strong>, kwadrat <strong>256×256 px</strong>, przezroczyste tło, kontur jak na kukłach. Lista obecnych: <code>4_przedmioty_obecne/</code>. Nowe, do drugiej ręki: <strong>tarcza drewniana</strong>, <strong>tarcza okuta</strong>, <strong>kołczan ze strzałami</strong>.</p>
+<h2>F. Postacie – na koniec</h2>
+<p>Bohaterowie i mieszkańcy są dziś rysowani drobnym pikselem. Kiedy mapa będzie gotowa i zaakceptowana, <strong>przemalujemy ich w tej samej manierze</strong> (jak wozy: miękkie cieniowanie, cienki kontur). To duża praca, więc dopiero po teście mapy. Na razie wystarczy na scenie-podglądzie pokazać <strong>jednego ludzika w nowym stylu</strong> obok obecnego.</p>
+<h2>Czego nie trzeba</h2>
+<ul>
+<li><strong>Mgły wojny</strong> (pergamin) – zostaje jak jest. Program zmiękcza jej krawędź i odsuwa ją od ścian.</li>
+<li><strong>Cieni na ziemi</strong> – robi je program.</li>
+<li><strong>Całych ulic i placów</strong> – program składa je sam z klocków.</li>
+</ul>
+<h2>Wydajność (dla porządku)</h2>
+<p>Program maluje mapę <strong>raz na każdy kwadrat 512×512</strong> (nie co klatkę), więc dokładne tekstury prawie nie kosztują płynności. Próba z cieniami wydłużyła to malowanie o 15–30%. Ważne jest tylko, żeby <strong>tekstury nie były większe niż 512×512</strong> i żeby animowane były tylko drobne rzeczy (woda, para, płomień).</p>

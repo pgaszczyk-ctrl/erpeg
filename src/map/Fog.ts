@@ -332,7 +332,10 @@ export class FogView {
     ctx.closePath();
     ctx.fillStyle = '#000';
     ctx.fill();
-    // A building in sight is seen whole: its roof and walls.
+    // A building in sight is seen whole: its roof and walls, plus a few px of ground around it
+    // (MGLA.odScian), so the fog's edge doesn't jitter right on the wall as the hero moves.
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
       const h = wallHeight(b);
       for (const dy of [0, h]) {
@@ -343,6 +346,7 @@ export class FogView {
           ctx.closePath();
         }
         ctx.fill('evenodd');
+        if (MGLA.odScian > 0) ctx.stroke();
       }
     }
     ctx.globalCompositeOperation = 'source-over';

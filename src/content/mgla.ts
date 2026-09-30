@@ -19,4 +19,6 @@ export const MGLA = {
   paralaksa: 1 / 20,
   /** Plik grafika z teksturą pergaminu (w public/swiat/): 'mgla_pergamin' (rzadsza siatka, polecana) albo 'mgla_pergamin_gestsza'. */
   plik: 'mgla_pergamin',
+  /** Widziany budynek odsłania też tyle punktów mapy ziemi wokół siebie, żeby krawędź mgły nie szarpała tuż przy ścianie. */
+  odScian: 4,
 };
