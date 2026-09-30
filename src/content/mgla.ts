@@ -13,8 +13,10 @@ export const MGLA = {
   nocCiemnosc: 0.78,
   /** Ile godzin przed wschodem / po zachodzie trwa szarówka. */
   szarowkaGodzin: 1,
-  /** Poznane, ale teraz niewidoczne miejsca: jak mocno je przykryć pergaminem (0–255). */
+  /** Poznane, ale teraz niewidoczne miejsca: jak mocno je przykryć lekką mgiełką (0–255), bez pergaminu. */
   poznaneKrycie: 150,
+  /** Kolor tej mgiełki (R, G, B). */
+  mgielka: [226, 229, 234] as [number, number, number],
   /** Pergamin przesuwa się razem z bohaterem o taką część jego drogi (0 = przypięty do mapy, 1 = jedzie z graczem). */
   paralaksa: 1 / 20,
   /** Plik grafika z teksturą pergaminu (w public/swiat/): 'mgla_pergamin' (rzadsza siatka, polecana) albo 'mgla_pergamin_gestsza'. */

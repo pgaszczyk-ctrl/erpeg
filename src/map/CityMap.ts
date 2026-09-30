@@ -37,6 +37,8 @@ export interface Building extends Box {
   id: number;
   /** Precomputed entrance (tiled maps: known before the building's tile is loaded). */
   door?: { x: number; y: number };
+  /** A small shed or garage (world maps): drawn, but doesn't stop the hero or shots. */
+  open?: boolean;
 }
 
 type RawMap = {
@@ -78,7 +80,8 @@ type RawMap = {
 export type RawTile = {
   a: [number, string, ...number[][]][];
   l: [number, string, number, number[], string | 0][];
-  b: [number, number[][], string | 0, string | 0, number][];
+  /** [id, rings, addresses, name, levels, open (world maps: a shed you walk through)] */
+  b: [number, number[][], string | 0, string | 0, number, (0 | 1)?][];
   /** World map tiles only: places found there [kind, name, x, y] (px). */
   p?: [Place['kind'], string, number, number][];
   /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
@@ -342,7 +345,7 @@ export class CityMap {
     this.lineGrid.add(l);
   }
 
-  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number) {
+  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1) {
     if (this.haveBuilding.has(id)) return;
     this.haveBuilding.add(id);
     const abs = rings.map((r) => decode(r, this.k));
@@ -351,6 +354,7 @@ export class CityMap {
     const stub = this.stubs.get(id);
     const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: seedOf(id), id, ...bb, y1: bb.y1 + 20 };
     if (stub) Object.assign(stub, { rings: abs, levels, ...bb, y1: bb.y1 + 20 });
+    if (open) b.open = true;
     this.buildings.push(b);
     this.buildingGrid.add(b);
   }
@@ -430,8 +434,8 @@ export class CityMap {
   private addTile(cx: number, cy: number, t: RawTile) {
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
-    for (const [bid, rings, addr, name, levels] of t.b) {
-      this.addBuilding(bid, rings, addr, name, levels);
+    for (const [bid, rings, addr, name, levels, open] of t.b) {
+      this.addBuilding(bid, rings, addr, name, levels, open);
       if (this.world && addr) {
         const b = this.buildings[this.buildings.length - 1];
         for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
@@ -832,6 +836,7 @@ export class CityMap {
 
   buildingAt(x: number, y: number): Building | undefined {
     for (const b of this.buildingGrid.at(x, y)) {
+      if (b.open) continue;
       if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) return b;
     }
     return undefined;

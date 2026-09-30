@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { CityMap, Building } from './CityMap';
-import { wallHeight } from './MapRenderer';
+import { wallHeight, WALL_SKEW } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
 import { MGLA } from '../content/mgla';
 import { SKALA_PLIKOW } from '../content/swiat';
@@ -239,6 +239,9 @@ export class FogView {
   private img: Phaser.GameObjects.Image;
   private cells = document.createElement('canvas');
   private cellCtx = this.cells.getContext('2d')!;
+  /** Explored-but-unseen cells: a plain light haze, no parchment (owner, bug report 16). */
+  private haze = document.createElement('canvas');
+  private hazeCtx = this.haze.getContext('2d')!;
   private static counter = 0;
 
   private paper: CanvasPattern | null = null;
@@ -273,20 +276,25 @@ export class FogView {
 
     // 1) Explored cells: grey; unexplored: black. One pixel per cell.
     if (this.cells.width !== gw || this.cells.height !== gh) {
-      this.cells.width = gw;
-      this.cells.height = gh;
+      this.cells.width = this.haze.width = gw;
+      this.cells.height = this.haze.height = gh;
     }
     const data = this.cellCtx.createImageData(gw, gh);
-    const d = data.data;
+    const hz = this.hazeCtx.createImageData(gw, gh);
+    const d = data.data, e = hz.data;
+    const [hr, hg, hb] = MGLA.mgielka;
     for (let j = 0; j < gh; j++) {
       for (let i = 0; i < gw; i++) {
         const o = (j * gw + i) * 4;
         const seen = this.explored.hasCell(gx0 + i, gy0 + j);
         d[o] = d[o + 1] = d[o + 2] = 0;
-        d[o + 3] = seen ? MGLA.poznaneKrycie : 255;
+        d[o + 3] = seen ? 0 : 255;
+        e[o] = hr; e[o + 1] = hg; e[o + 2] = hb;
+        e[o + 3] = seen ? MGLA.poznaneKrycie : 0;
       }
     }
     this.cellCtx.putImageData(data, 0, 0);
+    this.hazeCtx.putImageData(hz, 0, 0);
 
     // 2) Scale up smoothly, then cut out what is visible now.
     const W = Math.ceil((gw * FOG_CELL) / FOG_RES);
@@ -314,6 +322,10 @@ export class FogView {
       ctx.fillStyle = this.paper;
       ctx.fillRect(0, 0, W, H);
     }
+    // Known places: under the parchment, only a light haze (you see the map, not who's there).
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.drawImage(this.haze, 0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-atop';
     const dark = MGLA.nocCiemnosc * (1 - this.light);
     if (dark > 0.01) {
       ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;
@@ -338,11 +350,12 @@ export class FogView {
     ctx.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
       const h = wallHeight(b);
-      for (const dy of [0, h]) {
+      for (const dy of [0, h / 2, h]) {
+        const dx = dy * WALL_SKEW;
         ctx.beginPath();
         for (const r of b.rings) {
-          ctx.moveTo((r[0] - ox) / FOG_RES, (r[1] + dy - oy) / FOG_RES);
-          for (let i = 2; i < r.length; i += 2) ctx.lineTo((r[i] - ox) / FOG_RES, (r[i + 1] + dy - oy) / FOG_RES);
+          ctx.moveTo((r[0] + dx - ox) / FOG_RES, (r[1] + dy - oy) / FOG_RES);
+          for (let i = 2; i < r.length; i += 2) ctx.lineTo((r[i] + dx - ox) / FOG_RES, (r[i + 1] + dy - oy) / FOG_RES);
           ctx.closePath();
         }
         ctx.fill('evenodd');

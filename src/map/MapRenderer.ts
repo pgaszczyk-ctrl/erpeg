@@ -3,6 +3,7 @@ import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building 
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
 import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
+import { DZIELENIE } from '../content/budynki';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
@@ -311,6 +312,8 @@ function linePath(ctx: CanvasRenderingContext2D, pts: number[]) {
 
 /** Wall heights (px) of the three kinds of buildings: a ground floor, a taller one, a very big one. */
 export const WYSOKOSCI_SCIAN = { parter: 4, wyzszy: 6, duzy: 8 };
+/** Walls lean this much to the right per px of height, so the east side of every building shows too (bug report 11). */
+export const WALL_SKEW = 0.35;
 
 export function wallHeight(b: Building) {
   // Low walls (they are drawn over the street to the south), whatever the
@@ -690,29 +693,109 @@ export class MapRenderer {
   }
 
   private paintBuilding(ctx: CanvasRenderingContext2D, b: Building) {
+    const parts = this.partsOf(b);
+    if (!parts) return this.paintBody(ctx, b, wallHeight(b), b.seed);
+    // A big hall (galleria, market hall): a few parts side by side, each with its own roof, every other one a storey higher.
     const h = wallHeight(b);
+    parts.forEach((clip, i) => {
+      ctx.save();
+      ctx.beginPath();
+      // The band of the footprint, swept down (and right) as far as the walls reach.
+      for (const t of [0, 0.5, 1]) {
+        const dh = (h + 3) * t;
+        ctx.moveTo(clip[0] + dh * WALL_SKEW, clip[1] + dh);
+        for (let k = 2; k < clip.length; k += 2) ctx.lineTo(clip[k] + dh * WALL_SKEW, clip[k + 1] + dh);
+        ctx.closePath();
+      }
+      ctx.clip('nonzero');
+      this.paintBody(ctx, b, i % 2 ? Math.min(h + 3, 11) : h, b.seed + i * 7);
+      // Each part a little lighter or darker, so they read as separate roofs even in one colour.
+      ringsPath(ctx, b.rings);
+      ctx.fillStyle = [`rgba(255,246,228,0.14)`, `rgba(24,14,36,0.12)`, `rgba(255,246,228,0.05)`, `rgba(24,14,36,0.2)`, `rgba(255,246,228,0.1)`][i % 5];
+      ctx.fill('evenodd');
+      ctx.restore();
+    });
+    // Where the parts meet: a thin seam over the roof.
+    ctx.save();
+    ringsPath(ctx, b.rings);
+    ctx.clip('evenodd');
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = EDGE.dach;
+    for (let i = 1; i < parts.length; i++) {
+      const c = parts[i];
+      ctx.beginPath();
+      ctx.moveTo(c[0], c[1]);
+      ctx.lineTo(c[6], c[7]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * A big hall is drawn as 2–DZIELENIE.maks parts cut across its longest side (bands as 4-point polygons),
+   * castles, churches and the like (by name) stay whole; null = draw as one.
+   */
+  private partsOf(b: Building): number[][] | null {
+    if (b.name && DZIELENIE.bezPodzialu.test(b.name)) return null;
+    const r = b.rings[0];
+    const m2 = Math.abs(ringArea(r)) / (PX_PER_M * PX_PER_M);
+    if (m2 < DZIELENIE.odM2) return null;
+    const n = Math.max(2, Math.min(DZIELENIE.maks, Math.round(m2 / DZIELENIE.m2NaCzesc)));
+    // The longest wall's direction (like the roof tiles).
+    let best = -1, ang = 0;
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const dx = r[j] - r[i], dy = r[j + 1] - r[i + 1];
+      if (dx * dx + dy * dy > best) [best, ang] = [dx * dx + dy * dy, Math.atan2(dy, dx)];
+    }
+    const ux = Math.cos(ang), uy = Math.sin(ang), vx = -uy, vy = ux;
+    let t0 = Infinity, t1 = -Infinity, s0 = Infinity, s1 = -Infinity;
+    for (let i = 0; i < r.length; i += 2) {
+      const t = r[i] * ux + r[i + 1] * uy, s = r[i] * vx + r[i + 1] * vy;
+      t0 = Math.min(t0, t); t1 = Math.max(t1, t); s0 = Math.min(s0, s); s1 = Math.max(s1, s);
+    }
+    s0 -= 20; s1 += 20;
+    const at = (t: number, s: number) => [t * ux + s * vx, t * uy + s * vy];
+    const out: number[][] = [];
+    for (let i = 0; i < n; i++) {
+      const a = t0 + ((t1 - t0) * i) / n - (i ? 0 : 20), c = t0 + ((t1 - t0) * (i + 1)) / n + (i === n - 1 ? 20 : 0);
+      out.push([...at(a, s0), ...at(c, s0), ...at(c, s1), ...at(a, s1)]);
+    }
+    // Draw from the back (north) forward, so the higher parts' walls overlap properly.
+    return out.sort((p, q) => p[1] + p[3] + p[5] + p[7] - (q[1] + q[3] + q[5] + q[7]));
+  }
+
+  private paintBody(ctx: CanvasRenderingContext2D, b: Building, h: number, seed: number) {
     const special = this.highlight.get(b);
-    // Walls: the footprint dropped by h, plus the outline.
-    ringsPath(ctx, b.rings, 0, h);
-    ctx.fillStyle = OUTLINE;
+    const sk = WALL_SKEW;
+    // Walls: the footprint dropped by h (leaning right), plus the outline.
+    ringsPath(ctx, b.rings, h * sk, h);
     ctx.lineWidth = EDGE.podstawa;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
-    for (let s = h; s > 0; s -= 2) {
-      ringsPath(ctx, b.rings, 0, s);
+    for (let s = h; s > 0; s -= 1) {
+      ringsPath(ctx, b.rings, s * sk, s);
       ctx.fillStyle = special ? special.wall : s > h / 2 ? '#d9c9a3' : '#eadcb8';
       ctx.fill('evenodd');
     }
     // The artist's front walls: on every wall of the outline that faces the viewer (south), the texture
     // runs along the wall with its bottom on the ground; low buildings show only its lower part.
     if (!special && this.wallArt.length) this.paintWalls(ctx, b, h);
+    else this.shadeSides(ctx, b, h);
     // Roof.
     ringsPath(ctx, b.rings);
-    const art = this.roofArt[b.seed % ROOFS.length] ?? null;
+    const art = this.roofArt[seed % ROOFS.length] ?? null;
     // Tile rows run along the building's longest wall, shifted per building, so neighbours don't share one grid.
-    if (art && !special) art.setTransform(roofTransform(b).scale(1 / DOTS));
-    ctx.fillStyle = special ? special.roof : art ?? ROOFS[b.seed % ROOFS.length];
+    if (art) art.setTransform(roofTransform(b).scale(1 / DOTS));
+    ctx.fillStyle = special && !art ? special.roof : art ?? ROOFS[seed % ROOFS.length];
     ctx.fill('evenodd');
+    // A place's roof keeps its tiles, coloured with the place's colour (bug reports 10 and 12: no flat sheets of paint).
+    if (special && art) {
+      ctx.globalCompositeOperation = 'color';
+      ctx.fillStyle = special.roof;
+      ctx.fill('evenodd');
+      ctx.globalCompositeOperation = 'source-over';
+    }
     ctx.lineWidth = EDGE.dach;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();
@@ -722,6 +805,26 @@ export class MapRenderer {
     ctx.lineWidth = 0.8;
     ctx.stroke();
     if (this.chimneyArt && !special) this.paintChimney(ctx, b);
+  }
+
+  /** The east-facing walls (seen thanks to WALL_SKEW) a little darker than the front ones. */
+  private shadeSides(ctx: CanvasRenderingContext2D, b: Building, h: number) {
+    const r = b.rings[0];
+    const out = ringArea(r) > 0 ? 1 : -1;
+    ctx.fillStyle = 'rgba(30,20,40,0.22)';
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const ax = r[i], ay = r[i + 1], dx = r[j] - ax, dy = r[j + 1] - ay;
+      const L = Math.hypot(dx, dy);
+      if (L < 1 || out * dy <= 0.2 * L) continue;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + dx, ay + dy);
+      ctx.lineTo(ax + dx + h * WALL_SKEW, ay + dy + h);
+      ctx.lineTo(ax + h * WALL_SKEW, ay + h);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   private paintWalls(ctx: CanvasRenderingContext2D, b: Building, h: number) {
@@ -740,12 +843,13 @@ export class MapRenderer {
       const L = Math.hypot(dx, dy);
       // Facing the viewer: the outward normal points down the screen.
       if (L < 1 || out * -dx <= 0.2 * L) continue;
-      art.pat.setTransform(new DOMMatrix([dx / L, dy / L, 0, 1, ax, ay + h - tileH]).scaleSelf(1 / DOTS));
+      const sk = WALL_SKEW;
+      art.pat.setTransform(new DOMMatrix([dx / L, dy / L, sk, 1, ax + (h - tileH) * sk, ay + h - tileH]).scaleSelf(1 / DOTS));
       ctx.beginPath();
       ctx.moveTo(ax, ay);
       ctx.lineTo(ax + dx, ay + dy);
-      ctx.lineTo(ax + dx, ay + dy + h);
-      ctx.lineTo(ax, ay + h);
+      ctx.lineTo(ax + dx + h * sk, ay + dy + h);
+      ctx.lineTo(ax + h * sk, ay + h);
       ctx.closePath();
       ctx.fillStyle = art.pat;
       ctx.fill();
@@ -755,8 +859,9 @@ export class MapRenderer {
         ctx.fill();
       }
     }
+    this.shadeSides(ctx, b, h);
     // Keep the outline crisp over the texture.
-    ringsPath(ctx, b.rings, 0, h);
+    ringsPath(ctx, b.rings, h * WALL_SKEW, h);
     ctx.lineWidth = EDGE.sciany;
     ctx.strokeStyle = OUTLINE;
     ctx.stroke();

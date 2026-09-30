@@ -11,6 +11,7 @@ import { PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { Terrain } from './terrain';
+import { SZOPY } from '../content/budynki';
 import { CityMap, PX_PER_M, type Place, type RawTile, type WorldLoader } from './CityMap';
 
 /** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
@@ -134,6 +135,12 @@ function polygons(f: VectorTileFeature) {
 }
 
 /** The game tile loader for a world map: converts the world tiles under each game tile. */
+const areaOf = (r: number[][]) => {
+  let a = 0;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] - r[i][0]) * (r[j][1] + r[i][1]);
+  return a / 2;
+};
+
 function worldLoader(map: CityMap): WorldLoader {
   const k = map.unitPx;
   // Each world tile is converted once; game tiles that share it reuse it.
@@ -212,7 +219,7 @@ function worldLoader(map: CityMap): WorldLoader {
         polygons(f).forEach((poly, j) => {
           const rings = poly.map((r) => r.map(pr));
           const xs = rings[0].map((q) => q[0]), ys = rings[0].map((q) => q[1]);
-          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: Math.max(1, Math.round(h / 3)), id: idOf(3, i * 8 + (j & 7)) });
+          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: h ? Math.max(1, Math.round(h / 3)) : SZOPY.domyslniePieter, id: idOf(3, i * 8 + (j & 7)) });
         });
       }
     });
@@ -237,7 +244,7 @@ function worldLoader(map: CityMap): WorldLoader {
       const street = streetNear(a.x, a.y);
       if (b && street) b.addr.push(`${street} ${a.n}`);
     }
-    for (const b of blds) out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, 0, b.levels]);
+    const castles: { x: number; y: number; name: string }[] = [];
     // Places (shops, schools, …) in map pixels.
     each('pois', (f, _i, pr) => {
       if (f.type !== 1) return;
@@ -252,12 +259,26 @@ function worldLoader(map: CityMap): WorldLoader {
         out.q!.push([qx * k, qy * k]);
         return;
       }
+      // Castles and palaces: their building keeps its name (drawn whole, never cut into parts).
+      if (['castle', 'fort', 'palace'].includes(String(f.properties.kind)) && nm) {
+        const [cx, cy] = pr(f.loadGeometry()[0][0]);
+        castles.push({ x: cx, y: cy, name: nm });
+      }
       const kind = placeKind(f.properties);
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
       const name = (f.properties['name:pl'] as string) || (f.properties.name as string) || DEFAULT_NAME[kind] || kind;
       out.p!.push([kind, name, x * k, y * k]);
     });
+    // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under
+    // SZOPY.usunM2 dropped, under SZOPY.przejscieM2 drawn but walked through (last field 1).
+    for (const b of blds) {
+      const m2 = Math.abs(areaOf(b.rings[0])) / 4; // half-metres²
+      if (!b.addr.length && m2 < SZOPY.usunM2) continue;
+      const open = !b.addr.length && m2 < SZOPY.przejscieM2 ? 1 : 0;
+      const castle = castles.find((c) => c.x >= b.box[0] && c.x <= b.box[2] && c.y >= b.box[1] && c.y <= b.box[3] && inside(b.rings[0], c.x, c.y));
+      out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, castle?.name || 0, b.levels, open]);
+    }
     return out;
   };
 

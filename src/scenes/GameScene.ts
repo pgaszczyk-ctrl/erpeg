@@ -11,7 +11,7 @@ import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
-import { MapRenderer } from '../map/MapRenderer';
+import { MapRenderer, wallHeight, WALL_SKEW } from '../map/MapRenderer';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
@@ -410,7 +410,8 @@ export class GameScene extends Phaser.Scene {
       if (p.kind === 'station') this.placeCarts([p]);
       else {
         const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
-        const img = this.add.image(p.door.x, p.door.y - 10, sign).setScale(artScale(sign)).setDepth(900_000);
+        const at = this.signSpot(p);
+        const img = this.add.image(at.x, at.y, sign).setScale(artScale(sign)).setDepth(900_000);
         this.signGlow(img);
       }
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
@@ -1313,6 +1314,30 @@ export class GameScene extends Phaser.Scene {
     m.hp = 0;
     this.enemies = this.enemies.filter((e) => e !== m);
     this.tweens.add({ targets: m, alpha: 0, scaleY: m.scaleY * 0.3, duration: 350, onComplete: () => m.destroy() });
+  }
+
+  /**
+   * Where a place's sign hangs: on its building's wall nearest the door (bug report 10: signs hung over the
+   * street when the door had to be moved out onto the road) – on the front wall when that one faces the viewer.
+   */
+  private signSpot(p: CityPlace): { x: number; y: number } {
+    const r = p.building?.rings[0];
+    if (!r || r.length < 6) return { x: p.door.x, y: p.door.y - 10 };
+    let best = Infinity, bx = p.door.x, by = p.door.y, south = false;
+    let area = 0;
+    for (let i = 0; i < r.length; i += 2) { const j = (i + 2) % r.length; area += r[i] * r[j + 1] - r[j] * r[i + 1]; }
+    const out = area > 0 ? 1 : -1;
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const ax = r[i], ay = r[i + 1], dx = r[j] - ax, dy = r[j + 1] - ay;
+      const L2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0.15, Math.min(0.85, ((p.door.x - ax) * dx + (p.door.y - ay) * dy) / L2));
+      const x = ax + dx * t, y = ay + dy * t;
+      const d = Math.hypot(x - p.door.x, y - p.door.y);
+      if (d < best) [best, bx, by, south] = [d, x, y, out * -dx > 0.3 * Math.sqrt(L2)];
+    }
+    const h = wallHeight(p.building!);
+    return south ? { x: bx + h * 0.5 * WALL_SKEW, y: by + h * 0.5 } : { x: bx, y: by - 6 };
   }
 
   /** A gang boss spills coins (in a few piles) and fruit on the ground (content/gangi.ts LUP_HERSZTA). */

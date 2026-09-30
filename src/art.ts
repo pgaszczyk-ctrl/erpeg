@@ -1280,11 +1280,13 @@ export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.log, 'kloda', null);
   useArtist(scene, TEX.signpost, 'drogowskaz', null);
   // Training stations (pack 07): the dummy stands as tall as a townsperson, the others in the same scale.
+  // Their frames are lined up on the post in the ground (bug report 9: the artist drew the hit frames moved
+  // sideways, so a hit dummy slid away; now only its top sways).
   const k = TRENING.wysokosc / 100;
-  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k);
-  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k);
-  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k);
-  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k);
+  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k, true);
+  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k, true);
+  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k, true);
+  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k, true);
   // Signboards over the places' doors (cut from the artist's board).
   const signs: [string, string][] = [[TEX.signShop, 'sklep'], [TEX.signSchool, 'szkola'], [TEX.signChurch, 'kosciol'], [TEX.signOffice, 'urzad'],
     [TEX.signHospital, 'szpital'], [TEX.signPolice, 'policja'], [TEX.signLibrary, 'biblioteka'], [TEX.signHotel, 'hotel'], [TEX.signBank, 'bank'],
@@ -1292,11 +1294,51 @@ export function useArtistArt(scene: Phaser.Scene) {
   for (const [key, file] of signs) useArtist(scene, key, `szyld_${file}`, null, SZYLDY.szerokosc / 86);
 }
 
-function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3) {
+/**
+ * A sheet of `n` frames redrawn so every frame's foot (the middle of its lowest opaque rows) sits at the same
+ * spot: frames get wider (1.6×) so a leaning top is never cut off.
+ */
+function baseAligned(img: HTMLImageElement, n: number): HTMLCanvasElement {
+  const fw = Math.floor(img.width / n), H = img.height;
+  const src = document.createElement('canvas');
+  src.width = img.width;
+  src.height = H;
+  const g = src.getContext('2d')!;
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, img.width, H).data;
+  const feet = Array.from({ length: n }, (_, f) => {
+    let bottom = 0;
+    for (let y = H - 1; y >= 0 && !bottom; y--)
+      for (let x = f * fw; x < (f + 1) * fw; x++) if (d[(y * img.width + x) * 4 + 3] > 100) { bottom = y; break; }
+    let sx = 0, cnt = 0;
+    for (let y = Math.max(0, bottom - 8); y <= bottom; y++)
+      for (let x = f * fw; x < (f + 1) * fw; x++) if (d[(y * img.width + x) * 4 + 3] > 100) { sx += x - f * fw; cnt++; }
+    return { x: cnt ? sx / cnt : fw / 2, y: bottom };
+  });
+  const FW = Math.ceil(fw * 1.6);
+  const out = document.createElement('canvas');
+  out.width = FW * n;
+  out.height = H + 4;
+  const o = out.getContext('2d')!;
+  const fy = Math.max(...feet.map((q) => q.y));
+  feet.forEach((q, f) => o.drawImage(src, f * fw, 0, fw, H, f * FW + Math.round(FW / 2 - q.x), fy - q.y, fw, H));
+  return out;
+}
+
+function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3, onBase = false) {
   const src = `swiat-${file}`;
   if (!scene.textures.exists(src)) return;
   const img = scene.textures.get(src).getSourceImage() as HTMLImageElement;
   if (scene.textures.exists(key)) scene.textures.remove(key);
+  if (frames && onBase) {
+    const c = baseAligned(img, frames.length);
+    const tex = scene.textures.addCanvas(key, c)!;
+    const FW = c.width / frames.length;
+    frames.forEach((f, i) => tex.add(f, 0, i * FW, 0, FW, c.height));
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    ART_SCALE.set(key, scale);
+    return;
+  }
   const tex = scene.textures.addImage(key, img)!;
   if (frames) {
     const fw = img.width / frames.length;
