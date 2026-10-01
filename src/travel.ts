@@ -53,6 +53,11 @@ export async function loadWorld() {
   for (const t of world.towns) for (const s of t.stations) stops.set(`${t.id}|${s.name}`, { ...s, key: `${t.id}|${s.name}`, mapId: t.id, mapName: t.name });
 }
 
+/** Stations, towns and rail links (the map screen's region view). */
+export function worldInfo() {
+  return { world, stops };
+}
+
 export function rememberMap(city: CityMap) {
   // The same station twice (a bus station is both a building and its outline in OSM): keep one.
   const keep = city.places.filter((p, i, all) => p.kind !== 'station' || !all.some((q, j) => j < i && q.kind === 'station' && q.name === p.name && Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 300 * PX_PER_M));

@@ -11,6 +11,8 @@
 // ============================================================================
 
 export interface PytanieQuizu {
+  /** Pytania z serwera: numer w bazie (gra zgłasza, że ktoś odpowiedział). */
+  id?: number;
   kategoria: string;
   pytanie: string;
   odpowiedzi: string[];
@@ -33,6 +35,9 @@ export const SZKOLA_QUIZ = {
   trudniejOd: [31, 41],
   /** Jak często rachunek lub łamigłówka liczbowa zamiast pytania z bazy (0–1). */
   szansaNaRachunek: 0.35,
+  /** Gdy z serwera jest mniej niż `malo` pytań na poziom (np. kilka dni bez nowej paczki), rachunków jest więcej. */
+  malo: 60,
+  rachunekGdyMalo: 0.6,
 };
 
 /** Pytania wpisane na stałe (gdy serwer nic nie przyśle), po poziomach 0–3. */

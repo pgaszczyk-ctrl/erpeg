@@ -39,7 +39,7 @@ import { BANK, LOKATY } from '../content/banki';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
-import { schoolQuiz } from '../quizzes';
+import { schoolQuiz, quizAnswered } from '../quizzes';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
@@ -3009,6 +3009,7 @@ export class GameScene extends Phaser.Scene {
         const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
         this.askRiddle(title, `📝 ${z.kategoria}${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
           d.a++;
+          quizAnswered(z);
           // After a lesson (naLekcje questions) a break: back in przerwaMin minutes, rounded up to :x0/:x5.
           if (d.a % SZKOLA_QUIZ.naLekcje === 0) {
             const t = new Date();

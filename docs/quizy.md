@@ -6,7 +6,7 @@ Szkoły w grze zadają quizy. Pytania pochodzą z trzech źródeł:
 2. **wbudowane** – `src/content/quizy.ts` (gdy serwer nic nie da),
 3. **losowane przez grę** – rachunki, ciągi liczb, zegar, zadania z treścią (nigdy się nie kończą).
 
-Każda paczka z serwera jest ważna **2 dni** (dziś i jutro). Program wgrywa nową paczkę codziennie, więc zawsze są pytania na dziś, nawet gdy jedno wgranie się nie uda. Przy każdym wgraniu przeterminowane pytania znikają same.
+Każda paczka z serwera jest ważna **5 dni** (najmniej 5, nawet gdy program poda mniej). Gdy na dany poziom jest dziś mniej niż 150 pytań, serwer dobiera stare pytania z zapasu – najpierw te, na które nikt jeszcze nie odpowiedział (gra zgłasza odpowiedź przez `quiz_answered`) – tak samo dla wszystkich graczy danego dnia. Pytania z odpowiedzią są kasowane 90 dni po wygaśnięciu, bez odpowiedzi zostają w zapasie. Gdy i zapasu jest mało (poniżej 60 na poziom), szkoły dają więcej rachunków (`malo`, `rachunekGdyMalo` w quizy.ts).
 
 ## Klucz
 

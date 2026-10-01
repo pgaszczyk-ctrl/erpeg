@@ -1,4 +1,5 @@
 import { rng } from './rng';
+import { rpc } from './api';
 import { QUIZY, SZKOLA_QUIZ, type PytanieQuizu } from './content/quizy';
 import { rachunek, levelForAge } from './scenes/Npcs';
 
@@ -11,8 +12,8 @@ const fromServer: PytanieQuizu[][] = [[], [], [], []];
 
 export function setServerQuizzes(list: ServerQuiz[]) {
   for (const l of fromServer) l.length = 0;
-  for (const [, level, kategoria, pytanie, odpowiedzi] of list) {
-    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ kategoria, pytanie, odpowiedzi });
+  for (const [id, level, kategoria, pytanie, odpowiedzi] of list) {
+    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ id, kategoria, pytanie, odpowiedzi });
   }
 }
 
@@ -101,7 +102,9 @@ export function schoolQuiz(schoolId: string, day: string, nth: number, age: numb
   const harder = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
   const level = Math.min(3, levelForAge(age) + harder);
   const r = rng(hash(`quiz:${schoolId}:${day}:${nth}:${level}`));
-  if (r() < SZKOLA_QUIZ.szansaNaRachunek) return puzzle(level, r);
+  // Few server questions (no fresh batch for days): more of the never-ending number puzzles.
+  const mathChance = fromServer[level].length < SZKOLA_QUIZ.malo ? SZKOLA_QUIZ.rachunekGdyMalo : SZKOLA_QUIZ.szansaNaRachunek;
+  if (r() < mathChance) return puzzle(level, r);
   // Server questions first (new every day), then the built-in ones.
   const pool = fromServer[level].length >= 10 && r() < 0.85 ? fromServer[level] : [...fromServer[level], ...QUIZY[level]];
   if (!pool.length) return puzzle(level, r);
@@ -113,4 +116,9 @@ export function schoolQuiz(schoolId: string, day: string, nth: number, age: numb
     [order[i], order[j]] = [order[j], order[i]];
   }
   return pool[order[nth % order.length]];
+}
+
+/** Tells the server a server question got an answer, so it isn't reused first when fresh ones run out. */
+export function quizAnswered(q: PytanieQuizu) {
+  if (q.id) rpc('quiz_answered', { p_id: q.id }).catch(() => {});
 }
