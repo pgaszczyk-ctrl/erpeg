@@ -1,14 +1,15 @@
-build 20260929.pmtiles
-total 30980
--rw-r--r-- 1 runner runner 3081333 Sep 29 10:28 berlin.pmtiles
--rw-r--r-- 1 runner runner 3619246 Sep 29 10:28 gorzow.pmtiles
--rw-r--r-- 1 runner runner      23 Sep 29 10:28 info.txt
--rw-r--r-- 1 runner runner 4685447 Sep 29 10:28 krakow.pmtiles
--rw-r--r-- 1 runner runner 3896826 Sep 29 10:28 lublin.pmtiles
--rw-r--r-- 1 runner runner 2632639 Sep 29 10:28 madryt.pmtiles
--rw-r--r-- 1 runner runner 3986554 Sep 29 10:28 szczecin.pmtiles
-drwxr-xr-x 3 runner runner    4096 Sep 29 10:28 terrarium
--rw-r--r-- 1 runner runner 9800505 Sep 29 10:28 zakopane.pmtiles
+build 20261003.pmtiles
+total 34720
+-rw-r--r-- 1 runner runner 3083292 Oct  3 22:15 berlin.pmtiles
+-rw-r--r-- 1 runner runner 3627886 Oct  3 22:15 gorzow.pmtiles
+-rw-r--r-- 1 runner runner      23 Oct  3 22:15 info.txt
+-rw-r--r-- 1 runner runner 4687059 Oct  3 22:15 krakow.pmtiles
+-rw-r--r-- 1 runner runner 3896710 Oct  3 22:15 lublin.pmtiles
+-rw-r--r-- 1 runner runner 2633192 Oct  3 22:15 madryt.pmtiles
+-rw-r--r-- 1 runner runner 3810918 Oct  3 22:15 pulawy.pmtiles
+-rw-r--r-- 1 runner runner 3985821 Oct  3 22:15 szczecin.pmtiles
+drwxr-xr-x 3 runner runner    4096 Oct  3 22:15 terrarium
+-rw-r--r-- 1 runner runner 9802632 Oct  3 22:15 zakopane.pmtiles
 pmtiles spec version: 3
 tile type: mvt
 bounds: (long: 19.800000, lat: 49.150000) (long: 20.150000, lat: 49.330000)
@@ -22,17 +23,17 @@ tile contents count: 1216
 clustered: true
 internal compression: gzip
 tile compression: gzip
-type baselayer
-version 4.15.2
 vector_layers <object, use --metadata to view full JSON metadata>
 description Basemap layers derived from OpenStreetMap and Natural Earth
 name Protomaps Basemap
+pgf:devanagari:name NotoSansDevanagari-Regular
 pgf:devanagari:version 1
+planetiler:osm:osmosisreplicationseq 123213
+planetiler:osm:osmosisreplicationtime 2026-10-03T04:00:00Z
+version 4.15.2
+attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
 planetiler:buildtime 2026-03-28T14:41:39.524Z
 planetiler:githash 0e5588c4a6e8c29a270a33afe8df62027d889604
-planetiler:osm:osmosisreplicationseq 123117
-planetiler:osm:osmosisreplicationtime 2026-09-29T04:00:00Z
-attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
-pgf:devanagari:name NotoSansDevanagari-Regular
 planetiler:osm:osmosisreplicationurl https://planet.osm.org/replication/hour/
 planetiler:version 0.10.2
+type baselayer
