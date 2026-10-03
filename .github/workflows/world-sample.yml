@@ -35,6 +35,8 @@ jobs:
           # Abroad: how the decorations look in Germany and Spain (Berlin Mitte, Madrid centro).
           pmtiles extract "https://build.protomaps.com/$B" data/world-sample/berlin.pmtiles --bbox=13.39,52.515,13.42,52.53 --maxzoom=15
           pmtiles extract "https://build.protomaps.com/$B" data/world-sample/madryt.pmtiles --bbox=-3.715,40.410,-3.695,40.425 --maxzoom=15
+          # The Vistula at Puławy: bridges missing on the world map (bug reports 42, 43).
+          pmtiles extract "https://build.protomaps.com/$B" data/world-sample/pulawy.pmtiles --bbox=21.90,51.35,22.00,51.44 --maxzoom=15
           { echo "build $B"; ls -l data/world-sample; pmtiles show data/world-sample/zakopane.pmtiles; } > data/world-sample/info.txt 2>&1
           cat data/world-sample/info.txt
       - name: Commit
