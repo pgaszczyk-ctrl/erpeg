@@ -93,4 +93,6 @@ export const PROSBY = {
   ],
   czekam: 'Czekam tutaj! Chochliki są {gdzie}, na {kierunek}.',
   dziekuje: 'Jest! {nazwa}! Dziękuję z całego serca! Weź to w podzięce.',
+  /** Ktoś, komu już dziś pomogłeś (raz dziennie na osobę). */
+  znowu: 'O, to ty! Jeszcze raz dziękuję za pomoc. Dziś już niczego mi nie trzeba.',
 };

@@ -26,7 +26,14 @@ const DOTS = OSTROSC;
  * hero and townsfolk slipped under the map there and vanished.
  */
 export const GROUND_DEPTH = -1e8;
-const MAX_CHUNKS = DOTS > 1 ? 12 : 24;
+/**
+ * How many painted chunks (each CHUNK×DOTS square, 4 MB at DOTS 2) may exist at once. Phones lost
+ * the picture ("WebGL context lost" on screen) with 12 of them plus everything else (~75 MB of
+ * textures), so: 8, and 6 on phones that report little memory. Painting reaches only a quarter
+ * chunk past the view, so 4–6 are needed while walking.
+ */
+const LOW_MEMORY = typeof navigator !== 'undefined' && ((navigator as { deviceMemory?: number }).deviceMemory ?? 8) <= 4;
+const MAX_CHUNKS = DOTS > 1 ? (LOW_MEMORY ? 6 : 8) : 16;
 const CAR_ROADS = new Set(['major', 'medium', 'minor', 'pedestrian', 'service']);
 /**
  * Does a street object at (x, y) beside line `own` stand on (or right by)
@@ -368,8 +375,9 @@ export class MapRenderer {
   update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2) {
     const v = cam.worldView;
     const want: [number, number, number][] = [];
-    const cx0 = Math.floor((v.x - CHUNK / 2) / CHUNK), cx1 = Math.floor((v.right + CHUNK / 2) / CHUNK);
-    const cy0 = Math.floor((v.y - CHUNK / 2) / CHUNK), cy1 = Math.floor((v.bottom + CHUNK / 2) / CHUNK);
+    const M = CHUNK / 4;
+    const cx0 = Math.floor((v.x - M) / CHUNK), cx1 = Math.floor((v.right + M) / CHUNK);
+    const cy0 = Math.floor((v.y - M) / CHUNK), cy1 = Math.floor((v.bottom + M) / CHUNK);
     const mx = v.centerX / CHUNK - 0.5, my = v.centerY / CHUNK - 0.5;
     for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2]);
     want.sort((a, b) => a[2] - b[2]);
@@ -387,10 +395,38 @@ export class MapRenderer {
       }
     }
 
+    // Spare textures beyond what the cap allows go back to the graphics card's memory.
+    while (this.free.length && this.chunks.size + this.free.length > MAX_CHUNKS) {
+      const c = this.free.pop()!;
+      c.img.destroy();
+      this.scene.textures.remove(c.tex);
+    }
+
     for (const [x, y] of want) {
       const k = `${x},${y}`;
       if (this.chunks.has(k) && !this.stale.has(k)) continue;
       if (budget-- <= 0) break;
+      // At the cap with nothing spare: reuse the farthest chunk the view doesn't need.
+      if (!this.chunks.has(k) && !this.free.length && this.chunks.size >= MAX_CHUNKS) {
+        let far: string | null = null;
+        let best = -1;
+        for (const ck of this.chunks.keys()) {
+          if (keep.has(ck)) continue;
+          const [ax, ay] = ck.split(',').map(Number);
+          const d = (ax - mx) ** 2 + (ay - my) ** 2;
+          if (d > best) {
+            best = d;
+            far = ck;
+          }
+        }
+        if (far) {
+          const c = this.chunks.get(far)!;
+          c.img.setVisible(false);
+          this.chunks.delete(far);
+          this.stale.delete(far);
+          this.free.push(c);
+        }
+      }
       this.draw(x, y);
     }
   }

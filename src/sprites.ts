@@ -75,6 +75,9 @@ export function loadHdSprites(scene: Phaser.Scene) {
 }
 
 const skala = new Map<string, number>();
+/** The artist's sheets and masks as plain pictures (taken out of the texture manager in createHdSprites). */
+const srcImg = new Map<string, HTMLImageElement>();
+const maskImg = new Map<string, HTMLImageElement>();
 
 /** Is this one of the new characters' textures? */
 export function isHd(key: string) {
@@ -112,7 +115,13 @@ const sheets = new Map<string, HTMLCanvasElement>();
 export function createHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
   for (const p of ALL()) {
-    if (!scene.textures.exists(`hdsrc-${p.id}`)) continue;
+    // The artist's sheets are only read when painting: keep the pictures, give the graphics card its memory back (~11 MB).
+    for (const [k, map] of [[`hdsrc-${p.id}`, srcImg], [`hdmask-${p.id}`, maskImg]] as const) {
+      if (!scene.textures.exists(k)) continue;
+      map.set(p.id, scene.textures.get(k).getSourceImage() as HTMLImageElement);
+      scene.textures.remove(k);
+    }
+    if (!srcImg.has(p.id)) continue;
     const key = `hd-${p.id}`;
     skala.set(key, p.skala);
     pending.set(key, p);
@@ -195,7 +204,7 @@ const shifts = new Map<string, number[]>();
 
 /** The sheet with stray pixels removed, the side row turned to look left and every frame centred. */
 function sheetPixels(scene: Phaser.Scene, p: Postac) {
-  const img = scene.textures.get(`hdsrc-${p.id}`).getSourceImage() as HTMLImageElement;
+  const img = srcImg.get(p.id)!;
   const c = canvas(F * 3, F * 3);
   const ctx = c.getContext('2d')!;
   ctx.drawImage(img, 0, 0);
@@ -211,9 +220,10 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
 
 function maskPixels(scene: Phaser.Scene, p: Postac) {
   const c = canvas(F * 3, F * 3);
-  if (!scene.textures.exists(`hdmask-${p.id}`)) return c;
+  const mask = maskImg.get(p.id);
+  if (!mask) return c;
   const ctx = c.getContext('2d')!;
-  ctx.drawImage(scene.textures.get(`hdmask-${p.id}`).getSourceImage() as HTMLImageElement, 0, 0);
+  ctx.drawImage(mask, 0, 0);
   if (p.bokWPrawo) mirrorRow(c, 1);
   const s = shifts.get(p.id);
   if (s) shiftFrames(c, s);

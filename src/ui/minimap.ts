@@ -4,7 +4,7 @@ import { FOG_CELL } from '../map/Fog';
 import { drawCity } from '../map/drawCity';
 import { session } from '../quests';
 import { worldInfo } from '../travel';
-import { SKALE_MAPY, WOJEWODZTWO, KRAJ, KONTUR_LUBELSKIE, KONTUR_POLSKI, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
+import { SKALE_MAPY, WOJEWODZTWO, KRAJ, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
 
 export { drawCity };
 
@@ -172,24 +172,28 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
   const s = S / (2 * v.km);
   const toS = (lat: number, lon: number) => [S / 2 + (lon - lon0) * 111.32 * cos * s, S / 2 - (lat - lat0) * 111.32 * s] as const;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = '#c9d7e3';
+  // No borders on purpose (owner, bug report 41): only the scale – the places, railways and a grid.
+  ctx.fillStyle = '#e8dcb8';
   ctx.fillRect(0, 0, S, S);
-  const poly = (pts: [number, number][], fill: string, stroke: string, w: number) => {
+  const step = kind === 'kraj' ? 1 : 0.25;
+  ctx.strokeStyle = 'rgba(110,90,58,0.15)';
+  ctx.lineWidth = 1 * u;
+  const [lx0, ly0] = [lon0 - (S / 2 / s) / (111.32 * cos), lat0 + S / 2 / s / 111.32];
+  const [lx1, ly1] = [lon0 + (S / 2 / s) / (111.32 * cos), lat0 - S / 2 / s / 111.32];
+  for (let lon = Math.ceil(lx0 / step) * step; lon <= lx1; lon += step) {
+    const [x] = toS(lat0, lon);
     ctx.beginPath();
-    pts.forEach(([lon, lat], i) => {
-      const [x, y] = toS(lat, lon);
-      if (i) ctx.lineTo(x, y);
-      else ctx.moveTo(x, y);
-    });
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = w * u;
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, S);
     ctx.stroke();
-  };
-  poly(KONTUR_POLSKI, '#e8dcb8', '#6d5a3a', 1.6);
-  poly(KONTUR_LUBELSKIE, kind === 'kraj' ? '#dfcf9c' : '#e8dcb8', '#8a6d3b', kind === 'kraj' ? 1 : 2);
+  }
+  for (let lat = Math.ceil(ly1 / step) * step; lat <= ly0; lat += step) {
+    const [, y] = toS(lat, lon0);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(S, y);
+    ctx.stroke();
+  }
   const { pts, towns, world, stops, here } = visitedPoints(game);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

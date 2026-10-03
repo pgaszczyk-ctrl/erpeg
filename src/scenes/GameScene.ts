@@ -2008,6 +2008,12 @@ export class GameScene extends Phaser.Scene {
     // Imps stole something: an errand into the fields (one at a time).
     const q = this.folkQuest;
     if (q && q.folk === f) return this.folkQuestTalk();
+    // Someone helped today only says thank you again (bug report 55: the same request came back at once).
+    const helped = session.daily[`pomoc:${f.id}`]?.d === today();
+    if (helped) {
+      this.dialog({ title: `🙂 ${f.name}`, text: PROSBY.znowu, buttons: ['Dzień dobry!'], onChoose: () => {} });
+      return;
+    }
     if (!q && f.role === 'wita' && !f.beaten && ((h >>> 9) % 1000) / 1000 < PROSBY.szansa && this.offerFolkQuest(f, h)) return;
     // Some tell where they are going – and go there along the streets.
     if (f.role === 'wita' && !f.beaten && ((h >>> 3) % 100) / 100 < M.sprawunki) {
@@ -2135,6 +2141,8 @@ export class GameScene extends Phaser.Scene {
     session.exp += r.exp;
     session.stats.missions++;
     f.waiting = false;
+    session.daily[`pomoc:${f.id}`] = { d: today(), n: 1, a: 1 };
+    for (const k of Object.keys(session.daily)) if (k.startsWith('pomoc:') && session.daily[k].d !== today()) delete session.daily[k];
     for (const e of q.enemies) e.temp = true;
     this.folkQuest = null;
     this.dialog({ title: `😊 ${f.name}`, text: `${PROSBY.dziekuje.replace('{nazwa}', q.zguba.nazwa)}\n\n+${r.monety} monet, +${r.exp} EXP`, buttons: ['Nie ma za co!'], onChoose: () => {} });
