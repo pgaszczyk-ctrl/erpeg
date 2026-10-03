@@ -36,6 +36,8 @@ import { KAMIEN_MOCY, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
+import { GRANICA } from '../content/mapa';
+import { worldOrigin } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
@@ -274,6 +276,10 @@ export class GameScene extends Phaser.Scene {
   private leaving = false;
   private travelling = false;
   private justRode = false;
+  /** Walked onto another map (GRANICA): a word on arrival. */
+  private walkedIn: string | null = null;
+  private crossAt = 0;
+  private pushOut = 0;
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
   private demoRun: DemoRun | null = null;
@@ -506,6 +512,8 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('missing', missing);
 
     this.replayAbandoned();
+    if (this.walkedIn) this.toast(this.walkedIn, 4000);
+    this.walkedIn = null;
     if (this.justRode) this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
     this.justRode = false;
 
@@ -606,6 +614,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setAlpha(now < this.protectUntil ? 0.45 + 0.55 * Math.abs(Math.sin(now / 120)) : hidden ? 0.5 : 1);
 
     this.unstickHero(now);
+    this.crossBorder(now);
     if (consumeHeal()) this.quickHeal();
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
@@ -2563,6 +2572,69 @@ export class GameScene extends Phaser.Scene {
         cam.fadeIn(300);
         this.toast(`Woźnica nie znalazł drogi: ${e.message}`);
         this.emitHud();
+      });
+  }
+
+  /**
+   * On foot between the Lublin map and the world map (content/mapa.ts GRANICA): coming from another town
+   * the hero steps onto the real Lublin map (its cobbles, missions and fixed characters), and pushing out
+   * through Lublin's edge takes him onto the world map there.
+   */
+  private crossBorder(now: number) {
+    if (this.travelling || demo.on || now < this.crossAt || this.player.isDead) return;
+    this.crossAt = now + 500;
+    const lublin = cachedMap('lublin');
+    if (!lublin) return;
+    const { x, y } = this.player;
+    if (worldOrigin(this.city.id)) {
+      const ll = this.city.toLatLon(x, y);
+      const p = lublin.fromLatLon(ll.lat, ll.lon);
+      const m = GRANICA.wejscieM * PX_PER_M;
+      if ([[0, 0], [m, 0], [-m, 0], [0, m], [0, -m]].every(([dx, dy]) => lublin.insideCity(p.x + dx, p.y + dy))) {
+        this.walkOnto('lublin', ll, '🏰 Wchodzisz do Lublina.');
+      }
+      return;
+    }
+    if (this.city.id !== 'lublin' || this.player.vel.lengthSq() === 0) {
+      this.pushOut = 0;
+      return;
+    }
+    const f = this.player.facing;
+    const d = GRANICA.wyjscieM * PX_PER_M;
+    if (this.city.insideCity(x + f.x * d, y + f.y * d)) {
+      this.pushOut = 0;
+      return;
+    }
+    this.pushOut += 0.5;
+    if (this.pushOut < GRANICA.wyjscieS) return;
+    // Just past the edge, on a world map whose origin is the nearest 0.1° (the same squares come back, so does their fog).
+    const ll = this.city.toLatLon(x + f.x * d * 3, y + f.y * d * 3);
+    this.walkOnto(`w:${(Math.round(ll.lat * 10) / 10).toFixed(4)},${(Math.round(ll.lon * 10) / 10).toFixed(4)}`, ll, '🌍 Wychodzisz poza Lublin.');
+  }
+
+  /** Restarts the scene on another map with the hero at (lat, lon) – no coach, no fee. */
+  private walkOnto(mapId: string, ll: { lat: number; lon: number }, word: string) {
+    this.travelling = true;
+    this.keepFog();
+    const cam = this.cameras.main;
+    cam.fadeOut(500, 0, 0, 0);
+    getMap(mapId)
+      .then(async (city) => {
+        const to = city.fromLatLon(ll.lat, ll.lon);
+        await city.ensure(to.x, to.y, LOAD_RADIUS);
+        session.arrive = city.reachableNear(to.x, to.y);
+        await prepareMap(city);
+        session.hp = this.player.hp;
+        this.walkedIn = word;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      })
+      .catch((e: Error) => {
+        this.travelling = false;
+        this.crossAt = this.time.now + 10_000;
+        cam.fadeIn(300);
+        this.toast(`Nie da się tu przejść: ${e.message}`);
       });
   }
 

@@ -39,3 +39,11 @@ export const MIASTA_WOJEWODZKIE: { nazwa: string; lat: number; lon: number }[] =
   { nazwa: 'Gorzów Wielkopolski', lat: 52.7368, lon: 15.2288 },
 ];
 export const ODWIEDZONE_KM = 20;
+
+/**
+ * Pieszo między mapą Lublina a mapą świata (zgłoszenia 45, 47, 48, 50): kto dojdzie do Lublina z innego
+ * miasta, wchodzi na prawdziwą mapę Lublina (bruk, zadania, stałe postacie), gdy jest `wejscieM` za jej
+ * granicą; kto pcha się przez granicę Lublina na zewnątrz (punkt `wyjscieM` przed nim jest poza nią),
+ * po `wyjscieS` sekundach wychodzi na mapę świata.
+ */
+export const GRANICA = { wejscieM: 80, wyjscieM: 15, wyjscieS: 1 };
