@@ -6,6 +6,7 @@ import { PRZEDMIOTY, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, type Umiejetnosc }
 import { normalizeSlot, goodsLabel } from '../inventory';
 import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
+import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy } from '../content/quizyGemini';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -109,7 +110,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -130,6 +131,7 @@ function render() {
   else if (tab === 'codes') codes(main);
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
+  else if (tab === 'quizzes') quizzesTab(main);
   else settings(main);
 }
 
@@ -637,7 +639,7 @@ function settings(main: HTMLElement) {
         msg.textContent = (e as Error).message;
       }
     }, 'b p'),
-  ]), quizCard(), btn('Wyloguj', () => {
+  ]), btn('Wyloguj', () => {
     key = '';
     try {
       sessionStorage.removeItem('erpeg-admin');
@@ -648,40 +650,156 @@ function settings(main: HTMLElement) {
   }));
 }
 
-/** School quizzes: counts and the upload key for an outside program (add_quizzes). */
-function quizCard() {
-  type Q = { today: number; tomorrow: number; byLevel: Record<string, number>; hasKey: boolean; last: string | null; sample: { level: number; category: string; question: string; answers: string[] }[] };
-  const info = el('div', {}, ['Wczytuję…']);
-  const keyOut = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+/** School quizzes (🧠 Quizy): numbers, Gemini's instructions and schema, pasting its answer, the list with deleting, the key. */
+function quizzesTab(main: HTMLElement) {
+  type Q = { today: number; tomorrow: number; in5?: number; byLevel: Record<string, number>; reserve?: Record<string, number>; answered?: number; total?: number; history?: number; hasKey: boolean; last: string | null };
+  type Row = { id: number; level: number; category: string; question: string; answers: string[]; from: string; to: string; answered: number };
   const LEVELS = ['maluch', 'uczeń', 'odkrywca', 'mędrzec'];
-  const load = () =>
+  const missing = (e: Error) => /function|funkcj|not find|does not exist|schema cache/i.test(e.message) ? 'Ta funkcja nie jest jeszcze włączona na serwerze (docs/sql/quizy-admin.sql).' : e.message;
+
+  // Numbers.
+  const info = el('div', {}, ['Wczytuję…']);
+  const loadInfo = () =>
     call<Q>('admin_quizzes', {}).then((q) => {
-      info.replaceChildren(
-        el('p', {}, [`Na dziś: ${q.today} pytań, na jutro: ${q.tomorrow}. ${LEVELS.map((l, i) => `${l}: ${q.byLevel[i] ?? 0}`).join(', ')}.`]),
-        el('p', {}, [q.last ? `Ostatnia paczka: ${new Date(q.last).toLocaleString('pl-PL')}` : 'Jeszcze nic nie wgrano – gra używa pytań wbudowanych i sama układa rachunki.']),
-        el('p', {}, [q.hasKey ? 'Klucz do wgrywania jest ustawiony.' : 'Brak klucza do wgrywania.']),
-        ...q.sample.slice(0, 5).map((s) => el('p', { className: 'msg' }, [`[${LEVELS[s.level]}, ${s.category}] ${s.question} → ${s.answers[0]}`])),
-      );
+      const lv = (o: Record<string, number> | undefined) => LEVELS.map((l, i) => `${l} ${o?.[i] ?? 0}`).join(' · ');
+      info.replaceChildren(...[
+        el('p', {}, [`Dziś w szkołach: ${q.today} pytań (${lv(q.byLevel)}). Jutro: ${q.tomorrow}${q.in5 !== undefined ? `, za 5 dni: ${q.in5}` : ''}.`]),
+        q.reserve ? el('p', {}, [`Zapas bez odpowiedzi (wraca, gdy brak nowych): ${lv(q.reserve)}.`]) : null,
+        q.total !== undefined ? el('p', {}, [`W bazie ${q.total} pytań, ${q.answered} już z odpowiedzią; pamięć powtórek: ${q.history}.`]) : null,
+        el('p', {}, [q.last ? `Ostatnia paczka: ${new Date(q.last).toLocaleString('pl-PL')}` : 'Jeszcze nic nie wgrano.']),
+        el('p', { className: 'msg' }, ['Każda paczka jest ważna 5 dni. Gdy na poziomie jest dziś mniej niż 150 pytań, gra dobiera stare z zapasu, a gdy i zapasu brak – więcej rachunków.']),
+      ].filter((x): x is HTMLParagraphElement & Record<string, unknown> => !!x));
     }).catch((e: Error) => info.replaceChildren(e.message));
-  load();
-  return el('div', { className: 'card', style: 'max-width: 640px' }, [
-    el('h3', {}, ['🧠 Quizy w szkołach']),
-    info,
-    el('p', {}, ['Zewnętrzny program (np. inny AI na harmonogramie) wgrywa pytania funkcją add_quizzes z kluczem poniżej; każda paczka jest ważna 2 dni, stare same znikają. Opis: docs/quizy.md w repozytorium.']),
-    btn('Wygeneruj nowy klucz', async () => {
-      if (!confirm('Stary klucz przestanie działać. Wygenerować nowy?')) return;
-      try {
-        const r = await call<{ key: string }>('admin_new_quiz_key', {});
-        keyOut.style.display = 'block';
-        keyOut.textContent = `Nowy klucz (pokazany tylko raz – skopiuj go do programu):\n${r.key}`;
-        load();
-      } catch (e) {
-        keyOut.style.display = 'block';
-        keyOut.textContent = (e as Error).message;
-      }
-    }, 'b'),
-    keyOut,
-  ]);
+  loadInfo();
+
+  // Instructions for Gemini.
+  const copy = (text: string, b: HTMLButtonElement) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      const t = b.textContent;
+      b.textContent = '✓ Skopiowano';
+      setTimeout(() => (b.textContent = t), 1500);
+    }).catch(() => {});
+  };
+  const prompt = el('pre', { className: 'card', style: 'white-space: pre-wrap; max-height: 220px; overflow: auto; font-size: 12px' }, [POLECENIE_GEMINI]);
+  const schema = el('pre', { className: 'card', style: 'white-space: pre-wrap; max-height: 220px; overflow: auto; font-size: 12px; display: none' }, [JSON.stringify(SCHEMAT_QUIZOW, null, 2)]);
+  const copyPrompt: HTMLButtonElement = btn('📋 Kopiuj polecenie', () => copy(POLECENIE_GEMINI, copyPrompt));
+  const copySchema: HTMLButtonElement = btn('📋 Kopiuj schemat', () => copy(JSON.stringify(SCHEMAT_QUIZOW, null, 2), copySchema));
+  const showSchema = btn('Pokaż schemat JSON', () => (schema.style.display = schema.style.display === 'none' ? 'block' : 'none'));
+
+  // Pasting Gemini's answer.
+  const box = el('textarea', { rows: 8, placeholder: '{"quizzes": [ … ]}  ← wklej tu odpowiedź Gemini', style: 'width: 100%; font-family: monospace; font-size: 12px' });
+  const days = el('select', {}, [5, 6, 7].map((d) => el('option', { value: String(d) }, [`ważne ${d} dni`])));
+  const out = el('div', { className: 'msg' });
+  const check = () => {
+    const r = sprawdzQuizy(box.value);
+    const per = LEVELS.map((l, i) => `${l} ${r.ok.filter((q) => q.level === i).length}`).join(' · ');
+    out.replaceChildren(
+      el('p', { className: r.ok.length ? 'msg ok' : 'msg bad' }, [`Dobrych pytań: ${r.ok.length} (${per}).${r.bledy.length ? ` Odrzucone: ${r.bledy.length}.` : ''}`]),
+      ...r.bledy.slice(0, 12).map((b) => el('p', { className: 'msg bad' }, [b])),
+      ...r.ok.slice(0, 5).map((q) => el('p', { className: 'msg' }, [`[${LEVELS[q.level]}, ${q.category}] ${q.question} → ✔ ${q.answers[0]}`])),
+    );
+    return r;
+  };
+  const upload = btn('⬆ Wgraj do gry', async () => {
+    const r = check();
+    if (!r.ok.length) return;
+    if (!confirm(`Wgrać ${r.ok.length} pytań? Uczniowie zobaczą je od dziś.`)) return;
+    try {
+      const res = await call<{ added?: number; repeated?: number; skipped?: number; error?: string }>('admin_add_quizzes', { p_quizzes: r.ok, p_days: Number(days.value) });
+      if (res.error) throw new Error(res.error);
+      out.prepend(el('p', { className: 'msg ok' }, [`Wgrano: ${res.added}. Powtórki odrzucone: ${res.repeated}. Złe: ${res.skipped}.`]));
+      box.value = '';
+      loadInfo();
+      loadList();
+    } catch (e) {
+      out.prepend(el('p', { className: 'msg bad' }, [missing(e as Error)]));
+    }
+  }, 'b p');
+
+  // The list (latest first), filter and delete.
+  const lvl = el('select', {}, [el('option', { value: '' }, ['wszystkie poziomy']), ...LEVELS.map((l, i) => el('option', { value: String(i) }, [l]))]);
+  const q = el('input', { type: 'search', placeholder: 'szukaj w pytaniach…' });
+  const list = el('div', { className: 'scroll' });
+  const loadList = () =>
+    call<Row[]>('admin_quiz_list', { p_level: lvl.value === '' ? null : Number(lvl.value), p_q: q.value || null, p_limit: 150 }).then((rows) => {
+      const today = new Date().toISOString().slice(0, 10);
+      list.replaceChildren(el('table', {}, [
+        el('thead', {}, [el('tr', {}, ['Poziom', 'Kategoria', 'Pytanie', 'Dobra / złe', 'Ważne', 'Odp.', ''].map((h) => el('th', {}, [h])))]),
+        el('tbody', {}, rows.map((r) => {
+          const del = btn('🗑', async () => {
+            if (!confirm(`Usunąć pytanie?\n\n${r.question}`)) return;
+            try {
+              await call('admin_quiz_delete', { p_id: r.id });
+              row.remove();
+              loadInfo();
+            } catch (e) {
+              alert(missing(e as Error));
+            }
+          });
+          const row = el('tr', {}, [
+            el('td', {}, [LEVELS[r.level] ?? String(r.level)]),
+            el('td', {}, [r.category]),
+            el('td', {}, [r.question]),
+            el('td', {}, [el('b', {}, [`✔ ${r.answers[0]}`]), ` · ${r.answers.slice(1).join(' · ')}`]),
+            el('td', {}, [`${r.from.slice(5)}–${r.to.slice(5)}${r.from <= today && today <= r.to ? ' ●' : ''}`]),
+            el('td', {}, [String(r.answered)]),
+            el('td', {}, [del]),
+          ]);
+          return row;
+        })),
+      ]));
+    }).catch((e: Error) => list.replaceChildren(el('p', { className: 'msg' }, [missing(e)])));
+  lvl.onchange = () => loadList();
+  q.oninput = () => {
+    clearTimeout((q as unknown as { t?: number }).t);
+    (q as unknown as { t?: number }).t = window.setTimeout(loadList, 400);
+  };
+  loadList();
+
+  // The key for a program that uploads by itself (add_quizzes).
+  const keyOut = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
+  const keyBtn = btn('Wygeneruj nowy klucz', async () => {
+    if (!confirm('Stary klucz przestanie działać. Wygenerować nowy?')) return;
+    try {
+      const r = await call<{ key: string }>('admin_new_quiz_key', {});
+      keyOut.style.display = 'block';
+      keyOut.textContent = `Nowy klucz (pokazany tylko raz – skopiuj go do programu):\n${r.key}`;
+      loadInfo();
+    } catch (e) {
+      keyOut.style.display = 'block';
+      keyOut.textContent = (e as Error).message;
+    }
+  });
+
+  main.append(
+    el('h2', {}, ['🧠 Quizy w szkołach']),
+    el('div', { className: 'card' }, [info]),
+    el('div', { className: 'card' }, [
+      el('h3', {}, ['1. Polecenie dla Gemini']),
+      el('p', {}, ['Skopiuj polecenie do Gemini (czat albo program). Najlepiej z włączoną odpowiedzią w formacie JSON i schematem poniżej – wtedy Gemini zawsze odda dobry układ.']),
+      el('div', {}, [copyPrompt, copySchema, showSchema]),
+      prompt,
+      schema,
+    ]),
+    el('div', { className: 'card' }, [
+      el('h3', {}, ['2. Wklej odpowiedź Gemini']),
+      box,
+      el('div', {}, [btn('Sprawdź', () => void check()), upload, days]),
+      out,
+    ]),
+    el('div', { className: 'card' }, [
+      el('h3', {}, ['3. Pytania w grze']),
+      el('p', { className: 'msg' }, ['Złe pytanie możesz usunąć – nie wróci, bo gra pamięta wszystkie wgrane pytania. ● = zadawane dziś.']),
+      el('div', {}, [lvl, ' ', q]),
+      list,
+    ]),
+    el('div', { className: 'card' }, [
+      el('h3', {}, ['Klucz dla programu, który wgrywa sam']),
+      el('p', {}, ['Program (np. Gemini na harmonogramie) może wysyłać pytania funkcją add_quizzes z tym kluczem – opis w docs/quizy-gemini.md.']),
+      keyBtn,
+      keyOut,
+    ]),
+  );
 }
 
 // ------------------------------------------------------------------ start

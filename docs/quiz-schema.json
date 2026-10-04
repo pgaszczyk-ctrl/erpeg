@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "properties": {
+    "quizzes": {
+      "type": "array",
+      "description": "Pytania quizowe po polsku.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "0: 5–7 lat, 1: 8–9 lat, 2: 10–12 lat, 3: nastolatki i dorośli"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "matematyka",
+              "łamigłówka",
+              "zagadka",
+              "przyroda",
+              "geografia",
+              "historia",
+              "język",
+              "nauka",
+              "sztuka",
+              "sport",
+              "Lubelszczyzna"
+            ]
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Pytanie po polsku, jednoznaczne."
+          },
+          "answers": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "PIERWSZA odpowiedź jest dobra, pozostałe wiarygodne, ale na pewno złe. Wszystkie różne."
+          }
+        },
+        "required": [
+          "level",
+          "category",
+          "question",
+          "answers"
+        ],
+        "propertyOrdering": [
+          "level",
+          "category",
+          "question",
+          "answers"
+        ]
+      }
+    }
+  },
+  "required": [
+    "quizzes"
+  ]
+}
