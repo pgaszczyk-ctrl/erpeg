@@ -332,6 +332,8 @@ export function wallHeight(b: Building) {
 
 // Texture keys must be unique for the whole game, across scene restarts.
 let textureCounter = 0;
+const czasyKawalkow: number[] = [];
+(window as unknown as { __czasyKawalkow: number[] }).__czasyKawalkow = czasyKawalkow;
 
 interface Chunk {
   key: string;
@@ -457,7 +459,10 @@ export class MapRenderer {
     const y0 = cy * CHUNK;
     const ctx = chunk.tex.getContext();
     this.patterns ??= this.withArt(ctx, makePatterns(ctx));
+    const t0 = performance.now();
     this.paint(ctx, x0, y0);
+    // Paint times of the last chunks (ms), for checks on phones and in automated tests.
+    (czasyKawalkow.push(Math.round(performance.now() - t0)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
     chunk.tex.refresh();
     chunk.img.setPosition(x0, y0).setVisible(true);
     this.chunks.set(chunk.key, chunk);
