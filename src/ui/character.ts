@@ -3,7 +3,7 @@ import { LECZENIE_OWOCAMI } from '../content/sklepy';
 import { slotCell, slotDrag, slotLabel } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf,
+  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition,
 } from '../inventory';
 import { session } from '../quests';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
@@ -217,7 +217,6 @@ function show(host: CharacterHost) {
       ['🏆 Rozbite gangi', String(session.stats.gangs ?? 0)],
       ['🧪 Mikstury lecznicze', String(session.mikstury)],
       ['⛺ Namioty', session.namioty.length ? session.namioty.map((t) => `${t.left}/${t.max}`).join(', ') + ' nocy' : 'brak (sklep budowlany lub sportowy)'],
-      ...(session.kamienie ? [['🔮 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
       ...(session.diamenty ? [['💎 Diamenty', String(session.diamenty)] as [string, string]] : []),
     ]));
   };
@@ -251,7 +250,7 @@ function show(host: CharacterHost) {
           const it = item(gear.equip[at.m]);
           if (!it) return ask(TALIZMANY.includes(at.m) ? 'Miejsce na talizman: przeciągnij tu talizman z plecaka, wtedy działa.' : `${MIEJSCA[at.m]}: pusto.`, []);
           const imb = imbueOf(it.id);
-          const info = `${it.nazwa}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}`;
+          const info = `${it.nazwa}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}${wearText(it.id)}`;
           if (it.id === 'kijek') return ask(info, []);
           return ask(info, [['Zdejmij do plecaka', () => (unequip(at.m) ? undefined : (alertFull(), false))]]);
         }
@@ -261,7 +260,7 @@ function show(host: CharacterHost) {
         if (!sl) return;
         if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
-        ask(slotLabel(sl), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+        ask(slotLabel(sl) + wearText(sl.item), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },
     });
   };
@@ -320,4 +319,14 @@ function show(host: CharacterHost) {
   };
 
   render();
+}
+
+/** " Wytrzymałość: 312/600." for things that wear out (worn, broken, glass). */
+function wearText(id: string) {
+  const c = condition(id);
+  if (!c) return '';
+  const it = item(id);
+  const wears = session.level.zuzycie || it?.szklany;
+  if (!wears) return ' Na tym poziomie trudności się nie zużywa.';
+  return c.left <= 0 ? ' 🔧 Zepsuty – napraw go w sklepie (do tego czasu bije jak kijek).' : ` Wytrzymałość: ${c.left}/${c.max}${it?.szklany ? ' (potem pęknie)' : ''}.`;
 }

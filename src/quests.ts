@@ -11,6 +11,8 @@ import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci } from './content/historia';
+import { loadSettings } from './settings';
+import { WSKRZESZENIE } from './content/sklepy';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -52,8 +54,6 @@ export const session = {
   /** Bank deposits (content/banki.ts). */
   lokaty: [] as NonNullable<SaveData['lokaty']>,
   story: { st: 'start', walked: 0 } as Story,
-  /** Power stones (content/sklepy.ts KAMIEN_MOCY). */
-  kamienie: 0,
   /** Diamonds (premium, content/sklepy.ts DIAMENT). */
   diamenty: 0,
   /** Lasting rewards from missions: znizka_woznica (1 = coach rides cheaper), przejazd (free rides left). */
@@ -126,6 +126,8 @@ export function spend(n: number) {
 
 /** Loads the missions made in the admin panel; the game works without them too. */
 export async function loadContent() {
+  // The admin panel's knobs (prices, speed…), in parallel with the missions.
+  const settings = loadSettings();
   // Today's school quizzes (no waiting for them: the built-in ones fill in).
   Promise.race([api.quizzes(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
     .then(setServerQuizzes)
@@ -142,6 +144,7 @@ export async function loadContent() {
     session.extra = [];
     session.secrets = new Set();
   }
+  await settings;
 }
 
 export function startSession(r: LoginResult) {
@@ -171,8 +174,8 @@ export function startSession(r: LoginResult) {
   session.fogs = { ...(p.save.fogs ?? {}) };
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
-  session.kamienie = Math.max(0, p.save.kamienie ?? 0);
-  session.diamenty = Math.max(0, p.save.diamenty ?? 0);
+  // Power stones are gone (4 Oct 2026): each old one is worth one diamond resurrection.
+  session.diamenty = Math.max(0, p.save.diamenty ?? 0) + Math.max(0, p.save.kamienie ?? 0) * WSKRZESZENIE.diamentow;
   session.flagi = { ...(p.save.flagi ?? {}) };
   session.byl = Array.isArray(p.save.byl) ? p.save.byl.slice(-40) : [];
   session.immortal = !!p.immortal;
@@ -219,7 +222,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, kamienie: session.kamienie, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };

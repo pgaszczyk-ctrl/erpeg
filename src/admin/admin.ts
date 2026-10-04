@@ -7,6 +7,7 @@ import { normalizeSlot, goodsLabel } from '../inventory';
 import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
 import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
+import { POKRETLA } from '../content/ustawienia';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -617,7 +618,9 @@ function settings(main: HTMLElement) {
   const a = el('input', { type: 'password', autocomplete: 'new-password' });
   const b = el('input', { type: 'password', autocomplete: 'new-password' });
   const msg = el('p', { className: 'msg' });
-  main.append(el('h2', {}, ['Ustawienia']), el('div', { className: 'card', style: 'max-width: 420px' }, [
+  const knobs = el('div', { className: 'card', style: 'max-width: 640px' }, [el('p', { className: 'muted' }, ['Wczytuję pokrętła…'])]);
+  void knobsCard(knobs);
+  main.append(el('h2', {}, ['Ustawienia']), knobs, el('div', { className: 'card', style: 'max-width: 420px' }, [
     el('h3', {}, ['Zmień hasło admina']),
     el('label', { className: 'f' }, [el('span', {}, ['Nowe hasło (co najmniej 10 znaków)']), a]),
     el('label', { className: 'f' }, [el('span', {}, ['Powtórz']), b]),
@@ -648,6 +651,51 @@ function settings(main: HTMLElement) {
     }
     loginScreen();
   }));
+}
+
+/** The game's knobs (content/ustawienia.ts) and the gold in the game. */
+async function knobsCard(box: HTMLElement) {
+  type S = { values: Record<string, number>; gold: { alive: number; coins: number; chest: number; diamonds: number } };
+  let s: S;
+  try {
+    s = await call<S>('admin_settings', {});
+  } catch (e) {
+    box.replaceChildren(el('p', { className: 'msg bad' }, [`Nie udało się wczytać pokrętł: ${(e as Error).message}`]));
+    return;
+  }
+  const fmt = (n: number) => Math.round(n).toLocaleString('pl-PL');
+  const g = s.gold;
+  const rows: (HTMLElement | string)[] = [];
+  let group = '';
+  for (const p of POKRETLA) {
+    if (p.grupa !== group) rows.push(el('h4', { style: 'margin: 12px 0 4px' }, [(group = p.grupa)]));
+    const changed = p.k in s.values;
+    const input = el('input', { type: 'number', min: String(p.min), max: String(p.max), step: String(p.krok ?? 1), value: String(changed ? s.values[p.k] : p.domyslnie), style: 'width: 120px' });
+    const note = el('small', { className: 'muted' }, [changed ? `zmienione (domyślnie ${p.domyslnie})` : 'domyślne']);
+    const save = async (v: number | null) => {
+      if (v !== null && !(v >= p.min && v <= p.max)) return void (note.textContent = `Dozwolone od ${p.min} do ${p.max}.`);
+      try {
+        await call('admin_set_setting', { p_k: p.k, p_v: v });
+        await knobsCard(box);
+      } catch (e) {
+        note.textContent = (e as Error).message;
+      }
+    };
+    rows.push(el('div', { style: 'display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0' }, [
+      el('span', { style: 'flex: 1 1 240px' }, [p.nazwa]),
+      input,
+      btn('Zapisz', () => void save(Number(input.value))),
+      changed && btn('Przywróć', () => void save(null)),
+      note,
+    ]));
+  }
+  box.replaceChildren(
+    el('h3', {}, ['💰 Złoto w grze']),
+    el('p', {}, [`Żywe postacie: ${g.alive}. Monety przy sobie: ${fmt(g.coins)}, w skrzyniach: ${fmt(g.chest)}, razem ${fmt(g.coins + g.chest)}. Diamenty: ${fmt(g.diamonds)} 💎.`]),
+    el('h3', {}, ['🎛 Pokrętła gry']),
+    el('p', { className: 'muted' }, ['Zmiana działa od następnego wejścia gracza do gry (tylko serwer testowy – produkcja ma jeszcze stare liczby).']),
+    ...rows,
+  );
 }
 
 /** School quizzes (🧠 Quizy): numbers, Gemini's instructions and schema, pasting its answer, the list with deleting, the key. */

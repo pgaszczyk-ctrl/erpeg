@@ -39,7 +39,7 @@ export interface SaveData {
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
   story?: import('./quests').Story;
-  /** Power stones: each brings the hero back once after dying. */
+  /** Old power stones (gone since 4 Oct 2026; each becomes WSKRZESZENIE.diamentow diamonds at login). */
   kamienie?: number;
   /** Healing potions from the alchemist. */
   mikstury?: number;

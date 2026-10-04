@@ -12,6 +12,8 @@ import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
+import { WSKRZESZENIE, DIAMENT } from '../content/sklepy';
+import { loadSettings } from '../settings';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -47,6 +49,7 @@ function formatDate(iso: string | null) {
 
 /** `reopen`: go straight to this character (e.g. after dying in the game). */
 export function showMenu(city: CityMap, reopen?: { name: string; code: string }): Promise<void> {
+  void loadSettings(); // the resurrection price etc. (also awaited by loadContent)
   return new Promise((resolve) => {
     root?.remove();
     root = el('div', { id: 'menu' });
@@ -373,13 +376,23 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       const err = error();
       const endless = !!p.infinite_resurrect;
       const free = endless || (p.resurrections ?? 0) < 1;
-      const rise: HTMLButtonElement = free
-        ? button(endless ? '✨ Wskrześ (postać testowa – bez limitu)' : '✨ Wskrześ – pierwszy raz za darmo', () =>
+      const cost = WSKRZESZENIE.diamentow;
+      const have = Math.max(0, p.save?.diamenty ?? 0) + Math.max(0, p.save?.kamienie ?? 0) * cost;
+      // Missing diamonds can be bought with the character's coins (the server checks and takes them).
+      const miss = Math.max(0, cost - have);
+      const coins = miss * DIAMENT.monet;
+      const canBuy = miss > 0 && (p.save?.coins ?? 0) >= coins;
+      const label = endless ? '✨ Wskrześ (postać testowa – bez limitu)'
+        : free ? '✨ Wskrześ – pierwszy raz za darmo'
+        : miss === 0 ? `💎 Wskrześ za ${cost} 💎 (masz ${have})`
+        : `💎 Dokup ${miss} 💎 za ${coins.toLocaleString('pl-PL')} monet i wskrześ`;
+      const rise: HTMLButtonElement = free || miss === 0 || canBuy
+        ? button(label, () =>
             busy(rise, err, async () => {
               const back = await api.resurrect(p.name, p.idik);
               await play(back);
             }), 'm-primary')
-        : el('button', { type: 'button', className: 'm-btn', disabled: true }, ['Wskrześ za 1 € (płatności wkrótce)']);
+        : el('button', { type: 'button', className: 'm-btn', disabled: true }, [`Brakuje ${miss} 💎 – kupno za ${miss * DIAMENT.euro} € już wkrótce`]);
       screen(
         el('h2', {}, [`👻 ${p.name} nie żyje`]),
         ghostMap(city, p),
@@ -390,7 +403,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('p', { className: 'm-warn' }, [
           free
             ? 'Duch wciąż błąka się po mieście… Możesz go wskrzesić: postać wróci do punktu startowego z rzeczami i doświadczeniem z ostatniego zapisu.'
-            : 'Ta postać była już raz wskrzeszona. Kolejne wskrzeszenie będzie kosztować 1 €.',
+            : `Ta postać była już raz wskrzeszona. Porażka… ale moc diamentów może ją ocalić: kolejne wskrzeszenie kosztuje ${WSKRZESZENIE.diamentow} 💎.`,
         ]),
         err,
         rise,

@@ -60,11 +60,13 @@ export const LAS = { kratkaM: 30, grzybowNaKratke: 3, szansaGrzyb: 0.45, szansaD
 export const DRZEWA = { na1000m2: 0.5, maksNaObszar: 16, minimalnyObszarM2: 1200 };
 
 /**
- * KAMIEŃ MOCY – do kupienia w świątyniach. Gdy bohater zginie, kamień się
- * rozsypuje i wskrzesza go (w hotelu, w którym ostatnio spał, albo w domu),
- * zamiast śmierci na zawsze. Cena w monetach albo w złotówkach (płatności wkrótce).
+ * WSKRZESZENIE za diamenty (zastąpiło kamień mocy, 4 X 2026). Gdy bohater
+ * zginie, a ma tyle diamentów, gra pyta: „Porażka. Moc diamentów może cię
+ * ocalić…” – wraca do życia w hotelu, w którym ostatnio spał, albo w domu.
+ * Tyle samo kosztuje wskrzeszenie martwej postaci w menu (po pierwszym,
+ * darmowym). Pokrętło w panelu admina: `wskrzeszenie_diamenty`.
  */
-export const KAMIEN_MOCY = { cena: 1_000_000_000, zlotych: 10 };
+export const WSKRZESZENIE = { diamentow: 10 };
 
 /**
  * DIAMENT – waluta premium (kupowana w banku: za monety albo prawdziwe

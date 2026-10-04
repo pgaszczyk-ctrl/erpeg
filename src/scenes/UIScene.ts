@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { WSKRZESZENIE } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showBrag } from '../ui/brag';
@@ -414,7 +415,7 @@ export class UIScene extends Phaser.Scene {
     this.coinText.setText(String(s.coins));
     this.expText.setText(maxed ? `poz. ${s.level} (max) · ${s.exp} EXP` : `poz. ${s.level} · ${s.exp}/${to} EXP`);
     this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
-    this.swordText.setText(`⚔ ${s.sword}`);
+    this.swordText.setText(`⚔ ${s.sword}`).setColor(s.swordWarn ? '#ff6b6b' : '#e8e8f0');
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;
     this.streetText.setText([s.street, s.pogoda].filter(Boolean).join('  ·  '));
@@ -809,7 +810,7 @@ export class UIScene extends Phaser.Scene {
       .text(width / 2, 0, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
       .setOrigin(0.5, 0);
     const info = this.add
-      .text(width / 2, 0, `Śmierć jest ostateczna.\nTwoje imię trafia na Tablicę Pamięci.\n\nZdobyte doświadczenie: ${s?.exp ?? 0} EXP\n\nPierwsze wskrzeszenie jest za darmo.`, {
+      .text(width / 2, 0, `Śmierć jest ostateczna.\nTwoje imię trafia na Tablicę Pamięci.\n\nZdobyte doświadczenie: ${s?.exp ?? 0} EXP\n\nPierwsze wskrzeszenie jest za darmo, każde kolejne kosztuje ${WSKRZESZENIE.diamentow} 💎.`, {
         fontFamily: 'monospace', fontSize: '17px', color: '#ffffff', align: 'center', wordWrap: { width: width - 40 }, lineSpacing: 4,
       })
       .setOrigin(0.5, 0);

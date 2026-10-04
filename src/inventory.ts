@@ -5,6 +5,7 @@ import {
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 import { esencja } from './content/esencje';
+import { ZUZYCIE, STRZALY } from './content/zuzycie';
 
 // The character's things: equipped items, a 5-slot backpack, skill practice
 // and whether they learned magic. Fruit, vegetables, mushrooms and wood lie in
@@ -57,6 +58,10 @@ export interface Gear {
   magic: boolean;
   /** Imbued weapons: item id → essence and until when (Date.now ms). */
   imbue: Record<string, { e: string; until: number }>;
+  /** Wear: item id → blows/shots used up (content/zuzycie.ts). */
+  wear: Record<string, number>;
+  /** Arrows in the quiver (STRZALY.kolczan at most). */
+  arrows: number;
 }
 
 export const gear: Gear = freshGear();
@@ -68,6 +73,8 @@ export function freshGear(): Gear {
     skills: { miecz: 0, luk: 0, magia: 0 },
     magic: false,
     imbue: {},
+    wear: {},
+    arrows: 0,
   };
 }
 
@@ -78,6 +85,7 @@ export function item(id: string | null | undefined): Przedmiot | undefined {
 /** Loads gear from a save, converting saves from before the backpack. */
 export function loadGear(save: {
   equip?: Gear['equip']; bag?: Slot[]; skills?: Gear['skills']; magic?: boolean; nasycenia?: Gear['imbue'];
+  zuzycie?: Gear['wear']; strzaly?: number;
   sword?: string; swordSkill?: number; fruits?: Partial<Record<Owoc, number>>;
 }) {
   const g = freshGear();
@@ -96,6 +104,9 @@ export function loadGear(save: {
   else if (save.swordSkill) g.skills.miecz = pointsForLevel(1 + save.swordSkill * 2); // old school levels
   g.magic = !!save.magic;
   for (const [id, v] of Object.entries(save.nasycenia ?? {})) if (v && esencja(v.e) && v.until > Date.now()) g.imbue[id] = { e: v.e, until: v.until };
+  for (const [id, n] of Object.entries(save.zuzycie ?? {})) if (item(id)?.wytrzymalosc && n > 0) g.wear[id] = Math.min(n, item(id)!.wytrzymalosc!);
+  // Characters from before arrows get a full quiver, so their bow keeps working.
+  g.arrows = Math.max(0, Math.min(STRZALY.kolczan, Math.round(save.strzaly ?? STRZALY.naStart)));
   // Bows and wands used to go in the second hand; now they are held in the main hand.
   const off = item(g.equip.dystans);
   if (off && off.miejsce === 'bron' && g.bag.length < PLECAK.miejsc) {
@@ -108,7 +119,7 @@ export function loadGear(save: {
 }
 
 export function saveGear() {
-  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic, nasycenia: gear.imbue };
+  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic, nasycenia: gear.imbue, zuzycie: gear.wear, strzaly: gear.arrows };
 }
 
 // ---------------------------------------------------------------- skills
@@ -203,7 +214,8 @@ export function weaponEffect() {
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */
 export function meleeDamage() {
   const p = item(gear.equip.bron);
-  const moc = p && !p.rodzaj ? p.moc : 1; // a bow or wand used as a club is no better than a stick
+  // A bow or wand used as a club, or a broken sword, is no better than a stick.
+  const moc = p && !p.rodzaj && !isBroken(p.id) ? p.moc : 1;
   return skillLevel('miecz') + WALKA.zaMoc * moc;
 }
 
@@ -212,7 +224,84 @@ export function shotDamage(weapon: Przedmiot) {
   const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
   const off = item(gear.equip.dystans);
   const extra = skill === 'magia' && off?.rodzaj === 'magia' ? off.moc : 0;
-  return skillLevel(skill) + WALKA.zaMoc * (weapon.moc + extra);
+  return skillLevel(skill) + WALKA.zaMoc * ((isBroken(weapon.id) ? 1 : weapon.moc) + extra);
+}
+
+// ---------------------------------------------------------------- wear and arrows
+
+/** What is left of an item that wears out (null = it doesn't). */
+export function condition(id: string | null | undefined): { left: number; max: number } | null {
+  const max = item(id)?.wytrzymalosc;
+  if (!id || !max) return null;
+  return { left: Math.max(0, max - (gear.wear[id] ?? 0)), max };
+}
+
+export function isBroken(id: string | null | undefined) {
+  const c = condition(id);
+  return !!c && c.left <= 0;
+}
+
+/**
+ * One blow or shot of an item: wears it out when `wearOn` (the difficulty) –
+ * glass always. 'warn' = it just got blunt, 'broken' = it just broke,
+ * 'shattered' = glass gone (back to the stick).
+ */
+export function useWeapon(id: string | null | undefined, wearOn: boolean): 'ok' | 'warn' | 'broken' | 'shattered' {
+  const p = item(id);
+  const c = condition(id);
+  if (!p || !c || c.left <= 0 || !(wearOn || p.szklany)) return 'ok';
+  gear.wear[p.id] = (gear.wear[p.id] ?? 0) + 1;
+  const left = c.left - 1;
+  if (left <= 0) {
+    if (!p.szklany) return 'broken';
+    // Glass shatters: the sword is gone.
+    delete gear.wear[p.id];
+    for (const m of Object.keys(gear.equip) as Miejsce[]) if (gear.equip[m] === p.id) gear.equip[m] = m === 'bron' ? 'kijek' : null;
+    const at = gear.bag.findIndex((s) => 'item' in s && s.item === p.id);
+    if (at >= 0) gear.bag.splice(at, 1);
+    return 'shattered';
+  }
+  const warnAt = Math.max(1, Math.round((c.max * ZUZYCIE.ostrzezenieProcent) / 100));
+  return left === warnAt ? 'warn' : 'ok';
+}
+
+/** Coins to repair an item fully (0 = nothing to repair, glass can't be). */
+export function repairCost(id: string) {
+  const p = item(id);
+  const c = condition(id);
+  if (!p || !c || p.szklany || c.left >= c.max) return 0;
+  return Math.max(1, Math.ceil((p.cena * ZUZYCIE.naprawaCzescCeny * (c.max - c.left)) / c.max));
+}
+
+export function repair(id: string) {
+  delete gear.wear[id];
+}
+
+/** Owned items (worn first, then the backpack) that a shop could repair. */
+export function repairable(): string[] {
+  const ids = [...Object.values(gear.equip), ...gear.bag.map((s) => ('item' in s ? s.item : null))];
+  return [...new Set(ids.filter((id): id is string => !!id && repairCost(id) > 0))];
+}
+
+/** Takes one arrow from the quiver; false when it is empty. */
+export function takeArrow() {
+  if (gear.arrows <= 0) return false;
+  gear.arrows--;
+  return true;
+}
+
+/** Room left in the quiver. */
+export function quiverRoom() {
+  return Math.max(0, STRZALY.kolczan - gear.arrows);
+}
+
+export function addArrows(n: number) {
+  gear.arrows = Math.min(STRZALY.kolczan, gear.arrows + Math.max(0, n));
+}
+
+/** Any bow owned (worn or in the backpack): the shop then sells arrows. */
+export function ownsBow() {
+  return [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].some((id) => item(id)?.rodzaj === 'luk');
 }
 
 /** The equipped ranged weapon, if it can be used (magic needs the skill). */
