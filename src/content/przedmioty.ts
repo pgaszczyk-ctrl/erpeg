@@ -33,6 +33,10 @@ export interface Przedmiot {
   efekt?: 'swiatlo' | 'pioruny' | 'szczescie';
   /** Krótki opis pokazywany w karcie postaci. */
   opis?: string;
+  /** Ile ciosów/strzałów wytrzyma, zanim się zepsuje (content/zuzycie.ts); brak = nie zużywa się. */
+  wytrzymalosc?: number;
+  /** Szkło: zużywa się na każdym poziomie trudności i po ostatnim ciosie pęka (znika). */
+  szklany?: boolean;
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
@@ -40,12 +44,13 @@ export interface Przedmiot {
 export const PRZEDMIOTY: Przedmiot[] = [
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
-  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500 },
-  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 7, cena: 6000 },
-  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 12, cena: 22500 },
+  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
+  { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 7, cena: 6000, wytrzymalosc: 900 },
+  { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 12, cena: 22500, wytrzymalosc: 1200 },
+  { id: 'szklany_miecz', nazwa: 'Szklany miecz', miejsce: 'bron', moc: 16, cena: 4000, wytrzymalosc: 15, szklany: true, opis: 'Bardzo mocny, ale kruchy: pęka po 15 trafionych ciosach – na każdym poziomie trudności.' },
   // Broń dystansowa (przytrzymaj i celuj)
-  { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 4, cena: 3000 },
-  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 7, cena: 12000 },
+  { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 4, cena: 3000, wytrzymalosc: 800 },
+  { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 7, cena: 12000, wytrzymalosc: 1000 },
   { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },

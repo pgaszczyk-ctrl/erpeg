@@ -70,7 +70,7 @@ umiarkowany · śródziemnomorski · pustynny · tropikalny · monsunowy · zimn
 
 ## Plan (kolejność)
 1. ✅ 60 km/h, każdy sklep skupuje, wskrzeszenie za diamenty, pokrętła w panelu + licznik złota.
-2. Zużycie broni, naprawa, szklany miecz, amunicja i kołczan.
+2. ✅ Zużycie broni, naprawa w sklepie, szklany miecz, strzały (content/zuzycie.ts). Kołczan na razie jako licznik przy broni (do 50), nie jako miejsce w plecaku.
 3. Surowce, siekiera/kilof, kowal (bez wspólnych zapasów).
 4. Nowy wygląd sklepów (kafelki, porównanie).
 5. Zapasy miast, złomowiec, huta – z serwerem pilnującym dobytku.

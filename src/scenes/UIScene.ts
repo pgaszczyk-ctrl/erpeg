@@ -415,7 +415,7 @@ export class UIScene extends Phaser.Scene {
     this.coinText.setText(String(s.coins));
     this.expText.setText(maxed ? `poz. ${s.level} (max) · ${s.exp} EXP` : `poz. ${s.level} · ${s.exp}/${to} EXP`);
     this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
-    this.swordText.setText(`⚔ ${s.sword}`);
+    this.swordText.setText(`⚔ ${s.sword}`).setColor(s.swordWarn ? '#ff6b6b' : '#e8e8f0');
     s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
     this.hud = s;
     this.streetText.setText([s.street, s.pogoda].filter(Boolean).join('  ·  '));

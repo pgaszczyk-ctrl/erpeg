@@ -3,6 +3,7 @@ import { PX_PER_M } from './map/CityMap';
 import { PRZEDMIOTY } from './content/przedmioty';
 import { OWOCE, WSKRZESZENIE, DIAMENT, ALCHEMIK, LECZENIE_OWOCAMI, LAS } from './content/sklepy';
 import { NAMIOT } from './content/hotele';
+import { ZUZYCIE, STRZALY } from './content/zuzycie';
 import { POKRETLA } from './content/ustawienia';
 import { rpc } from './api';
 
@@ -10,6 +11,7 @@ import { rpc } from './api';
 
 // Ceny bazowe (do mnożników) – zapamiętane przed jakąkolwiek zmianą.
 const CENY_PRZEDMIOTOW = new Map(PRZEDMIOTY.map((p) => [p.id, p.cena]));
+const WYTRZYMALOSC = new Map(PRZEDMIOTY.map((p) => [p.id, p.wytrzymalosc]));
 const CENY_ZBIOROW = new Map(Object.entries(OWOCE).map(([k, o]) => [k, o.cena]));
 
 const USTAW: Record<string, (v: number) => void> = {
@@ -23,6 +25,13 @@ const USTAW: Record<string, (v: number) => void> = {
   leczenie_owocow: (v) => (LECZENIE_OWOCAMI.owocow = Math.round(v)),
   grzybow_na_kratke: (v) => (LAS.grzybowNaKratke = Math.round(v)),
   uderzen_na_drzewo: (v) => (LAS.uderzenNaDrzewo = Math.round(v)),
+  wytrzymalosc_mnoznik: (v) => PRZEDMIOTY.forEach((p) => {
+    const base = WYTRZYMALOSC.get(p.id);
+    if (base && !p.szklany) p.wytrzymalosc = Math.max(1, Math.round(base * v));
+  }),
+  naprawa_czesc_ceny: (v) => (ZUZYCIE.naprawaCzescCeny = v),
+  strzala_cena: (v) => (STRZALY.cena = Math.round(v)),
+  kolczan: (v) => (STRZALY.kolczan = Math.round(v)),
 };
 
 /** Wpisuje wartości z serwera (brakujące = domyślne). */
