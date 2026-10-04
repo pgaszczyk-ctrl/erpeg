@@ -24,6 +24,7 @@ Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat
 <li>
 <p><strong>Rurociągi tylko wzdłuż dróg, bez zygzaków po trawie.</strong> Rura biegnie <strong>równolegle do drogi, w stałym odsunięciu</strong> (połowa jezdni + chodnik + 6–8 px trawy, po jednej stronie), <strong>tym samym łukiem co droga</strong>, z zaokrąglonymi zakrętami. Na każdym końcu <strong>wchodzi do budynku</strong> (skręt łukiem do najbliższej ściany w zasięgu ok. 80 px mapy, rura rysowana przed budynkiem, więc ściana ją przykrywa) <strong>albo pod ziemię</strong> (kołnierz i żeliwna studzienka, z której czasem idzie para). Nigdy nie przecina jezdni ani budynku po drodze; gdy na trasie jest skrzyżowanie lub wjazd – rura kończy się studzienką przed nim i może wyjść drugą studzienką za nim. Długość odcinka 60–200 px mapy, 0–2 odcinki na ulicę (ziarno z id drogi OSM, więc wszędzie tak samo). Kod: <code>trasaPrzyDrodze()</code> + <code>rurociagWzdluz()</code> w <a href="generator/steampunk.ts"><code>generator/steampunk.ts</code></a> (stare <code>rurociag()</code> po siatce zostaje tylko do rur na ścianach). Wzór: <a href="zrzuty/generator_rurociag.png"><code>zrzuty/generator_rurociag.png</code></a>.</p>
 </li>
+<li><strong>Góry</strong> (makieta zaakceptowana): generator na prawdziwych wysokościach, szersze ścieżki szlaku (dopasowane do ludzika), na stromym stoku rozmycie tego, co leży niżej od bohatera; bez oddalania i bez zmiany perspektywy. Po skałach, urwiskach i bardzo stromo tylko szlakiem. Szczegóły i zadanie G10: <a href="GORY.md"><code>GORY.md</code></a>.</li>
 </ol>
 <h2>1. Co jest w folderze <code>generator/</code></h2>
 <p>Gotowy kod TypeScript, bez Phasera i bez DOM-u (działa też w Web Workerze), do skopiowania jako <code>src/gen/</code>:</p>
@@ -171,6 +172,12 @@ Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat
 <td>Kolej na stacjach: tory, perony, składy parowe na torze, konduktor; konie tylko przy dworcach autobusowych (SPEC 7)</td>
 <td>lokomotywa stoi na torze przy peronie, wagony idą za łukiem; przy dworcu autobusowym wóz</td>
 <td>~600 tys.</td>
+</tr>
+<tr>
+<td>G10</td>
+<td>Góry: generator na mapach z terenem, szersze ścieżki, filtr „rozmycie w dół”, blokady szlaku (<a href="GORY.md"><code>GORY.md</code></a>)</td>
+<td>Zakopane wygląda jak makieta, płynnie na telefonie</td>
+<td>~500 tys.</td>
 </tr>
 <tr>
 <td>G7</td>
