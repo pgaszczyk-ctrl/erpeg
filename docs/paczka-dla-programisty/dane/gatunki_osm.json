@@ -1,0 +1,265 @@
+{
+  "_opis": "Dobór gatunków drzew do obszarów OSM. Wagi sumują się do 1 w obrębie reguły. 'chop' = udział drzew ze zaciosem (do ścięcia). 'odstepPx' = minimalny odstęp pni w px mapy (Poisson). Kolejność reguł: pierwsza pasująca wygrywa. Wysokości tylko na mapach z terenem (terrain.heightAt). ZMIANA 4.10: drzewa w skali 0,6 (SKALA_DRZEW w generatorze) i gęściej – odstępy ×0,55, gęstość ×1,4 (odstępy w px mapy).",
+  "reguly": [
+    {
+      "gdy": {
+        "denotation": "natural_monument"
+      },
+      "ochrona": "pomnik",
+      "chop": 0,
+      "skala": 1.35
+    },
+    {
+      "gdy": {
+        "natural": "tree"
+      },
+      "ochrona": "park",
+      "chop": 0,
+      "gatunekZ": [
+        "species",
+        "genus",
+        "leaf_type"
+      ],
+      "domyslnie": {
+        "lipa": 0.35,
+        "klon_jako_lipa": 0.0,
+        "dab": 0.2,
+        "kasztanowiec_jako_buk": 0.25,
+        "brzoza": 0.2
+      }
+    },
+    {
+      "gdy": {
+        "landuse": "orchard"
+      },
+      "ochrona": "sad",
+      "chop": 0,
+      "uklad": "rzedy",
+      "odstepPx": 8,
+      "wagi": {
+        "jablon": 0.6,
+        "grusza": 0.25,
+        "sliwa": 0.15
+      }
+    },
+    {
+      "gdy": {
+        "landuse": "allotments"
+      },
+      "ochrona": "sad",
+      "chop": 0,
+      "odstepPx": 9,
+      "gestosc": 0.49,
+      "wagi": {
+        "jablon": 0.45,
+        "sliwa": 0.25,
+        "grusza": 0.15,
+        "krzak": 0.15
+      }
+    },
+    {
+      "gdy": {
+        "leisure": "park"
+      },
+      "ochrona": "park",
+      "chop": 0,
+      "odstepPx": 12,
+      "gestosc": 0.63,
+      "wagi": {
+        "lipa": 0.3,
+        "dab": 0.25,
+        "buk": 0.15,
+        "brzoza": 0.15,
+        "krzak": 0.15
+      }
+    },
+    {
+      "gdy": {
+        "landuse": "cemetery"
+      },
+      "ochrona": "park",
+      "chop": 0,
+      "odstepPx": 11,
+      "gestosc": 0.42,
+      "wagi": {
+        "lipa": 0.4,
+        "brzoza": 0.2,
+        "swierk": 0.2,
+        "krzak": 0.2
+      }
+    },
+    {
+      "gdy": {
+        "natural": "wetland"
+      },
+      "chop": 0.2,
+      "odstepPx": 9,
+      "gestosc": 0.56,
+      "wagi": {
+        "olcha": 0.4,
+        "wierzba": 0.4,
+        "brzoza": 0.2
+      },
+      "runo": [
+        "trzcina",
+        "trawa_wysoka"
+      ]
+    },
+    {
+      "gdy": {
+        "natural": "heath"
+      },
+      "chop": 0.1,
+      "odstepPx": 10,
+      "gestosc": 0.35,
+      "wagi": {
+        "jalowiec": 0.5,
+        "sosna": 0.3,
+        "brzoza": 0.2
+      },
+      "runo": [
+        "wrzos"
+      ]
+    },
+    {
+      "gdy": {
+        "natural": "scrub"
+      },
+      "chop": 0.2,
+      "odstepPx": 6,
+      "gestosc": 0.9,
+      "wagi": {
+        "krzak": 0.7,
+        "brzoza": 0.15,
+        "sosna": 0.15
+      }
+    },
+    {
+      "gdy": {
+        "las": true,
+        "leaf_type": "needleleaved"
+      },
+      "chop": 0.3,
+      "odstepPx": 9,
+      "wagi": {
+        "sosna": 0.65,
+        "swierk": 0.3,
+        "brzoza": 0.05
+      },
+      "runo": [
+        "paproc",
+        "mech",
+        "szyszki_igly"
+      ],
+      "podloze": "las_iglasty"
+    },
+    {
+      "gdy": {
+        "las": true,
+        "leaf_type": "broadleaved"
+      },
+      "chop": 0.3,
+      "odstepPx": 10,
+      "wagi": {
+        "dab": 0.35,
+        "buk": 0.25,
+        "brzoza": 0.2,
+        "lipa": 0.1,
+        "olcha": 0.1
+      },
+      "runo": [
+        "paproc",
+        "kwiaty",
+        "grzyb"
+      ],
+      "podloze": "las_lisciasty"
+    },
+    {
+      "gdy": {
+        "las": true
+      },
+      "chop": 0.3,
+      "odstepPx": 9,
+      "wagi": {
+        "sosna": 0.35,
+        "dab": 0.2,
+        "brzoza": 0.2,
+        "swierk": 0.15,
+        "buk": 0.1
+      },
+      "runo": [
+        "paproc",
+        "grzyb",
+        "mech"
+      ],
+      "podloze": "las_lisciasty"
+    },
+    {
+      "gdy": {
+        "landuse": "grass"
+      },
+      "ochrona": "park",
+      "chop": 0,
+      "odstepPx": 16,
+      "gestosc": 0.17,
+      "wagi": {
+        "lipa": 0.3,
+        "brzoza": 0.3,
+        "krzak": 0.4
+      }
+    }
+  ],
+  "biomy": {
+    "przyWodzieM": 30,
+    "przyWodzieZamien": {
+      "dab": "olcha",
+      "buk": "olcha",
+      "lipa": "wierzba",
+      "sosna": "olcha"
+    },
+    "przyWodzieRuno": [
+      "trzcina",
+      "trawa_wysoka"
+    ],
+    "wysokoscM": [
+      {
+        "od": 600,
+        "zamien": {
+          "dab": "swierk",
+          "buk": "swierk",
+          "lipa": "jodla",
+          "brzoza": "swierk",
+          "sosna": "swierk"
+        }
+      },
+      {
+        "od": 1200,
+        "zamien": {
+          "*": "jodla"
+        }
+      },
+      {
+        "od": 1500,
+        "zamien": {
+          "*": "kosodrzewina"
+        }
+      },
+      {
+        "od": 1800,
+        "zamien": {
+          "*": null
+        }
+      }
+    ]
+  },
+  "skrajLasu": {
+    "szerokoscPx": 16,
+    "skala": 0.8,
+    "szansaKrzak": 0.4
+  },
+  "kepy": {
+    "szumSkalaPx": 120,
+    "progPolany": 0.32
+  },
+  "chopLosowanie": "hash(x, y, 77) < chop i promień korony < 12,5 px pliku (stare/grube okazy nie)"
+}

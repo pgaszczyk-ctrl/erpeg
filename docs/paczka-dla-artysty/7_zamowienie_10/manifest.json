@@ -1,0 +1,1379 @@
+[
+ {
+  "plik": "podloze_trawa_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "krótka miejska trawa, drobne kępki, spokojna"
+ },
+ {
+  "plik": "podloze_trawa_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_trawa_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_laka_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wyższa trawa, kilka kwiatków, trochę jaśniejsza i cieplejsza od trawy"
+ },
+ {
+  "plik": "podloze_laka_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_laka_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_park_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "staranna, równiejsza trawa, odrobinę ciemniejsza"
+ },
+ {
+  "plik": "podloze_park_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_park_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_las_lisciasty_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "ściółka: brązowe liście, trochę mchu i ziemi, bez pni"
+ },
+ {
+  "plik": "podloze_las_lisciasty_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_las_lisciasty_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_las_iglasty_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "ściółka: rude igły, szyszki, mech"
+ },
+ {
+  "plik": "podloze_las_iglasty_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_las_iglasty_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 12,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_bruk_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "kostka brukowa ok. 4×3 px na kamień, ciemne szpary, lekko nierówna"
+ },
+ {
+  "plik": "podloze_bruk_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_bruk_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_chodnik_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "płyty chodnikowe ok. 16×16 px, jaśniejsze od bruku"
+ },
+ {
+  "plik": "podloze_chodnik_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_chodnik_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_plac_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "duże kamienne płyty rynku ok. 24×16 px w cegiełkę"
+ },
+ {
+  "plik": "podloze_plac_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_plac_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_droga_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "ubita ziemia, delikatne koleiny poziomo, kamyczki"
+ },
+ {
+  "plik": "podloze_droga_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_droga_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 10,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_piasek_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "piasek, drobne zmarszczki, jasny"
+ },
+ {
+  "plik": "podloze_piasek_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_piasek_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "podloze_woda_a.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "spokojna woda, ciemniejsza i jaśniejsza smuga, bez odbić nieba (falowanie robi program)"
+ },
+ {
+  "plik": "podloze_woda_b.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant b tego samego podłoża"
+ },
+ {
+  "plik": "podloze_woda_c.png",
+  "grupa": "A. Podłoże",
+  "typ": "kafel",
+  "w": 256,
+  "h": 256,
+  "maxKolorow": 8,
+  "alfa": "brak",
+  "opis": "wariant c tego samego podłoża"
+ },
+ {
+  "plik": "drzewo_dab.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 288,
+  "h": 448,
+  "komorka": [
+   96,
+   112
+  ],
+  "kolumny": 3,
+  "wiersze": 4,
+  "nazwy": [
+   [
+    "korona_a",
+    "korona_b",
+    "korona_c"
+   ],
+   [
+    "pien_a",
+    "pien_b",
+    "pien_c"
+   ],
+   [
+    "pien_zacios_a",
+    "pien_zacios_b",
+    "pien_zacios_c"
+   ],
+   [
+    "pieniek",
+    "sadzonka",
+    ""
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 24,
+  "alfa": "0/255",
+  "opis": "szeroka „kalafiorowa” korona, ciemna zieleń, brązowy pień"
+ },
+ {
+  "plik": "drzewo_brzoza.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 192,
+  "h": 416,
+  "komorka": [
+   64,
+   104
+  ],
+  "kolumny": 3,
+  "wiersze": 4,
+  "nazwy": [
+   [
+    "korona_a",
+    "korona_b",
+    "korona_c"
+   ],
+   [
+    "pien_a",
+    "pien_b",
+    "pien_c"
+   ],
+   [
+    "pien_zacios_a",
+    "pien_zacios_b",
+    "pien_zacios_c"
+   ],
+   [
+    "pieniek",
+    "sadzonka",
+    ""
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 24,
+  "alfa": "0/255",
+  "opis": "lekka jasnozielona korona, biały pień w czarne plamki"
+ },
+ {
+  "plik": "drzewo_sosna.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 216,
+  "h": 480,
+  "komorka": [
+   72,
+   120
+  ],
+  "kolumny": 3,
+  "wiersze": 4,
+  "nazwy": [
+   [
+    "korona_a",
+    "korona_b",
+    "korona_c"
+   ],
+   [
+    "pien_a",
+    "pien_b",
+    "pien_c"
+   ],
+   [
+    "pien_zacios_a",
+    "pien_zacios_b",
+    "pien_zacios_c"
+   ],
+   [
+    "pieniek",
+    "sadzonka",
+    ""
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 24,
+  "alfa": "0/255",
+  "opis": "wysoki rudy pień, płaskie kępy igieł u góry"
+ },
+ {
+  "plik": "drzewo_swierk.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 168,
+  "h": 448,
+  "komorka": [
+   56,
+   112
+  ],
+  "kolumny": 3,
+  "wiersze": 4,
+  "nazwy": [
+   [
+    "korona_a",
+    "korona_b",
+    "korona_c"
+   ],
+   [
+    "pien_a",
+    "pien_b",
+    "pien_c"
+   ],
+   [
+    "pien_zacios_a",
+    "pien_zacios_b",
+    "pien_zacios_c"
+   ],
+   [
+    "pieniek",
+    "sadzonka",
+    ""
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 24,
+  "alfa": "0/255",
+  "opis": "ciemny stożek z pięter gałęzi, pień widać tylko u dołu"
+ },
+ {
+  "plik": "drzewo_jablon.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 192,
+  "h": 288,
+  "komorka": [
+   64,
+   72
+  ],
+  "kolumny": 3,
+  "wiersze": 4,
+  "nazwy": [
+   [
+    "korona_a",
+    "korona_b",
+    "korona_c"
+   ],
+   [
+    "pien_a",
+    "pien_b",
+    "pien_c"
+   ],
+   [
+    "owoce_a",
+    "owoce_b",
+    "owoce_c"
+   ],
+   [
+    "pieniek",
+    "sadzonka",
+    ""
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 24,
+  "alfa": "0/255",
+  "opis": "niska rozłożysta, jasna zieleń; owoce osobno w ostatnim wierszu"
+ },
+ {
+  "plik": "krzaki.png",
+  "grupa": "B. Drzewa",
+  "typ": "arkusz",
+  "w": 240,
+  "h": 64,
+  "komorka": [
+   40,
+   32
+  ],
+  "kolumny": 6,
+  "wiersze": 2,
+  "nazwy": [
+   [
+    "krzak_lisciasty_gora_a",
+    "krzak_lisciasty_gora_b",
+    "krzak_lisciasty_gora_c",
+    "krzak_kwitnacy_gora_a",
+    "krzak_kwitnacy_gora_b",
+    "krzak_kwitnacy_gora_c"
+   ],
+   [
+    "krzak_lisciasty_dol_a",
+    "krzak_lisciasty_dol_b",
+    "krzak_lisciasty_dol_c",
+    "krzak_kwitnacy_dol_a",
+    "krzak_kwitnacy_dol_b",
+    "krzak_kwitnacy_dol_c"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 20,
+  "alfa": "0/255",
+  "opis": "dwa rodzaje krzaków × 3 warianty; górna część (kołysze się) i dolna (stoi) na tym samym płótnie"
+ },
+ {
+  "plik": "runo.png",
+  "grupa": "C. Runo i kamienie",
+  "typ": "arkusz",
+  "w": 128,
+  "h": 144,
+  "komorka": [
+   16,
+   24
+  ],
+  "kolumny": 8,
+  "wiersze": 6,
+  "nazwy": [
+   [
+    "trawa_niska_1",
+    "trawa_niska_2",
+    "trawa_niska_3",
+    "trawa_niska_4",
+    "trawa_niska_5",
+    "trawa_niska_6",
+    "trawa_niska_7",
+    "trawa_niska_8"
+   ],
+   [
+    "trawa_wysoka_1",
+    "trawa_wysoka_2",
+    "trawa_wysoka_3",
+    "trawa_wysoka_4",
+    "trawa_wysoka_5",
+    "trawa_wysoka_6",
+    "trawa_wysoka_7",
+    "trawa_wysoka_8"
+   ],
+   [
+    "trzcina_1",
+    "trzcina_2",
+    "trzcina_3",
+    "trzcina_4",
+    "paproc_1",
+    "paproc_2",
+    "paproc_3",
+    "wrzos_1"
+   ],
+   [
+    "kwiaty_czerwone_1",
+    "kwiaty_czerwone_2",
+    "kwiaty_zolte_1",
+    "kwiaty_zolte_2",
+    "kwiaty_niebieskie_1",
+    "kwiaty_niebieskie_2",
+    "kwiaty_biale_1",
+    "kwiaty_biale_2"
+   ],
+   [
+    "kamyk_1",
+    "kamyk_2",
+    "kamyk_3",
+    "kamyk_4",
+    "kamyk_5",
+    "kamyk_6",
+    "glaz_1",
+    "glaz_2"
+   ],
+   [
+    "grzyb_prawdziwek",
+    "grzyb_kurka",
+    "grzyb_muchomor",
+    "mech_1",
+    "mech_2",
+    "szyszki",
+    "liscie_lezace",
+    "patyk"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 40,
+  "alfa": "0/255",
+  "opis": "każda roślina wyrasta z dolnej krawędzi komórki, na środku; trawa niska 4–8 px, wysoka 10–16 px, trzcina do 22 px"
+ },
+ {
+  "plik": "materialy.png",
+  "grupa": "D. Budynki",
+  "typ": "paleta",
+  "w": 56,
+  "h": 120,
+  "komorka": [
+   8,
+   8
+  ],
+  "kolumny": 7,
+  "wiersze": 15,
+  "nazwy": [
+   [
+    "dachowka_czerwona_0",
+    "dachowka_czerwona_1",
+    "dachowka_czerwona_2",
+    "dachowka_czerwona_3",
+    "dachowka_czerwona_4",
+    "dachowka_czerwona_5",
+    "dachowka_czerwona_krawedz"
+   ],
+   [
+    "dachowka_brazowa_0",
+    "dachowka_brazowa_1",
+    "dachowka_brazowa_2",
+    "dachowka_brazowa_3",
+    "dachowka_brazowa_4",
+    "dachowka_brazowa_5",
+    "dachowka_brazowa_krawedz"
+   ],
+   [
+    "lupek_0",
+    "lupek_1",
+    "lupek_2",
+    "lupek_3",
+    "lupek_4",
+    "lupek_5",
+    "lupek_krawedz"
+   ],
+   [
+    "gont_0",
+    "gont_1",
+    "gont_2",
+    "gont_3",
+    "gont_4",
+    "gont_5",
+    "gont_krawedz"
+   ],
+   [
+    "blacha_zielona_0",
+    "blacha_zielona_1",
+    "blacha_zielona_2",
+    "blacha_zielona_3",
+    "blacha_zielona_4",
+    "blacha_zielona_5",
+    "blacha_zielona_krawedz"
+   ],
+   [
+    "miedz_patyna_0",
+    "miedz_patyna_1",
+    "miedz_patyna_2",
+    "miedz_patyna_3",
+    "miedz_patyna_4",
+    "miedz_patyna_5",
+    "miedz_patyna_krawedz"
+   ],
+   [
+    "papa_0",
+    "papa_1",
+    "papa_2",
+    "papa_3",
+    "papa_4",
+    "papa_5",
+    "papa_krawedz"
+   ],
+   [
+    "tynk_kremowy_0",
+    "tynk_kremowy_1",
+    "tynk_kremowy_2",
+    "tynk_kremowy_3",
+    "tynk_kremowy_4",
+    "tynk_kremowy_5",
+    "tynk_kremowy_krawedz"
+   ],
+   [
+    "tynk_zolty_0",
+    "tynk_zolty_1",
+    "tynk_zolty_2",
+    "tynk_zolty_3",
+    "tynk_zolty_4",
+    "tynk_zolty_5",
+    "tynk_zolty_krawedz"
+   ],
+   [
+    "tynk_szary_0",
+    "tynk_szary_1",
+    "tynk_szary_2",
+    "tynk_szary_3",
+    "tynk_szary_4",
+    "tynk_szary_5",
+    "tynk_szary_krawedz"
+   ],
+   [
+    "tynk_bialy_0",
+    "tynk_bialy_1",
+    "tynk_bialy_2",
+    "tynk_bialy_3",
+    "tynk_bialy_4",
+    "tynk_bialy_5",
+    "tynk_bialy_krawedz"
+   ],
+   [
+    "cegla_0",
+    "cegla_1",
+    "cegla_2",
+    "cegla_3",
+    "cegla_4",
+    "cegla_5",
+    "cegla_krawedz"
+   ],
+   [
+    "drewno_0",
+    "drewno_1",
+    "drewno_2",
+    "drewno_3",
+    "drewno_4",
+    "drewno_5",
+    "drewno_krawedz"
+   ],
+   [
+    "kamien_0",
+    "kamien_1",
+    "kamien_2",
+    "kamien_3",
+    "kamien_4",
+    "kamien_5",
+    "kamien_krawedz"
+   ],
+   [
+    "mosiadz_0",
+    "mosiadz_1",
+    "mosiadz_2",
+    "mosiadz_3",
+    "mosiadz_4",
+    "mosiadz_5",
+    "mosiadz_krawedz"
+   ]
+  ],
+  "kotwica": null,
+  "maxKolorow": 105,
+  "alfa": "brak",
+  "opis": "każdy wiersz = jeden materiał: 6 kwadratów 8×8 jednolitego koloru od najciemniejszego do najjaśniejszego + 7. kolor kalenicy/krawędzi"
+ },
+ {
+  "plik": "stemple_scian.png",
+  "grupa": "D. Budynki",
+  "typ": "arkusz",
+  "w": 128,
+  "h": 48,
+  "komorka": [
+   16,
+   16
+  ],
+  "kolumny": 8,
+  "wiersze": 3,
+  "nazwy": [
+   [
+    "okno_zwykle",
+    "okno_zwykle_noc",
+    "okno_okragle",
+    "okno_okragle_noc",
+    "okno_witraz",
+    "okno_witraz_noc",
+    "witryna",
+    "witryna_noc"
+   ],
+   [
+    "drzwi_drewniane",
+    "drzwi_mosiezne",
+    "drzwi_sklep",
+    "drzwi_kosciol",
+    "brama",
+    "manometr",
+    "zawor",
+    "skrzynka_pary"
+   ],
+   [
+    "lampa_sciana",
+    "lampa_sciana_noc",
+    "kratka_wentylacyjna",
+    "szyld_wspornik",
+    "balkon_kuty",
+    "skrzynka_kwiaty",
+    "zegar_scienny",
+    "tablica_mosiezna"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "małe elementy przyklejane przez program na ścianę frontową; okno 3–5 px szer. × 4–5 px wys., drzwi 4–6 × 7 px, witryna 10–12 × 6 px; wszystko stoi na dolnej krawędzi komórki"
+ },
+ {
+  "plik": "rury_sciana.png",
+  "grupa": "D. Budynki",
+  "typ": "arkusz",
+  "w": 48,
+  "h": 18,
+  "komorka": [
+   8,
+   18
+  ],
+  "kolumny": 6,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "rura_8",
+    "rura_12",
+    "rura_16",
+    "rura_pozioma",
+    "rura_kolano_gora",
+    "rura_kolano_dol"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 10,
+  "alfa": "0/255",
+  "opis": "mosiężna rura po ścianie (3–4 px szerokości): pionowa na wysokość ściany 8/12/16 px z kolankiem u góry i u dołu, odcinek poziomy 8 px, osobne kolanka"
+ },
+ {
+  "plik": "stemple_dachow.png",
+  "grupa": "D. Budynki",
+  "typ": "arkusz",
+  "w": 128,
+  "h": 48,
+  "komorka": [
+   16,
+   24
+  ],
+  "kolumny": 8,
+  "wiersze": 2,
+  "nazwy": [
+   [
+    "komin_ceglany",
+    "komin_mosiezny",
+    "zbiornik_dachowy",
+    "kociol_dachowy",
+    "lukarna_dachowka",
+    "lukarna_lupek",
+    "lukarna_gont",
+    "swietlik"
+   ],
+   [
+    "wentylator_1",
+    "wentylator_2",
+    "wentylator_3",
+    "wiatrowskaz_1",
+    "wiatrowskaz_2",
+    "iglica",
+    "dzwonek_szkola",
+    "kopulka_bank"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 20,
+  "alfa": "0/255",
+  "opis": "rzeczy stawiane przez program na dachach (widok prawie z góry); wentylator i wiatrowskaz to klatki animacji"
+ },
+ {
+  "plik": "rurociag.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 64,
+  "h": 24,
+  "komorka": [
+   8,
+   8
+  ],
+  "kolumny": 8,
+  "wiersze": 3,
+  "nazwy": [
+   [
+    "rura_pozioma",
+    "rura_pionowa",
+    "kolano_pn_wsch",
+    "kolano_wsch_pd",
+    "kolano_pd_zach",
+    "kolano_zach_pn",
+    "krzyz",
+    "przejscie_pod_droga"
+   ],
+   [
+    "trojnik_bez_pn",
+    "trojnik_bez_pd",
+    "trojnik_bez_zach",
+    "trojnik_bez_wsch",
+    "koncowka_pn",
+    "koncowka_pd",
+    "koncowka_wsch",
+    "koncowka_zach"
+   ],
+   [
+    "zawor_poziomy",
+    "zawor_pionowy",
+    "manometr_poziomy",
+    "manometr_pionowy",
+    "podpora_pozioma",
+    "podpora_pionowa",
+    "przeciek_1",
+    "przeciek_2"
+   ]
+  ],
+  "kotwica": "srodek",
+  "maxKolorow": 12,
+  "alfa": "0/255",
+  "opis": "moduły rurociągu: rura 3–4 px grubości biegnie środkiem kafla (x 2–5 albo y 2–5) i dochodzi do krawędzi, żeby moduły się łączyły; schemat: 6_zamowienie_09/03_szablony/schemat_rurociagu_moduly_8x8.png"
+ },
+ {
+  "plik": "para_mala.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 96,
+  "h": 16,
+  "komorka": [
+   16,
+   16
+  ],
+  "kolumny": 6,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "para_mala_1",
+    "para_mala_2",
+    "para_mala_3",
+    "para_mala_4",
+    "para_mala_5",
+    "para_mala_6"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 6,
+  "alfa": "stopnie",
+  "opis": "obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)"
+ },
+ {
+  "plik": "para_srednia.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 144,
+  "h": 24,
+  "komorka": [
+   24,
+   24
+  ],
+  "kolumny": 6,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "para_srednia_1",
+    "para_srednia_2",
+    "para_srednia_3",
+    "para_srednia_4",
+    "para_srednia_5",
+    "para_srednia_6"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 6,
+  "alfa": "stopnie",
+  "opis": "obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)"
+ },
+ {
+  "plik": "para_duza.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 192,
+  "h": 32,
+  "komorka": [
+   32,
+   32
+  ],
+  "kolumny": 6,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "para_duza_1",
+    "para_duza_2",
+    "para_duza_3",
+    "para_duza_4",
+    "para_duza_5",
+    "para_duza_6"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 6,
+  "alfa": "stopnie",
+  "opis": "obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)"
+ },
+ {
+  "plik": "latarnia_gazowa.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 32,
+  "h": 48,
+  "komorka": [
+   16,
+   48
+  ],
+  "kolumny": 2,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "dzien",
+    "noc"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "żeliwna latarnia z mosiężną głowicą; noc = świeci (sama latarnia, poświatę robi program)"
+ },
+ {
+  "plik": "lawka.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 24,
+  "h": 16,
+  "komorka": [
+   24,
+   16
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "lawka"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "ławka z żeliwnymi bokami, widziana prawie z góry (widać siedzisko)"
+ },
+ {
+  "plik": "kosz_mosiezny.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 8,
+  "h": 12,
+  "komorka": [
+   8,
+   12
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "kosz"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "mosiężny kosz na śmieci"
+ },
+ {
+  "plik": "hydrant_parowy.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 10,
+  "h": 12,
+  "komorka": [
+   10,
+   12
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "hydrant"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "niski zawór z czerwonym kółkiem"
+ },
+ {
+  "plik": "studzienka.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 16,
+  "h": 16,
+  "komorka": [
+   16,
+   16
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "studzienka"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "okrągła kratka w bruku (prawie koło), bez pary – parę robi program z para_*"
+ },
+ {
+  "plik": "slup_ogloszeniowy.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 16,
+  "h": 32,
+  "komorka": [
+   16,
+   32
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "slup"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "okrągły słup z afiszami bez napisów"
+ },
+ {
+  "plik": "skrzynka_rozdzielcza.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 12,
+  "h": 16,
+  "komorka": [
+   12,
+   16
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "skrzynka"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "skrzynka rozdzielcza pary z manometrem i lampką"
+ },
+ {
+  "plik": "zbiornik_ulica.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 20,
+  "h": 24,
+  "komorka": [
+   20,
+   24
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "zbiornik"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "duży mosiężny zbiornik na nóżkach z zaworem"
+ },
+ {
+  "plik": "zegar_uliczny.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 12,
+  "h": 40,
+  "komorka": [
+   12,
+   40
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "zegar"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "zegar na słupie"
+ },
+ {
+  "plik": "donica_kwiaty.png",
+  "grupa": "E. Ulica i steampunk",
+  "typ": "arkusz",
+  "w": 12,
+  "h": 12,
+  "komorka": [
+   12,
+   12
+  ],
+  "kolumny": 1,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "donica"
+   ]
+  ],
+  "kotwica": "dol_srodek",
+  "maxKolorow": 16,
+  "alfa": "0/255",
+  "opis": "donica z kwiatami przy drzwiach"
+ },
+ {
+  "plik": "efekty_ciecie.png",
+  "grupa": "F. Efekty",
+  "typ": "arkusz",
+  "w": 128,
+  "h": 16,
+  "komorka": [
+   16,
+   16
+  ],
+  "kolumny": 8,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "wiory_1",
+    "wiory_2",
+    "wiory_3",
+    "wiory_4",
+    "uderzenie_1",
+    "uderzenie_2",
+    "uderzenie_3",
+    ""
+   ]
+  ],
+  "kotwica": "srodek",
+  "maxKolorow": 10,
+  "alfa": "0/255",
+  "opis": "wióry odpryskujące od pnia (4 klatki) i krótki błysk uderzenia (3 klatki)"
+ },
+ {
+  "plik": "efekty_liscie.png",
+  "grupa": "F. Efekty",
+  "typ": "arkusz",
+  "w": 96,
+  "h": 72,
+  "komorka": [
+   24,
+   24
+  ],
+  "kolumny": 4,
+  "wiersze": 3,
+  "nazwy": [
+   [
+    "liscie_zielone_1",
+    "liscie_zielone_2",
+    "liscie_zielone_3",
+    "liscie_zielone_4"
+   ],
+   [
+    "liscie_jesienne_1",
+    "liscie_jesienne_2",
+    "liscie_jesienne_3",
+    "liscie_jesienne_4"
+   ],
+   [
+    "igly_1",
+    "igly_2",
+    "igly_3",
+    "igly_4"
+   ]
+  ],
+  "kotwica": "srodek",
+  "maxKolorow": 12,
+  "alfa": "0/255",
+  "opis": "obłok spadających liści / igieł, 4 klatki"
+ },
+ {
+  "plik": "ikony_akcji.png",
+  "grupa": "F. Efekty",
+  "typ": "arkusz",
+  "w": 64,
+  "h": 8,
+  "komorka": [
+   8,
+   8
+  ],
+  "kolumny": 8,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "siekiera",
+    "reka",
+    "klodka",
+    "owoc_jablko",
+    "owoc_gruszka",
+    "owoc_sliwka",
+    "drewno",
+    "kropla"
+   ]
+  ],
+  "kotwica": "srodek",
+  "maxKolorow": 12,
+  "alfa": "0/255",
+  "opis": "małe ikonki nad drzewem: ścinasz / potrząsasz / chronione; owoce spadające z drzewa; drewno (+1)"
+ },
+ {
+  "plik": "pasek_postepu.png",
+  "grupa": "F. Efekty",
+  "typ": "arkusz",
+  "w": 36,
+  "h": 5,
+  "komorka": [
+   18,
+   5
+  ],
+  "kolumny": 2,
+  "wiersze": 1,
+  "nazwy": [
+   [
+    "pusty",
+    "pelny"
+   ]
+  ],
+  "kotwica": "srodek",
+  "maxKolorow": 6,
+  "alfa": "0/255",
+  "opis": "mosiężna ramka paska postępu jak manometr: pusta i pełna (program odsłania pełną od lewej)"
+ }
+]

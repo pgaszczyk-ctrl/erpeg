@@ -1,0 +1,379 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – specyfikacja 09</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Specyfikacja techniczna – overhaul 09: żywy świat w pixel arcie</h1>
+<blockquote>
+<p>Dla programisty (czat 🛠 Technika i rozwój). Grafik dostaje osobno <code>docs/paczka-dla-artysty/ZAMOWIENIE_09_pixel_art_swiat.md</code>. Ten dokument opisuje, <strong>co zmienić w kodzie</strong>, żeby wszystko, co grafik narysuje, dało się wstawić, i co da się zrobić <strong>od razu, na zaślepkach</strong>, zanim grafiki przyjdą.
+Implementacja wzorcowa (działa w przeglądarce): <a href="makieta/zywy-swiat.html"><code>makieta/zywy-swiat.html</code></a>. Opis jej kodu: <a href="makieta/OPIS_KODU.md"><code>makieta/OPIS_KODU.md</code></a>.
+Data: 4 października 2026. Decyzje właściciela z czatu 🎨 Grafika.</p>
+</blockquote>
+<h2>0. Decyzje właściciela (nie do dyskusji bez niego)</h2>
+<ol>
+<li><strong>Cały świat jako szczegółowy pixel art w stylu konia z wozu.</strong> Jedna gęstość pikseli dla postaci, budynków, drzew, dekoracji i ziemi. Kierunek „malarski” (zamówienie 08, wpis „Art direction 30 Sep” w <code>CLAUDE.md</code>) jest <strong>nieaktualny</strong>. Wpis w <code>CLAUDE.md</code> trzeba podmienić.</li>
+<li><strong>Pixel art także dlatego, że ma być lekki dla telefonu.</strong> Styl malarski wymagałby tekstur w rozdzielczości ekranu (4–9× więcej pamięci).</li>
+<li><strong>Świat ma żyć:</strong> korony i trawa kołyszą się na wietrze (siła z prawdziwej pogody, <code>weather.w</code>), postać przeciska się pod koronami (prześwit), cienie chmur, para z kratek.</li>
+<li><strong>Różne drzewa według danych OSM</strong> (las liściasty, iglasty, mieszany, park, sad, brzeg wody, góry), po kilka wariantów.</li>
+<li><strong>Nie każde drzewo da się ściąć.</strong> Ścinalne mają widoczny zacios. Chronione: sady, parki, pomniki przyrody (<code>denotation=natural_monument</code>), stare okazy. Pieniek → sadzonka → drzewo.</li>
+<li><strong>Gracz musi od pierwszego ciosu wiedzieć, że ścina albo strąca owoce.</strong> Właściciel: „teraz nie wiem, czasem zniknie, czasem nie”.</li>
+<li><strong>Budynki z OSM liczone pikselowo</strong> (dach kopertowy z obrysu, rzędy dachówek wzdłuż okapu, obrys, cień), zamiast obracanej tekstury, która „dziwacznie się skaluje”.</li>
+<li><strong>Wyraźny steampunk:</strong> rury na części budynków, losowe rurociągi, zawory, manometry, para ze studzienek.</li>
+<li><strong>Kolej parowa:</strong> na torach i peronach parowe lokomotywy i wagony dopasowane do krzywizny torów. <strong>Konie z wozem tylko na dworcach autobusowych.</strong> Tory i perony do poprawienia.</li>
+<li>Widok zostaje szeroki (cała okolica widoczna), mgła wojny bez zmian.</li>
+</ol>
+<h2>1. Stan obecny (sprawdzone w kodzie, gałąź <code>claude/bold-gauss-peehzd</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Obszar</th>
+<th>Gdzie</th>
+<th>Jak jest dziś</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kawałki mapy</td>
+<td><code>MapRenderer.ts</code></td>
+<td><code>CHUNK</code> 512 px mapy, malowane w Canvas 2D przy <code>DOTS = OSTROSC</code> (1 lub 2) px płótna na px mapy, <code>MAX_CHUNKS</code> 8 (6 przy <code>deviceMemory ≤ 4</code>) przy DOTS 2, ok. 4 MB każdy</td>
+<td>budżet pamięci ciasny (~39 MB tekstur po poprawkach z 3 października)</td>
+</tr>
+<tr>
+<td>Skala plików grafika</td>
+<td><code>content/swiat.ts</code> <code>SKALA_PLIKOW = 3</code></td>
+<td>pliki 3× większe niż mapa, <code>artPattern</code>/<code>artSheet</code> zmniejszają je do <code>DOTS/3</code></td>
+<td>przy DOTS 2 zmniejszenie 2:3 → piksele różnej wielkości i rozmycie</td>
+</tr>
+<tr>
+<td>Dachy</td>
+<td><code>paintBody</code>, <code>roofTransform</code></td>
+<td>wzór dachówki obrócony wzdłuż najdłuższej ściany, przesunięty per budynek</td>
+<td>schodki i „mikso-piksele” na skosach, wielkość dachówki zależna od przeskalowania</td>
+</tr>
+<tr>
+<td>Ściany</td>
+<td><code>wallHeight</code> 4/6/8 px mapy, <code>WALL_SKEW</code> 0,35, <code>paintWalls</code></td>
+<td>wzór ściany ścinany wzdłuż krawędzi</td>
+<td>jak wyżej</td>
+</tr>
+<tr>
+<td>Drzewa ozdobne</td>
+<td><code>paintGreenery</code> (<code>ZIELEN</code>)</td>
+<td>malowane w kawałek, siatka co 16 m, <strong>nie reagują na nic</strong></td>
+<td>wyglądają jak drzewa do ścięcia lub owocowe → gracz uderza i nic się nie dzieje</td>
+</tr>
+<tr>
+<td>Sosny do ścięcia</td>
+<td><code>Forest</code> w <code>scenes/Ambient.ts</code> (<code>LAS</code>: siatka 30 m, 4 uderzenia = drewno, wracają przy logowaniu)</td>
+<td>sprite z klatkami full/stump, przy uderzeniu tween kąta ±5°</td>
+<td>brak paska postępu, uderzenie wygląda tak samo jak w drzewo ozdobne</td>
+</tr>
+<tr>
+<td>Drzewa owocowe</td>
+<td><code>Orchards</code> w <code>Ambient.ts</code></td>
+<td>uderzenie zrzuca 1 owoc (2–5 na drzewo), tween kąta</td>
+<td>owoc „znika” do plecaka bez animacji spadania</td>
+</tr>
+<tr>
+<td>Postacie grafika</td>
+<td><code>sprites.ts</code>, <code>wyglad.ts</code> <code>skala</code> 0,36</td>
+<td>arkusze 64×64 zmniejszane LINEAR do ~23 px mapy</td>
+<td>lekko rozmyte. <strong>Stary bohater <code>look.ts</code> (16×20, 1 px = 1 px mapy) ma piksel ~2,5× grubszy</strong> – to „blondynka” ze zrzutu właściciela. Sprawdzić, czy na produkcji gracz nie widzi wciąż <code>look.ts</code></td>
+</tr>
+<tr>
+<td>Wozy</td>
+<td><code>placeCarts</code>, 156×125 na 50 px mapy (0,4 px mapy na px pliku)</td>
+<td>najbliżej docelowej gęstości („koń = wzorzec”)</td>
+<td>stoją też przy stacjach kolejowych → właściciel chce tam lokomotywy</td>
+</tr>
+<tr>
+<td>Tory</td>
+<td><code>paintRail</code></td>
+<td>linia przerywana + szara kreska</td>
+<td>płasko, „programowo”</td>
+</tr>
+<tr>
+<td>Pogoda</td>
+<td><code>weather.ts</code> (<code>w</code> = wiatr m/s, <code>kind</code>), <code>WeatherFx.ts</code></td>
+<td>deszcz, śnieg, mgła, błyski</td>
+<td>wiatr nieużywany</td>
+</tr>
+<tr>
+<td>Kamera</td>
+<td><code>GameScene</code> <code>setZoom(max(2, floor(short/176)) × OSTROSC)</code></td>
+<td>całkowite powiększenie</td>
+<td>przy OSTROSC 1 i bazowym 3 → 1,5 px ekranu na px pliku (patrz 2.3)</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Nowa skala: piksel do piksela</h2>
+<h3>2.1 Zasada</h3>
+<p><strong>1 px pliku grafika = 0,5 px mapy</strong> (= 3,84 px na metr przy <code>PX_PER_M</code> 1,92). Przy <code>DOTS = 2</code> to <strong>dokładnie 1 px płótna kawałka</strong>, więc grafiki kładzie się na płótno 1:1, bez skalowania. Sprite'y Phasera dostają <code>setScale(0.5)</code> i filtr NEAREST, więc przy powiększeniu kamery <code>2 × OSTROSC</code> każdy piksel pliku to całkowita liczba pikseli ekranu.</p>
+<ul>
+<li><code>content/swiat.ts</code>: <code>SKALA_PLIKOW = 2</code> dla nowych plików. <strong>Na czas przejścia</strong> trzymaj skalę per plik (np. <code>SKALE_PLIKOW: Record&lt;string, number&gt;</code>, domyślnie 3 dla starych, 2 dla nowych z zamówienia 09), żeby stare i nowe działały naraz.</li>
+<li><code>artPattern</code>/<code>artSheet</code>: przy <code>DOTS === SKALA</code> żadnego <code>drawImage</code> ze skalowaniem. Przy <code>DOTS = 1</code> (słabe telefony) zmniejszenie 2:1. Proponuję uśrednianie 2×2 (wygładzanie przeglądarki <code>imageSmoothingQuality: 'high'</code>) albo „najbliższy sąsiad”. Do porównania na zrzutach, decyzja po teście.</li>
+<li>Sprite'y nowych grafik: <code>texture.setFilter(Phaser.Textures.FilterMode.NEAREST)</code>, <code>setScale(0.5)</code>, kamera <code>roundPixels = true</code>. Stare arkusze postaci zostają LINEAR 0,36, dopóki nie przyjdą nowe (pole w <code>Postac</code>, np. <code>piksel: true</code> → NEAREST + 0,5).</li>
+<li><strong>Postacie (decyzja 4.10, po teście bazy):</strong> maniera „blondynki” (łuczniczka v1), celowo grubszy piksel niż świat. Arkusz 64×64 = siatka 32×32 powiększona 2×, postać ok. 28 px siatki (56 px pliku). Wyświetlać ze skalą <strong>0,375</strong> i NEAREST: 1 px siatki = 0,75 px mapy = 3 px ekranu przy powiększeniu 4 (OSTROSC 2), czyli równo; postać ok. 21 px mapy (dziś 23). Przy OSTROSC 1 wychodzi 1,5 px ekranu (nierówno, do przyjęcia). Broń w dłoni (<code>bron_&lt;id&gt;_reka</code> 24×24 = siatka 12×12 ×2) w tej samej skali co postać.</li>
+</ul>
+<h3>2.2 Proporcje budynek–postać (do decyzji właściciela, nie blokuje reszty)</h3>
+<p>Postać ma 23 px mapy (~12 m według <code>PX_PER_M</code>), dom 12×10 m to 23×19 px mapy, więc budynki wyglądają na mniejsze od ludzika (właściciel to zauważył). Dwie drogi:
+- <strong>A (zalecana na teraz):</strong> zostawić <code>PX_PER_M</code>. To umowna skala gry. Grafik rysuje „pod piksele”, nie „pod metry”.
+- <strong>B:</strong> podnieść <code>PX_PER_M</code> (np. 2,5–3). Budynki i ulice rosną względem postaci, na ekranie widać mniej miasta, chodzenie trwa dłużej. Zapisane pozycje mają skalę (<code>map_scale</code>, <code>s</code>), więc konwersja istnieje, ale zmienia się dużo stałych (prędkość, zasięgi, gangi, siatki). Osobna decyzja i osobny test.</p>
+<h3>2.3 Powiększenie kamery</h3>
+<p>Przy <code>OSTROSC = 2</code> powiększenie jest zawsze parzyste, więc 1 px pliku = całkowita liczba pikseli ekranu. Przy <code>OSTROSC = 1</code> i bazie 3 (szerokie ekrany) wychodzi 1,5. Propozycja: przy <code>OSTROSC = 1</code> brać bazę parzystą (2 lub 4), albo pogodzić się z nierównymi pikselami tylko na słabych telefonach.</p>
+<h2>3. Drzewa, krzaki, trawa (warianty i ich koszt)</h2>
+<h3>3.1 Jeden system drzew zamiast trzech</h3>
+<p>Zastąpić <code>ZIELEN</code>/<code>paintGreenery</code>, <code>Forest</code> (sosny) i <code>Orchards</code> <strong>jednym modelem</strong> (np. <code>src/map/trees.ts</code> + <code>scenes/Trees.ts</code>):</p>
+<pre><code class="language-ts">interface Tree {
+  id: number;            // stały: hash z pozycji (mapa + siatka), jak dziś w Forest
+  x: number; y: number;  // podstawa pnia, px mapy
+  gat: Gatunek;          // 'dab' | 'buk' | 'lipa' | 'brzoza' | 'olcha' | 'wierzba' | 'jablon' | 'grusza' | 'sliwa' | 'sosna' | 'swierk' | 'jodla' | 'kosodrzewina' | 'jalowiec' | 'krzak_…'
+  war: 0 | 1 | 2;        // wariant a/b/c
+  chop: boolean;         // da się ściąć (ma zacios)
+  ochrona?: 'sad' | 'park' | 'pomnik' | 'stary'; // powód, gdy nie da się
+  owoce?: number;        // ile zostało (drzewa owocowe)
+  stan: 'drzewo' | 'pieniek' | 'sadzonka';
+}
+</code></pre>
+<p>Rozmieszczenie per komórka 1 km (jak <code>Forest</code>/<code>Townsfolk</code>, tylko gdy <code>ready</code>): Poisson-disk (próby z odrzuceniem, minimalny odstęp zależny od gatunku), gęstość modulowana szumem (kępy i polany), <strong>na skraju obszaru niższe drzewa i krzaki</strong> (odległość od brzegu wielokąta). Seed z mapy i komórki, <strong>nie</strong> z logowania (drzewa stoją zawsze w tym samym miejscu). Szczegółowe wagi i reguły: <a href="dane/gatunki_osm.json"><code>dane/gatunki_osm.json</code></a>.</p>
+<p>Pojedyncze drzewa z OSM (<code>natural=tree</code>, punkty) w parkach i przy ulicach: postawić dokładnie tam (z <code>species</code>/<code>genus</code>/<code>leaf_type</code>, jeśli są). Lublin ma ich dużo. <strong>Wymaga zmian w <code>fetch-osm.sh</code> i <code>build-map.mjs</code></strong>: dziś <code>natural=wood</code>/<code>landuse=forest</code> stają się jednym <code>forest</code> bez <code>leaf_type</code>, a sad (<code>orchard</code>) wpada do <code>farmland</code>. Do dodania w danych: <code>leaf_type</code>, <code>leaf_cycle</code>, osobny rodzaj <code>orchard</code>, <code>natural=tree</code> (node), <code>denotation</code>, <code>natural=heath</code>, <code>wetland=reedbed/swamp</code>. Po zmianie potrzebne odświeżenie danych workflow „Fetch Lublin map data”. Na mapach świata (<code>world.ts</code>, Protomaps) <code>leaf_type</code> bywa w <code>landcover</code>/<code>landuse</code>, do sprawdzenia. W razie braku: mieszany las.</p>
+<p><strong>Biomy:</strong> bliskość wody (<code>CityMap.nearWater</code>, istnieje) → olcha, wierzba, trzciny. Wysokość (tylko mapy świata, <code>terrain.heightAt</code>) → progi z <a href="dane/gatunki_osm.json"><code>dane/gatunki_osm.json</code></a> (świerk/jodła wyżej, kosodrzewina najwyżej). Lublin bez terenu → bez progów wysokości.</p>
+<h3>3.2 Wariant A (zalecany): korony jako sprite'y z gotowymi klatkami wiatru</h3>
+<ul>
+<li><strong>Pień</strong> malowany w kawałek mapy (jak dziś drzewa ozdobne): zero kosztu na klatkę.</li>
+<li><strong>Korona</strong> jako osobny <code>Image</code> z <code>depth = y podstawy</code> → naturalne sortowanie z postaciami: drzewo za postacią jest za nią, drzewo przed postacią ją zasłania. Makieta robi to samo (<code>drawSpriteList</code> dla drzew z <code>t.y &lt;= player.y</code> przed postacią, reszta po niej).</li>
+<li><strong>Wiatr bez shadera:</strong> przy wczytaniu tekstury korony program <strong>sam generuje 5 klatek ścięcia</strong> (przesunięcie każdego wiersza o <code>round(k × wysokośćWiersza × sztywność)</code>, k = −2…+2, jak <code>dx</code> w makiecie). Co klatkę każde widoczne drzewo wybiera klatkę z <code>wiatr(x, y, czas)</code>. Piksele zostają ostre, tekstura atlasu rośnie 5×, ale drzew jest kilkanaście gatunków × 3 warianty.</li>
+<li>Oszacowanie: 15 gatunków × 3 warianty × 5 klatek × (96×112×4 B) ≈ 9,7 MB, jeśli wszystko naraz. Wczytywać gatunki według biomu w pobliżu i trzymać w jednym atlasie (<code>DynamicTexture</code>/canvas), wtedy zwykle 3–5 MB.</li>
+<li><strong>Szelest:</strong> po wejściu postaci pod koronę lub po uderzeniu przez 0,5–1 s szybkie przełączanie klatek (−1/+1) + cząsteczki liści (Phaser particles, tekstura <code>efekt_liscie</code>).</li>
+<li><strong>Prześwit:</strong> tylko dla koron, które w tej chwili zasłaniają postać (zwykle 0–3): <code>sprite.filters.internal.addMask(teksturaKółka, true)</code> z gotową teksturą kółka o postrzępionej krawędzi z macierzy Bayera 4×4 (wygenerować raz na kilka promieni, np. 12/16/20 px mapy). Maska w <code>viewTransform: 'world'</code> przesuwana za postacią. Gdy postać wychodzi, filtr zdjąć (filtry kosztują pass renderowania na obiekt).</li>
+<li>Liczba sprite'ów: korona na ekranie ~80 px pliku = 40 px mapy, odstęp ~28 px mapy → w gęstym lesie ok. 100–150 koron w widoku telefonu. Tworzyć tylko w promieniu widoku + margines (pula obiektów, jak <code>Forest</code>).</li>
+</ul>
+<h3>3.3 Wariant B (alternatywa): warstwa koron w kawałku + shader</h3>
+<p>Kawałek mapy dzielony na płótno ziemi i płótno koron (nad postaciami) + maska (wysokość w koronie, sztywność, faza). Filtr przesuwa piksele według wiatru i robi prześwit. Kod GLSL: <a href="shadery/korony.frag.glsl"><code>shadery/korony.frag.glsl</code></a>, kontroler: <a href="shadery/FiltrWiatru.ts"><code>shadery/FiltrWiatru.ts</code></a>. <strong>Wady:</strong> +4 MB płótna koron + ~1 MB maski na kawałek (×8 kawałków, czyli z ~39 do ~80 MB, za dużo przy dzisiejszym budżecie), brak sortowania głębi pojedynczych drzew, pass filtra na kawałek co klatkę. Opisany dla porządku i do efektów ziemi (3.5).</p>
+<h3>3.4 Krzaki, wysoka trawa, trzciny</h3>
+<ul>
+<li><strong>Krzaki:</strong> jak korony (wariant A), osobna dolna część w kawałku.</li>
+<li><strong>Niska trawa:</strong> kępki malowane w kawałek (statyczne). Ruch daje „jasny pas podmuchu” (3.5).</li>
+<li><strong>Wysoka trawa i trzciny:</strong> tylko w obszarach łąk i brzegów, jako małe sprite'y z 3 gotowymi klatkami ścięcia (jak korony) w promieniu widoku. Przy postaci (≤ 9 px mapy) wybór klatki odchylonej od niej + <code>depth</code> po podstawie, więc trawa przed postacią zasłania stopy (efekt brodzenia). Pula ≤ 300 obiektów.</li>
+</ul>
+<h3>3.5 Ziemia: podmuch na łące i cienie chmur</h3>
+<ul>
+<li><strong>Podmuch:</strong> jasny pas sunący przez łąki (<code>gustAt</code> w makiecie). Najtaniej jako <code>TileSprite</code> z ditherowaną teksturą pasa (z macierzy Bayera), tryb mieszania <code>ADD</code> o małej sile, maskowany do trawy. Maska trawy = osobne płótno 1/4 rozdzielczości kawałka (0,25 MB) albo kanał alfa w samym kawałku. Prościej: tylko na obszarach <code>grass</code>/<code>meadow</code>/<code>park</code>, rysowany pod postaciami.</li>
+<li><strong>Cienie chmur:</strong> jeden <code>TileSprite</code> 512×512 z ditherowanymi plamami (wygenerowany raz z szumu), mieszanie MULTIPLY, przesuwany z wiatrem, <code>depth</code> nad postaciami i drzewami, pod mgłą wojny i HUD. Przy <code>kind</code> pochmurno/deszcz więcej plam, przy czystym niebie mniej, nocą wyłączone.</li>
+</ul>
+<h3>3.6 Wiatr z pogody</h3>
+<p><code>S = clamp(weather.w / 7, 0.1, 2.2)</code> (m/s). Parametry fal: <a href="dane/wiatr.json"><code>dane/wiatr.json</code></a> (te same co w makiecie: <code>windAt</code>, <code>gustAt</code>). Kierunek: na razie stały z zachodu (podmuch w prawo). Docelowo dodać <code>wind_from_direction</code> z MET (pole <code>d</code> w <code>weather_cells.hours</code>, <code>weather_collect</code>). Burza: S ≥ 1,8 + więcej liści. Śnieg: wiatr słabszy, korony w wersji ze śniegiem (część G).</p>
+<h2>4. Ścinanie i owoce: informacja zwrotna</h2>
+<p>Wymaganie właściciela: <strong>od pierwszego ciosu widać, że coś się dzieje.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Zdarzenie</th>
+<th>Co widać i słychać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uderzenie w drzewo z zaciosem</td>
+<td>pasek postępu nad koroną (<code>LAS.uderzenNaDrzewo</code> segmentów, mosiężna ramka <code>pasek_postepu</code>, ikonka <code>ikona_siekiera</code>), szelest korony, <code>efekt_wiory</code> + <code>efekt_uderzenie</code> przy pniu, dźwięk „stuk” (<code>sfx.ts</code>), <code>navigator.vibrate?.(15)</code></td>
+</tr>
+<tr>
+<td>Kolejne uderzenia</td>
+<td>pasek przyrasta, szelest mocniejszy</td>
+</tr>
+<tr>
+<td>Ostatnie uderzenie</td>
+<td><code>efekt_upadek_drzewa</code> (4 klatki) + obłok liści, korona znika, pień → pieniek, „+1 drewno” unoszące się nad pniem (jak <code>+N</code> przy pasku umiejętności)</td>
+</tr>
+<tr>
+<td>Odejście w trakcie</td>
+<td>pasek gaśnie po 3 s, postęp przepada</td>
+</tr>
+<tr>
+<td>Uderzenie w drzewo chronione</td>
+<td>krótkie drgnięcie korony, głuchy dźwięk, <strong>dymek z powodem</strong> (pierwszy raz na rodzaj ochrony, potem tylko ikonka): „Pomnik przyrody – chroniony”, „Drzewo w parku – nie wolno ścinać”, „Za grube – szukaj drzew z zaciosem”</td>
+</tr>
+<tr>
+<td>Drzewo owocowe</td>
+<td><strong>potrząsanie zamiast ścinania</strong>: korona się trzęsie, z warstwy owoców znika 1 owoc, który widocznie spada (<code>owoc_*</code>, łuk + odbicie), turla się i leci do bohatera (albo leży jako zbieralny), „+1 jabłko”. Gdy owoców brak: korona bez warstwy owoców i dymek „Już puste – wrócą przy następnym logowaniu”</td>
+</tr>
+</tbody>
+</table>
+<p>Stany i odrastanie: <code>pieniek</code> → po X minutach gry <code>sadzonka</code> → po Y minutach <code>drzewo</code>. Albo, prościej i zgodnie z dzisiejszą zasadą, wszystko wraca przy następnym logowaniu, a pieniek i sadzonka są tylko w obrębie sesji. Decyzja właściciela, w makiecie 10 s i 14 s.</p>
+<h2>4a. Postacie: prosty wygląd, wspólny szkielet, atak bez animacji postaci</h2>
+<p>Decyzja właściciela po pierwszym podglądzie grafika: postać ma być <strong>prostsza</strong>, z ruchem w <strong>3 kierunkach (ewentualnie 5)</strong>, resztę daje lustro, a <strong>atak jest wspólny dla wszystkich i zależy tylko od broni</strong> (zamówienie 09, punkt 4).</p>
+<ul>
+<li><strong>Nowy format arkusza:</strong> wiersze = kierunki (3: przód, bok w lewo, tył; albo 5: przód, skos przód-lewo, bok w lewo, skos tył-lewo, tył), kolumny = <code>stoi</code>, <code>krok1…krok4</code>. Klatki 64×64, stopy y = 62, środek x = 32. Arkusz 320×192 albo 320×320. <code>sprites.ts</code> dziś zakłada 192×192 3×3 i <code>WALK = [1, 2]</code>: dodać rozpoznawanie formatu (po wymiarach albo polu <code>format: 'v9'</code> w <code>Postac</code>) i cykl 4 klatek (<code>WALK_V9 = [1, 2, 3, 4]</code>, ok. 8 kl./s).</li>
+<li><strong>Kierunek z kąta ruchu:</strong> 3 kierunki: jak dziś. 5 kierunków: 8 sektorów po 45°; prawe (E, SE, NE) = lewe (W, SW, NW) z <code>flipX</code>. Uwaga na kotwicę dłoni przy odbiciu (x → 63 − x).</li>
+<li><strong>Wspólne bazy:</strong> <code>baza_dorosly</code>, <code>baza_dziecko</code>, <code>baza_starszy</code>, (<code>baza_chochlik</code>…): wszystkie postacie z jednej bazy mają identyczne pozy, więc <strong>kotwica dłoni jest jedna na bazę</strong> (<code>baza_&lt;nazwa&gt;_dlon.png</code>: jeden czerwony piksel w klatce → przy wczytaniu zamienić na tablicę <code>[kierunek][klatka] = {x, y}</code>). Pole <code>baza</code> w <code>Postac</code>.</li>
+<li><strong>Atak:</strong> <code>swingWeapon</code> (GameScene) już rysuje broń niezależnie od postaci (dziś obraca ikonę 16×16). Zmiana: postać na czas ciosu w klatce <code>stoi</code> kierunku ciosu, wypad 1–2 px w stronę ciosu i powrót; broń z arkusza <code>bron_&lt;id&gt;_reka</code> (16 kątów co 22,5°, rękojeść w środku płótna), wybierana klatka najbliższa bieżącemu kątowi łuku, zaczepiona w kotwicy dłoni. <strong>Bez obracania pixel artu</strong> (zamiast <code>setRotation</code> wybór klatki), dopóki są klatki; bez nich zostaje dzisiejsze obracanie ikony. Smuga: <code>smuga_ciecie/obuch/magia</code> (4 klatki) zamiast dzisiejszego <code>drawSweep</code> z Graphics. Łuk: <code>luk_napiety</code> przy celowaniu, <code>strzala</code> 16 kątów w locie. Siekiera (ścinanie) i potrząsanie drzewem używają tego samego mechanizmu.</li>
+<li><strong>Bohater gracza:</strong> <code>look.ts</code> (16×20, gruby piksel, „blondynka”) do wycofania, gdy będą nowe arkusze. Wszystkie postacie z arkuszy, <code>setScale(0.375)</code> + NEAREST (punkt 2.1).</li>
+</ul>
+<h2>5. Budynki liczone piksel po pikselu</h2>
+<p>Wzór: <a href="makieta/dachy_roofs.py"><code>makieta/dachy_roofs.py</code></a> (port makiety w Pythonie, uogólniony na dowolny wielokąt) i <code>zrzuty/dachy_*.png</code>.</p>
+<p>Algorytm (dla każdego piksela płótna w obrysie, przy DOTS 2):
+1. <strong>Najbliższa krawędź</strong> obrysu (odcinek) = połać, <code>d</code> = odległość do niej.
+2. Normalna krawędzi na zewnątrz → jasność połaci z <code>-(nx·0,6 + ny·0,8)</code> (światło z lewej-góry) → odcień 0–3 z palety materiału.
+3. Rzędy dachówek: <code>floor(d) % 3 === 2</code> → odcień ciemniej (łupek: co 2 + spoiny co 4 wzdłuż krawędzi, przesunięte w co drugim rzędzie).
+4. Naroża (dwie najbliższe krawędzie sąsiednie, |d1 − d2| &lt; 0,75) → odcień jaśniej. Kalenica: dwie najbliższe krawędzie <strong>przeciwległe</strong> (iloczyn normalnych &lt; −0,5) i |d1 − d2| &lt; 0,75 → kolor kalenicy. Uwaga: w <code>dachy_roofs.py</code> kalenica to „<code>d</code> bliskie maksimum”, co działa tylko dla wypukłych obrysów. Dla L/U użyć kryterium przeciwległych krawędzi.
+5. Obrys <code>#1e1a24</code> na brzegu dachu. Ściany jak dziś: obrys opuszczony o <code>wallHeight</code> i przesunięty w prawo (<code>WALL_SKEW</code> zostaje, właściciel tego chciał). Kolumnami: odcień ściany z nachylenia krawędzi, cokół, linia cienia pod okapem, stemple okien (<code>okno_*</code>, nocą <code>_noc</code>), drzwi w miejscu prawdziwych drzwi (<code>entranceOf</code>), rury z 6.4 zamówienia.
+6. Cień rzucany w prawo-w dół (makieta: <code>inFP(x − k, y − k/2)</code> dla k ≤ 0,9·H), ditherowana krawędź.</p>
+<p>Wydajność: dom ~90×80 px płótna × ~10 krawędzi = ok. 70 tys. operacji. Kawałek z 300 budynkami to kilka milionów operacji, ok. 10–30 ms. Malowanie kawałka trwa dziś ~17 ms, więc trzeba zmierzyć. Gdy za wolno: liczyć w Web Workerze (OffscreenCanvas) albo raz przy <code>build-map</code> zapisywać „szkielet dachu” (krawędzie kalenic i naroży) w kafelkach mapy.</p>
+<p>Obecne mechanizmy do zachowania: <code>partsOf</code> (wielkie hale w 2–5 częściach, każda liczona osobno), <code>highlight</code> (miejsca specjalne: zamiast przebarwiania inny materiał + <code>dodatek_&lt;miejsce&gt;</code> z zamówienia), kominy (<code>KOMINY</code>), odkrywanie budynku przez mgłę (<code>markBuilding</code>).</p>
+<p>Opcjonalnie (przełącznik, decyzja po teście): <strong>przyciąganie kąta budynku</strong> do 0°/26,565°/45°/63,435° przy odchyłce ≤ 10° (<code>snapA</code> w makiecie), obrót wokół środka. Uwaga na kolizje (<code>CityMap.buildingAt</code>), bo obrys się przesuwa. Najlepiej robić to w <code>build-map</code>, nie w kliencie.</p>
+<h2>6. Steampunk na mapie</h2>
+<ul>
+<li><strong>Rury na ścianach:</strong> ok. 30% budynków (seed) dostaje pionową rurę <code>rura_sciana_&lt;8|12|16&gt;</code> na jednej ścianie frontowej przy narożniku, część poziomy odcinek pod oknami, manometr lub zawór przy drzwiach miejsc.</li>
+<li><strong>Dachy:</strong> ok. 10% zbiornik lub kocioł na dachu (stemple w obrysie, jak <code>paintChimney</code>), wentylatory 3 klatki (tylko w widoku, sprite).</li>
+<li><strong>Rurociągi (zmiana 4.10):</strong> tylko <strong>równolegle do dróg, w stałym odsunięciu za chodnikiem, tym samym łukiem co droga</strong>; na końcach wejście do budynku albo pod ziemię (studzienka). Żadnych tras „Manhattan” przez trawniki. Szczegóły i kod: <a href="GENERATOR_SWIATA.md"><code>GENERATOR_SWIATA.md</code></a> punkt 0.6, <a href="generator/steampunk.ts"><code>generator/steampunk.ts</code></a> (<code>trasaPrzyDrodze</code>, <code>rurociagWzdluz</code>). Przecieki i para jako sprite'y w widoku (punkty zwraca <code>rurociagWzdluz</code>).</li>
+<li><strong>Para ze studzienek:</strong> dziś <code>studzienka_para</code> to statyczna klatka w kawałku. Dodać pulę sprite'ów obłoczków (<code>para_*</code>, 4–6 klatek) nad kratkami w widoku, losowe odstępy 2–6 s. To samo przy kominach i kotłach.</li>
+</ul>
+<h2>7. Kolej parowa (zamiast koni na stacjach kolejowych)</h2>
+<ul>
+<li><strong>Rozróżnić stacje:</strong> dziś <code>station</code> to zarówno kolej (OSM <code>railway=station/halt</code>), jak i dworce autobusowe (<code>amenity=bus_station</code>, build-map i <code>world.ts</code>). Dodać do miejsca pole, np. <code>rodzaj: 'kolej' | 'autobus'</code> (build-map, split-map, <code>world.ts</code> <code>rememberMap</code>). <strong>Przy dworcach autobusowych zostaje wóz konny i woźnica</strong> (<code>placeCarts</code>, <code>STALE_HD.woznica</code>). <strong>Przy stacjach kolejowych: skład parowy na torze + konduktor</strong> (nowa postać stała; do czasu arkusza od grafika woźnica w czapce, czyli zaślepka). Okna przejazdu (<code>openCoach</code>) przy stacji kolejowej mówią „pociąg/konduktor”.</li>
+<li><strong>Tory</strong> (<code>paintRail</code> → <code>tor()</code> z generatora): podsypka, podkłady, szyny.</li>
+<li><strong>Perony:</strong> OSM <code>railway=platform</code> (dodać do <code>fetch-osm.sh</code>/<code>build-map</code>, jeśli brak), płyty z jasną krawędzią, wiata z modułów, latarnie, ławki.</li>
+<li><strong>Ustawienie składu:</strong> znaleźć linię <code>rail</code> najbliższą miejscu stacji (najlepiej przy peronie), punkt na niej najbliższy drzwiom stacji, i od niego rozstawić pojazdy wzdłuż linii <strong>po długości łuku</strong>: lokomotywa, tender, 1–4 wagony (seed ze stacji), odstęp = długość pojazdu + 2 px. Dla każdego pojazdu kąt stycznej toru w jego środku → klatka z arkusza:</li>
+<li><strong>lokomotywa i tender: 16 kierunków</strong> (co 22,5°, mają przód i tył), <code>klatka = round(kąt / 22,5°) mod 16</code>,</li>
+<li><strong>wagony: 8 kierunków</strong> (co 22,5° w zakresie 0–157,5°; wagon jest symetryczny, więc kąt+180° = ta sama klatka): <code>round((kąt mod 180°) / 22,5°) mod 8</code>.</li>
+<li>Największy błąd dopasowania do toru to 11,25°. Przy pojazdach długości 30–64 px to najwyżej 1–2 px na końcach, niewidoczne. Więcej kierunków nie trzeba (32 kierunki podwoiłyby pracę grafika bez widocznej różnicy).</li>
+<li>Do czasu arkuszy od grafika: zaślepka rysowana programem (prostokąt z kabiną i kominem w danym kierunku).</li>
+<li>Para z komina (<code>para()</code>), okna wagonów nocą. Później (opcja): pociąg przyjeżdża i odjeżdża po torze, te same klatki.</li>
+</ul>
+<h2>8. Pamięć i wydajność – budżet</h2>
+<table>
+<thead>
+<tr>
+<th>Pozycja</th>
+<th>Dziś</th>
+<th>Po zmianach (wariant A)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kawałki mapy (8 × 4 MB)</td>
+<td>~32 MB</td>
+<td>~32 MB (bez zmian)</td>
+</tr>
+<tr>
+<td>Atlas koron (5 klatek)</td>
+<td>–</td>
+<td>3–5 MB (gatunki z okolicy)</td>
+</tr>
+<tr>
+<td>Krzaki, trawa wysoka, efekty</td>
+<td>–</td>
+<td>~1–2 MB</td>
+</tr>
+<tr>
+<td>Pojazdy kolei (16 kier. × 4 typy)</td>
+<td>–</td>
+<td>~1,5 MB</td>
+</tr>
+<tr>
+<td>Stemple budynków, moduły rur, para</td>
+<td>–</td>
+<td>&lt; 1 MB</td>
+</tr>
+<tr>
+<td>Cienie chmur, podmuch (TileSprite)</td>
+<td>–</td>
+<td>1–2 MB</td>
+</tr>
+<tr>
+<td><strong>Razem tekstury świata</strong></td>
+<td>~39 MB</td>
+<td><strong>~45–50 MB</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Kryteria (telefon średniej klasy, OSTROSC 2, Arceus): las Dąbrowa + centrum Lublina, ≥ 45 kl./s po 2 min chodzenia, brak „WebGL context lost”, malowanie kawałka ≤ 40 ms. Pomiar: licznik klatek w <code>watchSpeed</code> + własny licznik bajtów tekstur (suma <code>width × height × 4</code> przy tworzeniu). Uwaga z <code>CLAUDE.md</code>: w headless Chromium czasy klatek skaczą, porównywać z poprzednią wersją na tej samej maszynie.</p>
+<h2>9. Zadania (kolejność, kryteria, wycena w tokenach)</h2>
+<p>Wszystko za przełącznikiem <code>?wyglad=09</code> (i w <code>localStorage</code>), dopóki właściciel nie zaakceptuje. Najpierw na serwerze testowym.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Zadanie</th>
+<th>Gotowe, gdy</th>
+<th>Wycena</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Z0</td>
+<td>Przełącznik <code>wyglad=09</code>, licznik pamięci tekstur, zrzuty porównawcze</td>
+<td>przełącza się bez przeładowania mapy albo po przeładowaniu, liczby w <code>window.__game</code></td>
+<td>~100 tys.</td>
+</tr>
+<tr>
+<td>Z1</td>
+<td>Skala piksel do piksela (2.1–2.3): skale per plik, NEAREST, zoom</td>
+<td>nowy plik testowy 2× wygląda ostro przy DOTS 1 i 2, stare pliki bez zmian</td>
+<td>~300 tys.</td>
+</tr>
+<tr>
+<td>Z2</td>
+<td>Jeden system drzew (3.1) + <strong>zaślepki</strong> generowane jak w makiecie (<code>buildCrown</code>) do czasu grafik + zmiany w danych OSM</td>
+<td>drzewa według tagów i biomu, te same przy każdym logowaniu, <code>ZIELEN</code>/<code>Forest</code>/<code>Orchards</code> zastąpione</td>
+<td>~800 tys.</td>
+</tr>
+<tr>
+<td>Z3</td>
+<td>Wiatr koron (3.2): klatki ścięcia, wybór klatki, szelest, siła z pogody</td>
+<td>kołysanie widać przy wietrze &gt; 3 m/s, ruch zawsze o całe piksele</td>
+<td>~300 tys.</td>
+</tr>
+<tr>
+<td>Z4</td>
+<td>Prześwit pod koronami (maska z Bayerem)</td>
+<td>postać widoczna pod każdą koroną, krawędź z szachownicy, bez spadku FPS</td>
+<td>~150 tys.</td>
+</tr>
+<tr>
+<td>Z5</td>
+<td>Ścinanie i owoce z informacją zwrotną (4)</td>
+<td>właściciel przy pierwszym ciosie wie, co się dzieje; drzewa chronione mówią dlaczego</td>
+<td>~400 tys.</td>
+</tr>
+<tr>
+<td>Z6</td>
+<td>Trawa wysoka, trzciny, podmuch, cienie chmur (3.4–3.5)</td>
+<td>brodzenie w trawie, pas podmuchu, chmury zależne od pogody</td>
+<td>~400 tys.</td>
+</tr>
+<tr>
+<td>Z7</td>
+<td>Budynki pikselowe (5) + stemple</td>
+<td>dachy jak w <code>dachy_katy_x4.png</code>, także L/U, czas malowania kawałka w budżecie</td>
+<td>~1 mln</td>
+</tr>
+<tr>
+<td>Z8</td>
+<td>Steampunk na mapie (6): rury, rurociągi, para</td>
+<td>rurociągi i para widoczne w centrum i na osiedlach, nie gęściej niż właściciel zaakceptuje</td>
+<td>~500 tys.</td>
+</tr>
+<tr>
+<td>Z4a</td>
+<td>Postacie v9 (4a): nowy format arkusza, 4-klatkowy chód, lustro dla 5 kierunków, kotwica dłoni, broń z 16 klatek i smugi; na zaślepce (prostokątna „baza” rysowana programem)</td>
+<td>ruch w 3/5 kierunkach bez drgań, cios wygląda tak samo dla każdej postaci, zależy od broni</td>
+<td>~400 tys.</td>
+</tr>
+<tr>
+<td>Z9</td>
+<td>Kolej (7): tory, perony, składy na stacjach, konduktor</td>
+<td>lokomotywy na stacjach dopasowane do łuków, konie tylko przy dworcach autobusowych</td>
+<td>~600 tys.</td>
+</tr>
+<tr>
+<td>Z10</td>
+<td>Podmiana na grafiki grafika partiami (zamówienie 09, pkt 12)</td>
+<td>każda partia na serwerze testowym, zrzut do właściciela</td>
+<td>~100–200 tys. na partię</td>
+</tr>
+</tbody>
+</table>
+<p>Z2–Z6 da się zrobić od razu na zaślepkach z makiety. Z7 i Z9 też (palety z makiety, pojazdy jako proste prostokąty w 16 kierunkach). Grafiki grafika tylko podmieniają wygląd.</p>
+<h2>10. Na koniec każdego zadania</h2>
+<ul>
+<li><code>npm run build</code> + zrzut w widoku telefonu (Playwright), porównanie przed/po.</li>
+<li>Wpis w <code>CLAUDE.md</code> (krótko, po angielsku jak reszta), w tym podmiana akapitu „Art direction (owner, 30 Sep 2026)” na decyzję z 4 października.</li>
+<li>Notka do czatu 🎨 Grafika (co gotowe, czego brakuje od grafika).</li>
+</ul>

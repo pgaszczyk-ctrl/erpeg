@@ -1,0 +1,308 @@
+<title>Kasprowy z wysoka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Układ: ekran gry na całą szerokość, pod nim pulpit przełączników i krótkie objaśnienie. Akcent = czerwień szlaku turystycznego. */
+:root{
+  --bg:#eef0ee; --panel:#ffffff; --fg:#1d2226; --muted:#5b6670; --line:#d3d8da;
+  --szlak:#c8352b; --biel:#ffffff; --granit:#3b424a;
+  --f-pix:"Pixelify Sans",ui-monospace,monospace; --f-txt:"Atkinson Hyperlegible",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15191c;--panel:#1d2327;--fg:#e6eaec;--muted:#9aa6ae;--line:#2e373d;--szlak:#e2574b;--biel:#f3f3f3;--granit:#c8ced3;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15191c;--panel:#1d2327;--fg:#e6eaec;--muted:#9aa6ae;--line:#2e373d;--szlak:#e2574b;--biel:#f3f3f3;--granit:#c8ced3;color-scheme:dark}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-txt);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:18px 40px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.znak{display:inline-grid;grid-template-rows:1fr 1fr 1fr;width:30px;height:22px;border:1px solid var(--line);border-radius:2px;overflow:hidden;flex:none}
+.znak i:nth-child(1),.znak i:nth-child(3){background:var(--biel)}.znak i:nth-child(2){background:var(--szlak)}
+h1{font-family:var(--f-pix);font-weight:600;font-size:1.7rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+.lead{margin:0;color:var(--muted);max-width:70ch}
+.ekran{position:relative;background:#0e1316;border-radius:6px;overflow:hidden;line-height:0;touch-action:none;user-select:none}
+#widok{width:100%;height:auto;image-rendering:pixelated;display:block;cursor:crosshair}
+.hud{position:absolute;left:10px;top:10px;font-family:var(--f-pix);font-size:15px;line-height:1.25;color:#fff;text-shadow:0 1px 0 #000,1px 0 0 #000,-1px 0 0 #000,0 -1px 0 #000;pointer-events:none}
+.hud b{font-size:20px;font-weight:600}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(20,16,24,.86);color:#fff;font-family:var(--f-pix);font-size:15px;line-height:1.3;padding:6px 12px;border-radius:4px;border-left:4px solid var(--szlak);pointer-events:none;max-width:90%;text-align:center}
+.ladowanie{position:absolute;inset:0;display:grid;place-items:center;color:#cfd8dc;font-family:var(--f-pix);font-size:18px;line-height:1.3;background:#0e1316;min-height:300px}
+.pulpit{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.karta{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:grid;gap:10px;min-width:0}
+.karta h2{font-family:var(--f-pix);font-weight:600;font-size:1.05rem;margin:0;letter-spacing:.03em}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button,.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:7px 11px;border-radius:4px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--granit);color:var(--bg);border-color:var(--granit)}
+.btn.szlak{border-color:var(--szlak);color:var(--szlak);font-weight:700}
+.btn:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--szlak);outline-offset:2px}
+.rzad{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label{display:flex;gap:8px;align-items:center;cursor:pointer}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--szlak)}
+.opis{margin:0;color:var(--muted);font-size:14px}
+ol{margin:0;padding-left:1.2em;display:grid;gap:4px}
+.liczba{font-variant-numeric:tabular-nums;font-family:var(--f-pix);min-width:5ch;text-align:right}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="znak" aria-hidden="true"><i></i><i></i><i></i></span>
+    <h1>Kasprowy z wysoka</h1>
+  </header>
+  <p class="lead">Świat z naszego generatora (trawa, kosodrzewina, skały, ścieżki) położony na prawdziwych wysokościach spod Kasprowego Wierchu. Na stromym zboczu wszystko, co leży niżej od bohatera, rozmywa się i blednie tym mocniej, im głębiej jest. To, co na wysokości bohatera i wyżej, zostaje ostre.</p>
+
+  <div class="ekran" id="ekran">
+    <canvas id="widok" width="720" height="468" aria-label="Widok gry: zbocze pod Kasprowym Wierchem"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="ladowanie" id="ladowanie">Generuję zbocze…</div>
+  </div>
+
+  <div class="pulpit">
+    <section class="karta">
+      <h2>Wędrówka</h2>
+      <div class="rzad">
+        <button class="btn szlak" id="zejdz">Zejdź szlakiem</button>
+        <button class="btn" id="wejdz">Wejdź na szczyt</button>
+        <button class="btn" id="stop">Stój</button>
+      </div>
+      <p class="opis">Strzałki lub WASD, albo dotknij miejsca na mapie. Spróbuj zejść ze szlaku na skały.</p>
+      <label><input type="checkbox" id="tpn"> Cały park narodowy: tylko szlakiem (jak w TPN)</label>
+    </section>
+    <section class="karta">
+      <h2>Rozmycie w dół</h2>
+      <div class="seg" role="group" aria-label="Rozmycie">
+        <button id="m0" aria-pressed="false">Bez rozmycia</button>
+        <button id="m1" aria-pressed="true">Rozmyj to, co niżej</button>
+      </div>
+      <label for="sila">Siła <input type="range" id="sila" min="20" max="200" value="100"><span class="liczba" id="silaTxt"></span></label>
+      <label for="wiatr">Wiatr <input type="range" id="wiatr" min="0" max="100" value="45"><span class="liczba" id="wiatrTxt"></span></label>
+    </section>
+  </div>
+
+  <section class="karta">
+    <h2>Jak to działa</h2>
+    <ol>
+      <li><b>Teren rysuje generator gry</b>: trawa z kępkami, kosodrzewina z wiatrem, skały z głazami, ścieżki, budynki z obrysów OSM. Rodzaj terenu i ścieżki z OpenStreetMap, wysokość z mapy wysokości, której gra już używa (cieniowanie stoków).</li>
+      <li><b>Rozmycie</b>: dla każdego piksela ekranu liczymy, o ile metrów leży niżej od bohatera. Od ok. 3 m w dół obraz się rozmywa (do 4 pikseli) i lekko niebieszczeje. Działa na gotowym obrazie, więc obejmuje też drzewa i runo. Bohater zawsze ostry.</li>
+      <li><b>Szlaki</b>: na skałach i stokach ponad ok. 37° chodzi się tylko ścieżką (do 3 m od niej). Opcjonalnie cały park narodowy tylko szlakiem.</li>
+    </ol>
+    <p class="opis">Skala jak w grze (1 piksel = 0,26 m). Wycinek ok. 640 × 640 m wokół szczytu. Postać: arkusz grafika (łuczniczka).</p>
+  </section>
+</div>
+
+<script>@@GEN@@</script>
+<script>
+const DANE='@@DANE@@', WYS='@@WYS@@', POSTAC='@@POSTAC@@';
+const RG=@@REG@@;
+(function(){
+'use strict';
+const GN=window.GEN,K=RG.K,W=Math.round(RG.RW*K),H=Math.round(RG.RH*K),N=W*H;
+const $=id=>document.getElementById(id);
+const cvs=$('widok'),ctx=cvs.getContext('2d');
+let VW=360,VH=234,kD=2;
+const internal=document.createElement('canvas'),ictx=internal.getContext('2d');
+let img,buf,dhA,B=[];
+function setSize(){
+  const w=$('ekran').clientWidth||900;
+  if(w<560){VW=240;VH=300}else{VW=360;VH=234}
+  internal.width=VW;internal.height=VH;img=ictx.createImageData(VW,VH);buf=new Uint32Array(img.data.buffer);
+  dhA=new Float32Array(VW*VH);B=[];for(let r=0;r<=4;r++)B.push(new Uint32Array(VW*VH));
+  kD=Math.max(2,2*Math.round(Math.min(w*(window.devicePixelRatio||1),1800)/VW/2));
+  cvs.width=VW*kD;cvs.height=VH*kD;dirty=true;
+}
+const RODZ=['trawa','laka','park','las_lisciasty','las_iglasty','bruk','chodnik','plac','droga','piasek','woda','pole_orka','pole_zboze','zarosla','parking','cmentarz','mokradlo','skala','tory'];
+const ID=Object.fromEntries(RODZ.map((r,i)=>[r,i]));
+let MAP,NEAR,HG,SL,GW,GHt,ground,trees=[],atlas={},sprite,bud=[];
+const GSTEP=K*4; // 8 m
+const gridAt=(A,x,y)=>{let gx=x/GSTEP,gy=y/GSTEP;if(gx<0)gx=0;if(gy<0)gy=0;if(gx>GW-1.001)gx=GW-1.001;if(gy>GHt-1.001)gy=GHt-1.001;
+  const i=gx|0,j=gy|0,fx=gx-i,fy=gy-j,k=j*GW+i;return A[k]*(1-fx)*(1-fy)+A[k+1]*fx*(1-fy)+A[k+GW]*(1-fx)*fy+A[k+GW+1]*fx*fy};
+const hAt=(x,y)=>gridAt(HG,x,y);
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src})}
+function pixels(i){const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d');x.drawImage(i,0,0);return x.getImageData(0,0,i.width,i.height).data}
+const tick=t=>{$('ladowanie').textContent=t;return new Promise(r=>setTimeout(r,16))};
+const pip=(ring,x,y)=>{let c=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c}return c};
+
+async function build(dane,wys){
+  // wysokości (siatka 8 m) i nachylenie
+  GW=wys.w;GHt=wys.h;HG=new Float32Array(GW*GHt);SL=new Float32Array(GW*GHt);
+  for(let k=0;k<GW*GHt;k++)HG[k]=1000+(wys.d[k*4]*256+wys.d[k*4+1])/20;
+  for(let j=0;j<GHt;j++)for(let i=0;i<GW;i++){const hx=(HG[j*GW+Math.min(GW-1,i+1)]-HG[j*GW+Math.max(0,i-1)])/16,hy=(HG[Math.min(GHt-1,j+1)*GW+i]-HG[Math.max(0,j-1)*GW+i])/16;SL[j*GW+i]=Math.hypot(hx,hy)}
+  await tick('Układam teren z OSM…');
+  // ścieżki: wąska (droga) i szeroka (strefa „przy szlaku”, 3 m)
+  const pc=document.createElement('canvas');pc.width=W;pc.height=H;const p2=pc.getContext('2d');
+  const stroke=(w,col)=>{p2.strokeStyle=col;p2.lineWidth=w;p2.lineCap='round';p2.lineJoin='round';for(const ln of RG.paths){p2.beginPath();ln.forEach((p,i)=>i?p2.lineTo(p[0],p[1]):p2.moveTo(p[0],p[1]));p2.stroke()}
+    p2.beginPath();RG.trasa.forEach((p,i)=>i?p2.lineTo(p[0],p[1]):p2.moveTo(p[0],p[1]));p2.stroke()};
+  stroke(2*11.5+18,'#ff0000');stroke(18,'#ffff00');
+  const pd=p2.getImageData(0,0,W,H).data;pc.width=1;
+  const C2=new Uint8Array(RG.RW*RG.RH);for(let k=0;k<C2.length;k++)C2[k]=dane[k*4];
+  MAP=new Uint8Array(N);NEAR=new Uint8Array(N);
+  bud=RG.bud.map(r=>r);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const k=y*W+x;
+    if(pd[k*4]>128)NEAR[k]=1;
+    if(pd[k*4+1]>128){MAP[k]=ID.droga;continue}
+    const u=x+(GN.szum(x/22,y/22)-0.5)*14,v=y+(GN.szum(x/22+40,y/22+17)-0.5)*14;
+    const i=Math.min(RG.RW-1,Math.max(0,Math.floor(u/K))),j=Math.min(RG.RH-1,Math.max(0,Math.floor(v/K)));
+    const c=C2[j*RG.RW+i];let r;
+    switch(c){case 1:r='las_iglasty';break;case 4:r='zarosla';break;case 5:r='mokradlo';break;case 6:case 7:case 10:r='skala';break;
+      case 8:case 11:r='woda';break;case 9:r='plac';break;default:r=GN.szum(x/70+9,y/70)>0.55?'laka':'trawa'}
+    MAP[k]=ID[r];
+  }
+  const rodzajW=(x,y)=>x<0||y<0||x>=W||y>=H?null:RODZ[MAP[(y|0)*W+(x|0)]];
+  await tick('Maluję trawę i skały…');
+  ground=GN.nowy(W,H);GN.malujPodloze(ground,0,0,rodzajW);
+  if(MAP.includes(ID.woda))GN.malujWode(ground,0,0,rodzajW);
+  await tick('Cieniuję stoki…');
+  // cieniowanie stoków: światło z lewej-góry, 2 stopnie ciemniej / 1 jaśniej, z ditheringiem
+  const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+0.5)/16);
+  const LS=new Float32Array(GW*GHt);
+  for(let j=0;j<GHt;j++)for(let i=0;i<GW;i++){const hx=(HG[j*GW+Math.min(GW-1,i+1)]-HG[j*GW+Math.max(0,i-1)])/16*1.6,hy=(HG[Math.min(GHt-1,j+1)*GW+i]-HG[Math.max(0,j-1)*GW+i])/16*1.6;
+    LS[j*GW+i]=(hx*0.6+hy*0.7)/Math.hypot(hx,hy,1)}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const s=gridAt(LS,x,y)+(BAY[((y&3)<<2)|(x&3)]-0.5)*0.16,k=y*W+x;
+    if(s>0.3)ground.px[k]=GN.ciemniej(GN.mieszaj(ground.px[k],GN.ciemniej(ground.px[k]),Math.min(1,(s-0.3)*1.6)));
+    else if(s>0.12)ground.px[k]=GN.mieszaj(ground.px[k],GN.ciemniej(ground.px[k]),0.55);
+    else if(s<-0.22)ground.px[k]=GN.jasniej(ground.px[k])}
+  await tick('Sieję runo…');
+  for(const q of GN.posiejRuno(0,0,W,H,rodzajW))GN.runo(ground,q.x,q.y,q.rodzaj,q.seed);
+  for(let y=6;y<H;y+=4)for(let x=4;x<W-4;x+=4){if(MAP[y*W+x]!==ID.skala)continue;const h=GN.hash(x,y,21);
+    if(h<0.012)GN.runo(ground,x,y,'glaz',x*31+y);else if(h<0.05)GN.runo(ground,x,y,'kamyk',x*31+y)}
+  // budynki z obrysów OSM (stacja kolejki, obserwatorium)
+  bud.forEach((r,i)=>{const g=GN.budynek(r.flat(),{wysokosc:12,dach:i%2?'papa':'lupek',sciana:'kamien',seed:i*17,komin:i===0});GN.naloz(ground,g.obraz,g.x0,g.y0)});
+  await tick('Sadzę kosodrzewinę…');
+  // atlas: kosodrzewina ×4, jałowiec ×2, każdy z 5 klatkami wiatru
+  for(const [g,n] of [['kosodrzewina',4],['jalowiec',2]]){atlas[g]=[];for(let v=0;v<n;v++){const d=GN.drzewo(g,300+v*71);
+    const kl=GN.klatkiWiatru(d.korona,d.koronaGora,d.koronaDol,GN.GATUNKI[g].sztywnosc);
+    atlas[g].push({d,kl,cv:kl.map(o=>{const c=document.createElement('canvas');c.width=o.w;c.height=o.h;c.getContext('2d').putImageData(GN.doImageData(o),0,0);return c})})}}
+  for(let gy=0;gy<H;gy+=11)for(let gx=0;gx<W;gx+=11){
+    const x=gx+Math.floor(GN.hash(gx,gy,5)*9),y=gy+Math.floor(GN.hash(gx,gy,6)*9);if(x>=W||y>=H)continue;const k=y*W+x,m=MAP[k];
+    if(NEAR[k])continue;
+    let g=null;if(m===ID.zarosla&&GN.hash(gx,gy,8)<0.8)g='kosodrzewina';else if((m===ID.trawa||m===ID.laka)&&GN.hash(gx,gy,8)<0.012)g=GN.hash(gx,gy,9)<0.5?'jalowiec':'kosodrzewina';
+    if(!g)continue;const vs=atlas[g],v=vs[Math.floor(GN.hash(gx,gy,10)*vs.length)];trees.push({x,y,v,ph:GN.hash(gx,gy,11)*6.28});
+  }
+  // cienie pod krzewami (wpieczone w ziemię)
+  for(const t of trees){const rx=t.v.d.korona.w*0.42,ry=4;for(let j=-ry;j<=ry;j++)for(let i=-rx;i<=rx;i++){if((i/rx)**2+(j/ry)**2>1)continue;const xx=Math.round(t.x+i+3),yy=Math.round(t.y+j);if(xx>=0&&yy>=0&&xx<W&&yy<H)ground.px[yy*W+xx]=GN.ciemniej(ground.px[yy*W+xx])}}
+  trees.sort((a,b)=>a.y-b.y);
+}
+
+/* ---------- stan ---------- */
+const trasa=RG.trasa;
+const S={x:trasa[trasa.length-1][0],y:trasa[trasa.length-1][1],dir:0,walk:0,mode:1,tpn:false,auto:0,autoI:0,toastUntil:0,t:0,target:null};
+let dirty=true;
+const sila=()=>$('sila').value/100, wiatr=()=>$('wiatr').value/100*2.2;
+function upTxt(){$('silaTxt').textContent=$('sila').value+'%';$('wiatrTxt').textContent=Math.round(wiatr()*7)+' m/s';dirty=true}
+function blockedWhy(x,y){
+  if(x<8||y<8||x>W-9||y>H-9)return 'Koniec makiety';
+  const k=(y|0)*W+(x|0),m=MAP[k],near=NEAR[k];
+  for(const r of bud)if(pip(r,x,y))return 'Budynek';
+  if(m===ID.woda&&!near)return 'Woda';
+  if(near)return null;
+  if(m===ID.skala)return 'Skały – tu tylko szlakiem';
+  if(gridAt(SL,x,y)>0.75)return 'Za stromo – tylko szlakiem';
+  if(S.tpn)return 'Park narodowy – nie wolno schodzić ze szlaku';
+  return null}
+function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;S.toastUntil=performance.now()+2200}
+function step(dx,dy,dt,force){
+  const L=Math.hypot(dx,dy);if(!L)return false;const ux=dx/L,uy=dy/L;
+  const nach=(hAt(S.x+ux*8,S.y+uy*8)-hAt(S.x,S.y))/(8/3.84);
+  const sp=46/(1+(nach>0?2.5:0.8)*Math.abs(nach)),st=Math.min(L,sp*dt);
+  const nx=S.x+ux*st,ny=S.y+uy*st;
+  if(!force){const why=blockedWhy(nx,ny);if(why){if(!S.toastUntil)toast(why);return false}}
+  S.x=nx;S.y=ny;S.walk+=st;S.dir=Math.abs(ux)>Math.abs(uy)*0.9?(ux<0?1:3):(uy<0?2:0);dirty=true;return true}
+
+/* ---------- rozmycie (pudełkowe ×2 ≈ gaussowskie) ---------- */
+const tmpR=new Float32Array(1),T3={};
+function blur(src,dst,r){
+  const w=VW,h=VH,n=w*h;let a=T3.a;if(!a||a.length!==n*3){a=T3.a=new Float32Array(n*3);T3.b=new Float32Array(n*3)}const b=T3.b;
+  for(let k=0;k<n;k++){const c=src[k];a[k*3]=c&255;a[k*3+1]=(c>>>8)&255;a[k*3+2]=(c>>>16)&255}
+  const pass=(I,O,horiz)=>{const len=horiz?w:h,cnt=horiz?h:w,d=2*r+1;
+    for(let q=0;q<cnt;q++){for(let ch=0;ch<3;ch++){let s=0;const at=p=>{p=p<0?0:p>=len?len-1:p;return (horiz?q*w+p:p*w+q)*3+ch};
+      for(let p=-r;p<=r;p++)s+=I[at(p)];for(let p=0;p<len;p++){O[at(p)]=s/d;s+=I[at(p+r+1)]-I[at(p-r)]}}}};
+  pass(a,b,true);pass(b,a,false);pass(a,b,true);pass(b,a,false);
+  for(let k=0;k<n;k++)dst[k]=(255<<24|(a[k*3+2]&255)<<16|(a[k*3+1]&255)<<8|(a[k*3]&255))>>>0}
+const HAZE=[178,198,210];
+
+/* ---------- rysowanie ---------- */
+function render(){
+  const cx=VW>>1,cy=Math.round(VH*0.58),x0=Math.round(S.x)-cx,y0=Math.round(S.y)-cy,hp=hAt(S.x,S.y),gp=ground.px;
+  for(let j=0;j<VH;j++){const yy=y0+j;for(let i=0;i<VW;i++){const xx=x0+i;buf[j*VW+i]=(xx<0||yy<0||xx>=W||yy>=H)?0xff3a3f45:gp[yy*W+xx]}}
+  // krzewy (z wiatrem); te tuż przed bohaterem rysujemy później, półprzezroczyste
+  const wv=wiatr(),later=[],pb=[S.x-20,S.y-44,S.x+20,S.y];
+  for(const t of trees){const d=t.v.d,f0=t.v.kl[0];const fx=Math.round(t.x-d.kotwica[0]-6),fy=Math.round(t.y-d.kotwica[1]);
+    if(fx+f0.w<x0||fy+f0.h<y0||fx>x0+VW||fy>y0+VH)continue;
+    const fr=Math.max(0,Math.min(4,Math.round(2+Math.sin(S.t*1.6+t.ph)*wv*0.9+ (wv>1?Math.sin(S.t*0.4+t.x*0.004):0)*0.6)));
+    if(t.y>S.y&&fx<pb[2]&&fx+f0.w>pb[0]&&fy<pb[3]&&fy+f0.h>pb[1]){later.push([t,fr,fx,fy]);continue}
+    const o=t.v.kl[fr];for(let j=0;j<o.h;j++){const yy=fy+j-y0;if(yy<0||yy>=VH)continue;for(let i=0;i<o.w;i++){const c=o.px[j*o.w+i];if(!(c>>>24))continue;const xx=fx+i-x0;if(xx>=0&&xx<VW)buf[yy*VW+xx]=c}}}
+  // rozmycie tego, co niżej
+  if(S.mode===1){
+    const k=sila();let need=0;
+    for(let j=0;j<VH;j++)for(let i=0;i<VW;i++){const dh=hp-hAt(x0+i,y0+j);const r=Math.max(0,Math.min(4,(dh-3)/8*k));dhA[j*VW+i]=r;if(r>need)need=r}
+    if(need>0.05){B[0].set(buf);const top=Math.ceil(need);for(let r=1;r<=top;r++)blur(buf,B[r],r);
+      for(let o=0;o<VW*VH;o++){const r=dhA[o];if(r<=0.02)continue;const l=Math.floor(r),f=r-l,A=B[l][o],Bc=B[Math.min(4,l+1)][o];
+        let R=(A&255)*(1-f)+(Bc&255)*f,G=((A>>>8)&255)*(1-f)+((Bc>>>8)&255)*f,Bl=((A>>>16)&255)*(1-f)+((Bc>>>16)&255)*f;
+        const hz=Math.min(0.32,r*0.08);R+=(HAZE[0]-R)*hz;G+=(HAZE[1]-G)*hz;Bl+=(HAZE[2]-Bl)*hz;
+        buf[o]=(255<<24|(Bl&255)<<16|(G&255)<<8|(R&255))>>>0}}
+  }
+  ictx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=false;ctx.drawImage(internal,0,0,cvs.width,cvs.height);
+  const k=kD;
+  // kolejka linowa: lina z cieniem
+  ctx.lineWidth=Math.max(1,k*0.5);
+  for(const ln of RG.cable){for(const [col,dx,dy] of [['rgba(0,0,0,.25)',6,10],['#1e1a24',0,0]]){ctx.strokeStyle=col;ctx.beginPath();ln.forEach((p,i)=>{const X=(p[0]-x0+dx)*k,Y=(p[1]-y0+dy)*k;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});ctx.stroke()}}
+  // bohater (siatka 32 → 48 px świata; przy kD parzystym piksele równe)
+  if(sprite){const row=S.dir===0?0:S.dir===2?2:1,moving=S.auto||S.target||keys.size,fr=moving?(Math.floor(S.walk/9)%2?2:0):1;
+    const sz=48*k,X=(cx-24)*k,Y=(cy-46)*k;
+    ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(cx*k,cy*k,9*k,3*k,0,0,6.283);ctx.fill();
+    if(S.dir===3){ctx.save();ctx.translate(X+sz,Y);ctx.scale(-1,1);ctx.drawImage(sprite,fr*32,row*32,32,32,0,0,sz,sz);ctx.restore()}
+    else ctx.drawImage(sprite,fr*32,row*32,32,32,X,Y,sz,sz)}
+  // krzewy przed bohaterem: prześwit
+  ctx.globalAlpha=0.55;for(const [t,fr,fx,fy] of later)ctx.drawImage(t.v.cv[fr],(fx-x0)*k,(fy-y0)*k,t.v.cv[fr].width*k,t.v.cv[fr].height*k);ctx.globalAlpha=1;
+  // szczyt
+  const css=cvs.width/(cvs.clientWidth||cvs.width),fs=Math.round(13*css);ctx.font=`${fs}px "Pixelify Sans",monospace`;ctx.textAlign='center';
+  for(const p of RG.pois){const X=(p.x-x0)*k,Y=(p.y-y0)*k;if(X<0||Y<0||X>cvs.width||Y>cvs.height)continue;
+    ctx.lineWidth=Math.max(2,fs/5);ctx.strokeStyle='rgba(20,16,24,.9)';ctx.fillStyle='#fff';ctx.strokeText(p.n+' '+p.e,X,Y-fs*0.6);ctx.fillText(p.n+' '+p.e,X,Y-fs*0.6)}
+  $('hud').innerHTML=`<b>${Math.round(hp)} m n.p.m.</b><br>${S.mode===1?'niżej = rozmyte':'bez rozmycia'}`;
+}
+
+/* ---------- sterowanie ---------- */
+const keys=new Set();
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){keys.add(k);S.auto=0;S.target=null;e.preventDefault()}});
+addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());dirty=true});
+let pointer=null;
+cvs.addEventListener('pointerdown',e=>{pointer=e;cvs.setPointerCapture(e.pointerId);S.auto=0;aim(e)});
+cvs.addEventListener('pointermove',e=>{if(pointer)aim(e)});
+const up=()=>{pointer=null};cvs.addEventListener('pointerup',up);cvs.addEventListener('pointercancel',up);
+function aim(e){const r=cvs.getBoundingClientRect(),i=(e.clientX-r.left)/r.width*VW,j=(e.clientY-r.top)/r.height*VH;
+  const cx=VW>>1,cy=Math.round(VH*0.58);S.target=[Math.round(S.x)-cx+i,Math.round(S.y)-cy+j]}
+function nearestIdx(){let b=0,bd=1e9;trasa.forEach((p,i)=>{const d=Math.hypot(p[0]-S.x,p[1]-S.y);if(d<bd){bd=d;b=i}});return b}
+$('zejdz').onclick=()=>{S.auto=-1;S.autoI=nearestIdx();S.target=null};
+$('wejdz').onclick=()=>{S.auto=1;S.autoI=nearestIdx();S.target=null};
+$('stop').onclick=()=>{S.auto=0;S.target=null;dirty=true};
+$('tpn').onchange=e=>{S.tpn=e.target.checked};
+$('sila').oninput=upTxt;$('wiatr').oninput=upTxt;
+for(const m of [0,1])$('m'+m).onclick=()=>{S.mode=m;for(const q of [0,1])$('m'+q).setAttribute('aria-pressed',String(q===m));dirty=true};
+
+let last=performance.now(),acc=0;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;S.t+=dt;acc+=dt;
+  let dx=0,dy=0;
+  if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;
+  if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;
+  if(dx||dy)step(dx,dy,dt);
+  else if(S.auto){const tg=trasa[S.autoI],ddx=tg[0]-S.x,ddy=tg[1]-S.y;
+    if(Math.hypot(ddx,ddy)<2){S.autoI+=S.auto;if(S.autoI<0||S.autoI>=trasa.length){toast(S.auto>0?'Kasprowy Wierch, 1987 m n.p.m.':'Koniec wycinka makiety');S.auto=0;dirty=true}}
+    else step(ddx,ddy,dt,true)}
+  else if(S.target){const ddx=S.target[0]-S.x,ddy=S.target[1]-S.y;if(Math.hypot(ddx,ddy)<2||!step(ddx,ddy,dt))S.target=pointer?S.target:null}
+  if(S.toastUntil&&now>S.toastUntil){$('toast').hidden=true;S.toastUntil=0}
+  if(dirty||acc>0.1){acc=0;dirty=false;render()}
+  requestAnimationFrame(frame);
+}
+(async function(){
+  const [a,b,c]=await Promise.all([loadImg(DANE),loadImg(WYS),loadImg(POSTAC)]);sprite=c;
+  await tick('Generuję zbocze…');
+  await build(pixels(a),{w:b.width,h:b.height,d:pixels(b)});
+  setSize();upTxt();addEventListener('resize',setSize);
+  $('ladowanie').hidden=true;
+  toast('Pod szczytem Kasprowego. Zejdź szlakiem.');
+  render();requestAnimationFrame(frame);
+  window.__gory=S;
+})();
+})();
+</script>

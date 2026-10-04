@@ -5,9 +5,18 @@ Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest **paczka v1*
 łuczniczka, goblin-chochlik) – styl się podoba i jest już w grze na serwerze testowym
 (https://exp-lore.app/test/). Zrzuty: `5_zrzuty_z_gry/`.
 
-**TERAZ NAJWAŻNIEJSZE: `ZAMOWIENIE_07_trening_i_reszta_swiata.md` (kukły treningowe i wszystko, co jeszcze rysuje program), obok niego `ZAMOWIENIE_06_chodzenie_i_reszta.md`** (najpierw punkt 0 – jeden styl całej gry; potem poprawka kroków, latarnia, wozy, mędrczyni i zaległości), obok niego wciąż `ZAMOWIENIE_03_duza_partia.md` – reszta podłoża, ściany, ozdoby ulic, drzewa i pozostałe postacie (świat 01, 02 i 03a są już w grze).
+**TERAZ NAJWAŻNIEJSZE (4 października 2026, wieczór): `ZAMOWIENIE_11_pojazdy_zabytki_postacie.md`.**
+Świat (ziemię, drzewa, trawę, budynki, rurociągi, parę, tory) **rysuje teraz program**, więc **zamówienie 10 (klocki świata) jest wstrzymane**. Od Ciebie potrzebujemy tylko: kolei parowej (lokomotywa, wagony w 16 kierunkach), poprawionego wozu konnego, zabytków, szyldów i nowych postaci (konduktor). Styl: `ZAMOWIENIE_09_pixel_art_swiat.md` (świat jak koń, postacie jak blondynka).
 
-**Nowe (wrzesień 2026): styl świata – lekki baśniowy steampunk.** Domy, ulice i ozdoby rysujemy w klimacie opisanym w `STYL_SWIATA_steampunk.md` (tam też nowe pliki: latarnie, parowóz, kominy z parą…).
+**TERAZ NAJWAŻNIEJSZE (4 października 2026): `ZAMOWIENIE_09_pixel_art_swiat.md`** i folder `6_zamowienie_09/`.
+Właściciel zmienił kierunek: **cały świat jako szczegółowy pixel art w stylu konia z wozu**, w jednej stałej skali
+(1 m = 3,84 px w pliku, gra niczego nie zmniejsza), z wyraźnym steampunkiem (rury, para, mosiądz) i ruchomą przyrodą
+(wiatr, ścinanie drzew). **Zamówienie 08 („malarski świat”) jest nieaktualne**, zostaje z niego tylko część G
+(pogoda i nowe potwory), rysowana według 09. Tam, gdzie starsze zamówienia mówią o skali „3× większej” albo o
+stylu malarskim, obowiązuje 09.
+
+Starsze zamówienia (03, 04, 06, 07, świat 01–02) zostają jako lista tego, co już jest w grze i co trzeba
+przerysować w nowym stylu. Opis klimatu świata: `STYL_SWIATA_steampunk.md`.
 
 Co jest w tej paczce:
 
@@ -18,6 +27,7 @@ Co jest w tej paczce:
 | `3_obecne_grafiki/` | wszystkie obecne obrazki z gry, powiększone ×4, **nazwane tak, jak ma się nazywać nowy plik** |
 | `4_przedmioty_obecne/` | obecne ikony przedmiotów (16 × 16, powiększone ×4) |
 | `5_zrzuty_z_gry/` | jak nowe postacie wyglądają w grze |
+| `6_zamowienie_09/` | **do zamówienia 09:** wzór stylu, zrzuty i animacja z makiety, szablony (scena, drzewo, postać, kafel, rurociąg), paleta startowa, dachy liczone przez program |
 
 ---
 
@@ -31,10 +41,12 @@ Co jest w tej paczce:
 
 ## B. Skala
 
-Na mapie 1 metr ≈ 2 punkty. Postać 64 × 64 px w pliku jest w grze zmniejszana do ok. 23 punktów.
-Dlatego **każdą nową grafikę rysujemy ok. 3 razy większą niż jej obecny rozmiar na mapie**
-(w tabelach niżej jest i obecny, i proponowany rozmiar pliku). Obecny wygląd każdej rzeczy
-widać w `3_obecne_grafiki/` (plik `<nazwa>__teraz_x4.png` → nowy plik to `<nazwa>.png`).
+**Od zamówienia 09 obowiązuje nowa skala:** 1 metr = 3,84 px w pliku (1 px pliku = 0,5 px mapy). Gra pokazuje
+pliki 1:1, bez zmniejszania i bez wygładzania. Postacie w manierze „blondynki” (siatka 32×32 powiększona 2× do klatki 64×64, postać ok. 28 px siatki), duże drzewo
+ok. 96×112, ściany 8/12/16 px, kafle podłoża 256×256. Pełna tabela: `ZAMOWIENIE_09_pixel_art_swiat.md`, punkt 2.
+
+~~Dawniej: każdą grafikę rysowaliśmy ok. 3 razy większą niż na mapie, a gra ją zmniejszała.~~ Ta zasada już nie
+obowiązuje (zmniejszanie rozmywało piksele i każda rzecz miała inną wielkość piksela).
 
 ## C. Arkusz postaci (ludzie i stworki, które chodzą)
 

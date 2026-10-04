@@ -1,0 +1,189 @@
+<!doctype html><meta charset="utf-8"><title>Generator świata</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Generator świata – świat rysowany w telefonie, bez grafika</h1>
+<blockquote>
+<p><strong>Decyzja właściciela (4 października 2026):</strong> ziemię, drzewa, krzaki, runo, budynki, rurociągi, parę i tory <strong>rysuje program w telefonie</strong>, tak jak w makiecie. Grafik zostaje tylko do rzeczy „z charakterem”: postacie (są już arkusze w manierze blondynki), pojazdy (lokomotywa, wagony, wóz), zabytki, szyldy, ikony przedmiotów. Zamówienie 10 dla grafika (klocki świata) jest wstrzymane.
+Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat.md</code></a>: tam jest <strong>jak to pokazać i animować</strong> (warstwy, wiatr, prześwit, ścinanie), tu <strong>skąd brać obrazki</strong>.</p>
+</blockquote>
+<h2>0. Ostatnie decyzje właściciela (4.10.2026, wieczór) – mają pierwszeństwo</h2>
+<ol>
+<li><strong>Wszystko się generuje, bez dużych arkuszy do ręcznego przeglądania.</strong> Gra obejmie cały świat, więc nikt nie będzie oglądał mapy kawałek po kawałku. Poprawiamy tylko konkretne miejsca, gdy ktoś zgłosi błąd. Generator jest deterministyczny: ten sam gatunek, wariant i miejsce wyglądają tak samo na każdym telefonie.</li>
+<li><strong>Drzewa w skali 0,6</strong> rozmiarów bazowych z <code>GATUNKI</code> (<code>SKALA_DRZEW</code> w <a href="generator/drzewa.ts"><code>generator/drzewa.ts</code></a>, domyślna wartość <code>drzewo()</code>) i <strong>gęściej</strong>: odstępy w <a href="dane/gatunki_osm.json"><code>dane/gatunki_osm.json</code></a> ×0,55, gęstość ×1,4. Powód: przy pełnej skali budynki wyglądały na za małe (<a href="zrzuty/budynki_drzewa_porownanie.png"><code>zrzuty/budynki_drzewa_porownanie.png</code></a>, wariant B).</li>
+<li><strong>Budynki obracane do 8 kątów</strong> (0°, 26,6°, 45°, 63,4°, 90°, 116,6°, 135°, 153,4° – krawędzie pod tymi kątami dają równe schodki pikseli), kształt z OSM zostaje (wariant C na porównaniu). Funkcja <code>przyciagnij(pierscien)</code> w <a href="generator/budynki.ts"><code>generator/budynki.ts</code></a>. <strong>Liczyć raz w <code>scripts/build-map.mjs</code></strong> (i w kafelkach świata <code>world.ts</code>), nie w telefonie:</li>
+<li>obrót wokół środka budynku do najbliższego kąta (największa zmiana ok. 11°),</li>
+<li>po obrocie sprawdzić, czy obrys nie wchodzi na drogę (wycięte drogi z clipper-lib) ani na sąsiedni budynek; jeśli tak, spróbować zmniejszyć budynek o 1–2 px na krawędź, a gdy dalej koliduje, zostawić go bez obrotu,</li>
+<li>kolizje (<code>CityMap.buildingAt</code>), drzwi (<code>entranceOf</code>) i odkrywanie przez mgłę liczą się już na obróconym obrysie, więc wszystko zostaje spójne,</li>
+<li>zapisane pozycje graczy się nie zmieniają (budynki przesuwają się najwyżej o kilka metrów); <code>unstickHero</code> i tak wyciąga postać ze ściany.</li>
+<li><strong>Kolej:</strong> na stacjach kolejowych parowe lokomotywy i wagony na torach (zamiast koni), przy dworcach autobusowych zostają wozy konne. Szczegóły: <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat.md</code></a> punkt 7.</li>
+<li><strong>Woda, brzegi, trawa i chodnik jak w makiecie, nie biedniej</strong> (uwaga właściciela po porównaniu z makietą):</li>
+<li><strong>każdy zbiornik wodny ma brzeg</strong>: szuwary (błoto, bujna ciemna trawa, trzciny na lądzie i w płyciźnie, lilie wodne) <strong>albo plaża</strong> (mokry i suchy piasek, wchodzący ditherem w trawę). Wybór: piasek w OSM → plaża; mokradło, zarośla, las, łąka → zwykle szuwary; trawa i park → odcinkami na zmianę (duży szum, więc jeden staw ma i plażę, i szuwary); bruk, chodnik, plac, droga → kamienne nabrzeże;</li>
+<li><strong>głębokość stopniowana</strong> od linii brzegu: piana → płycizna (jasna nad piaskiem, mętna zielona przy szuwarach) → płytko → średnio → głębia, granice pasów postrzępione, zmarszczki i błyski, ciemny uskok brzegu od północy;</li>
+<li><strong>trawa żywsza</strong>: duże jaśniejsze i ciemniejsze plamy, błyski, dużo gęstszych kępek, plamy wysokiej trawy, kwiatki (<code>posiejRuno</code>);</li>
+<li>
+<p><strong>chodnik nierówny</strong>: płyty różnej szerokości i odcienia, przesunięte rzędy, krzywe fugi, pęknięcia, zapadnięte płyty, wyszczerbione rogi, mech i trawa w fugach.
+   Kod: <a href="generator/woda.ts"><code>generator/woda.ts</code></a> (<code>malujWode</code>), <code>posiejRuno</code> w <code>runo.ts</code>, <code>chodnik</code> i trawa w <code>podloze.ts</code>. Wzór: <a href="zrzuty/generator_laka_staw_tor.png"><code>zrzuty/generator_laka_staw_tor.png</code></a>, <a href="zrzuty/generator_chodnik_trawa.png"><code>zrzuty/generator_chodnik_trawa.png</code></a>.</p>
+</li>
+<li>
+<p><strong>Rurociągi tylko wzdłuż dróg, bez zygzaków po trawie.</strong> Rura biegnie <strong>równolegle do drogi, w stałym odsunięciu</strong> (połowa jezdni + chodnik + 6–8 px trawy, po jednej stronie), <strong>tym samym łukiem co droga</strong>, z zaokrąglonymi zakrętami. Na każdym końcu <strong>wchodzi do budynku</strong> (skręt łukiem do najbliższej ściany w zasięgu ok. 80 px mapy, rura rysowana przed budynkiem, więc ściana ją przykrywa) <strong>albo pod ziemię</strong> (kołnierz i żeliwna studzienka, z której czasem idzie para). Nigdy nie przecina jezdni ani budynku po drodze; gdy na trasie jest skrzyżowanie lub wjazd – rura kończy się studzienką przed nim i może wyjść drugą studzienką za nim. Długość odcinka 60–200 px mapy, 0–2 odcinki na ulicę (ziarno z id drogi OSM, więc wszędzie tak samo). Kod: <code>trasaPrzyDrodze()</code> + <code>rurociagWzdluz()</code> w <a href="generator/steampunk.ts"><code>generator/steampunk.ts</code></a> (stare <code>rurociag()</code> po siatce zostaje tylko do rur na ścianach). Wzór: <a href="zrzuty/generator_rurociag.png"><code>zrzuty/generator_rurociag.png</code></a>.</p>
+</li>
+<li><strong>Góry</strong> (makieta zaakceptowana): generator na prawdziwych wysokościach, szersze ścieżki szlaku (dopasowane do ludzika), na stromym stoku rozmycie tego, co leży niżej od bohatera; bez oddalania i bez zmiany perspektywy. Po skałach, urwiskach i bardzo stromo tylko szlakiem. Szczegóły i zadanie G10: <a href="GORY.md"><code>GORY.md</code></a>.</li>
+</ol>
+<h2>1. Co jest w folderze <code>generator/</code></h2>
+<p>Gotowy kod TypeScript, bez Phasera i bez DOM-u (działa też w Web Workerze), do skopiowania jako <code>src/gen/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Co daje</th>
+<th>Najważniejsze funkcje</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wspolne.ts</code></td>
+<td>piksele (<code>Obraz</code> = <code>{w, h, px: Uint32Array}</code>), kolory, hash, szum we współrzędnych świata, Bayer, obrys</td>
+<td><code>nowy</code>, <code>hex</code>, <code>ciemniej</code>, <code>jasniej</code>, <code>hash</code>, <code>rng</code>, <code>szum</code>, <code>bayer</code>, <code>naloz</code>, <code>obrysuj</code>, <code>doImageData</code>, <code>doCanvas</code></td>
+</tr>
+<tr>
+<td><code>drzewa.ts</code></td>
+<td><strong>16 rodzajów drzew i krzaków</strong> (dąb, buk, lipa, brzoza, olcha, wierzba, jabłoń, grusza, śliwa, sosna, świerk, jodła, kosodrzewina, jałowiec, krzak, krzak kwitnący), każdy w dowolnej liczbie wariantów (ziarno). Korona, pień, pień z zaciosem, pieniek, sadzonka, warstwa owoców, punkt stania, 5 klatek wiatru</td>
+<td><code>GATUNKI</code>, <code>drzewo(gatunek, ziarno)</code>, <code>klatkiWiatru(korona, góra, dół, sztywność)</code></td>
+</tr>
+<tr>
+<td><code>podloze.ts</code></td>
+<td>19 rodzajów podłoża liczonych per piksel we współrzędnych świata (bez szwów między kawałkami): trawa, łąka, park, las liściasty/iglasty, bruk, chodnik, plac, droga, piasek, woda, pole (orka/zboże), zarośla, parking, cmentarz, mokradło, skała, tory. Postrzępione granice bez pasków od grafika</td>
+<td><code>kolorPodloza(rodzaj, x, y)</code>, <code>malujPodloze(obraz, x0, y0, rodzajW, cień?)</code>, <code>obwodka(...)</code></td>
+</tr>
+<tr>
+<td><code>woda.ts</code></td>
+<td><strong>woda ze stopniowaną głębią i brzegi</strong> przy każdym zbiorniku: szuwary albo plaża, przy utwardzonym – nabrzeże; odległość od brzegu liczona w oknie z marginesem 32 px, więc bez szwów między kawałkami; zwraca miejsca trzcin</td>
+<td><code>malujWode(obraz, x0, y0, rodzajW)</code> → <code>[x, y][]</code> trzcin, <code>rodzajBrzegu</code>, <code>odlegloscBrzegu</code></td>
+</tr>
+<tr>
+<td><code>runo.ts</code></td>
+<td>kępki trawy, wysoka trawa, trzciny z pałką, paproć, wrzos, kwiaty, kamyki, głazy, grzyby; z przesunięciem wierzchołka (wiatr, odchylenie od postaci)</td>
+<td><code>runo(obraz, x, y, rodzaj, ziarno, wiatr)</code>, <code>posiejRuno(x0, y0, w, h, rodzajW)</code> (deterministyczny rozsiew)</td>
+</tr>
+<tr>
+<td><code>budynki.ts</code></td>
+<td>budynek z dowolnego obrysu: dach kopertowy z najbliższej krawędzi (połacie, rzędy dachówek, naroża, kalenice, kosze w L/U), ściany pod obrysem z przesunięciem <code>WALL_SKEW</code>, okna (nocą część świeci), drzwi, mosiężna rura, komin; 13 materiałów; maska cienia</td>
+<td><code>budynek(pierścień, opcje)</code>, <code>cienBudynku(pierścień, wysokość)</code>, <code>MATERIALY</code></td>
+</tr>
+<tr>
+<td><code>steampunk.ts</code></td>
+<td>moduły rurociągu 8×8 (z zaworami, manometrami, podporami), trasa rurociągu po siatce, obłoczki pary (3 rozmiary × 6 klatek), tor kolejowy wzdłuż łamanej</td>
+<td><code>rurociagWzdluz</code> (rura po dowolnej łamanej, końce: dom / ziemia), <code>trasaPrzyDrodze</code>, <code>rownolegla</code>, <code>wycinek</code>, <code>zaokraglij</code>, <code>modulRury</code>, <code>para</code>, <code>tor</code></td>
+</tr>
+<tr>
+<td><code>demo/</code></td>
+<td>galeria wszystkiego + pomiar czasu (otwórz <code>demo/index.html</code>)</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Czy to nie za ciężkie dla telefonu? (pomiary)</h2>
+<p>Zmierzone w Chromium bez karty graficznej, z <strong>dławieniem procesora 4× i 6×</strong> (symulacja średniego i słabego telefonu), na jednym kawałku mapy 1024×1024 px (= dzisiejszy kawałek 512 px mapy przy DOTS 2), z gęstym lasem (117 drzew), łąką, stawem, 12 budynkami, rurociągiem i torem: <strong>tabela w <a href="POMIARY.md"><code>POMIARY.md</code></a></strong>. W skrócie (drzewa 0,6, gęsty las 409 drzew): cały kawałek ok. 0,4 s na komputerze, ok. 1,25 s na średnim telefonie (1,9 s z wodą), ok. 1,85 s na słabym; atlas drzew raz ok. 0,1–0,3 s.</p>
+<p>Wnioski i zasady:
+1. <strong>Drzewa, para, moduły rur generujemy raz</strong> (przy starcie albo przy pierwszym biomie w okolicy) do atlasu, czyli tekstury Phasera. Wszystkie gatunki × 3 warianty × 5 klatek wiatru to ułamek sekundy nawet na słabym telefonie i kilka MB pamięci. Można też tylko gatunki z okolicy.
+2. <strong>Podłoże, runo, pnie, budynki, tory i rurociągi malujemy raz na kawałek mapy</strong>, tak jak dziś <code>MapRenderer.paint</code>, tylko per piksel zamiast wzorów z plików. Kawałek maluje się raz i jest trzymany w pamięci (<code>MAX_CHUNKS</code>), więc koszt ponosimy przy wchodzeniu w nowy teren, nie co klatkę.
+3. <strong>Malowanie kawałka w Web Workerze</strong> (OffscreenCanvas albo przekazanie <code>Uint32Array</code>): gra nie przycina się podczas chodzenia, a kawałek pojawia się chwilę później (jak dziś przy wczytywaniu kafelków). Kod generatora nie używa DOM-u, więc przeniesie się bez zmian.
+4. <strong>Pamięć</strong> bez zmian względem dzisiejszych kawałków (to te same płótna). Odpadają za to pliki <code>public/swiat/*.png</code> (pobieranie i dekodowanie przy starcie).
+5. Gdy telefon jest bardzo wolny (<code>OSTROSC = 1</code>): kawałek 512×512 zamiast 1024×1024, czyli 4× mniej pracy.</p>
+<h2>3. Jak to wpiąć w grę</h2>
+<h3>3.1 Kawałek mapy (<code>MapRenderer.paint</code>)</h3>
+<ol>
+<li><strong>Mapa rodzajów:</strong> obszary OSM jak dziś (<code>paintArea</code>) wypełnić na pomocniczym płótnie <strong>kolorami-identyfikatorami</strong> (np. R = numer rodzaju) z <code>imageSmoothingEnabled = false</code>. Drogi i chodniki tak samo (grubość jak <code>trackWidth</code>). Odczyt przez <code>getImageData</code> raz na kawałek → <code>Uint8Array</code>. Uwaga: Canvas wygładza krawędzie wypełnień, więc przy odczycie brać najbliższy znany identyfikator albo rysować bez wygładzania (<code>ctx.imageSmoothingEnabled</code> nie dotyczy ścieżek – kolory pośrednie odrzucić i wziąć sąsiada).</li>
+<li><code>malujPodloze(obrazKawałka, x0·DOTS, y0·DOTS, rodzajW, cień)</code>: współrzędne <strong>świata</strong> w px obrazu (px mapy × 2), dzięki temu sąsiednie kawałki się łączą.</li>
+<li>Cienie budynków (<code>cienBudynku</code>) i drzew (elipsa przesunięta w prawo-dół, jak w demo) przed narysowaniem obiektów.</li>
+<li>Tory: <code>tor()</code> dla linii <code>rail</code>/<code>tram</code> (zastępuje <code>paintRail</code>).</li>
+<li>Woda i brzegi: <code>malujWode(obrazKawałka, x0·DOTS, y0·DOTS, rodzajW)</code> zaraz po <code>malujPodloze</code> (kawałki bez wody w zasięgu 32 px są pomijane od razu). Zwrócone trzciny rysować jak runo.
+5a. Runo: <code>posiejRuno(...)</code> (gęstość per rodzaj, plamy wysokiej trawy, kwiatki). <strong>Statyczne</strong> w kawałku. Ruchoma wysoka trawa przy postaci to osobne sprite'y (SPEC 3.4).</li>
+<li>Budynki: <code>budynek(pierścień×2, {wysokosc: wallHeight×2, dach, sciana, seed, rura, komin, drzwi, noc})</code>, kolejność z północy na południe jak dziś. Materiał z ziarna budynku, miejsca specjalne (<code>highlight</code>) dostają własny materiał (np. szkoła <code>miedz_patyna</code>). <code>partsOf</code> (hale) zostaje: każda część osobno.</li>
+<li>Rurociągi: wzdłuż dróg (punkt 0.6): dla drogi <code>minor</code>/<code>medium</code> w kawałku (i z marginesem, żeby rura z sąsiedniego kawałka się nie ucinała) ziarno z id drogi → strona, odcinek [s0, s1], koniec w domu lub studzience; <code>rurociagWzdluz</code> przed budynkami.</li>
+<li>Pnie drzew rysowane w kawałek. <strong>Korony nie</strong>: one są sprite'ami z atlasu (SPEC 3.2).</li>
+<li><code>putImageData</code> do płótna kawałka i <code>refresh()</code> tekstury.</li>
+</ol>
+<h3>3.2 Drzewa (<code>src/scenes/Trees.ts</code>, zastępuje <code>ZIELEN</code>/<code>Forest</code>/<code>Orchards</code>)</h3>
+<ul>
+<li>Przy starcie: dla gatunków z okolicy <code>drzewo(gatunek, ziarno_wariantu)</code> × 3 → <code>klatkiWiatru</code> → jeden <code>CanvasTexture</code> (atlas) z klatkami <code>&lt;gatunek&gt;-&lt;wariant&gt;-w&lt;k&gt;</code>, <code>pien</code>, <code>pienZacios</code>, <code>pieniek</code>, <code>sadzonka</code>, <code>owoce</code>. Filtr NEAREST, skala 0,5.</li>
+<li>Rozmieszczenie i gatunki: <a href="dane/gatunki_osm.json"><code>dane/gatunki_osm.json</code></a>. Ścinanie, owoce, informacja zwrotna: SPEC punkt 4.</li>
+</ul>
+<h3>3.3 Para i efekty</h3>
+<p><code>para(rozmiar, klatka)</code> → tekstura z 6 klatkami. Pula sprite'ów nad studzienkami, kominami i przeciekami w widoku (SPEC punkt 6). Wióry i liście to cząsteczki Phasera w kolorach z palety drzewa (1–2 px), bez grafik.</p>
+<h2>4. Czego generator (jeszcze) nie robi – zostaje grafikowi albo na później</h2>
+<ul>
+<li><strong>Postacie</strong> (są arkusze; nowe w manierze blondynki), <strong>pojazdy</strong> (lokomotywa, wagony w 16 kierunkach, wóz z koniem), <strong>zabytki</strong> (fontanna, wieża zegarowa, smoczy kocioł), <strong>szyldy miejsc</strong>, <strong>ikony przedmiotów</strong> i HUD.</li>
+<li>Latarnie, ławki, hydranty, słupy ogłoszeniowe: zostają obecne pliki. Można spróbować generatora (proste bryły), decyzja po porównaniu.</li>
+<li>Śnieg: łatwy w generatorze (mieszanie koloru z bielą według <code>snowLevel</code> + białe czapy na koronach i dachach od góry). Do dopisania przy części G.</li>
+</ul>
+<h2>5. Kolejność wdrożenia (zamiast Z2/Z7 ze SPEC)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Zadanie</th>
+<th>Gotowe, gdy</th>
+<th>Wycena</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td>Skopiować <code>generator/</code> do <code>src/gen/</code>, typecheck, test jednostkowy (deterministyczność: ten sam obraz dla tego samego ziarna)</td>
+<td><code>npm run build</code> przechodzi</td>
+<td>~100 tys.</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Podłoże z generatora w <code>MapRenderer</code> za przełącznikiem <code>?wyglad=09</code> (mapa rodzajów + <code>malujPodloze</code> + obwódki + runo + tory)</td>
+<td>kawałki bez szwów, czas malowania w budżecie</td>
+<td>~400 tys.</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>Malowanie kawałka w Web Workerze</td>
+<td>brak przycięć przy chodzeniu na telefonie</td>
+<td>~300 tys.</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>Budynki z generatora (<code>budynek</code>, cienie, materiały, miejsca specjalne, drzwi z <code>entranceOf</code>)</td>
+<td>dachy jak w demo, także hale i L/U</td>
+<td>~500 tys.</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Drzewa z atlasu + wiatr + prześwit + ścinanie (SPEC Z3–Z5 na atlasie z generatora)</td>
+<td>jak w makiecie</td>
+<td>~800 tys.</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>Rurociągi, para, przecieki</td>
+<td>widoczne, nie za gęsto (akceptacja właściciela)</td>
+<td>~300 tys.</td>
+</tr>
+<tr>
+<td>G8</td>
+<td>Przyciąganie budynków do 8 kątów w <code>build-map</code> (+ mapy świata), z kontrolą kolizji (punkt 0.3)</td>
+<td>budynki równo ułożone, żaden nie wchodzi na drogę; liczba „zostawionych bez obrotu” w logu build-map</td>
+<td>~300 tys.</td>
+</tr>
+<tr>
+<td>G9</td>
+<td>Kolej na stacjach: tory, perony, składy parowe na torze, konduktor; konie tylko przy dworcach autobusowych (SPEC 7)</td>
+<td>lokomotywa stoi na torze przy peronie, wagony idą za łukiem; przy dworcu autobusowym wóz</td>
+<td>~600 tys.</td>
+</tr>
+<tr>
+<td>G10</td>
+<td>Góry: generator na mapach z terenem, szersze ścieżki, filtr „rozmycie w dół”, blokady szlaku (<a href="GORY.md"><code>GORY.md</code></a>)</td>
+<td>Zakopane wygląda jak makieta, płynnie na telefonie</td>
+<td>~500 tys.</td>
+</tr>
+<tr>
+<td>G7</td>
+<td>Usunięcie nieużywanych plików <code>public/swiat/</code> (podłoże, dachy, ściany, drzewa) po akceptacji</td>
+<td>mniej do pobierania</td>
+<td>~50 tys.</td>
+</tr>
+</tbody>
+</table>

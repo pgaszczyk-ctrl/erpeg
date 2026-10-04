@@ -1,0 +1,84 @@
+<!doctype html><meta charset="utf-8"><title>Makieta – opis kodu</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Makieta <code>zywy-swiat.html</code> – co gdzie jest</h1>
+<p>Jeden plik HTML, czysty JavaScript (bez bibliotek), wszystko rysowane piksel po pikselu na <code>&lt;canvas&gt;</code> 256×176 (1 px canvasu = 1 px pliku grafika = 0,5 px mapy gry). Świat 384×256. Otwórz w przeglądarce, sterowanie strzałkami/WASD, E/spacja = ścinanie/potrząsanie.</p>
+<table>
+<thead>
+<tr>
+<th>Funkcja / miejsce</th>
+<th>Co robi</th>
+<th>Odpowiednik w SPEC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>windAt</code>, <code>gustAt</code>, <code>PULSE</code></td>
+<td>wiatr: dwie sinusoidy + fala podmuchu sunąca w prawo</td>
+<td>3.6, <a href="dane/wiatr.json"><code>dane/wiatr.json</code></a></td>
+</tr>
+<tr>
+<td><code>bay(x, y)</code></td>
+<td>macierz Bayera 4×4 (dithering krawędzi prześwitu, chmur, granic)</td>
+<td>3.2</td>
+</tr>
+<tr>
+<td><code>noise</code></td>
+<td>szum wartości 64×64 (chmury, tekstura ziemi)</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td><code>placeTrees</code></td>
+<td>rozmieszczenie: rzut z odrzuceniem (Poisson), skraj lasu, gatunki zależne od x (iglasty po lewej, liściasty po prawej), sad w rzędach, pomnik przyrody, <code>chop</code> przez hash</td>
+<td>3.1</td>
+</tr>
+<tr>
+<td><code>buildCrown</code></td>
+<td><strong>zaślepka korony:</strong> kępy kół (dąb/brzoza/sosna/jabłoń/krzak) albo piętra (świerk), 4 odcienie wg światła z lewej-góry, ciemna linia pod kępami, obrys z selektywnym jaśniejszym brzegiem od światła, plamki liści, jabłka; <code>rf</code> = wysokość w koronie</td>
+<td>Z2 (zaślepki do czasu grafik)</td>
+</tr>
+<tr>
+<td><code>rebuildCanopy</code></td>
+<td>mapa „tu jest korona” (do testu prześwitu)</td>
+<td>–</td>
+</tr>
+<tr>
+<td><code>bake</code></td>
+<td>malowanie świata: ziemia (szum + paleta), droga, staw, cienie drzew (elipsy), pnie z zaciosem / pieniek / tabliczka pomnika, budynki, jasne/ciemne wersje do podmuchu i chmur</td>
+<td>kawałek mapy</td>
+</tr>
+<tr>
+<td><code>bakeBuildings</code></td>
+<td><strong>dach kopertowy z obrysu</strong> (prostokąt): najbliższa krawędź → połać, jasność z normalnej, rzędy dachówek z <code>d</code>, naroża, kalenica, obrys; ściana pod dachem kolumnami z oknami (część zapalona), cokół, cień pod okapem; cień rzucany; tryb „jak dziś” = obracana tekstura w blokach 4 px; <code>snapA</code> = przyciąganie kątów</td>
+<td>5 (uogólnienie: <code>dachy_roofs.py</code>)</td>
+</tr>
+<tr>
+<td><code>genTufts</code></td>
+<td>kępki trawy, wysoka trawa na łące, trzciny z pałką, paprocie w lesie, każdy piksel z wysokością <code>j</code> nad podstawą</td>
+<td>3.4</td>
+</tr>
+<tr>
+<td><code>drawTufts(front)</code></td>
+<td>źdźbła przesunięte o <code>round(wiatr × j × 0,3)</code> + odchylenie od postaci; te przed postacią rysowane po niej (brodzenie)</td>
+<td>3.4</td>
+</tr>
+<tr>
+<td><code>drawSpriteList(t, hole)</code></td>
+<td>korona: każdy piksel przesunięty o <code>round(w × (0,3 + 0,95·rf))</code> + szelest; prześwit z Bayerem</td>
+<td>3.2</td>
+</tr>
+<tr>
+<td><code>render</code></td>
+<td>kolejność: ziemia (+ chmury, podmuch, iskry na wodzie) → trawa za postacią → [budynki, krzaki, sadzonki, korony drzew za postacią, postać] posortowane po y → trawa przed postacią → korony przed postacią z prześwitem → liście/wióry → pasek ścinania, „+3”</td>
+<td>3.2–3.5</td>
+</tr>
+<tr>
+<td><code>tryChop</code>, <code>chopping</code>, <code>chips</code>, <code>spawnLeaves</code>, <code>pops</code></td>
+<td>ścinanie 4 uderzeniami z paskiem postępu, wióry i liście, pieniek → sadzonka → drzewo; jabłoń: potrząśnięcie, 3 jabłka spadają, „+3”; chronione: komunikat z powodem</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>update</code></td>
+<td>ruch postaci z kolizjami, autopilot, wykrywanie „pod koroną” tylko dla drzew na południe od postaci, odrastanie</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<p>Uwaga: w grze wariant A zastępuje przesuwanie pojedynczych pikseli co klatkę (makieta robi to na CPU dla całego widoku) gotowymi klatkami ścięcia (<a href="shadery/klatkiWiatru.ts"><code>shadery/klatkiWiatru.ts</code></a>). Efekt ten sam, koszt dużo mniejszy.</p>

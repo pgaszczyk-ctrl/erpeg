@@ -1,10 +1,18 @@
-<!doctype html><meta charset="utf-8"><title>Exp-lore – paczka dla grafika</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px}code{background:#f2f2f2;padding:0 3px}</style><h1>Exp-lore – paczka dla grafika</h1>
+<!doctype html><meta charset="utf-8"><title>Exp-lore – paczka dla grafika</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Exp-lore – paczka dla grafika</h1>
 <p>Exp-lore to przygodowa gra na telefon (i komputer), grana na prawdziwej mapie miasta, widok z góry.
 Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest <strong>paczka v1</strong> (wędrowiec, rycerz,
 łuczniczka, goblin-chochlik) – styl się podoba i jest już w grze na serwerze testowym
 (https://exp-lore.app/test/). Zrzuty: <code>5_zrzuty_z_gry/</code>.</p>
-<p><strong>TERAZ NAJWAŻNIEJSZE: <code>ZAMOWIENIE_07_trening_i_reszta_swiata.md</code> (kukły treningowe i wszystko, co jeszcze rysuje program), obok niego <code>ZAMOWIENIE_06_chodzenie_i_reszta.md</code></strong> (najpierw punkt 0 – jeden styl całej gry; potem poprawka kroków, latarnia, wozy, mędrczyni i zaległości), obok niego wciąż <code>ZAMOWIENIE_03_duza_partia.md</code> – reszta podłoża, ściany, ozdoby ulic, drzewa i pozostałe postacie (świat 01, 02 i 03a są już w grze).</p>
-<p><strong>Nowe (wrzesień 2026): styl świata – lekki baśniowy steampunk.</strong> Domy, ulice i ozdoby rysujemy w klimacie opisanym w <code>STYL_SWIATA_steampunk.md</code> (tam też nowe pliki: latarnie, parowóz, kominy z parą…).</p>
+<p><strong>TERAZ NAJWAŻNIEJSZE (4 października 2026, wieczór): <a href="ZAMOWIENIE_11_pojazdy_zabytki_postacie.md"><code>ZAMOWIENIE_11_pojazdy_zabytki_postacie.md</code></a>.</strong>
+Świat (ziemię, drzewa, trawę, budynki, rurociągi, parę, tory) <strong>rysuje teraz program</strong>, więc <strong>zamówienie 10 (klocki świata) jest wstrzymane</strong>. Od Ciebie potrzebujemy tylko: kolei parowej (lokomotywa, wagony w 16 kierunkach), poprawionego wozu konnego, zabytków, szyldów i nowych postaci (konduktor). Styl: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pixel_art_swiat.md</code></a> (świat jak koń, postacie jak blondynka).</p>
+<p><strong>TERAZ NAJWAŻNIEJSZE (4 października 2026): <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pixel_art_swiat.md</code></a></strong> i folder <code>6_zamowienie_09/</code>.
+Właściciel zmienił kierunek: <strong>cały świat jako szczegółowy pixel art w stylu konia z wozu</strong>, w jednej stałej skali
+(1 m = 3,84 px w pliku, gra niczego nie zmniejsza), z wyraźnym steampunkiem (rury, para, mosiądz) i ruchomą przyrodą
+(wiatr, ścinanie drzew). <strong>Zamówienie 08 („malarski świat”) jest nieaktualne</strong>, zostaje z niego tylko część G
+(pogoda i nowe potwory), rysowana według 09. Tam, gdzie starsze zamówienia mówią o skali „3× większej” albo o
+stylu malarskim, obowiązuje 09.</p>
+<p>Starsze zamówienia (03, 04, 06, 07, świat 01–02) zostają jako lista tego, co już jest w grze i co trzeba
+przerysować w nowym stylu. Opis klimatu świata: <a href="STYL_SWIATA_steampunk.md"><code>STYL_SWIATA_steampunk.md</code></a>.</p>
 <p>Co jest w tej paczce:</p>
 <table>
 <thead>
@@ -34,6 +42,10 @@ Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest <strong>pacz
 <td><code>5_zrzuty_z_gry/</code></td>
 <td>jak nowe postacie wyglądają w grze</td>
 </tr>
+<tr>
+<td><code>6_zamowienie_09/</code></td>
+<td><strong>do zamówienia 09:</strong> wzór stylu, zrzuty i animacja z makiety, szablony (scena, drzewo, postać, kafel, rurociąg), paleta startowa, dachy liczone przez program</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -46,12 +58,13 @@ Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest <strong>pacz
 <li><strong>Wrogów nie obrysowujemy na czerwono</strong> – gra sama dodaje wrogom czerwoną poświatę.</li>
 </ul>
 <h2>B. Skala</h2>
-<p>Na mapie 1 metr ≈ 2 punkty. Postać 64 × 64 px w pliku jest w grze zmniejszana do ok. 23 punktów.
-Dlatego <strong>każdą nową grafikę rysujemy ok. 3 razy większą niż jej obecny rozmiar na mapie</strong>
-(w tabelach niżej jest i obecny, i proponowany rozmiar pliku). Obecny wygląd każdej rzeczy
-widać w <code>3_obecne_grafiki/</code> (plik <code>&lt;nazwa&gt;__teraz_x4.png</code> → nowy plik to <code>&lt;nazwa&gt;.png</code>).</p>
+<p><strong>Od zamówienia 09 obowiązuje nowa skala:</strong> 1 metr = 3,84 px w pliku (1 px pliku = 0,5 px mapy). Gra pokazuje
+pliki 1:1, bez zmniejszania i bez wygładzania. Postacie w manierze „blondynki” (siatka 32×32 powiększona 2× do klatki 64×64, postać ok. 28 px siatki), duże drzewo
+ok. 96×112, ściany 8/12/16 px, kafle podłoża 256×256. Pełna tabela: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pixel_art_swiat.md</code></a>, punkt 2.</p>
+<p>~~Dawniej: każdą grafikę rysowaliśmy ok. 3 razy większą niż na mapie, a gra ją zmniejszała.~~ Ta zasada już nie
+obowiązuje (zmniejszanie rozmywało piksele i każda rzecz miała inną wielkość piksela).</p>
 <h2>C. Arkusz postaci (ludzie i stworki, które chodzą)</h2>
-<p>Wzór: <code>1_format/wzor_arkusza_192x192.png</code> (i objaśnienie <code>wzor_arkusza_objasnienie.png</code>).</p>
+<p>Wzór: <a href="1_format/wzor_arkusza_192x192.png"><code>1_format/wzor_arkusza_192x192.png</code></a> (i objaśnienie <code>wzor_arkusza_objasnienie.png</code>).</p>
 <ul>
 <li><strong>192 × 192 px = 3 × 3 klatki po 64 × 64.</strong></li>
 <li>Rzędy: 1 = w dół (przodem), 2 = w bok <strong>patrząc w lewo</strong> (w prawo gra odbija sama), 3 = w górę (tyłem).</li>
@@ -78,7 +91,7 @@ widać w <code>3_obecne_grafiki/</code> (plik <code>&lt;nazwa&gt;__teraz_x4.png<
 <strong>Maski są do poprawy:</strong> zamiast samego ubrania zaznaczają kontury całej postaci (czerwony), a u
 mieszkańca 01 także włosy (zielony), u 03 twarz i czapkę. Maska ma obejmować <strong>tylko ubranie</strong>
 (czerwony = główne ubranie, zielony = spodnie/pas/drugi kolor), bez konturu, skóry, włosów i czapki.
-<strong>Poprawione w paczce v3</strong> – maski są teraz dobre, gra robi z nich warianty kolorystyczne (<code>5_zrzuty_z_gry/mieszkancy_warianty_kolorow.png</code>). Tak robić maski dla kolejnych postaci.</p>
+<strong>Poprawione w paczce v3</strong> – maski są teraz dobre, gra robi z nich warianty kolorystyczne (<a href="5_zrzuty_z_gry/mieszkancy_warianty_kolorow.png"><code>5_zrzuty_z_gry/mieszkancy_warianty_kolorow.png</code></a>). Tak robić maski dla kolejnych postaci.</p>
 <h2>D. Lista do narysowania</h2>
 <h3>D1. Postacie (arkusz 3 × 3 po 64 × 64 + maska)</h3>
 <table>
@@ -586,7 +599,7 @@ dach tajski, glina), zamki (ok. 144 × 144) i pomniki (wieża z zegarem, łuk, o
 <h2>E. Kolejność</h2>
 <ol>
 <li>✅ Mieszkańcy 1–15, bohaterowie 4–10, wrogowie, stałe postacie partia 1 (mag, Margo, dziadkowie, Grażynka) – są w grze.</li>
-<li><strong>Teraz: świat – <code>ZAMOWIENIE_swiat_01.md</code></strong> (podłoże, drogi, dachy), potem ściany, latarnie, kominy, parowóz (<code>STYL_SWIATA_steampunk.md</code>).</li>
+<li><strong>Teraz: świat – <a href="ZAMOWIENIE_swiat_01.md"><code>ZAMOWIENIE_swiat_01.md</code></a></strong> (podłoże, drogi, dachy), potem ściany, latarnie, kominy, parowóz (<a href="STYL_SWIATA_steampunk.md"><code>STYL_SWIATA_steampunk.md</code></a>).</li>
 <li>Reszta stałych postaci (Luigi, Martin, trener, biegaczka, mądrale, woźnica, pies).</li>
 <li>Drzewa, grzyby, owoce, szyldy.</li>
 <li>Smok i cień smoka.</li>
