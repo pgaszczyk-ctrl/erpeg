@@ -7,7 +7,7 @@ import { DZIELENIE } from '../content/budynki';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
-import { WYGLAD_09, maluj09 } from './Podloze09';
+import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -333,12 +333,16 @@ export function wallHeight(b: Building) {
 // Texture keys must be unique for the whole game, across scene restarts.
 let textureCounter = 0;
 const czasyKawalkow: number[] = [];
-(window as unknown as { __czasyKawalkow: number[] }).__czasyKawalkow = czasyKawalkow;
+/** Overhaul 09: from asking for a chunk to seeing it (ms), background ground included. */
+const czasyCalosci: number[] = [];
+Object.assign(window, { __czasyKawalkow: czasyKawalkow, __czasyCalosci: czasyCalosci });
 
 interface Chunk {
   key: string;
   tex: Phaser.Textures.CanvasTexture;
   img: Phaser.GameObjects.Image;
+  /** Which request for its ground (overhaul 09) the chunk waits for; older answers are dropped. */
+  ver?: number;
 }
 
 export class MapRenderer {
@@ -454,12 +458,32 @@ export class MapRenderer {
       const img = this.scene.add.image(0, 0, key).setOrigin(0).setScale(1 / DOTS).setDepth(GROUND_DEPTH);
       chunk = { key: '', tex, img };
     }
-    chunk.key = `${cx},${cy}`;
+    const fresh = chunk.key !== k;
+    chunk.key = k;
     const x0 = cx * CHUNK;
     const y0 = cy * CHUNK;
     const ctx = chunk.tex.getContext();
     this.patterns ??= this.withArt(ctx, makePatterns(ctx));
     const t0 = performance.now();
+    if (WYGLAD_09) {
+      // Overhaul 09: the ground is computed in the background (Web Worker); the chunk shows up when it's ready
+      // (a chunk being redrawn keeps its old picture until then).
+      const ver = (chunk.ver = (chunk.ver ?? 0) + 1);
+      const c = chunk;
+      if (fresh) c.img.setVisible(false);
+      this.chunks.set(k, c);
+      const order = this.groundOrder(x0, y0);
+      ziemiaWTle().policz(order).then((ground) => {
+        if (c.key !== k || c.ver !== ver || !this.scene.textures.exists(c.tex.key)) return;
+        const t1 = performance.now();
+        this.paint(ctx, x0, y0, ground);
+        (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
+        (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
+        c.tex.refresh();
+        c.img.setPosition(x0, y0).setVisible(true);
+      });
+      return;
+    }
     this.paint(ctx, x0, y0);
     // Paint times of the last chunks (ms), for checks on phones and in automated tests.
     (czasyKawalkow.push(Math.round(performance.now() - t0)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
@@ -510,7 +534,25 @@ export class MapRenderer {
     return out;
   }
 
-  private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
+  /** What the background painter needs for a chunk's ground: the kinds of ground around it (overhaul 09). */
+  private groundOrder(x0: number, y0: number) {
+    const m = this.map;
+    const wide = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 });
+    wide.areas.sort((a, b) => a.id - b.id);
+    const outside = !m.insideCity(x0, y0) || !m.insideCity(x0 + CHUNK, y0) || !m.insideCity(x0, y0 + CHUNK) || !m.insideCity(x0 + CHUNK, y0 + CHUNK) || !m.insideCity(x0 + CHUNK / 2, y0 + CHUNK / 2);
+    return mapaRodzajow(wide.areas, wide.lines, trackWidth, outside ? (g) => {
+      g.beginPath();
+      g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
+      for (const r of m.boundary) {
+        g.moveTo(r[0], r[1]);
+        for (let i = 2; i < r.length; i += 2) g.lineTo(r[i], r[i + 1]);
+        g.closePath();
+      }
+      g.fill('evenodd');
+    } : null, x0, y0, CHUNK);
+  }
+
+  private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
     const P = this.patterns!;
     const m = this.map;
     ctx.setTransform(DOTS, 0, 0, DOTS, -x0 * DOTS, -y0 * DOTS);
@@ -523,21 +565,9 @@ export class MapRenderer {
     // Wide enough for outlines, walls (drawn lower) and patterns.
     clip = { x0: x0 - 40, y0: y0 - 80, x1: x0 + CHUNK + 40, y1: y0 + CHUNK + 80 };
 
-    if (WYGLAD_09) {
+    if (ground) {
       // Overhaul 09: the ground (areas, roads, water, tracks) comes from the generator in src/gen.
-      const wide = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 });
-      wide.areas.sort((a, b) => a.id - b.id);
-      const outside = !m.insideCity(x0, y0) || !m.insideCity(x0 + CHUNK, y0) || !m.insideCity(x0, y0 + CHUNK) || !m.insideCity(x0 + CHUNK, y0 + CHUNK) || !m.insideCity(x0 + CHUNK / 2, y0 + CHUNK / 2);
-      maluj09(ctx, wide.areas, wide.lines, trackWidth, outside ? (g) => {
-        g.beginPath();
-        g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
-        for (const r of m.boundary) {
-          g.moveTo(r[0], r[1]);
-          for (let i = 2; i < r.length; i += 2) g.lineTo(r[i], r[i + 1]);
-          g.closePath();
-        }
-        g.fill('evenodd');
-      } : null, x0, y0, CHUNK);
+      rysujZiemie(ctx, ground, x0, y0, CHUNK);
       if (m.terrain) this.paintRelief(ctx, x0, y0);
       buildings.sort((a, b) => a.y1 - b.y1);
       for (const b of buildings) this.paintBuilding(ctx, b);

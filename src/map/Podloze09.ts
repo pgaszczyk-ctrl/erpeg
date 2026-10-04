@@ -1,5 +1,6 @@
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, doCanvas, hash, type Rodzaj, type Obraz } from '../gen';
+import type { Rodzaj } from '../gen';
 import type { Area, Line } from './CityMap';
+import { GEN_DOTS, MARGINES, RODZAJE, ziemia } from './ziemia09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
 // liczy generator z `src/gen`. Obszary OSM trafiają najpierw na pomocnicze płótno „mapy rodzajów”
@@ -7,19 +8,13 @@ import type { Area, Line } from './CityMap';
 
 export const WYGLAD_09 = new URLSearchParams(location.search).get('wyglad') === '09';
 
-/** Piksele generatora na piksel mapy (art: 1 px = 0,5 px mapy). */
-export const GEN_DOTS = 2;
-/** Margines mapy rodzajów dookoła kawałka (woda czyta rodzaj do 32 px od brzegu, granice drżą o ±2). */
-const MARGINES = 40;
-
-const RODZAJE: Rodzaj[] = [
-  'trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'bruk', 'chodnik', 'plac', 'droga', 'piasek', 'woda',
-  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory',
-];
 const ID = Object.fromEntries(RODZAJE.map((r, i) => [r, i])) as Record<Rodzaj, number>;
 /** Kolory-identyfikatory: kod z trzech kanałów, więc pośrednie piksele (wygładzone brzegi) rozpoznajemy po braku dopasowania. */
 const KOD = RODZAJE.map((_, i) => [(i * 37 + 11) & 255, (i * 91 + 53) & 255, (i * 151 + 97) & 255] as const);
-const KOD_NA_ID = new Map<number, number>(KOD.map(([r, g, b], i) => [(r << 16) | (g << 8) | b, i]));
+/** Rodzaj po czerwonym kanale (kody mają różne R) i pełny kod jako liczba (kolejność bajtów ImageData). */
+const PO_R = new Int16Array(256).fill(-1);
+KOD.forEach(([r], i) => (PO_R[r] = i));
+const KOD_32 = KOD.map(([r, g, b]) => (b << 16) | (g << 8) | r);
 const kolor = (r: Rodzaj) => `rgb(${KOD[ID[r]].join(',')})`;
 
 /** Rodzaj podłoża z rodzaju obszaru OSM (leśne i pola zmieniają odmianę wg id obszaru). */
@@ -48,9 +43,28 @@ function rodzajObszaru(a: Area): Rodzaj {
 
 let rodzajeCanvas: HTMLCanvasElement | null = null;
 
-function sciezkaObszaru(ctx: CanvasRenderingContext2D, rings: number[][]) {
+/** Granice pierścieni (liczone raz), żeby pomijać dziury i obszary poza kawałkiem. */
+const ramki = new WeakMap<number[], [number, number, number, number]>();
+function ramka(r: number[]) {
+  let b = ramki.get(r);
+  if (!b) {
+    b = [Infinity, Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < r.length; i += 2) {
+      if (r[i] < b[0]) b[0] = r[i];
+      if (r[i + 1] < b[1]) b[1] = r[i + 1];
+      if (r[i] > b[2]) b[2] = r[i];
+      if (r[i + 1] > b[3]) b[3] = r[i + 1];
+    }
+    ramki.set(r, b);
+  }
+  return b;
+}
+
+function sciezkaObszaru(ctx: CanvasRenderingContext2D, rings: number[][], x0: number, y0: number, x1: number, y1: number) {
   ctx.beginPath();
   for (const r of rings) {
+    const b = ramka(r);
+    if (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1) continue;
     ctx.moveTo(r[0], r[1]);
     for (let i = 2; i < r.length; i += 2) ctx.lineTo(r[i], r[i + 1]);
     ctx.closePath();
@@ -58,12 +72,10 @@ function sciezkaObszaru(ctx: CanvasRenderingContext2D, rings: number[][]) {
 }
 
 /**
- * Maluje ziemię kawałka (x0, y0, `rozmiar` px mapy) do `ctx` (transformacja mapy już ustawiona).
- * `szerokoscDrogi` = jak gruba ma być droga na mapie (px mapy); `poza` rysuje kształt poza granicą miasta (czyli las).
- * Zwraca kępki runa (do namalowania nad ziemią).
+ * Mapa rodzajów kawałka (x0, y0, `rozmiar` px mapy): obszary, drogi, woda i tory na pomocniczym płótnie.
+ * `szerokoscDrogi` = jak gruba ma być droga na mapie (px mapy); `poza` rysuje kształt poza granicą miasta (las).
  */
-export function maluj09(
-  ctx: CanvasRenderingContext2D,
+export function mapaRodzajow(
   areas: Area[],
   lines: Line[],
   szerokoscDrogi: (l: Line) => number,
@@ -71,7 +83,7 @@ export function maluj09(
   x0: number,
   y0: number,
   rozmiar: number,
-) {
+): Zlecenie {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -84,10 +96,12 @@ export function maluj09(
   g.setTransform(GEN_DOTS, 0, 0, GEN_DOTS, MARGINES - x0 * GEN_DOTS, MARGINES - y0 * GEN_DOTS);
   g.lineJoin = 'round';
   g.lineCap = 'round';
+  const m = MARGINES / GEN_DOTS + 2;
+  const bx0 = x0 - m, by0 = y0 - m, bx1 = x0 + rozmiar + m, by1 = y0 + rozmiar + m;
 
   for (const a of areas) {
     if (a.kind === 'paved') continue;
-    sciezkaObszaru(g, a.rings);
+    sciezkaObszaru(g, a.rings, bx0, by0, bx1, by1);
     g.fillStyle = kolor(rodzajObszaru(a));
     g.fill('evenodd');
   }
@@ -98,7 +112,7 @@ export function maluj09(
     if (woda) r = 'woda';
     else if (tor) r = 'tory';
     else if (l.kind === 'pedestrian') r = 'chodnik';
-    else if (l.kind in SZEROKOSC_LINII) r = 'droga';
+    else if (DROGI.has(l.kind)) r = 'droga';
     if (!r) continue;
     g.beginPath();
     g.moveTo(l.pts[0], l.pts[1]);
@@ -109,44 +123,88 @@ export function maluj09(
   }
   for (const a of areas) {
     if (a.kind !== 'paved') continue;
-    sciezkaObszaru(g, a.rings);
+    sciezkaObszaru(g, a.rings, bx0, by0, bx1, by1);
     g.fillStyle = kolor('bruk');
     g.fill('evenodd');
   }
   if (poza) { g.fillStyle = kolor('las_iglasty'); poza(g); }
 
-  // Odczyt rodzajów; piksele „pośrednie” dostają rodzaj sąsiada z lewej albo z góry.
-  const dane = g.getImageData(0, 0, S, S).data;
+  // Odczyt rodzajów; piksele „pośrednie” (wygładzone brzegi) dostają rodzaj sąsiada z lewej albo z góry.
+  const dane = new Uint32Array(g.getImageData(0, 0, S, S).data.buffer);
   const ids = new Uint8Array(S * S);
-  const pewne = new Uint8Array(S * S);
+  let ost = 0;
   for (let k = 0; k < S * S; k++) {
-    const id = KOD_NA_ID.get((dane[4 * k] << 16) | (dane[4 * k + 1] << 8) | dane[4 * k + 2]);
-    if (id !== undefined) { ids[k] = id; pewne[k] = 1; }
+    const v = dane[k];
+    const id = PO_R[v & 255];
+    // Pewne tylko przy zgodnych wszystkich trzech kanałach; inaczej rodzaj sąsiada z lewej (albo z góry na początku wiersza).
+    if (id >= 0 && (v & 0xffffff) === KOD_32[id]) ost = id;
+    else ost = k % S ? ost : k >= S ? ids[k - S] : 0;
+    ids[k] = ost;
   }
-  for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
-    const k = j * S + i;
-    if (pewne[k]) continue;
-    ids[k] = i > 0 ? ids[k - 1] : j > 0 ? ids[k - S] : 0;
+  return { ids, S, X0: x0 * GEN_DOTS, Y0: y0 * GEN_DOTS, N };
+}
+
+export interface Zlecenie { ids: Uint8Array; S: number; X0: number; Y0: number; N: number }
+
+/** Piksele ziemi → płótno N×N. */
+function naPlotno(px: Uint32Array, N: number) {
+  const c = document.createElement('canvas');
+  c.width = N;
+  c.height = N;
+  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength), N, N), 0, 0);
+  return c;
+}
+
+/**
+ * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
+ */
+class ZiemiaWTle {
+  private workery: Worker[] = [];
+  private czeka = new Map<number, (c: HTMLCanvasElement) => void>();
+  private nr = 0;
+  private kolej = 0;
+  private wymiar = new Map<number, number>();
+
+  constructor() {
+    try {
+      const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
+      for (let i = 0; i < ile; i++) {
+        const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array }>) => {
+          const gotowe = this.czeka.get(e.data.nr);
+          const N = this.wymiar.get(e.data.nr)!;
+          this.czeka.delete(e.data.nr);
+          this.wymiar.delete(e.data.nr);
+          gotowe?.(naPlotno(e.data.px, N));
+        };
+        this.workery.push(w);
+      }
+    } catch {
+      this.workery = [];
+    }
   }
-  const X0 = x0 * GEN_DOTS, Y0 = y0 * GEN_DOTS;
-  const rodzajW = (x: number, y: number): Rodzaj | null => {
-    const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
-    if (i < 0 || j < 0 || i >= S || j >= S) return null;
-    return RODZAJE[ids[j * S + i]];
-  };
 
-  const obraz: Obraz = nowy(N, N);
-  malujPodloze(obraz, X0, Y0, rodzajW);
-  const trzciny = malujWode(obraz, X0, Y0, rodzajW);
-  const kepki = posiejRuno(X0, Y0, N, N, rodzajW);
-  for (const k of kepki) runo(obraz, k.x - X0, k.y - Y0, k.rodzaj, k.seed, 0);
-  for (const [x, y] of trzciny) runo(obraz, x - X0, y - Y0, 'trzcina', hash(x, y, 77) * 1e6 | 0, 0);
+  policz(z: Zlecenie): Promise<HTMLCanvasElement> {
+    if (!this.workery.length) return Promise.resolve(naPlotno(ziemia(z.ids, z.S, z.X0, z.Y0, z.N), z.N));
+    const nr = ++this.nr;
+    const w = this.workery[this.kolej++ % this.workery.length];
+    return new Promise((ok) => {
+      this.czeka.set(nr, ok);
+      this.wymiar.set(nr, z.N);
+      w.postMessage({ nr, ...z }, [z.ids.buffer]);
+    });
+  }
+}
 
-  const c = doCanvas(obraz);
+let wTle: ZiemiaWTle | null = null;
+export const ziemiaWTle = () => (wTle ??= new ZiemiaWTle());
+
+/** Gotowa ziemia na kawałek (transformacja mapy już ustawiona w ctx). */
+export function rysujZiemie(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, x0: number, y0: number, rozmiar: number) {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(c, x0, y0, rozmiar, rozmiar);
   ctx.restore();
 }
 
-const SZEROKOSC_LINII: Record<string, number> = { major: 1, medium: 1, minor: 1, service: 1, track: 1, path: 1, steps: 1 };
+const DROGI = new Set(['major', 'medium', 'minor', 'service', 'track', 'path', 'steps']);
