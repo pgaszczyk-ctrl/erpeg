@@ -156,7 +156,7 @@ Opcjonalnie (przełącznik, decyzja po teście): **przyciąganie kąta budynku**
 
 - **Rury na ścianach:** ok. 30% budynków (seed) dostaje pionową rurę `rura_sciana_<8|12|16>` na jednej ścianie frontowej przy narożniku, część poziomy odcinek pod oknami, manometr lub zawór przy drzwiach miejsc.
 - **Dachy:** ok. 10% zbiornik lub kocioł na dachu (stemple w obrysie, jak `paintChimney`), wentylatory 3 klatki (tylko w widoku, sprite).
-- **Rurociągi:** losowo, per komórka 1 km (seed z mapy): 1–3 trasy po siatce 4 px mapy (8 px pliku) wzdłuż krawędzi jezdni (`minor`/`medium`, po stronie chodnika) i przez trawniki między budynkami (ścieżka „Manhattan” z omijaniem budynków i wody, przecięcie jezdni modułem `przejscie_pod_droga`). Moduły z zamówienia (`rura_*`), malowane w kawałek. Przecieki (`rura_przeciek`) i para jako sprite'y w widoku.
+- **Rurociągi (zmiana 4.10):** tylko **równolegle do dróg, w stałym odsunięciu za chodnikiem, tym samym łukiem co droga**; na końcach wejście do budynku albo pod ziemię (studzienka). Żadnych tras „Manhattan” przez trawniki. Szczegóły i kod: `GENERATOR_SWIATA.md` punkt 0.6, `generator/steampunk.ts` (`trasaPrzyDrodze`, `rurociagWzdluz`). Przecieki i para jako sprite'y w widoku (punkty zwraca `rurociagWzdluz`).
 - **Para ze studzienek:** dziś `studzienka_para` to statyczna klatka w kawałku. Dodać pulę sprite'ów obłoczków (`para_*`, 4–6 klatek) nad kratkami w widoku, losowe odstępy 2–6 s. To samo przy kominach i kotłach.
 
 ## 7. Kolej parowa (zamiast koni na stacjach kolejowych)

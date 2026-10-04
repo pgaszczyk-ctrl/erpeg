@@ -20,6 +20,8 @@
    - **chodnik nierówny**: płyty różnej szerokości i odcienia, przesunięte rzędy, krzywe fugi, pęknięcia, zapadnięte płyty, wyszczerbione rogi, mech i trawa w fugach.
    Kod: `generator/woda.ts` (`malujWode`), `posiejRuno` w `runo.ts`, `chodnik` i trawa w `podloze.ts`. Wzór: `zrzuty/generator_laka_staw_tor.png`, `zrzuty/generator_chodnik_trawa.png`.
 
+6. **Rurociągi tylko wzdłuż dróg, bez zygzaków po trawie.** Rura biegnie **równolegle do drogi, w stałym odsunięciu** (połowa jezdni + chodnik + 6–8 px trawy, po jednej stronie), **tym samym łukiem co droga**, z zaokrąglonymi zakrętami. Na każdym końcu **wchodzi do budynku** (skręt łukiem do najbliższej ściany w zasięgu ok. 80 px mapy, rura rysowana przed budynkiem, więc ściana ją przykrywa) **albo pod ziemię** (kołnierz i żeliwna studzienka, z której czasem idzie para). Nigdy nie przecina jezdni ani budynku po drodze; gdy na trasie jest skrzyżowanie lub wjazd – rura kończy się studzienką przed nim i może wyjść drugą studzienką za nim. Długość odcinka 60–200 px mapy, 0–2 odcinki na ulicę (ziarno z id drogi OSM, więc wszędzie tak samo). Kod: `trasaPrzyDrodze()` + `rurociagWzdluz()` w `generator/steampunk.ts` (stare `rurociag()` po siatce zostaje tylko do rur na ścianach). Wzór: `zrzuty/generator_rurociag.png`.
+
 ## 1. Co jest w folderze `generator/`
 
 Gotowy kod TypeScript, bez Phasera i bez DOM-u (działa też w Web Workerze), do skopiowania jako `src/gen/`:
@@ -32,7 +34,7 @@ Gotowy kod TypeScript, bez Phasera i bez DOM-u (działa też w Web Workerze), do
 | `woda.ts` | **woda ze stopniowaną głębią i brzegi** przy każdym zbiorniku: szuwary albo plaża, przy utwardzonym – nabrzeże; odległość od brzegu liczona w oknie z marginesem 32 px, więc bez szwów między kawałkami; zwraca miejsca trzcin | `malujWode(obraz, x0, y0, rodzajW)` → `[x, y][]` trzcin, `rodzajBrzegu`, `odlegloscBrzegu` |
 | `runo.ts` | kępki trawy, wysoka trawa, trzciny z pałką, paproć, wrzos, kwiaty, kamyki, głazy, grzyby; z przesunięciem wierzchołka (wiatr, odchylenie od postaci) | `runo(obraz, x, y, rodzaj, ziarno, wiatr)`, `posiejRuno(x0, y0, w, h, rodzajW)` (deterministyczny rozsiew) |
 | `budynki.ts` | budynek z dowolnego obrysu: dach kopertowy z najbliższej krawędzi (połacie, rzędy dachówek, naroża, kalenice, kosze w L/U), ściany pod obrysem z przesunięciem `WALL_SKEW`, okna (nocą część świeci), drzwi, mosiężna rura, komin; 13 materiałów; maska cienia | `budynek(pierścień, opcje)`, `cienBudynku(pierścień, wysokość)`, `MATERIALY` |
-| `steampunk.ts` | moduły rurociągu 8×8 (z zaworami, manometrami, podporami), trasa rurociągu po siatce, obłoczki pary (3 rozmiary × 6 klatek), tor kolejowy wzdłuż łamanej | `modulRury`, `rurociag`, `para`, `tor` |
+| `steampunk.ts` | moduły rurociągu 8×8 (z zaworami, manometrami, podporami), trasa rurociągu po siatce, obłoczki pary (3 rozmiary × 6 klatek), tor kolejowy wzdłuż łamanej | `rurociagWzdluz` (rura po dowolnej łamanej, końce: dom / ziemia), `trasaPrzyDrodze`, `rownolegla`, `wycinek`, `zaokraglij`, `modulRury`, `para`, `tor` |
 | `demo/` | galeria wszystkiego + pomiar czasu (otwórz `demo/index.html`) | – |
 
 ## 2. Czy to nie za ciężkie dla telefonu? (pomiary)
@@ -57,7 +59,7 @@ Wnioski i zasady:
 5. Woda i brzegi: `malujWode(obrazKawałka, x0·DOTS, y0·DOTS, rodzajW)` zaraz po `malujPodloze` (kawałki bez wody w zasięgu 32 px są pomijane od razu). Zwrócone trzciny rysować jak runo.
 5a. Runo: `posiejRuno(...)` (gęstość per rodzaj, plamy wysokiej trawy, kwiatki). **Statyczne** w kawałku. Ruchoma wysoka trawa przy postaci to osobne sprite'y (SPEC 3.4).
 6. Budynki: `budynek(pierścień×2, {wysokosc: wallHeight×2, dach, sciana, seed, rura, komin, drzwi, noc})`, kolejność z północy na południe jak dziś. Materiał z ziarna budynku, miejsca specjalne (`highlight`) dostają własny materiał (np. szkoła `miedz_patyna`). `partsOf` (hale) zostaje: każda część osobno.
-7. Rurociągi: trasy losowane per komórka 1 km (SPEC punkt 6), moduły rysowane w kawałek.
+7. Rurociągi: wzdłuż dróg (punkt 0.6): dla drogi `minor`/`medium` w kawałku (i z marginesem, żeby rura z sąsiedniego kawałka się nie ucinała) ziarno z id drogi → strona, odcinek [s0, s1], koniec w domu lub studzience; `rurociagWzdluz` przed budynkami.
 8. Pnie drzew rysowane w kawałek. **Korony nie**: one są sprite'ami z atlasu (SPEC 3.2).
 9. `putImageData` do płótna kawałka i `refresh()` tekstury.
 

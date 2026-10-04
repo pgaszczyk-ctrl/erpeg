@@ -17,8 +17,13 @@ Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat
 <li><strong>każdy zbiornik wodny ma brzeg</strong>: szuwary (błoto, bujna ciemna trawa, trzciny na lądzie i w płyciźnie, lilie wodne) <strong>albo plaża</strong> (mokry i suchy piasek, wchodzący ditherem w trawę). Wybór: piasek w OSM → plaża; mokradło, zarośla, las, łąka → zwykle szuwary; trawa i park → odcinkami na zmianę (duży szum, więc jeden staw ma i plażę, i szuwary); bruk, chodnik, plac, droga → kamienne nabrzeże;</li>
 <li><strong>głębokość stopniowana</strong> od linii brzegu: piana → płycizna (jasna nad piaskiem, mętna zielona przy szuwarach) → płytko → średnio → głębia, granice pasów postrzępione, zmarszczki i błyski, ciemny uskok brzegu od północy;</li>
 <li><strong>trawa żywsza</strong>: duże jaśniejsze i ciemniejsze plamy, błyski, dużo gęstszych kępek, plamy wysokiej trawy, kwiatki (<code>posiejRuno</code>);</li>
-<li><strong>chodnik nierówny</strong>: płyty różnej szerokości i odcienia, przesunięte rzędy, krzywe fugi, pęknięcia, zapadnięte płyty, wyszczerbione rogi, mech i trawa w fugach.
-   Kod: <a href="generator/woda.ts"><code>generator/woda.ts</code></a> (<code>malujWode</code>), <code>posiejRuno</code> w <code>runo.ts</code>, <code>chodnik</code> i trawa w <code>podloze.ts</code>. Wzór: <a href="zrzuty/generator_laka_staw_tor.png"><code>zrzuty/generator_laka_staw_tor.png</code></a>, <a href="zrzuty/generator_chodnik_trawa.png"><code>zrzuty/generator_chodnik_trawa.png</code></a>.</li>
+<li>
+<p><strong>chodnik nierówny</strong>: płyty różnej szerokości i odcienia, przesunięte rzędy, krzywe fugi, pęknięcia, zapadnięte płyty, wyszczerbione rogi, mech i trawa w fugach.
+   Kod: <a href="generator/woda.ts"><code>generator/woda.ts</code></a> (<code>malujWode</code>), <code>posiejRuno</code> w <code>runo.ts</code>, <code>chodnik</code> i trawa w <code>podloze.ts</code>. Wzór: <a href="zrzuty/generator_laka_staw_tor.png"><code>zrzuty/generator_laka_staw_tor.png</code></a>, <a href="zrzuty/generator_chodnik_trawa.png"><code>zrzuty/generator_chodnik_trawa.png</code></a>.</p>
+</li>
+<li>
+<p><strong>Rurociągi tylko wzdłuż dróg, bez zygzaków po trawie.</strong> Rura biegnie <strong>równolegle do drogi, w stałym odsunięciu</strong> (połowa jezdni + chodnik + 6–8 px trawy, po jednej stronie), <strong>tym samym łukiem co droga</strong>, z zaokrąglonymi zakrętami. Na każdym końcu <strong>wchodzi do budynku</strong> (skręt łukiem do najbliższej ściany w zasięgu ok. 80 px mapy, rura rysowana przed budynkiem, więc ściana ją przykrywa) <strong>albo pod ziemię</strong> (kołnierz i żeliwna studzienka, z której czasem idzie para). Nigdy nie przecina jezdni ani budynku po drodze; gdy na trasie jest skrzyżowanie lub wjazd – rura kończy się studzienką przed nim i może wyjść drugą studzienką za nim. Długość odcinka 60–200 px mapy, 0–2 odcinki na ulicę (ziarno z id drogi OSM, więc wszędzie tak samo). Kod: <code>trasaPrzyDrodze()</code> + <code>rurociagWzdluz()</code> w <a href="generator/steampunk.ts"><code>generator/steampunk.ts</code></a> (stare <code>rurociag()</code> po siatce zostaje tylko do rur na ścianach). Wzór: <a href="zrzuty/generator_rurociag.png"><code>zrzuty/generator_rurociag.png</code></a>.</p>
+</li>
 </ol>
 <h2>1. Co jest w folderze <code>generator/</code></h2>
 <p>Gotowy kod TypeScript, bez Phasera i bez DOM-u (działa też w Web Workerze), do skopiowania jako <code>src/gen/</code>:</p>
@@ -64,7 +69,7 @@ Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat
 <tr>
 <td><code>steampunk.ts</code></td>
 <td>moduły rurociągu 8×8 (z zaworami, manometrami, podporami), trasa rurociągu po siatce, obłoczki pary (3 rozmiary × 6 klatek), tor kolejowy wzdłuż łamanej</td>
-<td><code>modulRury</code>, <code>rurociag</code>, <code>para</code>, <code>tor</code></td>
+<td><code>rurociagWzdluz</code> (rura po dowolnej łamanej, końce: dom / ziemia), <code>trasaPrzyDrodze</code>, <code>rownolegla</code>, <code>wycinek</code>, <code>zaokraglij</code>, <code>modulRury</code>, <code>para</code>, <code>tor</code></td>
 </tr>
 <tr>
 <td><code>demo/</code></td>
@@ -91,7 +96,7 @@ Ten dokument uzupełnia <a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat
 <li>Woda i brzegi: <code>malujWode(obrazKawałka, x0·DOTS, y0·DOTS, rodzajW)</code> zaraz po <code>malujPodloze</code> (kawałki bez wody w zasięgu 32 px są pomijane od razu). Zwrócone trzciny rysować jak runo.
 5a. Runo: <code>posiejRuno(...)</code> (gęstość per rodzaj, plamy wysokiej trawy, kwiatki). <strong>Statyczne</strong> w kawałku. Ruchoma wysoka trawa przy postaci to osobne sprite'y (SPEC 3.4).</li>
 <li>Budynki: <code>budynek(pierścień×2, {wysokosc: wallHeight×2, dach, sciana, seed, rura, komin, drzwi, noc})</code>, kolejność z północy na południe jak dziś. Materiał z ziarna budynku, miejsca specjalne (<code>highlight</code>) dostają własny materiał (np. szkoła <code>miedz_patyna</code>). <code>partsOf</code> (hale) zostaje: każda część osobno.</li>
-<li>Rurociągi: trasy losowane per komórka 1 km (SPEC punkt 6), moduły rysowane w kawałek.</li>
+<li>Rurociągi: wzdłuż dróg (punkt 0.6): dla drogi <code>minor</code>/<code>medium</code> w kawałku (i z marginesem, żeby rura z sąsiedniego kawałka się nie ucinała) ziarno z id drogi → strona, odcinek [s0, s1], koniec w domu lub studzience; <code>rurociagWzdluz</code> przed budynkami.</li>
 <li>Pnie drzew rysowane w kawałek. <strong>Korony nie</strong>: one są sprite'ami z atlasu (SPEC 3.2).</li>
 <li><code>putImageData</code> do płótna kawałka i <code>refresh()</code> tekstury.</li>
 </ol>

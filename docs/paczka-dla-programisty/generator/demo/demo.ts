@@ -1,5 +1,5 @@
 // Galeria + pomiar czasu generowania. Zbuduj: npx esbuild demo/demo.ts --bundle --format=iife --outfile=demo/demo.js
-import { nowy, naloz, doCanvas, Obraz, hash, rng, ciemniej, GATUNKI, drzewo, klatkiWiatru, malujPodloze, obwodka, Rodzaj, runo, budynek, cienBudynku, rurociag, para, tor, przyciagnij, malujWode, posiejRuno } from '../index';
+import { nowy, naloz, doCanvas, Obraz, hash, rng, ciemniej, GATUNKI, drzewo, klatkiWiatru, malujPodloze, obwodka, Rodzaj, runo, budynek, cienBudynku, para, tor, przyciagnij, malujWode, posiejRuno, rurociagWzdluz, trasaPrzyDrodze, dlugosc } from '../index';
 
 const czasy: Record<string, number> = {};
 const mierz = <T>(n: string, f: () => T): T => { const t = performance.now(); const r = f(); czasy[n] = Math.round((performance.now() - t) * 10) / 10; return r; };
@@ -66,8 +66,21 @@ mierz('tor', () => tor(chunk, [0, 980, 400, 960, 700, 1000, 1024, 940], 0, 0));
 const trzciny = mierz('woda_glebia_i_brzegi', () => malujWode(chunk, 0, 0, rodzajW));
 mierz('runo_rozsypane', () => { const k = posiejRuno(0, 0, N, N, rodzajW); k.forEach((q) => runo(chunk, q.x, q.y, q.rodzaj, q.seed)); czasy['runo_sztuk'] = k.length; });
 mierz('trzciny', () => { trzciny.sort((a, b) => a[1] - b[1]).forEach(([x, y]) => runo(chunk, x, y, 'trzcina', x * 31 + y)); czasy['trzcin_sztuk'] = trzciny.length; });
+mierz('rurociag_wzdluz_drogi', () => {
+  // rura po północnej stronie drogi: 8 px za chodnikiem, tym samym łukiem; start pod ziemią, koniec w najbliższym domu
+  const odcinek = (ax: number, ay: number, bx: number, by: number, px: number, py: number): [number, number] => { const dx = bx - ax, dy = by - ay; let t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy); t = Math.max(0, Math.min(1, t)); return [ax + t * dx, ay + t * dy]; };
+  const naScianie = (ex: number, ey: number): [number, number] | undefined => { let best: [number, number] | undefined, bd = 160;
+    for (const b of budynki) { const p = b.p, n = p.length / 2; for (let i = 0; i < n; i++) { const j = (i + 1) % n; const q = odcinek(p[2 * i], p[2 * i + 1], p[2 * j], p[2 * j + 1], ex, ey); const d = Math.hypot(q[0] - ex, q[1] - ey); if (d < bd) { bd = d; best = q; } } } return best; };
+  const L = dlugosc(droga);
+  // koniec rury: miejsce przy drodze (s), z którego najbliżej do ściany domu po północnej stronie
+  let najS = 760, najDom: [number, number] | undefined, najD = 1e9;
+  for (let s1 = 560; s1 < 900; s1 += 8) { const t = trasaPrzyDrodze(droga, 420, s1, -27); const n = t.pts.length; const d = naScianie(t.pts[n - 2], t.pts[n - 1]); if (d) { const dd = Math.hypot(d[0] - t.pts[n - 2], d[1] - t.pts[n - 1]); if (dd < najD) { najD = dd; najS = s1; najDom = d; } } }
+  const t1b = trasaPrzyDrodze(droga, 420, najS, -27, najDom);
+  rurociagWzdluz(chunk, t1b.pts, 0, 0, 3, 'ziemia', t1b.koniec);
+  const t2 = trasaPrzyDrodze(droga, 820, L - 20, 27);
+  rurociagWzdluz(chunk, t2.pts, 0, 0, 4, 'ziemia', 'ziemia');
+});
 mierz('budynki_wszystkie', () => { budynki.forEach((b, i) => { const g = budynek(b.p, { wysokosc: b.h, dach: b.dach, sciana: b.sciana, seed: b.seed, rura: i % 3 === 0, komin: i % 2 === 0, noc: false }); naloz(chunk, g.obraz, g.x0, g.y0); }); });
-mierz('rurociag', () => { const k: [number, number][] = []; let x = 50, y = 70; for (let i = 0; i < 44; i++) { k.push([x, y]); if (i < 18) x++; else if (i < 28) y++; else x++; } rurociag(chunk, k, 0, 0, 3); });
 mierz('drzewa_w_lesie', () => {
   const pos: [number, number, string][] = []; const rr = rng(9);
   for (let i = 0; i < 9000 && pos.length < 420; i++) { const x = 20 + rr() * 340, y = 60 + rr() * 900; if (!(rodzajW(x | 0, y | 0) || '').startsWith('las')) continue; if (pos.some(([a, b]) => Math.hypot(a - x, (b - y) * 1.3) < 24)) continue;
@@ -86,7 +99,7 @@ const crop = (x: number, y: number, w: number, h: number) => { const o = nowy(w,
 pokaz('Zbliżenie: las', crop(100, 360, 320, 200), 3);
 pokaz('Zbliżenie: miasto', crop(560, 60, 360, 260), 3);
 pokaz('Zbliżenie: łąka, staw (głębia, plaża, szuwary), tor', crop(560, 640, 440, 360), 3);
-pokaz('Zbliżenie: chodnik i trawa', crop(420, 440, 340, 220), 3);
+pokaz('Zbliżenie: chodnik, trawa i rurociąg wzdłuż drogi', crop(560, 300, 440, 300), 3);
 { const o = nowy(32 * 6, 32 * 3); para_kl.forEach((p, i) => naloz(o, p, (i % 6) * 32, Math.floor(i / 6) * 32)); pokaz('Para: 3 rozmiary × 6 klatek', o, 3); }
 (window as any).__czasy = czasy;
 const pre = document.createElement('pre'); pre.textContent = JSON.stringify(czasy, null, 1); document.body.prepend(pre);

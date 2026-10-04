@@ -986,64 +986,6 @@
   var ZEL = ["#2a2630", "#3a3440", "#55505c"].map(hex);
   var CZERW = hex("#b2453a");
   var BIEL = hex("#ece6d6");
-  function modulRury(k, dodatek) {
-    const o = nowy(8, 8);
-    const poz = (x, y) => ustaw(o, x, y, y === 2 ? MOS[1] : y === 3 ? MOS[4] : y === 4 ? MOS[3] : MOS[2]);
-    const pion = (x, y) => ustaw(o, x, y, x === 2 ? MOS[4] : x === 3 ? MOS[3] : x === 4 ? MOS[2] : MOS[1]);
-    for (let y = 2; y <= 5; y++) for (let x = 2; x <= 5; x++) (k.e || k.w) && !(k.n || k.s) ? poz(x, y) : pion(x, y);
-    if (k.w) for (let x = 0; x < 2; x++) for (let y = 2; y <= 5; y++) poz(x, y);
-    if (k.e) for (let x = 6; x < 8; x++) for (let y = 2; y <= 5; y++) poz(x, y);
-    if (k.n) for (let y = 0; y < 2; y++) for (let x = 2; x <= 5; x++) pion(x, y);
-    if (k.s) for (let y = 6; y < 8; y++) for (let x = 2; x <= 5; x++) pion(x, y);
-    const o2 = o.px.slice();
-    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
-      if (!(o.px[y * 8 + x] >>> 24)) continue;
-      const pusty = (xx, yy) => xx >= 0 && yy >= 0 && xx < 8 && yy < 8 && !(o.px[yy * 8 + xx] >>> 24);
-      if (pusty(x + 1, y) || pusty(x, y + 1) || pusty(x - 1, y) || pusty(x, y - 1)) o2[y * 8 + x] = MOS[0];
-    }
-    o.px.set(o2);
-    if (dodatek === "kolnierz") {
-      for (let i = 1; i <= 6; i++) {
-        if (k.e || k.w) ustaw(o, 4, i, MOS[1]);
-        else ustaw(o, i, 4, MOS[1]);
-      }
-    }
-    if (dodatek === "zawor") {
-      for (let i = 2; i <= 5; i++) {
-        ustaw(o, i, 0, CZERW);
-        ustaw(o, i, 2, CZERW);
-      }
-      ustaw(o, 2, 1, CZERW);
-      ustaw(o, 5, 1, CZERW);
-      ustaw(o, 3, 1, ZEL[1]);
-      ustaw(o, 4, 1, ZEL[1]);
-    }
-    if (dodatek === "manometr") {
-      for (let y = 0; y <= 3; y++) for (let x = 2; x <= 5; x++) ustaw(o, x, y, x === 2 || x === 5 || y === 0 || y === 3 ? MOS[0] : BIEL);
-      ustaw(o, 4, 1, OBRYS);
-    }
-    if (dodatek === "podpora") {
-      for (let y = 6; y < 8; y++) {
-        ustaw(o, 2, y, ZEL[2]);
-        ustaw(o, 5, y, ZEL[0]);
-      }
-    }
-    return o;
-  }
-  function rurociag(o, komorki, ox, oy, seed) {
-    const set = new Set(komorki.map(([x, y]) => `${x},${y}`));
-    komorki.forEach(([cx, cy], i) => {
-      const k = { n: set.has(`${cx},${cy - 1}`), s: set.has(`${cx},${cy + 1}`), e: set.has(`${cx + 1},${cy}`), w: set.has(`${cx - 1},${cy}`) };
-      const prosty = k.e && k.w && !k.n && !k.s || k.n && k.s && !k.e && !k.w;
-      const h = hash(cx, cy, seed);
-      const dod = prosty && h < 0.12 ? "zawor" : prosty && h < 0.2 ? "manometr" : prosty && i % 3 === 0 ? "podpora" : prosty && h > 0.8 ? "kolnierz" : void 0;
-      const m = modulRury(k, dod);
-      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
-        const c = m.px[y * 8 + x];
-        if (c >>> 24) ustaw(o, cx * 8 + x - ox, cy * 8 + y - oy, c);
-      }
-    });
-  }
   function para(rozmiar, klatka, seed = 0) {
     const o = nowy(rozmiar, rozmiar), t = klatka / 5;
     const kul = [[0.5, 0.8, 0.22], [0.38, 0.62, 0.2], [0.62, 0.6, 0.2], [0.5, 0.45, 0.24]];
@@ -1089,6 +1031,176 @@
         s0 += g.L;
       }
     }
+  }
+  function rownolegla(pts, d) {
+    const n = pts.length / 2, out = [];
+    const nrm = (i) => {
+      const dx = pts[2 * i + 2] - pts[2 * i], dy = pts[2 * i + 3] - pts[2 * i + 1], L2 = Math.hypot(dx, dy) || 1;
+      return [-dy / L2, dx / L2];
+    };
+    for (let i = 0; i < n; i++) {
+      const a = i > 0 ? nrm(i - 1) : nrm(0), b = i < n - 1 ? nrm(i) : nrm(n - 2);
+      let mx = a[0] + b[0], my = a[1] + b[1];
+      const ml = Math.hypot(mx, my) || 1;
+      mx /= ml;
+      my /= ml;
+      const cos = mx * b[0] + my * b[1], k = Math.min(2, 1 / Math.max(0.5, cos));
+      out.push(pts[2 * i] + mx * d * k, pts[2 * i + 1] + my * d * k);
+    }
+    return out;
+  }
+  function wycinek(pts, s0, s1) {
+    const out = [];
+    let s = 0;
+    for (let i = 0; i + 3 < pts.length; i += 2) {
+      const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3], L2 = Math.hypot(bx - ax, by - ay);
+      const p = (t) => [ax + (bx - ax) * t / L2, ay + (by - ay) * t / L2];
+      if (s + L2 >= s0 && s <= s1) {
+        if (!out.length) out.push(...p(Math.max(0, s0 - s)));
+        out.push(...p(Math.min(L2, s1 - s)));
+      }
+      s += L2;
+    }
+    return out;
+  }
+  var dlugosc = (pts) => {
+    let s = 0;
+    for (let i = 0; i + 3 < pts.length; i += 2) s += Math.hypot(pts[i + 2] - pts[i], pts[i + 3] - pts[i + 1]);
+    return s;
+  };
+  function zaokraglij(pts, r2) {
+    const n = pts.length / 2;
+    if (n < 3) return pts.slice();
+    const out = [pts[0], pts[1]];
+    for (let i = 1; i < n - 1; i++) {
+      const px = pts[2 * i], py = pts[2 * i + 1];
+      const ax = pts[2 * i - 2] - px, ay = pts[2 * i - 1] - py, bx = pts[2 * i + 2] - px, by = pts[2 * i + 3] - py;
+      const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by), rr = Math.min(r2, la / 2, lb / 2);
+      const s1x = px + ax / la * rr, s1y = py + ay / la * rr, s2x = px + bx / lb * rr, s2y = py + by / lb * rr;
+      for (let k = 0; k <= 6; k++) {
+        const t = k / 6, u = 1 - t;
+        out.push(u * u * s1x + 2 * u * t * px + t * t * s2x, u * u * s1y + 2 * u * t * py + t * t * s2y);
+      }
+    }
+    out.push(pts[2 * n - 2], pts[2 * n - 1]);
+    return out;
+  }
+  function rurociagWzdluz(o, pts, ox, oy, seed, poczatek = "ziemia", koniec = "dom") {
+    const para2 = [];
+    const put = (x, y, c) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
+    const juz = /* @__PURE__ */ new Set();
+    const ciemn = (x, y) => {
+      const xx = Math.round(x - ox), yy = Math.round(y - oy);
+      if (xx < 0 || yy < 0 || xx >= o.w || yy >= o.h) return;
+      const id = yy * o.w + xx;
+      if (juz.has(id)) return;
+      juz.add(id);
+      const c = o.px[yy * o.w + xx];
+      const r2 = c & 255, g = c >>> 8 & 255, b = c >>> 16 & 255;
+      o.px[yy * o.w + xx] = rgb(r2 * 0.6 + 6, g * 0.64 + 8, b * 0.76 + 24);
+    };
+    const seg = [];
+    for (let i = 0; i + 3 < pts.length; i += 2) {
+      const dx = pts[i + 2] - pts[i], dy = pts[i + 3] - pts[i + 1], L2 = Math.hypot(dx, dy);
+      if (L2 > 0.01) seg.push({ ax: pts[i], ay: pts[i + 1], ux: dx / L2, uy: dy / L2, L: L2 });
+    }
+    if (!seg.length) return para2;
+    const Lx = -0.6, Ly = -0.8;
+    const calk = seg.reduce((a, g) => a + g.L, 0);
+    for (const pass of [0, 1, 2]) {
+      let s0 = 0;
+      for (const g of seg) {
+        let nx = -g.uy, ny = g.ux;
+        if (nx * Lx + ny * Ly < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+        for (let t = 0; t < g.L; t += 0.35) {
+          const x = g.ax + g.ux * t, y = g.ay + g.uy * t, s = s0 + t;
+          if (pass === 0) {
+            for (let k = -2; k <= 2; k += 0.5) {
+              ciemn(x + nx * k + 2, y + ny * k + 3);
+            }
+            continue;
+          }
+          if (pass === 1) {
+            const kol = Math.abs(s % 16 - 8) < 0.9 && s > 4 && s < calk - 4;
+            for (let k = -2.5; k <= 2.5; k += 0.5) {
+              const a = Math.abs(k);
+              if (a > 2 && !kol) continue;
+              let c;
+              if (a >= 2) c = MOS[0];
+              else {
+                const v = 0.45 + 0.3 * (k / 1.5) + 0.25 * (1 - a / 1.5);
+                c = MOS[v > 0.82 ? 4 : v > 0.58 ? 3 : v > 0.36 ? 2 : 1];
+                if (kol) c = a < 0.9 ? MOS[4] : MOS[0];
+              }
+              put(x + nx * k, y + ny * k, c);
+            }
+            continue;
+          }
+          const kraw = s > 10 && s < calk - 10;
+          if (kraw && Math.abs(s % 24 - 12) < 0.2) for (let j = 2.5; j <= 4; j += 0.5) {
+            put(x - nx * j - g.ux, y - ny * j - g.uy + 1, ZEL[0]);
+            put(x - nx * j + g.ux, y - ny * j + g.uy + 1, ZEL[1]);
+          }
+          if (kraw && Math.abs(s % 48 - 30) < 0.2) {
+            const h = hash(Math.floor(s / 48), seed, 61);
+            if (h < 0.35) {
+              for (let i = -2; i <= 2; i++) {
+                put(x + nx * 4 + g.ux * i, y + ny * 4 + g.uy * i, CZERW);
+              }
+              put(x + nx * 3, y + ny * 3, ZEL[1]);
+              put(x + nx * 5, y + ny * 5, CZERW);
+            } else if (h < 0.6) {
+              for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) put(x + nx * (4 + j) + g.ux * i, y + ny * (4 + j) + g.uy * i, i === 0 && j === 0 ? OBRYS : BIEL);
+              put(x + nx * 2.5, y + ny * 2.5, MOS[1]);
+            } else if (h < 0.75) para2.push([Math.round(x), Math.round(y)]);
+          }
+        }
+        s0 += g.L;
+      }
+    }
+    const koniecRury = (rodz, x, y, ux, uy) => {
+      let nx = -uy, ny = ux;
+      if (nx * Lx + ny * Ly < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      for (let k = -3; k <= 3; k += 0.5) for (let t = 0; t <= 1; t += 0.5) put(x - ux * t + nx * k, y - uy * t + ny * k, Math.abs(k) > 2.4 ? MOS[0] : t === 0 ? MOS[1] : MOS[3]);
+      if (rodz === "ziemia") {
+        const cx = x + ux * 4, cy = y + uy * 4;
+        for (let j = -4; j <= 4; j++) for (let i = -6; i <= 6; i++) {
+          const d = (i / 6) ** 2 + (j / 4) ** 2;
+          if (d > 1) continue;
+          put(cx + i, cy + j, d > 0.62 ? j < 0 ? ZEL[2] : ZEL[0] : d > 0.35 ? ZEL[1] : hex("#14121a"));
+        }
+        for (let i = -3; i <= 3; i += 2) put(cx + i, cy, ZEL[2]);
+        para2.push([Math.round(cx), Math.round(cy - 2)]);
+      }
+      if (rodz === "dom") {
+        for (let t = 1; t <= 4; t += 0.35) for (let k = -1.5; k <= 1.5; k += 0.5) put(x + ux * t + nx * k, y + uy * t + ny * k, MOS[Math.abs(k) > 1 ? 1 : 3]);
+        for (let k = -3.5; k <= 3.5; k += 0.5) put(x + ux * 1 + nx * k, y + uy * 1 + ny * k, ZEL[1]);
+      }
+    };
+    const g0 = seg[0], gN = seg[seg.length - 1];
+    if (poczatek !== "nic") koniecRury(poczatek, g0.ax, g0.ay, -g0.ux, -g0.uy);
+    else koniecRury("nic", g0.ax, g0.ay, -g0.ux, -g0.uy);
+    const ex = gN.ax + gN.ux * gN.L, ey = gN.ay + gN.uy * gN.L;
+    koniecRury(koniec, ex, ey, gN.ux, gN.uy);
+    return para2;
+  }
+  function trasaPrzyDrodze(droga2, s0, s1, odsuniecie, dom) {
+    let pts = wycinek(rownolegla(droga2, odsuniecie), s0, s1);
+    if (dom) {
+      const n = pts.length, ex = pts[n - 2], ey = pts[n - 1];
+      const dx = dom[0] - ex, dy = dom[1] - ey;
+      const ux = pts[n - 2] - pts[n - 4], uy = pts[n - 1] - pts[n - 3], ul = Math.hypot(ux, uy) || 1;
+      const wzdl = (dx * ux + dy * uy) / ul;
+      if (wzdl > 0) pts.push(ex + ux / ul * wzdl, ey + uy / ul * wzdl);
+      pts.push(dom[0], dom[1]);
+    }
+    return { pts: zaokraglij(pts, 10), koniec: dom ? "dom" : "ziemia" };
   }
 
   // demo/demo.ts
@@ -1196,22 +1308,54 @@
     trzciny.sort((a, b) => a[1] - b[1]).forEach(([x, y]) => runo(chunk, x, y, "trzcina", x * 31 + y));
     czasy["trzcin_sztuk"] = trzciny.length;
   });
+  mierz("rurociag_wzdluz_drogi", () => {
+    const odcinek = (ax, ay, bx, by, px, py) => {
+      const dx = bx - ax, dy = by - ay;
+      let t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+      t = Math.max(0, Math.min(1, t));
+      return [ax + t * dx, ay + t * dy];
+    };
+    const naScianie = (ex, ey) => {
+      let best, bd = 160;
+      for (const b of budynki) {
+        const p = b.p, n = p.length / 2;
+        for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          const q = odcinek(p[2 * i], p[2 * i + 1], p[2 * j], p[2 * j + 1], ex, ey);
+          const d = Math.hypot(q[0] - ex, q[1] - ey);
+          if (d < bd) {
+            bd = d;
+            best = q;
+          }
+        }
+      }
+      return best;
+    };
+    const L2 = dlugosc(droga);
+    let najS = 760, najDom, najD = 1e9;
+    for (let s1 = 560; s1 < 900; s1 += 8) {
+      const t = trasaPrzyDrodze(droga, 420, s1, -27);
+      const n = t.pts.length;
+      const d = naScianie(t.pts[n - 2], t.pts[n - 1]);
+      if (d) {
+        const dd = Math.hypot(d[0] - t.pts[n - 2], d[1] - t.pts[n - 1]);
+        if (dd < najD) {
+          najD = dd;
+          najS = s1;
+          najDom = d;
+        }
+      }
+    }
+    const t1b = trasaPrzyDrodze(droga, 420, najS, -27, najDom);
+    rurociagWzdluz(chunk, t1b.pts, 0, 0, 3, "ziemia", t1b.koniec);
+    const t2 = trasaPrzyDrodze(droga, 820, L2 - 20, 27);
+    rurociagWzdluz(chunk, t2.pts, 0, 0, 4, "ziemia", "ziemia");
+  });
   mierz("budynki_wszystkie", () => {
     budynki.forEach((b, i) => {
       const g = budynek(b.p, { wysokosc: b.h, dach: b.dach, sciana: b.sciana, seed: b.seed, rura: i % 3 === 0, komin: i % 2 === 0, noc: false });
       naloz(chunk, g.obraz, g.x0, g.y0);
     });
-  });
-  mierz("rurociag", () => {
-    const k = [];
-    let x = 50, y = 70;
-    for (let i = 0; i < 44; i++) {
-      k.push([x, y]);
-      if (i < 18) x++;
-      else if (i < 28) y++;
-      else x++;
-    }
-    rurociag(chunk, k, 0, 0, 3);
   });
   mierz("drzewa_w_lesie", () => {
     const pos = [];
@@ -1249,7 +1393,7 @@
   pokaz("Zbli\u017Cenie: las", crop(100, 360, 320, 200), 3);
   pokaz("Zbli\u017Cenie: miasto", crop(560, 60, 360, 260), 3);
   pokaz("Zbli\u017Cenie: \u0142\u0105ka, staw (g\u0142\u0119bia, pla\u017Ca, szuwary), tor", crop(560, 640, 440, 360), 3);
-  pokaz("Zbli\u017Cenie: chodnik i trawa", crop(420, 440, 340, 220), 3);
+  pokaz("Zbli\u017Cenie: chodnik, trawa i ruroci\u0105g wzd\u0142u\u017C drogi", crop(560, 300, 440, 300), 3);
   {
     const o = nowy(32 * 6, 32 * 3);
     para_kl.forEach((p, i) => naloz(o, p, i % 6 * 32, Math.floor(i / 6) * 32));
