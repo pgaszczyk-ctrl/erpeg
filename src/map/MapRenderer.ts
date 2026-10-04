@@ -7,6 +7,7 @@ import { DZIELENIE } from '../content/budynki';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
+import { WYGLAD_09, maluj09 } from './Podloze09';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -512,13 +513,38 @@ export class MapRenderer {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    ctx.fillStyle = P.grass;
-    ctx.fillRect(x0, y0, CHUNK, CHUNK);
-
     const box = { x0: x0 - 8, y0: y0 - 60, x1: x0 + CHUNK + 8, y1: y0 + CHUNK + 8 };
     const { areas, lines, buildings } = m.query(box);
     // Wide enough for outlines, walls (drawn lower) and patterns.
     clip = { x0: x0 - 40, y0: y0 - 80, x1: x0 + CHUNK + 40, y1: y0 + CHUNK + 80 };
+
+    if (WYGLAD_09) {
+      // Overhaul 09: the ground (areas, roads, water, tracks) comes from the generator in src/gen.
+      const wide = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 });
+      wide.areas.sort((a, b) => a.id - b.id);
+      const outside = !m.insideCity(x0, y0) || !m.insideCity(x0 + CHUNK, y0) || !m.insideCity(x0, y0 + CHUNK) || !m.insideCity(x0 + CHUNK, y0 + CHUNK) || !m.insideCity(x0 + CHUNK / 2, y0 + CHUNK / 2);
+      maluj09(ctx, wide.areas, wide.lines, trackWidth, outside ? (g) => {
+        g.beginPath();
+        g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
+        for (const r of m.boundary) {
+          g.moveTo(r[0], r[1]);
+          for (let i = 2; i < r.length; i += 2) g.lineTo(r[i], r[i + 1]);
+          g.closePath();
+        }
+        g.fill('evenodd');
+      } : null, x0, y0, CHUNK);
+      if (m.terrain) this.paintRelief(ctx, x0, y0);
+      buildings.sort((a, b) => a.y1 - b.y1);
+      for (const b of buildings) this.paintBuilding(ctx, b);
+      if (this.treeArt || this.bushArt) this.paintGreenery(ctx, x0, y0);
+      if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
+      if (this.lampArt) this.paintLamps(ctx, lines);
+      clip = null;
+      return;
+    }
+
+    ctx.fillStyle = P.grass;
+    ctx.fillRect(x0, y0, CHUNK, CHUNK);
 
     // Areas (already in draw order from the map build).
     areas.sort((a, b) => a.id - b.id);

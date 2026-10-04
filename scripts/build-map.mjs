@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
+import { przyciagnijBudynki } from './snap-buildings.mjs';
 const ClipperLib = createRequire(import.meta.url)('clipper-lib');
 
 // Arguments (all optional; the default builds Lublin):
@@ -458,6 +459,17 @@ for (const b of kept) {
   if (b.a) for (const a of b.a.split(' | ')) if (!k.addrs.includes(a)) k.addrs.push(a);
   if (!k.name && b.name) k.name = b.name;
   k.levels = Math.max(k.levels, b.levels);
+}
+// Buildings turned to 8 angles (GENERATOR_SWIATA.md 0.3): tidy pixel steps, no collisions with roads or neighbours.
+{
+  const roadLines = [];
+  for (const l of lines) {
+    const w = LINE_WIDTH_M[l.kind];
+    if (!w || l.pass) continue;
+    roadLines.push({ pts: decode(l.pts), half: (w / 2 + 0.4) * UNITS_PER_M });
+  }
+  const st = przyciagnijBudynki(blocks, roadLines, { ClipperLib, CS, UNITS_PER_M, CELL });
+  console.log(`map: buildings snapped to 8 angles: ${st.obrocone} turned, ${st.zmniejszone} turned and shrunk, ${st.bezObrotu} left unturned (collision), ${st.juzRowne} already straight`);
 }
 const encodeAbs = (r) => {
   const out = [r[0], r[1]];
