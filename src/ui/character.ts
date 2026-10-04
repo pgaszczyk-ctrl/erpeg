@@ -217,7 +217,6 @@ function show(host: CharacterHost) {
       ['🏆 Rozbite gangi', String(session.stats.gangs ?? 0)],
       ['🧪 Mikstury lecznicze', String(session.mikstury)],
       ['⛺ Namioty', session.namioty.length ? session.namioty.map((t) => `${t.left}/${t.max}`).join(', ') + ' nocy' : 'brak (sklep budowlany lub sportowy)'],
-      ...(session.kamienie ? [['🔮 Kamienie mocy', String(session.kamienie)] as [string, string]] : []),
       ...(session.diamenty ? [['💎 Diamenty', String(session.diamenty)] as [string, string]] : []),
     ]));
   };

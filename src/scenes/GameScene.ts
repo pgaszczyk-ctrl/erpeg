@@ -32,7 +32,7 @@ import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK } from '../content/trudnosc';
-import { KAMIEN_MOCY, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
+import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
@@ -257,6 +257,8 @@ export class GameScene extends Phaser.Scene {
   private damageCarry = 0;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
+  /** The hero said no to the diamonds' rescue: now it's the game-over screen. */
+  private rescueDeclined = false;
   private glow!: Phaser.GameObjects.Graphics;
   private npcs!: Npcs;
   private fixed!: FixedNpcs;
@@ -300,6 +302,7 @@ export class GameScene extends Phaser.Scene {
     this.markers = new Map();
     this.leaving = false;
     this.lingerUntil = 0;
+    this.rescueDeclined = false;
     this.mapView = new MapRenderer(this, this.city);
     this.explored = new Explored();
     const inLublin = this.city.id === 'lublin';
@@ -1436,13 +1439,29 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       return;
     }
-    if (session.kamienie > 0) return this.reviveWithStone();
+    // Enough diamonds: their power may save the hero (Escape picks the last button: yes).
+    const cost = WSKRZESZENIE.diamentow;
+    if (session.diamenty >= cost) {
+      this.player.anims.stop();
+      this.dialog({
+        title: '💀 Porażka',
+        text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\nKosztuje ${cost} 💎 – masz ${session.diamenty} 💎. Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.`,
+        buttons: ['Nie, to koniec', `💎 Tak, ocal mnie (${cost} 💎)`],
+        onChoose: (i) => (i === 1 ? this.reviveWithDiamonds() : this.dieForGood()),
+      });
+      return;
+    }
+    this.dieForGood();
+  }
+
+  /** Death is final: the character goes to the memorial board. */
+  private dieForGood() {
+    this.rescueDeclined = true;
     this.lingerUntil = 0;
     this.player.anims.stop();
     this.player.setFrame('down-0');
     this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
     this.emitHud();
-    // Death is final: the character goes to the memorial board.
     const inLublin = this.city.id === 'lublin';
     const place = inLublin ? this.city.describe(this.player.x, this.player.y) : `${mapName(this.city.id)}, ${this.city.describe(this.player.x, this.player.y)}`;
     // The ghost screen shows Lublin: someone who died in a town haunts home.
@@ -1854,15 +1873,15 @@ export class GameScene extends Phaser.Scene {
     this.travel(t, times, diamonds);
   }
 
-  /** A power stone crumbles: back to life at the load point (last hotel, or home). */
-  private reviveWithStone() {
-    session.kamienie--;
+  /** The diamonds' power: back to life at the load point (last hotel, or home). */
+  private reviveWithDiamonds() {
+    session.diamenty -= WSKRZESZENIE.diamentow;
     this.lingerUntil = 0;
     this.damageCarry = 0;
     this.player.hp = PLAYER.maxHp;
     session.hp = PLAYER.maxHp;
     const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
-    this.toast('🔮 Kamień mocy rozsypał się – wracasz do życia!', 4000);
+    this.toast(`💎 Moc diamentów cię ocaliła – wracasz do życia! Zostało ${session.diamenty} 💎.`, 4000);
     if (at.m === this.city.id) {
       this.player.setPosition(at.x, at.y);
       this.cameras.main.centerOn(at.x, at.y);
@@ -2260,29 +2279,6 @@ export class GameScene extends Phaser.Scene {
       this.dialog({ title: `😵 ${f.name}`, text: `${M.przegrana[Math.floor(Math.random() * M.przegrana.length)]}\n\nTracisz jedno serduszko.`, buttons: ['Następnym razem…'], onChoose: () => {} });
     }
     this.emitHud();
-  }
-
-  /** The power stone: brings the hero back once after dying. */
-  private openStone(p: CityPlace) {
-    const k = KAMIEN_MOCY;
-    const fmt = (n: number) => n.toLocaleString('pl-PL');
-    this.dialog({
-      title: `🔮 Kamień mocy – ${p.name}`,
-      text: `Kapłan pokazuje lśniący kamień. „Gdy zginiesz, kamień się rozsypie i wrócisz do życia – w hotelu, w którym ostatnio spałeś, albo w domu.”\n\nCena: ${fmt(k.cena)} monet albo ${k.zlotych} zł. Masz ${fmt(session.coins)} monet i ${session.kamienie} ${session.kamienie === 1 ? 'kamień' : 'kamieni'}.`,
-      buttons: [`Kup za ${fmt(k.cena)} 💰`, `Kup za ${k.zlotych} zł`, 'Nie teraz'],
-      onChoose: (i) => {
-        if (i === 0) {
-          if (session.coins < k.cena) return this.toast(`Za mało monet – kamień kosztuje ${fmt(k.cena)}.`, 2500);
-          spend(k.cena);
-          session.kamienie++;
-          this.emitHud();
-          this.save();
-          this.toast('🔮 Masz kamień mocy!', 2500);
-        } else if (i === 1) {
-          this.dialog({ title: '🔮 Kamień mocy', text: `Płatności prawdziwymi pieniędzmi (${k.zlotych} zł) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
-        }
-      },
-    });
   }
 
   /** A bank: deposits for a few days that come back with interest. */
@@ -3037,10 +3033,6 @@ export class GameScene extends Phaser.Scene {
 
   private openShop(p: CityPlace, tab = 0) {
     const offers = this.offers('sklep');
-    // Easier levels: every shop buys fruit; harder ones: only some (always the same ones).
-    let h = 2166136261;
-    for (const ch of `skup:${p.id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-    const buys = ((h >>> 0) % 1000) / 1000 < session.level.skup;
     const title = p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`;
     const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
     const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);
@@ -3048,11 +3040,9 @@ export class GameScene extends Phaser.Scene {
       // Selling: each kind of goods in the backpack separately, and everything at once.
       const groups = (Object.keys(GRUPY) as Grupa[]).filter((g) => groupCount(g) > 0);
       const total = fruitValue();
-      const lines = buys ? groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`) : [];
-      const all = buys && groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
-      const text = !buys
-        ? 'Tu nie skupujemy owoców, grzybów ani drewna – spróbuj w innym sklepie.'
-        : groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
+      const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
+      const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
+      const text = groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
       this.dialog({
         title, text, tabs,
         buttons: [...all, ...lines, 'Wyjdź'],
@@ -3663,13 +3653,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dialog(req: DialogRequest) {
-    // At a school or church: "ask about the shadows" (and in churches the
-    // power stone) as more options, before the last button.
+    // At a school or church: "ask about the shadows" as one more option, before the last button.
     const place = this.storyPlace;
     const extras: [string, () => void][] = [];
     const ask = place && this.story.askLabel();
     if (place && ask) extras.push([ask, () => this.story.ask(place)]);
-    if (place?.kind === 'church') extras.push(['🔮 Kamień mocy', () => this.openStone(place)]);
     if (place && extras.length) {
       this.storyPlace = null;
       const at = req.buttons.length - 1;
@@ -3747,7 +3735,8 @@ export class GameScene extends Phaser.Scene {
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel(this.handSkill())}` + (item(gear.equip.dystans) ? `  ✋ ${item(gear.equip.dystans)!.nazwa}` : ''),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
-      dead: this.player.isDead,
+      // Not while the diamonds may still save the hero (the question waits on top).
+      dead: this.player.isDead && !session.immortal && (this.rescueDeclined || session.diamenty < WSKRZESZENIE.diamentow),
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
       pogoda: weatherLabel(isNight()),
