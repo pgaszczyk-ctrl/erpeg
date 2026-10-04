@@ -1,0 +1,489 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 10 (wstrzymane)</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Zamówienie 10 – klocki świata, partia 1 (konkretna lista plików)</h1>
+<blockquote>
+<p><strong>WSTRZYMANE (4.10.2026), czeka na decyzję właściciela:</strong> rozważamy, żeby świat (ziemię, drzewa, budynki, rurociągi, parę) rysował w całości program, jak w makiecie. Wtedy od grafika potrzebne byłyby tylko postacie, pojazdy, zabytki, szyldy i ikony. Nie zaczynaj tej listy bez potwierdzenia.</p>
+<p><strong>Styl, skala i klimat: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pixel_art_swiat.md</code></a> (punkty 1–2).</strong> To zamówienie mówi dokładnie, <strong>jakie pliki</strong> narysować w pierwszej kolejności, żeby gra mogła narysować świat: ziemię, drzewa, budynki, ulice ze steampunkiem i efekty. Postacie, kolej i zima przyjdą w kolejnych partiach.
+Materiały: folder <strong><code>7_zamowienie_10/</code></strong>: szablony każdego arkusza (<code>szablony/&lt;plik&gt;_siatka.png</code> do podłożenia pod rysunek i <code>&lt;plik&gt;_objasnienie.png</code> z podpisami), lista plików <a href="7_zamowienie_10/manifest.json"><code>manifest.json</code></a>, sprawdzarka <a href="7_zamowienie_10/sprawdz_paczke.py"><code>sprawdz_paczke.py</code></a>.
+Data: 4 października 2026.</p>
+</blockquote>
+<h2>0. Najważniejsze w 5 zdaniach</h2>
+<ol>
+<li><strong>Każdy plik ma dokładny rozmiar z tabeli</strong> i jest rysowany 1:1 (bez powiększania). Gra pokazuje każdy piksel.</li>
+<li><strong>Arkusze rysujesz w siatce z szablonu:</strong> jedna rzecz w jednej komórce, nazwy komórek są w <code>_objasnienie.png</code>. Puste komórki zostaw puste.</li>
+<li><strong>Rzeczy stojące na ziemi</strong> (pnie, kępki, latarnie, okna, drzwi) <strong>stoją na dolnej krawędzi komórki, na środku</strong> (czerwony punkt w siatce). Od boków i góry zostaw 1 px wolnego.</li>
+<li><strong>Bez półprzezroczystości</strong> (wyjątek: para, 2–3 stopnie). <strong>Kafle podłoża są pełne</strong> (bez przezroczystości) i powtarzają się bez szwów.</li>
+<li><strong>Kolory z palety</strong> <a href="6_zamowienie_09/04_paleta/paleta_startowa.png"><code>6_zamowienie_09/04_paleta/paleta_startowa.png</code></a> (możesz ją dopracować, ale wtedy oddaj nową). Światło z lewej-góry, obrys w kolorze materiału, nie czarny.</li>
+</ol>
+<h2>1. Co rysuje program, a co Ty</h2>
+<table>
+<thead>
+<tr>
+<th>Rysuje program (Tobie nie potrzeba)</th>
+<th>Rysujesz Ty (ta partia)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kształty budynków z mapy: dachy, połacie, kalenice, ściany, cienie</td>
+<td><strong>kolory materiałów</strong> dachów i ścian + <strong>stemple</strong> (okna, drzwi, rury, kominy)</td>
+</tr>
+<tr>
+<td>granice trawa–droga–woda–las (postrzępione krawędzie)</td>
+<td><strong>kafle podłoża</strong> + <strong>runo</strong> (kępki, kamienie), które program rozsypuje na granicach</td>
+</tr>
+<tr>
+<td>cienie drzew i budynków, cienie chmur, wiatr, prześwit pod koronami</td>
+<td><strong>drzewa</strong> w częściach (korona, pień, pień z zaciosem, pieniek, sadzonka, owoce)</td>
+</tr>
+<tr>
+<td>przebieg rurociągów po mapie, gdzie bucha para</td>
+<td><strong>moduły rurociągu</strong> 8×8 i <strong>obłoczki pary</strong></td>
+</tr>
+<tr>
+<td>pasek postępu, liczby „+1”, dźwięki</td>
+<td><strong>efekty i ikonki</strong> (wióry, liście, siekiera, owoce)</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Jak pracować z generatorem obrazów (ważne)</h2>
+<p>Generator rysuje za duże obrazy z pikselami różnej wielkości. Żeby plik nadawał się do gry:
+1. Generuj na <strong>jednolitym tle</strong> (np. czysta magenta <code>#ff00ff</code>), z prośbą o „pixel art, flat colors, no anti-aliasing, top-down view, light from top-left”.
+2. <strong>Zmniejsz</strong> do docelowego rozmiaru metodą <strong>najbliższego sąsiada</strong> (nearest neighbor). Nie używaj dwuliniowego ani dwusześciennego.
+3. <strong>Ogranicz kolory</strong> do palety (w GIMP: Obraz → Tryb → Indeksowany → paleta <code>paleta_startowa.gpl</code>, bez ditheringu; w Aseprite: Sprite → Color Mode → Indexed).
+4. <strong>Usuń tło</strong> (magenta → przezroczystość), sprawdź, czy na brzegach nie zostały różowe piksele.
+5. <strong>Popraw ręcznie</strong> pojedyncze „brudne” piksele, obrys i podstawę.
+6. <strong>Kafle:</strong> przesuń obraz o połowę (GIMP: Warstwa → Przekształć → Przesunięcie, „zawijaj”), zamaluj szew na środku, przesuń z powrotem. Sprawdź 2×2 kafle obok siebie.
+7. <strong>Wklej do arkusza</strong> w komórkę według <code>_siatka.png</code> (siatka to osobna warstwa pod spodem, w pliku końcowym jej nie ma).</p>
+<h2>3. Kontrola automatyczna (robimy ją my)</h2>
+<p>Każdą paczkę sprawdzamy skryptem <a href="7_zamowienie_10/sprawdz_paczke.py"><code>7_zamowienie_10/sprawdz_paczke.py</code></a>: wymiary, przezroczystość, liczba kolorów, szwy kafli, kontrast podłoża, puste komórki, czy rzeczy stoją na dolnej krawędzi i nie dotykają boków, kolory spoza palety. Odpowiadamy raportem <code>RAPORT.txt</code> z listą „OK / UWAGA / BŁĄD” dla każdego pliku. Pliki z błędem wracają do poprawki, a pliki z uwagą ocenia właściciel.</p>
+<h2>4. Lista plików – partia 1</h2>
+<p>Razem <strong>62 plików</strong>. Szablon każdego arkusza: <code>7_zamowienie_10/szablony/&lt;nazwa&gt;_siatka.png</code> i <code>&lt;nazwa&gt;_objasnienie.png</code>.</p>
+<h3>A. Podłoże</h3>
+<p>Kafle <strong>256×256 px</strong>, po 3 warianty (<code>_a</code>, <code>_b</code>, <code>_c</code>) w tej samej jasności, żeby program mógł je mieszać. <strong>Spokojne</strong>: mało kontrastu, bez dużych pojedynczych obiektów (te dają stemple z runa). Bez kierunkowego światła i cieni.</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Kolorów najwyżej</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>podloze_trawa_a/_b/_c.png</code></td>
+<td>12</td>
+<td>krótka miejska trawa, drobne kępki, spokojna</td>
+</tr>
+<tr>
+<td><code>podloze_laka_a/_b/_c.png</code></td>
+<td>12</td>
+<td>wyższa trawa, kilka kwiatków, trochę jaśniejsza i cieplejsza od trawy</td>
+</tr>
+<tr>
+<td><code>podloze_park_a/_b/_c.png</code></td>
+<td>12</td>
+<td>staranna, równiejsza trawa, odrobinę ciemniejsza</td>
+</tr>
+<tr>
+<td><code>podloze_las_lisciasty_a/_b/_c.png</code></td>
+<td>12</td>
+<td>ściółka: brązowe liście, trochę mchu i ziemi, bez pni</td>
+</tr>
+<tr>
+<td><code>podloze_las_iglasty_a/_b/_c.png</code></td>
+<td>12</td>
+<td>ściółka: rude igły, szyszki, mech</td>
+</tr>
+<tr>
+<td><code>podloze_bruk_a/_b/_c.png</code></td>
+<td>10</td>
+<td>kostka brukowa ok. 4×3 px na kamień, ciemne szpary, lekko nierówna</td>
+</tr>
+<tr>
+<td><code>podloze_chodnik_a/_b/_c.png</code></td>
+<td>8</td>
+<td>płyty chodnikowe ok. 16×16 px, jaśniejsze od bruku</td>
+</tr>
+<tr>
+<td><code>podloze_plac_a/_b/_c.png</code></td>
+<td>8</td>
+<td>duże kamienne płyty rynku ok. 24×16 px w cegiełkę</td>
+</tr>
+<tr>
+<td><code>podloze_droga_a/_b/_c.png</code></td>
+<td>10</td>
+<td>ubita ziemia, delikatne koleiny poziomo, kamyczki</td>
+</tr>
+<tr>
+<td><code>podloze_piasek_a/_b/_c.png</code></td>
+<td>8</td>
+<td>piasek, drobne zmarszczki, jasny</td>
+</tr>
+<tr>
+<td><code>podloze_woda_a/_b/_c.png</code></td>
+<td>8</td>
+<td>spokojna woda, ciemniejsza i jaśniejsza smuga, bez odbić nieba (falowanie robi program)</td>
+</tr>
+</tbody>
+</table>
+<h3>B. Drzewa</h3>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar pliku</th>
+<th>Komórka</th>
+<th>Układ (wiersze × kolumny)</th>
+<th>Kolorów najwyżej</th>
+<th>Przezroczystość</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>drzewo_dab.png</code></td>
+<td>288×448</td>
+<td>96×112</td>
+<td>4 × 3</td>
+<td>24</td>
+<td>tylko 0 albo 100%</td>
+<td>szeroka „kalafiorowa” korona, ciemna zieleń, brązowy pień</td>
+</tr>
+<tr>
+<td><code>drzewo_brzoza.png</code></td>
+<td>192×416</td>
+<td>64×104</td>
+<td>4 × 3</td>
+<td>24</td>
+<td>tylko 0 albo 100%</td>
+<td>lekka jasnozielona korona, biały pień w czarne plamki</td>
+</tr>
+<tr>
+<td><code>drzewo_sosna.png</code></td>
+<td>216×480</td>
+<td>72×120</td>
+<td>4 × 3</td>
+<td>24</td>
+<td>tylko 0 albo 100%</td>
+<td>wysoki rudy pień, płaskie kępy igieł u góry</td>
+</tr>
+<tr>
+<td><code>drzewo_swierk.png</code></td>
+<td>168×448</td>
+<td>56×112</td>
+<td>4 × 3</td>
+<td>24</td>
+<td>tylko 0 albo 100%</td>
+<td>ciemny stożek z pięter gałęzi, pień widać tylko u dołu</td>
+</tr>
+<tr>
+<td><code>drzewo_jablon.png</code></td>
+<td>192×288</td>
+<td>64×72</td>
+<td>4 × 3</td>
+<td>24</td>
+<td>tylko 0 albo 100%</td>
+<td>niska rozłożysta, jasna zieleń; owoce osobno w ostatnim wierszu</td>
+</tr>
+<tr>
+<td><code>krzaki.png</code></td>
+<td>240×64</td>
+<td>40×32</td>
+<td>2 × 6</td>
+<td>20</td>
+<td>tylko 0 albo 100%</td>
+<td>dwa rodzaje krzaków × 3 warianty; górna część (kołysze się) i dolna (stoi) na tym samym płótnie</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Drzewa:</strong> każdy gatunek to jeden arkusz, wszystkie komórki tej samej wielkości (płótno drzewa). <strong>Korona i pień tego samego wariantu nałożone na siebie dają całe drzewo</strong>, więc rysuj je razem, a potem rozdziel na dwie komórki. Pień stoi na dolnej krawędzi na środku. Korona zachodzi na górę pnia o 4–6 px. Pień z zaciosem = ten sam pień z <strong>wyraźnym jasnym zaciosem</strong> (świeże drewno, 3–4 px). Owoce (jabłoń) = <strong>tylko owoce</strong> w miejscach, gdzie wiszą na koronie (program zdejmuje je po kolei). Rozmiary: dąb 96×112, brzoza 64×104, sosna 72×120, świerk 56×112, jabłoń 64×72. Wzór wyglądu: <code>6_zamowienie_09/02_makieta_zrzuty/</code> (makieta to szkic programu, Twoje mają być ładniejsze).</p>
+<h3>C. Runo i kamienie</h3>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar pliku</th>
+<th>Komórka</th>
+<th>Układ (wiersze × kolumny)</th>
+<th>Kolorów najwyżej</th>
+<th>Przezroczystość</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runo.png</code></td>
+<td>128×144</td>
+<td>16×24</td>
+<td>6 × 8</td>
+<td>40</td>
+<td>tylko 0 albo 100%</td>
+<td>każda roślina wyrasta z dolnej krawędzi komórki, na środku; trawa niska 4–8 px, wysoka 10–16 px, trzcina do 22 px</td>
+</tr>
+</tbody>
+</table>
+<h3>D. Budynki</h3>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar pliku</th>
+<th>Komórka</th>
+<th>Układ (wiersze × kolumny)</th>
+<th>Kolorów najwyżej</th>
+<th>Przezroczystość</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>materialy.png</code></td>
+<td>56×120</td>
+<td>8×8</td>
+<td>15 × 7</td>
+<td>105</td>
+<td>pełny, bez przezroczystości</td>
+<td>każdy wiersz = jeden materiał: 6 kwadratów 8×8 jednolitego koloru od najciemniejszego do najjaśniejszego + 7. kolor kalenicy/krawędzi</td>
+</tr>
+<tr>
+<td><code>stemple_scian.png</code></td>
+<td>128×48</td>
+<td>16×16</td>
+<td>3 × 8</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>małe elementy przyklejane przez program na ścianę frontową; okno 3–5 px szer. × 4–5 px wys., drzwi 4–6 × 7 px, witryna 10–12 × 6 px; wszystko stoi na dolnej krawędzi komórki</td>
+</tr>
+<tr>
+<td><code>rury_sciana.png</code></td>
+<td>48×18</td>
+<td>8×18</td>
+<td>1 × 6</td>
+<td>10</td>
+<td>tylko 0 albo 100%</td>
+<td>mosiężna rura po ścianie (3–4 px szerokości): pionowa na wysokość ściany 8/12/16 px z kolankiem u góry i u dołu, odcinek poziomy 8 px, osobne kolanka</td>
+</tr>
+<tr>
+<td><code>stemple_dachow.png</code></td>
+<td>128×48</td>
+<td>16×24</td>
+<td>2 × 8</td>
+<td>20</td>
+<td>tylko 0 albo 100%</td>
+<td>rzeczy stawiane przez program na dachach (widok prawie z góry); wentylator i wiatrowskaz to klatki animacji</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Materiały</strong> (<code>materialy.png</code>): kolejność wierszy: <code>dachowka_czerwona</code>, <code>dachowka_brazowa</code>, <code>lupek</code>, <code>gont</code>, <code>blacha_zielona</code>, <code>miedz_patyna</code>, <code>papa</code>, <code>tynk_kremowy</code>, <code>tynk_zolty</code>, <code>tynk_szary</code>, <code>tynk_bialy</code>, <code>cegla</code>, <code>drewno</code>, <code>kamien</code>, <code>mosiadz</code>. W każdym wierszu 6 kwadratów 8×8 jednolitego koloru od najciemniejszego do najjaśniejszego (program cieniuje nimi połacie i ściany) + 7. kwadrat: kalenica/krawędź (dachy) albo cokół (ściany). Jak wygląda dach z takich kolorów: <a href="6_zamowienie_09/05_dachy_jak_liczy_program/dachy_katy_x4.png"><code>6_zamowienie_09/05_dachy_jak_liczy_program/dachy_katy_x4.png</code></a>.</p>
+<p><strong>Stemple:</strong> program przykleja je na ściany (wysokość ściany 8, 12 albo 16 px) i dachy, <strong>nie obraca ich</strong>, więc rysujesz je w zwykłym widoku gry. Okna nocą (<code>_noc</code>) to te same okna z ciepłym światłem.</p>
+<h3>E. Ulica i steampunk</h3>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar pliku</th>
+<th>Komórka</th>
+<th>Układ (wiersze × kolumny)</th>
+<th>Kolorów najwyżej</th>
+<th>Przezroczystość</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rurociag.png</code></td>
+<td>64×24</td>
+<td>8×8</td>
+<td>3 × 8</td>
+<td>12</td>
+<td>tylko 0 albo 100%</td>
+<td>moduły rurociągu: rura 3–4 px grubości biegnie środkiem kafla (x 2–5 albo y 2–5) i dochodzi do krawędzi, żeby moduły się łączyły; schemat: 6_zamowienie_09/03_szablony/schemat_rurociagu_moduly_8x8.png</td>
+</tr>
+<tr>
+<td><code>para_mala.png</code></td>
+<td>96×16</td>
+<td>16×16</td>
+<td>1 × 6</td>
+<td>6</td>
+<td>do 4 stopni</td>
+<td>obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)</td>
+</tr>
+<tr>
+<td><code>para_srednia.png</code></td>
+<td>144×24</td>
+<td>24×24</td>
+<td>1 × 6</td>
+<td>6</td>
+<td>do 4 stopni</td>
+<td>obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)</td>
+</tr>
+<tr>
+<td><code>para_duza.png</code></td>
+<td>192×32</td>
+<td>32×32</td>
+<td>1 × 6</td>
+<td>6</td>
+<td>do 4 stopni</td>
+<td>obłoczek pary: 6 klatek (rośnie, rozwiewa się w górę); biało-kremowy; wolno 2–3 stopnie przezroczystości (100/60/30%)</td>
+</tr>
+<tr>
+<td><code>latarnia_gazowa.png</code></td>
+<td>32×48</td>
+<td>16×48</td>
+<td>1 × 2</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>żeliwna latarnia z mosiężną głowicą; noc = świeci (sama latarnia, poświatę robi program)</td>
+</tr>
+<tr>
+<td><code>lawka.png</code></td>
+<td>24×16</td>
+<td>24×16</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>ławka z żeliwnymi bokami, widziana prawie z góry (widać siedzisko)</td>
+</tr>
+<tr>
+<td><code>kosz_mosiezny.png</code></td>
+<td>8×12</td>
+<td>8×12</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>mosiężny kosz na śmieci</td>
+</tr>
+<tr>
+<td><code>hydrant_parowy.png</code></td>
+<td>10×12</td>
+<td>10×12</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>niski zawór z czerwonym kółkiem</td>
+</tr>
+<tr>
+<td><code>studzienka.png</code></td>
+<td>16×16</td>
+<td>16×16</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>okrągła kratka w bruku (prawie koło), bez pary – parę robi program z para_*</td>
+</tr>
+<tr>
+<td><code>slup_ogloszeniowy.png</code></td>
+<td>16×32</td>
+<td>16×32</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>okrągły słup z afiszami bez napisów</td>
+</tr>
+<tr>
+<td><code>skrzynka_rozdzielcza.png</code></td>
+<td>12×16</td>
+<td>12×16</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>skrzynka rozdzielcza pary z manometrem i lampką</td>
+</tr>
+<tr>
+<td><code>zbiornik_ulica.png</code></td>
+<td>20×24</td>
+<td>20×24</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>duży mosiężny zbiornik na nóżkach z zaworem</td>
+</tr>
+<tr>
+<td><code>zegar_uliczny.png</code></td>
+<td>12×40</td>
+<td>12×40</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>zegar na słupie</td>
+</tr>
+<tr>
+<td><code>donica_kwiaty.png</code></td>
+<td>12×12</td>
+<td>12×12</td>
+<td>1 × 1</td>
+<td>16</td>
+<td>tylko 0 albo 100%</td>
+<td>donica z kwiatami przy drzwiach</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rurociąg:</strong> moduły muszą do siebie pasować: rura dochodzi do krawędzi kafla zawsze w tym samym miejscu (środek, 3–4 px grubości). Schemat połączeń: <a href="6_zamowienie_09/03_szablony/schemat_rurociagu_moduly_8x8.png"><code>6_zamowienie_09/03_szablony/schemat_rurociagu_moduly_8x8.png</code></a>. <strong>Para:</strong> jedyne pliki z półprzezroczystością (do 4 stopni, bez gładkich przejść).</p>
+<h3>F. Efekty</h3>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Rozmiar pliku</th>
+<th>Komórka</th>
+<th>Układ (wiersze × kolumny)</th>
+<th>Kolorów najwyżej</th>
+<th>Przezroczystość</th>
+<th>Co ma przedstawiać</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>efekty_ciecie.png</code></td>
+<td>128×16</td>
+<td>16×16</td>
+<td>1 × 8</td>
+<td>10</td>
+<td>tylko 0 albo 100%</td>
+<td>wióry odpryskujące od pnia (4 klatki) i krótki błysk uderzenia (3 klatki)</td>
+</tr>
+<tr>
+<td><code>efekty_liscie.png</code></td>
+<td>96×72</td>
+<td>24×24</td>
+<td>3 × 4</td>
+<td>12</td>
+<td>tylko 0 albo 100%</td>
+<td>obłok spadających liści / igieł, 4 klatki</td>
+</tr>
+<tr>
+<td><code>ikony_akcji.png</code></td>
+<td>64×8</td>
+<td>8×8</td>
+<td>1 × 8</td>
+<td>12</td>
+<td>tylko 0 albo 100%</td>
+<td>małe ikonki nad drzewem: ścinasz / potrząsasz / chronione; owoce spadające z drzewa; drewno (+1)</td>
+</tr>
+<tr>
+<td><code>pasek_postepu.png</code></td>
+<td>36×5</td>
+<td>18×5</td>
+<td>1 × 2</td>
+<td>6</td>
+<td>tylko 0 albo 100%</td>
+<td>mosiężna ramka paska postępu jak manometr: pusta i pełna (program odsłania pełną od lewej)</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Kolejność: najpierw mała próbka</h2>
+<p>Zanim narysujesz wszystko, oddaj <strong>próbkę</strong> (te same nazwy i rozmiary, reszta komórek pusta):
+1. <code>podloze_trawa_a.png</code>, <code>podloze_bruk_a.png</code>, <code>podloze_droga_a.png</code>,
+2. <code>drzewo_dab.png</code>: tylko <code>korona_a</code> i <code>pien_a</code>; <code>drzewo_sosna.png</code>: tylko <code>korona_a</code> i <code>pien_a</code>,
+3. <code>runo.png</code>: pierwszy wiersz (trawa niska),
+4. <code>materialy.png</code>: pierwsze 3 wiersze (dachówka czerwona, brązowa, łupek) i <code>tynk_kremowy</code>, <code>cegla</code>,
+5. <code>stemple_scian.png</code>: <code>okno_zwykle</code>, <code>okno_zwykle_noc</code>, <code>drzwi_drewniane</code>; <code>rury_sciana.png</code>: <code>rura_12</code>,
+6. <code>rurociag.png</code>: pierwszy wiersz; <code>para_mala.png</code>.</p>
+<p>Wstawimy ją do makiety i do gry testowej. Po akceptacji właściciela robisz resztę <strong>w tej kolejności: A (podłoże) → B (drzewa) → C (runo) → D (budynki) → E (ulica) → F (efekty).</strong></p>
+<h2>6. Jak oddać</h2>
+<ul>
+<li>Jeden zip, <strong>wszystkie PNG w jednym folderze</strong> (bez podfolderów), nazwy <strong>dokładnie</strong> jak w tabelach (małe litery, bez polskich znaków).</li>
+<li>Dodatkowo możesz dołączyć podglądy powiększone, ale z dopiskiem <code>_podglad</code> w nazwie.</li>
+<li>Jeśli zmieniłeś paletę: <code>paleta.gpl</code> + <code>paleta.png</code>.</li>
+</ul>
+<h2>7. Następne partie (dla orientacji)</h2>
+<p>Partia 2: kolej parowa (lokomotywa, wagony w 16 kierunkach, tory i perony – punkt 9a zamówienia 09), pozostałe gatunki drzew (buk, lipa, olcha, wierzba, grusza, śliwa, jodła, kosodrzewina, jałowiec), reszta kafli (pole, zarośla, parking, cmentarz, mokradło, skała, tory) i dekoracji ulic. Partia 3: zima i pogoda (część G zamówienia 08 w nowym stylu). Postacie osobno (zamówienie 09, punkt 4, wzór: blondynka).</p>

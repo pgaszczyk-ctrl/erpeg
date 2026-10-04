@@ -1,5 +1,7 @@
 # Zamówienie 08 – cała mapa w stylu kukieł treningowych
 
+> **NIEAKTUALNE od 4 października 2026.** Właściciel wybrał szczegółowy pixel art w stylu konia z wozu. Obowiązuje `ZAMOWIENIE_09_pixel_art_swiat.md`. Z tego zamówienia zostaje tylko **część G** (pogoda i nowe potwory), rysowana w stylu i skali z 09.
+
 Kukły, tarcza i kryształ (paczka 07) oraz wozy konne to **wzorzec dla całej gry**: miękkie, malarskie cieniowanie, światło z lewej-góry, cienki ciemny kontur, przygaszone ciepłe barwy. Dziś obok nich stoi mapa, która wygląda płasko i „programowo”, więc ładne rzeczy wyglądają na niej jak naklejki. Chcemy, żeby **cała mapa była namalowana w tej samej manierze**.
 
 Z pikseli rezygnujemy: budynki, szyldy, wozy i wiele innych rzeczy już nie są pikselowe.

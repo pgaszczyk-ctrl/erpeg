@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – paczka dla programisty</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Paczka dla programisty – overhaul 09 „żywy świat w pixel arcie”</h1>
+<p>Dla czatu 🛠 Technika i rozwój (Claude w repozytorium <code>pgaszczyk-ctrl/erpeg</code>). Grafik dostaje osobną paczkę: <code>docs/paczka-dla-artysty/</code>.</p>
+<blockquote>
+<p><strong>Najnowsza decyzja (4.10.2026): świat rysuje program w telefonie.</strong> Ziemia, drzewa, runo, budynki, rurociągi, para i tory pochodzą z generatora (<code>generator/</code>), nie z plików grafika. Grafik robi tylko pojazdy, zabytki, szyldy i nowe postacie (zamówienie 11). Tam, gdzie SPEC mówi o „grafikach od grafika” dla świata, obowiązuje <a href="GENERATOR_SWIATA.md"><code>GENERATOR_SWIATA.md</code></a>.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Plik / folder</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="PROMPT_DLA_PROGRAMISTY.md"><code>PROMPT_DLA_PROGRAMISTY.md</code></a></td>
+<td>gotowe polecenie do wklejenia w czat programisty</td>
+</tr>
+<tr>
+<td><a href="GENERATOR_SWIATA.md"><code>GENERATOR_SWIATA.md</code></a></td>
+<td><strong>zacznij tu (punkt 0 = ostatnie decyzje):</strong> co daje generator, pomiary obciążenia telefonu, jak wpiąć w <code>MapRenderer</code> i drzewa, zadania G1–G9 z wyceną</td>
+</tr>
+<tr>
+<td><code>generator/</code></td>
+<td><strong>gotowy kod TypeScript</strong> (bez Phasera i DOM-u, działa w Web Workerze): drzewa 16 gatunków z klatkami wiatru, podłoże 19 rodzajów (żywa trawa, nierówny chodnik), woda z głębią i brzegami (plaża/szuwary), runo, budynki z obrysu, rurociągi, para, tory; <code>demo/index.html</code> = galeria + pomiar czasu</td>
+</tr>
+<tr>
+<td><a href="POMIARY.md"><code>POMIARY.md</code></a></td>
+<td>czasy generowania na symulowanym telefonie (CPU 1×, 4×, 6×)</td>
+</tr>
+<tr>
+<td><a href="SPEC_09_zywy_swiat.md"><code>SPEC_09_zywy_swiat.md</code></a></td>
+<td>decyzje właściciela, stan obecny w kodzie, skala, wiatr/prześwit/ścinanie z informacją zwrotną, postacie (4a), steampunk, kolej, budżet pamięci, zadania Z0–Z10</td>
+</tr>
+<tr>
+<td><a href="makieta/zywy-swiat.html"><code>makieta/zywy-swiat.html</code></a></td>
+<td>działająca makieta: implementacja wzorcowa efektów (wiatr, prześwit, ścinanie, owoce)</td>
+</tr>
+<tr>
+<td><a href="makieta/OPIS_KODU.md"><code>makieta/OPIS_KODU.md</code></a></td>
+<td>co gdzie jest w makiecie</td>
+</tr>
+<tr>
+<td><a href="makieta/dachy_roofs.py"><code>makieta/dachy_roofs.py</code></a></td>
+<td>wcześniejszy prototyp dachów w Pythonie (zastąpiony przez <a href="generator/budynki.ts"><code>generator/budynki.ts</code></a>)</td>
+</tr>
+<tr>
+<td><code>shadery/</code></td>
+<td>szkice: klatki wiatru, maska prześwitu, własny filtr Phaser 4</td>
+</tr>
+<tr>
+<td><code>dane/</code></td>
+<td>gatunki wg tagów OSM, parametry drzew, wzory wiatru</td>
+</tr>
+<tr>
+<td><code>zrzuty/</code></td>
+<td>zrzuty z makiety i galerii generatora, schematy</td>
+</tr>
+</tbody>
+</table>
+<p>Zasada pracy jak zawsze: wszystko za przełącznikiem <code>?wyglad=09</code>, najpierw serwer testowy, zrzut w widoku telefonu, na produkcję tylko na polecenie właściciela.</p>

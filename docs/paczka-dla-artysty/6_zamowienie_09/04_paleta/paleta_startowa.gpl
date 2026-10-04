@@ -1,0 +1,87 @@
+GIMP Palette
+Name: Exp-lore paleta startowa 09
+Columns: 8
+#
+ 30  26  36	Obrys / tusz #1e1a24
+ 46  42  58	Obrys / tusz #2e2a3a
+ 74 116  51	Trawa #4a7433
+ 85 128  57	Trawa #558039
+ 98 141  64	Trawa #628d40
+112 153  74	Trawa #70994a
+134 173  85	Trawa #86ad55
+164 194 100	Trawa #a4c264
+ 54  83  43	Ściółka leśna #36532b
+ 63  93  46	Ściółka leśna #3f5d2e
+ 74 104  50	Ściółka leśna #4a6832
+ 86 111  55	Ściółka leśna #566f37
+110  90  52	Ściółka leśna #6e5a34
+ 91  74  47	Ściółka leśna #5b4a2f
+ 36  64  43	Liście – dąb/buk #24402b
+ 51  90  50	Liście – dąb/buk #335a32
+ 74 122  58	Liście – dąb/buk #4a7a3a
+111 154  76	Liście – dąb/buk #6f9a4c
+ 61 102  48	Liście – brzoza/wierzba #3d6630
+ 88 144  63	Liście – brzoza/wierzba #58903f
+127 180  88	Liście – brzoza/wierzba #7fb458
+172 210 122	Liście – brzoza/wierzba #acd27a
+ 20  43  42	Igły – sosna/świerk #142b2a
+ 31  64  56	Igły – sosna/świerk #1f4038
+ 44  88  70	Igły – sosna/świerk #2c5846
+ 67 114  88	Igły – sosna/świerk #437258
+ 90 135 106	Igły – sosna/świerk #5a876a
+ 58  42  34	Kora #3a2a22
+ 92  65  47	Kora #5c412f
+125  90  61	Kora #7d5a3d
+162 100  62	Kora #a2643e
+207 200 184	Kora #cfc8b8
+239 233 220	Kora #efe9dc
+134 103  68	Ziemia / droga #866744
+152 120  78	Ziemia / droga #98784e
+171 138  90	Ziemia / droga #ab8a5a
+191 156 104	Ziemia / droga #bf9c68
+211 187 136	Ziemia / droga #d3bb88
+ 37  80 106	Woda #25506a
+ 46  99 128	Woda #2e6380
+ 59 120 146	Woda #3b7892
+127 176 189	Woda #7fb0bd
+185 224 232	Woda #b9e0e8
+179 155 105	Piasek #b39b69
+199 174 123	Piasek #c7ae7b
+218 197 146	Piasek #dac592
+ 90  36  32	Dachówka czerwona #5a2420
+127  52  40	Dachówka czerwona #7f3428
+162  72  52	Dachówka czerwona #a24834
+200 106  68	Dachówka czerwona #c86a44
+217 138  88	Dachówka czerwona #d98a58
+ 74  44  30	Dachówka brązowa #4a2c1e
+100  64  42	Dachówka brązowa #64402a
+130  88  58	Dachówka brązowa #82583a
+162 118  78	Dachówka brązowa #a2764e
+191 148 102	Dachówka brązowa #bf9466
+ 38  40  58	Łupek #26283a
+ 54  58  78	Łupek #363a4e
+ 76  84 104	Łupek #4c5468
+106 117 144	Łupek #6a7590
+110  92  76	Tynk #6e5c4c
+147 128 106	Tynk #93806a
+181 162 134	Tynk #b5a286
+205 189 156	Tynk #cdbd9c
+ 78  39  35	Cegła #4e2723
+110  54  44	Cegła #6e362c
+138  72  54	Cegła #8a4836
+165 100  74	Cegła #a5644a
+107  74  34	Mosiądz / światło okien #6b4a22
+154 100  32	Mosiądz / światło okien #9a6420
+200 150  62	Mosiądz / światło okien #c8963e
+233 197 106	Mosiądz / światło okien #e9c56a
+242 216 136	Mosiądz / światło okien #f2d888
+ 42  52  80	Szkło okien #2a3450
+ 86 112 154	Szkło okien #56709a
+ 52  30  35	Z konia i woźnicy (skóra, sierść, ubrania) #341e23
+ 81  50  47	Z konia i woźnicy (skóra, sierść, ubrania) #51322f
+117  72  54	Z konia i woźnicy (skóra, sierść, ubrania) #754836
+164  94  56	Z konia i woźnicy (skóra, sierść, ubrania) #a45e38
+140 127 101	Z konia i woźnicy (skóra, sierść, ubrania) #8c7f65
+ 64 126 212	Z konia i woźnicy (skóra, sierść, ubrania) #407ed4
+194 148  96	Z konia i woźnicy (skóra, sierść, ubrania) #c29460
+222 216 214	Z konia i woźnicy (skóra, sierść, ubrania) #ded8d6

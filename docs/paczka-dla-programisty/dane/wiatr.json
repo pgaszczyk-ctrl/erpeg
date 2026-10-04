@@ -1,0 +1,14 @@
+{
+  "_opis": "Funkcje wiatru z makiety (współrzędne w px pliku = 2 × px mapy; T w sekundach). Wynik w px pliku przesunięcia dla wierzchołka korony przy sztywności 1.",
+  "sila": "S = clamp(weather.w / 7, 0.1, 2.2)",
+  "windAt": "S * (0.32*sin(T*2.1 + x*0.07 + y*0.03) + 0.14*sin(T*3.4 - x*0.05 + y*0.06) + 1.25*gust(x,y))",
+  "gust": "p = frac((x*0.8 + y*0.35)*0.0055 - T*0.26); exp(-((p-0.5)*6)^2)",
+  "przesuniecieKorony": "round(windAt(x_pnia, y_srodkaKorony) * sztywnosc * (0.3 + 0.95*rf))  // rf = 0 dół korony … 1 wierzchołek",
+  "przesuniecieZdzbla": "round(windAt(x_podstawy, y_podstawy) * sztywnosc * j * 0.3) + odchylenie od postaci  // j = piksel nad podstawą",
+  "odchylenieOdPostaci": "jeśli d < 9.5 px pliku: sign(x - xPostaci) * min(j, 4) * (1 - d/9.5) * 1.3",
+  "szelest": "sin(T*26 + y*0.9 + seed) * rustle * 1.7 * (0.3 + rf); rustle = 1 po wejściu/uderzeniu, gaśnie exp(-2.4*dt)",
+  "podmuchNaLace": "piksel trawy jaśniejszy, gdy gust*S*0.95 > bayer4x4(x,y) + 0.42",
+  "chmury": "n = 0.65*noise((x - T*9)/34, (y - T*3.2)/34) + 0.35*noise(...*2.3); cień gdy n > 0.6 + (bayer-0.5)*0.05",
+  "przeswit": "promień 18 px pliku (rośnie/maleje płynnie ~7/s); piksel korony ukryty gdy d < R-5, w pasie R-5..R ukryty gdy bayer4x4(xŚwiata,yŚwiata) < (R-d)/5",
+  "bayer4x4": [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+}

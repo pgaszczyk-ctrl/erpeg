@@ -1,0 +1,27 @@
+{
+  "_opis": "Parametry gatunków (z makiety). Rozmiary w px pliku grafika (1 px pliku = 0,5 px mapy). sztywnosc = mnożnik wychylenia korony na wietrze. Palety z makiety (zaślepki do czasu grafik): 4 odcienie od ciemnego.",
+  "dab":      { "plotno": [96, 112], "korona": "kepy", "sztywnosc": 1.3, "pien": "braz",    "paleta": ["#24402b", "#335a32", "#4a7a3a", "#6f9a4c"] },
+  "buk":      { "plotno": [96, 112], "korona": "kepy", "sztywnosc": 1.2, "pien": "szary",   "paleta": ["#24402b", "#335a32", "#4a7a3a", "#6f9a4c"] },
+  "lipa":     { "plotno": [96, 112], "korona": "kepy", "sztywnosc": 1.3, "pien": "braz",    "paleta": ["#2f5530", "#43753a", "#5f9446", "#86b45c"] },
+  "brzoza":   { "plotno": [64, 104], "korona": "kepy_wysokie", "sztywnosc": 2.1, "pien": "brzoza", "paleta": ["#3d6630", "#58903f", "#7fb458", "#acd27a"] },
+  "olcha":    { "plotno": [72, 96],  "korona": "kepy", "sztywnosc": 1.4, "pien": "ciemny",  "paleta": ["#24402b", "#335a32", "#4a7a3a", "#6f9a4c"] },
+  "wierzba":  { "plotno": [96, 104], "korona": "zwisajaca", "sztywnosc": 2.3, "pien": "braz", "paleta": ["#3d6630", "#58903f", "#7fb458", "#acd27a"] },
+  "jablon":   { "plotno": [64, 72],  "korona": "kepy", "sztywnosc": 1.4, "pien": "braz",    "paleta": ["#2f5530", "#43753a", "#5f9446", "#86b45c"], "owoce": [2, 5] },
+  "grusza":   { "plotno": [64, 88],  "korona": "kepy_wysokie", "sztywnosc": 1.4, "pien": "braz", "paleta": ["#2f5530", "#43753a", "#5f9446", "#86b45c"], "owoce": [2, 5] },
+  "sliwa":    { "plotno": [56, 68],  "korona": "kepy", "sztywnosc": 1.5, "pien": "ciemny",  "paleta": ["#2f5530", "#43753a", "#5f9446", "#86b45c"], "owoce": [3, 6] },
+  "sosna":    { "plotno": [72, 120], "korona": "kepy_plaskie", "sztywnosc": 1.0, "pien": "rudy", "paleta": ["#1d3a3a", "#2a524a", "#3c6b58", "#5a876a"], "uderzen": 4 },
+  "swierk":   { "plotno": [56, 112], "korona": "pietra", "sztywnosc": 0.8, "pien": "ciemny", "paleta": ["#142b2a", "#1f4038", "#2c5846", "#437258"] },
+  "jodla":    { "plotno": [60, 116], "korona": "pietra", "sztywnosc": 0.8, "pien": "szary",  "paleta": ["#1d3a3a", "#2a524a", "#3c6b58", "#5a876a"] },
+  "kosodrzewina": { "plotno": [64, 40], "korona": "kepy_plaskie", "sztywnosc": 0.9, "pien": null, "paleta": ["#142b2a", "#1f4038", "#2c5846", "#437258"] },
+  "jalowiec": { "plotno": [28, 48],  "korona": "kolumna", "sztywnosc": 0.7, "pien": null,    "paleta": ["#1d3a3a", "#2a524a", "#3c6b58", "#5a876a"] },
+  "krzak":    { "plotno": [40, 32],  "korona": "kepy", "sztywnosc": 1.7, "pien": null,      "paleta": ["#2a4729", "#3d6433", "#56833f", "#79a151"] },
+  "pnie": {
+    "braz":   ["#3a2a22", "#5c412f", "#7d5a3d"],
+    "szary":  ["#3e3a3a", "#6a6460", "#8f8880"],
+    "brzoza": ["#5a554c", "#cfc8b8", "#efe9dc"],
+    "rudy":   ["#4a2a20", "#7c4630", "#a2643e"],
+    "ciemny": ["#2e221c", "#4a3628", "#664a34"]
+  },
+  "obrys": "#1e1a24",
+  "odrost": { "pieniekNaSadzonkeMin": 10, "sadzonkaNaDrzewoMin": 30, "albo": "wszystko wraca przy logowaniu (jak dziś) – decyzja właściciela" }
+}

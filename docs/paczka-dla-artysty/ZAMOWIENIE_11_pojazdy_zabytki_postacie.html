@@ -1,0 +1,146 @@
+<!doctype html><meta charset="utf-8"><title>Exp-lore – zamówienie 11</title><style>body{font-family:sans-serif;max-width:900px;margin:24px auto;padding:0 16px;line-height:1.45}table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 8px;vertical-align:top}code{background:#f2f2f2;padding:0 3px}pre{background:#f4f4f4;padding:8px;overflow:auto}img{max-width:100%;image-rendering:pixelated;border:1px solid #ccc;margin:6px 0}blockquote{border-left:4px solid #c8963e;margin:8px 0;padding:2px 12px;background:#faf6ec}</style><h1>Zamówienie 11 – tylko to, czego nie narysuje program</h1>
+<blockquote>
+<p><strong>Zmiana (4 października 2026):</strong> ziemię, drzewa, krzaki, trawę, budynki, rurociągi, parę i tory <strong>rysuje teraz program</strong> (zobacz <code>6_zamowienie_09/02_makieta_zrzuty/</code>). <strong>Zamówienie 10 (klocki świata) jest wstrzymane, nie rysuj go.</strong> Od Ciebie potrzebujemy tylko rzeczy z charakterem, których program nie zrobi dobrze: pojazdów, zabytków, szyldów i kilku nowych postaci.
+Styl i skala: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pixel_art_swiat.md</code></a> (punkty 1–2 dla świata, punkt 4 dla postaci). Zasady techniczne i praca z generatorem obrazów: <a href="ZAMOWIENIE_10_klocki_swiata_partia1.md"><code>ZAMOWIENIE_10_klocki_swiata_partia1.md</code></a>, punkty 0, 2, 3 i 6 (one nadal obowiązują). Każda paczka jest sprawdzana skryptem (<a href="7_zamowienie_10/sprawdz_paczke.py"><code>7_zamowienie_10/sprawdz_paczke.py</code></a>).</p>
+</blockquote>
+<h2>1. Dwie gęstości pikseli – pilnuj, która do czego</h2>
+<table>
+<thead>
+<tr>
+<th>Co</th>
+<th>Gęstość</th>
+<th>Wzór</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pojazdy, zabytki, szyldy</strong> (część świata)</td>
+<td>drobny piksel: 1 px pliku = 1 px świata</td>
+<td>koń z wozu (<a href="6_zamowienie_09/01_wzor_stylu/kon_WZOR_SWIATA_x3.png"><code>6_zamowienie_09/01_wzor_stylu/kon_WZOR_SWIATA_x3.png</code></a>) i makieta</td>
+</tr>
+<tr>
+<td><strong>Postacie</strong></td>
+<td>grubszy piksel: siatka 32×32 zapisana jako 64×64 (każdy piksel 2×2)</td>
+<td>blondynka (<a href="6_zamowienie_09/01_wzor_stylu/wzor_postaci_blondynka_tak_nie.png"><code>01_wzor_stylu/wzor_postaci_blondynka_tak_nie.png</code></a>)</td>
+</tr>
+</tbody>
+</table>
+<h2>2. Lista</h2>
+<h3>2.1 Kolej parowa (najważniejsze)</h3>
+<p><strong>Lokomotywa i tender w 16 kierunkach</strong> (mają przód i tył), <strong>wagony w 8 kierunkach</strong> (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (<a href="6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png"><code>6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png</code></a>). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Widok prawie z góry, lekko z przodu (jak mapa). Bez dymu (parę robi program). Do każdego arkusza osobny <code>_cien.png</code> (czarna sylwetka cienia na ziemi, ta sama siatka).</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Klatka</th>
+<th>Arkusz</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lokomotywa_parowa.png</code></td>
+<td>72×72</td>
+<td>1152×72</td>
+<td>mała, sympatyczna lokomotywa ok. 64 px długości: komin, mosiężny kocioł, kabina, lampa z przodu, czerwone koła</td>
+</tr>
+<tr>
+<td><code>tender.png</code></td>
+<td>56×56</td>
+<td>896×56</td>
+<td>wagonik z węglem i wodą</td>
+</tr>
+<tr>
+<td><code>wagon_osobowy_zielony.png</code>, <code>wagon_osobowy_bordowy.png</code></td>
+<td>72×72</td>
+<td>576×72 (8 kierunków)</td>
+<td>drewniany wagon z oknami; + <code>_noc</code> (te same klatki, okna świecą)</td>
+</tr>
+<tr>
+<td><code>wagon_towarowy.png</code></td>
+<td>72×72</td>
+<td>576×72 (8 kierunków)</td>
+<td>kryty wagon z desek</td>
+</tr>
+<tr>
+<td><code>wagon_platforma.png</code></td>
+<td>72×72</td>
+<td>576×72 (8 kierunków)</td>
+<td>platforma z beczkami i skrzyniami</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Najpierw próbka:</strong> lokomotywa w 3 kierunkach (0°, 22,5°, 45°) + <code>_cien</code>, żeby sprawdzić styl i wielkość na torze. To tylko próbka; docelowo lokomotywa ma wszystkie 16 kierunków.</p>
+<h3>2.2 Wóz konny (poprawka)</h3>
+<p>Obecne wozy są narysowane czysto z boku i wyglądają płasko. Nowe: <strong>lekko z góry i z przodu</strong>, więcej odcieni na koniu (jaśniejszy grzbiet, ciemniejszy brzuch), widać wnętrze skrzyni. 2 klatki (krok konia), 3 ładunki (<code>pusty</code>, <code>beczki</code>, <code>worki</code>) × 3 maści (<code>brazowy</code>, <code>czarny</code>, <code>szary</code>), klatka ok. <strong>124×100</strong>, jeden kierunek (patrzy w lewo, prawo robi lustro). Nazwy jak dziś: <code>woz_konny_&lt;ladunek&gt;_&lt;masc&gt;.png</code> + <code>_cien</code>. Wozy stoją tylko przy dworcach autobusowych.</p>
+<h3>2.3 Zabytki i miejsca</h3>
+<p>Widok prawie z góry (koła na ziemi jako prawie koła, widać wnętrze fontanny i kotła), drobny piksel, mocny steampunk. Środek podstawy na środku dolnej krawędzi.</p>
+<table>
+<thead>
+<tr>
+<th>Plik</th>
+<th>Płótno</th>
+<th>Klatki</th>
+<th>Co to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fontanna_smok.png</code></td>
+<td>96×96</td>
+<td>3 (woda się rusza)</td>
+<td>okrągła fontanna z mosiężnym smokiem</td>
+</tr>
+<tr>
+<td><code>kociol_publiczny.png</code></td>
+<td>80×80</td>
+<td>2 (zgaszony / świeci)</td>
+<td>„smoczy kocioł” na placu, mosiężny, z manometrami i rurami</td>
+</tr>
+<tr>
+<td><code>wieza_zegarowa.png</code></td>
+<td>64×128</td>
+<td>1</td>
+<td>wieża z zegarem i miedzianym dachem, skrócona w pionie (ok. 2/3)</td>
+</tr>
+<tr>
+<td><code>wieza_cisnien.png</code></td>
+<td>48×72</td>
+<td>1</td>
+<td>mosiężny zbiornik na wodę dla lokomotyw (przy dworcach)</td>
+</tr>
+<tr>
+<td><code>zuraw_wodny.png</code></td>
+<td>24×40</td>
+<td>1</td>
+<td>żuraw do nalewania wody do lokomotywy</td>
+</tr>
+<tr>
+<td><code>wiata_peronowa.png</code></td>
+<td>32×32</td>
+<td>1</td>
+<td>moduł wiaty (słupy z kutego żelaza, daszek), powtarzany wzdłuż peronu</td>
+</tr>
+<tr>
+<td><code>semafor.png</code></td>
+<td>12×40</td>
+<td>2 (stój / jedź)</td>
+<td>semafor kolejowy</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 Szyldy miejsc</h3>
+<p>12 szyldów jak dziś (<code>szyld_&lt;sklep|szkola|kosciol|urzad|szpital|policja|biblioteka|hotel|bank|alchemik|sklep_sportowy|kemping&gt;</code>) + nowe <code>szyld_dworzec</code>, <code>szyld_kupiec</code>. <strong>Mosiężna tabliczka na kutym wysięgniku</strong>, prosty symbol, bez napisów, <strong>28×24 px</strong> (drobny piksel).</p>
+<h3>2.5 Nowe postacie (maniera blondynki, arkusz wg zamówienia 09 punkt 4)</h3>
+<ul>
+<li><code>konduktor</code>: mundur z mosiężnymi guzikami, czapka z daszkiem, gwizdek, chorągiewka (stoi przy stacjach kolejowych zamiast woźnicy).</li>
+<li>Po akceptacji bazy ruchu: przerysowanie mieszkańców 11 i 15 (dziś wyłączeni, ucięte spódnice).</li>
+</ul>
+<h2>3. Kolejność</h2>
+<ol>
+<li>Próbka lokomotywy (3 kierunki + cień).</li>
+<li>Reszta kolei (2.1) i wieża ciśnień.</li>
+<li>Wóz konny (2.2).</li>
+<li>Zabytki (2.3) i szyldy (2.4).</li>
+<li>Konduktor (2.5).</li>
+</ol>
