@@ -7,14 +7,20 @@ import { rachunek, levelForAge } from './scenes/Npcs';
 // loaded at login), the built-in ones from content/quizy.ts and number puzzles
 // the game makes up itself, so they never run out.
 
-type ServerQuiz = [number, number, string, string, string[]];
-const fromServer: PytanieQuizu[][] = [[], [], [], []];
+// The 6th field is the country the question is only for (null = everywhere).
+type ServerQuiz = [number, number, string, string, string[], (string | null)?];
+const fromServer: (PytanieQuizu & { kraj?: string | null })[][] = [[], [], [], []];
 
 export function setServerQuizzes(list: ServerQuiz[]) {
   for (const l of fromServer) l.length = 0;
-  for (const [id, level, kategoria, pytanie, odpowiedzi] of list) {
-    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ id, kategoria, pytanie, odpowiedzi });
+  for (const [id, level, kategoria, pytanie, odpowiedzi, kraj] of list) {
+    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ id, kategoria, pytanie, odpowiedzi, kraj: kraj ?? null });
   }
+}
+
+/** Server questions of a level that may be asked in this country (general ones plus that country's). */
+function serverFor(level: number, kraj: string | null) {
+  return fromServer[level].filter((q) => !q.kraj || q.kraj === kraj);
 }
 
 export function serverQuizCount() {
@@ -95,18 +101,20 @@ function puzzle(level: number, r: () => number): PytanieQuizu {
 
 /**
  * The n-th question of the day in one school, for a player of this age
- * (always the same for that school, day and number).
+ * (always the same for that school, day and number). `kraj` = the school's
+ * country (kraj.ts): questions about one country are asked only there.
  */
-export function schoolQuiz(schoolId: string, day: string, nth: number, age: number): PytanieQuizu {
+export function schoolQuiz(schoolId: string, day: string, nth: number, age: number, kraj: string | null): PytanieQuizu {
   // Later questions of the day get harder (content/quizy.ts trudniejOd).
   const harder = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
   const level = Math.min(3, levelForAge(age) + harder);
   const r = rng(hash(`quiz:${schoolId}:${day}:${nth}:${level}`));
   // Few server questions (no fresh batch for days): more of the never-ending number puzzles.
-  const mathChance = fromServer[level].length < SZKOLA_QUIZ.malo ? SZKOLA_QUIZ.rachunekGdyMalo : SZKOLA_QUIZ.szansaNaRachunek;
+  const server = serverFor(level, kraj);
+  const mathChance = server.length < SZKOLA_QUIZ.malo ? SZKOLA_QUIZ.rachunekGdyMalo : SZKOLA_QUIZ.szansaNaRachunek;
   if (r() < mathChance) return puzzle(level, r);
   // Server questions first (new every day), then the built-in ones.
-  const pool = fromServer[level].length >= 10 && r() < 0.85 ? fromServer[level] : [...fromServer[level], ...QUIZY[level]];
+  const pool = server.length >= 10 && r() < 0.85 ? server : [...server, ...QUIZY[level]];
   if (!pool.length) return puzzle(level, r);
   // The same school walks through a shuffled list, so questions don't repeat within a day.
   const pr = rng(hash(`quizorder:${schoolId}:${day}:${level}:${pool.length}`));

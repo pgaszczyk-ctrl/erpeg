@@ -42,6 +42,7 @@ import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RAD
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz, quizAnswered } from '../quizzes';
+import { krajMapy } from '../kraj';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
@@ -3115,7 +3116,8 @@ export class GameScene extends Phaser.Scene {
       buttons: ['🧠 Quiz', 'Wyjdź'],
       onChoose: (i) => {
         if (i !== 0) return;
-        const z = schoolQuiz(p.id, d.d, d.a, session.age);
+        const ll = this.city.toLatLon(p.door.x, p.door.y);
+        const z = schoolQuiz(p.id, d.d, d.a, session.age, krajMapy(session.mapId, ll.lat, ll.lon));
         const nth = d.a;
         const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
         const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';

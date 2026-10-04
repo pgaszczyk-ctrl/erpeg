@@ -29,6 +29,11 @@
               "Lubelszczyzna"
             ]
           },
+          "country": {
+            "type": "string",
+            "maxLength": 2,
+            "description": "'' = pytanie ogólne, zadawane w każdym kraju. Kod kraju ISO 3166 (dwie wielkie litery, np. PL, JP, FR), gdy pytanie dotyczy historii, geografii, kultury, języka lub ludzi tylko jednego kraju – wtedy zadają je tylko szkoły w tym kraju."
+          },
           "question": {
             "type": "string",
             "maxLength": 300,
@@ -48,12 +53,14 @@
         "required": [
           "level",
           "category",
+          "country",
           "question",
           "answers"
         ],
         "propertyOrdering": [
           "level",
           "category",
+          "country",
           "question",
           "answers"
         ]

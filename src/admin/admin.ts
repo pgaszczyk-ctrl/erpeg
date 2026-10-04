@@ -6,7 +6,7 @@ import { PRZEDMIOTY, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, type Umiejetnosc }
 import { normalizeSlot, goodsLabel } from '../inventory';
 import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
-import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy } from '../content/quizyGemini';
+import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -653,7 +653,8 @@ function settings(main: HTMLElement) {
 /** School quizzes (🧠 Quizy): numbers, Gemini's instructions and schema, pasting its answer, the list with deleting, the key. */
 function quizzesTab(main: HTMLElement) {
   type Q = { today: number; tomorrow: number; in5?: number; byLevel: Record<string, number>; reserve?: Record<string, number>; answered?: number; total?: number; history?: number; hasKey: boolean; last: string | null };
-  type Row = { id: number; level: number; category: string; question: string; answers: string[]; from: string; to: string; answered: number };
+  type Row = { id: number; level: number; category: string; country?: string | null; question: string; answers: string[]; from: string; to: string; answered: number };
+  const kraj = (k: string | null | undefined) => (k ? k : '🌍 ogólne');
   const LEVELS = ['maluch', 'uczeń', 'odkrywca', 'mędrzec'];
   const missing = (e: Error) => /function|funkcj|not find|does not exist|schema cache/i.test(e.message) ? 'Ta funkcja nie jest jeszcze włączona na serwerze (docs/sql/quizy-admin.sql).' : e.message;
 
@@ -696,7 +697,7 @@ function quizzesTab(main: HTMLElement) {
     out.replaceChildren(
       el('p', { className: r.ok.length ? 'msg ok' : 'msg bad' }, [`Dobrych pytań: ${r.ok.length} (${per}).${r.bledy.length ? ` Odrzucone: ${r.bledy.length}.` : ''}`]),
       ...r.bledy.slice(0, 12).map((b) => el('p', { className: 'msg bad' }, [b])),
-      ...r.ok.slice(0, 5).map((q) => el('p', { className: 'msg' }, [`[${LEVELS[q.level]}, ${q.category}] ${q.question} → ✔ ${q.answers[0]}`])),
+      ...r.ok.slice(0, 5).map((q) => el('p', { className: 'msg' }, [`[${LEVELS[q.level]}, ${q.category}, ${kraj(q.country)}] ${q.question} → ✔ ${q.answers[0]}`])),
     );
     return r;
   };
@@ -718,13 +719,14 @@ function quizzesTab(main: HTMLElement) {
 
   // The list (latest first), filter and delete.
   const lvl = el('select', {}, [el('option', { value: '' }, ['wszystkie poziomy']), ...LEVELS.map((l, i) => el('option', { value: String(i) }, [l]))]);
+  const land = el('select', {}, [el('option', { value: '' }, ['każdy kraj']), el('option', { value: '-' }, ['🌍 tylko ogólne']), el('option', { value: '*' }, ['tylko z krajem']), el('option', { value: 'PL' }, ['PL'])]);
   const q = el('input', { type: 'search', placeholder: 'szukaj w pytaniach…' });
   const list = el('div', { className: 'scroll' });
   const loadList = () =>
-    call<Row[]>('admin_quiz_list', { p_level: lvl.value === '' ? null : Number(lvl.value), p_q: q.value || null, p_limit: 150 }).then((rows) => {
+    call<Row[]>('admin_quiz_list', { p_level: lvl.value === '' ? null : Number(lvl.value), p_q: q.value || null, p_limit: 150, p_country: land.value || null }).then((rows) => {
       const today = new Date().toISOString().slice(0, 10);
-      list.replaceChildren(el('table', {}, [
-        el('thead', {}, [el('tr', {}, ['Poziom', 'Kategoria', 'Pytanie', 'Dobra / złe', 'Ważne', 'Odp.', ''].map((h) => el('th', {}, [h])))]),
+      list.replaceChildren(el('table', { className: 'qz' }, [
+        el('thead', {}, [el('tr', {}, ['Poziom', 'Kategoria', 'Kraj', 'Pytanie', 'Dobra / złe', 'Ważne', 'Odp.', ''].map((h) => el('th', {}, [h])))]),
         el('tbody', {}, rows.map((r) => {
           const del = btn('🗑', async () => {
             if (!confirm(`Usunąć pytanie?\n\n${r.question}`)) return;
@@ -736,20 +738,36 @@ function quizzesTab(main: HTMLElement) {
               alert(missing(e as Error));
             }
           });
+          // The country can be fixed by hand (older questions came without one).
+          const landBtn: HTMLButtonElement = btn(kraj(r.country), async () => {
+            const v = window.prompt('Kraj pytania: zostaw puste = ogólne (wszędzie), albo dwie litery kodu kraju, np. PL, JP.', r.country ?? '');
+            if (v === null) return;
+            const k = krajPytania(v);
+            if (k === null) return alert('Wpisz pusty albo dwie litery kodu kraju (np. PL).');
+            try {
+              await call('admin_quiz_country', { p_id: r.id, p_country: k });
+              r.country = k || null;
+              landBtn.textContent = kraj(r.country);
+            } catch (e) {
+              alert(missing(e as Error));
+            }
+          }, 'b land');
           const row = el('tr', {}, [
-            el('td', {}, [LEVELS[r.level] ?? String(r.level)]),
-            el('td', {}, [r.category]),
-            el('td', {}, [r.question]),
-            el('td', {}, [el('b', {}, [`✔ ${r.answers[0]}`]), ` · ${r.answers.slice(1).join(' · ')}`]),
-            el('td', {}, [`${r.from.slice(5)}–${r.to.slice(5)}${r.from <= today && today <= r.to ? ' ●' : ''}`]),
-            el('td', {}, [String(r.answered)]),
-            el('td', {}, [del]),
+            el('td', { className: 'lv' }, [LEVELS[r.level] ?? String(r.level)]),
+            el('td', { className: 'cat' }, [r.category]),
+            el('td', { className: 'land' }, [landBtn]),
+            el('td', { className: 'q' }, [r.question]),
+            el('td', { className: 'a' }, [el('b', {}, [`✔ ${r.answers[0]}`]), ` · ${r.answers.slice(1).join(' · ')}`]),
+            el('td', { className: 'when' }, [`${r.from.slice(5)}–${r.to.slice(5)}${r.from <= today && today <= r.to ? ' ●' : ''}`]),
+            el('td', { className: 'num' }, [String(r.answered)]),
+            el('td', { className: 'del' }, [del]),
           ]);
           return row;
         })),
       ]));
     }).catch((e: Error) => list.replaceChildren(el('p', { className: 'msg' }, [missing(e)])));
   lvl.onchange = () => loadList();
+  land.onchange = () => loadList();
   q.oninput = () => {
     clearTimeout((q as unknown as { t?: number }).t);
     (q as unknown as { t?: number }).t = window.setTimeout(loadList, 400);
@@ -789,8 +807,8 @@ function quizzesTab(main: HTMLElement) {
     ]),
     el('div', { className: 'card' }, [
       el('h3', {}, ['3. Pytania w grze']),
-      el('p', { className: 'msg' }, ['Złe pytanie możesz usunąć – nie wróci, bo gra pamięta wszystkie wgrane pytania. ● = zadawane dziś.']),
-      el('div', {}, [lvl, ' ', q]),
+      el('p', { className: 'msg' }, ['Złe pytanie możesz usunąć – nie wróci, bo gra pamięta wszystkie wgrane pytania. ● = zadawane dziś. Kraj: 🌍 ogólne = zadawane wszędzie, kod (np. PL) = tylko w szkołach w tym kraju; dotknij, żeby zmienić.']),
+      el('div', { className: 'qzf' }, [lvl, land, q]),
       list,
     ]),
     el('div', { className: 'card' }, [

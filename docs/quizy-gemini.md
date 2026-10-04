@@ -22,6 +22,11 @@ Po 50 pytań na każdy poziom:
 
 Kategorie: matematyka, łamigłówka, zagadka, przyroda, geografia, historia, język, nauka, sztuka, sport, Lubelszczyzna. Mniej więcej jedna trzecia pytań to matematyka i łamigłówki liczbowe.
 
+Kraj (pole "country"): gra toczy się na prawdziwej mapie świata i szkoła zadaje pytanie tylko tam, gdzie ma ono sens.
+- "" (puste) – pytanie ogólne, dobre w każdym kraju (matematyka, przyroda, nauka, historia i geografia świata, np. piramidy w Egipcie jako ciekawostka o świecie).
+- Kod kraju, np. "PL" – pytanie o historię, geografię, kulturę, język, święta lub sławnych ludzi jednego kraju (np. chrzest Polski, Wisła, ortografia polska, kategoria Lubelszczyzna = zawsze "PL"). Takie pytanie dostaną tylko gracze w szkołach w tym kraju, więc nikt w Polsce nie zostanie zapytany o historię feudalnej Japonii ("JP").
+Większość pytań niech będzie ogólna albo "PL"; pytania o inne kraje (np. "JP", "FR", "IT", "GB", "DE") tylko czasem, jako ciekawostki dla podróżników.
+
 Zasady:
 1. Każde pytanie ma 3–4 krótkie odpowiedzi. PIERWSZA odpowiedź jest poprawna (gra sama je tasuje). Pozostałe są wiarygodne, ale na pewno złe.
 2. Każdy fakt musi być pewny i niezmienny w czasie (żadnych rekordów, rankingów, cen, „obecnych” prezydentów, liczby ludności).
@@ -31,7 +36,7 @@ Zasady:
 6. Sprawdź każdy rachunek dwa razy.
 
 Odpowiedz wyłącznie obiektem JSON w formacie:
-{"quizzes": [{"level": 0, "category": "przyroda", "question": "Które zwierzę mówi „muu”?", "answers": ["Krowa", "Kot", "Kaczka", "Pies"]}]}
+{"quizzes": [{"level": 0, "category": "przyroda", "country": "", "question": "Które zwierzę mówi „muu”?", "answers": ["Krowa", "Kot", "Kaczka", "Pies"]}, {"level": 2, "category": "historia", "country": "PL", "question": "W którym roku odbył się chrzest Polski?", "answers": ["966", "1025", "1410", "1569"]}]}
 ```
 
 ## Schemat odpowiedzi
@@ -47,6 +52,7 @@ Wtedy Gemini zawsze odda obiekt `{"quizzes": [ … ]}`, w którym każde pytanie
 |---|---|
 | `level` | 0 maluch (5–7 lat), 1 uczeń (8–9), 2 odkrywca (10–12), 3 mędrzec (starsi i dorośli) |
 | `category` | jedna z: matematyka, łamigłówka, zagadka, przyroda, geografia, historia, język, nauka, sztuka, sport, Lubelszczyzna |
+| `country` | `""` = pytanie ogólne (zadawane w każdym kraju) albo kod kraju (dwie litery, np. `PL`, `JP`), gdy pytanie dotyczy tylko jednego kraju – wtedy zadają je tylko szkoły w tym kraju (gra rozpoznaje kraj po miejscu szkoły, `src/kraj.ts`). Lubelszczyzna = zawsze `PL`. Bez pola = ogólne. W panelu kraj każdego pytania można zmienić (przycisk w kolumnie „Kraj”). |
 | `question` | pytanie po polsku, do 300 znaków |
 | `answers` | 3–4 odpowiedzi, **pierwsza dobra**, każda do 120 znaków, wszystkie różne |
 

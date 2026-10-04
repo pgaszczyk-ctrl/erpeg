@@ -25,6 +25,25 @@
       th, td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
       th { cursor: pointer; user-select: none; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--box); }
       th.num, td.num { text-align: right; }
+      /* 🧠 Quizy: question and answers wrap so the whole row (with 🗑) fits; on phones each question is a little card. */
+      table.qz td.q, table.qz td.a { white-space: normal; min-width: 160px; }
+      table.qz td.del { width: 1%; }
+      table.qz .b { padding: 4px 8px; }
+      .qzf { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+      .qzf input { flex: 1 1 180px; }
+      @media (max-width: 700px) {
+        table.qz thead { display: none; }
+        table.qz, table.qz tbody { display: block; }
+        table.qz tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+        table.qz td { border: 0; padding: 0; white-space: normal; }
+        table.qz td.q { order: 1; flex: 1 1 100%; font-weight: 600; min-width: 0; }
+        table.qz td.a { order: 2; flex: 1 1 100%; min-width: 0; }
+        table.qz td.lv, table.qz td.cat, table.qz td.when { order: 3; color: var(--muted); font-size: 13px; }
+        table.qz td.num { order: 3; color: var(--muted); font-size: 13px; }
+        table.qz td.num::before { content: 'odp. '; }
+        table.qz td.land { order: 4; margin-left: auto; }
+        table.qz td.del { order: 5; width: auto; }
+      }
       tr.click { cursor: pointer; }
       tr.click:hover td { background: #29233a; }
       .muted { color: var(--muted); }

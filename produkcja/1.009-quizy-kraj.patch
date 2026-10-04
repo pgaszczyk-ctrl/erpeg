@@ -1,0 +1,603 @@
+diff --git a/admin.html b/admin.html
+index 93e88eb..82bfb0b 100644
+--- a/admin.html
++++ b/admin.html
+@@ -25,6 +25,25 @@
+       th, td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+       th { cursor: pointer; user-select: none; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--box); }
+       th.num, td.num { text-align: right; }
++      /* 🧠 Quizy: question and answers wrap so the whole row (with 🗑) fits; on phones each question is a little card. */
++      table.qz td.q, table.qz td.a { white-space: normal; min-width: 160px; }
++      table.qz td.del { width: 1%; }
++      table.qz .b { padding: 4px 8px; }
++      .qzf { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
++      .qzf input { flex: 1 1 180px; }
++      @media (max-width: 700px) {
++        table.qz thead { display: none; }
++        table.qz, table.qz tbody { display: block; }
++        table.qz tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
++        table.qz td { border: 0; padding: 0; white-space: normal; }
++        table.qz td.q { order: 1; flex: 1 1 100%; font-weight: 600; min-width: 0; }
++        table.qz td.a { order: 2; flex: 1 1 100%; min-width: 0; }
++        table.qz td.lv, table.qz td.cat, table.qz td.when { order: 3; color: var(--muted); font-size: 13px; }
++        table.qz td.num { order: 3; color: var(--muted); font-size: 13px; }
++        table.qz td.num::before { content: 'odp. '; }
++        table.qz td.land { order: 4; margin-left: auto; }
++        table.qz td.del { order: 5; width: auto; }
++      }
+       tr.click { cursor: pointer; }
+       tr.click:hover td { background: #29233a; }
+       .muted { color: var(--muted); }
+diff --git a/src/admin/admin.ts b/src/admin/admin.ts
+index da32a45..a6ba548 100644
+--- a/src/admin/admin.ts
++++ b/src/admin/admin.ts
+@@ -6,6 +6,7 @@ import { PRZEDMIOTY, UMIEJETNOSCI, PIERWSZY_POZIOM, MNOZNIK_POZIOMU, MAKS_POZIOM
+ import { normalizeSlot, goodsLabel } from '../inventory';
+ import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
+ import { PX_PER_M } from '../map/CityMap';
++import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
+ 
+ // The admin panel (admin.html): characters and their statistics, missions
+ // (with a preview on the map) and secret codes for real places. Every call
+@@ -109,7 +110,7 @@ function loginScreen(error = '') {
+ }
+ 
+ function render() {
+-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['settings', '⚙ Ustawienia']];
++  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+   const header = el('header', {}, [
+     el('h1', {}, ['EXP-LORE admin']),
+     ...tabs.map(([id, label]) => btn(label, () => {
+@@ -129,6 +130,7 @@ function render() {
+   else if (tab === 'missions') missions(main);
+   else if (tab === 'codes') codes(main);
+   else if (tab === 'errors') void errorsTab(main);
++  else if (tab === 'quizzes') quizzesTab(main);
+   else if (tab === 'bugs') void bugsTab(main);
+   else settings(main);
+ }
+@@ -619,7 +621,7 @@ function settings(main: HTMLElement) {
+         msg.textContent = (e as Error).message;
+       }
+     }, 'b p'),
+-  ]), quizCard(), btn('Wyloguj', () => {
++  ]), btn('Wyloguj', () => {
+     key = '';
+     try {
+       sessionStorage.removeItem('erpeg-admin');
+@@ -630,40 +632,174 @@ function settings(main: HTMLElement) {
+   }));
+ }
+ 
+-/** School quizzes: counts and the upload key for an outside program (add_quizzes). */
+-function quizCard() {
+-  type Q = { today: number; tomorrow: number; byLevel: Record<string, number>; hasKey: boolean; last: string | null; sample: { level: number; category: string; question: string; answers: string[] }[] };
+-  const info = el('div', {}, ['Wczytuję…']);
+-  const keyOut = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
++/** School quizzes (🧠 Quizy): numbers, Gemini's instructions and schema, pasting its answer, the list with deleting, the key. */
++function quizzesTab(main: HTMLElement) {
++  type Q = { today: number; tomorrow: number; in5?: number; byLevel: Record<string, number>; reserve?: Record<string, number>; answered?: number; total?: number; history?: number; hasKey: boolean; last: string | null };
++  type Row = { id: number; level: number; category: string; country?: string | null; question: string; answers: string[]; from: string; to: string; answered: number };
++  const kraj = (k: string | null | undefined) => (k ? k : '🌍 ogólne');
+   const LEVELS = ['maluch', 'uczeń', 'odkrywca', 'mędrzec'];
+-  const load = () =>
++  const missing = (e: Error) => /function|funkcj|not find|does not exist|schema cache/i.test(e.message) ? 'Ta funkcja nie jest jeszcze włączona na serwerze (docs/sql/quizy-admin.sql).' : e.message;
++
++  // Numbers.
++  const info = el('div', {}, ['Wczytuję…']);
++  const loadInfo = () =>
+     call<Q>('admin_quizzes', {}).then((q) => {
+-      info.replaceChildren(
+-        el('p', {}, [`Na dziś: ${q.today} pytań, na jutro: ${q.tomorrow}. ${LEVELS.map((l, i) => `${l}: ${q.byLevel[i] ?? 0}`).join(', ')}.`]),
+-        el('p', {}, [q.last ? `Ostatnia paczka: ${new Date(q.last).toLocaleString('pl-PL')}` : 'Jeszcze nic nie wgrano – gra używa pytań wbudowanych i sama układa rachunki.']),
+-        el('p', {}, [q.hasKey ? 'Klucz do wgrywania jest ustawiony.' : 'Brak klucza do wgrywania.']),
+-        ...q.sample.slice(0, 5).map((s) => el('p', { className: 'msg' }, [`[${LEVELS[s.level]}, ${s.category}] ${s.question} → ${s.answers[0]}`])),
+-      );
++      const lv = (o: Record<string, number> | undefined) => LEVELS.map((l, i) => `${l} ${o?.[i] ?? 0}`).join(' · ');
++      info.replaceChildren(...[
++        el('p', {}, [`Dziś w szkołach: ${q.today} pytań (${lv(q.byLevel)}). Jutro: ${q.tomorrow}${q.in5 !== undefined ? `, za 5 dni: ${q.in5}` : ''}.`]),
++        q.reserve ? el('p', {}, [`Zapas bez odpowiedzi (wraca, gdy brak nowych): ${lv(q.reserve)}.`]) : null,
++        q.total !== undefined ? el('p', {}, [`W bazie ${q.total} pytań, ${q.answered} już z odpowiedzią; pamięć powtórek: ${q.history}.`]) : null,
++        el('p', {}, [q.last ? `Ostatnia paczka: ${new Date(q.last).toLocaleString('pl-PL')}` : 'Jeszcze nic nie wgrano.']),
++        el('p', { className: 'msg' }, ['Każda paczka jest ważna 5 dni. Gdy na poziomie jest dziś mniej niż 150 pytań, gra dobiera stare z zapasu, a gdy i zapasu brak – więcej rachunków.']),
++      ].filter((x): x is HTMLParagraphElement & Record<string, unknown> => !!x));
+     }).catch((e: Error) => info.replaceChildren(e.message));
+-  load();
+-  return el('div', { className: 'card', style: 'max-width: 640px' }, [
+-    el('h3', {}, ['🧠 Quizy w szkołach']),
+-    info,
+-    el('p', {}, ['Zewnętrzny program (np. inny AI na harmonogramie) wgrywa pytania funkcją add_quizzes z kluczem poniżej; każda paczka jest ważna 2 dni, stare same znikają. Opis: docs/quizy.md w repozytorium.']),
+-    btn('Wygeneruj nowy klucz', async () => {
+-      if (!confirm('Stary klucz przestanie działać. Wygenerować nowy?')) return;
+-      try {
+-        const r = await call<{ key: string }>('admin_new_quiz_key', {});
+-        keyOut.style.display = 'block';
+-        keyOut.textContent = `Nowy klucz (pokazany tylko raz – skopiuj go do programu):\n${r.key}`;
+-        load();
+-      } catch (e) {
+-        keyOut.style.display = 'block';
+-        keyOut.textContent = (e as Error).message;
+-      }
+-    }, 'b'),
+-    keyOut,
+-  ]);
++  loadInfo();
++
++  // Instructions for Gemini.
++  const copy = (text: string, b: HTMLButtonElement) => {
++    navigator.clipboard?.writeText(text).then(() => {
++      const t = b.textContent;
++      b.textContent = '✓ Skopiowano';
++      setTimeout(() => (b.textContent = t), 1500);
++    }).catch(() => {});
++  };
++  const prompt = el('pre', { className: 'card', style: 'white-space: pre-wrap; max-height: 220px; overflow: auto; font-size: 12px' }, [POLECENIE_GEMINI]);
++  const schema = el('pre', { className: 'card', style: 'white-space: pre-wrap; max-height: 220px; overflow: auto; font-size: 12px; display: none' }, [JSON.stringify(SCHEMAT_QUIZOW, null, 2)]);
++  const copyPrompt: HTMLButtonElement = btn('📋 Kopiuj polecenie', () => copy(POLECENIE_GEMINI, copyPrompt));
++  const copySchema: HTMLButtonElement = btn('📋 Kopiuj schemat', () => copy(JSON.stringify(SCHEMAT_QUIZOW, null, 2), copySchema));
++  const showSchema = btn('Pokaż schemat JSON', () => (schema.style.display = schema.style.display === 'none' ? 'block' : 'none'));
++
++  // Pasting Gemini's answer.
++  const box = el('textarea', { rows: 8, placeholder: '{"quizzes": [ … ]}  ← wklej tu odpowiedź Gemini', style: 'width: 100%; font-family: monospace; font-size: 12px' });
++  const days = el('select', {}, [5, 6, 7].map((d) => el('option', { value: String(d) }, [`ważne ${d} dni`])));
++  const out = el('div', { className: 'msg' });
++  const check = () => {
++    const r = sprawdzQuizy(box.value);
++    const per = LEVELS.map((l, i) => `${l} ${r.ok.filter((q) => q.level === i).length}`).join(' · ');
++    out.replaceChildren(
++      el('p', { className: r.ok.length ? 'msg ok' : 'msg bad' }, [`Dobrych pytań: ${r.ok.length} (${per}).${r.bledy.length ? ` Odrzucone: ${r.bledy.length}.` : ''}`]),
++      ...r.bledy.slice(0, 12).map((b) => el('p', { className: 'msg bad' }, [b])),
++      ...r.ok.slice(0, 5).map((q) => el('p', { className: 'msg' }, [`[${LEVELS[q.level]}, ${q.category}, ${kraj(q.country)}] ${q.question} → ✔ ${q.answers[0]}`])),
++    );
++    return r;
++  };
++  const upload = btn('⬆ Wgraj do gry', async () => {
++    const r = check();
++    if (!r.ok.length) return;
++    if (!confirm(`Wgrać ${r.ok.length} pytań? Uczniowie zobaczą je od dziś.`)) return;
++    try {
++      const res = await call<{ added?: number; repeated?: number; skipped?: number; error?: string }>('admin_add_quizzes', { p_quizzes: r.ok, p_days: Number(days.value) });
++      if (res.error) throw new Error(res.error);
++      out.prepend(el('p', { className: 'msg ok' }, [`Wgrano: ${res.added}. Powtórki odrzucone: ${res.repeated}. Złe: ${res.skipped}.`]));
++      box.value = '';
++      loadInfo();
++      loadList();
++    } catch (e) {
++      out.prepend(el('p', { className: 'msg bad' }, [missing(e as Error)]));
++    }
++  }, 'b p');
++
++  // The list (latest first), filter and delete.
++  const lvl = el('select', {}, [el('option', { value: '' }, ['wszystkie poziomy']), ...LEVELS.map((l, i) => el('option', { value: String(i) }, [l]))]);
++  const land = el('select', {}, [el('option', { value: '' }, ['każdy kraj']), el('option', { value: '-' }, ['🌍 tylko ogólne']), el('option', { value: '*' }, ['tylko z krajem']), el('option', { value: 'PL' }, ['PL'])]);
++  const q = el('input', { type: 'search', placeholder: 'szukaj w pytaniach…' });
++  const list = el('div', { className: 'scroll' });
++  const loadList = () =>
++    call<Row[]>('admin_quiz_list', { p_level: lvl.value === '' ? null : Number(lvl.value), p_q: q.value || null, p_limit: 150, p_country: land.value || null }).then((rows) => {
++      const today = new Date().toISOString().slice(0, 10);
++      list.replaceChildren(el('table', { className: 'qz' }, [
++        el('thead', {}, [el('tr', {}, ['Poziom', 'Kategoria', 'Kraj', 'Pytanie', 'Dobra / złe', 'Ważne', 'Odp.', ''].map((h) => el('th', {}, [h])))]),
++        el('tbody', {}, rows.map((r) => {
++          const del = btn('🗑', async () => {
++            if (!confirm(`Usunąć pytanie?\n\n${r.question}`)) return;
++            try {
++              await call('admin_quiz_delete', { p_id: r.id });
++              row.remove();
++              loadInfo();
++            } catch (e) {
++              alert(missing(e as Error));
++            }
++          });
++          // The country can be fixed by hand (older questions came without one).
++          const landBtn: HTMLButtonElement = btn(kraj(r.country), async () => {
++            const v = window.prompt('Kraj pytania: zostaw puste = ogólne (wszędzie), albo dwie litery kodu kraju, np. PL, JP.', r.country ?? '');
++            if (v === null) return;
++            const k = krajPytania(v);
++            if (k === null) return alert('Wpisz pusty albo dwie litery kodu kraju (np. PL).');
++            try {
++              await call('admin_quiz_country', { p_id: r.id, p_country: k });
++              r.country = k || null;
++              landBtn.textContent = kraj(r.country);
++            } catch (e) {
++              alert(missing(e as Error));
++            }
++          }, 'b land');
++          const row = el('tr', {}, [
++            el('td', { className: 'lv' }, [LEVELS[r.level] ?? String(r.level)]),
++            el('td', { className: 'cat' }, [r.category]),
++            el('td', { className: 'land' }, [landBtn]),
++            el('td', { className: 'q' }, [r.question]),
++            el('td', { className: 'a' }, [el('b', {}, [`✔ ${r.answers[0]}`]), ` · ${r.answers.slice(1).join(' · ')}`]),
++            el('td', { className: 'when' }, [`${r.from.slice(5)}–${r.to.slice(5)}${r.from <= today && today <= r.to ? ' ●' : ''}`]),
++            el('td', { className: 'num' }, [String(r.answered)]),
++            el('td', { className: 'del' }, [del]),
++          ]);
++          return row;
++        })),
++      ]));
++    }).catch((e: Error) => list.replaceChildren(el('p', { className: 'msg' }, [missing(e)])));
++  lvl.onchange = () => loadList();
++  land.onchange = () => loadList();
++  q.oninput = () => {
++    clearTimeout((q as unknown as { t?: number }).t);
++    (q as unknown as { t?: number }).t = window.setTimeout(loadList, 400);
++  };
++  loadList();
++
++  // The key for a program that uploads by itself (add_quizzes).
++  const keyOut = el('pre', { className: 'card', style: 'white-space: pre-wrap; display: none' });
++  const keyBtn = btn('Wygeneruj nowy klucz', async () => {
++    if (!confirm('Stary klucz przestanie działać. Wygenerować nowy?')) return;
++    try {
++      const r = await call<{ key: string }>('admin_new_quiz_key', {});
++      keyOut.style.display = 'block';
++      keyOut.textContent = `Nowy klucz (pokazany tylko raz – skopiuj go do programu):\n${r.key}`;
++      loadInfo();
++    } catch (e) {
++      keyOut.style.display = 'block';
++      keyOut.textContent = (e as Error).message;
++    }
++  });
++
++  main.append(
++    el('h2', {}, ['🧠 Quizy w szkołach']),
++    el('div', { className: 'card' }, [info]),
++    el('div', { className: 'card' }, [
++      el('h3', {}, ['1. Polecenie dla Gemini']),
++      el('p', {}, ['Skopiuj polecenie do Gemini (czat albo program). Najlepiej z włączoną odpowiedzią w formacie JSON i schematem poniżej – wtedy Gemini zawsze odda dobry układ.']),
++      el('div', {}, [copyPrompt, copySchema, showSchema]),
++      prompt,
++      schema,
++    ]),
++    el('div', { className: 'card' }, [
++      el('h3', {}, ['2. Wklej odpowiedź Gemini']),
++      box,
++      el('div', {}, [btn('Sprawdź', () => void check()), upload, days]),
++      out,
++    ]),
++    el('div', { className: 'card' }, [
++      el('h3', {}, ['3. Pytania w grze']),
++      el('p', { className: 'msg' }, ['Złe pytanie możesz usunąć – nie wróci, bo gra pamięta wszystkie wgrane pytania. ● = zadawane dziś. Kraj: 🌍 ogólne = zadawane wszędzie, kod (np. PL) = tylko w szkołach w tym kraju; dotknij, żeby zmienić.']),
++      el('div', { className: 'qzf' }, [lvl, land, q]),
++      list,
++    ]),
++    el('div', { className: 'card' }, [
++      el('h3', {}, ['Klucz dla programu, który wgrywa sam']),
++      el('p', {}, ['Program (np. Gemini na harmonogramie) może wysyłać pytania funkcją add_quizzes z tym kluczem – opis w docs/quizy-gemini.md.']),
++      keyBtn,
++      keyOut,
++    ]),
++  );
+ }
+ 
+ // ------------------------------------------------------------------ start
+diff --git a/src/api.ts b/src/api.ts
+index e70b6cb..68654fb 100644
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -169,7 +169,7 @@ export const api = {
+     rpc<{ name: string; exp: number; died_at: string; death_place: string | null; resurrected: boolean }[]>('memorial', { p_limit: 100 }),
+   resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
+   /** Missions made in the admin panel. */
+-  quizzes: () => rpc<[number, number, string, string, string[]][]>('school_quizzes', {}),
++  quizzes: () => rpc<[number, number, string, string, string[], string | null][]>('school_quizzes', { p_all: true }),
+   content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', {}),
+   redeem: (token: string, missionId: string, code: string) =>
+     rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),
+diff --git a/src/content/quizy.ts b/src/content/quizy.ts
+index 5058cb9..84e848b 100644
+--- a/src/content/quizy.ts
++++ b/src/content/quizy.ts
+@@ -11,6 +11,8 @@
+ // ============================================================================
+ 
+ export interface PytanieQuizu {
++  /** Pytania z serwera: numer w bazie (gra zgłasza, że ktoś odpowiedział). */
++  id?: number;
+   kategoria: string;
+   pytanie: string;
+   odpowiedzi: string[];
+@@ -33,6 +35,9 @@ export const SZKOLA_QUIZ = {
+   trudniejOd: [31, 41],
+   /** Jak często rachunek lub łamigłówka liczbowa zamiast pytania z bazy (0–1). */
+   szansaNaRachunek: 0.35,
++  /** Gdy z serwera jest mniej niż `malo` pytań na poziom (np. kilka dni bez nowej paczki), rachunków jest więcej. */
++  malo: 60,
++  rachunekGdyMalo: 0.6,
+ };
+ 
+ /** Pytania wpisane na stałe (gdy serwer nic nie przyśle), po poziomach 0–3. */
+diff --git a/src/content/quizyGemini.ts b/src/content/quizyGemini.ts
+new file mode 100644
+index 0000000..48a3e94
+--- /dev/null
++++ b/src/content/quizyGemini.ts
+@@ -0,0 +1,114 @@
++// ============================================================================
++//  QUIZY OD GEMINI: schemat odpowiedzi i polecenie (panel admina → 🧠 Quizy,
++//  kopia w docs/quizy-gemini.md). Gemini zwraca JSON zgodny ze SCHEMAT_QUIZOW,
++//  który wkleja się w panelu albo wysyła funkcją add_quizzes z kluczem.
++// ============================================================================
++
++export const KATEGORIE_QUIZOW = ['matematyka', 'łamigłówka', 'zagadka', 'przyroda', 'geografia', 'historia', 'język', 'nauka', 'sztuka', 'sport', 'Lubelszczyzna'] as const;
++
++/**
++ * Kraj pytania: '' = ogólne (zadawane wszędzie), albo dwuliterowy kod kraju (PL, JP, FR…),
++ * gdy pytanie dotyczy historii, geografii, kultury czy języka jednego kraju – wtedy
++ * zadają je tylko szkoły w tym kraju (gra rozpoznaje kraj po miejscu szkoły, src/kraj.ts).
++ */
++export const KRAJ_OPIS = "'' = pytanie ogólne, zadawane w każdym kraju. Kod kraju ISO 3166 (dwie wielkie litery, np. PL, JP, FR), gdy pytanie dotyczy historii, geografii, kultury, języka lub ludzi tylko jednego kraju – wtedy zadają je tylko szkoły w tym kraju.";
++
++/** Poprawia wpisany kraj: '' albo dwie wielkie litery; null = zły zapis. */
++export function krajPytania(v: unknown): string | null {
++  const k = String(v ?? '').trim().toUpperCase();
++  if (k === '' || k === 'OGÓLNE' || k === 'OGOLNE') return '';
++  return /^[A-Z]{2}$/.test(k) ? k : null;
++}
++
++export const POZIOMY_QUIZOW = ['0 – maluch (5–7 lat)', '1 – uczeń (8–9 lat)', '2 – odkrywca (10–12 lat)', '3 – mędrzec (nastolatki i dorośli)'];
++
++/**
++ * Schemat odpowiedzi dla Gemini (structured output: responseMimeType "application/json",
++ * responseSchema = to). Format OpenAPI, który Gemini rozumie.
++ */
++export const SCHEMAT_QUIZOW = {
++  type: 'object',
++  properties: {
++    quizzes: {
++      type: 'array',
++      description: 'Pytania quizowe po polsku.',
++      items: {
++        type: 'object',
++        properties: {
++          level: { type: 'integer', minimum: 0, maximum: 3, description: '0: 5–7 lat, 1: 8–9 lat, 2: 10–12 lat, 3: nastolatki i dorośli' },
++          category: { type: 'string', enum: [...KATEGORIE_QUIZOW] },
++          country: { type: 'string', maxLength: 2, description: KRAJ_OPIS },
++          question: { type: 'string', maxLength: 300, description: 'Pytanie po polsku, jednoznaczne.' },
++          answers: { type: 'array', minItems: 3, maxItems: 4, items: { type: 'string', maxLength: 120 }, description: 'PIERWSZA odpowiedź jest dobra, pozostałe wiarygodne, ale na pewno złe. Wszystkie różne.' },
++        },
++        required: ['level', 'category', 'country', 'question', 'answers'],
++        propertyOrdering: ['level', 'category', 'country', 'question', 'answers'],
++      },
++    },
++  },
++  required: ['quizzes'],
++};
++
++/** Polecenie dla Gemini (do wklejenia w czacie albo w programie na harmonogramie). */
++export const POLECENIE_GEMINI = `Przygotuj 200 nowych pytań quizowych po polsku do gry przygodowej dla dzieci i dorosłych (szkoły w grze zadają je graczom).
++
++Po 50 pytań na każdy poziom:
++- level 0: dzieci 5–7 lat (proste słowa, rachunki do 10, zwierzęta, kolory),
++- level 1: 8–9 lat (tabliczka mnożenia, ortografia, przyroda, Polska),
++- level 2: 10–12 lat (ułamki, procenty, geografia świata, historia Polski),
++- level 3: nastolatki i dorośli (wiedza szkolna i ogólna).
++
++Kategorie: ${KATEGORIE_QUIZOW.join(', ')}. Mniej więcej jedna trzecia pytań to matematyka i łamigłówki liczbowe.
++
++Kraj (pole "country"): gra toczy się na prawdziwej mapie świata i szkoła zadaje pytanie tylko tam, gdzie ma ono sens.
++- "" (puste) – pytanie ogólne, dobre w każdym kraju (matematyka, przyroda, nauka, historia i geografia świata, np. piramidy w Egipcie jako ciekawostka o świecie).
++- Kod kraju, np. "PL" – pytanie o historię, geografię, kulturę, język, święta lub sławnych ludzi jednego kraju (np. chrzest Polski, Wisła, ortografia polska, kategoria Lubelszczyzna = zawsze "PL"). Takie pytanie dostaną tylko gracze w szkołach w tym kraju, więc nikt w Polsce nie zostanie zapytany o historię feudalnej Japonii ("JP").
++Większość pytań niech będzie ogólna albo "PL"; pytania o inne kraje (np. "JP", "FR", "IT", "GB", "DE") tylko czasem, jako ciekawostki dla podróżników.
++
++Zasady:
++1. Każde pytanie ma 3–4 krótkie odpowiedzi. PIERWSZA odpowiedź jest poprawna (gra sama je tasuje). Pozostałe są wiarygodne, ale na pewno złe.
++2. Każdy fakt musi być pewny i niezmienny w czasie (żadnych rekordów, rankingów, cen, „obecnych” prezydentów, liczby ludności).
++3. Pytanie jednoznaczne: tylko jedna odpowiedź może być dobra, także przy zagadkach.
++4. Język przyjazny dzieciom, bez przemocy i treści dla dorosłych.
++5. Bez powtórek i bez pytań bardzo podobnych do siebie.
++6. Sprawdź każdy rachunek dwa razy.
++
++Odpowiedz wyłącznie obiektem JSON w formacie:
++{"quizzes": [{"level": 0, "category": "przyroda", "country": "", "question": "Które zwierzę mówi „muu”?", "answers": ["Krowa", "Kot", "Kaczka", "Pies"]}, {"level": 2, "category": "historia", "country": "PL", "question": "W którym roku odbył się chrzest Polski?", "answers": ["966", "1025", "1410", "1569"]}]}`;
++
++export interface PytanieZGemini { level: number; category: string; country: string; question: string; answers: string[] }
++
++/** Sprawdza wklejoną odpowiedź: zwraca dobre pytania i opis błędów (numer pytania od 1). */
++export function sprawdzQuizy(text: string): { ok: PytanieZGemini[]; bledy: string[] } {
++  const bledy: string[] = [];
++  let data: unknown;
++  // Gemini bywa, że otacza JSON znakami ``` – zdejmujemy je.
++  const clean = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
++  try {
++    data = JSON.parse(clean);
++  } catch (e) {
++    return { ok: [], bledy: [`To nie jest poprawny JSON: ${(e as Error).message}`] };
++  }
++  const list = Array.isArray(data) ? data : (data as { quizzes?: unknown })?.quizzes;
++  if (!Array.isArray(list)) return { ok: [], bledy: ['Brak listy „quizzes”.'] };
++  const ok: PytanieZGemini[] = [];
++  const seen = new Set<string>();
++  list.forEach((q: Partial<PytanieZGemini>, i) => {
++    const n = i + 1;
++    const ans = Array.isArray(q?.answers) ? q.answers.map((a) => String(a).trim()).filter(Boolean) : [];
++    if (!Number.isInteger(q?.level) || q.level! < 0 || q.level! > 3) return void bledy.push(`${n}: level musi być 0–3.`);
++    if (!q.question || !String(q.question).trim()) return void bledy.push(`${n}: brak pytania.`);
++    if (String(q.question).length > 300) return void bledy.push(`${n}: pytanie dłuższe niż 300 znaków.`);
++    if (ans.length < 2 || ans.length > 5) return void bledy.push(`${n}: potrzeba 2–5 odpowiedzi.`);
++    if (new Set(ans).size !== ans.length) return void bledy.push(`${n}: odpowiedzi się powtarzają.`);
++    const country = krajPytania(q.country);
++    if (country === null) return void bledy.push(`${n}: kraj „${q.country}” – wpisz pusty albo dwie litery kodu kraju (np. PL).`);
++    const k = String(q.question).trim().toLowerCase();
++    if (seen.has(k)) return void bledy.push(`${n}: to samo pytanie drugi raz.`);
++    seen.add(k);
++    const category = String(q.category ?? '').slice(0, 40);
++    // Lubelszczyzna is always Poland.
++    ok.push({ level: q.level!, category, country: country || (category === 'Lubelszczyzna' ? 'PL' : ''), question: String(q.question).trim(), answers: ans });
++  });
++  return { ok, bledy };
++}
+diff --git a/src/kraj.ts b/src/kraj.ts
+new file mode 100644
+index 0000000..9599fe8
+--- /dev/null
++++ b/src/kraj.ts
+@@ -0,0 +1,53 @@
++// In which country a place stands (two-letter ISO code), so school quizzes about one
++// country's history or geography are asked only there (quizzes.country, admin tab 🧠 Quizy).
++// Lublin and the town maps are always Poland; on world maps Poland is told by a rough
++// outline, other countries by boxes (smaller ones first, so neighbours win over big ones).
++
++/** Poland's outline (lon, lat), rough: a few km off at the border at most. */
++const POLSKA: [number, number][] = [
++  [14.2, 53.92], [15.0, 54.15], [16.0, 54.26], [16.9, 54.6], [17.9, 54.83], [18.4, 54.8], [18.85, 54.75], [19.6, 54.45],
++  [22.8, 54.36], [23.5, 54.0], [23.9, 53.15], [23.6, 52.6], [23.2, 52.3], [23.6, 52.1], [23.5, 51.6], [23.7, 51.5],
++  [24.1, 50.85], [24.0, 50.4], [23.5, 50.2], [22.6, 49.5], [22.9, 49.0], [22.55, 49.08], [21.6, 49.42], [20.9, 49.35],
++  [20.0, 49.2], [19.4, 49.6], [18.85, 49.5], [18.6, 49.9], [17.9, 50.0], [17.6, 50.3], [16.9, 50.45], [16.6, 50.15],
++  [16.2, 50.65], [15.0, 51.0], [14.8, 50.85], [14.95, 51.45], [14.6, 51.8], [14.75, 52.1], [14.55, 52.6], [14.1, 52.85],
++  [14.4, 53.25],
++];
++
++/** Other countries: [code, south, north, west, east]. Checked in this order. */
++const KRAJE: [string, number, number, number, number][] = [
++  ['SI', 45.4, 46.9, 13.4, 16.6], ['LU', 49.4, 50.2, 5.7, 6.5], ['BE', 49.5, 51.5, 2.5, 6.4], ['NL', 50.75, 53.6, 3.3, 7.2],
++  ['RU', 54.3, 55.3, 19.6, 22.9], ['CH', 45.8, 47.8, 5.95, 10.5], ['SK', 47.7, 49.6, 16.95, 22.6], ['AT', 46.4, 49.0, 9.5, 17.2], ['CZ', 48.55, 51.06, 12.1, 18.9],
++  ['HU', 45.7, 48.6, 16.1, 22.9], ['LT', 53.9, 56.45, 21.0, 26.8], ['LV', 55.7, 58.1, 21.0, 28.2], ['EE', 57.5, 59.7, 21.8, 28.2],
++  ['DK', 54.5, 57.8, 8.0, 12.7], ['IE', 51.4, 55.4, -10.5, -6.0], ['PT', 36.9, 42.2, -9.5, -6.2], ['HR', 42.4, 46.55, 13.5, 19.4],
++  ['BY', 51.25, 56.2, 23.2, 32.8], ['MD', 45.5, 48.5, 26.6, 30.1], ['DE', 47.3, 55.1, 5.9, 15.0], ['GB', 49.9, 60.9, -8.2, 1.8],
++  ['IT', 36.6, 47.1, 6.6, 18.5], ['FR', 42.3, 51.1, -4.8, 8.2], ['ES', 36.0, 43.8, -9.3, 3.3], ['RS', 42.2, 46.2, 18.8, 23.0],
++  ['BG', 41.2, 44.2, 22.4, 28.6], ['RO', 43.6, 48.3, 20.2, 29.7], ['GR', 34.8, 41.8, 19.4, 28.3], ['UA', 44.4, 52.4, 22.1, 40.2],
++  ['NO', 57.9, 71.2, 4.6, 31.1], ['SE', 55.3, 69.1, 11.1, 24.2], ['FI', 59.8, 70.1, 20.5, 31.6], ['TR', 35.8, 42.1, 26.0, 44.8],
++  ['IL', 29.5, 33.3, 34.3, 35.9], ['EG', 22.0, 31.7, 24.7, 36.9], ['JP', 24.0, 45.6, 122.9, 146.0], ['KR', 33.1, 38.6, 124.6, 130.9],
++  ['CN', 18.2, 53.6, 73.5, 134.8], ['IN', 6.7, 35.5, 68.1, 97.4], ['RU', 41.2, 81.9, 27.3, 180], ['MX', 14.5, 32.7, -118.4, -86.7],
++  ['US', 24.5, 49.4, -125.0, -66.9], ['CA', 41.7, 83.1, -141.0, -52.6], ['BR', -33.8, 5.3, -74.0, -34.8], ['AR', -55.1, -21.8, -73.6, -53.6],
++  ['AU', -43.7, -10.6, 113.2, 153.7],
++];
++
++function inside(lon: number, lat: number, ring: [number, number][]) {
++  let c = false;
++  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
++    const [xi, yi] = ring[i];
++    const [xj, yj] = ring[j];
++    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) c = !c;
++  }
++  return c;
++}
++
++/** The country code at a point, or null when unknown (then only general questions are asked). */
++export function krajWPunkcie(lat: number, lon: number): string | null {
++  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
++  if (inside(lon, lat, POLSKA)) return 'PL';
++  for (const [k, s, n, w, e] of KRAJE) if (lat >= s && lat <= n && lon >= w && lon <= e) return k;
++  return null;
++}
++
++/** The country of a map: Lublin and the station towns are Poland, a world map ('w:…') by its point. */
++export function krajMapy(mapId: string, lat: number, lon: number) {
++  return mapId.startsWith('w:') ? krajWPunkcie(lat, lon) : 'PL';
++}
+diff --git a/src/quizzes.ts b/src/quizzes.ts
+index 52e7a78..5fcc51c 100644
+--- a/src/quizzes.ts
++++ b/src/quizzes.ts
+@@ -1,4 +1,5 @@
+ import { rng } from './rng';
++import { rpc } from './api';
+ import { QUIZY, SZKOLA_QUIZ, type PytanieQuizu } from './content/quizy';
+ import { rachunek, levelForAge } from './scenes/Npcs';
+ 
+@@ -6,16 +7,22 @@ import { rachunek, levelForAge } from './scenes/Npcs';
+ // loaded at login), the built-in ones from content/quizy.ts and number puzzles
+ // the game makes up itself, so they never run out.
+ 
+-type ServerQuiz = [number, number, string, string, string[]];
+-const fromServer: PytanieQuizu[][] = [[], [], [], []];
++// The 6th field is the country the question is only for (null = everywhere).
++type ServerQuiz = [number, number, string, string, string[], (string | null)?];
++const fromServer: (PytanieQuizu & { kraj?: string | null })[][] = [[], [], [], []];
+ 
+ export function setServerQuizzes(list: ServerQuiz[]) {
+   for (const l of fromServer) l.length = 0;
+-  for (const [, level, kategoria, pytanie, odpowiedzi] of list) {
+-    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ kategoria, pytanie, odpowiedzi });
++  for (const [id, level, kategoria, pytanie, odpowiedzi, kraj] of list) {
++    if (level >= 0 && level <= 3 && pytanie && odpowiedzi?.length >= 2) fromServer[level].push({ id, kategoria, pytanie, odpowiedzi, kraj: kraj ?? null });
+   }
+ }
+ 
++/** Server questions of a level that may be asked in this country (general ones plus that country's). */
++function serverFor(level: number, kraj: string | null) {
++  return fromServer[level].filter((q) => !q.kraj || q.kraj === kraj);
++}
++
+ export function serverQuizCount() {
+   return fromServer.reduce((n, l) => n + l.length, 0);
+ }
+@@ -94,16 +101,20 @@ function puzzle(level: number, r: () => number): PytanieQuizu {
+ 
+ /**
+  * The n-th question of the day in one school, for a player of this age
+- * (always the same for that school, day and number).
++ * (always the same for that school, day and number). `kraj` = the school's
++ * country (kraj.ts): questions about one country are asked only there.
+  */
+-export function schoolQuiz(schoolId: string, day: string, nth: number, age: number): PytanieQuizu {
++export function schoolQuiz(schoolId: string, day: string, nth: number, age: number, kraj: string | null): PytanieQuizu {
+   // Later questions of the day get harder (content/quizy.ts trudniejOd).
+   const harder = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+   const level = Math.min(3, levelForAge(age) + harder);
+   const r = rng(hash(`quiz:${schoolId}:${day}:${nth}:${level}`));
+-  if (r() < SZKOLA_QUIZ.szansaNaRachunek) return puzzle(level, r);
++  // Few server questions (no fresh batch for days): more of the never-ending number puzzles.
++  const server = serverFor(level, kraj);
++  const mathChance = server.length < SZKOLA_QUIZ.malo ? SZKOLA_QUIZ.rachunekGdyMalo : SZKOLA_QUIZ.szansaNaRachunek;
++  if (r() < mathChance) return puzzle(level, r);
+   // Server questions first (new every day), then the built-in ones.
+-  const pool = fromServer[level].length >= 10 && r() < 0.85 ? fromServer[level] : [...fromServer[level], ...QUIZY[level]];
++  const pool = server.length >= 10 && r() < 0.85 ? server : [...server, ...QUIZY[level]];
+   if (!pool.length) return puzzle(level, r);
+   // The same school walks through a shuffled list, so questions don't repeat within a day.
+   const pr = rng(hash(`quizorder:${schoolId}:${day}:${level}:${pool.length}`));
+@@ -114,3 +125,8 @@ export function schoolQuiz(schoolId: string, day: string, nth: number, age: numb
+   }
+   return pool[order[nth % order.length]];
+ }
++
++/** Tells the server a server question got an answer, so it isn't reused first when fresh ones run out. */
++export function quizAnswered(q: PytanieQuizu) {
++  if (q.id) rpc('quiz_answered', { p_id: q.id }).catch(() => {});
++}
+diff --git a/src/scenes/GameScene.ts b/src/scenes/GameScene.ts
+index ebaf00e..57c6ced 100644
+--- a/src/scenes/GameScene.ts
++++ b/src/scenes/GameScene.ts
+@@ -35,7 +35,8 @@ import { BANK, LOKATY } from '../content/banki';
+ import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
+ import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
+ import { SZKOLA_QUIZ } from '../content/quizy';
+-import { schoolQuiz } from '../quizzes';
++import { schoolQuiz, quizAnswered } from '../quizzes';
++import { krajMapy } from '../kraj';
+ import { tr, tx } from '../i18n';
+ import { rng } from '../rng';
+ import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
+@@ -2656,12 +2657,14 @@ export class GameScene extends Phaser.Scene {
+       buttons: ['🧠 Quiz', 'Wyjdź'],
+       onChoose: (i) => {
+         if (i !== 0) return;
+-        const z = schoolQuiz(p.id, d.d, d.a, session.age);
++        const ll = this.city.toLatLon(p.door.x, p.door.y);
++        const z = schoolQuiz(p.id, d.d, d.a, session.age, krajMapy(session.mapId, ll.lat, ll.lon));
+         const nth = d.a;
+         const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+         const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
+         this.askRiddle(title, `📝 ${z.kategoria}${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
+           d.a++;
++          quizAnswered(z);
+           // After a lesson (naLekcje questions) a break: back in przerwaMin minutes, rounded up to :x0/:x5.
+           if (d.a % SZKOLA_QUIZ.naLekcje === 0) {
+             const t = new Date();
+diff --git a/src/version.ts b/src/version.ts
+index c742a26..5f058c1 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -4,7 +4,7 @@
+ // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
+ // code with VITE_TEST=1 and says so on screen.
+ 
+-export const WERSJA = '1.008';
++export const WERSJA = '1.009';
+ 
+ /** Built for the test server? */
+ export const TEST = import.meta.env.VITE_TEST === '1';
