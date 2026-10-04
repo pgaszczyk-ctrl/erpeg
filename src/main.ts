@@ -7,6 +7,7 @@ import { installTouchControls } from './controls';
 import { installErrorLog, watchGraphics, report } from './errlog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
+import { api } from './api';
 import { watchUpdates } from './update';
 import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
@@ -62,7 +63,16 @@ installLeaveGuard(game);
 // A new version went live: a bar offers to save and reload (every 30 min).
 watchUpdates(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).
-watchGraphics(game.canvas, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
+watchGraphics(
+  game.canvas,
+  () => (session.name && session.idik ? codeLink(session.name, session.idik) : null),
+  async () => {
+    if (!session.token) return;
+    const s = game.scene.getScene('game') as Phaser.Scene & { saveForReload?: () => Promise<void> };
+    await s.saveForReload?.();
+    await api.logout(session.token);
+  },
+);
 // Graphics errors (e.g. out of GPU memory: new pictures stay invisible) go to the error log.
 setInterval(() => {
   const gl = (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl;

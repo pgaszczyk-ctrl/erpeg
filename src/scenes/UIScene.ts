@@ -190,7 +190,7 @@ export class UIScene extends Phaser.Scene {
     const onToast = (t: string, ms?: number) => this.toast(t, ms);
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
-    const onPractice = (p: { skill: string; into: number; need: number; max: boolean }) => this.showPractice(p);
+    const onPractice = (p: { skill: string; into: number; need: number; max: boolean; gain?: number }) => this.showPractice(p);
     this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
@@ -264,7 +264,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
-  private showPractice(p: { skill: string; into: number; need: number; max: boolean }) {
+  private showPractice(p: { skill: string; into: number; need: number; max: boolean; gain?: number }) {
     this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
     const full = 70 * this.ui;
     this.skillFill.setSize(Math.max(2 * this.ui, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
@@ -272,6 +272,16 @@ export class UIScene extends Phaser.Scene {
     this.skillBar.setAlpha(1);
     this.skillHide?.remove();
     this.skillHide = this.time.delayedCall(2500, () => this.tweens.add({ targets: this.skillBar, alpha: 0, duration: 500 }));
+    // At higher levels one hit moves the bar by a fraction of a pixel (bug report 23: "the bar stands still"):
+    // a small "+1" rises from the bar's end so every bit of practice shows.
+    if (p.max || !p.gain) return;
+    const b = this.skillBar;
+    const t = this.add
+      .text(b.x + 35 * this.ui + 4, b.y, `+${p.gain}`, { fontFamily: 'monospace', fontSize: `${8 * this.ui}px`, color: '#f7c531', stroke: '#1e1a24', strokeThickness: 3 })
+      .setOrigin(0, 0.5)
+      .setDepth(6)
+      .setResolution(OSTROSC);
+    this.tweens.add({ targets: t, y: t.y - 10 * this.ui, alpha: 0, duration: 900, onComplete: () => t.destroy() });
   }
 
   private layout() {
@@ -472,13 +482,16 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0, 0).setVisible(false).setDepth(7);
   }
 
-  /** Blinks the joystick at the start and after a while without moving. */
+  private joyLearned = false;
+  /** Blinks the joystick at the start and after a while without moving – until the player has used it once. */
   private joyHint() {
     const now = this.time.now;
     // A thumb held still on the joystick (or a key held down) is walking too: no touchmove comes, but it isn't idle.
     const k = keyboardDir();
     if (touchInput.joyActive || touchInput.x || touchInput.y || k.x || k.y) activity.last = performance.now();
-    if (now < this.hintAt) return;
+    // Once the player has walked with it, it never blinks again (bug report 24: it kept blinking in the corner while fighting).
+    if (touchInput.joyActive) this.joyLearned = true;
+    if (this.joyLearned || now < this.hintAt) return;
     const idle = performance.now() - activity.last;
     if (this.hintAt !== 0 && idle < 9000) return;
     this.hintAt = now + 9000;

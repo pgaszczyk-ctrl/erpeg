@@ -53,6 +53,29 @@ export const MIESZKANCY = {
       starszy: ['Pan Zenek', 'Pan Staszek', 'Pan Henio', 'Dziadek Józek', 'Pan Władek', 'Pan Kazio'],
     },
   } as Record<'k' | 'm', Record<'dziecko' | 'dorosly' | 'starszy', string[]>>,
+  /**
+   * W mieście, w którym bohater jeszcze nie był (zgłoszenie 18): pierwszy i trzeci zagadnięty mieszkaniec
+   * mówi, gdzie jesteśmy. {miasto} = nazwa miejscowości. Miasto uznajemy za znane przez 60 dni.
+   */
+  nowyWMiescie: [
+    'No tak, to {miasto}. A ty z daleka?',
+    'To jest {miasto} – rzadko kto tu zagląda z mieczem.',
+    'Pierwszy raz tutaj? To {miasto}, od razu widać po minie.',
+    'To {miasto}, wędrowcze. Skąd przybywasz?',
+    'Ho, ho, obcy! Tu, w naszym mieście, wszyscy się znają. To {miasto}, gdybyś nie wiedział.',
+    'Zgubiłeś się? Spokojnie, to tylko {miasto}.',
+    'Dzień dobry! Miasto {miasto} gości zawsze mile widzi.',
+    'Ty nie stąd, co? To jest {miasto}, kochanieńki.',
+    '{miasto} wita! Tylko uważaj na chochliki za miastem.',
+    'A ty to skąd? Bo tu {miasto}, gdyby co.',
+    'No proszę, nowa twarz! Witaj – to {miasto}.',
+    'Szukasz czegoś? To {miasto}, tu wszystko jest blisko.',
+    'Witamy! To {miasto}. Pierwsza wizyta, prawda?',
+    'To {miasto}. Daleko cię nogi poniosły, podróżniku.',
+    'Ech, turysta… No tak, to {miasto}, nic tu się nie dzieje. Prawie.',
+    'Ooo, przybysz! Rozgość się – to {miasto}.',
+  ],
+
   powitania: ['Dzień dobry!', 'Dzień dobry, piękna dziś pogoda.', 'Witam, witam!', 'Dzień dobry! Uważaj na chochliki.', 'O, dzień dobry! Spieszę się do sklepu.', 'Dzień dobry. Widziałeś może mojego kota?'],
   wyzwanie: ['Hej, ty z mieczem! Zmierzysz się ze mną?', 'Wyglądasz na silnego… Sprawdzimy? Pojedynek!', 'Stawaj! Nikt w tej dzielnicy mnie jeszcze nie pokonał!'],
   przyjmuje: ['Pojedynek? Z przyjemnością!', 'Ha! Myślisz, że dasz mi radę? Dawaj!', 'No dobrze, ale nie płacz potem!'],

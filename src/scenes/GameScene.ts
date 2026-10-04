@@ -1481,8 +1481,9 @@ export class GameScene extends Phaser.Scene {
   private replayAbandoned() {
     const a = session.abandoned;
     session.abandoned = null;
-    // Left on another map than the one we start on: nothing to replay.
-    if (!a || !a.enemies?.length || (a.m ?? 'lublin') !== this.city.id) return;
+    // Left on another map than the one we start on: nothing to replay. Test characters can't be hurt anyway
+    // (bug report 30: after an immortal "death" a reload put Arceus among the old gang's members with no gang around).
+    if (!a || !a.enemies?.length || (a.m ?? 'lublin') !== this.city.id || session.immortal) return;
     this.player.setPosition(a.x, a.y);
     this.player.hp = Math.max(1, Math.min(PLAYER.maxHp, a.hp));
     for (const e of a.enemies) {
@@ -1530,6 +1531,15 @@ export class GameScene extends Phaser.Scene {
     }
     if (session.name && session.idik) location.hash = new URL(codeLink(session.name, session.idik)).hash;
     return null;
+  }
+
+  /** The broken-graphics reload (errlog.ts watchGraphics): save and come back to this spot, whatever is going on. */
+  async saveForReload() {
+    if (this.player.isDead || demo.on) return;
+    this.leaving = true;
+    this.keepFog();
+    keepResume(session.name, this.city.id, this.player.x, this.player.y);
+    await saveNow(this.player.hp).catch(() => {});
   }
 
   /** "Wyjdź": close the session properly and go back to the start screen. */
@@ -2007,13 +2017,35 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
+  /** People spoken to per town (new towns' greeting, bug report 18). */
+  private townTalks: Record<string, number> = {};
+
+  /** The town the hero is in, by name (null when the map knows none). */
+  private townHere(): string | null {
+    const w = this.whereIs(this.player.x, this.player.y);
+    const town = w.includes(',') ? w.slice(w.lastIndexOf(',') + 1).trim() : w;
+    return town && town !== 'Daleko' ? town : null;
+  }
+
   /** A passer-by: says hello, and some want a duel. */
   private talkToFolk(f: Folk) {
     const M = MIESZKANCY;
     let h = 2166136261;
     for (const ch of f.id + today()) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const pick = (a: string[]) => a[(h >>> 0) % a.length];
-    const hello = pick(M.powitania);
+    let hello = pick(M.powitania);
+    // A town the hero hasn't been to (bug report 18): the 1st and 3rd person spoken to say where we are.
+    const town = this.townHere();
+    const key = `miasto:${town}`;
+    if (town && !(key in session.seen)) {
+      const c = (this.townTalks[town] = (this.townTalks[town] ?? 0) + 1);
+      if (c >= 3) session.seen[key] = dayNumber(today());
+      if ((c === 1 || c === 3) && !f.beaten && f.role !== 'wyzywa' && !(this.folkQuest?.folk === f)) {
+        hello = M.nowyWMiescie[(h >>> 5) % M.nowyWMiescie.length].replace('{miasto}', town);
+        this.dialog({ title: `🙂 ${f.name}`, text: hello, buttons: ['Dzień dobry!'], onChoose: () => {} });
+        return;
+      }
+    }
     // Imps stole something: an errand into the fields (one at a time).
     const q = this.folkQuest;
     if (q && q.folk === f) return this.folkQuestTalk();
@@ -2832,7 +2864,7 @@ export class GameScene extends Phaser.Scene {
   private practiced(skill: Umiejetnosc, points = 1) {
     const up = practice(skill, points);
     const pr = skillProgress(skill);
-    this.game.events.emit('practice', { skill, ...pr, max: pr.level >= MAKS_POZIOM });
+    this.game.events.emit('practice', { skill, ...pr, max: pr.level >= MAKS_POZIOM, gain: points });
     if (up) {
       this.toast(`${UMIEJETNOSCI[skill].nazwa}: poziom ${up}! Szybsze ataki.`, 2200);
       this.applySkill();

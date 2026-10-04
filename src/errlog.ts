@@ -92,7 +92,7 @@ export function installErrorLog() {
  * so it looks frozen. Report it, and if the picture doesn't come back soon
  * after the page is visible again, offer to reload straight into the game.
  */
-export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string | null) {
+export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string | null, beforeReload?: () => Promise<unknown>) {
   let lostAt = 0;
   // Back after a loss: Phaser reloads the image files, but everything the game drew itself
   // (the map chunks, texts, hearts) comes back empty – only a fresh load fixes the picture.
@@ -115,8 +115,11 @@ export function watchGraphics(canvas: HTMLCanvasElement, relogin: () => string |
     offer.className = 'm-screen';
     offer.style.zIndex = '50';
     offer.innerHTML = `<div class="m-box"><h2>${broken ? 'Obraz gry się zepsuł' : 'Obraz gry się zatrzymał'}</h2><p>Telefon zabrał grze grafikę, gdy była w tle. Dotknij, żeby wczytać grę od nowa – wrócisz tam, gdzie byłeś.</p><button class="m-btn m-primary" type="button">Wczytaj ponownie</button></div>`;
-    offer.querySelector('button')!.onclick = () => {
+    offer.querySelector('button')!.onclick = async () => {
       report('gl', 'Gracz przeładował grę po utracie grafiki');
+      // Lost graphics are not the player's fault: close the session properly, so the reload doesn't
+      // replay a game "closed without Wyjdź" (stuck among the enemies for 10 s, bug report 30).
+      await Promise.race([beforeReload?.().catch(() => {}), new Promise((ok) => setTimeout(ok, 1500))]);
       const link = relogin();
       // Keep the address (?lang, /test/), add the character's code: the page opens straight into the game.
       if (link) location.hash = new URL(link).hash;
