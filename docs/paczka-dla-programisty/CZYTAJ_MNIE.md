@@ -9,6 +9,7 @@ Dla czatu 🛠 Technika i rozwój (Claude w repozytorium `pgaszczyk-ctrl/erpeg`)
 | `PROMPT_DLA_PROGRAMISTY.md` | gotowe polecenie do wklejenia w czat programisty |
 | `GENERATOR_SWIATA.md` | **zacznij tu (punkt 0 = ostatnie decyzje):** co daje generator, pomiary obciążenia telefonu, jak wpiąć w `MapRenderer` i drzewa, zadania G1–G9 z wyceną |
 | `generator/` | **gotowy kod TypeScript** (bez Phasera i DOM-u, działa w Web Workerze): drzewa 16 gatunków z klatkami wiatru, podłoże 19 rodzajów (żywa trawa, nierówny chodnik), woda z głębią i brzegami (plaża/szuwary), runo, budynki z obrysu, rurociągi, para, tory; `demo/index.html` = galeria + pomiar czasu |
+| `GORY.md` | góry: rozmycie w dół, szersze ścieżki, chodzenie tylko szlakiem (zadanie G10), makieta w `makieta/gory/` |
 | `POMIARY.md` | czasy generowania na symulowanym telefonie (CPU 1×, 4×, 6×) |
 | `SPEC_09_zywy_swiat.md` | decyzje właściciela, stan obecny w kodzie, skala, wiatr/prześwit/ścinanie z informacją zwrotną, postacie (4a), steampunk, kolej, budżet pamięci, zadania Z0–Z10 |
 | `makieta/zywy-swiat.html` | działająca makieta: implementacja wzorcowa efektów (wiatr, prześwit, ścinanie, owoce) |

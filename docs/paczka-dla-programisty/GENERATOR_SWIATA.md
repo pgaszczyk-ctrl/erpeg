@@ -21,6 +21,7 @@
    Kod: `generator/woda.ts` (`malujWode`), `posiejRuno` w `runo.ts`, `chodnik` i trawa w `podloze.ts`. Wzór: `zrzuty/generator_laka_staw_tor.png`, `zrzuty/generator_chodnik_trawa.png`.
 
 6. **Rurociągi tylko wzdłuż dróg, bez zygzaków po trawie.** Rura biegnie **równolegle do drogi, w stałym odsunięciu** (połowa jezdni + chodnik + 6–8 px trawy, po jednej stronie), **tym samym łukiem co droga**, z zaokrąglonymi zakrętami. Na każdym końcu **wchodzi do budynku** (skręt łukiem do najbliższej ściany w zasięgu ok. 80 px mapy, rura rysowana przed budynkiem, więc ściana ją przykrywa) **albo pod ziemię** (kołnierz i żeliwna studzienka, z której czasem idzie para). Nigdy nie przecina jezdni ani budynku po drodze; gdy na trasie jest skrzyżowanie lub wjazd – rura kończy się studzienką przed nim i może wyjść drugą studzienką za nim. Długość odcinka 60–200 px mapy, 0–2 odcinki na ulicę (ziarno z id drogi OSM, więc wszędzie tak samo). Kod: `trasaPrzyDrodze()` + `rurociagWzdluz()` w `generator/steampunk.ts` (stare `rurociag()` po siatce zostaje tylko do rur na ścianach). Wzór: `zrzuty/generator_rurociag.png`.
+7. **Góry** (makieta zaakceptowana): generator na prawdziwych wysokościach, szersze ścieżki szlaku (dopasowane do ludzika), na stromym stoku rozmycie tego, co leży niżej od bohatera; bez oddalania i bez zmiany perspektywy. Po skałach, urwiskach i bardzo stromo tylko szlakiem. Szczegóły i zadanie G10: `GORY.md`.
 
 ## 1. Co jest w folderze `generator/`
 
@@ -90,4 +91,5 @@ Wnioski i zasady:
 | G6 | Rurociągi, para, przecieki | widoczne, nie za gęsto (akceptacja właściciela) | ~300 tys. |
 | G8 | Przyciąganie budynków do 8 kątów w `build-map` (+ mapy świata), z kontrolą kolizji (punkt 0.3) | budynki równo ułożone, żaden nie wchodzi na drogę; liczba „zostawionych bez obrotu” w logu build-map | ~300 tys. |
 | G9 | Kolej na stacjach: tory, perony, składy parowe na torze, konduktor; konie tylko przy dworcach autobusowych (SPEC 7) | lokomotywa stoi na torze przy peronie, wagony idą za łukiem; przy dworcu autobusowym wóz | ~600 tys. |
+| G10 | Góry: generator na mapach z terenem, szersze ścieżki, filtr „rozmycie w dół”, blokady szlaku (`GORY.md`) | Zakopane wygląda jak makieta, płynnie na telefonie | ~500 tys. |
 | G7 | Usunięcie nieużywanych plików `public/swiat/` (podłoże, dachy, ściany, drzewa) po akceptacji | mniej do pobierania | ~50 tys. |
