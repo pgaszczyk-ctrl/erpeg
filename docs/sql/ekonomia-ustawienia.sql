@@ -49,7 +49,8 @@ grant execute on function public.admin_settings(text), public.admin_set_setting(
 
 -- Wskrzeszenie: pierwsze za darmo, każde kolejne za diamenty z zapisu
 -- (pokrętło wskrzeszenie_diamenty, domyślnie 10; stare kamienie mocy liczą się
--- po tyle diamentów każdy).
+-- po tyle diamentów każdy; brakujące diamenty dokupuje za monety z zapisu,
+-- pokrętło diament_monet).
 create or replace function public.resurrect(p_name text, p_idik text)
  returns jsonb
  language plpgsql
@@ -60,7 +61,10 @@ declare
   v public.players;
   v_token text := encode(gen_random_bytes(24), 'hex');
   v_cost int := coalesce((select gs.v from public.game_settings gs where gs.k = 'wskrzeszenie_diamenty')::int, 10);
+  v_price numeric := coalesce((select gs.v from public.game_settings gs where gs.k = 'diament_monet'), 1000000);
   v_have int;
+  v_coins numeric;
+  v_miss int;
   v_save jsonb;
 begin
   select * into v from public.players where idik = upper(replace(btrim(p_idik), ' ', '')) and lower(name) = lower(btrim(p_name));
@@ -72,10 +76,13 @@ begin
   v_save := coalesce(v.save, '{}'::jsonb);
   if v.resurrections >= 1 and not v.infinite_resurrect then
     v_have := greatest(0, coalesce((v_save->>'diamenty')::int, 0)) + greatest(0, coalesce((v_save->>'kamienie')::int, 0)) * v_cost;
-    if v_have < v_cost then
-      return jsonb_build_object('error', format('Wskrzeszenie kosztuje %s 💎, a postać ma %s 💎.', v_cost, v_have), 'paid', true);
+    -- Missing diamonds are bought with the character's coins (diament_monet each).
+    v_miss := greatest(0, v_cost - v_have);
+    v_coins := greatest(0, coalesce((v_save->>'coins')::numeric, 0));
+    if v_coins < v_miss * v_price then
+      return jsonb_build_object('error', format('Wskrzeszenie kosztuje %s 💎, a postać ma %s 💎 i za mało monet, żeby dokupić resztę.', v_cost, v_have), 'paid', true);
     end if;
-    v_save := jsonb_set(v_save - 'kamienie', '{diamenty}', to_jsonb(v_have - v_cost));
+    v_save := jsonb_set(jsonb_set(v_save - 'kamienie', '{diamenty}', to_jsonb(v_have + v_miss - v_cost)), '{coins}', to_jsonb(v_coins - v_miss * v_price));
   end if;
   update public.deaths set resurrected_at = now()
    where id = (select id from public.deaths where player_id = v.id order by died_at desc limit 1);

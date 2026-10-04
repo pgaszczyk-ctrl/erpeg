@@ -1439,19 +1439,50 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       return;
     }
-    // Enough diamonds: their power may save the hero (Escape picks the last button: yes).
+    this.player.anims.stop();
+    this.offerRescue();
+  }
+
+  /**
+   * "Porażka": the diamonds' power may save the hero. Without enough of them
+   * the missing ones can be bought here (coins, or real money – soon).
+   * Escape picks the last button, which never means death.
+   */
+  private offerRescue() {
     const cost = WSKRZESZENIE.diamentow;
-    if (session.diamenty >= cost) {
-      this.player.anims.stop();
-      this.dialog({
-        title: '💀 Porażka',
-        text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\nKosztuje ${cost} 💎 – masz ${session.diamenty} 💎. Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.`,
-        buttons: ['Nie, to koniec', `💎 Tak, ocal mnie (${cost} 💎)`],
-        onChoose: (i) => (i === 1 ? this.reviveWithDiamonds() : this.dieForGood()),
+    const d = DIAMENT;
+    const fmt = (n: number) => n.toLocaleString('pl-PL');
+    const miss = Math.max(0, cost - session.diamenty);
+    const coins = miss * d.monet;
+    const buttons = ['Nie, to koniec'];
+    const actions: (() => void)[] = [() => this.dieForGood()];
+    if (miss > 0 && session.coins >= coins) {
+      buttons.push(`💰 Kup ${miss} 💎 za ${fmt(coins)} monet`);
+      actions.push(() => {
+        spend(coins);
+        session.diamenty += miss;
+        this.emitHud();
+        this.offerRescue();
       });
-      return;
     }
-    this.dieForGood();
+    if (miss > 0) {
+      buttons.push(`💳 Kup ${miss} 💎 za ${fmt(miss * d.euro)} €`);
+      actions.push(() =>
+        this.dialog({ title: '💎 Diamenty', text: `Płatności prawdziwymi pieniędzmi pojawią się wkrótce.`, buttons: ['Wróć'], onChoose: () => this.offerRescue() }));
+    } else {
+      buttons.push(`💎 Tak, ocal mnie (${cost} 💎)`);
+      actions.push(() => this.reviveWithDiamonds());
+    }
+    const have = `Kosztuje ${cost} 💎 – masz ${session.diamenty} 💎.`;
+    const buy = miss === 0 ? '' : session.coins >= coins
+      ? `\n\nBrakuje ci ${miss} 💎 – możesz je teraz dokupić (${fmt(d.monet)} monet za diament, masz ${fmt(session.coins)}).`
+      : `\n\nBrakuje ci ${miss} 💎 (diament kosztuje ${fmt(d.monet)} monet albo ${d.euro} €; masz ${fmt(session.coins)} monet).`;
+    this.dialog({
+      title: '💀 Porażka',
+      text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\n${have} Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.${buy}`,
+      buttons,
+      onChoose: (i) => actions[i]?.(),
+    });
   }
 
   /** Death is final: the character goes to the memorial board. */
@@ -3736,7 +3767,7 @@ export class GameScene extends Phaser.Scene {
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
       // Not while the diamonds may still save the hero (the question waits on top).
-      dead: this.player.isDead && !session.immortal && (this.rescueDeclined || session.diamenty < WSKRZESZENIE.diamentow),
+      dead: this.player.isDead && !session.immortal && (this.rescueDeclined || !!this.demoRun),
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
       pogoda: weatherLabel(isNight()),
