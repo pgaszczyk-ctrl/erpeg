@@ -12,7 +12,7 @@ import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw
 import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
-import { idRosliny } from '../gen';
+import { idRosliny, type WielkoscMiasta } from '../gen';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
 import type { Peron09 } from './dworzec09';
@@ -243,7 +243,7 @@ function pointIn(r: number[], x: number, y: number) {
   return inside;
 }
 
-function night() {
+export function night() {
   const h = new Date().getHours();
   const n = MIESZKANCY.noc;
   return n.od > n.do ? h >= n.od || h < n.do : h >= n.od && h < n.do;
@@ -391,6 +391,13 @@ export class MapRenderer {
   /** Chunks drawn before a map tile arrived: redrawn in place (kept visible meanwhile). */
   private stale = new Set<string>();
 
+  /** City size for the buildings' steampunk (GENERATOR_SWIATA 0.10): Lublin is big; a station town by how many places it has; world maps medium. */
+  private get miasto(): WielkoscMiasta {
+    if (this.map.id === 'lublin') return 'duze';
+    if (this.map.id.startsWith('w:')) return 'srednie';
+    return this.map.places.length > 150 ? 'srednie' : 'wies';
+  }
+
   constructor(private scene: Phaser.Scene, private map: CityMap) {
     this.korony = new Korony(scene);
     const off = map.onTile((b) => {
@@ -521,7 +528,7 @@ export class MapRenderer {
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
-        c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py))];
+        c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py)), ...ready.wyrzuty.map((z) => this.korony.wyrzut(z))];
         c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot, k: q.k }));
         c.ripe = this.onRipe ? c.zbior.filter((q) => !STAN.zebrane.has(q.id)).map((q) => this.onRipe!(q)).filter((im): im is Phaser.GameObjects.Image => !!im) : undefined;
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
@@ -676,7 +683,7 @@ export class MapRenderer {
     const pola: Pole09[] = wide.areas
       .filter((a) => a.kind === 'farmland' || a.kind === 'allotments')
       .map((a) => ({ r: a.rings[0].map((v) => v * G2), seed: a.id, dz: a.kind === 'allotments' }));
-    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale };
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

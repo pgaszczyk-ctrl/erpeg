@@ -3,7 +3,7 @@ import { tor, kolorPodloza } from '../gen';
 import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
+import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -47,6 +47,8 @@ export interface Zlecenie {
   zebrane: string[];
   /** Udział roślin dojrzałych do zebrania (pokrętło admina pola_dojrzale). */
   dojrzale: number;
+  /** Wielkość miejscowości (Lublin = duże): ile steampunku na budynkach (GENERATOR_SWIATA 0.10). */
+  miasto: WielkoscMiasta;
 }
 
 /** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
@@ -101,7 +103,7 @@ function zapamietaj(klucz: string, b: ReturnType<typeof budynek>) {
 }
 
 /** Budynki i pnie drzew: cienie na ziemi, potem wszystko od północy na południe (dach kopertowy z kalenicami, ściany, okna; pień). */
-function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean, sciete: Set<string>) {
+function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean, sciete: Set<string>, miasto: WielkoscMiasta, wyrzuty: ZrodloPary[]) {
   const cien = new Uint8Array(o.w * o.h);
   for (const b of budynki) cienBudynku(b.r, b.h, cien, o.w, o.h, X0, Y0);
   for (const t of drzewa) if (!sciete.has(idDrzewa(t))) cienDrzewa(t, cien, o.w, o.h, X0, Y0);
@@ -118,7 +120,7 @@ function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], dr
       naloz(o, pien, rzecz.x - d.kotwica[0] - X0, rzecz.y - d.kotwica[1] - Y0);
       continue;
     }
-    malujBudynek(o, X0, Y0, rzecz, noc);
+    malujBudynek(o, X0, Y0, rzecz, noc, miasto, wyrzuty);
   }
 }
 
@@ -156,19 +158,23 @@ function naloz(o: Obraz, src: Obraz, x: number, y: number) {
   }
 }
 
-function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boolean) {
+function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boolean, miasto: WielkoscMiasta, wyrzuty: ZrodloPary[]) {
   const u = hash(b.seed, 3, 91), v = hash(b.seed, 5, 17);
   const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(DACHY, u);
   const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
-  const klucz = `${b.seed}|${b.h}|${dach}|${sciana}|${noc ? 1 : 0}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
+  const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
+  const klucz = `${b.seed}|${b.h}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    gotowy = budynek(b.r, { wysokosc: b.h, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25 });
+    gotowy = budynek(b.r, { wysokosc: b.h, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk });
     zapamietaj(klucz, gotowy);
   }
-  const { obraz, x0, y0 } = gotowy;
+  const { obraz, x0, y0, para } = gotowy;
   naloz(o, obraz, x0 - X0, y0 - Y0);
+  // Para z tego budynku: tylko wyloty w tym kawałku (budynek na kilku kawałkach nie da jej dwa razy).
+  for (const z of para) if (z.okres && z.x >= X0 && z.y >= Y0 && z.x < X0 + o.w && z.y < Y0 + o.h) wyrzuty.push(z);
 }
 
 const KRAWEDZ_PERONU = [hex('#e6dfcd'), hex('#d4ccb8')], LINIA_PERONU = hex('#e2b53c');
@@ -201,7 +207,7 @@ function malujPerony(o: Obraz, ids: Uint8Array, S: number, X0: number, Y0: numbe
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
  */
-export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[] } {
+export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[] } {
   const { ids, S, X0, Y0, N } = z;
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
@@ -244,7 +250,8 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) =>
     !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
-  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete);
+  const wyrzuty: ZrodloPary[] = [];
+  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete, z.miasto ?? 'srednie', wyrzuty);
   const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));
   // Zmarszczki na wodzie (gra je animuje): kratka 14 px, z dala od brzegu, co trzecia–czwarta.
   const fale: [number, number][] = [];
@@ -254,5 +261,5 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     if (hash(x, y, 903) > 0.32 || fx >= X0 + N || fy >= Y0 + N) continue;
     if ([[0, 0], [7, 0], [-7, 0], [0, 6], [0, -6]].every(([dx, dy]) => rodzajW(fx + dx, fy + dy) === 'woda')) fale.push([fx, fy]);
   }
-  return { px: obraz.px, drzewa: swoje, para, fale, zbior };
+  return { px: obraz.px, drzewa: swoje, para, fale, zbior, wyrzuty };
 }

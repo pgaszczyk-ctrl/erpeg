@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { klatkiWiatru, GATUNKI, para, type Obraz } from '../gen';
+import { klatkiWiatru, GATUNKI, para, klatkaPary, type Obraz, type ZrodloPary } from '../gen';
 import { drzewoZ, idDrzewa, OWOCOWE, STAN, type Drzewo09 } from './drzewa09';
 import { hash } from '../gen';
 import { GEN_DOTS } from './ziemia09';
@@ -117,7 +117,35 @@ export class Korony {
     return im;
   }
 
+  /** Krótkie wyrzuty pary z budynku (GENERATOR_SWIATA 0.11): obłoczek tylko w chwili wyrzutu (`klatkaPary`), inaczej ukryty. */
+  private wyrzuty = new Set<Phaser.GameObjects.Image>();
+  wyrzut(z: ZrodloPary) {
+    const im = this.steam(z.x, z.y);
+    this.obloczki.delete(im);
+    im.setData('z', z).setScale(z.rozmiar / 24 / GEN_DOTS).setDepth(z.y / GEN_DOTS + 40).setVisible(false);
+    this.wyrzuty.add(im);
+    return im;
+  }
+
+  private updateWyrzuty(T: number, cam: Phaser.Geom.Rectangle) {
+    const wiatr = Math.max(-1, Math.min(1, (weather.wind - 2) / 8));
+    for (const im of this.wyrzuty) {
+      const x0 = im.getData('x0') as number, y0 = im.getData('y0') as number;
+      if (x0 < cam.x - 30 || x0 > cam.right + 30 || y0 < cam.y - 30 || y0 > cam.bottom + 40) {
+        im.setVisible(false);
+        continue;
+      }
+      const k = klatkaPary(im.getData('z') as ZrodloPary, T);
+      if (k < 0) {
+        im.setVisible(false);
+        continue;
+      }
+      im.setVisible(true).setFrame(`p${k}`).setPosition(Math.round((x0 + wiatr * k) * 2) / 2, Math.round((y0 - k * 1.2) * 2) / 2).setAlpha(k < 5 ? 1 : 0.6);
+    }
+  }
+
   dropSteam(im: Phaser.GameObjects.Image) {
+    this.wyrzuty.delete(im);
     this.obloczki.delete(im);
     this.fale.delete(im);
     im.destroy();
@@ -259,6 +287,7 @@ export class Korony {
   update(now: number, dt: number, cam: Phaser.Geom.Rectangle, hx: number, hy: number) {
     const T = now / 1000;
     if (this.obloczki.size) this.updateSteam(T, cam);
+    if (this.wyrzuty.size) this.updateWyrzuty(T, cam);
     if (this.fale.size) this.updateFale(T, cam);
     const S = Math.max(0.1, Math.min(2.2, weather.wind / 7));
     // Środek postaci w px generatora.

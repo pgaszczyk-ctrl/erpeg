@@ -27,6 +27,8 @@ export const weather = {
   snowLevel: 0 as 0 | 1 | 2,
   /** Wind (m/s) from the forecast; moves the tree crowns (overhaul 09). `?wiatr=<m/s>` forces it. */
   wind: 3,
+  /** Cloud cover 0–1 from the forecast hour (`k` %), for the moving cloud shadows. */
+  cloud: 0.3,
   /** true once real data arrived (else the defaults above). */
   real: false,
   /** Forced by ?pogoda= (tests, showing it off). */
@@ -75,6 +77,7 @@ export function tickWeather(now = Date.now()): boolean {
     weather.rain = h.p;
     weather.snowCm = h.n ?? 0;
     weather.wind = h.w ?? 3;
+    weather.cloud = Math.max(0, Math.min(1, (h.k ?? 30) / 100));
     weather.real = true;
   }
   const S = POGODA.snieg;
@@ -82,6 +85,7 @@ export function tickWeather(now = Date.now()): boolean {
   if (forcedWind !== null) weather.wind = forcedWind;
   if (weather.forced) {
     weather.kind = weather.forced;
+    weather.cloud = weather.forced === 'czysto' ? 0.15 : weather.forced === 'pochmurno' ? 0.75 : 0.9;
     if (weather.forced === 'snieg') weather.temp = Math.min(weather.temp ?? -2, -1);
   }
   return weather.kind !== before;

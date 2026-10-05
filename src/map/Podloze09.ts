@@ -2,7 +2,7 @@ import type { Rodzaj } from '../gen';
 import { TEST } from '../version';
 import type { Area, Line } from './CityMap';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, type Zlecenie, type Rodzaj09 } from './ziemia09';
-import type { Sprite, DoZebrania } from '../gen';
+import type { Sprite, DoZebrania, ZrodloPary } from '../gen';
 import type { Drzewo09 } from './drzewa09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
@@ -102,7 +102,7 @@ export function mapaRodzajow(
   y0: number,
   rozmiar: number,
   perony: number[][] = [],
-): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony' | 'pola' | 'miesiac' | 'zebrane' | 'dojrzale'> {
+): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony' | 'pola' | 'miesiac' | 'zebrane' | 'dojrzale' | 'miasto'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -198,7 +198,7 @@ function naPlotno(px: Uint32Array, N: number) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[] }
 
 /** Warzywa z rysunkami od grafika (zamówienie 12, public/uprawy/uprawa_<warzywo>_<faza>.png). */
 export const WARZYWA_RYSUNKI = ['marchewka', 'dynia', 'kapusta', 'brokul', 'salata', 'ziemniak', 'burak'];
@@ -238,7 +238,7 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; cien?: Uint32Array; S?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number }>) => {
           if (e.data.cien) {
             const ok = this.pojazdy.get(e.data.nr);
             this.pojazdy.delete(e.data.nr);
@@ -249,7 +249,7 @@ class ZiemiaWTle {
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior, wyrzuty: e.data.wyrzuty });
         };
         this.workery.push(w);
       }
@@ -279,8 +279,8 @@ class ZiemiaWTle {
 
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
-      const { px, drzewa, para, fale, zbior } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior });
+      const { px, drzewa, para, fale, zbior, wyrzuty } = ziemia(z);
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior, wyrzuty });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];
