@@ -5,7 +5,7 @@ import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
-import { ITEM_PICTURES } from '../ui/itemIcon';
+import { ITEM_PICTURES, ITEM_VARIANTS } from '../ui/itemIcon';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
@@ -20,7 +20,7 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     // Item pictures (16×16 pixel art) for shop dialogs.
-    for (const id of ITEM_PICTURES) this.load.image(`item-${id}`, `items/${id}.png`);
+    for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, `items/${id}.png`);
     loadHdSprites(this);
     // The artist's ground and roof textures (content/swiat.ts).
     for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);

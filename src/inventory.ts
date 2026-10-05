@@ -313,7 +313,10 @@ export function rangedWeapon(): Przedmiot | null {
 }
 
 export function defense() {
-  return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), 0);
+  // A shield in the second hand (no `rodzaj`: not a magic item) counts like armour.
+  const off = item(gear.equip.dystans);
+  const shield = off && !off.rodzaj ? off.moc : 0;
+  return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield);
 }
 
 /** Chance that a hit does no harm, from armour. */
@@ -502,7 +505,7 @@ export function imbueOf(id: string | null | undefined) {
 /** Can things of this kind be imbued (weapons in hand or the second hand)? */
 export function canImbue(id: string | null | undefined) {
   const p = item(id);
-  return !!p && (p.miejsce === 'bron' || p.miejsce === 'dystans');
+  return !!p && (p.miejsce === 'bron' || (p.miejsce === 'dystans' && p.rodzaj === 'magia'));
 }
 
 /** Can this item be worn in that place? */

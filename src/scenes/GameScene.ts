@@ -3293,7 +3293,7 @@ export class GameScene extends Phaser.Scene {
   private offers(where: 'sklep' | 'biblioteka') {
     const out: Przedmiot[] = [];
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
-      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['zbroja'], ['helm'], ['buty']];
+      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
       const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany);
       if (miejsce === 'helm') {

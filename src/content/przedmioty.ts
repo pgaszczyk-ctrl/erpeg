@@ -60,6 +60,9 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
   // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
+  // Tarcze (paczka ikony12 B2): w drugiej ręce, dodają obronę jak zbroja. Liczby tymczasowe.
+  { id: 'tarcza_drewniana', nazwa: 'Tarcza drewniana', miejsce: 'dystans', moc: 1, cena: 700, opis: 'Okrągła, z desek. W drugiej ręce: +1 do obrony.' },
+  { id: 'tarcza_okuta', nazwa: 'Tarcza okuta', miejsce: 'dystans', moc: 3, cena: 4500, opis: 'Z żelaznym obrzeżem i mosiężnym umbem. W drugiej ręce: +3 do obrony.' },
   { id: 'skorzana_zbroja', nazwa: 'Skórzana zbroja', miejsce: 'zbroja', moc: 2, cena: 1600 },
   { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
   { id: 'skorzany_helm', nazwa: 'Skórzany hełm', miejsce: 'helm', moc: 1, cena: 800 },
