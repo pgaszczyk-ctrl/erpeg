@@ -7,3 +7,4 @@ export * from './woda';
 export * from './budynki';
 export * from './steampunk';
 export * from './pojazdy';
+export * from './pola';

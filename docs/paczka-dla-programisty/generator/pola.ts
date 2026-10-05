@@ -1,0 +1,253 @@
+// Pola uprawne: „szachownica” wąskich pasów (jak na Lubelszczyźnie), każdy pas jedną uprawą, w rzędach wzdłuż pasa,
+// wygląd zależny od miesiąca (wzrost, kwitnienie, dojrzewanie, ściernisko, orka, ozimina), miedze z chwastami i kwiatami,
+// a w warzywach część roślin DOJRZAŁA (do zebrania, jak drzewa z zaciosem) – reszta to dekoracja.
+// Wszystko deterministyczne: ziarno z id obszaru OSM, pozycje we współrzędnych świata.
+import { Obraz, hex, hash, rng, szum, bayer, ustaw, wez, mieszaj, ciemniej, jasniej, OBRYS } from './wspolne';
+import { KATY_PIKSELOWE } from './budynki';
+
+export type Uprawa = 'marchewka' | 'brokul' | 'salata' | 'kapusta' | 'ziemniak' | 'burak' | 'dynia' | 'zboze' | 'rzepak' | 'kukurydza' | 'chmiel' | 'slonecznik';
+/** Faza w danym miesiącu: goła ziemia, młode, rosnące, kwitnie, dojrzałe (do zbioru), zebrane/ściernisko, ozimina. */
+export type Faza = 'orka' | 'mlode' | 'rosnie' | 'kwitnie' | 'dojrzale' | 'zebrane' | 'ozimina';
+
+interface Opis { rzad: number; krok: number; ziemia: boolean; zbiór: string | null; fazy: Faza[] /* 12 miesięcy, styczeń = 0 */; waga: number }
+const F = (s: string): Faza[] => s.split(' ').map((k) => ({ o: 'orka', m: 'mlode', r: 'rosnie', k: 'kwitnie', d: 'dojrzale', z: 'zebrane', w: 'ozimina' } as Record<string, Faza>)[k]);
+/** Uprawy: rozstaw rzędów i roślin w px świata, czy widać ziemię, przedmiot do zebrania (id z OWOCE w grze), fazy po miesiącach, waga losowania. */
+export const UPRAWY: Record<Uprawa, Opis> = {
+  //                                             sty ...                                  gru
+  marchewka: { rzad: 11, krok: 7, ziemia: true, zbiór: 'marchewka', fazy: F('o o o m m r r d d d o o'), waga: 1 },
+  brokul:    { rzad: 14, krok: 12, ziemia: true, zbiór: 'brokul',    fazy: F('o o o o m r d d d d o o'), waga: 0.7 },
+  salata:    { rzad: 12, krok: 10, ziemia: true, zbiór: 'salata',    fazy: F('o o o m r d d d d o o o'), waga: 0.6 },
+  kapusta:   { rzad: 15, krok: 14, ziemia: true, zbiór: 'kapusta',  fazy: F('o o o o m r r d d d o o'), waga: 0.8 },
+  ziemniak:  { rzad: 12, krok: 9, ziemia: true, zbiór: 'ziemniak',  fazy: F('o o o o m k k r d d o o'), waga: 1.4 },
+  burak:     { rzad: 12, krok: 9, ziemia: true, zbiór: 'burak',     fazy: F('o o o o m r r r d d d o'), waga: 0.8 },
+  dynia:     { rzad: 22, krok: 18, ziemia: true, zbiór: 'dynia',   fazy: F('o o o o o m r r d d o o'), waga: 0.4 },
+  zboze:     { rzad: 5, krok: 4, ziemia: false, zbiór: null,       fazy: F('w w w r r r d z z o w w'), waga: 3 },
+  rzepak:    { rzad: 6, krok: 5, ziemia: false, zbiór: null,       fazy: F('w w w r k r d z w w w w'), waga: 1.4 },
+  kukurydza: { rzad: 12, krok: 7, ziemia: true, zbiór: null,        fazy: F('o o o o m r r r d z o o'), waga: 1.2 },
+  chmiel:    { rzad: 20, krok: 9, ziemia: true, zbiór: null,       fazy: F('o o o m r r r d z o o o'), waga: 0.5 },
+  slonecznik:{ rzad: 13, krok: 10, ziemia: true, zbiór: null,        fazy: F('o o o o m r k d z o o o'), waga: 0.4 },
+};
+
+/** Uprawa pasa: z tagu OSM `crop`, jeśli jest; inaczej losowana z wag (deterministycznie z ziarna pasa). Działki (allotments) mają tylko warzywa. */
+export function uprawaPasa(seed: number, dzialka = false, cropOSM?: string): Uprawa {
+  const map: Record<string, Uprawa> = { wheat: 'zboze', barley: 'zboze', rye: 'zboze', oats: 'zboze', triticale: 'zboze', cereal: 'zboze', rape: 'rzepak', rapeseed: 'rzepak', maize: 'kukurydza', corn: 'kukurydza', potato: 'ziemniak', potatoes: 'ziemniak', sugar_beet: 'burak', hop: 'chmiel', hops: 'chmiel', sunflower: 'slonecznik', vegetables: 'marchewka', cabbage: 'kapusta', carrot: 'marchewka', pumpkin: 'dynia' };
+  if (cropOSM && map[cropOSM]) return map[cropOSM];
+  const lista = (Object.keys(UPRAWY) as Uprawa[]).filter((u) => !dzialka || UPRAWY[u].zbiór);
+  const suma = lista.reduce((a, u) => a + UPRAWY[u].waga, 0);
+  let r = hash(seed, 3, 91) * suma;
+  for (const u of lista) { r -= UPRAWY[u].waga; if (r <= 0) return u; }
+  return lista[0];
+}
+
+export interface Pas { pierscien: number[]; kat: number; seed: number }
+
+/**
+ * Dzieli obszar pola (pierścień w px świata) na wąskie pasy wzdłuż najdłuższej krawędzi, kąt przyciągnięty do 8 kątów
+ * pikselowych (równe schodki rzędów). Szerokość pasa 60–160 px (ok. 15–40 m), losowana z ziarna obszaru.
+ */
+export function pasyPola(pierscien: number[], seed: number, dzialka = false): Pas[] {
+  const n = pierscien.length / 2;
+  let best = 0, bk = 0;
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n, dx = pierscien[2 * j] - pierscien[2 * i], dy = pierscien[2 * j + 1] - pierscien[2 * i + 1], l = Math.hypot(dx, dy); if (l > best) { best = l; bk = (Math.atan2(dy, dx) * 180) / Math.PI; } }
+  const k0 = ((bk % 180) + 180) % 180;
+  const kat = KATY_PIKSELOWE.reduce((a, k) => (Math.min(Math.abs(k - k0), 180 - Math.abs(k - k0)) < Math.min(Math.abs(a - k0), 180 - Math.abs(a - k0)) ? k : a), 0);
+  const t = (kat * Math.PI) / 180, ux = Math.cos(t), uy = Math.sin(t), vx = -uy, vy = ux;
+  let v0 = 1e9, v1 = -1e9, u0 = 1e9, u1 = -1e9;
+  for (let i = 0; i < n; i++) { const x = pierscien[2 * i], y = pierscien[2 * i + 1], v = x * vx + y * vy, u = x * ux + y * uy; v0 = Math.min(v0, v); v1 = Math.max(v1, v); u0 = Math.min(u0, u); u1 = Math.max(u1, u); }
+  const R = rng(seed), out: Pas[] = [];
+  let v = v0, k = 0;
+  while (v < v1 - 4) {
+    const w = dzialka ? 40 + R() * 30 : 60 + R() * 100, va = v, vb = Math.min(v1, v + w);
+    const prost = [u0 - 2, va, u1 + 2, va, u1 + 2, vb, u0 - 2, vb];
+    const ring: number[] = [];
+    for (let i = 0; i < 8; i += 2) ring.push(prost[i] * ux + prost[i + 1] * vx, prost[i] * uy + prost[i + 1] * vy);
+    out.push({ pierscien: przytnij(ring, pierscien), kat, seed: (seed * 31 + k++) | 0 });
+    v = vb;
+  }
+  return out.filter((p) => p.pierscien.length >= 6);
+}
+
+/** Przycięcie wypukłego prostokąta pasa do obszaru (Sutherland–Hodgman po krawędziach obszaru; obszary pól są prawie zawsze wypukłe). */
+function przytnij(sub: number[], clip: number[]): number[] {
+  let out = sub;
+  const n = clip.length / 2;
+  let area = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n; area += clip[2 * i] * clip[2 * j + 1] - clip[2 * j] * clip[2 * i + 1]; }
+  const s = area > 0 ? 1 : -1;
+  for (let i = 0; i < n && out.length; i++) {
+    const j = (i + 1) % n, ax = clip[2 * i], ay = clip[2 * i + 1], bx = clip[2 * j], by = clip[2 * j + 1];
+    const inside = (x: number, y: number) => s * ((bx - ax) * (y - ay) - (by - ay) * (x - ax)) >= 0;
+    const inp = out, m = inp.length / 2; out = [];
+    for (let k = 0; k < m; k++) {
+      const px = inp[2 * k], py = inp[2 * k + 1], qx = inp[2 * ((k + 1) % m)], qy = inp[2 * ((k + 1) % m) + 1];
+      const pi = inside(px, py), qi = inside(qx, qy);
+      if (pi) out.push(px, py);
+      if (pi !== qi) { const d1 = (bx - ax) * (py - ay) - (by - ay) * (px - ax), d2 = (bx - ax) * (qy - ay) - (by - ay) * (qx - ax), t = d1 / (d1 - d2); out.push(px + (qx - px) * t, py + (qy - py) * t); }
+    }
+  }
+  return out;
+}
+
+const pip = (r: number[], x: number, y: number) => { let c = false; const n = r.length / 2; for (let i = 0, j = n - 1; i < n; j = i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[2 * j], by = r[2 * j + 1]; if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) c = !c; } return c; };
+const odKrawedzi = (r: number[], x: number, y: number) => { let m = 1e9; const n = r.length / 2; for (let i = 0; i < n; i++) { const j = (i + 1) % n, ax = r[2 * i], ay = r[2 * i + 1], dx = r[2 * j] - ax, dy = r[2 * j + 1] - ay; let t = ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); m = Math.min(m, Math.hypot(ax + t * dx - x, ay + t * dy - y)); } return m; };
+
+const P = (a: string[]) => a.map(hex);
+const K = {
+  ziemia: P(['#4a3424', '#5a4030', '#6b4d38', '#7c5c43', '#8e6c50']),
+  ziemiaSucha: P(['#6e5a42', '#7f6a4e', '#90795a', '#a28a68']),
+  lisc: P(['#2c4a22', '#3a5e2a', '#4c7434', '#628a40', '#7ea250']),
+  liscSiny: P(['#2c4a44', '#3a5e56', '#4c7468', '#62887a', '#80a294']),
+  liscJasny: P(['#4a7a2c', '#5e9234', '#78aa40', '#94c050', '#b4d66a']),
+  zloto: P(['#8a6a2c', '#a8843a', '#c49e4a', '#d8b65e', '#ead07a']),
+  sciern: P(['#9a8450', '#ae965c', '#c0a86a', '#d0ba7c']),
+  rzepakZ: P(['#b89a10', '#d8b818', '#f0d230', '#f8e65a']),
+  pomar: P(['#8a3a10', '#b4521a', '#d86e22', '#f08c34', '#f8b05a']),
+  burak: P(['#5a1a2a', '#7a2236', '#982e44']),
+  kwiaty: P(['#d83a3a', '#5a7ad8', '#f2f2f2', '#e8d04a', '#b06ad0']),
+  slupy: P(['#4a3424', '#6a4a30', '#8a6440']),
+  drut: hex('#5a5560'),
+  slom: P(['#a88a48', '#c4a458', '#dcc070', '#ecd890']),
+};
+const OBRYS_LISCIA = hex('#16261a');
+const pick = (t: number[], v: number) => t[Math.max(0, Math.min(t.length - 1, Math.floor(v * t.length)))];
+
+export interface DoZebrania { x: number; y: number; przedmiot: string; uprawa: Uprawa }
+
+/**
+ * Maluje pas pola w obraz (współrzędne świata, przesunięcie ox, oy). `miesiac` 0–11. `wiatr` przechyla wysokie rośliny (px).
+ * Zwraca rośliny dojrzałe do zebrania (ok. co 9. w warzywach, w miesiącach zbioru) – gra robi z nich obiekty jak drzewa do ścięcia.
+ */
+export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox = 0, oy = 0, wiatr = 0): DoZebrania[] {
+  const U = UPRAWY[uprawa], faza = U.fazy[((miesiac % 12) + 12) % 12];
+  const r = pas.pierscien, t = (pas.kat * Math.PI) / 180, ux = Math.cos(t), uy = Math.sin(t), vx = -uy, vy = ux;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]); }
+  const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
+  const MIEDZA = 4;
+  // 1. podłoże pasa: ziemia w bruzdach wzdłuż rzędów / łan / ściernisko / ozimina; miedza z trawą
+  for (let y = Math.floor(y0); y <= y1; y++) for (let x = Math.floor(x0); x <= x1; x++) {
+    if (!pip(r, x + 0.5, y + 0.5)) continue;
+    const d = odKrawedzi(r, x + 0.5, y + 0.5), h = hash(x, y, pas.seed), n = szum(x / 7, y / 7), b = bayer(x, y);
+    const v = x * vx + y * vy, u = x * ux + y * uy, fv = ((v % U.rzad) + U.rzad) % U.rzad;
+    let c: number;
+    if (d < MIEDZA - (n - 0.5) * 2) { // miedza
+      c = pick(K.lisc.slice(1), n * 0.7 + h * 0.4);
+      if (h < 0.025 && miesiac >= 4 && miesiac <= 8) c = K.kwiaty[Math.floor(hash(x, y, 7) * 5)];
+    } else if (faza === 'orka' || (U.ziemia && faza !== 'zebrane')) {
+      const grzbiet = fv < U.rzad / 2;
+      c = pick(K.ziemia, (grzbiet ? 0.55 : 0.2) + n * 0.25 + h * 0.2 + (b - 0.5) * 0.15);
+      if (faza === 'orka' && Math.floor(fv) === 0) c = K.ziemia[0];
+    } else if (faza === 'zebrane') {
+      c = (Math.floor(fv) === 0 && h < 0.7) ? K.sciern[0] : pick(K.sciern.slice(1), n * 0.6 + h * 0.4);
+      if (U.ziemia) c = pick(K.ziemiaSucha, n * 0.6 + h * 0.4);
+    } else if (faza === 'ozimina') {
+      c = Math.floor(fv) <= 1 ? pick(K.liscJasny.slice(1, 4), n * 0.5 + h * 0.5) : pick(K.ziemia.slice(1, 4), n * 0.5 + h * 0.5);
+    } else if (uprawa === 'zboze') { // łan: falujące kłosy (fala z szumu wzdłuż wiatru)
+      const fala = szum(u / 18 + wiatr * 0.3, v / 30);
+      const pal = faza === 'dojrzale' ? K.zloto : K.liscJasny;
+      c = pick(pal, 0.25 + fala * 0.55 + (Math.floor(fv) === 0 ? -0.2 : 0) + (h - 0.5) * 0.25);
+      if (faza === 'dojrzale' && h < 0.004 && miesiac === 6) c = K.kwiaty[0]; // maki w zbożu
+    } else if (uprawa === 'rzepak') {
+      c = faza === 'kwitnie' ? pick(K.rzepakZ, 0.3 + n * 0.5 + (h - 0.5) * 0.3) : faza === 'dojrzale' ? pick(K.ziemiaSucha, 0.4 + n * 0.4) : pick(K.liscSiny, 0.3 + n * 0.5 + (h - 0.5) * 0.3);
+    } else c = pick(K.lisc, n);
+    const X = x - ox, Y = y - oy; if (X >= 0 && Y >= 0 && X < o.w && Y < o.h) o.px[Y * o.w + X] = c;
+  }
+  // 2. rośliny w rzędach
+  let vmin = 1e9, vmax = -1e9, umin = 1e9, umax = -1e9;
+  for (let i = 0; i < r.length; i += 2) { const v = r[i] * vx + r[i + 1] * vy, u = r[i] * ux + r[i + 1] * uy; vmin = Math.min(vmin, v); vmax = Math.max(vmax, v); umin = Math.min(umin, u); umax = Math.max(umax, u); }
+  const zbiór: DoZebrania[] = [];
+  if (faza === 'orka' || faza === 'ozimina') { if (faza === 'orka' && uprawa === 'chmiel') chmielPusty(); return zbiór; }
+  if (uprawa === 'zboze' || uprawa === 'rzepak') { if (faza === 'zebrane' && uprawa === 'zboze') bele(); return zbiór; }
+  const rosliny: [number, number, number][] = [];
+  for (let v = Math.ceil(vmin / U.rzad) * U.rzad + U.rzad * 0.25; v < vmax; v += U.rzad)
+    for (let u = Math.ceil(umin / U.krok) * U.krok; u < umax; u += U.krok) {
+      const ju = (hash(Math.round(u), Math.round(v), 5) - 0.5) * U.krok * 0.3;
+      const x = (u + ju) * ux + v * vx, y = (u + ju) * uy + v * vy;
+      if (!pip(r, x, y) || odKrawedzi(r, x, y) < MIEDZA + 2) continue;
+      if (hash(Math.round(x), Math.round(y), 13) < 0.04) continue; // luki w rzędach
+      rosliny.push([x, y, hash(Math.round(x), Math.round(y), pas.seed + 1)]);
+    }
+  if (uprawa === 'chmiel') chmielSlupy();
+  rosliny.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, h] of rosliny) {
+    const dojrzala = faza === 'dojrzale' && !!U.zbiór && h < 0.035;
+    roslina(x, y, h, dojrzala);
+    if (dojrzala) zbiór.push({ x: Math.round(x), y: Math.round(y), przedmiot: U.zbiór!, uprawa });
+  }
+  return zbiór;
+
+  function cien(X: number, Y: number, R0: number) {
+    for (let j = -Math.ceil(R0 * 0.6); j <= R0 * 0.6; j++) for (let i = -Math.ceil(R0); i <= R0; i++) { if ((i / R0) ** 2 + (j / (R0 * 0.6)) ** 2 > 1) continue; const xx = X + i + 2 - ox, yy = Y + j + 1 - oy; const c = wez(o, xx, yy); if (c >>> 24) ustaw(o, xx, yy, ciemniej(c)); }
+  }
+  function roslina(x: number, y: number, h: number, dojrz: boolean) {
+    const X = Math.round(x), Y = Math.round(y), w = Math.round(wiatr * (0.5 + h * 0.5));
+    const mlode = faza === 'mlode', s = mlode ? 0.5 : 1;
+    switch (uprawa) {
+      case 'marchewka': { // pierzaste naci, dojrzała: pomarańczowa główka wystaje
+        const n = mlode ? 3 : 5;
+        for (let i = 0; i < n; i++) { const lx = (i - (n - 1) / 2) * 1.5, hh = Math.round((mlode ? 3 : 6) + hash(X, Y + i, 3) * 3);
+          for (let j = 0; j < hh; j++) { const xx = X + lx * (j / hh) * 1.8 + (j > hh - 3 ? w : 0); put(xx, Y - j, j === hh - 1 ? K.liscJasny[4] : K.liscJasny[1 + ((j + i) % 3)]); if (j > 1 && (j + i) % 2 === 0) put(xx + (lx < 0 ? -1 : 1), Y - j, K.liscJasny[2]); } }
+        if (dojrz) { for (const [i, j, c] of [[-1, 1, 3], [0, 1, 3], [1, 1, 2], [-1, 2, 2], [0, 2, 2], [1, 2, 1], [0, 3, 1], [-2, 1, 4]] as [number, number, number][]) put(X + i, Y + j, K.pomar[c]); }
+        break; }
+      case 'salata': case 'kapusta': case 'brokul': { // rozety; kapusta – głowa, brokuł – zielona „chmurka” różyczek
+        const R0 = (uprawa === 'kapusta' ? 5.6 : uprawa === 'brokul' ? 4.8 : 4) * s * (dojrz ? 1.15 : 1);
+        const pal = uprawa === 'salata' ? K.liscJasny : K.liscSiny;
+        cien(X, Y, R0);
+        for (let j = -Math.ceil(R0); j <= R0; j++) for (let i = -Math.ceil(R0 + 1); i <= R0 + 1; i++) {
+          const d = Math.hypot(i, j * 1.25); if (d > R0 + 0.4) continue;
+          const l = (-i - j) / (R0 * 1.4) + (hash(X + i, Y + j, 4) - 0.5) * 0.6;
+          put(X + i, Y + j - 1, d > R0 - 0.6 ? OBRYS_LISCIA : pal[Math.max(1, Math.min(4, Math.round(2.4 + l * 1.4)))]);
+        }
+        if (!mlode && uprawa === 'brokul') for (let k = 0; k < 4; k++) { const a = k * 1.6 + h * 6, rr = R0 * 0.35; put(X + Math.round(Math.cos(a) * rr), Y - 1 + Math.round(Math.sin(a) * rr * 0.8), dojrz ? hex('#3c6a3a') : K.lisc[2]); put(X + Math.round(Math.cos(a) * rr) - 1, Y - 2 + Math.round(Math.sin(a) * rr * 0.8), dojrz ? hex('#5a8a4a') : K.lisc[3]); }
+        if (!mlode && uprawa === 'kapusta') { const c1 = dojrz ? hex('#cfe6b0') : K.liscJasny[3], c2 = dojrz ? hex('#e8f4d4') : K.liscJasny[4]; for (const [i, j] of [[0, -1], [-1, -2], [1, -1], [0, -2], [-1, -1]]) put(X + i, Y + j, j === -2 ? c2 : c1); }
+        if (dojrz && uprawa === 'salata') { put(X, Y - 1, K.liscJasny[4]); put(X - 1, Y - 2, hex('#d8ec9a')); }
+        break; }
+      case 'ziemniak': case 'burak': {
+        const R0 = 4.4 * s; cien(X, Y, R0);
+        for (let j = -5; j <= 5; j++) for (let i = -6; i <= 6; i++) { const d = Math.hypot(i, j * 1.3); if (d > R0 + 0.5) continue; if (d > R0 - 0.5) { if (hash(X + i, Y + j, 9) < 0.5) put(X + i, Y + j - 1, OBRYS_LISCIA); continue; } if (hash(X + i, Y + j, 9) < 0.12) continue; put(X + i, Y + j - 1, uprawa === 'burak' ? K.lisc[1 + Math.floor(hash(X + i, Y + j, 2) * 3)] : K.lisc[2 + Math.floor(hash(X + i, Y + j, 2) * 3)]); }
+        if (uprawa === 'burak') { put(X, Y - 1, K.burak[2]); put(X, Y, K.burak[1]); }
+        if (faza === 'kwitnie' && h < 0.4) { put(X, Y - 3, h < 0.2 ? K.kwiaty[2] : K.kwiaty[4]); put(X + 1, Y - 3, K.kwiaty[3]); }
+        if (dojrz) { const kol = uprawa === 'ziemniak' ? [hex('#c8a46a'), hex('#a8844e')] : [K.burak[2], K.burak[0]]; put(X - 1, Y + 1, kol[0]); put(X, Y + 1, kol[0]); put(X + 1, Y + 1, kol[1]); put(X, Y + 2, kol[1]); put(X + 2, Y, kol[0]); }
+        break; }
+      case 'dynia': {
+        for (let k = 0; k < 10; k++) { const a = h * 6 + k * 0.7; put(X + Math.round(Math.cos(a) * (2 + k)), Y + Math.round(Math.sin(a) * (1 + k * 0.5)), K.lisc[2 + (k & 1)]); }
+        for (let j = -3; j <= 2; j++) for (let i = -5; i <= 5; i++) if (Math.hypot(i, j * 1.5) < 4.5 && hash(X + i, Y + j, 1) > 0.2) put(X + i + 3, Y + j - 2, K.lisc[1 + Math.floor(hash(X + i, Y + j, 3) * 3)]);
+        if (faza === 'dojrzale' && (dojrz || h < 0.45)) { const R0 = dojrz ? 5 : 3; cien(X, Y, R0 + 1);
+          for (let j = -R0; j <= R0; j++) for (let i = -R0 - 1; i <= R0 + 1; i++) { const d = Math.hypot(i / 1.2, j); if (d > R0 + 0.3) continue; put(X + i, Y + j, d > R0 - 0.5 ? K.pomar[0] : (i % 2 === 0 ? K.pomar[2] : K.pomar[3]) ); }
+          put(X - 1, Y - 1, K.pomar[4]); put(X, Y - R0 - 1, K.lisc[0]); }
+        break; }
+      case 'kukurydza': case 'slonecznik': { // wysokie łodygi z wiatrem
+        const H = Math.round((uprawa === 'kukurydza' ? 27 : 30) * (mlode ? 0.35 : 1) + h * 4), sucha = faza === 'zebrane';
+        if (sucha && uprawa === 'kukurydza') { put(X, Y, K.sciern[1]); put(X, Y - 1, K.sciern[2]); break; }
+        const lod = faza === 'dojrzale' && uprawa === 'slonecznik' ? K.ziemiaSucha : K.lisc;
+        for (let j = 0; j < H; j++) { const xx = X + Math.round((w * j * j) / (H * H)); put(xx, Y - j, lod[2]); if (j > 3 && j % 4 === 0) { put(xx - 1, Y - j + 1, lod[3]); put(xx + 1, Y - j, lod[1]); put(xx - 2, Y - j + 2, lod[2]); put(xx + 2, Y - j + 1, lod[1]); } }
+        const tx = X + w, ty = Y - H;
+        if (uprawa === 'kukurydza' && !mlode) { put(tx, ty, faza === 'dojrzale' ? K.zloto[3] : K.liscJasny[4]); put(tx - 1, ty + 1, K.zloto[2]); put(tx + 1, ty + 1, K.zloto[2]); if (faza !== 'rosnie') { put(X + 1, Y - Math.round(H * 0.5), K.zloto[3]); put(X + 1, Y - Math.round(H * 0.5) + 1, K.zloto[2]); } }
+        if (uprawa === 'slonecznik' && !mlode) { const zolty = faza === 'kwitnie';
+          for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const d = Math.hypot(i, j); if (d > 3.8) continue; put(tx + i, ty + j, d < 2 ? hex('#4a2e18') : zolty ? K.rzepakZ[2 + ((i + j) & 1)] : hex('#6a4a28')); } }
+        break; }
+      case 'chmiel': { // pnącze po sznurku do drutu (słupy rysuje chmielSlupy)
+        const H = mlode ? 16 : 40;
+        for (let j = 0; j < H; j++) { const xx = X + Math.round(Math.sin(j * 0.6 + h * 6) * 1.2); put(xx, Y - j, K.lisc[2 + ((j >> 1) & 1)]); if (!mlode && j > 4 && hash(X, j, 4) < 0.5) { put(xx + 1, Y - j, K.lisc[3]); put(xx - 1, Y - j, K.lisc[1]); } if (faza === 'dojrzale' && j > 6 && hash(X, j, 6) < 0.18) put(xx + 1, Y - j, K.liscJasny[4]); }
+        break; }
+    }
+  }
+  function chmielSlupy() {
+    for (let v = Math.ceil(vmin / 40) * 40; v < vmax; v += 40) for (let u = Math.ceil(umin / 54) * 54; u < umax; u += 54) {
+      const x = u * ux + v * vx, y = u * uy + v * vy; if (!pip(r, x, y) || odKrawedzi(r, x, y) < MIEDZA + 2) continue;
+      for (let j = 0; j < 46; j++) { put(x, y - j, K.slupy[1]); put(x + 1, y - j, K.slupy[0]); }
+      for (let k = 1; k < 54; k++) put(x + ux * k, y + uy * k - 46, K.drut); // drut u góry wzdłuż rzędu
+    }
+  }
+  function chmielPusty() { chmielSlupy(); }
+  function bele() { // bele słomy na ściernisku
+    const R = rng(pas.seed + 77);
+    for (let k = 0; k < 40; k++) {
+      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0); if (!pip(r, x, y) || odKrawedzi(r, x, y) < 10 || R() > 0.35) continue;
+      const X = Math.round(x), Y = Math.round(y);
+      for (let j = -5; j <= 5; j++) for (let i = -6; i <= 6; i++) { const d = Math.hypot(i / 1.15, j); if (d > 5.4) continue; put(X + i, Y + j, d > 4.7 ? OBRYS : K.slom[Math.max(0, Math.min(3, Math.round(2 - (i + j) / 3 + (hash(X + i, Y + j, 2) - 0.5))))]); }
+      for (let i = -3; i <= 3; i++) put(X + i + 2, Y + 4, ciemniej(wez(o, X + i + 2 - ox, Y + 4 - oy) || K.sciern[1]));
+      put(X - 1, Y - 1, K.slom[3]); put(X + 1, Y, K.slom[1]);
+    }
+  }
+}
+void mieszaj; void jasniej;
