@@ -98,7 +98,7 @@ export function mapaRodzajow(
   y0: number,
   rozmiar: number,
   perony: number[][] = [],
-): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory'> {
+): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -194,7 +194,7 @@ function naPlotno(px: Uint32Array, N: number) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][] }
 
 class ZiemiaWTle {
   private workery: Worker[] = [];
@@ -208,12 +208,12 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[] }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][] }>) => {
           const gotowe = this.czeka.get(e.data.nr);
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para });
         };
         this.workery.push(w);
       }
@@ -224,8 +224,8 @@ class ZiemiaWTle {
 
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
-      const { px, drzewa } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa });
+      const { px, drzewa, para } = ziemia(z);
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];

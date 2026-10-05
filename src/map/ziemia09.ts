@@ -1,5 +1,6 @@
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza } from '../gen';
+import { wyposazPeron, type Peron09 } from './dworzec09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -34,6 +35,8 @@ export interface Zlecenie {
   sciete: string[];
   /** Tory (kolej i tramwaj) w okolicy kawałka, px generatora. */
   tory: number[][];
+  /** Perony w okolicy (do steampunkowego wyposażenia, dworzec09.ts). */
+  perony: Peron09[];
 }
 
 const DACHY: [string, number][] = [['dachowka_czerwona', 34], ['dachowka_brazowa', 24], ['lupek', 16], ['gont', 9], ['blacha_zielona', 7], ['papa', 10]];
@@ -179,7 +182,7 @@ function malujPerony(o: Obraz, ids: Uint8Array, S: number, X0: number, Y0: numbe
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
  */
-export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
+export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][] } {
   const { ids, S, X0, Y0, N } = z;
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
@@ -195,6 +198,8 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
   // Tory: podsypka, podkłady, szyny (generator), potem perony na wierzchu (płyty z jasną krawędzią i żółtą linią).
   for (const t of z.tory) tor(obraz, t, X0, Y0);
   malujPerony(obraz, ids, S, X0, Y0);
+  const para: [number, number][] = [];
+  for (const p of z.perony) for (const q of wyposazPeron(obraz, X0, Y0, p)) if (q[0] >= X0 && q[1] >= Y0 && q[0] < X0 + N && q[1] < Y0 + N) para.push(q);
   // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
   const ramki = z.budynki.map((b) => {
     let a = Infinity, c = Infinity, e = -Infinity, f = -Infinity;
@@ -210,5 +215,5 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
   const sciete = new Set(z.sciete);
   if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete);
   const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));
-  return { px: obraz.px, drzewa: swoje };
+  return { px: obraz.px, drzewa: swoje, para };
 }

@@ -10,7 +10,8 @@ import { OSTROSC } from '../screen';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
 import { GEN_DOTS, type Budynek09 } from './ziemia09';
 import { Korony, type Korona } from './Korony';
-import { peronyZastepcze } from './perony';
+import { peronyWOkolicy } from './perony';
+import type { Peron09 } from './dworzec09';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -362,6 +363,8 @@ interface Chunk {
   ver?: number;
   /** Overhaul 09: the tree crowns standing in this chunk (sprites, sorted by depth with the characters). */
   crowns?: Korona[];
+  /** Overhaul 09: steam puffs from the platform pipes and gauges. */
+  steam?: Phaser.GameObjects.Image[];
 }
 
 
@@ -506,6 +509,7 @@ export class MapRenderer {
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
+        c.steam = ready.para.map(([px, py]) => this.korony.steam(px, py));
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
@@ -526,6 +530,8 @@ export class MapRenderer {
 
   /** Takes a chunk's tree crowns away (it is recycled or hidden). */
   private dropCrowns(c: Chunk) {
+    if (c.steam) for (const im of c.steam) this.korony.dropSteam(im);
+    c.steam = undefined;
     if (!c.crowns) return;
     for (const k of c.crowns) this.korony.drop(k);
     c.crowns = undefined;
@@ -591,6 +597,9 @@ export class MapRenderer {
     const wide = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 });
     wide.areas.sort((a, b) => a.id - b.id);
     const outside = !m.insideCity(x0, y0) || !m.insideCity(x0 + CHUNK, y0) || !m.insideCity(x0, y0 + CHUNK) || !m.insideCity(x0 + CHUNK, y0 + CHUNK) || !m.insideCity(x0 + CHUNK / 2, y0 + CHUNK / 2);
+    // Platforms around the chunk (OSM and made-up ones, perony.ts): their slabs go into the kind map,
+    // their steampunk fittings (pipes, lens lamps, a telescope, a steam gauge) are painted by the worker.
+    const perony = peronyWOkolicy(m, { x0: x0 - 60, y0: y0 - 60, x1: x0 + CHUNK + 60, y1: y0 + CHUNK + 60 });
     const kinds = mapaRodzajow(wide.areas, wide.lines, trackWidth, outside ? (g) => {
       g.beginPath();
       g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
@@ -600,7 +609,7 @@ export class MapRenderer {
         g.closePath();
       }
       g.fill('evenodd');
-    } : null, x0, y0, CHUNK, peronyZastepcze(m, { x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 }));
+    } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
     for (const l of wide.lines) if (l.kind === 'rail' || l.kind === 'tram') tory.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
@@ -619,7 +628,9 @@ export class MapRenderer {
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
       };
     });
-    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory };
+    const G2 = GEN_DOTS;
+    const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
+    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory, perony: peronyGen };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

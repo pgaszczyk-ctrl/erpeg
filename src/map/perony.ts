@@ -7,9 +7,9 @@ import { PX_PER_M, type CityMap, type Line, type Place } from './CityMap';
 
 export const PERON = {
   /** Długość dorysowanego peronu (m). */
-  dlugoscM: 70,
+  dlugoscM: 110,
   /** Szerokość (m) i odstęp krawędzi od osi toru (m). */
-  szerokoscM: 4,
+  szerokoscM: 7,
   odToruM: 2.4,
   /** Stacja dalej od toru niż tyle (m) to nie kolej (np. dworzec autobusowy). */
   maksOdToruM: 60,
@@ -17,13 +17,16 @@ export const PERON = {
   osmBliskoM: 50,
 };
 
-const gotowe = new WeakMap<CityMap, Map<string, number[] | null>>();
+/** Peron w px mapy: obrys, oś, strona toru (+1 = po prawej od kierunku osi), szerokość. */
+export interface Peron { ring: number[]; os: number[]; tor: 1 | -1; szer: number }
+
+const gotowe = new WeakMap<CityMap, Map<string, Peron | null>>();
 
 /** Perony dorysowane przy stacjach w okolicy prostokąta (px mapy); liczone raz na stację, gdy okolica jest wczytana. */
-export function peronyZastepcze(m: CityMap, box: { x0: number; y0: number; x1: number; y1: number }): number[][] {
+export function peronyZastepcze(m: CityMap, box: { x0: number; y0: number; x1: number; y1: number }): Peron[] {
   let pam = gotowe.get(m);
   if (!pam) gotowe.set(m, (pam = new Map()));
-  const out: number[][] = [];
+  const out: Peron[] = [];
   const zasieg = PERON.dlugoscM * PX_PER_M;
   for (const p of m.places) {
     if (p.kind !== 'station' || p.door.x < box.x0 - zasieg || p.door.x > box.x1 + zasieg || p.door.y < box.y0 - zasieg || p.door.y > box.y1 + zasieg) continue;
@@ -39,7 +42,7 @@ export function peronyZastepcze(m: CityMap, box: { x0: number; y0: number; x1: n
   return out;
 }
 
-function peronStacji(m: CityMap, p: Place, okolica: { x0: number; y0: number; x1: number; y1: number }): number[] | null {
+function peronStacji(m: CityMap, p: Place, okolica: { x0: number; y0: number; x1: number; y1: number }): Peron | null {
   const { areas, lines } = m.query(okolica);
   const osm = PERON.osmBliskoM * PX_PER_M;
   const blisko = (x0: number, y0: number, x1: number, y1: number) => x1 >= p.door.x - osm && x0 <= p.door.x + osm && y1 >= p.door.y - osm && y0 <= p.door.y + osm;
@@ -58,33 +61,86 @@ function peronStacji(m: CityMap, p: Place, okolica: { x0: number; y0: number; x1
     }
   }
   if (!best || best.d > PERON.maksOdToruM * PX_PER_M) return null;
-  const pol = (PERON.dlugoscM * PX_PER_M) / 2;
-  const os = wycinek(best.l.pts, Math.max(0, best.s - pol), best.s + pol);
-  if (os.length < 4) return null;
-  const a = PERON.odToruM * PX_PER_M, b = a + PERON.szerokoscM * PX_PER_M;
-  // Strona stacji: znak iloczynu wektorowego (kierunek toru × do drzwi); rownolegla(+d) = po prawej.
-  const tx = os[os.length - 2] - os[0], ty = os[os.length - 1] - os[1];
-  const prawa = tx * (p.door.y - best.y) - ty * (p.door.x - best.x) > 0 ? 1 : -1;
+  const a = PERON.odToruM * PX_PER_M;
   const inneTory = tory.filter((l) => l !== best!.l);
-  const wolne = (srodek: number[]) => {
-    for (let k = 0; k < srodek.length; k += 2) {
-      const x = srodek[k], y = srodek[k + 1];
+  const wolne = (srodek: number[], pol: number) => {
+    // Próbki co ~4 px wzdłuż osi (długie proste odcinki mają tylko dwa wierzchołki).
+    const pr: number[] = [];
+    for (let k = 0; k + 3 < srodek.length; k += 2) {
+      const n = Math.max(1, Math.ceil(Math.hypot(srodek[k + 2] - srodek[k], srodek[k + 3] - srodek[k + 1]) / 4));
+      for (let q = 0; q < n; q++) pr.push(srodek[k] + ((srodek[k + 2] - srodek[k]) * q) / n, srodek[k + 1] + ((srodek[k + 3] - srodek[k + 1]) * q) / n);
+    }
+    for (let k = 0; k < pr.length; k += 2) {
+      const x = pr[k], y = pr[k + 1];
       if (m.buildingAt(x, y)) return false;
       for (const l of inneTory) for (let j = 0; j + 3 < l.pts.length; j += 2) {
         const ax = l.pts[j], ay = l.pts[j + 1], dx = l.pts[j + 2] - ax, dy = l.pts[j + 3] - ay, L2 = dx * dx + dy * dy || 1;
         const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2));
-        if (Math.hypot(ax + dx * t - x, ay + dy * t - y) < (b - a) / 2 + a) return false;
+        if (Math.hypot(ax + dx * t - x, ay + dy * t - y) < pol + a) return false;
       }
     }
     return true;
   };
-  for (const strona of [prawa, -prawa]) {
-    const srodek = rownolegla(os, (strona * (a + b)) / 2);
-    if (!wolne(srodek)) continue;
-    const blizej = rownolegla(os, strona * a), dalej = rownolegla(os, strona * b);
-    const ring = [...blizej];
-    for (let k = dalej.length - 2; k >= 0; k -= 2) ring.push(dalej[k], dalej[k + 1]);
-    return ring;
+  // Najpierw pełna długość i szerokość po stronie stacji, potem po drugiej; między gęstymi torami
+  // i przy zwrotnicach krótszy i węższy peron.
+  for (const dl of [PERON.dlugoscM, 75, 45]) {
+    const pol = (dl * PX_PER_M) / 2;
+    const os = wycinek(best.l.pts, Math.max(0, best.s - pol), best.s + pol);
+    if (os.length < 4) return null;
+    // Strona stacji: znak iloczynu wektorowego (kierunek toru × do drzwi); rownolegla(+d) = po prawej.
+    const tx = os[os.length - 2] - os[0], ty = os[os.length - 1] - os[1];
+    const prawa = tx * (p.door.y - best.y) - ty * (p.door.x - best.x) > 0 ? 1 : -1;
+    for (const szer of [PERON.szerokoscM, 5.5, 4])
+    for (const strona of [prawa, -prawa]) {
+      const b = a + szer * PX_PER_M;
+      const srodek = rownolegla(os, (strona * (a + b)) / 2);
+      if (!wolne(srodek, (b - a) / 2)) continue;
+      const blizej = rownolegla(os, strona * a), dalej = rownolegla(os, strona * b);
+      const ring = [...blizej];
+      for (let k = dalej.length - 2; k >= 0; k -= 2) ring.push(dalej[k], dalej[k + 1]);
+      // Oś peronu i strona toru: tor leży po stronie przeciwnej do przesunięcia.
+      return { ring, os: srodek, tor: (strona > 0 ? -1 : 1) as 1 | -1, szer: b - a };
+    }
   }
   return null;
+}
+
+/**
+ * Wszystkie perony w okolicy prostokąta: z OSM (linie – oś, obszary – oś z kierunku największego rozrzutu)
+ * i dorysowane. Strona toru z najbliższego toru przy środku peronu.
+ */
+export function peronyWOkolicy(m: CityMap, box: { x0: number; y0: number; x1: number; y1: number }): Peron[] {
+  const out = peronyZastepcze(m, box);
+  const { areas, lines } = m.query(box);
+  const tory = lines.filter((l) => l.kind === 'rail' || l.kind === 'tram');
+  const stronaToru = (os: number[]): 1 | -1 => {
+    const n = os.length / 2, cx = (os[0] + os[os.length - 2]) / 2, cy = (os[1] + os[os.length - 1]) / 2;
+    let bd = Infinity, bx = cx, by = cy;
+    for (const l of tory) for (let j = 0; j + 3 < l.pts.length; j += 2) {
+      const ax = l.pts[j], ay = l.pts[j + 1], dx = l.pts[j + 2] - ax, dy = l.pts[j + 3] - ay, L2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / L2));
+      const d = Math.hypot(ax + dx * t - cx, ay + dy * t - cy);
+      if (d < bd) { bd = d; bx = ax + dx * t; by = ay + dy * t; }
+    }
+    const tx = os[2 * (n - 1)] - os[0], ty = os[2 * (n - 1) + 1] - os[1];
+    // rownolegla(+d) leży po prawej: (−ty, tx) w układzie ekranu.
+    return (bx - cx) * -ty + (by - cy) * tx >= 0 ? 1 : -1;
+  };
+  for (const l of lines) if (l.kind === 'platform') out.push({ ring: [], os: l.pts, tor: stronaToru(l.pts), szer: l.width });
+  for (const a of areas) {
+    if (a.kind !== 'platform') continue;
+    const r = a.rings[0];
+    let cx = 0, cy = 0;
+    for (let i = 0; i < r.length; i += 2) { cx += r[i]; cy += r[i + 1]; }
+    cx /= r.length / 2; cy /= r.length / 2;
+    let sxx = 0, syy = 0, sxy = 0;
+    for (let i = 0; i < r.length; i += 2) { const x = r[i] - cx, y = r[i + 1] - cy; sxx += x * x; syy += y * y; sxy += x * y; }
+    const ang = 0.5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(ang), uy = Math.sin(ang);
+    let t0 = Infinity, t1 = -Infinity, w0 = Infinity, w1 = -Infinity;
+    for (let i = 0; i < r.length; i += 2) { const x = r[i] - cx, y = r[i + 1] - cy, t = x * ux + y * uy, w = -x * uy + y * ux; t0 = Math.min(t0, t); t1 = Math.max(t1, t); w0 = Math.min(w0, w); w1 = Math.max(w1, w); }
+    const wm = (w0 + w1) / 2;
+    const os = [cx + t0 * ux - wm * uy, cy + t0 * uy + wm * ux, cx + t1 * ux - wm * uy, cy + t1 * uy + wm * ux];
+    out.push({ ring: [], os, tor: stronaToru(os), szer: w1 - w0 });
+  }
+  return out;
 }

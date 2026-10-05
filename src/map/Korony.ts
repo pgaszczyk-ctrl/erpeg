@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { klatkiWiatru, GATUNKI, type Obraz } from '../gen';
+import { klatkiWiatru, GATUNKI, para, type Obraz } from '../gen';
 import { drzewoZ, idDrzewa, OWOCOWE, STAN, type Drzewo09 } from './drzewa09';
 import { hash } from '../gen';
 import { GEN_DOTS } from './ziemia09';
@@ -93,6 +93,47 @@ export class Korony {
     if (!k.pada) k.im.destroy();
   }
 
+  // ------------------------------------------------------------ para (perony, zawory, manometry)
+
+  private obloczki = new Set<Phaser.GameObjects.Image>();
+
+  /** Obłoczek pary w punkcie (px generatora): 6 klatek z generatora, unosi się i rozwiewa w pętli. */
+  steam(px: number, py: number) {
+    if (!this.scene.textures.exists('para09')) {
+      const R = 24;
+      const c = document.createElement('canvas');
+      c.width = R * 6;
+      c.height = R;
+      const ctx = c.getContext('2d')!;
+      for (let k = 0; k < 6; k++) ctx.putImageData(obrazDanych(para(R, k, 7)), k * R, 0);
+      const tex = this.scene.textures.addCanvas('para09', c)!;
+      for (let k = 0; k < 6; k++) tex.add(`p${k}`, 0, k * R, 0, R, R);
+      tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const x = px / GEN_DOTS, y = py / GEN_DOTS;
+    const im = this.scene.add.image(x, y, 'para09', 'p0').setOrigin(0.5, 1).setScale(1 / GEN_DOTS).setDepth(y + 1);
+    im.setData('x0', x).setData('y0', y).setData('faza', hash(px, py, 13) * 6);
+    this.obloczki.add(im);
+    return im;
+  }
+
+  dropSteam(im: Phaser.GameObjects.Image) {
+    this.obloczki.delete(im);
+    im.destroy();
+  }
+
+  /** Para: co ~1,2 s nowy obłoczek, unosi się o kilka px i rzednie (klatki 0–5); silniejszy wiatr znosi ją w bok. */
+  private updateSteam(T: number, cam: Phaser.Geom.Rectangle) {
+    const wiatr = Math.max(-1, Math.min(1, (weather.wind - 2) / 8));
+    for (const im of this.obloczki) {
+      const x0 = im.getData('x0') as number, y0 = im.getData('y0') as number;
+      if (x0 < cam.x - 30 || x0 > cam.right + 30 || y0 < cam.y - 30 || y0 > cam.bottom + 40) continue;
+      const t = ((T * 0.85 + (im.getData('faza') as number)) % 1.4) / 1.4; // 0..1 w cyklu
+      const k = Math.min(5, Math.floor(t * 6));
+      im.setFrame(`p${k}`).setPosition(Math.round((x0 + wiatr * t * 6) * 2) / 2, Math.round((y0 - t * 7) * 2) / 2).setAlpha(t < 0.8 ? 1 : (1 - t) * 5);
+    }
+  }
+
   // ------------------------------------------------------------ stan drzew (do następnego logowania)
 
   /** Kratki 32 px mapy z koronami (szukanie drzewa pod ciosem i pni pod stopami). */
@@ -176,6 +217,7 @@ export class Korony {
   /** Co klatkę gry: wiatr i prześwit koron w widoku. `hx, hy` = stopy postaci (px mapy). */
   update(now: number, dt: number, cam: Phaser.Geom.Rectangle, hx: number, hy: number) {
     const T = now / 1000;
+    if (this.obloczki.size) this.updateSteam(T, cam);
     const S = Math.max(0.1, Math.min(2.2, weather.wind / 7));
     // Środek postaci w px generatora.
     const px = hx * GEN_DOTS, py = (hy - KORONY.srodekPostaci) * GEN_DOTS;
