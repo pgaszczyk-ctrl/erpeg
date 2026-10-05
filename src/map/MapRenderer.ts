@@ -8,8 +8,11 @@ import { DZIELENIE } from '../content/budynki';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
-import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
-import { GEN_DOTS, type Budynek09 } from './ziemia09';
+import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
+import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
+import { STAN } from './drzewa09';
+import { POLA, miesiacUpraw } from '../content/pola';
+import { idRosliny } from '../gen';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
 import type { Peron09 } from './dworzec09';
@@ -367,7 +370,12 @@ interface Chunk {
   crowns?: Korona[];
   /** Overhaul 09: steam puffs from the platform pipes and gauges. */
   steam?: Phaser.GameObjects.Image[];
+  /** Overhaul 09: ripe vegetables on fields in this chunk (map px), harvested with a swing. */
+  zbior?: Uprawa09[];
 }
+
+/** A ripe vegetable on a field (src/gen/pola.ts): where (map px), what goes into the backpack, its id (generator px). */
+export interface Uprawa09 { id: string; x: number; y: number; veg: string }
 
 
 
@@ -505,13 +513,14 @@ export class MapRenderer {
       if (fresh) c.img.setVisible(false);
       this.chunks.set(k, c);
       const order = this.groundOrder(x0, y0);
-      ziemiaWTle().policz(order).then((ready) => {
+      przygotujRysunkiUpraw().then(() => ziemiaWTle().policz(order)).then((ready) => {
         if (c.key !== k || c.ver !== ver || !this.scene.textures.exists(c.tex.key)) return;
         const t1 = performance.now();
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
         c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py))];
+        c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot }));
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
@@ -532,11 +541,33 @@ export class MapRenderer {
 
   /** Takes a chunk's tree crowns away (it is recycled or hidden). */
   private dropCrowns(c: Chunk) {
+    c.zbior = undefined;
     if (c.steam) for (const im of c.steam) this.korony.dropSteam(im);
     c.steam = undefined;
     if (!c.crowns) return;
     for (const k of c.crowns) this.korony.drop(k);
     c.crowns = undefined;
+  }
+
+  /** The nearest ripe vegetable on a field within `reach` of (x, y) (not picked, not being picked). */
+  uprawaAt(x: number, y: number, reach: number, busy: Set<string>): Uprawa09 | null {
+    let best: Uprawa09 | null = null;
+    let bd = reach;
+    for (const c of this.chunks.values()) for (const q of c.zbior ?? []) {
+      if (STAN.zebrane.has(q.id) || busy.has(`pole:${q.id}`)) continue;
+      const d = Math.hypot(q.x - x, q.y - 3 - y);
+      if (d < bd) {
+        bd = d;
+        best = q;
+      }
+    }
+    return best;
+  }
+
+  /** A vegetable was picked: a hole with leaf scraps instead (until the next login). */
+  zbierzUprawe(id: string, x: number, y: number) {
+    STAN.zebrane.add(id);
+    this.redrawAround(x, y);
   }
 
   /** Repaints the chunks around a map point (a felled tree's stump, overhaul 09); the old picture stays until then. */
@@ -632,7 +663,11 @@ export class MapRenderer {
     });
     const G2 = GEN_DOTS;
     const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
-    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory, perony: peronyGen };
+    // Fields and allotments reaching the chunk: whole outlines (the strips must be the same in every chunk).
+    const pola: Pole09[] = wide.areas
+      .filter((a) => a.kind === 'farmland' || a.kind === 'allotments')
+      .map((a) => ({ r: a.rings[0].map((v) => v * G2), seed: a.id, dz: a.kind === 'allotments' }));
+    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

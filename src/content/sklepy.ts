@@ -16,7 +16,7 @@
 // w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
 // grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
 // (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'grzyb' | 'drewno';
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno';
 export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
@@ -27,6 +27,11 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; j
   marchewka: { nazwa: 'marchewka', mnoga: 'marchewki', cena: 2, jadalne: true, grupa: 'warzywa' },
   brokul: { nazwa: 'brokuł', mnoga: 'brokuły', cena: 3, jadalne: true, grupa: 'warzywa' },
   salata: { nazwa: 'sałata', mnoga: 'sałata', cena: 3, jadalne: true, grupa: 'warzywa' },
+  // Z pól (overhaul 09, src/gen/pola.ts), ceny wg POLA.md (do decyzji właściciela; pokrętło cen zbiorów działa i na nie).
+  ziemniak: { nazwa: 'ziemniak', mnoga: 'ziemniaki', cena: 2, jadalne: true, grupa: 'warzywa' },
+  kapusta: { nazwa: 'kapusta', mnoga: 'kapusty', cena: 4, jadalne: true, grupa: 'warzywa' },
+  burak: { nazwa: 'burak', mnoga: 'buraki', cena: 2, jadalne: true, grupa: 'warzywa' },
+  dynia: { nazwa: 'dynia', mnoga: 'dynie', cena: 6, jadalne: true, grupa: 'warzywa' },
   grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 1, jadalne: true, grupa: 'grzyby' },
   drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false, grupa: 'drewno' },
 };

@@ -226,7 +226,8 @@ export class Forest {
       const x = (cx + 0.15 + r() * 0.3) * this.cell;
       const y = (cy + 0.15 + r() * 0.4) * this.cell;
       const veg = WARZYWA.rodzaje[Math.floor(r() * WARZYWA.rodzaje.length)];
-      if (roll < WARZYWA.szansa) {
+      // Overhaul 09: whole fields are sown in strips with ripe vegetables to pick (src/gen/pola.ts) – no beds.
+      if (roll < WARZYWA.szansa && !WYGLAD_09) {
         for (let row = 0; row < WARZYWA.rzedow; row++)
           for (let i = 0; i < WARZYWA.wRzedzie; i++) {
             const vx = x + i * 8;

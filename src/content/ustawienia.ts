@@ -31,6 +31,7 @@ export const POKRETLA: Pokretlo[] = [
   { k: 'leczenie_owocow', grupa: 'Leczenie', nazwa: 'Jedno serduszko = tyle zjedzonych owoców', domyslnie: 20, min: 1, max: 200 },
   { k: 'grzybow_na_kratke', grupa: 'Zbieranie', nazwa: 'Grzybów na kratkę lasu (30 m) najwyżej', domyslnie: 3, min: 0, max: 10 },
   { k: 'uderzen_na_drzewo', grupa: 'Zbieranie', nazwa: 'Uderzeń w sosnę na jedno drewno', domyslnie: 4, min: 1, max: 30 },
+  { k: 'pola_dojrzale', grupa: 'Zbieranie', nazwa: 'Dojrzałe warzywa na polach (udział, 0,035 = 3,5 %)', domyslnie: 0.035, min: 0, max: 0.5 },
   { k: 'wytrzymalosc_mnoznik', grupa: 'Zużycie broni', nazwa: 'Wytrzymałość broni (× mnożnik; szklany miecz bez zmian)', domyslnie: 1, min: 0.1, max: 20, krok: 0.1 },
   { k: 'naprawa_czesc_ceny', grupa: 'Zużycie broni', nazwa: 'Pełna naprawa kosztuje tyle ceny broni (0.3 = 30%)', domyslnie: 0.3, min: 0, max: 2, krok: 0.05 },
   { k: 'strzala_cena', grupa: 'Zużycie broni', nazwa: 'Strzała kosztuje (monet)', domyslnie: 3, min: 0, max: 1000 },

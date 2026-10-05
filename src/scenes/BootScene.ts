@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { createArt, useArtistArt } from '../art';
+import { createArt, useArtistArt, useCropIcons, CROP_ICONS } from '../art';
 import { createHeroAnims } from '../objects/Player';
 import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
@@ -24,11 +24,14 @@ export class BootScene extends Phaser.Scene {
     loadHdSprites(this);
     // The artist's ground and roof textures (content/swiat.ts).
     for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
+    // Vegetables from the fields: the artist's ripe plant as their icon (order 12).
+    for (const v of CROP_ICONS) this.load.image(`uprawa-${v}`, `uprawy/uprawa_${v}_dojrzala_1.png`);
   }
 
   create() {
     createArt(this);
     useArtistArt(this);
+    useCropIcons(this);
     createHeroAnims(this);
     createHdSprites(this);
     createSlimeAnims(this);

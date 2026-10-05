@@ -1,7 +1,8 @@
 import type { Rodzaj } from '../gen';
 import { TEST } from '../version';
 import type { Area, Line } from './CityMap';
-import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie, type Rodzaj09 } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, type Zlecenie, type Rodzaj09 } from './ziemia09';
+import type { Sprite, DoZebrania } from '../gen';
 import type { Drzewo09 } from './drzewa09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
@@ -101,7 +102,7 @@ export function mapaRodzajow(
   y0: number,
   rozmiar: number,
   perony: number[][] = [],
-): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony'> {
+): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony' | 'pola' | 'miesiac' | 'zebrane' | 'dojrzale'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -197,7 +198,33 @@ function naPlotno(px: Uint32Array, N: number) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[] }
+
+/** Warzywa z rysunkami od grafika (zamówienie 12, public/uprawy/uprawa_<warzywo>_<faza>.png). */
+export const WARZYWA_RYSUNKI = ['marchewka', 'dynia', 'kapusta', 'brokul', 'salata', 'ziemniak', 'burak'];
+const FAZY_RYSUNKOW = ['mloda', 'dorosla_1', 'dorosla_2', 'dorosla_3', 'dojrzala_1', 'dojrzala_2', 'po_zbiorze'];
+
+/** Wczytuje rysunki roślin (podstawa: środek dolnej krawędzi). Brakujące pomija – wtedy roślinę rysuje kod. */
+export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
+  const out: Record<string, Sprite> = {};
+  const base = import.meta.env.BASE_URL || '/';
+  await Promise.all(WARZYWA_RYSUNKI.flatMap((u) => FAZY_RYSUNKOW.map((f) => new Promise<void>((ok) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const g = c.getContext('2d')!;
+      g.drawImage(img, 0, 0);
+      const d = g.getImageData(0, 0, img.width, img.height);
+      out[`${u}_${f}`] = { o: { w: img.width, h: img.height, px: new Uint32Array(d.data.buffer.slice(0)) }, bx: Math.floor(img.width / 2), by: img.height - 1 };
+      ok();
+    };
+    img.onerror = () => ok();
+    img.src = `${base}uprawy/uprawa_${u}_${f}.png`;
+  }))));
+  return out;
+}
 
 class ZiemiaWTle {
   private workery: Worker[] = [];
@@ -211,7 +238,7 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; cien?: Uint32Array; S?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; cien?: Uint32Array; S?: number }>) => {
           if (e.data.cien) {
             const ok = this.pojazdy.get(e.data.nr);
             this.pojazdy.delete(e.data.nr);
@@ -222,7 +249,7 @@ class ZiemiaWTle {
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior });
         };
         this.workery.push(w);
       }
@@ -244,10 +271,16 @@ class ZiemiaWTle {
     });
   }
 
+  /** Rysunki roślin na pola: do każdego Web Workera (przed kolejnymi zleceniami, kolejność wiadomości jest zachowana) i do liczenia w grze. */
+  ustawRysunki(r: Record<string, Sprite>) {
+    ustawRysunkiUpraw(r);
+    for (const w of this.workery) w.postMessage({ rysunki: r });
+  }
+
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
-      const { px, drzewa, para, fale } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale });
+      const { px, drzewa, para, fale, zbior } = ziemia(z);
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];
@@ -261,6 +294,10 @@ class ZiemiaWTle {
 
 let wTle: ZiemiaWTle | null = null;
 export const ziemiaWTle = () => (wTle ??= new ZiemiaWTle());
+
+/** Rysunki roślin wczytane i wysłane do Web Workerów (raz); kawałki mapy czekają na to przed pierwszym zleceniem. */
+let rysunkiGotowe: Promise<void> | null = null;
+export const przygotujRysunkiUpraw = () => (rysunkiGotowe ??= wczytajRysunkiUpraw().then((r) => ziemiaWTle().ustawRysunki(r)).catch(() => undefined));
 
 /** Gotowa ziemia na kawałek (transformacja mapy już ustawiona w ctx). */
 export function rysujZiemie(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, x0: number, y0: number, rozmiar: number) {

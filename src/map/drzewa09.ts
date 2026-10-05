@@ -97,9 +97,10 @@ export function drzewoZ(g: string, w: number): Drzewo {
 }
 
 /** Stan drzew na czas sesji: ścięte i strząśnięte drzewa wracają przy następnym logowaniu (jak dawniej). */
-export const STAN = { sciete: new Set<string>(), owoce: new Map<string, number>() };
-/** Nowe logowanie: drzewa odrastają, owoce wracają. */
+export const STAN = { sciete: new Set<string>(), owoce: new Map<string, number>(), zebrane: new Set<string>() };
+/** Nowe logowanie: drzewa odrastają, owoce wracają, zebrane warzywa na polach odrastają. */
 export function odrostDrzew() {
   STAN.sciete.clear();
   STAN.owoce.clear();
+  STAN.zebrane.clear();
 }

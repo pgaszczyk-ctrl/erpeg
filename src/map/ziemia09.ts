@@ -2,6 +2,7 @@ import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza } from '../gen';
 import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
+import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -38,6 +39,23 @@ export interface Zlecenie {
   tory: number[][];
   /** Perony w okolicy (do steampunkowego wyposażenia, dworzec09.ts). */
   perony: Peron09[];
+  /** Pola uprawne i działki sięgające kawałka (pełny obrys w px generatora, ziarno = id obszaru OSM). */
+  pola: Pole09[];
+  /** Miesiąc gracza (0–11): wygląd upraw. */
+  miesiac: number;
+  /** Rośliny zebrane w tej sesji (idRosliny): dołek po zbiorze. */
+  zebrane: string[];
+  /** Udział roślin dojrzałych do zebrania (pokrętło admina pola_dojrzale). */
+  dojrzale: number;
+}
+
+/** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
+export interface Pole09 { r: number[]; seed: number; dz: boolean }
+
+/** Rysunki roślin od grafika (public/uprawy, zamówienie 12), wysłane do Web Workera raz przy starcie gry. */
+let RYSUNKI: Record<string, Sprite> | undefined;
+export function ustawRysunkiUpraw(r: Record<string, Sprite>) {
+  RYSUNKI = r;
 }
 
 const DACHY: [string, number][] = [['dachowka_czerwona', 34], ['dachowka_brazowa', 24], ['lupek', 16], ['gont', 9], ['blacha_zielona', 7], ['papa', 10]];
@@ -183,7 +201,7 @@ function malujPerony(o: Obraz, ids: Uint8Array, S: number, X0: number, Y0: numbe
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
  */
-export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][] } {
+export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[] } {
   const { ids, S, X0, Y0, N } = z;
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
@@ -196,6 +214,15 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   const trzciny = malujWode(obraz, X0, Y0, rodzajW);
   for (const k of posiejRuno(X0, Y0, N, N, rodzajW)) runo(obraz, k.x - X0, k.y - Y0, k.rodzaj, k.seed, 0);
   for (const [x, y] of trzciny) runo(obraz, x - X0, y - Y0, 'trzcina', (hash(x, y, 77) * 1e6) | 0, 0);
+  // Pola uprawne: całe obsiane pasami (uprawa wg pasa i miesiąca), część warzyw dojrzała do zebrania.
+  const zbior: DoZebrania[] = [];
+  const wycinek = { x0: X0 - 2, y0: Y0 - 2, x1: X0 + N + 2, y1: Y0 + N + 2 };
+  const zebrane = new Set(z.zebrane);
+  for (const p of z.pola) for (const pas of pasyPola(p.r, p.seed, p.dz)) {
+    const u = uprawaPasa(pas.seed, p.dz);
+    for (const q of malujPas(obraz, pas, u, z.miesiac, X0, Y0, 0, { wycinek, rysunki: RYSUNKI, zebrane, dojrzale: z.dojrzale }))
+      if (q.x >= X0 && q.y >= Y0 && q.x < X0 + N && q.y < Y0 + N) zbior.push(q);
+  }
   // Tory: podsypka, podkłady, szyny (generator), potem perony na wierzchu (płyty z jasną krawędzią i żółtą linią).
   for (const t of z.tory) tor(obraz, t, X0, Y0);
   malujPerony(obraz, ids, S, X0, Y0);
@@ -227,5 +254,5 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     if (hash(x, y, 903) > 0.32 || fx >= X0 + N || fy >= Y0 + N) continue;
     if ([[0, 0], [7, 0], [-7, 0], [0, 6], [0, -6]].every(([dx, dy]) => rodzajW(fx + dx, fy + dy) === 'woda')) fale.push([fx, fy]);
   }
-  return { px: obraz.px, drzewa: swoje, para, fale };
+  return { px: obraz.px, drzewa: swoje, para, fale, zbior };
 }

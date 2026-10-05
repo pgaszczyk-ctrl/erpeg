@@ -5,6 +5,7 @@ import { OWOCE, WSKRZESZENIE, DIAMENT, ALCHEMIK, LECZENIE_OWOCAMI, LAS } from '.
 import { NAMIOT } from './content/hotele';
 import { ZUZYCIE, STRZALY } from './content/zuzycie';
 import { POKRETLA } from './content/ustawienia';
+import { POLA } from './content/pola';
 import { rpc } from './api';
 
 // Wpisuje pokrętła z panelu admina (content/ustawienia.ts) w stałe gry.
@@ -25,6 +26,7 @@ const USTAW: Record<string, (v: number) => void> = {
   leczenie_owocow: (v) => (LECZENIE_OWOCAMI.owocow = Math.round(v)),
   grzybow_na_kratke: (v) => (LAS.grzybowNaKratke = Math.round(v)),
   uderzen_na_drzewo: (v) => (LAS.uderzenNaDrzewo = Math.round(v)),
+  pola_dojrzale: (v) => (POLA.dojrzale = v),
   wytrzymalosc_mnoznik: (v) => PRZEDMIOTY.forEach((p) => {
     const base = WYTRZYMALOSC.get(p.id);
     if (base && !p.szklany) p.wytrzymalosc = Math.max(1, Math.round(base * v));

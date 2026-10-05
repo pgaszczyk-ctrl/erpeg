@@ -910,7 +910,7 @@ export class GameScene extends Phaser.Scene {
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()) || this.mapView.uprawaAt(hit.x, hit.y, 12, new Set()));
     if (!ranged || gathering) this.swingWeapon(swingAim, strong);
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
@@ -983,8 +983,14 @@ export class GameScene extends Phaser.Scene {
     const k09 = this.mapView.korony.hitAt(hit.x, hit.y, 12 * this.player.reach);
     if (k09) this.treeHit(k09, now);
     // Vegetables: a swing starts picking one (a bar fills up).
-    const veg = this.forest.vegAt(hit.x, hit.y, 12 * this.player.reach, new Set(this.harvests.map((h) => h.spot.id)));
+    const busy = new Set(this.harvests.map((h) => h.spot.id));
+    const veg = this.forest.vegAt(hit.x, hit.y, 12 * this.player.reach, busy);
     if (veg) this.startHarvest(veg, now);
+    // Overhaul 09: ripe vegetables on the fields (src/gen/pola.ts).
+    else {
+      const u = this.mapView.uprawaAt(hit.x, hit.y, 12 * this.player.reach, busy);
+      if (u) this.startHarvest({ id: `pole:${u.id}`, x: u.x, y: u.y, kind: 'warzywo', veg: u.veg as Owoc, left: 1 }, now);
+    }
     const dummy = this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz');
     if (dummy) {
       hits++;
@@ -1109,7 +1115,8 @@ export class GameScene extends Phaser.Scene {
       }
       session.stats.fruit++;
       spot.sprite?.destroy();
-      this.forest.picked(spot.id);
+      if (spot.id.startsWith('pole:')) this.mapView.zbierzUprawe(spot.id.slice(5), spot.x, spot.y);
+      else this.forest.picked(spot.id);
       this.toast(`+1 ${OWOCE[f].nazwa}`, 800);
       this.emitHud();
       return false;
