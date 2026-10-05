@@ -28,6 +28,7 @@ const start = () => {
   pokaz('Lipiec', 6, 1, false);
   pokaz('Maj', 4, 1, false);
   pokaz('Październik, zbliżenie, dojrzałe do zebrania zaznaczone', 9, 3, true, [440, 40, 330, 200]);
+  pokaz('Wrzesień, zbliżenie: kapusta, brokuł, dynie', 8, 3, false, [640, 50, 330, 200]);
   (window as any).__ok = true;
 };
 if (sprite.complete) start(); else sprite.onload = start;

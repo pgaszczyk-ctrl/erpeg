@@ -30,6 +30,12 @@ Wysokie rośliny (kukurydza, słonecznik, chmiel) i łan zboża ruszają się z 
 - Nowe przedmioty (grupa `warzywa`, jadalne): `ziemniak` 2, `kapusta` 4, `burak` 2, `dynia` 6 monet (do decyzji właściciela, pokrętła cen już są). Ikony 16×16 – do zamówienia albo z generatora.
 - Pokrętło admina `pola_dojrzale` (udział dojrzałych, domyślnie 0,035).
 
+## 3a. Brzegi (poprawka 5.10)
+Brzeg pasa nie jest prosty: odległość od brzegu falowana szumem (`brzeg()` w `malujPas`), poszarpany pas przejścia ziemia/trawa, każdy rząd kończy się gdzie indziej, na skraju kępki trawy i kwiatów z `runo()`, rzadko pojedyncze chwasty w polu.
+
+## 3b. Rośliny od grafika
+Właściciel nie chce uproszczonych roślin („kulki, emotki”). Grafik dostał zamówienie 12 (atlas upraw: młoda / dorosła ×3 / dojrzała do zebrania ×2 / po zbiorze, duże, wyrównujemy skryptem). Do czasu dostawy rośliny rysuje `pola.ts`; potem `malujPas` zamiast funkcji `roslina()` kładzie sprite z atlasu (wariant z hasha pozycji), reszta (pasy, rzędy, ziemia, miedze, pory roku, łan zboża) zostaje bez zmian. Wysokie rośliny (kukurydza, słonecznik, chmiel) jako sprite'y z klatkami wiatru jak korony drzew.
+
 ## 4. Zadanie
 | # | Zadanie | Gotowe, gdy | Wycena |
 |---|---|---|---|

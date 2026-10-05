@@ -1,4 +1,5 @@
 # Exp-lore – paczka dla grafika
+> **Nowe (5.10):** `ZAMOWIENIE_12_uprawy.md` – rośliny na polach (atlas upraw), wzory w `9_uprawy/`.
 
 Exp-lore to przygodowa gra na telefon (i komputer), grana na prawdziwej mapie miasta, widok z góry.
 Zmieniamy grafikę na nowy, ładniejszy styl. Punktem wyjścia jest **paczka v1** (wędrowiec, rycerz,

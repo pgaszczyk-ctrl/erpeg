@@ -4,6 +4,7 @@
 // Wszystko deterministyczne: ziarno z id obszaru OSM, pozycje we współrzędnych świata.
 import { Obraz, hex, hash, rng, szum, bayer, ustaw, wez, mieszaj, ciemniej, jasniej, OBRYS } from './wspolne';
 import { KATY_PIKSELOWE } from './budynki';
+import { runo } from './runo';
 
 export type Uprawa = 'marchewka' | 'brokul' | 'salata' | 'kapusta' | 'ziemniak' | 'burak' | 'dynia' | 'zboze' | 'rzepak' | 'kukurydza' | 'chmiel' | 'slonecznik';
 /** Faza w danym miesiącu: goła ziemia, młode, rosnące, kwitnie, dojrzałe (do zbioru), zebrane/ściernisko, ozimina. */
@@ -122,14 +123,16 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]); }
   const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
-  const MIEDZA = 4;
+  const MIEDZA = 5;
+  /** Odległość od brzegu pasa z falowaniem (brzeg pola nie jest prosty: trawa wchodzi w pole, pole w miedzę). */
+  const brzeg = (x: number, y: number) => odKrawedzi(r, x, y) + (szum(x / 14 + pas.seed % 50, y / 14) - 0.5) * 11 + (szum(x / 4.5 + 30, y / 4.5) - 0.5) * 3;
   // 1. podłoże pasa: ziemia w bruzdach wzdłuż rzędów / łan / ściernisko / ozimina; miedza z trawą
   for (let y = Math.floor(y0); y <= y1; y++) for (let x = Math.floor(x0); x <= x1; x++) {
     if (!pip(r, x + 0.5, y + 0.5)) continue;
-    const d = odKrawedzi(r, x + 0.5, y + 0.5), h = hash(x, y, pas.seed), n = szum(x / 7, y / 7), b = bayer(x, y);
+    const d = brzeg(x + 0.5, y + 0.5), h = hash(x, y, pas.seed), n = szum(x / 7, y / 7), b = bayer(x, y);
     const v = x * vx + y * vy, u = x * ux + y * uy, fv = ((v % U.rzad) + U.rzad) % U.rzad;
     let c: number;
-    if (d < MIEDZA - (n - 0.5) * 2) { // miedza
+    if (d < MIEDZA || (d < MIEDZA + 6 && b > (d - MIEDZA) / 6 + 0.15)) { // miedza i poszarpany pas przejścia
       c = pick(K.lisc.slice(1), n * 0.7 + h * 0.4);
       if (h < 0.025 && miesiac >= 4 && miesiac <= 8) c = K.kwiaty[Math.floor(hash(x, y, 7) * 5)];
     } else if (faza === 'orka' || (U.ziemia && faza !== 'zebrane')) {
@@ -155,14 +158,16 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
   let vmin = 1e9, vmax = -1e9, umin = 1e9, umax = -1e9;
   for (let i = 0; i < r.length; i += 2) { const v = r[i] * vx + r[i + 1] * vy, u = r[i] * ux + r[i + 1] * uy; vmin = Math.min(vmin, v); vmax = Math.max(vmax, v); umin = Math.min(umin, u); umax = Math.max(umax, u); }
   const zbiór: DoZebrania[] = [];
-  if (faza === 'orka' || faza === 'ozimina') { if (faza === 'orka' && uprawa === 'chmiel') chmielPusty(); return zbiór; }
-  if (uprawa === 'zboze' || uprawa === 'rzepak') { if (faza === 'zebrane' && uprawa === 'zboze') bele(); return zbiór; }
+  if (faza === 'orka' || faza === 'ozimina') { if (faza === 'orka' && uprawa === 'chmiel') chmielPusty(); trawaNaBrzegu(); return zbiór; }
+  if (uprawa === 'zboze' || uprawa === 'rzepak') { if (faza === 'zebrane' && uprawa === 'zboze') bele(); trawaNaBrzegu(); return zbiór; }
   const rosliny: [number, number, number][] = [];
   for (let v = Math.ceil(vmin / U.rzad) * U.rzad + U.rzad * 0.25; v < vmax; v += U.rzad)
     for (let u = Math.ceil(umin / U.krok) * U.krok; u < umax; u += U.krok) {
       const ju = (hash(Math.round(u), Math.round(v), 5) - 0.5) * U.krok * 0.3;
       const x = (u + ju) * ux + v * vx, y = (u + ju) * uy + v * vy;
-      if (!pip(r, x, y) || odKrawedzi(r, x, y) < MIEDZA + 2) continue;
+      if (!pip(r, x, y)) continue;
+      const kon = MIEDZA + 3 + hash(Math.round(v), 0, pas.seed + 3) * 9; // każdy rząd kończy się gdzie indziej
+      const db = brzeg(x, y); if (db < kon || (db < kon + 6 && hash(Math.round(x), Math.round(y), 17) < 0.5)) continue;
       if (hash(Math.round(x), Math.round(y), 13) < 0.04) continue; // luki w rzędach
       rosliny.push([x, y, hash(Math.round(x), Math.round(y), pas.seed + 1)]);
     }
@@ -173,8 +178,71 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
     roslina(x, y, h, dojrzala);
     if (dojrzala) zbiór.push({ x: Math.round(x), y: Math.round(y), przedmiot: U.zbiór!, uprawa });
   }
+  trawaNaBrzegu();
   return zbiór;
 
+  /** Kępki trawy i chwastów na skraju pasa i rzadko w polu – przykrywają równą krawędź. */
+  function trawaNaBrzegu() {
+    const lato = miesiac >= 4 && miesiac <= 8;
+    for (let y = Math.floor(y0); y <= y1; y += 3) for (let x = Math.floor(x0); x <= x1; x += 3) {
+      const jx = x + Math.floor(hash(x, y, 41) * 3), jy = y + Math.floor(hash(x, y, 42) * 3);
+      if (!pip(r, jx, jy)) continue;
+      const d = brzeg(jx, jy), h = hash(jx, jy, pas.seed + 9);
+      let k: 'trawa_niska' | 'trawa_wysoka' | 'kwiaty' | null = null;
+      if (d > MIEDZA - 2 && d < MIEDZA + 5 && h < 0.3) k = h < 0.04 ? 'trawa_wysoka' : lato && h < 0.08 ? 'kwiaty' : 'trawa_niska';
+      else if (d >= MIEDZA + 7 && h < 0.012 && faza !== 'orka') k = 'trawa_niska'; // pojedyncze chwasty
+      if (k) runo(o, jx - ox, jy - oy, k, jx * 131 + jy, wiatr * 0.6);
+    }
+  }
+
+  /** Liść: elipsa wzdłuż kąta, jasna żyłka, ciemny brzeg (falisty dla sałaty i dyni), światło z lewej-góry. */
+  function lisc(cx: number, cy: number, a: number, dl: number, sz: number, pal: number[], falisty = false) {
+    const ca = Math.cos(a), sa = Math.sin(a), R = Math.ceil(dl + 1);
+    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+      const u = i * ca + j * sa, v = -i * sa + j * ca; // u wzdłuż liścia od nasady
+      if (u < 0) continue;
+      const t = u / dl, half = sz * Math.sin(Math.min(1, t) * Math.PI) * (falisty ? 0.85 + 0.25 * Math.sin(u * 2.3) : 1);
+      if (t > 1 || Math.abs(v) > half) continue;
+      const brzegL = Math.abs(v) > half - 0.9 || t > 0.93;
+      const swiatlo = (-i - j) / (dl * 2.4) - (ca + sa) * 0.22 + (v * (sa - ca) > 0 ? 0.12 : -0.08);
+      let c = pal[Math.max(1, Math.min(4, Math.round(2.3 + swiatlo * 2)))];
+      if (Math.abs(v) < 0.5 && t > 0.1 && t < 0.85) c = pal[4];
+      else if (brzegL) c = OBRYS_LISCIA;
+      put(cx + i, cy + j, c);
+    }
+  }
+  /** Główka kapusty: koło z liśćmi okrywowymi (łuki) i jasnym środkiem. */
+  function glowa(cx: number, cy: number, R0: number, pal: number[]) {
+    for (let j = -Math.ceil(R0); j <= R0; j++) for (let i = -Math.ceil(R0); i <= R0; i++) {
+      const d = Math.hypot(i, j); if (d > R0 + 0.3) continue;
+      const l = (-i - j) / (R0 * 1.6); let k = Math.max(0, Math.min(3, Math.round(1.6 + l * 1.6 - d / R0 * 0.6)));
+      if (Math.abs(d - R0 * 0.62) < 0.45 && i + j > -1) k = Math.max(0, k - 1); // łuk liścia
+      put(cx + i, cy + j, d > R0 - 0.6 ? OBRYS_LISCIA : pal[k]);
+    }
+  }
+  /** Brokuł: zbite różyczki (guzki z jasnym czubkiem). */
+  function rozyczki(cx: number, cy: number, R0: number, dojrz: boolean) {
+    const pal = dojrz ? [hex('#1e3a26'), hex('#2e5634'), hex('#467a44'), hex('#6a9e58')] : [hex('#24402c'), hex('#2e4e36'), hex('#3c6244'), hex('#507652')];
+    for (let j = -Math.ceil(R0); j <= R0; j++) for (let i = -Math.ceil(R0); i <= R0; i++) { const d = Math.hypot(i, j * 1.1); if (d > R0 + 0.3) continue; put(cx + i, cy + j, d > R0 - 0.6 ? OBRYS_LISCIA : pal[1]); }
+    for (let k = 0; k < 7; k++) { const a = k * 2.4, rr = k ? R0 * 0.55 : 0, bx = Math.round(cx + Math.cos(a) * rr), by = Math.round(cy + Math.sin(a) * rr * 0.9);
+      put(bx, by, pal[2]); put(bx - 1, by - 1, pal[3]); put(bx + 1, by, pal[1]); put(bx, by + 1, pal[0]); }
+  }
+  /** Dynia: spłaszczona kula z 4–5 bruzdami, połysk z lewej-góry, ciemny dół, ogonek. */
+  function dyniaOwoc(cx: number, cy: number, sk: number) {
+    const rx = 5.2 * sk, ry = 3.9 * sk;
+    cien(Math.round(cx), Math.round(cy), rx);
+    for (let j = -Math.ceil(ry); j <= ry; j++) for (let i = -Math.ceil(rx); i <= rx; i++) {
+      const e = (i / rx) ** 2 + (j / ry) ** 2; if (e > 1.05) continue;
+      if (e > 0.78 && e <= 1.05) { put(cx + i, cy + j, hex('#5a2208')); continue; }
+      const seg = Math.abs(Math.sin((i / rx) * Math.PI * 2.2)); // bruzdy
+      const l = (-i / rx - j / ry) * 0.9 + 0.1;
+      let k = Math.round(2 + l * 1.6); if (seg < 0.22) k -= 2; else if (seg > 0.85 && l > 0) k += 1;
+      put(cx + i, cy + j, K.pomar[Math.max(0, Math.min(4, k))]);
+    }
+    const tx = Math.round(cx + 0.5), ty = Math.round(cy - ry);
+    put(tx, ty, hex('#4a5a24')); put(tx, ty - 1, hex('#6a7a30')); put(tx + 1, ty - 2, hex('#6a7a30'));
+    put(Math.round(cx - rx * 0.45), Math.round(cy - ry * 0.45), K.pomar[4]); put(Math.round(cx - rx * 0.45) + 1, Math.round(cy - ry * 0.45), hex('#fcd08a'));
+  }
   function cien(X: number, Y: number, R0: number) {
     for (let j = -Math.ceil(R0 * 0.6); j <= R0 * 0.6; j++) for (let i = -Math.ceil(R0); i <= R0; i++) { if ((i / R0) ** 2 + (j / (R0 * 0.6)) ** 2 > 1) continue; const xx = X + i + 2 - ox, yy = Y + j + 1 - oy; const c = wez(o, xx, yy); if (c >>> 24) ustaw(o, xx, yy, ciemniej(c)); }
   }
@@ -188,18 +256,16 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
           for (let j = 0; j < hh; j++) { const xx = X + lx * (j / hh) * 1.8 + (j > hh - 3 ? w : 0); put(xx, Y - j, j === hh - 1 ? K.liscJasny[4] : K.liscJasny[1 + ((j + i) % 3)]); if (j > 1 && (j + i) % 2 === 0) put(xx + (lx < 0 ? -1 : 1), Y - j, K.liscJasny[2]); } }
         if (dojrz) { for (const [i, j, c] of [[-1, 1, 3], [0, 1, 3], [1, 1, 2], [-1, 2, 2], [0, 2, 2], [1, 2, 1], [0, 3, 1], [-2, 1, 4]] as [number, number, number][]) put(X + i, Y + j, K.pomar[c]); }
         break; }
-      case 'salata': case 'kapusta': case 'brokul': { // rozety; kapusta – głowa, brokuł – zielona „chmurka” różyczek
-        const R0 = (uprawa === 'kapusta' ? 5.6 : uprawa === 'brokul' ? 4.8 : 4) * s * (dojrz ? 1.15 : 1);
+      case 'salata': case 'kapusta': case 'brokul': {
+        const sc = (uprawa === 'kapusta' ? 1.25 : uprawa === 'brokul' ? 1.15 : 0.95) * s * (dojrz ? 1.12 : 1);
         const pal = uprawa === 'salata' ? K.liscJasny : K.liscSiny;
-        cien(X, Y, R0);
-        for (let j = -Math.ceil(R0); j <= R0; j++) for (let i = -Math.ceil(R0 + 1); i <= R0 + 1; i++) {
-          const d = Math.hypot(i, j * 1.25); if (d > R0 + 0.4) continue;
-          const l = (-i - j) / (R0 * 1.4) + (hash(X + i, Y + j, 4) - 0.5) * 0.6;
-          put(X + i, Y + j - 1, d > R0 - 0.6 ? OBRYS_LISCIA : pal[Math.max(1, Math.min(4, Math.round(2.4 + l * 1.4)))]);
-        }
-        if (!mlode && uprawa === 'brokul') for (let k = 0; k < 4; k++) { const a = k * 1.6 + h * 6, rr = R0 * 0.35; put(X + Math.round(Math.cos(a) * rr), Y - 1 + Math.round(Math.sin(a) * rr * 0.8), dojrz ? hex('#3c6a3a') : K.lisc[2]); put(X + Math.round(Math.cos(a) * rr) - 1, Y - 2 + Math.round(Math.sin(a) * rr * 0.8), dojrz ? hex('#5a8a4a') : K.lisc[3]); }
-        if (!mlode && uprawa === 'kapusta') { const c1 = dojrz ? hex('#cfe6b0') : K.liscJasny[3], c2 = dojrz ? hex('#e8f4d4') : K.liscJasny[4]; for (const [i, j] of [[0, -1], [-1, -2], [1, -1], [0, -2], [-1, -1]]) put(X + i, Y + j, j === -2 ? c2 : c1); }
-        if (dojrz && uprawa === 'salata') { put(X, Y - 1, K.liscJasny[4]); put(X - 1, Y - 2, hex('#d8ec9a')); }
+        cien(X, Y, 6 * sc);
+        // liście zewnętrzne: 5–6 płatów dookoła, z żyłką i falistym brzegiem
+        const nL = uprawa === 'salata' ? 7 : 6;
+        for (let k = 0; k < nL; k++) { const a = (k / nL) * Math.PI * 2 + h * 3; lisc(X + Math.cos(a) * 1.5 * sc, Y - 1 + Math.sin(a) * 1.1 * sc, a, 6.2 * sc, 3.3 * sc, pal, uprawa === 'salata'); }
+        if (uprawa === 'kapusta' && !mlode) glowa(X, Y - 2, 3.4 * sc, dojrz ? [hex('#7a9a6e'), hex('#9cbc8a'), hex('#c4dcae'), hex('#e2f0cc')] : [K.liscSiny[1], K.liscSiny[2], K.liscSiny[3], K.liscSiny[4]]);
+        if (uprawa === 'brokul' && !mlode) rozyczki(X, Y - 2, 3 * sc, dojrz);
+        if (uprawa === 'salata') { for (let k = 0; k < 4; k++) { const a = k * 1.7 + h * 5; lisc(X + Math.cos(a) * 0.8, Y - 2 + Math.sin(a) * 0.6, a, 3.6 * sc, 2.4 * sc, K.liscJasny, true); } if (dojrz) { put(X, Y - 3, hex('#d8ec9a')); put(X - 1, Y - 3, hex('#eef7c8')); } }
         break; }
       case 'ziemniak': case 'burak': {
         const R0 = 4.4 * s; cien(X, Y, R0);
@@ -209,11 +275,10 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
         if (dojrz) { const kol = uprawa === 'ziemniak' ? [hex('#c8a46a'), hex('#a8844e')] : [K.burak[2], K.burak[0]]; put(X - 1, Y + 1, kol[0]); put(X, Y + 1, kol[0]); put(X + 1, Y + 1, kol[1]); put(X, Y + 2, kol[1]); put(X + 2, Y, kol[0]); }
         break; }
       case 'dynia': {
-        for (let k = 0; k < 10; k++) { const a = h * 6 + k * 0.7; put(X + Math.round(Math.cos(a) * (2 + k)), Y + Math.round(Math.sin(a) * (1 + k * 0.5)), K.lisc[2 + (k & 1)]); }
-        for (let j = -3; j <= 2; j++) for (let i = -5; i <= 5; i++) if (Math.hypot(i, j * 1.5) < 4.5 && hash(X + i, Y + j, 1) > 0.2) put(X + i + 3, Y + j - 2, K.lisc[1 + Math.floor(hash(X + i, Y + j, 3) * 3)]);
-        if (faza === 'dojrzale' && (dojrz || h < 0.45)) { const R0 = dojrz ? 5 : 3; cien(X, Y, R0 + 1);
-          for (let j = -R0; j <= R0; j++) for (let i = -R0 - 1; i <= R0 + 1; i++) { const d = Math.hypot(i / 1.2, j); if (d > R0 + 0.3) continue; put(X + i, Y + j, d > R0 - 0.5 ? K.pomar[0] : (i % 2 === 0 ? K.pomar[2] : K.pomar[3]) ); }
-          put(X - 1, Y - 1, K.pomar[4]); put(X, Y - R0 - 1, K.lisc[0]); }
+        // pnącze z wąsami i duże klapowane liście
+        for (let k = 0; k < 14; k++) { const a = h * 6 + k * 0.45; const xx = X + Math.cos(a) * (2 + k * 0.9), yy = Y + Math.sin(a) * (1 + k * 0.45); put(xx, yy, K.lisc[1]); if (k % 4 === 3) { put(xx + 1, yy - 1, K.liscJasny[2]); put(xx + 2, yy - 1, K.liscJasny[1]); } }
+        for (let k = 0; k < 3; k++) { const a = h * 6 + k * 2.1; lisc(X + Math.cos(a) * 6, Y + Math.sin(a) * 3 - 1, a + 1.2, 8, 6, K.lisc, true); }
+        if (faza === 'dojrzale' && (dojrz || h < 0.45)) dyniaOwoc(X + 1, Y + 1, dojrz ? 1.5 : 1.1);
         break; }
       case 'kukurydza': case 'slonecznik': { // wysokie łodygi z wiatrem
         const H = Math.round((uprawa === 'kukurydza' ? 27 : 30) * (mlode ? 0.35 : 1) + h * 4), sucha = faza === 'zebrane';
@@ -233,7 +298,7 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
   }
   function chmielSlupy() {
     for (let v = Math.ceil(vmin / 40) * 40; v < vmax; v += 40) for (let u = Math.ceil(umin / 54) * 54; u < umax; u += 54) {
-      const x = u * ux + v * vx, y = u * uy + v * vy; if (!pip(r, x, y) || odKrawedzi(r, x, y) < MIEDZA + 2) continue;
+      const x = u * ux + v * vx, y = u * uy + v * vy; if (!pip(r, x, y) || brzeg(x, y) < MIEDZA + 4) continue;
       for (let j = 0; j < 46; j++) { put(x, y - j, K.slupy[1]); put(x + 1, y - j, K.slupy[0]); }
       for (let k = 1; k < 54; k++) put(x + ux * k, y + uy * k - 46, K.drut); // drut u góry wzdłuż rzędu
     }
@@ -242,7 +307,7 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
   function bele() { // bele słomy na ściernisku
     const R = rng(pas.seed + 77);
     for (let k = 0; k < 40; k++) {
-      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0); if (!pip(r, x, y) || odKrawedzi(r, x, y) < 10 || R() > 0.35) continue;
+      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0); if (!pip(r, x, y) || brzeg(x, y) < 12 || R() > 0.35) continue;
       const X = Math.round(x), Y = Math.round(y);
       for (let j = -5; j <= 5; j++) for (let i = -6; i <= 6; i++) { const d = Math.hypot(i / 1.15, j); if (d > 5.4) continue; put(X + i, Y + j, d > 4.7 ? OBRYS : K.slom[Math.max(0, Math.min(3, Math.round(2 - (i + j) / 3 + (hash(X + i, Y + j, 2) - 0.5))))]); }
       for (let i = -3; i <= 3; i++) put(X + i + 2, Y + 4, ciemniej(wez(o, X + i + 2 - ox, Y + 4 - oy) || K.sciern[1]));
