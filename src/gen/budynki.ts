@@ -54,13 +54,57 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   // krawędzie z normalnymi na zewnątrz
   let area = 0; for (let i = 0; i < n; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % n]; area += ax * by - bx * ay; }
   const E = P.map(([ax, ay], i) => { const [bx, by] = P[(i + 1) % n]; const L = Math.hypot(bx - ax, by - ay) || 1; const ux = (bx - ax) / L, uy = (by - ay) / L; const s = area > 0 ? 1 : -1; return { ax, ay, ux, uy, L, nx: uy * s, ny: -ux * s }; });
+  // Dwie najbliższe krawędzie punktu. Krawędzie są w siatce kratek, więc przeszukujemy tylko okolicę
+  // (kratki pierścieniami, aż reszta musi być dalej). Wynik taki sam jak przy sprawdzaniu wszystkich po kolei:
+  // przy równej odległości wygrywa krawędź o niższym numerze.
+  const KR = 8, gx0 = Math.floor(minX / KR) - 1, gy0 = Math.floor(minY / KR) - 1;
+  const GW = Math.floor(maxX / KR) + 2 - gx0, GH = Math.floor(maxY / KR) + 2 - gy0;
+  const kratki: number[][] = Array.from({ length: GW * GH }, () => []);
+  E.forEach((e, i) => {
+    const bx = e.ax + e.ux * e.L, by = e.ay + e.uy * e.L;
+    const cx0 = Math.max(0, Math.floor((Math.min(e.ax, bx) - 1) / KR) - gx0), cx1 = Math.min(GW - 1, Math.floor((Math.max(e.ax, bx) + 1) / KR) - gx0);
+    const cy0 = Math.max(0, Math.floor((Math.min(e.ay, by) - 1) / KR) - gy0), cy1 = Math.min(GH - 1, Math.floor((Math.max(e.ay, by) + 1) / KR) - gy0);
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) kratki[cy * GW + cx].push(i);
+  });
+  const znak = new Int32Array(E.length);
+  let stempel = 0;
+  // Wynik ostatniego wyszukiwania (bez tworzenia obiektów na każdy piksel).
+  let d1 = 1e9, i1 = 0, d2 = 1e9, i2 = 0, qx = 0, qy = 0;
+  const wez = (i: number) => {
+    if (znak[i] === stempel) return;
+    znak[i] = stempel;
+    const e = E[i];
+    const t = Math.max(0, Math.min(e.L, (qx - e.ax) * e.ux + (qy - e.ay) * e.uy));
+    const dx = e.ax + e.ux * t - qx, dy = e.ay + e.uy * t - qy;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < d1 || (d === d1 && i < i1)) { d2 = d1; i2 = i1; d1 = d; i1 = i; }
+    else if (d < d2 || (d === d2 && i < i2)) { d2 = d; i2 = i; }
+  };
   const najblizsze = (px: number, py: number) => {
-    let d1 = 1e9, i1 = 0, d2 = 1e9, i2 = 0;
-    E.forEach((e, i) => { const t = Math.max(0, Math.min(e.L, (px - e.ax) * e.ux + (py - e.ay) * e.uy)); const d = Math.hypot(e.ax + e.ux * t - px, e.ay + e.uy * t - py);
-      if (d < d1) { d2 = d1; i2 = i1; d1 = d; i1 = i; } else if (d < d2) { d2 = d; i2 = i; } });
-    return { d1, i1, d2, i2 };
+    d1 = 1e9; i1 = 0; d2 = 1e9; i2 = 0; qx = px; qy = py;
+    stempel++;
+    const cx = Math.floor(px / KR) - gx0, cy = Math.floor(py / KR) - gy0;
+    for (let R = 0; ; R++) {
+      // Gdy kratek do przejrzenia robi się więcej niż krawędzi: po prostu wszystkie krawędzie.
+      if ((2 * R + 1) * (2 * R + 1) > 2 * E.length) { for (let i = 0; i < E.length; i++) wez(i); break; }
+      for (let y = cy - R; y <= cy + R; y++) {
+        if (y < 0 || y >= GH) continue;
+        const brzeg = y === cy - R || y === cy + R;
+        for (let x = cx - R; x <= cx + R; x += brzeg ? 1 : 2 * R || 1) {
+          if (x < 0 || x >= GW) continue;
+          const k = kratki[y * GW + x];
+          for (let m = 0; m < k.length; m++) wez(k[m]);
+        }
+      }
+      // Krawędzie spoza przeszukanego kwadratu są dalej niż jego brzeg.
+      const granica = Math.min(px - (gx0 + cx - R) * KR, (gx0 + cx + R + 1) * KR - px, py - (gy0 + cy - R) * KR, (gy0 + cy + R + 1) * KR - py);
+      if (d2 < granica) break;
+      if (cx - R <= 0 && cy - R <= 0 && cx + R >= GW - 1 && cy + R >= GH - 1) break;
+    }
   };
   const D = MATERIALY[op.dach], S = MATERIALY[op.sciana];
+  let drzwiI1 = -1;
+  if (op.drzwi) { najblizsze(op.drzwi[0], op.drzwi[1]); drzwiI1 = i1; }
   const o = nowy(W, Hh);
   const kind = new Uint8Array(W * Hh); // 1 dach, 2 ściana
   const sOf = new Int16Array(W * Hh);
@@ -71,12 +115,13 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   }
   const K = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= Hh ? 0 : kind[j * W + i]);
   let maxD = 0; const dd = new Float32Array(W * Hh);
-  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1) { const d = najblizsze(x0 + i + 0.5, y0 + j + 0.5).d1; dd[j * W + i] = d; maxD = Math.max(maxD, d); }
+  const qI1 = new Int32Array(W * Hh), qI2 = new Int32Array(W * Hh), qD1 = new Float64Array(W * Hh), qD2 = new Float64Array(W * Hh);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1) { najblizsze(x0 + i + 0.5, y0 + j + 0.5); const k = j * W + i; qI1[k] = i1; qI2[k] = i2; qD1[k] = d1; qD2[k] = d2; const d = d1; dd[j * W + i] = d; maxD = Math.max(maxD, d); }
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
     const k = kind[j * W + i]; if (!k) continue;
     const x = x0 + i, y = y0 + j; let c: number;
     if (k === 1) {
-      const q = najblizsze(x + 0.5, y + 0.5), e = E[q.i1], d = q.d1;
+      const k = j * W + i, q = { i1: qI1[k], i2: qI2[k], d1: qD1[k], d2: qD2[k] }, e = E[q.i1], d = q.d1;
       const lum = -(e.nx * 0.6 + e.ny * 0.8);
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       const along = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy;
@@ -93,7 +138,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else {
       const s = sOf[j * W + i], hh = H - s, px = x - s * sk, py = y - s;
-      const q = najblizsze(px + 0.5, py + 0.5), e = E[q.i1];
+      najblizsze(px + 0.5, py + 0.5); const q = { i1 }, e = E[q.i1];
       let t = e.nx < -0.35 ? 3 : e.nx > 0.35 ? 1 : 2;
       const along = (px - e.ax) * e.ux + (py - e.ay) * e.uy;
       if (S.wzor === 'cegla') { if (hh % 3 === 0 || (Math.floor(along + (Math.floor(hh / 3) % 2) * 2) % 4 === 0 && hash(Math.floor(along), hh, 7) < 0.6)) t = Math.max(0, t - 1); }
@@ -114,7 +159,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
         if (hh === lo - 1 && m >= 2 && m <= 4 && along > 3 && along < e.L - 3) c = S.tony[4];
       }
       // drzwi
-      if (op.drzwi) { const [dx, dy] = op.drzwi; const dq = najblizsze(dx, dy); if (dq.i1 === q.i1) { const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy; if (Math.abs(along - da) <= 2 && hh <= 6) { c = hh === 6 || Math.abs(along - da) > 1.5 ? hex('#3a2416') : hex('#6a4426'); okno = true; } } }
+      if (op.drzwi) { const [dx, dy] = op.drzwi; if (drzwiI1 === q.i1) { const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy; if (Math.abs(along - da) <= 2 && hh <= 6) { c = hh === 6 || Math.abs(along - da) > 1.5 ? hex('#3a2416') : hex('#6a4426'); okno = true; } } }
       // rura
       if (op.rura && e.ny > 0.5 && e.L > 14) { const ra = e.L - 4; if (along >= ra && along < ra + 2) { c = MOSIADZ[along < ra + 1 ? 3 : 1]; if (hh % 5 === 2) c = MOSIADZ[0]; okno = true; } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];

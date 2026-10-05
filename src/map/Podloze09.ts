@@ -1,6 +1,6 @@
 import type { Rodzaj } from '../gen';
 import type { Area, Line } from './CityMap';
-import { GEN_DOTS, MARGINES, RODZAJE, ziemia } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie } from './ziemia09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
 // liczy generator z `src/gen`. Obszary OSM trafiają najpierw na pomocnicze płótno „mapy rodzajów”
@@ -83,7 +83,7 @@ export function mapaRodzajow(
   x0: number,
   y0: number,
   rozmiar: number,
-): Zlecenie {
+): Omit<Zlecenie, 'budynki' | 'noc'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -144,7 +144,6 @@ export function mapaRodzajow(
   return { ids, S, X0: x0 * GEN_DOTS, Y0: y0 * GEN_DOTS, N };
 }
 
-export interface Zlecenie { ids: Uint8Array; S: number; X0: number; Y0: number; N: number }
 
 /** Piksele ziemi → płótno N×N. */
 function naPlotno(px: Uint32Array, N: number) {
@@ -185,7 +184,7 @@ class ZiemiaWTle {
   }
 
   policz(z: Zlecenie): Promise<HTMLCanvasElement> {
-    if (!this.workery.length) return Promise.resolve(naPlotno(ziemia(z.ids, z.S, z.X0, z.Y0, z.N), z.N));
+    if (!this.workery.length) return Promise.resolve(naPlotno(ziemia(z), z.N));
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];
     return new Promise((ok) => {

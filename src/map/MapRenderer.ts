@@ -8,6 +8,7 @@ import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
+import { GEN_DOTS, type Budynek09 } from './ziemia09';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -540,7 +541,7 @@ export class MapRenderer {
     const wide = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 });
     wide.areas.sort((a, b) => a.id - b.id);
     const outside = !m.insideCity(x0, y0) || !m.insideCity(x0 + CHUNK, y0) || !m.insideCity(x0, y0 + CHUNK) || !m.insideCity(x0 + CHUNK, y0 + CHUNK) || !m.insideCity(x0 + CHUNK / 2, y0 + CHUNK / 2);
-    return mapaRodzajow(wide.areas, wide.lines, trackWidth, outside ? (g) => {
+    const kinds = mapaRodzajow(wide.areas, wide.lines, trackWidth, outside ? (g) => {
       g.beginPath();
       g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
       for (const r of m.boundary) {
@@ -550,6 +551,22 @@ export class MapRenderer {
       }
       g.fill('evenodd');
     } : null, x0, y0, CHUNK);
+    // Buildings whose roof or walls reach the chunk (walls hang below the outline), north to south.
+    const { buildings } = m.query({ x0: x0 - 8, y0: y0 - 60, x1: x0 + CHUNK + 8, y1: y0 + CHUNK + 8 });
+    buildings.sort((a, b) => a.y1 - b.y1);
+    const G = GEN_DOTS;
+    const budynki: Budynek09[] = buildings.map((b) => {
+      const hl = this.highlight.get(b);
+      return {
+        r: b.rings[0].map((v) => v * G),
+        dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),
+        h: wallHeight(b) * G,
+        seed: b.seed,
+        drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
+        hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
+      };
+    });
+    return { ...kinds, budynki, noc: night() };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
@@ -567,10 +584,9 @@ export class MapRenderer {
 
     if (ground) {
       // Overhaul 09: the ground (areas, roads, water, tracks) comes from the generator in src/gen.
+      // Buildings come with the ground (roofs, walls, shadows from the generator).
       rysujZiemie(ctx, ground, x0, y0, CHUNK);
       if (m.terrain) this.paintRelief(ctx, x0, y0);
-      buildings.sort((a, b) => a.y1 - b.y1);
-      for (const b of buildings) this.paintBuilding(ctx, b);
       if (this.treeArt || this.bushArt) this.paintGreenery(ctx, x0, y0);
       if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
       if (this.lampArt) this.paintLamps(ctx, lines);
