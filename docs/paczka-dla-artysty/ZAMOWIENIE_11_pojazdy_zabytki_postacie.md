@@ -10,6 +10,15 @@
 | **Pojazdy, zabytki, szyldy** (część świata) | drobny piksel: 1 px pliku = 1 px świata | koń z wozu (`6_zamowienie_09/01_wzor_stylu/kon_WZOR_SWIATA_x3.png`) i makieta |
 | **Postacie** | grubszy piksel: siatka 32×32 zapisana jako 64×64 (każdy piksel 2×2) | blondynka (`01_wzor_stylu/wzor_postaci_blondynka_tak_nie.png`) |
 
+## 1a. Wyrównanie do świata (ważne – po ocenie próbki lokomotywy, 5.10)
+
+Próbka lokomotywy jest ładna, ale za dokładna względem świata z generatora: płynne przejścia tonów, za dużo odcieni, miękkie krawędzie. Po prostym wyrównaniu pasuje bardzo dobrze (`8_wyrownanie/wyrownanie_lokomotywa_x2.png`: z lewej Twoja próbka zmniejszona, w środku po wyrównaniu, z prawej zastępcza lokomotywa rysowana programem). Zasady dla każdego pliku z tego zamówienia:
+- **rysuj od razu w docelowej wielkości** (lokomotywa ok. 64 px długości), bez zmniejszania z dużego obrazka,
+- **tylko kolory z `8_wyrownanie/paleta_swiata.png`** (te same co w domach, rurach i torach), 4–5 odcieni na materiał, bez gradientów i bez wygładzania krawędzi,
+- światło z lewej-góry, obrys 1 px `#1e1a24` dookoła sylwetki, szczegóły co najmniej 2 px,
+- widok bardziej z góry niż w próbce (jak dachy domów: widać dach i jedną ścianę), żeby pojazd leżał na torze, a nie stał przed nim.
+Każdą paczkę przepuszczamy przez `8_wyrownanie/wyrownaj.py` (zmniejszenie, paleta, obrys). Jeśli po nim obrazek wygląda inaczej niż Twój, popraw kolory u siebie.
+
 ## 2. Lista
 
 ### 2.1 Kolej parowa (najważniejsze)
