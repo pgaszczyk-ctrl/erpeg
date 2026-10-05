@@ -39,8 +39,12 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
   chrust: { nazwa: 'chrust', mnoga: 'chrust', wielu: 'chrustu', cena: 3, jadalne: false, grupa: 'drewno' },
 };
 
-/** Siekiera (przedmioty.ts `siekiera`): w sklepach budowlanych zawsze, w zwykłych w co `coKtorySklep`-tym (wg id sklepu). */
-export const SIEKIERA = { coKtorySklep: 3 };
+/** Siekiera (przedmioty.ts `siekiera`): w każdym sklepie budowlanym i w co `coKtorySklep`-tym zwykłym (wg id sklepu, czyli stale te same). */
+export const SIEKIERA = {
+  coKtorySklep: 3,
+  /** Sklepy sportowe (w danych mapy razem z budowlanymi) poznajemy po nazwie – one siekier nie mają. */
+  sportowy: /sport|decathlon|outdoor|martes|go ?sport|\b4f\b|rower|bike|ski|turyst|wędk|wedk/i,
+};
 
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
 export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {

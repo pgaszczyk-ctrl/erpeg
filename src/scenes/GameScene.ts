@@ -1077,9 +1077,13 @@ export class GameScene extends Phaser.Scene {
     return 'drewno';
   }
 
-  /** Every DIY shop and every SIEKIERA.coKtorySklep-th ordinary one (by its id) sells the axe. */
+  /**
+   * Every DIY shop and a third of the ordinary ones (picked by the shop's id, so always the same ones) sell the axe
+   * (owner, 5 Oct 2026). `gear` places are DIY and sports shops together (the map keeps no OSM type), so sports
+   * ones are told apart by name (SIEKIERA.sportowy).
+   */
   private sellsAxe(p: CityPlace) {
-    if (p.kind === 'gear') return true;
+    if (p.kind === 'gear') return !SIEKIERA.sportowy.test(p.name);
     let h = 0;
     for (const ch of p.id) h = (h * 31 + ch.charCodeAt(0)) | 0;
     return Math.abs(h) % SIEKIERA.coKtorySklep === 0;
@@ -2698,12 +2702,12 @@ export class GameScene extends Phaser.Scene {
     const ax = item('siekiera')!;
     const owned = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].find((id) => id === ax.id);
     const sharpen = owned ? repairCost(ax.id) : 0;
-    const tools: [string, () => void][] = owned
+    const tools: [string, () => void][] = !this.sellsAxe(p) ? [] : owned
       ? sharpen ? [[`🔧 Naostrz siekierę – ${sharpen} monet`, () => this.repairItem(ax.id)]] : []
       : [[this.label(ax), () => this.buy(ax)]];
     this.dialog({
       title: `🏕 ${p.name}`,
-      text: `Na półkach leżą namioty i siekiery. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot. Z siekierą ścięte drzewo daje drewno, a nie chrust. Masz ${session.coins} monet.${have}`,
+      text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''} Masz ${session.coins} monet.${have}`,
       buttons: [...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
       icons: [...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), null],
       onChoose: (i) => {
