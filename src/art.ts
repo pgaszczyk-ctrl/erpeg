@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from './skala';
 import Phaser from 'phaser';
 import { TRENING, SZYLDY } from './content/swiat';
 import { rng } from './rng';
@@ -1287,6 +1288,9 @@ export function artScale(key: string) {
  * sprites of it are shown at 1/3 (artScale) so it stays sharp.
  */
 /** The artist's nature pictures (pack 04c) over the drawn trees, pine, mushroom and log. */
+/** The hero's height in map px at full size: the artist's frame body (~56 of 64 px) × the people's scale 0.36. */
+const WZROST_POSTACI_PX = 56 * 0.36;
+
 export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.treeApple, 'drzewo_jablon', ['full', 'bare']);
   useArtist(scene, TEX.treePlum, 'drzewo_sliwa', ['full', 'bare']);
@@ -1298,13 +1302,17 @@ export function useArtistArt(scene: Phaser.Scene) {
   // Training stations (pack 07): the dummy stands as tall as a townsperson, the others in the same scale.
   // Their frames are lined up on the post in the ground (bug report 9: the artist drew the hit frames moved
   // sideways, so a hit dummy slid away; now only its top sways).
-  const k = TRENING.wysokosc / 100;
+  // With the smaller people (SKALA_POSTACI) every station is sized against the hero's height (TRENING.wzgledemPostaci):
+  // the dummy as tall as the hero, the target a bit lower, the crystal a bit taller.
+  const wzrost = WZROST_POSTACI_PX * SKALA_POSTACI;
+  const k = (f: string) => (SKALA_POSTACI < 1 ? (wzrost * (TRENING.wzgledemPostaci[f] ?? 1)) / (TRENING.sylwetka[f] ?? 100) : TRENING.wysokosc / 100);
   // Overhaul 09: in the world's pixel density (2 picture px per map px), hard edges, closed outline – like the carts.
+  // With the smaller people that is also the characters' density (0.48 map px per art px), so the pixels match.
   const px = WYGLAD_09 ? 2 : 0;
-  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k, true, px);
-  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k, true, px);
-  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k, true, px);
-  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k, true, px);
+  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k('kukla_treningowa'), true, px);
+  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k('kukla_treningowa_druga'), true, px);
+  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k('tarcza_strzelnicza'), true, px);
+  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k('krysztal_magii'), true, px);
   // Signboards over the places' doors (cut from the artist's board).
   const signs: [string, string][] = [[TEX.signShop, 'sklep'], [TEX.signSchool, 'szkola'], [TEX.signChurch, 'kosciol'], [TEX.signOffice, 'urzad'],
     [TEX.signHospital, 'szpital'], [TEX.signPolice, 'policja'], [TEX.signLibrary, 'biblioteka'], [TEX.signHotel, 'hotel'], [TEX.signBank, 'bank'],

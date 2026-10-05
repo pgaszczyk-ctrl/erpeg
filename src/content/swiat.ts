@@ -105,7 +105,20 @@ export const WOZY = {
 };
 
 /** Przyrządy treningowe (paczka 07): 3 klatki (stoi, trafiony, wraca); kukła ma w grze `wysokosc` punktów mapy (jak mieszkaniec), reszta w tej samej skali. */
-export const TRENING = { wysokosc: 22, klatkaMs: 110 };
+export const TRENING = {
+  /** Dawna wysokość (px mapy obrazka 100 px) – gdy postacie są w pełnej wielkości (SKALA_POSTACI 1). */
+  wysokosc: 22,
+  klatkaMs: 110,
+  /**
+   * Proporcje względem wzrostu postaci (zadanie „HUD, Kufer, proporcje” część C, 5.10.2026): obiekty na skalę
+   * człowieka wymiarujemy względem postaci, nie w metrach. Kukła ≈ wzrost postaci, tarcza trochę niższa, kryształ trochę wyższy.
+   */
+  wzgledemPostaci: { kukla_treningowa: 1.0, kukla_treningowa_druga: 1.0, tarcza_strzelnicza: 0.9, krysztal_magii: 1.1 } as Record<string, number>,
+  /** Widoczna wysokość obrazków grafika (px, od czubka do podstawy), żeby liczyć skalę z sylwetki, nie z płótna. */
+  sylwetka: { kukla_treningowa: 94, kukla_treningowa_druga: 94, tarcza_strzelnicza: 83, krysztal_magii: 93 } as Record<string, number>,
+  /** Odstęp między stanowiskami na boisku (px mapy) przy pełnej wielkości postaci; mnożony przez SKALA_POSTACI. */
+  odstep: 18,
+};
 
 /** Szyldy nad drzwiami miejsc (wycięte z planszy grafika, 86 × 84): szerokość w grze w punktach mapy (dawne znaczki miały 14). */
 export const SZYLDY = { szerokosc: 16 };

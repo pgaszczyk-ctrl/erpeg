@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { SKLAD_GANGOW } from '../content/pogoda';
 import { GROUND_DEPTH } from '../map/MapRenderer';
@@ -693,7 +694,7 @@ export class Training {
       for (let tries = 0; tries < 30 && !list.length; tries++) {
         const ox = cx + (tries ? (Math.sin(tries * 7.1) * (a.x1 - a.x0)) / 3 : 0);
         const oy = cy + (tries ? (Math.cos(tries * 3.7) * (a.y1 - a.y0)) / 3 : 0);
-        const spots = kinds.map((k, i) => ({ kind: k, x: ox + (i - 1) * 18, y: oy }));
+        const spots = kinds.map((k, i) => ({ kind: k, x: ox + (i - 1) * TRENING.odstep * SKALA_POSTACI, y: oy }));
         if (spots.every((p) => pointInRings(a.rings, p.x, p.y) && this.city.isFree(p.x, p.y, 5, 5))) list = spots;
       }
       // The second dummy (the coach's challenge, big pitches only): as far along the pitch as fits (up to ~60 m).
@@ -849,7 +850,7 @@ export class Training {
   /** The station of that kind hit at (x, y), if any; it wobbles. */
   hitAt(x: number, y: number, reach: number, kind: StationKind): Station | null {
     for (const s of this.active) {
-      if (s.kind !== kind || Math.hypot(s.x - x, s.y - 7 - y) > reach) continue;
+      if (s.kind !== kind || Math.hypot(s.x - x, s.y - 7 * SKALA_POSTACI - y) > reach) continue;
       const img = s.sprite;
       if (img?.texture.has('1')) {
         // The artist's frames: hit (leans back) → coming back → standing.
@@ -869,7 +870,7 @@ export class Training {
 
   /** Any station of any kind (projectiles hitting the wrong one just stop). */
   anyAt(x: number, y: number, reach: number): Station | null {
-    for (const s of this.active) if (Math.hypot(s.x - x, s.y - 7 - y) <= reach) return s;
+    for (const s of this.active) if (Math.hypot(s.x - x, s.y - 7 * SKALA_POSTACI - y) <= reach) return s;
     return null;
   }
 }

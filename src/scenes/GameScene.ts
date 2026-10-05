@@ -3108,7 +3108,7 @@ export class GameScene extends Phaser.Scene {
     const px = this.player.x, py = this.player.y;
     const points: { x: number; y: number }[] = [];
     for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
-    for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 });
+    for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 * SKALA_POSTACI });
     let best: { x: number; y: number } | null = null;
     let bestScore = Infinity;
     for (const t of points) {
