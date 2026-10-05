@@ -50,6 +50,12 @@ export const WALKA = {
   /** Magia na razie: mocny czar tyle razy mocniej (pełna magia przyjdzie później). */
   mnoznikCzaru: 2,
   lukStopnie: 120,
+  /**
+   * Celowanie strzałą i czarem (właściciel 5.10.2026: „patrzę mniej więcej w kierunku wroga, to musi lecieć do celu”):
+   * strzał leci prosto w najbliższy cel (potwór, tarcza albo kryształ treningowy) w tym stożku wokół kierunku,
+   * jeśli nic go nie zasłania. Pudło dalej się zdarza (i pokazuje „pudło!”), ale lot jest w stronę celu.
+   */
+  celowanieStopnie: 35,
   ciosMs: 150,
   /** Wielkość obrazka broni w punktach mapy (mocny cios trochę większy). */
   wielkoscBroni: 13,

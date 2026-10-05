@@ -862,6 +862,11 @@ export class Training {
     return null;
   }
 
+  /** Stations of one kind near the hero (where to aim a bow or a spell). */
+  targetsOf(kind: StationKind): Station[] {
+    return [...this.active].filter((s) => s.kind === kind);
+  }
+
   /** Any station of any kind (projectiles hitting the wrong one just stop). */
   anyAt(x: number, y: number, reach: number): Station | null {
     for (const s of this.active) if (Math.hypot(s.x - x, s.y - 7 - y) <= reach) return s;

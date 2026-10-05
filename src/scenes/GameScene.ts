@@ -3098,9 +3098,42 @@ export class GameScene extends Phaser.Scene {
     this.fireShot(weapon, this.dirFor(r.mode, r.dx, r.dy, r.dragged), strong, now);
   }
 
-  /** An arrow or a spell from the weapon in hand, flying in `dir`. */
+  /**
+   * Aim help: the nearest target (a visible monster, or a training target/crystal for this skill) within the range
+   * and within WALKA.celowanieStopnie of `dir`, with nothing built in between – the shot flies straight at it.
+   */
+  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia'): { x: number; y: number } {
+    const range = skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE;
+    const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
+    const px = this.player.x, py = this.player.y;
+    const points: { x: number; y: number }[] = [];
+    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
+    for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 });
+    let best: { x: number; y: number } | null = null;
+    let bestScore = Infinity;
+    for (const t of points) {
+      const dx = t.x - px, dy = t.y - py, d = Math.hypot(dx, dy);
+      if (d < 2 || d > range) continue;
+      const cos = (dx * dir.x + dy * dir.y) / d;
+      if (cos < maxCos) continue;
+      // Nothing built in between (walls stop shots anyway).
+      let clear = true;
+      for (let s = 6; s < d && clear; s += 6) if (this.city.buildingAt(px + (dx * s) / d, py + (dy * s) / d) !== undefined) clear = false;
+      if (!clear) continue;
+      // Closer and better lined up wins.
+      const score = d * (2 - cos);
+      if (score < bestScore) {
+        bestScore = score;
+        best = { x: dx / d, y: dy / d };
+      }
+    }
+    return best ?? dir;
+  }
+
+  /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
   private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+    dir = this.aimAssist(dir, skill);
     this.lastShot = now;
     // A bow needs arrows from the quiver, and every shot wears it.
     if (skill === 'luk') {
