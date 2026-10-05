@@ -21,6 +21,8 @@ export class BootScene extends Phaser.Scene {
   preload() {
     // Item pictures (16×16 pixel art) for shop dialogs.
     for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, `items/${id}.png`);
+    // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
+    this.load.spritesheet('szklo-peka', 'items/szklany_miecz_peka.png', { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);
     // The artist's ground and roof textures (content/swiat.ts).
     for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);

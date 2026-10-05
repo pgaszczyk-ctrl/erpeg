@@ -3274,6 +3274,24 @@ export class GameScene extends Phaser.Scene {
     return out;
   }
 
+  /**
+   * The glass sword bursts in the hero's hand: the artist's 4 frames once (100/100/100/180 ms, never
+   * looped, one anchor for all frames), then the remains fade out (ikony12 B animation, 5 Oct 2026).
+   */
+  private shatterGlass() {
+    if (!this.textures.exists('szklo-peka')) return;
+    const size = WALKA.wielkoscBroni * 1.6 * SKALA_POSTACI;
+    const img = this.add.image(this.player.x + 4 * SKALA_POSTACI, this.player.y - 8 * SKALA_POSTACI, 'szklo-peka', 0)
+      .setDisplaySize(size, size).setDepth(this.player.depth + 2);
+    const times = [100, 100, 100, 180];
+    let at = 0;
+    times.forEach((ms, f) => {
+      this.time.delayedCall(at, () => img.active && img.setFrame(f));
+      at += ms;
+    });
+    this.time.delayedCall(at, () => this.tweens.add({ targets: img, alpha: 0, duration: 250, onComplete: () => img.destroy() }));
+  }
+
   /** One blow or shot wore the weapon: say when it got blunt, broke or shattered. */
   private wearWeapon(id: string | null | undefined) {
     const p = item(id);
@@ -3284,6 +3302,7 @@ export class GameScene extends Phaser.Scene {
     else {
       const spare = gear.bag.some((sl) => 'item' in sl && item(sl.item)?.miejsce === 'bron');
       this.toast(`💥 ${p.nazwa} pękł! ${spare ? 'Załóż inną broń z plecaka (karta postaci).' : 'Został ci kijek.'}`, 3000);
+      if (p.szklany) this.shatterGlass();
       this.applySkill();
     }
     this.emitHud();
