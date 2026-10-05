@@ -25,6 +25,13 @@ Styl i skala: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pix
 </tr>
 </tbody>
 </table>
+<h2>1a. Wyrównanie do świata (ważne – po ocenie próbki lokomotywy, 5.10)</h2>
+<p>Próbka lokomotywy jest ładna, ale za dokładna względem świata z generatora: płynne przejścia tonów, za dużo odcieni, miękkie krawędzie. Po prostym wyrównaniu pasuje bardzo dobrze (<a href="8_wyrownanie/wyrownanie_lokomotywa_x2.png"><code>8_wyrownanie/wyrownanie_lokomotywa_x2.png</code></a>: z lewej Twoja próbka zmniejszona, w środku po wyrównaniu, z prawej zastępcza lokomotywa rysowana programem). Zasady dla każdego pliku z tego zamówienia:
+- <strong>rysuj od razu w docelowej wielkości</strong> (lokomotywa ok. 64 px długości), bez zmniejszania z dużego obrazka,
+- <strong>tylko kolory z <a href="8_wyrownanie/paleta_swiata.png"><code>8_wyrownanie/paleta_swiata.png</code></a></strong> (te same co w domach, rurach i torach), 4–5 odcieni na materiał, bez gradientów i bez wygładzania krawędzi,
+- światło z lewej-góry, obrys 1 px <code>#1e1a24</code> dookoła sylwetki, szczegóły co najmniej 2 px,
+- widok bardziej z góry niż w próbce (jak dachy domów: widać dach i jedną ścianę), żeby pojazd leżał na torze, a nie stał przed nim.
+Każdą paczkę przepuszczamy przez <a href="8_wyrownanie/wyrownaj.py"><code>8_wyrownanie/wyrownaj.py</code></a> (zmniejszenie, paleta, obrys). Jeśli po nim obrazek wygląda inaczej niż Twój, popraw kolory u siebie.</p>
 <h2>2. Lista</h2>
 <h3>2.1 Kolej parowa (najważniejsze)</h3>
 <p><strong>Lokomotywa i tender w 16 kierunkach</strong> (mają przód i tył), <strong>wagony w 8 kierunkach</strong> (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (<a href="6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png"><code>6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png</code></a>). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Widok prawie z góry, lekko z przodu (jak mapa). Bez dymu (parę robi program). Do każdego arkusza osobny <code>_cien.png</code> (czarna sylwetka cienia na ziemi, ta sama siatka).</p>
