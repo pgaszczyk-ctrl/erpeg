@@ -62,8 +62,9 @@ const CSS = `
   background: rgba(28,20,14,0.82); border: 2px solid #b8893b; border-radius: 10px; box-shadow: 0 0 0 2px #1a110b; color: #f3dfb0; }
 #hud .hud-compass { position: relative !important; flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border-radius: 8px !important;
   background: #3d2e22 !important; border: 2px solid #b8893b !important; display: flex; align-items: center; justify-content: center; }
-#hud .hud-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-#hud .hud-l1 { display: flex; align-items: baseline; gap: 9px; white-space: nowrap; }
+#hud .hud-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; overflow: hidden; }
+#hud .hud-l1 { display: flex; align-items: baseline; gap: 9px; white-space: nowrap; min-width: 0; overflow: hidden; }
+#hud .hud-weather { flex-shrink: 0; }
 #hud .hud-town { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 #hud .hud-weather { font-size: 14px; color: #d9c49a; }
 #hud .hud-l2 { font-size: 13px; color: #c9b48a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -171,7 +172,7 @@ export function mountHud(on: HudHandlers) {
   const hp = btn('', 'Zdrowie', on.character);
   const xp = btn('', 'Doświadczenie', on.character);
   m.append(canvas, heal, hp, xp, count,
-    btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie dla znajomych', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
+    btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
   p.className = 'hud-p';
@@ -236,15 +237,15 @@ function layout() {
   parts.heal.style.borderRadius = '50%';
   at(parts.hp, 49, 1, 10, H - 2);
   at(parts.xp, 59, 1, 10, H - 2);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 0, 66, 24, 24);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 25, 66, 24, 24);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 2, H - 20, 20, 20);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 26, H - 20, 20, 20);
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
     left: `${32 * s}px`, top: `${(27 + E) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   const menuW = 64; // the ☰ button top left
-  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, window.innerWidth - M - menuW)}px` });
+  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * 0.6), window.innerWidth - M - menuW)}px` });
   // Pickups: left of the machine on a wide screen, above it on a narrow one.
   const wide = window.innerWidth - W * s - 2 * M > 170;
   Object.assign(parts.picks.style, wide

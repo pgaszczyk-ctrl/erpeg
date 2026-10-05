@@ -6,6 +6,7 @@ from PIL import Image
 import os
 
 E = 30                      # extra rows on top
+H0 = 60 + E                 # picture height
 SRC = 'scripts/hud-v1'
 DST = 'public/hud'
 A, B, C, D, Ee, F, H, I = '#1a110b', '#e2b25a', '#b8893b', '#1f2a2c', '#f1e3c2', '#6b4a1f', '#2e2017', '#3d2e22'
@@ -33,42 +34,31 @@ def rect(x, y, w, h, col):
         for i in range(x, x + w):
             px[i, j] = rgb(col)
 
-# Bottom row: clear the three v1 buttons; two bigger buttons (owner: +50 %) – 24×24 frames with
-# the 9×9 icons drawn at 2× (camera from v1 button 2, a quest-log scroll).
+# Bottom row (HUD fixes, 5 Oct 2026): clear the v1 buttons; exactly two buttons of 20×20 – a 2 px brass
+# frame and the artist's 16×16 icon filling the whole inside (no inner dark frame): camera and quest log.
+# Their bottom edge is the tubes' bottom (y 89), so the machine is one rectangle.
 for j in range(44 + E, 60 + E):
     for i in range(0, 49):
         px[i, j] = (0, 0, 0, 0)
-cam_icon = [[src.getpixel((20 + i, 47 + j)) for i in range(9)] for j in range(9)]
-scroll = [
-    '.AAAAAAA.',
-    'AFEEEEEFA',
-    '.AEEEEEA.',
-    '.AEAAAEA.',
-    '.AEEEEEA.',
-    '.AEAAEEA.',
-    '.AEEEEEA.',
-    'AFEEEEEFA',
-    '.AAAAAAA.',
-]
-col = {'A': A, 'E': Ee, 'F': F, '.': H}
-scroll_icon = [[rgb(col[ch]) for ch in row] for row in scroll]
-N = 24
-def button(x0, y0, icon):
-    rows = ['.' + 'A' * (N - 2) + '.', 'A' + 'B' * (N - 2) + 'A', 'AC' + 'I' * (N - 4) + 'CA']
-    rows += ['ACH' + '#' * (N - 6) + 'HCA'] * (N - 6)
-    rows += ['AC' + 'H' * (N - 4) + 'CA', 'A' + 'F' * (N - 2) + 'A', '.' + 'A' * (N - 2) + '.']
-    pal = {'A': A, 'B': B, 'C': C, 'I': I, 'H': H, 'F': F}
-    for j, row in enumerate(rows):
-        for i, ch in enumerate(row):
-            if ch in pal:
-                px[x0 + i, y0 + j] = rgb(pal[ch])
-    for j in range(N - 6):
-        for i in range(N - 6):
-            c = icon[j // 2][i // 2]
-            px[x0 + 3 + i, y0 + 3 + j] = c if c[3] else rgb(H)
-by = 66
-button(0, by, cam_icon)
-button(25, by, scroll_icon)
+ICONS = 'scripts/hud-ikony'
+N = 20
+def button(x0, y0, name):
+    icon = Image.open(f'{ICONS}/{name}_16.png').convert('RGBA')
+    for j in range(N):
+        for i in range(N):
+            edge = min(i, j, N - 1 - i, N - 1 - j)
+            if edge == 0:
+                if (i in (0, N - 1)) and (j in (0, N - 1)):
+                    continue  # rounded corners
+                px[x0 + i, y0 + j] = rgb(A)
+            elif edge == 1:
+                px[x0 + i, y0 + j] = rgb(B if (i == 1 or j == 1) and i < N - 2 and j < N - 2 else C)
+            else:
+                c = icon.getpixel((i - 2, j - 2))
+                px[x0 + i, y0 + j] = c if c[3] else rgb(I)
+by = H0 - N
+button(2, by, 'aparat')
+button(26, by, 'dziennik')
 
 # Avatar frame (26×26 at x 11, y 2): outline, light brass top/left, brass, dark bottom, dark inside.
 ax, ay, aw = 11, 2, 26
@@ -102,7 +92,11 @@ for i in (58, 59):
     px[i, py0 + 4] = rgb(A)
 out.save(f'{DST}/maszynka_baza.png')
 
-for name in ('mikstura', 'owoc'):
-    _, o = shifted(name)
-    o.save(f'{DST}/maszynka_{name}.png')
+_, o = shifted('mikstura')
+o.save(f'{DST}/maszynka_mikstura.png')
+# The fruit heal: the artist's apple (16×16) in the middle of the round heal button (11..36, 9+E..34+E).
+o = Image.new('RGBA', (70, H0))
+apple = Image.open(f'{ICONS}/owoc_jablko_16.png').convert('RGBA')
+o.paste(apple, (11 + 13 - 8, 9 + E + 13 - 8), apple)
+o.save(f'{DST}/maszynka_owoc.png')
 print('ok', out.size)

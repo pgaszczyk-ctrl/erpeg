@@ -3,7 +3,7 @@ import { PX_PER_M } from './map/CityMap';
 import { PRZEDMIOTY } from './content/przedmioty';
 import { OWOCE, WSKRZESZENIE, DIAMENT, ALCHEMIK, LECZENIE_OWOCAMI, LAS } from './content/sklepy';
 import { NAMIOT } from './content/hotele';
-import { ZUZYCIE, STRZALY } from './content/zuzycie';
+import { ZUZYCIE, STRZALY, AMUNICJA } from './content/zuzycie';
 import { POKRETLA } from './content/ustawienia';
 import { POLA } from './content/pola';
 import { rpc } from './api';
@@ -32,7 +32,7 @@ const USTAW: Record<string, (v: number) => void> = {
     if (base && !p.szklany) p.wytrzymalosc = Math.max(1, Math.round(base * v));
   }),
   naprawa_czesc_ceny: (v) => (ZUZYCIE.naprawaCzescCeny = v),
-  strzala_cena: (v) => (STRZALY.cena = Math.round(v)),
+  strzala_cena: (v) => (AMUNICJA.strzaly.cena = Math.round(v)),
   kolczan: (v) => (STRZALY.kolczan = Math.round(v)),
 };
 

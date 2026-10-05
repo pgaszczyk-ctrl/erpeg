@@ -1,4 +1,5 @@
 import { condition } from '../inventory';
+import type { Owoc, Grupa } from '../content/sklepy';
 
 // Pixel-art pictures of items (public/items/<id>.png: the old 16×16 ones, and the artist's 64×64 – a 32×32
 // grid shown 2× – from pack ikony12 as they arrive), shown
@@ -7,7 +8,7 @@ import { condition } from '../inventory';
 /** Items that have a picture (also loaded as Phaser textures `item-<id>` in BootScene). */
 export const ITEM_PICTURES = [
   'kijek', 'zelazny', 'miecz_mosiezny', 'stalowy', 'szabla_hartowana', 'rycerski', 'karabela_damascenska', 'swietlisty', 'gromowladny',
-  'luk', 'dlugi_luk', 'rozdzka', 'kula', 'ksiega',
+  'luk', 'luk_refleksyjny', 'dlugi_luk', 'kusza', 'pistolet_parowy', 'rozdzka', 'kula', 'ksiega',
   'skorzana_zbroja', 'kolczuga', 'skorzany_helm', 'zelazny_helm', 'kapelusz', 'czapka_maga', 'korona',
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
   'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta',
@@ -16,8 +17,24 @@ const HAVE = new Set(ITEM_PICTURES);
 
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */
 const CRACKED: Record<string, string> = { szklany_miecz: 'szklany_miecz_pekniety' };
+/**
+ * Raw materials (ikony12 A1, 64×64 like the items): only wood (`drewno`) is a backpack good so far;
+ * chrust, kij (bow material, not the stick weapon `kijek`), wegiel, ruda_zelaza, miedz wait for crafting.
+ */
+export const MATERIAL_PICTURES = ['drewno', 'chrust', 'kij', 'wegiel', 'ruda_zelaza', 'miedz'];
+/** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
+const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = { drewno: 'drewno' };
+
+/** The picture URL of a backpack good or goods group, if it has one. */
+export function goodsPicture(what: Owoc | Grupa): string | undefined {
+  const f = GOODS_PICTURES[what];
+  return f ? `items/${f}.png` : undefined;
+}
+
+/** Ammunition pictures (ikony12 C2), textures `item-<kind>`: arrows, bolts, bullets, a magic charge. */
+export const AMMO_PICTURES = ['strzaly', 'belty', 'naboje', 'ladunek_magii'];
 /** Extra pictures to load (BootScene) besides ITEM_PICTURES. */
-export const ITEM_VARIANTS = Object.values(CRACKED);
+export const ITEM_VARIANTS = [...Object.values(CRACKED), ...AMMO_PICTURES, ...MATERIAL_PICTURES];
 
 /** The picture file for an item now (its cracked variant when worn down). */
 function pictureOf(id: string) {

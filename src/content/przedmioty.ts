@@ -10,6 +10,8 @@
 export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet' | 'talizman' | 'talizman2' | 'talizman3';
 /** Trzy miejsca na talizmany (przedmioty z miejsce: 'talizman' idą do pierwszego wolnego). */
 export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
+import type { Amunicja } from './zuzycie';
+
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
 export interface Przedmiot {
@@ -23,6 +25,8 @@ export interface Przedmiot {
   cena: number;
   /** Łuk albo magia (różdżka w ręce; kula/księga w drugiej ręce wzmacniają czary). */
   rodzaj?: 'luk' | 'magia';
+  /** What a ranged weapon shoots (default arrows). */
+  amunicja?: Amunicja;
   /** Gdzie się go kupuje: sklep (domyślnie) albo biblioteka. */
   gdzie?: 'sklep' | 'biblioteka';
   /**
@@ -55,7 +59,11 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'szklany_miecz', nazwa: 'Szklany miecz', miejsce: 'bron', moc: 16, cena: 4000, wytrzymalosc: 15, szklany: true, opis: 'Bardzo mocny, ale kruchy: pęka po 15 trafionych ciosach – na każdym poziomie trudności.' },
   // Broń dystansowa (przytrzymaj i celuj)
   { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 4, cena: 3000, wytrzymalosc: 800 },
+  { id: 'luk_refleksyjny', nazwa: 'Łuk refleksyjny', miejsce: 'bron', rodzaj: 'luk', moc: 5, cena: 6000, wytrzymalosc: 900 },
   { id: 'dlugi_luk', nazwa: 'Długi łuk', miejsce: 'bron', rodzaj: 'luk', moc: 7, cena: 12000, wytrzymalosc: 1000 },
+  // ikony12 C1: temporary numbers. Crossbow shoots bolts, the steam pistol bullets (AMUNICJA in zuzycie.ts).
+  { id: 'kusza', nazwa: 'Kusza', miejsce: 'bron', rodzaj: 'luk', amunicja: 'belty', moc: 10, cena: 25000, wytrzymalosc: 1200 },
+  { id: 'pistolet_parowy', nazwa: 'Pistolet parowy', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 14, cena: 60000, wytrzymalosc: 1400 },
   { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },

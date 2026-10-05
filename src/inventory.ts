@@ -5,7 +5,7 @@ import {
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 import { esencja } from './content/esencje';
-import { ZUZYCIE, STRZALY } from './content/zuzycie';
+import { ZUZYCIE, STRZALY, AMUNICJA, type Amunicja } from './content/zuzycie';
 
 // The character's things: equipped items, a 5-slot backpack, skill practice
 // and whether they learned magic. Fruit, vegetables, mushrooms and wood lie in
@@ -60,8 +60,8 @@ export interface Gear {
   imbue: Record<string, { e: string; until: number }>;
   /** Wear: item id → blows/shots used up (content/zuzycie.ts). */
   wear: Record<string, number>;
-  /** Arrows in the quiver (STRZALY.kolczan at most). */
-  arrows: number;
+  /** Ammunition per kind (STRZALY.kolczan of each at most): arrows, bolts, bullets. */
+  ammo: Record<Amunicja, number>;
 }
 
 export const gear: Gear = freshGear();
@@ -74,7 +74,7 @@ export function freshGear(): Gear {
     magic: false,
     imbue: {},
     wear: {},
-    arrows: 0,
+    ammo: { strzaly: 0, belty: 0, naboje: 0 },
   };
 }
 
@@ -85,7 +85,7 @@ export function item(id: string | null | undefined): Przedmiot | undefined {
 /** Loads gear from a save, converting saves from before the backpack. */
 export function loadGear(save: {
   equip?: Gear['equip']; bag?: Slot[]; skills?: Gear['skills']; magic?: boolean; nasycenia?: Gear['imbue'];
-  zuzycie?: Gear['wear']; strzaly?: number;
+  zuzycie?: Gear['wear']; strzaly?: number; belty?: number; naboje?: number;
   sword?: string; swordSkill?: number; fruits?: Partial<Record<Owoc, number>>;
 }) {
   const g = freshGear();
@@ -106,7 +106,8 @@ export function loadGear(save: {
   for (const [id, v] of Object.entries(save.nasycenia ?? {})) if (v && esencja(v.e) && v.until > Date.now()) g.imbue[id] = { e: v.e, until: v.until };
   for (const [id, n] of Object.entries(save.zuzycie ?? {})) if (item(id)?.wytrzymalosc && n > 0) g.wear[id] = Math.min(n, item(id)!.wytrzymalosc!);
   // Characters from before arrows get a full quiver, so their bow keeps working.
-  g.arrows = Math.max(0, Math.min(STRZALY.kolczan, Math.round(save.strzaly ?? STRZALY.naStart)));
+  const fill = (n: number | undefined, start: number) => Math.max(0, Math.min(STRZALY.kolczan, Math.round(n ?? start)));
+  g.ammo = { strzaly: fill(save.strzaly, STRZALY.naStart), belty: fill(save.belty, 0), naboje: fill(save.naboje, 0) };
   // Bows and wands used to go in the second hand; now they are held in the main hand.
   const off = item(g.equip.dystans);
   if (off && off.miejsce === 'bron' && g.bag.length < PLECAK.miejsc) {
@@ -119,7 +120,7 @@ export function loadGear(save: {
 }
 
 export function saveGear() {
-  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic, nasycenia: gear.imbue, zuzycie: gear.wear, strzaly: gear.arrows };
+  return { equip: gear.equip, bag: gear.bag, skills: gear.skills, magic: gear.magic, nasycenia: gear.imbue, zuzycie: gear.wear, strzaly: gear.ammo.strzaly, belty: gear.ammo.belty, naboje: gear.ammo.naboje };
 }
 
 // ---------------------------------------------------------------- skills
@@ -283,25 +284,32 @@ export function repairable(): string[] {
   return [...new Set(ids.filter((id): id is string => !!id && repairCost(id) > 0))];
 }
 
-/** Takes one arrow from the quiver; false when it is empty. */
-export function takeArrow() {
-  if (gear.arrows <= 0) return false;
-  gear.arrows--;
+/** What a ranged weapon shoots (null for swords and magic). */
+export function ammoOf(p: Przedmiot | undefined): Amunicja | null {
+  return p?.rodzaj === 'luk' ? (p.amunicja ?? 'strzaly') : null;
+}
+
+/** Takes one piece of ammunition; false when there is none. */
+export function takeAmmo(k: Amunicja) {
+  if (gear.ammo[k] <= 0) return false;
+  gear.ammo[k]--;
   return true;
 }
 
-/** Room left in the quiver. */
-export function quiverRoom() {
-  return Math.max(0, STRZALY.kolczan - gear.arrows);
+/** Room left for that kind. */
+export function ammoRoom(k: Amunicja) {
+  return Math.max(0, STRZALY.kolczan - gear.ammo[k]);
 }
 
-export function addArrows(n: number) {
-  gear.arrows = Math.min(STRZALY.kolczan, gear.arrows + Math.max(0, n));
+export function addAmmo(k: Amunicja, n: number) {
+  gear.ammo[k] = Math.min(STRZALY.kolczan, gear.ammo[k] + Math.max(0, n));
 }
 
-/** Any bow owned (worn or in the backpack): the shop then sells arrows. */
-export function ownsBow() {
-  return [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].some((id) => item(id)?.rodzaj === 'luk');
+/** Kinds of ammunition the owned ranged weapons (worn or in the backpack) shoot: the shop sells those. */
+export function ownedAmmo(): Amunicja[] {
+  const ids = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))];
+  const kinds = new Set(ids.map((id) => ammoOf(item(id))).filter((k): k is Amunicja => !!k));
+  return (Object.keys(AMUNICJA) as Amunicja[]).filter((k) => kinds.has(k));
 }
 
 /** The equipped ranged weapon, if it can be used (magic needs the skill). */

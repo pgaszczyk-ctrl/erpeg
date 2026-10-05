@@ -3,9 +3,10 @@ import { LECZENIE_OWOCAMI, OWOCE, type Owoc } from '../content/sklepy';
 import { slotCell, slotDrag, slotLabel } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownsBow,
+  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
 import { session } from '../quests';
+import { AMUNICJA } from '../content/zuzycie';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin } from '../sprites';
 import { ENEMY_KINDS } from '../objects/Slime';
@@ -389,7 +390,12 @@ function show(host: CharacterHost) {
     s.append(gold);
     if (session.diamenty) s.append(line('💎', 'Diamenty', session.diamenty, 4));
     s.append(line('🧪', 'Mikstury', session.mikstury, 4));
-    if (ownsBow()) s.append(line('🏹', 'Strzały', gear.arrows, 4));
+    for (const k of ownedAmmo()) {
+      const pic = document.createElement('img');
+      pic.src = `${import.meta.env.BASE_URL}items/${k}.png`;
+      pic.className = 'k-res-pic';
+      s.append(line(pic, AMUNICJA[k].nazwa, gear.ammo[k], 3));
+    }
     const goods = goodsByKind();
     for (const f of Object.keys(OWOCE) as Owoc[]) {
       const n = goods[f] ?? 0;

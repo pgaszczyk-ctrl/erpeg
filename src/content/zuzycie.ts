@@ -17,11 +17,23 @@ export const ZUZYCIE = {
   naprawaCzescCeny: 0.3,
 };
 
-/** Strzały do łuku: kołczan mieści `kolczan`, nowy łuk przychodzi z `zLukiem`. */
+/**
+ * Amunicja broni dystansowej (właściciel, 5 X 2026: „dużo więcej, 200, zużywa się jak broń”):
+ * łuki strzelają strzałami, kusza bełtami, pistolet parowy nabojami. Każdy strzał zabiera
+ * jedną sztukę (i punkt wytrzymałości broni). Każdego rodzaju mieści się `kolczan`,
+ * nowa broń przychodzi z `zLukiem` sztuk swojej amunicji.
+ */
+export type Amunicja = 'strzaly' | 'belty' | 'naboje';
+
+export const AMUNICJA: Record<Amunicja, { nazwa: string; wielu: string; ikona: string; cena: number }> = {
+  strzaly: { nazwa: 'Strzały', wielu: 'strzał', ikona: '🏹', cena: 3 },
+  belty: { nazwa: 'Bełty', wielu: 'bełtów', ikona: '🎯', cena: 5 },
+  naboje: { nazwa: 'Naboje', wielu: 'nabojów', ikona: '🔩', cena: 8 },
+};
+
 export const STRZALY = {
-  cena: 3,
-  kolczan: 50,
-  zLukiem: 20,
+  kolczan: 200,
+  zLukiem: 50,
   /** Postacie sprzed strzał dostają tyle na start (żeby łuk nie stanął). */
   naStart: 50,
   /** Licznik przy broni robi się czerwony poniżej tylu. */

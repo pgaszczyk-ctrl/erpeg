@@ -1,4 +1,4 @@
-import { itemIcon } from './itemIcon';
+import { itemIcon, goodsPicture } from './itemIcon';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
 import { MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
@@ -21,7 +21,16 @@ function el(tag: string, cls = '', text = '') {
 }
 
 export function slotIcon(s: Slot): Node | string {
-  if ('goods' in s) return GRUPY[s.goods].ikona;
+  if ('goods' in s) {
+    const pic = goodsPicture(s.goods);
+    if (!pic) return GRUPY[s.goods].ikona;
+    const img = document.createElement('img');
+    img.src = pic;
+    img.className = 'item-ico sl-ico';
+    img.alt = '';
+    img.draggable = false;
+    return img;
+  }
   if ('esencja' in s) return esencja(s.esencja)?.ikona ?? '🧪';
   const p = item(s.item);
   if (!p) return '?';

@@ -40,7 +40,7 @@ import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPozi
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
-import { STRZALY } from '../content/zuzycie';
+import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
@@ -58,7 +58,7 @@ import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PI
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
-  condition, isBroken, useWeapon, repairCost, repair, repairable, takeArrow, quiverRoom, addArrows, ownsBow,
+  condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo,
   goodsByKind,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
@@ -3150,10 +3150,12 @@ export class GameScene extends Phaser.Scene {
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     dir = this.aimAssist(dir, skill);
     this.lastShot = now;
-    // A bow needs arrows from the quiver, and every shot wears it.
-    if (skill === 'luk') {
-      if (!takeArrow()) {
-        if (now - this.noArrowsToast > 2500) this.toast('🏹 Brak strzał! Kup je w sklepie.', 2000);
+    // A bow needs arrows (a crossbow bolts, the steam pistol bullets), and every shot wears it.
+    const ammo = ammoOf(weapon);
+    if (ammo) {
+      if (!takeAmmo(ammo)) {
+        const a = AMUNICJA[ammo];
+        if (now - this.noArrowsToast > 2500) this.toast(`${a.ikona} Brak: ${a.nazwa.toLowerCase()}! Kup je w sklepie.`, 2000);
         this.noArrowsToast = now;
         return;
       }
@@ -3230,11 +3232,12 @@ export class GameScene extends Phaser.Scene {
     }
     spend(p.cena);
     repair(p.id); // a new one is whole
-    const arrows = p.rodzaj === 'luk' ? Math.min(STRZALY.zLukiem, quiverRoom()) : 0;
-    addArrows(arrows);
+    const kind = ammoOf(p);
+    const arrows = kind ? Math.min(STRZALY.zLukiem, ammoRoom(kind)) : 0;
+    if (kind) addAmmo(kind, arrows);
     this.applySkill();
     this.emitHud();
-    this.toast((where === 'equipped' ? `Kupiłeś i założyłeś: ${p.nazwa}!` : `Kupiłeś: ${p.nazwa} (w plecaku).`) + (arrows ? ` Do tego ${arrows} strzał.` : ''));
+    this.toast((where === 'equipped' ? `Kupiłeś i założyłeś: ${p.nazwa}!` : `Kupiłeś: ${p.nazwa} (w plecaku).`) + (kind && arrows ? ` Do tego ${arrows} ${AMUNICJA[kind].wielu}.` : ''));
     this.save();
   }
 
@@ -3249,13 +3252,14 @@ export class GameScene extends Phaser.Scene {
     this.save();
   }
 
-  private buyArrows(n: number) {
-    const cost = n * STRZALY.cena;
-    if (session.coins < cost) return this.toast(`Za mało monet – ${n} strzał kosztuje ${cost}.`, 2200);
+  private buyArrows(k: Amunicja, n: number) {
+    const a = AMUNICJA[k];
+    const cost = n * a.cena;
+    if (session.coins < cost) return this.toast(`Za mało monet – ${n} ${a.wielu} kosztuje ${cost}.`, 2200);
     spend(cost);
-    addArrows(n);
+    addAmmo(k, n);
     this.emitHud();
-    this.toast(`🏹 +${n} strzał (masz ${gear.arrows}).`, 1800);
+    this.toast(`${a.ikona} +${n} ${a.wielu} (masz ${gear.ammo[k]}).`, 1800);
     this.save();
   }
 
@@ -3270,7 +3274,8 @@ export class GameScene extends Phaser.Scene {
       else if (item(id)?.szklany) out += ` · ${c.left}/${c.max}`;
       else if (pct < 100) out += ` · ${pct}%`;
     }
-    if (item(id)?.rodzaj === 'luk') out += ` · 🏹${gear.arrows}`;
+    const k = ammoOf(item(id));
+    if (k) out += ` · ${AMUNICJA[k].ikona}${gear.ammo[k]}`;
     return out;
   }
 
@@ -3366,23 +3371,25 @@ export class GameScene extends Phaser.Scene {
     }
     // Grandma Grażynka's garden tools wait at the shop nearest her village.
     const tools = this.fixed.grazynkaStep() === 'sklep' && this.fixed.grazynkaShop()?.id === p.id ? ['🧺 Odbierz narzędzia babci Grażynki'] : [];
-    // Repairs of worn weapons, and arrows for a bow (+10, +50, a full quiver).
+    // Repairs of worn weapons, and ammunition for every ranged weapon owned (+50, +100, full).
     const fixes = repairable();
-    const room = quiverRoom();
-    const packs = ownsBow() && room > 0 ? [...new Set([10, 50].filter((n) => n < room).concat(room))] : [];
+    const packs = ownedAmmo().flatMap((k) => {
+      const room = ammoRoom(k);
+      return room > 0 ? [...new Set([50, 100].filter((n) => n < room).concat(room))].map((n) => ({ k, n, full: n === room })) : [];
+    });
     const extra: [string, () => void][] = [
       ...fixes.map((id): [string, () => void] => {
         const c = condition(id)!;
         return [`🔧 Napraw: ${item(id)!.nazwa} (${Math.round((100 * c.left) / c.max)}%) – ${repairCost(id)} monet`, () => this.repairItem(id)];
       }),
-      ...packs.map((n): [string, () => void] => [`🏹 Strzały +${n}${n === room ? ' (do pełna)' : ''} – ${n * STRZALY.cena} monet`, () => this.buyArrows(n)]),
+      ...packs.map(({ k, n, full }): [string, () => void] => [`${AMUNICJA[k].nazwa} +${n}${full ? ' (do pełna)' : ''} – ${n * AMUNICJA[k].cena} monet`, () => this.buyArrows(k, n)]),
     ];
-    const quiver = ownsBow() ? `\n🏹 W kołczanie: ${gear.arrows}/${STRZALY.kolczan} strzał.` : '';
+    const quiver = ownedAmmo().map((k) => `\n${AMUNICJA[k].ikona} ${AMUNICJA[k].nazwa}: ${gear.ammo[k]}/${STRZALY.kolczan}`).join('');
     this.dialog({
       title, tabs,
       text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
-      icons: [...tools.map(() => null), ...extra.map(() => null), ...offers.map((o) => itemTexture(o.id)), null],
+      icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
         if (i < 0) return switchTab(i);
         if (tools.length && i === 0) {
@@ -4124,7 +4131,7 @@ export class GameScene extends Phaser.Scene {
       duelMax: MIESZKANCY.serduszka * 2,
       title: session.story.title ? `${session.name}, ${session.story.title}` : null,
       sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel(this.handSkill())}` + this.wearLabel() + (item(gear.equip.dystans) ? `  ✋ ${item(gear.equip.dystans)!.nazwa}` : ''),
-      swordWarn: isBroken(gear.equip.bron) || (rangedWeapon()?.rodzaj === 'luk' && gear.arrows < STRZALY.malo),
+      swordWarn: isBroken(gear.equip.bron) || (!!ammoOf(rangedWeapon() ?? undefined) && gear.ammo[ammoOf(rangedWeapon() ?? undefined)!] < STRZALY.malo),
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
       // Not while the diamonds may still save the hero (the question waits on top).

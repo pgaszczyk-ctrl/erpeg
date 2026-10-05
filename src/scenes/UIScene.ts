@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
-import { WSKRZESZENIE } from '../content/sklepy';
+import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showBrag } from '../ui/brag';
+import { goodsPicture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { OWOCE, type Owoc } from '../content/sklepy';
@@ -270,7 +271,7 @@ export class UIScene extends Phaser.Scene {
     const q = s.lingering === null ? s.quests[0] : undefined;
     setHud({
       hp: s.hp, maxHp: s.maxHp, extra: s.extra, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
-      noHeal: s.potions <= 0 && !s.heal && s.hp < s.maxHp,
+      noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
     });
@@ -298,10 +299,10 @@ export class UIScene extends Phaser.Scene {
         if (d <= 0) continue;
         const o = OWOCE[f];
         const name = d === 1 ? o.nazwa : d % 10 >= 2 && d % 10 <= 4 && (d % 100 < 12 || d % 100 > 14) ? o.mnoga : o.wielu;
-        hudPickup(`+${d} ${name}`, this.iconOf(GOODS_TEX[f]));
+        hudPickup(`+${d} ${name}`, goodsPicture(f) ?? this.iconOf(GOODS_TEX[f]));
       }
     }
-    if (this.lastCoins !== null && s.coins > this.lastCoins) hudPickup(`+${s.coins - this.lastCoins} złota`, this.iconOf(TEX.coin));
+    if (this.lastCoins !== null && s.coins > this.lastCoins) hudPickup(`+${s.coins - this.lastCoins} złota`, `${import.meta.env.BASE_URL}hud/zloto_16.png`);
     this.lastGoods = { ...s.goods };
     this.lastCoins = s.coins;
   }
@@ -571,7 +572,7 @@ export class UIScene extends Phaser.Scene {
     this.sleepWorld();
     toggleCharacter({
       page,
-      goodsIcon: (f) => this.iconOf(GOODS_TEX[f]),
+      goodsIcon: (f) => goodsPicture(f) ?? this.iconOf(GOODS_TEX[f]),
       onClose: () => {
         this.wakeWorld();
         game.gearChanged();

@@ -35,5 +35,5 @@ export const POKRETLA: Pokretlo[] = [
   { k: 'wytrzymalosc_mnoznik', grupa: 'Zużycie broni', nazwa: 'Wytrzymałość broni (× mnożnik; szklany miecz bez zmian)', domyslnie: 1, min: 0.1, max: 20, krok: 0.1 },
   { k: 'naprawa_czesc_ceny', grupa: 'Zużycie broni', nazwa: 'Pełna naprawa kosztuje tyle ceny broni (0.3 = 30%)', domyslnie: 0.3, min: 0, max: 2, krok: 0.05 },
   { k: 'strzala_cena', grupa: 'Zużycie broni', nazwa: 'Strzała kosztuje (monet)', domyslnie: 3, min: 0, max: 1000 },
-  { k: 'kolczan', grupa: 'Zużycie broni', nazwa: 'Kołczan mieści strzał', domyslnie: 50, min: 5, max: 500 },
+  { k: 'kolczan', grupa: 'Zużycie broni', nazwa: 'Mieści się sztuk amunicji (każdego rodzaju)', domyslnie: 200, min: 5, max: 500 },
 ];
