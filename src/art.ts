@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { TRENING, SZYLDY } from './content/swiat';
 import { rng } from './rng';
 import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
-import { nowy, rgb, obrysuj, jasniej, doCanvas, OBRYS } from './gen';
+import { nowy, rgb, doCanvas, OBRYS } from './gen';
+import { PALETA_SWIATA } from './content/paleta';
 import { WYGLAD_09 } from './map/Podloze09';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
@@ -1330,14 +1331,16 @@ function baseAligned(img: HTMLImageElement, n: number): HTMLCanvasElement {
 }
 
 /**
- * The artist's smooth picture turned into the world's pixel art: shrunk with an area average to `k` of its size,
- * alpha made hard (half covered or more = solid), then the generator's outline (dark, lighter on the lit side).
+ * The artist's picture lined up with the world (like docs/paczka-dla-artysty/8_wyrownanie/wyrownaj.py, the fix the
+ * owner liked on the locomotive): shrunk with an area average to `k` of its size, every pixel replaced by the nearest
+ * colour of the world palette (PALETA_SWIATA), alpha made hard, then a 1 px #1e1a24 outline around the silhouette.
  */
 function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
   const W = Math.max(1, Math.round(src.width * k)), H = Math.max(1, Math.round(src.height * k));
   const d = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
-  const o = nowy(W, H);
+  const o = nowy(W + 2, H + 2);
   const sx = src.width / W, sy = src.height / H;
+  const pal = PALETA_SWIATA.map((c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255]);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let r = 0, g = 0, b = 0, a = 0, n = 0;
     for (let v = Math.floor(y * sy); v < Math.min(src.height, Math.ceil((y + 1) * sy)); v++)
@@ -1345,9 +1348,20 @@ function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
         const i = (v * src.width + u) * 4, al = d[i + 3] / 255;
         r += d[i] * al; g += d[i + 1] * al; b += d[i + 2] * al; a += al; n++;
       }
-    if (a / n >= 0.5) o.px[y * W + x] = rgb(r / a, g / a, b / a);
+    if (a / n < 0.5) continue;
+    r /= a; g /= a; b /= a;
+    let best = pal[0], bd = Infinity;
+    for (const q of pal) { const e = (q[0] - r) ** 2 + (q[1] - g) ** 2 + (q[2] - b) ** 2; if (e < bd) { bd = e; best = q; } }
+    o.px[(y + 1) * o.w + x + 1] = rgb(best[0], best[1], best[2]);
   }
-  obrysuj(o, OBRYS, jasniej);
+  // Outline around the silhouette (outside, 4 neighbours), as in wyrownaj.py.
+  const add: number[] = [];
+  for (let y = 0; y < o.h; y++) for (let x = 0; x < o.w; x++) {
+    if (o.px[y * o.w + x]) continue;
+    const at = (i: number, j: number) => i >= 0 && j >= 0 && i < o.w && j < o.h && o.px[j * o.w + i];
+    if (at(x + 1, y) || at(x - 1, y) || at(x, y + 1) || at(x, y - 1)) add.push(y * o.w + x);
+  }
+  for (const i of add) o.px[i] = OBRYS;
   return doCanvas(o);
 }
 
