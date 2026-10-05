@@ -206,12 +206,14 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     for (let i = 0; i < b.r.length; i += 2) { a = Math.min(a, b.r[i]); c = Math.min(c, b.r[i + 1]); e = Math.max(e, b.r[i]); f = Math.max(f, b.r[i + 1]); }
     return [a, c, e, f];
   });
-  const wBudynku = (x: number, y: number) => z.budynki.some((b, i) => {
+  // Drzewa nie w budynkach ani na ich podwórkach i nie tuż przy ścianie (korona nie wchodzi na dach).
+  const wObrysie = (x: number, y: number) => z.budynki.some((b, i) => {
     const r = ramki[i];
-    if (x < r[0] || y < r[1] || x > r[2] || y > r[3]) return false;
-    return wPierscieniu(b.r, x + 0.5, y + 0.5) && !b.dziury.some((d) => wPierscieniu(d, x + 0.5, y + 0.5));
+    return x >= r[0] && y >= r[1] && x <= r[2] && y <= r[3] && wPierscieniu(b.r, x + 0.5, y + 0.5);
   });
-  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) => !wBudynku(x, y));
+  const OD_SCIAN = 12;
+  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) =>
+    !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
   if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete);
   const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));

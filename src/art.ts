@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { TRENING, SZYLDY } from './content/swiat';
 import { rng } from './rng';
 import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
+import { nowy, rgb, obrysuj, jasniej, doCanvas, OBRYS } from './gen';
+import { WYGLAD_09 } from './map/Podloze09';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
 // Every texture is registered under a key (see TEX); to switch to a real
@@ -1283,10 +1285,12 @@ export function useArtistArt(scene: Phaser.Scene) {
   // Their frames are lined up on the post in the ground (bug report 9: the artist drew the hit frames moved
   // sideways, so a hit dummy slid away; now only its top sways).
   const k = TRENING.wysokosc / 100;
-  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k, true);
-  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k, true);
-  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k, true);
-  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k, true);
+  // Overhaul 09: in the world's pixel density (2 picture px per map px), hard edges, closed outline – like the carts.
+  const px = WYGLAD_09 ? 2 : 0;
+  useArtist(scene, TEX.dummy, 'kukla_treningowa', ['0', '1', '2'], k, true, px);
+  useArtist(scene, TEX.dummyFar, 'kukla_treningowa_druga', ['0', '1', '2'], k, true, px);
+  useArtist(scene, TEX.target, 'tarcza_strzelnicza', ['0', '1', '2'], k, true, px);
+  useArtist(scene, TEX.crystal, 'krysztal_magii', ['0', '1', '2'], k, true, px);
   // Signboards over the places' doors (cut from the artist's board).
   const signs: [string, string][] = [[TEX.signShop, 'sklep'], [TEX.signSchool, 'szkola'], [TEX.signChurch, 'kosciol'], [TEX.signOffice, 'urzad'],
     [TEX.signHospital, 'szpital'], [TEX.signPolice, 'policja'], [TEX.signLibrary, 'biblioteka'], [TEX.signHotel, 'hotel'], [TEX.signBank, 'bank'],
@@ -1325,11 +1329,43 @@ function baseAligned(img: HTMLImageElement, n: number): HTMLCanvasElement {
   return out;
 }
 
-function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3, onBase = false) {
+/**
+ * The artist's smooth picture turned into the world's pixel art: shrunk with an area average to `k` of its size,
+ * alpha made hard (half covered or more = solid), then the generator's outline (dark, lighter on the lit side).
+ */
+function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
+  const W = Math.max(1, Math.round(src.width * k)), H = Math.max(1, Math.round(src.height * k));
+  const d = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
+  const o = nowy(W, H);
+  const sx = src.width / W, sy = src.height / H;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let r = 0, g = 0, b = 0, a = 0, n = 0;
+    for (let v = Math.floor(y * sy); v < Math.min(src.height, Math.ceil((y + 1) * sy)); v++)
+      for (let u = Math.floor(x * sx); u < Math.min(src.width, Math.ceil((x + 1) * sx)); u++) {
+        const i = (v * src.width + u) * 4, al = d[i + 3] / 255;
+        r += d[i] * al; g += d[i + 1] * al; b += d[i + 2] * al; a += al; n++;
+      }
+    if (a / n >= 0.5) o.px[y * W + x] = rgb(r / a, g / a, b / a);
+  }
+  obrysuj(o, OBRYS, jasniej);
+  return doCanvas(o);
+}
+
+function useArtist(scene: Phaser.Scene, key: string, file: string, frames: string[] | null, scale = 1 / 3, onBase = false, pxPerMap = 0) {
   const src = `swiat-${file}`;
   if (!scene.textures.exists(src)) return;
   const img = scene.textures.get(src).getSourceImage() as HTMLImageElement;
   if (scene.textures.exists(key)) scene.textures.remove(key);
+  if (frames && onBase && pxPerMap) {
+    // Overhaul 09: chunky pixels at the world's density, shown with NEAREST.
+    const c = pixelate(baseAligned(img, frames.length), scale * pxPerMap);
+    const tex = scene.textures.addCanvas(key, c)!;
+    const FW = c.width / frames.length;
+    frames.forEach((f, i) => tex.add(f, 0, Math.round(i * FW), 0, Math.floor(FW), c.height));
+    tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    ART_SCALE.set(key, 1 / pxPerMap);
+    return;
+  }
   if (frames && onBase) {
     const c = baseAligned(img, frames.length);
     const tex = scene.textures.addCanvas(key, c)!;

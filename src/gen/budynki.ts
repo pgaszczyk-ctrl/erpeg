@@ -39,7 +39,9 @@ export interface OpcjeBudynku {
 export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
   // Obrys z podwórkami (dziury): maska ścian i dachu bierze wszystkie pierścienie (parzysto-nieparzyście).
-  const pierscienie = [pierscien, ...(op.dziury ?? [])];
+  // Drobne „zęby” z zaokrąglonych narożników (pogrubianie i łączenie budynków w build-map) wygładzone,
+  // żeby krawędzie szły równymi schodkami pikseli (właściciel 5.10.2026: domy wyglądały na poszarpane).
+  const pierscienie = [pierscien, ...(op.dziury ?? [])].map((r) => (r.length > 8 ? uprosc(r, 1.6) : r));
   const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
@@ -56,18 +58,35 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   // Krawędzie z normalnymi na zewnątrz bryły (przy podwórku: w stronę podwórka). Dach liczy się z bryły
   // uproszczonej, gdy obrys jest „dziwny” (bryla()), ściany i maska zostają na prawdziwym obrysie.
   const geo = bryla(pierscienie);
-  type Kraw = { ax: number; ay: number; ux: number; uy: number; L: number; nx: number; ny: number };
+  // Budynek prawie okrągły (rotunda, wieża): dach stożkowy z wierzchołkiem w środku, cieniowany dookoła,
+  // zamiast płatów z uproszczonego wielokąta (właściciel 5.10.2026: „okrągły budynek mógłby być piękny”).
+  const stozek = okragly(pierscienie[0], pierscienie.length);
+  type Kraw = { ax: number; ay: number; ux: number; uy: number; L: number; nx: number; ny: number; p: number; n: number };
   const E: Kraw[] = [];
   geo.forEach((r, ri) => {
-    const m = r.length / 2;
+    const m = r.length / 2, baza = E.length;
     let area = 0; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; area += ax * by - bx * ay; }
     const s = (area > 0 ? 1 : -1) * (ri === 0 ? 1 : -1);
     for (let i = 0; i < m; i++) {
       const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length];
       const L = Math.hypot(bx - ax, by - ay) || 1; const ux = (bx - ax) / L, uy = (by - ay) / L;
-      E.push({ ax, ay, ux, uy, L, nx: uy * s, ny: -ux * s });
+      E.push({ ax, ay, ux, uy, L, nx: uy * s, ny: -ux * s, p: baza + ((i + m - 1) % m), n: baza + ((i + 1) % m) });
     }
   });
+  // Łuki (rotundy, zaokrąglone narożniki): ściany pod łagodnym kątem do sąsiadek cieniujemy płynnie,
+  // normalna przechodzi wzdłuż ściany od średniej z poprzednią do średniej z następną (bez widocznych płatów).
+  const LAGODNIE = 0.8;
+  const gladkaNormalna = (e: Kraw, x: number, y: number): [number, number] => {
+    const a = E[e.p], b = E[e.n];
+    const da = a.nx * e.nx + a.ny * e.ny, db = b.nx * e.nx + b.ny * e.ny;
+    if (da < LAGODNIE && db < LAGODNIE) return [e.nx, e.ny];
+    const t = Math.max(0, Math.min(1, ((x - e.ax) * e.ux + (y - e.ay) * e.uy) / e.L));
+    const n0x = da >= LAGODNIE ? (a.nx + e.nx) / 2 : e.nx, n0y = da >= LAGODNIE ? (a.ny + e.ny) / 2 : e.ny;
+    const n1x = db >= LAGODNIE ? (b.nx + e.nx) / 2 : e.nx, n1y = db >= LAGODNIE ? (b.ny + e.ny) / 2 : e.ny;
+    let nx = n0x + (n1x - n0x) * t, ny = n0y + (n1y - n0y) * t;
+    const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    return [nx, ny];
+  };
   // Dwie najbliższe krawędzie punktu. Krawędzie są w siatce kratek, więc przeszukujemy tylko okolicę
   // (kratki pierścieniami, aż reszta musi być dalej). Wynik taki sam jak przy sprawdzaniu wszystkich po kolei:
   // przy równej odległości wygrywa krawędź o niższym numerze.
@@ -134,9 +153,23 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
     const k = kind[j * W + i]; if (!k) continue;
     const x = x0 + i, y = y0 + j; let c: number;
-    if (k === 1) {
+    if (k === 1 && stozek) {
+      const dx = x + 0.5 - stozek.cx, dy = y + 0.5 - stozek.cy, r = Math.hypot(dx, dy) || 0.01;
+      const nx = dx / r, ny = dy / r, d = Math.max(0, stozek.r - r);
+      const lum = -(nx * 0.6 + ny * 0.8);
+      let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
+      // Rzędy dachówek w kręgach, spoiny wzdłuż obwodu co ~4 px (gęściej przy okapie, rzadziej przy szczycie).
+      const kat = Math.atan2(dy, dx), along = kat * stozek.r;
+      if (D.wzor === 'dachowka' || D.wzor === 'gont') { if (Math.floor(d) % 3 === 2 || (Math.floor(along + Math.floor(d / 3) * 2) % 4 === 0 && d > 1)) t = Math.max(0, t - 1); }
+      else if (D.wzor === 'lupek') { if (Math.floor(d) % 2 === 1) t = Math.max(0, t - 1); }
+      else if (D.wzor === 'blacha') { if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); }
+      c = D.tony[t];
+      if (r < 1.2) c = D.krawedz; // szpic
+      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
+    } else if (k === 1) {
       const k = j * W + i, q = { i1: qI1[k], i2: qI2[k], d1: qD1[k], d2: qD2[k] }, e = E[q.i1], d = q.d1;
-      const lum = -(e.nx * 0.6 + e.ny * 0.8);
+      const [gnx, gny] = gladkaNormalna(e, x + 0.5, y + 0.5);
+      const lum = -(gnx * 0.6 + gny * 0.8);
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       const along = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy;
       switch (D.wzor) {
@@ -147,9 +180,10 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       }
       c = D.tony[t];
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
-      if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże
+      if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
+      // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
+      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else {
       const s = sOf[j * W + i], hh = H - s, px = x - s * sk, py = y - s;
       najblizsze(px + 0.5, py + 0.5); const q = { i1 }, e = E[q.i1];
@@ -178,7 +212,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       if (op.rura && e.ny > 0.5 && e.L > 14) { const ra = e.L - 4; if (along >= ra && along < ra + 2) { c = MOSIADZ[along < ra + 1 ? 3 : 1]; if (hh % 5 === 2) c = MOSIADZ[0]; okno = true; } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j + 1) === 0) c = OBRYS;
+      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j + 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0) c = OBRYS;
     }
     o.px[j * W + i] = c;
   }
@@ -268,21 +302,71 @@ export function uprosc(r: number[], tol: number): number[] {
   return out.length >= 6 ? out : r;
 }
 
-/** Ile wyraźnych załamań ma obrys po zgubieniu drobnych schodków (3 px). */
-const zalaman = (r: number[]) => uprosc(r, 3).length / 2;
+/**
+ * Ile wyraźnych załamań ma obrys po zgubieniu drobnych schodków (3 px): liczą się tylko ostre (skręt > 25°),
+ * więc łuk rotundy z wieloma łagodnymi kątami nie jest „dziwny” (jej dach cieniuje się płynnie, `gladkaNormalna`).
+ */
+export const zalaman = (r: number[]) => {
+  const u = uprosc(r, 3), n = u.length / 2;
+  let ile = 0;
+  for (let i = 0; i < n; i++) {
+    const a = (i + n - 1) % n, b = (i + 1) % n;
+    const x1 = u[2 * i] - u[2 * a], y1 = u[2 * i + 1] - u[2 * a + 1], x2 = u[2 * b] - u[2 * i], y2 = u[2 * b + 1] - u[2 * i + 1];
+    const c = (x1 * x2 + y1 * y2) / ((Math.hypot(x1, y1) * Math.hypot(x2, y2)) || 1);
+    if (c < Math.cos((25 * Math.PI) / 180)) ile++;
+  }
+  return ile;
+};
 /** Granica „dziwności”: obrys z większą liczbą załamań dostaje dach z bryły uproszczonej (prosta kamienica ma 4–12). */
 export const MAKS_ZALAMAN = 14;
 
 /**
  * Bryła, z której liczy się dach: zwykły budynek – jego obrys; „dziwny” (poszarpany, zrośnięty z wielu części) –
- * obrys coraz mocniej upraszczany (3 → 8 → 14 → 22 px), aż załamań będzie najwyżej MAKS_ZALAMAN; małe podwórka znikają.
+ * obrys wygładzony (wygladz): łuki płynne, schodki i wypustki znikają, małe podwórka też.
  */
 export function bryla(pierscienie: number[][]): number[][] {
   if (zalaman(pierscienie[0]) <= MAKS_ZALAMAN) return pierscienie;
-  let tol = 8, z = uprosc(pierscienie[0], tol);
-  for (const t of [14, 22]) { if (z.length / 2 <= MAKS_ZALAMAN) break; tol = t; z = uprosc(pierscienie[0], t); }
-  const dz = pierscienie.slice(1).map((d) => uprosc(d, tol)).filter((d) => d.length >= 6 && Math.abs(pole(d)) > tol * tol * 4);
+  // „Dziwny” obrys (poszarpany, łuki, zrośnięte części): wygładzony jak ręką – łuki płynne (cieniują się
+  // gładko, `gladkaNormalna`), długie ściany zostają proste, schodki i wypustki znikają; małe podwórka też.
+  const z = wygladz(pierscienie[0]);
+  const dz = pierscienie.slice(1).map(wygladz).filter((d) => d.length >= 6 && Math.abs(pole(d)) > 400);
   return [z, ...dz];
 }
 
+/** Pierścień próbkowany co 3 px, uśredniony dwa razy oknem ±4 próbek, potem bez zbędnych punktów (1 px). */
+export function wygladz(r: number[]): number[] {
+  const n = r.length / 2, pr: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, ax = r[2 * i], ay = r[2 * i + 1], bx = r[2 * j], by = r[2 * j + 1];
+    const k = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 3));
+    for (let q = 0; q < k; q++) pr.push(ax + ((bx - ax) * q) / k, ay + ((by - ay) * q) / k);
+  }
+  let p = pr;
+  const m = p.length / 2;
+  if (m < 8) return r;
+  for (let pass = 0; pass < 2; pass++) {
+    const o: number[] = new Array(p.length);
+    for (let i = 0; i < m; i++) {
+      let sx = 0, sy = 0;
+      for (let w = -4; w <= 4; w++) { const j = (i + w + m) % m; sx += p[2 * j]; sy += p[2 * j + 1]; }
+      o[2 * i] = sx / 9; o[2 * i + 1] = sy / 9;
+    }
+    p = o;
+  }
+  return uprosc(p, 1);
+}
+
 function pole(r: number[]) { let a = 0; for (let i = 0; i < r.length; i += 2) { const j = (i + 2) % r.length; a += r[i] * r[j + 1] - r[j] * r[i + 1]; } return a / 2; }
+
+/** Czy obrys jest prawie kołem (dużo wierzchołków, promień prawie stały, bez podwórek): środek i średni promień. */
+export function okragly(r: number[], pierscieni: number): { cx: number; cy: number; r: number } | null {
+  const n = r.length / 2;
+  if (pierscieni > 1 || n < 10) return null;
+  let cx = 0, cy = 0;
+  for (let i = 0; i < n; i++) { cx += r[2 * i]; cy += r[2 * i + 1]; }
+  cx /= n; cy /= n;
+  let s = 0, s2 = 0;
+  for (let i = 0; i < n; i++) { const d = Math.hypot(r[2 * i] - cx, r[2 * i + 1] - cy); s += d; s2 += d * d; }
+  const m = s / n, sd = Math.sqrt(Math.max(0, s2 / n - m * m));
+  return sd / m < 0.09 && m > 6 ? { cx, cy, r: m } : null;
+}

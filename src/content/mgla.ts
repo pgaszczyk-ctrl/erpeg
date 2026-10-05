@@ -23,4 +23,6 @@ export const MGLA = {
   plik: 'mgla_pergamin',
   /** Widziany budynek odsłania też tyle punktów mapy ziemi wokół siebie, żeby krawędź mgły nie szarpała tuż przy ścianie. */
   odScian: 4,
+  /** Miękka krawędź pola widzenia (px mapy, rozmycie maski; 0 = ostra jak dawniej). Właściciel 5.10.2026. */
+  miekkaKrawedz: 14,
 };

@@ -242,6 +242,9 @@ export class FogView {
   /** Explored-but-unseen cells: a plain light haze, no parchment (owner, bug report 16). */
   private haze = document.createElement('canvas');
   private hazeCtx = this.haze.getContext('2d')!;
+  /** What is seen now, cut out of the fog with a soft edge. */
+  private mask = document.createElement('canvas');
+  private maskCtx = this.mask.getContext('2d')!;
   private static counter = 0;
 
   private paper: CanvasPattern | null = null;
@@ -331,37 +334,59 @@ export class FogView {
       ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;
       ctx.fillRect(0, 0, W, H);
     }
-    ctx.globalCompositeOperation = 'destination-out';
+    // What is seen now (the vision cone and buildings in sight) goes into a mask, which then cuts the fog
+    // with a soft edge (owner, 5 Oct 2026: a sharp outline looked wrong in the soft world).
     const ox = gx0 * FOG_CELL;
     const oy = gy0 * FOG_CELL;
-    ctx.beginPath();
+    if (this.mask.width !== W || this.mask.height !== H) {
+      this.mask.width = W;
+      this.mask.height = H;
+    }
+    const mc = this.maskCtx;
+    mc.globalCompositeOperation = 'copy';
+    mc.fillStyle = 'rgba(0,0,0,0)';
+    mc.fillRect(0, 0, W, H);
+    mc.globalCompositeOperation = 'source-over';
+    mc.fillStyle = '#000';
+    mc.strokeStyle = '#000';
+    mc.beginPath();
     for (let i = 0; i < vision.length; i += 2) {
       const px = (vision[i] - ox) / FOG_RES;
       const py = (vision[i + 1] - oy) / FOG_RES;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+      if (i === 0) mc.moveTo(px, py);
+      else mc.lineTo(px, py);
     }
-    ctx.closePath();
-    ctx.fillStyle = '#000';
-    ctx.fill();
+    mc.closePath();
+    mc.fill();
     // A building in sight is seen whole: its roof and walls, plus a few px of ground around it
     // (MGLA.odScian), so the fog's edge doesn't jitter right on the wall as the hero moves.
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = (2 * MGLA.odScian) / FOG_RES;
+    mc.lineJoin = 'round';
+    mc.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
       const h = wallHeight(b);
       for (const dy of [0, h / 2, h]) {
         const dx = dy * WALL_SKEW;
-        ctx.beginPath();
+        mc.beginPath();
         for (const r of b.rings) {
-          ctx.moveTo((r[0] + dx - ox) / FOG_RES, (r[1] + dy - oy) / FOG_RES);
-          for (let i = 2; i < r.length; i += 2) ctx.lineTo((r[i] + dx - ox) / FOG_RES, (r[i + 1] + dy - oy) / FOG_RES);
-          ctx.closePath();
+          mc.moveTo((r[0] + dx - ox) / FOG_RES, (r[1] + dy - oy) / FOG_RES);
+          for (let i = 2; i < r.length; i += 2) mc.lineTo((r[i] + dx - ox) / FOG_RES, (r[i + 1] + dy - oy) / FOG_RES);
+          mc.closePath();
         }
-        ctx.fill('evenodd');
-        if (MGLA.odScian > 0) ctx.stroke();
+        mc.fill('evenodd');
+        if (MGLA.odScian > 0) mc.stroke();
       }
     }
+    ctx.globalCompositeOperation = 'destination-out';
+    const blur = MGLA.miekkaKrawedz / FOG_RES;
+    if (blur > 0) {
+      // The mask's blurred shadow does the cutting (shadows work on every browser, canvas filters don't).
+      ctx.save();
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = blur;
+      ctx.shadowOffsetX = W + 50;
+      ctx.drawImage(this.mask, -(W + 50), 0);
+      ctx.restore();
+    } else ctx.drawImage(this.mask, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     this.tex.refresh();
     this.img.setPosition(ox, oy);
