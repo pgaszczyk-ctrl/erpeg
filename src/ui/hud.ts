@@ -1,0 +1,324 @@
+// The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):
+// - bottom right: one pixel-art "machine" (70×60 picture pixels shown ×4, NEAREST): two glass
+//   tubes (life red, experience amber), a round heal button (potion, else fruit), a brass pipe
+//   with a gauge, and three square buttons (character sheet, camera, gold);
+// - top right: a plaque with a compass (= the map), the town + weather and where we are,
+//   and one line of the current quest under it;
+// - pickups: short "+1 marchewka" notes left of the machine, stacked, fading.
+// Plain HTML (real buttons with labels for screen readers) outside #game, so touches on it
+// never reach the joystick (controls.ts listens on #game only).
+
+const BASE_URL = import.meta.env.BASE_URL || '/';
+
+export interface HudView {
+  hp: number;
+  maxHp: number;
+  /** Bonus half-hearts from a potion (blue, on top of the red). */
+  extra: number;
+  /** Share of the way to the next level (1 at the top level). */
+  expShare: number;
+  potions: number;
+  fruit: number;
+  /** Nothing left to heal with (the button is dimmed). */
+  noHeal: boolean;
+  town: string;
+  weather: string;
+  detail: string;
+  quest: { text: string; color: string; more: number } | null;
+}
+
+export interface HudHandlers {
+  heal: () => void;
+  character: () => void;
+  camera: () => void;
+  gold: () => void;
+  map: () => void;
+  quests: () => void;
+}
+
+/** Picture pixels: the machine's grid (from the mock-up). */
+const W = 70;
+const H = 60;
+/** Tube inside: 46 px high, bottom at y 52. */
+const TUBA = 46;
+
+const CSS = `
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
+#hud.off { display: none; }
+#hud button { pointer-events: auto; position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; border-radius: 4px; -webkit-tap-highlight-color: transparent; }
+#hud button:focus-visible { outline: 2px solid #f1e3c2; }
+@media (hover: hover) { #hud .hud-m button:hover { background: rgba(255,240,200,0.12); } }
+#hud .hud-m { position: absolute; }
+#hud .hud-m canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+#hud .hud-count { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none; }
+#hud .hud-heal.low { animation: hud-pulse 0.9s ease-in-out infinite; }
+@keyframes hud-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(232,100,90,0); } 50% { box-shadow: 0 0 14px 6px rgba(232,100,90,0.75); } }
+#hud .hud-p { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#hud .hud-plate { pointer-events: auto; display: flex; align-items: center; gap: 9px; padding: 6px 11px 6px 6px; box-sizing: border-box; max-width: 100%;
+  background: rgba(28,20,14,0.82); border: 2px solid #b8893b; border-radius: 10px; box-shadow: 0 0 0 2px #1a110b; color: #f3dfb0; }
+#hud .hud-compass { position: relative !important; flex-shrink: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 50% !important;
+  background: radial-gradient(circle at 35% 30%, #f1e3c2, #cdb88e) !important; border: 3px solid #b8893b !important; display: flex; align-items: center; justify-content: center; }
+#hud .hud-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#hud .hud-l1 { display: flex; align-items: baseline; gap: 9px; white-space: nowrap; }
+#hud .hud-town { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+#hud .hud-weather { font-size: 14px; color: #d9c49a; }
+#hud .hud-l2 { font-size: 13px; color: #c9b48a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud .hud-quest { position: relative !important; display: flex; align-items: center; gap: 7px; max-width: 100%; padding: 4px 10px 4px 4px !important;
+  background: rgba(28,20,14,0.72) !important; border-radius: 8px !important; color: #f3dfb0; font: inherit; font-size: 14px; text-align: left; }
+#hud .hud-quest .dot { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; color: #3a2a1c; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+#hud .hud-quest .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud .hud-quest .more { color: #c9b48a; font-size: 12px; flex-shrink: 0; }
+#hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
+  transition: opacity 0.5s; white-space: nowrap; }
+#hud .hud-pick img { width: 18px; height: 18px; image-rendering: pixelated; object-fit: contain; }
+`;
+
+const img = (name: string) => {
+  const i = new Image();
+  i.src = `${BASE_URL}hud/maszynka_${name}.png`;
+  return i;
+};
+
+let root: HTMLDivElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;
+let pics: Record<'baza' | 'mikstura' | 'owoc' | 'gora', HTMLImageElement> | null = null;
+let view: HudView | null = null;
+let timer = 0;
+let parts: {
+  m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
+  p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
+  picks: HTMLDivElement;
+} | null = null;
+let scale = 4;
+
+/** How big the machine is: ×4 as the spec says, smaller only on tiny screens (always whole pixels). */
+function pickScale() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return h < 260 || w < 250 ? 2 : h < 340 || w < 320 ? 3 : 4;
+}
+const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
+
+export function mountHud(on: HudHandlers) {
+  unmountHud();
+  if (!document.getElementById('hud-css')) {
+    const st = document.createElement('style');
+    st.id = 'hud-css';
+    st.textContent = CSS;
+    document.head.append(st);
+  }
+  pics ??= { baza: img('baza'), mikstura: img('mikstura'), owoc: img('owoc'), gora: img('gora') };
+  for (const p of Object.values(pics)) if (!p.complete) p.addEventListener('load', draw, { once: true });
+  root = document.createElement('div');
+  root.id = 'hud';
+  const btn = (cls: string, label: string, fn: () => void) => {
+    const b = document.createElement('button');
+    b.className = cls;
+    b.type = 'button';
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    // pointerdown, not click: the game's own touch handling must not see it as a swing.
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fn();
+    });
+    return b;
+  };
+
+  const m = document.createElement('div');
+  m.className = 'hud-m';
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  ctx = canvas.getContext('2d');
+  const count = document.createElement('div');
+  count.className = 'hud-count';
+  const heal = btn('hud-heal', 'Wylecz się', on.heal);
+  const hp = btn('', 'Zdrowie', on.character);
+  const xp = btn('', 'Doświadczenie', on.character);
+  m.append(canvas, heal, hp, xp, count,
+    btn('hud-b1', 'Karta postaci', on.character), btn('hud-b2', 'Aparat – zrób zdjęcie dla znajomych', on.camera), btn('hud-b3', 'Złoto i zasoby', on.gold));
+
+  const p = document.createElement('div');
+  p.className = 'hud-p';
+  const plate = document.createElement('div');
+  plate.className = 'hud-plate';
+  const compass = btn('hud-compass', 'Mapa', on.map);
+  compass.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 15 12h-6z" fill="#c0392b"/><path d="M12 22 9 12h6z" fill="#2a1c10"/><circle cx="12" cy="12" r="1.6" fill="#b8893b"/></svg>';
+  const lines = document.createElement('div');
+  lines.className = 'hud-lines';
+  const l1 = document.createElement('div');
+  l1.className = 'hud-l1';
+  const town = document.createElement('span');
+  town.className = 'hud-town';
+  const weather = document.createElement('span');
+  weather.className = 'hud-weather';
+  l1.append(town, weather);
+  const detail = document.createElement('div');
+  detail.className = 'hud-l2';
+  lines.append(l1, detail);
+  plate.append(compass, lines);
+  const quest = btn('hud-quest', 'Dziennik zadań', on.quests);
+  p.append(plate, quest);
+
+  const picks = document.createElement('div');
+  picks.className = 'hud-picks';
+  root.append(m, p, picks);
+  document.body.append(root);
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks };
+  layout();
+  window.addEventListener('resize', layout);
+  // A slow bubble in each tube.
+  timer = window.setInterval(draw, 140);
+}
+
+export function unmountHud() {
+  window.removeEventListener('resize', layout);
+  window.clearInterval(timer);
+  root?.remove();
+  root = null;
+  parts = null;
+  ctx = null;
+}
+
+/** Hidden while a dialog or the game-over screen covers the game. */
+export function showHud(on: boolean) {
+  root?.classList.toggle('off', !on);
+}
+
+function layout() {
+  if (!parts) return;
+  scale = pickScale();
+  const s = scale;
+  const M = margin();
+  const at = (el: HTMLElement, x: number, y: number, w: number, h: number) =>
+    Object.assign(el.style, { left: `${x * s}px`, top: `${y * s}px`, width: `${w * s}px`, height: `${h * s}px` });
+  Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
+  at(parts.heal, 11, 9, 26, 26);
+  parts.heal.style.borderRadius = '50%';
+  at(parts.hp, 49, 1, 10, 58);
+  at(parts.xp, 59, 1, 10, 58);
+  const b = parts.m.querySelectorAll<HTMLButtonElement>('.hud-b1, .hud-b2, .hud-b3');
+  b.forEach((el, i) => at(el, 1 + i * 16, 44, 15, 15));
+  Object.assign(parts.count.style, {
+    left: `${32 * s}px`, top: `${29 * s}px`, minWidth: `${6 * s}px`, height: `${4.5 * s}px`, padding: `0 ${s}px`,
+    border: `${s / 2}px solid #b8893b`, font: `700 ${3 * s}px/${3.5 * s}px 'Pixelify Sans', monospace`,
+  });
+  const menuW = 64; // the ☰ button top left
+  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, window.innerWidth - M - menuW)}px` });
+  // Pickups: left of the machine on a wide screen, above it on a narrow one.
+  const wide = window.innerWidth - W * s - 2 * M > 170;
+  Object.assign(parts.picks.style, wide
+    ? { right: `${M + W * s + 10}px`, bottom: `${M + 20 * s}px` }
+    : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
+}
+
+export function setHud(v: HudView) {
+  view = v;
+  if (!parts) return;
+  parts.count.textContent = String(v.potions > 0 ? v.potions : v.fruit);
+  const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})` : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
+  parts.heal.setAttribute('aria-label', label);
+  parts.heal.title = label;
+  parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
+  const hpPct = Math.round((100 * v.hp) / v.maxHp);
+  parts.hp.setAttribute('aria-label', `Zdrowie ${hpPct}%`);
+  parts.hp.title = `Zdrowie ${hpPct}%`;
+  parts.xp.setAttribute('aria-label', `Doświadczenie ${Math.round(100 * v.expShare)}% do następnego poziomu`);
+  parts.xp.title = parts.xp.getAttribute('aria-label')!;
+  parts.town.textContent = v.town;
+  parts.weather.textContent = v.weather;
+  parts.detail.textContent = v.detail;
+  parts.detail.style.display = v.detail ? '' : 'none';
+  const q = v.quest;
+  parts.quest.style.display = q ? '' : 'none';
+  if (q) {
+    parts.quest.innerHTML = '';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.textContent = '!';
+    dot.style.background = q.color;
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = q.text;
+    parts.quest.append(dot, t);
+    if (q.more) {
+      const more = document.createElement('span');
+      more.className = 'more';
+      more.textContent = `+${q.more}`;
+      parts.quest.append(more);
+    }
+    parts.quest.setAttribute('aria-label', `Bieżące zadanie: ${q.text}. Otwórz dziennik zadań`);
+  }
+  draw();
+}
+
+/** Liquid height in whole pixels (the spec: the level moves by whole pixels). */
+const level = (share: number) => Math.round(Math.max(0, Math.min(1, share)) * TUBA);
+
+function draw() {
+  if (!ctx || !pics || !view) return;
+  const v = view;
+  const c = ctx;
+  c.clearRect(0, 0, W, H);
+  const ok = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0;
+  if (ok(pics.baza)) c.drawImage(pics.baza, 0, 0);
+  const icon = v.potions > 0 ? pics.mikstura : pics.owoc;
+  c.globalAlpha = v.noHeal ? 0.4 : 1;
+  if (ok(icon)) c.drawImage(icon, 0, 0);
+  c.globalAlpha = 1;
+  const t = performance.now();
+  const tube = (x: number, h: number, body: string, top: string, phase: number) => {
+    if (h <= 0) return;
+    const y = 53 - h;
+    c.fillStyle = body;
+    c.fillRect(x, y, 6, h);
+    c.fillStyle = top;
+    c.fillRect(x, y, 6, 1);
+    // A bubble rising slowly through the liquid every few seconds.
+    if (h > 5) {
+      const k = ((t / 3600 + phase) % 1);
+      const by = Math.round(52 - k * (h - 3));
+      c.fillRect(x + 2 + (Math.floor(t / 900 + phase * 7) % 2), by, 1, 1);
+    }
+  };
+  // Life: red, with the potion's blue bonus on top (the tube holds life + bonus).
+  const all = v.maxHp + v.extra;
+  const red = level(v.hp / all);
+  const blue = v.extra > 0 ? Math.min(TUBA - red, level((v.hp + v.extra) / all) - red) : 0;
+  tube(51, red, '#c0392b', '#e8645a', 0);
+  if (blue > 0) {
+    c.fillStyle = '#3f7fd0';
+    c.fillRect(51, 53 - red - blue, 6, blue);
+    c.fillStyle = '#9cc8ff';
+    c.fillRect(51, 53 - red - blue, 6, 1);
+  }
+  tube(61, level(v.expShare), '#e0a020', '#fff1b0', 0.45);
+  if (ok(pics.gora)) c.drawImage(pics.gora, 0, 0);
+}
+
+/** "+1 marchewka" left of the machine for ~2 s; newer ones below, older ones fade. */
+export function hudPickup(text: string, icon?: string) {
+  if (!parts) return;
+  const box = parts.picks;
+  const el = document.createElement('div');
+  el.className = 'hud-pick';
+  const t = document.createElement('span');
+  t.textContent = text;
+  el.append(t);
+  if (icon) {
+    const i = document.createElement('img');
+    i.src = icon;
+    i.alt = '';
+    el.append(i);
+  }
+  box.append(el);
+  while (box.children.length > 5) box.firstElementChild!.remove();
+  Array.from(box.children).forEach((c, i, a) => ((c as HTMLElement).style.opacity = i === a.length - 1 ? '1' : '0.55'));
+  window.setTimeout(() => {
+    el.style.opacity = '0';
+    window.setTimeout(() => el.remove(), 550);
+  }, 2000);
+}

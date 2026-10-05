@@ -1,12 +1,13 @@
-import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { WSKRZESZENIE } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showBrag } from '../ui/brag';
 import { report } from '../errlog';
-import { TEX, PLAYER_TEX, arrowTexture, artScale } from '../art';
-import { expNaPoziom, MAKS_POZIOM_POSTACI, poziomPostaci } from '../content/historia';
+import { TEX, GOODS_TEX, arrowTexture } from '../art';
+import { OWOCE, type Owoc } from '../content/sklepy';
+import { mountHud, unmountHud, setHud, showHud, hudPickup } from '../ui/hud';
+import { poziomPostaci } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
@@ -14,37 +15,23 @@ import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
 import { OSTROSC } from '../screen';
-import { heroPortrait } from '../sprites';
 import { session } from '../quests';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
 // Runs on top of GameScene with its own unzoomed camera.
-/** How long the big quest lines stay after login or a new quest. */
-const QUESTS_SHOWN_MS = 10_000;
 
 export class UIScene extends Phaser.Scene {
-  private hearts: Phaser.GameObjects.Image[] = [];
-  /** Heal button (🧪 potion / 🍎 20 fruit), shown when hurt and there is something to heal with. */
-  private healBtn!: Phaser.GameObjects.Arc;
-  private healIcon!: Phaser.GameObjects.Text;
-  private healCount!: Phaser.GameObjects.Text;
+  // Life, experience, healing, the character sheet, camera, gold, the town and the current
+  // quest are the HTML HUD (src/ui/hud.ts, owner's spec 5 Oct 2026); here only what lives
+  // in the canvas: the menu button, duel hearts, quest arrows, toasts, dialogs, the joystick.
   private duelHearts: Phaser.GameObjects.Image[] = [];
-  private coinText!: Phaser.GameObjects.Text;
-  private coinIcon!: Phaser.GameObjects.Image;
-  private expText!: Phaser.GameObjects.Text;
-  private titleText!: Phaser.GameObjects.Text;
   private menuBtn!: Phaser.GameObjects.Text;
-  private mapBtn!: Phaser.GameObjects.Image;
-  /** The hero's portrait (top right); tapping it opens the character sheet. */
-  private charBtn!: Phaser.GameObjects.Image;
-  private portraitBox!: Phaser.GameObjects.Graphics;
-  private stars: Phaser.GameObjects.Image[] = [];
   private lastLevel = 0;
-  private swordText!: Phaser.GameObjects.Text;
-  /** Fruit in the backpack: the game's own fruit pictures (emoji plums are missing on some phones). */
-  private fruitIcons: Phaser.GameObjects.Image[] = [];
-  private fruitTexts: Phaser.GameObjects.Text[] = [];
+  /** What the last HUD state held, for the "+1 marchewka" notes (null = nothing yet). */
+  private lastGoods: Partial<Record<Owoc, number>> | null = null;
+  private lastCoins: number | null = null;
+  private lastWarn = false;
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
@@ -58,30 +45,11 @@ export class UIScene extends Phaser.Scene {
   private hintAt = 0;
   private hintUntil = 0;
 
-  private streetText!: Phaser.GameObjects.Text;
   private skillBar!: Phaser.GameObjects.Container;
   private skillFill!: Phaser.GameObjects.Rectangle;
   private skillLabel!: Phaser.GameObjects.Text;
   private skillHide?: Phaser.Time.TimerEvent;
   private goalText!: Phaser.GameObjects.Text;
-  /** One line and one arrow per active quest (up to 3), in its colour. */
-  private questTexts: Phaser.GameObjects.Text[] = [];
-  private questSmall: Phaser.GameObjects.Text[] = [];
-  /** The quests shown last (a new one shows the big lines again). */
-  private questKey = '';
-  private questTimer?: Phaser.Time.TimerEvent;
-
-  /** Big quest lines for QUESTS_SHOWN_MS (after login, or a new quest), then only small ones on a computer. */
-  private showQuests() {
-    this.questTimer?.remove();
-    this.tweens.killTweensOf([...this.questTexts, ...this.questSmall]);
-    for (const t of this.questTexts) t.setAlpha(1);
-    for (const t of this.questSmall) t.setAlpha(0);
-    this.questTimer = this.time.delayedCall(QUESTS_SHOWN_MS, () => {
-      this.tweens.add({ targets: this.questTexts, alpha: 0, duration: 1200 });
-      if (!window.matchMedia('(pointer: coarse)').matches) this.tweens.add({ targets: this.questSmall, alpha: 0.9, duration: 1200, delay: 600 });
-    });
-  }
   private arrows: Phaser.GameObjects.Image[] = [];
   private toastText!: Phaser.GameObjects.Text;
   private hud?: HudState;
@@ -112,63 +80,20 @@ export class UIScene extends Phaser.Scene {
       add.text = (...a: unknown[]) => text(...a).setResolution(OSTROSC);
       add.sharp = true;
     }
-    this.hearts = [];
     this.duelHearts = [];
-    // The scene object is reused when it starts again (after a coach ride):
-    // drop the old, destroyed objects.
-    this.fruitIcons = [];
-    this.fruitTexts = [];
     this.dialogButtons = [];
     this.overlay = undefined;
+    this.lastGoods = null;
+    this.lastCoins = null;
+    this.lastLevel = 0;
+    this.lastWarn = false;
     this.ui = Math.max(2, Math.round(Math.min(this.view.width, this.view.height) / 220));
-
-    this.coinIcon = this.add.image(0, 0, TEX.coin).setScale(this.ui).setOrigin(1, 0);
-    this.coinText = this.add
-      .text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${8 * this.ui}px`, color: '#fff2a8', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
-      .setOrigin(1, 0);
-    this.expText = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${6 * this.ui}px`, color: '#bfe6ff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
-      .setOrigin(1, 0);
-    this.titleText = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${6 * this.ui}px`, color: '#ffd27a', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
-      .setOrigin(1, 0);
     this.menuBtn = this.add
       .text(0, 0, '☰', { fontFamily: 'sans-serif', fontSize: `${12 * this.ui}px`, color: '#ffffff', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
       .setOrigin(0, 0);
-
-    // Portrait: head and shoulders of the player's own hero, in a small frame.
-    // (a Graphics frame: a stroked Rectangle drew as a triangle here)
-    const fw = 18 * this.ui, fh = 15 * this.ui;
-    this.portraitBox = this.add.graphics();
-    this.portraitBox.fillStyle(0x1e1a24, 0.75).fillRect(-fw, 0, fw, fh).lineStyle(this.ui, 0xf7c531, 1).strokeRect(-fw, 0, fw, fh);
-    this.charBtn = this.add.image(0, 0, this.textures.exists(PLAYER_TEX) ? PLAYER_TEX : TEX.hero, 'down-0').setOrigin(0.5, 0).setScale(this.ui).setCrop(0, 0, 16, 13);
-    this.setPortrait();
-    this.stars = [];
-    for (let i = 0; i < 5; i++) this.stars.push(this.add.image(0, 0, TEX.starEmpty).setOrigin(0).setScale(this.ui));
-    this.lastLevel = 0;
-    this.swordText = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 })
-      .setOrigin(0, 0);
-    for (const tex of [TEX.fruitApple, TEX.vegCarrot, TEX.mushroom]) {
-      this.fruitIcons.push(this.add.image(0, 0, tex).setScale(this.ui * artScale(tex)).setOrigin(0.5, 0.5));
-      this.fruitTexts.push(
-        this.add.text(0, 0, '0', { fontFamily: 'monospace', fontSize: `${5 * this.ui}px`, color: '#e8e8f0', stroke: '#1e1a24', strokeThickness: this.ui * 2 }).setOrigin(0, 0.5),
-      );
-    }
-    this.mapBtn = this.add.image(0, 0, TEX.mapIcon).setScale(this.ui).setOrigin(1, 0);
-
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
-    const small = Math.max(13, 5 * this.ui);
-    this.streetText = label(small).setOrigin(0.5, 0);
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
-    this.questTexts = [0, 1, 2].map(() => label(small, '#ffffff').setOrigin(0.5, 0));
-    // After a while the quest lines fade (they cover the map); a computer keeps them small on the right.
-    this.questSmall = [0, 1, 2].map(() =>
-      this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '10px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3, align: 'right' }).setOrigin(1, 0).setAlpha(0),
-    );
-    this.questKey = '';
-    this.showQuests();
     this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit):
@@ -183,6 +108,14 @@ export class UIScene extends Phaser.Scene {
     this.dialogBox = undefined;
 
     this.createTouchControls();
+    mountHud({
+      heal: () => (this.scene.get('game') as GameScene).healButton?.(),
+      character: () => this.openCharacter(),
+      gold: () => this.openCharacter('eq'),
+      quests: () => this.openCharacter('quests'),
+      map: () => this.openMap(),
+      camera: () => this.takePhoto(),
+    });
     this.layout();
     this.scale.on('resize', this.layout, this);
 
@@ -222,6 +155,7 @@ export class UIScene extends Phaser.Scene {
       this.game.events.off('practice', onPractice);
       offTap();
       healHome.on = false;
+      unmountHud();
       window.removeEventListener('keydown', onKey);
       closeMinimap();
       closeCharacter();
@@ -262,7 +196,6 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: big, scale: 1, alpha: 1, duration: 450, ease: 'Back.easeOut' });
     this.tweens.add({ targets: sub, alpha: 1, duration: 400, delay: 300 });
     this.tweens.add({ targets: [big, sub], alpha: 0, delay: 2600, duration: 600, onComplete: () => { big.destroy(); sub.destroy(); } });
-    this.stars.forEach((st, i) => this.tweens.add({ targets: st, scale: this.ui * 1.4, yoyo: true, duration: 180, delay: i * 80 }));
   }
 
   /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
@@ -292,57 +225,12 @@ export class UIScene extends Phaser.Scene {
     this.menuBtn.setPosition(pad, pad - 2 * this.ui);
     const u = this.ui;
     const hx = pad + this.menuBtn.width + 3 * u;
-    // Right column: portrait, hearts under it, then 5 experience stars.
-    const right = width - pad;
-    this.portraitBox.setPosition(right, pad);
-    this.charBtn.setPosition(right - 9 * u, pad + u);
-    const hy = pad + 17 * u;
-    // Up to 5 hearts a row (the level bonus can double them), a bit bigger than the rest.
-    const hs = this.heartScale();
-    const rows = Math.ceil(this.hearts.length / 5);
-    this.hearts.forEach((h, i) => {
-      const row = Math.floor(i / 5);
-      const inRow = Math.min(5, this.hearts.length - row * 5);
-      h.setScale(hs).setPosition(right - (inRow - (i % 5)) * 10 * hs + hs, hy + row * 9 * hs);
-    });
-    const sy = hy + Math.max(1, rows) * 9 * hs + u;
-    this.stars.forEach((st, i) => st.setPosition(right - (5 - i) * 11 * u + u, sy));
-    this.expText.setPosition(right, sy + 12 * u);
-    this.titleText.setPosition(right, sy + 12 * u + this.expText.height + u);
-    // Coins and the map button to the left of the portrait.
-    const lx = right - 18 * u - 4 * u;
-    this.coinText.setPosition(lx, pad - u);
-    this.coinIcon.setPosition(lx - this.coinText.width - 2 * u, pad);
-    this.mapBtn.setPosition(this.coinIcon.x - 10 * u, pad);
-    // Left: menu, weapon (or the purple duel hearts), fruit.
-    this.duelHearts.forEach((h, i) => h.setPosition(hx + i * 10 * u, pad + 2 * u));
-    this.swordText.setPosition(hx, pad + 2 * u);
-    const fy = pad + 2 * u + this.swordText.height + 5 * u;
-    let fx = hx + 2 * this.ui;
-    this.fruitIcons.forEach((ic, i) => {
-      ic.setPosition(fx, fy);
-      const t = this.fruitTexts[i];
-      t.setPosition(fx + 5 * this.ui, fy);
-      fx += 5 * this.ui + t.width + 5 * this.ui;
-    });
+    // Top left: the menu, and the purple hearts during a duel.
+    this.duelHearts.forEach((h, i) => h.setPosition(hx, pad + 2 * u).setX(hx + i * 10 * u));
     const wrap = Math.min(width - 40, 520);
-    // Street and goal under both corners.
-    const ty = Math.max(fy + 8 * u, this.titleText.text ? this.titleText.y + this.titleText.height : sy + 12 * u + this.expText.height) + 2 * u;
-    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, ty + 18);
-    let qy = ty + 18 + (this.goalText.text ? this.goalText.height + 2 : 0);
-    for (const t of this.questTexts) {
-      t.setWordWrapWidth(wrap).setPosition(width / 2, qy);
-      if (t.text) qy += t.height + 1;
-    }
-    this.streetText.setPosition(width / 2, ty);
-    // Small quest lines on the right, under the level and title.
-    let sqy = (this.titleText.text ? this.titleText.y + this.titleText.height : this.expText.y + this.expText.height) + 3 * u;
-    for (const t of this.questSmall) {
-      t.setWordWrapWidth(Math.min(260, width / 3)).setPosition(right, sqy);
-      if (t.text) sqy += t.height + 1;
-    }
+    this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.2);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
-    this.skillBar.setPosition(width / 2, height * 0.66);
+    this.skillBar.setPosition(width / 2, height * 0.6);
 
     const r = JOY_RADIUS;
     this.joyHome.set(pad + r + 16, height - pad - r - 16);
@@ -357,53 +245,9 @@ export class UIScene extends Phaser.Scene {
     // The heal button follows the hero (placeHeroWidgets).
   }
 
-  private heartScale() {
-    return this.ui + 1;
-  }
-
-  /** The hero's head in the portrait frame (the new detailed heroes or the drawn one). */
-  private setPortrait() {
-    const hd = heroPortrait();
-    if (hd) {
-      const [x, y, w, h] = hd.crop;
-      this.charBtn.setTexture(hd.key, 'down-0').setCrop(x, y, w, h).setScale((16 * this.ui) / w).setOrigin(0.5, y / 64);
-    } else if (this.textures.exists(PLAYER_TEX)) this.charBtn.setTexture(PLAYER_TEX, 'down-0').setCrop(0, 0, 16, 13);
-  }
-
   private updateHud(s: HudState) {
-    // Red hearts, then the potion's blue ones.
-    const total = s.maxHp / 2 + Math.ceil(s.extra / 2);
-    while (this.hearts.length < total) this.hearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0).setScale(this.heartScale()));
-    while (this.hearts.length > total) this.hearts.pop()!.destroy();
-    // The hero's picture is redrawn (a new texture) when worn gear changes.
-    this.setPortrait();
-    // Experience towards the next level as 5 stars, filled by halves (like hearts).
-    const from = expNaPoziom(s.level);
-    const to = expNaPoziom(s.level + 1);
-    const maxed = s.level >= MAKS_POZIOM_POSTACI;
-    const halves = maxed ? 10 : Math.floor(Math.max(0, Math.min(0.999, (s.exp - from) / (to - from))) * 10);
-    this.stars.forEach((st, i) => st.setTexture(halves >= i * 2 + 2 ? TEX.star : halves === i * 2 + 1 ? TEX.starHalf : TEX.starEmpty));
     if (this.lastLevel && s.level > this.lastLevel) this.levelUp(s.level);
     this.lastLevel = s.level;
-    this.hearts.forEach((h, i) => {
-      if (i >= s.maxHp / 2) {
-        const left = s.extra - (i - s.maxHp / 2) * 2;
-        h.setTexture(TEX.heartBonus).setAlpha(left === 1 ? 0.55 : 1);
-        return;
-      }
-      const filled = s.hp - i * 2; // 2 hp per heart
-      h.setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty);
-      h.setAlpha(filled === 1 ? 0.55 : 1); // half heart
-    });
-    // Heal button: only when hurt and there is something to heal with.
-    const heal = s.heal;
-    healHome.on = !!heal && !s.dead;
-    for (const o of [this.healBtn, this.healIcon, this.healCount]) o.setVisible(healHome.on);
-    if (heal) {
-      this.healIcon.setText(heal.icon);
-      this.healCount.setText(heal.n > 1 ? `×${heal.n}` : '');
-    }
-    this.healLow = s.hp * 2 <= s.maxHp;
     while (this.duelHearts.length < s.duelMax / 2) {
       this.duelHearts.push(this.add.image(0, 0, TEX.heartDuel).setOrigin(0).setScale(this.ui).setVisible(false));
       this.layout();
@@ -412,28 +256,68 @@ export class UIScene extends Phaser.Scene {
       const filled = (s.duel ?? 0) - i * 2;
       h.setVisible(s.duel !== null).setTexture(filled > 0 ? TEX.heartDuel : TEX.heartDuelEmpty).setAlpha(filled === 1 ? 0.55 : 1);
     });
-    this.swordText.setVisible(s.duel === null);
-    this.coinText.setText(String(s.coins));
-    this.expText.setText(maxed ? `poz. ${s.level} (max) · ${s.exp} EXP` : `poz. ${s.level} · ${s.exp}/${to} EXP`);
-    this.titleText.setText(s.title ? `🏅 ${s.title}` : '');
-    this.swordText.setText(`⚔ ${s.sword}`).setColor(s.swordWarn ? '#ff6b6b' : '#e8e8f0');
-    s.fruitN?.forEach((n, i) => this.fruitTexts[i]?.setText(String(n)));
+    // The weapon line is gone from the map: a broken weapon or few arrows say so once.
+    if (s.swordWarn && !this.lastWarn) this.toast(`⚠ ${s.sword}`, 3000);
+    this.lastWarn = s.swordWarn;
+    this.pickups(s);
     this.hud = s;
-    this.streetText.setText([s.street, s.pogoda].filter(Boolean).join('  ·  '));
-    this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
-    this.questTexts.forEach((t, i) => {
-      const q = s.lingering === null ? s.quests[i] : undefined;
-      const text = q ? `${q.main ? '⭐' : '🎯'} ${q.text}` : '';
-      t.setText(text).setColor(q ? q.color : '#ffffff');
-      this.questSmall[i].setText(text).setColor(q ? q.color : '#ffffff');
-      if (q) this.arrows[i].setTexture(arrowTexture(this, q.color));
+    const q = s.lingering === null ? s.quests[0] : undefined;
+    setHud({
+      hp: s.hp, maxHp: s.maxHp, extra: s.extra, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
+      noHeal: s.potions <= 0 && !s.heal && s.hp < s.maxHp,
+      town: s.town, weather: s.pogoda ?? '', detail: s.detail,
+      quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
     });
-    // A quest that wasn't there before: show the big lines again for a while.
-    const ids = s.quests.map((q) => q.color); // each quest keeps its colour while active
-    if (ids.some((id) => !this.questKey.split('\n').includes(id)) && this.questKey !== '') this.showQuests();
-    this.questKey = ids.join('\n') || ' ';
+    this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
+    s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
+  }
+
+  /** "+1 marchewka", "+12 złota" by the HUD when something new is in the backpack or the purse. */
+  private pickups(s: HudState) {
+    const busy = !!document.getElementById('chest') || !!document.getElementById('character') || !!this.dialogBox;
+    if (this.lastGoods && !busy) {
+      for (const [f, n] of Object.entries(s.goods) as [Owoc, number][]) {
+        const d = n - (this.lastGoods[f] ?? 0);
+        if (d <= 0) continue;
+        const o = OWOCE[f];
+        const name = d === 1 ? o.nazwa : d % 10 >= 2 && d % 10 <= 4 && (d % 100 < 12 || d % 100 > 14) ? o.mnoga : o.wielu;
+        hudPickup(`+${d} ${name}`, this.iconOf(GOODS_TEX[f]));
+      }
+    }
+    if (this.lastCoins !== null && s.coins > this.lastCoins) hudPickup(`+${s.coins - this.lastCoins} złota`, this.iconOf(TEX.coin));
+    this.lastGoods = { ...s.goods };
+    this.lastCoins = s.coins;
+  }
+
+  private icons = new Map<string, string>();
+  /** A game texture as a small picture for the HTML notes (cached). */
+  private iconOf(key: string | undefined) {
+    if (!key || !this.textures.exists(key)) return undefined;
+    let url = this.icons.get(key);
+    if (!url) {
+      try {
+        url = this.textures.getBase64(key);
+      } catch {
+        return undefined;
+      }
+      this.icons.set(key, url);
+    }
+    return url;
+  }
+
+  /** The camera button: a picture of the game to send to friends (the "Pochwal się" card). */
+  private takePhoto() {
+    const game = this.scene.get('game') as GameScene;
+    if (!game.player || this.overlay || this.dialogBox) return;
+    game.scene.pause();
+    const lvl = poziomPostaci(session.exp);
+    const title = session.story.title ?? `Poziom ${lvl}`;
+    void showBrag(this.game, session.name, { top: session.story.title ? 'Mój tytuł' : 'Osiągnąłem', title, sub: `poziom ${lvl} · ${session.exp} EXP` }).then(() => {
+      game.scene.resume();
+      resetTouch();
+    });
   }
 
   private createTouchControls() {
@@ -463,10 +347,6 @@ export class UIScene extends Phaser.Scene {
     // The attack button is gone (a tap on the joystick or a second finger swings).
     this.attackBtn.setVisible(false);
     this.attackLabel.setVisible(false);
-    // Heal (phones: above the attack button; computers: bottom-right, or key H).
-    this.healBtn = this.add.circle(0, 0, 26, 0x3fa34d, 0.5).setStrokeStyle(3, 0xffffff, 0.6).setVisible(false).setDepth(6);
-    this.healIcon = this.add.text(0, 0, '🧪', { fontFamily: 'sans-serif', fontSize: '28px' }).setOrigin(0.5).setVisible(false).setDepth(7);
-    this.arcHearts = [];
     this.lowWarned = false;
     if (!this.textures.exists('lowhp-vignette')) {
       const t = this.textures.createCanvas('lowhp-vignette', 256, 256)!;
@@ -479,9 +359,6 @@ export class UIScene extends Phaser.Scene {
       t.refresh();
     }
     this.vignette = this.add.image(0, 0, 'lowhp-vignette').setDepth(-1).setVisible(false);
-    this.healCount = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3 })
-      .setOrigin(0, 0).setVisible(false).setDepth(7);
   }
 
   private joyLearned = false;
@@ -501,71 +378,26 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
-  private healLow = false;
-  /** Hearts in an arc under the hero while hurt, and a red edge when life is low. */
-  private arcHearts: Phaser.GameObjects.Image[] = [];
   private vignette!: Phaser.GameObjects.Image;
   private lowWarned = false;
 
-  /** Keeps the arc of hearts and the heal button just under the hero. */
-  private placeHeroWidgets(time: number) {
-    const game = this.scene.get('game') as GameScene;
+  /** Low life: the screen edges pulse red (and a hint, once per time). */
+  private lowLife(time: number) {
     const s = this.hud;
-    const show = !!s && !!game.player && !s.dead && !this.dialogBox;
-    const hurt = show && s!.hp < s!.maxHp;
-    if (!show) {
-      for (const h of this.arcHearts) h.setVisible(false);
-      this.vignette?.setVisible(false);
-      return;
-    }
-    const cam = game.cameras.main;
-    const z = cam.zoom / OSTROSC;
-    const sx = (game.player.x - cam.worldView.x) * z;
-    const sy = (game.player.y - cam.worldView.y) * z;
-    // Always 3 hearts under the hero, standing for the share of life left
-    // (any wound shows at least the last heart gone: 9 of 10 = 2 red + 1 empty).
-    const n = 3;
-    const halves = Math.max(s!.hp > 0 ? 1 : 0, Math.min(2 * n - 2, Math.floor((s!.hp / s!.maxHp) * 2 * n)));
-    while (this.arcHearts.length < n) this.arcHearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0.5).setDepth(5).setScale(this.ui));
-    while (this.arcHearts.length > n) this.arcHearts.pop()!.destroy();
-    // Smaller people (SKALA_POSTACI): the arc hugs the hero closer, the hearts a little smaller.
-    const K = SKALA_POSTACI;
-    const R = 15 * z * K;
-    this.arcHearts.forEach((h, i) => {
-      const a = n > 1 ? Phaser.Math.DegToRad(150 - (120 * i) / (n - 1)) : Math.PI / 2;
-      const filled = halves - i * 2;
-      h.setPosition(sx + Math.cos(a) * R, sy + 4 * z * K + Math.sin(a) * R * 0.75).setScale(this.ui * Math.sqrt(K))
-        .setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty)
-        .setAlpha(filled >= 2 ? 0.6 : filled === 1 ? 0.4 : 0.3)
-        .setVisible(hurt);
-    });
-    // The heal button (fruit or potion) right under the arc: easy to hit when in trouble.
-    const hx = sx;
-    const hy = sy + 4 * z * K + R * 0.75 + 14 + 24;
-    this.healBtn.setPosition(hx, hy);
-    this.healIcon.setPosition(hx, hy + 1);
-    this.healCount.setPosition(hx + 12, hy + 8);
-    healHome.x = hx;
-    healHome.y = hy;
-    healHome.r = 26;
-    // Low life: the screen edges pulse red (and a hint, once per time).
-    const low = s!.hp * 3 <= s!.maxHp;
-    if (this.vignette) {
-      const { width, height } = this.view;
-      this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
-      if (low) this.vignette.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(time / 260)));
-    }
+    const low = !!s && !s.dead && !this.dialogBox && s.hp * 3 <= s.maxHp;
+    const { width, height } = this.view;
+    this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
+    if (low) this.vignette.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(time / 260)));
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(healHome.on ? '❤ Mało życia! Dotknij ikonki pod bohaterem, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku w prawym dolnym rogu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
   update(time: number) {
-    // The heal button blinks below half health.
-    if (this.healBtn?.visible) this.healBtn.setAlpha(this.healLow ? 0.4 + 0.45 * Math.abs(Math.sin(time / 220)) : 0.5);
-    for (const o of [this.healIcon, this.healCount]) if (o?.visible) o.setAlpha(this.healLow ? 0.95 : 0.7);
-    this.placeHeroWidgets(time);
+    this.lowLife(time);
+    // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
+    showHud(!this.dialogBox && !this.overlay);
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);
@@ -696,16 +528,6 @@ export class UIScene extends Phaser.Scene {
       this.openGameMenu();
       return;
     }
-    const cb = this.charBtn.getBounds();
-    if (!this.dialogBox && !this.overlay && x >= cb.x - 8 && x <= cb.right + 6 && y >= cb.y - 12 && y <= cb.bottom + 12) {
-      this.openCharacter();
-      return;
-    }
-    const mb = this.mapBtn.getBounds();
-    if (!this.dialogBox && !this.overlay && x >= mb.x - 12 && x <= mb.right + 12 && y >= mb.y - 12 && y <= mb.bottom + 12) {
-      this.openMap();
-      return;
-    }
     if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
     let choice: number | null = null;
@@ -719,22 +541,15 @@ export class UIScene extends Phaser.Scene {
     choose?.(choice);
   }
 
-  private openCharacter() {
+  private openCharacter(page?: 'eq' | 'quests') {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay) return;
+    if (!game.player || this.overlay || this.dialogBox) return;
     touchInput.attack = false;
     toggleCharacter({
+      page,
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
-      brag: () => {
-        game.scene.pause();
-        const lvl = poziomPostaci(session.exp);
-        const title = session.story.title ?? `Poziom ${lvl}`;
-        void showBrag(this.game, session.name, { top: session.story.title ? 'Mój tytuł' : 'Osiągnąłem', title, sub: `poziom ${lvl} · ${session.exp} EXP` }).then(() => {
-          game.scene.resume();
-          resetTouch();
-        });
-      },
+      brag: () => this.takePhoto(),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
   }

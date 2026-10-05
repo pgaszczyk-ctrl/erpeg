@@ -36,7 +36,7 @@ import { note } from '../log';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
-import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC } from '../content/historia';
+import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
@@ -44,7 +44,7 @@ import { STRZALY } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
-import { GRANICA } from '../content/mapa';
+import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
 import { worldOrigin } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -59,6 +59,7 @@ import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, takeArrow, quiverRoom, addArrows, ownsBow,
+  goodsByKind,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -169,6 +170,16 @@ export interface HudState {
   pogoda?: string;
   /** Active quests (at most 3): goal line, where its arrow points, its colour. */
   quests: { text: string; pos: { x: number; y: number } | null; color: string; main: boolean }[];
+  /** Healing potions and edible goods in the backpack (the HUD's heal button). */
+  potions: number;
+  fruit: number;
+  /** Share of the way to the next level (the HUD's amber tube). */
+  expShare: number;
+  /** The plaque top right: the town and where in it (see placeInfo). */
+  town: string;
+  detail: string;
+  /** Goods in the backpack by kind (the HUD shows "+1 marchewka" when one grows). */
+  goods: Partial<Record<Owoc, number>>;
 }
 
 export interface QuestInfo {
@@ -317,6 +328,7 @@ export class GameScene extends Phaser.Scene {
     this.leaving = false;
     this.lingerUntil = 0;
     this.rescueDeclined = false;
+    this.toldPlace = null;
     this.mapView = new MapRenderer(this, this.city);
     this.explored = new Explored();
     const inLublin = this.city.id === 'lublin';
@@ -633,7 +645,7 @@ export class GameScene extends Phaser.Scene {
 
     this.unstickHero(now);
     this.crossBorder(now);
-    if (consumeHeal()) this.quickHeal();
+    if (consumeHeal()) this.healButton();
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
       this.player.extra = 0;
@@ -922,7 +934,10 @@ export class GameScene extends Phaser.Scene {
     const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
     const talk = foeNear || strong ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
     if (talk) {
-      if (performance.now() >= this.talkReadyAt) talk();
+      if (performance.now() >= this.talkReadyAt) {
+        this.learnPlace();
+        talk();
+      }
       return;
     }
     // A swing at a building door (or while standing at one) goes in.
@@ -3511,6 +3526,18 @@ export class GameScene extends Phaser.Scene {
     return demo.on ? SEN.owocowNaSerce : LECZENIE_OWOCAMI.owocow;
   }
 
+  /**
+   * The HUD's heal button (and key H), as the spec says: a potion when there is one,
+   * else fruit (LECZENIE_OWOCAMI.owocow for one heart).
+   */
+  healButton() {
+    if (this.player.isDead) return;
+    if (this.player.hp >= PLAYER.maxHp) return this.toast('Masz pełne zdrowie.', 1200);
+    if (session.mikstury > 0) return this.drinkPotion();
+    if (totalFruit() >= this.fruitPerHeart()) return this.eatFruit();
+    this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
+  }
+
   quickHeal() {
     if (this.player.isDead) return;
     const missing = PLAYER.maxHp - this.player.hp;
@@ -3849,6 +3876,56 @@ export class GameScene extends Phaser.Scene {
     }));
   }
 
+  /**
+   * Where an NPC last told the hero he is (HUD plaque, second line): set by any talk,
+   * forgotten MIEJSCE_HUD.wiedzaM away from that spot (owner's HUD spec, 5 Oct 2026).
+   */
+  private toldPlace: { name: string; x: number; y: number; map: string } | null = null;
+
+  private learnPlace() {
+    const x = this.player.x;
+    const y = this.player.y;
+    const name = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '').replace(/,.*$/, '') ?? null;
+    if (name) this.toldPlace = { name, x, y, map: this.city.id };
+  }
+
+  /** The town the hero belongs to now: its name, centre and the radius counted as "in town". */
+  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean } {
+    const R = MIEJSCE_HUD;
+    if (this.city.id === 'lublin') {
+      const towns = this.city.townList();
+      const d = (t: { x: number; y: number }) => Math.hypot(t.x - x, t.y - y);
+      const lub = towns.find((t) => t.name === 'Lublin');
+      const near = towns.filter((t) => t.name !== 'Lublin').sort((a, b) => d(a) - d(b))[0];
+      if (near && (!lub || d(near) < 1500 * PX_PER_M && d(near) < d(lub) || d(lub) > 12_000 * PX_PER_M)) return { ...near, r: R.wsM * PX_PER_M, wies: !R.miasta.includes(near.name) };
+      if (lub) return { ...lub, r: R.lublinM * PX_PER_M };
+    }
+    const o = worldOrigin(this.city.id);
+    const c = o ? this.city.fromLatLon(o.lat, o.lon) : { x: (this.city.minX + this.city.width) / 2, y: (this.city.minY + this.city.height) / 2 };
+    return { name: mapName(this.city.id), x: c.x, y: c.y, r: (o ? R.miastoM : R.miasteczkoM) * PX_PER_M };
+  }
+
+  /**
+   * The plaque's two lines: the town, and where we are – the place an NPC named while
+   * near it, else "w mieście / za miastem · gdzieś na północy" counted from the town's centre.
+   */
+  private placeInfo(): { town: string; detail: string } {
+    const x = this.player.x;
+    const y = this.player.y;
+    const t = this.townAt(x, y);
+    const told = this.toldPlace;
+    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    const dx = x - t.x;
+    const dy = y - t.y;
+    const dist = Math.hypot(dx, dy);
+    const inTown = dist < t.r;
+    if (inTown && dist < t.r * MIEJSCE_HUD.centrum) return { town: t.name, detail: 'w centrum' };
+    const strony = ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
+    const k = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
+    const where = t.wies ? (inTown ? 'we wsi' : 'za wsią') : inTown ? 'w mieście' : 'za miastem';
+    return { town: t.name, detail: `${where} · gdzieś ${strony[k]}` };
+  }
+
   /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
   private whereIs(x: number, y: number) {
     // A street line if that part of the map is loaded, else the nearest known address without its number.
@@ -3999,6 +4076,14 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('toast', text, ms);
   }
 
+  /** Share of the way to the next character level (1 at the top level). */
+  private expShare() {
+    const lvl = poziomPostaci(session.exp);
+    if (lvl >= MAKS_POZIOM_POSTACI) return 1;
+    const from = expNaPoziom(lvl);
+    return Math.max(0, Math.min(0.999, (session.exp - from) / (expNaPoziom(lvl + 1) - from)));
+  }
+
   private emitHud() {
     this.applyLevel();
     const quests = this.activeQuests();
@@ -4029,6 +4114,11 @@ export class GameScene extends Phaser.Scene {
       street: this.city.streetNear(this.player.x, this.player.y),
       pogoda: weatherLabel(isNight()),
       quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
+      potions: session.mikstury,
+      fruit: totalFruit(),
+      expShare: this.expShare(),
+      ...this.placeInfo(),
+      goods: goodsByKind(),
     };
     this.registry.set('hud', state);
     this.game.events.emit('hud', state);

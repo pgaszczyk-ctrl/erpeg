@@ -47,3 +47,15 @@ export const ODWIEDZONE_KM = 20;
  * po `wyjscieS` sekundach wychodzi na mapę świata.
  */
 export const GRANICA = { wejscieM: 80, wyjscieM: 15, wyjscieS: 1 };
+
+/**
+ * HUD, plakietka w prawym górnym rogu (spec. „nowy HUD”, 5.10.2026): druga linia mówi, gdzie jesteśmy.
+ * Konkretne miejsce (ulica) tylko po rozmowie z kimś – ważne do `wiedzaM` od miejsca rozmowy;
+ * inaczej „w mieście / za miastem · gdzieś na północy” od środka miejscowości.
+ * Promienie „w mieście” (metry): Lublin, wsie i miasteczka z mapy Lublina, duże miasta z mapy świata, mapy stacji.
+ */
+export const MIEJSCE_HUD = {
+  wiedzaM: 300, lublinM: 5500, wsM: 900, miastoM: 4000, miasteczkoM: 1000, centrum: 0.15,
+  /** Miejscowości z mapy Lublina, które są miastami (reszta to wsie: „we wsi / za wsią”). */
+  miasta: ['Nałęczów'],
+};

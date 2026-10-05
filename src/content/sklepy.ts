@@ -20,20 +20,21 @@ export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 
 export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
-export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; cena: number; jadalne: boolean; grupa: Grupa }> = {
-  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', cena: 2, jadalne: true, grupa: 'owoce' },
-  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', cena: 3, jadalne: true, grupa: 'owoce' },
-  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', cena: 5, jadalne: true, grupa: 'owoce' },
-  marchewka: { nazwa: 'marchewka', mnoga: 'marchewki', cena: 2, jadalne: true, grupa: 'warzywa' },
-  brokul: { nazwa: 'brokuł', mnoga: 'brokuły', cena: 3, jadalne: true, grupa: 'warzywa' },
-  salata: { nazwa: 'sałata', mnoga: 'sałata', cena: 3, jadalne: true, grupa: 'warzywa' },
+/** `wielu` = dopełniacz liczby mnogiej („+5 jabłek” w powiadomieniach HUD-u). */
+export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; cena: number; jadalne: boolean; grupa: Grupa }> = {
+  jablko: { nazwa: 'jabłko', mnoga: 'jabłka', wielu: 'jabłek', cena: 2, jadalne: true, grupa: 'owoce' },
+  sliwka: { nazwa: 'śliwka', mnoga: 'śliwki', wielu: 'śliwek', cena: 3, jadalne: true, grupa: 'owoce' },
+  winogrono: { nazwa: 'winogrono', mnoga: 'winogrona', wielu: 'winogron', cena: 5, jadalne: true, grupa: 'owoce' },
+  marchewka: { nazwa: 'marchewka', mnoga: 'marchewki', wielu: 'marchewek', cena: 2, jadalne: true, grupa: 'warzywa' },
+  brokul: { nazwa: 'brokuł', mnoga: 'brokuły', wielu: 'brokułów', cena: 3, jadalne: true, grupa: 'warzywa' },
+  salata: { nazwa: 'sałata', mnoga: 'sałata', wielu: 'sałat', cena: 3, jadalne: true, grupa: 'warzywa' },
   // Z pól (overhaul 09, src/gen/pola.ts), ceny wg POLA.md (do decyzji właściciela; pokrętło cen zbiorów działa i na nie).
-  ziemniak: { nazwa: 'ziemniak', mnoga: 'ziemniaki', cena: 2, jadalne: true, grupa: 'warzywa' },
-  kapusta: { nazwa: 'kapusta', mnoga: 'kapusty', cena: 4, jadalne: true, grupa: 'warzywa' },
-  burak: { nazwa: 'burak', mnoga: 'buraki', cena: 2, jadalne: true, grupa: 'warzywa' },
-  dynia: { nazwa: 'dynia', mnoga: 'dynie', cena: 6, jadalne: true, grupa: 'warzywa' },
-  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', cena: 1, jadalne: true, grupa: 'grzyby' },
-  drewno: { nazwa: 'drewno', mnoga: 'drewno', cena: 12, jadalne: false, grupa: 'drewno' },
+  ziemniak: { nazwa: 'ziemniak', mnoga: 'ziemniaki', wielu: 'ziemniaków', cena: 2, jadalne: true, grupa: 'warzywa' },
+  kapusta: { nazwa: 'kapusta', mnoga: 'kapusty', wielu: 'kapust', cena: 4, jadalne: true, grupa: 'warzywa' },
+  burak: { nazwa: 'burak', mnoga: 'buraki', wielu: 'buraków', cena: 2, jadalne: true, grupa: 'warzywa' },
+  dynia: { nazwa: 'dynia', mnoga: 'dynie', wielu: 'dyń', cena: 6, jadalne: true, grupa: 'warzywa' },
+  grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', wielu: 'grzybów', cena: 1, jadalne: true, grupa: 'grzyby' },
+  drewno: { nazwa: 'drewno', mnoga: 'drewno', wielu: 'drewna', cena: 12, jadalne: false, grupa: 'drewno' },
 };
 
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */

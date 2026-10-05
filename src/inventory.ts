@@ -398,6 +398,13 @@ export function fruitCount(f: Owoc) {
   return goodsSlots().reduce((n, s) => n + (s.counts[f] ?? 0), 0);
 }
 
+/** Every goods kind in the backpack with its count (the HUD notices what was picked up). */
+export function goodsByKind() {
+  const out: Partial<Record<Owoc, number>> = {};
+  for (const s of goodsSlots()) for (const [f, n] of Object.entries(s.counts) as [Owoc, number][]) out[f] = (out[f] ?? 0) + n;
+  return out;
+}
+
 /** How many things of one group (all fruit, all vegetables…). */
 export function groupCount(g: Grupa) {
   return goodsSlots().reduce((n, s) => n + (s.goods === g ? goodsN(s) : 0), 0);

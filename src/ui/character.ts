@@ -86,11 +86,16 @@ export interface CharacterHost {
   /** Opens the "📸 Pochwal się" card (ui/brag.ts). */
   brag?: () => void;
   tent?: TentAction;
+  /** Open on this page (HUD: gold → equipment, the quest line → quests). */
+  page?: 'eq' | 'quests';
 }
 
 export function toggleCharacter(host: CharacterHost) {
   if (open) closeCharacter();
-  else show(host);
+  else {
+    if (host.page) page = host.page === 'eq' ? 'ekwipunek' : 'zadania';
+    show(host);
+  }
 }
 
 function el(tag: string, cls = '', text = '') {
