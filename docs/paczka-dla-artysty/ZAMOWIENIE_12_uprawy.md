@@ -15,6 +15,22 @@ Pierwsza próba (marchew, dynia) jest ładna, ale to **ilustracja**, a ma być *
 
 Tekst od właściciela: „Próba jest śliczna, ale wyszła ilustracja. Potrzebuję pixel artu, tylko trochę bardziej artystycznego: rysuj na siatce 4×4 px (jeden piksel gry), 3–5 odcieni na kolor, twarde krawędzie i obrys, bez gradientów. Kształty prostsze (nać marchwi z kilku grubych piór), widok z góry z ukosa jak drzewa w grze, kolory z palety świata, przezroczyste tło. Najpierw znowu marchew i dynia.”
 
+## Polecenie do generatora obrazów (gotowe do wklejenia)
+Grafik pracuje generatorem obrazów, więc nie narysuje dokładnej siatki ani palety – to załatwia nasz skrypt. Od obrazka potrzebujemy: wyraźnego stylu pixel art, prostych kształtów, jednolitego tła do wycięcia i jednej rośliny w jednym miejscu. Polecenie po angielsku (generatory lepiej je rozumieją), podmień nazwę rośliny i fazę:
+
+```
+Pixel art game sprite sheet, 16-bit style, of a CARROT plant in 7 growth stages in one row, evenly spaced, same scale, same baseline:
+young sprout; adult plant (3 slightly different variants); ripe plant ready to harvest with the orange top of the root visible at the base (2 variants); harvested spot (small hole with a few leaf scraps).
+Top-down 3/4 view like plants in a top-down RPG (we see the leaves spread from above, not a pure side view).
+Chunky visible pixels, each pixel clearly square, about 16 to 24 pixels tall per plant, 3 to 5 shades per colour, hard edges, 1-pixel dark outline (#1e1a24), light from the top-left.
+Simple readable shapes: carrot leaves as 4-6 thick feathery fronds, not many tiny leaflets.
+Muted natural colours. No anti-aliasing, no gradients, no painterly texture, no soft shadows, no ground under the plant, no text.
+Solid flat background colour pure magenta #FF00FF.
+```
+Dla dyni: `a PUMPKIN plant … young seedling; vine with leaves (3 variants, one with a yellow flower); ripe plant with an orange ribbed pumpkin with a stem (2 variants); harvested vine remains`, a w zasadach kształtów: `pumpkin leaves with 3-5 lobes, curly tendrils, pumpkin with 4-5 clear ribs`.
+
+Jeśli wynik wyjdzie gładki jak ilustracja: dopisz na początku `strict pixel art, low resolution, 64x16 pixel canvas upscaled 8x with nearest neighbour`.
+
 ## Lista (docelowy rozmiar po zmniejszeniu, w nawiasie)
 Dla każdej uprawy: **młoda** (1 wariant), **dorosła** (3 warianty, lekko różne), **dojrzała do zebrania** (2 warianty – plon wyraźnie widoczny, np. pomarańczowa główka marchwi wystająca z ziemi, kopczyk ziemniaków przy krzaku, dorodna dynia), **po zbiorze** (1: dołek/resztki liści).
 
