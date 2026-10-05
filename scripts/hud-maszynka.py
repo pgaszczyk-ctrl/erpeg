@@ -33,16 +33,12 @@ def rect(x, y, w, h, col):
         for i in range(x, x + w):
             px[i, j] = rgb(col)
 
-# Bottom row: clear the three v1 buttons, put the camera (v1 button 2) and a new quest-log button.
-by = 44 + E
-for j in range(by, by + 15):
-    for i in range(0, 48):
+# Bottom row: clear the three v1 buttons; two bigger buttons (owner: +50 %) – 24×24 frames with
+# the 9×9 icons drawn at 2× (camera from v1 button 2, a quest-log scroll).
+for j in range(44 + E, 60 + E):
+    for i in range(0, 49):
         px[i, j] = (0, 0, 0, 0)
-cam = src.crop((17, 44, 32, 59))
-frame = src.crop((1, 44, 16, 59))
-out.paste(cam, (9, by), cam)
-out.paste(frame, (26, by), frame)
-# Scroll icon inside the quest-log button (inner 9×9 at +3,+3).
+cam_icon = [[src.getpixel((20 + i, 47 + j)) for i in range(9)] for j in range(9)]
 scroll = [
     '.AAAAAAA.',
     'AFEEEEEFA',
@@ -54,12 +50,25 @@ scroll = [
     'AFEEEEEFA',
     '.AAAAAAA.',
 ]
-col = {'A': A, 'E': Ee, 'F': F}
-rect(26 + 3, by + 3, 9, 9, H)
-for j, row in enumerate(scroll):
-    for i, ch in enumerate(row):
-        if ch in col:
-            px[26 + 3 + i, by + 3 + j] = rgb(col[ch])
+col = {'A': A, 'E': Ee, 'F': F, '.': H}
+scroll_icon = [[rgb(col[ch]) for ch in row] for row in scroll]
+N = 24
+def button(x0, y0, icon):
+    rows = ['.' + 'A' * (N - 2) + '.', 'A' + 'B' * (N - 2) + 'A', 'AC' + 'I' * (N - 4) + 'CA']
+    rows += ['ACH' + '#' * (N - 6) + 'HCA'] * (N - 6)
+    rows += ['AC' + 'H' * (N - 4) + 'CA', 'A' + 'F' * (N - 2) + 'A', '.' + 'A' * (N - 2) + '.']
+    pal = {'A': A, 'B': B, 'C': C, 'I': I, 'H': H, 'F': F}
+    for j, row in enumerate(rows):
+        for i, ch in enumerate(row):
+            if ch in pal:
+                px[x0 + i, y0 + j] = rgb(pal[ch])
+    for j in range(N - 6):
+        for i in range(N - 6):
+            c = icon[j // 2][i // 2]
+            px[x0 + 3 + i, y0 + 3 + j] = c if c[3] else rgb(H)
+by = 66
+button(0, by, cam_icon)
+button(25, by, scroll_icon)
 
 # Avatar frame (26×26 at x 11, y 2): outline, light brass top/left, brass, dark bottom, dark inside.
 ax, ay, aw = 11, 2, 26
@@ -84,6 +93,13 @@ for i in range(ax + aw, 50):
     px[i, py0 + 4] = rgb(A)
 rect(42, py0 - 1, 3, 7, A)
 rect(43, py0, 1, 5, B)
+# …and on behind the red tube (life) into the gold one (experience): seen in the gap between them.
+for i in (58, 59):
+    px[i, py0] = rgb(A)
+    px[i, py0 + 1] = rgb(B)
+    px[i, py0 + 2] = rgb(C)
+    px[i, py0 + 3] = rgb(F)
+    px[i, py0 + 4] = rgb(A)
 out.save(f'{DST}/maszynka_baza.png')
 
 for name in ('mikstura', 'owoc'):

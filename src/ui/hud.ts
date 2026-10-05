@@ -236,11 +236,11 @@ function layout() {
   parts.heal.style.borderRadius = '50%';
   at(parts.hp, 49, 1, 10, H - 2);
   at(parts.xp, 59, 1, 10, H - 2);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 9, 44 + E, 15, 15);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 26, 44 + E, 15, 15);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 0, 66, 24, 24);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 25, 66, 24, 24);
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${32 * s}px`, top: `${(30 + E) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    left: `${32 * s}px`, top: `${(27 + E) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   const menuW = 64; // the ☰ button top left
