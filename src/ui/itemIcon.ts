@@ -27,6 +27,8 @@ export const MATERIAL_PICTURES = [
   'piasek', 'odlamek_komety', 'sztaba_zelaza', 'sztaba_stali', 'sztaba_mosiadzu', 'szklo',
   // A3/D1: power cells (full/empty) and the pickaxe – for later.
   'ogniwo', 'ogniwo_puste', 'kilof',
+  // D2: vehicles and scrap for later; the diamond is shown in the Kufer's Zasoby.
+  'rower', 'hulajnoga_parowa', 'diament', 'zlom', 'zlom_miedziany',
 ];
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
 const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = {

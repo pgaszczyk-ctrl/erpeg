@@ -388,7 +388,11 @@ function show(host: CharacterHost) {
     const gold = line('🪙', 'Złoto', session.coins, 7);
     gold.classList.add('k-gold');
     s.append(gold);
-    if (session.diamenty) s.append(line('💎', 'Diamenty', session.diamenty, 4));
+    if (session.diamenty) {
+      const pic = document.createElement('img');
+      pic.src = `${import.meta.env.BASE_URL}items/diament.png`;
+      s.append(line(pic, 'Diamenty', session.diamenty, 4));
+    }
     s.append(line('🧪', 'Mikstury', session.mikstury, 4));
     for (const k of ownedAmmo()) {
       const pic = document.createElement('img');

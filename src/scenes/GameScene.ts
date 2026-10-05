@@ -848,9 +848,12 @@ export class GameScene extends Phaser.Scene {
    * (half its diagonal, at least WIDOK.ekranMin× the old range, at most WIDOK.maks px).
    */
   private viewCone() {
-    const w = session.level.widok ?? { stopnie: 116, ekran: false };
     const v = this.cameras.main.worldView;
     const edge = Math.hypot(v.width, v.height) / 2;
+    // Owner, 5 Oct 2026: no fog from the hero's sight any more – all around, to the screen's corners; only
+    // buildings block it (the rays stop at walls). The difficulty's cone (`widok`) is no longer used here.
+    if (WIDOK.wszedzie) return { half: Math.PI + 0.5, range: Math.min(WIDOK.maksWszedzie, Math.max(BASE_VIEW_RANGE * WIDOK.ekranMin, edge * 1.05)) };
+    const w = session.level.widok ?? { stopnie: 116, ekran: false };
     const range = w.ekran ? Math.min(WIDOK.maks, Math.max(BASE_VIEW_RANGE * WIDOK.ekranMin, edge)) : BASE_VIEW_RANGE;
     return { half: (w.stopnie / 2) * (Math.PI / 180), range };
   }

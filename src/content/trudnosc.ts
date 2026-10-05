@@ -17,7 +17,12 @@
 // ============================================================================
 
 /** Zasięg „do brzegu ekranu”: co najmniej ekranMin × dawny zasięg, najwyżej maks punktów mapy (tyle liczy telefon bez zadyszki). */
-export const WIDOK = { ekranMin: 2, maks: 330 };
+export const WIDOK = {
+  ekranMin: 2, maks: 330,
+  /** Właściciel, 5 X 2026: widać wszystko dookoła aż do rogów ekranu, zasłaniają tylko budynki (stożek wzroku wyłączony). */
+  wszedzie: true,
+  maksWszedzie: 700,
+};
 
 export interface Trudnosc {
   nazwa: string;
