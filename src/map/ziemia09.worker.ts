@@ -13,6 +13,6 @@ self.onmessage = (e: MessageEvent<(Zlecenie & { nr: number }) | { nr: number; po
     (self as unknown as Worker).postMessage({ nr: d.nr, px: o.px, cien: c.px, S: o.w }, [o.px.buffer, c.px.buffer]);
     return;
   }
-  const { px, drzewa, para } = ziemia(d);
-  (self as unknown as Worker).postMessage({ nr: d.nr, px, drzewa, para }, [px.buffer]);
+  const { px, drzewa, para, fale } = ziemia(d);
+  (self as unknown as Worker).postMessage({ nr: d.nr, px, drzewa, para, fale }, [px.buffer]);
 };

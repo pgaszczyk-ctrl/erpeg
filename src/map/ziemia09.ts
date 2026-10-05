@@ -1,6 +1,7 @@
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza } from '../gen';
 import { wyposazPeron, type Peron09 } from './dworzec09';
+import { stragany } from './targ09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -11,12 +12,12 @@ export const GEN_DOTS = 2;
 export const MARGINES = 40;
 
 /** Rodzaje w mapie rodzajów: podłoża generatora i peron (dla generatora to chodnik, krawędź dorysowujemy sami). */
-export type Rodzaj09 = Rodzaj | 'peron';
+export type Rodzaj09 = Rodzaj | 'peron' | 'targ';
 export const RODZAJE: Rodzaj09[] = [
   'trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'bruk', 'chodnik', 'plac', 'droga', 'piasek', 'woda',
-  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron',
+  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron', 'targ',
 ];
-const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory');
+const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory'), TARG_ID = RODZAJE.indexOf('targ');
 
 /** Budynek do namalowania (współrzędne w px generatora = px mapy × GEN_DOTS). */
 export interface Budynek09 {
@@ -182,13 +183,13 @@ function malujPerony(o: Obraz, ids: Uint8Array, S: number, X0: number, Y0: numbe
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
  */
-export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][] } {
+export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][] } {
   const { ids, S, X0, Y0, N } = z;
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
     if (i < 0 || j < 0 || i >= S || j >= S) return null;
     const r = RODZAJE[ids[j * S + i]];
-    return r === 'peron' ? 'chodnik' : r;
+    return r === 'peron' ? 'chodnik' : r === 'targ' ? 'plac' : r;
   };
   const obraz = nowy(N, N);
   malujPodloze(obraz, X0, Y0, rodzajW);
@@ -198,6 +199,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   // Tory: podsypka, podkłady, szyny (generator), potem perony na wierzchu (płyty z jasną krawędzią i żółtą linią).
   for (const t of z.tory) tor(obraz, t, X0, Y0);
   malujPerony(obraz, ids, S, X0, Y0);
+  stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID; });
   const para: [number, number][] = [];
   for (const p of z.perony) for (const q of wyposazPeron(obraz, X0, Y0, p)) if (q[0] >= X0 && q[1] >= Y0 && q[0] < X0 + N && q[1] < Y0 + N) para.push(q);
   // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
@@ -217,5 +219,13 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   const sciete = new Set(z.sciete);
   if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete);
   const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));
-  return { px: obraz.px, drzewa: swoje, para };
+  // Zmarszczki na wodzie (gra je animuje): kratka 14 px, z dala od brzegu, co trzecia–czwarta.
+  const fale: [number, number][] = [];
+  const K = 14;
+  for (let y = Math.ceil(Y0 / K) * K; y < Y0 + N; y += K) for (let x = Math.ceil(X0 / K) * K; x < X0 + N; x += K) {
+    const fx = x + Math.floor(hash(x, y, 901) * K), fy = y + Math.floor(hash(x, y, 902) * K);
+    if (hash(x, y, 903) > 0.32 || fx >= X0 + N || fy >= Y0 + N) continue;
+    if ([[0, 0], [7, 0], [-7, 0], [0, 6], [0, -6]].every(([dx, dy]) => rodzajW(fx + dx, fy + dy) === 'woda')) fale.push([fx, fy]);
+  }
+  return { px: obraz.px, drzewa: swoje, para, fale };
 }

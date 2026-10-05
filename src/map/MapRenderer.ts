@@ -509,7 +509,7 @@ export class MapRenderer {
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
-        c.steam = ready.para.map(([px, py]) => this.korony.steam(px, py));
+        c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py))];
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();

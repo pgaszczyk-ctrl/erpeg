@@ -35,7 +35,7 @@ const KOD_32 = KOD.map(([r, g, b]) => (b << 16) | (g << 8) | r);
 const kolor = (r: Rodzaj09) => `rgb(${KOD[ID[r]].join(',')})`;
 
 /** Rodzaj podłoża z rodzaju obszaru OSM (leśne i pola zmieniają odmianę wg id obszaru). */
-function rodzajObszaru(a: Area): Rodzaj {
+function rodzajObszaru(a: Area): Rodzaj09 {
   switch (a.kind) {
     case 'grass': return 'trawa';
     case 'park': return 'park';
@@ -48,7 +48,7 @@ function rodzajObszaru(a: Area): Rodzaj {
     case 'allotments': return 'laka'; // działki: łąka z drzewami owocowymi (drzewa09.ts)
     case 'pitch': return 'trawa';
     case 'playground': return 'plac';
-    case 'parking': return 'parking';
+    case 'parking': return 'targ'; // parkingi jako plac targowy ze straganami (targ09.ts)
     case 'plaza': return 'plac';
     case 'paved': return 'bruk';
     case 'sand': return 'piasek';
@@ -197,7 +197,7 @@ function naPlotno(px: Uint32Array, N: number) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][] }
 
 class ZiemiaWTle {
   private workery: Worker[] = [];
@@ -211,7 +211,7 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; cien?: Uint32Array; S?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; cien?: Uint32Array; S?: number }>) => {
           if (e.data.cien) {
             const ok = this.pojazdy.get(e.data.nr);
             this.pojazdy.delete(e.data.nr);
@@ -222,7 +222,7 @@ class ZiemiaWTle {
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale });
         };
         this.workery.push(w);
       }
@@ -246,8 +246,8 @@ class ZiemiaWTle {
 
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
-      const { px, drzewa, para } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para });
+      const { px, drzewa, para, fale } = ziemia(z);
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];

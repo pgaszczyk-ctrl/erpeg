@@ -119,7 +119,48 @@ export class Korony {
 
   dropSteam(im: Phaser.GameObjects.Image) {
     this.obloczki.delete(im);
+    this.fale.delete(im);
     im.destroy();
+  }
+
+  // ------------------------------------------------------------ zmarszczki na wodzie (właściciel 5.10.2026)
+
+  private fale = new Set<Phaser.GameObjects.Image>();
+
+  /** Błysk/zmarszczka na wodzie w punkcie (px generatora): pojawia się, wydłuża i gaśnie, lekko dryfuje; bez względu na wiatr. */
+  fala(px: number, py: number) {
+    if (!this.scene.textures.exists('fala09')) {
+      const W = 8, H = 3, J = ['#9ecbe0', '#cfeaf4', '#eef9fc'].map((h) => h);
+      const c = document.createElement('canvas');
+      c.width = W * 5;
+      c.height = H;
+      const g = c.getContext('2d')!;
+      // klatki: 0 nic, 1 krótka kreska, 2 dłuższa z błyskiem, 3 dwie kreski (fala się łamie), 4 kropka
+      const kres = (k: number, x: number, y: number, w: number, col: string) => { g.fillStyle = col; g.fillRect(k * W + x, y, w, 1); };
+      kres(1, 3, 1, 2, J[0]);
+      kres(2, 1, 1, 5, J[0]); kres(2, 2, 0, 2, J[2]);
+      kres(3, 0, 1, 2, J[1]); kres(3, 5, 1, 2, J[0]);
+      kres(4, 4, 2, 1, J[0]);
+      const tex = this.scene.textures.addCanvas('fala09', c)!;
+      for (let k = 0; k < 5; k++) tex.add(`f${k}`, 0, k * W, 0, W, H);
+      tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const x = px / GEN_DOTS, y = py / GEN_DOTS;
+    const im = this.scene.add.image(x, y, 'fala09', 'f0').setOrigin(0.5).setScale(1 / GEN_DOTS).setDepth(-1e8 + 3).setAlpha(0.85);
+    im.setData('x0', x).setData('y0', y).setData('faza', hash(px, py, 21) * 7).setData('okres', 2.2 + hash(px, py, 22) * 1.6);
+    this.fale.add(im);
+    return im;
+  }
+
+  private updateFale(T: number, cam: Phaser.Geom.Rectangle) {
+    const KL = [0, 1, 2, 2, 3, 4, 0, 0];
+    for (const im of this.fale) {
+      const x0 = im.getData('x0') as number, y0 = im.getData('y0') as number;
+      if (x0 < cam.x - 10 || x0 > cam.right + 10 || y0 < cam.y - 10 || y0 > cam.bottom + 10) continue;
+      const okres = im.getData('okres') as number, t = ((T + (im.getData('faza') as number)) % okres) / okres;
+      im.setFrame(`f${KL[Math.min(KL.length - 1, Math.floor(t * KL.length))]}`);
+      im.setPosition(Math.round((x0 + Math.sin((T + x0) * 0.6) * 1.5) * 2) / 2, y0);
+    }
   }
 
   /** Para: co ~1,2 s nowy obłoczek, unosi się o kilka px i rzednie (klatki 0–5); silniejszy wiatr znosi ją w bok. */
@@ -218,6 +259,7 @@ export class Korony {
   update(now: number, dt: number, cam: Phaser.Geom.Rectangle, hx: number, hy: number) {
     const T = now / 1000;
     if (this.obloczki.size) this.updateSteam(T, cam);
+    if (this.fale.size) this.updateFale(T, cam);
     const S = Math.max(0.1, Math.min(2.2, weather.wind / 7));
     // Środek postaci w px generatora.
     const px = hx * GEN_DOTS, py = (hy - KORONY.srodekPostaci) * GEN_DOTS;
