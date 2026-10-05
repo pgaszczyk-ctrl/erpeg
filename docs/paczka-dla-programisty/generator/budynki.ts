@@ -58,9 +58,20 @@ export function poziomSteampunku(miasto: WielkoscMiasta, powierzchniaM2: number,
 /** Pole obrysu w m² (px obrazu: 3,84 px = 1 m). */
 export const poleM2 = (pierscien: number[]) => { let a = 0; const n = pierscien.length / 2; for (let i = 0; i < n; i++) { const j = (i + 1) % n; a += pierscien[2 * i] * pierscien[2 * j + 1] - pierscien[2 * j] * pierscien[2 * i + 1]; } return Math.abs(a) / 2 / (3.84 * 3.84); };
 
+/** Źródło pary: miejsce w świecie, wielkość obłoczka (16/24/32) i rytm krótkich wyrzutów (okres 0 = nieczynne). */
+export interface ZrodloPary { x: number; y: number; rozmiar: number; okres: number; faza: number; czas: number }
+/**
+ * Para „pryska” krótko i rzadko (decyzja właściciela 5.10: było jej za dużo): tylko ok. 40 % wylotów działa (na poziomie 3 ok. 55 %),
+ * każdy co 5–14 s wyrzuca jeden obłoczek na 0,8–1,6 s. Zwraca klatkę animacji `para()` (0–5) albo −1, gdy w tej chwili nic nie leci.
+ */
+export function klatkaPary(z: ZrodloPary, tSek: number): number {
+  if (!z.okres) return -1;
+  const tt = (((tSek + z.faza) % z.okres) + z.okres) % z.okres;
+  return tt < z.czas ? Math.min(5, Math.floor((tt / z.czas) * 6)) : -1;
+}
 /** `pierscien` = [x0, y0, x1, y1, …] w px obrazu (świat). Zwraca obraz budynku i jego lewy-górny róg w świecie. */
-/** Zwraca też `para`: miejsca (w świecie) i wielkość obłoczków pary (16/24/32) – gra stawia tam animowane sprite'y `para()`. */
-export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: [number, number, number][] } {
+/** Zwraca też `para`: źródła pary (patrz `ZrodloPary`, `klatkaPary`) – gra stawia tam animowane obłoczki `para()` tylko w chwili wyrzutu. */
+export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: ZrodloPary[] } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
   const n = pierscien.length / 2;
   const P: [number, number][] = []; for (let i = 0; i < n; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
@@ -186,7 +197,9 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     para.push([x0 + bx + 2, y0 + by - 7, SP >= 3 ? 32 : SP === 2 ? 24 : 16]);
   }
   if (SP >= 1 || op.ozdoby) ozdoby();
-  return { obraz: o, x0, y0, para };
+  const RP = rng(op.seed * 61 + 5), czynne = (op.steampunk ?? 0) >= 3 ? 0.55 : 0.4;
+  const zrodla: ZrodloPary[] = para.map(([x, y, r]) => { const dziala = RP() < czynne; return { x, y, rozmiar: r, okres: dziala ? 5 + RP() * 9 : 0, faza: RP() * 14, czas: 0.8 + RP() * 0.8 }; });
+  return { obraz: o, x0, y0, para: zrodla };
 
   /**
    * Katalog ozdób steampunku (decyzja właściciela 5.10: „nie ograniczaj się do rur”). Losowany zestaw wg poziomu:
