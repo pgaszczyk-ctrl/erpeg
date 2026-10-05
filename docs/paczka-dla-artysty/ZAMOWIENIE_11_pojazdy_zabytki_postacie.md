@@ -10,20 +10,28 @@
 | **Pojazdy, zabytki, szyldy** (część świata) | drobny piksel: 1 px pliku = 1 px świata | koń z wozu (`6_zamowienie_09/01_wzor_stylu/kon_WZOR_SWIATA_x3.png`) i makieta |
 | **Postacie** | grubszy piksel: siatka 32×32 zapisana jako 64×64 (każdy piksel 2×2) | blondynka (`01_wzor_stylu/wzor_postaci_blondynka_tak_nie.png`) |
 
-## 1a. Wyrównanie do świata (ważne – po ocenie próbki lokomotywy, 5.10)
+## 1a. Jak rysować, a co robimy my (decyzja właściciela 5.10 – zastępuje poprzednią wersję tego punktu)
 
-Próbka lokomotywy jest ładna, ale za dokładna względem świata z generatora: płynne przejścia tonów, za dużo odcieni, miękkie krawędzie. Po prostym wyrównaniu pasuje bardzo dobrze (`8_wyrownanie/wyrownanie_lokomotywa_x2.png`: z lewej Twoja próbka zmniejszona, w środku po wyrównaniu, z prawej zastępcza lokomotywa rysowana programem). Zasady dla każdego pliku z tego zamówienia:
-- **rysuj od razu w docelowej wielkości** (lokomotywa ok. 64 px długości), bez zmniejszania z dużego obrazka,
-- **tylko kolory z `8_wyrownanie/paleta_swiata.png`** (te same co w domach, rurach i torach), 4–5 odcieni na materiał, bez gradientów i bez wygładzania krawędzi,
-- światło z lewej-góry, obrys 1 px `#1e1a24` dookoła sylwetki, szczegóły co najmniej 2 px,
-- widok bardziej z góry niż w próbce (jak dachy domów: widać dach i jedną ścianę), żeby pojazd leżał na torze, a nie stał przed nim.
-Każdą paczkę przepuszczamy przez `8_wyrownanie/wyrownaj.py` (zmniejszenie, paleta, obrys). Jeśli po nim obrazek wygląda inaczej niż Twój, popraw kolory u siebie.
+Właścicielowi najbardziej podoba się **pierwsza próbka lokomotywy** (widok z ukosa z góry, mosiężny kocioł, turkusowa kabina, czerwone koła, lampa), **po naszym wyrównaniu** (`8_wyrownanie/wyrownanie_lokomotywa_x2.png`, środek). Druga próbka (widok prosto z góry) jest odrzucona.
+
+**Ty:** rysujesz tak jak w pierwszej próbce – w swoim stylu, w dużym rozmiarze, z pełnymi szczegółami. Nie zmniejszasz, nie zmieniasz palety, nie dodajesz obrysu gry.
+**My:** zmniejszamy do skali gry (lokomotywa ok. 64 px długości), zamieniamy kolory na paletę świata i dodajemy obrys – skryptem `8_wyrownanie/wyrownaj.py`. To robimy zawsze my, po Twojej dostawie.
+
+Żeby to się udało, pilnuj tylko tego:
+- **ten sam kąt patrzenia co w pierwszej próbce** we wszystkich kierunkach (z ukosa z góry, jak w próbce w kierunku 0°), ta sama wielkość pojazdu, to samo światło (z lewej-góry),
+- **każdy kierunek w osobnym pliku PNG z przezroczystym tłem** (albo jeden pasek z równymi komórkami), pojazd na środku komórki, kółka na tej samej linii we wszystkich kierunkach obrotu po torze,
+- **duży rozmiar**: ok. 4× docelowego (lokomotywa ok. 250–300 px długości), wszystkie kierunki w tej samej skali,
+- **szczegóły grube**: nic cieńszego niż ok. 6–8 px w dużym rysunku (po zmniejszeniu zniknie), raczej mniej drobiazgów niż więcej,
+- **bez tła, cienia, dymu, torów i napisów**; cień i parę robi gra,
+- kolory jak w pierwszej próbce (mosiądz, turkus, czerwone koła, ciemne żelazo) – paletę i tak dopasujemy.
+
+Gotowy tekst dla Ciebie od właściciela: „Wróć do stylu i kąta z pierwszej próbki lokomotywy – tamta była najlepsza. Rysuj duże, ok. 4× (lokomotywa 250–300 px), każdy kierunek na przezroczystym tle, ten sam kąt, skala i światło we wszystkich 16 kierunkach. Nie zmniejszaj, nie zmieniaj palety i nie dodawaj obrysu – to zrobimy my. Najpierw te 3 kierunki (0°, 22,5°, 45°) do akceptacji.”
 
 ## 2. Lista
 
 ### 2.1 Kolej parowa (najważniejsze)
 
-**Lokomotywa i tender w 16 kierunkach** (mają przód i tył), **wagony w 8 kierunkach** (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (`6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png`). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Widok prawie z góry, lekko z przodu (jak mapa). Bez dymu (parę robi program). Do każdego arkusza osobny `_cien.png` (czarna sylwetka cienia na ziemi, ta sama siatka).
+**Lokomotywa i tender w 16 kierunkach** (mają przód i tył), **wagony w 8 kierunkach** (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (`6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png`). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Kąt patrzenia jak w pierwszej próbce (z ukosa z góry). Bez dymu (parę robi program). Cień robimy sami z sylwetki. **Wymiary w tabeli to wynik po naszym wyrównaniu; Ty dostarczasz ok. 4× większe rysunki (punkt 1a).**
 
 | Plik | Klatka | Arkusz | Co to |
 |---|---|---|---|
@@ -33,7 +41,7 @@ Każdą paczkę przepuszczamy przez `8_wyrownanie/wyrownaj.py` (zmniejszenie, pa
 | `wagon_towarowy.png` | 72×72 | 576×72 (8 kierunków) | kryty wagon z desek |
 | `wagon_platforma.png` | 72×72 | 576×72 (8 kierunków) | platforma z beczkami i skrzyniami |
 
-**Najpierw próbka:** lokomotywa w 3 kierunkach (0°, 22,5°, 45°) + `_cien`, żeby sprawdzić styl i wielkość na torze. To tylko próbka; docelowo lokomotywa ma wszystkie 16 kierunków.
+**Najpierw próbka:** lokomotywa w 3 kierunkach (0°, 22,5°, 45°) w dużym rozmiarze, w stylu pierwszej próbki (punkt 1a). Cień zrobimy sami z sylwetki. Docelowo lokomotywa ma wszystkie 16 kierunków.
 
 ### 2.2 Wóz konny (poprawka)
 
