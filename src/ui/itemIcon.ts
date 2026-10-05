@@ -29,7 +29,13 @@ export const MATERIAL_PICTURES = [
   'ogniwo', 'ogniwo_puste', 'kilof',
 ];
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
-const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = { drewno: 'drewno', chrust: 'chrust' };
+const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = {
+  drewno: 'drewno', chrust: 'chrust',
+  // Backpack groups instead of the bright, detailed emoji (owner, 5 Oct 2026): the artist's apple (HUD pack) and
+  // Noto emoji run through docs/paczka-dla-artysty/8_wyrownanie/wyrownaj.py (24 px, world palette, outline; sources
+  // in scripts/ikony-grup/), centred in 32×32 and shown 2× like the other icons.
+  owoce: 'grupa_owoce', warzywa: 'grupa_warzywa', grzyby: 'grupa_grzyby',
+};
 
 /** The picture URL of a backpack good or goods group, if it has one. */
 export function goodsPicture(what: Owoc | Grupa): string | undefined {
