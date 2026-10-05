@@ -1,3 +1,4 @@
+import { zachowajZdjecie } from './zdjecia';
 import type Phaser from 'phaser';
 import { gameShot } from './snapshot';
 import { pixelLogo } from './logo';
@@ -98,6 +99,7 @@ export async function bragCard(game: Phaser.Game, name: string, b: Brag): Promis
 /** The window with the card and its buttons. */
 export async function showBrag(game: Phaser.Game, name: string, b: Brag): Promise<void> {
   const card = await bragCard(game, name, b);
+  zachowajZdjecie(card, `${name}: ${b.title}`);
   return new Promise((resolve) => {
     const root = document.createElement('div');
     root.className = 'm-screen';

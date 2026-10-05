@@ -12,7 +12,7 @@ import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHom
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
-import { toggleCharacter, closeCharacter } from '../ui/character';
+import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
 import { OSTROSC } from '../screen';
 import { session } from '../quests';
@@ -110,8 +110,8 @@ export class UIScene extends Phaser.Scene {
     this.createTouchControls();
     mountHud({
       heal: () => (this.scene.get('game') as GameScene).healButton?.(),
-      character: () => this.openCharacter(),
-      gold: () => this.openCharacter('eq'),
+      character: () => this.openCharacter('eq'),
+      gold: () => this.openCharacter('gold'),
       quests: () => this.openCharacter('quests'),
       map: () => this.openMap(),
       camera: () => this.takePhoto(),
@@ -136,7 +136,8 @@ export class UIScene extends Phaser.Scene {
         this.openCharacter();
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
-        if (this.dialogBox) {
+        if (isCharacterOpen()) closeCharacter();
+        else if (this.dialogBox) {
           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
           const choose = this.dialogChoose;
           const last = this.dialogButtons.filter((b) => b.index >= 0).length - 1;
@@ -417,7 +418,7 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = !!this.dialogBox || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest');
+    const waiting = !!this.dialogBox || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
@@ -546,12 +547,23 @@ export class UIScene extends Phaser.Scene {
     choose?.(choice);
   }
 
-  private openCharacter(page?: 'eq' | 'quests') {
+  /** The Kufer (ui/character.ts): the world stands still while it is open (owner, 5 Oct 2026). */
+  private openCharacter(page?: 'eq' | 'gold' | 'quests') {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay || this.dialogBox) return;
     touchInput.attack = false;
+    if (isCharacterOpen()) return closeCharacter();
+    const paused = !game.scene.isPaused();
+    if (paused) game.scene.pause();
+    resetTouch();
     toggleCharacter({
       page,
+      goodsIcon: (f) => this.iconOf(GOODS_TEX[f]),
+      onClose: () => {
+        if (paused && game.scene.isPaused()) game.scene.resume();
+        resetTouch();
+        game.gearChanged();
+      },
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
       brag: () => this.takePhoto(),
