@@ -92,12 +92,12 @@ let parts: {
 } | null = null;
 let scale = 4;
 
-/** How big the machine is: ×4 as the spec says, smaller only on tiny screens (always whole pixels). */
+/** How big the machine is: ×2 on every screen (owner, 5 Oct 2026: ×4 from the spec was far too big). */
 function pickScale() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  return h < 260 || w < 250 ? 2 : h < 340 || w < 320 ? 3 : 4;
+  return 2;
 }
+/** Touch targets stay at least this big (CSS px), reaching past the drawing if needed. */
+const MIN_HIT = 44;
 const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
 
 export function mountHud(on: HudHandlers) {
@@ -193,8 +193,11 @@ function layout() {
   scale = pickScale();
   const s = scale;
   const M = margin();
-  const at = (el: HTMLElement, x: number, y: number, w: number, h: number) =>
-    Object.assign(el.style, { left: `${x * s}px`, top: `${y * s}px`, width: `${w * s}px`, height: `${h * s}px` });
+  const at = (el: HTMLElement, x: number, y: number, w: number, h: number) => {
+    const gw = Math.max(0, MIN_HIT - w * s) / 2;
+    const gh = Math.max(0, MIN_HIT - h * s) / 2;
+    Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
+  };
   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
   at(parts.heal, 11, 9, 26, 26);
   parts.heal.style.borderRadius = '50%';
@@ -202,9 +205,10 @@ function layout() {
   at(parts.xp, 59, 1, 10, 58);
   const b = parts.m.querySelectorAll<HTMLButtonElement>('.hud-b1, .hud-b2, .hud-b3');
   b.forEach((el, i) => at(el, 1 + i * 16, 44, 15, 15));
+  // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${32 * s}px`, top: `${29 * s}px`, minWidth: `${6 * s}px`, height: `${4.5 * s}px`, padding: `0 ${s}px`,
-    border: `${s / 2}px solid #b8893b`, font: `700 ${3 * s}px/${3.5 * s}px 'Pixelify Sans', monospace`,
+    left: `${32 * s}px`, top: `${30 * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   const menuW = 64; // the ☰ button top left
   Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, window.innerWidth - M - menuW)}px` });
