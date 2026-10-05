@@ -154,7 +154,7 @@ Opcjonalnie (przełącznik, decyzja po teście): **przyciąganie kąta budynku**
 
 ## 6. Steampunk na mapie
 
-- **Rury na ścianach:** ok. 30% budynków (seed) dostaje pionową rurę `rura_sciana_<8|12|16>` na jednej ścianie frontowej przy narożniku, część poziomy odcinek pod oknami, manometr lub zawór przy drzwiach miejsc.
+- **Rury na ścianach (zmiana 5.10):** udział i ilość wg miasta i wielkości budynku – `poziomSteampunku` (GENERATOR_SWIATA punkt 0.10). Dawniej: ok. 30% budynków (seed) dostaje pionową rurę `rura_sciana_<8|12|16>` na jednej ścianie frontowej przy narożniku, część poziomy odcinek pod oknami, manometr lub zawór przy drzwiach miejsc.
 - **Dachy:** ok. 10% zbiornik lub kocioł na dachu (stemple w obrysie, jak `paintChimney`), wentylatory 3 klatki (tylko w widoku, sprite).
 - **Rurociągi (zmiana 4.10):** tylko **równolegle do dróg, w stałym odsunięciu za chodnikiem, tym samym łukiem co droga**; na końcach wejście do budynku albo pod ziemię (studzienka). Żadnych tras „Manhattan” przez trawniki. Szczegóły i kod: `GENERATOR_SWIATA.md` punkt 0.6, `generator/steampunk.ts` (`trasaPrzyDrodze`, `rurociagWzdluz`). Przecieki i para jako sprite'y w widoku (punkty zwraca `rurociagWzdluz`).
 - **Para ze studzienek:** dziś `studzienka_para` to statyczna klatka w kawałku. Dodać pulę sprite'ów obłoczków (`para_*`, 4–6 klatek) nad kratkami w widoku, losowe odstępy 2–6 s. To samo przy kominach i kotłach.

@@ -24,6 +24,12 @@
 7. **Góry** (makieta zaakceptowana): generator na prawdziwych wysokościach, szersze ścieżki szlaku (dopasowane do ludzika), na stromym stoku rozmycie tego, co leży niżej od bohatera; bez oddalania i bez zmiany perspektywy. Po skałach, urwiskach i bardzo stromo tylko szlakiem. Szczegóły i zadanie G10: `GORY.md`.
 8. **Pola** (5.10): całe pola obsiane w pasach (szachownica jak na Lubelszczyźnie), uprawa z tagu OSM `crop` albo z wag, wygląd wg miesiąca, miedze, ok. 3,5 % warzyw dojrzałych do zebrania (jak drzewa z zaciosem). Szczegóły i zadanie G11: `POLA.md`.
 9. **Zabytki** (5.10): duże charakterystyczne budowle nie jako bloki – grafik maluje je na szkielecie z OSM (obrys, części, wysokości w rzucie gry), gra stawia obrazek dokładnie na obrysie. Szczegóły i zadanie G12: `ZABYTKI.md`.
+10. **Steampunk na zwykłych budynkach wg miasta i wielkości** (5.10): `poziomSteampunku(wielkośćMiasta, pole m², ziarno)` w `generator/budynki.ts` → opcja `steampunk` 0–3 w `budynek()`:
+   - duże miasto (place=city lub > 100 tys.; mapa Lublina): 3/4 dużych budynków (≥ 600 m²) poziom 3, 1/3 średnich (150–600 m²) poziom 2, 1/5 małych poziom 1;
+   - średnie miasto (town / 10–100 tys.): połowa dużych (2–3), 1/4 średnich (2), 15 % małych (1);
+   - wieś: 1/5 wszystkich (małe 1, większe 2);
+   - poziom 1: rura na ścianie wystająca kolanem ponad dach + komin z parą; 2: + kocioł na dachu z manometrem i rurą wylotową, więcej rur, okna-bulaje, większa para; 3: + żelazny komin, rurociąg po dachu, wentylator, druga wystająca rura, duża para.
+   `budynek()` zwraca `para: [x, y, rozmiar][]` – gra stawia tam animowane obłoczki `para()` (pióropusz z 2–3 obłoczków). Wielkość miasta: Lublin = duże, mapy miast z planu stacji wg `place`/`population` z OSM, mapy świata wg najbliższego miejsca z warstwy `places` Protomaps (city/town/village). Wzór: `zrzuty/budynki_steampunk_porownanie.png`, demo `generator/demo/steampunk_budynki_demo.ts`.
 
 ## 1. Co jest w folderze `generator/`
 

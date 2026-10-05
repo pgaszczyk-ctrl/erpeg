@@ -1,7 +1,7 @@
 // Budynki z obrysu OSM liczone piksel po pikselu (port makiety + `dachy_roofs.py`, uogólnione na dowolny wielokąt).
 // Konwencja gry zostaje: dach = obrys, ściany „wiszą” pod obrysem i są przesunięte w prawo (WALL_SKEW 0,35).
 // Wszystkie miary w px obrazu (0,5 px mapy): ściany 8 / 12 / 16 px.
-import { Obraz, nowy, hex, hash, OBRYS, mieszaj } from './wspolne';
+import { Obraz, nowy, hex, hash, rng, OBRYS, mieszaj } from './wspolne';
 
 export interface Material { tony: number[]; krawedz: number; wzor: 'dachowka' | 'lupek' | 'gont' | 'blacha' | 'gladki' | 'cegla' | 'deski' | 'kamien' }
 const M = (t: string[], k: string, wzor: Material['wzor']): Material => ({ tony: t.map(hex), krawedz: hex(k), wzor });
@@ -32,10 +32,30 @@ export interface OpcjeBudynku {
   rura?: boolean;              // mosiężna rura na ścianie
   komin?: boolean;
   drzwi?: [number, number];    // punkt drzwi (we współrzędnych pierścienia) – drzwi na najbliższej ścianie
+  /** Poziom steampunku 0–3 (patrz `poziomSteampunku`): 1 rura + komin z parą, 2 + kocioł na dachu, więcej rur, manometr, okno-bulaj, 3 + rurociąg po dachu, wentylator, dodatkowe kominy, duża para. */
+  steampunk?: 0 | 1 | 2 | 3;
 }
 
+export type WielkoscMiasta = 'duze' | 'srednie' | 'wies';
+/** Wielkość miejscowości z OSM: place=city albo population > 100 tys. → duże; town / 10–100 tys. → średnie; reszta → wieś. Mapa Lublina = duże. */
+export const wielkoscMiasta = (place?: string, ludnosc?: number): WielkoscMiasta =>
+  (ludnosc ?? 0) > 100000 || place === 'city' ? 'duze' : (ludnosc ?? 0) > 10000 || place === 'town' ? 'srednie' : 'wies';
+/**
+ * Ile steampunku na budynku (decyzja właściciela 5.10): w dużych miastach 3/4 dużych budynków (≥ 600 m²) mocno, 1/3 średnich (150–600 m²),
+ * 1/5 małych; w średnich miastach połowa dużych, 1/4 średnich, 15 % małych; na wsi 1/5 wszystkich, lekko. Deterministycznie z ziarna budynku.
+ */
+export function poziomSteampunku(miasto: WielkoscMiasta, powierzchniaM2: number, seed: number): 0 | 1 | 2 | 3 {
+  const duzy = powierzchniaM2 >= 600, sredni = powierzchniaM2 >= 150, r = hash(seed, 17, 401);
+  if (miasto === 'duze') return duzy ? (r < 0.75 ? 3 : 0) : sredni ? (r < 0.33 ? 2 : 0) : (r < 0.2 ? 1 : 0);
+  if (miasto === 'srednie') return duzy ? (r < 0.5 ? (r < 0.25 ? 3 : 2) : 0) : sredni ? (r < 0.25 ? 2 : 0) : (r < 0.15 ? 1 : 0);
+  return r < 0.2 ? (duzy || sredni ? 2 : 1) : 0;
+}
+/** Pole obrysu w m² (px obrazu: 3,84 px = 1 m). */
+export const poleM2 = (pierscien: number[]) => { let a = 0; const n = pierscien.length / 2; for (let i = 0; i < n; i++) { const j = (i + 1) % n; a += pierscien[2 * i] * pierscien[2 * j + 1] - pierscien[2 * j] * pierscien[2 * i + 1]; } return Math.abs(a) / 2 / (3.84 * 3.84); };
+
 /** `pierscien` = [x0, y0, x1, y1, …] w px obrazu (świat). Zwraca obraz budynku i jego lewy-górny róg w świecie. */
-export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number } {
+/** Zwraca też `para`: miejsca (w świecie) i wielkość obłoczków pary (16/24/32) – gra stawia tam animowane sprite'y `para()`. */
+export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: [number, number, number][] } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
   const n = pierscien.length / 2;
   const P: [number, number][] = []; for (let i = 0; i < n; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
@@ -61,6 +81,12 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     return { d1, i1, d2, i2 };
   };
   const D = MATERIALY[op.dach], S = MATERIALY[op.sciana];
+  const SP = op.steampunk ?? 0;
+  // rury na ścianach: [indeks krawędzi, położenie wzdłuż] – ściany widoczne (południe/wschód), dłuższe niż 14 px
+  const rury: [number, number, boolean][] = [];
+  { const R = rng(op.seed * 7 + 3), wid = E.map((e, i) => [e, i] as const).filter(([e]) => (e.ny > 0.5 || e.nx > 0.5) && e.L > 14);
+    const ile = SP >= 3 ? 4 : SP === 2 ? 2 : (SP === 1 || op.rura) ? 1 : 0;
+    for (let k = 0; k < ile && wid.length; k++) { const [e, i] = wid[Math.floor(R() * wid.length)]; rury.push([i, 3 + Math.floor(R() * (e.L - 8)), SP >= 2 && R() < 0.6]); } }
   const o = nowy(W, Hh);
   const kind = new Uint8Array(W * Hh); // 1 dach, 2 ściana
   const sOf = new Int16Array(W * Hh);
@@ -116,7 +142,10 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       // drzwi
       if (op.drzwi) { const [dx, dy] = op.drzwi; const dq = najblizsze(dx, dy); if (dq.i1 === q.i1) { const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy; if (Math.abs(along - da) <= 2 && hh <= 6) { c = hh === 6 || Math.abs(along - da) > 1.5 ? hex('#3a2416') : hex('#6a4426'); okno = true; } } }
       // rura
-      if (op.rura && e.ny > 0.5 && e.L > 14) { const ra = e.L - 4; if (along >= ra && along < ra + 2) { c = MOSIADZ[along < ra + 1 ? 3 : 1]; if (hh % 5 === 2) c = MOSIADZ[0]; okno = true; } }
+      for (const [ei, ra, zawor] of rury) if (ei === q.i1 && along >= ra && along < ra + 3) { c = MOSIADZ[along < ra + 1 ? 3 : along < ra + 2 ? 2 : 0]; if (hh % 5 === 2) c = MOSIADZ[0]; if (zawor && hh === Math.floor(H / 2)) c = hex('#b2453a'); if (zawor && hh === Math.floor(H / 2) + 1 && along < ra + 1) c = hex('#ece6d6'); okno = true; }
+      // okno-bulaj (okrągłe, mosiężne) na budynkach steampunkowych
+      if (okno && SP >= 2 && c !== MOSIADZ[0] && c !== MOSIADZ[1] && c !== MOSIADZ[3]) { const m = Math.floor(along + (op.seed % 5)) % 7, f = H >= 14 && hh > 9 ? 1 : 0, lo = 3 + f * 7;
+        if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && hash(Math.floor((along + (op.seed % 5)) / 7), f, op.seed + 5) < 0.3) { const cx = 3, cy = lo + 1.5, d = Math.hypot(m - cx, hh - cy); c = d > 1.2 ? MOSIADZ[2] : (op.noc ? SWIATLO[0] : SZYBA[1]); } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
       if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j + 1) === 0) c = OBRYS;
@@ -132,7 +161,49 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const yy = by + j, xx = bx + i; if (yy >= 0 && xx < W) o.px[yy * W + xx] = (i === 0 || i === 3) && j > -5 ? mieszaj(c, OBRYS, i === 3 ? 0.5 : 0) : c;
     }
   }
-  return { obraz: o, x0, y0 };
+  const para: [number, number, number][] = [];
+  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < W && j < Hh) o.px[j * W + i] = c; };
+  /** Pionowa rura wystająca ponad dach (3 px), z kołnierzem i kolanem; opcjonalnie para z wylotu. */
+  const rurka = (i: number, j: number, wys: number, wPrawo: boolean, zPara: number) => {
+    for (let k = 0; k < wys; k++) { put(i - 1, j - k, OBRYS); put(i, j - k, MOSIADZ[3]); put(i + 1, j - k, MOSIADZ[2]); put(i + 2, j - k, MOSIADZ[0]); put(i + 3, j - k, OBRYS); if (k % 5 === 3) { put(i, j - k, MOSIADZ[1]); put(i + 1, j - k, MOSIADZ[1]); put(i + 2, j - k, MOSIADZ[0]); } }
+    const t = j - wys, d = wPrawo ? 1 : -1;
+    for (let k = 0; k < 5; k++) { const ii = i + 1 + d * k; put(ii, t - 1, OBRYS); put(ii, t, MOSIADZ[3]); put(ii, t + 1, MOSIADZ[1]); put(ii, t + 2, OBRYS); }
+    const ko = i + 1 + d * 5; for (let k = -1; k <= 2; k++) put(ko, t + k, MOSIADZ[k === -1 || k === 2 ? 0 : 2]);
+    if (zPara) para.push([x0 + ko, y0 + t - 1, zPara]);
+  };
+  // rury ze ścian wystają ponad krawędź dachu
+  if (SP >= 1) rury.forEach(([ei, ra], k) => { const e = E[ei]; const px = e.ax + e.ux * (ra + 1), py = e.ay + e.uy * (ra + 1);
+    rurka(Math.round(px - x0) - 1, Math.round(py - y0), SP >= 3 ? 12 : 8, k % 2 === 0, SP >= 2 && k % 2 === 0 ? (SP >= 3 ? 32 : 24) : 0); });
+  if (op.komin && maxD > 6 && SP >= 1) { /* para z komina ceglanego: szukamy jego miejsca jeszcze raz (ten sam wybór) */
+    let best = -1, bx = 0, by = 0;
+    for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }
+    para.push([x0 + bx + 2, y0 + by - 7, SP >= 3 ? 32 : SP === 2 ? 24 : 16]);
+  }
+  if (SP >= 2 && maxD > 5) {
+    const miejsca: [number, number][] = [];
+    for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 5) miejsca.push([i, j]);
+    const R = rng(op.seed * 13 + 1), wez = () => miejsca[Math.floor(R() * miejsca.length)];
+    if (miejsca.length) {
+      // kocioł: leżący walec z nitami, na nóżkach
+      const [ki, kj] = wez(), kw = SP >= 3 ? 16 : 12, kh = SP >= 3 ? 9 : 7;
+      for (let j = 0; j < kh; j++) for (let i = 0; i < kw; i++) { const brzeg = j === 0 || j === kh - 1 || i === 0 || i === kw - 1; const t = j < kh * 0.3 ? 3 : j < kh * 0.55 ? 2 : j < kh * 0.8 ? 1 : 0;
+        put(ki - 6 + i, kj - 7 + j, brzeg ? OBRYS : (i === 3 || i === kw - 4) ? MOSIADZ[0] : (j === 2 && i % 3 === 1) ? MOSIADZ[3] : MOSIADZ[t]); }
+      put(ki - 4, kj, OBRYS); put(ki + 3, kj, OBRYS);
+      if (SP >= 2) { put(ki - 3, kj - 4, hex('#ece6d6')); put(ki - 2, kj - 4, hex('#ece6d6')); put(ki - 3, kj - 3, hex('#ece6d6')); put(ki - 2, kj - 3, OBRYS); } // manometr
+      rurka(ki + kw - 8, kj - kh, 7, true, SP >= 3 ? 32 : 24);
+      if (SP >= 3) {
+        // rurociąg po dachu od kotła do drugiego komina, wentylator, żelazne kominy
+        const [ri, rj] = wez();
+        let i = ki + 6, j = kj - 4; while (i !== ri || j !== rj) { put(i, j, MOSIADZ[2]); put(i, j + 1, MOSIADZ[0]); if (i !== ri) i += Math.sign(ri - i); else j += Math.sign(rj - j); }
+        for (let jj = -14; jj <= 0; jj++) for (let ii = -1; ii < 4; ii++) put(ri + ii - 1, rj + jj, ii === -1 || ii === 3 ? OBRYS : jj <= -13 ? MOSIADZ[3] : jj === -6 ? MOSIADZ[1] : ii === 0 ? hex('#6e6878') : ii === 2 ? hex('#2a2630') : hex('#3a3440'));
+        para.push([x0 + ri, y0 + rj - 15, 32]);
+        const [r2i, r2j] = wez(); rurka(r2i, r2j, 10, false, 24);
+        const [wi, wj] = wez();
+        for (let jj = -3; jj <= 3; jj++) for (let ii = -3; ii <= 3; ii++) { const d = Math.hypot(ii, jj); if (d > 3.3) continue; put(wi + ii, wj + jj, d > 2.5 ? MOSIADZ[1] : (ii === 0 || jj === 0 || ii === jj || ii === -jj) ? hex('#2a2630') : hex('#6e6878')); }
+      }
+    }
+  }
+  return { obraz: o, x0, y0, para };
 }
 
 /** Cień rzucany w prawo-w dół: wpisuje 1 do `maska` (w×h, lewy-górny róg w świecie = (mx, my)) tam, gdzie pada cień budynku.
