@@ -1,4 +1,5 @@
 # Exp-lore – paczka dla grafika
+> **Nowe (5.10):** `ZAMOWIENIE_13_zabytki.md` – zabytki malowane na szkielecie z mapy (pierwszy: Zamek Lubelski), materiały w `10_zabytki/`.
 > **Nowe (5.10):** `ZAMOWIENIE_12_uprawy.md` – rośliny na polach (atlas upraw), wzory w `9_uprawy/`.
 
 Exp-lore to przygodowa gra na telefon (i komputer), grana na prawdziwej mapie miasta, widok z góry.
