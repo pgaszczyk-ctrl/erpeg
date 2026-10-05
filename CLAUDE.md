@@ -1,6 +1,6 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
-- The game's name is Exp-lore (a placeholder); the menu shows it as a pixel logo (`src/ui/logo.ts` `pixelLogo`, GAME_NAME). Address: https://exp-lore.app (the owner's Cloudflare domain, GitHub Pages custom domain); the old github.io address redirects there.
+- The game's name is Exp-lore (a placeholder); the menu shows it as a pixel logo (`src/ui/logo.ts` `pixelLogo`, GAME_NAME) with the catchphrase "Przygoda palcem po mapie" / "Finger-on-the-map adventure" (owner, 5 Oct 2026; never "Przygoda w Lublinie"). Loading never names Lublin: BootScene and the character-link screen show changing map-in-the-backpack lines (`LADOWANIE` in src/content/ladowanie.ts, every LADOWANIE_CO_MS). Address: https://exp-lore.app (the owner's Cloudflare domain, GitHub Pages custom domain); the old github.io address redirects there.
 
 - The owner does not program. They describe features in Polish; reply in Polish, avoid jargon, and verify changes yourself (build plus a Playwright screenshot/check) before reporting.
 - Stack: Phaser 4 + TypeScript + Vite. `npm run build` runs a typecheck and the build. The Phaser 4 API differs from v3 (e.g. `setTintMode` instead of `setTintFill`); the bundled guides live in `node_modules/phaser/skills/`.

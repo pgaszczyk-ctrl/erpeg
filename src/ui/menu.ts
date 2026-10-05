@@ -5,6 +5,7 @@ import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
 import { tx } from '../i18n';
+import { LADOWANIE } from '../content/ladowanie';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
 import { pixelLogo } from './logo';
@@ -58,7 +59,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, ['Przygoda w Lublinie']), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
+      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });
@@ -435,7 +436,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     // Opened from the QR code / shared link: load that character right away.
     const fromLink = codeFromLink() ?? reopen;
     if (fromLink) {
-      screen(el('p', {}, [`Wczytuję postać ${fromLink.name}…`]));
+      screen(el('p', {}, [LADOWANIE[Math.floor(Math.random() * LADOWANIE.length)]]));
       login(fromLink.name, fromLink.code).catch((e) => load(fromLink, (e as Error).message));
     } else main();
   });
