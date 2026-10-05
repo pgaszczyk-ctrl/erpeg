@@ -29,7 +29,7 @@ function rodzajObszaru(a: Area): Rodzaj {
     case 'water': return 'woda';
     case 'farmland': return a.id % 2 ? 'pole_orka' : 'pole_zboze';
     case 'cemetery': return 'cmentarz';
-    case 'allotments': return 'park';
+    case 'allotments': return 'laka'; // działki: łąka z drzewami owocowymi (drzewa09.ts)
     case 'pitch': return 'trawa';
     case 'playground': return 'plac';
     case 'parking': return 'parking';
@@ -84,7 +84,7 @@ export function mapaRodzajow(
   x0: number,
   y0: number,
   rozmiar: number,
-): Omit<Zlecenie, 'budynki' | 'noc'> {
+): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');

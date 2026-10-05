@@ -12,6 +12,9 @@ import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer, wallHeight, WALL_SKEW } from '../map/MapRenderer';
+import type { Korona } from '../map/Korony';
+import { GEN_DOTS } from '../map/ziemia09';
+import { DRZEWA_09 } from '../content/korony';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
@@ -46,7 +49,7 @@ import { schoolQuiz, quizAnswered } from '../quizzes';
 import { krajMapy } from '../kraj';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, LAS, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
@@ -646,6 +649,7 @@ export class GameScene extends Phaser.Scene {
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.orchards.update(this.player.x, this.player.y, now);
+    if (this.chopping.size) this.updateChopping(now);
     this.forest.update(this.player.x, this.player.y, now);
     this.landmarks.update(this.player.x, this.player.y);
     this.updateHarvests(now);
@@ -856,7 +860,7 @@ export class GameScene extends Phaser.Scene {
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
     const free = (x: number, y: number) =>
-      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
+      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.mapView.korony.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
     if (dx && free(a.x + dx, fy)) a.x += dx;
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }
@@ -901,7 +905,7 @@ export class GameScene extends Phaser.Scene {
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
     if (!ranged || gathering) this.swingWeapon(swingAim, strong);
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
@@ -970,6 +974,9 @@ export class GameScene extends Phaser.Scene {
       this.dropFruit(pine.x, pine.y, 'drewno');
       this.toast('🪓 Drzewo ścięte!', 1000);
     }
+    // Overhaul 09: the generator's trees – chop the notched ones, shake fruit off, the rest say why not.
+    const k09 = this.mapView.korony.hitAt(hit.x, hit.y, 12 * this.player.reach);
+    if (k09) this.treeHit(k09, now);
     // Vegetables: a swing starts picking one (a bar fills up).
     const veg = this.forest.vegAt(hit.x, hit.y, 12 * this.player.reach, new Set(this.harvests.map((h) => h.spot.id)));
     if (veg) this.startHarvest(veg, now);
@@ -979,6 +986,95 @@ export class GameScene extends Phaser.Scene {
       this.dummyHit(dummy);
     }
     if (hits) this.practiced('miecz');
+  }
+
+  /** Trees being chopped (overhaul 09): blows left and the progress bar over the crown. */
+  private chopping = new Map<string, { k: Korona; left: number; last: number; bar: Phaser.GameObjects.Graphics }>();
+  /** Reasons already explained once in this session (then only a short sign). */
+  private treeSaid = new Set<string>();
+
+  /** A swing lands on one of the generator's trees (SPEC_09 point 4: from the first blow you see what happens). */
+  private treeHit(k: Korona, now: number) {
+    const t = k.t;
+    const x = t.x / GEN_DOTS, y = t.y / GEN_DOTS;
+    const top = y - k.a.ky / GEN_DOTS + 3;
+    if (t.o === 'sad') {
+      // Fruit trees: shaking, one fruit falls; bare ones say when fruit comes back.
+      if (this.mapView.korony.strac(k)) this.dropFruit(x, y - 4, DRZEWA_09.owoc[t.g] ?? 'jablko');
+      else this.treeBubble(x, top, this.treeSaid.has('pusto') ? DRZEWA_09.krotko : DRZEWA_09.pusto, 'pusto');
+      return;
+    }
+    if (!t.c) {
+      this.mapView.korony.trzes(k);
+      if (t.o) this.treeBubble(x, top, this.treeSaid.has(t.o) ? DRZEWA_09.krotko : DRZEWA_09.dlaczego[t.o], t.o);
+      return;
+    }
+    // A notched tree: every blow fills the bar; the last one fells it.
+    const id = `${t.x},${t.y}`;
+    let c = this.chopping.get(id);
+    if (!c) {
+      c = { k, left: LAS.uderzenNaDrzewo, last: now, bar: this.add.graphics().setDepth(1_050_000) };
+      this.chopping.set(id, c);
+    }
+    c.left--;
+    c.last = now;
+    this.mapView.korony.trzes(k, true);
+    this.woodChips(x, y - 3);
+    navigator.vibrate?.(15);
+    this.drawChopBar(c.bar, x, top, 1 - c.left / LAS.uderzenNaDrzewo);
+    if (c.left > 0) return;
+    c.bar.destroy();
+    this.chopping.delete(id);
+    this.mapView.korony.zetnij(k, this.player.x < x);
+    this.mapView.redrawAround(x, y);
+    this.dropFruit(x, y - 2, 'drewno');
+    this.floatText(x, top, '+1 drewno', '#e8c56a');
+  }
+
+  /** The chopping bar over a crown: brass frame, segments filling up. */
+  private drawChopBar(g: Phaser.GameObjects.Graphics, x: number, y: number, part: number) {
+    const w = 16, h = 3, n = LAS.uderzenNaDrzewo;
+    g.clear().setAlpha(1);
+    g.fillStyle(0x1e1a24, 1).fillRect(x - w / 2 - 1, y - h - 1, w + 2, h + 2);
+    g.fillStyle(0x6b4a22, 1).fillRect(x - w / 2, y - h, w, h);
+    g.fillStyle(0xe9c56a, 1).fillRect(x - w / 2, y - h, Math.round(w * part), h);
+    g.fillStyle(0x1e1a24, 1);
+    for (let i = 1; i < n; i++) g.fillRect(x - w / 2 + Math.round((w * i) / n), y - h, 0.5, h);
+  }
+
+  /** Bars fade after a while without a blow, and the progress is lost. */
+  private updateChopping(now: number) {
+    for (const [id, c] of this.chopping) {
+      const idle = now - c.last;
+      if (idle < DRZEWA_09.pasekGasnieMs - 500) continue;
+      c.bar.setAlpha(Math.max(0, (DRZEWA_09.pasekGasnieMs - idle) / 500));
+      if (idle >= DRZEWA_09.pasekGasnieMs || !c.k.im.active) {
+        c.bar.destroy();
+        this.chopping.delete(id);
+      }
+    }
+  }
+
+  /** Little wood chips flying from the trunk. */
+  private woodChips(x: number, y: number) {
+    for (let i = 0; i < 5; i++) {
+      const r = this.add.rectangle(x, y, 1, 1, [0xc9a46a, 0x8a613f, 0xe2c08a][i % 3]).setDepth(1_040_000);
+      this.tweens.add({ targets: r, x: x + (Math.random() - 0.5) * 16, y: y - 2 - Math.random() * 6, alpha: 0, duration: 380 + Math.random() * 200, ease: 'Quad.easeOut', onComplete: () => r.destroy() });
+    }
+  }
+
+  /** A short line over a tree (why it can't be cut, it's bare…): the full text the first time, later only a sign. */
+  private treeBubble(x: number, y: number, text: string, why: string) {
+    this.treeSaid.add(why);
+    this.floatText(x, y, text, '#f3ecd8', text.length > 3 ? 1600 : 700);
+  }
+
+  private floatText(x: number, y: number, text: string, color: string, ms = 900) {
+    const t = this.add
+      .text(x, y, text, { fontFamily: 'monospace', fontSize: '6px', color, stroke: '#1e1a24', strokeThickness: 3, resolution: 4, align: 'center', wordWrap: { width: 110 } })
+      .setOrigin(0.5, 1)
+      .setDepth(1_060_000);
+    this.tweens.add({ targets: t, y: y - 8, alpha: { from: 1, to: 0 }, delay: ms * 0.6, duration: ms * 0.4, onComplete: () => t.destroy() });
   }
 
   /** Vegetables being picked: a bar over each fills up in WARZYWA.zbiorSekund. */

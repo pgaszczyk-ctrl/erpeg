@@ -13,6 +13,7 @@ import { PLAYER } from './objects/Player';
 import { zyciePostaci } from './content/historia';
 import { loadSettings } from './settings';
 import { WSKRZESZENIE } from './content/sklepy';
+import { odrostDrzew } from './map/drzewa09';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -199,6 +200,7 @@ export function startSession(r: LoginResult) {
   session.libRiddles = 0;
   for (const m of p.save.gen ?? []) session.gen[m.id] = m;
   session.nonce = Math.floor(Math.random() * 1e9);
+  odrostDrzew(); // ścięte drzewa i strząśnięte owoce wracają przy każdym logowaniu
   const a = r.abandoned ?? null;
   if (a) {
     const ka = PX_PER_M / (a.s ?? 4);

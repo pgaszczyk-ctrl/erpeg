@@ -1,21 +1,25 @@
-import { drzewo, hash, szum, type Rodzaj, type Drzewo } from '../gen';
+import { drzewo, hash, szum, GATUNKI, type Rodzaj, type Drzewo } from '../gen';
 
 // Drzewa overhaulu 09 (docs/paczka-dla-programisty/dane/gatunki_osm.json, SPEC_09 punkt 3): rozmieszczenie gęste
 // i deterministyczne we współrzędnych świata (px generatora = px mapy × 2), więc każdy kawałek mapy i każdy telefon
 // widzi te same drzewa w tych samych miejscach. Bez DOM-u (liczy się też w Web Workerze).
 
-interface Regula { odstep: number; gestosc: number; wagi: [string, number][]; skraj?: boolean }
+/** Dlaczego drzewa nie wolno ściąć (SPEC_09 punkt 4); sad = owocowe, potrząsa się nimi. */
+export type Ochrona = 'park' | 'ozdobne' | 'sad' | 'gruby';
+interface Regula { odstep: number; gestosc: number; wagi: [string, number][]; skraj?: boolean; chop?: number; ochrona?: Ochrona }
 
 /** Reguły po rodzaju podłoża; odstęp w px mapy (z gatunki_osm.json, już ×0,55), gęstość = szansa w kratce. */
 const REGULY: Partial<Record<Rodzaj, Regula>> = {
-  park: { odstep: 12, gestosc: 0.63, wagi: [['lipa', 0.3], ['dab', 0.25], ['buk', 0.15], ['brzoza', 0.15], ['krzak', 0.15]] },
-  cmentarz: { odstep: 11, gestosc: 0.42, wagi: [['lipa', 0.4], ['brzoza', 0.2], ['swierk', 0.2], ['krzak', 0.2]] },
-  mokradlo: { odstep: 9, gestosc: 0.56, wagi: [['olcha', 0.4], ['wierzba', 0.4], ['brzoza', 0.2]] },
-  zarosla: { odstep: 6, gestosc: 0.9, wagi: [['krzak', 0.7], ['brzoza', 0.15], ['sosna', 0.15]] },
-  las_iglasty: { odstep: 9, gestosc: 1, wagi: [['sosna', 0.65], ['swierk', 0.3], ['brzoza', 0.05]], skraj: true },
+  park: { odstep: 12, gestosc: 0.63, ochrona: 'park', wagi: [['lipa', 0.3], ['dab', 0.25], ['buk', 0.15], ['brzoza', 0.15], ['krzak', 0.15]] },
+  cmentarz: { odstep: 11, gestosc: 0.42, ochrona: 'park', wagi: [['lipa', 0.4], ['brzoza', 0.2], ['swierk', 0.2], ['krzak', 0.2]] },
+  // Działki (w mapie rodzajów jako łąka): drzewa owocowe.
+  laka: { odstep: 9, gestosc: 0.49, ochrona: 'sad', wagi: [['jablon', 0.45], ['sliwa', 0.25], ['grusza', 0.15], ['krzak', 0.15]] },
+  mokradlo: { odstep: 9, gestosc: 0.56, chop: 0.2, wagi: [['olcha', 0.4], ['wierzba', 0.4], ['brzoza', 0.2]] },
+  zarosla: { odstep: 6, gestosc: 0.9, chop: 0.2, wagi: [['krzak', 0.7], ['brzoza', 0.15], ['sosna', 0.15]] },
+  las_iglasty: { odstep: 9, gestosc: 1, chop: 0.3, wagi: [['sosna', 0.65], ['swierk', 0.3], ['brzoza', 0.05]], skraj: true },
   // Lasy bez rodzaju liści w danych: las mieszany.
-  las_lisciasty: { odstep: 9, gestosc: 1, wagi: [['sosna', 0.35], ['dab', 0.2], ['brzoza', 0.2], ['swierk', 0.15], ['buk', 0.1]], skraj: true },
-  trawa: { odstep: 16, gestosc: 0.17, wagi: [['lipa', 0.3], ['brzoza', 0.3], ['krzak', 0.4]] },
+  las_lisciasty: { odstep: 9, gestosc: 1, chop: 0.3, wagi: [['sosna', 0.35], ['dab', 0.2], ['brzoza', 0.2], ['swierk', 0.15], ['buk', 0.1]], skraj: true },
+  trawa: { odstep: 16, gestosc: 0.17, ochrona: 'ozdobne', wagi: [['lipa', 0.3], ['brzoza', 0.3], ['krzak', 0.4]] },
 };
 /** Bliżej wody (gatunki_osm.json biomy.przyWodzieZamien). */
 const PRZY_WODZIE: Record<string, string> = { dab: 'olcha', buk: 'olcha', lipa: 'wierzba', sosna: 'olcha' };
@@ -26,7 +30,16 @@ const KEPY_SKALA = 240, PROG_POLANY = 0.32;
 /** Ile wariantów każdego gatunku. */
 export const WARIANTY = 3;
 
-export interface Drzewo09 { x: number; y: number; g: string; w: number }
+/**
+ * Drzewo: podstawa pnia (px generatora), gatunek, wariant; `c` = da się ściąć (ma zacios), `o` = dlaczego nie
+ * (owocowe: 'sad'). Krzaki nie mają ani jednego, ani drugiego.
+ */
+export interface Drzewo09 { x: number; y: number; g: string; w: number; c?: 1; o?: Ochrona }
+
+/** Stały identyfikator drzewa (to samo miejsce = to samo drzewo w każdym kawałku i na każdym telefonie). */
+export const idDrzewa = (t: { x: number; y: number }) => `${t.x},${t.y}`;
+/** Gatunki z owocami (potrząsanie zamiast ścinania). */
+export const OWOCOWE = new Set(['jablon', 'grusza', 'sliwa']);
 
 /** Drzewa, których podstawa leży w prostokącie świata (px generatora). `wolne` = czy nie stoi w budynku. */
 export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodzajW: (x: number, y: number) => Rodzaj | null, wolne: (x: number, y: number) => boolean): Drzewo09[] {
@@ -52,7 +65,14 @@ export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodz
     if (reg.skraj && g !== 'krzak' && [[32, 0], [-32, 0], [0, 32], [0, -32]].some(([dx, dy]) => rodzajW(x + dx, y + dy) !== r) && hash(kx, ky, 505) < 0.4) g = 'krzak';
     // Przy wodzie olchy i wierzby.
     if (PRZY_WODZIE[g] && [[40, 0], [-40, 0], [0, 40], [0, -40], [28, 28], [-28, -28], [28, -28], [-28, 28]].some(([dx, dy]) => rodzajW(x + dx, y + dy) === 'woda')) g = PRZY_WODZIE[g];
-    out.push({ x, y, g, w: Math.floor(hash(kx, ky, 506) * WARIANTY) });
+    const t: Drzewo09 = { x, y, g, w: Math.floor(hash(kx, ky, 506) * WARIANTY) };
+    if (OWOCOWE.has(g)) t.o = 'sad';
+    else if (!g.startsWith('krzak')) {
+      // Ścinalne tylko w lasach i zaroślach, część drzew (gatunki_osm.json chop), i tylko gatunki z zaciosem.
+      if (reg.chop && GATUNKI[g].sciecie && hash(kx, ky, 507) < reg.chop) t.c = 1;
+      else t.o = reg.ochrona ?? 'gruby';
+    }
+    out.push(t);
   }
   return out;
 }
@@ -72,4 +92,12 @@ export function drzewoZ(g: string, w: number): Drzewo {
     gotowe.set(k, d);
   }
   return d;
+}
+
+/** Stan drzew na czas sesji: ścięte i strząśnięte drzewa wracają przy następnym logowaniu (jak dawniej). */
+export const STAN = { sciete: new Set<string>(), owoce: new Map<string, number>() };
+/** Nowe logowanie: drzewa odrastają, owoce wracają. */
+export function odrostDrzew() {
+  STAN.sciete.clear();
+  STAN.owoce.clear();
 }

@@ -1,4 +1,4 @@
-import { rozstawDrzewa, drzewoZ, type Drzewo09 } from './drzewa09';
+import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -24,7 +24,11 @@ export interface Budynek09 {
   hl?: [string, string];
 }
 
-export interface Zlecenie { ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean }
+export interface Zlecenie {
+  ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean;
+  /** Drzewa ścięte w tej sesji (idDrzewa): zamiast pnia pieniek, bez korony i cienia. */
+  sciete: string[];
+}
 
 const DACHY: [string, number][] = [['dachowka_czerwona', 34], ['dachowka_brazowa', 24], ['lupek', 16], ['gont', 9], ['blacha_zielona', 7], ['papa', 10]];
 const SCIANY: [string, number][] = [['tynk_kremowy', 30], ['tynk_zolty', 18], ['tynk_szary', 15], ['cegla', 27], ['kamien', 6], ['drewno', 4]];
@@ -69,10 +73,10 @@ function zapamietaj(klucz: string, b: ReturnType<typeof budynek>) {
 }
 
 /** Budynki i pnie drzew: cienie na ziemi, potem wszystko od północy na południe (dach kopertowy z kalenicami, ściany, okna; pień). */
-function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean) {
+function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean, sciete: Set<string>) {
   const cien = new Uint8Array(o.w * o.h);
   for (const b of budynki) cienBudynku(b.r, b.h, cien, o.w, o.h, X0, Y0);
-  for (const t of drzewa) cienDrzewa(t, cien, o.w, o.h, X0, Y0);
+  for (const t of drzewa) if (!sciete.has(idDrzewa(t))) cienDrzewa(t, cien, o.w, o.h, X0, Y0);
   for (let k = 0; k < cien.length; k++) if (cien[k] && o.px[k]) o.px[k] = ciemniej(o.px[k]);
   const lista: [number, Budynek09 | Drzewo09][] = [
     ...budynki.map((b) => [dolBudynku(b), b] as [number, Budynek09]),
@@ -82,7 +86,8 @@ function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], dr
   for (const [, rzecz] of lista) {
     if ('g' in rzecz) {
       const d = drzewoZ(rzecz.g, rzecz.w);
-      naloz(o, d.pien, rzecz.x - d.kotwica[0] - X0, rzecz.y - d.kotwica[1] - Y0);
+      const pien = sciete.has(idDrzewa(rzecz)) ? d.pieniek : rzecz.c && d.pienZacios ? d.pienZacios : d.pien;
+      naloz(o, pien, rzecz.x - d.kotwica[0] - X0, rzecz.y - d.kotwica[1] - Y0);
       continue;
     }
     malujBudynek(o, X0, Y0, rzecz, noc);
@@ -166,7 +171,8 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
     return wPierscieniu(b.r, x + 0.5, y + 0.5) && !b.dziury.some((d) => wPierscieniu(d, x + 0.5, y + 0.5));
   });
   const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) => !wBudynku(x, y));
-  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc);
-  const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N);
+  const sciete = new Set(z.sciete);
+  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete);
+  const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));
   return { px: obraz.px, drzewa: swoje };
 }

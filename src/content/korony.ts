@@ -9,3 +9,19 @@ export const KORONY = {
   /** Środek postaci nad stopami (px mapy). */
   srodekPostaci: 7,
 };
+
+/** Drzewa overhaulu 09: ścinanie i owoce (SPEC_09 punkt 4); dymki nad drzewem, którego nie wolno ściąć. */
+export const DRZEWA_09 = {
+  /** Pasek postępu gaśnie po tylu ms bez ciosu, a postęp przepada. */
+  pasekGasnieMs: 3000,
+  dlaczego: {
+    park: '🌳 Drzewo w parku – nie wolno ścinać',
+    ozdobne: '🌳 Ozdobne drzewo przy domach – nie wolno ścinać',
+    gruby: '🌲 Za grube – szukaj drzew z zaciosem',
+  } as Record<string, string>,
+  /** Za drugim razem przy tym samym powodzie tylko krótko. */
+  krotko: '🔒',
+  pusto: '🍃 Już puste – owoce wrócą przy następnym logowaniu',
+  /** Jaki owoc spada z którego gatunku (gruszek jeszcze nie ma w sklepach). */
+  owoc: { jablon: 'jablko', sliwa: 'sliwka', grusza: 'jablko' } as Record<string, 'jablko' | 'sliwka'>,
+};

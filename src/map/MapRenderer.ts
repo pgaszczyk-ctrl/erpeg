@@ -507,13 +507,20 @@ export class MapRenderer {
   }
 
   /** Overhaul 09: tree crowns (wind, see-through), see src/map/Korony.ts. */
-  private korony: Korony;
+  readonly korony: Korony;
 
   /** Takes a chunk's tree crowns away (it is recycled or hidden). */
   private dropCrowns(c: Chunk) {
     if (!c.crowns) return;
     for (const k of c.crowns) this.korony.drop(k);
     c.crowns = undefined;
+  }
+
+  /** Repaints the chunks around a map point (a felled tree's stump, overhaul 09); the old picture stays until then. */
+  redrawAround(x: number, y: number) {
+    for (let cx = Math.floor((x - 40) / CHUNK); cx <= Math.floor((x + 40) / CHUNK); cx++)
+      for (let cy = Math.floor((y - 40) / CHUNK); cy <= Math.floor((y + 40) / CHUNK); cy++)
+        if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
   }
 
   /** Wind and see-through of the crowns in view; call every frame (overhaul 09). */
@@ -594,7 +601,7 @@ export class MapRenderer {
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
       };
     });
-    return { ...kinds, budynki, noc: night() };
+    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete() };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

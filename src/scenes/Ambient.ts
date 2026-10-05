@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SKLAD_GANGOW } from '../content/pogoda';
 import { GROUND_DEPTH } from '../map/MapRenderer';
+import { WYGLAD_09 } from '../map/Podloze09';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { TRENING } from '../content/swiat';
 import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
@@ -95,7 +96,8 @@ export class Orchards {
       }
     }
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
-    const lists = areas.filter((a) => FRUIT_AREAS[a.kind]).map((a) => this.treesOf(a, a.id));
+    // Overhaul 09: fruit trees come from the generator's trees (map/Korony.ts); only the planted ones stay.
+    const lists = WYGLAD_09 ? [] : areas.filter((a) => FRUIT_AREAS[a.kind]).map((a) => this.treesOf(a, a.id));
     lists.push(this.planted);
     for (const list of lists) {
       for (const t of list) {
@@ -210,6 +212,8 @@ export class Forest {
       const x = (cx + 0.1 + r() * 0.8) * this.cell;
       const y = (cy + 0.1 + r() * 0.8) * this.cell;
       if (roll >= chance) continue;
+      // Overhaul 09: trees to chop are the generator's trees with a notch (map/Korony.ts).
+      if (kind === 'drzewo' && WYGLAD_09) continue;
       if (!this.city.areaKindsAt(x, y).includes('forest')) continue;
       if (!this.city.isFree(x, y, 5, 5) || this.city.roadAt(x, y)) continue;
       // Not right on top of another mushroom or the tree.

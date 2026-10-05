@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { klatkiWiatru, GATUNKI, type Obraz } from '../gen';
-import { drzewoZ, type Drzewo09 } from './drzewa09';
+import { drzewoZ, idDrzewa, OWOCOWE, STAN, type Drzewo09 } from './drzewa09';
+import { hash } from '../gen';
 import { GEN_DOTS } from './ziemia09';
 import { weather } from '../weather';
 import { KORONY } from '../content/korony';
@@ -32,6 +33,10 @@ export interface Korona {
   /** Szelest po wejściu postaci (gaśnie). */
   szelest: number;
   ziarno: number;
+  /** Korona bez owoców (strząśnięte do końca). */
+  pusta?: boolean;
+  /** Upada (ścięta): nie odpowiada na nic. */
+  pada?: boolean;
 }
 
 let licznik = 0;
@@ -43,13 +48,13 @@ export class Korony {
   constructor(private scene: Phaser.Scene) {}
 
   /** Tekstura z 5 klatkami wiatru dla gatunku i wariantu (owoce kołyszą się razem z koroną). */
-  private arkusz(g: string, w: number): Arkusz {
-    const key = `drz09-${g}-${w}`;
+  private arkusz(g: string, w: number, bezOwocow = false): Arkusz {
+    const key = `drz09-${g}-${w}${bezOwocow ? '-p' : ''}`;
     let a = this.arkusze.get(key);
     if (a) return a;
     const d = drzewoZ(g, w);
     const kor: Obraz = { w: d.korona.w, h: d.korona.h, px: d.korona.px.slice() };
-    if (d.owoce) for (let i = 0; i < kor.px.length; i++) if (d.owoce.px[i] >>> 24) kor.px[i] = d.owoce.px[i];
+    if (d.owoce && !bezOwocow) for (let i = 0; i < kor.px.length; i++) if (d.owoce.px[i] >>> 24) kor.px[i] = d.owoce.px[i];
     const klatki = klatkiWiatru(kor, d.koronaGora, d.koronaDol, GATUNKI[g].sztywnosc, MARGINES);
     const W = klatki[0].w, H = klatki[0].h;
     if (!this.scene.textures.exists(key)) {
@@ -68,18 +73,104 @@ export class Korony {
   }
 
   make(t: Drzewo09): Korona {
-    const a = this.arkusz(t.g, t.w);
+    const pusta = OWOCOWE.has(t.g) && this.owoce(t) === 0;
+    const a = this.arkusz(t.g, t.w, pusta);
     const x = t.x / GEN_DOTS, y = t.y / GEN_DOTS;
     const im = this.scene.add.image(x, y, a.key, 'w0').setOrigin(a.kx / a.w, a.ky / a.h).setScale(1 / GEN_DOTS).setDepth(y);
-    const k: Korona = { t, im, a, k: 2, r: 0, szelest: 0, ziarno: (t.x * 7919 + t.y * 104729) % 1000 };
+    const k: Korona = { t, im, a, k: 2, r: 0, szelest: 0, ziarno: (t.x * 7919 + t.y * 104729) % 1000, pusta };
     this.wszystkie.add(k);
+    const c = this.kratka(x, y);
+    let zb = this.siatka.get(c);
+    if (!zb) this.siatka.set(c, (zb = new Set()));
+    zb.add(k);
     return k;
   }
 
   drop(k: Korona) {
     this.wszystkie.delete(k);
+    this.siatka.get(this.kratka(k.t.x / GEN_DOTS, k.t.y / GEN_DOTS))?.delete(k);
     this.zdejmijDziure(k);
-    k.im.destroy();
+    if (!k.pada) k.im.destroy();
+  }
+
+  // ------------------------------------------------------------ stan drzew (do następnego logowania)
+
+  /** Kratki 32 px mapy z koronami (szukanie drzewa pod ciosem i pni pod stopami). */
+  private siatka = new Map<string, Set<Korona>>();
+  private kratka = (x: number, y: number) => `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
+
+  /** Ścięte drzewa (idDrzewa): pieniek w kawałku, bez korony. Wracają przy następnym logowaniu. */
+  sciete() {
+    return [...STAN.sciete];
+  }
+
+  /** Ile owoców zostało na drzewie (na początku 2–5, jak dawne drzewa owocowe). */
+  owoce(t: Drzewo09) {
+    const id = idDrzewa(t);
+    if (!STAN.owoce.has(id)) STAN.owoce.set(id, 2 + Math.floor(hash(t.x, t.y, 611) * 4));
+    return STAN.owoce.get(id)!;
+  }
+
+  /** Drzewo (korona, która jeszcze stoi), którego pień leży najbliżej ciosu w (x, y), w px mapy. */
+  hitAt(x: number, y: number, zasieg: number): Korona | null {
+    let best: Korona | null = null, bd = zasieg;
+    for (let gy = Math.floor((y - zasieg) / 32); gy <= Math.floor((y + zasieg + 8) / 32); gy++)
+      for (let gx = Math.floor((x - zasieg) / 32); gx <= Math.floor((x + zasieg) / 32); gx++)
+        for (const k of this.siatka.get(`${gx},${gy}`) ?? []) {
+          if (k.pada) continue;
+          // Trafia się w pień i dół korony (krzak: w środek).
+          const d = Math.hypot(k.t.x / GEN_DOTS - x, k.t.y / GEN_DOTS - (k.t.g.startsWith('krzak') ? 4 : 7) - y);
+          if (d < bd) { bd = d; best = k; }
+        }
+    return best;
+  }
+
+  /** Czy w punkcie (px mapy) stoi pień (kolizje postaci); krzaki i pieńki nie zatrzymują. */
+  blocked(x: number, y: number) {
+    for (const k of this.siatka.get(this.kratka(x, y)) ?? []) {
+      if (k.pada || k.t.g.startsWith('krzak')) continue;
+      if (Math.abs(k.t.x / GEN_DOTS - x) < 2.5 && Math.abs(k.t.y / GEN_DOTS - y) < 2) return true;
+    }
+    return false;
+  }
+
+  /** Potrząśnięcie koroną (cios, strącony owoc): szelest i krótkie drgnięcie. */
+  trzes(k: Korona, mocno = false) {
+    k.szelest = 1;
+    const x = k.im.x;
+    this.scene.tweens.add({ targets: k.im, x: { from: x - (mocno ? 1.5 : 0.8), to: x + (mocno ? 1.5 : 0.8) }, duration: 45, yoyo: true, repeat: mocno ? 2 : 1, onComplete: () => k.im.active && k.im.setX(x) });
+  }
+
+  /** Strąca jeden owoc; false, gdy drzewo już puste. */
+  strac(k: Korona): boolean {
+    const n = this.owoce(k.t);
+    this.trzes(k, true);
+    if (n <= 0) return false;
+    STAN.owoce.set(idDrzewa(k.t), n - 1);
+    if (n - 1 === 0) {
+      // Bez owoców: ten sam kształt, inna tekstura (też w klatkach wiatru).
+      k.a = this.arkusz(k.t.g, k.t.w, true);
+      k.pusta = true;
+      this.zdejmijDziure(k);
+      k.im.setTexture(k.a.key, `w${KLATKI[k.k]}`);
+    }
+    return true;
+  }
+
+  /** Ścina drzewo: korona przewraca się i znika; pień w kawałku zmieni się w pieniek przy przemalowaniu. */
+  zetnij(k: Korona, wPrawo: boolean) {
+    STAN.sciete.add(idDrzewa(k.t));
+    k.pada = true;
+    this.zdejmijDziure(k);
+    const im = k.im;
+    this.scene.tweens.add({
+      targets: im,
+      angle: wPrawo ? 86 : -86,
+      alpha: { from: 1, to: 0 },
+      duration: 650,
+      ease: 'Quad.easeIn',
+      onComplete: () => im.destroy(),
+    });
   }
 
   /** Co klatkę gry: wiatr i prześwit koron w widoku. `hx, hy` = stopy postaci (px mapy). */
