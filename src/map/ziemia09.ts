@@ -1,4 +1,5 @@
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, OBRYS, type Rodzaj, type Obraz } from '../gen';
+import { rozstawDrzewa, drzewoZ, type Drzewo09 } from './drzewa09';
+import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -67,57 +68,81 @@ function zapamietaj(klucz: string, b: ReturnType<typeof budynek>) {
   }
 }
 
-/** Budynki: cienie na ziemi, potem bryły od północy na południe (dach kopertowy z kalenicami, ściany, okna). */
-function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], noc: boolean) {
+/** Budynki i pnie drzew: cienie na ziemi, potem wszystko od północy na południe (dach kopertowy z kalenicami, ściany, okna; pień). */
+function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean) {
   const cien = new Uint8Array(o.w * o.h);
   for (const b of budynki) cienBudynku(b.r, b.h, cien, o.w, o.h, X0, Y0);
+  for (const t of drzewa) cienDrzewa(t, cien, o.w, o.h, X0, Y0);
   for (let k = 0; k < cien.length; k++) if (cien[k] && o.px[k]) o.px[k] = ciemniej(o.px[k]);
-  for (const b of budynki) {
-    const u = hash(b.seed, 3, 91), v = hash(b.seed, 5, 17);
-    const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(DACHY, u);
-    const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
-    const klucz = `${b.seed}|${b.h}|${dach}|${sciana}|${noc ? 1 : 0}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
-    let gotowy = pamiec.get(klucz);
-    if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
-    else {
-      gotowy = budynek(b.r, { wysokosc: b.h, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25 });
-      zapamietaj(klucz, gotowy);
+  const lista: [number, Budynek09 | Drzewo09][] = [
+    ...budynki.map((b) => [dolBudynku(b), b] as [number, Budynek09]),
+    ...drzewa.map((t) => [t.y, t] as [number, Drzewo09]),
+  ];
+  lista.sort((a, b) => a[0] - b[0]);
+  for (const [, rzecz] of lista) {
+    if ('g' in rzecz) {
+      const d = drzewoZ(rzecz.g, rzecz.w);
+      naloz(o, d.pien, rzecz.x - d.kotwica[0] - X0, rzecz.y - d.kotwica[1] - Y0);
+      continue;
     }
-    const { obraz, x0, y0 } = gotowy;
-    for (let j = 0; j < obraz.h; j++) {
-      const yy = y0 + j - Y0;
-      if (yy < 0 || yy >= o.h) continue;
-      for (let i = 0; i < obraz.w; i++) {
-        const c = obraz.px[j * obraz.w + i];
-        if (!c) continue;
-        const xx = x0 + i - X0;
-        if (xx < 0 || xx >= o.w) continue;
-        // Podwórka (dziury w obrysie) zostają ziemią; obrys dziury ciemny.
-        if (b.dziury.length && b.dziury.some((d) => wPierscieniu(d, x0 + i + 0.5, y0 + j + 0.5))) continue;
-        o.px[yy * o.w + xx] = c;
-      }
-    }
-    for (const d of b.dziury) obrysujDziure(o, X0, Y0, d);
+    malujBudynek(o, X0, Y0, rzecz, noc);
   }
 }
 
-/** Ciemna linia wzdłuż brzegu podwórka. */
-function obrysujDziure(o: Obraz, X0: number, Y0: number, r: number[]) {
-  for (let i = 0; i < r.length; i += 2) {
-    const ax = r[i], ay = r[i + 1], bx = r[(i + 2) % r.length], by = r[(i + 3) % r.length];
-    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
-    for (let k = 0; k <= n; k++) {
-      const x = Math.round(ax + ((bx - ax) * k) / n) - X0, y = Math.round(ay + ((by - ay) * k) / n) - Y0;
-      if (x >= 0 && y >= 0 && x < o.w && y < o.h) o.px[y * o.w + x] = OBRYS;
+function dolBudynku(b: Budynek09) {
+  let m = -Infinity;
+  for (let i = 1; i < b.r.length; i += 2) m = Math.max(m, b.r[i]);
+  return m;
+}
+
+/** Cień korony: owal przesunięty w prawo-w dół od pnia (słońce z lewej-góry). */
+function cienDrzewa(t: Drzewo09, cien: Uint8Array, w: number, h: number, X0: number, Y0: number) {
+  const d = drzewoZ(t.g, t.w);
+  const rx = d.korona.w * 0.36, ry = rx * 0.45, cx = t.x + rx * 0.45 - X0, cy = t.y - ry * 0.3 - Y0;
+  for (let j = Math.floor(cy - ry); j <= cy + ry; j++) {
+    if (j < 0 || j >= h) continue;
+    for (let i = Math.floor(cx - rx); i <= cx + rx; i++) {
+      if (i < 0 || i >= w) continue;
+      const u = (i - cx) / rx, v = (j - cy) / ry;
+      if (u * u + v * v <= 1) cien[j * w + i] = 1;
     }
   }
+}
+
+/** Nakłada obraz (pomijając przezroczyste piksele). */
+function naloz(o: Obraz, src: Obraz, x: number, y: number) {
+  for (let j = 0; j < src.h; j++) {
+    const yy = y + j;
+    if (yy < 0 || yy >= o.h) continue;
+    for (let i = 0; i < src.w; i++) {
+      const c = src.px[j * src.w + i];
+      if (!(c >>> 24)) continue;
+      const xx = x + i;
+      if (xx >= 0 && xx < o.w) o.px[yy * o.w + xx] = c;
+    }
+  }
+}
+
+function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boolean) {
+  const u = hash(b.seed, 3, 91), v = hash(b.seed, 5, 17);
+  const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(DACHY, u);
+  const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
+  const klucz = `${b.seed}|${b.h}|${dach}|${sciana}|${noc ? 1 : 0}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  let gotowy = pamiec.get(klucz);
+  if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
+  else {
+    gotowy = budynek(b.r, { wysokosc: b.h, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25 });
+    zapamietaj(klucz, gotowy);
+  }
+  const { obraz, x0, y0 } = gotowy;
+  naloz(o, obraz, x0 - X0, y0 - Y0);
 }
 
 /**
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
  */
-export function ziemia(z: Zlecenie): Uint32Array {
+export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
   const { ids, S, X0, Y0, N } = z;
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
@@ -129,6 +154,19 @@ export function ziemia(z: Zlecenie): Uint32Array {
   const trzciny = malujWode(obraz, X0, Y0, rodzajW);
   for (const k of posiejRuno(X0, Y0, N, N, rodzajW)) runo(obraz, k.x - X0, k.y - Y0, k.rodzaj, k.seed, 0);
   for (const [x, y] of trzciny) runo(obraz, x - X0, y - Y0, 'trzcina', (hash(x, y, 77) * 1e6) | 0, 0);
-  if (z.budynki.length) malujBudynki(obraz, X0, Y0, z.budynki, z.noc);
-  return obraz.px;
+  // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
+  const ramki = z.budynki.map((b) => {
+    let a = Infinity, c = Infinity, e = -Infinity, f = -Infinity;
+    for (let i = 0; i < b.r.length; i += 2) { a = Math.min(a, b.r[i]); c = Math.min(c, b.r[i + 1]); e = Math.max(e, b.r[i]); f = Math.max(f, b.r[i + 1]); }
+    return [a, c, e, f];
+  });
+  const wBudynku = (x: number, y: number) => z.budynki.some((b, i) => {
+    const r = ramki[i];
+    if (x < r[0] || y < r[1] || x > r[2] || y > r[3]) return false;
+    return wPierscieniu(b.r, x + 0.5, y + 0.5) && !b.dziury.some((d) => wPierscieniu(d, x + 0.5, y + 0.5));
+  });
+  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) => !wBudynku(x, y));
+  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc);
+  const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N);
+  return { px: obraz.px, drzewa: swoje };
 }

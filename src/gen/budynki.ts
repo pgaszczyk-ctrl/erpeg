@@ -32,13 +32,15 @@ export interface OpcjeBudynku {
   rura?: boolean;              // mosiężna rura na ścianie
   komin?: boolean;
   drzwi?: [number, number];    // punkt drzwi (we współrzędnych pierścienia) – drzwi na najbliższej ścianie
+  dziury?: number[][];         // podwórka (pierścienie wewnątrz obrysu): dach spada też w ich stronę, od podwórka widać ściany
 }
 
 /** `pierscien` = [x0, y0, x1, y1, …] w px obrazu (świat). Zwraca obraz budynku i jego lewy-górny róg w świecie. */
 export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
-  const n = pierscien.length / 2;
-  const P: [number, number][] = []; for (let i = 0; i < n; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
+  // Obrys z podwórkami (dziury): maska ścian i dachu bierze wszystkie pierścienie (parzysto-nieparzyście).
+  const pierscienie = [pierscien, ...(op.dziury ?? [])];
+  const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
   const x0 = Math.floor(minX) - 2, y0 = Math.floor(minY) - 2, W = Math.ceil(maxX + H * sk) - x0 + 3, Hh = Math.ceil(maxY + H) - y0 + 3;
@@ -46,14 +48,26 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const mask = new Uint8Array(W * Hh);
   for (let j = 0; j < Hh; j++) {
     const py = y0 + j + 0.5, xs: number[] = [];
-    for (let i = 0; i < n; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % n]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); }
+    for (const r of pierscienie) { const m = r.length / 2; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); } }
     xs.sort((a, b) => a - b);
     for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k] - 0.5); x < xs[k + 1] - 0.5; x++) { const i = x - x0; if (i >= 0 && i < W) mask[j * W + i] = 1; }
   }
   const inFP = (x: number, y: number) => { const i = x - x0, j = y - y0; return i >= 0 && j >= 0 && i < W && j < Hh && mask[j * W + i] === 1; };
-  // krawędzie z normalnymi na zewnątrz
-  let area = 0; for (let i = 0; i < n; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % n]; area += ax * by - bx * ay; }
-  const E = P.map(([ax, ay], i) => { const [bx, by] = P[(i + 1) % n]; const L = Math.hypot(bx - ax, by - ay) || 1; const ux = (bx - ax) / L, uy = (by - ay) / L; const s = area > 0 ? 1 : -1; return { ax, ay, ux, uy, L, nx: uy * s, ny: -ux * s }; });
+  // Krawędzie z normalnymi na zewnątrz bryły (przy podwórku: w stronę podwórka). Dach liczy się z bryły
+  // uproszczonej, gdy obrys jest „dziwny” (bryla()), ściany i maska zostają na prawdziwym obrysie.
+  const geo = bryla(pierscienie);
+  type Kraw = { ax: number; ay: number; ux: number; uy: number; L: number; nx: number; ny: number };
+  const E: Kraw[] = [];
+  geo.forEach((r, ri) => {
+    const m = r.length / 2;
+    let area = 0; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; area += ax * by - bx * ay; }
+    const s = (area > 0 ? 1 : -1) * (ri === 0 ? 1 : -1);
+    for (let i = 0; i < m; i++) {
+      const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length];
+      const L = Math.hypot(bx - ax, by - ay) || 1; const ux = (bx - ax) / L, uy = (by - ay) / L;
+      E.push({ ax, ay, ux, uy, L, nx: uy * s, ny: -ux * s });
+    }
+  });
   // Dwie najbliższe krawędzie punktu. Krawędzie są w siatce kratek, więc przeszukujemy tylko okolicę
   // (kratki pierścieniami, aż reszta musi być dalej). Wynik taki sam jak przy sprawdzaniu wszystkich po kolei:
   // przy równej odległości wygrywa krawędź o niższym numerze.
@@ -232,3 +246,43 @@ export function przyciagnij(pierscien: number[], opcje: { katy?: number[]; prost
   const P = [[-W / 2, -H / 2], [W / 2, -H / 2], [W / 2, H / 2], [-W / 2, H / 2]];
   return P.flatMap(([u, v]) => [cx + (mu + u) * ux + (mv + v) * vx, cy + (mu + u) * uy + (mv + v) * vy]);
 }
+
+/** Upraszcza zamknięty pierścień (Douglas–Peucker): punkty bliżej niż `tol` od prostej znikają. */
+export function uprosc(r: number[], tol: number): number[] {
+  const n = r.length / 2;
+  if (n <= 4) return r;
+  // Dzielimy w najdalszym od pierwszego punkcie, każdą połowę upraszczamy osobno.
+  let far = 0, fd = -1;
+  for (let i = 1; i < n; i++) { const d = (r[2 * i] - r[0]) ** 2 + (r[2 * i + 1] - r[1]) ** 2; if (d > fd) { fd = d; far = i; } }
+  const keep = new Uint8Array(n); keep[0] = keep[far] = 1;
+  const dp = (a: number, b: number) => {
+    const ax = r[2 * a], ay = r[2 * a + 1], bx = r[2 * (b % n)], by = r[2 * (b % n) + 1];
+    const L = Math.hypot(bx - ax, by - ay) || 1;
+    let best = -1, bi = -1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs((bx - ax) * (ay - r[2 * i + 1]) - (ax - r[2 * i]) * (by - ay)) / L; if (d > best) { best = d; bi = i; } }
+    if (best > tol) { keep[bi] = 1; dp(a, bi); dp(bi, b); }
+  };
+  dp(0, far); dp(far, n);
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) if (keep[i]) out.push(r[2 * i], r[2 * i + 1]);
+  return out.length >= 6 ? out : r;
+}
+
+/** Ile wyraźnych załamań ma obrys po zgubieniu drobnych schodków (3 px). */
+const zalaman = (r: number[]) => uprosc(r, 3).length / 2;
+/** Granica „dziwności”: obrys z większą liczbą załamań dostaje dach z bryły uproszczonej (prosta kamienica ma 4–12). */
+export const MAKS_ZALAMAN = 14;
+
+/**
+ * Bryła, z której liczy się dach: zwykły budynek – jego obrys; „dziwny” (poszarpany, zrośnięty z wielu części) –
+ * obrys coraz mocniej upraszczany (3 → 8 → 14 → 22 px), aż załamań będzie najwyżej MAKS_ZALAMAN; małe podwórka znikają.
+ */
+export function bryla(pierscienie: number[][]): number[][] {
+  if (zalaman(pierscienie[0]) <= MAKS_ZALAMAN) return pierscienie;
+  let tol = 8, z = uprosc(pierscienie[0], tol);
+  for (const t of [14, 22]) { if (z.length / 2 <= MAKS_ZALAMAN) break; tol = t; z = uprosc(pierscienie[0], t); }
+  const dz = pierscienie.slice(1).map((d) => uprosc(d, tol)).filter((d) => d.length >= 6 && Math.abs(pole(d)) > tol * tol * 4);
+  return [z, ...dz];
+}
+
+function pole(r: number[]) { let a = 0; for (let i = 0; i < r.length; i += 2) { const j = (i + 2) % r.length; a += r[i] * r[j + 1] - r[j] * r[i + 1]; } return a / 2; }

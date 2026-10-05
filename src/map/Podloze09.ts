@@ -1,6 +1,7 @@
 import type { Rodzaj } from '../gen';
 import type { Area, Line } from './CityMap';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie } from './ziemia09';
+import type { Drzewo09 } from './drzewa09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
 // liczy generator z `src/gen`. Obszary OSM trafiają najpierw na pomocnicze płótno „mapy rodzajów”
@@ -157,9 +158,12 @@ function naPlotno(px: Uint32Array, N: number) {
 /**
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
+/** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[] }
+
 class ZiemiaWTle {
   private workery: Worker[] = [];
-  private czeka = new Map<number, (c: HTMLCanvasElement) => void>();
+  private czeka = new Map<number, (g: Gotowe) => void>();
   private nr = 0;
   private kolej = 0;
   private wymiar = new Map<number, number>();
@@ -169,12 +173,12 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[] }>) => {
           const gotowe = this.czeka.get(e.data.nr);
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.(naPlotno(e.data.px, N));
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa });
         };
         this.workery.push(w);
       }
@@ -183,8 +187,11 @@ class ZiemiaWTle {
     }
   }
 
-  policz(z: Zlecenie): Promise<HTMLCanvasElement> {
-    if (!this.workery.length) return Promise.resolve(naPlotno(ziemia(z), z.N));
+  policz(z: Zlecenie): Promise<Gotowe> {
+    if (!this.workery.length) {
+      const { px, drzewa } = ziemia(z);
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa });
+    }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];
     return new Promise((ok) => {

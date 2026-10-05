@@ -9,6 +9,7 @@ import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
 import { GEN_DOTS, type Budynek09 } from './ziemia09';
+import { drzewoZ, type Drzewo09 } from './drzewa09';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -344,6 +345,15 @@ interface Chunk {
   img: Phaser.GameObjects.Image;
   /** Which request for its ground (overhaul 09) the chunk waits for; older answers are dropped. */
   ver?: number;
+  /** Overhaul 09: the tree crowns standing in this chunk (sprites, sorted by depth with the characters). */
+  crowns?: Phaser.GameObjects.Image[];
+}
+
+/** Takes a chunk's tree crowns away (it is recycled or hidden). */
+function dropCrowns(c: Chunk) {
+  if (!c.crowns) return;
+  for (const im of c.crowns) im.destroy();
+  c.crowns = undefined;
 }
 
 export class MapRenderer {
@@ -372,6 +382,7 @@ export class MapRenderer {
   /** Frees the chunk textures (the scene is going away). */
   destroy() {
     for (const c of [...this.chunks.values(), ...this.free]) {
+      dropCrowns(c);
       c.img.destroy();
       this.scene.textures.remove(c.tex);
     }
@@ -397,6 +408,7 @@ export class MapRenderer {
       const [x, y] = k.split(',').map(Number);
       if (x < cx0 - 1 || x > cx1 + 1 || y < cy0 - 1 || y > cy1 + 1 || this.chunks.size > MAX_CHUNKS) {
         c.img.setVisible(false);
+        dropCrowns(c);
         this.chunks.delete(k);
         this.stale.delete(k);
         this.free.push(c);
@@ -406,6 +418,7 @@ export class MapRenderer {
     // Spare textures beyond what the cap allows go back to the graphics card's memory.
     while (this.free.length && this.chunks.size + this.free.length > MAX_CHUNKS) {
       const c = this.free.pop()!;
+      dropCrowns(c);
       c.img.destroy();
       this.scene.textures.remove(c.tex);
     }
@@ -430,6 +443,7 @@ export class MapRenderer {
         if (far) {
           const c = this.chunks.get(far)!;
           c.img.setVisible(false);
+          dropCrowns(c);
           this.chunks.delete(far);
           this.stale.delete(far);
           this.free.push(c);
@@ -443,6 +457,7 @@ export class MapRenderer {
   invalidate() {
     for (const [, c] of this.chunks) {
       c.img.setVisible(false);
+      dropCrowns(c);
       this.free.push(c);
     }
     this.chunks.clear();
@@ -474,10 +489,12 @@ export class MapRenderer {
       if (fresh) c.img.setVisible(false);
       this.chunks.set(k, c);
       const order = this.groundOrder(x0, y0);
-      ziemiaWTle().policz(order).then((ground) => {
+      ziemiaWTle().policz(order).then((ready) => {
         if (c.key !== k || c.ver !== ver || !this.scene.textures.exists(c.tex.key)) return;
         const t1 = performance.now();
-        this.paint(ctx, x0, y0, ground);
+        this.paint(ctx, x0, y0, ready.ziemia);
+        dropCrowns(c);
+        c.crowns = ready.drzewa.map((t) => this.crown(t));
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
@@ -491,6 +508,35 @@ export class MapRenderer {
     chunk.tex.refresh();
     chunk.img.setPosition(x0, y0).setVisible(true);
     this.chunks.set(chunk.key, chunk);
+  }
+
+  /**
+   * A tree crown (overhaul 09) as a sprite standing on the trunk painted in the chunk, sorted by depth like
+   * the characters: a hero north of the tree is hidden by it, south of it walks in front.
+   */
+  private crown(t: Drzewo09) {
+    const key = `drz09-${t.g}-${t.w}`;
+    const d = drzewoZ(t.g, t.w);
+    if (!this.scene.textures.exists(key)) {
+      const c = document.createElement('canvas');
+      c.width = d.korona.w;
+      c.height = d.korona.h;
+      const g = c.getContext('2d')!;
+      g.putImageData(new ImageData(new Uint8ClampedArray(d.korona.px.buffer as ArrayBuffer, d.korona.px.byteOffset, d.korona.px.byteLength).slice(), c.width, c.height), 0, 0);
+      if (d.owoce) {
+        const o = document.createElement('canvas');
+        o.width = c.width;
+        o.height = c.height;
+        o.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(d.owoce.px.buffer as ArrayBuffer, d.owoce.px.byteOffset, d.owoce.px.byteLength).slice(), c.width, c.height), 0, 0);
+        g.drawImage(o, 0, 0);
+      }
+      this.scene.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const x = t.x / GEN_DOTS, y = t.y / GEN_DOTS;
+    return this.scene.add.image(x, y, key)
+      .setOrigin(d.kotwica[0] / d.korona.w, (d.kotwica[1] + 1) / d.korona.h)
+      .setScale(1 / GEN_DOTS)
+      .setDepth(y);
   }
 
   /** Roof patterns from the artist's files (empty until they arrive). */
@@ -587,7 +633,6 @@ export class MapRenderer {
       // Buildings come with the ground (roofs, walls, shadows from the generator).
       rysujZiemie(ctx, ground, x0, y0, CHUNK);
       if (m.terrain) this.paintRelief(ctx, x0, y0);
-      if (this.treeArt || this.bushArt) this.paintGreenery(ctx, x0, y0);
       if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
       if (this.lampArt) this.paintLamps(ctx, lines);
       clip = null;
