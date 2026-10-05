@@ -583,6 +583,7 @@ export class GameScene extends Phaser.Scene {
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
     this.mapView.update(this.cameras.main);
+    if (this.player) this.mapView.updateTrees(now, dt, this.cameras.main, this.player.x, this.player.y);
     // Tiled maps: keep the map loaded around the hero.
     if (now >= this.nextTiles && this.player) {
       this.nextTiles = now + 700;

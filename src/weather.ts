@@ -25,6 +25,8 @@ export const weather = {
   /** Snow on the ground (cm) and its level: 0 none, 1 light, 2 heavy. */
   snowCm: 0,
   snowLevel: 0 as 0 | 1 | 2,
+  /** Wind (m/s) from the forecast; moves the tree crowns (overhaul 09). `?wiatr=<m/s>` forces it. */
+  wind: 3,
   /** true once real data arrived (else the defaults above). */
   real: false,
   /** Forced by ?pogoda= (tests, showing it off). */
@@ -36,6 +38,12 @@ const KINDS: Pogoda[] = ['czysto', 'pochmurno', 'deszcz', 'ulewa', 'burza', 'sni
   const q = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('pogoda');
   if (q && (KINDS as string[]).includes(q)) weather.forced = q as Pogoda;
 }
+
+const forcedWind = (() => {
+  const q = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('wiatr');
+  return q !== null && Number.isFinite(+q) ? +q : null;
+})();
+if (forcedWind !== null) weather.wind = forcedWind;
 
 let hours: Hour[] = [];
 let cell = '';
@@ -66,10 +74,12 @@ export function tickWeather(now = Date.now()): boolean {
     weather.temp = h.c;
     weather.rain = h.p;
     weather.snowCm = h.n ?? 0;
+    weather.wind = h.w ?? 3;
     weather.real = true;
   }
   const S = POGODA.snieg;
   weather.snowLevel = weather.snowCm >= S.duzyOdCm ? 2 : weather.snowCm >= S.drobnyOdCm ? 1 : 0;
+  if (forcedWind !== null) weather.wind = forcedWind;
   if (weather.forced) {
     weather.kind = weather.forced;
     if (weather.forced === 'snieg') weather.temp = Math.min(weather.temp ?? -2, -1);
