@@ -1,4 +1,5 @@
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
+import { tor, kolorPodloza } from '../gen';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -8,10 +9,13 @@ export const GEN_DOTS = 2;
 /** Margines mapy rodzajów dookoła kawałka (woda czyta rodzaj do 32 px od brzegu, granice drżą o ±2). */
 export const MARGINES = 40;
 
-export const RODZAJE: Rodzaj[] = [
+/** Rodzaje w mapie rodzajów: podłoża generatora i peron (dla generatora to chodnik, krawędź dorysowujemy sami). */
+export type Rodzaj09 = Rodzaj | 'peron';
+export const RODZAJE: Rodzaj09[] = [
   'trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'bruk', 'chodnik', 'plac', 'droga', 'piasek', 'woda',
-  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory',
+  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron',
 ];
+const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory');
 
 /** Budynek do namalowania (współrzędne w px generatora = px mapy × GEN_DOTS). */
 export interface Budynek09 {
@@ -28,6 +32,8 @@ export interface Zlecenie {
   ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean;
   /** Drzewa ścięte w tej sesji (idDrzewa): zamiast pnia pieniek, bez korony i cienia. */
   sciete: string[];
+  /** Tory (kolej i tramwaj) w okolicy kawałka, px generatora. */
+  tory: number[][];
 }
 
 const DACHY: [string, number][] = [['dachowka_czerwona', 34], ['dachowka_brazowa', 24], ['lupek', 16], ['gont', 9], ['blacha_zielona', 7], ['papa', 10]];
@@ -143,6 +149,32 @@ function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boole
   naloz(o, obraz, x0 - X0, y0 - Y0);
 }
 
+const KRAWEDZ_PERONU = [hex('#e6dfcd'), hex('#d4ccb8')], LINIA_PERONU = hex('#e2b53c');
+
+/** Perony: płyty chodnika na całym peronie (też tam, gdzie zachodzi podsypka), jasna krawędź od toru i żółta linia. */
+function malujPerony(o: Obraz, ids: Uint8Array, S: number, X0: number, Y0: number) {
+  const N = o.w;
+  const at = (i: number, j: number) => ids[(j + MARGINES) * S + i + MARGINES];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    if (at(i, j) !== PERON_ID) continue;
+    // Odległość (w kratkach) do najbliższego piksela poza peronem i czy tam leży tor.
+    let d = 9, przyTorze = false;
+    for (let r = 1; r <= 12 && !przyTorze && (d === 9 || r <= d + 6); r++)
+      for (let k = -r; k <= r; k++)
+        for (const [a, b] of [[i + k, j - r], [i + k, j + r], [i - r, j + k], [i + r, j + k]]) {
+          const q = at(a, b);
+          if (q !== PERON_ID && d === 9) d = r;
+          if (q === TORY_ID) przyTorze = true;
+        }
+    if (d === 9) d = 7;
+    const x = X0 + i, y = Y0 + j;
+    let c = kolorPodloza('chodnik', x, y);
+    if (d <= 2) c = KRAWEDZ_PERONU[d - 1];
+    else if (przyTorze && d === 5 && hash(x >> 1, y >> 1, 5) < 0.85) c = LINIA_PERONU;
+    o.px[j * N + i] = c;
+  }
+}
+
 /**
  * `ids`: mapa rodzajów S×S (indeksy RODZAJE), lewy-górny róg = (X0 − MARGINES, Y0 − MARGINES) w px generatora.
  * Zwraca piksele N×N (RGBA w kolejności bajtów ImageData).
@@ -152,13 +184,17 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[] } {
   const rodzajW = (x: number, y: number): Rodzaj | null => {
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
     if (i < 0 || j < 0 || i >= S || j >= S) return null;
-    return RODZAJE[ids[j * S + i]];
+    const r = RODZAJE[ids[j * S + i]];
+    return r === 'peron' ? 'chodnik' : r;
   };
   const obraz = nowy(N, N);
   malujPodloze(obraz, X0, Y0, rodzajW);
   const trzciny = malujWode(obraz, X0, Y0, rodzajW);
   for (const k of posiejRuno(X0, Y0, N, N, rodzajW)) runo(obraz, k.x - X0, k.y - Y0, k.rodzaj, k.seed, 0);
   for (const [x, y] of trzciny) runo(obraz, x - X0, y - Y0, 'trzcina', (hash(x, y, 77) * 1e6) | 0, 0);
+  // Tory: podsypka, podkłady, szyny (generator), potem perony na wierzchu (płyty z jasną krawędzią i żółtą linią).
+  for (const t of z.tory) tor(obraz, t, X0, Y0);
+  malujPerony(obraz, ids, S, X0, Y0);
   // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
   const ramki = z.budynki.map((b) => {
     let a = Infinity, c = Infinity, e = -Infinity, f = -Infinity;

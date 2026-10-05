@@ -22,6 +22,7 @@ osmium tags-filter "$PBF" \
   wr/building \
   w/highway \
   w/railway=rail,tram,light_rail \
+  wr/railway=platform \
   n/railway=station,halt \
   w/waterway=river,stream,canal,ditch,drain \
   wr/natural=water,wood,scrub,grassland,wetland,sand,beach \

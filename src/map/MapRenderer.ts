@@ -10,6 +10,7 @@ import { OSTROSC } from '../screen';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle } from './Podloze09';
 import { GEN_DOTS, type Budynek09 } from './ziemia09';
 import { Korony, type Korona } from './Korony';
+import { peronyZastepcze } from './perony';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -212,6 +213,20 @@ function artSheet(scene: Phaser.Scene, file: string): HTMLCanvasElement | null {
 
 /** Pattern transform from the chunk's canvas pixels back to map pixels. */
 const UNDOTS = new DOMMatrix().scaleSelf(1 / DOTS);
+
+/** The runs of a polyline whose segments touch the box (a long railway: only the part near a chunk). */
+function clipLine(pts: number[], x0: number, y0: number, x1: number, y1: number): number[][] {
+  const out: number[][] = [];
+  let run: number[] | null = null;
+  for (let i = 0; i + 3 < pts.length; i += 2) {
+    const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3];
+    const inside = Math.max(ax, bx) >= x0 && Math.min(ax, bx) <= x1 && Math.max(ay, by) >= y0 && Math.min(ay, by) <= y1;
+    if (!inside) { run = null; continue; }
+    if (!run) out.push((run = [ax, ay]));
+    run.push(bx, by);
+  }
+  return out;
+}
 
 /** Is (x, y) inside the ring (even–odd rule)? */
 function pointIn(r: number[], x: number, y: number) {
@@ -585,7 +600,10 @@ export class MapRenderer {
         g.closePath();
       }
       g.fill('evenodd');
-    } : null, x0, y0, CHUNK);
+    } : null, x0, y0, CHUNK, peronyZastepcze(m, { x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 24 }));
+    // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
+    const tory: number[][] = [];
+    for (const l of wide.lines) if (l.kind === 'rail' || l.kind === 'tram') tory.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
     // Buildings whose roof or walls reach the chunk (walls hang below the outline), north to south.
     const { buildings } = m.query({ x0: x0 - 8, y0: y0 - 60, x1: x0 + CHUNK + 8, y1: y0 + CHUNK + 8 });
     buildings.sort((a, b) => a.y1 - b.y1);
@@ -601,7 +619,7 @@ export class MapRenderer {
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
       };
     });
-    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete() };
+    return { ...kinds, budynki, noc: night(), sciete: this.korony.sciete(), tory };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

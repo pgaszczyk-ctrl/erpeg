@@ -60,6 +60,8 @@ export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodz
     // Pień na tym samym podłożu (nie na drodze, w wodzie ani przy samym brzegu) i nie w budynku.
     if (rodzajW(x - 3, y) !== r || rodzajW(x + 3, y) !== r || rodzajW(x, y - 3) !== r || rodzajW(x, y + 3) !== r) continue;
     if (!wolne(x, y)) continue;
+    // Nie przy torach (trawa między torami na stacji to teren kolei).
+    if ([[16, 0], [-16, 0], [0, 16], [0, -16], [12, 12], [-12, -12], [12, -12], [-12, 12]].some(([dx, dy]) => rodzajW(x + dx, y + dy) === 'tory')) continue;
     let g = losuj(reg.wagi, hash(kx, ky, 504));
     // Skraj lasu: częściej krzaki.
     if (reg.skraj && g !== 'krzak' && [[32, 0], [-32, 0], [0, 32], [0, -32]].some(([dx, dy]) => rodzajW(x + dx, y + dy) !== r) && hash(kx, ky, 505) < 0.4) g = 'krzak';

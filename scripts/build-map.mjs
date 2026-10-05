@@ -169,7 +169,7 @@ function areaKind(t) {
 }
 
 // Draw order: big soft areas first, small detailed ones last.
-const AREA_ORDER = ['farmland', 'grass', 'sand', 'scrub', 'wetland', 'forest', 'park', 'allotments', 'cemetery', 'pitch', 'playground', 'parking', 'plaza', 'water'];
+const AREA_ORDER = ['farmland', 'grass', 'sand', 'scrub', 'wetland', 'forest', 'park', 'allotments', 'cemetery', 'pitch', 'playground', 'parking', 'plaza', 'platform', 'water'];
 
 // ---------------------------------------------------------------- collect
 
@@ -254,6 +254,18 @@ for (const f of features) {
     if (!isArea || (t.layer || '').startsWith('-')) continue;
     const rings = areaRings();
     if (rings.length) buildings.push({ rings, a: address(t), name: t.name || null, levels: +(t['building:levels'] || 0) || 0, kind: t.building });
+    continue;
+  }
+
+  // Railway platforms (fetch-osm.sh asks for them since 5 Oct 2026): areas, or lines drawn 4 m wide.
+  if (t.railway === 'platform') {
+    if (isArea) {
+      const rings = areaRings();
+      if (rings.length) areas.push({ kind: 'platform', rings });
+    } else if (g.type === 'LineString') {
+      const l = encode(g.coordinates, false);
+      if (l) lines.push({ kind: 'platform', pts: l, bridge: 0, pass: 0 });
+    }
     continue;
   }
 

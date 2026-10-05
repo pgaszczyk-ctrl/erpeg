@@ -6,12 +6,12 @@ import type { CityMap } from './CityMap';
 export const AREA_FILL: Record<string, string> = {
   water: '#3f8fd8', forest: '#3d8b3d', scrub: '#5e9e3a', wetland: '#6aa89a', park: '#7ccf45', grass: '#72c23a',
   farmland: '#c8d77a', cemetery: '#6aa84f', allotments: '#8bc34a', pitch: '#4fb34f', playground: '#e0c070',
-  parking: '#d2ad7c', plaza: '#dccfb2', paved: '#c3b79f', rock: '#a39e92', glacier: '#e6eef2', sand: '#e8d59a',
+  parking: '#d2ad7c', plaza: '#dccfb2', paved: '#c3b79f', rock: '#a39e92', glacier: '#e6eef2', sand: '#e8d59a', platform: '#c9c0ae',
 };
 // Plain earthen roads (no asphalt): wider = more trodden and darker.
 export const ROAD_FILL: Record<string, string> = {
   major: '#c28a52', medium: '#c9935c', minor: '#d09d66', service: '#d6a771', track: '#d6a771',
-  pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a',
+  pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a', platform: '#c9c0ae',
 };
 /** Draws the city (green, water, roads, buildings) inside `box` onto the whole canvas. */
 export function drawCity(canvas: HTMLCanvasElement, city: CityMap, box: { x0: number; y0: number; x1: number; y1: number }) {

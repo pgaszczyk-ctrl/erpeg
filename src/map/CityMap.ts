@@ -12,7 +12,7 @@ export const PX_PER_M = 1.92; // 20% bigger than 1.6, so narrow Old Town streets
 // Widths in metres of line features.
 const LINE_WIDTH_M: Record<string, number> = {
   major: 14, medium: 11, minor: 7, service: 4, track: 3, pedestrian: 6, path: 2.5, steps: 2.5,
-  rail: 3, tram: 2.5, river: 14, stream: 3, ditch: 1.5,
+  rail: 3, tram: 2.5, river: 14, stream: 3, ditch: 1.5, platform: 4,
 };
 export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek';
 export const ROAD_KINDS = new Set(['major', 'medium', 'minor', 'service', 'track', 'pedestrian', 'path', 'steps']);

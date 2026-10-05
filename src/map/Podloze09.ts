@@ -1,22 +1,35 @@
 import type { Rodzaj } from '../gen';
 import type { Area, Line } from './CityMap';
-import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie, type Rodzaj09 } from './ziemia09';
 import type { Drzewo09 } from './drzewa09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
 // liczy generator z `src/gen`. Obszary OSM trafiają najpierw na pomocnicze płótno „mapy rodzajów”
 // (każdy rodzaj = swój kolor-identyfikator), z którego generator czyta rodzaj podłoża w punkcie.
 
-export const WYGLAD_09 = new URLSearchParams(location.search).get('wyglad') === '09';
+/**
+ * Włącznik nowego wyglądu: `?wyglad=09` włącza i zapamiętuje w telefonie (localStorage `exp-wyglad`),
+ * `?wyglad=0` wyłącza; przeładowania gry (nowa wersja, grafika) go nie gubią.
+ */
+export const WYGLAD_09 = (() => {
+  const q = new URLSearchParams(location.search).get('wyglad');
+  try {
+    if (q === '09') localStorage.setItem('exp-wyglad', '09');
+    else if (q !== null) localStorage.removeItem('exp-wyglad');
+    return localStorage.getItem('exp-wyglad') === '09';
+  } catch {
+    return q === '09';
+  }
+})();
 
-const ID = Object.fromEntries(RODZAJE.map((r, i) => [r, i])) as Record<Rodzaj, number>;
+const ID = Object.fromEntries(RODZAJE.map((r, i) => [r, i])) as Record<Rodzaj09, number>;
 /** Kolory-identyfikatory: kod z trzech kanałów, więc pośrednie piksele (wygładzone brzegi) rozpoznajemy po braku dopasowania. */
 const KOD = RODZAJE.map((_, i) => [(i * 37 + 11) & 255, (i * 91 + 53) & 255, (i * 151 + 97) & 255] as const);
 /** Rodzaj po czerwonym kanale (kody mają różne R) i pełny kod jako liczba (kolejność bajtów ImageData). */
 const PO_R = new Int16Array(256).fill(-1);
 KOD.forEach(([r], i) => (PO_R[r] = i));
 const KOD_32 = KOD.map(([r, g, b]) => (b << 16) | (g << 8) | r);
-const kolor = (r: Rodzaj) => `rgb(${KOD[ID[r]].join(',')})`;
+const kolor = (r: Rodzaj09) => `rgb(${KOD[ID[r]].join(',')})`;
 
 /** Rodzaj podłoża z rodzaju obszaru OSM (leśne i pola zmieniają odmianę wg id obszaru). */
 function rodzajObszaru(a: Area): Rodzaj {
@@ -84,7 +97,8 @@ export function mapaRodzajow(
   x0: number,
   y0: number,
   rozmiar: number,
-): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete'> {
+  perony: number[][] = [],
+): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
   if (!rodzajeCanvas) rodzajeCanvas = document.createElement('canvas');
@@ -127,6 +141,27 @@ export function mapaRodzajow(
     sciezkaObszaru(g, a.rings, bx0, by0, bx1, by1);
     g.fillStyle = kolor('bruk');
     g.fill('evenodd');
+  }
+  // Perony: z OSM (obszary i linie 4 m) i dorysowane przy stacjach bez nich (perony.ts).
+  g.fillStyle = g.strokeStyle = kolor('peron');
+  for (const a of areas) {
+    if (a.kind !== 'platform') continue;
+    sciezkaObszaru(g, a.rings, bx0, by0, bx1, by1);
+    g.fill('evenodd');
+  }
+  for (const l of lines) {
+    if (l.kind !== 'platform') continue;
+    g.beginPath();
+    g.moveTo(l.pts[0], l.pts[1]);
+    for (let i = 2; i < l.pts.length; i += 2) g.lineTo(l.pts[i], l.pts[i + 1]);
+    g.lineCap = 'butt';
+    g.lineWidth = l.width;
+    g.stroke();
+    g.lineCap = 'round';
+  }
+  if (perony.length) {
+    sciezkaObszaru(g, perony, bx0, by0, bx1, by1);
+    g.fill('nonzero');
   }
   if (poza) { g.fillStyle = kolor('las_iglasty'); poza(g); }
 
