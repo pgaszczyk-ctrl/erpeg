@@ -58,7 +58,7 @@ export function wyposazPeron(o: Obraz, X0: number, Y0: number, p: Peron09): [num
 }
 
 /** Punkt łamanej w długości łuku s. */
-function punkt(pts: number[], s: number): [number, number] {
+export function punkt(pts: number[], s: number): [number, number] {
   let acc = 0;
   for (let i = 0; i + 3 < pts.length; i += 2) {
     const ax = pts[i], ay = pts[i + 1], bx = pts[i + 2], by = pts[i + 3], l = Math.hypot(bx - ax, by - ay);

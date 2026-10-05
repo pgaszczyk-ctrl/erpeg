@@ -48,18 +48,7 @@ function peronStacji(m: CityMap, p: Place, okolica: { x0: number; y0: number; x1
   const blisko = (x0: number, y0: number, x1: number, y1: number) => x1 >= p.door.x - osm && x0 <= p.door.x + osm && y1 >= p.door.y - osm && y0 <= p.door.y + osm;
   if (areas.some((a) => a.kind === 'platform' && blisko(a.x0, a.y0, a.x1, a.y1)) || lines.some((l) => l.kind === 'platform' && blisko(l.x0, l.y0, l.x1, l.y1))) return null;
   const tory = lines.filter((l) => l.kind === 'rail');
-  // Najbliższy punkt toru (odległość, linia, długość łuku do niego).
-  let best: { d: number; l: Line; s: number; x: number; y: number } | null = null;
-  for (const l of tory) {
-    let s = 0;
-    for (let i = 0; i + 3 < l.pts.length; i += 2) {
-      const ax = l.pts[i], ay = l.pts[i + 1], dx = l.pts[i + 2] - ax, dy = l.pts[i + 3] - ay, L = Math.hypot(dx, dy) || 1;
-      const t = Math.max(0, Math.min(1, ((p.door.x - ax) * dx + (p.door.y - ay) * dy) / (L * L)));
-      const x = ax + dx * t, y = ay + dy * t, d = Math.hypot(x - p.door.x, y - p.door.y);
-      if (!best || d < best.d) best = { d, l, s: s + t * L, x, y };
-      s += L;
-    }
-  }
+  const best = najblizszyTor(tory, p.door.x, p.door.y);
   if (!best || best.d > PERON.maksOdToruM * PX_PER_M) return null;
   const a = PERON.odToruM * PX_PER_M;
   const inneTory = tory.filter((l) => l !== best!.l);
@@ -143,4 +132,32 @@ export function peronyWOkolicy(m: CityMap, box: { x0: number; y0: number; x1: nu
     out.push({ ring: [], os, tor: stronaToru(os), szer: w1 - w0 });
   }
   return out;
+}
+
+/** Najbliższy punkt torów do (x, y): linia, odległość, długość łuku do niego, sam punkt. */
+export function najblizszyTor(tory: Line[], px: number, py: number) {
+  let best: { d: number; l: Line; s: number; x: number; y: number } | null = null;
+  for (const l of tory) {
+    let s = 0;
+    for (let i = 0; i + 3 < l.pts.length; i += 2) {
+      const ax = l.pts[i], ay = l.pts[i + 1], dx = l.pts[i + 2] - ax, dy = l.pts[i + 3] - ay, L = Math.hypot(dx, dy) || 1;
+      const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (L * L)));
+      const x = ax + dx * t, y = ay + dy * t, d = Math.hypot(x - px, y - py);
+      if (!best || d < best.d) best = { d, l, s: s + t * L, x, y };
+      s += L;
+    }
+  }
+  return best;
+}
+
+/**
+ * Tor stacji kolejowej (najbliższy drzwiom, najwyżej PERON.maksOdToruM), gdy okolica jest wczytana:
+ * undefined = jeszcze nie wiadomo (kafelki się wczytują), null = to nie kolej (np. dworzec autobusowy).
+ */
+export function torStacji(m: CityMap, p: Place) {
+  const r = 2 * PERON.dlugoscM * PX_PER_M;
+  const okolica = { x0: p.door.x - r, y0: p.door.y - r, x1: p.door.x + r, y1: p.door.y + r };
+  if (!m.ready(okolica)) return undefined;
+  const best = najblizszyTor(m.query(okolica).lines.filter((l) => l.kind === 'rail'), p.door.x, p.door.y);
+  return best && best.d <= PERON.maksOdToruM * PX_PER_M ? best : null;
 }

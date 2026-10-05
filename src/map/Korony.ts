@@ -98,7 +98,7 @@ export class Korony {
   private obloczki = new Set<Phaser.GameObjects.Image>();
 
   /** Obłoczek pary w punkcie (px generatora): 6 klatek z generatora, unosi się i rozwiewa w pętli. */
-  steam(px: number, py: number) {
+  steam(px: number, py: number, glebia?: number) {
     if (!this.scene.textures.exists('para09')) {
       const R = 24;
       const c = document.createElement('canvas');
@@ -111,7 +111,7 @@ export class Korony {
       tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     const x = px / GEN_DOTS, y = py / GEN_DOTS;
-    const im = this.scene.add.image(x, y, 'para09', 'p0').setOrigin(0.5, 1).setScale(1 / GEN_DOTS).setDepth(y + 1);
+    const im = this.scene.add.image(x, y, 'para09', 'p0').setOrigin(0.5, 1).setScale(1 / GEN_DOTS).setDepth(glebia ?? y + 1);
     im.setData('x0', x).setData('y0', y).setData('faza', hash(px, py, 13) * 6);
     this.obloczki.add(im);
     return im;

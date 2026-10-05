@@ -1,4 +1,5 @@
 import type { Rodzaj } from '../gen';
+import { TEST } from '../version';
 import type { Area, Line } from './CityMap';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, type Zlecenie, type Rodzaj09 } from './ziemia09';
 import type { Drzewo09 } from './drzewa09';
@@ -8,17 +9,19 @@ import type { Drzewo09 } from './drzewa09';
 // (każdy rodzaj = swój kolor-identyfikator), z którego generator czyta rodzaj podłoża w punkcie.
 
 /**
- * Włącznik nowego wyglądu: `?wyglad=09` włącza i zapamiętuje w telefonie (localStorage `exp-wyglad`),
- * `?wyglad=0` wyłącza; przeładowania gry (nowa wersja, grafika) go nie gubią.
+ * Włącznik nowego wyglądu. Na serwerze testowym jest domyślnie włączony (właściciel 5.10.2026: bez dopisków);
+ * `?wyglad=0` wyłącza i zapamiętuje to w telefonie (localStorage `exp-wyglad`), `?wyglad=09` włącza
+ * (też na produkcji, gdy kiedyś tam trafi).
  */
 export const WYGLAD_09 = (() => {
   const q = new URLSearchParams(location.search).get('wyglad');
   try {
     if (q === '09') localStorage.setItem('exp-wyglad', '09');
-    else if (q !== null) localStorage.removeItem('exp-wyglad');
-    return localStorage.getItem('exp-wyglad') === '09';
+    else if (q !== null) localStorage.setItem('exp-wyglad', '0');
+    const zapisany = localStorage.getItem('exp-wyglad');
+    return zapisany === null ? TEST : zapisany === '09';
   } catch {
-    return q === '09';
+    return q === '09' || (q === null && TEST);
   }
 })();
 
@@ -208,7 +211,13 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][] }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; cien?: Uint32Array; S?: number }>) => {
+          if (e.data.cien) {
+            const ok = this.pojazdy.get(e.data.nr);
+            this.pojazdy.delete(e.data.nr);
+            ok?.({ obraz: naPlotno(e.data.px, e.data.S!), cien: naPlotno(e.data.cien, e.data.S!) });
+            return;
+          }
           const gotowe = this.czeka.get(e.data.nr);
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
@@ -220,6 +229,19 @@ class ZiemiaWTle {
     } catch {
       this.workery = [];
     }
+  }
+
+  private pojazdy = new Map<number, (k: { obraz: HTMLCanvasElement; cien: HTMLCanvasElement }) => void>();
+
+  /** Klatka pojazdu kolejowego (model z generator/pojazdy.ts) w kierunku `kat` stopni, z cieniem; liczona w tle. */
+  pojazd(typ: string, kat: number): Promise<{ obraz: HTMLCanvasElement; cien: HTMLCanvasElement }> {
+    if (!this.workery.length) return Promise.reject(new Error('bez Web Workera'));
+    const nr = ++this.nr;
+    const w = this.workery[this.kolej++ % this.workery.length];
+    return new Promise((ok) => {
+      this.pojazdy.set(nr, ok);
+      w.postMessage({ nr, pojazd: typ, kat });
+    });
   }
 
   policz(z: Zlecenie): Promise<Gotowe> {

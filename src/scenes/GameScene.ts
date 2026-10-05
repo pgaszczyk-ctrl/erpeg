@@ -13,6 +13,9 @@ import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer, wallHeight, WALL_SKEW } from '../map/MapRenderer';
 import type { Korona } from '../map/Korony';
+import { Pociagi } from '../map/Pociagi';
+import { torStacji } from '../map/perony';
+import { WYGLAD_09 } from '../map/Podloze09';
 import { GEN_DOTS } from '../map/ziemia09';
 import { DRZEWA_09 } from '../content/korony';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
@@ -304,6 +307,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
     this.enemies = [];
     this.dragons = new Map();
@@ -427,7 +431,7 @@ export class GameScene extends Phaser.Scene {
     const showPlace = (p: CityPlace) => {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
-      if (p.kind === 'station') this.placeCarts([p]);
+      if (p.kind === 'station') this.stationVehicles(p);
       else {
         const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
         const at = this.signSpot(p);
@@ -1320,6 +1324,24 @@ export class GameScene extends Phaser.Scene {
     return glow;
   }
 
+  private pociagi?: Pociagi;
+
+  /**
+   * Overhaul 09: a steam train on the track at railway stations, the horse cart only at bus stations
+   * (SPEC_09 point 7). Waits until the tiles around the station are in to tell which it is.
+   */
+  private stationVehicles(p: CityPlace, tries = 0) {
+    if (!WYGLAD_09) return this.placeCarts([p]);
+    const tor = torStacji(this.city, p);
+    if (tor === undefined) {
+      if (tries < 40) this.time.delayedCall(800, () => this.stationVehicles(p, tries + 1));
+      else this.placeCarts([p]);
+      return;
+    }
+    if (!tor) return this.placeCarts([p]);
+    (this.pociagi ??= new Pociagi(this, this.mapView)).postaw(p, tor);
+  }
+
   private placeCarts(stations: CityPlace[]) {
     const W = WOZY;
     const file = (p: CityPlace) => {
@@ -1338,6 +1360,8 @@ export class GameScene extends Phaser.Scene {
           const src = tex.getSourceImage() as HTMLImageElement;
           tex.add('f0', 0, 0, 0, src.width / 2, src.height);
           tex.add('f1', 0, src.width / 2, 0, src.width / 2, src.height);
+          // Lined up with the world (scripts/wyrownaj-wozy.py): sharp pixels, no smoothing.
+          tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
         const at = this.cartSpot(p);
         const img = this.add.image(at.x - 10, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
