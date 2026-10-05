@@ -30,14 +30,24 @@ export function isMinimapOpen() {
   return !!open;
 }
 
+/** Called once when the map screen closes (the world goes on). */
+let closed: (() => void) | null = null;
+
 export function closeMinimap() {
-  open?.remove();
+  if (!open) return;
+  open.remove();
   open = null;
+  const c = closed;
+  closed = null;
+  c?.();
 }
 
-export function toggleMinimap(game: GameScene) {
+export function toggleMinimap(game: GameScene, onClose?: () => void) {
   if (open) closeMinimap();
-  else showMinimap(game);
+  else {
+    closed = onClose ?? null;
+    showMinimap(game);
+  }
 }
 
 function showMinimap(game: GameScene) {

@@ -77,7 +77,9 @@ export function installErrorLog() {
     setInterval(() => {
       // Only while playing (the start screen has no frames to watch).
       const c = context();
-      if (!c.scenes.includes('game')) return w.postMessage({ hidden: true });
+      // The world is put to sleep while the map screen or the trunk is open: no frames on purpose.
+      const asleep = (window as unknown as { __game?: Phaser.Game }).__game?.loop.running === false;
+      if (!c.scenes.includes('game') || asleep) return w.postMessage({ hidden: true });
       w.postMessage({ hidden: document.hidden, ctx: { ...c, player: session.name } });
     }, 1000);
     document.addEventListener('visibilitychange', () => w.postMessage({ hidden: document.hidden }));

@@ -10,7 +10,7 @@ import { mountHud, unmountHud, setHud, showHud, hudPickup } from '../ui/hud';
 import { poziomPostaci } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
-import { toggleMinimap, closeMinimap } from '../ui/minimap';
+import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
@@ -137,6 +137,7 @@ export class UIScene extends Phaser.Scene {
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
         if (isCharacterOpen()) closeCharacter();
+        else if (isMinimapOpen()) closeMinimap();
         else if (this.dialogBox) {
           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
           const choose = this.dialogChoose;
@@ -553,15 +554,13 @@ export class UIScene extends Phaser.Scene {
     if (!game.player || this.overlay || this.dialogBox) return;
     touchInput.attack = false;
     if (isCharacterOpen()) return closeCharacter();
-    const paused = !game.scene.isPaused();
-    if (paused) game.scene.pause();
-    resetTouch();
+    if (isMinimapOpen()) closeMinimap();
+    this.sleepWorld();
     toggleCharacter({
       page,
       goodsIcon: (f) => this.iconOf(GOODS_TEX[f]),
       onClose: () => {
-        if (paused && game.scene.isPaused()) game.scene.resume();
-        resetTouch();
+        this.wakeWorld();
         game.gearChanged();
       },
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
@@ -573,9 +572,25 @@ export class UIScene extends Phaser.Scene {
 
   private openMap() {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay) return;
+    if (!game.player || this.overlay || isCharacterOpen()) return;
     touchInput.attack = false; // the tap on the button isn't a sword swing
-    toggleMinimap(game);
+    if (isMinimapOpen()) return closeMinimap();
+    this.sleepWorld();
+    toggleMinimap(game, () => this.wakeWorld());
+  }
+
+  /**
+   * The map screen and the trunk cover the game: the whole game loop sleeps meanwhile (no updates,
+   * no drawing – the game drawing on behind them made the map screen crawl on phones, owner 5 Oct 2026).
+   */
+  private sleepWorld() {
+    resetTouch();
+    if (this.game.loop.running) this.game.loop.sleep();
+  }
+
+  private wakeWorld() {
+    resetTouch();
+    if (!this.game.loop.running) this.game.loop.wake();
   }
 
   /** Top-left menu: leave the game properly. */

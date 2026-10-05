@@ -27,9 +27,25 @@ export function drawCity(canvas: HTMLCanvasElement, city: CityMap, box: { x0: nu
   ctx.setTransform(s, 0, 0, s, -box.x0 * s, -box.y0 * s);
   ctx.lineJoin = ctx.lineCap = 'round';
 
+  // Holes (buildings cut out of the merged paved areas: thousands) outside the view or smaller
+  // than a screen pixel are skipped – drawing them all made the map screen freeze (owner, 5 Oct 2026).
+  const tiny = 1 / s;
+  const skip = (r: number[]) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < r.length; i += 2) {
+      const x = r[i], y = r[i + 1];
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+    return x1 < box.x0 || x0 > box.x1 || y1 < box.y0 || y0 > box.y1 || (x1 - x0 < tiny && y1 - y0 < tiny);
+  };
   const path = (rings: number[][]) => {
     ctx.beginPath();
-    for (const r of rings) {
+    for (let k = 0; k < rings.length; k++) {
+      const r = rings[k];
+      if (k > 0 && skip(r)) continue;
       ctx.moveTo(r[0], r[1]);
       for (let i = 2; i < r.length; i += 2) ctx.lineTo(r[i], r[i + 1]);
       ctx.closePath();
