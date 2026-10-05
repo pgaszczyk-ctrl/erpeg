@@ -16,7 +16,7 @@
 // w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
 // grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
 // (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno';
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust';
 export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
@@ -35,7 +35,12 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
   dynia: { nazwa: 'dynia', mnoga: 'dynie', wielu: 'dyń', cena: 6, jadalne: true, grupa: 'warzywa' },
   grzyb: { nazwa: 'grzyb', mnoga: 'grzyby', wielu: 'grzybów', cena: 1, jadalne: true, grupa: 'grzyby' },
   drewno: { nazwa: 'drewno', mnoga: 'drewno', wielu: 'drewna', cena: 12, jadalne: false, grupa: 'drewno' },
+  // Z drzewa ściętego bez siekiery (właściciel, 5 X 2026); leży w plecaku razem z drewnem.
+  chrust: { nazwa: 'chrust', mnoga: 'chrust', wielu: 'chrustu', cena: 3, jadalne: false, grupa: 'drewno' },
 };
+
+/** Siekiera (przedmioty.ts `siekiera`): w sklepach budowlanych zawsze, w zwykłych w co `coKtorySklep`-tym (wg id sklepu). */
+export const SIEKIERA = { coKtorySklep: 3 };
 
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
 export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {

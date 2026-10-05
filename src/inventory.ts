@@ -284,6 +284,17 @@ export function repairable(): string[] {
   return [...new Set(ids.filter((id): id is string => !!id && repairCost(id) > 0))];
 }
 
+/** An owned axe that still cuts (worn or in the backpack), or null. */
+export function axe(): string | null {
+  const ids = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))];
+  return ids.find((id) => item(id)?.narzedzie === 'siekiera' && !isBroken(id)) ?? null;
+}
+
+/** Any axe owned, even a blunt one (the shop then doesn't offer another). */
+export function ownsAxe() {
+  return [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].some((id) => item(id)?.narzedzie === 'siekiera');
+}
+
 /** What a ranged weapon shoots (null for swords and magic). */
 export function ammoOf(p: Przedmiot | undefined): Amunicja | null {
   return p?.rodzaj === 'luk' ? (p.amunicja ?? 'strzaly') : null;
@@ -348,7 +359,7 @@ export function addItem(id: string): 'equipped' | 'bag' | false {
   const m = slotFor(p.miejsce);
   if (!gear.equip[m] || gear.equip[m] === 'kijek') {
     // A stick is not worth keeping when a real sword comes along (with a bow or wand it goes to the backpack).
-    if (gear.equip[m] === 'kijek' && p.rodzaj && gear.bag.length < PLECAK.miejsc) gear.bag.push({ item: 'kijek' });
+    if (gear.equip[m] === 'kijek' && (p.rodzaj || p.narzedzie) && gear.bag.length < PLECAK.miejsc) gear.bag.push({ item: 'kijek' });
     gear.equip[m] = id;
     return 'equipped';
   }

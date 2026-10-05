@@ -310,7 +310,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       const at = city.toLatLon(forest.x, forest.y);
       return {
         id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
-        opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu),
+        opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? ' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)' : ''),
         zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: `Przynieś ${ilu} z lasu` },
         zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Bóg zapłać.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
         nagroda: ZBIERANIE.premia + ile * z.zaSztuke,

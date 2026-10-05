@@ -18,12 +18,16 @@ const HAVE = new Set(ITEM_PICTURES);
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */
 const CRACKED: Record<string, string> = { szklany_miecz: 'szklany_miecz_pekniety' };
 /**
- * Raw materials (ikony12 A1, 64×64 like the items): only wood (`drewno`) is a backpack good so far;
+ * Raw materials (ikony12 A1/A2, 64×64 like the items): only wood (`drewno`) and brushwood (`chrust`) are backpack goods so far;
  * chrust, kij (bow material, not the stick weapon `kijek`), wegiel, ruda_zelaza, miedz wait for crafting.
  */
-export const MATERIAL_PICTURES = ['drewno', 'chrust', 'kij', 'wegiel', 'ruda_zelaza', 'miedz'];
+export const MATERIAL_PICTURES = [
+  'drewno', 'chrust', 'kij', 'wegiel', 'ruda_zelaza', 'miedz',
+  // A2: for the smith later.
+  'piasek', 'odlamek_komety', 'sztaba_zelaza', 'sztaba_stali', 'sztaba_mosiadzu', 'szklo',
+];
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
-const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = { drewno: 'drewno' };
+const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = { drewno: 'drewno', chrust: 'chrust' };
 
 /** The picture URL of a backpack good or goods group, if it has one. */
 export function goodsPicture(what: Owoc | Grupa): string | undefined {

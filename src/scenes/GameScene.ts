@@ -53,12 +53,12 @@ import { schoolQuiz, quizAnswered } from '../quizzes';
 import { krajMapy } from '../kraj';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
-import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, LAS, type Owoc } from '../content/sklepy';
+import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, LAS, SIEKIERA, type Owoc } from '../content/sklepy';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
-  condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo,
+  condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
   goodsByKind,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
@@ -991,7 +991,7 @@ export class GameScene extends Phaser.Scene {
     // Pines in the forest: a few blows fell one and give wood.
     const pine = this.forest.hitAt(hit.x, hit.y, 12 * this.player.reach);
     if (pine && this.forest.chop(pine)) {
-      this.dropFruit(pine.x, pine.y, 'drewno');
+      this.dropFruit(pine.x, pine.y, this.chopYield());
       this.toast('🪓 Drzewo ścięte!', 1000);
     }
     // Overhaul 09: the generator's trees – chop the notched ones, shake fruit off, the rest say why not.
@@ -1053,8 +1053,36 @@ export class GameScene extends Phaser.Scene {
     this.chopping.delete(id);
     this.mapView.korony.zetnij(k, this.player.x < x);
     this.mapView.redrawAround(x, y);
-    this.dropFruit(x, y - 2, 'drewno');
-    this.floatText(x, top, '+1 drewno', '#e8c56a');
+    const got = this.chopYield();
+    this.dropFruit(x, y - 2, got);
+    this.floatText(x, top, `+1 ${OWOCE[got].nazwa}`, '#e8c56a');
+  }
+
+  private axeHintShown = false;
+  /** A felled tree gives wood with an axe (which wears one point per tree), else only brushwood (docs/ekonomia.md). */
+  private chopYield(): Owoc {
+    const a = axe();
+    if (!a) {
+      if (!this.axeHintShown) {
+        this.axeHintShown = true;
+        const blunt = ownsAxe();
+        const text = `🪓 Bez ${blunt ? 'ostrej ' : ''}siekiery z drzewa leci tylko chrust. ${blunt ? 'Naostrz ją w sklepie (Napraw).' : 'Siekierę kupisz w sklepie budowlanym albo w niektórych zwykłych.'}`;
+        this.time.delayedCall(900, () => this.toast(text, 3500));
+      }
+      return 'chrust';
+    }
+    const r = useWeapon(a, session.level.zuzycie);
+    if (r === 'warn') this.toast('⚠️ Siekiera się tępi – naostrz ją w sklepie (Napraw).', 2600);
+    else if (r === 'broken') this.toast('🪓 Siekiera całkiem się stępiła. Dopóki jej nie naostrzysz w sklepie, z drzew leci chrust.', 3500);
+    return 'drewno';
+  }
+
+  /** Every DIY shop and every SIEKIERA.coKtorySklep-th ordinary one (by its id) sells the axe. */
+  private sellsAxe(p: CityPlace) {
+    if (p.kind === 'gear') return true;
+    let h = 0;
+    for (const ch of p.id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return Math.abs(h) % SIEKIERA.coKtorySklep === 0;
   }
 
   /** The chopping bar over a crown: brass frame, segments filling up. */
@@ -2666,12 +2694,21 @@ export class GameScene extends Phaser.Scene {
   private openGearShop(p: CityPlace) {
     const kinds = NAMIOT.rodzaje;
     const have = session.namioty.length ? `\n\nTwoje namioty: ${this.tentsText()}.` : '';
+    // The axe: buy one, or sharpen a blunt one.
+    const ax = item('siekiera')!;
+    const owned = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].find((id) => id === ax.id);
+    const sharpen = owned ? repairCost(ax.id) : 0;
+    const tools: [string, () => void][] = owned
+      ? sharpen ? [[`🔧 Naostrz siekierę – ${sharpen} monet`, () => this.repairItem(ax.id)]] : []
+      : [[this.label(ax), () => this.buy(ax)]];
     this.dialog({
       title: `🏕 ${p.name}`,
-      text: `Na półkach leżą namioty. Rozłożysz je w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot. Masz ${session.coins} monet.${have}`,
-      buttons: [...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
+      text: `Na półkach leżą namioty i siekiery. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot. Z siekierą ścięte drzewo daje drewno, a nie chrust. Masz ${session.coins} monet.${have}`,
+      buttons: [...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
+      icons: [...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), null],
       onChoose: (i) => {
-        const k = kinds[i];
+        if (tools[i]) return tools[i][1]();
+        const k = kinds[i - tools.length];
         if (!k) return;
         if (session.coins < k.cena) return this.toast(`Za mało monet – ${k.nazwa.toLowerCase()} kosztuje ${k.cena}.`, 2500);
         spend(k.cena);
@@ -3319,7 +3356,7 @@ export class GameScene extends Phaser.Scene {
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
       where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
-      const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany);
+      const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
       if (miejsce === 'helm') {
         // Headwear is also about looks: every one not owned yet is on offer.
         out.push(...all.filter((p) => !owns(p.id)));
@@ -3341,6 +3378,7 @@ export class GameScene extends Phaser.Scene {
 
   private openShop(p: CityPlace, tab = 0) {
     const offers = this.offers('sklep');
+    if (this.sellsAxe(p) && !ownsAxe()) offers.unshift(item('siekiera')!);
     const title = p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`;
     const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
     const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);

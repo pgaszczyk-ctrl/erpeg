@@ -298,8 +298,8 @@ export const MARTIN = {
     id: 'zmarzniety_smok',
     tytul: { pl: 'Zmarznięty smok', en: 'The frozen dragon' },
     opis: {
-      pl: 'Widziałem dzisiaj cień smoka… ale on dziwnie lśnił, jakby był ze szronu! Musi mu być potwornie zimno. Przynieś mi dużo drewna z lasu, spróbujemy rozpalić stary smoczy kocioł na rynku, żeby go ogrzać.',
-      en: 'I saw a dragon\'s shadow today… but it glittered strangely, as if it were made of frost! It must be terribly cold. Bring me plenty of wood from the forest, we will try to light the old dragon cauldron in the market square to warm it.',
+      pl: 'Widziałem dzisiaj cień smoka… ale on dziwnie lśnił, jakby był ze szronu! Musi mu być potwornie zimno. Przynieś mi dużo drewna z lasu, spróbujemy rozpalić stary smoczy kocioł na rynku, żeby go ogrzać. Weź siekierę – bez niej z drzew leci sam chrust.',
+      en: 'I saw a dragon\'s shadow today… but it glittered strangely, as if it were made of frost! It must be terribly cold. Bring me plenty of wood from the forest, we will try to light the old dragon cauldron in the market square to warm it. Take an axe – without one, trees give only brushwood.',
     },
     towar: 'drewno' as const,
     ile: 15,

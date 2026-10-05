@@ -41,6 +41,8 @@ export interface Przedmiot {
   wytrzymalosc?: number;
   /** Szkło: zużywa się na każdym poziomie trudności i po ostatnim ciosie pęka (znika). */
   szklany?: boolean;
+  /** A tool: works from the backpack too (the axe turns felled trees into wood instead of brushwood). */
+  narzedzie?: 'siekiera';
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
@@ -48,6 +50,10 @@ export interface Przedmiot {
 export const PRZEDMIOTY: Przedmiot[] = [
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
+  // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
+  // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.
+  { id: 'siekiera', nazwa: 'Siekiera', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'siekiera',
+    opis: 'Ścięte drzewo daje drewno zamiast chrustu – wystarczy mieć ją w plecaku. Można też nią walczyć.' },
   { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
   // Drabinka z docs/ekonomia.md (kij → żelazo → mosiądz → stal → stal hartowana → damasceńska); ikony z paczki ikony12 B1.
   // Liczby tymczasowe, wpasowane między stare szczeble – do przeliczenia z nową gospodarką.

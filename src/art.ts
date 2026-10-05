@@ -971,6 +971,8 @@ export const GOODS_TEX = {
   // From the fields (overhaul 09): the artist's ripe plant (order 12), loaded in BootScene (useCropIcons).
   ziemniak: 'uprawa-ziemniak', kapusta: 'uprawa-kapusta', burak: 'uprawa-burak', dynia: 'uprawa-dynia',
   grzyb: TEX.mushroom, drewno: TEX.log,
+  // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
+  chrust: 'item-chrust',
 } as const;
 
 function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: string, grape = false) {
@@ -1265,7 +1267,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
 }
 
 /** Textures replaced by the artist's pictures (drawn 3× bigger): shown at this scale. */
-const ART_SCALE = new Map<string, number>();
+const ART_SCALE = new Map<string, number>([['item-chrust', 0.2]]);
 /** How much to shrink a sprite of this texture (1/3 for the artist's big pictures, else 1). */
 /** Vegetables from the fields that have no drawn icon: the artist's ripe plant (public/uprawy), NEAREST, half size. */
 export const CROP_ICONS = ['ziemniak', 'kapusta', 'burak', 'dynia'];
