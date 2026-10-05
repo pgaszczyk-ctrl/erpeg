@@ -4,10 +4,14 @@
 // collision tests, address search and spawn-point picking.
 
 import type { Terrain } from './terrain';
+import { SKALA_SWIATA } from '../skala';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
-export const PX_PER_M = 1.92; // 20% bigger than 1.6, so narrow Old Town streets are passable
+/** Pixels per metre the map files' pixel values (index, signs) were made at. */
+const PLIK_PX_PER_M = 1.92; // 20% bigger than 1.6, so narrow Old Town streets are passable
+/** In-game pixels per metre: ×SKALA_SWIATA (1.5) in the bigger-world look (src/skala.ts). */
+export const PX_PER_M = PLIK_PX_PER_M * SKALA_SWIATA;
 
 // Widths in metres of line features.
 const LINE_WIDTH_M: Record<string, number> = {
@@ -252,9 +256,11 @@ export class CityMap {
 
   constructor(raw: RawMap, id = 'lublin') {
     this.id = id;
-    for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x, y });
+    // Pixel values in the map files are at PLIK_PX_PER_M.
+    const sp = PX_PER_M / PLIK_PX_PER_M;
+    for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x: x * sp, y: y * sp });
     for (const [x, y, ...to] of raw.signs ?? [])
-      this.signs.push({ x: x as number, y: y as number, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
+      this.signs.push({ x: (x as number) * sp, y: (y as number) * sp, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;
@@ -271,7 +277,7 @@ export class CityMap {
     this.buildingGrid = new Grid<Building>([]);
 
     for (const [ux, uy] of raw.posts ?? []) this.posts.push({ x: ux * k, y: uy * k });
-    for (const [px, py] of raw.postsPx ?? []) this.posts.push({ x: px, y: py });
+    for (const [px, py] of raw.postsPx ?? []) this.posts.push({ x: px * sp, y: py * sp });
     if (raw.tiles) {
       this.initTiled(raw, id);
       return;
@@ -367,8 +373,9 @@ export class CityMap {
       return cx * 100000 + cy;
     }));
     for (const [aid, kind, ...rings] of raw.areas as unknown as [number, string, ...number[][]][]) this.addArea(aid, kind, rings);
+    const sp = PX_PER_M / PLIK_PX_PER_M;
     for (const [bid, x0, y0, x1, y1, dx, dy, addr, name] of raw.bld ?? []) {
-      const b: Building = { rings: [], addresses: addr ? addr.split(' | ') : [], name: name || null, levels: 1, seed: seedOf(bid), id: bid, x0, y0, x1, y1, door: { x: dx, y: dy } };
+      const b: Building = { rings: [], addresses: addr ? addr.split(' | ') : [], name: name || null, levels: 1, seed: seedOf(bid), id: bid, x0: x0 * sp, y0: y0 * sp, x1: x1 * sp, y1: y1 * sp, door: { x: dx * sp, y: dy * sp } };
       this.stubs.set(bid, b);
       for (const a of b.addresses) {
         const key = normAddress(a);
@@ -377,9 +384,9 @@ export class CityMap {
       if (b.name) this.named.push(b);
     }
     for (const [kind, name, pid, bid, dx, dy] of raw.places ?? []) {
-      this.places.push({ kind: kind as Place['kind'], name, id: pid, building: this.stubs.get(bid) ?? null, door: { x: dx, y: dy } });
+      this.places.push({ kind: kind as Place['kind'], name, id: pid, building: this.stubs.get(bid) ?? null, door: { x: dx * sp, y: dy * sp } });
     }
-    for (const [name, x, y] of raw.streets ?? []) this.streets.set(normAddress(name), { x, y });
+    for (const [name, x, y] of raw.streets ?? []) this.streets.set(normAddress(name), { x: x * sp, y: y * sp });
     this.tileBase = `map/${id}/`;
   }
 

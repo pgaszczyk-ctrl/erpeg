@@ -93,14 +93,28 @@ export class Explored {
 
   load(data: { s: number; chunks: Record<string, string> } | undefined) {
     this.chunks.clear();
-    // A different map scale means different cells: start fresh.
-    if (!data || data.s !== PX_PER_M) return;
-    for (const [k, v] of Object.entries(data.chunks)) {
+    if (!data) return;
+    const k = PX_PER_M / (data.s || PX_PER_M);
+    for (const [key, v] of Object.entries(data.chunks)) {
       const bits = b64.dec(v);
       const c = new Uint8Array(CHUNK_CELLS * CHUNK_CELLS);
       for (let i = 0; i < c.length; i++) c[i] = (bits[i >> 3] >> (i & 7)) & 1;
-      this.chunks.set(k, c);
+      if (Math.abs(k - 1) < 1e-6) {
+        this.chunks.set(key, c);
+        continue;
+      }
+      // Saved at another map scale (the test server's bigger world shares saves with production): every
+      // seen cell marks the cells covering the same ground at this scale.
+      const [cx, cy] = key.split(',').map(Number);
+      for (let i = 0; i < c.length; i++) {
+        if (!c[i]) continue;
+        const gx = cx * CHUNK_CELLS + (i % CHUNK_CELLS), gy = cy * CHUNK_CELLS + Math.floor(i / CHUNK_CELLS);
+        const x0 = gx * FOG_CELL * k, y0 = gy * FOG_CELL * k, x1 = (gx + 1) * FOG_CELL * k, y1 = (gy + 1) * FOG_CELL * k;
+        for (let y = Math.floor(y0 / FOG_CELL) * FOG_CELL; y < y1; y += FOG_CELL)
+          for (let x = Math.floor(x0 / FOG_CELL) * FOG_CELL; x < x1; x += FOG_CELL) this.mark(x + FOG_CELL / 2, y + FOG_CELL / 2);
+      }
     }
+    this.dirty = false;
   }
 }
 

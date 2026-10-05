@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
@@ -337,7 +338,8 @@ function linePath(ctx: CanvasRenderingContext2D, pts: number[]) {
 }
 
 /** Wall heights (px) of the three kinds of buildings: a ground floor, a taller one, a very big one. */
-export const WYSOKOSCI_SCIAN = { parter: 4, wyzszy: 6, duzy: 8 };
+// ×SKALA_SWIATA: in the bigger-world look buildings grow in height as well as footprint (more window rows).
+export const WYSOKOSCI_SCIAN = { parter: 4 * SKALA_SWIATA, wyzszy: 6 * SKALA_SWIATA, duzy: 8 * SKALA_SWIATA };
 /** Walls lean this much to the right per px of height, so the east side of every building shows too (bug report 11). */
 export const WALL_SKEW = 0.35;
 
