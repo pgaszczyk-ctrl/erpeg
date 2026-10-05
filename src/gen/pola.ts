@@ -121,7 +121,8 @@ const OBRYS_LISCIA = hex('#16261a');
 const LISC_1 = K.lisc.slice(1), SCIERN_1 = K.sciern.slice(1), LISC_J14 = K.liscJasny.slice(1, 4), ZIEMIA_14 = K.ziemia.slice(1, 4);
 const pick = (t: number[], v: number) => t[Math.max(0, Math.min(t.length - 1, Math.floor(v * t.length)))];
 
-export interface DoZebrania { x: number; y: number; przedmiot: string; uprawa: Uprawa }
+/** Roślina do zebrania; `k` = klucz rysunku dojrzałej (gra pokazuje ją wtedy jako osobny obrazek, w polu jej nie maluje). */
+export interface DoZebrania { x: number; y: number; przedmiot: string; uprawa: Uprawa; k?: string }
 
 /** Rysunek rośliny od grafika (zamówienie 12): obraz i punkt podstawy (środek dolnej krawędzi). */
 export interface Sprite { o: Obraz; bx: number; by: number }
@@ -233,8 +234,11 @@ export function malujPas(o: Obraz, pas: Pas, uprawa: Uprawa, miesiac: number, ox
   for (const [x, y, h] of rosliny) {
     const dojrzala = faza === 'dojrzale' && !!U.zbiór && h < udzial;
     const zebrana = dojrzala && !!op.zebrane?.has(idRosliny(x, y));
-    if (!rysunek(x, y, h, dojrzala, zebrana)) roslina(x, y, h, dojrzala);
-    if (dojrzala && !zebrana) zbiór.push({ x: Math.round(x), y: Math.round(y), przedmiot: U.zbiór!, uprawa });
+    // Dojrzała z rysunkiem: gra stawia ją osobno (wyraźnie, zbiera się ją wejściem jak grzyb), tu zostaje goła ziemia.
+    const klucz = dojrzala && !zebrana && op.rysunki ? kluczRysunku(uprawa, 'dojrzala', Math.floor(h * 997)) : '';
+    const osobno = !!klucz && !!op.rysunki![klucz];
+    if (!osobno && !rysunek(x, y, h, dojrzala, zebrana)) roslina(x, y, h, dojrzala);
+    if (dojrzala && !zebrana) zbiór.push({ x: Math.round(x), y: Math.round(y), przedmiot: U.zbiór!, uprawa, ...(osobno ? { k: klucz } : {}) });
   }
   trawaNaBrzegu();
   return zbiór;

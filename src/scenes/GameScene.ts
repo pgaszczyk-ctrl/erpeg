@@ -12,7 +12,7 @@ import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
-import { MapRenderer, wallHeight, WALL_SKEW } from '../map/MapRenderer';
+import { MapRenderer, wallHeight, WALL_SKEW, type Uprawa09 } from '../map/MapRenderer';
 import type { Korona } from '../map/Korony';
 import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
@@ -330,6 +330,8 @@ export class GameScene extends Phaser.Scene {
     this.rescueDeclined = false;
     this.toldPlace = null;
     this.mapView = new MapRenderer(this, this.city);
+    this.mapView.onRipe = (q) => this.ripeCrop(q);
+    this.mapView.onRipeGone = (im) => this.removePickup(im);
     this.explored = new Explored();
     const inLublin = this.city.id === 'lublin';
     session.mapId = this.city.id;
@@ -632,6 +634,8 @@ export class GameScene extends Phaser.Scene {
       // Mountains (world maps): slower uphill and down steep slopes.
       const tr = this.city.terrain;
       if (tr) this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+      // Picking a vegetable on the way: a short stop-and-go.
+      if (now < this.cropSlowUntil) this.player.vel.scale(WARZYWA.zwolnienie);
     }
     const bx = this.player.x;
     const by = this.player.y;
@@ -868,7 +872,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.fogView.update(this.cameras.main, this.vision, this.seenNow);
     for (const e of this.enemies) if (!e.isDead) e.setVisible(pointInPolygon(this.vision, e.x, e.y));
-    for (const i of this.pickups) i.setVisible(pointInPolygon(this.vision, i.x, i.y));
+    for (const i of this.pickups) {
+      i.setVisible(pointInPolygon(this.vision, i.x, i.y));
+      (i.getData('glow') as Phaser.GameObjects.Image | undefined)?.setVisible(i.visible);
+    }
   }
 
   /** Moves a sprite by its velocity, sliding along walls, buildings and water. */
@@ -922,7 +929,7 @@ export class GameScene extends Phaser.Scene {
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()) || this.mapView.uprawaAt(hit.x, hit.y, 12, new Set()));
+    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
     if (!ranged || gathering) this.swingWeapon(swingAim, strong);
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
@@ -1001,11 +1008,7 @@ export class GameScene extends Phaser.Scene {
     const busy = new Set(this.harvests.map((h) => h.spot.id));
     const veg = this.forest.vegAt(hit.x, hit.y, 12 * this.player.reach, busy);
     if (veg) this.startHarvest(veg, now);
-    // Overhaul 09: ripe vegetables on the fields (src/gen/pola.ts).
-    else {
-      const u = this.mapView.uprawaAt(hit.x, hit.y, 12 * this.player.reach, busy);
-      if (u) this.startHarvest({ id: `pole:${u.id}`, x: u.x, y: u.y, kind: 'warzywo', veg: u.veg as Owoc, left: 1 }, now);
-    }
+    // (Ripe vegetables on the 09 fields are picked by walking over them: ripeCrop.)
     const dummy = this.training.hitAt(hit.x, hit.y, 12 * this.player.reach, 'miecz');
     if (dummy) {
       hits++;
@@ -1569,6 +1572,55 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Until when the hero walks slower after picking a vegetable. */
+  private cropSlowUntil = 0;
+
+  /**
+   * A ripe vegetable on a 09 field as a pickup of its own (owner, 5 Oct 2026: in the field they were hard to tell
+   * from the unripe ones): the artist's ripe plant over a soft golden glow, picked by walking over it.
+   */
+  private ripeCrop(q: Uprawa09): Phaser.GameObjects.Image | undefined {
+    const key = q.k ? `upr09-${q.k}` : GOODS_TEX[q.veg as Owoc];
+    if (!key || !this.textures.exists(key)) return undefined;
+    const img = this.add.image(q.x, q.y, key);
+    if (q.k) {
+      // Base point = the middle of the bottom edge (as the generator paints them), 2 picture px per map px.
+      const src = this.textures.get(key).getSourceImage();
+      img.setOrigin(Math.floor(src.width / 2) / src.width, (src.height - 1) / src.height).setScale(1 / GEN_DOTS);
+    } else img.setScale(artScale(key));
+    img.setDepth(q.y);
+    img.setData('kind', `crop:${q.veg}`);
+    img.setData('spot', q.id);
+    if (!this.textures.exists('crop-glow')) {
+      const n = 32;
+      const tex = this.textures.createCanvas('crop-glow', n, n)!;
+      const ctx = tex.getContext();
+      const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+      grd.addColorStop(0, 'rgba(255,224,138,1)');
+      grd.addColorStop(0.5, 'rgba(255,224,138,0.55)');
+      grd.addColorStop(1, 'rgba(255,224,138,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, n, n);
+      tex.refresh();
+      tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    {
+      const glow = this.add.image(q.x, q.y - 3, 'crop-glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(q.y - 0.5).setScale(0.75).setAlpha(0.85);
+      this.tweens.add({ targets: glow, alpha: 0.4, duration: 900 + Math.random() * 400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      // The plant itself bobs a little now and then: "I'm ready".
+      const sy = img.scaleY;
+      this.tweens.add({ targets: img, scaleY: sy * 1.18, duration: 220, yoyo: true, repeat: -1, repeatDelay: 1400 + Math.random() * 900, delay: Math.random() * 1500, ease: 'Sine.out' });
+      img.setData('glow', glow);
+      img.once('destroy', () => glow.destroy());
+    }
+    // Hidden in the fog until the hero sees them (updateFog keeps it so).
+    const seen = !!this.vision && pointInPolygon(this.vision, q.x, q.y);
+    img.setVisible(seen);
+    (img.getData('glow') as Phaser.GameObjects.Image | undefined)?.setVisible(seen);
+    this.pickups.push(img);
+    return img;
+  }
+
   private removePickup(item: Phaser.GameObjects.Image) {
     this.pickups = this.pickups.filter((p) => p !== item);
     item.destroy();
@@ -1583,6 +1635,21 @@ export class GameScene extends Phaser.Scene {
       q.got = true;
       q.item = undefined;
       this.toast(`${q.zguba.ikona} Odzyskane: ${q.zguba.nazwa}! Zanieś to do: ${q.folk.name}.`, 3500);
+      this.emitHud();
+      return;
+    }
+    if (kind.startsWith('crop:')) {
+      // A ripe vegetable on a field (overhaul 09): into the backpack, a hole in the field, a short slow-down.
+      const f = kind.slice(5) as Owoc;
+      if (!addFruit(f)) {
+        if (!item.getData('warned')) this.toast('Plecak pełny!', 1200);
+        item.setData('warned', true);
+        return;
+      }
+      session.stats.fruit++;
+      this.cropSlowUntil = this.time.now + WARZYWA.zwolnienieMs;
+      this.mapView.zbierzUprawe(item.getData('spot') as string, item.x, item.y);
+      this.removePickup(item);
       this.emitHud();
       return;
     }

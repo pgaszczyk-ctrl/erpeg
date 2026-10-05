@@ -6,6 +6,7 @@ import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES, ITEM_VARIANTS } from '../ui/itemIcon';
+import { WARZYWA_RYSUNKI } from '../map/Podloze09';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
@@ -28,6 +29,8 @@ export class BootScene extends Phaser.Scene {
     for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
     // Vegetables from the fields: the artist's ripe plant as their icon (order 12).
     for (const v of CROP_ICONS) this.load.image(`uprawa-${v}`, `uprawy/uprawa_${v}_dojrzala_1.png`);
+    // Ripe plants on the fields (overhaul 09), shown on their own so they stand out (GameScene ripeCrop).
+    for (const v of WARZYWA_RYSUNKI) for (const n of [1, 2]) this.load.image(`upr09-${v}_dojrzala_${n}`, `uprawy/uprawa_${v}_dojrzala_${n}.png`);
   }
 
   create() {

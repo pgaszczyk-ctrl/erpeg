@@ -370,12 +370,14 @@ interface Chunk {
   crowns?: Korona[];
   /** Overhaul 09: steam puffs from the platform pipes and gauges. */
   steam?: Phaser.GameObjects.Image[];
-  /** Overhaul 09: ripe vegetables on fields in this chunk (map px), harvested with a swing. */
+  /** Overhaul 09: ripe vegetables on fields in this chunk (map px), picked by walking over them. */
   zbior?: Uprawa09[];
+  /** Their pictures (GameScene's onRipe), taken away with the chunk. */
+  ripe?: Phaser.GameObjects.Image[];
 }
 
 /** A ripe vegetable on a field (src/gen/pola.ts): where (map px), what goes into the backpack, its id (generator px). */
-export interface Uprawa09 { id: string; x: number; y: number; veg: string }
+export interface Uprawa09 { id: string; x: number; y: number; veg: string; /** The ripe plant's picture (uprawa_<k>.png), when the artist drew one. */ k?: string }
 
 
 
@@ -520,7 +522,8 @@ export class MapRenderer {
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
         c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py))];
-        c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot }));
+        c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot, k: q.k }));
+        c.ripe = this.onRipe ? c.zbior.filter((q) => !STAN.zebrane.has(q.id)).map((q) => this.onRipe!(q)).filter((im): im is Phaser.GameObjects.Image => !!im) : undefined;
         (czasyKawalkow.push(Math.round(performance.now() - t1)), czasyKawalkow.length > 20 && czasyKawalkow.shift());
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
@@ -542,12 +545,18 @@ export class MapRenderer {
   /** Takes a chunk's tree crowns away (it is recycled or hidden). */
   private dropCrowns(c: Chunk) {
     c.zbior = undefined;
+    if (c.ripe) for (const im of c.ripe) this.onRipeGone?.(im);
+    c.ripe = undefined;
     if (c.steam) for (const im of c.steam) this.korony.dropSteam(im);
     c.steam = undefined;
     if (!c.crowns) return;
     for (const k of c.crowns) this.korony.drop(k);
     c.crowns = undefined;
   }
+
+  /** GameScene makes a picture (a pickup) of each ripe vegetable of a ready chunk, and takes it away again. */
+  onRipe?: (q: Uprawa09) => Phaser.GameObjects.Image | undefined;
+  onRipeGone?: (im: Phaser.GameObjects.Image) => void;
 
   /** The nearest ripe vegetable on a field within `reach` of (x, y) (not picked, not being picked). */
   uprawaAt(x: number, y: number, reach: number, busy: Set<string>): Uprawa09 | null {

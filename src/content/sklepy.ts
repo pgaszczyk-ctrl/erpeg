@@ -59,7 +59,12 @@ export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {
  * (w kratce z szansą `szansa`). Uderz warzywo – pasek zapełnia się przez zbiorSekund
  * i dopiero wtedy jest zebrane. Odrastają przy każdym wejściu do gry.
  */
-export const WARZYWA = { szansa: 0.25, rzedow: 3, wRzedzie: 4, zbiorSekund: 2, rodzaje: ['marchewka', 'brokul', 'salata'] as Owoc[] };
+export const WARZYWA = {
+  szansa: 0.25, rzedow: 3, wRzedzie: 4, zbiorSekund: 2, rodzaje: ['marchewka', 'brokul', 'salata'] as Owoc[],
+  /** Pola (overhaul 09): dojrzałe warzywo zbiera się wejściem na nie (jak grzyb), a krok na chwilę zwalnia (właściciel, 5 X 2026). */
+  zwolnienie: 0.35,
+  zwolnienieMs: 600,
+};
 
 // ----------------------------------------------------------------------------
 //  LAS – w lasach rosną grzyby (zbiera się je, wchodząc na nie) i drzewa do
