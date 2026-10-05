@@ -4,10 +4,24 @@
 // collision tests, address search and spawn-point picking.
 
 import type { Terrain } from './terrain';
-import { SKALA_SWIATA } from '../skala';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
+/**
+ * Bigger-world look „B” (src/skala.ts): ×1.5 px per metre only with `?swiat=15` (localStorage `exp-swiat`), else 1.
+ * Defined here, not in skala.ts: split-map runs this file in Node, which can't import without a file extension.
+ */
+export const SKALA_SWIATA = (() => {
+  if (typeof location === 'undefined' || typeof localStorage === 'undefined') return 1;
+  try {
+    const q = new URLSearchParams(location.search).get('swiat');
+    if (q === '15') localStorage.setItem('exp-swiat', '15');
+    else if (q !== null) localStorage.setItem('exp-swiat', '1');
+    return localStorage.getItem('exp-swiat') === '15' ? 1.5 : 1;
+  } catch {
+    return 1;
+  }
+})();
 /** Pixels per metre the map files' pixel values (index, signs) were made at. */
 const PLIK_PX_PER_M = 1.92; // 20% bigger than 1.6, so narrow Old Town streets are passable
 /** In-game pixels per metre: ×SKALA_SWIATA (1.5) in the bigger-world look (src/skala.ts). */

@@ -1,21 +1,10 @@
 // Skala świata (wersja „B”, właściciel 5.10.2026; wyłączona tego samego dnia, zostaje pod `?swiat=15`): domy, drzewa i ulice 1,5 raza większe względem postaci.
 // Ludziki zostają tej samej wielkości na ekranie, a świat jest rysowany w większej skali (więcej pikseli na metr),
 // więc przy tych samych 60 km/h tło przesuwa się 1,5 raza szybciej. Odległości w metrach się nie zmieniają.
-// Bez importów: czyta to też split-map w Node (tam zawsze 1).
+// SKALA_SWIATA jest w CityMap.ts (split-map uruchamia go w Node, tam zawsze 1).
 
-/** Ile razy większy świat: `?swiat=15` włącza, `?swiat=1` wyłącza (zapamiętane w telefonie, localStorage `exp-swiat`). */
-export const SKALA_SWIATA = (() => {
-  if (typeof location === 'undefined' || typeof localStorage === 'undefined') return 1;
-  try {
-    const q = new URLSearchParams(location.search).get('swiat');
-    if (q === '15') localStorage.setItem('exp-swiat', '15');
-    else if (q !== null) localStorage.setItem('exp-swiat', '1');
-    // Domyślnie wyłączone (właściciel 5.10.2026: dorysowywanie mapy za wolne) – zamiast tego mniejsze postacie.
-    return localStorage.getItem('exp-swiat') === '15' ? 1.5 : 1;
-  } catch {
-    return 1;
-  }
-})();
+// SKALA_SWIATA lives in CityMap.ts (Node runs CityMap for split-map and can't import this file without an extension).
+export { SKALA_SWIATA } from './map/CityMap';
 
 /**
  * Wielkość postaci (wersja „A”, właściciel 5.10.2026): ludziki 2/3 dotychczasowej wielkości, świat bez zmian,
