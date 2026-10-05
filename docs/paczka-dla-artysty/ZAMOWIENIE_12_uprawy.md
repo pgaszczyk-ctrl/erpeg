@@ -2,12 +2,18 @@
 
 Pola w grze rysuje program: dzieli pole na pasy, sadzi rośliny w rzędach, robi miedze z trawą, ziemię, ściernisko, łan zboża i pory roku (`9_uprawy/pola_pazdziernik_z_generatora.png`, zbliżenia w tym samym folderze). **Same rośliny** program rysuje dziś zbyt prosto. Prosimy Cię o atlas roślin – program będzie je sadził w rzędach zamiast swoich.
 
-## Jak rysować (tak jak pierwsza próbka lokomotywy)
-- W swoim stylu, **duże: ok. 4× docelowego rozmiaru**, każda roślina w osobnym PNG z przezroczystym tłem, podstawa (miejsce, gdzie roślina wychodzi z ziemi) na środku dolnej krawędzi.
-- Widok jak drzewa i krzaki w grze: z góry, lekko z ukosa. Światło z lewej-góry. Bez cienia na ziemi (robi go program), bez ziemi pod rośliną, bez tła.
-- Nie zmniejszaj, nie zmieniaj palety, nie dodawaj obrysu gry – to robimy my (`8_wyrownanie/wyrownaj.py`).
-- Rośliny stoją prosto; wiatr dodaje program.
-- **Żadnych uproszczeń typu kulka/emotka**: dynia ma bruzdy, ogonek i liście; kapusta liście okrywowe i żyłki; marchew pierzastą nać.
+## Jak rysować (poprawka 5.10 po pierwszej próbie)
+Pierwsza próba (marchew, dynia) jest ładna, ale to **ilustracja**, a ma być **pixel art**, tylko trochę bardziej artystyczny niż generator. Po zmniejszeniu do gry pierzasta nać zlała się w plamę (`9_uprawy/test_proby_po_wyrownaniu_x3.png`, z lewej dynia i marchew z próby po wyrównaniu, na polu z generatora).
+- **Pixel art jak pierwsza lokomotywa i nasze drzewa:** rysuj na siatce – **1 piksel gry = kwadrat 4×4 px** w Twoim dużym rysunku. Wyraźne „piksele”, 3–5 odcieni na kolor, twarde krawędzie, ciemny obrys, **bez gradientów, bez miękkiego malowania i bez fotograficznych detali**.
+- Może być trochę bardziej artystycznie niż generator: ładniejszy kształt liści, połysk na dyni, kilka jaśniejszych pikseli światła – ale każdy szczegół co najmniej 1 piksel gry (4×4 px u Ciebie).
+- **Uproszczone kształty:** nać marchwi = 4–6 grubszych „piór” z 2–3 ząbkami, nie dziesiątki listków; liść dyni = 3–5 klapek. Musi być czytelne przy 12–22 px.
+- **Widok z góry z ukosa, jak drzewa w grze** – widać wierzch rośliny (liście rozłożone dookoła łodygi), a nie czysty profil z boku.
+- **Kolory z `8_wyrownanie/paleta_swiata.png`** (są w niej zielenie liści, pomarańcz marchwi i dyni, brązy ziemi).
+- Tło całkowicie przezroczyste (bez szarego podłoża i cieni). Podstawa rośliny na środku dolnej krawędzi, wspólna dla wszystkich faz.
+- Światło z lewej-góry. Rośliny stoją prosto (wiatr robi program). Bez ziemi pod rośliną (poza dołkiem „po zbiorze”).
+- Po Twojej dostawie i tak przepuszczamy wszystko przez `8_wyrownanie/wyrownaj.py` (zmniejszenie, paleta, obrys) – ale rysunek ma już wyglądać jak pixel art, wtedy nic się nie zgubi.
+
+Tekst od właściciela: „Próba jest śliczna, ale wyszła ilustracja. Potrzebuję pixel artu, tylko trochę bardziej artystycznego: rysuj na siatce 4×4 px (jeden piksel gry), 3–5 odcieni na kolor, twarde krawędzie i obrys, bez gradientów. Kształty prostsze (nać marchwi z kilku grubych piór), widok z góry z ukosa jak drzewa w grze, kolory z palety świata, przezroczyste tło. Najpierw znowu marchew i dynia.”
 
 ## Lista (docelowy rozmiar po zmniejszeniu, w nawiasie)
 Dla każdej uprawy: **młoda** (1 wariant), **dorosła** (3 warianty, lekko różne), **dojrzała do zebrania** (2 warianty – plon wyraźnie widoczny, np. pomarańczowa główka marchwi wystająca z ziemi, kopczyk ziemniaków przy krzaku, dorodna dynia), **po zbiorze** (1: dołek/resztki liści).
