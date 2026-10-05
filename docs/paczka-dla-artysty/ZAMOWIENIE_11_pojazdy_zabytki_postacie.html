@@ -25,16 +25,21 @@ Styl i skala: <a href="ZAMOWIENIE_09_pixel_art_swiat.md"><code>ZAMOWIENIE_09_pix
 </tr>
 </tbody>
 </table>
-<h2>1a. Wyrównanie do świata (ważne – po ocenie próbki lokomotywy, 5.10)</h2>
-<p>Próbka lokomotywy jest ładna, ale za dokładna względem świata z generatora: płynne przejścia tonów, za dużo odcieni, miękkie krawędzie. Po prostym wyrównaniu pasuje bardzo dobrze (<a href="8_wyrownanie/wyrownanie_lokomotywa_x2.png"><code>8_wyrownanie/wyrownanie_lokomotywa_x2.png</code></a>: z lewej Twoja próbka zmniejszona, w środku po wyrównaniu, z prawej zastępcza lokomotywa rysowana programem). Zasady dla każdego pliku z tego zamówienia:
-- <strong>rysuj od razu w docelowej wielkości</strong> (lokomotywa ok. 64 px długości), bez zmniejszania z dużego obrazka,
-- <strong>tylko kolory z <a href="8_wyrownanie/paleta_swiata.png"><code>8_wyrownanie/paleta_swiata.png</code></a></strong> (te same co w domach, rurach i torach), 4–5 odcieni na materiał, bez gradientów i bez wygładzania krawędzi,
-- światło z lewej-góry, obrys 1 px <code>#1e1a24</code> dookoła sylwetki, szczegóły co najmniej 2 px,
-- widok bardziej z góry niż w próbce (jak dachy domów: widać dach i jedną ścianę), żeby pojazd leżał na torze, a nie stał przed nim.
-Każdą paczkę przepuszczamy przez <a href="8_wyrownanie/wyrownaj.py"><code>8_wyrownanie/wyrownaj.py</code></a> (zmniejszenie, paleta, obrys). Jeśli po nim obrazek wygląda inaczej niż Twój, popraw kolory u siebie.</p>
+<h2>1a. Jak rysować, a co robimy my (decyzja właściciela 5.10 – zastępuje poprzednią wersję tego punktu)</h2>
+<p>Właścicielowi najbardziej podoba się <strong>pierwsza próbka lokomotywy</strong> (widok z ukosa z góry, mosiężny kocioł, turkusowa kabina, czerwone koła, lampa), <strong>po naszym wyrównaniu</strong> (<a href="8_wyrownanie/wyrownanie_lokomotywa_x2.png"><code>8_wyrownanie/wyrownanie_lokomotywa_x2.png</code></a>, środek). Druga próbka (widok prosto z góry) jest odrzucona.</p>
+<p><strong>Ty:</strong> rysujesz tak jak w pierwszej próbce – w swoim stylu, w dużym rozmiarze, z pełnymi szczegółami. Nie zmniejszasz, nie zmieniasz palety, nie dodajesz obrysu gry.
+<strong>My:</strong> zmniejszamy do skali gry (lokomotywa ok. 64 px długości), zamieniamy kolory na paletę świata i dodajemy obrys – skryptem <a href="8_wyrownanie/wyrownaj.py"><code>8_wyrownanie/wyrownaj.py</code></a>. To robimy zawsze my, po Twojej dostawie.</p>
+<p>Żeby to się udało, pilnuj tylko tego:
+- <strong>ten sam kąt patrzenia co w pierwszej próbce</strong> we wszystkich kierunkach (z ukosa z góry, jak w próbce w kierunku 0°), ta sama wielkość pojazdu, to samo światło (z lewej-góry),
+- <strong>każdy kierunek w osobnym pliku PNG z przezroczystym tłem</strong> (albo jeden pasek z równymi komórkami), pojazd na środku komórki, kółka na tej samej linii we wszystkich kierunkach obrotu po torze,
+- <strong>duży rozmiar</strong>: ok. 4× docelowego (lokomotywa ok. 250–300 px długości), wszystkie kierunki w tej samej skali,
+- <strong>szczegóły grube</strong>: nic cieńszego niż ok. 6–8 px w dużym rysunku (po zmniejszeniu zniknie), raczej mniej drobiazgów niż więcej,
+- <strong>bez tła, cienia, dymu, torów i napisów</strong>; cień i parę robi gra,
+- kolory jak w pierwszej próbce (mosiądz, turkus, czerwone koła, ciemne żelazo) – paletę i tak dopasujemy.</p>
+<p>Gotowy tekst dla Ciebie od właściciela: „Wróć do stylu i kąta z pierwszej próbki lokomotywy – tamta była najlepsza. Rysuj duże, ok. 4× (lokomotywa 250–300 px), każdy kierunek na przezroczystym tle, ten sam kąt, skala i światło we wszystkich 16 kierunkach. Nie zmniejszaj, nie zmieniaj palety i nie dodawaj obrysu – to zrobimy my. Najpierw te 3 kierunki (0°, 22,5°, 45°) do akceptacji.”</p>
 <h2>2. Lista</h2>
 <h3>2.1 Kolej parowa (najważniejsze)</h3>
-<p><strong>Lokomotywa i tender w 16 kierunkach</strong> (mają przód i tył), <strong>wagony w 8 kierunkach</strong> (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (<a href="6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png"><code>6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png</code></a>). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Widok prawie z góry, lekko z przodu (jak mapa). Bez dymu (parę robi program). Do każdego arkusza osobny <code>_cien.png</code> (czarna sylwetka cienia na ziemi, ta sama siatka).</p>
+<p><strong>Lokomotywa i tender w 16 kierunkach</strong> (mają przód i tył), <strong>wagony w 8 kierunkach</strong> (wagon jest symetryczny: jadący w lewo wygląda tak samo jak jadący w prawo, więc wystarczy pół obrotu: 0°, 22,5° … 157,5°). Kierunki w jednym wierszu, od „jedzie w prawo” (0°) zgodnie z ruchem wskazówek zegara co 22,5° (<a href="6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png"><code>6_zamowienie_09/03_szablony/schemat_16_kierunkow_pojazdu.png</code></a>). Program ustawia każdy pojazd osobno na torze i wybiera kierunek najbliższy krzywiźnie toru w tym miejscu (różnica najwyżej 11°, niewidoczna). Więcej kierunków nie trzeba. Środek pojazdu w środku klatki. Kąt patrzenia jak w pierwszej próbce (z ukosa z góry). Bez dymu (parę robi program). Cień robimy sami z sylwetki. <strong>Wymiary w tabeli to wynik po naszym wyrównaniu; Ty dostarczasz ok. 4× większe rysunki (punkt 1a).</strong></p>
 <table>
 <thead>
 <tr>
@@ -77,7 +82,7 @@ Każdą paczkę przepuszczamy przez <a href="8_wyrownanie/wyrownaj.py"><code>8_w
 </tr>
 </tbody>
 </table>
-<p><strong>Najpierw próbka:</strong> lokomotywa w 3 kierunkach (0°, 22,5°, 45°) + <code>_cien</code>, żeby sprawdzić styl i wielkość na torze. To tylko próbka; docelowo lokomotywa ma wszystkie 16 kierunków.</p>
+<p><strong>Najpierw próbka:</strong> lokomotywa w 3 kierunkach (0°, 22,5°, 45°) w dużym rozmiarze, w stylu pierwszej próbki (punkt 1a). Cień zrobimy sami z sylwetki. Docelowo lokomotywa ma wszystkie 16 kierunków.</p>
 <h3>2.2 Wóz konny (poprawka)</h3>
 <p>Obecne wozy są narysowane czysto z boku i wyglądają płasko. Nowe: <strong>lekko z góry i z przodu</strong>, więcej odcieni na koniu (jaśniejszy grzbiet, ciemniejszy brzuch), widać wnętrze skrzyni. 2 klatki (krok konia), 3 ładunki (<code>pusty</code>, <code>beczki</code>, <code>worki</code>) × 3 maści (<code>brazowy</code>, <code>czarny</code>, <code>szary</code>), klatka ok. <strong>124×100</strong>, jeden kierunek (patrzy w lewo, prawo robi lustro). Nazwy jak dziś: <code>woz_konny_&lt;ladunek&gt;_&lt;masc&gt;.png</code> + <code>_cien</code>. Wozy stoją tylko przy dworcach autobusowych.</p>
 <h3>2.3 Zabytki i miejsca</h3>
