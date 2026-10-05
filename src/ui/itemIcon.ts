@@ -11,7 +11,7 @@ export const ITEM_PICTURES = [
   'luk', 'luk_refleksyjny', 'dlugi_luk', 'kusza', 'pistolet_parowy', 'rozdzka', 'kula', 'ksiega',
   'skorzana_zbroja', 'kolczuga', 'skorzany_helm', 'zelazny_helm', 'kapelusz', 'czapka_maga', 'korona',
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
-  'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta',
+  'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera',
 ];
 const HAVE = new Set(ITEM_PICTURES);
 
@@ -25,6 +25,8 @@ export const MATERIAL_PICTURES = [
   'drewno', 'chrust', 'kij', 'wegiel', 'ruda_zelaza', 'miedz',
   // A2: for the smith later.
   'piasek', 'odlamek_komety', 'sztaba_zelaza', 'sztaba_stali', 'sztaba_mosiadzu', 'szklo',
+  // A3/D1: power cells (full/empty) and the pickaxe – for later.
+  'ogniwo', 'ogniwo_puste', 'kilof',
 ];
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
 const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = { drewno: 'drewno', chrust: 'chrust' };
