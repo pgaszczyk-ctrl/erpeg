@@ -1,7 +1,8 @@
 // The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):
 // - bottom right: one pixel-art "machine" (70×60 picture pixels shown ×4, NEAREST): two glass
 //   tubes (life red, experience amber), a round heal button (potion, else fruit), a brass pipe
-//   with a gauge, and three square buttons (character sheet, camera, gold);
+//   with a gauge, the hero's avatar above the heal button (= the Kufer) and two square buttons
+//   at the bottom (camera, quest log) – v2, owner 5 Oct 2026;
 // - top right: a plaque with a compass (= the map), the town + weather and where we are,
 //   and one line of the current quest under it;
 // - pickups: short "+1 marchewka" notes left of the machine, stacked, fading.
@@ -31,16 +32,19 @@ export interface HudHandlers {
   heal: () => void;
   character: () => void;
   camera: () => void;
-  gold: () => void;
   map: () => void;
   quests: () => void;
 }
 
 /** Picture pixels: the machine's grid (from the mock-up). */
 const W = 70;
-const H = 60;
+/** v2 (owner, 5 Oct 2026): 30 rows taller – longer tubes, the avatar over the heal button (scripts/hud-maszynka.py). */
+const E = 30;
+const H = 60 + E;
 /** Tube inside: 46 px high, bottom at y 52. */
-const TUBA = 46;
+const TUBA = 46 + E;
+/** The tube's bottom (first row under the liquid). */
+const DNO = 53 + E;
 
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
@@ -82,7 +86,9 @@ const img = (name: string) => {
 
 let root: HTMLDivElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let pics: Record<'baza' | 'mikstura' | 'owoc' | 'gora', HTMLImageElement> | null = null;
+let pics: Record<'baza' | 'mikstura' | 'owoc', HTMLImageElement> | null = null;
+/** The hero's head and shoulders for the avatar frame (null: the drawn frame stays empty). */
+let avatar: HTMLCanvasElement | null = null;
 let view: HudView | null = null;
 let timer = 0;
 let parts: {
@@ -134,7 +140,7 @@ export function mountHud(on: HudHandlers) {
     st.textContent = CSS;
     document.head.append(st);
   }
-  pics ??= { baza: img('baza'), mikstura: img('mikstura'), owoc: img('owoc'), gora: img('gora') };
+  pics ??= { baza: img('baza'), mikstura: img('mikstura'), owoc: img('owoc') };
   for (const p of Object.values(pics)) if (!p.complete) p.addEventListener('load', draw, { once: true });
   root = document.createElement('div');
   root.id = 'hud';
@@ -165,7 +171,7 @@ export function mountHud(on: HudHandlers) {
   const hp = btn('', 'Zdrowie', on.character);
   const xp = btn('', 'Doświadczenie', on.character);
   m.append(canvas, heal, hp, xp, count,
-    btn('hud-b1', 'Karta postaci', on.character), btn('hud-b2', 'Aparat – zrób zdjęcie dla znajomych', on.camera), btn('hud-b3', 'Złoto i zasoby', on.gold));
+    btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie dla znajomych', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
   p.className = 'hud-p';
@@ -225,15 +231,16 @@ function layout() {
     Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
   };
   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
-  at(parts.heal, 11, 9, 26, 26);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, 11, 2, 26, 26);
+  at(parts.heal, 11, 9 + E, 26, 26);
   parts.heal.style.borderRadius = '50%';
-  at(parts.hp, 49, 1, 10, 58);
-  at(parts.xp, 59, 1, 10, 58);
-  const b = parts.m.querySelectorAll<HTMLButtonElement>('.hud-b1, .hud-b2, .hud-b3');
-  b.forEach((el, i) => at(el, 1 + i * 16, 44, 15, 15));
+  at(parts.hp, 49, 1, 10, H - 2);
+  at(parts.xp, 59, 1, 10, H - 2);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 9, 44 + E, 15, 15);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 26, 44 + E, 15, 15);
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${32 * s}px`, top: `${30 * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    left: `${32 * s}px`, top: `${(30 + E) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   const menuW = 64; // the ☰ button top left
@@ -302,7 +309,7 @@ function draw() {
   const t = performance.now();
   const tube = (x: number, h: number, body: string, top: string, phase: number) => {
     if (h <= 0) return;
-    const y = 53 - h;
+    const y = DNO - h;
     c.fillStyle = body;
     c.fillRect(x, y, 6, h);
     c.fillStyle = top;
@@ -310,7 +317,7 @@ function draw() {
     // A bubble rising slowly through the liquid every few seconds.
     if (h > 5) {
       const k = ((t / 3600 + phase) % 1);
-      const by = Math.round(52 - k * (h - 3));
+      const by = Math.round(DNO - 1 - k * (h - 3));
       c.fillRect(x + 2 + (Math.floor(t / 900 + phase * 7) % 2), by, 1, 1);
     }
   };
@@ -321,12 +328,40 @@ function draw() {
   tube(51, red, '#c0392b', '#e8645a', 0);
   if (blue > 0) {
     c.fillStyle = '#3f7fd0';
-    c.fillRect(51, 53 - red - blue, 6, blue);
+    c.fillRect(51, DNO - red - blue, 6, blue);
     c.fillStyle = '#9cc8ff';
-    c.fillRect(51, 53 - red - blue, 6, 1);
+    c.fillRect(51, DNO - red - blue, 6, 1);
   }
   tube(61, level(v.expShare), '#e0a020', '#fff1b0', 0.45);
-  if (ok(pics.gora)) c.drawImage(pics.gora, 0, 0);
+  // Glass: a light streak and 4 marks = 5 parts (5 hearts / 5 stars) on each tube.
+  c.fillStyle = 'rgba(255,255,255,0.35)';
+  c.fillRect(52, 8, 1, TUBA - 2);
+  c.fillRect(62, 8, 1, TUBA - 2);
+  c.fillStyle = '#1a110b';
+  for (let k = 1; k < 5; k++) {
+    const y = Math.round(DNO - (TUBA * k) / 5);
+    c.fillRect(55, y, 2, 1);
+    c.fillRect(65, y, 2, 1);
+  }
+  // The hero's head in the avatar frame (inside 18×18 at 15,6).
+  if (avatar) c.drawImage(avatar, 15, 6, 18, 18);
+}
+
+/** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
+export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
+  if (!src) {
+    avatar = null;
+  } else {
+    // Shrunk once to the frame's 18 px (smoothly), then shown blocky like the rest of the machine.
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 18;
+    const g = cv.getContext('2d')!;
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, 18, 18);
+    avatar = cv;
+  }
+  draw();
 }
 
 /** "+1 marchewka" left of the machine for ~2 s; newer ones below, older ones fade. */

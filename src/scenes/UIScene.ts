@@ -6,7 +6,8 @@ import { showBrag } from '../ui/brag';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar } from '../ui/hud';
+import { heroPortrait } from '../sprites';
 import { poziomPostaci } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -111,12 +112,15 @@ export class UIScene extends Phaser.Scene {
     mountHud({
       heal: () => (this.scene.get('game') as GameScene).healButton?.(),
       character: () => this.openCharacter('eq'),
-      gold: () => this.openCharacter('gold'),
       quests: () => this.openCharacter('quests'),
       map: () => this.openMap(),
       camera: () => this.takePhoto(),
     });
     this.layout();
+    this.heroAvatar();
+    const onLook = () => this.heroAvatar();
+    this.game.events.on('hero-look', onLook);
+    this.events.once('shutdown', () => this.game.events.off('hero-look', onLook));
     this.scale.on('resize', this.layout, this);
 
     const onHud = (s: HudState) => this.updateHud(s);
@@ -274,6 +278,15 @@ export class UIScene extends Phaser.Scene {
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
+  }
+
+  /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
+  private heroAvatar() {
+    const hd = heroPortrait();
+    const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
+    const fr = tex?.has('down-1') ? tex.get('down-1') : null;
+    if (!tex || !fr) return setHudAvatar(null);
+    setHudAvatar(tex.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36);
   }
 
   /** "+1 marchewka", "+12 złota" by the HUD when something new is in the backpack or the purse. */
