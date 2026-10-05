@@ -43,7 +43,7 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
 export const SIEKIERA = {
   coKtorySklep: 3,
   /** Sklepy sportowe (w danych mapy razem z budowlanymi) poznajemy po nazwie – one siekier nie mają. */
-  sportowy: /sport|decathlon|outdoor|martes|go ?sport|\b4f\b|rower|bike|ski|turyst|wędk|wedk/i,
+  sportowy: /sport|decathlon|outdoor|martes|go ?sport|\b4f\b|rower|bike|ski|turyst|wędk|wedk|swim/i,
 };
 
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
