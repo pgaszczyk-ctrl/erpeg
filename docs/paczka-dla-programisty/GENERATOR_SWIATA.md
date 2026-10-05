@@ -28,7 +28,8 @@
    - duże miasto (place=city lub > 100 tys.; mapa Lublina): 3/4 dużych budynków (≥ 600 m²) poziom 3, 1/3 średnich (150–600 m²) poziom 2, 1/5 małych poziom 1;
    - średnie miasto (town / 10–100 tys.): połowa dużych (2–3), 1/4 średnich (2), 15 % małych (1);
    - wieś: 1/5 wszystkich (małe 1, większe 2);
-   - poziom 1: rura na ścianie wystająca kolanem ponad dach + komin z parą; 2: + kocioł na dachu z manometrem i rurą wylotową, więcej rur, okna-bulaje, większa para; 3: + żelazny komin, rurociąg po dachu, wentylator, druga wystająca rura, duża para.
+   - **katalog 19 ozdób** (`OZDOBY_STEAMPUNK`, `zrzuty/steampunk_katalog_ozdob.png`): na ścianach – manometr, zawór z kołem, lampa gazowa, rurki poziome, rura spod ziemi (właz + kolano do ściany, czasem para), kratka z parą, zębatka, zegar, zbiornik przy ścianie, poczta pneumatyczna; na dachu – kocioł z manometrem i wylotem pary, wentylator, świetlik z zębatą ramą, luneta na trójnogu, kopuła obserwatorium, zbiornik wody na nóżkach, antena Tesli z iskrami, żelazny komin, anemometr; do tego rury po ścianach wystające kolanem nad dach i okna-bulaje;
+   - losowanie zestawu wg poziomu: 1 → 1–2 drobne; 2 → 2–3 średnie + 1–2 drobne; 3 → 2–3 duże + 2–3 średnie + 2–3 drobne (każdy budynek inny, deterministycznie z ziarna); `ozdoby: [...]` wymusza konkretne (miejsca specjalne, podgląd).
    `budynek()` zwraca `para: [x, y, rozmiar][]` – gra stawia tam animowane obłoczki `para()` (pióropusz z 2–3 obłoczków). Wielkość miasta: Lublin = duże, mapy miast z planu stacji wg `place`/`population` z OSM, mapy świata wg najbliższego miejsca z warstwy `places` Protomaps (city/town/village). Wzór: `zrzuty/budynki_steampunk_porownanie.png`, demo `generator/demo/steampunk_budynki_demo.ts`.
 
 ## 1. Co jest w folderze `generator/`

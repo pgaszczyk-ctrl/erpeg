@@ -31,7 +31,22 @@ function pokaz(t: string, o: Obraz, k: number) {
   x.drawImage(hero, 32, 0, 32, 32, (o.w * 0.5 - 24) * k, (o.h * 0.6 - 46) * k, 48 * k, 48 * k);
   const d = document.createElement('div'); d.innerHTML = `<h3>${t}</h3>`; d.appendChild(b); document.body.appendChild(d);
 }
+function galeria() {
+  const o = nowy(780, 300); malujPodloze(o, 0, 0, (x, y) => (x < 0 || y < 0 || x >= 780 || y >= 300 ? null : 'bruk'));
+  const pary: [number, number, number][] = [];
+  const ksz = [[0, 0, 74, 0, 74, 46, 0, 46], [0, 0, 60, 0, 60, 26, 30, 26, 30, 56, 0, 56], [0, 0, 84, 0, 84, 40, 0, 40]];
+  let k = 0;
+  for (let rz = 0; rz < 2; rz++) for (let i = 0; i < 6; i++) {
+    const r = ksz[(i + rz) % 3].map((v, q) => v + (q % 2 ? 40 + rz * 140 : 20 + i * 122));
+    const sp = (rz === 0 ? [1, 2, 2, 3, 3, 3] : [3, 3, 3, 2, 3, 1])[i] as 0 | 1 | 2 | 3;
+    const b = budynek(r, { wysokosc: [12, 16, 16, 12, 16, 8][i], dach: ['lupek', 'dachowka_czerwona', 'blacha_zielona', 'dachowka_brazowa', 'miedz_patyna', 'gont'][i], sciana: ['cegla', 'tynk_kremowy', 'kamien', 'tynk_zolty', 'cegla', 'drewno'][i], seed: 300 + k++ * 37, komin: true, steampunk: sp });
+    naloz(o, b.obraz, b.x0, b.y0); pary.push(...b.para);
+  }
+  pary.forEach(([x, y, rr], q) => { const kl = klatki[rr === 16 ? 0 : rr === 24 ? 1 : 2][q % 3]; naloz(o, kl, Math.round(x - rr / 2), Math.round(y - rr)); });
+  return o;
+}
 const start = () => {
+  const gal = galeria(); pokaz('Zbliżenie 1', wyciete(gal, 250, 0, 260, 150), 4); pokaz('Zbliżenie 2', wyciete(gal, 0, 140, 260, 160), 4); pokaz('Zbliżenie 3', wyciete(gal, 250, 140, 260, 160), 4); pokaz('Zbliżenie 4', wyciete(gal, 500, 0, 260, 150), 4);
   const cx = 0, cy = 830, cw = 520, ch = 440;
   for (const [nazwa, m] of [['Bez steampunku', null], ['Duże miasto', 'duze'], ['Średnie miasto', 'srednie'], ['Wieś', 'wies']] as [string, WielkoscMiasta | null][]) {
     const [o, ile] = scena(m); pokaz(`${nazwa} – budynki wg poziomu 0/1/2/3: ${ile.join(' / ')}`, wyciete(o, cx, cy, cw, ch), 3); }

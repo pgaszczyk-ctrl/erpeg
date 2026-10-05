@@ -34,7 +34,12 @@ export interface OpcjeBudynku {
   drzwi?: [number, number];    // punkt drzwi (we współrzędnych pierścienia) – drzwi na najbliższej ścianie
   /** Poziom steampunku 0–3 (patrz `poziomSteampunku`): 1 rura + komin z parą, 2 + kocioł na dachu, więcej rur, manometr, okno-bulaj, 3 + rurociąg po dachu, wentylator, dodatkowe kominy, duża para. */
   steampunk?: 0 | 1 | 2 | 3;
+  /** Wymuszony zestaw ozdób (nazwy z `OZDOBY_STEAMPUNK`) zamiast losowania – do podglądu i miejsc specjalnych. */
+  ozdoby?: string[];
 }
+
+/** Katalog ozdób steampunku (nazwy do `OpcjeBudynku.ozdoby`). */
+export const OZDOBY_STEAMPUNK = ['manometr', 'zawor', 'lampa', 'rurki_poziome', 'rura_spod_ziemi', 'kratka_z_para', 'zebatka', 'zegar', 'zbiornik_przy_scianie', 'poczta_pneumatyczna', 'kociol', 'wentylator', 'swietlik_zebaty', 'luneta', 'kopula_obserwatorium', 'zbiornik_wody', 'antena_tesli', 'komin_zelazny', 'anemometr'];
 
 export type WielkoscMiasta = 'duze' | 'srednie' | 'wies';
 /** Wielkość miejscowości z OSM: place=city albo population > 100 tys. → duże; town / 10–100 tys. → średnie; reszta → wieś. Mapa Lublina = duże. */
@@ -61,7 +66,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const P: [number, number][] = []; for (let i = 0; i < n; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
-  const x0 = Math.floor(minX) - 2, y0 = Math.floor(minY) - 2, W = Math.ceil(maxX + H * sk) - x0 + 3, Hh = Math.ceil(maxY + H) - y0 + 3;
+  const ST = (op.steampunk ?? 0) > 0 || !!op.ozdoby, mL = ST ? 10 : 2, mT = ST ? 20 : 2, mB = ST ? 12 : 3; // zapas na ozdoby wystające za obrys
+  const x0 = Math.floor(minX) - mL, y0 = Math.floor(minY) - mT, W = Math.ceil(maxX + H * sk) - x0 + mB, Hh = Math.ceil(maxY + H) - y0 + mB;
   // maska obrysu (scanline)
   const mask = new Uint8Array(W * Hh);
   for (let j = 0; j < Hh; j++) {
@@ -179,31 +185,97 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }
     para.push([x0 + bx + 2, y0 + by - 7, SP >= 3 ? 32 : SP === 2 ? 24 : 16]);
   }
-  if (SP >= 2 && maxD > 5) {
-    const miejsca: [number, number][] = [];
-    for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 5) miejsca.push([i, j]);
-    const R = rng(op.seed * 13 + 1), wez = () => miejsca[Math.floor(R() * miejsca.length)];
-    if (miejsca.length) {
-      // kocioł: leżący walec z nitami, na nóżkach
-      const [ki, kj] = wez(), kw = SP >= 3 ? 16 : 12, kh = SP >= 3 ? 9 : 7;
+  if (SP >= 1 || op.ozdoby) ozdoby();
+  return { obraz: o, x0, y0, para };
+
+  /**
+   * Katalog ozdób steampunku (decyzja właściciela 5.10: „nie ograniczaj się do rur”). Losowany zestaw wg poziomu:
+   * 1 → 1–2 drobne, 2 → 3–5, 3 → 6–9 (w tym duże na dachu). Każda ozdoba w rzucie gry, z obrysem, światło z lewej-góry.
+   */
+  function ozdoby() {
+    const R = rng(op.seed * 131 + 7);
+    const I = hex('#2a2630'), I2 = hex('#3a3440'), I3 = hex('#55505c'), I4 = hex('#6e6878'), CZ = hex('#b2453a'), CZ2 = hex('#7a2a24'), BIEL = hex('#ece6d6'),
+      MIEDZ = [hex('#5a2e18'), hex('#8a4a26'), hex('#b8683a'), hex('#d89058')], PATYNA = [hex('#24463e'), hex('#356256'), hex('#4a8070'), hex('#66a08c')], SZKLO = hex('#8ab8c8'), SZKLO2 = hex('#4a7088');
+    const pd = E.map((e, i) => ({ e, i })).filter(({ e }) => e.ny > 0.5 && e.L > 9); // ściany od południa (najlepiej widać)
+    const sciany = pd.length ? pd : E.map((e, i) => ({ e, i })).filter(({ e }) => e.nx > 0.5 && e.L > 9);
+    const dach: [number, number][] = []; for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3.5) dach.push([i, j]);
+    const zajete: [number, number][] = [];
+    const wolne = (i: number, j: number, r: number) => !zajete.some(([a, b]) => Math.abs(a - i) < r && Math.abs(b - j) < r);
+    /** punkt na ścianie (krawędź, położenie wzdłuż, wysokość nad ziemią) → piksel obrazu */
+    const wpt = (e: typeof E[number], along: number, hh: number): [number, number] => [Math.round(e.ax + e.ux * along + (H - hh) * sk - x0), Math.round(e.ay + e.uy * along + (H - hh) - y0)];
+    const naScianie = (): [typeof E[number], number] | null => { if (!sciany.length) return null; for (let k = 0; k < 6; k++) { const { e } = sciany[Math.floor(R() * sciany.length)]; const al = 3 + R() * (e.L - 6); const [i, j] = wpt(e, al, H / 2); if (wolne(i, j, 6)) { zajete.push([i, j]); return [e, al]; } } return null; };
+    const naDachu = (r: number): [number, number] | null => { for (let k = 0; k < 10 && dach.length; k++) { const [i, j] = dach[Math.floor(R() * dach.length)]; if (wolne(i, j, r)) { zajete.push([i, j]); return [i, j]; } } return null; };
+    const kolo = (ci: number, cj: number, r: number, f: (d: number, i: number, j: number) => number | 0) => { for (let j = -Math.ceil(r); j <= r; j++) for (let i = -Math.ceil(r); i <= r; i++) { const d = Math.hypot(i, j); if (d > r + 0.3) continue; const c = f(d, i, j); if (c) put(ci + i, cj + j, c); } };
+
+    // ——— na ścianie ———
+    const manometr = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 5));
+      for (let k = 1; k <= 3; k++) put(i, j + k, MOSIADZ[1]);
+      kolo(i, j, 3.6, (d, a, b) => d > 3.1 ? OBRYS : d > 2.2 ? (a + b < 0 ? MOSIADZ[3] : MOSIADZ[1]) : (a === 1 && b === -1) || (a === 0 && b === 0) || (a === 2 && b === -2) ? CZ2 : BIEL); };
+    const zawor = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], 3 + Math.floor(R() * 4));
+      for (let k = 0; k < 4; k++) { put(i + k - 4, j + 2, MOSIADZ[2]); put(i + k - 4, j + 3, MOSIADZ[0]); } kolo(i, j - 1, 3.6, (d, a, b) => d > 3.1 ? OBRYS : d > 2.1 ? (a + b < 0 ? hex('#d86a52') : CZ) : (a === 0 || b === 0 || a === b) ? CZ2 : 0); put(i, j - 1, MOSIADZ[3]); };
+    const zegar = () => { const w = naScianie(); if (!w || H < 10) return; const [i, j] = wpt(w[0], w[1], H - 5);
+      kolo(i, j, 4.4, (d, a, b) => d > 4 ? OBRYS : d > 3 ? (a + b < 0 ? MOSIADZ[3] : MOSIADZ[1]) : (a === 0 && b <= 0 && b >= -3) || (b === 0 && a >= 0 && a <= 2) ? OBRYS : hex('#f2ead2')); };
+      const zebatka = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], H / 2);
+      kolo(i, j, 4.8, (d, a, b) => { const ang = Math.atan2(b, a), zab = Math.cos(ang * 8) > 0.3; if (d > (zab ? 4.6 : 3.6)) return 0; if (d < 1.4) return OBRYS; return d > 3.2 ? MOSIADZ[a + b < 0 ? 2 : 0] : MOSIADZ[a + b < 0 ? 3 : 1]; }); };
+    const lampa = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 3));
+      for (let a = 0; a < 4; a++) put(i + a, j, I); put(i + 3, j - 1, I); for (let b = 1; b <= 6; b++) for (let a = 1; a <= 5; a++) put(i + a, j + b, a === 1 || a === 5 || b === 1 || b === 6 ? OBRYS : b === 2 ? MOSIADZ[2] : op.noc ? SWIATLO[1] : (a === 2 ? hex('#fff0b0') : hex('#e8d090'))); put(i + 3, j + 7, MOSIADZ[0]); };
+    const rurkiPoziome = () => { const w = naScianie(); if (!w) return; const [e, al] = w, hh = 2 + Math.floor(R() * 3), dl = Math.min(e.L - al - 2, 10 + R() * 14);
+      for (let t = 0; t < dl; t++) { const [i, j] = wpt(e, al + t, hh); put(i, j - 1, OBRYS); put(i, j, MOSIADZ[3]); put(i, j + 1, MOSIADZ[1]); put(i, j + 2, OBRYS); if (Math.floor(t) % 6 === 0) { put(i, j, MOSIADZ[0]); put(i, j + 1, MOSIADZ[0]); } } };
+    const spodZiemi = () => { const w = naScianie(); if (!w) return; const [e, al] = w; const [gi, gj] = wpt(e, al, 0); const bi = gi + Math.round(e.nx * 4), bj = gj + Math.round(Math.max(e.ny, 0.3) * 4);
+      kolo(bi, bj + 1, 2.6, (d) => (d > 2 ? OBRYS : d > 1.2 ? I3 : hex('#14121a')));
+      for (let k = 0; k <= 4; k++) { put(bi - 1, bj - k, OBRYS); put(bi, bj - k, MOSIADZ[3]); put(bi + 1, bj - k, MOSIADZ[1]); put(bi + 2, bj - k, OBRYS); }
+      for (let t = 0; t <= 4; t++) { const ii = bi + Math.round((gi - bi) * t / 4), jj = bj - 4 + Math.round((gj - 4 - (bj - 4)) * t / 4); put(ii, jj - 1, OBRYS); put(ii, jj, MOSIADZ[2]); put(ii, jj + 1, MOSIADZ[0]); }
+      put(bi, bj - 2, MOSIADZ[0]); put(bi + 1, bj - 2, MOSIADZ[0]); if (R() < 0.5) para.push([x0 + bi, y0 + bj - 2, 16]); };
+    const zbiornik = () => { const w = naScianie(); if (!w) return; const [e, al] = w; const [gi, gj] = wpt(e, al, 0); const bi = gi + Math.round(e.nx * 4) - 3, bj = gj + 3;
+      for (let b = -12; b <= 0; b++) for (let a = 0; a < 7; a++) { const kraw = a === 0 || a === 6 || b === -12 || b === 0; const t = a < 2 ? 3 : a < 4 ? 2 : a < 6 ? 1 : 0; put(bi + a, bj + b, kraw ? OBRYS : (b === -9 || b === -3) ? MOSIADZ[0] : (b === -10 && a % 2) ? MOSIADZ[3] : MOSIADZ[t]); }
+      for (let a = 1; a < 6; a++) put(bi + a, bj - 13, MOSIADZ[a < 3 ? 3 : 1]); put(bi + 3, bj - 14, OBRYS);
+      kolo(bi + 3, bj - 6, 1.6, (d) => (d > 1.2 ? OBRYS : BIEL)); };
+    const kratka = () => { const w = naScianie(); if (!w) return; const [e, al] = w; const [gi, gj] = wpt(e, al, 0); const bi = gi + Math.round(e.nx * 5), bj = gj + 4;
+      for (let b = 0; b < 5; b++) for (let a = 0; a < 9; a++) put(bi + a, bj + b, a === 0 || b === 0 || a === 8 || b === 4 ? OBRYS : a % 2 ? I : I3); para.push([x0 + bi + 3, y0 + bj, 16]); };
+    const poczta = () => { const w = naScianie(); if (!w) return; const [e, al] = w;
+      for (let hh = 0; hh <= H; hh++) { const [i, j] = wpt(e, al, hh); put(i - 1, j, OBRYS); put(i, j, hh % 4 === 0 ? MOSIADZ[2] : SZKLO); put(i + 1, j, hh % 4 === 0 ? MOSIADZ[0] : SZKLO2); put(i + 2, j, OBRYS); }
+      const [i, j] = wpt(e, al, 3); for (let b = -1; b <= 2; b++) for (let a = -1; a <= 3; a++) put(i + a, j + b, a === -1 || a === 3 || b === -1 || b === 2 ? OBRYS : MOSIADZ[b < 1 ? 3 : 1]); };
+    // ——— na dachu ———
+    const kociol = () => { const m = naDachu(10); if (!m) return; const [ki, kj] = m, kw = SP >= 3 ? 16 : 12, kh = SP >= 3 ? 9 : 7;
       for (let j = 0; j < kh; j++) for (let i = 0; i < kw; i++) { const brzeg = j === 0 || j === kh - 1 || i === 0 || i === kw - 1; const t = j < kh * 0.3 ? 3 : j < kh * 0.55 ? 2 : j < kh * 0.8 ? 1 : 0;
         put(ki - 6 + i, kj - 7 + j, brzeg ? OBRYS : (i === 3 || i === kw - 4) ? MOSIADZ[0] : (j === 2 && i % 3 === 1) ? MOSIADZ[3] : MOSIADZ[t]); }
-      put(ki - 4, kj, OBRYS); put(ki + 3, kj, OBRYS);
-      if (SP >= 2) { put(ki - 3, kj - 4, hex('#ece6d6')); put(ki - 2, kj - 4, hex('#ece6d6')); put(ki - 3, kj - 3, hex('#ece6d6')); put(ki - 2, kj - 3, OBRYS); } // manometr
-      rurka(ki + kw - 8, kj - kh, 7, true, SP >= 3 ? 32 : 24);
-      if (SP >= 3) {
-        // rurociąg po dachu od kotła do drugiego komina, wentylator, żelazne kominy
-        const [ri, rj] = wez();
-        let i = ki + 6, j = kj - 4; while (i !== ri || j !== rj) { put(i, j, MOSIADZ[2]); put(i, j + 1, MOSIADZ[0]); if (i !== ri) i += Math.sign(ri - i); else j += Math.sign(rj - j); }
-        for (let jj = -14; jj <= 0; jj++) for (let ii = -1; ii < 4; ii++) put(ri + ii - 1, rj + jj, ii === -1 || ii === 3 ? OBRYS : jj <= -13 ? MOSIADZ[3] : jj === -6 ? MOSIADZ[1] : ii === 0 ? hex('#6e6878') : ii === 2 ? hex('#2a2630') : hex('#3a3440'));
-        para.push([x0 + ri, y0 + rj - 15, 32]);
-        const [r2i, r2j] = wez(); rurka(r2i, r2j, 10, false, 24);
-        const [wi, wj] = wez();
-        for (let jj = -3; jj <= 3; jj++) for (let ii = -3; ii <= 3; ii++) { const d = Math.hypot(ii, jj); if (d > 3.3) continue; put(wi + ii, wj + jj, d > 2.5 ? MOSIADZ[1] : (ii === 0 || jj === 0 || ii === jj || ii === -jj) ? hex('#2a2630') : hex('#6e6878')); }
-      }
-    }
+      put(ki - 4, kj, OBRYS); put(ki + 3, kj, OBRYS); kolo(ki - 2, kj - 4, 1.6, (d) => (d > 1.2 ? OBRYS : BIEL));
+      rurka(ki + kw - 8, kj - kh, 7, true, SP >= 3 ? 32 : 24); };
+    const kominZel = () => { const m = naDachu(6); if (!m) return; const [ri, rj] = m;
+      for (let jj = -14; jj <= 0; jj++) for (let ii = -1; ii < 4; ii++) put(ri + ii - 1, rj + jj, ii === -1 || ii === 3 ? OBRYS : jj <= -13 ? MOSIADZ[3] : jj === -6 ? MOSIADZ[1] : ii === 0 ? I4 : ii === 2 ? I : I2);
+      para.push([x0 + ri, y0 + rj - 15, 32]); };
+    const wentylator = () => { const m = naDachu(6); if (!m) return; const [wi, wj] = m;
+      kolo(wi, wj, 5, (d, ii, jj) => (d > 4.5 ? OBRYS : d > 3.6 ? MOSIADZ[ii + jj < 0 ? 3 : 1] : d < 1 ? MOSIADZ[2] : (Math.abs(ii - jj) <= 0.5 || Math.abs(ii + jj) <= 0.5 || ii === 0 || jj === 0) ? I4 : I)); };
+    const luneta = () => { const m = naDachu(8); if (!m) return; const [i, j] = m;
+      for (const [a, b] of [[-3, 0], [3, 0], [0, 2]]) for (let k = 0; k <= 4; k++) put(i + Math.round(a * k / 4), j - 4 + Math.round((b + 4) * k / 4), I); // trójnóg
+      for (let k = 0; k < 16; k++) { const ii = i - 5 + k, jj = j - 4 - Math.round(k * 0.55); const g = k > 10 ? 1 : 0; put(ii, jj - 1 - g, OBRYS); put(ii, jj - g, MOSIADZ[3]); put(ii, jj, k < 4 ? MOSIADZ[1] : MOSIADZ[2]); put(ii, jj + 1, MOSIADZ[0]); put(ii, jj + 2, OBRYS); if (k % 5 === 4) { put(ii, jj, MOSIADZ[0]); put(ii, jj + 1, OBRYS); } }
+      put(i + 11, j - 13, SZKLO); put(i + 11, j - 12, SZKLO2); put(i + 11, j - 11, SZKLO2); put(i - 6, j - 3, OBRYS); put(i - 6, j - 4, MOSIADZ[0]); };
+    const kopula = () => { const m = naDachu(11); if (!m) return; const [i, j] = m;
+      for (let b = -2; b <= 0; b++) for (let a = -7; a <= 7; a++) put(i + a, j + b, a === -7 || a === 7 || b === 0 ? OBRYS : I3);
+      kolo(i, j - 3, 6.4, (d, a, b) => (b > 0 ? 0 : d > 5.9 ? OBRYS : (a === 1 || a === 2) && b < -1 ? hex('#14121a') : MIEDZ[Math.max(0, Math.min(3, Math.round(1.6 - (a + b) / 4)))])); };
+    const zbiornikWody = () => { const m = naDachu(8); if (!m) return; const [i, j] = m;
+      for (const a of [-3, 3]) for (let k = 0; k < 6; k++) put(i + a, j - k, I);
+      for (let b = -14; b <= -6; b++) for (let a = -4; a <= 4; a++) put(i + a, j + b, a === -4 || a === 4 || b === -14 || b === -6 ? OBRYS : (b === -12 || b === -8) ? I2 : hex(['#765436', '#926c46', '#ae8858', '#5a3e28'][a < -1 ? 2 : a < 2 ? 1 : 0])); };
+    const antena = () => { const m = naDachu(6); if (!m) return; const [i, j] = m;
+      for (let k = 0; k < 14; k++) { put(i - 2, j - k, OBRYS); put(i - 1, j - k, k % 2 ? MIEDZ[3] : MIEDZ[1]); put(i, j - k, k % 2 ? MIEDZ[3] : MIEDZ[1]); put(i + 1, j - k, k % 2 ? MIEDZ[2] : MIEDZ[0]); put(i + 2, j - k, OBRYS); }
+      kolo(i, j - 17, 3.2, (d, a, b) => (d > 2.7 ? OBRYS : a + b < -1 ? hex('#f0f4ff') : SZKLO)); for (const [a, b] of [[4, -20], [5, -21], [-4, -18], [-5, -19], [3, -14]]) put(i + a, j + b, hex('#d8e8ff')); };
+    const swietlik = () => { const m = naDachu(7); if (!m) return; const [i, j] = m;
+      kolo(i, j, 5.6, (d, a, b) => { const zab = Math.cos(Math.atan2(b, a) * 10) > 0.2; if (d > (zab ? 5.6 : 4.6)) return 0; return d > 3.8 ? MOSIADZ[a + b < 0 ? 3 : 1] : d > 3.2 ? OBRYS : (a + b < -1 ? SZKLO : SZKLO2); }); };
+    const anemometr = () => { const m = naDachu(6); if (!m) return; const [i, j] = m;
+      for (let k = 0; k < 13; k++) { put(i, j - k, I3); put(i + 1, j - k, I); }
+      for (let a = -5; a <= 6; a++) put(i + a, j - 13, I3);
+      for (const [a, b] of [[-6, -14], [6, -14], [0, -17]]) kolo(i + a, j + b, 1.8, (d, x) => (d > 1.4 ? OBRYS : x < 0 ? MOSIADZ[3] : MOSIADZ[1])); };
+
+    const drobne = [manometr, zawor, lampa, rurkiPoziome, spodZiemi, kratka, zebatka];
+    const srednie = [zegar, zbiornik, poczta, kociol, wentylator, swietlik, spodZiemi, manometr];
+    const duze = [luneta, kopula, zbiornikWody, antena, kominZel, anemometr, kociol];
+    const losuj = (lista: (() => void)[], n: number) => { const l = lista.slice(); for (let k = 0; k < n && l.length; k++) l.splice(Math.floor(R() * l.length), 1)[0](); };
+    if (op.ozdoby) { const mapa: Record<string, () => void> = { manometr, zawor, lampa, rurki_poziome: rurkiPoziome, rura_spod_ziemi: spodZiemi, kratka_z_para: kratka, zebatka, zegar, zbiornik_przy_scianie: zbiornik, poczta_pneumatyczna: poczta, kociol, wentylator, swietlik_zebaty: swietlik, luneta, kopula_obserwatorium: kopula, zbiornik_wody: zbiornikWody, antena_tesli: antena, komin_zelazny: kominZel, anemometr }; op.ozdoby.forEach((n) => mapa[n]?.()); return; }
+    if (SP === 1) losuj(drobne, 1 + (R() < 0.5 ? 1 : 0));
+    if (SP === 2) { losuj(srednie, 2 + Math.floor(R() * 2)); losuj(drobne, 1 + Math.floor(R() * 2)); }
+    if (SP === 3) { losuj(duze, 2 + Math.floor(R() * 2)); losuj(srednie, 2 + Math.floor(R() * 2)); losuj(drobne, 2 + Math.floor(R() * 2)); }
   }
-  return { obraz: o, x0, y0, para };
+
 }
 
 /** Cień rzucany w prawo-w dół: wpisuje 1 do `maska` (w×h, lewy-górny róg w świecie = (mx, my)) tam, gdzie pada cień budynku.
