@@ -527,7 +527,7 @@ export class UIScene extends Phaser.Scene {
       const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
       const key = d.icons?.[i];
-      const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setScale(2) : null;
+      const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setDisplaySize(32, 32) : null;
       const pad = pic ? 40 : 0;
       const text = this.add
         .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: stacked ? '15px' : '17px', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })

@@ -45,8 +45,13 @@ export const PRZEDMIOTY: Przedmiot[] = [
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
+  // Drabinka z docs/ekonomia.md (kij → żelazo → mosiądz → stal → stal hartowana → damasceńska); ikony z paczki ikony12 B1.
+  // Liczby tymczasowe, wpasowane między stare szczeble – do przeliczenia z nową gospodarką.
+  { id: 'miecz_mosiezny', nazwa: 'Mosiężny miecz', miejsce: 'bron', moc: 5, cena: 3000, wytrzymalosc: 750, opis: 'Złocisty, z nitami i trybikiem przy jelcu.' },
   { id: 'stalowy', nazwa: 'Stalowy miecz', miejsce: 'bron', moc: 7, cena: 6000, wytrzymalosc: 900 },
+  { id: 'szabla_hartowana', nazwa: 'Szabla hartowana', miejsce: 'bron', moc: 10, cena: 12000, wytrzymalosc: 1050, opis: 'Polska szabla; ostrze z tęczowym nalotem po hartowaniu.' },
   { id: 'rycerski', nazwa: 'Rycerski miecz', miejsce: 'bron', moc: 12, cena: 22500, wytrzymalosc: 1200 },
+  { id: 'karabela_damascenska', nazwa: 'Karabela damasceńska', miejsce: 'bron', moc: 15, cena: 50000, wytrzymalosc: 1500, opis: 'Szlachecka karabela ze stali damasceńskiej, z odrobiną odłamka komety.' },
   { id: 'szklany_miecz', nazwa: 'Szklany miecz', miejsce: 'bron', moc: 16, cena: 4000, wytrzymalosc: 15, szklany: true, opis: 'Bardzo mocny, ale kruchy: pęka po 15 trafionych ciosach – na każdym poziomie trudności.' },
   // Broń dystansowa (przytrzymaj i celuj)
   { id: 'luk', nazwa: 'Łuk', miejsce: 'bron', rodzaj: 'luk', moc: 4, cena: 3000, wytrzymalosc: 800 },
