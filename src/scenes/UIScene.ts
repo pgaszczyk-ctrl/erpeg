@@ -384,10 +384,15 @@ export class UIScene extends Phaser.Scene {
   /** Low life: the screen edges pulse red (and a hint, once per time). */
   private lowLife(time: number) {
     const s = this.hud;
-    const low = !!s && !s.dead && !this.dialogBox && s.hp * 3 <= s.maxHp;
+    // From half life down (owner, 5 Oct 2026): the red edge is what tells the player he's hurt.
+    const low = !!s && !s.dead && !this.dialogBox && s.hp * 2 <= s.maxHp;
     const { width, height } = this.view;
     this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
-    if (low) this.vignette.setAlpha(0.45 + 0.4 * Math.abs(Math.sin(time / 260)));
+    if (low) {
+      // Stronger and faster the less life is left.
+      const k = 1 - s!.hp / (s!.maxHp / 2);
+      this.vignette.setAlpha(0.3 + 0.25 * k + (0.25 + 0.2 * k) * Math.abs(Math.sin(time / (320 - 120 * k))));
+    }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
       this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku w prawym dolnym rogu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);

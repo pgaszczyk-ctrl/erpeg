@@ -56,8 +56,8 @@ const CSS = `
 #hud .hud-p { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-plate { pointer-events: auto; display: flex; align-items: center; gap: 9px; padding: 6px 11px 6px 6px; box-sizing: border-box; max-width: 100%;
   background: rgba(28,20,14,0.82); border: 2px solid #b8893b; border-radius: 10px; box-shadow: 0 0 0 2px #1a110b; color: #f3dfb0; }
-#hud .hud-compass { position: relative !important; flex-shrink: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 50% !important;
-  background: radial-gradient(circle at 35% 30%, #f1e3c2, #cdb88e) !important; border: 3px solid #b8893b !important; display: flex; align-items: center; justify-content: center; }
+#hud .hud-compass { position: relative !important; flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border-radius: 8px !important;
+  background: #3d2e22 !important; border: 2px solid #b8893b !important; display: flex; align-items: center; justify-content: center; }
 #hud .hud-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 #hud .hud-l1 { display: flex; align-items: baseline; gap: 9px; white-space: nowrap; }
 #hud .hud-town { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
@@ -92,10 +92,36 @@ let parts: {
 } | null = null;
 let scale = 4;
 
-/** How big the machine is: ×2 on every screen (owner, 5 Oct 2026: ×4 from the spec was far too big). */
+/** How big the machine is: ×2 on phones, ×3 on a computer (owner, 5 Oct 2026: ×4 from the spec was far too big). */
 function pickScale() {
-  return 2;
+  return window.matchMedia('(pointer: coarse)').matches ? 2 : 3;
 }
+
+/** A folded paper map in pixels (the button for the map screen; a compass would always point north). */
+const MAPA_SVG = (() => {
+  const rows = [
+    '..aaaa....aaaa..',
+    '.abbbbaccabbbba.',
+    '.abbbbacca bbba.',
+    '.abrbbaccabbbba.',
+    '.abbrbaccabbbba.',
+    '.abbbbrccabbbba.',
+    '.abbbbacrrbbbba.',
+    '.abbbbaccarbbba.',
+    '.abbbbaccabbxba.',
+    '.abbbbaccabxbxa.',
+    '.abbbbaccabbxba.',
+    '.abbbbaccabbbba.',
+    '.aaaaaaaaaaaaaa.',
+  ];
+  const col: Record<string, string> = { a: '#1a110b', b: '#f1e3c2', c: '#d9c49a', r: '#8a5a12', x: '#c0392b' };
+  let r = '';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    const c = col[ch] ?? (ch === ' ' ? col.b : '');
+    if (c) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+  }));
+  return `<svg width="32" height="26" viewBox="0 0 16 13" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+})();
 /** Touch targets stay at least this big (CSS px), reaching past the drawing if needed. */
 const MIN_HIT = 44;
 const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
@@ -146,7 +172,7 @@ export function mountHud(on: HudHandlers) {
   const plate = document.createElement('div');
   plate.className = 'hud-plate';
   const compass = btn('hud-compass', 'Mapa', on.map);
-  compass.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 15 12h-6z" fill="#c0392b"/><path d="M12 22 9 12h6z" fill="#2a1c10"/><circle cx="12" cy="12" r="1.6" fill="#b8893b"/></svg>';
+  compass.innerHTML = MAPA_SVG;
   const lines = document.createElement('div');
   lines.className = 'hud-lines';
   const l1 = document.createElement('div');
