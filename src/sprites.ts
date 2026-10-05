@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from './skala';
 import Phaser from 'phaser';
 import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
@@ -87,8 +88,9 @@ export function isHd(key: string) {
 /** Sizes and places a sprite of a new character so its feet are 8 px under its position, like the old people. */
 export function fitHd(s: Phaser.GameObjects.Sprite, times = 1) {
   const k = s.texture.key;
-  const sc = (skala.get(baseOf(k)) ?? 0.36) * times;
-  s.setScale(sc).setOrigin(0.5, (STOPY_PX - 8 / sc) / F);
+  // SKALA_POSTACI: smaller people next to the same world (src/skala.ts); the feet stay as far under the position, scaled too.
+  const sc = (skala.get(baseOf(k)) ?? 0.36) * times * SKALA_POSTACI;
+  s.setScale(sc).setOrigin(0.5, (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F);
   return s;
 }
 

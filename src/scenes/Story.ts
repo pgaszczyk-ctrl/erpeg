@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { TEX, makeLookTexture } from '../art';
 import { fitHd, ensureHd } from '../sprites';
@@ -84,7 +85,7 @@ export class Story {
 
   private exclaim(): Phaser.GameObjects.Image {
     const p = this.host.player;
-    const img = this.scene.add.image(p.x, p.y - 24, TEX.exclaim).setDepth(1_300_000);
+    const img = this.scene.add.image(p.x, p.y - 24 * SKALA_POSTACI, TEX.exclaim).setDepth(1_300_000);
     this.scene.tweens.add({ targets: img, y: img.y - 3, duration: 250, yoyo: true, repeat: -1 });
     return img;
   }

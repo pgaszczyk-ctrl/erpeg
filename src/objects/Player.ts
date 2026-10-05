@@ -3,9 +3,9 @@ import { TEX, HERO_DIRS, type Dir } from '../art';
 import { SKALA_SWIATA } from '../skala';
 
 export const PLAYER = {
-  // 60 km/h at 1.92 px per metre (60 / 3.6 × 1.92); was 60 px/s ≈ 110 km/h, then 32, then 37.3 ≈ 70 km/h (owner, 4 Oct 2026: back to 60).
-  // ×SKALA_SWIATA: the bigger-world look has more px per metre, so the same 60 km/h.
-  speed: 32 * SKALA_SWIATA,
+  // 80 km/h at 1.92 px per metre (80 / 3.6 × 1.92 ≈ 42.7; owner, 5 Oct 2026); was 60 px/s ≈ 110 km/h, then 32 ≈ 60, 37.3 ≈ 70, 32 again.
+  // ×SKALA_SWIATA: the bigger-world look has more px per metre, so the same km/h. Every speed-up (level, hotel, admin) multiplies this.
+  speed: (80 / 3.6) * 1.92 * SKALA_SWIATA,
   maxHp: 6,
   attackCooldown: 320, // ms
   attackReach: 9, // px from the centre to the middle of the swing (close, easier to aim)

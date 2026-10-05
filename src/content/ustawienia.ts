@@ -21,7 +21,7 @@ export interface Pokretlo {
 }
 
 export const POKRETLA: Pokretlo[] = [
-  { k: 'predkosc_kmh', grupa: 'Ruch', nazwa: 'Prędkość pieszo (km/h)', domyslnie: 60, min: 20, max: 150 },
+  { k: 'predkosc_kmh', grupa: 'Ruch', nazwa: 'Prędkość pieszo (km/h)', domyslnie: 80, min: 20, max: 150 },
   { k: 'wskrzeszenie_diamenty', grupa: 'Diamenty', nazwa: 'Wskrzeszenie kosztuje (💎)', domyslnie: 10, min: 1, max: 1000 },
   { k: 'diament_monet', grupa: 'Diamenty', nazwa: 'Diament w banku kosztuje (monet)', domyslnie: 1_000_000, min: 1000, max: 1e9, krok: 1000 },
   { k: 'ceny_przedmiotow', grupa: 'Ceny', nazwa: 'Ceny przedmiotów w sklepach (× mnożnik)', domyslnie: 1, min: 0.1, max: 10, krok: 0.05 },

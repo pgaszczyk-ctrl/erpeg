@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { WSKRZESZENIE } from '../content/sklepy';
 import { askBug } from '../ui/bug';
@@ -527,18 +528,20 @@ export class UIScene extends Phaser.Scene {
     const halves = Math.max(s!.hp > 0 ? 1 : 0, Math.min(2 * n - 2, Math.floor((s!.hp / s!.maxHp) * 2 * n)));
     while (this.arcHearts.length < n) this.arcHearts.push(this.add.image(0, 0, TEX.heart).setOrigin(0.5).setDepth(5).setScale(this.ui));
     while (this.arcHearts.length > n) this.arcHearts.pop()!.destroy();
-    const R = 15 * z;
+    // Smaller people (SKALA_POSTACI): the arc hugs the hero closer, the hearts a little smaller.
+    const K = SKALA_POSTACI;
+    const R = 15 * z * K;
     this.arcHearts.forEach((h, i) => {
       const a = n > 1 ? Phaser.Math.DegToRad(150 - (120 * i) / (n - 1)) : Math.PI / 2;
       const filled = halves - i * 2;
-      h.setPosition(sx + Math.cos(a) * R, sy + 4 * z + Math.sin(a) * R * 0.75)
+      h.setPosition(sx + Math.cos(a) * R, sy + 4 * z * K + Math.sin(a) * R * 0.75).setScale(this.ui * Math.sqrt(K))
         .setTexture(filled > 0 ? TEX.heart : TEX.heartEmpty)
         .setAlpha(filled >= 2 ? 0.6 : filled === 1 ? 0.4 : 0.3)
         .setVisible(hurt);
     });
     // The heal button (fruit or potion) right under the arc: easy to hit when in trouble.
     const hx = sx;
-    const hy = sy + 4 * z + R * 0.75 + 14 + 24;
+    const hy = sy + 4 * z * K + R * 0.75 + 14 + 24;
     this.healBtn.setPosition(hx, hy);
     this.healIcon.setPosition(hx, hy + 1);
     this.healCount.setPosition(hx + 12, hy + 8);

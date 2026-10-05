@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
@@ -144,7 +145,7 @@ export class DemoRun {
     const p = this.host.player;
     p.vel.set(0, 0);
     p.anims.stop();
-    const ex = this.scene.add.image(p.x, p.y - 24, TEX.exclaim).setDepth(1_300_000);
+    const ex = this.scene.add.image(p.x, p.y - 24 * SKALA_POSTACI, TEX.exclaim).setDepth(1_300_000);
     this.scene.tweens.add({ targets: ex, y: ex.y - 3, duration: 200, yoyo: true, repeat: 5 });
     this.scene.cameras.main.shake(600, 0.012);
     bigText(DEMO_TEKSTY.olsnienie, 2600);

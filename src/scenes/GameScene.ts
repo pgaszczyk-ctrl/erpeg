@@ -1,3 +1,4 @@
+import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
@@ -1130,14 +1131,14 @@ export class GameScene extends Phaser.Scene {
     const side = this.swingSide;
     this.swingSide = -side;
     const img = this.add.image(this.player.x, this.player.y, key).setOrigin(0.2, 0.8);
-    const size = W.wielkoscBroni * (strong ? 1.35 : 1);
+    const size = W.wielkoscBroni * (strong ? 1.35 : 1) * SKALA_POSTACI;
     img.setDisplaySize(size, size);
     if (strong) img.setTint(0xfff0b0);
     const st = { a: aim - half * side };
     const place = () => {
       // The hilt in the hero's hand, the blade pointing out along the swing (the pictures point up-right).
-      const cx = this.player.x + Math.cos(st.a) * 3;
-      const cy = this.player.y - 3 + Math.sin(st.a) * 3;
+      const cx = this.player.x + Math.cos(st.a) * 3 * SKALA_POSTACI;
+      const cy = this.player.y - 3 * SKALA_POSTACI + Math.sin(st.a) * 3 * SKALA_POSTACI;
       img.setPosition(cx, cy).setRotation(st.a + Math.PI / 4);
       // In front of the hero when swinging down, behind when up.
       img.setDepth(this.player.depth + (Math.sin(st.a) > -0.3 ? 1 : -1));
@@ -1853,7 +1854,7 @@ export class GameScene extends Phaser.Scene {
     const blink = 0.55 + 0.45 * Math.sin(this.time.now / 180);
     spots.forEach((p, i) => {
       const b = (this.bubbles[i] ??= this.add.image(0, 0, TEX.talkBubble).setDepth(1_150_000));
-      b.setPosition(Math.round(p.x + 6), Math.round(p.y - 20)).setAlpha(blink).setVisible(true);
+      b.setPosition(Math.round(p.x + 6 * SKALA_POSTACI), Math.round(p.y - 20 * SKALA_POSTACI)).setAlpha(blink).setVisible(true);
     });
     for (let i = spots.length; i < this.bubbles.length; i++) this.bubbles[i].setVisible(false);
   }
