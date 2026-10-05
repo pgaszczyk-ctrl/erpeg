@@ -145,6 +145,10 @@
       /* Item grids (ui/slots.ts): equipment 3×3, backpack and chest 4×5, all the same cell size. */
       .sl-wrap { --sl: min(62px, 15.5vw, calc((min(100dvh, 680px) - 300px) / 7.3)); display: flex; flex-direction: column; align-items: center; gap: 16px; touch-action: none; }
       .c-eqpage { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; min-height: 0; }
+      /* Item info on the equipment page: always the same height (owner: the whole page jumped with every tap). */
+      .c-eqpage .c-actions, .c-eqpage .c-actions:empty { display: flex; height: 118px; flex: none; overflow-y: auto; align-content: flex-start;
+        box-sizing: border-box; padding: 6px 8px; border: 1px solid #3a3346; border-radius: 6px; background: #241f2c; }
+      .c-eqpage .c-actions:empty::before { content: 'Dotknij rzeczy, żeby zobaczyć jej opis.'; color: #8a8296; font-size: 12px; }
       #chest .sl-wrap { --sl: min(56px, 15vw, calc((100vh - 290px) / 8.6)); gap: 4px; margin-top: 0; }
       #chest .sl-wrap h3 { margin: 4px 0 0; font-size: 14px; color: #f7c531; align-self: flex-start; }
       .sl-grid { display: grid; gap: 5px; }
