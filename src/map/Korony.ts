@@ -184,7 +184,11 @@ export class Korony {
     const KL = [0, 1, 2, 2, 3, 4, 0, 0];
     for (const im of this.fale) {
       const x0 = im.getData('x0') as number, y0 = im.getData('y0') as number;
-      if (x0 < cam.x - 10 || x0 > cam.right + 10 || y0 < cam.y - 10 || y0 > cam.bottom + 10) continue;
+      if (x0 < cam.x - 10 || x0 > cam.right + 10 || y0 < cam.y - 10 || y0 > cam.bottom + 10) {
+        if (im.visible) im.setVisible(false);
+        continue;
+      }
+      if (!im.visible) im.setVisible(true);
       const okres = im.getData('okres') as number, t = ((T + (im.getData('faza') as number)) % okres) / okres;
       im.setFrame(`f${KL[Math.min(KL.length - 1, Math.floor(t * KL.length))]}`);
       im.setPosition(Math.round((x0 + Math.sin((T + x0) * 0.6) * 1.5) * 2) / 2, y0);
@@ -196,7 +200,11 @@ export class Korony {
     const wiatr = Math.max(-1, Math.min(1, (weather.wind - 2) / 8));
     for (const im of this.obloczki) {
       const x0 = im.getData('x0') as number, y0 = im.getData('y0') as number;
-      if (x0 < cam.x - 30 || x0 > cam.right + 30 || y0 < cam.y - 30 || y0 > cam.bottom + 40) continue;
+      if (x0 < cam.x - 30 || x0 > cam.right + 30 || y0 < cam.y - 30 || y0 > cam.bottom + 40) {
+        if (im.visible) im.setVisible(false);
+        continue;
+      }
+      if (!im.visible) im.setVisible(true);
       const t = ((T * 0.85 + (im.getData('faza') as number)) % 1.4) / 1.4; // 0..1 w cyklu
       const k = Math.min(5, Math.floor(t * 6));
       im.setFrame(`p${k}`).setPosition(Math.round((x0 + wiatr * t * 6) * 2) / 2, Math.round((y0 - t * 7) * 2) / 2).setAlpha(t < 0.8 ? 1 : (1 - t) * 5);
@@ -295,7 +303,12 @@ export class Korony {
     const m = 40;
     for (const k of this.wszystkie) {
       const im = k.im;
-      if (im.x < cam.x - m || im.x > cam.right + m || im.y < cam.y - m || im.y > cam.bottom + 2 * m) continue;
+      // Off-screen crowns are not drawn at all (report 56: 5000 crowns alive, ~500 on screen, phone at 21 fps).
+      if (im.x < cam.x - m || im.x > cam.right + m || im.y < cam.y - m || im.y > cam.bottom + 2 * m) {
+        if (im.visible && !k.pada) im.setVisible(false);
+        continue;
+      }
+      if (!im.visible) im.setVisible(true);
       // Prześwit: tylko korona przed postacią (podstawa niżej niż stopy), gdy postać stoi pod jej liśćmi.
       const lx = Math.round(px - (k.t.x - k.a.kx)), ly = Math.round(py - (k.t.y - k.a.ky));
       const pod = k.t.y > hy * GEN_DOTS && lx >= 0 && ly >= 0 && lx < k.a.w && ly < k.a.h && zaslania(k.a.klatki[2], lx, ly);

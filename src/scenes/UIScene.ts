@@ -7,7 +7,7 @@ import { goodsPicture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
 import { heroPortrait } from '../sprites';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -15,7 +15,7 @@ import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
-import { OSTROSC } from '../screen';
+import { OSTROSC, przyblizenie } from '../screen';
 import { session } from '../quests';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
@@ -114,6 +114,8 @@ export class UIScene extends Phaser.Scene {
       character: () => this.openCharacter('eq'),
       quests: () => this.openCharacter('quests'),
       map: () => this.openMap(),
+      zoom: () => (this.scene.get('game') as GameScene).toggleZoom(),
+      zoomOn: przyblizenie(),
       camera: () => this.takePhoto(),
     });
     this.layout();
@@ -135,6 +137,9 @@ export class UIScene extends Phaser.Scene {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
         this.openMap();
+      }
+      if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.dialogBox) {
+        hudZoom((this.scene.get('game') as GameScene).toggleZoom());
       }
       if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.dialogBox) {
         this.openCharacter();

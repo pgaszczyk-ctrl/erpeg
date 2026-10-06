@@ -34,6 +34,10 @@ export interface HudHandlers {
   camera: () => void;
   map: () => void;
   quests: () => void;
+  /** Bigger picture for children (+~30 %); returns whether it is on now. */
+  zoom: () => boolean;
+  /** Whether the bigger picture is on (the button's look at start). */
+  zoomOn: boolean;
 }
 
 /** Picture pixels: the machine's grid (from the mock-up). */
@@ -62,6 +66,7 @@ const CSS = `
   background: rgba(28,20,14,0.82); border: 2px solid #b8893b; border-radius: 10px; box-shadow: 0 0 0 2px #1a110b; color: #f3dfb0; }
 #hud .hud-compass { position: relative !important; flex-shrink: 0; width: 44px; height: 44px; box-sizing: border-box; border-radius: 8px !important;
   background: #3d2e22 !important; border: 2px solid #b8893b !important; display: flex; align-items: center; justify-content: center; }
+#hud .hud-zoom.on { background: #6b4a1f !important; }
 #hud .hud-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; overflow: hidden; }
 #hud .hud-l1 { display: flex; align-items: baseline; gap: 9px; white-space: nowrap; min-width: 0; overflow: hidden; }
 #hud .hud-weather { flex-shrink: 0; }
@@ -129,6 +134,38 @@ const MAPA_SVG = (() => {
   }));
   return `<svg width="32" height="26" viewBox="0 0 16 13" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
 })();
+/** A brass magnifier in pixels (the bigger-picture button): a "+" when off, a "−" when on. */
+function lupaSvg(on: boolean) {
+  const rows = [
+    '...aaaa.....',
+    '..abbbba....',
+    '.abcccbba...',
+    'abccccccba..',
+    'abcccccc.ba.',
+    'abccccccbba.',
+    '.abccccbba..',
+    '..abbbbaaa..',
+    '...aaaaabda.',
+    '........adda',
+    '.........ada',
+    '..........a.',
+  ];
+  const col: Record<string, string> = { a: '#1a110b', b: '#e2b25a', c: '#9cc8e0', d: '#8a5a12', '.': '' };
+  let r = '';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    const c = col[ch];
+    if (c) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+  }));
+  // The sign inside the glass.
+  r += `<rect x="2" y="4" width="5" height="1" fill="#1a110b"/>`;
+  if (!on) r += `<rect x="4" y="2" width="1" height="5" fill="#1a110b"/>`;
+  return `<svg width="28" height="28" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+}
+
+/** Redraws the magnifier button (after the Z key). */
+let zoomBtn: ((on: boolean) => void) | null = null;
+export const hudZoom = (on: boolean) => zoomBtn?.(on);
+
 /** Touch targets stay at least this big (CSS px), reaching past the drawing if needed. */
 const MIN_HIT = 44;
 const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
@@ -180,6 +217,17 @@ export function mountHud(on: HudHandlers) {
   plate.className = 'hud-plate';
   const compass = btn('hud-compass', 'Mapa', on.map);
   compass.innerHTML = MAPA_SVG;
+  // Bigger picture for children (owner, 6 Oct 2026: kids can't make out the details).
+  const lupa = btn('hud-compass hud-zoom', '', () => setZoomBtn(on.zoom()));
+  const setZoomBtn = (zoomBtn = (z: boolean) => {
+    lupa.innerHTML = lupaSvg(z);
+    const label = z ? 'Pomniejsz widok' : 'Powiększ widok';
+    lupa.setAttribute('aria-label', label);
+    lupa.title = `${label} (Z)`;
+    lupa.setAttribute('aria-pressed', String(z));
+    lupa.classList.toggle('on', z);
+  });
+  setZoomBtn(on.zoomOn);
   const lines = document.createElement('div');
   lines.className = 'hud-lines';
   const l1 = document.createElement('div');
@@ -192,7 +240,7 @@ export function mountHud(on: HudHandlers) {
   const detail = document.createElement('div');
   detail.className = 'hud-l2';
   lines.append(l1, detail);
-  plate.append(compass, lines);
+  plate.append(compass, lupa, lines);
   const quest = btn('hud-quest', 'Dziennik zadań', on.quests);
   p.append(plate, quest);
 

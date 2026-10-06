@@ -4,7 +4,7 @@ import { itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art';
-import { OSTROSC } from '../screen';
+import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../screen';
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { LOOK_TOP, LOOK_H } from '../look';
@@ -324,6 +324,8 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.dragons = new Map();
     this.pickups = [];
+    this.farObjects = [];
+    this.signGlows = new Set();
     this.markers = new Map();
     this.leaving = false;
     this.lingerUntil = 0;
@@ -451,7 +453,7 @@ export class GameScene extends Phaser.Scene {
         const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
         const at = this.signSpot(p);
         const img = this.add.image(at.x, at.y, sign).setScale(artScale(sign)).setDepth(900_000);
-        this.signGlow(img);
+        this.farObjects.push(img, this.signGlow(img));
       }
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
       if (p.kind === 'station' && hdOn) {
@@ -465,7 +467,7 @@ export class GameScene extends Phaser.Scene {
     };
     for (const p of this.city.places) showPlace(p);
     // Road signs on the ways out of town (split-map): read when walking past.
-    for (const sg of this.city.signs) this.add.image(sg.x, sg.y + 2, TEX.signpost).setOrigin(0.5, 1).setScale(artScale(TEX.signpost)).setDepth(sg.y);
+    for (const sg of this.city.signs) this.farObjects.push(this.add.image(sg.x, sg.y + 2, TEX.signpost).setOrigin(0.5, 1).setScale(artScale(TEX.signpost)).setDepth(sg.y));
     this.signRead = -1;
     this.applySkill();
 
@@ -594,10 +596,25 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
-  /** Integer zoom so pixels stay crisp; aims for ~11 tiles on the short screen side. */
+  /**
+   * Integer zoom so pixels stay crisp; aims for ~11 tiles on the short screen side. The bigger picture
+   * (HUD magnifier / Z, `przyblizenie`) is ~30 % closer: the next whole number of canvas px per map px
+   * at or above ×1.3 (phones with 2 canvas px per CSS px: 4 → 5, i.e. +25 %).
+   */
   private fitZoom() {
     const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
-    this.cameras.main.setZoom(Math.max(2, Math.floor(short / 176)) * OSTROSC);
+    const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
+    this.cameras.main.setZoom(przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z);
+  }
+
+  /** Switches the bigger picture on/off (kept on the device); returns whether it is on. */
+  toggleZoom() {
+    const on = !przyblizenie();
+    ustawPrzyblizenie(on);
+    this.fitZoom();
+    this.lastVision = { x: NaN, y: NaN, a: NaN };
+    this.toast(on ? '🔍 Widok powiększony' : '🔍 Zwykły widok', 1200);
+    return on;
   }
 
   // ------------------------------------------------------------------ loop
@@ -760,6 +777,8 @@ export class GameScene extends Phaser.Scene {
     this.weatherFx.update(dt, this.cameras.main, this.player, now);
     this.drawMagic(now);
 
+    this.animateCrops(now);
+    this.cullFar(now);
     for (const item of [...this.pickups]) {
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
     }
@@ -875,9 +894,24 @@ export class GameScene extends Phaser.Scene {
     }
     this.fogView.update(this.cameras.main, this.vision, this.seenNow);
     for (const e of this.enemies) if (!e.isDead) e.setVisible(pointInPolygon(this.vision, e.x, e.y));
+    // Off-screen pickups are simply hidden (no polygon test); hundreds of ripe crops on allotments (report 56).
+    const v = this.cameras.main.worldView;
     for (const i of this.pickups) {
-      i.setVisible(pointInPolygon(this.vision, i.x, i.y));
+      const onScreen = i.x > v.x - 20 && i.x < v.right + 20 && i.y > v.y - 20 && i.y < v.bottom + 30;
+      i.setVisible(onScreen && pointInPolygon(this.vision, i.x, i.y));
       (i.getData('glow') as Phaser.GameObjects.Image | undefined)?.setVisible(i.visible);
+    }
+  }
+
+  /** Ripe crops on screen: the glow pulses and the plant bobs now and then (one loop instead of two tweens each). */
+  private animateCrops(now: number) {
+    for (const i of this.pickups) {
+      const glow = i.getData('glow') as Phaser.GameObjects.Image | undefined;
+      if (!glow || !i.visible) continue;
+      const faza = i.getData('faza') as number, okres = i.getData('okres') as number;
+      glow.setAlpha(0.62 + 0.23 * Math.sin((now + faza) / 160));
+      const t = ((now + faza) % okres) / 220;
+      i.setScale(i.scaleX, (i.getData('sy') as number) * (t < 2 ? 1 + 0.18 * Math.sin((t * Math.PI) / 2) : 1));
     }
   }
 
@@ -1381,8 +1415,27 @@ export class GameScene extends Phaser.Scene {
     }
     const glow = this.add.image(sign.x, sign.y, key).setBlendMode(Phaser.BlendModes.ADD).setDepth(sign.depth - 1);
     glow.setDisplaySize(P.promien * 2.2, P.promien * 1.7).setAlpha(P.mocno);
-    if (P.pulsMs) this.tweens.add({ targets: glow, alpha: P.mocno * 0.75, duration: P.pulsMs, yoyo: true, repeat: -1, ease: 'Sine.inOut', delay: Math.random() * P.pulsMs });
+    // The slow pulse is done by cullFar for the glows on screen (a tween each – over a thousand – slowed phones).
+    glow.setData('faza', Math.random() * 10_000);
+    this.signGlows.add(glow);
     return glow;
+  }
+
+  /** Place signs, their glows and signposts of the whole map (report 56: ~2000 of them were drawn every frame). */
+  private farObjects: Phaser.GameObjects.Image[] = [];
+  private signGlows = new Set<Phaser.GameObjects.Image>();
+
+  /** Shows only the far objects near the screen and pulses the visible sign glows. */
+  private cullFar(now: number) {
+    const v = this.cameras.main.worldView;
+    const m = 40;
+    const P = POSWIATA_SZYLDU;
+    for (const o of this.farObjects) {
+      if (!o.active) continue;
+      const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
+      if (on !== o.visible) o.setVisible(on);
+      if (on && P.pulsMs && this.signGlows.has(o)) o.setAlpha(P.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / P.pulsMs) * Math.PI)));
+    }
   }
 
   private pociagi?: Pociagi;
@@ -1608,12 +1661,10 @@ export class GameScene extends Phaser.Scene {
       tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
     {
-      const glow = this.add.image(q.x, q.y - 3, 'crop-glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(q.y - 0.5).setScale(0.75).setAlpha(0.85);
-      this.tweens.add({ targets: glow, alpha: 0.4, duration: 900 + Math.random() * 400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      const glow = this.add.image(q.x, q.y - 3, 'crop-glow').setDepth(q.y - 0.5).setScale(0.75).setAlpha(0.85);
+      // Pulse and bob are driven by animateCrops (only those on screen) – hundreds of tweens slowed phones (report 56).
       // The plant itself bobs a little now and then: "I'm ready".
-      const sy = img.scaleY;
-      this.tweens.add({ targets: img, scaleY: sy * 1.18, duration: 220, yoyo: true, repeat: -1, repeatDelay: 1400 + Math.random() * 900, delay: Math.random() * 1500, ease: 'Sine.out' });
-      img.setData('glow', glow);
+      img.setData('glow', glow).setData('sy', img.scaleY).setData('faza', Math.random() * 1000).setData('okres', 1600 + Math.random() * 900);
       img.once('destroy', () => glow.destroy());
     }
     // Hidden in the fog until the hero sees them (updateFog keeps it so).

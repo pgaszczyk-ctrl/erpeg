@@ -48,3 +48,24 @@ export function watchSpeed(fps: () => number, playing: () => boolean) {
 export function cssSize(el: HTMLElement) {
   return { w: el.clientWidth || window.innerWidth, h: el.clientHeight || window.innerHeight };
 }
+
+/** The bigger picture for children (owner, 6 Oct 2026: kids couldn't make out the details): ~30 % closer. */
+export const PRZYBLIZENIE = 1.3;
+const ZOOM_KEY = 'exp-przyblizenie';
+let zoomOn = (() => {
+  try {
+    return localStorage.getItem(ZOOM_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
+/** Is the bigger picture on (remembered on this device)? */
+export const przyblizenie = () => zoomOn;
+export function ustawPrzyblizenie(on: boolean) {
+  zoomOn = on;
+  try {
+    localStorage.setItem(ZOOM_KEY, on ? '1' : '0');
+  } catch {
+    /* no storage: only for this visit */
+  }
+}
