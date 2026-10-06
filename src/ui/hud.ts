@@ -41,7 +41,9 @@ export interface HudHandlers {
 }
 
 /** Picture pixels: the machine's grid (from the mock-up). */
-const W = 70;
+/** v3 (owner, 6 Oct 2026): 16 columns more on the left, so the camera fits left of the avatar/heal/quest-log column. */
+const L = 16;
+const W = 70 + L;
 /** v2 (owner, 5 Oct 2026): 30 rows taller – longer tubes, the avatar over the heal button (scripts/hud-maszynka.py). */
 const E = 30;
 const H = 60 + E;
@@ -49,6 +51,10 @@ const H = 60 + E;
 const TUBA = 46 + E;
 /** The tube's bottom (first row under the liquid). */
 const DNO = 53 + E;
+/** The column (avatar, heal button, quest log): left edge, and the tops with equal gaps (scripts/hud-maszynka.py). */
+const CX = 11 + L;
+const HY = 36;
+const BY = 70;
 
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
@@ -280,16 +286,16 @@ function layout() {
     Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
   };
   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, 11, 2, 26, 26);
-  at(parts.heal, 11, 9 + E, 26, 26);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
+  at(parts.heal, CX, HY, 26, 26);
   parts.heal.style.borderRadius = '50%';
-  at(parts.hp, 49, 1, 10, H - 2);
-  at(parts.xp, 59, 1, 10, H - 2);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, 2, H - 20, 20, 20);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, 26, H - 20, 20, 20);
+  at(parts.hp, 49 + L, 1, 10, H - 2);
+  at(parts.xp, 59 + L, 1, 10, H - 2);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CX + 3 - 8 - 20, BY, 20, 20);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CX + 3, BY, 20, 20);
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${32 * s}px`, top: `${(27 + E) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    left: `${(CX + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   const menuW = 64; // the ☰ button top left
@@ -374,26 +380,26 @@ function draw() {
   const all = v.maxHp + v.extra;
   const red = level(v.hp / all);
   const blue = v.extra > 0 ? Math.min(TUBA - red, level((v.hp + v.extra) / all) - red) : 0;
-  tube(51, red, '#c0392b', '#e8645a', 0);
+  tube(51 + L, red, '#c0392b', '#e8645a', 0);
   if (blue > 0) {
     c.fillStyle = '#3f7fd0';
-    c.fillRect(51, DNO - red - blue, 6, blue);
+    c.fillRect(51 + L, DNO - red - blue, 6, blue);
     c.fillStyle = '#9cc8ff';
-    c.fillRect(51, DNO - red - blue, 6, 1);
+    c.fillRect(51 + L, DNO - red - blue, 6, 1);
   }
-  tube(61, level(v.expShare), '#e0a020', '#fff1b0', 0.45);
+  tube(61 + L, level(v.expShare), '#e0a020', '#fff1b0', 0.45);
   // Glass: a light streak and 4 marks = 5 parts (5 hearts / 5 stars) on each tube.
   c.fillStyle = 'rgba(255,255,255,0.35)';
-  c.fillRect(52, 8, 1, TUBA - 2);
-  c.fillRect(62, 8, 1, TUBA - 2);
+  c.fillRect(52 + L, 8, 1, TUBA - 2);
+  c.fillRect(62 + L, 8, 1, TUBA - 2);
   c.fillStyle = '#1a110b';
   for (let k = 1; k < 5; k++) {
     const y = Math.round(DNO - (TUBA * k) / 5);
-    c.fillRect(55, y, 2, 1);
-    c.fillRect(65, y, 2, 1);
+    c.fillRect(55 + L, y, 2, 1);
+    c.fillRect(65 + L, y, 2, 1);
   }
-  // The hero's head in the avatar frame (inside 18×18 at 15,6).
-  if (avatar) c.drawImage(avatar, 15, 6, 18, 18);
+  // The hero's head in the avatar frame (inside 18×18).
+  if (avatar) c.drawImage(avatar, CX + 4, 6, 18, 18);
 }
 
 /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
