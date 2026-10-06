@@ -63,6 +63,11 @@ export function itemTexture(id: string) {
   return HAVE.has(id) ? `item-${pictureOf(id)}` : null;
 }
 
+/** The picture's URL (relative, like the game's base ./), or null when the item has none yet. */
+export function itemPictureUrl(id: string): string | null {
+  return HAVE.has(id) ? `items/${pictureOf(id)}.png` : null;
+}
+
 /** An <img> of the item, or null when it has no picture yet. */
 export function itemIcon(id: string, className = 'item-ico'): HTMLImageElement | null {
   if (!HAVE.has(id)) return null;

@@ -3,7 +3,9 @@ import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showPhoto } from '../ui/brag';
-import { goodsPicture } from '../ui/itemIcon';
+import { goodsPicture, itemPictureUrl } from '../ui/itemIcon';
+import { gear, item, condition, ammoOf, isBroken } from '../inventory';
+import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { OWOCE, type Owoc } from '../content/sklepy';
@@ -279,11 +281,37 @@ export class UIScene extends Phaser.Scene {
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
       coins: s.coins, diamonds: session.diamenty,
+      bron: this.weaponWindow(),
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
+  }
+
+  /**
+   * The HUD's weapon window (owner, 6 Oct 2026): the weapon in hand; a sword shows its rough wear (when weapons wear on
+   * this difficulty, or a glass one), a bow/crossbow/gun the shots left, a wand "∞" (magic has no charges yet).
+   */
+  private weaponWindow() {
+    const id = gear.equip.bron ?? 'kijek';
+    const it = item(id);
+    const name = it?.nazwa ?? 'Kijek';
+    const pic = itemPictureUrl(id);
+    const k = ammoOf(it);
+    if (k) {
+      const n = gear.ammo[k];
+      return { pic, label: String(n), warn: n < STRZALY.malo || isBroken(id), title: `${name}: ${n} ${AMUNICJA[k].wielu}` };
+    }
+    if (it?.rodzaj === 'magia') return { pic, label: '∞', warn: false, title: `${name}: czary bez ograniczeń` };
+    const c = condition(id);
+    if (c && (session.level.zuzycie || it?.szklany)) {
+      if (c.left <= 0) return { pic, label: '0%', warn: true, title: `${name}: zepsuty – napraw w sklepie` };
+      if (it?.szklany) return { pic, label: `${c.left}`, warn: c.left <= 5, title: `${name}: jeszcze ${c.left} ciosów` };
+      const pct = Math.max(1, Math.round((100 * c.left) / c.max));
+      return { pic, label: `${pct}%`, warn: pct <= 15, title: `${name}: stan ok. ${pct}%` };
+    }
+    return { pic, label: '', warn: false, title: name };
   }
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */

@@ -29,6 +29,8 @@ export interface HudView {
   /** The purse and the diamonds (shown on the plaque at the top, owner 6 Oct 2026). */
   coins: number;
   diamonds: number;
+  /** The weapon in hand for the window left of the heal button: picture, worn % or shots left, red when it needs care. */
+  bron: { pic: string | null; label: string; warn: boolean; title: string };
 }
 
 export interface HudHandlers {
@@ -70,6 +72,11 @@ const CSS = `
 #hud .hud-m { position: absolute; }
 #hud .hud-m canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 #hud .hud-count { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none; }
+#hud .hud-wpn img { position: absolute; image-rendering: pixelated; pointer-events: none; }
+#hud .hud-wcount { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none;
+  border: 1px solid #b8893b; font: 700 11px/12px 'Pixelify Sans', monospace; height: 14px; min-width: 16px; padding: 0 3px; white-space: nowrap; }
+#hud .hud-wcount.warn { background: #7a1e14; color: #ffe0d8; }
+#hud .hud-wcount:empty { display: none; }
 #hud .hud-heal.low { animation: hud-pulse 0.9s ease-in-out infinite; }
 @keyframes hud-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(232,100,90,0); } 50% { box-shadow: 0 0 14px 6px rgba(232,100,90,0.75); } }
 #hud .hud-p { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -116,6 +123,7 @@ let parts: {
   m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
+  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement;
 } | null = null;
 let scale = 4;
 
@@ -248,7 +256,14 @@ export function mountHud(on: HudHandlers) {
   const heal = btn('hud-heal', 'Wylecz się', on.heal);
   const hp = btn('', 'Zdrowie', on.character);
   const xp = btn('', 'Doświadczenie', on.character);
-  m.append(canvas, heal, hp, xp, count,
+  // The weapon window (owner, 6 Oct 2026): sword → rough wear, bow/crossbow/gun → shots left, wand → magic.
+  const wpn = btn('hud-wpn', 'Broń w ręce', on.character);
+  const wpnImg = document.createElement('img');
+  wpnImg.alt = '';
+  wpn.append(wpnImg);
+  const wcount = document.createElement('div');
+  wcount.className = 'hud-wcount';
+  m.append(canvas, heal, hp, xp, count, wpn, wcount,
     btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
@@ -294,7 +309,7 @@ export function mountHud(on: HudHandlers) {
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount };
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -334,6 +349,12 @@ function layout() {
   at(parts.xp, 59 + L, 1, 10, H - 2);
   at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CX + 3 - 8 - 20, BY, 20, 20);
   at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CX + 3, BY, 20, 20);
+  // The weapon window: frame drawn in the machine picture (20×20 left of the heal button), the picture inside 16×16.
+  const wx = CX + 3 - 8 - 20, wy = HY + 3;
+  at(parts.wpn, wx, wy, 20, 20);
+  const g = Math.max(0, MIN_HIT - 20 * s) / 2;
+  Object.assign(parts.wpnImg.style, { left: `${g + 2 * s}px`, top: `${g + 2 * s}px`, width: `${16 * s}px`, height: `${16 * s}px` });
+  Object.assign(parts.wcount.style, { left: `${wx * s}px`, top: `${(wy + 17) * s}px` });
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
     left: `${(CX + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
@@ -362,6 +383,12 @@ export function setHud(v: HudView) {
     parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
   }
   parts.count.textContent = String(v.potions > 0 ? v.potions : v.fruit);
+  if (v.bron.pic && !parts.wpnImg.src.endsWith(v.bron.pic)) parts.wpnImg.src = v.bron.pic;
+  parts.wpnImg.style.visibility = v.bron.pic ? 'visible' : 'hidden';
+  parts.wcount.textContent = v.bron.label;
+  parts.wcount.classList.toggle('warn', v.bron.warn);
+  parts.wpn.setAttribute('aria-label', v.bron.title);
+  parts.wpn.title = v.bron.title;
   const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})` : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
   parts.heal.setAttribute('aria-label', label);
   parts.heal.title = label;

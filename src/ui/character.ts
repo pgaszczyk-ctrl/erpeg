@@ -296,7 +296,7 @@ function show(host: CharacterHost) {
           if (!it) return ask(TALIZMANY.includes(at.m) ? 'Miejsce na talizman: przeciągnij tu talizman z plecaka, wtedy działa.' : `${MIEJSCA[at.m]}: pusto.`, []);
           const imb = imbueOf(it.id);
           const k = skillOfItem(it.id);
-          const info = `${it.nazwa}${k ? ` · ${UMIEJETNOSCI[k].nazwa.toLowerCase()} poz. ${skillLevel(k)}` : ''}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}${wearText(it.id)}`;
+          const info = `${it.nazwa}${k ? ` · ${UMIEJETNOSCI[k].nazwa.toLowerCase()} poz. ${skillLevel(k)}` : ''}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}${statText(it.id)}${wearText(it.id)}`;
           if (it.id === 'kijek') return ask(info, []);
           return ask(info, [['Zdejmij do plecaka', () => (unequip(at.m) ? undefined : (alertFull(), false))]]);
         }
@@ -306,7 +306,7 @@ function show(host: CharacterHost) {
         if (!sl) return;
         if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
-        ask(slotLabel(sl) + wearText(sl.item), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },
     });
     return s;
@@ -527,6 +527,25 @@ function show(host: CharacterHost) {
 
   render();
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
+}
+
+/**
+ * " Atak +7 (w ręce: +4, ▲ +3)." – what the item adds, so two swords can be told apart (owner, 6 Oct 2026),
+ * compared with what is worn in that place now.
+ */
+function statText(id: string) {
+  const it = item(id);
+  if (!it || !it.moc || it.miejsce === 'talizman' || it.miejsce === 'amulet') return '';
+  const what = it.miejsce === 'bron'
+    ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj ? 'Atak strzałem' : it.narzedzie ? 'Atak (narzędzie)' : 'Atak')
+    : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Obrona') : 'Obrona';
+  let out = ` ${what} +${it.moc}`;
+  const worn = item(gear.equip[it.miejsce]);
+  if (worn && worn.id !== id && (worn.rodzaj ?? '') === (it.rodzaj ?? '')) {
+    const d = it.moc - worn.moc;
+    out += ` (założone: +${worn.moc}${d ? `, ${d > 0 ? '▲ +' : '▼ '}${d}` : ', tyle samo'})`;
+  }
+  return out + '.';
 }
 
 /** " Wytrzymałość: 312/600." for things that wear out (worn, broken, glass). */

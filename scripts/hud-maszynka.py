@@ -75,6 +75,10 @@ hpipe(KX + 2, TX + 1, ry)
 flange_h(KX + N + G // 2 - 1, ry)
 flange_h(TX - 4, ry)
 
+# A short pipe from the heal button to the weapon window on its left (6 Oct 2026; the window is HTML, see hud.ts).
+hpipe(KX + N - 2, CX + 3, HY + 11)
+flange_h(KX + N + 1, HY + 11)
+
 # The heal button with its pipe and gauge (v1), moved down to its place in the column.
 HOFF = (L, HY - 9)
 lp = left_part('baza')
@@ -118,6 +122,20 @@ def button(x0, y0, name):
                 c = icon.getpixel((i - 2, j - 2))
                 px[x0 + i, y0 + j] = c if c[3] else rgb(I)
 button(KX, BY, 'aparat')
+# The weapon window left of the heal button (owner, 6 Oct 2026): the same frame, empty inside – the game puts the
+# weapon's picture and its wear / ammo count in it.
+WY = HY + 3
+for j in range(N):
+    for i in range(N):
+        edge = min(i, j, N - 1 - i, N - 1 - j)
+        if edge == 0:
+            if (i in (0, N - 1)) and (j in (0, N - 1)):
+                continue
+            px[KX + i, WY + j] = rgb(A)
+        elif edge == 1:
+            px[KX + i, WY + j] = rgb(B if (i == 1 or j == 1) and i < N - 2 and j < N - 2 else C)
+        else:
+            px[KX + i, WY + j] = rgb(I)
 button(QX, BY, 'dziennik')
 out.save(f'{DST}/maszynka_baza.png')
 
