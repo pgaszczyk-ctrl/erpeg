@@ -64,7 +64,7 @@ const BY = 70;
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
 #hud.off { display: none; }
-#hud.dim { opacity: 0.45; }
+#hud.dim .hud-m, #hud.dim .hud-plate, #hud.dim .hud-quest, #hud.dim .hud-picks { opacity: 0.45; }
 #hud.dim, #hud.dim * { pointer-events: none !important; }
 #hud button { pointer-events: auto; position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; border-radius: 4px; -webkit-tap-highlight-color: transparent; }
 #hud button:focus-visible { outline: 2px solid #f1e3c2; }
@@ -96,10 +96,12 @@ const CSS = `
 #hud .hud-quest .dot { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; color: #3a2a1c; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 #hud .hud-quest .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #hud .hud-quest .more { color: #c9b48a; font-size: 12px; flex-shrink: 0; }
-#hud .hud-money { display: flex; align-items: center; gap: 12px; padding: 4px 11px 4px 7px; background: rgba(28,20,14,0.82); border: 2px solid #b8893b;
-  border-radius: 9px; box-shadow: 0 0 0 2px #1a110b; color: #ffe9a8; font-size: 16px; font-weight: 700; white-space: nowrap; }
-#hud .hud-money span { display: flex; align-items: center; gap: 5px; }
-#hud .hud-money img, #hud .hud-money svg { width: 22px; height: 22px; image-rendering: pixelated; flex-shrink: 0; }
+#hud .hud-money { display: flex; align-items: center; gap: 16px; padding: 5px 14px 5px 9px; background: rgba(28,20,14,0.88); border: 2px solid #b8893b;
+  border-radius: 10px; box-shadow: 0 0 0 2px #1a110b; color: #ffe9a8; font-size: 21px; font-weight: 700; white-space: nowrap; }
+#hud .hud-money span { display: flex; align-items: center; gap: 6px; }
+#hud .hud-money img, #hud .hud-money svg { width: 30px; height: 30px; image-rendering: pixelated; flex-shrink: 0; }
+/* On a computer: top edge, centred over the hero (owner, 6 Oct 2026). */
+#hud .hud-money.top { position: absolute; left: 50%; transform: translateX(-50%); }
 #hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }
@@ -123,7 +125,7 @@ let parts: {
   m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
-  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement;
+  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement;
 } | null = null;
 let scale = 4;
 
@@ -309,7 +311,7 @@ export function mountHud(on: HudHandlers) {
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money };
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -360,6 +362,12 @@ function layout() {
     left: `${(CX + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
+  // The purse and diamonds: on a phone under the plaque; on a computer alone at the top edge, centred over the hero.
+  const top = !window.matchMedia('(pointer: coarse)').matches;
+  if (top && parts.money.parentElement !== root) root?.append(parts.money);
+  if (!top && parts.money.parentElement !== parts.p) parts.p.insertBefore(parts.money, parts.quest);
+  parts.money.classList.toggle('top', top);
+  parts.money.style.top = top ? `${M}px` : '';
   const menuW = 64; // the ☰ button top left
   Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * 0.6), window.innerWidth - M - menuW)}px` });
   // Pickups: left of the machine on a wide screen, above it on a narrow one.
