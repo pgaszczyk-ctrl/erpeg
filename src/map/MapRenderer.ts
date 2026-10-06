@@ -29,8 +29,11 @@ const CHUNK = 512; // px
  * Canvas pixels per map pixel in the map chunks: 2 on sharp screens (OSTROSC),
  * so the artist's 3× graphics keep twice the detail and roof edges and lamps
  * aren't blown-up blocks next to the detailed characters; 1 on slow phones.
+ * The 09 look always gets at least GEN_DOTS (2): the generator paints 2 picture px per map px and
+ * at 1 every other one was dropped – roofs came out ~3× coarser than the characters (owner, 6 Oct
+ * 2026, GESTOSC_PIKSELI.md: "gigantyczny dysonans między postaciami a budynkami").
  */
-const DOTS = OSTROSC;
+const DOTS = WYGLAD_09 ? Math.max(OSTROSC, GEN_DOTS) : OSTROSC;
 /**
  * The map lies under everything. Sprites are sorted by their y, and parts of
  * the Lublin map (around Jastków, Nałęczów…) have negative y: at −1000 the

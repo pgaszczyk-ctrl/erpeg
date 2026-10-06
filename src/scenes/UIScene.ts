@@ -8,6 +8,9 @@ import { gear, item, condition, ammoOf, isBroken } from '../inventory';
 import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
+
+/** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
+const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
 import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
 import { heroPortrait } from '../sprites';
@@ -494,15 +497,16 @@ export class UIScene extends Phaser.Scene {
       const { width, height } = this.view;
       const m = 40;
       arrow.setVisible(true);
-      if (sx > m && sx < width - m && sy > m && sy < height - m) {
+      if (sx > m && sx < width - m && sy > 90 && sy < height - 130) {
         const bob = Math.sin(this.time.now / 150 + i) * 4;
         arrow.setPosition(sx, sy - 24 * this.ui / 2 - 10 + bob).setRotation(Math.PI / 2);
         return;
       }
-      const cx = width / 2;
-      const cy = height / 2;
+      // Off screen: on a ring around the hero (owner, 6 Oct 2026: at the screen edge they hid under the HUD).
+      const cx = ((game.player.x - cam.worldView.x) * cam.zoom) / OSTROSC;
+      const cy = ((game.player.y - 10 - cam.worldView.y) * cam.zoom) / OSTROSC;
       const ang = Math.atan2(sy - cy, sx - cx);
-      const t = Math.min((width / 2 - m) / Math.abs(Math.cos(ang) || 1e-6), (height / 2 - m) / Math.abs(Math.sin(ang) || 1e-6));
+      const t = Math.max(60, Math.min(width, height) * STRZALKI_ZADAN.promien);
       arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
     });
   }
