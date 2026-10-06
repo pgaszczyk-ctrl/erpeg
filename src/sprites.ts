@@ -2,6 +2,28 @@ import { SKALA_POSTACI } from './skala';
 import Phaser from 'phaser';
 import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
+import { TEST } from './version';
+import { WYGLAD_09 } from './map/Podloze09';
+
+/**
+ * Characters on the world's pixel grid (GESTOSC_PIKSELI.md variant B; owner, 6 Oct 2026, test server only
+ * for now): every sheet is averaged into blocks of about one world pixel (0.5 map px), anchored at the feet,
+ * with hard alpha, and drawn NEAREST – so a character's pixel matches a roof's instead of a smooth
+ * picture. `?siatka=0` / `?siatka=1` overrides it (remembered, localStorage `exp-siatka`).
+ */
+const SIATKA_POSTACI = (() => {
+  let v: string | null = null;
+  try {
+    v = new URLSearchParams(location.search).get('siatka');
+    if (v === '0' || v === '1') localStorage.setItem('exp-siatka', v);
+    else v = localStorage.getItem('exp-siatka');
+  } catch {
+    /* no storage */
+  }
+  return WYGLAD_09 && (v === '1' || (v !== '0' && TEST));
+})();
+/** One world pixel in map px (the generator paints 2 px per map px). */
+const PIKSEL_SWIATA = 0.5;
 
 // The new detailed characters (content/wyglad.ts). Every sheet becomes a
 // texture `hd-<id>` with the same frame names as the old people (`down-0`…,
@@ -142,7 +164,7 @@ export function ensureHd(scene: Phaser.Scene, key: string): string {
   const base = m[1];
   const p = pending.get(base);
   if (p && !scene.textures.exists(base)) {
-    const src = sheetPixels(scene, p);
+    const src = naSiatke(sheetPixels(scene, p), p);
     addSheet(scene, base, src);
     sheets.set(base, src);
     // Heroes get clothes colours only when they stand in for missing townsfolk.
@@ -153,7 +175,7 @@ export function ensureHd(scene: Phaser.Scene, key: string): string {
   const src = sheets.get(base);
   const mask = masks.get(base);
   if (n > 0 && src && mask && STROJE[n]) {
-    const c = recolour(src, mask, STROJE[n]);
+    const c = naSiatke(recolour(src, mask, STROJE[n]), pending.get(base));
     addSheet(scene, key, c);
     sheets.set(key, c);
     return key;
@@ -365,6 +387,41 @@ function glow(src: HTMLCanvasElement) {
   return c;
 }
 
+/**
+ * Variant B: averages each frame into square blocks of one world pixel (the block size in sheet px comes
+ * from the character's `skala` × SKALA_POSTACI), anchored at the feet (column 32, row STOPY_PX), colours
+ * weighted by alpha, alpha hard (> 110 = solid). The frame stays 64 px, so frames, origins and crops hold.
+ */
+function naSiatke(src: HTMLCanvasElement, p: Postac | undefined): HTMLCanvasElement {
+  if (!SIATKA_POSTACI || !p) return src;
+  const b = Math.max(1, Math.round(PIKSEL_SWIATA / (p.skala * SKALA_POSTACI)));
+  if (b < 2) return src;
+  const ctx = src.getContext('2d')!;
+  const img = ctx.getImageData(0, 0, src.width, src.height);
+  const d = img.data, W = src.width;
+  for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) {
+    const fx = col * F, fy = r * F;
+    // Block edges: x = 32 + k·b, y = STOPY_PX + 1 + k·b (the feet's last row closes a block).
+    const x0 = 32 - Math.ceil(32 / b) * b, y0 = STOPY_PX + 1 - Math.ceil((STOPY_PX + 1) / b) * b;
+    for (let by = y0; by < F; by += b) for (let bx = x0; bx < F; bx += b) {
+      let a = 0, rr = 0, gg = 0, bb = 0, n = 0;
+      const ya = Math.max(0, by), yb = Math.min(F, by + b), xa = Math.max(0, bx), xb = Math.min(F, bx + b);
+      for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) {
+        const i = ((fy + y) * W + fx + x) * 4, al = d[i + 3];
+        a += al; rr += d[i] * al; gg += d[i + 1] * al; bb += d[i + 2] * al; n++;
+      }
+      if (!n) continue;
+      const solid = a / n > 110;
+      for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) {
+        const i = ((fy + y) * W + fx + x) * 4;
+        if (solid) { d[i] = rr / a; d[i + 1] = gg / a; d[i + 2] = bb / a; d[i + 3] = 255; } else d[i + 3] = 0;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return src;
+}
+
 /** Recolours the red (clothes) and green (second colour) parts of the mask. */
 function recolour(src: HTMLCanvasElement, mask: HTMLCanvasElement, s: (typeof STROJE)[number]) {
   const c = canvas(src.width, src.height);
@@ -393,7 +450,7 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
   for (const dir of HERO_DIRS) {
     for (let f = 0; f < 3; f++) tex.add(`${dir}-${f}`, 0, COL[f] * F, ROW[dir] * F, F, F);
   }
-  tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  tex.setFilter(SIATKA_POSTACI && !key.endsWith('-red') ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
     if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });
