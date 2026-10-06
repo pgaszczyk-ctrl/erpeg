@@ -690,6 +690,8 @@ export class GameScene extends Phaser.Scene {
         const cam = this.cameras.main;
         this.player.face((attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x - this.player.x, (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y - (this.player.y + 2));
       }
+      // An enemy near the hero wins over a tree, a bush or the mouse's aim (owner, 6 Oct 2026: fighting in the forest).
+      this.faceFoe();
       const hit = this.player.tryAttack(now);
       if (hit) this.resolveAttack(hit, now);
     }
@@ -973,12 +975,53 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** `strong`: a strong attack (held WALKA.mocnyPoMs): harder, further, sure to land, and never a talk or a door. */
+  /** The reach of a sword swing (px), `far` × for a strong blow. */
+  private swingReach(far = 1) {
+    return (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach * far;
+  }
+
+  /** The nearest seen, living, hostile enemy within `range` of the hero (null: none). */
+  private nearestFoe(range: number) {
+    let best: Enemy | null = null;
+    let bd = Infinity;
+    for (const e of this.enemies) {
+      if (e.isDead || e.peaceful || !e.visible) continue;
+      const d = Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) - e.size;
+      if (d < range && d < bd) [best, bd] = [e, d];
+    }
+    return best;
+  }
+
+  /** Turns the hero to the nearest enemy in reach (×1.5), so the swing goes at it and not at a tree. */
+  private faceFoe(far = 1) {
+    const foe = this.nearestFoe(this.swingReach(far) * 1.5);
+    if (foe) this.player.face(foe.x - this.player.x, foe.y - (this.player.y + 2));
+  }
+
+  /** A swing at nothing to fight (owner, 6 Oct 2026): only a faint trace of the arm's sweep, no weapon picture. */
+  private faintSwing(aim: number) {
+    const g = this.add.graphics().setDepth(this.player.depth + 1);
+    const r = this.swingReach() * 0.6, half = 0.7;
+    g.lineStyle(1, 0xffffff, 0.35);
+    g.beginPath();
+    g.arc(this.player.x, this.player.y - 2, r, aim - half, aim + half);
+    g.strokePath();
+    this.tweens.add({ targets: g, alpha: 0, duration: 140, onComplete: () => g.destroy() });
+  }
+
   private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
+    // Fighting = an enemy near the hero: then the swing is for it, never for trees, fruit or vegetables (owner, 6 Oct 2026).
+    const fighting = !!this.nearestFoe(this.swingReach(strong ? WALKA.zasiegMiecz : 1) * 1.5);
+    const drill = !!this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 1.5, ranged ? (ranged.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz');
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
-    if (!ranged || gathering) this.swingWeapon(swingAim, strong);
+    const gathering = !!ranged && !fighting && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    // The weapon flies across only in a fight or at a training station; otherwise just a faint trace of the arm.
+    if (!ranged || gathering) {
+      if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
+      else this.faintSwing(swingAim);
+    }
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
       this.save();
@@ -1017,7 +1060,7 @@ export class GameScene extends Phaser.Scene {
       const d = Math.abs(((Math.atan2(dy, dx) - aim + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       return d <= arc / 2;
     };
-    if (arc) this.drawSweep(aim, arc, reach);
+    if (arc && (fighting || drill)) this.drawSweep(aim, arc, reach);
     // An enemy right on top of the hero is always hit too.
     const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
     for (const s of [...this.enemies]) {
@@ -1039,6 +1082,11 @@ export class GameScene extends Phaser.Scene {
     }
     // A blow that landed wears the sword (content/zuzycie.ts).
     if (landed) this.wearWeapon(gear.equip.bron);
+    // In a fight the swing is only for the enemies.
+    if (fighting) {
+      if (hits) this.practiced('miecz');
+      return;
+    }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
@@ -3281,7 +3329,10 @@ export class GameScene extends Phaser.Scene {
     const strong = r.held >= WALKA.mocnyPoMs;
     // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
     if (!weapon) {
-      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) {
+        this.faceFoe(WALKA.zasiegMiecz);
+        this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      }
       return;
     }
     if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only

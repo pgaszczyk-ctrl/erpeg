@@ -8,17 +8,20 @@ import { drzewo, hash, szum, GATUNKI, type Rodzaj, type Drzewo } from '../gen';
 export type Ochrona = 'park' | 'ozdobne' | 'sad' | 'gruby';
 interface Regula { odstep: number; gestosc: number; wagi: [string, number][]; skraj?: boolean; chop?: number; ochrona?: Ochrona }
 
-/** Reguły po rodzaju podłoża; odstęp w px mapy (z gatunki_osm.json, już ×0,55), gęstość = szansa w kratce. */
+/**
+ * Reguły po rodzaju podłoża; odstęp w px mapy (z gatunki_osm.json, już ×0,55), gęstość = szansa w kratce.
+ * Lasy, zarośla i mokradła o połowę rzadsze (właściciel 6.10.2026: drzewa zagradzały drogę, w lesie trudno walczyć).
+ */
 const REGULY: Partial<Record<Rodzaj, Regula>> = {
   park: { odstep: 12, gestosc: 0.63, ochrona: 'park', wagi: [['lipa', 0.3], ['dab', 0.25], ['buk', 0.15], ['brzoza', 0.15], ['krzak', 0.15]] },
   cmentarz: { odstep: 11, gestosc: 0.42, ochrona: 'park', wagi: [['lipa', 0.4], ['brzoza', 0.2], ['swierk', 0.2], ['krzak', 0.2]] },
   // Działki (w mapie rodzajów jako łąka): drzewa owocowe.
   laka: { odstep: 9, gestosc: 0.49, ochrona: 'sad', wagi: [['jablon', 0.45], ['sliwa', 0.25], ['grusza', 0.15], ['krzak', 0.15]] },
-  mokradlo: { odstep: 9, gestosc: 0.56, chop: 0.2, wagi: [['olcha', 0.4], ['wierzba', 0.4], ['brzoza', 0.2]] },
-  zarosla: { odstep: 6, gestosc: 0.9, chop: 0.2, wagi: [['krzak', 0.7], ['brzoza', 0.15], ['sosna', 0.15]] },
-  las_iglasty: { odstep: 9, gestosc: 1, chop: 0.3, wagi: [['sosna', 0.65], ['swierk', 0.3], ['brzoza', 0.05]], skraj: true },
+  mokradlo: { odstep: 9, gestosc: 0.28, chop: 0.2, wagi: [['olcha', 0.4], ['wierzba', 0.4], ['brzoza', 0.2]] },
+  zarosla: { odstep: 6, gestosc: 0.45, chop: 0.2, wagi: [['krzak', 0.7], ['brzoza', 0.15], ['sosna', 0.15]] },
+  las_iglasty: { odstep: 9, gestosc: 0.5, chop: 0.3, wagi: [['sosna', 0.65], ['swierk', 0.3], ['brzoza', 0.05]], skraj: true },
   // Lasy bez rodzaju liści w danych: las mieszany.
-  las_lisciasty: { odstep: 9, gestosc: 1, chop: 0.3, wagi: [['sosna', 0.35], ['dab', 0.2], ['brzoza', 0.2], ['swierk', 0.15], ['buk', 0.1]], skraj: true },
+  las_lisciasty: { odstep: 9, gestosc: 0.5, chop: 0.3, wagi: [['sosna', 0.35], ['dab', 0.2], ['brzoza', 0.2], ['swierk', 0.15], ['buk', 0.1]], skraj: true },
   trawa: { odstep: 16, gestosc: 0.17, ochrona: 'ozdobne', wagi: [['lipa', 0.3], ['brzoza', 0.3], ['krzak', 0.4]] },
 };
 /** Bliżej wody (gatunki_osm.json biomy.przyWodzieZamien). */
