@@ -7,7 +7,7 @@
 import { rpc, offline } from '../api';
 import { session } from '../quests';
 import { recentLog } from '../log';
-import { WERSJA, WERSJA_TEST, BUILD, TEST } from '../version';
+import { WERSJA, WERSJA_TEST, BUILD, TEST, wersjaNapis } from '../version';
 
 export const MAX_ZNAKOW = 300;
 
@@ -22,6 +22,10 @@ export function askBug(context: Record<string, unknown>, shot: string | null = n
     box.className = 'm-box';
     const h = document.createElement('h2');
     h.textContent = '🐞 Znalazłem buga';
+    // The version in sight, so it's clear whether a bug was already fixed in a newer one (owner, 6 Oct 2026).
+    const ver = document.createElement('div');
+    ver.textContent = wersjaNapis();
+    ver.style.cssText = 'font-size:13px;color:#c9b27a;margin:-4px 0 8px';
     const p = document.createElement('p');
     p.textContent = 'Opisz, co się stało i co robiłeś tuż przedtem. Razem z opisem wyślemy, gdzie jesteś i co ostatnio działo się w grze.';
     const area = Object.assign(document.createElement('textarea'), { maxLength: MAX_ZNAKOW, rows: 5, className: 'm-input', placeholder: 'np. Po rozmowie z woźnicą zniknął mój ludzik…' });
@@ -44,7 +48,7 @@ export function askBug(context: Record<string, unknown>, shot: string | null = n
       img.style.cssText = 'width:84px;border:2px solid #4a4a55;border-radius:4px';
       shotRow.append(attach, img, document.createTextNode('Dołącz zrzut ekranu'));
     }
-    box.append(h, p, area, count, ...(shot ? [shotRow] : []), note, ok, cancel);
+    box.append(h, ver, p, area, count, ...(shot ? [shotRow] : []), note, ok, cancel);
     root.append(box);
     document.body.append(root);
     area.focus();

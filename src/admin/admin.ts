@@ -603,7 +603,7 @@ async function bugsTab(main: HTMLElement) {
     } }, [
       el('td', {}, [done]),
       el('td', {}, [decide]),
-      el('td', {}, [new Date(b.at).toLocaleString('pl-PL')]),
+      el('td', {}, [new Date(b.at).toLocaleString('pl-PL'), el('br'), el('small', { style: 'opacity: 0.7' }, [`wersja ${c.wersja ?? '?'}`])]),
       el('td', {}, [b.player ?? '—']),
       el('td', {}, [b.text.slice(0, 140)]),
       el('td', {}, [`${c.map ?? ''} ${c.street ?? ''}`]),

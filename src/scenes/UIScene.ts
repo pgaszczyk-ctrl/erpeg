@@ -8,6 +8,7 @@ import { gear, item, condition, ammoOf, isBroken } from '../inventory';
 import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
+import { wersjaNapis } from '../version';
 
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
@@ -648,7 +649,7 @@ export class UIScene extends Phaser.Scene {
     if (this.dialogBox || this.overlay || !game.player || game.player.isDead) return;
     this.showDialog({
       title: 'Menu',
-      text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
+      text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
       buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', 'Graj dalej'],
       onChoose: (i) => {
         if (i === 1) showCodeOverlay(session.name, session.idik);
