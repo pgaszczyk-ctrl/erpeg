@@ -20,7 +20,8 @@ export const SKALA_POSTACI = (() => {
     const zapisany = localStorage.getItem('exp-ludziki');
     if (zapisany !== null) return zapisany === '67' ? 2 / 3 : 1;
     const wyglad = new URLSearchParams(location.search).get('wyglad') ?? localStorage.getItem('exp-wyglad');
-    return import.meta.env.VITE_TEST === '1' && wyglad !== '0' ? 2 / 3 : 1;
+    // Since 1.010 the default everywhere (with the new look), as on the test server before.
+    return wyglad !== '0' ? 2 / 3 : 1;
   } catch {
     return 1;
   }

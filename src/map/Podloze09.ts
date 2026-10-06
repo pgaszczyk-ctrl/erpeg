@@ -1,5 +1,4 @@
 import type { Rodzaj } from '../gen';
-import { TEST } from '../version';
 import type { Area, Line } from './CityMap';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, obrazBudynku, type Zlecenie, type Rodzaj09, type Budynek09 } from './ziemia09';
 import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
@@ -23,9 +22,10 @@ export const WYGLAD_09 = (() => {
     if (q === '09') localStorage.setItem('exp-wyglad', '09');
     else if (q !== null) localStorage.setItem('exp-wyglad', '0');
     const zapisany = localStorage.getItem('exp-wyglad');
-    return zapisany === null ? TEST : zapisany === '09';
+    // Since 1.010 (owner, 6 Oct 2026: „przerzuć wszystko z testa na produkcję”) on by default everywhere.
+    return zapisany === null ? true : zapisany === '09';
   } catch {
-    return q === '09' || (q === null && TEST);
+    return q !== '0';
   }
 })();
 
