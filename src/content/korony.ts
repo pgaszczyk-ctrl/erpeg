@@ -8,6 +8,14 @@ export const KORONY = {
   szybkoscPrzeswitu: 7,
   /** Środek postaci nad stopami (px mapy). */
   srodekPostaci: 7,
+  /**
+   * Które pnie zatrzymują postać (właściciel 6.10.2026: w lesie za często coś blokowało ruch): tylko taka część drzew
+   * (wybrana na stałe z położenia), i to wąskim pniem; przez resztę przechodzi się jak przez zarośla.
+   */
+  pnieBlokuja: 0.3,
+  /** Połowa szerokości / wysokości twardego pnia (px mapy). */
+  pienSzer: 1.6,
+  pienWys: 1.2,
 };
 
 /** Drzewa overhaulu 09: ścinanie i owoce (SPEC_09 punkt 4); dymki nad drzewem, którego nie wolno ściąć. */

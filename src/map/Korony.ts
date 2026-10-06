@@ -246,8 +246,8 @@ export class Korony {
   /** Czy w punkcie (px mapy) stoi pień (kolizje postaci); krzaki i pieńki nie zatrzymują. */
   blocked(x: number, y: number) {
     for (const k of this.siatka.get(this.kratka(x, y)) ?? []) {
-      if (k.pada || k.t.g.startsWith('krzak')) continue;
-      if (Math.abs(k.t.x / GEN_DOTS - x) < 2.5 && Math.abs(k.t.y / GEN_DOTS - y) < 2) return true;
+      if (k.pada || k.t.g.startsWith('krzak') || hash(k.t.x, k.t.y, 211) >= KORONY.pnieBlokuja) continue;
+      if (Math.abs(k.t.x / GEN_DOTS - x) < KORONY.pienSzer && Math.abs(k.t.y / GEN_DOTS - y) < KORONY.pienWys) return true;
     }
     return false;
   }
