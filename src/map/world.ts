@@ -115,6 +115,40 @@ const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
 };
 
+/**
+ * Turns a building around its middle so its longest wall lies at one of the 8 "pixel" angles (like build-map's G8 for
+ * Lublin – owner, 6 Oct 2026: unturned buildings on world maps had ragged, stair-stepped sides). Rings in half-metres;
+ * if a corner would land on a road (within 2 m of a road line it wasn't near before), it stays as it is.
+ */
+const KATY = [0, 26.565, 45, 63.435, 90, 116.565, 135, 153.435];
+function straighten(rings: number[][][], roads: number[][]) {
+  const r = rings[0];
+  const n = r.length;
+  if (n < 3) return;
+  let best = -1, ang = 0, cx = 0, cy = 0;
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = r[i], [bx, by] = r[(i + 1) % n];
+    const L = (bx - ax) ** 2 + (by - ay) ** 2;
+    if (L > best) [best, ang] = [L, Math.atan2(by - ay, bx - ax)];
+    cx += ax / n;
+    cy += ay / n;
+  }
+  const deg = (((ang * 180) / Math.PI) % 180 + 180) % 180;
+  let cel = 0, bd = 999;
+  for (const k of [...KATY, 180]) if (Math.abs(deg - k) < bd) [bd, cel] = [Math.abs(deg - k), k % 180];
+  if (bd < 0.5) return;
+  const d = ((cel - deg) * Math.PI) / 180, co = Math.cos(d), si = Math.sin(d);
+  const turn = ([x, y]: number[]) => [cx + (x - cx) * co - (y - cy) * si, cy + (x - cx) * si + (y - cy) * co];
+  const near = (x: number, y: number) => roads.some(([ax, ay, bx, by]) => {
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2));
+    return Math.hypot(ax + dx * t - x, ay + dy * t - y) < 4; // 2 m
+  });
+  const turned = rings.map((ring) => ring.map(turn));
+  for (let i = 0; i < n; i++) if (near(turned[0][i][0], turned[0][i][1]) && !near(r[i][0], r[i][1])) return;
+  turned.forEach((ring, i) => (rings[i] = ring));
+}
+
 /** Signed area of a ring in tile coordinates (y down): > 0 for outer rings in vector tiles. */
 function ringArea(r: { x: number; y: number }[]) {
   let a = 0;
@@ -272,7 +306,21 @@ function worldLoader(map: CityMap): WorldLoader {
     });
     // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under
     // SZOPY.usunM2 dropped, under SZOPY.przejscieM2 drawn but walked through (last field 1).
+    // Roads of this tile (half-metres) for the straightening check below: a turned building must not step onto one.
+    const roadSegs: number[][] = [];
+    for (const l of out.l) {
+      if (l[1] === 'rail' || l[1] === 'tram') continue;
+      // Points are stored as steps from the previous one (`flat`).
+      const q = l[3] as number[];
+      let x = q[0], y = q[1];
+      for (let i = 2; i + 1 < q.length; i += 2) {
+        roadSegs.push([x, y, x + q[i], y + q[i + 1]]);
+        x += q[i];
+        y += q[i + 1];
+      }
+    }
     for (const b of blds) {
+      straighten(b.rings, roadSegs);
       const m2 = Math.abs(areaOf(b.rings[0])) / 4; // half-metres²
       if (!b.addr.length && m2 < SZOPY.usunM2) continue;
       const open = !b.addr.length && m2 < SZOPY.przejscieM2 ? 1 : 0;
