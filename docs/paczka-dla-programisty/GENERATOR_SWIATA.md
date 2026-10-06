@@ -119,4 +119,5 @@ Wnioski i zasady:
 | G13 | Wozy konne z części od grafika (`WOZY.md`) | koń + wóz + ładunek w dobrej skali, ładunek na dnie | ~200 tys. |
 | G14 | Szyldy na słupach przy rogu budynku, lampka nocą zamiast poświaty (punkt 14) | szyld widać z daleka bez aury | ~100 tys. |
 | G15 | Ozdoby steampunkowe ze sprite'ów grafika zamiast rysowania pikselami (punkt 15) | ozdoby w stylu postaci | ~150 tys. |
+| G16 | Góry v2: warstwy co 10 m z mgłą (gęsta od 50 m niżej) i paralaksą w obie strony, bez linii poziomic, piętra roślin, znaki szlaku, kurz (`GORY.md` p. 7), potem elementy od grafika (`ZAMOWIENIE_16`) | na stoku od razu widać wysokość i spadek; płynnie na telefonie | ~400 tys. |
 | G7 | Usunięcie nieużywanych plików `public/swiat/` (podłoże, dachy, ściany, drzewa) po akceptacji | mniej do pobierania | ~50 tys. |

@@ -116,6 +116,6 @@ export class Terrain {
     const dh = this.heightAt(x + (vx / len) * step, y + (vy / len) * step) - this.heightAt(x, y);
     if (Number.isNaN(dh)) return 1;
     const grade = dh / 6;
-    return grade > 0 ? 1 / (1 + GORY.podejscie * grade) : 1 / (1 + GORY.zejscie * Math.max(0, -grade - 0.1));
+    return grade > 0 ? 1 / (1 + GORY.podejscie * grade) : 1 / (1 + GORY.zejscie * -grade);
   }
 }

@@ -12,6 +12,8 @@ import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
+import { GoryFiltr } from '../map/GoryFiltr';
+import { GORY } from '../content/gory';
 import { MapRenderer, wallHeight, WALL_SKEW, WALLS_UP, type Uprawa09 } from '../map/MapRenderer';
 import type { Korona } from '../map/Korony';
 import { Pociagi } from '../map/Pociagi';
@@ -332,6 +334,8 @@ export class GameScene extends Phaser.Scene {
     this.rescueDeclined = false;
     this.toldPlace = null;
     this.mapView = new MapRenderer(this, this.city);
+    // Góry v2 (world maps with terrain): blur, fog, shrinking and parallax of what lies below, on the graphics card.
+    this.gory = GoryFiltr.make(this, this.city);
     this.mapView.onRipe = (q) => this.ripeCrop(q);
     this.mapView.onRipeGone = (im) => this.removePickup(im);
     this.explored = new Explored();
@@ -623,6 +627,7 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000;
     this.mapView.update(this.cameras.main);
     if (this.player) this.mapView.updateTrees(now, dt, this.cameras.main, this.player.x, this.player.y);
+    if (this.player) this.gory?.update(now, dt, this.player.x, this.player.y);
     // Tiled maps: keep the map loaded around the hero.
     if (now >= this.nextTiles && this.player) {
       this.nextTiles = now + 700;
@@ -652,6 +657,15 @@ export class GameScene extends Phaser.Scene {
       const tr = this.city.terrain;
       if (tr) {
         this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+        // Dust from under the boots on a steep climb.
+        if (now - this.lastDust > GORY.kurzCoMs) {
+          const len = Math.hypot(this.player.vel.x, this.player.vel.y), step = 6 * PX_PER_M;
+          const dh = tr.heightAt(this.player.x + (this.player.vel.x / len) * step, this.player.y + (this.player.vel.y / len) * step) - tr.heightAt(this.player.x, this.player.y);
+          if (dh / 6 > GORY.kurzOd) {
+            this.lastDust = now;
+            this.dustPuff();
+          }
+        }
         // Steep off any path (report 57): walkable but slow, with a word the first time.
         const f = this.city.steepFactor(this.player.x, this.player.y);
         if (f < 1) {
@@ -1691,6 +1705,21 @@ export class GameScene extends Phaser.Scene {
 
   /** Until when the hero walks slower after picking a vegetable. */
   private cropSlowUntil = 0;
+  /** Góry v2 camera filter (null off world maps / without WebGL). */
+  private gory: GoryFiltr | null = null;
+  /** When the last dust puff came out from under the boots (uphill). */
+  private lastDust = 0;
+
+  /** A dust puff at the hero's feet on a steep climb (Góry v2): light beige, grows and fades in 0.7 s. */
+  private dustPuff() {
+    const g = this.add.graphics().setDepth(this.player.y - 1);
+    const x = this.player.x + (Math.random() - 0.5) * 3, y = this.player.y + 1;
+    for (let i = 0; i < 9; i++) {
+      g.fillStyle(0xc8b49a, 0.8);
+      g.fillRect(x + (Math.random() - 0.5) * 4, y + (Math.random() - 0.5) * 2, 1, 1);
+    }
+    this.tweens.add({ targets: g, alpha: 0, scaleX: 1.6, scaleY: 1.4, y: -2, duration: 700, onComplete: () => g.destroy() });
+  }
   /** The "steep slope" word was said (once per scene). */
   private steepSaid = false;
 

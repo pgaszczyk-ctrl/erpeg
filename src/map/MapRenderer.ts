@@ -750,6 +750,7 @@ export class MapRenderer {
       if (m.terrain) {
         this.paintRelief(ctx, x0, y0);
         this.paintCliffs(ctx, x0, y0);
+        this.paintTrailMarks(ctx, lines);
       }
       if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
       if (this.lampArt) this.paintLamps(ctx, lines);
@@ -825,6 +826,7 @@ export class MapRenderer {
     if (m.terrain) {
       this.paintRelief(ctx, x0, y0);
       this.paintCliffs(ctx, x0, y0);
+      this.paintTrailMarks(ctx, lines);
     }
 
     // Buildings, north to south so southern walls overlap northern roofs.
@@ -870,6 +872,77 @@ export class MapRenderer {
         ctx.lineWidth = 0.6;
         ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.75, 0, 0, Math.PI * 2); ctx.stroke();
       }
+  }
+
+  /**
+   * Trail marks in the mountains (Góry v2, GORY.md p. 7): along paths above GORY.szlakOdM, every GORY.znakCoM metres
+   * (counted from the path's start, so every chunk agrees), alternately on each side: a stone with a white-red-white
+   * stripe or a wooden post with the stripe on top; on steep ground a little cairn. Placeholders until the artist's sprites.
+   */
+  private paintTrailMarks(ctx: CanvasRenderingContext2D, lines: Line[]) {
+    const t = this.map.terrain!;
+    const co = GORY.znakCoM * PX_PER_M;
+    for (const l of lines) {
+      if (l.kind !== 'path' && l.kind !== 'steps') continue;
+      const p = l.pts;
+      let acc = co * 0.5, n = 0;
+      for (let i = 0; i + 3 < p.length; i += 2) {
+        const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay, L = Math.hypot(dx, dy);
+        if (!L) continue;
+        let d = co - acc;
+        while (d <= L) {
+          const x = ax + (dx * d) / L, y = ay + (dy * d) / L;
+          n++;
+          const h = t.heightAt(x, y);
+          if (h > GORY.szlakOdM) {
+            const side = n % 2 ? 1 : -1, off = l.width / 2 + 2.2;
+            const mx = x - (dy / L) * off * side, my = y + (dx / L) * off * side;
+            if (t.slopeAt(mx, my) > GORY.stromoBezSzlaku && n % 3 === 0) this.cairn(ctx, mx, my);
+            else if (n % 2) this.markStone(ctx, mx, my);
+            else this.markPost(ctx, mx, my);
+          }
+          d += co;
+        }
+        acc = (acc + L) % co;
+      }
+    }
+  }
+
+  private markStone(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.fillStyle = '#1e1a24';
+    ctx.fillRect(x - 2, y - 2.5, 4, 3);
+    ctx.fillStyle = '#7a7a80';
+    ctx.fillRect(x - 1.5, y - 2, 3, 2);
+    ctx.fillStyle = '#f4f4f4';
+    ctx.fillRect(x - 1, y - 2, 2, 0.5);
+    ctx.fillRect(x - 1, y - 1, 2, 0.5);
+    ctx.fillStyle = '#c8352c';
+    ctx.fillRect(x - 1, y - 1.5, 2, 0.5);
+  }
+
+  private markPost(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.fillStyle = '#1e1a24';
+    ctx.fillRect(x - 1, y - 6, 2, 6);
+    ctx.fillStyle = '#5a3a1e';
+    ctx.fillRect(x - 0.5, y - 5.5, 1, 5.5);
+    ctx.fillStyle = '#f4f4f4';
+    ctx.fillRect(x - 0.5, y - 5.5, 1, 0.5);
+    ctx.fillRect(x - 0.5, y - 4.5, 1, 0.5);
+    ctx.fillStyle = '#c8352c';
+    ctx.fillRect(x - 0.5, y - 5, 1, 0.5);
+  }
+
+  private cairn(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    for (const [w, dy] of [[4.5, 0], [3.5, -1.5], [2, -3]] as const) {
+      ctx.fillStyle = '#1e1a24';
+      ctx.fillRect(x - w / 2 - 0.5, y + dy - 1.5, w + 1, 2);
+      ctx.fillStyle = '#8a8a90';
+      ctx.fillRect(x - w / 2, y + dy - 1, w, 1.5);
+    }
+    ctx.fillStyle = '#f4f4f4';
+    ctx.fillRect(x - 0.5, y - 4.5, 1, 0.5);
+    ctx.fillStyle = '#c8352c';
+    ctx.fillRect(x - 0.5, y - 4, 1, 0.5);
   }
 
   private reliefShade?: HTMLCanvasElement;
