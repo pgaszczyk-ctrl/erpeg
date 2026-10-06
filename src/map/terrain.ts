@@ -19,7 +19,9 @@ export class Terrain {
   private pending = new Map<number, Promise<void>>();
   private base: string;
   /** Steeper than this (m per m) only along paths; rock and ice too, if set (content/gory.ts). */
-  readonly maxSlope = GORY.stromoBezSzlaku;
+  readonly maxSlope = GORY.urwisko;
+  /** Steep off a path (slowed, CityMap.steepFactor): from this slope, speed naStromym → naStromymMin at maxSlope. */
+  readonly steep = { from: GORY.stromoBezSzlaku, slow: GORY.naStromym, min: GORY.naStromymMin };
   readonly rockOnlyPaths = GORY.skalyTylkoSzlakiem;
 
   constructor(private toLatLon: LatLon, private pxPerM: number) {

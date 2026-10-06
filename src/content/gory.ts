@@ -5,10 +5,17 @@
 
 export const GORY = {
   /**
-   * Jak strome zbocze da się przejść bez szlaku (przewyższenie na metr:
-   * 0.45 to ok. 24°). Na bardziej stromym trzeba iść ścieżką albo drogą.
+   * Od jakiego nachylenia poza szlakiem robi się „stromo” (przewyższenie na metr: 0.45 to ok. 24°):
+   * dalej da się iść, ale bardzo wolno (zgłoszenie 57, właściciel 6.10.2026: łąka pod skocznią w Zakopanem
+   * wyglądała zwyczajnie, a była ścianą nie do przejścia).
    */
   stromoBezSzlaku: 0.45,
+  /** Prędkość poza szlakiem na zboczu o nachyleniu `stromoBezSzlaku` (mnożnik, oprócz zwykłego „pod górę”)… */
+  naStromym: 0.5,
+  /** …malejąca do tej przy urwisku. */
+  naStromymMin: 0.2,
+  /** Urwisko (1.0 = 45°): tu poza szlakiem już się nie wejdzie. */
+  urwisko: 1.0,
   /** Po skałach, piargach i lodowcach chodzi się tylko szlakiem. */
   skalyTylkoSzlakiem: true,
   /** Pod górę wolniej: prędkość / (1 + podejscie × nachylenie). */

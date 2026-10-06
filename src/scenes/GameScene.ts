@@ -650,7 +650,18 @@ export class GameScene extends Phaser.Scene {
       this.player.vel.scale(PODLOZE[this.city.surfaceAt(this.player.x, this.player.y)]);
       // Mountains (world maps): slower uphill and down steep slopes.
       const tr = this.city.terrain;
-      if (tr) this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+      if (tr) {
+        this.player.vel.scale(tr.speedFactor(this.player.x, this.player.y, this.player.vel.x, this.player.vel.y));
+        // Steep off any path (report 57): walkable but slow, with a word the first time.
+        const f = this.city.steepFactor(this.player.x, this.player.y);
+        if (f < 1) {
+          this.player.vel.scale(f);
+          if (!this.steepSaid) {
+            this.steepSaid = true;
+            this.toast('⛰ Stromo! Bez ścieżki idziesz bardzo powoli – szlakiem pójdzie szybciej.', 3500);
+          }
+        }
+      }
       // Picking a vegetable on the way: a short stop-and-go.
       if (now < this.cropSlowUntil) this.player.vel.scale(WARZYWA.zwolnienie);
     }
@@ -1632,6 +1643,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Until when the hero walks slower after picking a vegetable. */
   private cropSlowUntil = 0;
+  /** The "steep slope" word was said (once per scene). */
+  private steepSaid = false;
 
   /**
    * A ripe vegetable on a 09 field as a pickup of its own (owner, 5 Oct 2026: in the field they were hard to tell

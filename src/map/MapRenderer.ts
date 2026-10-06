@@ -747,7 +747,10 @@ export class MapRenderer {
       // Overhaul 09: the ground (areas, roads, water, tracks) comes from the generator in src/gen.
       // Buildings come with the ground (roofs, walls, shadows from the generator).
       rysujZiemie(ctx, ground, x0, y0, CHUNK);
-      if (m.terrain) this.paintRelief(ctx, x0, y0);
+      if (m.terrain) {
+        this.paintRelief(ctx, x0, y0);
+        this.paintCliffs(ctx, x0, y0);
+      }
       if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
       if (this.lampArt) this.paintLamps(ctx, lines);
       clip = null;
@@ -819,7 +822,10 @@ export class MapRenderer {
     }
 
     // Mountains (world maps): hill shading and contour lines over the ground.
-    if (m.terrain) this.paintRelief(ctx, x0, y0);
+    if (m.terrain) {
+      this.paintRelief(ctx, x0, y0);
+      this.paintCliffs(ctx, x0, y0);
+    }
 
     // Buildings, north to south so southern walls overlap northern roofs.
     buildings.sort((a, b) => a.y1 - b.y1);
@@ -828,6 +834,42 @@ export class MapRenderer {
     if (Object.keys(this.deco).length) this.paintDecorations(ctx, lines, areas, x0, y0);
     if (this.lampArt) this.paintLamps(ctx, lines);
     clip = null;
+  }
+
+  /**
+   * Where the hero can't go (a cliff past GORY.urwisko, off any path – report 57: a meadow that looked flat was a wall),
+   * boulders are drawn, so the player sees why: a grey stone with a lit top-left, a dark outline, on a 4 m grid,
+   * size and offset by position (stays the same in every chunk).
+   */
+  private paintCliffs(ctx: CanvasRenderingContext2D, x0: number, y0: number) {
+    const m = this.map, t = m.terrain!;
+    const cell = 4 * PX_PER_M;
+    const h = (a: number, b: number, s: number) => {
+      let v = (a * 374761393 + b * 668265263 + s * 2147483647) | 0;
+      v = Math.imul(v ^ (v >>> 13), 1274126177);
+      return ((v ^ (v >>> 16)) >>> 0) / 4294967296;
+    };
+    for (let cy = Math.floor((y0 - cell) / cell); cy <= Math.ceil((y0 + CHUNK + cell) / cell); cy++)
+      for (let cx = Math.floor((x0 - cell) / cell); cx <= Math.ceil((x0 + CHUNK + cell) / cell); cx++) {
+        const x = (cx + 0.5) * cell, y = (cy + 0.5) * cell;
+        if (!(t.slopeAt(x, y) > t.maxSlope) || m.nearPath(x, y)) continue;
+        if (h(cx, cy, 5) < 0.3) continue; // gaps between the stones, so it reads as a scree, not a pavement
+        const big = h(cx, cy, 6) < 0.15;
+        const r = cell * (big ? 0.6 + 0.15 * h(cx, cy, 1) : 0.22 + 0.22 * h(cx, cy, 1));
+        const px = x + (h(cx, cy, 2) - 0.5) * cell * 0.4, py = y + (h(cx, cy, 3) - 0.5) * cell * 0.4;
+        const tone = h(cx, cy, 4) < 0.5 ? ['#6e6a66', '#8c8782', '#b3ada6'] : ['#66625f', '#7f7a75', '#a49e97'];
+        ctx.fillStyle = 'rgba(30,26,36,0.35)'; // shadow to the lower right
+        ctx.beginPath(); ctx.ellipse(px + r * 0.35, py + r * 0.3, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = tone[0];
+        ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.75, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = tone[1];
+        ctx.beginPath(); ctx.ellipse(px - r * 0.12, py - r * 0.12, r * 0.78, r * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = tone[2];
+        ctx.beginPath(); ctx.ellipse(px - r * 0.35, py - r * 0.3, r * 0.32, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#1e1a24';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.75, 0, 0, Math.PI * 2); ctx.stroke();
+      }
   }
 
   private reliefShade?: HTMLCanvasElement;

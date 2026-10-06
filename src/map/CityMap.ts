@@ -931,7 +931,28 @@ export class CityMap {
     return false;
   }
 
-  /** World maps: too steep, or rock/ice, and not on (or right by) a path or road. */
+  /**
+   * World maps: how much a steep slope off any path slows the walk (1 = not at all): from GORY.stromoBezSzlaku
+   * it drops from naStromym to naStromymMin at the cliff (urwisko), where roughOffPath blocks.
+   */
+  steepFactor(x: number, y: number) {
+    const t = this.terrain;
+    if (!t) return 1;
+    const s = t.slopeAt(x, y), st = t.steep;
+    if (!(s > st.from)) return 1;
+    if (this.nearPath(x, y)) return 1;
+    const k = Math.min(1, (s - st.from) / (t.maxSlope - st.from));
+    return st.slow + (st.min - st.slow) * k;
+  }
+
+  nearPath(x: number, y: number) {
+    const m = 3 * PX_PER_M; // the hero's feet may stick out of a narrow path
+    for (const l of this.lineGrid.query({ x0: x - m, y0: y - m, x1: x + m, y1: y + m }))
+      if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + m) return true;
+    return false;
+  }
+
+  /** World maps: a cliff (GORY.urwisko), or rock/ice, and not on (or right by) a path or road. */
   private roughOffPath(x: number, y: number) {
     const t = this.terrain!;
     let rough = t.slopeAt(x, y) > t.maxSlope;
@@ -942,10 +963,7 @@ export class CityMap {
           break;
         }
     if (!rough) return false;
-    const m = 3 * PX_PER_M; // the hero's feet may stick out of a narrow path
-    for (const l of this.lineGrid.query({ x0: x - m, y0: y - m, x1: x + m, y1: y + m }))
-      if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + m) return false;
-    return true;
+    return !this.nearPath(x, y);
   }
 
   /** Is a feet box of the given half size free at (x, y)? */
