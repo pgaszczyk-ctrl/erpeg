@@ -12,7 +12,7 @@ import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
-import { MapRenderer, wallHeight, WALL_SKEW, type Uprawa09 } from '../map/MapRenderer';
+import { MapRenderer, wallHeight, WALL_SKEW, WALLS_UP, type Uprawa09 } from '../map/MapRenderer';
 import type { Korona } from '../map/Korony';
 import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
@@ -1596,6 +1596,8 @@ export class GameScene extends Phaser.Scene {
       if (d < best) [best, bx, by, south] = [d, x, y, out * -dx > 0.3 * Math.sqrt(L2)];
     }
     const h = wallHeight(p.building!);
+    // Overhaul 09: walls stand on the outline (roof jutting out north), so the front wall's middle is above the edge.
+    if (WALLS_UP) return south ? { x: bx - h * 0.5 * WALL_SKEW, y: by - h * 0.5 } : { x: bx - h * WALL_SKEW, y: by - h - 4 };
     return south ? { x: bx + h * 0.5 * WALL_SKEW, y: by + h * 0.5 } : { x: bx, y: by - 6 };
   }
 

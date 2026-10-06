@@ -4,7 +4,9 @@ import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building 
 import { AREA_FILL, ROAD_FILL } from './drawCity';
 import { GORY } from '../content/gory';
 import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
-import { DZIELENIE } from '../content/budynki';
+import { DZIELENIE, POZIOMY } from '../content/budynki';
+import { SKALA_POSTACI } from '../skala';
+import { Wysokie } from './Wysokie';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
@@ -12,7 +14,7 @@ import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw
 import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
-import { idRosliny, type WielkoscMiasta } from '../gen';
+import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
 import type { Peron09 } from './dworzec09';
@@ -346,7 +348,32 @@ export const WYSOKOSCI_SCIAN = { parter: 4 * SKALA_SWIATA, wyzszy: 6 * SKALA_SWI
 /** Walls lean this much to the right per px of height, so the east side of every building shows too (bug report 11). */
 export const WALL_SKEW = 0.35;
 
+/**
+ * Overhaul 09 (owner, 6 Oct 2026, GENERATOR_SWIATA 13a): game levels instead of storeys – 1–3 storeys = 1 level, 4–14 = 2,
+ * 15+ = 3; a level is 16–24 px of the mock-up (by the footprint's size), scaled so buildings keep the mock-up's proportion to
+ * the characters (content/budynki.ts POZIOMY). `poziom` in generator px, `h` (the wall) in map px.
+ */
+const ksztalty = new WeakMap<Building, { poziomy: number; poziom: number; h: number }>();
+export function ksztalt09(b: Building) {
+  let k = ksztalty.get(b);
+  if (k) return k;
+  const r = b.rings[0] ?? [];
+  let a = 0;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1];
+  const m2 = Math.abs(a) / 2 / (PX_PER_M * PX_PER_M);
+  const f = (56 * 0.36 * SKALA_POSTACI * GEN_DOTS) / POZIOMY.wzorBohatera;
+  const { poziomy, poziom } = ksztaltBudynku(b.levels || 1, m2);
+  const p = Math.max(10, Math.round(poziom * f));
+  k = { poziomy, poziom: p, h: (poziomy * p) / GEN_DOTS };
+  if (r.length) ksztalty.set(b, k);
+  return k;
+}
+
+/** Overhaul 09: walls stand on the footprint and the roof juts out to the north (else walls hang south of it, over the street). */
+export const WALLS_UP = WYGLAD_09;
+
 export function wallHeight(b: Building) {
+  if (WYGLAD_09) return ksztalt09(b).h;
   // Low walls (they are drawn over the street to the south), whatever the
   // map says about storeys: only three heights, so nothing hides the streets.
   const l = b.levels || 1;
@@ -374,6 +401,8 @@ interface Chunk {
   zbior?: Uprawa09[];
   /** Their pictures (GameScene's onRipe), taken away with the chunk. */
   ripe?: Phaser.GameObjects.Image[];
+  /** Overhaul 09: tall buildings reaching this chunk (shown as their own sprites by Wysokie). */
+  wysokie?: Budynek09[];
 }
 
 /** A ripe vegetable on a field (src/gen/pola.ts): where (map px), what goes into the backpack, its id (generator px). */
@@ -400,6 +429,7 @@ export class MapRenderer {
 
   constructor(private scene: Phaser.Scene, private map: CityMap) {
     this.korony = new Korony(scene);
+    this.wysokie = new Wysokie(scene, this.korony);
     const off = map.onTile((b) => {
       // Walls hang up to ~60 px below a footprint: one chunk of margin.
       for (let cx = Math.floor(b.x0 / CHUNK) - 1; cx <= Math.floor(b.x1 / CHUNK) + 1; cx++)
@@ -421,6 +451,7 @@ export class MapRenderer {
     }
     this.chunks.clear();
     this.free = [];
+    this.wysokie.destroy();
   }
 
   /** Draws the chunks around the camera; call every frame. */
@@ -528,6 +559,8 @@ export class MapRenderer {
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
+        c.wysokie = order.budynki.filter((b) => b.osobno);
+        this.wysokie.trzymaj(c, c.wysokie, order.noc, order.miasto);
         c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py)), ...ready.wyrzuty.map((z) => this.korony.wyrzut(z))];
         c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot, k: q.k }));
         c.ripe = this.onRipe ? c.zbior.filter((q) => !STAN.zebrane.has(q.id)).map((q) => this.onRipe!(q)).filter((im): im is Phaser.GameObjects.Image => !!im) : undefined;
@@ -548,9 +581,13 @@ export class MapRenderer {
 
   /** Overhaul 09: tree crowns (wind, see-through), see src/map/Korony.ts. */
   readonly korony: Korony;
+  /** Overhaul 09: tall buildings as sprites with a see-through cut-out (src/map/Wysokie.ts). */
+  private readonly wysokie: Wysokie;
 
   /** Takes a chunk's tree crowns away (it is recycled or hidden). */
   private dropCrowns(c: Chunk) {
+    if (c.wysokie) this.wysokie.pusc(c, c.wysokie);
+    c.wysokie = undefined;
     c.zbior = undefined;
     if (c.ripe) for (const im of c.ripe) this.onRipeGone?.(im);
     c.ripe = undefined;
@@ -595,7 +632,10 @@ export class MapRenderer {
 
   /** Wind and see-through of the crowns in view; call every frame (overhaul 09). */
   updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, hx: number, hy: number) {
-    if (WYGLAD_09) this.korony.update(now, dt, cam.worldView, hx, hy);
+    if (WYGLAD_09) {
+      this.korony.update(now, dt, cam.worldView, hx, hy);
+      this.wysokie.update(cam.worldView, hx, hy);
+    }
   }
 
   /** Roof patterns from the artist's files (empty until they arrive). */
@@ -662,16 +702,20 @@ export class MapRenderer {
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
     for (const l of wide.lines) if (l.kind === 'rail' || l.kind === 'tram') tory.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
-    // Buildings whose roof or walls reach the chunk (walls hang below the outline), north to south.
-    const { buildings } = m.query({ x0: x0 - 8, y0: y0 - 60, x1: x0 + CHUNK + 8, y1: y0 + CHUNK + 8 });
+    // Buildings whose roof, walls or shadow reach the chunk (roofs jut out north of the outline), north to south.
+    const { buildings } = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 48 });
     buildings.sort((a, b) => a.y1 - b.y1);
     const G = GEN_DOTS;
     const budynki: Budynek09[] = buildings.map((b) => {
       const hl = this.highlight.get(b);
+      const k = ksztalt09(b);
       return {
         r: b.rings[0].map((v) => v * G),
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),
-        h: wallHeight(b) * G,
+        h: k.poziomy * k.poziom,
+        poziom: k.poziom,
+        osobno: k.poziomy >= POZIOMY.osobnoOd,
+        id: b.id,
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,

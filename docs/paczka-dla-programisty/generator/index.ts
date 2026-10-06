@@ -9,3 +9,4 @@ export * from './steampunk';
 export * from './pojazdy';
 export * from './pola';
 export * from './cienieChmur';
+export * from './przeswit';

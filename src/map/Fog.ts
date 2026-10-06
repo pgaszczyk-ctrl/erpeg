@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { CityMap, Building } from './CityMap';
-import { wallHeight, WALL_SKEW } from './MapRenderer';
+import { wallHeight, WALL_SKEW, WALLS_UP } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
 import { MGLA } from '../content/mgla';
 import { SKALA_PLIKOW } from '../content/swiat';
@@ -42,9 +42,11 @@ export function markBuilding(explored: Explored, city: CityMap, b: Building) {
   const h = wallHeight(b);
   const n = ((b.x1 - b.x0) / FOG_CELL) * ((b.y1 - b.y0 + h) / FOG_CELL);
   if (n > 40000) return; // huge blocks: only what the rays touch
-  for (let y = b.y0; y <= b.y1 + h; y += FOG_CELL) {
-    for (let x = b.x0; x <= b.x1; x += FOG_CELL) {
-      if (city.buildingAt(x, y) === b || city.buildingAt(x, y - h) === b) explored.mark(x, y);
+  // Walls hang south of the outline – or (overhaul 09) stand on it with the roof jutting out north.
+  const up = WALLS_UP ? -1 : 1;
+  for (let y = b.y0 - (WALLS_UP ? h : 0); y <= b.y1 + (WALLS_UP ? 0 : h); y += FOG_CELL) {
+    for (let x = b.x0 - (WALLS_UP ? h * WALL_SKEW : 0); x <= b.x1; x += FOG_CELL) {
+      if (city.buildingAt(x, y) === b || city.buildingAt(x - up * h * WALL_SKEW, y - up * h) === b) explored.mark(x, y);
     }
   }
 }
@@ -377,7 +379,7 @@ export class FogView {
     mc.lineJoin = 'round';
     mc.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
-      const h = wallHeight(b);
+      const h = wallHeight(b) * (WALLS_UP ? -1 : 1);
       for (const dy of [0, h / 2, h]) {
         const dx = dy * WALL_SKEW;
         mc.beginPath();

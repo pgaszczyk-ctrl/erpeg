@@ -1,8 +1,11 @@
 import type { Rodzaj } from '../gen';
 import { TEST } from '../version';
 import type { Area, Line } from './CityMap';
-import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, type Zlecenie, type Rodzaj09 } from './ziemia09';
-import type { Sprite, DoZebrania, ZrodloPary } from '../gen';
+import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, obrazBudynku, type Zlecenie, type Rodzaj09, type Budynek09 } from './ziemia09';
+import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
+
+/** Obraz wysokiego budynku z Web Workera (px generatora) i jego wyloty pary. */
+export interface ObrazBudynku { obraz: HTMLCanvasElement; x0: number; y0: number; wyrzuty: ZrodloPary[] }
 import type { Drzewo09 } from './drzewa09';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
@@ -185,12 +188,12 @@ export function mapaRodzajow(
 }
 
 
-/** Piksele ziemi → płótno N×N. */
-function naPlotno(px: Uint32Array, N: number) {
+/** Piksele ziemi → płótno N×N (albo N × H: obraz budynku). */
+function naPlotno(px: Uint32Array, N: number, H = px.length / N) {
   const c = document.createElement('canvas');
   c.width = N;
-  c.height = N;
-  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength), N, N), 0, 0);
+  c.height = H;
+  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(px.buffer as ArrayBuffer, px.byteOffset, px.byteLength), N, H), 0, 0);
   return c;
 }
 
@@ -238,7 +241,13 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number; bud?: boolean; x0?: number; y0?: number }>) => {
+          if (e.data.bud) {
+            const ok = this.budynki.get(e.data.nr);
+            this.budynki.delete(e.data.nr);
+            ok?.({ obraz: naPlotno(e.data.px, e.data.S!), x0: e.data.x0!, y0: e.data.y0!, wyrzuty: e.data.wyrzuty });
+            return;
+          }
           if (e.data.cien) {
             const ok = this.pojazdy.get(e.data.nr);
             this.pojazdy.delete(e.data.nr);
@@ -259,6 +268,21 @@ class ZiemiaWTle {
   }
 
   private pojazdy = new Map<number, (k: { obraz: HTMLCanvasElement; cien: HTMLCanvasElement }) => void>();
+  private budynki = new Map<number, (k: ObrazBudynku) => void>();
+
+  /** Wysoki budynek jako osobny obrazek (px generatora, lewy-górny róg x0, y0), liczony w tle. */
+  budynek(b: Budynek09, noc: boolean, miasto: WielkoscMiasta): Promise<ObrazBudynku> {
+    if (!this.workery.length) {
+      const g = obrazBudynku(b, noc, miasto);
+      return Promise.resolve({ obraz: naPlotno(g.obraz.px.slice(), g.obraz.w), x0: g.x0, y0: g.y0, wyrzuty: g.para.filter((z) => z.okres) });
+    }
+    const nr = ++this.nr;
+    const w = this.workery[this.kolej++ % this.workery.length];
+    return new Promise((ok) => {
+      this.budynki.set(nr, ok);
+      w.postMessage({ nr, budynek: b, noc, miasto });
+    });
+  }
 
   /** Klatka pojazdu kolejowego (model z generator/pojazdy.ts) w kierunku `kat` stopni, z cieniem; liczona w tle. */
   pojazd(typ: string, kat: number): Promise<{ obraz: HTMLCanvasElement; cien: HTMLCanvasElement }> {

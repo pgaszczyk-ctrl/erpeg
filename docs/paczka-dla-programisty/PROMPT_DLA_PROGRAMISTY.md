@@ -13,6 +13,10 @@ Najważniejsze decyzje właściciela (4.10.2026):
 - Drzewa w skali 0,6 (SKALA_DRZEW) i gęściej (dane/gatunki_osm.json). Korony to sprite'y z atlasu z 5 klatkami wiatru, pnie w kawałku mapy.
 - Budynki z OSM obracane do 8 kątów (przyciagnij() w generator/budynki.ts), liczone raz w scripts/build-map.mjs (i dla map świata), z kontrolą kolizji z drogami i sąsiadami – gdy koliduje, zmniejsz o 1–2 px, a w ostateczności zostaw bez obrotu. Dach i ściany liczy generator (budynek()), WALL_SKEW zostaje.
 - Rurociągi tylko wzdłuż dróg: równolegle, w stałym odsunięciu za chodnikiem, tym samym łukiem co droga; na końcach wchodzą do budynku albo pod ziemię do studzienki (trasaPrzyDrodze + rurociagWzdluz w generator/steampunk.ts, GENERATOR_SWIATA punkt 0.6). Żadnych zygzaków po trawie.
+- Budynki: poziomy gry zamiast pięter – 1–3 piętra = 1 duży poziom, 4–14 = 2, 15+ = 3, duże okna, drzwi, mur pruski, okiennice (`ksztaltBudynku`, GENERATOR_SWIATA punkt 13a); wieże/maszty to zabytki od grafika.
+- Prześwit za wysokimi budynkami: wariant E – duże wycięcie, zostaje kontur budynku (`generator/przeswit.ts`, punkt 13).
+- Szyldy (G14): słup na rogu budynku + tablica od grafika + lampka nocą zamiast złotej poświaty (punkt 14).
+- Ozdoby steampunkowe (G15): sprite'y od grafika po wyrównaniu zamiast rysowania pikselami (punkt 15).
 - Góry (GORY.md, zadanie G10): ten sam generator na prawdziwych wysokościach, szersze ścieżki szlaku dopasowane do ludzika, na stromym stoku rozmycie tego, co leży niżej od bohatera (filtr/shader), bez oddalania kamery; po skałach i urwiskach tylko szlakiem.
 - Pola (POLA.md, G11): zamiast grządek 3×4 całe pola w pasach jednej uprawy (generator/pola.ts), wygląd wg miesiąca, część warzyw dojrzała do zebrania jak drzewa z zaciosem.
 - Steampunk na budynkach wg wielkości miasta i budynku (katalog 19 ozdób, GENERATOR_SWIATA 0.10); para tylko z części wylotów i krótkimi wyrzutami (`klatkaPary`, 0.11); ruchome cienie chmur z wiatrem i zachmurzeniem z pogody (`teksturaChmur`, 0.12).

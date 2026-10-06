@@ -29,6 +29,12 @@ export interface Budynek09 {
   drzwi?: [number, number];
   /** Kolory miejsc wyróżnionych w grze (sklep, szkoła, misja): dach i ściana. */
   hl?: [string, string];
+  /** Wysokość jednego poziomu gry (px generatora, `ksztaltBudynku`): duże okna, drzwi, mur pruski. */
+  poziom?: number;
+  /** Wysoki budynek (od POZIOMY.osobnoOd): w kawałku tylko jego cień, sam budynek gra stawia jako osobny obrazek z prześwitem. */
+  osobno?: boolean;
+  /** Id budynku z mapy (wysokie budynki gra trzyma pod nim). */
+  id?: number;
 }
 
 export interface Zlecenie {
@@ -114,6 +120,7 @@ function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], dr
   ];
   lista.sort((a, b) => a[0] - b[0]);
   for (const [, rzecz] of lista) {
+    if ('osobno' in rzecz && rzecz.osobno) continue;
     if ('g' in rzecz) {
       const d = drzewoZ(rzecz.g, rzecz.w);
       const pien = sciete.has(idDrzewa(rzecz)) ? d.pieniek : rzecz.c && d.pienZacios ? d.pienZacios : d.pien;
@@ -159,23 +166,34 @@ function naloz(o: Obraz, src: Obraz, x: number, y: number) {
 }
 
 function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boolean, miasto: WielkoscMiasta, wyrzuty: ZrodloPary[]) {
+  const { obraz, x0, y0, para } = obrazBudynku(b, noc, miasto);
+  naloz(o, obraz, x0 - X0, y0 - Y0);
+  // Para z tego budynku: tylko wyloty w tym kawałku (budynek na kilku kawałkach nie da jej dwa razy).
+  for (const z of para) if (z.okres && z.x >= X0 && z.y >= Y0 && z.x < X0 + o.w && z.y < Y0 + o.h) wyrzuty.push(z);
+}
+
+/** Obraz jednego budynku (z pamięci, jeśli już był liczony): też dla wysokich budynków stawianych przez grę osobno. */
+export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta) {
   const u = hash(b.seed, 3, 91), v = hash(b.seed, 5, 17);
   const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(DACHY, u);
   const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${b.seed}|${b.h}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    gotowy = budynek(b.r, { wysokosc: b.h, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk });
+    gotowy = budynek(b.r, { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk });
     zapamietaj(klucz, gotowy);
   }
-  const { obraz, x0, y0, para } = gotowy;
-  naloz(o, obraz, x0 - X0, y0 - Y0);
-  // Para z tego budynku: tylko wyloty w tym kawałku (budynek na kilku kawałkach nie da jej dwa razy).
-  for (const z of para) if (z.okres && z.x >= X0 && z.y >= Y0 && z.x < X0 + o.w && z.y < Y0 + o.h) wyrzuty.push(z);
+  // Ściany stoją na obrysie (wygląd 09 z poziomami): obraz w górę o wysokość ściany i w lewo o jej przechył,
+  // więc podstawa ściany leży na krawędzi obrysu, a dach wystaje na północ (za nim można stanąć).
+  const dx = -Math.round(b.h * SKOS), dy = -b.h;
+  return { obraz: gotowy.obraz, x0: gotowy.x0 + dx, y0: gotowy.y0 + dy, para: gotowy.para.map((z) => ({ ...z, x: z.x + dx, y: z.y + dy })) };
 }
+
+/** Przechył ścian w generatorze (domyślny `skos` budynku, WALL_SKEW). */
+const SKOS = 0.35;
 
 const KRAWEDZ_PERONU = [hex('#e6dfcd'), hex('#d4ccb8')], LINIA_PERONU = hex('#e2b53c');
 

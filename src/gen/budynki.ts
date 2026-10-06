@@ -37,6 +37,24 @@ export interface OpcjeBudynku {
   steampunk?: 0 | 1 | 2 | 3;
   /** Wymuszony zestaw ozdób (nazwy z `OZDOBY_STEAMPUNK`) zamiast losowania – do podglądu i miejsc specjalnych. */
   ozdoby?: string[];
+  /** Dach płaski z attyką (domyślnie tylko przy 3 poziomach gry). */
+  plaski?: boolean;
+  /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
+  poziom?: number;
+}
+
+/** Dachy płaskie: żwir jasny, papa, zielony dach, blacha (wybór z ziarna budynku). */
+const DACHY_PLASKIE = [['#5c5a5e', '#77747a', '#8f8c90', '#a6a3a6', '#c0bdbd'], ['#2a2a2e', '#38383e', '#46464c', '#5a5a62', '#74747c'], ['#2f4a2c', '#3d5c34', '#4c6e3c', '#5e8248', '#8aa868'], ['#4a5058', '#5e6670', '#727c88', '#8a96a2', '#a8b2bc']].map((t) => t.map(hex));
+
+/**
+ * Poziomy gry zamiast pięter (decyzja właściciela 6.10: dużo pięter i okienek gryzie się z dużym ludzikiem; blok z wielkiej płyty
+ * ma być dwupoziomową karczmą, nie pomniejszonym molochem): 1–3 piętra OSM = 1 poziom, 4–14 = 2, 15+ = 3.
+ * Wysokość poziomu rośnie z wielkością budynku, ale łagodnie: 100 m² → 16 px, 400 → 20, 1600+ → 24 (przy bohaterce 48 px).
+ */
+export function ksztaltBudynku(pietraOSM: number, powierzchniaM2: number): { poziomy: number; poziom: number; wysokosc: number } {
+  const poziomy = pietraOSM <= 3 ? 1 : pietraOSM <= 14 ? 2 : 3;
+  const poziom = Math.round(Math.min(24, Math.max(16, 16 + 2 * Math.log2(Math.max(1, powierzchniaM2 / 100)))));
+  return { poziomy, poziom, wysokosc: poziomy * poziom };
 }
 
 
@@ -75,6 +93,7 @@ export function klatkaPary(z: ZrodloPary, tSek: number): number {
 /** Zwraca też `para`: źródła pary (patrz `ZrodloPary`, `klatkaPary`) – gra stawia tam animowane obłoczki `para()` tylko w chwili wyrzutu. */
 export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: ZrodloPary[] } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
+  const PLASKI = op.plaski ?? Math.round(H / Math.max(10, op.poziom ?? H)) >= 3; // dach płaski tylko na najwyższych (3 poziomy gry)
   // Obrys z podwórkami (dziury): maska ścian i dachu bierze wszystkie pierścienie (parzysto-nieparzyście).
   // Drobne „zęby” z zaokrąglonych narożników (pogrubianie i łączenie budynków w build-map) wygładzone,
   // żeby krawędzie szły równymi schodkami pikseli (właściciel 5.10.2026: domy wyglądały na poszarpane).
@@ -223,9 +242,15 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
         case 'blacha': if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); break;
       }
       c = D.tony[t];
+      if (PLASKI) { // dach płaski (wysokie budynki): attyka – jasny brzeg, ciemny pas cienia pod nią, papa z lekką fakturą, świetliki
+        const P = DACHY_PLASKIE[op.seed % DACHY_PLASKIE.length];
+        c = d < 1.5 ? P[4] : d < 2.5 ? (lum > 0.05 ? P[3] : P[0]) : d < 3.5 && lum > 0.05 ? P[1] : (hash(x >> 1, y >> 1, op.seed) < 0.08 ? P[3] : P[2]);
+        if (d > 6 && Math.floor(x / 9) % 3 === 0 && Math.floor(y / 6) % 4 === 1 && (x % 9) < 4 && (y % 6) < 3) c = (y % 6) === 0 ? P[4] : SZYBA[1];
+      } else {
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
       if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
+      }
       // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
       if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else {
@@ -238,24 +263,67 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       else if (S.wzor === 'kamien') { if ((hh % 4 === 0) || Math.floor(along + (Math.floor(hh / 4) % 2) * 3) % 6 === 0) t = Math.max(0, t - 1); }
       else if (hash(x, y, op.seed) < 0.1) t = Math.min(4, t + 1);
       c = S.tony[t];
-      // okna: rzędy co 7 px wysokości, co 7 px wzdłuż ściany, z dala od narożników
       let okno = false;
-      const pietra = H >= 14 ? 2 : 1;
-      for (let f = 0; f < pietra; f++) {
-        const lo = 3 + f * 7, m = Math.floor(along + (op.seed % 5)) % 7;
-        if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && along > 3 && along < e.L - 3) {
-          const id = Math.floor((along + (op.seed % 5)) / 7) * 3 + f, swieci = !!op.noc && hash(id, f, op.seed) < 0.45;
-          c = swieci ? (hh === lo + 3 || m === 2 ? SWIATLO[1] : SWIATLO[0]) : (hh === lo + 3 && m === 2 ? SZYBA[1] : SZYBA[0]);
-          okno = true;
+      if (op.poziom === undefined) { // stary układ: rzędy małych okien co 7 px wysokości, co 7 px wzdłuż ściany, z dala od narożników
+        const pietra = H >= 14 ? 2 : 1;
+        for (let f = 0; f < pietra; f++) {
+          const lo = 3 + f * 7, m = Math.floor(along + (op.seed % 5)) % 7;
+          if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && along > 3 && along < e.L - 3) {
+            const id = Math.floor((along + (op.seed % 5)) / 7) * 3 + f, swieci = !!op.noc && hash(id, f, op.seed) < 0.45;
+            c = swieci ? (hh === lo + 3 || m === 2 ? SWIATLO[1] : SWIATLO[0]) : (hh === lo + 3 && m === 2 ? SZYBA[1] : SZYBA[0]);
+            okno = true;
+          }
+          if (hh === lo - 1 && m >= 2 && m <= 4 && along > 3 && along < e.L - 3) c = S.tony[4];
         }
-        if (hh === lo - 1 && m >= 2 && m <= 4 && along > 3 && along < e.L - 3) c = S.tony[4];
+        if (op.drzwi) { const [dx, dy] = op.drzwi; if (drzwiI1 === q.i1) { const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy; if (Math.abs(along - da) <= 2 && hh <= 6) { c = hh === 6 || Math.abs(along - da) > 1.5 ? hex('#3a2416') : hex('#6a4426'); okno = true; } } }
+      } else {
+      // ——— poziomy gry (decyzja właściciela 6.10): 1–3 piętra OSM = jeden duży poziom; okna wielkie jak dla bohatera ———
+      const L = Math.max(10, op.poziom), NP = Math.max(1, Math.round(H / L));
+      const f = Math.min(NP - 1, Math.floor(hh / L)), hl = hh - f * L;
+      const ww = Math.max(4, Math.round(L * 0.4)), wh = Math.max(5, Math.round(L * 0.55)), wb = Math.round(L * 0.24) + (f === 0 ? 1 : 0);
+      const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt, al = Math.floor(along);
+      const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), u = m - wx, v = hl - wb, nr = Math.floor((al + off) / pt);
+      const okCale = al - u > 2 && al - u + ww < e.L - 2;
+      const ciemnaSciana = S.wzor === 'cegla' || S.wzor === 'kamien' || S.wzor === 'deski';
+      const RAMA = ciemnaSciana ? hex('#e6dcc6') : hex('#4e3424'), BELKA = [hex('#3a2618'), hex('#5a3c26')];
+      const szach = !PLASKI && S.wzor === 'gladki' && hash(op.seed, 3, 11) < 0.45; // mur pruski (karczma)
+      const okiennice = !PLASKI && !szach && L <= 21 && hash(op.seed, 5, 13) < 0.5, OKIENNICA = [hex('#2f4a36'), hex('#3f6046'), hex('#6a3a2a'), hex('#8a4c34')];
+      const ok = op.seed % 2 ? 0 : 2;
+      // drzwi (parter): łukowe, z desek, w kamiennej opasce – okna obok drzwi znikają
+      let przyDrzwiach = false;
+      if (op.drzwi && f === 0 && drzwiI1 === q.i1) {
+        const [dx, dy] = op.drzwi;
+        const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy, dw = Math.max(5, Math.round(L * 0.5)) | 1, dh = Math.round(L * 0.8), du = along - (da - dw / 2);
+        if (Math.abs(al - u + ww / 2 - da) < (ww + dw) / 2 + 3) przyDrzwiach = true;
+        const lukY = dh - dw / 2, wDrzwiach = (pd: number) => du >= -pd && du < dw + pd && (hh < lukY || Math.hypot(du - (dw - 1) / 2, hh - lukY) <= dw / 2 + pd);
+        if (wDrzwiach(1)) { okno = true; c = wDrzwiach(0) ? (Math.floor(du) % 3 === 0 ? BELKA[0] : hex('#6a4426')) : S.tony[4];
+          if (wDrzwiach(0) && Math.floor(du) === dw - 2 && hh === Math.round(dh * 0.45)) c = MOSIADZ[3]; if (hh === 0) c = hex('#8a847c'); } }
+      if (!okno) {
+        if (hh <= 1) c = hh === 0 ? hex('#4c4848') : hex('#6a6462'); // cokół
+        else if (f < NP - 1 && hl === L - 1) c = S.tony[0]; // gzyms między poziomami
+        else if (f < NP - 1 && hl === L - 2) c = S.tony[4];
+        if (szach && hh > 1 && !(u >= -1 && u <= ww && v >= -1 && v <= wh)) { // belki: poziome na granicach, słupki przy oknach, zastrzały między nimi
+          const gx = m - (wx + ww + 2), g = pt - ww - 4;
+          if (hl <= 1 || hl >= L - 2 || u === -2 || u === ww + 1) c = BELKA[hl <= 1 || u === -2 ? 0 : 1];
+          else if (g >= 4 && gx >= 0 && gx < g && Math.abs(((nr % 2 ? gx : g - 1 - gx) / (g - 1)) * (L - 4) - (hl - 2)) < 0.9) c = BELKA[0];
+        }
+        if (okiennice && okCale && !przyDrzwiach && v >= 0 && v < wh && (u === -3 || u === -2 || u === ww + 1 || u === ww + 2)) c = OKIENNICA[ok + (v % 2 ? 0 : 1)];
+        if (okCale && !(przyDrzwiach && f === 0)) {
+          if (u >= 0 && u < ww && v >= 0 && v < wh) { okno = true;
+            const bul = SP >= 2 && f >= 1 && hash(nr, f, op.seed + 5) < 0.3;
+            if (bul) { const d = Math.hypot(u - (ww - 1) / 2, v - (wh - 1) / 2), r = Math.min(ww, wh) / 2; c = d > r ? c : d > r - 1.3 ? MOSIADZ[u + v < ww ? 3 : 1] : op.noc ? SWIATLO[0] : SZYBA[d < r * 0.5 && u < ww / 2 ? 1 : 0]; if (d > r) okno = false; }
+            else if (u === 0 || u === ww - 1 || v === 0 || v === wh - 1 || u === ww >> 1 || v === Math.floor(wh * 0.55)) c = RAMA;
+            else { const swieci = !!op.noc && hash(nr, f, op.seed) < 0.45; c = swieci ? (u + (wh - v) < 5 ? SWIATLO[1] : SWIATLO[0]) : (u - 1 + (wh - 2 - v) < 3 ? SZYBA[1] : SZYBA[0]); }
+          } else if (v === -1 && u >= -1 && u <= ww) c = S.tony[4]; // parapet
+          else if (v === -2 && u >= 0 && u < ww) c = S.tony[0];
+          else if (v === wh && u >= -1 && u <= ww) c = ciemnaSciana ? S.tony[0] : S.tony[1]; // nadproże
+        }
       }
-      // drzwi
-      if (op.drzwi) { const [dx, dy] = op.drzwi; if (drzwiI1 === q.i1) { const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy; if (Math.abs(along - da) <= 2 && hh <= 6) { c = hh === 6 || Math.abs(along - da) > 1.5 ? hex('#3a2416') : hex('#6a4426'); okno = true; } } }
+      }
       // rura
       for (const [ei, ra, zawor] of rury) if (ei === q.i1 && along >= ra && along < ra + 3) { c = MOSIADZ[along < ra + 1 ? 3 : along < ra + 2 ? 2 : 0]; if (hh % 5 === 2) c = MOSIADZ[0]; if (zawor && hh === Math.floor(H / 2)) c = hex('#b2453a'); if (zawor && hh === Math.floor(H / 2) + 1 && along < ra + 1) c = hex('#ece6d6'); okno = true; }
       // okno-bulaj (okrągłe, mosiężne) na budynkach steampunkowych
-      if (okno && SP >= 2 && c !== MOSIADZ[0] && c !== MOSIADZ[1] && c !== MOSIADZ[3]) { const m = Math.floor(along + (op.seed % 5)) % 7, f = H >= 14 && hh > 9 ? 1 : 0, lo = 3 + f * 7;
+      if (op.poziom === undefined && okno && SP >= 2 && c !== MOSIADZ[0] && c !== MOSIADZ[1] && c !== MOSIADZ[3]) { const m = Math.floor(along + (op.seed % 5)) % 7, f = H >= 14 && hh > 9 ? 1 : 0, lo = 3 + f * 7;
         if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && hash(Math.floor((along + (op.seed % 5)) / 7), f, op.seed + 5) < 0.3) { const cx = 3, cy = lo + 1.5, d = Math.hypot(m - cx, hh - cy); c = d > 1.2 ? MOSIADZ[2] : (op.noc ? SWIATLO[0] : SZYBA[1]); } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
