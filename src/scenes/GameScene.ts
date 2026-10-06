@@ -236,6 +236,9 @@ type Enemy = Slime & {
   minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
 };
 
+/** Places where the story's question about the dragon's shadow can be asked. */
+const STORY_PLACES = new Set(['school', 'church', 'university']);
+
 export class GameScene extends Phaser.Scene {
   city!: CityMap;
   player!: Player;
@@ -2139,7 +2142,9 @@ export class GameScene extends Phaser.Scene {
     for (const rm of this.missions) {
       if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
         id = rm.m.id;
-        open = () => this.openMissionDialog(rm);
+        // A mission taken at a church/school keeps its door, but asking about the shadows must stay possible there (report 58).
+        const host = this.city.places.find((p) => STORY_PLACES.has(p.kind) && Phaser.Math.Distance.Between(p.door.x, p.door.y, rm.door.x, rm.door.y) < DOOR_RADIUS);
+        open = () => this.withStoryPlace(host, () => this.openMissionDialog(rm));
       }
     }
     if (!id) {
@@ -2171,16 +2176,18 @@ export class GameScene extends Phaser.Scene {
 
   private openPlace(p: CityPlace) {
     // Schools, churches and universities: the story question joins their dialog.
-    if (p.kind === 'school' || p.kind === 'church' || p.kind === 'university') {
-      this.storyPlace = p;
-      try {
-        this.openPlaceInner(p);
-      } finally {
-        this.storyPlace = null;
-      }
-      return;
+    this.withStoryPlace(STORY_PLACES.has(p.kind) ? p : undefined, () => this.openPlaceInner(p));
+  }
+
+  /** Runs `open` with `p` as the place whose dialog gets "ask about the shadows" (see dialog()). */
+  private withStoryPlace(p: CityPlace | undefined, open: () => void) {
+    if (!p) return open();
+    this.storyPlace = p;
+    try {
+      open();
+    } finally {
+      this.storyPlace = null;
     }
-    this.openPlaceInner(p);
   }
 
   private openPlaceInner(p: CityPlace) {

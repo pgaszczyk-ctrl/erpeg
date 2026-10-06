@@ -14,7 +14,7 @@ const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
 import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
 import { heroPortrait } from '../sprites';
-import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
+import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -140,6 +140,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
+      if (typingInField(e)) return;
       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
         this.openMap();
       }
@@ -580,7 +581,7 @@ export class UIScene extends Phaser.Scene {
   private dialogOpenedAt = 0;
 
   private onDialogTap(x: number, y: number) {
-    if (!this.dialogBox && !this.overlay && x >= 0 && x < 60 && y < 60) {
+    if (!this.dialogBox && !this.overlay && onMenuButton(x, y)) {
       this.openGameMenu();
       return;
     }

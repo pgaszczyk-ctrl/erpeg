@@ -10,6 +10,7 @@ import { Wysokie } from './Wysokie';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
+import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
 import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
 import { STAN } from './drzewa09';
@@ -206,12 +207,31 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
   };
 }
 
-/** An artist's object sheet (lamp, chimney) shrunk to map size, smoothed (null when there is no file). */
-function artSheet(scene: Phaser.Scene, file: string): HTMLCanvasElement | null {
+/**
+ * An artist's object sheet (lamp, chimney, decorations) shrunk to map size (null when there is no file).
+ * In the 09 look each of its `frames` is turned into world pixels (area average, world palette, hard alpha,
+ * 1 px outline – `pixelate` in art.ts): smoothly shrunk, the gas lamps were a blur (owner, 6 Oct 2026).
+ */
+function artSheet(scene: Phaser.Scene, file: string, frames = 1): HTMLCanvasElement | null {
   const key = `swiat-${file}`;
   if (!scene.textures.exists(key)) return null;
   const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
   const c = document.createElement('canvas');
+  if (WYGLAD_09) {
+    const fw = Math.floor(img.width / frames);
+    const parts = Array.from({ length: frames }, (_, i) => {
+      const f = document.createElement('canvas');
+      f.width = fw;
+      f.height = img.height;
+      f.getContext('2d')!.drawImage(img, i * fw, 0, fw, img.height, 0, 0, fw, img.height);
+      return pixelate(f, DOTS / SKALA_PLIKOW);
+    });
+    c.width = parts[0].width * frames;
+    c.height = parts[0].height;
+    const g = c.getContext('2d')!;
+    parts.forEach((p, i) => g.drawImage(p, i * parts[0].width, 0));
+    return c;
+  }
   c.width = Math.round((img.width * DOTS) / SKALA_PLIKOW);
   c.height = Math.round((img.height * DOTS) / SKALA_PLIKOW);
   const g = c.getContext('2d')!;
@@ -668,14 +688,14 @@ export class MapRenderer {
       const pat = artPattern(this.scene, ctx, `${w.plik}_okno`) ?? artPattern(this.scene, ctx, `${w.plik}_gladka`);
       if (pat) this.wallArt.push({ pat, udzial: w.udzial });
     }
-    this.lampArt = artSheet(this.scene, LATARNIE.plik);
-    this.chimneyArt = artSheet(this.scene, KOMINY.plik);
-    this.treeArt = artSheet(this.scene, ZIELEN.drzewo);
+    this.lampArt = artSheet(this.scene, LATARNIE.plik, LATARNIE.klatki);
+    this.chimneyArt = artSheet(this.scene, KOMINY.plik, KOMINY.klatki);
+    this.treeArt = artSheet(this.scene, ZIELEN.drzewo, ZIELEN.klatki);
     for (const [k, d] of Object.entries(DEKORACJE)) {
-      const c = artSheet(this.scene, d.plik);
+      const c = artSheet(this.scene, d.plik, 'klatki' in d ? (d as { klatki: number }).klatki : 1);
       if (c) this.deco[k as keyof typeof DEKORACJE] = c;
     }
-    this.bushArt = artSheet(this.scene, ZIELEN.krzak);
+    this.bushArt = artSheet(this.scene, ZIELEN.krzak, ZIELEN.klatki);
     this.roofArt = DACHY_PLIKI.map((f) => {
       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
       return made.get(f)!;

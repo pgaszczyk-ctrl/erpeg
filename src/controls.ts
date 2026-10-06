@@ -82,6 +82,15 @@ type TapListener = (x: number, y: number) => void;
 const tapListeners = new Set<TapListener>();
 
 /** Subscribes to taps/clicks/attack keys; returns an unsubscribe function. */
+/** A key pressed while typing in a text field (bug report, codes…) is the player's text, never a game key (report 58). */
+export function typingInField(e: KeyboardEvent) {
+  const t = e.target as HTMLElement | null;
+  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+}
+
+/** The ☰ menu button's corner of the screen (CSS px; UIScene opens the menu on a tap there). */
+export const onMenuButton = (x: number, y: number) => x >= 0 && x < 60 && y >= 0 && y < 60;
+
 export function onTap(fn: TapListener) {
   tapListeners.add(fn);
   return () => tapListeners.delete(fn);
@@ -258,7 +267,7 @@ export function installTouchControls(el: HTMLElement) {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (menuOpen()) return;
+      if (menuOpen() || typingInField(e)) return;
       const code = e.code || e.key;
       if (KEY_DIRS[code]) {
         heldKeys.add(code);
@@ -305,9 +314,12 @@ export function installTouchControls(el: HTMLElement) {
       healRequest = true;
       return;
     }
-    startHold('mouse');
-    touchInput.attack = true;
-    pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
+    // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
+    if (!onMenuButton(e.offsetX, e.offsetY)) {
+      startHold('mouse');
+      touchInput.attack = true;
+      pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
+    }
     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
   });
   document.addEventListener('contextmenu', (e) => e.preventDefault());

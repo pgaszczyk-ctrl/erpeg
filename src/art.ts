@@ -1358,7 +1358,7 @@ function baseAligned(img: HTMLImageElement, n: number): HTMLCanvasElement {
  * owner liked on the locomotive): shrunk with an area average to `k` of its size, every pixel replaced by the nearest
  * colour of the world palette (PALETA_SWIATA), alpha made hard, then a 1 px #1e1a24 outline around the silhouette.
  */
-function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
+export function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
   const W = Math.max(1, Math.round(src.width * k)), H = Math.max(1, Math.round(src.height * k));
   const d = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
   const o = nowy(W + 2, H + 2);

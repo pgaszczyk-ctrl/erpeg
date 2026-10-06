@@ -118,14 +118,14 @@ let root: HTMLDivElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let pics: Record<'baza' | 'mikstura' | 'owoc', HTMLImageElement> | null = null;
 /** The hero's head and shoulders for the avatar frame (null: the drawn frame stays empty). */
-let avatar: HTMLCanvasElement | null = null;
+let avatar: { src: CanvasImageSource; sx: number; sy: number; sw: number; sh: number } | null = null;
 let view: HudView | null = null;
 let timer = 0;
 let parts: {
   m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
-  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement;
+  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
 } | null = null;
 let scale = 4;
 
@@ -265,7 +265,11 @@ export function mountHud(on: HudHandlers) {
   wpn.append(wpnImg);
   const wcount = document.createElement('div');
   wcount.className = 'hud-wcount';
-  m.append(canvas, heal, hp, xp, count, wpn, wcount,
+  // The avatar has its own canvas at the screen's real pixels (owner, 6 Oct 2026: shrunk into the machine's 18 px it was blurred).
+  const avPic = document.createElement('canvas');
+  avPic.className = 'hud-avpic';
+  avPic.style.cssText = 'position:absolute;pointer-events:none';
+  m.append(canvas, avPic, heal, hp, xp, count, wpn, wcount,
     btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
@@ -311,7 +315,7 @@ export function mountHud(on: HudHandlers) {
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic };
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -345,6 +349,8 @@ function layout() {
   };
   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
   at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
+  Object.assign(parts.avPic.style, { left: `${(CX + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
+  drawAvatar();
   at(parts.heal, CX, HY, 26, 26);
   parts.heal.style.borderRadius = '50%';
   at(parts.hp, 49 + L, 1, 10, H - 2);
@@ -484,25 +490,25 @@ function draw() {
     c.fillRect(55 + L, y, 2, 1);
     c.fillRect(65 + L, y, 2, 1);
   }
-  // The hero's head in the avatar frame (inside 18×18).
-  if (avatar) c.drawImage(avatar, CX + 4, 6, 18, 18);
 }
 
 /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
 export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
-  if (!src) {
-    avatar = null;
-  } else {
-    // Shrunk once to the frame's 18 px (smoothly), then shown blocky like the rest of the machine.
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = 18;
-    const g = cv.getContext('2d')!;
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(src, sx, sy, sw, sh, 0, 0, 18, 18);
-    avatar = cv;
-  }
-  draw();
+  avatar = src ? { src, sx, sy, sw, sh } : null;
+  drawAvatar();
+}
+
+/** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */
+function drawAvatar() {
+  if (!parts) return;
+  const cv = parts.avPic;
+  const n = Math.max(1, Math.round(18 * scale * (window.devicePixelRatio || 1)));
+  if (cv.width !== n) cv.width = cv.height = n;
+  const g = cv.getContext('2d')!;
+  g.clearRect(0, 0, n, n);
+  if (!avatar) return;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(avatar.src, avatar.sx, avatar.sy, avatar.sw, avatar.sh, 0, 0, n, n);
 }
 
 /** "+1 marchewka" left of the machine for ~2 s; newer ones below, older ones fade. */
