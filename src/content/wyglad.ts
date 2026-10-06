@@ -69,7 +69,7 @@ export const MIESZKANCY_HD: Postac[] = [
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'slime', bokWPrawo: false, skala: 0.28 };
 
 /** Fixed characters (pack „postacie stałe 01”): each has one look (no recolouring). Key = who in FixedNpcs/Story. */
-export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica', Postac> = {
+export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies', Postac> = {
   mag: { id: 'mag', nazwa: 'Mag Albrecht', plik: 'mag', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
   margo: { id: 'margo', nazwa: 'Siostra Margo', plik: 'siostra_margo', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'dorosly' },
   marek: { id: 'marek', nazwa: 'Dziadek Marek', plik: 'dziadek_marek', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
@@ -79,6 +79,8 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
   luigi: { id: 'luigi', nazwa: 'Luigi', plik: 'luigi', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'dorosly' },
   martin: { id: 'martin', nazwa: 'Martin', plik: 'martin', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'dorosly' },
   woznica: { id: 'woznica', nazwa: 'Woźnica', plik: 'woznica', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'dorosly' },
+  // The dog on Guliwera/Cyda (6 Oct 2026, from the 🎨 Grafika chat): about 0.6 of a person, no mask.
+  pies: { id: 'pies', nazwa: 'Biało-czarny pies', plik: 'pies', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
 };
 
 /** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */

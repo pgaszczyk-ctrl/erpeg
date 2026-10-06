@@ -10,7 +10,8 @@ import { groupCount, takeGroup, groupValue, sellGroup, fruitCount, takeFruit } f
 import { levelForAge } from './Npcs';
 import type { Place } from '../map/CityMap';
 import { today } from './Npcs';
-import { fixedSprite, isHd, walkHd } from '../sprites';
+import { fixedSprite, isHd, walkHd, hdOn, ensureHd, fitHd } from '../sprites';
+import { STALE_HD } from '../content/wyglad';
 
 // The fixed characters from content/postacie.ts: a dog on Guliwera/Cyda that
 // lost its piggy, Sister Margo on Orlanda and Grandpa Marek or Grandma Iwonka
@@ -176,7 +177,8 @@ export class FixedNpcs {
     const dogLines = streetLines(PIES.ulice);
     if (dogLines.length && this.state('npc-pies') !== 'done') {
       const w = new Walker(dogLines, PIES.predkosc * PX_PER_M, this.r);
-      const sprite = scene.add.image(w.x, w.y, TEX.dog);
+      const dogKey = hdOn ? ensureHd(scene, `hd-${STALE_HD.pies.id}`) : '';
+      const sprite = hdOn && scene.textures.exists(dogKey) ? fitHd(scene.add.sprite(w.x, w.y, dogKey, 'down-0')) : scene.add.image(w.x, w.y, TEX.dog);
       const label = scene.add.text(w.x, w.y - 14, '', { fontFamily: 'monospace', fontSize: '8px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 }).setOrigin(0.5, 1).setAlpha(0);
       this.list.push({ id: 'pies', walker: w, sprite, label, x: w.x, y: w.y });
       this.piggyAt = this.findPiggySpot(dogLines);
