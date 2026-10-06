@@ -26,6 +26,9 @@ export interface HudView {
   weather: string;
   detail: string;
   quest: { text: string; color: string; more: number } | null;
+  /** The purse and the diamonds (shown on the plaque at the top, owner 6 Oct 2026). */
+  coins: number;
+  diamonds: number;
 }
 
 export interface HudHandlers {
@@ -59,6 +62,8 @@ const BY = 70;
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
 #hud.off { display: none; }
+#hud.dim { opacity: 0.45; }
+#hud.dim, #hud.dim * { pointer-events: none !important; }
 #hud button { pointer-events: auto; position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; border-radius: 4px; -webkit-tap-highlight-color: transparent; }
 #hud button:focus-visible { outline: 2px solid #f1e3c2; }
 @media (hover: hover) { #hud .hud-m button:hover { background: rgba(255,240,200,0.12); } }
@@ -84,6 +89,10 @@ const CSS = `
 #hud .hud-quest .dot { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; color: #3a2a1c; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 #hud .hud-quest .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #hud .hud-quest .more { color: #c9b48a; font-size: 12px; flex-shrink: 0; }
+#hud .hud-money { display: flex; align-items: center; gap: 12px; padding: 4px 11px 4px 7px; background: rgba(28,20,14,0.82); border: 2px solid #b8893b;
+  border-radius: 9px; box-shadow: 0 0 0 2px #1a110b; color: #ffe9a8; font-size: 16px; font-weight: 700; white-space: nowrap; }
+#hud .hud-money span { display: flex; align-items: center; gap: 5px; }
+#hud .hud-money img, #hud .hud-money svg { width: 22px; height: 22px; image-rendering: pixelated; flex-shrink: 0; }
 #hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }
@@ -106,7 +115,7 @@ let timer = 0;
 let parts: {
   m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
-  picks: HTMLDivElement;
+  picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
 } | null = null;
 let scale = 4;
 
@@ -140,6 +149,31 @@ const MAPA_SVG = (() => {
   }));
   return `<svg width="32" height="26" viewBox="0 0 16 13" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
 })();
+/** A leather purse tied with a gold cord, in pixels (the coins on the top plaque). */
+const SAKIEWKA_SVG = (() => {
+  const rows = [
+    '....aaaa....',
+    '...accca....',
+    '....aya.....',
+    '...ayyya....',
+    '..abbbbba...',
+    '.abbcbbbba..',
+    'abbcbbbbbba.',
+    'abcbbbbbdba.',
+    'abbbbbbbdba.',
+    'abbbbbbddba.',
+    '.abbddddba..',
+    '..aaaaaaa...',
+  ];
+  const col: Record<string, string> = { a: '#1a110b', b: '#8a5a2b', c: '#b07a40', d: '#5e3b1c', y: '#e2b25a' };
+  let r = '';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    const c = col[ch];
+    if (c) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;
+  }));
+  return `<svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+})();
+
 /** A brass magnifier in pixels (the bigger-picture button): a "+" when off, a "−" when on. */
 function lupaSvg(on: boolean) {
   const rows = [
@@ -247,14 +281,20 @@ export function mountHud(on: HudHandlers) {
   detail.className = 'hud-l2';
   lines.append(l1, detail);
   plate.append(compass, lupa, lines);
+  // The purse and the diamonds under the plaque.
+  const money = document.createElement('div');
+  money.className = 'hud-money';
+  const coinsEl = document.createElement('span');
+  const diamondsEl = document.createElement('span');
+  money.append(coinsEl, diamondsEl);
   const quest = btn('hud-quest', 'Dziennik zadań', on.quests);
-  p.append(plate, quest);
+  p.append(plate, money, quest);
 
   const picks = document.createElement('div');
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl };
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -270,9 +310,10 @@ export function unmountHud() {
   ctx = null;
 }
 
-/** Hidden while a dialog or the game-over screen covers the game. */
-export function showHud(on: boolean) {
-  root?.classList.toggle('off', !on);
+/** Dimmed (still visible, taps go through) while a dialog is open; hidden behind the game-over screen (owner, 6 Oct 2026). */
+export function showHud(mode: 'on' | 'dim' | 'off') {
+  root?.classList.toggle('off', mode === 'off');
+  root?.classList.toggle('dim', mode === 'dim');
 }
 
 function layout() {
@@ -307,9 +348,19 @@ function layout() {
     : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
 }
 
+let lastMoney = '';
 export function setHud(v: HudView) {
   view = v;
   if (!parts) return;
+  const money = `${v.coins}|${v.diamonds}`;
+  if (money !== lastMoney) {
+    lastMoney = money;
+    const n = (x: number) => x.toLocaleString('pl-PL');
+    parts.coins.innerHTML = `${SAKIEWKA_SVG}${n(v.coins)}`;
+    parts.diamonds.innerHTML = `<img src="${BASE_URL}items/diament.png" alt="">${n(v.diamonds)}`;
+    parts.coins.title = `Sakiewka: ${n(v.coins)} monet`;
+    parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
+  }
   parts.count.textContent = String(v.potions > 0 ? v.potions : v.fruit);
   const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})` : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
   parts.heal.setAttribute('aria-label', label);

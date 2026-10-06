@@ -278,6 +278,7 @@ export class UIScene extends Phaser.Scene {
       noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
+      coins: s.coins, diamonds: session.diamenty,
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
@@ -420,7 +421,7 @@ export class UIScene extends Phaser.Scene {
   update(time: number) {
     this.lowLife(time);
     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
-    showHud(!this.dialogBox && !this.overlay);
+    showHud(this.overlay ? 'off' : this.dialogBox ? 'dim' : 'on');
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);
