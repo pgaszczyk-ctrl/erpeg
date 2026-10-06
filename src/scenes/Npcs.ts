@@ -1,6 +1,7 @@
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { TEX } from '../art';
+import { hdOn, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { rng } from '../rng';
@@ -292,8 +293,18 @@ export class Npcs {
     for (const n of this.list) {
       const near = Math.abs(n.x - px) < 400 && Math.abs(n.y - py) < 400;
       if (near && !n.sprite) {
-        n.sprite = this.scene.add.sprite(n.x, n.y, TEX.hero, 'down-0').setTint(0xc9a0ff).setDepth(n.y).setScale(SKALA_POSTACI);
-        n.bubble = this.scene.add.image(n.x, n.y - 13 * SKALA_POSTACI, TEX.bubble).setDepth(n.y + 1);
+        // One of the artist's townsfolk looks (owner, 6 Oct 2026: the small old purple figures out), the same one
+        // every time for this riddle-giver, and a woman's look for a woman's name.
+        // Grandmas and grandpas get an old look, everyone else a grown-up one (never a child).
+        const wiek = /^(Babcia|Dziadek)/.test(n.name) ? 'starszy' : 'dorosly';
+        const looks = hdOn ? hdFolkLooks().filter((t) => (personOf(t)?.plec === 'k') === n.female && personOf(t)?.wiek === wiek) : [];
+        const tex = looks.length ? ensureHd(this.scene, looks[hash(`madrala:${n.id}`) % looks.length]) : null;
+        if (tex && this.scene.textures.exists(tex)) {
+          n.sprite = fitHd(this.scene.add.sprite(n.x, n.y, tex, 'down-0').setDepth(n.y));
+        } else {
+          n.sprite = this.scene.add.sprite(n.x, n.y, TEX.hero, 'down-0').setTint(0xc9a0ff).setDepth(n.y).setScale(SKALA_POSTACI);
+        }
+        n.bubble = this.scene.add.image(n.x, n.y - (tex ? 16 : 13) * SKALA_POSTACI, TEX.bubble).setDepth(n.y + 1);
         this.scene.tweens.add({ targets: n.bubble, y: n.bubble.y - 2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
         // It blinks, so a riddle waiting here catches the eye.
         this.scene.tweens.add({ targets: n.bubble, alpha: 0.25, duration: 360, yoyo: true, repeat: -1 });
