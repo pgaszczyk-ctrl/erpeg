@@ -11,7 +11,6 @@ import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin } from '../sprites';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
-import { zdjecia, usunZdjecie, wyslijZdjecie } from './zdjecia';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -33,21 +32,25 @@ function skinPicker(changed: () => void) {
 }
 
 // The "Kufer" (owner's spec from the 🎨 Grafika chat, 5 Oct 2026): a steampunk trunk of dark
-// wood and brass over the paused, blurred world, with four tabs – Kufer (the character with
-// the 9 equipment places and the backpack, Stan: level on nixie tubes, EXP and life tubes like
-// the HUD's, skills; Zasoby: drum counters), Dziennik zadań (the quest log), Księga osiągnięć
-// (seals from content/osiagniecia.ts + statistics) and Aparat (take a photo, the gallery kept on
-// this device, ui/zdjecia.ts). Closed with the red valve, Escape or the phone's back button.
+// wood and brass over the paused, blurred world. On a computer three tabs – Kufer (three columns:
+// Postać – the 9 equipment places and the backpack; Stan – level on nixie tubes, EXP and life tubes
+// like the HUD's, skills; Zasoby – drum counters), Dziennik zadań (the quest log) and Księga
+// osiągnięć (seals from content/osiagniecia.ts + statistics). On a phone the three columns are
+// tabs of their own (owner, 6 Oct 2026: scrolling down the trunk was a pain), and what still
+// doesn't fit scrolls with a brass slider on the right (`brassScroll`). The camera is only the
+// HUD's button (ui/brag.ts showPhoto). Closed with the red valve, Escape or the phone's back button.
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'kufer' | 'zadania' | 'ksiega' | 'aparat';
-const PAGES: [Page, string, string][] = [
-  ['kufer', '🧳', 'Kufer'],
-  ['zadania', '📜', 'Dziennik zadań'],
-  ['ksiega', '📖', 'Księga osiągnięć'],
-  ['aparat', '📷', 'Aparat'],
-];
+type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
+/** Narrow screens (the trunk's three columns would stack): each column gets a tab of its own. */
+const narrow = () => window.matchMedia('(max-width: 960px)').matches;
+const pages = (): [Page, string, string][] =>
+  narrow()
+    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Stan'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
+/** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
+const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
 let dispose: (() => void) | null = null;
 /** The page shown last (the trunk opens there again). */
@@ -111,8 +114,6 @@ export interface CharacterHost {
   eat: () => number | null;
   quests: () => QuestLine[];
   toggleArrow: (id: string) => void;
-  /** Takes a photo ("📸 Pochwal się" card, ui/brag.ts; it lands in the Aparat gallery). */
-  brag?: () => void;
   tent?: TentAction;
   /** Open here (HUD: the character button, gold → Zasoby, the quest line → the quest log). */
   page?: 'eq' | 'gold' | 'quests';
@@ -125,7 +126,7 @@ export interface CharacterHost {
 export function toggleCharacter(host: CharacterHost) {
   if (open) closeCharacter();
   else {
-    if (host.page) page = host.page === 'quests' ? 'zadania' : 'kufer';
+    if (host.page) page = host.page === 'quests' ? 'zadania' : host.page === 'gold' ? 'zasoby' : 'postac';
     show(host);
   }
 }
@@ -170,7 +171,7 @@ function skillOfItem(id: string | null): Umiejetnosc | null {
 function show(host: CharacterHost) {
   let hp = host.hp;
   const { maxHp, onChange, eat, tent } = host;
-  const scrollTo = host.page === 'gold' ? 'k-zasoby' : host.page === 'eq' ? 'k-postac' : null;
+  const scrollTo = !narrow() && host.page === 'gold' ? 'k-zasoby' : null;
   closed = host.onClose ?? null;
   const root = el('div') as HTMLDivElement;
   root.id = 'character';
@@ -488,52 +489,13 @@ function show(host: CharacterHost) {
     body.append(t);
   };
 
-  // ---------------------------------------------------------------- Aparat
-  const pageAparat = () => {
-    const s = section('Aparat');
-    if (host.brag) {
-      const b = el('button', 'c-btn k-snap', '📸 Zrób zdjęcie') as HTMLButtonElement;
-      b.onclick = () => {
-        const take = host.brag!;
-        closeCharacter();
-        take();
-      };
-      s.append(b);
-    }
-    const list = zdjecia();
-    s.append(el('div', 'k-sub', list.length ? 'Twoje zdjęcia (zostają na tym urządzeniu):' : 'Nie masz jeszcze zdjęć. Zrób pierwsze – pokaże świat wokół twojej postaci, twój poziom i tytuł.'));
-    const grid = el('div', 'k-photos');
-    const msg = el('div', 'c-note');
-    for (const z of list) {
-      const f = el('figure', 'k-photo');
-      const img = Object.assign(document.createElement('img'), { src: z.url, alt: z.title });
-      const cap = el('figcaption', '', `${z.title} · ${new Date(z.at).toLocaleDateString('pl-PL')}`);
-      const send = el('button', 'c-btn', '📤 Wyślij') as HTMLButtonElement;
-      send.onclick = async () => {
-        const how = await wyslijZdjecie(z);
-        if (how === 'saved') msg.textContent = 'Zdjęcie zapisane – wyślij je, komu chcesz.';
-      };
-      const del = el('button', 'c-btn c-muted', '🗑') as HTMLButtonElement;
-      del.setAttribute('aria-label', 'Usuń zdjęcie');
-      del.onclick = () => {
-        usunZdjecie(z.at);
-        render();
-      };
-      const btns = el('div', 'k-photo-btns');
-      btns.append(send, del);
-      f.append(img, cap, btns);
-      grid.append(f);
-    }
-    s.append(grid, msg);
-    body.append(s);
-  };
-
   const render = () => {
     const keep = body.scrollTop;
     body.replaceChildren();
     tabs.replaceChildren();
     actions.replaceChildren();
-    for (const [id, icon, label] of PAGES) {
+    page = fitPage(page);
+    for (const [id, icon, label] of pages()) {
       const t = el('button', `k-tab${id === page ? ' k-tab-on' : ''}`) as HTMLButtonElement;
       t.type = 'button';
       t.append(el('span', 'k-tab-ic', icon), el('span', 'k-tab-l', label));
@@ -549,15 +511,19 @@ function show(host: CharacterHost) {
       const cols = el('div', 'k-cols');
       cols.append(sectionPostac(), sectionStan(), sectionZasoby());
       body.append(cols);
-    } else {
+    } else if (page === 'postac') body.append(sectionPostac());
+    else {
       dispose?.();
       dispose = null;
-      if (page === 'zadania') pageZadania();
-      else if (page === 'ksiega') pageKsiega();
-      else pageAparat();
+      if (page === 'stan') body.append(sectionStan());
+      else if (page === 'zasoby') body.append(sectionZasoby());
+      else if (page === 'zadania') pageZadania();
+      else pageKsiega();
     }
     body.scrollTop = keep;
+    slider.update();
   };
+  const slider = brassScroll(box, body);
 
   render();
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
@@ -571,4 +537,52 @@ function wearText(id: string) {
   const wears = session.level.zuzycie || it?.szklany;
   if (!wears) return ' Na tym poziomie trudności się nie zużywa.';
   return c.left <= 0 ? ' 🔧 Zepsuty – napraw go w sklepie (do tego czasu bije jak kijek).' : ` Wytrzymałość: ${c.left}/${c.max}${it?.szklany ? ' (potem pęknie)' : ''}.`;
+}
+
+/**
+ * A brass slider along the trunk's right edge (owner, 6 Oct 2026: on a phone, swiping the trunk
+ * fought with dragging things): a rail with a valve-wheel knob, shown only when the page doesn't fit.
+ * Drag the knob or tap the rail; the page also still scrolls the usual way.
+ */
+function brassScroll(box: HTMLElement, body: HTMLElement) {
+  const rail = el('div', 'k-rail');
+  const knob = el('div', 'k-knob');
+  rail.append(knob);
+  box.append(rail);
+  const update = () => {
+    const max = body.scrollHeight - body.clientHeight;
+    rail.style.display = max > 4 ? '' : 'none';
+    if (max <= 4) return;
+    const r = body.getBoundingClientRect(), b = box.getBoundingClientRect();
+    rail.style.top = `${r.top - b.top + 6}px`;
+    rail.style.height = `${r.height - 12}px`;
+    const free = rail.clientHeight - knob.offsetHeight;
+    knob.style.transform = `translateY(${(free * body.scrollTop) / max}px) rotate(${body.scrollTop / 2}deg)`;
+  };
+  const scrollToY = (clientY: number) => {
+    const rr = rail.getBoundingClientRect();
+    const t = (clientY - rr.top - knob.offsetHeight / 2) / Math.max(1, rr.height - knob.offsetHeight);
+    body.scrollTop = Math.max(0, Math.min(1, t)) * (body.scrollHeight - body.clientHeight);
+  };
+  rail.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    rail.setPointerCapture(e.pointerId);
+    scrollToY(e.clientY);
+    const move = (ev: PointerEvent) => scrollToY(ev.clientY);
+    const up = () => {
+      rail.removeEventListener('pointermove', move);
+      rail.removeEventListener('pointerup', up);
+      rail.removeEventListener('pointercancel', up);
+    };
+    rail.addEventListener('pointermove', move);
+    rail.addEventListener('pointerup', up);
+    rail.addEventListener('pointercancel', up);
+  });
+  body.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  // Pictures arriving later change the height.
+  new ResizeObserver(update).observe(body);
+  requestAnimationFrame(update);
+  return { update };
 }

@@ -2,14 +2,13 @@ import Phaser from 'phaser';
 import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
-import { showBrag } from '../ui/brag';
+import { showPhoto } from '../ui/brag';
 import { goodsPicture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { OWOCE, type Owoc } from '../content/sklepy';
 import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar } from '../ui/hud';
 import { heroPortrait } from '../sprites';
-import { poziomPostaci } from '../content/historia';
 import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
@@ -328,9 +327,7 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay || this.dialogBox) return;
     game.scene.pause();
-    const lvl = poziomPostaci(session.exp);
-    const title = session.story.title ?? `Poziom ${lvl}`;
-    void showBrag(this.game, session.name, { top: session.story.title ? 'Mój tytuł' : 'Osiągnąłem', title, sub: `poziom ${lvl} · ${session.exp} EXP` }).then(() => {
+    void showPhoto(this.game, session.name).then(() => {
       game.scene.resume();
       resetTouch();
     });
@@ -579,7 +576,6 @@ export class UIScene extends Phaser.Scene {
       },
       hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
-      brag: () => this.takePhoto(),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
   }

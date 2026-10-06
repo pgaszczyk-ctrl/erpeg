@@ -1,4 +1,4 @@
-import { zachowajZdjecie } from './zdjecia';
+import { zachowajZdjecie, zdjecia, usunZdjecie, wyslijZdjecie } from './zdjecia';
 import type Phaser from 'phaser';
 import { gameShot } from './snapshot';
 import { pixelLogo } from './logo';
@@ -18,7 +18,14 @@ export interface Brag {
   top?: string;
   /** A smaller line under it, e.g. "poziom 20 · 19 000 EXP". */
   sub?: string;
+  /** Photo style (the HUD camera): the title is the player's caption, a bit smaller. */
+  podpis?: boolean;
 }
+
+/** Ready captions for the camera (owner, 6 Oct 2026: a photo and a caption – one of five or your own). */
+export const PODPISY = ['Pozdrowienia z przygody!', 'Zgadnij, gdzie teraz jestem?', 'Na tropie smoka', 'Tu jeszcze nikogo z was nie było', 'Moje miasto w pikselach'];
+/** Longest own caption. */
+const PODPIS_MAX = 60;
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
   const words = text.split(' ');
@@ -37,12 +44,15 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
 
 /** Draws the square card. */
 export async function bragCard(game: Phaser.Game, name: string, b: Brag): Promise<HTMLCanvasElement> {
+  return drawCard(await gameShot(game, { maxW: 1400, withHud: false }), name, b);
+}
+
+function drawCard(shot: HTMLCanvasElement | null | undefined, name: string, b: Brag): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = c.height = BOK;
   const ctx = c.getContext('2d')!;
   ctx.fillStyle = '#1e1a24';
   ctx.fillRect(0, 0, BOK, BOK);
-  const shot = await gameShot(game, { maxW: 1400, withHud: false });
   if (shot) {
     // Cover the square, keeping the hero (the middle of the view) in the middle.
     const k = Math.max(BOK / shot.width, BOK / shot.height);
@@ -79,9 +89,11 @@ export async function bragCard(game: Phaser.Game, name: string, b: Brag): Promis
     y += 30;
   }
   ctx.fillStyle = '#f7c531';
-  ctx.font = 'bold 96px ui-monospace, Menlo, Consolas, monospace';
-  for (const line of wrap(ctx, b.title, BOK - 120)) {
-    y += 96;
+  const size = b.podpis ? 70 : 96;
+  ctx.font = `bold ${size}px ui-monospace, Menlo, Consolas, monospace`;
+  if (b.podpis) y += 30;
+  for (const line of wrap(ctx, b.title, BOK - 120).slice(0, 3)) {
+    y += size;
     ctx.fillText(line, BOK / 2, y);
   }
   ctx.fillStyle = '#ffffff';
@@ -145,6 +157,135 @@ export async function showBrag(game: Phaser.Game, name: string, b: Brag): Promis
     close.onclick = done;
     root.onclick = (e) => e.target === root && done();
     box.append(h, img, share, saveBtn, msg, close);
+    root.append(box);
+    document.body.append(root);
+  });
+}
+
+/**
+ * The HUD camera (owner, 6 Oct 2026): the world around the hero with a caption – one of PODPISY or
+ * the player's own – the logo, the name and the date; share or save it. The last photos (kept on this
+ * device, ui/zdjecia.ts) are listed under it, as the Kufer no longer has an Aparat tab.
+ */
+export async function showPhoto(game: Phaser.Game, name: string): Promise<void> {
+  const shot = await gameShot(game, { maxW: 1400, withHud: false });
+  let caption = PODPISY[0];
+  let card = drawCard(shot, name, { title: caption, podpis: true });
+  return new Promise((resolve) => {
+    const root = document.createElement('div');
+    root.className = 'm-screen';
+    root.id = 'brag';
+    const box = document.createElement('div');
+    box.className = 'm-box ph-box';
+    const h = document.createElement('h2');
+    h.textContent = '📷 Aparat';
+    const img = Object.assign(document.createElement('img'), { alt: 'Zdjęcie' });
+    img.className = 'ph-img';
+    const redraw = () => {
+      card = drawCard(shot, name, { title: caption, podpis: true });
+      img.src = card.toDataURL('image/jpeg', 0.85);
+    };
+    img.src = card.toDataURL('image/jpeg', 0.85);
+    // Captions: five ready ones and your own.
+    const chips = document.createElement('div');
+    chips.className = 'ph-chips';
+    const own = Object.assign(document.createElement('input'), { type: 'text', maxLength: PODPIS_MAX, placeholder: '✏️ Albo wpisz własny podpis…', className: 'ph-own' });
+    const pick = (t: string, chip?: HTMLElement) => {
+      caption = t.trim() || PODPISY[0];
+      for (const c of chips.children) c.classList.toggle('ph-on', c === chip);
+      redraw();
+    };
+    PODPISY.forEach((t, i) => {
+      const c = Object.assign(document.createElement('button'), { type: 'button', className: `ph-chip${i === 0 ? ' ph-on' : ''}`, textContent: t });
+      c.onclick = () => {
+        own.value = '';
+        pick(t, c);
+      };
+      chips.append(c);
+    });
+    let typing = 0;
+    own.oninput = () => {
+      window.clearTimeout(typing);
+      typing = window.setTimeout(() => pick(own.value), 250);
+    };
+    // Keys typed here are not the game's (WASD, M, C…).
+    own.onkeydown = (e) => e.stopPropagation();
+    const msg = document.createElement('p');
+    msg.style.cssText = 'min-height:1.2em;color:#fff2a8;margin:4px 0';
+    const blob = () => new Promise<Blob>((ok, no) => card.toBlob((x) => (x ? ok(x) : no(new Error('no image'))), 'image/jpeg', 0.9));
+    const fileName = () => `exp-lore-${name}-${Date.now()}.jpg`.replace(/\s+/g, '-');
+    let kept = false;
+    const keep = () => {
+      if (kept) return;
+      kept = true;
+      zachowajZdjecie(card, `${name}: ${caption}`);
+    };
+    const save = async () => {
+      keep();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(await blob());
+      a.download = fileName();
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    const share = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn m-primary', textContent: '📤 Udostępnij' });
+    share.onclick = async () => {
+      keep();
+      try {
+        const file = new File([await blob()], fileName(), { type: 'image/jpeg' });
+        const data = { title: 'Exp-lore', text: `${caption} – ${name} w Exp-lore https://exp-lore.app`, files: [file] };
+        if (navigator.share && navigator.canShare?.(data)) return void (await navigator.share(data));
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
+      }
+      await save();
+      msg.textContent = 'Zdjęcie zapisane – wyślij je, komu chcesz.';
+    };
+    const saveBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: '💾 Zapisz' });
+    saveBtn.onclick = () => void save();
+    const row = document.createElement('div');
+    row.className = 'ph-row';
+    row.append(share, saveBtn);
+    // Earlier photos (on this device).
+    const old = document.createElement('div');
+    old.className = 'ph-old';
+    const listOld = () => {
+      old.replaceChildren();
+      const list = zdjecia();
+      if (!list.length) return;
+      const t = document.createElement('div');
+      t.className = 'ph-old-t';
+      t.textContent = 'Twoje wcześniejsze zdjęcia (dotknij, żeby wysłać):';
+      old.append(t);
+      const strip = document.createElement('div');
+      strip.className = 'ph-strip';
+      for (const z of list) {
+        const f = document.createElement('div');
+        f.className = 'ph-thumb';
+        const im = Object.assign(document.createElement('img'), { src: z.url, alt: z.title, title: z.title });
+        im.onclick = async () => {
+          if ((await wyslijZdjecie(z)) === 'saved') msg.textContent = 'Zdjęcie zapisane – wyślij je, komu chcesz.';
+        };
+        const del = Object.assign(document.createElement('button'), { type: 'button', className: 'ph-del', textContent: '✕' });
+        del.setAttribute('aria-label', 'Usuń zdjęcie');
+        del.onclick = () => {
+          usunZdjecie(z.at);
+          listOld();
+        };
+        f.append(im, del);
+        strip.append(f);
+      }
+      old.append(strip);
+    };
+    listOld();
+    const close = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: 'Zamknij' });
+    const done = () => {
+      root.remove();
+      resolve();
+    };
+    close.onclick = done;
+    root.onclick = (e) => e.target === root && done();
+    box.append(h, img, chips, own, row, msg, old, close);
     root.append(box);
     document.body.append(root);
   });
