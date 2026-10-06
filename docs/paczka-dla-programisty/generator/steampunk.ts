@@ -55,6 +55,7 @@ export function para(rozmiar: number, klatka: number, seed = 0): Obraz {
       const cx = kx * rozmiar, cy = (ky - t * 0.35) * rozmiar, r = kr * rozmiar * (0.55 + t * 0.7);
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r; v = Math.max(v, 1 - d);
     }
+    if (v <= 0) continue; // poza obłoczkiem: szum nie może dorysować kropek na całym kwadracie (właściciel 6.10: „kwadratowa otoczka”)
     v -= t * 0.35 + (hash(x, y, seed + klatka) - 0.5) * 0.25;
     if (v <= 0) continue;
     const a = v > 0.45 ? 255 : v > 0.22 ? 150 : 75;
