@@ -20,7 +20,9 @@ ZABYTKI = [
     # Właściciel 7.10.2026: prawdziwa brama stoi na mapie skosem (przejazd z NE na SW), więc od strony widza byłaby bokiem
     # i nie dałoby się poznać, co to. Zamiast niej steampunkowa rotunda w tym miejscu: okrągła (z każdej strony taka sama),
     # wyższa, z elementami Bramy Krakowskiej.
-    {'id': 'brama_krakowska', 'nazwa': 'Brama Krakowska – steampunkowa rotunda', 'czesci': [
+    # `wyzej`: grafik może wyprowadzić budowlę ponad szkielet, do tylu razy jego wysokości (płótno ma zapas u góry);
+    # w grze taka wieża zasłania bohaterkę jak wysokie drzewo i robi się przejrzysta, gdy ta stoi za nią.
+    {'id': 'brama_krakowska', 'nazwa': 'Brama Krakowska – steampunkowa rotunda', 'wyzej': 2, 'czesci': [
         {'nr': 1, 'osm': 'Brama Krakowska', 'kolo_m': 15, 'wysokosc_m': 36, 'sciana': '#c98a5a', 'dach': '#4f8a86', 'opis': 'okrągła rotunda: dół z czerwonej cegły z przejazdem od południa, wyżej biały bęben z zegarem, miedziany hełm z latarnią'},
     ]},
     {'id': 'nowy_ratusz', 'nazwa': 'Nowy Ratusz (Urząd Miasta, pl. Łokietka 1)', 'czesci': [
@@ -110,7 +112,8 @@ def main():
         xs = [x for r, *_ in czesci for x, _ in r]; ys = [y for r, *_ in czesci for _, y in r]
         hmax = max(h for _, h, *_ in czesci)
         M = 12
-        x0 = math.floor(min(xs)) - M; y0 = math.floor(min(ys)) - M
+        gora = M + round((z.get('wyzej', 1) - 1) * hmax)  # zapas na wieżę wyższą niż szkielet
+        x0 = math.floor(min(xs)) - M; y0 = math.floor(min(ys)) - gora
         W = math.ceil(max(xs) + 0.35 * hmax) - x0 + M; H = math.ceil(max(ys) + hmax) - y0 + M
         # 1) sam szkielet na magencie
         glab = np.full((H, W), -1e9); out = np.zeros((H, W, 3)); out[:] = (255, 0, 255)

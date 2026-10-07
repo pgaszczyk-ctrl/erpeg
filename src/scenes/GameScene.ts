@@ -81,7 +81,7 @@ import { keepResume } from '../update';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
 import { SmokAI, aktualizujEfekty, wyczyscEfekty, type StanGracza } from '../objects/SmokAI';
-import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, type GatunekId } from '../content/smoki';
+import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
 import { trzesienieWlaczone } from '../ustawieniaGracza';
 import { SmokiNaMapie } from './SmokiNaMapie';
 import { Etapy } from './Etapy';
@@ -570,6 +570,7 @@ export class GameScene extends Phaser.Scene {
         this.enemies = this.enemies.filter((q) => q !== e);
         e.destroy();
       },
+      odblokowane: () => poziomPostaci(session.exp) >= SMOKI_NA_MAPIE.odPoziomu && (session.story.st === 'smok' || session.story.st === 'koniec'),
     });
     (window as unknown as { __smok?: (g: GatunekId) => void }).__smok = (g) => {
       const a = Math.random() * Math.PI * 2;

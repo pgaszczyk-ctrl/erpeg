@@ -17,6 +17,8 @@ export interface SmokiHost {
   home: { x: number; y: number } | null;
   spawn: (x: number, y: number, g: GatunekId) => Slime;
   despawn: (s: Slime) => void;
+  /** Smoki w terenie dopiero od poziomu 5 i po odblokowaniu w historii (Mag wysłał na smoka). */
+  odblokowane: () => boolean;
 }
 
 export class SmokiNaMapie {
@@ -31,6 +33,7 @@ export class SmokiNaMapie {
     const now = performance.now();
     if (now < this.nastepne) return;
     this.nastepne = now + 1000;
+    if (!this.host.odblokowane()) return;
     const K = KRATKA_M * PX_PER_M;
     const cx = Math.floor(hx / K), cy = Math.floor(hy / K);
     for (let x = cx - 1; x <= cx + 1; x++) for (let y = cy - 1; y <= cy + 1; y++) {

@@ -75,5 +75,6 @@ export const LIMIT_EFEKTOW = 24;
  * Rozmieszczenie (właściciel 7.10: „wg środowiska, rzadko”): w kratce 1 km z szansą `szansa` (poza centrum: najwyżej
  * `maksMiejsc` miejsc w kratce), w pierwszym z `prob` losowych punktów kratki, którego teren pasuje do gatunku;
  * nie bliżej niż `odDomuM` od domu i `odMiejscM` od sklepów itp. Pokonany smok wraca przy następnym wejściu do gry.
+ * Dopiero od poziomu `odPoziomu` i gdy historia „Cień smoka” je odblokuje (Mag Albrecht wysłał na smoka – etap 'smok' albo dalej).
  */
-export const SMOKI_NA_MAPIE = { szansa: 0.18, maksMiejsc: 4, prob: 14, odDomuM: 600, odMiejscM: 120, odRuchu: 1600 };
+export const SMOKI_NA_MAPIE = { odPoziomu: 5, szansa: 0.18, maksMiejsc: 4, prob: 14, odDomuM: 600, odMiejscM: 120, odRuchu: 1600 };

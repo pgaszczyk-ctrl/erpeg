@@ -20,6 +20,8 @@ Wszystkie pliki są w folderze `19_zabytki_szkielety/`.
 
 **Decyzja właściciela:** zamiast wiernej bramy stawiamy w tym miejscu **steampunkową rotundę**: okrągłą (z każdej strony wygląda tak samo), **wyższą**, z elementami Bramy Krakowskiej. Nowy szkielet jest okrągły (`brama_krakowska_szkielet_x4.png`, średnica ok. 15 m, ściany 50 px w rzucie).
 
+**Rotunda może wyjść ponad szkielet, nawet dwa razy wyżej.** Na górze płótna jest zapas magenty na taką wysokość. Podstawa (dolny obrys) i średnica zostają jak w szkielecie, a w górę rośnie tylko wieża. W grze tak wysoka wieża działa jak wysokie drzewo: zasłania bohaterkę, która stoi za nią, i wtedy robi się przejrzysta.
+
 Co ma mieć rotunda (od dołu):
 
 1. **Dół z czerwonej cegły** jak w próbce, z gotyckimi blankami w połowie wysokości. **Przejazd (ostrołukowa brama) od południa**, czyli na stronie widocznej dla gracza.
@@ -64,7 +66,7 @@ Na dachu katedry, we wschodniej części, stoi **cewka Tesli**. Miejsce zaznaczy
 
 ```
 Repaint this block-out as a detailed pixel art building for a top-down RPG.
-Keep EXACTLY the same silhouette, size, position and perspective: roofs seen from above, walls visible below the roofs, leaning slightly to the right. Do not move or resize anything. Keep the flat magenta background #FF00FF.
+Keep EXACTLY the same footprint, base, size, position and perspective: roofs seen from above, walls visible below the roofs, leaning slightly to the right. The tower may rise ABOVE the block-out, up to twice its height, into the empty magenta space at the top. Keep the flat magenta background #FF00FF.
 This is a STEAMPUNK ROTUNDA inspired by the Krakow Gate in Lublin (Brama Krakowska), see the attached photos:
 part 1 – a tall round tower: red-brick lower part with gothic crenellations and a pointed archway passage facing south (towards the viewer), a white round drum above with a big brass clock with visible gears, a green-patina copper helmet roof with a lantern and a brass spire; brass rings around the tower, copper pipes climbing the walls, a small observation balcony with a brass telescope.
 Pixel art: chunky square pixels, 3-5 shades per colour, 1-pixel dark outline #1e1a24, light from the top-left, no anti-aliasing, no gradients, no text.
