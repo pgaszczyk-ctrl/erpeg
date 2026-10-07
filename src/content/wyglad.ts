@@ -26,6 +26,8 @@ export interface Postac {
   /** Who it is, so the townsfolk get a fitting name: k = woman/girl, m = man/boy. */
   plec?: 'k' | 'm';
   wiek?: 'dziecko' | 'dorosly' | 'starszy';
+  /** Already drawn in world pixels at its final size (one sheet px = one world px on screen): no averaging, never smoothed. */
+  ostry?: boolean;
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
@@ -92,8 +94,9 @@ export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).
   { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt'] },
   // The boss of „Przebudzenie Starego Grodu”: the brass goat from Lublin's arms (order 14/17, pack „koziol_i_smok_gorski” 7.10.2026);
-  // drawn at a person's size, the game makes him 2.5× bigger (ENEMY_KINDS koziol scale).
-  { postac: { id: 'koziol', nazwa: 'Mosiężny Kozioł', plik: 'koziol', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['koziol'] },
+  // drawn in world pixels; skala 0.3 × ENEMY_KINDS koziol scale 2.5 × SKALA_POSTACI 2/3 = 0.5 map px per sheet px (one world pixel),
+  // NEAREST – at 0.36 he was averaged into 2×2 blocks and smoothed while enlarged, a blur (owner 7.10.2026: „koszmarny, rozmazany”).
+  { postac: { id: 'koziol', nazwa: 'Mosiężny Kozioł', plik: 'koziol', bokWPrawo: false, skala: 0.3, maska: false, ostry: true }, rodzaje: ['koziol'] },
 ];
 
 /** Townsfolk: each hero in these clothes colours (hue in degrees, saturation ×, lightness ×) – red and green mask parts. */

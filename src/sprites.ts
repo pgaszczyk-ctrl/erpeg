@@ -189,7 +189,7 @@ export function ensureRed(scene: Phaser.Scene, key: string): string {
   const red = `${key}-red`;
   if (!scene.textures.exists(red)) {
     const c = sheets.get(key);
-    if (c) addSheet(scene, red, glow(c));
+    if (c) addSheet(scene, red, glow(c, !!pending.get(baseOf(key))?.ostry));
   }
   return red;
 }
@@ -357,7 +357,7 @@ function dropSpecks(img: ImageData, ox: number, oy: number) {
 }
 
 /** A copy with a soft red glow behind the character. */
-function glow(src: HTMLCanvasElement) {
+function glow(src: HTMLCanvasElement, ostry = false) {
   const c = canvas(src.width, src.height);
   const ctx = c.getContext('2d')!;
   // Red silhouette, blurred, per frame (so the glow doesn't bleed into the neighbours).
@@ -375,11 +375,13 @@ function glow(src: HTMLCanvasElement) {
       ctx.clip();
       ctx.filter = `blur(${POSWIATA.rozmycie}px)`;
       ctx.globalAlpha = POSWIATA.mocno;
-      for (let i = 0; i < POSWIATA.warstwy; i++) ctx.drawImage(sil, col * F, r * F, F, F, col * F, r * F, F, F);
+      // A sharp (world-pixel) sheet gets only a 1 px rim: a blurred halo turns into blocks under NEAREST.
+      if (!ostry) for (let i = 0; i < POSWIATA.warstwy; i++) ctx.drawImage(sil, col * F, r * F, F, F, col * F, r * F, F, F);
       // A thin sharp red rim right at the edge too (some browsers have no canvas blur).
       ctx.filter = 'none';
       ctx.globalAlpha = 0.9;
-      for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(sil, col * F, r * F, F, F, col * F + dx, r * F + dy, F, F);
+      const o = ostry ? 1 : 2;
+      for (const [dx, dy] of [[-o, 0], [o, 0], [0, -o], [0, o]]) ctx.drawImage(sil, col * F, r * F, F, F, col * F + dx, r * F + dy, F, F);
       ctx.restore();
     }
   }
@@ -393,7 +395,7 @@ function glow(src: HTMLCanvasElement) {
  * weighted by alpha, alpha hard (> 110 = solid). The frame stays 64 px, so frames, origins and crops hold.
  */
 function naSiatke(src: HTMLCanvasElement, p: Postac | undefined): HTMLCanvasElement {
-  if (!SIATKA_POSTACI || !p) return src;
+  if (!SIATKA_POSTACI || !p || p.ostry) return src;
   const b = Math.max(1, Math.round(PIKSEL_SWIATA / (p.skala * SKALA_POSTACI)));
   if (b < 2) return src;
   const ctx = src.getContext('2d')!;
@@ -450,7 +452,8 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
   for (const dir of HERO_DIRS) {
     for (let f = 0; f < 3; f++) tex.add(`${dir}-${f}`, 0, COL[f] * F, ROW[dir] * F, F, F);
   }
-  tex.setFilter(SIATKA_POSTACI && !key.endsWith('-red') ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+  const ostry = pending.get(baseOf(key))?.ostry;
+  tex.setFilter(ostry || (SIATKA_POSTACI && !key.endsWith('-red')) ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
     if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });
