@@ -648,7 +648,7 @@ export class FixedNpcs {
     const t = `${title} – ${tr(z.tytul)}`;
     if (st === 'new') {
       this.host.dialog({
-        title: t, text: `${tr(z.opis)}\n\n${tx('Nagroda', 'Reward')}: ${z.monety} ${tx('monet', 'coins')}, ${z.exp} EXP.`,
+        title: t, text: tr(z.opis), // no reward told up front (owner 7 Oct 2026)
         buttons: [tx('Przyniosę drewno! 🪵', 'I will bring the wood! 🪵'), tx('Nie teraz', 'Not now')],
         onChoose: (i) => {
           if (i !== 0 || this.host.questsFull()) return;

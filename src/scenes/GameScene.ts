@@ -3039,7 +3039,7 @@ export class GameScene extends Phaser.Scene {
     const text = P.prosba[(h >>> 7) % P.prosba.length].replace('{co}', zguba.co).replace('{gdzie}', gdzie).replace('{m}', String(m)).replace('{kierunek}', kierunek);
     this.dialog({
       title: `😟 ${f.name}`,
-      text: `${text}\n\nNagroda: ${P.nagroda.monety} monet i ${P.nagroda.exp} EXP.`,
+      text, // no reward told up front (owner 7 Oct 2026)
       buttons: ['Pomogę! ⚔', 'Nie teraz'],
       onChoose: (i) => {
         if (i !== 0 || this.folkQuest || this.questsFull()) return;
@@ -3668,7 +3668,8 @@ export class GameScene extends Phaser.Scene {
     const coins = opts.coins ?? 0;
     const prize = [exp ? `${exp} EXP` : '', coins ? tx(`${coins} monet`, `${coins} coins`) : ''].filter(Boolean).join(' + ');
     const rule = opts.retry ? '' : tx('Tylko jedna próba!', 'Only one try!');
-    const foot = [prize ? tx(`Nagroda: ${prize}.`, `Reward: ${prize}.`) : '', rule].filter(Boolean).join(' ');
+    const foot = rule; // no reward told up front (owner 7 Oct 2026)
+    void prize;
     this.dialog({
       title,
       text: `${intro}\n\n${tr(z.pytanie)}${foot ? `\n\n${foot}` : ''}`,
@@ -3704,10 +3705,9 @@ export class GameScene extends Phaser.Scene {
     // A request "from life" (content/prosby.ts), never the same one within 60 days.
     const where = this.city.toLatLon(n.x, n.y);
     const r = requestFor(n, day, session.age, session.seen, Number.isFinite(where.lat) ? where : null);
-    const prize = r.coins ? `${r.coins} monet` : `${r.apples} jabłka`;
     this.dialog({
       title: `❓ ${n.name}`,
-      text: `${n.greeting}\n\n${r.question}\n\nNagroda: ${prize} i ${r.exp} EXP. Tylko jedna próba!`,
+      text: `${n.greeting}\n\n${r.question}\n\nTylko jedna próba!`, // no reward told up front (owner 7 Oct 2026)
       buttons: [...r.answers, 'Później'],
       onChoose: (i) => {
         if (i >= r.answers.length) return;
@@ -3719,7 +3719,7 @@ export class GameScene extends Phaser.Scene {
         for (const [k, v] of Object.entries(session.seen)) if (dn - v >= NIE_POWTARZAJ_DNI) delete session.seen[k];
         const ok = i === r.correct;
         session.stats.riddles = (session.stats.riddles ?? 0) + (ok ? 1 : 0);
-        let got = prize;
+        let got = r.coins ? `${r.coins} monet` : `${r.apples} jabłka`;
         if (ok) {
           if (r.coins) earn(r.coins);
           let added = 0;
@@ -4148,10 +4148,9 @@ export class GameScene extends Phaser.Scene {
       this.dialog({ title, text: `🔔 Przerwa! Nauczyciele piją herbatę. Kolejne lekcje o ${hh}:${mm} – wróć wtedy.`, buttons: ['OK'], onChoose: () => {} });
       return;
     }
-    const prize = [`+${SZKOLA_QUIZ.exp} EXP`, SZKOLA_QUIZ.monety ? `+${SZKOLA_QUIZ.monety} monet` : '', gear.magic ? 'ćwiczy magię' : ''].filter(Boolean).join(', ');
     this.dialog({
       title,
-      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie – im dalej, tym trudniejsze.\n\nZa dobrą odpowiedź: ${prize}.`,
+      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie – im dalej, tym trudniejsze.`, // no reward told up front (owner 7 Oct 2026)
       buttons: ['🧠 Quiz', 'Wyjdź'],
       onChoose: (i) => {
         if (i !== 0) return;
@@ -4196,7 +4195,7 @@ export class GameScene extends Phaser.Scene {
     // A finished survey from any library can be handed in here.
     const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
     const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
-    const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (+${BIBLIOTEKA_ZAGADKI.exp} EXP, zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
+    const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
     this.dialog({
       title: `📚 ${p.name}`,
       text: gear.magic
@@ -4246,7 +4245,7 @@ export class GameScene extends Phaser.Scene {
     const r = riddleFor({ id: `lib:${p.id}:${session.nonce}:${n}`, x: 0, y: 0, name: '', greeting: '', difficulty: 0 }, today(), session.age);
     this.dialog({
       title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
-      text: `${r.question}\n\nNagroda: ${exp} EXP. Tylko jedna próba!`,
+      text: `${r.question}\n\nTylko jedna próba!`,
       buttons: [...r.answers],
       onChoose: (i) => {
         const right = i === r.correct;
@@ -4441,7 +4440,8 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'new') {
       this.missionDialog(m, {
         title: who,
-        text: `${m.opis}\n\n${this.rewardText(m)}.` + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
+        // Owner 7 Oct 2026: no reward told when a quest is offered – only the explorers' (library) survey says it, so the player knows how far it sends him.
+        text: m.opis + (m.dowolnaBiblioteka ? `\n\n${this.rewardText(m)}.` : '') + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
           if (i !== 0 || this.questsFull()) return;
