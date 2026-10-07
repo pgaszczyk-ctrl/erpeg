@@ -1,3 +1,5 @@
+import { trzesienieWlaczone, ustawTrzesienie } from '../ustawieniaGracza';
+import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
 import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { askBug } from '../ui/bug';
@@ -8,7 +10,7 @@ import { gear, item, condition, ammoOf, isBroken } from '../inventory';
 import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
-import { wersjaNapis } from '../version';
+import { wersjaNapis, TEST } from '../version';
 
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
@@ -281,7 +283,7 @@ export class UIScene extends Phaser.Scene {
     this.hud = s;
     const q = s.lingering === null ? s.quests[0] : undefined;
     setHud({
-      hp: s.hp, maxHp: s.maxHp, extra: s.extra, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
+      hp: s.hp, maxHp: s.maxHp, extra: s.extra, zatruty: !!s.zatruty, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
       noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
@@ -650,8 +652,26 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (i) => {
+        if (i === 3) {
+          ustawTrzesienie(!trzesienieWlaczone());
+          this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
+          return;
+        }
+        if (i === 4 && TEST) {
+          // Test server only: call a dragon of any kind next to the hero (all its attacks), for checks and tuning.
+          const ids = Object.keys(GATUNKI_SMOKOW) as GatunekId[];
+          this.showDialog({
+            title: '🐉 Przywołaj smoka',
+            text: 'Smok stanie obok i zaatakuje, gdy podejdziesz.',
+            buttons: [...ids.map((g) => GATUNKI_SMOKOW[g].nazwa), 'Anuluj'],
+            onChoose: (k) => {
+              if (k < ids.length) (window as unknown as { __smok?: (g: GatunekId) => void }).__smok?.(ids[k]);
+            },
+          });
+          return;
+        }
         if (i === 1) showCodeOverlay(session.name, session.idik);
         if (i === 2) {
           game.scene.pause();

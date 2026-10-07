@@ -89,6 +89,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   leash: { x: number; y: number; r: number } | null = null;
   /** Not pushed back by blows (the demo's Wawel dragon). */
   heavy = false;
+  /** In the air (a mountain dragon's flight): unseen and can't be hit. */
+  inAir = false;
   /** Its own way of moving, called instead of think() (the demo's Wawel dragon). */
   brain?: (now: number) => void;
   private nextThink = 0;

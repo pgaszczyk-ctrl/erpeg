@@ -40,7 +40,7 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { WIDOK } from '../content/trudnosc';
+import { WIDOK, TRUDNOSCI } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
@@ -80,6 +80,10 @@ import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
+import { SmokAI, aktualizujEfekty, wyczyscEfekty, type StanGracza } from '../objects/SmokAI';
+import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, type GatunekId } from '../content/smoki';
+import { trzesienieWlaczone } from '../ustawieniaGracza';
+import { SmokiNaMapie } from './SmokiNaMapie';
 import { Etapy } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
 import { SEN } from '../content/demo';
@@ -149,6 +153,8 @@ export interface HudState {
   maxHp: number;
   /** Bonus half-hearts from a potion (blue). */
   extra: number;
+  /** Poisoned by a dragon's smoke: the life tube turns greenish. */
+  zatruty?: boolean;
   /** What the heal button would use (null: nothing to heal with, or healthy). */
   heal: { icon: string; n: number } | null;
   coins: number;
@@ -232,6 +238,8 @@ type Challenge =
   | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number; path: number[]; cum: number[] };
 
 type Enemy = Slime & {
+  /** A dragon's kind (content/smoki.ts); the story's dragon is 'cien'. */
+  gatunek?: GatunekId;
   missionId?: string; temp?: boolean; folkQuest?: boolean; carrier?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number };
   /** Weather's effect on its strength (content/pogoda.ts WPLYW_NA_POTWORY): life and damage × this. */
   power?: number;
@@ -327,7 +335,12 @@ export class GameScene extends Phaser.Scene {
   /** The QR demo (null in a normal game). */
   private demoRun: DemoRun | null = null;
   /** Dragons fighting the hero (content: objects/Dragon.ts). */
-  private dragons = new Map<Enemy, DragonBrain>();
+  private dragons = new Map<Enemy, { update(now: number, dt: number): void; destroy(): void }>();
+  /** States from dragons' attacks (SmokAI): until when, and the next damage tick. */
+  private stany: Partial<Record<StanGracza, { do: number; tik: number }>> = {};
+  /** Fractions of a half-heart from dragons' attacks and lingering effects add up here. */
+  private smokCarry = 0;
+  private smokiNaMapie?: SmokiNaMapie;
   /** Blows that beat the story's dragon (its life is set when the fight starts). */
   static readonly SMOK_CIOSOW = 10;
 
@@ -340,6 +353,9 @@ export class GameScene extends Phaser.Scene {
     this.city = this.registry.get('city') as CityMap;
     this.enemies = [];
     this.dragons = new Map();
+    this.stany = {};
+    this.smokCarry = 0;
+    wyczyscEfekty();
     this.pickups = [];
     this.farObjects = [];
     this.signGlows = new Set();
@@ -542,6 +558,23 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.events.once('shutdown', () => offPlaces());
+    // Dragons in the wild (content/smoki.ts SMOKI_NA_MAPIE): by the ground, rarely, outside the centre.
+    this.smokiNaMapie = demo.on ? undefined : new SmokiNaMapie({
+      city: this.city,
+      home: inLublin ? { x: session.startX, y: session.startY } : null,
+      spawn: (x, y, g) => this.spawnDragon(x, y, g),
+      despawn: (d) => {
+        const e = d as Enemy;
+        this.dragons.get(e)?.destroy();
+        this.dragons.delete(e);
+        this.enemies = this.enemies.filter((q) => q !== e);
+        e.destroy();
+      },
+    });
+    (window as unknown as { __smok?: (g: GatunekId) => void }).__smok = (g) => {
+      const a = Math.random() * Math.PI * 2;
+      this.spawnDragon(this.player.x + Math.cos(a) * 70, this.player.y + Math.sin(a) * 50, g);
+    };
     this.streets = new StreetEnemies(
       this,
       this.city,
@@ -724,6 +757,7 @@ export class GameScene extends Phaser.Scene {
       }
       // Picking a vegetable on the way: a short stop-and-go.
       if (now < this.cropSlowUntil) this.player.vel.scale(WARZYWA.zwolnienie);
+      if (this.stany.zatrucie) this.player.vel.scale(ATAKI_SMOKA.dym.spowolnienie); // a dragon's poison slows the walk
     }
     const bx = this.player.x;
     const by = this.player.y;
@@ -852,6 +886,9 @@ export class GameScene extends Phaser.Scene {
 
     this.animateCrops(now);
     this.cullFar(now);
+    this.updateStany(now);
+    aktualizujEfekty(now);
+    this.smokiNaMapie?.update(this.player.x, this.player.y);
     this.updatePosts(now);
     this.zabytki.update(this.player.x, this.player.y);
     for (const item of [...this.pickups]) {
@@ -968,7 +1005,7 @@ export class GameScene extends Phaser.Scene {
       this.lastVision = { x: p.x, y: p.y, a };
     }
     this.fogView.update(this.cameras.main, this.vision, this.seenNow);
-    for (const e of this.enemies) if (!e.isDead) e.setVisible(pointInPolygon(this.vision, e.x, e.y));
+    for (const e of this.enemies) if (!e.isDead) e.setVisible(!e.inAir && pointInPolygon(this.vision, e.x, e.y));
     // Off-screen pickups are simply hidden (no polygon test); hundreds of ripe crops on allotments (report 56).
     const v = this.cameras.main.worldView;
     for (const i of this.pickups) {
@@ -1392,21 +1429,147 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => this.pickups.push(item) });
   }
 
-  /** A dragon starts fighting: strong (SMOK_CIOSOW blows of the hero's sword), claws and fire. */
+  /**
+   * A dragon starts fighting. The QR demo's Wawel dragon keeps its old claws-and-fireballs brain; every other one is
+   * data (content/smoki.ts) run by SmokAI: the story's dragon is 'cien' (attacks come in phases, life = SMOK_CIOSOW
+   * blows of the hero's sword), the others have their species' life.
+   */
   private dragonFight(s: Enemy) {
     const demoDragon = this.demoRun?.isDragon(s);
-    if (!demoDragon) s.hp = Math.max(s.hp, Math.round(GameScene.SMOK_CIOSOW * meleeDamage() * (s.power ?? 1)));
-    this.dragons.set(s, new DragonBrain(this, s, {
+    if (demoDragon) {
+      this.dragons.set(s, new DragonBrain(this, s, {
+        player: this.player,
+        blocked: (x, y) => this.city.isBlocked(x, y),
+        hurt: (from, half) => {
+          if (this.time.now < this.noHurtUntil) return;
+          const dmg = Math.max(1, Math.round(half * session.level.obrazenia));
+          if (!this.player.hurt(from, this.time.now, Math.random() < blockChance() ? 0 : dmg)) return;
+          this.emitHud();
+          if (this.player.isDead) this.onPlayerDeath();
+        },
+      }));
+      return;
+    }
+    const story = s === this.story.dragonSprite;
+    const g: GatunekId = s.gatunek ?? (story ? 'cien' : 'lesny');
+    s.gatunek = g;
+    if (story) s.hp = Math.max(s.hp, Math.round(GameScene.SMOK_CIOSOW * meleeDamage() * (s.power ?? 1)));
+    else if (!s.getData('smokZycie')) {
+      s.hp = Math.round((GATUNKI_SMOKOW[g].zycie || 400) * (s.power ?? 1)); // 'cien' called on the test server: 400
+      s.setData('smokZycie', true);
+    }
+    this.dragons.set(s, new SmokAI(this, s, g, this.smokHost()));
+  }
+
+  /** A beaten dragon's loot (content/smoki.ts): dragon scales into the backpack, gold on the ground, EXP. */
+  private smokLup(g: GatunekId, x?: number, y?: number) {
+    const L = GATUNKI_SMOKOW[g].lup;
+    const roll = ([a, b]: [number, number]) => a + Math.floor(Math.random() * (b - a + 1));
+    const n = roll(L.luska);
+    let wlozone = 0;
+    for (let i = 0; i < n; i++) if (addFruit('luska')) wlozone++;
+    if (wlozone) this.toast(`🐉 Łuska smocza ×${wlozone}${wlozone < n ? ' (plecak pełny)' : ''}`, 2500);
+    const zloto = roll(L.zloto);
+    if (zloto && x !== undefined && y !== undefined) {
+      const kupki = Math.min(5, zloto);
+      let left = zloto;
+      for (let i = 0; i < kupki; i++) {
+        const k = i === kupki - 1 ? left : Math.max(1, Math.round(left / (kupki - i)));
+        left -= k;
+        const a = (i / kupki) * Math.PI * 2;
+        this.dropPickup(x + Math.cos(a) * 10, y! + Math.sin(a) * 7, false, k);
+      }
+    }
+    if (L.exp) session.exp += L.exp;
+    this.gearChanged();
+  }
+
+  /** Index of the difficulty (0 Dziecięcy … 4 Hardkor) for the dragons' table. */
+  private trudnoscIdx() {
+    return Math.max(0, TRUDNOSCI.indexOf(session.level));
+  }
+
+  /** What a dragon's brain may do to the hero (damage as a share of full life, states, shaking). */
+  private smokHost() {
+    const mult = () => TRUDNOSC_SMOKOW.obrazenia[this.trudnoscIdx()] ?? 1;
+    return {
       player: this.player,
-      blocked: (x, y) => this.city.isBlocked(x, y),
-      hurt: (from, half) => {
-        if (this.time.now < this.noHurtUntil) return;
-        const dmg = Math.max(1, Math.round(half * session.level.obrazenia));
-        if (!this.player.hurt(from, this.time.now, Math.random() < blockChance() ? 0 : dmg)) return;
+      W: 56 * 0.36 * SKALA_POSTACI,
+      trudnosc: this.trudnoscIdx(),
+      blocked: (x: number, y: number) => this.city.isBlocked(x, y),
+      hurt: (from: Phaser.Math.Vector2, czesc: number) => {
+        if (this.time.now < this.noHurtUntil || this.player.isDead) return;
+        // Fractions of a half-heart add up (Dziecięcy: a bite is 4 % of life, less than half a heart).
+        const pending = this.smokCarry + czesc * PLAYER.maxHp * mult();
+        const dmg = Math.floor(pending);
+        const blocked = Math.random() < blockChance();
+        if (!this.player.hurt(from, this.time.now, blocked ? 0 : dmg)) return;
+        if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
+        else this.smokCarry = pending - dmg;
         this.emitHud();
         if (this.player.isDead) this.onPlayerDeath();
       },
-    }));
+      drain: (czesc: number) => this.smokDrain(czesc * mult()),
+      stan: (st: StanGracza, ms: number) => {
+        const now = this.time.now;
+        const cur = this.stany[st];
+        this.stany[st] = { do: Math.max(cur?.do ?? 0, now + ms), tik: cur?.tik ?? now + 500 };
+        if (st === 'zatrucie') this.emitHud();
+      },
+      shake: (px: number, ms: number) => {
+        if (!trzesienieWlaczone()) return this.flash(ms);
+        const cam = this.cameras.main;
+        cam.shake(ms, px / Math.max(1, cam.width / cam.zoom), true);
+        try {
+          navigator.vibrate?.(Math.min(400, ms));
+        } catch {
+          /* no vibration */
+        }
+      },
+    };
+  }
+
+  /** A lingering effect's tick (burning, acid, poison): no knock-back; fractions add up. */
+  private smokDrain(czesc: number) {
+    if (this.player.isDead || session.immortal && this.player.hp <= 1) return;
+    if (this.time.now < this.noHurtUntil) return;
+    const pending = this.smokCarry + czesc * PLAYER.maxHp;
+    const n = Math.floor(pending);
+    this.smokCarry = pending - n;
+    if (n <= 0) return;
+    this.player.drain(n);
+    this.player.setTint(0xff9a8a);
+    this.time.delayedCall(120, () => this.player.clearTint());
+    this.emitHud();
+    if (this.player.isDead) this.onPlayerDeath();
+  }
+
+  /** Burning, acid burns and poison from dragons: their ticks; poison slows the walk (applied in update). */
+  private updateStany(now: number) {
+    const T: Record<StanGracza, { tik: number; obrazenia: number }> = {
+      podpalenie: ATAKI_SMOKA.ogien.podpalenie,
+      oparzenie: ATAKI_SMOKA.kwas.oparzenie,
+      zatrucie: { tik: ATAKI_SMOKA.dym.tik, obrazenia: ATAKI_SMOKA.dym.obrazenia },
+    };
+    let changed = false;
+    for (const k of Object.keys(this.stany) as StanGracza[]) {
+      const st = this.stany[k]!;
+      if (now >= st.do) {
+        delete this.stany[k];
+        changed = changed || k === 'zatrucie';
+        continue;
+      }
+      if (now >= st.tik) {
+        st.tik = now + T[k].tik;
+        this.smokDrain(T[k].obrazenia * (TRUDNOSC_SMOKOW.obrazenia[this.trudnoscIdx()] ?? 1));
+      }
+    }
+    if (changed) this.emitHud();
+  }
+
+  /** Instead of shaking (switched off in the menu): a short white flash. */
+  private flash(ms: number) {
+    this.cameras.main.flash(Math.min(250, ms), 255, 250, 235);
   }
 
   private onEnemyKilled(s: Enemy) {
@@ -1421,7 +1584,16 @@ export class GameScene extends Phaser.Scene {
     }
     if (s === this.story.dragonSprite) {
       this.enemies = this.enemies.filter((e) => e !== s);
+      this.smokLup('cien');
       this.story.dragonKilled();
+      return;
+    }
+    if (s.kindId === 'smok' && s.gatunek) {
+      this.enemies = this.enemies.filter((e) => e !== s);
+      this.smokiNaMapie?.pokonany(s);
+      this.smokLup(s.gatunek, s.x, s.y);
+      session.stats.kills.smok = (session.stats.kills.smok ?? 0) + 1;
+      this.emitHud();
       return;
     }
     this.dropLoot(s.x, s.y, s.kindId);
@@ -1458,6 +1630,13 @@ export class GameScene extends Phaser.Scene {
         break;
       }
     }
+  }
+
+  /** A dragon of a kind (content/smoki.ts) at (x, y), fighting by SmokAI once the hero comes near. */
+  spawnDragon(x: number, y: number, g: GatunekId) {
+    const e = this.spawnEnemy(x, y, undefined, 'smok');
+    e.gatunek = g;
+    return e;
   }
 
   spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
@@ -3653,7 +3832,7 @@ export class GameScene extends Phaser.Scene {
         if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
       }
       if (!done) {
-        const foe = this.enemies.find((e) => !e.isDead && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
+        const foe = this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
         if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
@@ -4040,9 +4219,10 @@ export class GameScene extends Phaser.Scene {
     this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
   }
 
-  /** A potion: full health and a bonus (blue) heart for a while. */
+  /** A potion: full health and a bonus (blue) heart for a while; it also cures a dragon's poison, burns and acid. */
   private drinkPotion() {
     session.mikstury--;
+    this.stany = {};
     this.player.heal(PLAYER.maxHp);
     this.player.extra = ALCHEMIK.premiaSerc * 2;
     this.player.extraUntil = Date.now() + ALCHEMIK.premiaMinut * 60_000;
@@ -4719,6 +4899,7 @@ export class GameScene extends Phaser.Scene {
       hp: this.player.hp,
       maxHp: PLAYER.maxHp,
       extra: this.player.extra,
+      zatruty: !!this.stany.zatrucie,
       heal: this.player.hp >= PLAYER.maxHp || this.player.isDead
         ? null
         : session.mikstury > 0 && (PLAYER.maxHp - this.player.hp >= 4 || totalFruit() < this.fruitPerHeart())

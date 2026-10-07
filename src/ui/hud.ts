@@ -16,6 +16,8 @@ export interface HudView {
   maxHp: number;
   /** Bonus half-hearts from a potion (blue, on top of the red). */
   extra: number;
+  /** Poisoned by a dragon's smoke: the liquid in the life tube turns greenish (no new icons – minimal HUD). */
+  zatruty?: boolean;
   /** Share of the way to the next level (1 at the top level). */
   expShare: number;
   potions: number;
@@ -472,7 +474,7 @@ function draw() {
   const all = v.maxHp + v.extra;
   const red = level(v.hp / all);
   const blue = v.extra > 0 ? Math.min(TUBA - red, level((v.hp + v.extra) / all) - red) : 0;
-  tube(51 + L, red, '#c0392b', '#e8645a', 0);
+  tube(51 + L, red, v.zatruty ? '#6a8a2a' : '#c0392b', v.zatruty ? '#a8c85a' : '#e8645a', 0);
   if (blue > 0) {
     c.fillStyle = '#3f7fd0';
     c.fillRect(51 + L, DNO - red - blue, 6, blue);

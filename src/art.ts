@@ -973,7 +973,25 @@ export const GOODS_TEX = {
   grzyb: TEX.mushroom, drewno: TEX.log,
   // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
   chrust: 'item-chrust',
+  // From dragons (content/smoki.ts): a code-drawn scale until the artist's icon.
+  luska: 'goods-luska',
 } as const;
+
+/** A dragon scale (placeholder): a green-gold teardrop with a light edge. */
+function drawScale(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, 'goods-luska', 8, 8);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.moveTo(4, 0); ctx.quadraticCurveTo(8.5, 5, 4, 8); ctx.quadraticCurveTo(-0.5, 5, 4, 0);
+  ctx.fill();
+  ctx.fillStyle = '#5a9a4a';
+  ctx.beginPath();
+  ctx.moveTo(4, 1.3); ctx.quadraticCurveTo(7, 5, 4, 6.8); ctx.quadraticCurveTo(1, 5, 4, 1.3);
+  ctx.fill();
+  px(ctx, 3, 2, 1, 3, '#c8e08a');
+  px(ctx, 5, 4, 1, 2, '#3a6a32');
+  tex.refresh();
+}
 
 function drawFruitItem(scene: Phaser.Scene, key: string, color: string, light: string, grape = false) {
   const { tex, ctx } = canvasTexture(scene, key, 8, 8);
@@ -1429,6 +1447,7 @@ export function createArt(scene: Phaser.Scene) {
   drawFruitItem(scene, TEX.fruitApple, '#e43b44', '#ffb3b8');
   drawForestItems(scene);
   drawDragon(scene);
+  drawScale(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawVeg(scene);

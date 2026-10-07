@@ -16,8 +16,8 @@
 // w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
 // grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
 // (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust';
-export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno';
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust' | 'luska';
+export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno' | 'surowce';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
 /** `wielu` = dopełniacz liczby mnogiej („+5 jabłek” w powiadomieniach HUD-u). */
@@ -37,6 +37,8 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
   drewno: { nazwa: 'drewno', mnoga: 'drewno', wielu: 'drewna', cena: 12, jadalne: false, grupa: 'drewno' },
   // Z drzewa ściętego bez siekiery (właściciel, 5 X 2026); leży w plecaku razem z drewnem.
   chrust: { nazwa: 'chrust', mnoga: 'chrust', wielu: 'chrustu', cena: 3, jadalne: false, grupa: 'drewno' },
+  // Łup ze smoków (content/smoki.ts), na przyszłe wytwarzanie u kowala (właściciel 7.10.2026); na razie do sprzedania.
+  luska: { nazwa: 'łuska smocza', mnoga: 'łuski smocze', wielu: 'łusek smoczych', cena: 40, jadalne: false, grupa: 'surowce' },
 };
 
 /** Siekiera (przedmioty.ts `siekiera`): w każdym sklepie budowlanym i w co `coKtorySklep`-tym zwykłym (wg id sklepu, czyli stale te same). */
@@ -52,6 +54,7 @@ export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {
   warzywa: { nazwa: 'Warzywa', ikona: '🥕🥦' },
   grzyby: { nazwa: 'Grzyby', ikona: '🍄' },
   drewno: { nazwa: 'Drewno', ikona: '🪵' },
+  surowce: { nazwa: 'Surowce', ikona: '🐉' },
 };
 
 /**

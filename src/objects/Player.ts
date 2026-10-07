@@ -131,6 +131,14 @@ export class Player extends Phaser.GameObjects.Sprite {
     return true;
   }
 
+  /** A tick of a lingering effect (burning, acid, poison): no knock-back, no blink, the potion's bonus goes first. */
+  drain(n: number) {
+    if (this.isDead || n <= 0) return;
+    const fromExtra = Math.min(this.extra, n);
+    this.extra -= fromExtra;
+    this.hp = Math.max(0, this.hp - (n - fromExtra));
+  }
+
   heal(amount: number) {
     this.hp = Math.min(PLAYER.maxHp, this.hp + amount);
   }
