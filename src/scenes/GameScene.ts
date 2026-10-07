@@ -89,6 +89,7 @@ import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey'
 import { SEN } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
+import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 
 const HEART_DROP_CHANCE = 0.25;
@@ -474,6 +475,8 @@ export class GameScene extends Phaser.Scene {
     this.duelHp = null;
     this.duelCarry = 0;
     this.storyPlace = null;
+    this.anomalia = new Anomalia(this, this.city, { player: this.player, dialog: (r) => this.dialog(r) });
+    (window as unknown as { __anomalia?: Anomalia }).__anomalia = this.anomalia;
     this.story = new Story(this, this.city, {
       player: this.player,
       dialog: (req) => this.dialog(req),
@@ -729,7 +732,7 @@ export class GameScene extends Phaser.Scene {
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
-    if (lingering || this.story.busy || this.demoRun?.busy) this.player.move(0, 0, now);
+    if (lingering || this.story.busy || this.demoRun?.busy || this.anomalia?.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
     if (this.player.vel.x || this.player.vel.y) {
       // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
@@ -766,6 +769,7 @@ export class GameScene extends Phaser.Scene {
     this.moveActor(this.player, dt);
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
     this.story.update(dt, this.player.x !== bx || this.player.y !== by);
+    if (!demo.on) this.anomalia?.update(now, this.player.x !== bx || this.player.y !== by);
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     // Protected after a fresh start: the hero blinks.
@@ -780,7 +784,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Dodatkowe serduszko z mikstury znikło.', 2000);
       this.emitHud();
     }
-    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy) {
+    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy && !this.anomalia?.busy) {
       // A mouse click swings towards where it clicked (the hero turns there).
       this.clickWorld = null;
       if (attackAim) {
@@ -1865,6 +1869,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pociagi?: Pociagi;
+  private anomalia?: Anomalia;
   /** Where the last mouse click landed in the world (null for taps and keys). */
   private clickWorld: { x: number; y: number } | null = null;
 

@@ -58,3 +58,32 @@ export function pipe(freq: number, ms = 420) {
   o.start(t);
   o.stop(t + ms / 1000 + 0.05);
 }
+
+/** A thunderclap: a burst of low, rumbling noise that cracks first and rolls away. */
+export function grzmot() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime;
+  const len = 2.6;
+  const buf = a.createBuffer(1, Math.floor(a.sampleRate * len), a.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < d.length; i++) {
+    // Brown-ish noise: random steps, smoothed, louder at the crack.
+    last = (last + (Math.random() * 2 - 1) * 0.08) * 0.985;
+    d[i] = last * 6;
+  }
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const lp = a.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(1800, t);
+  lp.frequency.exponentialRampToValueAtTime(160, t + 0.6);
+  const gain = a.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.5, t + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  src.connect(lp).connect(gain).connect(a.destination);
+  src.start(t);
+  src.stop(t + len);
+}

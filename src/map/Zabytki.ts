@@ -26,6 +26,8 @@ interface Stoi {
   dol: number;
   /** Per picture column: the map y of its lowest painted pixel (−Infinity: an empty column). */
   podstawa: Float32Array;
+  /** Layers on the landmark (sculptures, turning signs), drawn just above it and faded with it. */
+  warstwy: { im: Phaser.GameObjects.Image; klatki: number; fps: number; faza: number }[];
 }
 
 /** px generatora szkieletu na metr (2 na punkt mapy przy 1,92 punktu na metr). */
@@ -87,9 +89,37 @@ export class Zabytki {
     const im = this.scene.add.image(x0, y0, key).setOrigin(0, 0).setScale(f).setDepth(dol);
     const podstawa = new Float32Array(w).fill(-Infinity);
     for (let i = 0; i < w; i++) for (let j = h - 1; j >= 0; j--) if (maska[j * w + i]) { podstawa[i] = y0 + (j + 1) * f; break; }
-    this.stoja.push({ z, im, maska, w, h, f, cx, cy, x0, y0, dol, podstawa });
+    const st: Stoi = { z, im, maska, w, h, f, cx, cy, x0, y0, dol, podstawa, warstwy: [] };
+    this.stoja.push(st);
+    this.warstwy(st);
     // Kawałki pod zabytkiem malujemy jeszcze raz – już bez zwykłego bloku z generatora.
     for (let x = x0; x <= x0 + w * f + 64; x += 64) for (let y = y0; y <= y0 + h * f + 64; y += 64) this.view.redrawAround(x, y);
+  }
+
+  /** Loads and places the landmark's layers (Zabytek.warstwy); animated sheets get their frames cut once. */
+  private warstwy(s: Stoi) {
+    for (const [n, w] of (s.z.warstwy ?? []).entries()) {
+      const key = `zabytek-${s.z.id}-w${n}`;
+      const put = () => {
+        if (!this.scene.sys.isActive() && !this.scene.sys.isPaused()) return;
+        const tex = this.scene.textures.get(key);
+        tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        const src = tex.getSourceImage() as HTMLImageElement;
+        let klatki = 1;
+        if (w.klatka) {
+          klatki = Math.max(1, Math.floor(src.width / w.klatka));
+          for (let i = 0; i < klatki; i++) if (!tex.has(`k${i}`)) tex.add(`k${i}`, 0, i * w.klatka, 0, w.klatka, src.height);
+        }
+        const im = this.scene.add.image(s.x0 + w.x * s.f, s.y0 + w.y * s.f, key, w.klatka ? 'k0' : undefined).setOrigin(0, 0).setScale(s.f).setDepth(s.im.depth + 0.01);
+        s.warstwy.push({ im, klatki, fps: w.fps ?? 8, faza: w.faza ?? 0 });
+      };
+      if (this.scene.textures.exists(key)) put();
+      else {
+        this.scene.load.image(key, w.plik);
+        this.scene.load.once(`filecomplete-image-${key}`, put);
+        this.scene.load.start();
+      }
+    }
   }
 
   /**
@@ -118,7 +148,13 @@ export class Zabytki {
 
   /** Bohater za zabytkiem (stopy na północ od jego podstawy, na jego obrazie): obraz przejrzysty. */
   update(hx: number, hy: number) {
+    const t = performance.now() / 1000;
     for (const s of this.stoja) {
+      for (const w of s.warstwy) {
+        if (w.klatki > 1) w.im.setFrame(`k${Math.floor(t * w.fps + w.faza) % w.klatki}`);
+        if (w.im.depth !== s.im.depth + 0.01) w.im.setDepth(s.im.depth + 0.01);
+        if (w.im.alpha !== s.im.alpha) w.im.setAlpha(s.im.alpha);
+      }
       const i = Math.floor((hx - s.x0) / s.f), j = Math.floor((hy - 6 - s.y0) / s.f);
       const kol = i >= 0 && i < s.w ? s.podstawa[i] : -Infinity;
       // In front of the wall in this column (owner 7.10.2026: „zamek niepotrzebnie znika” when walking past its south

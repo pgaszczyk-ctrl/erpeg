@@ -22,6 +22,11 @@ export interface Zabytek {
   sciany: number;
   /** Przezroczystość, gdy bohater stoi za zabytkiem. */
   przeswit: number;
+  /**
+   * Warstwy na budynku (rzeźby, obracające się szyldy): plik, lewy-górny róg względem obrazu (px obrazu), dla animacji
+   * szerokość klatki (arkusz poziomy), klatek na sekundę i przesunięcie fazy (klatki).
+   */
+  warstwy?: { plik: string; x: number; y: number; klatka?: number; fps?: number; faza?: number }[];
 }
 
 export const ZABYTKI: Zabytek[] = [
@@ -48,5 +53,24 @@ export const ZABYTKI: Zabytek[] = [
     przesun: [-9, -57],
     sciany: 0,
     przeswit: 0.35,
+  },
+  {
+    // Targi Lublin (Dworcowa 11), hale A, B, C (paczka „targi_lublin_i_smok” 7.10.2026): obraz dokładnie na masce szkieletu
+    // (ściany w dół o 16 px i w prawo o 0,35 – podniesiony jak zamek); na dachu rzeźba smoka na złotej kości D20
+    // i trzy obracające się szyldy (StarFest, Targi, D20), 12 klatek po 64 px, 8 kl./s, fazy 0/4/8.
+    id: 'targi_lublin',
+    mapa: 'lublin',
+    budynek: 'Hala C',
+    plik: 'swiat/zabytki/targi/targi_lublin.png',
+    naMapie: [14618, 12954.5],
+    przesun: [-5.6, -16],
+    sciany: 0,
+    przeswit: 0.35,
+    warstwy: [
+      { plik: 'swiat/zabytki/targi/rzezba_smok_d20.png', x: 319, y: 203 },
+      { plik: 'swiat/zabytki/targi/obrot_starfest_12klatek.png', x: 152, y: 70, klatka: 64, fps: 8, faza: 0 },
+      { plik: 'swiat/zabytki/targi/obrot_targi_12klatek.png', x: 663, y: 64, klatka: 64, fps: 8, faza: 4 },
+      { plik: 'swiat/zabytki/targi/obrot_d20_12klatek.png', x: 433, y: 328, klatka: 64, fps: 8, faza: 8 },
+    ],
   },
 ];
