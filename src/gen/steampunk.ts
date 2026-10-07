@@ -120,6 +120,26 @@ export function tor(o: Obraz, pts: number[], ox: number, oy: number, woda?: (x: 
   }
 }
 
+/**
+ * Tor tramwajowy wtopiony w jezdnię (właściciel 7.10.2026: „tramwajowe to po prostu koleiny w szosie”): bez podsypki
+ * i podkładów, tylko dwie wąskie, ciemne bruzdy szyn z jasnym połyskiem stali, na tym, co już leży (bruk, asfalt).
+ */
+export function koleiny(o: Obraz, pts: number[], ox: number, oy: number) {
+  const ciemna = rgb(46, 42, 44, 255), polysk = hex('#9a98a2');
+  for (let i = 0; i + 3 < pts.length; i += 2) {
+    const ax = pts[i], ay = pts[i + 1], dx = pts[i + 2] - ax, dy = pts[i + 3] - ay, L = Math.hypot(dx, dy);
+    if (!L) continue;
+    const ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+    for (let t = 0; t < L; t += 0.5) {
+      const x = ax + ux * t, y = ay + uy * t;
+      for (const k of [-2.6, 2.6]) {
+        ustaw(o, Math.round(x + nx * k - ox), Math.round(y + ny * k - oy), ciemna);
+        if (Math.floor(t * 2) % 3 === 0) ustaw(o, Math.round(x + nx * (k + 0.8) - ox), Math.round(y + ny * (k + 0.8) - oy), polysk);
+      }
+    }
+  }
+}
+
 // ───────────────────────── Rurociąg wzdłuż drogi (zastępuje trasy „po siatce” w świecie) ─────────────────────────
 // Zasada właściciela: rura nie wędruje po trawie zygzakiem. Biegnie RÓWNOLEGLE do drogi, w stałym odsunięciu
 // (za chodnikiem), tym samym łukiem co droga, a na końcach wchodzi do budynku albo pod ziemię (studzienka).

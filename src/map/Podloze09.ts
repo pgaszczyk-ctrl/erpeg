@@ -130,10 +130,12 @@ export function mapaRodzajow(
   }
   for (const l of lines) {
     const woda = l.kind === 'river' || l.kind === 'stream' || l.kind === 'ditch';
-    const tor = l.kind === 'rail' || l.kind === 'tram';
+    // Tram tracks are only grooves in the road (owner, 7 Oct 2026): the ground under them is road, not ballast.
+    const tor = l.kind === 'rail';
     let r: Rodzaj | null = null;
     if (woda) r = 'woda';
     else if (tor) r = 'tory';
+    else if (l.kind === 'tram') r = 'droga';
     else if (l.kind === 'pedestrian') r = 'chodnik';
     else if (DROGI.has(l.kind)) r = 'droga';
     if (!r) continue;
@@ -141,7 +143,7 @@ export function mapaRodzajow(
     g.moveTo(l.pts[0], l.pts[1]);
     for (let i = 2; i < l.pts.length; i += 2) g.lineTo(l.pts[i], l.pts[i + 1]);
     g.strokeStyle = kolor(r);
-    g.lineWidth = woda ? l.width : tor ? Math.max(l.width, 4) : szerokoscDrogi(l);
+    g.lineWidth = woda ? l.width : tor ? Math.max(l.width, 4) : l.kind === 'tram' ? Math.max(l.width, 4) : szerokoscDrogi(l);
     g.stroke();
   }
   for (const a of areas) {

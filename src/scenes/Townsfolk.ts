@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
-import { PX_PER_M, type CityMap, type Line } from '../map/CityMap';
+import { PX_PER_M, distToPolyline, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
 import { LUDZIE_W_DESZCZU } from '../content/pogoda';
 import { rng } from '../rng';
+import { rownolegla } from '../gen';
 import { Walker } from './FixedNpcs';
 
 // People strolling along the cobbled (car) streets: 2 per 200 m. Most only
@@ -116,13 +117,20 @@ export class Townsfolk {
     const village = MIESZKANCY.wsie.find((d) => houses >= d.domow)?.mnoznik ?? 0;
     const district = Math.max(village, MIESZKANCY.dzielnice.find((d) => places >= d.miejsc)?.mnoznik ?? 0.25);
     const share = district * (isNight() ? MIESZKANCY.noc.ludzi : 1);
-    for (const l of this.city.query(box).lines) {
+    const q = this.city.query(box);
+    const tory = q.lines.filter((t) => t.kind === 'tram' || t.kind === 'rail');
+    for (const l of q.lines) {
       if (!PAVED.has(l.kind) || l.pts.length < 4) continue;
       if (l.pts[0] < box.x0 || l.pts[0] >= box.x1 || l.pts[1] < box.y0 || l.pts[1] >= box.y1) continue;
       const want = (lengthM(l) / 200) * MIESZKANCY.na200m * share;
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
+      // A street with tram rails along it (Kraków): people walk on its side, not on the rails (owner, 7 Oct 2026).
+      let mid = 0;
+      for (let i = 0; i + 1 < l.pts.length; i += 2) if (tory.some((t) => distToPolyline(t.pts, l.pts[i], l.pts[i + 1]) < 3 * PX_PER_M)) mid++;
+      const zTorami = tory.length > 0 && mid * 2 >= l.pts.length / 2;
       for (let i = 0; i < n; i++) {
-        const walker = new Walker([l.pts], SPEED * (0.7 + r() * 0.6), r);
+        const pts = zTorami ? rownolegla(l.pts, (r() < 0.5 ? -1 : 1) * (l.width / 2 + PX_PER_M)) : l.pts;
+        const walker = new Walker([pts], SPEED * (0.7 + r() * 0.6), r);
         const roll = r();
         const role: FolkRole = roll < MIESZKANCY.tylkoWita ? 'wita' : roll < MIESZKANCY.tylkoWita + MIESZKANCY.wyzywa ? 'wyzywa' : 'przyjmuje';
         const tex = hdOn ? HD_LOOKS[Math.floor(r() * HD_LOOKS.length)] : `folk${Math.floor(r() * LOOKS)}`;

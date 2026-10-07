@@ -11,6 +11,41 @@ import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
 import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
+import { drzewoZ } from '../map/drzewa09';
+import { GEN_DOTS } from '../map/ziemia09';
+import { doCanvas, nowy, type Obraz } from '../gen';
+
+/** Generator species for a planted fruit tree (overhaul 09). */
+const GATUNEK_09: Partial<Record<Owoc, string>> = { jablko: 'jablon', sliwka: 'sliwa', winogrono: 'jablon' };
+
+/**
+ * A planted fruit tree in the 09 look (owner, 7 Oct 2026: the demo's trees were the old drawings): the generator's
+ * tree (trunk + crown, fruit layer on the 'full' frame) as one texture with frames 'full' and 'bare'; origin = its foot.
+ */
+function drzewo09Tekstura(scene: Phaser.Scene, fruit: Owoc): { key: string; ox: number; oy: number } {
+  const g = GATUNEK_09[fruit] ?? 'jablon';
+  const d = drzewoZ(g, 1);
+  const key = `sad09-${g}`;
+  const W = d.korona.w, H = d.korona.h;
+  if (!scene.textures.exists(key)) {
+    const warstwy = (z: Obraz | null) => {
+      const o = nowy(W, H);
+      for (const l of [d.pien, d.korona, z]) if (l) for (let i = 0; i < o.px.length; i++) if (l.px[i] >>> 24) o.px[i] = l.px[i];
+      return doCanvas(o);
+    };
+    const c = document.createElement('canvas');
+    c.width = W * 2;
+    c.height = H;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(warstwy(d.owoce), 0, 0);
+    ctx.drawImage(warstwy(null), W, 0);
+    const tex = scene.textures.addCanvas(key, c)!;
+    tex.add('full', 0, 0, 0, W, H);
+    tex.add('bare', 0, W, 0, W, H);
+    tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  }
+  return { key, ox: d.kotwica[0] / W, oy: d.kotwica[1] / H };
+}
 
 // Things that fill the city around the hero as they walk: fruit trees on
 // green areas and enemies around narrow streets. Both are created only near
@@ -103,6 +138,12 @@ export class Orchards {
     for (const list of lists) {
       for (const t of list) {
         if (t.sprite || Math.hypot(t.x - px, t.y - py) > NEAR) continue;
+        if (WYGLAD_09 && list === this.planted) {
+          const d = drzewo09Tekstura(this.scene, t.fruit);
+          t.sprite = this.scene.add.image(t.x, t.y, d.key, t.left > 0 ? 'full' : 'bare').setOrigin(d.ox, d.oy).setScale(1 / GEN_DOTS).setDepth(t.y);
+          this.active.add(t);
+          continue;
+        }
         t.sprite = this.scene.add
           .image(t.x, t.y, TREE_TEX[t.fruit]!, t.left > 0 ? 'full' : 'bare')
           .setOrigin(0.5, 0.92)

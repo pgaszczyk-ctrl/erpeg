@@ -77,6 +77,9 @@ export const GORY = {
   znakCoM: 40,
   /** Poziomice co tyle metrów, co piąta grubsza. */
   poziomice: 20,
+  /** Poziomice tylko w prawdziwych górach: różnica wysokości w promieniu `poziomiceRzezbaM` od kawałka ≥ `poziomiceOdM` (właściciel 7.10.2026). */
+  poziomiceOdM: 120,
+  poziomiceRzezbaM: 600,
   /** Jak mocne jest cieniowanie gór (0 – brak, 1 – mocne). */
   cien: 0.55,
 };

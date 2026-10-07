@@ -1,5 +1,5 @@
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
-import { tor, kolorPodloza } from '../gen';
+import { tor, kolorPodloza , koleiny } from '../gen';
 import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
@@ -44,8 +44,10 @@ export interface Zlecenie {
   ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean;
   /** Drzewa ścięte w tej sesji (idDrzewa): zamiast pnia pieniek, bez korony i cienia. */
   sciete: string[];
-  /** Tory (kolej i tramwaj) w okolicy kawałka, px generatora. */
+  /** Tory kolejowe w okolicy kawałka, px generatora. */
   tory: number[][];
+  /** Tory tramwajowe: tylko koleiny w jezdni. */
+  tramwaje?: number[][];
   /** Perony w okolicy (do steampunkowego wyposażenia, dworzec09.ts). */
   perony: Peron09[];
   /** Pola uprawne i działki sięgające kawałka (pełny obrys w px generatora, ziarno = id obszaru OSM). */
@@ -258,6 +260,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     return i >= 0 && j >= 0 && i < S && j < S && RODZAJE[ids[j * S + i]] === 'woda';
   };
   for (const mz of z.mozaiki ?? []) malujMozaike(obraz, X0, Y0, N, mz);
+  for (const t of z.tramwaje ?? []) koleiny(obraz, t, X0, Y0);
   for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);
   malujPerony(obraz, ids, S, X0, Y0);
   stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID && !(z.mozaiki ?? []).some((m) => naMozaice(m, x, y, 30)); });

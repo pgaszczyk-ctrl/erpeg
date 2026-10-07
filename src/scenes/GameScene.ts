@@ -79,7 +79,6 @@ import { demo } from '../demo';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
-import { DragonBrain } from '../objects/Dragon';
 import { SmokAI, aktualizujEfekty, wyczyscEfekty, smokSmierc, type StanGracza } from '../objects/SmokAI';
 import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
 import { trzesienieWlaczone } from '../ustawieniaGracza';
@@ -1453,19 +1452,11 @@ export class GameScene extends Phaser.Scene {
    * blows of the hero's sword), the others have their species' life.
    */
   private dragonFight(s: Enemy) {
-    const demoDragon = this.demoRun?.isDragon(s);
-    if (demoDragon) {
-      this.dragons.set(s, new DragonBrain(this, s, {
-        player: this.player,
-        blocked: (x, y) => this.city.isBlocked(x, y),
-        hurt: (from, half) => {
-          if (this.time.now < this.noHurtUntil) return;
-          const dmg = Math.max(1, Math.round(half * session.level.obrazenia));
-          if (!this.player.hurt(from, this.time.now, Math.random() < blockChance() ? 0 : dmg)) return;
-          this.emitHud();
-          if (this.player.isDead) this.onPlayerDeath();
-        },
-      }));
+    // The QR demo's Wawel dragon: the artist's mountain dragon (owner, 7 Oct 2026: the old small green placeholder
+    // didn't read as a dragon); its life is set by the demo (SEN.ciosow blows).
+    if (this.demoRun?.isDragon(s)) {
+      s.gatunek = 'gorski';
+      this.dragons.set(s, new SmokAI(this, s, 'gorski', this.smokHost()));
       return;
     }
     const story = s === this.story.dragonSprite;

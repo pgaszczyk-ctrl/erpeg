@@ -729,7 +729,9 @@ export class MapRenderer {
     } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
-    for (const l of wide.lines) if (l.kind === 'rail' || l.kind === 'tram') tory.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
+    const tramwaje: number[][] = [];
+    for (const l of wide.lines) if (l.kind === 'tram') tramwaje.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
+    for (const l of wide.lines) if (l.kind === 'rail') tory.push(...clipLine(l.pts, x0 - 16, y0 - 16, x0 + CHUNK + 16, y0 + CHUNK + 16).map((p) => p.map((v) => v * GEN_DOTS)));
     // Buildings whose roof, walls or shadow reach the chunk (roofs jut out north of the outline), north to south.
     const { buildings } = m.query({ x0: x0 - 24, y0: y0 - 24, x1: x0 + CHUNK + 24, y1: y0 + CHUNK + 48 });
     buildings.sort((a, b) => a.y1 - b.y1);
@@ -766,7 +768,7 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki };
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
@@ -1005,6 +1007,20 @@ export class MapRenderer {
         if (!Number.isNaN(v)) any = true;
       }
     if (!any) return;
+    // Relief shading and contour lines only in real mountains (owner, 7 Oct 2026: on flat ground „sama poziomica” – dark bands and lines on a hill like Wawel): the
+    // spread of heights within GORY.poziomiceRzezbaM around the chunk must reach GORY.poziomiceOdM.
+    {
+      const cx = x0 + CHUNK / 2, cy = y0 + CHUNK / 2, R = GORY.poziomiceRzezbaM * PX_PER_M;
+      let lo = Infinity, hi = -Infinity;
+      for (let ring = 0; ring <= 2; ring++) for (let k = 0; k < (ring ? 12 : 1); k++) {
+        const a = (k * Math.PI) / 6, r = (R * ring) / 2;
+        const v = t.heightAt(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        if (Number.isNaN(v)) continue;
+        lo = Math.min(lo, v);
+        hi = Math.max(hi, v);
+      }
+      if (!(hi - lo >= GORY.poziomiceOdM)) return;
+    }
     const at = (i: number, j: number) => h[Math.min(n - 1, Math.max(0, j)) * n + Math.min(n - 1, Math.max(0, i))];
     // The heights come in ~12 m steps: smooth them for the shading (two box
     // blurs each way), or every step shows as a square.
