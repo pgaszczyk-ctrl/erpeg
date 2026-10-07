@@ -86,3 +86,22 @@ PNG z przezroczystym tłem (jak obecni bohaterowie, nie magenta), bez wygładzan
 ## Co zrobimy po naszej stronie (do wiadomości)
 
 Gra złoży bohatera z warstw: włosy-tył → tułów → głowa, i przebarwi je według masek. W tworzeniu postaci pojawią się strzałki ◀ ▶ dla głowy i tułowia oraz kolory skóry, włosów i ubrania, a w Kufrze ta sama przebieralnia. Dotychczasowi bohaterowie zostają, kto ich ma, zachowuje swój wygląd.
+
+---
+
+## Poprawka po próbie (7.10.2026) – głowy i ciała osobno
+
+Próbę (głowy 1–2, tułowie 1 i 4) złożyliśmy w grze i przebarwiliśmy. Właściciel ocenił: **szyje są za długie**. Przez sztywny szablon („głowa kończy się na wierszu 39, tułów zaczyna się na 40”) każda postać ma ten sam, wyciągnięty odstęp brody od ramion. Na razie w grze opuszczamy głowę o 3 px, co wygląda dużo lepiej (`22_awatary/proba_w_grze_x3.png`). Na dalsze części zmieniamy zasady:
+
+1. **Głowy i ciała rysuj jako osobne obrazki, nie w jednym szablonie postaci.** Głowa to sama głowa: twarz, włosy, uszy, nakrycie głowy. Bez szyi, ewentualnie 1 px cienia pod brodą.
+2. **Ciała mogą mieć różny wzrost:** niższe (dziecięce, krępe) i wyższe (smukłe). Szyja jest częścią ciała: krótka, 1–2 px widocznej skóry.
+3. **Każda część podaje swój punkt zaczepienia w każdej klatce** (w `metadata.json`):
+   - głowa: punkt pod brodą (`broda` [x, y]);
+   - ciało: punkt na szyi, w którym ma stanąć broda (`szyja` [x, y]);
+   - stopy ciała zostają na wierszu 62, w punkcie [32, 62].
+
+   Gra położy brodę głowy w punkcie szyi ciała. Dzięki temu każda głowa pasuje do każdego ciała, niezależnie od jego wzrostu.
+4. **Arkusze bez zmian:** 192 × 192, 3 × 3 klatki po 64 px, wiersze dół / bok (w lewo) / góra, kolumny krok A / stoi / krok B. Głowa może być wszędzie w swoich klatkach. Liczy się punkt `broda`.
+5. **Maski:** w głowie 01 kilka pasemek włosów było namalowanych tonem skóry i oznaczonych jako skóra. Po przebarwieniu włosów zostawały brązowe paski. Gra to teraz łata, ale proszę: wszystko, co jest włosami, w masce na żółto, niezależnie od użytego koloru.
+
+Kolejność bez zmian: najpierw 2 głowy i 2 ciała (jedno niższe, jedno wyższe) według nowych zasad, potem reszta.

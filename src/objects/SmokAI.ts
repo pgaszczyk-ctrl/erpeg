@@ -105,7 +105,7 @@ export class SmokAI {
 
   /** Kierunek do kamery/bok/od kamery wg wektora (bok patrzy w lewo, w prawo lustrem). */
   private kierunek(vx: number, vy: number): { k: string; lustro: boolean } {
-    if (Math.abs(vx) >= Math.abs(vy) * 0.8) return { k: 'bok', lustro: vx > 0 };
+    if (Math.abs(vx) >= Math.abs(vy) * 0.8 || (this.rysunek && RYSUNKI_SMOKOW[this.gatunek]?.tylkoBok)) return { k: 'bok', lustro: vx > 0 };
     if (vy < 0 && this.rysunek && RYSUNKI_SMOKOW[this.gatunek]?.tylJakBok) return { k: 'bok', lustro: vx > 0 };
     return { k: vy > 0 ? 'przod' : 'tyl', lustro: false };
   }

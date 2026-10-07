@@ -16,7 +16,8 @@ def rgba(p):
     for y in range(im.height):
         for x in range(im.width):
             r, g, b, a = px[x, y]
-            if r == 255 and g == 0 and b == 255: px[x, y] = (0, 0, 0, 0)
+            # magenta i jej mieszanki na krawędzi (próbki leśnego/trującego miały różową obwódkę)
+            if a == 0 or (r > 150 and b > 150 and g < 110 and abs(r - b) < 90): px[x, y] = (0, 0, 0, 0)
     return im
 
 for g in ('ognisty', 'kwasowy'):
@@ -26,23 +27,30 @@ for g in ('ognisty', 'kwasowy'):
     w, h = 220, 200
     wier = (len(pliki) + KOL - 1) // KOL
     ark = Image.new('RGBA', (w * KOL, h * wier), (0, 0, 0, 0))
-    # Smok ognisty, nowy rzut z góry (próbki grafika 7.10.2026, ognisty_rzut_v2/, stopy w [110,165] → +5 px w dół):
-    # właściciel: „podmień czerwonego smoka na nowego”. Są tylko 2 klatki z boku, więc cały bok (stoi, idzie, ziej,
-    # ugryzienie) składamy z nich: chód = postój z podskokiem o 1 px, otwarta paszcza = ziej_2. Przód/tył/śmierć – stare.
-    v2 = os.path.join(ZR, 'ognisty_rzut_v2')
-    if g == 'ognisty' and os.path.isdir(v2):
-        stoi = rgba(os.path.join(v2, 'smok_ognisty_stoi_bok_1.png'))
-        ziej = rgba(os.path.join(v2, 'smok_ognisty_ziej_bok_2.png'))
-        def kl(im, dy):
-            c = Image.new('RGBA', (w, h), (0, 0, 0, 0)); c.paste(im, (0, 5 + dy)); return c
-        zamiana = {'stoi_bok_1': kl(stoi, 0), 'stoi_bok_2': kl(stoi, 0), 'idzie_bok_1': kl(stoi, 0), 'idzie_bok_2': kl(stoi, -1),
-                   'idzie_bok_3': kl(stoi, 0), 'idzie_bok_4': kl(stoi, -1), 'ziej_bok_1': kl(stoi, 0), 'ziej_bok_2': kl(ziej, 0),
-                   'ziej_bok_3': kl(stoi, 0), 'ugryzienie_bok_1': kl(stoi, 0), 'ugryzienie_bok_2': kl(ziej, 0), 'ugryzienie_bok_3': kl(stoi, 0)}
-    else:
-        zamiana = {}
+    zamiana = {}
     for i, f in enumerate(pliki):
         n = nazwy[i]
         ark.paste(zamiana[n] if n in zamiana else rgba(os.path.join(d, f)), ((i % KOL) * w, (i // KOL) * h))
+    ark.save(os.path.join(CEL, f'smok_{g}.png'), optimize=True)
+    json.dump({'komorka': [w, h], 'stopy': [110, 170], 'klatki': nazwy}, open(os.path.join(CEL, f'smok_{g}.json'), 'w'))
+    print(g, len(nazwy), json.dumps(nazwy))
+
+# Leśny i trujący (paczka „smoki_chochlik_v3”): na razie tylko 2 klatki stania z boku – cały arkusz z nich
+# (chód = postój z podskokiem o 1 px, ugryzienie 2 = wypad 2 px, śmierć = postój); gra pokazuje zawsze bok (RYSUNKI_SMOKOW.tylkoBok).
+for g in ('lesny', 'trujacy'):
+    d = os.path.join(ZR, 'v3', f'smok_{g}_probki')
+    if not os.path.isdir(d): continue
+    s1, s2 = rgba(os.path.join(d, f'smok_{g}_stoi_bok_1.png')), rgba(os.path.join(d, f'smok_{g}_stoi_bok_2.png'))
+    w, h = 220, 200
+    def kl(im, dx=0, dy=0):
+        c = Image.new('RGBA', (w, h), (0, 0, 0, 0)); c.paste(im, (dx, dy)); return c
+    klatki = {'stoi_bok_1': kl(s1), 'stoi_bok_2': kl(s2), 'idzie_bok_1': kl(s1), 'idzie_bok_2': kl(s2, 0, -1), 'idzie_bok_3': kl(s1),
+              'idzie_bok_4': kl(s2, 0, -1), 'ugryzienie_bok_1': kl(s1, 1), 'ugryzienie_bok_2': kl(s2, -2), 'ugryzienie_bok_3': kl(s1),
+              'smierc_bok_1': kl(s1), 'smierc_bok_2': kl(s1, 0, 1), 'smierc_bok_3': kl(s1, 0, 2)}
+    nazwy = sorted(klatki)
+    wier = (len(nazwy) + KOL - 1) // KOL
+    ark = Image.new('RGBA', (w * KOL, h * wier), (0, 0, 0, 0))
+    for i, n in enumerate(nazwy): ark.paste(klatki[n], ((i % KOL) * w, (i // KOL) * h))
     ark.save(os.path.join(CEL, f'smok_{g}.png'), optimize=True)
     json.dump({'komorka': [w, h], 'stopy': [110, 170], 'klatki': nazwy}, open(os.path.join(CEL, f'smok_{g}.json'), 'w'))
     print(g, len(nazwy), json.dumps(nazwy))

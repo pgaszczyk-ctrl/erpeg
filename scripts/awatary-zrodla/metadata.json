@@ -1,0 +1,46 @@
+{
+  "frame_size": [
+    64,
+    64
+  ],
+  "sheet_size": [
+    192,
+    192
+  ],
+  "neck": {
+    "dol": [
+      32,
+      39
+    ],
+    "bok": [
+      31,
+      39
+    ],
+    "gora": [
+      32,
+      39
+    ]
+  },
+  "body_first_row": 40,
+  "feet_row": 62,
+  "parts": {
+    "glowa_01": {
+      "role": "head",
+      "description": "Krótkie rozczochrane włosy",
+      "back_hair_layer": false
+    },
+    "glowa_02": {
+      "role": "head",
+      "description": "Wysoki kucyk",
+      "back_hair_layer": false
+    },
+    "tulow_01": {
+      "role": "body",
+      "description": "Koszula i kamizelka podróżnika"
+    },
+    "tulow_04": {
+      "role": "body",
+      "description": "Sukienka z warsztatowym fartuchem"
+    }
+  }
+}

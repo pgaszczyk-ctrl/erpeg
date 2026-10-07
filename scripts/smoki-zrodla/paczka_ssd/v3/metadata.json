@@ -1,0 +1,1185 @@
+{
+  "smok_ognisty/smok_ognisty_stoi_bok_1.png": {
+    "bbox": [
+      30,
+      67,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_stoi_bok_2.png": {
+    "bbox": [
+      30,
+      67,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_bok_1.png": {
+    "bbox": [
+      33,
+      67,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_bok_2.png": {
+    "bbox": [
+      31,
+      67,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_bok_3.png": {
+    "bbox": [
+      29,
+      62,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_bok_4.png": {
+    "bbox": [
+      31,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_bok_1.png": {
+    "bbox": [
+      40,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_bok_2.png": {
+    "bbox": [
+      26,
+      58,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_bok_3.png": {
+    "bbox": [
+      30,
+      61,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_bok_1.png": {
+    "bbox": [
+      33,
+      60,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_bok_2.png": {
+    "bbox": [
+      24,
+      61,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_bok_3.png": {
+    "bbox": [
+      33,
+      61,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_smierc_bok_1.png": {
+    "bbox": [
+      37,
+      55,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_smierc_bok_2.png": {
+    "bbox": [
+      32,
+      49,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_smierc_bok_3.png": {
+    "bbox": [
+      15,
+      99,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_stoi_przod_1.png": {
+    "bbox": [
+      26,
+      27,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_stoi_przod_2.png": {
+    "bbox": [
+      26,
+      28,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_przod_1.png": {
+    "bbox": [
+      32,
+      28,
+      197,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_przod_2.png": {
+    "bbox": [
+      25,
+      26,
+      194,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_przod_3.png": {
+    "bbox": [
+      26,
+      27,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_przod_4.png": {
+    "bbox": [
+      26,
+      26,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_przod_1.png": {
+    "bbox": [
+      27,
+      25,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_przod_2.png": {
+    "bbox": [
+      25,
+      26,
+      195,
+      169
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_przod_3.png": {
+    "bbox": [
+      26,
+      32,
+      194,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_przod_1.png": {
+    "bbox": [
+      26,
+      32,
+      193,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_przod_2.png": {
+    "bbox": [
+      25,
+      33,
+      195,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_przod_3.png": {
+    "bbox": [
+      25,
+      32,
+      194,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_stoi_tyl_1.png": {
+    "bbox": [
+      29,
+      29,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_stoi_tyl_2.png": {
+    "bbox": [
+      31,
+      29,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_tyl_1.png": {
+    "bbox": [
+      41,
+      30,
+      179,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_tyl_2.png": {
+    "bbox": [
+      37,
+      27,
+      183,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_tyl_3.png": {
+    "bbox": [
+      31,
+      31,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_idzie_tyl_4.png": {
+    "bbox": [
+      33,
+      29,
+      187,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_tyl_1.png": {
+    "bbox": [
+      34,
+      34,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_tyl_2.png": {
+    "bbox": [
+      34,
+      27,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ugryzienie_tyl_3.png": {
+    "bbox": [
+      30,
+      36,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_tyl_1.png": {
+    "bbox": [
+      26,
+      31,
+      194,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_tyl_2.png": {
+    "bbox": [
+      28,
+      30,
+      192,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_ognisty/smok_ognisty_ziej_tyl_3.png": {
+    "bbox": [
+      34,
+      33,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_bok_1.png": {
+    "bbox": [
+      30,
+      65,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_bok_2.png": {
+    "bbox": [
+      33,
+      64,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_bok_1.png": {
+    "bbox": [
+      36,
+      65,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_bok_2.png": {
+    "bbox": [
+      40,
+      64,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_bok_3.png": {
+    "bbox": [
+      31,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_bok_4.png": {
+    "bbox": [
+      34,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_bok_1.png": {
+    "bbox": [
+      34,
+      66,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_bok_2.png": {
+    "bbox": [
+      31,
+      58,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_bok_3.png": {
+    "bbox": [
+      32,
+      66,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_bok_1.png": {
+    "bbox": [
+      27,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_bok_2.png": {
+    "bbox": [
+      23,
+      62,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_bok_3.png": {
+    "bbox": [
+      41,
+      63,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_smierc_bok_1.png": {
+    "bbox": [
+      29,
+      73,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_smierc_bok_2.png": {
+    "bbox": [
+      28,
+      78,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_smierc_bok_3.png": {
+    "bbox": [
+      20,
+      76,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_przod_1.png": {
+    "bbox": [
+      28,
+      26,
+      191,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_przod_2.png": {
+    "bbox": [
+      33,
+      23,
+      188,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_przod_1.png": {
+    "bbox": [
+      30,
+      24,
+      191,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_przod_2.png": {
+    "bbox": [
+      29,
+      19,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_przod_3.png": {
+    "bbox": [
+      28,
+      18,
+      192,
+      157
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_przod_4.png": {
+    "bbox": [
+      31,
+      30,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_przod_1.png": {
+    "bbox": [
+      31,
+      34,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_przod_2.png": {
+    "bbox": [
+      28,
+      29,
+      192,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_przod_3.png": {
+    "bbox": [
+      28,
+      33,
+      192,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_przod_1.png": {
+    "bbox": [
+      30,
+      34,
+      189,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_przod_2.png": {
+    "bbox": [
+      29,
+      35,
+      191,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_przod_3.png": {
+    "bbox": [
+      29,
+      35,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_tyl_1.png": {
+    "bbox": [
+      34,
+      42,
+      187,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_stoi_tyl_2.png": {
+    "bbox": [
+      35,
+      39,
+      185,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_tyl_1.png": {
+    "bbox": [
+      38,
+      40,
+      183,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_tyl_2.png": {
+    "bbox": [
+      38,
+      38,
+      182,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_tyl_3.png": {
+    "bbox": [
+      35,
+      38,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_idzie_tyl_4.png": {
+    "bbox": [
+      36,
+      28,
+      183,
+      157
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_tyl_1.png": {
+    "bbox": [
+      39,
+      48,
+      181,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_tyl_2.png": {
+    "bbox": [
+      38,
+      32,
+      182,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_ugryzienie_tyl_3.png": {
+    "bbox": [
+      34,
+      39,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_tyl_1.png": {
+    "bbox": [
+      34,
+      35,
+      186,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_tyl_2.png": {
+    "bbox": [
+      35,
+      37,
+      184,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_kwasowy/smok_kwasowy_pluj_tyl_3.png": {
+    "bbox": [
+      36,
+      42,
+      184,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_lesny_probki/smok_lesny_stoi_bok_1.png": {
+    "bbox": [
+      30,
+      69,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_lesny_probki/smok_lesny_stoi_bok_2.png": {
+    "bbox": [
+      30,
+      66,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_trujacy_probki/smok_trujacy_stoi_bok_1.png": {
+    "bbox": [
+      30,
+      101,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "smok_trujacy_probki/smok_trujacy_stoi_bok_2.png": {
+    "bbox": [
+      30,
+      101,
+      190,
+      170
+    ],
+    "pivot": [
+      110,
+      170
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_dol_krok_A.png": {
+    "bbox": [
+      9,
+      16,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_dol_stoi.png": {
+    "bbox": [
+      9,
+      16,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_dol_krok_B.png": {
+    "bbox": [
+      9,
+      16,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_bok_krok_A.png": {
+    "bbox": [
+      14,
+      13,
+      49,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_bok_stoi.png": {
+    "bbox": [
+      15,
+      13,
+      50,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_bok_krok_B.png": {
+    "bbox": [
+      14,
+      13,
+      49,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_gora_krok_A.png": {
+    "bbox": [
+      9,
+      15,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_gora_stoi.png": {
+    "bbox": [
+      9,
+      16,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  },
+  "chochlik/chochlik_gora_krok_B.png": {
+    "bbox": [
+      9,
+      15,
+      55,
+      62
+    ],
+    "pivot": [
+      32,
+      62
+    ],
+    "status": "new"
+  }
+}
