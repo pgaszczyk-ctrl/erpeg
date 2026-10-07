@@ -1,31 +1,68 @@
 import { hash, hex, ustaw, OBRYS, type Obraz } from '../gen';
+import { rysunekOzdoby, type RysunekOzdoby } from '../gen/budynki';
 
 // Stragany na placach (overhaul 09, właściciel 5.10.2026: „na placu Zamkowym zrobiłeś parking – lepiej stragany”).
 // Parkingi z OSM malujemy jak brukowany plac (rodzaj `targ` w mapie rodzajów), a na nich rzędy straganów:
 // pasiasta markiza na mosiężnych słupkach, stół z towarem, cień. Px generatora, bez DOM-u (Web Worker).
 
 export const TARG = {
-  /** Rozstaw straganów na placu (px generatora) i szansa, że w danym miejscu stoi stragan. */
+  /** Rozstaw miejsc na placu (px generatora). */
   co: [30, 28] as [number, number],
-  szansa: 0.8,
+  /** Dawne stragany: dziś nie stawiamy (paczka „smoki_swinka_dekoracje”, 7.10.2026: dekoracje zamiast straganów). */
+  szansa: 0,
+  /** Dekoracje od grafika w części miejsc (≈ 30 %), z ich udziałami. */
+  dekoracje: 0.3,
+  mieszanka: [['donica_miedziana', 30], ['lawka_trybiki', 25], ['zegar_uliczny', 15], ['gablota_ogloszen', 15], ['pompa_parowa', 10], ['teleskop', 5]] as [string, number][],
 };
+
+/** Stragany albo dekoracje na pikselach rodzaju `targ`: `jestTarg(x, y)` w px generatora (współrzędne świata). */
+export function stragany(o: Obraz, X0: number, Y0: number, jestTarg: (x: number, y: number) => boolean) {
+  const [sx, sy] = TARG.co, M = 50;
+  // Co druga kolumna miejsc (przejścia między nimi), w niej część miejsc: odstęp ≥ 2 miejsca w rzędzie.
+  const dek = (gx: number, gy: number) => ((gx + (gy >> 1)) & 1) === 0 && hash(gx, gy, 821) < TARG.dekoracje * 2;
+  const suma = TARG.mieszanka.reduce((t, [, w]) => t + w, 0);
+  for (let gy = Math.floor((Y0 - M) / sy); gy <= Math.floor((Y0 + o.h + M) / sy); gy++)
+    for (let gx = Math.floor((X0 - M) / sx); gx <= Math.floor((X0 + o.w + M) / sx); gx++) {
+      const x = gx * sx + (gy & 1 ? sx >> 1 : 0) + Math.floor(hash(gx, gy, 812) * 6) - 3, y = gy * sy + Math.floor(hash(gx, gy, 813) * 5);
+      if (dek(gx, gy)) {
+        let r = hash(gx, gy, 822) * suma, n = TARG.mieszanka[0][0];
+        for (const [k, w] of TARG.mieszanka) if ((r -= w) <= 0) { n = k; break; }
+        const rys = rysunekOzdoby(`plac_${n}`);
+        if (!rys) continue;
+        const pw = Math.ceil(rys.o.w / 2) + 3;
+        // Cała podstawa i trochę wokół na placu (nie przy jezdni, nie w budynku).
+        if (![[-pw, 0], [pw, 0], [0, 4], [-pw, -6], [pw, -6], [0, -Math.min(rys.o.h, 30)]].every(([dx, dy]) => jestTarg(x + dx, y + dy))) continue;
+        dekoracja(o, X0, Y0, x, y, rys, hash(gx, gy, 823) < 0.5);
+        continue;
+      }
+      if (hash(gx, gy, 811) >= TARG.szansa) continue;
+      // Cały stragan (markiza, stół, cień) na placu.
+      if (![[-15, 0], [15, 0], [-15, -22], [15, -22], [0, -11], [0, 3], [18, 3]].every(([dx, dy]) => jestTarg(x + dx, y + dy))) continue;
+      stragan(o, X0, Y0, x, y, Math.floor(hash(gx, gy, 814) * 1e6));
+    }
+}
 
 const PASY = [['#b2453a', '#efe6cc'], ['#3c6652', '#efe6cc'], ['#3c4256', '#e9c56a'], ['#9a6420', '#efe6cc'], ['#6e2a2e', '#e9c56a']].map((p) => p.map(hex));
 const MOS = ['#6b4a22', '#9a6420', '#c8963e', '#e9c56a'].map(hex);
 const STOL = ['#3e2a1c', '#5a3e28', '#765436', '#926c46'].map(hex);
 const TOWAR = [['#8f322a', '#cc6a52'], ['#c9b240', '#e8d878'], ['#3f6b38', '#70994a'], ['#5b3a7a', '#8a64a8'], ['#765436', '#a07a50']].map((p) => p.map(hex));
 
-/** Stragany na pikselach rodzaju `targ`: `jestTarg(x, y)` w px generatora (współrzędne świata). */
-export function stragany(o: Obraz, X0: number, Y0: number, jestTarg: (x: number, y: number) => boolean) {
-  const [sx, sy] = TARG.co, M = 30;
-  for (let gy = Math.floor((Y0 - M) / sy); gy <= Math.floor((Y0 + o.h + M) / sy); gy++)
-    for (let gx = Math.floor((X0 - M) / sx); gx <= Math.floor((X0 + o.w + M) / sx); gx++) {
-      if (hash(gx, gy, 811) >= TARG.szansa) continue;
-      const x = gx * sx + (gy & 1 ? sx >> 1 : 0) + Math.floor(hash(gx, gy, 812) * 6) - 3, y = gy * sy + Math.floor(hash(gx, gy, 813) * 5);
-      // Cały stragan (markiza, stół, cień) na placu.
-      if (![[-15, 0], [15, 0], [-15, -22], [15, -22], [0, -11], [0, 3], [18, 3]].every(([dx, dy]) => jestTarg(x + dx, y + dy))) continue;
-      stragan(o, X0, Y0, x, y, Math.floor(hash(gx, gy, 814) * 1e6));
-    }
+/** Dekoracja od grafika stojąca na placu: podstawa w (x, y), krótki cień w prawo-dół, czasem lustrem. */
+function dekoracja(o: Obraz, X0: number, Y0: number, x: number, y: number, r: RysunekOzdoby, lustro: boolean) {
+  const ox = x - r.bx, oy = y - r.by;
+  const pel = (a: number, b: number) => a >= 0 && b >= 0 && a < r.o.w && b < r.o.h && (r.o.px[b * r.o.w + (lustro ? r.o.w - 1 - a : a)] >>> 24) > 0;
+  // cień: dolna część sylwetki położona na ziemi w prawo-dół
+  for (let b = r.o.h - 6; b < r.o.h + 2; b++) for (let a = 0; a < r.o.w + 3; a++) {
+    if (!pel(a - 3, b - 2) || pel(a, b)) continue;
+    const i = ox + a - X0, j = oy + b - Y0;
+    if (i < 0 || j < 0 || i >= o.w || j >= o.h) continue;
+    const c = o.px[j * o.w + i];
+    o.px[j * o.w + i] = (c & 0xff000000) | ((((c >>> 16) & 255) * 0.66) << 16) | ((((c >>> 8) & 255) * 0.64) << 8) | ((c & 255) * 0.6);
+  }
+  for (let b = 0; b < r.o.h; b++) for (let a = 0; a < r.o.w; a++) {
+    const c = r.o.px[b * r.o.w + (lustro ? r.o.w - 1 - a : a)];
+    if (c >>> 24) ustaw(o, ox + a - X0, oy + b - Y0, c);
+  }
 }
 
 /** Jeden stragan; (x, y) = środek przedniej krawędzi stołu przy ziemi. */

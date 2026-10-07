@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Slime } from './Slime';
 import type { Player } from './Player';
 import { TEX } from '../art';
-import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU } from './smokRysunki';
-import { RYSUNKI_SMOKOW } from '../content/smoki';
+import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU, zaladujEfektyAtakow, kluczAtaku, type EfektAtaku } from './smokRysunki';
+import { RYSUNKI_SMOKOW, EFEKTY_ATAKOW } from '../content/smoki';
 import { ATAKI_SMOKA as A, GATUNKI_SMOKOW, TRUDNOSC_SMOKOW, LIMIT_EFEKTOW, PRZERWA_MIEDZY_ATAKAMI, type AtakSmoka, type GatunekId } from '../content/smoki';
 
 // Smok jako dane (content/smoki.ts): gatunek + ataki. Ugryzienie ma każdy; ataki specjalne (ogień, kwas, dym, lot)
@@ -33,7 +33,7 @@ export interface SmokHost {
 type Tryb = 'idzie' | 'gryzie' | 'telegraf' | 'atak' | 'lot' | 'oszolomiony';
 
 /** Efekty na ziemi i w powietrzu (wspólne dla wszystkich smoków, z limitem). */
-interface Efekt { g: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image; do: number; od: number; tick?: (now: number) => void; koniec?: () => void }
+interface Efekt { g: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite; do: number; od: number; tick?: (now: number) => void; koniec?: () => void }
 const efekty: Efekt[] = [];
 
 /** Warstwy: ślady na ziemi tuż nad mapą (pod postaciami), ogień/dym/fala nad postaciami. */
@@ -50,8 +50,15 @@ export class SmokAI {
   private cel = { x: 0, y: 0 };
   private znacznik?: Phaser.GameObjects.Graphics;
   private plomien?: Phaser.GameObjects.Graphics;
+  /** Płomień od grafika (gdy wczytany) i jego początek. */
+  private ogien?: Phaser.GameObjects.Sprite;
+  private ogienOd = 0;
+  /** Po ataku: do kiedy trzymać pozę „wyrzut” (klatka 2), a potem „powrót” (3), zanim smok znów pójdzie. */
+  private pozaWyrzutDo = 0;
+  private pozaPowrotDo = 0;
+  private pozaKier = { x: 0, y: 1 };
   private tikAt = 0;
-  private kule: { img: Phaser.GameObjects.Image; vx: number; vy: number; zostalo: number }[] = [];
+  private kule: { img: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite; vx: number; vy: number; zostalo: number }[] = [];
   private lot?: { mign: number; nastepne: number; cien?: Phaser.GameObjects.Image; px: number; py: number };
   private zycieMax: number;
   private zauwazyl = false;
@@ -72,6 +79,8 @@ export class SmokAI {
     this.skala = d.scaleX;
     this.zycieMax = d.hp;
     // Rysunki od grafika (content/smoki.ts RYSUNKI_SMOKOW): wczytywane przy pierwszym smoku tego gatunku.
+    // Ogień i kwas od grafika: każdy smok może ich użyć (też Cień smoka w fazach).
+    void zaladujEfektyAtakow(scene);
     const r = RYSUNKI_SMOKOW[gatunek];
     if (r) void zaladujSmoka(scene, gatunek).then((ok) => {
       if (!ok || !d.active) return;
@@ -114,6 +123,31 @@ export class SmokAI {
     }
   }
 
+  /** Jedna klatka ataku specjalnego (ziej/pluj nr 1–3) w kierunku celu, bez animacji. */
+  private pozaAtaku(nr: number, vx: number, vy: number, atak = this.atak) {
+    if (!this.rysunek) return;
+    const akcja = atak === 'ogien' ? 'ziej' : atak === 'kwas' ? 'pluj' : '';
+    if (!akcja) return;
+    let { k, lustro } = this.kierunek(vx, vy);
+    let f = klatkaSmoka(this.gatunek, `${akcja}_${k}_${nr}`);
+    if (f < 0) { k = 'bok'; f = klatkaSmoka(this.gatunek, `${akcja}_bok_${nr}`); }
+    if (f < 0) return;
+    this.animacja = '';
+    this.d.anims.stop();
+    this.d.setFlipX(k === 'bok' && lustro);
+    if (this.d.frame.name !== String(f)) this.d.setFrame(f);
+  }
+
+  /** Pysk w punktach mapy (z rysunku grafika), inaczej tuż nad środkiem smoka. */
+  private pysk(vx: number, vy: number): { x: number; y: number } {
+    const d = this.d, r = RYSUNKI_SMOKOW[this.gatunek];
+    if (!this.rysunek || !r?.pysk) return { x: d.x, y: d.y - 4 };
+    const { k, lustro } = this.kierunek(vx, vy);
+    const [px, py] = r.pysk[k as 'bok' | 'przod' | 'tyl'];
+    const dx = (px - r.srodek[0]) * this.skala, dy = (py - r.srodek[1]) * this.skala;
+    return { x: d.x + (lustro ? -dx : dx), y: d.y + dy };
+  }
+
   private get tf() { return TRUDNOSC_SMOKOW.telegraf[this.host.trudnosc] ?? 1; }
   private get W() { return this.host.W; }
 
@@ -149,7 +183,11 @@ export class SmokAI {
       if (g.kolor !== 0xffffff && !this.rysunek) d.setTint(g.kolor);
       if (dist > pysk - 2) d.vel.set(ux * g.predkosc, uy * g.predkosc);
       else d.vel.set(0, 0);
-      this.graj(d.vel.lengthSq() > 1 ? 'idzie' : 'stoi', ux, uy);
+      if (now < this.pozaPowrotDo) {
+        // Smok kończy wyrzut ognia/kwasu (klatki 2 → 3 grafika) i dopiero potem rusza.
+        d.vel.set(0, 0);
+        this.pozaAtaku(now < this.pozaWyrzutDo ? 2 : 3, this.pozaKier.x, this.pozaKier.y, this.ostatni);
+      } else this.graj(d.vel.lengthSq() > 1 ? 'idzie' : 'stoi', ux, uy);
       if (dist < pysk && now >= (this.odnowione.ugryzienie ?? 0)) {
         // Ugryzienie: cofa się na chwilę (telegraf), potem kłapie przed siebie.
         this.tryb = 'gryzie';
@@ -221,6 +259,8 @@ export class SmokAI {
     this.atak = a;
     this.ostatni = a;
     this.kat = Math.atan2(uy, ux); // kierunek blokowany w chwili rozpoczęcia (ogień)
+    // Płomień grafika jest w 8 kierunkach: stożek obrażeń i znacznik idą za nim.
+    if (a === 'ogien' && this.scene.textures.exists(kluczAtaku('ogien_prawo'))) this.kat = Math.round(this.kat / (Math.PI / 4)) * (Math.PI / 4);
     this.cel = { x: p.x, y: p.y };
     this.znacznik?.destroy();
     this.znacznik = this.scene.add.graphics().setDepth(ZIEMIA + 2);
@@ -245,12 +285,16 @@ export class SmokAI {
     g.clear();
     g.lineStyle(1.5, 0xff3b30, migaj);
     if (this.atak === 'ogien') {
-      d.setTint(0xffd0a0);
-      stozek(g, d.x, d.y - 4, this.kat, A.ogien.dlugosc * W, A.ogien.szerokosc * W, false);
+      const c = Math.cos(this.kat), s = Math.sin(this.kat);
+      if (this.rysunek) this.pozaAtaku(1, c, s); else d.setTint(0xffd0a0);
+      const p = this.pysk(c, s);
+      stozek(g, p.x, p.y, this.kat, A.ogien.dlugosc * W, A.ogien.szerokosc * W, false);
     } else if (this.atak === 'kwas') {
-      d.setTint(0xe8ff9a);
+      const vx = this.cel.x - d.x, vy = this.cel.y - d.y;
+      if (this.rysunek) this.pozaAtaku(1, vx, vy); else d.setTint(0xe8ff9a);
+      const p = this.pysk(vx, vy);
       g.strokeCircle(this.cel.x, this.cel.y, A.kwas.kaluza.promien * W);
-      g.lineBetween(d.x, d.y - 4, this.cel.x, this.cel.y);
+      g.lineBetween(p.x, p.y, this.cel.x, this.cel.y);
     } else if (this.atak === 'dym') {
       d.setTint(0xc8b8e0);
       d.setScale(d.scaleX, d.scaleX * 0.9); // przykuca
@@ -267,16 +311,29 @@ export class SmokAI {
       this.tryb = 'atak';
       this.until = now + A.ogien.czas;
       this.tikAt = now;
-      this.plomien = this.scene.add.graphics().setDepth(POWIETRZE).setBlendMode(Phaser.BlendModes.ADD);
+      this.pozaAtaku(2, Math.cos(this.kat), Math.sin(this.kat));
+      const p = this.pysk(Math.cos(this.kat), Math.sin(this.kat));
+      const ogien = plomienGrafika(this.scene, p.x, p.y, this.kat, A.ogien.dlugosc * W);
+      if (ogien) { this.ogien = ogien; this.ogienOd = now; }
+      else this.plomien = this.scene.add.graphics().setDepth(POWIETRZE).setBlendMode(Phaser.BlendModes.ADD);
       return;
     }
     if (this.atak === 'kwas') {
       const n = TRUDNOSC_SMOKOW.kulKwasu[this.host.trudnosc] ?? A.kwas.kul;
-      const baza = Math.atan2(this.cel.y - d.y, this.cel.x - d.x);
+      this.pozaAtaku(2, this.cel.x - d.x, this.cel.y - d.y);
+      this.pozaKier = { x: this.cel.x - d.x, y: this.cel.y - d.y };
+      this.pozaWyrzutDo = now + 220;
+      this.pozaPowrotDo = now + 400;
+      const u = this.pysk(this.cel.x - d.x, this.cel.y - d.y);
+      const baza = Math.atan2(this.cel.y - u.y, this.cel.x - u.x);
+      const grafika = this.scene.textures.exists(kluczAtaku('pocisk_kwasu'));
       for (let i = 0; i < n; i++) {
         const a = baza + (i - (n - 1) / 2) * 0.22;
-        const img = this.scene.add.image(d.x, d.y - 6, 'smok-kwas').setDepth(POWIETRZE);
-        const zasieg = Math.min(A.kwas.lot * W, Math.hypot(this.cel.x - d.x, this.cel.y - d.y) + 2);
+        const img = grafika
+          ? this.scene.add.sprite(u.x, u.y, kluczAtaku('pocisk_kwasu')).play(kluczAtaku('pocisk_kwasu')).setScale(SKALA_RYSUNKU).setRotation(a).setDepth(POWIETRZE)
+          : this.scene.add.image(u.x, u.y, 'smok-kwas').setDepth(POWIETRZE);
+        if (grafika) (img as Phaser.GameObjects.Sprite).texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        const zasieg = Math.min(A.kwas.lot * W, Math.hypot(this.cel.x - u.x, this.cel.y - u.y) + 2);
         this.kule.push({ img, vx: Math.cos(a) * A.kwas.predkosc, vy: Math.sin(a) * A.kwas.predkosc, zostalo: zasieg / A.kwas.predkosc });
       }
       this.koniecAtaku(now, A.kwas.odnowienie);
@@ -292,20 +349,27 @@ export class SmokAI {
 
   /** Ogień: stożek trwa, co tik rani tylko w obszarze i podpala; na końcu przypalona plama. */
   private trwa(now: number) {
-    const d = this.d, W = this.W, p = this.host.player;
+    const W = this.W, p = this.host.player;
     if (this.atak !== 'ogien') return;
     const L = A.ogien.dlugosc * W, S = A.ogien.szerokosc * W;
-    const g = this.plomien!;
-    g.clear();
-    // Płomień z kodu (zaślepka): kilka nakładających się, migoczących klinów.
-    for (let i = 0; i < 4; i++) {
-      const k = 0.88 + 0.12 * Math.random();
-      g.fillStyle([0xff4a1c, 0xff8a2a, 0xffc84a, 0xfff0a0][i], 0.35 + 0.15 * i);
-      stozek(g, d.x, d.y - 4, this.kat + (Math.random() - 0.5) * 0.08, L * k * (1 - i * 0.12), S * k * (1 - i * 0.2), true);
+    const u = this.pysk(Math.cos(this.kat), Math.sin(this.kat));
+    if (this.ogien) {
+      // Płomień grafika: 1. klatka buchnięcie, potem migocze 2↔3, na koniec gaśnie na 3.
+      const t = now - this.ogienOd, koniec = this.until - now;
+      this.ogien.setFrame(t < 120 ? 0 : koniec < 150 ? 2 : 1 + (Math.floor(t / 110) % 2));
+    } else if (this.plomien) {
+      const g = this.plomien;
+      g.clear();
+      // Płomień z kodu (zaślepka): kilka nakładających się, migoczących klinów.
+      for (let i = 0; i < 4; i++) {
+        const k = 0.88 + 0.12 * Math.random();
+        g.fillStyle([0xff4a1c, 0xff8a2a, 0xffc84a, 0xfff0a0][i], 0.35 + 0.15 * i);
+        stozek(g, u.x, u.y, this.kat + (Math.random() - 0.5) * 0.08, L * k * (1 - i * 0.12), S * k * (1 - i * 0.2), true);
+      }
     }
     if (now >= this.tikAt) {
       this.tikAt = now + A.ogien.tik;
-      if (wStozku(p.x, p.y - 4, d.x, d.y - 4, this.kat, L, S)) {
+      if (wStozku(p.x, p.y - 4, u.x, u.y, this.kat, L, S)) {
         this.host.drain(A.ogien.obrazenia);
         this.host.stan('podpalenie', A.ogien.podpalenie.ms);
       }
@@ -313,7 +377,12 @@ export class SmokAI {
     if (now >= this.until) {
       this.plomien?.destroy();
       this.plomien = undefined;
-      plama(this.scene, d.x + Math.cos(this.kat) * L * 0.55, d.y - 4 + Math.sin(this.kat) * L * 0.55, L * 0.45, S * 0.4, this.kat, A.ogien.plamaMs, now);
+      this.ogien?.destroy();
+      this.ogien = undefined;
+      this.pozaKier = { x: Math.cos(this.kat), y: Math.sin(this.kat) };
+      this.pozaWyrzutDo = now;
+      this.pozaPowrotDo = now + 200;
+      plama(this.scene, u.x + Math.cos(this.kat) * L * 0.55, u.y + 4 + Math.sin(this.kat) * L * 0.55, L * 0.45, S * 0.4, this.kat, A.ogien.plamaMs, now);
       this.koniecAtaku(now, A.ogien.odnowienie);
     }
   }
@@ -410,6 +479,7 @@ export class SmokAI {
         this.host.stan('oparzenie', A.kwas.oparzenie.ms);
       }
       if (trafiony || b.zostalo <= 0 || this.host.blocked(b.img.x, b.img.y)) {
+        rozbryzg(this.scene, b.img.x, b.img.y);
         kaluza(this.scene, b.img.x, b.img.y + 4, A.kwas.kaluza.promien * W, this.scene.time.now, this.host);
         b.img.destroy();
         return false;
@@ -423,6 +493,8 @@ export class SmokAI {
     this.znacznik = undefined;
     this.plomien?.destroy();
     this.plomien = undefined;
+    this.ogien?.destroy();
+    this.ogien = undefined;
     this.lot?.cien?.destroy();
   }
 
@@ -486,6 +558,12 @@ function klapniecie(scene: Phaser.Scene, x: number, y: number, a: number) {
 
 /** Przypalona plama po ogniu (dekoracja, bez obrażeń). */
 function plama(scene: Phaser.Scene, x: number, y: number, rx: number, ry: number, a: number, ms: number, now: number) {
+  if (scene.textures.exists(kluczAtaku('przypalona_plama'))) {
+    // Rysunek grafika: świeża → stygnie → wyblakła, przez cały czas plamy.
+    const img = efektAtaku(scene, 'przypalona_plama', x, y, rx * 2.2).setDepth(ZIEMIA + 1);
+    dodaj({ g: img, od: now, do: now + ms, tick: (t) => { img.setFrame(Math.min(2, Math.floor(((t - now) / ms) * 3))); img.setAlpha(Math.min(1, (now + ms - t) / 3000)); } });
+    return;
+  }
   const g = scene.add.graphics().setDepth(ZIEMIA + 1);
   g.fillStyle(0x1e1a24, 0.35);
   g.fillEllipse(x, y, rx * 2 * Math.abs(Math.cos(a)) + ry * 2 * Math.abs(Math.sin(a)), rx * 2 * Math.abs(Math.sin(a)) + ry * 2 * Math.abs(Math.cos(a)));
@@ -497,8 +575,20 @@ function plama(scene: Phaser.Scene, x: number, y: number, rx: number, ry: number
 /** Kałuża kwasu: rani stojących w niej, bąbelkuje, blaknie. */
 function kaluza(scene: Phaser.Scene, x: number, y: number, r: number, now: number, host: SmokHost) {
   const K = A.kwas.kaluza;
-  const g = scene.add.graphics().setDepth(ZIEMIA + 1);
   let tik = now + K.tik;
+  const rani = (t: number) => {
+    if (t < tik) return;
+    tik = t + K.tik;
+    const p = host.player;
+    if (((p.x - x) / r) ** 2 + ((p.y - y) / (r * 0.65)) ** 2 <= 1) host.drain(K.obrazenia);
+  };
+  if (scene.textures.exists(kluczAtaku('kaluza_kwasu'))) {
+    const s = efektAtaku(scene, 'kaluza_kwasu', x, y, r * 2).setDepth(ZIEMIA + 1);
+    s.play(kluczAtaku('kaluza_kwasu'));
+    dodaj({ g: s, od: now, do: now + K.ms, tick: (t) => { s.setAlpha(Math.min(1, ((now + K.ms - t) / K.ms) * 3)); rani(t); } });
+    return;
+  }
+  const g = scene.add.graphics().setDepth(ZIEMIA + 1);
   dodaj({
     g, od: now, do: now + K.ms,
     tick: (t) => {
@@ -511,13 +601,35 @@ function kaluza(scene: Phaser.Scene, x: number, y: number, r: number, now: numbe
         const f = ((t / 600 + i * 0.27) % 1);
         if (f < 0.6) g.fillCircle(x + Math.cos(i * 2.1) * r * 0.5, y + Math.sin(i * 1.7) * r * 0.3, 0.8 + f * 1.2);
       }
-      if (t >= tik) {
-        tik = t + K.tik;
-        const p = host.player;
-        if (((p.x - x) / r) ** 2 + ((p.y - y) / (r * 0.65)) ** 2 <= 1) host.drain(K.obrazenia);
-      }
+      rani(t);
     },
   });
+}
+
+/** Rysunek efektu od grafika zaczepiony w swoim punkcie, przeskalowany do `dl` punktów mapy (długość/szerokość rysunku). */
+function efektAtaku(scene: Phaser.Scene, n: EfektAtaku, x: number, y: number, dl: number) {
+  const e = EFEKTY_ATAKOW[n];
+  return scene.add.sprite(x, y, kluczAtaku(n), 0).setOrigin(e.kotwica[0] / e.bok, e.kotwica[1] / e.bok).setScale(dl / e.dlugosc);
+}
+
+/** Płomień od grafika w jednym z 8 kierunków (lewe lustrem), wylot w pysku; null bez rysunków. */
+function plomienGrafika(scene: Phaser.Scene, x: number, y: number, kat: number, L: number): Phaser.GameObjects.Sprite | null {
+  if (!scene.textures.exists(kluczAtaku('ogien_prawo'))) return null;
+  const o = ((Math.round(kat / (Math.PI / 4)) % 8) + 8) % 8; // 0 prawo, 2 dół, 4 lewo, 6 góra
+  const nazwy: EfektAtaku[] = ['ogien_prawo', 'ogien_prawo_dol', 'ogien_dol', 'ogien_prawo_dol', 'ogien_prawo', 'ogien_prawo_gora', 'ogien_gora', 'ogien_prawo_gora'];
+  const lustro = o >= 3 && o <= 5;
+  const n = nazwy[o], e = EFEKTY_ATAKOW[n];
+  const s = scene.add.sprite(x, y, kluczAtaku(n), 0).setScale(L / e.dlugosc).setDepth(POWIETRZE).setFlipX(lustro);
+  s.setOrigin((lustro ? e.bok - e.kotwica[0] : e.kotwica[0]) / e.bok, e.kotwica[1] / e.bok);
+  return s;
+}
+
+/** Rozbryzg kwasu przy uderzeniu kuli (raz). */
+function rozbryzg(scene: Phaser.Scene, x: number, y: number) {
+  if (!scene.textures.exists(kluczAtaku('rozbryzg_kwasu'))) return;
+  const s = efektAtaku(scene, 'rozbryzg_kwasu', x, y, 24).setDepth(POWIETRZE);
+  s.play(kluczAtaku('rozbryzg_kwasu'));
+  s.once('animationcomplete', () => s.destroy());
 }
 
 /** Trujący dym: rośnie, trwa w miejscu wydechu, rzednie; w środku zatrucie. */

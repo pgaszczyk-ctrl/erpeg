@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { TEX, artScale } from '../art';
 import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { rng } from '../rng';
@@ -297,7 +297,7 @@ export class FixedNpcs {
       // The crown is a circle of ~9 px around 13 px above the trunk's foot;
       // the piggy sits behind its middle with a third of it sticking out.
       const edge = tree.x + Math.min(9, tree.w / 2 - 2);
-      const w = this.scene.textures.getFrame(TEX.piggy).width;
+      const w = this.scene.textures.getFrame(TEX.piggy).width * artScale(TEX.piggy);
       return { x: edge - w / 2 + w / 3, y: tree.y - 12, behind: true };
     }
     const r = rng(hash('piggy'));
@@ -367,7 +367,7 @@ export class FixedNpcs {
     const st = this.state('npc-pies');
     if (this.piggyAt && st === 'active') {
       // Behind a tree: drawn just under the tree (trees are drawn at their trunk's y).
-      if (!this.piggy) this.piggy = this.scene.add.image(this.piggyAt.x, this.piggyAt.y, TEX.piggy).setDepth(this.piggyAt.behind ? this.piggyAt.y + 11 : this.piggyAt.y);
+      if (!this.piggy) this.piggy = this.scene.add.image(this.piggyAt.x, this.piggyAt.y, TEX.piggy).setScale(artScale(TEX.piggy)).setDepth(this.piggyAt.behind ? this.piggyAt.y + 11 : this.piggyAt.y);
       this.piggy.setVisible(visible(this.piggyAt.x, this.piggyAt.y));
       if (Math.hypot(px - this.piggyAt.x, py + 5 - this.piggyAt.y) < (this.piggyAt.behind ? 18 : 10)) {
         session.missions['npc-pies'] = 'goal';

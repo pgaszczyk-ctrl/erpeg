@@ -1,0 +1,418 @@
+{
+  "efekt_ogien_prawo_1.png": {
+    "anchor": [
+      10,
+      64
+    ],
+    "bbox": [
+      10,
+      52,
+      55,
+      25
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_2.png": {
+    "anchor": [
+      10,
+      64
+    ],
+    "bbox": [
+      10,
+      34,
+      108,
+      60
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_3.png": {
+    "anchor": [
+      10,
+      64
+    ],
+    "bbox": [
+      10,
+      39,
+      96,
+      50
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_dol_1.png": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bbox": [
+      10,
+      10,
+      42,
+      34
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_dol_2.png": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bbox": [
+      10,
+      10,
+      93,
+      55
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_dol_3.png": {
+    "anchor": [
+      10,
+      10
+    ],
+    "bbox": [
+      10,
+      10,
+      83,
+      55
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_dol_1.png": {
+    "anchor": [
+      64,
+      10
+    ],
+    "bbox": [
+      48,
+      10,
+      32,
+      69
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_dol_2.png": {
+    "anchor": [
+      64,
+      10
+    ],
+    "bbox": [
+      12,
+      10,
+      104,
+      108
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_dol_3.png": {
+    "anchor": [
+      64,
+      10
+    ],
+    "bbox": [
+      21,
+      10,
+      86,
+      108
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_gora_1.png": {
+    "anchor": [
+      10,
+      118
+    ],
+    "bbox": [
+      10,
+      77,
+      45,
+      41
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_gora_2.png": {
+    "anchor": [
+      10,
+      118
+    ],
+    "bbox": [
+      10,
+      66,
+      95,
+      52
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_prawo_gora_3.png": {
+    "anchor": [
+      10,
+      118
+    ],
+    "bbox": [
+      10,
+      66,
+      83,
+      52
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_gora_1.png": {
+    "anchor": [
+      64,
+      118
+    ],
+    "bbox": [
+      46,
+      39,
+      36,
+      79
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_gora_2.png": {
+    "anchor": [
+      64,
+      118
+    ],
+    "bbox": [
+      23,
+      10,
+      82,
+      108
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_ogien_gora_3.png": {
+    "anchor": [
+      64,
+      118
+    ],
+    "bbox": [
+      28,
+      12,
+      72,
+      106
+    ],
+    "frame": [
+      128,
+      128
+    ]
+  },
+  "efekt_pocisk_kwasu_1.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      42,
+      46,
+      12,
+      4
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_pocisk_kwasu_2.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      42,
+      46,
+      12,
+      4
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_rozbryzg_kwasu_1.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      24,
+      37,
+      48,
+      22
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_rozbryzg_kwasu_2.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      24,
+      33,
+      48,
+      30
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_rozbryzg_kwasu_3.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      24,
+      35,
+      48,
+      25
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_kaluza_kwasu_1.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      23,
+      65,
+      50
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_kaluza_kwasu_2.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      23,
+      65,
+      50
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_kaluza_kwasu_3.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      23,
+      65,
+      49
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_przypalona_plama_1.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      25,
+      65,
+      46
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_przypalona_plama_2.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      25,
+      65,
+      46
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  },
+  "efekt_przypalona_plama_3.png": {
+    "anchor": [
+      48,
+      48
+    ],
+    "bbox": [
+      15,
+      25,
+      65,
+      45
+    ],
+    "frame": [
+      96,
+      96
+    ]
+  }
+}

@@ -1,0 +1,1028 @@
+{
+  "ognisty_bok": [
+    {
+      "file": "smok_ognisty_stoi_bok_1.png",
+      "bbox": [
+        30,
+        91,
+        160,
+        79
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_stoi_bok_2.png",
+      "bbox": [
+        34,
+        90,
+        151,
+        80
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_bok_1.png",
+      "bbox": [
+        23,
+        89,
+        164,
+        81
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_bok_2.png",
+      "bbox": [
+        30,
+        84,
+        161,
+        79
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_bok_3.png",
+      "bbox": [
+        30,
+        84,
+        156,
+        79
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_bok_4.png",
+      "bbox": [
+        23,
+        82,
+        165,
+        80
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_bok_1.png",
+      "bbox": [
+        41,
+        81,
+        146,
+        82
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_bok_2.png",
+      "bbox": [
+        28,
+        85,
+        160,
+        78
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_bok_3.png",
+      "bbox": [
+        23,
+        84,
+        164,
+        79
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_bok_1.png",
+      "bbox": [
+        43,
+        83,
+        150,
+        86
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_bok_2.png",
+      "bbox": [
+        28,
+        87,
+        160,
+        82
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_bok_3.png",
+      "bbox": [
+        23,
+        84,
+        163,
+        84
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_smierc_bok_1.png",
+      "bbox": [
+        31,
+        87,
+        162,
+        70
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_smierc_bok_2.png",
+      "bbox": [
+        26,
+        95,
+        163,
+        61
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_smierc_bok_3.png",
+      "bbox": [
+        23,
+        114,
+        164,
+        38
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ],
+  "ognisty_przod": [
+    {
+      "file": "smok_ognisty_stoi_przod_1.png",
+      "bbox": [
+        30,
+        61,
+        160,
+        109
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_stoi_przod_2.png",
+      "bbox": [
+        27,
+        61,
+        158,
+        109
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_przod_1.png",
+      "bbox": [
+        22,
+        61,
+        160,
+        109
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_przod_2.png",
+      "bbox": [
+        29,
+        56,
+        161,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_przod_3.png",
+      "bbox": [
+        27,
+        56,
+        160,
+        110
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_przod_4.png",
+      "bbox": [
+        23,
+        56,
+        161,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_przod_1.png",
+      "bbox": [
+        29,
+        55,
+        161,
+        99
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_przod_2.png",
+      "bbox": [
+        27,
+        55,
+        160,
+        101
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_przod_3.png",
+      "bbox": [
+        22,
+        55,
+        162,
+        97
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_przod_1.png",
+      "bbox": [
+        28,
+        55,
+        160,
+        113
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_przod_2.png",
+      "bbox": [
+        27,
+        58,
+        161,
+        105
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_przod_3.png",
+      "bbox": [
+        23,
+        55,
+        162,
+        111
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ],
+  "ognisty_tyl": [
+    {
+      "file": "smok_ognisty_stoi_tyl_1.png",
+      "bbox": [
+        30,
+        58,
+        160,
+        112
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_stoi_tyl_2.png",
+      "bbox": [
+        26,
+        59,
+        162,
+        111
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_tyl_1.png",
+      "bbox": [
+        24,
+        59,
+        162,
+        111
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_tyl_2.png",
+      "bbox": [
+        31,
+        55,
+        160,
+        110
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_tyl_3.png",
+      "bbox": [
+        26,
+        55,
+        160,
+        107
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_idzie_tyl_4.png",
+      "bbox": [
+        24,
+        55,
+        162,
+        109
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_tyl_1.png",
+      "bbox": [
+        30,
+        55,
+        160,
+        105
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_tyl_2.png",
+      "bbox": [
+        26,
+        55,
+        162,
+        104
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ugryzienie_tyl_3.png",
+      "bbox": [
+        24,
+        55,
+        162,
+        106
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_tyl_1.png",
+      "bbox": [
+        30,
+        55,
+        160,
+        102
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_tyl_2.png",
+      "bbox": [
+        27,
+        55,
+        161,
+        102
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_ognisty_ziej_tyl_3.png",
+      "bbox": [
+        24,
+        55,
+        162,
+        102
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ],
+  "kwasowy_bok": [
+    {
+      "file": "smok_kwasowy_stoi_bok_1.png",
+      "bbox": [
+        30,
+        95,
+        160,
+        75
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_stoi_bok_2.png",
+      "bbox": [
+        30,
+        93,
+        156,
+        77
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_bok_1.png",
+      "bbox": [
+        24,
+        95,
+        162,
+        76
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_bok_2.png",
+      "bbox": [
+        30,
+        88,
+        160,
+        75
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_bok_3.png",
+      "bbox": [
+        32,
+        88,
+        157,
+        75
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_bok_4.png",
+      "bbox": [
+        26,
+        89,
+        161,
+        73
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_bok_1.png",
+      "bbox": [
+        33,
+        81,
+        154,
+        79
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_bok_2.png",
+      "bbox": [
+        21,
+        88,
+        172,
+        74
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_bok_3.png",
+      "bbox": [
+        30,
+        85,
+        153,
+        75
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_bok_1.png",
+      "bbox": [
+        21,
+        77,
+        171,
+        96
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_bok_2.png",
+      "bbox": [
+        21,
+        99,
+        171,
+        69
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_bok_3.png",
+      "bbox": [
+        27,
+        88,
+        158,
+        80
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_smierc_bok_1.png",
+      "bbox": [
+        30,
+        88,
+        159,
+        69
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_smierc_bok_2.png",
+      "bbox": [
+        24,
+        97,
+        162,
+        57
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_smierc_bok_3.png",
+      "bbox": [
+        21,
+        107,
+        165,
+        45
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ],
+  "kwasowy_przod": [
+    {
+      "file": "smok_kwasowy_stoi_przod_1.png",
+      "bbox": [
+        30,
+        62,
+        160,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_stoi_przod_2.png",
+      "bbox": [
+        30,
+        62,
+        160,
+        113
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_przod_1.png",
+      "bbox": [
+        30,
+        62,
+        161,
+        114
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_przod_2.png",
+      "bbox": [
+        30,
+        59,
+        160,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_przod_3.png",
+      "bbox": [
+        30,
+        60,
+        161,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_przod_4.png",
+      "bbox": [
+        30,
+        59,
+        161,
+        108
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_przod_1.png",
+      "bbox": [
+        30,
+        57,
+        160,
+        104
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_przod_2.png",
+      "bbox": [
+        23,
+        57,
+        177,
+        105
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_przod_3.png",
+      "bbox": [
+        23,
+        57,
+        177,
+        105
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_przod_1.png",
+      "bbox": [
+        31,
+        64,
+        161,
+        114
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_przod_2.png",
+      "bbox": [
+        31,
+        64,
+        160,
+        118
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_przod_3.png",
+      "bbox": [
+        30,
+        64,
+        161,
+        109
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ],
+  "kwasowy_tyl": [
+    {
+      "file": "smok_kwasowy_stoi_tyl_1.png",
+      "bbox": [
+        30,
+        58,
+        160,
+        112
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_stoi_tyl_2.png",
+      "bbox": [
+        30,
+        57,
+        158,
+        114
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_tyl_1.png",
+      "bbox": [
+        30,
+        57,
+        160,
+        113
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_tyl_2.png",
+      "bbox": [
+        30,
+        54,
+        159,
+        113
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_tyl_3.png",
+      "bbox": [
+        31,
+        53,
+        159,
+        111
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_idzie_tyl_4.png",
+      "bbox": [
+        30,
+        54,
+        160,
+        111
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_tyl_1.png",
+      "bbox": [
+        30,
+        58,
+        160,
+        99
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_tyl_2.png",
+      "bbox": [
+        31,
+        53,
+        158,
+        100
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_ugryzienie_tyl_3.png",
+      "bbox": [
+        31,
+        53,
+        160,
+        104
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_tyl_1.png",
+      "bbox": [
+        30,
+        53,
+        159,
+        101
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_tyl_2.png",
+      "bbox": [
+        31,
+        53,
+        159,
+        104
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    },
+    {
+      "file": "smok_kwasowy_pluj_tyl_3.png",
+      "bbox": [
+        30,
+        53,
+        160,
+        101
+      ],
+      "pivot": [
+        110,
+        170
+      ]
+    }
+  ]
+}

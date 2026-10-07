@@ -233,7 +233,9 @@ export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
 }
 
 /** Ozdoby steampunkowe od grafika (zamówienie 15, public/swiat/ozdoby/<nazwa>.png, klatki obok siebie; robi je scripts/ozdoby.sh). */
-export const OZDOBY_PLIKI: Record<string, number> = { manometr: 1, zawor: 1, lampa_scienna: 2, zegar: 1, zebatka: 1, bulaj: 1, wentylator: 3 };
+export const OZDOBY_PLIKI: Record<string, number> = { manometr: 1, zawor: 1, lampa_scienna: 2, zegar: 1, zebatka: 1, bulaj: 1, wentylator: 3,
+  // Dekoracje placów zamiast dawnych straganów (paczka „smoki_swinka_dekoracje”, scripts/dekoracje-plac.py).
+  plac_zegar_uliczny: 1, plac_pompa_parowa: 1, plac_teleskop: 1, plac_lawka_trybiki: 1, plac_donica_miedziana: 1, plac_gablota_ogloszen: 1 };
 
 /** Wczytuje ozdoby: jedna klatka → `nazwa`, kilka → `nazwa#0`, `nazwa#1`…; podstawa = środek dolnej krawędzi klatki. */
 export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {

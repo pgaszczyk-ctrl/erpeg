@@ -1,0 +1,110 @@
+{
+  "zegar_uliczny": {
+    "file": "zegar_uliczny.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      20,
+      12,
+      24,
+      60
+    ],
+    "interaktywny": false
+  },
+  "pompa_parowa": {
+    "file": "pompa_parowa.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      11,
+      30,
+      42,
+      42
+    ],
+    "interaktywny": false
+  },
+  "teleskop": {
+    "file": "teleskop.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      10,
+      16,
+      44,
+      56
+    ],
+    "interaktywny": false
+  },
+  "lawka_trybiki": {
+    "file": "lawka_trybiki.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      8,
+      35,
+      48,
+      37
+    ],
+    "interaktywny": false
+  },
+  "donica_miedziana": {
+    "file": "donica_miedziana.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      12,
+      33,
+      40,
+      39
+    ],
+    "interaktywny": false
+  },
+  "gablota_ogloszen": {
+    "file": "gablota_ogloszen.png",
+    "frame": [
+      64,
+      80
+    ],
+    "anchor": [
+      32,
+      72
+    ],
+    "bbox": [
+      10,
+      22,
+      44,
+      50
+    ],
+    "interaktywny": false
+  }
+}

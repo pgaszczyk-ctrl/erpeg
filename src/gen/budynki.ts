@@ -11,6 +11,8 @@ export interface RysunekOzdoby { o: Obraz; bx: number; by: number }
 let OZDOBY_RYS: Record<string, RysunekOzdoby> = {};
 /** Rysunki ozdób (zamówienie 15, public/swiat/ozdoby/) – gra ustawia je raz, w grze i w każdym Web Workerze. Brakującą ozdobę rysuje kod. */
 export function ustawOzdoby(r: Record<string, RysunekOzdoby>) { OZDOBY_RYS = r; }
+/** Jeden rysunek ozdoby (np. dekoracja placu `plac_zegar_uliczny`), gdy wczytany. */
+export const rysunekOzdoby = (n: string): RysunekOzdoby | undefined => OZDOBY_RYS[n];
 
 export interface Material { tony: number[]; krawedz: number; wzor: 'dachowka' | 'lupek' | 'gont' | 'blacha' | 'gladki' | 'cegla' | 'deski' | 'kamien' }
 const M = (t: string[], k: string, wzor: Material['wzor']): Material => ({ tony: t.map(hex), krawedz: hex(k), wzor });

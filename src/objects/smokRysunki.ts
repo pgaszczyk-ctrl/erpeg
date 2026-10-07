@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { RYSUNKI_SMOKOW, EFEKTY_SMOKOW, type GatunekId } from '../content/smoki';
+import { RYSUNKI_SMOKOW, EFEKTY_SMOKOW, EFEKTY_ATAKOW, type GatunekId } from '../content/smoki';
 
 // Rysunki smoków od grafika (content/smoki.ts RYSUNKI_SMOKOW): arkusz wczytywany dopiero przy pierwszym smoku
 // danego gatunku (1,5 MB), animacje „<akcja>_<kierunek>” tworzone raz. Skala 1/2: 2 px obrazu na punkt mapy.
 
 export const SKALA_RYSUNKU = 0.5;
 
-const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4 };
+const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4, ziej: 6, pluj: 6 };
 
 const ladowanie = new Map<string, Promise<boolean>>();
 
@@ -69,4 +69,36 @@ export function klatkaSmoka(g: GatunekId, nazwa: string) {
 /** Czy jest animacja tej akcji w tym kierunku. */
 export function maAnimacje(scene: Phaser.Scene, g: GatunekId, akcja: string, kier: string) {
   return scene.anims.exists(`${kluczSmoka(g)}-${akcja}_${kier}`);
+}
+
+export type EfektAtaku = keyof typeof EFEKTY_ATAKOW;
+export const kluczAtaku = (n: EfektAtaku) => `smok-atak-${n}`;
+let efektyAtakow: Promise<boolean> | undefined;
+
+/** Ogień i kwas od grafika (EFEKTY_ATAKOW): wczytywane raz, przy pierwszym smoku; bez nich zostają kształty z kodu. */
+export function zaladujEfektyAtakow(scene: Phaser.Scene): Promise<boolean> {
+  if (scene.textures.exists(kluczAtaku('kaluza_kwasu'))) return Promise.resolve(true);
+  if (efektyAtakow) return efektyAtakow;
+  efektyAtakow = new Promise<boolean>((ok) => {
+    for (const [n, e] of Object.entries(EFEKTY_ATAKOW)) scene.load.spritesheet(kluczAtaku(n as EfektAtaku), `swiat/smoki/efekt_${n}.png`, { frameWidth: e.bok, frameHeight: e.bok });
+    scene.load.once('complete', () => {
+      const jest = scene.textures.exists(kluczAtaku('kaluza_kwasu'));
+      if (jest) {
+        for (const n of Object.keys(EFEKTY_ATAKOW)) {
+          const k = kluczAtaku(n as EfektAtaku);
+          if (scene.textures.exists(k)) scene.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
+        }
+        const anim = (n: EfektAtaku, fps: number, repeat: number) => {
+          const k = kluczAtaku(n);
+          if (!scene.anims.exists(k)) scene.anims.create({ key: k, frames: scene.anims.generateFrameNumbers(k, { start: 0, end: EFEKTY_ATAKOW[n].ile - 1 }), frameRate: fps, repeat });
+        };
+        anim('pocisk_kwasu', 8, -1);
+        anim('kaluza_kwasu', 4, -1);
+        anim('rozbryzg_kwasu', 12, 0);
+      } else efektyAtakow = undefined;
+      ok(jest);
+    });
+    scene.load.start();
+  });
+  return efektyAtakow;
 }

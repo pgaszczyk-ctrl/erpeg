@@ -1319,6 +1319,9 @@ export function useArtistArt(scene: Phaser.Scene) {
   useArtist(scene, TEX.mushroom, 'grzyb', null);
   useArtist(scene, TEX.log, 'kloda', null);
   useArtist(scene, TEX.signpost, 'drogowskaz', null);
+  // The dog's rubber piggy (pack „smoki_swinka_dekoracje”): 16×16 at the world's 2 px per map px.
+  useArtist(scene, TEX.piggy, 'swinka', null, 0.5);
+  if (scene.textures.exists(TEX.piggy) && scene.textures.exists('swiat-swinka')) scene.textures.get(TEX.piggy).setFilter(Phaser.Textures.FilterMode.NEAREST);
   // Training stations (pack 07): the dummy stands as tall as a townsperson, the others in the same scale.
   // Their frames are lined up on the post in the ground (bug report 9: the artist drew the hit frames moved
   // sideways, so a hit dummy slid away; now only its top sways).
