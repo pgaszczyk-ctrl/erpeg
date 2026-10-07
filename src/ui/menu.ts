@@ -438,6 +438,19 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     if (fromLink) {
       screen(el('p', {}, [LADOWANIE[Math.floor(Math.random() * LADOWANIE.length)]]));
       login(fromLink.name, fromLink.code).catch((e) => load(fromLink, (e as Error).message));
+      return;
+    }
+    // Links from the landing page (/welcome): #nowa, #wczytaj, #konto open that screen.
+    const goTo = location.hash.slice(1);
+    if (['nowa', 'wczytaj', 'konto'].includes(goTo)) history.replaceState(null, '', location.pathname + location.search);
+    if (goTo === 'nowa' && !TEST) newCharacter();
+    else if (goTo === 'wczytaj') load();
+    else if (goTo === 'konto' && !TEST) {
+      main();
+      void (async () => {
+        if (googleUser() && (await googleToken())) return account();
+        if (await askAccount()) account();
+      })();
     } else main();
   });
 }
