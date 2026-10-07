@@ -141,7 +141,7 @@
     "opis": "Leon zniża głos, choć na Rynku nikogo nie ma.\n\n„Herszt chochlików – gruby, z jednym złamanym rogiem – za pączka z różą sprzedałby własną babkę. Zajdź do Dobrej Cukierni na Krakowskim Przedmieściu i kup mu jednego. Może wtedy odda, co ukradł.\n\nTylko nie zjedz go po drodze!”",
     "zadanie": {
       "typ": "idz",
-      "miejsce": "Krakowskie Przedmieście 19",
+      "miejsce": "51.24783, 22.56338",
       "cel": "Idź do Dobrej Cukierni na Krakowskim Przedmieściu",
       "postac": {
         "imie": "Cukiernik Bruno"
@@ -264,12 +264,12 @@
   {
     "id": "sz_cukiernia",
     "tylkoTest": true,
-    "adres": "Krakowskie Przedmieście 19",
+    "adres": "51.24783, 22.56338",
     "tytul": "Dobra Cukiernia",
     "opis": "Za ladą parują mosiężne piece, a na półkach lśnią pączki z różą i ekierki z kremem. Pachnie wanilią i lukrem.\n\nCukiernik Bruno puszcza do ciebie oko: „Wiesz, kto zna nasze hasło, ten dostaje coś naprawdę specjalnego… Ale nie od każdego je słyszę.”",
     "zadanie": {
       "typ": "brak",
-      "miejsce": "Krakowskie Przedmieście 19",
+      "miejsce": "51.24783, 22.56338",
       "cel": ""
     },
     "zakonczenie": "",

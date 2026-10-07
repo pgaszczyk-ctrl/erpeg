@@ -18,6 +18,8 @@ import { POLA, miesiacUpraw } from '../content/pola';
 import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
+import { MOZAIKI } from '../content/mozaiki';
+import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
 
 export { AREA_FILL, ROAD_FILL };
@@ -755,7 +757,16 @@ export class MapRenderer {
     const pola: Pole09[] = wide.areas
       .filter((a) => a.kind === 'farmland' || a.kind === 'allotments')
       .map((a) => ({ r: a.rings[0].map((v) => v * G2), seed: a.id, dz: a.kind === 'allotments' }));
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale };
+    // Pictures laid in coloured paving (content/mozaiki.ts), those reaching the chunk.
+    const mozaiki: Mozaika09[] = [];
+    for (const mz of MOZAIKI) {
+      if (mz.mapa !== m.id) continue;
+      const c = m.fromLatLon(mz.lat, mz.lon);
+      const half = (mz.szerM * PX_PER_M) / 2 + 8;
+      if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
+      mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
+    }
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {

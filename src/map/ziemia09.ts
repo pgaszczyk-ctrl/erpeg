@@ -3,6 +3,7 @@ import { tor, kolorPodloza } from '../gen';
 import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
+import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -57,6 +58,8 @@ export interface Zlecenie {
   dojrzale: number;
   /** Wielkość miejscowości (Lublin = duże): ile steampunku na budynkach (GENERATOR_SWIATA 0.10). */
   miasto: WielkoscMiasta;
+  /** Obrazki z kostki w posadzce w okolicy kawałka (content/mozaiki.ts). */
+  mozaiki?: Mozaika09[];
 }
 
 /** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
@@ -254,9 +257,10 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
     return i >= 0 && j >= 0 && i < S && j < S && RODZAJE[ids[j * S + i]] === 'woda';
   };
+  for (const mz of z.mozaiki ?? []) malujMozaike(obraz, X0, Y0, N, mz);
   for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);
   malujPerony(obraz, ids, S, X0, Y0);
-  stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID; });
+  stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID && !(z.mozaiki ?? []).some((m) => naMozaice(m, x, y, 30)); });
   const para: [number, number][] = [];
   for (const p of z.perony) for (const q of wyposazPeron(obraz, X0, Y0, p)) if (q[0] >= X0 && q[1] >= Y0 && q[0] < X0 + N && q[1] < Y0 + N) para.push(q);
   // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
