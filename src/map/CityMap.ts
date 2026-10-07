@@ -45,6 +45,9 @@ interface Box { x0: number; y0: number; x1: number; y1: number }
 
 /** `id`: the feature's index in the whole map (stable across tiles; seeds use it). */
 export interface Area extends Box { kind: string; rings: number[][]; id: number }
+/** Smallest width of a passage through a building (m). */
+const PRZEJSCIE_M = 4;
+
 export interface Line extends Box { kind: string; pts: number[]; width: number; bridge: boolean; pass: boolean; name: string | null; id: number }
 export interface Building extends Box {
   rings: number[][];
@@ -905,10 +908,11 @@ export class CityMap {
     let onPassage = false;
     for (const l of lines) {
       if (!(l.bridge || l.pass)) continue;
-      if (distToPolyline(l.pts, x, y) <= l.width / 2) {
-        if (l.bridge) onBridge = true;
-        if (l.pass) onPassage = true;
-      }
+      const d = distToPolyline(l.pts, x, y);
+      if (l.bridge && d <= l.width / 2) onBridge = true;
+      // A gateway through a building: at least PRZEJSCIE_M wide whatever the path's class, so the hero's feet box
+      // fits (a footway's 2.5 m left a strip of under a pixel – the owner saw the arch but couldn't get through).
+      if (l.pass && d <= Math.max(l.width / 2, (PRZEJSCIE_M / 2) * PX_PER_M)) onPassage = true;
     }
     if (!onPassage && this.buildingAt(x, y)) return true;
     if (onBridge) return false;

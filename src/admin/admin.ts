@@ -277,7 +277,10 @@ function missions(main: HTMLElement) {
   });
   main.append(
     el('h2', {}, ['Misje']),
-    el('div', { className: 'row' }, [btn('+ Nowa misja / nowe miejsce', () => editor.replaceChildren(missionEditor(null)), 'b p')]),
+    el('div', { className: 'row' }, [
+      btn('+ Nowa misja / nowe miejsce', () => editor.replaceChildren(missionEditor(null)), 'b p'),
+      btn('🧙 Kreator historii (misja z etapami)', () => editor.replaceChildren(missionEditor(null, true)), 'b p'),
+    ]),
     editor,
     el('div', { className: 'scroll', style: 'margin-top: 12px' }, [el('table', {}, [
       el('thead', {}, [el('tr', {}, ['Tytuł', 'Adres (✓ = jest na mapie)', 'Rodzaj', 'Przyjęło', 'Ukończyło', 'Hasła'].map((h, i) => el('th', { className: i >= 3 ? 'num' : '' }, [h])))]),
@@ -287,7 +290,7 @@ function missions(main: HTMLElement) {
   );
 }
 
-function missionEditor(id: string | null) {
+function missionEditor(id: string | null, kreator = false) {
   const existing = id ? data!.missions.find((d) => d.id === id) : undefined;
   const m: Misja = existing ? { ...existing.data } : {
     id: '', adres: '', tytul: '', opis: '', zakonczenie: '', nagroda: 50,
@@ -297,9 +300,9 @@ function missionEditor(id: string | null) {
   const inp = (value: string | number, props: Record<string, unknown> = {}) => el('input', { value: String(value ?? ''), ...props });
   const f = {
     tytul: inp(m.tytul, { placeholder: 'np. Klocki w opałach' }),
-    adres: inp(m.adres, { placeholder: 'np. Narutowicza 5' }),
+    adres: inp(m.adres, { placeholder: 'np. Narutowicza 5 (Enter = pokaż na mapie)' }),
     typ: el('select', {}, Object.entries(TYPY).map(([k, v]) => el('option', { value: k, selected: z.typ === k }, [v]))),
-    miejsce: inp(typeof z.miejsce === 'string' ? z.miejsce : '', { placeholder: 'np. Bramowa 1' }),
+    miejsce: inp(typeof z.miejsce === 'string' ? z.miejsce : '', { placeholder: 'np. Bramowa 1 albo kliknij na mapie (Enter = pokaż)' }),
     ile: inp(z.ile ?? 3, { type: 'number', min: 1, max: 30 }),
     wrog: el('select', {}, Object.entries(WROGOWIE).map(([k, v]) => el('option', { value: k, selected: z.wrog === k }, [v]))),
     cel: inp(z.cel ?? '', { placeholder: 'krótko, np. Pokonaj chochliki przy Bramie' }),
@@ -328,9 +331,15 @@ function missionEditor(id: string | null) {
     odp2: inp(z.odpowiedzi?.[2] ?? '', { placeholder: 'odpowiedź 3' }),
     dobra: el('select', {}, [0, 1, 2].map((i) => el('option', { value: String(i), selected: (z.dobra ?? 0) === i }, [`dobra jest odpowiedź ${i + 1}`]))),
     podpowiedz: inp(z.podpowiedz ?? '', { placeholder: 'co powie po złej odpowiedzi' }),
-    wiele: el('input', { type: 'checkbox', checked: !!m.etapy?.length }),
+    wiele: el('input', { type: 'checkbox', checked: !!m.etapy?.length || kreator }),
     przedmioty: el('select', { multiple: true, size: 5 }, PRZEDMIOTY.filter((p) => p.id !== 'kijek').map((p) => el('option', { value: p.id, selected: !!m.przedmioty?.includes(p.id) }, [p.nazwa]))),
     tytulB: inp(m.tytul_bohatera ?? '', { placeholder: 'np. Strażnik Serca Miasta (puste = bez tytułu)' }),
+    // People standing in the world (owner 7.10.2026: „w queście musi być ktoś”): the giver at the door, someone at the goal.
+    gImie: inp(m.postac?.imie ?? '', { placeholder: 'np. Hela Trybik (puste = nikt nie stoi)' }),
+    gKobieta: el('input', { type: 'checkbox', checked: !!m.postac?.kobieta }),
+    zImie: inp(z.postac?.imie ?? '', { placeholder: 'np. Maszynista Bolek (puste = nikt)' }),
+    zKobieta: el('input', { type: 'checkbox', checked: !!z.postac?.kobieta }),
+    klik: el('select', {}),
     flaga: el('select', {}, [['', '— bez —'], ['znizka_woznica', 'Zniżka u woźniców'], ['schemat_pistoletu', 'Schemat pistoletu (½ ceny)'], ['receptura_alchemika', 'Receptura alchemika (30 owoców)']].map(([v, t]) => el('option', { value: v, selected: (m.flaga ?? '') === v }, [t]))),
   };
   const field = (label: string, input: HTMLElement, note?: string) => el('label', { className: 'f' }, [el('span', {}, [label]), input, note ? el('small', { className: 'muted' }, [note]) : null]);
@@ -354,6 +363,7 @@ function missionEditor(id: string | null) {
     el('div', { className: 'row' }, [field('Ilu wrogów', f.ile), field('Jaki wróg', f.wrog)]),
     field('Cel (pokazywany na ekranie)', f.cel),
     el('label', { className: 'row' }, [f.szukaj, 'Trzeba szukać (strzałka pokazuje tylko okolicę)']),
+    el('div', { className: 'row' }, [field('Postać na miejscu celu (to ona mówi „Co mówi po wykonaniu”, gdy kończy się na miejscu)', f.zImie), el('label', {}, [f.zKobieta, ' kobieta'])]),
     riddleFields,
     el('label', { className: 'row' }, [f.naMiejscu, 'Zakończ na miejscu (nagroda od razu po wykonaniu, bez powrotu)']),
   ]);
@@ -413,6 +423,8 @@ function missionEditor(id: string | null) {
       if (f.zabierz.checked) wymaga.zabierz = true;
     }
     if (Object.keys(wymaga).length) out.wymaga = wymaga;
+    if (f.gImie.value.trim()) out.postac = { imie: f.gImie.value.trim(), ...(f.gKobieta.checked ? { kobieta: true } : {}) };
+    if (!out.etapy && typ !== 'brak' && f.zImie.value.trim()) out.zadanie.postac = { imie: f.zImie.value.trim(), ...(f.zKobieta.checked ? { kobieta: true } : {}) };
     if (typ !== 'brak') {
       if (f.exp.value !== '') out.doswiadczenie = Math.max(0, Number(f.exp.value) || 0);
       if (f.przedmiot.value) out.przedmiot = f.przedmiot.value;
@@ -431,10 +443,26 @@ function missionEditor(id: string | null) {
     stagesBox.style.display = wiele ? '' : 'none';
     f.typ.parentElement!.style.display = wiele ? 'none' : '';
     f.szukaj.parentElement!.style.display = typ === 'pokonaj' ? '' : 'none';
-    preview.replaceChildren(missionPreview(read()));
+    // What a click on the map sets: the goal / the door, or a stage's place.
+    const was = f.klik.value;
+    const opts: [string, string][] = [['wejscie', 'wejście (zleceniodawca)']];
+    if (wiele) for (let i = 0; i < stages.count(); i++) opts.push([`etap:${i}`, `miejsce etapu ${i + 1}`]);
+    else if (typ !== 'brak') opts.unshift(['cel', 'cel zadania (postać na miejscu)']);
+    f.klik.replaceChildren(...opts.map(([v, t]) => el('option', { value: v, selected: v === was }, [t])));
+    preview.replaceChildren(missionPreview(read(), (lat, lon) => {
+      const v = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      const k = f.klik.value;
+      if (k === 'wejscie') f.adres.value = v;
+      else if (k === 'cel') f.miejsce.value = v;
+      else if (k.startsWith('etap:')) return stages.setPlace(Number(k.slice(5)), v);
+      update();
+    }, f.klik));
   };
+  // Addresses: the map moves only on Enter or leaving the field (owner 7.10.2026: not at every letter).
+  f.adres.dataset.adres = f.miejsce.dataset.adres = '1';
   for (const e of Object.values(f)) {
-    e.addEventListener('input', update);
+    if (e === f.klik) continue;
+    e.addEventListener('input', () => { if (!e.dataset.adres) update(); });
     e.addEventListener('change', update);
   }
   refresh = update;
@@ -464,7 +492,13 @@ function missionEditor(id: string | null) {
   }, 'b p');
 
   const card = el('div', { className: 'card' }, [
-    el('h3', {}, [existing ? `Edycja: ${m.tytul}` : 'Nowa misja / miejsce']),
+    el('h3', {}, [existing ? `Edycja: ${m.tytul}` : kreator ? '🧙 Kreator historii' : 'Nowa misja / miejsce']),
+    kreator ? el('ol', { className: 'muted' }, [
+      el('li', {}, ['Wpisz tytuł i adres budynku, gdzie zaczyna się historia (Enter pokaże go na mapie), i kto tam stoi (zleceniodawca).']),
+      el('li', {}, ['Napisz, co mówi zleceniodawca – kilka zdań, z klimatem.']),
+      el('li', {}, ['Dodawaj etapy (+ Dodaj etap): rodzaj, miejsce (adres albo kliknij na mapie, wybierając „miejsce etapu N”), postać na miejscu i jej słowa.']),
+      el('li', {}, ['Ustaw nagrodę i zapisz. Seria łączy kolejne misje w jedną opowieść (Wymagania → ukończone misje).']),
+    ]) : '',
     el('div', { className: 'grid2' }, [
       el('div', {}, [
         field('Tytuł', f.tytul),
@@ -473,6 +507,7 @@ function missionEditor(id: string | null) {
         needs,
         el('label', { className: 'row' }, [f.wiele, 'Misja wieloetapowa (etapy po kolei)']),
         field('Rodzaj', f.typ),
+        el('div', { className: 'row' }, [field('Zleceniodawca stojący przy drzwiach (imię)', f.gImie), el('label', {}, [f.gKobieta, ' kobieta'])]),
         field('Co mówi zleceniodawca', f.opis),
         taskFields,
         el('label', { className: 'row' }, [f.active, 'Włączona (widoczna w grze)']),
@@ -488,9 +523,11 @@ function missionEditor(id: string | null) {
 }
 
 /** What the player will see: the dialog and where things are on the map. */
-function missionPreview(m: Misja) {
+function missionPreview(m: Misja, pick?: (lat: number, lon: number) => void, klik?: HTMLElement) {
   const door = spotOf(m.adres);
   const target = m.zadanie.typ === 'brak' ? null : spotOf(m.zadanie.miejsce);
+  // Every stage's place (empty = the giver's door), numbered on the map, with the person standing there.
+  const stagesAt = (m.etapy ?? []).map((e, i) => ({ i, p: e.miejsce === '' || e.miejsce === undefined ? door : spotOf(e.miejsce), who: e.postac?.imie }));
   const reward = `Nagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${itemName(m.przedmiot)}` : ''}.`;
   const dialog = el('div', { className: 'dialog' }, [
     el('div', { className: 't' }, [m.tytul || '(tytuł)']),
@@ -506,11 +543,13 @@ function missionPreview(m: Misja) {
     ]),
   ]);
   if (city && door) {
+    const pts = [door, ...(stagesAt.length ? stagesAt.map((q) => q.p) : [target])].filter((q): q is { x: number; y: number } => !!q);
+    const xs = pts.map((q) => q.x), ys = pts.map((q) => q.y);
     const a = door;
     const b = target ?? a;
-    const cx = (a.x + b.x) / 2;
-    const cy = (a.y + b.y) / 2;
-    const R = Math.max(80 * PX_PER_M, Math.hypot(a.x - b.x, a.y - b.y) / 2 + 40 * PX_PER_M);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const R = Math.max(80 * PX_PER_M, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2 + 40 * PX_PER_M);
     const canvas = el('canvas', { className: 'map', width: 600, height: 600 });
     const map = city;
     const paint = () => {
@@ -534,13 +573,42 @@ function missionPreview(m: Misja) {
       ctx.textBaseline = 'middle';
       ctx.fillText(glyph, x, y + 1);
     };
-    if (target) dot(b, '#ff4b4b', m.zadanie.typ === 'idz' ? '⚑' : '⚔');
-    dot(a, '#f7c531', '!');
+    const name = (p: { x: number; y: number }, text: string | undefined) => {
+      if (!text) return;
+      const x = (p.x - (cx - R)) * s, y = (p.y - (cy - R)) * s - 20;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#1e1a24';
+      ctx.strokeText(`🧍 ${text}`, x, y);
+      ctx.fillStyle = '#fff8e0';
+      ctx.fillText(`🧍 ${text}`, x, y);
     };
+    if (stagesAt.length) {
+      for (const q of stagesAt) if (q.p) { dot(q.p, '#ff4b4b', String(q.i + 1)); name(q.p, q.who); }
+    } else if (target) {
+      dot(b, '#ff4b4b', m.zadanie.typ === 'idz' ? '⚑' : '⚔');
+      name(b, m.zadanie.postac?.imie);
+    }
+    dot(a, '#f7c531', '!');
+    name(a, m.postac?.imie);
+    };
+    if (pick) {
+      canvas.style.cursor = 'crosshair';
+      canvas.onclick = (ev) => {
+        const r = canvas.getBoundingClientRect();
+        const x = cx - R + ((ev.clientX - r.left) / r.width) * 2 * R, y = cy - R + ((ev.clientY - r.top) / r.height) * 2 * R;
+        const ll = map.toLatLon(x, y);
+        pick(ll.lat, ll.lon);
+      };
+    }
     // The map is loaded in tiles: draw now and again once that part is in.
     paint();
     if (!map.ready({ x0: cx - R, y0: cy - R, x1: cx + R, y1: cy + R })) map.ensure(cx, cy, R).then(paint, () => {});
-    out.append(canvas, el('div', { className: 'legend' }, ['🟡 wejście (tu się dostaje misję)', target ? '  🔴 cel zadania' : '']));
+    out.append(
+      klik ? el('label', { className: 'row' }, ['Kliknięcie w mapę ustawia: ', klik]) : '',
+      canvas,
+      el('div', { className: 'legend' }, ['🟡 wejście (tu się dostaje misję)', stagesAt.length ? '  🔴 miejsca etapów (numery)' : target ? '  🔴 cel zadania' : '', '  🧍 postacie']),
+    );
   } else if (!city) out.append(el('p', { className: 'muted' }, ['Wczytuję mapę…']));
   return out;
 }

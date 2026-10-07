@@ -615,7 +615,7 @@ export class UIScene extends Phaser.Scene {
     this.sleepWorld();
     toggleCharacter({
       page,
-      goodsIcon: (f) => goodsPicture(f) ?? this.iconOf(GOODS_TEX[f]),
+      goodsIcon: (f) => goodsPicture(f) ?? (f in GOODS_TEX ? this.iconOf(GOODS_TEX[f as Owoc]) : undefined),
       onClose: () => {
         this.wakeWorld();
         game.gearChanged();

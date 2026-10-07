@@ -1,5 +1,8 @@
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce, type Umiejetnosc } from '../content/przedmioty';
-import { LECZENIE_OWOCAMI, OWOCE, type Owoc } from '../content/sklepy';
+import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../content/sklepy';
+
+/** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
+const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
@@ -119,7 +122,7 @@ export interface CharacterHost {
   /** Open here (HUD: the character button, gold → Zasoby, the quest line → the quest log). */
   page?: 'eq' | 'gold' | 'quests';
   /** A goods kind's picture (the game's own textures), for the drum counters. */
-  goodsIcon?: (f: Owoc) => string | undefined;
+  goodsIcon?: (f: Owoc | Grupa) => string | undefined;
   /** When the trunk closes. */
   onClose?: () => void;
 }
@@ -402,14 +405,32 @@ function show(host: CharacterHost) {
       pic.className = 'k-res-pic';
       s.append(line(pic, AMUNICJA[k].nazwa, gear.ammo[k], 3));
     }
+    // By group like the backpack (owner 7.10.2026: the backpack showed 24 under a carrot – all vegetables – and here
+    // only 3 carrots); a tap on a group opens its kinds.
     const goods = goodsByKind();
-    for (const f of Object.keys(OWOCE) as Owoc[]) {
-      const n = goods[f] ?? 0;
-      if (!n) continue;
-      const url = host.goodsIcon?.(f);
-      const icon = url ? Object.assign(document.createElement('img'), { src: url, alt: '' }) : '•';
-      const name = OWOCE[f].mnoga;
-      s.append(line(icon, name[0].toUpperCase() + name.slice(1), n, 4));
+    const pic = (url: string | undefined, alt: string) => (url ? Object.assign(document.createElement('img'), { src: url, alt: '' }) : alt);
+    for (const g of Object.keys(GRUPY) as Grupa[]) {
+      const kinds = (Object.keys(OWOCE) as Owoc[]).filter((f) => OWOCE[f].grupa === g && (goods[f] ?? 0) > 0);
+      if (!kinds.length) continue;
+      const total = kinds.reduce((a, f) => a + (goods[f] ?? 0), 0);
+      const head = line(pic(host.goodsIcon?.(g) ?? host.goodsIcon?.(kinds[0]), '•'), `${GRUPY[g].nazwa}${kinds.length > 1 ? ' ▸' : ''}`, total, 4);
+      s.append(head);
+      if (kinds.length < 2) continue;
+      head.classList.add('k-res-group');
+      const list = el('div', 'k-res-kinds');
+      list.hidden = !openGroups.has(g);
+      if (!list.hidden) head.querySelector('.k-res-name')!.textContent = `${GRUPY[g].nazwa} ▾`;
+      for (const f of kinds) {
+        const name = OWOCE[f].mnoga;
+        list.append(line(pic(host.goodsIcon?.(f), '•'), name[0].toUpperCase() + name.slice(1), goods[f] ?? 0, 4));
+      }
+      head.onclick = () => {
+        list.hidden = !list.hidden;
+        if (list.hidden) openGroups.delete(g);
+        else openGroups.add(g);
+        head.querySelector('.k-res-name')!.textContent = `${GRUPY[g].nazwa} ${list.hidden ? '▸' : '▾'}`;
+      };
+      s.append(list);
     }
     if (session.namioty.length) s.append(line('⛺', 'Noce w namiotach', session.namioty.reduce((a, t) => a + t.left, 0), 4));
     if (!Object.values(goods).some(Boolean)) s.append(el('div', 'k-sub', 'Plecak bez zbiorów: owoce, warzywa, grzyby i drewno pojawią się tu, gdy je zbierzesz.'));

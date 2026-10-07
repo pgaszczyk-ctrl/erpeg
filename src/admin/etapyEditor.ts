@@ -82,7 +82,7 @@ function growing<T>(items: Partial<T>[], make: (x: Partial<T>) => { box: HTMLEle
 function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: () => void) {
   const f = {
     typ: el('select', {}, Object.entries(RODZAJE_ETAPOW).map(([k, v]) => el('option', { value: k, selected: (e.typ ?? 'idz') === k }, [v]))),
-    miejsce: inp(typeof e.miejsce === 'string' ? e.miejsce : e.miejsce ? `${e.miejsce.lat}, ${e.miejsce.lon}` : '', { placeholder: 'adres albo „51.2468, 22.5684”; puste = drzwi zleceniodawcy' }),
+    miejsce: inp(typeof e.miejsce === 'string' ? e.miejsce : e.miejsce ? `${e.miejsce.lat}, ${e.miejsce.lon}` : '', { placeholder: 'adres albo „51.2468, 22.5684”; puste = drzwi zleceniodawcy (Enter = pokaż na mapie)' }),
     cel: inp(e.cel, { placeholder: 'krótko, na ekranie i w dzienniku' }),
     tekst: area(e.tekst, 'tekst na początku etapu (rozmowa: co mówi postać)'),
     komunikat: area(e.komunikat, 'tekst po wykonaniu etapu (opcjonalnie)'),
@@ -124,7 +124,9 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     onChange();
   };
   f.typ.addEventListener('change', show);
-  card.addEventListener('input', onChange);
+  // Typing an address doesn't redraw the map at every letter (owner 7.10.2026): only Enter or leaving the field does.
+  f.miejsce.dataset.adres = '1';
+  card.addEventListener('input', (ev) => { if (!(ev.target as HTMLElement).dataset?.adres) onChange(); });
   card.addEventListener('change', onChange);
   const title = el('b');
   card.append(
@@ -167,7 +169,7 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     if (typ === 'melodia') opt('nuty', f.nuty.value.split(/\s+/).map((x) => NUTY.findIndex((n) => n.toLowerCase() === x.toLowerCase())).filter((i) => i >= 0));
     return out;
   };
-  return { card, read, title };
+  return { card, read, title, setPlace: (v: string) => { f.miejsce.value = v; onChange(); } };
 }
 
 /** The whole list: cards with ↑ ↓ ✕ and „+ Dodaj etap”. */
@@ -208,5 +210,11 @@ export function etapyEditor(etapy: Etap[], enemies: Record<string, string>, onCh
   };
   wrap.append(holder, btn('+ Dodaj etap', () => add({ typ: 'idz', miejsce: '', cel: '' })));
   etapy.forEach(add);
-  return { box: wrap, read: () => cards.map((c) => c.read()) };
+  return {
+    box: wrap,
+    read: () => cards.map((c) => c.read()),
+    count: () => cards.length,
+    /** A click on the preview map: this stage's place becomes that point. */
+    setPlace: (i: number, v: string) => cards[i]?.setPlace(v),
+  };
 }

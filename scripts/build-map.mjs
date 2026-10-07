@@ -284,7 +284,8 @@ for (const f of features) {
     // mess at game scale: the road itself is drawn wide enough instead.
     if (t.footway === 'sidewalk' || t.footway === 'crossing' || t.path === 'sidewalk' || t.cycleway === 'crossing') continue;
     const cls = ROAD[t.highway];
-    if (!cls || t.tunnel === 'yes' || (t.access === 'private' && cls === 'service')) continue;
+    // Private service roads are dropped, except gateways through buildings (owner 7.10.2026: „prześwity w kamienicach”).
+    if (!cls || t.tunnel === 'yes' || (t.access === 'private' && cls === 'service' && t.tunnel !== 'building_passage')) continue;
     const l = encode(g.coordinates, false);
     if (!l) continue;
     lines.push({ kind: cls, pts: l, bridge: t.bridge && t.bridge !== 'no' ? 1 : 0, pass: t.tunnel === 'building_passage' || t.covered === 'yes' ? 1 : 0, name: t.name || null });
@@ -382,8 +383,14 @@ const SKIP_KINDS = new Set(['roof', 'carport', 'shelter', 'transformer_tower', '
 const MIN_M2 = 25;
 const areaM2 = (r) => Math.abs(ringArea(r)) / (UNITS_PER_M * UNITS_PER_M);
 const kept = buildings.filter((b) => !SKIP_KINDS.has(b.kind) && (b.a || b.name || areaM2(b.abs[0]) >= MIN_M2));
+// Landmarks the artist paints on their own OSM outline (order 19): never grown, merged, cut or turned, and cut out of
+// their merged neighbours, so the game can hide exactly them under the picture (Zabytki.covers).
+const ZABYTEK = (b) => b.name === 'Brama Krakowska' || b.name === 'Wieża Trynitarska' || (b.name || '').startsWith('Archikatedra Świętego Jana') ||
+  (b.name === 'Urząd Miasta Lublin' && (b.a || '').includes('Łokietka 1'));
+const zabytki = kept.filter(ZABYTEK);
 const grown = [];
 for (const b of kept) {
+  if (ZABYTEK(b)) continue;
   // Outer ring counter-clockwise, holes clockwise (what Clipper expects).
   const rings = b.abs.slice().sort((a, c) => Math.abs(ringArea(c)) - Math.abs(ringArea(a)));
   const paths = rings.map((r, i) => {
@@ -426,6 +433,7 @@ const corridors = new ClipperLib.Paths();
 const clipper = new ClipperLib.Clipper();
 clipper.AddPaths(grown, ClipperLib.PolyType.ptSubject, true);
 clipper.AddPaths(corridors, ClipperLib.PolyType.ptClip, true);
+for (const b of zabytki) clipper.AddPaths(b.abs.slice(0, 1).map(toPath), ClipperLib.PolyType.ptClip, true);
 const tree = new ClipperLib.PolyTree();
 clipper.Execute(ClipperLib.ClipType.ctDifference, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
 const blocks = [];
@@ -460,6 +468,7 @@ blocks.forEach((k, i) => {
 });
 const blockAt = (x, y) => (bgrid.get(Math.floor(x / CELL) + ',' + Math.floor(y / CELL)) || []).map((i) => blocks[i]).find((k) => inRings(k.abs, x, y));
 for (const b of kept) {
+  if (ZABYTEK(b)) continue;
   // The block it is in: try the middle, then its corners (a street may cut through it).
   const r = b.abs[0];
   let cx = 0, cy = 0;
@@ -488,6 +497,9 @@ const encodeAbs = (r) => {
   for (let i = 2; i < r.length; i += 2) out.push(r[i] - r[i - 2], r[i + 1] - r[i - 1]);
   return out;
 };
+// Landmarks as they are in OSM (after snapping, so they keep their real shape).
+for (const b of zabytki) blocks.push({ abs: b.abs, addrs: b.a ? b.a.split(' | ') : [], name: b.name, levels: b.levels });
+if (zabytki.length) console.log(`map: ${zabytki.length} landmarks kept apart: ${zabytki.map((b) => b.name).join(', ')}`);
 const merged = blocks.map((k) => ({ rings: k.abs.map(encodeAbs), a: k.addrs.join(' | ') || null, name: k.name, levels: k.levels }));
 console.log(`map: ${buildings.length} buildings merged into ${merged.length} blocks in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 

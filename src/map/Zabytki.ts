@@ -24,6 +24,8 @@ interface Stoi {
   x0: number;
   y0: number;
   dol: number;
+  /** Per picture column: the map y of its lowest painted pixel (−Infinity: an empty column). */
+  podstawa: Float32Array;
 }
 
 /** px generatora szkieletu na metr (2 na punkt mapy przy 1,92 punktu na metr). */
@@ -38,9 +40,9 @@ export class Zabytki {
     for (const z of ZABYTKI) {
       if (z.mapa !== city.id) continue;
       const b = city.findBuilding(z.budynek);
-      if (!b) continue;
+      if (!b && !z.naMapie) continue;
       const key = `zabytek-${z.id}`;
-      const go = () => this.postaw(z, b, key);
+      const go = () => this.postaw(z, b ?? null, key);
       if (scene.textures.exists(key)) go();
       else {
         scene.load.image(key, z.plik);
@@ -50,13 +52,24 @@ export class Zabytki {
     }
   }
 
-  private postaw(z: Zabytek, b: Building, key: string) {
+  private postaw(z: Zabytek, b: Building | null, key: string) {
     if (!this.scene.sys.isActive() && !this.scene.sys.isPaused()) return;
     const f = PX_PER_M / SZKIELET_PX_NA_M;
-    const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
-    // Ściany stoją na obrysie (jak budynki 09): obraz w górę o ściany i w lewo o ich przechył.
-    const x0 = cx + (z.rog[0] - z.srodek[0]) * f - z.sciany * 0.35 * f;
-    const y0 = cy + (z.rog[1] - z.srodek[1]) * f - z.sciany * f;
+    let cx: number, cy: number, x0: number, y0: number;
+    if (z.naMapie) {
+      // Placed by the skeleton's own map corner (file map px → map px), then moved as the artist drew it.
+      const k = PX_PER_M / 1.92;
+      x0 = z.naMapie[0] * k + (z.przesun?.[0] ?? 0) * f;
+      y0 = z.naMapie[1] * k + (z.przesun?.[1] ?? 0) * f;
+      cx = x0;
+      cy = y0;
+    } else {
+      cx = (b!.x0 + b!.x1) / 2;
+      cy = (b!.y0 + b!.y1) / 2;
+      // Ściany stoją na obrysie (jak budynki 09): obraz w górę o ściany i w lewo o ich przechył.
+      x0 = cx + (z.rog![0] - z.srodek![0]) * f - z.sciany * 0.35 * f;
+      y0 = cy + (z.rog![1] - z.srodek![1]) * f - z.sciany * f;
+    }
     const tex = this.scene.textures.get(key);
     tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const src = tex.getSourceImage() as HTMLImageElement;
@@ -69,8 +82,12 @@ export class Zabytki {
     const d = g.getImageData(0, 0, w, h).data;
     const maska = new Uint8Array(w * h);
     for (let i = 0; i < w * h; i++) maska[i] = d[i * 4 + 3] > 0 ? 1 : 0;
-    const im = this.scene.add.image(x0, y0, key).setOrigin(0, 0).setScale(f).setDepth(b.y1);
-    this.stoja.push({ z, im, maska, w, h, f, cx, cy, x0, y0, dol: b.y1 });
+    const podstawa0 = (() => { for (let j = h - 1; j >= 0; j--) for (let i = 0; i < w; i++) if (maska[j * w + i]) return y0 + (j + 1) * f; return y0 + h * f; })();
+    const dol = b && !z.naMapie ? b.y1 : podstawa0;
+    const im = this.scene.add.image(x0, y0, key).setOrigin(0, 0).setScale(f).setDepth(dol);
+    const podstawa = new Float32Array(w).fill(-Infinity);
+    for (let i = 0; i < w; i++) for (let j = h - 1; j >= 0; j--) if (maska[j * w + i]) { podstawa[i] = y0 + (j + 1) * f; break; }
+    this.stoja.push({ z, im, maska, w, h, f, cx, cy, x0, y0, dol, podstawa });
     // Kawałki pod zabytkiem malujemy jeszcze raz – już bez zwykłego bloku z generatora.
     for (let x = x0; x <= x0 + w * f + 64; x += 64) for (let y = y0; y <= y0 + h * f + 64; y += 64) this.view.redrawAround(x, y);
   }
@@ -89,9 +106,9 @@ export class Zabytki {
       for (let y = b.y0 + krok / 2; y < b.y1; y += krok) for (let x = b.x0 + krok / 2; x < b.x1; x += krok) {
         if (!wPierscieniu(r, x, y)) continue;
         n++;
-        // W układzie obrazu przed podniesieniem o ściany: tam obrys leży na dachu szkieletu.
-        const i = Math.floor((x - s.cx) / s.f + s.z.srodek[0] - s.z.rog[0]);
-        const j = Math.floor((y - s.cy) / s.f + s.z.srodek[1] - s.z.rog[1]);
+        // W układzie obrazu przed podniesieniem o ściany: tam obrys leży na dachu szkieletu (obraz postawiony na mapie: wprost).
+        const i = s.z.naMapie ? Math.floor((x - s.x0) / s.f) : Math.floor((x - s.cx) / s.f + s.z.srodek![0] - s.z.rog![0]);
+        const j = s.z.naMapie ? Math.floor((y - s.y0) / s.f) : Math.floor((y - s.cy) / s.f + s.z.srodek![1] - s.z.rog![1]);
         if (i >= 0 && j >= 0 && i < s.w && j < s.h && s.maska[j * s.w + i]) w++;
       }
       if (n && w / n >= 0.6) return true;
@@ -103,7 +120,17 @@ export class Zabytki {
   update(hx: number, hy: number) {
     for (const s of this.stoja) {
       const i = Math.floor((hx - s.x0) / s.f), j = Math.floor((hy - 6 - s.y0) / s.f);
-      const za = hy < s.dol && i >= 0 && j >= 0 && i < s.w && j < s.h && s.maska[j * s.w + i] === 1;
+      const kol = i >= 0 && i < s.w ? s.podstawa[i] : -Infinity;
+      // In front of the wall in this column (owner 7.10.2026: „zamek niepotrzebnie znika” when walking past its south
+      // walls): drawn over the castle, which stays whole; behind it (courtyard, north side): see-through where it covers her.
+      if (hy >= kol - 1) {
+        const d = Math.min(s.dol, hy - 0.5);
+        if (s.im.depth !== d) s.im.setDepth(d);
+        if (s.im.alpha !== 1) s.im.setAlpha(1);
+        continue;
+      }
+      if (s.im.depth !== s.dol) s.im.setDepth(s.dol);
+      const za = j >= 0 && j < s.h && i >= 0 && i < s.w && s.maska[j * s.w + i] === 1;
       const a = za ? s.z.przeswit : 1;
       if (s.im.alpha !== a) s.im.setAlpha(a);
     }
