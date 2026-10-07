@@ -1,0 +1,408 @@
+diff --git a/src/admin/admin.ts b/src/admin/admin.ts
+index 511248d..10a5291 100644
+--- a/src/admin/admin.ts
++++ b/src/admin/admin.ts
+@@ -603,7 +603,7 @@ async function bugsTab(main: HTMLElement) {
+     } }, [
+       el('td', {}, [done]),
+       el('td', {}, [decide]),
+-      el('td', {}, [new Date(b.at).toLocaleString('pl-PL')]),
++      el('td', {}, [new Date(b.at).toLocaleString('pl-PL'), el('br'), el('small', { style: 'opacity: 0.7' }, [`wersja ${c.wersja ?? '?'}`])]),
+       el('td', {}, [b.player ?? '—']),
+       el('td', {}, [b.text.slice(0, 140)]),
+       el('td', {}, [`${c.map ?? ''} ${c.street ?? ''}`]),
+diff --git a/src/art.ts b/src/art.ts
+index d9af1d5..0b790d8 100644
+--- a/src/art.ts
++++ b/src/art.ts
+@@ -1358,7 +1358,7 @@ function baseAligned(img: HTMLImageElement, n: number): HTMLCanvasElement {
+  * owner liked on the locomotive): shrunk with an area average to `k` of its size, every pixel replaced by the nearest
+  * colour of the world palette (PALETA_SWIATA), alpha made hard, then a 1 px #1e1a24 outline around the silhouette.
+  */
+-function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
++export function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
+   const W = Math.max(1, Math.round(src.width * k)), H = Math.max(1, Math.round(src.height * k));
+   const d = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
+   const o = nowy(W + 2, H + 2);
+diff --git a/src/controls.ts b/src/controls.ts
+index eca3b9a..2a2af19 100644
+--- a/src/controls.ts
++++ b/src/controls.ts
+@@ -82,6 +82,15 @@ type TapListener = (x: number, y: number) => void;
+ const tapListeners = new Set<TapListener>();
+ 
+ /** Subscribes to taps/clicks/attack keys; returns an unsubscribe function. */
++/** A key pressed while typing in a text field (bug report, codes…) is the player's text, never a game key (report 58). */
++export function typingInField(e: KeyboardEvent) {
++  const t = e.target as HTMLElement | null;
++  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
++}
++
++/** The ☰ menu button's corner of the screen (CSS px; UIScene opens the menu on a tap there). */
++export const onMenuButton = (x: number, y: number) => x >= 0 && x < 60 && y >= 0 && y < 60;
++
+ export function onTap(fn: TapListener) {
+   tapListeners.add(fn);
+   return () => tapListeners.delete(fn);
+@@ -258,7 +267,7 @@ export function installTouchControls(el: HTMLElement) {
+   window.addEventListener(
+     'keydown',
+     (e) => {
+-      if (menuOpen()) return;
++      if (menuOpen() || typingInField(e)) return;
+       const code = e.code || e.key;
+       if (KEY_DIRS[code]) {
+         heldKeys.add(code);
+@@ -305,9 +314,12 @@ export function installTouchControls(el: HTMLElement) {
+       healRequest = true;
+       return;
+     }
+-    startHold('mouse');
+-    touchInput.attack = true;
+-    pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
++    // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
++    if (!onMenuButton(e.offsetX, e.offsetY)) {
++      startHold('mouse');
++      touchInput.attack = true;
++      pendingAim = { x: e.offsetX, y: e.offsetY }; // the swing goes towards the click
++    }
+     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
+   });
+   document.addEventListener('contextmenu', (e) => e.preventDefault());
+diff --git a/src/map/MapRenderer.ts b/src/map/MapRenderer.ts
+index 712f44b..eeed878 100644
+--- a/src/map/MapRenderer.ts
++++ b/src/map/MapRenderer.ts
+@@ -10,6 +10,7 @@ import { Wysokie } from './Wysokie';
+ import { MIESZKANCY } from '../content/mieszkancy';
+ import { plazaLandmark } from './landmarks';
+ import { OSTROSC } from '../screen';
++import { pixelate } from '../art';
+ import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
+ import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
+ import { STAN } from './drzewa09';
+@@ -206,12 +207,31 @@ function makePatterns(ctx: CanvasRenderingContext2D) {
+   };
+ }
+ 
+-/** An artist's object sheet (lamp, chimney) shrunk to map size, smoothed (null when there is no file). */
+-function artSheet(scene: Phaser.Scene, file: string): HTMLCanvasElement | null {
++/**
++ * An artist's object sheet (lamp, chimney, decorations) shrunk to map size (null when there is no file).
++ * In the 09 look each of its `frames` is turned into world pixels (area average, world palette, hard alpha,
++ * 1 px outline – `pixelate` in art.ts): smoothly shrunk, the gas lamps were a blur (owner, 6 Oct 2026).
++ */
++function artSheet(scene: Phaser.Scene, file: string, frames = 1): HTMLCanvasElement | null {
+   const key = `swiat-${file}`;
+   if (!scene.textures.exists(key)) return null;
+   const img = scene.textures.get(key).getSourceImage() as HTMLImageElement;
+   const c = document.createElement('canvas');
++  if (WYGLAD_09) {
++    const fw = Math.floor(img.width / frames);
++    const parts = Array.from({ length: frames }, (_, i) => {
++      const f = document.createElement('canvas');
++      f.width = fw;
++      f.height = img.height;
++      f.getContext('2d')!.drawImage(img, i * fw, 0, fw, img.height, 0, 0, fw, img.height);
++      return pixelate(f, DOTS / SKALA_PLIKOW);
++    });
++    c.width = parts[0].width * frames;
++    c.height = parts[0].height;
++    const g = c.getContext('2d')!;
++    parts.forEach((p, i) => g.drawImage(p, i * parts[0].width, 0));
++    return c;
++  }
+   c.width = Math.round((img.width * DOTS) / SKALA_PLIKOW);
+   c.height = Math.round((img.height * DOTS) / SKALA_PLIKOW);
+   const g = c.getContext('2d')!;
+@@ -668,14 +688,14 @@ export class MapRenderer {
+       const pat = artPattern(this.scene, ctx, `${w.plik}_okno`) ?? artPattern(this.scene, ctx, `${w.plik}_gladka`);
+       if (pat) this.wallArt.push({ pat, udzial: w.udzial });
+     }
+-    this.lampArt = artSheet(this.scene, LATARNIE.plik);
+-    this.chimneyArt = artSheet(this.scene, KOMINY.plik);
+-    this.treeArt = artSheet(this.scene, ZIELEN.drzewo);
++    this.lampArt = artSheet(this.scene, LATARNIE.plik, LATARNIE.klatki);
++    this.chimneyArt = artSheet(this.scene, KOMINY.plik, KOMINY.klatki);
++    this.treeArt = artSheet(this.scene, ZIELEN.drzewo, ZIELEN.klatki);
+     for (const [k, d] of Object.entries(DEKORACJE)) {
+-      const c = artSheet(this.scene, d.plik);
++      const c = artSheet(this.scene, d.plik, 'klatki' in d ? (d as { klatki: number }).klatki : 1);
+       if (c) this.deco[k as keyof typeof DEKORACJE] = c;
+     }
+-    this.bushArt = artSheet(this.scene, ZIELEN.krzak);
++    this.bushArt = artSheet(this.scene, ZIELEN.krzak, ZIELEN.klatki);
+     this.roofArt = DACHY_PLIKI.map((f) => {
+       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
+       return made.get(f)!;
+diff --git a/src/scenes/GameScene.ts b/src/scenes/GameScene.ts
+index 4ebbcc4..c173d4f 100644
+--- a/src/scenes/GameScene.ts
++++ b/src/scenes/GameScene.ts
+@@ -236,6 +236,9 @@ type Enemy = Slime & {
+   minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
+ };
+ 
++/** Places where the story's question about the dragon's shadow can be asked. */
++const STORY_PLACES = new Set(['school', 'church', 'university']);
++
+ export class GameScene extends Phaser.Scene {
+   city!: CityMap;
+   player!: Player;
+@@ -2139,7 +2142,9 @@ export class GameScene extends Phaser.Scene {
+     for (const rm of this.missions) {
+       if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
+         id = rm.m.id;
+-        open = () => this.openMissionDialog(rm);
++        // A mission taken at a church/school keeps its door, but asking about the shadows must stay possible there (report 58).
++        const host = this.city.places.find((p) => STORY_PLACES.has(p.kind) && Phaser.Math.Distance.Between(p.door.x, p.door.y, rm.door.x, rm.door.y) < DOOR_RADIUS);
++        open = () => this.withStoryPlace(host, () => this.openMissionDialog(rm));
+       }
+     }
+     if (!id) {
+@@ -2171,16 +2176,18 @@ export class GameScene extends Phaser.Scene {
+ 
+   private openPlace(p: CityPlace) {
+     // Schools, churches and universities: the story question joins their dialog.
+-    if (p.kind === 'school' || p.kind === 'church' || p.kind === 'university') {
+-      this.storyPlace = p;
+-      try {
+-        this.openPlaceInner(p);
+-      } finally {
+-        this.storyPlace = null;
+-      }
+-      return;
++    this.withStoryPlace(STORY_PLACES.has(p.kind) ? p : undefined, () => this.openPlaceInner(p));
++  }
++
++  /** Runs `open` with `p` as the place whose dialog gets "ask about the shadows" (see dialog()). */
++  private withStoryPlace(p: CityPlace | undefined, open: () => void) {
++    if (!p) return open();
++    this.storyPlace = p;
++    try {
++      open();
++    } finally {
++      this.storyPlace = null;
+     }
+-    this.openPlaceInner(p);
+   }
+ 
+   private openPlaceInner(p: CityPlace) {
+diff --git a/src/scenes/Npcs.ts b/src/scenes/Npcs.ts
+index 266b501..da76ede 100644
+--- a/src/scenes/Npcs.ts
++++ b/src/scenes/Npcs.ts
+@@ -1,6 +1,7 @@
+ import { SKALA_POSTACI } from '../skala';
+ import Phaser from 'phaser';
+ import { TEX } from '../art';
++import { hdOn, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
+ import type { CityMap } from '../map/CityMap';
+ import { PX_PER_M } from '../map/CityMap';
+ import { rng } from '../rng';
+@@ -292,8 +293,18 @@ export class Npcs {
+     for (const n of this.list) {
+       const near = Math.abs(n.x - px) < 400 && Math.abs(n.y - py) < 400;
+       if (near && !n.sprite) {
+-        n.sprite = this.scene.add.sprite(n.x, n.y, TEX.hero, 'down-0').setTint(0xc9a0ff).setDepth(n.y).setScale(SKALA_POSTACI);
+-        n.bubble = this.scene.add.image(n.x, n.y - 13 * SKALA_POSTACI, TEX.bubble).setDepth(n.y + 1);
++        // One of the artist's townsfolk looks (owner, 6 Oct 2026: the small old purple figures out), the same one
++        // every time for this riddle-giver, and a woman's look for a woman's name.
++        // Grandmas and grandpas get an old look, everyone else a grown-up one (never a child).
++        const wiek = /^(Babcia|Dziadek)/.test(n.name) ? 'starszy' : 'dorosly';
++        const looks = hdOn ? hdFolkLooks().filter((t) => (personOf(t)?.plec === 'k') === n.female && personOf(t)?.wiek === wiek) : [];
++        const tex = looks.length ? ensureHd(this.scene, looks[hash(`madrala:${n.id}`) % looks.length]) : null;
++        if (tex && this.scene.textures.exists(tex)) {
++          n.sprite = fitHd(this.scene.add.sprite(n.x, n.y, tex, 'down-0').setDepth(n.y));
++        } else {
++          n.sprite = this.scene.add.sprite(n.x, n.y, TEX.hero, 'down-0').setTint(0xc9a0ff).setDepth(n.y).setScale(SKALA_POSTACI);
++        }
++        n.bubble = this.scene.add.image(n.x, n.y - (tex ? 16 : 13) * SKALA_POSTACI, TEX.bubble).setDepth(n.y + 1);
+         this.scene.tweens.add({ targets: n.bubble, y: n.bubble.y - 2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+         // It blinks, so a riddle waiting here catches the eye.
+         this.scene.tweens.add({ targets: n.bubble, alpha: 0.25, duration: 360, yoyo: true, repeat: -1 });
+diff --git a/src/scenes/UIScene.ts b/src/scenes/UIScene.ts
+index 9bb905c..81eecb0 100644
+--- a/src/scenes/UIScene.ts
++++ b/src/scenes/UIScene.ts
+@@ -8,13 +8,14 @@ import { gear, item, condition, ammoOf, isBroken } from '../inventory';
+ import { STRZALY, AMUNICJA } from '../content/zuzycie';
+ import { report } from '../errlog';
+ import { TEX, GOODS_TEX, arrowTexture } from '../art';
++import { wersjaNapis } from '../version';
+ 
+ /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
+ const STRZALKI_ZADAN = { promien: 0.3 };
+ import { OWOCE, type Owoc } from '../content/sklepy';
+ import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
+ import { heroPortrait } from '../sprites';
+-import { touchInput, resetTouch, onTap, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
++import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
+ import type { HudState, DialogRequest, GameScene } from './GameScene';
+ import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
+ import { PLAYER } from '../objects/Player';
+@@ -140,6 +141,7 @@ export class UIScene extends Phaser.Scene {
+     this.game.events.on('practice', onPractice);
+     const offTap = onTap((x, y) => this.onDialogTap(x, y));
+     const onKey = (e: KeyboardEvent) => {
++      if (typingInField(e)) return;
+       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
+         this.openMap();
+       }
+@@ -580,7 +582,7 @@ export class UIScene extends Phaser.Scene {
+   private dialogOpenedAt = 0;
+ 
+   private onDialogTap(x: number, y: number) {
+-    if (!this.dialogBox && !this.overlay && x >= 0 && x < 60 && y < 60) {
++    if (!this.dialogBox && !this.overlay && onMenuButton(x, y)) {
+       this.openGameMenu();
+       return;
+     }
+@@ -647,7 +649,7 @@ export class UIScene extends Phaser.Scene {
+     if (this.dialogBox || this.overlay || !game.player || game.player.isDead) return;
+     this.showDialog({
+       title: 'Menu',
+-      text: 'Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.',
++      text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+       buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', 'Graj dalej'],
+       onChoose: (i) => {
+         if (i === 1) showCodeOverlay(session.name, session.idik);
+diff --git a/src/ui/bug.ts b/src/ui/bug.ts
+index 59adcc8..6f58058 100644
+--- a/src/ui/bug.ts
++++ b/src/ui/bug.ts
+@@ -7,7 +7,7 @@
+ import { rpc, offline } from '../api';
+ import { session } from '../quests';
+ import { recentLog } from '../log';
+-import { WERSJA, WERSJA_TEST, BUILD, TEST } from '../version';
++import { WERSJA, WERSJA_TEST, BUILD, TEST, wersjaNapis } from '../version';
+ 
+ export const MAX_ZNAKOW = 300;
+ 
+@@ -22,6 +22,10 @@ export function askBug(context: Record<string, unknown>, shot: string | null = n
+     box.className = 'm-box';
+     const h = document.createElement('h2');
+     h.textContent = '🐞 Znalazłem buga';
++    // The version in sight, so it's clear whether a bug was already fixed in a newer one (owner, 6 Oct 2026).
++    const ver = document.createElement('div');
++    ver.textContent = wersjaNapis();
++    ver.style.cssText = 'font-size:13px;color:#c9b27a;margin:-4px 0 8px';
+     const p = document.createElement('p');
+     p.textContent = 'Opisz, co się stało i co robiłeś tuż przedtem. Razem z opisem wyślemy, gdzie jesteś i co ostatnio działo się w grze.';
+     const area = Object.assign(document.createElement('textarea'), { maxLength: MAX_ZNAKOW, rows: 5, className: 'm-input', placeholder: 'np. Po rozmowie z woźnicą zniknął mój ludzik…' });
+@@ -44,7 +48,7 @@ export function askBug(context: Record<string, unknown>, shot: string | null = n
+       img.style.cssText = 'width:84px;border:2px solid #4a4a55;border-radius:4px';
+       shotRow.append(attach, img, document.createTextNode('Dołącz zrzut ekranu'));
+     }
+-    box.append(h, p, area, count, ...(shot ? [shotRow] : []), note, ok, cancel);
++    box.append(h, ver, p, area, count, ...(shot ? [shotRow] : []), note, ok, cancel);
+     root.append(box);
+     document.body.append(root);
+     area.focus();
+diff --git a/src/ui/hud.ts b/src/ui/hud.ts
+index a955e1e..a0057de 100644
+--- a/src/ui/hud.ts
++++ b/src/ui/hud.ts
+@@ -118,14 +118,14 @@ let root: HTMLDivElement | null = null;
+ let ctx: CanvasRenderingContext2D | null = null;
+ let pics: Record<'baza' | 'mikstura' | 'owoc', HTMLImageElement> | null = null;
+ /** The hero's head and shoulders for the avatar frame (null: the drawn frame stays empty). */
+-let avatar: HTMLCanvasElement | null = null;
++let avatar: { src: CanvasImageSource; sx: number; sy: number; sw: number; sh: number } | null = null;
+ let view: HudView | null = null;
+ let timer = 0;
+ let parts: {
+   m: HTMLDivElement; count: HTMLDivElement; heal: HTMLButtonElement; hp: HTMLButtonElement; xp: HTMLButtonElement;
+   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
+   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
+-  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement;
++  wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
+ } | null = null;
+ let scale = 4;
+ 
+@@ -265,7 +265,11 @@ export function mountHud(on: HudHandlers) {
+   wpn.append(wpnImg);
+   const wcount = document.createElement('div');
+   wcount.className = 'hud-wcount';
+-  m.append(canvas, heal, hp, xp, count, wpn, wcount,
++  // The avatar has its own canvas at the screen's real pixels (owner, 6 Oct 2026: shrunk into the machine's 18 px it was blurred).
++  const avPic = document.createElement('canvas');
++  avPic.className = 'hud-avpic';
++  avPic.style.cssText = 'position:absolute;pointer-events:none';
++  m.append(canvas, avPic, heal, hp, xp, count, wpn, wcount,
+     btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
+ 
+   const p = document.createElement('div');
+@@ -311,7 +315,7 @@ export function mountHud(on: HudHandlers) {
+   picks.className = 'hud-picks';
+   root.append(m, p, picks);
+   document.body.append(root);
+-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money };
++  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic };
+   layout();
+   window.addEventListener('resize', layout);
+   // A slow bubble in each tube.
+@@ -345,6 +349,8 @@ function layout() {
+   };
+   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
+   at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
++  Object.assign(parts.avPic.style, { left: `${(CX + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
++  drawAvatar();
+   at(parts.heal, CX, HY, 26, 26);
+   parts.heal.style.borderRadius = '50%';
+   at(parts.hp, 49 + L, 1, 10, H - 2);
+@@ -484,25 +490,25 @@ function draw() {
+     c.fillRect(55 + L, y, 2, 1);
+     c.fillRect(65 + L, y, 2, 1);
+   }
+-  // The hero's head in the avatar frame (inside 18×18).
+-  if (avatar) c.drawImage(avatar, CX + 4, 6, 18, 18);
+ }
+ 
+ /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
+ export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
+-  if (!src) {
+-    avatar = null;
+-  } else {
+-    // Shrunk once to the frame's 18 px (smoothly), then shown blocky like the rest of the machine.
+-    const cv = document.createElement('canvas');
+-    cv.width = cv.height = 18;
+-    const g = cv.getContext('2d')!;
+-    g.imageSmoothingEnabled = true;
+-    g.imageSmoothingQuality = 'high';
+-    g.drawImage(src, sx, sy, sw, sh, 0, 0, 18, 18);
+-    avatar = cv;
+-  }
+-  draw();
++  avatar = src ? { src, sx, sy, sw, sh } : null;
++  drawAvatar();
++}
++
++/** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */
++function drawAvatar() {
++  if (!parts) return;
++  const cv = parts.avPic;
++  const n = Math.max(1, Math.round(18 * scale * (window.devicePixelRatio || 1)));
++  if (cv.width !== n) cv.width = cv.height = n;
++  const g = cv.getContext('2d')!;
++  g.clearRect(0, 0, n, n);
++  if (!avatar) return;
++  g.imageSmoothingEnabled = false;
++  g.drawImage(avatar.src, avatar.sx, avatar.sy, avatar.sw, avatar.sh, 0, 0, n, n);
+ }
+ 
+ /** "+1 marchewka" left of the machine for ~2 s; newer ones below, older ones fade. */
+diff --git a/src/version.ts b/src/version.ts
+index 8d23dd4..60bb766 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -4,7 +4,7 @@
+ // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
+ // code with VITE_TEST=1 and says so on screen.
+ 
+-export const WERSJA = '1.011';
++export const WERSJA = '1.012';
+ 
+ /** Built for the test server? */
+ export const TEST = import.meta.env.VITE_TEST === '1';
