@@ -14,13 +14,20 @@ Wszystkie pliki są w folderze `19_zabytki_szkielety/`.
 
 **Rzut gry:** dachy widać z góry na obrysie, a ściany idą w dół (na południe) i lekko w prawo, jak u zamku. Światło z lewej-góry, obrys #1e1a24, grube kwadratowe piksele, 3–5 odcieni na kolor, bez gradientów, bez napisów.
 
-## 1. Brama Krakowska (`brama_krakowska_*`)
+## 1. Brama Krakowska → steampunkowa rotunda (`brama_krakowska_*`, poprawka 7.10)
 
-- Jedna część: **gotycka wieża bramna z czerwonej cegły**, na górze **biały barokowy hełm** z latarnią i iglicą, na ścianie zegar.
-- W szkielecie wieża ma wysokość ok. 30 m (ściany 40 px w rzucie, ściśnięte jak donżon zamku).
-- **Przejazd bramny**: przez bramę biegnie ulica (z północnego wschodu na południowy zachód). Na widocznej ścianie namaluj **ostrołukowy przejazd** (ciemne wnętrze łuku), żeby było widać, że to brama.
-- Lekki steampunk: **mosiężna tarcza zegara z widocznymi zębatkami** zamiast zwykłego zegara, 1–2 miedziane rurki wzdłuż muru.
-- Zdjęcia: https://www.wikidata.org/wiki/Q9663386 (link do Wikimedia Commons na stronie).
+**Dziękujemy za próbkę: styl jest bardzo dobry** (cegła, biały bęben, miedziany hełm, zegar). Problem jest w orientacji. Prawdziwa brama stoi na mapie skosem, a przejazd biegnie z północnego wschodu na południowy zachód. Wierna kopia byłaby więc od strony widza widoczna bokiem i nie dałoby się poznać, co to.
+
+**Decyzja właściciela:** zamiast wiernej bramy stawiamy w tym miejscu **steampunkową rotundę**: okrągłą (z każdej strony wygląda tak samo), **wyższą**, z elementami Bramy Krakowskiej. Nowy szkielet jest okrągły (`brama_krakowska_szkielet_x4.png`, średnica ok. 15 m, ściany 50 px w rzucie).
+
+Co ma mieć rotunda (od dołu):
+
+1. **Dół z czerwonej cegły** jak w próbce, z gotyckimi blankami w połowie wysokości. **Przejazd (ostrołukowa brama) od południa**, czyli na stronie widocznej dla gracza.
+2. **Biały bęben** (z próbki) z **dużym mosiężnym zegarem z widocznymi zębatkami**, skierowanym na południe.
+3. **Miedziany hełm z latarnią** (zielona patyna, jak w próbce), na szczycie mosiężna iglica albo kula.
+4. Steampunk: **mosiężne obręcze** opasujące wieżę na 2–3 wysokościach, **miedziane rury** pnące się po murze i wychodzące nad dach, **mały balkon obserwacyjny z lunetą** pod bębnem, kilka nitów i zaworów. Pary nie rysuj, robi ją program.
+
+Uwagi do próbki, które dalej obowiązują: przejazd ostrołukowy (nie półokrągły), rury mosiężne/miedziane (bez zielonej patyny na rurach), światło z lewej-góry.
 
 ## 2. Nowy Ratusz (`nowy_ratusz_*`)
 
@@ -58,8 +65,8 @@ Na dachu katedry, we wschodniej części, stoi **cewka Tesli**. Miejsce zaznaczy
 ```
 Repaint this block-out as a detailed pixel art building for a top-down RPG.
 Keep EXACTLY the same silhouette, size, position and perspective: roofs seen from above, walls visible below the roofs, leaning slightly to the right. Do not move or resize anything. Keep the flat magenta background #FF00FF.
-This is KRAKOW GATE in Lublin, Poland (Brama Krakowska), see the attached photos:
-part 1 – a gothic red-brick gate tower with a white baroque helmet roof, a pointed archway passage through it, a brass clock face with visible gears.
+This is a STEAMPUNK ROTUNDA inspired by the Krakow Gate in Lublin (Brama Krakowska), see the attached photos:
+part 1 – a tall round tower: red-brick lower part with gothic crenellations and a pointed archway passage facing south (towards the viewer), a white round drum above with a big brass clock with visible gears, a green-patina copper helmet roof with a lantern and a brass spire; brass rings around the tower, copper pipes climbing the walls, a small observation balcony with a brass telescope.
 Pixel art: chunky square pixels, 3-5 shades per colour, 1-pixel dark outline #1e1a24, light from the top-left, no anti-aliasing, no gradients, no text.
 Very light steampunk touch: brass clockwork, a few copper pipes.
 ```
@@ -75,7 +82,7 @@ Solid flat background pure magenta #FF00FF, no ground, no shadow.
 
 ## Kolejność
 
-1. Brama Krakowska (do akceptacji).
+1. Brama Krakowska jako steampunkowa rotunda (do akceptacji, na nowym okrągłym szkielecie).
 2. Nowy Ratusz.
 3. Archikatedra z Wieżą Trynitarską i osobno cewka Tesli.
 

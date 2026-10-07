@@ -1,24 +1,24 @@
 {
  "id": "brama_krakowska",
- "nazwa": "Brama Krakowska",
+ "nazwa": "Brama Krakowska – steampunkowa rotunda",
  "rog_px_obrazu": [
-  30120,
-  20882
+  30134,
+  20890
  ],
  "rog_punkty_mapy": [
-  15060.0,
-  10441.0
+  15067.0,
+  10445.0
  ],
  "rozmiar_1x": [
-  130,
-  142
+  101,
+  133
  ],
  "czesci": [
   {
    "nr": 1,
    "osm": "Brama Krakowska",
-   "wysokosc_px": 40,
-   "opis": "gotycka wieża bramna z cegły, barokowy hełm (biały/miedziany), zegar"
+   "wysokosc_px": 50,
+   "opis": "okrągła rotunda: dół z czerwonej cegły z przejazdem od południa, wyżej biały bęben z zegarem, miedziany hełm z latarnią"
   }
  ]
 }

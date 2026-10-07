@@ -17,8 +17,11 @@ PX_M = 1.92 * 2  # px obrazu na metr
 OUT = 'docs/paczka-dla-artysty/19_zabytki_szkielety'
 
 ZABYTKI = [
-    {'id': 'brama_krakowska', 'nazwa': 'Brama Krakowska', 'czesci': [
-        {'nr': 1, 'osm': 'Brama Krakowska', 'wysokosc_m': 30, 'sciana': '#c98a5a', 'dach': '#e8e4da', 'opis': 'gotycka wieża bramna z cegły, barokowy hełm (biały/miedziany), zegar'},
+    # Właściciel 7.10.2026: prawdziwa brama stoi na mapie skosem (przejazd z NE na SW), więc od strony widza byłaby bokiem
+    # i nie dałoby się poznać, co to. Zamiast niej steampunkowa rotunda w tym miejscu: okrągła (z każdej strony taka sama),
+    # wyższa, z elementami Bramy Krakowskiej.
+    {'id': 'brama_krakowska', 'nazwa': 'Brama Krakowska – steampunkowa rotunda', 'czesci': [
+        {'nr': 1, 'osm': 'Brama Krakowska', 'kolo_m': 15, 'wysokosc_m': 36, 'sciana': '#c98a5a', 'dach': '#4f8a86', 'opis': 'okrągła rotunda: dół z czerwonej cegły z przejazdem od południa, wyżej biały bęben z zegarem, miedziany hełm z latarnią'},
     ]},
     {'id': 'nowy_ratusz', 'nazwa': 'Nowy Ratusz (Urząd Miasta, pl. Łokietka 1)', 'czesci': [
         {'nr': 1, 'osm': 'Urząd Miasta Lublin', 'pietra': 4.5, 'sciana': '#e3c77a', 'dach': '#a8483a', 'opis': 'klasycystyczny gmach, żółte ściany, czerwony dach czterospadowy'},
@@ -55,6 +58,13 @@ def wczytaj():
         lv = p.get('building:levels')
         wszystkie.append((r, float(lv) if lv and lv.replace('.', '').isdigit() else 2))
         if p.get('name') in nazwy and p['name'] not in znalezione: znalezione[p['name']] = r
+    # Części okrągłe (rotunda): koło o średnicy kolo_m metrów w środku obrysu z OSM.
+    for z in ZABYTKI:
+        for c in z['czesci']:
+            if 'kolo_m' in c and c['osm'] in znalezione:
+                r = znalezione[c['osm']]
+                cx = sum(x for x, _ in r) / len(r); cy = sum(y for _, y in r) / len(r); R = c['kolo_m'] / 2 * PX_M
+                znalezione[c['osm']] = [(cx + R * math.cos(t * math.pi / 24), cy + R * math.sin(t * math.pi / 24)) for t in range(48)]
     return znalezione, wszystkie
 
 def maska(r, x0, y0, W, H):
