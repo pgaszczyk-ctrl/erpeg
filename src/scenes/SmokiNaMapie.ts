@@ -1,6 +1,7 @@
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { SMOKI_NA_MAPIE as S, type GatunekId } from '../content/smoki';
+import { SMOKI_NA_MAPIE as S, SMOKI_TESTOWE, type GatunekId } from '../content/smoki';
+import { TEST } from '../version';
 import type { Slime } from '../objects/Slime';
 
 // Smoki w terenie (właściciel 7.10.2026: „wg środowiska, rzadko”): w kratce 1 km z małą szansą, tylko poza centrum,
@@ -33,6 +34,7 @@ export class SmokiNaMapie {
     const now = performance.now();
     if (now < this.nastepne) return;
     this.nastepne = now + 1000;
+    if (TEST) this.testowe(hx, hy);
     if (!this.host.odblokowane()) return;
     const K = KRATKA_M * PX_PER_M;
     const cx = Math.floor(hx / K), cy = Math.floor(hy / K);
@@ -58,6 +60,25 @@ export class SmokiNaMapie {
         m.s = undefined;
         this.zywe.delete(key);
       }
+    }
+  }
+
+  /** Serwer testowy: smoki w stałych miejscach (content/smoki.ts SMOKI_TESTOWE), bez poziomu i historii. */
+  private testowe(hx: number, hy: number) {
+    const c = this.host.city;
+    for (const t of SMOKI_TESTOWE) {
+      const key = `test|${t.miejsce}`;
+      if (!this.kratki.has(key)) {
+        const p = c.places.find((q) => q.id === t.miejsce);
+        if (!p) continue;
+        const at = c.freeNear(p.door.x + t.odM * PX_PER_M * 0.8, p.door.y + t.odM * PX_PER_M * 0.6);
+        this.kratki.set(key, { key, x: at.x, y: at.y, g: t.gatunek });
+      }
+      const m = this.kratki.get(key)!;
+      if (m.s || this.pokonane.has(key)) continue;
+      if (Math.hypot(m.x - hx, m.y - hy) > S.odRuchu * PX_PER_M * 0.6) continue;
+      m.s = this.host.spawn(m.x, m.y, m.g);
+      this.zywe.set(key, m);
     }
   }
 

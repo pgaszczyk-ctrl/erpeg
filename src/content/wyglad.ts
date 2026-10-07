@@ -90,7 +90,10 @@ export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet'] },
   { postac: { id: 'bandyta', nazwa: 'Bandyta', plik: 'bandyta', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['bandyta'] },
   // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).
-  { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt', 'koziol'] },
+  { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt'] },
+  // The boss of „Przebudzenie Starego Grodu”: the brass goat from Lublin's arms (order 14/17, pack „koziol_i_smok_gorski” 7.10.2026);
+  // drawn at a person's size, the game makes him 2.5× bigger (ENEMY_KINDS koziol scale).
+  { postac: { id: 'koziol', nazwa: 'Mosiężny Kozioł', plik: 'koziol', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['koziol'] },
 ];
 
 /** Townsfolk: each hero in these clothes colours (hue in degrees, saturation ×, lightness ×) – red and green mask parts. */

@@ -34,7 +34,7 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   // Gang bosses: come out when the last gang member falls (content/gangi.ts).
   herszt: { name: 'Herszt gangu', hp: 45, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
   // Mosiężny Kozioł (Stary Gród Q10 boss): twice a big boss's life, slow; the goblin boss's sheet in brass until the artist draws him.
-  koziol: { name: 'Mosiężny Kozioł', hp: 240, wanderSpeed: 10, chaseSpeed: 30, sightRange: 160, loseRange: 360, scale: 2.5, damage: 2, exp: 150, tint: 0xd9a640 },
+  koziol: { name: 'Mosiężny Kozioł', hp: 240, wanderSpeed: 10, chaseSpeed: 30, sightRange: 160, loseRange: 360, scale: 2.5, damage: 2, exp: 150 },
   wielki_herszt: { name: 'Wielki herszt', hp: 120, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
   // In the rain (content/pogoda.ts): water blobs instead of imps (small, one arrow is enough) and their master,
   // the wodnik, who conjures more blobs next to the hero and keeps them alive with his magic.
@@ -134,7 +134,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** How far from its centre a sword swing or a touch reaches it. */
   get size() {
-    if (this.kindId === 'smok') return 14;
+    if (this.kindId === 'smok') return this.sizeOverride ?? 14;
     return 6 * this.kind.scale;
   }
 
@@ -265,8 +265,13 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Call after think(); keeps the sprite facing its movement. */
   updateLook() {
-    this.face();
+    if (!this.ownLook) this.face();
   }
+
+  /** Its look is driven from outside (a dragon with the artist's sheet: SmokAI picks the animation by direction). */
+  ownLook = false;
+  /** Body radius for blows and reach, when not the usual (the artist's big mountain dragon). */
+  sizeOverride?: number;
 
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {

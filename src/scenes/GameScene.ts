@@ -80,7 +80,7 @@ import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
-import { SmokAI, aktualizujEfekty, wyczyscEfekty, type StanGracza } from '../objects/SmokAI';
+import { SmokAI, aktualizujEfekty, wyczyscEfekty, smokSmierc, type StanGracza } from '../objects/SmokAI';
 import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
 import { trzesienieWlaczone } from '../ustawieniaGracza';
 import { SmokiNaMapie } from './SmokiNaMapie';
@@ -1590,6 +1590,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (s.kindId === 'smok' && s.gatunek) {
+      if (s.ownLook) smokSmierc(this, s, s.gatunek); // the artist's dragon lies down and fades
       this.enemies = this.enemies.filter((e) => e !== s);
       this.smokiNaMapie?.pokonany(s);
       this.smokLup(s.gatunek, s.x, s.y);

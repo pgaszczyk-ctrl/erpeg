@@ -78,3 +78,26 @@ export const LIMIT_EFEKTOW = 24;
  * Dopiero od poziomu `odPoziomu` i gdy historia „Cień smoka” je odblokuje (Mag Albrecht wysłał na smoka – etap 'smok' albo dalej).
  */
 export const SMOKI_NA_MAPIE = { odPoziomu: 5, szansa: 0.18, maksMiejsc: 4, prob: 14, odDomuM: 600, odMiejscM: 120, odRuchu: 1600 };
+
+/**
+ * Rysunki smoków od grafika (zamówienie 15b; robi je scripts/smok-gorski.py ze źródeł w scripts/smoki-zrodla/):
+ * arkusz klatek w jednej skali (2 px obrazu na punkt mapy, długość 6 wzrostów bohaterki – zamówienie mówi 8–9, ale na telefonie
+ * zasłaniał bohaterkę i pół ekranu), środek masy sylwetki w punkcie `srodek` komórki (tam stoi smok w grze), łapy `doLap` px niżej. Kierunki: przod (do kamery), bok (w lewo, w prawo lustrem), tyl.
+ * Gatunek bez rysunków zostaje zaślepką z kodu.
+ */
+export const RYSUNKI_SMOKOW: Partial<Record<GatunekId, { plik: string; komorka: [number, number]; srodek: [number, number]; doLap: number; klatki: string[]; efekty: boolean }>> = {
+  gorski: {
+    plik: 'swiat/smoki/smok_gorski.png', komorka: [216, 194], srodek: [108, 89], doLap: 65.6,
+    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "ladowanie_przod_1", "ladowanie_przod_2", "ladowanie_przod_3", "lot_gora_1", "lot_gora_2", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "start_bok_1", "start_bok_2", "start_bok_3", "start_przod_1", "start_przod_2", "start_przod_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
+    efekty: true,
+  },
+};
+
+/** Efekty uderzenia od grafika (public/swiat/smoki/efekt_*.png, klatki obok siebie): szerokość klatki, ile klatek, wysokość. */
+export const EFEKTY_SMOKOW = { fala: [137, 4, 106], pyl: [67, 3, 53], pekniecia: [83, 2, 68], odlamek: [11, 6, 13] } as const;
+
+/** Smoki na serwerze testowym, zawsze w tym samym miejscu (bez poziomu i historii): przy miejscu o tym id, `odM` metrów obok. */
+export const SMOKI_TESTOWE: { miejsce: string; gatunek: GatunekId; odM: number }[] = [
+  // Właściciel 7.10.2026: smok górski do testu przy Decathlonie (Gęsia 1, przy al. Kraśnickiej).
+  { miejsce: 'gear:3703:14957', gatunek: 'gorski', odM: 45 },
+];

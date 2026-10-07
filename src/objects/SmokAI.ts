@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { Slime } from './Slime';
 import type { Player } from './Player';
 import { TEX } from '../art';
+import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU } from './smokRysunki';
+import { RYSUNKI_SMOKOW } from '../content/smoki';
 import { ATAKI_SMOKA as A, GATUNKI_SMOKOW, TRUDNOSC_SMOKOW, LIMIT_EFEKTOW, PRZERWA_MIEDZY_ATAKAMI, type AtakSmoka, type GatunekId } from '../content/smoki';
 
 // Smok jako dane (content/smoki.ts): gatunek + ataki. Ugryzienie ma każdy; ataki specjalne (ogień, kwas, dym, lot)
@@ -67,7 +69,49 @@ export class SmokAI {
       d.setTint(g.kolor);
     }
     if (g.skala !== 1) d.setScale(d.scaleX * g.skala);
+    this.skala = d.scaleX;
     this.zycieMax = d.hp;
+    // Rysunki od grafika (content/smoki.ts RYSUNKI_SMOKOW): wczytywane przy pierwszym smoku tego gatunku.
+    const r = RYSUNKI_SMOKOW[gatunek];
+    if (r) void zaladujSmoka(scene, gatunek).then((ok) => {
+      if (!ok || !d.active) return;
+      d.anims.stop();
+      d.clearTint();
+      d.setTexture(kluczSmoka(gatunek), klatkaSmoka(gatunek, 'stoi_przod_1'));
+      d.setScale(SKALA_RYSUNKU);
+      // Punkt smoka = środek ciała (nie łapy): duży smok zatrzymuje się przed bohaterką, a nie staje na niej.
+      d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
+      d.ownLook = true;
+      d.sizeOverride = Math.round(r.komorka[0] * SKALA_RYSUNKU * 0.24);
+      this.skala = SKALA_RYSUNKU;
+      this.rysunek = true;
+    });
+  }
+
+  /** Smok narysowany przez grafika (a nie zaślepka z kodu). */
+  private rysunek = false;
+  private skala = 1;
+  private animacja = '';
+
+  /** Kierunek do kamery/bok/od kamery wg wektora (bok patrzy w lewo, w prawo lustrem). */
+  private kierunek(vx: number, vy: number): { k: string; lustro: boolean } {
+    if (Math.abs(vx) >= Math.abs(vy) * 0.8) return { k: 'bok', lustro: vx > 0 };
+    return { k: vy > 0 ? 'przod' : 'tyl', lustro: false };
+  }
+
+  /** Animacja z arkusza grafika (gdy jest): akcja w kierunku, z lustrem; jednorazowe nie zaczynają się od nowa co klatkę. */
+  private graj(akcja: string, vx: number, vy: number, kierunekStaly?: string) {
+    if (!this.rysunek) return;
+    const d = this.d;
+    let { k, lustro } = this.kierunek(vx, vy);
+    if (kierunekStaly) { k = kierunekStaly; lustro = kierunekStaly === 'bok' ? lustro : false; }
+    if (!maAnimacje(this.scene, this.gatunek, akcja, k)) k = maAnimacje(this.scene, this.gatunek, akcja, 'przod') ? 'przod' : 'bok';
+    const key = `${kluczSmoka(this.gatunek)}-${akcja}_${k}`;
+    d.setFlipX(lustro);
+    if (this.animacja !== key || !d.anims.isPlaying && (akcja === 'stoi' || akcja === 'idzie')) {
+      this.animacja = key;
+      d.anims.play(key, true);
+    }
   }
 
   private get tf() { return TRUDNOSC_SMOKOW.telegraf[this.host.trudnosc] ?? 1; }
@@ -93,7 +137,7 @@ export class SmokAI {
     const W = this.W;
     // Zauważa bohaterkę dopiero w swoim promieniu (gatunek.wykrycie); potem walczy do końca.
     if (!this.zauwazyl) {
-      if (dist > GATUNKI_SMOKOW[this.gatunek].wykrycie * this.W && this.zycieMax <= d.hp) { d.vel.set(0, 0); return; }
+      if (dist > GATUNKI_SMOKOW[this.gatunek].wykrycie * this.W && this.zycieMax <= d.hp) { d.vel.set(0, 0); this.graj('stoi', 0, 1); return; }
       this.zauwazyl = true;
     }
     d.chasing = true;
@@ -102,9 +146,10 @@ export class SmokAI {
     if (this.tryb === 'idzie') {
       d.clearTint();
       const g = GATUNKI_SMOKOW[this.gatunek];
-      if (g.kolor !== 0xffffff) d.setTint(g.kolor);
+      if (g.kolor !== 0xffffff && !this.rysunek) d.setTint(g.kolor);
       if (dist > pysk - 2) d.vel.set(ux * g.predkosc, uy * g.predkosc);
       else d.vel.set(0, 0);
+      this.graj(d.vel.lengthSq() > 1 ? 'idzie' : 'stoi', ux, uy);
       if (dist < pysk && now >= (this.odnowione.ugryzienie ?? 0)) {
         // Ugryzienie: cofa się na chwilę (telegraf), potem kłapie przed siebie.
         this.tryb = 'gryzie';
@@ -119,6 +164,7 @@ export class SmokAI {
       return;
     }
     if (this.tryb === 'gryzie') {
+      this.graj('ugryzienie', Math.cos(this.kat), Math.sin(this.kat));
       const k = (this.until - now) / (A.ugryzienie.telegraf * this.tf);
       d.vel.set(-Math.cos(this.kat) * 14 * k, -Math.sin(this.kat) * 14 * k);
       if (now >= this.until) {
@@ -150,6 +196,7 @@ export class SmokAI {
     }
     if (this.tryb === 'oszolomiony') {
       d.vel.set(0, 0);
+      if (!d.inAir) this.graj('ladowanie', 0, 1, 'przod');
       if (now >= this.until) {
         d.clearTint();
         this.tryb = 'idzie';
@@ -275,13 +322,15 @@ export class SmokAI {
   private leci(now: number) {
     const d = this.d, l = this.lot!, p = this.host.player, W = this.W;
     if (l.mign === 0 && now < this.until) {
-      d.setScale(d.scaleX * 1.002); // przysiad i wzbicie (zaślepka)
+      // Start: przysiad, skrzydła, wzbicie (rysunek grafika), u zaślepki tylko lekkie urośnięcie.
+      if (this.rysunek) this.graj('start', p.x - d.x, p.y - d.y);
+      else d.setScale(d.scaleX * 1.002);
       return;
     }
     if (l.mign === 0) {
       d.setVisible(false);
       d.inAir = true;
-      d.setScale(GATUNKI_SMOKOW[this.gatunek].skala);
+      d.setScale(this.skala);
     }
     const odstep = TRUDNOSC_SMOKOW.odstepLotu[this.host.trudnosc] ?? A.lot.odstep;
     if (l.mign < A.lot.migniecia && now >= l.nastepne) {
@@ -291,7 +340,11 @@ export class SmokAI {
       if (l.mign < A.lot.blokadaOd) { l.px += (p.x - l.px) * 0.5; l.py += (p.y - l.py) * 0.5; }
       l.cien?.destroy();
       const k = 0.6 + 0.2 * l.mign;
-      l.cien = this.scene.add.image(l.px, l.py, TEX.dragonShadow, 'f0').setDepth(ZIEMIA + 3).setAlpha(0.2 + 0.15 * l.mign).setScale(k * 1.4);
+      // Cień z rysunku lotu z góry (grafik: „cień robimy kodem z tego rysunku”), u zaślepki narysowany cień smoka.
+      l.cien = this.rysunek
+        ? this.scene.add.image(l.px, l.py, kluczSmoka(this.gatunek), klatkaSmoka(this.gatunek, `lot_gora_${1 + (l.mign % 2)}`)).setTint(0x000000).setScale(this.skala * k)
+        : this.scene.add.image(l.px, l.py, TEX.dragonShadow, 'f0').setScale(k * 1.4);
+      l.cien.setDepth(ZIEMIA + 3).setAlpha(this.rysunek ? 0.35 + 0.2 * l.mign : 0.2 + 0.15 * l.mign);
       this.scene.tweens.add({ targets: l.cien, alpha: 0, duration: odstep * 0.8, ease: 'Quad.In' });
       this.znacznik!.clear().lineStyle(1.5, 0xff3b30, 0.5 + 0.15 * l.mign).strokeCircle(l.px, l.py, A.lot.promien * W);
       return;
@@ -303,8 +356,14 @@ export class SmokAI {
       d.setPosition(l.px, l.py);
       d.setVisible(true);
       d.inAir = false;
-      const s = GATUNKI_SMOKOW[this.gatunek].skala * d.kind.scale;
+      const s = this.skala;
       d.setScale(s * 1.6);
+      if (this.rysunek) {
+        this.animacja = '';
+        d.setFlipX(false);
+        d.anims.stop();
+        d.setFrame(klatkaSmoka(this.gatunek, 'lot_gora_1'));
+      }
       this.scene.tweens.add({ targets: d, scaleX: s, scaleY: s, duration: A.lot.upadek, ease: 'Quad.In', onComplete: () => this.uderzenie(this.scene.time.now) });
       this.tryb = 'oszolomiony';
       this.until = now + A.lot.upadek + A.lot.oszolomienie;
@@ -319,9 +378,12 @@ export class SmokAI {
     // Trzęsienie słabnie z odległością (do 3 promieni).
     const sila = Math.max(0, 1 - dist / (R * 3));
     if (sila > 0) this.host.shake(Math.max(1, Math.round(A.lot.trzesienie.px * sila)), A.lot.trzesienie.ms);
-    fala(this.scene, d.x, d.y, R);
-    pekniecia(this.scene, d.x, d.y, R * 0.7, A.lot.peknieciaMs, now);
-    d.setTint(0x9a9aa8);
+    if (this.scene.textures.exists(kluczEfektu('fala'))) efektyUderzenia(this.scene, d.x, d.y, A.lot.peknieciaMs, now);
+    else {
+      fala(this.scene, d.x, d.y, R);
+      pekniecia(this.scene, d.x, d.y, R * 0.7, A.lot.peknieciaMs, now);
+    }
+    if (!this.rysunek) d.setTint(0x9a9aa8);
     this.odnowione.lot = now + A.lot.odnowienie;
     this.wolnyOd = now + A.lot.oszolomienie + PRZERWA_MIEDZY_ATAKAMI;
     this.atak = null;
@@ -501,6 +563,38 @@ function fala(scene: Phaser.Scene, x: number, y: number, R: number) {
     },
     onComplete: () => g.destroy(),
   });
+}
+
+/** Upadek z rysunkami grafika: fala (4 klatki), pył (3), pęknięcia (świeże → wyblakłe), odłamki rozrzucone kodem. */
+function efektyUderzenia(scene: Phaser.Scene, x: number, y: number, ms: number, now: number) {
+  const K = SKALA_RYSUNKU;
+  const fala = scene.add.sprite(x, y, kluczEfektu('fala'), 0).setScale(K).setDepth(POWIETRZE);
+  let f = 0;
+  scene.time.addEvent({ delay: 90, repeat: 3, callback: () => { f++; if (f < 4) fala.setFrame(f); else scene.tweens.add({ targets: fala, alpha: 0, duration: 200, onComplete: () => fala.destroy() }); } });
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.4;
+    const pyl = scene.add.sprite(x + Math.cos(a) * 14, y + Math.sin(a) * 8, kluczEfektu('pyl'), 0).setScale(K).setDepth(POWIETRZE - 1);
+    let k = 0;
+    scene.time.addEvent({ delay: 160, repeat: 2, callback: () => { k++; if (k < 3) pyl.setFrame(k); } });
+    scene.tweens.add({ targets: pyl, y: pyl.y - 10, alpha: 0, delay: 250, duration: 700, onComplete: () => pyl.destroy() });
+  }
+  const pek = scene.add.image(x, y, kluczEfektu('pekniecia'), 0).setScale(K).setDepth(ZIEMIA + 1);
+  dodaj({ g: pek, od: now, do: now + ms, tick: (t) => { if (t > now + ms / 2 && pek.frame.name !== '1') pek.setFrame(1); pek.setAlpha(Math.min(1, (now + ms - t) / 4000)); } });
+  for (let i = 0; i < 6; i++) {
+    const a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 22;
+    const o = scene.add.image(x, y - 4, kluczEfektu('odlamek'), i).setScale(K).setDepth(POWIETRZE);
+    scene.tweens.add({ targets: o, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.6, angle: (Math.random() - 0.5) * 360, duration: 420, ease: 'Quad.Out' });
+    scene.tweens.add({ targets: o, alpha: 0, delay: 1800, duration: 600, onComplete: () => o.destroy() });
+  }
+}
+
+/** Śmierć smoka z rysunkiem: kopia leży i gaśnie (3 klatki z boku), bo prawdziwy obiekt gra zaraz usuwa. */
+export function smokSmierc(scene: Phaser.Scene, d: Slime, gatunek: GatunekId) {
+  const key = `${kluczSmoka(gatunek)}-smierc_bok`;
+  if (!scene.anims.exists(key)) return;
+  const c = scene.add.sprite(d.x, d.y, kluczSmoka(gatunek)).setOrigin(d.originX, d.originY).setScale(d.scaleX).setFlipX(d.flipX).setDepth(d.depth);
+  c.play(key);
+  scene.tweens.add({ targets: c, alpha: 0, delay: 1600, duration: 900, onComplete: () => c.destroy() });
 }
 
 /** Pęknięcia ziemi po upadku (dekoracja). */
