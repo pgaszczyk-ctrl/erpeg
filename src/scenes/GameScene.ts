@@ -1091,7 +1091,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     // A swing at a building door (or while standing at one) goes in.
-    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy))) return;
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy, true))) return;
     if (ranged && !gathering) {
       if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
       return;
@@ -2074,10 +2074,11 @@ export class GameScene extends Phaser.Scene {
       const img = this.markers.get(rm.m.id);
       if (!img) continue;
       const st = missionState(rm.m);
-      img.setTexture(st === 'done' ? TEX.markerDone : TEX.marker);
+      img.setTexture(TEX.marker);
       img.setAlpha(st === 'active' ? 0.5 : 1);
-      // A mission whose requirements aren't met yet stays hidden (mission chains, admin panel).
-      img.setVisible(missionAvailable(rm.m));
+      // A mission whose requirements aren't met yet stays hidden (mission chains, admin panel), and a
+      // finished one leaves no mark: the place or person there is just itself again (owner, 7 Oct 2026).
+      img.setVisible(missionAvailable(rm.m) && st !== 'done');
     }
   }
 
@@ -2166,7 +2167,7 @@ export class GameScene extends Phaser.Scene {
    * A building door a swing lands on (or the hero stands at): a shop, school,
    * church, mission building… Buildings open with a swing, not by walking in.
    */
-  private openDoorAt(x: number, y: number): boolean {
+  private openDoorAt(x: number, y: number, standing = false): boolean {
     const fx = x;
     const fy = y;
     let id: string | null = null;
@@ -2175,8 +2176,11 @@ export class GameScene extends Phaser.Scene {
     // Several missions can share a door (mission chains): the one finished last waits behind the
     // one that matters now – ready to hand in, in progress, new – and hidden ones don't open at all.
     const rank = (rm: ResolvedMission) => ({ goal: 0, active: 1, new: 2, done: 3 })[missionState(rm.m)];
+    // A finished mission only answers a swing aimed at its door (a short thanks), never the hero just
+    // standing there, so it doesn't catch every swing nearby.
     const atDoor = this.missions
       .filter((rm) => missionAvailable(rm.m) && Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS)
+      .filter((rm) => !(standing && missionState(rm.m) === 'done'))
       .sort((a, b) => rank(a) - rank(b));
     // A place at the same door (station, hotel, church, shop…) must stay reachable: a finished mission
     // gives way to it, an open one gets a button for it in its dialog.
@@ -2185,6 +2189,7 @@ export class GameScene extends Phaser.Scene {
     const shared = rm ? placeAt(rm.door) : undefined;
     if (rm && !(shared && missionState(rm.m) === 'done')) {
       id = rm.m.id;
+      if (missionState(rm.m) === 'done') savePoint = false;
       // A mission taken at a church/school keeps its door, but asking about the shadows must stay possible there (report 58).
       const host = shared && STORY_PLACES.has(shared.kind) ? shared : undefined;
       open = () => {
@@ -2221,12 +2226,25 @@ export class GameScene extends Phaser.Scene {
   /** Adds a mission to the game: gold "!" over its door, goal enemies. */
   private addMission(rm: ResolvedMission, highlight: boolean) {
     this.missions.push(rm);
-    if (highlight && rm.door.building) this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
+    if (highlight && rm.door.building && missionState(rm.m) !== 'done') this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
     // Above the fog: mission doors are always shown.
     const img = this.add.image(rm.door.x, rm.door.y - 14, TEX.marker).setDepth(1_100_000);
     this.tweens.add({ targets: img, y: img.y - 4, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.markers.set(rm.m.id, img);
     if (missionState(rm.m) === 'active') this.startMissionGoal(rm);
+  }
+
+  /** A finished mission's building loses its gold roof: back to its place's own look, or plain. */
+  private plainAgain(id: string) {
+    const b = this.missions.find((r) => r.m.id === id)?.door.building;
+    if (!b || !this.mapView.highlight.has(b)) return;
+    // Another open mission at the same building keeps it gold.
+    if (this.missions.some((r) => r.m.id !== id && r.door.building === b && missionAvailable(r.m) && missionState(r.m) !== 'done')) return;
+    this.mapView.highlight.delete(b);
+    const p = this.city.places.find((q) => q.building === b);
+    if (p) this.mapView.highlight.set(b, { roof: PLACE_LOOK[p.kind].roof, wall: PLACE_LOOK[p.kind].wall });
+    const rm = this.missions.find((r) => r.m.id === id)!;
+    this.mapView.redrawAround(rm.door.x, rm.door.y);
   }
 
   private openPlace(p: CityPlace) {
@@ -4135,6 +4153,7 @@ export class GameScene extends Phaser.Scene {
           this.time.delayedCall(2600, () => this.toast(`🐴 Zniżka u woźniców: −${Math.round(WOZNICA.znizka * 100)}% na zawsze, a na dworcu ${WOZNICA.gratisNaStacji} jeden kurs gratis!`, 4000));
         }
         setMissionState(m, 'done');
+        this.plainAgain(m.id);
         this.refreshMarkers();
         this.emitHud();
         this.save(); // finishing a mission is a save point
@@ -4283,7 +4302,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Mission doors for the map screen. */
   missionMarkers() {
-    return this.missions.filter((rm) => missionAvailable(rm.m)).map((rm) => ({ x: rm.door.x, y: rm.door.y, done: missionState(rm.m) === 'done' }));
+    return this.missions.filter((rm) => missionAvailable(rm.m) && missionState(rm.m) !== 'done').map((rm) => ({ x: rm.door.x, y: rm.door.y, done: false }));
   }
 
   goalPosition() {
