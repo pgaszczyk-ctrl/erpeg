@@ -8,6 +8,7 @@ import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { PX_PER_M } from '../map/CityMap';
 import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
 import { POKRETLA } from '../content/ustawienia';
+import { etapyEditor } from './etapyEditor';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -327,6 +328,9 @@ function missionEditor(id: string | null) {
     odp2: inp(z.odpowiedzi?.[2] ?? '', { placeholder: 'odpowiedź 3' }),
     dobra: el('select', {}, [0, 1, 2].map((i) => el('option', { value: String(i), selected: (z.dobra ?? 0) === i }, [`dobra jest odpowiedź ${i + 1}`]))),
     podpowiedz: inp(z.podpowiedz ?? '', { placeholder: 'co powie po złej odpowiedzi' }),
+    wiele: el('input', { type: 'checkbox', checked: !!m.etapy?.length }),
+    przedmioty: el('select', { multiple: true, size: 5 }, PRZEDMIOTY.filter((p) => p.id !== 'kijek').map((p) => el('option', { value: p.id, selected: !!m.przedmioty?.includes(p.id) }, [p.nazwa]))),
+    tytulB: inp(m.tytul_bohatera ?? '', { placeholder: 'np. Strażnik Serca Miasta (puste = bez tytułu)' }),
   };
   const field = (label: string, input: HTMLElement, note?: string) => el('label', { className: 'f' }, [el('span', {}, [label]), input, note ? el('small', { className: 'muted' }, [note]) : null]);
   const riddleFields = el('div', { className: 'card' }, [
@@ -341,21 +345,33 @@ function missionEditor(id: string | null) {
     f.misje,
     el('label', { className: 'row' }, [f.wPrzedmiot, 'Przedmiot w plecaku:', f.wymagany, f.zabierz, 'zabierz po przyjęciu']),
   ]);
-  const taskFields = el('div', {}, [
+  // The stage cards report changes before `update` exists (while they're built): wire it up below.
+  let refresh = () => {};
+  const stages = etapyEditor(m.etapy ?? [], WROGOWIE, () => refresh());
+  const singleTask = el('div', {}, [
     field('Miejsce zadania (adres)', f.miejsce, 'Gdzie są wrogowie albo dokąd trzeba dojść.'),
     el('div', { className: 'row' }, [field('Ilu wrogów', f.ile), field('Jaki wróg', f.wrog)]),
     field('Cel (pokazywany na ekranie)', f.cel),
     el('label', { className: 'row' }, [f.szukaj, 'Trzeba szukać (strzałka pokazuje tylko okolicę)']),
     riddleFields,
     el('label', { className: 'row' }, [f.naMiejscu, 'Zakończ na miejscu (nagroda od razu po wykonaniu, bez powrotu)']),
+  ]);
+  const stagesBox = el('div', {}, [
+    el('p', { className: 'muted' }, ['Etapy idą po kolei; misja kończy się (z nagrodą) po ostatnim etapie, tam gdzie on się dzieje – zwykle ostatni etap to rozmowa ze zleceniodawcą.']),
+    stages.box,
+  ]);
+  const taskFields = el('div', {}, [
+    singleTask,
+    stagesBox,
     field('Co mówi po wykonaniu', f.zakonczenie),
     el('div', { className: 'row' }, [field('Nagroda (monety)', f.nagroda), field('EXP', f.exp), field('Diamenty', f.diamenty), field('Przedmiot w nagrodę', f.przedmiot)]),
+    el('div', { className: 'row' }, [field('Więcej przedmiotów (Ctrl/⌘)', f.przedmioty), field('Tytuł bohatera w nagrodę', f.tytulB)]),
   ]);
   const preview = el('div');
   const msg = el('p', { className: 'msg' });
 
   const read = (): Misja => {
-    const typ = f.typ.value as Misja['zadanie']['typ'];
+    const typ = (f.wiele.checked ? 'idz' : f.typ.value) as Misja['zadanie']['typ'];
     const out: Misja = {
       id: id ?? '', tytul: f.tytul.value.trim(), adres: f.adres.value.trim(), opis: f.opis.value.trim(),
       zakonczenie: f.zakonczenie.value.trim(), nagroda: Math.max(0, Number(f.nagroda.value) || 0),
@@ -373,6 +389,17 @@ function missionEditor(id: string | null) {
             ...(f.szukaj.checked ? { szukaj: true } : {}),
           },
     };
+    if (f.wiele.checked && typ !== 'brak') {
+      const etapy = stages.read();
+      if (etapy.length) {
+        out.etapy = etapy;
+        // `zadanie` = the first stage, so everything that reads one task still finds one.
+        out.zadanie = { ...etapy[0] };
+      }
+    }
+    const more = [...f.przedmioty.selectedOptions].map((o) => o.value);
+    if (more.length && typ !== 'brak') out.przedmioty = more;
+    if (f.tytulB.value.trim() && typ !== 'brak') out.tytul_bohatera = f.tytulB.value.trim();
     if (f.seria.value.trim()) out.seria = f.seria.value.trim();
     if (f.tylkoTest.checked) out.tylkoTest = true;
     const wymaga: NonNullable<Misja['wymaga']> = {};
@@ -397,6 +424,10 @@ function missionEditor(id: string | null) {
     taskFields.style.display = typ === 'brak' ? 'none' : '';
     f.ile.parentElement!.style.display = f.wrog.parentElement!.style.display = typ === 'pokonaj' ? '' : 'none';
     riddleFields.style.display = typ === 'zagadka' ? '' : 'none';
+    const wiele = f.wiele.checked;
+    singleTask.style.display = wiele ? 'none' : '';
+    stagesBox.style.display = wiele ? '' : 'none';
+    f.typ.parentElement!.style.display = wiele ? 'none' : '';
     f.szukaj.parentElement!.style.display = typ === 'pokonaj' ? '' : 'none';
     preview.replaceChildren(missionPreview(read()));
   };
@@ -404,6 +435,7 @@ function missionEditor(id: string | null) {
     e.addEventListener('input', update);
     e.addEventListener('change', update);
   }
+  refresh = update;
 
   const save = btn('💾 Zapisz', async () => {
     const mm = read();
@@ -437,6 +469,7 @@ function missionEditor(id: string | null) {
         field('Adres budynku (tu się ją dostaje)', f.adres, 'Jak na tabliczce: „Ulica numer”. Znaczek ✓/✗ w podglądzie mówi, czy jest na mapie.'),
         field('Główna nazwa questa (seria)', f.seria, 'Misje z tą samą nazwą tworzą jedną historię; w dzienniku: „⚙ Seria – część N: tytuł”.'),
         needs,
+        el('label', { className: 'row' }, [f.wiele, 'Misja wieloetapowa (etapy po kolei)']),
         field('Rodzaj', f.typ),
         field('Co mówi zleceniodawca', f.opis),
         taskFields,

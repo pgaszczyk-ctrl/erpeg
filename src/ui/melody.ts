@@ -46,9 +46,21 @@ function staff(notes: number[], lit = -1, ghost = false) {
   return s + '</svg>';
 }
 
-export function playMelody(length: number): Promise<void> {
+/** Texts and a fixed tune for melodies outside the dragon story (mission stages „melodia”). */
+export interface MelodyOptions {
+  /** Fixed notes 0–4 (Do…Sol); they stay the same after misses. */
+  notes?: number[];
+  title?: string;
+  intro?: string;
+  /** Label over the tune, e.g. „Organy grają:”. */
+  hums?: string;
+}
+
+export function playMelody(length: number, opts: MelodyOptions = {}): Promise<void> {
   return new Promise((resolve) => {
-    let notes = tune(length);
+    const fixed = opts.notes?.filter((n) => n >= 0 && n < NUTY.length);
+    if (fixed?.length) length = fixed.length;
+    let notes = fixed?.length ? [...fixed] : tune(length);
     let typed: number[] = [];
     let busy = false;
     let wrong = 0;
@@ -58,9 +70,9 @@ export function playMelody(length: number): Promise<void> {
     const box = document.createElement('div');
     box.className = 'm-box';
     const h = document.createElement('h2');
-    h.textContent = MELODIA.tytul;
+    h.textContent = opts.title ?? MELODIA.tytul;
     const p = document.createElement('p');
-    p.textContent = MELODIA.wstep;
+    p.textContent = opts.intro ?? MELODIA.wstep;
     const song = document.createElement('div');
     const mine = document.createElement('div');
     const note = document.createElement('p');
@@ -98,7 +110,7 @@ export function playMelody(length: number): Promise<void> {
           // A few wrong tries in a row: the dragon hums a new one.
           setTimeout(() => {
             typed = [];
-            if (++wrong % 3 === 0) notes = tune(length);
+            if (++wrong % 3 === 0 && !fixed?.length) notes = tune(length);
             hum();
           }, 900);
           return;
@@ -122,7 +134,7 @@ export function playMelody(length: number): Promise<void> {
       hum();
     };
     const label = (t: string) => Object.assign(document.createElement('div'), { textContent: t, style: 'font-size:12px;color:#9aa39a;margin-top:4px' });
-    box.append(h, p, label(MELODIA.smokNuci), song, label(MELODIA.twojaFujarka), mine, note, keys, again);
+    box.append(h, p, label(opts.hums ?? MELODIA.smokNuci), song, label(MELODIA.twojaFujarka), mine, note, keys, again);
     root.append(box);
     document.body.append(root);
     draw();

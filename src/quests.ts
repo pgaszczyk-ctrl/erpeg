@@ -1,6 +1,6 @@
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
-import { MISJE, type Miejsce, type Misja } from './content/fabula';
+import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
@@ -67,6 +67,10 @@ export const session = {
   mikstury: 0,
   /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
   bezStrzalki: [] as string[],
+  /** Multi-stage missions: the current stage number per mission id (saved as `etap`). */
+  etap: {} as Record<string, number>,
+  /** Story items (names) from mission stages – not in the backpack, can't be sold (saved as `fabula`). */
+  fabula: [] as string[],
   /** Own tents: nights left of each. */
   namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
@@ -182,6 +186,8 @@ export function startSession(r: LoginResult) {
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
+  session.etap = p.save.etap && typeof p.save.etap === 'object' ? { ...p.save.etap } : {};
+  session.fabula = Array.isArray(p.save.fabula) ? p.save.fabula.filter((x) => typeof x === 'string').slice(0, 60) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
   session.mapId = 'lublin';
   session.arrive = null;
@@ -224,7 +230,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty,
+    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
   };
@@ -251,6 +257,38 @@ export function missionAvailable(m: Misja) {
   if (w.misje?.some((id) => session.missions[id] !== 'done')) return false;
   if (w.przedmiot && !owns(w.przedmiot)) return false;
   return true;
+}
+
+/** How many stages a mission has (a plain mission is one stage: its `zadanie`). */
+export function stageCount(m: Misja) {
+  return m.etapy?.length ? m.etapy.length : 1;
+}
+
+/** The current stage's number (0-based). */
+export function stageIndex(m: Misja) {
+  return Math.min(session.etap[m.id] ?? 0, stageCount(m) - 1);
+}
+
+/** The task of the current stage (multi-stage missions) or the mission's only task. */
+export function zadanieOf(m: Misja): Etap {
+  return m.etapy?.length ? m.etapy[stageIndex(m)] : m.zadanie;
+}
+
+/** Only the character level is missing (the rest is met): the giver says „come back at level N”. */
+export function levelLock(m: Misja): number | null {
+  const w = m.wymaga;
+  if (missionState(m) !== 'new' || !w?.poziom || poziomPostaci(session.exp) >= w.poziom) return null;
+  if (w.misje?.some((id) => session.missions[id] !== 'done')) return null;
+  if (w.przedmiot && !owns(w.przedmiot)) return null;
+  return w.poziom;
+}
+
+/** Story items: give / take by name. */
+export function giveStory(names: string[] | undefined) {
+  for (const n of names ?? []) if (n && !session.fabula.includes(n)) session.fabula.push(n);
+}
+export function takeStory(names: string[] | undefined) {
+  if (names?.length) session.fabula = session.fabula.filter((n) => !names.includes(n));
 }
 
 /** Which part of its series a mission is (1 + the longest chain of earlier series missions it needs). */
@@ -445,15 +483,27 @@ export interface ResolvedMission {
   target: Place | null;
 }
 
+/** Where the current stage happens: its own place, or the giver's door when it names none. */
+export function stageTarget(city: CityMap, m: Misja, door: Place): Place | null {
+  const z = zadanieOf(m);
+  if (z.typ === 'brak') return door;
+  const at = z.miejsce;
+  if (at === '' || at === undefined || at === null) return door;
+  return resolvePlace(city, at);
+}
+
 /** Resolves every mission; addresses not found on the map are reported. */
 export function resolveMissions(city: CityMap) {
   const ok: ResolvedMission[] = [];
   const missing: string[] = [];
   for (const m of [...MISJE, ...session.extra]) {
     const door = resolvePlace(city, m.adres);
-    const target = m.zadanie.typ === 'brak' ? door : resolvePlace(city, m.zadanie.miejsce);
+    const target = door ? stageTarget(city, m, door) : null;
+    const z = zadanieOf(m);
     if (!door) missing.push(m.adres);
-    else if (!target) missing.push(typeof m.zadanie.miejsce === 'string' ? m.zadanie.miejsce : JSON.stringify(m.zadanie.miejsce));
+    else if (!target) missing.push(typeof z.miejsce === 'string' ? z.miejsce : JSON.stringify(z.miejsce));
+    // Every stage's place, so a typo shows up at once, not halfway through a chain.
+    for (const e of m.etapy ?? []) if (door && typeof e.miejsce === 'string' && e.miejsce && !resolvePlace(city, e.miejsce)) missing.push(e.miejsce);
     if (door) ok.push({ m, door, target });
   }
   return { missions: ok, missing };

@@ -69,6 +69,7 @@ import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
   session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
+  zadanieOf, stageIndex, stageCount, stageTarget, levelLock, giveStory, takeStory,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -78,6 +79,7 @@ import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
 import { DragonBrain } from '../objects/Dragon';
+import { Etapy } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
 import { SEN } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
@@ -290,6 +292,8 @@ export class GameScene extends Phaser.Scene {
   private noArrowsToast = -1e9;
   private glow!: Phaser.GameObjects.Graphics;
   private npcs!: Npcs;
+  /** Mission stages beyond fights/walks/gathering (Etapy.ts). */
+  private etapy!: Etapy;
   private fixed!: FixedNpcs;
   private wornKey = '';
   private home: Building | null = null;
@@ -375,6 +379,27 @@ export class GameScene extends Phaser.Scene {
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
+    this.etapy?.destroy();
+    this.etapy = new Etapy({
+      scene: this,
+      city: this.city,
+      player: this.player,
+      dialog: (r) => this.dialog(r),
+      toast: (t, ms) => this.toast(t, ms),
+      stageDone: (rm, said) => this.completeStage(rm, said),
+      stageBack: (rm) => this.stageBack(rm),
+      hurtStory: () => {
+        // One heart (2 halves), never the last one.
+        this.player.hp = Math.max(Math.min(2, this.player.hp), this.player.hp - 2);
+        this.emitHud();
+      },
+      pay: (n) => {
+        if (session.coins < n) return false;
+        spend(n);
+        this.emitHud();
+        return true;
+      },
+    });
     this.orchards = new Orchards(this, this.city);
     this.forest = new Forest(
       this,
@@ -446,7 +471,10 @@ export class GameScene extends Phaser.Scene {
     // Random missions taken earlier (churches, offices, police) and not finished.
     for (const m of Object.values(session.gen)) {
       const place = this.city.places.find((p) => p.id === m.placeId);
-      if (place) this.addMission({ m, door: { ...place.door, building: place.building ?? undefined }, target: resolvePlace(this.city, m.zadanie.miejsce) }, false);
+      if (place) {
+        const door = { ...place.door, building: place.building ?? undefined };
+        this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
+      }
     }
     this.refreshMarkers();
 
@@ -1389,7 +1417,7 @@ export class GameScene extends Phaser.Scene {
     if (s.temp || s.ambient) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
-      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.reachGoal(rm, 'Zadanie wykonane! ');
+      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.completeStage(rm, 'Zadanie wykonane! ');
     } else {
       // Fixed spots come back after a while.
       const home = s.home.clone();
@@ -2047,7 +2075,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startMissionGoal(rm: ResolvedMission) {
-    const z = rm.m.zadanie;
+    const z = zadanieOf(rm.m);
     if (z.typ === 'pokonaj' && rm.target) {
       this.enemies.filter((e) => e.missionId === rm.m.id).forEach((e) => e.destroy());
       this.enemies = this.enemies.filter((e) => e.missionId !== rm.m.id);
@@ -2157,6 +2185,15 @@ export class GameScene extends Phaser.Scene {
         this.withStoryPlace(host, () => this.openMissionDialog(rm));
         this.doorPlace = null;
       };
+    }
+    if (!id && !placeAt({ x: fx, y: fy })) {
+      // A chain mission waiting only for a higher level: the giver says when to come back.
+      const locked = this.missions.find((r) => levelLock(r.m) && Phaser.Math.Distance.Between(r.door.x, r.door.y, fx, fy) < DOOR_RADIUS);
+      if (locked) {
+        id = locked.m.id;
+        savePoint = false;
+        open = () => this.dialog({ title: locked.m.tytul, text: `Wróć, gdy nabierzesz krzepy (poziom ${levelLock(locked.m)}).`, buttons: ['Dobrze'], onChoose: () => {} });
+      }
     }
     if (!id) {
       for (const p of this.city.places) {
@@ -3977,7 +4014,7 @@ export class GameScene extends Phaser.Scene {
   private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
     const m = rm.m;
     const st = missionState(m);
-    if (m.zadanie.typ === 'brak') {
+    if (m.zadanie.typ === 'brak' && !m.etapy?.length) {
       // Just a place (e.g. a partner with a secret code on a flyer).
       this.missionDialog(m, { title: m.tytul, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
     } else if (st === 'new' && this.activeQuests().length >= ZADAN_NARAZ) {
@@ -4000,17 +4037,23 @@ export class GameScene extends Phaser.Scene {
             this.gearChanged();
           }
           setMissionState(m, 'active');
+          session.etap[m.id] = 0;
+          rm.target = stageTarget(this.city, m, rm.door);
           if (onAccept) onAccept(); // adds it, which also spawns its enemies
           else this.startMissionGoal(rm);
           this.refreshMarkers();
           this.emitHud();
           this.save();
+          this.etapy.begin(rm);
         },
       });
     } else if (st === 'active') {
-      const z = m.zadanie;
+      // A talk, riddle, choice… happening right at this door: start it (again) instead of „not yet”.
+      if (this.etapy.poke(rm)) return;
+      const z = zadanieOf(m);
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
-      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
+      const part = stageCount(m) > 1 ? ` (etap ${stageIndex(m) + 1} z ${stageCount(m)})` : '';
+      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś${part}.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
       this.finishMission(rm);
     } else {
@@ -4024,6 +4067,8 @@ export class GameScene extends Phaser.Scene {
       m.nagroda ? `${m.nagroda} monet` : '',
       `${missionExp(m)} EXP`,
       m.przedmiot ? item(m.przedmiot)?.nazwa ?? '' : '',
+      ...(m.przedmioty ?? []).map((id) => item(id)?.nazwa ?? ''),
+      m.tytul_bohatera ? `tytuł „${m.tytul_bohatera}”` : '',
       m.diamenty ? `${m.diamenty} 💎` : '',
       m.flaga === 'znizka_woznica' ? 'zniżka u woźniców' : '',
     ].filter(Boolean);
@@ -4041,7 +4086,7 @@ export class GameScene extends Phaser.Scene {
       onChoose: () => {
         if (missionState(m) !== 'goal') return; // already handed in (a double tap)
         const z = m.zadanie;
-        if (z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
+        if (!m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
           setMissionState(m, 'active');
           this.refreshMarkers();
           this.toast('Czegoś jednak brakuje w plecaku!');
@@ -4054,11 +4099,18 @@ export class GameScene extends Phaser.Scene {
           session.diamenty += m.diamenty;
           this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${m.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500));
         }
-        if (m.przedmiot) {
-          const where = addItem(m.przedmiot);
-          this.toast(where ? `Dostałeś: ${item(m.przedmiot)?.nazwa}!` : `Plecak pełny – ${item(m.przedmiot)?.nazwa} przepadł.`, 2500);
+        const gifts = [m.przedmiot, ...(m.przedmioty ?? [])].filter((x): x is string => !!x && !!item(x));
+        if (gifts.length) {
+          const lost = gifts.filter((id) => !addItem(id));
+          const got = gifts.filter((id) => !lost.includes(id));
+          this.toast([got.length ? `Dostałeś: ${got.map((id) => item(id)!.nazwa).join(', ')}!` : '', lost.length ? `Plecak pełny – przepadło: ${lost.map((id) => item(id)!.nazwa).join(', ')}.` : ''].filter(Boolean).join('\n'), 2500);
           this.gearChanged();
         }
+        if (m.tytul_bohatera) {
+          session.story.title = m.tytul_bohatera;
+          this.time.delayedCall(1200, () => this.toast(`🏅 Nowy tytuł: ${m.tytul_bohatera}!`, 3000));
+        }
+        delete session.etap[m.id];
         if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
           session.flagi.znizka_woznica = 1;
           session.flagi.przejazd = (session.flagi.przejazd ?? 0) + 1;
@@ -4079,42 +4131,50 @@ export class GameScene extends Phaser.Scene {
   private reachGoal(rm: ResolvedMission, said?: string) {
     setMissionState(rm.m, 'goal');
     this.refreshMarkers();
-    if (rm.m.naMiejscu) {
+    // Multi-stage missions end where their last stage happens (its last stage is usually the talk with the giver).
+    if (rm.m.naMiejscu || rm.m.etapy?.length) {
       this.finishMission(rm);
       return;
     }
     if (said !== undefined) this.toast(`${said}Wróć do: ${rm.m.adres}`);
   }
 
-  /** A riddle mission's question, asked on reaching its spot; a wrong answer shows the hint. */
-  private riddleAsked = new Set<string>();
-  private askMissionRiddle(rm: ResolvedMission) {
-    const z = rm.m.zadanie;
-    const answers = z.odpowiedzi?.filter((a) => a.trim()) ?? [];
-    if (!z.pytanie || !answers.length) return this.reachGoal(rm, 'Dotarłeś! ');
-    this.riddleAsked.add(rm.m.id);
-    this.dialog({
-      title: `🧩 ${rm.m.tytul}`,
-      text: z.pytanie,
-      buttons: [...answers, 'Muszę pomyśleć'],
-      onChoose: (i) => {
-        if (i >= answers.length) return;
-        if (i === (z.dobra ?? 0)) {
-          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
-          this.reachGoal(rm, 'Dobrze! ');
-          this.emitHud();
-          return;
-        }
-        this.dialog({
-          title: '🤔 Nie tym razem',
-          text: z.podpowiedz ? `Podpowiedź: ${z.podpowiedz}` : 'To nie to. Pomyśl jeszcze.',
-          buttons: ['Spróbuję jeszcze raz', 'Później'],
-          onChoose: (j) => {
-            if (j === 0) this.askMissionRiddle(rm);
-          },
-        });
-      },
-    });
+  /**
+   * The current stage is done: its story items change hands, its closing words show, and the mission moves
+   * on to the next stage – or, after the last one, to its reward (reachGoal). One-stage missions go straight on.
+   */
+  completeStage(rm: ResolvedMission, said?: string) {
+    const m = rm.m;
+    if (missionState(m) !== 'active') return;
+    const z = zadanieOf(m);
+    if (m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) return;
+    giveStory(z.daje);
+    takeStory(z.zabiera);
+    const last = stageIndex(m) >= stageCount(m) - 1;
+    const after = () => {
+      if (last) return this.reachGoal(rm, said);
+      session.etap[m.id] = stageIndex(m) + 1;
+      rm.target = stageTarget(this.city, m, rm.door);
+      this.startMissionGoal(rm);
+      this.emitHud();
+      this.save();
+      if (said) this.toast(`${said}Dalej: ${zadanieOf(m).cel}`, 2500);
+      this.etapy.begin(rm);
+    };
+    const gave = z.daje?.length ? `\n\n📜 Masz: ${z.daje.join(', ')}` : '';
+    // The closing words (komunikat), then the next stage. One-stage missions keep their old messages.
+    if (m.etapy?.length && (z.komunikat || gave)) this.dialog({ title: m.tytul, text: `${z.komunikat ?? ''}${gave}`.trim(), buttons: ['Dalej'], onChoose: after });
+    else after();
+  }
+
+  /** A timed walk ran out: back to the stage before it, no penalty. */
+  stageBack(rm: ResolvedMission) {
+    const m = rm.m;
+    session.etap[m.id] = Math.max(0, stageIndex(m) - 1);
+    rm.target = stageTarget(this.city, m, rm.door);
+    this.startMissionGoal(rm);
+    this.emitHud();
+    this.dialog({ title: `⏱ ${m.tytul}`, text: 'Czas minął! Spróbuj jeszcze raz.', buttons: ['Jeszcze raz'], onChoose: () => {} });
   }
 
   /** A mission dialog; where a secret code can be told, it gets one more button. */
@@ -4162,6 +4222,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private markersAt = 0;
+  private clockAt = 0;
 
   private checkGoals() {
     // Chains: a mission shows up as soon as its requirements are met (level, earlier mission, an item).
@@ -4169,35 +4230,35 @@ export class GameScene extends Phaser.Scene {
       this.markersAt = this.time.now + 1000;
       this.refreshMarkers();
     }
+    this.etapy.update(this.missions, this.time.now, this.game.loop.delta);
+    // A timed walk: the HUD line counts down.
+    if (this.time.now > this.clockAt && this.missions.some((rm) => this.etapy.secondsLeft(rm.m.id, this.time.now) !== null)) {
+      this.clockAt = this.time.now + 1000;
+      this.emitHud();
+    }
     for (const rm of this.missions) {
-      const z = rm.m.zadanie;
+      const z = zadanieOf(rm.m);
+      const st = missionState(rm.m);
+      const multi = !!rm.m.etapy?.length;
       if (z.typ === 'zbierz' && z.towar) {
         // Enough in the backpack: take it back. (Sold or eaten meanwhile: not yet.)
-        const st = missionState(rm.m);
         const have = fruitCount(z.towar) >= (z.ile ?? 1);
         if (st === 'active' && have) {
-          this.reachGoal(rm, 'Masz wszystko! ');
-        } else if (st === 'goal' && !have) {
+          if (multi) this.completeStage(rm, 'Masz wszystko! ');
+          else this.reachGoal(rm, 'Masz wszystko! ');
+        } else if (!multi && st === 'goal' && !have) {
           setMissionState(rm.m, 'active');
           this.refreshMarkers();
         }
         continue;
       }
-      if (rm.m.zadanie.typ === 'zagadka' && missionState(rm.m) === 'active' && rm.target) {
-        // The question comes on reaching the spot; after „later” only once the hero has walked away and back.
-        const d = Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y);
-        if (d > GOAL_RADIUS * 2) this.riddleAsked.delete(rm.m.id);
-        else if (d < GOAL_RADIUS && !this.riddleAsked.has(rm.m.id)) this.askMissionRiddle(rm);
-        continue;
-      }
-      if (rm.m.zadanie.typ !== 'idz' || missionState(rm.m) !== 'active' || !rm.target) continue;
+      if (z.typ !== 'idz' || st !== 'active' || !rm.target) continue;
       if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
-        const note = rm.m.zadanie.komunikat;
-        if (note && !rm.m.naMiejscu) {
+        if (!multi && z.komunikat && !rm.m.naMiejscu) {
           setMissionState(rm.m, 'goal');
           this.refreshMarkers();
-          this.dialog({ title: `🗺 ${rm.m.tytul}`, text: note, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
-        } else this.reachGoal(rm, 'Dotarłeś! ');
+          this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
+        } else this.completeStage(rm, 'Dotarłeś! ');
       }
     }
   }
@@ -4214,7 +4275,7 @@ export class GameScene extends Phaser.Scene {
   /** Radius (px) of the area to search, for wanted villains; 0 otherwise. */
   goalRadius() {
     const rm = this.missions.find((r) => missionState(r.m) === 'active');
-    return rm?.m.zadanie.szukaj ? SEARCH_RADIUS + 10 : 0;
+    return rm && zadanieOf(rm.m).szukaj ? SEARCH_RADIUS + 10 : 0;
   }
 
   private appliedLevel = '';
@@ -4261,8 +4322,10 @@ export class GameScene extends Phaser.Scene {
 
   /** The quest log for the character sheet: where each began, what now, how far (in words) and its arrow. */
   questLog(): QuestLine[] {
-    return this.activeQuests().map((q) => ({
-      id: q.id, title: q.title, text: q.text, color: q.color, main: q.main, start: q.start,
+    // Story items (mission stages) show under the quests: „Masz: soczewka, korzeń dębu”.
+    const items = session.fabula.length ? `\n📜 Masz: ${session.fabula.join(', ')}` : '';
+    return this.activeQuests().map((q, i) => ({
+      id: q.id, title: q.title, text: `${q.text}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
       far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
       arrow: !session.bezStrzalki.includes(q.id),
     }));
@@ -4392,14 +4455,19 @@ export class GameScene extends Phaser.Scene {
     for (const rm of this.missions) {
       const st = missionState(rm.m);
       const q = { id: rm.m.id, title: missionTitle(rm.m, this.missions.map((r) => r.m)), start: rm.m.adres };
-      if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
-        const z = rm.m.zadanie;
-        out.push({ ...q, text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
+      const z = zadanieOf(rm.m);
+      // Multi-stage: which stage, and a timed walk's countdown.
+      const part = stageCount(rm.m) > 1 ? `[${stageIndex(rm.m) + 1}/${stageCount(rm.m)}] ` : '';
+      const left = this.etapy.secondsLeft(rm.m.id, this.time.now);
+      const clock = left !== null ? ` ⏱ ${left} s` : '';
+      if (st === 'active' && rm.target && z.typ === 'zbierz') {
+        out.push({ ...q, text: `${part}${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
       } else if (st === 'active' && rm.target) {
-        // For fights, point at the nearest remaining enemy of that mission.
-        const foes = rm.m.zadanie.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
-        const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : rm.target;
-        out.push({ ...q, text: rm.m.zadanie.cel, pos: { x: pos.x, y: pos.y } });
+        // For fights, point at the nearest remaining enemy of that mission; things to pick up / fix: the nearest one.
+        const foes = z.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
+        const thing = z.szukaj ? null : this.etapy.arrowFor(rm.m.id);
+        const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : thing ?? rm.target;
+        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}`, pos: { x: pos.x, y: pos.y } });
       } else if (st === 'goal' && rm.m.dowolnaBiblioteka) {
         const lib = this.city.places.filter((p) => p.kind === 'library').reduce<CityPlace | null>((a, p) => (!a || dist(p.door) < dist(a.door) ? p : a), null);
         out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });

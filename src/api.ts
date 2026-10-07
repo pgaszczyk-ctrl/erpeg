@@ -50,6 +50,10 @@ export interface SaveData {
   /** Imbued weapons (inventory.ts gear.imbue). */
   nasycenia?: Record<string, { e: string; until: number }>;
   bezStrzalki?: string[];
+  /** Multi-stage missions: current stage per mission id. */
+  etap?: Record<string, number>;
+  /** Story items from mission stages. */
+  fabula?: string[];
   /** Diamonds (premium currency, content/sklepy.ts DIAMENT). */
   diamenty?: number;
   /** Lasting mission rewards (quests.ts session.flagi). */

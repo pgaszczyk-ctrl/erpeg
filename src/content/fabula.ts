@@ -16,13 +16,36 @@ export type Miejsce = string | { lat: number; lon: number };
  */
 export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik';
 
+/**
+ * Rodzaj zadania (albo etapu misji wieloetapowej):
+ * 'idz' – dojdź (opcjonalnie na czas), 'pokonaj' – pokonaj wrogów, 'zbierz' – przynieś towar z plecaka,
+ * 'brak' – samo miejsce, 'zagadka' – jedno pytanie, 'zagadki' – kilka pytań po kolei,
+ * 'rozmowa' – ktoś coś mówi (po dojściu na miejsce), 'podnies' – podnieś rzeczy leżące na ziemi,
+ * 'napraw' – postój przy miejscu, aż pasek się napełni, 'wybor' – przekonaj zagadką albo zapłać,
+ * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce.
+ */
+export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia';
+
+/** Pytanie z trzema (lub więcej) odpowiedziami; `dobra` = numer dobrej (0 = pierwsza). */
+export interface Pytanie {
+  pytanie: string;
+  odpowiedzi: string[];
+  dobra: number;
+}
+
+/** Strona paragrafu: tekst i wybory; zły wybór kosztuje serce i wraca do tej strony. Bez wyborów = „Dalej”. */
+export interface Strona {
+  tekst: string;
+  wybory?: { tekst: string; dobry?: boolean }[];
+}
+
 export interface Zadanie {
   /**
    * 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca,
    * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce),
    * 'zbierz' = przynieś rzeczy (np. grzyby, drewno); miejsce = gdzie ich szukać.
    */
-  typ: 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka';
+  typ: TypEtapu;
   /** Tylko dla 'zbierz': co przynieść (id z sklepy.ts, np. 'grzyb', 'drewno') i ile. */
   towar?: import('./sklepy').Owoc;
   miejsce: Miejsce;
@@ -43,6 +66,35 @@ export interface Zadanie {
   dobra?: number;
   /** Tylko dla 'zagadka': podpowiedź po złej odpowiedzi. */
   podpowiedz?: string;
+}
+
+/**
+ * Etap misji wieloetapowej (Misja.etapy). `miejsce` puste = drzwi zleceniodawcy. Pola rodzaju jak w Zadanie,
+ * plus: tekst na początku etapu, przedmioty fabularne dane/zabrane po etapie, postać stojąca na miejscu.
+ */
+export interface Etap extends Zadanie {
+  /** Okienko, gdy etap się zaczyna (dla 'rozmowa': to, co mówi postać). */
+  tekst?: string;
+  /** Przedmioty fabularne (nazwy) dane po wykonaniu etapu. */
+  daje?: string[];
+  /** Przedmioty fabularne zabrane po wykonaniu etapu. */
+  zabiera?: string[];
+  /** Postać stojąca na miejscu etapu, póki etap trwa (zjawa = półprzezroczysta, niebieska). */
+  postac?: { imie: string; zjawa?: boolean; kobieta?: boolean };
+  /** 'podnies' / 'napraw': w promieniu ilu metrów od miejsca leżą rzeczy / punkty (domyślnie 40). */
+  promien?: number;
+  /** 'napraw': ile sekund stania przy punkcie. */
+  sekund?: number;
+  /** 'zagadki': pytania po kolei; zła odpowiedź = to samo pytanie jeszcze raz. */
+  pytania?: Pytanie[];
+  /** 'melodia': nuty 0–4 (Do Re Mi Fa Sol); puste = losowa melodia według trudności. */
+  nuty?: number[];
+  /** 'wybor': ile monet zamiast przekonywania zagadką. */
+  zaplac?: number;
+  /** 'paragraf': strony. */
+  strony?: Strona[];
+  /** 'idz': trzeba zdążyć (czas jak w wyzwaniach sportowych); po czasie etap cofa się o jeden. */
+  naCzas?: boolean;
 }
 
 /**
@@ -93,6 +145,12 @@ export interface Misja {
   naMiejscu?: boolean;
   /** Diamenty w nagrodę. */
   diamenty?: number;
+  /** Etapy po kolei (misja wieloetapowa); wtedy `zadanie` opisuje tylko pierwszy etap dla starej gry. */
+  etapy?: Etap[];
+  /** Więcej przedmiotów w nagrodę (oprócz `przedmiot`). */
+  przedmioty?: string[];
+  /** Tytuł bohatera w nagrodę (jak „Pogromca smoka”). */
+  tytul_bohatera?: string;
   /** Tylko serwer testowy (panel admina): stara gra na produkcji jej nie dostaje. */
   tylkoTest?: boolean;
 }
