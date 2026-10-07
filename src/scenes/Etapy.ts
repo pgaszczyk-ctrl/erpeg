@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
-import { session, missionState, stageIndex, zadanieOf, type ResolvedMission } from '../quests';
-import type { Etap } from '../content/fabula';
+import { session, missionState, missionAvailable, levelLock, stageIndex, zadanieOf, type ResolvedMission } from '../quests';
+import type { Etap, Postac } from '../content/fabula';
 import { TRUDNOSCI } from '../content/trudnosc';
 import { MELODIA } from '../content/historia';
 import { playMelody } from '../ui/melody';
@@ -34,6 +34,8 @@ export interface StageHost {
   hurtStory(): void;
   /** Pay coins (false = not enough). */
   pay(n: number): boolean;
+  /** A swing at a mission's giver: the mission's dialog, as at its door. */
+  talkMission(rm: ResolvedMission): void;
 }
 
 /** How near the stage's place the hero must come (map px), and how far away it re-arms. */
@@ -54,6 +56,17 @@ interface Live {
   /** 'zagadki' / 'paragraf': how far along. */
   step: number;
   who: Phaser.GameObjects.GameObject[];
+  /** Where the stage's person stands (null: none). */
+  at: { x: number; y: number; imie: string } | null;
+}
+
+/** A mission's giver standing at its door. */
+interface Giver {
+  who: Phaser.GameObjects.GameObject[];
+  x: number;
+  y: number;
+  imie: string;
+  rm: ResolvedMission;
 }
 
 const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia']);
@@ -66,11 +79,15 @@ function hash(s: string) {
 
 export class Etapy {
   private live = new Map<string, Live>();
+  private givers = new Map<string, Giver>();
 
   constructor(private host: StageHost) {}
 
   /** Every frame: set up what the active missions' current stages show, fire spot stages, fill fix bars. */
+  private rms: ResolvedMission[] = [];
+
   update(missions: ResolvedMission[], now: number, dt: number) {
+    this.rms = missions;
     const seen = new Set<string>();
     for (const rm of missions) {
       if (missionState(rm.m) !== 'active' || !rm.target) continue;
@@ -90,6 +107,50 @@ export class Etapy {
       this.drop(l);
       this.live.delete(id);
     }
+    this.updateGivers(missions);
+  }
+
+  /**
+   * Givers (Misja.postac) stand at their mission's door while the mission is shown, taken or done (after it they
+   * stay as people of the town); one person with the same name already standing near there is enough.
+   */
+  private updateGivers(missions: ResolvedMission[]) {
+    const want = new Set<string>();
+    for (const rm of missions) {
+      const g = rm.m.postac;
+      if (!g || !(missionAvailable(rm.m) || levelLock(rm.m) !== null)) continue;
+      const x = rm.door.x + 10, y = rm.door.y + 2;
+      const twin = [...this.live.values()].some((l) => l.at && l.at.imie === g.imie && Math.hypot(l.at.x - x, l.at.y - y) < 40) ||
+        [...this.givers.values()].some((o) => o.rm.m.id !== rm.m.id && o.imie === g.imie && Math.hypot(o.x - x, o.y - y) < 40);
+      if (twin) continue;
+      want.add(rm.m.id);
+      const had = this.givers.get(rm.m.id);
+      if (had) { had.rm = rm; continue; }
+      this.givers.set(rm.m.id, { who: this.person(g, x, y), x, y, imie: g.imie, rm });
+    }
+    for (const [id, g] of this.givers) {
+      if (want.has(id)) continue;
+      for (const w of g.who) w.destroy();
+      this.givers.delete(id);
+    }
+  }
+
+  /** A mission person (giver or stage person) within `r` of (x, y): what talking to them does, or null. */
+  talkAt(x: number, y: number, r: number): (() => void) | null {
+    for (const g of this.givers.values()) if (Math.hypot(g.x - x, g.y - (y + 2)) < r) return () => this.host.talkMission(g.rm);
+    for (const l of this.live.values()) {
+      if (!l.at || Math.hypot(l.at.x - x, l.at.y - (y + 2)) >= r) continue;
+      const rm = [...this.rms].find((q) => this.live.get(q.m.id) === l);
+      if (!rm) continue;
+      const z = zadanieOf(rm.m);
+      return () => {
+        if (SPOT.has(z.typ)) {
+          l.armed = false;
+          this.fire(rm, z, l);
+        } else this.host.dialog({ title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: ['Dobrze'], onChoose: () => {} });
+      };
+    }
+    return null;
   }
 
   /** A timed walk's seconds left (for the HUD line), or null. */
@@ -137,6 +198,8 @@ export class Etapy {
   }
 
   destroy() {
+    for (const g of this.givers.values()) for (const w of g.who) w.destroy();
+    this.givers.clear();
     for (const l of this.live.values()) this.drop(l);
     this.live.clear();
   }
@@ -144,13 +207,14 @@ export class Etapy {
   // ------------------------------------------------------------------ setup
 
   private setup(rm: ResolvedMission, z: Etap, key: string, now: number): Live {
-    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [] };
+    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [], at: null };
     const t = rm.target!;
     const r = rng(hash(key));
     if (z.typ === 'podnies') {
       for (const q of this.spots(t, z.ile ?? 1, (z.promien ?? 40) * PX_PER_M, r)) {
         const it = this.host.scene.add.image(q.x, q.y, TEX.questItem).setDepth(q.y - 4);
         this.host.scene.tweens.add({ targets: it, y: q.y - 2, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        it.setData('glow', this.glow(q.x, q.y));
         l.items.push(it);
       }
     }
@@ -159,6 +223,7 @@ export class Etapy {
       const list = n === 1 ? [{ x: t.x, y: t.y }] : this.spots(t, n, (z.promien ?? 40) * PX_PER_M, r);
       for (const q of list) {
         const icon = this.host.scene.add.image(q.x, q.y, TEX.questItem).setTint(0xd9a640).setDepth(q.y - 4);
+        icon.setData('glow', this.glow(q.x, q.y));
         const bar = this.host.scene.add.graphics().setDepth(1_050_000);
         l.points.push({ x: q.x, y: q.y, done: false, t: 0, icon, bar });
       }
@@ -169,8 +234,46 @@ export class Etapy {
       const s = (d / Math.max(1, this.host.player.speed)) * (session.level.wyzwanie);
       l.until = now + Math.max(60, s) * 1000;
     }
-    if (z.postac) this.person(rm, z, l);
+    if (z.postac) {
+      const x = rm.target!.x + 10, y = rm.target!.y + 2;
+      l.who.push(...this.person(z.postac, x, y));
+      l.at = { x, y, imie: z.postac.imie };
+    }
     return l;
+  }
+
+  /**
+   * A pulsing golden glow and a widening ring under a thing to pick up or a spot to fix (owner 7.10.2026: the
+   * spot to clean the medallion was hard to find).
+   */
+  private glow(x: number, y: number) {
+    const sc = this.host.scene;
+    if (!sc.textures.exists('etap-glow')) {
+      const n = 48;
+      const tex = sc.textures.createCanvas('etap-glow', n, n)!;
+      const ctx = tex.getContext();
+      const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+      grd.addColorStop(0, 'rgba(255,214,110,1)');
+      grd.addColorStop(0.45, 'rgba(255,200,80,0.55)');
+      grd.addColorStop(1, 'rgba(255,200,80,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, n, n);
+      tex.refresh();
+    }
+    const c = sc.add.container(x, y).setDepth(y - 5);
+    const g = sc.add.image(0, 0, 'etap-glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.7);
+    const ring = sc.add.graphics();
+    c.add([g, ring]);
+    sc.tweens.add({ targets: g, alpha: 0.45, scale: 0.9, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    sc.tweens.addCounter({
+      from: 0, to: 1, duration: 1400, repeat: -1,
+      onUpdate: (tw) => {
+        if (!ring.active) return void tw.stop();
+        const t = tw.getValue() ?? 0;
+        ring.clear().lineStyle(1, 0xffd56e, 1 - t).strokeEllipse(0, 2, 8 + 22 * t, 4 + 11 * t);
+      },
+    });
+    return c;
   }
 
   /** `n` free spots around a place within `R` map px (deterministic by the stage). */
@@ -190,29 +293,30 @@ export class Etapy {
     return out.length ? out : [{ x: t.x, y: t.y }];
   }
 
-  /** A character standing at the stage's place (a townsfolk look; a ghost is blue and see-through). */
-  private person(rm: ResolvedMission, z: Etap, l: Live) {
-    const t = rm.target!;
+  /** A character standing at (x, y) with a name over the head (a townsfolk look by the name; a ghost is blue and see-through). */
+  private person(p: Postac, x: number, y: number): Phaser.GameObjects.GameObject[] {
     const sc = this.host.scene;
-    const k = !!z.postac!.kobieta;
-    const looks = hdOn ? hdFolkLooks().filter((x) => (personOf(x)?.plec === 'k') === k && personOf(x)?.wiek !== 'dziecko') : [];
-    const tex = looks.length ? ensureHd(sc, looks[hash(z.postac!.imie) % looks.length]) : null;
-    const x = t.x + 10;
-    const y = t.y + 2;
+    const k = !!p.kobieta;
+    const looks = hdOn ? hdFolkLooks().filter((t) => (personOf(t)?.plec === 'k') === k && personOf(t)?.wiek !== 'dziecko') : [];
+    const tex = looks.length ? ensureHd(sc, looks[hash(p.imie) % looks.length]) : null;
     let s: Phaser.GameObjects.Sprite;
-    if (tex && sc.textures.exists(tex)) s = fitHd(sc.add.sprite(x, y, tex, 'down-0').setDepth(y));
+    if (tex && sc.textures.exists(tex)) s = fitHd(sc.add.sprite(x, y, tex, 'down-1').setDepth(y));
     else s = sc.add.sprite(x, y, TEX.hero, 'down-0').setDepth(y).setScale(SKALA_POSTACI);
-    if (z.postac!.zjawa) {
+    if (p.zjawa) {
       s.setTint(0x9fd0ff).setAlpha(0.6);
       sc.tweens.add({ targets: s, alpha: 0.35, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     }
-    const name = sc.add.text(x, y - 24 * SKALA_POSTACI, z.postac!.imie, { fontFamily: 'monospace', fontSize: '7px', color: '#fff8e0', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 }).setOrigin(0.5, 1).setDepth(1_150_000);
-    l.who.push(s, name);
+    const name = sc.add.text(x, y - 24 * SKALA_POSTACI, p.imie, { fontFamily: 'monospace', fontSize: '7px', color: '#fff8e0', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 }).setOrigin(0.5, 1).setDepth(1_150_000);
+    return [s, name];
   }
 
   private drop(l: Live) {
-    for (const it of l.items) it.destroy();
+    for (const it of l.items) {
+      (it.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy();
+      it.destroy();
+    }
     for (const q of l.points) {
+      (q.icon.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy();
       q.icon.destroy();
       q.bar.destroy();
     }
@@ -236,6 +340,7 @@ export class Etapy {
     if (z.typ === 'podnies') {
       for (const it of [...l.items]) {
         if (Math.hypot(it.x - p.x, it.y - (p.y + 4)) > PODNIES) continue;
+        (it.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy();
         it.destroy();
         l.items = l.items.filter((x) => x !== it);
         const left = l.items.length;
@@ -255,6 +360,7 @@ export class Etapy {
         if (at) q.bar.fillStyle(0x1e1a24, 0.8).fillRect(q.x - 8, q.y - 16, 16, 3).fillStyle(0xd9a640, 1).fillRect(q.x - 7.5, q.y - 15.5, 15 * f, 2);
         if (f < 1) continue;
         q.done = true;
+        (q.icon.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy();
         q.bar.clear();
         q.icon.setTint(0x7fd35a).setAlpha(0.6);
         const left = l.points.filter((x) => !x.done).length;

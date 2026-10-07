@@ -1,73 +1,281 @@
 [
   {
-    "id": "sz_jarmark", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true,
-    "adres": "Dworcowa 11", "tytul": "Jarmark Wynalazców",
-    "opis": "Hela Trybik, wynalazczyni z Targów: „Wędrowcze! Mój mosiężny pomocnik Zębatek stanął w pół kroku – serce mu zamarło. Maszynista Bolek z peronu wie wszystko o kotłach. Leć do niego!”",
-    "zadanie": { "typ": "idz", "miejsce": "51.23177, 22.56962", "cel": "Idź na peron Dworca Głównego" },
-    "zakonczenie": "Na peronie bucha para. Maszynista Bolek macha do ciebie czapką.",
-    "nagroda": 0, "doswiadczenie": 50
+    "id": "sz_jarmark",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "adres": "Dworcowa 11",
+    "tytul": "Jarmark Wynalazców",
+    "opis": "Między straganami Targów pachnie smarem, prażonymi orzechami i rozgrzaną miedzią. Wynalazczyni Hela Trybik ociera sadzę z gogli i chwyta cię za rękaw:\n\n„Wędrowcze, ratunku! Mój mosiężny pomocnik Zębatek stanął w pół kroku, z jedną nogą w górze, jakby ktoś zatrzymał czas. W piersi ma serce-kocioł… i ono zamarło. Słyszysz? Ani tyknięcia.\n\nNikt w mieście nie zna się na kotłach lepiej niż maszynista Bolek z peronu Dworca Głównego. Leć do niego, zanim Zębatek do reszty zardzewieje!”",
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "51.23177, 22.56962",
+      "cel": "Znajdź maszynistę Bolka na peronie Dworca Głównego",
+      "postac": {
+        "imie": "Maszynista Bolek"
+      }
+    },
+    "zakonczenie": "Peron tonie w białej parze. Z kabiny parowozu wychyla się wąsaty maszynista w poplamionej czapce i zeskakuje na bruk.\n\n„Bolek jestem, do usług! Hela cię przysłała? Zębatek stanął? A to ci kłopot… Serce takiego pomocnika to mały kocioł, a kocioł bez pary to tylko garnek. Usiądź, wędrowcze, coś ci opowiem.”",
+    "nagroda": 0,
+    "doswiadczenie": 50,
+    "postac": {
+      "imie": "Hela Trybik",
+      "kobieta": true
+    }
   },
   {
-    "id": "sz_para", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_jarmark"] },
-    "adres": "51.23177, 22.56962", "tytul": "Para na peronie",
-    "opis": "Maszynista Bolek: „Zębatek? Jego serce to mały kocioł. Zawiadowca w Dworcu Metropolitalnym sprawdzi, czy znasz się na parze. Idź, zapytaj go.”",
-    "zadanie": { "typ": "zagadka", "miejsce": "Dworcowa 2", "cel": "Odpowiedz zawiadowcy w Dworcu Metropolitalnym", "pytanie": "Zawiadowca: „Co powstaje z wody i ognia w kotle?”", "odpowiedzi": ["para", "dym", "lód"], "dobra": 0, "podpowiedz": "Bucha z komina parowozu." },
-    "zakonczenie": "Zawiadowca kiwa głową: „Zna się! Bolek przesyła ci swój gwizdek.”",
-    "nagroda": 20, "doswiadczenie": 150, "przedmiot": "gwizdek_maszynisty"
+    "id": "sz_para",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_jarmark"
+      ]
+    },
+    "adres": "51.23177, 22.56962",
+    "tytul": "Para na peronie",
+    "opis": "Bolek stuka kluczem w koło parowozu, aż dzwoni.\n\n„Słuchaj uważnie. W sercu Zębatka trzeba rozpalić porządny ogień, a do tego potrzebne są części, których w żadnym sklepie nie kupisz. Ale nie dam ich byle komu.\n\nIdź do zawiadowcy w Dworcu Metropolitalnym. Stary Feliks sprawdzi, czy rozumiesz, jak działa para. Jak zda – oddam ci coś, co nosiłem przy sobie trzydzieści lat.”",
+    "zadanie": {
+      "typ": "zagadka",
+      "miejsce": "Dworcowa 2",
+      "cel": "Odpowiedz zawiadowcy Feliksowi w Dworcu Metropolitalnym",
+      "pytanie": "Zawiadowca Feliks poprawia czapkę z mosiężnym orłem i przygląda ci się spod krzaczastych brwi:\n\n„Bolek cię przysyła? Zobaczymy. Powiedz mi, młody wędrowcze: co powstaje w kotle z wody i ognia?”",
+      "odpowiedzi": [
+        "para",
+        "dym",
+        "lód"
+      ],
+      "dobra": 0,
+      "podpowiedz": "Bucha z komina parowozu.",
+      "postac": {
+        "imie": "Zawiadowca Feliks"
+      }
+    },
+    "zakonczenie": "Feliks uśmiecha się pierwszy raz od rana i gwiżdże przez palce.\n\n„Zna się! Para to krew tego miasta. Bolek kazał ci to przekazać – jego gwizdek maszynisty. Kiedy zagwiżdżesz, każdy kolejarz w Lublinie będzie wiedział, że jesteś swój.”",
+    "nagroda": 20,
+    "doswiadczenie": 150,
+    "przedmiot": "gwizdek_maszynisty",
+    "postac": {
+      "imie": "Maszynista Bolek"
+    }
   },
   {
-    "id": "sz_chochliki", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_para"] },
-    "adres": "51.23169, 22.56712", "tytul": "Chochliki spod Bramy",
-    "opis": "Zawiadowca: „Części do serca Zębatka ktoś wywiózł pod Bramę Krakowską. Chochliki się tam kręcą – przegoń je!”",
-    "zadanie": { "typ": "pokonaj", "miejsce": "Bramowa 1", "ile": 2, "wrog": "glut", "cel": "Przegoń chochliki spod Bramy Krakowskiej" },
-    "zakonczenie": "Chochliki uciekły, a strażnik bramy wychodzi zza filaru.",
-    "nagroda": 0, "doswiadczenie": 100
+    "id": "sz_chochliki",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_para"
+      ]
+    },
+    "adres": "51.23169, 22.56712",
+    "tytul": "Chochliki spod Bramy",
+    "opis": "Feliks pochyla się i ścisza głos:\n\n„Wiesz, gdzie się podziały części do serca Zębatka? Wczoraj w nocy ktoś je wywiózł z magazynu na wózku. Kółka skrzypiały aż pod Bramę Krakowską. A tam, wiadomo, kręcą się chochliki – rude, złośliwe, kradną wszystko, co błyszczy.\n\nPrzegoń je, a strażnik bramy powie ci więcej.”",
+    "zadanie": {
+      "typ": "pokonaj",
+      "miejsce": "Bramowa 1",
+      "ile": 2,
+      "wrog": "glut",
+      "cel": "Przegoń chochliki spod Bramy Krakowskiej",
+      "postac": {
+        "imie": "Strażnik Bramy Wit"
+      }
+    },
+    "zakonczenie": "Ostatni chochlik ucieka z piskiem w zaułek. Zza filaru wychodzi strażnik w hełmie z mosiężnym grzebieniem, opierając się na halabardzie.\n\n„Brawo, wędrowcze! Od tygodnia nie dawały mi spokoju. Wit jestem, pilnuję tej bramy, jak mój ojciec i dziad.”",
+    "nagroda": 0,
+    "doswiadczenie": 100,
+    "postac": {
+      "imie": "Zawiadowca Feliks"
+    }
   },
   {
-    "id": "sz_czarcia_lapa", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_chochliki"] },
-    "adres": "Bramowa 1", "tytul": "Czarcia Łapa",
-    "opis": "Strażnik Bramy: „Dziękuję, wędrowcze. Części zabrał stróż latarni z Rynku. Ale pogada tylko z kimś, kto zna legendę Trybunału.”",
-    "zadanie": { "typ": "zagadka", "miejsce": "Rynek 1", "cel": "Odpowiedz stróżowi latarni przy Trybunale", "pytanie": "Stróż latarni: „Jaki ślad zostawił diabeł w Trybunale?”", "odpowiedzi": ["odcisk łapy", "róg", "ogon"], "dobra": 0, "podpowiedz": "Wypalony na stole sędziowskim." },
-    "zakonczenie": "Stróż latarni: „Zgadza się! Części? Ech, chochliki zaniosły je do cukierni. Łasuchy!”",
-    "nagroda": 0, "doswiadczenie": 100
+    "id": "sz_czarcia_lapa",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_chochliki"
+      ]
+    },
+    "adres": "Bramowa 1",
+    "tytul": "Czarcia Łapa",
+    "opis": "Wit drapie się po brodzie.\n\n„Części, mówisz? Widziałem, jak chochliki oddawały je stróżowi latarni z Rynku – temu, co zapala gazowe lampy przy Trybunale. Dziwny to człowiek. Pogada tylko z kimś, kto zna legendę o diable, który zostawił ślad na sędziowskim stole.\n\nIdź na Rynek. A jak nie znasz legendy – posłuchaj, co ludzie szepczą pod Trybunałem.”",
+    "zadanie": {
+      "typ": "zagadka",
+      "miejsce": "Rynek 1",
+      "cel": "Odpowiedz stróżowi latarni Leonowi przy Trybunale",
+      "pytanie": "Stróż latarni Leon zapala długim drągiem gazową lampę i dopiero wtedy na ciebie patrzy:\n\n„Wit cię przysłał? Hm. Powiedz mi zatem, wędrowcze: jaki ślad zostawił diabeł w Trybunale, gdy sędziowie wydali niesprawiedliwy wyrok?”",
+      "odpowiedzi": [
+        "odcisk łapy",
+        "róg",
+        "ogon"
+      ],
+      "dobra": 0,
+      "podpowiedz": "Wypalony na stole sędziowskim.",
+      "postac": {
+        "imie": "Stróż latarni Leon"
+      }
+    },
+    "zakonczenie": "Leon kiwa głową, a płomień w lampie podskakuje.\n\n„Zgadza się – odcisk łapy, wypalony w dębowym stole. Kto zna tę historię, zna też wartość sprawiedliwości. Części? Ech… Chochliki zabrały mi je z powrotem i zaniosły do cukierni na Krakowskim. Łasuchy jedne!”",
+    "nagroda": 0,
+    "doswiadczenie": 100,
+    "postac": {
+      "imie": "Strażnik Bramy Wit"
+    }
   },
   {
-    "id": "sz_slodki_trop", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_czarcia_lapa"] },
-    "adres": "51.24766, 22.56803", "tytul": "Słodki trop",
-    "opis": "Stróż latarni: „Herszt chochlików przepada za pączkami z Dobrej Cukierni. Kup mu jednego, to może odda części.”",
-    "zadanie": { "typ": "idz", "miejsce": "Krakowskie Przedmieście 19", "cel": "Idź do Dobrej Cukierni" },
-    "zakonczenie": "Cukiernik zawija ci pączka w bibułkę: „Na koszt firmy, dla bohatera!”",
-    "nagroda": 0, "doswiadczenie": 50, "przedmiot": "paczek"
+    "id": "sz_slodki_trop",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_czarcia_lapa"
+      ]
+    },
+    "adres": "51.24766, 22.56803",
+    "tytul": "Słodki trop",
+    "opis": "Leon zniża głos, choć na Rynku nikogo nie ma.\n\n„Herszt chochlików – gruby, z jednym złamanym rogiem – za pączka z różą sprzedałby własną babkę. Zajdź do Dobrej Cukierni na Krakowskim Przedmieściu i kup mu jednego. Może wtedy odda, co ukradł.\n\nTylko nie zjedz go po drodze!”",
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "Krakowskie Przedmieście 19",
+      "cel": "Idź do Dobrej Cukierni na Krakowskim Przedmieściu",
+      "postac": {
+        "imie": "Cukiernik Bruno"
+      }
+    },
+    "zakonczenie": "Za szybą cukierni parują mosiężne piece, a w powietrzu wisi zapach wanilii. Cukiernik Bruno w białym fartuchu zawija pączka w bibułkę.\n\n„Dla herszta chochlików? Ha! Ten łobuz wyjada mi lukier z parapetu. Weź – na koszt firmy, dla bohatera. I wracaj kiedyś, mam też inne… specjały.”",
+    "nagroda": 0,
+    "doswiadczenie": 50,
+    "przedmiot": "paczek",
+    "postac": {
+      "imie": "Stróż latarni Leon"
+    }
   },
   {
-    "id": "sz_herszt", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_slodki_trop"], "przedmiot": "paczek", "zabierz": true },
-    "adres": "51.24808, 22.56403", "tytul": "Herszt łasuch",
-    "opis": "Herszt chochlików oblizuje się na widok pączka: „Dobra, dobra… Części oddałem strażnikowi na Zamku. Niech ci powie, kiedy podpisano Unię, to ci odda.”",
-    "zadanie": { "typ": "zagadka", "miejsce": "Zamkowa 9", "cel": "Odpowiedz strażnikowi na Zamku", "pytanie": "Strażnik zamkowy: „W którym roku podpisano Unię Lubelską?”", "odpowiedzi": ["1569", "1410", "1791"], "dobra": 0, "podpowiedz": "Wiek XVI, druga połowa." },
-    "zakonczenie": "Strażnik oddaje ci mosiężny kluczyk: „To do nakręcania serca. Resztę ma zegarmistrz Ignacy z Wieży Trynitarskiej.”",
-    "nagroda": 25, "doswiadczenie": 150, "przedmiot": "kluczyk_nakrecacz"
+    "id": "sz_herszt",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_slodki_trop"
+      ],
+      "przedmiot": "paczek",
+      "zabierz": true
+    },
+    "adres": "51.24808, 22.56403",
+    "tytul": "Herszt łasuch",
+    "opis": "Na murku siedzi gruby chochlik z ułamanym rogiem i oblizuje się na widok pączka.\n\n„Daaaj… Dobra, dobra, nie patrz tak. Części już nie mam! Oddałem je strażnikowi na Zamku, bo straszył mnie halabardą. Ale on ich nie odda byle komu. Musisz wiedzieć, kiedy podpisano Unię – tam na zamku wszyscy mają na tym punkcie bzika.\n\nA teraz pączek!”",
+    "zadanie": {
+      "typ": "zagadka",
+      "miejsce": "Zamkowa 9",
+      "cel": "Odpowiedz strażnikowi zamkowemu Zbrosławowi",
+      "pytanie": "Strażnik zamkowy Zbrosław zastępuje ci drogę na schodach Zamku:\n\n„Stój! Do skarbca nie wpuszczam nieuków. Powiedz, w którym roku na tym zamku podpisano Unię Lubelską?”",
+      "odpowiedzi": [
+        "1569",
+        "1410",
+        "1791"
+      ],
+      "dobra": 0,
+      "podpowiedz": "Wiek XVI, druga połowa.",
+      "postac": {
+        "imie": "Strażnik zamkowy Zbrosław"
+      }
+    },
+    "zakonczenie": "Zbrosław opuszcza halabardę i wyjmuje z sakwy mosiężny kluczyk.\n\n„Tysiąc pięćset sześćdziesiąty dziewiąty. Pięknie. To kluczyk do nakręcania serca – chochliki zgubiły go na dziedzińcu. Resztę części ma zegarmistrz Ignacy z Wieży Trynitarskiej. On zna każdy tryb w tym mieście.”",
+    "nagroda": 25,
+    "doswiadczenie": 150,
+    "przedmiot": "kluczyk_nakrecacz",
+    "postac": {
+      "imie": "Herszt Łasuch"
+    }
   },
   {
-    "id": "sz_zegarmistrz", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_herszt"] },
-    "adres": "Zamkowa 9", "tytul": "Zegarmistrz z Wieży",
-    "opis": "Strażnik zamkowy: „Ignacy z Wieży Trynitarskiej zna każdy tryb w mieście. Ale i on lubi zagadki.”",
-    "zadanie": { "typ": "zagadka", "miejsce": "51.24730, 22.56900", "cel": "Odpowiedz zegarmistrzowi Ignacemu", "pytanie": "Ignacy: „Trzy koła zębate w rzędzie. Pierwsze kręci się w prawo. W którą stronę kręci się trzecie?”", "odpowiedzi": ["w prawo", "w lewo", "stoi"], "dobra": 0, "podpowiedz": "Każde kolejne kręci się odwrotnie niż poprzednie." },
-    "zakonczenie": "Ignacy: „Brawo! Weź ten chronometr – tyka równo jak zdrowe serce. Zanieś wszystko Heli!”",
-    "nagroda": 25, "doswiadczenie": 150, "przedmiot": "kieszonkowy_chronometr"
+    "id": "sz_zegarmistrz",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_herszt"
+      ]
+    },
+    "adres": "Zamkowa 9",
+    "tytul": "Zegarmistrz z Wieży",
+    "opis": "Zbrosław spogląda w stronę katedry.\n\n„Ignacy mieszka w Wieży Trynitarskiej, tuż pod zegarem. Od czterdziestu lat dba, żeby wskazówki nad miastem szły równo. Ale uważaj – stary lubi zagadki bardziej niż herbatę.”",
+    "zadanie": {
+      "typ": "zagadka",
+      "miejsce": "51.24730, 22.56900",
+      "cel": "Odpowiedz zegarmistrzowi Ignacemu pod Wieżą Trynitarską",
+      "pytanie": "Zegarmistrz Ignacy, z lupą wciśniętą w oko, nie odrywa wzroku od trybików:\n\n„Trzy koła zębate stoją w rzędzie i zazębiają się. Pierwsze kręci się w prawo. W którą stronę kręci się trzecie?”",
+      "odpowiedzi": [
+        "w prawo",
+        "w lewo",
+        "stoi"
+      ],
+      "dobra": 0,
+      "podpowiedz": "Każde kolejne kręci się odwrotnie niż poprzednie.",
+      "postac": {
+        "imie": "Zegarmistrz Ignacy"
+      }
+    },
+    "zakonczenie": "Ignacy odkłada lupę i klaszcze.\n\n„Brawo! Pierwsze w prawo, drugie w lewo, trzecie znów w prawo – tak tańczą tryby. Weź ten kieszonkowy chronometr. Tyka równo jak zdrowe serce i nauczy serce Zębatka właściwego rytmu.”",
+    "nagroda": 25,
+    "doswiadczenie": 150,
+    "przedmiot": "kieszonkowy_chronometr",
+    "postac": {
+      "imie": "Strażnik zamkowy Zbrosław"
+    }
   },
   {
-    "id": "sz_serce", "seria": "Serce Zębatka", "tylkoTest": true, "naMiejscu": true, "wymaga": { "misje": ["sz_zegarmistrz"] },
-    "adres": "51.24730, 22.56900", "tytul": "Serce Zębatka",
-    "opis": "Ignacy: „Masz już wszystko: gwizdek, kluczyk i chronometr. Biegnij na Targi, do Heli!”",
-    "zadanie": { "typ": "idz", "miejsce": "Dworcowa 11", "cel": "Wróć do Heli na Targi" },
-    "zakonczenie": "Hela wkłada części do piersi Zębatka i przekręca kluczyk. Tyk… tyk… Zębatek otwiera oczy i kłania ci się w pas: „Dziękuję, przyjacielu!”",
-    "nagroda": 0, "doswiadczenie": 250, "diamenty": 1
+    "id": "sz_serce",
+    "seria": "Serce Zębatka",
+    "tylkoTest": true,
+    "naMiejscu": true,
+    "wymaga": {
+      "misje": [
+        "sz_zegarmistrz"
+      ]
+    },
+    "adres": "51.24730, 22.56900",
+    "tytul": "Serce Zębatka",
+    "opis": "Ignacy liczy na palcach.\n\n„Gwizdek maszynisty – żeby serce wiedziało, kiedy ruszyć. Kluczyk – żeby je nakręcić. Chronometr – żeby biło równo. Masz wszystko!\n\nBiegnij na Targi, do Heli. Zębatek czeka.”",
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "Dworcowa 11",
+      "cel": "Wróć do Heli Trybik na Targi",
+      "postac": {
+        "imie": "Hela Trybik",
+        "kobieta": true
+      }
+    },
+    "zakonczenie": "Hela wkłada części do piersi Zębatka, przekręca kluczyk i przykłada gwizdek do jego ust. Cisza… a potem: tyk. Tyk. Tyk.\n\nZębatek prostuje się, zgrzytają jego mosiężne stawy, a w oczach zapala się ciepłe światło. Kłania ci się w pas: „Dziękuję, przyjacielu. Moje serce znów bije – i zapamięta, komu to zawdzięcza.”\n\nHela ociera łzę rękawem: „Weź ten diament. Na Targach mówią, że przynosi szczęście dobrym ludziom.”",
+    "nagroda": 0,
+    "doswiadczenie": 250,
+    "diamenty": 1,
+    "postac": {
+      "imie": "Zegarmistrz Ignacy"
+    }
   },
   {
-    "id": "sz_cukiernia", "tylkoTest": true,
-    "adres": "Krakowskie Przedmieście 19", "tytul": "Dobra Cukiernia",
-    "opis": "Pachnie wanilią i lukrem. Cukiernik puszcza do ciebie oko: „Jak ktoś zna hasło, to dostanie coś specjalnego…”",
-    "zadanie": { "typ": "brak", "miejsce": "Krakowskie Przedmieście 19", "cel": "" },
-    "zakonczenie": "", "nagroda": 0
+    "id": "sz_cukiernia",
+    "tylkoTest": true,
+    "adres": "Krakowskie Przedmieście 19",
+    "tytul": "Dobra Cukiernia",
+    "opis": "Za ladą parują mosiężne piece, a na półkach lśnią pączki z różą i ekierki z kremem. Pachnie wanilią i lukrem.\n\nCukiernik Bruno puszcza do ciebie oko: „Wiesz, kto zna nasze hasło, ten dostaje coś naprawdę specjalnego… Ale nie od każdego je słyszę.”",
+    "zadanie": {
+      "typ": "brak",
+      "miejsce": "Krakowskie Przedmieście 19",
+      "cel": ""
+    },
+    "zakonczenie": "",
+    "nagroda": 0,
+    "postac": {
+      "imie": "Cukiernik Bruno"
+    }
   }
 ]

@@ -250,7 +250,11 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
       if (q.x >= X0 && q.y >= Y0 && q.x < X0 + N && q.y < Y0 + N) zbior.push(q);
   }
   // Tory: podsypka, podkłady, szyny (generator), potem perony na wierzchu (płyty z jasną krawędzią i żółtą linią).
-  for (const t of z.tory) tor(obraz, t, X0, Y0);
+  const wodaPod = (x: number, y: number) => {
+    const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
+    return i >= 0 && j >= 0 && i < S && j < S && RODZAJE[ids[j * S + i]] === 'woda';
+  };
+  for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);
   malujPerony(obraz, ids, S, X0, Y0);
   stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID; });
   const para: [number, number][] = [];

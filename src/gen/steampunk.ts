@@ -64,23 +64,59 @@ export function para(rozmiar: number, klatka: number, seed = 0): Obraz {
   return o;
 }
 
-/** Tor wzdłuż łamanej (px świata): podsypka, podkłady co 4 px, dwie szyny z połyskiem. Rysuje w obraz z przesunięciem (ox, oy). */
-export function tor(o: Obraz, pts: number[], ox: number, oy: number) {
+/**
+ * Tor wzdłuż łamanej (px świata): podsypka, podkłady co 4 px, dwie szyny z połyskiem. Rysuje w obraz z przesunięciem (ox, oy).
+ * `woda(x, y)`: gdzie po obu stronach toru jest woda, zamiast podsypki stoi most (właściciel 7.10.2026: „mosty dla pociągów”):
+ * cień na wodzie, pomost z belek, kratownice z nitami po obu stronach i przyczółki na brzegach.
+ */
+export function tor(o: Obraz, pts: number[], ox: number, oy: number, woda?: (x: number, y: number) => boolean) {
   const seg: { ax: number; ay: number; ux: number; uy: number; L: number }[] = [];
   for (let i = 0; i + 3 < pts.length; i += 2) { const dx = pts[i + 2] - pts[i], dy = pts[i + 3] - pts[i + 1], L = Math.hypot(dx, dy); if (L > 0) seg.push({ ax: pts[i], ay: pts[i + 1], ux: dx / L, uy: dy / L, L }); }
   const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
   const podsyp = [hex('#6c6660'), hex('#7c756d'), hex('#8c847a')], drewno = [hex('#5a3e28'), hex('#765436')];
-  for (const pass of [0, 1, 2]) {
+  const pomost = [hex('#4a3324'), hex('#5c4030')], krata = [hex('#3a3440'), hex('#55505c'), hex('#7a7482')], nit = hex('#b08a48'), cien = rgb(16, 30, 48, 120);
+  const przyczolek = [hex('#7a7268'), hex('#948b7e')];
+  // Most tam, gdzie po obu stronach (9 i 13 px od osi) jest woda; wydłużony o 6 px na brzegi (przyczółki).
+  const most = (x: number, y: number, nx: number, ny: number) =>
+    !!woda && ((woda(Math.round(x + nx * 10), Math.round(y + ny * 10)) && woda(Math.round(x - nx * 10), Math.round(y - ny * 10))) ||
+      (woda(Math.round(x + nx * 14), Math.round(y + ny * 14)) && woda(Math.round(x - nx * 14), Math.round(y - ny * 14))));
+  // Najpierw zaznacz odcinki mostu (co 0,5 px łuku), z zapasem na przyczółki.
+  const naMoscie: boolean[][] = seg.map((g) => {
+    const n = Math.ceil(g.L / 0.5) + 1, m: boolean[] = new Array(n).fill(false);
+    for (let i = 0; i < n; i++) { const t = i * 0.5; if (most(g.ax + g.ux * t, g.ay + g.uy * t, -g.uy, g.ux)) for (let k = Math.max(0, i - 12); k <= Math.min(n - 1, i + 12); k++) m[k] = true; }
+    return m;
+  });
+  for (const pass of [0, 1, 2, 3]) {
     let s0 = 0;
-    for (const g of seg) {
-      for (let t = 0; t < g.L; t += 0.5) {
+    seg.forEach((g, gi) => {
+      for (let t = 0, i = 0; t < g.L; t += 0.5, i++) {
         const x = g.ax + g.ux * t, y = g.ay + g.uy * t, nx = -g.uy, ny = g.ux, s = s0 + t;
-        if (pass === 0) for (let k = -7; k <= 7; k += 0.5) put(x + nx * k, y + ny * k, podsyp[Math.floor(hash(Math.round(x + nx * k), Math.round(y + ny * k), 3) * 3)]);
+        const nm = naMoscie[gi][i];
+        if (pass === 0) {
+          if (!nm) for (let k = -7; k <= 7; k += 0.5) put(x + nx * k, y + ny * k, podsyp[Math.floor(hash(Math.round(x + nx * k), Math.round(y + ny * k), 3) * 3)]);
+          else {
+            // Cień mostu na wodzie (w prawo-dół), potem pomost z belek; na brzegu kamienny przyczółek.
+            for (let k = -8; k <= 8; k += 0.5) put(x + nx * k + 3, y + ny * k + 5, cien);
+            const brzeg = !most(x, y, nx, ny);
+            for (let k = -8; k <= 8; k += 0.5) put(x + nx * k, y + ny * k, brzeg ? przyczolek[Math.floor(hash(Math.round(x + nx * k), Math.round(y + ny * k), 9) * 2)] : pomost[Math.floor(s) % 3 === 0 ? 0 : 1]);
+          }
+        }
         if (pass === 1 && Math.floor(s) % 4 === 0) for (let k = -5; k <= 5; k += 0.5) { put(x + nx * k, y + ny * k, drewno[1]); put(x + nx * k + g.ux, y + ny * k + g.uy, drewno[0]); }
         if (pass === 2) { put(x + nx * -3, y + ny * -3, ZEL[1]); put(x + nx * 3, y + ny * 3, ZEL[1]); put(x + nx * -2, y + ny * -2, hex('#aaaab8')); put(x + nx * 4, y + ny * 4, ZEL[0]); }
+        if (pass === 3 && nm) {
+          // Kratownica po obu stronach: dolny i górny pas, ukośne zastrzały co 8 px, nity na węzłach, obrys na zewnątrz.
+          for (const side of [-1, 1]) {
+            const k0 = side * 7.5;
+            put(x + nx * k0, y + ny * k0, krata[0]);
+            put(x + nx * (k0 + side), y + ny * (k0 + side), OBRYS);
+            put(x + nx * (k0 - side * 0.5), y + ny * (k0 - side * 0.5), krata[side < 0 ? 2 : 1]);
+            const f = ((s % 8) + 8) % 8;
+            if (f < 0.5) put(x + nx * k0, y + ny * k0, nit);
+          }
+        }
       }
       s0 += g.L;
-    }
+    });
   }
 }
 

@@ -21,7 +21,33 @@ const KOMIN = { x: 22.5, z: 29 }, SKOS = 0.35, SCISK = 0.85;
 const klatki = new Map<string, Promise<void>>();
 
 export class Pociagi {
+  /** Every shown vehicle with its station, so a swing or click anywhere on the train finds the conductor. */
+  private pojazdy: { p: Place; img: Phaser.GameObjects.Image }[] = [];
+
   constructor(private scene: Phaser.Scene, private map: MapRenderer) {}
+
+  /**
+   * The station whose train has a painted pixel within `margin` map px of (x, y) (owner 7.10.2026: „kliknąć
+   * gdziekolwiek w wagon/lokomotywę”): the frames are drawn at an angle, so the test reads the picture's alpha.
+   */
+  /** Has this station a steam train (then its coachman is a conductor)? */
+  ma(p: Place) {
+    return this.pojazdy.some((v) => v.p.id === p.id);
+  }
+
+  stacjaPrzy(x: number, y: number, margin = 4): Place | null {
+    const tex = this.scene.textures;
+    for (const { p, img } of this.pojazdy) {
+      if (!img.active) continue;
+      const w = img.width, h = img.height, k = 1 / img.scaleX;
+      for (let dy = -margin; dy <= margin; dy += 2) for (let dx = -margin; dx <= margin; dx += 2) {
+        const lx = (x + dx - img.x) * k + img.originX * w, ly = (y + dy - img.y) * k + img.originY * h;
+        if (lx < 0 || ly < 0 || lx >= w || ly >= h) continue;
+        if ((tex.getPixelAlpha(Math.floor(lx), Math.floor(ly), img.texture.key) ?? 0) > 100) return p;
+      }
+    }
+    return null;
+  }
 
   /** Tekstury klatki pojazdu (obraz + cień), liczone raz w tle. */
   private klatka(typ: string, kat: number): Promise<void> {
@@ -52,7 +78,7 @@ export class Pociagi {
       for (const dx of PRZESUN) {
         const uklad = this.uloz(typy, tor.l.pts, L, tor.s + dx, naprzod);
         if (uklad && (uklad.pasuje || (wagonow === 1 && dx === PRZESUN[PRZESUN.length - 1]))) {
-          for (const v of uklad.pojazdy) void this.klatka(v.typ, v.kat).then(() => this.pokaz(v.typ, v.kat, v.x, v.y));
+          for (const v of uklad.pojazdy) void this.klatka(v.typ, v.kat).then(() => this.pokaz(p, v.typ, v.kat, v.x, v.y));
           return;
         }
       }
@@ -93,11 +119,12 @@ export class Pociagi {
   }
 
 
-  private pokaz(typ: string, kat: number, x: number, y: number) {
+  private pokaz(p: Place, typ: string, kat: number, x: number, y: number) {
     if (!this.scene.sys.isActive()) return;
     const key = `poj-${typ}-${kat}`;
     this.scene.add.image(x, y, `${key}-c`).setOrigin(0.5, 0.58).setScale(1 / GEN_DOTS).setAlpha(0.3).setDepth(GROUND_DEPTH + 5);
-    this.scene.add.image(x, y, key).setOrigin(0.5, 0.58).setScale(1 / GEN_DOTS).setDepth(y + 2);
+    const img = this.scene.add.image(x, y, key).setOrigin(0.5, 0.58).setScale(1 / GEN_DOTS).setDepth(y + 2);
+    this.pojazdy.push({ p, img });
     if (typ !== 'lokomotywa') return;
     // Para z komina: punkt komina w rzucie gry.
     const r = (kat * Math.PI) / 180, zp = KOMIN.z * SCISK;

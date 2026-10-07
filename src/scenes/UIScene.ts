@@ -24,6 +24,9 @@ import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
 import { OSTROSC, przyblizenie } from '../screen';
+
+/** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
+export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
@@ -526,10 +529,11 @@ export class UIScene extends Phaser.Scene {
   private showDialog(d: DialogRequest) {
     this.closeDialog();
     const { width, height } = this.view;
-    const w = Math.min(width - 24, 560);
+    const w = Math.min(width - 24, 620);
     const x = (width - w) / 2;
-    const title = this.add.text(x + 16, 0, d.title, { fontFamily: 'monospace', fontSize: '20px', color: '#f7c531', wordWrap: { width: w - 32 } });
-    const body = this.add.text(x + 16, 0, d.text, { fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', wordWrap: { width: w - 32 }, lineSpacing: 4 });
+    // A book-like readable font (owner 7.10.2026: the monospace dialogs were „zbyt nieczytelne”).
+    const title = this.add.text(x + 16, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 } });
+    const body = this.add.text(x + 16, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb', wordWrap: { width: w - 32 }, lineSpacing: 5 });
     const btnH = 44;
     // Up to two buttons side by side; longer lists (a shop) one under another.
     const stacked = d.buttons.length > 2;
@@ -553,7 +557,7 @@ export class UIScene extends Phaser.Scene {
         const c = d.tabs!.colors?.[t] ?? 0x2f6f9f;
         const on = t === d.tabs!.active;
         const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, on ? c : 0x2a2632).setOrigin(0).setStrokeStyle(on ? 3 : 2, on ? 0xffffff : c, on ? 0.9 : 1);
-        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: 'monospace', fontSize: '16px', color: on ? '#ffffff' : '#c8c8d0', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
+        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: DIALOG_FONT, fontSize: '18px', color: on ? '#ffffff' : '#c8c8d0', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
         items.push(rect, text);
         if (!on) this.dialogButtons.push({ rect, index: -1 - t });
       });
@@ -570,7 +574,7 @@ export class UIScene extends Phaser.Scene {
       const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setDisplaySize(32, 32) : null;
       const pad = pic ? 40 : 0;
       const text = this.add
-        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: 'monospace', fontSize: stacked ? '15px' : '17px', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })
+        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })
         .setOrigin(0.5);
       items.push(rect, text);
       if (pic) items.push(pic);

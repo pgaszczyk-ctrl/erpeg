@@ -55,7 +55,12 @@ export class BootScene extends Phaser.Scene {
     const lines = [LADOWANIE[0], ...LADOWANIE.slice(1).sort(() => Math.random() - 0.5)];
     let n = 0;
     const timer = this.time.addEvent({ delay: LADOWANIE_CO_MS, loop: true, callback: () => text.setText(lines[++n % lines.length]) });
-    Promise.all([CityMap.load('map/lublin.json'), loadWorld()])
+    // The dialogs' font: Phaser draws text once, so it must be loaded first (never wait more than 3 s for it).
+    const font = Promise.race([
+      Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
+      new Promise((ok) => setTimeout(ok, 3000)),
+    ]);
+    Promise.all([CityMap.load('map/lublin.json'), loadWorld(), font])
       .then(([city]) => {
         timer.remove();
         rememberMap(city);

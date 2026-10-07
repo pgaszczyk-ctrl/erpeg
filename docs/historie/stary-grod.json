@@ -1,212 +1,911 @@
 [
   {
-    "id": "sg_czarcia_lapa", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 2 },
-    "adres": "Rynek 1", "tytul": "Czarcia Łapa",
-    "opis": "Urzędnik Magistratu: „Wędrowcze! Machina rachunkowa Trybunału stanęła. Tryby zaklinowały się wokół starego dębowego stołu, tego z wypaloną łapą. Nasze klucze nic nie pomagają. Zajrzyj do optyka na Złotej, może jego szkła coś pokażą.”",
-    "zadanie": { "typ": "zagadka", "miejsce": "Złota 2", "cel": "Idź do optyka na Złotej" },
+    "id": "sg_czarcia_lapa",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 2
+    },
+    "adres": "Rynek 1",
+    "tytul": "Czarcia Łapa",
+    "opis": "W sali Trybunału zamiast szelestu papierów słychać zgrzyt. Urzędnik Magistratu w wytartym surducie wyciera czoło chusteczką:\n\n„Wędrowcze, dobrze, że jesteś! Nasza machina rachunkowa stanęła. Tryby zaklinowały się wokół starego dębowego stołu – tego z wypaloną łapą diabła. Klucze nie pomagają, smar nie pomaga, a czeladnicy boją się do niej podejść.\n\nZajrzyj do optyka na Złotej. Jego szkła widzą rzeczy, których zwykłe oko nie dostrzeże.”",
+    "zadanie": {
+      "typ": "zagadka",
+      "miejsce": "Złota 2",
+      "cel": "Idź do optyka na Złotej"
+    },
     "etapy": [
-      { "typ": "zagadka", "miejsce": "Złota 2", "cel": "Idź do optyka na Złotej", "postac": { "imie": "Optyk" },
+      {
+        "typ": "zagadka",
+        "miejsce": "Złota 2",
+        "cel": "Idź do optyka na Złotej",
+        "postac": {
+          "imie": "Optyk"
+        },
         "tekst": "„Soczewka do aetheru? Mam jedną. Ale najpierw powiedz…”",
-        "pytanie": "Co napędza machiny w Lublinie?", "odpowiedzi": ["para", "wiatr", "chomiki w kółkach"], "dobra": 0, "podpowiedz": "Bucha z kominów i kotłów.",
-        "daje": ["soczewka 🔍"] },
-      { "typ": "rozmowa", "miejsce": "Grodzka 5", "cel": "Pokaż soczewkę rzeczoznawcy Henrykowi", "postac": { "imie": "Henryk z Markuszowa" },
-        "tekst": "„Soczewka polaryzująca? Wspaniale. Chodźmy do Trybunału, obejrzę ten stół.”" },
-      { "typ": "idz", "miejsce": "Rynek 1", "cel": "Wróć z Henrykiem do Trybunału",
-        "komunikat": "Przez soczewkę widać, jak z odcisku łapy sączy się fioletowa mgiełka i oplata tryby. Henryk szepcze: to nie usterka, to dziki aether. Pęknięcie Magii dotarło pod Rynek." },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Opowiedz wszystko urzędnikowi", "postac": { "imie": "Urzędnik Magistratu" },
-        "tekst": "„Henryk mówi, że to dopiero początek. Gasną latarnie przy Jezuickiej, na Placu po Farze iskrzą fundamenty, na Złotej zegary chodzą do tyłu, a przepompownia traci parę. Sprawdź to, proszę.”" }
+        "pytanie": "Co napędza machiny w Lublinie?",
+        "odpowiedzi": [
+          "para",
+          "wiatr",
+          "chomiki w kółkach"
+        ],
+        "dobra": 0,
+        "podpowiedz": "Bucha z kominów i kotłów.",
+        "daje": [
+          "soczewka 🔍"
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "Grodzka 5",
+        "cel": "Pokaż soczewkę rzeczoznawcy Henrykowi",
+        "postac": {
+          "imie": "Henryk z Markuszowa"
+        },
+        "tekst": "„Soczewka polaryzująca? Wspaniale. Chodźmy do Trybunału, obejrzę ten stół.”"
+      },
+      {
+        "typ": "idz",
+        "miejsce": "Rynek 1",
+        "cel": "Wróć z Henrykiem do Trybunału",
+        "komunikat": "Przez soczewkę widać, jak z odcisku łapy sączy się fioletowa mgiełka i oplata tryby. Henryk szepcze: to nie usterka, to dziki aether. Pęknięcie Magii dotarło pod Rynek."
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Opowiedz wszystko urzędnikowi",
+        "postac": {
+          "imie": "Urzędnik Magistratu"
+        },
+        "tekst": "„Henryk mówi, że to dopiero początek. Gasną latarnie przy Jezuickiej, na Placu po Farze iskrzą fundamenty, na Złotej zegary chodzą do tyłu, a przepompownia traci parę. Sprawdź to, proszę.”"
+      }
     ],
     "zakonczenie": "Urzędnik ściska ci dłoń: „Dziękujemy, wędrowcze. Czekamy na wieści!”",
-    "nagroda": 30, "doswiadczenie": 40
+    "nagroda": 30,
+    "doswiadczenie": 40,
+    "postac": {
+      "imie": "Urzędnik Magistratu"
+    }
   },
   {
-    "id": "sg_kamien", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 2, "misje": ["sg_czarcia_lapa"] },
-    "adres": "51.24714, 22.56804", "tytul": "Kamień Nieszczęścia",
-    "opis": "Latarnik: „Gaz idzie, a latarnie gasną! A po ciemku coś zgrzyta, jakby tryby gryzły żelazo. Igiełka ciśnienia ciągnie w stronę Wieży Trynitarskiej.”",
-    "zadanie": { "typ": "idz", "miejsce": "51.24730, 22.56900", "cel": "Idź pod Wieżę Trynitarską" },
+    "id": "sg_kamien",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 2,
+      "misje": [
+        "sg_czarcia_lapa"
+      ]
+    },
+    "adres": "51.24714, 22.56804",
+    "tytul": "Kamień Nieszczęścia",
+    "opis": "Latarnik stoi pod martwą latarnią i stuka w mosiężny manometr.\n\n„Gaz idzie, igiełka drga, a latarnie gasną jedna po drugiej! A po ciemku coś zgrzyta w zaułkach, jakby tryby gryzły żelazo. Dzieci boją się wracać do domu.\n\nIgiełka ciśnienia ciągnie w stronę Wieży Trynitarskiej. Sprawdzisz, co tam się dzieje?”",
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "51.24730, 22.56900",
+      "cel": "Idź pod Wieżę Trynitarską"
+    },
     "etapy": [
-      { "typ": "idz", "miejsce": "51.24730, 22.56900", "cel": "Idź pod Wieżę Trynitarską",
-        "komunikat": "Stary Kamień Nieszczęścia mruczy jak magnes. Do bruku przywarły śruby i gwoździe, a w zaułku coś się rusza…" },
-      { "typ": "pokonaj", "miejsce": "51.24730, 22.56900", "ile": 3, "wrog": "glut", "cel": "Przegoń chochliki przyciągnięte przez kamień" },
-      { "typ": "wybor", "miejsce": "Zamkowa 9", "cel": "Zdobądź ołowiany płaszcz w zbrojowni zamku", "postac": { "imie": "Strażnik zbrojowni" },
-        "tekst": "„Ołowiany płaszcz? Z magazynu? A kto ty jesteś?”", "zaplac": 50, "daje": ["ołowiany płaszcz"] },
-      { "typ": "napraw", "miejsce": "51.24730, 22.56900", "ile": 1, "sekund": 6, "cel": "Okryj kamień ołowianym płaszczem", "zabiera": ["ołowiany płaszcz"] },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Wróć do Latarnika", "postac": { "imie": "Latarnik" },
-        "tekst": "„Świecą! Wszystkie! Weź ten rysunek, dziadek był rusznikarzem. Z nim każdy sklep zrobi ci pistolet parowy za pół ceny.”" }
+      {
+        "typ": "idz",
+        "miejsce": "51.24730, 22.56900",
+        "cel": "Idź pod Wieżę Trynitarską",
+        "komunikat": "Stary Kamień Nieszczęścia mruczy jak magnes. Do bruku przywarły śruby i gwoździe, a w zaułku coś się rusza…"
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "51.24730, 22.56900",
+        "ile": 3,
+        "wrog": "glut",
+        "cel": "Przegoń chochliki przyciągnięte przez kamień"
+      },
+      {
+        "typ": "wybor",
+        "miejsce": "Zamkowa 9",
+        "cel": "Zdobądź ołowiany płaszcz w zbrojowni zamku",
+        "postac": {
+          "imie": "Strażnik zbrojowni"
+        },
+        "tekst": "„Ołowiany płaszcz? Z magazynu? A kto ty jesteś?”",
+        "zaplac": 50,
+        "daje": [
+          "ołowiany płaszcz"
+        ]
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "51.24730, 22.56900",
+        "ile": 1,
+        "sekund": 6,
+        "cel": "Okryj kamień ołowianym płaszczem",
+        "zabiera": [
+          "ołowiany płaszcz"
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Wróć do Latarnika",
+        "postac": {
+          "imie": "Latarnik"
+        },
+        "tekst": "„Świecą! Wszystkie! Weź ten rysunek, dziadek był rusznikarzem. Z nim każdy sklep zrobi ci pistolet parowy za pół ceny.”"
+      }
     ],
     "zakonczenie": "Latarnik zapala ostatnią latarnię i uchyla czapki.",
-    "nagroda": 50, "doswiadczenie": 60, "flaga": "schemat_pistoletu"
+    "nagroda": 50,
+    "doswiadczenie": 60,
+    "flaga": "schemat_pistoletu",
+    "postac": {
+      "imie": "Latarnik"
+    }
   },
   {
-    "id": "sg_leszek", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 3, "misje": ["sg_czarcia_lapa"] },
-    "adres": "Grodzka 11", "tytul": "Sen Leszka Czarnego",
+    "id": "sg_leszek",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 3,
+      "misje": [
+        "sg_czarcia_lapa"
+      ]
+    },
+    "adres": "Grodzka 11",
+    "tytul": "Sen Leszka Czarnego",
     "opis": "Mechanik-Historyk: „Fundamenty starej fary iskrzą i nie dają się uziemić. Gdybym tylko mógł zmierzyć to zjawisko… Siarka by je wywołała. Alchemik przy Bramie Krakowskiej ma odczynnik.”",
-    "zadanie": { "typ": "rozmowa", "miejsce": "Plac Władysława Łokietka 3", "cel": "Idź do alchemika przy Bramie Krakowskiej" },
+    "zadanie": {
+      "typ": "rozmowa",
+      "miejsce": "Plac Władysława Łokietka 3",
+      "cel": "Idź do alchemika przy Bramie Krakowskiej"
+    },
     "etapy": [
-      { "typ": "rozmowa", "miejsce": "Plac Władysława Łokietka 3", "cel": "Idź do alchemika przy Bramie Krakowskiej", "postac": { "imie": "Alchemik" },
-        "tekst": "„Odczynnik siarkowy? Dam, jak mi naprawisz destylarkę. Zawór się zaciął.”" },
-      { "typ": "napraw", "miejsce": "Plac Władysława Łokietka 3", "ile": 1, "sekund": 5, "cel": "Odkręć zawór destylarki", "daje": ["odczynnik siarkowy 🧪"] },
-      { "typ": "idz", "miejsce": "", "cel": "Wróć na Plac po Farze", "zabiera": ["odczynnik siarkowy 🧪"],
-        "komunikat": "Siarka syczy na kamieniach. Z iskier wyrasta lśniąca postać w koronie: książę Leszek Czarny! – Kto przejdzie, niech wpierw udowodni, że zna mój sen." },
-      { "typ": "podnies", "miejsce": "", "ile": 3, "promien": 40, "szukaj": true, "cel": "Znajdź 3 tablice na Placu po Farze", "postac": { "imie": "Leszek Czarny", "zjawa": true },
-        "komunikat": "Na tablicach czytasz: „Rok 1282. Książę Leszek Czarny zasnął tu pod starym dębem.” · „We śnie ukazał mu się Archanioł Michał i obiecał zwycięstwo.” · „Po zwycięstwie nad Jaćwingami książę ufundował kościół św. Michała. Dziś zostały fundamenty.”" },
-      { "typ": "zagadki", "miejsce": "", "cel": "Odpowiedz zjawie księcia", "postac": { "imie": "Leszek Czarny", "zjawa": true },
+      {
+        "typ": "rozmowa",
+        "miejsce": "Plac Władysława Łokietka 3",
+        "cel": "Idź do alchemika przy Bramie Krakowskiej",
+        "postac": {
+          "imie": "Alchemik"
+        },
+        "tekst": "„Odczynnik siarkowy? Dam, jak mi naprawisz destylarkę. Zawór się zaciął.”"
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "Plac Władysława Łokietka 3",
+        "ile": 1,
+        "sekund": 5,
+        "cel": "Odkręć zawór destylarki",
+        "daje": [
+          "odczynnik siarkowy 🧪"
+        ]
+      },
+      {
+        "typ": "idz",
+        "miejsce": "",
+        "cel": "Wróć na Plac po Farze",
+        "zabiera": [
+          "odczynnik siarkowy 🧪"
+        ],
+        "komunikat": "Siarka syczy na kamieniach. Z iskier wyrasta lśniąca postać w koronie: książę Leszek Czarny! – Kto przejdzie, niech wpierw udowodni, że zna mój sen."
+      },
+      {
+        "typ": "podnies",
+        "miejsce": "",
+        "ile": 3,
+        "promien": 40,
+        "szukaj": true,
+        "cel": "Znajdź 3 tablice na Placu po Farze",
+        "postac": {
+          "imie": "Leszek Czarny",
+          "zjawa": true
+        },
+        "komunikat": "Na tablicach czytasz: „Rok 1282. Książę Leszek Czarny zasnął tu pod starym dębem.” · „We śnie ukazał mu się Archanioł Michał i obiecał zwycięstwo.” · „Po zwycięstwie nad Jaćwingami książę ufundował kościół św. Michała. Dziś zostały fundamenty.”"
+      },
+      {
+        "typ": "zagadki",
+        "miejsce": "",
+        "cel": "Odpowiedz zjawie księcia",
+        "postac": {
+          "imie": "Leszek Czarny",
+          "zjawa": true
+        },
         "pytania": [
-          { "pytanie": "Kto przyśnił się księciu?", "odpowiedzi": ["Archanioł Michał", "smok", "Jaćwing"], "dobra": 0 },
-          { "pytanie": "Kogo pokonał książę?", "odpowiedzi": ["Jaćwingów", "Krzyżaków", "Tatarów"], "dobra": 0 },
-          { "pytanie": "Co stanęło w miejscu dębu?", "odpowiedzi": ["kościół św. Michała", "ratusz", "zamek"], "dobra": 0 }
-        ] },
-      { "typ": "paragraf", "miejsce": "", "cel": "Zejdź do krypty", "daje": ["korzeń świętego dębu 🌳"],
+          {
+            "pytanie": "Kto przyśnił się księciu?",
+            "odpowiedzi": [
+              "Archanioł Michał",
+              "smok",
+              "Jaćwing"
+            ],
+            "dobra": 0
+          },
+          {
+            "pytanie": "Kogo pokonał książę?",
+            "odpowiedzi": [
+              "Jaćwingów",
+              "Krzyżaków",
+              "Tatarów"
+            ],
+            "dobra": 0
+          },
+          {
+            "pytanie": "Co stanęło w miejscu dębu?",
+            "odpowiedzi": [
+              "kościół św. Michała",
+              "ratusz",
+              "zamek"
+            ],
+            "dobra": 0
+          }
+        ]
+      },
+      {
+        "typ": "paragraf",
+        "miejsce": "",
+        "cel": "Zejdź do krypty",
+        "daje": [
+          "korzeń świętego dębu 🌳"
+        ],
         "strony": [
-          { "tekst": "Zjawa księcia kiwa głową i znika. W fundamentach otwiera się zasypana krypta. Schodzisz po omszałych stopniach…" },
-          { "tekst": "W środku pulsuje żywy korzeń dębu, ciepły jak dłoń. Co robisz?", "wybory": [ { "tekst": "Odrąb mały fragment łomem", "dobry": true }, { "tekst": "Wyrwij cały korzeń", "dobry": false } ] }
-        ] },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Wróć do Historyka", "postac": { "imie": "Mechanik-Historyk" },
-        "tekst": "„Częstotliwość zapisana! A korzeń zatrzymaj, czuję, że się przyda.”" }
+          {
+            "tekst": "Zjawa księcia kiwa głową i znika. W fundamentach otwiera się zasypana krypta. Schodzisz po omszałych stopniach…"
+          },
+          {
+            "tekst": "W środku pulsuje żywy korzeń dębu, ciepły jak dłoń. Co robisz?",
+            "wybory": [
+              {
+                "tekst": "Odrąb mały fragment łomem",
+                "dobry": true
+              },
+              {
+                "tekst": "Wyrwij cały korzeń",
+                "dobry": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Wróć do Historyka",
+        "postac": {
+          "imie": "Mechanik-Historyk"
+        },
+        "tekst": "„Częstotliwość zapisana! A korzeń zatrzymaj, czuję, że się przyda.”"
+      }
     ],
     "zakonczenie": "Historyk zapisuje coś w grubym notesie: „To wszystko jest połączone…”",
-    "nagroda": 60, "doswiadczenie": 80
+    "nagroda": 60,
+    "doswiadczenie": 80,
+    "postac": {
+      "imie": "Mechanik-Historyk"
+    }
   },
   {
-    "id": "sg_zlotniczanka", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 3, "misje": ["sg_czarcia_lapa"] },
-    "adres": "Złota 4", "tytul": "Złotniczanka",
-    "opis": "Jubiler: „Wszystkie zegary w warsztacie chodzą do tyłu! A nocą z zaułków dochodzi takie cichutkie tykanie… Poszukaj, proszę, między Złotą a Archidiakońską.”",
-    "zadanie": { "typ": "podnies", "miejsce": "51.24786, 22.56949", "cel": "Znajdź źródło tykania" },
+    "id": "sg_zlotniczanka",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 3,
+      "misje": [
+        "sg_czarcia_lapa"
+      ]
+    },
+    "adres": "Złota 4",
+    "tytul": "Złotniczanka",
+    "opis": "W warsztacie jubilera tyka sto zegarów – i wszystkie chodzą do tyłu. Jubiler rozkłada bezradnie ręce.\n\n„Wskazówki cofają się od tygodnia. Klienci uciekają, myślą, że to klątwa. A nocą z zaułków dochodzi takie cichutkie tykanie, jakby ktoś wołał o pomoc…\n\nPoszukaj, proszę, między Złotą a Archidiakońską. Tam tyka najgłośniej.”",
+    "zadanie": {
+      "typ": "podnies",
+      "miejsce": "51.24786, 22.56949",
+      "cel": "Znajdź źródło tykania"
+    },
     "etapy": [
-      { "typ": "podnies", "miejsce": "51.24786, 22.56949", "ile": 1, "promien": 25, "szukaj": true, "cel": "Znajdź źródło tykania",
-        "komunikat": "Pod kratą ściekową drga mosiężny medalion.", "daje": ["medalion"] },
-      { "typ": "napraw", "miejsce": "", "ile": 1, "sekund": 8, "cel": "Oczyść medalion na stole Jubilera" },
-      { "typ": "paragraf", "miejsce": "", "cel": "Zanieś medalion na strych", "zabiera": ["medalion"],
+      {
+        "typ": "podnies",
+        "miejsce": "51.24786, 22.56949",
+        "ile": 1,
+        "promien": 25,
+        "szukaj": true,
+        "cel": "Znajdź źródło tykania",
+        "komunikat": "Pod kratą ściekową drga mosiężny medalion.",
+        "daje": [
+          "medalion"
+        ]
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "",
+        "ile": 1,
+        "sekund": 8,
+        "cel": "Oczyść medalion przy stole Jubilera (stań przy świecącym punkcie)"
+      },
+      {
+        "typ": "paragraf",
+        "miejsce": "",
+        "cel": "Zanieś medalion na strych",
+        "zabiera": [
+          "medalion"
+        ],
         "strony": [
-          { "tekst": "Strych nad warsztatem. Stare belki skrzypią. Którędy idziesz?", "wybory": [ { "tekst": "Przy ścianie", "dobry": true }, { "tekst": "Środkiem", "dobry": false } ] },
-          { "tekst": "Dalej leży sterta skrzyń. Którędy?", "wybory": [ { "tekst": "Po belce przy ścianie", "dobry": true }, { "tekst": "Środkiem, po deskach", "dobry": false } ] },
-          { "tekst": "W kącie stoi stolik dawnego czeladnika. Kładziesz na nim medalion. Tykanie cichnie. Ktoś bardzo cicho mówi: dziękuję." }
-        ] },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Wróć do Jubilera", "postac": { "imie": "Jubiler" },
-        "tekst": "„Zegary idą do przodu! Weź ten zegarek, należał do mojego mistrza. Z nim trafisz, w co celujesz.”" }
+          {
+            "tekst": "Strych nad warsztatem. Stare belki skrzypią. Którędy idziesz?",
+            "wybory": [
+              {
+                "tekst": "Przy ścianie",
+                "dobry": true
+              },
+              {
+                "tekst": "Środkiem",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "Dalej leży sterta skrzyń. Którędy?",
+            "wybory": [
+              {
+                "tekst": "Po belce przy ścianie",
+                "dobry": true
+              },
+              {
+                "tekst": "Środkiem, po deskach",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "W kącie stoi stolik dawnego czeladnika. Kładziesz na nim medalion. Tykanie cichnie. Ktoś bardzo cicho mówi: dziękuję."
+          }
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Wróć do Jubilera",
+        "postac": {
+          "imie": "Jubiler"
+        },
+        "tekst": "„Zegary idą do przodu! Weź ten zegarek, należał do mojego mistrza. Z nim trafisz, w co celujesz.”"
+      }
     ],
     "zakonczenie": "W warsztacie znów tyka równo, do przodu.",
-    "nagroda": 80, "doswiadczenie": 80, "przedmiot": "zegarek_czeladnika"
+    "nagroda": 80,
+    "doswiadczenie": 80,
+    "przedmiot": "zegarek_czeladnika",
+    "postac": {
+      "imie": "Jubiler"
+    }
   },
   {
-    "id": "sg_bystrzyca", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 4, "misje": ["sg_czarcia_lapa"] },
-    "adres": "51.23923, 22.57128", "tytul": "Tajemnica Bystrzycy",
+    "id": "sg_bystrzyca",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 4,
+      "misje": [
+        "sg_czarcia_lapa"
+      ]
+    },
+    "adres": "51.23923, 22.57128",
+    "tytul": "Tajemnica Bystrzycy",
     "opis": "Inżynier Wodny przy przepompowni: „Ciśnienie pary leci na łeb! Coś zatyka rury od strony rzeki. Moje mosiężne czyściciele nie wróciły z obchodu.”",
-    "zadanie": { "typ": "idz", "miejsce": "51.23853, 22.56955", "cel": "Idź nad rzekę przy Alejach Zygmuntowskich" },
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "51.23853, 22.56955",
+      "cel": "Idź nad rzekę przy Alejach Zygmuntowskich"
+    },
     "etapy": [
-      { "typ": "idz", "miejsce": "51.23853, 22.56955", "cel": "Idź nad rzekę przy Alejach Zygmuntowskich",
-        "komunikat": "Na brzegu leżą czyściciele oplecione niebieskimi glonami. W wodzie coś chlupie." },
-      { "typ": "pokonaj", "miejsce": "51.23853, 22.56955", "ile": 4, "wrog": "zombie", "cel": "Przegoń rzeczne utopce" },
-      { "typ": "pokonaj", "miejsce": "51.23609, 22.57378", "ile": 4, "wrog": "zombie", "cel": "Przegoń utopce w górę rzeki" },
-      { "typ": "podnies", "miejsce": "51.23609, 22.57378", "ile": 3, "promien": 30, "cel": "Zbierz próbki pulsujących glonów", "daje": ["próbki glonów"] },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Zanieś próbki do przepompowni", "postac": { "imie": "Inżynier Wodny" }, "zabiera": ["próbki glonów"],
-        "tekst": "„Te glony nie są z miasta. Spływają z południa, od lasów Starego Gaju. Tam mieszka Pustelnik, ale drogi przez mgłę nikt nie zna. Może ktoś w gospodzie przy Janowskiej ma mapę.”" }
+      {
+        "typ": "idz",
+        "miejsce": "51.23853, 22.56955",
+        "cel": "Idź nad rzekę przy Alejach Zygmuntowskich",
+        "komunikat": "Na brzegu leżą czyściciele oplecione niebieskimi glonami. W wodzie coś chlupie."
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "51.23853, 22.56955",
+        "ile": 4,
+        "wrog": "zombie",
+        "cel": "Przegoń rzeczne utopce"
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "51.23609, 22.57378",
+        "ile": 4,
+        "wrog": "zombie",
+        "cel": "Przegoń utopce w górę rzeki"
+      },
+      {
+        "typ": "podnies",
+        "miejsce": "51.23609, 22.57378",
+        "ile": 3,
+        "promien": 30,
+        "cel": "Zbierz próbki pulsujących glonów",
+        "daje": [
+          "próbki glonów"
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Zanieś próbki do przepompowni",
+        "postac": {
+          "imie": "Inżynier Wodny"
+        },
+        "zabiera": [
+          "próbki glonów"
+        ],
+        "tekst": "„Te glony nie są z miasta. Spływają z południa, od lasów Starego Gaju. Tam mieszka Pustelnik, ale drogi przez mgłę nikt nie zna. Może ktoś w gospodzie przy Janowskiej ma mapę.”"
+      }
     ],
     "zakonczenie": "Inżynier dokręca zawór: ciśnienie wraca.",
-    "nagroda": 80, "doswiadczenie": 100
+    "nagroda": 80,
+    "doswiadczenie": 100,
+    "postac": {
+      "imie": "Inżynier Wodny"
+    }
   },
   {
-    "id": "sg_pustelnik", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 4, "misje": ["sg_leszek", "sg_bystrzyca"] },
-    "adres": "Janowska 1", "tytul": "Pustelnik ze Starego Gaju",
+    "id": "sg_pustelnik",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 4,
+      "misje": [
+        "sg_leszek",
+        "sg_bystrzyca"
+      ]
+    },
+    "adres": "Janowska 1",
+    "tytul": "Pustelnik ze Starego Gaju",
     "opis": "Barman w gospodzie: „Mapa Starego Gaju? Mam, ale za darmo nie dam. Jeden taki zostawił tu dług i zwiał. Albo zagraj ze mną w karty, wędrowcze.”",
-    "zadanie": { "typ": "wybor", "miejsce": "", "cel": "Zdobądź mapę lasu od barmana" },
+    "zadanie": {
+      "typ": "wybor",
+      "miejsce": "",
+      "cel": "Zdobądź mapę lasu od barmana"
+    },
     "etapy": [
-      { "typ": "wybor", "miejsce": "", "cel": "Zdobądź mapę lasu od barmana", "postac": { "imie": "Barman" },
-        "tekst": "„No to jak? Przekonasz mnie bystrością albo spłacisz ten dług – 100 monet.”", "zaplac": 100, "daje": ["mapa lasu 🗺"] },
-      { "typ": "idz", "miejsce": "51.21069, 22.52589", "cel": "Idź na skraj lasu Stary Gaj",
-        "komunikat": "Gęsta mgła. Między drzewami syczy para, a na mapie ktoś ołówkiem dorysował ścieżkę do wąwozu." },
-      { "typ": "pokonaj", "miejsce": "51.21069, 22.52589", "ile": 5, "wrog": "driada", "cel": "Przegoń Parowe Driady" },
-      { "typ": "napraw", "miejsce": "51.20667, 22.52022", "ile": 3, "sekund": 4, "promien": 40, "cel": "Wyrównaj napięcie w trzech generatorach" },
-      { "typ": "rozmowa", "miejsce": "51.20667, 22.52022", "cel": "Porozmawiaj z Pustelnikiem", "postac": { "imie": "Pustelnik" },
-        "tekst": "„Soczewka, korzeń, glony… To jedno źródło. Pod Rynkiem stoi Serce Miasta, kocioł z czasów Smoczego Paktu. Kometa obudziła w nim smoczy żar i teraz dziki aether płynie rurami do rzeki i lasu. Zejdź tam. Tylko uważaj: tamtejszy mrok gasi zwykłe światło.”" }
+      {
+        "typ": "wybor",
+        "miejsce": "",
+        "cel": "Zdobądź mapę lasu od barmana",
+        "postac": {
+          "imie": "Barman"
+        },
+        "tekst": "„No to jak? Przekonasz mnie bystrością albo spłacisz ten dług – 100 monet.”",
+        "zaplac": 100,
+        "daje": [
+          "mapa lasu 🗺"
+        ]
+      },
+      {
+        "typ": "idz",
+        "miejsce": "51.21069, 22.52589",
+        "cel": "Idź na skraj lasu Stary Gaj",
+        "komunikat": "Gęsta mgła. Między drzewami syczy para, a na mapie ktoś ołówkiem dorysował ścieżkę do wąwozu."
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "51.21069, 22.52589",
+        "ile": 5,
+        "wrog": "driada",
+        "cel": "Przegoń Parowe Driady"
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "51.20667, 22.52022",
+        "ile": 3,
+        "sekund": 4,
+        "promien": 40,
+        "cel": "Wyrównaj napięcie w trzech generatorach"
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "51.20667, 22.52022",
+        "cel": "Porozmawiaj z Pustelnikiem",
+        "postac": {
+          "imie": "Pustelnik"
+        },
+        "tekst": "„Soczewka, korzeń, glony… To jedno źródło. Pod Rynkiem stoi Serce Miasta, kocioł z czasów Smoczego Paktu. Kometa obudziła w nim smoczy żar i teraz dziki aether płynie rurami do rzeki i lasu. Zejdź tam. Tylko uważaj: tamtejszy mrok gasi zwykłe światło.”"
+      }
     ],
     "zakonczenie": "Pustelnik daje ci filtr i zapisuje recepturę na skrawku kory.",
-    "nagroda": 100, "doswiadczenie": 120, "flaga": "receptura_alchemika", "przedmiot": "filtr_aetherowy"
+    "nagroda": 100,
+    "doswiadczenie": 120,
+    "flaga": "receptura_alchemika",
+    "przedmiot": "filtr_aetherowy",
+    "postac": {
+      "imie": "Barman"
+    }
   },
   {
-    "id": "sg_podziemia", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 5, "misje": ["sg_pustelnik"] },
-    "adres": "Rynek 1", "tytul": "Lubelskie Podziemia",
+    "id": "sg_podziemia",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 5,
+      "misje": [
+        "sg_pustelnik"
+      ]
+    },
+    "adres": "Rynek 1",
+    "tytul": "Lubelskie Podziemia",
     "opis": "Urzędnik Magistratu: „Trasa Podziemna jest zamknięta. Ktokolwiek tam schodzi, wraca po ciemku, a lampy gasną po trzech krokach. Szmugler z Bramowej podobno ma coś, co świeci mimo wszystko… Nie mów nikomu, że to ja ci powiedziałem.”",
-    "zadanie": { "typ": "rozmowa", "miejsce": "Bramowa 2", "cel": "Znajdź szmuglera na Bramowej" },
+    "zadanie": {
+      "typ": "rozmowa",
+      "miejsce": "Bramowa 2",
+      "cel": "Znajdź szmuglera na Bramowej"
+    },
     "etapy": [
-      { "typ": "rozmowa", "miejsce": "Bramowa 2", "cel": "Znajdź szmuglera na Bramowej", "postac": { "imie": "Szmugler" },
-        "tekst": "„Paliwo Świetlne? Fosfor z aetherem, najlepsze w mieście. Ale chochliki zwinęły mi skrzynkę i siedzą z nią za ratuszem.”" },
-      { "typ": "pokonaj", "miejsce": "Plac Władysława Łokietka 1", "ile": 5, "wrog": "glut", "cel": "Odbij skrzynkę szmuglera za ratuszem", "daje": ["skrzynka szmuglera 📦"] },
-      { "typ": "rozmowa", "miejsce": "Bramowa 2", "cel": "Oddaj skrzynkę szmuglerowi", "postac": { "imie": "Szmugler" }, "zabiera": ["skrzynka szmuglera 📦"], "daje": ["paliwo świetlne 🕯"],
-        "tekst": "„Uczciwy z ciebie. Masz, wlej do latarki i nie patrz prosto w płomień.”" },
-      { "typ": "idz", "miejsce": "", "cel": "Wróć pod Trybunał", "komunikat": "Latarka z paliwem świetlnym przebija mrok. Schodzisz pod Rynek." },
-      { "typ": "paragraf", "miejsce": "", "cel": "Przejdź podziemia", "daje": ["notatnik architekta 📒"],
+      {
+        "typ": "rozmowa",
+        "miejsce": "Bramowa 2",
+        "cel": "Znajdź szmuglera na Bramowej",
+        "postac": {
+          "imie": "Szmugler"
+        },
+        "tekst": "„Paliwo Świetlne? Fosfor z aetherem, najlepsze w mieście. Ale chochliki zwinęły mi skrzynkę i siedzą z nią za ratuszem.”"
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "Plac Władysława Łokietka 1",
+        "ile": 5,
+        "wrog": "glut",
+        "cel": "Odbij skrzynkę szmuglera za ratuszem",
+        "daje": [
+          "skrzynka szmuglera 📦"
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "Bramowa 2",
+        "cel": "Oddaj skrzynkę szmuglerowi",
+        "postac": {
+          "imie": "Szmugler"
+        },
+        "zabiera": [
+          "skrzynka szmuglera 📦"
+        ],
+        "daje": [
+          "paliwo świetlne 🕯"
+        ],
+        "tekst": "„Uczciwy z ciebie. Masz, wlej do latarki i nie patrz prosto w płomień.”"
+      },
+      {
+        "typ": "idz",
+        "miejsce": "",
+        "cel": "Wróć pod Trybunał",
+        "komunikat": "Latarka z paliwem świetlnym przebija mrok. Schodzisz pod Rynek."
+      },
+      {
+        "typ": "paragraf",
+        "miejsce": "",
+        "cel": "Przejdź podziemia",
+        "daje": [
+          "notatnik architekta 📒"
+        ],
         "strony": [
-          { "tekst": "W posadzce ziemi zapadnia, czarna jak smoła.", "wybory": [ { "tekst": "Obejdź ją bokiem", "dobry": true }, { "tekst": "Skocz", "dobry": false } ] },
-          { "tekst": "Drogę przecina rura z gorącą parą.", "wybory": [ { "tekst": "Zakręć zawór", "dobry": true }, { "tekst": "Przebiegnij", "dobry": false } ] },
-          { "tekst": "Korytarz się rozwidla.", "wybory": [ { "tekst": "W stronę szumu", "dobry": true }, { "tekst": "W stronę ciszy", "dobry": false } ] },
-          { "tekst": "Na dnie stoi mosiężna śluza z zamkiem akustycznym. Pod ścianą leży stara torba architekta. W notatniku: „Klucz to dźwięk. Zna go tylko ojciec Dominik z klasztoru przy Złotej”." }
-        ] }
+          {
+            "tekst": "W posadzce ziemi zapadnia, czarna jak smoła.",
+            "wybory": [
+              {
+                "tekst": "Obejdź ją bokiem",
+                "dobry": true
+              },
+              {
+                "tekst": "Skocz",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "Drogę przecina rura z gorącą parą.",
+            "wybory": [
+              {
+                "tekst": "Zakręć zawór",
+                "dobry": true
+              },
+              {
+                "tekst": "Przebiegnij",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "Korytarz się rozwidla.",
+            "wybory": [
+              {
+                "tekst": "W stronę szumu",
+                "dobry": true
+              },
+              {
+                "tekst": "W stronę ciszy",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "Na dnie stoi mosiężna śluza z zamkiem akustycznym. Pod ścianą leży stara torba architekta. W notatniku: „Klucz to dźwięk. Zna go tylko ojciec Dominik z klasztoru przy Złotej”."
+          }
+        ]
+      }
     ],
     "zakonczenie": "Wychodzisz na Rynek z notatnikiem pod pachą. Urzędnik blednie: „Ojciec Dominik? Przecież on…”",
-    "nagroda": 120, "doswiadczenie": 150
+    "nagroda": 120,
+    "doswiadczenie": 150,
+    "postac": {
+      "imie": "Urzędnik Magistratu"
+    }
   },
   {
-    "id": "sg_dominik", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 5, "misje": ["sg_podziemia"] },
-    "adres": "Złota 9", "tytul": "Widmo Ojca Dominika",
+    "id": "sg_dominik",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 5,
+      "misje": [
+        "sg_podziemia"
+      ]
+    },
+    "adres": "Złota 9",
+    "tytul": "Widmo Ojca Dominika",
     "opis": "Przeor: „Ojciec Dominik? Jego duch zjawia się, gdy grają organy. Ale organy milczą: chochliki wykręciły trzy mosiężne piszczałki i porozrzucały je po okolicy.”",
-    "zadanie": { "typ": "pokonaj", "miejsce": "", "cel": "Przegoń chochliki przy klasztorze" },
+    "zadanie": {
+      "typ": "pokonaj",
+      "miejsce": "",
+      "cel": "Przegoń chochliki przy klasztorze"
+    },
     "etapy": [
-      { "typ": "pokonaj", "miejsce": "", "ile": 4, "wrog": "glut", "cel": "Przegoń chochliki przy klasztorze" },
-      { "typ": "podnies", "miejsce": "", "ile": 3, "promien": 60, "szukaj": true, "cel": "Znajdź 3 piszczałki", "daje": ["piszczałki"] },
-      { "typ": "napraw", "miejsce": "", "ile": 1, "sekund": 6, "cel": "Wstaw piszczałki do organów", "zabiera": ["piszczałki"] },
-      { "typ": "melodia", "miejsce": "", "cel": "Zagraj melodię z notatnika", "tekst": "Organy znów mają wszystkie piszczałki. Zagraj melodię z notatnika architekta.", "nuty": [0, 2, 4, 2, 1, 0] },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Spotkaj ducha", "postac": { "imie": "Ojciec Dominik", "zjawa": true }, "daje": ["cylinder z szyfrem"],
-        "tekst": "Zjawa uśmiecha się i kładzie ci w dłonie woskowy cylinder fonografu. Potem rozpływa się razem z ostatnim dźwiękiem." },
-      { "typ": "rozmowa", "miejsce": "", "cel": "Porozmawiaj z Przeorem", "postac": { "imie": "Przeor" },
-        "tekst": "„To szyfr rezonansowy. Niech ci służy. Weź też to, nasi bracia nosili to w czasach Wielkiej Wojny o Tryby.”" }
+      {
+        "typ": "pokonaj",
+        "miejsce": "",
+        "ile": 4,
+        "wrog": "glut",
+        "cel": "Przegoń chochliki przy klasztorze"
+      },
+      {
+        "typ": "podnies",
+        "miejsce": "",
+        "ile": 3,
+        "promien": 60,
+        "szukaj": true,
+        "cel": "Znajdź 3 piszczałki",
+        "daje": [
+          "piszczałki"
+        ]
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "",
+        "ile": 1,
+        "sekund": 6,
+        "cel": "Wstaw piszczałki do organów",
+        "zabiera": [
+          "piszczałki"
+        ]
+      },
+      {
+        "typ": "melodia",
+        "miejsce": "",
+        "cel": "Zagraj melodię z notatnika",
+        "tekst": "Organy znów mają wszystkie piszczałki. Zagraj melodię z notatnika architekta.",
+        "nuty": [
+          0,
+          2,
+          4,
+          2,
+          1,
+          0
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Spotkaj ducha",
+        "postac": {
+          "imie": "Ojciec Dominik",
+          "zjawa": true
+        },
+        "daje": [
+          "cylinder z szyfrem"
+        ],
+        "tekst": "Zjawa uśmiecha się i kładzie ci w dłonie woskowy cylinder fonografu. Potem rozpływa się razem z ostatnim dźwiękiem."
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "",
+        "cel": "Porozmawiaj z Przeorem",
+        "postac": {
+          "imie": "Przeor"
+        },
+        "tekst": "„To szyfr rezonansowy. Niech ci służy. Weź też to, nasi bracia nosili to w czasach Wielkiej Wojny o Tryby.”"
+      }
     ],
     "zakonczenie": "Przeor błogosławi ci na drogę.",
-    "nagroda": 120, "doswiadczenie": 150, "przedmiot": "klasztorny_pochlaniacz"
+    "nagroda": 120,
+    "doswiadczenie": 150,
+    "przedmiot": "klasztorny_pochlaniacz",
+    "postac": {
+      "imie": "Przeor"
+    }
   },
   {
-    "id": "sg_wieniawa", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 6, "misje": ["sg_dominik"] },
-    "adres": "Rynek 1", "tytul": "Wyścig na Wieniawę",
+    "id": "sg_wieniawa",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 6,
+      "misje": [
+        "sg_dominik"
+      ]
+    },
+    "adres": "Rynek 1",
+    "tytul": "Wyścig na Wieniawę",
     "opis": "Urzędnik: „Masz cylinder? Śluza pod Rynkiem czeka. Ostrożnie…”",
-    "zadanie": { "typ": "idz", "miejsce": "", "cel": "Otwórz śluzę pod Trybunałem" },
+    "zadanie": {
+      "typ": "idz",
+      "miejsce": "",
+      "cel": "Otwórz śluzę pod Trybunałem"
+    },
     "etapy": [
-      { "typ": "idz", "miejsce": "", "cel": "Otwórz śluzę pod Trybunałem", "zabiera": ["cylinder z szyfrem"],
-        "komunikat": "Cylinder gra, śluza się otwiera i bucha gorąco. Serce Miasta się topi! Nad Rynkiem wyją syreny." },
-      { "typ": "rozmowa", "miejsce": "51.24762, 22.56785", "cel": "Porozmawiaj z Kapitanem Straży", "postac": { "imie": "Kapitan Straży Pożarnej" },
-        "tekst": "„Woda wyparuje, zanim doleci! Na Wieniawie wynalazca ma Prototypowy Rdzeń Mrożący. Leć, ile sił w nogach!”" },
-      { "typ": "idz", "miejsce": "Stanisława Leszczyńskiego 14", "naCzas": true, "cel": "Biegnij do wynalazcy na Wieniawę" },
-      { "typ": "napraw", "miejsce": "Stanisława Leszczyńskiego 14", "ile": 1, "sekund": 6, "cel": "Wyrwij rygiel windy łomem",
-        "tekst": "Winda się zacięła! Rdzeń jest w piwnicy.", "daje": ["rdzeń mrożący ❄"] },
-      { "typ": "idz", "miejsce": "Rynek 1", "naCzas": true, "cel": "Zanieś rdzeń na Rynek",
-        "komunikat": "Kapitan podpina rdzeń do węża. Para opada. Mamy chwilę, ale Serce wciąż bije za mocno." }
+      {
+        "typ": "idz",
+        "miejsce": "",
+        "cel": "Otwórz śluzę pod Trybunałem",
+        "zabiera": [
+          "cylinder z szyfrem"
+        ],
+        "komunikat": "Cylinder gra, śluza się otwiera i bucha gorąco. Serce Miasta się topi! Nad Rynkiem wyją syreny."
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "51.24762, 22.56785",
+        "cel": "Porozmawiaj z Kapitanem Straży",
+        "postac": {
+          "imie": "Kapitan Straży Pożarnej"
+        },
+        "tekst": "„Woda wyparuje, zanim doleci! Na Wieniawie wynalazca ma Prototypowy Rdzeń Mrożący. Leć, ile sił w nogach!”"
+      },
+      {
+        "typ": "idz",
+        "miejsce": "Stanisława Leszczyńskiego 14",
+        "naCzas": true,
+        "cel": "Biegnij do wynalazcy na Wieniawę"
+      },
+      {
+        "typ": "napraw",
+        "miejsce": "Stanisława Leszczyńskiego 14",
+        "ile": 1,
+        "sekund": 6,
+        "cel": "Wyrwij rygiel windy łomem",
+        "tekst": "Winda się zacięła! Rdzeń jest w piwnicy.",
+        "daje": [
+          "rdzeń mrożący ❄"
+        ]
+      },
+      {
+        "typ": "idz",
+        "miejsce": "Rynek 1",
+        "naCzas": true,
+        "cel": "Zanieś rdzeń na Rynek",
+        "komunikat": "Kapitan podpina rdzeń do węża. Para opada. Mamy chwilę, ale Serce wciąż bije za mocno."
+      }
     ],
     "zakonczenie": "Kapitan ociera pot z czoła: „Zdążyłeś! Ale to jeszcze nie koniec.”",
-    "nagroda": 150, "doswiadczenie": 200
+    "nagroda": 150,
+    "doswiadczenie": 200,
+    "postac": {
+      "imie": "Urzędnik Magistratu"
+    }
   },
   {
-    "id": "sg_serce", "seria": "Przebudzenie Starego Grodu", "tylkoTest": true, "wymaga": { "poziom": 7, "misje": ["sg_wieniawa"] },
-    "adres": "51.24762, 22.56785", "tytul": "Serce Koziego Grodu",
+    "id": "sg_serce",
+    "seria": "Przebudzenie Starego Grodu",
+    "tylkoTest": true,
+    "wymaga": {
+      "poziom": 7,
+      "misje": [
+        "sg_wieniawa"
+      ]
+    },
+    "adres": "51.24762, 22.56785",
+    "tytul": "Serce Koziego Grodu",
     "opis": "Kapitan Straży: „Zawory główne są przy studzienkach na Rynku. Zakręć je, a potem zejdź szybem za Trybunałem. I uważaj, coś tam na dole tupie.”",
-    "zadanie": { "typ": "napraw", "miejsce": "Rynek 1", "cel": "Zakręć trzy zawory główne" },
+    "zadanie": {
+      "typ": "napraw",
+      "miejsce": "Rynek 1",
+      "cel": "Zakręć trzy zawory główne"
+    },
     "etapy": [
-      { "typ": "napraw", "miejsce": "Rynek 1", "ile": 3, "sekund": 5, "promien": 40, "cel": "Zakręć trzy zawory główne" },
-      { "typ": "pokonaj", "miejsce": "Rynek 1", "ile": 4, "wrog": "glut", "cel": "Przegoń chochliki od zaworów" },
-      { "typ": "paragraf", "miejsce": "Rynek 1", "cel": "Zejdź szybem do komory kotła",
+      {
+        "typ": "napraw",
+        "miejsce": "Rynek 1",
+        "ile": 3,
+        "sekund": 5,
+        "promien": 40,
+        "cel": "Zakręć trzy zawory główne"
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "Rynek 1",
+        "ile": 4,
+        "wrog": "glut",
+        "cel": "Przegoń chochliki od zaworów"
+      },
+      {
+        "typ": "paragraf",
+        "miejsce": "Rynek 1",
+        "cel": "Zejdź szybem do komory kotła",
         "strony": [
-          { "tekst": "Schodzisz szybem do komory. Wrzątek syczy, para dusi.", "wybory": [ { "tekst": "Osłoń twarz i idź pod ścianą", "dobry": true }, { "tekst": "Biegnij środkiem", "dobry": false } ] },
-          { "tekst": "Z obręczy kotła odrywa się mosiężny kolos z rogami: Kozioł z herbu miasta! Oczy ma rdzawe, nie poznaje nikogo. Jednym skokiem wybija się szybem na Rynek." }
-        ] },
-      { "typ": "pokonaj", "miejsce": "Rynek 1", "ile": 1, "wrog": "koziol", "cel": "Rozbij rdzawy pancerz Kozła",
-        "komunikat": "Rdza opada z jego blach. Kozioł kiwa łbem i wraca do szybu." },
-      { "typ": "paragraf", "miejsce": "Rynek 1", "cel": "Uspokój Serce Miasta", "zabiera": ["rdzeń mrożący ❄", "korzeń świętego dębu 🌳"],
+          {
+            "tekst": "Schodzisz szybem do komory. Wrzątek syczy, para dusi.",
+            "wybory": [
+              {
+                "tekst": "Osłoń twarz i idź pod ścianą",
+                "dobry": true
+              },
+              {
+                "tekst": "Biegnij środkiem",
+                "dobry": false
+              }
+            ]
+          },
+          {
+            "tekst": "Z obręczy kotła odrywa się mosiężny kolos z rogami: Kozioł z herbu miasta! Oczy ma rdzawe, nie poznaje nikogo. Jednym skokiem wybija się szybem na Rynek."
+          }
+        ]
+      },
+      {
+        "typ": "pokonaj",
+        "miejsce": "Rynek 1",
+        "ile": 1,
+        "wrog": "koziol",
+        "cel": "Rozbij rdzawy pancerz Kozła",
+        "komunikat": "Rdza opada z jego blach. Kozioł kiwa łbem i wraca do szybu."
+      },
+      {
+        "typ": "paragraf",
+        "miejsce": "Rynek 1",
+        "cel": "Uspokój Serce Miasta",
+        "zabiera": [
+          "rdzeń mrożący ❄",
+          "korzeń świętego dębu 🌳"
+        ],
         "strony": [
-          { "tekst": "Łączysz rdzeń mrożący z korzeniem dębu.", "wybory": [ { "tekst": "Włóż razem do kotła", "dobry": true } ] },
-          { "tekst": "Smoczy żar uspokaja się i świeci równo, jak za czasów Paktu. Magia i para znów pracują razem." }
-        ] },
-      { "typ": "rozmowa", "miejsce": "Rynek 1", "cel": "Wróć do Urzędnika i Henryka", "postac": { "imie": "Henryk z Markuszowa" },
-        "tekst": "„Całe Stare Miasto ci dziękuje! Od dziś jesteś Strażnikiem Serca Miasta.”" }
+          {
+            "tekst": "Łączysz rdzeń mrożący z korzeniem dębu.",
+            "wybory": [
+              {
+                "tekst": "Włóż razem do kotła",
+                "dobry": true
+              }
+            ]
+          },
+          {
+            "tekst": "Smoczy żar uspokaja się i świeci równo, jak za czasów Paktu. Magia i para znów pracują razem."
+          }
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "miejsce": "Rynek 1",
+        "cel": "Wróć do Urzędnika i Henryka",
+        "postac": {
+          "imie": "Henryk z Markuszowa"
+        },
+        "tekst": "„Całe Stare Miasto ci dziękuje! Od dziś jesteś Strażnikiem Serca Miasta.”"
+      }
     ],
     "zakonczenie": "Nad Rynkiem znów świecą latarnie, a z kominów leci równa, biała para.",
-    "nagroda": 300, "doswiadczenie": 400, "przedmioty": ["karabin_trybunal", "plaszcz_cechmistrza"], "tytul_bohatera": "Strażnik Serca Miasta"
+    "nagroda": 300,
+    "doswiadczenie": 400,
+    "przedmioty": [
+      "karabin_trybunal",
+      "plaszcz_cechmistrza"
+    ],
+    "tytul_bohatera": "Strażnik Serca Miasta",
+    "postac": {
+      "imie": "Kapitan Straży Pożarnej"
+    }
   }
 ]

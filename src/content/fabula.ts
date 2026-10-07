@@ -66,6 +66,15 @@ export interface Zadanie {
   dobra?: number;
   /** Tylko dla 'zagadka': podpowiedź po złej odpowiedzi. */
   podpowiedz?: string;
+  /** Postać stojąca na miejscu zadania, póki trwa (zjawa = półprzezroczysta, niebieska); to ona mówi po dotarciu. */
+  postac?: Postac;
+}
+
+/** Ktoś stojący w świecie przy misji (zleceniodawca przy drzwiach albo osoba na miejscu etapu). */
+export interface Postac {
+  imie: string;
+  zjawa?: boolean;
+  kobieta?: boolean;
 }
 
 /**
@@ -79,8 +88,6 @@ export interface Etap extends Zadanie {
   daje?: string[];
   /** Przedmioty fabularne zabrane po wykonaniu etapu. */
   zabiera?: string[];
-  /** Postać stojąca na miejscu etapu, póki etap trwa (zjawa = półprzezroczysta, niebieska). */
-  postac?: { imie: string; zjawa?: boolean; kobieta?: boolean };
   /** 'podnies' / 'napraw': w promieniu ilu metrów od miejsca leżą rzeczy / punkty (domyślnie 40). */
   promien?: number;
   /** 'napraw': ile sekund stania przy punkcie. */
@@ -114,6 +121,8 @@ export interface Wymagania {
 
 export interface Misja {
   id: string;
+  /** Zleceniodawca stojący przy drzwiach misji (właściciel 7.10.2026: „w queście musi być ktoś”). */
+  postac?: Postac;
   /** Budynek, w którym misję się dostaje (jego wejście świeci na złoto). */
   adres: string;
   tytul: string;

@@ -426,6 +426,7 @@ export class GameScene extends Phaser.Scene {
         this.emitHud();
         return true;
       },
+      talkMission: (rm) => this.openMissionDialog(rm),
     });
     this.orchards = new Orchards(this, this.city);
     this.forest = new Forest(
@@ -781,8 +782,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy) {
       // A mouse click swings towards where it clicked (the hero turns there).
+      this.clickWorld = null;
       if (attackAim) {
         const cam = this.cameras.main;
+        this.clickWorld = { x: (attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x, y: (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y };
         this.player.face((attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x - this.player.x, (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y - (this.player.y + 2));
       }
       // An enemy near the hero wins over a tree, a bush or the mouse's aim (owner, 6 Oct 2026: fighting in the forest).
@@ -1056,7 +1059,7 @@ export class GameScene extends Phaser.Scene {
     const sporty = !this.challenge ? this.training.npcAt(x, y, r) : null;
     if (sporty) return () => this.talkSport(sporty);
     if (this.story.wizardAt(x, y, r)) return () => this.story.talkToWizard();
-    return null;
+    return this.etapy.talkAt(x, y, r);
   }
 
   /** The skill of the weapon in the main hand (sword, bow or wand). */
@@ -1137,6 +1140,16 @@ export class GameScene extends Phaser.Scene {
         talk();
       }
       return;
+    }
+    // A swing at a train (any carriage), a click on it near the hero, or a swing while standing by it: its station's conductor.
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.pociagi) {
+      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
+      const st = this.pociagi.stacjaPrzy(hit.x, hit.y) ?? (c && this.pociagi.stacjaPrzy(c.x, c.y, 2)) ?? this.pociagi.stacjaPrzy(this.player.x, this.player.y, 8);
+      if (st) {
+        this.learnPlace();
+        this.openCoach(st);
+        return;
+      }
     }
     // A swing at a building door (or while standing at one) goes in.
     if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy, true))) return;
@@ -1852,6 +1865,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pociagi?: Pociagi;
+  /** Where the last mouse click landed in the world (null for taps and keys). */
+  private clickWorld: { x: number; y: number } | null = null;
 
   /**
    * Overhaul 09: a steam train on the track at railway stations, the horse cart only at bus stations
@@ -2611,7 +2626,7 @@ export class GameScene extends Phaser.Scene {
     const trips: (Offer & { gratis?: boolean })[] = coachOffers(this.city.id, at, p.name, p.id, side).map((t) =>
       free && !t.level ? { ...t, price: 0, gratis: true } : { ...t, price: Math.ceil((t.price * cut) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie },
     );
-    const title = `🐴 Woźnica – ${p.name}${side ? ` (${STRONY[side]})` : ''}`;
+    const title = `${this.pociagi?.ma(p) ? '🚂 Konduktor' : '🐴 Woźnica'} – ${p.name}${side ? ` (${STRONY[side]})` : ''}`;
     if (!trips.length) {
       this.dialog({ title, text: side ? `Woźnica karmi konia. „${STRONY[side][0].toUpperCase()}${STRONY[side].slice(1)} teraz nic nie jeżdżę. Spytaj innego woźnicę albo przyjdź po zmianie kursów.”` : 'Woźnica karmi konia. „Dziś nigdzie nie jadę, koń odpoczywa.”', buttons: ['OK'], onChoose: () => {} });
       return;
@@ -4347,19 +4362,21 @@ export class GameScene extends Phaser.Scene {
   private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
     const m = rm.m;
     const st = missionState(m);
+    // The giver speaks (Misja.postac): their name over the mission's.
+    const who = m.postac ? `${m.postac.imie} – ${m.tytul}` : m.tytul;
     if (m.zadanie.typ === 'brak' && !m.etapy?.length) {
       // Just a place (e.g. a partner with a secret code on a flyer).
-      this.missionDialog(m, { title: m.tytul, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
     } else if (st === 'new' && this.activeQuests().length >= ZADAN_NARAZ) {
       this.missionDialog(m, {
-        title: m.tytul,
+        title: who,
         text: `${m.opis}\n\nMasz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`,
         buttons: ['OK'],
         onChoose: () => {},
       });
     } else if (st === 'new') {
       this.missionDialog(m, {
-        title: m.tytul,
+        title: who,
         text: `${m.opis}\n\n${this.rewardText(m)}.` + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
@@ -4386,11 +4403,11 @@ export class GameScene extends Phaser.Scene {
       const z = zadanieOf(m);
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
       const part = stageCount(m) > 1 ? ` (etap ${stageIndex(m) + 1} z ${stageCount(m)})` : '';
-      this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś${part}.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: `Jeszcze nie skończyłeś${part}.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
       this.finishMission(rm);
     } else {
-      this.missionDialog(m, { title: m.tytul, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
     }
   }
 
@@ -4417,8 +4434,11 @@ export class GameScene extends Phaser.Scene {
   /** The reward dialog: at the mission's door, or right at the goal for „zakończ na miejscu” missions. */
   private finishMission(rm: ResolvedMission) {
     const m = rm.m;
+    // Who says the closing words: the person at the goal for missions ending there, else the giver.
+    const z = zadanieOf(m);
+    const speaker = (m.naMiejscu || m.etapy?.length) && z.postac ? z.postac.imie : m.postac?.imie;
     this.missionDialog(m, {
-      title: m.tytul,
+      title: speaker ? `${speaker} – ${m.tytul}` : m.tytul,
       text: `${m.zakonczenie}\n\n${this.rewardText(m)}`,
       buttons: ['Dziękuję!'],
       onChoose: () => {

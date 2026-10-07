@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { TRENING, SZYLDY } from './content/swiat';
 import { rng } from './rng';
 import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
-import { nowy, rgb, doCanvas, OBRYS } from './gen';
+import { nowy, rgb, doCanvas, OBRYS, skladowe } from './gen';
 import { PALETA_SWIATA } from './content/paleta';
 import { WYGLAD_09 } from './map/Podloze09';
 
@@ -1395,11 +1395,14 @@ export function pixelate(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
     for (const q of pal) { const e = (q[0] - r) ** 2 + (q[1] - g) ** 2 + (q[2] - b) ** 2; if (e < bd) { bd = e; best = q; } }
     o.px[(y + 1) * o.w + x + 1] = rgb(best[0], best[1], best[2]);
   }
-  // Outline around the silhouette (outside, 4 neighbours), as in wyrownaj.py.
+  // Outline around the silhouette (outside, 4 neighbours), as in wyrownaj.py – but only next to a light pixel:
+  // where the artist's own dark outline is already the edge, one more ring made thin things (lamps) twice as
+  // thick as the buildings' 1 px outline (owner 7.10.2026).
   const add: number[] = [];
+  const light = (c: number) => { const [r, g, b] = skladowe(c); return r + g + b > 170; };
   for (let y = 0; y < o.h; y++) for (let x = 0; x < o.w; x++) {
     if (o.px[y * o.w + x]) continue;
-    const at = (i: number, j: number) => i >= 0 && j >= 0 && i < o.w && j < o.h && o.px[j * o.w + i];
+    const at = (i: number, j: number) => i >= 0 && j >= 0 && i < o.w && j < o.h && o.px[j * o.w + i] !== 0 && light(o.px[j * o.w + i]);
     if (at(x + 1, y) || at(x - 1, y) || at(x, y + 1) || at(x, y - 1)) add.push(y * o.w + x);
   }
   for (const i of add) o.px[i] = OBRYS;
