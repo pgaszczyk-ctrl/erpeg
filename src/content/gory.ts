@@ -26,14 +26,14 @@ export const GORY = {
    * Góry v2 (właściciel 6.10.2026, GORY.md p. 7–7c): teren niżej od bohatera warstwami co 10 m coraz bardziej rozmyty,
    * niebieskawy, od 20 m w dół mgła; pomniejszony i z paralaksą (1 = włączone, 0 = tylko rozmycie i mgła – plan B na słabe telefony).
    */
-  paralaksa: 0.4,
+  paralaksa: 0.7,
   /**
    * Paralaksa tylko przy gwałtownych przyrostach (właściciel 7.10.2026: w lesie na zboczu ruch paralaksy i mocne
-   * rozmycie przyprawiały o mdłości): pełna siła (×`paralaksa`, było 1) dopiero przy różnicy wysokości w okolicy
+   * rozmycie przyprawiały o mdłości): pełna siła (×`paralaksa` 0.7, było 1) dopiero przy różnicy wysokości w okolicy
    * `paralaksaPelnaM`, od `paralaksaOdM` w górę stopniowo, niżej wcale.
    */
-  paralaksaOdM: 150,
-  paralaksaPelnaM: 300,
+  paralaksaOdM: 200,
+  paralaksaPelnaM: 400,
   /** Siła rozmycia niższych warstw (1 = jak w makiecie, 0 = bez rozmycia); o połowę słabsze niż w makiecie. */
   rozmycie: 0.5,
   /**
