@@ -121,7 +121,25 @@ const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
  * if a corner would land on a road (within 2 m of a road line it wasn't near before), it stays as it is.
  */
 const KATY = [0, 26.565, 45, 63.435, 90, 116.565, 135, 153.435];
-function straighten(rings: number[][][], roads: number[][]) {
+/** Road segments of a tile in a grid of KRATKA half-metres (each in every cell its box ± 2 m touches). */
+const KRATKA = 32;
+function roadGrid(segs: number[][]) {
+  const g = new Map<number, number[][]>();
+  for (const s of segs) {
+    const x0 = Math.floor((Math.min(s[0], s[2]) - 4) / KRATKA), x1 = Math.floor((Math.max(s[0], s[2]) + 4) / KRATKA);
+    const y0 = Math.floor((Math.min(s[1], s[3]) - 4) / KRATKA), y1 = Math.floor((Math.max(s[1], s[3]) + 4) / KRATKA);
+    // A very long segment (a straight road across the tile) in many cells is fine: tiles are 1 km.
+    for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
+      const k = i * 100003 + j;
+      let a = g.get(k);
+      if (!a) g.set(k, (a = []));
+      a.push(s);
+    }
+  }
+  return g;
+}
+
+function straighten(rings: number[][][], roads: Map<number, number[][]>) {
   const r = rings[0];
   const n = r.length;
   if (n < 3) return;
@@ -139,7 +157,8 @@ function straighten(rings: number[][][], roads: number[][]) {
   if (bd < 0.5) return;
   const d = ((cel - deg) * Math.PI) / 180, co = Math.cos(d), si = Math.sin(d);
   const turn = ([x, y]: number[]) => [cx + (x - cx) * co - (y - cy) * si, cy + (x - cx) * si + (y - cy) * co];
-  const near = (x: number, y: number) => roads.some(([ax, ay, bx, by]) => {
+  // Only the road segments in the corner's grid cell (all of a tile's were checked: 9 s in Kraków's demo, owner 7.10.2026).
+  const near = (x: number, y: number) => (roads.get(Math.floor(x / KRATKA) * 100003 + Math.floor(y / KRATKA)) ?? []).some(([ax, ay, bx, by]) => {
     const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
     const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2));
     return Math.hypot(ax + dx * t - x, ay + dy * t - y) < 4; // 2 m
@@ -319,8 +338,9 @@ function worldLoader(map: CityMap): WorldLoader {
         y += q[i + 1];
       }
     }
+    const grid = roadGrid(roadSegs);
     for (const b of blds) {
-      straighten(b.rings, roadSegs);
+      straighten(b.rings, grid);
       const m2 = Math.abs(areaOf(b.rings[0])) / 4; // half-metres²
       if (!b.addr.length && m2 < SZOPY.usunM2) continue;
       const open = !b.addr.length && m2 < SZOPY.przejscieM2 ? 1 : 0;
