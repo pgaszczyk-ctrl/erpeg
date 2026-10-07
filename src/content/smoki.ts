@@ -89,11 +89,15 @@ export const RYSUNKI_SMOKOW: Partial<Record<GatunekId, { plik: string; komorka: 
   /** Pysk w klatce (px komórki) dla pozy bok (patrzy w lewo) / przód / tył: stąd wylatuje ogień i kwas. */
   pysk?: Record<'bok' | 'przod' | 'tyl', [number, number]>;
   /** Wiersz stóp w klatce: głębia rysowania liczona od stóp (drzewo przed łapami zasłania smoka, a nie jego środek). */
-  stopy?: number }>> = {
+  stopy?: number;
+  /** Idąc w górę ekranu pokazuj bok (lustrem jak w poziomie): gatunek bez narysowanego tyłu w nowym stylu. */
+  tylJakBok?: boolean }>> = {
   gorski: {
     plik: 'swiat/smoki/smok_gorski.png', komorka: [216, 194], srodek: [108, 89], doLap: 65.6,
     klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "ladowanie_przod_1", "ladowanie_przod_2", "ladowanie_przod_3", "lot_gora_1", "lot_gora_2", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "start_bok_1", "start_bok_2", "start_bok_3", "start_przod_1", "start_przod_2", "start_przod_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
     efekty: true,
+    // Właściciel 7.10.2026: „smok zmienia sprita w trakcie walki” – wszystkie klatki z 2 uproszczonych (scripts/smok-podmien.py).
+    tylJakBok: true,
   },
   // Paczka „smoki_swinka_dekoracje” (7.10.2026, zamówienie 15b): klatki 220×200 już w skali gry, stopy w [110, 170]
   // (scripts/smoki-nowe.py skleja arkusze); ziej/pluj: 1 zapowiada, 2 wyrzuca, 3 wraca.
