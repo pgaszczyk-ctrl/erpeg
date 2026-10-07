@@ -25,5 +25,5 @@ export const KOLORY_MOZAIKI: Record<string, [number, number, number]> = {
 
 export const MOZAIKI: Mozaika[] = [
   // Parking przed halą A Targów Lublin (Dworcowa 11): środek parkingu, wzdłuż jego dłuższej krawędzi (ok. 37,6°).
-  { mapa: 'lublin', lat: 51.23431, lon: 22.56649, szerM: 46, katDeg: 37.6, obraz: LOGO_TARGI, kostkaM: 0.9 },
+  { mapa: 'lublin', lat: 51.23431, lon: 22.56649, szerM: 75, katDeg: 37.6, obraz: LOGO_TARGI, kostkaM: 0.9 },
 ];
