@@ -1,4 +1,4 @@
-import { trzesienieWlaczone, ustawTrzesienie } from '../ustawieniaGracza';
+import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
 import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
@@ -656,14 +656,19 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (i) => {
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());
           this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
           return;
         }
-        if (i === 4 && TEST) {
+        if (i === 4) {
+          ustawEfektGor(!efektGorWlaczony());
+          this.toast(efektGorWlaczony() ? '⛰ Efekt gór włączony' : '⛰ Efekt gór wyłączony – bez rozmycia i mgły w dole', 2000);
+          return;
+        }
+        if (i === 5 && TEST) {
           // Test server only: call a dragon of any kind next to the hero (all its attacks), for checks and tuning.
           const ids = Object.keys(GATUNKI_SMOKOW) as GatunekId[];
           this.showDialog({

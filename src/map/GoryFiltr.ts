@@ -3,6 +3,7 @@ import type { CityMap } from './CityMap';
 import { PX_PER_M } from './CityMap';
 import { GORY } from '../content/gory';
 import { weather } from '../weather';
+import { efektGorWlaczony } from '../ustawieniaGracza';
 
 // Góry v2 (owner, 6 Oct 2026; docs/paczka-dla-programisty/GORY.md p. 7–7c): a camera filter on the graphics card.
 // Terrain below the hero is blurred in 10 m layers, tinted blue and fogged further down, drawn smaller (as if farther
@@ -22,6 +23,10 @@ uniform float uHp;
 uniform float uT;
 uniform float uWind;
 uniform float uPar;
+uniform float uMoc;
+uniform float uRozm;
+uniform float uCiem;
+uniform float uSzer;
 uniform float uFlip;
 uniform float uHFlip;
 varying vec2 outTexCoord;
@@ -66,10 +71,18 @@ void main() {
   vec2 tuv = toUv(w);
   vec4 base = texture2D(uMainSampler, tuv);
   vec3 c = base.rgb;
-  float b = clamp(floor(uHp / 10.0) - floor((uHp - dh) / 10.0), -2.0, 4.0);
-  if (b >= 1.0) {
+  // Ground lower than the hero: a faint dark haze (also on small hills), fading in over uSzer metres, so the
+  // edge is a soft step, never a hard line (owner, 7 Oct 2026: the old 10 m layer edges looked like a gash).
+  if (dh > 0.5) {
+    float d = smoothstep(0.5, 0.5 + uSzer, dh) * (1.0 + 0.5 * smoothstep(10.0, 60.0, dh));
+    c *= 1.0 - uCiem * d;
+  }
+  // Blur only in real mountains (uMoc), growing smoothly with the drop instead of 10 m steps.
+  float b = clamp((dh - 8.0) / 10.0, 0.0, 4.0);
+  float bm = smoothstep(0.0, 1.0, b) * uMoc;
+  if (bm > 0.01 && uRozm > 0.0) {
     // Blur of the layers below (like the mock-up's mipmap levels 0.4 + 0.6 b), in map px.
-    float r = 0.5 * exp2(0.4 + 0.6 * b);
+    float r = 0.5 * exp2(0.4 + 0.6 * max(b, 1.0)) * uRozm;
     vec2 ox = vec2(r / uView.z, 0.0);
     vec2 oy = vec2(0.0, r / uView.w);
     vec3 sum = c;
@@ -77,13 +90,14 @@ void main() {
     sum += texture2D(uMainSampler, tuv + oy).rgb + texture2D(uMainSampler, tuv - oy).rgb;
     sum += texture2D(uMainSampler, tuv + ox + oy).rgb + texture2D(uMainSampler, tuv - ox - oy).rgb;
     sum += texture2D(uMainSampler, tuv + ox - oy).rgb + texture2D(uMainSampler, tuv - ox + oy).rgb;
-    c = sum / 9.0;
-    c = mix(c, vec3(178.0, 198.0, 210.0) / 255.0, 0.04 * b);
+    vec3 blur = mix(sum / 9.0, vec3(178.0, 198.0, 210.0) / 255.0, 0.04 * b);
+    if (dh > 0.5) blur *= 1.0 - uCiem * smoothstep(0.5, 0.5 + uSzer, dh) * (1.0 + 0.5 * smoothstep(10.0, 60.0, dh));
+    c = mix(c, blur, bm);
   }
   if (dh > 20.0) {
     float f = dh < 50.0 ? 0.16 * (dh - 20.0) / 30.0 : min(0.8, 0.16 + 0.64 * (dh - 50.0) / 50.0);
     vec2 m = w / ${(PX_PER_M / 3.84).toFixed(4)} + vec2(uT * 6.0 * uWind, uT * 1.8);
-    f *= 0.7 + 0.6 * (vn(m / 64.0) * 0.65 + vn(m / 24.0) * 0.35);
+    f *= (0.7 + 0.6 * (vn(m / 64.0) * 0.65 + vn(m / 24.0) * 0.35)) * uMoc;
     c = mix(c, vec3(0.86, 0.9, 0.94), f);
   }
   gl_FragColor = vec4(c, base.a);
@@ -122,6 +136,10 @@ function zarejestruj(renderer: Phaser.Renderer.WebGL.WebGLRenderer) {
       pm.setUniform('uT', u.t);
       pm.setUniform('uWind', u.wind);
       pm.setUniform('uPar', u.par);
+      pm.setUniform('uMoc', u.moc);
+      pm.setUniform('uRozm', u.rozm);
+      pm.setUniform('uCiem', u.ciem);
+      pm.setUniform('uSzer', u.szer);
       pm.setUniform('uFlip', u.flip);
       pm.setUniform('uHFlip', u.hflip);
     }
@@ -144,6 +162,14 @@ export class GoryFiltr {
   /** The parallax anchor that follows the hero with a delay. */
   private ax = NaN;
   private ay = NaN;
+  /** Effect strength 0..1 (eased) and its target from the terrain's relief and the buildings around. */
+  private moc = NaN;
+  private cel = 0;
+  private zmierzono = -1e9;
+  private zmX = NaN;
+  private zmY = NaN;
+  /** Last measurements (for tests: window.__gory). */
+  info = { rzezba: 0, zabudowa: 0, cel: 0, moc: 0 };
 
   static make(scene: Phaser.Scene, city: CityMap) {
     if (!city.terrain || !(scene.game.renderer instanceof Phaser.Renderer.WebGL.WebGLRenderer)) return null;
@@ -166,8 +192,9 @@ export class GoryFiltr {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.ctl = new (Controller as any)(cam, NAZWA);
     this.ctl.glTexture = scene.textures.getFrame(key).glTexture;
-    this.ctl.u = { view: [0, 0, 1, 1], grid: [0, 0, 1, N], p: [0, 0], d: [0, 0], hp: 0, t: 0, wind: 0.5, par: GORY.paralaksa, flip: 1, hflip: 1 };
+    this.ctl.u = { view: [0, 0, 1, 1], grid: [0, 0, 1, N], p: [0, 0], d: [0, 0], hp: 0, t: 0, wind: 0.5, par: 0, moc: 0, rozm: GORY.rozmycie, ciem: GORY.przyciemnienie, szer: GORY.przyciemnienieSzerM, flip: 1, hflip: 1 };
     cam.filters.external.add(this.ctl);
+    (window as unknown as { __gory?: GoryFiltr }).__gory = this;
     scene.events.once('shutdown', () => this.destroy());
   }
 
@@ -205,12 +232,82 @@ export class GoryFiltr {
     this.tex.refresh();
   }
 
+  /**
+   * How strong the mountain look should be here (owner, 7 Oct 2026: in Zakopane's centre the parallax by the
+   * railway looked bad – it is meant for mountains). Relief = spread of heights within GORY.rzezbaPromienM
+   * (5th–95th percentile, so one stray sample doesn't count), ramped between rzezbaOdM and rzezbaPelnaM;
+   * then damped by how much of a circle of zabudowaPromienM around the hero is covered by buildings.
+   */
+  private measure(hx: number, hy: number, hp: number) {
+    const t = this.city.terrain!;
+    const R = GORY.rzezbaPromienM * PX_PER_M;
+    const hs: number[] = [hp];
+    for (let ring = 1; ring <= 6; ring++) {
+      const r = (R * ring) / 6;
+      for (let k = 0; k < 16; k++) {
+        const a = (k + (ring % 2) * 0.5) * (Math.PI / 8);
+        const h = t.heightAt(hx + Math.cos(a) * r, hy + Math.sin(a) * r);
+        if (!Number.isNaN(h)) hs.push(h);
+      }
+    }
+    hs.sort((a, b) => a - b);
+    const rzezba = hs[Math.floor(hs.length * 0.95)] - hs[Math.floor(hs.length * 0.05)];
+    const od = GORY.rzezbaOdM, pelna = Math.max(od + 1, GORY.rzezbaPelnaM);
+    const zRzezby = Math.max(0, Math.min(1, (rzezba - od) / (pelna - od)));
+
+    const Rb = GORY.zabudowaPromienM * PX_PER_M;
+    let pole = 0;
+    for (const b of this.city.query({ x0: hx - Rb, y0: hy - Rb, x1: hx + Rb, y1: hy + Rb }).buildings) {
+      if (b.open) continue;
+      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+      if ((cx - hx) ** 2 + (cy - hy) ** 2 > Rb * Rb) continue;
+      pole += b.rings?.length ? poleBudynku(b.rings) : (b.x1 - b.x0) * (b.y1 - b.y0) * 0.7;
+    }
+    const zabudowa = pole / (Math.PI * Rb * Rb);
+    const zOd = GORY.zabudowaOd, zPelna = Math.max(zOd + 0.001, GORY.zabudowaPelna);
+    const gestosc = Math.max(0, Math.min(1, (zabudowa - zOd) / (zPelna - zOd)));
+    const wlaczony = efektGorWlaczony();
+    const tlumienie = 1 - gestosc * (1 - GORY.zabudowaZostaje);
+    const cel = wlaczony ? zRzezby * tlumienie : 0;
+    // Parallax only on sharp rises (owner, 7 Oct 2026): its own, higher relief ramp.
+    const pOd = GORY.paralaksaOdM, pPelna = Math.max(pOd + 1, GORY.paralaksaPelnaM);
+    this.parCel = wlaczony ? Math.max(0, Math.min(1, (rzezba - pOd) / (pPelna - pOd))) * tlumienie : 0;
+    // The faint dark haze needs only a little relief (hills, Wawel), whatever the buildings.
+    this.ciemno = wlaczony && rzezba >= GORY.przyciemnienieOdM;
+    this.info = { rzezba: Math.round(rzezba), zabudowa: Math.round(zabudowa * 1000) / 1000, cel, moc: this.moc };
+    return cel;
+  }
+  private parCel = 0;
+  private par = 0;
+  private ciemno = false;
+  private ciemV = 0;
+
   update(now: number, dt: number, hx: number, hy: number) {
     if (!this.ctl) return;
     const t = this.city.terrain!;
     const hp = t.heightAt(hx, hy);
     if (Number.isNaN(hp)) {
       this.ctl.active = false;
+      return;
+    }
+    // Strength: measured twice a second (at once after a jump), eased over GORY.przejscieS.
+    const skok = Number.isNaN(this.zmX) || Math.hypot(hx - this.zmX, hy - this.zmY) > 200 * PX_PER_M;
+    if (skok || now - this.zmierzono > 500) {
+      this.cel = this.measure(hx, hy, hp);
+      this.zmierzono = now;
+      [this.zmX, this.zmY] = [hx, hy];
+      if (skok) [this.moc, this.par] = [this.cel, this.parCel];
+    }
+    const ease = 1 - Math.exp(-dt / Math.max(0.05, GORY.przejscieS));
+    this.moc += (this.cel - this.moc) * ease;
+    if (Math.abs(this.cel - this.moc) < 0.002) this.moc = this.cel;
+    this.par += (this.parCel - this.par) * ease;
+    if (Math.abs(this.parCel - this.par) < 0.002) this.par = this.parCel;
+    this.info.moc = this.moc;
+    // Nothing to show (flat land): the filter is off, which also spares the graphics card.
+    if (this.moc < 0.01 && !this.ciemno && this.ciemV < 0.003) {
+      this.ctl.active = false;
+      this.ax = NaN;
       return;
     }
     this.ctl.active = true;
@@ -235,6 +332,28 @@ export class GoryFiltr {
     u.hp = hp;
     u.t = now / 1000;
     u.wind = Math.max(0.1, Math.min(2, weather.wind / 7));
-    u.par = GORY.paralaksa;
+    u.par = GORY.paralaksa * this.par;
+    u.moc = this.moc;
+    u.rozm = GORY.rozmycie;
+    this.ciemV += ((this.ciemno ? GORY.przyciemnienie : 0) - this.ciemV) * (1 - Math.exp(-dt / Math.max(0.05, GORY.przejscieS)));
+    u.ciem = this.ciemV;
+    u.szer = Math.max(0.5, GORY.przyciemnienieSzerM);
   }
+}
+
+/** Footprint of a building (outer ring minus courtyards), cached per ring list. */
+const POLA = new WeakMap<number[][], number>();
+function poleBudynku(rings: number[][]) {
+  let s = POLA.get(rings);
+  if (s !== undefined) return s;
+  s = 0;
+  rings.forEach((r, i) => {
+    let a = 0;
+    for (let k = 0; k + 3 < r.length; k += 2) a += r[k] * r[k + 3] - r[k + 2] * r[k + 1];
+    a += r[r.length - 2] * r[1] - r[0] * r[r.length - 1];
+    s! += (i === 0 ? 1 : -1) * Math.abs(a / 2);
+  });
+  s = Math.max(0, s);
+  POLA.set(rings, s);
+  return s;
 }

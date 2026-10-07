@@ -6,6 +6,7 @@ import { NAMIOT } from './content/hotele';
 import { ZUZYCIE, STRZALY, AMUNICJA } from './content/zuzycie';
 import { POKRETLA } from './content/ustawienia';
 import { POLA } from './content/pola';
+import { GORY } from './content/gory';
 import { rpc } from './api';
 
 // Wpisuje pokrętła z panelu admina (content/ustawienia.ts) w stałe gry.
@@ -34,6 +35,18 @@ const USTAW: Record<string, (v: number) => void> = {
   naprawa_czesc_ceny: (v) => (ZUZYCIE.naprawaCzescCeny = v),
   strzala_cena: (v) => (AMUNICJA.strzaly.cena = Math.round(v)),
   kolczan: (v) => (STRZALY.kolczan = Math.round(v)),
+  gory_paralaksa: (v) => (GORY.paralaksa = v),
+  gory_rozmycie: (v) => (GORY.rozmycie = v),
+  gory_paralaksa_od: (v) => (GORY.paralaksaOdM = v),
+  gory_paralaksa_pelna: (v) => (GORY.paralaksaPelnaM = v),
+  gory_przyciemnienie: (v) => (GORY.przyciemnienie = v),
+  gory_przyciemnienie_szer: (v) => (GORY.przyciemnienieSzerM = v),
+  gory_rzezba_od: (v) => (GORY.rzezbaOdM = v),
+  gory_rzezba_pelna: (v) => (GORY.rzezbaPelnaM = v),
+  gory_rzezba_promien: (v) => (GORY.rzezbaPromienM = v),
+  gory_zabudowa_od: (v) => (GORY.zabudowaOd = v),
+  gory_zabudowa_pelna: (v) => (GORY.zabudowaPelna = v),
+  gory_zabudowa_zostaje: (v) => (GORY.zabudowaZostaje = v),
 };
 
 /** Wpisuje wartości z serwera (brakujące = domyślne). */
