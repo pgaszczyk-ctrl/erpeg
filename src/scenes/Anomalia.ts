@@ -5,6 +5,7 @@ import { ANOMALIA as A } from '../content/anomalia';
 import { weather } from '../weather';
 import { grzmot } from '../sfx';
 import { session } from '../quests';
+import { NAMIOT } from '../content/hotele';
 import type { CityMap } from '../map/CityMap';
 import type { DialogRequest } from './GameScene';
 
@@ -26,7 +27,7 @@ export class Anomalia {
   private prev = NaN;
   private next = 0;
 
-  constructor(private scene: Phaser.Scene, private city: CityMap, private host: { player: Phaser.GameObjects.Sprite; dialog: (r: DialogRequest) => void }) {}
+  constructor(private scene: Phaser.Scene, private city: CityMap, private host: { player: Phaser.GameObjects.Sprite; dialog: (r: DialogRequest) => void; save: () => void }) {}
 
   update(now: number, wolno: boolean) {
     if (this.busy || now < this.next || byloW === session.nonce) return;
@@ -103,7 +104,24 @@ export class Anomalia {
         title: A.tytul,
         text: A.tekst,
         buttons: [A.przycisk],
-        onChoose: () => this.host.dialog({ title: 'Exp-lore', text: A.drugi, buttons: [A.drugiPrzycisk], onChoose: () => (this.busy = false) }),
+        onChoose: () => {
+          // The first tent free, once per character (owner, 7 Oct 2026).
+          const prezent = !session.flagi.namiot_gratis;
+          if (prezent) {
+            session.flagi.namiot_gratis = 1;
+            const n = NAMIOT.rodzaje[0].noclegow;
+            session.namioty.push({ max: n, left: n });
+          }
+          this.host.dialog({
+            title: 'Exp-lore',
+            text: `${A.drugi}\n\n${A.ps}${prezent ? `\n\n${A.psDostal}` : ''}`,
+            buttons: [A.drugiPrzycisk],
+            onChoose: () => {
+              this.busy = false;
+              if (prezent) this.host.save();
+            },
+          });
+        },
       });
     });
   }

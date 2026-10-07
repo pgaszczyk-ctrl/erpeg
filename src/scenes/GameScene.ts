@@ -475,7 +475,7 @@ export class GameScene extends Phaser.Scene {
     this.duelHp = null;
     this.duelCarry = 0;
     this.storyPlace = null;
-    this.anomalia = new Anomalia(this, this.city, { player: this.player, dialog: (r) => this.dialog(r) });
+    this.anomalia = new Anomalia(this, this.city, { player: this.player, dialog: (r) => this.dialog(r), save: () => this.save() });
     (window as unknown as { __anomalia?: Anomalia }).__anomalia = this.anomalia;
     this.story = new Story(this, this.city, {
       player: this.player,

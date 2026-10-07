@@ -9,6 +9,9 @@ export const ANOMALIA = {
   przycisk: 'Hmm…',
   drugi: 'Gra jest wciąż w przygotowaniu. Exp-loruj śmiało, ale poza Lublinem zadań jest na razie znacznie mniej.',
   drugiPrzycisk: 'Rozumiem',
+  /** Dopisek z prezentem: zwykły namiot (NAMIOT.rodzaje[0]), tylko raz na postać (flaga `namiot_gratis`). */
+  ps: 'Ps. Na wyprawę dobrze zabrać ze sobą namiot. Pierwszy gratis!',
+  psDostal: '⛺ Dostajesz namiot (rozbijesz go w Kufrze, w lesie albo na polu).',
   /** Wiatr podczas wichury (m/s). */
   wichura: 24,
 };
