@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exp-lore – przygoda na prawdziwej mapie</title>
+  <meta name="description" content="Exp-lore: gra przygodowa w przeglądarce na prawdziwej mapie Lublina i świata.">
+  <!--
+    MIEJSCE NA STRONĘ POWITALNĄ (landing page).
+    Ten plik można w całości podmienić na stronę z ChatGPT – zasady w docs/welcome.md.
+    Ważne: linki do gry zostaw takie jak niżej (../#nowa, ../#wczytaj, ../#konto).
+  -->
+  <style>
+    :root { --tlo: #1e1a24; --tekst: #f3ead8; --zloto: #e0b44c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--tlo); color: var(--tekst); font-family: system-ui, sans-serif; padding: 16px; text-align: center; }
+    main { max-width: 420px; width: 100%; }
+    h1 { font-size: 2.4rem; margin: 0 0 8px; color: var(--zloto); letter-spacing: 1px; }
+    p { line-height: 1.5; opacity: 0.9; }
+    a.btn { display: block; margin: 12px 0; padding: 14px; border-radius: 10px; text-decoration: none;
+      font-weight: 600; color: var(--tlo); background: var(--zloto); }
+    a.btn.drugi { background: transparent; color: var(--tekst); border: 2px solid var(--zloto); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Exp-lore</h1>
+    <p>Przygoda na prawdziwej mapie Twojego miasta. Tu wkrótce stanie strona powitalna.</p>
+    <a class="btn" href="../#nowa">Zacznij przygodę</a>
+    <a class="btn drugi" href="../#konto">Zaloguj się na konto</a>
+    <a class="btn drugi" href="../#wczytaj">Wczytaj postać kodem</a>
+  </main>
+</body>
+</html>
