@@ -1,8 +1,8 @@
-# Zamówienie 14 – Kozioł, boss historii „Przebudzenie Starego Grodu”
+# Zamówienie 17 – Kozioł, boss historii „Przebudzenie Starego Grodu”
 
 W finale historii z kotła pod Rynkiem wyrywa się **mosiężny kolos z rogami – Kozioł z herbu Lublina**. Kometa obudziła w nim dziki żar, oczy ma rdzawe, nikogo nie poznaje. Gracz rozbija jego rdzawy pancerz, a wtedy Kozioł się uspokaja i wraca do szybu.
 
-Teraz w grze stoi za niego zastępczo powiększony, złoty herszt goblinów (`11_koziol/koziol_teraz_zastepczy.png`). Prosimy o prawdziwego Kozła.
+Teraz w grze stoi za niego zastępczo powiększony, złoty herszt goblinów (`17_koziol/koziol_teraz_zastepczy.png`). Prosimy o prawdziwego Kozła.
 
 ## Wygląd
 - Kozioł z herbu Lublina: koza stojąca na **tylnych nogach**, przednie uniesione, duże zakręcone rogi, bródka.
