@@ -9,6 +9,8 @@ import { esencja } from '../content/esencje';
 // slots with pointer events (mouse and fingers alike). A short tap without
 // dragging is a tap.
 
+/** Items without a picture yet (the „Serce Zębatka” rewards) – until the artist draws them. */
+const ITEM_EMOJI: Record<string, string> = { gwizdek_maszynisty: '🚂', kluczyk_nakrecacz: '🗝', kieszonkowy_chronometr: '⏱', cukierniczy_cylinder: '🎩', paczek: '🍩' };
 export const SLOT_ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🛡', zbroja: '🦺', helm: '⛑', buty: '🥾', amulet: '📿', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' };
 /** Greyed pictures in empty equipment places (what goes there). */
 const EMPTY_PIC: Partial<Record<Miejsce, string>> = { bron: 'zelazny', dystans: 'tarcza_drewniana', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
@@ -34,7 +36,7 @@ export function slotIcon(s: Slot): Node | string {
   if ('esencja' in s) return esencja(s.esencja)?.ikona ?? '🧪';
   const p = item(s.item);
   if (!p) return '?';
-  return itemIcon(p.id, 'item-ico sl-ico') ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
+  return itemIcon(p.id, 'item-ico sl-ico') ?? ITEM_EMOJI[p.id] ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
 }
 
 export function slotLabel(s: Slot) {

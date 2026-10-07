@@ -1,6 +1,8 @@
 // Talks to the game server (a Supabase project "erpeg"). All reads and writes
 // go through database functions; the publishable key only allows calling them.
 
+import { TEST } from './version';
+
 const URL = 'https://iiffchuhrhsjjgmstypx.supabase.co/rest/v1/rpc/';
 const KEY = 'sb_publishable_lvVeo1Qv3E_4wTQ2oUeI1Q_2_gAgUdA';
 /** For the freeze watchdog (a worker calls the server on its own). */
@@ -175,7 +177,8 @@ export const api = {
   resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
   /** Missions made in the admin panel. */
   quizzes: () => rpc<[number, number, string, string, string[], string | null][]>('school_quizzes', { p_all: true }),
-  content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', {}),
+  // The test server also gets missions marked „tylko serwer testowy” (production's game_content() leaves them out).
+  content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', TEST ? { p_all: true } : {}),
   redeem: (token: string, missionId: string, code: string) =>
     rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),
 };

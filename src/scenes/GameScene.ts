@@ -61,14 +61,14 @@ import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
-  goodsByKind,
+  goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, missionState, setMissionState, missionExp, resolveMissions, resolvePlace,
+  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, type Snapshot } from '../api';
@@ -1389,11 +1389,7 @@ export class GameScene extends Phaser.Scene {
     if (s.temp || s.ambient) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
-      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) {
-        setMissionState(rm.m, 'goal');
-        this.refreshMarkers();
-        this.toast(`Zadanie wykonane! Wróć do: ${rm.m.adres}`);
-      }
+      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.reachGoal(rm, 'Zadanie wykonane! ');
     } else {
       // Fixed spots come back after a while.
       const home = s.home.clone();
@@ -2045,6 +2041,8 @@ export class GameScene extends Phaser.Scene {
       const st = missionState(rm.m);
       img.setTexture(st === 'done' ? TEX.markerDone : TEX.marker);
       img.setAlpha(st === 'active' ? 0.5 : 1);
+      // A mission whose requirements aren't met yet stays hidden (mission chains, admin panel).
+      img.setVisible(missionAvailable(rm.m));
     }
   }
 
@@ -2139,13 +2137,26 @@ export class GameScene extends Phaser.Scene {
     let id: string | null = null;
     let open: (() => void) | null = null;
     let savePoint = true;
-    for (const rm of this.missions) {
-      if (Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS) {
-        id = rm.m.id;
-        // A mission taken at a church/school keeps its door, but asking about the shadows must stay possible there (report 58).
-        const host = this.city.places.find((p) => STORY_PLACES.has(p.kind) && Phaser.Math.Distance.Between(p.door.x, p.door.y, rm.door.x, rm.door.y) < DOOR_RADIUS);
-        open = () => this.withStoryPlace(host, () => this.openMissionDialog(rm));
-      }
+    // Several missions can share a door (mission chains): the one finished last waits behind the
+    // one that matters now – ready to hand in, in progress, new – and hidden ones don't open at all.
+    const rank = (rm: ResolvedMission) => ({ goal: 0, active: 1, new: 2, done: 3 })[missionState(rm.m)];
+    const atDoor = this.missions
+      .filter((rm) => missionAvailable(rm.m) && Phaser.Math.Distance.Between(rm.door.x, rm.door.y, fx, fy) < DOOR_RADIUS)
+      .sort((a, b) => rank(a) - rank(b));
+    // A place at the same door (station, hotel, church, shop…) must stay reachable: a finished mission
+    // gives way to it, an open one gets a button for it in its dialog.
+    const placeAt = (q: { x: number; y: number }) => this.city.places.find((p) => Math.abs(p.door.x - q.x) < DOOR_RADIUS && Math.abs(p.door.y - q.y) < DOOR_RADIUS && Phaser.Math.Distance.Between(p.door.x, p.door.y, q.x, q.y) < DOOR_RADIUS);
+    const rm = atDoor[0];
+    const shared = rm ? placeAt(rm.door) : undefined;
+    if (rm && !(shared && missionState(rm.m) === 'done')) {
+      id = rm.m.id;
+      // A mission taken at a church/school keeps its door, but asking about the shadows must stay possible there (report 58).
+      const host = shared && STORY_PLACES.has(shared.kind) ? shared : undefined;
+      open = () => {
+        this.doorPlace = shared ?? null;
+        this.withStoryPlace(host, () => this.openMissionDialog(rm));
+        this.doorPlace = null;
+      };
     }
     if (!id) {
       for (const p of this.city.places) {
@@ -3979,10 +3990,15 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'new') {
       this.missionDialog(m, {
         title: m.tytul,
-        text: `${m.opis}\n\nNagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${item(m.przedmiot)?.nazwa}` : ''}.`,
+        text: `${m.opis}\n\n${this.rewardText(m)}.` + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
         buttons: ['Przyjmuję', 'Nie teraz'],
         onChoose: (i) => {
           if (i !== 0 || this.questsFull()) return;
+          const w = m.wymaga;
+          if (w?.zabierz && w.przedmiot) {
+            if (!takeItem(w.przedmiot)) return this.toast(`Nie masz już: ${item(w.przedmiot)?.nazwa ?? w.przedmiot}`, 2500);
+            this.gearChanged();
+          }
           setMissionState(m, 'active');
           if (onAccept) onAccept(); // adds it, which also spawns its enemies
           else this.startMissionGoal(rm);
@@ -3996,40 +4012,109 @@ export class GameScene extends Phaser.Scene {
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
       this.missionDialog(m, { title: m.tytul, text: `Jeszcze nie skończyłeś.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
-      this.missionDialog(m, {
-        title: m.tytul,
-        text: `${m.zakonczenie}\n\nNagroda: ${m.nagroda} monet i ${missionExp(m)} EXP` + (m.przedmiot ? ` oraz ${item(m.przedmiot)?.nazwa}` : '') + (m.flaga === 'znizka_woznica' ? ` i zniżka u woźniców` : ''),
-        buttons: ['Dziękuję!'],
-        onChoose: () => {
-          const z = m.zadanie;
-          if (z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
-            setMissionState(m, 'active');
-            this.refreshMarkers();
-            this.toast('Czegoś jednak brakuje w plecaku!');
-            return;
-          }
-          earn(m.nagroda);
-          session.stats.missions++;
-          session.exp += missionExp(m);
-          if (m.przedmiot) {
-            const where = addItem(m.przedmiot);
-            this.toast(where ? `Dostałeś: ${item(m.przedmiot)?.nazwa}!` : `Plecak pełny – ${item(m.przedmiot)?.nazwa} przepadł.`, 2500);
-            this.applySkill();
-          }
-          if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
-            session.flagi.znizka_woznica = 1;
-            session.flagi.przejazd = (session.flagi.przejazd ?? 0) + 1;
-            this.time.delayedCall(2600, () => this.toast(`🐴 Zniżka u woźniców: −${Math.round(WOZNICA.znizka * 100)}% na zawsze, a na dworcu ${WOZNICA.gratisNaStacji} jeden kurs gratis!`, 4000));
-          }
-          setMissionState(m, 'done');
-          this.refreshMarkers();
-          this.emitHud();
-          this.save(); // finishing a mission is a save point
-        },
-      });
+      this.finishMission(rm);
     } else {
       this.missionDialog(m, { title: m.tytul, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
     }
+  }
+
+  /** "Nagroda: 150 EXP, 20 monet, Gwizdek Maszynisty i 1 💎" for the mission dialogs. */
+  private rewardText(m: Misja) {
+    const parts = [
+      m.nagroda ? `${m.nagroda} monet` : '',
+      `${missionExp(m)} EXP`,
+      m.przedmiot ? item(m.przedmiot)?.nazwa ?? '' : '',
+      m.diamenty ? `${m.diamenty} 💎` : '',
+      m.flaga === 'znizka_woznica' ? 'zniżka u woźniców' : '',
+    ].filter(Boolean);
+    const last = parts.pop();
+    return `Nagroda: ${parts.length ? `${parts.join(', ')} i ${last}` : last}`;
+  }
+
+  /** The reward dialog: at the mission's door, or right at the goal for „zakończ na miejscu” missions. */
+  private finishMission(rm: ResolvedMission) {
+    const m = rm.m;
+    this.missionDialog(m, {
+      title: m.tytul,
+      text: `${m.zakonczenie}\n\n${this.rewardText(m)}`,
+      buttons: ['Dziękuję!'],
+      onChoose: () => {
+        if (missionState(m) !== 'goal') return; // already handed in (a double tap)
+        const z = m.zadanie;
+        if (z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
+          setMissionState(m, 'active');
+          this.refreshMarkers();
+          this.toast('Czegoś jednak brakuje w plecaku!');
+          return;
+        }
+        earn(m.nagroda);
+        session.stats.missions++;
+        session.exp += missionExp(m);
+        if (m.diamenty) {
+          session.diamenty += m.diamenty;
+          this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${m.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500));
+        }
+        if (m.przedmiot) {
+          const where = addItem(m.przedmiot);
+          this.toast(where ? `Dostałeś: ${item(m.przedmiot)?.nazwa}!` : `Plecak pełny – ${item(m.przedmiot)?.nazwa} przepadł.`, 2500);
+          this.gearChanged();
+        }
+        if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
+          session.flagi.znizka_woznica = 1;
+          session.flagi.przejazd = (session.flagi.przejazd ?? 0) + 1;
+          this.time.delayedCall(2600, () => this.toast(`🐴 Zniżka u woźniców: −${Math.round(WOZNICA.znizka * 100)}% na zawsze, a na dworcu ${WOZNICA.gratisNaStacji} jeden kurs gratis!`, 4000));
+        }
+        setMissionState(m, 'done');
+        this.refreshMarkers();
+        this.emitHud();
+        this.save(); // finishing a mission is a save point
+      },
+    });
+  }
+
+  /**
+   * The goal is reached (enemies beaten, spot reached, things gathered, riddle solved): back to the
+   * door for the reward, or – „zakończ na miejscu” – the reward right here, so a chain flows on.
+   */
+  private reachGoal(rm: ResolvedMission, said?: string) {
+    setMissionState(rm.m, 'goal');
+    this.refreshMarkers();
+    if (rm.m.naMiejscu) {
+      this.finishMission(rm);
+      return;
+    }
+    if (said !== undefined) this.toast(`${said}Wróć do: ${rm.m.adres}`);
+  }
+
+  /** A riddle mission's question, asked on reaching its spot; a wrong answer shows the hint. */
+  private riddleAsked = new Set<string>();
+  private askMissionRiddle(rm: ResolvedMission) {
+    const z = rm.m.zadanie;
+    const answers = z.odpowiedzi?.filter((a) => a.trim()) ?? [];
+    if (!z.pytanie || !answers.length) return this.reachGoal(rm, 'Dotarłeś! ');
+    this.riddleAsked.add(rm.m.id);
+    this.dialog({
+      title: `🧩 ${rm.m.tytul}`,
+      text: z.pytanie,
+      buttons: [...answers, 'Muszę pomyśleć'],
+      onChoose: (i) => {
+        if (i >= answers.length) return;
+        if (i === (z.dobra ?? 0)) {
+          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
+          this.reachGoal(rm, 'Dobrze! ');
+          this.emitHud();
+          return;
+        }
+        this.dialog({
+          title: '🤔 Nie tym razem',
+          text: z.podpowiedz ? `Podpowiedź: ${z.podpowiedz}` : 'To nie to. Pomyśl jeszcze.',
+          buttons: ['Spróbuję jeszcze raz', 'Później'],
+          onChoose: (j) => {
+            if (j === 0) this.askMissionRiddle(rm);
+          },
+        });
+      },
+    });
   }
 
   /** A mission dialog; where a secret code can be told, it gets one more button. */
@@ -4076,7 +4161,14 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private markersAt = 0;
+
   private checkGoals() {
+    // Chains: a mission shows up as soon as its requirements are met (level, earlier mission, an item).
+    if (this.time.now > this.markersAt) {
+      this.markersAt = this.time.now + 1000;
+      this.refreshMarkers();
+    }
     for (const rm of this.missions) {
       const z = rm.m.zadanie;
       if (z.typ === 'zbierz' && z.towar) {
@@ -4084,29 +4176,35 @@ export class GameScene extends Phaser.Scene {
         const st = missionState(rm.m);
         const have = fruitCount(z.towar) >= (z.ile ?? 1);
         if (st === 'active' && have) {
-          setMissionState(rm.m, 'goal');
-          this.refreshMarkers();
-          this.toast(`Masz wszystko! Wróć do: ${rm.m.adres}`);
+          this.reachGoal(rm, 'Masz wszystko! ');
         } else if (st === 'goal' && !have) {
           setMissionState(rm.m, 'active');
           this.refreshMarkers();
         }
         continue;
       }
+      if (rm.m.zadanie.typ === 'zagadka' && missionState(rm.m) === 'active' && rm.target) {
+        // The question comes on reaching the spot; after „later” only once the hero has walked away and back.
+        const d = Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y);
+        if (d > GOAL_RADIUS * 2) this.riddleAsked.delete(rm.m.id);
+        else if (d < GOAL_RADIUS && !this.riddleAsked.has(rm.m.id)) this.askMissionRiddle(rm);
+        continue;
+      }
       if (rm.m.zadanie.typ !== 'idz' || missionState(rm.m) !== 'active' || !rm.target) continue;
       if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
-        setMissionState(rm.m, 'goal');
-        this.refreshMarkers();
         const note = rm.m.zadanie.komunikat;
-        if (note) this.dialog({ title: `🗺 ${rm.m.tytul}`, text: note, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
-        else this.toast(`Dotarłeś! Wróć do: ${rm.m.adres}`);
+        if (note && !rm.m.naMiejscu) {
+          setMissionState(rm.m, 'goal');
+          this.refreshMarkers();
+          this.dialog({ title: `🗺 ${rm.m.tytul}`, text: note, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
+        } else this.reachGoal(rm, 'Dotarłeś! ');
       }
     }
   }
 
   /** Mission doors for the map screen. */
   missionMarkers() {
-    return this.missions.map((rm) => ({ x: rm.door.x, y: rm.door.y, done: missionState(rm.m) === 'done' }));
+    return this.missions.filter((rm) => missionAvailable(rm.m)).map((rm) => ({ x: rm.door.x, y: rm.door.y, done: missionState(rm.m) === 'done' }));
   }
 
   goalPosition() {
@@ -4119,18 +4217,21 @@ export class GameScene extends Phaser.Scene {
     return rm?.m.zadanie.szukaj ? SEARCH_RADIUS + 10 : 0;
   }
 
-  private appliedLevel = 0;
+  private appliedLevel = '';
 
-  /** The level bonus: more life (the new part comes filled) and faster walking. */
+  /** The level bonus (and worn items' life/speed): more life (the new part comes filled) and faster walking. */
   private applyLevel() {
     const lvl = poziomPostaci(session.exp);
-    if (lvl === this.appliedLevel && this.player.speed !== PLAYER.speed) return;
-    this.appliedLevel = lvl;
-    const max = zyciePostaci(session.level.serca, session.exp);
+    const zycie = gearLifeBonus();
+    const bieg = gearSpeedBonus();
+    const key = `${lvl}|${zycie}|${bieg}`;
+    if (key === this.appliedLevel && this.player.speed !== PLAYER.speed) return;
+    this.appliedLevel = key;
+    const max = zyciePostaci(session.level.serca, session.exp) + zycie;
     if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
     PLAYER.maxHp = max;
     this.player.hp = Math.min(this.player.hp, max);
-    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (session.immortal ? ADMIN_SZYBKOSC : 1);
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal ? ADMIN_SZYBKOSC : 1);
   }
 
   /**
@@ -4290,7 +4391,7 @@ export class GameScene extends Phaser.Scene {
     if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', start: 'Martin, Irysowa', ...mq });
     for (const rm of this.missions) {
       const st = missionState(rm.m);
-      const q = { id: rm.m.id, title: rm.m.tytul, start: rm.m.adres };
+      const q = { id: rm.m.id, title: missionTitle(rm.m, this.missions.map((r) => r.m)), start: rm.m.adres };
       if (st === 'active' && rm.target && rm.m.zadanie.typ === 'zbierz') {
         const z = rm.m.zadanie;
         out.push({ ...q, text: `${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
@@ -4307,14 +4408,20 @@ export class GameScene extends Phaser.Scene {
     return out;
   }
 
+  /** A place sharing a mission's door: the mission dialog gets a button to go in there. */
+  private doorPlace: CityPlace | null = null;
+
   private dialog(req: DialogRequest) {
     // At a school or church: "ask about the shadows" as one more option, before the last button.
     const place = this.storyPlace;
+    const door = this.doorPlace;
     const extras: [string, () => void][] = [];
     const ask = place && this.story.askLabel();
     if (place && ask) extras.push([ask, () => this.story.ask(place)]);
-    if (place && extras.length) {
+    if (door) extras.push([`🚪 ${door.name || 'Wejdź do środka'}`, () => this.openPlace(door)]);
+    if (extras.length) {
       this.storyPlace = null;
+      this.doorPlace = null;
       const at = req.buttons.length - 1;
       const orig = req;
       req = {

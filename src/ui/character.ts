@@ -11,6 +11,7 @@ import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin } from '../sprites';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
+import { MISJE } from '../content/fabula';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -470,7 +471,24 @@ function show(host: CharacterHost) {
       }
       seals.append(c);
     }
-    s.append(el('div', 'k-sub', `Zdobyte pieczęcie: ${got} z ${OSIAGNIECIA.length}`), seals);
+    // One seal per quest series (admin panel „Główna nazwa questa”): all its missions done.
+    const series = new Map<string, { all: number; done: number }>();
+    for (const m of [...MISJE, ...session.extra]) {
+      if (!m.seria) continue;
+      const v = series.get(m.seria) ?? { all: 0, done: 0 };
+      v.all++;
+      if (session.missions[m.id] === 'done') v.done++;
+      series.set(m.seria, v);
+    }
+    for (const [name, v] of series) {
+      const ok = v.done >= v.all;
+      if (ok) got++;
+      const c = el('div', `k-seal${ok ? ' k-seal-on' : ''}`);
+      c.append(el('div', 'k-seal-ic', '⚙'), el('div', 'k-seal-name', name), el('div', 'k-seal-desc', 'Ukończ całą historię.'));
+      if (!ok) c.append(el('div', 'k-seal-pr', `${v.done} / ${v.all}`));
+      seals.append(c);
+    }
+    s.append(el('div', 'k-sub', `Zdobyte pieczęcie: ${got} z ${OSIAGNIECIA.length + series.size}`), seals);
     body.append(s);
     const t = section('Kronika');
     const kills = (Object.entries(st.kills) as [string, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);

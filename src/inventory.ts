@@ -1,7 +1,7 @@
 import { WALKA, zTabeli } from './content/walka';
 import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
-  PODKOWA, TALIZMANY, type Miejsce, type Przedmiot, type Umiejetnosc,
+  PODKOWA, TALIZMANY, SZYBKOSC_TALIZMANU, ZYCIE_PRZEDMIOTU, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 import { esencja } from './content/esencje';
@@ -207,6 +207,16 @@ export function luckyCoins(n: number) {
   return whole;
 }
 
+/** Walking bonus from worn speed talismans (+SZYBKOSC_TALIZMANU each). */
+export function gearSpeedBonus() {
+  return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU;
+}
+
+/** Extra life (half-hearts) from worn items with the 'zycie' effect. */
+export function gearLifeBonus() {
+  return Object.values(gear.equip).filter((id) => item(id)?.efekt === 'zycie').length * ZYCIE_PRZEDMIOTU;
+}
+
 /** Special power of the weapon in hand (mythic items). */
 export function weaponEffect() {
   return item(gear.equip.bron)?.efekt;
@@ -397,6 +407,19 @@ export function unequip(m: Miejsce): boolean {
 
 export function dropFromBag(index: number) {
   gear.bag.splice(index, 1);
+}
+
+/** Takes one item away (a story item handed over in a mission): from the backpack first, else off the body. */
+export function takeItem(id: string): boolean {
+  const i = gear.bag.findIndex((s) => 'item' in s && s.item === id);
+  if (i >= 0) {
+    gear.bag.splice(i, 1);
+    return true;
+  }
+  const m = (Object.keys(gear.equip) as Miejsce[]).find((k) => gear.equip[k] === id);
+  if (!m) return false;
+  gear.equip[m] = m === 'bron' ? 'kijek' : null;
+  return true;
 }
 
 // ---------------------------------------------------------------- fruit

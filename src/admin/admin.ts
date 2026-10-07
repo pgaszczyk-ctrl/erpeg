@@ -29,7 +29,7 @@ interface Code {
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
 const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)' };
-const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
+const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Zagadka (pytanie na miejscu)', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';
 try {
@@ -54,6 +54,15 @@ const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pl-PL'
 const km = (m: number | undefined) => ((m ?? 0) / 1000).toFixed(2);
 const sum = (o: Record<string, number> | undefined) => Object.values(o ?? {}).reduce((a, b) => a + b, 0);
 const itemName = (id: string | null | undefined) => (id ? PRZEDMIOTY.find((p) => p.id === id)?.nazwa ?? id : '—');
+/** Where an address is on the map: a building's door, or a spot typed as "51.2468, 22.5684" (e.g. a platform). */
+function spotOf(addr: unknown): { x: number; y: number } | null {
+  if (!city || typeof addr !== 'string') return null;
+  const g = /^\s*(-?\d{1,2}\.\d+)\s*[,;]\s*(-?\d{1,3}\.\d+)\s*$/.exec(addr);
+  if (g) return city.fromLatLon(+g[1], +g[2]);
+  const b = city.findBuilding(addr);
+  return b ? city.entranceOf(b) : null;
+}
+
 const allMissions = (): { id: string; m: Misja; fromCode: boolean; active: boolean }[] => [
   ...MISJE.map((m) => ({ id: m.id, m, fromCode: true, active: true })),
   ...(data?.missions ?? []).map((d) => ({ id: d.id, m: { ...d.data, id: d.id }, fromCode: false, active: d.active })),
@@ -254,7 +263,7 @@ function missions(main: HTMLElement) {
   const editor = el('div');
   const rows = allMissions().map(({ id, m, fromCode, active }) => {
     const c = missionCounts(id);
-    const found = city?.findBuilding(m.adres);
+    const found = spotOf(m.adres);
     const nCodes = data!.codes.filter((k) => k.mission_id === id).length;
     return el('tr', { className: fromCode ? '' : 'click', onclick: fromCode ? undefined : () => editor.replaceChildren(missionEditor(id)) }, [
       el('td', {}, [m.tytul, ' ', fromCode ? el('span', { className: 'badge' }, ['w kodzie gry']) : null, !active ? el('span', { className: 'badge bad' }, ['wyłączona']) : null]),
@@ -300,15 +309,47 @@ function missionEditor(id: string | null) {
     exp: inp(m.doswiadczenie ?? '', { type: 'number', min: 0, placeholder: 'puste = tyle co monet' }),
     przedmiot: el('select', {}, [el('option', { value: '' }, ['— bez przedmiotu —']), ...PRZEDMIOTY.filter((p) => p.id !== 'kijek').map((p) => el('option', { value: p.id, selected: m.przedmiot === p.id }, [`${p.efekt ? '✨ ' : ''}${p.nazwa}`]))]),
     active: el('input', { type: 'checkbox', checked: existing ? existing.active : true }),
+    // Mission chains (owner's „Serce Zębatka”, 6 Oct 2026).
+    seria: inp(m.seria ?? '', { placeholder: 'np. Serce Zębatka (puste = zwykła misja)' }),
+    naMiejscu: el('input', { type: 'checkbox', checked: !!m.naMiejscu }),
+    diamenty: inp(m.diamenty ?? 0, { type: 'number', min: 0, max: 10 }),
+    tylkoTest: el('input', { type: 'checkbox', checked: !!m.tylkoTest }),
+    wPoziom: el('input', { type: 'checkbox', checked: !!m.wymaga?.poziom }),
+    poziom: inp(m.wymaga?.poziom ?? 2, { type: 'number', min: 1, max: 20 }),
+    wMisje: el('input', { type: 'checkbox', checked: !!m.wymaga?.misje?.length }),
+    misje: el('select', { multiple: true, size: 6 }, allMissions().filter((x) => x.id !== id).map((x) => el('option', { value: x.id, selected: !!m.wymaga?.misje?.includes(x.id) }, [`${x.m.seria ? `⚙ ${x.m.seria}: ` : ''}${x.m.tytul} (${x.m.adres})`]))),
+    wPrzedmiot: el('input', { type: 'checkbox', checked: !!m.wymaga?.przedmiot }),
+    wymagany: el('select', {}, PRZEDMIOTY.filter((p) => p.id !== 'kijek').map((p) => el('option', { value: p.id, selected: m.wymaga?.przedmiot === p.id }, [p.nazwa]))),
+    zabierz: el('input', { type: 'checkbox', checked: !!m.wymaga?.zabierz }),
+    pytanie: el('textarea', { value: z.pytanie ?? '', placeholder: 'np. Co powstaje z wody i ognia w kotle?' }),
+    odp0: inp(z.odpowiedzi?.[0] ?? '', { placeholder: 'odpowiedź 1' }),
+    odp1: inp(z.odpowiedzi?.[1] ?? '', { placeholder: 'odpowiedź 2' }),
+    odp2: inp(z.odpowiedzi?.[2] ?? '', { placeholder: 'odpowiedź 3' }),
+    dobra: el('select', {}, [0, 1, 2].map((i) => el('option', { value: String(i), selected: (z.dobra ?? 0) === i }, [`dobra jest odpowiedź ${i + 1}`]))),
+    podpowiedz: inp(z.podpowiedz ?? '', { placeholder: 'co powie po złej odpowiedzi' }),
   };
   const field = (label: string, input: HTMLElement, note?: string) => el('label', { className: 'f' }, [el('span', {}, [label]), input, note ? el('small', { className: 'muted' }, [note]) : null]);
+  const riddleFields = el('div', { className: 'card' }, [
+    field('Pytanie (pada po dojściu na miejsce zadania)', f.pytanie),
+    el('div', { className: 'row' }, [f.odp0, f.odp1, f.odp2]),
+    el('div', { className: 'row' }, [f.dobra, f.podpowiedz]),
+  ]);
+  const needs = el('div', { className: 'card' }, [
+    el('b', {}, ['Wymagania (misja widoczna dopiero, gdy wszystkie zaznaczone są spełnione)']),
+    el('label', { className: 'row' }, [f.wPoziom, 'Poziom postaci od', f.poziom]),
+    el('label', { className: 'row' }, [f.wMisje, 'Ukończone misje (Ctrl/⌘ = kilka):']),
+    f.misje,
+    el('label', { className: 'row' }, [f.wPrzedmiot, 'Przedmiot w plecaku:', f.wymagany, f.zabierz, 'zabierz po przyjęciu']),
+  ]);
   const taskFields = el('div', {}, [
     field('Miejsce zadania (adres)', f.miejsce, 'Gdzie są wrogowie albo dokąd trzeba dojść.'),
     el('div', { className: 'row' }, [field('Ilu wrogów', f.ile), field('Jaki wróg', f.wrog)]),
     field('Cel (pokazywany na ekranie)', f.cel),
     el('label', { className: 'row' }, [f.szukaj, 'Trzeba szukać (strzałka pokazuje tylko okolicę)']),
+    riddleFields,
+    el('label', { className: 'row' }, [f.naMiejscu, 'Zakończ na miejscu (nagroda od razu po wykonaniu, bez powrotu)']),
     field('Co mówi po wykonaniu', f.zakonczenie),
-    el('div', { className: 'row' }, [field('Nagroda (monety)', f.nagroda), field('EXP', f.exp), field('Przedmiot w nagrodę', f.przedmiot)]),
+    el('div', { className: 'row' }, [field('Nagroda (monety)', f.nagroda), field('EXP', f.exp), field('Diamenty', f.diamenty), field('Przedmiot w nagrodę', f.przedmiot)]),
   ]);
   const preview = el('div');
   const msg = el('p', { className: 'msg' });
@@ -323,12 +364,31 @@ function missionEditor(id: string | null) {
         : {
             typ, miejsce: f.miejsce.value.trim(), cel: f.cel.value.trim() || (typ === 'idz' ? `Idź pod ${f.miejsce.value.trim()}` : `Pokonaj wrogów przy ${f.miejsce.value.trim()}`),
             ...(typ === 'pokonaj' ? { ile: Math.max(1, Number(f.ile.value) || 1), wrog: f.wrog.value as RodzajWroga } : {}),
+            ...(typ === 'zagadka' ? {
+              pytanie: f.pytanie.value.trim(),
+              odpowiedzi: [f.odp0.value.trim(), f.odp1.value.trim(), f.odp2.value.trim()].filter(Boolean),
+              dobra: Number(f.dobra.value) || 0,
+              ...(f.podpowiedz.value.trim() ? { podpowiedz: f.podpowiedz.value.trim() } : {}),
+            } : {}),
             ...(f.szukaj.checked ? { szukaj: true } : {}),
           },
     };
+    if (f.seria.value.trim()) out.seria = f.seria.value.trim();
+    if (f.tylkoTest.checked) out.tylkoTest = true;
+    const wymaga: NonNullable<Misja['wymaga']> = {};
+    if (f.wPoziom.checked) wymaga.poziom = Math.max(1, Number(f.poziom.value) || 1);
+    const chosen = [...f.misje.selectedOptions].map((o) => o.value);
+    if (f.wMisje.checked && chosen.length) wymaga.misje = chosen;
+    if (f.wPrzedmiot.checked && f.wymagany.value) {
+      wymaga.przedmiot = f.wymagany.value;
+      if (f.zabierz.checked) wymaga.zabierz = true;
+    }
+    if (Object.keys(wymaga).length) out.wymaga = wymaga;
     if (typ !== 'brak') {
       if (f.exp.value !== '') out.doswiadczenie = Math.max(0, Number(f.exp.value) || 0);
       if (f.przedmiot.value) out.przedmiot = f.przedmiot.value;
+      if (Number(f.diamenty.value) > 0) out.diamenty = Math.min(10, Math.floor(Number(f.diamenty.value)));
+      if (f.naMiejscu.checked) out.naMiejscu = true;
     } else out.nagroda = 0;
     return out;
   };
@@ -336,10 +396,14 @@ function missionEditor(id: string | null) {
     const typ = f.typ.value;
     taskFields.style.display = typ === 'brak' ? 'none' : '';
     f.ile.parentElement!.style.display = f.wrog.parentElement!.style.display = typ === 'pokonaj' ? '' : 'none';
+    riddleFields.style.display = typ === 'zagadka' ? '' : 'none';
+    f.szukaj.parentElement!.style.display = typ === 'pokonaj' ? '' : 'none';
     preview.replaceChildren(missionPreview(read()));
   };
-  for (const e of Object.values(f)) e.addEventListener('input', update);
-  f.typ.addEventListener('change', update);
+  for (const e of Object.values(f)) {
+    e.addEventListener('input', update);
+    e.addEventListener('change', update);
+  }
 
   const save = btn('💾 Zapisz', async () => {
     const mm = read();
@@ -348,7 +412,7 @@ function missionEditor(id: string | null) {
       msg.textContent = 'Podaj tytuł i adres.';
       return;
     }
-    if (city && !city.findBuilding(mm.adres) && !confirm(`Nie znalazłem na mapie adresu „${mm.adres}”. Zapisać mimo to?`)) return;
+    if (city && !spotOf(mm.adres) && !confirm(`Nie znalazłem na mapie adresu „${mm.adres}”. Zapisać mimo to?`)) return;
     save.disabled = true;
     try {
       const { id: _id, ...body } = mm;
@@ -371,10 +435,13 @@ function missionEditor(id: string | null) {
       el('div', {}, [
         field('Tytuł', f.tytul),
         field('Adres budynku (tu się ją dostaje)', f.adres, 'Jak na tabliczce: „Ulica numer”. Znaczek ✓/✗ w podglądzie mówi, czy jest na mapie.'),
+        field('Główna nazwa questa (seria)', f.seria, 'Misje z tą samą nazwą tworzą jedną historię; w dzienniku: „⚙ Seria – część N: tytuł”.'),
+        needs,
         field('Rodzaj', f.typ),
         field('Co mówi zleceniodawca', f.opis),
         taskFields,
         el('label', { className: 'row' }, [f.active, 'Włączona (widoczna w grze)']),
+        el('label', { className: 'row' }, [f.tylkoTest, 'Tylko serwer testowy (produkcja jej nie widzi)']),
         msg,
         el('div', { className: 'row' }, [save, btn('Anuluj', () => card.remove())]),
       ]),
@@ -387,8 +454,8 @@ function missionEditor(id: string | null) {
 
 /** What the player will see: the dialog and where things are on the map. */
 function missionPreview(m: Misja) {
-  const door = city?.findBuilding(m.adres);
-  const target = m.zadanie.typ === 'brak' || typeof m.zadanie.miejsce !== 'string' ? undefined : city?.findBuilding(m.zadanie.miejsce);
+  const door = spotOf(m.adres);
+  const target = m.zadanie.typ === 'brak' ? null : spotOf(m.zadanie.miejsce);
   const reward = `Nagroda: ${m.nagroda} monet${m.przedmiot ? ` + ${itemName(m.przedmiot)}` : ''}.`;
   const dialog = el('div', { className: 'dialog' }, [
     el('div', { className: 't' }, [m.tytul || '(tytuł)']),
@@ -404,8 +471,8 @@ function missionPreview(m: Misja) {
     ]),
   ]);
   if (city && door) {
-    const a = city.entranceOf(door);
-    const b = target ? city.entranceOf(target) : a;
+    const a = door;
+    const b = target ?? a;
     const cx = (a.x + b.x) / 2;
     const cy = (a.y + b.y) / 2;
     const R = Math.max(80 * PX_PER_M, Math.hypot(a.x - b.x, a.y - b.y) / 2 + 40 * PX_PER_M);

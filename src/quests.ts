@@ -3,14 +3,14 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { loadGear, saveGear, normalizeSlot, addEssence } from './inventory';
+import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
-import { zyciePostaci } from './content/historia';
+import { zyciePostaci, poziomPostaci } from './content/historia';
 import { loadSettings } from './settings';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
@@ -239,6 +239,37 @@ export function setMissionState(m: Misja, s: MissionState) {
   session.missions[m.id] = s;
 }
 
+/**
+ * Is a mission shown (gold door, arrow)? Taken ones always are; new ones only when their
+ * requirements are met (level, earlier missions done, an item in hand) – mission chains.
+ */
+export function missionAvailable(m: Misja) {
+  if (missionState(m) !== 'new') return true;
+  const w = m.wymaga;
+  if (!w) return true;
+  if (w.poziom && poziomPostaci(session.exp) < w.poziom) return false;
+  if (w.misje?.some((id) => session.missions[id] !== 'done')) return false;
+  if (w.przedmiot && !owns(w.przedmiot)) return false;
+  return true;
+}
+
+/** Which part of its series a mission is (1 + the longest chain of earlier series missions it needs). */
+export function seriesPart(m: Misja, all: Misja[], seen = new Set<string>()): number {
+  if (!m.seria || seen.has(m.id)) return 1;
+  seen.add(m.id);
+  let best = 0;
+  for (const id of m.wymaga?.misje ?? []) {
+    const p = all.find((q) => q.id === id && q.seria === m.seria);
+    if (p) best = Math.max(best, seriesPart(p, all, seen));
+  }
+  return best + 1;
+}
+
+/** Title for the quest log: "⚙ Serce Zębatka – część 3: Chochliki spod Bramy". */
+export function missionTitle(m: Misja, all: Misja[]) {
+  return m.seria ? `⚙ ${m.seria} – część ${seriesPart(m, all)}: ${m.tytul}` : m.tytul;
+}
+
 /** Experience for finishing a mission (defaults to its coin reward). */
 export function missionExp(m: Misja) {
   return m.doswiadczenie ?? m.nagroda;
@@ -389,7 +420,16 @@ export interface Place {
 }
 
 /** Turns an address or lat/lon into a point on the map (a building's door for addresses). */
+/** "51.2468, 22.5684" typed as an address (a spot that isn't a building, e.g. a platform). */
+export function latLonOf(m: Miejsce): { lat: number; lon: number } | null {
+  if (typeof m !== 'string') return m;
+  const g = /^\s*(-?\d{1,2}\.\d+)\s*[,;]\s*(-?\d{1,3}\.\d+)\s*$/.exec(m);
+  return g ? { lat: +g[1], lon: +g[2] } : null;
+}
+
 export function resolvePlace(city: CityMap, m: Miejsce): Place | null {
+  const ll = latLonOf(m);
+  if (ll) m = ll;
   if (typeof m !== 'string') {
     const p = city.fromLatLon(m.lat, m.lon);
     return { ...p };

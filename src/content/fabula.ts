@@ -22,7 +22,7 @@ export interface Zadanie {
    * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce),
    * 'zbierz' = przynieś rzeczy (np. grzyby, drewno); miejsce = gdzie ich szukać.
    */
-  typ: 'pokonaj' | 'idz' | 'brak' | 'zbierz';
+  typ: 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka';
   /** Tylko dla 'zbierz': co przynieść (id z sklepy.ts, np. 'grzyb', 'drewno') i ile. */
   towar?: import('./sklepy').Owoc;
   miejsce: Miejsce;
@@ -35,6 +35,29 @@ export interface Zadanie {
   szukaj?: boolean;
   /** Tylko dla 'idz': okienko po dotarciu na miejsce (zamiast krótkiego napisu). */
   komunikat?: string;
+  /** Tylko dla 'zagadka': pytanie zadawane po dojściu na miejsce zadania. */
+  pytanie?: string;
+  /** Tylko dla 'zagadka': odpowiedzi do wyboru (zwykle 3). */
+  odpowiedzi?: string[];
+  /** Tylko dla 'zagadka': która odpowiedź jest dobra (0 = pierwsza). */
+  dobra?: number;
+  /** Tylko dla 'zagadka': podpowiedź po złej odpowiedzi. */
+  podpowiedz?: string;
+}
+
+/**
+ * Kiedy misja się pokazuje (złote drzwi, strzałka). Wszystkie warunki naraz;
+ * misja już przyjęta zostaje widoczna, nawet gdy warunek przestał być spełniony.
+ */
+export interface Wymagania {
+  /** Od którego poziomu postaci. */
+  poziom?: number;
+  /** Id misji, które trzeba wcześniej ukończyć. */
+  misje?: string[];
+  /** Przedmiot (id z przedmioty.ts), który trzeba mieć. */
+  przedmiot?: string;
+  /** Zabrać ten przedmiot po przyjęciu misji (np. pączek oddany hersztowi). */
+  zabierz?: boolean;
 }
 
 export interface Misja {
@@ -62,6 +85,16 @@ export interface Misja {
   placeId?: string;
   /** Wykonane zadanie można oddać w dowolnej bibliotece (zlecenia towarzystw naukowych). */
   dowolnaBiblioteka?: boolean;
+  /** Główna nazwa questa (seria), np. „Serce Zębatka”; misje serii łączą się wymaganiami. */
+  seria?: string;
+  /** Kiedy misja jest widoczna (poziom, poprzednie misje, przedmiot). */
+  wymaga?: Wymagania;
+  /** Zakończ na miejscu: nagroda i „Co mówi po wykonaniu” od razu po osiągnięciu celu, bez powrotu. */
+  naMiejscu?: boolean;
+  /** Diamenty w nagrodę. */
+  diamenty?: number;
+  /** Tylko serwer testowy (panel admina): stara gra na produkcji jej nie dostaje. */
+  tylkoTest?: boolean;
 }
 
 export interface Wrogowie {

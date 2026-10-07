@@ -32,9 +32,13 @@ export interface Przedmiot {
   /**
    * Moc specjalna (przedmioty mityczne, tylko z tajnych haseł):
    * 'swiatlo' = świeci i widać dalej, 'pioruny' = sam razi pioruny wrogów w pobliżu,
-   * 'szczescie' = więcej monet za potwory i rozbite bandy (PODKOWA).
+   * 'szczescie' = więcej monet za potwory i rozbite bandy (PODKOWA),
+   * 'szybkosc' = szybsze chodzenie (SZYBKOSC_TALIZMANU, talizmany „Serca Zębatka”),
+   * 'zycie' = więcej życia (ZYCIE_PRZEDMIOTU, Cukierniczy Cylinder).
    */
-  efekt?: 'swiatlo' | 'pioruny' | 'szczescie';
+  efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie';
+  /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
+  fabularny?: boolean;
   /** Krótki opis pokazywany w karcie postaci. */
   opis?: string;
   /** Ile ciosów/strzałów wytrzyma, zanim się zepsuje (content/zuzycie.ts); brak = nie zużywa się. */
@@ -93,7 +97,18 @@ export const PRZEDMIOTY: Przedmiot[] = [
   // Talizmany (miejsce na szyi): tylko w nagrodę za misje.
   { id: 'podkowa_szczescia', nazwa: 'Podkowa Szczęścia', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szczescie', opis: 'Dopóki ją nosisz, każdy potwór i każda rozbita banda dają 10% więcej monet.' },
   { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 7, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
+  // „Serce Zębatka” (owner's quest chain, 6 Oct 2026): rewards of its missions, made in the admin panel.
+  { id: 'gwizdek_maszynisty', nazwa: 'Gwizdek Maszynisty', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Mosiężny gwizdek z parowozu. Noszony jako talizman: chodzisz o 4% szybciej.' },
+  { id: 'kluczyk_nakrecacz', nazwa: 'Kluczyk Nakręcacz', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Kluczyk do nakręcania mechanizmów. Noszony jako talizman: chodzisz o 4% szybciej.' },
+  { id: 'kieszonkowy_chronometr', nazwa: 'Kieszonkowy Chronometr', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Tyka równo jak serce Zębatka. Noszony jako talizman: chodzisz o 4% szybciej.' },
+  { id: 'cukierniczy_cylinder', nazwa: 'Cukierniczy Cylinder', miejsce: 'helm', moc: 1, cena: 0, efekt: 'zycie', opis: 'Pachnie lukrem. Daje jedno serce życia więcej.' },
+  { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true, opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
 ];
+
+/** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */
+export const SZYBKOSC_TALIZMANU = 0.04;
+/** Przedmiot z efektem 'zycie': tyle połówek serca więcej (2 = jedno serce). */
+export const ZYCIE_PRZEDMIOTU = 2;
 
 /** Świetlisty miecz: o ile razy dalej widać. */
 export const SWIATLO = 1.5;
