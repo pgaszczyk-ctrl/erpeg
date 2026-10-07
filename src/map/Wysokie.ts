@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ziemiaWTle } from './Podloze09';
+import { ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
 import { GEN_DOTS, type Budynek09 } from './ziemia09';
 import type { WielkoscMiasta } from '../gen';
 import { PRZESWIT_BUDYNKU, POZIOMY } from '../content/budynki';
@@ -98,7 +98,7 @@ export class Wysokie {
   private licz(id: number, w: Wysoki, miasto: WielkoscMiasta) {
     w.czeka = true;
     const noc = w.noc;
-    void ziemiaWTle().budynek(w.b, noc, miasto).then((g) => {
+    void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(w.b, noc, miasto)).then((g) => {
       w.czeka = false;
       if (this.wszystkie.get(id) !== w || !this.scene.sys.isActive()) return;
       if (w.noc !== noc) return this.licz(id, w, miasto);

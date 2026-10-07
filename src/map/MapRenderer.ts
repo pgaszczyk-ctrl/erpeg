@@ -646,6 +646,9 @@ export class MapRenderer {
     this.redrawAround(x, y);
   }
 
+  /** Buildings under a landmark picture (G12, Zabytki.ts): painted as a shadow only. */
+  zabytekCovers: (b: Building) => boolean = () => false;
+
   /** Repaints the chunks around a map point (a felled tree's stump, overhaul 09); the old picture stays until then. */
   redrawAround(x: number, y: number) {
     for (let cx = Math.floor((x - 40) / CHUNK); cx <= Math.floor((x + 40) / CHUNK); cx++)
@@ -732,12 +735,14 @@ export class MapRenderer {
     const budynki: Budynek09[] = buildings.map((b) => {
       const hl = this.highlight.get(b);
       const k = ksztalt09(b);
+      const zabytek = this.zabytekCovers(b);
       return {
+        zabytek,
         r: b.rings[0].map((v) => v * G),
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),
         h: k.poziomy * k.poziom,
         poziom: k.poziom,
-        osobno: k.poziomy >= POZIOMY.osobnoOd,
+        osobno: !zabytek && k.poziomy >= POZIOMY.osobnoOd,
         id: b.id,
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,

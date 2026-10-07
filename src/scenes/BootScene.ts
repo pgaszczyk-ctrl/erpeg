@@ -6,11 +6,11 @@ import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES, ITEM_VARIANTS } from '../ui/itemIcon';
-import { WARZYWA_RYSUNKI } from '../map/Podloze09';
+import { WARZYWA_RYSUNKI, WYGLAD_09 } from '../map/Podloze09';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
-import { MAMY } from '../content/swiat';
+import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
@@ -31,6 +31,12 @@ export class BootScene extends Phaser.Scene {
     for (const v of CROP_ICONS) this.load.image(`uprawa-${v}`, `uprawy/uprawa_${v}_dojrzala_1.png`);
     // Ripe plants on the fields (overhaul 09), shown on their own so they stand out (GameScene ripeCrop).
     for (const v of WARZYWA_RYSUNKI) for (const n of [1, 2]) this.load.image(`upr09-${v}_dojrzala_${n}`, `uprawy/uprawa_${v}_dojrzala_${n}.png`);
+    // Signs on posts (G14, overhaul 09): the artist's posts (2 frames: lamp off/on) and the boards of every kind of place.
+    if (WYGLAD_09) {
+      this.load.spritesheet('szyld-slup-tablica', 'swiat/szyldy/slup_tablica.png', { frameWidth: 12, frameHeight: 40 });
+      this.load.spritesheet('szyld-slup-ramie', 'swiat/szyldy/slup_ramie.png', { frameWidth: 28, frameHeight: 40 });
+      for (const t of new Set(Object.values(SLUPY_SZYLDOW.tablice))) this.load.image(`tablica-${t}`, `swiat/szyldy/tablica_${t}.png`);
+    }
   }
 
   create() {

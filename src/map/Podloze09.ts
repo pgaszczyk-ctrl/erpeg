@@ -6,6 +6,7 @@ import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
 /** Obraz wysokiego budynku z Web Workera (px generatora) i jego wyloty pary. */
 export interface ObrazBudynku { obraz: HTMLCanvasElement; x0: number; y0: number; wyrzuty: ZrodloPary[] }
 import type { Drzewo09 } from './drzewa09';
+import { ustawOzdoby } from '../gen/budynki';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
 // liczy generator z `src/gen`. Obszary OSM trafiają najpierw na pomocnicze płótno „mapy rodzajów”
@@ -229,6 +230,34 @@ export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
   return out;
 }
 
+/** Ozdoby steampunkowe od grafika (zamówienie 15, public/swiat/ozdoby/<nazwa>.png, klatki obok siebie; robi je scripts/ozdoby.sh). */
+export const OZDOBY_PLIKI: Record<string, number> = { manometr: 1, zawor: 1, lampa_scienna: 2, zegar: 1, zebatka: 1, bulaj: 1, wentylator: 3 };
+
+/** Wczytuje ozdoby: jedna klatka → `nazwa`, kilka → `nazwa#0`, `nazwa#1`…; podstawa = środek dolnej krawędzi klatki. */
+export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {
+  const out: Record<string, Sprite> = {};
+  const base = import.meta.env.BASE_URL || '/';
+  await Promise.all(Object.entries(OZDOBY_PLIKI).map(([n, k]) => new Promise<void>((ok) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.floor(img.width / k);
+      for (let f = 0; f < k; f++) {
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = img.height;
+        const g = c.getContext('2d')!;
+        g.drawImage(img, -f * w, 0);
+        const d = g.getImageData(0, 0, w, img.height);
+        out[k > 1 ? `${n}#${f}` : n] = { o: { w, h: img.height, px: new Uint32Array(d.data.buffer.slice(0)) }, bx: Math.floor(w / 2), by: img.height - 1 };
+      }
+      ok();
+    };
+    img.onerror = () => ok();
+    img.src = `${base}swiat/ozdoby/${n}.png`;
+  })));
+  return out;
+}
+
 class ZiemiaWTle {
   private workery: Worker[] = [];
   private czeka = new Map<number, (g: Gotowe) => void>();
@@ -296,9 +325,10 @@ class ZiemiaWTle {
   }
 
   /** Rysunki roślin na pola: do każdego Web Workera (przed kolejnymi zleceniami, kolejność wiadomości jest zachowana) i do liczenia w grze. */
-  ustawRysunki(r: Record<string, Sprite>) {
+  ustawRysunki(r: Record<string, Sprite>, ozdoby: Record<string, Sprite> = {}) {
     ustawRysunkiUpraw(r);
-    for (const w of this.workery) w.postMessage({ rysunki: r });
+    ustawOzdoby(ozdoby);
+    for (const w of this.workery) w.postMessage({ rysunki: r, ozdoby });
   }
 
   policz(z: Zlecenie): Promise<Gotowe> {
@@ -321,7 +351,7 @@ export const ziemiaWTle = () => (wTle ??= new ZiemiaWTle());
 
 /** Rysunki roślin wczytane i wysłane do Web Workerów (raz); kawałki mapy czekają na to przed pierwszym zleceniem. */
 let rysunkiGotowe: Promise<void> | null = null;
-export const przygotujRysunkiUpraw = () => (rysunkiGotowe ??= wczytajRysunkiUpraw().then((r) => ziemiaWTle().ustawRysunki(r)).catch(() => undefined));
+export const przygotujRysunkiUpraw = () => (rysunkiGotowe ??= Promise.all([wczytajRysunkiUpraw(), wczytajOzdoby()]).then(([r, oz]) => ziemiaWTle().ustawRysunki(r, oz)).catch(() => undefined));
 
 /** Gotowa ziemia na kawałek (transformacja mapy już ustawiona w ctx). */
 export function rysujZiemie(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement, x0: number, y0: number, rozmiar: number) {

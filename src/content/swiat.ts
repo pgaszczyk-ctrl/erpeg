@@ -124,6 +124,20 @@ export const TRENING = {
 export const SZYLDY = { szerokosc: 16 };
 
 /**
+ * Szyldy na słupach (G14, wygląd 09; właściciel 6.10: szyld wiszący na ścianie „nie wiadomo co to jest”):
+ * żeliwny słup od grafika tuż obok drzwi, na nim tablica rodzaju miejsca (22×20 px obrazu), nocą świeci lampka.
+ * `odDrzwiM` – jak daleko od drzwi wzdłuż ściany (pierwsze wolne), `odSciany` – ile punktów mapy przed ścianą,
+ * `kolysanie` – stopnie, o ile buja się tablica na ramieniu, `lampa` – poświata lampki nocą.
+ */
+export const SLUPY_SZYLDOW = {
+  tablice: { shop: 'sklep', school: 'szkola', church: 'kosciol', office: 'urzad', hospital: 'szpital', police: 'policja', library: 'biblioteka', hotel: 'hotel', bank: 'bank', university: 'szkola', alchemist: 'alchemik', gear: 'sportowy', camp: 'kemping' } as Record<string, string>,
+  odDrzwiM: [3.5, 4.5, 2.5, 5.5],
+  odSciany: 3,
+  kolysanie: 4,
+  lampa: { promien: 7, mocno: 0.75, plama: 0.35 },
+};
+
+/**
  * Złota poświata pod szyldami (żeby było widać, gdzie sklep itp.): delikatniejsza
  * niż czerwona pod wrogami. `promien` w punktach mapy, `mocno` 0–1, `kolor`,
  * `pulsMs` – powolne falowanie (0 = stała).

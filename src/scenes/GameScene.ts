@@ -44,7 +44,8 @@ import { WIDOK } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
-import { WOZY, POSWIATA_SZYLDU } from '../content/swiat';
+import { Zabytki } from '../map/Zabytki';
+import { WOZY, POSWIATA_SZYLDU, SLUPY_SZYLDOW } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
 import { worldOrigin } from '../map/world';
@@ -342,12 +343,15 @@ export class GameScene extends Phaser.Scene {
     this.pickups = [];
     this.farObjects = [];
     this.signGlows = new Set();
+    this.posts = [];
+    this.postsNight = null;
     this.markers = new Map();
     this.leaving = false;
     this.lingerUntil = 0;
     this.rescueDeclined = false;
     this.toldPlace = null;
     this.mapView = new MapRenderer(this, this.city);
+    this.zabytki = new Zabytki(this, this.city, this.mapView);
     // Góry v2 (world maps with terrain): blur, fog, shrinking and parallax of what lies below, on the graphics card.
     this.gory = GoryFiltr.make(this, this.city);
     this.mapView.onRipe = (q) => this.ripeCrop(q);
@@ -492,10 +496,14 @@ export class GameScene extends Phaser.Scene {
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.stationVehicles(p);
       else {
-        const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
-        const at = this.signSpot(p);
-        const img = this.add.image(at.x, at.y, sign).setScale(artScale(sign)).setDepth(900_000);
-        this.farObjects.push(img, this.signGlow(img));
+        const post = this.signPost(p);
+        if (post) this.farObjects.push(...post);
+        else {
+          const sign = look.sign === TEX.tent && this.textures.exists(TEX.signCamp) ? TEX.signCamp : look.sign;
+          const at = this.signSpot(p);
+          const img = this.add.image(at.x, at.y, sign).setScale(artScale(sign)).setDepth(900_000);
+          this.farObjects.push(img, this.signGlow(img));
+        }
       }
       // The coachman himself stands by his cart (pack „postacie stałe 02”).
       if (p.kind === 'station' && hdOn) {
@@ -844,6 +852,8 @@ export class GameScene extends Phaser.Scene {
 
     this.animateCrops(now);
     this.cullFar(now);
+    this.updatePosts(now);
+    this.zabytki.update(this.player.x, this.player.y);
     for (const item of [...this.pickups]) {
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
     }
@@ -1526,6 +1536,121 @@ export class GameScene extends Phaser.Scene {
     glow.setData('faza', Math.random() * 10_000);
     this.signGlows.add(glow);
     return glow;
+  }
+
+  /**
+   * G14 (overhaul 09): a cast-iron post right by the door (on the ground in front of the wall, the board never over the door)
+   * with the board of its kind of place, two kinds by the place's id: the board under a crossbar, or on chains from an arm
+   * that points away from the door and sways a little. The lamp on top is lit at night (`updatePosts`). Null = old wall sign.
+   */
+  private signPost(p: CityPlace): Phaser.GameObjects.Image[] | null {
+    const S = SLUPY_SZYLDOW;
+    const t = S.tablice[p.kind];
+    if (!WYGLAD_09 || !t || !this.textures.exists(`tablica-${t}`) || !this.textures.exists('szyld-slup-ramie')) return null;
+    const at = this.postSpot(p);
+    let h = 0;
+    for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
+    const arm = (h & 1) === 1;
+    // Frames are in picture px (2 per map px): the post's foot is row 38, its axis column 5.5 (board post) / 6 (arm post).
+    const K = 0.5;
+    const flip = arm && at.x < p.door.x; // the arm points away from the door
+    const post = this.add.image(at.x, at.y, arm ? 'szyld-slup-ramie' : 'szyld-slup-tablica', 0)
+      .setOrigin(arm ? (flip ? 22 / 28 : 6 / 28) : 5.5 / 12, 39 / 40).setScale(K).setFlipX(flip).setDepth(at.y);
+    const top = at.y - 39 * K;
+    const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
+    const board = this.add.image(Math.round(bx * 2) / 2, top + (arm ? 16 : 12) * K, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    for (const k of ['szyld-slup-ramie', 'szyld-slup-tablica', `tablica-${t}`]) this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    // A small shadow at the foot, to the bottom right.
+    if (!this.textures.exists('cien-slupa')) {
+      const c = this.textures.createCanvas('cien-slupa', 10, 5)!;
+      const g = c.getContext();
+      g.fillStyle = 'rgba(20,16,24,0.35)';
+      g.beginPath();
+      g.ellipse(5, 2.5, 5, 2.5, 0, 0, Math.PI * 2);
+      g.fill();
+      c.refresh();
+    }
+    const shadow = this.add.image(at.x + 2, at.y - 0.5, 'cien-slupa').setDepth(at.y - 1);
+    const lampX = at.x + (arm ? (flip ? -0.5 : 0.5) : 0) * K, lampY = top + 5 * K;
+    const lamp = this.add.image(lampX, lampY, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y + 1).setVisible(false);
+    const pool = this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false);
+    this.lampGlowTexture();
+    lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
+    pool.setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
+    this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
+    return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
+  }
+
+  private zabytki!: Zabytki;
+  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
+  private postsNight: boolean | null = null;
+  private postsNightAt = 0;
+
+  private lampGlowTexture() {
+    if (this.textures.exists('sign-glow-lamp')) return;
+    const n = 32;
+    const tex = this.textures.createCanvas('sign-glow-lamp', n, n)!;
+    const ctx = tex.getContext();
+    const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+    grd.addColorStop(0, 'rgba(255,214,130,1)');
+    grd.addColorStop(0.45, 'rgba(255,190,90,0.55)');
+    grd.addColorStop(1, 'rgba(255,170,60,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, n, n);
+    tex.refresh();
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+  }
+
+  /** Night lamps on the sign posts (checked every 2 s) and the boards on arms swaying, only for those on screen. */
+  private updatePosts(now: number) {
+    if (!this.posts.length) return;
+    if (now - this.postsNightAt > 2000) {
+      this.postsNightAt = now;
+      const night = isNight();
+      if (night !== this.postsNight) {
+        this.postsNight = night;
+        for (const q of this.posts) q.post.setFrame(night ? 1 : 0);
+      }
+    }
+    const night = !!this.postsNight;
+    for (const q of this.posts) {
+      if (!q.post.visible) {
+        if (q.lamp.visible) q.lamp.setVisible(false);
+        if (q.pool.visible) q.pool.setVisible(false);
+        continue;
+      }
+      if (q.lamp.visible !== night) q.lamp.setVisible(night);
+      if (q.pool.visible !== night) q.pool.setVisible(night);
+      if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
+    }
+  }
+
+  /**
+   * Where a sign post stands: on the ground in front of the door's wall, a few metres along it to one side
+   * (SLUPY_SZYLDOW.odDrzwiM, the first spot that isn't in a building or water); without a building just beside the door.
+   */
+  private postSpot(p: CityPlace): { x: number; y: number } {
+    const r = p.building?.rings[0];
+    const d = p.door;
+    if (!r || r.length < 6) return { x: d.x + 6, y: d.y };
+    let best = Infinity, ux = 1, uy = 0, nx = 0, ny = 1;
+    let area = 0;
+    for (let i = 0; i < r.length; i += 2) { const j = (i + 2) % r.length; area += r[i] * r[j + 1] - r[j] * r[i + 1]; }
+    const out = area > 0 ? 1 : -1;
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const ax = r[i], ay = r[i + 1], dx = r[j] - ax, dy = r[j + 1] - ay;
+      const L = Math.hypot(dx, dy) || 1;
+      const tt = Math.max(0, Math.min(1, ((d.x - ax) * dx + (d.y - ay) * dy) / (L * L)));
+      const dd = Math.hypot(ax + dx * tt - d.x, ay + dy * tt - d.y);
+      if (dd < best) [best, ux, uy, nx, ny] = [dd, dx / L, dy / L, (out * dy) / L, (-out * dx) / L];
+    }
+    const S = SLUPY_SZYLDOW;
+    for (const m of S.odDrzwiM) for (const side of [1, -1]) {
+      const x = d.x + ux * side * m * PX_PER_M + nx * S.odSciany, y = d.y + uy * side * m * PX_PER_M + ny * S.odSciany;
+      if (!this.city.isBlocked(x, y) && !this.city.isBlocked(x, y - 2)) return { x, y };
+    }
+    return { x: d.x + nx * S.odSciany + 5, y: d.y + ny * S.odSciany };
   }
 
   /** Place signs, their glows and signposts of the whole map (report 56: ~2000 of them were drawn every frame). */

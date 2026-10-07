@@ -3,6 +3,15 @@
 // Wszystkie miary w px obrazu (0,5 px mapy): ściany 8 / 12 / 16 px.
 import { Obraz, nowy, hex, hash, rng, OBRYS, mieszaj } from './wspolne';
 
+/** Cień: ten sam kolor ciemniej, bez zmiany odcienia (piksel ABGR). */
+const przyciemnij = (c: number, f: number) => ((c & 0xff000000) | (Math.round(((c >> 16) & 255) * f) << 16) | (Math.round(((c >> 8) & 255) * f) << 8) | Math.round((c & 255) * f)) >>> 0;
+
+/** Ozdoba od grafika: obraz i punkt podstawy (środek dolnej krawędzi). Klatki osobno: `lampa_scienna#1`. */
+export interface RysunekOzdoby { o: Obraz; bx: number; by: number }
+let OZDOBY_RYS: Record<string, RysunekOzdoby> = {};
+/** Rysunki ozdób (zamówienie 15, public/swiat/ozdoby/) – gra ustawia je raz, w grze i w każdym Web Workerze. Brakującą ozdobę rysuje kod. */
+export function ustawOzdoby(r: Record<string, RysunekOzdoby>) { OZDOBY_RYS = r; }
+
 export interface Material { tony: number[]; krawedz: number; wzor: 'dachowka' | 'lupek' | 'gont' | 'blacha' | 'gladki' | 'cegla' | 'deski' | 'kamien' }
 const M = (t: string[], k: string, wzor: Material['wzor']): Material => ({ tony: t.map(hex), krawedz: hex(k), wzor });
 export const MATERIALY: Record<string, Material> = {
@@ -380,19 +389,52 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     const wpt = (e: typeof E[number], along: number, hh: number): [number, number] => [Math.round(e.ax + e.ux * along + (H - hh) * sk - x0), Math.round(e.ay + e.uy * along + (H - hh) - y0)];
     const naScianie = (): [typeof E[number], number] | null => { if (!sciany.length) return null; for (let k = 0; k < 6; k++) { const { e } = sciany[Math.floor(R() * sciany.length)]; const al = 3 + R() * (e.L - 6); const [i, j] = wpt(e, al, H / 2); if (wolne(i, j, 6)) { zajete.push([i, j]); return [e, al]; } } return null; };
     const naDachu = (r: number): [number, number] | null => { for (let k = 0; k < 10 && dach.length; k++) { const [i, j] = dach[Math.floor(R() * dach.length)]; if (wolne(i, j, r)) { zajete.push([i, j]); return [i, j]; } } return null; };
+    /** Rysunek grafika: podstawa (środek dolnej krawędzi) w (ci, cj), pod nim cień w prawo-dół (na ścianie 1 px, na dachu 3 px i ciemniej). */
+    const stempel = (nazwa: string, ci: number, cj: number, naDach: boolean): boolean => {
+      const r = OZDOBY_RYS[nazwa];
+      if (!r) return false;
+      const ox = ci - r.bx, oy = cj - r.by, d = naDach ? 3 : 1, pel = (a: number, b: number) => a >= 0 && b >= 0 && a < r.o.w && b < r.o.h && (r.o.px[b * r.o.w + a] >>> 24) > 0;
+      for (let b = 0; b < r.o.h + d; b++) for (let a = 0; a < r.o.w + d; a++) {
+        if (pel(a, b) || !pel(a - d, b - d)) continue;
+        const i = ox + a, j = oy + b;
+        if (i < 0 || j < 0 || i >= W || j >= Hh) continue;
+        const c = o.px[j * W + i];
+        if (c >>> 24) o.px[j * W + i] = przyciemnij(c, naDach ? 0.6 : 0.75);
+      }
+      for (let b = 0; b < r.o.h; b++) for (let a = 0; a < r.o.w; a++) { const c = r.o.px[b * r.o.w + a]; if (c >>> 24) put(ox + a, oy + b, c); }
+      return true;
+    };
+    /** Ozdoba ścienna z rysunku: podstawa na wysokości `hh` (obniżona, gdy rysunek nie mieści się pod okapem). Nie mieści się wcale → kod. */
+    const naSciane = (nazwa: string, w: [typeof E[number], number], hh: number): boolean => {
+      const r = OZDOBY_RYS[nazwa];
+      if (!r || H < r.o.h + 3) return false;
+      const [i, j] = wpt(w[0], w[1], Math.max(1, Math.min(hh, H - r.o.h - 1)));
+      return stempel(nazwa, i, j, false);
+    };
     const kolo = (ci: number, cj: number, r: number, f: (d: number, i: number, j: number) => number | 0) => { for (let j = -Math.ceil(r); j <= r; j++) for (let i = -Math.ceil(r); i <= r; i++) { const d = Math.hypot(i, j); if (d > r + 0.3) continue; const c = f(d, i, j); if (c) put(ci + i, cj + j, c); } };
 
     // ——— na ścianie ———
-    const manometr = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 5));
+    const manometr = () => { const w = naScianie(); if (!w) return; if (naSciane('manometr', w, H - 10)) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 5));
       for (let k = 1; k <= 3; k++) put(i, j + k, MOSIADZ[1]);
       kolo(i, j, 3.6, (d, a, b) => d > 3.1 ? OBRYS : d > 2.2 ? (a + b < 0 ? MOSIADZ[3] : MOSIADZ[1]) : (a === 1 && b === -1) || (a === 0 && b === 0) || (a === 2 && b === -2) ? CZ2 : BIEL); };
-    const zawor = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], 3 + Math.floor(R() * 4));
+    const zawor = () => { const w = naScianie(); if (!w) return; const hz = 3 + Math.floor(R() * 4); if (naSciane('zawor', w, hz - 3)) return; const [i, j] = wpt(w[0], w[1], hz);
       for (let k = 0; k < 4; k++) { put(i + k - 4, j + 2, MOSIADZ[2]); put(i + k - 4, j + 3, MOSIADZ[0]); } kolo(i, j - 1, 3.6, (d, a, b) => d > 3.1 ? OBRYS : d > 2.1 ? (a + b < 0 ? hex('#d86a52') : CZ) : (a === 0 || b === 0 || a === b) ? CZ2 : 0); put(i, j - 1, MOSIADZ[3]); };
-    const zegar = () => { const w = naScianie(); if (!w || H < 10) return; const [i, j] = wpt(w[0], w[1], H - 5);
+    const zegar = () => { const w = naScianie(); if (!w || H < 10) return;
+      const rz = OZDOBY_RYS.zegar;
+      if (rz && H >= rz.o.h + 3) { // tarcza od grafika, wskazówki dorysowane (po zmniejszeniu znikały)
+        const hb = Math.max(1, H - rz.o.h - 1), [i, j] = wpt(w[0], w[1], hb);
+        stempel('zegar', i, j, false);
+        let t = rz.o.h, l = rz.o.w, rr = 0, bb = 0; // środek tarczy z nieprzezroczystych pikseli rysunku
+        for (let y = 0; y < rz.o.h; y++) for (let x = 0; x < rz.o.w; x++) if (rz.o.px[y * rz.o.w + x] >>> 24) { t = Math.min(t, y); bb = Math.max(bb, y); l = Math.min(l, x); rr = Math.max(rr, x); }
+        const ci = i - rz.bx + Math.round((l + rr) / 2), cj = j - rz.by + Math.round((t + bb) / 2);
+        for (let k = 0; k <= 2; k++) put(ci, cj - k, OBRYS);
+        put(ci + 1, cj, OBRYS);
+        return;
+      } const [i, j] = wpt(w[0], w[1], H - 5);
       kolo(i, j, 4.4, (d, a, b) => d > 4 ? OBRYS : d > 3 ? (a + b < 0 ? MOSIADZ[3] : MOSIADZ[1]) : (a === 0 && b <= 0 && b >= -3) || (b === 0 && a >= 0 && a <= 2) ? OBRYS : hex('#f2ead2')); };
-      const zebatka = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], H / 2);
+      const zebatka = () => { const w = naScianie(); if (!w) return; if (naSciane('zebatka', w, Math.round(H / 2 - 6))) return; const [i, j] = wpt(w[0], w[1], H / 2);
       kolo(i, j, 4.8, (d, a, b) => { const ang = Math.atan2(b, a), zab = Math.cos(ang * 8) > 0.3; if (d > (zab ? 4.6 : 3.6)) return 0; if (d < 1.4) return OBRYS; return d > 3.2 ? MOSIADZ[a + b < 0 ? 2 : 0] : MOSIADZ[a + b < 0 ? 3 : 1]; }); };
-    const lampa = () => { const w = naScianie(); if (!w) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 3));
+    const lampa = () => { const w = naScianie(); if (!w) return; if (naSciane(`lampa_scienna#${op.noc ? 1 : 0}`, w, H)) return; const [i, j] = wpt(w[0], w[1], Math.max(5, H - 3));
       for (let a = 0; a < 4; a++) put(i + a, j, I); put(i + 3, j - 1, I); for (let b = 1; b <= 6; b++) for (let a = 1; a <= 5; a++) put(i + a, j + b, a === 1 || a === 5 || b === 1 || b === 6 ? OBRYS : b === 2 ? MOSIADZ[2] : op.noc ? SWIATLO[1] : (a === 2 ? hex('#fff0b0') : hex('#e8d090'))); put(i + 3, j + 7, MOSIADZ[0]); };
     const rurkiPoziome = () => { const w = naScianie(); if (!w) return; const [e, al] = w, hh = 2 + Math.floor(R() * 3), dl = Math.min(e.L - al - 2, 10 + R() * 14);
       for (let t = 0; t < dl; t++) { const [i, j] = wpt(e, al + t, hh); put(i, j - 1, OBRYS); put(i, j, MOSIADZ[3]); put(i, j + 1, MOSIADZ[1]); put(i, j + 2, OBRYS); if (Math.floor(t) % 6 === 0) { put(i, j, MOSIADZ[0]); put(i, j + 1, MOSIADZ[0]); } } };
@@ -419,7 +461,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     const kominZel = () => { const m = naDachu(6); if (!m) return; const [ri, rj] = m;
       for (let jj = -14; jj <= 0; jj++) for (let ii = -1; ii < 4; ii++) put(ri + ii - 1, rj + jj, ii === -1 || ii === 3 ? OBRYS : jj <= -13 ? MOSIADZ[3] : jj === -6 ? MOSIADZ[1] : ii === 0 ? I4 : ii === 2 ? I : I2);
       para.push([x0 + ri, y0 + rj - 15, 32]); };
-    const wentylator = () => { const m = naDachu(6); if (!m) return; const [wi, wj] = m;
+    const wentylator = () => { const m = naDachu(OZDOBY_RYS['wentylator#0'] ? 8 : 6); if (!m) return; const [wi, wj] = m;
+      if (stempel(`wentylator#${op.seed % 3}`, wi, wj + 6, true)) return;
       kolo(wi, wj, 5, (d, ii, jj) => (d > 4.5 ? OBRYS : d > 3.6 ? MOSIADZ[ii + jj < 0 ? 3 : 1] : d < 1 ? MOSIADZ[2] : (Math.abs(ii - jj) <= 0.5 || Math.abs(ii + jj) <= 0.5 || ii === 0 || jj === 0) ? I4 : I)); };
     const luneta = () => { const m = naDachu(8); if (!m) return; const [i, j] = m;
       for (const [a, b] of [[-3, 0], [3, 0], [0, 2]]) for (let k = 0; k <= 4; k++) put(i + Math.round(a * k / 4), j - 4 + Math.round((b + 4) * k / 4), I); // trójnóg
@@ -441,7 +484,9 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       for (let a = -5; a <= 6; a++) put(i + a, j - 13, I3);
       for (const [a, b] of [[-6, -14], [6, -14], [0, -17]]) kolo(i + a, j + b, 1.8, (d, x) => (d > 1.4 ? OBRYS : x < 0 ? MOSIADZ[3] : MOSIADZ[1])); };
 
+    const bulaj = () => { const w = naScianie(); if (w) naSciane('bulaj', w, H - 12); };
     const drobne = [manometr, zawor, lampa, rurkiPoziome, spodZiemi, kratka, zebatka];
+    if (OZDOBY_RYS.bulaj && H >= 22) drobne.push(bulaj);
     const srednie = [zegar, zbiornik, poczta, kociol, wentylator, swietlik, spodZiemi, manometr];
     const duze = [luneta, kopula, zbiornikWody, antena, kominZel, anemometr, kociol];
     const losuj = (lista: (() => void)[], n: number) => { const l = lista.slice(); for (let k = 0; k < n && l.length; k++) l.splice(Math.floor(R() * l.length), 1)[0](); };

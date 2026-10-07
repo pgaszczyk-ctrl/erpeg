@@ -33,6 +33,8 @@ export interface Budynek09 {
   poziom?: number;
   /** Wysoki budynek (od POZIOMY.osobnoOd): w kawałku tylko jego cień, sam budynek gra stawia jako osobny obrazek z prześwitem. */
   osobno?: boolean;
+  /** Część zabytku od grafika (G12): w kawałku tylko jej cień, obraz zabytku stawia gra (Zabytki.ts). */
+  zabytek?: boolean;
   /** Id budynku z mapy (wysokie budynki gra trzyma pod nim). */
   id?: number;
 }
@@ -120,7 +122,7 @@ function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], dr
   ];
   lista.sort((a, b) => a[0] - b[0]);
   for (const [, rzecz] of lista) {
-    if ('osobno' in rzecz && rzecz.osobno) continue;
+    if ('osobno' in rzecz && (rzecz.osobno || rzecz.zabytek)) continue;
     if ('g' in rzecz) {
       const d = drzewoZ(rzecz.g, rzecz.w);
       const pien = sciete.has(idDrzewa(rzecz)) ? d.pieniek : rzecz.c && d.pienZacios ? d.pienZacios : d.pien;
