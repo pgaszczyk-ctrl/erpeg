@@ -19,6 +19,7 @@ import type { Korona } from '../map/Korony';
 import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
 import { WYGLAD_09 } from '../map/Podloze09';
+import { straganObraz } from '../map/targ09';
 import { GEN_DOTS } from '../map/ziemia09';
 import { DRZEWA_09 } from '../content/korony';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
@@ -349,6 +350,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
     this.enemies = [];
@@ -514,6 +516,7 @@ export class GameScene extends Phaser.Scene {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.stationVehicles(p);
+      else if (p.kind === 'merchant' && WYGLAD_09) this.merchantStalls(p);
       else {
         const post = this.signPost(p);
         if (post) this.farObjects.push(...post);
@@ -833,13 +836,13 @@ export class GameScene extends Phaser.Scene {
         s.vel.set(away.x, away.y);
         this.moveActor(s, dt);
         s.updateLook();
-        s.setDepth(s.y);
+        s.setDepth(s.y + s.depthOff);
         continue;
       }
       // The story's dragon before the fight (or a friendly one): stays put.
       if (s.peaceful) {
         s.vel.set(0, 0);
-        s.setDepth(s.y);
+        s.setDepth(s.y + s.depthOff);
         continue;
       }
       // Far from the hero: asleep (saves work on phones).
@@ -854,7 +857,7 @@ export class GameScene extends Phaser.Scene {
       else s.think(target, now);
       this.moveActor(s, dt);
       s.updateLook();
-      s.setDepth(s.y);
+      s.setDepth(s.y + s.depthOff);
       if (now < this.noHurtUntil) continue; // just back from a talk: a moment of peace
       if (dragon) continue; // its claws hurt, not touching it
       if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
@@ -1143,6 +1146,16 @@ export class GameScene extends Phaser.Scene {
         talk();
       }
       return;
+    }
+    // A swing at a merchant's stall (or a click on one near the hero, or standing by it): the merchant's shop.
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.stalls.length) {
+      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
+      const st = this.stallAt(hit.x, hit.y, 10) ?? (c && this.stallAt(c.x, c.y, 9)) ?? this.stallAt(this.player.x, this.player.y, 13);
+      if (st) {
+        this.learnPlace();
+        this.openShop(st);
+        return;
+      }
     }
     // A swing at a train (any carriage), a click on it near the hero, or a swing while standing by it: its station's conductor.
     if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.pociagi) {
@@ -1699,6 +1712,61 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return p.door;
+  }
+
+  /** Merchant stalls by the roundabout: where each stands and whose shop it opens (a swing on any of them). */
+  private stalls: { x: number; y: number; p: CityPlace }[] = [];
+
+  /**
+   * The travelling merchant (09 look, owner 7 Oct 2026: „zamień stragan bez ikonki na losowy”): instead of the cart sign
+   * 1–5 market stalls in one loose group by the place's door, each in its own colours (targ09 `straganObraz`), fixed by
+   * the place id; every one of them opens the same shop. The trade point keeps its golden glow on the middle stall.
+   */
+  private merchantStalls(p: CityPlace) {
+    // Free spots can be judged only once the tiles there are in (unloaded ground counts as blocked): wait for them.
+    const d = p.door;
+    if (!this.city.ready({ x0: d.x - 60, y0: d.y - 60, x1: d.x + 60, y1: d.y + 60 })) {
+      this.time.delayedCall(2000, () => this.merchantStalls(p));
+      return;
+    }
+    let h = 2166136261;
+    for (let i = 0; i < p.id.length; i++) h = Math.imul(h ^ p.id.charCodeAt(i), 16777619);
+    const los = () => { h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909); return ((h >>> 0) % 10000) / 10000; };
+    const ile = 1 + Math.floor(los() * 5);
+    const miejsca = [[0, 0], [-17, 3], [17, 3], [-9, -13], [9, -13], [0, 16], [-26, -9], [26, -9]];
+    const at = this.signSpot(p);
+    let postawione = 0;
+    for (const [dx, dy] of miejsca) {
+      if (postawione >= ile) break;
+      const x = at.x + dx + Math.round((los() - 0.5) * 4), y = at.y + dy + Math.round((los() - 0.5) * 3);
+      if (this.city.isBlocked(x - 7, y) || this.city.isBlocked(x + 7, y) || this.city.isBlocked(x, y - 10)) continue;
+      const seed = Math.floor(los() * 1e6);
+      const key = `stragan-${seed % 40}`;
+      if (!this.textures.exists(key)) {
+        const { o } = straganObraz((seed % 40) * 37 + 11); // 40 looks: awning colours and goods from the seed
+        const t = this.textures.createCanvas(key, o.w, o.h)!;
+        t.getContext().putImageData(new ImageData(new Uint8ClampedArray(o.px.buffer as ArrayBuffer, o.px.byteOffset, o.px.byteLength).slice(), o.w, o.h), 0, 0);
+        t.refresh();
+        t.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      }
+      // Generator px: 2 per map px; the table's foot (17, 29) on the spot.
+      const img = this.add.image(x, y, key).setOrigin(17 / 34, 29 / 32).setScale(0.5).setDepth(y).setFlipX(los() < 0.5);
+      this.farObjects.push(img);
+      if (postawione === 0) this.farObjects.push(this.signGlow(img));
+      this.stalls.push({ x, y: y - 5, p });
+      postawione++;
+    }
+    if (!postawione) {
+      const img = this.add.image(at.x, at.y, TEX.cart).setDepth(900_000);
+      this.farObjects.push(img, this.signGlow(img));
+    }
+  }
+
+  /** The stall under a swing / click / next to the hero, if any. */
+  private stallAt(x: number, y: number, r: number) {
+    let best: CityPlace | null = null, d = r;
+    for (const st of this.stalls) { const e = Math.hypot(st.x - x, st.y - y); if (e < d) { d = e; best = st.p; } }
+    return best;
   }
 
   /** A soft golden glow behind a place's sign (content/swiat.ts POSWIATA_SZYLDU), so shops are easy to spot. */
@@ -3996,7 +4064,7 @@ export class GameScene extends Phaser.Scene {
   private openShop(p: CityPlace, tab = 0) {
     const offers = this.offers('sklep');
     if (this.sellsAxe(p) && !ownsAxe()) offers.unshift(item('siekiera')!);
-    const title = p.kind === 'merchant' ? `🛒 Obwoźny kupiec (${p.name})` : `🛒 ${p.name}`;
+    const title = p.kind === 'merchant' ? `🛒 Stragany (${p.name})` : `🛒 ${p.name}`;
     const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
     const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);
     if (tab === 1) {
@@ -4042,7 +4110,7 @@ export class GameScene extends Phaser.Scene {
     const quiver = ownedAmmo().map((k) => `\n${AMUNICJA[k].ikona} ${AMUNICJA[k].nazwa}: ${gear.ammo[k]}/${STRZALY.kolczan}`).join('');
     this.dialog({
       title, tabs,
-      text: (p.kind === 'merchant' ? `Kupiec z wozem zatrzymał się na rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {

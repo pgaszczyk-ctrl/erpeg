@@ -272,6 +272,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   ownLook = false;
   /** Body radius for blows and reach, when not the usual (the artist's big mountain dragon). */
   sizeOverride?: number;
+  /** Depth below the position (map px): a big drawn dragon's point is its body centre, its feet are lower – trees in front of the feet must cover it, not its middle. */
+  depthOff = 0;
 
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {

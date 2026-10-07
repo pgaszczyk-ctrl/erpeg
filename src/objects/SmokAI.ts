@@ -92,6 +92,7 @@ export class SmokAI {
       d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
       d.ownLook = true;
       d.sizeOverride = Math.round(r.komorka[0] * SKALA_RYSUNKU * 0.24);
+      d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * SKALA_RYSUNKU : 0;
       this.skala = SKALA_RYSUNKU;
       this.rysunek = true;
     });

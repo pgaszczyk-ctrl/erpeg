@@ -1,0 +1,34 @@
+{
+  "smok_ognisty_stoi_bok_1.png": {
+    "rozmiar": [
+      220,
+      200
+    ],
+    "punkt_odniesienia": [
+      110,
+      165
+    ],
+    "bbox": [
+      30,
+      77,
+      160,
+      88
+    ]
+  },
+  "smok_ognisty_ziej_bok_2.png": {
+    "rozmiar": [
+      220,
+      200
+    ],
+    "punkt_odniesienia": [
+      110,
+      165
+    ],
+    "bbox": [
+      16,
+      77,
+      171,
+      88
+    ]
+  }
+}

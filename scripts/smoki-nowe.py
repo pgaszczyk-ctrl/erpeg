@@ -26,8 +26,23 @@ for g in ('ognisty', 'kwasowy'):
     w, h = 220, 200
     wier = (len(pliki) + KOL - 1) // KOL
     ark = Image.new('RGBA', (w * KOL, h * wier), (0, 0, 0, 0))
+    # Smok ognisty, nowy rzut z góry (próbki grafika 7.10.2026, ognisty_rzut_v2/, stopy w [110,165] → +5 px w dół):
+    # właściciel: „podmień czerwonego smoka na nowego”. Są tylko 2 klatki z boku, więc cały bok (stoi, idzie, ziej,
+    # ugryzienie) składamy z nich: chód = postój z podskokiem o 1 px, otwarta paszcza = ziej_2. Przód/tył/śmierć – stare.
+    v2 = os.path.join(ZR, 'ognisty_rzut_v2')
+    if g == 'ognisty' and os.path.isdir(v2):
+        stoi = rgba(os.path.join(v2, 'smok_ognisty_stoi_bok_1.png'))
+        ziej = rgba(os.path.join(v2, 'smok_ognisty_ziej_bok_2.png'))
+        def kl(im, dy):
+            c = Image.new('RGBA', (w, h), (0, 0, 0, 0)); c.paste(im, (0, 5 + dy)); return c
+        zamiana = {'stoi_bok_1': kl(stoi, 0), 'stoi_bok_2': kl(stoi, 0), 'idzie_bok_1': kl(stoi, 0), 'idzie_bok_2': kl(stoi, -1),
+                   'idzie_bok_3': kl(stoi, 0), 'idzie_bok_4': kl(stoi, -1), 'ziej_bok_1': kl(stoi, 0), 'ziej_bok_2': kl(ziej, 0),
+                   'ziej_bok_3': kl(stoi, 0), 'ugryzienie_bok_1': kl(stoi, 0), 'ugryzienie_bok_2': kl(ziej, 0), 'ugryzienie_bok_3': kl(stoi, 0)}
+    else:
+        zamiana = {}
     for i, f in enumerate(pliki):
-        ark.paste(rgba(os.path.join(d, f)), ((i % KOL) * w, (i // KOL) * h))
+        n = nazwy[i]
+        ark.paste(zamiana[n] if n in zamiana else rgba(os.path.join(d, f)), ((i % KOL) * w, (i // KOL) * h))
     ark.save(os.path.join(CEL, f'smok_{g}.png'), optimize=True)
     json.dump({'komorka': [w, h], 'stopy': [110, 170], 'klatki': nazwy}, open(os.path.join(CEL, f'smok_{g}.json'), 'w'))
     print(g, len(nazwy), json.dumps(nazwy))

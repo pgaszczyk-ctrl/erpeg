@@ -1,4 +1,4 @@
-import { hash, hex, ustaw, OBRYS, type Obraz } from '../gen';
+import { hash, hex, ustaw, OBRYS, nowy, type Obraz } from '../gen';
 import { rysunekOzdoby, type RysunekOzdoby } from '../gen/budynki';
 
 // Stragany na placach (overhaul 09, właściciel 5.10.2026: „na placu Zamkowym zrobiłeś parking – lepiej stragany”).
@@ -97,4 +97,11 @@ function stragan(o: Obraz, X0: number, Y0: number, x: number, y: number, seed: n
   for (let i = -14; i <= 14; i++) { const fal = (i + 14) % 3 === 1 ? 2 : 1; for (let j = 1; j <= fal; j++) put(x + i, top + 8 + j, j === fal ? OBRYS : Math.floor((i + 14) / 3) % 2 ? pasy[1] : pasy[0]); }
   // mosiężna kulka na szczycie
   put(x, top - 1, MOS[3]); put(x, top - 2, MOS[2]); put(x - 1, top - 1, OBRYS); put(x + 1, top - 1, OBRYS);
+}
+
+/** Jeden stragan jako osobny obrazek (kupiec przy rondzie: działające stragany w grze). Podstawa stołu w (`bx`, `by`), px generatora. */
+export function straganObraz(seed: number): { o: Obraz; bx: number; by: number } {
+  const o = nowy(34, 32);
+  stragan(o, 0, 0, 17, 29, seed);
+  return { o, bx: 17, by: 29 };
 }
