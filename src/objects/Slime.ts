@@ -3,6 +3,7 @@ import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
 import { PLAYER } from './Player';
+import { SKALA_POSTACI } from '../skala';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -202,8 +203,27 @@ export class Slime extends Phaser.GameObjects.Sprite {
     return now < this.dazedUntil;
   }
 
+  /** Shadow on the ground under the creature (owner, 7 Oct 2026: „dodaj cień pod stworami”). */
+  private shadow?: Phaser.GameObjects.Image;
+
+  private updateShadow() {
+    if (!this.shadow) {
+      this.shadow = this.scene.add.image(this.x, this.y, cienStwora(this.scene)).setDepth(CIEN_GLEBIA);
+      this.once(Phaser.GameObjects.Events.DESTROY, () => this.shadow?.destroy());
+    }
+    const sh = this.shadow;
+    // Width from the drawn body: the artist's sheets leave a lot of empty frame around the figure.
+    const w = Math.max(8, this.displayWidth * (this.depthOff ? 0.6 : this.hd ? 0.95 : 1));
+    const feet = this.y + (this.depthOff || (this.hd ? 8 * SKALA_POSTACI : 0));
+    const h = Math.max(3, Math.round(w * 0.36));
+    // Light from the north-west like the trees and buildings: the shadow falls a little right and down from the feet.
+    sh.setPosition(Math.round(this.x + w * 0.12), Math.round(feet + (this.depthOff ? -h * 0.2 : h * 0.1))).setDisplaySize(Math.round(w), h);
+    sh.setVisible(this.visible && !this.inAir).setAlpha(CIEN_ALFA * Math.min(1, this.alpha * 1.2));
+  }
+
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
+    this.updateShadow();
     const a = this.aura;
     if (a) {
       a.setPosition(this.x, this.y).setFrame(this.frame.name).setFlipX(this.flipX).setDepth(this.depth - 0.01);
@@ -306,4 +326,29 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
     return false;
   }
+}
+
+/** Shadows lie just above the map chunks and gang mist, under every sprite. */
+const CIEN_GLEBIA = -1e7 + 1;
+const CIEN_ALFA = 0.5;
+
+/** A pixel ellipse (hard edge, the outline colour, a lighter rim), shared by all creatures. */
+function cienStwora(scene: Phaser.Scene) {
+  const key = 'cien-stwora';
+  if (scene.textures.exists(key)) return key;
+  const W = 24, H = 10;
+  const t = scene.textures.createCanvas(key, W, H)!;
+  const c = t.getContext();
+  const d = c.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const e = ((x + 0.5 - W / 2) / (W / 2)) ** 2 + ((y + 0.5 - H / 2) / (H / 2)) ** 2;
+    if (e > 1) continue;
+    const i = (y * W + x) * 4;
+    d.data[i] = 0x1e; d.data[i + 1] = 0x1a; d.data[i + 2] = 0x24;
+    d.data[i + 3] = e > 0.6 ? 150 : 255;
+  }
+  c.putImageData(d, 0, 0);
+  t.refresh();
+  t.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return key;
 }
