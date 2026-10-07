@@ -61,7 +61,7 @@ import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
-  goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus,
+  goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
@@ -236,6 +236,13 @@ type Enemy = Slime & {
   power?: number;
   /** A wodnik's conjured blobs, and a blob's wodnik. */
   minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
+};
+
+/** Permanent mission rewards, as named in the reward line. */
+const FLAGI_NAZWY: Record<NonNullable<Misja['flaga']>, string> = {
+  znizka_woznica: 'zniżka u woźniców',
+  schemat_pistoletu: 'schemat pistoletu (pistolet parowy za pół ceny)',
+  receptura_alchemika: 'receptura alchemika (mikstura z 30 owoców)',
 };
 
 /** Places where the story's question about the dragon's shadow can be asked. */
@@ -1096,7 +1103,7 @@ export class GameScene extends Phaser.Scene {
     const aim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach * (strong ? WALKA.zasiegMiecz : 1);
     const power = strong ? strongFactor('miecz') : 1;
-    const chance = hitChance('miecz', strong, session.level.celnosc);
+    const chance = hitChance('miecz', strong, session.level.celnosc + gearAimBonus());
     const inArc = (s: Enemy) => {
       if (!arc) return false;
       const dx = s.x - this.player.x;
@@ -1461,7 +1468,7 @@ export class GameScene extends Phaser.Scene {
    * gold, only hearts and fruit; skeletons no hearts but 2–3 coins.
    */
   private dropLoot(x: number, y: number, kind: RodzajWroga = 'glut') {
-    if (kind === 'herszt' || kind === 'wielki_herszt') return this.dropBossLoot(x, y);
+    if (kind === 'herszt' || kind === 'wielki_herszt' || kind === 'koziol') return this.dropBossLoot(x, y);
     if (kind === 'driada') {
       if (this.player.hp < PLAYER.maxHp && Math.random() < 0.5) this.dropPickup(x, y, true);
       else this.dropFruit(x, y + 6, Math.random() < 0.5 ? 'jablko' : 'sliwka');
@@ -3504,7 +3511,7 @@ export class GameScene extends Phaser.Scene {
       }
       if (!done) {
         const foe = this.enemies.find((e) => !e.isDead && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
-        if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc)) {
+        if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
           this.practiced(shot.skill);
@@ -3533,8 +3540,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Buys an item: pays, equips it or puts it in the backpack. */
   private buy(p: Przedmiot) {
-    if (session.coins < p.cena) {
-      this.toast(`Za mało monet – ${p.nazwa} kosztuje ${p.cena}.`);
+    if (session.coins < this.cenaDla(p)) {
+      this.toast(`Za mało monet – ${p.nazwa} kosztuje ${this.cenaDla(p)}.`);
       return;
     }
     const where = addItem(p.id);
@@ -3542,7 +3549,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Plecak pełny! Zrób miejsce w karcie postaci.');
       return;
     }
-    spend(p.cena);
+    spend(this.cenaDla(p));
     repair(p.id); // a new one is whole
     const kind = ammoOf(p);
     const arrows = kind ? Math.min(STRZALY.zLukiem, ammoRoom(kind)) : 0;
@@ -3648,7 +3655,7 @@ export class GameScene extends Phaser.Scene {
 
   private label(p: Przedmiot) {
     const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `obrona ${p.moc}`;
-    return `${p.nazwa} – ${p.cena} monet (${what})`;
+    return `${p.nazwa} – ${this.cenaDla(p)} monet (${what})`;
   }
 
   private openShop(p: CityPlace, tab = 0) {
@@ -3902,7 +3909,8 @@ export class GameScene extends Phaser.Scene {
 
   /** The alchemist at a petrol station: 50 fruit → a healing potion. */
   private openAlchemist(p: CityPlace) {
-    const n = ALCHEMIK.owocow;
+    // The hermit's recipe (flag receptura_alchemika, Stary Gród Q6): a potion from 30 fruit instead of 50.
+    const n = session.flagi.receptura_alchemika ? Math.min(ALCHEMIK.owocow, 30) : ALCHEMIK.owocow;
     const have = totalFruit();
     this.dialog({
       title: `⚗️ Alchemik – ${p.name}`,
@@ -4061,6 +4069,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** A shop price: the steam pistol costs half with the gunsmith's drawing (flag schemat_pistoletu, Stary Gród Q2). */
+  private cenaDla(p: { id: string; cena: number }) {
+    return p.id === 'pistolet_parowy' && session.flagi.schemat_pistoletu ? Math.round(p.cena / 2) : p.cena;
+  }
+
   /** "Nagroda: 150 EXP, 20 monet, Gwizdek Maszynisty i 1 💎" for the mission dialogs. */
   private rewardText(m: Misja) {
     const parts = [
@@ -4070,7 +4083,7 @@ export class GameScene extends Phaser.Scene {
       ...(m.przedmioty ?? []).map((id) => item(id)?.nazwa ?? ''),
       m.tytul_bohatera ? `tytuł „${m.tytul_bohatera}”` : '',
       m.diamenty ? `${m.diamenty} 💎` : '',
-      m.flaga === 'znizka_woznica' ? 'zniżka u woźniców' : '',
+      m.flaga ? FLAGI_NAZWY[m.flaga] : '',
     ].filter(Boolean);
     const last = parts.pop();
     return `Nagroda: ${parts.length ? `${parts.join(', ')} i ${last}` : last}`;
@@ -4105,6 +4118,11 @@ export class GameScene extends Phaser.Scene {
           const got = gifts.filter((id) => !lost.includes(id));
           this.toast([got.length ? `Dostałeś: ${got.map((id) => item(id)!.nazwa).join(', ')}!` : '', lost.length ? `Plecak pełny – przepadło: ${lost.map((id) => item(id)!.nazwa).join(', ')}.` : ''].filter(Boolean).join('\n'), 2500);
           this.gearChanged();
+        }
+        if (m.flaga && m.flaga !== 'znizka_woznica' && !session.flagi[m.flaga]) {
+          session.flagi[m.flaga] = 1;
+          const what = m.flaga;
+          this.time.delayedCall(2600, () => this.toast(what === 'schemat_pistoletu' ? '📜 Schemat pistoletu: pistolet parowy w sklepach za pół ceny!' : '📜 Receptura alchemika: mikstura z 30 owoców zamiast 50!', 4000));
         }
         if (m.tytul_bohatera) {
           session.story.title = m.tytul_bohatera;

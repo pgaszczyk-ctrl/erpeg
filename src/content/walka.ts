@@ -46,7 +46,7 @@ export const WALKA = {
     natychmiast: [[1, 5], [20, 15]] as Tabela,
   },
   /** Na nich jeden strzał nigdy nie zabija. */
-  bezNatychmiast: ['herszt', 'wielki_herszt', 'smok', 'wojownik'] as string[],
+  bezNatychmiast: ['herszt', 'wielki_herszt', 'koziol', 'smok', 'wojownik'] as string[],
   /** Magia na razie: mocny czar tyle razy mocniej (pełna magia przyjdzie później). */
   mnoznikCzaru: 2,
   lukStopnie: 120,

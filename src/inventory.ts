@@ -1,7 +1,7 @@
 import { WALKA, zTabeli } from './content/walka';
 import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
-  PODKOWA, TALIZMANY, SZYBKOSC_TALIZMANU, ZYCIE_PRZEDMIOTU, type Miejsce, type Przedmiot, type Umiejetnosc,
+  PODKOWA, TALIZMANY, SZYBKOSC_TALIZMANU, ZYCIE_PRZEDMIOTU, CELNOSC_PRZEDMIOTU, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 import { esencja } from './content/esencje';
@@ -212,6 +212,11 @@ export function gearSpeedBonus() {
   return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU;
 }
 
+/** Extra hit chance (percentage points) from worn items with the 'celnosc' effect. */
+export function gearAimBonus() {
+  return Object.values(gear.equip).filter((id) => item(id)?.efekt === 'celnosc').length * CELNOSC_PRZEDMIOTU;
+}
+
 /** Extra life (half-hearts) from worn items with the 'zycie' effect. */
 export function gearLifeBonus() {
   return Object.values(gear.equip).filter((id) => item(id)?.efekt === 'zycie').length * ZYCIE_PRZEDMIOTU;
@@ -345,7 +350,9 @@ export function defense() {
   // A shield in the second hand (no `rodzaj`: not a magic item) counts like armour.
   const off = item(gear.equip.dystans);
   const shield = off && !off.rodzaj ? off.moc : 0;
-  return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield);
+  // Talismans with the 'obrona' effect count too (Filtr aetherowy).
+  const charms = TALIZMANY.reduce((sum, m) => sum + (item(gear.equip[m])?.efekt === 'obrona' ? item(gear.equip[m])!.moc : 0), 0);
+  return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield + charms);
 }
 
 /** Chance that a hit does no harm, from armour. */

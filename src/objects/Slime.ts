@@ -33,6 +33,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   wojownik: { name: 'Wojownik', hp: 20, wanderSpeed: 20, chaseSpeed: 44, sightRange: 250, loseRange: 500, scale: 1, damage: 1, exp: 0 },
   // Gang bosses: come out when the last gang member falls (content/gangi.ts).
   herszt: { name: 'Herszt gangu', hp: 45, wanderSpeed: 14, chaseSpeed: 40, sightRange: 120, loseRange: 260, scale: 1.8, damage: 2, exp: 40, tint: 0xff8a8a },
+  // Mosiężny Kozioł (Stary Gród Q10 boss): twice a big boss's life, slow; the goblin boss's sheet in brass until the artist draws him.
+  koziol: { name: 'Mosiężny Kozioł', hp: 240, wanderSpeed: 10, chaseSpeed: 30, sightRange: 160, loseRange: 360, scale: 2.5, damage: 2, exp: 150, tint: 0xd9a640 },
   wielki_herszt: { name: 'Wielki herszt', hp: 120, wanderSpeed: 12, chaseSpeed: 38, sightRange: 140, loseRange: 320, scale: 2.5, damage: 2, exp: 100, tint: 0xff5a5a },
   // In the rain (content/pogoda.ts): water blobs instead of imps (small, one arrow is enough) and their master,
   // the wodnik, who conjures more blobs next to the hero and keeps them alive with his magic.
@@ -53,7 +55,7 @@ export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
 
 /** Pictures of the little creatures (all but the bandit). */
-const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
+const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, koziol: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
 
 export function createSlimeAnims(scene: Phaser.Scene) {
   for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.blob]) {

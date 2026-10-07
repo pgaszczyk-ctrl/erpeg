@@ -34,9 +34,11 @@ export interface Przedmiot {
    * 'swiatlo' = świeci i widać dalej, 'pioruny' = sam razi pioruny wrogów w pobliżu,
    * 'szczescie' = więcej monet za potwory i rozbite bandy (PODKOWA),
    * 'szybkosc' = szybsze chodzenie (SZYBKOSC_TALIZMANU, talizmany „Serca Zębatka”),
-   * 'zycie' = więcej życia (ZYCIE_PRZEDMIOTU, Cukierniczy Cylinder).
+   * 'zycie' = więcej życia (ZYCIE_PRZEDMIOTU, Cukierniczy Cylinder),
+   * 'celnosc' = łatwiej trafić (CELNOSC_PRZEDMIOTU punktów procentowych, Zegarek czeladnika),
+   * 'obrona' = talizman liczony do obrony jak zbroja (jego `moc`, Filtr aetherowy).
    */
-  efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie';
+  efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie' | 'celnosc' | 'obrona';
   /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
   fabularny?: boolean;
   /** Krótki opis pokazywany w karcie postaci. */
@@ -102,6 +104,12 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kluczyk_nakrecacz', nazwa: 'Kluczyk Nakręcacz', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Kluczyk do nakręcania mechanizmów. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'kieszonkowy_chronometr', nazwa: 'Kieszonkowy Chronometr', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Tyka równo jak serce Zębatka. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'cukierniczy_cylinder', nazwa: 'Cukierniczy Cylinder', miejsce: 'helm', moc: 1, cena: 0, efekt: 'zycie', opis: 'Pachnie lukrem. Daje jedno serce życia więcej.' },
+  // „Przebudzenie Starego Grodu” (owner's spec, 6 Oct 2026): rewards of its chain; numbers as in the spec.
+  { id: 'zegarek_czeladnika', nazwa: 'Zegarek czeladnika', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', opis: 'Tyka równo jak serce. Z nim trafiasz, w co celujesz (+10% trafień).' },
+  { id: 'filtr_aetherowy', nazwa: 'Filtr aetherowy', miejsce: 'talizman', moc: 1, cena: 0, efekt: 'obrona', opis: 'Od Pustelnika ze Starego Gaju. Dziki aether omija cię bokiem (obrona +1).' },
+  { id: 'klasztorny_pochlaniacz', nazwa: 'Klasztorny pochłaniacz', miejsce: 'zbroja', moc: 5, cena: 0, opis: 'Nosili go dominikanie w czasach Wielkiej Wojny o Tryby.' },
+  { id: 'plaszcz_cechmistrza', nazwa: 'Płaszcz Cechmistrza', miejsce: 'zbroja', moc: 6, cena: 0, opis: 'Dla Strażnika Serca Miasta.' },
+  { id: 'karabin_trybunal', nazwa: 'Karabin „Trybunał”', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 16, cena: 0, wytrzymalosc: 1600, opis: 'Parowy karabin wyborowy. Wyrok zapada z daleka.' },
   { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true, opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
 ];
 
@@ -109,6 +117,8 @@ export const PRZEDMIOTY: Przedmiot[] = [
 export const SZYBKOSC_TALIZMANU = 0.04;
 /** Przedmiot z efektem 'zycie': tyle połówek serca więcej (2 = jedno serce). */
 export const ZYCIE_PRZEDMIOTU = 2;
+/** Przedmiot z efektem 'celnosc': tyle punktów procentowych łatwiej trafić. */
+export const CELNOSC_PRZEDMIOTU = 10;
 
 /** Świetlisty miecz: o ile razy dalej widać. */
 export const SWIATLO = 1.5;

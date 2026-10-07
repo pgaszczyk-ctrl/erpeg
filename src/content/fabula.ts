@@ -14,7 +14,7 @@ export type Miejsce = string | { lat: number; lon: number };
  * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
  * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol';
 
 /**
  * Rodzaj zadania (albo etapu misji wieloetapowej):
@@ -130,9 +130,10 @@ export interface Misja {
   przedmiot?: string;
   /**
    * Trwała nagroda: 'znizka_woznica' = u woźniców na zawsze taniej (WOZNICA.znizka)
-   * i jeden darmowy przejazd u woźnicy na dworcu WOZNICA.gratisNaStacji.
+   * i jeden darmowy przejazd u woźnicy na dworcu WOZNICA.gratisNaStacji;
+   * 'schemat_pistoletu' = pistolet parowy w sklepach za pół ceny; 'receptura_alchemika' = mikstura z 30 owoców.
    */
-  flaga?: 'znizka_woznica';
+  flaga?: 'znizka_woznica' | 'schemat_pistoletu' | 'receptura_alchemika';
   /** Tylko zlecenia losowe: miejsce (kościół, urząd, komenda), które je dało. */
   placeId?: string;
   /** Wykonane zadanie można oddać w dowolnej bibliotece (zlecenia towarzystw naukowych). */

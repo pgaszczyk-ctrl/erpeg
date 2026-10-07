@@ -29,7 +29,7 @@ interface Code {
 }
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
-const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)' };
+const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)', koziol: 'Mosiężny Kozioł – boss (240 życia)' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Zagadka (pytanie na miejscu)', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';
@@ -331,6 +331,7 @@ function missionEditor(id: string | null) {
     wiele: el('input', { type: 'checkbox', checked: !!m.etapy?.length }),
     przedmioty: el('select', { multiple: true, size: 5 }, PRZEDMIOTY.filter((p) => p.id !== 'kijek').map((p) => el('option', { value: p.id, selected: !!m.przedmioty?.includes(p.id) }, [p.nazwa]))),
     tytulB: inp(m.tytul_bohatera ?? '', { placeholder: 'np. Strażnik Serca Miasta (puste = bez tytułu)' }),
+    flaga: el('select', {}, [['', '— bez —'], ['znizka_woznica', 'Zniżka u woźniców'], ['schemat_pistoletu', 'Schemat pistoletu (½ ceny)'], ['receptura_alchemika', 'Receptura alchemika (30 owoców)']].map(([v, t]) => el('option', { value: v, selected: (m.flaga ?? '') === v }, [t]))),
   };
   const field = (label: string, input: HTMLElement, note?: string) => el('label', { className: 'f' }, [el('span', {}, [label]), input, note ? el('small', { className: 'muted' }, [note]) : null]);
   const riddleFields = el('div', { className: 'card' }, [
@@ -365,7 +366,7 @@ function missionEditor(id: string | null) {
     stagesBox,
     field('Co mówi po wykonaniu', f.zakonczenie),
     el('div', { className: 'row' }, [field('Nagroda (monety)', f.nagroda), field('EXP', f.exp), field('Diamenty', f.diamenty), field('Przedmiot w nagrodę', f.przedmiot)]),
-    el('div', { className: 'row' }, [field('Więcej przedmiotów (Ctrl/⌘)', f.przedmioty), field('Tytuł bohatera w nagrodę', f.tytulB)]),
+    el('div', { className: 'row' }, [field('Więcej przedmiotów (Ctrl/⌘)', f.przedmioty), field('Tytuł bohatera w nagrodę', f.tytulB), field('Trwała nagroda', f.flaga)]),
   ]);
   const preview = el('div');
   const msg = el('p', { className: 'msg' });
@@ -400,6 +401,7 @@ function missionEditor(id: string | null) {
     const more = [...f.przedmioty.selectedOptions].map((o) => o.value);
     if (more.length && typ !== 'brak') out.przedmioty = more;
     if (f.tytulB.value.trim() && typ !== 'brak') out.tytul_bohatera = f.tytulB.value.trim();
+    if (f.flaga.value && typ !== 'brak') out.flaga = f.flaga.value as NonNullable<Misja['flaga']>;
     if (f.seria.value.trim()) out.seria = f.seria.value.trim();
     if (f.tylkoTest.checked) out.tylkoTest = true;
     const wymaga: NonNullable<Misja['wymaga']> = {};
