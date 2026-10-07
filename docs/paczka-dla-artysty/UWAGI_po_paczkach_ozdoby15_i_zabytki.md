@@ -52,8 +52,9 @@ Zasady jak dotąd: jedna rzecz na obrazku, tło magenta #FF00FF, bez cienia na z
 
 ## Zabytki
 
-- **Brama Krakowska** i **Nowy Ratusz**: szkice stylu są ładne, ale nie wstawiamy ich, bo nie leżą na szkielecie z mapy. **Szkielety (×4 na magencie, z numerami części) przygotujemy my** i wtedy prosimy o obraz namalowany na nich, tak jak przy zamku. Do tego czasu nie trzeba robić finałów.
-- Kolejne zabytki po szkieletach: Brama Grodzka, katedra, Trybunał Koronny (Stary Ratusz, nie mylić z Nowym Ratuszem).
+- **Brama Krakowska** i **Nowy Ratusz**: szkice stylu są ładne, ale nie leżą na szkielecie z mapy. **Szkielety są już gotowe**: zamówienie 19 (`ZAMOWIENIE_19_brama_ratusz_katedra.md`, folder `19_zabytki_szkielety/`), razem z Archikatedrą, Wieżą Trynitarską i animowaną cewką Tesli.
+- **Zamek Lubelski** zostaje taki, jak jest.
+- Kolejne zabytki (Brama Grodzka, Trybunał Koronny, czyli Stary Ratusz) dostaniesz po zamówieniu 19.
 
 ## Inne zamówienia w kolejce
 

@@ -1,0 +1,34 @@
+{
+ "id": "katedra",
+ "nazwa": "Archikatedra i Wieża Trynitarska",
+ "rog_px_obrazu": [
+  30590,
+  21106
+ ],
+ "rog_punkty_mapy": [
+  15295.0,
+  10553.0
+ ],
+ "rozmiar_1x": [
+  367,
+  334
+ ],
+ "czesci": [
+  {
+   "nr": 1,
+   "osm": "Archikatedra Świętego Jana Chrzciciela i Świętego Jana Ewangelisty",
+   "wysokosc_px": 24,
+   "opis": "archikatedra: jasne ściany, zielony dach, portyk z kolumnami od zachodu"
+  },
+  {
+   "nr": 2,
+   "osm": "Wieża Trynitarska",
+   "wysokosc_px": 56,
+   "opis": "Wieża Trynitarska (40 m): neogotycka, beżowa, z zegarem"
+  }
+ ],
+ "cewka_tesli_px_1x": [
+  288,
+  186
+ ]
+}

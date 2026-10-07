@@ -1,0 +1,24 @@
+{
+ "id": "nowy_ratusz",
+ "nazwa": "Nowy Ratusz (Urząd Miasta, pl. Łokietka 1)",
+ "rog_px_obrazu": [
+  29875,
+  20748
+ ],
+ "rog_punkty_mapy": [
+  14937.5,
+  10374.0
+ ],
+ "rozmiar_1x": [
+  165,
+  196
+ ],
+ "czesci": [
+  {
+   "nr": 1,
+   "osm": "Urząd Miasta Lublin",
+   "wysokosc_px": 16,
+   "opis": "klasycystyczny gmach, żółte ściany, czerwony dach czterospadowy"
+  }
+ ]
+}
