@@ -15,6 +15,7 @@ import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 import { WSKRZESZENIE, DIAMENT } from '../content/sklepy';
 import { loadSettings } from '../settings';
+import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -91,6 +92,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       );
 
     const newCharacter = () => {
+      let poDemo = false;
+      try { poDemo = localStorage.getItem(PO_DEMO_KLUCZ) === '1'; } catch { /* no storage: the normal form */ }
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
       const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
       // "📍": the phone's location as the start, if the game has a map of it.
@@ -158,8 +161,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       const go: HTMLButtonElement = button('Stwórz postać', () =>
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
-          const place = start.value.trim() || DEFAULT_START;
-          const p = geoStart ?? city.findAnyStart(place, DEFAULT_START);
+          const place = poDemo ? PO_DEMO_START.nazwa : start.value.trim() || DEFAULT_START;
+          const p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? city.findAnyStart(place, DEFAULT_START);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę, ulicę i numer albo miejscowość, np. „Kościelna 5, Garbów”.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           if (token && (await api.myCharacters(token)).filter((c) => !c.dead).length >= GOOGLE_LIMIT) {
@@ -167,6 +170,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           }
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
+          if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
           showCode(r, `Witaj, ${r.player.name}!`);
         }), 'm-primary');
       // How the hero looks: random (a new roll with the dice button), shown next to the name.
@@ -235,11 +239,14 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('h2', {}, ['Nowa postać']),
         el('div', { className: 'm-namerow' }, [preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
         lookBox,
-        el('label', { className: 'm-field' }, [
-          el('span', {}, ['Adres startowy']),
-          el('div', { className: 'm-pass' }, [start, geoBtn]),
-          geoInfo,
-        ]),
+        // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
+        poDemo
+          ? el('div', { className: 'm-field' }, [el('span', {}, ['Start przygody']), el('small', {}, [`🏛 ${PO_DEMO_START.nazwa}`])])
+          : el('label', { className: 'm-field' }, [
+              el('span', {}, ['Adres startowy']),
+              el('div', { className: 'm-pass' }, [start, geoBtn]),
+              geoInfo,
+            ]),
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
           el('label', { className: 'm-slide m-level' }, [levelRange, levelName]),

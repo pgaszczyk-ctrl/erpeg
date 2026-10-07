@@ -28,6 +28,13 @@ ZABYTKI = [
     {'id': 'nowy_ratusz', 'nazwa': 'Nowy Ratusz (Urząd Miasta, pl. Łokietka 1)', 'czesci': [
         {'nr': 1, 'osm': 'Urząd Miasta Lublin', 'pietra': 4.5, 'sciana': '#e3c77a', 'dach': '#a8483a', 'opis': 'klasycystyczny gmach, żółte ściany, czerwony dach czterospadowy'},
     ]},
+    # Właściciel 7.10.2026: Targi Lublin (Dworcowa 11) jako osobny budynek od grafika, jak Zamek Lubelski; plac przed nimi
+    # to miejsce startu po demie. Trzy hale z OSM.
+    {'id': 'targi_lublin', 'nazwa': 'Targi Lublin (Dworcowa 11): hale A, B, C', 'katalog': 'docs/paczka-dla-artysty/21_targi_lublin', 'czesci': [
+        {'nr': 1, 'osm': 'Hala A', 'wysokosc_m': 12, 'sciana': '#c9b48a', 'dach': '#6a7f8f', 'opis': 'Hala A: duża hala wystawowa'},
+        {'nr': 2, 'osm': 'Hala B', 'wysokosc_m': 9, 'sciana': '#c9a27a', 'dach': '#8a6f5a', 'opis': 'Hala B: mały łącznik między halami'},
+        {'nr': 3, 'osm': 'Hala C', 'wysokosc_m': 12, 'sciana': '#b8c4a8', 'dach': '#5f7f6a', 'opis': 'Hala C: największa hala wystawowa'},
+    ]},
     {'id': 'katedra', 'nazwa': 'Archikatedra i Wieża Trynitarska', 'czesci': [
         {'nr': 1, 'osm': 'Archikatedra Świętego Jana Chrzciciela i Świętego Jana Ewangelisty', 'wysokosc_m': 20, 'sciana': '#d8d4cc', 'dach': '#5f8f6a', 'opis': 'archikatedra: jasne ściany, zielony dach, portyk z kolumnami od zachodu'},
         {'nr': 2, 'osm': 'Wieża Trynitarska', 'wysokosc_m': 40, 'sciana': '#d9c49a', 'dach': '#b89c70', 'opis': 'Wieża Trynitarska (40 m): neogotycka, beżowa, z zegarem'},
@@ -55,7 +62,7 @@ def wczytaj():
         if g['type'] not in ('Polygon', 'MultiPolygon') or 'building' not in p: continue
         ring = g['coordinates'][0] if g['type'] == 'Polygon' else g['coordinates'][0][0]
         lon = sum(q[0] for q in ring) / len(ring); lat = sum(q[1] for q in ring) / len(ring)
-        if not (22.55 < lon < 22.59 and 51.24 < lat < 51.26): continue
+        if not (22.54 < lon < 22.60 and 51.22 < lat < 51.27): continue
         r = [proj(q[0], q[1]) for q in ring]
         lv = p.get('building:levels')
         wszystkie.append((r, float(lv) if lv and lv.replace('.', '').isdigit() else 2))
@@ -102,11 +109,15 @@ def bryly(lista, x0, y0, W, H, glab, out, kolory=None):
             out[Y, X] = c
 
 def main():
-    os.makedirs(OUT, exist_ok=True)
+    import sys
+    tylko = set(sys.argv[1:])  # np. `targi_lublin` – tylko te zabytki
     znalezione, wszystkie = wczytaj()
     try: font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 22)
     except OSError: font = ImageFont.load_default()
     for z in ZABYTKI:
+        if tylko and z['id'] not in tylko: continue
+        OUT = z.get('katalog', globals()['OUT'])
+        os.makedirs(OUT, exist_ok=True)
         czesci = [(znalezione[c['osm']], wysokosc(c), hexrgb(c['sciana']), hexrgb(c['dach']), c) for c in z['czesci'] if c['osm'] in znalezione]
         if not czesci: print('brak w OSM:', z['id']); continue
         xs = [x for r, *_ in czesci for x, _ in r]; ys = [y for r, *_ in czesci for _, y in r]

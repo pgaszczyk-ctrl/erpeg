@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { session, freshStats, freshChest } from './quests';
 import { offline } from './api';
-import { DEMO_KODY, DEMO_IMIONA, DEMO_TEKSTY, SEN, type Pobudka } from './content/demo';
+import { DEMO_KODY, DEMO_IMIONA, DEMO_TEKSTY, SEN, type Pobudka, PO_DEMO_KLUCZ } from './content/demo';
 import { TRUDNOSCI } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci } from './content/historia';
@@ -133,7 +133,11 @@ export function finale() {
   const btn = document.createElement('button');
   btn.textContent = DEMO_TEKSTY.koniec;
   btn.style.cssText = 'font:bold 22px monospace;padding:14px 22px;background:#3fa34d;color:#fff;border:3px solid #9be29b;border-radius:10px;cursor:pointer;opacity:0;transition:opacity 1s 2s;';
-  btn.onclick = () => (location.href = location.origin + location.pathname);
+  // Straight to a new character, starting on the square in front of Targi Lublin (owner 7.10.2026: no choosing after the demo).
+  btn.onclick = () => {
+    try { localStorage.setItem(PO_DEMO_KLUCZ, '1'); } catch { /* private mode: the normal form then */ }
+    location.href = location.origin + location.pathname + '#nowa';
+  };
   const sub = document.createElement('div');
   sub.textContent = DEMO_TEKSTY.koniecPodpis;
   sub.style.cssText = 'color:#ddd;font-size:16px;opacity:0;transition:opacity 1s 2.4s;';

@@ -1,0 +1,36 @@
+{
+ "id": "targi_lublin",
+ "nazwa": "Targi Lublin (Dworcowa 11): hale A, B, C",
+ "rog_px_obrazu": [
+  29236,
+  25909
+ ],
+ "rog_punkty_mapy": [
+  14618.0,
+  12954.5
+ ],
+ "rozmiar_1x": [
+  854,
+  617
+ ],
+ "czesci": [
+  {
+   "nr": 1,
+   "osm": "Hala A",
+   "wysokosc_px": 16,
+   "opis": "Hala A: duża hala wystawowa"
+  },
+  {
+   "nr": 2,
+   "osm": "Hala B",
+   "wysokosc_px": 16,
+   "opis": "Hala B: mały łącznik między halami"
+  },
+  {
+   "nr": 3,
+   "osm": "Hala C",
+   "wysokosc_px": 16,
+   "opis": "Hala C: największa hala wystawowa"
+  }
+ ]
+}

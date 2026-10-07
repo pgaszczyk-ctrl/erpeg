@@ -56,3 +56,9 @@ export const DEMO_TEKSTY = {
   koniec: 'Zacznij własną przygodę',
   koniecPodpis: 'Za darmo, nawet bez konta.',
 };
+
+/** Where a character made right after the demo starts (owner 7.10.2026): the square in front of Targi Lublin, Dworcowa 11. */
+export const PO_DEMO_START = { nazwa: 'Plac przed Targami Lublin', lat: 51.23471, lon: 22.56526 };
+
+/** Set by the demo's end (localStorage): the next new character starts at PO_DEMO_START, no start address to choose. */
+export const PO_DEMO_KLUCZ = 'exp-po-demo';
