@@ -21,6 +21,8 @@ import { peronyWOkolicy } from './perony';
 import { MOZAIKI } from '../content/mozaiki';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
+import { ruryPrzyUlicy, type Rura09 } from './rury09';
+import { TEST } from '../version';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -754,6 +756,29 @@ export class MapRenderer {
       };
     });
     const G2 = GEN_DOTS;
+    const rury: Rura09[] = [];
+    const pipeRoads = new Map<string, Line[]>();
+    if (TEST) for (const l of wide.lines) {
+      if (!['minor', 'medium', 'service'].includes(l.kind) || l.bridge) continue;
+      const paths = ruryPrzyUlicy(l.pts, l.id, trackWidth(l), (x, y) => {
+        if (!m.isFree(x, y, 4, 4)) return false;
+        // Leave roads, sidewalks, rails and their crossings open. Query includes adjacent tiles.
+        const cx=Math.floor(x/32)*32, cy=Math.floor(y/32)*32, key=`${cx},${cy}`;
+        let nearby=pipeRoads.get(key);
+        if (!nearby) {
+          nearby=m.query({x0:cx-40,y0:cy-40,x1:cx+72,y1:cy+72}).lines.filter(q =>
+            ['major','medium','minor','service','pedestrian','steps','platform','path','rail','tram'].includes(q.kind));
+          pipeRoads.set(key, nearby);
+        }
+        return !nearby.some(q =>
+          distToPolyline(q.pts, x, y) < (q.kind === 'rail' || q.kind === 'tram' ? 7 : trackWidth(q) / 2 + 4));
+      });
+      for (const p of paths) {
+        const xs=p.pts.filter((_,i)=>i%2===0), ys=p.pts.filter((_,i)=>i%2===1);
+        if (Math.max(...xs)<x0-10 || Math.min(...xs)>x0+CHUNK+10 || Math.max(...ys)<y0-10 || Math.min(...ys)>y0+CHUNK+10) continue;
+        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed});
+      }
+    }
     const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
     // Fields and allotments reaching the chunk: whole outlines (the strips must be the same in every chunk).
     const pola: Pole09[] = wide.areas
@@ -768,7 +793,7 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje };
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
