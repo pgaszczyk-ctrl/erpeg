@@ -974,7 +974,7 @@ export const GOODS_TEX = {
   // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
   chrust: 'item-chrust',
   // From dragons (content/smoki.ts): a code-drawn scale until the artist's icon.
-  luska: 'goods-luska',
+  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza',
 } as const;
 
 /** A dragon scale (placeholder): a green-gold teardrop with a light edge. */

@@ -22,6 +22,7 @@ const PLACE_ICONS: Record<string, [string, string]> = {
   police: ['#2b3f8a', '★'],
   library: ['#2f8a6a', '¶'],
   merchant: ['#e43b44', '$'],
+  maker: ['#a86d37', '⚒'],
 };
 let open: HTMLDivElement | null = null;
 let zoom = 0;

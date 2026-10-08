@@ -42,6 +42,8 @@
 #shop .s26-stock{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-content:start;max-height:284px;overflow:auto;padding:3px;scrollbar-color:#c29b59 #1f160f}
 #shop .s26-cell,#shop .s26-bag-cell{display:flex;position:relative;align-items:center;justify-content:center;aspect-ratio:1;padding:4px;min-width:0;border:4px ridge #92734c;border-radius:5px;color:#e5caa0;background:radial-gradient(ellipse at center,#403025,#251a12);box-shadow:inset 0 0 4px #000,0 2px #100c08}
 #shop .s26-cell img,#shop .s26-cell svg{width:100%;height:100%}
+#shop .s26-cell .s26-food-icon{font-size:32px;line-height:1}
+#shop .s26-hero-image .s26-food-icon{font-size:84px;line-height:1}
 #shop .selected{border-color:#e9c568;background:#6b4e20;box-shadow:0 0 0 2px #efcf83,inset 0 0 5px #ffe8a9}
 #shop .empty{opacity:.65}
 #shop .s26-badge{position:absolute;bottom:1px;right:3px;font:bold 13px 'Pixelify Sans',monospace;color:#ffda89;background:#24170dcf;padding:0 2px;pointer-events:none}

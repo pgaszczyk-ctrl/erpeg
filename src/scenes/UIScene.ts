@@ -297,7 +297,8 @@ export class UIScene extends Phaser.Scene {
     const q = s.lingering === null ? s.quests[0] : undefined;
     setHud({
       hp: s.hp, maxHp: s.maxHp, extra: s.extra, zatruty: !!s.zatruty, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
-      noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow,
+      noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow && !s.heal,
+      preparedFood: s.heal && s.heal.icon !== '🧪' && s.heal.icon !== '🍎' ? s.heal : undefined,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
       coins: s.coins, diamonds: session.diamenty,

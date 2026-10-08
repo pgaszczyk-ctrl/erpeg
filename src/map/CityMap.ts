@@ -116,7 +116,7 @@ export type WorldLoader = (box: Box) => Promise<RawTile>;
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker';
   name: string;
   id: string;
   building: Building | null;
@@ -334,7 +334,9 @@ export class CityMap {
         }
       }
     }
-    if (b && this.placeBuildings.has(b)) return null;
+    // A maker may share an entrance; loading it first must not hide an existing shop.
+    if (b && this.placeBuildings.has(b) && kind !== 'maker'
+      && this.places.some(p => p.building === b && p.kind !== 'maker')) return null;
     if (b) this.placeBuildings.add(b);
     this.placeIds.add(id);
     const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y } };
@@ -342,6 +344,14 @@ export class CityMap {
     return place;
   }
   private placeIds = new Set<string>();
+
+  /** Curated real businesses can be added without rebuilding the terrain/map extract. */
+  addProducer(name: string, address: string, lat: number, lon: number) {
+    if (!this.hasLatLon(lat, lon)) return null;
+    const p = this.fromLatLon(lat, lon);
+    return this.addPlace('maker', name, p.x, p.y, address,
+      `maker:${lat.toFixed(7)}:${lon.toFixed(7)}`);
+  }
 
   /** World maps: called with the places each new tile brings. */
   onPlaces(f: (p: Place[]) => void) {

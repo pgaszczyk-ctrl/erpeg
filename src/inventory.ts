@@ -368,7 +368,7 @@ export function owns(id: string) {
 export function addItem(id: string): 'equipped' | 'bag' | false {
   const p = item(id);
   if (!p) return false;
-  if (p.pojazd) {
+  if (p.pojazd || p.leczenie) {
     if (gear.bag.length >= PLECAK.miejsc) return false;
     gear.bag.push({ item: id });
     return 'bag';
@@ -401,7 +401,7 @@ export function equipFromBag(index: number) {
   const s = gear.bag[index];
   if (!s || !('item' in s)) return;
   const p = item(s.item)!;
-  if (p.pojazd) return;
+  if (p.pojazd || p.leczenie) return;
   const m = slotFor(p.miejsce);
   const worn = gear.equip[m];
   gear.equip[m] = s.item;
@@ -433,6 +433,17 @@ export function takeItem(id: string): boolean {
   if (!m) return false;
   gear.equip[m] = m === 'bron' ? 'kijek' : null;
   return true;
+}
+
+/** Prepared food stays an ordinary saved item, also usable by item-based quests. */
+export function foodCount(id: string) {
+  return gear.bag.filter(s => 'item' in s && s.item === id).length
+    + Object.values(gear.equip).filter(v => v === id).length;
+}
+
+export function nextFood() {
+  return [...gear.bag.map(s => 'item' in s ? s.item : null), ...Object.values(gear.equip)]
+    .map(id => item(id)).find(p => (p?.leczenie ?? 0) > 0);
 }
 
 // ---------------------------------------------------------------- fruit
@@ -566,7 +577,7 @@ export function canImbue(id: string | null | undefined) {
 /** Can this item be worn in that place? */
 export function fits(id: string, m: Miejsce) {
   const p = item(id);
-  if (!p || p.pojazd) return false;
+  if (!p || p.pojazd || p.leczenie) return false;
   return TALIZMANY.includes(p.miejsce) ? TALIZMANY.includes(m) : p.miejsce === m;
 }
 
