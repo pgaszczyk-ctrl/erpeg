@@ -43,7 +43,7 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'wojowniczka', nazwa: 'Wojowniczka z kucykiem', plik: 'bohater_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'zwiadowca', nazwa: 'Chłopiec w pelerynie', plik: 'bohater_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
   { id: 'srebrna', nazwa: 'Srebrnowłosa', plik: 'bohater_10', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
-  // Bohaterowie z klocków, próba zamówienia 22 (scripts/awatary-sklad.py: głowa + tułów + kolory z masek, głowa 3 px niżej).
+  // Bohaterowie z klocków, próba zamówienia 22 (scripts/awatary-sklad.py: głowa + tułów + kolory z masek, punkty broda/szyja z metadata.json).
   // Tylko serwer testowy: na końcu listy, więc numery dotychczasowych bohaterów się nie zmieniają.
   ...(import.meta.env?.VITE_TEST === '1' ? ([
   { id: 'skladababa', nazwa: 'Rozczochrany wędrowiec (próba)', plik: 'sklad_01_01_0', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },

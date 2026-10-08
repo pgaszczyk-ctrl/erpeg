@@ -115,18 +115,18 @@ export const RYSUNKI_SMOKOW: Partial<Record<GatunekId, { plik: string; komorka: 
     efekty: false,
     pysk: { bok: [32, 120], przod: [80, 152], tyl: [167, 52] },
   },
-  // Paczka „smoki_chochlik_v3”: leśny i trujący mają na razie tylko 2 próbne klatki z boku (scripts/smoki-nowe.py).
+  // Paczka „23_smoki_proba_v2” (8.10.2026): leśny i trujący mają na razie tylko 2 próbne klatki z boku (scripts/smoki-nowe.py).
   lesny: {
     plik: 'swiat/smoki/smok_lesny.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
     klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3"],
     efekty: false, tylkoBok: true,
-    pysk: { bok: [35, 140], przod: [35, 140], tyl: [35, 140] },
+    pysk: { bok: [32, 100], przod: [32, 100], tyl: [32, 100] },
   },
   trujacy: {
     plik: 'swiat/smoki/smok_trujacy.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
     klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3"],
     efekty: false, tylkoBok: true,
-    pysk: { bok: [35, 145], przod: [35, 145], tyl: [35, 145] },
+    pysk: { bok: [32, 149], przod: [32, 149], tyl: [32, 149] },
   },
 };
 

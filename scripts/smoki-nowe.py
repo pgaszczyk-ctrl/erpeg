@@ -35,7 +35,7 @@ for g in ('ognisty', 'kwasowy'):
     json.dump({'komorka': [w, h], 'stopy': [110, 170], 'klatki': nazwy}, open(os.path.join(CEL, f'smok_{g}.json'), 'w'))
     print(g, len(nazwy), json.dumps(nazwy))
 
-# Leśny i trujący (paczka „smoki_chochlik_v3”): na razie tylko 2 klatki stania z boku – cały arkusz z nich
+# Leśny i trujący (paczka „23_smoki_proba_v2”, 8.10.2026): na razie tylko 2 klatki stania z boku – cały arkusz z nich
 # (chód = postój z podskokiem o 1 px, ugryzienie 2 = wypad 2 px, śmierć = postój); gra pokazuje zawsze bok (RYSUNKI_SMOKOW.tylkoBok).
 for g in ('lesny', 'trujacy'):
     d = os.path.join(ZR, 'v3', f'smok_{g}_probki')
