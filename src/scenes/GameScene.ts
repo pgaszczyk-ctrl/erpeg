@@ -3968,7 +3968,8 @@ export class GameScene extends Phaser.Scene {
     if (!TEST) return this.dialog(req);
     this.dialog({
       ...req,
-      shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries },
+      shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries,
+        sellsAmmo: p.kind === 'shop' || p.kind === 'merchant' },
       onChoose: (i) => {
         req.onChoose(i);
         if (entries.find(e => e.index === i)?.refresh) refresh();
@@ -4163,7 +4164,9 @@ export class GameScene extends Phaser.Scene {
         stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', badge: '↻' })),
       ...packs.map(({ k, n }, i): ShopEntry => ({ id: `ammo:${k}:${n}`, index: tools.length + fixes.length + i,
         name: `${AMUNICJA[k].nazwa} +${n}`, category: 'ammo', picture: `items/${k}.png`,
-        description: 'Uzupełnij zapas amunicji.', stats: [['W zestawie', String(n)]], price: n * AMUNICJA[k].cena, action: 'KUP' })),
+        description: 'Uzupełnij zapas amunicji.', stats: [['Masz', `${gear.ammo[k]}/${STRZALY.kolczan}`],
+          ['W zestawie', String(n)], ['Po zakupie', `${gear.ammo[k] + n}/${STRZALY.kolczan}`]],
+        price: n * AMUNICJA[k].cena, action: 'KUP' })),
       ...offers.map((o, i) => shopItem(o, tools.length + extra.length + i, this.cenaDla(o))),
     ];
     this.shopDialog(p, {
