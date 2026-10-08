@@ -48,6 +48,12 @@ export const SIEKIERA = {
   sportowy: /sport|decathlon|outdoor|martes|go ?sport|\b4f\b|rower|bike|ski|turyst|wędk|wedk|swim/i,
 };
 
+/** Pojazdy w sklepach sportowych: ceny właściciela i prędkości z docs/ekonomia.md. */
+export const POJAZDY = {
+  rower: { monet: 10_000, szybkosc: 1.25 },
+  hulajnoga: { diamenty: 1, szybkosc: 1.4 },
+};
+
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
 export const GRUPY: Record<Grupa, { nazwa: string; ikona: string }> = {
   owoce: { nazwa: 'Owoce', ikona: '🍎🍇' },

@@ -20,7 +20,7 @@ const USTAW: Record<string, (v: number) => void> = {
   predkosc_kmh: (v) => (PLAYER.speed = (v / 3.6) * PX_PER_M),
   wskrzeszenie_diamenty: (v) => (WSKRZESZENIE.diamentow = Math.round(v)),
   diament_monet: (v) => (DIAMENT.monet = Math.round(v)),
-  ceny_przedmiotow: (v) => PRZEDMIOTY.forEach((p) => (p.cena = Math.round((CENY_PRZEDMIOTOW.get(p.id) ?? p.cena) * v))),
+  ceny_przedmiotow: (v) => PRZEDMIOTY.forEach((p) => { if (!p.pojazd) p.cena = Math.round((CENY_PRZEDMIOTOW.get(p.id) ?? p.cena) * v); }),
   ceny_zbiorow: (v) => Object.entries(OWOCE).forEach(([k, o]) => (o.cena = Math.max(1, Math.round((CENY_ZBIOROW.get(k) ?? o.cena) * v)))),
   namiot_pole: (v) => (NAMIOT.cenaPola = Math.round(v)),
   alchemik_owocow: (v) => (ALCHEMIK.owocow = Math.round(v)),
