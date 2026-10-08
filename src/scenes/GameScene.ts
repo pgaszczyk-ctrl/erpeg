@@ -949,7 +949,7 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.missionId || Math.abs(e.x - x) > r || Math.abs(e.y - y) > r) continue;
       if (Math.hypot(e.x - x, e.y - y) > r) continue;
       this.enemies = this.enemies.filter((x) => x !== e);
-      this.tweens.add({ targets: e, alpha: 0, scale: 0.2, duration: 250, onComplete: () => e.destroy() });
+      this.tweens.add({ targets: e, alpha: 0, scaleX: e.scaleX * 0.25, scaleY: e.scaleY * 0.25, duration: 250, onComplete: () => e.destroy() });
     }
   }
 
