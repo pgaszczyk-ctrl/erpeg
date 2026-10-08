@@ -368,6 +368,11 @@ export function owns(id: string) {
 export function addItem(id: string): 'equipped' | 'bag' | false {
   const p = item(id);
   if (!p) return false;
+  if (p.pojazd) {
+    if (gear.bag.length >= PLECAK.miejsc) return false;
+    gear.bag.push({ item: id });
+    return 'bag';
+  }
   // Talismans always go into the backpack first: they work once dragged onto a talisman place.
   if (TALIZMANY.includes(p.miejsce) && gear.bag.length < PLECAK.miejsc) {
     gear.bag.push({ item: id });
@@ -396,6 +401,7 @@ export function equipFromBag(index: number) {
   const s = gear.bag[index];
   if (!s || !('item' in s)) return;
   const p = item(s.item)!;
+  if (p.pojazd) return;
   const m = slotFor(p.miejsce);
   const worn = gear.equip[m];
   gear.equip[m] = s.item;
@@ -560,7 +566,7 @@ export function canImbue(id: string | null | undefined) {
 /** Can this item be worn in that place? */
 export function fits(id: string, m: Miejsce) {
   const p = item(id);
-  if (!p) return false;
+  if (!p || p.pojazd) return false;
   return TALIZMANY.includes(p.miejsce) ? TALIZMANY.includes(m) : p.miejsce === m;
 }
 

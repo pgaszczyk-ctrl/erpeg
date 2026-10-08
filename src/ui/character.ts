@@ -17,7 +17,6 @@ import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
 import { TEST } from '../version';
 import { rememberTestLook } from '../testAppearance';
-import { testVehicle, setTestVehicle, type TestVehicle } from '../testTransport';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -53,23 +52,6 @@ function skinPicker(changed: () => void) {
   const next = el('button', 'c-btn', '▶') as HTMLButtonElement;
   next.onclick = () => go(1);
   row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
-  return row;
-}
-
-function vehiclePicker(changed: () => void) {
-  const row = el('label', 'c-skin');
-  row.append(el('span', '', 'Podróżowanie'));
-  const list = document.createElement('select');
-  list.setAttribute('aria-label', 'Podróżowanie');
-  for (const [value, name] of [['pieszo', 'Pieszo'], ['rower', 'Rower'], ['hulajnoga', 'Hulajnoga parowa']]) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = name;
-    option.selected = value === testVehicle;
-    list.append(option);
-  }
-  list.onchange = () => { setTestVehicle(list.value as TestVehicle); changed(); };
-  row.append(list);
   return row;
 }
 
@@ -287,7 +269,6 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Kufer: Postać
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
-    if (TEST) s.append(vehiclePicker(() => { onChange(); render(); }));
     if (NOWE_POSTACIE) s.append(skinPicker(() => {
       onChange();
       render();
@@ -349,7 +330,9 @@ function show(host: CharacterHost) {
         if (!sl) return;
         if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
-        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), item(sl.item)?.pojazd
+          ? [['Wyrzuć', () => dropFromBag(i)]]
+          : [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },
     });
     return s;

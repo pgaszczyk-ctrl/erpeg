@@ -15,7 +15,8 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles } from '../ui/hud';
+import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
 import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
@@ -128,6 +129,7 @@ export class UIScene extends Phaser.Scene {
       zoom: () => (this.scene.get('game') as GameScene).toggleZoom(),
       zoomOn: przyblizenie(),
       camera: () => this.takePhoto(),
+      vehicle: TEST ? (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle) : undefined,
     });
     this.layout();
     this.heroAvatar();
@@ -457,6 +459,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   update(time: number) {
+    setHudVehicles(hasTestVehicle('rower'), hasTestVehicle('hulajnoga'), testVehicle);
     this.lowLife(time);
     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
     showHud(this.overlay ? 'off' : this.dialogBox ? 'dim' : 'on');
