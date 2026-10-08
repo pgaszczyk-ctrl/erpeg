@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { TEST } from './version';
 import { SKALA_POSTACI } from './skala';
-import { BOHATEROWIE } from './content/wyglad';
 import { heroSkin } from './sprites';
 import type { Player } from './objects/Player';
 import { gear } from './inventory';
@@ -19,11 +18,23 @@ export const vehicleSpeed = () => {
   return TEST && testVehicle !== 'pieszo' ? POJAZDY[testVehicle].szybkosc : 1;
 };
 
-export function loadTestVehicles(scene: Phaser.Scene) {
-  if (!TEST) return;
-  for (const p of BOHATEROWIE) for (const vehicle of ['rower', 'hulajnoga']) {
-    scene.load.image(`${p.id}-${vehicle}`, `postacie/${p.plik}_${vehicle}.png`);
-  }
+// Keep unused riding art off the initial download/GPU budget (25 looks × 2 vehicles).
+const loading = new WeakMap<Phaser.Game, Set<string>>();
+function requestVehicle(scene: Phaser.Scene, postac: ReturnType<typeof heroSkin>, vehicle: 'rower' | 'hulajnoga') {
+  const key = `${postac.id}-${vehicle}`;
+  if (scene.textures.exists(key)) return;
+  let pending = loading.get(scene.game);
+  if (!pending) { pending = new Set(); loading.set(scene.game, pending); }
+  if (pending.has(key)) return;
+  pending.add(key);
+  const img = new Image();
+  img.onload = () => {
+    if (!scene.game.isBooted) return;
+    if (!scene.textures.exists(key)) scene.textures.addImage(key, img);
+  };
+  // One attempt per game: a missing image must not issue a request on every frame.
+  img.onerror = () => {};
+  img.src = `${import.meta.env.BASE_URL}postacie/${postac.plik}_${vehicle}.png`;
 }
 
 /** The existing player still moves and collides; only its drawing changes while riding. */
@@ -32,13 +43,17 @@ export class TestRide {
   constructor(private scene: Phaser.Scene) {}
   update(player: Player, postac: number | undefined, name: string) {
     if (!TEST) return;
+    const skin = heroSkin(postac, name);
+    // Prefetch only the owned vehicles of the current look; changing look readies that pair too.
+    for (const vehicle of ['rower', 'hulajnoga'] as const)
+      if (hasTestVehicle(vehicle)) requestVehicle(this.scene, skin, vehicle);
     if (testVehicle !== 'pieszo' && !hasTestVehicle(testVehicle)) testVehicle = 'pieszo';
     if (testVehicle === 'pieszo' || player.isDead) {
       this.image?.setVisible(false);
       player.setVisible(true);
       return;
     }
-    const key = `${heroSkin(postac, name).id}-${testVehicle}`;
+    const key = `${skin.id}-${testVehicle}`;
     if (!this.scene.textures.exists(key)) {
       this.image?.setVisible(false);
       player.setVisible(true);

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TEST } from '../version';
 import { TEX, artScale } from '../art';
 import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
@@ -155,6 +156,7 @@ export class FixedNpcs {
   private grazynkaTry = 0;
   private luigiHome: Pt | null = null;
   private luigiTry = 0;
+  private fixedDirty = false;
 
   constructor(private scene: Phaser.Scene, private city: CityMap, private host: FixedHost) {
     // They all live in Lublin (Garbów is part of its map).
@@ -162,12 +164,31 @@ export class FixedNpcs {
     this.grazynkaHome = city.fromLatLon(GRAZYNKA.miejscowosc.lat, GRAZYNKA.miejscowosc.lon);
     const lb = city.findBuilding(LUIGI.adres);
     this.luigiHome = lb ? city.entranceOf(lb) : null;
-    const streetLines = (names: string[]) =>
-      city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
+    this.placeLublinPeople();
+    if (TEST) {
+      const off = city.onTile(() => { this.fixedDirty = true; });
+      scene.events.once('shutdown', off);
+    }
+  }
+
+  /** Remote NPCs appear once their neighbourhood is loaded, like Luigi/Grażynka.
+   * Wait for the same neighbourhood as the old startup preload, avoiding partial routes/toy placement.
+   */
+  private placeLublinPeople() {
+    if (this.city.id !== 'lublin') return;
+    const { city, scene } = this;
+    const has = (id: string) => this.list.some(w => w.id === id);
+    const streetLines = (names: string[]) => {
+      if (TEST && !names.every(name => {
+        const p = city.findStart(name), r = 400 * PX_PER_M;
+        return p && city.ready({ x0:p.x-r, y0:p.y-r, x1:p.x+r, y1:p.y+r });
+      })) return [];
+      return city.lines.filter((l) => l.name && names.includes(l.name) && l.pts.length >= 4).map((l) => l.pts);
+    };
 
     // Martin, the dragon expert, on Irysowa.
     const martinLines = streetLines([MARTIN.ulica]);
-    if (martinLines.length) {
+    if (martinLines.length && !has('martin')) {
       const w = new Walker(martinLines, MARTIN.predkosc * PX_PER_M, this.r);
       const sprite = fixedSprite(scene, w.x, w.y, 'martin', TEX.hero, 0xd08050);
       this.list.push({ id: 'martin', walker: w, sprite, x: w.x, y: w.y });
@@ -175,7 +196,7 @@ export class FixedNpcs {
 
     // The dog (unless it already got its piggy back).
     const dogLines = streetLines(PIES.ulice);
-    if (dogLines.length && this.state('npc-pies') !== 'done') {
+    if (dogLines.length && !has('pies') && this.state('npc-pies') !== 'done') {
       const w = new Walker(dogLines, PIES.predkosc * PX_PER_M, this.r);
       const dogKey = hdOn ? ensureHd(scene, `hd-${STALE_HD.pies.id}`) : '';
       const sprite = hdOn && scene.textures.exists(dogKey) ? fitHd(scene.add.sprite(w.x, w.y, dogKey, 'down-0')) : scene.add.image(w.x, w.y, TEX.dog);
@@ -186,7 +207,7 @@ export class FixedNpcs {
 
     // Sister Margo.
     const nunLines = streetLines([MARGO.ulica]);
-    if (nunLines.length) {
+    if (nunLines.length && !has('margo')) {
       const w = new Walker(nunLines, MARGO.predkosc * PX_PER_M, this.r);
       const sprite = fixedSprite(scene, w.x, w.y, 'margo', TEX.hero, 0x9a9aa6);
       this.list.push({ id: 'margo', walker: w, sprite, x: w.x, y: w.y });
@@ -194,7 +215,7 @@ export class FixedNpcs {
 
     // Grandpa or grandma, by their block on Śnieżyńskiego.
     const block = DZIADKOWIE.adresy.map((a) => city.findBuilding(a)).find(Boolean);
-    if (block) {
+    if (block && !has('dziadkowie') && (!TEST || (block.rings.length && streetLines([DZIADKOWIE.ulica]).length))) {
       const door = city.entranceOf(block);
       const near = streetLines([DZIADKOWIE.ulica]).map((pts) => {
         // The longest run of points near the block.
@@ -334,6 +355,7 @@ export class FixedNpcs {
   }
 
   update(dt: number, px: number, py: number, now: number, visible: (x: number, y: number) => boolean) {
+    if (this.fixedDirty) { this.fixedDirty = false; this.placeLublinPeople(); }
     this.placeGrazynka(px, py, now);
     this.placeLuigi(px, py, now);
     for (const w of this.list) {
