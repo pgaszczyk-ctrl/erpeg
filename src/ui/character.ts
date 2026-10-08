@@ -318,7 +318,7 @@ function show(host: CharacterHost) {
         if (!sl) return;
         if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
-        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), item(sl.item)?.pojazd
+        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), item(sl.item)?.pojazd || item(sl.item)?.leczenie
           ? [['Wyrzuć', () => dropFromBag(i)]]
           : [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },

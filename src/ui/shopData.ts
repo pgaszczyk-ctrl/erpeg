@@ -2,7 +2,7 @@ import type { Przedmiot } from '../content/przedmioty';
 import { itemPictureUrl, goodsPicture } from './itemIcon';
 import type { Grupa } from '../content/sklepy';
 
-export type ShopCategory = 'all' | 'weapons' | 'armour' | 'supplies' | 'ammo' | 'magic' | 'services';
+export type ShopCategory = 'all' | 'weapons' | 'armour' | 'supplies' | 'ammo' | 'magic' | 'services' | 'food';
 /** Presentation only: the existing shop callbacks still perform every transaction. */
 export interface ShopEntry {
   id: string;
@@ -10,6 +10,8 @@ export interface ShopEntry {
   name: string;
   category: ShopCategory;
   picture?: string | null;
+  icon?: string;
+  costNote?: string;
   description: string;
   stats?: [string, string][];
   price?: number;

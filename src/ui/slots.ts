@@ -47,7 +47,7 @@ export function slotLabel(s: Slot) {
   }
   const p = item(s.item);
   const imb = imbueOf(s.item);
-  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
+  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${p.leczenie ? ` Leczy: +${p.leczenie} serce. Zużywane po miksturach i owocach.` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
 }
 
 const key = (p: Place) => (p.zone === 'eq' ? p.m : String(p.i));

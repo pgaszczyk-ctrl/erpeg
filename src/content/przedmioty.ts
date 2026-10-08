@@ -12,6 +12,7 @@ export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet'
 export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
 import type { Amunicja } from './zuzycie';
 import { POJAZDY } from './sklepy';
+import { WYTWORCY } from './wytworcy';
 
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
@@ -44,6 +45,8 @@ export interface Przedmiot {
   efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie' | 'celnosc' | 'obrona';
   /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
   fabularny?: boolean;
+  /** Prepared food: heals this many hearts, after potions and edible harvests. */
+  leczenie?: number;
   /** Krótki opis pokazywany w karcie postaci. */
   opis?: string;
   /** Ile ciosów/strzałów wytrzyma, zanim się zepsuje (content/zuzycie.ts); brak = nie zużywa się. */
@@ -119,7 +122,9 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'klasztorny_pochlaniacz', nazwa: 'Klasztorny pochłaniacz', miejsce: 'zbroja', moc: 5, cena: 0, opis: 'Nosili go dominikanie w czasach Wielkiej Wojny o Tryby.' },
   { id: 'plaszcz_cechmistrza', nazwa: 'Płaszcz Cechmistrza', miejsce: 'zbroja', moc: 6, cena: 0, opis: 'Dla Strażnika Serca Miasta.' },
   { id: 'karabin_trybunal', nazwa: 'Karabin „Trybunał”', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 16, cena: 0, wytrzymalosc: 1600, opis: 'Parowy karabin wyborowy. Wyrok zapada z daleka.' },
-  { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true, opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
+  { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true,
+    ...(import.meta.env?.VITE_TEST === '1' ? { leczenie: WYTWORCY.paczkarnia.hearts } : {}),
+    opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
 ];
 
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */

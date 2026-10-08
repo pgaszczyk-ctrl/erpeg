@@ -24,6 +24,8 @@ export interface HudView {
   fruit: number;
   /** Nothing left to heal with (the button is dimmed). */
   noHeal: boolean;
+  /** Prepared food selected after potions and edible harvests. */
+  preparedFood?: { icon: string; n: number };
   town: string;
   weather: string;
   detail: string;
@@ -440,14 +442,16 @@ export function setHud(v: HudView) {
     parts.coins.title = `Sakiewka: ${n(v.coins)} monet`;
     parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
   }
-  parts.count.textContent = String(v.potions > 0 ? v.potions : v.fruit);
+  parts.count.textContent = String(v.potions > 0 ? v.potions : v.preparedFood ? v.preparedFood.n : v.fruit);
   if (v.bron.pic && !parts.wpnImg.src.endsWith(v.bron.pic)) parts.wpnImg.src = v.bron.pic;
   parts.wpnImg.style.visibility = v.bron.pic ? 'visible' : 'hidden';
   parts.wcount.textContent = v.bron.label;
   parts.wcount.classList.toggle('warn', v.bron.warn);
   parts.wpn.setAttribute('aria-label', v.bron.title);
   parts.wpn.title = v.bron.title;
-  const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})` : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
+  const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})`
+    : v.preparedFood ? `Zjedz przygotowane jedzenie ${v.preparedFood.icon} (masz ${v.preparedFood.n})`
+    : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
   parts.heal.setAttribute('aria-label', label);
   parts.heal.title = label;
   parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
@@ -495,7 +499,10 @@ function draw() {
   if (ok(pics.baza)) c.drawImage(pics.baza, 0, 0);
   const icon = v.potions > 0 ? pics.mikstura : pics.owoc;
   c.globalAlpha = v.noHeal ? 0.4 : 1;
-  if (ok(icon)) c.drawImage(icon, 0, 0);
+  if (v.preparedFood && v.potions <= 0) {
+    c.font = '16px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(v.preparedFood.icon, CX + 13, HY + 13);
+  } else if (ok(icon)) c.drawImage(icon, 0, 0);
   c.globalAlpha = 1;
   const t = performance.now();
   const tube = (x: number, h: number, body: string, top: string, phase: number) => {

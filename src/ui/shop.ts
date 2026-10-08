@@ -11,6 +11,7 @@ const categories: [ShopCategory, string, string][] = [
   ['all', 'Wszystko', 'miecz_mosiezny'], ['weapons', 'Broń', 'zelazny'],
   ['armour', 'Ochrona', 'tarcza_okuta'], ['supplies', 'Wyposażenie', 'siekiera'],
   ['ammo', 'Amunicja', 'strzaly'], ['magic', 'Magia', 'ksiega'], ['services', 'Usługi', 'ogniwo'],
+  ['food', 'Jedzenie', 'grupa_owoce'],
 ];
 const number = (n: number) => n.toLocaleString('pl-PL');
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = '') {
@@ -24,6 +25,7 @@ function button(text: string, cls: string, fn: () => void) {
 }
 /** A small geometric tent for goods whose commissioned art has not arrived yet. */
 function fallback(entry: ShopEntry) {
+  if (entry.icon) return el('span', 's26-food-icon', entry.icon);
   if (entry.id.startsWith('tent:')) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 32 32'); svg.setAttribute('aria-hidden', 'true');
@@ -72,7 +74,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const bar = el('div', 's26-bar');
     const tabs = el('div', 's26-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Kupowanie i sprzedaż');
     const selling = request.tabs?.active === 1;
-    ['KUPUJ', 'SPRZEDAJ'].forEach((name, i) => {
+    (request.tabs?.labels.map(label => label.replace(/^[^\p{L}\p{N}]+/u, '').toUpperCase()) ?? [request.shop?.entries.some(e => e.id.startsWith('make:')) ? 'WYTWÓRZ' : 'KUPUJ', 'SPRZEDAJ']).forEach((name, i) => {
       const b = button(name, `s26-tab${Number(selling) === i ? ' on' : ''}`, () => { if (Number(selling) !== i) choose(-1 - i); });
       b.dataset.focus = `tab:${i}`; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(Number(selling) === i));
       b.disabled = i === 1 && !request.tabs; if (b.disabled) b.title = 'To miejsce nie prowadzi skupu';
@@ -137,7 +139,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     for (let i = entries.length; i < Math.max(12, Math.ceil(entries.length / 6) * 6); i++) {
       const empty = el('span', 's26-cell empty'); empty.setAttribute('aria-hidden', 'true'); stock.append(empty);
     }
-    if (!entries.length) card.append(el('p', 's26-empty', selling ? 'Nie masz zbiorów na sprzedaż.'
+    if (!entries.length) card.append(el('p', 's26-empty', request.title.startsWith('Kuźnia') ? data.subtitle : selling ? 'Nie masz zbiorów na sprzedaż.'
       : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.'));
     card.append(stock); row.append(filters, card); assortment.append(row); left.append(assortment);
     const bag = el('details', 's26-backpack'); bag.open = bagOpen ?? window.matchMedia('(min-width: 701px)').matches;
@@ -167,7 +169,8 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       const stats = el('dl', 's26-stats');
       for (const [label, value] of entry.stats ?? []) stats.append(el('dt', '', label), el('dd', '', value));
       detail.append(stats, el('p', 's26-description', entry.description));
-      const pay = entry.price === undefined ? '' : `${number(entry.price)} ${entry.diamonds ? entry.price === 1 ? 'DIAMENT' : 'DIAMENTÓW' : 'MONET'}`;
+      const pay = (entry.price === undefined ? '' : `${number(entry.price)} ${entry.diamonds ? entry.price === 1 ? 'DIAMENT' : 'DIAMENTÓW' : 'MONET'}`)
+        + (entry.costNote ? ` + ${entry.costNote}` : '');
       const action = button('', 's26-action', () => {
         if (performance.now() - lastAction < 350) return;
         lastAction = performance.now(); choose(entry.index);
@@ -179,7 +182,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       detail.append(hero, el('h3', '', 'Zapas pełny'), el('p', 's26-description',
         `Masz po ${STRZALY.kolczan} sztuk posiadanej amunicji. Kolejne zakupy będą dostępne po jej zużyciu.`));
     } else {
-      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.'));
+      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', request.title.startsWith('Kuźnia') ? data.subtitle : selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.'));
     }
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';
