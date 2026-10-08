@@ -3465,7 +3465,7 @@ export class GameScene extends Phaser.Scene {
       price: fruitCount(f) * OWOCE[f].cena, action: 'SPRZEDAJ', refresh: true,
     }));
     const text = tab === 0 ? 'Napraw sprzęt u kowala. Jeśli jest sprawny, naprawa nie jest potrzebna.'
-      : 'Kowal skupuje rudę żelaza po 30 monet i drewno po 12 monet za sztukę.';
+      : `Kowal skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
     this.shopDialog(p, {
       title: `Kuźnia — ${p.name}`, text,
       tabs: { labels: ['NAPRAW', 'SPRZEDAJ'], active: tab, colors: [0x2f6f9f, 0x3fa34d] },
@@ -3510,7 +3510,7 @@ export class GameScene extends Phaser.Scene {
       },
     }, [{ id: `make:${r.item}`, index: 0, name: r.name, category: 'food', icon: r.icon,
       description: 'Przynieś owoce i zapłać za przygotowanie. Jedzenie leczy po miksturach i owocach; możesz też zachować je do zadań.',
-      stats: [['Owoce', `${groupCount('owoce')}/${r.fruit}`], ['Masz', String(count)], ['Leczenie', `+${r.hearts} serce`]],
+      stats: [['Owoce', `${groupCount('owoce')}/${r.fruit}`], ['Masz', String(count)], ['Leczenie', `+${r.hearts} ${r.hearts === 1 ? 'serce' : r.hearts < 5 ? 'serca' : 'serc'}`]],
       price: r.coins, costNote: `${r.fruit} OWOCÓW`, action: 'WYTWÓRZ', badge: String(count), refresh: true }],
     () => this.openProducer(p), 'Przynieś składniki. Wytwórca przygotuje jedzenie na drogę.');
   }
