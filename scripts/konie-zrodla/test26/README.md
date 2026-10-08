@@ -1,0 +1,1 @@
+Oryginalne wozy z commit becba21 (przed pierwszym filtrowaniem). Właściciel 8.10.2026 zachował ich sylwetkę. `python3 scripts/wyrownaj-wozy.py` dopasowuje je do obecnej palety świata i zapisuje wyłącznie w public/swiat/konie_test26. Nie filtruj już przetworzonych plików.

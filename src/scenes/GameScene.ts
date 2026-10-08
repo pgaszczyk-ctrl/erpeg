@@ -1,6 +1,7 @@
+import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
-import { itemTexture } from '../ui/itemIcon';
+import { itemPictureUrl, goodsPicture, itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art';
@@ -218,6 +219,8 @@ export interface DialogRequest {
   icons?: (string | null)[];
   /** Tabs under the title (e.g. a shop: buy / sell); tapping tab t calls onChoose(-1 - t). */
   tabs?: { labels: string[]; active: number; colors?: number[] };
+  /** Pack 26 shop presentation, test only; transactions keep their existing callbacks. */
+  shop?: ShopPresentation;
   onChoose: (index: number) => void;
 }
 
@@ -1988,7 +1991,7 @@ export class GameScene extends Phaser.Scene {
     };
     const want = [...new Set(stations.map(file))].filter((f) => !this.textures.exists(`swiat-${f}`));
     if (!want.length) return put();
-    for (const f of want) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
+    for (const f of want) this.load.image(`swiat-${f}`, `swiat/${TEST ? 'konie_test26/' : ''}${f}.png`);
     this.load.once('complete', put);
     this.load.start();
   }
@@ -3391,7 +3394,17 @@ export class GameScene extends Phaser.Scene {
       : [[this.label(ax), () => this.buy(ax)]];
     const vehicles = TEST && SIEKIERA.sportowy.test(p.name)
       ? PRZEDMIOTY.filter((it) => it.pojazd && !this.ownsVehicle(it.id)) : [];
-    this.dialog({
+    const entries: ShopEntry[] = [
+      ...vehicles.map((v, i) => shopItem(v, i, this.cenaDla(v))),
+      ...tools.map((_, i): ShopEntry => owned ? {
+        id: 'repair:siekiera', index: vehicles.length + i, name: 'Naostrz siekierę', category: 'services', picture: itemPictureUrl(ax.id),
+        description: 'Przywróć siekierze pełną wytrzymałość.', price: sharpen, action: 'NAPRAW', refresh: true,
+      } : shopItem(ax, vehicles.length + i, this.cenaDla(ax))),
+      ...kinds.map((k, i): ShopEntry => ({ id: `tent:${i}`, index: vehicles.length + tools.length + i, name: k.nazwa,
+        category: 'supplies', description: 'Rozłożysz go w lesie albo na polu z karty postaci. Nocleg zapisuje grę i miejsce startu.',
+        stats: [['Noclegi', String(k.noclegow)]], price: k.cena, action: 'KUP', refresh: true })),
+    ];
+    this.shopDialog(p, {
       title: `🏕 ${p.name}`,
       text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}${vehicles.length ? ' oraz pojazdy' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''}${vehicles.length ? ' Pojazd trzymaj w plecaku; wsiądziesz obrazkiem w panelu gry.' : ''} Masz ${session.coins} monet${vehicles.length ? ` i ${session.diamenty} 💎` : ''}.${have}`,
       buttons: [...vehicles.map((v) => this.label(v)), ...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
@@ -3409,7 +3422,7 @@ export class GameScene extends Phaser.Scene {
         this.save();
         this.toast(`⛺ Kupiony: ${k.nazwa} (${k.noclegow} noclegów). Rozłożysz go w lesie albo na polu z karty postaci.`, 3000);
       },
-    });
+    }, entries, () => this.openGearShop(p), 'Namioty i wyposażenie na kolejną wyprawę.');
   }
 
   /** "Namiot 19/20, Super namiot 480/500". */
@@ -3951,6 +3964,18 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ shops, schools, library
 
+  private shopDialog(p: CityPlace, req: DialogRequest, entries: ShopEntry[], refresh: () => void, subtitle: string) {
+    if (!TEST) return this.dialog(req);
+    this.dialog({
+      ...req,
+      shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries },
+      onChoose: (i) => {
+        req.onChoose(i);
+        if (entries.find(e => e.index === i)?.refresh) refresh();
+      },
+    });
+  }
+
   /** Buys an item: pays, equips it or puts it in the backpack. */
   private buy(p: Przedmiot) {
     if (p.pojazd && this.ownsVehicle(p.id)) return this.toast('Masz już ten pojazd.');
@@ -4092,7 +4117,7 @@ export class GameScene extends Phaser.Scene {
       const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
       const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
       const text = groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
-      this.dialog({
+      this.shopDialog(p, {
         title, text, tabs,
         buttons: [...all, ...lines, 'Wyjdź'],
         onChoose: (i) => {
@@ -4107,7 +4132,11 @@ export class GameScene extends Phaser.Scene {
           this.save();
           this.openShop(p, 1);
         },
-      });
+      }, [
+        ...(all.length ? [{ id: 'sell:all', index: 0, name: 'Wszystkie zbiory', category: 'supplies' as const,
+          picture: goodsPicture('owoce'), description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka.', price: total, action: 'SPRZEDAJ WSZYSTKO' }] : []),
+        ...groups.map((g, i) => shopGoods(g, i + all.length, GRUPY[g].nazwa, groupCount(g), groupValue(g))),
+      ], () => this.openShop(p, 1), 'Kupiec odkupi twoje zbiory.');
       return;
     }
     // Grandma Grażynka's garden tools wait at the shop nearest her village.
@@ -4126,7 +4155,18 @@ export class GameScene extends Phaser.Scene {
       ...packs.map(({ k, n, full }): [string, () => void] => [`${AMUNICJA[k].nazwa} +${n}${full ? ' (do pełna)' : ''} – ${n * AMUNICJA[k].cena} monet`, () => this.buyArrows(k, n)]),
     ];
     const quiver = ownedAmmo().map((k) => `\n${AMUNICJA[k].ikona} ${AMUNICJA[k].nazwa}: ${gear.ammo[k]}/${STRZALY.kolczan}`).join('');
-    this.dialog({
+    const entries: ShopEntry[] = [
+      ...tools.map((name, i): ShopEntry => ({ id: 'grazynka:tools', index: i, name, category: 'services',
+        description: 'Narzędzia czekają dla babci Grażynki.', action: 'ODBIERZ' })),
+      ...fixes.map((id, i): ShopEntry => ({ id: `repair:${id}`, index: tools.length + i, name: `Napraw: ${item(id)!.nazwa}`,
+        category: 'services', picture: itemPictureUrl(id), description: 'Przywróć przedmiotowi pełną wytrzymałość.',
+        stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', badge: '↻' })),
+      ...packs.map(({ k, n }, i): ShopEntry => ({ id: `ammo:${k}:${n}`, index: tools.length + fixes.length + i,
+        name: `${AMUNICJA[k].nazwa} +${n}`, category: 'ammo', picture: `items/${k}.png`,
+        description: 'Uzupełnij zapas amunicji.', stats: [['W zestawie', String(n)]], price: n * AMUNICJA[k].cena, action: 'KUP' })),
+      ...offers.map((o, i) => shopItem(o, tools.length + extra.length + i, this.cenaDla(o))),
+    ];
+    this.shopDialog(p, {
       title, tabs,
       text: (p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
@@ -4146,7 +4186,7 @@ export class GameScene extends Phaser.Scene {
         const o = offers[i - tools.length - extra.length];
         if (o) this.buy(o);
       },
-    });
+    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : 'Kowal za ladą poleca swój towar.');
   }
 
   /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
@@ -4214,7 +4254,16 @@ export class GameScene extends Phaser.Scene {
     const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
     const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
     const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
-    this.dialog({
+    const entries: ShopEntry[] = [
+      ...learn.map((_, i): ShopEntry => ({ id: 'learn:magic', index: i, name: 'Nauka magii', category: 'magic', picture: itemPictureUrl('ksiega'),
+        description: 'Naucz się zaklęć, a potem wybierz różdżkę, kulę albo księgę.', price: NAUKA_MAGII, action: 'NAUCZ SIĘ', refresh: true })),
+      ...offers.map((o, i) => shopItem(o, learn.length + i, this.cenaDla(o))),
+      ...(surveyBtn ? [{ id: 'library:survey', index: learn.length + offers.length, name: surveyBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
+        category: 'services' as const, description: 'Porozmawiaj z bibliotekarką o wyprawie.', action: 'ROZMAWIAJ' }] : []),
+      { id: 'library:riddle', index: learn.length + offers.length + Number(!!surveyBtn), name: riddleBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
+        category: 'services', description: 'Bibliotekarka przygotowała zagadki.', action: 'ROZMAWIAJ' },
+    ];
+    this.shopDialog(p, {
       title: `📚 ${p.name}`,
       text: gear.magic
         ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
@@ -4249,7 +4298,7 @@ export class GameScene extends Phaser.Scene {
         const o = offers[i - learn.length];
         if (o) this.buy(o);
       },
-    });
+    }, entries, () => this.openLibrary(p), 'Księgi, magia i opowieści z dalekich wypraw.');
   }
 
   /** A librarian's riddle: at most BIBLIOTEKA_ZAGADKI.naSesje per session, one try each. */
@@ -4941,6 +4990,9 @@ export class GameScene extends Phaser.Scene {
       req = {
         ...req,
         buttons: [...req.buttons.slice(0, at), ...extras.map(([l]) => l), ...req.buttons.slice(at)],
+        shop: req.shop ? { ...req.shop, entries: [...req.shop.entries,
+          ...extras.map(([name], i): ShopEntry => ({ id: `place:extra:${i}`, index: at + i, name,
+            category: 'services', description: 'Porozmawiaj o tym miejscu.', action: 'ROZMAWIAJ' }))] } : undefined,
         onChoose: (i) => (i >= at && i < at + extras.length ? extras[i - at][1]() : orig.onChoose(i >= at + extras.length ? i - extras.length : i)),
       };
     }

@@ -5,7 +5,7 @@ import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
-import { ITEM_PICTURES, ITEM_VARIANTS } from '../ui/itemIcon';
+import { ITEM_PICTURES, ITEM_VARIANTS, itemAssetUrl } from '../ui/itemIcon';
 import { WARZYWA_RYSUNKI, WYGLAD_09 } from '../map/Podloze09';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
@@ -22,7 +22,7 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     // Item pictures (16×16 pixel art) for shop dialogs.
-    for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, `items/${id}.png`);
+    for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, itemAssetUrl(id));
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
     this.load.spritesheet('szklo-peka', 'items/szklany_miecz_peka.png', { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);

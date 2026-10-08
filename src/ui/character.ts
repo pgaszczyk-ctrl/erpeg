@@ -12,6 +12,7 @@ import { session } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin } from '../sprites';
+import { heroPreviewBackground } from './heroPreview';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
@@ -24,7 +25,7 @@ function skinPicker(changed: () => void) {
   const i = BOHATEROWIE.indexOf(now);
   const row = el('div', 'c-skin');
   const pic = el('div', 'c-skin-pic');
-  pic.style.backgroundImage = `url(postacie/${now.plik}.png)`;
+  heroPreviewBackground(pic, now.plik);
   const go = (d: number) => {
     session.look = { ...session.look, postac: (i + d + BOHATEROWIE.length) % BOHATEROWIE.length };
     if (TEST) rememberTestLook(session.look, session.name);
@@ -280,7 +281,7 @@ function show(host: CharacterHost) {
     if (NOWE_POSTACIE) {
       // The standing frame facing us (column 2, row 1 of the artist's 3×3 sheet).
       const hero = el('div', 'k-dag-hero');
-      hero.style.backgroundImage = `url(postacie/${heroSkin(session.look.postac, session.name).plik}.png)`;
+      heroPreviewBackground(hero, heroSkin(session.look.postac, session.name).plik);
       pic.append(hero);
     }
     pic.setAttribute('role', 'img');

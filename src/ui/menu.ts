@@ -1,4 +1,5 @@
 import type { CityMap } from '../map/CityMap';
+import { heroPreviewUrl } from './heroPreview';
 import { api, type LoginResult } from '../api';
 import { startSession, loadContent } from '../quests';
 import { drawCity } from './minimap';
@@ -183,8 +184,11 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       const preview = el('canvas', { className: 'm-hero', width: hd ? 144 : 48, height: hd ? 60 : LOOK_H });
       const sheet = new Image();
       sheet.onload = () => paint();
+      let sheetRequest = 0;
       const loadSheet = () => {
-        if (hd) sheet.src = `postacie/${BOHATEROWIE[look.postac ?? 0].plik}.png`;
+        if (!hd) return;
+        const request = ++sheetRequest;
+        void heroPreviewUrl(BOHATEROWIE[look.postac ?? 0].plik).then(url => { if (request === sheetRequest) sheet.src = url; });
       };
       let frame = 0;
       const paint = () => {
@@ -192,7 +196,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         if (hd) {
           ctx.clearRect(0, 0, 144, 60);
           if (!sheet.complete || !sheet.naturalWidth) return;
-          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingEnabled = !TEST;
           // Standing frames: down, side (turned to face right), up.
           for (let row = 0; row < 3; row++) {
             ctx.save();
