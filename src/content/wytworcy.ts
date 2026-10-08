@@ -1,7 +1,7 @@
 /** TEST recipes: costs and healing can be adjusted independently of the shop window. */
 export const WYTWORCY = {
-  paczkarnia: { item: 'paczek', name: 'Pączek', icon: '🍩', fruit: 20, coins: 50, hearts: 1 },
-} as const;
+  paczkarnia: { item: 'paczek', name: 'Pączek', icon: '🍩', fruit: 20, coins: 50, hearts: 2 },
+};
 
 export function producerRecipe(name: string) {
   if (/dobra pączkarnia/i.test(name)) return WYTWORCY.paczkarnia;
