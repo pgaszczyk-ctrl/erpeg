@@ -90,6 +90,7 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   if (import.meta.env?.VITE_TEST === '1' && /\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
   const kind = String(p.kind ?? '');
   const detail = String(p.kind_detail ?? '');
+  if (import.meta.env?.VITE_TEST === '1' && (kind === 'car_repair' || detail === 'car_repair')) return 'workshop';
   const named = !!p.name;
   switch (kind) {
     case 'supermarket': return 'shop';
@@ -113,7 +114,7 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
 
 const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   shop: 'Sklep', police: 'Komenda Policji', library: 'Biblioteka', bank: 'Bank', alchemist: 'Stacja paliw',
-  gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
+  workshop: 'Warsztat samochodowy', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
 };
 
 /**

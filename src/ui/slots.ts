@@ -10,7 +10,7 @@ import { esencja } from '../content/esencje';
 // dragging is a tap.
 
 /** Items without a picture yet (the „Serce Zębatka” rewards) – until the artist draws them. */
-const ITEM_EMOJI: Record<string, string> = { gwizdek_maszynisty: '🚂', kluczyk_nakrecacz: '🗝', kieszonkowy_chronometr: '⏱', cukierniczy_cylinder: '🎩', paczek: '🍩' };
+const ITEM_EMOJI: Record<string, string> = { gwizdek_maszynisty: '🚂', kluczyk_nakrecacz: '🗝', kieszonkowy_chronometr: '⏱', cukierniczy_cylinder: '🎩', paczek: '🍩', hamburger: '🍔' };
 export const SLOT_ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🛡', zbroja: '🦺', helm: '⛑', buty: '🥾', amulet: '📿', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' };
 /** Greyed pictures in empty equipment places (what goes there). */
 const EMPTY_PIC: Partial<Record<Miejsce, string>> = { bron: 'zelazny', dystans: 'tarcza_drewniana', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
@@ -47,7 +47,7 @@ export function slotLabel(s: Slot) {
   }
   const p = item(s.item);
   const imb = imbueOf(s.item);
-  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${p.leczenie ? ` Leczy: +${p.leczenie} serce. Zużywane po miksturach i owocach.` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
+  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${p.leczenie ? ` Leczy: +${p.leczenie} ${p.leczenie === 1 ? 'serce' : p.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
 }
 
 const key = (p: Place) => (p.zone === 'eq' ? p.m : String(p.i));

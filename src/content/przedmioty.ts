@@ -125,6 +125,11 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true,
     ...(import.meta.env?.VITE_TEST === '1' ? { leczenie: WYTWORCY.paczkarnia.hearts } : {}),
     opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
+  ...(import.meta.env?.VITE_TEST === '1' ? [{
+    id: 'hamburger', nazwa: 'Burger warzywny', miejsce: 'talizman', moc: 0, cena: 0,
+    leczenie: WYTWORCY.mcdonalds.hearts,
+    opis: 'Przygotowany wyłącznie z warzyw. Leczenie zużywa go po miksturach i jadalnych zbiorach.',
+  }] as Przedmiot[] : []),
 ];
 
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */
