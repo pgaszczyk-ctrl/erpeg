@@ -13,7 +13,8 @@ export const ITEM_PICTURES = [
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
   'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera',
 ];
-const HAVE = new Set(ITEM_PICTURES);
+// Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items on test.
+const HAVE = new Set([...ITEM_PICTURES, ...(import.meta.env?.VITE_TEST === '1' ? ['rower', 'hulajnoga_parowa'] : [])]);
 
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */
 const CRACKED: Record<string, string> = { szklany_miecz: 'szklany_miecz_pekniety' };

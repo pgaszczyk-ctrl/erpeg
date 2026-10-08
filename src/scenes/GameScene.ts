@@ -8,6 +8,7 @@ import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../scree
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
+import { TEST } from '../version';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -43,7 +44,7 @@ import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI } from '../content/trudnosc';
-import { WSKRZESZENIE, DIAMENT, GRUPY, type Grupa } from '../content/sklepy';
+import { WSKRZESZENIE, DIAMENT, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
@@ -3388,12 +3389,16 @@ export class GameScene extends Phaser.Scene {
     const tools: [string, () => void][] = !this.sellsAxe(p) ? [] : owned
       ? sharpen ? [[`🔧 Naostrz siekierę – ${sharpen} monet`, () => this.repairItem(ax.id)]] : []
       : [[this.label(ax), () => this.buy(ax)]];
+    const vehicles = TEST && SIEKIERA.sportowy.test(p.name)
+      ? PRZEDMIOTY.filter((it) => it.pojazd && !this.ownsVehicle(it.id)) : [];
     this.dialog({
       title: `🏕 ${p.name}`,
-      text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''} Masz ${session.coins} monet.${have}`,
-      buttons: [...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
-      icons: [...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), null],
+      text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}${vehicles.length ? ' oraz pojazdy' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''}${vehicles.length ? ' Pojazd trzymaj w plecaku; wsiądziesz obrazkiem w panelu gry.' : ''} Masz ${session.coins} monet${vehicles.length ? ` i ${session.diamenty} 💎` : ''}.${have}`,
+      buttons: [...vehicles.map((v) => this.label(v)), ...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`), 'Wyjdź'],
+      icons: [...vehicles.map((v) => itemTexture(v.id)), ...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), null],
       onChoose: (i) => {
+        if (vehicles[i]) return this.buy(vehicles[i]);
+        i -= vehicles.length;
         if (tools[i]) return tools[i][1]();
         const k = kinds[i - tools.length];
         if (!k) return;
@@ -3948,8 +3953,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Buys an item: pays, equips it or puts it in the backpack. */
   private buy(p: Przedmiot) {
-    if (session.coins < this.cenaDla(p)) {
-      this.toast(`Za mało monet – ${p.nazwa} kosztuje ${this.cenaDla(p)}.`);
+    if (p.pojazd && this.ownsVehicle(p.id)) return this.toast('Masz już ten pojazd.');
+    const diamonds = p.cenaDiamenty ?? 0;
+    if (diamonds ? session.diamenty < diamonds : session.coins < this.cenaDla(p)) {
+      this.toast(diamonds ? `Za mało diamentów – ${p.nazwa} kosztuje ${diamonds} 💎.` : `Za mało monet – ${p.nazwa} kosztuje ${this.cenaDla(p)}.`);
       return;
     }
     const where = addItem(p.id);
@@ -3957,7 +3964,8 @@ export class GameScene extends Phaser.Scene {
       this.toast('Plecak pełny! Zrób miejsce w karcie postaci.');
       return;
     }
-    spend(this.cenaDla(p));
+    if (diamonds) session.diamenty -= diamonds;
+    else spend(this.cenaDla(p));
     repair(p.id); // a new one is whole
     const kind = ammoOf(p);
     const arrows = kind ? Math.min(STRZALY.zLukiem, ammoRoom(kind)) : 0;
@@ -4062,8 +4070,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private label(p: Przedmiot) {
+    if (p.pojazd) return `${p.nazwa} – ${p.cenaDiamenty ? `${p.cenaDiamenty} 💎` : `${this.cenaDla(p)} monet`} (+${Math.round((POJAZDY[p.pojazd].szybkosc - 1) * 100)}% prędkości)`;
     const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `obrona ${p.moc}`;
     return `${p.nazwa} – ${this.cenaDla(p)} monet (${what})`;
+  }
+
+  private ownsVehicle(id: string) {
+    return owns(id) || session.chest.slots.some((s) => s && 'item' in s && s.item === id);
   }
 
   private openShop(p: CityPlace, tab = 0) {

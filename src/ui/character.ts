@@ -25,31 +25,18 @@ function skinPicker(changed: () => void) {
   const row = el('div', 'c-skin');
   const pic = el('div', 'c-skin-pic');
   pic.style.backgroundImage = `url(postacie/${now.plik}.png)`;
-  if (TEST) {
-    const list = document.createElement('select');
-    list.setAttribute('aria-label', 'Wybierz postać');
-    BOHATEROWIE.forEach((p, n) => {
-      const option = document.createElement('option');
-      option.textContent = p.nazwa;
-      option.value = String(n);
-      option.selected = n === i;
-      list.append(option);
-    });
-    list.addEventListener('change', () => {
-      session.look = { ...session.look, postac: Number(list.value) };
-      rememberTestLook(session.look, session.name);
-      changed();
-    });
-    row.append(pic, list);
-    return row;
-  }
   const go = (d: number) => {
     session.look = { ...session.look, postac: (i + d + BOHATEROWIE.length) % BOHATEROWIE.length };
+    if (TEST) rememberTestLook(session.look, session.name);
     changed();
   };
   const prev = el('button', 'c-btn', '◀') as HTMLButtonElement;
+  prev.type = 'button';
+  prev.setAttribute('aria-label', 'Poprzednia postać');
   prev.onclick = () => go(-1);
   const next = el('button', 'c-btn', '▶') as HTMLButtonElement;
+  next.type = 'button';
+  next.setAttribute('aria-label', 'Następna postać');
   next.onclick = () => go(1);
   row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
   return row;

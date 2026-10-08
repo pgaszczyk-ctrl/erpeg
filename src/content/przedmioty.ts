@@ -11,6 +11,7 @@ export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet'
 /** Trzy miejsca na talizmany (przedmioty z miejsce: 'talizman' idą do pierwszego wolnego). */
 export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
 import type { Amunicja } from './zuzycie';
+import { POJAZDY } from './sklepy';
 
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
@@ -23,6 +24,8 @@ export interface Przedmiot {
   moc: number;
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
+  /** Premium price; charged instead of coins. */
+  cenaDiamenty?: number;
   /** Łuk albo magia (różdżka w ręce; kula/księga w drugiej ręce wzmacniają czary). */
   rodzaj?: 'luk' | 'magia';
   /** What a ranged weapon shoots (default arrows). */
@@ -57,8 +60,8 @@ export interface Przedmiot {
 // ok. 50×, żeby na dobry sprzęt trzeba było popracować (owoce, zlecenia).
 export const PRZEDMIOTY: Przedmiot[] = [
   ...(import.meta.env?.VITE_TEST === '1' ? [
-    { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: 0, pojazd: 'rower', opis: 'Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
-    { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, pojazd: 'hulajnoga', opis: 'Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+    { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: POJAZDY.rower.monet, pojazd: 'rower', opis: 'Jazda o 25% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+    { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, cenaDiamenty: POJAZDY.hulajnoga.diamenty, pojazd: 'hulajnoga', opis: 'Jazda o 40% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
   ] as Przedmiot[] : []),
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },

@@ -5,6 +5,7 @@ import { BOHATEROWIE } from './content/wyglad';
 import { heroSkin } from './sprites';
 import type { Player } from './objects/Player';
 import { gear } from './inventory';
+import { POJAZDY } from './content/sklepy';
 
 export type TestVehicle = 'pieszo' | 'rower' | 'hulajnoga';
 export let testVehicle: TestVehicle = 'pieszo';
@@ -15,7 +16,7 @@ export const setTestVehicle = (vehicle: TestVehicle) => {
 };
 export const vehicleSpeed = () => {
   if (testVehicle !== 'pieszo' && !hasTestVehicle(testVehicle)) testVehicle = 'pieszo';
-  return TEST && testVehicle !== 'pieszo' ? 1.4 : 1;
+  return TEST && testVehicle !== 'pieszo' ? POJAZDY[testVehicle].szybkosc : 1;
 };
 
 export function loadTestVehicles(scene: Phaser.Scene) {
