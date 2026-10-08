@@ -45,6 +45,7 @@ export interface HudHandlers {
   zoom: () => boolean;
   /** Whether the bigger picture is on (the button's look at start). */
   zoomOn: boolean;
+  vehicle?: (vehicle: 'rower' | 'hulajnoga') => void;
 }
 
 /** Picture pixels: the machine's grid (from the mock-up). */
@@ -75,6 +76,10 @@ const CSS = `
 #hud .hud-m canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 #hud .hud-count { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none; }
 #hud .hud-wpn img { position: absolute; image-rendering: pixelated; pointer-events: none; }
+#hud .hud-m button.hud-vehicle { box-sizing: border-box; background: #302218; border: 2px solid #b8893b; box-shadow: 0 0 0 2px #1a110b, inset 0 0 0 2px #674922; }
+#hud .hud-vehicle[hidden] { display: none; }
+#hud .hud-m button.hud-vehicle[aria-pressed="true"] { background: #705021; border-color: #ffe9a8; }
+#hud .hud-vehicle img { width: 100%; height: 100%; box-sizing: border-box; padding: 5px; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
 #hud .hud-wcount { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none;
   border: 1px solid #b8893b; font: 700 11px/12px 'Pixelify Sans', monospace; height: 14px; min-width: 16px; padding: 0 3px; white-space: nowrap; }
 #hud .hud-wcount.warn { background: #7a1e14; color: #ffe0d8; }
@@ -128,7 +133,9 @@ let parts: {
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
   wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
+  vehicles: Record<'rower' | 'hulajnoga', HTMLButtonElement>;
 } | null = null;
+let lastVehicles = '';
 let scale = 4;
 
 /** How big the machine is: ×2 on phones, ×3 on a computer (owner, 5 Oct 2026: ×4 from the spec was far too big). */
@@ -271,7 +278,21 @@ export function mountHud(on: HudHandlers) {
   const avPic = document.createElement('canvas');
   avPic.className = 'hud-avpic';
   avPic.style.cssText = 'position:absolute;pointer-events:none';
+  const vehicleButton = (vehicle: 'rower' | 'hulajnoga', pic: string) => {
+    const b = btn(`hud-vehicle hud-${vehicle}`, '', () => on.vehicle?.(vehicle));
+    b.hidden = true;
+    const image = document.createElement('img');
+    image.alt = '';
+    if (on.vehicle) image.src = BASE_URL + pic;
+    b.append(image);
+    return b;
+  };
+  const vehicles = {
+    rower: vehicleButton('rower', 'hud/welocyped_128.png'),
+    hulajnoga: vehicleButton('hulajnoga', 'items/hulajnoga_parowa.png'),
+  };
   m.append(canvas, avPic, heal, hp, xp, count, wpn, wcount,
+    vehicles.rower, vehicles.hulajnoga,
     btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
@@ -317,7 +338,7 @@ export function mountHud(on: HudHandlers) {
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic, vehicles };
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -331,6 +352,25 @@ export function unmountHud() {
   root = null;
   parts = null;
   ctx = null;
+  lastVehicles = '';
+}
+
+/** Only vehicles in the backpack get a button; clicking an active one means walking. */
+export function setHudVehicles(rower: boolean, hulajnoga: boolean, active: 'pieszo' | 'rower' | 'hulajnoga') {
+  if (!parts) return;
+  const key = `${rower}:${hulajnoga}:${active}`;
+  if (key === lastVehicles) return;
+  lastVehicles = key;
+  for (const vehicle of ['rower', 'hulajnoga'] as const) {
+    const b = parts.vehicles[vehicle];
+    b.hidden = !(vehicle === 'rower' ? rower : hulajnoga);
+    const mounted = active === vehicle;
+    const label = vehicle === 'rower' ? (mounted ? 'Zejdź z roweru' : 'Wsiądź na rower') : (mounted ? 'Zejdź z hulajnogi' : 'Wsiądź na hulajnogę');
+    b.setAttribute('aria-pressed', String(mounted));
+    b.setAttribute('aria-label', label);
+    b.title = label;
+  }
+  layout();
 }
 
 /** Dimmed (still visible, taps go through) while a dialog is open; hidden behind the game-over screen (owner, 6 Oct 2026). */
@@ -350,6 +390,8 @@ function layout() {
     Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
   };
   Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
+  at(parts.vehicles.rower, 2, -24, 20, 20);
+  at(parts.vehicles.hulajnoga, parts.vehicles.rower.hidden ? 2 : 26, -24, 20, 20);
   at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
   Object.assign(parts.avPic.style, { left: `${(CX + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
   drawAvatar();
@@ -382,7 +424,7 @@ function layout() {
   const wide = window.innerWidth - W * s - 2 * M > 170;
   Object.assign(parts.picks.style, wide
     ? { right: `${M + W * s + 10}px`, bottom: `${M + 20 * s}px` }
-    : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
+    : { right: `${M}px`, bottom: `${M + (H + (parts.vehicles.rower.hidden && parts.vehicles.hulajnoga.hidden ? 0 : 24)) * s + 8}px` });
 }
 
 let lastMoney = '';

@@ -49,11 +49,17 @@ export interface Przedmiot {
   szklany?: boolean;
   /** A tool: works from the backpack too (the axe turns felled trees into wood instead of brushwood). */
   narzedzie?: 'siekiera';
+  /** Vehicles stay in the backpack; their HUD buttons toggle riding. */
+  pojazd?: 'rower' | 'hulajnoga';
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
 // ok. 50×, żeby na dobry sprzęt trzeba było popracować (owoce, zlecenia).
 export const PRZEDMIOTY: Przedmiot[] = [
+  ...(import.meta.env?.VITE_TEST === '1' ? [
+    { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: 0, pojazd: 'rower', opis: 'Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+    { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, pojazd: 'hulajnoga', opis: 'Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+  ] as Przedmiot[] : []),
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
