@@ -62,6 +62,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const data = request.shop!;
     const focusKey = (document.activeElement as HTMLElement)?.dataset.focus;
     const scroll = box.querySelector('.s26-stock')?.scrollTop ?? 0;
+    const categoryScroll = box.querySelector('.s26-categories')?.scrollLeft ?? 0;
     const bagOpen = box.querySelector<HTMLDetailsElement>('.s26-backpack')?.open;
     box.replaceChildren();
     const head = el('header', 's26-head');
@@ -93,15 +94,35 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     assortment.append(el('h3', '', selling ? 'Skup' : 'Asortyment'));
     const row = el('div', 's26-stock-row');
     const filters = el('nav', 's26-categories'); filters.setAttribute('aria-label', 'Kategorie towarów');
-    const available = categories.filter(([c]) => c === 'all' || data.entries.some(e => e.category === c));
+    const ammunition = data.sellsAmmo ? ownedAmmo() : [];
+    const available = categories.filter(([c]) => c === 'all' || data.entries.some(e => e.category === c)
+      || (!selling && c === 'ammo' && ammunition.length > 0));
     if (!available.some(([c]) => c === category)) category = 'all';
     const entries = data.entries.filter(e => category === 'all' || e.category === category);
     if (!entries.some(e => e.id === selected)) selected = entries[0]?.id;
     available.forEach(([id, name, pic]) => {
       const b = button('', `s26-category${category === id ? ' on' : ''}`, () => { category = id; viewingBag = null; render(); });
       b.dataset.focus = `category:${id}`; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', String(category === id)); b.title = name;
-      b.append(image(`items/${pic}.png`)); filters.append(b);
+      b.append(image(`items/${pic}.png`), el('span', '', name)); filters.append(b);
     });
+    const card = el('div', 's26-stock-card');
+    const categoryName = available.find(([id]) => id === category)![1];
+    const cardTitle = el('h4', 's26-category-title', categoryName === 'Wszystko' ? 'Wszystkie towary' : categoryName);
+    cardTitle.id = 's26-category-title'; card.setAttribute('aria-labelledby', cardTitle.id);
+    card.append(cardTitle);
+    if (!selling && ammunition.length) {
+      const quivers = el('div', 's26-quivers'); quivers.setAttribute('aria-live', 'polite');
+      quivers.setAttribute('aria-label', 'Twój zapas amunicji');
+      ammunition.forEach(k => {
+        const full = gear.ammo[k] >= STRZALY.kolczan;
+        const supply = el('div', `s26-quiver${full ? ' full' : ''}`);
+        supply.append(image(`items/${k}.png`), el('span', '', AMUNICJA[k].nazwa),
+          el('strong', '', `${gear.ammo[k]} / ${STRZALY.kolczan}`));
+        if (full) supply.append(el('span', 's26-quiver-full', 'PEŁNY'));
+        quivers.append(supply);
+      });
+      card.append(quivers);
+    }
     const stock = el('div', 's26-stock');
     entries.forEach(entry => {
       const b = button('', `s26-cell${entry.id === selected && viewingBag === null ? ' selected' : ''}`, () => {
@@ -116,8 +137,9 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     for (let i = entries.length; i < Math.max(12, Math.ceil(entries.length / 6) * 6); i++) {
       const empty = el('span', 's26-cell empty'); empty.setAttribute('aria-hidden', 'true'); stock.append(empty);
     }
-    if (!entries.length) assortment.append(el('p', 's26-empty', selling ? 'Nie masz zbiorów na sprzedaż.' : 'Brak towarów w tej kategorii.'));
-    row.append(filters, stock); assortment.append(row); left.append(assortment);
+    if (!entries.length) card.append(el('p', 's26-empty', selling ? 'Nie masz zbiorów na sprzedaż.'
+      : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.'));
+    card.append(stock); row.append(filters, card); assortment.append(row); left.append(assortment);
     const bag = el('details', 's26-backpack'); bag.open = bagOpen ?? window.matchMedia('(min-width: 701px)').matches;
     const summary = el('summary', '', `PLECAK ${gear.bag.length}/${PLECAK.miejsc}`); bag.append(summary);
     const bagGrid = el('div', 's26-bag-grid');
@@ -152,14 +174,25 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       }); action.dataset.focus = 'action'; action.dataset.action = entry.id;
       action.append(el('strong', '', entry.action ?? (selling ? 'SPRZEDAJ' : 'KUP')), el('span', '', pay));
       detail.append(action);
+    } else if (!selling && category === 'ammo' && ammunition.length) {
+      const hero = el('div', 's26-hero-image'); hero.append(image(`items/${ammunition[0]}.png`));
+      detail.append(hero, el('h3', '', 'Zapas pełny'), el('p', 's26-description',
+        `Masz po ${STRZALY.kolczan} sztuk posiadanej amunicji. Kolejne zakupy będą dostępne po jej zużyciu.`));
     } else {
       detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.'));
     }
-    const ammo = el('div', 's26-ammo', ownedAmmo().map(k => `${AMUNICJA[k].nazwa}: ${gear.ammo[k]}/${STRZALY.kolczan}`).join(' · '));
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';
-    right.append(detail, ammo, notice, exit); body.append(left, right); box.append(head, bar, subtitle, body);
+    right.append(detail, notice, exit); body.append(left, right); box.append(head, bar, subtitle, body);
     stock.scrollTop = scroll;
+    filters.scrollLeft = categoryScroll;
+    // Reveal the chosen folder without scrolling the entire shop on a phone.
+    const activeCategory = filters.querySelector<HTMLElement>('.on');
+    if (activeCategory) {
+      const tabRect = activeCategory.getBoundingClientRect(), navRect = filters.getBoundingClientRect();
+      if (tabRect.left < navRect.left) filters.scrollLeft -= navRect.left - tabRect.left;
+      else if (tabRect.right > navRect.right) filters.scrollLeft += tabRect.right - navRect.right;
+    }
     const focused = [...box.querySelectorAll<HTMLElement>('[data-focus]')].find(e => e.dataset.focus === focusKey);
     focused?.focus({ preventScroll: true });
   };
