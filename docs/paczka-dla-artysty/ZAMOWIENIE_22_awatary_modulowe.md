@@ -1,5 +1,16 @@
 # Zamówienie 22: bohater z klocków – 10 głów, 8 tułowi, zmienne kolory
 
+## Pilna poprawka stylu po próbie v2 (8.10.2026)
+
+Właściciel obejrzał nowe postacie w grze: **„wyblakłe, wychudzone i bardzo nijakie”**. Próba v2 nie ma zaakceptowanego stylu. Wróć do wyglądu istniejących bohaterów Exp-lore, zwłaszcza łuczniczki („blondynki”), wędrowca i rycerza; wzory: `public/postacie/ranger.png`, `traveler.png`, `knight.png` oraz `22_awatary/przyklad_skladania_x3.png`. Zachowaj modułowe głowy i ciała oraz osobne punkty `broda` / `szyja` opisane niżej.
+
+- Kolory wyraźne, nasycone jak u obecnych bohaterów; czytelne światło i cień, mocny kontrast ubrania, włosów i twarzy. Neutralne kolory potrzebne do masek nie mogą dawać bladej, szarej postaci po złożeniu i przebarwieniu.
+- Pełniejsze, zwarte sylwetki: szerokość ramion, tułowia, rąk i nóg porównywalna z istniejącymi bohaterami. Duża głowa, krótka szyja i wyraźne buty; bez wychudzonego korpusu pod wielką głową. Niższe i wyższe ciała nadal mają mieć naturalne proporcje.
+- Twarze, fryzury i stroje mają mieć charakter i być rozpoznawalne w zwykłym rozmiarze gry. Utrzymaj obecny obrys, ostre piksele i kierunek światła.
+- Najpierw popraw tylko próbę: dwie głowy i dwa ciała, komplet klatek oraz masek. Dołącz porównanie obok obecnych bohaterów **w tej samej skali**, także po złożeniu i przebarwieniu; pokaż przód, bok i tył oraz podgląd bez powiększenia. Dalsze części dopiero po akceptacji właściciela.
+
+Ta poprawka dotyczy rysunków. Samo zwiększenie nasycenia w grze nie naprawi proporcji ani nijakich twarzy.
+
 Dziś gracz wybiera jednego z 10 gotowych bohaterów. Właściciel chce, żeby każdy mógł złożyć własnego: **10 głów × 8 tułowi = 80 postaci**, a do tego **kolory skóry, włosów i ubrania** do wyboru. Gra będzie składać bohatera z dwóch warstw: najpierw tułów, na nim głowa.
 
 **To nie są „modułowe postacie 24×30”, które właściciel kiedyś odrzucił („fatalnie wyglądają”).** Rysujesz dokładnie w tym samym rozmiarze i stylu co obecni bohaterowie (wzór: łuczniczka v1, „blondynka”): klatki 64 × 64, duża głowa, obrys 1 px #1e1a24, światło z lewej-góry. Sprawdziliśmy, że to działa: w `22_awatary/przyklad_skladania_x3.png` są obecne postacie rozcięte na szyi i złożone na krzyż. Wyglądają naturalnie. Przeszkadza tylko jedno: dziś każda postać ma szyję gdzie indziej (od wiersza 35 do 44). Dlatego wszystkie nowe części muszą trzymać się jednego szablonu.
