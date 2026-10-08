@@ -758,10 +758,10 @@ export class MapRenderer {
     const G2 = GEN_DOTS;
     const rury: Rura09[] = [];
     const pipeRoads = new Map<string, Line[]>();
-    if (TEST) for (const l of wide.lines) {
+    if (TEST) for (const l of m.query({x0:x0-80,y0:y0-80,x1:x0+CHUNK+80,y1:y0+CHUNK+80}).lines) {
       if (!['minor', 'medium', 'service'].includes(l.kind) || l.bridge) continue;
-      const paths = ruryPrzyUlicy(l.pts, l.id, trackWidth(l), (x, y) => {
-        if (!m.isFree(x, y, 4, 4)) return false;
+      const paths = ruryPrzyUlicy(l.pts, l.id, trackWidth(l), (x, y, radius = 4) => {
+        if (!m.isFree(x, y, radius, radius)) return false;
         // Leave roads, sidewalks, rails and their crossings open. Query includes adjacent tiles.
         const cx=Math.floor(x/32)*32, cy=Math.floor(y/32)*32, key=`${cx},${cy}`;
         let nearby=pipeRoads.get(key);
@@ -771,12 +771,12 @@ export class MapRenderer {
           pipeRoads.set(key, nearby);
         }
         return !nearby.some(q =>
-          distToPolyline(q.pts, x, y) < (q.kind === 'rail' || q.kind === 'tram' ? 7 : trackWidth(q) / 2 + 4));
-      });
+          distToPolyline(q.pts, x, y) < (q.kind === 'rail' || q.kind === 'tram' ? 7 : trackWidth(q) / 2) + radius);
+      }, 500 * PX_PER_M);
       for (const p of paths) {
         const xs=p.pts.filter((_,i)=>i%2===0), ys=p.pts.filter((_,i)=>i%2===1);
-        if (Math.max(...xs)<x0-10 || Math.min(...xs)>x0+CHUNK+10 || Math.max(...ys)<y0-10 || Math.min(...ys)>y0+CHUNK+10) continue;
-        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed});
+        if (Math.max(...xs)<x0-80 || Math.min(...xs)>x0+CHUNK+80 || Math.max(...ys)<y0-80 || Math.min(...ys)>y0+CHUNK+80) continue;
+        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed, kotly:p.kotly?.map(k=>({x:k.x*G2,y:k.y*G2,pipeX:k.pipeX*G2,pipeY:k.pipeY*G2}))});
       }
     }
     const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
