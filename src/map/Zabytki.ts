@@ -45,8 +45,12 @@ export class Zabytki {
       if (!b && !z.naMapie) continue;
       const key = `zabytek-${z.id}`;
       const go = () => this.postaw(z, b ?? null, key);
-      if (scene.textures.exists(key)) go();
-      else {
+      if (scene.textures.exists(key)) {
+        // During create() the scene is not active yet. Cached landmarks must wait for CREATE,
+        // otherwise postaw() skips them after a journey or another scene restart.
+        if (scene.sys.isActive() || scene.sys.isPaused()) go();
+        else scene.sys.events.once(Phaser.Scenes.Events.CREATE, go);
+      } else {
         scene.load.image(key, z.plik);
         scene.load.once(`filecomplete-image-${key}`, go);
         scene.load.start();
