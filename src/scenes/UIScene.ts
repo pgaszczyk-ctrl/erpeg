@@ -1,3 +1,4 @@
+import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
@@ -67,6 +68,8 @@ export class UIScene extends Phaser.Scene {
   private toastText!: Phaser.GameObjects.Text;
   private hud?: HudState;
   private dialogBox?: Phaser.GameObjects.Container;
+  private shop?: ShopHandle;
+  private get hasDialog() { return !!this.dialogBox || !!this.shop; }
   private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number }[] = [];
   private dialogChoose?: (i: number) => void;
 
@@ -141,7 +144,7 @@ export class UIScene extends Phaser.Scene {
     const onHud = (s: HudState) => this.updateHud(s);
     this.game.events.on('hud', onHud);
     const onDialog = (d: DialogRequest) => this.showDialog(d);
-    const onToast = (t: string, ms?: number) => this.toast(t, ms);
+    const onToast = (t: string, ms?: number) => { if (t !== 'Gra zapisana') this.shop?.message(t); this.toast(t, ms); };
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
     const onPractice = (p: { skill: string; into: number; need: number; max: boolean; gain?: number }) => this.showPractice(p);
@@ -149,13 +152,17 @@ export class UIScene extends Phaser.Scene {
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
       if (typingInField(e)) return;
-      if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
+      if (this.shop) {
+        if (e.key === 'Escape') { e.preventDefault(); this.chooseShop(this.shop.lastIndex); }
+        return;
+      }
+      if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.hasDialog) {
         this.openMap();
       }
-      if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.dialogBox) {
+      if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.hasDialog) {
         hudZoom((this.scene.get('game') as GameScene).toggleZoom());
       }
-      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.dialogBox) {
+      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.hasDialog) {
         this.openCharacter();
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
@@ -184,6 +191,7 @@ export class UIScene extends Phaser.Scene {
       window.removeEventListener('keydown', onKey);
       closeMinimap();
       closeCharacter();
+      this.closeDialog();
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -337,7 +345,7 @@ export class UIScene extends Phaser.Scene {
 
   /** "+1 marchewka", "+12 złota" by the HUD when something new is in the backpack or the purse. */
   private pickups(s: HudState) {
-    const busy = !!document.getElementById('chest') || !!document.getElementById('character') || !!this.dialogBox;
+    const busy = !!document.getElementById('chest') || !!document.getElementById('character') || !!this.hasDialog;
     if (this.lastGoods && !busy) {
       for (const [f, n] of Object.entries(s.goods) as [Owoc, number][]) {
         const d = n - (this.lastGoods[f] ?? 0);
@@ -371,7 +379,7 @@ export class UIScene extends Phaser.Scene {
   /** The camera button: a picture of the game to send to friends (the "Pochwal się" card). */
   private takePhoto() {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay || this.dialogBox) return;
+    if (!game.player || this.overlay || this.hasDialog) return;
     game.scene.pause();
     void showPhoto(this.game, session.name).then(() => {
       game.scene.resume();
@@ -444,7 +452,7 @@ export class UIScene extends Phaser.Scene {
   private lowLife(time: number) {
     const s = this.hud;
     // From half life down (owner, 5 Oct 2026): the red edge is what tells the player he's hurt.
-    const low = !!s && !s.dead && !this.dialogBox && s.hp * 2 <= s.maxHp;
+    const low = !!s && !s.dead && !this.hasDialog && s.hp * 2 <= s.maxHp;
     const { width, height } = this.view;
     this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
     if (low) {
@@ -462,7 +470,7 @@ export class UIScene extends Phaser.Scene {
     setHudVehicles(hasTestVehicle('rower'), hasTestVehicle('hulajnoga'), testVehicle);
     this.lowLife(time);
     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
-    showHud(this.overlay ? 'off' : this.dialogBox ? 'dim' : 'on');
+    showHud(this.overlay ? 'off' : this.hasDialog ? 'dim' : 'on');
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);
@@ -477,7 +485,7 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = !!this.dialogBox || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
+    const waiting = this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
@@ -497,7 +505,7 @@ export class UIScene extends Phaser.Scene {
     const quests = this.hud?.quests ?? [];
     this.arrows.forEach((arrow, i) => {
       const pos = quests[i]?.pos;
-      if (!pos || !game.player || this.dialogBox) {
+      if (!pos || !game.player || this.hasDialog) {
         arrow.setVisible(false);
         return;
       }
@@ -530,6 +538,14 @@ export class UIScene extends Phaser.Scene {
   // ---------------------------------------------------------------- dialogs
 
   private showDialog(d: DialogRequest) {
+    if (TEST && d.shop) {
+      if (this.shop) { this.dialogChoose = d.onChoose; this.shop.update(d); return; }
+      this.closeDialog();
+      resetTouch();
+      this.dialogChoose = d.onChoose;
+      this.shop = showShop(d, i => this.chooseShop(i));
+      return;
+    }
     this.closeDialog();
     const { width, height } = this.view;
     const w = Math.min(width - 24, 620);
@@ -591,11 +607,12 @@ export class UIScene extends Phaser.Scene {
   private dialogOpenedAt = 0;
 
   private onDialogTap(x: number, y: number) {
-    if (!this.dialogBox && !this.overlay && onMenuButton(x, y)) {
+    if (this.shop) return;
+    if (!this.hasDialog && !this.overlay && onMenuButton(x, y)) {
       this.openGameMenu();
       return;
     }
-    if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
+    if (!this.hasDialog || this.time.now - this.dialogOpenedAt < 250) return;
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
     let choice: number | null = null;
     const real = this.dialogButtons.filter((b) => b.index >= 0);
@@ -611,7 +628,7 @@ export class UIScene extends Phaser.Scene {
   /** The Kufer (ui/character.ts): the world stands still while it is open (owner, 5 Oct 2026). */
   private openCharacter(page?: 'eq' | 'gold' | 'quests') {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay || this.dialogBox) return;
+    if (!game.player || this.overlay || this.hasDialog) return;
     touchInput.attack = false;
     if (isCharacterOpen()) return closeCharacter();
     if (isMinimapOpen()) closeMinimap();
@@ -655,7 +672,7 @@ export class UIScene extends Phaser.Scene {
   /** Top-left menu: leave the game properly. */
   private openGameMenu() {
     const game = this.scene.get('game') as GameScene;
-    if (this.dialogBox || this.overlay || !game.player || game.player.isDead) return;
+    if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
@@ -703,7 +720,19 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  private chooseShop(index: number) {
+    const shop = this.shop;
+    if (!shop) return;
+    const revision = shop.revision;
+    this.dialogChoose?.(index);
+    // Stock refresh updates the same window. A quest/service may replace it with a dialog.
+    if (this.shop === shop && shop.revision === revision) this.closeDialog();
+    resetTouch();
+  }
+
   private closeDialog() {
+    this.shop?.destroy();
+    this.shop = undefined;
     this.dialogBox?.destroy();
     this.dialogBox = undefined;
     this.dialogButtons = [];

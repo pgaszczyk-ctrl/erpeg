@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
 import { TEST } from './version';
+import { cleanHumanSheet } from './spriteCleanup';
 import { WYGLAD_09 } from './map/Podloze09';
 
 /**
@@ -57,6 +58,7 @@ const ROW = { down: 0, side: 1, up: 2 } as const;
 export const hdOn = NOWE_POSTACIE;
 
 const ENEMIES = WROGOWIE_HD.map((w) => w.postac);
+const human = (p: Postac | undefined) => !!p && p !== CHOCHLIK && p !== STALE_HD.pies && !ENEMIES.includes(p);
 const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES, ...Object.values(STALE_HD)];
 
 /**
@@ -111,7 +113,11 @@ export function isHd(key: string) {
 export function fitHd(s: Phaser.GameObjects.Sprite, times = 1) {
   const k = s.texture.key;
   // SKALA_POSTACI: smaller people next to the same world (src/skala.ts); the feet stay as far under the position, scaled too.
-  const sc = (skala.get(baseOf(k)) ?? 0.36) * times * SKALA_POSTACI;
+  const rawScale = skala.get(baseOf(k)) ?? 0.36;
+  // 0.24 made the two eyes sample at different fractional widths while walking.
+  // A quarter world unit and pupil spacing in multiples of four keep both eyes equally sampled.
+  const sc = TEST && human(pending.get(baseOf(k))) && rawScale === 0.36 && SKALA_POSTACI === 2 / 3
+    ? 0.25 * times : rawScale * times * SKALA_POSTACI;
   s.setScale(sc).setOrigin(0.5, (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F);
   return s;
 }
@@ -234,7 +240,8 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
   ctx.drawImage(img, 0, 0);
   if (p.bokWPrawo) mirrorRow(c, 1);
   const data = ctx.getImageData(0, 0, c.width, c.height);
-  for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
+  if (TEST && human(p)) cleanHumanSheet(data, p.plik);
+  else for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
   ctx.putImageData(data, 0, 0);
   const s = centreShifts(data);
   shifts.set(p.id, s);
@@ -395,7 +402,7 @@ function glow(src: HTMLCanvasElement, ostry = false) {
  * weighted by alpha, alpha hard (> 110 = solid). The frame stays 64 px, so frames, origins and crops hold.
  */
 function naSiatke(src: HTMLCanvasElement, p: Postac | undefined): HTMLCanvasElement {
-  if (!SIATKA_POSTACI || !p || p.ostry) return src;
+  if (!SIATKA_POSTACI || !p || p.ostry || (TEST && human(p))) return src;
   const b = Math.max(1, Math.round(PIKSEL_SWIATA / (p.skala * SKALA_POSTACI)));
   if (b < 2) return src;
   const ctx = src.getContext('2d')!;
@@ -453,7 +460,7 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
     for (let f = 0; f < 3; f++) tex.add(`${dir}-${f}`, 0, COL[f] * F, ROW[dir] * F, F, F);
   }
   const ostry = pending.get(baseOf(key))?.ostry;
-  tex.setFilter(ostry || (SIATKA_POSTACI && !key.endsWith('-red')) ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+  tex.setFilter(ostry || (TEST && human(pending.get(baseOf(key)))) || (SIATKA_POSTACI && !key.endsWith('-red')) ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
     if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });

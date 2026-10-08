@@ -16,6 +16,11 @@ export const ITEM_PICTURES = [
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items on test.
 const HAVE = new Set([...ITEM_PICTURES, ...(import.meta.env?.VITE_TEST === '1' ? ['rower', 'hulajnoga_parowa'] : [])]);
 
+/** Pack 26 trial helmet stays on test; production keeps the previous picture. */
+export function itemAssetUrl(id: string) {
+  return import.meta.env?.VITE_TEST === '1' && id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
+}
+
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */
 const CRACKED: Record<string, string> = { szklany_miecz: 'szklany_miecz_pekniety' };
 /**
@@ -66,14 +71,14 @@ export function itemTexture(id: string) {
 
 /** The picture's URL (relative, like the game's base ./), or null when the item has none yet. */
 export function itemPictureUrl(id: string): string | null {
-  return HAVE.has(id) ? `items/${pictureOf(id)}.png` : null;
+  return HAVE.has(id) ? itemAssetUrl(pictureOf(id)) : null;
 }
 
 /** An <img> of the item, or null when it has no picture yet. */
 export function itemIcon(id: string, className = 'item-ico'): HTMLImageElement | null {
   if (!HAVE.has(id)) return null;
   const img = document.createElement('img');
-  img.src = `items/${pictureOf(id)}.png`; // relative: the game is built with base ./
+  img.src = itemAssetUrl(pictureOf(id)); // relative: the game is built with base ./
   img.className = className;
   img.alt = '';
   img.draggable = false;

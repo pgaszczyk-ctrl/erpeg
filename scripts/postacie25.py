@@ -11,13 +11,42 @@ SOURCE = ROOT / 'scripts/postacie25-zrodla'
 ROWS = ('dol', 'prawo', 'gora')
 COLS = ('krok_1', 'stoi', 'krok_2')
 
-def solid(im):
+def solid(im, body_only=False):
     im = im.convert('RGBA')
     im.putalpha(im.getchannel('A').point(lambda a: 255 if a >= 128 else 0))
+    if body_only:
+        # Some source cells include feet from the neighbouring character above the head.
+        # Remove them BEFORE measuring the box, otherwise they also shrink the real person.
+        alpha = im.getchannel('A')
+        pixels = alpha.load()
+        seen = set()
+        largest = []
+        for y in range(im.height):
+            for x in range(im.width):
+                if not pixels[x, y] or (x, y) in seen:
+                    continue
+                part, queue = [], [(x, y)]
+                seen.add((x, y))
+                while queue:
+                    px, py = queue.pop()
+                    part.append((px, py))
+                    for dx in (-1, 0, 1):
+                        for dy in (-1, 0, 1):
+                            nx, ny = px + dx, py + dy
+                            if 0 <= nx < im.width and 0 <= ny < im.height and pixels[nx, ny] and (nx, ny) not in seen:
+                                seen.add((nx, ny))
+                                queue.append((nx, ny))
+                if len(part) > len(largest):
+                    largest = part
+        clean = Image.new('L', im.size)
+        mask = clean.load()
+        for x, y in largest:
+            mask[x, y] = 255
+        im.putalpha(clean)
     return im
 
 for number in range(1, 26):
-    frames = [solid(Image.open(SOURCE / 'postacie' / f'postac_{number:02}' / f'{row}_{col}.png'))
+    frames = [solid(Image.open(SOURCE / 'postacie' / f'postac_{number:02}' / f'{row}_{col}.png'), body_only=True)
               for row in ROWS for col in COLS]
     boxes = [im.getbbox() for im in frames]
     scale = min(54 / max(b[3]-b[1] for b in boxes), 60 / max(b[2]-b[0] for b in boxes))
@@ -35,7 +64,7 @@ for number in range(1, 26):
         # Pack 01 has a scooter baked into both riding cells; use it only for the scooter.
         embedded = number <= 10 and vehicle == 'hulajnoga'
         file = f'{pose}_prawo.png' if number > 10 or embedded else 'prawo_stoi.png'
-        person = solid(Image.open(SOURCE / 'postacie' / f'postac_{number:02}' / file))
+        person = solid(Image.open(SOURCE / 'postacie' / f'postac_{number:02}' / file), body_only=not embedded)
         person = person.crop(person.getbbox())
         person = person.resize((round(person.width*scale), round(person.height*scale)), Image.Resampling.NEAREST)
         # The pictures face left despite the source filenames; the prepared riding picture faces right.
