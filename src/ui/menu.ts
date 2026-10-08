@@ -53,6 +53,7 @@ function formatDate(iso: string | null) {
 /** `reopen`: go straight to this character (e.g. after dying in the game). */
 export function showMenu(city: CityMap, reopen?: { name: string; code: string }): Promise<void> {
   void loadSettings(); // the resurrection price etc. (also awaited by loadContent)
+  const contentReady = loadContent(); // Read-only content while the player fills in the form.
   return new Promise((resolve) => {
     root?.remove();
     root = el('div', { id: 'menu' });
@@ -77,7 +78,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       }
     };
     const play = async (r: LoginResult) => {
-      await loadContent();
+      await contentReady;
       startSession(r);
       root?.remove();
       root = null;

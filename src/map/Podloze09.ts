@@ -213,7 +213,7 @@ const FAZY_RYSUNKOW = ['mloda', 'dorosla_1', 'dorosla_2', 'dorosla_3', 'dojrzala
 /** Wczytuje rysunki roślin (podstawa: środek dolnej krawędzi). Brakujące pomija – wtedy roślinę rysuje kod. */
 export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
   const out: Record<string, Sprite> = {};
-  const base = import.meta.env.BASE_URL || '/';
+  const { rysunki } = await import('./rysunki09');
   await Promise.all(WARZYWA_RYSUNKI.flatMap((u) => FAZY_RYSUNKOW.map((f) => new Promise<void>((ok) => {
     const img = new Image();
     img.onload = () => {
@@ -227,7 +227,7 @@ export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
       ok();
     };
     img.onerror = () => ok();
-    img.src = `${base}uprawy/uprawa_${u}_${f}.png`;
+    img.src = rysunki[`uprawa_${u}_${f}`];
   }))));
   return out;
 }
@@ -240,7 +240,7 @@ export const OZDOBY_PLIKI: Record<string, number> = { manometr: 1, zawor: 1, lam
 /** Wczytuje ozdoby: jedna klatka → `nazwa`, kilka → `nazwa#0`, `nazwa#1`…; podstawa = środek dolnej krawędzi klatki. */
 export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {
   const out: Record<string, Sprite> = {};
-  const base = import.meta.env.BASE_URL || '/';
+  const { rysunki } = await import('./rysunki09');
   await Promise.all(Object.entries(OZDOBY_PLIKI).map(([n, k]) => new Promise<void>((ok) => {
     const img = new Image();
     img.onload = () => {
@@ -257,7 +257,7 @@ export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {
       ok();
     };
     img.onerror = () => ok();
-    img.src = `${base}swiat/ozdoby/${n}.png`;
+    img.src = rysunki[n];
   })));
   return out;
 }

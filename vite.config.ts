@@ -21,6 +21,15 @@ export default defineConfig({
   plugins: [{ name: 'version-json', apply: 'build', generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build }) }); } }],
   build: {
     chunkSizeWarningLimit: 2000,
-    rollupOptions: { input: { main: 'index.html', admin: 'admin.html' } },
+    rollupOptions: {
+      input: { main: 'index.html', admin: 'admin.html' },
+      output: {
+        // Phaser is large and unchanged between game updates; let browsers keep it cached.
+        manualChunks(id) {
+          if (id.includes('/node_modules/phaser/')) return 'phaser';
+          if (id.includes('/public/') && id.includes('?inline')) return 'rysunki';
+        },
+      },
+    },
   },
 });

@@ -6,14 +6,14 @@ import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
 import { enterWorld, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES, ITEM_VARIANTS, itemAssetUrl } from '../ui/itemIcon';
-import { WARZYWA_RYSUNKI, WYGLAD_09 } from '../map/Podloze09';
+import { WARZYWA_RYSUNKI, WYGLAD_09, przygotujRysunkiUpraw } from '../map/Podloze09';
 import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
-import { loadTestVehicles } from '../testTransport';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { TEST } from '../version';
+import { bootImageUrl } from '../bootImages';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -21,25 +21,40 @@ export class BootScene extends Phaser.Scene {
     super('boot');
   }
 
+  private worldReady!: Promise<CityMap>;
+  private loadingText!: Phaser.GameObjects.Text;
+
   preload() {
+    const { width, height } = this.scale;
+    this.loadingText = this.add
+      .text(width / 2, height / 2, LADOWANIE[0], { fontFamily: 'monospace', fontSize: `${18 * OSTROSC}px`, color: '#ffffff', align: 'center', wordWrap: { width: width - 40 * OSTROSC } })
+      .setOrigin(0.5);
+    this.load.on('progress', (p: number) => this.loadingText.setText(`${LADOWANIE[0]}\n${Math.round(p * 100)}%`));
+    // Fetch the map/font while Phaser downloads the artwork, not afterwards.
+    const font = Promise.race([
+      Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
+      new Promise((ok) => setTimeout(ok, 3000)),
+    ]);
+    this.worldReady = Promise.all([CityMap.load('map/lublin.json'), loadWorld(), font]).then(([city]) => city);
+    // The loading error is shown in create(); avoid an unhandled rejection during preload.
+    void this.worldReady.catch(() => {});
     if (TEST) this.load.image('szlam-szczegolowy', 'proby31/szlam_wodny.png');
     // Item pictures (16×16 pixel art) for shop dialogs.
-    for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, itemAssetUrl(id));
+    for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, bootImageUrl(itemAssetUrl(id)));
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
-    this.load.spritesheet('szklo-peka', 'items/szklany_miecz_peka.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('szklo-peka', bootImageUrl('items/szklany_miecz_peka.png'), { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);
-    loadTestVehicles(this);
     // The artist's ground and roof textures (content/swiat.ts).
-    for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
+    for (const f of MAMY) this.load.image(`swiat-${f}`, bootImageUrl(`swiat/${f}.png`));
     // Vegetables from the fields: the artist's ripe plant as their icon (order 12).
-    for (const v of CROP_ICONS) this.load.image(`uprawa-${v}`, `uprawy/uprawa_${v}_dojrzala_1.png`);
+    for (const v of CROP_ICONS) this.load.image(`uprawa-${v}`, bootImageUrl(`uprawy/uprawa_${v}_dojrzala_1.png`));
     // Ripe plants on the fields (overhaul 09), shown on their own so they stand out (GameScene ripeCrop).
-    for (const v of WARZYWA_RYSUNKI) for (const n of [1, 2]) this.load.image(`upr09-${v}_dojrzala_${n}`, `uprawy/uprawa_${v}_dojrzala_${n}.png`);
+    for (const v of WARZYWA_RYSUNKI) for (const n of [1, 2]) this.load.image(`upr09-${v}_dojrzala_${n}`, bootImageUrl(`uprawy/uprawa_${v}_dojrzala_${n}.png`));
     // Signs on posts (G14, overhaul 09): the artist's posts (2 frames: lamp off/on) and the boards of every kind of place.
     if (WYGLAD_09) {
-      this.load.spritesheet('szyld-slup-tablica', 'swiat/szyldy/slup_tablica.png', { frameWidth: 12, frameHeight: 40 });
-      this.load.spritesheet('szyld-slup-ramie', 'swiat/szyldy/slup_ramie.png', { frameWidth: 28, frameHeight: 40 });
-      for (const t of new Set(Object.values(SLUPY_SZYLDOW.tablice))) this.load.image(`tablica-${t}`, `swiat/szyldy/tablica_${t}.png`);
+      this.load.spritesheet('szyld-slup-tablica', bootImageUrl('swiat/szyldy/slup_tablica.png'), { frameWidth: 12, frameHeight: 40 });
+      this.load.spritesheet('szyld-slup-ramie', bootImageUrl('swiat/szyldy/slup_ramie.png'), { frameWidth: 28, frameHeight: 40 });
+      for (const t of new Set(Object.values(SLUPY_SZYLDOW.tablice))) this.load.image(`tablica-${t}`, bootImageUrl(`swiat/szyldy/tablica_${t}.png`));
     }
   }
 
@@ -55,22 +70,16 @@ export class BootScene extends Phaser.Scene {
     createHeroAnims(this);
     createHdSprites(this);
     createSlimeAnims(this);
+    // Decode the generator's tiny art and start its workers while the login form is visible.
+    if (TEST && WYGLAD_09) void przygotujRysunkiUpraw();
 
-    const { width, height } = this.scale;
-    const text = this.add
-      .text(width / 2, height / 2, LADOWANIE[0], { fontFamily: 'monospace', fontSize: `${18 * OSTROSC}px`, color: '#ffffff', align: 'center', wordWrap: { width: width - 40 * OSTROSC } })
-      .setOrigin(0.5);
+    const text = this.loadingText.setText(LADOWANIE[0]);
     // Changing lines while loading (content/ladowanie.ts), in a shuffled order after the first.
     const lines = [LADOWANIE[0], ...LADOWANIE.slice(1).sort(() => Math.random() - 0.5)];
     let n = 0;
     const timer = this.time.addEvent({ delay: LADOWANIE_CO_MS, loop: true, callback: () => text.setText(lines[++n % lines.length]) });
-    // The dialogs' font: Phaser draws text once, so it must be loaded first (never wait more than 3 s for it).
-    const font = Promise.race([
-      Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
-      new Promise((ok) => setTimeout(ok, 3000)),
-    ]);
-    Promise.all([CityMap.load('map/lublin.json'), loadWorld(), font])
-      .then(([city]) => {
+    this.worldReady
+      .then((city) => {
         timer.remove();
         rememberMap(city);
         this.registry.set('city', city);
