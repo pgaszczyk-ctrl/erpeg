@@ -4,6 +4,7 @@ import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
 import { PLAYER } from './Player';
 import { SKALA_POSTACI } from '../skala';
+import { TEST } from '../version';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -113,13 +114,17 @@ export class Slime extends Phaser.GameObjects.Sprite {
     // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
     const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(scene, kind) : null;
     const hd = !!hdTex && scene.textures.exists(hdTex);
-    super(scene, x, y, hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
+    const detailedBlob = TEST && kind === 'blob' && scene.textures.exists('szlam-szczegolowy');
+    super(scene, x, y, detailedBlob ? 'szlam-szczegolowy' : hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, detailedBlob ? 'body' : person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
     this.hp = k.hp;
     this.hd = hd;
-    if (hd) {
+    if (detailedBlob) {
+      // Keep the previous body's world width and feet/collision anchor. Static art supplied.
+      this.setScale(12.8 / 514).setOrigin(0.5, 1);
+    } else if (hd) {
       fitHd(this, k.scale);
       this.walkAnim = `${hdTex}-walk`;
     } else {
@@ -130,7 +135,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.home = new Phaser.Math.Vector2(x, y);
     if (hd) this.setFrame('down-0');
     else if (kind === 'smok') this.anims.play('dragon-flap');
-    else if (kind !== 'bandyta' && kind !== 'wojownik') this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
+    else if (!detailedBlob && kind !== 'bandyta' && kind !== 'wojownik') this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
   }
 
   /** How far from its centre a sword swing or a touch reaches it. */

@@ -13,6 +13,7 @@ import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { loadTestVehicles } from '../testTransport';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
+import { TEST } from '../version';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -21,6 +22,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    if (TEST) this.load.image('szlam-szczegolowy', 'proby31/szlam_wodny.png');
     // Item pictures (16×16 pixel art) for shop dialogs.
     for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, itemAssetUrl(id));
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
@@ -42,6 +44,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    // Use a frame of the original PNG: no palette filter or destructive downscale.
+    // The source has large transparent margins and faint isolated pixels outside the body.
+    if (TEST && this.textures.exists('szlam-szczegolowy')) {
+      this.textures.get('szlam-szczegolowy').add('body', 0, 370, 470, 514, 386);
+    }
     createArt(this);
     useArtistArt(this);
     useCropIcons(this);

@@ -7,6 +7,7 @@ import { LUDZIE_W_DESZCZU } from '../content/pogoda';
 import { rng } from '../rng';
 import { rownolegla } from '../gen';
 import { Walker } from './FixedNpcs';
+import { TEST } from '../version';
 
 // People strolling along the cobbled (car) streets: 2 per 200 m. Most only
 // say hello; some challenge the hero to a duel or accept one (GameScene).
@@ -169,6 +170,17 @@ export class Townsfolk {
     const C = LUDZIE_W_DESZCZU.kolory;
     const col = C[seed % C.length];
     const g = this.scene.add.graphics();
+    if (TEST) {
+      // Canopy viewed from above: cover the head and shoulders, leave the legs visible.
+      g.lineStyle(1, 0x1e1a24, 1).lineBetween(2, 0, 4, 9);
+      const points = [[-9,0],[-6,-4],[0,-6],[6,-4],[9,0],[6,4],[0,6],[-6,4]].map(([x,y]) => new Phaser.Math.Vector2(x,y));
+      g.fillStyle(col, 1).fillPoints(points, true);
+      g.fillStyle(0x1e1a24, 0.25).fillPoints(points.slice(2, 7), true);
+      g.lineStyle(0.6, 0x1e1a24, 0.8).strokePoints(points, true);
+      for (const p of points) g.lineBetween(0, 0, p.x, p.y);
+      g.fillStyle(0xe8e0d0, 1).fillRect(-0.5, -0.5, 1, 1);
+      return g;
+    }
     g.lineStyle(0.8, 0x2a2430, 1).lineBetween(3, 0, 5, 10); // handle, down to the hand at the side
     g.fillStyle(col, 1).slice(0, 0, 9, Math.PI, 0, false).fillPath();
     g.fillStyle(0x1e1a24, 0.25).slice(0, 0, 9, Math.PI * 1.5, 0, false).fillPath(); // shade on the right
@@ -239,7 +251,8 @@ export class Townsfolk {
       const dx = f.x - ox, dy = f.y - oy;
       const s = f.sprite;
       s.setPosition(f.x, f.y).setDepth(f.y).setVisible(!scared && visible(f.x, f.y));
-      f.umbrella?.setPosition(f.x, f.y - s.displayHeight * s.originY - 1).setDepth(f.y + 0.5).setVisible(s.visible && s.alpha > 0.5);
+      const canopyY = f.y - s.displayHeight * s.originY + (TEST ? s.displayHeight * 0.3 : -1);
+      f.umbrella?.setPosition(f.x, canopyY).setDepth(s.depth + 0.5).setAlpha(s.alpha).setVisible(s.visible && s.alpha > 0.5);
       if (Math.abs(dx) + Math.abs(dy) < 0.01) {
         s.anims.stop();
         s.setFrame('down-0');

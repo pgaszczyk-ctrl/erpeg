@@ -18,6 +18,7 @@ const HAVE = new Set([...ITEM_PICTURES, ...(import.meta.env?.VITE_TEST === '1' ?
 
 /** Pack 26 trial helmet stays on test; production keeps the previous picture. */
 export function itemAssetUrl(id: string) {
+  if (import.meta.env?.VITE_TEST === '1' && id === 'skorzana_zbroja') return 'proby31/skorzana_zbroja.png';
   return import.meta.env?.VITE_TEST === '1' && id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
 }
 
