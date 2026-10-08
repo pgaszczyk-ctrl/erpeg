@@ -1,48 +1,37 @@
-# Zamówienie 22 — próba modułowych awatarów
+# Awatary — poprawiona próba według uwag z 7.10.2026
 
-Gotowe: głowy 01 i 02 oraz tułowie 01 i 04, każdy w 9 klatkach, z maską przebarwiania. To etap próbny z zamówienia, nie wszystkie 10 głów i 8 tułowi. Cztery połączenia są w podglądach; pozostałe części wymagają odbioru tej próby w grze.
+2 głowy (01, 02), 2 ciała (01, 04), wszystkie 9 klatek i maski. Tułów 01 jest niższy i krępy, tułów 04 wyższy. Głowy nie zawierają szyi. Pozostałe części po akceptacji próby.
 
-## Pliki do importu
+## Nowe składanie
 
-| Plik | Część |
-|---|---|
-| `glowy/glowa_01.png` | Krótkie rozczochrane włosy |
-| `glowy/glowa_02.png` | Wysoki kucyk |
-| `tulowie/tulow_01.png` | Koszula i kamizelka podróżnika |
-| `tulowie/tulow_04.png` | Sukienka z warsztatowym fartuchem |
+Arkusze pozostają 192 × 192, klatki 64 × 64. Wiersze: dół, bok w lewo, góra. Kolumny: krok A, stoi, krok B. Wszystkie współrzędne w metadata.json są lokalne dla klatki i liczone od zera.
 
-Do każdego pliku jest odpowiadający mu `_maska.png`. Obie głowy mieszczą włosy w warstwie głowy; nie potrzebują obecnie dodatkowego `_tyl.png`.
+Każda część ma tablicę `frames` z 9 wpisami, w kolejności wierszami. Głowy podają `broda`, ciała `szyja` i `stopy`. Dla wybranego wpisu:
 
-## Układ i punkty składania
+```js
+const dx = cialo.frames[n].szyja[0] - glowa.frames[n].broda[0];
+const dy = cialo.frames[n].szyja[1] - glowa.frames[n].broda[1];
+// Najpierw tułów w pozycji postaci, następnie głowa w pozycji + [dx,dy].
+```
 
-Arkusz 192 × 192, 3 × 3 klatki po 64 × 64. Rzędy: dół, bok patrzący w lewo, góra. Kolumny: krok A, stoi, krok B. Dla chodu użyć sekwencji 0–1–2–1. Wszystkie części pobierać z tej samej klatki i składać bez osobnego centrowania.
+Usuń tymczasowe opuszczanie każdej głowy o 3 px. Nowe przesunięcie wynika wyłącznie z punktów zaczepienia. Przesuń maskę razem z jej częścią.
 
-Punkt szyi: [32, 39] dla dołu i góry, [31, 39] dla boku. Głowa kończy się na y=39. Tułów zaczyna się od skóry szyi na y=40; stopy są na y=62. Punkt zaczepienia całej postaci: [32, 62]. Nie ma podskoku głowy między kolumnami; ewentualne kołysanie dodać w kodzie do całej złożonej postaci.
+W tej próbie tułów 01 ma szyję na y=43, tułów 04 na y=38, stopy obu na y=62. Głowa ma punkt zaczepienia y=38. Zatem głowa na niższym ciele jest przesunięta o +5 px, na wyższym o 0 px. W widoku bocznym zaczepy są na x=31, w pozostałych na x=32. Te liczby opisują tę próbę; docelowo korzystaj z każdego wpisu metadanych, bez stałych w kodzie.
 
-Kolejność warstw: ewentualne przyszłe włosy-tył → tułów → głowa. Obecnie wystarczą dwie ostatnie warstwy. Broń i tarczę rysować osobno. Dotychczasowe gotowe postacie pozostawić bez zmian.
+Warstwy: opcjonalne włosy-tył → ciało → głowa. Dla głów 01–02 dodatkowa warstwa włosów-tył nie jest potrzebna.
 
-## Maski
+## Maski i eksport
 
-| RGB maski | Znaczenie |
-|---|---|
-| [0, 0, 255] | Skóra: twarz, uszy, szyja, dłonie i odsłonięte nogi |
-| [255, 255, 0] | Włosy głowy |
-| [255, 0, 0] | Główne ubranie: koszula/spodnie lub sukienka |
-| [0, 255, 0] | Drugi kolor: kamizelka lub fartuch i jego paski |
-| Alfa 0 | Nie przebarwiać: kontur, oczy, usta, buty, pas, sakiewka, mosiądz |
+- Niebieski (0,0,255): skóra.
+- Żółty (255,255,0): wszystkie włosy i ich pasemka.
+- Czerwony (255,0,0): koszula/sukienka.
+- Zielony (0,255,0): kamizelka/fartuch.
+- Przezroczystość: obrys, oczy, usta, skóra butów i pasa, metal, mosiądz.
 
-Maski zawierają wyłącznie te czyste barwy i binarną alfę. Barwa maski jest etykietą materiału, nie kolorem wyświetlanym na postaci. Używać jasności piksela z kolorowego sprite’a i wybranego koloru gracza. Nie zastępować całego materiału jednym płaskim kolorem. `paleta_materialow.json` opisuje trzy tony użyte w każdej grupie oraz palety przykładowych przebarwień.
+PNG mają binarną przezroczystość bez wygładzania. Import 1:1, nearest neighbour. Nie nakładaj dotychczasowej łaty maski pasemek głowy 01. Maski są przygotowane według części twarzy i włosów, a przypadkowe tony skóry/ust w obszarze włosów zostały przypisane do włosów. Podgląd niebieskich i blond włosów pokazuje wynik.
 
-`podglad_przebarwienia_x3.png` jest wyłącznie demonstracją działania; gotowych wariantów kolorystycznych nie trzeba importować do gry. W podglądach potwierdzono, że przebarwianie pomija widoczne piksele bez maski i zachowuje przezroczystość.
+## Kontrola
 
-## HUD
+Podglądy obejmują wszystkie 4 połączenia, 36 złożonych klatek i 12 GIF-ów chodu. Testy sprawdzają wymiary, przezroczystość, maski, marginesy, punkty zaczepienia, stopy, ruch nóg oraz spójność sylwetek po składaniu. Kontrola jest wykonana na plikach; integracja i przebarwianie shaderem wymagają ponownego sprawdzenia w grze.
 
-Wziąć głowę z klatki dół/stoi (kolumna 1 licząc od zera). Twarz jest samodzielnie czytelna. Bezpieczny wycinek obejmujący również kucyk to [12, 0, 40, 40] względem tej klatki; dopasować go do okna portretu. Wąski wycinek 36 × 36 może wymagać przesunięcia, aby nie przyciąć kucyka. Przebarwiać portret tą samą maską co głowę na mapie.
-
-## Podglądy i kontrola
-
-`podglad_zlozone_x3.png`: od lewej G01/T01, G01/T04, G02/T01, G02/T04. `podglad_wszystkie_klatki_x3.png` zawiera wszystkie cztery arkusze złożonych postaci. Folder `podglady/` zawiera kompletne złożone arkusze i GIF-y chodu dla trzech kierunków.
-
-Wykonano kontrolę wszystkich 36 klatek części: punktów szyi, stóp, marginesów, masek, konturu i odmienności kroków. Rysunki oraz maski mają ostrą, binarną przezroczystość; używać nearest-neighbor. Testy nie zastępują sprawdzenia shader’a przebarwiania i animacji w działającej grze.
-
-Źródłowe rysunki powstały w generatorze obrazów. Wyeksportowano je z wyrównaniem do szablonu, wspólnymi paletami i maskami materiałów; polecenia są w `PROMPTY.txt`. `sprawdz_paczke.py` wymaga Pillow i zapisuje `WERYFIKACJA.json`.
+Rysunki przygotowano wbudowanym generatorem grafiki. Prompty znajdują się w PROMPTY.txt.

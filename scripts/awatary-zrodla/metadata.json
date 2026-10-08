@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "frame_size": [
     64,
     64
@@ -7,40 +8,445 @@
     192,
     192
   ],
-  "neck": {
-    "dol": [
-      32,
-      39
-    ],
-    "bok": [
-      31,
-      39
-    ],
-    "gora": [
-      32,
-      39
-    ]
-  },
-  "body_first_row": 40,
-  "feet_row": 62,
+  "rows": [
+    "dol",
+    "bok",
+    "gora"
+  ],
+  "columns": [
+    "krok_A",
+    "stoi",
+    "krok_B"
+  ],
+  "coordinate_system": "local frame, zero-based",
   "parts": {
     "glowa_01": {
       "role": "head",
-      "description": "Krótkie rozczochrane włosy",
-      "back_hair_layer": false
+      "file": "glowy/glowa_01.png",
+      "mask": "glowy/glowa_01_maska.png",
+      "neck_included": false,
+      "frames": [
+        {
+          "row": 0,
+          "column": 0,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 0,
+          "column": 1,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 0,
+          "column": 2,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 0,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 1,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 2,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 0,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 1,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 2,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        }
+      ]
     },
     "glowa_02": {
       "role": "head",
-      "description": "Wysoki kucyk",
-      "back_hair_layer": false
+      "file": "glowy/glowa_02.png",
+      "mask": "glowy/glowa_02_maska.png",
+      "neck_included": false,
+      "frames": [
+        {
+          "row": 0,
+          "column": 0,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 0,
+          "column": 1,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 0,
+          "column": 2,
+          "kierunek": "dol",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 0,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 1,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 1,
+          "column": 2,
+          "kierunek": "bok",
+          "broda": [
+            31,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 0,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 1,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        },
+        {
+          "row": 2,
+          "column": 2,
+          "kierunek": "gora",
+          "broda": [
+            32,
+            38
+          ]
+        }
+      ]
     },
     "tulow_01": {
       "role": "body",
-      "description": "Koszula i kamizelka podróżnika"
+      "file": "tulowie/tulow_01.png",
+      "mask": "tulowie/tulow_01_maska.png",
+      "height": 20,
+      "frames": [
+        {
+          "row": 0,
+          "column": 0,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 0,
+          "column": 1,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 0,
+          "column": 2,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 0,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 1,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 2,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 0,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 1,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 2,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            43
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        }
+      ]
     },
     "tulow_04": {
       "role": "body",
-      "description": "Sukienka z warsztatowym fartuchem"
+      "file": "tulowie/tulow_04.png",
+      "mask": "tulowie/tulow_04_maska.png",
+      "height": 25,
+      "frames": [
+        {
+          "row": 0,
+          "column": 0,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 0,
+          "column": 1,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 0,
+          "column": 2,
+          "kierunek": "dol",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 0,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 1,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 1,
+          "column": 2,
+          "kierunek": "bok",
+          "szyja": [
+            31,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 0,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 1,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        },
+        {
+          "row": 2,
+          "column": 2,
+          "kierunek": "gora",
+          "szyja": [
+            32,
+            38
+          ],
+          "stopy": [
+            32,
+            62
+          ]
+        }
+      ]
     }
   }
 }
