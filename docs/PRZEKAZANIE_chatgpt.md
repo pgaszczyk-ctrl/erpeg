@@ -33,3 +33,19 @@
 - Poprawka: `src/map/Zabytki.ts` czeka na zdarzenie CREATE przed umieszczeniem obrazu znajdującego się już w pamięci. Zachowano sprawdzenie aktywności przy pobieraniu obrazu; grafika, wygląd świata i dane mapy bez zmian.
 - Dokumentacja: CLAUDE.md i ten dziennik. Produkcja, wersja i Supabase nietknięte.
 - Sprawdzone: `VITE_TEST=1 npm run build`, następnie `VITE_TEST=1 npx --no-install vite build`, Vite preview oraz Playwright (1280×900 i 390×844). Przy pierwszym wejściu i po restarcie sceny są wszystkie trzy indywidualne budynki; test wymaga widoczności Targów. Zrzuty `*-targi-1.png` obejrzano. Sprawdzenie używa zastępczego logowania i nie dotyka prawdziwej postaci ani bazy.
+
+## 2026-10-08 — zanikanie Targów przy ścianie i mruganie dekoracji
+
+- Zgoda właściciela w czacie: sprawdzić niepotrzebne zanikanie Targów podczas podejścia oraz znikanie/mruganie rzeźby smoka przy chodzeniu. To osobny problem od wcześniej naprawionego braku zabytków po restarcie sceny.
+- Odtworzono zanikanie w 65 dostępnych miejscach przy przednich ścianach hal. Punkt położenia bohatera wypadał kilka pikseli nad podstawą obrazu, choć rzeczywiste stopy były już przed nią. `src/map/Zabytki.ts` uwzględnia teraz przesunięcie stóp `8 × SKALA_POSTACI` zgodne z `fitHd`; obraz zostaje nieprzezroczysty i pod postacią.
+- Dekoracje kopiowały kolejność rysowania i przezroczystość zabytku przed jego aktualizacją: przy zmianie kolejności mogły na jedną klatkę schować się pod dachem. Kopiowanie przeniesiono po aktualizacji budynku, w tej samej klatce; dotyczy rzeźby i trzech szyldów.
+- Sprawdzone: `VITE_TEST=1 npm run build`, następnie `VITE_TEST=1 npx --no-install vite build`, działający Vite preview i Playwright 1280×900 oraz 390×844. W obu rozmiarach wszystkie 65 miejsc pozostaje nieprzezroczyste; faktyczny ruch klawiaturą, zgodność warstw z budynkiem w każdej obserwowanej klatce (275/262 klatki w pierwszej próbie), potrzebna przezroczystość zamku za ścianą, trzy zabytki i cztery dekoracje Targów po restarcie sceny, brak nieobsłużonych błędów JavaScript. Zrzuty przy ścianie i podczas chodzenia obejrzano; pomocniczy skrypt: `/workspace/onboarding-tools/check-targi-occlusion.mjs`, zrzuty `/workspace/onboarding-artifacts/*-targi-*-fixed.png` i `*-castle-behind-fixed.png`.
+- Test używa zastępczego logowania/odpowiedzi Supabase; nie odczytuje ani nie zmienia prawdziwej postaci. Grafiki zabytków, geometria mapy, pliki produkcji i wersji oraz baza pozostają bez zmian. Pliki: `src/map/Zabytki.ts`, CLAUDE.md i ten dziennik.
+- Praca była przerwana awarią uruchomienia środowiska; po zapisaniu i publikacji konfiguracji przez właściciela odzyskano dostęp do plików, Git i API GitHub. Nie wymagano dostępu do Supabase.
+
+## 2026-10-08 — uwagi do stylu modułowych postaci v2
+
+- Polecenie właściciela po zrzucie z gry: nowe postacie są „wyblakłe, wychudzone i bardzo nijakie”; grafik ma wrócić do stylu istniejących postaci.
+- Zapisano pilną poprawkę w `docs/paczka-dla-artysty/ZAMOWIENIE_22_awatary_modulowe.md`: nasycenie i kontrast jak u obecnych bohaterów, pełniejsze sylwetki i krótkie szyje, czytelne twarze/stroje; konkretne wzory ranger/traveler/knight. Zachowano modułowe części i osobne punkty broda/szyja. Najpierw poprawiona próba dwóch głów i dwóch ciał, z porównaniem w tej samej skali, dopiero po akceptacji dalsze części.
+- CLAUDE.md zawiera nową decyzję. Nie zmieniano grafik postaci ani ich kolorów w grze. Sprawdzono treść i ścieżki wzorów; dokumentacja nie zmienia działania aplikacji. Uwagi są zapisane w repozytorium, nie wysyłano wiadomości do zewnętrznego grafika.
+- Pozostało: poprawione rysunki od grafika i ocena właściciela.

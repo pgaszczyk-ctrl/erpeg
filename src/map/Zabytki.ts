@@ -3,6 +3,7 @@ import { PX_PER_M, type CityMap, type Building } from './CityMap';
 import { WYGLAD_09 } from './Podloze09';
 import { ZABYTKI, type Zabytek } from '../content/zabytki';
 import type { MapRenderer } from './MapRenderer';
+import { SKALA_POSTACI } from '../skala';
 
 // Zabytki od grafika (G12, wygląd 09): obraz namalowany na szkielecie z OSM stoi dokładnie na obrysie, jako jeden obiekt
 // sortowany z postaciami po południowej krawędzi obrysu. Budynków pod nim generator nie rysuje (tylko ich cień);
@@ -154,25 +155,28 @@ export class Zabytki {
   update(hx: number, hy: number) {
     const t = performance.now() / 1000;
     for (const s of this.stoja) {
+      const i = Math.floor((hx - s.x0) / s.f), j = Math.floor((hy - 6 - s.y0) / s.f);
+      const kol = i >= 0 && i < s.w ? s.podstawa[i] : -Infinity;
+      // In front of the wall in this column (owner 7.10.2026: „zamek niepotrzebnie znika” when walking past its south
+      // walls): drawn over the castle, which stays whole; behind it (courtyard, north side): see-through where it covers her.
+      // fitHd places the feet 8 * SKALA_POSTACI below the hero's position. Compare the wall with the feet,
+      // not the body anchor: beside Targi the anchor can still overlap the wall while the feet are in front.
+      if (hy + 8 * SKALA_POSTACI >= kol - 1) {
+        const d = Math.min(s.dol, hy - 0.5);
+        if (s.im.depth !== d) s.im.setDepth(d);
+        if (s.im.alpha !== 1) s.im.setAlpha(1);
+      } else {
+        if (s.im.depth !== s.dol) s.im.setDepth(s.dol);
+        const za = j >= 0 && j < s.h && i >= 0 && i < s.w && s.maska[j * s.w + i] === 1;
+        const a = za ? s.z.przeswit : 1;
+        if (s.im.alpha !== a) s.im.setAlpha(a);
+      }
+      // Keep roof decorations with their building in this frame, after its depth and alpha were updated.
       for (const w of s.warstwy) {
         if (w.klatki > 1) w.im.setFrame(`k${Math.floor(t * w.fps + w.faza) % w.klatki}`);
         if (w.im.depth !== s.im.depth + 0.01) w.im.setDepth(s.im.depth + 0.01);
         if (w.im.alpha !== s.im.alpha) w.im.setAlpha(s.im.alpha);
       }
-      const i = Math.floor((hx - s.x0) / s.f), j = Math.floor((hy - 6 - s.y0) / s.f);
-      const kol = i >= 0 && i < s.w ? s.podstawa[i] : -Infinity;
-      // In front of the wall in this column (owner 7.10.2026: „zamek niepotrzebnie znika” when walking past its south
-      // walls): drawn over the castle, which stays whole; behind it (courtyard, north side): see-through where it covers her.
-      if (hy >= kol - 1) {
-        const d = Math.min(s.dol, hy - 0.5);
-        if (s.im.depth !== d) s.im.setDepth(d);
-        if (s.im.alpha !== 1) s.im.setAlpha(1);
-        continue;
-      }
-      if (s.im.depth !== s.dol) s.im.setDepth(s.dol);
-      const za = j >= 0 && j < s.h && i >= 0 && i < s.w && s.maska[j * s.w + i] === 1;
-      const a = za ? s.z.przeswit : 1;
-      if (s.im.alpha !== a) s.im.setAlpha(a);
     }
   }
 }
