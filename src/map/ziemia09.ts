@@ -2,6 +2,7 @@ import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza , koleiny } from '../gen';
 import { rurociagWzdluz } from '../gen';
 import type { Rura09 } from './rury09';
+import { malujKociol } from './kociol09';
 import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
@@ -269,8 +270,12 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   malujPerony(obraz, ids, S, X0, Y0);
   stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID && !(z.mozaiki ?? []).some((m) => naMozaice(m, x, y, 30)); });
   const para: [number, number][] = [];
-  for (const r of z.rury ?? []) for (const q of rurociagWzdluz(obraz, r.pts, X0, Y0, r.seed, 'ziemia', 'ziemia'))
-    if (q[0]>=X0 && q[1]>=Y0 && q[0]<X0+N && q[1]<Y0+N) para.push(q);
+  for (const r of z.rury ?? []) {
+    const steam = rurociagWzdluz(obraz, r.pts, X0, Y0, r.seed, 'ziemia', 'ziemia', true);
+    for (const k of r.kotly ?? []) steam.push(malujKociol(obraz, X0, Y0, k));
+    for (const q of steam)
+      if (q[0]>=X0 && q[1]>=Y0 && q[0]<X0+N && q[1]<Y0+N) para.push(q);
+  }
   for (const p of z.perony) for (const q of wyposazPeron(obraz, X0, Y0, p)) if (q[0] >= X0 && q[1] >= Y0 && q[0] < X0 + N && q[1] < Y0 + N) para.push(q);
   // Drzewa: pnie z okolicy kawałka (korona wysoka, więc też z pasa poniżej), w kawałku tylko te, których podstawa jest w nim.
   const ramki = z.budynki.map((b) => {

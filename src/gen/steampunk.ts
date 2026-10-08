@@ -200,7 +200,7 @@ export type KoniecRury = 'ziemia' | 'dom' | 'nic';
  *  - 'nic': koniec ucięty kołnierzem (gdy rura biegnie dalej w sąsiednim kawałku – wtedy ta sama trasa jest liczona w obu kawałkach).
  * Zwraca punkty, z których może iść para (przecieki przy kołnierzach i studzienkach) – sprite'y w widoku.
  */
-export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, seed: number, poczatek: KoniecRury = 'ziemia', koniec: KoniecRury = 'dom'): [number, number][] {
+export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, seed: number, poczatek: KoniecRury = 'ziemia', koniec: KoniecRury = 'dom', tylkoWidoczne = false): [number, number][] {
   const para: [number, number][] = [];
   const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
   const juz = new Set<number>();
@@ -214,6 +214,11 @@ export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, 
   for (const pass of [0, 1, 2]) {
     let s0 = 0;
     for (const g of seg) {
+      // Long test street routes retain full arc phase but do not rasterise off-chunk pixels.
+      if (tylkoWidoczne && (Math.max(g.ax, g.ax + g.ux * g.L) < ox - 12 ||
+        Math.min(g.ax, g.ax + g.ux * g.L) > ox + o.w + 12 ||
+        Math.max(g.ay, g.ay + g.uy * g.L) < oy - 12 ||
+        Math.min(g.ay, g.ay + g.uy * g.L) > oy + o.h + 12)) { s0 += g.L; continue; }
       let nx = -g.uy, ny = g.ux; if (nx * Lx + ny * Ly < 0) { nx = -nx; ny = -ny; } // n wskazuje stronę oświetloną
       for (let t = 0; t < g.L; t += 0.35) {
         const x = g.ax + g.ux * t, y = g.ay + g.uy * t, s = s0 + t;
