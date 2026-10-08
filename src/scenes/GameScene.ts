@@ -61,8 +61,9 @@ import { krajMapy } from '../kraj';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, LAS, SIEKIERA, type Owoc } from '../content/sklepy';
-import { producerRecipe, foodIcon, isSmith } from '../content/wytworcy';
+import { producerRecipe, foodIcon } from '../content/wytworcy';
 import { PRODUCER_LOCATIONS } from '../content/wytworcy-miejsca';
+import { WORKSHOP_LOCATIONS } from '../content/warsztaty-miejsca';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
@@ -151,6 +152,7 @@ const PLACE_LOOK = {
   gear: { roof: '#c8702a', wall: '#f5e4d6', sign: TEX.signGear },
   camp: { roof: '', wall: '', sign: TEX.tent },
   maker: { roof: '#a86d37', wall: '#f0ddbc', sign: TEX.signShop },
+  workshop: { roof: '#71624f', wall: '#e0d2bc', sign: TEX.signGear },
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
@@ -364,6 +366,7 @@ export class GameScene extends Phaser.Scene {
     this.city = this.registry.get('city') as CityMap;
     if (TEST && !this.city.id.startsWith('w:')) {
       for (const p of PRODUCER_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon);
+      for (const p of WORKSHOP_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon, 'workshop');
     }
     this.enemies = [];
     this.dragons = new Map();
@@ -1817,7 +1820,7 @@ export class GameScene extends Phaser.Scene {
    */
   private signPost(p: CityPlace): Phaser.GameObjects.Image[] | null {
     const S = SLUPY_SZYLDOW;
-    const t = S.tablice[p.kind] ?? (p.kind === 'maker' ? 'sklep' : undefined);
+    const t = S.tablice[p.kind] ?? (p.kind === 'maker' || p.kind === 'workshop' ? 'sklep' : undefined);
     if (!WYGLAD_09 || !t || !this.textures.exists(`tablica-${t}`) || !this.textures.exists('szyld-slup-ramie')) return null;
     const at = this.postSpot(p);
     let h = 0;
@@ -2650,7 +2653,7 @@ export class GameScene extends Phaser.Scene {
   private openPlace(p: CityPlace, venueChosen = false) {
     if (TEST && !venueChosen) {
       const shared = this.city.places.filter(q => Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 1);
-      if (shared.length > 1 && shared.some(q => q.kind === 'maker')) {
+      if (shared.length > 1 && shared.some(q => q.kind === 'maker' || q.kind === 'workshop')) {
         this.dialog({ title: 'Miejsca przy tym wejściu', text: 'Dokąd chcesz wejść?',
           buttons: [...shared.map(q => q.name), 'Wyjdź'],
           onChoose: i => { if (shared[i]) this.openPlace(shared[i], true); } });
@@ -2687,6 +2690,7 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'camp') return this.openCamp(p);
     if (p.kind === 'gear') return this.openGearShop(p);
     if (TEST && p.kind === 'maker') return this.openProducer(p);
+    if (TEST && p.kind === 'workshop') return this.openWorkshop(p);
     // Church, office, police: a random mission.
     const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
     if (known) return this.openMissionDialog(known);
@@ -3449,29 +3453,29 @@ export class GameScene extends Phaser.Scene {
     }, entries, () => this.openGearShop(p), 'Namioty i wyposażenie na kolejną wyprawę.');
   }
 
-  /** Smiths buy only iron ore and wood, and repair owned equipment. */
-  private openSmith(p: CityPlace, tab = 0) {
+  /** Mechanics buy iron ore/wood and repair owned equipment. */
+  private openWorkshop(p: CityPlace, tab = 0) {
     const fixes = repairable();
     const goods = (['ruda_zelaza', 'drewno'] as Owoc[]).filter(f => fruitCount(f) > 0);
     const entries: ShopEntry[] = tab === 0 ? fixes.map((id, index) => ({
       id: `repair:${id}`, index, name: `Napraw: ${item(id)!.nazwa}`, category: 'services',
-      picture: itemPictureUrl(id), description: 'Kowal przywróci sprzętowi pełną wytrzymałość.',
+      picture: itemPictureUrl(id), description: 'Mechanik przywróci sprzętowi pełną wytrzymałość.',
       stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]],
       price: repairCost(id), action: 'NAPRAW', refresh: true,
     })) : goods.map((f, index) => ({
       id: `sell:${f}`, index, name: OWOCE[f].nazwa, category: 'supplies', picture: goodsPicture(f),
-      description: 'Kowal odkupi cały zapas tego surowca z plecaka.',
+      description: 'Mechanik odkupi cały zapas tego surowca z plecaka.',
       stats: [['Liczba', String(fruitCount(f))], ['Za sztukę', `${OWOCE[f].cena} monet`]],
       price: fruitCount(f) * OWOCE[f].cena, action: 'SPRZEDAJ', refresh: true,
     }));
-    const text = tab === 0 ? 'Napraw sprzęt u kowala. Jeśli jest sprawny, naprawa nie jest potrzebna.'
-      : `Kowal skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
+    const text = tab === 0 ? 'Napraw sprzęt u mechanika. Jeśli jest sprawny, naprawa nie jest potrzebna.'
+      : `Mechanik skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
     this.shopDialog(p, {
-      title: `Kuźnia — ${p.name}`, text,
+      title: `Warsztat — ${p.name}`, text,
       tabs: { labels: ['NAPRAW', 'SPRZEDAJ'], active: tab, colors: [0x2f6f9f, 0x3fa34d] },
       buttons: [...entries.map(e => e.name), 'Wyjdź'],
       onChoose: i => {
-        if (i < 0) return this.openSmith(p, -1 - i);
+        if (i < 0) return this.openWorkshop(p, -1 - i);
         if (i >= entries.length) return;
         if (tab === 0) this.repairItem(fixes[i]);
         else {
@@ -3481,25 +3485,25 @@ export class GameScene extends Phaser.Scene {
           earn(value); this.emitHud(); this.save(); this.toast(`Sprzedane za ${value} monet!`);
         }
       },
-    }, entries, () => this.openSmith(p, tab), text);
+    }, entries, () => this.openWorkshop(p, tab), text);
   }
 
-  /** Exchange fruit and money for a saved item; failure never takes either payment. */
+  /** Exchange the recipe's ingredient group and money for a saved item; failures take nothing. */
   private openProducer(p: CityPlace) {
-    if (isSmith(p.name)) return this.openSmith(p);
     const r = producerRecipe(p.name);
     if (!r) return;
     const count = foodCount(r.item);
+    const ingredient = r.group === 'owoce' ? 'owoców' : 'warzyw';
     this.shopDialog(p, {
       title: `Wytwórca — ${p.name}`,
-      text: `Przynieś ${r.fruit} owoców i ${r.coins} monet.`,
+      text: `Przynieś ${r.amount} ${ingredient} i ${r.coins} monet.`,
       buttons: [`${r.icon} Wytwórz: ${r.name}`, 'Wyjdź'],
       onChoose: i => {
         if (i !== 0) return;
         if (session.coins < r.coins) return this.toast(`Za mało monet — potrzeba ${r.coins}.`);
-        if (groupCount('owoce') < r.fruit) return this.toast(`Za mało owoców — potrzeba ${r.fruit}, masz ${groupCount('owoce')}.`);
+        if (groupCount(r.group) < r.amount) return this.toast(`Za mało ${ingredient} — potrzeba ${r.amount}, masz ${groupCount(r.group)}.`);
         const previous = structuredClone(gear.bag);
-        takeGroup('owoce', r.fruit);
+        takeGroup(r.group, r.amount);
         if (!addItem(r.item)) {
           gear.bag = previous;
           return this.toast('Plecak pełny! Zrób miejsce na przygotowane jedzenie.');
@@ -3509,9 +3513,9 @@ export class GameScene extends Phaser.Scene {
         this.toast(`${r.icon} Gotowe: ${r.name}! Masz ${foodCount(r.item)}.`);
       },
     }, [{ id: `make:${r.item}`, index: 0, name: r.name, category: 'food', icon: r.icon,
-      description: 'Przynieś owoce i zapłać za przygotowanie. Jedzenie leczy po miksturach i owocach; możesz też zachować je do zadań.',
-      stats: [['Owoce', `${groupCount('owoce')}/${r.fruit}`], ['Masz', String(count)], ['Leczenie', `+${r.hearts} ${r.hearts === 1 ? 'serce' : r.hearts < 5 ? 'serca' : 'serc'}`]],
-      price: r.coins, costNote: `${r.fruit} OWOCÓW`, action: 'WYTWÓRZ', badge: String(count), refresh: true }],
+      description: `Przynieś ${GRUPY[r.group].nazwa.toLowerCase()} i zapłać za przygotowanie. ${r.group === 'warzywa' ? 'Burger jest wyłącznie warzywny. ' : ''}Jedzenie leczy po miksturach i jadalnych zbiorach; możesz też zachować je do zadań.`,
+      stats: [[GRUPY[r.group].nazwa, `${groupCount(r.group)}/${r.amount}`], ['Masz', String(count)], ['Leczenie', `+${r.hearts} ${r.hearts === 1 ? 'serce' : r.hearts < 5 ? 'serca' : 'serc'}`]],
+      price: r.coins, costNote: `${r.amount} ${ingredient.toUpperCase()}`, action: 'WYTWÓRZ', badge: String(count), refresh: true }],
     () => this.openProducer(p), 'Przynieś składniki. Wytwórca przygotuje jedzenie na drogę.');
   }
 
@@ -4059,7 +4063,8 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       ...req,
       shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries,
-        sellsAmmo: p.kind === 'shop' || p.kind === 'merchant' },
+        sellsAmmo: p.kind === 'shop' || p.kind === 'merchant',
+        emptyText: p.kind === 'workshop' ? subtitle : undefined },
       onChoose: (i) => {
         req.onChoose(i);
         if (entries.find(e => e.index === i)?.refresh) refresh();
@@ -4467,7 +4472,7 @@ export class GameScene extends Phaser.Scene {
     if (!takeItem(food.id)) return;
     this.player.heal(2 * food.leczenie!);
     this.emitHud(); this.save();
-    this.toast(`${foodIcon(food.id) ?? '🥣'} Zjedzone: ${food.nazwa}. +${food.leczenie} serce.`);
+    this.toast(`${foodIcon(food.id) ?? '🥣'} Zjedzone: ${food.nazwa}. +${food.leczenie} ${food.leczenie === 1 ? 'serce' : food.leczenie! < 5 ? 'serca' : 'serc'}.`);
   }
 
   /** A potion: full health and a bonus (blue) heart for a while; it also cures a dragon's poison, burns and acid. */

@@ -139,8 +139,8 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     for (let i = entries.length; i < Math.max(12, Math.ceil(entries.length / 6) * 6); i++) {
       const empty = el('span', 's26-cell empty'); empty.setAttribute('aria-hidden', 'true'); stock.append(empty);
     }
-    if (!entries.length) card.append(el('p', 's26-empty', request.title.startsWith('Kuźnia') ? data.subtitle : selling ? 'Nie masz zbiorów na sprzedaż.'
-      : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.'));
+    if (!entries.length) card.append(el('p', 's26-empty', data.emptyText ?? (selling ? 'Nie masz zbiorów na sprzedaż.'
+      : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.')));
     card.append(stock); row.append(filters, card); assortment.append(row); left.append(assortment);
     const bag = el('details', 's26-backpack'); bag.open = bagOpen ?? window.matchMedia('(min-width: 701px)').matches;
     const summary = el('summary', '', `PLECAK ${gear.bag.length}/${PLECAK.miejsc}`); bag.append(summary);
@@ -182,7 +182,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       detail.append(hero, el('h3', '', 'Zapas pełny'), el('p', 's26-description',
         `Masz po ${STRZALY.kolczan} sztuk posiadanej amunicji. Kolejne zakupy będą dostępne po jej zużyciu.`));
     } else {
-      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', request.title.startsWith('Kuźnia') ? data.subtitle : selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.'));
+      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', data.emptyText ?? (selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.')));
     }
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';

@@ -26,6 +26,7 @@ export interface ShopPresentation {
   banner: 'decathlon' | 'kupiec_01';
   subtitle: string;
   sellsAmmo?: boolean;
+  emptyText?: string;
   entries: ShopEntry[];
 }
 
