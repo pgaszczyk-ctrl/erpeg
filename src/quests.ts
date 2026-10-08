@@ -14,6 +14,9 @@ import { zyciePostaci, poziomPostaci } from './content/historia';
 import { loadSettings } from './settings';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
+import { TEST } from './version';
+import { testLook } from './testAppearance';
+import { setTestVehicle } from './testTransport';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -105,6 +108,8 @@ export const session = {
   daily: {} as Record<string, { d: string; n: number; a: number }>,
   /** How the hero looks (chosen at character creation). */
   look: { ...DEFAULT_LOOK } as Look,
+  /** Preserve the shared production appearance while test uses its separate catalogue. */
+  productionLook: { ...DEFAULT_LOOK } as Look,
 };
 
 export const CHEST_SLOTS = 100;
@@ -170,7 +175,9 @@ export function startSession(r: LoginResult) {
   session.riddles = { ...(p.save.riddles ?? {}) };
   session.seen = { ...(p.save.seen ?? {}) };
   session.daily = { ...(p.save.daily ?? {}) };
-  session.look = cleanLook(p.save.look);
+  session.productionLook = cleanLook(p.save.look);
+  session.look = testLook(session.productionLook, p.name);
+  setTestVehicle('pieszo');
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
   session.startX = p.start_x * k;
@@ -232,7 +239,7 @@ export function saveNow(hp: number) {
   const data: SaveData = {
     coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
-    jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
+    jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
   return api.save(session.token, data, session.exp);
 }

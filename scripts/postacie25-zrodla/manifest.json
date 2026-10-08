@@ -1,0 +1,5685 @@
+{
+  "status": "grafika_do_integracji_i_korekty_animacji",
+  "characters": [
+    {
+      "id": "postac_01",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 0,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_01/dol_krok_1.png",
+          "source_rect": [
+            0,
+            0,
+            119,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_01/dol_stoi.png",
+          "source_rect": [
+            119,
+            0,
+            239,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_01/dol_krok_2.png",
+          "source_rect": [
+            239,
+            0,
+            358,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_01/gora_krok_1.png",
+          "source_rect": [
+            358,
+            0,
+            477,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_01/gora_stoi.png",
+          "source_rect": [
+            477,
+            0,
+            596,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_01/gora_krok_2.png",
+          "source_rect": [
+            596,
+            0,
+            716,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_01/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            0,
+            835,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_01/prawo_stoi.png",
+          "source_rect": [
+            835,
+            0,
+            954,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_01/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            0,
+            1069,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_01/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            0,
+            1193,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_01/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            0,
+            1312,
+            121
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_02",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 1,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_02/dol_krok_1.png",
+          "source_rect": [
+            0,
+            121,
+            119,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_02/dol_stoi.png",
+          "source_rect": [
+            119,
+            121,
+            239,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_02/dol_krok_2.png",
+          "source_rect": [
+            239,
+            121,
+            358,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_02/gora_krok_1.png",
+          "source_rect": [
+            358,
+            121,
+            477,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_02/gora_stoi.png",
+          "source_rect": [
+            477,
+            121,
+            596,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_02/gora_krok_2.png",
+          "source_rect": [
+            596,
+            121,
+            716,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_02/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            121,
+            835,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_02/prawo_stoi.png",
+          "source_rect": [
+            835,
+            121,
+            954,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_02/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            121,
+            1069,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_02/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            121,
+            1193,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_02/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            121,
+            1312,
+            233
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            96
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_03",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 2,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_03/dol_krok_1.png",
+          "source_rect": [
+            0,
+            233,
+            119,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_03/dol_stoi.png",
+          "source_rect": [
+            119,
+            233,
+            239,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_03/dol_krok_2.png",
+          "source_rect": [
+            239,
+            233,
+            358,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_03/gora_krok_1.png",
+          "source_rect": [
+            358,
+            233,
+            477,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_03/gora_stoi.png",
+          "source_rect": [
+            477,
+            233,
+            596,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_03/gora_krok_2.png",
+          "source_rect": [
+            596,
+            233,
+            716,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_03/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            233,
+            835,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_03/prawo_stoi.png",
+          "source_rect": [
+            835,
+            233,
+            954,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_03/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            233,
+            1069,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_03/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            233,
+            1193,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_03/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            233,
+            1312,
+            350
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_04",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 3,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_04/dol_krok_1.png",
+          "source_rect": [
+            0,
+            350,
+            119,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_04/dol_stoi.png",
+          "source_rect": [
+            119,
+            350,
+            239,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_04/dol_krok_2.png",
+          "source_rect": [
+            239,
+            350,
+            358,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_04/gora_krok_1.png",
+          "source_rect": [
+            358,
+            350,
+            477,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_04/gora_stoi.png",
+          "source_rect": [
+            477,
+            350,
+            596,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_04/gora_krok_2.png",
+          "source_rect": [
+            596,
+            350,
+            716,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_04/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            350,
+            835,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_04/prawo_stoi.png",
+          "source_rect": [
+            835,
+            350,
+            954,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_04/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            350,
+            1069,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_04/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            350,
+            1193,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_04/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            350,
+            1312,
+            471
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_05",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 4,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_05/dol_krok_1.png",
+          "source_rect": [
+            0,
+            471,
+            119,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_05/dol_stoi.png",
+          "source_rect": [
+            119,
+            471,
+            239,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_05/dol_krok_2.png",
+          "source_rect": [
+            239,
+            471,
+            358,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_05/gora_krok_1.png",
+          "source_rect": [
+            358,
+            471,
+            477,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_05/gora_stoi.png",
+          "source_rect": [
+            477,
+            471,
+            596,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_05/gora_krok_2.png",
+          "source_rect": [
+            596,
+            471,
+            716,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_05/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            471,
+            835,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_05/prawo_stoi.png",
+          "source_rect": [
+            835,
+            471,
+            954,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_05/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            471,
+            1069,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_05/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            471,
+            1193,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_05/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            471,
+            1312,
+            593
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_06",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 5,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_06/dol_krok_1.png",
+          "source_rect": [
+            0,
+            593,
+            119,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_06/dol_stoi.png",
+          "source_rect": [
+            119,
+            593,
+            239,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_06/dol_krok_2.png",
+          "source_rect": [
+            239,
+            593,
+            358,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_06/gora_krok_1.png",
+          "source_rect": [
+            358,
+            593,
+            477,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_06/gora_stoi.png",
+          "source_rect": [
+            477,
+            593,
+            596,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_06/gora_krok_2.png",
+          "source_rect": [
+            596,
+            593,
+            716,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_06/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            593,
+            835,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_06/prawo_stoi.png",
+          "source_rect": [
+            835,
+            593,
+            954,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_06/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            593,
+            1069,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_06/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            593,
+            1193,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_06/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            593,
+            1312,
+            715
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            86
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_07",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 6,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_07/dol_krok_1.png",
+          "source_rect": [
+            0,
+            715,
+            119,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_07/dol_stoi.png",
+          "source_rect": [
+            119,
+            715,
+            239,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_07/dol_krok_2.png",
+          "source_rect": [
+            239,
+            715,
+            358,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_07/gora_krok_1.png",
+          "source_rect": [
+            358,
+            715,
+            477,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_07/gora_stoi.png",
+          "source_rect": [
+            477,
+            715,
+            596,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_07/gora_krok_2.png",
+          "source_rect": [
+            596,
+            715,
+            716,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_07/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            715,
+            835,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_07/prawo_stoi.png",
+          "source_rect": [
+            835,
+            715,
+            954,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_07/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            715,
+            1069,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_07/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            715,
+            1193,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_07/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            715,
+            1312,
+            823
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            100
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_08",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 7,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_08/dol_krok_1.png",
+          "source_rect": [
+            0,
+            823,
+            119,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_08/dol_stoi.png",
+          "source_rect": [
+            119,
+            823,
+            239,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_08/dol_krok_2.png",
+          "source_rect": [
+            239,
+            823,
+            358,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_08/gora_krok_1.png",
+          "source_rect": [
+            358,
+            823,
+            477,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_08/gora_stoi.png",
+          "source_rect": [
+            477,
+            823,
+            596,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_08/gora_krok_2.png",
+          "source_rect": [
+            596,
+            823,
+            716,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_08/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            823,
+            835,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_08/prawo_stoi.png",
+          "source_rect": [
+            835,
+            823,
+            954,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_08/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            823,
+            1069,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_08/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            823,
+            1193,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_08/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            823,
+            1312,
+            948
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            83
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_09",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 8,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_09/dol_krok_1.png",
+          "source_rect": [
+            0,
+            948,
+            119,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_09/dol_stoi.png",
+          "source_rect": [
+            119,
+            948,
+            239,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_09/dol_krok_2.png",
+          "source_rect": [
+            239,
+            948,
+            358,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_09/gora_krok_1.png",
+          "source_rect": [
+            358,
+            948,
+            477,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_09/gora_stoi.png",
+          "source_rect": [
+            477,
+            948,
+            596,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_09/gora_krok_2.png",
+          "source_rect": [
+            596,
+            948,
+            716,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_09/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            948,
+            835,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_09/prawo_stoi.png",
+          "source_rect": [
+            835,
+            948,
+            954,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_09/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            948,
+            1069,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_09/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            948,
+            1193,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_09/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            948,
+            1312,
+            1065
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            91
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_10",
+      "sheet": "arkusze/zestaw_01.png",
+      "row": 9,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_10/dol_krok_1.png",
+          "source_rect": [
+            0,
+            1065,
+            119,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_10/dol_stoi.png",
+          "source_rect": [
+            119,
+            1065,
+            239,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_10/dol_krok_2.png",
+          "source_rect": [
+            239,
+            1065,
+            358,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_10/gora_krok_1.png",
+          "source_rect": [
+            358,
+            1065,
+            477,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_10/gora_stoi.png",
+          "source_rect": [
+            477,
+            1065,
+            596,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_10/gora_krok_2.png",
+          "source_rect": [
+            596,
+            1065,
+            716,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_10/prawo_krok_1.png",
+          "source_rect": [
+            716,
+            1065,
+            835,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_10/prawo_stoi.png",
+          "source_rect": [
+            835,
+            1065,
+            954,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_10/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            1065,
+            1069,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            22,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_10/hulajnoga_prawo.png",
+          "source_rect": [
+            1069,
+            1065,
+            1193,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            18,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_10/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            1065,
+            1312,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            74
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": true
+        }
+      ]
+    },
+    {
+      "id": "postac_11",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 0,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_11/dol_krok_1.png",
+          "source_rect": [
+            0,
+            0,
+            119,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_11/dol_stoi.png",
+          "source_rect": [
+            119,
+            0,
+            239,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_11/dol_krok_2.png",
+          "source_rect": [
+            239,
+            0,
+            359,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_11/gora_krok_1.png",
+          "source_rect": [
+            359,
+            0,
+            481,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_11/gora_stoi.png",
+          "source_rect": [
+            481,
+            0,
+            599,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_11/gora_krok_2.png",
+          "source_rect": [
+            599,
+            0,
+            718,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_11/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            0,
+            837,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_11/prawo_stoi.png",
+          "source_rect": [
+            837,
+            0,
+            954,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_11/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            0,
+            1073,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_11/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            0,
+            1193,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_11/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            0,
+            1312,
+            123
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_12",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 1,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_12/dol_krok_1.png",
+          "source_rect": [
+            0,
+            123,
+            119,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_12/dol_stoi.png",
+          "source_rect": [
+            119,
+            123,
+            239,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_12/dol_krok_2.png",
+          "source_rect": [
+            239,
+            123,
+            359,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_12/gora_krok_1.png",
+          "source_rect": [
+            359,
+            123,
+            481,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_12/gora_stoi.png",
+          "source_rect": [
+            481,
+            123,
+            599,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_12/gora_krok_2.png",
+          "source_rect": [
+            599,
+            123,
+            718,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_12/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            123,
+            837,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_12/prawo_stoi.png",
+          "source_rect": [
+            837,
+            123,
+            954,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_12/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            123,
+            1073,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_12/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            123,
+            1193,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_12/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            123,
+            1312,
+            243
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_13",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 2,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_13/dol_krok_1.png",
+          "source_rect": [
+            0,
+            243,
+            119,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_13/dol_stoi.png",
+          "source_rect": [
+            119,
+            243,
+            239,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_13/dol_krok_2.png",
+          "source_rect": [
+            239,
+            243,
+            359,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_13/gora_krok_1.png",
+          "source_rect": [
+            359,
+            243,
+            481,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_13/gora_stoi.png",
+          "source_rect": [
+            481,
+            243,
+            599,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_13/gora_krok_2.png",
+          "source_rect": [
+            599,
+            243,
+            718,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_13/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            243,
+            837,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_13/prawo_stoi.png",
+          "source_rect": [
+            837,
+            243,
+            954,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_13/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            243,
+            1073,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_13/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            243,
+            1193,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_13/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            243,
+            1312,
+            366
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            85
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_14",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 3,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_14/dol_krok_1.png",
+          "source_rect": [
+            0,
+            366,
+            119,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_14/dol_stoi.png",
+          "source_rect": [
+            119,
+            366,
+            239,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_14/dol_krok_2.png",
+          "source_rect": [
+            239,
+            366,
+            359,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_14/gora_krok_1.png",
+          "source_rect": [
+            359,
+            366,
+            481,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_14/gora_stoi.png",
+          "source_rect": [
+            481,
+            366,
+            599,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_14/gora_krok_2.png",
+          "source_rect": [
+            599,
+            366,
+            718,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_14/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            366,
+            837,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_14/prawo_stoi.png",
+          "source_rect": [
+            837,
+            366,
+            954,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_14/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            366,
+            1073,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_14/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            366,
+            1193,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_14/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            366,
+            1312,
+            487
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_15",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 4,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_15/dol_krok_1.png",
+          "source_rect": [
+            0,
+            487,
+            119,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_15/dol_stoi.png",
+          "source_rect": [
+            119,
+            487,
+            239,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_15/dol_krok_2.png",
+          "source_rect": [
+            239,
+            487,
+            359,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_15/gora_krok_1.png",
+          "source_rect": [
+            359,
+            487,
+            481,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_15/gora_stoi.png",
+          "source_rect": [
+            481,
+            487,
+            599,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_15/gora_krok_2.png",
+          "source_rect": [
+            599,
+            487,
+            718,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_15/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            487,
+            837,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_15/prawo_stoi.png",
+          "source_rect": [
+            837,
+            487,
+            954,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_15/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            487,
+            1073,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_15/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            487,
+            1193,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_15/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            487,
+            1312,
+            616
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            79
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_16",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 5,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_16/dol_krok_1.png",
+          "source_rect": [
+            0,
+            616,
+            119,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_16/dol_stoi.png",
+          "source_rect": [
+            119,
+            616,
+            239,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_16/dol_krok_2.png",
+          "source_rect": [
+            239,
+            616,
+            359,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_16/gora_krok_1.png",
+          "source_rect": [
+            359,
+            616,
+            481,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_16/gora_stoi.png",
+          "source_rect": [
+            481,
+            616,
+            599,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_16/gora_krok_2.png",
+          "source_rect": [
+            599,
+            616,
+            718,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_16/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            616,
+            837,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_16/prawo_stoi.png",
+          "source_rect": [
+            837,
+            616,
+            954,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_16/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            616,
+            1073,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_16/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            616,
+            1193,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_16/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            616,
+            1312,
+            735
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_17",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 6,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_17/dol_krok_1.png",
+          "source_rect": [
+            0,
+            735,
+            119,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_17/dol_stoi.png",
+          "source_rect": [
+            119,
+            735,
+            239,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_17/dol_krok_2.png",
+          "source_rect": [
+            239,
+            735,
+            359,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_17/gora_krok_1.png",
+          "source_rect": [
+            359,
+            735,
+            481,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_17/gora_stoi.png",
+          "source_rect": [
+            481,
+            735,
+            599,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_17/gora_krok_2.png",
+          "source_rect": [
+            599,
+            735,
+            718,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_17/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            735,
+            837,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_17/prawo_stoi.png",
+          "source_rect": [
+            837,
+            735,
+            954,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_17/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            735,
+            1073,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_17/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            735,
+            1193,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_17/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            735,
+            1312,
+            855
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            88
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_18",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 7,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_18/dol_krok_1.png",
+          "source_rect": [
+            0,
+            855,
+            119,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_18/dol_stoi.png",
+          "source_rect": [
+            119,
+            855,
+            239,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_18/dol_krok_2.png",
+          "source_rect": [
+            239,
+            855,
+            359,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_18/gora_krok_1.png",
+          "source_rect": [
+            359,
+            855,
+            481,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_18/gora_stoi.png",
+          "source_rect": [
+            481,
+            855,
+            599,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_18/gora_krok_2.png",
+          "source_rect": [
+            599,
+            855,
+            718,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_18/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            855,
+            837,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_18/prawo_stoi.png",
+          "source_rect": [
+            837,
+            855,
+            954,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_18/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            855,
+            1073,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_18/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            855,
+            1193,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_18/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            855,
+            1312,
+            974
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            89
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_19",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 8,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_19/dol_krok_1.png",
+          "source_rect": [
+            0,
+            974,
+            119,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_19/dol_stoi.png",
+          "source_rect": [
+            119,
+            974,
+            239,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_19/dol_krok_2.png",
+          "source_rect": [
+            239,
+            974,
+            359,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_19/gora_krok_1.png",
+          "source_rect": [
+            359,
+            974,
+            481,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_19/gora_stoi.png",
+          "source_rect": [
+            481,
+            974,
+            599,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_19/gora_krok_2.png",
+          "source_rect": [
+            599,
+            974,
+            718,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_19/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            974,
+            837,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_19/prawo_stoi.png",
+          "source_rect": [
+            837,
+            974,
+            954,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_19/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            974,
+            1073,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_19/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            974,
+            1193,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_19/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            974,
+            1312,
+            1095
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            87
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_20",
+      "sheet": "arkusze/zestaw_02.png",
+      "row": 9,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_20/dol_krok_1.png",
+          "source_rect": [
+            0,
+            1095,
+            119,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_20/dol_stoi.png",
+          "source_rect": [
+            119,
+            1095,
+            239,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_20/dol_krok_2.png",
+          "source_rect": [
+            239,
+            1095,
+            359,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_20/gora_krok_1.png",
+          "source_rect": [
+            359,
+            1095,
+            481,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            19,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_20/gora_stoi.png",
+          "source_rect": [
+            481,
+            1095,
+            599,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_20/gora_krok_2.png",
+          "source_rect": [
+            599,
+            1095,
+            718,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_20/prawo_krok_1.png",
+          "source_rect": [
+            718,
+            1095,
+            837,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_20/prawo_stoi.png",
+          "source_rect": [
+            837,
+            1095,
+            954,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            21,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_20/prawo_krok_2.png",
+          "source_rect": [
+            954,
+            1095,
+            1073,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_20/hulajnoga_prawo.png",
+          "source_rect": [
+            1073,
+            1095,
+            1193,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_20/welocyped_prawo.png",
+          "source_rect": [
+            1193,
+            1095,
+            1312,
+            1199
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            20,
+            104
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_21",
+      "sheet": "arkusze/zestaw_03.png",
+      "row": 0,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_21/dol_krok_1.png",
+          "source_rect": [
+            0,
+            0,
+            146,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_21/dol_stoi.png",
+          "source_rect": [
+            146,
+            0,
+            295,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            5,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_21/dol_krok_2.png",
+          "source_rect": [
+            295,
+            0,
+            443,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            6,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_21/gora_krok_1.png",
+          "source_rect": [
+            443,
+            0,
+            587,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_21/gora_stoi.png",
+          "source_rect": [
+            587,
+            0,
+            732,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_21/gora_krok_2.png",
+          "source_rect": [
+            732,
+            0,
+            876,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_21/prawo_krok_1.png",
+          "source_rect": [
+            876,
+            0,
+            1022,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_21/prawo_stoi.png",
+          "source_rect": [
+            1022,
+            0,
+            1168,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_21/prawo_krok_2.png",
+          "source_rect": [
+            1168,
+            0,
+            1314,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_21/hulajnoga_prawo.png",
+          "source_rect": [
+            1314,
+            0,
+            1460,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_21/welocyped_prawo.png",
+          "source_rect": [
+            1460,
+            0,
+            1606,
+            196
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            12
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_22",
+      "sheet": "arkusze/zestaw_03.png",
+      "row": 1,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_22/dol_krok_1.png",
+          "source_rect": [
+            0,
+            196,
+            146,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_22/dol_stoi.png",
+          "source_rect": [
+            146,
+            196,
+            295,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            5,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_22/dol_krok_2.png",
+          "source_rect": [
+            295,
+            196,
+            443,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            6,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_22/gora_krok_1.png",
+          "source_rect": [
+            443,
+            196,
+            587,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_22/gora_stoi.png",
+          "source_rect": [
+            587,
+            196,
+            732,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_22/gora_krok_2.png",
+          "source_rect": [
+            732,
+            196,
+            876,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_22/prawo_krok_1.png",
+          "source_rect": [
+            876,
+            196,
+            1022,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_22/prawo_stoi.png",
+          "source_rect": [
+            1022,
+            196,
+            1168,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_22/prawo_krok_2.png",
+          "source_rect": [
+            1168,
+            196,
+            1314,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_22/hulajnoga_prawo.png",
+          "source_rect": [
+            1314,
+            196,
+            1460,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_22/welocyped_prawo.png",
+          "source_rect": [
+            1460,
+            196,
+            1606,
+            394
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            10
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_23",
+      "sheet": "arkusze/zestaw_03.png",
+      "row": 2,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_23/dol_krok_1.png",
+          "source_rect": [
+            0,
+            394,
+            146,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_23/dol_stoi.png",
+          "source_rect": [
+            146,
+            394,
+            295,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            5,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_23/dol_krok_2.png",
+          "source_rect": [
+            295,
+            394,
+            443,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            6,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_23/gora_krok_1.png",
+          "source_rect": [
+            443,
+            394,
+            587,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_23/gora_stoi.png",
+          "source_rect": [
+            587,
+            394,
+            732,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_23/gora_krok_2.png",
+          "source_rect": [
+            732,
+            394,
+            876,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_23/prawo_krok_1.png",
+          "source_rect": [
+            876,
+            394,
+            1022,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_23/prawo_stoi.png",
+          "source_rect": [
+            1022,
+            394,
+            1168,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_23/prawo_krok_2.png",
+          "source_rect": [
+            1168,
+            394,
+            1314,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_23/hulajnoga_prawo.png",
+          "source_rect": [
+            1314,
+            394,
+            1460,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_23/welocyped_prawo.png",
+          "source_rect": [
+            1460,
+            394,
+            1606,
+            587
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            15
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_24",
+      "sheet": "arkusze/zestaw_03.png",
+      "row": 3,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_24/dol_krok_1.png",
+          "source_rect": [
+            0,
+            587,
+            146,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_24/dol_stoi.png",
+          "source_rect": [
+            146,
+            587,
+            295,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            5,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_24/dol_krok_2.png",
+          "source_rect": [
+            295,
+            587,
+            443,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            6,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_24/gora_krok_1.png",
+          "source_rect": [
+            443,
+            587,
+            587,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_24/gora_stoi.png",
+          "source_rect": [
+            587,
+            587,
+            732,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_24/gora_krok_2.png",
+          "source_rect": [
+            732,
+            587,
+            876,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_24/prawo_krok_1.png",
+          "source_rect": [
+            876,
+            587,
+            1022,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_24/prawo_stoi.png",
+          "source_rect": [
+            1022,
+            587,
+            1168,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_24/prawo_krok_2.png",
+          "source_rect": [
+            1168,
+            587,
+            1314,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_24/hulajnoga_prawo.png",
+          "source_rect": [
+            1314,
+            587,
+            1460,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_24/welocyped_prawo.png",
+          "source_rect": [
+            1460,
+            587,
+            1606,
+            782
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            13
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    },
+    {
+      "id": "postac_25",
+      "sheet": "arkusze/zestaw_03.png",
+      "row": 4,
+      "frames": [
+        {
+          "pose": "dol_krok_1",
+          "file": "postacie/postac_25/dol_krok_1.png",
+          "source_rect": [
+            0,
+            782,
+            146,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_stoi",
+          "file": "postacie/postac_25/dol_stoi.png",
+          "source_rect": [
+            146,
+            782,
+            295,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            5,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "dol_krok_2",
+          "file": "postacie/postac_25/dol_krok_2.png",
+          "source_rect": [
+            295,
+            782,
+            443,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            6,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_1",
+          "file": "postacie/postac_25/gora_krok_1.png",
+          "source_rect": [
+            443,
+            782,
+            587,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_stoi",
+          "file": "postacie/postac_25/gora_stoi.png",
+          "source_rect": [
+            587,
+            782,
+            732,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "gora_krok_2",
+          "file": "postacie/postac_25/gora_krok_2.png",
+          "source_rect": [
+            732,
+            782,
+            876,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            8,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_1",
+          "file": "postacie/postac_25/prawo_krok_1.png",
+          "source_rect": [
+            876,
+            782,
+            1022,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_stoi",
+          "file": "postacie/postac_25/prawo_stoi.png",
+          "source_rect": [
+            1022,
+            782,
+            1168,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "prawo_krok_2",
+          "file": "postacie/postac_25/prawo_krok_2.png",
+          "source_rect": [
+            1168,
+            782,
+            1314,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "hulajnoga_prawo",
+          "file": "postacie/postac_25/hulajnoga_prawo.png",
+          "source_rect": [
+            1314,
+            782,
+            1460,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        },
+        {
+          "pose": "welocyped_prawo",
+          "file": "postacie/postac_25/welocyped_prawo.png",
+          "source_rect": [
+            1460,
+            782,
+            1606,
+            979
+          ],
+          "canvas": [
+            160,
+            208
+          ],
+          "source_offset": [
+            7,
+            11
+          ],
+          "verified_animation": false,
+          "vehicle_embedded": false
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Zestaw 01 ostatnie dwie kolumny zawierają hulajnogi razem z postaciami; ostatnia kolumna NIE jest prawidłowym jeźdźcem welocypedu.",
+    "Klatki chodu wymagają przeglądu i poprawy zakresu ruchu.",
+    "Nie dostarczono oddzielnych głów, masek kolorów ani kotwic pojazdów."
+  ]
+}

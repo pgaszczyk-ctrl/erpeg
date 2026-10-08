@@ -211,7 +211,7 @@ export function heroSkin(postac: number | undefined, name: string): Postac {
   if (postac !== undefined && BOHATEROWIE[postac]) return BOHATEROWIE[postac];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return BOHATEROWIE[h % PIERWSI_BOHATEROWIE];
+  return BOHATEROWIE[h % (TEST ? BOHATEROWIE.length : PIERWSI_BOHATEROWIE)];
 }
 
 // ------------------------------------------------------------------ making the sheets

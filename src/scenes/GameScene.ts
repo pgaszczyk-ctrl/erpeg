@@ -7,6 +7,7 @@ import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art'
 import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../screen';
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
+import { TestRide, vehicleSpeed } from '../testTransport';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -262,6 +263,7 @@ export class GameScene extends Phaser.Scene {
   city!: CityMap;
   player!: Player;
   private mapView!: MapRenderer;
+  private testRide!: TestRide;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
   private missions: ResolvedMission[] = [];
@@ -369,6 +371,7 @@ export class GameScene extends Phaser.Scene {
     this.rescueDeclined = false;
     this.toldPlace = null;
     this.mapView = new MapRenderer(this, this.city);
+    this.testRide = new TestRide(this);
     this.zabytki = new Zabytki(this, this.city, this.mapView);
     // Góry v2 (world maps with terrain): blur, fog, shrinking and parallax of what lies below, on the graphics card.
     this.gory = GoryFiltr.make(this, this.city);
@@ -736,6 +739,7 @@ export class GameScene extends Phaser.Scene {
     const moving = kd.x !== 0 || kd.y !== 0;
     if (lingering || this.story.busy || this.demoRun?.busy || this.anomalia?.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
+    this.player.vel.scale(vehicleSpeed());
     if (this.player.vel.x || this.player.vel.y) {
       // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
       this.player.vel.scale(PODLOZE[this.city.surfaceAt(this.player.x, this.player.y)]);
@@ -887,6 +891,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.player.setDepth(this.player.y);
+    this.testRide.update(this.player, session.look.postac, session.name);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y), (n) => session.riddles[n.id] === today());
