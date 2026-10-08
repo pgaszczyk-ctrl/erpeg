@@ -11,6 +11,7 @@ import { demoFromLink, startDemo } from '../demo';
 import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
+import { loadTestVehicles } from '../testTransport';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
@@ -25,6 +26,7 @@ export class BootScene extends Phaser.Scene {
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
     this.load.spritesheet('szklo-peka', 'items/szklany_miecz_peka.png', { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);
+    loadTestVehicles(this);
     // The artist's ground and roof textures (content/swiat.ts).
     for (const f of MAMY) this.load.image(`swiat-${f}`, `swiat/${f}.png`);
     // Vegetables from the fields: the artist's ripe plant as their icon (order 12).

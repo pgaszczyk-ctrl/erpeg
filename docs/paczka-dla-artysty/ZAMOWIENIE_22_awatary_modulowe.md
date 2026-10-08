@@ -1,5 +1,7 @@
 # Zamówienie 22: bohater z klocków – 10 głów, 8 tułowi, zmienne kolory
 
+**Nieaktualne od 8.10.2026:** właściciel zastąpił generator głów i ciał wyborem 25 gotowych postaci z paczki `exp_lore_25_postaci_pojazdy_programista.zip`. Ubrania pozostają namalowane; ewentualne maski tylko dla skóry i włosów. Dalsze zamówienia części modułowych wstrzymane. Aktualny opis: `ZAMOWIENIE_25_postacie_pojazdy.md`.
+
 ## Pilna poprawka stylu po próbie v2 (8.10.2026)
 
 Właściciel obejrzał nowe postacie w grze: **„wyblakłe, wychudzone i bardzo nijakie”**. Próba v2 nie ma zaakceptowanego stylu. Wróć do wyglądu istniejących bohaterów Exp-lore, zwłaszcza łuczniczki („blondynki”), wędrowca i rycerza; wzory: `public/postacie/ranger.png`, `traveler.png`, `knight.png` oraz `22_awatary/przyklad_skladania_x3.png`. Zachowaj modułowe głowy i ciała oraz osobne punkty `broda` / `szyja` opisane niżej.

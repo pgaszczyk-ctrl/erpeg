@@ -15,6 +15,9 @@ import { heroSkin } from '../sprites';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
+import { TEST } from '../version';
+import { rememberTestLook } from '../testAppearance';
+import { testVehicle, setTestVehicle, type TestVehicle } from '../testTransport';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -23,6 +26,24 @@ function skinPicker(changed: () => void) {
   const row = el('div', 'c-skin');
   const pic = el('div', 'c-skin-pic');
   pic.style.backgroundImage = `url(postacie/${now.plik}.png)`;
+  if (TEST) {
+    const list = document.createElement('select');
+    list.setAttribute('aria-label', 'Wybierz postać');
+    BOHATEROWIE.forEach((p, n) => {
+      const option = document.createElement('option');
+      option.textContent = p.nazwa;
+      option.value = String(n);
+      option.selected = n === i;
+      list.append(option);
+    });
+    list.addEventListener('change', () => {
+      session.look = { ...session.look, postac: Number(list.value) };
+      rememberTestLook(session.look, session.name);
+      changed();
+    });
+    row.append(pic, list);
+    return row;
+  }
   const go = (d: number) => {
     session.look = { ...session.look, postac: (i + d + BOHATEROWIE.length) % BOHATEROWIE.length };
     changed();
@@ -32,6 +53,23 @@ function skinPicker(changed: () => void) {
   const next = el('button', 'c-btn', '▶') as HTMLButtonElement;
   next.onclick = () => go(1);
   row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
+  return row;
+}
+
+function vehiclePicker(changed: () => void) {
+  const row = el('label', 'c-skin');
+  row.append(el('span', '', 'Podróżowanie'));
+  const list = document.createElement('select');
+  list.setAttribute('aria-label', 'Podróżowanie');
+  for (const [value, name] of [['pieszo', 'Pieszo'], ['rower', 'Rower'], ['hulajnoga', 'Hulajnoga parowa']]) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = name;
+    option.selected = value === testVehicle;
+    list.append(option);
+  }
+  list.onchange = () => { setTestVehicle(list.value as TestVehicle); changed(); };
+  row.append(list);
   return row;
 }
 
@@ -249,6 +287,7 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Kufer: Postać
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
+    if (TEST) s.append(vehiclePicker(() => { onChange(); render(); }));
     if (NOWE_POSTACIE) s.append(skinPicker(() => {
       onChange();
       render();

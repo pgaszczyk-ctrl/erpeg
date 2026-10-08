@@ -31,7 +31,7 @@ export interface Postac {
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
-export const BOHATEROWIE: Postac[] = [
+const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
   { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
@@ -43,19 +43,21 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'wojowniczka', nazwa: 'Wojowniczka z kucykiem', plik: 'bohater_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'zwiadowca', nazwa: 'Chłopiec w pelerynie', plik: 'bohater_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
   { id: 'srebrna', nazwa: 'Srebrnowłosa', plik: 'bohater_10', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
-  // Bohaterowie z klocków, próba zamówienia 22 (scripts/awatary-sklad.py: głowa + tułów + kolory z masek, punkty broda/szyja z metadata.json).
-  // Tylko serwer testowy: na końcu listy, więc numery dotychczasowych bohaterów się nie zmieniają.
-  ...(import.meta.env?.VITE_TEST === '1' ? ([
-  { id: 'skladababa', nazwa: 'Rozczochrany wędrowiec (próba)', plik: 'sklad_01_01_0', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladababe', nazwa: 'Siwy wędrowiec (próba)', plik: 'sklad_01_01_4', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladabaeb', nazwa: 'Rozczochrany w fartuchu (próba)', plik: 'sklad_01_04_1', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladabaec', nazwa: 'Złotowłosy w fartuchu (próba)', plik: 'sklad_01_04_2', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladacabb', nazwa: 'Kucyk w kamizelce (próba)', plik: 'sklad_02_01_1', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacabc', nazwa: 'Ruda z kucykiem (próba)', plik: 'sklad_02_01_2', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacaea', nazwa: 'Kucyk w fartuchu (próba)', plik: 'sklad_02_04_0', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacaed', nazwa: 'Siwy kucyk w fartuchu (próba)', plik: 'sklad_02_04_3', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  ] as Postac[]) : []),
+
 ];
+
+/** Complete, fixed looks from the owner's new pack, replacing the hero list on test only. */
+export const BOHATEROWIE_25: Postac[] = Array.from({ length: 25 }, (_, i) => ({
+  id: `lista${String.fromCharCode(97 + i)}`,
+  nazwa: `Postać ${String(i + 1).padStart(2, '0')}`,
+  plik: `lista25_${String(i + 1).padStart(2, '0')}`,
+  bokWPrawo: false,
+  skala: 0.36,
+  maska: false,
+  przebarwiaj: false,
+  ostry: true,
+}));
+export const BOHATEROWIE = import.meta.env?.VITE_TEST === '1' ? BOHATEROWIE_25 : DOTYCHCZASOWI_BOHATEROWIE;
 
 /** Characters made before the pack 04–10 got one of the first three by their name: they keep it. */
 export const PIERWSI_BOHATEROWIE = 3;
