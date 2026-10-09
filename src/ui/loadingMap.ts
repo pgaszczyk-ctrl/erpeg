@@ -12,7 +12,8 @@ let menu: HTMLElement | null = null;
 let video: HTMLVideoElement | null = null;
 let poster: HTMLImageElement | null = null;
 let resize: (() => void) | null = null;
-let panOffset = 0.2;
+let overviewOffset = 0.08;
+let panOffset = 0.12;
 const EUROPE = { x: 655 / 1280, y: 211 / 720 };
 
 const root = () => document.getElementById('loading-map');
@@ -135,14 +136,15 @@ function initialFrame(r: HTMLElement) {
 }
 function flightFrames(r: HTMLElement) {
   return [
-    { offset: 0, transform: initialFrame(r), easing: 'cubic-bezier(.4, 0, .2, 1)' },
+    { offset: 0, transform: initialFrame(r), easing: 'linear' },
+    { offset: overviewOffset, transform: initialFrame(r), easing: 'cubic-bezier(.4, 0, .2, 1)' },
     { offset: panOffset, transform: frame(r, point!, initialScale(r), portrait(r)), easing: 'cubic-bezier(.6, 0, .9, .4)' },
     { offset: 1, transform: frame(r, point!, finalScale(r)) },
   ];
 }
 
 /** The destination is resolved by travel.ts from this character's real save. */
-export async function flyToGameLocation(lat: number, lon: number) {
+export async function flyToGameLocation(lat: number, lon: number, mapReady: Promise<void>) {
   const r = root();
   if (!r || r.hidden || !loadingGame()) return;
   point = punktNaMapieWczytywania(lat, lon);
@@ -153,14 +155,38 @@ export async function flyToGameLocation(lat: number, lon: number) {
   // The supplied movie runs at 9 fps. During movement use its still frame,
   // then resume the lamp animation if terrain preparation takes longer.
   video?.pause();
+  await fade;
+  if (r.hidden || finished || r.dataset.phase === 'error') return;
   if (!reduced()) {
     const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
     const distance = Math.hypot((point.x - from.x) * 1280, (point.y - from.y) * 720);
     const panMs = Math.min(650, Math.max(250, distance * 1.6));
-    const duration = panMs + 1400;
-    panOffset = panMs / duration;
+    const overviewMs = 1000, zoomMs = 10_000, zoomStart = overviewMs + panMs;
+    const duration = zoomStart + zoomMs;
+    overviewOffset = overviewMs / duration;
+    panOffset = zoomStart / duration;
     flight = r.querySelector<HTMLElement>('.lm-plate')!.animate(flightFrames(r), { duration, easing: 'linear', fill: 'forwards' });
-    await flight.finished.catch(() => {});
+    const current = flight, done = current.finished.catch(() => {});
+    let terrainReady = false, finishing = false;
+    void mapReady.then(() => { terrainReady = true; });
+    const began = performance.now();
+    while (flight === current && current.playState !== 'finished' && current.playState !== 'idle' && !finished && r.dataset.phase !== 'error') {
+      const time = Number(current.currentTime ?? 0);
+      if (time >= zoomStart && !finishing) {
+        const progress = Math.max(0, Math.min(1, (time - zoomStart) / zoomMs));
+        if (terrainReady) {
+          // A gentle tail towards the destination once the actual first view is painted.
+          const remaining = Math.max(1800, (1-progress)*3600, zoomStart+3600-(performance.now()-began));
+          current.updatePlaybackRate((duration-time)/remaining);
+          finishing = true;
+        } else if (progress > 0.6) {
+          // Keep approaching instead of parking at maximum zoom while workers are busy.
+          current.updatePlaybackRate(Math.max(0.001, (1-progress)*0.8));
+        }
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+    await done;
   } else {
     r.querySelector<HTMLElement>('.lm-plate')!.style.transform = frame(r, point, finalScale(r));
   }

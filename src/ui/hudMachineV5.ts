@@ -21,7 +21,7 @@ export function createMachineV5(p: Parts) {
   const images: Record<string, HTMLImageElement> = {};
   let last: HudView | null = null;
   let portrait: Portrait = null;
-  let s = 1, narrow = false, shift = 0, height = 120;
+  let s = 1, pixelPitch = 1, narrow = false, shift = 0, height = 120;
   let sockets: number[][] = [];
   let alive = true;
   const names = ['zbiorniki','leczenie_ramka','rurki','zawor','manometr','jablko','mikstura','aparat','questy',...Array.from({length:6},(_,i)=>`menu_socket_${i}`)];
@@ -49,19 +49,29 @@ export function createMachineV5(p: Parts) {
   const buttonAt = (b: HTMLButtonElement, point: number[], size=48) => at(b,point[0]-size/2,point[1]-size/2,size,size);
   const iconAt = (b: HTMLButtonElement) => {
     const im = b.querySelector('img');
-    if (im) Object.assign(im.style,{left:`${13*s}px`,top:`${13*s}px`,width:`${22*s}px`,height:`${22*s}px`});
+    if (im) Object.assign(im.style,{left:`${12*s}px`,top:`${12*s}px`,width:`${24*s}px`,height:`${24*s}px`,imageRendering:'auto'});
   };
   function layout() {
-    narrow = window.innerWidth < 380;
-    s = window.matchMedia('(pointer: coarse)').matches ? 1 : 1.5;
+    const dpr = window.devicePixelRatio || 1;
+    const desired = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900 ? 1 : 2;
+    // One source pixel occupies a whole number of display pixels, including 125% OS scaling.
+    pixelPitch = Math.max(1, Math.ceil(desired * dpr - 0.001));
+    s = pixelPitch / dpr;
+    if (268 * s + 16 > window.innerWidth) s = 1; // rare low-DPI narrow touch displays
+    narrow = 372 * s + 16 > window.innerWidth;
     shift = narrow ? -50 : 0;
-    height = narrow ? 158 : 120;
+    height = narrow ? 166 : 120;
     sockets = Array.from({length:6},(_,i)=>narrow ? [253+shift+(i%2)*52,32+Math.floor(i/2)*50] : [253+(i%3)*52,32+Math.floor(i/3)*50]);
     // On narrow screens slot reading order stays avatar/camera/quests/bike/weapon/scooter.
-    const origin = window.innerWidth/2 - (195+shift)*s;
+    const origin = Math.round((window.innerWidth/2 - (195+shift)*s) * dpr) / dpr;
     Object.assign(p.m.style,{left:`${origin}px`,right:'auto',bottom:'calc(8px + env(safe-area-inset-bottom))',width:`${390*s}px`,height:`${height*s}px`});
-    canvas.width = Math.round(390*s*(devicePixelRatio||1));
-    canvas.height = Math.round(height*s*(devicePixelRatio||1));
+    // Compose once on the artist's grid, then enlarge that bitmap once in CSS.
+    canvas.width = 390;
+    canvas.height = height;
+    canvas.style.imageRendering = Math.abs(s*dpr-Math.round(s*dpr)) < 0.001 ? 'pixelated' : 'auto';
+    p.m.style.transform = '';
+    const y = p.m.getBoundingClientRect().y;
+    p.m.style.transform = `translateY(${(Math.round(y*dpr)-y*dpr)/dpr}px)`;
     canvas.style.pointerEvents = 'none';
     buttonAt(p.heal,[195+shift,63],64);
     const av = p.m.querySelector<HTMLButtonElement>('.hud-av')!;
@@ -71,7 +81,7 @@ export function createMachineV5(p: Parts) {
     // With just a scooter, use the first vehicle slot, leaving the reserve empty.
     if (p.vehicles.rower.hidden && !p.vehicles.hulajnoga.hidden) buttonAt(p.vehicles.hulajnoga,sockets[3]);
     iconAt(p.wpn); iconAt(p.vehicles.rower); iconAt(p.vehicles.hulajnoga);
-    at(p.avPic,sockets[0][0]-11,sockets[0][1]-11,22,22);
+    at(p.avPic,sockets[0][0]-12,sockets[0][1]-12,24,24);
     at(p.count,181+shift,103,28,16);
     p.count.style.font = `700 ${12*s}px/${15*s}px 'Pixelify Sans',monospace`;
     p.count.style.padding = '0';
@@ -85,7 +95,9 @@ export function createMachineV5(p: Parts) {
   function pic(name:string,x:number,y:number,w?:number,h?:number) {
     const im=images[name];
     if (!im?.complete || !im.naturalWidth) return;
+    c.imageSmoothingEnabled = (w !== undefined && w < im.naturalWidth) || (h !== undefined && h < im.naturalHeight);
     c.drawImage(im,x,y,w??im.naturalWidth,h??im.naturalHeight);
+    c.imageSmoothingEnabled = false;
   }
   function fluid(rect:number[],fraction:number,color:string,shine:string) {
     const [x,y,w,h]=rect, f=Math.max(0,Math.min(1,fraction));
@@ -97,8 +109,7 @@ export function createMachineV5(p: Parts) {
   function draw(v:HudView) {
     last=v;
     if (document.hidden) return;
-    const ratio=s*(devicePixelRatio||1);
-    c.setTransform(ratio,0,0,ratio,0,0);c.clearRect(0,0,390,height);c.imageSmoothingEnabled=false;
+    c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,390,height);c.imageSmoothingEnabled=false;
     pic('rurki',shift,0);pic('zbiorniki',76+shift,48);pic('leczenie_ramka',163+shift,25);
     pic('zawor',151+shift,52,10,10);pic('manometr',214+shift,20,16,16);
     // Matching brass connectors between the original independent sockets.
@@ -120,16 +131,16 @@ export function createMachineV5(p: Parts) {
     XP.forEach((r,i)=>fluid(r,v.expShare*4-i,'#d79a32','#f3c465'));
     c.globalAlpha=v.noHeal?.4:1;
     if(v.preparedFood && v.potions<=0){c.font='26px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(v.preparedFood.icon,195+shift,63);}
-    else pic(v.potions>0?'mikstura':'jablko',179+shift,47,32,32);
+    else pic(v.potions>0?'mikstura':'jablko',183+shift,51,24,24);
     c.globalAlpha=1;
-    pic('aparat',sockets[1][0]-11,sockets[1][1]-11,22,22);
-    pic('questy',sockets[2][0]-11,sockets[2][1]-11,22,22);
+    pic('aparat',sockets[1][0]-12,sockets[1][1]-12,24,24);
+    pic('questy',sockets[2][0]-12,sockets[2][1]-12,24,24);
     for(const [i,b] of [[3,p.vehicles.rower],[p.vehicles.rower.hidden?3:5,p.vehicles.hulajnoga]] as const) if(!b.hidden && b.getAttribute('aria-pressed')==='true'){
       c.strokeStyle='#ffe7a0';c.lineWidth=2;c.strokeRect(sockets[i][0]-16,sockets[i][1]-16,32,33);
     }
   }
   function paintAvatar(){
-    const n=Math.max(1,Math.round(22*s*(devicePixelRatio||1))),cv=p.avPic;
+    const n=Math.max(1,Math.round(24*s*(devicePixelRatio||1))),cv=p.avPic;
     cv.width=cv.height=n;const g=cv.getContext('2d')!;g.imageSmoothingEnabled=false;
     if(portrait)g.drawImage(portrait.src,portrait.sx,portrait.sy,portrait.sw,portrait.sh,0,0,n,n);
   }
