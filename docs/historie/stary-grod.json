@@ -152,7 +152,7 @@
     },
     "adres": "Grodzka 11",
     "tytul": "Sen Leszka Czarnego",
-    "opis": "Mechanik-Historyk: „Fundamenty starej fary iskrzą i nie dają się uziemić. Gdybym tylko mógł zmierzyć to zjawisko… Siarka by je wywołała. Alchemik przy Bramie Krakowskiej ma odczynnik.”",
+    "opis": "Mechanik-Historyk: „Fundamenty dawnej świątyni iskrzą i nie dają się uziemić. Gdybym tylko mógł zmierzyć to zjawisko… Siarka by je wywołała. Alchemik przy Bramie Krakowskiej ma odczynnik.”",
     "zadanie": {
       "typ": "rozmowa",
       "miejsce": "Plac Władysława Łokietka 3",
@@ -625,7 +625,7 @@
             ]
           },
           {
-            "tekst": "Na dnie stoi mosiężna śluza z zamkiem akustycznym. Pod ścianą leży stara torba architekta. W notatniku: „Klucz to dźwięk. Zna go tylko ojciec Dominik z klasztoru przy Złotej”."
+            "tekst": "Na dnie stoi mosiężna śluza z zamkiem akustycznym. Pod ścianą leży stara torba architekta. W notatniku: „Klucz to dźwięk. Zna go tylko ojciec Dominik ze świątyni przy Złotej”."
           }
         ]
       }
@@ -653,7 +653,7 @@
     "zadanie": {
       "typ": "pokonaj",
       "miejsce": "",
-      "cel": "Przegoń chochliki przy klasztorze"
+      "cel": "Przegoń chochliki przy świątyni"
     },
     "etapy": [
       {
@@ -661,7 +661,7 @@
         "miejsce": "",
         "ile": 4,
         "wrog": "glut",
-        "cel": "Przegoń chochliki przy klasztorze"
+        "cel": "Przegoń chochliki przy świątyni"
       },
       {
         "typ": "podnies",

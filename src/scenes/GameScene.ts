@@ -10,7 +10,9 @@ import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
 import { LOOK_TOP, LOOK_H } from '../look';
-import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
+import { touchInput, keyboardDir, consumeAttack, attackAim, resetTouch, resetKeys } from '../controls';
+import { loadingGame, loadingMapError } from '../ui/loadingMap';
+import { letGo } from '../guard';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime, ENEMY_KINDS, PREDKOSC_WROGOW } from '../objects/Slime';
 import { CityMap, PX_PER_M } from '../map/CityMap';
@@ -345,6 +347,7 @@ export class GameScene extends Phaser.Scene {
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
   private demoRun: DemoRun | null = null;
+  private introSince: number | null = null;
   /** Dragons fighting the hero (content: objects/Dragon.ts). */
   private dragons = new Map<Enemy, { update(now: number, dt: number): void; destroy(): void }>();
   /** States from dragons' attacks (SmokAI): until when, and the next damage tick. */
@@ -360,6 +363,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.introSince = null;
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
@@ -724,6 +728,11 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ loop
 
+  /** Called by the login transition; workers keep drawing while gameplay waits. */
+  firstViewReady() {
+    return this.mapView.firstViewReady(this.cameras.main) && !this.load.isLoading();
+  }
+
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
     this.mapView.update(this.cameras.main);
@@ -733,6 +742,18 @@ export class GameScene extends Phaser.Scene {
     if (now >= this.nextTiles && this.player) {
       this.nextTiles = now + 700;
       this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
+    }
+    if (loadingGame()) {
+      this.introSince ??= now;
+      this.updateFog();
+      this.zabytki.update(this.player.x, this.player.y);
+      return;
+    }
+    if (this.introSince !== null) {
+      if (this.lingerUntil) this.lingerUntil += now - this.introSince;
+      this.introSince = null;
+      resetTouch();
+      resetKeys();
     }
     if (this.player.isDead || this.leaving || this.travelling) return;
     if (this.demoRun) {
@@ -2453,7 +2474,10 @@ export class GameScene extends Phaser.Scene {
     // Every session starts in Lublin, at home.
     const lublin = cachedMap('lublin') ?? this.city;
     game.registry.set('city', lublin);
-    showMenu(lublin, reopen).then(() => enterWorld(game));
+    showMenu(lublin, reopen).then(() => enterWorld(game)).catch((err: Error) => {
+      report('map-start', err.message);
+      loadingMapError(err.message, () => { letGo(); location.reload(); });
+    });
   }
 
   /** Puts what was explored on this map into the session (saved with the game). */

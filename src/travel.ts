@@ -8,6 +8,8 @@ import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
 import { takeResume } from './update';
+import { flyToGameLocation, loadingGame, revealLoadedGame } from './ui/loadingMap';
+import type { GameScene } from './scenes/GameScene';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -148,11 +150,36 @@ export async function enterWorld(game: Phaser.Game) {
     }
   }
   session.arrive = at ? { x: at.x, y: at.y } : null;
+  const intro = loadingGame();
+  const a = session.abandoned;
+  const start = a?.enemies?.length && (a.m ?? 'lublin') === city.id && !session.immortal
+    ? a : session.arrive ?? { x: session.startX, y: session.startY };
+  const ll = city.toLatLon(start.x, start.y);
+  // Fade/zoom and the real terrain preparation run at the same time.
+  const flight = intro ? flyToGameLocation(ll.lat, ll.lon) : Promise.resolve();
   await prepareMap(city);
   // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
   if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
   game.registry.set('city', city);
+  const scene = game.scene.getScene('game') as GameScene;
+  const created = intro ? new Promise<void>((resolve) => scene.events.once('create', resolve)) : Promise.resolve();
   game.scene.start('game');
+  if (!intro) return;
+  await created;
+  const deadline = performance.now() + 60_000;
+  const ready = async () => {
+    // Query the current camera on every check, including after a phone rotation.
+    while (!scene.firstViewReady()) {
+      if (performance.now() > deadline) throw new Error('Wczytywanie trwa zbyt długo. Spróbuj ponownie.');
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+  };
+  await Promise.all([flight, ready()]);
+  // Tiles/landmarks arriving during the zoom may have asked for another drawing.
+  await ready();
+  // Allow the completed textures to pass through a rendered frame before fading the cover.
+  await new Promise<void>((resolve) => game.events.once('postrender', resolve));
+  await revealLoadedGame();
 }
 
 export function mapName(id: string) {

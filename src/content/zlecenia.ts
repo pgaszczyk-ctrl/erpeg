@@ -1,5 +1,5 @@
 // ============================================================================
-//  ZLECENIA LOSOWE – kościoły, urzędy i komendy policji.
+//  ZLECENIA LOSOWE – świątynie, urzędy i komendy policji.
 //  Przy każdym uruchomieniu gry w danym miejscu czeka nowe zlecenie,
 //  złożone z jednego z poniższych szablonów. {adres} i {ulica} gra podmienia
 //  na prawdziwe miejsce w okolicy, {zloczynca} na imię z listy.
@@ -20,18 +20,18 @@ export interface SzablonZlecen {
 }
 
 export const KOSCIOL: SzablonZlecen = {
-  tytuly: ['Prośba proboszcza', 'Sprawa parafialna', 'Pomoc dla sąsiada'],
+  tytuly: ['Prośba opiekuna świątyni', 'Sprawa świątyni', 'Pomoc dla sąsiada'],
   pokonaj: [
-    'Proboszcz prosi o pomoc: chochliki oblazły ogródek przy {adres}. Przegoń je, a Bóg ci wynagrodzi.',
+    'Opiekun świątyni prosi o pomoc: chochliki oblazły ogródek przy {adres}. Przegoń je, mieszkańcy będą ci wdzięczni.',
     'Pani z chóru skarży się, że pod {adres} kręcą się psotne chochliki. Zrób z nimi porządek.',
   ],
   idz: [
-    'Zanieś pani Halinie spod {adres} ciasto z kiermaszu parafialnego.',
-    'Trzeba doręczyć zaproszenie na odpust pod adres {adres}.',
+    'Zanieś pani Halinie spod {adres} ciasto z kiermaszu przy świątyni.',
+    'Trzeba doręczyć zaproszenie na święto przy świątyni pod adres {adres}.',
   ],
   zbierz: [
-    'Siostry gotują zupę dla ubogich. Przynieś z lasu {ile} {towar}.',
-    'Na kiermasz parafialny brakuje {ile} {towar}. Las jest niedaleko – pomożesz?',
+    'Opiekunowie świątyni gotują zupę dla potrzebujących. Przynieś z lasu {ile} {towar}.',
+    'Na kiermasz przy świątyni brakuje {ile} {towar}. Las jest niedaleko – pomożesz?',
   ],
   odleglosc: [150, 700],
 };
@@ -81,7 +81,7 @@ export const NAGRODA = { pokonaj: 15, idz: 6, zaKazde100m: 2 };
 /**
  * Zlecenia „przynieś z lasu”: co można zamówić, ile sztuk (od–do), nagroda za
  * sztukę (więcej niż w sklepie) i jak daleko może być las (metry).
- * Kościół zamawia grzyby, urząd drewno.
+ * Świątynia zamawia grzyby, urząd drewno.
  */
 export const ZBIERANIE = {
   // formy: 2–4 sztuki, 5 i więcej sztuk

@@ -452,7 +452,7 @@ function show(host: CharacterHost) {
     const s = section('Dziennik zadań');
     const quests = host.quests();
     const log = el('div', 'c-quests');
-    if (!quests.length) log.append(el('div', 'c-quest', 'Brak aktywnych zadań. Zapytaj w kościele, urzędzie, na policji albo porozmawiaj z mieszkańcami.'));
+    if (!quests.length) log.append(el('div', 'c-quest', 'Brak aktywnych zadań. Zapytaj w świątyni, urzędzie, na policji albo porozmawiaj z mieszkańcami.'));
     for (const q of quests) {
       const row = el('div', 'c-quest');
       const dot = el('span', 'c-qdot', q.main ? '⭐' : '');

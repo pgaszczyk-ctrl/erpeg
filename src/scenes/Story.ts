@@ -426,7 +426,7 @@ export class Story {
   goal(): { text: string; pos: { x: number; y: number } | null } | null {
     const st = this.state;
     const k = (s: number) => PX_PER_M / (s || PX_PER_M);
-    if (st.st === 'cien') return { text: 'Popytaj o cienie w szkołach i kościołach', pos: null };
+    if (st.st === 'cien') return { text: 'Popytaj o cienie w szkołach i świątyniach', pos: null };
     if (st.st === 'uczelnia' && st.target) {
       if (st.target.m !== this.city.id) return { text: `Wróć i idź do: ${st.target.name}`, pos: null };
       return { text: `Idź do: ${st.target.name}`, pos: { x: st.target.x * k(st.target.s), y: st.target.y * k(st.target.s) } };

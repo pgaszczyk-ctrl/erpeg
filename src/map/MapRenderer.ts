@@ -419,6 +419,9 @@ interface Chunk {
   img: Phaser.GameObjects.Image;
   /** Which request for its ground (overhaul 09) the chunk waits for; older answers are dropped. */
   ver?: number;
+  /** Latest request whose pixels have reached the canvas texture. */
+  paintedVer?: number;
+  error?: Error;
   /** Overhaul 09: the tree crowns standing in this chunk (sprites, sorted by depth with the characters). */
   crowns?: Korona[];
   /** Overhaul 09: steam puffs from the platform pipes and gauges. */
@@ -543,6 +546,20 @@ export class MapRenderer {
     }
   }
 
+  /** The visible terrain has both its map data and its finished picture. */
+  firstViewReady(cam: Phaser.Cameras.Scene2D.Camera) {
+    const v = cam.worldView;
+    if (!this.map.ready({ x0: v.x, y0: v.y, x1: v.right, y1: v.bottom })) return false;
+    for (let x = Math.floor(v.x / CHUNK); x <= Math.floor(v.right / CHUNK); x++) {
+      for (let y = Math.floor(v.y / CHUNK); y <= Math.floor(v.bottom / CHUNK); y++) {
+        const key = `${x},${y}`, c = this.chunks.get(key);
+        if (c?.error) throw c.error;
+        if (!c || !c.img.visible || this.stale.has(key) || (WYGLAD_09 && c.paintedVer !== c.ver)) return false;
+      }
+    }
+    return this.wysokie.firstViewReady(v);
+  }
+
   /** Forces a redraw of every chunk (e.g. after mission highlights change). */
   invalidate() {
     for (const [, c] of this.chunks) {
@@ -566,6 +583,7 @@ export class MapRenderer {
     }
     const fresh = chunk.key !== k;
     chunk.key = k;
+    chunk.error = undefined;
     const x0 = cx * CHUNK;
     const y0 = cy * CHUNK;
     const ctx = chunk.tex.getContext();
@@ -594,6 +612,9 @@ export class MapRenderer {
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
         c.img.setPosition(x0, y0).setVisible(true);
+        c.paintedVer = ver;
+      }).catch((error: unknown) => {
+        if (c.key === k && c.ver === ver) c.error = error instanceof Error ? error : new Error(String(error));
       });
       return;
     }

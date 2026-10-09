@@ -13,6 +13,8 @@ import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { bootImageUrl } from '../bootImages';
+import { hideLoadingMap, loadingMapError } from '../ui/loadingMap';
+import { letGo } from '../guard';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -85,12 +87,17 @@ export class BootScene extends Phaser.Scene {
         // A QR code's demo link: straight into the game, no menu, no character.
         const qr = demoFromLink();
         if (qr) {
+          hideLoadingMap();
           text.setText('Budzisz się…');
           return startDemo(this.game, qr);
         }
         text.setText('');
         return showMenu(city).then(() => enterWorld(this.game));
       })
-      .catch((err: Error) => (timer.remove(), text.setText(`Nie udało się wczytać mapy.\n${err.message}\n\nOdśwież stronę.`)));
+      .catch((err: Error) => {
+        timer.remove();
+        text.setText('');
+        loadingMapError(err.message, () => { letGo(); location.reload(); });
+      });
   }
 }

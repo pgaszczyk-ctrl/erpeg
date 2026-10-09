@@ -23,6 +23,7 @@ interface Wysoki {
   refs: Set<object>;
   /** Liczy się (pierwszy raz albo po zmianie dnia i nocy). */
   czeka: boolean;
+  error?: Error;
   im?: Phaser.GameObjects.Image;
   tex?: Phaser.Textures.CanvasTexture;
   /** Piksele bez prześwitu (ABGR). */
@@ -80,6 +81,23 @@ export class Wysokie {
     for (const [id, w] of this.wszystkie) this.usun(id, w);
   }
 
+  /** Only buildings reaching the first view need to be ready before it is revealed. */
+  firstViewReady(view: Phaser.Geom.Rectangle) {
+    const G = GEN_DOTS;
+    for (const w of this.wszystkie.values()) {
+      const xs = w.b.r.filter((_, i) => i % 2 === 0), ys = w.b.r.filter((_, i) => i % 2 === 1);
+      // While its image is being drawn, use the footprint plus walls and roof decorations.
+      const x0 = w.im ? w.x0 / G : (Math.min(...xs) - w.b.h * 0.35 - 40) / G;
+      const y0 = w.im ? w.y0 / G : (Math.min(...ys) - w.b.h - 80) / G;
+      const x1 = w.im ? (w.x0 + w.w) / G : (Math.max(...xs) + 40) / G;
+      const y1 = w.im ? (w.y0 + w.h) / G : (Math.max(...ys) + 40) / G;
+      if (x1 <= view.x || x0 >= view.right || y1 <= view.y || y0 >= view.bottom) continue;
+      if (w.error) throw w.error;
+      if (w.czeka || !w.im) return false;
+    }
+    return true;
+  }
+
   private usun(id: number, w: Wysoki) {
     this.wszystkie.delete(id);
     w.refs.clear();
@@ -97,6 +115,7 @@ export class Wysokie {
 
   private licz(id: number, w: Wysoki, miasto: WielkoscMiasta) {
     w.czeka = true;
+    w.error = undefined;
     const noc = w.noc;
     void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(w.b, noc, miasto)).then((g) => {
       w.czeka = false;
@@ -105,7 +124,7 @@ export class Wysokie {
       this.zdejmij(w);
       const key = `bud09-${licznik++}`;
       const tex = this.scene.textures.addCanvas(key, g.obraz);
-      if (!tex) return;
+      if (!tex) throw new Error('Nie udało się narysować budynku');
       tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
       const ctx = tex.getContext();
       const dane = ctx.getImageData(0, 0, g.obraz.width, g.obraz.height);
@@ -116,6 +135,10 @@ export class Wysokie {
       w.im = this.scene.add.image(g.x0 / GEN_DOTS, g.y0 / GEN_DOTS, key).setOrigin(0).setScale(1 / GEN_DOTS).setDepth(w.dol / GEN_DOTS);
       w.para = g.wyrzuty.map((z) => this.korony.wyrzut(z));
       for (const p of w.para) p.setDepth(Math.max(p.depth, w.dol / GEN_DOTS + 0.5));
+    }).catch((error: unknown) => {
+      if (this.wszystkie.get(id) !== w) return;
+      w.czeka = false;
+      w.error = error instanceof Error ? error : new Error(String(error));
     });
   }
 

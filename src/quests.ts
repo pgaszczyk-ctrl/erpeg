@@ -17,6 +17,7 @@ import { odrostDrzew } from './map/drzewa09';
 import { TEST } from './version';
 import { testLook } from './testAppearance';
 import { setTestVehicle } from './testTransport';
+import { odswiezSlownictwoMisji } from './content/slownictwo';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -148,7 +149,7 @@ export async function loadContent() {
       api.content(),
       new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000)),
     ]);
-    session.extra = list.map(({ sekret, ...m }) => m);
+    session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(m));
     session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
   } catch {
     session.extra = [];
@@ -211,7 +212,7 @@ export function startSession(r: LoginResult) {
   session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
   session.gen = {};
   session.libRiddles = 0;
-  for (const m of p.save.gen ?? []) session.gen[m.id] = m;
+  for (const m of p.save.gen ?? []) session.gen[m.id] = odswiezSlownictwoMisji(m);
   session.nonce = Math.floor(Math.random() * 1e9);
   odrostDrzew(); // ścięte drzewa i strząśnięte owoce wracają przy każdym logowaniu
   const a = r.abandoned ?? null;
@@ -388,7 +389,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
         id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
         opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? ' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)' : ''),
         zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: `Przynieś ${ilu} z lasu` },
-        zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Bóg zapłać.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
+        zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Dziękujemy za pomoc.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
         nagroda: ZBIERANIE.premia + ile * z.zaSztuke,
       };
     }
@@ -402,7 +403,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń chochliki spod ${adres}` }
       : { typ: 'idz', miejsce: adres, cel: `Idź pod ${adres}` },
     zakonczenie: place.kind === 'church'
-      ? 'Bóg zapłać! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
+      ? 'Dziękujemy za pomoc! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
       : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
     nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
   };

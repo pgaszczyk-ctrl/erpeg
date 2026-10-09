@@ -17,6 +17,7 @@ import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 import { WSKRZESZENIE, DIAMENT } from '../content/sklepy';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
+import { showLoginMap, beginMapIntro } from './loadingMap';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -52,6 +53,7 @@ function formatDate(iso: string | null) {
 
 /** `reopen`: go straight to this character (e.g. after dying in the game). */
 export function showMenu(city: CityMap, reopen?: { name: string; code: string }): Promise<void> {
+  showLoginMap();
   void loadSettings(); // the resurrection price etc. (also awaited by loadContent)
   const contentReady = loadContent(); // Read-only content while the player fills in the form.
   return new Promise((resolve) => {
@@ -80,7 +82,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const play = async (r: LoginResult) => {
       await contentReady;
       startSession(r);
-      root?.remove();
+      if (root) beginMapIntro(root);
       root = null;
       resolve();
     };

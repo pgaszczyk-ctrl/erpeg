@@ -26,6 +26,7 @@ import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
 import { OSTROSC, przyblizenie } from '../screen';
+import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
@@ -151,6 +152,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
+      if (loadingGame()) return;
       if (typingInField(e)) return;
       if (this.shop) {
         if (e.key === 'Escape') { e.preventDefault(); this.chooseShop(this.shop.lastIndex); }
@@ -486,7 +488,7 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
+    const waiting = loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
@@ -608,6 +610,7 @@ export class UIScene extends Phaser.Scene {
   private dialogOpenedAt = 0;
 
   private onDialogTap(x: number, y: number) {
+    if (loadingGame()) return;
     if (this.shop) return;
     if (!this.hasDialog && !this.overlay && onMenuButton(x, y)) {
       this.openGameMenu();
@@ -672,6 +675,7 @@ export class UIScene extends Phaser.Scene {
 
   /** Top-left menu: leave the game properly. */
   private openGameMenu() {
+    if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
     if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
     this.showDialog({
