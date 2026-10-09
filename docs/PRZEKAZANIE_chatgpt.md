@@ -316,6 +316,8 @@
 - To wizualna próba skrótu istniejącego obrazu, także ścian/drzew/pociągów, nie pełna izometria z dodatkowymi fasadami. Powiększenie widocznego pionowego obszaru może zmienić liczbę obiektów w kadrze. Geografia, kolizje, dachy/kolory/ozdoby i cache danych OSM dotychczasowe. Bez PNG, SQL, zmian graczy, PRODUKCJA/src/version.ts/produkcja.
 - Lokalna budowa i Playwright przeszły: 1280×900/390×844, przełącznik w tej samej pozycji i przy tym samym zoomX, ratio zoomY0.72, proporcje bohatera, rzeczywisty ruch klawiaturą/dotykiem, telefon poziomo/resize komputera, budżet fragmentów i brak błędów JS; zrzuty obu rzutów obejrzano. Dalsze sprawdzenie/publikacja poniżej.
 
+- Przejęto zwykłym merge równoległy 3a9b4fd (HUD/tempo ładowania), zachowując oba wpisy przekazania; pełny npm run build i osobny vite build ponownie przeszły. Układ publikacji `/test2/`→`/test/`: domy Lublina i próbka PMTiles Krakowa na telefonie, stare budynki, gotowość, limit6, bez błędów JS/RPC. Dwie wysokości poza próbką Krakowa celowo niedostępne — dotychczasowy fallback działa. Regresja zwykłej gry na komputerze/telefonie po merge: menu/test-badge, demo Krakowa, ruch, Kufer, zero pageerrors; RPC przechwycone. Zrzuty obu rzutów, Krakowa i Kuffra obejrzano. Nie przedstawiać tej kontroli na SwiftShader jako pomiaru FPS fizycznego telefonu.
+
 ## 2026-10-09 — czytelność HUD27 i tempo budzenia
 
 - Właściciel zgłosił zbyt mały HUD na komputerze i nierówne piksele na telefonie oraz zbyt szybki zoom kończący się przed gotowością mapy.

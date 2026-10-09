@@ -18,7 +18,9 @@ Próba nowych dachów nie przypomina ilustracji referencyjnej, została uznana z
 
 ## Kontrola aktualnej wersji
 
-Pełny npm run build i osobny vite build. Lokalny Playwright1280×900 oraz390×844: Obecny/Niższy kąt, identyczne miejsce/poziomy zoom, zoomY ratio0.72, zachowana ekranowa wysokość bohatera, rzeczywiste sterowanie klawiaturą/dotykiem, obrót telefonu/resize komputera, budżet fragmentów i brak błędów JS. Zrzuty obu rzutów obejrzano. Dalsze potwierdzenie publikacji poniżej.
+Pełny npm run build i osobny vite build, również po przejęciu równoległych poprawek HUD/ładowania (3a9b4fd). Lokalny Playwright1280×900 oraz390×844: Obecny/Niższy kąt, identyczne miejsce/poziomy zoom, zoomY ratio0.72, zachowana ekranowa wysokość bohatera, rzeczywiste sterowanie klawiaturą/dotykiem, obrót telefonu/resize komputera, budżet fragmentów i brak błędów JS. Zrzuty obu rzutów obejrzano.
+
+Układ publikacji `/test2/` z bazą `/test/` sprawdzony na domach Lublina i próbce PMTiles Krakowa: stare budynki, gotowy kadr, limit6 fragmentów, zero błędów JS i połączeń Supabase. Dwie wysokości poza lokalną próbką celowo niedostępne; zadziałał dotychczasowy fallback. Regresja zwykłej gry po merge: menu/test-badge, demo Krakowa, ruch i Kufer na obu ekranach, bez błędów JS; RPC przechwycone. To kontrole funkcjonalne na programowym GPU, nie nowy pomiar wydajności fizycznych urządzeń. Dalsze potwierdzenie publikacji poniżej.
 
 ---
 
