@@ -12,6 +12,8 @@ let menu: HTMLElement | null = null;
 let video: HTMLVideoElement | null = null;
 let poster: HTMLImageElement | null = null;
 let resize: (() => void) | null = null;
+let panOffset = 0.2;
+const EUROPE = { x: 655 / 1280, y: 211 / 720 };
 
 const root = () => document.getElementById('loading-map');
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -56,8 +58,13 @@ export function showLoginMap() {
   r.dataset.phase = 'menu';
   r.querySelector('.lm-error')?.remove();
   const plate = r.querySelector<HTMLElement>('.lm-plate')!;
-  plate.style.transform = '';
+  plate.style.transform = initialFrame(r);
   plate.style.opacity = '';
+  resize = () => {
+    if (flight) (flight.effect as KeyframeEffect).setKeyframes(flightFrames(r));
+    else plate.style.transform = point ? frame(r, point, finalScale(r)) : initialFrame(r);
+  };
+  window.addEventListener('resize', resize);
   preparePoster(r);
 }
 
@@ -106,16 +113,31 @@ export function beginMapIntro(login: HTMLElement) {
     .then(() => { login.remove(); if (menu === login) menu = null; });
 }
 
+const portrait = (r: HTMLElement) => r.clientHeight > r.clientWidth;
+const initialScale = (r: HTMLElement) => portrait(r)
+  ? Math.max(r.clientWidth / 1280, r.clientHeight / 720) * 1.8
+  : Math.min(r.clientWidth / 1280, r.clientHeight / 720);
+const finalScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 3.2 : 14);
+
+/** Place a point on the actual image at the viewport's centre. */
+function frame(r: HTMLElement, p: { x: number; y: number }, scale: number, crop = false) {
+  let x = (0.5 - p.x) * 1280 * scale, y = (0.5 - p.y) * 720 * scale;
+  if (crop) {
+    // Keep the image covering portrait screens during the pan, even near its edges.
+    const mx = Math.max(0, (1280 * scale - r.clientWidth) / 2);
+    const my = Math.max(0, (720 * scale - r.clientHeight) / 2);
+    x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
+  }
+  return `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+}
+function initialFrame(r: HTMLElement) {
+  return frame(r, portrait(r) ? EUROPE : { x: 0.5, y: 0.5 }, initialScale(r), portrait(r));
+}
 function flightFrames(r: HTMLElement) {
-  const width = r.clientWidth, height = r.clientHeight;
-  const w = Math.min(width, height * 1280 / 720), h = w * 720 / 1280;
-  const dx = (point!.x - 0.5) * w, dy = (point!.y - 0.5) * h;
-  const zoom = width < 600 ? 22 : 14;
-  // Two endpoints let the compositor interpolate one continuous movement.
-  // The old 25 stops changed its speed at every sampled point.
   return [
-    { transform: 'translate3d(0, 0, 0) scale(1)' },
-    { transform: `translate3d(${-dx * zoom}px, ${-dy * zoom}px, 0) scale(${zoom})` },
+    { offset: 0, transform: initialFrame(r), easing: 'cubic-bezier(.4, 0, .2, 1)' },
+    { offset: panOffset, transform: frame(r, point!, initialScale(r), portrait(r)), easing: 'cubic-bezier(.6, 0, .9, .4)' },
+    { offset: 1, transform: frame(r, point!, finalScale(r)) },
   ];
 }
 
@@ -127,18 +149,23 @@ export async function flyToGameLocation(lat: number, lon: number) {
   r.style.setProperty('--target-x', String(point.x));
   r.style.setProperty('--target-y', String(point.y));
   if (r.hidden || finished || r.dataset.phase === 'error') return;
-  r.dataset.phase = 'zoom';
+  r.dataset.phase = 'pan';
   // The supplied movie runs at 9 fps. During movement use its still frame,
   // then resume the lamp animation if terrain preparation takes longer.
   video?.pause();
   if (!reduced()) {
-    flight = r.querySelector<HTMLElement>('.lm-plate')!.animate(flightFrames(r), { duration: 1800, easing: 'cubic-bezier(.6, 0, .9, .4)', fill: 'forwards' });
-    resize = () => (flight?.effect as KeyframeEffect | null)?.setKeyframes(flightFrames(r));
-    window.addEventListener('resize', resize);
+    const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
+    const distance = Math.hypot((point.x - from.x) * 1280, (point.y - from.y) * 720);
+    const panMs = Math.min(650, Math.max(250, distance * 1.6));
+    const duration = panMs + 1400;
+    panOffset = panMs / duration;
+    flight = r.querySelector<HTMLElement>('.lm-plate')!.animate(flightFrames(r), { duration, easing: 'linear', fill: 'forwards' });
     await flight.finished.catch(() => {});
+  } else {
+    r.querySelector<HTMLElement>('.lm-plate')!.style.transform = frame(r, point, finalScale(r));
   }
   await fade;
-  if (!r.hidden && !finished && r.dataset.phase === 'zoom') {
+  if (!r.hidden && !finished && r.dataset.phase === 'pan') {
     r.dataset.phase = 'waiting';
     void video?.play().catch(() => {});
   }
