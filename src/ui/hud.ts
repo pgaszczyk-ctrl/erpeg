@@ -65,6 +65,10 @@ const DNO = 53 + E;
 const CX = 11 + L;
 const HY = 36;
 const BY = 70;
+/** Bottom buttons share the original 20 px frame and 8 px brass connector. */
+const BUTTON = 20;
+const STEP = BUTTON + 8;
+const CAMERA_X = CX + 3 - STEP;
 
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
@@ -78,10 +82,8 @@ const CSS = `
 #hud .hud-m canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 #hud .hud-count { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none; }
 #hud .hud-wpn img { position: absolute; image-rendering: pixelated; pointer-events: none; }
-#hud .hud-m button.hud-vehicle { box-sizing: border-box; background: #302218; border: 2px solid #b8893b; box-shadow: 0 0 0 2px #1a110b, inset 0 0 0 2px #674922; }
 #hud .hud-vehicle[hidden] { display: none; }
-#hud .hud-m button.hud-vehicle[aria-pressed="true"] { background: #705021; border-color: #ffe9a8; }
-#hud .hud-vehicle img { width: 100%; height: 100%; box-sizing: border-box; padding: 5px; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+#hud .hud-vehicle img { position: absolute; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
 #hud .hud-wcount { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none;
   border: 1px solid #b8893b; font: 700 11px/12px 'Pixelify Sans', monospace; height: 14px; min-width: 16px; padding: 0 3px; white-space: nowrap; }
 #hud .hud-wcount.warn { background: #7a1e14; color: #ffe0d8; }
@@ -139,6 +141,12 @@ let parts: {
 } | null = null;
 let lastVehicles = '';
 let scale = 4;
+/** Room to the left for the longer bottom rail; the upper machine stays anchored on the right. */
+let railExtra = 0;
+
+function visibleVehicles() {
+  return parts ? Object.values(parts.vehicles).filter((b) => !b.hidden) : [];
+}
 
 /** How big the machine is: ×2 on phones, ×3 on a computer (owner, 5 Oct 2026: ×4 from the spec was far too big). */
 function pickScale() {
@@ -386,32 +394,41 @@ function layout() {
   scale = pickScale();
   const s = scale;
   const M = margin();
+  const vehicles = visibleVehicles();
+  railExtra = vehicles.length * STEP;
+  const width = W + railExtra;
+  if (ctx && ctx.canvas.width !== width) ctx.canvas.width = width;
   const at = (el: HTMLElement, x: number, y: number, w: number, h: number) => {
     const gw = Math.max(0, MIN_HIT - w * s) / 2;
     const gh = Math.max(0, MIN_HIT - h * s) / 2;
     Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
   };
-  Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
-  at(parts.vehicles.rower, 2, -24, 20, 20);
-  at(parts.vehicles.hulajnoga, parts.vehicles.rower.hidden ? 2 : 26, -24, 20, 20);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
-  Object.assign(parts.avPic.style, { left: `${(CX + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
+  Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${width * s}px`, height: `${H * s}px` });
+  const g = Math.max(0, MIN_HIT - BUTTON * s) / 2;
+  const insetIcon = (image: HTMLImageElement) => Object.assign(image.style, {
+    left: `${g + 2 * s}px`, top: `${g + 2 * s}px`, width: `${16 * s}px`, height: `${16 * s}px`,
+  });
+  vehicles.forEach((b, i) => {
+    at(b, CAMERA_X + (i + 2) * STEP, BY, BUTTON, BUTTON);
+    insetIcon(b.querySelector<HTMLImageElement>('img')!);
+  });
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX + railExtra, 2, 26, 26);
+  Object.assign(parts.avPic.style, { left: `${(CX + railExtra + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
   drawAvatar();
-  at(parts.heal, CX, HY, 26, 26);
+  at(parts.heal, CX + railExtra, HY, 26, 26);
   parts.heal.style.borderRadius = '50%';
-  at(parts.hp, 49 + L, 1, 10, H - 2);
-  at(parts.xp, 59 + L, 1, 10, H - 2);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CX + 3 - 8 - 20, BY, 20, 20);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CX + 3, BY, 20, 20);
+  at(parts.hp, 49 + L + railExtra, 1, 10, H - 2);
+  at(parts.xp, 59 + L + railExtra, 1, 10, H - 2);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CAMERA_X, BY, BUTTON, BUTTON);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CAMERA_X + STEP, BY, BUTTON, BUTTON);
   // The weapon window: frame drawn in the machine picture (20×20 left of the heal button), the picture inside 16×16.
-  const wx = CX + 3 - 8 - 20, wy = HY + 3;
+  const wx = CAMERA_X + railExtra, wy = HY + 3;
   at(parts.wpn, wx, wy, 20, 20);
-  const g = Math.max(0, MIN_HIT - 20 * s) / 2;
-  Object.assign(parts.wpnImg.style, { left: `${g + 2 * s}px`, top: `${g + 2 * s}px`, width: `${16 * s}px`, height: `${16 * s}px` });
+  insetIcon(parts.wpnImg);
   Object.assign(parts.wcount.style, { left: `${wx * s}px`, top: `${(wy + 17) * s}px` });
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${(CX + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    left: `${(CX + railExtra + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
   // The purse and diamonds: on a phone under the plaque; on a computer alone at the top edge, centred over the hero.
@@ -423,10 +440,11 @@ function layout() {
   const menuW = 64; // the ☰ button top left
   Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * 0.6), window.innerWidth - M - menuW)}px` });
   // Pickups: left of the machine on a wide screen, above it on a narrow one.
-  const wide = window.innerWidth - W * s - 2 * M > 170;
+  const wide = window.innerWidth - width * s - 2 * M > 170;
   Object.assign(parts.picks.style, wide
-    ? { right: `${M + W * s + 10}px`, bottom: `${M + 20 * s}px` }
-    : { right: `${M}px`, bottom: `${M + (H + (parts.vehicles.rower.hidden && parts.vehicles.hulajnoga.hidden ? 0 : 24)) * s + 8}px` });
+    ? { right: `${M + width * s + 10}px`, bottom: `${M + 20 * s}px` }
+    : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
+  draw();
 }
 
 let lastMoney = '';
@@ -494,8 +512,10 @@ function draw() {
   if (!ctx || !pics || !view) return;
   const v = view;
   const c = ctx;
-  c.clearRect(0, 0, W, H);
+  c.clearRect(0, 0, c.canvas.width, H);
   const ok = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0;
+  c.save();
+  c.translate(railExtra, 0);
   if (ok(pics.baza)) c.drawImage(pics.baza, 0, 0);
   const icon = v.potions > 0 ? pics.mikstura : pics.owoc;
   c.globalAlpha = v.noHeal ? 0.4 : 1;
@@ -541,6 +561,46 @@ function draw() {
     c.fillRect(55 + L, y, 2, 1);
     c.fillRect(65 + L, y, 2, 1);
   }
+  c.restore();
+  if (railExtra > 0) drawBottomRail(c, ok(pics.baza));
+}
+
+/** Extend the original pipe and reuse its camera/quest frames, followed by the owned vehicles. */
+function drawBottomRail(c: CanvasRenderingContext2D, baseLoaded: boolean) {
+  const y = BY + BUTTON / 2 - 2;
+  const pipe = ['#1a110b', '#e2b25a', '#b8893b', '#6b4a1f', '#1a110b'];
+  pipe.forEach((color, k) => {
+    c.fillStyle = color;
+    c.fillRect(CAMERA_X + 2, y + k, railExtra, 1);
+  });
+  const vehicles = visibleVehicles();
+  // Same collars as scripts/hud-maszynka.py, centred in each 8 px gap.
+  for (let i = 0; i < vehicles.length + 1; i++) {
+    const x = CAMERA_X + i * STEP + BUTTON + 3;
+    c.fillStyle = pipe[0];
+    c.fillRect(x, y - 1, 3, 7);
+    c.fillStyle = pipe[1];
+    c.fillRect(x + 1, y, 1, 5);
+  }
+  if (baseLoaded && pics) {
+    for (let i = 0; i < 2; i++) {
+      const x = CAMERA_X + i * STEP;
+      c.drawImage(pics.baza, x, BY, BUTTON, BUTTON, x, BY, BUTTON, BUTTON);
+    }
+  }
+  vehicles.forEach((b, n) => {
+    const x = CAMERA_X + (n + 2) * STEP;
+    const active = b.getAttribute('aria-pressed') === 'true';
+    // The original pixel frame, including its clipped corners and lighter top/left edges.
+    for (let j = 0; j < BUTTON; j++) for (let i = 0; i < BUTTON; i++) {
+      const edge = Math.min(i, j, BUTTON - 1 - i, BUTTON - 1 - j);
+      if (edge === 0 && (i === 0 || i === BUTTON - 1) && (j === 0 || j === BUTTON - 1)) continue;
+      c.fillStyle = edge === 0 ? pipe[0]
+        : edge === 1 ? (active ? '#ffe9a8' : (i === 1 || j === 1) && i < BUTTON - 2 && j < BUTTON - 2 ? pipe[1] : pipe[2])
+        : active ? '#705021' : '#3d2e22';
+      c.fillRect(x + i, BY + j, 1, 1);
+    }
+  });
 }
 
 /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
