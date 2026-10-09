@@ -156,7 +156,9 @@ export async function enterWorld(game: Phaser.Game) {
     ? a : session.arrive ?? { x: session.startX, y: session.startY };
   const ll = city.toLatLon(start.x, start.y);
   // Fade/zoom and the real terrain preparation run at the same time.
-  const flight = intro ? flyToGameLocation(ll.lat, ll.lon) : Promise.resolve();
+  let markMapReady: () => void = () => {};
+  const mapReady = new Promise<void>((resolve) => { markMapReady = resolve; });
+  const flight = intro ? flyToGameLocation(ll.lat, ll.lon, mapReady) : Promise.resolve();
   await prepareMap(city);
   // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
   if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
@@ -174,7 +176,7 @@ export async function enterWorld(game: Phaser.Game) {
       await new Promise<void>((resolve) => setTimeout(resolve, 100));
     }
   };
-  await Promise.all([flight, ready()]);
+  await Promise.all([flight, ready().then(markMapReady)]);
   // Tiles/landmarks arriving during the zoom may have asked for another drawing.
   await ready();
   scene.scene.setVisible(true);
