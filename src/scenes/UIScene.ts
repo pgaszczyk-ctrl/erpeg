@@ -466,7 +466,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku w prawym dolnym rogu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
