@@ -363,7 +363,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.introSince = null;
+    // Include create() itself: preparing the first chunks can occupy several seconds.
+    this.introSince = loadingGame() ? this.time.now : null;
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
