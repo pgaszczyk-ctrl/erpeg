@@ -108,7 +108,7 @@ export const session = {
   daily: {} as Record<string, { d: string; n: number; a: number }>,
   /** How the hero looks (chosen at character creation). */
   look: { ...DEFAULT_LOOK } as Look,
-  /** Preserve the shared production appearance while test uses its separate catalogue. */
+  /** Preserve the shared production appearance while test uses its separate local choice. */
   productionLook: { ...DEFAULT_LOOK } as Look,
 };
 

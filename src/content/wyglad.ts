@@ -31,7 +31,7 @@ export interface Postac {
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
-const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
+export const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
   { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
@@ -46,7 +46,7 @@ const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
 
 ];
 
-/** Complete, fixed looks from the owner's new pack, replacing the hero list on test only. */
+/** Complete, fixed looks from the owner's new pack, released in 1.015. */
 export const BOHATEROWIE_25: Postac[] = Array.from({ length: 25 }, (_, i) => ({
   id: `lista${String.fromCharCode(97 + i)}`,
   nazwa: `Postać ${String(i + 1).padStart(2, '0')}`,
@@ -57,7 +57,7 @@ export const BOHATEROWIE_25: Postac[] = Array.from({ length: 25 }, (_, i) => ({
   przebarwiaj: false,
   ostry: true,
 }));
-export const BOHATEROWIE = import.meta.env?.VITE_TEST === '1' ? BOHATEROWIE_25 : DOTYCHCZASOWI_BOHATEROWIE;
+export const BOHATEROWIE = BOHATEROWIE_25;
 
 /** Characters made before the pack 04–10 got one of the first three by their name: they keep it. */
 export const PIERWSI_BOHATEROWIE = 3;

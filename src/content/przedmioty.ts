@@ -62,10 +62,8 @@ export interface Przedmiot {
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
 // ok. 50×, żeby na dobry sprzęt trzeba było popracować (owoce, zlecenia).
 export const PRZEDMIOTY: Przedmiot[] = [
-  ...(import.meta.env?.VITE_TEST === '1' ? [
-    { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: POJAZDY.rower.monet, pojazd: 'rower', opis: 'Jazda o 25% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
-    { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, cenaDiamenty: POJAZDY.hulajnoga.diamenty, pojazd: 'hulajnoga', opis: 'Jazda o 40% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
-  ] as Przedmiot[] : []),
+  { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: POJAZDY.rower.monet, pojazd: 'rower', opis: 'Jazda o 25% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+  { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, cenaDiamenty: POJAZDY.hulajnoga.diamenty, pojazd: 'hulajnoga', opis: 'Jazda o 40% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
   // Broń do ręki (klik)
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
@@ -123,13 +121,13 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'plaszcz_cechmistrza', nazwa: 'Płaszcz Cechmistrza', miejsce: 'zbroja', moc: 6, cena: 0, opis: 'Dla Strażnika Serca Miasta.' },
   { id: 'karabin_trybunal', nazwa: 'Karabin „Trybunał”', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 16, cena: 0, wytrzymalosc: 1600, opis: 'Parowy karabin wyborowy. Wyrok zapada z daleka.' },
   { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true,
-    ...(import.meta.env?.VITE_TEST === '1' ? { leczenie: WYTWORCY.paczkarnia.hearts } : {}),
+    leczenie: WYTWORCY.paczkarnia.hearts,
     opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
-  ...(import.meta.env?.VITE_TEST === '1' ? [{
+  {
     id: 'hamburger', nazwa: 'Burger warzywny', miejsce: 'talizman', moc: 0, cena: 0,
     leczenie: WYTWORCY.mcdonalds.hearts,
     opis: 'Przygotowany wyłącznie z warzyw. Leczenie zużywa go po miksturach i jadalnych zbiorach.',
-  }] as Przedmiot[] : []),
+  },
 ];
 
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */

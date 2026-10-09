@@ -132,7 +132,7 @@ export class UIScene extends Phaser.Scene {
       zoom: () => (this.scene.get('game') as GameScene).toggleZoom(),
       zoomOn: przyblizenie(),
       camera: () => this.takePhoto(),
-      vehicle: TEST ? (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle) : undefined,
+      vehicle: (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle),
     });
     this.layout();
     this.heroAvatar();
@@ -539,7 +539,7 @@ export class UIScene extends Phaser.Scene {
   // ---------------------------------------------------------------- dialogs
 
   private showDialog(d: DialogRequest) {
-    if (TEST && d.shop) {
+    if (d.shop) {
       if (this.shop) { this.dialogChoose = d.onChoose; this.shop.update(d); return; }
       this.closeDialog();
       resetTouch();

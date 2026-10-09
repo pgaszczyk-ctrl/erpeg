@@ -1,14 +1,13 @@
 import { SKALA_POSTACI } from './skala';
 import Phaser from 'phaser';
-import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, PIERWSI_BOHATEROWIE, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
+import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
-import { TEST } from './version';
 import { cleanHumanSheet } from './spriteCleanup';
 import { WYGLAD_09 } from './map/Podloze09';
 
 /**
- * Characters on the world's pixel grid (GESTOSC_PIKSELI.md variant B; owner, 6 Oct 2026, test server only
- * for now): every sheet is averaged into blocks of about one world pixel (0.5 map px), anchored at the feet,
+ * Characters on the world's pixel grid (GESTOSC_PIKSELI.md variant B; released in 1.015):
+ * non-human sheets are averaged into blocks of about one world pixel (0.5 map px), anchored at the feet,
  * with hard alpha, and drawn NEAREST – so a character's pixel matches a roof's instead of a smooth
  * picture. `?siatka=0` / `?siatka=1` overrides it (remembered, localStorage `exp-siatka`).
  */
@@ -21,7 +20,7 @@ const SIATKA_POSTACI = (() => {
   } catch {
     /* no storage */
   }
-  return WYGLAD_09 && (v === '1' || (v !== '0' && TEST));
+  return WYGLAD_09 && v !== '0';
 })();
 /** One world pixel in map px (the generator paints 2 px per map px). */
 const PIKSEL_SWIATA = 0.5;
@@ -116,7 +115,7 @@ export function fitHd(s: Phaser.GameObjects.Sprite, times = 1) {
   const rawScale = skala.get(baseOf(k)) ?? 0.36;
   // 0.24 made the two eyes sample at different fractional widths while walking.
   // A quarter world unit and pupil spacing in multiples of four keep both eyes equally sampled.
-  const sc = TEST && human(pending.get(baseOf(k))) && rawScale === 0.36 && SKALA_POSTACI === 2 / 3
+  const sc = human(pending.get(baseOf(k))) && rawScale === 0.36 && SKALA_POSTACI === 2 / 3
     ? 0.25 * times : rawScale * times * SKALA_POSTACI;
   s.setScale(sc).setOrigin(0.5, (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F);
   return s;
@@ -217,7 +216,7 @@ export function heroSkin(postac: number | undefined, name: string): Postac {
   if (postac !== undefined && BOHATEROWIE[postac]) return BOHATEROWIE[postac];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return BOHATEROWIE[h % (TEST ? BOHATEROWIE.length : PIERWSI_BOHATEROWIE)];
+  return BOHATEROWIE[h % BOHATEROWIE.length];
 }
 
 // ------------------------------------------------------------------ making the sheets
@@ -240,7 +239,7 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
   ctx.drawImage(img, 0, 0);
   if (p.bokWPrawo) mirrorRow(c, 1);
   const data = ctx.getImageData(0, 0, c.width, c.height);
-  if (TEST && human(p)) cleanHumanSheet(data, p.plik);
+  if (human(p)) cleanHumanSheet(data, p.plik);
   else for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
   ctx.putImageData(data, 0, 0);
   const s = centreShifts(data);
@@ -402,7 +401,7 @@ function glow(src: HTMLCanvasElement, ostry = false) {
  * weighted by alpha, alpha hard (> 110 = solid). The frame stays 64 px, so frames, origins and crops hold.
  */
 function naSiatke(src: HTMLCanvasElement, p: Postac | undefined): HTMLCanvasElement {
-  if (!SIATKA_POSTACI || !p || p.ostry || (TEST && human(p))) return src;
+  if (!SIATKA_POSTACI || !p || p.ostry || human(p)) return src;
   const b = Math.max(1, Math.round(PIKSEL_SWIATA / (p.skala * SKALA_POSTACI)));
   if (b < 2) return src;
   const ctx = src.getContext('2d')!;
@@ -460,7 +459,7 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement) {
     for (let f = 0; f < 3; f++) tex.add(`${dir}-${f}`, 0, COL[f] * F, ROW[dir] * F, F, F);
   }
   const ostry = pending.get(baseOf(key))?.ostry;
-  tex.setFilter(ostry || (TEST && human(pending.get(baseOf(key)))) || (SIATKA_POSTACI && !key.endsWith('-red')) ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+  tex.setFilter(ostry || human(pending.get(baseOf(key))) || (SIATKA_POSTACI && !key.endsWith('-red')) ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
   for (const dir of HERO_DIRS) {
     const anim = `${key}-walk-${dir}`;
     if (!scene.anims.exists(anim)) scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });

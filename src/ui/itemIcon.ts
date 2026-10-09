@@ -13,13 +13,13 @@ export const ITEM_PICTURES = [
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
   'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera',
 ];
-// Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items on test.
-const HAVE = new Set([...ITEM_PICTURES, ...(import.meta.env?.VITE_TEST === '1' ? ['rower', 'hulajnoga_parowa'] : [])]);
+// Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
+const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
 
-/** Pack 26 trial helmet stays on test; production keeps the previous picture. */
+/** Detailed illustrations released in 1.015, without resampling the original files. */
 export function itemAssetUrl(id: string) {
-  if (import.meta.env?.VITE_TEST === '1' && id === 'skorzana_zbroja') return 'proby31/skorzana_zbroja.png';
-  return import.meta.env?.VITE_TEST === '1' && id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
+  if (id === 'skorzana_zbroja') return 'proby31/skorzana_zbroja.png';
+  return id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
 }
 
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */

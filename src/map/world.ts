@@ -87,10 +87,10 @@ const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', c
 
 /** World map point of interest → the game's place. */
 function placeKind(p: Record<string, unknown>): Place['kind'] | null {
-  if (import.meta.env?.VITE_TEST === '1' && /\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
+  if (/\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
   const kind = String(p.kind ?? '');
   const detail = String(p.kind_detail ?? '');
-  if (import.meta.env?.VITE_TEST === '1' && (kind === 'car_repair' || detail === 'car_repair')) return 'workshop';
+  if (kind === 'car_repair' || detail === 'car_repair') return 'workshop';
   const named = !!p.name;
   switch (kind) {
     case 'supermarket': return 'shop';

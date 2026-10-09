@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { TEST } from './version';
 import { SKALA_POSTACI } from './skala';
 import { heroSkin } from './sprites';
 import type { Player } from './objects/Player';
@@ -8,14 +7,14 @@ import { POJAZDY } from './content/sklepy';
 
 export type TestVehicle = 'pieszo' | 'rower' | 'hulajnoga';
 export let testVehicle: TestVehicle = 'pieszo';
-export const hasTestVehicle = (vehicle: Exclude<TestVehicle, 'pieszo'>) => TEST && gear.bag.some(s =>
+export const hasTestVehicle = (vehicle: Exclude<TestVehicle, 'pieszo'>) => gear.bag.some(s =>
   'item' in s && s.item === (vehicle === 'rower' ? 'rower' : 'hulajnoga_parowa'));
 export const setTestVehicle = (vehicle: TestVehicle) => {
   testVehicle = vehicle === 'pieszo' || hasTestVehicle(vehicle) ? vehicle : 'pieszo';
 };
 export const vehicleSpeed = () => {
   if (testVehicle !== 'pieszo' && !hasTestVehicle(testVehicle)) testVehicle = 'pieszo';
-  return TEST && testVehicle !== 'pieszo' ? POJAZDY[testVehicle].szybkosc : 1;
+  return testVehicle !== 'pieszo' ? POJAZDY[testVehicle].szybkosc : 1;
 };
 
 // Keep unused riding art off the initial download/GPU budget (25 looks × 2 vehicles).
@@ -42,7 +41,6 @@ export class TestRide {
   private image?: Phaser.GameObjects.Image;
   constructor(private scene: Phaser.Scene) {}
   update(player: Player, postac: number | undefined, name: string) {
-    if (!TEST) return;
     const skin = heroSkin(postac, name);
     // Prefetch only the owned vehicles of the current look; changing look readies that pair too.
     for (const vehicle of ['rower', 'hulajnoga'] as const)

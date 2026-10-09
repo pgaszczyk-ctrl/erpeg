@@ -197,7 +197,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         if (hd) {
           ctx.clearRect(0, 0, 144, 60);
           if (!sheet.complete || !sheet.naturalWidth) return;
-          ctx.imageSmoothingEnabled = !TEST;
+          ctx.imageSmoothingEnabled = false;
           // Standing frames: down, side (turned to face right), up.
           for (let row = 0; row < 3; row++) {
             ctx.save();

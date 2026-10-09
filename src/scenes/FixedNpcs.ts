@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { TEST } from '../version';
 import { TEX, artScale } from '../art';
 import type { CityMap } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
@@ -165,10 +164,8 @@ export class FixedNpcs {
     const lb = city.findBuilding(LUIGI.adres);
     this.luigiHome = lb ? city.entranceOf(lb) : null;
     this.placeLublinPeople();
-    if (TEST) {
-      const off = city.onTile(() => { this.fixedDirty = true; });
-      scene.events.once('shutdown', off);
-    }
+    const off = city.onTile(() => { this.fixedDirty = true; });
+    scene.events.once('shutdown', off);
   }
 
   /** Remote NPCs appear once their neighbourhood is loaded, like Luigi/Grażynka.
@@ -179,7 +176,7 @@ export class FixedNpcs {
     const { city, scene } = this;
     const has = (id: string) => this.list.some(w => w.id === id);
     const streetLines = (names: string[]) => {
-      if (TEST && !names.every(name => {
+      if (!names.every(name => {
         const p = city.findStart(name), r = 400 * PX_PER_M;
         return p && city.ready({ x0:p.x-r, y0:p.y-r, x1:p.x+r, y1:p.y+r });
       })) return [];
@@ -215,7 +212,7 @@ export class FixedNpcs {
 
     // Grandpa or grandma, by their block on Śnieżyńskiego.
     const block = DZIADKOWIE.adresy.map((a) => city.findBuilding(a)).find(Boolean);
-    if (block && !has('dziadkowie') && (!TEST || (block.rings.length && streetLines([DZIADKOWIE.ulica]).length))) {
+    if (block && !has('dziadkowie') && block.rings.length && streetLines([DZIADKOWIE.ulica]).length) {
       const door = city.entranceOf(block);
       const near = streetLines([DZIADKOWIE.ulica]).map((pts) => {
         // The longest run of points near the block.

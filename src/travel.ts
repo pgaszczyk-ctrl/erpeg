@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { CityMap, PX_PER_M } from './map/CityMap';
-import { PIES, MARGO, DZIADKOWIE, MARTIN } from './content/postacie';
+import { PIES, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
@@ -8,7 +8,6 @@ import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
 import { takeResume } from './update';
-import { TEST } from './version';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -112,10 +111,10 @@ export async function prepareMap(city: CityMap) {
     pts.push({ x: session.startX, y: session.startY, r: near });
     // Do not wait for remote neighbourhoods merely to create their walking NPCs.
     // Active return/collection quests still need their exact target at login.
-    const fixedStreets = TEST ? [
+    const fixedStreets = [
       ...(['active', 'goal'].includes(session.missions['npc-pies']) ? PIES.ulice : []),
       ...(session.missions[MARTIN.zadanie.id] === 'active' ? [MARTIN.ulica] : []),
-    ] : [...PIES.ulice, MARGO.ulica, DZIADKOWIE.ulica, MARTIN.ulica];
+    ];
     for (const street of fixedStreets) {
       const p = city.findStart(street);
       if (p) pts.push({ ...p, r: 400 * PX_PER_M });
