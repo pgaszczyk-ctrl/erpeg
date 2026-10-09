@@ -3,7 +3,7 @@ import { BOHATEROWIE } from './content/wyglad';
 import type { Look } from './look';
 
 // One draw for this pack, without replacement: Arceus and Jam start with different new heroes.
-// Choices are separate from the shared production save, and remain stable on this device.
+// Choices are separate from the shared production save, and remain stable on this device (also after 1.015).
 const FIRST_DRAW = [0, 12];
 const key = (name: string) => `exp-test-avatar25:${name.toLowerCase()}`;
 

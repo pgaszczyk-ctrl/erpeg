@@ -1,4 +1,3 @@
-import { TEST } from '../version';
 import { cleanHumanSheet } from '../spriteCleanup';
 
 const sheets = new Map<string, Promise<string>>();
@@ -6,7 +5,6 @@ const sheets = new Map<string, Promise<string>>();
 /** Use the same pupil/fragment preparation in the picker as in the world. */
 export function heroPreviewUrl(file: string): Promise<string> {
   const url = `postacie/${file}.png`;
-  if (!TEST) return Promise.resolve(url);
   if (!sheets.has(file)) sheets.set(file, new Promise<string>((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
@@ -23,6 +21,5 @@ export function heroPreviewUrl(file: string): Promise<string> {
 }
 
 export function heroPreviewBackground(element: HTMLElement, file: string) {
-  if (!TEST) element.style.backgroundImage = `url(postacie/${file}.png)`;
-  else void heroPreviewUrl(file).then(url => { if (element.isConnected) element.style.backgroundImage = `url(${url})`; });
+  void heroPreviewUrl(file).then(url => { if (element.isConnected) element.style.backgroundImage = `url(${url})`; });
 }

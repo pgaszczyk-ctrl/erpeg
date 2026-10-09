@@ -4,7 +4,6 @@ import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
 import { PLAYER } from './Player';
 import { SKALA_POSTACI } from '../skala';
-import { TEST } from '../version';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -114,7 +113,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
     const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(scene, kind) : null;
     const hd = !!hdTex && scene.textures.exists(hdTex);
-    const detailedBlob = TEST && kind === 'blob' && scene.textures.exists('szlam-szczegolowy');
+    const detailedBlob = kind === 'blob' && scene.textures.exists('szlam-szczegolowy');
     super(scene, x, y, detailedBlob ? 'szlam-szczegolowy' : hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, detailedBlob ? 'body' : person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;

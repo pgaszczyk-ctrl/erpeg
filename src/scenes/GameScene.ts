@@ -9,7 +9,6 @@ import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../scree
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
-import { TEST } from '../version';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim } from '../controls';
 import { Player, PLAYER } from '../objects/Player';
@@ -364,7 +363,7 @@ export class GameScene extends Phaser.Scene {
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
-    if (TEST && !this.city.id.startsWith('w:')) {
+    if (!this.city.id.startsWith('w:')) {
       for (const p of PRODUCER_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon);
       for (const p of WORKSHOP_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon, 'workshop');
     }
@@ -2000,7 +1999,7 @@ export class GameScene extends Phaser.Scene {
     };
     const want = [...new Set(stations.map(file))].filter((f) => !this.textures.exists(`swiat-${f}`));
     if (!want.length) return put();
-    for (const f of want) this.load.image(`swiat-${f}`, `swiat/${TEST ? 'konie_test26/' : ''}${f}.png`);
+    for (const f of want) this.load.image(`swiat-${f}`, `swiat/konie_test26/${f}.png`);
     this.load.once('complete', put);
     this.load.start();
   }
@@ -2651,7 +2650,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openPlace(p: CityPlace, venueChosen = false) {
-    if (TEST && !venueChosen) {
+    if (!venueChosen) {
       const shared = this.city.places.filter(q => Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 1);
       if (shared.length > 1 && shared.some(q => q.kind === 'maker' || q.kind === 'workshop')) {
         this.dialog({ title: 'Miejsca przy tym wejściu', text: 'Dokąd chcesz wejść?',
@@ -2689,8 +2688,8 @@ export class GameScene extends Phaser.Scene {
     if (p.kind === 'alchemist') return this.openAlchemist(p);
     if (p.kind === 'camp') return this.openCamp(p);
     if (p.kind === 'gear') return this.openGearShop(p);
-    if (TEST && p.kind === 'maker') return this.openProducer(p);
-    if (TEST && p.kind === 'workshop') return this.openWorkshop(p);
+    if (p.kind === 'maker') return this.openProducer(p);
+    if (p.kind === 'workshop') return this.openWorkshop(p);
     // Church, office, police: a random mission.
     const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
     if (known) return this.openMissionDialog(known);
@@ -3408,12 +3407,9 @@ export class GameScene extends Phaser.Scene {
     // The axe: buy one, or sharpen a blunt one.
     const ax = item('siekiera')!;
     const owned = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].find((id) => id === ax.id);
-    const fixes = TEST && this.sellsAxe(p) ? repairable().filter(id => item(id)?.miejsce === 'bron') : [];
-    const sharpen = owned && !TEST ? repairCost(ax.id) : 0;
-    const tools: [string, () => void][] = !this.sellsAxe(p) ? [] : owned
-      ? sharpen ? [[`🔧 Naostrz siekierę – ${sharpen} monet`, () => this.repairItem(ax.id)]] : []
-      : [[this.label(ax), () => this.buy(ax)]];
-    const vehicles = TEST && SIEKIERA.sportowy.test(p.name)
+    const fixes = this.sellsAxe(p) ? repairable().filter(id => item(id)?.miejsce === 'bron') : [];
+    const tools: [string, () => void][] = !this.sellsAxe(p) || owned ? [] : [[this.label(ax), () => this.buy(ax)]];
+    const vehicles = SIEKIERA.sportowy.test(p.name)
       ? PRZEDMIOTY.filter((it) => it.pojazd && !this.ownsVehicle(it.id)) : [];
     const entries: ShopEntry[] = [
       ...vehicles.map((v, i) => shopItem(v, i, this.cenaDla(v))),
@@ -3421,10 +3417,7 @@ export class GameScene extends Phaser.Scene {
         name: `Napraw: ${item(id)!.nazwa}`, category: 'services', picture: itemPictureUrl(id),
         description: 'Warsztat budowlany naprawi twoją broń i narzędzia.',
         stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', refresh: true })),
-      ...tools.map((_, i): ShopEntry => owned ? {
-        id: 'repair:siekiera', index: vehicles.length + i, name: 'Naostrz siekierę', category: 'services', picture: itemPictureUrl(ax.id),
-        description: 'Przywróć siekierze pełną wytrzymałość.', price: sharpen, action: 'NAPRAW', refresh: true,
-      } : shopItem(ax, vehicles.length + i, this.cenaDla(ax))),
+      ...tools.map((_, i) => shopItem(ax, vehicles.length + i, this.cenaDla(ax))),
       ...kinds.map((k, i): ShopEntry => ({ id: `tent:${i}`, index: vehicles.length + tools.length + i, name: k.nazwa,
         category: 'supplies', description: 'Rozłożysz go w lesie albo na polu z karty postaci. Nocleg zapisuje grę i miejsce startu.',
         stats: [['Noclegi', String(k.noclegow)]], price: k.cena, action: 'KUP', refresh: true })),
@@ -4059,7 +4052,6 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ shops, schools, library
 
   private shopDialog(p: CityPlace, req: DialogRequest, entries: ShopEntry[], refresh: () => void, subtitle: string) {
-    if (!TEST) return this.dialog(req);
     this.dialog({
       ...req,
       shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries,
@@ -4448,22 +4440,12 @@ export class GameScene extends Phaser.Scene {
     if (this.player.hp >= PLAYER.maxHp) return this.toast('Masz pełne zdrowie.', 1200);
     if (session.mikstury > 0) return this.drinkPotion();
     if (totalFruit() >= this.fruitPerHeart()) return this.eatFruit();
-    if (TEST && nextFood()) return this.eatPreparedFood();
+    if (nextFood()) return this.eatPreparedFood();
     this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
   }
 
   quickHeal() {
-    if (TEST) return this.healButton();
-    if (this.player.isDead) return;
-    const missing = PLAYER.maxHp - this.player.hp;
-    if (missing <= 0) return this.toast('Masz pełne zdrowie.', 1200);
-    const fruit = totalFruit() >= this.fruitPerHeart();
-    if (session.mikstury > 0 && (missing >= 4 || !fruit)) return this.drinkPotion();
-    if (fruit) {
-      this.eatFruit();
-      return;
-    }
-    this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
+    return this.healButton();
   }
 
   private eatPreparedFood() {
@@ -5160,7 +5142,7 @@ export class GameScene extends Phaser.Scene {
   private emitHud() {
     this.applyLevel();
     const quests = this.activeQuests();
-    const preparedFood = TEST ? nextFood() : undefined;
+    const preparedFood = nextFood();
     const state: HudState = {
       hp: this.player.hp,
       maxHp: PLAYER.maxHp,
@@ -5168,7 +5150,7 @@ export class GameScene extends Phaser.Scene {
       zatruty: !!this.stany.zatrucie,
       heal: this.player.hp >= PLAYER.maxHp || this.player.isDead
         ? null
-        : session.mikstury > 0 && (TEST || PLAYER.maxHp - this.player.hp >= 4 || totalFruit() < this.fruitPerHeart())
+        : session.mikstury > 0
           ? { icon: '🧪', n: session.mikstury }
           : totalFruit() >= this.fruitPerHeart()
             ? { icon: '🍎', n: Math.floor(totalFruit() / this.fruitPerHeart()) }

@@ -22,7 +22,6 @@ import { MOZAIKI } from '../content/mozaiki';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
 import { ruryPrzyUlicy, type Rura09 } from './rury09';
-import { TEST } from '../version';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -758,7 +757,7 @@ export class MapRenderer {
     const G2 = GEN_DOTS;
     const rury: Rura09[] = [];
     const pipeRoads = new Map<string, Line[]>();
-    if (TEST) for (const l of m.query({x0:x0-80,y0:y0-80,x1:x0+CHUNK+80,y1:y0+CHUNK+80}).lines) {
+    for (const l of m.query({x0:x0-80,y0:y0-80,x1:x0+CHUNK+80,y1:y0+CHUNK+80}).lines) {
       if (!['minor', 'medium', 'service'].includes(l.kind) || l.bridge) continue;
       const paths = ruryPrzyUlicy(l.pts, l.id, trackWidth(l), (x, y, radius = 4) => {
         if (!m.isFree(x, y, radius, radius)) return false;
