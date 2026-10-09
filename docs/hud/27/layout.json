@@ -1,0 +1,196 @@
+{
+  "canvas": [
+    390,
+    120
+  ],
+  "parts": {
+    "zbiorniki": [
+      76,
+      48,
+      73,
+      30
+    ],
+    "leczenie_ramka": [
+      163,
+      25,
+      64,
+      77
+    ],
+    "menu_ramka": [
+      229,
+      0,
+      144,
+      106
+    ]
+  },
+  "healing_center": [
+    195,
+    63
+  ],
+  "icons": {
+    "jablko": [
+      179,
+      47,
+      32,
+      32
+    ],
+    "avatar": [
+      242,
+      21,
+      22,
+      22
+    ],
+    "aparat": [
+      294,
+      21,
+      22,
+      22
+    ],
+    "questy": [
+      346,
+      21,
+      22,
+      22
+    ],
+    "welocyped": [
+      242,
+      71,
+      22,
+      22
+    ],
+    "miecz": [
+      294,
+      71,
+      22,
+      22
+    ],
+    "zawor": [
+      151,
+      52,
+      10,
+      10
+    ],
+    "manometr": [
+      214,
+      20,
+      16,
+      16
+    ]
+  },
+  "hp_chambers": [
+    [
+      85,
+      53,
+      8,
+      7
+    ],
+    [
+      97,
+      53,
+      8,
+      7
+    ],
+    [
+      109,
+      53,
+      8,
+      7
+    ],
+    [
+      120,
+      53,
+      8,
+      7
+    ],
+    [
+      131,
+      53,
+      8,
+      7
+    ]
+  ],
+  "xp_chambers": [
+    [
+      85,
+      70,
+      12,
+      4
+    ],
+    [
+      101,
+      70,
+      10,
+      4
+    ],
+    [
+      114,
+      70,
+      10,
+      4
+    ],
+    [
+      129,
+      70,
+      10,
+      4
+    ]
+  ],
+  "touch_centers": {
+    "heal": [
+      195,
+      63
+    ],
+    "avatar": [
+      253,
+      32
+    ],
+    "camera": [
+      305,
+      32
+    ],
+    "quests": [
+      357,
+      32
+    ],
+    "vehicle": [
+      253,
+      82
+    ],
+    "weapon": [
+      305,
+      82
+    ]
+  },
+  "touch_size": [
+    48,
+    48
+  ],
+  "version": 5,
+  "tank_scale_vs_v1": 0.65,
+  "menu_socket_size": [
+    32,
+    33
+  ],
+  "empty_socket": {
+    "center": [
+      357,
+      82
+    ],
+    "interactive": false
+  },
+  "xp_color": "#d79a32",
+  "clock_removed": true,
+  "manometer_decorative": true,
+  "healing_count": {
+    "source": "actual quantity of selected healing item",
+    "example": 418,
+    "position": [
+      186,
+      112
+    ]
+  },
+  "healing_touch_size": [
+    64,
+    64
+  ]
+}

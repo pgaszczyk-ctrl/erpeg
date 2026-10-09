@@ -1,0 +1,25 @@
+{
+  "version": 5,
+  "bulaj": [
+    64,
+    77
+  ],
+  "tanks": [
+    73,
+    30
+  ],
+  "menu_frames": [
+    32,
+    33
+  ],
+  "menu_icon_display": [
+    22,
+    22
+  ],
+  "valve_between_tanks_and_center": true,
+  "manometer_decorative": true,
+  "count_is_healing_item_quantity": true,
+  "alpha_binary": true,
+  "browser_render_test": false,
+  "game_test": false
+}

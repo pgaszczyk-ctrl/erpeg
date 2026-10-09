@@ -1,3 +1,7 @@
+import { TEST } from '../version';
+import { createMachineV5 } from './hudMachineV5';
+const newMachine = TEST && new URLSearchParams(location.search).get('hud') !== 'old';
+
 // The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):
 // - bottom right: one pixel-art "machine" (70×60 picture pixels shown ×4, NEAREST): two glass
 //   tubes (life red, experience amber), a round heal button (potion, else fruit), a brass pipe
@@ -139,6 +143,7 @@ let parts: {
   wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
   vehicles: Record<'rower' | 'hulajnoga', HTMLButtonElement>;
 } | null = null;
+let machineV5: ReturnType<typeof createMachineV5> | null = null;
 let lastVehicles = '';
 let scale = 4;
 /** Room to the left for the longer bottom rail; the upper machine stays anchored on the right. */
@@ -349,6 +354,7 @@ export function mountHud(on: HudHandlers) {
   root.append(m, p, picks);
   document.body.append(root);
   parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic, vehicles };
+  if (newMachine) machineV5 = createMachineV5(parts);
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -358,6 +364,8 @@ export function mountHud(on: HudHandlers) {
 export function unmountHud() {
   window.removeEventListener('resize', layout);
   window.clearInterval(timer);
+  machineV5?.destroy();
+  machineV5 = null;
   root?.remove();
   root = null;
   parts = null;
@@ -431,6 +439,7 @@ function layout() {
     left: `${(CX + railExtra + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
+  if (machineV5) machineV5.layout();
   // The purse and diamonds: on a phone under the plaque; on a computer alone at the top edge, centred over the hero.
   const top = !window.matchMedia('(pointer: coarse)').matches;
   if (top && parts.money.parentElement !== root) root?.append(parts.money);
@@ -444,6 +453,7 @@ function layout() {
   Object.assign(parts.picks.style, wide
     ? { right: `${M + width * s + 10}px`, bottom: `${M + 20 * s}px` }
     : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
+  if (machineV5) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(16px + env(safe-area-inset-bottom) + ${parts.m.style.height})` });
   draw();
 }
 
@@ -472,6 +482,7 @@ export function setHud(v: HudView) {
     : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
   parts.heal.setAttribute('aria-label', label);
   parts.heal.title = label;
+  if (machineV5) parts.heal.disabled = v.noHeal;
   parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
   const hpPct = Math.round((100 * v.hp) / v.maxHp);
   parts.hp.setAttribute('aria-label', `Zdrowie ${hpPct}%`);
@@ -509,6 +520,7 @@ export function setHud(v: HudView) {
 const level = (share: number) => Math.round(Math.max(0, Math.min(1, share)) * TUBA);
 
 function draw() {
+  if (machineV5) { if (view) machineV5.draw(view); return; }
   if (!ctx || !pics || !view) return;
   const v = view;
   const c = ctx;
@@ -612,6 +624,7 @@ export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw =
 /** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */
 function drawAvatar() {
   if (!parts) return;
+  if (machineV5) { machineV5.avatar(avatar); return; }
   const cv = parts.avPic;
   const n = Math.max(1, Math.round(18 * scale * (window.devicePixelRatio || 1)));
   if (cv.width !== n) cv.width = cv.height = n;
