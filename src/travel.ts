@@ -177,6 +177,8 @@ export async function enterWorld(game: Phaser.Game) {
   await Promise.all([flight, ready()]);
   // Tiles/landmarks arriving during the zoom may have asked for another drawing.
   await ready();
+  scene.scene.setVisible(true);
+  scene.scene.setVisible(true, 'ui');
   // Allow the completed textures to pass through a rendered frame before fading the cover.
   await new Promise<void>((resolve) => game.events.once('postrender', resolve));
   await revealLoadedGame();

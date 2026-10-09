@@ -365,6 +365,9 @@ export class GameScene extends Phaser.Scene {
   create() {
     // Include create() itself: preparing the first chunks can occupy several seconds.
     this.introSince = loadingGame() ? this.time.now : null;
+    // Keep workers/updates active without competing with the opaque intro for
+    // every GPU frame. travel.ts renders the prepared scene before revealing it.
+    this.scene.setVisible(!loadingGame());
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.city = this.registry.get('city') as CityMap;
@@ -679,9 +682,10 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
 
-    // Draw the first chunks right away so the start isn't blank.
+    // Under the intro, submit chunks over successive updates instead of a
+    // single burst that interrupts the zoom. Uncovered travel/demos stay as before.
     cam.preRender();
-    this.mapView.update(cam, 16);
+    if (!loadingGame()) this.mapView.update(cam, 16);
 
     this.demoRun = null;
     if (demo.on) {
@@ -736,7 +740,10 @@ export class GameScene extends Phaser.Scene {
 
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
-    this.mapView.update(this.cameras.main);
+    const intro = loadingGame();
+    // A hidden scene does not run the render pass that normally updates worldView.
+    if (intro) this.cameras.main.preRender();
+    this.mapView.update(this.cameras.main, intro ? 1 : 2);
     if (this.player) this.mapView.updateTrees(now, dt, this.cameras.main, this.player.x, this.player.y);
     if (this.player) this.gory?.update(now, dt, this.player.x, this.player.y);
     // Tiled maps: keep the map loaded around the hero.
@@ -744,7 +751,7 @@ export class GameScene extends Phaser.Scene {
       this.nextTiles = now + 700;
       this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
     }
-    if (loadingGame()) {
+    if (intro) {
       this.introSince ??= now;
       this.updateFog();
       this.zabytki.update(this.player.x, this.player.y);

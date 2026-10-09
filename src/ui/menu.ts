@@ -68,21 +68,28 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });
-    const busy = async (btn: HTMLButtonElement, err: HTMLElement, fn: () => Promise<void>) => {
+    const busy = async (btn: HTMLButtonElement, err: HTMLElement, fn: () => Promise<void>, waiting?: string) => {
+      if (btn.disabled) return;
       err.textContent = '';
+      const label = [...btn.childNodes];
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      if (waiting) btn.replaceChildren(waiting);
       try {
         await fn();
       } catch (e) {
         err.textContent = (e as Error).message;
       } finally {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        if (waiting) btn.replaceChildren(...label);
       }
     };
     const play = async (r: LoginResult) => {
-      await contentReady;
-      startSession(r);
       if (root) beginMapIntro(root);
+      // Show the response before session/scene preparation can occupy the thread.
+      await Promise.all([contentReady, new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))]);
+      startSession(r);
       root = null;
       resolve();
     };
@@ -300,7 +307,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
             el('b', {}, [`${c.dead ? '👻 ' : ''}${c.name}`]),
             el('small', {}, [`${c.exp} EXP${lvl ? ` · ${lvl}` : ''}${c.last_seen ? ` · grano ${formatDate(c.last_seen)}` : ''}`]),
           ]);
-          b.onclick = () => busy(b, err, () => login(c.name, c.idik));
+          b.onclick = () => busy(b, err, () => login(c.name, c.idik), tx('Wchodzisz do gry…', 'Entering the game…'));
           return b;
         };
         const newBtn = el('button', { type: 'button', className: 'm-btn', disabled: alive >= GOOGLE_LIMIT }, [
@@ -317,7 +324,13 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     };
 
     /** After creating a character (or when an old one got its new code). */
-    const showCode = (r: LoginResult, title: string) =>
+    const showCode = (r: LoginResult, title: string) => {
+      const err = error();
+      const go: HTMLButtonElement = button('Mam kod – graj', () => busy(go, err, async () => {
+        remember(r.player.name, r.player.idik, box.querySelector<HTMLFormElement>('.m-remember'));
+        if (r.player.dead) dead(r);
+        else await play(r);
+      }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary');
       screen(
         el('h2', {}, [title]),
         el('p', {}, ['To Twój kod postaci. Imię i kod wystarczą, żeby wczytać postać na każdym urządzeniu.']),
@@ -326,12 +339,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           'Zapisz kod, zrób zdjęcie albo wyślij go sobie (np. na WhatsAppie)! Bez niego nie wczytasz postaci. Kod znajdziesz też w grze w menu ☰.',
         ]),
         rememberForm(r.player.name, r.player.idik),
-        button('Mam kod – graj', () => {
-          remember(r.player.name, r.player.idik, box.querySelector<HTMLFormElement>('.m-remember'));
-          if (r.player.dead) dead(r);
-          else play(r);
-        }, 'm-primary'),
+        err, go,
       );
+    };
 
     const login = async (name: string, code: string, password?: string, form?: HTMLFormElement) => {
       if (TEST && !TEST_POSTACIE.some((n) => n.toLowerCase() === name.toLowerCase())) {
@@ -372,7 +382,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       ]);
       form.onsubmit = (e) => {
         e.preventDefault();
-        busy(go, err, () => login(name.value.trim(), code.value, oldCode() ? pass.value : undefined, form));
+        busy(go, err, () => login(name.value.trim(), code.value, oldCode() ? pass.value : undefined, form), tx('Wchodzisz do gry…', 'Entering the game…'));
       };
       const gErr = error();
       const gBtn: HTMLButtonElement = button('👤 Wczytaj z konta (e-mail lub Google)', () =>
@@ -406,7 +416,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
             busy(rise, err, async () => {
               const back = await api.resurrect(p.name, p.idik);
               await play(back);
-            }), 'm-primary')
+            }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary')
         : el('button', { type: 'button', className: 'm-btn', disabled: true }, [`Brakuje ${miss} 💎 – kupno za ${miss * DIAMENT.euro} € już wkrótce`]);
       screen(
         el('h2', {}, [`👻 ${p.name} nie żyje`]),

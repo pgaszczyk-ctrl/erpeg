@@ -84,6 +84,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    this.scene.setVisible(!loadingGame());
     // Lay everything out in CSS pixels; the camera enlarges it to the sharper canvas.
     // (centred, not with origin 0: Graphics were drawn off their place that way)
     const fitCam = () => this.cameras.main.setZoom(OSTROSC).centerOn(this.view.width / 2, this.view.height / 2);
