@@ -13,7 +13,7 @@ const commit = (() => {
 const build = `${commit} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
 
 // base: './' so the built game works from any sub-path (e.g. GitHub Pages).
-// Two pages: the game (index.html) and the admin panel (admin.html).
+// Game, admin and the separate test2 map laboratory.
 export default defineConfig({
   base: './',
   define: { __BUILD__: JSON.stringify(build) },
@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
-      input: { main: 'index.html', admin: 'admin.html' },
+      input: { main: 'index.html', admin: 'admin.html', test2: 'test2.html' },
       output: {
         // Phaser is large and unchanged between game updates; let browsers keep it cached.
         manualChunks(id) {

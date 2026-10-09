@@ -22,6 +22,7 @@ import { MOZAIKI } from '../content/mozaiki';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
 import { ruryPrzyUlicy, type Rura09 } from './rury09';
+import { architekturaTest2Aktywna, srodowiskoTest2 } from '../test2/mode';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -411,6 +412,7 @@ let textureCounter = 0;
 const czasyKawalkow: number[] = [];
 /** Overhaul 09: from asking for a chunk to seeing it (ms), background ground included. */
 const czasyCalosci: number[] = [];
+const czasyWorker: number[] = [];
 Object.assign(window, { __czasyKawalkow: czasyKawalkow, __czasyCalosci: czasyCalosci });
 
 interface Chunk {
@@ -442,6 +444,27 @@ export interface Uprawa09 { id: string; x: number; y: number; veg: string; /** T
 export class MapRenderer {
   private chunks = new Map<string, Chunk>();
   private free: Chunk[] = [];
+  /** Test2 reports allocated pixel storage; this is not total browser/GPU memory. */
+  diagnostics() {
+    const chunks = [...this.chunks.values(), ...this.free];
+    const high = this.wysokie.diagnostics();
+    return {
+      chunks: this.chunks.size,
+      allocatedChunks: chunks.length,
+      maxChunks: MAX_CHUNKS,
+      pendingChunks: [...this.chunks.values()].filter(c => c.paintedVer !== c.ver).length,
+      chunkRgbaBytes: chunks.reduce((sum, c) => sum + c.tex.width * c.tex.height * 4, 0),
+      crowns: chunks.reduce((sum, c) => sum + (c.crowns?.length ?? 0), 0),
+      steam: chunks.reduce((sum, c) => sum + (c.steam?.length ?? 0), 0),
+      buildings: high.count,
+      pendingBuildings: high.pending,
+      buildingRgbaBytes: high.rgbaBytes,
+      workerBuildingCacheMaxBytes: 12_000_000 * Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1)),
+      paintMs: [...czasyKawalkow],
+      readyMs: [...czasyCalosci],
+      computeMs: [...czasyWorker],
+    };
+  }
   private patterns?: Patterns;
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
@@ -492,7 +515,12 @@ export class MapRenderer {
     const cy0 = Math.floor((v.y - M) / CHUNK), cy1 = Math.floor((v.bottom + M) / CHUNK);
     const mx = v.centerX / CHUNK - 0.5, my = v.centerY / CHUNK - 0.5;
     for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2]);
-    want.sort((a, b) => a[2] - b[2]);
+    if (srodowiskoTest2()) {
+      // Prioritize the visible terrain; prefetch must fit the existing pixel budget.
+      const visible = ([x, y]: [number, number, number]) => x >= Math.floor(v.x / CHUNK) && x <= Math.floor(v.right / CHUNK) && y >= Math.floor(v.y / CHUNK) && y <= Math.floor(v.bottom / CHUNK);
+      want.sort((a, b) => Number(visible(b)) - Number(visible(a)) || a[2] - b[2]);
+      want.length = Math.min(want.length, MAX_CHUNKS);
+    } else want.sort((a, b) => a[2] - b[2]);
     const keep = new Set(want.map(([x, y]) => `${x},${y}`));
 
     // Recycle chunks far from the view.
@@ -600,6 +628,10 @@ export class MapRenderer {
       przygotujRysunkiUpraw().then(() => ziemiaWTle().policz(order)).then((ready) => {
         if (c.key !== k || c.ver !== ver || !this.scene.textures.exists(c.tex.key)) return;
         const t1 = performance.now();
+        if (ready.computeMs !== undefined) {
+          czasyWorker.push(Math.round(ready.computeMs));
+          if (czasyWorker.length > 20) czasyWorker.shift();
+        }
         this.paint(ctx, x0, y0, ready.ziemia);
         this.dropCrowns(c);
         c.crowns = ready.drzewa.map((t) => this.korony.make(t));
@@ -763,6 +795,7 @@ export class MapRenderer {
       const k = ksztalt09(b);
       const zabytek = this.zabytekCovers(b);
       return {
+        test2: architekturaTest2Aktywna(),
         zabytek,
         r: b.rings[0].map((v) => v * G),
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),

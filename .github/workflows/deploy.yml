@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
-# Two games on one site:
+# Two games and a map laboratory on one site:
 #   https://exp-lore.app/       production – built from the commit named in PRODUKCJA
 #   https://exp-lore.app/test/  the test server – the newest code (VITE_TEST=1)
+#   https://exp-lore.app/test2/ the map laboratory – shares /test/ assets
 # A release to production = bump WERSJA in src/version.ts (+0.001) and point PRODUKCJA at that commit
 # (and empty produkcja/). A single small fix can go live alone as produkcja/<version>-<name>.patch.
 
@@ -81,6 +82,17 @@ jobs:
         with:
           name: test
           path: site/test
+      - name: Publish the test2 laboratory using shared test assets
+        run: |
+          mkdir -p site/test2
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path('site/test/test2.html').read_text()
+          if '<base href="./">' not in html:
+              raise SystemExit('test2 HTML is missing its expected asset base')
+          html = html.replace('<base href="./">', '<base href="/test/">')
+          Path('site/test2/index.html').write_text(html)
+          PY
       - run: du -sh site site/test
       - uses: actions/upload-pages-artifact@v3
         with:

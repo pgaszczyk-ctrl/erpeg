@@ -204,7 +204,7 @@ function naPlotno(px: Uint32Array, N: number, H = px.length / N) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; computeMs?: number }
 
 /** Warzywa z rysunkami od grafika (zamówienie 12, public/uprawy/uprawa_<warzywo>_<faza>.png). */
 export const WARZYWA_RYSUNKI = ['marchewka', 'dynia', 'kapusta', 'brokul', 'salata', 'ziemniak', 'burak'];
@@ -274,7 +274,7 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number; bud?: boolean; x0?: number; y0?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number; bud?: boolean; x0?: number; y0?: number; computeMs?: number }>) => {
           if (e.data.bud) {
             const ok = this.budynki.get(e.data.nr);
             this.budynki.delete(e.data.nr);
@@ -291,7 +291,7 @@ class ZiemiaWTle {
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior, wyrzuty: e.data.wyrzuty });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior, wyrzuty: e.data.wyrzuty, computeMs: e.data.computeMs });
         };
         this.workery.push(w);
       }
@@ -337,8 +337,9 @@ class ZiemiaWTle {
 
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
+      const start = performance.now();
       const { px, drzewa, para, fale, zbior, wyrzuty } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior, wyrzuty });
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior, wyrzuty, computeMs: performance.now() - start });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];

@@ -44,6 +44,18 @@ let licznik = 0;
 
 export class Wysokie {
   private wszystkie = new Map<number, Wysoki>();
+  diagnostics() {
+    let count = 0, pending = 0, rgbaBytes = 0;
+    for (const w of this.wszystkie.values()) {
+      if (w.czeka) pending++;
+      if (w.tex) {
+        count++;
+        // Canvas plus the retained original pixel array; GPU copy is additional.
+        rgbaBytes += w.tex.width * w.tex.height * 4 + (w.orig?.byteLength ?? 0);
+      }
+    }
+    return { count, pending, rgbaBytes };
+  }
 
   constructor(private scene: Phaser.Scene, private korony: Korony) {}
 

@@ -8,6 +8,7 @@ import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
+import { stylizujBudynekTest2 } from '../gen/architekturaTest2';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -26,6 +27,8 @@ const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory'), TA
 
 /** Budynek do namalowania (współrzędne w px generatora = px mapy × GEN_DOTS). */
 export interface Budynek09 {
+  /** Optional experimental architecture, explicitly forwarded to workers by the test2 view. */
+  test2?: boolean;
   r: number[];
   dziury: number[][];
   h: number;
@@ -191,11 +194,13 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${b.test2 ? 'test2' : 'normal'}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    gotowy = budynek(b.r, { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk });
+    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
+    gotowy = budynek(b.r, op);
+    if (b.test2) stylizujBudynekTest2(b.r, op, gotowy);
     zapamietaj(klucz, gotowy);
   }
   // Ściany stoją na obrysie (wygląd 09 z poziomami): obraz w górę o wysokość ściany i w lewo o jej przechył,
