@@ -13,12 +13,12 @@
     <div id="lab-game"></div>
     <div id="lab-ui">
       <header>
-        <div class="brand"><strong>EXP-LORE <span>TEST2</span></strong><small>Architektura ze wspólnych klocków</small></div>
-        <nav aria-label="Wygląd świata"><a id="new-look">Nowy</a><a id="old-look">Obecny</a></nav>
+        <div class="brand"><strong>EXP-LORE <span>TEST2</span></strong><small>Próba rzutu · stare budynki</small></div>
+        <nav aria-label="Rzut mapy"><a id="normal-view">Obecny</a><a id="iso-view">Niższy kąt</a></nav>
         <button id="panel-toggle" aria-expanded="false" aria-controls="lab-panel">Pomiary</button>
       </header>
       <section id="lab-panel" hidden>
-        <p>Spacer po prawdziwej mapie OSM. Budynki powstają na urządzeniu. To próba wyglądu i wydajności mapy, bez walki i zapisywania postaci.</p>
+        <p>Dotychczasowe budynki i grafiki z OSM. „Niższy kąt” skraca obraz mapy w pionie; przełącznik pozwala od razu porównać oba rzuty w tym samym miejscu. To próba kamery, bez walki i zapisywania postaci.</p>
         <div class="locations"><button data-location="station">Dworzec Lublin</button><button data-location="homes">Domy w Lublinie</button><button data-location="krakow">Kraków · mapa świata</button></div>
         <form id="coordinates"><label>Szerokość geogr.<input id="lat" type="number" step="any" min="-85" max="85" required></label><label>Długość geogr.<input id="lon" type="number" step="any" min="-180" max="180" required></label><button>Przejdź · mapa świata</button></form>
         <div id="metrics" aria-live="off"></div>

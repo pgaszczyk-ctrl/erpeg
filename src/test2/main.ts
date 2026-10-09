@@ -8,7 +8,6 @@ import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
 import { OSTROSC } from '../screen';
 import { SKALA_POSTACI } from '../skala';
-import { architekturaTest2Aktywna } from './mode';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const query = new URLSearchParams(location.search);
@@ -22,27 +21,48 @@ const validNumber = (s: string | null, fallback: number, limit: number) => s !==
 const lat = validNumber(query.get('lat'), initial.lat, 85);
 const lon = validNumber(query.get('lon'), initial.lon, 180);
 const mapa = query.get('mapa') === 'world' ? 'world' : 'lublin';
-let zoom = Math.min(5, Math.max(1, validNumber(query.get('zoom'), 2, 10)));
+let zoom = Math.min(5, Math.max(1, validNumber(query.get('zoom'), 3, 10)));
+const LOWER_VIEW = 0.72;
+let lowerView = query.get('view') !== 'normal';
+const verticalRatio = () => lowerView ? LOWER_VIEW : 1;
 const keys = new Set<string>();
 let stick = { x: 0, y: 0 };
 let drag: { id: number; x: number; y: number } | null = null;
 let scene: LabScene | undefined;
 const status = (message: string | null) => { $('lab-status').hidden = message === null; if (message !== null) $('lab-status').textContent = message; };
-const navigate = (point: { lat: number; lon: number; mapa: string }, arch = query.get('arch') ?? '1') => {
+const navigate = (point: { lat: number; lon: number; mapa: string }) => {
   const url = new URL(location.href);
-  for (const [key, value] of Object.entries({ ...point, arch, zoom })) url.searchParams.set(key, String(value));
+  url.searchParams.delete('arch');
+  for (const [key, value] of Object.entries({ ...point, view: lowerView ? 'lower' : 'normal', zoom })) url.searchParams.set(key, String(value));
   location.href = url.href;
 };
 const refreshLinks = () => {
   const p = scene?.city && scene.player ? scene.city.toLatLon(scene.player.x, scene.player.y) : { lat, lon };
-  for (const [id, arch] of [['new-look', '1'], ['old-look', '0']]) {
+  for (const [id, view] of [['iso-view', 'lower'], ['normal-view', 'normal']]) {
     const a = $<HTMLAnchorElement>(id), url = new URL(location.href);
-    for (const [key, value] of Object.entries({ ...p, mapa, arch, zoom })) url.searchParams.set(key, String(value));
+    url.searchParams.delete('arch');
+    for (const [key, value] of Object.entries({ ...p, mapa, view, zoom })) url.searchParams.set(key, String(value));
     a.href = url.href;
-    a.classList.toggle('active', architekturaTest2Aktywna() === (arch === '1'));
+    a.classList.toggle('active', lowerView === (view === 'lower'));
+    a.setAttribute('aria-current', lowerView === (view === 'lower') ? 'true' : 'false');
   }
 };
 refreshLinks();
+for (const [id, lower] of [['iso-view', true], ['normal-view', false]] as const) {
+  $<HTMLAnchorElement>(id).onclick = e => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    lowerView = lower;
+    scene?.fit();
+    if (scene) scene.frames.length = 0;
+    const url = new URL(location.href);
+    url.searchParams.delete('arch');
+    url.searchParams.set('view', lower ? 'lower' : 'normal');
+    url.searchParams.set('zoom', String(zoom));
+    history.replaceState(null, '', url);
+    refreshLinks();
+  };
+}
 $('lat').setAttribute('value', String(lat)); $('lon').setAttribute('value', String(lon));
 $('panel-toggle').onclick = () => {
   const open = $('lab-panel').hidden;
@@ -77,6 +97,7 @@ class LabScene extends Phaser.Scene {
   private direction = 'down';
   private trains?: Pociagi;
   private shownStations = new Set<string>();
+  private readonly heroScale = SKALA_POSTACI === 2 / 3 ? 0.25 : 0.36 * SKALA_POSTACI;
   constructor() { super('test2'); }
   preload() { this.load.spritesheet('lab-hero', 'postacie/lista25_01.png', { frameWidth: 64, frameHeight: 64 }); }
   create() {
@@ -101,10 +122,19 @@ class LabScene extends Phaser.Scene {
     void this.loadMap();
   }
   fit() {
-    // Keep the visible area small enough for the existing six-chunk phone budget.
-    const minZoom = Math.max(1, Math.ceil(this.scale.height / OSTROSC / 490), Math.ceil(this.scale.width / OSTROSC / 980));
+    // Both views share a zoom budget, so switching changes only the projection.
+    // Either a 2×3 or 3×2 chunk rectangle fits the six-chunk phone budget.
+    const w = this.scale.width / OSTROSC, h = this.scale.height / OSTROSC / LOWER_VIEW;
+    const minZoom = Math.max(1, Math.min(Math.max(Math.ceil(w / 490), Math.ceil(h / 980)), Math.max(Math.ceil(w / 980), Math.ceil(h / 490))));
     zoom = Math.max(minZoom, zoom);
-    this.cameras.main.setZoom(zoom * OSTROSC);
+    this.cameras.main.setZoom(zoom * OSTROSC, zoom * OSTROSC * verticalRatio());
+    // The hero is a standing sprite; keep its proportions and foot anchor.
+    this.player?.setScale(this.heroScale, this.heroScale / verticalRatio());
+    if (this.mapView) {
+      this.cameras.main.preRender();
+      this.ready = false;
+      status('Przygotowuję kadr…');
+    }
   }
   private async loadMap() {
     try {
@@ -114,7 +144,8 @@ class LabScene extends Phaser.Scene {
       await Promise.all([city.ensure(start.x, start.y, r), przygotujRysunkiUpraw()]);
       this.city = city;
       const p = city.freeNear(start.x, start.y);
-      this.player = this.add.sprite(p.x, p.y, 'lab-hero', 0).setScale(SKALA_POSTACI === 2 / 3 ? 0.25 : 0.36 * SKALA_POSTACI).setOrigin(0.5, 56 / 64).setDepth(p.y);
+      this.player = this.add.sprite(p.x, p.y, 'lab-hero', 0).setOrigin(0.5, 56 / 64).setDepth(p.y);
+      this.fit();
       this.mapView = new MapRenderer(this, city);
       this.trains = new Pociagi(this, this.mapView);
       this.cameras.main.startFollow(this.player, true, 1, 1);
@@ -123,12 +154,12 @@ class LabScene extends Phaser.Scene {
       Object.assign(window, { __test2: { scene: this, city, renderer: this.mapView, player: this.player, metrics: () => this.metrics(), ready: () => this.ready } });
     } catch (error) { status(`Nie udało się wczytać mapy: ${error instanceof Error ? error.message : error}. Odśwież stronę, aby spróbować ponownie.`); }
   }
-  private radius() { return Math.max(400, Math.hypot(this.scale.width, this.scale.height) / (zoom * OSTROSC) / 2 + 150); }
+  private radius() { return Math.max(400, Math.hypot(this.scale.width / (zoom * OSTROSC), this.scale.height / (zoom * OSTROSC * verticalRatio())) / 2 + 150); }
   metrics() {
     const frames = [...this.frames].sort((a, b) => a - b);
     const duration = this.frames.reduce((a, b) => a + b, 0);
     return {
-      variant: architekturaTest2Aktywna() ? 'new' : 'current', ready: this.ready,
+      variant: lowerView ? 'lower' : 'current', projection: { x: 1, y: verticalRatio() }, ready: this.ready,
       fps: duration ? 1000 * this.frames.length / duration : 0,
       frameP95: frames[Math.floor(frames.length * 0.95)] ?? 0,
       renderer: this.mapView?.diagnostics(),
@@ -144,6 +175,8 @@ class LabScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 0.05);
     let dx = Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA')) + stick.x;
     let dy = Number(keys.has('ArrowDown') || keys.has('KeyS')) - Number(keys.has('ArrowUp') || keys.has('KeyW')) + stick.y;
+    // Inverse projection keeps the joystick direction consistent with the screen.
+    dy /= verticalRatio();
     const length = Math.hypot(dx, dy);
     if (length > 1) { dx /= length; dy /= length; }
     const p = this.player, oldX = p.x, oldY = p.y;
@@ -160,6 +193,7 @@ class LabScene extends Phaser.Scene {
       this.lastEnsure = now; this.busy = true;
       void this.city.ensure(p.x, p.y, this.radius()).catch(() => status('Trwa ponawianie pobierania mapy…')).finally(() => { this.busy = false; });
     }
+    this.cameras.main.preRender();
     this.mapView.update(this.cameras.main);
     this.mapView.updateTrees(now, dt, this.cameras.main, p.x, p.y);
     for (const station of this.city.places) {

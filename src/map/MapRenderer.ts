@@ -22,7 +22,7 @@ import { MOZAIKI } from '../content/mozaiki';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
 import { ruryPrzyUlicy, type Rura09 } from './rury09';
-import { architekturaTest2Aktywna, srodowiskoTest2 } from '../test2/mode';
+import { srodowiskoTest2 } from '../test2/mode';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -795,7 +795,6 @@ export class MapRenderer {
       const k = ksztalt09(b);
       const zabytek = this.zabytekCovers(b);
       return {
-        test2: architekturaTest2Aktywna(),
         zabytek,
         r: b.rings[0].map((v) => v * G),
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),

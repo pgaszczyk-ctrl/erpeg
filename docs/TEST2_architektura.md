@@ -1,3 +1,31 @@
+# Test2: próba rzutu ze starymi budynkami
+
+Adres: https://exp-lore.app/test2/ . Lokalnie: `/test2.html` z Vite build + preview.
+
+## Decyzja właściciela — 9.10.2026
+
+Próba nowych dachów nie przypomina ilustracji referencyjnej, została uznana za zbyt równą/schematyczną. Wycofano ją w całości: usunięty moduł architekturaTest2, jego flaga w zleceniu workera, wariant cache i test tego generatora. Budynki korzystają wyłącznie z dotychczasowej geometrii, palet, dachów i ozdób. Parametr arch z wcześniejszych linków jest ignorowany/usuwany przy zmianie widoku.
+
+## Aktualna próba
+
+- Przełącznik **Obecny / Niższy kąt** działa w tym samym miejscu, bez przeładowania strony. `view=normal|lower` pozwala też otworzyć oba rzuty bezpośrednio.
+- Niższy kąt: natywna kamera Phasera, `zoomY = zoomX ×0.72`, bez obrotu, szadera lub dodatkowego bufora. Oba widoki mają ten sam poziomy zoom (domyślnie3). Zachowana nieregularna dotychczasowa grafika; nie dochodzą nowe połacie/gzymsy.
+- To skrócenie w pionie już narysowanego obrazu — również ścian/drzew/pociągów. Nie odsłania dodatkowych fasad. Pełna izometria wymaga osobnego przeliczenia podstaw obiektów i wysokości; nie nazywać tej próby nowym silnikiem izometrycznym.
+- Bohater ma kompensację skali Y i zachowaną podstawę stóp/proporcje. Wektor dotyku/klawiatury przeliczany przez odwrotny skrót pionowy, potem normalizowany do dotychczasowej prędkości świata. Kolizje/współrzędne OSM pozostają dotychczasowe.
+- Zasięg pobierania używa obu zoomów. Wspólne minimum powiększenia mieści prostokąt w 2×3 lub 3×2 fragmentach; limit6/8 pozostaje egzekwowany. Kamera aktualizuje worldView przed sprawdzeniem gotowości i renderowaniem mapy. Po przełączeniu/powiększeniu/obrocie gotowość nowego kadru jest sprawdzana ponownie.
+- Samo ustawienie zoomY nie dokłada grafiki i pracy malowania budynku. Większy widoczny zasięg pionowy może jednak pokazać więcej obiektów/fragmentów niż Obecny przy tym samym zoomX, więc koszt spaceru należy mierzyć. Istniejące ograniczenia pamięci wektorów/wysokości/wysokich budynków pozostają jak opisano poniżej.
+- HTML `/test2/` nadal współdzieli zasoby `/test/`. Bez nowych PNG, zmian produkcyjnego pinu, SQL, danych graczy lub prawdziwych RPC.
+
+## Kontrola aktualnej wersji
+
+Pełny npm run build i osobny vite build. Lokalny Playwright1280×900 oraz390×844: Obecny/Niższy kąt, identyczne miejsce/poziomy zoom, zoomY ratio0.72, zachowana ekranowa wysokość bohatera, rzeczywiste sterowanie klawiaturą/dotykiem, obrót telefonu/resize komputera, budżet fragmentów i brak błędów JS. Zrzuty obu rzutów obejrzano. Dalsze potwierdzenie publikacji poniżej.
+
+---
+
+## Archiwum: odrzucona próba architektury i pierwotne pomiary
+
+**Poniższy opis dotyczy wycofanego kodu f2e22bd. Nie opisuje obecnego wyglądu. Wymieniony test generatora/moduł zostały usunięte. Ograniczenia istniejącego systemu danych OSM nadal obowiązują.**
+
 # Test2: proceduralna architektura OSM
 
 Adres: https://exp-lore.app/test2/ (opublikowane 9.10.2026, kod f2e22bd). Lokalnie: `/test2.html` z Vite build + preview.

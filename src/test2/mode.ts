@@ -3,6 +3,3 @@ export function srodowiskoTest2(): boolean {
   if (typeof location === 'undefined') return false;
   return /(?:^|\/)test2(?:\/|\.html|$)/.test(location.pathname);
 }
-export function architekturaTest2Aktywna(): boolean {
-  return srodowiskoTest2() && new URLSearchParams(location.search).get('arch') !== '0';
-}
