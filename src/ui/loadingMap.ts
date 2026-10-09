@@ -167,6 +167,10 @@ export function loadingMapError(message: string, retry: () => void) {
   if (!r) return;
   r.hidden = false;
   r.dataset.phase = 'error';
+  // An inert login still covers pointer hits while fading; remove it on failure.
+  menu?.getAnimations().forEach((animation) => animation.cancel());
+  menu?.remove();
+  menu = null;
   stopMedia();
   r.getAnimations().forEach((animation) => animation.cancel());
   r.style.opacity = '';
