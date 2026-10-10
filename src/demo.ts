@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { session, freshStats, freshChest } from './quests';
 import { offline } from './api';
-import { DEMO_KODY, DEMO_IMIONA, DEMO_TEKSTY, SEN, type Pobudka, PO_DEMO_KLUCZ } from './content/demo';
+import { DEMO_KODY, DEMO_TEKSTY, SEN, type Pobudka, PO_DEMO_KLUCZ, PO_DEMO_START } from './content/demo';
 import { TRUDNOSCI } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci } from './content/historia';
@@ -11,11 +11,12 @@ import { randomLook } from './look';
 import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
 import { pixelLogo } from './ui/logo';
+import { TEST } from './version';
 
 // The QR demo: `?d=<code>` (content/demo.ts) plays without a character or a
 // menu. Nothing is written on the server (api.ts `offline`). The phases:
 // 'jedzenie' (by Wawel, eat fruit) → 'smok' (fight the Wawel dragon) →
-// a blackout → 'jawa' (awake where the QR code sends, a while to walk) →
+// a blackout → 'jawa' (a few steps in front of Targi Lublin) →
 // 'koniec' (dimmed, "Zacznij własną przygodę"). scenes/Demo.ts runs them in the game.
 
 export type DemoPhase = 'jedzenie' | 'smok' | 'jawa' | 'koniec';
@@ -55,7 +56,7 @@ export async function startDemo(game: Phaser.Game, p: Pobudka) {
   demo.phase = 'jedzenie';
   demo.pobudka = p;
   Object.assign(session, {
-    token: '', idik: '', name: DEMO_IMIONA[Math.floor(Math.random() * DEMO_IMIONA.length)],
+    token: '', idik: '', name: '',
     age: 6, level: { ...TRUDNOSCI[0], potwory: 0 }, exp: SEN.exp, coins: 0, missions: {}, fog: undefined, fogs: {},
     lokaty: [], story: { st: 'koniec', walked: 0 }, immortal: false, mikstury: 0, bezStrzalki: [], namioty: [], at: null,
     gen: {}, questResults: {}, libRiddles: 0, nonce: Math.floor(Math.random() * 1e9), abandoned: null, stats: freshStats(), extra: [],
@@ -71,9 +72,8 @@ export async function startDemo(game: Phaser.Game, p: Pobudka) {
   game.scene.start('game');
 }
 
-/** Awake: where the QR code sends, a plain hero (level 1, a stick, 10 coins) who can't die. */
+/** Awake before Targi Lublin: an unnamed hero (level 1, a stick, 10 coins) who can't die. */
 export async function wakeUp(scene: Phaser.Scene) {
-  const p = demo.pobudka!;
   session.exp = 0;
   session.coins = 10;
   session.immortal = true;
@@ -81,9 +81,10 @@ export async function wakeUp(scene: Phaser.Scene) {
   loadGear({});
   PLAYER.maxHp = zyciePostaci(session.level.serca, 0);
   session.hp = PLAYER.maxHp;
-  const city = await getMap('mapa' in p ? 'lublin' : mapId(p));
-  const at = 'adres' in p ? city.findAnyStart(p.adres, p.adres) : city.fromLatLon(p.lat, p.lon);
-  await arriveAt(scene.game, city, at ?? { x: session.startX, y: session.startY });
+  // All existing QR links now lead from the Wawel dream to the same Targi prologue.
+  const city = await getMap('lublin');
+  const at = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
+  await arriveAt(scene.game, city, at);
   demo.phase = 'jawa';
   scene.scene.stop('ui');
   scene.scene.restart();
@@ -136,7 +137,8 @@ export function finale() {
   // Straight to a new character, starting on the square in front of Targi Lublin (owner 7.10.2026: no choosing after the demo).
   btn.onclick = () => {
     try { localStorage.setItem(PO_DEMO_KLUCZ, '1'); } catch { /* private mode: the normal form then */ }
-    location.href = location.origin + location.pathname + '#nowa';
+    // Test demos also lead to real character creation; the test server only loads test characters.
+    location.href = location.origin + (TEST ? '/' : location.pathname) + '#nowa';
   };
   const sub = document.createElement('div');
   sub.textContent = DEMO_TEKSTY.koniecPodpis;

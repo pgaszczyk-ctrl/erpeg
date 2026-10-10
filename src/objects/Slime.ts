@@ -301,7 +301,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
-    if (this.isDead) return false;
+    if (this.isDead || this.inAir) return false;
     this.hp -= damage;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);

@@ -1,10 +1,10 @@
 // The demo started from QR codes (src/demo.ts, scenes/Demo.ts): a stranger
 // wakes up by Wawel, eats fruit, remembers who they are, fights the Wawel
-// dragon, then wakes up for real where the QR code sends them and walks
-// around for a while before "Zacznij własną przygodę".
+// dragon, then wakes up in front of Targi Lublin and takes a few steps
+// before the existing invitation to create a new character.
 //
 // Link: https://exp-lore.app/?d=<kod>. The codes say nothing on purpose;
-// each one sends the hero to a different real place (the table below).
+// printed codes stay valid; their earlier destinations are retained below.
 
 /** Where the hero wakes up after the dream: an address on our Lublin map, or any place on Earth (a world map). */
 export type Pobudka =
@@ -12,13 +12,10 @@ export type Pobudka =
   | { miasto: string; mapa: 'lublin'; lat: number; lon: number }
   | { miasto: string; lat: number; lon: number };
 
-/** QR codes: code → where the hero wakes up. Printed codes must keep working, so never reuse or change a code. */
+/** Existing QR registrations. Wake-up is now always PO_DEMO_START; never reuse a printed code. */
 export const DEMO_KODY: Record<string, Pobudka> = {
   ShgD6aib8: { miasto: 'Lublin', mapa: 'lublin', lat: 51.248833, lon: 22.51734 },
 };
-
-/** Names given at random to the demo hero. */
-export const DEMO_IMIONA = ['Felicja', 'Gustaw', 'Leonardo'];
 
 /** The dream: by Wawel in Kraków (world map). */
 export const SEN = {
@@ -32,29 +29,35 @@ export const SEN = {
   owocowNaSerce: 5,
   /** Hero's experience in the dream (level 20). */
   exp: 19000,
-  /** Sword blows that beat the dragon (how it fights: SMOK in objects/Dragon.ts). */
-  ciosow: 6,
+  /** Health in ordinary sword blows; strong blows still do more damage. */
+  ciosow: 18,
+  /** Take flight after losing this many ordinary blows, even in close combat. */
+  ciosyDoLotu: 2,
+  /** Dragon attack timing/damage: medium, independently of the demo's forgiving controls. */
+  trudnoscSmoka: 2,
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
 
-/** After waking up: a walk without a timer; past `koniecM` from where the hero woke up the demo ends, and nobody gets further than `granicaM`. */
-export const JAWA = { koniecM: 500, granicaM: 1000 };
+/** A few actual steps before the existing invitation to create a character; no time limit. */
+export const JAWA = { koniecM: 8, predkoscM: 2 };
 
 export const DEMO_TEKSTY = {
   przebudzenieTytul: '…',
   przebudzenie:
     'Gdzie ja jestem…? I kim ja właściwie jestem?\n\nZnam to miejsce… Te mury na wzgórzu… Aha, to Wawel! Jestem w Krakowie.\n\nBurczy mi w brzuchu. Może znajdę tu coś do jedzenia… A ten miecz w ręku to co to? Wygląda na porządny.',
   celZbierz: (masz: number, trzeba: number) => `Zbierz owoce z drzew – uderz drzewo mieczem (${masz}/${trzeba})`,
-  celZjedz: 'Zjedz owoce – przycisk 🍎 pod bohaterem (klawisz H)',
+  celZjedz: 'Zjedz jabłka – przycisk leczenia w prawym dolnym rogu (H)',
+  jablkaTytul: '🍎 Zjedz zebrane jabłka',
+  jablka: 'Masz już dość jabłek. Teraz trzeba je zjeść, żeby odzyskać siły.\n\nNaciśnij „Zjedz jabłka” albo użyj przycisku leczenia w prawym dolnym rogu ekranu (klawisz H).',
   olsnienie: 'OOooo, już wiem kim jestem!',
-  kimJestem: (imie: string) => `Jestem ${imie}, pogromca smoków! Smok wawelski znowu grasuje – czeka nad Wisłą.`,
+  kimJestem: 'Jestem pogromcą smoków! Smok wawelski znowu grasuje – czeka nad Wisłą.',
   celSmok: 'Pokonaj smoka wawelskiego!',
-  smokPokonany: 'Smok pokonany!',
+  smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
   pobudkaTytul: '💤 Pobudka',
-  pobudka: (miasto: string) => `To dopiero ekscytujący sen…\n\nDobrze znowu być w domu. ${miasto} – tu wszystko wygląda znajomo. Rozejrzę się po okolicy.`,
-  koniec: 'Zacznij własną przygodę',
-  koniecPodpis: 'Za darmo, nawet bez konta.',
+  pobudka: 'To dopiero ekscytujący sen…\n\nJestem w Lublinie, na placu przed Targami Lublin. Przejdę kilka kroków i rozejrzę się.',
+  koniec: 'Stwórz nową postać',
+  koniecPodpis: 'Zacznij własną przygodę. Za darmo, nawet bez konta.',
 };
 
 /** Where a character made right after the demo starts (owner 7.10.2026): the square in front of Targi Lublin, Dworcowa 11. */

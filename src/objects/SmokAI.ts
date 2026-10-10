@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Slime } from './Slime';
 import type { Player } from './Player';
 import { TEX } from '../art';
-import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU, zaladujEfektyAtakow, kluczAtaku, type EfektAtaku } from './smokRysunki';
+import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU, zaladujEfektyAtakow, kluczAtaku, pokazOdlot, type EfektAtaku } from './smokRysunki';
 import { RYSUNKI_SMOKOW, EFEKTY_ATAKOW } from '../content/smoki';
 import { ATAKI_SMOKA as A, GATUNKI_SMOKOW, TRUDNOSC_SMOKOW, LIMIT_EFEKTOW, PRZERWA_MIEDZY_ATAKAMI, type AtakSmoka, type GatunekId } from '../content/smoki';
 
@@ -31,6 +31,12 @@ export interface SmokHost {
 }
 
 type Tryb = 'idzie' | 'gryzie' | 'telegraf' | 'atak' | 'lot' | 'oszolomiony';
+
+interface SmokOptions {
+  /** Wawel demo: retreat into the air after this much damage, also at sword range. */
+  lotPoObrazeniach?: number;
+  widocznyOdlot?: boolean;
+}
 
 /** Efekty na ziemi i w powietrzu (wspólne dla wszystkich smoków, z limitem). */
 interface Efekt { g: Phaser.GameObjects.Graphics | Phaser.GameObjects.Image | Phaser.GameObjects.Sprite; do: number; od: number; tick?: (now: number) => void; koniec?: () => void }
@@ -61,11 +67,13 @@ export class SmokAI {
   private kule: { img: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite; vx: number; vy: number; zostalo: number }[] = [];
   private lot?: { mign: number; nastepne: number; cien?: Phaser.GameObjects.Image; px: number; py: number };
   private zycieMax: number;
+  private zyciePrzedLotem: number;
+  private odlot?: Phaser.GameObjects.Sprite;
   private zauwazyl = false;
   /** Kolejny atak specjalny najwcześniej wtedy. */
   private wolnyOd = 0;
 
-  constructor(private scene: Phaser.Scene, readonly d: Slime, readonly gatunek: GatunekId, private host: SmokHost) {
+  constructor(private scene: Phaser.Scene, readonly d: Slime, readonly gatunek: GatunekId, private host: SmokHost, private options: SmokOptions = {}) {
     d.heavy = true;
     d.brain = () => {};
     const g = GATUNKI_SMOKOW[gatunek];
@@ -78,6 +86,7 @@ export class SmokAI {
     if (g.skala !== 1) d.setScale(d.scaleX * g.skala);
     this.skala = d.scaleX;
     this.zycieMax = d.hp;
+    this.zyciePrzedLotem = d.hp;
     // Rysunki od grafika (content/smoki.ts RYSUNKI_SMOKOW): wczytywane przy pierwszym smoku tego gatunku.
     // Ogień i kwas od grafika: każdy smok może ich użyć (też Cień smoka w fazach).
     void zaladujEfektyAtakow(scene);
@@ -179,6 +188,11 @@ export class SmokAI {
     d.chasing = true;
     const pysk = d.size + A.ugryzienie.zasieg * W * 0.5;
 
+    const prog = this.options.lotPoObrazeniach;
+    if (prog && this.zyciePrzedLotem - d.hp >= prog && (this.tryb === 'idzie' || this.tryb === 'gryzie')) {
+      this.zacznij('lot', now, ux, uy);
+    }
+
     if (this.tryb === 'idzie') {
       d.clearTint();
       const g = GATUNKI_SMOKOW[this.gatunek];
@@ -269,6 +283,13 @@ export class SmokAI {
     if (a === 'lot') {
       this.tryb = 'lot';
       this.until = now + A.lot.start * this.tf;
+      this.zyciePrzedLotem = d.hp;
+      if (this.options.widocznyOdlot) {
+        d.inAir = true;
+        d.setVisible(false);
+        this.odlot?.destroy();
+        this.odlot = pokazOdlot(this.scene, d, this.gatunek, A.lot.start * this.tf);
+      }
       // Miejsce upadku: losowo do 2 W od gracza; przy 1. mignięciu jeszcze idzie za graczem.
       const r = Math.random() * A.lot.rozrzut * this.W, t = Math.random() * Math.PI * 2;
       this.lot = { mign: 0, nastepne: this.until, px: p.x + Math.cos(t) * r, py: p.y + Math.sin(t) * r };
@@ -424,6 +445,11 @@ export class SmokAI {
       // Upadek z góry w wyznaczone miejsce.
       l.cien?.destroy();
       this.znacznik?.clear();
+      // Wawel's bank is narrow: a retreat must not strand the demo dragon in the Vistula or a wall.
+      if (this.options.widocznyOdlot && this.host.blocked(l.px, l.py)) {
+        l.px = d.x;
+        l.py = d.y;
+      }
       d.setPosition(l.px, l.py);
       d.setVisible(true);
       d.inAir = false;
@@ -491,6 +517,8 @@ export class SmokAI {
   }
 
   private sprzataj() {
+    this.odlot?.destroy();
+    this.odlot = undefined;
     this.znacznik?.destroy();
     this.znacznik = undefined;
     this.plomien?.destroy();

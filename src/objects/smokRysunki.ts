@@ -71,6 +71,30 @@ export function maAnimacje(scene: Phaser.Scene, g: GatunekId, akcja: string, kie
   return scene.anims.exists(`${kluczSmoka(g)}-${akcja}_${kier}`);
 }
 
+/** Visible takeoff; the actor stays at its ground position for combat/collisions. */
+export function pokazOdlot(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite, g: GatunekId, startMs = 600) {
+  const im = scene.add.sprite(d.x, d.y, d.texture.key, d.frame.name)
+    .setName('smok-odlot').setOrigin(d.originX, d.originY).setScale(d.scaleX, d.scaleY).setFlipX(d.flipX).setDepth(1_200_000);
+  const shadow = scene.add.ellipse(d.x, d.y + d.displayHeight * 0.3, d.displayWidth * 0.6, 10, 0x1e1a24, 0.3)
+    .setDepth(-1e7 + 3);
+  const k = maAnimacje(scene, g, 'start', 'bok') ? 'bok' : 'przod';
+  if (maAnimacje(scene, g, 'start', k)) im.anims.play(`${kluczSmoka(g)}-start_${k}`);
+  scene.time.delayedCall(startMs, () => {
+    if (!im.active) return;
+    const frame = klatkaSmoka(g, 'lot_gora_1');
+    if (frame >= 0 && im.texture.key === kluczSmoka(g)) {
+      im.anims.stop();
+      im.setFlipX(false).setFrame(frame);
+      if (maAnimacje(scene, g, 'lot', 'gora')) im.anims.play(`${kluczSmoka(g)}-lot_gora`);
+    }
+    scene.tweens.add({ targets: im, y: im.y - 180, scaleX: im.scaleX * 0.15, scaleY: im.scaleY * 0.15,
+      alpha: 0, duration: 900, ease: 'Cubic.In', onComplete: () => im.destroy() });
+  });
+  scene.tweens.add({ targets: shadow, scaleX: 0.25, scaleY: 0.25, alpha: 0, delay: startMs,
+    duration: 900, onComplete: () => shadow.destroy() });
+  return im;
+}
+
 export type EfektAtaku = keyof typeof EFEKTY_ATAKOW;
 export const kluczAtaku = (n: EfektAtaku) => `smok-atak-${n}`;
 let efektyAtakow: Promise<boolean> | undefined;

@@ -4,8 +4,8 @@ import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
 import { demo, dreamPlaces, blackout, bigText, finale, wakeUp } from '../demo';
-import { session } from '../quests';
 import { meleeDamage, totalFruit } from '../inventory';
+import { pokazOdlot, zaladujSmoka } from '../objects/smokRysunki';
 import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
@@ -13,8 +13,8 @@ import type { DialogRequest } from './GameScene';
 
 // The QR demo inside the game (the phases are described in src/demo.ts):
 // fruit trees by the start, the goal line and arrow, the "I know who I am!"
-// moment, the Wawel dragon (stays close, backs off after two blows and spits
-// fire), the blackout, the walk after waking up and the dimmed end.
+// moment, the Wawel dragon's airborne retreats, the blackout, a few steps
+// in front of Targi Lublin and the invitation to create a character.
 
 export interface DemoHost {
   player: Player;
@@ -26,6 +26,8 @@ export interface DemoHost {
   /** A fireball reached the hero. */
   hurt: (from: Phaser.Math.Vector2, damage: number) => void;
   hud: () => void;
+  heal: () => void;
+  ready: () => boolean;
 }
 
 
@@ -36,10 +38,12 @@ export class DemoRun {
   frozen = false;
   private trees: FruitTree[] = [];
   private healTo = 0;
+  private fruitHintShown = false;
   private dragon: Slime | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
-  /** Where the hero woke up (the walk after waking is measured from here). */
+  /** Last position while walking after waking up. */
   private wokeAt: { x: number; y: number } | null = null;
+  private walked = 0;
 
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
 
@@ -52,16 +56,23 @@ export class DemoRun {
         this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }),
       );
     } else if (demo.phase === 'jawa') {
-      blackout(false, 900);
-      const miasto = demo.pobudka?.miasto ?? '';
-      this.scene.time.delayedCall(900, () =>
-        this.host.dialog({
+      this.busy = true;
+      p.speed = JAWA.predkoscM * PX_PER_M;
+      // Keep the blackout until ground, building and roof layers are ready.
+      const reveal = () => {
+        if (!this.host.ready()) { this.scene.time.delayedCall(100, reveal); return; }
+        blackout(false, 900);
+        this.scene.time.delayedCall(900, () => this.host.dialog({
           title: DEMO_TEKSTY.pobudkaTytul,
-          text: DEMO_TEKSTY.pobudka(miasto),
+          text: DEMO_TEKSTY.pobudka,
           buttons: ['Rozejrzę się'],
-          onChoose: () => (this.wokeAt = { x: p.x, y: p.y }),
-        }),
-      );
+          onChoose: () => {
+            this.busy = false;
+            this.wokeAt = { x: p.x, y: p.y };
+          },
+        }));
+      };
+      this.scene.time.delayedCall(100, reveal);
     }
   }
 
@@ -87,16 +98,21 @@ export class DemoRun {
     void now;
     void dt;
     if (this.frozen) return;
+    if (demo.phase === 'jedzenie' && !this.busy && !this.fruitHintShown && totalFruit() >= SEN.owocowNaSerce && this.host.player.hp < this.healTo) {
+      this.fruitHintShown = true;
+      this.host.dialog({ title: DEMO_TEKSTY.jablkaTytul, text: DEMO_TEKSTY.jablka,
+        buttons: ['Zjedz jabłka', 'Za chwilę'], onChoose: (i) => { if (i === 0) this.host.heal(); } });
+      return;
+    }
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
     const w = this.wokeAt;
     const p = this.host.player;
     if (demo.phase === 'jawa' && w) {
-      // A walk around after waking: never further than JAWA.granicaM; past JAWA.koniecM the demo ends.
-      const d = Math.hypot(p.x - w.x, p.y - w.y);
-      const max = JAWA.granicaM * PX_PER_M;
-      if (d > max) p.setPosition(w.x + ((p.x - w.x) * max) / d, w.y + ((p.y - w.y) * max) / d);
+      // Count actual steps, also when turning back or walking around a tree.
+      this.walked += Math.hypot(p.x - w.x, p.y - w.y);
+      this.wokeAt = { x: p.x, y: p.y };
     }
-    if (demo.phase === 'jawa' && w && Math.hypot(p.x - w.x, p.y - w.y) > JAWA.koniecM * PX_PER_M) {
+    if (demo.phase === 'jawa' && w && this.walked >= JAWA.koniecM * PX_PER_M) {
       demo.phase = 'koniec';
       this.frozen = true;
       this.host.player.vel.set(0, 0);
@@ -116,7 +132,12 @@ export class DemoRun {
     return e === this.dragon;
   }
 
-  onDragonKilled() {
+  onDragonKilled(d: Slime) {
+    this.busy = true;
+    this.host.player.vel.set(0, 0);
+    // Replace the generic squashed-enemy death with takeoff and visible ascent.
+    pokazOdlot(this.scene, d, 'gorski');
+    d.setVisible(false);
     this.dragon = null;
     bigText(DEMO_TEKSTY.smokPokonany, 1800);
     this.scene.time.delayedCall(2000, () => this.sleep());
@@ -151,22 +172,30 @@ export class DemoRun {
     bigText(DEMO_TEKSTY.olsnienie, 2600);
     this.scene.time.delayedCall(2800, () => {
       ex.destroy();
-      this.busy = false;
       demo.phase = 'smok';
-      this.placeDragon();
-      this.host.toast(DEMO_TEKSTY.kimJestem(session.name), 4500);
-      this.host.hud();
+      void this.placeDragon().then(() => {
+        if (!this.scene.sys.isActive() || this.frozen) return;
+        this.busy = false;
+        this.host.toast(DEMO_TEKSTY.kimJestem, 4500);
+        this.host.hud();
+      }).catch(() => {
+        this.busy = false;
+        this.host.dialog({ title: 'Nie udało się wczytać smoka', text: 'Spróbuj ponownie.',
+          buttons: ['Spróbuj ponownie'], onChoose: () => this.remember() });
+      });
     });
   }
 
-  private placeDragon() {
+  private async placeDragon() {
     const { smok } = dreamPlaces();
     const at = this.host.city.fromLatLon(smok.lat, smok.lon);
-    this.host.city.ensure(at.x, at.y, 200 * PX_PER_M).catch(() => {});
+    await this.host.city.ensure(at.x, at.y, 200 * PX_PER_M);
+    await zaladujSmoka(this.scene, 'gorski');
+    if (!this.scene.sys.isActive() || this.frozen) return;
     const spot = this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
     const d = this.host.spawnDragon(spot.x, spot.y);
-    // Its way of fighting is objects/Dragon.ts (GameScene gives it to every dragon).
+    // GameScene gives the demo dragon SmokAI's airborne-retreat options.
     d.hp = SEN.ciosow * meleeDamage();
     this.dragon = d;
   }
@@ -179,10 +208,9 @@ export class DemoRun {
     blackout(true, 700);
     this.scene.time.delayedCall(2000, () => {
       wakeUp(this.scene).catch(() => {
-        // The map didn't load: at least show the end.
         blackout(false);
-        demo.phase = 'koniec';
-        finale();
+        this.host.dialog({ title: 'Nie udało się wczytać Lublina', text: 'Spróbuj ponownie, żeby obudzić się przed Targami Lublin.',
+          buttons: ['Spróbuj ponownie'], onChoose: () => { this.frozen = false; this.sleep(); } });
       });
     });
   }

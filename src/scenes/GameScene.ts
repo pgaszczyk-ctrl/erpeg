@@ -724,6 +724,8 @@ export class GameScene extends Phaser.Scene {
           if (this.player.isDead) this.onPlayerDeath();
         },
         hud: () => this.emitHud(),
+        heal: () => this.healButton(),
+        ready: () => this.firstViewReady(),
       });
       this.demoRun.start();
     }
@@ -1261,7 +1263,7 @@ export class GameScene extends Phaser.Scene {
     // An enemy right on top of the hero is always hit too.
     const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
     for (const s of [...this.enemies]) {
-      if (s.isDead) continue;
+      if (s.isDead || s.inAir) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
       if (Math.random() >= chance) {
@@ -1528,8 +1530,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * A dragon starts fighting. The QR demo's Wawel dragon keeps its old claws-and-fireballs brain; every other one is
-   * data (content/smoki.ts) run by SmokAI: the story's dragon is 'cien' (attacks come in phases, life = SMOK_CIOSOW
+   * A dragon starts fighting. The Wawel demo uses SmokAI with retreats after damage; the other dragons are
+   * data (content/smoki.ts): the story's dragon is 'cien' (attacks come in phases, life = SMOK_CIOSOW
    * blows of the hero's sword), the others have their species' life.
    */
   private dragonFight(s: Enemy) {
@@ -1537,7 +1539,9 @@ export class GameScene extends Phaser.Scene {
     // didn't read as a dragon); its life is set by the demo (SEN.ciosow blows).
     if (this.demoRun?.isDragon(s)) {
       s.gatunek = 'gorski';
-      this.dragons.set(s, new SmokAI(this, s, 'gorski', this.smokHost()));
+      this.dragons.set(s, new SmokAI(this, s, 'gorski', this.smokHost(SEN.trudnoscSmoka), {
+        lotPoObrazeniach: SEN.ciosyDoLotu * meleeDamage(), widocznyOdlot: true,
+      }));
       return;
     }
     const story = s === this.story.dragonSprite;
@@ -1580,12 +1584,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** What a dragon's brain may do to the hero (damage as a share of full life, states, shaking). */
-  private smokHost() {
-    const mult = () => TRUDNOSC_SMOKOW.obrazenia[this.trudnoscIdx()] ?? 1;
+  private smokHost(trudnosc = this.trudnoscIdx()) {
+    const mult = () => TRUDNOSC_SMOKOW.obrazenia[trudnosc] ?? 1;
     return {
       player: this.player,
       W: 56 * 0.36 * SKALA_POSTACI,
-      trudnosc: this.trudnoscIdx(),
+      trudnosc,
       blocked: (x: number, y: number) => this.city.isBlocked(x, y),
       hurt: (from: Phaser.Math.Vector2, czesc: number) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
@@ -1669,7 +1673,7 @@ export class GameScene extends Phaser.Scene {
     if (s.duel) return this.endDuel(s, true);
     if (this.demoRun?.isDragon(s)) {
       this.enemies = this.enemies.filter((e) => e !== s);
-      this.demoRun.onDragonKilled();
+      this.demoRun.onDragonKilled(s);
       return;
     }
     if (s === this.story.dragonSprite) {
