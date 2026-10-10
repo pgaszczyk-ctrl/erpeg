@@ -362,3 +362,5 @@
 
 - Końcowe CI [38059995737](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/38059995737), kod 3cc9d70: pełna budowa, test:quests, test:quest-maps i Playwright success (10.10.2026 14:46 UTC). Telefon390×844 PL/EN i komputer1280×800: pełny zegar, błędna odpowiedź i naprawa, 2/3 tropów, częściowy układ po logowaniu/zmianie języka, brak obrażeń po błędzie, blokady między miastami. Wszystkie RPC przechwycone; żadnych zapisów rzeczywistych graczy.
 - Obejrzano zrzuty CI: oferta/ukończenie na telefonie, dochodzenie z krótkim celem HUD, karty EN na telefonie i oferta pomocnika EN na komputerze. Dialogi i przyciski mieszczą się w widoku; notes jest w dzienniku, nie w krótkim HUD. Upload zrzutów uwzględnia ignorowany/ukryty katalog .cache.
+
+- Publikacja [38061097869](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/38061097869) zakończona success 10.10.2026 15:00 UTC (17:00 Polska). Kod scalony przez PR#2: 07804e3. HTTPS /test/version.json potwierdziło 07804e3 (build14:59UTC), /version.json nadal e0a27d0; PRODUKCJA/WERSJA/produkcja i dane Supabase nietknięte. Końcowy wpis jest wyłącznie dokumentacją [skip ci], bez ponownej publikacji identycznego kodu.
