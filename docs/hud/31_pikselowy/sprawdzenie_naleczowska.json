@@ -1,0 +1,164 @@
+[
+  {
+    "name": "desktop",
+    "checks": [
+      {
+        "side": "south",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "east",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "north",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "west",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": true
+      },
+      {
+        "side": "south-return",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      }
+    ],
+    "errors": []
+  },
+  {
+    "name": "phone",
+    "checks": [
+      {
+        "side": "south",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "east",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "north",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      },
+      {
+        "side": "west",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": true
+      },
+      {
+        "side": "south-return",
+        "address": [
+          "Nałęczowska 16"
+        ],
+        "name": "eLeader",
+        "id": 30667,
+        "levels": 6,
+        "drawn": true,
+        "visible": true,
+        "pending": false,
+        "refs": 2,
+        "opaque": 43627,
+        "cutout": false
+      }
+    ],
+    "errors": []
+  }
+]

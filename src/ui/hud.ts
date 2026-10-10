@@ -130,7 +130,7 @@ const CSS = `
 #hud .hud-reservoir button[disabled] { cursor: default; }
 #hud .hud-reservoir .hud-heal.low { animation: none; }
 #hud .hud-reservoir .hud-heal.low::after { content: ''; position: absolute; inset: 26% 12% 10%; border-radius: 50%; animation: hud-pulse 0.9s ease-in-out infinite; pointer-events: none; }
-#hud .hud-reservoir .hud-avpic { image-rendering: auto; }
+#hud .hud-reservoir .hud-avpic { image-rendering: pixelated; }
 #hud .hud-reservoir .hud-vehicle:disabled img { opacity: 0.32; filter: grayscale(1); }
 `;
 
@@ -634,11 +634,6 @@ function drawBottomRail(c: CanvasRenderingContext2D, baseLoaded: boolean) {
 export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
   avatar = src ? { src, sx, sy, sw, sh } : null;
   drawAvatar();
-}
-
-/** Load only the accepted portrait corresponding to the currently selected hero. */
-export function setHudHeroPortrait(id: string) {
-  if (machineV5 && 'hero' in machineV5) machineV5.hero(id);
 }
 
 /** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */

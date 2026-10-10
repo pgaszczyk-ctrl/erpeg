@@ -47,9 +47,16 @@ export const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
 ];
 
 /** Complete, fixed looks from the owner's new pack, released in 1.015. */
+const NAZWY_BOHATEROW = [
+  'Czarodziej', 'Chłopak w kamizelce', 'Podróżnik w cylindrze', 'Siwy wędrowiec', 'Starsza pani',
+  'Strażnik', 'Rudy drwal', 'Dziewczyna z łukiem', 'Mechanik w kaszkiecie', 'Marynarz',
+  'Dziewczyna z warkoczami', 'Kowal', 'Pilotka w goglach', 'Profesor', 'Kucharz',
+  'Ogrodnik', 'Kominiarz', 'Kupiec w turbanie', 'Wynalazca', 'Brodaty kupiec',
+  'Rudowłosa podróżniczka', 'Kapitan', 'Dziewczyna z fioletowymi włosami', 'Górnik', 'Listonoszka',
+];
 export const BOHATEROWIE_25: Postac[] = Array.from({ length: 25 }, (_, i) => ({
   id: `lista${String.fromCharCode(97 + i)}`,
-  nazwa: `Postać ${String(i + 1).padStart(2, '0')}`,
+  nazwa: NAZWY_BOHATEROW[i],
   plik: `lista25_${String(i + 1).padStart(2, '0')}`,
   bokWPrawo: false,
   skala: 0.36,

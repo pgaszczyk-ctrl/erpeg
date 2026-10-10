@@ -16,9 +16,9 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudHeroPortrait, hudZoom, setHudVehicles } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
-import { heroPortrait, heroSkin } from '../sprites';
+import { heroPortrait } from '../sprites';
 import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
@@ -341,7 +341,6 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
-    setHudHeroPortrait(heroSkin(session.look.postac, session.name).id);
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;

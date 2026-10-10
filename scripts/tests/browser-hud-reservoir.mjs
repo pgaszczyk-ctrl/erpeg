@@ -33,8 +33,8 @@ try {
   const inputs=page.locator('#menu input');await inputs.nth(0).fill('Arceus');await inputs.nth(1).fill('OFFLINE');
   await page.getByRole('button',{name:'Wczytaj',exact:true}).click();
   await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&document.getElementById('loading-map')?.hidden,null,{timeout:90000});
-  await page.waitForFunction(()=>document.querySelector('.hud-avpic')?.dataset.portrait==='1',null,{timeout:30000});
-  assert.equal(new Set(requests.filter(s=>s.includes('/portrety/'))).size,1,'Only selected portrait should load');
+  await page.waitForFunction(()=>document.querySelector('.hud-avpic')?.dataset.source==='sprite',null,{timeout:30000});
+  assert.equal(requests.filter(s=>s.includes('/portrety/')||s.includes('/baniak.webp')).length,0,'Sprite heads and pixel boiler need no illustrated portrait/tank downloads');
   await page.evaluate(()=>{const sc=window.__game.scene.getScene('game');sc.player.hp=4;window.__session.exp=60;window.__session.mikstury=2;window.__gear.bag=[{goods:'owoce',counts:{jablko:50}},{item:'paczek'},{item:'rower'}];sc.emitHud();});
   await page.waitForTimeout(300);
   assert((await page.locator('.hud-heal').getAttribute('aria-label')).includes('miksturę'));
@@ -60,7 +60,7 @@ try {
   // A drag over the tank must not consume healing.
   const b=await page.locator('.hud-heal').boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2+16,b.y+b.height/2,{steps:4});await page.mouse.up();
   assert.equal(await page.evaluate(()=>window.__session.mikstury),2);
-  const box=await page.locator('.hud-m').boundingBox();assert(box.x>=0&&box.x+box.width<=width+.1,'HUD fits viewport');assert(box.height<120,'Compact height');
+  const box=await page.locator('.hud-m').boundingBox();assert(box.x>=0&&box.x+box.width<=width+.1,'HUD fits viewport');assert(box.height<(mobile?120:150),'Compact on phones, enlarged on desktop');if(!mobile) assert(box.width>=400,'Desktop HUD enlarged');
   const geometry=await page.evaluate(()=>{const r=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};return {exp:r('.hud-m button[aria-label^="Doświadczenie"]'),portrait:r('.hud-av'),life:r('.hud-heal'),camera:r('.hud-b1'),bike:r('.hud-rower')};});
   assert(geometry.exp.x<geometry.portrait.x&&geometry.portrait.x<geometry.life.x&&geometry.life.x<geometry.camera.x&&geometry.camera.x<geometry.bike.x);
   for(const r of Object.values(geometry)){assert(r.width>=44&&r.height>=44);}
@@ -87,19 +87,28 @@ try {
   const dim=await page.locator('.hud-rower img').evaluate(im=>Number(getComputedStyle(im).opacity));assert(dim<.4,'Inactive bicycle is dimmed');
   await page.screenshot({path:`${artifacts}/hud-v6-${name}-no-vehicle.png`});
   const lifeAlone=await page.locator('.hud-heal').boundingBox();assert(Math.abs(lifeAlone.x+lifeAlone.width/2-width/2)<=.6,'Removing vehicles must not move the life tank');
-  await page.locator('.hud-av').click();await page.locator('#character').waitFor({state:'visible'});await page.keyboard.press('Escape');await page.locator('#character').waitFor({state:'hidden'});
+  await page.locator('.hud-av').click();await page.locator('#character').waitFor({state:'visible'});assert((await page.locator('#character').innerText()).includes('Czarodziej'));assert(!(await page.locator('#character').innerText()).includes('Postać 01'));await page.keyboard.press('Escape');await page.locator('#character').waitFor({state:'hidden'});
   await page.waitForTimeout(100);
   await page.locator('.hud-b1').click();await page.waitForFunction(()=>document.querySelector('#photo')||[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Zapisz')));
   await page.locator('#brag').getByRole('button',{name:'Zamknij',exact:true}).click();
   await page.locator('#brag').waitFor({state:'hidden'});
   await page.waitForFunction(()=>!document.querySelector('#hud').classList.contains('off'));
   // Sample changed heroes and verify all 25 on desktop.
+  const headPrints=new Set();
   for(const index of name==='desktop'?Array.from({length:25},(_,i)=>i):[12,24]){
    await page.evaluate(index=>{window.__session.look.postac=index;window.__game.scene.getScene('game').refreshLook();},index);
-   await page.waitForFunction(index=>document.querySelector('.hud-avpic')?.dataset.portrait===String(index+1),index,{timeout:30000});
+   await page.waitForFunction(index=>window.__game.scene.getScene('game').player.texture.key===`hd-lista${String.fromCharCode(97+index)}`,index);
+   const hash=await page.evaluate(()=>{
+    const sc=window.__game.scene.getScene('game'),fr=sc.player.texture.get('down-1');
+    const expected=document.createElement('canvas');expected.width=expected.height=42;const g=expected.getContext('2d');g.imageSmoothingEnabled=false;
+    g.drawImage(sc.player.texture.getSourceImage(),fr.cutX+14,fr.cutY+5,36,36,5,5,32,32);
+    const bytes=g.getImageData(0,0,42,42).data,actual=document.querySelector('.hud-avpic').getContext('2d').getImageData(0,0,42,42).data;
+    if(bytes.some((v,i)=>v!==actual[i]))throw Error('HUD head differs from selected standing sprite');
+    let h=0;for(const x of actual)h=(h*31+x)|0;return h;
+   });headPrints.add(hash);
   }
   await page.evaluate(()=>{window.__session.look.postac=0;window.__session.exp=60;window.__gear.bag=[{item:'rower'}];window.__session.mikstury=2;const sc=window.__game.scene.getScene('game');sc.player.hp=6;sc.refreshLook();sc.emitHud();});
-  await page.waitForFunction(()=>document.querySelector('.hud-avpic')?.dataset.portrait==='1');
+  assert.equal(headPrints.size,name==='desktop'?25:2,'Each selected hero displays their own head');
   await page.screenshot({path:`${artifacts}/hud-v6-${name}-final.png`});
   if(name==='phone'){
    await page.setViewportSize({width:844,height:390});

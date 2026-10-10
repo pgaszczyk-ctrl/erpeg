@@ -11,7 +11,7 @@ const BASE = `${import.meta.env.BASE_URL || '/'}hud/v6/`;
 const HEIGHT = 94;
 const LIFE_X = 136;
 
-/** Compact TEST HUD: EXP → portrait → clickable life tank → camera → owned vehicles. */
+/** Compact TEST HUD, drawn on the same small pixel grid as the world. Life anchors the screen centre. */
 export function createReservoirHud(p: Parts) {
   p.m.classList.add('hud-reservoir');
   p.m.querySelector('canvas')!.style.display = 'none';
@@ -21,18 +21,12 @@ export function createReservoirHud(p: Parts) {
   const camera = p.m.querySelector<HTMLButtonElement>('.hud-b1')!;
   const canvas = document.createElement('canvas');
   canvas.className = 'hud-reservoir-art';
-  canvas.style.cssText = 'pointer-events:none;image-rendering:auto';
+  canvas.style.cssText = 'pointer-events:none;image-rendering:pixelated';
   p.m.prepend(canvas);
   const c = canvas.getContext('2d')!;
-  // A small rendering grid makes only the tank look like the pixel world.
-  // The accepted portrait/camera/vehicle masters retain their existing detail.
-  const tankCanvas = document.createElement('canvas');
-  tankCanvas.width = 48; tankCanvas.height = 60;
-  const tankContext = tankCanvas.getContext('2d')!;
   const images: Record<string, HTMLImageElement> = {};
   let last: HudView | null = null, alive = true;
-  let fallback: Portrait = null, portrait: HTMLImageElement | null = null;
-  let pendingPortrait: HTMLImageElement | null = null, heroId = '';
+  let fallback: Portrait = null;
   let s = 1, dpr = 1;
   const width = 267;
   let vehicles: HTMLButtonElement[] = [];
@@ -42,12 +36,10 @@ export function createReservoirHud(p: Parts) {
     im.onload = () => { if (alive && last) draw(last); };
     im.src = url;
   };
-  load('tank', BASE + 'baniak.webp');
   load('camera', BASE + 'aparat.webp');
   load('apple', `${import.meta.env.BASE_URL || '/'}hud/v5/jablko.png`);
   load('potion', `${import.meta.env.BASE_URL || '/'}hud/v5/mikstura.png`);
   load('pipes', `${import.meta.env.BASE_URL || '/'}hud/v5/rurki.png`);
-  load('gear', `${import.meta.env.BASE_URL || '/'}swiat/ozdoby/zebatka.png`);
   // The approved vehicle art is requested only when that vehicle is in the backpack.
 
   const removers: (() => void)[] = [];
@@ -74,7 +66,7 @@ export function createReservoirHud(p: Parts) {
   });
   function layout() {
     dpr = window.devicePixelRatio || 1;
-    s = window.innerWidth >= 900 && !window.matchMedia('(pointer: coarse)').matches ? 1.1 : 1;
+    s = window.innerWidth >= 900 && !window.matchMedia('(pointer: coarse)').matches ? 1.5 : 1;
     vehicles = [p.vehicles.rower, p.vehicles.hulajnoga].filter(b => !b.hidden);
     // One fixed vehicle socket; inventory/availability selection lives in hud.ts.
     // Its inactive bicycle placeholder keeps the life tank's anchor unchanged.
@@ -83,7 +75,7 @@ export function createReservoirHud(p: Parts) {
       left: `${left}px`, right: 'auto', bottom: 'calc(8px + env(safe-area-inset-bottom))',
       width: `${width * s}px`, height: `${HEIGHT * s}px`, transform: '',
     });
-    const w = Math.round(width * s * dpr), h = Math.round(HEIGHT * s * dpr);
+    const w = width, h = HEIGHT;
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     at(p.xp, 2, 38, 44, 44);
     at(av, 54, 38, 44, 44);
@@ -111,80 +103,87 @@ export function createReservoirHud(p: Parts) {
     const im = images[name];
     if (im?.complete && im.naturalWidth) c.drawImage(im, x, y, w, h);
   }
-  const metal = () => {
-    const g = c.createLinearGradient(0, 49, 0, 73);
-    g.addColorStop(0, '#ffe09a'); g.addColorStop(.25, '#c38a3d');
-    g.addColorStop(.6, '#67401e'); g.addColorStop(1, '#daa551'); return g;
-  };
-  function rounded(x: number, y: number, w: number, h: number, r: number) {
-    c.beginPath(); c.roundRect(x, y, w, h, r);
+  // Integer rows/edges, a restrained brass palette and no antialiased outline.
+  const ink = '#211a22', dark = '#644226', brass = '#b28443', light = '#e0bc78';
+  function rect(x: number, y: number, w: number, h: number, color: string) {
+    c.fillStyle = color; c.fillRect(x, y, w, h);
+  }
+  function oval(x: number, y: number, rx: number, ry: number, color: string) {
+    c.fillStyle = color;
+    for (let j = -ry; j <= ry; j++) {
+      const n = Math.floor(rx * Math.sqrt(Math.max(0, 1 - j * j / (ry * ry))));
+      c.fillRect(x - n, y + j, n * 2 + 1, 1);
+    }
   }
   function pipe(x: number, end: number) {
     const im = images.pipes;
     if (im?.complete && im.naturalWidth) {
-      c.save(); c.imageSmoothingEnabled = false;
-      // Repeat the original five-pixel rail, preserving its brass highlights.
       for (let at = x; at < end; at += 8) {
         const n = Math.min(8, end - at);
         c.drawImage(im, 146, 54, n, 7, at, 57, n, 7);
       }
-      c.restore(); return;
+    } else {
+      rect(x, 58, end - x, 5, ink); rect(x, 59, end - x, 3, brass);
+      rect(x, 59, end - x, 1, light);
     }
-    c.fillStyle = '#251919'; c.fillRect(x, 58, end - x, 5);
-    c.fillStyle = '#b78643'; c.fillRect(x, 59, end - x, 3);
-    c.fillStyle = '#f5d088'; c.fillRect(x, 59, end - x, 1);
   }
-  function frame(x: number, y = 60, active = false) {
-    // Existing world cog, with the accepted artwork sitting over its centre.
-    c.save(); c.imageSmoothingEnabled = false;
-    pic('gear', x - 24, y - 24, 48, 48);
-    c.restore();
-    c.beginPath(); c.arc(x, y, 19, 0, Math.PI * 2);
-    c.fillStyle = 'rgba(37,25,24,.72)'; c.fill();
-    c.strokeStyle = active ? '#fff0a6' : metal(); c.lineWidth = active ? 2.5 : 1.5; c.stroke();
+  function frame(x: number, active = false) {
+    // Low-profile gear sockets, fitted to the icon instead of a large machine behind it.
+    for (const [dx, dy] of [[-5,-23],[-5,17],[-23,-5],[17,-5],[-18,-18],[10,-18],[-18,10],[10,10]]) {
+      rect(x + dx, 60 + dy, 8, 8, ink);
+      rect(x + dx + 1, 61 + dy, 6, 6, dark);
+      rect(x + dx + 1, 61 + dy, 5, 2, brass);
+    }
+    oval(x, 60, 21, 21, ink);
+    oval(x, 59, 19, 19, active ? '#f5d38a' : light);
+    oval(x, 61, 18, 18, dark);
+    oval(x, 60, 16, 16, '#382d2a');
+    for (const [dx, dy] of [[-14,-12],[12,-12],[-14,12],[12,12]]) {
+      rect(x + dx, 60 + dy, 2, 2, light);
+    }
   }
   function tank(v: HudView) {
-    const c = tankContext;
-    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, 48, 60);
-    c.setTransform(2 / 3, 0, 0, 2 / 3, -100 * 2 / 3, 0);
-    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    // Artwork is an empty glass shell; the actual life and bonus fluid remain independent.
-    c.save();
-    c.beginPath(); c.ellipse(136, 55, 31, 28, 0, 0, Math.PI * 2); c.clip();
-    c.fillStyle = '#271c27'; c.fillRect(103, 27, 66, 58);
+    // Empty boiler shell and real fluid are drawn together; no photographic asset or blur.
+    rect(116, 84, 8, 8, ink); rect(148, 84, 8, 8, ink);
+    rect(118, 85, 4, 5, dark); rect(150, 85, 4, 5, dark);
+    oval(136, 55, 35, 33, ink);
+    oval(136, 54, 33, 31, light);
+    oval(137, 56, 32, 30, dark);
+    oval(136, 55, 30, 28, brass);
+    oval(136, 55, 28, 26, ink);
     const total = Math.max(1, v.maxHp + v.extra);
     const red = Math.max(0, Math.min(1, v.hp / total));
     const blue = Math.max(0, Math.min(1 - red, v.extra / total));
-    // The shell's transparent window occupies y=35..69 at this display size.
-    // Measure fluid inside that window, rather than counting the opaque neck/base.
-    const top = 69 - (red + blue) * 34;
-    const g = c.createLinearGradient(104, 0, 168, 0);
-    g.addColorStop(0, v.zatruty ? '#879e38' : '#ff8176');
-    g.addColorStop(.25, v.zatruty ? '#99b43e' : '#f63b46');
-    g.addColorStop(1, v.zatruty ? '#3c571b' : '#9b162d');
-    c.fillStyle = g; c.fillRect(103, 69 - red * 34, 66, red * 34);
-    if (blue) { c.fillStyle = '#579ee7'; c.fillRect(103, top, 66, blue * 34); }
-    if (red + blue > 0) {
-      c.strokeStyle = blue ? '#bde7ff' : v.zatruty ? '#d0e588' : '#ffc3b5';
-      c.lineWidth = 1;
-      c.beginPath(); c.moveTo(105, top + 1); c.quadraticCurveTo(135, top - 1, 166, top + 1); c.stroke();
+    const surface = 79 - Math.round((red + blue) * 48);
+    const redSurface = 79 - Math.round(red * 48);
+    for (let y = 31; y <= 79; y++) {
+      const n = Math.floor(26 * Math.sqrt(Math.max(0, 1 - (y - 55) ** 2 / (24 * 24))));
+      const fluid = y >= redSurface ? (v.zatruty ? '#63803c' : '#bd3844') : y >= surface ? '#548cc0' : '#303034';
+      rect(136 - n, y, n * 2 + 1, 1, fluid);
+      if (y >= surface && n > 6) {
+        rect(136 - n + 2, y, 3, 1, y >= redSurface ? (v.zatruty ? '#8d9f52' : '#df6257') : '#80b4d7');
+        rect(136 + n - 3, y, 3, 1, y >= redSurface ? (v.zatruty ? '#425f35' : '#8d2c3c') : '#376384');
+      }
+      if (y === surface && n > 1) rect(136 - n + 1, y, n * 2 - 1, 1, blue ? '#add1df' : v.zatruty ? '#c1c787' : '#ed9580');
     }
-    c.restore();
-    const shell = images.tank;
-    if (shell?.complete && shell.naturalWidth) c.drawImage(shell, 100, 0, 72, 90);
-    // Enlarge shell and real fluid together on the same pixel grid.
-    const art = canvas.getContext('2d')!;
-    art.save(); art.imageSmoothingEnabled = false;
-    art.drawImage(tankCanvas, 100, 0, 72, 90); art.restore();
-    // Small overlapping bottle: the selected healing supply, not another action.
-    // Keep the smaller supply icon/label at their existing readable resolution.
+    // Quiet glass shine, gauge ticks, rivets, neck and cap.
+    rect(115, 43, 2, 10, '#bdd0c580'); rect(117, 38, 2, 5, '#bdd0c580');
+    for (let y = 42; y < 75; y += 8) rect(155, y, 4, 1, '#271d28');
+    for (const [x,y] of [[108,45],[110,71],[161,42],[161,69]]) {
+      rect(x, y, 3, 3, ink); rect(x, y, 2, 2, light);
+    }
+    rect(123, 15, 26, 14, ink); rect(125, 16, 22, 11, dark);
+    rect(125, 16, 22, 2, light); rect(128, 18, 16, 7, brass);
+    rect(130, 8, 12, 9, ink); rect(132, 9, 8, 7, brass);
+    rect(128, 5, 16, 4, ink); rect(129, 6, 14, 2, light);
+    rect(128, 20, 2, 3, light); rect(141, 20, 2, 3, light);
     supply(v);
   }
   function supply(v: HudView) {
     c.save(); c.globalAlpha = v.noHeal ? .55 : 1;
-    rounded(148, 59, 25, 25, 7); c.fillStyle = '#342725'; c.fill();
-    c.strokeStyle = metal(); c.lineWidth = 2; c.stroke();
-    rounded(155, 55, 11, 6, 2); c.fillStyle = metal(); c.fill();
+    rect(148, 59, 25, 26, ink); rect(150, 60, 21, 24, brass);
+    rect(151, 62, 19, 21, '#362929'); rect(150, 60, 21, 1, light);
+    rect(155, 55, 11, 5, ink); rect(156, 56, 9, 3, light);
     if (v.preparedFood && v.potions <= 0 && v.fruit < v.fruitPerHeal) {
       c.font = '17px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(v.preparedFood.icon, 160.5, 72);
@@ -194,57 +193,43 @@ export function createReservoirHud(p: Parts) {
   function draw(v: HudView) {
     last = v;
     if (document.hidden) return;
-    c.setTransform(canvas.width / width, 0, 0, canvas.height / HEIGHT, 0, 0);
-    c.clearRect(0, 0, width, HEIGHT); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, width, HEIGHT); c.imageSmoothingEnabled = false;
     pipe(44, 108); pipe(165, width - 20);
-    // The one horizontal amber experience reservoir.
-    rounded(0, 49, 49, 22, 7); c.fillStyle = '#21181b'; c.fill();
-    c.strokeStyle = metal(); c.lineWidth = 2; c.stroke();
-    c.save(); rounded(7, 53, 35, 14, 4); c.clip();
-    c.fillStyle = '#281c22'; c.fillRect(7, 53, 35, 14);
-    const xp = c.createLinearGradient(0, 53, 0, 67);
-    xp.addColorStop(0, '#ffefad'); xp.addColorStop(.4, '#eeb940'); xp.addColorStop(1, '#975810');
-    c.fillStyle = xp; c.fillRect(7, 53, 35 * Math.max(0, Math.min(1, v.expShare)), 14);
-    c.fillStyle = '#ffe5af88'; c.fillRect(7, 54, 35, 1);
-    c.fillStyle = '#25181a'; for (let k = 1; k < 5; k++) c.fillRect(7 + k * 7, 60, 1, 6);
-    c.restore();
-    c.fillStyle = metal(); c.fillRect(2, 52, 4, 16); c.fillRect(43, 52, 4, 16);
+    // One horizontal experience reservoir, brass caps and a marked glass window.
+    rect(1, 49, 48, 22, ink); rect(3, 50, 44, 20, brass);
+    rect(3, 50, 44, 1, light); rect(7, 52, 36, 16, ink);
+    rect(8, 53, 34, 14, '#322829');
+    const xp = Math.round(34 * Math.max(0, Math.min(1, v.expShare)));
+    rect(8, 54, xp, 12, '#c39c46'); rect(8, 54, xp, 2, '#e4c774');
+    rect(8, 64, xp, 2, '#8d622d');
+    for (let k = 1; k < 5; k++) rect(7 + k * 7, 60, 1, 6, ink);
+    rect(4, 52, 2, 16, light); rect(44, 52, 2, 16, dark);
     frame(76); frame(197);
-    tank(v); pic('camera', 177, 40, 40, 40);
+    tank(v);
+    // Preserve the accepted camera illustration inside a small socket.
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+    pic('camera', 177, 40, 40, 40); c.imageSmoothingEnabled = false;
     vehicles.forEach(b => {
       c.save(); c.globalAlpha = b.disabled ? .35 : 1;
-      frame(242, 60, b.getAttribute('aria-pressed') === 'true');
+      frame(242, b.getAttribute('aria-pressed') === 'true');
       c.restore();
     });
   }
   function paintAvatar() {
-    const cv = p.avPic, n = Math.max(1, Math.round(42 * s * dpr));
-    if (cv.width !== n) cv.width = cv.height = n;
-    const g = cv.getContext('2d')!; g.clearRect(0, 0, n, n);
-    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    if (portrait) g.drawImage(portrait, 0, 0, n, n);
-    else if (fallback) g.drawImage(fallback.src, fallback.sx, fallback.sy, fallback.sw, fallback.sh, 0, 0, n, n);
-  }
-  function hero(id: string) {
-    if (id === heroId) return;
-    heroId = id; portrait = null;
-    if (pendingPortrait) pendingPortrait.onload = pendingPortrait.onerror = null;
-    const letter = /^lista([a-y])$/.exec(id)?.[1];
-    if (!letter) { paintAvatar(); return; }
-    const index = letter.charCodeAt(0) - 96;
-    const im = new Image(); pendingPortrait = im;
-    im.onload = () => {
-      if (!alive || id !== heroId) return;
-      portrait = im; p.avPic.dataset.portrait = String(index); paintAvatar();
-    };
-    im.onerror = () => { if (alive && id === heroId) paintAvatar(); };
-    im.src = BASE + `portrety/postac_${String(index).padStart(2, '0')}.webp`;
+    const cv = p.avPic;
+    if (cv.width !== 42) cv.width = cv.height = 42;
+    const g = cv.getContext('2d')!; g.clearRect(0, 0, 42, 42);
+    g.imageSmoothingEnabled = false;
+    if (fallback) g.drawImage(fallback.src, fallback.sx, fallback.sy, fallback.sw, fallback.sh, 5, 5, 32, 32);
+    // Observed by the browser check; the source is the actual standing hero sprite.
+    cv.dataset.source = fallback ? 'sprite' : 'empty';
   }
   return {
-    layout, draw, hero,
+    layout, draw,
     avatar(a: Portrait) { fallback = a; paintAvatar(); },
     destroy() {
-      alive = false; if (pendingPortrait) pendingPortrait.onload = pendingPortrait.onerror = null;
+      alive = false;
       Object.values(images).forEach(im => { im.onload = null; });
       removers.forEach(f => f()); canvas.remove();
     },
