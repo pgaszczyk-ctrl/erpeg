@@ -74,17 +74,30 @@
         "podpowiedz": "quest.postman_stamp.runtime.8"
       },
       {
-        "typ": "zagadka",
+        "typ": "uklad",
         "anchor": 0,
-        "cel": "quest.postman_stamp.runtime.9",
-        "pytanie": "quest.postman_stamp.runtime.10",
-        "odpowiedzi": [
-          "quest.postman_stamp.runtime.11",
-          "quest.postman_stamp.runtime.12",
-          "quest.postman_stamp.runtime.13"
+        "cel": "quest.postman_stamp.v2.goal",
+        "tekst": "quest.postman_stamp.v2.order",
+        "karty": [
+          {
+            "id": "square",
+            "tekst": "quest.postman_stamp.v2.card.square"
+          },
+          {
+            "id": "circle",
+            "tekst": "quest.postman_stamp.v2.card.circle"
+          },
+          {
+            "id": "triangle",
+            "tekst": "quest.postman_stamp.v2.card.triangle"
+          }
         ],
-        "dobra": 0,
-        "podpowiedz": "quest.postman_stamp.runtime.14"
+        "kolejnosc": [
+          "circle",
+          "triangle",
+          "square"
+        ],
+        "podpowiedz": "quest.postman_stamp.v2.hint"
       }
     ],
     "giverKinds": [
@@ -107,19 +120,8 @@
         "tekst": "quest.sleepy_guardian.runtime.2"
       },
       {
-        "typ": "melodia",
-        "anchor": 0,
-        "cel": "quest.sleepy_guardian.runtime.3",
-        "tekst": "quest.sleepy_guardian.runtime.4",
-        "nuty": [
-          0,
-          2,
-          1
-        ]
-      },
-      {
         "typ": "decyzja",
-        "anchor": 0,
+        "anchor": 1,
         "wyborKlucz": "approach",
         "cel": "quest.sleepy_guardian.runtime.5",
         "tekst": "quest.sleepy_guardian.runtime.6",
@@ -135,6 +137,30 @@
             "wynik": "quest.sleepy_guardian.runtime.10"
           }
         ]
+      },
+      {
+        "typ": "melodia",
+        "anchor": 1,
+        "cel": "quest.sleepy_guardian.runtime.3",
+        "tekst": "quest.sleepy_guardian.v2.song",
+        "nuty": [
+          2,
+          1,
+          0
+        ],
+        "warianty": [
+          {
+            "klucz": "approach",
+            "wartosc": "quiet",
+            "etap": {
+              "typ": "napraw",
+              "anchor": 1,
+              "cel": "quest.sleepy_guardian.v2.goal.486",
+              "sekund": 4,
+              "ile": 1
+            }
+          }
+        ]
       }
     ],
     "giverKinds": [
@@ -146,39 +172,62 @@
   },
   {
     "id": "quest.two_seals",
-    "anchorCount": 3,
+    "anchorCount": 4,
     "green": false,
     "requires": [],
     "stages": [
       {
-        "typ": "decyzja",
-        "anchor": 0,
-        "wyborKlucz": "pair",
-        "cel": "quest.two_seals.runtime.1",
-        "tekst": "quest.two_seals.runtime.2",
-        "opcje": [
+        "typ": "badanie",
+        "anchor": 1,
+        "cel": "quest.two_seals.v2.goal.408",
+        "ile": 2,
+        "tekst": "quest.two_seals.v2.investigate",
+        "tropy": [
           {
-            "id": "route",
-            "tekst": "quest.two_seals.runtime.3",
-            "wynik": "quest.two_seals.runtime.4"
+            "id": "transport",
+            "anchor": 1,
+            "tytul": "quest.two_seals.v2.clue.title.transport",
+            "tekst": "quest.two_seals.v2.clue.text.transport"
           },
           {
-            "id": "repair",
-            "tekst": "quest.two_seals.runtime.5",
-            "wynik": "quest.two_seals.runtime.6"
+            "id": "garden",
+            "anchor": 2,
+            "tytul": "quest.two_seals.v2.clue.title.garden",
+            "tekst": "quest.two_seals.v2.clue.text.garden"
           },
           {
-            "id": "creature",
-            "tekst": "quest.two_seals.runtime.7",
-            "wynik": "quest.two_seals.runtime.8"
+            "id": "craft",
+            "anchor": 3,
+            "tytul": "quest.two_seals.v2.clue.title.craft",
+            "tekst": "quest.two_seals.v2.clue.text.craft"
           }
         ]
       },
       {
-        "typ": "rozmowa",
-        "anchor": 1,
-        "cel": "quest.two_seals.runtime.9",
-        "tekst": "quest.two_seals.runtime.10"
+        "typ": "uklad",
+        "anchor": 0,
+        "cel": "quest.two_seals.v2.goal.414",
+        "tekst": "quest.two_seals.v2.instructions.409",
+        "karty": [
+          {
+            "id": "connect",
+            "tekst": "quest.two_seals.v2.card.410"
+          },
+          {
+            "id": "tune",
+            "tekst": "quest.two_seals.v2.card.411"
+          },
+          {
+            "id": "compare",
+            "tekst": "quest.two_seals.v2.card.412"
+          }
+        ],
+        "kolejnosc": [
+          "compare",
+          "tune",
+          "connect"
+        ],
+        "podpowiedz": "quest.two_seals.v2.hint.413"
       },
       {
         "typ": "decyzja",
@@ -286,11 +335,47 @@
         ]
       },
       {
-        "typ": "napraw",
+        "typ": "melodia",
         "anchor": 1,
-        "cel": "quest.flask_guardian.runtime.7",
-        "sekund": 6,
-        "ile": 1
+        "cel": "quest.flask_guardian.v2.goal.450",
+        "tekst": "quest.flask_guardian.v2.leaf",
+        "nuty": [
+          0,
+          1,
+          0
+        ],
+        "warianty": [
+          {
+            "klucz": "essence",
+            "wartosc": "water",
+            "etap": {
+              "typ": "uklad",
+              "anchor": 1,
+              "cel": "quest.flask_guardian.v2.goal.456",
+              "tekst": "quest.flask_guardian.v2.instructions.451",
+              "karty": [
+                {
+                  "id": "fins",
+                  "tekst": "quest.flask_guardian.v2.card.452"
+                },
+                {
+                  "id": "pad",
+                  "tekst": "quest.flask_guardian.v2.card.453"
+                },
+                {
+                  "id": "regulator",
+                  "tekst": "quest.flask_guardian.v2.card.454"
+                }
+              ],
+              "kolejnosc": [
+                "regulator",
+                "pad",
+                "fins"
+              ],
+              "podpowiedz": "quest.flask_guardian.v2.hint.455"
+            }
+          }
+        ]
       },
       {
         "typ": "rozmowa",
@@ -329,26 +414,107 @@
           {
             "id": "scent_glow",
             "tekst": "quest.garden_wheels.runtime.5",
-            "wynik": "quest.garden_wheels.runtime.6"
+            "wynik": "quest.garden_wheels.v2.choice.scent_glow"
           },
           {
             "id": "scent_shade",
             "tekst": "quest.garden_wheels.runtime.7",
-            "wynik": "quest.garden_wheels.runtime.8"
+            "wynik": "quest.garden_wheels.v2.choice.scent_shade"
           },
           {
             "id": "glow_shade",
             "tekst": "quest.garden_wheels.runtime.9",
-            "wynik": "quest.garden_wheels.runtime.10"
+            "wynik": "quest.garden_wheels.v2.choice.glow_shade"
           }
         ]
       },
       {
-        "typ": "napraw",
-        "anchor": 0,
-        "cel": "quest.garden_wheels.runtime.11",
-        "sekund": 6,
-        "ile": 1
+        "typ": "uklad",
+        "anchor": 2,
+        "cel": "quest.garden_wheels.v2.goal.464",
+        "tekst": "quest.garden_wheels.v2.instructions.459",
+        "karty": [
+          {
+            "id": "seeds",
+            "tekst": "quest.garden_wheels.v2.card.460"
+          },
+          {
+            "id": "wire",
+            "tekst": "quest.garden_wheels.v2.card.461"
+          },
+          {
+            "id": "pots",
+            "tekst": "quest.garden_wheels.v2.card.462"
+          }
+        ],
+        "kolejnosc": [
+          "pots",
+          "wire",
+          "seeds"
+        ],
+        "podpowiedz": "quest.garden_wheels.v2.hint.463",
+        "warianty": [
+          {
+            "klucz": "seeds",
+            "wartosc": "scent_shade",
+            "etap": {
+              "typ": "uklad",
+              "anchor": 2,
+              "cel": "quest.garden_wheels.v2.goal.470",
+              "tekst": "quest.garden_wheels.v2.instructions.465",
+              "karty": [
+                {
+                  "id": "seeds",
+                  "tekst": "quest.garden_wheels.v2.card.466"
+                },
+                {
+                  "id": "shade",
+                  "tekst": "quest.garden_wheels.v2.card.467"
+                },
+                {
+                  "id": "pots",
+                  "tekst": "quest.garden_wheels.v2.card.468"
+                }
+              ],
+              "kolejnosc": [
+                "pots",
+                "shade",
+                "seeds"
+              ],
+              "podpowiedz": "quest.garden_wheels.v2.hint.469"
+            }
+          },
+          {
+            "klucz": "seeds",
+            "wartosc": "glow_shade",
+            "etap": {
+              "typ": "uklad",
+              "anchor": 2,
+              "cel": "quest.garden_wheels.v2.goal.476",
+              "tekst": "quest.garden_wheels.v2.instructions.471",
+              "karty": [
+                {
+                  "id": "seeds",
+                  "tekst": "quest.garden_wheels.v2.card.472"
+                },
+                {
+                  "id": "wire",
+                  "tekst": "quest.garden_wheels.v2.card.473"
+                },
+                {
+                  "id": "shade",
+                  "tekst": "quest.garden_wheels.v2.card.474"
+                }
+              ],
+              "kolejnosc": [
+                "shade",
+                "wire",
+                "seeds"
+              ],
+              "podpowiedz": "quest.garden_wheels.v2.hint.475"
+            }
+          }
+        ]
       }
     ],
     "giverKinds": [
@@ -420,6 +586,45 @@
             "wynik": "quest.noisy_neighbours.runtime.20"
           }
         ]
+      },
+      {
+        "typ": "uklad",
+        "anchor": 0,
+        "cel": "quest.noisy_neighbours.v2.goal.502",
+        "tekst": "quest.noisy_neighbours.v2.instructions.497",
+        "karty": [
+          {
+            "id": "evening",
+            "tekst": "quest.noisy_neighbours.v2.card.498"
+          },
+          {
+            "id": "afternoon",
+            "tekst": "quest.noisy_neighbours.v2.card.499"
+          },
+          {
+            "id": "morning",
+            "tekst": "quest.noisy_neighbours.v2.card.500"
+          }
+        ],
+        "kolejnosc": [
+          "morning",
+          "afternoon",
+          "evening"
+        ],
+        "podpowiedz": "quest.noisy_neighbours.v2.hint.501",
+        "warianty": [
+          {
+            "klucz": "schedule",
+            "wartosc": "insulate",
+            "etap": {
+              "typ": "napraw",
+              "anchor": 2,
+              "cel": "quest.noisy_neighbours.v2.goal.503",
+              "sekund": 4,
+              "ile": 1
+            }
+          }
+        ]
       }
     ],
     "giverKinds": [
@@ -431,47 +636,75 @@
   },
   {
     "id": "quest.pact_pages",
-    "anchorCount": 3,
+    "anchorCount": 4,
     "green": false,
     "requires": [],
     "stages": [
       {
-        "typ": "zagadka",
+        "typ": "badanie",
         "anchor": 1,
+        "cel": "quest.pact_pages.v2.goal.424",
+        "ile": 2,
+        "tekst": "quest.pact_pages.v2.investigate",
+        "tropy": [
+          {
+            "id": "receiver_ab",
+            "anchor": 1,
+            "tytul": "quest.pact_pages.v2.clue.title.receiver_ab",
+            "tekst": "quest.pact_pages.v2.clue.text.receiver_ab"
+          },
+          {
+            "id": "receiver_bc",
+            "anchor": 2,
+            "tytul": "quest.pact_pages.v2.clue.title.receiver_bc",
+            "tekst": "quest.pact_pages.v2.clue.text.receiver_bc"
+          },
+          {
+            "id": "receiver_bd",
+            "anchor": 3,
+            "tytul": "quest.pact_pages.v2.clue.title.receiver_bd",
+            "tekst": "quest.pact_pages.v2.clue.text.receiver_bd"
+          }
+        ]
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
         "cel": "quest.pact_pages.runtime.1",
-        "pytanie": "quest.pact_pages.runtime.2",
+        "pytanie": "quest.pact_pages.v2.sector",
         "odpowiedzi": [
           "quest.pact_pages.runtime.3",
           "quest.pact_pages.runtime.4",
           "quest.pact_pages.runtime.5"
         ],
         "dobra": 1,
-        "podpowiedz": "quest.pact_pages.runtime.6"
+        "podpowiedz": "quest.pact_pages.v2.sector_hint"
       },
       {
-        "typ": "zagadka",
-        "anchor": 2,
-        "cel": "quest.pact_pages.runtime.7",
-        "pytanie": "quest.pact_pages.runtime.8",
-        "odpowiedzi": [
-          "quest.pact_pages.runtime.9",
-          "quest.pact_pages.runtime.10",
-          "quest.pact_pages.runtime.11"
-        ],
-        "dobra": 0,
-        "podpowiedz": "quest.pact_pages.runtime.12"
-      },
-      {
-        "typ": "zagadka",
+        "typ": "uklad",
         "anchor": 0,
-        "cel": "quest.pact_pages.runtime.13",
-        "pytanie": "quest.pact_pages.runtime.14",
-        "odpowiedzi": [
-          "quest.pact_pages.runtime.15",
-          "quest.pact_pages.runtime.16"
+        "cel": "quest.pact_pages.v2.goal.432",
+        "tekst": "quest.pact_pages.v2.instructions.427",
+        "karty": [
+          {
+            "id": "comet",
+            "tekst": "quest.pact_pages.v2.card.428"
+          },
+          {
+            "id": "war",
+            "tekst": "quest.pact_pages.v2.card.429"
+          },
+          {
+            "id": "pact",
+            "tekst": "quest.pact_pages.v2.card.430"
+          }
         ],
-        "dobra": 0,
-        "podpowiedz": "quest.pact_pages.runtime.17"
+        "kolejnosc": [
+          "pact",
+          "war",
+          "comet"
+        ],
+        "podpowiedz": "quest.pact_pages.v2.hint.431"
       }
     ],
     "giverKinds": [
@@ -508,11 +741,62 @@
         ]
       },
       {
-        "typ": "napraw",
+        "typ": "uklad",
         "anchor": 1,
-        "cel": "quest.core_trip.runtime.7",
-        "sekund": 6,
-        "ile": 1
+        "cel": "quest.core_trip.v2.goal.440",
+        "tekst": "quest.core_trip.v2.instructions.435",
+        "karty": [
+          {
+            "id": "connect",
+            "tekst": "quest.core_trip.v2.card.436"
+          },
+          {
+            "id": "clear",
+            "tekst": "quest.core_trip.v2.card.437"
+          },
+          {
+            "id": "disconnect",
+            "tekst": "quest.core_trip.v2.card.438"
+          }
+        ],
+        "kolejnosc": [
+          "disconnect",
+          "clear",
+          "connect"
+        ],
+        "podpowiedz": "quest.core_trip.v2.hint.439",
+        "warianty": [
+          {
+            "klucz": "mode",
+            "wartosc": "precision",
+            "etap": {
+              "typ": "uklad",
+              "anchor": 1,
+              "cel": "quest.core_trip.v2.goal.446",
+              "tekst": "quest.core_trip.v2.instructions.441",
+              "karty": [
+                {
+                  "id": "long",
+                  "tekst": "quest.core_trip.v2.card.442"
+                },
+                {
+                  "id": "medium",
+                  "tekst": "quest.core_trip.v2.card.443"
+                },
+                {
+                  "id": "short",
+                  "tekst": "quest.core_trip.v2.card.444"
+                }
+              ],
+              "kolejnosc": [
+                "short",
+                "medium",
+                "long"
+              ],
+              "podpowiedz": "quest.core_trip.v2.hint.445"
+            }
+          }
+        ]
       }
     ],
     "giverKinds": [
@@ -558,6 +842,19 @@
           2,
           1
         ]
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 1,
+        "cel": "quest.helper_workshop.v2.goal.494",
+        "pytanie": "quest.helper_workshop.v2.test",
+        "odpowiedzi": [
+          "quest.helper_workshop.v2.test.a",
+          "quest.helper_workshop.v2.test.b",
+          "quest.helper_workshop.v2.test.c"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.helper_workshop.v2.test.hint"
       },
       {
         "typ": "decyzja",
@@ -614,16 +911,30 @@
         "podpowiedz": "quest.old_sign_new_note.runtime.5"
       },
       {
-        "typ": "zagadka",
+        "typ": "uklad",
         "anchor": 0,
-        "cel": "quest.old_sign_new_note.runtime.6",
-        "pytanie": "quest.old_sign_new_note.runtime.7",
-        "odpowiedzi": [
-          "quest.old_sign_new_note.runtime.8",
-          "quest.old_sign_new_note.runtime.9"
+        "cel": "quest.old_sign_new_note.v2.goal.484",
+        "tekst": "quest.old_sign_new_note.v2.instructions.479",
+        "karty": [
+          {
+            "id": "wing",
+            "tekst": "quest.old_sign_new_note.v2.card.480"
+          },
+          {
+            "id": "leaf",
+            "tekst": "quest.old_sign_new_note.v2.card.481"
+          },
+          {
+            "id": "gear",
+            "tekst": "quest.old_sign_new_note.v2.card.482"
+          }
         ],
-        "dobra": 0,
-        "podpowiedz": "quest.old_sign_new_note.runtime.10"
+        "kolejnosc": [
+          "gear",
+          "leaf",
+          "wing"
+        ],
+        "podpowiedz": "quest.old_sign_new_note.v2.hint.483"
       }
     ],
     "giverKinds": [

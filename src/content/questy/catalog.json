@@ -1111,7 +1111,7 @@
       "id": "quest.clock_opinion",
       "textRefs": {
         "title": "quest.clock_opinion.title",
-        "offer": "quest.clock_opinion.offer",
+        "offer": "quest.clock_opinion.v2.offer",
         "finish": "quest.clock_opinion.finish"
       },
       "moduleSequence": [
@@ -1250,8 +1250,8 @@
       "id": "quest.sleepy_guardian",
       "textRefs": {
         "title": "quest.sleepy_guardian.title",
-        "offer": "quest.sleepy_guardian.offer",
-        "finish": "quest.sleepy_guardian.finish"
+        "offer": "quest.sleepy_guardian.v2.offer",
+        "finish": "quest.sleepy_guardian.v2.finish"
       },
       "moduleSequence": [
         "module.12",
@@ -1331,8 +1331,8 @@
       "id": "quest.two_seals",
       "textRefs": {
         "title": "quest.two_seals.title",
-        "offer": "quest.two_seals.offer",
-        "finish": "quest.two_seals.finish"
+        "offer": "quest.two_seals.v2.offer",
+        "finish": "quest.two_seals.v2.finish"
       },
       "moduleSequence": [
         "module.09",
@@ -1393,7 +1393,7 @@
       "textRefs": {
         "title": "quest.tea_map.title",
         "offer": "quest.tea_map.offer",
-        "finish": "quest.tea_map.finish"
+        "finish": "quest.tea_map.v2.finish"
       },
       "moduleSequence": [
         "module.05",
@@ -1440,8 +1440,8 @@
       "id": "quest.flask_guardian",
       "textRefs": {
         "title": "quest.flask_guardian.title",
-        "offer": "quest.flask_guardian.offer",
-        "finish": "quest.flask_guardian.finish"
+        "offer": "quest.flask_guardian.v2.offer",
+        "finish": "quest.flask_guardian.v2.finish"
       },
       "moduleSequence": [
         "module.18",
@@ -1505,8 +1505,8 @@
       "id": "quest.garden_wheels",
       "textRefs": {
         "title": "quest.garden_wheels.title",
-        "offer": "quest.garden_wheels.offer",
-        "finish": "quest.garden_wheels.finish"
+        "offer": "quest.garden_wheels.v2.offer",
+        "finish": "quest.garden_wheels.v2.finish"
       },
       "moduleSequence": [
         "module.16",
@@ -1646,8 +1646,8 @@
       "id": "quest.pact_pages",
       "textRefs": {
         "title": "quest.pact_pages.title",
-        "offer": "quest.pact_pages.offer",
-        "finish": "quest.pact_pages.finish"
+        "offer": "quest.pact_pages.v2.offer",
+        "finish": "quest.pact_pages.v2.finish"
       },
       "moduleSequence": [
         "module.02",
@@ -1710,8 +1710,8 @@
       "id": "quest.core_trip",
       "textRefs": {
         "title": "quest.core_trip.title",
-        "offer": "quest.core_trip.offer",
-        "finish": "quest.core_trip.finish"
+        "offer": "quest.core_trip.v2.offer",
+        "finish": "quest.core_trip.v2.finish"
       },
       "moduleSequence": [
         "module.17",
@@ -1778,8 +1778,8 @@
       "id": "quest.helper_workshop",
       "textRefs": {
         "title": "quest.helper_workshop.title",
-        "offer": "quest.helper_workshop.offer",
-        "finish": "quest.helper_workshop.finish"
+        "offer": "quest.helper_workshop.v2.offer",
+        "finish": "quest.helper_workshop.v2.finish"
       },
       "moduleSequence": [
         "module.31",
@@ -8669,6 +8669,1830 @@
           "text": "Compare all the information given."
         }
       ]
+    },
+    {
+      "id": "quest.two_seals.v2.investigate",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Trzej pomocnicy mają pieczęcie notesu. Odwiedź dowolnych dwóch, w wybranej kolejności. Złote znaki na mapie wskazują spotkania."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Three helpers have notebook seals. Visit any two, in whichever order you like. Gold markers show the meetings."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.title.transport",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pieczęć transportu"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Transport seal"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.text.transport",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Posłaniec przykłada pieczęć. „Sprawdzałem trasę po powrocie magii: odbiorniki działają, ale ich odczyty nie są jeszcze równe.”"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The messenger stamps your notebook. “I checked the route after magic returned: the receivers work, but their readings do not match yet.”"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.title.garden",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pieczęć ogrodnika"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Gardener’s seal"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.text.garden",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Ogrodnik przykłada pieczęć. „Nasiona budzą się od ciepła. Czujnik pokazuje jednak inny wynik rano niż wieczorem — mimo tej samej temperatury.”"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The gardener stamps your notebook. “Warmth wakes the seeds. Yet the sensor gives different readings in the morning and evening, even at the same temperature.”"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.title.craft",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pieczęć rzemiosła"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Craft seal"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.clue.text.craft",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Rzemieślniczka przykłada pieczęć. „Mechanizmy są sprawne. Zanim połączymy latarnie, musimy zestroić ich odbiorniki.”"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The craftswoman stamps your notebook. “The mechanisms work. We must tune the receivers before connecting the lamps.”"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.goal.408",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zdobądź dowolne dwie pieczęcie."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Collect any two seals."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.instructions.409",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Instrukcja: najpierw porównaj odczyty, potem ustaw wspólny rytm. Podłącz zasilanie dopiero na końcu. Ułóż trzy karty."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Instructions: compare the readings first, then set a shared rhythm. Connect the power only at the end. Arrange three cards."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.card.410",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Podłącz zasilanie"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Connect the power"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.card.411",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Ustaw wspólny rytm"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Set a shared rhythm"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.card.412",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Porównaj odczyty"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Compare readings"
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.hint.413",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Nie zasilaj niezestrojonej sieci. Najpierw porównanie, potem wspólny rytm."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Do not power an untuned network. Compare first, then set a shared rhythm."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.goal.414",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zestroj odbiorniki latarni."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Tune the lamp receivers."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Notes ma trzy puste miejsca na pieczęcie, ale do uruchomienia dwóch latarni wystarczą dowolne dwie. Wybierz, z kim porozmawiasz, i zestroj małą sieć."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The notebook has three spaces for seals, but any two will do to start the two lamps. Choose whom to meet and tune the small network."
+        }
+      ]
+    },
+    {
+      "id": "quest.two_seals.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Dwie pieczęcie wystarczyły. Latarnie odpowiadają wspólnym rytmem; zachowuję twój notes z odczytami."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Two seals were enough. The lamps answer with a shared rhythm; I’ll keep your notebook and its readings."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.investigate",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Każdy odbiornik wskazuje dwa sektory. Zbadaj dwa z trzech i znajdź sektor wspólny dla ich odczytów."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Each receiver points to two sectors. Inspect any two of the three and find the sector shared by their readings."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.title.receiver_ab",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odbiornik z kołem"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Gear receiver"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.text.receiver_ab",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Igła przeskakuje między sektorami A i B. W notesie zapisujesz: {A, B}."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The needle jumps between sectors A and B. You note: {A, B}."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.title.receiver_bc",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odbiornik z liściem"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Leaf receiver"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.text.receiver_bc",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Igła przeskakuje między sektorami B i C. W notesie zapisujesz: {B, C}."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The needle jumps between sectors B and C. You note: {B, C}."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.title.receiver_bd",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odbiornik ze skrzydłem"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Wing receiver"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.clue.text.receiver_bd",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Igła przeskakuje między sektorami B i D. W notesie zapisujesz: {B, D}."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The needle jumps between sectors B and D. You note: {B, D}."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.goal.424",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Porównaj dowolne dwa odbiorniki."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Compare any two receivers."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.sector",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Spójrz na dwa odczyty w notesie. Który sektor występuje w obu?"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Look at the two readings in your notebook. Which sector appears in both?"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.sector_hint",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Szukasz wspólnej litery, nie sumy wszystkich sektorów. Odczyty pozostają w dzienniku zadania."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Look for a shared letter, not all the sectors combined. Your readings remain in the quest journal."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.instructions.427",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Trzy ilustracje opisują historię. Smoki zasilały maszyny podczas Paktu. Wojna o Tryby zerwała współpracę i smoki odeszły w sen. Później Kometa je obudziła. Ułóż ilustracje od najstarszej."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Three pictures tell the story. Dragons powered machines during the Pact. The War of Gears broke the partnership and the dragons left to sleep. Later, the Comet woke them. Put the oldest picture first."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.card.428",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Kometa: przebudzenie"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Comet: awakening"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.card.429",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wojna: odejście smoków"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "War: dragons depart"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.card.430",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pakt: wspólna energia"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Pact: shared energy"
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.hint.431",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Kometa budzi smoki, nie usypia. Ich sen nastąpił po wojnie."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The Comet wakes the dragons, rather than putting them to sleep. Their sleep followed the war."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.goal.432",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odtwórz zapis Paktu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Reconstruct the Pact record."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Kronikarz pomieszał karty Paktu, a odbiorniki łapią po dwa sektory naraz. Zbadaj wybrane urządzenia i odtwórz opowieść. Ja potrzymam kartki. Wiatr już próbował zostać bibliotekarzem."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The chronicler mixed up the Pact cards, and each receiver picks up two sectors at once. Inspect the devices you choose and reconstruct the story. I’ll hold the pages. The wind has already applied for the librarian’s job."
+        }
+      ]
+    },
+    {
+      "id": "quest.pact_pages.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zapis pasuje: Pakt, wojna, sen, a potem przebudzenie po Komecie. Urządzenia pamiętają rytm, choć my musieliśmy go sobie przypomnieć."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The record fits: Pact, war, sleep, then awakening after the Comet. The devices remember the rhythm, even though we had to rediscover it."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.instructions.435",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Reset ma trzy kroki. Odłącz rdzeń, wyzeruj licznik i dopiero potem ponownie podłącz rdzeń."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The reset has three steps. Disconnect the core, clear the counter, and only then reconnect the core."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.436",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Podłącz rdzeń"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Connect core"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.437",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wyzeruj licznik"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Clear counter"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.438",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odłącz rdzeń"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Disconnect core"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.hint.439",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Najpierw odłącz zasilanie, a podłącz je na końcu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Disconnect power first; reconnect it last."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.goal.440",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Uruchom regulator w wybranym trybie."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Start the regulator in your chosen mode."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.instructions.441",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wzorzec wyznacza rosnący rytm: krótki impuls, średni impuls, długi impuls. Ustaw trzy płytki w tej kolejności."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The reference gives a rising rhythm: short pulse, medium pulse, long pulse. Arrange the three plates in that order."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.442",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Długi impuls"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Long pulse"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.443",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Średni impuls"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Medium pulse"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.card.444",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Krótki impuls"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Short pulse"
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.hint.445",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Długość impulsów ma rosnąć."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The pulses should get longer."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.goal.446",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Dostrój regulator według wzorca."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Tune the regulator to the reference."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Regulator gubi rytm. Możesz wybrać pełny reset albo delikatną kalibrację. Po drodze rdzeń ma własne zasilanie; nie musisz się ścigać ani kupować części."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The regulator keeps losing its rhythm. Choose a full reset or gentle calibration. The core has its own power supply for the trip; no race or parts purchase is needed."
+        }
+      ]
+    },
+    {
+      "id": "quest.core_trip.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Regulator utrzymuje rytm. Twój wybrany sposób naprawy trafił do instrukcji pomocnika."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The regulator holds its rhythm. Your chosen repair method has been added to the helper’s manual."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.leaf",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Filtr liścia przepuszcza spokojny rytm Do–Re–Do. Powtórz go, żeby strażnik odróżniał ten sygnał od szelestu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The leaf filter passes the calm rhythm Do–Re–Do. Repeat it so the guardian can distinguish that signal from rustling."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.goal.450",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Dostrój filtr wyciszający."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Tune the quieting filter."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.instructions.451",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Podkładka odprowadza ciepło z regulatora do żeberek, a potem do powietrza. Ułóż elementy zgodnie z drogą ciepła."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The pad carries heat from the regulator to the fins, then into the air. Arrange the parts along the heat’s path."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.card.452",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Żeberka"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Fins"
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.card.453",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Podkładka"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Cooling pad"
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.card.454",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Regulator"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Regulator"
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.hint.455",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Podkładka musi dotykać regulatora, a żeberka odbierają od niej ciepło."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The pad touches the regulator, and the fins carry heat away from the pad."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.goal.456",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Złóż układ chłodzący."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Assemble the cooling system."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Strażnik alarmuje na każdy szelest i grzeje regulator. Mam dwie próbki: liść do strojenia filtra albo wodę do układu chłodzącego. Wybierz metodę i sprawdź ją na miejscu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The guardian sounds an alarm at every rustle and overheats its regulator. I have two samples: leaf for tuning the filter, or water for a cooling system. Choose a method and test it on site."
+        }
+      ]
+    },
+    {
+      "id": "quest.flask_guardian.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Strażnik rozpoznaje spokojny sygnał. O własnym cieniu wciąż ma kilka pytań, ale już nie zwołuje na nie całego miasta."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The guardian recognises a calm signal. It still has questions about its own shadow, but no longer summons the whole town to answer them."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.instructions.459",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pachnące, świecące donice: najpierw ustaw donice, potem przewód lampki. Nasiona trafiają do nich na końcu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Scented, glowing planters: place the pots first, then the lamp wire. Add the seeds last."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.460",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Nasiona"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Seeds"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.461",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Przewód lampki"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Lamp wire"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.462",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Donice"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Pots"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.hint.463",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Donice podtrzymują instalację; nasiona sadzimy po montażu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The pots support the installation; plant the seeds after assembly."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.goal.464",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zbuduj wybrany kącik wśród zieleni."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Build your chosen corner in the greenery."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.instructions.465",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pachnący kącik: ustaw donice, zamontuj osłonę, potem posadź nasiona."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Scented nook: place the pots, fit the shade, then plant the seeds."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.466",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Nasiona"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Seeds"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.467",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Osłona"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Shade"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.468",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Donice"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Pots"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.hint.469",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zwróć uwagę, co podtrzymuje instalację. Nasiona zawsze trafiają na końcu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Notice what supports the installation. The seeds always go last."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.goal.470",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zbuduj wybrany kącik wśród zieleni."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Build your chosen corner in the greenery."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.instructions.471",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zacienione światło: postaw osłonę, poprowadź przewód lampki, a potem posadź nasiona."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Shaded light: set up the shade, run the lamp wire, then plant the seeds."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.472",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Nasiona"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Seeds"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.473",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Przewód lampki"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Lamp wire"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.card.474",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Osłona"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Shade"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.hint.475",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zwróć uwagę, co podtrzymuje instalację. Nasiona zawsze trafiają na końcu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Notice what supports the installation. The seeds always go last."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.goal.476",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zbuduj wybrany kącik wśród zieleni."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Build your chosen corner in the greenery."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Mam składane donice i trzy rodzaje nasion: zapach, blask, cień. Wybierz parę i zbuduj kącik w pobliskiej zieleni. Ogródek jest przenośny; ślimaki jeszcze nie dostały rozkładu jazdy."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "I have folding planters and three kinds of seed: scent, glow, shade. Choose a pair and build a corner in nearby greenery. The garden is portable; the snails haven’t received the timetable yet."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Twój układ donic jest gotowy. Pomocnik zapisuje parę nasion i sposób montażu, żeby nie pomylić przewodu z korzeniem."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Your planter arrangement is ready. The helper records the seed pair and assembly method so it won’t confuse a wire with a root."
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.instructions.479",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Na ramce: koło zębate po lewej, liść w środku, skrzydło po prawej. Dopasuj fragmenty pojedynczo."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The frame shows a gear on the left, a leaf in the middle and a wing on the right. Fit the pieces one at a time."
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.card.480",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Skrzydło"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Wing"
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.card.481",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Liść"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Leaf"
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.card.482",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Koło zębate"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Gear"
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.hint.483",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zacznij od lewej strony ramki."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Start at the left side of the frame."
+        }
+      ]
+    },
+    {
+      "id": "quest.old_sign_new_note.v2.goal.484",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odtwórz mozaikę z notesu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Reconstruct the notebook mosaic."
+        }
+      ]
+    },
+    {
+      "id": "quest.sleepy_guardian.v2.song",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Strażnik mruczy Mi–Re–Do, coraz ciszej. Powtórz tę opadającą melodię."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The guardian hums Mi–Re–Do, getting quieter. Repeat the falling melody."
+        }
+      ]
+    },
+    {
+      "id": "quest.sleepy_guardian.v2.goal.486",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Postój spokojnie przy strażniku przez chwilę."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Stay quietly beside the guardian for a moment."
+        }
+      ]
+    },
+    {
+      "id": "quest.sleepy_guardian.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Ten mały strażnik nie chce walczyć. Po powrocie magii wszystko słyszy za głośno. Sprawdź jego reakcję i wybierz: cicha obecność albo krótka melodia."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "This little guardian doesn’t want to fight. Since magic returned, everything sounds too loud. Check its reaction and choose quiet company or a short tune."
+        }
+      ]
+    },
+    {
+      "id": "quest.sleepy_guardian.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Strażnik odpoczywa. Czasem pomoc polega na tym, żeby niczego nie poganiać. Nawet czegoś, co ma koła."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The guardian is resting. Sometimes helping means not rushing anyone. Even someone with wheels."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.test",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Nowe urządzenie C nie ma luźnej śruby, a jego odbiornik mruczy Do–Mi–Re. Pomocnik proponuje użyć klucza, tak jak przy A. Jak go poprawisz?"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "New device C has no loose screw, and its receiver hums Do–Mi–Re. The helper suggests using a spanner, just as it did for A. How will you correct it?"
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.test.a",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Najpierw odczytaj objawy C; tu potrzebna jest melodia."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Read C’s symptoms first; this one needs a tune."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.test.b",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Klucz pasuje do każdej awarii."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "A spanner fixes every fault."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.test.c",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pomiń sprawdzenie i wymień całe urządzenie."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Skip the inspection and replace the whole device."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.test.hint",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Przenoś sposób sprawdzania, a nie narzędzie z poprzedniego zadania."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Reuse the method of checking, rather than the tool from the previous task."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.goal.494",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Sprawdź, czego nauczył się pomocnik."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Test what the helper has learned."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pomocnik zapamiętał klucz i teraz chce nim naprawiać wszystko. Pokaż mu dwa różne przypadki, a potem sprawdź, co zapamiętał. Klucz przy melodii brzmi głównie jak klucz."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The helper learned about a spanner and now wants to fix everything with it. Show it two different cases, then test what it learned. A spanner playing a tune mostly sounds like a spanner."
+        }
+      ]
+    },
+    {
+      "id": "quest.helper_workshop.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pomocnik poprawił regułę: najpierw objawy, potem narzędzie. Twój wybór jego specjalności zostaje w notesie warsztatu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The helper corrected its rule: symptoms first, tool second. Your choice of its speciality remains in the workshop notebook."
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.instructions.497",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Spokojne poranki, praca pompy po południu, a na koniec wieczorny odczyt. Ułóż trzy karty planu."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Quiet mornings, pump work in the afternoon, then an evening reading. Arrange the three schedule cards."
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.card.498",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wieczór: odczyt"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Evening: reading"
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.card.499",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Popołudnie: pompa"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Afternoon: pump"
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.card.500",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Rano: cisza"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Morning: quiet"
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.hint.501",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Ułóż pory dnia od najwcześniejszej."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Arrange the times of day from earliest to latest."
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.goal.502",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wprowadź wybrane rozwiązanie sąsiadów."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Apply the neighbours’ chosen solution."
+        }
+      ]
+    },
+    {
+      "id": "quest.noisy_neighbours.v2.goal.503",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Zamontuj izolację przy wspólnej pompie."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Fit insulation to the shared pump."
+        }
+      ]
+    },
+    {
+      "id": "quest.clock_opinion.v2.offer",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": true,
+          "text": "Zegar znów chodzi. Szkoda, że własnymi drogami. Każda wskazówka pokazuje co innego — pomożesz im ustalić wspólny czas?"
+        },
+        {
+          "language": "en",
+          "localHumor": true,
+          "text": "The clock is ticking again. Keeping time apparently costs extra. Each hand gives a different reading — will you help them agree?"
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.choice.scent_glow",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wybrano zapach i blask. Teraz zamontuj przewód i posadź nasiona."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Scent and glow selected. Now fit the wire and plant the seeds."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.choice.scent_shade",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wybrano zapach i cień. Teraz zamontuj osłonę i posadź nasiona."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Scent and shade selected. Now fit the shade and plant the seeds."
+        }
+      ]
+    },
+    {
+      "id": "quest.garden_wheels.v2.choice.glow_shade",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Wybrano blask i cień. Teraz ustaw osłonę, lampkę i nasiona."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Glow and shade selected. Now set up the shade, lamp and seeds."
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.goal",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Odtwórz trasę z potwierdzeń."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Reconstruct the route from the receipts."
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.order",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Pieczątki zapisują czas doręczenia: koło 09:00, trójkąt 09:10, kwadrat 09:20. Wybierz kolejne potwierdzenia od najwcześniejszego."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The stamps record delivery times: circle 09:00, triangle 09:10, square 09:20. Pick the receipts from earliest to latest."
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.card.square",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Kwadrat — 09:20"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Square — 09:20"
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.card.circle",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Koło — 09:00"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Circle — 09:00"
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.card.triangle",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Trójkąt — 09:10"
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Triangle — 09:10"
+        }
+      ]
+    },
+    {
+      "id": "quest.postman_stamp.v2.hint",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Porównaj godziny pieczątek. Relacja świadka C była pomyłką, nie musimy zmieniać sprawnych zegarów."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "Compare the stamp times. Witness C was mistaken; we do not need to alter the working clocks."
+        }
+      ]
+    },
+    {
+      "id": "quest.tea_map.v2.finish",
+      "kind": "dialogue",
+      "variants": [
+        {
+          "language": "pl",
+          "localHumor": false,
+          "text": "Szkic znów jest czytelny, a pieczęć rozpoznana. Herbatę odtąd stawiam na osobnym stoliku."
+        },
+        {
+          "language": "en",
+          "localHumor": false,
+          "text": "The sketch is readable again, and the seal has been identified. I’ll keep my tea on a separate table from now on."
+        }
+      ]
     }
   ],
   "generatorPolicy": {
@@ -8753,5 +10577,6 @@
     "everest_and_poles": "future_virtual_avatar_expeditions_not_real_player_travel_requirement",
     "npc": "original Meridian Keeper proposal, not existing licensed character",
     "status": "not_enabled_not_part_of_current_city_intro"
-  }
+  },
+  "runtimeRevision": 2
 }

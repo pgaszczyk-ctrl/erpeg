@@ -105,7 +105,7 @@ export const BIBLIOTEKA_MAPA = {
   expZaKm: 60,
   tytuly: ['Mapa drogi: {cel}', 'Wyprawa badawcza: {cel}', 'Atlas okolic: {cel}'],
   opisy: [
-    'Bibliotekarka rozkłada starą mapę: „Nasze towarzystwo naukowe tworzy atlas okolic Lublina. Brakuje nam drogi do miejscowości {cel} – to ok. {km} km stąd. Dojdź tam, zapamiętaj drogę i wróć z relacją!”',
+    'Bibliotekarka rozkłada starą mapę: „Nasze towarzystwo naukowe tworzy atlas okolicy. Brakuje nam drogi do miejscowości {cel} – to ok. {km} km stąd. Dojdź tam, zapamiętaj drogę i wróć z relacją!”',
     '„Profesor z towarzystwa naukowego prosi o pomoc: potrzebujemy zbadać drogę do miejscowości {cel} (ok. {km} km w linii prostej). Dotrzyj tam i wróć – zapłacimy za każdy kilometr!”',
   ],
   zakonczenie: 'Wspaniale! Twoja relacja trafi do atlasu towarzystwa naukowego. Oto obiecana nagroda.',

@@ -1,6 +1,7 @@
-import { translateMission } from './content/questy/text';
+import { effectiveStage } from './content/questy/progress';
+import { translateMission, legacyText } from './content/questy/text';
 import { restoreScenario } from './content/questy/scenarios';
-import { lang, setLanguage } from './i18n';
+import { lang, setLanguage, tx } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
@@ -235,6 +236,7 @@ export function startSession(r: LoginResult) {
 }
 
 /** Sends the current progress to the server. */
+let saveChain: Promise<unknown> = Promise.resolve();
 export function saveNow(hp: number) {
   session.hp = hp;
   // Keep states of story missions and of random ones still in progress.
@@ -248,7 +250,12 @@ export function saveNow(hp: number) {
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
-  return api.save(session.token, data, session.exp);
+  // Card/clue checkpoints can happen close together. An older request must never overwrite
+  // a newer completion; snapshot before queuing so later choices cannot mutate a pending save.
+  const snapshot=structuredClone(data), token=session.token, exp=session.exp;
+  const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
+  saveChain=next;
+  return next;
 }
 
 export function missionState(m: Misja): MissionState {
@@ -291,7 +298,7 @@ export function stageIndex(m: Misja) {
 
 /** The task of the current stage (multi-stage missions) or the mission's only task. */
 export function zadanieOf(m: Misja): Etap {
-  return m.etapy?.length ? m.etapy[stageIndex(m)] : m.zadanie;
+  return effectiveStage(m, stageIndex(m), m.scenariusz?.choices ?? session.questResults[m.id]?.choices);
 }
 
 /** Only the character level is missing (the rest is met): the giver says „come back at level N”. */
@@ -370,7 +377,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
   const door = city.entranceOf(target);
   const ulica = city.streetNear(door.x, door.y, 200) ?? adres.replace(/\s+\S+$/, '');
   const id = `gen-${place.id}-${session.nonce}`;
-  const fill = (t: string, zl = '') => t.replace('{adres}', adres).replace('{ulica}', ulica).replace('{zloczynca}', zl);
+  const fill = (t: string, zl = '') => legacyText(t).replace('{adres}', adres).replace('{ulica}', ulica).replace('{zloczynca}', zl);
 
   if (police) {
     const bandit = r() < 0.5;
@@ -378,12 +385,12 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
     const nagroda = bandit ? POLICJA.nagrodaBandyta : POLICJA.nagrodaPotwor;
     const przedmiot = r() < POLICJA.szansaNaPrzedmiot ? pick(POLICJA.przedmioty) : undefined;
     return {
-      id, placeId: place.id, adres: place.name, tytul: pick(POLICJA.tytuly), nagroda, przedmiot,
+      id, placeId: place.id, adres: place.name, tytul: legacyText(pick(POLICJA.tytuly)), nagroda, przedmiot,
       opis: fill(pick(bandit ? POLICJA.bandyta : POLICJA.potwor), zl),
       zadanie: bandit
-        ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: `Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})` }
-        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: `Zabij wielkiego chochlika przy ul. ${ulica}` },
-      zakonczenie: 'Dobra robota, łowco nagród! Oto obiecana nagroda.',
+        ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: tx(`Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})`, `Find and defeat: ${zl} (near ${ulica})`) }
+        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: tx(`Zabij wielkiego chochlika przy ul. ${ulica}`, `Defeat the giant imp near ${ulica}`) },
+      zakonczenie: legacyText('Dobra robota, łowco nagród! Oto obiecana nagroda.'),
     };
   }
   const roll = r();
@@ -395,13 +402,14 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       const towar = place.kind === 'church' ? 'grzyb' : 'drewno';
       const z = ZBIERANIE[towar];
       const ile = z.ile[0] + Math.floor(r() * (z.ile[1] - z.ile[0] + 1));
-      const ilu = `${ile} ${ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? z.formy[0] : z.formy[1]}`;
+      const iluPL = `${ile} ${ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? z.formy[0] : z.formy[1]}`;
+      const ilu = tx(iluPL, `${ile} ${towar === 'grzyb' ? 'mushrooms' : 'pieces of wood'}`);
       const at = city.toLatLon(forest.x, forest.y);
       return {
-        id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
-        opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? ' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)' : ''),
-        zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: `Przynieś ${ilu} z lasu` },
-        zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Dziękujemy za pomoc.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
+        id, placeId: place.id, adres: place.name, tytul: legacyText(pick(tpl.tytuly)),
+        opis: legacyText(pick(tpl.zbierz)).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? legacyText(' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)') : ''),
+        zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: tx(`Przynieś ${ilu} z lasu`, `Bring ${ilu} from the forest`) },
+        zakonczenie: legacyText(towar === 'grzyb' ? 'Jakie piękne grzyby! Dziękujemy za pomoc.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!'),
         nagroda: ZBIERANIE.premia + ile * z.zaSztuke,
       };
     }
@@ -409,14 +417,14 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
   const fight = roll < 0.67;
   const extra = Math.round(distM / 100) * NAGRODA.zaKazde100m;
   return {
-    id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
+    id, placeId: place.id, adres: place.name, tytul: legacyText(pick(tpl.tytuly)),
     opis: fill(pick(fight ? tpl.pokonaj : tpl.idz)),
     zadanie: fight
-      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń chochliki spod ${adres}` }
-      : { typ: 'idz', miejsce: adres, cel: `Idź pod ${adres}` },
-    zakonczenie: place.kind === 'church'
+      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: tx(`Przegoń chochliki spod ${adres}`, `Drive the imps away from ${adres}`) }
+      : { typ: 'idz', miejsce: adres, cel: tx(`Idź pod ${adres}`, `Go to ${adres}`) },
+    zakonczenie: legacyText(place.kind === 'church'
       ? 'Dziękujemy za pomoc! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
-      : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
+      : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.'),
     nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
   };
 }
@@ -437,17 +445,17 @@ export function mapMissionForLibrary(city: CityMap, place: CityPlace): Misja | n
   const cel = far[Math.floor(r() * far.length)];
   const d = Math.max(B.odKm, Math.round(km(cel)));
   const at = city.toLatLon(cel.x, cel.y);
-  const fill = (t: string) => t.replace('{cel}', cel.name).replace('{km}', String(d));
+  const fill = (t: string) => legacyText(t).replace('{cel}', cel.name).replace('{km}', String(d));
   return {
     id, placeId: place.id, adres: place.name,
     tytul: fill(B.tytuly[Math.floor(r() * B.tytuly.length)]),
     opis: fill(B.opisy[Math.floor(r() * B.opisy.length)]),
     zadanie: {
-      typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: `Zbadaj drogę do miejscowości ${cel.name}`,
-      komunikat: `Droga do miejscowości ${cel.name} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: ${place.name}).`,
+      typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: tx(`Zbadaj drogę do miejscowości ${cel.name}`, `Survey the route to ${cel.name}`),
+      komunikat: tx(`Droga do miejscowości ${cel.name} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: ${place.name}).`, `Route to ${cel.name} surveyed! Quest complete — return to the nearest library (or to ${place.name}).`),
     },
     dowolnaBiblioteka: true,
-    zakonczenie: B.zakonczenie,
+    zakonczenie: legacyText(B.zakonczenie),
     nagroda: d * B.monetZaKm,
     doswiadczenie: d * B.expZaKm,
   };
