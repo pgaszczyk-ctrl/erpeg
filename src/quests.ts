@@ -298,7 +298,7 @@ export function stageIndex(m: Misja) {
 
 /** The task of the current stage (multi-stage missions) or the mission's only task. */
 export function zadanieOf(m: Misja): Etap {
-  return effectiveStage(m, stageIndex(m));
+  return effectiveStage(m, stageIndex(m), m.scenariusz?.choices ?? session.questResults[m.id]?.choices);
 }
 
 /** Only the character level is missing (the rest is met): the giver says „come back at level N”. */

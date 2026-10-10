@@ -5,9 +5,8 @@ export const progressKey = (stage: number, kind: 'clues' | 'cards') => `${kind}:
 export function readProgress(choices: Record<string, string>, key: string, allowed: string[]) {
   return [...new Set((choices[key] ?? '').split(',').filter(id => allowed.includes(id)))];
 }
-export function effectiveStage(m: Misja, index: number): Etap {
+export function effectiveStage(m: Misja, index: number, choices=m.scenariusz?.choices ?? {}): Etap {
   const base: Etap = m.etapy?.length ? m.etapy[index] : m.zadanie;
-  const choices = m.scenariusz?.choices ?? {};
   const variant = base.warianty?.find(v => choices[v.klucz] === v.wartosc);
   return variant ? { ...base, ...variant.etap } : base;
 }
