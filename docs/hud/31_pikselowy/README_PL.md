@@ -7,3 +7,5 @@ Komputer:400.5×141 pikseli ekranu, telefon:267×94. Obszary kliknięcia przynaj
 Zrzuty z prawdziwej gry na lokalnym Vite preview: komputer1440×900, telefon390×844/DPR2 oraz mały telefon320×740/DPR2.625. JSON opisuje wyniki działania, nie tylko wygląd. Sprawdzono leczenie i zużycie zapasów, bonus zdrowia, blokadę podczas przeciągania, pojedynczy pojazd i wsiadanie/schodzenie, kamerę, kartę postaci,25 różnych główek zgodnych ze sprite'ami oraz obrót telefonu. Supabase w testach przechwycony — żadnych prawdziwych zapisów graczy.
 
 Starsze wersje: docs/hud/29_baniak i30_centrowanie; oryginalne ilustracje w28_awatary pozostają do ewentualnego powrotu. W grze można porównać ?hud=old / ?hud=v5.
+
+Nałęczowska16: osobny skrypt browser-building-presence.mjs sprawdza zwykłą postać, pierwszy odsłonięty widok i4 strony/powrót na komputerze i telefonie. Publiczna produkcja e0a27d0 również pokazała eLeader/id30667 z6 piętrami; osobne zrzuty produkcja*.png. Nie odtworzono braku zgłoszonego przez właściciela; nie zmieniano mapy bez potwierdzonej przyczyny.

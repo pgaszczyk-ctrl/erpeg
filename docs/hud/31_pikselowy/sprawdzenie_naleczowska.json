@@ -1,6 +1,14 @@
 [
   {
     "name": "desktop",
+    "initial": {
+      "mapId": "lublin",
+      "immortal": false,
+      "drawn": true,
+      "visible": true,
+      "pending": false,
+      "cutout": false
+    },
     "checks": [
       {
         "side": "south",
@@ -82,6 +90,14 @@
   },
   {
     "name": "phone",
+    "initial": {
+      "mapId": "lublin",
+      "immortal": false,
+      "drawn": true,
+      "visible": true,
+      "pending": false,
+      "cutout": false
+    },
     "checks": [
       {
         "side": "south",
