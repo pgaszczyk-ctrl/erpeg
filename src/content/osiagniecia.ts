@@ -1,3 +1,5 @@
+import { legacyText } from './questy/text';
+import { tx } from '../i18n';
 // ============================================================================
 //  KSIĘGA OSIĄGNIĘĆ (Kufer → zakładka „Księga osiągnięć”).
 //  Pieczęcie liczone z tego, co gra już zapisuje (statystyki, poziom, tytuł).
@@ -25,7 +27,8 @@ export interface Osiagniecie {
   ile: (s: StanDoOsiagniec) => number;
 }
 
-export const OSIAGNIECIA: Osiagniecie[] = [
+const achievements: Osiagniecie[] = [
+  { ikona: '💎', nazwa: tx('Okrążenie Ziemi','Around the Earth'), opis: tx('Przejdź łącznie 40 075 km.','Travel a total of 40,075 km.'), cel:40075, ile:(s)=>s.km },
   { ikona: '🥾', nazwa: 'Pierwsze kroki', opis: 'Przejdź 1 km.', cel: 1, ile: (s) => s.km },
   { ikona: '🗺', nazwa: 'Wędrowiec', opis: 'Przejdź 25 km.', cel: 25, ile: (s) => s.km },
   { ikona: '🧭', nazwa: 'Podróżnik', opis: 'Przejdź 100 km.', cel: 100, ile: (s) => s.km },
@@ -41,3 +44,5 @@ export const OSIAGNIECIA: Osiagniecie[] = [
   { ikona: '🐉', nazwa: 'Cień smoka', opis: 'Zakończ historię smoka (dowolnym tytułem).', cel: 1, ile: (s) => (s.tytul ? 1 : 0) },
   { ikona: '🤫', nazwa: 'Wtajemniczony', opis: 'Zdradź komuś tajemne hasło.', cel: 1, ile: (s) => s.hasla },
 ];
+
+export const OSIAGNIECIA: Osiagniecie[] = achievements.map(a => ({...a,nazwa:legacyText(a.nazwa),opis:legacyText(a.opis)}));

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { tx } from '../i18n';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { session, missionState, missionAvailable, levelLock, stageIndex, zadanieOf, type ResolvedMission } from '../quests';
@@ -69,7 +70,7 @@ interface Giver {
   rm: ResolvedMission;
 }
 
-const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia']);
+const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia', 'decyzja']);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -147,7 +148,7 @@ export class Etapy {
         if (SPOT.has(z.typ)) {
           l.armed = false;
           this.fire(rm, z, l);
-        } else this.host.dialog({ title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: ['Dobrze'], onChoose: () => {} });
+        } else this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: ['Dobrze'], onChoose: () => {} });
       };
     }
     return null;
@@ -194,7 +195,7 @@ export class Etapy {
   begin(rm: ResolvedMission) {
     const z = zadanieOf(rm.m);
     // A talk says its words on arrival; other stages may open with a few words right away.
-    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ title: rm.m.tytul, text: z.tekst, buttons: ['Ruszam!'], onChoose: () => {} });
+    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: rm.m.tytul, text: z.tekst, buttons: ['Ruszam!'], onChoose: () => {} });
   }
 
   destroy() {
@@ -381,10 +382,10 @@ export class Etapy {
     const title = z.postac?.imie ?? rm.m.tytul;
     switch (z.typ) {
       case 'rozmowa':
-        this.host.dialog({ title, text: z.tekst || z.cel, buttons: ['Dalej'], onChoose: () => this.host.stageDone(rm) });
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title, text: z.tekst || z.cel, buttons: [tx('Dalej', 'Next')], onChoose: () => this.host.stageDone(rm) });
         return;
       case 'zagadka':
-        this.ask(rm, title, { pytanie: z.pytanie ?? '', odpowiedzi: z.odpowiedzi ?? [], dobra: z.dobra ?? 0 }, z.podpowiedz, () => this.host.stageDone(rm, 'Dobrze! '), z.tekst);
+        this.ask(rm, title, { pytanie: z.pytanie ?? '', odpowiedzi: z.odpowiedzi ?? [], dobra: z.dobra ?? 0 }, z.podpowiedz, () => this.host.stageDone(rm, tx('Dobrze! ', 'Correct! ')), z.tekst);
         return;
       case 'zagadki': {
         const list = z.pytania ?? [];
@@ -396,6 +397,22 @@ export class Etapy {
           }, l.step === 0 ? z.tekst : undefined);
         };
         next();
+        return;
+      }
+      case 'decyzja': {
+        const options = z.opcje ?? [];
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title, text: z.tekst || z.cel,
+          buttons: [...options.map(o => o.tekst), tx('Później', 'Later')],
+          onChoose: i => {
+            const option = options[i];
+            if (!option || missionState(rm.m) !== 'active') return;
+            if (z.wyborKlucz) {
+              const choices = rm.m.scenariusz?.choices ?? (session.questResults[rm.m.id] ??= { originMap:session.mapId, routeM:0, choices:{} }).choices;
+              choices[z.wyborKlucz] = option.id;
+            }
+            this.host.stageDone(rm, option.wynik);
+          },
+        });
         return;
       }
       case 'wybor':
@@ -414,22 +431,22 @@ export class Etapy {
   private ask(rm: ResolvedMission, title: string, q: { pytanie: string; odpowiedzi: string[]; dobra: number }, hint: string | undefined, ok: () => void, intro?: string) {
     const answers = q.odpowiedzi.filter((a) => a && a.trim());
     if (!q.pytanie || !answers.length) return ok();
-    this.host.dialog({
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `🧩 ${title}`,
       text: intro ? `${intro}\n\n${q.pytanie}` : q.pytanie,
-      buttons: [...answers, 'Muszę pomyśleć'],
+      buttons: [...answers, tx('Muszę pomyśleć', 'Let me think')],
       onChoose: (i) => {
         if (i >= answers.length) return;
         if (i === q.dobra) {
           session.stats.riddles = (session.stats.riddles ?? 0) + 1;
           return ok();
         }
-        this.host.dialog({
-          title: '🤔 Nie tym razem',
-          text: hint ? `Podpowiedź: ${hint}` : 'To nie to. Pomyśl jeszcze.',
-          buttons: ['Spróbuję jeszcze raz', 'Później'],
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
+          title: tx('🤔 Nie tym razem', '🤔 Not this time'),
+          text: hint ? `${tx('Podpowiedź', 'Hint')}: ${hint}` : tx('To nie to. Pomyśl jeszcze.', 'Not quite. Think it over.'),
+          buttons: [tx('Spróbuję jeszcze raz', 'Try again'), tx('Później', 'Later')],
           onChoose: (j) => {
-            if (j === 0) this.ask(rm, title, q, hint, ok);
+            if (j === 0) this.ask(rm, title, q, hint, ok, intro);
           },
         });
       },
@@ -440,7 +457,7 @@ export class Etapy {
   private choose(rm: ResolvedMission, z: Etap, title: string, l: Live) {
     const pay = z.zaplac ?? 0;
     const buttons = ['🧠 Przekonaj', ...(pay ? [`💰 Zapłać ${pay} monet`] : []), 'Później'];
-    this.host.dialog({
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title,
       text: z.tekst || z.cel,
       buttons,
@@ -465,14 +482,14 @@ export class Etapy {
     if (l.step >= pages.length) return this.host.stageDone(rm);
     const pg = pages[l.step];
     const ways = pg.wybory?.filter((w) => w.tekst) ?? [];
-    this.host.dialog({
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `📖 ${rm.m.tytul}`,
       text: pg.tekst,
       buttons: ways.length ? ways.map((w) => w.tekst) : [l.step === pages.length - 1 ? 'Koniec' : 'Dalej'],
       onChoose: (i) => {
         if (ways.length && ways[i] && ways[i].dobry === false) {
           this.host.hurtStory();
-          this.host.dialog({ title: '💥 Auć!', text: 'To nie była dobra droga. Tracisz serce – spróbuj inaczej.', buttons: ['Jeszcze raz'], onChoose: () => this.page(rm, z, l) });
+          this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: '💥 Auć!', text: 'To nie była dobra droga. Tracisz serce – spróbuj inaczej.', buttons: ['Jeszcze raz'], onChoose: () => this.page(rm, z, l) });
           return;
         }
         l.step++;
@@ -484,10 +501,10 @@ export class Etapy {
   private async melody(rm: ResolvedMission, z: Etap, title: string) {
     const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
     this.host.scene.scene.pause();
-    await playMelody(MELODIA.nut[lvl] ?? 4, { notes: z.nuty, title: `🎵 ${title}`, intro: z.tekst || z.cel, hums: 'Melodia:' });
+    await playMelody(MELODIA.nut[lvl] ?? 4, { notes: z.nuty, title: `🎵 ${title}`, intro: z.tekst || z.cel, hums: tx('Melodia:', 'Tune:') });
     this.host.scene.scene.resume();
     consumeAttack();
-    this.host.stageDone(rm, 'Pięknie zagrane! ');
+    this.host.stageDone(rm, tx('Pięknie zagrane! ', 'Nicely played! '));
   }
 }
 

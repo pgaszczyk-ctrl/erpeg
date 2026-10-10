@@ -24,7 +24,7 @@ export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada'
  * 'napraw' – postój przy miejscu, aż pasek się napełni, 'wybor' – przekonaj zagadką albo zapłać,
  * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce.
  */
-export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia';
+export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja';
 
 /** Pytanie z trzema (lub więcej) odpowiedziami; `dobra` = numer dobrej (0 = pierwsza). */
 export interface Pytanie {
@@ -40,6 +40,8 @@ export interface Strona {
 }
 
 export interface Zadanie {
+  /** Source-language and humour tag edited with a dialogue; older missions may omit it. */
+  dialogueMeta?: { language: 'pl' | 'en'; localHumor: boolean };
   /**
    * 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca,
    * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce),
@@ -84,6 +86,9 @@ export interface Postac {
 export interface Etap extends Zadanie {
   /** Okienko, gdy etap się zaczyna (dla 'rozmowa': to, co mówi postać). */
   tekst?: string;
+  /** A choice without a penalty; its stable ID is saved with the city scenario. */
+  wyborKlucz?: string;
+  opcje?: { id: string; tekst: string; wynik: string }[];
   /** Przedmioty fabularne (nazwy) dane po wykonaniu etapu. */
   daje?: string[];
   /** Przedmioty fabularne zabrane po wykonaniu etapu. */
@@ -121,6 +126,8 @@ export interface Wymagania {
 
 export interface Misja {
   id: string;
+  /** Once per character, independent of city. Coordinates stay bound to the accepted map. */
+  scenariusz?: import('./questy/scenarios').CityBinding;
   /** Zleceniodawca stojący przy drzwiach misji (właściciel 7.10.2026: „w queście musi być ktoś”). */
   postac?: Postac;
   /** Budynek, w którym misję się dostaje (jego wejście świeci na złoto). */

@@ -58,7 +58,7 @@ export async function startDemo(game: Phaser.Game, p: Pobudka) {
     token: '', idik: '', name: DEMO_IMIONA[Math.floor(Math.random() * DEMO_IMIONA.length)],
     age: 6, level: { ...TRUDNOSCI[0], potwory: 0 }, exp: SEN.exp, coins: 0, missions: {}, fog: undefined, fogs: {},
     lokaty: [], story: { st: 'koniec', walked: 0 }, immortal: false, mikstury: 0, bezStrzalki: [], namioty: [], at: null,
-    gen: {}, libRiddles: 0, nonce: Math.floor(Math.random() * 1e9), abandoned: null, stats: freshStats(), extra: [],
+    gen: {}, questResults: {}, libRiddles: 0, nonce: Math.floor(Math.random() * 1e9), abandoned: null, stats: freshStats(), extra: [],
     secrets: new Set<string>(), chest: freshChest(), riddles: {}, seen: {}, daily: {}, look: randomLook(),
   });
   const pts = pointsForLevel(MAKS_POZIOM);

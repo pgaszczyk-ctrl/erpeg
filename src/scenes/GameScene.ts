@@ -1,3 +1,6 @@
+import { planCityQuests } from '../content/questy/planner';
+import { lang } from '../i18n';
+import { legacyText, dialogueMetadata } from '../content/questy/text';
 import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
@@ -218,6 +221,10 @@ export interface QuestInfo {
 const questColors = new Map<string, string>();
 
 export interface DialogRequest {
+  language?: import('../i18n').Lang;
+  localHumor?: boolean;
+  textId?: string;
+  buttonMetadata?: { language: string; localHumor: boolean; textId?: string }[];
   title: string;
   text: string;
   buttons: string[];
@@ -270,6 +277,8 @@ const FLAGI_NAZWY: Record<NonNullable<Misja['flaga']>, string> = {
 const STORY_PLACES = new Set(['school', 'church', 'university']);
 
 export class GameScene extends Phaser.Scene {
+  private cityQuestEpoch = 0;
+  private cityQuestPlanning = false;
   city!: CityMap;
   player!: Player;
   private mapView!: MapRenderer;
@@ -525,6 +534,12 @@ export class GameScene extends Phaser.Scene {
     for (const rm of missions) this.addMission(rm, true);
     // Random missions taken earlier (churches, offices, police) and not finished.
     for (const m of Object.values(session.gen)) {
+      if (m.scenariusz) {
+        if (m.scenariusz.mapId !== this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
+        const door = resolvePlace(this.city, m.scenariusz.anchors[0]);
+        if (door) this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
+        continue;
+      }
       const place = this.city.places.find((p) => p.id === m.placeId);
       if (place) {
         const door = { ...place.door, building: place.building ?? undefined };
@@ -532,6 +547,11 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.refreshMarkers();
+    const epoch = ++this.cityQuestEpoch;
+    this.cityQuestPlanning = false;
+    this.events.once('shutdown', () => { if (this.cityQuestEpoch === epoch) this.cityQuestEpoch++; });
+    this.time.delayedCall(1500, () => void this.refreshCityMissions(epoch));
+    this.time.addEvent({ delay: 15000, loop: true, callback: () => void this.refreshCityMissions(epoch) });
 
     // Shops and schools: coloured roofs and signs (under the fog, so they
     // are discovered by exploring).
@@ -2657,6 +2677,24 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
+  private async refreshCityMissions(epoch: number) {
+    if (epoch !== this.cityQuestEpoch || this.cityQuestPlanning) return;
+    this.cityQuestPlanning = true;
+    const city = this.city;
+    try {
+      const offers = await planCityQuests(city, this.player, mapName(city.id).startsWith('w:') ? tx('mieście startu','the starting city') : mapName(city.id), session.missions, { ...session.gen, ...Object.fromEntries(this.missions.filter(r => r.m.scenariusz).map(r => [r.m.id,r.m])) });
+      if (epoch !== this.cityQuestEpoch || city !== this.city) return;
+      for (const m of offers) {
+        if (this.missions.some(r => r.m.id === m.id) || missionState(m) !== 'new' || session.gen[m.id]) continue;
+        const door = resolvePlace(city, m.scenariusz!.anchors[0]);
+        if (door) this.addMission({m, door, target:stageTarget(city,m,door)}, false);
+      }
+      this.refreshMarkers();
+      this.emitHud();
+    } catch (error) { report('city-quests', error instanceof Error ? error.message : String(error)); }
+    finally { if (epoch === this.cityQuestEpoch) this.cityQuestPlanning = false; }
+  }
+
   /** Adds a mission to the game: gold "!" over its door, goal enemies. */
   private addMission(rm: ResolvedMission, highlight: boolean) {
     this.missions.push(rm);
@@ -4623,7 +4661,7 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'new' && this.activeQuests().length >= ZADAN_NARAZ) {
       this.missionDialog(m, {
         title: who,
-        text: `${m.opis}\n\nMasz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`,
+        text: `${m.opis}\n\n${tx(`Masz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`, `You already have ${ZADAN_NARAZ} active quests. Finish one before accepting another. View active quests in your character sheet 👤.`)}`,
         buttons: ['OK'],
         onChoose: () => {},
       });
@@ -4632,7 +4670,7 @@ export class GameScene extends Phaser.Scene {
         title: who,
         // Owner 7 Oct 2026: no reward told when a quest is offered – only the explorers' (library) survey says it, so the player knows how far it sends him.
         text: m.opis + (m.dowolnaBiblioteka ? `\n\n${this.rewardText(m)}.` : '') + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
-        buttons: ['Przyjmuję', 'Nie teraz'],
+        buttons: [tx('Przyjmuję','Accept'), tx('Nie teraz','Not now')],
         onChoose: (i) => {
           if (i !== 0 || this.questsFull()) return;
           const w = m.wymaga;
@@ -4640,6 +4678,9 @@ export class GameScene extends Phaser.Scene {
             if (!takeItem(w.przedmiot)) return this.toast(`Nie masz już: ${item(w.przedmiot)?.nazwa ?? w.przedmiot}`, 2500);
             this.gearChanged();
           }
+          // Refuse a stale offer if another place already bound this scenario.
+          if (m.scenariusz && (session.gen[m.id] || missionState(m) !== 'new')) return;
+          if (m.scenariusz) session.gen[m.id] = m;
           setMissionState(m, 'active');
           session.etap[m.id] = 0;
           rm.target = stageTarget(this.city, m, rm.door);
@@ -4657,7 +4698,7 @@ export class GameScene extends Phaser.Scene {
       const z = zadanieOf(m);
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
       const part = stageCount(m) > 1 ? ` (etap ${stageIndex(m) + 1} z ${stageCount(m)})` : '';
-      this.missionDialog(m, { title: who, text: `Jeszcze nie skończyłeś${part}.\n\nCel: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: `${tx('Jeszcze nie skończyłeś','Still in progress')}${part}.\n\n${tx('Cel','Goal')}: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
       this.finishMission(rm);
     } else {
@@ -4673,7 +4714,7 @@ export class GameScene extends Phaser.Scene {
   /** "Nagroda: 150 EXP, 20 monet, Gwizdek Maszynisty i 1 💎" for the mission dialogs. */
   private rewardText(m: Misja) {
     const parts = [
-      m.nagroda ? `${m.nagroda} monet` : '',
+      m.nagroda ? `${m.nagroda} ${tx('monet','coins')}` : '',
       `${missionExp(m)} EXP`,
       m.przedmiot ? item(m.przedmiot)?.nazwa ?? '' : '',
       ...(m.przedmioty ?? []).map((id) => item(id)?.nazwa ?? ''),
@@ -4682,7 +4723,7 @@ export class GameScene extends Phaser.Scene {
       m.flaga ? FLAGI_NAZWY[m.flaga] : '',
     ].filter(Boolean);
     const last = parts.pop();
-    return `Nagroda: ${parts.length ? `${parts.join(', ')} i ${last}` : last}`;
+    return `${tx('Nagroda','Reward')}: ${parts.length ? `${parts.join(', ')} ${tx('i','and')} ${last}` : last}`;
   }
 
   /** The reward dialog: at the mission's door, or right at the goal for „zakończ na miejscu” missions. */
@@ -4694,11 +4735,14 @@ export class GameScene extends Phaser.Scene {
     this.missionDialog(m, {
       title: speaker ? `${speaker} – ${m.tytul}` : m.tytul,
       text: `${m.zakonczenie}\n\n${this.rewardText(m)}`,
-      buttons: ['Dziękuję!'],
+      buttons: [tx('Dziękuję!','Thank you!')],
       onChoose: () => {
         if (missionState(m) !== 'goal') return; // already handed in (a double tap)
         const z = m.zadanie;
         if (!m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
+          // Refuse a stale offer if another place already bound this scenario.
+          if (m.scenariusz && (session.gen[m.id] || missionState(m) !== 'new')) return;
+          if (m.scenariusz) session.gen[m.id] = m;
           setMissionState(m, 'active');
           this.refreshMarkers();
           this.toast('Czegoś jednak brakuje w plecaku!');
@@ -4754,7 +4798,7 @@ export class GameScene extends Phaser.Scene {
       this.finishMission(rm);
       return;
     }
-    if (said !== undefined) this.toast(`${said}Wróć do: ${rm.m.adres}`);
+    if (said !== undefined) this.toast(`${said} ${tx('Wróć do', 'Return to')}: ${rm.m.adres}`);
   }
 
   /**
@@ -4776,12 +4820,13 @@ export class GameScene extends Phaser.Scene {
       this.startMissionGoal(rm);
       this.emitHud();
       this.save();
-      if (said) this.toast(`${said}Dalej: ${zadanieOf(m).cel}`, 2500);
+      if (said && !m.scenariusz) this.toast(`${said}Dalej: ${zadanieOf(m).cel}`, 2500);
       this.etapy.begin(rm);
     };
+    if (m.scenariusz && said && z.typ === 'decyzja') z.komunikat = said;
     const gave = z.daje?.length ? `\n\n📜 Masz: ${z.daje.join(', ')}` : '';
     // The closing words (komunikat), then the next stage. One-stage missions keep their old messages.
-    if (m.etapy?.length && (z.komunikat || gave)) this.dialog({ title: m.tytul, text: `${z.komunikat ?? ''}${gave}`.trim(), buttons: ['Dalej'], onChoose: after });
+    if (m.etapy?.length && (z.komunikat || gave)) this.dialog({ ...z.dialogueMeta, title: m.tytul, text: `${z.komunikat ?? ''}${gave}`.trim(), buttons: [tx('Dalej','Next')], onChoose: after });
     else after();
   }
 
@@ -5091,6 +5136,12 @@ export class GameScene extends Phaser.Scene {
         out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });
       } else if (st === 'goal') out.push({ ...q, text: `Wróć do: ${rm.m.adres}`, pos: rm.door });
     }
+    // Accepted elsewhere stays in the journal, with no arrow on this map.
+    for (const m of Object.values(session.gen)) {
+      if (!m.scenariusz || m.scenariusz.mapId === this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
+      out.push({ id:m.id, title:m.tytul, start:m.adres,
+        text:`${tx('Kontynuuj w', 'Continue in')} ${m.scenariusz.mapName}: ${zadanieOf(m).cel}`, pos:null });
+    }
     return out;
   }
 
@@ -5119,6 +5170,10 @@ export class GameScene extends Phaser.Scene {
         onChoose: (i) => (i >= at && i < at + extras.length ? extras[i - at][1]() : orig.onChoose(i >= at + extras.length ? i - extras.length : i)),
       };
     }
+    req = { ...req, title: legacyText(req.title), text: legacyText(req.text), buttons:req.buttons.map(legacyText) };
+    const metadata = dialogueMetadata(req.text);
+    req = { ...req, language:metadata.textId ? lang : req.language ?? lang, localHumor:req.localHumor ?? metadata.localHumor, textId:req.textId ?? metadata.textId,
+      buttonMetadata:req.buttons.map(label => ({ language:lang, ...dialogueMetadata(label) })) };
     this.player.vel.set(0, 0);
     this.player.anims.stop();
     this.scene.pause();

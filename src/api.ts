@@ -33,6 +33,8 @@ export async function rpc<T>(fn: string, args: Record<string, unknown>, keepaliv
 }
 
 export interface SaveData {
+  language?: import('./i18n').Lang;
+  questResults?: Record<string, import('./content/questy/scenarios').QuestResult>;
   coins?: number;
   hp?: number;
   missions?: Record<string, 'new' | 'active' | 'goal' | 'done'>;

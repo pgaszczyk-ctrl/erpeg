@@ -30,6 +30,7 @@ export const RODZAJE_ETAPOW: Record<TypEtapu, string> = {
   wybor: 'Wybór: przekonaj zagadką albo zapłać',
   paragraf: 'Paragraf (strony z wyborem drogi)',
   melodia: 'Melodia na fujarce',
+  decyzja: 'Decyzja (bez utraty serc, zapisany wybór)',
   brak: 'Samo miejsce (bez zadania)',
 };
 const NUTY = ['Do', 'Re', 'Mi', 'Fa', 'Sol'];
@@ -81,6 +82,9 @@ function growing<T>(items: Partial<T>[], make: (x: Partial<T>) => { box: HTMLEle
 /** One stage card; `onChange` refreshes the preview. */
 function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: () => void) {
   const f = {
+    language: el('select', {}, ['pl','en'].map(language => el('option', {value:language,selected:(e.dialogueMeta?.language ?? 'pl')===language}, [language==='pl'?'Polski':'English']))),
+    localHumor: el('input', {type:'checkbox',checked:e.dialogueMeta?.localHumor ?? false}),
+    decisionKey: inp(e.wyborKlucz, {placeholder:'stały klucz wyboru, np. essence'}),
     typ: el('select', {}, Object.entries(RODZAJE_ETAPOW).map(([k, v]) => el('option', { value: k, selected: (e.typ ?? 'idz') === k }, [v]))),
     miejsce: inp(typeof e.miejsce === 'string' ? e.miejsce : e.miejsce ? `${e.miejsce.lat}, ${e.miejsce.lon}` : '', { placeholder: 'adres albo „51.2468, 22.5684”; puste = drzwi zleceniodawcy (Enter = pokaż na mapie)' }),
     cel: inp(e.cel, { placeholder: 'krótko, na ekranie i w dzienniku' }),
@@ -105,6 +109,12 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
   const one = questionBox({ pytanie: e.pytanie, odpowiedzi: e.odpowiedzi, dobra: e.dobra });
   const many = growing<Pytanie>(e.pytania ?? [], questionBox, 'pytanie');
   const pages = growing<Strona>(e.strony ?? [], pageBox, 'strona');
+  const decisions = growing<NonNullable<Etap['opcje']>[number]>(e.opcje ?? [], option => {
+    const id = inp(option.id, {placeholder:'stały identyfikator, np. leaf'});
+    const label = inp(option.tekst, {placeholder:'odpowiedź gracza'});
+    const result = area(option.wynik, 'reakcja po tym wyborze');
+    return {box:el('div', {className:'card'}, [id,label,result]), read:()=>({id:id.value.trim(),tekst:label.value.trim(),wynik:result.value.trim()})};
+  }, 'odpowiedź');
   const parts: Record<string, HTMLElement> = {
     pokonaj: row(field('Ilu', f.ile), field('Jaki wróg', f.wrog), el('label', {}, [f.szukaj, ' trzeba szukać'])),
     zbierz: row(field('Co', f.towar), field('Ile', f.ile)),
@@ -113,6 +123,7 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     napraw: row(field('Ile punktów', f.ile), field('Sekund przy każdym', f.sekund), field('W promieniu (m)', f.promien)),
     zagadka: el('div', {}, [one.box, f.podpowiedz]),
     zagadki: many.box,
+    decyzja: el('div', {}, [field('Klucz zapisywanego wyboru',f.decisionKey),decisions.box]),
     wybor: field('Albo zapłać (monet, 0 = tylko zagadka)', f.zaplac),
     paragraf: pages.box,
     melodia: field('Nuty', f.nuty, 'Do Re Mi Fa Sol, oddzielone spacją.'),
@@ -134,6 +145,7 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     row(field('Rodzaj', f.typ), field('Miejsce', f.miejsce)),
     field('Cel (na ekranie)', f.cel),
     kind,
+    row(field('Język dialogu',f.language),el('label', {}, [f.localHumor,' Lokalny humor (w tłumaczeniu adaptuj żart)'])),
     field('Tekst na początku', f.tekst),
     field('Tekst po wykonaniu', f.komunikat),
     row(field('Daje przedmioty fabularne', f.daje), field('Zabiera', f.zabiera)),
@@ -143,7 +155,7 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
   const read = (): Etap => {
     const typ = f.typ.value as TypEtapu;
     const m = f.miejsce.value.trim();
-    const out: Etap = { typ, miejsce: m, cel: f.cel.value.trim() || RODZAJE_ETAPOW[typ] };
+    const out: Etap = { typ, dialogueMeta:{language:f.language.value as 'pl'|'en',localHumor:f.localHumor.checked}, miejsce: m, cel: f.cel.value.trim() || RODZAJE_ETAPOW[typ] };
     const opt = <K extends keyof Etap>(k: K, v: Etap[K] | '' | undefined) => {
       if (v !== '' && v !== undefined && !(Array.isArray(v) && !v.length)) out[k] = v as Etap[K];
     };
@@ -164,6 +176,7 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
       opt('podpowiedz', f.podpowiedz.value.trim());
     }
     if (typ === 'zagadki') out.pytania = many.read().filter((q) => q.pytanie && q.odpowiedzi.length);
+    if (typ === 'decyzja') {out.wyborKlucz=f.decisionKey.value.trim() || 'decision';out.opcje=decisions.read().filter(o=>o.id&&o.tekst);}
     if (typ === 'wybor') out.zaplac = Math.max(0, Number(f.zaplac.value) || 0);
     if (typ === 'paragraf') out.strony = pages.read().filter((s) => s.tekst);
     if (typ === 'melodia') opt('nuty', f.nuty.value.split(/\s+/).map((x) => NUTY.findIndex((n) => n.toLowerCase() === x.toLowerCase())).filter((i) => i >= 0));

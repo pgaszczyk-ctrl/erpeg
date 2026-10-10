@@ -122,6 +122,10 @@ export async function prepareMap(city: CityMap) {
       if (p) pts.push({ ...p, r: 400 * PX_PER_M });
     }
   }
+  for (const m of Object.values(session.gen)) {
+    if (m.scenariusz?.mapId !== city.id || !['active', 'goal'].includes(session.missions[m.id])) continue;
+    for (const ll of m.scenariusz.anchors) pts.push({ ...city.fromLatLon(ll.lat,ll.lon), r:100 * PX_PER_M });
+  }
   const a = session.abandoned;
   if (a && (a.m ?? 'lublin') === city.id) pts.push({ x: a.x, y: a.y, r: near });
   await Promise.all(pts.map((p) => city.ensure(p.x, p.y, p.r)));

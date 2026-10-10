@@ -1,0 +1,636 @@
+[
+  {
+    "id": "quest.clock_opinion",
+    "anchorCount": 1,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.clock_opinion.runtime.1",
+        "pytanie": "quest.clock_opinion.runtime.2",
+        "odpowiedzi": [
+          "quest.clock_opinion.runtime.3",
+          "quest.clock_opinion.runtime.4",
+          "quest.clock_opinion.runtime.5"
+        ],
+        "dobra": 1,
+        "podpowiedz": "quest.clock_opinion.runtime.6"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.clock_opinion.runtime.7",
+        "pytanie": "quest.clock_opinion.runtime.8",
+        "odpowiedzi": [
+          "quest.clock_opinion.runtime.9",
+          "quest.clock_opinion.runtime.10",
+          "quest.clock_opinion.runtime.11"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.clock_opinion.runtime.12"
+      },
+      {
+        "typ": "napraw",
+        "anchor": 0,
+        "cel": "quest.clock_opinion.runtime.13",
+        "sekund": 6,
+        "ile": 1
+      }
+    ],
+    "giverKinds": [
+      "shop",
+      "alchemist",
+      "gear",
+      "maker",
+      "workshop",
+      "station"
+    ]
+  },
+  {
+    "id": "quest.postman_stamp",
+    "anchorCount": 3,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.postman_stamp.runtime.1",
+        "tekst": "quest.postman_stamp.runtime.2"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 2,
+        "cel": "quest.postman_stamp.runtime.3",
+        "pytanie": "quest.postman_stamp.runtime.4",
+        "odpowiedzi": [
+          "quest.postman_stamp.runtime.5",
+          "quest.postman_stamp.runtime.6",
+          "quest.postman_stamp.runtime.7"
+        ],
+        "dobra": 2,
+        "podpowiedz": "quest.postman_stamp.runtime.8"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.postman_stamp.runtime.9",
+        "pytanie": "quest.postman_stamp.runtime.10",
+        "odpowiedzi": [
+          "quest.postman_stamp.runtime.11",
+          "quest.postman_stamp.runtime.12",
+          "quest.postman_stamp.runtime.13"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.postman_stamp.runtime.14"
+      }
+    ],
+    "giverKinds": [
+      "office",
+      "shop",
+      "merchant",
+      "station"
+    ]
+  },
+  {
+    "id": "quest.sleepy_guardian",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.sleepy_guardian.runtime.1",
+        "tekst": "quest.sleepy_guardian.runtime.2"
+      },
+      {
+        "typ": "melodia",
+        "anchor": 0,
+        "cel": "quest.sleepy_guardian.runtime.3",
+        "tekst": "quest.sleepy_guardian.runtime.4",
+        "nuty": [
+          0,
+          2,
+          1
+        ]
+      },
+      {
+        "typ": "decyzja",
+        "anchor": 0,
+        "wyborKlucz": "approach",
+        "cel": "quest.sleepy_guardian.runtime.5",
+        "tekst": "quest.sleepy_guardian.runtime.6",
+        "opcje": [
+          {
+            "id": "quiet",
+            "tekst": "quest.sleepy_guardian.runtime.7",
+            "wynik": "quest.sleepy_guardian.runtime.8"
+          },
+          {
+            "id": "hum",
+            "tekst": "quest.sleepy_guardian.runtime.9",
+            "wynik": "quest.sleepy_guardian.runtime.10"
+          }
+        ]
+      }
+    ],
+    "giverKinds": [
+      "shop",
+      "merchant",
+      "library",
+      "station"
+    ]
+  },
+  {
+    "id": "quest.two_seals",
+    "anchorCount": 3,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "decyzja",
+        "anchor": 0,
+        "wyborKlucz": "pair",
+        "cel": "quest.two_seals.runtime.1",
+        "tekst": "quest.two_seals.runtime.2",
+        "opcje": [
+          {
+            "id": "route",
+            "tekst": "quest.two_seals.runtime.3",
+            "wynik": "quest.two_seals.runtime.4"
+          },
+          {
+            "id": "repair",
+            "tekst": "quest.two_seals.runtime.5",
+            "wynik": "quest.two_seals.runtime.6"
+          },
+          {
+            "id": "creature",
+            "tekst": "quest.two_seals.runtime.7",
+            "wynik": "quest.two_seals.runtime.8"
+          }
+        ]
+      },
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.two_seals.runtime.9",
+        "tekst": "quest.two_seals.runtime.10"
+      },
+      {
+        "typ": "decyzja",
+        "anchor": 2,
+        "wyborKlucz": "battery",
+        "cel": "quest.two_seals.runtime.11",
+        "tekst": "quest.two_seals.runtime.12",
+        "opcje": [
+          {
+            "id": "workshop",
+            "tekst": "quest.two_seals.runtime.13",
+            "wynik": "quest.two_seals.runtime.14"
+          },
+          {
+            "id": "scope",
+            "tekst": "quest.two_seals.runtime.15",
+            "wynik": "quest.two_seals.runtime.16"
+          }
+        ]
+      },
+      {
+        "typ": "napraw",
+        "anchor": 2,
+        "cel": "quest.two_seals.runtime.17",
+        "sekund": 6,
+        "ile": 1
+      }
+    ],
+    "giverKinds": [
+      "office",
+      "library",
+      "station",
+      "workshop",
+      "maker"
+    ]
+  },
+  {
+    "id": "quest.tea_map",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.tea_map.runtime.1",
+        "tekst": "quest.tea_map.runtime.2"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 1,
+        "cel": "quest.tea_map.runtime.3",
+        "pytanie": "quest.tea_map.runtime.4",
+        "odpowiedzi": [
+          "quest.tea_map.runtime.5",
+          "quest.tea_map.runtime.6",
+          "quest.tea_map.runtime.7"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.tea_map.runtime.8"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.tea_map.runtime.9",
+        "pytanie": "quest.tea_map.runtime.10",
+        "odpowiedzi": [
+          "quest.tea_map.runtime.11",
+          "quest.tea_map.runtime.12"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.tea_map.runtime.13"
+      }
+    ],
+    "giverKinds": [
+      "shop",
+      "merchant",
+      "office",
+      "library"
+    ]
+  },
+  {
+    "id": "quest.flask_guardian",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "decyzja",
+        "anchor": 0,
+        "wyborKlucz": "essence",
+        "cel": "quest.flask_guardian.runtime.1",
+        "tekst": "quest.flask_guardian.runtime.2",
+        "opcje": [
+          {
+            "id": "leaf",
+            "tekst": "quest.flask_guardian.runtime.3",
+            "wynik": "quest.flask_guardian.runtime.4"
+          },
+          {
+            "id": "water",
+            "tekst": "quest.flask_guardian.runtime.5",
+            "wynik": "quest.flask_guardian.runtime.6"
+          }
+        ]
+      },
+      {
+        "typ": "napraw",
+        "anchor": 1,
+        "cel": "quest.flask_guardian.runtime.7",
+        "sekund": 6,
+        "ile": 1
+      },
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.flask_guardian.runtime.8",
+        "tekst": "quest.flask_guardian.runtime.9"
+      }
+    ],
+    "giverKinds": [
+      "workshop",
+      "maker",
+      "alchemist",
+      "gear",
+      "shop"
+    ]
+  },
+  {
+    "id": "quest.garden_wheels",
+    "anchorCount": 3,
+    "green": true,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.garden_wheels.runtime.1",
+        "tekst": "quest.garden_wheels.runtime.2"
+      },
+      {
+        "typ": "decyzja",
+        "anchor": 2,
+        "wyborKlucz": "seeds",
+        "cel": "quest.garden_wheels.runtime.3",
+        "tekst": "quest.garden_wheels.runtime.4",
+        "opcje": [
+          {
+            "id": "scent_glow",
+            "tekst": "quest.garden_wheels.runtime.5",
+            "wynik": "quest.garden_wheels.runtime.6"
+          },
+          {
+            "id": "scent_shade",
+            "tekst": "quest.garden_wheels.runtime.7",
+            "wynik": "quest.garden_wheels.runtime.8"
+          },
+          {
+            "id": "glow_shade",
+            "tekst": "quest.garden_wheels.runtime.9",
+            "wynik": "quest.garden_wheels.runtime.10"
+          }
+        ]
+      },
+      {
+        "typ": "napraw",
+        "anchor": 0,
+        "cel": "quest.garden_wheels.runtime.11",
+        "sekund": 6,
+        "ile": 1
+      }
+    ],
+    "giverKinds": [
+      "merchant",
+      "shop",
+      "library",
+      "office"
+    ]
+  },
+  {
+    "id": "quest.noisy_neighbours",
+    "anchorCount": 3,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "rozmowa",
+        "anchor": 1,
+        "cel": "quest.noisy_neighbours.runtime.1",
+        "tekst": "quest.noisy_neighbours.runtime.2"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 2,
+        "cel": "quest.noisy_neighbours.runtime.3",
+        "pytanie": "quest.noisy_neighbours.runtime.4",
+        "odpowiedzi": [
+          "quest.noisy_neighbours.runtime.5",
+          "quest.noisy_neighbours.runtime.6",
+          "quest.noisy_neighbours.runtime.7"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.noisy_neighbours.runtime.8"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 2,
+        "cel": "quest.noisy_neighbours.runtime.9",
+        "pytanie": "quest.noisy_neighbours.runtime.10",
+        "odpowiedzi": [
+          "quest.noisy_neighbours.runtime.11",
+          "quest.noisy_neighbours.runtime.12"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.noisy_neighbours.runtime.13"
+      },
+      {
+        "typ": "napraw",
+        "anchor": 2,
+        "cel": "quest.noisy_neighbours.runtime.14",
+        "sekund": 6,
+        "ile": 1
+      },
+      {
+        "typ": "decyzja",
+        "anchor": 0,
+        "wyborKlucz": "schedule",
+        "cel": "quest.noisy_neighbours.runtime.15",
+        "tekst": "quest.noisy_neighbours.runtime.16",
+        "opcje": [
+          {
+            "id": "schedule",
+            "tekst": "quest.noisy_neighbours.runtime.17",
+            "wynik": "quest.noisy_neighbours.runtime.18"
+          },
+          {
+            "id": "insulate",
+            "tekst": "quest.noisy_neighbours.runtime.19",
+            "wynik": "quest.noisy_neighbours.runtime.20"
+          }
+        ]
+      }
+    ],
+    "giverKinds": [
+      "office",
+      "shop",
+      "maker",
+      "workshop"
+    ]
+  },
+  {
+    "id": "quest.pact_pages",
+    "anchorCount": 3,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "zagadka",
+        "anchor": 1,
+        "cel": "quest.pact_pages.runtime.1",
+        "pytanie": "quest.pact_pages.runtime.2",
+        "odpowiedzi": [
+          "quest.pact_pages.runtime.3",
+          "quest.pact_pages.runtime.4",
+          "quest.pact_pages.runtime.5"
+        ],
+        "dobra": 1,
+        "podpowiedz": "quest.pact_pages.runtime.6"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 2,
+        "cel": "quest.pact_pages.runtime.7",
+        "pytanie": "quest.pact_pages.runtime.8",
+        "odpowiedzi": [
+          "quest.pact_pages.runtime.9",
+          "quest.pact_pages.runtime.10",
+          "quest.pact_pages.runtime.11"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.pact_pages.runtime.12"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.pact_pages.runtime.13",
+        "pytanie": "quest.pact_pages.runtime.14",
+        "odpowiedzi": [
+          "quest.pact_pages.runtime.15",
+          "quest.pact_pages.runtime.16"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.pact_pages.runtime.17"
+      }
+    ],
+    "giverKinds": [
+      "library",
+      "university",
+      "school",
+      "office",
+      "shop"
+    ]
+  },
+  {
+    "id": "quest.core_trip",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "decyzja",
+        "anchor": 0,
+        "wyborKlucz": "mode",
+        "cel": "quest.core_trip.runtime.1",
+        "tekst": "quest.core_trip.runtime.2",
+        "opcje": [
+          {
+            "id": "power",
+            "tekst": "quest.core_trip.runtime.3",
+            "wynik": "quest.core_trip.runtime.4"
+          },
+          {
+            "id": "precision",
+            "tekst": "quest.core_trip.runtime.5",
+            "wynik": "quest.core_trip.runtime.6"
+          }
+        ]
+      },
+      {
+        "typ": "napraw",
+        "anchor": 1,
+        "cel": "quest.core_trip.runtime.7",
+        "sekund": 6,
+        "ile": 1
+      }
+    ],
+    "giverKinds": [
+      "workshop",
+      "maker",
+      "alchemist",
+      "gear",
+      "shop"
+    ]
+  },
+  {
+    "id": "quest.helper_workshop",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [],
+    "stages": [
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.helper_workshop.runtime.1",
+        "pytanie": "quest.helper_workshop.runtime.2",
+        "odpowiedzi": [
+          "quest.helper_workshop.runtime.3",
+          "quest.helper_workshop.runtime.4"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.helper_workshop.runtime.5"
+      },
+      {
+        "typ": "napraw",
+        "anchor": 0,
+        "cel": "quest.helper_workshop.runtime.6",
+        "sekund": 6,
+        "ile": 1
+      },
+      {
+        "typ": "melodia",
+        "anchor": 1,
+        "cel": "quest.helper_workshop.runtime.7",
+        "tekst": "quest.helper_workshop.runtime.8",
+        "nuty": [
+          0,
+          2,
+          1
+        ]
+      },
+      {
+        "typ": "decyzja",
+        "anchor": 1,
+        "wyborKlucz": "service",
+        "cel": "quest.helper_workshop.runtime.9",
+        "tekst": "quest.helper_workshop.runtime.10",
+        "opcje": [
+          {
+            "id": "repair",
+            "tekst": "quest.helper_workshop.runtime.11",
+            "wynik": "quest.helper_workshop.runtime.12"
+          },
+          {
+            "id": "route",
+            "tekst": "quest.helper_workshop.runtime.13",
+            "wynik": "quest.helper_workshop.runtime.14"
+          },
+          {
+            "id": "creature",
+            "tekst": "quest.helper_workshop.runtime.15",
+            "wynik": "quest.helper_workshop.runtime.16"
+          }
+        ]
+      }
+    ],
+    "giverKinds": [
+      "maker",
+      "workshop",
+      "gear",
+      "alchemist",
+      "shop"
+    ]
+  },
+  {
+    "id": "quest.old_sign_new_note",
+    "anchorCount": 2,
+    "green": false,
+    "requires": [
+      "quest.tea_map",
+      "quest.two_seals"
+    ],
+    "stages": [
+      {
+        "typ": "zagadka",
+        "anchor": 1,
+        "cel": "quest.old_sign_new_note.runtime.1",
+        "pytanie": "quest.old_sign_new_note.runtime.2",
+        "odpowiedzi": [
+          "quest.old_sign_new_note.runtime.3",
+          "quest.old_sign_new_note.runtime.4"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.old_sign_new_note.runtime.5"
+      },
+      {
+        "typ": "zagadka",
+        "anchor": 0,
+        "cel": "quest.old_sign_new_note.runtime.6",
+        "pytanie": "quest.old_sign_new_note.runtime.7",
+        "odpowiedzi": [
+          "quest.old_sign_new_note.runtime.8",
+          "quest.old_sign_new_note.runtime.9"
+        ],
+        "dobra": 0,
+        "podpowiedz": "quest.old_sign_new_note.runtime.10"
+      }
+    ],
+    "giverKinds": [
+      "library",
+      "office",
+      "shop",
+      "merchant"
+    ]
+  }
+]

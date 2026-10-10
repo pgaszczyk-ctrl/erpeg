@@ -474,7 +474,7 @@ export class UIScene extends Phaser.Scene {
     setHudVehicles(hasTestVehicle('rower'), hasTestVehicle('hulajnoga'), testVehicle);
     this.lowLife(time);
     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
-    showHud(this.overlay ? 'off' : this.hasDialog ? 'dim' : 'on');
+    showHud(this.overlay || this.hasDialog ? 'off' : 'on');
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);
