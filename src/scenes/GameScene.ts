@@ -198,6 +198,7 @@ export interface HudState {
   /** Healing potions and edible goods in the backpack (the HUD's heal button). */
   potions: number;
   fruit: number;
+  fruitPerHeal: number;
   /** Share of the way to the next level (the HUD's amber tube). */
   expShare: number;
   /** The plaque top right: the town and where in it (see placeInfo). */
@@ -5272,6 +5273,7 @@ export class GameScene extends Phaser.Scene {
       quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
       potions: session.mikstury,
       fruit: totalFruit(),
+      fruitPerHeal: this.fruitPerHeart(),
       expShare: this.expShare(),
       ...this.placeInfo(),
       goods: goodsByKind(),
