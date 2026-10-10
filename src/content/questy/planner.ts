@@ -51,6 +51,7 @@ function safePoint(city: CityMap, at: Point): Point | null {
 }
 /** Density is a capability check, not a fabricated population count. Works in any country. */
 export async function planCityQuests(city: CityMap, near: Point, mapName: string, states: Record<string, string>, taken: Record<string, Misja>): Promise<Misja[]> {
+  if (!CITY_SCENARIOS.length) return []; // Do not fetch/scan maps for the withdrawn pack.
   const radius = 1000 * PX_PER_M;
   await city.ensure(near.x, near.y, radius);
   const places = city.places.filter(p => Math.hypot(p.door.x - near.x, p.door.y - near.y) <= radius);

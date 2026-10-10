@@ -1,6 +1,6 @@
 import { effectiveStage } from './content/questy/progress';
 import { translateMission, legacyText } from './content/questy/text';
-import { restoreScenario } from './content/questy/scenarios';
+import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
 import { lang, setLanguage, tx } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
@@ -276,6 +276,7 @@ export function setMissionState(m: Misja, s: MissionState) {
  * requirements are met (level, earlier missions done, an item in hand) – mission chains.
  */
 export function missionAvailable(m: Misja) {
+  if (isWithdrawnCityQuest(m.id)) return false;
   if (m.scenariusz && (m.scenariusz.mapId !== session.mapId || missionState(m) === 'done')) return false;
   if (missionState(m) !== 'new') return true;
   const w = m.wymaga;
