@@ -8,4 +8,6 @@ Zrzuty z prawdziwej gry na lokalnym Vite preview: komputer1440×900, telefon390�
 
 Starsze wersje: docs/hud/29_baniak i30_centrowanie; oryginalne ilustracje w28_awatary pozostają do ewentualnego powrotu. W grze można porównać ?hud=old / ?hud=v5.
 
-Nałęczowska16: osobny skrypt browser-building-presence.mjs sprawdza zwykłą postać, pierwszy odsłonięty widok i4 strony/powrót na komputerze i telefonie. Publiczna produkcja e0a27d0 również pokazała eLeader/id30667 z6 piętrami; osobne zrzuty produkcja*.png. Nie odtworzono braku zgłoszonego przez właściciela; nie zmieniano mapy bez potwierdzonej przyczyny.
+Nałęczowska16: osobny skrypt browser-building-presence.mjs sprawdza zwykłą postać, pierwszy odsłonięty widok i4 strony/powrót na komputerze i telefonie. Publiczna produkcja e0a27d0 również pokazała eLeader/id30667 z6 piętrami; osobne zrzuty produkcja*.png. Właściciel ostatecznie wskazał starsze demo produkcyjne i potwierdził poprawny TEST; kontrola zwykłej postaci nie odtwarza tamtego demo. Nie zmieniano mapy bez potwierdzonej przyczyny.
+
+Publikacja TEST6b496ee zakończona. Powtórny Playwright publicznej wersji komputer1440×900 i telefon390×844/obrót przeszedł; JS[], RPC atrapami. Wyniki: sprawdzenie_hud_test.json. Produkcja nadal e0a27d0.

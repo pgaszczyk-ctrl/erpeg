@@ -1,0 +1,116 @@
+[
+  {
+    "name": "desktop",
+    "before": {
+      "hp": 4,
+      "potions": 2,
+      "fruit": 50
+    },
+    "after": {
+      "hp": 10,
+      "potions": 1,
+      "fruit": 50,
+      "extra": 2
+    },
+    "fruitAfter": {
+      "hp": 6,
+      "fruit": 30,
+      "food": 1
+    },
+    "foodAfter": {
+      "hp": 8,
+      "food": 0
+    },
+    "geometry": {
+      "exp": {
+        "x": 519,
+        "y": 808,
+        "width": 66,
+        "height": 66
+      },
+      "portrait": {
+        "x": 597,
+        "y": 808,
+        "width": 66,
+        "height": 66
+      },
+      "life": {
+        "x": 662.25,
+        "y": 751,
+        "width": 115.5,
+        "height": 141
+      },
+      "camera": {
+        "x": 778.5,
+        "y": 808,
+        "width": 66,
+        "height": 66
+      },
+      "bike": {
+        "x": 846,
+        "y": 808,
+        "width": 66,
+        "height": 66
+      }
+    },
+    "errors": [],
+    "saveMocked": true
+  },
+  {
+    "name": "phone",
+    "before": {
+      "hp": 4,
+      "potions": 2,
+      "fruit": 50
+    },
+    "after": {
+      "hp": 10,
+      "potions": 1,
+      "fruit": 50,
+      "extra": 2
+    },
+    "fruitAfter": {
+      "hp": 6,
+      "fruit": 30,
+      "food": 1
+    },
+    "foodAfter": {
+      "hp": 8,
+      "food": 0
+    },
+    "geometry": {
+      "exp": {
+        "x": 61,
+        "y": 780,
+        "width": 44,
+        "height": 44
+      },
+      "portrait": {
+        "x": 113,
+        "y": 780,
+        "width": 44,
+        "height": 44
+      },
+      "life": {
+        "x": 156.5,
+        "y": 742,
+        "width": 77,
+        "height": 94
+      },
+      "camera": {
+        "x": 234,
+        "y": 780,
+        "width": 44,
+        "height": 44
+      },
+      "bike": {
+        "x": 279,
+        "y": 780,
+        "width": 44,
+        "height": 44
+      }
+    },
+    "errors": [],
+    "saveMocked": true
+  }
+]
