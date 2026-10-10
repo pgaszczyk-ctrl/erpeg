@@ -5,7 +5,7 @@ import { startSession, loadContent } from '../quests';
 import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
-import { tx } from '../i18n';
+import { lang, tx } from '../i18n';
 import { LADOWANIE } from '../content/ladowanie';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
@@ -65,6 +65,13 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
 
     const screen = (...children: (Node | string)[]) => {
       box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
+      const languages = el('select', { 'ariaLabel': 'Language / Język' }, [el('option', {value:'pl'}, ['Polski']), el('option', {value:'en'}, ['English'])]);
+      languages.value = lang;
+      languages.onchange = () => {
+        try { localStorage.setItem('exp-language', languages.value); } catch { /* URL still works */ }
+        const url = new URL(location.href); url.searchParams.set('lang', languages.value); location.href = url.href;
+      };
+      box.append(languages);
       box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });

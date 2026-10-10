@@ -1,3 +1,6 @@
+import { translateMission } from './content/questy/text';
+import { restoreScenario } from './content/questy/scenarios';
+import { lang, setLanguage } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
@@ -83,6 +86,7 @@ export const session = {
   jazda: null as import('./journey').Journey | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
+  questResults: {} as NonNullable<SaveData['questResults']>,
   /** Library riddles answered this session (max BIBLIOTEKA_ZAGADKI.naSesje). */
   libRiddles: 0,
   /** Changes every login, so each place offers a new random mission. */
@@ -160,6 +164,7 @@ export async function loadContent() {
 
 export function startSession(r: LoginResult) {
   const p = r.player;
+  setLanguage(p.save.language);
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
@@ -211,8 +216,9 @@ export function startSession(r: LoginResult) {
   session.missions = { ...(p.save.missions ?? {}) };
   session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
   session.gen = {};
+  session.questResults = { ...(p.save.questResults ?? {}) };
   session.libRiddles = 0;
-  for (const m of p.save.gen ?? []) session.gen[m.id] = odswiezSlownictwoMisji(m);
+  for (const m of p.save.gen ?? []) session.gen[m.id] = translateMission(restoreScenario(odswiezSlownictwoMisji(m)));
   session.nonce = Math.floor(Math.random() * 1e9);
   odrostDrzew(); // ścięte drzewa i strząśnięte owoce wracają przy każdym logowaniu
   const a = r.abandoned ?? null;
@@ -238,7 +244,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
+    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
@@ -251,6 +257,11 @@ export function missionState(m: Misja): MissionState {
 
 export function setMissionState(m: Misja, s: MissionState) {
   session.missions[m.id] = s;
+  if (s === 'done' && m.scenariusz) {
+    session.questResults[m.id] = { originMap:m.scenariusz.mapId, choices:{...m.scenariusz.choices}, routeM:m.scenariusz.routeM,
+      ...(m.id === 'quest.tea_map' ? {reading:1} : {}) };
+    delete session.gen[m.id];
+  }
 }
 
 /**
@@ -258,6 +269,7 @@ export function setMissionState(m: Misja, s: MissionState) {
  * requirements are met (level, earlier missions done, an item in hand) – mission chains.
  */
 export function missionAvailable(m: Misja) {
+  if (m.scenariusz && (m.scenariusz.mapId !== session.mapId || missionState(m) === 'done')) return false;
   if (missionState(m) !== 'new') return true;
   const w = m.wymaga;
   if (!w) return true;
@@ -504,7 +516,8 @@ export function stageTarget(city: CityMap, m: Misja, door: Place): Place | null 
 export function resolveMissions(city: CityMap) {
   const ok: ResolvedMission[] = [];
   const missing: string[] = [];
-  for (const m of [...MISJE, ...session.extra]) {
+  for (const raw of [...MISJE, ...session.extra]) {
+    const m = translateMission(raw);
     const door = resolvePlace(city, m.adres);
     const target = door ? stageTarget(city, m, door) : null;
     const z = zadanieOf(m);
