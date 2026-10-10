@@ -131,6 +131,7 @@ const CSS = `
 #hud .hud-reservoir .hud-heal.low { animation: none; }
 #hud .hud-reservoir .hud-heal.low::after { content: ''; position: absolute; inset: 26% 12% 10%; border-radius: 50%; animation: hud-pulse 0.9s ease-in-out infinite; pointer-events: none; }
 #hud .hud-reservoir .hud-avpic { image-rendering: auto; }
+#hud .hud-reservoir .hud-vehicle:disabled img { opacity: 0.32; filter: grayscale(1); }
 `;
 
 const img = (name: string) => {
@@ -383,17 +384,19 @@ export function unmountHud() {
   lastVehicles = '';
 }
 
-/** Only vehicles in the backpack get a button; clicking an active one means walking. */
-export function setHudVehicles(rower: boolean, hulajnoga: boolean, active: 'pieszo' | 'rower' | 'hulajnoga') {
+/** Compact HUD has one socket: available scooter, bicycle, or an inactive bicycle. */
+export function setHudVehicles(rower: boolean, hulajnoga: boolean, active: 'pieszo' | 'rower' | 'hulajnoga', hulajnogaGotowa = hulajnoga) {
   if (!parts) return;
-  const key = `${rower}:${hulajnoga}:${active}`;
+  const key = `${rower}:${hulajnoga}:${active}:${hulajnogaGotowa}`;
   if (key === lastVehicles) return;
   lastVehicles = key;
+  const selected = hulajnoga && hulajnogaGotowa ? 'hulajnoga' : 'rower';
   for (const vehicle of ['rower', 'hulajnoga'] as const) {
     const b = parts.vehicles[vehicle];
-    b.hidden = !(vehicle === 'rower' ? rower : hulajnoga);
-    const mounted = active === vehicle;
-    const label = vehicle === 'rower' ? (mounted ? 'Zejdź z roweru' : 'Wsiądź na rower') : (mounted ? 'Zejdź z hulajnogi' : 'Wsiądź na hulajnogę');
+    b.hidden = reservoir ? vehicle !== selected : !(vehicle === 'rower' ? rower : hulajnoga);
+    b.disabled = reservoir && vehicle === 'rower' && !rower;
+    const mounted = !b.disabled && active === vehicle;
+    const label = b.disabled ? 'Brak dostępnego pojazdu' : vehicle === 'rower' ? (mounted ? 'Zejdź z roweru' : 'Wsiądź na rower') : (mounted ? 'Zejdź z hulajnogi' : 'Wsiądź na hulajnogę');
     b.setAttribute('aria-pressed', String(mounted));
     b.setAttribute('aria-label', label);
     b.title = label;
