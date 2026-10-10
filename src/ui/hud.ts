@@ -1,6 +1,9 @@
 import { TEST } from '../version';
 import { createMachineV5 } from './hudMachineV5';
-const newMachine = TEST && new URLSearchParams(location.search).get('hud') !== 'old';
+import { createReservoirHud } from './hudReservoir';
+const hudStyle = new URLSearchParams(location.search).get('hud');
+const newMachine = TEST && hudStyle !== 'old';
+const reservoir = newMachine && hudStyle !== 'v5';
 
 // The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):
 // - bottom right: one pixel-art "machine" (70×60 picture pixels shown ×4, NEAREST): two glass
@@ -26,6 +29,8 @@ export interface HudView {
   expShare: number;
   potions: number;
   fruit: number;
+  /** Fruit needed for one use of the healing button (including the demo's rule). */
+  fruitPerHeal: number;
   /** Nothing left to heal with (the button is dimmed). */
   noHeal: boolean;
   /** Prepared food selected after potions and edible harvests. */
@@ -121,6 +126,11 @@ const CSS = `
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }
 #hud .hud-pick img { width: 18px; height: 18px; image-rendering: pixelated; object-fit: contain; }
+#hud .hud-reservoir button:hover { background: transparent; }
+#hud .hud-reservoir button[disabled] { cursor: default; }
+#hud .hud-reservoir .hud-heal.low { animation: none; }
+#hud .hud-reservoir .hud-heal.low::after { content: ''; position: absolute; inset: 26% 12% 10%; border-radius: 50%; animation: hud-pulse 0.9s ease-in-out infinite; pointer-events: none; }
+#hud .hud-reservoir .hud-avpic { image-rendering: auto; }
 `;
 
 const img = (name: string) => {
@@ -143,7 +153,7 @@ let parts: {
   wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
   vehicles: Record<'rower' | 'hulajnoga', HTMLButtonElement>;
 } | null = null;
-let machineV5: ReturnType<typeof createMachineV5> | null = null;
+let machineV5: ReturnType<typeof createMachineV5> | ReturnType<typeof createReservoirHud> | null = null;
 let lastVehicles = '';
 let scale = 4;
 /** Room to the left for the longer bottom rail; the upper machine stays anchored on the right. */
@@ -298,7 +308,7 @@ export function mountHud(on: HudHandlers) {
     b.hidden = true;
     const image = document.createElement('img');
     image.alt = '';
-    if (on.vehicle) image.src = BASE_URL + pic;
+    if (on.vehicle && !reservoir) image.src = BASE_URL + pic;
     b.append(image);
     return b;
   };
@@ -354,7 +364,7 @@ export function mountHud(on: HudHandlers) {
   root.append(m, p, picks);
   document.body.append(root);
   parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic, vehicles };
-  if (newMachine) machineV5 = createMachineV5(parts);
+  if (newMachine) machineV5 = reservoir ? createReservoirHud(parts) : createMachineV5(parts);
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -470,7 +480,8 @@ export function setHud(v: HudView) {
     parts.coins.title = `Sakiewka: ${n(v.coins)} monet`;
     parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
   }
-  parts.count.textContent = String(v.potions > 0 ? v.potions : v.preparedFood ? v.preparedFood.n : v.fruit);
+  const food = v.potions <= 0 && v.fruit < v.fruitPerHeal ? v.preparedFood : undefined;
+  parts.count.textContent = String(v.potions > 0 ? v.potions : food ? food.n : reservoir ? Math.floor(v.fruit / v.fruitPerHeal) : v.fruit);
   if (v.bron.pic && !parts.wpnImg.src.endsWith(v.bron.pic)) parts.wpnImg.src = v.bron.pic;
   parts.wpnImg.style.visibility = v.bron.pic ? 'visible' : 'hidden';
   parts.wcount.textContent = v.bron.label;
@@ -478,13 +489,14 @@ export function setHud(v: HudView) {
   parts.wpn.setAttribute('aria-label', v.bron.title);
   parts.wpn.title = v.bron.title;
   const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})`
-    : v.preparedFood ? `Zjedz przygotowane jedzenie ${v.preparedFood.icon} (masz ${v.preparedFood.n})`
-    : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
-  parts.heal.setAttribute('aria-label', label);
-  parts.heal.title = label;
+    : food ? `Zjedz przygotowane jedzenie ${food.icon} (masz ${food.n})`
+    : `Zjedz ${v.fruitPerHeal} owoców, żeby się wyleczyć (masz ${v.fruit})`;
+  const hpPct = Math.round((100 * v.hp) / v.maxHp);
+  const healLabel = reservoir ? `Zdrowie ${hpPct}%. ${label}` : label;
+  parts.heal.setAttribute('aria-label', healLabel);
+  parts.heal.title = healLabel;
   if (machineV5) parts.heal.disabled = v.noHeal;
   parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
-  const hpPct = Math.round((100 * v.hp) / v.maxHp);
   parts.hp.setAttribute('aria-label', `Zdrowie ${hpPct}%`);
   parts.hp.title = `Zdrowie ${hpPct}%`;
   parts.xp.setAttribute('aria-label', `Doświadczenie ${Math.round(100 * v.expShare)}% do następnego poziomu`);
@@ -619,6 +631,11 @@ function drawBottomRail(c: CanvasRenderingContext2D, baseLoaded: boolean) {
 export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
   avatar = src ? { src, sx, sy, sw, sh } : null;
   drawAvatar();
+}
+
+/** Load only the accepted portrait corresponding to the currently selected hero. */
+export function setHudHeroPortrait(id: string) {
+  if (machineV5 && 'hero' in machineV5) machineV5.hero(id);
 }
 
 /** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */

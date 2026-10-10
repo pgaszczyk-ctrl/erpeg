@@ -2,7 +2,7 @@ import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
-import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
+import { WSKRZESZENIE } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showPhoto } from '../ui/brag';
@@ -16,9 +16,9 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudHeroPortrait, hudZoom, setHudVehicles } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
-import { heroPortrait } from '../sprites';
+import { heroPortrait, heroSkin } from '../sprites';
 import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
@@ -300,7 +300,8 @@ export class UIScene extends Phaser.Scene {
     const q = s.lingering === null ? s.quests[0] : undefined;
     setHud({
       hp: s.hp, maxHp: s.maxHp, extra: s.extra, zatruty: !!s.zatruty, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
-      noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow && !s.heal,
+      fruitPerHeal: s.fruitPerHeal,
+      noHeal: s.potions <= 0 && s.fruit < s.fruitPerHeal && !s.heal,
       preparedFood: s.heal && s.heal.icon !== '🧪' && s.heal.icon !== '🍎' ? s.heal : undefined,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
@@ -340,6 +341,7 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
+    setHudHeroPortrait(heroSkin(session.look.postac, session.name).id);
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;

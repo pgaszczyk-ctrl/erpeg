@@ -1,0 +1,11 @@
+# HUD z baniakiem życia — 10.10.2026
+
+Nowa wersja na TEST, według poprawionego układu właściciela: jeden poziomy zbiornik doświadczenia po lewej, portret, największy zbiornik życia, aparat oraz posiadane pojazdy. Miniaturowy zbiorniczek nachodzący na życie pokazuje sposób leczenia. Kliknięcie obu rysunków uruchamia ten sam dotychczasowy `healButton`: mikstura → jadalne plony → gotowe jedzenie. Licznik pokazuje liczbę możliwych użyć (dla owoców liczbę pełnych porcji). Życie jest czerwone, premia niebieska, zatrucie zielone. Poziom płynu jest liczony w oknie szkła, bez szyjki i podstawy.
+
+Grafiki aparatu, velocypedu i wszystkich 25 portretów to zaakceptowane oryginały z `../28_awatary/`. `public/hud/v6/` zawiera ich bezstratne WebP, o tych samych wymiarach i identycznych widocznych pikselach. Nie zmieniono palety, konturów ani rozdzielczości. Przy wejściu pobiera się tylko portret wybranego bohatera; grafika pojazdu dopiero przy jego posiadaniu. Nowa pusta oprawa życia jest w `baniak_pusty.png`, a płyny rysuje osobno kod.
+
+Dolny HUD ma 94 px wysokości na telefonie i około 103 px na komputerze. Rysunki aparatu/pojazdu mają około 38–40 px, portret 42 px, pola dotyku co najmniej 44×44 px. Brak pustych gniazd na pojazdy; oba posiadane pojazdy mają osobne przyciski i mieszczą się na ekranie 320 px. Cienkie rurki łączą elementy. Stan broni/amunicji pozostaje małą plakietką pod portretem oraz w kufrze; dziennik zadań jest w kufrze i pod górną tabliczką bieżącego zadania.
+
+Powrót: `?hud=old` włącza HUD sprzed paczki 27, a `?hud=v5` pozwala obejrzeć machinę z paczki 27. Zachowano wcześniejszą kopię w `../27/hud_poprzedni_7f03d9e.zip`. Produkcyjny pin i wersja nie są zmienione.
+
+Test przeglądarkowy: po `VITE_TEST=1 npm run build`, osobnym `VITE_TEST=1 npx vite build` i uruchomieniu `npx vite preview` wykonać `node scripts/tests/browser-hud-reservoir.mjs`. Wymaga Playwright (można wskazać `PLAYWRIGHT_MODULE`) i Chromium (`BROWSER_EXECUTABLE`); `HUD_BASE` ustawia adres podglądu, `HUD_ARTIFACTS` katalog zrzutów. Wszystkie połączenia Supabase są zastąpione atrapami. Test obejmuje rzeczywiste logowanie, leczenie i zużycie zapasów, klik małej nakładki, przeciągnięcie, wszystkie portrety, aparat/kufer, oba pojazdy i trzy rozmiary ekranu.
