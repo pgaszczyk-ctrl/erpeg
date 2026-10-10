@@ -122,6 +122,24 @@ const CSS = `
 #hud .hud-money img, #hud .hud-money svg { width: 30px; height: 30px; image-rendering: pixelated; flex-shrink: 0; }
 /* On a computer: top edge, centred over the hero (owner, 6 Oct 2026). */
 #hud .hud-money.top { position: absolute; left: 50%; transform: translateX(-50%); }
+/* Steampunk plates (owner, 10 Oct 2026): a riveted brass frame on dark iron, pipes joining the plaque and the purse. */
+#hud .hud-plate, #hud .hud-money, #hud .hud-quest {
+  --rv: #f4dc9c 0 1.2px, #b28443 1.6px 2.2px, #3a2618 2.6px 3.1px, transparent 3.4px;
+  background: radial-gradient(circle at 6px 6px, var(--rv)), radial-gradient(circle at calc(100% - 6px) 6px, var(--rv)),
+    radial-gradient(circle at 6px calc(100% - 6px), var(--rv)), radial-gradient(circle at calc(100% - 6px) calc(100% - 6px), var(--rv)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(64,48,40,0.94), rgba(30,24,22,0.94)) !important;
+  border: 3px solid #b8893b !important; border-radius: 5px !important;
+  box-shadow: 0 0 0 2px #1a110b, inset 0 1px 0 #f0d088, inset 0 0 0 1px #6b4a26, 0 3px 0 1px rgba(0,0,0,0.35) !important; }
+#hud .hud-plate { padding-left: 8px; padding-right: 13px; }
+#hud .hud-quest { border-width: 2px !important; padding-left: 8px !important; padding-right: 12px !important; }
+#hud .hud-money:not(.top), #hud .hud-quest { position: relative; }
+#hud .hud-money:not(.top)::before, #hud .hud-quest::before { content: ''; position: absolute; right: 22px; top: -11px; width: 8px; height: 8px;
+  background: linear-gradient(90deg, #1a110b 0 1px, #f0d088 1px 2px, #b28443 2px 6px, #644226 6px 7px, #1a110b 7px); pointer-events: none; }
+#hud .hud-money:not(.top)::after, #hud .hud-quest::after { content: ''; position: absolute; right: 19px; top: -6px; width: 14px; height: 3px;
+  background: #b28443; border: 1px solid #1a110b; border-top-color: #f0d088; pointer-events: none; }
+#hud .hud-compass { border: 2px solid #d9b56f !important; border-radius: 6px !important;
+  box-shadow: 0 0 0 2px #1a110b, inset 0 0 0 2px #644226, inset 0 3px 6px rgba(0,0,0,0.45); }
 #hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }

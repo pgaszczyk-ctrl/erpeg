@@ -99,12 +99,12 @@ export function createReservoirHud(p: Parts) {
     paintAvatar();
     if (last) draw(last);
   }
-  function pic(name: string, x: number, y: number, w: number, h: number) {
-    const im = images[name];
-    if (im?.complete && im.naturalWidth) c.drawImage(im, x, y, w, h);
-  }
-  // Integer rows/edges, a restrained brass palette and no antialiased outline.
-  const ink = '#211a22', dark = '#644226', brass = '#b28443', light = '#e0bc78';
+  // Steampunk dress (owner, 10 Oct 2026: "zbyt mało steampunkowo… z rurkami, może manometrami"):
+  // the same layout and hit areas, drawn as one small boiler-room machine on the world's pixel grid.
+  const ink = '#211a22', dark = '#644226', brass = '#b28443', light = '#e0bc78', pale = '#f4dc9c';
+  const copper = '#8f4f2c', copperL = '#c97b4a', copperD = '#5a2f22', iron = '#3b3438', ironL = '#5d5258';
+  const cream = '#eadcb4', needle = '#a3262e';
+  const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   function rect(x: number, y: number, w: number, h: number, color: string) {
     c.fillStyle = color; c.fillRect(x, y, w, h);
   }
@@ -115,106 +115,276 @@ export function createReservoirHud(p: Parts) {
       c.fillRect(x - n, y + j, n * 2 + 1, 1);
     }
   }
-  function pipe(x: number, end: number) {
-    const im = images.pipes;
-    if (im?.complete && im.naturalWidth) {
-      for (let at = x; at < end; at += 8) {
-        const n = Math.min(8, end - at);
-        c.drawImage(im, 146, 54, n, 7, at, 57, n, 7);
+  function rivet(x: number, y: number) {
+    rect(x, y, 3, 3, ink); rect(x, y, 2, 2, light); rect(x, y, 1, 1, pale);
+  }
+  function line(x0: number, y0: number, x1: number, y1: number, color: string) {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let i = 0; i <= n; i++) rect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1, color);
+  }
+  /** A horizontal pipe: dark outline, lit top, shaded bottom (light from the north-west like the world). */
+  function hpipe(x0: number, x1: number, y: number, th: number, kind: 'brass' | 'copper' = 'brass') {
+    const [hi, mid, lo] = kind === 'brass' ? [light, brass, dark] : [copperL, copper, copperD];
+    rect(x0, y, x1 - x0, th, ink);
+    rect(x0, y + 1, x1 - x0, th - 2, mid);
+    rect(x0, y + 1, x1 - x0, 1, hi);
+    if (th > 5) rect(x0, y + 2, x1 - x0, 1, kind === 'brass' ? pale : '#e0a070');
+    rect(x0, y + th - 2, x1 - x0, 1, lo);
+  }
+  function vpipe(x: number, y0: number, y1: number, th: number, kind: 'brass' | 'copper' = 'brass') {
+    const [hi, mid, lo] = kind === 'brass' ? [light, brass, dark] : [copperL, copper, copperD];
+    rect(x, y0, th, y1 - y0, ink);
+    rect(x + 1, y0, th - 2, y1 - y0, mid);
+    rect(x + 1, y0, 1, y1 - y0, hi);
+    rect(x + th - 2, y0, 1, y1 - y0, lo);
+  }
+  /** A flange on a horizontal pipe: a taller collar with two bolts. */
+  function flange(x: number, y: number, th: number) {
+    rect(x, y - 2, 4, th + 4, ink); rect(x + 1, y - 1, 2, th + 2, brass);
+    rect(x + 1, y - 1, 1, th + 2, light);
+    rect(x + 1, y - 1, 2, 1, pale); rect(x + 1, y + th, 2, 1, dark);
+  }
+  function vflange(x: number, y: number, th: number) {
+    rect(x - 2, y, th + 4, 4, ink); rect(x - 1, y + 1, th + 2, 2, brass);
+    rect(x - 1, y + 1, th + 2, 1, light);
+  }
+  /** A small valve wheel (seen from the front) on a pipe. */
+  function wheel(x: number, y: number, r: number, turn: number) {
+    oval(x, y, r, r, ink); oval(x, y, r - 1, r - 1, copperL); oval(x, y, r - 2, r - 2, ink);
+    for (let k = 0; k < 4; k++) {
+      const a = turn + k * Math.PI / 2;
+      line(x, y, x + Math.round(Math.cos(a) * (r - 1)), y + Math.round(Math.sin(a) * (r - 1)), copperL);
+    }
+    rect(x - 1, y - 1, 2, 2, pale);
+  }
+  /** A pressure gauge: brass bezel, cream dial, ticks, a red zone, the needle at share 0..1. */
+  function gauge(x: number, y: number, r: number, share: number, redZone: 'low' | 'high' | null, flutter: number) {
+    oval(x, y + 1, r + 1, r + 1, ink);
+    oval(x, y, r + 1, r + 1, ink);
+    oval(x, y, r, r, light); oval(x + 1, y + 1, r - 1, r - 1, dark); oval(x, y, r - 1, r - 1, brass);
+    oval(x, y, r - 2, r - 2, ink); oval(x, y, r - 3, r - 3, cream);
+    oval(x + 1, y + 1, r - 4, r - 4, '#e3d3a6');
+    const from = Math.PI * 0.75, span = Math.PI * 1.5;
+    const ticks = r >= 9 ? 8 : 6;
+    for (let k = 0; k <= ticks; k++) {
+      const a = from + span * k / ticks;
+      const big = k % 2 === 0;
+      const r1 = r - 3, r0 = r - (big ? 5 : 4);
+      line(x + Math.round(Math.cos(a) * r0), y + Math.round(Math.sin(a) * r0), x + Math.round(Math.cos(a) * r1), y + Math.round(Math.sin(a) * r1), ink);
+    }
+    if (redZone) {
+      for (let k = 0; k <= 6; k++) {
+        const a = from + span * (redZone === 'low' ? k / 6 * 0.22 : 0.78 + k / 6 * 0.22);
+        rect(x + Math.round(Math.cos(a) * (r - 3)), y + Math.round(Math.sin(a) * (r - 3)), 1, 1, needle);
       }
-    } else {
-      rect(x, 58, end - x, 5, ink); rect(x, 59, end - x, 3, brass);
-      rect(x, 59, end - x, 1, light);
+    }
+    const a = from + span * Math.max(0, Math.min(1, share)) + flutter;
+    const len = r - 3;
+    line(x, y, x + Math.round(Math.cos(a) * len), y + Math.round(Math.sin(a) * len), needle);
+    line(x - Math.round(Math.cos(a) * 2), y - Math.round(Math.sin(a) * 2), x, y, ink);
+    rect(x - 1, y - 1, 2, 2, ink); rect(x - 1, y - 1, 1, 1, light);
+    // Glass glint.
+    rect(x - r + 3, y - r + 4, 1, 2, '#ffffffa0'); rect(x - r + 4, y - r + 3, 2, 1, '#ffffffa0');
+  }
+  /** Cog pictures, made once per size: 12 steps over one tooth so the turning is smooth. */
+  const cogs = new Map<string, HTMLCanvasElement[]>();
+  function cogFrames(r: number, teeth: number, tone: 'brass' | 'iron') {
+    const key = `${r}:${teeth}:${tone}`;
+    let fr = cogs.get(key);
+    if (fr) return fr;
+    fr = [];
+    const size = r * 2 + 3, o = r + 1;
+    const [hi, mid, lo] = tone === 'brass' ? ['#d9b56f', '#9c7139', '#5c3e22'] : [ironL, iron, '#29232a'];
+    for (let step = 0; step < 12; step++) {
+      const cv = document.createElement('canvas'); cv.width = cv.height = size;
+      const g = cv.getContext('2d')!;
+      const rot = step / 12 * Math.PI * 2 / teeth;
+      for (let py = 0; py < size; py++) for (let px = 0; px < size; px++) {
+        const dx = px - o + 0.5, dy = py - o + 0.5, d = Math.hypot(dx, dy);
+        const a = Math.atan2(dy, dx) - rot;
+        const tooth = Math.cos(a * teeth) > 0.1;
+        const edge = tooth ? r : r - 3;
+        if (d > edge + 0.5) continue;
+        let col = mid;
+        if (d > edge - 0.6 || (d < r * 0.38 + 0.6 && d > r * 0.38 - 0.6)) col = ink;
+        else if (d < r * 0.38) col = '#00000000';
+        else if (dx + dy < -r * 0.3) col = hi;
+        else if (dx + dy > r * 0.5) col = lo;
+        if (col === '#00000000') continue;
+        g.fillStyle = col; g.fillRect(px, py, 1, 1);
+      }
+      // Spokes holes for a lighter look on big cogs.
+      fr.push(cv);
+    }
+    cogs.set(key, fr);
+    return fr;
+  }
+  function cog(x: number, y: number, r: number, teeth: number, t: number, dir: number, tone: 'brass' | 'iron' = 'brass') {
+    const fr = cogFrames(r, teeth, tone);
+    const i = still ? 0 : ((Math.floor(t * 12) * dir) % 12 + 12) % 12;
+    c.drawImage(fr[i], x - r - 1, y - r - 1);
+  }
+  /** A porthole socket: a riveted brass ring with a dark inside (portrait, camera, vehicle). */
+  function porthole(x: number, y: number, active = false) {
+    oval(x, y + 1, 21, 21, ink);
+    oval(x, y, 21, 21, ink);
+    oval(x, y, 20, 20, active ? pale : light);
+    oval(x + 1, y + 1, 19, 19, dark);
+    oval(x, y, 18, 18, brass);
+    oval(x, y, 16, 16, ink);
+    oval(x, y, 15, 15, '#2c2326');
+    oval(x - 1, y - 1, 13, 13, '#352b2d');
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4 + Math.PI / 8;
+      rivet(x + Math.round(Math.cos(a) * 18) - 1, y + Math.round(Math.sin(a) * 18) - 1);
     }
   }
-  function frame(x: number, active = false) {
-    // Low-profile gear sockets, fitted to the icon instead of a large machine behind it.
-    for (const [dx, dy] of [[-5,-23],[-5,17],[-23,-5],[17,-5],[-18,-18],[10,-18],[-18,10],[10,10]]) {
-      rect(x + dx, 60 + dy, 8, 8, ink);
-      rect(x + dx + 1, 61 + dy, 6, 6, dark);
-      rect(x + dx + 1, 61 + dy, 5, 2, brass);
-    }
-    oval(x, 60, 21, 21, ink);
-    oval(x, 59, 19, 19, active ? '#f5d38a' : light);
-    oval(x, 61, 18, 18, dark);
-    oval(x, 60, 16, 16, '#382d2a');
-    for (const [dx, dy] of [[-14,-12],[12,-12],[-14,12],[12,12]]) {
-      rect(x + dx, 60 + dy, 2, 2, light);
-    }
+  function steamPuff(x: number, y: number, t: number, period: number, phase: number) {
+    if (still) return;
+    const k = ((t + phase) % period) / period;
+    if (k > 0.45) return;
+    const p = k / 0.45;
+    const yy = y - Math.round(p * 14), xx = x + Math.round(Math.sin(p * 5) * 2 + p * 4);
+    const r = 1 + Math.round(p * 3);
+    c.save(); c.globalAlpha = 0.75 * (1 - p);
+    oval(xx, yy, r, r, '#e9eef0'); oval(xx - 1, yy - 1, Math.max(0, r - 1), Math.max(0, r - 1), '#ffffff');
+    c.restore();
   }
-  function tank(v: HudView) {
-    // Empty boiler shell and real fluid are drawn together; no photographic asset or blur.
-    rect(116, 84, 8, 8, ink); rect(148, 84, 8, 8, ink);
-    rect(118, 85, 4, 5, dark); rect(150, 85, 4, 5, dark);
-    oval(136, 55, 35, 33, ink);
-    oval(136, 54, 33, 31, light);
-    oval(137, 56, 32, 30, dark);
-    oval(136, 55, 30, 28, brass);
-    oval(136, 55, 28, 26, ink);
+  function pic(name: string, x: number, y: number, w: number, h: number) {
+    const im = images[name];
+    if (im?.complete && im.naturalWidth) c.drawImage(im, x, y, w, h);
+  }
+  function tank(v: HudView, t: number) {
+    // Feet and the cradle the boiler stands on.
+    rect(112, 84, 10, 9, ink); rect(150, 84, 10, 9, ink);
+    rect(113, 85, 8, 7, iron); rect(151, 85, 8, 7, iron);
+    rect(113, 85, 8, 1, ironL); rect(151, 85, 8, 1, ironL);
+    // Shell: an iron hoop, a riveted brass band, then the glass.
+    oval(136, 56, 36, 34, ink);
+    oval(136, 55, 36, 34, ink);
+    oval(136, 55, 35, 33, iron); oval(135, 54, 33, 31, ironL); oval(137, 56, 33, 31, '#29232a');
+    oval(136, 55, 33, 31, iron);
+    oval(136, 55, 31, 29, ink);
+    oval(136, 55, 30, 28, light); oval(137, 56, 29, 27, dark); oval(136, 55, 29, 27, brass);
+    oval(136, 55, 27, 25, ink);
+    for (let k = 0; k < 16; k++) {
+      const a = k * Math.PI / 8;
+      rivet(136 + Math.round(Math.cos(a) * 33) - 1, 55 + Math.round(Math.sin(a) * 31) - 1);
+    }
     const total = Math.max(1, v.maxHp + v.extra);
     const red = Math.max(0, Math.min(1, v.hp / total));
     const blue = Math.max(0, Math.min(1 - red, v.extra / total));
-    const surface = 79 - Math.round((red + blue) * 48);
-    const redSurface = 79 - Math.round(red * 48);
+    const surface = 79 - Math.round((red + blue) * 46);
+    const redSurface = 79 - Math.round(red * 46);
+    const wave = still ? 0 : Math.round(Math.sin(t * 2.2));
     for (let y = 31; y <= 79; y++) {
-      const n = Math.floor(26 * Math.sqrt(Math.max(0, 1 - (y - 55) ** 2 / (24 * 24))));
-      const fluid = y >= redSurface ? (v.zatruty ? '#63803c' : '#bd3844') : y >= surface ? '#548cc0' : '#303034';
+      const n = Math.floor(25 * Math.sqrt(Math.max(0, 1 - (y - 55) ** 2 / (24 * 24))));
+      const fluid = y >= redSurface ? (v.zatruty ? '#63803c' : '#bd3844') : y >= surface ? '#548cc0' : '#2a2a30';
       rect(136 - n, y, n * 2 + 1, 1, fluid);
       if (y >= surface && n > 6) {
         rect(136 - n + 2, y, 3, 1, y >= redSurface ? (v.zatruty ? '#8d9f52' : '#df6257') : '#80b4d7');
         rect(136 + n - 3, y, 3, 1, y >= redSurface ? (v.zatruty ? '#425f35' : '#8d2c3c') : '#376384');
       }
-      if (y === surface && n > 1) rect(136 - n + 1, y, n * 2 - 1, 1, blue ? '#add1df' : v.zatruty ? '#c1c787' : '#ed9580');
+      if (y === surface && n > 1) {
+        rect(136 - n + 1, y, n * 2 - 1, 1, blue ? '#add1df' : v.zatruty ? '#c1c787' : '#ed9580');
+        if (wave) rect(136 - n + 4 + (wave > 0 ? 6 : 14), y - 1, 6, 1, blue ? '#add1df' : '#ed9580');
+      }
     }
-    // Quiet glass shine, gauge ticks, rivets, neck and cap.
-    rect(115, 43, 2, 10, '#bdd0c580'); rect(117, 38, 2, 5, '#bdd0c580');
-    for (let y = 42; y < 75; y += 8) rect(155, y, 4, 1, '#271d28');
-    for (const [x,y] of [[108,45],[110,71],[161,42],[161,69]]) {
-      rect(x, y, 3, 3, ink); rect(x, y, 2, 2, light);
+    // Bubbles rising through the liquid.
+    if (!still && surface < 77) {
+      for (let b = 0; b < 3; b++) {
+        const per = 2.6 + b * 0.7, k = ((t + b * 1.3) % per) / per;
+        const by = Math.round(78 - k * (78 - surface - 2));
+        const bx = 128 + b * 8 + Math.round(Math.sin(t * 3 + b) * 1.5);
+        rect(bx, by, 2, 2, v.zatruty ? '#a9b86a' : y2(by) ? '#f08a8a' : '#a8d0ea');
+      }
     }
-    rect(123, 15, 26, 14, ink); rect(125, 16, 22, 11, dark);
-    rect(125, 16, 22, 2, light); rect(128, 18, 16, 7, brass);
-    rect(130, 8, 12, 9, ink); rect(132, 9, 8, 7, brass);
-    rect(128, 5, 16, 4, ink); rect(129, 6, 14, 2, light);
-    rect(128, 20, 2, 3, light); rect(141, 20, 2, 3, light);
+    function y2(by: number) { return by >= redSurface; }
+    // Glass: shine, a scale with brass marks on the right.
+    rect(116, 40, 2, 12, '#ffffff55'); rect(118, 36, 2, 5, '#ffffff55'); rect(119, 34, 3, 1, '#ffffff40');
+    for (let k = 0; k <= 4; k++) {
+      const y = 33 + k * 11;
+      rect(154, y, k % 2 ? 3 : 5, 1, '#1d1619'); rect(154, y + 1, k % 2 ? 3 : 5, 1, '#ffffff30');
+    }
+    // Neck, safety valve with a whistle and a puff of steam now and then.
+    rect(124, 17, 24, 10, ink); rect(125, 18, 22, 8, brass); rect(125, 18, 22, 1, pale); rect(125, 24, 22, 1, dark);
+    for (const x of [127, 143]) rivet(x, 20);
+    rect(130, 9, 12, 9, ink); rect(131, 10, 10, 8, brass); rect(131, 10, 2, 8, light); rect(139, 10, 1, 8, dark);
+    rect(128, 6, 16, 4, ink); rect(129, 7, 14, 2, light); rect(129, 8, 14, 1, brass);
+    rect(134, 2, 4, 5, ink); rect(135, 3, 2, 3, pale);
+    steamPuff(136, 1, t, 4.2, 0);
+    if (v.hp / Math.max(1, v.maxHp) < 0.34) steamPuff(140, 2, t, 1.1, 0.4);
+    // A pressure gauge on the boiler's shoulder: life as pressure, red zone at the bottom.
+    vpipe(107, 30, 40, 5);
+    gauge(109, 22, 10, red + blue, 'low', still ? 0 : Math.sin(t * 9) * 0.04);
     supply(v);
   }
   function supply(v: HudView) {
     c.save(); c.globalAlpha = v.noHeal ? .55 : 1;
-    rect(148, 59, 25, 26, ink); rect(150, 60, 21, 24, brass);
-    rect(151, 62, 19, 21, '#362929'); rect(150, 60, 21, 1, light);
-    rect(155, 55, 11, 5, ink); rect(156, 56, 9, 3, light);
+    // A small brass cage with a hinged lid, hung on the boiler.
+    rect(148, 58, 25, 27, ink); rect(150, 60, 21, 23, brass); rect(150, 60, 21, 1, pale);
+    rect(150, 60, 1, 23, light); rect(170, 60, 1, 23, dark);
+    rect(152, 63, 17, 18, '#2f2427');
+    rect(155, 54, 11, 5, ink); rect(156, 55, 9, 3, light); rect(156, 57, 9, 1, dark);
     if (v.preparedFood && v.potions <= 0 && v.fruit < v.fruitPerHeal) {
-      c.font = '17px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '15px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(v.preparedFood.icon, 160.5, 72);
     } else pic(v.potions > 0 ? 'potion' : 'apple', 151, 62, 19, 19);
+    for (const x of [149, 169]) { rect(x, 59, 2, 2, pale); rect(x, 81, 2, 2, pale); }
     c.restore();
+  }
+  function expTube(v: HudView, t: number) {
+    // A horizontal glass tube between two hex caps, a gauge on top showing the same share.
+    vpipe(21, 38, 50, 6);
+    vflange(21, 44, 6);
+    gauge(24, 28, 11, v.expShare, null, still ? 0 : Math.sin(t * 7 + 1) * 0.03);
+    rect(1, 48, 48, 24, ink);
+    rect(2, 49, 7, 22, brass); rect(41, 49, 7, 22, brass);
+    rect(2, 49, 7, 1, pale); rect(41, 49, 7, 1, pale); rect(2, 49, 1, 22, light); rect(41, 49, 1, 22, light);
+    rect(8, 49, 1, 22, dark); rect(47, 49, 1, 22, dark);
+    rivet(4, 52); rivet(4, 65); rivet(43, 52); rivet(43, 65);
+    rect(9, 51, 32, 18, ink); rect(10, 52, 30, 16, '#2b2427');
+    const xp = Math.round(30 * Math.max(0, Math.min(1, v.expShare)));
+    rect(10, 53, xp, 14, '#c39c46'); rect(10, 53, xp, 2, '#ecd085'); rect(10, 65, xp, 2, '#8d622d');
+    if (!still && xp > 4) {
+      const k = (t % 1.8) / 1.8;
+      rect(10 + Math.round(k * (xp - 2)), 58 + Math.round(Math.sin(t * 6) * 2), 2, 2, '#f6e3a4');
+    }
+    for (let k = 1; k < 5; k++) rect(10 + k * 6, 61, 1, 6, ink);
+    rect(10, 52, 30, 1, '#ffffff40'); rect(12, 54, 8, 1, '#ffffff60');
   }
   function draw(v: HudView) {
     last = v;
     if (document.hidden) return;
+    const t = performance.now() / 1000;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, width, HEIGHT); c.imageSmoothingEnabled = false;
-    pipe(44, 108); pipe(165, width - 20);
-    // One horizontal experience reservoir, brass caps and a marked glass window.
-    rect(1, 49, 48, 22, ink); rect(3, 50, 44, 20, brass);
-    rect(3, 50, 44, 1, light); rect(7, 52, 36, 16, ink);
-    rect(8, 53, 34, 14, '#322829');
-    const xp = Math.round(34 * Math.max(0, Math.min(1, v.expShare)));
-    rect(8, 54, xp, 12, '#c39c46'); rect(8, 54, xp, 2, '#e4c774');
-    rect(8, 64, xp, 2, '#8d622d');
-    for (let k = 1; k < 5; k++) rect(7 + k * 7, 60, 1, 6, ink);
-    rect(4, 52, 2, 16, light); rect(44, 52, 2, 16, dark);
-    frame(76); frame(197);
-    tank(v);
-    // Preserve the accepted camera illustration inside a small socket.
+    // Lower copper return pipe along the whole machine, with elbows up into each socket.
+    hpipe(12, 260, 85, 6, 'copper');
+    for (const x of [18, 73, 194, 239]) vpipe(x, 78, 88, 6, 'copper');
+    wheel(98, 88, 5, still ? 0 : t * 0.6);
+    // Cogs turning slowly behind the sockets.
+    cog(96, 40, 11, 9, t * 0.18, 1, 'iron');
+    cog(57, 82, 9, 8, t * 0.24, -1);
+    cog(219, 40, 10, 9, t * 0.2, -1, 'iron');
+    // The main brass steam line through every socket.
+    hpipe(44, 260, 56, 8);
+    for (const x of [48, 100, 170, 216]) flange(x, 56, 8);
+    expTube(v, t);
+    porthole(76, 60);
+    porthole(197, 60);
+    tank(v, t);
+    // Keep the accepted camera illustration inside its porthole.
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-    pic('camera', 177, 40, 40, 40); c.imageSmoothingEnabled = false;
+    pic('camera', 179, 42, 36, 36); c.imageSmoothingEnabled = false;
     vehicles.forEach(b => {
-      c.save(); c.globalAlpha = b.disabled ? .35 : 1;
-      frame(242, b.getAttribute('aria-pressed') === 'true');
+      c.save(); c.globalAlpha = b.disabled ? .45 : 1;
+      porthole(242, 60, b.getAttribute('aria-pressed') === 'true');
       c.restore();
     });
+    // A steam vent at the end of the line.
+    rect(259, 52, 6, 14, ink); rect(260, 53, 4, 12, brass); rect(260, 53, 1, 12, pale);
+    steamPuff(262, 50, t, 5.5, 2);
   }
   function paintAvatar() {
     const cv = p.avPic;
