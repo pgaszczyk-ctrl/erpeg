@@ -39,17 +39,17 @@ export const SEN = {
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
 
-/** A few actual steps before the existing invitation to create a character; no time limit. */
-export const JAWA = { koniecM: 8, predkoscM: 2 };
+/** Actual walking distance before the invitation to create a character; no time limit. */
+export const JAWA = { koniecM: 400 };
 
 export const DEMO_TEKSTY = {
   przebudzenieTytul: '…',
   przebudzenie:
     'Gdzie ja jestem…? I kim ja właściwie jestem?\n\nZnam to miejsce… Te mury na wzgórzu… Aha, to Wawel! Jestem w Krakowie.\n\nBurczy mi w brzuchu. Może znajdę tu coś do jedzenia… A ten miecz w ręku to co to? Wygląda na porządny.',
   celZbierz: (masz: number, trzeba: number) => `Zbierz owoce z drzew – uderz drzewo mieczem (${masz}/${trzeba})`,
-  celZjedz: 'Zjedz jabłka – przycisk leczenia w prawym dolnym rogu (H)',
+  celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu (H)',
   jablkaTytul: '🍎 Zjedz zebrane jabłka',
-  jablka: 'Masz już dość jabłek. Teraz trzeba je zjeść, żeby odzyskać siły.\n\nNaciśnij „Zjedz jabłka” albo użyj przycisku leczenia w prawym dolnym rogu ekranu (klawisz H).',
+  jablka: 'Masz już dość jabłek. Teraz trzeba je zjeść, żeby odzyskać siły.\n\nNaciśnij „Zjedz jabłka” albo dotknij baniaka życia u dołu ekranu (klawisz H).',
   olsnienie: 'OOooo, już wiem kim jestem!',
   kimJestem: 'Jestem pogromcą smoków! Smok wawelski znowu grasuje – czeka nad Wisłą.',
   celSmok: 'Pokonaj smoka wawelskiego!',
