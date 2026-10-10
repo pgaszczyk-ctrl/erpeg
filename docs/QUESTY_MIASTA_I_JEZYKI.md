@@ -1,5 +1,7 @@
 # Questy miejskie i języki — 10.10.2026
 
+**WYCOFANE na polecenie właściciela 10.10.2026.** Paczka 12 scenariuszy nie jest oferowana ani odtwarzana na mapie, w HUD lub dzienniku, także z wcześniejszych zapisów. Definicje poniżej są archiwalne i pozostają do odczytu danych; nie stanowią zaakceptowanego projektu dalszych questów. Starsze zadania, tłumaczenia i niezwiązane zmiany gry pozostają. Nie włączać tej paczki ponownie bez wyraźnego polecenia właściciela.
+
 ## Działające questy
 
 `src/content/questy/runtime.json` zawiera 12 wykonywalnych scenariuszy: zegar, listonosz, spokojny strażnik, dwie pieczęcie, szkic zalany herbatą, filtr strażnika, ogródek, hałaśliwi sąsiedzi, karty paktu, regulator, uczący się automat oraz powrót do wcześniejszego odczytu. Ostatni wymaga ukończenia szkicu i pieczęci; nie wszystkie zadania są od razu dostępne.
