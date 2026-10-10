@@ -4996,11 +4996,14 @@ export class GameScene extends Phaser.Scene {
   questLog(): QuestLine[] {
     // Story items (mission stages) show under the quests: „Masz: soczewka, korzeń dębu”.
     const items = session.fabula.length ? `\n📜 Masz: ${session.fabula.join(', ')}` : '';
-    return this.activeQuests().map((q, i) => ({
-      id: q.id, title: q.title, text: `${q.text}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
+    return this.activeQuests().map((q, i) => {
+      const mission=session.gen[q.id] ?? this.missions.find(r=>r.m.id===q.id)?.m;
+      const notes=mission ? missionNotes(mission) : '';
+      return {
+      id: q.id, title: q.title, text: `${q.text}${notes ? `\n${notes}` : ''}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
       far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
       arrow: !session.bezStrzalki.includes(q.id),
-    }));
+    };});
   }
 
   /**
@@ -5139,8 +5142,7 @@ export class GameScene extends Phaser.Scene {
         const foes = z.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
         const thing = z.szukaj ? null : this.etapy.arrowFor(rm.m.id);
         const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : thing ?? rm.target;
-        const notes = missionNotes(rm.m);
-        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}${notes ? `\n${notes}` : ''}`, pos: { x: pos.x, y: pos.y } });
+        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}`, pos: { x: pos.x, y: pos.y } });
       } else if (st === 'goal' && rm.m.dowolnaBiblioteka) {
         const lib = this.city.places.filter((p) => p.kind === 'library').reduce<CityPlace | null>((a, p) => (!a || dist(p.door) < dist(a.door) ? p : a), null);
         out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });
