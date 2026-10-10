@@ -351,3 +351,11 @@
 - Naprawiono nachodzenie HTML HUD na dialogi telefonu; usunięto dodatkowe „Dalej” po zwykłej poprawnej odpowiedzi nowego scenariusza.
 - Walidacja: pełne `VITE_TEST=1 npm run build`, `npm run test:quests`, `npm run test:quest-maps`; Playwright na Vite preview z mockami wszystkich RPC, 390×844 i 1280×800, pełna naprawa zegara, decyzja i rzeczywiste odtworzenie zapisu przez logowanie, globalna blokada po podróży.
 - Szczegóły i ograniczenia w `docs/QUESTY_MIASTA_I_JEZYKI.md`. Główny prolog nadal wymaga osobnego wdrożenia; 40 modułów nie jest jeszcze dowolnym generatorem, efekty ogródka/automatu są obecnie tekstowe. Nie zmieniano Supabase, PRODUKCJA, WERSJA ani produkcja/.
+
+### 10.10.2026 — przegląd questów i rewizja 2
+- 12 questów sprawdzonych; nowe badania dowolnych 2/3 tropów na mapie, układanie kart z checkpointami, decyzje zmieniające dalszą mechanikę i próba uczenia pomocnika. Chronologia Paktu zgodna z lore v1.1, ton pogodny.
+- Tłumaczenia PL/EN nowych treści oraz starych szablonów zleceń; metadane języka i humoru, adaptowany żart zegara. Biblioteki nie przypisują każdej mapy do Lublina.
+- Zapisane przyjęcia rewizji 1 zachowują stare etapy. Te same globalne ID blokują powtórkę między miastami. Kolejka zapisów chroni przed nadpisaniem nowszego stanu. Lista rozmów przy wspólnych drzwiach.
+- Pliki: content/questy, fabula, quests, Etapy, GameScene, edytor, zlecenia; testy quest-variants i rozszerzone browser-city-quests; nowy workflow CI.
+- Lokalne: pełne npm run build, test:quests, test:quest-maps i diff --check przeszły. Lokalny Chromium blokowany przez środowisko (socket EPERM / headless SIGSEGV); pełny Playwright sprawdzamy w CI przed scaleniem. Wynik CI i wdrożenia dopisany poniżej po uzyskaniu.
+- Pełny nowy prolog i usunięcie blokady maga 5, populacja miast i dowolny generator 40 modułów nadal są osobnym zakresem. PRODUKCJA / WERSJA / produkcja i Supabase bez zmian.

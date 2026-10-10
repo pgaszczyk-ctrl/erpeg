@@ -1,0 +1,1202 @@
+[
+  {
+    "id": "legacy.jobs.1",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Prośba opiekuna świątyni"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Temple keeper’s request"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.2",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Sprawa świątyni"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Temple business"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.3",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pomoc dla sąsiada"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Helping a neighbour"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.4",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Opiekun świątyni prosi o pomoc: chochliki oblazły ogródek przy {adres}. Przegoń je, mieszkańcy będą ci wdzięczni."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The temple keeper needs help: imps have overrun the garden at {adres}. Drive them away; the neighbours will be grateful."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.5",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pani z chóru skarży się, że pod {adres} kręcą się psotne chochliki. Zrób z nimi porządek."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "A choir member says mischievous imps are gathering at {adres}. Help deal with them."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.6",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zanieś pani Halinie spod {adres} ciasto z kiermaszu przy świątyni."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Take a cake from the temple fair to Halina at {adres}."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.7",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Trzeba doręczyć zaproszenie na święto przy świątyni pod adres {adres}."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "An invitation to the temple celebration needs delivering to {adres}."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.8",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Opiekunowie świątyni gotują zupę dla potrzebujących. Przynieś z lasu {ile} {towar}."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The temple keepers are making soup for those in need. Bring {ile} {towar} from the forest."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.9",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Na kiermasz przy świątyni brakuje {ile} {towar}. Las jest niedaleko – pomożesz?"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The temple fair needs {ile} {towar}. The forest is nearby — will you help?"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.10",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Sprawa urzędowa"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Town office business"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.11",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pilne pismo"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Urgent letter"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.12",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Skarga mieszkańców"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Neighbours’ complaint"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.13",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mieszkańcy spod {adres} złożyli skargę na chochliki. Urzędnik prosi o rozwiązanie problemu w trybie pilnym."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The residents at {adres} have complained about imps. The clerk asks for urgent help."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.14",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wydział porządku publicznego zleca usunięcie chochlików spod {adres}."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The public order office asks you to drive the imps away from {adres}."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.15",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Doręcz pismo urzędowe pod adres {adres}. Za potwierdzenie odbioru czeka nagroda."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Deliver an official letter to {adres}. There is a reward for confirming its receipt."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.16",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zanieś decyzję w sprawie ogródka działkowego do mieszkańca spod {adres}."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Take the allotment decision to the resident at {adres}."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.17",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Gmina naprawia ławki w parku i potrzebuje {ile} {towar}. Zetnij drzewa w lesie."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The town is repairing park benches and needs {ile} {towar}. Cut trees in the forest."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.18",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Stołówka urzędu zamawia {ile} {towar}. Zbierz je w pobliskim lesie."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The office canteen needs {ile} {towar}. Gather them in the nearby forest."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.19",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "List gończy"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wanted notice"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.20",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Poszukiwany!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wanted!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.21",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zlecenie dla łowcy nagród"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Bounty hunter’s job"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.22",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "List gończy! {zloczynca} ukrywa się gdzieś w okolicy ulicy {ulica}. Znajdź go i pokonaj."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wanted! {zloczynca} is hiding somewhere near {ulica}. Find and defeat him."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.23",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Poszukiwany {zloczynca}, ostatnio widziany przy ulicy {ulica}. Nagroda za ujęcie!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wanted: {zloczynca}, last seen near {ulica}. Reward for capture!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.24",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przy ulicy {ulica} grasuje wielki chochlik. Zabij go, zanim kogoś ugryzie!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "A giant imp is prowling near {ulica}. Defeat it before it bites someone!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.25",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mieszkańcy ulicy {ulica} widzieli ogromnego, rogatego chochlika. Potrzebny ktoś odważny."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Residents near {ulica} saw an enormous horned imp. They need someone brave."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.26",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mapa drogi: {cel}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Route map: {cel}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.27",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wyprawa badawcza: {cel}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Survey trip: {cel}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.28",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Atlas okolic: {cel}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Local atlas: {cel}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.29",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Bibliotekarka rozkłada starą mapę: „Nasze towarzystwo naukowe tworzy atlas okolicy. Brakuje nam drogi do miejscowości {cel} – to ok. {km} km stąd. Dojdź tam, zapamiętaj drogę i wróć z relacją!”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The librarian unfolds an old map. “Our learned society is making an atlas of the surrounding area. We are missing the route to {cel}, about {km} km away. Travel there, remember the route and bring back a report!”"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.30",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "„Profesor z towarzystwa naukowego prosi o pomoc: potrzebujemy zbadać drogę do miejscowości {cel} (ok. {km} km w linii prostej). Dotrzyj tam i wróć – zapłacimy za każdy kilometr!”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "“A professor from the learned society needs help surveying the route to {cel}, about {km} km in a straight line. Get there and return; we pay for every kilometre!”"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.31",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wspaniale! Twoja relacja trafi do atlasu towarzystwa naukowego. Oto obiecana nagroda."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wonderful! Your report will go into the society’s atlas. Here is the promised reward."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.32",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Dobra robota, łowco nagród! Oto obiecana nagroda."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Good work, bounty hunter! Here is your promised reward."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.33",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Jakie piękne grzyby! Dziękujemy za pomoc."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "What lovely mushrooms! Thank you for helping."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.34",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Świetne drewno, ławki będą jak nowe. Dziękujemy!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Fine wood! The benches will be as good as new. Thank you!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.35",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Dziękujemy za pomoc! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Thank you for helping! Come back another time; there is always someone who needs a hand."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.36",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Job done. The town office thanks you. Come back another time for more jobs."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.37",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Znajdź i pokonaj: {zloczynca} (okolice ul. {ulica})"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Find and defeat: {zloczynca} (near {ulica})"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.38",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zabij wielkiego chochlika przy ul. {ulica}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Defeat the giant imp near {ulica}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.39",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przegoń chochliki spod {adres}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Drive the imps away from {adres}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.40",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Idź pod {adres}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Go to {adres}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.41",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przynieś {ile} {towar} z lasu"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Bring {ile} {towar} from the forest"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.42",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zbadaj drogę do miejscowości {cel}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Survey the route to {cel}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.43",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Droga do miejscowości {cel} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: {adres})."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Route to {cel} surveyed! Quest complete — return to the nearest library (or to {adres})."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.44",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": " (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": " (Only an axe produces wood from a felled tree; without one, you get twigs.)"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.45",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Ruszam!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Off I go!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.46",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wszystko dobrze! "
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "All correct! "
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.47",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🧠 Przekonaj"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🧠 Persuade"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.48",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "💰 Zapłać {ile} monet"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "💰 Pay {ile} coins"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.49",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przekonany! "
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Convinced! "
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.50",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Za mało monet – potrzeba {ile}."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Not enough coins — you need {ile}."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.51",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Koniec"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Finish"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.52",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "💥 Auć!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "💥 Ouch!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.53",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "To nie była dobra droga. Tracisz serce – spróbuj inaczej."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "That was the wrong path. You lose a heart — try another way."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.54",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Jeszcze raz"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Try again"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.55",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Czas minął! Spróbuj jeszcze raz."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Time ran out! Try again."
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.56",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Gra zapisana"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Game saved"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.57",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Oddaj relację w bibliotece"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Hand in your report at a library"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.58",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wróć do: {adres}"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Return to: {adres}"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.59",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Muszę się dowiedzieć"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I need to find out"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.60",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Dziękuję"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Thank you"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.61",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Idę tam!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I’ll go there!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.62",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Ruszam na smoka!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I’ll go and find the dragon!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.63",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "❗ Smok!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "❗ A dragon!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.64",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🐉 Smok"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🐉 Dragon"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.65",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Słucham dalej…"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Tell me more…"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.66",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🎵 Zagram waszą melodię"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🎵 I’ll play your tune"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.67",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zostańmy przyjaciółmi!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Let’s be friends!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.68",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "⚔ Zwycięstwo!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "⚔ Victory!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.69",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Hurra!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Hooray!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.70",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Do zobaczenia"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "See you later"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.71",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🏅 Nowy tytuł!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🏅 New title!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.72",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wspaniale!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wonderful!"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.73",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "📸 Pochwal się"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "📸 Share your achievement"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.74",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Gmina naprawia ławki w parku i potrzebuje {ile} {towar}. Zetnij drzewa w lesie. (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The town is repairing park benches and needs {ile} {towar}. Cut trees in the forest. (Only an axe produces wood from a felled tree; without one, you get twigs.)"
+      }
+    ]
+  },
+  {
+    "id": "legacy.jobs.75",
+    "kind": "dialogue",
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Stołówka urzędu zamawia {ile} {towar}. Zbierz je w pobliskim lesie. (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The office canteen needs {ile} {towar}. Gather them in the nearby forest. (Only an axe produces wood from a felled tree; without one, you get twigs.)"
+      }
+    ]
+  }
+]

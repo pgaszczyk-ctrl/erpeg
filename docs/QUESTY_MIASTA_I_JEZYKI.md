@@ -6,7 +6,7 @@
 
 Questy korzystają z istniejących zagadek, napraw i melodii oraz nowego etapu `decyzja`. Odpowiedzi w decyzji są poprawnymi wariantami rozwiązania. Reakcja i stały identyfikator wyboru są zapisywane. Zwykłe złe odpowiedzi pozwalają spróbować ponownie bez utraty życia. Pomocnik dostarcza części fabularne, nie obciąża plecaka. Nagroda pilotażowa: 10 monet i 20 EXP za scenariusz; bez diamentów lub zmian cen.
 
-To adaptacje scenariuszy do działającego silnika: wybór pieczęci i nasion jest wyborem kart, efekty wariantów są tekstowe; nie ma jeszcze nowego budynku ogródka, autonomicznego androida, marszu z zużyciem baterii ani samodzielnego generatora dowolnej kombinacji 40 modułów. Katalog 40 modułów i wstępne dialogi w `catalog.json` są materiałem do dalszego wdrażania, a nie deklaracją, że wszystkie mechaniki już działają. Etapy składa się jawnie w `runtime.json`.
+Katalog 40 modułów pozostaje projektem generatora. Aktualne scenariusze wykonuje adapter `runtime.json`; nie ma jeszcze nowego budynku ogródka, autonomicznego androida, marszu z zużyciem baterii ani samodzielnego generatora dowolnej kombinacji 40 modułów. Katalog 40 modułów i wstępne dialogi w `catalog.json` są materiałem do dalszego wdrażania, a nie deklaracją, że wszystkie mechaniki już działają. Etapy składa się jawnie w `runtime.json`.
 
 ## Miasta i miejsca
 
@@ -44,3 +44,24 @@ Dodano diamentowy wpis „Okrążenie Ziemi” za 40 075 km łącznie. Istnieją
 - `scripts/tests/browser-city-quests.cjs` z Playwright, Vite preview i w pełni przechwyconymi RPC: logowanie, cała naprawa zegara z błędną i poprawną odpowiedzią, nagroda, podróż, decyzja, zapis i ponowne logowanie EN; widoki 390×844 i 1280×800. Test nigdy nie loguje ani nie zapisuje realnej postaci.
 
 W środowisku bez lokalnego pakietu Playwright można podać `PLAYWRIGHT_MODULE`; przeglądarkę spoza standardowej instalacji wskazuje `BROWSER_EXECUTABLE`. Zrzuty powstają w ignorowanym `.cache/`. Wdrożenie trafia na gałąź serwera testowego; pliki wydania produkcyjnego pozostają bez zmian.
+
+## Weryfikacja i druga wersja — 10.10.2026
+
+Sprawdzono wszystkie 12 questów. Dziesięć otrzymało zmienione czynności lub etapy; zegar, szkic z herbatą i posłaniec także mają poprawione teksty lub prezentację.
+
+- `badanie`: rzeczywiste punkty na mapie, dowolne dwa z trzech w dowolnej kolejności, jedno zaliczenie każdego tropu. Tropy zapisane po odczycie pozostają w dzienniku oraz w pytaniu podsumowującym. Pieczęcie i odbiorniki korzystają z tej mechaniki. Planner sprawdza wszystkie pary i kolejności, wybierając najdłuższą trasę do kontroli budżetu.
+- `uklad`: pojedyncze karty z własnymi ID, zamiast wyboru gotowego rozwiązania. Zapisuje poprawny początek układu; błąd czyści tylko układ i daje podpowiedź bez straty serc. Pakt, regulator, donice, potwierdzenia i mozaika używają różnych wskazówek.
+- Decyzje faktycznie zmieniają czynność: liść → melodia, woda → układ chłodzenia; cisza → spokojny postój, nucenie → melodia; harmonogram → karty, izolacja → montaż przy pompie. Warianty regulatora i donic mają inne elementy oraz kolejności.
+- Pomocnik dostaje nowy przypadek po pokazie dwóch awarii: gracz poprawia jego nadmierne uogólnienie, a nie tylko czyta, że automat coś zapamiętał.
+- Pakt ma rzeczywiste odczyty {A,B}, {B,C}, {B,D}; każda para jednoznacznie wskazuje B. Chronologia: Pakt → Wojna o Tryby / odejście w sen → Kometa i przebudzenie.
+- Gdy kilka questów dzieli drzwi, gracz wybiera rozmowę z listy.
+
+Nowe przyjęcia mają `scenariusz.revision = 2`. Dotychczasowe zapisane instancje bez rewizji zachowują zapisane etapy, odpowiedzi i współrzędne; tłumaczymy ich teksty bez przebudowy. ID questów pozostają te same, więc nowa edycja nie odblokowuje ukończonych zadań. Zapisy są kolejkowane ze zdjęciem bieżącego stanu, aby starsza odpowiedź serwera nie nadpisała nowszego ukończenia.
+
+Katalog: 515 rekordów PL/EN plus 76 wcześniejszych i 75 nowych tłumaczeń szablonów oraz przycisków. Każdy wariant ma język i `localHumor`. Żart o chodzącym zegarze ma oznaczenie lokalnego humoru i osobną angielską puentę. Nazwy prawdziwych miejsc nie są tłumaczone. Dodatkowo przetłumaczono zlecenia urzędu, świątyni, policji i wypraw bibliotekarskich, również z podstawionymi nazwami i liczbami. Biblioteka poza Lublinem mówi o okolicy, a nie o okolicach Lublina. Nie oznacza to pełnego tłumaczenia quizów serwerowych, sklepów i regionalnych historii.
+
+Edytor obsługuje tropy, karty i kolejność. Warianty zależne od decyzji nadal autorujemy w repozytorium; edytor zachowuje istniejące warianty przy zmianie etapu.
+
+Pozostaje osobny zakres: pełny nowy prolog głównej historii, próg ludności miasta, dowolne składanie 40 modułów, autonomiczne androidy i widoczne trwałe obiekty ogródka. Niniejsza zmiana dotyczy questów miejskich; nie usuwa istniejącej blokady maga na poziomie 5.
+
+Dodatkowe sprawdzenia: `scripts/tests/quest-variants.mjs` (pary tropów, warianty, karty, zmiana języka, stare etapy), rozszerzony test przeglądarkowy (trop zapisany w EN, częściowe karty kontynuowane w PL) i `City quest checks` w CI.

@@ -6,7 +6,7 @@ import { questText, questTextMetadata } from '../../.cache/quest-tests/text.mjs'
 const content=JSON.parse(fs.readFileSync('src/content/questy/catalog.json'));
 const ids=new Set();
 for(const text of content.texts){assert(!ids.has(text.id),text.id);ids.add(text.id);for(const language of ['pl','en']){const v=text.variants.filter(v=>v.language===language);assert.equal(v.length,1);assert.equal(typeof v[0].localHumor,'boolean');assert(v[0].text.trim());}}
-const binding={version:1,mapId:'pulawy',mapName:'Puławy',giverName:'Warsztat',anchors:[{lat:51.41,lon:21.97},{lat:51.411,lon:21.97},{lat:51.412,lon:21.97}],choices:{},routeM:500};
+const binding={version:1,mapId:'pulawy',mapName:'Puławy',giverName:'Warsztat',anchors:[{lat:51.41,lon:21.97},{lat:51.411,lon:21.97},{lat:51.412,lon:21.97},{lat:51.413,lon:21.97}],choices:{},routeM:500};
 const states={};const taken={};
 for(const definition of CITY_SCENARIOS){const m=materializeScenario(definition.id,structuredClone(binding));assert(m.etapy.length);assert.equal(m.id,definition.id);assert(scenarioPending(m.id,states,taken));}
 const m=materializeScenario('quest.helper_workshop',structuredClone(binding));

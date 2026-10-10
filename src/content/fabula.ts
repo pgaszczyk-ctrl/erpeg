@@ -24,7 +24,7 @@ export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada'
  * 'napraw' – postój przy miejscu, aż pasek się napełni, 'wybor' – przekonaj zagadką albo zapłać,
  * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce.
  */
-export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja';
+export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja' | 'badanie' | 'uklad';
 
 /** Pytanie z trzema (lub więcej) odpowiedziami; `dobra` = numer dobrej (0 = pierwsza). */
 export interface Pytanie {
@@ -89,6 +89,13 @@ export interface Etap extends Zadanie {
   /** A choice without a penalty; its stable ID is saved with the city scenario. */
   wyborKlucz?: string;
   opcje?: { id: string; tekst: string; wynik: string }[];
+  /** Visit any `ile` different clues, in any order; coordinates belong to the accepted city. */
+  tropy?: { id: string; miejsce: Miejsce; tytul: string; tekst: string }[];
+  /** Arrange cards using stable IDs. Wrong arrangements have no health penalty. */
+  karty?: { id: string; tekst: string }[];
+  kolejnosc?: string[];
+  /** A saved decision can change the next activity without changing its stage index. */
+  warianty?: { klucz: string; wartosc: string; etap: Partial<Etap> }[];
   /** Przedmioty fabularne (nazwy) dane po wykonaniu etapu. */
   daje?: string[];
   /** Przedmioty fabularne zabrane po wykonaniu etapu. */

@@ -31,6 +31,8 @@ export const RODZAJE_ETAPOW: Record<TypEtapu, string> = {
   paragraf: 'Paragraf (strony z wyborem drogi)',
   melodia: 'Melodia na fujarce',
   decyzja: 'Decyzja (bez utraty serc, zapisany wybór)',
+  badanie: 'Badanie (dowolne tropy na mapie)',
+  uklad: 'Układanie kart (zapis częściowego rozwiązania)',
   brak: 'Samo miejsce (bez zadania)',
 };
 const NUTY = ['Do', 'Re', 'Mi', 'Fa', 'Sol'];
@@ -115,6 +117,19 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     const result = area(option.wynik, 'reakcja po tym wyborze');
     return {box:el('div', {className:'card'}, [id,label,result]), read:()=>({id:id.value.trim(),tekst:label.value.trim(),wynik:result.value.trim()})};
   }, 'odpowiedź');
+  const cards = growing<NonNullable<Etap['karty']>[number]>(e.karty ?? [], card => {
+    const id=inp(card.id,{placeholder:'stałe ID karty'}),text=inp(card.tekst,{placeholder:'tekst karty'});
+    return {box:row(id,text),read:()=>({id:id.value.trim(),tekst:text.value.trim()})};
+  },'karta');
+  const order=inp((e.kolejnosc ?? []).join(', '),{placeholder:'ID kart w poprawnej kolejności, po przecinku'});
+  const clues = growing<NonNullable<Etap['tropy']>[number]>(e.tropy ?? [], clue => {
+    const id=inp(clue.id,{placeholder:'stałe ID tropu'}),title=inp(clue.tytul,{placeholder:'nazwa tropu'}),text=area(clue.tekst,'informacja po zbadaniu'),place=inp(typeof clue.miejsce==='string' ? clue.miejsce : clue.miejsce ? `${clue.miejsce.lat}, ${clue.miejsce.lon}` : '',{placeholder:'adres lub lat, lon'});
+    return {box:el('div',{className:'card'},[id,title,place,text]),read:()=>{
+      const coords=place.value.split(',').map(Number);
+      const miejsce=coords.length===2 && coords.every(Number.isFinite) ? {lat:coords[0],lon:coords[1]} : place.value.trim();
+      return {id:id.value.trim(),tytul:title.value.trim(),tekst:text.value.trim(),miejsce};
+    }};
+  },'trop');
   const parts: Record<string, HTMLElement> = {
     pokonaj: row(field('Ilu', f.ile), field('Jaki wróg', f.wrog), el('label', {}, [f.szukaj, ' trzeba szukać'])),
     zbierz: row(field('Co', f.towar), field('Ile', f.ile)),
@@ -124,6 +139,8 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     zagadka: el('div', {}, [one.box, f.podpowiedz]),
     zagadki: many.box,
     decyzja: el('div', {}, [field('Klucz zapisywanego wyboru',f.decisionKey),decisions.box]),
+    badanie: el('div',{},[field('Ile różnych tropów wystarczy',f.ile),clues.box]),
+    uklad: el('div',{},[cards.box,field('Poprawna kolejność',order),f.podpowiedz]),
     wybor: field('Albo zapłać (monet, 0 = tylko zagadka)', f.zaplac),
     paragraf: pages.box,
     melodia: field('Nuty', f.nuty, 'Do Re Mi Fa Sol, oddzielone spacją.'),
@@ -177,6 +194,9 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     }
     if (typ === 'zagadki') out.pytania = many.read().filter((q) => q.pytanie && q.odpowiedzi.length);
     if (typ === 'decyzja') {out.wyborKlucz=f.decisionKey.value.trim() || 'decision';out.opcje=decisions.read().filter(o=>o.id&&o.tekst);}
+    if (typ === 'badanie') {out.ile=n;out.tropy=clues.read().filter(c=>c.id&&c.tytul&&c.miejsce);}
+    if (typ === 'uklad') {out.karty=cards.read().filter(c=>c.id&&c.tekst);out.kolejnosc=list(order.value);opt('podpowiedz',f.podpowiedz.value.trim());}
+    if (e.warianty) out.warianty=e.warianty;
     if (typ === 'wybor') out.zaplac = Math.max(0, Number(f.zaplac.value) || 0);
     if (typ === 'paragraf') out.strony = pages.read().filter((s) => s.tekst);
     if (typ === 'melodia') opt('nuty', f.nuty.value.split(/\s+/).map((x) => NUTY.findIndex((n) => n.toLowerCase() === x.toLowerCase())).filter((i) => i >= 0));

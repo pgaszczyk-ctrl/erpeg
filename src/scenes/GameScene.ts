@@ -1,3 +1,4 @@
+import { missionNotes } from '../content/questy/progress';
 import { planCityQuests } from '../content/questy/planner';
 import { lang } from '../i18n';
 import { legacyText, dialogueMetadata } from '../content/questy/text';
@@ -2648,7 +2649,13 @@ export class GameScene extends Phaser.Scene {
       const host = shared && STORY_PLACES.has(shared.kind) ? shared : undefined;
       open = () => {
         this.doorPlace = shared ?? null;
-        this.withStoryPlace(host, () => this.openMissionDialog(rm));
+        const available = atDoor.filter(q => missionState(q.m) !== 'done');
+        this.withStoryPlace(host, () => available.length > 1 ? this.dialog({
+          title: shared?.name ?? tx('Sprawy w okolicy','Nearby quests'),
+          text: tx('Wybierz sprawę, o której chcesz porozmawiać.','Choose which quest you would like to discuss.'),
+          buttons:[...available.map(q=>q.m.tytul),tx('Później','Later')],
+          onChoose:i=>{if(available[i])this.openMissionDialog(available[i]);},
+        }) : this.openMissionDialog(rm));
         this.doorPlace = null;
       };
     }
@@ -4697,7 +4704,7 @@ export class GameScene extends Phaser.Scene {
       if (this.etapy.poke(rm)) return;
       const z = zadanieOf(m);
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
-      const part = stageCount(m) > 1 ? ` (etap ${stageIndex(m) + 1} z ${stageCount(m)})` : '';
+      const part = stageCount(m) > 1 ? tx(` (etap ${stageIndex(m) + 1} z ${stageCount(m)})`, ` (stage ${stageIndex(m) + 1} of ${stageCount(m)})`) : '';
       this.missionDialog(m, { title: who, text: `${tx('Jeszcze nie skończyłeś','Still in progress')}${part}.\n\n${tx('Cel','Goal')}: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
     } else if (st === 'goal') {
       this.finishMission(rm);
@@ -4809,11 +4816,13 @@ export class GameScene extends Phaser.Scene {
     const m = rm.m;
     if (missionState(m) !== 'active') return;
     const z = zadanieOf(m);
+    const completedIndex = stageIndex(m);
     if (m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) return;
     giveStory(z.daje);
     takeStory(z.zabiera);
     const last = stageIndex(m) >= stageCount(m) - 1;
     const after = () => {
+      if (missionState(m) !== 'active' || stageIndex(m) !== completedIndex) return;
       if (last) return this.reachGoal(rm, said);
       session.etap[m.id] = stageIndex(m) + 1;
       rm.target = stageTarget(this.city, m, rm.door);
@@ -5130,7 +5139,8 @@ export class GameScene extends Phaser.Scene {
         const foes = z.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
         const thing = z.szukaj ? null : this.etapy.arrowFor(rm.m.id);
         const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : thing ?? rm.target;
-        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}`, pos: { x: pos.x, y: pos.y } });
+        const notes = missionNotes(rm.m);
+        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}${notes ? `\n${notes}` : ''}`, pos: { x: pos.x, y: pos.y } });
       } else if (st === 'goal' && rm.m.dowolnaBiblioteka) {
         const lib = this.city.places.filter((p) => p.kind === 'library').reduce<CityPlace | null>((a, p) => (!a || dist(p.door) < dist(a.door) ? p : a), null);
         out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });

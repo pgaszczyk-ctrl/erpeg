@@ -81,13 +81,29 @@ export async function planCityQuests(city: CityMap, near: Point, mapName: string
         if (!green) continue;
         points = [giver.at, points[1], green];
       }
-      const chain = [0, ...def.stages.map(s => s.anchor)]; let distance = 0, valid = true;
+      // Validate every optional investigation point and both ends of every decision branch.
+      // For any-two clues use the worst permutation, so choosing an order never strands a player.
+      const stages = def.stages as unknown as {anchor:number;tropy?:{anchor:number}[];warianty?:{etap:{anchor?:number}}[]}[];
+      const chains: number[][] = [[0]];
+      for (const stage of stages) {
+        const options = stage.tropy
+          ? stage.tropy.flatMap(a => stage.tropy!.filter(b => a !== b).map(b => [a.anchor,b.anchor]))
+          : [...new Set([stage.anchor,...(stage.warianty ?? []).map(v => v.etap.anchor ?? stage.anchor)])].map(a => [a]);
+        const prior = chains.splice(0);
+        for (const chain of prior) for (const option of options) chains.push([...chain,...option]);
+      }
+      let distance = 0, valid = true;
+      for (const chain of chains) {
+      let route = 0;
       for (let n = 1; n < chain.length; n++) {
         const a = points[chain[n-1]], b = points[chain[n]];
         const key = [a.x,a.y,b.x,b.y].join(',');
         if (!pairCache.has(key)) pairCache.set(key, routeDistance(city, a, b, source.routeBudgetM));
         const d = pairCache.get(key)!;
-        if (d === null) { valid = false; break; } distance += d;
+        if (d === null) { valid = false; break; } route += d;
+      }
+      distance = Math.max(distance, route);
+      if (!valid) break;
       }
       if (!valid || distance > source.routeBudgetM) continue;
       const binding: CityBinding = { version:1, mapId:city.id, mapName, giverName:giver.p.name, anchors: points.map(p => city.toLatLon(p.x,p.y)), choices:{}, routeM:Math.ceil(distance) };

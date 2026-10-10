@@ -8,7 +8,7 @@
     "dev": "node scripts/build-maps.mjs && vite --host",
     "build": "node scripts/build-maps.mjs && tsc --noEmit && vite build",
     "preview": "vite preview --host",
-    "test:quests": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/city-quests.mjs",
+    "test:quests": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/city-quests.mjs && node scripts/tests/quest-variants.mjs",
     "test:quest-maps": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/real-city-quests.mjs"
   },
   "dependencies": {

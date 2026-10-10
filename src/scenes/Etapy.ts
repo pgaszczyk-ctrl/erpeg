@@ -14,6 +14,8 @@ import { hdOn, hdFolkLooks, personOf, ensureHd, fitHd } from '../sprites';
 import { SKALA_POSTACI } from '../skala';
 import { consumeAttack } from '../controls';
 import type { DialogRequest } from './GameScene';
+import { saveNow, resolvePlace } from '../quests';
+import { progressKey, readProgress, addClue, arrangeCard, missionNotes } from '../content/questy/progress';
 
 // Mission stages beyond the old four tasks (owner, 6–7 Oct 2026: „Serce Zębatka”, „Przebudzenie Starego
 // Grodu”): talks, riddle lists, choices, paragraph pages, melodies on the spot; things to pick up; spots to
@@ -24,7 +26,7 @@ import type { DialogRequest } from './GameScene';
 export interface StageHost {
   scene: Phaser.Scene;
   city: CityMap;
-  player: Phaser.GameObjects.Sprite & { speed: number };
+  player: Phaser.GameObjects.Sprite & { speed: number; hp: number };
   dialog(req: DialogRequest): void;
   toast(text: string, ms?: number): void;
   /** The current stage of this mission is done: give/take story items, move on (or finish). */
@@ -59,6 +61,7 @@ interface Live {
   who: Phaser.GameObjects.GameObject[];
   /** Where the stage's person stands (null: none). */
   at: { x: number; y: number; imie: string } | null;
+  clueArmed: Set<string>;
 }
 
 /** A mission's giver standing at its door. */
@@ -70,7 +73,7 @@ interface Giver {
   rm: ResolvedMission;
 }
 
-const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia', 'decyzja']);
+const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia', 'decyzja', 'uklad']);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -175,6 +178,12 @@ export class Etapy {
   progress(id: string): string {
     const l = this.live.get(id);
     if (!l) return '';
+    const rm = this.rms.find(r => r.m.id === id);
+    if (rm && zadanieOf(rm.m).typ === 'badanie') {
+      const z = zadanieOf(rm.m);
+      const found = readProgress(this.choices(rm), progressKey(stageIndex(rm.m),'clues'), (z.tropy ?? []).map(t => t.id));
+      return ` (${found.length}/${z.ile ?? 2})`;
+    }
     if (l.points.length > 1) return ` (${l.points.filter((q) => q.done).length}/${l.points.length})`;
     return '';
   }
@@ -184,6 +193,10 @@ export class Etapy {
     const z = zadanieOf(rm.m);
     const l = this.live.get(rm.m.id);
     const t = rm.target;
+    if (l && z.typ === 'badanie') {
+      const near = (z.tropy ?? []).find(c => { const at = resolvePlace(this.host.city,c.miejsce); return at && Math.hypot(at.x-this.host.player.x,at.y-this.host.player.y)<BLISKO; });
+      if (near) { this.inspectClue(rm,z,near); return true; }
+    }
     if (!l || !t || !SPOT.has(z.typ)) return false;
     if (Math.hypot(t.x - this.host.player.x, t.y - this.host.player.y) > BLISKO * 1.5) return false;
     l.armed = false;
@@ -208,9 +221,20 @@ export class Etapy {
   // ------------------------------------------------------------------ setup
 
   private setup(rm: ResolvedMission, z: Etap, key: string, now: number): Live {
-    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [], at: null };
+    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [], at: null, clueArmed:new Set((z.tropy ?? []).map(c => c.id)) };
     const t = rm.target!;
     const r = rng(hash(key));
+    if (z.typ === 'badanie') {
+      const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
+      for (const clue of z.tropy ?? []) {
+        const q = resolvePlace(this.host.city,clue.miejsce);
+        if (!q) continue;
+        const done = found.includes(clue.id);
+        const icon = this.host.scene.add.image(q.x,q.y,TEX.questItem).setTint(done ? 0x7fd35a : 0xd9a640).setAlpha(done ? 0.5 : 1).setDepth(q.y-4);
+        if (!done) icon.setData('glow',this.glow(q.x,q.y));
+        l.points.push({...q,done,t:0,icon,bar:this.host.scene.add.graphics()});
+      }
+    }
     if (z.typ === 'podnies') {
       for (const q of this.spots(t, z.ile ?? 1, (z.promien ?? 40) * PX_PER_M, r)) {
         const it = this.host.scene.add.image(q.x, q.y, TEX.questItem).setDepth(q.y - 4);
@@ -329,6 +353,21 @@ export class Etapy {
   private tick(rm: ResolvedMission, z: Etap, l: Live, now: number, dt: number) {
     const p = this.host.player;
     const t = rm.target!;
+    if (z.typ === 'badanie') {
+      const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
+      for (let i=0;i<(z.tropy ?? []).length;i++) {
+        const clue = z.tropy![i], at = resolvePlace(this.host.city,clue.miejsce);
+        if (!at) continue;
+        const d = Math.hypot(at.x-p.x,at.y-p.y);
+        if (d > BLISKO*2) l.clueArmed.add(clue.id);
+        const point = l.points.find(q=>q.x===at.x&&q.y===at.y);
+        if (point && found.includes(clue.id) && !point.done) {
+          point.done=true; (point.icon.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy(); point.icon.setTint(0x7fd35a).setAlpha(0.5);
+        }
+        if (!found.includes(clue.id) && d<BLISKO && l.clueArmed.delete(clue.id)) {this.inspectClue(rm,z,clue);return;}
+      }
+      return;
+    }
     if (SPOT.has(z.typ)) {
       const d = Math.hypot(t.x - p.x, t.y - p.y);
       if (d > BLISKO * 2) l.armed = true;
@@ -345,8 +384,8 @@ export class Etapy {
         it.destroy();
         l.items = l.items.filter((x) => x !== it);
         const left = l.items.length;
-        if (left) this.host.toast(`Masz! Zostało jeszcze: ${left}`, 1400);
-        else this.host.stageDone(rm, 'Znalezione! ');
+        if (left) this.host.toast(tx(`Masz! Zostało jeszcze: ${left}`,`Got it! Still to find: ${left}`), 1400);
+        else this.host.stageDone(rm, tx('Znalezione! ', 'Found! '));
       }
       return;
     }
@@ -365,8 +404,8 @@ export class Etapy {
         q.bar.clear();
         q.icon.setTint(0x7fd35a).setAlpha(0.6);
         const left = l.points.filter((x) => !x.done).length;
-        if (left) this.host.toast(`Gotowe! Zostało jeszcze: ${left}`, 1400);
-        else this.host.stageDone(rm, 'Naprawione! ');
+        if (left) this.host.toast(tx(`Gotowe! Zostało jeszcze: ${left}`,`Done! Still to fix: ${left}`), 1400);
+        else this.host.stageDone(rm, tx('Naprawione! ', 'Fixed! '));
       }
       return;
     }
@@ -381,6 +420,9 @@ export class Etapy {
   private fire(rm: ResolvedMission, z: Etap, l: Live) {
     const title = z.postac?.imie ?? rm.m.tytul;
     switch (z.typ) {
+      case 'uklad':
+        this.arrange(rm,z,title);
+        return;
       case 'rozmowa':
         this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title, text: z.tekst || z.cel, buttons: [tx('Dalej', 'Next')], onChoose: () => this.host.stageDone(rm) });
         return;
@@ -409,6 +451,7 @@ export class Etapy {
             if (z.wyborKlucz) {
               const choices = rm.m.scenariusz?.choices ?? (session.questResults[rm.m.id] ??= { originMap:session.mapId, routeM:0, choices:{} }).choices;
               choices[z.wyborKlucz] = option.id;
+              void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
             }
             this.host.stageDone(rm, option.wynik);
           },
@@ -427,13 +470,47 @@ export class Etapy {
     }
   }
 
+  private choices(rm: ResolvedMission) {
+    return rm.m.scenariusz?.choices ?? (session.questResults[rm.m.id] ??= {originMap:session.mapId,routeM:0,choices:{}}).choices;
+  }
+
+  private inspectClue(rm: ResolvedMission,z: Etap,clue: NonNullable<Etap['tropy']>[number]) {
+    const index = stageIndex(rm.m), key = progressKey(index,'clues'), allowed = (z.tropy ?? []).map(c=>c.id);
+    this.host.dialog({...z.dialogueMeta,title:clue.tytul,text:clue.tekst,
+      buttons:[tx('Zapisz trop','Record clue'),tx('Później','Later')],onChoose:i=>{
+        if(i!==0 || missionState(rm.m)!=='active' || stageIndex(rm.m)!==index)return;
+        const found=addClue(this.choices(rm),key,allowed,clue.id);
+        void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
+        if(found.length >= (z.ile ?? 2)) this.host.stageDone(rm);
+        else this.host.toast(tx(`Tropy: ${found.length}/${z.ile ?? 2}. Wybierz kolejny punkt.`,`Clues: ${found.length}/${z.ile ?? 2}. Choose another point.`),2200);
+      }});
+  }
+
+  private arrange(rm: ResolvedMission,z: Etap,title: string) {
+    const index=stageIndex(rm.m),key=progressKey(index,'cards'),choices=this.choices(rm),order=z.kolejnosc ?? [],cards=z.karty ?? [];
+    const prefix=readProgress(choices,key,order);
+    if(!order.length || cards.length!==order.length)return;
+    const available=cards.filter(c=>!prefix.includes(c.id));
+    const placed=prefix.map(id=>cards.find(c=>c.id===id)?.tekst).join(' → ');
+    this.host.dialog({...z.dialogueMeta,title,text:`${z.tekst || z.cel}${placed ? `\n\n${tx('Ułożone','Placed')}: ${placed}` : ''}`,
+      buttons:[...available.map(c=>c.tekst),tx('Później','Later')],onChoose:i=>{
+        if(!available[i] || missionState(rm.m)!=='active' || stageIndex(rm.m)!==index)return;
+        const result=arrangeCard(choices,key,order,available[i].id);
+        void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
+        if(result.complete)return this.host.stageDone(rm);
+        if(result.correct)return this.arrange(rm,z,title);
+        this.host.dialog({...z.dialogueMeta,title:tx('Sprawdź połączenia','Check the connections'),text:z.podpowiedz || tx('Te karty nie pasują do wskazówek. Spróbuj od początku.','These cards do not fit the clues. Try from the start.'),buttons:[tx('Spróbuję jeszcze raz','Try again'),tx('Później','Later')],onChoose:j=>{if(j===0)this.arrange(rm,z,title);}});
+      }});
+  }
+
   /** One question; a wrong answer shows the hint (or „try again”) and asks the same again. */
   private ask(rm: ResolvedMission, title: string, q: { pytanie: string; odpowiedzi: string[]; dobra: number }, hint: string | undefined, ok: () => void, intro?: string) {
     const answers = q.odpowiedzi.filter((a) => a && a.trim());
     if (!q.pytanie || !answers.length) return ok();
+    const notes=missionNotes(rm.m);
     this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `🧩 ${title}`,
-      text: intro ? `${intro}\n\n${q.pytanie}` : q.pytanie,
+      text: `${intro ? `${intro}\n\n` : ''}${q.pytanie}${notes ? `\n\n${tx('Notes','Notebook')}:\n${notes}` : ''}`,
       buttons: [...answers, tx('Muszę pomyśleć', 'Let me think')],
       onChoose: (i) => {
         if (i >= answers.length) return;
