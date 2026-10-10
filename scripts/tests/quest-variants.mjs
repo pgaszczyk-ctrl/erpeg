@@ -37,7 +37,7 @@ const flask=materializeScenario('quest.flask_guardian',binding());flask.scenariu
 const choices={};assert.equal(arrangeCard(choices,'cards:1',['a','b','c'],'b').correct,false);assert.equal(choices['cards:1'],'');assert.equal(arrangeCard(choices,'cards:1',['a','b','c'],'a').complete,false);const saved=JSON.parse(JSON.stringify(choices));assert.equal(arrangeCard(saved,'cards:1',['a','b','c'],'b').complete,false);assert.equal(arrangeCard(saved,'cards:1',['a','b','c'],'c').complete,true);
 // Legacy accepted quest must not silently gain a new stage or have its answer changed.
 const old={...flask,etapy:[{typ:'napraw',miejsce:binding().anchors[1],cel:'Zamontuj wybrany element przy strażniku.',sekund:6}],scenariusz:{...flask.scenariusz,revision:undefined}};
-assert.equal(restoreScenario(old).etapy.length,1);assert.equal(restoreScenario(old).etapy[0].typ,'napraw');
+assert.equal(restoreScenario(old).etapy.length,1);assert.equal(restoreScenario(old).etapy[0].typ,'napraw');assert.equal(restoreScenario(old).etapy[0].dialogueMeta.language,'en');
 assert.equal(legacyText('Doręcz pismo urzędowe pod adres 香港 Central 12. Za potwierdzenie odbioru czeka nagroda.'),'Deliver an official letter to 香港 Central 12. There is a reward for confirming its receipt.');
 assert.equal(legacyText('Przynieś 5 grzybów z lasu'),'Bring 5 mushrooms from the forest');
 assert(legacyText('Hmm… Czuję, że widziałeś cień. Ale jesteś jeszcze za słaby na tę opowieść. Wróć, gdy osiągniesz 5. poziom.').includes('5'));

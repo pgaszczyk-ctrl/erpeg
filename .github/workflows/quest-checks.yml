@@ -43,5 +43,6 @@ jobs:
         with:
           name: quest-screenshots
           path: .cache/quest-*.png
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7

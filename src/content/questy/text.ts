@@ -62,14 +62,23 @@ export function dialogueMetadata(text: string): { localHumor: boolean; textId?: 
 
 /** Localise only fields which the player reads. Save IDs and map anchors are unchanged. */
 export function translateMission<T extends import('../fabula').Misja>(mission: T): T {
-  const translate = (stage: import('../fabula').Etap) => ({ ...stage,
+  const translate = (stage: import('../fabula').Etap): import('../fabula').Etap => {
+    const source=stage.tekst || stage.pytanie || stage.cel, localized=legacyText(source), meta=dialogueMetadata(localized);
+    return { ...stage,
+    dialogueMeta:{language:localized!==source || meta.textId ? lang : stage.dialogueMeta?.language ?? lang,localHumor:meta.textId ? meta.localHumor : stage.dialogueMeta?.localHumor ?? false},
     cel:legacyText(stage.cel),
     ...(stage.tekst ? {tekst:legacyText(stage.tekst)} : {}),
     ...(stage.komunikat ? {komunikat:legacyText(stage.komunikat)} : {}),
     ...(stage.pytanie ? {pytanie:legacyText(stage.pytanie)} : {}),
     ...(stage.podpowiedz ? {podpowiedz:legacyText(stage.podpowiedz)} : {}),
     ...(stage.odpowiedzi ? {odpowiedzi:stage.odpowiedzi.map(legacyText)} : {}),
-  });
+    ...(stage.opcje ? {opcje:stage.opcje.map(o=>({...o,tekst:legacyText(o.tekst),wynik:legacyText(o.wynik)}))} : {}),
+    ...(stage.pytania ? {pytania:stage.pytania.map(q=>({...q,pytanie:legacyText(q.pytanie),odpowiedzi:q.odpowiedzi.map(legacyText)}))} : {}),
+    ...(stage.strony ? {strony:stage.strony.map(p=>({...p,tekst:legacyText(p.tekst),wybory:p.wybory?.map(w=>({...w,tekst:legacyText(w.tekst)}))}))} : {}),
+    ...(stage.tropy ? {tropy:stage.tropy.map(c=>({...c,tytul:legacyText(c.tytul),tekst:legacyText(c.tekst)}))} : {}),
+    ...(stage.karty ? {karty:stage.karty.map(c=>({...c,tekst:legacyText(c.tekst)}))} : {}),
+    ...(stage.warianty ? {warianty:stage.warianty.map(v=>({...v,etap:translate({...stage,warianty:undefined,...v.etap})}))} : {}),
+  };};
   return { ...mission, tytul:legacyText(mission.tytul), opis:legacyText(mission.opis), zakonczenie:legacyText(mission.zakonczenie),
     zadanie:translate(mission.zadanie), ...(mission.etapy ? {etapy:mission.etapy.map(translate)} : {}) };
 }

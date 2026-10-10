@@ -355,6 +355,7 @@ export class Etapy {
     const t = rm.target!;
     if (z.typ === 'badanie') {
       const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
+      if (found.length >= (z.ile ?? 2)) {this.host.stageDone(rm);return;}
       for (let i=0;i<(z.tropy ?? []).length;i++) {
         const clue = z.tropy![i], at = resolvePlace(this.host.city,clue.miejsce);
         if (!at) continue;
@@ -490,6 +491,8 @@ export class Etapy {
     const index=stageIndex(rm.m),key=progressKey(index,'cards'),choices=this.choices(rm),order=z.kolejnosc ?? [],cards=z.karty ?? [];
     const prefix=readProgress(choices,key,order);
     if(!order.length || cards.length!==order.length)return;
+    // A reload may occur after the final checkpoint reached the server but before stage advancement.
+    if(prefix.length===order.length && prefix.every((id,i)=>id===order[i]))return this.host.stageDone(rm);
     const available=cards.filter(c=>!prefix.includes(c.id));
     const placed=prefix.map(id=>cards.find(c=>c.id===id)?.tekst).join(' → ');
     this.host.dialog({...z.dialogueMeta,title,text:`${z.tekst || z.cel}${placed ? `\n\n${tx('Ułożone','Placed')}: ${placed}` : ''}`,

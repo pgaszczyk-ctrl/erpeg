@@ -54,6 +54,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   async function clue(page,id){await page.evaluate(id=>{const sc=window.__game.scene.getScene('game'),m=window.__session.gen['quest.pact_pages'];const c=m.etapy[0].tropy.find(c=>c.id===id);const at=sc.city.fromLatLon(c.miejsce.lat,c.miejsce.lon);sc.player.setPosition(at.x,at.y);},id);await page.waitForTimeout(400);}
   await clue(pl,'receiver_bc');await click(pl,'Zapisz trop');await pl.waitForTimeout(300);
   assert.equal(latestSave.gen.find(m=>m.id==='quest.pact_pages').scenariusz.choices['clues:0'],'receiver_bc');
+  const notebook=await pl.evaluate(()=>({hud:window.__game.scene.getScene('game').activeQuests().find(q=>q.id==='quest.pact_pages').text,log:window.__game.scene.getScene('game').questLog().find(q=>q.id==='quest.pact_pages').text}));
+  assert(!notebook.hud.includes('{B, C}'));assert(notebook.log.includes('{B, C}'));
+  await pl.screenshot({path:'.cache/quest-phone-investigation.png'});
   await pl.close();pl=await pageFor('en',390,844);await pl.waitForTimeout(2000);
   await clue(pl,'receiver_bd');await click(pl,'Record clue');await goToGoal(pl,'quest.pact_pages');await click(pl,'B');
   // Wrong card gives a retry without damage. Correct partial arrangements survive another login.
