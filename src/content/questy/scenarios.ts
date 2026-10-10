@@ -15,10 +15,17 @@ export interface CityBinding {
   choices: Record<string, string>;
   routeM: number;
 }
-export const CITY_SCENARIOS = runtime;
+// Withdrawn by the owner on 10 Oct 2026. Keep definitions only to read existing saves.
+const withdrawnCityQuestIds = new Set([
+  'quest.clock_opinion', 'quest.postman_stamp', 'quest.sleepy_guardian', 'quest.two_seals',
+  'quest.tea_map', 'quest.flask_guardian', 'quest.garden_wheels', 'quest.noisy_neighbours',
+  'quest.pact_pages', 'quest.core_trip', 'quest.helper_workshop', 'quest.old_sign_new_note',
+]);
+export function isWithdrawnCityQuest(id: string) { return withdrawnCityQuestIds.has(id); }
+export const CITY_SCENARIOS = runtime.filter(q => !isWithdrawnCityQuest(q.id));
 export function scenarioPending(id: string, states: Record<string, string>, taken: Record<string, Misja>) {
   // A character owns one scenario instance across ALL cities and logins.
-  return !['active', 'goal', 'done'].includes(states[id]) && !taken[id];
+  return !isWithdrawnCityQuest(id) && !['active', 'goal', 'done'].includes(states[id]) && !taken[id];
 }
 export function materializeScenario(id: string, binding: CityBinding): Misja {
   const definition = runtime.find(q => q.id === id);

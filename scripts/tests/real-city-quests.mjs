@@ -9,6 +9,6 @@ for(const id of ['lublin','pulawy']){
  const near=id==='lublin'?city.findAnyStart('Plac Zamkowy','Plac Zamkowy'):city.places.find(p=>p.kind==='office')?.door ?? city.places[0].door;
  const start=Date.now();const offers=await planCityQuests(city,near,id==='lublin'?'Lublin':'Puławy',{},{});
  console.log(id,'near',near,'nearby places',city.places.filter(p=>Math.hypot(p.door.x-near.x,p.door.y-near.y)<1000*PX_PER_M).length,'offers',offers.map(q=>({id:q.id,routeM:q.scenariusz.routeM,at:q.scenariusz.giverName})), 'ms',Date.now()-start);
- assert(offers.length>=4,`At least four feasible quests in ${id}`);
- const completed={[offers[0].id]:'done'};const again=await planCityQuests(city,near,id,completed,{});assert(!again.some(q=>q.id===offers[0].id));
+ assert.equal(offers.length,0,`Withdrawn quests absent in ${id}`);
+ const completed={'quest.clock_opinion':'done'};const again=await planCityQuests(city,near,id,completed,{});assert.deepEqual(again,[]);
 }
