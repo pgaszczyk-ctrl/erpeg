@@ -9,3 +9,5 @@ Dolny HUD ma 94 px wysokości na telefonie i około 103 px na komputerze. Rysunk
 Powrót: `?hud=old` włącza HUD sprzed paczki 27, a `?hud=v5` pozwala obejrzeć machinę z paczki 27. Zachowano wcześniejszą kopię w `../27/hud_poprzedni_7f03d9e.zip`. Produkcyjny pin i wersja nie są zmienione.
 
 Test przeglądarkowy: po `VITE_TEST=1 npm run build`, osobnym `VITE_TEST=1 npx vite build` i uruchomieniu `npx vite preview` wykonać `node scripts/tests/browser-hud-reservoir.mjs`. Wymaga Playwright (można wskazać `PLAYWRIGHT_MODULE`) i Chromium (`BROWSER_EXECUTABLE`); `HUD_BASE` ustawia adres podglądu, `HUD_ARTIFACTS` katalog zrzutów. Wszystkie połączenia Supabase są zastąpione atrapami. Test obejmuje rzeczywiste logowanie, leczenie i zużycie zapasów, klik małej nakładki, przeciągnięcie, wszystkie portrety, aparat/kufer, oba pojazdy i trzy rozmiary ekranu.
+
+Opublikowano na exp-lore.app/test (98e7acc); końcowy podgląd z serwera: hud_telefon_serwer.png, wynik kontroli: sprawdzenie_serwera.json. Produkcyjny kod zachował e0a27d0.

@@ -374,6 +374,10 @@
 - Build korzysta z istniejących wygenerowanych map po sprawdzeniu git diff wejść i generatora od1f95664: bez zmian. Ponownie wygenerowano aktualny indeks/kafelki. Początkowe zbędne przebudowanie całej mapy przerwano, nie traktowano go jako ukończonego testu.
 - Nie ruszono PRODUKCJA, WERSJA, produkcja/ ani SQL/Supabase. Płyny są osobne od oprawy; nowe grafiki nie zmieniają animacji bohaterów ani obrazów jazdy w świecie.
 
+- Publikacja [38062382877](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/38062382877) zakończona success 10.10.2026. Publiczne HTTPS /test/version.json potwierdziło98e7acc (build15:18UTC), produkcja nadal e0a27d0. Aparat/velocyped/baniak/portret01 pobrane z serwera: identyczne SHA256 z lokalnymi plikami.
+- Końcowy Playwright opublikowanej gry390×844/DPR2 i po obrocie844×390: rzeczywiste kliknięcia i zużycie mikstury,20 owoców,pączka,nakładki; brak zużycia podczas przeciągania, wyłączenie leczenia bez zapasu, kufer/aparat, oba pojazdy i zmiana portretu — przeszły, błędy JS[]. Wszystkie połączenia Supabase przechwycone; bez zapisów graczy. Zrzut i JSON: docs/hud/29_baniak/hud_telefon_serwer.png oraz sprawdzenie_serwera.json.
+- Publiczne zasoby przeglądarki pobrano przez curl z odziedziczonym proxy i weryfikacją TLS/systemowym CA. Automatyczna kontrola odrzuciła trwałe rozszerzenie zaufania profilu przeglądarki; bezpieczna kontrola przez zweryfikowane HTTPS pozwoliła ukończyć sprawdzenie bez wyłączania TLS. Nie pozostała blokada publikacji. Końcowy zapis dokumentacji [skip ci], bez ponownego budowania identycznego kodu.
+
 ## 10.10.2026 — demo Wawel → Targi Lublin
 
 - Właściciel poprosił o komunikat po jabłkach, animowany odlot/trudniejszą walkę, anonimową postać, pobudkę przed Targami i ekran nowej postaci po kilku krokach. Poprzedni cel kodu QR wskazywał 51.248833,22.51734, daleko od Targów; nie był to brak modelu Targów w tej lokalizacji. Zachowano rejestr wydrukowanego kodu, ale pobudka używa wspólnego PO_DEMO_START (Dworcowa11,51.23471,22.56526).
