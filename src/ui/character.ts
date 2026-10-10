@@ -124,6 +124,7 @@ export interface CharacterHost {
   maxHp: number;
   onChange: () => void;
   eat: () => number | null;
+  fruitPerHeal?: number;
   quests: () => QuestLine[];
   toggleArrow: (id: string) => void;
   tent?: TentAction;
@@ -354,7 +355,7 @@ function show(host: CharacterHost) {
       ['📈 Premia za poziom', `+${Math.round(czescPremii(lvl) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['🛡 Obrona', `${defense()} (${Math.round(blockChance() * 100)}% bloku)`],
     ]));
-    const n = LECZENIE_OWOCAMI.owocow;
+    const n = host.fruitPerHeal ?? LECZENIE_OWOCAMI.owocow;
     const canEat = totalFruit() >= n && hp < maxHp;
     const eatBtn = el('button', `c-btn${canEat ? '' : ' c-muted'}`, `🍎 Zjedz ${n} owoców → +1 ❤`) as HTMLButtonElement;
     eatBtn.disabled = !canEat;

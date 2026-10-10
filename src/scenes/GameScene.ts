@@ -4509,7 +4509,7 @@ export class GameScene extends Phaser.Scene {
    * there isn't enough fruit), else 20 fruit for one heart.
    */
   /** Fruit eaten for one heart (fewer in the QR demo). */
-  private fruitPerHeart() {
+  fruitPerHeart() {
     return demo.on ? SEN.owocowNaSerce : LECZENIE_OWOCAMI.owocow;
   }
 
@@ -4969,7 +4969,8 @@ export class GameScene extends Phaser.Scene {
     if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
     PLAYER.maxHp = max;
     this.player.hp = Math.min(this.player.hp, max);
-    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal ? ADMIN_SZYBKOSC : 1);
+    // The demo's protection from death must not grant the administrator's fivefold speed.
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal && !demo.on ? ADMIN_SZYBKOSC : 1);
   }
 
   /**

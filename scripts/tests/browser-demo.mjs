@@ -7,7 +7,7 @@ const browser = await chromium.launch({executablePath:process.env.BROWSER_EXECUT
 try {
 for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false],['phone',{width:390,height:844},true]]) {
  const context=await browser.newContext({viewport, isMobile:mobile, hasTouch:mobile, locale:'pl-PL', deviceScaleFactor:mobile?2:1});
- const errors=[];
+ const errors=[]; const browserDialogs=[];
  await context.route('**/*.supabase.co/**', route => {
   const path=new URL(route.request().url()).pathname;
   let body=null;
@@ -34,6 +34,7 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
   await new Promise(resolve=>setTimeout(resolve,1800)); await route.continue();
  });
  page.on('pageerror',e=>errors.push(e.message));
+ page.on('dialog',async d=>{browserDialogs.push(d.type());await d.accept();});
 
 
  await page.goto('http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8&world=http://127.0.0.1:4173/sample.pmtiles&terrain=http://127.0.0.1:4173/terrain');
@@ -58,10 +59,28 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');for(const i of [...s.pickups])if(i.getData('kind')==='fruit:jablko')s.collect(i);});
  await page.waitForFunction(()=>window.__game.scene.getScene('ui').dialogChoose&&window.__game.scene.getScene('game').demoRun.fruitHintShown);
  await page.screenshot({path:`work/demo-${name}-apples.png`});
- await choose(0);
+ const beforeEating=await page.evaluate(()=>window.__game.scene.getScene('game').player.hp);
+ if(mobile){
+  await choose(1);
+  await page.locator('#hud .hud-av').click();
+  await page.getByRole('button',{name:'⚙️ Stan',exact:true}).click();
+  const eat=page.getByRole('button',{name:'🍎 Zjedz 5 owoców → +1 ❤',exact:true});
+  assert(await eat.isEnabled()); await eat.click();
+  assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating+2);
+  await page.locator('#character .k-valve').click();
+ }else await choose(0);
+ assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating+2);
  await page.waitForFunction(()=>window.__game.scene.getScene('game').demoRun.dragon,null,{timeout:90000});
  await page.waitForFunction(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon;return s.dragons.has(d);},null,{timeout:60000});
  console.log(name,'dragon');
+ // Verify the actual HUD eating control too, with a fresh five-apple fixture.
+ await page.evaluate(()=>{const s=window.__game.scene.getScene('game');s.player.hp-=2;for(let n=0;n<5;n++)s.dropFruit(s.player.x+100,s.player.y,'jablko');});
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').pickups.filter(i=>i.getData('kind')==='fruit:jablko').length>=5);
+ await page.evaluate(()=>{const s=window.__game.scene.getScene('game');for(const i of [...s.pickups])if(i.getData('kind')==='fruit:jablko')s.collect(i);});
+ const hudHp=await page.evaluate(()=>window.__game.scene.getScene('game').player.hp);
+ await page.locator('#hud .hud-heal').click();
+ assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),hudHp+2);
+
  const hp=await page.evaluate(()=>{
   const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon,ai=s.dragons.get(d);
   const base=d.hp/18;
@@ -76,15 +95,15 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  await page.waitForFunction(()=>{const s=window.__game.scene.getScene('game');return s.demoRun.dragon.inAir&&s.children.getByName('smok-odlot');},null,{timeout:30000});
  const air=await page.evaluate(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon,im=s.children.getByName('smok-odlot');const hp=d.hp;d.hit(s.player,s.time.now,d.hp);return {before:hp,after:d.hp,y:im.y};});
  assert.equal(air.before,air.after,'An airborne dragon cannot be hit');
- await page.screenshot({path:`work/demo-${name}-takeoff.png`});
- await page.waitForFunction(y=>{const s=window.__game.scene.getScene('game'),im=s.children.getByName('smok-odlot');return im&&im.y<y-15;},air.y,{timeout:30000});
- await page.screenshot({path:`work/demo-${name}-ascent.png`});
  await page.evaluate(()=>{
   const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon,l=s.dragons.get(d).lot;
   // Deliberately select a blocked point towards the Vistula; the river is narrower than 300 px.
   for(let r=10;r<=400;r+=10)if(s.city.isBlocked(d.x-r,d.y)){l.px=d.x-r;l.py=d.y;return;}
   throw Error('No blocked bank point in the fixture');
  });
+ await page.screenshot({path:`work/demo-${name}-takeoff.png`});
+ await page.waitForFunction(y=>{const s=window.__game.scene.getScene('game'),im=s.children.getByName('smok-odlot');return im&&im.y<y-15;},air.y,{timeout:30000});
+ await page.screenshot({path:`work/demo-${name}-ascent.png`});
  await page.waitForFunction(()=>!window.__game.scene.getScene('game').demoRun.dragon.inAir,null,{timeout:30000});
  assert.equal(await page.evaluate(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon;return s.city.isBlocked(d.x,d.y);}),false);
  // Complete the lethal-hit path: generic corpse is replaced with visible departure.
@@ -102,6 +121,11 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  await choose(0);
  await page.screenshot({path:`work/demo-${name}-targi.png`});
  console.log(name,'Targi ready',art);
+ const speed=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return s.player.speed;});
+ assert(Math.abs(speed-(70/3.6)*1.92)<.001,`Awake speed must be ordinary level-one speed: ${speed}`);
+ await page.evaluate(()=>window.__game.scene.getScene('game').emitHud());
+ assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.speed),speed,'HUD refresh must retain normal speed');
+
  const direction=await page.evaluate(()=>{
   const s=window.__game.scene.getScene('game'),p=s.player;
   for(const [key,dx,dy]of [['ArrowDown',0,1],['ArrowLeft',-1,0],['ArrowRight',1,0],['ArrowUp',0,-1]]){
@@ -110,6 +134,11 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
    if(safe)return key;
   }throw Error('No way to walk a few steps in front of Targi');
  });
+ await page.evaluate(()=>{window.__game.scene.getScene('game').demoRun.walked=10*1.92;});
+ await page.waitForTimeout(300);
+ assert.equal(await page.locator('#demo-end').count(),0,'Ten metres must not end the demo');
+ // Advance the long-distance fixture to just below the 400m boundary; finish with real movement.
+ await page.evaluate(()=>{window.__game.scene.getScene('game').demoRun.walked=399*1.92;});
  await page.keyboard.down(direction);
  await page.waitForSelector('#demo-end',{timeout:30000});
  await page.keyboard.up(direction);
@@ -117,7 +146,7 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  await page.waitForTimeout(2800);
  await page.screenshot({path:`work/demo-${name}-finale.png`});
  const distance=await page.evaluate(()=>window.__game.scene.getScene('game').demoRun.walked/1.92);
- assert(distance>=8&&distance<10);
+ assert(distance>=400&&distance<410,`Distance at finale: ${distance}`);
  await page.locator('#demo-end button').click();
  await page.waitForSelector('#menu',{timeout:60000});
  assert(!new URL(page.url()).searchParams.has('d'));
@@ -129,6 +158,7 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  assert.equal(await page.evaluate(()=>window.__session.name),'');
  await page.screenshot({path:`work/demo-${name}-new-character.png`});
  assert.deepEqual(errors,[]);
+ assert.deepEqual(browserDialogs,[],'Character creation must not prompt beforeunload');
  console.log(JSON.stringify({name,testBuild,apples:true,unnamed:true,airInvulnerable:true,visibleAscent:true,safeLanding:true,Targi:art,walkMetres:distance,newCharacter:testBuild?'production redirect':'creation form',errors}));
  await context.close();
 }

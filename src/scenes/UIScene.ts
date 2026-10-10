@@ -647,7 +647,7 @@ export class UIScene extends Phaser.Scene {
         this.wakeWorld();
         game.gearChanged();
       },
-      hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
+      hp: game.player.hp, maxHp: PLAYER.maxHp, fruitPerHeal: game.fruitPerHeart(), onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });

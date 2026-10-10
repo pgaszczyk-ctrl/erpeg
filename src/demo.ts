@@ -12,6 +12,7 @@ import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
 import { pixelLogo } from './ui/logo';
 import { TEST } from './version';
+import { letGo } from './guard';
 
 // The QR demo: `?d=<code>` (content/demo.ts) plays without a character or a
 // menu. Nothing is written on the server (api.ts `offline`). The phases:
@@ -138,6 +139,7 @@ export function finale() {
   btn.onclick = () => {
     try { localStorage.setItem(PO_DEMO_KLUCZ, '1'); } catch { /* private mode: the normal form then */ }
     // Test demos also lead to real character creation; the test server only loads test characters.
+    letGo();
     location.href = location.origin + (TEST ? '/' : location.pathname) + '#nowa';
   };
   const sub = document.createElement('div');
