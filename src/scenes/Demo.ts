@@ -57,7 +57,6 @@ export class DemoRun {
       );
     } else if (demo.phase === 'jawa') {
       this.busy = true;
-      p.speed = JAWA.predkoscM * PX_PER_M;
       // Keep the blackout until ground, building and roof layers are ready.
       const reveal = () => {
         if (!this.host.ready()) { this.scene.time.delayedCall(100, reveal); return; }

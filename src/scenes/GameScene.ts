@@ -1,5 +1,6 @@
 import { missionNotes } from '../content/questy/progress';
 import { planCityQuests } from '../content/questy/planner';
+import { CITY_SCENARIOS, isWithdrawnCityQuest } from '../content/questy/scenarios';
 import { lang } from '../i18n';
 import { legacyText, dialogueMetadata } from '../content/questy/text';
 import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
@@ -536,6 +537,7 @@ export class GameScene extends Phaser.Scene {
     for (const rm of missions) this.addMission(rm, true);
     // Random missions taken earlier (churches, offices, police) and not finished.
     for (const m of Object.values(session.gen)) {
+      if (isWithdrawnCityQuest(m.id)) continue;
       if (m.scenariusz) {
         if (m.scenariusz.mapId !== this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
         const door = resolvePlace(this.city, m.scenariusz.anchors[0]);
@@ -552,8 +554,10 @@ export class GameScene extends Phaser.Scene {
     const epoch = ++this.cityQuestEpoch;
     this.cityQuestPlanning = false;
     this.events.once('shutdown', () => { if (this.cityQuestEpoch === epoch) this.cityQuestEpoch++; });
-    this.time.delayedCall(1500, () => void this.refreshCityMissions(epoch));
-    this.time.addEvent({ delay: 15000, loop: true, callback: () => void this.refreshCityMissions(epoch) });
+    if (CITY_SCENARIOS.length) {
+      this.time.delayedCall(1500, () => void this.refreshCityMissions(epoch));
+      this.time.addEvent({ delay: 15000, loop: true, callback: () => void this.refreshCityMissions(epoch) });
+    }
 
     // Shops and schools: coloured roofs and signs (under the fog, so they
     // are discovered by exploring).
@@ -2709,6 +2713,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Adds a mission to the game: gold "!" over its door, goal enemies. */
   private addMission(rm: ResolvedMission, highlight: boolean) {
+    if (isWithdrawnCityQuest(rm.m.id)) return;
     this.missions.push(rm);
     if (highlight && rm.door.building && missionState(rm.m) !== 'done') this.mapView.highlight.set(rm.door.building, { roof: '#e8b923', wall: '#f3e2a0' });
     // Above the fog: mission doors are always shown.
@@ -4509,7 +4514,7 @@ export class GameScene extends Phaser.Scene {
    * there isn't enough fruit), else 20 fruit for one heart.
    */
   /** Fruit eaten for one heart (fewer in the QR demo). */
-  private fruitPerHeart() {
+  fruitPerHeart() {
     return demo.on ? SEN.owocowNaSerce : LECZENIE_OWOCAMI.owocow;
   }
 
@@ -4969,7 +4974,8 @@ export class GameScene extends Phaser.Scene {
     if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
     PLAYER.maxHp = max;
     this.player.hp = Math.min(this.player.hp, max);
-    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal ? ADMIN_SZYBKOSC : 1);
+    // The demo's protection from death must not grant the administrator's fivefold speed.
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal && !demo.on ? ADMIN_SZYBKOSC : 1);
   }
 
   /**
@@ -5155,6 +5161,7 @@ export class GameScene extends Phaser.Scene {
     }
     // Accepted elsewhere stays in the journal, with no arrow on this map.
     for (const m of Object.values(session.gen)) {
+      if (isWithdrawnCityQuest(m.id)) continue;
       if (!m.scenariusz || m.scenariusz.mapId === this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
       out.push({ id:m.id, title:m.tytul, start:m.adres,
         text:`${tx('Kontynuuj w', 'Continue in')} ${m.scenariusz.mapName}: ${zadanieOf(m).cel}`, pos:null });
