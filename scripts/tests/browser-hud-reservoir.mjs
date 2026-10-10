@@ -64,17 +64,29 @@ try {
   const geometry=await page.evaluate(()=>{const r=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};return {exp:r('.hud-m button[aria-label^="Doświadczenie"]'),portrait:r('.hud-av'),life:r('.hud-heal'),camera:r('.hud-b1'),bike:r('.hud-rower')};});
   assert(geometry.exp.x<geometry.portrait.x&&geometry.portrait.x<geometry.life.x&&geometry.life.x<geometry.camera.x&&geometry.camera.x<geometry.bike.x);
   for(const r of Object.values(geometry)){assert(r.width>=44&&r.height>=44);}
+  assert(Math.abs(geometry.life.x+geometry.life.width/2-width/2)<=.6,'Life tank is centred on the screen');
   assert(geometry.life.height>geometry.camera.height&&geometry.life.width>geometry.camera.width);
   await page.screenshot({path:`${artifacts}/hud-v6-${name}.png`});
   await page.locator('.hud-rower').click();assert.equal(await page.locator('.hud-rower').getAttribute('aria-pressed'),'true');
   await page.locator('.hud-rower').click();assert.equal(await page.locator('.hud-rower').getAttribute('aria-pressed'),'false');
   await page.evaluate(()=>{window.__gear.bag.push({item:'hulajnoga_parowa'});window.__game.scene.getScene('game').emitHud();});
   await page.waitForFunction(()=>!document.querySelector('.hud-hulajnoga').hidden);
-  const both=await page.locator('.hud-m').boundingBox();assert(both.x>=0&&both.x+both.width<=width+.1,'Two vehicles fit');
+  const both=await page.locator('.hud-m').boundingBox();assert(both.x>=0&&both.x+both.width<=width+.1,'Selected vehicle fits');
+  const lifeBoth=await page.locator('.hud-heal').boundingBox();assert(Math.abs(lifeBoth.x+lifeBoth.width/2-width/2)<=.6,'Owning both vehicles must not move the life tank');
+  assert(await page.locator('.hud-rower').isHidden(),'Scooter takes precedence over the bicycle');
+  assert.equal(await page.locator('.hud-vehicle:visible').count(),1,'Only one vehicle socket');
   await page.locator('.hud-hulajnoga').click();assert.equal(await page.locator('.hud-hulajnoga').getAttribute('aria-pressed'),'true');
   await page.screenshot({path:`${artifacts}/hud-v6-${name}-both.png`});
+  await page.locator('.hud-hulajnoga').click();assert.equal(await page.locator('.hud-hulajnoga').getAttribute('aria-pressed'),'false');
+  await page.evaluate(()=>{window.__gear.bag=[{item:'hulajnoga_parowa'}];window.__game.scene.getScene('game').emitHud();});
+  assert(await page.locator('.hud-hulajnoga').isEnabled());
   await page.evaluate(()=>{window.__gear.bag=[];window.__game.scene.getScene('game').emitHud();});
-  await page.waitForFunction(()=>document.querySelector('.hud-rower').hidden&&document.querySelector('.hud-hulajnoga').hidden);
+  await page.waitForFunction(()=>!document.querySelector('.hud-rower').hidden&&document.querySelector('.hud-rower').disabled&&document.querySelector('.hud-hulajnoga').hidden);
+  assert.equal(await page.locator('.hud-vehicle:visible').count(),1);
+  assert.equal(await page.locator('.hud-rower').getAttribute('aria-pressed'),'false');
+  const dim=await page.locator('.hud-rower img').evaluate(im=>Number(getComputedStyle(im).opacity));assert(dim<.4,'Inactive bicycle is dimmed');
+  await page.screenshot({path:`${artifacts}/hud-v6-${name}-no-vehicle.png`});
+  const lifeAlone=await page.locator('.hud-heal').boundingBox();assert(Math.abs(lifeAlone.x+lifeAlone.width/2-width/2)<=.6,'Removing vehicles must not move the life tank');
   await page.locator('.hud-av').click();await page.locator('#character').waitFor({state:'visible'});await page.keyboard.press('Escape');await page.locator('#character').waitFor({state:'hidden'});
   await page.waitForTimeout(100);
   await page.locator('.hud-b1').click();await page.waitForFunction(()=>document.querySelector('#photo')||[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Zapisz')));
@@ -92,6 +104,7 @@ try {
   if(name==='phone'){
    await page.setViewportSize({width:844,height:390});
    const rotated=await page.locator('.hud-m').boundingBox();assert(rotated.x>=0&&rotated.x+rotated.width<=844);
+   const lifeRotated=await page.locator('.hud-heal').boundingBox();assert(Math.abs(lifeRotated.x+lifeRotated.width/2-422)<=.6,'Life tank stays centred after rotation');
    await page.screenshot({path:`${artifacts}/hud-v6-phone-landscape.png`});
   }
   assert.deepEqual(errors,[]);

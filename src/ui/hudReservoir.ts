@@ -9,6 +9,7 @@ type Parts = {
 type Portrait = { src: CanvasImageSource; sx: number; sy: number; sw: number; sh: number } | null;
 const BASE = `${import.meta.env.BASE_URL || '/'}hud/v6/`;
 const HEIGHT = 94;
+const LIFE_X = 136;
 
 /** Compact TEST HUD: EXP → portrait → clickable life tank → camera → owned vehicles. */
 export function createReservoirHud(p: Parts) {
@@ -23,11 +24,17 @@ export function createReservoirHud(p: Parts) {
   canvas.style.cssText = 'pointer-events:none;image-rendering:auto';
   p.m.prepend(canvas);
   const c = canvas.getContext('2d')!;
+  // A small rendering grid makes only the tank look like the pixel world.
+  // The accepted portrait/camera/vehicle masters retain their existing detail.
+  const tankCanvas = document.createElement('canvas');
+  tankCanvas.width = 48; tankCanvas.height = 60;
+  const tankContext = tankCanvas.getContext('2d')!;
   const images: Record<string, HTMLImageElement> = {};
   let last: HudView | null = null, alive = true;
   let fallback: Portrait = null, portrait: HTMLImageElement | null = null;
   let pendingPortrait: HTMLImageElement | null = null, heroId = '';
-  let s = 1, dpr = 1, width = 220;
+  let s = 1, dpr = 1;
+  const width = 267;
   let vehicles: HTMLButtonElement[] = [];
 
   const load = (name: string, url: string) => {
@@ -39,6 +46,8 @@ export function createReservoirHud(p: Parts) {
   load('camera', BASE + 'aparat.webp');
   load('apple', `${import.meta.env.BASE_URL || '/'}hud/v5/jablko.png`);
   load('potion', `${import.meta.env.BASE_URL || '/'}hud/v5/mikstura.png`);
+  load('pipes', `${import.meta.env.BASE_URL || '/'}hud/v5/rurki.png`);
+  load('gear', `${import.meta.env.BASE_URL || '/'}swiat/ozdoby/zebatka.png`);
   // The approved vehicle art is requested only when that vehicle is in the backpack.
 
   const removers: (() => void)[] = [];
@@ -67,10 +76,11 @@ export function createReservoirHud(p: Parts) {
     dpr = window.devicePixelRatio || 1;
     s = window.innerWidth >= 900 && !window.matchMedia('(pointer: coarse)').matches ? 1.1 : 1;
     vehicles = [p.vehicles.rower, p.vehicles.hulajnoga].filter(b => !b.hidden);
-    width = 220 + vehicles.length * 45;
-    const right = Math.max(4, Math.min(12, (window.innerWidth - width * s) / 2));
+    // One fixed vehicle socket; inventory/availability selection lives in hud.ts.
+    // Its inactive bicycle placeholder keeps the life tank's anchor unchanged.
+    const left = Math.round((window.innerWidth / 2 - LIFE_X * s) * dpr) / dpr;
     Object.assign(p.m.style, {
-      left: 'auto', right: `${right}px`, bottom: 'calc(8px + env(safe-area-inset-bottom))',
+      left: `${left}px`, right: 'auto', bottom: 'calc(8px + env(safe-area-inset-bottom))',
       width: `${width * s}px`, height: `${HEIGHT * s}px`, transform: '',
     });
     const w = Math.round(width * s * dpr), h = Math.round(HEIGHT * s * dpr);
@@ -79,11 +89,11 @@ export function createReservoirHud(p: Parts) {
     at(av, 54, 38, 44, 44);
     at(p.avPic, 55, 39, 42, 42);
     // Life is the biggest button, and the overlapping healing bottle belongs to it.
-    at(p.heal, 98, 0, 77, 94);
+    at(p.heal, LIFE_X - 77 / 2, 0, 77, 94);
     p.heal.style.borderRadius = '35%';
     at(camera, 175, 38, 44, 44);
-    vehicles.forEach((b, i) => {
-      at(b, 220 + i * 45, 38, 44, 44);
+    vehicles.forEach(b => {
+      at(b, 220, 38, 44, 44);
       const im = b.querySelector('img')!;
       Object.assign(im.style, { left: `${3 * s}px`, top: `${3 * s}px`, width: `${38 * s}px`, height: `${38 * s}px`, imageRendering: 'auto' });
       const wanted = b === p.vehicles.rower ? BASE + 'velocyped.webp' : `${import.meta.env.BASE_URL || '/'}items/hulajnoga_parowa.png`;
@@ -110,16 +120,34 @@ export function createReservoirHud(p: Parts) {
     c.beginPath(); c.roundRect(x, y, w, h, r);
   }
   function pipe(x: number, end: number) {
+    const im = images.pipes;
+    if (im?.complete && im.naturalWidth) {
+      c.save(); c.imageSmoothingEnabled = false;
+      // Repeat the original five-pixel rail, preserving its brass highlights.
+      for (let at = x; at < end; at += 8) {
+        const n = Math.min(8, end - at);
+        c.drawImage(im, 146, 54, n, 7, at, 57, n, 7);
+      }
+      c.restore(); return;
+    }
     c.fillStyle = '#251919'; c.fillRect(x, 58, end - x, 5);
     c.fillStyle = '#b78643'; c.fillRect(x, 59, end - x, 3);
     c.fillStyle = '#f5d088'; c.fillRect(x, 59, end - x, 1);
   }
-  function frame(x: number, active = false) {
-    c.beginPath(); c.arc(x, 60, 21, 0, Math.PI * 2);
+  function frame(x: number, y = 60, active = false) {
+    // Existing world cog, with the accepted artwork sitting over its centre.
+    c.save(); c.imageSmoothingEnabled = false;
+    pic('gear', x - 24, y - 24, 48, 48);
+    c.restore();
+    c.beginPath(); c.arc(x, y, 19, 0, Math.PI * 2);
     c.fillStyle = 'rgba(37,25,24,.72)'; c.fill();
     c.strokeStyle = active ? '#fff0a6' : metal(); c.lineWidth = active ? 2.5 : 1.5; c.stroke();
   }
   function tank(v: HudView) {
+    const c = tankContext;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, 48, 60);
+    c.setTransform(2 / 3, 0, 0, 2 / 3, -100 * 2 / 3, 0);
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     // Artwork is an empty glass shell; the actual life and bonus fluid remain independent.
     c.save();
     c.beginPath(); c.ellipse(136, 55, 31, 28, 0, 0, Math.PI * 2); c.clip();
@@ -142,8 +170,17 @@ export function createReservoirHud(p: Parts) {
       c.beginPath(); c.moveTo(105, top + 1); c.quadraticCurveTo(135, top - 1, 166, top + 1); c.stroke();
     }
     c.restore();
-    pic('tank', 100, 0, 72, 90);
+    const shell = images.tank;
+    if (shell?.complete && shell.naturalWidth) c.drawImage(shell, 100, 0, 72, 90);
+    // Enlarge shell and real fluid together on the same pixel grid.
+    const art = canvas.getContext('2d')!;
+    art.save(); art.imageSmoothingEnabled = false;
+    art.drawImage(tankCanvas, 100, 0, 72, 90); art.restore();
     // Small overlapping bottle: the selected healing supply, not another action.
+    // Keep the smaller supply icon/label at their existing readable resolution.
+    supply(v);
+  }
+  function supply(v: HudView) {
     c.save(); c.globalAlpha = v.noHeal ? .55 : 1;
     rounded(148, 59, 25, 25, 7); c.fillStyle = '#342725'; c.fill();
     c.strokeStyle = metal(); c.lineWidth = 2; c.stroke();
@@ -174,7 +211,11 @@ export function createReservoirHud(p: Parts) {
     c.fillStyle = metal(); c.fillRect(2, 52, 4, 16); c.fillRect(43, 52, 4, 16);
     frame(76); frame(197);
     tank(v); pic('camera', 177, 40, 40, 40);
-    vehicles.forEach((b, i) => frame(242 + i * 45, b.getAttribute('aria-pressed') === 'true'));
+    vehicles.forEach(b => {
+      c.save(); c.globalAlpha = b.disabled ? .35 : 1;
+      frame(242, 60, b.getAttribute('aria-pressed') === 'true');
+      c.restore();
+    });
   }
   function paintAvatar() {
     const cv = p.avPic, n = Math.max(1, Math.round(42 * s * dpr));
