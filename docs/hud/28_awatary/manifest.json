@@ -1,0 +1,487 @@
+{
+  "date": "2026-10-10",
+  "status": "artwork proposal, not integrated",
+  "count": 25,
+  "portraits": [
+    {
+      "number": 1,
+      "savedIndex": 0,
+      "heroId": "listaa",
+      "sourceSheet": "public/postacie/lista25_01.png",
+      "portrait": "portrety/postac_01.png",
+      "original": "pierwowzory/postac_01.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "f6c24ad7f4769614383214d3093a394ec650a120c70d9fd7841343c3cf7136b8",
+      "visibleBoundsAlpha16": [
+        48,
+        31,
+        1236,
+        1232
+      ]
+    },
+    {
+      "number": 2,
+      "savedIndex": 1,
+      "heroId": "listab",
+      "sourceSheet": "public/postacie/lista25_02.png",
+      "portrait": "portrety/postac_02.png",
+      "original": "pierwowzory/postac_02.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "5229b7da6465eff1eefc71449307b0979de2cde1787bab68074fcb07bd32b9ba",
+      "visibleBoundsAlpha16": [
+        0,
+        61,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 3,
+      "savedIndex": 2,
+      "heroId": "listac",
+      "sourceSheet": "public/postacie/lista25_03.png",
+      "portrait": "portrety/postac_03.png",
+      "original": "pierwowzory/postac_03.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "6a7d18b43555f0036ea026918bbafd8e57b6d482799f2b143e6bf01628e5999e",
+      "visibleBoundsAlpha16": [
+        8,
+        0,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 4,
+      "savedIndex": 3,
+      "heroId": "listad",
+      "sourceSheet": "public/postacie/lista25_04.png",
+      "portrait": "portrety/postac_04.png",
+      "original": "pierwowzory/postac_04.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "9acd15fab11a5f24df9c088d68786cfa35752842d3ac6c3a5851653f1987504d",
+      "visibleBoundsAlpha16": [
+        5,
+        73,
+        1249,
+        1240
+      ]
+    },
+    {
+      "number": 5,
+      "savedIndex": 4,
+      "heroId": "listae",
+      "sourceSheet": "public/postacie/lista25_05.png",
+      "portrait": "portrety/postac_05.png",
+      "original": "pierwowzory/postac_05.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "d9c254defb58df117fd929d43061cc93f1aacf3c6ca9f9e95760964a577de140",
+      "visibleBoundsAlpha16": [
+        69,
+        20,
+        1239,
+        1236
+      ]
+    },
+    {
+      "number": 6,
+      "savedIndex": 5,
+      "heroId": "listaf",
+      "sourceSheet": "public/postacie/lista25_06.png",
+      "portrait": "portrety/postac_06.png",
+      "original": "pierwowzory/postac_06.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "72c60fd77fd941b003d0e0dd73bb5087a568844c6a8ffc66a0aea0a7215d204f",
+      "visibleBoundsAlpha16": [
+        15,
+        46,
+        1254,
+        1248
+      ]
+    },
+    {
+      "number": 7,
+      "savedIndex": 6,
+      "heroId": "listag",
+      "sourceSheet": "public/postacie/lista25_07.png",
+      "portrait": "portrety/postac_07.png",
+      "original": "pierwowzory/postac_07.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "0f16fd4f0af633cd3eba582973f183a880c0cee5a9208bb4b0407921194651dd",
+      "visibleBoundsAlpha16": [
+        7,
+        65,
+        1253,
+        1237
+      ]
+    },
+    {
+      "number": 8,
+      "savedIndex": 7,
+      "heroId": "listah",
+      "sourceSheet": "public/postacie/lista25_08.png",
+      "portrait": "portrety/postac_08.png",
+      "original": "pierwowzory/postac_08.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "ed0079eb997ea76bd2e5df9784e0b58f8f0c2ab66288882c3855c62fae8fc488",
+      "visibleBoundsAlpha16": [
+        21,
+        4,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 9,
+      "savedIndex": 8,
+      "heroId": "listai",
+      "sourceSheet": "public/postacie/lista25_09.png",
+      "portrait": "portrety/postac_09.png",
+      "original": "pierwowzory/postac_09.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "7b9c5a50eb324dc2a8dd518d60117722feb348612d3268ed78882af21fa434e4",
+      "visibleBoundsAlpha16": [
+        33,
+        57,
+        1251,
+        1254
+      ]
+    },
+    {
+      "number": 10,
+      "savedIndex": 9,
+      "heroId": "listaj",
+      "sourceSheet": "public/postacie/lista25_10.png",
+      "portrait": "portrety/postac_10.png",
+      "original": "pierwowzory/postac_10.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "e3fb530b4ba681bf6c3afb158379a89bec03a5f05c7a7c98b6e203924e201843",
+      "visibleBoundsAlpha16": [
+        19,
+        63,
+        1247,
+        1254
+      ]
+    },
+    {
+      "number": 11,
+      "savedIndex": 10,
+      "heroId": "listak",
+      "sourceSheet": "public/postacie/lista25_11.png",
+      "portrait": "portrety/postac_11.png",
+      "original": "pierwowzory/postac_11.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "19db51cf03e4b5aab6f26f3a945c37ffb505fe9cd273490f4629402ec4e98abb",
+      "visibleBoundsAlpha16": [
+        22,
+        52,
+        1240,
+        1254
+      ]
+    },
+    {
+      "number": 12,
+      "savedIndex": 11,
+      "heroId": "listal",
+      "sourceSheet": "public/postacie/lista25_12.png",
+      "portrait": "portrety/postac_12.png",
+      "original": "pierwowzory/postac_12.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "1fcefc3d283edb86226b5359063e9bf4bde4476b1409e9d12878e74802df28b8",
+      "visibleBoundsAlpha16": [
+        0,
+        125,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 13,
+      "savedIndex": 12,
+      "heroId": "listam",
+      "sourceSheet": "public/postacie/lista25_13.png",
+      "portrait": "portrety/postac_13.png",
+      "original": "pierwowzory/postac_13.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "1f1549f2eee5e3f5b347a018c15cdc0abcd778d1db75c0226c837173f26754d3",
+      "visibleBoundsAlpha16": [
+        31,
+        54,
+        1232,
+        1236
+      ]
+    },
+    {
+      "number": 14,
+      "savedIndex": 13,
+      "heroId": "listan",
+      "sourceSheet": "public/postacie/lista25_14.png",
+      "portrait": "portrety/postac_14.png",
+      "original": "pierwowzory/postac_14.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "5e8489ab2158b67c6185493ddbc9cd39a0ea327df695c129bdf9833fdb288fda",
+      "visibleBoundsAlpha16": [
+        55,
+        74,
+        1254,
+        1241
+      ]
+    },
+    {
+      "number": 15,
+      "savedIndex": 14,
+      "heroId": "listao",
+      "sourceSheet": "public/postacie/lista25_15.png",
+      "portrait": "portrety/postac_15.png",
+      "original": "pierwowzory/postac_15.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "18ba997e9861591da0a017cbb6cdcb91bb5534219374759c8f1f9ad56ab65641",
+      "visibleBoundsAlpha16": [
+        25,
+        4,
+        1227,
+        1254
+      ]
+    },
+    {
+      "number": 16,
+      "savedIndex": 15,
+      "heroId": "listap",
+      "sourceSheet": "public/postacie/lista25_16.png",
+      "portrait": "portrety/postac_16.png",
+      "original": "pierwowzory/postac_16.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "3b6d2083d9c9dffd29daa996677545dba548a590ad5dab49d5f84801db691435",
+      "visibleBoundsAlpha16": [
+        11,
+        37,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 17,
+      "savedIndex": 16,
+      "heroId": "listaq",
+      "sourceSheet": "public/postacie/lista25_17.png",
+      "portrait": "portrety/postac_17.png",
+      "original": "pierwowzory/postac_17.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "46b70f3a2d5ac4d8c443b60b8e0bcb4981e0c6a9bdb9caa34ea2bd05d2db665d",
+      "visibleBoundsAlpha16": [
+        61,
+        81,
+        1247,
+        1243
+      ]
+    },
+    {
+      "number": 18,
+      "savedIndex": 17,
+      "heroId": "listar",
+      "sourceSheet": "public/postacie/lista25_18.png",
+      "portrait": "portrety/postac_18.png",
+      "original": "pierwowzory/postac_18.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "a9f0ec77025d0e57d0decb7b7c75aca98f8128462d7f654710bcf52f882cc2a8",
+      "visibleBoundsAlpha16": [
+        65,
+        7,
+        1192,
+        1254
+      ]
+    },
+    {
+      "number": 19,
+      "savedIndex": 18,
+      "heroId": "listas",
+      "sourceSheet": "public/postacie/lista25_19.png",
+      "portrait": "portrety/postac_19.png",
+      "original": "pierwowzory/postac_19.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "242e206d64ee555cafdd2ece6988809f8b53506ab89390a1fdc0649145f4426a",
+      "visibleBoundsAlpha16": [
+        7,
+        25,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 20,
+      "savedIndex": 19,
+      "heroId": "listat",
+      "sourceSheet": "public/postacie/lista25_20.png",
+      "portrait": "portrety/postac_20.png",
+      "original": "pierwowzory/postac_20.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "283df1c69a2cfef10e4ed06ca2b6bd12676a0e3df505c56bca1b4feda1d9e76a",
+      "visibleBoundsAlpha16": [
+        0,
+        88,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 21,
+      "savedIndex": 20,
+      "heroId": "listau",
+      "sourceSheet": "public/postacie/lista25_21.png",
+      "portrait": "portrety/postac_21.png",
+      "original": "pierwowzory/postac_21.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "dd98987ba2027a6776048d6ad68ecb7d69a43ee82d172dddcc8bb91d48cd8de1",
+      "visibleBoundsAlpha16": [
+        59,
+        0,
+        1225,
+        1254
+      ]
+    },
+    {
+      "number": 22,
+      "savedIndex": 21,
+      "heroId": "listav",
+      "sourceSheet": "public/postacie/lista25_22.png",
+      "portrait": "portrety/postac_22.png",
+      "original": "pierwowzory/postac_22.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "da2c7a86a3623fc3fce3b91648aad0e5204988e859ef1785a083aa721bc8960a",
+      "visibleBoundsAlpha16": [
+        17,
+        55,
+        1252,
+        1254
+      ]
+    },
+    {
+      "number": 23,
+      "savedIndex": 22,
+      "heroId": "listaw",
+      "sourceSheet": "public/postacie/lista25_23.png",
+      "portrait": "portrety/postac_23.png",
+      "original": "pierwowzory/postac_23.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "da748707b32150993c3319b4e26eb9c85d3b100cf2674c65c09bf7ae4b08e265",
+      "visibleBoundsAlpha16": [
+        20,
+        30,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 24,
+      "savedIndex": 23,
+      "heroId": "listax",
+      "sourceSheet": "public/postacie/lista25_24.png",
+      "portrait": "portrety/postac_24.png",
+      "original": "pierwowzory/postac_24.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "9bd1c757eeff314f125fd07ea5adad184c9847273adc7b25d024c3ffca63677d",
+      "visibleBoundsAlpha16": [
+        38,
+        44,
+        1254,
+        1254
+      ]
+    },
+    {
+      "number": 25,
+      "savedIndex": 24,
+      "heroId": "listay",
+      "sourceSheet": "public/postacie/lista25_25.png",
+      "portrait": "portrety/postac_25.png",
+      "original": "pierwowzory/postac_25.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "d3e6613fd5b576da9b9cee8a354c216e10035d3ac4f77303de4ce8d02c5a78cd",
+      "visibleBoundsAlpha16": [
+        23,
+        10,
+        1254,
+        1254
+      ]
+    }
+  ],
+  "icons": [
+    "ikony/aparat.png",
+    "ikony/velocyped.png"
+  ],
+  "hudSketch": "hud_uproszczony_szkic.png"
+}
