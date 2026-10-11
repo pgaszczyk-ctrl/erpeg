@@ -1,8 +1,8 @@
-import { TEST } from '../version';
 import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
 const hudStyle = new URLSearchParams(location.search).get('hud');
-const newMachine = TEST && hudStyle !== 'old';
+/** The steampunk boiler HUD everywhere – test, demo and the ordinary game (owner, 11 Oct 2026: „nie chcę starego huda”); `?hud=old` / `?hud=v5` stay only for comparison. */
+const newMachine = hudStyle !== 'old';
 const reservoir = newMachine && hudStyle !== 'v5';
 
 // The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):

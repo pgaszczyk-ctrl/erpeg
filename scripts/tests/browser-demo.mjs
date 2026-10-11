@@ -119,7 +119,7 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  await choose(0);
  await page.screenshot({path:`work/demo-${name}-targi.png`});
  const gazeciarz=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');const f=[...s.folk.active].find(f=>f.role==='gazeciarz'&&f.sprite?.visible);return f?Math.hypot(f.x-s.player.x,f.y-s.player.y)/1.92:null;});
- assert(gazeciarz!==null&&gazeciarz<20,`A newsboy must stand near the wake-up spot: ${gazeciarz}`);
+ assert(gazeciarz!==null&&gazeciarz<60,`A newsboy must stand near the wake-up spot: ${gazeciarz}`);
  console.log(name,'Targi ready',art);
  const speed=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return s.player.speed;});
  assert(Math.abs(speed-(70/3.6)*1.92)<.001,`Awake speed must be ordinary level-one speed: ${speed}`);

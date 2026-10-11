@@ -42,8 +42,10 @@ export const SEN = {
 /** Actual walking distance before the invitation to create a character; no time limit. */
 export const JAWA = {
   koniecM: 400,
-  /** A newsboy stands this far from where the hero wakes up (m). */
+  /** A newsboy stands this far from where the hero wakes up (m), when `gazeciarz` below is not free. */
   gazeciarzM: 9,
+  /** …and preferably here: on the round paved square in front of Targi Lublin, between its gas lamps (owner, 11 Oct 2026). */
+  gazeciarz: { lat: 51.23464, lon: 22.56560 },
 };
 
 export const DEMO_TEKSTY = {
@@ -51,9 +53,8 @@ export const DEMO_TEKSTY = {
   przebudzenie:
     'Gdzie ja jestem…? I kim ja właściwie jestem?\n\nZnam to miejsce… Te mury na wzgórzu… Aha, to Wawel! Jestem w Krakowie.\n\nBurczy mi w brzuchu. Może znajdę tu coś do jedzenia… A ten miecz w ręku to co to? Wygląda na porządny.',
   celZbierz: (masz: number, trzeba: number) => `Zbierz owoce z drzew – uderz drzewo mieczem (${masz}/${trzeba})`,
-  celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu (H)',
-  jablkaTytul: '🍎 Zjedz zebrane jabłka',
-  jablka: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij tego przycisku.',
+  celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu',
+  jablka: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij baniaka życia z jabłkiem.',
   /** Added on a computer (no touch screen). */
   jablkaKlawisz: ' Możesz też nacisnąć H.',
   olsnienie: 'OOooo, już wiem kim jestem!',

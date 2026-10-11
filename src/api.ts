@@ -171,7 +171,7 @@ export const api = {
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
-  /** Assigns a character (name + code) to the signed-in Google account (max 3 alive). */
+  /** Assigns a character (name + code) to the signed-in account (no limit since 11 Oct 2026). */
   linkGoogle: (name: string, code: string, token: string) => rpc<{ ok?: boolean }>('link_google', { p_name: name, p_idik: code }, false, token),
   /** The Google account's characters, most recently played first. */
   myCharacters: (token: string) =>

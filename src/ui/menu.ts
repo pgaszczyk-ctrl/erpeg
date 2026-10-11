@@ -24,7 +24,6 @@ import { showLoginMap, beginMapIntro } from './loadingMap';
 
 const DEFAULT_START = 'Plac Zamkowy';
 /** Living characters per account (the server checks it too). */
-const GOOGLE_LIMIT = 3;
 
 let root: HTMLDivElement | null = null;
 
@@ -183,9 +182,6 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? city.findAnyStart(place, DEFAULT_START);
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę, ulicę i numer albo miejscowość, np. „Kościelna 5, Garbów”.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
-          if (token && (await api.myCharacters(token)).filter((c) => !c.dead).length >= GOOGLE_LIMIT) {
-            throw new Error(`Na jednym koncie mogą być najwyżej ${GOOGLE_LIMIT} żywe postacie. Odznacz przypisanie albo użyj innego konta.`);
-          }
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
@@ -307,7 +303,6 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         const token = await googleToken();
         if (!token) return load(undefined, 'Sesja wygasła – zaloguj się ponownie.');
         const chars = await api.myCharacters(token);
-        const alive = chars.filter((c) => !c.dead).length;
         const row = (c: (typeof chars)[number], first = false) => {
           const lvl = TRUDNOSCI.find((t) => t.wiek === c.age)?.nazwa ?? '';
           const b = el('button', { type: 'button', className: `m-btn m-char${first ? ' m-primary' : ''}` }, [
@@ -317,9 +312,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           b.onclick = () => busy(b, err, () => login(c.name, c.idik), tx('Wchodzisz do gry…', 'Entering the game…'));
           return b;
         };
-        const newBtn = el('button', { type: 'button', className: 'm-btn', disabled: alive >= GOOGLE_LIMIT }, [
-          alive >= GOOGLE_LIMIT ? `➕ Nowa postać (limit ${GOOGLE_LIMIT} żywych na konto)` : '➕ Nowa postać',
-        ]);
+        const newBtn = el('button', { type: 'button', className: 'm-btn' }, ['➕ Nowa postać']);
         newBtn.onclick = newCharacter;
         const [lastOne, ...rest] = chars;
         list.replaceChildren(...(lastOne ? [row(lastOne, true)] : []), newBtn, ...rest.map((c) => row(c)));

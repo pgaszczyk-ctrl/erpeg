@@ -163,6 +163,11 @@ export class DemoRun {
   /** A newsboy a few steps from the hero after waking up: something to be curious about at once. */
   private placeNewsboy() {
     const p = this.host.player;
+    const at = this.host.city.fromLatLon(JAWA.gazeciarz.lat, JAWA.gazeciarz.lon);
+    if (this.host.city.isFree(at.x, at.y, 4, 4) && Math.hypot(at.x - p.x, at.y - p.y) < 80 * PX_PER_M) {
+      this.host.newsboy(at.x, at.y);
+      return;
+    }
     const m = JAWA.gazeciarzM * PX_PER_M;
     for (const [dx, dy] of [[1, 0.3], [-1, 0.3], [0.4, 1], [-0.4, 1], [0.6, -0.8], [-0.6, -0.8]]) {
       const x = p.x + dx * m, y = p.y + dy * m;
