@@ -32,3 +32,11 @@ polecenia i wytyczne. Właściciel gry nie musi niczego przepisywać: wystarczy,
 
 Na początku każdej pracy przejrzyj `od-grafika/` i `od-projektanta/`: pliki ze statusem `nowe` są do przeczytania,
 po wdrożeniu zmień im status i napisz krótką odpowiedź w `do-…/`.
+
+## Numer wiadomości i osobne stany — decyzja właściciela 2026-10-11
+
+Każda nowa wiadomość ma unikalne ID: numer zamówienia + P/G/D + kolejny trzycyfrowy numer (P programista, G grafik, D projektant), np. 32-P001, 32-G002. Sprawdź zajęte numery przed użyciem. ID dopisz też do nazwy pliku. Odpowiedź wskazuje konkretne ID w polu „Odpowiedź na”. Zmiana ustaleń to nowa wiadomość z nowym ID.
+
+Dodatkowe obowiązkowe pola nagłówka: ID, Odpowiedź na, Do, Akceptacja, Wykonanie. Dotychczasowe Od/Status/Dotyczy pozostają. Status określa obsługę wiadomości, Akceptacja decyzję właściciela (oczekuje/zaakceptowane/odrzucone wraz z datą i zakresem), Wykonanie faktycznie przygotowane lub wdrożone elementy. Wykonanie grafiki i wdrożenie w grze raportuj osobno. Brak odpowiedzi nie oznacza akceptacji. Nie oznaczaj całego zadania jako zrobione po samym przeczytaniu wiadomości.
+
+Odpowiedź programisty potwierdza ID wiadomości, wersję paczki, konkretne wdrożone elementy i wynik sprawdzenia. Przy wielu elementach dodaj tabelę ich stanów. Przykład aktualnej korespondencji: od-grafika/2026-10-11_32-G002_gazeciarz.md.
