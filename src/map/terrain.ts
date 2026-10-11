@@ -118,4 +118,42 @@ export class Terrain {
     const grade = dh / 6;
     return grade > 0 ? 1 / (1 + GORY.podejscie * grade) : 1 / (1 + GORY.zejscie * -grade);
   }
+
+  /**
+   * Mountain zone at a point (owner, 11 Oct 2026, Triglav): 0 = below the treeline, 1 = above it (no trees,
+   * bushes or benches; forest/park/scrub look like an alpine meadow), 2 = above the rock line (bare rock/scree
+   * wherever there is no road, water or square). Both lines wander ± GORY.granicaRozrzut m with a soft noise
+   * (in metres, so every chunk agrees). NaN heights (not loaded) count as 0.
+   */
+  zoneAt(x: number, y: number): 0 | 1 | 2 {
+    const h = this.zoneHeight(x, y);
+    return h >= GORY.skalyNadLasem ? 2 : h >= 0 ? 1 : 0;
+  }
+
+  /**
+   * Height over the treeline at a point (m; negative below it, NaN where not loaded): the real height minus the
+   * treeline for its latitude (GORY.granicaLasu at 46°, granicaLasuNaStopien lower per degree north), shifted by
+   * a soft noise of ± GORY.granicaRozrzut. Rock from GORY.skalyNadLasem up.
+   */
+  zoneHeight(x: number, y: number) {
+    const h = this.heightAt(x, y);
+    if (!(h > GORY.granicaLasuMin - GORY.granicaRozrzut)) return h - GORY.granicaLasuMin - GORY.granicaRozrzut - 1;
+    const { lat } = this.toLatLon(x, y);
+    const line = Math.min(GORY.granicaLasuMax, Math.max(GORY.granicaLasuMin, GORY.granicaLasu - (Math.abs(lat) - 46) * GORY.granicaLasuNaStopien));
+    return h - line + (noise(x / this.pxPerM / 90, y / this.pxPerM / 90) * 2 - 1) * GORY.granicaRozrzut;
+  }
+}
+
+/** Smooth value noise 0..1 on a unit grid (bilinear between hashed corners, smoothstep). */
+function noise(x: number, y: number) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const h = (a: number, b: number) => {
+    let v = (a * 374761393 + b * 668265263) | 0;
+    v = Math.imul(v ^ (v >>> 13), 1274126177);
+    return ((v ^ (v >>> 16)) >>> 0) / 4294967296;
+  };
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const top = h(ix, iy) * (1 - sx) + h(ix + 1, iy) * sx;
+  const bottom = h(ix, iy + 1) * (1 - sx) + h(ix + 1, iy + 1) * sx;
+  return top * (1 - sy) + bottom * sy;
 }

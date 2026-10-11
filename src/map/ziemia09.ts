@@ -67,6 +67,8 @@ export interface Zlecenie {
   mozaiki?: Mozaika09[];
   /** Road-side pipes on test, planned once when painting a chunk. */
   rury?: Rura09[];
+  /** Mountains (MapRenderer strefyGor): heights over the treeline (m) on a grid of `b` generator px (w × w corners from the kind map's corner); no trees from `las` up. */
+  strefy?: { b: number; w: number; h: Float32Array; las: number };
 }
 
 /** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
@@ -290,7 +292,16 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     return x >= r[0] && y >= r[1] && x <= r[2] && y <= r[3] && wPierscieniu(b.r, x + 0.5, y + 0.5);
   });
   const OD_SCIAN = 12;
-  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajW, (x, y) =>
+  // Above the treeline (strefy) no tree or bush grows.
+  const st = z.strefy;
+  const nadLasem = (x: number, y: number) => {
+    if (!st) return false;
+    const fx = Math.max(0, Math.min(st.w - 1.001, (x - X0 + MARGINES) / st.b)), fy = Math.max(0, Math.min(st.w - 1.001, (y - Y0 + MARGINES) / st.b));
+    const i = Math.floor(fx), j = Math.floor(fy), ax = fx - i, ay = fy - j, q = j * st.w + i;
+    return (st.h[q] * (1 - ax) + st.h[q + 1] * ax) * (1 - ay) + (st.h[q + st.w] * (1 - ax) + st.h[q + st.w + 1] * ax) * ay >= st.las;
+  };
+  const rodzajDrzew = st ? (x: number, y: number) => (nadLasem(x, y) ? null : rodzajW(x, y)) : rodzajW;
+  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, (x, y) =>
     !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
   const wyrzuty: ZrodloPary[] = [];

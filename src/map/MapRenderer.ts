@@ -12,7 +12,8 @@ import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
 import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
-import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, type Budynek09, type Pole09, type Rodzaj09 } from './ziemia09';
+import type { Terrain } from './terrain';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
 import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
@@ -781,6 +782,7 @@ export class MapRenderer {
       }
       g.fill('evenodd');
     } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
+    const strefy = m.terrain ? strefyGor(m.terrain, kinds, x0, y0) : undefined;
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
     const tramwaje: number[][] = [];
@@ -845,7 +847,7 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury };
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
@@ -1484,6 +1486,7 @@ export class MapRenderer {
         this.along(l, D.lawka.coM * PX_PER_M, (x, y, ux, uy, side, n) => {
           const bx = x - uy * off * side, by = y + ux * off * side;
           if (!free(bx, by) || m.surfaceAt(bx, by) !== 'trawa' || !m.areaKindsAt(bx, by).includes('park')) return;
+          if (m.terrain && m.terrain.zoneAt(bx, by)) return; // no benches above the treeline (a national park, not a city one)
           this.stand(ctx, 'lawka', bx, by);
           if (n % 2 === 0) this.stand(ctx, 'kosz', bx + 11, by);
         });
@@ -1577,4 +1580,47 @@ export class MapRenderer {
       }
     }
   }
+}
+
+/** Generator px per cell of the mountain zone grid (8 map px ≈ 4 m); heights in between are interpolated. */
+const STREFA_KRATKA = 16;
+/** Above the treeline these grounds turn into an alpine meadow… */
+const NAD_LASEM = new Set<Rodzaj09>(['las_lisciasty', 'las_iglasty', 'park', 'zarosla', 'laka']);
+/** …and above the rock line these into bare rock (roads, water, squares, rails and fields stay). */
+const NAD_SKALAMI = new Set<Rodzaj09>(['trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'zarosla', 'mokradlo']);
+
+/**
+ * Treeline and rock line on a chunk's kind map (heights over the treeline, Terrain.zoneHeight) (owner, 11 Oct 2026: Triglav's summit was a park with trees and benches –
+ * the world map has only the national park there, no rock). Zone heights (Terrain.zoneHeight: real height + a soft
+ * wander) on a STREFA_KRATKA grid, interpolated per pixel so the lines curve. Returns the grid for the worker, which
+ * plants no trees above the treeline; undefined when the chunk is all below it.
+ */
+function strefyGor(t: Terrain, k: { ids: Uint8Array; S: number }, x0: number, y0: number) {
+  const { ids, S } = k;
+  const B = STREFA_KRATKA;
+  const w = Math.ceil(S / B) + 1;
+  const h = new Float32Array(w * w);
+  let top = -Infinity;
+  for (let j = 0; j < w; j++)
+    for (let i = 0; i < w; i++) {
+      const v = t.zoneHeight(x0 + (i * B - MARGINES) / GEN_DOTS, y0 + (j * B - MARGINES) / GEN_DOTS);
+      h[j * w + i] = Number.isNaN(v) ? -1e4 : v;
+      if (v > top) top = v;
+    }
+  if (!(top >= 0)) return undefined;
+  const LAS = RODZAJE.map((r) => NAD_LASEM.has(r));
+  const SKALA = RODZAJE.map((r) => NAD_SKALAMI.has(r));
+  const TRAWA = RODZAJE.indexOf('trawa'), SKALA_ID = RODZAJE.indexOf('skala');
+  for (let y = 0; y < S; y++) {
+    const fy = y / B, j = Math.floor(fy), ay = fy - j;
+    for (let x = 0; x < S; x++) {
+      const fx = x / B, i = Math.floor(fx), ax = fx - i, q = j * w + i;
+      const v = (h[q] * (1 - ax) + h[q + 1] * ax) * (1 - ay) + (h[q + w] * (1 - ax) + h[q + w + 1] * ax) * ay;
+      if (v < 0) continue;
+      const p = y * S + x, r = ids[p];
+      if (v >= GORY.skalyNadLasem && SKALA[r]) ids[p] = SKALA_ID;
+      else if (LAS[r]) ids[p] = TRAWA;
+    }
+  }
+  return { b: B, w, h, las: 0 };
 }

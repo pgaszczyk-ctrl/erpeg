@@ -5,6 +5,22 @@
 
 export const GORY = {
   /**
+   * Granica lasu (właściciel 11.10.2026: na Triglavie rosły drzewa i stały ławki, bo mapa świata ma tam tylko
+   * „park” narodowy, a skał wcale): powyżej niej nie rośnie żadne drzewo ani krzak, nie ma ławek, a las, park
+   * i zarośla wyglądają jak hala (trawa). Granica zależy od szerokości geograficznej: tyle metrów n.p.m. na 46°
+   * (Alpy, ~2000 m)…
+   */
+  granicaLasu: 2000,
+  /** …o tyle metrów niżej na każdy stopień dalej na północ (wyżej na południe): Tatry (49°) ~1520 m, Pireneje ~2500 m. */
+  granicaLasuNaStopien: 150,
+  /** Granica lasu nie niżej i nie wyżej niż (m n.p.m.). */
+  granicaLasuMin: 400,
+  granicaLasuMax: 3900,
+  /** Tyle metrów nad granicą lasu teren bez drogi, wody i placu wygląda jak skała/piarg, nawet gdy mapa nic tam nie zaznacza. */
+  skalyNadLasem: 400,
+  /** Obie granice nie biegną po poziomicy: przesuwają się w terenie o ± tyle metrów (szum), jak prawdziwe. */
+  granicaRozrzut: 70,
+  /**
    * Od jakiego nachylenia poza szlakiem robi się „stromo” (przewyższenie na metr: 0.45 to ok. 24°):
    * dalej da się iść, ale bardzo wolno (zgłoszenie 57, właściciel 6.10.2026: łąka pod skocznią w Zakopanem
    * wyglądała zwyczajnie, a była ścianą nie do przejścia).
