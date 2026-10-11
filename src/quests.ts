@@ -9,6 +9,7 @@ import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from 
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
+import { REPORTAZ } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
@@ -459,6 +460,47 @@ export function mapMissionForLibrary(city: CityMap, place: CityPlace): Misja | n
     zakonczenie: legacyText(B.zakonczenie),
     nagroda: d * B.monetZaKm,
     doswiadczenie: d * B.expZaKm,
+  };
+}
+
+/**
+ * The newsboy's reporter errand (owner, 11 Oct 2026): go to a place in town (a shop, office, temple…,
+ * else an addressed house) and write a note there – it finishes on the spot. One per newsboy per login.
+ * `placeId` = 'gazeta:<map>:<x>:<y>' keeps where it was given (newsboys walk around).
+ */
+export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: number; name: string }): Misja | null {
+  const id = `gen-gazeta-${folk.id}-${session.nonce}`;
+  const taken = session.gen[id];
+  if (taken) return taken;
+  const R = REPORTAZ;
+  const r = rng(hash(`${folk.id}:${session.nonce}:gazeta`));
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
+  const inRange = (p: { x: number; y: number }) => { const d = dist(p); return d >= R.odM && d <= R.doM; };
+  const places = city.places.filter((p) => p.name && p.kind !== 'station' && inRange(p.door));
+  let cel: { name: string; x: number; y: number } | null = null;
+  if (places.length) {
+    const p = places[Math.floor(r() * places.length)];
+    cel = { name: p.name, x: p.door.x, y: p.door.y };
+  } else {
+    const houses = city.addressed().filter((b) => b.door && (b.name || b.addresses[0]) && inRange(b.door));
+    if (houses.length) {
+      const b = houses[Math.floor(r() * houses.length)];
+      cel = { name: (b.name || b.addresses[0])!, x: b.door!.x, y: b.door!.y };
+    }
+  }
+  if (!cel) return null;
+  const km = dist(cel) / 1000;
+  const at = city.toLatLon(cel.x, cel.y);
+  const fill = (t: string) => t.replace('{cel}', cel!.name);
+  return {
+    id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name,
+    tytul: fill(R.tytuly[Math.floor(r() * R.tytuly.length)]),
+    opis: fill(R.opisy[Math.floor(r() * R.opisy.length)]),
+    zadanie: { typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: `Spisz notatkę: ${cel.name}`, komunikat: R.komunikat },
+    naMiejscu: true,
+    zakonczenie: R.komunikat,
+    nagroda: Math.max(R.minMonet, Math.round(km * R.monetNaKm)),
+    doswiadczenie: Math.max(R.minExp, Math.round(km * R.expNaKm)),
   };
 }
 

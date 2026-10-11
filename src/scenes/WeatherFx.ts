@@ -77,16 +77,17 @@ export class WeatherFx {
       const x = c.getContext('2d')!;
       const img = x.createImageData(S, S);
       const [cr, cg, cb] = LAMPA.kolor;
-      const half = (LAMPA.stozekStopni * Math.PI) / 180, soft = (15 * Math.PI) / 180;
+      const half = (LAMPA.stozekStopni * Math.PI) / 180, soft = (40 * Math.PI) / 180;
       const st = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
       for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
         const dx = px + 0.5 - h, dy = py + 0.5 - h;
         const r = Math.hypot(dx, dy) / h;
         if (r >= 1) continue;
-        const ring = 0.8 * (1 - st(0, LAMPA.wokol, r));
+        const ring = LAMPA.wokolMoc * (1 - st(0, LAMPA.wokol, r));
         const ang = Math.abs(Math.atan2(dy, dx));
-        const cone = (1 - st(half, half + soft, ang)) * (1 - st(0.35, 1, r)) * 0.95;
-        const v = Math.max(ring, cone) * st(LAMPA.dziura, LAMPA.dziura * 2.2, r);
+        const cone = (1 - st(half, half + soft, ang)) * (1 - st(0.3, 1, r)) * LAMPA.stozekMoc;
+        // A lamp, not a torch: the glow and the light ahead add up softly; only the very middle stays dim over the hero.
+        const v = Math.min(1, ring + cone * (1 - ring)) * (0.25 + 0.75 * st(LAMPA.dziura, LAMPA.dziura * 3, r));
         const k = (py * S + px) * 4;
         img.data[k] = cr; img.data[k + 1] = cg; img.data[k + 2] = cb;
         img.data[k + 3] = Math.round(255 * v);

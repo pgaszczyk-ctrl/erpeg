@@ -14,6 +14,9 @@
 - Keep a short log of everything you changed in `docs/PRZEKAZANIE_chatgpt.md` (date, what, why, files, how it was checked, anything left unfinished). Claude takes the project back from it.
 - Add new facts about the game to `CLAUDE.md` in the same style (one short bullet per feature).
 
+## Mail between agents
+- `docs/poczta/` is where the programmer, the artist and the designer leave each other orders and guidelines (see its README). Check `od-grafika/` and `od-projektanta/` for files with `Status: nowe` before starting work.
+
 ## Server (Supabase project `erpeg`, id iiffchuhrhsjjgmstypx)
 - It is shared by production and the test server: every change there is live for all players at once. Inspect tables before changing them; prefer new functions/columns over altering or dropping existing ones; never delete player data (`players`, `deaths`, saves).
 - Table `players` has RLS on and no policies; all access goes through SECURITY DEFINER RPCs. Keep it that way.

@@ -3,6 +3,7 @@ import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, distToPolyline, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
+import { GAZETA } from '../content/gazeta';
 import { LUDZIE_W_DESZCZU } from '../content/pogoda';
 import { rng } from '../rng';
 import { rownolegla } from '../gen';
@@ -12,7 +13,7 @@ import { Walker } from './FixedNpcs';
 // say hello; some challenge the hero to a duel or accept one (GameScene).
 // They are made per 1 km square near the hero, always the same ones.
 
-export type FolkRole = 'wita' | 'wyzywa' | 'przyjmuje';
+export type FolkRole = 'wita' | 'wyzywa' | 'przyjmuje' | 'gazeciarz';
 
 export interface Folk {
   id: string;
@@ -38,6 +39,8 @@ export interface Folk {
   waiting?: boolean;
   /** An umbrella over the head in the rain (drawn by code until the artist's one). */
   umbrella?: Phaser.GameObjects.Graphics;
+  /** A newsboy's rolled-paper sign over the head. */
+  sign?: Phaser.GameObjects.Image;
 }
 
 /** Night by the phone's clock (fewer people, more monsters). */
@@ -144,8 +147,39 @@ export class Townsfolk {
         });
       }
     }
+    // Newsboys (owner, 11 Oct 2026): in every town, more of them where there are more places.
+    const papers = GAZETA.ilu.find((g) => places >= g.miejsc)?.ile ?? 0;
+    const streets = q.lines.filter((l) => PAVED.has(l.kind) && l.pts.length >= 4 && l.pts[0] >= box.x0 && l.pts[0] < box.x1 && l.pts[1] >= box.y0 && l.pts[1] < box.y1)
+      .sort((a, b) => lengthM(b) - lengthM(a));
+    const rp = rng(hash(`${this.city.id}:gazeta:${key}`));
+    for (let i = 0; i < papers && streets.length; i++) {
+      const l = streets[Math.min(streets.length - 1, Math.floor(rp() * Math.min(streets.length, 6)))];
+      const walker = new Walker([l.pts], SPEED * 0.9, rp);
+      list.push({
+        id: `${key}:gazeta${i}`, role: 'gazeciarz', walker, x: walker.x, y: walker.y,
+        name: GAZETA.imiona[Math.floor(rp() * GAZETA.imiona.length)],
+        tex: hdOn ? GAZETA.wyglad : `folk${Math.floor(rp() * LOOKS)}`,
+      });
+    }
     this.cells.set(key, list);
     return list;
+  }
+
+  /** A small rolled newspaper drawn by code (until the artist's newsboy, order 32). */
+  private paperTexture() {
+    const key = 'gazeta-znak';
+    if (this.scene.textures.exists(key)) return key;
+    const c = document.createElement('canvas');
+    c.width = 14; c.height = 11;
+    const g = c.getContext('2d')!;
+    const px = (x: number, y: number, w: number, h: number, col: string) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    px(1, 1, 12, 9, '#1e1a24');
+    px(2, 2, 10, 7, '#efe4c4');
+    px(3, 3, 8, 1, '#1e1a24');
+    for (const y of [5, 7]) { px(3, y, 3, 1, '#7a6a55'); px(7, y, 4, 1, '#7a6a55'); }
+    px(2, 2, 10, 1, '#ffffff');
+    this.scene.textures.addCanvas(key, c);
+    return key;
   }
 
   /** The weather changed: people strolling around are made again (fewer and with umbrellas in the rain, or back out after it). */
@@ -156,6 +190,8 @@ export class Townsfolk {
       f.sprite = undefined;
       f.umbrella?.destroy();
       f.umbrella = undefined;
+      f.sign?.destroy();
+      f.sign = undefined;
       this.active.delete(f);
     }
     this.next = 0;
@@ -189,6 +225,8 @@ export class Townsfolk {
         f.sprite = undefined;
         f.umbrella?.destroy();
         f.umbrella = undefined;
+        f.sign?.destroy();
+        f.sign = undefined;
         this.active.delete(f);
       }
       // The rain stopped: umbrellas closed.
@@ -201,11 +239,12 @@ export class Townsfolk {
             if (this.active.has(f) || Math.abs(f.x - px) > NEAR || Math.abs(f.y - py) > NEAR) continue;
             // In the rain fewer people are out (always the same ones stay at home).
             const wet = this.wet();
-            if (wet && (hash(`${f.id}:deszcz`) % 1000) / 1000 >= LUDZIE_W_DESZCZU.ilu && !f.waiting) continue;
+            if (wet && f.role !== 'gazeciarz' && (hash(`${f.id}:deszcz`) % 1000) / 1000 >= LUDZIE_W_DESZCZU.ilu && !f.waiting) continue;
             if (isHd(f.tex)) f.tex = ensureHd(this.scene, f.tex);
             f.sprite = this.scene.add.sprite(f.x, f.y, f.tex, 'down-0').setOrigin(0.5, 0.6);
             if (isHd(f.tex)) fitHd(f.sprite);
             if (wet && (hash(`${f.id}:parasol`) % 1000) / 1000 < LUDZIE_W_DESZCZU.parasol) f.umbrella = this.makeUmbrella(hash(f.id));
+            if (f.role === 'gazeciarz') f.sign = this.scene.add.image(f.x, f.y, this.paperTexture()).setScale(0.5);
             this.active.add(f);
           }
         }
@@ -215,6 +254,7 @@ export class Townsfolk {
     for (const f of this.active) {
       if (f.away || f.gone || !f.sprite) {
         f.umbrella?.setVisible(false);
+        f.sign?.setVisible(false);
         continue;
       }
       const ox = f.x, oy = f.y;
@@ -244,6 +284,8 @@ export class Townsfolk {
       s.setPosition(f.x, f.y).setDepth(f.y).setVisible(!scared && visible(f.x, f.y));
       const canopyY = f.y - s.displayHeight * s.originY + s.displayHeight * 0.3;
       f.umbrella?.setPosition(f.x, canopyY).setDepth(s.depth + 0.5).setAlpha(s.alpha).setVisible(s.visible && s.alpha > 0.5);
+      // The newsboy's paper sign bobs over the head (above the fog like the talk bubbles).
+      f.sign?.setPosition(Math.round(f.x), Math.round(f.y - s.displayHeight * s.originY - 3 + Math.sin(now / 260) * 0.8)).setDepth(1_150_000).setVisible(s.visible);
       if (Math.abs(dx) + Math.abs(dy) < 0.01) {
         s.anims.stop();
         s.setFrame('down-0');

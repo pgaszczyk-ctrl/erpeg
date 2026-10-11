@@ -121,7 +121,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['letters', '📰 Listy'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -142,6 +142,7 @@ function render() {
   else if (tab === 'codes') codes(main);
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
+  else if (tab === 'letters') void lettersTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
   else settings(main);
 }
@@ -782,6 +783,39 @@ async function bugsTab(main: HTMLElement) {
   });
   const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['', 'Decyzja', 'Kiedy', 'Postać', 'Opis', 'Gdzie'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
   main.append(detail, el('div', { className: 'scroll' }, [table]));
+}
+
+/** Letters to the editors from the newsboys (gazeciarze): players' quest ideas – read as ideas only. */
+async function lettersTab(main: HTMLElement) {
+  type Letter = { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; status: string };
+  main.append(el('h2', {}, ['Listy do redakcji']), el('p', { className: 'muted' }, ['Pomysły graczy na zadania i przygody, wysłane u gazeciarza („✉ Do redakcji”). To tylko pomysły – Claude nie robi nic z listem, dopóki sam go nie zlecisz.']));
+  let list: Letter[];
+  try {
+    list = await call<Letter[]>('admin_quest_orders', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  if (!list.length) {
+    main.append(el('p', {}, ['Brak listów.']));
+    return;
+  }
+  const STANY: [string, string][] = [['nowe', '🆕 Nowe'], ['przyjete', '👍 Do zrobienia'], ['zrobione', '✔ Zrobione'], ['odrzucone', '✖ Odrzucone']];
+  const rows = list.map((l) => {
+    const c = l.ctx ?? {};
+    const pick = el('select', { onchange: async () => {
+      await call('admin_quest_order_status', { p_id: l.id, p_status: pick.value });
+      l.status = pick.value;
+    } }, STANY.map(([v, t]) => el('option', { value: v, selected: l.status === v }, [t])));
+    return el('tr', {}, [
+      el('td', {}, [pick]),
+      el('td', {}, [new Date(l.at).toLocaleString('pl-PL')]),
+      el('td', {}, [l.player ?? '—']),
+      el('td', { style: 'white-space: pre-wrap' }, [l.text]),
+      el('td', {}, [`${c.miasto ?? ''} ${c.ulica ?? ''}`]),
+    ]);
+  });
+  main.append(el('div', { className: 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, ['Stan', 'Kiedy', 'Postać', 'List', 'Skąd'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)])]));
 }
 
 function settings(main: HTMLElement) {

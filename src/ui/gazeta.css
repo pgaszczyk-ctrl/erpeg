@@ -1,0 +1,40 @@
+/* The newsboy's paper: the shop window's wood and brass around a newspaper page. */
+#gazeta.gz-screen{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:16px;background:#100b0880;backdrop-filter:blur(2px);font:17px/1.35 'Alegreya Sans','Trebuchet MS',sans-serif}
+#gazeta *{box-sizing:border-box}
+#gazeta .gz-box{position:relative;width:min(860px,100%);max-height:calc(100dvh - 32px);display:flex;padding:12px;border:7px ridge #af813f;border-radius:10px;background:repeating-linear-gradient(0deg,#2c1e14 0 48px,#312217 49px 51px);box-shadow:0 0 0 3px #20150e,inset 0 0 0 3px #17110d,0 12px 50px #0008}
+#gazeta .gz-close{position:absolute;right:-12px;top:-12px;z-index:2;width:40px;height:40px;display:grid;place-items:center;padding:0;color:#f7e2b3;background:#a43628;border:4px ridge #c99b59;border-radius:50%;font:30px/1 serif;cursor:pointer;box-shadow:0 2px #120d08}
+#gazeta .gz-paper{flex:1;min-width:0;overflow:auto;padding:14px 20px 12px;color:#2a2118;background:radial-gradient(ellipse at 30% 20%,#f6eccf,#e9dcb8 70%,#dccba0);border:2px solid #8a6a3c;box-shadow:inset 0 0 30px #a0835455;scrollbar-color:#a07b45 #e2d2aa}
+#gazeta .gz-mast{text-align:center;border-bottom:4px double #2a2118;padding-bottom:6px}
+#gazeta .gz-ears{font-size:13px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #2a211880;padding-bottom:3px}
+#gazeta .gz-mast h2{margin:4px 0 0;font:900 44px/1 'Alegreya','Georgia',serif;letter-spacing:2px;text-transform:uppercase}
+#gazeta .gz-sub{margin:2px 0 0;font-style:italic;font-size:15px}
+#gazeta .gz-tabs{display:flex;gap:6px;margin:8px 0;justify-content:center;flex-wrap:wrap}
+#gazeta .gz-tab{display:flex;gap:6px;align-items:center;min-height:40px;padding:4px 14px;border:2px solid #2a2118;border-radius:3px;background:#efe3c3;color:#2a2118;font:700 16px 'Alegreya Sans',sans-serif;cursor:pointer}
+#gazeta .gz-tab.on{background:#2a2118;color:#f3e6c4}
+#gazeta .gz-tab:focus-visible,#gazeta button:focus-visible,#gazeta textarea:focus-visible{outline:3px solid #b8893b;outline-offset:2px}
+#gazeta .gz-head{margin:6px 0 8px;text-align:center;font:800 22px 'Alegreya','Georgia',serif;text-transform:uppercase;letter-spacing:1px}
+#gazeta .gz-cols{columns:2 260px;column-gap:24px;column-rule:1px solid #2a211860}
+#gazeta .gz-art{break-inside:avoid;margin:0 0 12px}
+#gazeta .gz-art h3{margin:0;font:800 19px/1.15 'Alegreya','Georgia',serif}
+#gazeta .gz-art p{margin:3px 0 0;text-align:justify;hyphens:auto}
+#gazeta .gz-art .gz-date{margin:1px 0 0;font-size:13px;font-style:italic;color:#5a4a36}
+#gazeta .gz-big{padding:10px 14px;border:2px solid #2a2118;background:#f3e9ce}
+#gazeta .gz-big h3{font-size:22px}
+#gazeta .gz-note{font-style:italic;color:#4d3e2c;text-align:center}
+#gazeta .gz-action{display:block;margin:10px auto 4px;min-height:46px;min-width:200px;padding:6px 22px;border:4px ridge #c99b59;border-radius:5px;background:linear-gradient(#f2d28e,#c4984b);color:#271c11;font:800 19px 'Alegreya Sans',sans-serif;cursor:pointer;box-shadow:0 2px #5a3f1c}
+#gazeta .gz-action:disabled{opacity:.5;cursor:default}
+#gazeta .gz-area{width:100%;padding:8px 10px;border:2px solid #2a2118;background:#fbf4df;color:#2a2118;font:17px/1.35 'Alegreya Sans',sans-serif;resize:vertical}
+#gazeta .gz-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#gazeta .gz-row .gz-action{margin:6px 0 0}
+#gazeta .gz-count{font-size:13px;color:#5a4a36}
+#gazeta .gz-foot{margin-top:10px;padding-top:4px;border-top:1px solid #2a211880;font-size:13px;text-align:right;font-style:italic}
+@media (max-width:600px){
+  #gazeta.gz-screen{padding:8px}
+  #gazeta .gz-box{padding:7px;border-width:5px;max-height:calc(100dvh - 16px)}
+  #gazeta .gz-paper{padding:10px 12px}
+  #gazeta .gz-mast h2{font-size:30px}
+  #gazeta .gz-tabs{gap:4px;flex-wrap:nowrap}
+  #gazeta .gz-tab{flex:1 1 0;justify-content:center;gap:3px;padding:4px 3px;font-size:13px;min-width:0}
+  #gazeta .gz-ears{padding-right:26px;font-size:11px}
+  #gazeta .gz-close{right:-6px;top:-6px}
+}

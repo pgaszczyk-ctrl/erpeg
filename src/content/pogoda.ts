@@ -95,14 +95,17 @@ export const LUDZIE_W_DESZCZU = { ilu: 0.5, parasol: 0.45, kolory: [0x2b4f7a, 0x
 export const POSWIATA_BOHATERA = {
   /** Reach of the cone ahead in map px (the hero is ~13 map px tall). */
   zasieg: 70,
-  /** Radius of the glow around the hero, as a share of `zasieg`. */
-  wokol: 0.4,
+  /** Radius of the glow around the hero, as a share of `zasieg` (owner: „to nie latarka tylko lampa” – a soft glow all around). */
+  wokol: 0.6,
+  /** Strength of the glow around vs the light ahead (0..1 of the texture). */
+  wokolMoc: 0.85,
+  stozekMoc: 0.4,
   /** The dark hole over the hero, as a share of `zasieg` (fully lit from `dziura` × 2). */
-  dziura: 0.1,
+  dziura: 0.07,
   /** Half-angle of the cone in degrees (soft edge 15° more). */
-  stozekStopni: 32,
+  stozekStopni: 45,
   kolor: [255, 214, 150] as [number, number, number],
-  moc: 0.5,
+  moc: 0.42,
   zaPogode: 2.5,
   zaNoc: 1,
   zaChmury: 1.5,
@@ -110,5 +113,5 @@ export const POSWIATA_BOHATERA = {
   odCiemnosci: 0.12,
   pelnaPrzy: 0.45,
   /** Flicker like a flame: ± this share of the light. */
-  migotanie: 0.12,
+  migotanie: 0.07,
 };

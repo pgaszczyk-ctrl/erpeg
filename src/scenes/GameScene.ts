@@ -82,11 +82,13 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
+  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
   zadanieOf, stageIndex, stageCount, stageTarget, levelLock, giveStory, takeStory,
   type ResolvedMission, type Place,
 } from '../quests';
-import { api, type Snapshot } from '../api';
+import { api, rpc, offline, type Snapshot } from '../api';
+import { showGazeta } from '../ui/gazeta';
+import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
 import { codeLink } from '../ui/codeCard';
@@ -542,6 +544,15 @@ export class GameScene extends Phaser.Scene {
         if (m.scenariusz.mapId !== this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
         const door = resolvePlace(this.city, m.scenariusz.anchors[0]);
         if (door) this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
+        continue;
+      }
+      // A newsboy's errand: remembered where it was given (newsboys walk around).
+      if (m.placeId?.startsWith('gazeta:')) {
+        const parts = m.placeId.split(':');
+        if (parts.slice(1, -2).join(':') === this.city.id && ['active', 'goal'].includes(missionState(m))) {
+          const door = { x: Number(parts[parts.length - 2]), y: Number(parts[parts.length - 1]) };
+          this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
+        }
         continue;
       }
       const place = this.city.places.find((p) => p.id === m.placeId);
@@ -3056,8 +3067,48 @@ export class GameScene extends Phaser.Scene {
     return town && town !== 'Daleko' ? town : null;
   }
 
+  /**
+   * The newsboy (owner, 11 Oct 2026): the „Kurier Parowy” – what's new, plans, a reporter's errand
+   * and a letter to the editors (RPC order_quest; untrusted player text, read as ideas only).
+   */
+  private newsboy(f: Folk) {
+    const m = newsboyMission(this.city, f);
+    const known = m ? this.missions.find((r) => r.m.id === m.id) : undefined;
+    const st = m ? missionState(m) : null;
+    const stan = !m ? 'brak' : known && st !== 'new' ? (st === 'done' ? 'zrobione' : 'wziete') : this.questsFull() ? 'pelno' : 'nowe';
+    const town = this.townHere() ?? mapName(this.city.id);
+    this.scene.pause();
+    resetTouch();
+    void showGazeta({
+      sprzedawca: f.name,
+      miasto: town && !town.startsWith('w:') ? town : 'okolica',
+      zlecenie: { tytul: m?.tytul ?? '', opis: m?.opis ?? '', stan },
+      wyslij: async (text) => {
+        if (offline.demo) return 'ok';
+        const ll = this.city.toLatLon(this.player.x, this.player.y);
+        const ctx = { mapa: this.city.id, miasto: town, lat: ll?.lat, lon: ll?.lon, ulica: this.whereIs(this.player.x, this.player.y),
+          wersja: TEST ? `${WERSJA_TEST}-test` : WERSJA, poziom: poziomPostaci(session.exp), time: new Date().toISOString() };
+        try {
+          return (await rpc<boolean>('order_quest', { p_player: session.name || null, p_text: text.slice(0, 500), p_ctx: ctx })) ? 'ok' : 'limit';
+        } catch {
+          return 'blad';
+        }
+      },
+    }).then((took) => {
+      this.scene.resume();
+      resetTouch();
+      if (!took || !m || known) return;
+      const rm: ResolvedMission = { m, door: { x: f.x, y: f.y }, target: resolvePlace(this.city, m.zadanie.miejsce) };
+      this.openMissionDialog(rm, () => {
+        session.gen[m.id] = m;
+        this.addMission(rm, false);
+      });
+    });
+  }
+
   /** A passer-by: says hello, and some want a duel. */
   private talkToFolk(f: Folk) {
+    if (f.role === 'gazeciarz') return this.newsboy(f);
     const M = MIESZKANCY;
     let h = 2166136261;
     for (const ch of f.id + today()) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);

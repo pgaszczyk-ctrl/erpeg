@@ -490,7 +490,7 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
+    const waiting = loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || !!document.getElementById('gazeta') || isCharacterOpen();
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
