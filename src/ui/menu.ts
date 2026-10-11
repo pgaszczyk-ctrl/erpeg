@@ -9,7 +9,7 @@ import { lang, tx } from '../i18n';
 import { LADOWANIE } from '../content/ladowanie';
 import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount } from './account';
-import { pixelLogo } from './logo';
+import { logoImage } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
@@ -64,7 +64,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, [pixelLogo()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
+      box.replaceChildren(el('h1', {}, [logoImage()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
       const languages = el('select', { 'ariaLabel': 'Language / Język' }, [el('option', {value:'pl'}, ['Polski']), el('option', {value:'en'}, ['English'])]);
       languages.value = lang;
       languages.onchange = () => {
