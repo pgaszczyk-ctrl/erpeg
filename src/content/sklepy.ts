@@ -105,6 +105,8 @@ export const WSKRZESZENIE = { diamentow: 10 };
  * `razySzybciej` razy szybciej (`szybciej`).
  */
 export const DIAMENT = { monet: 1_000_000, euro: 2, dowolneMiasto: 1, szybciej: 1, razySzybciej: 2 };
+/** Said instead of a price in euro (owner, 11 Oct 2026: no „albo 2 €” – the Kurier will explain supporters' rewards in a few days). */
+export const DIAMENT_WSPIERAJACY = 'Diamenty są też nagrodą dla wspierających grę – szczegóły wkrótce w Kurierze Parowym.';
 
 /**
  * ALCHEMIK – na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw

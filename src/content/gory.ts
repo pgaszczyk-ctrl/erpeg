@@ -21,6 +21,15 @@ export const GORY = {
   /** Obie granice nie biegną po poziomicy: przesuwają się w terenie o ± tyle metrów (szum), jak prawdziwe. */
   granicaRozrzut: 70,
   /**
+   * Las przy szlakach w górach (właściciel 11.10.2026: „przez las nie widać gdzie iść”): wzdłuż ścieżek, schodów,
+   * dróg leśnych i dróg dojazdowych w górach (tam, gdzie rysujemy poziomice) od brzegu drogi do tylu metrów nie rośnie
+   * żadne drzewo (korona ma ok. 4 m), a dalej, do szlakRzadziejM, rośnie co drugie. Las poza tym pasem zostaje gęsty.
+   */
+  szlakBezDrzewM: 4.5,
+  szlakRzadziejM: 9,
+  /** Jaka część drzew zostaje w pasie rzadszego lasu. */
+  szlakRzadziejZostaje: 0.45,
+  /**
    * Od jakiego nachylenia poza szlakiem robi się „stromo” (przewyższenie na metr: 0.45 to ok. 24°):
    * dalej da się iść, ale bardzo wolno (zgłoszenie 57, właściciel 6.10.2026: łąka pod skocznią w Zakopanem
    * wyglądała zwyczajnie, a była ścianą nie do przejścia).

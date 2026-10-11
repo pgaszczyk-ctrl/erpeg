@@ -14,7 +14,7 @@ import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
-import { WSKRZESZENIE, DIAMENT } from '../content/sklepy';
+import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY } from '../content/sklepy';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
@@ -424,7 +424,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
               const back = await api.resurrect(p.name, p.idik);
               await play(back);
             }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary')
-        : el('button', { type: 'button', className: 'm-btn', disabled: true }, [`Brakuje ${miss} 💎 – kupno za ${miss * DIAMENT.euro} € już wkrótce`]);
+        : el('button', { type: 'button', className: 'm-btn', disabled: true }, [`Brakuje ${miss} 💎`]);
       screen(
         el('h2', {}, [`👻 ${p.name} nie żyje`]),
         ghostMap(city, p),
@@ -435,7 +435,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('p', { className: 'm-warn' }, [
           free
             ? 'Duch wciąż błąka się po mieście… Możesz go wskrzesić: postać wróci do punktu startowego z rzeczami i doświadczeniem z ostatniego zapisu.'
-            : `Ta postać była już raz wskrzeszona. Porażka… ale moc diamentów może ją ocalić: kolejne wskrzeszenie kosztuje ${WSKRZESZENIE.diamentow} 💎.`,
+            : `Ta postać była już raz wskrzeszona. Porażka… ale moc diamentów może ją ocalić: kolejne wskrzeszenie kosztuje ${WSKRZESZENIE.diamentow} 💎. ${DIAMENT_WSPIERAJACY}`,
         ]),
         err,
         rise,

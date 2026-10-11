@@ -69,6 +69,8 @@ export interface Zlecenie {
   rury?: Rura09[];
   /** Mountains (MapRenderer strefyGor): heights over the treeline (m) on a grid of `b` generator px (w × w corners from the kind map's corner); no trees from `las` up. */
   strefy?: { b: number; w: number; h: Float32Array; las: number };
+  /** Mountain trails near the chunk (gen px polylines + half width) and their tree-free / thinner bands (gen px from the edge). */
+  szlaki?: { linie: { p: number[]; pol: number }[]; wolne: number; rzadziej: number; zostaje: number };
 }
 
 /** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
@@ -300,7 +302,18 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     const i = Math.floor(fx), j = Math.floor(fy), ax = fx - i, ay = fy - j, q = j * st.w + i;
     return (st.h[q] * (1 - ax) + st.h[q + 1] * ax) * (1 - ay) + (st.h[q + st.w] * (1 - ax) + st.h[q + st.w + 1] * ax) * ay >= st.las;
   };
-  const rodzajDrzew = st ? (x: number, y: number) => (nadLasem(x, y) ? null : rodzajW(x, y)) : rodzajW;
+  const przySzlaku = pasySzlakow(z.szlaki, X0, Y0, N);
+  const LESNE = new Set<Rodzaj>(['las_lisciasty', 'las_iglasty', 'zarosla', 'mokradlo']);
+  const rodzajDrzew = st || przySzlaku ? (x: number, y: number) => {
+    if (st && nadLasem(x, y)) return null;
+    const r = rodzajW(x, y);
+    // Along mountain trails: forest trees cleared from the path, thinned a bit further out (parks keep their alleys).
+    if (przySzlaku && r && LESNE.has(r)) {
+      const v = przySzlaku(x, y);
+      if (v === 2 || (v === 1 && hash(x, y, 931) >= z.szlaki!.zostaje)) return null;
+    }
+    return r;
+  } : rodzajW;
   const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, (x, y) =>
     !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
@@ -316,4 +329,41 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     if ([[0, 0], [7, 0], [-7, 0], [0, 6], [0, -6]].every(([dx, dy]) => rodzajW(fx + dx, fy + dy) === 'woda')) fale.push([fx, fy]);
   }
   return { px: obraz.px, drzewa: swoje, para, fale, zbior, wyrzuty };
+}
+
+/**
+ * The bands along mountain trails (owner, 11 Oct 2026: in the forest you couldn't see where to go): a coarse grid over
+ * the chunk and the tree margin, 2 = no trees (within `wolne` of the path's edge), 1 = thinner (within `rzadziej`).
+ * Returns a lookup by generator px, or null when the chunk has no such trails.
+ */
+function pasySzlakow(sz: Zlecenie['szlaki'], X0: number, Y0: number, N: number) {
+  if (!sz || !sz.linie.length) return null;
+  const C = 4;
+  const ox = X0 - 64, oy = Y0 - 24, W = Math.ceil((N + 128) / C), H = Math.ceil((N + 136) / C);
+  const g = new Uint8Array(W * H);
+  let any = false;
+  for (const { p, pol } of sz.linie) {
+    const r1 = pol + sz.wolne, r2 = pol + sz.rzadziej;
+    for (let i = 0; i + 3 < p.length; i += 2) {
+      const ax = p[i], ay = p[i + 1], bx = p[i + 2], by = p[i + 3];
+      const minX = Math.floor((Math.min(ax, bx) - r2 - ox) / C), maxX = Math.ceil((Math.max(ax, bx) + r2 - ox) / C);
+      const minY = Math.floor((Math.min(ay, by) - r2 - oy) / C), maxY = Math.ceil((Math.max(ay, by) + r2 - oy) / C);
+      if (maxX < 0 || maxY < 0 || minX >= W || minY >= H) continue;
+      const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1;
+      for (let gy = Math.max(0, minY); gy <= Math.min(H - 1, maxY); gy++)
+        for (let gx = Math.max(0, minX); gx <= Math.min(W - 1, maxX); gx++) {
+          const cx = ox + (gx + 0.5) * C, cy = oy + (gy + 0.5) * C;
+          const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / L));
+          const d = Math.hypot(cx - (ax + dx * t), cy - (ay + dy * t));
+          const v = d <= r1 ? 2 : d <= r2 ? 1 : 0;
+          const k = gy * W + gx;
+          if (v > g[k]) { g[k] = v; any = true; }
+        }
+    }
+  }
+  if (!any) return null;
+  return (x: number, y: number) => {
+    const gx = Math.floor((x - ox) / C), gy = Math.floor((y - oy) / C);
+    return gx < 0 || gy < 0 || gx >= W || gy >= H ? 0 : g[gy * W + gx];
+  };
 }

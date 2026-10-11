@@ -57,18 +57,16 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  });
  await page.waitForFunction(()=>{const s=window.__game.scene.getScene('game');return s.pickups.filter(i=>i.getData('kind')==='fruit:jablko').length+window.__session.stats.fruit>=5;},null,{timeout:30000});
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');for(const i of [...s.pickups])if(i.getData('kind')==='fruit:jablko')s.collect(i);});
- await page.waitForFunction(()=>window.__game.scene.getScene('ui').dialogChoose&&window.__game.scene.getScene('game').demoRun.fruitHintShown);
+ // Tutorial: the screen darkens around the heal control; only a tap on it eats (taps elsewhere are swallowed).
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').demoRun.fruitHintShown,null,{timeout:10000});
+ await page.waitForSelector('#samouczek',{timeout:60000});
  await page.screenshot({path:`work/demo-${name}-apples.png`});
  const beforeEating=await page.evaluate(()=>window.__game.scene.getScene('game').player.hp);
- if(mobile){
-  await choose(1);
-  await page.locator('#hud .hud-av').click();
-  await page.getByRole('button',{name:'⚙️ Stan',exact:true}).click();
-  const eat=page.getByRole('button',{name:'🍎 Zjedz 5 owoców → +1 ❤',exact:true});
-  assert(await eat.isEnabled()); await eat.click();
-  assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating+2);
-  await page.locator('#character .k-valve').click();
- }else await choose(0);
+ await page.mouse.click(20,viewport.height/2);
+ assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating,'A tap outside the heal control must not eat');
+ const healAt=await page.evaluate(()=>{const r=document.querySelector('#hud .hud-heal').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};});
+ await page.mouse.click(healAt.x,healAt.y);
+ await page.waitForFunction(()=>!document.getElementById('samouczek'),null,{timeout:5000});
  assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating+2);
  await page.waitForFunction(()=>window.__game.scene.getScene('game').demoRun.dragon,null,{timeout:90000});
  await page.waitForFunction(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon;return s.dragons.has(d);},null,{timeout:60000});
@@ -120,6 +118,8 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  assert.equal(await page.evaluate(()=>!!document.getElementById('demo-end')),false);
  await choose(0);
  await page.screenshot({path:`work/demo-${name}-targi.png`});
+ const gazeciarz=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');const f=[...s.folk.active].find(f=>f.role==='gazeciarz'&&f.sprite?.visible);return f?Math.hypot(f.x-s.player.x,f.y-s.player.y)/1.92:null;});
+ assert(gazeciarz!==null&&gazeciarz<20,`A newsboy must stand near the wake-up spot: ${gazeciarz}`);
  console.log(name,'Targi ready',art);
  const speed=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return s.player.speed;});
  assert(Math.abs(speed-(70/3.6)*1.92)<.001,`Awake speed must be ordinary level-one speed: ${speed}`);

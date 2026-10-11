@@ -10,6 +10,7 @@ import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
+import { pokazGdzieKliknac } from '../ui/samouczek';
 
 // The QR demo inside the game (the phases are described in src/demo.ts):
 // fruit trees by the start, the goal line and arrow, the "I know who I am!"
@@ -28,6 +29,8 @@ export interface DemoHost {
   hud: () => void;
   heal: () => void;
   ready: () => boolean;
+  /** Puts a newsboy at a spot (the wake-up in front of Targi Lublin). */
+  newsboy: (x: number, y: number) => void;
 }
 
 
@@ -39,6 +42,8 @@ export class DemoRun {
   private trees: FruitTree[] = [];
   private healTo = 0;
   private fruitHintShown = false;
+  /** Closes the eating spotlight (tutorial). */
+  private zamknijSamouczek: (() => void) | null = null;
   private dragon: Slime | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
   /** Last position while walking after waking up. */
@@ -60,6 +65,7 @@ export class DemoRun {
       // Keep the blackout until ground, building and roof layers are ready.
       const reveal = () => {
         if (!this.host.ready()) { this.scene.time.delayedCall(100, reveal); return; }
+        this.placeNewsboy();
         blackout(false, 900);
         this.scene.time.delayedCall(900, () => this.host.dialog({
           title: DEMO_TEKSTY.pobudkaTytul,
@@ -98,10 +104,22 @@ export class DemoRun {
     void dt;
     if (this.frozen) return;
     if (demo.phase === 'jedzenie' && !this.busy && !this.fruitHintShown && totalFruit() >= SEN.owocowNaSerce && this.host.player.hp < this.healTo) {
+      // The demo is the first tutorial: the player eats the apples alone (owner, 11 Oct 2026 – a dialog button
+      // here got pressed by the taps on the tree). Everything else goes dark, the heal control is shown.
       this.fruitHintShown = true;
-      this.host.dialog({ title: DEMO_TEKSTY.jablkaTytul, text: DEMO_TEKSTY.jablka,
-        buttons: ['Zjedz jabłka', 'Za chwilę'], onChoose: (i) => { if (i === 0) this.host.heal(); } });
+      this.busy = true;
+      this.host.player.vel.set(0, 0);
+      this.host.player.anims.stop();
+      this.scene.time.delayedCall(450, () => {
+        if (this.frozen) return;
+        this.zamknijSamouczek = pokazGdzieKliknac('#hud .hud-heal', DEMO_TEKSTY.jablka + (matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz), () => this.host.heal());
+      });
       return;
+    }
+    if (this.zamknijSamouczek && this.host.player.hp >= this.healTo) {
+      this.zamknijSamouczek();
+      this.zamknijSamouczek = null;
+      this.busy = false;
     }
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
     const w = this.wokeAt;
@@ -142,6 +160,20 @@ export class DemoRun {
     this.scene.time.delayedCall(2000, () => this.sleep());
   }
 
+  /** A newsboy a few steps from the hero after waking up: something to be curious about at once. */
+  private placeNewsboy() {
+    const p = this.host.player;
+    const m = JAWA.gazeciarzM * PX_PER_M;
+    for (const [dx, dy] of [[1, 0.3], [-1, 0.3], [0.4, 1], [-0.4, 1], [0.6, -0.8], [-0.6, -0.8]]) {
+      const x = p.x + dx * m, y = p.y + dy * m;
+      if (!this.host.city.isFree(x, y, 4, 4) || this.host.city.buildingAt(x, y)) continue;
+      this.host.newsboy(x, y);
+      return;
+    }
+    const q = this.host.city.freeNear(p.x + m, p.y);
+    this.host.newsboy(q.x, q.y);
+  }
+
   // ------------------------------------------------------------ the dream
 
   private plantTrees() {
@@ -167,8 +199,8 @@ export class DemoRun {
     p.anims.stop();
     const ex = this.scene.add.image(p.x, p.y - 24 * SKALA_POSTACI, TEX.exclaim).setDepth(1_300_000);
     this.scene.tweens.add({ targets: ex, y: ex.y - 3, duration: 200, yoyo: true, repeat: 5 });
-    // A gentle tremor (owner, 11 Oct 2026: it was too strong).
-    this.scene.cameras.main.shake(500, 0.003);
+    // A light tremor (owner, 11 Oct 2026: still too dramatic at 500 ms / 0.003).
+    this.scene.cameras.main.shake(300, 0.0012);
     bigText(DEMO_TEKSTY.olsnienie, 2600);
     this.scene.time.delayedCall(2800, () => {
       ex.destroy();

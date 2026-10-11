@@ -783,6 +783,7 @@ export class MapRenderer {
       g.fill('evenodd');
     } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
     const strefy = m.terrain ? strefyGor(m.terrain, kinds, x0, y0) : undefined;
+    const szlaki = m.terrain ? this.szlakiGor(wide.lines, x0, y0) : undefined;
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
     const tramwaje: number[][] = [];
@@ -847,7 +848,45 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy };
+    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
+  }
+
+  /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */
+  private rzezba(x: number, y: number) {
+    const t = this.map.terrain!, R = GORY.poziomiceRzezbaM * PX_PER_M;
+    let lo = Infinity, hi = -Infinity;
+    for (let ring = 0; ring <= 2; ring++) for (let k = 0; k < (ring ? 12 : 1); k++) {
+      const a = (k * Math.PI) / 6, r = (R * ring) / 2;
+      const v = t.heightAt(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (Number.isNaN(v)) continue;
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    return hi - lo;
+  }
+
+  /** Is this trail in the mountains? Measured once per line at its middle point, so every chunk agrees. */
+  private gorskie = new Map<number, boolean>();
+  private szlakiGor(lines: Line[], x0: number, y0: number) {
+    const G = GEN_DOTS;
+    const linie: { p: number[]; pol: number }[] = [];
+    for (const l of lines) {
+      if (!SZLAKI_LESNE.has(l.kind) || l.bridge || l.pts.length < 4) continue;
+      let g = this.gorskie.get(l.id);
+      if (g === undefined) {
+        const i = Math.floor(l.pts.length / 4) * 2;
+        const r = this.rzezba(l.pts[i], l.pts[i + 1]);
+        if (Number.isNaN(r) || r === -Infinity) continue; // heights not loaded: ask again next time
+        g = r >= GORY.poziomiceOdM;
+        if (this.gorskie.size > 20000) this.gorskie.clear();
+        this.gorskie.set(l.id, g);
+      }
+      if (!g) continue;
+      for (const p of clipLine(l.pts, x0 - 40, y0 - 30, x0 + CHUNK + 40, y0 + CHUNK + 70)) linie.push({ p: p.map((v) => v * G), pol: (trackWidth(l) / 2) * G });
+    }
+    if (!linie.length) return undefined;
+    const m = PX_PER_M * G;
+    return { linie, wolne: GORY.szlakBezDrzewM * m, rzadziej: GORY.szlakRzadziejM * m, zostaje: GORY.szlakRzadziejZostaje };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
@@ -1581,6 +1620,9 @@ export class MapRenderer {
     }
   }
 }
+
+/** Ways along which mountain forest is cleared (owner, 11 Oct 2026). */
+const SZLAKI_LESNE = new Set(['path', 'steps', 'track', 'service', 'minor']);
 
 /** Generator px per cell of the mountain zone grid (8 map px ≈ 4 m); heights in between are interpolated. */
 const STREFA_KRATKA = 16;

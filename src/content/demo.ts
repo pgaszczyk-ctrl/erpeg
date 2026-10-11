@@ -40,7 +40,11 @@ export const SEN = {
 };
 
 /** Actual walking distance before the invitation to create a character; no time limit. */
-export const JAWA = { koniecM: 400 };
+export const JAWA = {
+  koniecM: 400,
+  /** A newsboy stands this far from where the hero wakes up (m). */
+  gazeciarzM: 9,
+};
 
 export const DEMO_TEKSTY = {
   przebudzenieTytul: '…',
@@ -49,7 +53,9 @@ export const DEMO_TEKSTY = {
   celZbierz: (masz: number, trzeba: number) => `Zbierz owoce z drzew – uderz drzewo mieczem (${masz}/${trzeba})`,
   celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu (H)',
   jablkaTytul: '🍎 Zjedz zebrane jabłka',
-  jablka: 'Masz już dość jabłek. Teraz trzeba je zjeść, żeby odzyskać siły.\n\nNaciśnij „Zjedz jabłka” albo dotknij baniaka życia u dołu ekranu (klawisz H).',
+  jablka: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij tego przycisku.',
+  /** Added on a computer (no touch screen). */
+  jablkaKlawisz: ' Możesz też nacisnąć H.',
   olsnienie: 'OOooo, już wiem kim jestem!',
   kimJestem: 'Jestem pogromcą smoków! Smok wawelski znowu grasuje – czeka nad Wisłą.',
   celSmok: 'Pokonaj smoka wawelskiego!',

@@ -164,9 +164,35 @@ export class Townsfolk {
         tex: hdOn ? GAZETA.wyglad : `folk${Math.floor(rp() * LOOKS)}`,
       });
     }
+    list.push(...(this.extra.get(key) ?? []));
+    this.extra.delete(key);
     this.cells.set(key, list);
     return list;
   }
+
+  /**
+   * A newsboy placed on purpose (owner, 11 Oct 2026: the demo's wake-up in front of Targi Lublin gets one
+   * close by, so the player is curious at once). Joins that square's people; the square must be loaded.
+   */
+  newsboyAt(x: number, y: number) {
+    const key = `${Math.floor(x / CELL)}:${Math.floor(y / CELL)}`;
+    const id = `${key}:gazeta-demo`;
+    const walker = new Walker([[x, y, x + 1, y]], 0, rng(hash(id)));
+    walker.x = x;
+    walker.y = y;
+    const f: Folk = {
+      id, role: 'gazeciarz', walker, x, y,
+      name: tr(GAZETA.imiona[hash(id) % GAZETA.imiona.length]),
+      tex: hdOn ? GAZETA.wyglad : 'folk0',
+    };
+    // The square's people may not be made yet (its tiles still loading): then he joins them when they are.
+    const list = this.cells.get(key);
+    if (list) { if (!list.some((g) => g.id === id)) list.push(f); }
+    else this.extra.set(key, [...(this.extra.get(key) ?? []).filter((g) => g.id !== id), f]);
+    this.next = 0;
+  }
+  /** People placed on purpose in squares not made yet (newsboyAt). */
+  private extra = new Map<string, Folk[]>();
 
   /** A small rolled newspaper drawn by code (until the artist's newsboy, order 32). */
   private paperTexture() {

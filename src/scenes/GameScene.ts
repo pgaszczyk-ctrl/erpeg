@@ -51,7 +51,7 @@ import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI } from '../content/trudnosc';
-import { WSKRZESZENIE, DIAMENT, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
+import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
@@ -754,6 +754,7 @@ export class GameScene extends Phaser.Scene {
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
         ready: () => this.firstViewReady(),
+        newsboy: (x, y) => this.folk.newsboyAt(x, y),
       });
       this.demoRun.start();
     }
@@ -2399,18 +2400,14 @@ export class GameScene extends Phaser.Scene {
         this.offerRescue();
       });
     }
-    if (miss > 0) {
-      buttons.push(`💳 Kup ${miss} 💎 za ${fmt(miss * d.euro)} €`);
-      actions.push(() =>
-        this.dialog({ title: '💎 Diamenty', text: `Płatności prawdziwymi pieniędzmi pojawią się wkrótce.`, buttons: ['Wróć'], onChoose: () => this.offerRescue() }));
-    } else {
+    if (miss === 0) {
       buttons.push(`💎 Tak, ocal mnie (${cost} 💎)`);
       actions.push(() => this.reviveWithDiamonds());
     }
     const have = `Kosztuje ${cost} 💎 – masz ${session.diamenty} 💎.`;
     const buy = miss === 0 ? '' : session.coins >= coins
       ? `\n\nBrakuje ci ${miss} 💎 – możesz je teraz dokupić (${fmt(d.monet)} monet za diament, masz ${fmt(session.coins)}).`
-      : `\n\nBrakuje ci ${miss} 💎 (diament kosztuje ${fmt(d.monet)} monet albo ${d.euro} €; masz ${fmt(session.coins)} monet).`;
+      : `\n\nBrakuje ci ${miss} 💎 (diament kosztuje ${fmt(d.monet)} monet; masz ${fmt(session.coins)} monet). ${DIAMENT_WSPIERAJACY}`;
     this.dialog({
       title: '💀 Porażka',
       text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\n${have} Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.${buy}`,
@@ -3500,8 +3497,8 @@ export class GameScene extends Phaser.Scene {
     const fmt = (n: number) => n.toLocaleString('pl-PL');
     this.dialog({
       title,
-      text: `💎 Diament to waluta premium. U woźnicy za ${d.dowolneMiasto} 💎 pojedziesz do dowolnego miasta, w którym już byłeś, a za kolejny ${d.szybciej} 💎 dojedziesz ${d.razySzybciej}× szybciej.\n\nCena: ${fmt(d.monet)} monet albo ${d.euro} €. Masz ${fmt(session.coins)} monet i ${session.diamenty} 💎.`,
-      buttons: [`Kup za ${fmt(d.monet)} 💰`, `Kup za ${d.euro} €`, 'Nie teraz'],
+      text: `💎 Diament to waluta premium. U woźnicy za ${d.dowolneMiasto} 💎 pojedziesz do dowolnego miasta, w którym już byłeś, a za kolejny ${d.szybciej} 💎 dojedziesz ${d.razySzybciej}× szybciej.\n\nCena: ${fmt(d.monet)} monet. ${DIAMENT_WSPIERAJACY}\n\nMasz ${fmt(session.coins)} monet i ${session.diamenty} 💎.`,
+      buttons: [`Kup za ${fmt(d.monet)} 💰`, 'Nie teraz'],
       onChoose: (i) => {
         if (i === 0) {
           if (session.coins < d.monet) return this.toast(`Za mało monet – diament kosztuje ${fmt(d.monet)}.`, 2500);
@@ -3510,8 +3507,6 @@ export class GameScene extends Phaser.Scene {
           this.emitHud();
           this.save();
           this.toast(`💎 Masz ${session.diamenty} ${session.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500);
-        } else if (i === 1) {
-          this.dialog({ title: '💎 Diamenty', text: `Płatności prawdziwymi pieniędzmi (${d.euro} €) pojawią się wkrótce.`, buttons: ['OK'], onChoose: () => {} });
         }
       },
     });
