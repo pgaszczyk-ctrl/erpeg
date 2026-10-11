@@ -126,3 +126,31 @@ export function cleanHumanSheet(img: ImageData, file?: string) {
     }
   });
 }
+
+/**
+ * Steps for sheets whose front and back steps keep both feet in place (the 25-hero pack: owner,
+ * 11 Oct 2026 – „niektóre nie ruszają nogami”). Until the artist redraws them, steps A and B of the
+ * front/back rows are made from the standing frame with one foot lifted: the lowest LEG rows of the
+ * left (A) or right (B) half move up by LIFT sheet pixels (1 map pixel at the game's scale).
+ */
+export function liftFeet(img: ImageData) {
+  const LEG = 9, LIFT = 4;
+  const d = img.data, width = img.width;
+  const at = (col: number, row: number, x: number, y: number) => ((row * F + y) * width + col * F + x) * 4;
+  for (const row of [0, 2]) {
+    let foot = -1, x0 = F, x1 = -1;
+    for (let y = F - 1; y >= 0 && foot < 0; y--) for (let x = 0; x < F; x++) if (d[at(1, row, x, y) + 3] >= 20) { foot = y; break; }
+    if (foot < LEG) continue;
+    for (let y = foot - LEG; y <= foot; y++) for (let x = 0; x < F; x++) if (d[at(1, row, x, y) + 3] >= 20) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+    const mid = (x0 + x1 + 1) / 2;
+    for (const [col, left] of [[0, true], [2, false]] as const) {
+      for (let y = 0; y < F; y++) for (let x = 0; x < F; x++) {
+        const lift = y >= foot - LEG && y <= foot && x < mid === left;
+        const sy = lift ? y + LIFT : y;
+        const to = at(col, row, x, y);
+        if (sy > foot) d.fill(0, to, to + 4);
+        else d.set(d.subarray(at(1, row, x, sy), at(1, row, x, sy) + 4), to);
+      }
+    }
+  }
+}

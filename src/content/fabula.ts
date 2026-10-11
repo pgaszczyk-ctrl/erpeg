@@ -90,7 +90,7 @@ export interface Etap extends Zadanie {
   wyborKlucz?: string;
   opcje?: { id: string; tekst: string; wynik: string }[];
   /** Visit any `ile` different clues, in any order; coordinates belong to the accepted city. */
-  tropy?: { id: string; miejsce: Miejsce; tytul: string; tekst: string }[];
+  tropy?: { id: string; miejsce: Miejsce; tytul: string; tekst: string; /** Button label instead of „Zapisz trop” (e.g. delivering a paper). */ przycisk?: string }[];
   /** Arrange cards using stable IDs. Wrong arrangements have no health penalty. */
   karty?: { id: string; tekst: string }[];
   kolejnosc?: string[];

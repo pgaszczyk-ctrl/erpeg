@@ -1,58 +1,97 @@
-/* The newsboy's paper: the shop window's wood and brass around a newspaper page. */
-#gazeta.gz-screen{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:16px;background:#100b0880;backdrop-filter:blur(2px);font:17px/1.35 'Alegreya Sans','Trebuchet MS',sans-serif}
+/* The newsboy's paper: a printed sheet lying over the game (no window frame). Newspaper type:
+   Playfair Display headlines, Old Standard TT body, UnifrakturMaguntia for a typeset masthead. */
+#gazeta.gz-screen{--ink:#231a12;--ink2:#5b4a36;--red:#8e2318;--paper:#efe3c4;position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:18px;background:radial-gradient(ellipse at center,#0c080566,#0c0805b8);font:17px/1.42 'Old Standard TT','Georgia',serif;color:var(--ink)}
 #gazeta *{box-sizing:border-box}
-#gazeta .gz-box{position:relative;width:min(860px,100%);max-height:calc(100dvh - 32px);display:flex;padding:12px;border:7px ridge #af813f;border-radius:10px;background:repeating-linear-gradient(0deg,#2c1e14 0 48px,#312217 49px 51px);box-shadow:0 0 0 3px #20150e,inset 0 0 0 3px #17110d,0 12px 50px #0008}
-#gazeta .gz-close{position:absolute;right:-12px;top:-12px;z-index:2;width:40px;height:40px;display:grid;place-items:center;padding:0;color:#f7e2b3;background:#a43628;border:4px ridge #c99b59;border-radius:50%;font:30px/1 serif;cursor:pointer;box-shadow:0 2px #120d08}
-#gazeta .gz-paper{flex:1;min-width:0;overflow:auto;padding:14px 20px 12px;color:#2a2118;background:radial-gradient(ellipse at 30% 20%,#f6eccf,#e9dcb8 70%,#dccba0);border:2px solid #8a6a3c;box-shadow:inset 0 0 30px #a0835455;scrollbar-color:#a07b45 #e2d2aa}
-#gazeta .gz-mast{text-align:center;border-bottom:4px double #2a2118;padding-bottom:6px}
-#gazeta .gz-ears{font-size:13px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #2a211880;padding-bottom:3px}
-#gazeta .gz-mast h2{margin:4px 0 0;font:900 44px/1 'Alegreya','Georgia',serif;letter-spacing:2px;text-transform:uppercase}
+#gazeta .gz-wrap{width:min(900px,100%);max-height:calc(100dvh - 36px);display:flex;transform:rotate(-0.6deg);filter:drop-shadow(0 14px 22px #000a) drop-shadow(0 2px 2px #0006);animation:gz-in .28s ease-out}
+@keyframes gz-in{from{transform:rotate(-3deg) translateY(30px) scale(.96);opacity:0}}
+#gazeta .gz-sheet{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 26px 12px;
+  background:
+    linear-gradient(90deg,transparent 49.6%,#7a5a2a1c 50%,#fff6 50.3%,transparent 50.8%),
+    radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,#b08a4c55 100%),
+    radial-gradient(circle at 18% 22%,#c9a46a22 0 6%,transparent 7%),
+    radial-gradient(circle at 82% 70%,#c9a46a1c 0 5%,transparent 6%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--paper)}
+/* Close: an ink stamp in the corner, like a printer's mark – not a window button. */
+#gazeta .gz-fold{position:absolute;right:16px;top:12px;z-index:2;display:flex;align-items:center;gap:5px;min-height:36px;padding:3px 10px;border:2px solid var(--red);border-radius:3px;background:#f5ead0cc;color:var(--red);font:700 13px/1 'Old Standard TT',serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transform:rotate(2deg)}
+#gazeta .gz-fold-x{font-size:16px}
+#gazeta .gz-fold:hover{background:var(--red);color:#f5ead0}
+/* Masthead */
+#gazeta .gz-mast{text-align:center;padding-bottom:4px}
+#gazeta .gz-ears{display:flex;justify-content:space-between;gap:10px;padding:0 190px 3px 0;border-bottom:1px solid var(--ink);font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+#gazeta .gz-ears-mid{flex:1;text-align:center}
 #gazeta .gz-winieta{display:block;width:100%;max-width:960px;height:auto;margin:6px auto 0;image-rendering:pixelated}
+#gazeta .gz-title{margin:6px 0 0;font:400 58px/1.05 'UnifrakturMaguntia','Playfair Display',serif;letter-spacing:1px}
 #gazeta .gz-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-#gazeta .gz-sub{margin:2px 0 0;font-style:italic;font-size:15px}
-#gazeta .gz-tabs{display:flex;gap:6px;margin:8px 0;justify-content:center;flex-wrap:wrap}
-#gazeta .gz-tab{display:flex;gap:6px;align-items:center;min-height:40px;padding:4px 14px;border:2px solid #2a2118;border-radius:3px;background:#efe3c3;color:#2a2118;font:700 16px 'Alegreya Sans',sans-serif;cursor:pointer}
-#gazeta .gz-tab.on{background:#2a2118;color:#f3e6c4}
-#gazeta .gz-tab:focus-visible,#gazeta button:focus-visible,#gazeta textarea:focus-visible{outline:3px solid #b8893b;outline-offset:2px}
-#gazeta .gz-head{margin:6px 0 8px;text-align:center;font:800 22px 'Alegreya','Georgia',serif;text-transform:uppercase;letter-spacing:1px}
-#gazeta .gz-cols{columns:2 260px;column-gap:24px;column-rule:1px solid #2a211860}
-#gazeta .gz-art{break-inside:avoid;margin:0 0 12px}
-#gazeta .gz-art h3{margin:0;font:800 19px/1.15 'Alegreya','Georgia',serif}
-#gazeta .gz-art p{margin:3px 0 0;text-align:justify;hyphens:auto}
-#gazeta .gz-art .gz-date{margin:1px 0 0;font-size:13px;font-style:italic;color:#5a4a36}
-#gazeta .gz-big{padding:10px 14px;border:2px solid #2a2118;background:#f3e9ce}
-#gazeta .gz-big h3{font-size:22px}
-#gazeta .gz-note{font-style:italic;color:#4d3e2c;text-align:center}
-#gazeta .gz-action{display:block;margin:10px auto 4px;min-height:46px;min-width:200px;padding:6px 22px;border:4px ridge #c99b59;border-radius:5px;background:linear-gradient(#f2d28e,#c4984b);color:#271c11;font:800 19px 'Alegreya Sans',sans-serif;cursor:pointer;box-shadow:0 2px #5a3f1c}
-#gazeta .gz-action:disabled{opacity:.5;cursor:default}
-#gazeta .gz-area{width:100%;padding:8px 10px;border:2px solid #2a2118;background:#fbf4df;color:#2a2118;font:17px/1.35 'Alegreya Sans',sans-serif;resize:vertical}
+#gazeta .gz-sub{margin:3px 0 0;font-style:italic;font-size:15px}
+/* Sections strip: between a thick-thin double rule, like a real paper's index */
+#gazeta .gz-nav{display:flex;justify-content:center;gap:2px;margin:4px 0 6px;padding:3px 0;border-top:3px double var(--ink);border-bottom:3px double var(--ink)}
+#gazeta .gz-tab{display:flex;gap:6px;align-items:center;justify-content:center;min-height:40px;padding:2px 14px;border:0;background:none;color:var(--ink);font:700 15px 'Old Standard TT',serif;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;position:relative}
+#gazeta .gz-tab+.gz-tab::before{content:'❧';position:absolute;left:-6px;font-size:11px;color:var(--ink2)}
+#gazeta .gz-tab.on{color:var(--red)}
+#gazeta .gz-tab.on .gz-tl{text-decoration:underline 2px;text-underline-offset:4px}
+#gazeta .gz-ic{filter:sepia(1) saturate(.6) brightness(.8)}
+#gazeta button:focus-visible,#gazeta textarea:focus-visible{outline:3px solid #b8893b;outline-offset:2px}
+/* Body */
+#gazeta .gz-body{flex:1;min-height:0;overflow:auto;padding:2px 4px 6px;scrollbar-width:thin;scrollbar-color:#9c7a48 transparent}
+#gazeta .gz-head{margin:8px 0 6px;text-align:center;font:900 26px/1.1 'Playfair Display','Georgia',serif}
+#gazeta .gz-cols{columns:2 250px;column-gap:26px;column-rule:1px solid #231a1255}
+#gazeta .gz-cols3{columns:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 26px}
+#gazeta .gz-story{break-inside:avoid;margin:0 0 14px}
+#gazeta .gz-story h2{margin:0;font:900 34px/1.08 'Playfair Display','Georgia',serif}
+#gazeta .gz-story h3{margin:0;font:700 21px/1.15 'Playfair Display','Georgia',serif}
+#gazeta .gz-small h3{font-size:18px}
+#gazeta .gz-lead{padding-bottom:10px;border-bottom:1px solid var(--ink);margin-bottom:12px}
+#gazeta .gz-lead .gz-text:first-of-type::first-letter{float:left;font:900 54px/.85 'Playfair Display',serif;margin:4px 6px 0 0;color:var(--red)}
+#gazeta .gz-kicker{margin:0 0 2px;font:700 12px 'Old Standard TT',serif;letter-spacing:2px;text-transform:uppercase;color:var(--ink2)}
+#gazeta .gz-k-zadanie,#gazeta .gz-k-specjalne{color:var(--red)}
+#gazeta .gz-k-specjalne::before{content:'★ '}
+#gazeta .gz-dateline{margin:2px 0 4px;font-size:13px;font-style:italic;color:var(--ink2)}
+#gazeta .gz-text{margin:4px 0 0;text-align:justify;hyphens:auto}
+#gazeta .gz-rule{border:0;border-top:3px double var(--ink);margin:10px 0}
+#gazeta .gz-box{padding:10px 14px;border:1.5px solid var(--ink);box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px var(--ink)}
+#gazeta .gz-me{margin-bottom:14px}
+#gazeta .gz-me .gz-text{text-align:left}
+#gazeta .gz-note{font-style:italic;color:var(--ink2);text-align:center}
+#gazeta .gz-link{margin-top:6px;padding:4px 0;min-height:36px;border:0;background:none;color:var(--red);font:700 italic 16px 'Old Standard TT',serif;text-decoration:underline;cursor:pointer}
+/* A rubber-stamp button */
+#gazeta .gz-stamp{display:block;margin:12px auto 4px;min-height:48px;min-width:210px;padding:6px 22px;border:3px double var(--red);border-radius:4px;background:transparent;color:var(--red);font:700 19px 'Playfair Display',serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transform:rotate(-1.5deg)}
+#gazeta .gz-stamp:hover{background:var(--red);color:var(--paper)}
+#gazeta .gz-stamp:disabled{opacity:.5;cursor:default}
+#gazeta .gz-area{width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--ink2);background:repeating-linear-gradient(#fbf3dc 0 26px,#cbb68a 27px);color:var(--ink);font:italic 18px/27px 'Old Standard TT',serif;resize:vertical}
 #gazeta .gz-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#gazeta .gz-row .gz-action{margin:6px 0 0}
-#gazeta .gz-count{font-size:13px;color:#5a4a36}
-#gazeta .gz-foot{margin-top:10px;padding-top:4px;border-top:1px solid #2a211880;font-size:13px;text-align:right;font-style:italic}
-@media (max-width:600px){
-  #gazeta.gz-screen{padding:8px}
-  #gazeta .gz-box{padding:7px;border-width:5px;max-height:calc(100dvh - 16px)}
-  #gazeta .gz-paper{padding:10px 12px}
-  #gazeta .gz-mast h2{font-size:30px}
-  #gazeta .gz-tabs{gap:4px;flex-wrap:nowrap}
-  #gazeta .gz-tab{flex:1 1 0;flex-direction:column;justify-content:center;gap:0;padding:3px 2px;font-size:11px;line-height:1.1;min-width:0}
-  #gazeta .gz-tab .gz-ic{font-size:17px}
-  #gazeta .gz-head{font-size:19px}
-  #gazeta .gz-ears{padding-right:26px;font-size:11px}
-  #gazeta .gz-close{right:-6px;top:-6px}
-}
-#gazeta .gz-cols3{columns:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:4px 24px}
-#gazeta .gz-rank h3{border-bottom:2px solid #2a2118;padding-bottom:2px;text-transform:uppercase;letter-spacing:1px;font-size:17px}
-#gazeta .gz-sub2{margin:6px 0 2px!important;font-weight:800;font-size:14px;text-align:left!important;font-style:italic}
-#gazeta .gz-list{margin:0;padding-left:22px}
-#gazeta .gz-feats{list-style:'❧ '}
-#gazeta .gz-list li{border-bottom:1px dotted #2a211860;padding:1px 0}
-#gazeta .gz-li{display:flex;justify-content:space-between;gap:8px;min-width:0}
-#gazeta .gz-list li::marker{font-weight:700}
+#gazeta .gz-row .gz-stamp{margin:8px 0 0}
+#gazeta .gz-count{font-size:13px;color:var(--ink2)}
+/* Rankings */
+#gazeta .gz-rank-h{padding-bottom:2px;border-bottom:2px solid var(--ink);text-transform:uppercase;letter-spacing:1px}
+#gazeta .gz-rank .gz-kicker{margin-top:8px}
+#gazeta .gz-list{margin:0;padding-left:24px}
+#gazeta .gz-list li{padding:1px 0}
+#gazeta .gz-li{display:flex;align-items:baseline;gap:4px;min-width:0}
+#gazeta .gz-dots{flex:1;border-bottom:1px dotted var(--ink2);min-width:10px}
 #gazeta .gz-who{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#gazeta .gz-val{text-align:right;font-size:15px}
-#gazeta .gz-feats .gz-li{flex-direction:column;gap:0}
-#gazeta .gz-feats .gz-val{text-align:left}
-#gazeta .gz-me{margin-bottom:12px;background:#f7ecc6}
-#gazeta .gz-me p{text-align:left}
+#gazeta .gz-val{font-size:15px;white-space:nowrap}
+#gazeta .gz-feats{list-style:'❧ '}
+#gazeta .gz-feats li{display:list-item}
+#gazeta .gz-feats .gz-who{display:block}
+#gazeta .gz-feats .gz-val{white-space:normal;font-style:italic}
+#gazeta .gz-foot{display:flex;justify-content:space-between;gap:10px;margin-top:6px;padding-top:4px;border-top:1px solid var(--ink);font-size:12px;font-style:italic;color:var(--ink2)}
+@media (max-width:640px){
+  #gazeta.gz-screen{padding:6px}
+  #gazeta .gz-wrap{transform:none;max-height:calc(100dvh - 12px)}
+  #gazeta .gz-sheet{padding:10px 12px 8px;background-size:auto}
+  #gazeta .gz-sheet{background-image:radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,#b08a4c55 100%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #gazeta .gz-ears{padding-right:0;font-size:10px;letter-spacing:.5px}
+  #gazeta .gz-ears span:not(.gz-ears-mid){display:none}
+  #gazeta .gz-title{font-size:38px}
+  #gazeta .gz-sub{font-size:13px}
+  #gazeta .gz-fold{position:static;align-self:flex-end;transform:none;margin-bottom:4px;min-height:34px}
+  #gazeta .gz-nav{gap:0}
+  #gazeta .gz-tab{flex:1 1 0;flex-direction:column;gap:0;padding:2px 1px;font-size:10px;letter-spacing:.3px;line-height:1.1;min-width:0}
+  #gazeta .gz-tab+.gz-tab::before{display:none}
+  #gazeta .gz-tab .gz-ic{font-size:18px}
+  #gazeta .gz-head{font-size:22px}
+  #gazeta .gz-story h2{font-size:26px}
+  #gazeta .gz-story h3{font-size:19px}
+  #gazeta .gz-text{text-align:left}
+}

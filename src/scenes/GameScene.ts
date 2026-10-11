@@ -82,12 +82,13 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, stanOsiagniec, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
+  session, saveNow, stanOsiagniec, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, newsboyDelivers, newsboyDelivery, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
   zadanieOf, stageIndex, stageCount, stageTarget, levelLock, giveStory, takeStory,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, rpc, offline, type Snapshot } from '../api';
-import { showGazeta, type Wydanie } from '../ui/gazeta';
+import { showGazeta, type Wydanie, type WiescSerwera } from '../ui/gazeta';
+import { GAZETA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
 import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
@@ -3088,27 +3089,73 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * The newsboy (owner, 11 Oct 2026): the „Kurier Parowy” – what's new, plans, a reporter's errand
-   * and a letter to the editors (RPC order_quest; untrusted player text, read as ideas only).
+   * The newsboy (owner, 11 Oct 2026): stands on a corner and shouts. A talk opens a few words and a
+   * choice first – read the paper, help deliver papers (every ROZNOSZENIE.co-th newsboy), goodbye.
    */
   private newsboy(f: Folk) {
+    const day = new Date().toISOString().slice(0, 10);
+    let h = 0;
+    for (const ch of `${f.id}:${day}`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    const shout = tr(GAZETA.okrzyki[Math.abs(h) % GAZETA.okrzyki.length]);
+    const d = newsboyDelivers(f) ? newsboyDelivery(this.city, f) : null;
+    const buttons: string[] = [tr(ROZMOWA.czytaj)];
+    const acts: (() => void)[] = [() => this.newspaper(f)];
+    if (d) {
+      const st = missionState(d);
+      const known = this.missions.find((r) => r.m.id === d.id);
+      if (st === 'new' || !known) {
+        buttons.push(tr(ROZMOWA.roznos));
+        acts.push(() => {
+          if (this.questsFull()) return this.dialog({ title: `🗞 ${f.name}`, text: tr(GZ.pelno), buttons: ['OK'], onChoose: () => {} });
+          const rm: ResolvedMission = { m: d, door: { x: f.x, y: f.y }, target: stageTarget(this.city, d, { x: f.x, y: f.y }) };
+          this.openMissionDialog(rm, () => {
+            session.gen[d.id] = d;
+            this.addMission(rm, false);
+          });
+        });
+      } else {
+        buttons.push(tr(ROZMOWA.jakIdzie));
+        acts.push(() => {
+          const left = st === 'done' ? '' : this.etapy.progress(d.id).replace(/[()\s]/g, '');
+          const [got, all] = left.split('/').map(Number);
+          const text = st === 'done' ? tr(ROZMOWA.zrobione)
+            : tr(ROZMOWA.wToku).replace('{zostalo}', String(Number.isFinite(all - got) ? all - got : '?')).replace('{ulica}', d.zadanie.cel?.split(': ').pop() ?? '');
+          this.dialog({ title: `🗞 ${f.name}`, text, buttons: ['OK'], onChoose: () => {} });
+        });
+      }
+    }
+    buttons.push(tr(ROZMOWA.pa));
+    acts.push(() => {});
+    this.dialog({ title: `🗞 ${f.name}`, text: tx(`„${shout}”`, `“${shout}”`), buttons, onChoose: (i) => acts[i]?.() });
+  }
+
+  /** The „Kurier Parowy” itself: front page news, rankings, workshop, the reporter's errand, letters. */
+  private newspaper(f: Folk) {
     const m = newsboyMission(this.city, f);
     const known = m ? this.missions.find((r) => r.m.id === m.id) : undefined;
     const st = m ? missionState(m) : null;
     const stan = !m ? 'brak' : known && st !== 'new' ? (st === 'done' ? 'zrobione' : 'wziete') : this.questsFull() ? 'pelno' : 'nowe';
     const town = this.townHere() ?? mapName(this.city.id);
+    const where = this.kurierMiejsce();
     this.scene.pause();
     resetTouch();
     void showGazeta({
       sprzedawca: f.name,
-      miasto: town && !town.startsWith('w:') ? town : 'okolica',
+      miasto: town && !town.startsWith('w:') ? town : tr(GZ.okolica),
       zlecenie: { tytul: m?.tytul ?? '', opis: m?.opis ?? '', stan },
-      kraj: this.kurierMiejsce().k,
+      kraj: where.k,
+      wiesci: async () => {
+        if (offline.demo) return [];
+        try {
+          return await rpc<WiescSerwera[]>('kurier_wiesci', { p_kraj: where.k, p_miasto: where.c, p_test: TEST });
+        } catch {
+          return null;
+        }
+      },
       wydanie: async () => {
         if (offline.demo) return null;
-        const { k, c } = this.kurierMiejsce();
         try {
-          return await rpc<Wydanie>('kurier_wydanie', { p_token: session.token, p_kraj: k, p_miasto: c });
+          return await rpc<Wydanie>('kurier_wydanie', { p_token: session.token, p_kraj: where.k, p_miasto: where.c });
         } catch {
           return null;
         }
@@ -3117,7 +3164,7 @@ export class GameScene extends Phaser.Scene {
         if (offline.demo) return 'ok';
         const ll = this.city.toLatLon(this.player.x, this.player.y);
         const ctx = { mapa: this.city.id, miasto: town, lat: ll?.lat, lon: ll?.lon, ulica: this.whereIs(this.player.x, this.player.y),
-          wersja: TEST ? `${WERSJA_TEST}-test` : WERSJA, poziom: poziomPostaci(session.exp), time: new Date().toISOString() };
+          wersja: TEST ? `${WERSJA_TEST}-test` : WERSJA, poziom: poziomPostaci(session.exp), jezyk: lang, time: new Date().toISOString() };
         try {
           return (await rpc<boolean>('order_quest', { p_player: session.name || null, p_text: text.slice(0, 500), p_ctx: ctx })) ? 'ok' : 'limit';
         } catch {

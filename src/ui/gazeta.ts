@@ -1,10 +1,14 @@
 import './gazeta.css';
-import { GAZETA, NOWOSCI, PLANY, RANKINGI, type Wiesc } from '../content/gazeta';
+import { GAZETA, NOWOSCI, PLANY, RANKINGI, STRONY, type Wiesc } from '../content/gazeta';
 import { odznaka } from '../content/osiagniecia';
+import { lang, tr, type Txt } from '../i18n';
 
-// The newsboy's paper (owner, 11 Oct 2026): a window in the style of the new shop windows – a wooden,
-// brass-fitted frame around a newspaper page. Pages: what's new, plans, a reporter's errand and a letter
-// to the editors. The game stands still while it is open (GameScene pauses itself).
+// The newsboy's paper (owner, 11 Oct 2026): a printed newspaper sheet lying over the game – deckled,
+// yellowed paper, newspaper type (Playfair Display headlines, Old Standard TT body), sections named
+// in the nav strip under the masthead like a real paper, no window frame. Pages: front page (news the
+// owner writes in the admin panel: new quests, special tasks – RPC kurier_wiesci), people (daily
+// rankings – RPC kurier_wydanie), workshop (what's new / plans), a reporter's assignment and a letter
+// to the editors. Polish and English. The game stands still while it is open (GameScene pauses).
 
 export type StanZlecenia = 'nowe' | 'wziete' | 'zrobione' | 'brak' | 'pelno';
 
@@ -26,25 +30,55 @@ export interface Wydanie {
   ja: { km: number; o: string[] } | null;
 }
 
+/** A piece of front-page news written in the admin panel (table kurier_wiesci). */
+export interface WiescSerwera {
+  id: number;
+  rodzaj: 'zadanie' | 'specjalne' | 'wiesc';
+  tytul: Partial<Txt>;
+  tresc: Partial<Txt>;
+  miejsce: string | null;
+  od: string;
+}
+
 export interface GazetaHost {
   /** Who sells the paper (shown in the corner). */
   sprzedawca: string;
   /** The town for the page header. */
   miasto: string;
   zlecenie: { tytul: string; opis: string; stan: StanZlecenia };
+  /** Front-page news; null when offline. */
+  wiesci?: () => Promise<WiescSerwera[] | null>;
   /** Fetches the daily edition (rankings); null when offline. */
   wydanie?: () => Promise<Wydanie | null>;
-  /** Country code and town, for the rankings' headings. */
+  /** Country code, for the rankings' headings. */
   kraj?: string | null;
   /** Sends a letter to the editors; resolves 'ok', 'limit' (too many) or 'blad' (no connection). */
   wyslij: (text: string) => Promise<'ok' | 'limit' | 'blad'>;
-  /** The page to open on (default: news). */
+  /** The page to open on (default: the front page). */
   strona?: Strona;
 }
 
-type Strona = 'nowosci' | 'ludzie' | 'plany' | 'zlecenie' | 'list';
+export type Strona = 'wiesci' | 'ludzie' | 'warsztat' | 'zlecenie' | 'list';
 
-/** Resolves with true when the player took the errand (GameScene then shows the mission dialog). */
+/** A server text in the reader's language (falls back to the other one). */
+const txt = (t: Partial<Txt> | undefined) => (t ? t[lang] || t.pl || t.en || '' : '');
+const locale = () => (lang === 'pl' ? 'pl-PL' : 'en-GB');
+
+/** A deckled paper edge: a clip-path polygon with small irregular teeth (fixed, so it doesn't flicker). */
+function deckle() {
+  let seed = 7;
+  const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const pts: string[] = [];
+  const side = (n: number, f: (t: number, j: number) => string) => { for (let i = 0; i < n; i++) pts.push(f(i / n, r() * 0.55)); };
+  side(60, (t, j) => `${(t * 100).toFixed(2)}% ${j.toFixed(2)}%`);
+  side(60, (t, j) => `${(100 - j * 0.6).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+  side(60, (t, j) => `${(100 - t * 100).toFixed(2)}% ${(100 - j).toFixed(2)}%`);
+  side(60, (t, j) => `${(j * 0.6).toFixed(2)}% ${(100 - t * 100).toFixed(2)}%`);
+  return `polygon(${pts.join(',')})`;
+}
+const DECKLE = deckle();
+
+/** Resolves with true when the player took the assignment (GameScene then shows the mission dialog). */
 export function showGazeta(h: GazetaHost): Promise<boolean> {
   return new Promise((resolve) => {
     const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = '') => {
@@ -53,26 +87,21 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       if (text) e.textContent = text;
       return e;
     };
-    let strona: Strona = h.strona ?? 'nowosci';
+    let strona: Strona = h.strona ?? 'wiesci';
     let draft = '';
-    // The edition is fetched once, when the page is first opened (or at once when it opens on it).
-    let wydanie: Wydanie | null | undefined;
-    let pobieram = false;
-    const pobierz = () => {
-      if (pobieram || wydanie !== undefined || !h.wydanie) return;
-      pobieram = true;
-      h.wydanie().then((w) => { wydanie = w; }, () => { wydanie = null; }).finally(() => {
-        pobieram = false;
-        if (!done && strona === 'ludzie') render();
-      });
-    };
     const root = el('div', 'gz-screen');
     root.id = 'gazeta';
-    const box = el('section', 'gz-box');
-    box.setAttribute('role', 'dialog');
-    box.setAttribute('aria-modal', 'true');
-    box.setAttribute('aria-label', GAZETA.tytul);
-    root.append(box);
+    root.lang = lang;
+    const sheet = el('section', 'gz-sheet');
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-label', tr(GAZETA.tytul));
+    sheet.style.clipPath = DECKLE;
+    // The deckled edge clips the sheet, so its shadow comes from a wrapper (drop-shadow follows the clip).
+    const wrap = el('div', 'gz-wrap');
+    wrap.append(sheet);
+    root.append(wrap);
+    root.onclick = (e) => { if (e.target === root) close(); };
     document.body.append(root);
     history.pushState({ ...history.state, expGazeta: true }, '');
     let done = false;
@@ -95,19 +124,83 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     window.addEventListener('popstate', onPop);
     window.addEventListener('keydown', onKey, true);
 
-    const dzis = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const wiesci = (lista: Wiesc[]) => {
-      const col = el('div', 'gz-cols');
-      for (const w of lista) {
-        const a = el('article', 'gz-art');
-        a.append(el('h3', '', w.tytul), el('p', 'gz-date', w.data), el('p', '', w.tresc));
-        col.append(a);
-      }
-      return col;
+    // Server data, fetched once each (front page at once, rankings when first opened).
+    const fetched = <T,>(f: (() => Promise<T | null>) | undefined) => {
+      const s = { v: undefined as T | null | undefined, busy: false };
+      const get = (page: Strona) => {
+        if (s.busy || s.v !== undefined) return;
+        if (!f) { s.v = null; return; }
+        s.busy = true;
+        f().then((v) => { s.v = v; }, () => { s.v = null; }).finally(() => {
+          s.busy = false;
+          if (!done && strona === page) render();
+        });
+      };
+      return { s, get };
     };
+    const news = fetched(h.wiesci);
+    const edition = fetched(h.wydanie);
+
+    const fmt = (t: Txt, vars: Record<string, string>) => Object.entries(vars).reduce((a, [k, v]) => a.replaceAll(`{${k}}`, v), tr(t));
+    const dzis = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const nr = Math.floor((Date.now() - Date.UTC(2026, 9, 11)) / 864e5) + 1;
+
+    // ------------------------------------------------------------------ pieces
+    const kicker = (t: string, cls = '') => el('p', `gz-kicker ${cls}`, t);
+    const story = (w: Wiesc, small = false) => {
+      const a = el('article', `gz-story${small ? ' gz-small' : ''}`);
+      a.append(el('h3', '', tr(w.tytul)), el('p', 'gz-dateline', w.data), el('p', 'gz-text', tr(w.tresc)));
+      return a;
+    };
+    const cols = (items: HTMLElement[], cls = '') => {
+      const c = el('div', `gz-cols ${cls}`);
+      c.append(...items);
+      return c;
+    };
+    const head = (t: string) => el('h2', 'gz-head', t);
+    const note = (t: string) => el('p', 'gz-note', t);
+
+    // ------------------------------------------------------------------ front page
+    const pageWiesci = (): HTMLElement[] => {
+      news.get('wiesci');
+      if (news.s.v === undefined) return [note(tr(STRONY.wczytuje))];
+      const list = news.s.v ?? [];
+      const out: HTMLElement[] = [];
+      const fromServer = (w: WiescSerwera, lead: boolean) => {
+        const a = el('article', `gz-story${lead ? ' gz-lead' : ''} gz-r-${w.rodzaj}`);
+        a.append(kicker(tr(STRONY.rodzaj[w.rodzaj] ?? STRONY.rodzaj.wiesc), `gz-k-${w.rodzaj}`), el(lead ? 'h2' : 'h3', '', txt(w.tytul)));
+        const dateline = new Date(`${w.od}T12:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'long' });
+        a.append(el('p', 'gz-dateline', w.miejsce ? `${dateline} · ${fmt(STRONY.gdzie, { miejsce: w.miejsce })}` : dateline));
+        for (const par of txt(w.tresc).split(/\n{2,}/)) if (par.trim()) a.append(el('p', 'gz-text', par.trim()));
+        return a;
+      };
+      if (list.length) {
+        out.push(fromServer(list[0], true));
+        if (list.length > 1) out.push(cols(list.slice(1).map((w) => fromServer(w, false))));
+      } else out.push(note(tr(STRONY.wiesciPusto)));
+      // Teasers: the reporter's assignment and the latest from the workshop.
+      const side: HTMLElement[] = [];
+      if (h.zlecenie.stan === 'nowe') {
+        const t = el('article', 'gz-story gz-box');
+        const go = el('button', 'gz-link', `${tr(STRONY.zlecenieTytul)} →`);
+        go.type = 'button';
+        go.onclick = () => { strona = 'zlecenie'; render(); };
+        t.append(kicker(tr(STRONY.zlecenie)), el('h3', '', h.zlecenie.tytul), go);
+        side.push(t);
+      }
+      for (const w of NOWOSCI.slice(0, list.length ? 2 : 3)) {
+        const s = story(w, true);
+        s.prepend(kicker(tr(STRONY.warsztat)));
+        side.push(s);
+      }
+      out.push(el('hr', 'gz-rule'), cols(side, 'gz-cols3'));
+      return out;
+    };
+
+    // ------------------------------------------------------------------ people (rankings)
     const nazwaKraju = (k: string) => {
       try {
-        return new Intl.DisplayNames(['pl'], { type: 'region' }).of(k) ?? k;
+        return new Intl.DisplayNames([lang], { type: 'region' }).of(k) ?? k;
       } catch {
         return k;
       }
@@ -117,19 +210,19 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       return o ? `${o.ikona} ${o.nazwa}` : null;
     };
     const kolumna = (tytul: string, z: Zakres | null) => {
-      const a = el('article', 'gz-art gz-rank');
-      a.append(el('h3', '', tytul));
+      const a = el('article', 'gz-story gz-rank');
+      a.append(el('h3', 'gz-rank-h', tytul));
       if (!z || (!z.km.length && !z.wybitne.length)) {
-        a.append(el('p', 'gz-date', RANKINGI.pusto));
+        a.append(el('p', 'gz-dateline', tr(RANKINGI.pusto)));
         return a;
       }
       if (z.km.length) {
-        a.append(el('p', 'gz-sub2', RANKINGI.km));
+        a.append(kicker(tr(RANKINGI.km)));
         const ol = el('ol', 'gz-list');
         for (const r of z.km) {
           const li = el('li');
           const row = el('div', 'gz-li');
-          row.append(el('span', 'gz-who', r.n), el('span', 'gz-val', `${r.km.toLocaleString('pl-PL')} km`));
+          row.append(el('span', 'gz-who', r.n), el('span', 'gz-dots'), el('span', 'gz-val', `${r.km.toLocaleString(locale())} km`));
           li.append(row);
           ol.append(li);
         }
@@ -137,121 +230,128 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       }
       const wyb = z.wybitne.map((r) => ({ n: r.n, o: r.o.map(badge).filter(Boolean) as string[] })).filter((r) => r.o.length);
       if (wyb.length) {
-        a.append(el('p', 'gz-sub2', RANKINGI.wybitne));
+        a.append(kicker(tr(RANKINGI.wybitne)));
         const ul = el('ul', 'gz-list gz-feats');
         for (const r of wyb) {
           const li = el('li');
-          const row = el('div', 'gz-li');
-          row.append(el('span', 'gz-who', r.n), el('span', 'gz-val', r.o.join(', ')));
-          li.append(row);
+          li.append(el('span', 'gz-who', r.n), el('span', 'gz-val', r.o.join(', ')));
           ul.append(li);
         }
         a.append(ul);
       }
       return a;
     };
-    const ludzie = (): HTMLElement[] => {
-      pobierz();
-      const head = el('h3', 'gz-head', RANKINGI.tytul);
-      if (wydanie === undefined) return [head, el('p', 'gz-note', RANKINGI.czekam)];
-      if (!wydanie) return [head, el('p', 'gz-note', RANKINGI.brak)];
-      const w = wydanie;
-      const dzien = new Date(`${w.dzien}T12:00:00`).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
-      const out: HTMLElement[] = [head, el('p', 'gz-note', w.dzis ? RANKINGI.dzis : RANKINGI.wczoraj.replace('{dzien}', dzien))];
+    const pageLudzie = (): HTMLElement[] => {
+      edition.get('ludzie');
+      const top = head(tr(RANKINGI.tytul));
+      const w = edition.s.v;
+      if (w === undefined) return [top, note(tr(STRONY.wczytuje))];
+      if (!w) return [top, note(tr(RANKINGI.brak))];
+      const dzien = new Date(`${w.dzien}T12:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'long' });
+      const out: HTMLElement[] = [top, note(w.dzis ? tr(RANKINGI.dzis) : fmt(RANKINGI.wczoraj, { dzien }))];
       // The player's own summary: only when a badge came that day (owner's wish), with the km walked.
       const moje = (w.ja?.o ?? []).map(badge).filter(Boolean) as string[];
       if (moje.length) {
-        const box = el('article', 'gz-art gz-big gz-me');
-        box.append(el('h3', '', RANKINGI.gratulacje), el('p', '', (w.dzis ? RANKINGI.mojeDzis : RANKINGI.moje).replace('{odznaki}', moje.join(', '))));
-        if (w.ja && w.ja.km >= 0.1) box.append(el('p', 'gz-date', RANKINGI.mojeKm.replace('{km}', w.ja.km.toLocaleString('pl-PL'))));
+        const box = el('article', 'gz-story gz-box gz-me');
+        box.append(kicker(tr(RANKINGI.gratulacje)), el('p', 'gz-text', fmt(w.dzis ? RANKINGI.mojeDzis : RANKINGI.moje, { odznaki: moje.join(', ') })));
+        if (w.ja && w.ja.km >= 0.1) box.append(el('p', 'gz-dateline', fmt(RANKINGI.mojeKm, { km: w.ja.km.toLocaleString(locale()) })));
         out.push(box);
       }
-      const cols = el('div', 'gz-cols gz-cols3');
-      cols.append(kolumna(RANKINGI.swiat, w.swiat));
-      if (h.kraj) cols.append(kolumna(nazwaKraju(h.kraj), w.kraj));
-      if (h.miasto && w.miasto) cols.append(kolumna(h.miasto, w.miasto));
-      out.push(cols, el('p', 'gz-note', RANKINGI.stopka));
+      const c = [kolumna(tr(RANKINGI.swiat), w.swiat)];
+      if (h.kraj) c.push(kolumna(nazwaKraju(h.kraj), w.kraj));
+      if (h.miasto && w.miasto) c.push(kolumna(h.miasto, w.miasto));
+      out.push(cols(c, 'gz-cols3'), note(tr(RANKINGI.stopka)));
       return out;
     };
+
+    // ------------------------------------------------------------------ workshop, assignment, letter
+    const pageWarsztat = (): HTMLElement[] => [
+      head(tr(STRONY.warsztatNowe)), cols(NOWOSCI.map((w) => story(w))),
+      el('hr', 'gz-rule'), head(tr(STRONY.warsztatPlany)), cols(PLANY.map((w) => story(w, true))), note(tr(STRONY.planyUwaga)),
+    ];
+    const pageZlecenie = (): HTMLElement[] => {
+      const z = h.zlecenie;
+      const out: HTMLElement[] = [head(tr(STRONY.zlecenieTytul))];
+      if (z.stan === 'brak') return [...out, note(tr(STRONY.zlecenieBrak))];
+      const a = el('article', 'gz-story gz-lead gz-box');
+      a.append(el('h2', '', z.tytul), el('p', 'gz-text', z.opis));
+      out.push(a);
+      if (z.stan === 'nowe') {
+        const b = el('button', 'gz-stamp', tr(STRONY.wez));
+        b.type = 'button';
+        b.onclick = () => close(true);
+        out.push(b);
+      } else out.push(note(tr(z.stan === 'wziete' ? STRONY.wziete : z.stan === 'pelno' ? STRONY.pelno : STRONY.zrobione)));
+      return out;
+    };
+    const pageList = (): HTMLElement[] => {
+      const area = el('textarea', 'gz-area');
+      area.maxLength = GAZETA.maksListu;
+      area.rows = 6;
+      area.placeholder = tr(STRONY.listPoczatek);
+      area.value = draft;
+      const count = el('span', 'gz-count', `${draft.length}/${GAZETA.maksListu}`);
+      area.oninput = () => { draft = area.value; count.textContent = `${draft.length}/${GAZETA.maksListu}`; };
+      const msg = el('p', 'gz-note');
+      msg.setAttribute('role', 'status');
+      const send = el('button', 'gz-stamp', tr(STRONY.wyslij));
+      send.type = 'button';
+      send.onclick = async () => {
+        const t = area.value.trim();
+        if (t.length < 5) { msg.textContent = tr(STRONY.zaKrotki); return; }
+        send.disabled = true;
+        msg.textContent = tr(STRONY.wysylam);
+        const r = await h.wyslij(t);
+        if (r === 'ok') {
+          draft = '';
+          area.value = '';
+          count.textContent = `0/${GAZETA.maksListu}`;
+          msg.textContent = tr(STRONY.wyslany);
+        } else msg.textContent = tr(r === 'limit' ? STRONY.limit : STRONY.blad);
+        send.disabled = false;
+      };
+      const row = el('div', 'gz-row');
+      row.append(count, send);
+      return [head(tr(STRONY.listTytul)), el('p', 'gz-text', tr(STRONY.listOpis)), area, row, msg];
+    };
+
+    // ------------------------------------------------------------------ the sheet
     const render = () => {
-      box.replaceChildren();
-      const x = el('button', 'gz-close', '×');
-      x.type = 'button';
-      x.setAttribute('aria-label', 'Zamknij gazetę');
-      x.onclick = () => close();
-      const paper = el('div', 'gz-paper');
+      sheet.replaceChildren();
+      const fold = el('button', 'gz-fold');
+      fold.type = 'button';
+      fold.setAttribute('aria-label', tr(STRONY.zamknij));
+      fold.append(el('span', 'gz-fold-x', '✕'), el('span', 'gz-fold-t', tr(STRONY.zamknij)));
+      fold.onclick = () => close();
       const mast = el('header', 'gz-mast');
-      // The artist's masthead (32-G003) carries the title itself; the h2 stays for screen readers only.
-      const win = el('img', 'gz-winieta');
-      win.src = GAZETA.winieta;
-      win.alt = '';
-      const title = el('h2', 'gz-sr', GAZETA.tytul);
-      mast.append(el('div', 'gz-ears', `${dzis} · ${h.miasto}`), win, title, el('p', 'gz-sub', GAZETA.podtytul));
-      const tabs = el('nav', 'gz-tabs');
-      const pages: [Strona, string, string][] = [['nowosci', '📰', 'Nowości'], ['ludzie', '🏆', 'Ludzie'], ['plany', '🔭', 'Plany'], ['zlecenie', '✒', 'Zlecenie'], ['list', '✉', 'Do redakcji']];
+      const ears = el('div', 'gz-ears');
+      ears.append(el('span', '', `Nr ${nr}`), el('span', 'gz-ears-mid', dzis), el('span', '', h.miasto));
+      const pic = GAZETA.winieta[lang];
+      const title = el('h1', pic ? 'gz-sr' : 'gz-title', tr(GAZETA.tytul));
+      mast.append(ears);
+      if (pic) {
+        const win = el('img', 'gz-winieta');
+        win.src = pic;
+        win.alt = '';
+        mast.append(win);
+      }
+      mast.append(title, el('p', 'gz-sub', tr(GAZETA.podtytul)));
+      const nav = el('nav', 'gz-nav');
+      const pages: [Strona, string, Txt][] = [['wiesci', '📰', STRONY.wiesci], ['ludzie', '🏆', STRONY.ludzie], ['warsztat', '⚙', STRONY.warsztat], ['zlecenie', '✒', STRONY.zlecenie], ['list', '✉', STRONY.list]];
       for (const [id, ic, name] of pages) {
         const b = el('button', `gz-tab${strona === id ? ' on' : ''}`);
         b.type = 'button';
-        b.append(el('span', 'gz-ic', ic), el('span', 'gz-tl', name));
+        b.append(el('span', 'gz-ic', ic), el('span', 'gz-tl', tr(name)));
         b.setAttribute('aria-pressed', String(strona === id));
         b.onclick = () => { strona = id; render(); };
-        tabs.append(b);
+        nav.append(b);
       }
       const body = el('div', 'gz-body');
-      if (strona === 'nowosci') body.append(el('h3', 'gz-head', 'Co nowego w świecie gry'), wiesci(NOWOSCI));
-      else if (strona === 'ludzie') body.append(...ludzie());
-      else if (strona === 'plany') body.append(el('h3', 'gz-head', 'Redakcja zdradza plany'), wiesci(PLANY), el('p', 'gz-note', 'Plany mogą się zmienić – piszcie do redakcji, co chcielibyście zobaczyć!'));
-      else if (strona === 'zlecenie') {
-        const z = h.zlecenie;
-        body.append(el('h3', 'gz-head', 'Zlecenie dla reportera'));
-        if (z.stan === 'brak') body.append(el('p', '', 'Dziś redakcja nie ma dla ciebie zlecenia w tej okolicy. Zajrzyj do innego gazeciarza.'));
-        else {
-          const a = el('article', 'gz-art gz-big');
-          a.append(el('h3', '', z.tytul), el('p', '', z.opis));
-          body.append(a);
-          if (z.stan === 'nowe') {
-            const b = el('button', 'gz-action', 'WEŹ ZLECENIE');
-            b.type = 'button';
-            b.onclick = () => close(true);
-            body.append(b);
-          } else body.append(el('p', 'gz-note', z.stan === 'wziete' ? 'To zlecenie już masz – strzałka pokaże ci drogę.' : z.stan === 'pelno' ? 'Masz już komplet zadań. Skończ któreś i wróć po to zlecenie.' : 'To zlecenie już wykonane. Dziękujemy!'));
-        }
-      } else {
-        body.append(el('h3', 'gz-head', 'List do redakcji'));
-        body.append(el('p', '', 'Opisz przygodę, którą chcesz przeżyć, miejsce, które warto pokazać w grze, albo pomysł na zadanie. Redakcja czyta każdy list – najlepsze trafią do gry!'));
-        const area = el('textarea', 'gz-area');
-        area.maxLength = GAZETA.maksListu;
-        area.rows = 6;
-        area.placeholder = 'Szanowna Redakcjo…';
-        area.value = draft;
-        const count = el('span', 'gz-count', `${draft.length}/${GAZETA.maksListu}`);
-        area.oninput = () => { draft = area.value; count.textContent = `${draft.length}/${GAZETA.maksListu}`; };
-        const note = el('p', 'gz-note');
-        note.setAttribute('role', 'status');
-        const send = el('button', 'gz-action', 'WYŚLIJ LIST');
-        send.type = 'button';
-        send.onclick = async () => {
-          const t = area.value.trim();
-          if (t.length < 5) { note.textContent = 'Napisz choć kilka słów.'; return; }
-          send.disabled = true;
-          note.textContent = 'Gazeciarz zanosi list do redakcji…';
-          const r = await h.wyslij(t);
-          if (r === 'ok') {
-            draft = '';
-            area.value = '';
-            count.textContent = `0/${GAZETA.maksListu}`;
-            note.textContent = 'Dziękujemy! List trafił do redakcji.';
-          } else note.textContent = r === 'limit' ? 'Redakcja ma dziś od ciebie dość listów – spróbuj za godzinę.' : 'Nie udało się wysłać (brak internetu?). Spróbuj jeszcze raz.';
-          send.disabled = false;
-        };
-        const row = el('div', 'gz-row');
-        row.append(count, send);
-        body.append(area, row, note);
-      }
-      const foot = el('footer', 'gz-foot', `Sprzedaje: ${h.sprzedawca}`);
-      paper.append(mast, tabs, body, foot);
-      box.append(x, paper);
-      (strona === 'list' ? box.querySelector<HTMLTextAreaElement>('textarea') : box.querySelector<HTMLButtonElement>('.gz-tab.on'))?.focus({ preventScroll: true });
+      body.append(...(strona === 'wiesci' ? pageWiesci() : strona === 'ludzie' ? pageLudzie() : strona === 'warsztat' ? pageWarsztat() : strona === 'zlecenie' ? pageZlecenie() : pageList()));
+      const foot = el('footer', 'gz-foot');
+      foot.append(el('span', '', fmt(STRONY.sprzedaje, { kto: h.sprzedawca })), el('span', '', `exp-lore.app`));
+      sheet.append(fold, mast, nav, body, foot);
+      (strona === 'list' ? sheet.querySelector<HTMLTextAreaElement>('textarea') : sheet.querySelector<HTMLButtonElement>('.gz-tab.on'))?.focus({ preventScroll: true });
     };
     render();
   });

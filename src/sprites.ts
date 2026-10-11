@@ -2,7 +2,7 @@ import { SKALA_POSTACI } from './skala';
 import Phaser from 'phaser';
 import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, MIESZKANCY_HD, NOWE_POSTACIE, POSWIATA, STOPY_PX, STROJE, type Postac } from './content/wyglad';
 import { HERO_DIRS } from './art';
-import { cleanHumanSheet } from './spriteCleanup';
+import { cleanHumanSheet, liftFeet } from './spriteCleanup';
 import { WYGLAD_09 } from './map/Podloze09';
 
 /**
@@ -240,6 +240,8 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
   if (p.bokWPrawo) mirrorRow(c, 1);
   const data = ctx.getImageData(0, 0, c.width, c.height);
   if (human(p)) cleanHumanSheet(data, p.plik);
+  // The 25-hero pack keeps both feet still from the front and back: lift one foot per step (until redrawn).
+  if (p.plik.startsWith('lista25_')) liftFeet(data);
   else for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
   ctx.putImageData(data, 0, 0);
   const s = centreShifts(data);

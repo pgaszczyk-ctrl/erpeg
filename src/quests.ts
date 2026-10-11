@@ -1,7 +1,7 @@
 import { effectiveStage } from './content/questy/progress';
 import { translateMission, legacyText } from './content/questy/text';
 import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
-import { lang, setLanguage, tx } from './i18n';
+import { lang, setLanguage, tx, tr, type Txt } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
@@ -9,7 +9,7 @@ import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from 
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
-import { REPORTAZ } from './content/gazeta';
+import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
@@ -501,16 +501,70 @@ export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: 
   if (!cel) return null;
   const km = dist(cel) / 1000;
   const at = city.toLatLon(cel.x, cel.y);
-  const fill = (t: string) => t.replace('{cel}', cel!.name);
+  const fill = (t: Txt) => tr(t).replaceAll('{cel}', cel!.name);
   return {
     id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name,
     tytul: fill(R.tytuly[Math.floor(r() * R.tytuly.length)]),
     opis: fill(R.opisy[Math.floor(r() * R.opisy.length)]),
-    zadanie: { typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: `Spisz notatkę: ${cel.name}`, komunikat: R.komunikat },
+    zadanie: { typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: fill(R.cel), komunikat: tr(R.komunikat) },
     naMiejscu: true,
-    zakonczenie: R.komunikat,
+    zakonczenie: tr(R.komunikat),
     nagroda: Math.max(R.minMonet, Math.round(km * R.monetNaKm)),
     doswiadczenie: Math.max(R.minExp, Math.round(km * R.expNaKm)),
+  };
+}
+
+/** Does this newsboy ask for help delivering papers? One in ROZNOSZENIE.co, fixed by his id. */
+export function newsboyDelivers(folk: { id: string }) {
+  return rng(hash(`${folk.id}:roznos`))() < 1 / ROZNOSZENIE.co;
+}
+
+/**
+ * Delivering papers (owner, 11 Oct 2026): N addressed houses of one street near the newsboy, visited in
+ * any order (stage 'badanie' with clue = house, button „Doręcz gazetę”); paid at the last house.
+ * One per newsboy per login, like his reporter's errand.
+ */
+export function newsboyDelivery(city: CityMap, folk: { id: string; x: number; y: number; name: string }): Misja | null {
+  const id = `gen-roznos-${folk.id}-${session.nonce}`;
+  const taken = session.gen[id];
+  if (taken) return taken;
+  const R = ROZNOSZENIE;
+  const r = rng(hash(`${folk.id}:${session.nonce}:roznos`));
+  const maxPx = R.promienM * PX_PER_M;
+  const streets = new Map<string, { addr: string; x: number; y: number }[]>();
+  for (const b of city.addressed()) {
+    if (!b.door || Math.hypot(b.door.x - folk.x, b.door.y - folk.y) > maxPx) continue;
+    const addr = b.addresses[0];
+    const m = addr?.match(/^(.*\D)\s+\d+\S*$/);
+    if (!m) continue;
+    const list = streets.get(m[1]) ?? [];
+    if (!list.some((h) => h.addr === addr)) list.push({ addr, x: b.door.x, y: b.door.y });
+    streets.set(m[1], list);
+  }
+  const good = [...streets.entries()].filter(([, l]) => l.length >= R.min);
+  if (!good.length) return null;
+  const [ulica, all] = good[Math.floor(r() * good.length)];
+  // Houses spread along the street: sorted by distance from the nearest one, then every k-th.
+  const start = all.reduce((a, b) => (Math.hypot(b.x - folk.x, b.y - folk.y) < Math.hypot(a.x - folk.x, a.y - folk.y) ? b : a));
+  all.sort((a, b) => Math.hypot(a.x - start.x, a.y - start.y) - Math.hypot(b.x - start.x, b.y - start.y));
+  const ile = Math.min(R.max, all.length);
+  const step = all.length / ile;
+  const domy = Array.from({ length: ile }, (_, i) => all[Math.floor(i * step)]);
+  const ll = (p: { x: number; y: number }) => { const q = city.toLatLon(p.x, p.y); return { lat: q.lat, lon: q.lon }; };
+  const fill = (t: Txt) => tr(t).replaceAll('{ulica}', ulica).replaceAll('{ile}', String(ile));
+  return {
+    id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name,
+    tytul: fill(R.tytul),
+    opis: fill(R.opis),
+    zadanie: { typ: 'idz', miejsce: ll(domy[0]), cel: fill(R.cel) },
+    etapy: [{
+      typ: 'badanie', miejsce: ll(domy[0]), ile, cel: fill(R.cel),
+      tropy: domy.map((d, i) => ({ id: `dom${i}`, miejsce: ll(d), tytul: d.addr, tekst: tr(R.dom), przycisk: tr(R.przycisk) })),
+    }],
+    naMiejscu: true,
+    zakonczenie: tr(R.koniec),
+    nagroda: ile * R.monetNaDom,
+    doswiadczenie: ile * R.expNaDom,
   };
 }
 

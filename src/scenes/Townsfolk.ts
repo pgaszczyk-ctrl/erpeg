@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import Phaser from 'phaser';
 import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
@@ -159,7 +160,7 @@ export class Townsfolk {
       walker.step(rp() * 120);
       list.push({
         id: `${key}:gazeta${i}`, role: 'gazeciarz', walker, x: walker.x, y: walker.y,
-        name: GAZETA.imiona[Math.floor(rp() * GAZETA.imiona.length)],
+        name: tr(GAZETA.imiona[Math.floor(rp() * GAZETA.imiona.length)]),
         tex: hdOn ? GAZETA.wyglad : `folk${Math.floor(rp() * LOOKS)}`,
       });
     }

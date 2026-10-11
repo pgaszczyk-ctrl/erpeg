@@ -478,12 +478,12 @@ export class Etapy {
   private inspectClue(rm: ResolvedMission,z: Etap,clue: NonNullable<Etap['tropy']>[number]) {
     const index = stageIndex(rm.m), key = progressKey(index,'clues'), allowed = (z.tropy ?? []).map(c=>c.id);
     this.host.dialog({...z.dialogueMeta,title:clue.tytul,text:clue.tekst,
-      buttons:[tx('Zapisz trop','Record clue'),tx('Później','Later')],onChoose:i=>{
+      buttons:[clue.przycisk ?? tx('Zapisz trop','Record clue'),tx('Później','Later')],onChoose:i=>{
         if(i!==0 || missionState(rm.m)!=='active' || stageIndex(rm.m)!==index)return;
         const found=addClue(this.choices(rm),key,allowed,clue.id);
         void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
         if(found.length >= (z.ile ?? 2)) this.host.stageDone(rm);
-        else this.host.toast(tx(`Tropy: ${found.length}/${z.ile ?? 2}. Wybierz kolejny punkt.`,`Clues: ${found.length}/${z.ile ?? 2}. Choose another point.`),2200);
+        else this.host.toast(clue.przycisk ? `${z.cel} ${found.length}/${z.ile ?? 2}` : tx(`Tropy: ${found.length}/${z.ile ?? 2}. Wybierz kolejny punkt.`,`Clues: ${found.length}/${z.ile ?? 2}. Choose another point.`),2200);
       }});
   }
 

@@ -121,7 +121,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['letters', '📰 Listy'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -143,6 +143,7 @@ function render() {
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
   else if (tab === 'letters') void lettersTab(main);
+  else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
   else settings(main);
 }
@@ -786,6 +787,74 @@ async function bugsTab(main: HTMLElement) {
 }
 
 /** Letters to the editors from the newsboys (gazeciarze): players' quest ideas – read as ideas only. */
+/**
+ * „Kurier Parowy” front page (owner, 11 Oct 2026): news the newsboys sell – new quests, special
+ * tasks, other news – in Polish and English (table kurier_wiesci). Nothing is ever deleted: „Ukryj” hides.
+ */
+async function kurierTab(main: HTMLElement) {
+  type W = { id?: number; rodzaj: string; tytul: { pl?: string; en?: string }; tresc: { pl?: string; en?: string }; miejsce: string | null;
+    od: string; do: string | null; kraj: string | null; miasto: string | null; test: boolean; aktywna: boolean };
+  main.append(el('h2', {}, ['Gazeta – pierwsza strona']), el('p', { className: 'muted' }, [
+    'Wieści, które gracze czytają u gazeciarzy: nowe zadania, zadania specjalne i inne ogłoszenia. Najnowsza jest na górze strony, dużymi literami. ',
+    'Pusty angielski tekst = gracze z angielskim widzą polski. „Tylko test” = widać tylko na serwerze testowym. Kraj/miasto puste = wszędzie.',
+  ]));
+  let list: W[];
+  try {
+    list = await call<W[]>('admin_kurier_wiesci', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const RODZAJE: [string, string][] = [['zadanie', '📜 Nowe zadanie'], ['specjalne', '★ Zadanie specjalne'], ['wiesc', '📰 Wieści']];
+  const form = (w: W) => {
+    const inp = (v: string | null, ph = '', type = 'text') => el('input', { type, value: v ?? '', placeholder: ph, style: 'width:100%' }) as HTMLInputElement;
+    const area = (v: string | undefined, ph: string) => el('textarea', { value: v ?? '', placeholder: ph, rows: 5, style: 'width:100%' }) as HTMLTextAreaElement;
+    const rodzaj = el('select', {}, RODZAJE.map(([v, t]) => el('option', { value: v, selected: w.rodzaj === v }, [t]))) as HTMLSelectElement;
+    const tPl = inp(w.tytul.pl ?? '', 'Tytuł po polsku'), tEn = inp(w.tytul.en ?? '', 'Title in English');
+    const bPl = area(w.tresc.pl, 'Treść po polsku (pusta linia = nowy akapit)'), bEn = area(w.tresc.en, 'Text in English');
+    const miejsce = inp(w.miejsce, 'Gdzie (np. Brama Krakowska) – pokazuje się pod tytułem');
+    const od = inp(w.od ?? today, '', 'date'), doo = inp(w.do, '', 'date');
+    const kraj = inp(w.kraj, 'np. PL'), miasto = inp(w.miasto, 'np. Lublin');
+    const test = el('input', { type: 'checkbox', checked: w.test }) as HTMLInputElement;
+    const aktywna = el('input', { type: 'checkbox', checked: w.aktywna }) as HTMLInputElement;
+    const msg = el('span', { className: 'muted' });
+    const save = btn(w.id ? '💾 Zapisz zmiany' : '➕ Opublikuj', async () => {
+      if (!tPl.value.trim() || !bPl.value.trim()) { msg.textContent = 'Wpisz przynajmniej polski tytuł i treść.'; return; }
+      msg.textContent = 'Zapisuję…';
+      try {
+        await call('admin_kurier_zapisz', { p_w: { id: w.id ?? null, rodzaj: rodzaj.value, tytul: { pl: tPl.value.trim(), en: tEn.value.trim() },
+          tresc: { pl: bPl.value.trim(), en: bEn.value.trim() }, miejsce: miejsce.value.trim(), od: od.value, do: doo.value,
+          kraj: kraj.value.trim(), miasto: miasto.value.trim(), test: test.checked, aktywna: aktywna.checked } });
+        main.replaceChildren();
+        void kurierTab(main);
+      } catch (e) { msg.textContent = (e as Error).message; }
+    });
+    const row = (label: string, ...c: Node[]) => el('label', { style: 'display:block;margin:6px 0' }, [el('b', {}, [label]), el('br'), ...c]);
+    return el('div', { className: 'card', style: 'max-width:760px' }, [
+      row('Rodzaj', rodzaj),
+      el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px' }, [row('🇵🇱 Tytuł', tPl), row('🇬🇧 Title', tEn), row('🇵🇱 Treść', bPl), row('🇬🇧 Text', bEn)]),
+      row('Gdzie', miejsce),
+      el('div', { style: 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px' }, [row('Od dnia', od), row('Do dnia (puste = bez końca)', doo), row('Kraj', kraj), row('Miasto', miasto)]),
+      el('label', {}, [test, ' Tylko test ']), ' ', el('label', {}, [aktywna, ' Widoczna']), el('br'), save, ' ', msg,
+    ]);
+  };
+  main.append(el('h3', {}, ['Nowa wieść']), form({ rodzaj: 'zadanie', tytul: {}, tresc: {}, miejsce: null, od: today, do: null, kraj: null, miasto: null, test: false, aktywna: true }));
+  if (!list.length) return;
+  main.append(el('h3', {}, ['Opublikowane']));
+  for (const w of list) {
+    const box = el('div');
+    const show = () => box.replaceChildren(el('div', { className: 'card', style: `max-width:760px;opacity:${w.aktywna ? 1 : 0.5}` }, [
+      el('b', {}, [`${RODZAJE.find((r) => r[0] === w.rodzaj)?.[1] ?? w.rodzaj}: ${w.tytul.pl ?? ''}`]),
+      el('div', { className: 'muted' }, [`${w.od}${w.do ? ' → ' + w.do : ''}${w.miasto ? ' · ' + w.miasto : ''}${w.kraj ? ' · ' + w.kraj : ''}${w.test ? ' · tylko test' : ''}${w.aktywna ? '' : ' · ukryta'}${w.tytul.en ? '' : ' · brak EN'}`]),
+      el('p', { style: 'white-space:pre-wrap' }, [w.tresc.pl ?? '']),
+      btn('✏ Edytuj', () => box.replaceChildren(form(w))),
+    ]));
+    show();
+    main.append(box);
+  }
+}
+
 async function lettersTab(main: HTMLElement) {
   type Letter = { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; status: string };
   main.append(el('h2', {}, ['Listy do redakcji']), el('p', { className: 'muted' }, ['Pomysły graczy na zadania i przygody, wysłane u gazeciarza („✉ Do redakcji”). To tylko pomysły – Claude nie robi nic z listem, dopóki sam go nie zlecisz.']));

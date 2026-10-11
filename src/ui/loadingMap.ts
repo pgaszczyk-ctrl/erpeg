@@ -13,7 +13,6 @@ let video: HTMLVideoElement | null = null;
 let poster: HTMLImageElement | null = null;
 let resize: (() => void) | null = null;
 let overviewOffset = 0.08;
-let panOffset = 0.12;
 const EUROPE = { x: 655 / 1280, y: 211 / 720 };
 
 const root = () => document.getElementById('loading-map');
@@ -134,13 +133,28 @@ function frame(r: HTMLElement, p: { x: number; y: number }, scale: number, crop 
 function initialFrame(r: HTMLElement) {
   return frame(r, portrait(r) ? EUROPE : { x: 0.5, y: 0.5 }, initialScale(r), portrait(r));
 }
+/**
+ * One movement (owner, 11 Oct 2026: „nie centruj najpierw, tylko centruj zoomując”): after a short
+ * look at the whole map the zoom starts from its middle and the destination glides to the centre while
+ * the picture grows – no separate pan. Geometric zoom; the target's distance from the screen centre
+ * shrinks as (1 − u)², so it moves steadily inwards and never swings out.
+ */
 function flightFrames(r: HTMLElement) {
-  return [
+  const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
+  const s0 = initialScale(r), s1 = finalScale(r), crop = portrait(r);
+  const frames: Keyframe[] = [
     { offset: 0, transform: initialFrame(r), easing: 'linear' },
-    { offset: overviewOffset, transform: initialFrame(r), easing: 'cubic-bezier(.4, 0, .2, 1)' },
-    { offset: panOffset, transform: frame(r, point!, initialScale(r), portrait(r)), easing: 'cubic-bezier(.6, 0, .9, .4)' },
-    { offset: 1, transform: frame(r, point!, finalScale(r)) },
   ];
+  const N = 40;
+  for (let k = 0; k <= N; k++) {
+    const t = k / N;
+    const u = t ** 1.7; // slow start, then faster – as the old zoom felt
+    const scale = s0 * (s1 / s0) ** u;
+    const f = 1 - (1 - u) ** 2 * (s0 / scale);
+    const p = { x: from.x + (point!.x - from.x) * f, y: from.y + (point!.y - from.y) * f };
+    frames.push({ offset: overviewOffset + (1 - overviewOffset) * t, transform: frame(r, p, scale, crop && k < N), easing: 'linear' });
+  }
+  return frames;
 }
 
 /** The destination is resolved by travel.ts from this character's real save. */
@@ -158,13 +172,10 @@ export async function flyToGameLocation(lat: number, lon: number, mapReady: Prom
   await fade;
   if (r.hidden || finished || r.dataset.phase === 'error') return;
   if (!reduced()) {
-    const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
-    const distance = Math.hypot((point.x - from.x) * 1280, (point.y - from.y) * 720);
-    const panMs = Math.min(650, Math.max(250, distance * 1.6));
-    const overviewMs = 1000, zoomMs = 10_000, zoomStart = overviewMs + panMs;
+    // A short look at the whole map, then one zoom that also brings the destination to the centre.
+    const overviewMs = 700, zoomMs = 10_000, zoomStart = overviewMs;
     const duration = zoomStart + zoomMs;
     overviewOffset = overviewMs / duration;
-    panOffset = zoomStart / duration;
     flight = r.querySelector<HTMLElement>('.lm-plate')!.animate(flightFrames(r), { duration, easing: 'linear', fill: 'forwards' });
     const current = flight, done = current.finished.catch(() => {});
     let terrainReady = false, finishing = false;

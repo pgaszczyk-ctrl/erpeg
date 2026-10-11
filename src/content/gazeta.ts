@@ -1,30 +1,79 @@
-// The newsboy (gazeciarz, owner 11 Oct 2026): in every town, more of them in bigger towns. He sells the
-// „Kurier Parowy”: what changed in the game, what is planned, a reporter's errand, and a letter to the
-// editors where the player can order a quest / describe an adventure (RPC order_quest → table quest_orders,
-// read by the owner in the admin panel; untrusted player text, ideas only).
+import type { Txt } from '../i18n';
+
+// The newsboy (gazeciarz, owner 11 Oct 2026): in every town, more of them in bigger towns. He stands on
+// a street corner, shouts and turns to the hero. A talk opens a short dialog first (read the paper,
+// help deliver papers – every few newsboys –, goodbye). The „Kurier Parowy” / „The Steam Courier”:
+//   • front page – news the owner writes in the admin panel (new quests, special tasks; RPC
+//     kurier_wiesci, table kurier_wiesci, both languages) + the reporter's errand,
+//   • „Ludzie” – daily rankings (RPC kurier_wydanie),
+//   • „Z warsztatu” – what changed in the game and what is planned (NOWOSCI / PLANY below),
+//   • a letter to the editors (RPC order_quest → quest_orders; untrusted player text, ideas only).
+// Every text is two-language ({ pl, en }, read with tr() when shown – the language can change at login).
 
 export const GAZETA = {
-  tytul: 'Kurier Parowy',
-  podtytul: 'Gazeta codzienna dla wszystkich exp-lorerów',
+  tytul: { pl: 'Kurier Parowy', en: 'The Steam Courier' } as Txt,
+  podtytul: { pl: 'Gazeta codzienna dla wszystkich exp-lorerów', en: 'The daily paper for every exp-lorer' } as Txt,
   /** How many newsboys a 1 km square gets, by how many places (shops, offices, temples…) it has. */
   ilu: [
     { miejsc: 60, ile: 3 },
     { miejsc: 25, ile: 2 },
     { miejsc: 6, ile: 1 },
   ],
-  /** Their look: the artist's newsboy trial v2 (order 32: standing frames only, so they stand on a corner). */
+  /** Their look: the artist's newsboy trial v2 (order 32: standing frames; they stand on a corner – owner OK). */
   wyglad: 'hd-gazeciarz',
-  /** The masthead picture (artist, 32-G003); the page title stays only for screen readers. */
-  winieta: 'gazeta/winieta_poziomy.png',
-  imiona: ['Gazeciarz Felek', 'Gazeciarz Józek', 'Gazeciarz Staś', 'Gazeciarz Kazio', 'Gazeciarka Mania', 'Gazeciarka Zocha', 'Gazeciarz Tadzio', 'Gazeciarka Hela'],
+  /** Masthead pictures per language (artist, 32-G003); a language without one gets a typeset masthead. */
+  winieta: { pl: 'gazeta/winieta_poziomy.png', en: null } as Record<'pl' | 'en', string | null>, // EN + phone versions ordered: 32-P004
+  imiona: [
+    { pl: 'Gazeciarz Felek', en: 'Newsboy Felek' }, { pl: 'Gazeciarz Józek', en: 'Newsboy Józek' },
+    { pl: 'Gazeciarz Staś', en: 'Newsboy Staś' }, { pl: 'Gazeciarz Kazio', en: 'Newsboy Kazio' },
+    { pl: 'Gazeciarka Mania', en: 'Newsgirl Mania' }, { pl: 'Gazeciarka Zocha', en: 'Newsgirl Zocha' },
+    { pl: 'Gazeciarz Tadzio', en: 'Newsboy Tadzio' }, { pl: 'Gazeciarka Hela', en: 'Newsgirl Hela' },
+  ] as Txt[],
   okrzyki: [
-    'Nadzwyczajne wydanie! Nadzwyczajne wydanie!',
-    'Kurier Parowy! Najświeższe wieści!',
-    'Smoki nad miastem? Czytajcie w Kurierze!',
-    'Gazeta, gazeta! Kto chce gazetę?',
-  ],
+    { pl: 'Nadzwyczajne wydanie! Nadzwyczajne wydanie!', en: 'Extra! Extra! Read all about it!' },
+    { pl: 'Kurier Parowy! Najświeższe wieści!', en: 'The Steam Courier! Hot off the press!' },
+    { pl: 'Smoki nad miastem? Czytajcie w Kurierze!', en: 'Dragons over the town? Read it in the Courier!' },
+    { pl: 'Gazeta, gazeta! Kto chce gazetę?', en: 'Paper, paper! Who wants a paper?' },
+    { pl: 'Nowe zadania dla śmiałków! Tylko w Kurierze!', en: 'New quests for the brave! Only in the Courier!' },
+  ] as Txt[],
   /** Longest letter to the editors. */
   maksListu: 500,
+};
+
+/** The talk with a newsboy, before the paper. */
+export const ROZMOWA = {
+  czytaj: { pl: '📰 Poproszę Kuriera', en: '📰 A Courier, please' } as Txt,
+  roznos: { pl: '🗞 Pomogę roznosić gazety', en: '🗞 I can help deliver papers' } as Txt,
+  jakIdzie: { pl: '🗞 Jak tam roznoszenie?', en: '🗞 About the deliveries…' } as Txt,
+  pa: { pl: '👋 Do widzenia', en: '👋 Goodbye' } as Txt,
+  /** Said while the delivery is in progress. {ulica} {zostalo} */
+  wToku: {
+    pl: 'Jeszcze {zostalo} domów przy ul. {ulica}! Wsuń gazetę w drzwi albo do skrzynki – wystarczy podejść pod adres.',
+    en: '{zostalo} more houses on {ulica}! Slip a paper under the door or into the box – just walk up to the address.',
+  } as Txt,
+  zrobione: { pl: 'Dzięki za pomoc! Dziś już wszystko rozniesione.', en: 'Thanks for the help! Everything is delivered for today.' } as Txt,
+};
+
+/** Delivering papers (owner, 11 Oct 2026): every few newsboys ask to bring the paper to N houses of one street. */
+export const ROZNOSZENIE = {
+  /** Which newsboys ask: one in `co` (by id). */
+  co: 3,
+  /** Houses to visit: as many as the street has, from `min` to `max`. */
+  min: 3,
+  max: 6,
+  /** The street: its houses within this distance of the newsboy (m). */
+  promienM: 700,
+  monetNaDom: 6,
+  expNaDom: 10,
+  tytul: { pl: 'Roznoszenie gazet – ul. {ulica}', en: 'Paper round – {ulica}' } as Txt,
+  opis: {
+    pl: 'Nie nadążam! Zanieś Kuriera do {ile} domów przy ul. {ulica}. Wystarczy podejść pod adres – gazetę wsuniesz w drzwi. Za ostatni dom od razu dostaniesz zapłatę.',
+    en: 'I can’t keep up! Take the Courier to {ile} houses on {ulica}. Just walk up to each address and slip the paper under the door. You get paid at the last house.',
+  } as Txt,
+  cel: { pl: 'Roznieś gazety: {ulica}', en: 'Deliver papers: {ulica}' } as Txt,
+  dom: { pl: 'Tu mieszkają prenumeratorzy Kuriera. Wsunąć gazetę w szparę drzwi?', en: 'Courier subscribers live here. Slip a paper under the door?' } as Txt,
+  przycisk: { pl: '🗞 Doręcz gazetę', en: '🗞 Deliver the paper' } as Txt,
+  koniec: { pl: 'Ostatnia gazeta doręczona! Gazeciarz będzie zachwycony – zapłata już w sakiewce.', en: 'The last paper is delivered! The newsboy will be delighted – your pay is in your purse.' } as Txt,
 };
 
 /** The reporter's errand: go to a place in town and write a note there (finishes on the spot). */
@@ -35,77 +84,125 @@ export const REPORTAZ = {
   minMonet: 15,
   expNaKm: 60,
   minExp: 25,
-  tytuly: ['Reportaż: {cel}', 'Sensacja przy {cel}!', 'Plotki spod {cel}', 'Co słychać przy {cel}?'],
+  tytuly: [
+    { pl: 'Reportaż: {cel}', en: 'Report: {cel}' },
+    { pl: 'Sensacja przy {cel}!', en: 'Sensation at {cel}!' },
+    { pl: 'Plotki spod {cel}', en: 'Gossip from {cel}' },
+    { pl: 'Co słychać przy {cel}?', en: 'What’s new at {cel}?' },
+  ] as Txt[],
   opisy: [
-    'Redakcja słyszała, że przy {cel} z kanałów bucha dziwnie kolorowa para. Idź tam, rozejrzyj się i spisz notatkę – wydrukujemy ją jutro na pierwszej stronie!',
-    'Mieszkańcy piszą, że koło {cel} chochliki podmieniają szyldy. Sprawdź, co się tam dzieje, i zanotuj wszystko, co zobaczysz.',
-    'Podobno przy {cel} ktoś widział cień smoka w kałuży. Bzdura czy sensacja? Idź i sprawdź na własne oczy.',
-    'Przy {cel} otwarto ponoć nowy parowy wynalazek. Zajrzyj tam i opisz go naszym czytelnikom.',
-  ],
-  komunikat: 'Notatka spisana! Gazeciarz odbierze ją przy następnym wydaniu, a honorarium już trafiło do sakiewki.',
+    { pl: 'Redakcja słyszała, że przy {cel} z kanałów bucha dziwnie kolorowa para. Idź tam, rozejrzyj się i spisz notatkę – wydrukujemy ją jutro na pierwszej stronie!', en: 'The editors heard that oddly coloured steam is puffing from the drains at {cel}. Go there, look around and write a note – we’ll print it on tomorrow’s front page!' },
+    { pl: 'Mieszkańcy piszą, że koło {cel} chochliki podmieniają szyldy. Sprawdź, co się tam dzieje, i zanotuj wszystko, co zobaczysz.', en: 'Readers write that imps swap the shop signs near {cel}. Find out what’s going on and note everything you see.' },
+    { pl: 'Podobno przy {cel} ktoś widział cień smoka w kałuży. Bzdura czy sensacja? Idź i sprawdź na własne oczy.', en: 'Someone says they saw a dragon’s shadow in a puddle at {cel}. Nonsense or a scoop? Go and see for yourself.' },
+    { pl: 'Przy {cel} otwarto ponoć nowy parowy wynalazek. Zajrzyj tam i opisz go naszym czytelnikom.', en: 'A new steam invention was supposedly unveiled at {cel}. Take a look and describe it for our readers.' },
+  ] as Txt[],
+  cel: { pl: 'Spisz notatkę: {cel}', en: 'Write a note: {cel}' } as Txt,
+  komunikat: { pl: 'Notatka spisana! Gazeciarz odbierze ją przy następnym wydaniu, a honorarium już trafiło do sakiewki.', en: 'Note written! The newsboy will collect it for the next edition, and your fee is already in your purse.' } as Txt,
+};
+
+/** Every label of the paper itself. */
+export const STRONY = {
+  wiesci: { pl: 'Wieści', en: 'News' } as Txt,
+  ludzie: { pl: 'Ludzie', en: 'People' } as Txt,
+  warsztat: { pl: 'Z warsztatu', en: 'Workshop' } as Txt,
+  zlecenie: { pl: 'Zlecenie', en: 'Assignment' } as Txt,
+  list: { pl: 'Do redakcji', en: 'Letters' } as Txt,
+  zamknij: { pl: 'Złóż gazetę', en: 'Fold the paper' } as Txt,
+  sprzedaje: { pl: 'Sprzedaje: {kto}', en: 'Sold by {kto}' } as Txt,
+  okolica: { pl: 'okolica', en: 'hereabouts' } as Txt,
+  // Front page
+  wiesciTytul: { pl: 'Z pierwszej strony', en: 'Front page' } as Txt,
+  wiesciPusto: { pl: 'Dziś redakcja nie ma nowych wieści o zadaniach w tej okolicy. Zajrzyj jutro – albo poczytaj, co słychać w warsztacie gry!', en: 'No quest news for these parts today. Look again tomorrow – or read what’s new in the game’s workshop!' } as Txt,
+  wczytuje: { pl: 'Gazeciarz wyciąga z torby najświeższe wydanie…', en: 'The newsboy pulls the latest edition from his bag…' } as Txt,
+  rodzaj: {
+    zadanie: { pl: 'Nowe zadanie', en: 'New quest' },
+    specjalne: { pl: 'Zadanie specjalne', en: 'Special task' },
+    wiesc: { pl: 'Wieści', en: 'News' },
+  } as Record<string, Txt>,
+  gdzie: { pl: 'Gdzie: {miejsce}', en: 'Where: {miejsce}' } as Txt,
+  // Workshop
+  warsztatNowe: { pl: 'Co nowego w grze', en: 'What’s new in the game' } as Txt,
+  warsztatPlany: { pl: 'Redakcja zdradza plany', en: 'The editors reveal their plans' } as Txt,
+  planyUwaga: { pl: 'Plany mogą się zmienić – piszcie do redakcji, co chcielibyście zobaczyć!', en: 'Plans may change – write to the editors about what you’d like to see!' } as Txt,
+  // Assignment
+  zlecenieTytul: { pl: 'Zlecenie dla reportera', en: 'An assignment for a reporter' } as Txt,
+  zlecenieBrak: { pl: 'Dziś redakcja nie ma dla ciebie zlecenia w tej okolicy. Zajrzyj do innego gazeciarza.', en: 'The editors have no assignment for you around here today. Try another newsboy.' } as Txt,
+  wez: { pl: 'Biorę zlecenie', en: 'Take the assignment' } as Txt,
+  wziete: { pl: 'To zlecenie już masz – strzałka pokaże ci drogę.', en: 'You already have this assignment – the arrow shows the way.' } as Txt,
+  pelno: { pl: 'Masz już komplet zadań. Skończ któreś i wróć po to zlecenie.', en: 'Your quest log is full. Finish one and come back for this.' } as Txt,
+  zrobione: { pl: 'To zlecenie już wykonane. Dziękujemy!', en: 'This assignment is done. Thank you!' } as Txt,
+  // Letters
+  listTytul: { pl: 'List do redakcji', en: 'A letter to the editors' } as Txt,
+  listOpis: { pl: 'Opisz przygodę, którą chcesz przeżyć, miejsce, które warto pokazać w grze, albo pomysł na zadanie. Redakcja czyta każdy list – najlepsze trafią do gry!', en: 'Describe an adventure you’d like to have, a place worth showing in the game, or an idea for a quest. The editors read every letter – the best ones make it into the game!' } as Txt,
+  listPoczatek: { pl: 'Szanowna Redakcjo…', en: 'Dear Editors…' } as Txt,
+  wyslij: { pl: 'Wyślij list', en: 'Send the letter' } as Txt,
+  zaKrotki: { pl: 'Napisz choć kilka słów.', en: 'Write at least a few words.' } as Txt,
+  wysylam: { pl: 'Gazeciarz zanosi list do redakcji…', en: 'The newsboy runs the letter to the editors…' } as Txt,
+  wyslany: { pl: 'Dziękujemy! List trafił do redakcji.', en: 'Thank you! Your letter reached the editors.' } as Txt,
+  limit: { pl: 'Redakcja ma dziś od ciebie dość listów – spróbuj za godzinę.', en: 'The editors have enough letters from you for now – try again in an hour.' } as Txt,
+  blad: { pl: 'Nie udało się wysłać (brak internetu?). Spróbuj jeszcze raz.', en: 'Couldn’t send it (no internet?). Try again.' } as Txt,
 };
 
 /** „Ludzie” – the daily rankings (RPC kurier_wydanie; test characters never appear). */
 export const RANKINGI = {
-  tytul: 'Ludzie z naszych łamów',
-  wczoraj: 'Wydanie z {dzien}: kto wędrował najdalej i kto dokonał rzeczy wielkich.',
-  dzis: 'Pierwsze wydanie rankingów – redakcja liczy na bieżąco, co dzieje się dzisiaj.',
-  czekam: 'Gazeciarz wyciąga z torby najświeższe wydanie…',
-  brak: 'Dziś gazeciarz nie dostał rankingów z drukarni (brak połączenia?). Zajrzyj później.',
-  pusto: 'Tu wczoraj było cicho – może ty trafisz do jutrzejszego wydania?',
-  km: 'Najdalej wędrowali',
-  wybitne: 'Wybitne osiągnięcia',
-  swiat: 'Świat',
-  gratulacje: 'Gratulacje od redakcji!',
-  moje: 'Wczoraj do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!',
-  mojeDzis: 'Dziś do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!',
-  mojeKm: 'Przebyta droga tego dnia: {km} km.',
-  stopka: 'Rankingi drukujemy codziennie o północy. Liczą się kilometry przebyte pieszo i odznaki z Księgi osiągnięć.',
+  tytul: { pl: 'Ludzie z naszych łamów', en: 'People in the news' } as Txt,
+  wczoraj: { pl: 'Wydanie z {dzien}: kto wędrował najdalej i kto dokonał rzeczy wielkich.', en: 'Edition of {dzien}: who walked the farthest and who did great things.' } as Txt,
+  dzis: { pl: 'Pierwsze wydanie rankingów – redakcja liczy na bieżąco, co dzieje się dzisiaj.', en: 'The first edition of the rankings – the editors count today’s deeds as they happen.' } as Txt,
+  brak: { pl: 'Dziś gazeciarz nie dostał rankingów z drukarni (brak połączenia?). Zajrzyj później.', en: 'The rankings didn’t arrive from the printers today (no connection?). Look again later.' } as Txt,
+  pusto: { pl: 'Tu wczoraj było cicho – może ty trafisz do jutrzejszego wydania?', en: 'All quiet here yesterday – maybe you’ll make tomorrow’s edition?' } as Txt,
+  km: { pl: 'Najdalej wędrowali', en: 'Farthest walkers' } as Txt,
+  wybitne: { pl: 'Wybitne osiągnięcia', en: 'Outstanding deeds' } as Txt,
+  swiat: { pl: 'Świat', en: 'World' } as Txt,
+  gratulacje: { pl: 'Gratulacje od redakcji!', en: 'Congratulations from the editors!' } as Txt,
+  moje: { pl: 'Wczoraj do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!', en: 'Yesterday a new seal joined your Book of Deeds: {odznaki}. The Steam Courier writes about you!' } as Txt,
+  mojeDzis: { pl: 'Dziś do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!', en: 'Today a new seal joined your Book of Deeds: {odznaki}. The Steam Courier writes about you!' } as Txt,
+  mojeKm: { pl: 'Przebyta droga tego dnia: {km} km.', en: 'Distance walked that day: {km} km.' } as Txt,
+  stopka: { pl: 'Rankingi drukujemy codziennie o północy. Liczą się kilometry przebyte pieszo i pieczęcie z Księgi osiągnięć.', en: 'Rankings are printed every midnight. Kilometres on foot and seals from the Book of Deeds count.' } as Txt,
 };
 
 export interface Wiesc {
   data: string;
-  tytul: string;
-  tresc: string;
+  tytul: Txt;
+  tresc: Txt;
 }
 
-/** „Co nowego” – newest first. Written for players, short and without jargon. */
+/** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
-    data: '11.10.2026', tytul: 'Codzienne rankingi w Kurierze',
-    tresc: 'Na stronie „Ludzie” gazeta pisze, kto wczoraj przewędrował najwięcej kilometrów na świecie, w twoim kraju i mieście, i kto zdobył wybitne odznaki. Jeśli i ty zdobędziesz pieczęć – redakcja ci pogratuluje!',
+    data: '11.10.2026', tytul: { pl: 'Kurier w nowej szacie', en: 'The Courier gets a new look' },
+    tresc: { pl: 'Gazeta wygląda teraz jak prawdziwa gazeta, a na pierwszej stronie redakcja ogłasza nowe zadania. Gazeciarze najpierw zagadują – a co trzeci poprosi o pomoc w roznoszeniu gazet po ulicy.', en: 'The paper now looks like a real paper, and the front page announces new quests. Newsboys chat first – and every third one asks for help delivering papers along a street.' },
   },
   {
-    data: '11.10.2026', tytul: 'Gazeciarze na ulicach!',
-    tresc: 'W każdym mieście biegają gazeciarze z Kurierem Parowym. Mają zlecenia reporterskie, przyjmują listy do redakcji i opowiadają, co nowego w świecie.',
+    data: '11.10.2026', tytul: { pl: 'Codzienne rankingi w Kurierze', en: 'Daily rankings in the Courier' },
+    tresc: { pl: 'Na stronie „Ludzie” gazeta pisze, kto wczoraj przewędrował najwięcej kilometrów na świecie, w twoim kraju i mieście, i kto zdobył wybitne pieczęcie. Jeśli i ty zdobędziesz pieczęć – redakcja ci pogratuluje!', en: 'The “People” page tells who walked the most kilometres yesterday in the world, your country and your town, and who earned outstanding seals. Earn one yourself and the editors will congratulate you!' },
   },
   {
-    data: '11.10.2026', tytul: 'Lampa na złą pogodę',
-    tresc: 'Po zmroku, w deszczu i we mgle bohater niesie ciepłe światło lampy – widać go i to, co ma tuż obok.',
+    data: '11.10.2026', tytul: { pl: 'Gazeciarze na ulicach!', en: 'Newsboys on the streets!' },
+    tresc: { pl: 'W każdym mieście na rogach ulic stoją gazeciarze z Kurierem Parowym. Mają zlecenia reporterskie i przyjmują listy do redakcji.', en: 'In every town newsboys stand on street corners with the Steam Courier. They have reporter assignments and take letters to the editors.' },
   },
   {
-    data: '10.10.2026', tytul: 'Nowa maszyneria na dole ekranu',
-    tresc: 'Kocioł życia, rurka doświadczenia z manometrem, mosiężne bulaje i para. Wystarczy dotknąć kotła, by się uleczyć.',
+    data: '11.10.2026', tytul: { pl: 'Lampa na złą pogodę', en: 'A lamp for bad weather' },
+    tresc: { pl: 'Po zmroku, w deszczu i we mgle bohater niesie ciepłe światło lampy – widać go i to, co ma tuż obok.', en: 'After dark, in rain and fog your hero carries a warm lamp – you can see them and what’s close by.' },
   },
   {
-    data: '9.10.2026', tytul: 'Rowery i parowe hulajnogi',
-    tresc: 'W sklepach sportowych kupisz rower albo parową hulajnogę – i pojedziesz szybciej niż na piechotę.',
+    data: '10.10.2026', tytul: { pl: 'Nowa maszyneria na dole ekranu', en: 'New machinery at the bottom of the screen' },
+    tresc: { pl: 'Kocioł życia, rurka doświadczenia z manometrem, mosiężne bulaje i para. Wystarczy dotknąć kotła, by się uleczyć.', en: 'A life boiler, an experience tube with a gauge, brass portholes and steam. Touch the boiler to heal.' },
   },
   {
-    data: '9.10.2026', tytul: '25 bohaterów do wyboru',
-    tresc: 'W Kufrze możesz zmienić wygląd bohatera – jest aż 25 postaci.',
+    data: '9.10.2026', tytul: { pl: 'Rowery i parowe hulajnogi', en: 'Bicycles and steam scooters' },
+    tresc: { pl: 'W sklepach sportowych kupisz rower albo parową hulajnogę – i pojedziesz szybciej niż na piechotę.', en: 'Sports shops sell bicycles and steam scooters – faster than walking.' },
   },
   {
-    data: '8.10.2026', tytul: 'Pączkarnia, burgery i warsztaty',
-    tresc: 'Dobra Pączkarnia na Krakowskim Przedmieściu robi pączki z owoców, McDonald’s – wege burgery z warzyw, a warsztaty samochodowe naprawiają broń i skupują rudę.',
+    data: '9.10.2026', tytul: { pl: '25 bohaterów do wyboru', en: '25 heroes to choose from' },
+    tresc: { pl: 'W Kufrze możesz zmienić wygląd bohatera – jest aż 25 postaci.', en: 'Change your hero’s look in the Trunk – there are 25 characters.' },
   },
 ];
 
 /** „Plany redakcji” – what we are working on (no dates promised). */
 export const PLANY: Wiesc[] = [
-  { data: 'wkrótce', tytul: 'Gazeciarz z prawdziwego zdarzenia', tresc: 'Nasz rysownik szkicuje gazeciarza z torbą pełną gazet i nową, papierową szatę Kuriera.' },
-  { data: 'wkrótce', tytul: 'Smoki w pełnej krasie', tresc: 'Leśny i trujący smok dostaną nowe, bajkowe rysunki i pełne ruchy.' },
-  { data: 'w planach', tytul: 'Zabytki Lublina', tresc: 'Nowy Ratusz, Archikatedra z Wieżą Trynitarską – rysowane jak Zamek i Brama Krakowska.' },
-  { data: 'w planach', tytul: 'Więcej przygód', tresc: 'Nowe historie pisane ręcznie – także z waszych listów do redakcji!' },
-  { data: 'w planach', tytul: 'Gra po angielsku', tresc: 'Cała gra w dwóch językach, z wyborem przy tworzeniu postaci.' },
+  { data: 'wkrótce', tytul: { pl: 'Gazeciarz z prawdziwego zdarzenia', en: 'A proper newsboy' }, tresc: { pl: 'Nasz rysownik szkicuje gazeciarzy i gazeciarki z torbą pełną gazet oraz nową, papierową szatę Kuriera.', en: 'Our artist is sketching newsboys and newsgirls with bags full of papers, and the Courier’s new paper look.' } },
+  { data: 'wkrótce', tytul: { pl: 'Smoki w pełnej krasie', en: 'Dragons in full glory' }, tresc: { pl: 'Leśny i trujący smok dostaną nowe, bajkowe rysunki i pełne ruchy.', en: 'The forest and poison dragons will get new fairy-tale drawings and full animations.' } },
+  { data: 'w planach', tytul: { pl: 'Zabytki Lublina', en: 'Lublin’s landmarks' }, tresc: { pl: 'Nowy Ratusz, Archikatedra z Wieżą Trynitarską – rysowane jak Zamek i Brama Krakowska.', en: 'The New Town Hall, the Cathedral and the Trinitarian Tower – drawn like the Castle and the Kraków Gate.' } },
+  { data: 'w planach', tytul: { pl: 'Więcej przygód', en: 'More adventures' }, tresc: { pl: 'Nowe historie pisane ręcznie – także z waszych listów do redakcji!', en: 'New hand-written stories – some from your letters to the editors!' } },
+  { data: 'w planach', tytul: { pl: 'Gra po angielsku', en: 'The whole game in English' }, tresc: { pl: 'Cała gra w dwóch językach, z wyborem przy tworzeniu postaci.', en: 'The whole game in two languages, chosen when you create your character.' } },
 ];
