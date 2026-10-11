@@ -5,3 +5,4 @@ public/map
 
 # Screenshots written by scripts/tests/browser-demo.mjs
 work/demo-*.png
+scripts/tests/_phone-demo.mjs

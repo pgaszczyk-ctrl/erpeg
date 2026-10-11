@@ -1,3 +1,4 @@
+import { tx } from './i18n';
 import { RPC } from './api';
 
 // Player accounts (Supabase Auth): e-mail + password, or Google. One account
@@ -50,7 +51,15 @@ function emailOf(jwt: string) {
 
 /** In the sign-in window: keep the tokens and close. True if this page was that window. */
 export function catchGoogleReturn(): boolean {
-  if (!new URLSearchParams(location.search).has('google')) return false;
+  const q = new URLSearchParams(location.search);
+  if (!q.has('google')) return false;
+  // A link from our e-mail (templates in docs/konta-maile.md): exp-lore.app/?google=1&token_hash=…&type=…,
+  // verified here, so the e-mail never shows a supabase.co address.
+  const th = q.get('token_hash'), ty = q.get('type');
+  if (th && ty) {
+    void verifyEmailLink(th, ty);
+    return true;
+  }
   const h = new URLSearchParams(location.hash.slice(1));
   const token = h.get('access_token');
   const error = h.get('error_description') ?? h.get('error');
@@ -71,6 +80,32 @@ export function catchGoogleReturn(): boolean {
   document.body.innerHTML = `<div style="font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center">${token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`}</div>`;
   setTimeout(() => window.close(), 600);
   return true;
+}
+
+const PAGE = 'font:18px/1.5 Georgia,serif;color:#f3e6c4;background:#1b140e;min-height:100vh;box-sizing:border-box;margin:0;padding:48px 20px;text-align:center';
+const gameUrl = () => `${location.origin}${location.pathname}`;
+
+async function verifyEmailLink(tokenHash: string, type: string) {
+  document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1><p>${tx('Sprawdzam link…', 'Checking the link…')}</p></div>`;
+  try {
+    const r = await fetch(`${AUTH}/verify`, {
+      method: 'POST',
+      headers: { apikey: RPC.headers.apikey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, token_hash: tokenHash }),
+    });
+    const j = await r.json();
+    if (!r.ok || !j.access_token) throw new Error(j.msg ?? j.error_description ?? 'bad link');
+    keep(j);
+    history.replaceState(null, '', gameUrl());
+    if (type === 'recovery') return newPasswordPage(j.access_token);
+    document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1>
+      <p>✅ ${tx('Konto potwierdzone! Jesteś zalogowany.', 'Account confirmed! You are signed in.')}</p>
+      <p><a href="${gameUrl()}" style="display:inline-block;margin-top:12px;padding:12px 26px;border:3px double #c99b59;color:#f3e6c4;text-decoration:none;font-weight:bold">▶ ${tx('Do gry', 'Play')}</a></p></div>`;
+  } catch {
+    document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1>
+      <p>❌ ${tx('Ten link wygasł albo był już użyty. Wróć do gry i poproś o nowy.', 'This link has expired or was already used. Go back to the game and ask for a new one.')}</p>
+      <p><a href="${gameUrl()}" style="color:#f2d28e">${tx('Do gry', 'Back to the game')}</a></p></div>`;
+  }
 }
 
 export function googleUser(): GoogleSession | null {
