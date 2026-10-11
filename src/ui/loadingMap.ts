@@ -1,7 +1,6 @@
 import { punktNaMapieWczytywania } from '../content/mapaWczytywania';
 import { tx } from '../i18n';
 import { resetTouch, resetKeys } from '../controls';
-import { pixelLogo } from './logo';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
@@ -232,7 +231,13 @@ export function demoMapAtOnce() {
   };
   window.addEventListener('resize', resize);
   preparePoster(r);
+  // The badge logo of the opening, fetched now so it's ready when it fades in.
+  logoImg = new Image();
+  logoImg.src = new URL('logo/odznaka.webp', document.baseURI).href;
+  logoImg.alt = 'Exp-lore';
 }
+
+let logoImg: HTMLImageElement | null = null;
 
 /**
  * The demo's opening: a moment of the world map, then it blurs and the game's logo fades in in the middle,
@@ -253,8 +258,11 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   await wait(1000);
   plate.style.transition = 'opacity .45s, filter .8s';
   plate.style.filter = 'blur(7px) brightness(.75)';
-  const logo = pixelLogo(undefined, 8);
-  logo.style.cssText = 'position:absolute;left:50%;top:46%;max-width:86vw;height:auto;image-rendering:pixelated;opacity:0;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 0 #1e1a24);';
+  // The owner's badge logo (11 Oct 2026: „użyj tego logo”).
+  const logo = logoImg ?? new Image();
+  if (!logo.src) logo.src = new URL('logo/odznaka.webp', document.baseURI).href;
+  await Promise.race([logo.decode().catch(() => {}), wait(1500)]);
+  logo.style.cssText = 'position:absolute;left:50%;top:48%;width:min(62vmin,420px);height:auto;opacity:0;transform:translate(-50%,-50%);filter:drop-shadow(0 8px 10px rgba(0,0,0,.55));pointer-events:none;';
   r.append(logo);
   const centre = 'translate(-50%,-50%)';
   await logo.animate([{ opacity: 0, transform: `${centre} scale(.8)` }, { opacity: 1, transform: `${centre} scale(1)` }], { duration: 800, easing: 'ease-out', fill: 'forwards' }).finished.catch(() => {});
