@@ -38,6 +38,7 @@ interface Wysoki {
   wyciete?: [number, number, number, number];
   znak?: string;
   para: Phaser.GameObjects.Image[];
+  miasto: WielkoscMiasta;
 }
 
 let licznik = 0;
@@ -67,7 +68,7 @@ export class Wysokie {
       if (!w) {
         let dol = -Infinity;
         for (let i = 1; i < b.r.length; i += 2) dol = Math.max(dol, b.r[i]);
-        w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [] };
+        w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [], miasto };
         this.wszystkie.set(id, w);
         this.licz(id, w, miasto);
       } else if (w.noc !== noc && !w.czeka) {
@@ -131,7 +132,9 @@ export class Wysokie {
     const noc = w.noc;
     void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(w.b, noc, miasto)).then((g) => {
       w.czeka = false;
-      if (this.wszystkie.get(id) !== w || !this.scene.sys.isActive()) return;
+      // A paused scene (a dialog is open) still takes the picture: dropping it left an invisible building whose
+      // shadow and walls stayed on the map (owner, 11 Oct 2026, demo). Only a scene that is gone skips it.
+      if (this.wszystkie.get(id) !== w || !this.zyje()) return;
       if (w.noc !== noc) return this.licz(id, w, miasto);
       this.zdejmij(w);
       const key = `bud09-${licznik++}`;
@@ -159,8 +162,10 @@ export class Wysokie {
     const G = GEN_DOTS, m = 20;
     const P = PRZESWIT_BUDYNKU;
     const sx = hx * G, sy = hy * G - P.srodekNadStopami * K;
-    for (const w of this.wszystkie.values()) {
+    for (const [id, w] of this.wszystkie) {
       const im = w.im;
+      // Safety net: a building with no picture, not being drawn and no error gets drawn again.
+      if (!im && !w.czeka && !w.error) this.licz(id, w, w.miasto);
       if (!im || !w.orig) continue;
       const x = w.x0 / G, y = w.y0 / G;
       const widac = x + w.w / G > cam.x - m && x < cam.right + m && y + w.h / G > cam.y - m && y < cam.bottom + m;
@@ -171,6 +176,11 @@ export class Wysokie {
       if (za) this.wytnij(w, sx, sy);
       else if (w.wyciete) this.przywroc(w);
     }
+  }
+
+  private zyje() {
+    const sys = this.scene.sys;
+    return sys.isActive() || sys.isPaused() || sys.isSleeping();
   }
 
   private pelny(w: Wysoki, i: number, j: number) {

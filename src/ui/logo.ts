@@ -59,3 +59,13 @@ export function pixelLogo(text = GAME_NAME, scale = 4): HTMLCanvasElement {
   big.setAttribute('aria-label', text);
   return big;
 }
+
+/** The game's round emblem (owner, 11 Oct 2026; public/logo-256.png, source scripts/logo-zrodlo.png) as an <img>. */
+export function logoImage(size = 150, className = 'm-logo'): HTMLImageElement {
+  const img = document.createElement('img');
+  img.src = `${import.meta.env.BASE_URL}logo-256.png`;
+  img.alt = GAME_NAME;
+  img.width = img.height = size;
+  img.className = className;
+  return img;
+}

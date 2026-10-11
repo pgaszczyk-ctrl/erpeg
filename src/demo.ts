@@ -10,7 +10,7 @@ import { MAKS_POZIOM } from './content/przedmioty';
 import { randomLook } from './look';
 import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
-import { pixelLogo } from './ui/logo';
+import { logoImage } from './ui/logo';
 import { TEST } from './version';
 import { letGo } from './guard';
 
@@ -130,8 +130,8 @@ export function bigText(text: string, ms = 2400) {
 /** The end: the game dims, the name and the invitation stay. */
 export function finale() {
   const el = layer('demo-end', 'background:rgba(10,8,14,0);transition:background 2.5s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;pointer-events:auto;font-family:monospace;');
-  const logo = pixelLogo(undefined, 6);
-  logo.style.cssText = 'image-rendering:pixelated;max-width:90vw;opacity:0;transition:opacity 1.5s 1s;';
+  const logo = logoImage(220, '');
+  logo.style.cssText = 'width:min(220px,60vw);height:auto;opacity:0;transition:opacity 1.5s 1s;';
   const btn = document.createElement('button');
   btn.textContent = DEMO_TEKSTY.koniec;
   btn.style.cssText = 'font:bold 22px monospace;padding:14px 22px;background:#3fa34d;color:#fff;border:3px solid #9be29b;border-radius:10px;cursor:pointer;opacity:0;transition:opacity 1s 2s;';
