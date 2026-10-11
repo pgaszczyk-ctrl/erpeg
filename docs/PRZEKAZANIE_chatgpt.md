@@ -437,3 +437,7 @@
 - Weryfikacja: Vite build, Playwright desktop 1365×1000 i mobile 390×844: brak poziomego overflow, strzałki, dialog, PL/EN, zapamiętanie języka i polityka; obejrzane pełne screenshoty. Pełny npm run build uruchomiony osobno (budowa map).
 
 - Dodatkowo na żądanie właściciela publiczne warunki Google: `/news/warunki.html` i `/news/terms.html`, linki w stopce PL/EN.
+
+## 2026-10-11 — Magicownia i stabilna galeria
+- Na żądanie właściciela usunięto nazwisko z publicznych dokumentów /news, dodano powiązanie z Magicownia.pl oraz dostarczone logo w polityce PL/EN. Wyjaśniono właścicielowi, że marka nie zastępuje wymaganej tożsamości administratora będącego osobą fizyczną; ten obowiązek pozostaje nieuzupełniony. Nie zmieniono danych w grze ani serwerze.
+- Galeria ma stały kadr 4:3 z object-fit:cover na wszystkich rozmiarach; oryginalne pełne obrazy pozostają w dialogu. Przycisków nie przesuwają proporcje zdjęć.
