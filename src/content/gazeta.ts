@@ -48,32 +48,66 @@ export const ROZMOWA = {
   pa: { pl: '👋 Do widzenia', en: '👋 Goodbye' } as Txt,
   /** Said while the delivery is in progress. {ulica} {zostalo} */
   wToku: {
-    pl: 'Jeszcze {zostalo} domów przy ul. {ulica}! Wsuń gazetę w drzwi albo do skrzynki – wystarczy podejść pod adres.',
+    pl: 'Jeszcze {zostalo} domów – {ulica}! Wsuń gazetę w drzwi albo do skrzynki – wystarczy podejść pod adres.',
     en: '{zostalo} more houses on {ulica}! Slip a paper under the door or into the box – just walk up to the address.',
   } as Txt,
   zrobione: { pl: 'Dzięki za pomoc! Dziś już wszystko rozniesione.', en: 'Thanks for the help! Everything is delivered for today.' } as Txt,
 };
 
-/** Delivering papers (owner, 11 Oct 2026): every few newsboys ask to bring the paper to N houses of one street. */
+/**
+ * Delivering papers (owner, 11 Oct 2026): every few newsboys ask for help – and not always the same way
+ * („roznoszenie musi być różnorodne”): a street round nearby, a long round a kilometre or more away, or one
+ * very important client a few kilometres off whom the newsboy forgot. `waga` = how often each kind comes.
+ */
 export const ROZNOSZENIE = {
   /** Which newsboys ask: one in `co` (by id). */
   co: 3,
-  /** Houses to visit: as many as the street has, from `min` to `max`. */
-  min: 3,
-  max: 6,
-  /** The street: its houses within this distance of the newsboy (m). */
-  promienM: 700,
   monetNaDom: 6,
   expNaDom: 10,
-  tytul: { pl: 'Roznoszenie gazet – ul. {ulica}', en: 'Paper round – {ulica}' } as Txt,
+  /** Extra pay for the walk to the street / client. */
+  monetNaKm: 25,
+  expNaKm: 45,
+  warianty: {
+    /** A street near the newsboy. */
+    blisko: { waga: 0.5, odM: 0, doM: 700, min: 3, max: 6 },
+    /** A whole street in another part of town. */
+    daleko: { waga: 0.3, odM: 800, doM: 1600, min: 6, max: 10 },
+    /** One forgotten, very important subscriber far away (one address). */
+    klient: { waga: 0.2, odM: 2200, doM: 3800 },
+  },
+  tytul: { pl: 'Roznoszenie gazet – {ulica}', en: 'Paper round – {ulica}' } as Txt,
   opis: {
-    pl: 'Nie nadążam! Zanieś Kuriera do {ile} domów przy ul. {ulica}. Wystarczy podejść pod adres – gazetę wsuniesz w drzwi. Za ostatni dom od razu dostaniesz zapłatę.',
+    pl: 'Nie nadążam! Zanieś Kuriera do {ile} domów – {ulica}. Wystarczy podejść pod adres – gazetę wsuniesz w drzwi. Za ostatni dom od razu dostaniesz zapłatę.',
     en: 'I can’t keep up! Take the Courier to {ile} houses on {ulica}. Just walk up to each address and slip the paper under the door. You get paid at the last house.',
+  } as Txt,
+  tytulDaleko: { pl: 'Wielka runda – {ulica}', en: 'The big round – {ulica}' } as Txt,
+  opisDaleko: {
+    pl: 'Mamy kłopot w innej dzielnicy – {ulica}, jakieś {km} km stąd! Chłopak, który tam roznosi gazety, rozchorował się, a czeka {ile} prenumeratorów. Weźmiesz całą torbę? Zapłacę jak za dwóch.',
+    en: 'The boy who delivers on {ulica} is sick in bed, and it’s a fair walk from here – about {km} km! {ile} subscribers are waiting. Will you take the whole bag? I’ll pay you double.',
   } as Txt,
   cel: { pl: 'Roznieś gazety: {ulica}', en: 'Deliver papers: {ulica}' } as Txt,
   dom: { pl: 'Tu mieszkają prenumeratorzy Kuriera. Wsunąć gazetę w szparę drzwi?', en: 'Courier subscribers live here. Slip a paper under the door?' } as Txt,
   przycisk: { pl: '🗞 Doręcz gazetę', en: '🗞 Deliver the paper' } as Txt,
   koniec: { pl: 'Ostatnia gazeta doręczona! Gazeciarz będzie zachwycony – zapłata już w sakiewce.', en: 'The last paper is delivered! The newsboy will be delighted – your pay is in your purse.' } as Txt,
+  /** The forgotten client: {kto} (name with title), {adres}, {km}. */
+  klienci: [
+    { pl: 'pan mecenas Wiktor Zębaty', en: 'Counsellor Wiktor Zębaty' },
+    { pl: 'pani radczyni Aurelia Mosiądz', en: 'Councillor Aurelia Mosiądz' },
+    { pl: 'profesor astronomii Teodor Lunetka', en: 'Professor of astronomy Teodor Lunetka' },
+    { pl: 'kapitan sterowca Bronisław Para', en: 'Airship captain Bronisław Para' },
+    { pl: 'dyrektor fabryki zegarów Hipolit Tryb', en: 'Clock factory director Hipolit Tryb' },
+    { pl: 'hrabina Eleonora Manometr', en: 'Countess Eleonora Manometr' },
+  ] as Txt[],
+  tytulKlient: { pl: 'Pilna gazeta: {adres}', en: 'Urgent paper: {adres}' } as Txt,
+  opisKlient: {
+    pl: 'O nie, zapomniałem! {kto} zawsze dostaje pierwszy egzemplarz, jeszcze ciepły z drukarni. Mieszka pod adresem {adres} – to jakieś {km} km stąd. Jeśli gazeta nie dotrze, redakcja mnie zwolni! Pobiegniesz? Płaci sowicie.',
+    en: 'Oh no, I forgot! {kto} always gets the very first copy, still warm from the press. The address is {adres} – about {km} km from here. If it doesn’t arrive, the editors will sack me! Will you run? They pay handsomely.',
+  } as Txt,
+  celKlient: { pl: 'Zanieś gazetę: {adres}', en: 'Deliver the paper: {adres}' } as Txt,
+  koniecKlient: {
+    pl: '{kto} odbiera Kuriera: „Nareszcie! Bez porannej gazety nie ruszam się z domu.” Dostajesz sowity napiwek.',
+    en: '{kto} takes the Courier: “At last! I never leave the house without my morning paper.” You get a generous tip.',
+  } as Txt,
 };
 
 /** The reporter's errand: go to a place in town and write a note there (finishes on the spot). */

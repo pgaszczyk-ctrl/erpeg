@@ -167,7 +167,8 @@ export class DemoRun {
     p.anims.stop();
     const ex = this.scene.add.image(p.x, p.y - 24 * SKALA_POSTACI, TEX.exclaim).setDepth(1_300_000);
     this.scene.tweens.add({ targets: ex, y: ex.y - 3, duration: 200, yoyo: true, repeat: 5 });
-    this.scene.cameras.main.shake(600, 0.012);
+    // A gentle tremor (owner, 11 Oct 2026: it was too strong).
+    this.scene.cameras.main.shake(500, 0.003);
     bigText(DEMO_TEKSTY.olsnienie, 2600);
     this.scene.time.delayedCall(2800, () => {
       ex.destroy();

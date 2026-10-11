@@ -529,43 +529,89 @@ export function newsboyDelivery(city: CityMap, folk: { id: string; x: number; y:
   const taken = session.gen[id];
   if (taken) return taken;
   const R = ROZNOSZENIE;
+  const W = R.warianty;
   const r = rng(hash(`${folk.id}:${session.nonce}:roznos`));
-  const maxPx = R.promienM * PX_PER_M;
-  const streets = new Map<string, { addr: string; x: number; y: number }[]>();
-  for (const b of city.addressed()) {
-    if (!b.door || Math.hypot(b.door.x - folk.x, b.door.y - folk.y) > maxPx) continue;
-    const addr = b.addresses[0];
-    const m = addr?.match(/^(.*\D)\s+\d+\S*$/);
-    if (!m) continue;
-    const list = streets.get(m[1]) ?? [];
-    if (!list.some((h) => h.addr === addr)) list.push({ addr, x: b.door.x, y: b.door.y });
-    streets.set(m[1], list);
-  }
-  const good = [...streets.entries()].filter(([, l]) => l.length >= R.min);
-  if (!good.length) return null;
-  const [ulica, all] = good[Math.floor(r() * good.length)];
-  // Houses spread along the street: sorted by distance from the nearest one, then every k-th.
-  const start = all.reduce((a, b) => (Math.hypot(b.x - folk.x, b.y - folk.y) < Math.hypot(a.x - folk.x, a.y - folk.y) ? b : a));
-  all.sort((a, b) => Math.hypot(a.x - start.x, a.y - start.y) - Math.hypot(b.x - start.x, b.y - start.y));
-  const ile = Math.min(R.max, all.length);
-  const step = all.length / ile;
-  const domy = Array.from({ length: ile }, (_, i) => all[Math.floor(i * step)]);
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
   const ll = (p: { x: number; y: number }) => { const q = city.toLatLon(p.x, p.y); return { lat: q.lat, lon: q.lon }; };
-  const fill = (t: Txt) => tr(t).replaceAll('{ulica}', ulica).replaceAll('{ile}', String(ile));
-  return {
-    id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name,
-    tytul: fill(R.tytul),
-    opis: fill(R.opis),
-    zadanie: { typ: 'idz', miejsce: ll(domy[0]), cel: fill(R.cel) },
-    etapy: [{
-      typ: 'badanie', miejsce: ll(domy[0]), ile, cel: fill(R.cel),
-      tropy: domy.map((d, i) => ({ id: `dom${i}`, miejsce: ll(d), tytul: d.addr, tekst: tr(R.dom), przycisk: tr(R.przycisk) })),
-    }],
-    naMiejscu: true,
-    zakonczenie: tr(R.koniec),
-    nagroda: ile * R.monetNaDom,
-    doswiadczenie: ile * R.expNaDom,
+  const kmTxt = (m: number) => (Math.round(m / 100) / 10).toLocaleString(lang === 'pl' ? 'pl-PL' : 'en-GB');
+  const base = { id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name, naMiejscu: true };
+  // Houses by street (the street = the address without its number).
+  const houses = (odM: number, doM: number) => {
+    const streets = new Map<string, { addr: string; x: number; y: number; d: number }[]>();
+    for (const b of city.addressed()) {
+      if (!b.door) continue;
+      const d = dist(b.door);
+      if (d > doM + 400) continue;
+      const addr = b.addresses[0];
+      const m = addr?.match(/^(.*\D)\s+\d+\S*$/);
+      if (!m) continue;
+      const list = streets.get(m[1]) ?? [];
+      if (!list.some((h) => h.addr === addr)) list.push({ addr, x: b.door.x, y: b.door.y, d });
+      streets.set(m[1], list);
+    }
+    return streets;
   };
+  const round = (v: typeof W.blisko): Misja | null => {
+    const good = [...houses(v.odM, v.doM).entries()].filter(([, l]) => {
+      const near = Math.min(...l.map((h) => h.d));
+      return l.length >= v.min && near >= v.odM && near <= v.doM;
+    });
+    if (!good.length) return null;
+    const [nazwa, all] = good[Math.floor(r() * good.length)];
+    // Polish: „ul. Magnoliowa”, but „Aleja Kraśnicka”, „Plac Zamkowy”… keep their own word.
+    const ulica = lang === 'pl' && !/^(aleja|al\.|plac|pl\.|rondo|osiedle|os\.|skwer|bulwar|rynek|park|droga|trakt|ulica)\b/i.test(nazwa) ? `ul. ${nazwa}` : nazwa;
+    // Houses spread along the street: sorted by distance from the nearest one, then every k-th.
+    const start = all.reduce((a, b) => (b.d < a.d ? b : a));
+    all.sort((a, b) => Math.hypot(a.x - start.x, a.y - start.y) - Math.hypot(b.x - start.x, b.y - start.y));
+    const ile = Math.min(v.max, all.length);
+    const step = all.length / ile;
+    const domy = Array.from({ length: ile }, (_, i) => all[Math.floor(i * step)]);
+    const far = v === W.daleko;
+    const km = start.d / 1000;
+    const fill = (t: Txt) => tr(t).replaceAll('{ulica}', ulica).replaceAll('{ile}', String(ile)).replaceAll('{km}', kmTxt(start.d));
+    return {
+      ...base,
+      tytul: fill(far ? R.tytulDaleko : R.tytul),
+      opis: fill(far ? R.opisDaleko : R.opis),
+      zadanie: { typ: 'idz', miejsce: ll(domy[0]), cel: fill(R.cel) },
+      etapy: [{
+        typ: 'badanie', miejsce: ll(domy[0]), ile, cel: fill(R.cel),
+        tropy: domy.map((d, i) => ({ id: `dom${i}`, miejsce: ll(d), tytul: d.addr, tekst: tr(R.dom), przycisk: tr(R.przycisk) })),
+      }],
+      zakonczenie: tr(R.koniec),
+      nagroda: Math.round(ile * R.monetNaDom * (far ? 2 : 1) + km * R.monetNaKm),
+      doswiadczenie: Math.round(ile * R.expNaDom + km * R.expNaKm),
+    };
+  };
+  const client = (): Misja | null => {
+    const v = W.klient;
+    const list = city.addressed().filter((b) => b.door && b.addresses[0] && dist(b.door) >= v.odM && dist(b.door) <= v.doM);
+    if (!list.length) return null;
+    const b = list[Math.floor(r() * list.length)];
+    const d = dist(b.door!);
+    const kto = R.klienci[Math.floor(r() * R.klienci.length)];
+    const ktoDuzy = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+    // {kto} starts a sentence in the offer and the ending: capitalised there.
+    const fill = (t: Txt) => tr(t).replaceAll('! {kto}', `! ${ktoDuzy(tr(kto))}`).replaceAll('{kto}', tr(kto)).replaceAll('{adres}', b.addresses[0]).replaceAll('{km}', kmTxt(d));
+    return {
+      ...base,
+      tytul: fill(R.tytulKlient),
+      opis: fill(R.opisKlient),
+      zadanie: { typ: 'idz', miejsce: ll(b.door!), cel: fill(R.celKlient), komunikat: ktoDuzy(fill(R.koniecKlient)) },
+      zakonczenie: ktoDuzy(fill(R.koniecKlient)),
+      nagroda: Math.round(20 + (d / 1000) * R.monetNaKm * 1.5),
+      doswiadczenie: Math.round(30 + (d / 1000) * R.expNaKm * 1.5),
+    };
+  };
+  // Pick a kind by weight; when the map has nothing for it (no such street / too far), try the others.
+  const kinds: [number, () => Misja | null][] = [[W.blisko.waga, () => round(W.blisko)], [W.daleko.waga, () => round(W.daleko)], [W.klient.waga, client]];
+  let pick = r() * kinds.reduce((a, k) => a + k[0], 0);
+  const first = kinds.findIndex((k) => (pick -= k[0]) < 0);
+  for (const k of [kinds[first], ...kinds.filter((_, i) => i !== first)]) {
+    const m = k[1]();
+    if (m) return m;
+  }
+  return null;
 }
 
 /** A walkable spot inside the nearest forest within `maxR` px, if any. */

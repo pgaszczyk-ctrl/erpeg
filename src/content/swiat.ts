@@ -100,7 +100,8 @@ export const MIEJSCA = {
 export const WOZY = {
   ladunki: ['pusty', 'beczki', 'worki'],
   masci: ['brazowy', 'czarny', 'szary'],
-  wysokosc: 50,
+  /** Owner 11 Oct 2026: „zbyt duże” – 50 → 34 until the artist's redraw (order 34). */
+  wysokosc: 34,
   klatkaMs: [1400, 2600] as [number, number],
 };
 

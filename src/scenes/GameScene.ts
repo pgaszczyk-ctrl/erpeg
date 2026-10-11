@@ -1256,9 +1256,10 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // A swing at a train (any carriage), a click on it near the hero, or a swing while standing by it: its station's conductor.
-    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.pociagi) {
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.pociagi || this.wozy.length)) {
       const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
-      const st = this.pociagi.stacjaPrzy(hit.x, hit.y) ?? (c && this.pociagi.stacjaPrzy(c.x, c.y, 2)) ?? this.pociagi.stacjaPrzy(this.player.x, this.player.y, 8);
+      const st = this.pociagi?.stacjaPrzy(hit.x, hit.y) ?? (c && this.pociagi?.stacjaPrzy(c.x, c.y, 2)) ?? this.pociagi?.stacjaPrzy(this.player.x, this.player.y, 8)
+        ?? this.cartAt(hit.x, hit.y) ?? (c && this.cartAt(c.x, c.y)) ?? this.cartAt(this.player.x, this.player.y, 6);
       if (st) {
         this.learnPlace();
         this.openCoach(st);
@@ -2048,6 +2049,18 @@ export class GameScene extends Phaser.Scene {
     (this.pociagi ??= new Pociagi(this, this.mapView)).postaw(p, tor);
   }
 
+  /** Horse carts at bus stations: a swing/click on one (or standing by it) opens its coachman, like trains. */
+  private wozy: { img: Phaser.GameObjects.Image; p: CityPlace }[] = [];
+
+  private cartAt(x: number, y: number, pad = 0): CityPlace | null {
+    for (const w of this.wozy) {
+      if (!w.img.active) continue;
+      const b = w.img.getBounds();
+      if (x >= b.x - pad && x <= b.right + pad && y >= b.y - pad && y <= b.bottom + pad) return w.p;
+    }
+    return null;
+  }
+
   private placeCarts(stations: CityPlace[]) {
     const W = WOZY;
     const file = (p: CityPlace) => {
@@ -2072,6 +2085,8 @@ export class GameScene extends Phaser.Scene {
         const at = this.cartSpot(p);
         const img = this.add.image(at.x - 10, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
         img.setScale(W.wysokosc / img.height).setDepth(at.y + 2);
+        this.wozy = this.wozy.filter((w) => w.img.active);
+        this.wozy.push({ img, p });
         const swap = () => {
           if (!img.active) return;
           img.setFrame(img.frame.name === 'f0' ? 'f1' : 'f0');
@@ -3119,6 +3134,7 @@ export class GameScene extends Phaser.Scene {
           const left = st === 'done' ? '' : this.etapy.progress(d.id).replace(/[()\s]/g, '');
           const [got, all] = left.split('/').map(Number);
           const text = st === 'done' ? tr(ROZMOWA.zrobione)
+            : !d.etapy?.length ? `${d.zadanie.cel} – ${tx('pospiesz się, czekają na ciebie!', 'hurry, they’re waiting!')}`
             : tr(ROZMOWA.wToku).replace('{zostalo}', String(Number.isFinite(all - got) ? all - got : '?')).replace('{ulica}', d.zadanie.cel?.split(': ').pop() ?? '');
           this.dialog({ title: `🗞 ${f.name}`, text, buttons: ['OK'], onChoose: () => {} });
         });
