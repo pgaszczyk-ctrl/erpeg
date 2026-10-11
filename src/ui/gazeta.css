@@ -7,6 +7,8 @@
 #gazeta .gz-mast{text-align:center;border-bottom:4px double #2a2118;padding-bottom:6px}
 #gazeta .gz-ears{font-size:13px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #2a211880;padding-bottom:3px}
 #gazeta .gz-mast h2{margin:4px 0 0;font:900 44px/1 'Alegreya','Georgia',serif;letter-spacing:2px;text-transform:uppercase}
+#gazeta .gz-winieta{display:block;width:100%;max-width:960px;height:auto;margin:6px auto 0;image-rendering:pixelated}
+#gazeta .gz-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #gazeta .gz-sub{margin:2px 0 0;font-style:italic;font-size:15px}
 #gazeta .gz-tabs{display:flex;gap:6px;margin:8px 0;justify-content:center;flex-wrap:wrap}
 #gazeta .gz-tab{display:flex;gap:6px;align-items:center;min-height:40px;padding:4px 14px;border:2px solid #2a2118;border-radius:3px;background:#efe3c3;color:#2a2118;font:700 16px 'Alegreya Sans',sans-serif;cursor:pointer}

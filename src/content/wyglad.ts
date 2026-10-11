@@ -93,7 +93,7 @@ export const MIESZKANCY_HD: Postac[] = [
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'chochlik', bokWPrawo: false, skala: 0.32, maska: false };
 
 /** Fixed characters (pack „postacie stałe 01”): each has one look (no recolouring). Key = who in FixedNpcs/Story. */
-export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies', Postac> = {
+export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies' | 'gazeciarz', Postac> = {
   mag: { id: 'mag', nazwa: 'Mag Albrecht', plik: 'mag', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
   margo: { id: 'margo', nazwa: 'Siostra Margo', plik: 'siostra_margo', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'dorosly' },
   marek: { id: 'marek', nazwa: 'Dziadek Marek', plik: 'dziadek_marek', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
@@ -105,6 +105,9 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
   woznica: { id: 'woznica', nazwa: 'Woźnica', plik: 'woznica', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'dorosly' },
   // The dog on Guliwera/Cyda (6 Oct 2026, from the 🎨 Grafika chat): about 0.6 of a person, no mask.
   pies: { id: 'pies', nazwa: 'Biało-czarny pies', plik: 'pies', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
+  // The newsboy, artist's trial v2 (order 32, 32-G003): only standing front + side frames, so newsboys stand still
+  // (gazeciarz_proba.png = those two frames copied into a 3×3 sheet; up uses the front). Full walk sheet to come.
+  gazeciarz: { id: 'gazeciarz', nazwa: 'Gazeciarz', plik: 'gazeciarz_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dziecko' },
 };
 
 /** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */

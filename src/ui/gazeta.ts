@@ -79,7 +79,12 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       x.onclick = () => close();
       const paper = el('div', 'gz-paper');
       const mast = el('header', 'gz-mast');
-      mast.append(el('div', 'gz-ears', `${dzis} · ${h.miasto}`), el('h2', '', GAZETA.tytul), el('p', 'gz-sub', GAZETA.podtytul));
+      // The artist's masthead (32-G003) carries the title itself; the h2 stays for screen readers only.
+      const win = el('img', 'gz-winieta');
+      win.src = GAZETA.winieta;
+      win.alt = '';
+      const title = el('h2', 'gz-sr', GAZETA.tytul);
+      mast.append(el('div', 'gz-ears', `${dzis} · ${h.miasto}`), win, title, el('p', 'gz-sub', GAZETA.podtytul));
       const tabs = el('nav', 'gz-tabs');
       const pages: [Strona, string, string][] = [['nowosci', '📰', 'Nowości'], ['plany', '🔭', 'Plany'], ['zlecenie', '✒', 'Zlecenie'], ['list', '✉', 'Do redakcji']];
       for (const [id, ic, name] of pages) {

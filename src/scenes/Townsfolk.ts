@@ -155,6 +155,8 @@ export class Townsfolk {
     for (let i = 0; i < papers && streets.length; i++) {
       const l = streets[Math.min(streets.length - 1, Math.floor(rp() * Math.min(streets.length, 6)))];
       const walker = new Walker([l.pts], SPEED * 0.9, rp);
+      // They stand on a corner (the artist's trial has standing frames only): somewhere along the street.
+      walker.step(rp() * 120);
       list.push({
         id: `${key}:gazeta${i}`, role: 'gazeciarz', walker, x: walker.x, y: walker.y,
         name: GAZETA.imiona[Math.floor(rp() * GAZETA.imiona.length)],
@@ -273,6 +275,16 @@ export class Townsfolk {
           this.scene.tweens.add({ targets: s, alpha: 0, duration: 500, onComplete: () => s.setVisible(false) });
           continue;
         }
+      } else if (f.role === 'gazeciarz') {
+        // A newsboy stands still and turns towards the hero (front, or the side mirrored).
+        const s = f.sprite;
+        const hx = px - f.x, hy = py - f.y;
+        const side = Math.abs(hx) > Math.abs(hy) * 1.2 && Math.hypot(hx, hy) < 160;
+        s.anims.stop();
+        s.setFrame(side ? 'side-0' : 'down-0').setFlipX(side && hx > 0);
+        s.setPosition(f.x, f.y).setDepth(f.y).setVisible(visible(f.x, f.y));
+        f.sign?.setPosition(Math.round(f.x), Math.round(f.y - s.displayHeight * s.originY - 3 + Math.sin(now / 260) * 0.8)).setDepth(1_150_000).setVisible(s.visible);
+        continue;
       } else if (!f.waiting) {
         f.walker.step(dt);
         f.x = f.walker.x;

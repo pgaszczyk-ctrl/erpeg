@@ -12,8 +12,10 @@ export const GAZETA = {
     { miejsc: 25, ile: 2 },
     { miejsc: 6, ile: 1 },
   ],
-  /** Their look: the artist's urchin until the newsboy sheet arrives (order 32). */
-  wyglad: 'hd-urwis',
+  /** Their look: the artist's newsboy trial v2 (order 32: standing frames only, so they stand on a corner). */
+  wyglad: 'hd-gazeciarz',
+  /** The masthead picture (artist, 32-G003); the page title stays only for screen readers. */
+  winieta: 'gazeta/winieta_poziomy.png',
   imiona: ['Gazeciarz Felek', 'Gazeciarz Józek', 'Gazeciarz Staś', 'Gazeciarz Kazio', 'Gazeciarka Mania', 'Gazeciarka Zocha', 'Gazeciarz Tadzio', 'Gazeciarka Hela'],
   okrzyki: [
     'Nadzwyczajne wydanie! Nadzwyczajne wydanie!',
