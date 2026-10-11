@@ -1,17 +1,17 @@
 build 20261011.pmtiles
 total 38572
--rw-r--r-- 1 runner runner 3085370 Oct 11 14:22 berlin.pmtiles
--rw-r--r-- 1 runner runner 3642994 Oct 11 14:22 gorzow.pmtiles
--rw-r--r-- 1 runner runner      23 Oct 11 14:22 info.txt
--rw-r--r-- 1 runner runner 4690156 Oct 11 14:21 krakow.pmtiles
--rw-r--r-- 1 runner runner 3897903 Oct 11 14:21 lublin.pmtiles
--rw-r--r-- 1 runner runner 2635956 Oct 11 14:22 madryt.pmtiles
--rw-r--r-- 1 runner runner 3814726 Oct 11 14:22 pulawy.pmtiles
--rw-r--r-- 1 runner runner 1655901 Oct 11 14:22 singapur.pmtiles
--rw-r--r-- 1 runner runner 3985690 Oct 11 14:22 szczecin.pmtiles
-drwxr-xr-x 3 runner runner    4096 Oct 11 14:21 terrarium
--rw-r--r-- 1 runner runner 2248777 Oct 11 14:22 triglav.pmtiles
--rw-r--r-- 1 runner runner 9802877 Oct 11 14:21 zakopane.pmtiles
+-rw-r--r-- 1 runner runner 3085370 Oct 11 18:29 berlin.pmtiles
+-rw-r--r-- 1 runner runner 3642994 Oct 11 18:29 gorzow.pmtiles
+-rw-r--r-- 1 runner runner      23 Oct 11 18:29 info.txt
+-rw-r--r-- 1 runner runner 4690156 Oct 11 18:29 krakow.pmtiles
+-rw-r--r-- 1 runner runner 3897903 Oct 11 18:29 lublin.pmtiles
+-rw-r--r-- 1 runner runner 2635956 Oct 11 18:29 madryt.pmtiles
+-rw-r--r-- 1 runner runner 3814726 Oct 11 18:29 pulawy.pmtiles
+-rw-r--r-- 1 runner runner 1655901 Oct 11 18:29 singapur.pmtiles
+-rw-r--r-- 1 runner runner 3985690 Oct 11 18:29 szczecin.pmtiles
+drwxr-xr-x 3 runner runner    4096 Oct 11 18:29 terrarium
+-rw-r--r-- 1 runner runner 2248777 Oct 11 18:29 triglav.pmtiles
+-rw-r--r-- 1 runner runner 9802877 Oct 11 18:29 zakopane.pmtiles
 pmtiles spec version: 3
 tile type: mvt
 bounds: (long: 19.800000, lat: 49.150000) (long: 20.150000, lat: 49.330000)
@@ -25,17 +25,17 @@ tile contents count: 1216
 clustered: true
 internal compression: gzip
 tile compression: gzip
-version 4.15.2
-vector_layers <object, use --metadata to view full JSON metadata>
 description Basemap layers derived from OpenStreetMap and Natural Earth
-name Protomaps Basemap
 pgf:devanagari:name NotoSansDevanagari-Regular
-pgf:devanagari:version 1
 planetiler:githash 0e5588c4a6e8c29a270a33afe8df62027d889604
-planetiler:osm:osmosisreplicationseq 123405
-planetiler:osm:osmosisreplicationtime 2026-10-11T04:00:00Z
-attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
-planetiler:buildtime 2026-03-28T14:41:39.524Z
 planetiler:osm:osmosisreplicationurl https://planet.osm.org/replication/hour/
 planetiler:version 0.10.2
 type baselayer
+vector_layers <object, use --metadata to view full JSON metadata>
+attribution <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>
+name Protomaps Basemap
+pgf:devanagari:version 1
+planetiler:buildtime 2026-03-28T14:41:39.524Z
+planetiler:osm:osmosisreplicationseq 123405
+planetiler:osm:osmosisreplicationtime 2026-10-11T04:00:00Z
+version 4.15.2
