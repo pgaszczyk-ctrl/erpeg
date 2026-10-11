@@ -6,6 +6,7 @@ import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 import { nowy, rgb, doCanvas, OBRYS, skladowe } from './gen';
 import { PALETA_SWIATA } from './content/paleta';
 import { WYGLAD_09 } from './map/Podloze09';
+import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from './content/flagi';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
 // Every texture is registered under a key (see TEX); to switch to a real
@@ -631,17 +632,26 @@ function drawSignpost(scene: Phaser.Scene) {
   tex.refresh();
 }
 
-/** A mountain top: a small cairn with a red-and-white flag (world map peaks). */
-function drawPeak(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.peak, 12, 12);
+/** A mountain top: a small cairn with a flag (world map peaks); `flaga` = 4 rows of 6 colour letters (content/flagi.ts). */
+function drawPeak(scene: Phaser.Scene, key: string, flaga: string[]) {
+  const { tex, ctx } = canvasTexture(scene, key, 12, 12);
   px(ctx, 1, 8, 10, 4, OUTLINE);
   px(ctx, 3, 6, 6, 3, OUTLINE);
   px(ctx, 2, 9, 8, 2, '#9a968c');
   px(ctx, 4, 7, 4, 2, '#b8b3a6');
-  px(ctx, 6, 0, 1, 7, OUTLINE);
-  px(ctx, 7, 0, 4, 2, '#ffffff');
-  px(ctx, 7, 2, 4, 2, '#d8323c');
+  px(ctx, 5, 0, 1, 7, OUTLINE);
+  flaga.forEach((row, y) => [...row].forEach((c, x) => {
+    if (KOLORY_FLAG[c]) px(ctx, 6 + x, y, 1, 1, KOLORY_FLAG[c]);
+  }));
   tex.refresh();
+}
+
+/** The peak marker with the flag of a country (ISO code from kraj.ts), made the first time it is needed. */
+export function peakTexture(scene: Phaser.Scene, kraj: string | null): string {
+  const flaga = (kraj && FLAGI[kraj]) || FLAGA_NIEZNANA;
+  const key = flaga === FLAGA_NIEZNANA ? TEX.peak : `${TEX.peak}-${kraj}`;
+  if (!scene.textures.exists(key)) drawPeak(scene, key, flaga);
+  return key;
 }
 
 /** The map button: a folded paper map with a red route and a cross. */
@@ -1274,7 +1284,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
   drawTent(scene);
   drawQuestItem(scene);
   drawSignpost(scene);
-  drawPeak(scene);
+  drawPeak(scene, TEX.peak, FLAGA_NIEZNANA);
   drawMapIcon(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');

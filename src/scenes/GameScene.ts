@@ -9,7 +9,7 @@ import Phaser from 'phaser';
 import { itemPictureUrl, goodsPicture, itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
-import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale } from '../art';
+import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale, peakTexture } from '../art';
 import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../screen';
 import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
@@ -63,7 +63,7 @@ import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RAD
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz, quizAnswered } from '../quizzes';
-import { krajMapy } from '../kraj';
+import { krajMapy, krajWPunkcie } from '../kraj';
 import { tr, tx } from '../i18n';
 import { rng } from '../rng';
 import { OWOCE, LECZENIE_OWOCAMI, ALCHEMIK, WARZYWA, LAS, SIEKIERA, type Owoc } from '../content/sklepy';
@@ -2637,7 +2637,8 @@ export class GameScene extends Phaser.Scene {
     const list = this.city.peaks;
     for (; this.peaksShown < list.length; this.peaksShown++) {
       const k = list[this.peaksShown];
-      this.add.image(k.x, k.y, TEX.peak).setDepth(900_000);
+      const ll = this.city.toLatLon(k.x, k.y);
+      this.add.image(k.x, k.y, peakTexture(this, krajWPunkcie(ll.lat, ll.lon))).setDepth(900_000);
       this.add.text(k.x, k.y - 7, `${k.name}\n${k.ele} m`, { fontFamily: 'monospace', fontSize: '7px', color: '#fff8e0', stroke: '#2a2430', strokeThickness: 3, align: 'center', resolution: 4 }).setOrigin(0.5, 1).setDepth(900_000);
     }
     const r = PEAK_REACH_M * PX_PER_M;
