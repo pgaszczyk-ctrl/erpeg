@@ -2,3 +2,6 @@ node_modules
 dist
 public/map
 .cache
+
+# Screenshots written by scripts/tests/browser-demo.mjs
+work/demo-*.png
