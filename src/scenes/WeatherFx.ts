@@ -42,6 +42,7 @@ export class WeatherFx {
   /** The hero's warm lamp light (POSWIATA_BOHATERA), added over the world and the darker sky. */
   private lamp: Phaser.GameObjects.Image;
   private flick = 1;
+  private lampAngle = Math.PI / 2;
   private drops: Drop[] = [];
   private flakes: Drop[] = [];
   private nextBolt = 0;
@@ -69,36 +70,55 @@ export class WeatherFx {
     }
     this.mist = scene.add.image(0, 0, 'weather-mist').setDepth(1_045_000).setAlpha(0).setVisible(false);
     if (!scene.textures.exists('hero-lamp')) {
-      const S = 256;
+      // Drawn pixel by pixel: a soft ring around the centre with a hole in the middle, and a cone along +x.
+      const S = 256, h = S / 2;
       const c = document.createElement('canvas');
       c.width = c.height = S;
       const x = c.getContext('2d')!;
-      const [r, g, b] = LAMPA.kolor;
-      const grd = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
-      grd.addColorStop(0.25, `rgba(${r},${g},${b},0.75)`);
-      grd.addColorStop(0.6, `rgba(${r},${g},${b},0.25)`);
-      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      x.fillStyle = grd;
-      x.fillRect(0, 0, S, S);
+      const img = x.createImageData(S, S);
+      const [cr, cg, cb] = LAMPA.kolor;
+      const half = (LAMPA.stozekStopni * Math.PI) / 180, soft = (15 * Math.PI) / 180;
+      const st = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+      for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+        const dx = px + 0.5 - h, dy = py + 0.5 - h;
+        const r = Math.hypot(dx, dy) / h;
+        if (r >= 1) continue;
+        const ring = 0.8 * (1 - st(0, LAMPA.wokol, r));
+        const ang = Math.abs(Math.atan2(dy, dx));
+        const cone = (1 - st(half, half + soft, ang)) * (1 - st(0.35, 1, r)) * 0.95;
+        const v = Math.max(ring, cone) * st(LAMPA.dziura, LAMPA.dziura * 2.2, r);
+        const k = (py * S + px) * 4;
+        img.data[k] = cr; img.data[k + 1] = cg; img.data[k + 2] = cb;
+        img.data[k + 3] = Math.round(255 * v);
+      }
+      x.putImageData(img, 0, 0);
       scene.textures.addCanvas('hero-lamp', c);
     }
     this.lamp = scene.add.image(0, 0, 'hero-lamp').setDepth(1_041_000).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
-    this.lamp.setDisplaySize(LAMPA.promien * 2, LAMPA.promien * 2);
+    this.lamp.setDisplaySize(LAMPA.zasieg * 2, LAMPA.zasieg * 2);
   }
 
-  /** The lamp: always a faint warm glow, stronger in the dark; it flickers a little like a flame. */
-  private updateLamp(dt: number, hero: { x: number; y: number }, now: number, light: number) {
+  /** The lamp: off in daylight with a clear sky, on at dusk/night and in bad weather; the cone follows where the hero faces. */
+  private updateLamp(dt: number, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light: number) {
     const E = EFEKTY_POGODY[weather.kind];
-    const dark = Math.min(1, (E.ciemniej ?? 0) * LAMPA.zaPogode + (1 - light) * LAMPA.zaNoc + Math.max(0, weather.cloud - 0.5) * LAMPA.zaChmury);
+    const dark = Math.min(1, (E.ciemniej ?? 0) * LAMPA.zaPogode + (1 - light) * LAMPA.zaNoc + Math.max(0, weather.cloud - LAMPA.chmuryOd) * LAMPA.zaChmury);
+    const t0 = Math.max(0, Math.min(1, (dark - LAMPA.odCiemnosci) / (LAMPA.pelnaPrzy - LAMPA.odCiemnosci)));
+    const want = LAMPA.moc * t0 * t0 * (3 - 2 * t0);
+    if (want <= 0.005) { this.lamp.setVisible(false); return; }
     // A flame: two slow waves plus a small random gust now and then.
     const t = now / 1000;
     if (Math.random() < dt * 3) this.flick = 1 - Math.random() * 0.7;
     else this.flick += (1 - this.flick) * Math.min(1, dt * 6);
     const m = LAMPA.migotanie * (0.5 * Math.sin(t * 5.3) + 0.3 * Math.sin(t * 11.7 + 1) + (this.flick - 1) * 0.6);
-    this.lamp.setPosition(hero.x, hero.y - 4).setAlpha(Math.max(0, (LAMPA.dzien + LAMPA.ciemno * dark) * (1 + m)));
-    const k = 1 + m * 0.15;
-    this.lamp.setDisplaySize(LAMPA.promien * 2 * k, LAMPA.promien * 2 * k);
+    const f = hero.facing;
+    if (f && (f.x || f.y)) {
+      const target = Math.atan2(f.y, f.x);
+      const d = Phaser.Math.Angle.Wrap(target - this.lampAngle);
+      this.lampAngle += d * Math.min(1, dt * 8);
+    }
+    this.lamp.setVisible(true).setPosition(hero.x, hero.y - 4).setRotation(this.lampAngle).setAlpha(Math.max(0, want * (1 + m)));
+    const k = 1 + m * 0.1;
+    this.lamp.setDisplaySize(LAMPA.zasieg * 2 * k, LAMPA.zasieg * 2 * k);
   }
 
   private fill(list: Drop[], n: number) {
@@ -130,7 +150,7 @@ export class WeatherFx {
     c.tilePositionY = v.y - 2 - this.drift * 0.33;
   }
 
-  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }, now: number, light = 1) {
+  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light = 1) {
     this.updateLamp(dt, hero, now, light);
     if (WYGLAD_09) this.updateClouds(dt, cam.worldView);
     const E = EFEKTY_POGODY[weather.kind];

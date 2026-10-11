@@ -86,21 +86,29 @@ export const WODNIK = {
 export const LUDZIE_W_DESZCZU = { ilu: 0.5, parasol: 0.45, kolory: [0x2b4f7a, 0x7a2b3b, 0x2f6b46, 0x3a3a44, 0xb08a2e] };
 
 /**
- * The hero's lamp (owner, 11 Oct 2026: „poświata wokół gracza, lekko mrugająca jak lampa; w nocy, w deszczu
- * i przy dużym zachmurzeniu musi być widoczny i widzieć co ma blisko”): a warm light added over the world
- * (and over the weather's darker sky) around the hero. Strength = `dzien` in daylight with clear sky, up to
- * `dzien + ciemno` in the darkest case (night, storm); the darkness is made of the weather's `ciemniej` × `zaPogode`,
- * the night (1 − daylight) × `zaNoc` and cloud cover above 50 % × `zaChmury`.
+ * The hero's lamp (owner, 11 Oct 2026): a warm light AROUND the hero (a hole over him, so he isn't
+ * blinded) and a cone lighting the way ahead in the direction he faces, like the old cone of sight.
+ * Off on a sunny day; it comes on with dusk/night, rain/storm/snow/mist or a heavily clouded sky.
+ * Darkness = weather `ciemniej` × `zaPogode` + night (1 − daylight) × `zaNoc` + cloud above `chmuryOd` × `zaChmury`;
+ * the light fades in between `odCiemnosci` and `pelnaPrzy` of it, up to `moc`.
  */
 export const POSWIATA_BOHATERA = {
-  /** Radius of the light in map px (the hero is ~13 map px tall). */
-  promien: 46,
+  /** Reach of the cone ahead in map px (the hero is ~13 map px tall). */
+  zasieg: 70,
+  /** Radius of the glow around the hero, as a share of `zasieg`. */
+  wokol: 0.4,
+  /** The dark hole over the hero, as a share of `zasieg` (fully lit from `dziura` × 2). */
+  dziura: 0.1,
+  /** Half-angle of the cone in degrees (soft edge 15° more). */
+  stozekStopni: 32,
   kolor: [255, 214, 150] as [number, number, number],
-  dzien: 0.13,
-  ciemno: 0.42,
-  zaPogode: 2.2,
-  zaNoc: 0.8,
-  zaChmury: 0.4,
+  moc: 0.5,
+  zaPogode: 2.5,
+  zaNoc: 1,
+  zaChmury: 1.5,
+  chmuryOd: 0.7,
+  odCiemnosci: 0.12,
+  pelnaPrzy: 0.45,
   /** Flicker like a flame: ± this share of the light. */
   migotanie: 0.12,
 };

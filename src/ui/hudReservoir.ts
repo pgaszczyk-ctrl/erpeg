@@ -381,7 +381,9 @@ export function createReservoirHud(p: Parts) {
     // Lower copper return pipe along the whole machine, with elbows up into each socket.
     hpipe(12, 254, 85, 6, 'copper');
     finial(12, 85, 6, -1); finial(254, 85, 6, 1);
-    for (const x of [18, 73, 194, 239]) vpipe(x, 78, 88, 6, 'copper');
+    // Elbows up into the EXP tube (its bottom at 72) and the three portholes (bottom rim ~80).
+    vpipe(18, 70, 88, 6, 'copper');
+    for (const x of [73, 194, 239]) vpipe(x, 76, 88, 6, 'copper');
     wheel(98, 88, 5, still ? 0 : t * 0.6);
     // Cogs turning slowly behind the sockets.
     cog(96, 40, 11, 9, t * 0.18, 1, 'iron');
