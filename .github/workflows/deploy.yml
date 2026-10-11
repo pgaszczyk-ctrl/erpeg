@@ -82,6 +82,14 @@ jobs:
         with:
           name: test
           path: site/test
+      - uses: actions/checkout@v4
+        with:
+          path: source
+          sparse-checkout: public/news
+      - name: Publish the current static newspaper
+        run: |
+          mkdir -p site/news
+          cp -a source/public/news/. site/news/
       - name: Publish the test2 laboratory using shared test assets
         run: |
           mkdir -p site/test2
