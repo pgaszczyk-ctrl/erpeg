@@ -45,6 +45,24 @@ export const REPORTAZ = {
   komunikat: 'Notatka spisana! Gazeciarz odbierze ją przy następnym wydaniu, a honorarium już trafiło do sakiewki.',
 };
 
+/** „Ludzie” – the daily rankings (RPC kurier_wydanie; test characters never appear). */
+export const RANKINGI = {
+  tytul: 'Ludzie z naszych łamów',
+  wczoraj: 'Wydanie z {dzien}: kto wędrował najdalej i kto dokonał rzeczy wielkich.',
+  dzis: 'Pierwsze wydanie rankingów – redakcja liczy na bieżąco, co dzieje się dzisiaj.',
+  czekam: 'Gazeciarz wyciąga z torby najświeższe wydanie…',
+  brak: 'Dziś gazeciarz nie dostał rankingów z drukarni (brak połączenia?). Zajrzyj później.',
+  pusto: 'Tu wczoraj było cicho – może ty trafisz do jutrzejszego wydania?',
+  km: 'Najdalej wędrowali',
+  wybitne: 'Wybitne osiągnięcia',
+  swiat: 'Świat',
+  gratulacje: 'Gratulacje od redakcji!',
+  moje: 'Wczoraj do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!',
+  mojeDzis: 'Dziś do twojej Księgi osiągnięć trafiła nowa pieczęć: {odznaki}. Kurier Parowy pisze o tobie!',
+  mojeKm: 'Przebyta droga tego dnia: {km} km.',
+  stopka: 'Rankingi drukujemy codziennie o północy. Liczą się kilometry przebyte pieszo i odznaki z Księgi osiągnięć.',
+};
+
 export interface Wiesc {
   data: string;
   tytul: string;
@@ -53,6 +71,10 @@ export interface Wiesc {
 
 /** „Co nowego” – newest first. Written for players, short and without jargon. */
 export const NOWOSCI: Wiesc[] = [
+  {
+    data: '11.10.2026', tytul: 'Codzienne rankingi w Kurierze',
+    tresc: 'Na stronie „Ludzie” gazeta pisze, kto wczoraj przewędrował najwięcej kilometrów na świecie, w twoim kraju i mieście, i kto zdobył wybitne odznaki. Jeśli i ty zdobędziesz pieczęć – redakcja ci pogratuluje!',
+  },
   {
     data: '11.10.2026', tytul: 'Gazeciarze na ulicach!',
     tresc: 'W każdym mieście biegają gazeciarze z Kurierem Parowym. Mają zlecenia reporterskie, przyjmują listy do redakcji i opowiadają, co nowego w świecie.',

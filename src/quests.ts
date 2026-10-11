@@ -16,6 +16,7 @@ import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci, poziomPostaci } from './content/historia';
+import type { StanDoOsiagniec } from './content/osiagniecia';
 import { loadSettings } from './settings';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
@@ -234,6 +235,15 @@ export function startSession(r: LoginResult) {
     }
   }
   session.abandoned = a;
+}
+
+/** What the Księga osiągnięć counts, from the session (also the newspaper's daily badges). */
+export function stanOsiagniec(): StanDoOsiagniec {
+  const st = session.stats;
+  return {
+    km: st.m / 1000, zabite: Object.values(st.kills).reduce((a, b) => a + b, 0), gangi: st.gangs ?? 0, pojedynki: st.duels ?? 0,
+    misje: st.missions, owoce: st.fruit, zarobione: st.earned, poziom: poziomPostaci(session.exp), tytul: session.story.title ?? null, hasla: st.codes,
+  };
 }
 
 /** Sends the current progress to the server. */

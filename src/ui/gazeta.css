@@ -36,7 +36,23 @@
   #gazeta .gz-paper{padding:10px 12px}
   #gazeta .gz-mast h2{font-size:30px}
   #gazeta .gz-tabs{gap:4px;flex-wrap:nowrap}
-  #gazeta .gz-tab{flex:1 1 0;justify-content:center;gap:3px;padding:4px 3px;font-size:13px;min-width:0}
+  #gazeta .gz-tab{flex:1 1 0;flex-direction:column;justify-content:center;gap:0;padding:3px 2px;font-size:11px;line-height:1.1;min-width:0}
+  #gazeta .gz-tab .gz-ic{font-size:17px}
+  #gazeta .gz-head{font-size:19px}
   #gazeta .gz-ears{padding-right:26px;font-size:11px}
   #gazeta .gz-close{right:-6px;top:-6px}
 }
+#gazeta .gz-cols3{columns:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:4px 24px}
+#gazeta .gz-rank h3{border-bottom:2px solid #2a2118;padding-bottom:2px;text-transform:uppercase;letter-spacing:1px;font-size:17px}
+#gazeta .gz-sub2{margin:6px 0 2px!important;font-weight:800;font-size:14px;text-align:left!important;font-style:italic}
+#gazeta .gz-list{margin:0;padding-left:22px}
+#gazeta .gz-feats{list-style:'❧ '}
+#gazeta .gz-list li{border-bottom:1px dotted #2a211860;padding:1px 0}
+#gazeta .gz-li{display:flex;justify-content:space-between;gap:8px;min-width:0}
+#gazeta .gz-list li::marker{font-weight:700}
+#gazeta .gz-who{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#gazeta .gz-val{text-align:right;font-size:15px}
+#gazeta .gz-feats .gz-li{flex-direction:column;gap:0}
+#gazeta .gz-feats .gz-val{text-align:left}
+#gazeta .gz-me{margin-bottom:12px;background:#f7ecc6}
+#gazeta .gz-me p{text-align:left}

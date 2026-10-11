@@ -1,5 +1,6 @@
 import './gazeta.css';
-import { GAZETA, NOWOSCI, PLANY, type Wiesc } from '../content/gazeta';
+import { GAZETA, NOWOSCI, PLANY, RANKINGI, type Wiesc } from '../content/gazeta';
+import { odznaka } from '../content/osiagniecia';
 
 // The newsboy's paper (owner, 11 Oct 2026): a window in the style of the new shop windows – a wooden,
 // brass-fitted frame around a newspaper page. Pages: what's new, plans, a reporter's errand and a letter
@@ -7,19 +8,41 @@ import { GAZETA, NOWOSCI, PLANY, type Wiesc } from '../content/gazeta';
 
 export type StanZlecenia = 'nowe' | 'wziete' | 'zrobione' | 'brak' | 'pelno';
 
+/** One scope of the daily edition (RPC kurier_wydanie). */
+export interface Zakres {
+  km: { n: string; km: number }[];
+  wybitne: { n: string; o: string[] }[];
+  graczy: number;
+}
+
+export interface Wydanie {
+  dzien: string;
+  /** True while yesterday has no records yet (the first day): today's edition so far. */
+  dzis: boolean;
+  swiat: Zakres;
+  kraj: Zakres | null;
+  miasto: Zakres | null;
+  /** The player's own day: km walked and badge ids earned. */
+  ja: { km: number; o: string[] } | null;
+}
+
 export interface GazetaHost {
   /** Who sells the paper (shown in the corner). */
   sprzedawca: string;
   /** The town for the page header. */
   miasto: string;
   zlecenie: { tytul: string; opis: string; stan: StanZlecenia };
+  /** Fetches the daily edition (rankings); null when offline. */
+  wydanie?: () => Promise<Wydanie | null>;
+  /** Country code and town, for the rankings' headings. */
+  kraj?: string | null;
   /** Sends a letter to the editors; resolves 'ok', 'limit' (too many) or 'blad' (no connection). */
   wyslij: (text: string) => Promise<'ok' | 'limit' | 'blad'>;
   /** The page to open on (default: news). */
   strona?: Strona;
 }
 
-type Strona = 'nowosci' | 'plany' | 'zlecenie' | 'list';
+type Strona = 'nowosci' | 'ludzie' | 'plany' | 'zlecenie' | 'list';
 
 /** Resolves with true when the player took the errand (GameScene then shows the mission dialog). */
 export function showGazeta(h: GazetaHost): Promise<boolean> {
@@ -32,6 +55,17 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     };
     let strona: Strona = h.strona ?? 'nowosci';
     let draft = '';
+    // The edition is fetched once, when the page is first opened (or at once when it opens on it).
+    let wydanie: Wydanie | null | undefined;
+    let pobieram = false;
+    const pobierz = () => {
+      if (pobieram || wydanie !== undefined || !h.wydanie) return;
+      pobieram = true;
+      h.wydanie().then((w) => { wydanie = w; }, () => { wydanie = null; }).finally(() => {
+        pobieram = false;
+        if (!done && strona === 'ludzie') render();
+      });
+    };
     const root = el('div', 'gz-screen');
     root.id = 'gazeta';
     const box = el('section', 'gz-box');
@@ -71,6 +105,74 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       }
       return col;
     };
+    const nazwaKraju = (k: string) => {
+      try {
+        return new Intl.DisplayNames(['pl'], { type: 'region' }).of(k) ?? k;
+      } catch {
+        return k;
+      }
+    };
+    const badge = (id: string) => {
+      const o = odznaka(id);
+      return o ? `${o.ikona} ${o.nazwa}` : null;
+    };
+    const kolumna = (tytul: string, z: Zakres | null) => {
+      const a = el('article', 'gz-art gz-rank');
+      a.append(el('h3', '', tytul));
+      if (!z || (!z.km.length && !z.wybitne.length)) {
+        a.append(el('p', 'gz-date', RANKINGI.pusto));
+        return a;
+      }
+      if (z.km.length) {
+        a.append(el('p', 'gz-sub2', RANKINGI.km));
+        const ol = el('ol', 'gz-list');
+        for (const r of z.km) {
+          const li = el('li');
+          const row = el('div', 'gz-li');
+          row.append(el('span', 'gz-who', r.n), el('span', 'gz-val', `${r.km.toLocaleString('pl-PL')} km`));
+          li.append(row);
+          ol.append(li);
+        }
+        a.append(ol);
+      }
+      const wyb = z.wybitne.map((r) => ({ n: r.n, o: r.o.map(badge).filter(Boolean) as string[] })).filter((r) => r.o.length);
+      if (wyb.length) {
+        a.append(el('p', 'gz-sub2', RANKINGI.wybitne));
+        const ul = el('ul', 'gz-list gz-feats');
+        for (const r of wyb) {
+          const li = el('li');
+          const row = el('div', 'gz-li');
+          row.append(el('span', 'gz-who', r.n), el('span', 'gz-val', r.o.join(', ')));
+          li.append(row);
+          ul.append(li);
+        }
+        a.append(ul);
+      }
+      return a;
+    };
+    const ludzie = (): HTMLElement[] => {
+      pobierz();
+      const head = el('h3', 'gz-head', RANKINGI.tytul);
+      if (wydanie === undefined) return [head, el('p', 'gz-note', RANKINGI.czekam)];
+      if (!wydanie) return [head, el('p', 'gz-note', RANKINGI.brak)];
+      const w = wydanie;
+      const dzien = new Date(`${w.dzien}T12:00:00`).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' });
+      const out: HTMLElement[] = [head, el('p', 'gz-note', w.dzis ? RANKINGI.dzis : RANKINGI.wczoraj.replace('{dzien}', dzien))];
+      // The player's own summary: only when a badge came that day (owner's wish), with the km walked.
+      const moje = (w.ja?.o ?? []).map(badge).filter(Boolean) as string[];
+      if (moje.length) {
+        const box = el('article', 'gz-art gz-big gz-me');
+        box.append(el('h3', '', RANKINGI.gratulacje), el('p', '', (w.dzis ? RANKINGI.mojeDzis : RANKINGI.moje).replace('{odznaki}', moje.join(', '))));
+        if (w.ja && w.ja.km >= 0.1) box.append(el('p', 'gz-date', RANKINGI.mojeKm.replace('{km}', w.ja.km.toLocaleString('pl-PL'))));
+        out.push(box);
+      }
+      const cols = el('div', 'gz-cols gz-cols3');
+      cols.append(kolumna(RANKINGI.swiat, w.swiat));
+      if (h.kraj) cols.append(kolumna(nazwaKraju(h.kraj), w.kraj));
+      if (h.miasto && w.miasto) cols.append(kolumna(h.miasto, w.miasto));
+      out.push(cols, el('p', 'gz-note', RANKINGI.stopka));
+      return out;
+    };
     const render = () => {
       box.replaceChildren();
       const x = el('button', 'gz-close', '×');
@@ -86,7 +188,7 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       const title = el('h2', 'gz-sr', GAZETA.tytul);
       mast.append(el('div', 'gz-ears', `${dzis} · ${h.miasto}`), win, title, el('p', 'gz-sub', GAZETA.podtytul));
       const tabs = el('nav', 'gz-tabs');
-      const pages: [Strona, string, string][] = [['nowosci', '📰', 'Nowości'], ['plany', '🔭', 'Plany'], ['zlecenie', '✒', 'Zlecenie'], ['list', '✉', 'Do redakcji']];
+      const pages: [Strona, string, string][] = [['nowosci', '📰', 'Nowości'], ['ludzie', '🏆', 'Ludzie'], ['plany', '🔭', 'Plany'], ['zlecenie', '✒', 'Zlecenie'], ['list', '✉', 'Do redakcji']];
       for (const [id, ic, name] of pages) {
         const b = el('button', `gz-tab${strona === id ? ' on' : ''}`);
         b.type = 'button';
@@ -97,6 +199,7 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       }
       const body = el('div', 'gz-body');
       if (strona === 'nowosci') body.append(el('h3', 'gz-head', 'Co nowego w świecie gry'), wiesci(NOWOSCI));
+      else if (strona === 'ludzie') body.append(...ludzie());
       else if (strona === 'plany') body.append(el('h3', 'gz-head', 'Redakcja zdradza plany'), wiesci(PLANY), el('p', 'gz-note', 'Plany mogą się zmienić – piszcie do redakcji, co chcielibyście zobaczyć!'));
       else if (strona === 'zlecenie') {
         const z = h.zlecenie;

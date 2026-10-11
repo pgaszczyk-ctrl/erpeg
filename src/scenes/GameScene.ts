@@ -82,12 +82,13 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
+  session, saveNow, stanOsiagniec, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
   zadanieOf, stageIndex, stageCount, stageTarget, levelLock, giveStory, takeStory,
   type ResolvedMission, type Place,
 } from '../quests';
 import { api, rpc, offline, type Snapshot } from '../api';
-import { showGazeta } from '../ui/gazeta';
+import { showGazeta, type Wydanie } from '../ui/gazeta';
+import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
@@ -132,6 +133,8 @@ const OCHRONA_MS = 10_000;
 const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 const HEARTBEAT_MS = 3000;
+/** How often the heartbeat carries the newspaper's daily numbers (kurier_dni). */
+const KURIER_CO_MS = 60_000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
 const LINGER_MS = 10000;
 const HIDE_IN = new Set(['forest', 'scrub', 'wetland']);
@@ -701,8 +704,17 @@ export class GameScene extends Phaser.Scene {
     this.justRode = false;
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
-    const beat = () => {
-      if (!this.leaving && !this.player.isDead) api.heartbeat(session.token, this.snapshot()).catch(() => {});
+    const beat = (e?: Event) => {
+      if (this.leaving || this.player.isDead) return;
+      const snap = this.snapshot();
+      // About once a minute (and when the page goes away) also the newspaper's daily numbers.
+      if (e || Date.now() - this.kurAt >= KURIER_CO_MS) {
+        this.kurAt = Date.now();
+        try {
+          snap.kur = { m: Math.round(session.stats.m), o: zdobyteOdznaki(stanOsiagniec()), ...this.kurierMiejsce() };
+        } catch { /* the rankings must never stop the heartbeat */ }
+      }
+      api.heartbeat(session.token, snap).catch(() => {});
     };
     this.time.addEvent({ delay: HEARTBEAT_MS, loop: true, callback: beat });
     window.addEventListener('pagehide', beat);
@@ -2228,6 +2240,7 @@ export class GameScene extends Phaser.Scene {
   }
   /** The "steep slope" word was said (once per scene). */
   private steepSaid = false;
+  private kurAt = 0;
 
   /**
    * A ripe vegetable on a 09 field as a pickup of its own (owner, 5 Oct 2026: in the field they were hard to tell
@@ -3067,6 +3080,13 @@ export class GameScene extends Phaser.Scene {
     return town && town !== 'Daleko' ? town : null;
   }
 
+  /** Country (2 letters) and town for the newspaper's rankings; world maps without a known town give none. */
+  private kurierMiejsce(): { k: string | null; c: string | null } {
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    const town = this.townHere() ?? mapName(this.city.id);
+    return { k: krajMapy(this.city.id, ll?.lat ?? NaN, ll?.lon ?? NaN), c: town && !town.startsWith('w:') ? town : null };
+  }
+
   /**
    * The newsboy (owner, 11 Oct 2026): the „Kurier Parowy” – what's new, plans, a reporter's errand
    * and a letter to the editors (RPC order_quest; untrusted player text, read as ideas only).
@@ -3083,6 +3103,16 @@ export class GameScene extends Phaser.Scene {
       sprzedawca: f.name,
       miasto: town && !town.startsWith('w:') ? town : 'okolica',
       zlecenie: { tytul: m?.tytul ?? '', opis: m?.opis ?? '', stan },
+      kraj: this.kurierMiejsce().k,
+      wydanie: async () => {
+        if (offline.demo) return null;
+        const { k, c } = this.kurierMiejsce();
+        try {
+          return await rpc<Wydanie>('kurier_wydanie', { p_token: session.token, p_kraj: k, p_miasto: c });
+        } catch {
+          return null;
+        }
+      },
       wyslij: async (text) => {
         if (offline.demo) return 'ok';
         const ll = this.city.toLatLon(this.player.x, this.player.y);

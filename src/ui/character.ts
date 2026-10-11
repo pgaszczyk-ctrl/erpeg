@@ -8,13 +8,13 @@ import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_P
 import {
   gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
-import { session } from '../quests';
+import { session, stanOsiagniec } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin } from '../sprites';
 import { heroPreviewBackground } from './heroPreview';
 import { ENEMY_KINDS } from '../objects/Slime';
-import { OSIAGNIECIA, type StanDoOsiagniec } from '../content/osiagniecia';
+import { OSIAGNIECIA } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
 import { TEST } from '../version';
 import { rememberTestLook } from '../testAppearance';
@@ -483,11 +483,8 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Księga osiągnięć
   const pageKsiega = () => {
     const st = session.stats;
-    const zabite = Object.values(st.kills).reduce((a, b) => a + b, 0);
-    const stan: StanDoOsiagniec = {
-      km: st.m / 1000, zabite, gangi: st.gangs ?? 0, pojedynki: st.duels ?? 0, misje: st.missions, owoce: st.fruit,
-      zarobione: st.earned, poziom: poziomPostaci(session.exp), tytul: session.story.title ?? null, hasla: st.codes,
-    };
+    const stan = stanOsiagniec();
+    const zabite = stan.zabite;
     const s = section('Księga osiągnięć');
     const seals = el('div', 'k-seals');
     let got = 0;

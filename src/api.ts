@@ -149,6 +149,8 @@ export interface Snapshot {
   y: number;
   hp: number;
   enemies: { x: number; y: number; hp: number; missionId?: string; k?: import('./content/fabula').RodzajWroga }[];
+  /** For the newspaper's daily rankings (about once a minute): metres walked in total, badge ids, country, town. */
+  kur?: { m: number; o: string[]; k: string | null; c: string | null };
 }
 
 export interface LoginResult {
