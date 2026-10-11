@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EFEKTY_POGODY, POSWIATA_BOHATERA as LAMPA } from '../content/pogoda';
+import { EFEKTY_POGODY, POSWIATA_BOHATERA as LAMPA, CIENIE_CHMUR as CHMURY } from '../content/pogoda';
 import { weather } from '../weather';
 import { teksturaChmur } from '../gen';
 import { WYGLAD_09 } from '../map/Podloze09';
@@ -14,7 +14,9 @@ import { night } from '../map/MapRenderer';
  * so its two shadow tones become a cool dark blue at alpha 60 / 105 over a transparent background (fainter vanished on screen).
  */
 function cloudCanvas(amount: number) {
-  const o = teksturaChmur(amount, 3);
+  // Owner (11 Oct 2026): clouds cover fragments of the view, never the whole screen – even a full overcast is
+  // ~35 % shadow in separate patches (the generator's own scale reached ~70 %, a dark veil over everything).
+  const o = teksturaChmur(CHMURY.odPokrycia + CHMURY.zaPokrycie * amount, 3);
   const c = document.createElement('canvas');
   c.width = o.w;
   c.height = o.h;
@@ -26,7 +28,7 @@ function cloudCanvas(amount: number) {
     img.data[k * 4] = 24;
     img.data[k * 4 + 1] = 34;
     img.data[k * 4 + 2] = 64;
-    img.data[k * 4 + 3] = r > 200 ? 60 : 105;
+    img.data[k * 4 + 3] = r > 200 ? CHMURY.alfaLekka : CHMURY.alfaPelna;
   }
   ctx.putImageData(img, 0, 0);
   return c;
@@ -99,10 +101,11 @@ export class WeatherFx {
     this.lamp.setDisplaySize(LAMPA.zasieg * 2, LAMPA.zasieg * 2);
   }
 
-  /** The lamp: off in daylight with a clear sky, on at dusk/night and in bad weather; the cone follows where the hero faces. */
+  /** The lamp: off in daylight, on at dusk/night and while it rains or snows; the cone follows where the hero faces. */
   private updateLamp(dt: number, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light: number) {
-    const E = EFEKTY_POGODY[weather.kind];
-    const dark = Math.min(1, (E.ciemniej ?? 0) * LAMPA.zaPogode + (1 - light) * LAMPA.zaNoc + Math.max(0, weather.cloud - LAMPA.chmuryOd) * LAMPA.zaChmury);
+    // Owner (11 Oct 2026): only after sunset or while it rains/snows – not for clouds or a grey day.
+    const pada = LAMPA.gdyPada.includes(weather.kind) ? LAMPA.zaOpady : 0;
+    const dark = Math.min(1, pada + (1 - light) * LAMPA.zaNoc);
     const t0 = Math.max(0, Math.min(1, (dark - LAMPA.odCiemnosci) / (LAMPA.pelnaPrzy - LAMPA.odCiemnosci)));
     const want = LAMPA.moc * t0 * t0 * (3 - 2 * t0);
     if (want <= 0.005) { this.lamp.setVisible(false); return; }

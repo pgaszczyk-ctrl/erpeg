@@ -85,11 +85,21 @@ export const WODNIK = {
 /** Mieszkańcy w deszczu: mniej ich na ulicach, część z parasolem. */
 export const LUDZIE_W_DESZCZU = { ilu: 0.5, parasol: 0.45, kolory: [0x2b4f7a, 0x7a2b3b, 0x2f6b46, 0x3a3a44, 0xb08a2e] };
 
+/** Cloud shadows drifting over the map (WeatherFx): cover = generator amount odPokrycia + zaPokrycie × forecast cloud
+ * (0.2 → ~10 % of the view in shadow, 0.65 → ~35 %), so even a full overcast leaves most of the ground in the sun. */
+export const CIENIE_CHMUR = {
+  odPokrycia: 0.2,
+  zaPokrycie: 0.45,
+  /** Alpha of the shadow's soft rim and of its core (0..255). */
+  alfaLekka: 38,
+  alfaPelna: 68,
+};
+
 /**
  * The hero's lamp (owner, 11 Oct 2026): a warm light AROUND the hero (a hole over him, so he isn't
  * blinded) and a cone lighting the way ahead in the direction he faces, like the old cone of sight.
- * Off on a sunny day; it comes on with dusk/night, rain/storm/snow/mist or a heavily clouded sky.
- * Darkness = weather `ciemniej` × `zaPogode` + night (1 − daylight) × `zaNoc` + cloud above `chmuryOd` × `zaChmury`;
+ * Off by day (clouds and mist don't light it); it comes on after sunset and while it rains or snows.
+ * Darkness = `zaOpady` while it rains/snows (`gdyPada`) + night (1 − daylight) × `zaNoc`;
  * the light fades in between `odCiemnosci` and `pelnaPrzy` of it, up to `moc`.
  */
 export const POSWIATA_BOHATERA = {
@@ -106,10 +116,10 @@ export const POSWIATA_BOHATERA = {
   stozekStopni: 45,
   kolor: [255, 214, 150] as [number, number, number],
   moc: 0.42,
-  zaPogode: 2.5,
+  /** Weather kinds in which the lamp is lit by day too (owner: „po zachodzie słońca lub pada”), and how strongly (0..1 of darkness). */
+  gdyPada: ['deszcz', 'ulewa', 'burza', 'snieg'] as string[],
+  zaOpady: 0.5,
   zaNoc: 1,
-  zaChmury: 1.5,
-  chmuryOd: 0.7,
   odCiemnosci: 0.12,
   pelnaPrzy: 0.45,
   /** Flicker like a flame: ± this share of the light. */
