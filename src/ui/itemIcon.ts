@@ -11,7 +11,7 @@ export const ITEM_PICTURES = [
   'luk', 'luk_refleksyjny', 'dlugi_luk', 'kusza', 'pistolet_parowy', 'rozdzka', 'kula', 'ksiega',
   'skorzana_zbroja', 'kolczuga', 'skorzany_helm', 'zelazny_helm', 'kapelusz', 'czapka_maga', 'korona',
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
-  'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera',
+  'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera', 'cukierniczy_cylinder',
 ];
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
 const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
