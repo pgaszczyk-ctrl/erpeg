@@ -1,6 +1,7 @@
 import { punktNaMapieWczytywania } from '../content/mapaWczytywania';
 import { tx } from '../i18n';
 import { resetTouch, resetKeys } from '../controls';
+import { pixelLogo } from './logo';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
@@ -206,6 +207,70 @@ export async function flyToGameLocation(lat: number, lon: number, mapReady: Prom
     r.dataset.phase = 'waiting';
     void video?.play().catch(() => {});
   }
+}
+
+/**
+ * QR demo (owner, 11 Oct 2026: no „Rozwijasz mapę…”/„Budzisz się…” texts and no green screen): the sharp world
+ * map is shown at once, as the page starts. `demoIntro` then plays the opening over it.
+ */
+export function demoMapAtOnce() {
+  const r = root();
+  if (!r) return;
+  stopMedia();
+  finished = false;
+  point = null;
+  r.hidden = false;
+  r.dataset.phase = 'demo';
+  r.setAttribute('aria-busy', 'true');
+  r.querySelector<HTMLElement>('.lm-lamp')?.style.setProperty('display', 'none');
+  const plate = r.querySelector<HTMLElement>('.lm-plate')!;
+  plate.style.transform = initialFrame(r);
+  plate.style.opacity = '1';
+  resize = () => {
+    if (flight) (flight.effect as KeyframeEffect).setKeyframes(flightFrames(r));
+    else plate.style.transform = initialFrame(r);
+  };
+  window.addEventListener('resize', resize);
+  preparePoster(r);
+}
+
+/**
+ * The demo's opening: a moment of the world map, then it blurs and the game's logo fades in in the middle,
+ * spins and vanishes, and a fast zoom flies to the dream's spot (Wawel). Resolves once the zoom is over and
+ * the first view of the game is ready (`mapReady`).
+ */
+export async function demoIntro(lat: number, lon: number, mapReady: Promise<void>) {
+  const r = root();
+  if (!r || r.hidden || finished) return;
+  point = punktNaMapieWczytywania(lat, lon);
+  const plate = r.querySelector<HTMLElement>('.lm-plate')!;
+  const wait = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
+  if (reduced()) {
+    plate.style.transform = frame(r, point, finalScale(r));
+    await mapReady;
+    return;
+  }
+  await wait(1000);
+  plate.style.transition = 'opacity .45s, filter .8s';
+  plate.style.filter = 'blur(7px) brightness(.75)';
+  const logo = pixelLogo(undefined, 8);
+  logo.style.cssText = 'position:absolute;left:50%;top:46%;max-width:86vw;height:auto;image-rendering:pixelated;opacity:0;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 0 #1e1a24);';
+  r.append(logo);
+  const centre = 'translate(-50%,-50%)';
+  await logo.animate([{ opacity: 0, transform: `${centre} scale(.8)` }, { opacity: 1, transform: `${centre} scale(1)` }], { duration: 800, easing: 'ease-out', fill: 'forwards' }).finished.catch(() => {});
+  await wait(800);
+  await logo.animate([
+    { opacity: 1, transform: `${centre} rotate(0deg) scale(1)` },
+    { opacity: 1, transform: `${centre} rotate(200deg) scale(1.08)`, offset: 0.45 },
+    { opacity: 0, transform: `${centre} rotate(720deg) scale(0)` },
+  ], { duration: 1000, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+  logo.remove();
+  plate.style.filter = '';
+  // A quick zoom straight onto the dream's spot.
+  overviewOffset = 0;
+  flight = plate.animate(flightFrames(r), { duration: 1700, easing: 'ease-in-out', fill: 'forwards' });
+  await flight.finished.catch(() => {});
+  await mapReady;
 }
 
 /** Reveal only after both the flight and actual terrain rendering are ready. */

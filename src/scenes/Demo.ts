@@ -11,6 +11,7 @@ import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
 import { pokazGdzieKliknac } from '../ui/samouczek';
+import { loadingMapVisible } from '../ui/loadingMap';
 
 // The QR demo inside the game (the phases are described in src/demo.ts):
 // fruit trees by the start, the goal line and arrow, the "I know who I am!"
@@ -57,9 +58,13 @@ export class DemoRun {
     if (demo.phase === 'jedzenie') {
       this.plantTrees();
       this.healTo = p.hp + 2;
-      this.scene.time.delayedCall(600, () =>
-        this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }),
-      );
+      // The first words only once the opening (logo over the world map) has gone.
+      const hello = () => {
+        if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
+        this.scene.time.delayedCall(600, () =>
+          this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }));
+      };
+      hello();
     } else if (demo.phase === 'jawa') {
       this.busy = true;
       // Keep the blackout until ground, building and roof layers are ready.

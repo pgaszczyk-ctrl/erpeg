@@ -13,7 +13,9 @@ import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { bootImageUrl } from '../bootImages';
-import { hideLoadingMap, loadingMapError } from '../ui/loadingMap';
+import { loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
+import { dreamPlaces } from '../demo';
+import type { GameScene } from './GameScene';
 import { letGo } from '../guard';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
@@ -30,7 +32,12 @@ export class BootScene extends Phaser.Scene {
     this.loadingText = this.add
       .text(width / 2, height / 2, LADOWANIE[0], { fontFamily: 'monospace', fontSize: `${18 * OSTROSC}px`, color: '#ffffff', align: 'center', wordWrap: { width: width - 40 * OSTROSC } })
       .setOrigin(0.5);
-    this.load.on('progress', (p: number) => this.loadingText.setText(`${LADOWANIE[0]}\n${Math.round(p * 100)}%`));
+    // The QR demo shows the world map at once, with no loading lines (owner, 11 Oct 2026).
+    const qrDemo = !!demoFromLink();
+    if (qrDemo) {
+      this.loadingText.setText('');
+      demoMapAtOnce();
+    } else this.load.on('progress', (p: number) => this.loadingText.setText(`${LADOWANIE[0]}\n${Math.round(p * 100)}%`));
     // Fetch the map/font while Phaser downloads the artwork, not afterwards.
     const font = Promise.race([
       Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
@@ -74,11 +81,12 @@ export class BootScene extends Phaser.Scene {
     // Decode the generator's tiny art and start its workers while the login form is visible.
     if (WYGLAD_09) void przygotujRysunkiUpraw();
 
-    const text = this.loadingText.setText(LADOWANIE[0]);
+    const qrDemo = !!demoFromLink();
+    const text = this.loadingText.setText(qrDemo ? '' : LADOWANIE[0]);
     // Changing lines while loading (content/ladowanie.ts), in a shuffled order after the first.
     const lines = [LADOWANIE[0], ...LADOWANIE.slice(1).sort(() => Math.random() - 0.5)];
     let n = 0;
-    const timer = this.time.addEvent({ delay: LADOWANIE_CO_MS, loop: true, callback: () => text.setText(lines[++n % lines.length]) });
+    const timer = this.time.addEvent({ delay: LADOWANIE_CO_MS, loop: true, callback: () => { if (!qrDemo) text.setText(lines[++n % lines.length]); } });
     this.worldReady
       .then((city) => {
         timer.remove();
@@ -87,9 +95,8 @@ export class BootScene extends Phaser.Scene {
         // A QR code's demo link: straight into the game, no menu, no character.
         const qr = demoFromLink();
         if (qr) {
-          hideLoadingMap();
-          text.setText('Budzisz się…');
-          return startDemo(this.game, qr);
+          text.setText('');
+          return this.playDemo(qr);
         }
         text.setText('');
         return showMenu(city).then(() => enterWorld(this.game));
@@ -99,5 +106,26 @@ export class BootScene extends Phaser.Scene {
         text.setText('');
         loadingMapError(err.message, () => { letGo(); location.reload(); });
       });
+  }
+
+  /** The QR demo: the logo opening over the world map runs while the dream's map is prepared, then the game shows. */
+  private async playDemo(qr: NonNullable<ReturnType<typeof demoFromLink>>) {
+    const game = this.game;
+    const scene = game.scene.getScene('game') as GameScene;
+    let markReady: () => void = () => {};
+    const ready = new Promise<void>((ok) => { markReady = ok; });
+    const { start } = dreamPlaces();
+    const intro = demoIntro(start.lat, start.lon, ready);
+    const created = new Promise<void>((ok) => scene.events.once('create', ok));
+    await startDemo(game, qr);
+    await created;
+    const deadline = performance.now() + 60_000;
+    while (!scene.firstViewReady() && performance.now() < deadline) await new Promise((ok) => setTimeout(ok, 100));
+    markReady();
+    await intro;
+    scene.scene.setVisible(true);
+    scene.scene.setVisible(true, 'ui');
+    await new Promise<void>((ok) => game.events.once('postrender', ok));
+    await revealLoadedGame();
   }
 }
