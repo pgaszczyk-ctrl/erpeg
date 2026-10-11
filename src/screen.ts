@@ -14,7 +14,16 @@ const slow = (() => {
     return false;
   }
 })();
-export const OSTROSC = forced >= 1 && forced <= 3 ? Math.floor(forced) : slow ? 1 : Math.max(1, Math.min(2, Math.floor(window.devicePixelRatio || 1)));
+/** A computer (mouse, no touch screen): its screen usually has 1–1.5 device px per CSS px. */
+const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(pointer: coarse)').matches;
+/**
+ * Computers draw at least 2 canvas px per CSS px (owner, 11 Oct 2026: on a computer the game looked
+ * „poszarpana”): at 1 px the world's pixels landed on 2 or 3 screen px by turns; now every world pixel
+ * is a whole number of canvas px and the browser shrinks the picture smoothly to the screen.
+ */
+export const OSTROSC = forced >= 1 && forced <= 3 ? Math.floor(forced) : slow ? 1
+  : komputer ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
+  : Math.max(1, Math.min(2, Math.floor(window.devicePixelRatio || 1)));
 
 /** Below this many frames a second the sharper picture is too much for the phone. */
 const MIN_FPS = 35;

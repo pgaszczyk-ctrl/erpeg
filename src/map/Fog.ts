@@ -268,6 +268,8 @@ export class FogView {
   private where = { lat: 51.25, lon: 22.57 };
   private lightAt = 0;
   private light = 1;
+  /** Daylight 0 (night) … 1 (day) here, refreshed once a minute (the hero's lamp uses it). */
+  get daylight() { return this.light; }
 
   constructor(private scene: Phaser.Scene, private explored: Explored, where?: { lat: number; lon: number }) {
     if (where) this.where = where;

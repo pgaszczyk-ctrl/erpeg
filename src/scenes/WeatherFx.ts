@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EFEKTY_POGODY } from '../content/pogoda';
+import { EFEKTY_POGODY, POSWIATA_BOHATERA as LAMPA } from '../content/pogoda';
 import { weather } from '../weather';
 import { teksturaChmur } from '../gen';
 import { WYGLAD_09 } from '../map/Podloze09';
@@ -39,6 +39,9 @@ export class WeatherFx {
   private dark: Phaser.GameObjects.Rectangle;
   private flash: Phaser.GameObjects.Rectangle;
   private mist: Phaser.GameObjects.Image;
+  /** The hero's warm lamp light (POSWIATA_BOHATERA), added over the world and the darker sky. */
+  private lamp: Phaser.GameObjects.Image;
+  private flick = 1;
   private drops: Drop[] = [];
   private flakes: Drop[] = [];
   private nextBolt = 0;
@@ -65,6 +68,37 @@ export class WeatherFx {
       scene.textures.addCanvas('weather-mist', c);
     }
     this.mist = scene.add.image(0, 0, 'weather-mist').setDepth(1_045_000).setAlpha(0).setVisible(false);
+    if (!scene.textures.exists('hero-lamp')) {
+      const S = 256;
+      const c = document.createElement('canvas');
+      c.width = c.height = S;
+      const x = c.getContext('2d')!;
+      const [r, g, b] = LAMPA.kolor;
+      const grd = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
+      grd.addColorStop(0.25, `rgba(${r},${g},${b},0.75)`);
+      grd.addColorStop(0.6, `rgba(${r},${g},${b},0.25)`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      x.fillStyle = grd;
+      x.fillRect(0, 0, S, S);
+      scene.textures.addCanvas('hero-lamp', c);
+    }
+    this.lamp = scene.add.image(0, 0, 'hero-lamp').setDepth(1_041_000).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.lamp.setDisplaySize(LAMPA.promien * 2, LAMPA.promien * 2);
+  }
+
+  /** The lamp: always a faint warm glow, stronger in the dark; it flickers a little like a flame. */
+  private updateLamp(dt: number, hero: { x: number; y: number }, now: number, light: number) {
+    const E = EFEKTY_POGODY[weather.kind];
+    const dark = Math.min(1, (E.ciemniej ?? 0) * LAMPA.zaPogode + (1 - light) * LAMPA.zaNoc + Math.max(0, weather.cloud - 0.5) * LAMPA.zaChmury);
+    // A flame: two slow waves plus a small random gust now and then.
+    const t = now / 1000;
+    if (Math.random() < dt * 3) this.flick = 1 - Math.random() * 0.7;
+    else this.flick += (1 - this.flick) * Math.min(1, dt * 6);
+    const m = LAMPA.migotanie * (0.5 * Math.sin(t * 5.3) + 0.3 * Math.sin(t * 11.7 + 1) + (this.flick - 1) * 0.6);
+    this.lamp.setPosition(hero.x, hero.y - 4).setAlpha(Math.max(0, (LAMPA.dzien + LAMPA.ciemno * dark) * (1 + m)));
+    const k = 1 + m * 0.15;
+    this.lamp.setDisplaySize(LAMPA.promien * 2 * k, LAMPA.promien * 2 * k);
   }
 
   private fill(list: Drop[], n: number) {
@@ -96,7 +130,8 @@ export class WeatherFx {
     c.tilePositionY = v.y - 2 - this.drift * 0.33;
   }
 
-  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }, now: number) {
+  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }, now: number, light = 1) {
+    this.updateLamp(dt, hero, now, light);
     if (WYGLAD_09) this.updateClouds(dt, cam.worldView);
     const E = EFEKTY_POGODY[weather.kind];
     const v = cam.worldView;

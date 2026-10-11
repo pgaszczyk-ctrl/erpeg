@@ -84,3 +84,23 @@ export const WODNIK = {
 
 /** Mieszkańcy w deszczu: mniej ich na ulicach, część z parasolem. */
 export const LUDZIE_W_DESZCZU = { ilu: 0.5, parasol: 0.45, kolory: [0x2b4f7a, 0x7a2b3b, 0x2f6b46, 0x3a3a44, 0xb08a2e] };
+
+/**
+ * The hero's lamp (owner, 11 Oct 2026: „poświata wokół gracza, lekko mrugająca jak lampa; w nocy, w deszczu
+ * i przy dużym zachmurzeniu musi być widoczny i widzieć co ma blisko”): a warm light added over the world
+ * (and over the weather's darker sky) around the hero. Strength = `dzien` in daylight with clear sky, up to
+ * `dzien + ciemno` in the darkest case (night, storm); the darkness is made of the weather's `ciemniej` × `zaPogode`,
+ * the night (1 − daylight) × `zaNoc` and cloud cover above 50 % × `zaChmury`.
+ */
+export const POSWIATA_BOHATERA = {
+  /** Radius of the light in map px (the hero is ~13 map px tall). */
+  promien: 46,
+  kolor: [255, 214, 150] as [number, number, number],
+  dzien: 0.13,
+  ciemno: 0.42,
+  zaPogode: 2.2,
+  zaNoc: 0.8,
+  zaChmury: 0.4,
+  /** Flicker like a flame: ± this share of the light. */
+  migotanie: 0.12,
+};

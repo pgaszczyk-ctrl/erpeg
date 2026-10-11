@@ -140,6 +140,19 @@ const CSS = `
   background: #b28443; border: 1px solid #1a110b; border-top-color: #f0d088; pointer-events: none; }
 #hud .hud-compass { border: 2px solid #d9b56f !important; border-radius: 6px !important;
   box-shadow: 0 0 0 2px #1a110b, inset 0 0 0 2px #644226, inset 0 3px 6px rgba(0,0,0,0.45); }
+/* Phones: a smaller place/weather plaque (owner, 11 Oct 2026: „zajmuje za dużo ekranu telefonu”). */
+@media (pointer: coarse) {
+  #hud .hud-plate { gap: 6px; padding: 3px 9px 3px 5px; }
+  #hud .hud-compass { width: 34px; height: 34px; }
+  #hud .hud-compass svg { width: 24px; height: 20px; }
+  #hud .hud-zoom svg { width: 20px; height: 20px; }
+  #hud .hud-town { font-size: 13px; }
+  #hud .hud-weather { font-size: 11px; }
+  #hud .hud-l1 { gap: 6px; }
+  #hud .hud-l2 { font-size: 10px; }
+  #hud .hud-quest { font-size: 12px; padding-top: 2px !important; padding-bottom: 2px !important; }
+  #hud .hud-quest .dot { width: 16px; height: 16px; font-size: 11px; }
+}
 #hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }
@@ -478,7 +491,7 @@ function layout() {
   parts.money.classList.toggle('top', top);
   parts.money.style.top = top ? `${M}px` : '';
   const menuW = 64; // the ☰ button top left
-  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * 0.6), window.innerWidth - M - menuW)}px` });
+  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * (window.matchMedia('(pointer: coarse)').matches ? 0.52 : 0.6)), window.innerWidth - M - menuW)}px` });
   // Pickups: left of the machine on a wide screen, above it on a narrow one.
   const wide = window.innerWidth - width * s - 2 * M > 170;
   Object.assign(parts.picks.style, wide

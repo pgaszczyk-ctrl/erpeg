@@ -66,7 +66,9 @@ export function createReservoirHud(p: Parts) {
   });
   function layout() {
     dpr = window.devicePixelRatio || 1;
-    s = window.innerWidth >= 900 && !window.matchMedia('(pointer: coarse)').matches ? 1.5 : 1;
+    // A computer gets a bigger machine (owner, 11 Oct 2026): ×2 on a tall enough window, else ×1.5.
+    const desk = window.innerWidth >= 900 && !window.matchMedia('(pointer: coarse)').matches;
+    s = desk ? (window.innerHeight >= 760 ? 2 : 1.5) : 1;
     vehicles = [p.vehicles.rower, p.vehicles.hulajnoga].filter(b => !b.hidden);
     // One fixed vehicle socket; inventory/availability selection lives in hud.ts.
     // Its inactive bicycle placeholder keeps the life tank's anchor unchanged.
@@ -239,6 +241,23 @@ export function createReservoirHud(p: Parts) {
       rivet(x + Math.round(Math.cos(a) * 18) - 1, y + Math.round(Math.sin(a) * 18) - 1);
     }
   }
+  /** A pipe's end (owner, 11 Oct 2026: bare ends looked unfinished): a collar, a brass acorn knob and a small spike. */
+  function finial(x: number, y: number, th: number, dir: 1 | -1) {
+    const cx = x + dir * 2;
+    rect(cx - 2, y - 2, 4, th + 4, ink); rect(cx - 1, y - 1, 2, th + 2, light); rect(cx - 1, y + th, 2, 1, dark);
+    const kx = x + dir * 7, ky = y + Math.floor(th / 2);
+    oval(kx, ky, 4, 4, ink); oval(kx, ky, 3, 3, brass); oval(kx - 1, ky - 1, 2, 2, light); rect(kx - 2, ky - 2, 1, 1, pale);
+    rect(kx + dir * 4, ky - 1, 1, 2, ink); rect(kx + dir * 5, ky, 1, 1, ink);
+    rect(kx - 1, ky + 2, 3, 1, dark);
+  }
+  /** The end of the steam line: a fluted brass whistle with a cap, instead of a bare stub. */
+  function whistle(x: number, y: number) {
+    rect(x - 4, y + 10, 9, 5, ink); rect(x - 3, y + 11, 7, 3, brass); rect(x - 3, y + 11, 7, 1, pale);
+    rect(x - 2, y, 5, 11, ink); rect(x - 1, y + 1, 3, 10, brass); rect(x - 1, y + 1, 1, 10, pale); rect(x + 1, y + 1, 1, 10, dark);
+    rect(x - 1, y + 4, 3, 1, ink); rect(x - 1, y + 7, 3, 1, ink);
+    rect(x - 3, y - 3, 7, 4, ink); rect(x - 2, y - 2, 5, 2, light); rect(x - 2, y - 1, 5, 1, brass);
+    rect(x, y - 5, 1, 3, ink); rect(x - 1, y - 6, 3, 2, ink); rect(x, y - 6, 1, 1, pale);
+  }
   function steamPuff(x: number, y: number, t: number, period: number, phase: number) {
     if (still) return;
     const k = ((t + phase) % period) / period;
@@ -360,7 +379,8 @@ export function createReservoirHud(p: Parts) {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, width, HEIGHT); c.imageSmoothingEnabled = false;
     // Lower copper return pipe along the whole machine, with elbows up into each socket.
-    hpipe(12, 260, 85, 6, 'copper');
+    hpipe(12, 254, 85, 6, 'copper');
+    finial(12, 85, 6, -1); finial(254, 85, 6, 1);
     for (const x of [18, 73, 194, 239]) vpipe(x, 78, 88, 6, 'copper');
     wheel(98, 88, 5, still ? 0 : t * 0.6);
     // Cogs turning slowly behind the sockets.
@@ -382,9 +402,10 @@ export function createReservoirHud(p: Parts) {
       porthole(242, 60, b.getAttribute('aria-pressed') === 'true');
       c.restore();
     });
-    // A steam vent at the end of the line.
-    rect(259, 52, 6, 14, ink); rect(260, 53, 4, 12, brass); rect(260, 53, 1, 12, pale);
-    steamPuff(262, 50, t, 5.5, 2);
+    // A steam whistle at the end of the line.
+    rect(259, 55, 7, 10, ink); rect(260, 56, 5, 8, brass); rect(260, 56, 5, 1, pale); rect(260, 63, 5, 1, dark);
+    whistle(262, 41);
+    steamPuff(262, 33, t, 5.5, 2);
   }
   function paintAvatar() {
     const cv = p.avPic;

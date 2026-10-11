@@ -965,7 +965,7 @@ export class GameScene extends Phaser.Scene {
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
-    this.weatherFx.update(dt, this.cameras.main, this.player, now);
+    this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
     this.drawMagic(now);
 
     this.animateCrops(now);
