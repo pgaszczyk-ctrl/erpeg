@@ -106,7 +106,7 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
   // The dog on Guliwera/Cyda (6 Oct 2026, from the 🎨 Grafika chat): about 0.6 of a person, no mask.
   pies: { id: 'pies', nazwa: 'Biało-czarny pies', plik: 'pies', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
   // The newsboy, artist's trial v2 (order 32, 32-G003): only standing front + side frames, so newsboys stand still
-  // (gazeciarz_proba.png = those two frames copied into a 3×3 sheet; up uses the front). Full walk sheet to come.
+  // (gazeciarz_proba.png = those two frames copied into a 3×3 sheet; up uses the front until a back frame arrives). Standing vs walking: the owner's decision is pending (32-G004).
   gazeciarz: { id: 'gazeciarz', nazwa: 'Gazeciarz', plik: 'gazeciarz_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dziecko' },
 };
 

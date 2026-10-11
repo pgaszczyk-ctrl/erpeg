@@ -279,9 +279,11 @@ export class Townsfolk {
         // A newsboy stands still and turns towards the hero (front, or the side mirrored).
         const s = f.sprite;
         const hx = px - f.x, hy = py - f.y;
-        const side = Math.abs(hx) > Math.abs(hy) * 1.2 && Math.hypot(hx, hy) < 160;
+        const near = Math.hypot(hx, hy) < 160;
+        const side = near && Math.abs(hx) > Math.abs(hy) * 1.2;
+        // Hero to the north: the newsboy turns his back to us (up-0 = the front copy until the artist's back frame).
         s.anims.stop();
-        s.setFrame(side ? 'side-0' : 'down-0').setFlipX(side && hx > 0);
+        s.setFrame(side ? 'side-0' : near && hy < 0 ? 'up-0' : 'down-0').setFlipX(side && hx > 0);
         s.setPosition(f.x, f.y).setDepth(f.y).setVisible(visible(f.x, f.y));
         f.sign?.setPosition(Math.round(f.x), Math.round(f.y - s.displayHeight * s.originY - 3 + Math.sin(now / 260) * 0.8)).setDepth(1_150_000).setVisible(s.visible);
         continue;
