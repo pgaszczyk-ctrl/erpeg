@@ -333,11 +333,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary');
       screen(
         el('h2', {}, [title]),
-        el('p', {}, ['To Twój kod postaci. Imię i kod wystarczą, żeby wczytać postać na każdym urządzeniu.']),
+        el('p', {}, ['Tym kodem zalogujesz się do postaci. Możesz też połączyć ją z kontem e-mail.']),
         codeCard(r.player.name, r.player.idik),
-        el('p', { className: 'm-warn' }, [
-          'Zapisz kod, zrób zdjęcie albo wyślij go sobie (np. na WhatsAppie)! Bez niego nie wczytasz postaci. Kod znajdziesz też w grze w menu ☰.',
-        ]),
         rememberForm(r.player.name, r.player.idik),
         err, go,
       );
