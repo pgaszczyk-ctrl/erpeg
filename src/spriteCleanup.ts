@@ -137,7 +137,8 @@ export function liftFeet(img: ImageData) {
   const LEG = 9, LIFT = 4;
   const d = img.data, width = img.width;
   const at = (col: number, row: number, x: number, y: number) => ((row * F + y) * width + col * F + x) * 4;
-  for (const row of [0, 2]) {
+  // Row 1 (side) too: from the side both steps had the legs spread alike (owner, 12 Oct 2026: the wizard).
+  for (const row of [0, 1, 2]) {
     let foot = -1, x0 = F, x1 = -1;
     for (let y = F - 1; y >= 0 && foot < 0; y--) for (let x = 0; x < F; x++) if (d[at(1, row, x, y) + 3] >= 20) { foot = y; break; }
     if (foot < LEG) continue;

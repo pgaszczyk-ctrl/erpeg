@@ -497,7 +497,10 @@ export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name:
   for (const dir of HERO_DIRS) {
     const anim = `me-walk-${dir}`;
     if (scene.anims.exists(anim)) scene.anims.remove(anim);
-    scene.anims.create({ key: anim, frames: WALK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FPS + 1, repeat: -1 });
+    // From the side the 25-hero pack draws both steps with the legs spread the same way (owner, 12 Oct 2026: the
+    // wizard „ledwo chodzi na boki”), so sideways the hero goes step – stand – step – stand like the townsfolk.
+    const side = dir === 'side';
+    scene.anims.create({ key: anim, frames: (side ? WALK_FOLK : WALK).map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: side ? WALK_FOLK_FPS : WALK_FPS + 1, repeat: -1 });
   }
   return key;
 }
