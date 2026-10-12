@@ -229,6 +229,9 @@ export interface QuestInfo {
 /** Arrow colours of the active side quests, kept across scene restarts. */
 const questColors = new Map<string, string>();
 
+/** The one the hero talks to: a character's walking sheet (its head is shown) or a picture (a place's sign). */
+export interface Rozmowca { tex?: string; obraz?: string; imie?: string }
+
 export interface DialogRequest {
   language?: import('../i18n').Lang;
   localHumor?: boolean;
@@ -243,6 +246,8 @@ export interface DialogRequest {
   tabs?: { labels: string[]; active: number; colors?: number[] };
   /** Pack 26 shop presentation, test only; transactions keep their existing callbacks. */
   shop?: ShopPresentation;
+  /** Who speaks (portrait on the left; the hero's on the right). null = nobody (system windows); absent = the last speaker nearby. */
+  kto?: Rozmowca | null;
   onChoose: (index: number) => void;
 }
 
@@ -1218,6 +1223,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
+    this.rozmowca = null; // a talk or a door below names the new speaker
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
     // Fighting = an enemy near the hero: then the swing is for it, never for trees, fruit or vegetables (owner, 6 Oct 2026).
@@ -1242,6 +1248,7 @@ export class GameScene extends Phaser.Scene {
     if (talk) {
       if (performance.now() >= this.talkReadyAt) {
         this.learnPlace();
+        this.zapamietajRozmowce(hit.x, hit.y);
         talk();
       }
       return;
@@ -2728,6 +2735,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (!open) return false;
     if (savePoint) this.save(); // entering a building is a save point
+    // The dialog's portrait: the place's sign, else a mission giver standing at the door.
+    const rp = placeAt({ x: fx, y: fy });
+    if (rp) this.rozmowcaMiejsca(rp);
+    else this.zapamietajRozmowce(fx, fy);
     open();
     return true;
   }
@@ -5311,7 +5322,32 @@ export class GameScene extends Phaser.Scene {
   /** A place sharing a mission's door: the mission dialog gets a button to go in there. */
   private doorPlace: CityPlace | null = null;
 
+  /** Who the hero talks to and where (for the dialog's portrait); cleared when he walks away. */
+  private rozmowca: { kto: Rozmowca; x: number; y: number } | null = null;
+
+  /** The person at a talk spot: the nearest character sprite (an artist sheet with a front frame) by it. */
+  private zapamietajRozmowce(x: number, y: number) {
+    let best: Phaser.GameObjects.Sprite | null = null, bd = 30;
+    for (const o of this.children.list) {
+      if (!(o instanceof Phaser.GameObjects.Sprite) || o === this.player || !o.visible) continue;
+      const key = o.texture.key;
+      if (!key.startsWith('hd-') || !o.texture.has('down-1')) continue;
+      const d = Math.min(Math.hypot(o.x - x, o.y - y), Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
+      if (d < bd) [best, bd] = [o, d];
+    }
+    this.rozmowca = best ? { kto: { tex: best.texture.key.replace(/-red$/, '') }, x: this.player.x, y: this.player.y } : null;
+  }
+
+  /** A place's door: its sign as the speaker's picture. */
+  private rozmowcaMiejsca(p: CityPlace | null | undefined) {
+    const sign = p ? PLACE_LOOK[p.kind as keyof typeof PLACE_LOOK]?.sign : undefined;
+    this.rozmowca = sign ? { kto: { obraz: sign }, x: this.player.x, y: this.player.y } : null;
+  }
+
   private dialog(req: DialogRequest) {
+    // The speaker's portrait (owner, 12 Oct 2026): the one talked to a moment ago, while the hero stays by them.
+    const r = this.rozmowca;
+    if (req.kto === undefined && r && Math.hypot(r.x - this.player.x, r.y - this.player.y) < 64) req = { ...req, kto: r.kto };
     // At a school or church: "ask about the shadows" as one more option, before the last button.
     const place = this.storyPlace;
     const door = this.doorPlace;

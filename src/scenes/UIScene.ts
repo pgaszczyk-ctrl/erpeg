@@ -19,8 +19,14 @@ import { OWOCE, type Owoc } from '../content/sklepy';
 import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
+import { PORTRETY_POSTACI } from '../content/portrety';
+import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
+/** Sheet id (`hd-<id>`) → its file name, so a portrait may be named after either. */
+const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
+  [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
+);
 import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
-import type { HudState, DialogRequest, GameScene } from './GameScene';
+import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
@@ -542,6 +548,72 @@ export class UIScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- dialogs
 
+  /** A brass frame with a portrait (or a placeholder silhouette while the artist's portrait is missing). */
+  private medalion(mx: number, my: number, P: number, key: string | null): Phaser.GameObjects.GameObject[] {
+    const g = this.add.graphics();
+    g.fillStyle(0x2a2016, 1).fillRoundedRect(mx, my, P, P, 8);
+    g.lineStyle(3, 0xd8a84a, 1).strokeRoundedRect(mx, my, P, P, 8);
+    g.lineStyle(1, 0x6d4a1e, 1).strokeRoundedRect(mx + 4, my + 4, P - 8, P - 8, 5);
+    const out: Phaser.GameObjects.GameObject[] = [g];
+    if (key && this.textures.exists(key)) out.push(this.add.image(mx + P / 2, my + P / 2, key).setDisplaySize(P - 10, P - 10));
+    else {
+      // Placeholder: a head-and-shoulders silhouette.
+      g.fillStyle(0x6d5a3e, 1).fillCircle(mx + P / 2, my + P * 0.4, P * 0.17);
+      g.fillRoundedRect(mx + P * 0.24, my + P * 0.6, P * 0.52, P * 0.3, { tl: P * 0.2, tr: P * 0.2, bl: 2, br: 2 });
+    }
+    return out;
+  }
+
+  private portretLaduje = new Set<string>();
+
+  /** The hero's dialog portrait (public/portrety/bohater_NN.webp for the 25 heroes); loads it on first use. */
+  private portretBohatera(gotowy?: () => void): string | null {
+    const hp = heroPortrait();
+    const m = hp && /lista([a-y])$/.exec(hp.key);
+    if (!m) return null;
+    const n = m[1].charCodeAt(0) - 96;
+    const key = `portret-bohater-${n}`;
+    if (this.textures.exists(key)) return key;
+    if (!this.portretLaduje.has(key)) {
+      this.portretLaduje.add(key);
+      this.load.image(key, `portrety/bohater_${String(n).padStart(2, '0')}.webp`);
+      if (gotowy) this.load.once(`filecomplete-image-${key}`, gotowy);
+      this.load.start();
+    }
+    return null;
+  }
+
+  /** The speaker's portrait: a picture (a place's sign) or the head of their walking sheet, enlarged crisp. */
+  private portretRozmowcy(k: Rozmowca, gotowy?: () => void): string | null {
+    if (k.obraz && this.textures.exists(k.obraz)) return k.obraz;
+    // The artist's portrait for this sheet (content/portrety.ts), loaded on first use.
+    const id = k.tex?.replace(/^hd-/, '').replace(/-s\d+$/, '').replace(/-red$/, '');
+    const plik = id && PORTRETY_POSTACI.find((p) => p === id || p === WYGLAD_PLIK[id]);
+    if (plik) {
+      const key = `portret-${plik}`;
+      if (this.textures.exists(key)) return key;
+      if (!this.portretLaduje.has(key)) {
+        this.portretLaduje.add(key);
+        this.load.image(key, `portrety/${plik}.webp`);
+        if (gotowy) this.load.once(`filecomplete-image-${key}`, gotowy);
+        this.load.start();
+      }
+    }
+    if (!k.tex || !this.textures.exists(k.tex)) return null;
+    const key = `portret-${k.tex}`;
+    if (this.textures.exists(key)) return key;
+    const t = this.textures.get(k.tex);
+    if (!t.has('down-1')) return null;
+    const fr = t.get('down-1');
+    const c = document.createElement('canvas');
+    c.width = c.height = 72;
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(t.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36, 0, 0, 72, 72);
+    this.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return key;
+  }
+
   private showDialog(d: DialogRequest) {
     if (d.shop) {
       if (this.shop) { this.dialogChoose = d.onChoose; this.shop.update(d); return; }
@@ -555,8 +627,11 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.view;
     const w = Math.min(width - 24, 620);
     const x = (width - w) / 2;
+    // Portraits (test, owner 12 Oct 2026): who speaks on the left, the hero on the right.
+    const P = TEST && d.kto ? (this.touch ? 60 : 78) : 0;
+    const side = P ? P + 10 : 0;
     // A book-like readable font (owner 7.10.2026: the monospace dialogs were „zbyt nieczytelne”).
-    const title = this.add.text(x + 16, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 } });
+    const title = this.add.text(x + 16 + side, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 - 2 * side } });
     const body = this.add.text(x + 16, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb', wordWrap: { width: w - 32 }, lineSpacing: 5 });
     const btnH = 44;
     // Up to two buttons side by side; longer lists (a shop) one under another.
@@ -564,19 +639,31 @@ export class UIScene extends Phaser.Scene {
     const rows = stacked ? d.buttons.length : 1;
     const btnsH = rows * btnH + (rows - 1) * 8;
     const tabH = d.tabs ? 38 : 0;
-    const h = 16 + title.height + 10 + (tabH ? tabH + 10 : 0) + body.height + 18 + btnsH + 16;
+    const headH = Math.max(title.height, P);
+    const h = 16 + headH + 10 + (tabH ? tabH + 10 : 0) + body.height + 18 + btnsH + 16;
     const y = Math.max(12, height - h - (this.touch ? 150 : 40));
-    title.setY(y + 16);
-    body.setY(title.y + title.height + 10 + (tabH ? tabH + 10 : 0));
+    title.setY(y + 16 + (headH - title.height) / 2);
+    body.setY(y + 16 + headH + 10 + (tabH ? tabH + 10 : 0));
 
     const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
     const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
+    if (P && d.kto) {
+      const kto = d.kto;
+      items.push(...this.medalion(x + 14, y + 14, P, this.portretRozmowcy(kto, () => {
+        if (this.dialogBox && this.dialogChoose === d.onChoose) this.dialogBox.add(this.medalion(x + 14, y + 14, P, this.portretRozmowcy(kto)));
+      })));
+      const hero = this.portretBohatera(() => {
+        // The hero's picture arrived while this window is open: put it in.
+        if (this.dialogBox && this.dialogChoose === d.onChoose) this.dialogBox.add(this.medalion(x + w - 14 - P, y + 14, P, this.portretBohatera()));
+      });
+      items.push(...this.medalion(x + w - 14 - P, y + 14, P, hero));
+    }
     this.dialogButtons = [];
     // Tabs (shop: buy / sell): the active one filled, the others only outlined; a tap gives onChoose(-1 - tab).
     if (d.tabs) {
       const n = d.tabs.labels.length;
       const tw = (w - 32 - (n - 1) * 10) / n;
-      const ty = title.y + title.height + 10;
+      const ty = y + 16 + headH + 10;
       d.tabs.labels.forEach((label, t) => {
         const c = d.tabs!.colors?.[t] ?? 0x2f6f9f;
         const on = t === d.tabs!.active;
