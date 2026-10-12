@@ -55,7 +55,7 @@ import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa 
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
-import { WOZY, POSWIATA_SZYLDU, SLUPY_SZYLDOW } from '../content/swiat';
+import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
 import { worldOrigin } from '../map/world';
@@ -1904,30 +1904,64 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  /** A soft golden glow behind a place's sign (content/swiat.ts POSWIATA_SZYLDU), so shops are easy to spot. */
+  /** A light cone under a wall sign / a stall (content/swiat.ts SNOP_SZYLDU), so places are easy to spot. */
   private signGlow(sign: Phaser.GameObjects.Image) {
-    const P = POSWIATA_SZYLDU;
-    const key = 'sign-glow';
+    const top = sign.y + sign.displayHeight * 0.25;
+    const glow = this.snop(sign.x, top, top + SNOP_SZYLDU.dlug * 0.8, sign.depth + 1);
+    this.signGlows.add(glow);
+    return glow;
+  }
+
+  /**
+   * A soft cone of warm light from a lamp at (x, top) down to the ground at `ground`, ending in a pool (ADD).
+   * Its alpha (day/night, the odd flicker) is set every frame for the ones on screen (cullFar / updatePosts).
+   */
+  private snop(x: number, top: number, ground: number, depth: number) {
+    const S = SNOP_SZYLDU;
+    const key = 'snop-swiatla';
     if (!this.textures.exists(key)) {
-      const n = 64;
-      const tex = this.textures.createCanvas(key, n, n)!;
+      const w = 48, h = 64;
+      const tex = this.textures.createCanvas(key, w, h)!;
       const ctx = tex.getContext();
-      const [r, g, b] = P.kolor;
-      const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
-      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
-      grd.addColorStop(0.5, `rgba(${r},${g},${b},0.7)`);
-      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, n, n);
+      const img = ctx.createImageData(w, h);
+      const [r, g, b] = S.kolor;
+      const pool = 0.82; // where the cone meets the ground (share of the height)
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const v = y / h, cx = Math.abs(x + 0.5 - w / 2);
+        // The cone: narrow at the lamp, wide on the ground, soft edges, brighter near the lamp and on the ground.
+        const half = 2 + (w / 2 - 6) * Math.min(1, v / pool);
+        const edge = Math.max(0, 1 - cx / half);
+        let a = Math.pow(edge, 1.6) * (0.55 + 0.25 * (1 - v)) * (v > pool ? Math.max(0, 1 - (v - pool) / (1 - pool)) : 1);
+        // The pool of light on the ground: a flat ellipse.
+        const ex = cx / (w / 2 - 2), ey = (v - pool) / 0.16;
+        const e = 1 - (ex * ex + ey * ey);
+        if (e > 0) a = Math.max(a, 0.75 * Math.pow(e, 1.3));
+        const i = (y * w + x) * 4;
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = Math.round(255 * Math.min(1, a));
+      }
+      ctx.putImageData(img, 0, 0);
       tex.refresh();
       tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
-    const glow = this.add.image(sign.x, sign.y, key).setBlendMode(Phaser.BlendModes.ADD).setDepth(sign.depth - 1);
-    glow.setDisplaySize(P.promien * 2.2, P.promien * 1.7).setAlpha(P.mocno);
-    // The slow pulse is done by cullFar for the glows on screen (a tween each – over a thousand – slowed phones).
-    glow.setData('faza', Math.random() * 10_000);
-    this.signGlows.add(glow);
+    const length = Math.max(8, ground - top) / 0.82;
+    const glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+    glow.setDisplaySize(S.szer, length).setAlpha(S.dzien);
+    const [lo, hi] = S.mrugCoMs;
+    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo));
     return glow;
+  }
+
+  /**
+   * 1, or – for a short while every few seconds (each lamp its own rhythm) – a stutter of a short circuit /
+   * an overloaded line: off and on a few times, now and then dimmed.
+   */
+  private flicker(now: number, o: Phaser.GameObjects.Image) {
+    const okres = o.getData('okres') as number, t = (now + (o.getData('faza') as number)) % okres;
+    if (t > SNOP_SZYLDU.mrugMs) return 1;
+    const krok = Math.floor(t / 55), seed = Math.floor((now + (o.getData('faza') as number)) / okres);
+    const h = Math.sin(krok * 12.9898 + seed * 78.233) * 43758.5453;
+    const x = h - Math.floor(h);
+    return x < 0.45 ? 0.08 : x < 0.65 ? 0.45 : 1;
   }
 
   /**
@@ -1965,10 +1999,10 @@ export class GameScene extends Phaser.Scene {
     const shadow = this.add.image(at.x + 2, at.y - 0.5, 'cien-slupa').setDepth(at.y - 1);
     const lampX = at.x + (arm ? (flip ? -0.5 : 0.5) : 0) * K, lampY = top + 5 * K;
     const lamp = this.add.image(lampX, lampY, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y + 1).setVisible(false);
-    const pool = this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false);
+    // The light: a cone from the lamp down to the pavement (SNOP_SZYLDU), day and night, with the odd flicker.
+    const pool = this.snop(lampX, lampY, at.y + 3, at.y + 0.7).setVisible(false); // over the board: the lamp lights it
     this.lampGlowTexture();
     lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
-    pool.setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
     this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
     return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
   }
@@ -1995,8 +2029,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Night lamps on the sign posts (checked every 2 s) and the boards on arms swaying, only for those on screen. */
   private updatePosts(now: number) {
-    if (!this.posts.length) return;
-    if (now - this.postsNightAt > 2000) {
+    if (now - this.postsNightAt > 2000 || this.postsNight === null) {
       this.postsNightAt = now;
       const night = isNight();
       if (night !== this.postsNight) {
@@ -2005,14 +2038,18 @@ export class GameScene extends Phaser.Scene {
       }
     }
     const night = !!this.postsNight;
+    const base = night ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const q of this.posts) {
       if (!q.post.visible) {
         if (q.lamp.visible) q.lamp.setVisible(false);
         if (q.pool.visible) q.pool.setVisible(false);
         continue;
       }
+      const f = this.flicker(now, q.pool);
+      if (!q.pool.visible) q.pool.setVisible(true);
+      q.pool.setAlpha(base * f);
       if (q.lamp.visible !== night) q.lamp.setVisible(night);
-      if (q.pool.visible !== night) q.pool.setVisible(night);
+      if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
       if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
     }
   }
@@ -2053,12 +2090,12 @@ export class GameScene extends Phaser.Scene {
   private cullFar(now: number) {
     const v = this.cameras.main.worldView;
     const m = 40;
-    const P = POSWIATA_SZYLDU;
+    const base = this.postsNight ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const o of this.farObjects) {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
-      if (on && P.pulsMs && this.signGlows.has(o)) o.setAlpha(P.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / P.pulsMs) * Math.PI)));
+      if (on && this.signGlows.has(o)) o.setAlpha(base * this.flicker(now, o));
     }
   }
 

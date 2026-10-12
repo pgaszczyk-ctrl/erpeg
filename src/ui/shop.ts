@@ -186,7 +186,20 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     }
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';
-    right.append(detail, notice, exit); body.append(left, right); box.append(head, bar, subtitle, body);
+    if (window.matchMedia('(max-width: 700px)').matches) {
+      // Phones (owner, 12 Oct 2026: the shop didn't fit and had to be scrolled): the seller presents the chosen
+      // thing at the top, in a speech bubble next to his face; the goods grid and the backpack follow, × closes.
+      const pitch = el('div', 's26-pitch');
+      banner.remove();
+      const face = el('div', 's26-face'); face.append(banner);
+      detail.classList.add('s26-bubble');
+      pitch.append(face, detail);
+      left.prepend(pitch, notice);
+      body.append(left);
+    } else {
+      right.append(detail, notice, exit); body.append(left, right);
+    }
+    box.append(head, bar, subtitle, body);
     stock.scrollTop = scroll;
     filters.scrollLeft = categoryScroll;
     // Reveal the chosen folder without scrolling the entire shop on a phone.

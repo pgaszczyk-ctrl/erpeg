@@ -118,4 +118,27 @@
  #shop .s26-message{font-size:15px;min-height:0;margin:4px 0}#shop .s26-message:empty{display:none}
  #shop .s26-exit{min-height:44px;font-size:21px;border-width:4px;margin:4px 0 6px}
 }
+@media(max-width:700px){
+ /* The seller presents the chosen thing in a speech bubble next to his face (owner, 12 Oct 2026). */
+ #shop .s26-pitch{display:flex;gap:8px;align-items:stretch}
+ #shop .s26-face{flex:0 0 92px;align-self:flex-start}
+ #shop .s26-face .s26-banner img{height:112px;width:92px;object-fit:cover;object-position:50% 40%}
+ #shop .s26-bubble{position:relative;flex:1;min-width:0;min-height:112px;border-radius:12px;padding:6px 8px 7px;grid-template-columns:52px minmax(0,1fr);column-gap:8px}
+ #shop .s26-bubble:before{content:'';position:absolute;left:-14px;top:30px;border:8px solid transparent;border-right:9px solid #aa834b}
+ #shop .s26-bubble:after{content:'';position:absolute;left:-8px;top:32px;border:6px solid transparent;border-right:7px solid #e5c990}
+ #shop .s26-bubble .s26-hero-image{height:52px;width:52px;border-width:3px;padding:2px;grid-row:1 / span 2}
+ #shop .s26-bubble .s26-hero-image img,#shop .s26-bubble .s26-hero-image svg{width:42px;height:42px}
+ #shop .s26-bubble .s26-hero-image .s26-food-icon{font-size:34px}
+ #shop .s26-bubble h3{font-size:16px;margin:0 0 2px}
+ #shop .s26-bubble .s26-stats{font-size:14px;margin:0 0 2px;grid-template-columns:auto auto;justify-content:start}
+ #shop .s26-bubble .s26-description{grid-column:1 / -1;font-size:15px;font-style:italic;margin:4px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+ #shop .s26-bubble .s26-description:before{content:'„'}#shop .s26-bubble .s26-description:after{content:'”'}
+ #shop .s26-bubble>p:not(.s26-description){grid-column:1 / -1;font-size:14px;margin:2px 0}
+ #shop .s26-bubble .s26-action{min-height:40px;margin-top:6px;padding:2px 8px;flex-direction:row;gap:10px;border-width:3px}
+ #shop .s26-bubble .s26-action strong{font-size:19px}#shop .s26-bubble .s26-action span{font-size:15px}
+ #shop .s26-bubble .s26-action:before,#shop .s26-bubble .s26-action:after{top:50%;margin-top:-3px}
+ #shop .s26-stock{max-height:none}
+ #shop .s26-category{min-height:38px}
+ #shop .s26-assortment>h3{display:none}
+}
 @media(max-height:600px) and (min-width:701px){#shop .s26-box{max-height:calc(100dvh - 24px)}#shop.s26-screen{padding:12px}}

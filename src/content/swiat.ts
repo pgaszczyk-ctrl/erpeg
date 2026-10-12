@@ -139,6 +139,22 @@ export const SLUPY_SZYLDOW = {
 };
 
 /**
+ * Snop światła pod szyldem (właściciel, 12 Oct 2026: szyldy słabo widać, a złota poświata wyglądała nienaturalnie):
+ * miękki stożek z lampy w dół na chodnik, jak latarnia – w dzień delikatny (`dzien`), nocą mocniejszy (`noc`).
+ * Co `mrugCoMs` (losowo w tym zakresie, każdy szyld swój rytm) krótko mruga przez `mrugMs` jak przy zwarciu
+ * albo przeciążeniu sieci, żeby spacerowicz zauważył, że coś tu jest. Wymiary w punktach mapy.
+ */
+export const SNOP_SZYLDU = {
+  szer: 24,
+  dlug: 22,
+  dzien: 0.45,
+  noc: 0.85,
+  kolor: [255, 214, 140] as [number, number, number],
+  mrugCoMs: [7000, 18000] as [number, number],
+  mrugMs: 650,
+};
+
+/**
  * Złota poświata pod szyldami (żeby było widać, gdzie sklep itp.): delikatniejsza
  * niż czerwona pod wrogami. `promien` w punktach mapy, `mocno` 0–1, `kolor`,
  * `pulsMs` – powolne falowanie (0 = stała).
