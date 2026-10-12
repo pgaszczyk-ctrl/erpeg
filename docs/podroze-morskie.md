@@ -40,6 +40,11 @@ Ustalenia właściciela z 12 X 2026 i stan prac. Kod: `src/porty.ts`, `src/conte
 5. Wszywki krajów z misjami bibliotek.
 6. Zamówienie u grafika: prom, parowiec, kapitan, szyld portu, gołąb, szablon wszywki, medale.
 
+## Ile kierunków z jednego portu
+
+Najwyżej `PROM.maksKierunkow` (3) – „tylko do kilku, jak z pociągami”. Najpierw linie dodane z próśb graczy,
+potem najbliższe prawdziwe; lista stała. Port B nie musi mieć drogi z powrotem do A (jak u woźniców).
+
 ## „Inne miejsce” (właściciel, 12 X 2026)
 
 Każdy kapitan ma „🧭 Inne miejsce…”: gracz wpisuje kraj albo port, kapitan mówi, że popyta innych kapitanów,

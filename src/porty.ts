@@ -10,7 +10,7 @@ import { PORTY_Z_MAPY } from './map/world';
 PORTY_Z_MAPY.on = TEST && !new URLSearchParams(location.search).has('d'); // not in the QR demo
 
 export interface Port { id: number; nazwa: string; lat: number; lon: number; terminal: string | null }
-export interface Rejs { do: Port; km: number; nazwa: string | null }
+export interface Rejs { do: Port; km: number; nazwa: string | null; /** Added from a player's request (admin ⚓ Porty). */ zProsby?: boolean }
 
 let porty: Port[] = [];
 const linie = new Map<number, Rejs[]>();
@@ -32,7 +32,7 @@ export function wczytajPorty(): Promise<void> {
     // Lines added from players' requests (admin panel ⚓ Porty, table port_lines).
     try {
       const extra = await rpc<[string, number, number, string, number, number, number, string | null][]>('game_ports', { p_test: TEST });
-      for (const [an, alat, alon, bn, blat, blon, km, nazwa] of extra ?? []) dodaj(znajdzLubDodaj({ nazwa: an, lat: alat, lon: alon }), znajdzLubDodaj({ nazwa: bn, lat: blat, lon: blon }), km, nazwa);
+      for (const [an, alat, alon, bn, blat, blon, km, nazwa] of extra ?? []) dodaj(znajdzLubDodaj({ nazwa: an, lat: alat, lon: alon }), znajdzLubDodaj({ nazwa: bn, lat: blat, lon: blon }), km, nazwa, true);
     } catch {
       // Offline: the known lines only.
     }
@@ -41,11 +41,13 @@ export function wczytajPorty(): Promise<void> {
   return ladowanie;
 }
 
-function dodaj(a: Port | undefined, b: Port | undefined, km: number, nazwa: string | null) {
+function dodaj(a: Port | undefined, b: Port | undefined, km: number, nazwa: string | null, zProsby = false) {
   if (!a || !b || a === b) return;
   for (const [x, y] of [[a, b], [b, a]] as const) {
     const l = linie.get(x.id) ?? [];
-    if (!l.some((r) => r.do === y)) l.push({ do: y, km, nazwa });
+    const old = l.find((r) => r.do === y);
+    if (old) old.zProsby ||= zProsby;
+    else l.push({ do: y, km, nazwa, zProsby });
     linie.set(x.id, l);
   }
 }
@@ -70,9 +72,13 @@ export function portyBlisko(at: { lat: number; lon: number }, km: number): Port[
   return porty.filter((p) => Math.abs(p.lat - at.lat) < km / 100 + 0.1 && odleglosc(p, at) <= km).sort((a, b) => odleglosc(a, at) - odleglosc(b, at));
 }
 
-/** Where ferries from this port go, the shortest first. */
+/**
+ * Where ferries from this port go: at most PROM.maksKierunkow – the lines added from players' requests first,
+ * then the shortest real ones (a fixed list, like a timetable); shown shortest first.
+ */
 export function rejsyZ(p: Port): Rejs[] {
-  return [...(linie.get(p.id) ?? [])].sort((a, b) => a.km - b.km);
+  const all = [...(linie.get(p.id) ?? [])].sort((a, b) => Number(!!b.zProsby) - Number(!!a.zProsby) || a.km - b.km);
+  return all.slice(0, PROM.maksKierunkow).sort((a, b) => a.km - b.km);
 }
 
 export const portPoId = (id: number) => porty[id];

@@ -23,6 +23,11 @@ export const PROM = {
   wskazowkaKm: 30,
   /** Najwięcej linii na liście kapitana (najkrótsze; reszta po „Dalej…”). */
   naStronie: 6,
+  /**
+   * Z jednego portu pływa się najwyżej do tylu miejsc (właściciel: „tylko do kilku, jak z pociągami”). Najpierw
+   * linie dodane z próśb graczy (panel ⚓ Porty), potem najbliższe prawdziwe. Lista stała, nie losuje się.
+   */
+  maksKierunkow: 3,
   /** Od którego poziomu postaci (0 = od razu). */
   odPoziomu: 0,
 };

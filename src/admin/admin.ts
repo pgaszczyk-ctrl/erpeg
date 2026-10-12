@@ -899,7 +899,7 @@ async function portyTab(main: HTMLElement) {
   type Linia = { id: number; at: string; a_nazwa: string; a_lat: number; a_lon: number; b_nazwa: string; b_lat: number; b_lon: number; km: number; nazwa: string | null; aktywna: boolean; test: boolean; prosba: number | null };
   main.append(el('h2', {}, ['Porty – prośby graczy i dodane linie']), el('p', { className: 'muted' }, [
     'Gracz u kapitana wybiera „🧭 Inne miejsce…” i wpisuje kraj albo port. Sprawdź, czy naprawdę pływa tam statek/prom, i dodaj linię: ',
-    'wtedy kapitanowie obu portów ją znają (po następnym wejściu do gry), a gracz usłyszy odpowiedź. „Tylko test” = linia widoczna tylko na serwerze testowym.',
+    'wtedy kapitanowie obu portów ją znają (po następnym wejściu do gry), a gracz usłyszy odpowiedź. „Tylko test” = linia widoczna tylko na serwerze testowym. Z jednego portu kapitan proponuje najwyżej 3 kierunki – dodane tu mają pierwszeństwo.',
   ]));
   let d: { prosby: Prosba[]; linie: Linia[] };
   try {
