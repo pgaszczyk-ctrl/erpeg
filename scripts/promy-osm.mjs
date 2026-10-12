@@ -66,16 +66,27 @@ out body;`;
 if (process.argv.includes('--rename')) {
   const json = JSON.parse(readFileSync('public/porty.json', 'utf8'));
   const towns = [];
-  for (let s = -60; s < 80; s += 20) for (let w = -180; w < 180; w += 30) {
-    const inside = json.porty.filter((p) => p[2] >= s && p[2] < s + 20 && p[3] >= w && p[3] < w + 30);
-    if (!inside.length) continue;
-    const q = `[out:json][timeout:180][maxsize:268435456][bbox:${s},${w},${s + 20},${w + 30}];
-node[place~"^(city|town)$"][name];
+  // Towns of a box; a dense one that times out is split in four (Europe needs it).
+  const townBox = async (s, w, n, e, depth = 0) => {
+    const q = `[out:json][timeout:180][maxsize:268435456][bbox:${s},${w},${n},${e}];
+(node[place=city][name];node[place=town][name];);
 out body;`;
-    const j = await overpass(q, `towns ${s},${w}`, 3);
-    if (!j) throw new Error(`Overpass: towns ${s},${w} failed`);
-    towns.push(...j.elements);
-    console.log(`towns ${s},${w}: ${j.elements.length}`);
+    const j = await overpass(q, `towns ${s},${w},${n},${e}`, depth < 3 ? 1 : 3);
+    if (j) {
+      console.log(`towns ${s},${w},${n},${e}: ${j.elements.length}`);
+      return j.elements;
+    }
+    if (depth >= 3) throw new Error(`Overpass: towns ${s},${w},${n},${e} failed`);
+    const ms = (s + n) / 2, mw = (w + e) / 2, out = [];
+    for (const [a, b, c, d] of [[s, w, ms, mw], [s, mw, ms, e], [ms, w, n, mw], [ms, mw, n, e]]) {
+      if (json.porty.some((p) => p[2] >= a - 0.2 && p[2] < c + 0.2 && p[3] >= b - 0.3 && p[3] < d + 0.3)) out.push(...(await townBox(a, b, c, d, depth + 1)));
+    }
+    return out;
+  };
+  for (let s = -60; s < 80; s += 20) for (let w = -180; w < 180; w += 30) {
+    // Only boxes with ports (plus a margin for towns just over the edge).
+    if (!json.porty.some((p) => p[2] >= s - 0.2 && p[2] < s + 20.2 && p[3] >= w - 0.3 && p[3] < w + 30.3)) continue;
+    towns.push(...(await townBox(s, w, s + 20, w + 30)));
     await new Promise((r) => setTimeout(r, 2000));
   }
   const R = 6371, rad = (d) => (d * Math.PI) / 180;
