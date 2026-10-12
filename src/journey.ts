@@ -21,11 +21,13 @@ export interface Journey {
   end: number;
   /** A train (long distance) or a coach. */
   train?: boolean;
+  /** A ferry (content/porty.ts): the sea picture and port words. */
+  statek?: boolean;
 }
 
 /** `times`: a diamond ride goes this many times faster. */
-export function rideMs(km: number, times = 1) {
-  return Math.round((km / PODROZ_KMH / times) * 3_600_000);
+export function rideMs(km: number, times = 1, kmh = PODROZ_KMH) {
+  return Math.round((km / kmh / times) * 3_600_000);
 }
 
 /** Server time minus the phone's (so the phone clock can't shorten a ride). */
@@ -46,7 +48,16 @@ function fmtLeft(ms: number) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
+  const d = Math.floor(h / 24);
+  if (d) return `${d} ${d === 1 ? 'dzień' : 'dni'} ${h % 24} godz.`;
   return h ? `${h} godz. ${m} min` : m ? `${m} min ${String(sec).padStart(2, '0')} s` : `${sec} s`;
+}
+
+/** Arrival time; another day gets its date („ok. 7:40, 14.10”). */
+function fmtArrival(t: number) {
+  const d = new Date(t - offset);
+  const today = new Date(Date.now()).toDateString() === d.toDateString();
+  return `ok. ${fmtClock(t)}${today ? '' : `, ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`}`;
 }
 
 function fmtClock(t: number) {
@@ -55,9 +66,10 @@ function fmtClock(t: number) {
 }
 
 /** Ride time for the coachman's list, e.g. "ok. 19 min". */
-export function rideText(km: number, times = 1) {
-  const ms = rideMs(km, times);
+export function rideText(km: number, times = 1, kmh = PODROZ_KMH) {
+  const ms = rideMs(km, times, kmh);
   const min = Math.round(ms / 60_000);
+  if (min >= 48 * 60) return `ok. ${Math.round(min / 60 / 24)} dni`;
   return min >= 60 ? `ok. ${Math.floor(min / 60)} godz. ${min % 60 ? `${min % 60} min` : ''}`.trim() : `ok. ${Math.max(1, min)} min`;
 }
 
@@ -67,27 +79,30 @@ export function showJourney(j: Journey): Promise<void> {
   const box = document.createElement('div');
   box.id = 'journey';
   box.style.cssText = 'position:fixed;inset:0;z-index:70;background:#141a14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;font-family:monospace;color:#fff;text-align:center;';
-  const icon = j.train ? '🚂' : '🐴';
+  const icon = j.statek ? '⛴' : j.train ? '🚂' : '🐴';
   box.innerHTML = `
-    <div style="font-size:20px;color:#f7c531">${icon} W drodze</div>
+    <div style="font-size:20px;color:#f7c531">${icon} ${j.statek ? 'Na morzu' : 'W drodze'}</div>
     <div style="width:min(94vw,640px)">
       <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span class="j-a"></span><span class="j-b"></span></div>
       <canvas class="j-road" width="${ROAD_W}" height="${ROAD_H}" style="width:100%;image-rendering:pixelated;display:block"></canvas>
     </div>
     <div class="j-left" style="font-size:16px"></div>
     <div class="j-eta" style="font-size:14px;color:#bbb"></div>
-    <div style="font-size:12px;color:#888;max-width:420px">Możesz zamknąć grę – podróż trwa dalej. Gdy wrócisz po przyjeździe, będziesz już na peronie.</div>`;
+    <div style="font-size:12px;color:#888;max-width:420px">${j.statek
+      ? 'Możesz zamknąć grę albo zagrać inną postacią – rejs trwa dalej. Gdy wrócisz po przypłynięciu, będziesz już w porcie.'
+      : 'Możesz zamknąć grę – podróż trwa dalej. Gdy wrócisz po przyjeździe, będziesz już na peronie.'}</div>`;
   box.querySelector('.j-a')!.textContent = j.from;
   box.querySelector('.j-b')!.textContent = j.to;
-  box.querySelector('.j-eta')!.textContent = `${j.km.toFixed(0)} km · przyjazd ok. ${fmtClock(j.end)}`;
+  box.querySelector('.j-eta')!.textContent = `${j.km.toFixed(0)} km · ${j.statek ? 'w porcie' : 'przyjazd'} ${fmtArrival(j.end)}`;
   document.body.append(box);
   return new Promise((done) => {
     const tick = () => {
       if (!box.isConnected) return done();
       const now = serverNow();
       const f = Math.min(1, Math.max(0, (now - j.start) / Math.max(1, j.end - j.start)));
-      drawRoad(box.querySelector('canvas')!, f, !!j.train, now);
-      box.querySelector('.j-left')!.textContent = now >= j.end ? 'Dojeżdżamy…' : `Zostało ${fmtLeft(j.end - now)}`;
+      if (j.statek) drawSea(box.querySelector('canvas')!, f, now);
+      else drawRoad(box.querySelector('canvas')!, f, !!j.train, now);
+      box.querySelector('.j-left')!.textContent = now >= j.end ? (j.statek ? 'Wpływamy do portu…' : 'Dojeżdżamy…') : `Zostało ${fmtLeft(j.end - now)}`;
       if (now >= j.end) {
         setTimeout(() => {
           box.remove();
@@ -180,6 +195,64 @@ function drawRoad(c: HTMLCanvasElement, f: number, train: boolean, now: number) 
   } else drawLoco(ctx, x, y + ch - 14);
 }
 
+/**
+ * The sea: a pier with a lighthouse at each end and the ferry (facing right) where it is now,
+ * rocking on the waves, a puff of steam from its funnel.
+ */
+function drawSea(c: HTMLCanvasElement, f: number, now: number) {
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingEnabled = false;
+  const p = (x: number, y: number, w: number, h: number, col: string) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(Math.round(x), Math.round(y), w, h);
+  };
+  // Sky and water.
+  p(0, 0, ROAD_W, 18, '#9fc6e6');
+  p(0, 18, ROAD_W, ROAD_H - 18, '#2e6aa8');
+  p(0, 18, ROAD_W, 1, '#c8e2f5');
+  // Waves drifting left (the ship goes right).
+  const shift = Math.floor(now / 220);
+  for (let y = 21; y < ROAD_H; y += 4) {
+    for (let x = (y * 7 + shift) % 11; x < ROAD_W; x += 11) p(ROAD_W - x, y + ((x >> 2) & 1), 3, 1, y % 8 ? '#5b93cf' : '#22558c');
+  }
+  // A pier with a lighthouse at both ends.
+  for (const x of [0, ROAD_W - 14]) {
+    p(x, 24, 14, 3, '#6b4a2a');
+    for (let k = 1; k < 14; k += 4) p(x + k, 27, 1, 6, '#4a3020');
+    const lx = x === 0 ? 2 : ROAD_W - 6;
+    p(lx, 9, 4, 15, '#e8e0d0');
+    p(lx, 12, 4, 2, '#c03030');
+    p(lx, 18, 4, 2, '#c03030');
+    p(lx - 1, 7, 6, 2, '#1e1a24');
+    p(lx + 1, 5, 2, 2, (Math.floor(now / 600) & 1) ? '#ffe680' : '#b89a40');
+  }
+  // The ferry.
+  const x0 = 16;
+  const x1 = ROAD_W - 16 - 30;
+  const x = Math.round(x0 + (x1 - x0) * f);
+  const rock = f < 1 ? Math.round(Math.sin(now / 420)) : 0;
+  const y = 14 + rock;
+  p(x, y + 10, 30, 1, '#1e1a24');
+  p(x + 1, y + 11, 28, 4, '#1e1a24');
+  p(x + 2, y + 11, 26, 2, '#7a2a2a');
+  p(x + 2, y + 13, 25, 1, '#2b2b33');
+  p(x + 27, y + 9, 3, 2, '#1e1a24');
+  p(x + 5, y + 5, 19, 5, '#1e1a24');
+  p(x + 6, y + 6, 17, 4, '#efe9dc');
+  for (let k = 8; k < 22; k += 3) p(x + k, y + 7, 1, 1, '#3f6fa8');
+  p(x + 12, y, 4, 5, '#1e1a24');
+  p(x + 13, y + 1, 2, 3, '#c8902a');
+  // Steam puffs behind the funnel.
+  if (f < 1) {
+    const t = (now / 900) % 1;
+    for (let k = 0; k < 3; k++) {
+      const u = (t + k / 3) % 1;
+      const r = 1 + Math.round(u * 2);
+      p(x + 12 - u * 12, y - 2 - u * 7, r, r, `rgba(240,240,245,${(1 - u).toFixed(2)})`);
+    }
+  }
+}
+
 /** A small steam engine (facing right). */
 function drawLoco(ctx: CanvasRenderingContext2D, x: number, y: number) {
   const p = (px: number, py: number, w: number, h: number, c: string) => {
@@ -199,3 +272,6 @@ function drawLoco(ctx: CanvasRenderingContext2D, x: number, y: number) {
 }
 
 export const journeyOpen = () => !!document.getElementById('journey');
+
+// For automated browser checks (scripts/tests/browser-porty.mjs).
+(window as unknown as { __showJourney: typeof showJourney }).__showJourney = showJourney;

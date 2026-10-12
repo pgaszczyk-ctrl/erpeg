@@ -197,7 +197,7 @@ export function mapName(id: string) {
 const cityMapId = (c: { lat: number; lon: number }) => `w:${c.lat.toFixed(4)},${c.lon.toFixed(4)}`;
 const worldNames = new Map<string, string>(DUZE_MIASTA.map((c) => [cityMapId(c), c.nazwa]));
 
-export type Offer = Trip & { level?: number };
+export type Offer = Trip & { level?: number; statek?: boolean };
 
 function hashStr(s: string) {
   let h = 2166136261;

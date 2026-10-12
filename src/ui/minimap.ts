@@ -24,6 +24,7 @@ const PLACE_ICONS: Record<string, [string, string]> = {
   merchant: ['#e43b44', '$'],
   maker: ['#a86d37', '♨'],
   workshop: ['#71624f', '⚒'],
+  port: ['#2b3f6a', '⚓'],
 };
 let open: HTMLDivElement | null = null;
 let zoom = 0;
