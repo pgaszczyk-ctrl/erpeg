@@ -1154,6 +1154,26 @@ export class GameScene extends Phaser.Scene {
     const fy = a.y + FEET.dy;
     const free = (x: number, y: number) =>
       this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.mapView.korony.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
+    // The whole step first: on a narrow diagonal way (a footbridge over water) each single-axis half-step pushes a
+    // corner of the feet over the edge, so moving x then y left the hero stuck mid-bridge (report 64, 12 Oct 2026).
+    if (dx && dy && free(a.x + dx, fy + dy)) {
+      a.x += dx;
+      a.y += dy;
+      return;
+    }
+    // Blocked straight ahead: try the step turned a little either way, so the hero slips into a narrow way
+    // instead of stopping at its edge.
+    if (a === this.player && (dx || dy)) {
+      for (const t of [0.35, -0.35, 0.7, -0.7]) {
+        const c = Math.cos(t), s = Math.sin(t);
+        const rx = dx * c - dy * s, ry = dx * s + dy * c;
+        if (free(a.x + rx, fy + ry) && !free(a.x + dx, fy) && !free(a.x, fy + dy)) {
+          a.x += rx;
+          a.y += ry;
+          return;
+        }
+      }
+    }
     if (dx && free(a.x + dx, fy)) a.x += dx;
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }

@@ -941,7 +941,8 @@ export class CityMap {
 
   /** Is (x, y) on a road or path (one of `lines`)? */
   private onRoad(lines: Line[], x: number, y: number) {
-    for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + PX_PER_M) return true;
+    // 2 m beyond the drawn edge: a narrow footbridge left the hero's feet a 3 px wide strip over a river (report 64).
+    for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + 2 * PX_PER_M) return true;
     return false;
   }
 
