@@ -196,8 +196,12 @@ export function mapName(id: string) {
 }
 const cityMapId = (c: { lat: number; lon: number }) => `w:${c.lat.toFixed(4)},${c.lon.toFixed(4)}`;
 const worldNames = new Map<string, string>(DUZE_MIASTA.map((c) => [cityMapId(c), c.nazwa]));
+/** A world map's name for the HUD (ports: porty.ts names the map a ferry lands on). */
+export function nameWorldMap(id: string, name: string) {
+  if (!worldNames.has(id)) worldNames.set(id, name);
+}
 
-export type Offer = Trip & { level?: number };
+export type Offer = Trip & { level?: number; statek?: boolean };
 
 function hashStr(s: string) {
   let h = 2166136261;

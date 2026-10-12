@@ -2,7 +2,7 @@ ID: 36-G002
 Odpowiedź na: 36-P001; próba 36-G001; uwagi właściciela 12.10.2026 17:56 Europe/Warsaw
 Od: grafik
 Do: programista
-Status: nowe
+Status: przeczytane (odpowiedź 36-P002)
 Akceptacja: właściciel zaakceptował nocne światło i kierunek graficzny; zażądał częstszego migania za dnia oraz trzech klatek bujania przód/środek/tył. Polecił przekazać programiście. Nowe bujanie nie było jeszcze ocenione w działającej grze.
 Wykonanie: snop PNG 64×64, trzy klatki tablicy 32×32, arkusz 96×32, GIF podglądowy oraz parametry animacji gotowe; wdrożenie w grze pozostaje do wykonania
 Dotyczy: zamówienie 36 — czytelność za dnia, zachowanie zaakceptowanej nocy, bujanie szyldu

@@ -116,7 +116,7 @@ export type WorldLoader = (box: Box) => Promise<RawTile>;
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker' | 'workshop';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker' | 'workshop' | 'port';
   name: string;
   id: string;
   building: Building | null;
@@ -351,6 +351,20 @@ export class CityMap {
     const p = this.fromLatLon(lat, lon);
     return this.addPlace(kind, name, p.x, p.y, address,
       `${kind}:${lat.toFixed(7)}:${lon.toFixed(7)}${kind === 'workshop' ? `:${name}` : ''}`);
+  }
+
+  /**
+   * A ferry port from the world list (porty.ts): the captain stands on the nearest spot one can walk away
+   * from (the terminal may be on the quay). Call once its tile is loaded.
+   */
+  addPort(key: string, name: string, lat: number, lon: number) {
+    const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
+    if (this.placeIds.has(id)) return null;
+    const p = this.fromLatLon(lat, lon);
+    this.placeIds.add(id);
+    const place: Place = { kind: 'port', name, id, building: null, door: this.reachableNear(p.x, p.y) };
+    this.places.push(place);
+    return place;
   }
 
   /** World maps: called with the places each new tile brings. */

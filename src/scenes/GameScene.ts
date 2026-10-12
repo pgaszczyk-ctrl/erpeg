@@ -93,6 +93,8 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
+import { PROM } from '../content/porty';
+import { cenaRejsu, odleglosc, portKey, portMapId, portyBlisko, rejsyZ, wczytajPorty, type Port } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
@@ -165,11 +167,21 @@ const PLACE_LOOK = {
   camp: { roof: '', wall: '', sign: TEX.tent },
   maker: { roof: '#a86d37', wall: '#f0ddbc', sign: TEX.signShop },
   workshop: { roof: '#71624f', wall: '#e0d2bc', sign: TEX.signGear },
+  port: { roof: '', wall: '', sign: 'sign-port' },
 } as const;
+/** „na północny zachód” – the way from `a` to `b` in words. */
+function kierunekSlownie(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const dy = b.lat - a.lat;
+  const dx = (b.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180);
+  const k = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+  return ['na wschód', 'na północny wschód', 'na północ', 'na północny zachód', 'na zachód', 'na południowy zachód', 'na południe', 'na południowy wschód'][(k + 8) % 8];
+}
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
 /** The new sign light (cone + flicker) is a test-server trial until the artist draws it (owner, 12 Oct 2026). */
 const SNOP = TEST;
+/** The player asked the device for less motion: the sign boards hang still and the lights don't blink fast. */
+const MNIEJ_RUCHU = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export interface HudState {
   hp: number;
@@ -368,6 +380,10 @@ export class GameScene extends Phaser.Scene {
   /** Walked onto another map (GRANICA): a word on arrival. */
   private walkedIn: string | null = null;
   private crossAt = 0;
+  /** Ferry ports (porty.ts) shown on this map: place id → port; the next check; the hint said. */
+  private porty = new Map<string, Port>();
+  private portyAt = 0;
+  private portyRzekl = false;
   private pushOut = 0;
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
@@ -395,6 +411,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.setVisible(!loadingGame());
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
+    this.porty = new Map();
+    this.portyAt = 0;
+    this.portyRzekl = false;
     this.city = this.registry.get('city') as CityMap;
     if (!this.city.id.startsWith('w:')) {
       for (const p of PRODUCER_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon);
@@ -593,6 +612,7 @@ export class GameScene extends Phaser.Scene {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.stationVehicles(p);
+      else if (p.kind === 'port') this.portLook(p);
       else if (p.kind === 'merchant' && WYGLAD_09) this.merchantStalls(p);
       else {
         const post = this.signPost(p);
@@ -890,6 +910,7 @@ export class GameScene extends Phaser.Scene {
 
     this.unstickHero(now);
     this.crossBorder(now);
+    this.portsNear(now);
     if (consumeHeal()) this.healButton();
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
@@ -1971,11 +1992,22 @@ export class GameScene extends Phaser.Scene {
       tex.refresh();
       tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
-    const length = Math.max(8, ground - top) / 0.82;
-    const glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
-    glow.setDisplaySize(S.szer, length).setAlpha(S.dzien);
+    let glow: Phaser.GameObjects.Image;
+    if (this.textures.exists('snop-szyldu')) {
+      // The artist's cone (36-G002): the lamp at its top anchor, the pool's middle on the ground.
+      const F = S.plik;
+      const size = (Math.max(8, ground - top) * F.rozmiar) / (F.ziemiaY - F.lampaY);
+      glow = this.add.image(x, top, 'snop-szyldu').setOrigin(0.5, F.lampaY / F.rozmiar).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(size, size);
+    } else {
+      const length = Math.max(8, ground - top) / 0.82;
+      glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(S.szer, length);
+    }
+    glow.setAlpha(S.dzien);
     const [lo, hi] = S.mrugCoMs;
-    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo));
+    const [dlo, dhi] = S.dzienRytm.coMs;
+    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo)).setData('dzien', dlo + Math.random() * (dhi - dlo));
     return glow;
   }
 
@@ -1990,6 +2022,19 @@ export class GameScene extends Phaser.Scene {
     const h = Math.sin(krok * 12.9898 + seed * 78.233) * 43758.5453;
     const x = h - Math.floor(h);
     return x < 0.45 ? 0.08 : x < 0.65 ? 0.45 : 1;
+  }
+
+  /**
+   * How bright a sign's light is now (ADD alpha). Night: the accepted look with the odd short-circuit stutter.
+   * Day (36-G002): every 2–3 s a double blink – flash, dim, flash – then the quiet base, each place its own rhythm.
+   */
+  private lightAlpha(now: number, o: Phaser.GameObjects.Image) {
+    const S = SNOP_SZYLDU;
+    if (this.postsNight) return MNIEJ_RUCHU ? S.noc : S.noc * this.flicker(now, o);
+    const D = S.dzienRytm;
+    if (MNIEJ_RUCHU) return D.baza;
+    const t = (now + (o.getData('faza') as number)) % (o.getData('dzien') as number);
+    return t < D.blyskMs ? D.blysk : t < D.blyskMs + D.przygasMs ? D.przygas : t < 2 * D.blyskMs + D.przygasMs ? D.blysk : D.baza;
   }
 
   /**
@@ -2012,7 +2057,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(arm ? (flip ? 22 / 28 : 6 / 28) : 5.5 / 12, 39 / 40).setScale(K).setFlipX(flip).setDepth(at.y);
     const top = at.y - 39 * K;
     const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
-    const board = this.add.image(Math.round(bx * 2) / 2, top + (arm ? 16 : 12) * K, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    // The shop's board has the artist's three swing frames (36-G002); the others swing by code (updatePosts).
+    const B = SNOP_SZYLDU.bujanie;
+    const frames = SNOP && t === 'sklep' && this.textures.exists('tablica-sklep-bujanie');
+    const by = top + (arm ? 16 : 12) * K;
+    const board = frames
+      ? this.add.image(Math.round(bx * 2) / 2, by, 'tablica-sklep-bujanie', 1).setOrigin(0.5, B.zaczepY / 32).setScale((K * 22) / B.szerRysunku).setDepth(at.y + 0.5)
+      : this.add.image(Math.round(bx * 2) / 2, by, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    if (frames) this.textures.get('tablica-sklep-bujanie').setFilter(Phaser.Textures.FilterMode.NEAREST);
     for (const k of ['szyld-slup-ramie', 'szyld-slup-tablica', `tablica-${t}`]) this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
     // A small shadow at the foot, to the bottom right.
     if (!this.textures.exists('cien-slupa')) {
@@ -2034,12 +2086,12 @@ export class GameScene extends Phaser.Scene {
       : this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false)
         .setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
     lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
-    this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
+    this.posts.push({ post, board: SNOP || arm ? board : null, frames, scale: board.scale, lamp, pool, phase: (h >>> 3) % 6283 });
     return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
   }
 
   private zabytki!: Zabytki;
-  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
+  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
   private postsNight: boolean | null = null;
   private postsNightAt = 0;
 
@@ -2069,7 +2121,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
     const night = !!this.postsNight;
-    const base = night ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const q of this.posts) {
       if (!q.post.visible) {
         if (q.lamp.visible) q.lamp.setVisible(false);
@@ -2081,14 +2132,44 @@ export class GameScene extends Phaser.Scene {
         if (q.lamp.visible !== night) q.lamp.setVisible(night);
         if (q.pool.visible !== night) q.pool.setVisible(night);
       } else {
-        const f = this.flicker(now, q.pool);
+        const a = this.lightAlpha(now, q.pool);
         if (!q.pool.visible) q.pool.setVisible(true);
-        q.pool.setAlpha(base * f);
-        if (q.lamp.visible !== night) q.lamp.setVisible(night);
-        if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
+        q.pool.setAlpha(a);
+        // The lamp itself: lit at night, and by day it flashes with the blink (the source is seen, not just the pool).
+        const lit = night || a > SNOP_SZYLDU.dzienRytm.baza + 0.01;
+        if (q.lamp.visible !== lit) q.lamp.setVisible(lit);
+        if (lit) q.lamp.setAlpha(night ? SLUPY_SZYLDOW.lampa.mocno * (a / SNOP_SZYLDU.noc) : SLUPY_SZYLDOW.lampa.mocno * a);
+        if (q.board) this.swingBoard(q, now);
+        continue;
       }
       if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
     }
+  }
+
+  /**
+   * The board swings forward and back on its hooks (36-G002): middle 400 ms → front 220 → middle 400 → back 220,
+   * each post its own phase. The shop's board has the artist's frames; the others lean by code (scale + shade).
+   */
+  private swingBoard(q: { board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; phase: number }, now: number) {
+    const b = q.board!;
+    const B = SNOP_SZYLDU.bujanie;
+    let k = 1;
+    if (!MNIEJ_RUCHU) {
+      const cykl = B.kroki.reduce((s, [, ms]) => s + ms, 0);
+      let t = (now + q.phase * 7) % cykl;
+      for (const [f, ms] of B.kroki) {
+        if (t < ms) { k = f; break; }
+        t -= ms;
+      }
+    }
+    if (b.getData('k') === k) return;
+    b.setData('k', k);
+    if (q.frames) {
+      b.setFrame(k);
+      return;
+    }
+    const w = k === 0 ? B.przod : k === 2 ? B.tyl : { sx: 1, sy: 1, kolor: 0xffffff };
+    b.setScale(q.scale * w.sx, q.scale * w.sy).setTint(w.kolor);
   }
 
   /**
@@ -2127,13 +2208,12 @@ export class GameScene extends Phaser.Scene {
   private cullFar(now: number) {
     const v = this.cameras.main.worldView;
     const m = 40;
-    const base = this.postsNight ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const o of this.farObjects) {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
       if (on && this.signGlows.has(o)) {
-        if (SNOP) o.setAlpha(base * this.flicker(now, o));
+        if (SNOP) o.setAlpha(this.lightAlpha(now, o));
         else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
       }
     }
@@ -2920,6 +3000,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
+    if (p.kind === 'port') return this.openPort(p);
     if (p.kind === 'hotel') return this.openHotel(p);
     if (p.kind === 'bank') return void this.openBank(p);
     if (p.kind === 'school') return this.openSchool(p);
@@ -2985,6 +3066,114 @@ export class GameScene extends Phaser.Scene {
         }
         if (t.gratis) session.flagi.przejazd = Math.max(0, (session.flagi.przejazd ?? 0) - 1);
         this.chooseSpeed(title, t, 0);
+      },
+    });
+  }
+
+  /**
+   * Ferry ports (content/porty.ts, TEST only): on world maps, every second, a captain appears in each port
+   * within PROM.widacKm whose map around is loaded; once per map a hint names the nearest port further away.
+   */
+  private portsNear(now: number) {
+    if (!TEST || demo.on || now < this.portyAt || !worldOrigin(this.city.id)) return;
+    this.portyAt = now + 1000;
+    void wczytajPorty();
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    for (const port of portyBlisko(ll, PROM.widacKm)) {
+      const key = portKey(port);
+      if ([...this.porty.values()].includes(port)) continue;
+      const at = this.city.fromLatLon(port.lat, port.lon);
+      const r = 60 * PX_PER_M;
+      if (!this.city.ready({ x0: at.x - r, y0: at.y - r, x1: at.x + r, y1: at.y + r })) continue;
+      // Already on this map (the scene started again): its look was drawn with the other places.
+      const fresh = this.city.addPort(key, port.nazwa, port.lat, port.lon);
+      const place = fresh ?? this.city.places.find((q) => q.kind === 'port' && q.id.endsWith(`/${key}`));
+      if (!place) continue;
+      this.porty.set(place.id, port);
+      if (fresh) this.portLook(place);
+    }
+    if (this.portyRzekl) return;
+    const far = portyBlisko(ll, PROM.wskazowkaKm);
+    if (!far.length && this.time.now < 20_000) return; // the list may still be loading
+    this.portyRzekl = true;
+    const p = far[0];
+    if (!p || odleglosc(p, ll) <= PROM.widacKm) return;
+    this.toast(`⚓ Najbliższy port promowy: ${p.nazwa}, ok. ${Math.round(odleglosc(p, ll))} km ${kierunekSlownie(ll, p)}.`, 6000);
+  }
+
+  /** The port the hero stands in (its captain), if any. */
+  private portHere(): Port | null {
+    let best: Port | null = null;
+    let bd = 300 * PX_PER_M;
+    for (const p of this.city.places) {
+      const port = p.kind === 'port' ? this.porty.get(p.id) : undefined;
+      const d = Math.hypot(p.door.x - this.player.x, p.door.y - this.player.y);
+      if (port && d < bd) [best, bd] = [port, d];
+    }
+    return best;
+  }
+
+  /** A port's look until the artist draws one: a code-drawn anchor board and the captain (the coachman in navy). */
+  private portLook(p: CityPlace) {
+    if (!this.textures.exists('sign-port')) {
+      const g = this.make.graphics({}, false);
+      const px = (x: number, y: number, w: number, h: number, c: number) => g.fillStyle(c).fillRect(x, y, w, h);
+      px(14, 18, 4, 18, 0x1e1a24);
+      px(15, 18, 2, 18, 0x6b4a2a);
+      px(1, 1, 30, 19, 0x1e1a24);
+      px(2, 2, 28, 17, 0xe8dcc0);
+      // The anchor.
+      px(15, 4, 2, 12, 0x2b3f6a);
+      px(12, 6, 8, 2, 0x2b3f6a);
+      px(14, 3, 4, 2, 0x2b3f6a);
+      px(9, 13, 2, 2, 0x2b3f6a);
+      px(21, 13, 2, 2, 0x2b3f6a);
+      px(10, 15, 12, 2, 0x2b3f6a);
+      g.generateTexture('sign-port', 32, 36);
+      g.destroy();
+    }
+    const sign = this.add.image(p.door.x - 9, p.door.y + 2, 'sign-port').setOrigin(0.5, 1).setScale(0.5).setDepth(p.door.y + 2);
+    this.farObjects.push(sign, this.signGlow(sign));
+    const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
+    if (this.textures.exists(key)) fitHd(this.add.sprite(p.door.x + 6, p.door.y + 1, key, 'down-0')).setTint(0x9fb4e8).setDepth(p.door.y + 3);
+  }
+
+  /** The harbour master: the port's fixed ferry lines (no drawing – a ferry always sails the same way). */
+  private openPort(p: CityPlace, page = 0) {
+    const port = this.porty.get(p.id);
+    const title = `⚓ Kapitan portu – ${port?.nazwa ?? p.name}`;
+    const all = port ? rejsyZ(port) : [];
+    if (!port || !all.length) {
+      this.dialog({ title, text: '„Dziś żaden prom stąd nie wypływa. Morze ma swoje humory.”', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const n = PROM.naStronie;
+    const list = all.slice(page * n, page * n + n);
+    const more = all.length > (page + 1) * n;
+    const time = (km: number) => (session.immortal ? 'od razu' : rideText(km, 1, PROM.kmh));
+    const lines = list.map((r) => `• ${r.do.nazwa}: ${r.km} km, ${time(r.km)} – ${cenaRejsu(r.km)} monet`);
+    this.dialog({
+      title,
+      text: `„Ahoj! ${page ? 'A dalej pływamy tam:' : 'Stąd pływamy:'}” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nProm płynie ok. ${PROM.kmh} km/h, naprawdę – także gdy zamkniesz grę. Po przypłynięciu grę wczytasz już w tamtym porcie.`,
+      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), 'Zostaję'],
+      onChoose: (i) => {
+        if (more && i === list.length) return this.openPort(p, page + 1);
+        const r = list[i];
+        if (!r) return;
+        const price = cenaRejsu(r.km);
+        if (PROM.odPoziomu && poziomPostaci(session.exp) < PROM.odPoziomu) return this.toast(`⛴ Promem pływa się od ${PROM.odPoziomu}. poziomu postaci.`);
+        if (session.coins < price) return this.toast(`Za mało monet: bilet kosztuje ${price}.`);
+        const to = { name: r.do.nazwa, lat: r.do.lat, lon: r.do.lon, key: `port|${r.do.nazwa}|${r.do.lat}`, mapId: portMapId(r.do), mapName: r.do.nazwa };
+        this.dialog({
+          title,
+          text: session.immortal
+            ? `Rejs do: ${r.do.nazwa} (${r.km} km). Postać testowa płynie od razu. Płyniesz?`
+            : `Rejs do: ${r.do.nazwa} (${r.km} km) potrwa ${time(r.km)}. Przez ten czas twoja postać będzie na promie – w tym czasie możesz zagrać inną postacią. Płyniesz?`,
+          buttons: [`⛴ Płynę – ${price} 💰`, 'Zostaję'],
+          onChoose: (k) => {
+            if (k === 0) this.travel({ to, km: r.km, via: null, price, statek: true });
+          },
+        });
       },
     });
   }
@@ -3913,26 +4102,29 @@ export class GameScene extends Phaser.Scene {
     if (t.price) spend(t.price);
     // Remember where we set off from and where we go: a diamond takes the hero back later.
     const from = this.city.toLatLon(this.player.x, this.player.y);
-    this.remember({ name: this.stationHere(), ...from, key: `${this.city.id}|${this.stationHere()}`, mapId: this.city.id, mapName: mapName(this.city.id) });
+    const here = t.statek ? (this.portHere()?.nazwa ?? mapName(this.city.id)) : this.stationHere();
+    this.remember({ name: here, ...from, key: `${this.city.id}|${here}`, mapId: this.city.id, mapName: mapName(this.city.id) });
     this.remember(t.to);
     this.emitHud();
     this.keepFog();
-    this.toast(`🐴 Jedziemy do: ${t.to.name}…`, 3000);
+    this.toast(t.statek ? `⛴ Płyniemy do: ${t.to.name}…` : `🐴 Jedziemy do: ${t.to.name}…`, 3000);
     const cam = this.cameras.main;
     cam.fadeOut(900, 0, 0, 0);
     Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
       .then(async ([city]) => {
-        const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
+        const st = t.statek ? undefined : city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
-        // A spot on the platform/street the hero can walk away from (not an island between the tracks).
-        session.arrive = st ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
+        // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
+        session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
         // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();
-          session.jazda = { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
+          session.jazda = t.statek
+            ? { from: here, to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times, PROM.kmh), statek: true }
+            : { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
           saveNow(this.player.hp).catch(() => {});
           await Promise.all([prepareMap(city), showJourney(session.jazda)]);
           session.jazda = null;
@@ -3954,7 +4146,7 @@ export class GameScene extends Phaser.Scene {
         session.diamenty += diamonds;
         this.travelling = false;
         cam.fadeIn(300);
-        this.toast(`Woźnica nie znalazł drogi: ${e.message}`);
+        this.toast(`${t.statek ? 'Kapitan' : 'Woźnica'} nie znalazł drogi: ${e.message}`);
         this.emitHud();
       });
   }
