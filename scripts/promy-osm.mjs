@@ -33,7 +33,7 @@ async function overpass(q, name, tries = 2) {
         return json;
       } catch (e) {
         console.log(`[${name}] ${url} failed: ${e.message}`);
-        await new Promise((r) => setTimeout(r, 10000));
+        await new Promise((r) => setTimeout(r, 15000 * (round + 1)));
       }
     }
   }
@@ -42,14 +42,14 @@ async function overpass(q, name, tries = 2) {
 
 // The whole world at once times out, so it is asked box by box (a box that still fails is split in four).
 async function box(s, w, n, e, depth = 0) {
-  const q = `[out:json][timeout:600][maxsize:1000000000][bbox:${s},${w},${n},${e}];
+  const q = `[out:json][timeout:180][maxsize:268435456][bbox:${s},${w},${n},${e}];
 way[route=ferry](if: length() > ${MIN_WAY_KM * 1000});
 out body geom;
 nwr[amenity=ferry_terminal];
 out center tags;
 node[place~"^(city|town)$"][name];
 out tags;`;
-  const j = await overpass(q, `${s},${w},${n},${e}`, depth < 2 ? 1 : 3);
+  const j = await overpass(q, `${s},${w},${n},${e}`, depth < 2 ? 1 : 2);
   if (j) {
     console.log(`box ${s},${w},${n},${e}: ${j.elements.length}`);
     return j.elements;
@@ -68,6 +68,8 @@ let all;
 if (from) {
   all = ['ways.json', 'terminals.json', 'towns.json'].flatMap((f) => JSON.parse(readFileSync(`${from}/${f}`, 'utf8')).elements);
 } else {
+  // What the servers say about free slots (for the log, when they refuse).
+  for (const url of SERVERS) console.log(url.replace('interpreter', 'status'), await fetch(url.replace('interpreter', 'status')).then((r) => r.text()).catch((e) => e.message));
   all = [];
   for (let s = -60; s < 80; s += 20) for (let w = -180; w < 180; w += 30) {
     all.push(...(await box(s, w, s + 20, w + 30)));
