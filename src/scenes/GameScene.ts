@@ -55,7 +55,7 @@ import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa 
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
-import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU } from '../content/swiat';
+import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
 import { worldOrigin } from '../map/world';
@@ -168,6 +168,8 @@ const PLACE_LOOK = {
 } as const;
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
+/** The new sign light (cone + flicker) is a test-server trial until the artist draws it (owner, 12 Oct 2026). */
+const SNOP = TEST;
 
 export interface HudState {
   hp: number;
@@ -1906,8 +1908,34 @@ export class GameScene extends Phaser.Scene {
 
   /** A light cone under a wall sign / a stall (content/swiat.ts SNOP_SZYLDU), so places are easy to spot. */
   private signGlow(sign: Phaser.GameObjects.Image) {
+    if (!SNOP) return this.oldSignGlow(sign);
     const top = sign.y + sign.displayHeight * 0.25;
     const glow = this.snop(sign.x, top, top + SNOP_SZYLDU.dlug * 0.8, sign.depth + 1);
+    this.signGlows.add(glow);
+    return glow;
+  }
+
+  /** The old soft golden glow behind a sign (production until the artist's sign light, owner 12 Oct 2026). */
+  private oldSignGlow(sign: Phaser.GameObjects.Image) {
+    const P = POSWIATA_SZYLDU;
+    const key = 'sign-glow';
+    if (!this.textures.exists(key)) {
+      const n = 64;
+      const tex = this.textures.createCanvas(key, n, n)!;
+      const ctx = tex.getContext();
+      const [r, g, b] = P.kolor;
+      const grd = ctx.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+      grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
+      grd.addColorStop(0.5, `rgba(${r},${g},${b},0.7)`);
+      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, n, n);
+      tex.refresh();
+      tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    const glow = this.add.image(sign.x, sign.y, key).setBlendMode(Phaser.BlendModes.ADD).setDepth(sign.depth - 1);
+    glow.setDisplaySize(P.promien * 2.2, P.promien * 1.7).setAlpha(P.mocno);
+    glow.setData('faza', Math.random() * 10_000);
     this.signGlows.add(glow);
     return glow;
   }
@@ -2000,8 +2028,11 @@ export class GameScene extends Phaser.Scene {
     const lampX = at.x + (arm ? (flip ? -0.5 : 0.5) : 0) * K, lampY = top + 5 * K;
     const lamp = this.add.image(lampX, lampY, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y + 1).setVisible(false);
     // The light: a cone from the lamp down to the pavement (SNOP_SZYLDU), day and night, with the odd flicker.
-    const pool = this.snop(lampX, lampY, at.y + 3, at.y + 0.7).setVisible(false); // over the board: the lamp lights it
     this.lampGlowTexture();
+    const pool = SNOP
+      ? this.snop(lampX, lampY, at.y + 3, at.y + 0.7).setVisible(false) // over the board: the lamp lights it
+      : this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false)
+        .setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
     lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
     this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
     return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
@@ -2045,11 +2076,17 @@ export class GameScene extends Phaser.Scene {
         if (q.pool.visible) q.pool.setVisible(false);
         continue;
       }
-      const f = this.flicker(now, q.pool);
-      if (!q.pool.visible) q.pool.setVisible(true);
-      q.pool.setAlpha(base * f);
-      if (q.lamp.visible !== night) q.lamp.setVisible(night);
-      if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
+      if (!SNOP) {
+        // Production: the old lamp and its pool, at night only.
+        if (q.lamp.visible !== night) q.lamp.setVisible(night);
+        if (q.pool.visible !== night) q.pool.setVisible(night);
+      } else {
+        const f = this.flicker(now, q.pool);
+        if (!q.pool.visible) q.pool.setVisible(true);
+        q.pool.setAlpha(base * f);
+        if (q.lamp.visible !== night) q.lamp.setVisible(night);
+        if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
+      }
       if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
     }
   }
@@ -2095,7 +2132,10 @@ export class GameScene extends Phaser.Scene {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
-      if (on && this.signGlows.has(o)) o.setAlpha(base * this.flicker(now, o));
+      if (on && this.signGlows.has(o)) {
+        if (SNOP) o.setAlpha(base * this.flicker(now, o));
+        else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
+      }
     }
   }
 

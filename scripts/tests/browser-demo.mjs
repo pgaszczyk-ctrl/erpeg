@@ -69,6 +69,8 @@ for (const [name, viewport, mobile] of (process.env.TYLKO_KOMPUTER ? [['desktop'
  await page.waitForFunction(()=>!document.getElementById('samouczek'),null,{timeout:5000});
  assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),beforeEating+2);
  await page.waitForFunction(()=>window.__game.scene.getScene('game').demoRun.dragon,null,{timeout:90000});
+ // The dragon stands at the Wawel statue (since 12 Oct 2026 freeNear finds the riverside path right there); walk up to it.
+ await page.evaluate(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon,p=s.player;const q=s.city.freeNear(d.x+60,d.y-60);p.x=q.x;p.y=q.y;});
  await page.waitForFunction(()=>{const s=window.__game.scene.getScene('game'),d=s.demoRun.dragon;return s.dragons.has(d);},null,{timeout:60000});
  console.log(name,'dragon');
  // Verify the actual HUD eating control too, with a fresh five-apple fixture.
