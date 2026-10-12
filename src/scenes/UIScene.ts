@@ -25,7 +25,7 @@ import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
 const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
   [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
 );
-import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
+import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -63,8 +63,6 @@ export class UIScene extends Phaser.Scene {
   private touch = false;
   private joyHome = new Phaser.Math.Vector2();
   private joyArrows!: Phaser.GameObjects.Graphics;
-  private hintAt = 0;
-  private hintUntil = 0;
 
   private skillBar!: Phaser.GameObjects.Container;
   private skillFill!: Phaser.GameObjects.Rectangle;
@@ -415,7 +413,6 @@ export class UIScene extends Phaser.Scene {
       g.fillTriangle(tx + dx * w, ty + dy * w, tx - dy * w - dx * 2, ty + dx * w - dy * 2, tx + dy * w - dx * 2, ty - dx * w - dy * 2);
     }
     this.joyArrows = g; // (a Graphics moved directly: inside a Container it stayed put)
-    this.hintAt = 0;
     // Half size: a tap on the joystick attacks too (one hand), the button is for two hands.
     this.attackBtn = this.add.circle(0, 0, 19, 0xe43b44, 0.45).setStrokeStyle(2, 0xffffff, 0.5);
     this.attackLabel = this.add
@@ -437,23 +434,6 @@ export class UIScene extends Phaser.Scene {
       t.refresh();
     }
     this.vignette = this.add.image(0, 0, 'lowhp-vignette').setDepth(-1).setVisible(false);
-  }
-
-  private joyLearned = false;
-  /** Blinks the joystick at the start and after a while without moving – until the player has used it once. */
-  private joyHint() {
-    const now = this.time.now;
-    // A thumb held still on the joystick (or a key held down) is walking too: no touchmove comes, but it isn't idle.
-    const k = keyboardDir();
-    if (touchInput.joyActive || touchInput.x || touchInput.y || k.x || k.y) activity.last = performance.now();
-    // Once the player has walked with it, it never blinks again (bug report 24: it kept blinking in the corner while fighting).
-    if (touchInput.joyActive) this.joyLearned = true;
-    if (this.joyLearned || now < this.hintAt) return;
-    const idle = performance.now() - activity.last;
-    if (this.hintAt !== 0 && idle < 9000) return;
-    this.hintAt = now + 9000;
-    this.hintUntil = now + 1700;
-    this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
   }
 
   private vignette!: Phaser.GameObjects.Image;
@@ -843,11 +823,10 @@ export class UIScene extends Phaser.Scene {
       this.touch = true;
       for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(true);
     }
-    this.joyHint();
     const t = touchInput;
-    // The joystick shows only while a thumb holds it (and as a blinking hint).
-    const hinting = this.time.now < this.hintUntil;
-    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive || hinting);
+    // The joystick shows only while a thumb holds it. The blinking hint at its old corner is gone (owner, 12 Oct 2026:
+    // it blinked under the HUD, also while walking; players find the joystick by themselves).
+    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive);
     if (t.joyActive) {
       this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);
       this.joyArrows.setPosition(t.joyOriginX, t.joyOriginY);
