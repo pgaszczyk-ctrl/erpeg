@@ -1,0 +1,96 @@
+{
+  "id": "36-G002",
+  "version": "v2",
+  "day": {
+    "period_ms": [
+      2000,
+      3000
+    ],
+    "alpha": {
+      "base": 0.35,
+      "flash": 0.85,
+      "dim": 0.15
+    },
+    "attention_sequence": [
+      {
+        "phase": "flash",
+        "ms": 100
+      },
+      {
+        "phase": "dim",
+        "ms": 120
+      },
+      {
+        "phase": "flash",
+        "ms": 100
+      }
+    ],
+    "phase_per_place": true
+  },
+  "night": {
+    "preserve_accepted_appearance": true,
+    "period_ms": [
+      7000,
+      18000
+    ]
+  },
+  "board": {
+    "sheet": "tablica_sklep_bujanie.png",
+    "frame_size": [
+      32,
+      32
+    ],
+    "frame_order": [
+      "front",
+      "neutral",
+      "back"
+    ],
+    "pivot_approx": [
+      16,
+      8.5
+    ],
+    "sequence": [
+      {
+        "index": 0,
+        "ms": 220
+      },
+      {
+        "index": 1,
+        "ms": 400
+      },
+      {
+        "index": 2,
+        "ms": 220
+      },
+      {
+        "index": 1,
+        "ms": 400
+      }
+    ],
+    "initial": 1,
+    "light_stays_fixed": true
+  },
+  "light": {
+    "file": "snop_64.png",
+    "blend": "ADD",
+    "size": [
+      64,
+      64
+    ],
+    "approx_anchors": {
+      "lamp": [
+        32,
+        8.4
+      ],
+      "ground": [
+        32,
+        55.5
+      ]
+    }
+  },
+  "reduced_motion": {
+    "board_frame": 1,
+    "flash": false
+  },
+  "state": "artwork_delivered_runtime_pending"
+}
