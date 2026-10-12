@@ -43,8 +43,8 @@ export const SEN = {
 
 /** Actual walking distance before the invitation to create a character; no time limit. */
 export const JAWA = {
-  /** Owner, 12 Oct 2026: see Targi, talk to the newsboy, ~100 m more – then make your own character (was 400). */
-  koniecM: 200,
+  /** Owner, 12 Oct 2026: 1 km of Lublin after waking up, then make your own character (was 400, then 200 – too little). */
+  koniecM: 1000,
   /** A newsboy stands this far from where the hero wakes up (m), when `gazeciarz` below is not free. */
   gazeciarzM: 9,
   /** …and preferably here: on the round paved square in front of Targi Lublin, between its gas lamps (owner, 11 Oct 2026). */

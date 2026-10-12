@@ -152,8 +152,8 @@ for (const [name, viewport, mobile] of (process.env.TYLKO_KOMPUTER ? [['desktop'
  await page.evaluate(()=>{window.__game.scene.getScene('game').demoRun.walked=10*1.92;});
  await page.waitForTimeout(300);
  assert.equal(await page.locator('#demo-end').count(),0,'Ten metres must not end the demo');
- // Advance the long-distance fixture to just below the 200 m boundary (JAWA.koniecM); finish with real movement.
- await page.evaluate(()=>{window.__game.scene.getScene('game').demoRun.walked=199*1.92;});
+ // Advance the long-distance fixture to just below the 1000 m boundary (JAWA.koniecM); finish with real movement.
+ await page.evaluate(()=>{window.__game.scene.getScene('game').demoRun.walked=999*1.92;});
  await page.keyboard.down(direction);
  await page.waitForSelector('#demo-end',{timeout:30000});
  await page.keyboard.up(direction);
@@ -161,7 +161,7 @@ for (const [name, viewport, mobile] of (process.env.TYLKO_KOMPUTER ? [['desktop'
  await page.waitForTimeout(2800);
  await page.screenshot({path:`work/demo-${name}-finale.png`});
  const distance=await page.evaluate(()=>window.__game.scene.getScene('game').demoRun.walked/1.92);
- assert(distance>=200&&distance<210,`Distance at finale: ${distance}`);
+ assert(distance>=1000&&distance<1010,`Distance at finale: ${distance}`);
  await page.locator('#demo-end button').click();
  await page.waitForSelector('#menu',{timeout:60000});
  assert(!new URL(page.url()).searchParams.has('d'));

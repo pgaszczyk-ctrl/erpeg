@@ -102,7 +102,7 @@ import { trzesienieWlaczone } from '../ustawieniaGracza';
 import { SmokiNaMapie } from './SmokiNaMapie';
 import { Etapy } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
-import { SEN } from '../content/demo';
+import { SEN, JAWA } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
 import { Anomalia } from './Anomalia';
@@ -510,6 +510,12 @@ export class GameScene extends Phaser.Scene {
 
     this.folk = new Townsfolk(this, this.city);
     this.folk.wet = isWet;
+    // A newsboy always stands on the square in front of Targi Lublin, where new characters start after the demo
+    // (owner, 12 Oct 2026). The demo places its own there after waking up.
+    if (this.city.id === 'lublin' && !demo.on) {
+      const g = this.city.fromLatLon(JAWA.gazeciarz.lat, JAWA.gazeciarz.lon);
+      this.folk.newsboyAt(g.x, g.y);
+    }
     this.weatherFx = new WeatherFx(this);
     this.magicG = this.add.graphics().setDepth(1_030_000);
     this.watchWeather();
