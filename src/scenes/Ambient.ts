@@ -528,6 +528,23 @@ export class StreetEnemies {
   }
 
   /** The active gang whose territory the point is in, if any. */
+  /** The nearest active gang within `maxPx` (big gangs count 3× farther: a beginner should meet a small one). */
+  nearestGang(x: number, y: number, maxPx: number) {
+    let best: Gang | null = null;
+    let bd = Infinity;
+    for (const g of this.gangs) {
+      if (g.clearedAt) continue;
+      const d = Math.hypot(g.x - x, g.y - y);
+      if (d > maxPx) continue;
+      const w = d * (g.kind.herszt === 'wielki_herszt' ? 3 : 1);
+      if (w < bd) {
+        bd = w;
+        best = g;
+      }
+    }
+    return best ? { x: best.x, y: best.y, r: best.r } : null;
+  }
+
   gangAt(x: number, y: number) {
     return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
   }

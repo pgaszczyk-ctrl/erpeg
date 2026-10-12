@@ -441,3 +441,10 @@
 ## 2026-10-11 — Magicownia i stabilna galeria
 - Na żądanie właściciela usunięto nazwisko z publicznych dokumentów /news, dodano powiązanie z Magicownia.pl oraz dostarczone logo w polityce PL/EN. Wyjaśniono właścicielowi, że marka nie zastępuje wymaganej tożsamości administratora będącego osobą fizyczną; ten obowiązek pozostaje nieuzupełniony. Nie zmieniono danych w grze ani serwerze.
 - Galeria ma stały kadr 4:3 z object-fit:cover na wszystkich rozmiarach; oryginalne pełne obrazy pozostają w dialogu. Przycisków nie przesuwają proporcje zdjęć.
+
+## 12.10.2026 — dane questów do konsultacji z projektantem i programistą
+
+- Na polecenie właściciela utworzono docs/questy-konsultacja/: README, brief ustaleń z rozmowy,40 czytelnych kart schematów, archiwum12 wycofanych scenariuszy ze wszystkimi etapami/PL/EN/metadanymi i pełny snapshotJSON katalogu/runtime (515 rekordów tekstowych). Źródłowy commit29d1b12 zapisany w dokumentach.
+- Dodano wiadomość Q-20261012-P001 do docs/poczta/do-projektanta, zgodnie z numeracją/stanami. To konsultacja, nie akceptacja ani zlecenie reaktywacji. Wycofanie12 questów pozostaje; brak nowych questów, kodu silnika, SQL, zmian produkcji lub zapisów graczy.
+- Powiązano istniejący QUESTY_MIASTA_I_JEZYKI.md i oznaczono jego opis jako historyczny. Zaznaczono sprzeczność starszego szkicu Komety z dopiskiemv1.1 i obecną historia.ts; próg maga5 oraz istniejące osiągnięcie40075 potwierdzone w kodzie. Pomysły właściciela odróżnione od działania gry.
+- Zweryfikowano linki do plików,40/12/515 pozycji, komplet PL/EN, referencje tekstów i zgodność12 ID z blokadą wycofania; JSON ponownie sparsowany. Zmiana tylko dokumentacyjna [skip ci]; bez budowy/publikacji gry. Izolowana gałąź dokumentacji zachowuje odrębny, niescalony commit próbek map na chatgpt/praca.
