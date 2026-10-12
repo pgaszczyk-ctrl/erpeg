@@ -486,18 +486,23 @@ export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: 
   const r = rng(hash(`${folk.id}:${session.nonce}:gazeta`));
   const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
   const inRange = (p: { x: number; y: number }) => { const d = dist(p); return d >= R.odM && d <= R.doM; };
-  const places = city.places.filter((p) => p.name && p.kind !== 'station' && inRange(p.door));
-  let cel: { name: string; x: number; y: number } | null = null;
-  if (places.length) {
+  // Only public places (libraries, schools…) or a plain address – no businesses (REPORTAZ.miejsca).
+  const places = city.places.filter((p) => p.name && R.miejsca.includes(p.kind) && inRange(p.door));
+  const houses = () => city.addressed().filter((b) => b.door && b.addresses[0] && inRange(b.door));
+  let cel = null as { name: string; x: number; y: number } | null;
+  const pickPlace = () => {
     const p = places[Math.floor(r() * places.length)];
     cel = { name: p.name, x: p.door.x, y: p.door.y };
-  } else {
-    const houses = city.addressed().filter((b) => b.door && (b.name || b.addresses[0]) && inRange(b.door));
-    if (houses.length) {
-      const b = houses[Math.floor(r() * houses.length)];
-      cel = { name: (b.name || b.addresses[0])!, x: b.door!.x, y: b.door!.y };
-    }
-  }
+  };
+  const pickHouse = () => {
+    const hs = houses();
+    if (!hs.length) return;
+    const b = hs[Math.floor(r() * hs.length)];
+    cel = { name: b.addresses[0]!, x: b.door!.x, y: b.door!.y };
+  };
+  if (places.length && r() >= R.adres) pickPlace();
+  else pickHouse();
+  if (!cel && places.length) pickPlace();
   if (!cel) return null;
   const km = dist(cel) / 1000;
   const at = city.toLatLon(cel.x, cel.y);

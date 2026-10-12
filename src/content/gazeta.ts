@@ -112,6 +112,13 @@ export const ROZNOSZENIE = {
 
 /** The reporter's errand: go to a place in town and write a note there (finishes on the spot). */
 export const REPORTAZ = {
+  /**
+   * Where a reporter's errand may send the hero (owner, 12 Oct 2026: never a random business – „restauracja Lwów” –
+   * the paper's business mentions are for paid partnerships later): only these public places, or a plain house address.
+   */
+  miejsca: ['library', 'school', 'university'] as string[],
+  /** Share of errands that go to a plain address even when such a place is in range. */
+  adres: 0.5,
   odM: 250,
   doM: 1100,
   monetNaKm: 30,
