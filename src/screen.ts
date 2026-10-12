@@ -21,8 +21,10 @@ const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)
  * „poszarpana”): at 1 px the world's pixels landed on 2 or 3 screen px by turns; now every world pixel
  * is a whole number of canvas px and the browser shrinks the picture smoothly to the screen.
  */
+/** A laptop running on battery (index.html asks the Battery API before the game loads; Chrome/Edge only). */
+export const NA_BATERII = (globalThis as { __naBaterii?: boolean }).__naBaterii === true;
 export const OSTROSC = forced >= 1 && forced <= 3 ? Math.floor(forced) : slow ? 1
-  : komputer ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
+  : komputer && !NA_BATERII ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
   : Math.max(1, Math.min(2, Math.floor(window.devicePixelRatio || 1)));
 
 /** Below this many frames a second the sharper picture is too much for the phone. */

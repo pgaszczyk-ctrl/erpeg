@@ -478,6 +478,16 @@ export function mapMissionForLibrary(city: CityMap, place: CityPlace): Misja | n
  * else an addressed house) and write a note there – it finishes on the spot. One per newsboy per login.
  * `placeId` = 'gazeta:<map>:<x>:<y>' keeps where it was given (newsboys walk around).
  */
+/**
+ * A school's/library's short name for the paper: up to and with its number, without patrons and the town
+ * („Szkoła Podstawowa nr 50 im. … w Lublinie” → „Szkoła Podstawowa nr 50”); null when it has no number.
+ */
+export function krotkaNazwa(name: string): string | null {
+  const m = /^(.*?\bnr\.?\s*\d+[a-z]?)\b/i.exec(name);
+  if (!m) return null;
+  return m[1].replace(/\s+im\..*?(?=\s+(?:filia|nr)\b|$)/i, '').replace(/\s+w\s+[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]*/u, '').replace(/\s+/g, ' ').trim();
+}
+
 export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: number; name: string }): Misja | null {
   const id = `gen-gazeta-${folk.id}-${session.nonce}`;
   const taken = session.gen[id];
@@ -486,13 +496,14 @@ export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: 
   const r = rng(hash(`${folk.id}:${session.nonce}:gazeta`));
   const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
   const inRange = (p: { x: number; y: number }) => { const d = dist(p); return d >= R.odM && d <= R.doM; };
-  // Only public places (libraries, schools…) or a plain address – no businesses (REPORTAZ.miejsca).
-  const places = city.places.filter((p) => p.name && R.miejsca.includes(p.kind) && inRange(p.door));
+  // Only public places (libraries, schools…) or a plain address – no businesses (REPORTAZ.miejsca); a place goes by
+  // its short name with its number („Szkoła Podstawowa nr 50”, owner 12 Oct 2026), places without a number by address.
+  const places = city.places.filter((p) => p.name && R.miejsca.includes(p.kind) && inRange(p.door) && (krotkaNazwa(p.name) || p.building?.addresses[0]));
   const houses = () => city.addressed().filter((b) => b.door && b.addresses[0] && inRange(b.door));
   let cel = null as { name: string; x: number; y: number } | null;
   const pickPlace = () => {
     const p = places[Math.floor(r() * places.length)];
-    cel = { name: p.name, x: p.door.x, y: p.door.y };
+    cel = { name: krotkaNazwa(p.name) ?? p.building!.addresses[0]!, x: p.door.x, y: p.door.y };
   };
   const pickHouse = () => {
     const hs = houses();

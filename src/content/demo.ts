@@ -35,13 +35,16 @@ export const SEN = {
   ciosyDoLotu: 2,
   /** Dragon attack timing/damage: medium, independently of the demo's forgiving controls. */
   trudnoscSmoka: 2,
+  /** Metres of walking in the dream before the hero wakes up anyway, dragon fought or not (owner, 12 Oct 2026). */
+  limitM: 1000,
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
 
 /** Actual walking distance before the invitation to create a character; no time limit. */
 export const JAWA = {
-  koniecM: 400,
+  /** Owner, 12 Oct 2026: see Targi, talk to the newsboy, ~100 m more – then make your own character (was 400). */
+  koniecM: 200,
   /** A newsboy stands this far from where the hero wakes up (m), when `gazeciarz` below is not free. */
   gazeciarzM: 9,
   /** …and preferably here: on the round paved square in front of Targi Lublin, between its gas lamps (owner, 11 Oct 2026). */
@@ -61,6 +64,7 @@ export const DEMO_TEKSTY = {
   kimJestem: 'Jestem pogromcą smoków! Smok wawelski znowu grasuje – czeka nad Wisłą.',
   celSmok: 'Pokonaj smoka wawelskiego!',
   smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
+  zaDaleko: 'Oczy same się zamykają… Ten sen zaraz się skończy.',
   pobudkaTytul: '💤 Pobudka',
   pobudka: 'To dopiero ekscytujący sen…\n\nJestem w Lublinie, na placu przed Targami Lublin. Przejdę kilka kroków i rozejrzę się.',
   koniec: 'Stwórz nową postać',

@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
-import { demo, dreamPlaces, blackout, bigText, finale, wakeUp } from '../demo';
+import { demo, dreamPlaces, blackout, bigText, finale, wakeUp, preloadLublin } from '../demo';
 import { meleeDamage, totalFruit } from '../inventory';
 import { pokazOdlot, zaladujSmoka } from '../objects/smokRysunki';
 import type { Slime } from '../objects/Slime';
@@ -50,6 +50,9 @@ export class DemoRun {
   /** Last position while walking after waking up. */
   private wokeAt: { x: number; y: number } | null = null;
   private walked = 0;
+  /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
+  private dreamWalked = 0;
+  private dreamLast: { x: number; y: number } | null = null;
 
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
 
@@ -57,6 +60,8 @@ export class DemoRun {
     const p = this.host.player;
     if (demo.phase === 'jedzenie') {
       this.plantTrees();
+      // Lublin is needed when the dream ends: fetch it now, a moment after the dream's own first view.
+      this.scene.time.delayedCall(6000, () => void preloadLublin());
       this.healTo = p.hp + 2;
       // The first words only once the opening (logo over the world map) has gone.
       const hello = () => {
@@ -129,6 +134,18 @@ export class DemoRun {
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
     const w = this.wokeAt;
     const p = this.host.player;
+    if ((demo.phase === 'jedzenie' || demo.phase === 'smok') && !this.busy) {
+      const l = this.dreamLast;
+      const step = l ? Math.hypot(p.x - l.x, p.y - l.y) : 0;
+      if (step < 40) this.dreamWalked += step; // a jump (unstick, landing) isn't walking
+      this.dreamLast = { x: p.x, y: p.y };
+      if (this.dreamWalked >= SEN.limitM * PX_PER_M) {
+        this.busy = true;
+        bigText(DEMO_TEKSTY.zaDaleko, 1800);
+        this.scene.time.delayedCall(2000, () => this.sleep());
+        return;
+      }
+    }
     if (demo.phase === 'jawa' && w) {
       // Count actual steps, also when turning back or walking around a tree.
       this.walked += Math.hypot(p.x - w.x, p.y - w.y);

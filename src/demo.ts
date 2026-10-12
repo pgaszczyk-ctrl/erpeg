@@ -50,6 +50,25 @@ async function arriveAt(game: Phaser.Game, city: CityMap, p: { x: number; y: num
   game.registry.set('city', city);
 }
 
+/**
+ * While the dream goes on, fetch the Lublin map around Targi Lublin in the background (owner, 12 Oct 2026: waking
+ * up took long). Waking up then only paints the first view; the downloads are already in the browser.
+ */
+let lublinNaZapas: Promise<unknown> | null = null;
+export function preloadLublin() {
+  lublinNaZapas ??= (async () => {
+    const city = await getMap('lublin');
+    const at = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
+    await city.ensure(at.x, at.y, 600 * PX_PER_M);
+    // The Targi Lublin picture and its turning signs come straight from the browser's cache later.
+    for (const f of ['targi_lublin', 'rzezba_smok_d20', 'obrot_d20_12klatek', 'obrot_starfest_12klatek', 'obrot_targi_12klatek'].map((n) => `swiat/zabytki/targi/${n}.png`)) {
+      const img = new Image();
+      img.src = new URL(f, document.baseURI).href;
+    }
+  })().catch(() => { lublinNaZapas = null; });
+  return lublinNaZapas;
+}
+
 /** The dream: a nameless hero at level 20 with the best gear, one heart short, by Wawel. */
 export async function startDemo(game: Phaser.Game, p: Pobudka) {
   offline.demo = true;

@@ -36,6 +36,11 @@
         color: #f3dfb0; font: 20px 'Alegreya Sans', sans-serif; text-align: center; white-space: pre-line; }
       .lm-error button { min-height: 44px; padding: 10px 18px; border: 2px solid #dca450; border-radius: 5px; background: #6d411f; color: #fff0cb; font: inherit; }
       @keyframes lm-turn { to { transform: rotate(360deg); } }
+      /* QR demo: the badge logo fades in at once, before any game code has loaded (owner, 12 Oct 2026). */
+      .lm-logo { position: absolute; left: 50%; top: 48%; width: min(62vmin, 420px); height: auto; transform: translate(-50%, -50%);
+        filter: drop-shadow(0 8px 10px rgba(0,0,0,.55)); pointer-events: none; opacity: 0; animation: lm-logo-in .7s .3s ease-out forwards; }
+      @keyframes lm-logo-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.85); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+      #loading-map[data-demo] .lm-lamp { display: none; }
       @media (prefers-reduced-motion: reduce) { .lm-lamp { animation: none; } .lm-plate { transition-duration: .15s; } }
 
       /* Map screen */
@@ -354,6 +359,21 @@
       <div class="lm-shade"></div>
       <div class="lm-lamp" aria-hidden="true"></div>
     </div>
+    <script>
+      // A laptop on battery draws a plainer picture (owner, 12 Oct 2026: unplugged, the game stuttered a lot).
+      // Read before the game's code runs (it loads after this script); screen.ts looks at window.__naBaterii.
+      try { navigator.getBattery && navigator.getBattery().then(function (b) { window.__naBaterii = !b.charging; }); } catch (e) {}
+    </script>
+    <script>
+      // QR demo (?d=…): show the logo right away, together with the map wallpaper.
+      (function () { try {
+        if (!/[?&]d=/.test(location.search)) return;
+        var r = document.getElementById('loading-map'), l = new Image();
+        r.setAttribute('data-demo', '1');
+        l.className = 'lm-logo'; l.alt = 'Exp-lore'; l.src = './logo/odznaka.webp';
+        r.appendChild(l);
+      } catch (e) {} })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

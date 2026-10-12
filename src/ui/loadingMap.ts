@@ -35,6 +35,8 @@ function stopMedia() {
   resize = null;
   flight?.cancel();
   flight = null;
+  drift?.anim.cancel();
+  drift = null;
   video?.pause();
   if (video) { video.removeAttribute('src'); video.load(); video.remove(); }
   video = null;
@@ -223,26 +225,64 @@ export function demoMapAtOnce() {
   r.setAttribute('aria-busy', 'true');
   r.querySelector<HTMLElement>('.lm-lamp')?.style.setProperty('display', 'none');
   const plate = r.querySelector<HTMLElement>('.lm-plate')!;
-  plate.style.transform = initialFrame(r);
   plate.style.opacity = '1';
-  resize = () => {
-    if (flight) (flight.effect as KeyframeEffect).setKeyframes(flightFrames(r));
-    else plate.style.transform = initialFrame(r);
-  };
+  startDrift(r);
+  resize = () => { if (!flight) startDrift(r); };
   window.addEventListener('resize', resize);
   preparePoster(r);
-  // The badge logo of the opening, fetched now so it's ready when it fades in.
-  logoImg = new Image();
-  logoImg.src = new URL('logo/odznaka.webp', document.baseURI).href;
-  logoImg.alt = 'Exp-lore';
+  // The badge logo: index.html already shows it before any code loads; otherwise (e.g. a scene restart) add it now.
+  logoImg = r.querySelector<HTMLImageElement>('.lm-logo');
+  if (!logoImg) {
+    logoImg = new Image();
+    logoImg.className = 'lm-logo';
+    logoImg.alt = 'Exp-lore';
+    logoImg.src = new URL('logo/odznaka.webp', document.baseURI).href;
+    r.append(logoImg);
+  }
 }
 
 let logoImg: HTMLImageElement | null = null;
 
 /**
- * The demo's opening: a moment of the world map, then it blurs and the game's logo fades in in the middle,
- * spins and vanishes, and a fast zoom flies to the dream's spot (Wawel). Resolves once the zoom is over and
- * the first view of the game is ready (`mapReady`).
+ * The demo's wallpaper (owner, 12 Oct 2026: „ucięta po bokach – pokazuj płynnie z losowej strony i przesuwaj delikatnie”):
+ * the map covers the whole screen and drifts slowly sideways, starting from a random side.
+ */
+let drift: { anim: Animation; from: { x: number; y: number }; to: { x: number; y: number }; scale: number; ms: number } | null = null;
+const DRYF_MS = 45_000;
+function startDrift(r: HTMLElement) {
+  drift?.anim.cancel();
+  const plate = r.querySelector<HTMLElement>('.lm-plate')!;
+  const w = r.clientWidth, h = r.clientHeight;
+  const scale = portrait(r) ? initialScale(r) : Math.max(w / 1280, h / 720) * 1.15;
+  const room = Math.max(0, (1280 * scale - w) / 2) / (1280 * scale);
+  const y = portrait(r) ? EUROPE.y : 0.5;
+  const cx = portrait(r) ? EUROPE.x : 0.5;
+  const lo = Math.max(0.5 - room, cx - room), hi = Math.min(0.5 + room, cx + room);
+  const left = Math.random() < 0.5;
+  const from = { x: left ? lo : hi, y }, to = { x: left ? hi : lo, y };
+  if (reduced()) {
+    plate.style.transform = frame(r, { x: cx, y }, scale);
+    drift = null;
+    return;
+  }
+  const anim = plate.animate([{ transform: frame(r, from, scale) }, { transform: frame(r, to, scale) }], { duration: DRYF_MS, easing: 'ease-in-out', fill: 'forwards' });
+  drift = { anim, from, to, scale, ms: DRYF_MS };
+}
+/** Where the drifting wallpaper is now (the point at the screen centre) and its scale. */
+function driftNow() {
+  if (!drift) return null;
+  const t = Math.min(1, Number(drift.anim.currentTime ?? 0) / drift.ms);
+  const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // close to ease-in-out
+  return { p: { x: drift.from.x + (drift.to.x - drift.from.x) * e, y: drift.from.y }, scale: drift.scale };
+}
+
+/** A coin spinning on its edge (owner: „monetą między palcami, wokół własnej osi”, not a wheel). */
+const COIN = (deg: number, scale = 1) => `translate(-50%,-50%) perspective(900px) rotateY(${deg}deg) scale(${scale})`;
+
+/**
+ * The demo's opening: the wallpaper drifts with the logo over it (shown at once by index.html); once the game is
+ * loading, the logo spins like a coin and vanishes, and a quick zoom flies to the dream's spot (Wawel). If the first
+ * view still isn't ready then, a small spinning coin waits at the bottom (owner: „nic się nie zadziało”).
  */
 export async function demoIntro(lat: number, lon: number, mapReady: Promise<void>) {
   const r = root();
@@ -251,34 +291,54 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   const plate = r.querySelector<HTMLElement>('.lm-plate')!;
   const wait = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
   if (reduced()) {
-    plate.style.transform = frame(r, point, finalScale(r));
+    logoImg?.remove();
+    drift?.anim.cancel();
+    plate.style.transform = frame(r, point, finalScale(r) / 2);
     await mapReady;
     return;
   }
-  await wait(1000);
-  plate.style.transition = 'opacity .45s, filter .8s';
-  plate.style.filter = 'blur(7px) brightness(.75)';
-  // The owner's badge logo (11 Oct 2026: „użyj tego logo”).
-  const logo = logoImg ?? new Image();
-  if (!logo.src) logo.src = new URL('logo/odznaka.webp', document.baseURI).href;
-  await Promise.race([logo.decode().catch(() => {}), wait(1500)]);
-  logo.style.cssText = 'position:absolute;left:50%;top:48%;width:min(62vmin,420px);height:auto;opacity:0;transform:translate(-50%,-50%);filter:drop-shadow(0 8px 10px rgba(0,0,0,.55));pointer-events:none;';
-  r.append(logo);
-  const centre = 'translate(-50%,-50%)';
-  await logo.animate([{ opacity: 0, transform: `${centre} scale(.8)` }, { opacity: 1, transform: `${centre} scale(1)` }], { duration: 800, easing: 'ease-out', fill: 'forwards' }).finished.catch(() => {});
-  await wait(800);
-  await logo.animate([
-    { opacity: 1, transform: `${centre} rotate(0deg) scale(1)` },
-    { opacity: 1, transform: `${centre} rotate(200deg) scale(1.08)`, offset: 0.45 },
-    { opacity: 0, transform: `${centre} rotate(720deg) scale(0)` },
-  ], { duration: 1000, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
-  logo.remove();
-  plate.style.filter = '';
-  // A quick zoom straight onto the dream's spot.
-  overviewOffset = 0;
-  flight = plate.animate(flightFrames(r), { duration: 1700, easing: 'ease-in-out', fill: 'forwards' });
+  const logo = logoImg ?? r.querySelector<HTMLImageElement>('.lm-logo');
+  if (logo) {
+    // Let the logo be seen for a moment (it fades in 0.3 s after the page opens).
+    const shown = 1800 - performance.now();
+    if (shown > 0) await wait(shown);
+    await Promise.race([logo.decode().catch(() => {}), wait(800)]);
+    logo.style.animation = 'none';
+    logo.style.opacity = '1';
+    await logo.animate([
+      { opacity: 1, transform: COIN(0) },
+      { opacity: 1, transform: COIN(540, 1.04), offset: 0.55 },
+      { opacity: 0, transform: COIN(1260, 0.3) },
+    ], { duration: 1300, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+    logo.remove();
+  }
+  // A quick zoom from where the wallpaper drifted to straight onto the dream's spot.
+  const now = driftNow();
+  drift?.anim.cancel();
+  drift = null;
+  const p0 = now?.p ?? { x: 0.5, y: 0.5 }, s0 = now?.scale ?? initialScale(r), s1 = Math.max(s0 * 2, finalScale(r) / 2);
+  const frames: Keyframe[] = [];
+  const N = 30;
+  for (let k = 0; k <= N; k++) {
+    const t = k / N, u = t ** 1.5, scale = s0 * (s1 / s0) ** u, f = 1 - (1 - u) ** 2 * (s0 / scale);
+    frames.push({ offset: t, transform: frame(r, { x: p0.x + (point.x - p0.x) * f, y: p0.y + (point.y - p0.y) * f }, scale) });
+  }
+  flight = plate.animate(frames, { duration: 1700, easing: 'ease-in-out', fill: 'forwards' });
   await flight.finished.catch(() => {});
-  await mapReady;
+  let ready = false;
+  void mapReady.then(() => { ready = true; });
+  await wait(50);
+  if (!ready) {
+    const coin = new Image();
+    coin.src = new URL('logo/odznaka.webp', document.baseURI).href;
+    coin.alt = '';
+    coin.style.cssText = 'position:absolute;left:50%;bottom:max(36px,env(safe-area-inset-bottom));top:auto;width:56px;height:auto;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.6));';
+    r.append(coin);
+    const spin = coin.animate([{ transform: 'translateX(-50%) perspective(400px) rotateY(0deg)' }, { transform: 'translateX(-50%) perspective(400px) rotateY(360deg)' }], { duration: 1400, iterations: Infinity });
+    await mapReady;
+    spin.cancel();
+    coin.remove();
+  }
 }
 
 /** Reveal only after both the flight and actual terrain rendering are ready. */
