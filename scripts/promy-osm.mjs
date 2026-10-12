@@ -22,47 +22,70 @@ const TOWN_KM = 20;
 
 const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 
-async function overpass(q, name) {
-  for (let round = 0; round < 3; round++) {
+async function overpass(q, name, tries = 2) {
+  for (let round = 0; round < tries; round++) {
     for (const url of SERVERS) {
       try {
-        console.log(`[${name}] ${url}`);
         const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: q }), headers: { 'User-Agent': 'exp-lore.app ferry ports (github actions)' } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if (json.remark && !json.elements?.length) throw new Error(json.remark);
-        console.log(`[${name}] ${json.elements.length} elements`);
+        if (json.remark && /runtime error|out of memory|timed out/i.test(json.remark)) throw new Error(json.remark);
         return json;
       } catch (e) {
-        console.log(`[${name}] failed: ${e.message}`);
-        await new Promise((r) => setTimeout(r, 20000));
+        console.log(`[${name}] ${url} failed: ${e.message}`);
+        await new Promise((r) => setTimeout(r, 10000));
       }
     }
   }
-  throw new Error(`Overpass: ${name} failed`);
+  return null;
+}
+
+// The whole world at once times out, so it is asked box by box (a box that still fails is split in four).
+async function box(s, w, n, e, depth = 0) {
+  const q = `[out:json][timeout:600][maxsize:1000000000][bbox:${s},${w},${n},${e}];
+way[route=ferry](if: length() > ${MIN_WAY_KM * 1000});
+out body geom;
+nwr[amenity=ferry_terminal];
+out center tags;
+node[place~"^(city|town)$"][name];
+out tags;`;
+  const j = await overpass(q, `${s},${w},${n},${e}`, depth < 2 ? 1 : 3);
+  if (j) {
+    console.log(`box ${s},${w},${n},${e}: ${j.elements.length}`);
+    return j.elements;
+  }
+  if (depth >= 2) throw new Error(`Overpass: box ${s},${w},${n},${e} failed`);
+  const ms = (s + n) / 2;
+  const mw = (w + e) / 2;
+  const out = [];
+  for (const [a, b, c, d] of [[s, w, ms, mw], [s, mw, ms, e], [ms, w, n, mw], [ms, mw, n, e]]) out.push(...(await box(a, b, c, d, depth + 1)));
+  return out;
 }
 
 const from = process.argv.indexOf('--from') >= 0 ? process.argv[process.argv.indexOf('--from') + 1] : null;
 const save = process.argv.indexOf('--save') >= 0 ? process.argv[process.argv.indexOf('--save') + 1] : null;
-async function get(file, q) {
-  if (from) return JSON.parse(readFileSync(`${from}/${file}`, 'utf8'));
-  const j = await overpass(q, file);
-  if (save) {
-    mkdirSync(save, { recursive: true });
-    writeFileSync(`${save}/${file}`, JSON.stringify(j));
+let all;
+if (from) {
+  all = ['ways.json', 'terminals.json', 'towns.json'].flatMap((f) => JSON.parse(readFileSync(`${from}/${f}`, 'utf8')).elements);
+} else {
+  all = [];
+  for (let s = -60; s < 80; s += 20) for (let w = -180; w < 180; w += 30) {
+    all.push(...(await box(s, w, s + 20, w + 30)));
+    await new Promise((r) => setTimeout(r, 2000));
   }
-  return j;
 }
-
-const ways = await get('ways.json', `[out:json][timeout:1800][maxsize:2000000000];
-way[route=ferry](if: length() > ${MIN_WAY_KM * 1000});
-out body geom;`);
-const terminals = await get('terminals.json', `[out:json][timeout:900];
-nwr[amenity=ferry_terminal];
-out center tags;`);
-const towns = await get('towns.json', `[out:json][timeout:900];
-node[place~"^(city|town)$"][name];
-out tags;`);
+const seen = new Set();
+const uniq = all.filter((e) => !seen.has(`${e.type}${e.id}`) && seen.add(`${e.type}${e.id}`));
+const ways = { elements: uniq.filter((e) => e.type === 'way' && e.tags?.route === 'ferry') };
+const terminals = { elements: uniq.filter((e) => e.tags?.amenity === 'ferry_terminal') };
+const towns = { elements: uniq.filter((e) => e.type === 'node' && /^(city|town)$/.test(e.tags?.place ?? '')) };
+if (save) {
+  mkdirSync(save, { recursive: true });
+  writeFileSync(`${save}/ways.json`, JSON.stringify(ways));
+  writeFileSync(`${save}/terminals.json`, JSON.stringify(terminals));
+  writeFileSync(`${save}/towns.json`, JSON.stringify(towns));
+}
+console.log(`ferry ways ${ways.elements.length}, terminals ${terminals.elements.length}, towns ${towns.elements.length}`);
 
 const R = 6371;
 const rad = (d) => (d * Math.PI) / 180;

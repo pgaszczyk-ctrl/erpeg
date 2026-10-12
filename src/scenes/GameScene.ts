@@ -3105,7 +3105,9 @@ export class GameScene extends Phaser.Scene {
         const to = { name: r.do.nazwa, lat: r.do.lat, lon: r.do.lon, key: `port|${r.do.nazwa}|${r.do.lat}`, mapId: portMapId(r.do), mapName: r.do.nazwa };
         this.dialog({
           title,
-          text: `Rejs do: ${r.do.nazwa} (${r.km} km) potrwa ${time(r.km)}. Przez ten czas twoja postać będzie na promie – w tym czasie możesz zagrać inną postacią. Płyniesz?`,
+          text: session.immortal
+            ? `Rejs do: ${r.do.nazwa} (${r.km} km). Postać testowa płynie od razu. Płyniesz?`
+            : `Rejs do: ${r.do.nazwa} (${r.km} km) potrwa ${time(r.km)}. Przez ten czas twoja postać będzie na promie – w tym czasie możesz zagrać inną postacią. Płyniesz?`,
           buttons: [`⛴ Płynę – ${price} 💰`, 'Zostaję'],
           onChoose: (k) => {
             if (k === 0) this.travel({ to, km: r.km, via: null, price, statek: true });

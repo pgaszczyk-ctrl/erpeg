@@ -1,6 +1,7 @@
 // Ferry ports of the world (public/porty.json from OpenStreetMap, scripts/promy-osm.mjs,
 // plus content/porty.ts LINIE_DOPISANE). Loaded once, on the first world map.
 import { LINIE_DOPISANE, PROM } from './content/porty';
+import { nameWorldMap } from './travel';
 
 export interface Port { id: number; nazwa: string; lat: number; lon: number; terminal: string | null }
 export interface Rejs { do: Port; km: number; nazwa: string | null }
@@ -14,7 +15,7 @@ export function wczytajPorty(): Promise<void> {
   ladowanie ??= (async () => {
     try {
       const res = await fetch('porty.json');
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = (await res.json()) as { porty: [number, string, number, number, string | null][]; linie: [number, number, number, string | null][] };
       porty = j.porty.map(([id, nazwa, lat, lon, terminal]) => ({ id, nazwa, lat, lon, terminal }));
       for (const [a, b, km, nazwa] of j.linie) dodaj(porty[a], porty[b], km, nazwa);
@@ -22,6 +23,7 @@ export function wczytajPorty(): Promise<void> {
       // No ports today.
     }
     for (const [a, b, km, nazwa] of LINIE_DOPISANE) dodaj(znajdzLubDodaj(a), znajdzLubDodaj(b), km, nazwa);
+    for (const p of porty) nameWorldMap(portMapId(p), p.nazwa);
   })();
   return ladowanie;
 }
