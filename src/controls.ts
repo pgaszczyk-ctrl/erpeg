@@ -141,6 +141,17 @@ export function consumeAttack() {
   return a;
 }
 
+/**
+ * A press that belonged to a dialog (choosing an answer) is not an attack: no swing, no hold, no strong blow
+ * after the dialog closes (owner, 12 Oct 2026). The joystick, if any, stays.
+ */
+export function cancelPress() {
+  hold.active = false;
+  release = null;
+  pendingAim = null;
+  touchInput.attack = false;
+}
+
 export function resetKeys() {
   heldKeys.clear();
 }

@@ -25,7 +25,7 @@ import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
 const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
   [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
 );
-import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
+import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -705,7 +705,10 @@ export class UIScene extends Phaser.Scene {
       this.openGameMenu();
       return;
     }
-    if (!this.hasDialog || this.time.now - this.dialogOpenedAt < 250) return;
+    if (!this.hasDialog) return;
+    // Any press while a dialog is open belongs to the dialog, never to the weapon.
+    cancelPress();
+    if (this.time.now - this.dialogOpenedAt < 250) return;
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
     let choice: number | null = null;
     const real = this.dialogButtons.filter((b) => b.index >= 0);
