@@ -210,6 +210,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '12.10.2026', tytul: { pl: 'Nowy herb i krótsze demo', en: 'A new emblem and a shorter demo' },
+    tresc: { pl: 'Gra ma nowe logo – okrągły herb z globusem, który na początku dema obraca się jak moneta. Gazeta ma zawsze ten sam, duży rozmiar, a reporterskie zlecenia prowadzą do szkół, bibliotek i zwykłych adresów. Na laptopie na baterii gra rysuje prostszy obraz, żeby nie zwalniać.', en: 'The game has a new logo – a round emblem with a globe that spins like a coin at the start of the demo. The paper always keeps one large size, and reporter errands lead to schools, libraries and plain addresses. On a laptop running on battery the game draws a plainer picture to stay smooth.' },
+  },
+  {
     data: '11.10.2026', tytul: { pl: 'Kurier w nowej szacie', en: 'The Courier gets a new look' },
     tresc: { pl: 'Gazeta wygląda teraz jak prawdziwa gazeta, a na pierwszej stronie redakcja ogłasza nowe zadania. Gazeciarze najpierw zagadują – a co trzeci poprosi o pomoc w roznoszeniu gazet po ulicy.', en: 'The paper now looks like a real paper, and the front page announces new quests. Newsboys chat first – and every third one asks for help delivering papers along a street.' },
   },
