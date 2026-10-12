@@ -19,6 +19,7 @@ try {
   for (const [name, viewport, mobile] of [['desktop', { width: 1280, height: 860 }, false], ['phone', { width: 390, height: 844 }, true]]) {
     const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, locale: 'pl-PL', deviceScaleFactor: mobile ? 2 : 1 });
     const errors = [];
+    const asked = [];
     const save = { at: { m: mapId, x: 30, y: 30, s: 1.92 }, coins: 5000, hp: 10, look: null };
     await context.route('**/*.supabase.co/**', (route) => {
       const path = new URL(route.request().url()).pathname;
@@ -31,6 +32,9 @@ try {
       if (path.endsWith('/weather')) body = { cell: 'test', at: new Date().toISOString(), h: [] };
       if (path.endsWith('/settings')) body = { external: { google: false } };
       if (path.endsWith('/save_game') || path.endsWith('/heartbeat')) body = true;
+      if (path.endsWith('/game_ports')) body = [];
+      if (path.endsWith('/port_answers')) body = [{ id: 7, at: new Date().toISOString(), port: 'Szczecin', lat: A.lat, lon: A.lon, text: 'Kopenhaga', status: 'dodana', odpowiedz: null }];
+      if (path.endsWith('/port_request')) { asked.push(JSON.parse(route.request().postData())); body = true; }
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await context.route('**/sample.pmtiles', async (route) => {
@@ -75,12 +79,25 @@ try {
     });
     console.log(name, 'dialog', text.replace(/\n/g, ' ').slice(0, 300));
     assert(/Wały Chrobrego/.test(text), 'The line is listed');
+    assert(/Pytałeś o: Kopenhaga/.test(text), 'The answer to an earlier request');
     await page.screenshot({ path: `work/porty-${name}-dialog.png` });
     const choose = async (index) => {
       await page.waitForTimeout(300);
       const at = await page.evaluate((index) => { const r = window.__game.scene.getScene('ui').dialogButtons.find((b) => b.index === index).rect; return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, index);
       await page.mouse.click(at.x, at.y);
     };
+    // „🧭 Inne miejsce…”: the wish goes to the server, the captain promises to ask around.
+    await choose(1);
+    await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Reykjavik, Islandia');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /Zajrzyj jutro/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
+    await page.screenshot({ path: `work/porty-${name}-inne.png` });
+    assert.equal(asked.length, 1);
+    assert.equal(asked[0].p_text, 'Reykjavik, Islandia');
+    console.log(name, 'request', JSON.stringify(asked[0]));
+    await choose(0);
+    await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.openPort(s.city.places.find((q) => q.kind === 'port')); });
+    await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
     await choose(0);
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
     await page.screenshot({ path: `work/porty-${name}-potwierdz.png` });

@@ -322,7 +322,9 @@ export class CityMap {
     // One station once (OSM often has it as a node, an area and a building).
     if (kind === 'station' && this.places.some((q) => q.kind === 'station' && q.name === name && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
     // Travelling merchants and coachmen stand in the street, not in a building.
-    const street = kind === 'merchant' || kind === 'station';
+    // Two landings of one ferry port (a node and an area in OSM): one captain.
+    if (kind === 'port' && this.places.some((q) => q.kind === 'port' && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
+    const street = kind === 'merchant' || kind === 'station' || kind === 'port';
     let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
     if (!b && !street) {
       let best = 40 * PX_PER_M;
@@ -339,7 +341,7 @@ export class CityMap {
       && this.places.some(p => p.building === b && p.kind !== 'maker' && p.kind !== 'workshop')) return null;
     if (b) this.placeBuildings.add(b);
     this.placeIds.add(id);
-    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y } };
+    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' || kind === 'port' ? this.freeNear(x, y) : { x, y } };
     this.places.push(place);
     return place;
   }

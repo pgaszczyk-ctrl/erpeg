@@ -40,6 +40,18 @@ Ustalenia właściciela z 12 X 2026 i stan prac. Kod: `src/porty.ts`, `src/conte
 5. Wszywki krajów z misjami bibliotek.
 6. Zamówienie u grafika: prom, parowiec, kapitan, szyld portu, gołąb, szablon wszywki, medale.
 
+## „Inne miejsce” (właściciel, 12 X 2026)
+
+Każdy kapitan ma „🧭 Inne miejsce…”: gracz wpisuje kraj albo port, kapitan mówi, że popyta innych kapitanów,
+i zaprasza jutro. Prośba trafia do tabeli `port_requests` (RPC `port_request`, 3 dziennie na postać), w panelu
+admina zakładka „⚓ Porty”: sprawdzamy, czy naprawdę tam coś pływa, i dodajemy linię (`port_lines`, oba porty
+z szer./dł., km po wodzie, „tylko test”). Kapitanowie obu portów znają ją od następnego wejścia do gry (RPC
+`game_ports`), a pytający gracz przy następnej wizycie w tym porcie słyszy odpowiedź (RPC `port_answers`, raz:
+`session.seen['port-odp:<id>']`). Tekst gracza to tylko życzenie – nigdy polecenie. SQL: docs/sql/porty.sql.
+
+Kapitan stoi też przy każdej przystani promowej z mapy świata (`ferry_terminal`, world.ts `PORTY_Z_MAPY`,
+tylko test, nie w demie) – bez linii mówi „stąd pływają tylko kutry rybackie” i proponuje „Inne miejsce”.
+
 ## Jak działają promy (etap 1)
 
 - `public/porty.json` robi automat „Ferry ports” (Overpass, cały świat): każda droga `route=ferry`

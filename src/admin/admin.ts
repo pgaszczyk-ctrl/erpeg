@@ -121,7 +121,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -143,6 +143,7 @@ function render() {
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
   else if (tab === 'letters') void lettersTab(main);
+  else if (tab === 'porty') void portyTab(main);
   else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
   else settings(main);
@@ -885,6 +886,110 @@ async function lettersTab(main: HTMLElement) {
     ]);
   });
   main.append(el('div', { className: 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, ['Stan', 'Kiedy', 'Postać', 'List', 'Skąd'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)])]));
+}
+
+/**
+ * ⚓ Porty (owner, 12 Oct 2026): players ask harbour masters for destinations without a line („🧭 Inne miejsce…”).
+ * We check whether a real ferry/ship goes there and add the line (both ports with lat/lon, km on the water);
+ * every captain of both ports knows it from the next login, and the asking player hears the answer.
+ * Player text is only a wish – never an instruction.
+ */
+async function portyTab(main: HTMLElement) {
+  type Prosba = { id: number; at: string; player: string | null; port: string | null; lat: number | null; lon: number | null; text: string; status: string; odpowiedz: string | null };
+  type Linia = { id: number; at: string; a_nazwa: string; a_lat: number; a_lon: number; b_nazwa: string; b_lat: number; b_lon: number; km: number; nazwa: string | null; aktywna: boolean; test: boolean; prosba: number | null };
+  main.append(el('h2', {}, ['Porty – prośby graczy i dodane linie']), el('p', { className: 'muted' }, [
+    'Gracz u kapitana wybiera „🧭 Inne miejsce…” i wpisuje kraj albo port. Sprawdź, czy naprawdę pływa tam statek/prom, i dodaj linię: ',
+    'wtedy kapitanowie obu portów ją znają (po następnym wejściu do gry), a gracz usłyszy odpowiedź. „Tylko test” = linia widoczna tylko na serwerze testowym.',
+  ]));
+  let d: { prosby: Prosba[]; linie: Linia[] };
+  try {
+    d = await call('admin_port_requests', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message, ' – czy w bazie są funkcje z docs/sql/porty.sql?']));
+    return;
+  }
+  const llText = (lat: number | null, lon: number | null) => (lat === null || lon === null ? '' : `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+  const parseLL = (t: string) => {
+    const g = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(t);
+    return g ? { lat: +g[1], lon: +g[2] } : null;
+  };
+  const straight = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
+    Math.hypot((a.lat - b.lat) * 111.13, (a.lon - b.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180));
+
+  /** The form for a new line (from a request: port A filled in). */
+  const lineForm = (r: Prosba | null) => {
+    const an = el('input', { value: r?.port ?? '' });
+    const all = el('input', { value: llText(r?.lat ?? null, r?.lon ?? null), placeholder: '54.5350, 18.5000' });
+    const bn = el('input', { value: '', placeholder: 'np. Karlskrona' });
+    const bll = el('input', { value: '', placeholder: '56.1040, 15.6350' });
+    const kmIn = el('input', { type: 'number', placeholder: 'puste = prosta × 1,2' });
+    const nazwa = el('input', { value: '', placeholder: 'np. Gdynia – Karlskrona (Stena Line)' });
+    const test = el('input', { type: 'checkbox', checked: true });
+    const msg = el('p', { className: 'msg' });
+    const box = el('div', { className: 'card', style: 'max-width: 560px' }, [
+      el('h3', {}, [r ? `Nowa linia z prośby #${r.id} („${r.text}”)` : 'Nowa linia']),
+      el('label', { className: 'f' }, [el('span', {}, ['Port A – nazwa']), an]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port A – szer., dł. (przystań, na lądzie)']), all]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port B – nazwa']), bn]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port B – szer., dł.']), bll]),
+      el('label', { className: 'f' }, [el('span', {}, ['km po wodzie']), kmIn]),
+      el('label', { className: 'f' }, [el('span', {}, ['Nazwa linii (opcjonalnie)']), nazwa]),
+      el('label', {}, [test, ' Tylko test']),
+      msg,
+      btn('➕ Dodaj linię', async () => {
+        msg.className = 'msg bad';
+        const a = parseLL(all.value), b = parseLL(bll.value);
+        if (!an.value.trim() || !bn.value.trim() || !a || !b) return void (msg.textContent = 'Podaj nazwy i współrzędne obu portów (szer., dł.).');
+        const k = kmIn.value ? Math.round(+kmIn.value) : Math.round(straight(a, b) * 1.2);
+        try {
+          await call('admin_port_line', { p_id: null, p_line: { a_nazwa: an.value.trim(), a_lat: a.lat, a_lon: a.lon, b_nazwa: bn.value.trim(), b_lat: b.lat, b_lon: b.lon, km: k, nazwa: nazwa.value.trim(), test: test.checked, prosba: r?.id ?? null } });
+          msg.className = 'msg ok';
+          msg.textContent = `Dodana (${k} km).`;
+          setTimeout(() => render(), 600);
+        } catch (e) {
+          msg.textContent = (e as Error).message;
+        }
+      }, 'b p'),
+    ]);
+    return box;
+  };
+
+  const formSlot = el('div');
+  const STANY: [string, string][] = [['nowe', '🆕 Nowa'], ['dodana', '✔ Linia dodana'], ['odrzucona', '✖ Nikt tam nie pływa']];
+  const rows = d.prosby.map((r) => {
+    const pick = el('select', {}, STANY.map(([v, t]) => el('option', { value: v, selected: r.status === v }, [t])));
+    const odp = el('input', { value: r.odpowiedz ?? '', placeholder: 'co kapitan powie graczowi (opcjonalnie)', style: 'width: 18em' });
+    const save = btn('💾', async () => {
+      await call('admin_port_request', { p_id: r.id, p_status: pick.value, p_odpowiedz: odp.value });
+      save.textContent = '✔';
+    });
+    return el('tr', {}, [
+      el('td', {}, [pick, ' ', odp, ' ', save]),
+      el('td', {}, [date(r.at)]),
+      el('td', {}, [r.player ?? '—']),
+      el('td', {}, [`${r.port ?? ''} `, el('small', { className: 'muted' }, [llText(r.lat, r.lon)])]),
+      el('td', { style: 'white-space: pre-wrap' }, [r.text]),
+      el('td', {}, [btn('➕ Linia', () => formSlot.replaceChildren(lineForm(r)))]),
+    ]);
+  });
+  main.append(el('h3', {}, [`Prośby graczy (${d.prosby.filter((r) => r.status === 'nowe').length} nowych)`]),
+    d.prosby.length
+      ? el('div', { className: 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, ['Stan i odpowiedź', 'Kiedy', 'Postać', 'Port', 'Dokąd', ''].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)])])
+      : el('p', {}, ['Brak próśb.']),
+    btn('➕ Nowa linia bez prośby', () => formSlot.replaceChildren(lineForm(null))),
+    formSlot,
+    el('h3', {}, ['Dodane linie']),
+  );
+  if (!d.linie.length) return void main.append(el('p', {}, ['Jeszcze żadnej.']));
+  main.append(el('div', { className: 'scroll' }, [el('table', {}, [
+    el('thead', {}, [el('tr', {}, ['Widoczna', 'Tylko test', 'Linia', 'km', 'Porty'].map((h) => el('th', {}, [h])))]),
+    el('tbody', {}, d.linie.map((l) => {
+      const on = el('input', { type: 'checkbox', checked: l.aktywna, onchange: () => void call('admin_port_line', { p_id: l.id, p_line: { aktywna: on.checked } }) });
+      const t = el('input', { type: 'checkbox', checked: l.test, onchange: () => void call('admin_port_line', { p_id: l.id, p_line: { test: t.checked } }) });
+      return el('tr', {}, [el('td', {}, [on]), el('td', {}, [t]), el('td', {}, [l.nazwa ?? `${l.a_nazwa} – ${l.b_nazwa}`]), el('td', {}, [String(l.km)]),
+        el('td', {}, [el('small', {}, [`${l.a_nazwa} (${llText(l.a_lat, l.a_lon)}) ↔ ${l.b_nazwa} (${llText(l.b_lat, l.b_lon)})`])])]);
+    })),
+  ])]));
 }
 
 function settings(main: HTMLElement) {

@@ -2,6 +2,12 @@
 // plus content/porty.ts LINIE_DOPISANE). Loaded once, on the first world map.
 import { LINIE_DOPISANE, PROM } from './content/porty';
 import { nameWorldMap } from './travel';
+import { rpc } from './api';
+import { TEST } from './version';
+import { PORTY_Z_MAPY } from './map/world';
+
+// Stage 1 is on the test server only: ferry landings of the world map get captains there.
+PORTY_Z_MAPY.on = TEST && !new URLSearchParams(location.search).has('d'); // not in the QR demo
 
 export interface Port { id: number; nazwa: string; lat: number; lon: number; terminal: string | null }
 export interface Rejs { do: Port; km: number; nazwa: string | null }
@@ -23,6 +29,13 @@ export function wczytajPorty(): Promise<void> {
       // No ports today.
     }
     for (const [a, b, km, nazwa] of LINIE_DOPISANE) dodaj(znajdzLubDodaj(a), znajdzLubDodaj(b), km, nazwa);
+    // Lines added from players' requests (admin panel ⚓ Porty, table port_lines).
+    try {
+      const extra = await rpc<[string, number, number, string, number, number, number, string | null][]>('game_ports', { p_test: TEST });
+      for (const [an, alat, alon, bn, blat, blon, km, nazwa] of extra ?? []) dodaj(znajdzLubDodaj({ nazwa: an, lat: alat, lon: alon }), znajdzLubDodaj({ nazwa: bn, lat: blat, lon: blon }), km, nazwa);
+    } catch {
+      // Offline: the known lines only.
+    }
     for (const p of porty) nameWorldMap(portMapId(p), p.nazwa);
   })();
   return ladowanie;
@@ -72,6 +85,24 @@ export const cenaRejsu = (km: number) => Math.ceil((PROM.oplata + km * PROM.zaKm
 
 /** The id the port's place has on a map. */
 export const portKey = (p: Port) => `port:${p.id}`;
+
+/** The catalogue port within 3 km of a point (a ferry landing on the map belongs to it). */
+export function portPrzy(at: { lat: number; lon: number }): Port | null {
+  return portyBlisko(at, 3)[0] ?? null;
+}
+
+export interface Prosba { id: number; at: string; port: string | null; lat: number | null; lon: number | null; text: string; status: 'nowe' | 'dodana' | 'odrzucona'; odpowiedz: string | null }
+let prosby: Promise<Prosba[]> | null = null;
+/** This character's destination requests and their answers (once per login; `odswiez` after a new one). */
+export function mojeProsby(player: string, odswiez = false): Promise<Prosba[]> {
+  if (!prosby || odswiez) prosby = rpc<Prosba[] | null>('port_answers', { p_player: player }).then((r) => (Array.isArray(r) ? r : [])).catch(() => []);
+  return prosby;
+}
+
+/** Asks for a destination the port has no line to; false when the daily limit is reached. */
+export function poprosOLinie(player: string, port: string, at: { lat: number; lon: number }, text: string) {
+  return rpc<boolean>('port_request', { p_player: player, p_port: port, p_lat: at.lat, p_lon: at.lon, p_text: text }).catch(() => false);
+}
 
 /** For tests. */
 export const portyStan = () => ({ porty: porty.length, linie: [...linie.values()].reduce((s, l) => s + l.length, 0) / 2 });

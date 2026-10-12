@@ -85,6 +85,9 @@ const LANDUSE: Record<string, string> = {
 
 const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', canal: 'stream', ditch: 'ditch', drain: 'ditch' };
 
+/** Ferry landings of the world map become ports with a captain (porty.ts sets it on the test server). */
+export const PORTY_Z_MAPY = { on: false };
+
 /** World map point of interest → the game's place. */
 function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   if (/\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
@@ -108,13 +111,14 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'hotel': case 'hostel': case 'guest_house': case 'motel': return 'hotel';
     case 'camp_site': case 'caravan_site': return 'camp';
     case 'station': case 'bus_station': return named ? 'station' : null;
+    case 'ferry_terminal': return PORTY_Z_MAPY.on ? 'port' : null;
     default: return null;
   }
 }
 
 const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   shop: 'Sklep', police: 'Komenda Policji', library: 'Biblioteka', bank: 'Bank', alchemist: 'Stacja paliw',
-  workshop: 'Warsztat samochodowy', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
+  workshop: 'Warsztat samochodowy', port: 'Przystań promowa', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
 };
 
 /**

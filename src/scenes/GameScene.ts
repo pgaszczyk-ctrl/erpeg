@@ -94,7 +94,7 @@ import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
 import { PROM } from '../content/porty';
-import { cenaRejsu, odleglosc, portKey, portMapId, portyBlisko, rejsyZ, wczytajPorty, type Port } from '../porty';
+import { cenaRejsu, mojeProsby, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, wczytajPorty, type Port } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
@@ -3085,6 +3085,12 @@ export class GameScene extends Phaser.Scene {
       const at = this.city.fromLatLon(port.lat, port.lon);
       const r = 60 * PX_PER_M;
       if (!this.city.ready({ x0: at.x - r, y0: at.y - r, x1: at.x + r, y1: at.y + r })) continue;
+      // A ferry landing of the map already stands there (it has its captain): it is this port.
+      const landing = this.city.places.find((q) => q.kind === 'port' && !this.porty.has(q.id) && odleglosc(this.city.toLatLon(q.door.x, q.door.y), port) < 3);
+      if (landing) {
+        this.porty.set(landing.id, port);
+        continue;
+      }
       // Already on this map (the scene started again): its look was drawn with the other places.
       const fresh = this.city.addPort(key, port.nazwa, port.lat, port.lon);
       const place = fresh ?? this.city.places.find((q) => q.kind === 'port' && q.id.endsWith(`/${key}`));
@@ -3140,24 +3146,43 @@ export class GameScene extends Phaser.Scene {
 
   /** The harbour master: the port's fixed ferry lines (no drawing – a ferry always sails the same way). */
   private openPort(p: CityPlace, page = 0) {
-    const port = this.porty.get(p.id);
+    const here = this.city.toLatLon(p.door.x, p.door.y);
+    // A ferry landing of the world map: the catalogue port it belongs to (its lines), if any.
+    let port = this.porty.get(p.id) ?? null;
+    if (!port && (port = portPrzy(here))) this.porty.set(p.id, port);
     const title = `⚓ Kapitan portu – ${port?.nazwa ?? p.name}`;
     const all = port ? rejsyZ(port) : [];
-    if (!port || !all.length) {
-      this.dialog({ title, text: '„Dziś żaden prom stąd nie wypływa. Morze ma swoje humory.”', buttons: ['OK'], onChoose: () => {} });
-      return;
-    }
+    void mojeProsby(session.name).then((prosby) => {
+      // Answers to this player's earlier requests asked in this port (told once), and the ones still waiting.
+      const tu = prosby.filter((r) => r.lat !== null && r.lon !== null && odleglosc({ lat: r.lat, lon: r.lon! }, here) < 3);
+      const nowe = tu.filter((r) => r.status !== 'nowe' && !session.seen[`port-odp:${r.id}`]);
+      for (const r of nowe) session.seen[`port-odp:${r.id}`] = Date.now();
+      const wiesci = [
+        ...nowe.map((r) => r.status === 'dodana'
+          ? `„Pytałeś o: ${r.text}. Znalazłem kapitana, który zna drogę – sprawdź listę!${r.odpowiedz ? ` ${r.odpowiedz}` : ''}”`
+          : `„Pytałeś o: ${r.text}. Niestety, żaden kapitan nie zna tam drogi.${r.odpowiedz ? ` ${r.odpowiedz}` : ''}”`),
+        ...tu.filter((r) => r.status === 'nowe').map((r) => `„Wciąż wypytuję innych kapitanów o: ${r.text}.”`),
+      ];
+      this.portMenu(p, port, title, all, page, here, wiesci.length && !page ? `${wiesci.join('\n')}\n\n` : '');
+    });
+  }
+
+  private portMenu(p: CityPlace, port: Port | null, title: string, all: ReturnType<typeof rejsyZ>, page: number, here: { lat: number; lon: number }, wiesci: string) {
     const n = PROM.naStronie;
     const list = all.slice(page * n, page * n + n);
     const more = all.length > (page + 1) * n;
     const time = (km: number) => (session.immortal ? 'od razu' : rideText(km, 1, PROM.kmh));
     const lines = list.map((r) => `• ${r.do.nazwa}: ${r.km} km, ${time(r.km)} – ${cenaRejsu(r.km)} monet`);
+    const intro = list.length
+      ? `„Ahoj! ${page ? 'A dalej pływamy tam:' : 'Stąd pływamy:'}” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nProm płynie ok. ${PROM.kmh} km/h, naprawdę – także gdy zamkniesz grę. Po przypłynięciu grę wczytasz już w tamtym porcie.`
+      : '„Ahoj! Stąd na razie pływają tylko kutry rybackie. Ale powiedz, dokąd chciałbyś popłynąć – popytam innych kapitanów.”';
     this.dialog({
       title,
-      text: `„Ahoj! ${page ? 'A dalej pływamy tam:' : 'Stąd pływamy:'}” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nProm płynie ok. ${PROM.kmh} km/h, naprawdę – także gdy zamkniesz grę. Po przypłynięciu grę wczytasz już w tamtym porcie.`,
-      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), 'Zostaję'],
+      text: wiesci + intro,
+      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', 'Zostaję'],
       onChoose: (i) => {
-        if (more && i === list.length) return this.openPort(p, page + 1);
+        if (more && i === list.length) return this.portMenu(p, port, title, all, page + 1, here, '');
+        if (i === list.length + (more ? 1 : 0)) return void this.askDestination(p, port, title, here);
         const r = list[i];
         if (!r) return;
         const price = cenaRejsu(r.km);
@@ -3175,6 +3200,26 @@ export class GameScene extends Phaser.Scene {
           },
         });
       },
+    });
+  }
+
+  /**
+   * „🧭 Inne miejsce…” (owner, 12 Oct 2026): the player names a country or a port; the captain asks the others
+   * and the request goes to us (table port_requests, admin ⚓ Porty). We check it, add a real line, and the
+   * captain tells the player on his next visit (`openPort`). Untrusted text – only a wish, never an order.
+   */
+  private async askDestination(p: CityPlace, port: Port | null, title: string, here: { lat: number; lon: number }) {
+    const text = (await askText(title, '„A gdzie to by szanowny chciał popłynąć? Napisz kraj albo port.”', 'np. Kopenhaga, Dania', { ok: 'Powiedz', upper: false }))?.trim();
+    if (!text) return;
+    const ok = await poprosOLinie(session.name, port?.nazwa ?? p.name, here, text);
+    if (ok) void mojeProsby(session.name, true);
+    this.dialog({
+      title,
+      text: ok
+        ? `„${text}? Hmm… stąd tam nie pływamy. Porozmawiam z innymi kapitanami – może któryś zna drogę. Zajrzyj jutro.”`
+        : '„Na dziś dość pytań – kapitanowie i tak muszą się naradzić przy kuflu. Zajrzyj jutro.”',
+      buttons: ['Dobrze'],
+      onChoose: () => {},
     });
   }
 
