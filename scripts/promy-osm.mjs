@@ -48,7 +48,7 @@ out body geom;
 nwr[amenity=ferry_terminal];
 out center tags;
 node[place~"^(city|town)$"][name];
-out tags;`;
+out body;`;
   const j = await overpass(q, `${s},${w},${n},${e}`, depth < 2 ? 1 : 2);
   if (j) {
     console.log(`box ${s},${w},${n},${e}: ${j.elements.length}`);
@@ -60,6 +60,51 @@ out tags;`;
   const out = [];
   for (const [a, b, c, d] of [[s, w, ms, mw], [s, mw, ms, e], [ms, w, n, mw], [ms, mw, n, e]]) out.push(...(await box(a, b, c, d, depth + 1)));
   return out;
+}
+
+// --rename: only (re)name the ports of an existing public/porty.json after the nearest city/town (light queries).
+if (process.argv.includes('--rename')) {
+  const json = JSON.parse(readFileSync('public/porty.json', 'utf8'));
+  const towns = [];
+  for (let s = -60; s < 80; s += 20) for (let w = -180; w < 180; w += 30) {
+    const inside = json.porty.filter((p) => p[2] >= s && p[2] < s + 20 && p[3] >= w && p[3] < w + 30);
+    if (!inside.length) continue;
+    const q = `[out:json][timeout:180][maxsize:268435456][bbox:${s},${w},${s + 20},${w + 30}];
+node[place~"^(city|town)$"][name];
+out body;`;
+    const j = await overpass(q, `towns ${s},${w}`, 3);
+    if (!j) throw new Error(`Overpass: towns ${s},${w} failed`);
+    towns.push(...j.elements);
+    console.log(`towns ${s},${w}: ${j.elements.length}`);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  const R = 6371, rad = (d) => (d * Math.PI) / 180;
+  const dist = (a, b) => 2 * R * Math.asin(Math.sqrt(Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2));
+  const g = new Map();
+  for (const t of towns) {
+    const k = `${Math.floor(t.lat)}|${Math.floor(t.lon)}`;
+    if (!g.has(k)) g.set(k, []);
+    g.get(k).push(t);
+  }
+  let named = 0;
+  for (const p of json.porty) {
+    const at = { lat: p[2], lon: p[3] };
+    let best = null, bd = TOWN_KM;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of g.get(`${Math.floor(at.lat) + dy}|${Math.floor(at.lon) + dx}`) ?? []) {
+      const d = dist(at, t);
+      if (d < bd) (bd = d), (best = t);
+    }
+    if (best) {
+      p[1] = best.tags['name:pl'] ?? best.tags['name:en'] ?? best.tags.name;
+      named++;
+    }
+  }
+  writeFileSync('public/porty.json', JSON.stringify(json));
+  console.log(`renamed ${named} of ${json.porty.length} ports`);
+  for (const n of ['Gdynia', 'Gdańsk', 'Świnoujście', 'Karlskrona', 'Rotterdam', 'Barcelona', 'Tunis', 'Genua', 'Palermo']) {
+    for (const p of json.porty.filter((q) => q[1] === n)) console.log(n, p[2], p[3], json.linie.filter((l) => l[0] === p[0] || l[1] === p[0]).map((l) => `${json.porty[l[0] === p[0] ? l[1] : l[0]][1]} ${l[2]} km`).join('; '));
+  }
+  process.exit(0);
 }
 
 const from = process.argv.indexOf('--from') >= 0 ? process.argv[process.argv.indexOf('--from') + 1] : null;
