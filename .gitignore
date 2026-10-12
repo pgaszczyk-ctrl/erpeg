@@ -6,4 +6,5 @@ public/map
 # Screenshots written by scripts/tests/browser-demo.mjs
 work/demo-*.png
 work/porty-*.png
+work/szyldy-*.png
 scripts/tests/_phone-demo.mjs

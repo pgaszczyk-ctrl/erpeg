@@ -63,6 +63,9 @@ export class BootScene extends Phaser.Scene {
       this.load.spritesheet('szyld-slup-tablica', bootImageUrl('swiat/szyldy/slup_tablica.png'), { frameWidth: 12, frameHeight: 40 });
       this.load.spritesheet('szyld-slup-ramie', bootImageUrl('swiat/szyldy/slup_ramie.png'), { frameWidth: 28, frameHeight: 40 });
       for (const t of new Set(Object.values(SLUPY_SZYLDOW.tablice))) this.load.image(`tablica-${t}`, bootImageUrl(`swiat/szyldy/tablica_${t}.png`));
+      // The artist's sign light (order 36-G002): the cone and the shop board's three swing frames (front / middle / back).
+      this.load.image('snop-szyldu', bootImageUrl('swiat/szyldy/snop.png'));
+      this.load.spritesheet('tablica-sklep-bujanie', bootImageUrl('swiat/szyldy/tablica_sklep_bujanie.png'), { frameWidth: 32, frameHeight: 32 });
     }
   }
 

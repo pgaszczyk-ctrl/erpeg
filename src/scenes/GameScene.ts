@@ -180,6 +180,8 @@ function kierunekSlownie(a: { lat: number; lon: number }, b: { lat: number; lon:
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
 /** The new sign light (cone + flicker) is a test-server trial until the artist draws it (owner, 12 Oct 2026). */
 const SNOP = TEST;
+/** The player asked the device for less motion: the sign boards hang still and the lights don't blink fast. */
+const MNIEJ_RUCHU = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export interface HudState {
   hp: number;
@@ -1990,11 +1992,22 @@ export class GameScene extends Phaser.Scene {
       tex.refresh();
       tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
-    const length = Math.max(8, ground - top) / 0.82;
-    const glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
-    glow.setDisplaySize(S.szer, length).setAlpha(S.dzien);
+    let glow: Phaser.GameObjects.Image;
+    if (this.textures.exists('snop-szyldu')) {
+      // The artist's cone (36-G002): the lamp at its top anchor, the pool's middle on the ground.
+      const F = S.plik;
+      const size = (Math.max(8, ground - top) * F.rozmiar) / (F.ziemiaY - F.lampaY);
+      glow = this.add.image(x, top, 'snop-szyldu').setOrigin(0.5, F.lampaY / F.rozmiar).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(size, size);
+    } else {
+      const length = Math.max(8, ground - top) / 0.82;
+      glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(S.szer, length);
+    }
+    glow.setAlpha(S.dzien);
     const [lo, hi] = S.mrugCoMs;
-    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo));
+    const [dlo, dhi] = S.dzienRytm.coMs;
+    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo)).setData('dzien', dlo + Math.random() * (dhi - dlo));
     return glow;
   }
 
@@ -2009,6 +2022,19 @@ export class GameScene extends Phaser.Scene {
     const h = Math.sin(krok * 12.9898 + seed * 78.233) * 43758.5453;
     const x = h - Math.floor(h);
     return x < 0.45 ? 0.08 : x < 0.65 ? 0.45 : 1;
+  }
+
+  /**
+   * How bright a sign's light is now (ADD alpha). Night: the accepted look with the odd short-circuit stutter.
+   * Day (36-G002): every 2–3 s a double blink – flash, dim, flash – then the quiet base, each place its own rhythm.
+   */
+  private lightAlpha(now: number, o: Phaser.GameObjects.Image) {
+    const S = SNOP_SZYLDU;
+    if (this.postsNight) return MNIEJ_RUCHU ? S.noc : S.noc * this.flicker(now, o);
+    const D = S.dzienRytm;
+    if (MNIEJ_RUCHU) return D.baza;
+    const t = (now + (o.getData('faza') as number)) % (o.getData('dzien') as number);
+    return t < D.blyskMs ? D.blysk : t < D.blyskMs + D.przygasMs ? D.przygas : t < 2 * D.blyskMs + D.przygasMs ? D.blysk : D.baza;
   }
 
   /**
@@ -2031,7 +2057,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(arm ? (flip ? 22 / 28 : 6 / 28) : 5.5 / 12, 39 / 40).setScale(K).setFlipX(flip).setDepth(at.y);
     const top = at.y - 39 * K;
     const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
-    const board = this.add.image(Math.round(bx * 2) / 2, top + (arm ? 16 : 12) * K, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    // The shop's board has the artist's three swing frames (36-G002); the others swing by code (updatePosts).
+    const B = SNOP_SZYLDU.bujanie;
+    const frames = SNOP && t === 'sklep' && this.textures.exists('tablica-sklep-bujanie');
+    const by = top + (arm ? 16 : 12) * K;
+    const board = frames
+      ? this.add.image(Math.round(bx * 2) / 2, by, 'tablica-sklep-bujanie', 1).setOrigin(0.5, B.zaczepY / 32).setScale((K * 22) / B.szerRysunku).setDepth(at.y + 0.5)
+      : this.add.image(Math.round(bx * 2) / 2, by, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    if (frames) this.textures.get('tablica-sklep-bujanie').setFilter(Phaser.Textures.FilterMode.NEAREST);
     for (const k of ['szyld-slup-ramie', 'szyld-slup-tablica', `tablica-${t}`]) this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
     // A small shadow at the foot, to the bottom right.
     if (!this.textures.exists('cien-slupa')) {
@@ -2053,12 +2086,12 @@ export class GameScene extends Phaser.Scene {
       : this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false)
         .setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
     lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
-    this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
+    this.posts.push({ post, board: SNOP || arm ? board : null, frames, scale: board.scale, lamp, pool, phase: (h >>> 3) % 6283 });
     return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
   }
 
   private zabytki!: Zabytki;
-  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
+  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
   private postsNight: boolean | null = null;
   private postsNightAt = 0;
 
@@ -2088,7 +2121,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
     const night = !!this.postsNight;
-    const base = night ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const q of this.posts) {
       if (!q.post.visible) {
         if (q.lamp.visible) q.lamp.setVisible(false);
@@ -2100,14 +2132,44 @@ export class GameScene extends Phaser.Scene {
         if (q.lamp.visible !== night) q.lamp.setVisible(night);
         if (q.pool.visible !== night) q.pool.setVisible(night);
       } else {
-        const f = this.flicker(now, q.pool);
+        const a = this.lightAlpha(now, q.pool);
         if (!q.pool.visible) q.pool.setVisible(true);
-        q.pool.setAlpha(base * f);
-        if (q.lamp.visible !== night) q.lamp.setVisible(night);
-        if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
+        q.pool.setAlpha(a);
+        // The lamp itself: lit at night, and by day it flashes with the blink (the source is seen, not just the pool).
+        const lit = night || a > SNOP_SZYLDU.dzienRytm.baza + 0.01;
+        if (q.lamp.visible !== lit) q.lamp.setVisible(lit);
+        if (lit) q.lamp.setAlpha(night ? SLUPY_SZYLDOW.lampa.mocno * (a / SNOP_SZYLDU.noc) : SLUPY_SZYLDOW.lampa.mocno * a);
+        if (q.board) this.swingBoard(q, now);
+        continue;
       }
       if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
     }
+  }
+
+  /**
+   * The board swings forward and back on its hooks (36-G002): middle 400 ms → front 220 → middle 400 → back 220,
+   * each post its own phase. The shop's board has the artist's frames; the others lean by code (scale + shade).
+   */
+  private swingBoard(q: { board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; phase: number }, now: number) {
+    const b = q.board!;
+    const B = SNOP_SZYLDU.bujanie;
+    let k = 1;
+    if (!MNIEJ_RUCHU) {
+      const cykl = B.kroki.reduce((s, [, ms]) => s + ms, 0);
+      let t = (now + q.phase * 7) % cykl;
+      for (const [f, ms] of B.kroki) {
+        if (t < ms) { k = f; break; }
+        t -= ms;
+      }
+    }
+    if (b.getData('k') === k) return;
+    b.setData('k', k);
+    if (q.frames) {
+      b.setFrame(k);
+      return;
+    }
+    const w = k === 0 ? B.przod : k === 2 ? B.tyl : { sx: 1, sy: 1, kolor: 0xffffff };
+    b.setScale(q.scale * w.sx, q.scale * w.sy).setTint(w.kolor);
   }
 
   /**
@@ -2146,13 +2208,12 @@ export class GameScene extends Phaser.Scene {
   private cullFar(now: number) {
     const v = this.cameras.main.worldView;
     const m = 40;
-    const base = this.postsNight ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const o of this.farObjects) {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
       if (on && this.signGlows.has(o)) {
-        if (SNOP) o.setAlpha(base * this.flicker(now, o));
+        if (SNOP) o.setAlpha(this.lightAlpha(now, o));
         else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
       }
     }

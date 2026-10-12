@@ -152,6 +152,25 @@ export const SNOP_SZYLDU = {
   kolor: [255, 214, 140] as [number, number, number],
   mrugCoMs: [7000, 18000] as [number, number],
   mrugMs: 650,
+  /**
+   * Za dnia (grafik 36-G002, właściciel: „w dzień musi mrugać częściej, w nocy super”): co `coMs` (każde miejsce
+   * swój rytm) podwójny błysk – `blysk` przez `blyskMs`, `przygas` przez `przygasMs`, znów `blysk` – potem `baza`.
+   * Alfa warstwy ADD (snop, lampa). Noc bez zmian: `noc` i mruganie co `mrugCoMs`.
+   */
+  dzienRytm: { coMs: [2000, 3000] as [number, number], baza: 0.35, blysk: 0.85, przygas: 0.15, blyskMs: 100, przygasMs: 120 },
+  /** Grafika snopu (snop.png 64×64): gdzie lampa i gdzie plama na ziemi (piksele obrazka). */
+  plik: { lampaY: 8.4, ziemiaY: 55.5, rozmiar: 64 },
+  /**
+   * Bujanie tablicy w przód i w tył (36-G002): kolejność klatek i czasy (ms). Tablica sklepu ma 3 klatki od grafika
+   * (32×32, zaczep 16, 8.5, widoczna ~24 px szerokości), pozostałe wychylają się kodem (`przod`/`tyl`: skala i cień).
+   */
+  bujanie: {
+    kroki: [[1, 400], [0, 220], [1, 400], [2, 220]] as [number, number][],
+    zaczepY: 8.5,
+    szerRysunku: 24,
+    przod: { sx: 1.04, sy: 1.0, kolor: 0xffffff },
+    tyl: { sx: 1.0, sy: 0.88, kolor: 0xcfc6bc },
+  },
 };
 
 /**
