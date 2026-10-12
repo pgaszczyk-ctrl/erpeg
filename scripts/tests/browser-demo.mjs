@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const browser = await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE, args:['--no-sandbox','--enable-unsafe-swiftshader'], chromiumSandbox:false});
 try {
-for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false],['phone',{width:390,height:844},true]]) {
+for (const [name, viewport, mobile] of (process.env.TYLKO_KOMPUTER ? [['desktop',{width:1280,height:900},false]] : [['desktop',{width:1280,height:900},false],['phone',{width:390,height:844},true]])) {
  const context=await browser.newContext({viewport, isMobile:mobile, hasTouch:mobile, locale:'pl-PL', deviceScaleFactor:mobile?2:1});
  const errors=[]; const browserDialogs=[];
  await context.route('**/*.supabase.co/**', route => {
@@ -121,6 +121,21 @@ for (const [name, viewport, mobile] of [['desktop',{width:1280,height:900},false
  const gazeciarz=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');const f=[...s.folk.active].find(f=>f.role==='gazeciarz'&&f.sprite?.visible);return f?Math.hypot(f.x-s.player.x,f.y-s.player.y)/1.92:null;});
  assert(gazeciarz!==null&&gazeciarz<60,`A newsboy must stand near the wake-up spot: ${gazeciarz}`);
  console.log(name,'Targi ready',art);
+ // The newsboy's errand taken in the demo gets its own quest line and arrow (owner, 12 Oct 2026).
+ await page.evaluate(()=>{const s=window.__game.scene.getScene('game');const f=[...s.folk.active].find(f=>f.role==='gazeciarz');s.newspaper(f);});
+ await page.locator('#gazeta').waitFor();
+ await page.locator('#gazeta .gz-tab').nth(3).click();
+ const take=page.locator('#gazeta button',{hasText:/Biorę zlecenie/});
+ if(await take.count()){
+  await take.first().click();
+  await page.waitForFunction(()=>window.__game.scene.getScene('ui').dialogBox,null,{timeout:10000});
+  await choose(0); // „Przyjmuję” is the first button of a new mission
+  await page.waitForTimeout(500);
+  const q=await page.evaluate(()=>window.__game.scene.getScene('game').activeQuests().map(q=>({id:q.id,pos:!!q.pos})));
+  assert(q.some(x=>x.id.startsWith('gen-gazeta')&&x.pos),`The newsboy's errand needs a quest arrow in the demo: ${JSON.stringify(q)}`);
+  console.log(name,'newsboy errand arrow',JSON.stringify(q));
+  await page.screenshot({path:`work/demo-${name}-zlecenie.png`});
+ } else console.log(name,'no newsboy errand on this nonce');
  const speed=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return s.player.speed;});
  assert(Math.abs(speed-(70/3.6)*1.92)<.001,`Awake speed must be ordinary level-one speed: ${speed}`);
  await page.evaluate(()=>window.__game.scene.getScene('game').emitHud());

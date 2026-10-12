@@ -2564,7 +2564,8 @@ export class GameScene extends Phaser.Scene {
   private save() {
     this.keepFog();
     saveNow(this.player.hp)
-      .then(() => this.toast('Gra zapisana'))
+      // The demo saves nothing (offline.demo), so it says nothing either.
+      .then(() => { if (!demo.on) this.toast('Gra zapisana'); })
       .catch((e: Error) => this.toast(`Nie udało się zapisać: ${e.message}`));
   }
 
@@ -5124,12 +5125,10 @@ export class GameScene extends Phaser.Scene {
    */
   activeQuests(): QuestInfo[] {
     const list: Omit<QuestInfo, 'color'>[] = [];
-    if (this.demoRun) {
-      const g = this.demoRun.goal();
-      return g ? [{ id: 'demo', main: true, title: 'Demo', ...g, color: KOLOR_GLOWNEGO }] : [];
-    }
-    const main = this.story.goal();
-    if (main) list.push({ id: 'main', main: true, title: 'Cień smoka', ...main });
+    // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
+    // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
+    const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
+    if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
     const ids = new Set(list.map((q) => q.id));
     for (const k of [...questColors.keys()]) if (!ids.has(k)) questColors.delete(k);
