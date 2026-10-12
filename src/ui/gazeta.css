@@ -90,8 +90,44 @@
   #gazeta .gz-tab{flex:1 1 0;flex-direction:column;gap:0;padding:2px 1px;font-size:10px;letter-spacing:.3px;line-height:1.1;min-width:0}
   #gazeta .gz-tab+.gz-tab::before{display:none}
   #gazeta .gz-tab .gz-ic{font-size:18px}
+  #gazeta .gz-tab .gz-tl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
   #gazeta .gz-head{font-size:22px}
   #gazeta .gz-story h2{font-size:26px}
   #gazeta .gz-story h3{font-size:19px}
   #gazeta .gz-text{text-align:left}
 }
+/* Puzzle of the day (src/ui/lamiglowka.ts): printed grid, the player's digits in blue ink */
+#gazeta .gz-center{text-align:center}
+#gazeta .gz-puz .gz-text{max-width:640px;margin:4px auto 0;text-align:left}
+#gazeta .gz-board-wrap{display:flex;justify-content:center;margin:12px 0 6px}
+#gazeta .gz-board{--n:6;--cell:min(46px,calc((100vw - 64px) / var(--n)));position:relative;display:grid;grid-template-columns:repeat(var(--n),var(--cell));grid-auto-rows:var(--cell);border:2.5px solid var(--ink);background:#fbf3dc}
+#gazeta .gz-cell{display:flex;align-items:center;justify-content:center;min-width:0;padding:0;border:1px solid #231a1266;background:transparent;color:var(--ink);font:700 calc(var(--cell) * .5)/1 'Old Standard TT',serif;position:relative}
+#gazeta button.gz-cell{cursor:pointer}
+#gazeta .gz-cell.ink{color:#1d3d7a;font-family:'Playfair Display',serif;font-style:italic}
+#gazeta .gz-cell.sel{background:#e9c97a;box-shadow:inset 0 0 0 2px var(--red)}
+#gazeta .gz-sudoku .br{border-right:2.5px solid var(--ink)}
+#gazeta .gz-sudoku .bb{border-bottom:2.5px solid var(--ink)}
+#gazeta .gz-black{background:#3a2c1e;border-color:#231a12}
+#gazeta .gz-clue{background:linear-gradient(to top right,#3a2c1e calc(50% - 1px),#efe3c4 50%,#3a2c1e calc(50% + 1px));color:#f5ead0;font-size:calc(var(--cell) * .3)}
+#gazeta .gz-cp{position:absolute;right:3px;top:2px}
+#gazeta .gz-cd{position:absolute;left:3px;bottom:2px}
+#gazeta .gz-krzyzowka{border:0;background:none;gap:3px}
+#gazeta .gz-krzyzowka .gz-cell{border:1.5px solid var(--ink);background:#fbf3dc;border-radius:3px;font-size:calc(var(--cell) * .42)}
+#gazeta .gz-krzyzowka .gz-none{border:0;background:none}
+#gazeta .gz-krzyzowka .gz-op{background:#e8d9b3}
+#gazeta .gz-krzyzowka .gz-res{background:#f5ead0;border-width:2px}
+#gazeta .gz-krzyzowka .gz-cell.sel{background:#e9c97a}
+#gazeta .gz-trasa{border:2px solid var(--ink);background:#d9e4ee}
+#gazeta .gz-trasa .gz-dot{border:0;z-index:1}
+#gazeta .gz-trasa .gz-dot::before{content:'';position:absolute;inset:14%;border-radius:50%;background:#fbf3dc;border:1px solid #231a1288;z-index:-1}
+#gazeta .gz-trasa .gz-dot{font-size:calc(var(--cell) * .4)}
+#gazeta .gz-trasa .gz-dot.on::before{background:#e9c97a;border:2px solid var(--red)}
+#gazeta .gz-trasa .gz-start::after,#gazeta .gz-trasa .gz-meta::after{content:'';position:absolute;inset:4%;border-radius:50%;border:2px dashed var(--red)}
+#gazeta .gz-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#gazeta .gz-route polyline{fill:none;stroke:var(--red);stroke-width:.12;stroke-linejoin:round;stroke-linecap:round;opacity:.75}
+#gazeta .gz-pad{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px auto 0;max-width:520px}
+#gazeta .gz-key{min-width:44px;min-height:44px;padding:0 8px;border:1.5px solid var(--ink);border-radius:4px;background:#fbf3dc;color:var(--ink);font:700 22px 'Old Standard TT',serif;cursor:pointer}
+#gazeta .gz-key:hover{background:#e9c97a}
+#gazeta .gz-puz-msg{min-height:1.4em;margin:8px 0 0;text-align:center;font-style:italic;color:var(--red)}
+#gazeta .gz-puz-msg.ok{font:700 19px 'Playfair Display',serif;color:#2c5a26}
+#gazeta .gz-puz-btns{justify-content:center;gap:24px}

@@ -107,6 +107,8 @@ export interface Stats {
   codes: number;
   /** Riddles answered right. */
   riddles?: number;
+  /** Puzzles of the day solved in the newspaper. */
+  lamiglowki?: number;
   /** Duels won against townsfolk. */
   duels?: number;
   /** Monster gangs broken up. */

@@ -1,7 +1,9 @@
 import './gazeta.css';
-import { GAZETA, NOWOSCI, PLANY, RANKINGI, STRONY, type Wiesc } from '../content/gazeta';
+import { GAZETA, LAMIGLOWKA, NOWOSCI, PLANY, RANKINGI, STRONY, type Wiesc } from '../content/gazeta';
 import { odznaka } from '../content/osiagniecia';
 import { lang, tr, type Txt } from '../i18n';
+import { dzienLamiglowki, rodzajDnia } from '../lamiglowki';
+import { stronaLamiglowki, type LamiglowkaHost } from './lamiglowka';
 
 // The newsboy's paper (owner, 11 Oct 2026): a printed newspaper sheet lying over the game – deckled,
 // yellowed paper, newspaper type (Playfair Display headlines, Old Standard TT body), sections named
@@ -54,11 +56,13 @@ export interface GazetaHost {
   kraj?: string | null;
   /** Sends a letter to the editors; resolves 'ok', 'limit' (too many) or 'blad' (no connection). */
   wyslij: (text: string) => Promise<'ok' | 'limit' | 'blad'>;
+  /** The puzzle of the day (none in the demo). */
+  lamiglowka?: LamiglowkaHost;
   /** The page to open on (default: the front page). */
   strona?: Strona;
 }
 
-export type Strona = 'wiesci' | 'ludzie' | 'warsztat' | 'zlecenie' | 'list';
+export type Strona = 'wiesci' | 'ludzie' | 'warsztat' | 'zlecenie' | 'lamiglowka' | 'list';
 
 /** A server text in the reader's language (falls back to the other one). */
 const txt = (t: Partial<Txt> | undefined) => (t ? t[lang] || t.pl || t.en || '' : '');
@@ -89,6 +93,13 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     };
     let strona: Strona = h.strona ?? 'wiesci';
     let draft = '';
+    // The puzzle page is built once (its state lives while the paper is open) and re-attached on every render.
+    let puzzle: ReturnType<typeof stronaLamiglowki> | null = null;
+    const pagePuzzle = (): HTMLElement[] => {
+      if (!h.lamiglowka) return [];
+      puzzle ??= stronaLamiglowki(h.lamiglowka);
+      return [puzzle.node];
+    };
     const root = el('div', 'gz-screen');
     root.id = 'gazeta';
     root.lang = lang;
@@ -118,6 +129,7 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     const onPop = () => { viaHistory = true; close(); };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (strona === 'lamiglowka' && puzzle && !(e.target instanceof HTMLTextAreaElement) && puzzle.klawisz(e)) { e.preventDefault(); e.stopPropagation(); }
       // Typing a letter must never reach the game.
       else e.stopPropagation();
     };
@@ -186,6 +198,14 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
         go.type = 'button';
         go.onclick = () => { strona = 'zlecenie'; render(); };
         t.append(kicker(tr(STRONY.zlecenie)), el('h3', '', h.zlecenie.tytul), go);
+        side.push(t);
+      }
+      if (h.lamiglowka) {
+        const t = el('article', 'gz-story gz-box');
+        const go = el('button', 'gz-link', `${tr(LAMIGLOWKA.tytul)} →`);
+        go.type = 'button';
+        go.onclick = () => { strona = 'lamiglowka'; render(); };
+        t.append(kicker(`🧩 ${tr(STRONY.lamiglowka)}`), el('h3', '', tr(LAMIGLOWKA.nazwy[rodzajDnia(dzienLamiglowki())])), go);
         side.push(t);
       }
       for (const w of NOWOSCI.slice(0, list.length ? 2 : 3)) {
@@ -337,8 +357,9 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       }
       mast.append(title, el('p', 'gz-sub', tr(GAZETA.podtytul)));
       const nav = el('nav', 'gz-nav');
-      const pages: [Strona, string, Txt][] = [['wiesci', '📰', STRONY.wiesci], ['ludzie', '🏆', STRONY.ludzie], ['warsztat', '⚙', STRONY.warsztat], ['zlecenie', '✒', STRONY.zlecenie], ['list', '✉', STRONY.list]];
+      const pages: [Strona, string, Txt][] = [['wiesci', '📰', STRONY.wiesci], ['ludzie', '🏆', STRONY.ludzie], ['warsztat', '⚙', STRONY.warsztat], ['zlecenie', '✒', STRONY.zlecenie], ['lamiglowka', '🧩', STRONY.lamiglowka], ['list', '✉', STRONY.list]];
       for (const [id, ic, name] of pages) {
+        if (id === 'lamiglowka' && !h.lamiglowka) continue;
         const b = el('button', `gz-tab${strona === id ? ' on' : ''}`);
         b.type = 'button';
         b.append(el('span', 'gz-ic', ic), el('span', 'gz-tl', tr(name)));
@@ -347,7 +368,7 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
         nav.append(b);
       }
       const body = el('div', 'gz-body');
-      body.append(...(strona === 'wiesci' ? pageWiesci() : strona === 'ludzie' ? pageLudzie() : strona === 'warsztat' ? pageWarsztat() : strona === 'zlecenie' ? pageZlecenie() : pageList()));
+      body.append(...(strona === 'wiesci' ? pageWiesci() : strona === 'ludzie' ? pageLudzie() : strona === 'warsztat' ? pageWarsztat() : strona === 'zlecenie' ? pageZlecenie() : strona === 'lamiglowka' ? pagePuzzle() : pageList()));
       const foot = el('footer', 'gz-foot');
       foot.append(el('span', '', fmt(STRONY.sprzedaje, { kto: h.sprzedawca })), el('span', '', `exp-lore.app`));
       sheet.append(fold, mast, nav, body, foot);
