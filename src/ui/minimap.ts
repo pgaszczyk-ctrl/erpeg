@@ -4,7 +4,7 @@ import { FOG_CELL } from '../map/Fog';
 import { drawCity } from '../map/drawCity';
 import { session } from '../quests';
 import { worldInfo, mapName, cachedMap } from '../travel';
-import { worldOrigin } from '../map/world';
+import { worldOrigin, landOfTile, tilesOver, type Lad } from '../map/world';
 import { krajWPunkcie } from '../kraj';
 import { DUZE_MIASTA } from '../content/pociagi';
 import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
@@ -106,7 +106,9 @@ function showMinimap(game: GameScene) {
     if (sk.rodzaj !== 'miasto') {
       geoView = geoFrame(game, sk.rodzaj);
       label.textContent = geoView.nazwa;
-      renderGeo(game, canvas, sk.rodzaj, geoView, geoOff);
+      renderGeo(game, canvas, sk.rodzaj, geoView, geoOff, () => {
+        if (open === root && SKALE_MAPY[zoom].rodzaj !== 'miasto') renderGeo(game, canvas, SKALE_MAPY[zoom].rodzaj as 'wojewodztwo' | 'kraj', geoView, geoOff);
+      });
       return;
     }
     const radiusM = sk.r;
@@ -240,14 +242,14 @@ const NAZWY_KRAJOW: Record<string, string> = { PL: 'Polska', DE: 'Niemcy', CZ: '
 function geoFrame(game: GameScene, kind: 'wojewodztwo' | 'kraj'): GeoFrame {
   const here = game.city.toLatLon?.(game.player.x, game.player.y) ?? { lat: 51.25, lon: 22.57 };
   if (kind === 'wojewodztwo') return { lat: here.lat, lon: here.lon, km: OKOLICA.km, nazwa: 'Okolica' };
-  const pts = [...knownCells(game, KRAJ_WIDOK.kratkaKm), ...visitedPoints(game).pts, here];
-  let n = -90, s = 90, w = 180, e = -180;
+  // Centred on the hero (owner, 13 Oct 2026), wide enough for every known place around him.
+  const pts = [...knownCells(game, KRAJ_WIDOK.kratkaKm), ...visitedPoints(game).pts];
+  let half = 0;
   for (const p of pts) {
-    n = Math.max(n, p.lat); s = Math.min(s, p.lat);
-    w = Math.min(w, p.lon); e = Math.max(e, p.lon);
+    const dy = Math.abs(p.lat - here.lat) * 111.32, dx = Math.abs(p.lon - here.lon) * 111.32 * Math.cos((here.lat * Math.PI) / 180);
+    half = Math.max(half, dx, dy);
   }
-  const lat = (n + s) / 2, lon = (w + e) / 2;
-  const half = Math.max(((n - s) / 2) * 111.32, ((e - w) / 2) * 111.32 * Math.cos((lat * Math.PI) / 180));
+  const lat = here.lat, lon = here.lon;
   const km = Math.min(KRAJ_WIDOK.maksKm, Math.max(KRAJ_WIDOK.minKm, half * KRAJ_WIDOK.zapas + 40));
   const kraje = new Set(pts.map((p) => krajWPunkcie(p.lat, p.lon)));
   const jeden = kraje.size === 1 ? [...kraje][0] : null;
@@ -256,7 +258,7 @@ function geoFrame(game: GameScene, kind: 'wojewodztwo' | 'kraj'): GeoFrame {
 }
 
 /** The region and country views: a simple drawn map in lat/lon. */
-function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztwo' | 'kraj', v: GeoFrame, geoOff: { lat: number; lon: number }) {
+function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztwo' | 'kraj', v: GeoFrame, geoOff: { lat: number; lon: number }, redraw?: () => void) {
   const ctx = canvas.getContext('2d')!;
   const S = canvas.width;
   const u = S / 400;
@@ -268,6 +270,7 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
   // No borders on purpose (owner, bug report 41): only the scale – the places, railways and a grid.
   ctx.fillStyle = '#e8dcb8';
   ctx.fillRect(0, 0, S, S);
+  drawLand(ctx, S, u, s, lat0, lon0, cos, v.km, redraw);
   const step = kind === 'kraj' ? (v.km > 1500 ? 10 : v.km > 700 ? 2 : 1) : 0.25;
   ctx.strokeStyle = 'rgba(110,90,58,0.15)';
   ctx.lineWidth = 1 * u;
@@ -382,6 +385,64 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
   ctx.font = `${Math.round(11 * u)}px monospace`;
   ctx.textAlign = 'left';
   ctx.fillText(`${km} km`, 16 * u, S - 20 * u);
+}
+
+/**
+ * Continent outlines (owner, 13 Oct 2026): the world map's land at a low zoom (1–4, by the view's size), read
+ * once per tile; until it arrives the plain parchment shows and `redraw` repaints when it does. Sea pale blue,
+ * land parchment, the coast a thin brown line (tile borders are not coast and are not stroked).
+ */
+const landDone = new Map<string, { tx: number; ty: number; z: number; l: Lad[] | null }>();
+function drawLand(ctx: CanvasRenderingContext2D, S: number, u: number, s: number, lat0: number, lon0: number, cos: number, km: number, redraw?: () => void) {
+  const z = Math.max(1, Math.min(4, Math.floor(Math.log2((40075 * cos) / km))));
+  const dLat = (S / 2 / s) / 111.32, dLon = (S / 2 / s) / (111.32 * cos);
+  const tiles = tilesOver(z, lat0 - dLat, lon0 - dLon, lat0 + dLat, lon0 + dLon);
+  const ready: { tx: number; ty: number; z: number; l: Lad[] | null }[] = [];
+  let waiting = false;
+  for (const [tx, ty] of tiles) {
+    const key = `${z}/${tx}/${ty}`;
+    const got = landDone.get(key);
+    if (got) { ready.push(got); continue; }
+    waiting = true;
+    landOfTile(z, tx, ty).then((l) => { landDone.set(key, { tx, ty, z, l }); redraw?.(); }, () => {});
+  }
+  // Only once every tile is in: a half-drawn coast would show sea where land is still loading.
+  if (waiting || !ready.length) return;
+  const toS = (lat: number, lon: number) => [S / 2 + (lon - lon0) * 111.32 * cos * s, S / 2 - (lat - lat0) * 111.32 * s] as const;
+  // Sea in every tile that was read (a tile missing from the file stays plain parchment), then its land.
+  const nn = 2 ** z;
+  const latOfY = (y: number) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+  ctx.fillStyle = '#c4d3d0';
+  for (const t of ready) {
+    if (!t.l) continue;
+    const [x0, y0] = toS(latOfY(t.ty), (t.tx / nn) * 360 - 180), [x1, y1] = toS(latOfY(t.ty + 1), ((t.tx + 1) / nn) * 360 - 180);
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  ctx.fillStyle = '#e8dcb8';
+  for (const t of ready) for (const feat of t.l ?? []) {
+    ctx.beginPath();
+    for (const ring of feat) {
+      for (let j = 0; j < ring.length; j += 3) {
+        const [x, y] = toS(ring[j], ring[j + 1]);
+        if (j) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      }
+      ctx.closePath();
+    }
+    ctx.fill('evenodd');
+  }
+  ctx.strokeStyle = 'rgba(110,84,52,0.7)';
+  ctx.lineWidth = 1.3 * u;
+  ctx.beginPath();
+  for (const t of ready) for (const feat of t.l ?? []) for (const ring of feat) {
+    for (let j = 3; j < ring.length; j += 3) {
+      if (ring[j - 1] && ring[j + 2]) continue; // along the tile's border
+      const [x1, y1] = toS(ring[j - 3], ring[j - 2]), [x2, y2] = toS(ring[j], ring[j + 1]);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+    }
+  }
+  ctx.stroke();
 }
 
 function dot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, u: number) {

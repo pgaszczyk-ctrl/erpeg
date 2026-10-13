@@ -115,6 +115,65 @@ export async function nearestLocality(lat: number, lon: number, lang: 'pl' | 'en
   return all.sort((a, b) => m(a) / WAGA_MIEJSCOWOSCI[a.size] - m(b) / WAGA_MIEJSCOWOSCI[b.size])[0] ?? null;
 }
 
+// ---------------------------------------------------------------- continents (map screen)
+
+/** A land outline: [lat, lon, onTileEdge (1/0)] per point – edges along the tile's border are not coastline. */
+export type Lad = Float64Array[];
+const landCache = new Map<string, Promise<Lad[] | null>>();
+
+/** The land (Protomaps `earth`) of one low-zoom world tile, for the map screen's continent outlines. */
+export function landOfTile(z: number, tx: number, ty: number): Promise<Lad[] | null> {
+  const nn = 2 ** z;
+  tx = ((tx % nn) + nn) % nn;
+  const key = `${z}/${tx}/${ty}`;
+  let p = landCache.get(key);
+  if (!p) {
+    p = (async () => {
+      if (ty < 0 || ty >= nn) return null;
+      const file = await worldFile();
+      const t = await file.getZxy(z, tx, ty);
+      if (!t) return null; // not in this world file (test samples): leave it unknown
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.earth;
+      const out: Lad[] = [];
+      for (let i = 0; l && i < l.length; i++) {
+        const rings: Lad = [];
+        for (const ring of l.feature(i).loadGeometry()) {
+          const a = new Float64Array(ring.length * 3);
+          ring.forEach((q, j) => {
+            const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+            a[j * 3] = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+            a[j * 3 + 1] = (x / nn) * 360 - 180;
+            a[j * 3 + 2] = q.x <= 0 || q.y <= 0 || q.x >= l.extent || q.y >= l.extent ? 1 : 0;
+          });
+          rings.push(a);
+        }
+        out.push(rings);
+      }
+      return out;
+    })();
+    p.catch(() => landCache.delete(key));
+    landCache.set(key, p);
+  }
+  return p;
+}
+
+/** The tiles of zoom `z` covering a lat/lon box (at most 25). */
+export function tilesOver(z: number, s: number, w: number, n: number, e: number) {
+  const nn = 2 ** z;
+  const tx = (lon: number) => Math.floor(((lon + 180) / 360) * nn);
+  const ty = (lat: number) => Math.floor(((1 - Math.asinh(Math.tan((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const out: [number, number][] = [];
+  for (let x = tx(w); x <= tx(e); x++) for (let y = ty(n); y <= ty(s); y++) if (out.length < 25) out.push([x, y]);
+  return out;
+}
+
+/** Already read (for drawing without waiting). */
+export function landReady(z: number, tx: number, ty: number) {
+  const nn = 2 ** z;
+  return landCache.get(`${z}/${((tx % nn) + nn) % nn}/${ty}`);
+}
+
 // ---------------------------------------------------------------- tiles
 
 const n = 2 ** Z;
