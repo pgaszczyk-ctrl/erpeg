@@ -95,7 +95,7 @@ import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
 import { PROM } from '../content/porty';
-import { cenaRejsu, mojeProsby, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, wczytajPorty, type Port } from '../porty';
+import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
 import { DemoRun } from './Demo';
@@ -3165,7 +3165,8 @@ export class GameScene extends Phaser.Scene {
     let port = this.porty.get(p.id) ?? null;
     if (!port && (port = portPrzy(here))) this.porty.set(p.id, port);
     const title = `⚓ Kapitan portu – ${port?.nazwa ?? p.name}`;
-    const all = port ? rejsyZ(port) : [];
+    // Back to the country's small ports only from those the hero has sailed to/from (owner, 13 Oct 2026).
+    const all = port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|'))) : [];
     void mojeProsby(session.name).then((prosby) => {
       // Answers to this player's earlier requests asked in this port (told once), and the ones still waiting.
       const tu = prosby.filter((r) => r.lat !== null && r.lon !== null && odleglosc({ lat: r.lat, lon: r.lon! }, here) < 3);
@@ -3186,14 +3187,15 @@ export class GameScene extends Phaser.Scene {
     const list = all.slice(page * n, page * n + n);
     const more = all.length > (page + 1) * n;
     const time = (km: number) => (session.immortal ? 'od razu' : rideText(km, 1, PROM.kmh));
-    const lines = list.map((r) => `• ${r.do.nazwa}: ${r.km} km, ${time(r.km)} – ${cenaRejsu(r.km)} monet`);
+    const dokad = (r: Rejs) => `${r.siec === 'liniowiec' ? '🚢 ' : ''}${r.do.nazwa}${r.siec ? ` (${r.siec === 'flagowy' ? 'port główny, ' : r.siec === 'liniowiec' ? 'liniowiec, ' : ''}${nazwaKraju(krajPortu(r.do)[0])})` : ''}`;
+    const lines = list.map((r) => `• ${dokad(r)}: ${r.km} km, ${time(r.km)} – ${cenaRejsu(r.km)} monet`);
     const intro = list.length
       ? `„Ahoj! ${page ? 'A dalej pływamy tam:' : 'Stąd pływamy:'}” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nProm płynie ok. ${PROM.kmh} km/h, naprawdę – także gdy zamkniesz grę. Po przypłynięciu grę wczytasz już w tamtym porcie.`
       : '„Ahoj! Stąd na razie pływają tylko kutry rybackie. Ale powiedz, dokąd chciałbyś popłynąć – popytam innych kapitanów.”';
     this.dialog({
       title,
       text: wiesci + intro,
-      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
+      buttons: [...list.map((r) => `⛴ ${dokad(r)} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
       onChoose: (i) => {
         if (more && i === list.length) return this.portMenu(p, port, title, all, page + 1, here, '');
         if (i === list.length + (more ? 1 : 0)) return void this.askDestination(p, port, title, here);
@@ -3226,6 +3228,29 @@ export class GameScene extends Phaser.Scene {
   private async askDestination(p: CityPlace, port: Port | null, title: string, here: { lat: number; lon: number }) {
     const text = (await askText(title, '„A gdzie to by szanowny chciał popłynąć? Napisz kraj albo port.”', 'np. Kopenhaga, Dania', { ok: 'Powiedz', upper: false }))?.trim();
     if (!text) return;
+    // First the captain works out the way through the ferry network (flagship ports, with changes).
+    const t = port ? trasaDo(port, text) : null;
+    const [isoTu, morskiTu] = port ? krajPortu(port) : [null, false];
+    if (!t && port && isoTu && !morskiTu) {
+      return this.dialog({ title, text: `„${text}? Stąd pływamy tylko po tutejszych wodach. Na dalekie rejsy musisz dojść do portu nad morzem.”`, buttons: ['Rozumiem'], onChoose: () => {} });
+    }
+    if (t) {
+      if (!t.hops.length) return this.dialog({ title, text: `„${text}? Przecież tu jesteś!”`, buttons: ['Faktycznie'], onChoose: () => {} });
+      const droga = [port!.nazwa, ...t.hops.map((h) => h.nazwa)].join(' → ');
+      const dni = t.km / PROM.kmh / 24;
+      const czas = dni >= 1 ? `ok. ${Math.round(dni)} ${Math.round(dni) === 1 ? 'dnia' : 'dni'}` : `ok. ${Math.max(1, Math.round(dni * 24))} godz.`;
+      const pierwszy = t.hops[0];
+      const r = (port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|'))) : []).find((q) => q.do === pierwszy);
+      return this.dialog({
+        title,
+        text: `„${t.kraj}? ${t.przez ? `Tam promy nie pływają – najbliżej dopłyniesz do ${t.hops[t.hops.length - 1].nazwa} (${t.przez}), a dalej lądem. ` : ''}Stąd prosto się nie da, ale z przesiadkami w głównych portach owszem:\n${droga}\nRazem ok. ${t.km} km po morzu, ${czas} rejsu. Każdy odcinek kupujesz u kapitana w porcie przesiadki.”`,
+        buttons: [...(r ? [`⛴ ${pierwszy.nazwa} – ${cenaRejsu(r.km)} 💰`] : []), 'Dobrze'],
+        onChoose: (i) => {
+          if (i !== 0 || !r) return;
+          this.portMenu(p, port, title, [r], 0, here, '');
+        },
+      });
+    }
     const ok = await poprosOLinie(session.name, port?.nazwa ?? p.name, here, text);
     if (ok) void mojeProsby(session.name, true);
     this.dialog({

@@ -70,6 +70,8 @@ try {
     // Talk to him: the port's line, price and time.
     await page.evaluate(() => {
       const s = window.__game.scene.getScene('game');
+      const orig = s.dialog.bind(s);
+      s.dialog = (req) => { window.__ostatni = req; return orig(req); };
       s.openPort(s.city.places.find((q) => q.kind === 'port'));
     });
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
@@ -81,24 +83,40 @@ try {
     assert(/Wały Chrobrego/.test(text), 'The line is listed');
     assert(/Pytałeś o: Kopenhaga/.test(text), 'The answer to an earlier request');
     await page.screenshot({ path: `work/porty-${name}-dialog.png` });
+    const chooseLabel = async (prefix) => {
+      const i = await page.evaluate((prefix) => window.__ostatni.buttons.findIndex((b) => b.startsWith(prefix)), prefix);
+      assert(i >= 0, `button ${prefix}`);
+      await choose(i);
+    };
     const choose = async (index) => {
       await page.waitForTimeout(300);
       const at = await page.evaluate((index) => { const r = window.__game.scene.getScene('ui').dialogButtons.find((b) => b.index === index).rect; return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, index);
       await page.mouse.click(at.x, at.y);
     };
     // „🧭 Inne miejsce…”: the wish goes to the server, the captain promises to ask around.
-    await choose(1);
-    await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Reykjavik, Islandia');
+    await chooseLabel('🧭');
+    await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Atlantyda');
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => /Zajrzyj jutro/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
     await page.screenshot({ path: `work/porty-${name}-inne.png` });
     assert.equal(asked.length, 1);
-    assert.equal(asked[0].p_text, 'Reykjavik, Islandia');
+    assert.equal(asked[0].p_text, 'Atlantyda');
     console.log(name, 'request', JSON.stringify(asked[0]));
     await choose(0);
+    // A real country: the captain works out the way with changes through the network's main ports.
     await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.openPort(s.city.places.find((q) => q.kind === 'port')); });
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
-    await choose(0);
+    await chooseLabel('🧭');
+    await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Kenia');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /Dar es Salaam/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
+    console.log(name, 'kenia', (await page.evaluate(() => window.__game.scene.getScene('ui').dialogBox.list.map((o) => o.text ?? '').join(' | '))).replace(/\n/g, ' ').slice(0, 400));
+    await page.screenshot({ path: `work/porty-${name}-kenia.png` });
+    assert.equal(asked.length, 1, 'no request to us for a country the network reaches');
+    await chooseLabel('Dobrze');
+    await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.openPort(s.city.places.find((q) => q.kind === 'port')); });
+    await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
+    await chooseLabel('⛴ Wały');
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
     await page.screenshot({ path: `work/porty-${name}-potwierdz.png` });
     const coins = await page.evaluate(() => window.__session.coins);
