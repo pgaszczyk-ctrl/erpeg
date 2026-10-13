@@ -50,7 +50,7 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { WIDOK, TRUDNOSCI } from '../content/trudnosc';
+import { WIDOK, TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
@@ -88,7 +88,7 @@ import {
 } from '../quests';
 import { api, rpc, offline, type Snapshot } from '../api';
 import { showGazeta, type Wydanie, type WiescSerwera } from '../ui/gazeta';
-import { GAZETA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
+import { GAZETA, LAMIGLOWKA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
 import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
@@ -3526,6 +3526,18 @@ export class GameScene extends Phaser.Scene {
         } catch {
           return null;
         }
+      },
+      lamiglowka: offline.demo ? undefined : {
+        poziom: trudnoscZWieku(session.age),
+        rozwiazana: (dzien) => session.daily.lamiglowka?.d === dzien,
+        rozwiaz: (dzien, rodzaj, sekundy) => {
+          session.daily.lamiglowka = { d: dzien, n: 1, a: 1 };
+          session.exp += LAMIGLOWKA.nagrodaExp;
+          session.stats.lamiglowki = (session.stats.lamiglowki ?? 0) + 1;
+          this.emitHud();
+          void this.save();
+          void rpc('lamiglowka_rozwiazana', { p_token: session.token, p_dzien: dzien, p_poziom: trudnoscZWieku(session.age), p_rodzaj: rodzaj, p_sekundy: sekundy }).catch(() => {});
+        },
       },
       wyslij: async (text) => {
         if (offline.demo) return 'ok';

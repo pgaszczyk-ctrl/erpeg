@@ -9,6 +9,8 @@ import { PX_PER_M } from '../map/CityMap';
 import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
 import { POKRETLA } from '../content/ustawienia';
 import { etapyEditor } from './etapyEditor';
+import { lamiglowkaDnia, rodzajDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, type Lamiglowka } from '../lamiglowki';
+import { LAMIGLOWKA } from '../content/gazeta';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -121,7 +123,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -146,6 +148,7 @@ function render() {
   else if (tab === 'porty') void portyTab(main);
   else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
+  else if (tab === 'puzzles') void puzzlesTab(main);
   else settings(main);
 }
 
@@ -1256,3 +1259,66 @@ CityMap.load('map/lublin.json').then((c) => {
 if (key) {
   reload().then(render).catch((e: Error) => loginScreen(e.message));
 } else loginScreen();
+
+/**
+ * 🧩 Łamigłówki (owner, 12 Oct 2026): the newspaper's puzzle of the day. The game makes the puzzles itself from
+ * the date (the same for everyone on one difficulty level), so this tab shows any day's five puzzles with their
+ * solutions, and how many players solved them (RPC admin_lamiglowki; test characters counted apart).
+ */
+async function puzzlesTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['Łamigłówka dnia (Kurier Parowy)']), el('p', { className: 'muted' }, [
+    `Codziennie jeden rodzaj dla wszystkich (sudoku 6×6, kakuro, matematyczna krzyżówka, najkrótsza trasa), a łamigłówka według poziomu trudności postaci. Za rozwiązanie ${LAMIGLOWKA.nagrodaExp} EXP raz dziennie. Losowanie nagród jeszcze nie działa.`,
+  ]));
+  const stats = el('div');
+  main.append(stats);
+  try {
+    type Dzien = { dzien: string; rodzaj: string; ile: number; graczy: number; poziomy: number[]; mediana: number | null };
+    type Ost = { name: string; dzien: string; poziom: number; sekundy: number | null; at: string; test: boolean };
+    const r = await call<{ dni: Dzien[]; ostatni: Ost[] }>('admin_lamiglowki', {});
+    const czas = (s: number | null) => (s == null ? '—' : s < 120 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`);
+    stats.append(el('h3', {}, ['Rozwiązania (30 dni)']), r.dni.length ? el('div', { className: 'scroll' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, ['Dzień', 'Rodzaj', 'Graczy', 'Razem z testowymi', ...TRUDNOSCI.map((t) => t.nazwa), 'Mediana czasu'].map((h) => el('th', {}, [h])))]),
+      el('tbody', {}, r.dni.map((d) => el('tr', {}, [d.dzien, LAMIGLOWKA.nazwy[d.rodzaj]?.pl ?? d.rodzaj, String(d.graczy), String(d.ile), ...d.poziomy.map(String), czas(d.mediana)].map((t) => el('td', {}, [t]))))),
+    ])]) : el('p', {}, ['Nikt jeszcze nie rozwiązał łamigłówki.']));
+    if (r.ostatni.length) stats.append(el('h3', {}, ['Ostatnio rozwiązali']), el('div', { className: 'scroll' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, ['Kiedy', 'Postać', 'Poziom', 'Czas'].map((h) => el('th', {}, [h])))]),
+      el('tbody', {}, r.ostatni.map((o) => el('tr', {}, [date(o.at), `${o.name ?? '—'}${o.test ? ' (testowa)' : ''}`, TRUDNOSCI[o.poziom]?.nazwa ?? String(o.poziom), czas(o.sekundy)].map((t) => el('td', {}, [t]))))),
+    ])]));
+  } catch (e) {
+    stats.append(el('p', { className: 'bad' }, [(e as Error).message]));
+  }
+  const pick = el('input', { type: 'date', value: dzienLamiglowki() });
+  const out = el('div');
+  const show = () => {
+    const d = pick.value;
+    out.replaceChildren(el('p', {}, [`${d}: ${LAMIGLOWKA.nazwy[rodzajDnia(d)].pl}`]));
+    for (let p = 0; p < 5; p++) {
+      out.append(el('h3', {}, [`${TRUDNOSCI[p].nazwa} – ${POZIOMY_LAMIGLOWEK[p].pl}`]), el('div', { style: 'display:flex;gap:24px;flex-wrap:wrap' }, [
+        el('div', {}, [el('p', { className: 'muted' }, ['Łamigłówka']), el('pre', { className: 'dialog' }, [puzzleText(lamiglowkaDnia(d, p), false)])]),
+        el('div', {}, [el('p', { className: 'muted' }, ['Rozwiązanie']), el('pre', { className: 'dialog' }, [puzzleText(lamiglowkaDnia(d, p), true)])]),
+      ]));
+    }
+  };
+  pick.onchange = show;
+  main.append(el('h3', {}, ['Podgląd łamigłówek']), el('p', {}, ['Dzień: ', pick]), out);
+  show();
+}
+
+/** A puzzle as monospaced text (· = empty, ▓ = black, kakuro clues as down\right). */
+function puzzleText(z: Lamiglowka, rozw: boolean): string {
+  const pad = (s: string, n: number) => s.padStart(n);
+  if (z.rodzaj === 'sudoku') return (rozw ? z.rozw : z.dane).map((w, r) => w.map((v, c) => `${v || '·'}${c === 2 ? ' |' : ''}`).join(' ') + (r % 2 === 1 && r < 5 ? '\n------+------' : '')).join('\n');
+  if (z.rodzaj === 'kakuro') return z.siatka.map((w, r) => w.map((k, c) => pad(k === 'b' ? String(rozw || z.dane[r][c] ? z.rozw[r][c] : '·') : k ? `${k.d || ''}\\${k.p || ''}` : '▓', 6)).join('')).join('\n');
+  if (z.rodzaj === 'krzyzowka') {
+    const L = rozw ? z.rozw.liczby : z.liczby, W = rozw ? z.rozw.wiersze : z.wiersze, K = rozw ? z.rozw.kolumny : z.kolumny;
+    const lines: string[] = [];
+    for (let r = 0; r < z.n; r++) {
+      lines.push(L[r].map((v, c) => pad(v == null ? '·' : String(v), 4) + (c < z.n - 1 ? ` ${W[r][c] ?? '·'}` : '')).join('') + ` = ${z.wynikiW[r]}`);
+      if (r < z.n - 1) lines.push(K[r].map((o) => pad(o ?? '·', 4) + '  ').join(''));
+    }
+    lines.push(z.wynikiK.map(() => pad('=', 4) + '  ').join(''), z.wynikiK.map((v) => pad(String(v), 4) + '  ').join(''));
+    return lines.join('\n');
+  }
+  const on = new Set(z.przyklad.map(([r, c]) => r * 100 + c));
+  return z.pola.map((w, r) => w.map((v, c) => (rozw && on.has(r * 100 + c) ? `[${v}]` : ` ${v} `)).join('')).join('\n') + (rozw ? `\nNajkrótsza: ${z.najkrotsza} m` : '');
+}
