@@ -58,7 +58,7 @@ import { Zabytki } from '../map/Zabytki';
 import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
-import { IKONA_HUBA, type Hub } from '../huby';
+import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
 import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -3064,10 +3064,10 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title,
       text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}${free ? 'Za odzyskanego konia jeden kurs masz u mnie gratis! ' : ''}Dziś jadę tam:” Masz ${session.coins} monet.${cut < 1 ? ` Twoja zniżka: −${Math.round(WOZNICA.znizka * 100)}%.` : ''}\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
-      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, ...(this.mamMapePodroznika() ? [] : [`🗺 Mapa podróżnika – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
+      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
       onChoose: (i) => {
         if (i === trips.length) return this.diamondRide(title);
-        if (i === trips.length + 1 && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openCoach(p));
+        if (i === trips.length + 1 && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openCoach(p), title.replace(/^\S+\s/, ''));
         const t = trips[i];
         if (!t) return;
         if (t.level && poziomPostaci(session.exp) < t.level) {
@@ -3193,11 +3193,11 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title,
       text: wiesci + intro,
-      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', ...(this.mamMapePodroznika() ? [] : [`🗺 Mapa podróżnika – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
+      buttons: [...list.map((r) => `⛴ ${r.do.nazwa} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
       onChoose: (i) => {
         if (more && i === list.length) return this.portMenu(p, port, title, all, page + 1, here, '');
         if (i === list.length + (more ? 1 : 0)) return void this.askDestination(p, port, title, here);
-        if (i === list.length + (more ? 2 : 1) && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openPort(p, page));
+        if (i === list.length + (more ? 2 : 1) && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openPort(p, page), title.replace(/^\S+\s/, ''));
         const r = list[i];
         if (!r) return;
         const price = cenaRejsu(r.km);
@@ -4996,7 +4996,7 @@ export class GameScene extends Phaser.Scene {
     const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
     const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
     const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
-    const mapBtn = this.mamMapePodroznika() ? null : `🗺 Mapa podróżnika – ${MAPA_PODROZNIKA.cena} 💰`;
+    const mapBtn = this.mamMapePodroznika() ? null : `🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`;
     const entries: ShopEntry[] = [
       ...learn.map((_, i): ShopEntry => ({ id: 'learn:magic', index: i, name: 'Nauka magii', category: 'magic', picture: itemPictureUrl('ksiega'),
         description: 'Naucz się zaklęć, a potem wybierz różdżkę, kulę albo księgę.', price: NAUKA_MAGII, action: 'NAUCZ SIĘ', refresh: true })),
@@ -5005,8 +5005,8 @@ export class GameScene extends Phaser.Scene {
         category: 'services' as const, description: 'Porozmawiaj z bibliotekarką o wyprawie.', action: 'ROZMAWIAJ' }] : []),
       { id: 'library:riddle', index: learn.length + offers.length + Number(!!surveyBtn), name: riddleBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
         category: 'services', description: 'Bibliotekarka przygotowała zagadki.', action: 'ROZMAWIAJ' },
-      ...(mapBtn ? [{ id: 'library:mapa', index: learn.length + offers.length + Number(!!surveyBtn) + 1, name: 'Mapa podróżnika', category: 'services' as const,
-        description: `Dworce i porty w promieniu ${MAPA_PODROZNIKA.promienKm} km na ekranie mapy.`, price: MAPA_PODROZNIKA.cena, action: 'KUP' }] : []),
+      ...(mapBtn ? [{ id: 'library:mapa', index: learn.length + offers.length + Number(!!surveyBtn) + 1, name: 'Przepisz dworce z mapy', category: 'services' as const,
+        description: `Bibliotekarka pozwoli przepisać ze swojej mapy dworce i porty w promieniu ${MAPA_PODROZNIKA.promienKm} km.`, price: MAPA_PODROZNIKA.cena, action: 'PRZEPISZ' }] : []),
     ];
     this.shopDialog(p, {
       title: `📚 ${p.name}`,
@@ -5028,7 +5028,7 @@ export class GameScene extends Phaser.Scene {
           });
         }
         if (i === at + (surveyBtn ? 1 : 0)) return this.libraryRiddle(p);
-        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p));
+        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p), `Bibliotekarka – ${p.name}`);
         if (learn.length && i === 0) {
           if (session.coins < NAUKA_MAGII) {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
@@ -5583,15 +5583,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Is the hero inside a traveller's map he bought? Each map shows only the area around where it was bought
-   * (owner, 13 Oct 2026: a map bought in Lublin says nothing about the station in Lębork).
+   * Has the hero copied this area's hubs onto his map? Each copy covers only the area around where it was done
+   * (owner, 13 Oct 2026: copied in Lublin, it says nothing about the station in Lębork).
    */
   mamMapePodroznika() {
     const here = this.city.toLatLon(this.player.x, this.player.y);
     return this.mapyPodroznika().some((m) => odleglosc(m, here) < MAPA_PODROZNIKA.promienKm * MAPA_PODROZNIKA.nowaOd);
   }
 
-  /** The traveller's maps bought: the centres of their areas. */
+  /** The copies made (where, and which hubs). */
   mapyPodroznika() {
     return session.mapyPodroznika;
   }
@@ -5618,22 +5618,32 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
-  /** Buying the traveller's map (coachman, captain, library). */
-  private buyTravellerMap(back: () => void) {
+  /**
+   * Copying the hubs from a coachman's/captain's/librarian's map (owner, 13 Oct 2026: not an item – „No tak, nowe
+   * miejsce. Przepisz sobie z mojej mapy, co gdzie jest”): pay once, and at most MAPA_PODROZNIKA.maksIkon hubs
+   * around here (the nearest of each kind, the rest spread out) stay on the hero's map screen for good.
+   */
+  private buyTravellerMap(back: () => void, kto: string) {
     if (this.mamMapePodroznika()) return back();
     const cena = MAPA_PODROZNIKA.cena;
     this.dialog({
-      title: '🗺 Mapa podróżnika',
-      text: `Mapa tej okolicy, na której ktoś zaznaczył dworce, przystanki dyliżansów i porty – w promieniu ${MAPA_PODROZNIKA.promienKm} km stąd. Zobaczysz je na ekranie mapy (🗺), a dotykając ikonki ustawisz strzałkę, która cię tam zaprowadzi. W innych stronach przyda się już inna mapa.\n\nKosztuje ${cena} monet. Masz ${session.coins}.`,
-      buttons: [`Kupuję – ${cena} 💰`, 'Nie teraz'],
+      title: `🗺 ${kto}`,
+      text: `„No tak, nowe miejsce. Przepisz sobie z mojej mapy, co gdzie jest – dworce, przystanki dyliżansów i porty w okolicy, do ${MAPA_PODROZNIKA.promienKm} km stąd.”\n\nZaznaczysz je na swojej mapie (🗺) na zawsze. Kosztuje ${cena} monet. Masz ${session.coins}.`,
+      buttons: [`Przepisuję – ${cena} 💰`, 'Nie teraz'],
       onChoose: (i) => {
         if (i !== 0) return back();
-        if (session.coins < cena) return this.toast(`Za mało monet: mapa kosztuje ${cena}.`);
-        spend(cena);
-        session.mapyPodroznika.push(this.city.toLatLon(this.player.x, this.player.y));
-        this.emitHud();
-        this.save();
-        this.toast('🗺 Masz mapę podróżnika tej okolicy! Otwórz mapę (🗺 albo M), by zobaczyć dworce i porty.', 4500);
+        if (session.coins < cena) return this.toast(`Za mało monet: to kosztuje ${cena}.`);
+        const here = this.city.toLatLon(this.player.x, this.player.y);
+        this.toast('🗺 Przepisujesz…', 1500);
+        void hubyBlisko(here, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]).then((h) => {
+          if (!h.length) return this.toast('„Hm, w okolicy nie ma żadnego dworca ani portu.” Nic nie płacisz.', 3500);
+          if (session.coins < cena || this.mamMapePodroznika()) return;
+          spend(cena);
+          session.mapyPodroznika.push({ ...here, h: doZapisu(h) });
+          this.emitHud();
+          this.save();
+          this.toast(`🗺 Na twojej mapie: ${h.map((q) => `${IKONA_HUBA[q.rodzaj]} ${q.nazwa}`).join(', ')}. Otwórz mapę (🗺 albo M).`, 6000);
+        });
       },
     });
   }

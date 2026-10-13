@@ -79,4 +79,22 @@ export function wybierz(list: Hub[], ile: number): Hub[] {
   return out.sort((a, b) => a.km - b.km);
 }
 
+const KOD: Record<RodzajHuba, string> = { kolej: 'k', autobus: 'a', port: 'p' };
+const RODZAJ: Record<string, RodzajHuba> = { k: 'kolej', a: 'autobus', p: 'port' };
+
+/** Hubs as kept in the save: [name, lat, lon, kind letter]. */
+export function doZapisu(h: Hub[]): [string, number, number, string][] {
+  return h.map((q) => [q.nazwa, Math.round(q.lat * 1e5) / 1e5, Math.round(q.lon * 1e5) / 1e5, KOD[q.rodzaj]]);
+}
+
+/** Every hub copied onto the hero's map (all copies, without repeats), distances from `at`. */
+export function przepisane(mapy: { h: [string, number, number, string][] }[], at: { lat: number; lon: number }): Hub[] {
+  const out: Hub[] = [];
+  for (const m of mapy) for (const [nazwa, lat, lon, k] of m.h) {
+    if (out.some((q) => q.nazwa === nazwa && Math.abs(q.lat - lat) < 1e-4 && Math.abs(q.lon - lon) < 1e-4)) continue;
+    out.push({ nazwa, lat, lon, rodzaj: RODZAJ[k] ?? 'kolej', km: odleglosc(at, { lat, lon }) });
+  }
+  return out.sort((a, b) => a.km - b.km);
+}
+
 export const IKONA_HUBA: Record<RodzajHuba, string> = { kolej: '🚂', autobus: '🚌', port: '⚓' };

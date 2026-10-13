@@ -52,8 +52,8 @@ export interface SaveData {
   /** Imbued weapons (inventory.ts gear.imbue). */
   nasycenia?: Record<string, { e: string; until: number }>;
   bezStrzalki?: string[];
-  /** Traveller's maps: where each was bought (it shows the hubs around that spot). */
-  mapyPodroznika?: { lat: number; lon: number }[];
+  /** Hubs copied from a coachman's/captain's/librarian's map: where it was done and the hubs [name, lat, lon, kind k/a/p]. */
+  mapyPodroznika?: { lat: number; lon: number; h: [string, number, number, string][] }[];
   /** Multi-stage missions: current stage per mission id. */
   etap?: Record<string, number>;
   /** Story items from mission stages. */

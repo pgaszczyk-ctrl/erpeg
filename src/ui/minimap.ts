@@ -8,7 +8,7 @@ import { worldOrigin, landOfTile, tilesOver, type Lad } from '../map/world';
 import { krajWPunkcie } from '../kraj';
 import { DUZE_MIASTA } from '../content/pociagi';
 import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM, MAPA_PODROZNIKA } from '../content/mapa';
-import { hubyBlisko, wybierz, IKONA_HUBA, type Hub } from '../huby';
+import { przepisane, IKONA_HUBA, type Hub } from '../huby';
 
 export { drawCity };
 
@@ -184,22 +184,8 @@ function showMinimap(game: GameScene) {
     const hit = ikony.filter((i) => Math.hypot(i.x - x, i.y - y) < 18 * k).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
     if (hit) hubPopup(game, root, hit.h, draw);
   });
-  // Every traveller's map bought within reach of the widest „Okolica” view: its own hubs (around where it was bought).
-  const here = game.city.toLatLon(game.player.x, game.player.y);
-  const mapy = game.mapyPodroznika().filter((m) => kmBetween(m, here) < OKOLICA.km * 1.5 + MAPA_PODROZNIKA.promienKm);
-  if (mapy.length) {
-    Promise.all(mapy.map((m) => hubyBlisko(m, MAPA_PODROZNIKA.promienKm, Infinity).catch(() => [] as Hub[]))).then((ls) => {
-      // Every hub of the maps bought, counted from the hero now; the nearest of each kind, then spread out (owner).
-      const all: Hub[] = [];
-      for (const h of ls.flat()) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
-      const chosen = wybierz(all.sort((a, b) => a.km - b.km), MAPA_PODROZNIKA.maksIkon);
-      // The hub being guided to stays on the map even when not among the chosen few.
-      const d = game.drogaDo();
-      if (d && !chosen.some((q) => q.nazwa === d.nazwa && q.lat === d.lat)) chosen.push({ ...d, km: kmBetween(d, here) });
-      huby = chosen.sort((a, b) => a.km - b.km);
-      if (open === root) draw();
-    }, () => {});
-  }
+  // The hubs copied onto the hero's map (kept in the save, nothing to fetch).
+  huby = przepisane(game.mapyPodroznika(), game.city.toLatLon(game.player.x, game.player.y));
   draw();
 }
 
@@ -230,7 +216,7 @@ function hubPopup(game: GameScene, root: HTMLDivElement, h: Hub, redraw: () => v
 }
 
 /** The hubs' icons (traveller's map) at screen points, the guided one and the nearest named. */
-function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: GameScene, toS: (lat: number, lon: number) => readonly [number, number], names: number) {
+function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: GameScene, toS: (lat: number, lon: number) => readonly [number, number], names: number, edgesToo = true) {
   ikony = [];
   if (!huby) return;
   const guided = game.drogaDo();
@@ -239,9 +225,11 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
   ctx.textBaseline = 'middle';
   huby.forEach((h, i) => {
     let [x, y] = toS(h.lat, h.lon);
-    // Out of view (the closer scales): at the edge, towards it, with how far – still tappable (owner, 13 Oct 2026).
+    // Out of view (the closer scales): at the edge, towards it, with how far – still tappable (owner, 13 Oct 2026);
+    // only the ones around here, not every hub copied anywhere in the world.
     const m = 16 * u;
     const edge = x < m || y < m || x > S - m || y > S - m;
+    if (edge && (h.km > MAPA_PODROZNIKA.promienKm * 1.2 || !edgesToo)) return;
     if (edge) {
       const dx = x - S / 2, dy = y - S / 2;
       const k = (S / 2 - m) / Math.max(Math.abs(dx), Math.abs(dy));
@@ -287,8 +275,8 @@ function mapHint(ctx: CanvasRenderingContext2D, S: number, u: number, other: boo
   ctx.font = `${Math.round(11 * u)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const t = other ? '🗺 Twoja mapa podróżnika nie sięga tej okolicy' : `🗺 Mapa podróżnika pokaże dworce i porty do ${MAPA_PODROZNIKA.promienKm} km`;
-  const t2 = other ? 'mapę tych stron kupisz u woźnicy, kapitana albo w bibliotece' : 'kupisz ją u woźnicy, kapitana portu albo w bibliotece';
+  const t = other ? '🗺 Dworców tej okolicy nie masz jeszcze na mapie' : '🗺 Gdzie są dworce i porty?';
+  const t2 = 'woźnica, kapitan portu albo bibliotekarka dadzą przepisać ze swojej mapy';
   ctx.fillStyle = 'rgba(30,26,36,0.7)';
   ctx.fillRect(0, 0, S, 36 * u);
   ctx.fillStyle = '#fbf3dc';
@@ -499,18 +487,8 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
     }
   }
   if (kind === 'wojewodztwo') {
-    // The areas of the maps bought (dashed circles), their hubs; the hint while this area has no map.
-    ctx.strokeStyle = 'rgba(79,195,247,0.8)';
-    ctx.setLineDash([6 * u, 5 * u]);
-    ctx.lineWidth = 1.5 * u;
-    for (const m of game.mapyPodroznika()) {
-      const [mx, my] = toS(m.lat, m.lon);
-      ctx.beginPath();
-      ctx.arc(mx, my, MAPA_PODROZNIKA.promienKm * s, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
-    drawHubs(ctx, S, u, game, toS, 6);
+    // The copied hubs; the hint while this area's hubs haven't been copied.
+    drawHubs(ctx, S, u, game, toS, 12, false);
     if (!game.mamMapePodroznika()) mapHint(ctx, S, u, game.mapyPodroznika().length > 0);
   } else ikony = [];
   // The hero.

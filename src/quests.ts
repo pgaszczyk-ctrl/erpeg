@@ -95,8 +95,8 @@ export const session = {
   mikstury: 0,
   /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
   bezStrzalki: [] as string[],
-  /** Traveller's maps bought (content/mapa.ts MAPA_PODROZNIKA): each shows the hubs around where it was bought. */
-  mapyPodroznika: [] as { lat: number; lon: number }[],
+  /** Hubs copied onto the hero's map (content/mapa.ts MAPA_PODROZNIKA): where it was done and what was copied. */
+  mapyPodroznika: [] as { lat: number; lon: number; h: [string, number, number, string][] }[],
   /** Multi-stage missions: the current stage number per mission id (saved as `etap`). */
   etap: {} as Record<string, number>,
   /** Story items (names) from mission stages – not in the backpack, can't be sold (saved as `fabula`). */
@@ -222,7 +222,7 @@ export function startSession(r: LoginResult) {
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
-  session.mapyPodroznika = Array.isArray(p.save.mapyPodroznika) ? p.save.mapyPodroznika.filter((m: { lat: unknown; lon: unknown }) => typeof m?.lat === 'number' && typeof m?.lon === 'number').slice(-60) : [];
+  session.mapyPodroznika = Array.isArray(p.save.mapyPodroznika) ? p.save.mapyPodroznika.filter((m) => typeof m?.lat === 'number' && typeof m?.lon === 'number' && Array.isArray(m.h)).slice(-200) : [];
   session.etap = p.save.etap && typeof p.save.etap === 'object' ? { ...p.save.etap } : {};
   session.fabula = Array.isArray(p.save.fabula) ? p.save.fabula.filter((x) => typeof x === 'string').slice(0, 60) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);

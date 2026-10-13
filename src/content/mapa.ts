@@ -71,16 +71,17 @@ export const MIEJSCE_HUD = {
 };
 
 /**
- * MAPA PODRÓŻNIKA (właściciel, 13.10.2026): kupiona u woźnicy/konduktora, kapitana portu albo w bibliotece
- * dokłada do ekranu mapy ikonki dworców kolejowych, autobusowych i portów w promieniu `promienKm` od MIEJSCA
- * ZAKUPU (mapa tej okolicy – kupiona w Lublinie nie powie nic o dworcu w Lęborku; tam kupuje się następną).
+ * MAPA PODRÓŻNIKA (właściciel, 13.10.2026): to nie przedmiot – u woźnicy/konduktora, kapitana portu albo
+ * w bibliotece płacisz `cena` („No tak, nowe miejsce. Przepisz sobie z mojej mapy, co gdzie jest”) i na twojej
+ * mapie zostają na zawsze ikonki najwyżej `maksIkon` dworców kolejowych, autobusowych i portów do `promienKm`
+ * od tego miejsca (najbliższy każdego rodzaju, reszta rozrzucona). W innych stronach przepisuje się od nowa.
  * Dotknięcie ikonki → „Prowadź” = strzałka do tego miejsca (nie liczy się do limitu zadań).
  * Dane dworców doczytywane tylko dla posiadaczy mapy (src/huby.ts).
  */
 export const MAPA_PODROZNIKA = {
   cena: 300,
   promienKm: 50,
-  /** Nową mapę można kupić, gdy bohater jest dalej niż ta część promienia od środka każdej posiadanej. */
+  /** Znowu przepisać można, gdy bohater jest dalej niż ta część promienia od miejsca każdego przepisania. */
   nowaOd: 0.6,
   /** Ile miejsc z jednej mapy (właściciel: „max 6, najlepiej oddalonych od siebie, przynajmniej 1 z każdego rodzaju”). */
   maksIkon: 6,

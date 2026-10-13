@@ -1,5 +1,5 @@
-// The traveller's map (content/mapa.ts MAPA_PODROZNIKA): bought at a coachman, the map screen's „Okolica”
-// shows stations/ports within 50 km (a mocked public/dworce cell + the region's own stations), a tap on an
+// The traveller's map (content/mapa.ts MAPA_PODROZNIKA): copied at a coachman (300 coins, no item), the map screen's „Okolica”
+// keeps up to 6 stations/ports within 50 km (a mocked public/dworce cell + the region's own stations), a tap on an
 // icon → „🧭 Prowadź” sets an extra arrow that doesn't count among the 3 quests. Lublin map, mocked server.
 // Run: VITE_TEST=1 npm run build && npx vite preview --port 4173 & node scripts/tests/browser-mapa-podroznika.mjs
 import { createRequire } from 'node:module';
@@ -51,11 +51,14 @@ try {
   });
   const coach = await page.evaluate(() => window.__dialogi.at(-1).buttons);
   console.log('coach', JSON.stringify(coach));
-  const bi = coach.findIndex((b) => b.startsWith('🗺 Mapa podróżnika'));
+  const bi = coach.findIndex((b) => b.startsWith('🗺 Przepisz dworce'));
   assert(bi >= 0);
   await page.evaluate((i) => { const d = window.__dialogi.at(-1); window.__game.scene.getScene('ui').closeDialog?.(); d.onChoose(i); }, bi);
   await page.evaluate(() => { const d = window.__dialogi.at(-1); window.__game.scene.getScene('ui').closeDialog?.(); d.onChoose(0); });
-  assert.equal(await page.evaluate(() => window.__session.mapyPodroznika.length), 1);
+  await page.waitForFunction(() => window.__session.mapyPodroznika.length === 1, null, { timeout: 30000 });
+  const copied = await page.evaluate(() => window.__session.mapyPodroznika[0].h);
+  console.log('copied', JSON.stringify(copied));
+  assert(copied.length <= 6 && copied.some((h) => h[3] === 'k') && copied.some((h) => h[3] === 'a'));
   assert(await page.evaluate(() => window.__game.scene.getScene('game').mamMapePodroznika()));
   assert.equal(await page.evaluate(() => window.__session.coins), 700);
   await page.waitForTimeout(500);
@@ -117,10 +120,10 @@ try {
   await page.waitForTimeout(3000);
   await page.waitForFunction(() => !window.__game.scene.getScene('game').drogaDo(), null, { timeout: 90000 });
   // A map is the map of where it was bought: one from Lębork says nothing here, and the coachman offers this area's.
-  await page.evaluate(() => { window.__session.mapyPodroznika = [{ lat: 54.54, lon: 17.75 }]; });
+  await page.evaluate(() => { window.__session.mapyPodroznika = [{ lat: 54.54, lon: 17.75, h: [['Lębork', 54.5436, 17.7509, 'k']] }]; });
   assert(!(await page.evaluate(() => window.__game.scene.getScene('game').mamMapePodroznika())));
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); s.openCoach(s.city.places.find((p) => p.kind === 'station')); });
-  assert((await page.evaluate(() => window.__dialogi.at(-1).buttons)).some((b) => b.startsWith('🗺 Mapa podróżnika')));
+  assert((await page.evaluate(() => window.__dialogi.at(-1).buttons)).some((b) => b.startsWith('🗺 Przepisz dworce')));
   await page.evaluate(() => window.__game.scene.getScene('ui').closeDialog?.());
   await page.evaluate(() => window.__game.scene.getScene('ui').openMap());
   await page.waitForTimeout(1200);
