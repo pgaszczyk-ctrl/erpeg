@@ -313,6 +313,8 @@ export class UIScene extends Phaser.Scene {
       bron: this.weaponWindow(),
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
+    // One arrow per quest (no limit since 13 Oct 2026): more are made when needed.
+    while (this.arrows.length < s.quests.length) this.arrows.push(this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();

@@ -5564,7 +5564,7 @@ export class GameScene extends Phaser.Scene {
       if (q.main) return { ...q, color: KOLOR_GLOWNEGO };
       if (!questColors.has(q.id)) {
         const used = new Set(questColors.values());
-        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[0]);
+        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[questColors.size % KOLORY_ZADAN.length]);
       }
       return { ...q, color: questColors.get(q.id)! };
     });

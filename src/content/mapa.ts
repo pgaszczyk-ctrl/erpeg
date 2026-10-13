@@ -86,5 +86,5 @@ export const MAPA_PODROZNIKA = {
   maksIkon: 40,
   /** Doszedłeś do celu, gdy jesteś tyle metrów od niego. */
   doszedlM: 60,
-  kolor: '#4fc3f7',
+  kolor: '#ffffff',
 };

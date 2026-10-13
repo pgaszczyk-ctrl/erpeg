@@ -234,7 +234,7 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
     const [x, y] = toS(h.lat, h.lon);
     if (x < -10 || y < -10 || x > S + 10 || y > S + 10) return;
     const on = guided?.nazwa === h.nazwa && guided.lat === h.lat;
-    ctx.fillStyle = on ? MAPA_PODROZNIKA.kolor : '#fbf3dc';
+    ctx.fillStyle = on ? '#4fc3f7' : '#fbf3dc';
     ctx.strokeStyle = '#1e1a24';
     ctx.lineWidth = 1.5 * u;
     ctx.beginPath();
