@@ -116,7 +116,7 @@ export class UIScene extends Phaser.Scene {
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
-    this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
+    this.arrows = [0, 1, 2, 3].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit):
     // an icon and a clear bar with a light frame (the soft blurred one was too faint on the map).

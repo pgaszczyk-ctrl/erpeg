@@ -7,7 +7,8 @@ import { worldInfo, mapName, cachedMap } from '../travel';
 import { worldOrigin, landOfTile, tilesOver, type Lad } from '../map/world';
 import { krajWPunkcie } from '../kraj';
 import { DUZE_MIASTA } from '../content/pociagi';
-import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
+import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM, MAPA_PODROZNIKA } from '../content/mapa';
+import { hubyBlisko, IKONA_HUBA, type Hub } from '../huby';
 
 export { drawCity };
 
@@ -31,6 +32,11 @@ const PLACE_ICONS: Record<string, [string, string]> = {
 };
 let open: HTMLDivElement | null = null;
 let zoom = 0;
+/** The traveller's map: hubs near the hero (null while loading or without the map) and where their icons were drawn. */
+let huby: Hub[] | null = null;
+let ikony: { x: number; y: number; h: Hub }[] = [];
+// For browser tests: the icons drawn now (canvas px).
+(window as unknown as { __mm: () => unknown }).__mm = () => ikony.map((i) => ({ x: i.x, y: i.y, nazwa: i.h.nazwa }));
 
 export function isMinimapOpen() {
   return !!open;
@@ -58,6 +64,8 @@ export function toggleMinimap(game: GameScene, onClose?: () => void) {
 
 function showMinimap(game: GameScene) {
   knownCache.clear();
+  huby = null;
+  ikony = [];
   const root = document.createElement('div');
   root.id = 'minimap';
   const size = Math.floor(Math.min(window.innerWidth, window.innerHeight - 70) - 24);
@@ -160,7 +168,102 @@ function showMinimap(game: GameScene) {
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
+  // A tap (no drag) on a hub's icon: its name, distance and „🧭 Prowadź”.
+  let tap: { x: number; y: number; moved: number } | null = null;
+  canvas.addEventListener('pointerdown', (e) => (tap = { x: e.clientX, y: e.clientY, moved: 0 }));
+  canvas.addEventListener('pointermove', (e) => {
+    if (tap) tap.moved = Math.max(tap.moved, Math.hypot(e.clientX - tap.x, e.clientY - tap.y));
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    if (!tap || tap.moved > 8) return void (tap = null);
+    tap = null;
+    const r = canvas.getBoundingClientRect();
+    const k = canvas.width / r.width;
+    const x = (e.clientX - r.left) * k, y = (e.clientY - r.top) * k;
+    const hit = ikony.filter((i) => Math.hypot(i.x - x, i.y - y) < 18 * k).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
+    if (hit) hubPopup(game, root, hit.h, draw);
+  });
+  // Every traveller's map bought within reach of the widest „Okolica” view: its own hubs (around where it was bought).
+  const here = game.city.toLatLon(game.player.x, game.player.y);
+  const mapy = game.mapyPodroznika().filter((m) => kmBetween(m, here) < OKOLICA.km * 1.5 + MAPA_PODROZNIKA.promienKm);
+  if (mapy.length) {
+    Promise.all(mapy.map((m) => hubyBlisko(m, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]))).then((ls) => {
+      const all: Hub[] = [];
+      for (const h of ls.flat()) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
+      huby = all.sort((a, b) => a.km - b.km);
+      if (open === root) draw();
+    }, () => {});
+  }
   draw();
+}
+
+/** The little card over the map: a hub's name and distance, and the guide button. */
+function hubPopup(game: GameScene, root: HTMLDivElement, h: Hub, redraw: () => void) {
+  root.querySelector('.mm-hub')?.remove();
+  const box = document.createElement('div');
+  box.className = 'mm-hub';
+  const prowadzi = game.drogaDo()?.nazwa === h.nazwa && game.drogaDo()?.lat === h.lat;
+  const nazwa = { kolej: 'Dworzec kolejowy', autobus: 'Dworzec autobusowy', port: 'Port promowy' }[h.rodzaj];
+  box.innerHTML = `<b>${IKONA_HUBA[h.rodzaj]} ${h.nazwa.replace(/</g, '&lt;')}</b><span>${nazwa} · ${h.km < 1 ? `${Math.round(h.km * 1000)} m` : `${h.km.toFixed(h.km < 10 ? 1 : 0)} km`} stąd</span>`;
+  const row = document.createElement('div');
+  const b = (text: string, fn: () => void) => {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = text;
+    x.onclick = (e) => {
+      e.stopPropagation();
+      fn();
+    };
+    row.append(x);
+  };
+  if (prowadzi) b('✋ Przestań prowadzić', () => { game.prowadzDo(null); box.remove(); redraw(); });
+  else b('🧭 Prowadź', () => { game.prowadzDo(h); closeMinimap(); });
+  b('✕', () => box.remove());
+  box.append(row);
+  root.append(box);
+}
+
+/** The hubs' icons (traveller's map) at screen points, the guided one and the nearest named. */
+function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: GameScene, toS: (lat: number, lon: number) => readonly [number, number], names: number) {
+  ikony = [];
+  if (!huby) return;
+  const guided = game.drogaDo();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  huby.forEach((h, i) => {
+    const [x, y] = toS(h.lat, h.lon);
+    if (x < -10 || y < -10 || x > S + 10 || y > S + 10) return;
+    const on = guided?.nazwa === h.nazwa && guided.lat === h.lat;
+    ctx.fillStyle = on ? MAPA_PODROZNIKA.kolor : '#fbf3dc';
+    ctx.strokeStyle = '#1e1a24';
+    ctx.lineWidth = 1.5 * u;
+    ctx.beginPath();
+    ctx.roundRect(x - 9 * u, y - 9 * u, 18 * u, 18 * u, 4 * u);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = `${Math.round(12 * u)}px sans-serif`;
+    ctx.fillStyle = '#1e1a24';
+    ctx.fillText(IKONA_HUBA[h.rodzaj], x, y + u);
+    if (on || i < names) {
+      ctx.font = `bold ${Math.round(10 * u)}px monospace`;
+      label(ctx, h.nazwa.length > 22 ? `${h.nazwa.slice(0, 21)}…` : h.nazwa, x, y - 15 * u, u);
+    }
+    ikony.push({ x, y, h });
+  });
+}
+
+/** Without the traveller's map: where to get one (on the wide views). */
+function mapHint(ctx: CanvasRenderingContext2D, S: number, u: number, other: boolean) {
+  ctx.font = `${Math.round(11 * u)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const t = other ? '🗺 Twoja mapa podróżnika nie sięga tej okolicy' : `🗺 Mapa podróżnika pokaże dworce i porty do ${MAPA_PODROZNIKA.promienKm} km`;
+  const t2 = other ? 'mapę tych stron kupisz u woźnicy, kapitana albo w bibliotece' : 'kupisz ją u woźnicy, kapitana portu albo w bibliotece';
+  ctx.fillStyle = 'rgba(30,26,36,0.7)';
+  ctx.fillRect(0, 0, S, 36 * u);
+  ctx.fillStyle = '#fbf3dc';
+  ctx.fillText(t, S / 2, 12 * u);
+  ctx.fillText(t2, S / 2, 26 * u);
 }
 
 /** Where the hero has been, in lat/lon: stations ridden to/from, maps with fog, the map he is on. */
@@ -365,6 +468,21 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
       label(ctx, c.nazwa, x, y - 12 * u, u);
     }
   }
+  if (kind === 'wojewodztwo') {
+    // The areas of the maps bought (dashed circles), their hubs; the hint while this area has no map.
+    ctx.strokeStyle = 'rgba(79,195,247,0.8)';
+    ctx.setLineDash([6 * u, 5 * u]);
+    ctx.lineWidth = 1.5 * u;
+    for (const m of game.mapyPodroznika()) {
+      const [mx, my] = toS(m.lat, m.lon);
+      ctx.beginPath();
+      ctx.arc(mx, my, MAPA_PODROZNIKA.promienKm * s, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    drawHubs(ctx, S, u, game, toS, 6);
+    if (!game.mamMapePodroznika()) mapHint(ctx, S, u, game.mapyPodroznika().length > 0);
+  } else ikony = [];
   // The hero.
   if (here) {
     const [x, y] = toS(here.lat, here.lon);
@@ -540,6 +658,11 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number, c: { x: n
     ctx.arc(x, y, Math.max(11 * u, q.main ? 0 : game.goalRadius() * s), 0, Math.PI * 2);
     ctx.stroke();
   }
+  drawHubs(ctx, S, u, game, (lat, lon) => {
+    const p = game.city.fromLatLon(lat, lon);
+    return toS(p.x, p.y);
+  }, 99);
+  if (!game.mamMapePodroznika() && R > 3000 * PX_PER_M) mapHint(ctx, S, u, game.mapyPodroznika().length > 0);
   const [hx, hy] = toS(game.player.x, game.player.y);
   const a = Math.atan2(game.player.facing.y, game.player.facing.x);
   ctx.save();

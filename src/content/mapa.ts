@@ -69,3 +69,22 @@ export const MIEJSCE_HUD = {
   /** Miejscowości z mapy Lublina, które są miastami (reszta to wsie: „we wsi / za wsią”). */
   miasta: ['Nałęczów'],
 };
+
+/**
+ * MAPA PODRÓŻNIKA (właściciel, 13.10.2026): kupiona u woźnicy/konduktora, kapitana portu albo w bibliotece
+ * dokłada do ekranu mapy ikonki dworców kolejowych, autobusowych i portów w promieniu `promienKm` od MIEJSCA
+ * ZAKUPU (mapa tej okolicy – kupiona w Lublinie nie powie nic o dworcu w Lęborku; tam kupuje się następną).
+ * Dotknięcie ikonki → „Prowadź” = strzałka do tego miejsca (nie liczy się do limitu zadań).
+ * Dane dworców doczytywane tylko dla posiadaczy mapy (src/huby.ts).
+ */
+export const MAPA_PODROZNIKA = {
+  cena: 300,
+  promienKm: 50,
+  /** Nową mapę można kupić, gdy bohater jest dalej niż ta część promienia od środka każdej posiadanej. */
+  nowaOd: 0.6,
+  /** Ile najbliższych miejsc pokazać na mapie (gęste miasta mają setki przystanków). */
+  maksIkon: 40,
+  /** Doszedłeś do celu, gdy jesteś tyle metrów od niego. */
+  doszedlM: 60,
+  kolor: '#4fc3f7',
+};
