@@ -51,7 +51,31 @@ export async function hubyBlisko(at: { lat: number; lon: number }, km: number, i
   for (const s of worldInfo().stops.values()) add(s.name, s.lat, s.lon, /autobus|PKS|d\.a\./i.test(s.name) ? 'autobus' : 'kolej');
   for (const l of lists) for (const [nazwa, lat, lon, k] of l) add(nazwa, lat, lon, k === 'a' ? 'autobus' : 'kolej');
   for (const p of portyBlisko(at, km)) add(p.nazwa, p.lat, p.lon, 'port');
-  return out.sort((a, b) => a.km - b.km).slice(0, ile);
+  return wybierz(out.sort((a, b) => a.km - b.km), ile);
+}
+
+/**
+ * At most `ile` hubs, spread out (owner, 13 Oct 2026: a 50 km circle can hold dozens of stations): the nearest one,
+ * then the nearest of every other kind there is (railway, bus, port), then each time the one farthest from all
+ * already chosen. `list` is sorted nearest first.
+ */
+export function wybierz(list: Hub[], ile: number): Hub[] {
+  const out: Hub[] = [];
+  for (const h of list) {
+    if (out.length >= ile) break;
+    if (!out.some((q) => q.rodzaj === h.rodzaj)) out.push(h);
+  }
+  while (out.length < Math.min(ile, list.length)) {
+    let best: Hub | null = null, bd = -1;
+    for (const h of list) {
+      if (out.includes(h)) continue;
+      const d = Math.min(...out.map((q) => odleglosc(q, h)));
+      if (d > bd) (bd = d), (best = h);
+    }
+    if (!best) break;
+    out.push(best);
+  }
+  return out.sort((a, b) => a.km - b.km);
 }
 
 export const IKONA_HUBA: Record<RodzajHuba, string> = { kolej: '🚂', autobus: '🚌', port: '⚓' };

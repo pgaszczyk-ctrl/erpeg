@@ -37,6 +37,7 @@ let huby: Hub[] | null = null;
 let ikony: { x: number; y: number; h: Hub }[] = [];
 // For browser tests: the icons drawn now (canvas px).
 (window as unknown as { __mm: () => unknown }).__mm = () => ikony.map((i) => ({ x: i.x, y: i.y, nazwa: i.h.nazwa }));
+(window as unknown as { __mmKinds: () => unknown }).__mmKinds = () => [...new Set(ikony.map((i) => i.h.rodzaj))];
 
 export function isMinimapOpen() {
   return !!open;
@@ -189,7 +190,9 @@ function showMinimap(game: GameScene) {
   if (mapy.length) {
     Promise.all(mapy.map((m) => hubyBlisko(m, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]))).then((ls) => {
       const all: Hub[] = [];
-      for (const h of ls.flat()) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
+      // The hub being guided to stays on the map even when not among a map's chosen few.
+      const d = game.drogaDo();
+      for (const h of [...ls.flat(), ...(d ? [d] : [])]) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
       huby = all.sort((a, b) => a.km - b.km);
       if (open === root) draw();
     }, () => {});
@@ -228,6 +231,7 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
   ikony = [];
   if (!huby) return;
   const guided = game.drogaDo();
+  const napisy: { x: number; y: number; w: number }[] = [];
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   huby.forEach((h, i) => {
@@ -246,7 +250,13 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
     ctx.fillText(IKONA_HUBA[h.rodzaj], x, y + u);
     if (on || i < names) {
       ctx.font = `bold ${Math.round(10 * u)}px monospace`;
-      label(ctx, h.nazwa.length > 22 ? `${h.nazwa.slice(0, 21)}…` : h.nazwa, x, y - 15 * u, u);
+      const t = h.nazwa.length > 22 ? `${h.nazwa.slice(0, 21)}…` : h.nazwa;
+      const w = ctx.measureText(t).width;
+      // Above the icon, or below it when another name is already there.
+      const free = (ly: number) => !napisy.some((n) => Math.abs(n.x - x) < (n.w + w) / 2 + 4 * u && Math.abs(n.y - ly) < 12 * u);
+      const ly = [y - 15 * u, y + 16 * u, y - 28 * u, y + 29 * u].find(free) ?? y - 15 * u;
+      napisy.push({ x, y: ly, w });
+      label(ctx, t, x, ly, u);
     }
     ikony.push({ x, y, h });
   });

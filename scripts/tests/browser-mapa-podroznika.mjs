@@ -76,8 +76,11 @@ try {
   });
   const icons = await page.evaluate(() => window.__mm?.() ?? null);
   console.log('icons', JSON.stringify(icons));
-  const sw = icons.find((i) => i.nazwa === 'Świdnik Miasto');
-  assert(sw, 'Świdnik on the map');
+  // At most 6, spread out, at least one of every kind there is (railway and bus here).
+  assert(icons.length <= 6 && icons.length >= 2, `6 at most (${icons.length})`);
+  const kinds = await page.evaluate(() => window.__mmKinds());
+  assert(kinds.includes('kolej') && kinds.includes('autobus'), `kinds ${kinds}`);
+  const sw = icons[icons.length - 1];
   assert(!icons.some((i) => i.nazwa === 'Daleko Stąd'), 'nothing past 50 km');
   await page.mouse.click(at.r.x + sw.x / at.k, at.r.y + sw.y / at.k);
   await page.waitForSelector('.mm-hub');
@@ -86,7 +89,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('#minimap'));
   const q = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { all: s.activeQuests().map((q) => q.id + ':' + q.text), n: s.questCount() }; });
   console.log('quests', JSON.stringify(q));
-  assert(q.all.some((t) => t.startsWith('droga:') && t.includes('Świdnik')));
+  assert(q.all.some((t) => t.startsWith('droga:') && t.includes(sw.nazwa)));
   assert(!q.all.filter((t) => !t.startsWith('droga')).length || q.n === q.all.length - 1);
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'work/mapa-strzalka.png' });

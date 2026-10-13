@@ -82,8 +82,8 @@ export const MAPA_PODROZNIKA = {
   promienKm: 50,
   /** Nową mapę można kupić, gdy bohater jest dalej niż ta część promienia od środka każdej posiadanej. */
   nowaOd: 0.6,
-  /** Ile najbliższych miejsc pokazać na mapie (gęste miasta mają setki przystanków). */
-  maksIkon: 40,
+  /** Ile miejsc z jednej mapy (właściciel: „max 6, najlepiej oddalonych od siebie, przynajmniej 1 z każdego rodzaju”). */
+  maksIkon: 6,
   /** Doszedłeś do celu, gdy jesteś tyle metrów od niego. */
   doszedlM: 60,
   kolor: '#ffffff',
