@@ -29,7 +29,7 @@ function komorka(key: string) {
   return p;
 }
 
-/** Hubs within `km` of a point, the nearest first, at most `ile`. */
+/** Hubs within `km` of a point, the nearest first; at most `ile` chosen by `wybierz` (Infinity = all of them). */
 export async function hubyBlisko(at: { lat: number; lon: number }, km: number, ile: number): Promise<Hub[]> {
   const dLat = km / 111.32, dLon = km / (111.32 * Math.max(0.1, Math.cos((at.lat * Math.PI) / 180)));
   const keys: string[] = [];
@@ -51,13 +51,14 @@ export async function hubyBlisko(at: { lat: number; lon: number }, km: number, i
   for (const s of worldInfo().stops.values()) add(s.name, s.lat, s.lon, /autobus|PKS|d\.a\./i.test(s.name) ? 'autobus' : 'kolej');
   for (const l of lists) for (const [nazwa, lat, lon, k] of l) add(nazwa, lat, lon, k === 'a' ? 'autobus' : 'kolej');
   for (const p of portyBlisko(at, km)) add(p.nazwa, p.lat, p.lon, 'port');
-  return wybierz(out.sort((a, b) => a.km - b.km), ile);
+  out.sort((a, b) => a.km - b.km);
+  return ile === Infinity ? out : wybierz(out, ile);
 }
 
 /**
- * At most `ile` hubs, spread out (owner, 13 Oct 2026: a 50 km circle can hold dozens of stations): the nearest one,
- * then the nearest of every other kind there is (railway, bus, port), then each time the one farthest from all
- * already chosen. `list` is sorted nearest first.
+ * At most `ile` hubs, spread out (owner, 13 Oct 2026: a 50 km circle can hold dozens of stations): first the
+ * nearest of every kind there is (railway, bus, port), then each time the one farthest from all already chosen.
+ * `list` is sorted nearest first (to the hero when the map screen opens).
  */
 export function wybierz(list: Hub[], ile: number): Hub[] {
   const out: Hub[] = [];

@@ -8,7 +8,7 @@ import { worldOrigin, landOfTile, tilesOver, type Lad } from '../map/world';
 import { krajWPunkcie } from '../kraj';
 import { DUZE_MIASTA } from '../content/pociagi';
 import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM, MAPA_PODROZNIKA } from '../content/mapa';
-import { hubyBlisko, IKONA_HUBA, type Hub } from '../huby';
+import { hubyBlisko, wybierz, IKONA_HUBA, type Hub } from '../huby';
 
 export { drawCity };
 
@@ -188,12 +188,15 @@ function showMinimap(game: GameScene) {
   const here = game.city.toLatLon(game.player.x, game.player.y);
   const mapy = game.mapyPodroznika().filter((m) => kmBetween(m, here) < OKOLICA.km * 1.5 + MAPA_PODROZNIKA.promienKm);
   if (mapy.length) {
-    Promise.all(mapy.map((m) => hubyBlisko(m, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]))).then((ls) => {
+    Promise.all(mapy.map((m) => hubyBlisko(m, MAPA_PODROZNIKA.promienKm, Infinity).catch(() => [] as Hub[]))).then((ls) => {
+      // Every hub of the maps bought, counted from the hero now; the nearest of each kind, then spread out (owner).
       const all: Hub[] = [];
-      // The hub being guided to stays on the map even when not among a map's chosen few.
+      for (const h of ls.flat()) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
+      const chosen = wybierz(all.sort((a, b) => a.km - b.km), MAPA_PODROZNIKA.maksIkon);
+      // The hub being guided to stays on the map even when not among the chosen few.
       const d = game.drogaDo();
-      for (const h of [...ls.flat(), ...(d ? [d] : [])]) if (!all.some((q) => q.nazwa === h.nazwa && q.lat === h.lat)) all.push({ ...h, km: kmBetween(h, here) });
-      huby = all.sort((a, b) => a.km - b.km);
+      if (d && !chosen.some((q) => q.nazwa === d.nazwa && q.lat === d.lat)) chosen.push({ ...d, km: kmBetween(d, here) });
+      huby = chosen.sort((a, b) => a.km - b.km);
       if (open === root) draw();
     }, () => {});
   }
@@ -235,8 +238,23 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   huby.forEach((h, i) => {
-    const [x, y] = toS(h.lat, h.lon);
-    if (x < -10 || y < -10 || x > S + 10 || y > S + 10) return;
+    let [x, y] = toS(h.lat, h.lon);
+    // Out of view (the closer scales): at the edge, towards it, with how far – still tappable (owner, 13 Oct 2026).
+    const m = 16 * u;
+    const edge = x < m || y < m || x > S - m || y > S - m;
+    if (edge) {
+      const dx = x - S / 2, dy = y - S / 2;
+      const k = (S / 2 - m) / Math.max(Math.abs(dx), Math.abs(dy));
+      x = S / 2 + dx * k;
+      y = S / 2 + dy * k;
+      const a = Math.atan2(dy, dx);
+      ctx.fillStyle = '#1e1a24';
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * 15 * u, y + Math.sin(a) * 15 * u);
+      ctx.lineTo(x + Math.cos(a + 0.5) * 10 * u, y + Math.sin(a + 0.5) * 10 * u);
+      ctx.lineTo(x + Math.cos(a - 0.5) * 10 * u, y + Math.sin(a - 0.5) * 10 * u);
+      ctx.fill();
+    }
     const on = guided?.nazwa === h.nazwa && guided.lat === h.lat;
     ctx.fillStyle = on ? '#4fc3f7' : '#fbf3dc';
     ctx.strokeStyle = '#1e1a24';
@@ -248,15 +266,17 @@ function drawHubs(ctx: CanvasRenderingContext2D, S: number, u: number, game: Gam
     ctx.font = `${Math.round(12 * u)}px sans-serif`;
     ctx.fillStyle = '#1e1a24';
     ctx.fillText(IKONA_HUBA[h.rodzaj], x, y + u);
-    if (on || i < names) {
+    if (on || i < names || edge) {
       ctx.font = `bold ${Math.round(10 * u)}px monospace`;
-      const t = h.nazwa.length > 22 ? `${h.nazwa.slice(0, 21)}…` : h.nazwa;
+      const n = h.nazwa.length > 22 ? `${h.nazwa.slice(0, 21)}…` : h.nazwa;
+      const t = edge ? `${n} · ${h.km < 10 ? h.km.toFixed(1) : Math.round(h.km)} km` : n;
       const w = ctx.measureText(t).width;
       // Above the icon, or below it when another name is already there.
       const free = (ly: number) => !napisy.some((n) => Math.abs(n.x - x) < (n.w + w) / 2 + 4 * u && Math.abs(n.y - ly) < 12 * u);
-      const ly = [y - 15 * u, y + 16 * u, y - 28 * u, y + 29 * u].find(free) ?? y - 15 * u;
-      napisy.push({ x, y: ly, w });
-      label(ctx, t, x, ly, u);
+      const ly = [y - 15 * u, y + 16 * u, y - 28 * u, y + 29 * u].map((q) => Math.max(8 * u, Math.min(S - 8 * u, q))).find(free) ?? y - 15 * u;
+      const lx = Math.max(w / 2 + 2 * u, Math.min(S - w / 2 - 2 * u, x));
+      napisy.push({ x: lx, y: ly, w });
+      label(ctx, t, lx, ly, u);
     }
     ikony.push({ x, y, h });
   });

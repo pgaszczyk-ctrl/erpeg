@@ -81,6 +81,9 @@ try {
   const kinds = await page.evaluate(() => window.__mmKinds());
   assert(kinds.includes('kolej') && kinds.includes('autobus'), `kinds ${kinds}`);
   const sw = icons[icons.length - 1];
+  // The nearest of each kind to the hero comes first.
+  const nearest = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const h = s.city.toLatLon(s.player.x, s.player.y); return h; });
+  console.log('hero', JSON.stringify(nearest));
   assert(!icons.some((i) => i.nazwa === 'Daleko Stąd'), 'nothing past 50 km');
   await page.mouse.click(at.r.x + sw.x / at.k, at.r.y + sw.y / at.k);
   await page.waitForSelector('.mm-hub');
@@ -93,6 +96,22 @@ try {
   assert(!q.all.filter((t) => !t.startsWith('droga')).length || q.n === q.all.length - 1);
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'work/mapa-strzalka.png' });
+  // The closest view: hubs out of sight sit at the edge with their distance, and can be tapped too.
+  await page.evaluate(() => window.__game.scene.getScene('ui').openMap());
+  await page.waitForSelector('#minimap');
+  await page.evaluate(() => { for (let i = 0; i < 6; i++) document.querySelectorAll('#minimap .mm-bar button')[1].click(); });
+  await page.waitForFunction(() => (window.__mm?.() ?? []).length >= 2, null, { timeout: 30000 });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: 'work/mapa-blisko.png' });
+  const close = await page.evaluate(() => window.__mm());
+  console.log('close', JSON.stringify(close.map((i) => i.nazwa)));
+  const at2 = await page.evaluate(() => { const c = document.querySelector('#minimap canvas'); const r = c.getBoundingClientRect(); return { x: r.left, y: r.top, k: c.width / r.width }; });
+  const other = close.find((i) => i.nazwa !== sw.nazwa);
+  await page.mouse.click(at2.x + other.x / at2.k, at2.y + other.y / at2.k);
+  await page.waitForSelector('.mm-hub');
+  await page.click('.mm-hub button:first-child');
+  await page.waitForFunction(() => !document.querySelector('#minimap'));
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').drogaDo().nazwa), other.nazwa);
   // Walking there ends the guide.
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const d = s.drogaDo(); const p = s.city.fromLatLon(d.lat, d.lon); s.player.setPosition(p.x, p.y + 20); });
   await page.waitForTimeout(3000);
