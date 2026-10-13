@@ -242,6 +242,18 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '13.10.2026', tytul: { pl: 'Promy po całym świecie', en: 'Ferries all over the world' },
+    tresc: { pl: 'W portach czekają kapitanowie. Z każdego portu nad morzem dopłyniesz do głównego portu kraju, a stamtąd do krajów obok i liniowcami za ocean. Zapytaj kapitana o dowolny kraj – wyznaczy drogę z przesiadkami. Rejs trwa naprawdę, także gdy zamkniesz grę.', en: 'Captains wait in the ports. From any sea port you can sail to the country’s main port, from there to the countries next door, and by ocean liner across the sea. Ask a captain about any country – he will plan a way with changes. The voyage takes real time, even with the game closed.' },
+  },
+  {
+    data: '13.10.2026', tytul: { pl: 'Mapa podróżnika', en: 'The traveller’s map' },
+    tresc: { pl: 'Woźnica, kapitan albo bibliotekarka dadzą ci przepisać ze swojej mapy dworce i porty okolicy. Na twojej mapie zostaną na zawsze, a dotykając ikonki ustawisz strzałkę, która cię tam zaprowadzi.', en: 'A coachman, a captain or a librarian will let you copy the stations and ports of the area from their map. They stay on your map for good, and tapping one sets an arrow that leads you there.' },
+  },
+  {
+    data: '13.10.2026', tytul: { pl: 'Próby maga i bez limitu zadań', en: 'The wizard’s trials and no quest limit' },
+    tresc: { pl: 'Zanim zmierzysz się ze smokiem, mag zleci ci próby: rozbić gang, wysłuchać lekcji, znaleźć wypalony krąg i przynieść owoce alchemikowi. Możesz też brać tyle zadań naraz, ile chcesz. Mapa pokazuje teraz kontury lądów, a dzikie smoki dymią z legowisk widocznych z daleka.', en: 'Before you face the dragon, the wizard sets you trials: break up a gang, hear a lesson, find a burnt circle and bring fruit to the alchemist. You can also take as many quests at once as you like. The map now shows the coastlines, and wild dragons’ lairs smoke so you can see them from afar.' },
+  },
+  {
     data: '12.10.2026', tytul: { pl: 'Łamigłówka dnia', en: 'Puzzle of the day' },
     tresc: { pl: 'W Kurierze Parowym codziennie nowa łamigłówka: sudoku, kakuro, matematyczna krzyżówka albo najkrótsza trasa. Taka sama dla wszystkich na twoim poziomie trudności – porównajcie się ze znajomymi!', en: 'Every day the Steam Courier prints a new puzzle: sudoku, kakuro, a number crossword or the shortest route. The same for everyone on your difficulty level – compare with your friends!' },
   },

@@ -3085,11 +3085,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Ferry ports (content/porty.ts, TEST only): on world maps, every second, a captain appears in each port
+   * Ferry ports (content/porty.ts; on production since 1.023): on world maps, every second, a captain appears in each port
    * within PROM.widacKm whose map around is loaded; once per map a hint names the nearest port further away.
    */
   private portsNear(now: number) {
-    if (!TEST || demo.on || now < this.portyAt || !worldOrigin(this.city.id)) return;
+    if (demo.on || now < this.portyAt || !worldOrigin(this.city.id)) return;
     this.portyAt = now + 1000;
     void wczytajPorty();
     const ll = this.city.toLatLon(this.player.x, this.player.y);
