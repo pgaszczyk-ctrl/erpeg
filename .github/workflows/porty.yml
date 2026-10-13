@@ -5,6 +5,8 @@ name: Ferry ports
 on:
   workflow_dispatch:
   push:
+    # Only on the work branch: merging into the test server's branch must not start another long download.
+    branches: [claude/hopeful-davinci-kcj9bh]
     paths: [scripts/promy-osm.mjs, .github/workflows/porty.yml]
 
 permissions:
@@ -19,7 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node scripts/promy-osm.mjs --save /tmp/overpass
+      # With the list already there only the ports' names are refreshed (delete public/porty.json for a full run).
+      - run: if [ -f public/porty.json ]; then node scripts/promy-osm.mjs --rename; else node scripts/promy-osm.mjs --save /tmp/overpass; fi
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"

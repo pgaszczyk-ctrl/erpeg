@@ -24,6 +24,7 @@ import { TEST } from './version';
 import { testLook } from './testAppearance';
 import { setTestVehicle } from './testTransport';
 import { odswiezSlownictwoMisji } from './content/slownictwo';
+import type { Proba } from './content/probyMaga';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -43,6 +44,21 @@ export interface Story {
   choice?: 'zabij' | 'zbadaj';
   /** Shown under the name, e.g. "Pogromca smoka". */
   title?: string;
+  /** The scale that fell from the shadow (content/probyMaga.ts). */
+  luska?: { m: string; x: number; y: number; s: number; done?: boolean };
+  /** The wizard's trials before the required level. */
+  proby?: {
+    k?: Proba;
+    done: Proba[];
+    /** EXP of skipped trials, added to the next one. */
+    carry: number;
+    /** Gangs broken up when the gang trial began. */
+    g0?: number;
+    /** The burnt circle (x, y) and where the arrow points (fx, fy). */
+    spot?: { m: string; x: number; y: number; fx: number; fy: number; s: number };
+    /** The wizard's "you are ready" note was delivered. */
+    gotowy?: boolean;
+  };
 }
 
 export const session = {

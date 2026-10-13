@@ -566,6 +566,8 @@ export class GameScene extends Phaser.Scene {
           e.chasing = false;
         }
       },
+      nearestGang: (x, y, maxPx) => this.streets.nearestGang(x, y, maxPx),
+      questSpot: (x, y) => this.questSpot(x, y),
     });
 
     // Missions: gold roofs and "!" over their doors.

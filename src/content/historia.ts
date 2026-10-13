@@ -4,7 +4,8 @@
 //  2. W szkołach i kościołach można zapytać o cienie – niektórzy coś wiedzą
 //     i wysyłają na uczelnię (albo do ratusza, gdy w miejscowości nie ma uczelni).
 //  3. Przy uczelni chodzi mag w spiczastej czapce. Od poziomu postaci 5 mówi,
-//     że smoki wróciły, i wskazuje, gdzie widziano smoka.
+//     że smoki wróciły, i wskazuje, gdzie widziano smoka. Wcześniej zleca
+//     próby (content/probyMaga.ts), żeby było co robić do poziomu 5.
 //  4. Przy smoku: „Zabij bestię” (walka) albo „Zbadaj to cudo” (rozmowa).
 //     Na koniec bohater dostaje tytuł pod imieniem.
 //  Teksty można dowolnie zmieniać. {cel} = nazwa uczelni, {poziom} = wymagany poziom.
