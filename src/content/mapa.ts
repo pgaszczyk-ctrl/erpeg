@@ -58,6 +58,12 @@ export const GRANICA = { wejscieM: 80, wyjscieM: 15, wyjscieS: 1 };
  * inaczej „w mieście / za miastem · gdzieś na północy” od środka miejscowości.
  * Promienie „w mieście” (metry): Lublin, wsie i miasteczka z mapy Lublina, duże miasta z mapy świata, mapy stacji.
  */
+/**
+ * Mapy świata (zgłoszenie 67): nazwę miejscowości gra sprawdza dopiero, gdy bohater zagada przechodnia.
+ * Pamięta ją, dopóki jest w jej granicach albo `pamietajM` od miejsca pytania; na odpowiedź czeka najwyżej `czekajMs`.
+ */
+export const MIEJSCOWOSC = { pamietajM: 2500, czekajMs: 3000 };
+
 export const MIEJSCE_HUD = {
   wiedzaM: 300, lublinM: 5500, wsM: 900, miastoM: 4000, miasteczkoM: 1000, centrum: 0.15,
   /** Miejscowości z mapy Lublina, które są miastami (reszta to wsie: „we wsi / za wsią”). */

@@ -57,8 +57,8 @@ import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
 import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
-import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
-import { worldOrigin } from '../map/world';
+import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC } from '../content/mapa';
+import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
@@ -434,6 +434,8 @@ export class GameScene extends Phaser.Scene {
     this.lingerUntil = 0;
     this.rescueDeclined = false;
     this.toldPlace = null;
+    this.localTown = null;
+    this.askingTown = false;
     this.mapView = new MapRenderer(this, this.city);
     this.testRide = new TestRide(this);
     this.zabytki = new Zabytki(this, this.city, this.mapView);
@@ -678,6 +680,8 @@ export class GameScene extends Phaser.Scene {
         e.destroy();
       },
       odblokowane: () => poziomPostaci(session.exp) >= SMOKI_NA_MAPIE.odPoziomu && (session.story.st === 'smok' || session.story.st === 'koniec'),
+      scene: this,
+      toast: (t, ms) => this.toast(t, ms),
     });
     (window as unknown as { __smok?: (g: GatunekId) => void }).__smok = (g) => {
       const a = Math.random() * Math.PI * 2;
@@ -1036,6 +1040,7 @@ export class GameScene extends Phaser.Scene {
     this.updateStany(now);
     aktualizujEfekty(now);
     this.smokiNaMapie?.update(this.player.x, this.player.y);
+    this.smokiNaMapie?.dym(this.time.now);
     this.updatePosts(now);
     this.zabytki.update(this.player.x, this.player.y);
     for (const item of [...this.pickups]) {
@@ -3440,6 +3445,49 @@ export class GameScene extends Phaser.Scene {
   /** People spoken to per town (new towns' greeting, bug report 18). */
   private townTalks: Record<string, number> = {};
 
+  /**
+   * World maps: the town or village the hero is in, learnt only from a passer-by (bug report 67, owner:
+   * „sprawdzaj lokalizację dopiero po zapytaniu człowieka”). `name` '' = asked here, nothing nearby.
+   */
+  private localTown: { m: string; name: string; x: number; y: number; r: number; wies: boolean; ax: number; ay: number } | null = null;
+  private askingTown = false;
+
+  /** The town learnt from a passer-by, while the hero is still in it or near where he asked. */
+  private localNear(x = this.player.x, y = this.player.y) {
+    const t = this.localTown;
+    if (!t || t.m !== this.city.id) return null;
+    const inTown = t.name && Math.hypot(t.x - x, t.y - y) <= t.r * 1.3;
+    return inTown || Math.hypot(t.ax - x, t.ay - y) <= MIEJSCOWOSC.pamietajM * PX_PER_M ? t : null;
+  }
+
+  /** On a world map: the town to name at (x, y) – the one a passer-by told, else the map's own city near its centre, else none. */
+  private worldTown(x: number, y: number): string | null {
+    const t = this.localNear(x, y);
+    if (t) return t.name || null;
+    const o = worldOrigin(this.city.id);
+    if (!o) return null;
+    const c = this.city.fromLatLon(o.lat, o.lon);
+    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? mapName(this.city.id) : null;
+  }
+
+  /** Asks the world map which town this is (once per spot); then `then` runs (a passer-by's answer). */
+  private learnTown(then: () => void) {
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    const ax = this.player.x, ay = this.player.y, m = this.city.id;
+    this.askingTown = true;
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), MIEJSCOWOSC.czekajMs));
+    void Promise.race([nearestLocality(ll.lat, ll.lon, lang), timeout]).catch(() => null).then((p) => {
+      this.askingTown = false;
+      if (m !== this.city.id) return;
+      if (p) {
+        const c = this.city.fromLatLon(p.lat, p.lon);
+        this.localTown = { m, name: p.name, x: c.x, y: c.y, r: p.r * PX_PER_M, wies: p.size === 'village', ax, ay };
+      } else this.localTown = { m, name: '', x: ax, y: ay, r: 0, wies: false, ax, ay };
+      this.emitHud();
+      then();
+    });
+  }
+
   /** The town the hero is in, by name (null when the map knows none). */
   private townHere(): string | null {
     const w = this.whereIs(this.player.x, this.player.y);
@@ -3564,6 +3612,8 @@ export class GameScene extends Phaser.Scene {
 
   /** A passer-by: says hello, and some want a duel. */
   private talkToFolk(f: Folk) {
+    // World maps: which town this is, asked of the passer-by first (a quick look at the world map's place names).
+    if (worldOrigin(this.city.id) && !this.localNear() && !this.askingTown && !demo.on) return this.learnTown(() => this.talkToFolk(f));
     if (f.role === 'gazeciarz') return this.newsboy(f);
     const M = MIESZKANCY;
     let h = 2166136261;
@@ -5537,7 +5587,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** The town the hero belongs to now: its name, centre and the radius counted as "in town". */
-  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean } {
+  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean; nieznana?: boolean } {
     const R = MIEJSCE_HUD;
     if (this.city.id === 'lublin') {
       const towns = this.city.townList();
@@ -5548,6 +5598,11 @@ export class GameScene extends Phaser.Scene {
       if (lub) return { ...lub, r: R.lublinM * PX_PER_M };
     }
     const o = worldOrigin(this.city.id);
+    if (o) {
+      const lt = this.localNear(x, y);
+      if (lt?.name) return { name: lt.name, x: lt.x, y: lt.y, r: lt.r, wies: lt.wies };
+      if (!this.worldTown(x, y)) return { name: tx('Nieznana okolica', 'Unknown area'), x, y, r: 0, nieznana: true };
+    }
     const c = o ? this.city.fromLatLon(o.lat, o.lon) : { x: (this.city.minX + this.city.width) / 2, y: (this.city.minY + this.city.height) / 2 };
     return { name: mapName(this.city.id), x: c.x, y: c.y, r: (o ? R.miastoM : R.miasteczkoM) * PX_PER_M };
   }
@@ -5562,6 +5617,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.townAt(x, y);
     const told = this.toldPlace;
     if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    if (t.nieznana) return { town: t.name, detail: tx('zapytaj przechodnia', 'ask a passer-by') };
     const dx = x - t.x;
     const dy = y - t.y;
     const dist = Math.hypot(dx, dy);
@@ -5580,6 +5636,7 @@ export class GameScene extends Phaser.Scene {
     if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
     const street = addr;
     let town = mapName(this.city.id);
+    if (worldOrigin(this.city.id)) town = this.worldTown(x, y) ?? 'Daleko';
     if (this.city.id === 'lublin') {
       // The Lublin map also holds Garbów, Jastków, Nałęczów and the villages around.
       const towns = this.city.townList();

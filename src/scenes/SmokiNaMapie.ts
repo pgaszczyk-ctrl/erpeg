@@ -1,6 +1,8 @@
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { SMOKI_NA_MAPIE as S, SMOKI_TESTOWE, type GatunekId } from '../content/smoki';
+import Phaser from 'phaser';
+import { SMOKI_NA_MAPIE as S, SMOKI_TESTOWE, LEGOWISKO as L, GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
+import { GROUND_DEPTH } from '../map/MapRenderer';
 import { TEST } from '../version';
 import type { Slime } from '../objects/Slime';
 
@@ -9,8 +11,14 @@ import type { Slime } from '../objects/Slime';
 // do końca tej wizyty w grze. Smok pojawia się, gdy bohaterka jest w pobliżu, i znika, gdy odejdzie daleko.
 
 const KRATKA_M = 1000;
+/** Kłęby legowiska nad mgłą wojny (1 000 000) i dachami: widać je z daleka, także nad nieodkrytym terenem. */
+const DYM_NAD_MGLA = 1_000_500;
 
-interface Miejsce { key: string; x: number; y: number; g: GatunekId; s?: Slime }
+interface Miejsce {
+  key: string; x: number; y: number; g: GatunekId; s?: Slime;
+  /** Dym nad legowiskiem (widać z daleka), czy już powiedziano, że to legowisko. */
+  dym?: Phaser.GameObjects.Image[]; powiedziane?: boolean;
+}
 
 export interface SmokiHost {
   city: CityMap;
@@ -20,6 +28,8 @@ export interface SmokiHost {
   despawn: (s: Slime) => void;
   /** Smoki w terenie dopiero od poziomu 5 i po odblokowaniu w historii (Mag wysłał na smoka). */
   odblokowane: () => boolean;
+  scene: Phaser.Scene;
+  toast: (text: string, ms?: number) => void;
 }
 
 export class SmokiNaMapie {
@@ -35,6 +45,7 @@ export class SmokiNaMapie {
     if (now < this.nastepne) return;
     this.nastepne = now + 1000;
     if (TEST) this.testowe(hx, hy);
+    this.legowiska(hx, hy);
     if (!this.host.odblokowane()) return;
     const K = KRATKA_M * PX_PER_M;
     const cx = Math.floor(hx / K), cy = Math.floor(hy / K);
@@ -82,9 +93,86 @@ export class SmokiNaMapie {
     }
   }
 
-  /** Pokonany: nie wraca do końca tej wizyty. */
+  /** Pokonany: nie wraca do końca tej wizyty (jego dym też znika). */
   pokonany(s: Slime) {
-    for (const [key, m] of this.zywe) if (m.s === s) { this.pokonane.add(key); this.zywe.delete(key); m.s = undefined; }
+    for (const [key, m] of this.zywe) if (m.s === s) { this.pokonane.add(key); this.zywe.delete(key); m.s = undefined; this.zgasDym(m); }
+  }
+
+  /** Legowiska w pobliżu: dym z daleka, komunikat przy wejściu (raz na wizytę). */
+  private legowiska(hx: number, hy: number) {
+    const M = PX_PER_M;
+    for (const [key, m] of this.kratki) {
+      if (!m) continue;
+      const d = Math.hypot(m.x - hx, m.y - hy);
+      const zywy = !this.pokonane.has(key) && (key.startsWith('test|') || this.host.odblokowane());
+      if (zywy && d < L.widacM * M) { if (!m.dym) this.rozpalDym(m); }
+      else if (m.dym) this.zgasDym(m);
+      if (zywy && !m.powiedziane && d < L.promienM * M * 1.2) {
+        m.powiedziane = true;
+        this.host.toast(`🐉 Legowisko: ${GATUNKI_SMOKOW[m.g].nazwa.toLowerCase()}! Uważaj.`, 3500);
+      }
+    }
+  }
+
+  private teksturyDymu() {
+    const tex = this.host.scene.textures;
+    if (tex.exists('smok-klab')) return;
+    const n = 64;
+    const c = tex.createCanvas('smok-klab', n, n)!;
+    const ctx = c.getContext();
+    const img = ctx.createImageData(n, n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+      const i = (y * n + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = r >= 1 ? 0 : Math.round(255 * (1 - r * r) ** 1.6);
+    }
+    ctx.putImageData(img, 0, 0);
+    c.refresh();
+  }
+
+  /** Kłęby dymu w kolorze gatunku wokół legowiska (część okopcona), lekka mgiełka w środku. */
+  private rozpalDym(m: Miejsce) {
+    this.teksturyDymu();
+    const sc = this.host.scene, R = L.promienM * PX_PER_M, kolor = GATUNKI_SMOKOW[m.g].kolor;
+    let h = 0;
+    for (let i = 0; i < m.key.length; i++) h = (h * 31 + m.key.charCodeAt(i)) | 0;
+    const r = rng((h >>> 0) ^ 0x51ab);
+    const d = GROUND_DEPTH + 1.5;
+    const dym: Phaser.GameObjects.Image[] = [sc.add.image(m.x, m.y, 'smok-klab').setDisplaySize(R * 2.2, R * 2.2).setTint(kolor).setAlpha(L.wnetrzeAlfa).setDepth(d)];
+    const n = Math.max(14, Math.round((Math.PI * 2 * R) / L.klebyCoPx));
+    for (let i = 0; i < n; i++) {
+      const a = ((i + r() * 0.8) / n) * Math.PI * 2, rr = R + (r() * 2 - 1) * L.rozrzut;
+      const size = L.klebyPx[0] + r() * (L.klebyPx[1] - L.klebyPx[0]);
+      const alfa = L.klebyAlfa[0] + r() * (L.klebyAlfa[1] - L.klebyAlfa[0]);
+      const p = sc.add.image(m.x + Math.cos(a) * rr, m.y + Math.sin(a) * rr, 'smok-klab')
+        .setDisplaySize(size, size * (0.75 + r() * 0.3)).setTint(r() < 0.35 ? L.sadza : kolor).setAlpha(alfa).setDepth(DYM_NAD_MGLA);
+      p.setData('a', alfa).setData('s', p.scaleX).setData('f', r() * Math.PI * 2).setData('t', 3 + r() * 3).setData('u', r() * 6);
+      dym.push(p);
+    }
+    m.dym = dym;
+  }
+
+  private zgasDym(m: Miejsce) {
+    for (const o of m.dym ?? []) o.destroy();
+    m.dym = undefined;
+  }
+
+  /** Co klatkę: kłęby w widoku powoli oddychają i unoszą się; poza ekranem są ukryte. */
+  dym(now: number) {
+    const v = this.host.scene.cameras.main.worldView, t = now / 1000;
+    for (const m of this.kratki.values()) {
+      if (!m?.dym) continue;
+      for (const p of m.dym) {
+        const on = p.x > v.x - 60 && p.x < v.right + 60 && p.y > v.y - 60 && p.y < v.bottom + 60;
+        p.setVisible(on);
+        if (!on || p.getData('a') === undefined) continue;
+        const w = Math.sin((t * Math.PI * 2) / (p.getData('t') as number) + (p.getData('f') as number));
+        p.setAlpha((p.getData('a') as number) * (0.75 + 0.25 * w));
+        const s = (p.getData('s') as number) * (1 + 0.1 * w);
+        p.setScale(s, s * (p.scaleY / p.scaleX));
+      }
+    }
   }
 
   private zaplanuj(key: string, box: { x0: number; y0: number; x1: number; y1: number }): Miejsce | null {

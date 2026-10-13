@@ -959,6 +959,8 @@ export class CityMap {
   private onRoad(lines: Line[], x: number, y: number) {
     // 2 m beyond the drawn edge: a narrow footbridge left the hero's feet a 3 px wide strip over a river (report 64).
     for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + 2 * PX_PER_M) return true;
+    // Railway bridges too (bug report 65): the tracks over water can be walked along, a little wider than the track bed.
+    for (const l of lines) if ((l.kind === 'rail' || l.kind === 'tram') && distToPolyline(l.pts, x, y) <= l.width / 2 + 1.5 * PX_PER_M) return true;
     return false;
   }
 

@@ -56,6 +56,65 @@ export function worldOrigin(id: string) {
   return m ? { lat: Number(m[1]), lon: Number(m[2]) } : null;
 }
 
+// ---------------------------------------------------------------- towns (asked of passers-by)
+
+/** A named town or village near a point: its centre, how far it reaches (m) and how big it is. */
+export type Miejscowosc = { name: string; lat: number; lon: number; r: number; size: 'city' | 'town' | 'village' };
+const ZASIEG_MIEJSCOWOSCI = { city: 6000, town: 2500, village: 1000 };
+const WAGA_MIEJSCOWOSCI = { city: 3, town: 2, village: 1 };
+const ZL = 11;
+const placesCache = new Map<string, Promise<Miejscowosc[]>>();
+
+/** The towns and villages of one zoom-11 world tile (~12 km), read once. */
+function placesOfTile(tx: number, ty: number, lang: 'pl' | 'en') {
+  const key = `${tx},${ty},${lang}`;
+  let p = placesCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const file = await worldFile();
+      const t = await file.getZxy(ZL, tx, ty);
+      if (!t) return [];
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.places;
+      const out: Miejscowosc[] = [];
+      const nn = 2 ** ZL;
+      for (let i = 0; l && i < l.length; i++) {
+        const f = l.feature(i);
+        const pr = f.properties;
+        const size = pr.kind === 'locality' && (pr.kind_detail === 'city' || pr.kind_detail === 'town' || pr.kind_detail === 'village') ? pr.kind_detail : null;
+        if (!size || !pr.name) continue;
+        const q = f.loadGeometry()[0]?.[0];
+        if (!q) continue;
+        const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+        const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+        const name = String((lang === 'pl' ? pr['name:pl'] : pr['name:en']) ?? pr.name);
+        out.push({ name, lat, lon: (x / nn) * 360 - 180, r: ZASIEG_MIEJSCOWOSCI[size], size });
+      }
+      return out;
+    })();
+    p.catch(() => placesCache.delete(key));
+    placesCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * Which town or village (lat, lon) belongs to (bug report 67: 50 km north of Toruń people still said „Toruń”):
+ * read only when a passer-by is asked. Inside a town's reach the biggest such town wins; else the nearest,
+ * a city counting as 3× nearer and a town 2× (the suburbs of a city belong to it).
+ */
+export async function nearestLocality(lat: number, lon: number, lang: 'pl' | 'en'): Promise<Miejscowosc | null> {
+  const nn = 2 ** ZL;
+  const tx = Math.floor(((lon + 180) / 360) * nn);
+  const ty = Math.floor(((1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const lists = await Promise.all([-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => placesOfTile(tx + dx, ty + dy, lang).catch(() => []))));
+  const all = lists.flat();
+  const m = (p: Miejscowosc) => Math.hypot((p.lat - lat) * 111_320, (p.lon - lon) * 111_320 * Math.cos((lat * Math.PI) / 180));
+  const inside = all.filter((p) => m(p) <= p.r).sort((a, b) => WAGA_MIEJSCOWOSCI[b.size] - WAGA_MIEJSCOWOSCI[a.size] || m(a) - m(b));
+  if (inside.length) return inside[0];
+  return all.sort((a, b) => m(a) / WAGA_MIEJSCOWOSCI[a.size] - m(b) / WAGA_MIEJSCOWOSCI[b.size])[0] ?? null;
+}
+
 // ---------------------------------------------------------------- tiles
 
 const n = 2 ** Z;

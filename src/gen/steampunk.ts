@@ -74,7 +74,8 @@ export function tor(o: Obraz, pts: number[], ox: number, oy: number, woda?: (x: 
   for (let i = 0; i + 3 < pts.length; i += 2) { const dx = pts[i + 2] - pts[i], dy = pts[i + 3] - pts[i + 1], L = Math.hypot(dx, dy); if (L > 0) seg.push({ ax: pts[i], ay: pts[i + 1], ux: dx / L, uy: dy / L, L }); }
   const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
   const podsyp = [hex('#6c6660'), hex('#7c756d'), hex('#8c847a')], drewno = [hex('#5a3e28'), hex('#765436')];
-  const pomost = [hex('#4a3324'), hex('#5c4030')], krata = [hex('#3a3440'), hex('#55505c'), hex('#7a7482')], nit = hex('#b08a48'), cien = rgb(16, 30, 48, 120);
+  // Żelazny most (właściciel 13.10.2026: „narysuj solidnie, z żelaza”): stalowy pomost z blach, po bokach ściany kratownicy z nitami.
+  const pomost = [hex('#4b4e58'), hex('#5b5f6b'), hex('#3d4049')], krata = [hex('#2e2a36'), hex('#4a4654'), hex('#6e6a7a'), hex('#8e8a9c')], nit = hex('#c09a52'), cien = rgb(16, 30, 48, 140);
   const przyczolek = [hex('#7a7268'), hex('#948b7e')];
   // Most tam, gdzie po obu stronach (9 i 13 px od osi) jest woda; wydłużony o 6 px na brzegi (przyczółki).
   const most = (x: number, y: number, nx: number, ny: number) =>
@@ -98,20 +99,33 @@ export function tor(o: Obraz, pts: number[], ox: number, oy: number, woda?: (x: 
             // Cień mostu na wodzie (w prawo-dół), potem pomost z belek; na brzegu kamienny przyczółek.
             for (let k = -8; k <= 8; k += 0.5) put(x + nx * k + 3, y + ny * k + 5, cien);
             const brzeg = !most(x, y, nx, ny);
-            for (let k = -8; k <= 8; k += 0.5) put(x + nx * k, y + ny * k, brzeg ? przyczolek[Math.floor(hash(Math.round(x + nx * k), Math.round(y + ny * k), 9) * 2)] : pomost[Math.floor(s) % 3 === 0 ? 0 : 1]);
+            for (let k = -8; k <= 8; k += 0.5) {
+              // Blachy pomostu: szew co 6 px wzdłuż i nity przy krawędziach.
+              const szew = ((s % 6) + 6) % 6 < 0.5, brzegBlachy = Math.abs(k) > 6.5;
+              put(x + nx * k, y + ny * k, brzeg ? przyczolek[Math.floor(hash(Math.round(x + nx * k), Math.round(y + ny * k), 9) * 2)] : szew ? pomost[2] : brzegBlachy && Math.floor(s) % 3 === 0 ? nit : pomost[Math.abs(k) < 4 ? 1 : 0]);
+            }
           }
         }
         if (pass === 1 && Math.floor(s) % 4 === 0) for (let k = -5; k <= 5; k += 0.5) { put(x + nx * k, y + ny * k, drewno[1]); put(x + nx * k + g.ux, y + ny * k + g.uy, drewno[0]); }
         if (pass === 2) { put(x + nx * -3, y + ny * -3, ZEL[1]); put(x + nx * 3, y + ny * 3, ZEL[1]); put(x + nx * -2, y + ny * -2, hex('#aaaab8')); put(x + nx * 4, y + ny * 4, ZEL[0]); }
         if (pass === 3 && nm) {
-          // Kratownica po obu stronach: dolny i górny pas, ukośne zastrzały co 8 px, nity na węzłach, obrys na zewnątrz.
-          for (const side of [-1, 1]) {
-            const k0 = side * 7.5;
-            put(x + nx * k0, y + ny * k0, krata[0]);
-            put(x + nx * (k0 + side), y + ny * (k0 + side), OBRYS);
-            put(x + nx * (k0 - side * 0.5), y + ny * (k0 - side * 0.5), krata[side < 0 ? 2 : 1]);
+          // Ściany kratownicy po obu stronach toru, stojące jak ściany budynków (w górę ekranu, niższe, gdy tor biegnie
+          // z północy na południe): dolny i górny pas, krzyżulce w „X” co 8 px, słupki, nity na węzłach, obrys.
+          const h = Math.round(2 + 6 * Math.abs(g.ux));
+          const strony = ny * -1 > 0 ? [1, -1] : [-1, 1]; // najpierw ściana dalsza (północna), potem bliższa
+          for (const side of strony) {
+            const k0 = side * 7.5, bx = x + nx * k0, by = y + ny * k0;
             const f = ((s % 8) + 8) % 8;
-            if (f < 0.5) put(x + nx * k0, y + ny * k0, nit);
+            for (let j = 0; j <= h; j++) {
+              const a = (((s + j * 8 / h) % 8) + 8) % 8, b = (((s - j * 8 / h) % 8) + 8) % 8;
+              const pas = j === 0 || j === h, slupek = f < 0.6, krzyz = a < 0.7 || b < 0.7;
+              if (!(pas || slupek || krzyz)) continue;
+              const c = pas ? (j === h ? krata[3] : krata[1]) : slupek ? krata[2] : krata[side * ny > 0 ? 1 : 2];
+              put(bx, by - j, c);
+              if (pas && f < 0.5) put(bx, by - j, nit);
+            }
+            put(bx, by - h - 1, OBRYS);
+            put(bx, by + 1, OBRYS);
           }
         }
       }
