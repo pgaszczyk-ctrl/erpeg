@@ -6,16 +6,20 @@
 export const SKALE_MAPY: ({ rodzaj: 'miasto'; r: number; nazwa?: string } | { rodzaj: 'wojewodztwo' | 'kraj' })[] = [
   { rodzaj: 'miasto', r: 600 },
   { rodzaj: 'miasto', r: 1500 },
-  // Lublin ma ok. 12–14 km średnicy.
-  { rodzaj: 'miasto', r: 7000, nazwa: 'Lublin' },
+  // Całe miasto (Lublin ma ok. 12–14 km średnicy); podpis = nazwa mapy, na której jesteśmy.
+  { rodzaj: 'miasto', r: 7000, nazwa: 'miasto' },
   { rodzaj: 'wojewodztwo' },
   { rodzaj: 'kraj' },
 ];
 
-/** Środek i promień (km) widoku województwa lubelskiego. */
-export const WOJEWODZTWO = { lat: 51.25, lon: 22.9, km: 135 };
-/** Środek i promień (km) widoku Polski. */
-export const KRAJ = { lat: 52.05, lon: 19.4, km: 400 };
+/**
+ * Widoki „Okolica” i „Kraj / świat” (właściciel, 13.10.2026: „ma się centrować na fragment mapy, w którym
+ * jesteśmy i który znamy”): okolica = koło `km` wokół bohatera; kraj = tyle, by zmieścić wszystko, co
+ * znamy (najmniej `minKm`, najwyżej `maksKm`), ze środkiem pośrodku poznanych miejsc.
+ * Poznany teren pokazujemy orientacyjnie – plamami w kratkach `kratkaKm`, nie dokładną trasą.
+ */
+export const OKOLICA = { km: 135, kratkaKm: 2 };
+export const KRAJ_WIDOK = { minKm: 400, maksKm: 6000, zapas: 1.25, kratkaKm: 8 };
 
 /** Miasta wojewódzkie (widok kraju: kropka, gdy bohater tam był – w promieniu `odwiedzoneKm`). */
 export const MIASTA_WOJEWODZKIE: { nazwa: string; lat: number; lon: number }[] = [

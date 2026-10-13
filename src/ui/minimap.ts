@@ -3,8 +3,11 @@ import { PX_PER_M } from '../map/CityMap';
 import { FOG_CELL } from '../map/Fog';
 import { drawCity } from '../map/drawCity';
 import { session } from '../quests';
-import { worldInfo } from '../travel';
-import { SKALE_MAPY, WOJEWODZTWO, KRAJ, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
+import { worldInfo, mapName, cachedMap } from '../travel';
+import { worldOrigin } from '../map/world';
+import { krajWPunkcie } from '../kraj';
+import { DUZE_MIASTA } from '../content/pociagi';
+import { SKALE_MAPY, OKOLICA, KRAJ_WIDOK, MIASTA_WOJEWODZKIE, ODWIEDZONE_KM } from '../content/mapa';
 
 export { drawCity };
 
@@ -54,6 +57,7 @@ export function toggleMinimap(game: GameScene, onClose?: () => void) {
 }
 
 function showMinimap(game: GameScene) {
+  knownCache.clear();
   const root = document.createElement('div');
   root.id = 'minimap';
   const size = Math.floor(Math.min(window.innerWidth, window.innerHeight - 70) - 24);
@@ -96,15 +100,19 @@ function showMinimap(game: GameScene) {
   open = root;
 
   let pending = 0;
+  let geoView: GeoFrame = { lat: 0, lon: 0, km: 100, nazwa: '' };
   const draw = () => {
     const sk = SKALE_MAPY[zoom];
     if (sk.rodzaj !== 'miasto') {
-      label.textContent = sk.rodzaj === 'kraj' ? 'Polska' : 'Województwo';
-      renderGeo(game, canvas, sk.rodzaj, geoOff);
+      geoView = geoFrame(game, sk.rodzaj);
+      label.textContent = geoView.nazwa;
+      renderGeo(game, canvas, sk.rodzaj, geoView, geoOff);
       return;
     }
     const radiusM = sk.r;
-    label.textContent = sk.nazwa ?? `${radiusM * 2 >= 1000 ? `${(radiusM * 2) / 1000} km` : `${radiusM * 2} m`}`;
+    const km = `${radiusM * 2 >= 1000 ? `${(radiusM * 2) / 1000} km` : `${radiusM * 2} m`}`;
+    const name = sk.nazwa ? mapName(game.city.id) : '';
+    label.textContent = name && name !== 'Daleko' ? name : km;
     const R = radiusM * PX_PER_M;
     const c = { x: game.player.x + off.x, y: game.player.y + off.y };
     render(game, canvas, R, c);
@@ -134,7 +142,7 @@ function showMinimap(game: GameScene) {
       off.x -= dx * k;
       off.y -= dy * k;
     } else {
-      const v = sk.rodzaj === 'kraj' ? KRAJ : WOJEWODZTWO;
+      const v = geoView;
       const kmPerPx = (2 * v.km) / size;
       geoOff.lat += (dy * kmPerPx) / 111.32;
       geoOff.lon -= (dx * kmPerPx) / (111.32 * Math.cos((v.lat * Math.PI) / 180));
@@ -174,12 +182,84 @@ function visitedPoints(game: GameScene) {
   return { pts, towns, world, stops, here };
 }
 
+type GeoFrame = { lat: number; lon: number; km: number; nazwa: string };
+
+/**
+ * Where the hero has been, roughly (owner, 13 Oct 2026: „nie rysuj dokładnie dróg, pokaż orientacyjnie”):
+ * every explored fog chunk (~130 m) of every map, turned into lat/lon and counted in cells of `cellKm`.
+ */
+const knownCache = new Map<number, { lat: number; lon: number }[]>();
+function knownCells(game: GameScene, cellKm: number) {
+  const hit = knownCache.get(cellKm);
+  if (hit) return hit;
+  const out = knownCellsNow(game, cellKm);
+  knownCache.set(cellKm, out);
+  return out;
+}
+
+function knownCellsNow(game: GameScene, cellKm: number) {
+  const cells = new Map<string, { lat: number; lon: number }>();
+  const fogs: [string, { s: number; chunks: Record<string, string> } | undefined][] = [
+    ['lublin', game.city.id === 'lublin' ? game.explored.chunkKeys() : session.fog],
+    ...Object.entries(session.fogs).filter(([id]) => id !== game.city.id),
+  ];
+  if (game.city.id !== 'lublin') fogs.push([game.city.id, game.explored.chunkKeys()]);
+  const chunkPx = 64 * FOG_CELL;
+  for (const [id, fog] of fogs) {
+    if (!fog?.chunks) continue;
+    const s = fog.s || PX_PER_M;
+    const map = id === game.city.id ? game.city : cachedMap(id);
+    const o = worldOrigin(id);
+    // A world map not loaded this session: the same projection as CityMap.world (origin = its own point).
+    const toLL = map
+      ? (xm: number, ym: number) => map.toLatLon(xm * PX_PER_M, ym * PX_PER_M)
+      : o
+        ? (xm: number, ym: number) => {
+          const mLat = 111132.954 - 559.822 * Math.cos((2 * o.lat * Math.PI) / 180);
+          const mLon = 111412.84 * Math.cos((o.lat * Math.PI) / 180);
+          return { lat: o.lat - ym / mLat, lon: o.lon + xm / mLon };
+        }
+        : null;
+    if (!toLL) continue;
+    for (const key of Object.keys(fog.chunks)) {
+      const [cx, cy] = key.split(',').map(Number);
+      const ll = toLL(((cx + 0.5) * chunkPx) / s, ((cy + 0.5) * chunkPx) / s);
+      if (!Number.isFinite(ll.lat)) continue;
+      const gy = Math.floor((ll.lat * 111.32) / cellKm);
+      const gx = Math.floor((ll.lon * 111.32 * Math.cos((ll.lat * Math.PI) / 180)) / cellKm);
+      const k = `${gx},${gy}`;
+      if (!cells.has(k)) cells.set(k, ll);
+    }
+  }
+  return [...cells.values()];
+}
+
+const NAZWY_KRAJOW: Record<string, string> = { PL: 'Polska', DE: 'Niemcy', CZ: 'Czechy', SK: 'Słowacja', UA: 'Ukraina', LT: 'Litwa', AT: 'Austria', IT: 'Włochy', FR: 'Francja', ES: 'Hiszpania', GB: 'Wielka Brytania', SE: 'Szwecja', DK: 'Dania', NO: 'Norwegia', HU: 'Węgry', CH: 'Szwajcaria', HR: 'Chorwacja', SI: 'Słowenia', NL: 'Holandia', BE: 'Belgia' };
+
+/** The view of the region (around the hero) or of the country / world (fitting everything known). */
+function geoFrame(game: GameScene, kind: 'wojewodztwo' | 'kraj'): GeoFrame {
+  const here = game.city.toLatLon?.(game.player.x, game.player.y) ?? { lat: 51.25, lon: 22.57 };
+  if (kind === 'wojewodztwo') return { lat: here.lat, lon: here.lon, km: OKOLICA.km, nazwa: 'Okolica' };
+  const pts = [...knownCells(game, KRAJ_WIDOK.kratkaKm), ...visitedPoints(game).pts, here];
+  let n = -90, s = 90, w = 180, e = -180;
+  for (const p of pts) {
+    n = Math.max(n, p.lat); s = Math.min(s, p.lat);
+    w = Math.min(w, p.lon); e = Math.max(e, p.lon);
+  }
+  const lat = (n + s) / 2, lon = (w + e) / 2;
+  const half = Math.max(((n - s) / 2) * 111.32, ((e - w) / 2) * 111.32 * Math.cos((lat * Math.PI) / 180));
+  const km = Math.min(KRAJ_WIDOK.maksKm, Math.max(KRAJ_WIDOK.minKm, half * KRAJ_WIDOK.zapas + 40));
+  const kraje = new Set(pts.map((p) => krajWPunkcie(p.lat, p.lon)));
+  const jeden = kraje.size === 1 ? [...kraje][0] : null;
+  const nazwa = km > 1500 ? 'Świat' : jeden ? NAZWY_KRAJOW[jeden] ?? 'Kraj' : 'Kraje';
+  return { lat, lon, km, nazwa };
+}
+
 /** The region and country views: a simple drawn map in lat/lon. */
-function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztwo' | 'kraj', geoOff: { lat: number; lon: number }) {
+function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztwo' | 'kraj', v: GeoFrame, geoOff: { lat: number; lon: number }) {
   const ctx = canvas.getContext('2d')!;
   const S = canvas.width;
   const u = S / 400;
-  const v = kind === 'kraj' ? KRAJ : WOJEWODZTWO;
   const lat0 = v.lat + geoOff.lat, lon0 = v.lon + geoOff.lon;
   const cos = Math.cos((v.lat * Math.PI) / 180);
   const s = S / (2 * v.km);
@@ -188,7 +268,7 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
   // No borders on purpose (owner, bug report 41): only the scale – the places, railways and a grid.
   ctx.fillStyle = '#e8dcb8';
   ctx.fillRect(0, 0, S, S);
-  const step = kind === 'kraj' ? 1 : 0.25;
+  const step = kind === 'kraj' ? (v.km > 1500 ? 10 : v.km > 700 ? 2 : 1) : 0.25;
   ctx.strokeStyle = 'rgba(110,90,58,0.15)';
   ctx.lineWidth = 1 * u;
   const [lx0, ly0] = [lon0 - (S / 2 / s) / (111.32 * cos), lat0 + S / 2 / s / 111.32];
@@ -210,6 +290,30 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
   const { pts, towns, world, stops, here } = visitedPoints(game);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // Known land, roughly: soft warm patches where the fog of war was lifted (no exact routes).
+  const cell = kind === 'kraj' ? KRAJ_WIDOK.kratkaKm : OKOLICA.kratkaKm;
+  const rKnown = Math.max(3 * u, cell * 0.85 * s);
+  for (const c of knownCells(game, cell)) {
+    const [x, y] = toS(c.lat, c.lon);
+    if (x < -rKnown || y < -rKnown || x > S + rKnown || y > S + rKnown) continue;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rKnown);
+    g.addColorStop(0, 'rgba(214,170,74,0.55)');
+    g.addColorStop(1, 'rgba(214,170,74,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - rKnown, y - rKnown, rKnown * 2, rKnown * 2);
+  }
+  // Places ridden to or from: gold dots with their names.
+  ctx.font = `bold ${Math.round(11 * u)}px monospace`;
+  const named = new Set<string>();
+  for (const st of session.byl) {
+    const [x, y] = toS(st.lat, st.lon);
+    if (x < 0 || y < 0 || x > S || y > S) continue;
+    dot(ctx, x, y, 4 * u, u);
+    const nm = st.mapName && st.mapName !== 'Daleko' ? st.mapName : st.name;
+    if (named.has(nm)) continue;
+    named.add(nm);
+    label(ctx, nm, x, y - 11 * u, u);
+  }
   if (kind === 'wojewodztwo') {
     // Railways between stations, then every station town: grey, the visited ones gold with 3 letters.
     ctx.strokeStyle = 'rgba(90,70,50,0.45)';
@@ -241,10 +345,13 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
     }
   } else {
     ctx.font = `bold ${Math.round(11 * u)}px monospace`;
-    for (const c of MIASTA_WOJEWODZKIE) {
+    // Big cities (voivodeship capitals + the long trains' cities) in view; named once the hero has been near.
+    const miasta = [...MIASTA_WOJEWODZKIE, ...DUZE_MIASTA.filter((d) => !MIASTA_WOJEWODZKIE.some((m) => m.nazwa === d.nazwa))];
+    for (const c of miasta) {
       const [x, y] = toS(c.lat, c.lon);
+      if (x < 0 || y < 0 || x > S || y > S) continue;
       const been = pts.some((p) => kmBetween(p, c) <= ODWIEDZONE_KM);
-      if (!been) {
+      if (!been || named.has(c.nazwa)) {
         ctx.fillStyle = 'rgba(80,70,60,0.35)';
         ctx.beginPath();
         ctx.arc(x, y, 2 * u, 0, Math.PI * 2);
@@ -267,7 +374,7 @@ function renderGeo(game: GameScene, canvas: HTMLCanvasElement, kind: 'wojewodztw
     ctx.stroke();
   }
   // Scale bar.
-  const km = kind === 'kraj' ? 100 : 20;
+  const km = kind === 'kraj' ? (v.km > 2500 ? 1000 : v.km > 1200 ? 500 : v.km > 600 ? 200 : 100) : 20;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(8 * u, S - 26 * u, km * s + 16 * u, 18 * u);
   ctx.fillStyle = '#ffffff';
