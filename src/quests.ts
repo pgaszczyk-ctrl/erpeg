@@ -54,6 +54,8 @@ export interface Story {
     carry: number;
     /** Gangs broken up when the gang trial began. */
     g0?: number;
+    /** The gang made for the trial (where it lies, on which map). */
+    gang?: { m: string; x: number; y: number; s: number };
     /** The burnt circle (x, y) and where the arrow points (fx, fy). */
     spot?: { m: string; x: number; y: number; fx: number; fy: number; s: number };
     /** The wizard's "you are ready" note was delivered. */

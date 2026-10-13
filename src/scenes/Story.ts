@@ -35,6 +35,9 @@ export interface StoryHost {
   scare: (x: number, y: number) => void;
   /** The nearest active monster gang (the wizard's first trial). */
   nearestGang: (x: number, y: number, maxPx: number) => { x: number; y: number; r: number } | null;
+  /** A free spot for a gang of that kind about `m` metres away, and placing one there (the gang trial). */
+  gangSpot: (x: number, y: number, m: number, kind: string) => { x: number; y: number } | null;
+  placeGang: (id: string, x: number, y: number, kind: string) => void;
   /** A quiet spot in fields or a wood 300–900 m away (the burnt circle). */
   questSpot: (x: number, y: number) => { x: number; y: number } | null;
 }
@@ -67,6 +70,8 @@ export class Story {
   private trialAt = 0;
   /** The place whose trial dialog was shown (shown again after walking away). */
   private shownAt: string | null = null;
+  /** The trial's gang was put on this scene's map. */
+  private gangPlaced = false;
 
   constructor(private scene: Phaser.Scene, private city: CityMap, private host: StoryHost) {
     const st = this.state;
@@ -507,10 +512,12 @@ export class Story {
   /** Can this trial be done here? Sets it up when it can. */
   private setUpTrial(k: Proba): boolean {
     const pr = this.state.proby!;
-    const p = this.host.player;
     if (k === 'gang') {
-      if (!this.host.nearestGang(p.x, p.y, 2500 * PX_PER_M)) return false;
+      // The game makes a gang of its own for this, a walk away (owner, 13 Oct 2026).
       pr.g0 = session.stats.gangs ?? 0;
+      pr.gang = undefined;
+      this.gangPlaced = false;
+      this.trialGang();
       return true;
     }
     if (k === 'lekcja') return !!this.nearest(['school', 'library']);
@@ -651,6 +658,7 @@ export class Story {
     if (!k) return;
     if (k === 'gang') {
       if ((session.stats.gangs ?? 0) > (pr.g0 ?? 0)) this.completeTrial('gang');
+      else this.trialGang();
       return;
     }
     if (k === 'krag') {
@@ -681,6 +689,23 @@ export class Story {
     this.shownAt = at.place.id;
     if (k === 'lekcja') this.lesson(at.place, 0);
     else this.potion(at.place);
+  }
+
+  /** The trial's own gang: found once (about PROBY_MAGA.gang.odlegloscM away) and put back on every visit to its map. */
+  private trialGang() {
+    const pr = this.state.proby!;
+    const G = PROBY_MAGA.gang;
+    if (!pr.gang || pr.gang.m !== this.city.id) {
+      const p = this.host.player;
+      const at = this.host.gangSpot(p.x, p.y, G.odlegloscM, G.rodzaj);
+      if (!at) return;
+      pr.gang = { m: this.city.id, x: at.x, y: at.y, s: PX_PER_M };
+      this.gangPlaced = false;
+    }
+    if (this.gangPlaced) return;
+    const k = PX_PER_M / (pr.gang.s || PX_PER_M);
+    this.host.placeGang(`proba:${pr.gang.x},${pr.gang.y}`, pr.gang.x * k, pr.gang.y * k, G.rodzaj);
+    this.gangPlaced = true;
   }
 
   private drawRing(x: number, y: number) {
@@ -744,6 +769,11 @@ export class Story {
   private trialGoal(k: Proba): { text: string; pos: { x: number; y: number } | null } {
     const p = this.host.player;
     if (k === 'gang') {
+      const own = this.state.proby?.gang;
+      if (own && own.m === this.city.id) {
+        const kk = PX_PER_M / (own.s || PX_PER_M);
+        return { text: PROBY_MAGA.gang.cel, pos: { x: own.x * kk, y: own.y * kk } };
+      }
       const g = this.host.nearestGang(p.x, p.y, 3000 * PX_PER_M);
       return g ? { text: PROBY_MAGA.gang.cel, pos: { x: g.x, y: g.y } } : { text: PROBY_MAGA.gang.szukaj, pos: null };
     }

@@ -401,7 +401,8 @@ export interface Gang {
   bossObj?: unknown;
   /** When it was broken up (scene time), 0 while active. */
   clearedAt: number;
-  fog?: Phaser.GameObjects.Graphics;
+  /** The red mist: a soft inside and puffs of smoke along the border. */
+  fog?: { inside: Phaser.GameObjects.Image; puffs: Phaser.GameObjects.Image[] };
   /** The last descriptive counter shown (content/gangi.ts stanGangu). */
   said?: string;
 }
@@ -527,7 +528,6 @@ export class StreetEnemies {
     return false;
   }
 
-  /** The active gang whose territory the point is in, if any. */
   /** The nearest active gang within `maxPx` (big gangs count 3× farther: a beginner should meet a small one). */
   nearestGang(x: number, y: number, maxPx: number) {
     let best: Gang | null = null;
@@ -545,6 +545,7 @@ export class StreetEnemies {
     return best ? { x: best.x, y: best.y, r: best.r } : null;
   }
 
+  /** The active gang whose territory the point is in, if any. */
   gangAt(x: number, y: number) {
     return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
   }
@@ -556,8 +557,7 @@ export class StreetEnemies {
         g.boss = 'dead';
         g.bossObj = undefined;
         g.clearedAt = this.scene.time.now;
-        g.fog?.destroy();
-        g.fog = undefined;
+        this.dropMist(g);
         this.events.cleared(g);
         return;
       }
@@ -602,6 +602,7 @@ export class StreetEnemies {
 
   update(px: number, py: number, now: number) {
     this.drawFlies(now);
+    this.breatheMist(now);
     if (now < this.next) return;
     this.next = now + 700;
     const pcx = Math.floor(px / KM);
@@ -613,15 +614,8 @@ export class StreetEnemies {
       const d = Math.hypot(g.x - px, g.y - py);
       // The red mist over an active territory near the hero.
       if (!g.clearedAt && d < g.r + 1500 * PX_PER_M) {
-        if (!g.fog) {
-          g.fog = this.scene.add.graphics().setDepth(GROUND_DEPTH + 1);
-          g.fog.fillStyle(GANG_MGLA.kolor, GANG_MGLA.alfa).fillCircle(g.x, g.y, g.r);
-          g.fog.lineStyle(4, GANG_MGLA.kolor, Math.min(1, GANG_MGLA.alfa * 2.5)).strokeCircle(g.x, g.y, g.r);
-        }
-      } else if (g.fog) {
-        g.fog.destroy();
-        g.fog = undefined;
-      }
+        if (!g.fog) this.makeMist(g);
+      } else if (g.fog) this.dropMist(g);
       if (g.clearedAt) continue;
       // Walking into a territory: say how many are there.
       if (d < g.r && g.spots && !g.said) this.tell(g);
@@ -640,6 +634,104 @@ export class StreetEnemies {
         for (const [i, m] of g.members) if (this.despawn(m)) g.members.delete(i);
       }
     }
+  }
+
+  /** Soft round textures for the gang mist: a puff of smoke and an inside that fades towards its edge. */
+  private mistTextures() {
+    const tex = this.scene.textures;
+    const soft = (key: string, n: number, alpha: (r: number) => number) => {
+      if (tex.exists(key)) return;
+      const c = tex.createCanvas(key, n, n)!;
+      const ctx = c.getContext();
+      const img = ctx.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+        const i = (y * n + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+        img.data[i + 3] = Math.round(255 * Math.max(0, Math.min(1, alpha(r))));
+      }
+      ctx.putImageData(img, 0, 0);
+      c.refresh();
+    };
+    // A puff: dense in the middle, fading out smoothly.
+    soft('gang-klab', 64, (r) => (r >= 1 ? 0 : (1 - r * r) ** 1.6));
+    // The inside: even, then fading in the outer fifth (the puffs cover the border).
+    soft('gang-wnetrze', 256, (r) => (r < 0.8 ? 1 : r >= 1 ? 0 : 1 - (r - 0.8) / 0.2));
+  }
+
+  private makeMist(g: Gang) {
+    this.mistTextures();
+    const M = GANG_MGLA;
+    const d = GROUND_DEPTH + 1;
+    const inside = this.scene.add.image(g.x, g.y, 'gang-wnetrze').setDisplaySize(g.r * 2, g.r * 2).setTint(M.kolor).setAlpha(M.alfa).setDepth(d);
+    const r = rng(hashStr2(`${g.id}:mgla`));
+    const n = Math.max(16, Math.round((Math.PI * 2 * g.r) / M.klebyCoPx));
+    const puffs: Phaser.GameObjects.Image[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = ((i + r() * 0.8) / n) * Math.PI * 2;
+      const rr = g.r + (r() * 2 - 1) * M.klebyRozrzut;
+      const size = M.klebyPx[0] + r() * (M.klebyPx[1] - M.klebyPx[0]);
+      const alpha = M.klebyAlfa[0] + r() * (M.klebyAlfa[1] - M.klebyAlfa[0]);
+      const p = this.scene.add.image(g.x + Math.cos(a) * rr, g.y + Math.sin(a) * rr, 'gang-klab')
+        .setDisplaySize(size, size * (0.75 + r() * 0.3)).setTint(r() < 0.35 ? 0xff7a7a : M.kolor).setAlpha(alpha).setDepth(d + 0.5);
+      p.setData('a', alpha).setData('s', p.scaleX).setData('f', r() * Math.PI * 2).setData('t', M.oddechS[0] + r() * (M.oddechS[1] - M.oddechS[0]));
+      puffs.push(p);
+    }
+    g.fog = { inside, puffs };
+  }
+
+  private dropMist(g: Gang) {
+    if (!g.fog) return;
+    g.fog.inside.destroy();
+    for (const p of g.fog.puffs) p.destroy();
+    g.fog = undefined;
+  }
+
+  /** The border's puffs breathe slowly; those off screen are hidden (hundreds per gang). */
+  private breatheMist(now: number) {
+    const v = this.scene.cameras.main.worldView;
+    const t = now / 1000;
+    for (const g of this.gangs) {
+      if (!g.fog) continue;
+      const near = g.x + g.r + 40 > v.x && g.x - g.r - 40 < v.right && g.y + g.r + 40 > v.y && g.y - g.r - 40 < v.bottom;
+      g.fog.inside.setVisible(near);
+      for (const p of g.fog.puffs) {
+        const on = near && p.x > v.x - 30 && p.x < v.right + 30 && p.y > v.y - 30 && p.y < v.bottom + 30;
+        p.setVisible(on);
+        if (!on) continue;
+        const w = Math.sin((t * Math.PI * 2) / (p.getData('t') as number) + (p.getData('f') as number));
+        p.setAlpha((p.getData('a') as number) * (0.8 + 0.2 * w));
+        const s = (p.getData('s') as number) * (1 + 0.08 * w);
+        p.setScale(s, s * (p.scaleY / p.scaleX));
+      }
+    }
+  }
+
+  /** A spot for a gang about `m` metres from (x, y): free, loaded, away from places and other gangs, by a road. */
+  gangSpot(x: number, y: number, m: number, kindName: string) {
+    const kind = GANGI.find((k) => k.nazwa === kindName) ?? GANGI[0];
+    const rad = kind.promienM * PX_PER_M;
+    for (let t = 0; t < 120; t++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = (m * (0.88 + Math.random() * 0.24)) * PX_PER_M;
+      const gx = x + Math.cos(a) * d;
+      const gy = y + Math.sin(a) * d;
+      if (!this.city.ready({ x0: gx - rad, y0: gy - rad, x1: gx + rad, y1: gy + rad })) continue;
+      if (this.city.isBlocked(gx, gy) || this.nearAvoid(gx, gy, GANG_OD_MIEJSC_M)) continue;
+      if (t < 90 && !this.nearRoad(gx, gy, GANG_WIES.odDrogiM * PX_PER_M)) continue;
+      if (this.gangs.some((g) => !g.clearedAt && Math.hypot(g.x - gx, g.y - gy) < (g.r + rad) * 0.6)) continue;
+      return { x: Math.round(gx), y: Math.round(gy) };
+    }
+    return null;
+  }
+
+  /** Puts a gang of that kind exactly there (a quest's gang); nothing when one with this id is already there. */
+  placeGang(id: string, x: number, y: number, kindName: string) {
+    if (this.gangs.some((g) => g.id === id)) return;
+    const kind = GANGI.find((k) => k.nazwa === kindName) ?? GANGI[0];
+    // Gangs planned on top of it step aside.
+    this.gangs = this.gangs.filter((g) => g.members.size || g.clearedAt || Math.hypot(g.x - x, g.y - y) >= (g.r + kind.promienM * PX_PER_M) * 0.6 || (this.dropMist(g), false));
+    this.gangs.push({ id, kind, x, y, r: kind.promienM * PX_PER_M, spots: null, alive: new Set(), members: new Map(), boss: 'none', clearedAt: 0 });
   }
 
   private flies?: Phaser.GameObjects.Graphics;

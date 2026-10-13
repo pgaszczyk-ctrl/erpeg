@@ -567,6 +567,8 @@ export class GameScene extends Phaser.Scene {
         }
       },
       nearestGang: (x, y, maxPx) => this.streets.nearestGang(x, y, maxPx),
+      gangSpot: (x, y, m, kind) => this.streets.gangSpot(x, y, m, kind),
+      placeGang: (id, x, y, kind) => this.streets.placeGang(id, x, y, kind),
       questSpot: (x, y) => this.questSpot(x, y),
     });
 

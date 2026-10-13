@@ -95,9 +95,25 @@ try {
   const intro = await next(/🧙/);
   assert.match(intro.text, /zwiadowcy/);
   assert.match(intro.text, /gang/);
+  // The game makes its own small gang about 670 m away; the arrow points at it.
+  await page.waitForFunction(() => window.__session.story.proby.gang, null, { timeout: 30000 });
+  const own = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('game');
+    const pr = window.__session.story.proby;
+    const g = s.streets.gangs.find((q) => q.id.startsWith('proba:'));
+    return { d: Math.hypot(pr.gang.x - s.player.x, pr.gang.y - s.player.y) / 1.92, kind: g?.kind.nazwa, r: g && g.r / 1.92 };
+  });
+  console.log('trial gang', JSON.stringify(own));
+  assert.equal(own.kind, 'Mały gang');
+  assert(own.d > 560 && own.d < 780, `about 670 m away (${own.d})`);
   const gGang = await goal();
   console.log('goal', JSON.stringify(gGang));
   assert.match(gGang.text, /gang/);
+  // Its border: puffs of red smoke, no hard line.
+  const gp = await page.evaluate(() => window.__session.story.proby.gang);
+  await go(gp.x, gp.y + 184 * 1.92 + 50);
+  await page.waitForFunction(() => window.__game.scene.getScene('game').streets.gangs.find((q) => q.id.startsWith('proba:'))?.fog, null, { timeout: 20000 });
+  await page.waitForTimeout(1500);
   await page.screenshot({ path: 'work/proby-gang.png' });
 
   // 1. A gang broken up (counted like in the game) → the pigeon, next: the lesson.

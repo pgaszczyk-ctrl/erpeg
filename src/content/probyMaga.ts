@@ -42,6 +42,9 @@ export const PROBY_MAGA = {
   wroc: 'Wróć do maga: {cel}',
 
   gang: {
+    /** Gra robi do tej próby własny gang: taki rodzaj (content/gangi.ts), mniej więcej tyle metrów od bohatera. */
+    rodzaj: 'Mały gang',
+    odlegloscM: 670,
     exp: 150,
     nazwa: 'rozbij gang chochlików',
     cel: 'Rozbij gang chochlików (czerwona mgła)',
