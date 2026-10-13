@@ -1940,12 +1940,14 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  /** A light cone under a wall sign / a stall (content/swiat.ts SNOP_SZYLDU), so places are easy to spot. */
+  /**
+   * The glow by a sign with no lamp of its own (wall signs, market stalls, the port's board). The lamp's light cone
+   * (SNOP_SZYLDU) belongs only to signs on posts: under these it shone out of nothing – „dziwny trójkąt” (owner,
+   * 13 Oct 2026). Until the artist draws their own lights (order 37-P001) they keep the soft halo from production.
+   */
   private signGlow(sign: Phaser.GameObjects.Image) {
-    if (!SNOP) return this.oldSignGlow(sign);
-    const top = sign.y + sign.displayHeight * 0.25;
-    const glow = this.snop(sign.x, top, top + SNOP_SZYLDU.dlug * 0.8, sign.depth + 1);
-    this.signGlows.add(glow);
+    const glow = this.oldSignGlow(sign);
+    glow.setData('bezLampy', true);
     return glow;
   }
 
@@ -2226,7 +2228,7 @@ export class GameScene extends Phaser.Scene {
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
       if (on && this.signGlows.has(o)) {
-        if (SNOP) o.setAlpha(this.lightAlpha(now, o));
+        if (SNOP && !o.getData('bezLampy')) o.setAlpha(this.lightAlpha(now, o));
         else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
       }
     }
