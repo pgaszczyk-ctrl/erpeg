@@ -104,31 +104,48 @@ export function portyBlisko(at: { lat: number; lon: number }, km: number): Port[
 }
 
 /**
- * Where ferries from this port go: at most PROM.maksKierunkow – the lines added from players' requests first,
- * then the shortest real ones (a fixed list, like a timetable); shown shortest first.
+ * Where ferries from this port go (owner, 14 Oct 2026: „jak z pociągami, 3 max, 1 lokalny jeśli jest, 2 sąsiednich
+ * krajów”): at most PROM.maksKierunkow – one in the own country (a line from a player's request first, then the
+ * country's flagship, the nearest real line, a port sailed to before) and the two nearest foreign countries (one
+ * port per country; requests first). A side short of choices leaves its places to the other. The rest of the world
+ * stays reachable through „🧭 Inne miejsce…” (trasaDo; `wszystkie` = every possible leg for it). Shown shortest first.
  */
-export function rejsyZ(p: Port, odwiedzone: { lat: number; lon: number }[] = []): Rejs[] {
-  const all = [...(linie.get(p.id) ?? [])].sort((a, b) => Number(!!b.zProsby) - Number(!!a.zProsby) || a.km - b.km);
-  const out: Rejs[] = all.slice(0, PROM.maksKierunkow);
+export function rejsyZ(p: Port, odwiedzone: { lat: number; lon: number }[] = [], wszystkie = false): Rejs[] {
+  const kand: Rejs[] = [];
   const add = (r: Rejs) => {
-    if (r.do !== p && !out.some((q) => q.do === r.do || odleglosc(q.do, r.do) < 3)) out.push(r);
+    if (r.do !== p && !kand.some((q) => q.do === r.do || odleglosc(q.do, r.do) < 3)) kand.push(r);
   };
-  // The network (owner, 13 Oct 2026): every sea port sails to its country's flagship; a flagship sails to the
-  // flagships of the countries next to it by sea, and back to the country's small ports the hero has been to.
   const [iso, morski] = krajPortu(p);
   const flag = iso ? flagowyPort.get(iso) : undefined;
+  const real = [...(linie.get(p.id) ?? [])].sort((a, b) => a.km - b.km);
+  for (const r of real) if (r.zProsby) add(r);
   if (iso && flag && morski && flag !== p) add({ do: flag, km: kmMorzem(p, flag), nazwa: null, siec: 'flagowy' });
+  for (const r of real) add(r);
   if (iso && flag === p) {
     for (const s of sasiedzi.get(iso) ?? []) {
       const f = flagowyPort.get(s.iso);
       const liniowiec = siec?.liniowce?.some(([a, b]) => (a === iso && b === s.iso) || (b === iso && a === s.iso));
       if (f) add({ do: f, km: s.km, nazwa: null, siec: liniowiec ? 'liniowiec' : 'sasiad' });
     }
-    for (const o of odwiedzone) {
-      const q = portyBlisko(o, 1)[0];
-      if (q && q !== p && krajPortu(q)[0] === iso && krajPortu(q)[1]) add({ do: q, km: kmMorzem(p, q), nazwa: null, siec: 'powrot' });
-    }
   }
+  if (iso) for (const o of odwiedzone) {
+    const q = portyBlisko(o, 1)[0];
+    if (q && q !== p && krajPortu(q)[0] === iso && krajPortu(q)[1]) add({ do: q, km: kmMorzem(p, q), nazwa: null, siec: 'powrot' });
+  }
+  // The captain's own route planning (trasaDo) may use any of them, not only the 3 on the board.
+  if (wszystkie) return kand;
+  const krajDo = (r: Rejs) => krajPortu(r.do)[0];
+  const lokalny = (r: Rejs) => !iso || !krajDo(r) || krajDo(r) === iso;
+  // Own country: a request, then the flagship, then the nearest real line, then a port sailed to before.
+  const ranga = (r: Rejs) => (r.zProsby ? 0 : r.siec === 'flagowy' ? 1 : !r.siec ? 2 : 3);
+  const swoje = kand.filter(lokalny).sort((a, b) => ranga(a) - ranga(b) || a.km - b.km);
+  // Foreign: one port per country, requests first, then the nearest (ocean liners are just farther).
+  const obce: Rejs[] = [];
+  for (const r of kand.filter((q) => !lokalny(q)).sort((a, b) => Number(!!b.zProsby) - Number(!!a.zProsby) || a.km - b.km))
+    if (!obce.some((q) => krajDo(q) === krajDo(r))) obce.push(r);
+  const max = PROM.maksKierunkow;
+  const out = [...swoje.slice(0, 1), ...obce.slice(0, max - 1)];
+  for (const r of [...swoje.slice(1), ...obce.slice(max - 1)]) if (out.length < max) out.push(r);
   return out.sort((a, b) => a.km - b.km);
 }
 

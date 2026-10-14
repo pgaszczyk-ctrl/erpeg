@@ -19,7 +19,7 @@ try {
     const P = window.__porty;
     await P.wczytajPorty();
     const at = (lat, lon) => P.portyBlisko({ lat, lon }, 5)[0];
-    const opis = (p) => P.rejsyZ(p).map((q) => `${q.do.nazwa}${q.siec ? `[${q.siec}:${P.krajPortu(q.do)[0]}]` : ''} ${q.km}`);
+    const opis = (p) => P.rejsyZ(p).map((q) => `${q.do.nazwa}[${q.siec ?? 'linia'}:${P.krajPortu(q.do)[0]}] ${q.km}`);
     const gdynia = at(54.535, 18.5), kop = P.portyBlisko({ lat: 55.68, lon: 12.6 }, 15)[0], hel = at(54.6, 18.8);
     const t = (p, x) => { const w = P.trasaDo(p, x); return w && { droga: w.hops.map((h) => h.nazwa).join(' → '), km: w.km, kraj: w.kraj, przez: w.przez }; };
     return {
@@ -33,7 +33,14 @@ try {
     };
   });
   for (const [k, v] of Object.entries(r)) console.log(k, JSON.stringify(v));
-  assert(r.gdynia[2].some((s) => s.includes('[sasiad:DK]')), 'Gdynia sails to Denmark');
+  assert.equal(r.gdynia[2].filter((s) => /\[sasiad:/.test(s)).length, 2, 'Gdynia sails to two neighbouring countries');
+  // At most 3 a port (owner, 14 Oct 2026): one at home if there is one, two foreign countries, one port each.
+  for (const k of ['gdynia', 'hel', 'kop']) {
+    const l = r[k][2], iso = r[k][1][0];
+    assert(l.length <= 3, `${k}: ${l.length} lines`);
+    const obce = l.map((s) => s.match(/:([A-Z]{2})\]/)?.[1]).filter((c) => c && c !== iso);
+    assert.equal(new Set(obce).size, obce.length, `${k}: one port per country`);
+  }
   assert(r.kenia && /Dar es Salaam$/.test(r.kenia.droga) && r.kenia.przez === 'Tanzania', 'Kenya via Tanzania');
   assert(r.japonia && r.japonia.km > 15000);
   assert.equal(r.bzdura, null);

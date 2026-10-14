@@ -24,8 +24,9 @@ export const PROM = {
   /** Najwięcej linii na liście kapitana (najkrótsze; reszta po „Dalej…”). */
   naStronie: 6,
   /**
-   * Z jednego portu pływa się najwyżej do tylu miejsc (właściciel: „tylko do kilku, jak z pociągami”). Najpierw
-   * linie dodane z próśb graczy (panel ⚓ Porty), potem najbliższe prawdziwe. Lista stała, nie losuje się.
+   * Z jednego portu pływa się najwyżej do tylu miejsc (właściciel 14.10.2026: „3 max, 1 lokalny jeśli jest, 2 sąsiednich
+   * krajów”): 1 w swoim kraju i 2 najbliższe inne kraje (po jednym porcie na kraj; linie z próśb graczy pierwsze).
+   * Gdy po którejś stronie brak, miejsce dostaje druga. Lista stała, nie losuje się.
    */
   maksKierunkow: 3,
   /** Od którego poziomu postaci (0 = od razu). */

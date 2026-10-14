@@ -3242,7 +3242,7 @@ export class GameScene extends Phaser.Scene {
       const dni = t.km / PROM.kmh / 24;
       const czas = dni >= 1 ? `ok. ${Math.round(dni)} ${Math.round(dni) === 1 ? 'dnia' : 'dni'}` : `ok. ${Math.max(1, Math.round(dni * 24))} godz.`;
       const pierwszy = t.hops[0];
-      const r = (port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|'))) : []).find((q) => q.do === pierwszy);
+      const r = (port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|')), true) : []).find((q) => q.do === pierwszy);
       return this.dialog({
         title,
         text: `„${t.kraj}? ${t.przez ? `Tam promy nie pływają – najbliżej dopłyniesz do ${t.hops[t.hops.length - 1].nazwa} (${t.przez}), a dalej lądem. ` : ''}Stąd prosto się nie da, ale z przesiadkami w głównych portach owszem:\n${droga}\nRazem ok. ${t.km} km po morzu, ${czas} rejsu. Każdy odcinek kupujesz u kapitana w porcie przesiadki.”`,
