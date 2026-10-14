@@ -732,6 +732,7 @@ export class Story {
       title: `${L.tytul} – ${krotkaNazwa(place.name) ?? place.name}`,
       text: `${r.opowiesc}\n\n${r.pytanie}`,
       buttons: order.map((j) => r.odpowiedzi[j]),
+      odpowiedzi: true,
       onChoose: (b) => {
         if (order[b] !== 0) {
           this.host.dialog({ title: L.tytul, text: L.zle, buttons: ['Słucham'], onChoose: () => this.lesson(place, i) });

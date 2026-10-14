@@ -266,6 +266,8 @@ export interface DialogRequest {
   shop?: ShopPresentation;
   /** Who speaks (portrait on the left; the hero's on the right). null = nobody (system windows); absent = the last speaker nearby. */
   kto?: Rozmowca | null;
+  /** Every button is an answer (riddles without „Później”): all in one colour, so the last one isn't greyed like a way out. */
+  odpowiedzi?: boolean;
   onChoose: (index: number) => void;
 }
 
@@ -5087,6 +5089,7 @@ export class GameScene extends Phaser.Scene {
       title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
       text: `${r.question}\n\nTylko jedna próba!`,
       buttons: [...r.answers],
+      odpowiedzi: true,
       onChoose: (i) => {
         const right = i === r.correct;
         if (right) {
