@@ -24,6 +24,8 @@ function exploring(game: Phaser.Game) {
   if (document.getElementById('journey')) return false;
   // The picture broke (errlog.ts watchGraphics): its reload button must not be asked about.
   if (document.getElementById('gl-reload')) return false;
+  // The session ended elsewhere (sesja.ts): its reload button must not be asked about either.
+  if (document.getElementById('sesja-wygasla')) return false;
   return !document.getElementById('menu') && !s.leaving && !!s.player && !s.player.isDead;
 }
 

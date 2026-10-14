@@ -1,4 +1,5 @@
 import { effectiveStage } from './content/questy/progress';
+import { sesjaWygasla, toWygasla } from './sesja';
 import { translateMission, legacyText } from './content/questy/text';
 import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
 import { lang, setLanguage, tx, tr, type Txt } from './i18n';
@@ -287,6 +288,7 @@ export function saveNow(hp: number) {
   const snapshot=structuredClone(data), token=session.token, exp=session.exp;
   const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
   saveChain=next;
+  next.catch((e) => { if (toWygasla(e)) sesjaWygasla(token); });
   return next;
 }
 

@@ -98,6 +98,7 @@ import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
+import { sesjaWygasla } from '../sesja';
 import { DemoRun } from './Demo';
 import { SmokAI, aktualizujEfekty, wyczyscEfekty, smokSmierc, type StanGracza } from '../objects/SmokAI';
 import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
@@ -762,7 +763,9 @@ export class GameScene extends Phaser.Scene {
           snap.kur = { m: Math.round(session.stats.m), o: zdobyteOdznaki(stanOsiagniec()), ...this.kurierMiejsce() };
         } catch { /* the rankings must never stop the heartbeat */ }
       }
-      api.heartbeat(session.token, snap).catch(() => {});
+      // The server refused the key: this character was loaded elsewhere or logged out (sesja.ts).
+      const token = session.token;
+      api.heartbeat(token, snap).then((ok) => { if (ok === false && !this.leaving) sesjaWygasla(token); }).catch(() => {});
     };
     this.time.addEvent({ delay: HEARTBEAT_MS, loop: true, callback: beat });
     window.addEventListener('pagehide', beat);
