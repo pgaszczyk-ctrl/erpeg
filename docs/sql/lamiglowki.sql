@@ -21,7 +21,7 @@ begin
   select id into v_id from public._player_by_token(p_token);
   if v_id is null then return false; end if;
   if p_dzien not in (v_dzis, v_dzis - 1) then return false; end if;
-  if p_rodzaj not in ('sudoku', 'kakuro', 'krzyzowka', 'trasa') or p_poziom not between 0 and 4 then return false; end if;
+  if p_rodzaj not in ('sudoku', 'kakuro', 'krzyzowka', 'trasa', 'krolowe') or p_poziom not between 0 and 4 then return false; end if;
   insert into lamiglowki_rozwiazania (player_id, dzien, poziom, rodzaj, sekundy)
   values (v_id, p_dzien, p_poziom, p_rodzaj, greatest(0, least(p_sekundy, 86400)))
   on conflict do nothing;

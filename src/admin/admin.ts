@@ -1267,7 +1267,7 @@ if (key) {
  */
 async function puzzlesTab(main: HTMLElement) {
   main.append(el('h2', {}, ['Łamigłówka dnia (Kurier Parowy)']), el('p', { className: 'muted' }, [
-    `Codziennie jeden rodzaj dla wszystkich (sudoku 6×6, kakuro, matematyczna krzyżówka, najkrótsza trasa), a łamigłówka według poziomu trudności postaci. Za rozwiązanie ${LAMIGLOWKA.nagrodaExp} EXP raz dziennie. Losowanie nagród jeszcze nie działa.`,
+    `Codziennie jeden rodzaj dla wszystkich (sudoku 6×6, kakuro, matematyczna krzyżówka, najkrótsza trasa, królowe – od 15.10.2026), a łamigłówka według poziomu trudności postaci. Za rozwiązanie ${LAMIGLOWKA.nagrodaExp} EXP raz dziennie. Losowanie nagród jeszcze nie działa.`,
   ]));
   const stats = el('div');
   main.append(stats);
@@ -1318,6 +1318,10 @@ function puzzleText(z: Lamiglowka, rozw: boolean): string {
     }
     lines.push(z.wynikiK.map(() => pad('=', 4) + '  ').join(''), z.wynikiK.map((v) => pad(String(v), 4) + '  ').join(''));
     return lines.join('\n');
+  }
+  if (z.rodzaj === 'krolowe') {
+    // Areas as letters; the solution's queens as ♛.
+    return z.obszary.map((w, r) => w.map((o, c) => (rozw && z.rozw[r] === c ? '♛' : String.fromCharCode(65 + o))).join(' ')).join('\n');
   }
   const on = new Set(z.przyklad.map(([r, c]) => r * 100 + c));
   return z.pola.map((w, r) => w.map((v, c) => (rozw && on.has(r * 100 + c) ? `[${v}]` : ` ${v} `)).join('')).join('\n') + (rozw ? `\nNajkrótsza: ${z.najkrotsza} m` : '');

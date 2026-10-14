@@ -1,12 +1,12 @@
 // Puzzle of the day in the „Kurier Parowy” (owner, 12 Oct 2026; from the puzzle book photos): every day one
-// kind (the same for everyone) – a 6×6 sudoku with 3×2 boxes, kakuro, a number crossword or the shortest
-// route – and one puzzle per difficulty level (TRUDNOSCI index 0–4: the same puzzle for everyone on that
+// kind (the same for everyone) – a 6×6 sudoku with 3×2 boxes, kakuro, a number crossword, the shortest
+// route or queens (from 15 Oct 2026) – and one puzzle per difficulty level (TRUDNOSCI index 0–4: the same puzzle for everyone on that
 // level). Hard puzzles only from Wysoki (3), very hard on Hardkor (4). Everything here is deterministic from
 // the day and the level (no Math.random), pure and DOM-free, so the game and the admin panel build the very
 // same puzzles and scripts/test-lamiglowki.mjs can check them in Node.
 
-export type RodzajLamiglowki = 'sudoku' | 'kakuro' | 'krzyzowka' | 'trasa';
-export const RODZAJE: RodzajLamiglowki[] = ['sudoku', 'kakuro', 'krzyzowka', 'trasa'];
+export type RodzajLamiglowki = 'sudoku' | 'kakuro' | 'krzyzowka' | 'trasa' | 'krolowe';
+export const RODZAJE: RodzajLamiglowki[] = ['sudoku', 'kakuro', 'krzyzowka', 'trasa', 'krolowe'];
 
 /** Sudoku 6×6: `dane[r][c]` 0 = empty. */
 export interface Sudoku { rodzaj: 'sudoku'; dane: number[][]; rozw: number[][] }
@@ -38,7 +38,12 @@ export interface Krzyzowka {
  *  each number is the metres of that stretch; the total counts every cell on the way. */
 export interface Trasa { rodzaj: 'trasa'; pola: number[][]; najkrotsza: number; przyklad: [number, number][] }
 
-export type Lamiglowka = Sudoku | Kakuro | Krzyzowka | Trasa;
+/** Queens (owner, 13 Oct 2026): an n×n board cut into n coloured regions (`obszary[r][c]` = region 0…n−1);
+ *  one queen in every row, every column and every region, and no two queens touching, not even at a corner.
+ *  `rozw[r]` = the queen's column in row r (the only solution). */
+export interface Krolowe { rodzaj: 'krolowe'; obszary: number[][]; rozw: number[] }
+
+export type Lamiglowka = Sudoku | Kakuro | Krzyzowka | Trasa | Krolowe;
 
 // ------------------------------------------------------------------ randomness
 
@@ -81,16 +86,30 @@ export function dzienLamiglowki(d = new Date()) {
   }
 }
 
+/** The first day with queens in the rotation (before it the four older kinds kept their order). */
+const KROLOWE_OD = Math.floor(Date.parse('2026-10-15T12:00:00Z') / 864e5);
+const STARE = RODZAJE.filter((k) => k !== 'krolowe');
+
 /** The day's kind: no kind twice in a row. */
 export function rodzajDnia(dzien: string): RodzajLamiglowki {
   const nr = Math.floor(Date.parse(`${dzien}T12:00:00Z`) / 864e5);
-  // Each block of 4 days is a shuffled order of all four kinds, its first never equal to the previous block's last.
-  const blok = Math.floor(nr / 4);
-  const kolejnosc = (b: number) => los(hash(`lamiglowki-blok:${b}`)).mieszaj([...RODZAJE]);
+  // Each block of days is a shuffled order of all the kinds, its first never equal to the previous block's last
+  // (swapping the first two never moves the last one, so the previous block's raw order is enough).
+  const stary = (n: number) => {
+    const blok = Math.floor(n / 4);
+    const kolejnosc = (b: number) => los(hash(`lamiglowki-blok:${b}`)).mieszaj([...STARE]);
+    let k = kolejnosc(blok);
+    const prev = kolejnosc(blok - 1);
+    if (k[0] === prev[3]) k = [k[1], k[0], k[2], k[3]];
+    return k[((n % 4) + 4) % 4];
+  };
+  if (nr < KROLOWE_OD) return stary(nr);
+  const N = RODZAJE.length, d = nr - KROLOWE_OD, blok = Math.floor(d / N);
+  const kolejnosc = (b: number) => los(hash(`lamiglowki-blok5:${b}`)).mieszaj([...RODZAJE]);
   let k = kolejnosc(blok);
-  const prev = kolejnosc(blok - 1);
-  if (k[0] === prev[3]) k = [k[1], k[0], k[2], k[3]];
-  return k[((nr % 4) + 4) % 4];
+  const przed = blok === 0 ? stary(KROLOWE_OD - 1) : kolejnosc(blok - 1)[N - 1];
+  if (k[0] === przed) k = [k[1], k[0], ...k.slice(2)];
+  return k[d % N];
 }
 
 export const POZIOMY_LAMIGLOWEK = [
@@ -105,7 +124,7 @@ export const POZIOMY_LAMIGLOWEK = [
 export function lamiglowkaDnia(dzien: string, poziom: number, rodzaj = rodzajDnia(dzien)): Lamiglowka {
   const p = Math.max(0, Math.min(4, Math.round(poziom)));
   const R = los(hash(`lamiglowka:${dzien}:${rodzaj}:${p}`));
-  return rodzaj === 'sudoku' ? sudoku(R, p) : rodzaj === 'kakuro' ? kakuro(R, p) : rodzaj === 'krzyzowka' ? krzyzowka(R, p) : trasa(R, p);
+  return rodzaj === 'sudoku' ? sudoku(R, p) : rodzaj === 'kakuro' ? kakuro(R, p) : rodzaj === 'krzyzowka' ? krzyzowka(R, p) : rodzaj === 'krolowe' ? krolowe(R, p) : trasa(R, p);
 }
 
 // ------------------------------------------------------------------ sudoku 6×6 (boxes 3 wide × 2 tall)
@@ -526,3 +545,122 @@ export function sprawdzTrase(t: Trasa, sciezka: [number, number][]) {
 }
 
 export const sumaTrasy = (t: Trasa, sciezka: [number, number][]) => sciezka.reduce((a, [r, c]) => a + t.pola[r][c], 0);
+
+// ------------------------------------------------------------------ queens
+
+/** Board size per level. */
+const KROLOWE_N = [5, 6, 7, 8, 9];
+
+/** Solutions of a region map (each row's column), at most `ile` of them. */
+export function rozwiazaniaKrolowych(obszary: number[][], ile = 2): number[][] {
+  const n = obszary.length, out: number[][] = [], kol = new Array<number>(n);
+  const zajK = new Array<boolean>(n).fill(false), zajO = new Array<boolean>(n).fill(false);
+  const krok = (r: number) => {
+    if (out.length >= ile) return;
+    if (r === n) { out.push([...kol]); return; }
+    for (let c = 0; c < n; c++) {
+      const o = obszary[r][c];
+      if (zajK[c] || zajO[o] || (r && Math.abs(kol[r - 1] - c) < 2)) continue;
+      zajK[c] = zajO[o] = true;
+      kol[r] = c;
+      krok(r + 1);
+      zajK[c] = zajO[o] = false;
+    }
+  };
+  krok(0);
+  return out;
+}
+
+/** Columns for n queens, one per row and column, rows next to each other at least 2 columns apart. */
+function ustawienie(R: Los, n: number): number[] {
+  const kol: number[] = [], zaj = new Set<number>();
+  const krok = (r: number): boolean => {
+    if (r === n) return true;
+    for (const c of R.mieszaj([...Array(n).keys()])) {
+      if (zaj.has(c) || (r && Math.abs(kol[r - 1] - c) < 2)) continue;
+      zaj.add(c);
+      kol[r] = c;
+      if (krok(r + 1)) return true;
+      zaj.delete(c);
+    }
+    return false;
+  };
+  krok(0);
+  return kol;
+}
+
+const SASIEDZI4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+/** Whether region `o` is still in one piece without the cell (r, c). */
+function spojnyBez(obszary: number[][], o: number, r: number, c: number) {
+  const n = obszary.length, komorki: [number, number][] = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (obszary[i][j] === o && (i !== r || j !== c)) komorki.push([i, j]);
+  if (!komorki.length) return false;
+  const byl = new Set([komorki[0][0] * n + komorki[0][1]]), kolejka = [komorki[0]];
+  while (kolejka.length) {
+    const [i, j] = kolejka.pop()!;
+    for (const [di, dj] of SASIEDZI4) {
+      const a = i + di, b = j + dj;
+      if (a < 0 || b < 0 || a >= n || b >= n || (a === r && b === c) || obszary[a][b] !== o || byl.has(a * n + b)) continue;
+      byl.add(a * n + b);
+      kolejka.push([a, b]);
+    }
+  }
+  return byl.size === komorki.length;
+}
+
+function krolowe(R: Los, p: number): Krolowe {
+  const n = KROLOWE_N[p];
+  for (let proba = 0; ; proba++) {
+    const rozw = ustawienie(R, n);
+    // Regions grow from the queens' cells, a random border cell at a time.
+    const obszary = Array.from({ length: n }, () => new Array<number>(n).fill(-1));
+    rozw.forEach((c, r) => (obszary[r][c] = r));
+    for (let wolne = n * n - n; wolne > 0; ) {
+      const brzeg: [number, number, number][] = [];
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        if (obszary[r][c] >= 0) continue;
+        for (const [dr, dc] of SASIEDZI4) {
+          const a = r + dr, b = c + dc;
+          if (a >= 0 && b >= 0 && a < n && b < n && obszary[a][b] >= 0) brzeg.push([r, c, obszary[a][b]]);
+        }
+      }
+      const [r, c, o] = brzeg[Math.floor(R.r() * brzeg.length)];
+      obszary[r][c] = o;
+      wolne--;
+    }
+    // While another solution exists, hand one of its queens' cells (never ours) to a neighbouring region:
+    // that region then holds two of its queens, and ours stays untouched.
+    for (let k = 0; k < n * n * 3; k++) {
+      const inne = rozwiazaniaKrolowych(obszary).find((s) => s.some((c, r) => c !== rozw[r]));
+      if (!inne) return { rodzaj: 'krolowe', obszary, rozw };
+      const ruchy: [number, number, number][] = [];
+      inne.forEach((c, r) => {
+        if (c === rozw[r]) return;
+        const o = obszary[r][c];
+        if (!spojnyBez(obszary, o, r, c)) return;
+        for (const [dr, dc] of SASIEDZI4) {
+          const a = r + dr, b = c + dc;
+          if (a >= 0 && b >= 0 && a < n && b < n && obszary[a][b] !== o) ruchy.push([r, c, obszary[a][b]]);
+        }
+      });
+      if (!ruchy.length) break;
+      const [r, c, o] = ruchy[Math.floor(R.r() * ruchy.length)];
+      obszary[r][c] = o;
+    }
+    if (proba > 50) throw new Error('krolowe: no unique puzzle');
+  }
+}
+
+/** The player's queens (true = a queen there): one per row, column and region, none touching. */
+export function sprawdzKrolowe(z: Krolowe, krolowe: boolean[][]) {
+  const n = z.obszary.length, kol: number[] = [];
+  for (let r = 0; r < n; r++) {
+    const w = krolowe[r] ?? [];
+    const cs = [...Array(n).keys()].filter((c) => w[c]);
+    if (cs.length !== 1) return false;
+    kol.push(cs[0]);
+  }
+  if (new Set(kol).size !== n || new Set(kol.map((c, r) => z.obszary[r][c])).size !== n) return false;
+  return kol.every((c, r) => !r || Math.abs(kol[r - 1] - c) > 1);
+}

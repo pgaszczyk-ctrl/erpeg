@@ -125,6 +125,17 @@
 #gazeta .gz-trasa .gz-start::after,#gazeta .gz-trasa .gz-meta::after{content:'';position:absolute;inset:4%;border-radius:50%;border:2px dashed var(--red)}
 #gazeta .gz-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 #gazeta .gz-route polyline{fill:none;stroke:var(--red);stroke-width:.12;stroke-linejoin:round;stroke-linecap:round;opacity:.75}
+#gazeta .gz-krolowe .gz-cell{border-color:#231a12;font-size:calc(var(--cell) * .62);color:var(--ink)}
+#gazeta .gz-krolowe .gz-cell.zle{color:var(--red)}
+#gazeta .gz-krolowe .gz-q0{background:#f2c9a0}
+#gazeta .gz-krolowe .gz-q1{background:#bcd6a4}
+#gazeta .gz-krolowe .gz-q2{background:#a9c8e3}
+#gazeta .gz-krolowe .gz-q3{background:#e8b4b8}
+#gazeta .gz-krolowe .gz-q4{background:#e9dc94}
+#gazeta .gz-krolowe .gz-q5{background:#c9b6e0}
+#gazeta .gz-krolowe .gz-q6{background:#a6d8cf}
+#gazeta .gz-krolowe .gz-q7{background:#e2c2a4}
+#gazeta .gz-krolowe .gz-q8{background:#cfd0c2}
 #gazeta .gz-pad{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px auto 0;max-width:520px}
 #gazeta .gz-key{min-width:44px;min-height:44px;padding:0 8px;border:1.5px solid var(--ink);border-radius:4px;background:#fbf3dc;color:var(--ink);font:700 22px 'Old Standard TT',serif;cursor:pointer}
 #gazeta .gz-key:hover{background:#e9c97a}

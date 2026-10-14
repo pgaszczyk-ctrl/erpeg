@@ -1,7 +1,8 @@
 import { LAMIGLOWKA as L } from '../content/gazeta';
 import { tr, type Txt } from '../i18n';
+import { TEST } from '../version';
 import {
-  lamiglowkaDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, OPY, sprawdzSudoku, sprawdzKakuro, sprawdzKrzyzowke, sprawdzTrase, sumaTrasy,
+  lamiglowkaDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, RODZAJE, OPY, sprawdzSudoku, sprawdzKakuro, sprawdzKrzyzowke, sprawdzTrase, sprawdzKrolowe, sumaTrasy,
   type Lamiglowka, type Op, type RodzajLamiglowki,
 } from '../lamiglowki';
 
@@ -51,8 +52,11 @@ const fmt = (t: Txt, vars: Record<string, string | number>) => Object.entries(va
 /** Builds the page once per opened paper; `node` is re-attached on every re-render of the sheet, `klawisz` takes keys. */
 export function stronaLamiglowki(h: LamiglowkaHost) {
   const dzien = dzienLamiglowki();
-  const z: Lamiglowka = lamiglowkaDnia(dzien, h.poziom);
+  // Test server only: ?lamiglowka=<kind> shows that kind today (to try a new kind before its day comes).
+  const wymus = TEST ? (new URLSearchParams(location.search).get('lamiglowka') as RodzajLamiglowki | null) : null;
+  const z: Lamiglowka = wymus && RODZAJE.includes(wymus) ? lamiglowkaDnia(dzien, h.poziom, wymus) : lamiglowkaDnia(dzien, h.poziom);
   const klucz = `${dzien}:${h.poziom}:${z.rodzaj}`;
+  if (wymus && z.rodzaj === 'krolowe') (window as unknown as { __krolowe?: number[] }).__krolowe = z.rozw;
   let gotowa = h.rozwiazana(dzien);
   const stan: Wpis = wczytaj(klucz) ?? { w: [], t0: Date.now() };
   const node = el('div', 'gz-puz');
@@ -185,6 +189,40 @@ export function stronaLamiglowki(h: LamiglowkaHost) {
         else if (nc && R === 2 * n) plansza.append(el('div', 'gz-cell given gz-res', String(z.wynikiK[c])));
         else plansza.append(el('div', 'gz-cell gz-none'));
       }
+    } else if (z.rodzaj === 'krolowe') {
+      klawisze = [];
+      const n = z.obszary.length, o = z.obszary;
+      plansza.style.setProperty('--n', String(n));
+      const q = (r: number, c: number) => (gotowa ? z.rozw[r] === c : komorka(r, c) === 'q');
+      // Queens breaking a rule (same row/column/region or touching) are printed red.
+      const zle = (r: number, c: number) => {
+        for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+          if ((a === r && b === c) || !q(a, b)) continue;
+          if (a === r || b === c || o[a][b] === o[r][c] || (Math.abs(a - r) < 2 && Math.abs(b - c) < 2)) return true;
+        }
+        return false;
+      };
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        const v = gotowa ? (z.rozw[r] === c ? 'q' : null) : komorka(r, c);
+        const b = el('button', `gz-cell gz-q${o[r][c]}${v === 'q' && !gotowa && zle(r, c) ? ' zle' : ''}`, v === 'q' ? '♛' : v === 'x' ? '×' : '');
+        b.type = 'button';
+        // Thick lines where regions meet.
+        b.style.borderTopWidth = r && o[r - 1][c] !== o[r][c] ? '3px' : '';
+        b.style.borderLeftWidth = c && o[r][c - 1] !== o[r][c] ? '3px' : '';
+        b.setAttribute('aria-label', `${r + 1}, ${c + 1}${v === 'q' ? ' ♛' : v === 'x' ? ' ×' : ''}`);
+        b.onclick = () => {
+          if (gotowa) return;
+          ustaw(r, c, v === null ? 'x' : v === 'x' ? 'q' : null);
+          msg.textContent = '';
+          const ile = z.obszary.flat().filter((_, i) => komorka(Math.floor(i / n), i % n) === 'q').length;
+          if (ile === n) {
+            if (sprawdzKrolowe(z, o.map((w, a) => w.map((_, bb) => komorka(a, bb) === 'q')))) sukces();
+            else powiedz(L.zle);
+          }
+          odswiez();
+        };
+        plansza.append(b);
+      }
     } else {
       klawisze = [];
       const H = z.pola.length, W = z.pola[0].length;
@@ -244,6 +282,11 @@ export function stronaLamiglowki(h: LamiglowkaHost) {
       const kolumny = z.kolumny.map((w, r) => w.map((d, c) => d ?? (komorka(2 * r + 1, 2 * c) as Op | null)));
       pelne = liczby.flat().every((v) => v != null) && wiersze.flat().every(Boolean) && kolumny.flat().every(Boolean);
       dobrze = pelne && n > 0 && sprawdzKrzyzowke(z, liczby, wiersze, kolumny);
+    } else if (z.rodzaj === 'krolowe') {
+      const g = z.obszary.map((w, r) => w.map((_, c) => komorka(r, c) === 'q'));
+      pelne = g.flat().filter(Boolean).length >= z.obszary.length;
+      dobrze = pelne && sprawdzKrolowe(z, g);
+      if (!pelne) { powiedz(L.malo, { n: z.obszary.length }); return; }
     }
     if (!pelne) powiedz(L.niePelne);
     else if (dobrze) sukces();
