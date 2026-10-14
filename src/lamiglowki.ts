@@ -18,7 +18,8 @@ export type KomorkaKakuro = null | { d: number; p: number } | 'b';
 export interface Kakuro { rodzaj: 'kakuro'; siatka: KomorkaKakuro[][]; dane: number[][]; rozw: number[][] }
 
 /** Number crossword: an n×n square of numbers with operators between them, read left to right / top to bottom
- *  (no operator precedence, like the book), row results on the right, column results at the bottom.
+ *  with the school order of operations (× and ÷ before + and −; owner, 14 Oct 2026 – it used to be strictly
+ *  left to right, like the book), row results on the right, column results at the bottom.
  *  Hidden numbers are null in `liczby`, hidden operators null in `wiersze`/`kolumny`. */
 export type Op = '+' | '-' | '×' | '÷';
 export interface Krzyzowka {
@@ -367,16 +368,20 @@ export const OPY: Op[] = ['+', '-', '×', '÷'];
 
 /** Left to right; null when a division isn't exact or the result leaves 0…maks. */
 function licz(liczby: number[], ops: Op[], maks: number): number | null {
-  let a = liczby[0];
-  for (let i = 0; i < ops.length; i++) {
-    const b = liczby[i + 1];
-    if (ops[i] === '+') a += b;
-    else if (ops[i] === '-') a -= b;
-    else if (ops[i] === '×') a *= b;
-    else { if (b === 0 || a % b) return null; a /= b; }
-    if (a < 0 || a > maks) return null;
+  // Like at school (owner, 14 Oct 2026): × and ÷ first, then + and − from the left. Every division must come
+  // out whole, and the running total never dips below zero (children's sums).
+  let suma = 0, znak = 1, wyraz = liczby[0];
+  for (let i = 0; i <= ops.length; i++) {
+    const o = ops[i], b = liczby[i + 1];
+    if (o === '×') { wyraz *= b; if (wyraz > 1e6) return null; continue; }
+    if (o === '÷') { if (b === 0 || wyraz % b) return null; wyraz /= b; continue; }
+    suma += znak * wyraz;
+    if (suma < 0) return null;
+    if (o === undefined) break;
+    znak = o === '+' ? 1 : -1;
+    wyraz = b;
   }
-  return a;
+  return suma > maks ? null : suma;
 }
 
 const KRZ = [

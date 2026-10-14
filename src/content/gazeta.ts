@@ -200,10 +200,11 @@ export const LAMIGLOWKA = {
   zasady: {
     sudoku: { pl: 'Wpisz cyfry od 1 do 6 tak, by w każdym wierszu, każdej kolumnie i każdym prostokącie 3×2 każda cyfra była dokładnie raz.', en: 'Fill in digits 1 to 6 so that every row, every column and every 3×2 box holds each digit exactly once.' },
     kakuro: { pl: 'W białe pola wpisz cyfry od 1 do 9. Liczba nad ukośną kreską to suma cyfr w prawo, liczba pod nią – suma cyfr w dół. W jednym ciągu cyfry nie mogą się powtarzać.', en: 'Fill the white cells with digits 1 to 9. The number above the slash is the sum of the digits to the right, the one below it – of the digits downwards. No digit repeats within one run.' },
-    krzyzowka: { pl: 'W puste pola wpisz liczby lub znaki działań. Liczymy po kolei, od lewej do prawej i z góry na dół – jak na kalkulatorze.', en: 'Fill the empty cells with numbers or operation signs. Work in order, left to right and top to bottom – like on a calculator.' },
+    krzyzowka: { pl: 'W puste pola wpisz liczby lub znaki działań. Wiersze czytamy od lewej, kolumny z góry. Liczymy jak w szkole: najpierw mnożenie i dzielenie, potem dodawanie i odejmowanie.', en: 'Fill the empty cells with numbers or operation signs. Rows read from the left, columns from the top. Work it out like at school: multiplication and division first, then addition and subtraction.' },
     trasa: { pl: 'Każda liczba to metry. Wyznacz drogę od startu w lewym dolnym rogu do mety w prawym górnym, krok po kroku w bok, w górę lub w dół, tak by suma metrów była najmniejsza. Dotknij pola obok końca trasy, by ją przedłużyć; dotknij pola na trasie, by ją do niego skrócić.', en: 'Every number is metres. Find the way from the start in the bottom-left corner to the finish in the top-right one, step by step sideways, up or down, so that the metres add up to the least. Tap a cell next to the end of the route to extend it; tap a cell on the route to cut it back there.' },
     krolowe: { pl: 'Postaw po jednej królowej ♛ w każdym wierszu, każdej kolumnie i każdym kolorowym obszarze. Królowe nie mogą się stykać – nawet rogami. Dotknij pola raz, by postawić krzyżyk (tu nie ma królowej), drugi raz – królową, trzeci – by wyczyścić.', en: 'Place one queen ♛ in every row, every column and every coloured area. Queens may not touch – not even at the corners. Tap a cell once to mark a cross (no queen here), twice for a queen, a third time to clear it.' },
   } as Record<string, Txt>,
+  zasadyTytul: { pl: 'Zasady', en: 'Rules' } as Txt,
   poziom: { pl: 'Trudność: {poziom}', en: 'Difficulty: {poziom}' } as Txt,
   sprawdz: { pl: 'Sprawdź', en: 'Check' } as Txt,
   wyczysc: { pl: 'Od nowa', en: 'Start over' } as Txt,
@@ -246,7 +247,7 @@ export interface Wiesc {
 export const NOWOSCI: Wiesc[] = [
   {
     data: '15.10.2026', tytul: { pl: 'Nowa łamigłówka: Królowe', en: 'A new puzzle: Queens' },
-    tresc: { pl: 'Od dziś w Kurierze także Królowe: po jednej królowej w każdym wierszu, kolumnie i kolorowym obszarze, a żadne dwie się nie stykają. Pięć rodzajów łamigłówek zmienia się codziennie.', en: 'From today the Courier also prints Queens: one queen in every row, column and coloured area, and no two of them touching. Five kinds of puzzle take turns every day.' },
+    tresc: { pl: 'Od dziś w Kurierze także Królowe: po jednej królowej w każdym wierszu, kolumnie i kolorowym obszarze, a żadne dwie się nie stykają. Pięć rodzajów łamigłówek zmienia się codziennie.', en: 'From today the Courier also prints Queens: one queen in every row, column and coloured area, and no two of them touching. Five kinds of puzzle take turns every day, and the number crossword now works like at school: multiplication and division first.' },
   },
   {
     data: '13.10.2026', tytul: { pl: 'Promy po całym świecie', en: 'Ferries all over the world' },

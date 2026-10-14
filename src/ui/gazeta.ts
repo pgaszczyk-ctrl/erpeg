@@ -338,6 +338,8 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     // ------------------------------------------------------------------ the sheet
     const render = () => {
       sheet.replaceChildren();
+      // The puzzle needs the room: a smaller masthead there (no scrolling – owner, 14 Oct 2026).
+      sheet.classList.toggle('gz-na-lamiglowce', strona === 'lamiglowka');
       const fold = el('button', 'gz-fold');
       fold.type = 'button';
       fold.setAttribute('aria-label', tr(STRONY.zamknij));

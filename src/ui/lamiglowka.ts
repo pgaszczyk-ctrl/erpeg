@@ -22,6 +22,9 @@ export interface LamiglowkaHost {
 
 type Wpis = { w: (number | string | null)[][]; t0: number; trasa?: [number, number][] };
 const KLUCZ = 'exp-lamiglowka';
+/** Kinds already played on this device (their rules fold away on a phone). */
+const ZNANE = 'exp-lamiglowki-znane';
+const waski = () => window.matchMedia('(max-width: 699px)').matches;
 
 function wczytaj(k: string): Wpis | null {
   try {
@@ -312,20 +315,61 @@ export function stronaLamiglowki(h: LamiglowkaHost) {
 
   const naglowek = el('div', 'gz-puz-head');
   naglowek.append(
-    el('h2', 'gz-head', `${tr(L.tytul)}: ${tr(L.nazwy[z.rodzaj])}`),
+    el('h2', 'gz-head gz-puz-title', `${tr(L.tytul)}: ${tr(L.nazwy[z.rodzaj])}`),
     el('p', 'gz-dateline gz-center', fmt(L.poziom, { poziom: tr(POZIOMY_LAMIGLOWEK[h.poziom] ?? POZIOMY_LAMIGLOWEK[0]) })),
-    el('p', 'gz-text', tr(L.zasady[z.rodzaj])),
   );
   const tablica = el('div', 'gz-board-wrap');
   tablica.append(plansza);
-  node.append(naglowek, tablica, pad, msg, przyciski, el('p', 'gz-note', tr(L.stopka)));
+  // On a computer the rules, the pad and the buttons stand right of the board (owner, 14 Oct 2026: no scrolling);
+  // on a phone everything goes one under another (the side column is display: contents there).
+  const bok = el('div', 'gz-puz-side');
+  // The rules fold away on a phone once this kind has been played on the device; a computer always shows them.
+  const zasady = el('details', 'gz-rules');
+  const znane = (() => { try { return JSON.parse(localStorage.getItem(ZNANE) ?? '[]') as string[]; } catch { return []; } })();
+  zasady.open = !waski() || !znane.includes(z.rodzaj);
+  zasady.append(el('summary', 'gz-rules-sum', tr(L.zasadyTytul)), el('p', 'gz-text', tr(L.zasady[z.rodzaj])), el('p', 'gz-note', tr(L.stopka)));
+  zasady.addEventListener('toggle', () => dopasuj());
+  try {
+    if (!znane.includes(z.rodzaj)) localStorage.setItem(ZNANE, JSON.stringify([...znane, z.rodzaj]));
+  } catch {
+    // private mode
+  }
+  bok.append(zasady, pad, msg, przyciski);
+  const glowna = el('div', 'gz-puz-main');
+  glowna.append(tablica, bok);
+  node.append(naglowek, glowna);
 
+  /** Shrinks the board's cells until the page fits the sheet without scrolling (owner, 14 Oct 2026). */
+  function dopasuj() {
+    requestAnimationFrame(() => {
+      const body = node.closest<HTMLElement>('.gz-body');
+      if (!body || !plansza.isConnected) return;
+      const n = Number(plansza.style.getPropertyValue('--n')) || 6;
+      const najmniej = waski() ? 28 : 24;
+      const najwiecej = Math.max(najmniej, Math.min(waski() ? 46 : 58, Math.floor((body.clientWidth - (waski() ? 8 : 300)) / n)));
+      const wysokosc = (c: number) => {
+        plansza.style.setProperty('--cell', `${c}px`);
+        return body.scrollHeight;
+      };
+      // The biggest cells that fit; when even the smallest don't (the side column is the tall one), the
+      // biggest that don't make the page any taller than the smallest do.
+      const granica = Math.max(body.clientHeight, wysokosc(najmniej));
+      let lo = najmniej, hi = najwiecej;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (wysokosc(mid) <= granica) lo = mid; else hi = mid - 1;
+      }
+      plansza.style.setProperty('--cell', `${lo}px`);
+    });
+  }
   odswiez = () => {
     rysuj();
     przyciski.style.display = gotowa ? 'none' : '';
     if (gotowa && !msg.textContent) { msg.className = 'gz-puz-msg ok'; msg.textContent = tr(L.juz); }
+    dopasuj();
   };
   odswiez();
+  new ResizeObserver(() => dopasuj()).observe(node);
 
   /** Keyboard: digits, + - * / x, Backspace/Delete, arrows move the selection. True when the key was used. */
   const klawisz = (e: KeyboardEvent) => {
