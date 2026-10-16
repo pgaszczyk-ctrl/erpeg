@@ -1,4 +1,7 @@
 import { SKALA_POSTACI } from '../skala';
+import { TEST } from '../version';
+import { SPOTKANIA } from '../content/spotkania';
+import { clearSegment } from '../combat/rules';
 import Phaser from 'phaser';
 import { SKLAD_GANGOW } from '../content/pogoda';
 import { GROUND_DEPTH } from '../map/MapRenderer';
@@ -405,6 +408,7 @@ export interface Gang {
   fog?: { inside: Phaser.GameObjects.Image; puffs: Phaser.GameObjects.Image[] };
   /** The last descriptive counter shown (content/gangi.ts stanGangu). */
   said?: string;
+  formation?: { x: number; y: number; angle: number; mobile: boolean; turn: number };
 }
 
 function hashStr2(s: string) {
@@ -479,15 +483,17 @@ export class StreetEnemies {
   /** Where the members stand, once the territory is loaded. */
   private makeSpots(g: Gang) {
     const r = rng(hashStr2(`${g.id}:${this.seed}:spots`));
-    const [lo, hi] = g.kind.czlonkow;
+    const [lo, hi] = TEST ? SPOTKANIA.czlonkowie[Math.max(0, GANGI.indexOf(g.kind))] : g.kind.czlonkow;
     const want = lo + Math.floor(r() * (hi - lo + 1));
     const spots: StreetSpawn[] = [];
+    if (TEST) g.formation = { x: g.x, y: g.y, angle: r() * Math.PI * 2, mobile: r() < SPOTKANIA.wedrowne, turn: 0 };
     for (let t = 0; spots.length < want && t < want * 40; t++) {
       const a = r() * Math.PI * 2;
-      const d = Math.sqrt(r()) * g.r * 0.9;
+      const d = Math.sqrt(r()) * (TEST ? SPOTKANIA.grupaM * PX_PER_M : g.r * 0.9);
       const x = g.x + Math.cos(a) * d;
       const y = g.y + Math.sin(a) * d;
       if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+      if (TEST && (spots.some((s) => Math.hypot(s.x - x, s.y - y) < 5) || !clearSegment({ x: g.x, y: g.y }, { x, y }, (px, py) => this.city.isFree(px, py, 3, 3)))) continue;
       spots.push({ x, y, kind: this.kindAt(x, y) });
     }
     // Some gangs have one berserker.
@@ -550,6 +556,50 @@ export class StreetEnemies {
     return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
   }
 
+  /** Restored TEST battle owns this gang, including killed members and the boss phase. */
+  adopt(g: Gang) {
+    const old = this.gangs.find((a) => a.id === g.id);
+    if (old) this.dropMist(old);
+    this.gangs = this.gangs.filter((a) => a.id !== g.id);
+    this.gangs.push(g);
+    this.planned.add(g.id.split(':').slice(0, 1).join(':'));
+  }
+
+  /** One moving nucleus, close orbiting members; never teleport or walk through a wall. */
+  formations(now: number, dt: number, free: (x: number, y: number) => boolean) {
+    for (const g of this.gangs) {
+      const f = g.formation;
+      if (!f || g.clearedAt || g.boss !== 'none') continue;
+      if (f.mobile) {
+        if (now > f.turn) { f.angle += Math.sin(now / 1700 + g.x) * 1.2; f.turn = now + 3000; }
+        const step = SPOTKANIA.wedrowkaMNaS * PX_PER_M * dt;
+        const to = { x: f.x + Math.cos(f.angle) * step, y: f.y + Math.sin(f.angle) * step };
+        const together=[...g.members.values()].every(raw=>{const e=raw as {x:number;y:number};return Math.hypot(e.x-to.x,e.y-to.y)<SPOTKANIA.grupaM*PX_PER_M*1.8;});
+        if (together && Math.hypot(to.x - g.x, to.y - g.y) < g.r * 0.65 && clearSegment(f, to, free)) { f.x = to.x; f.y = to.y; }
+        else { f.angle += Math.PI * 0.6; f.turn = now + 1000; }
+      }
+      for (const [i, raw] of g.members) {
+        const e = raw as Phaser.GameObjects.Sprite & { vel: Phaser.Math.Vector2; isDead: boolean; updateLook(): void; home: Phaser.Math.Vector2 };
+        if (!e.active || e.isDead) continue;
+        const a = i * 2.4 + (f.mobile ? now / (SPOTKANIA.orbitaS * 1000) * Math.PI * 2 : 0);
+        const rr = i === 0 ? 0 : SPOTKANIA.grupaM * PX_PER_M * (0.55 + (i % 3) * 0.15);
+        const tx = f.x + Math.cos(a) * rr, ty = f.y + Math.sin(a) * rr;
+        const d = Math.hypot(tx - e.x, ty - e.y), step = Math.min(d, SPOTKANIA.wedrowkaMNaS * PX_PER_M * 2.5 * dt);
+        const p = { x: e.x + (tx - e.x) * step / (d || 1), y: e.y + (ty - e.y) * step / (d || 1) };
+        if (d > 0.5 && clearSegment(e, p, free)) { e.vel.set(p.x - e.x, p.y - e.y).scale(1 / Math.max(dt, .001)); e.setPosition(p.x, p.y); e.home.set(p.x, p.y); }
+        else e.vel.set(0, 0);
+        e.updateLook(); e.setDepth(e.y);
+      }
+    }
+  }
+
+  /** Reuse gang mist textures, underneath the normal fog of war. */
+  smallMist(x: number, y: number, neutral = false) {
+    this.mistTextures();
+    return this.scene.add.image(x, y, 'gang-wnetrze').setDisplaySize(SPOTKANIA.mglaM * PX_PER_M * 2, SPOTKANIA.mglaM * PX_PER_M * 2)
+      .setTint(neutral ? 0x9dbbba : 0xc59b7c).setAlpha(0.11).setDepth(GROUND_DEPTH + 2);
+  }
+
   /** A gang member or boss was killed. */
   killed(e: unknown) {
     for (const g of this.gangs) {
@@ -568,7 +618,8 @@ export class StreetEnemies {
         this.tell(g);
         if (!g.alive.size && g.boss === 'none') {
           g.boss = 'out';
-          const p = this.city.isFree(g.x, g.y, 6, 6) ? { x: g.x, y: g.y } : this.city.freeNear(g.x, g.y);
+          const centre=TEST&&g.formation?g.formation:g;
+          const p = this.city.isFree(centre.x, centre.y, 6, 6) ? { x: centre.x, y: centre.y } : this.city.freeNear(centre.x, centre.y);
           g.bossObj = this.spawn({ x: p.x, y: p.y, kind: g.kind.herszt }, g);
           this.spawnEscort(g, p);
           this.events.bossOut(g);

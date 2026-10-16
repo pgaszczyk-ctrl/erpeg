@@ -1,0 +1,80 @@
+name: TEST turn combat checks
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/tests/*combat*'
+      - '.github/workflows/combat-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: combat-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache/restore@v4
+        id: maps
+        with:
+          path: |
+            .cache/lublin-full.json
+            public/map
+          key: combat-maps-v1-${{ hashFiles('data/**/*.geojsonseq.gz', 'data/rail.json', 'data/towns.json', 'scripts/build-map*.mjs', 'scripts/split-map.mjs', 'scripts/snap-buildings.mjs', 'scripts/signposts.mjs', 'scripts/lublin-area.json', 'src/map/CityMap.ts', 'src/skala.ts') }}
+      - name: Keep matching map cache current after checkout
+        if: steps.maps.outputs.cache-hit == 'true'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for root in [Path('.cache/lublin-full.json'), Path('public/map')]:
+              for p in ([root] if root.is_file() else root.rglob('*')):
+                  if p.is_file(): p.touch()
+          PY
+      - run: node --experimental-strip-types scripts/tests/combat.mjs
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - uses: actions/cache/save@v4
+        if: steps.maps.outputs.cache-hit != 'true'
+        with:
+          path: |
+            .cache/lublin-full.json
+            public/map
+          key: ${{ steps.maps.outputs.cache-primary-key }}
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: TEST desktop and phone
+        run: |
+          npx vite build
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
+          node scripts/tests/browser-combat.mjs
+        env:
+          VITE_TEST: '1'
+      - name: Production isolation
+        run: |
+          npx vite build --outDir .cache/production-check
+          npx vite preview --outDir .cache/production-check --host 127.0.0.1 --port 4174 > /tmp/preview-production.log 2>&1 &
+          COMBAT_PRODUCTION=1 node scripts/tests/browser-combat.mjs
+      - name: Lost session stops play
+        run: node scripts/tests/browser-sesja.mjs
+      - name: Screenshot previews for inspection
+        if: always()
+        run: node scripts/tests/combat-shots.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: combat-checks
+          path: .cache/combat-*
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,4 +1,5 @@
 import { SKALA_POSTACI } from '../skala';
+import { TEST } from '../version';
 import Phaser from 'phaser';
 import { TEX, makeLookTexture } from '../art';
 import { fitHd, ensureHd } from '../sprites';
@@ -105,8 +106,15 @@ export class Story {
     const d = this.dragon;
     if (!d || !d.active || d.isDead || this.busy) return;
     const dist = Math.hypot(d.x - p.x, d.y - p.y);
-    if (st.st === 'smok' && !st.choice && !this.met && dist < 110 && this.host.visible(d.x, d.y)) this.meetDragon();
-    else if (st.st === 'smok' && st.choice === 'zbadaj' && dist < 30) this.talkToDragon();
+    if (!TEST && st.st === 'smok' && !st.choice && !this.met && dist < 110 && this.host.visible(d.x, d.y)) this.meetDragon();
+    else if (!TEST && st.st === 'smok' && st.choice === 'zbadaj' && dist < 30) this.talkToDragon();
+  }
+
+  approachDragon() {
+    if (this.busy || !this.dragon) return;
+    if (!this.state.choice) this.meetDragon();
+    else if (this.state.choice === 'zbadaj') this.talkToDragon();
+    else this.host.dialog({ title:'🐉 Smok', text:'Smok spokojnie przygląda się twojej mapie.', buttons:['OK'], onChoose:()=>{} });
   }
 
   // ---------------------------------------------------------------- 1. the shadow

@@ -1,4 +1,8 @@
 import { missionNotes } from '../content/questy/progress';
+import { TurnCombat, type TurnHost } from '../combat/TurnCombat';
+import type { UIScene } from './UIScene';
+import type { CombatSave } from '../combat/state';
+import { SPOTKANIA } from '../content/spotkania';
 import { planCityQuests } from '../content/questy/planner';
 import { CITY_SCENARIOS, isWithdrawnCityQuest } from '../content/questy/scenarios';
 import { lang } from '../i18n';
@@ -79,7 +83,7 @@ import {
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
-import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
+import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot, type Gang } from './Ambient';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -291,7 +295,8 @@ type Challenge =
   | { kind: 'kukly'; npc: SportNpc; a: Station; b: Station; step: 'a' | 'b' | 'back'; hits: number; start: number; until: number }
   | { kind: 'wyscig'; npc: SportNpc; name: string; from: { x: number; y: number }; to: { x: number; y: number }; rival: Phaser.GameObjects.Sprite; start: number; rivalMs: number; path: number[]; cum: number[] };
 
-type Enemy = Slime & {
+export type Enemy = Slime & {
+  gang?: Gang;
   /** A dragon's kind (content/smoki.ts); the story's dragon is 'cien'. */
   gatunek?: GatunekId;
   missionId?: string; temp?: boolean; folkQuest?: boolean; carrier?: boolean; ambient?: boolean; peaceful?: boolean; fleeUntil?: number; duel?: { folk: Folk; dmg: number };
@@ -312,6 +317,8 @@ const FLAGI_NAZWY: Record<NonNullable<Misja['flaga']>, string> = {
 const STORY_PLACES = new Set(['school', 'church', 'university']);
 
 export class GameScene extends Phaser.Scene {
+  turnCombat?: TurnCombat;
+  private testEncounterSequence = 0;
   private cityQuestEpoch = 0;
   private cityQuestPlanning = false;
   city!: CityMap;
@@ -408,6 +415,95 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('game');
+  }
+
+  /** Same footprint/obstacles as ordinary walking, shared by planning and execution. */
+  private turnFree(x: number, y: number) {
+    const fy=y+FEET.dy;
+    return this.city.isFree(x,fy,FEET.hw,FEET.hh) && !this.orchards.blocked(x,fy) && !this.forest.blocked(x,fy)
+      && !this.mapView.korony.blocked(x,fy) && !this.training.blocked(x,fy) && !this.landmarks.blocked(x,fy);
+  }
+
+  private turnHost(): TurnHost {
+    return {
+      scene:this,player:this.player,map:this.city.id,
+      enemies:()=>this.enemies,
+      visible:(p)=>pointInPolygon(this.vision,p.x,p.y),
+      free:(x,y)=>this.turnFree(x,y),
+      hit:(e,damage,skill,strong)=>{
+        const usedWeapon=gear.equip.bron;
+        if(skill) this.practiced(skill);
+        if(skill && (skill!=='miecz'||damage>0))this.wearWeapon(usedWeapon);
+        if(damage<=0){this.missText(e.x,e.y-8);return;}
+        const imb=imbueOf(usedWeapon)?.e;
+        const heavy=e.heavy;e.heavy=true;
+        const dead=e.hit(new Phaser.Math.Vector2(this.player.x,this.player.y),this.time.now,damage*this.essenceBoost(imb,e));
+        e.heavy=heavy;e.vel.set(0,0);
+        if(skill==='miecz')this.swingWeapon(Math.atan2(e.y-this.player.y,e.x-this.player.x),strong);
+        else if(skill)this.tweens.add({targets:this.add.image(this.player.x,this.player.y,skill==='magia'?TEX.magicShot:TEX.arrowShot).setDepth(999_800).setRotation(Math.atan2(e.y-this.player.y,e.x-this.player.x)),x:e.x,y:e.y,duration:180,onComplete:(_t:unknown,targets:Phaser.GameObjects.Image[])=>targets[0].destroy()});
+        else this.drawBolt(e.x,e.y);
+        if(dead)this.onEnemyKilled(e);else this.essenceHit(imb,e,this.time.now);
+      },
+      hurt:(e,damage)=>{
+        if(e.duel){this.duelHp=Math.max(0,(this.duelHp??0)-e.duel.dmg);if(this.duelHp<=0)this.endDuel(e,false);}
+        else {this.player.drain(damage);if(session.immortal)this.player.hp=Math.max(1,this.player.hp);if(this.player.isDead){this.turnCombat?.defeat();this.onPlayerDeath();}}
+        this.emitHud();
+      },
+      ammo:()=>{const w=rangedWeapon();const k=w&&ammoOf(w);return !k||takeAmmo(k);},
+      canHeal:()=>this.player.hp<PLAYER.maxHp&&(session.mikstury>0||totalFruit()>=this.fruitPerHeart()||!!nextFood()),
+      heal:()=>{
+        if(this.player.hp>=PLAYER.maxHp)return false;
+        if(session.mikstury>0)this.drinkPotion();
+        else if(totalFruit()>=this.fruitPerHeart())this.eatFruit();
+        else if(nextFood())this.eatPreparedFood();else return false;
+        return true;
+      },
+      neutral:()=>{
+        if(this.story.busy||this.anomalia?.busy)return null;
+        const f=this.folk.at(this.player.x,this.player.y,SPOTKANIA.interakcjaM*PX_PER_M);
+        return f&&pointInPolygon(this.vision,f.x,f.y)?{id:`folk:${f.id}`,point:{x:f.x,y:f.y},talk:()=>this.talkToFolk(f)}:null;
+      },
+      talkDragon:(e)=>{
+        if(e===this.story.dragonSprite)this.story.approachDragon();
+        else this.dialog({title:'🐉 '+tx('Smok','Dragon'),text:tx('Smok spokojnie przygląda się twojej mapie. Dziś nie szuka zwady.','The dragon quietly studies your map. It is not looking for a fight.'),buttons:[tx('Do zobaczenia','See you')],onChoose:()=>{}});
+      },
+      mist:(p,neutral)=>this.streets.smallMist(p.x,p.y,neutral),
+      restore:(s)=>this.restoreTurnCombat(s),
+      loot:()=>this.pickups.filter(i=>i.active&&i.getData('combatLoot')).map(i=>({x:i.getData('lootX')??i.x,y:i.getData('lootY')??i.y,kind:i.getData('kind'),n:i.getData('n')??1,texture:i.texture.key,frame:i.frame.name,scale:i.scaleX})),
+      duel:(e)=>e.duel?{folkId:e.duel.folk.id,hp:this.duelHp??MIESZKANCY.serduszka*2,damage:e.duel.dmg,carry:this.duelCarry}:undefined,
+      life:()=>this.duelHp!==null?[this.duelHp,MIESZKANCY.serduszka*2]:[this.player.hp,PLAYER.maxHp],
+      save:async(state)=>{session.testCombat=state;this.keepFog();await saveNow(this.player.hp);},
+      hud:()=>this.emitHud(),
+      menu:()=>(this.scene.get('ui') as UIScene).combatMenu(),
+      blocked:()=>(this.scene.get('ui') as UIScene).combatBlocked(),
+      mayOffer:()=>!this.story.busy&&!this.anomalia?.busy&&!(this.scene.get('ui') as UIScene).combatBlocked(),
+    };
+  }
+
+  private restoreTurnCombat(s: CombatSave): Enemy[] {
+    if(s.enemies.some(e=>e.duel))this.folk.update(0,s.hero.x,s.hero.y,this.time.now,()=>true);
+    let gang: Gang|undefined;
+    if(s.gang){gang={...s.gang,alive:new Set(s.gang.alive),members:new Map(),clearedAt:s.gang.boss==='dead'?this.time.now:0};this.streets.adopt(gang);}
+    const missionIds=new Set(s.enemies.map(e=>e.missionId).filter(Boolean));
+    const storyDragon=this.story.dragonSprite;
+    for(const e of [...this.enemies])if(e!==storyDragon&&(e.gang?.id===s.gang?.id&&!!e.gang||e.missionId&&missionIds.has(e.missionId))){e.destroy();this.enemies=this.enemies.filter(q=>q!==e);}
+    const result=s.enemies.map(raw=>{
+      const e=raw.missionId==='story-smok'&&storyDragon?storyDragon as Enemy:this.spawnEnemy(raw.x,raw.y,raw.missionId,raw.kind);
+      e.setPosition(raw.x,raw.y);e.hp=raw.hp;e.gang=gang;e.ambient=raw.ambient;e.temp=raw.temp;e.folkQuest=raw.folkQuest;e.carrier=raw.carrier;e.gatunek=raw.gatunek;e.power=raw.power;
+      if(raw.berserk)e.makeBerserk(BERSERKER.zycie,BERSERKER.auraKolor,BERSERKER.mrugMs,BERSERKER.predkosc);
+      if(raw.kind==='smok')this.dragonFight(e);
+      e.hp=raw.hp;
+      if(raw.duel){
+        const f=this.folk.byId(raw.duel.folkId);
+        if(f){e.duel={folk:f,dmg:raw.duel.damage};this.duelHp=raw.duel.hp;this.duelCarry=raw.duel.carry;this.folk.away(f,true);e.setTexture(isHd(f.tex)?ensureRed(this,f.tex):`${f.tex}-red`,'down-0');if(isHd(f.tex))fitHd(e);e.walkAnim=`${f.tex}-red-walk`;}
+        else{e.hp=0;this.duelHp=null;this.toast('Przeciwnik zrezygnował z pojedynku.');}
+      }
+      if(gang){if(raw.slot!==undefined)gang.members.set(raw.slot,e);if(raw.boss)gang.bossObj=e;e.leash={x:gang.x,y:gang.y,r:gang.r};}
+      return e;
+    });
+    this.player.setPosition(s.hero.x,s.hero.y);this.player.hp=s.hero.hp;this.player.extra=s.hero.extra;this.player.extraUntil=s.hero.extraUntil;
+    for(const p of s.loot??[]){const i=this.add.image(p.x,p.y,p.texture,p.frame).setScale(p.scale).setDepth(p.y-8);i.setData('kind',p.kind).setData('n',p.n).setData('combatLoot',true);this.pickups.push(i);}
+    return result;
   }
 
   create() {
@@ -700,6 +796,7 @@ export class GameScene extends Phaser.Scene {
       avoid,
       (sp, g) => {
         const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
+        if (TEST && !demo.on) e.gang = g;
         e.ambient = true;
         // They stand at their spot; they only come out when they see the hero.
         e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
@@ -746,7 +843,9 @@ export class GameScene extends Phaser.Scene {
     if (missing.length) console.warn('Nie znaleziono na mapie:', missing);
     this.registry.set('missing', missing);
 
-    this.replayAbandoned();
+    this.turnCombat = TEST && !demo.on ? new TurnCombat(this.turnHost()) : undefined;
+    if(this.turnCombat)(window as unknown as {__spotkanie?:(k:string)=>void}).__spotkanie=(k)=>this.testEncounter(k);
+    if (!session.testCombat) this.replayAbandoned();
     if (this.walkedIn) this.toast(this.walkedIn, 4000);
     this.walkedIn = null;
     if (this.justRode) this.toast(`🐴 Witaj w miejscowości ${mapName(this.city.id)}! Woźnica czeka przy stacji, gdy zechcesz wracać.`, 5000);
@@ -867,6 +966,20 @@ export class GameScene extends Phaser.Scene {
       resetKeys();
     }
     if (this.player.isDead || this.leaving || this.travelling) return;
+    if (this.turnCombat) {
+      if(!this.turnCombat.held)this.clearHomeArea();
+      this.turnCombat.update(now, dt);
+      if (this.turnCombat.held) {
+        this.player.vel.set(0, 0);
+        this.player.setDepth(this.player.y);
+        this.updateFog();
+        this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
+        this.cullFar(now); this.zabytki.update(this.player.x, this.player.y);
+        this.updatePosts(now); this.streets.formations(now, 0, (x,y)=>this.turnFree(x,y));
+        this.emitHud();
+        return;
+      }
+    }
     if (this.demoRun) {
       this.demoRun.update(now, dt);
       if (this.demoRun.frozen) return;
@@ -975,10 +1088,12 @@ export class GameScene extends Phaser.Scene {
     }
     this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
     this.streets.update(this.player.x, this.player.y, now);
+    if (this.turnCombat) this.streets.formations(now, dt, (x,y)=>this.turnFree(x,y));
     this.clearHomeArea();
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
       if (s.isDead) continue;
+      if (this.turnCombat) { s.setDepth(s.y + s.depthOff); continue; }
       // Scared by the dragon's shadow: running away.
       if (s.fleeUntil && now < s.fleeUntil) {
         const away = new Phaser.Math.Vector2(s.x - this.player.x, s.y - this.player.y).normalize().scale(s.kind.chaseSpeed * 1.3 * PREDKOSC_WROGOW);
@@ -1046,7 +1161,7 @@ export class GameScene extends Phaser.Scene {
 
     this.animateCrops(now);
     this.cullFar(now);
-    this.updateStany(now);
+    if (!this.turnCombat) this.updateStany(now);
     aktualizujEfekty(now);
     this.smokiNaMapie?.update(this.player.x, this.player.y);
     this.smokiNaMapie?.dym(this.time.now);
@@ -1095,7 +1210,7 @@ export class GameScene extends Phaser.Scene {
       this.glow.setAlpha(0.55 + 0.15 * Math.sin(now / 250));
       this.glow.setDepth(this.player.y - 1);
     }
-    if (fx !== 'pioruny' || now - this.lastBolt < PIORUNY.co) return;
+    if (this.turnCombat || fx !== 'pioruny' || now - this.lastBolt < PIORUNY.co) return;
     const range = PIORUNY.zasiegM * PX_PER_M;
     // The weakest enemy in reach (so strikes finish foes off), nearest first on a tie.
     let foe: Enemy | null = null;
@@ -1290,6 +1405,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
+    if (this.turnCombat) {
+      const e = this.enemies.filter((q)=>!q.isDead && q.visible).sort((a,b)=>Math.hypot(a.x-hit.x,a.y-hit.y)-Math.hypot(b.x-hit.x,b.y-hit.y))
+        .find((q)=>Math.hypot(q.x-this.player.x,q.y-this.player.y) < SPOTKANIA.interakcjaM*PX_PER_M);
+      if (e) { this.turnCombat.offer(e); return; }
+    }
     this.rozmowca = null; // a talk or a door below names the new speaker
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
@@ -1314,6 +1434,7 @@ export class GameScene extends Phaser.Scene {
     const talk = foeNear || strong ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
     if (talk) {
       if (performance.now() >= this.talkReadyAt) {
+        if (this.turnCombat) { this.turnCombat.offerTalk(`talk:${Math.round(hit.x)},${Math.round(hit.y)}`, {x:hit.x,y:hit.y}, talk); return; }
         this.learnPlace();
         this.zapamietajRozmowce(hit.x, hit.y);
         talk();
@@ -1366,7 +1487,7 @@ export class GameScene extends Phaser.Scene {
     if (arc && (fighting || drill)) this.drawSweep(aim, arc, reach);
     // An enemy right on top of the hero is always hit too.
     const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
-    for (const s of [...this.enemies]) {
+    for (const s of this.turnCombat ? [] : [...this.enemies]) {
       if (s.isDead || s.inAir) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
@@ -1629,8 +1750,9 @@ export class GameScene extends Phaser.Scene {
     const ty = y + 4 + Math.random() * 8;
     const item = this.add.image(x, y - 10, tex).setScale(artScale(tex)).setDepth(ty);
     item.setData('kind', `fruit:${fruit}`);
+    if(this.turnCombat?.active){item.setData('combatLoot',true).setData('lootX',tx).setData('lootY',ty);this.pickups.push(item);}
     // Falls from the crown to the ground, then can be picked up.
-    this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => this.pickups.push(item) });
+    this.tweens.add({ targets: item, x: tx, y: ty, duration: 280, ease: 'Bounce.Out', onComplete: () => {if(!this.pickups.includes(item))this.pickups.push(item);} });
   }
 
   /**
@@ -1815,6 +1937,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnGroup(p: Place, count: number, missionId?: string, kind: RodzajWroga = 'glut', spread = 40) {
+    if(TEST&&!demo.on)spread=Math.min(spread,SPOTKANIA.grupaM*PX_PER_M);
     for (let i = 0; i < count; i++) {
       // Spread them around the spot on free ground, preferably on a street
       // or path (so they can't end up shut in a courtyard).
@@ -1835,7 +1958,29 @@ export class GameScene extends Phaser.Scene {
   spawnDragon(x: number, y: number, g: GatunekId) {
     const e = this.spawnEnemy(x, y, undefined, 'smok');
     e.gatunek = g;
+    if(TEST&&!demo.on)this.dragonFight(e); // load the existing art; update() remains owned by turns
     return e;
+  }
+
+  /** TEST demonstration uses reachable points around the current hero, on the current map. */
+  testEncounter(kind: string) {
+    if(!TEST||!this.turnCombat||this.turnCombat.held)return;
+    const points:{x:number;y:number}[]=[];
+    for(let r=18;r<=42&&points.length<4;r+=6)for(let a=0;a<Math.PI*2&&points.length<4;a+=Math.PI/6){
+      const p={x:this.player.x+Math.cos(a)*r,y:this.player.y+Math.sin(a)*r};
+      if(this.turnFree(p.x,p.y)&&points.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>6))points.push(p);
+    }
+    if(!points.length)return this.toast('Brak wolnego miejsca na spotkanie.');
+    if(kind==='neutral'){
+      const e=this.spawnEnemy(points[0].x,points[0].y,`test-spotkanie:${Date.now()}`,'smok');e.peaceful=true;e.temp=true;this.turnCombat.offer(e);return;
+    }
+    if(kind==='single'){const e=this.spawnEnemy(points[0].x,points[0].y,`test-spotkanie:${Date.now()}`,'glut');e.temp=true;this.turnCombat.offer(e);return;}
+    const n=kind==='single'?1:Math.min(3,points.length);
+    const at=points[0];
+    const g:Gang={id:`test:${Date.now()}:${++this.testEncounterSequence}`,kind:{nazwa:'Grupka testowa',promienM:92,czlonkow:[n,n],naKm2:0,herszt:'herszt',nagroda:{monety:25,exp:40}},x:at.x,y:at.y,r:92*PX_PER_M,spots:points.slice(0,n).map(p=>({...p,kind:'glut'})),alive:new Set(Array.from({length:n},(_,i)=>i)),members:new Map(),boss:'none',clearedAt:0,formation:{x:at.x,y:at.y,angle:0,mobile:kind==='mobile',turn:0}};
+    this.streets.adopt(g);
+    for(let i=0;i<n;i++){const p=points[i];const e=this.spawnEnemy(p.x,p.y,`test-spotkanie:${Date.now()}`,'glut');e.temp=true;e.ambient=true;e.gang=g;g.members.set(i,e);}
+    if(kind!=='mobile'&&kind!=='static')this.turnCombat.offer(g.members.get(0) as Enemy);
   }
 
   spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
@@ -2439,10 +2584,12 @@ export class GameScene extends Phaser.Scene {
     const item = this.add.image(x, y, heart ? TEX.pickupHeart : TEX.coin).setDepth(y - 8);
     item.setData('kind', heart ? 'heart' : 'coin');
     item.setData('n', coins);
+    if(this.turnCombat?.active)item.setData('combatLoot',true);
     if (coins > 1) item.setScale(1.3);
     this.pickups.push(item);
     this.tweens.add({ targets: item, y: y - 3, duration: 400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.time.delayedCall(15000, () => {
+      if(item.getData('combatLoot'))return;
       if (!item.active) return;
       this.tweens.add({ targets: item, alpha: 0, duration: 300, onComplete: () => this.removePickup(item) });
     });
@@ -2701,6 +2848,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Is any enemy close enough to be fighting us? */
   inCombat() {
+    if (this.turnCombat) return this.turnCombat.active;
     return this.enemies.some((e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 120);
   }
 
@@ -2772,6 +2920,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private save() {
+    if(this.turnCombat?.active)return; // the controller checkpoints the complete action exactly once
     this.keepFog();
     saveNow(this.player.hp)
       // The demo saves nothing (offline.demo), so it says nothing either.
@@ -3861,6 +4010,7 @@ export class GameScene extends Phaser.Scene {
     this.duelCarry = 0;
     this.toast(`⚔ Pojedynek! Masz ${MIESZKANCY.serduszka} fioletowe serduszka.`, 2500);
     this.emitHud();
+    this.turnCombat?.start(e);
   }
 
   private endDuel(e: Enemy, won: boolean) {
@@ -4589,6 +4739,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Press and hold to aim, let go to shoot (bow or magic). */
   private updateRanged(now: number, lingering: boolean) {
+    if (this.turnCombat?.held) { consumeRelease(); return; }
     const weapon = rangedWeapon();
     const aim = weapon && !lingering ? this.aimDirection() : null;
     this.aimLine.clear();
@@ -4638,7 +4789,7 @@ export class GameScene extends Phaser.Scene {
     const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
     const px = this.player.x, py = this.player.y;
     const points: { x: number; y: number }[] = [];
-    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
+    if(!this.turnCombat)for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
     for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 * SKALA_POSTACI });
     let best: { x: number; y: number } | null = null;
     let bestScore = Infinity;
@@ -4663,6 +4814,7 @@ export class GameScene extends Phaser.Scene {
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
   private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
+    if (this.turnCombat?.held) return; // Outside combat TEST shots can still train at stations.
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     dir = this.aimAssist(dir, skill);
     this.lastShot = now;
@@ -4707,7 +4859,7 @@ export class GameScene extends Phaser.Scene {
         if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
       }
       if (!done) {
-        const foe = this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
+        const foe = this.turnCombat ? undefined : this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
         if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
@@ -5125,6 +5277,7 @@ export class GameScene extends Phaser.Scene {
    * else fruit (LECZENIE_OWOCAMI.owocow for one heart).
    */
   healButton() {
+    if (this.turnCombat?.active) return this.turnCombat.choose('special');
     if (this.player.isDead) return;
     if (this.player.hp >= PLAYER.maxHp) return this.toast('Masz pełne zdrowie.', 1200);
     if (session.mikstury > 0) return this.drinkPotion();
