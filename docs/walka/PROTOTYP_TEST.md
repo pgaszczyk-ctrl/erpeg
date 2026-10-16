@@ -12,6 +12,7 @@ Wszystkie poniższe wartości są próbą do strojenia, nie zatwierdzonym balans
 | Atak / przemieszczenie / leczenie | po 1 ruchu |
 | Mocny atak | 2 ruchy; dotychczasowy mnożnik broni |
 | Przemieszczenie | droga do 12 m, próbkowana co 1 punkt mapy; siatka obejścia 3 punkty |
+| Łuk / magia | zasięg 55 m / 45 m; wymagają widocznej, nieprzegrodzonej linii |
 | Odpowiedź rywala | 1 działanie: dojście do 9 m ALBO atak |
 | Aktywna fala | najwyżej 3 przeciwników (2 przy maksymalnym życiu poniżej 6 połówek serca); pozostali czekają na kolejną falę |
 | Banda / mały / wielki gang | odpowiednio 2–3 / 3–4 / 6–8 członków |
@@ -25,18 +26,22 @@ Wszystkie poniższe wartości są próbą do strojenia, nie zatwierdzonym balans
 | Wędrujące grupki | 45%; jądro 1,5 m/s, orbita około 18 s; jądro czeka na blokowanych towarzyszy |
 | Animacja działania | około 280 ms; kolejna akcja czeka także na potwierdzenie zapisu |
 
+Trzy początkowe ruchy pozwalają na podejście i dwa ciosy albo mocny oraz zwykły atak. Progi 5/12 i limit pięciu ograniczają długość planowania. Krok 12 m pozwala dojść z dystansu spotkania 24 m do zasięgu broni; wróg porusza się krócej i wybiera między dojściem a ciosem. Mnożnik 0,65 i mniejsza fala w trybie z czterema połówkami życia zapewniają przeżycie pierwszej zwykłej odpowiedzi, także z deszczowym wzmocnieniem; silni bossowie nadal wymagają przygotowania. Szanse 8/8/6% dają rzadkie, zauważalne zdarzenia, a blok wynika z ekwipunku.
+
 Terytoria istniejących gangów zachowują rozmiary 92/184/230 m. Zmniejszone jest rozmieszczenie uczestników, nie mechanicznie całe terytorium. Wędrówka mieści się w obrębie 65% promienia istniejącego terytorium. Przy przeszkodzie jądro zmienia kierunek, uczestnicy poruszają się z kontrolą kolizji i nie teleportują.
 
 ## Przebieg i integracja
 
 - Podejście/uniknięcie jest osobnym, bezpiecznym wyborem. Znana wroga grupa uprzedza o walce. Neutralny rozmówca lub spokojny smok prowadzą do dialogu; decyzje głównej historii pozostają w `Story`.
+- Rozmowa fabularna i otwarte menu mają pierwszeństwo nad automatycznym spotkaniem. Zastąpienie oferty innym dialogiem zwalnia blokadę wejścia.
 - Uniknięte spotkanie odblokowuje automatyczny wybór dopiero po oddaleniu; świadome ponowne wybranie działa bez czekania. Nie ma bezpłatnej ucieczki z rozpoczętego starcia.
 - Ruch i atak są oddzielne. Wybór, podgląd i anulowanie są bezpłatne. Podgląd trasy nie zmienia mgły odkrycia; odkrywanie następuje dopiero podczas wykonania.
 - Zwykły cios nie odrzuca uczestników. Silniejsi wrogowie przygotowują kierunkowy cios, którego obszar pozostaje przez pełną turę bohatera; zejście z niego pozwala uniknąć ataku.
 - Fale oraz pojawienie się herszta nie uruchamiają natychmiastowych ciosów. Nowa fala zaczyna od decyzji bohatera.
 - Na TEST dawni przeciwnicy nie chodzą i nie biją niezależnie od spotkań. Podczas planowania stoi symulacja walki, stare pociski, okresowe obrażenia, zbieranie i regeneracja. Rysowanie mapy, pogoda, mgła wojny i animacje dekoracji pozostają aktywne.
 - Automatyczny piorun jest rozstrzygany raz na początku własnej tury, bez darmowego treningu ani zużycia broni. Leczenie zużywa 1 ruch oraz istniejące zapasy, z zachowaniem dotychczasowego pierwszeństwa mikstur/owoców/jedzenia. Czas ważności nasycenia broni pozostaje czasem rzeczywistym.
-- Zapis `testCombat` jest dodatkowym polem zwykłego zapisu, wyłącznie na TEST. Obejmuje pulę, fazę, już odpowiadających rywali, ich życie i pozycje, stan generatora losowego, zapowiedzi, fazę gangu oraz uzyskany postęp. Następna akcja czeka na potwierdzenie zapisu. Lokalny checkpoint chroni także odświeżenie podczas wysyłki. Bez nowych tabel, SQL ani edycji istniejących danych graczy poza zwykłym zapisem rozgrywki.
+- Zapis `testCombat` jest dodatkowym polem zwykłego zapisu, wyłącznie na TEST. Obejmuje pulę, fazę, już odpowiadających rywali, ich życie i pozycje, stan generatora losowego, zapowiedzi, fazę gangu oraz uzyskany postęp. Następna akcja czeka na potwierdzenie zapisu. Lokalny checkpoint chroni także odświeżenie podczas wysyłki. Przywracanie porównuje bazowy postęp, aby stary lokalny zapis nie zastępował nowszej rozgrywki z produkcji/innego urządzenia. Bez nowych tabel, SQL ani edycji istniejących danych graczy poza zwykłym zapisem rozgrywki.
+- Dawny trening strzelania działa poza starciem, ale pociski nie ranią przeciwników z nieprzyjętego spotkania. Ruch przeciwników respektuje dotychczasowe granice terytorium.
 - Istniejące funkcje zabicia, łupów, EXP, treningu, zużycia, amunicji i zakończenia zadań pozostają miejscem rozliczania nagród. Łupy walki nie znikają podczas spokojnego wybierania działań i są częścią checkpointu.
 - Produkcja nie tworzy kontrolera tur, nie czyta checkpointu TEST i zachowuje dotychczasową walkę. Nie zmieniono `PRODUKCJA`, `WERSJA` ani `produkcja/`.
 

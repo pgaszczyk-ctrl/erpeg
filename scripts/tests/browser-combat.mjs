@@ -6,6 +6,14 @@ const require=createRequire(import.meta.url);
 const { chromium }=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 await mkdir('.cache',{recursive:true});
 const production=process.env.COMBAT_PRODUCTION==='1';
+const origin=`http://127.0.0.1:${production?4174:4173}/`;
+// Preview starts in the background in CI; wait for its actual HTTP readiness.
+for(let attempt=0;attempt<40;attempt++){
+  try{const response=await fetch(origin,{signal:AbortSignal.timeout(1000)});await response.arrayBuffer();if(response.ok)break;}
+  catch{}
+  if(attempt===39)throw new Error(`Preview did not start: ${origin}`);
+  await new Promise(resolve=>setTimeout(resolve,250));
+}
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--enable-unsafe-swiftshader'],chromiumSandbox:false});
 const results=[];let currentPage=null,currentErrors=[];
 try {
@@ -34,7 +42,7 @@ try {
     async function dismiss(last=true){
       await page.evaluate(last=>{const ui=window.__game.scene.getScene('ui');if(ui.dialogBox){const fn=ui.dialogChoose;const bs=ui.dialogButtons.filter(b=>b.index>=0);ui.closeDialog();fn?.(last?bs.length-1:0);}},last);
     }
-    await page.goto(`http://127.0.0.1:${production?4174:4173}/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA`);
+    await page.goto(`${origin}?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA`);
     await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&window.__game.scene.getScene('game').firstViewReady?.()&&!document.querySelector('#loading-map:not([hidden])'),null,{timeout:150000});
     if(production){
       assert.equal(await page.evaluate(()=>!!window.__game.scene.getScene('game').turnCombat),false);
