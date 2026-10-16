@@ -77,6 +77,13 @@ export const LIMIT_EFEKTOW = 24;
  * nie bliżej niż `odDomuM` od domu i `odMiejscM` od sklepów itp. Pokonany smok wraca przy następnym wejściu do gry.
  * Dopiero od poziomu `odPoziomu` i gdy historia „Cień smoka” je odblokuje (Mag Albrecht wysłał na smoka – etap 'smok' albo dalej).
  */
+/**
+ * Legowisko dzikiego smoka (zgłoszenie 66, właściciel 13.10.2026: „rewelacyjny pomysł, zrób”): kłęby dymu w kolorze
+ * gatunku, widoczne z daleka (`widacM`), promień `promienM`; przy pierwszym wejściu komunikat. Kłęby co `klebyCoPx`,
+ * średnica `klebyPx`, krycie `klebyAlfa`, część kłębów okopcona (`sadza`).
+ */
+export const LEGOWISKO = { promienM: 45, widacM: 1400, klebyCoPx: 9, klebyPx: [22, 46] as [number, number], klebyAlfa: [0.3, 0.6] as [number, number], rozrzut: 14, sadza: 0x4a4550, wnetrzeAlfa: 0.18 };
+
 export const SMOKI_NA_MAPIE = { odPoziomu: 5, szansa: 0.18, maksMiejsc: 4, prob: 14, odDomuM: 600, odMiejscM: 120, odRuchu: 1600 };
 
 /**

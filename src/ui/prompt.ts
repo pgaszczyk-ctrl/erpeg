@@ -1,8 +1,8 @@
 // A small HTML window asking for one line of text (e.g. a secret code).
 // Resolves with the text, or null when cancelled.
 
-/** `opts.value` pre-fills the field, `opts.ok` names the button, `opts.number` shows a number pad. */
-export function askText(title: string, text: string, placeholder = '', opts: { value?: string; ok?: string; number?: boolean } = {}): Promise<string | null> {
+/** `opts.value` pre-fills the field, `opts.ok` names the button, `opts.number` shows a number pad, `opts.upper` false = no capitals. */
+export function askText(title: string, text: string, placeholder = '', opts: { value?: string; ok?: string; number?: boolean; upper?: boolean } = {}): Promise<string | null> {
   return new Promise((resolve) => {
     const root = document.createElement('div');
     root.className = 'm-screen';
@@ -14,7 +14,7 @@ export function askText(title: string, text: string, placeholder = '', opts: { v
     const p = document.createElement('p');
     p.textContent = text;
     const input = Object.assign(document.createElement('input'), {
-      placeholder, autocomplete: 'off', spellcheck: false, className: 'm-upper m-input',
+      placeholder, autocomplete: 'off', spellcheck: false, className: opts.upper === false ? 'm-input' : 'm-upper m-input',
     });
     if (opts.value) input.value = opts.value;
     if (opts.number) input.inputMode = 'numeric';

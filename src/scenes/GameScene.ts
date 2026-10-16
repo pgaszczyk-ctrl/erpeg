@@ -50,15 +50,16 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { WIDOK, TRUDNOSCI } from '../content/trudnosc';
+import { WIDOK, TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
 import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
-import { GRANICA, MIEJSCE_HUD } from '../content/mapa';
-import { worldOrigin } from '../map/world';
+import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
+import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
+import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
@@ -88,13 +89,16 @@ import {
 } from '../quests';
 import { api, rpc, offline, type Snapshot } from '../api';
 import { showGazeta, type Wydanie, type WiescSerwera } from '../ui/gazeta';
-import { GAZETA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
+import { GAZETA, LAMIGLOWKA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
 import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo } from '../demo';
+import { PROM } from '../content/porty';
+import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { keepResume } from '../update';
+import { sesjaWygasla } from '../sesja';
 import { DemoRun } from './Demo';
 import { SmokAI, aktualizujEfekty, wyczyscEfekty, smokSmierc, type StanGracza } from '../objects/SmokAI';
 import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
@@ -165,11 +169,21 @@ const PLACE_LOOK = {
   camp: { roof: '', wall: '', sign: TEX.tent },
   maker: { roof: '#a86d37', wall: '#f0ddbc', sign: TEX.signShop },
   workshop: { roof: '#71624f', wall: '#e0d2bc', sign: TEX.signGear },
+  port: { roof: '', wall: '', sign: 'sign-port' },
 } as const;
+/** „na północny zachód” – the way from `a` to `b` in words. */
+function kierunekSlownie(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const dy = b.lat - a.lat;
+  const dx = (b.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180);
+  const k = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+  return ['na wschód', 'na północny wschód', 'na północ', 'na północny zachód', 'na zachód', 'na południowy zachód', 'na południe', 'na południowy wschód'][(k + 8) % 8];
+}
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
 /** The new sign light (cone + flicker) is a test-server trial until the artist draws it (owner, 12 Oct 2026). */
 const SNOP = TEST;
+/** The player asked the device for less motion: the sign boards hang still and the lights don't blink fast. */
+const MNIEJ_RUCHU = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export interface HudState {
   hp: number;
@@ -231,6 +245,9 @@ export interface QuestInfo {
 /** Arrow colours of the active side quests, kept across scene restarts. */
 const questColors = new Map<string, string>();
 
+/** The traveller's map's guide (map screen „🧭 Prowadź”): a hub the arrow points to, kept across scene restarts. */
+let droga: Hub | null = null;
+
 /** The one the hero talks to: a character's walking sheet (its head is shown) or a picture (a place's sign). */
 export interface Rozmowca { tex?: string; obraz?: string; imie?: string }
 
@@ -250,6 +267,8 @@ export interface DialogRequest {
   shop?: ShopPresentation;
   /** Who speaks (portrait on the left; the hero's on the right). null = nobody (system windows); absent = the last speaker nearby. */
   kto?: Rozmowca | null;
+  /** Every button is an answer (riddles without „Później”): all in one colour, so the last one isn't greyed like a way out. */
+  odpowiedzi?: boolean;
   onChoose: (index: number) => void;
 }
 
@@ -368,6 +387,10 @@ export class GameScene extends Phaser.Scene {
   /** Walked onto another map (GRANICA): a word on arrival. */
   private walkedIn: string | null = null;
   private crossAt = 0;
+  /** Ferry ports (porty.ts) shown on this map: place id → port; the next check; the hint said. */
+  private porty = new Map<string, Port>();
+  private portyAt = 0;
+  private portyRzekl = false;
   private pushOut = 0;
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
@@ -395,6 +418,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.setVisible(!loadingGame());
     this.stalls = [];
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
+    this.porty = new Map();
+    this.portyAt = 0;
+    this.portyRzekl = false;
     this.city = this.registry.get('city') as CityMap;
     if (!this.city.id.startsWith('w:')) {
       for (const p of PRODUCER_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon);
@@ -415,6 +441,8 @@ export class GameScene extends Phaser.Scene {
     this.lingerUntil = 0;
     this.rescueDeclined = false;
     this.toldPlace = null;
+    this.localTown = null;
+    this.askingTown = false;
     this.mapView = new MapRenderer(this, this.city);
     this.testRide = new TestRide(this);
     this.zabytki = new Zabytki(this, this.city, this.mapView);
@@ -547,6 +575,10 @@ export class GameScene extends Phaser.Scene {
           e.chasing = false;
         }
       },
+      nearestGang: (x, y, maxPx) => this.streets.nearestGang(x, y, maxPx),
+      gangSpot: (x, y, m, kind) => this.streets.gangSpot(x, y, m, kind),
+      placeGang: (id, x, y, kind) => this.streets.placeGang(id, x, y, kind),
+      questSpot: (x, y) => this.questSpot(x, y),
     });
 
     // Missions: gold roofs and "!" over their doors.
@@ -593,6 +625,7 @@ export class GameScene extends Phaser.Scene {
       const look = PLACE_LOOK[p.kind];
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.stationVehicles(p);
+      else if (p.kind === 'port') this.portLook(p);
       else if (p.kind === 'merchant' && WYGLAD_09) this.merchantStalls(p);
       else {
         const post = this.signPost(p);
@@ -654,6 +687,8 @@ export class GameScene extends Phaser.Scene {
         e.destroy();
       },
       odblokowane: () => poziomPostaci(session.exp) >= SMOKI_NA_MAPIE.odPoziomu && (session.story.st === 'smok' || session.story.st === 'koniec'),
+      scene: this,
+      toast: (t, ms) => this.toast(t, ms),
     });
     (window as unknown as { __smok?: (g: GatunekId) => void }).__smok = (g) => {
       const a = Math.random() * Math.PI * 2;
@@ -728,7 +763,9 @@ export class GameScene extends Phaser.Scene {
           snap.kur = { m: Math.round(session.stats.m), o: zdobyteOdznaki(stanOsiagniec()), ...this.kurierMiejsce() };
         } catch { /* the rankings must never stop the heartbeat */ }
       }
-      api.heartbeat(session.token, snap).catch(() => {});
+      // The server refused the key: this character was loaded elsewhere or logged out (sesja.ts).
+      const token = session.token;
+      api.heartbeat(token, snap).then((ok) => { if (ok === false && !this.leaving) sesjaWygasla(token); }).catch(() => {});
     };
     this.time.addEvent({ delay: HEARTBEAT_MS, loop: true, callback: beat });
     window.addEventListener('pagehide', beat);
@@ -890,6 +927,7 @@ export class GameScene extends Phaser.Scene {
 
     this.unstickHero(now);
     this.crossBorder(now);
+    this.portsNear(now);
     if (consumeHeal()) this.healButton();
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
@@ -1011,6 +1049,7 @@ export class GameScene extends Phaser.Scene {
     this.updateStany(now);
     aktualizujEfekty(now);
     this.smokiNaMapie?.update(this.player.x, this.player.y);
+    this.smokiNaMapie?.dym(this.time.now);
     this.updatePosts(now);
     this.zabytki.update(this.player.x, this.player.y);
     for (const item of [...this.pickups]) {
@@ -1906,12 +1945,14 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
-  /** A light cone under a wall sign / a stall (content/swiat.ts SNOP_SZYLDU), so places are easy to spot. */
+  /**
+   * The glow by a sign with no lamp of its own (wall signs, market stalls, the port's board). The lamp's light cone
+   * (SNOP_SZYLDU) belongs only to signs on posts: under these it shone out of nothing – „dziwny trójkąt” (owner,
+   * 13 Oct 2026). Until the artist draws their own lights (order 37-P001) they keep the soft halo from production.
+   */
   private signGlow(sign: Phaser.GameObjects.Image) {
-    if (!SNOP) return this.oldSignGlow(sign);
-    const top = sign.y + sign.displayHeight * 0.25;
-    const glow = this.snop(sign.x, top, top + SNOP_SZYLDU.dlug * 0.8, sign.depth + 1);
-    this.signGlows.add(glow);
+    const glow = this.oldSignGlow(sign);
+    glow.setData('bezLampy', true);
     return glow;
   }
 
@@ -1971,11 +2012,22 @@ export class GameScene extends Phaser.Scene {
       tex.refresh();
       tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
-    const length = Math.max(8, ground - top) / 0.82;
-    const glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
-    glow.setDisplaySize(S.szer, length).setAlpha(S.dzien);
+    let glow: Phaser.GameObjects.Image;
+    if (this.textures.exists('snop-szyldu')) {
+      // The artist's cone (36-G002): the lamp at its top anchor, the pool's middle on the ground.
+      const F = S.plik;
+      const size = (Math.max(8, ground - top) * F.rozmiar) / (F.ziemiaY - F.lampaY);
+      glow = this.add.image(x, top, 'snop-szyldu').setOrigin(0.5, F.lampaY / F.rozmiar).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(size, size);
+    } else {
+      const length = Math.max(8, ground - top) / 0.82;
+      glow = this.add.image(x, top, key).setOrigin(0.5, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(depth);
+      glow.setDisplaySize(S.szer, length);
+    }
+    glow.setAlpha(S.dzien);
     const [lo, hi] = S.mrugCoMs;
-    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo));
+    const [dlo, dhi] = S.dzienRytm.coMs;
+    glow.setData('faza', Math.random() * 100_000).setData('okres', lo + Math.random() * (hi - lo)).setData('dzien', dlo + Math.random() * (dhi - dlo));
     return glow;
   }
 
@@ -1990,6 +2042,19 @@ export class GameScene extends Phaser.Scene {
     const h = Math.sin(krok * 12.9898 + seed * 78.233) * 43758.5453;
     const x = h - Math.floor(h);
     return x < 0.45 ? 0.08 : x < 0.65 ? 0.45 : 1;
+  }
+
+  /**
+   * How bright a sign's light is now (ADD alpha). Night: the accepted look with the odd short-circuit stutter.
+   * Day (36-G002): every 2–3 s a double blink – flash, dim, flash – then the quiet base, each place its own rhythm.
+   */
+  private lightAlpha(now: number, o: Phaser.GameObjects.Image) {
+    const S = SNOP_SZYLDU;
+    if (this.postsNight) return MNIEJ_RUCHU ? S.noc : S.noc * this.flicker(now, o);
+    const D = S.dzienRytm;
+    if (MNIEJ_RUCHU) return D.baza;
+    const t = (now + (o.getData('faza') as number)) % (o.getData('dzien') as number);
+    return t < D.blyskMs ? D.blysk : t < D.blyskMs + D.przygasMs ? D.przygas : t < 2 * D.blyskMs + D.przygasMs ? D.blysk : D.baza;
   }
 
   /**
@@ -2012,7 +2077,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(arm ? (flip ? 22 / 28 : 6 / 28) : 5.5 / 12, 39 / 40).setScale(K).setFlipX(flip).setDepth(at.y);
     const top = at.y - 39 * K;
     const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
-    const board = this.add.image(Math.round(bx * 2) / 2, top + (arm ? 16 : 12) * K, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    // The shop's board has the artist's three swing frames (36-G002); the others swing by code (updatePosts).
+    const B = SNOP_SZYLDU.bujanie;
+    const frames = SNOP && t === 'sklep' && this.textures.exists('tablica-sklep-bujanie');
+    const by = top + (arm ? 16 : 12) * K;
+    const board = frames
+      ? this.add.image(Math.round(bx * 2) / 2, by, 'tablica-sklep-bujanie', 1).setOrigin(0.5, B.zaczepY / 32).setScale((K * 22) / B.szerRysunku).setDepth(at.y + 0.5)
+      : this.add.image(Math.round(bx * 2) / 2, by, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    if (frames) this.textures.get('tablica-sklep-bujanie').setFilter(Phaser.Textures.FilterMode.NEAREST);
     for (const k of ['szyld-slup-ramie', 'szyld-slup-tablica', `tablica-${t}`]) this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
     // A small shadow at the foot, to the bottom right.
     if (!this.textures.exists('cien-slupa')) {
@@ -2034,12 +2106,12 @@ export class GameScene extends Phaser.Scene {
       : this.add.image(at.x, at.y + 1, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y - 2).setVisible(false)
         .setDisplaySize(S.lampa.promien * 3.4, S.lampa.promien * 1.4).setAlpha(S.lampa.plama);
     lamp.setDisplaySize(S.lampa.promien * 2, S.lampa.promien * 2).setAlpha(S.lampa.mocno);
-    this.posts.push({ post, board: arm ? board : null, lamp, pool, phase: (h >>> 3) % 6283 });
+    this.posts.push({ post, board: SNOP || arm ? board : null, frames, scale: board.scale, lamp, pool, phase: (h >>> 3) % 6283 });
     return [post, board, shadow]; // the lamp and its pool are shown by updatePosts (night, post on screen)
   }
 
   private zabytki!: Zabytki;
-  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
+  private posts: { post: Phaser.GameObjects.Image; board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; lamp: Phaser.GameObjects.Image; pool: Phaser.GameObjects.Image; phase: number }[] = [];
   private postsNight: boolean | null = null;
   private postsNightAt = 0;
 
@@ -2069,7 +2141,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
     const night = !!this.postsNight;
-    const base = night ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const q of this.posts) {
       if (!q.post.visible) {
         if (q.lamp.visible) q.lamp.setVisible(false);
@@ -2081,14 +2152,44 @@ export class GameScene extends Phaser.Scene {
         if (q.lamp.visible !== night) q.lamp.setVisible(night);
         if (q.pool.visible !== night) q.pool.setVisible(night);
       } else {
-        const f = this.flicker(now, q.pool);
+        const a = this.lightAlpha(now, q.pool);
         if (!q.pool.visible) q.pool.setVisible(true);
-        q.pool.setAlpha(base * f);
-        if (q.lamp.visible !== night) q.lamp.setVisible(night);
-        if (night) q.lamp.setAlpha(SLUPY_SZYLDOW.lampa.mocno * f);
+        q.pool.setAlpha(a);
+        // The lamp itself: lit at night, and by day it flashes with the blink (the source is seen, not just the pool).
+        const lit = night || a > SNOP_SZYLDU.dzienRytm.baza + 0.01;
+        if (q.lamp.visible !== lit) q.lamp.setVisible(lit);
+        if (lit) q.lamp.setAlpha(night ? SLUPY_SZYLDOW.lampa.mocno * (a / SNOP_SZYLDU.noc) : SLUPY_SZYLDOW.lampa.mocno * a);
+        if (q.board) this.swingBoard(q, now);
+        continue;
       }
       if (q.board) q.board.setAngle(SLUPY_SZYLDOW.kolysanie * Math.sin(now / 1100 + q.phase));
     }
+  }
+
+  /**
+   * The board swings forward and back on its hooks (36-G002): middle 400 ms → front 220 → middle 400 → back 220,
+   * each post its own phase. The shop's board has the artist's frames; the others lean by code (scale + shade).
+   */
+  private swingBoard(q: { board: Phaser.GameObjects.Image | null; frames: boolean; scale: number; phase: number }, now: number) {
+    const b = q.board!;
+    const B = SNOP_SZYLDU.bujanie;
+    let k = 1;
+    if (!MNIEJ_RUCHU) {
+      const cykl = B.kroki.reduce((s, [, ms]) => s + ms, 0);
+      let t = (now + q.phase * 7) % cykl;
+      for (const [f, ms] of B.kroki) {
+        if (t < ms) { k = f; break; }
+        t -= ms;
+      }
+    }
+    if (b.getData('k') === k) return;
+    b.setData('k', k);
+    if (q.frames) {
+      b.setFrame(k);
+      return;
+    }
+    const w = k === 0 ? B.przod : k === 2 ? B.tyl : { sx: 1, sy: 1, kolor: 0xffffff };
+    b.setScale(q.scale * w.sx, q.scale * w.sy).setTint(w.kolor);
   }
 
   /**
@@ -2127,13 +2228,12 @@ export class GameScene extends Phaser.Scene {
   private cullFar(now: number) {
     const v = this.cameras.main.worldView;
     const m = 40;
-    const base = this.postsNight ? SNOP_SZYLDU.noc : SNOP_SZYLDU.dzien;
     for (const o of this.farObjects) {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
       if (on !== o.visible) o.setVisible(on);
       if (on && this.signGlows.has(o)) {
-        if (SNOP) o.setAlpha(base * this.flicker(now, o));
+        if (SNOP && !o.getData('bezLampy')) o.setAlpha(this.lightAlpha(now, o));
         else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
       }
     }
@@ -2920,6 +3020,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
+    if (p.kind === 'port') return this.openPort(p);
     if (p.kind === 'hotel') return this.openHotel(p);
     if (p.kind === 'bank') return void this.openBank(p);
     if (p.kind === 'school') return this.openSchool(p);
@@ -2970,9 +3071,10 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title,
       text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}${free ? 'Za odzyskanego konia jeden kurs masz u mnie gratis! ' : ''}Dziś jadę tam:” Masz ${session.coins} monet.${cut < 1 ? ` Twoja zniżka: −${Math.round(WOZNICA.znizka * 100)}%.` : ''}\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
-      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, 'Zostaję'],
+      buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
       onChoose: (i) => {
         if (i === trips.length) return this.diamondRide(title);
+        if (i === trips.length + 1 && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openCoach(p), title.replace(/^\S+\s/, ''));
         const t = trips[i];
         if (!t) return;
         if (t.level && poziomPostaci(session.exp) < t.level) {
@@ -2986,6 +3088,185 @@ export class GameScene extends Phaser.Scene {
         if (t.gratis) session.flagi.przejazd = Math.max(0, (session.flagi.przejazd ?? 0) - 1);
         this.chooseSpeed(title, t, 0);
       },
+    });
+  }
+
+  /**
+   * Ferry ports (content/porty.ts; on production since 1.023): on world maps, every second, a captain appears in each port
+   * within PROM.widacKm whose map around is loaded; once per map a hint names the nearest port further away.
+   */
+  private portsNear(now: number) {
+    if (demo.on || now < this.portyAt || !worldOrigin(this.city.id)) return;
+    this.portyAt = now + 1000;
+    void wczytajPorty();
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    for (const port of portyBlisko(ll, PROM.widacKm)) {
+      const key = portKey(port);
+      if ([...this.porty.values()].includes(port)) continue;
+      const at = this.city.fromLatLon(port.lat, port.lon);
+      const r = 60 * PX_PER_M;
+      if (!this.city.ready({ x0: at.x - r, y0: at.y - r, x1: at.x + r, y1: at.y + r })) continue;
+      // A ferry landing of the map already stands there (it has its captain): it is this port.
+      const landing = this.city.places.find((q) => q.kind === 'port' && !this.porty.has(q.id) && odleglosc(this.city.toLatLon(q.door.x, q.door.y), port) < 3);
+      if (landing) {
+        this.porty.set(landing.id, port);
+        continue;
+      }
+      // Already on this map (the scene started again): its look was drawn with the other places.
+      const fresh = this.city.addPort(key, port.nazwa, port.lat, port.lon);
+      const place = fresh ?? this.city.places.find((q) => q.kind === 'port' && q.id.endsWith(`/${key}`));
+      if (!place) continue;
+      this.porty.set(place.id, port);
+      if (fresh) this.portLook(place);
+    }
+    if (this.portyRzekl) return;
+    const far = portyBlisko(ll, PROM.wskazowkaKm);
+    if (!far.length && this.time.now < 20_000) return; // the list may still be loading
+    this.portyRzekl = true;
+    const p = far[0];
+    if (!p || odleglosc(p, ll) <= PROM.widacKm) return;
+    this.toast(`⚓ Najbliższy port promowy: ${p.nazwa}, ok. ${Math.round(odleglosc(p, ll))} km ${kierunekSlownie(ll, p)}.`, 6000);
+  }
+
+  /** The port the hero stands in (its captain), if any. */
+  private portHere(): Port | null {
+    let best: Port | null = null;
+    let bd = 300 * PX_PER_M;
+    for (const p of this.city.places) {
+      const port = p.kind === 'port' ? this.porty.get(p.id) : undefined;
+      const d = Math.hypot(p.door.x - this.player.x, p.door.y - this.player.y);
+      if (port && d < bd) [best, bd] = [port, d];
+    }
+    return best;
+  }
+
+  /** A port's look until the artist draws one: a code-drawn anchor board and the captain (the coachman in navy). */
+  private portLook(p: CityPlace) {
+    if (!this.textures.exists('sign-port')) {
+      const g = this.make.graphics({}, false);
+      const px = (x: number, y: number, w: number, h: number, c: number) => g.fillStyle(c).fillRect(x, y, w, h);
+      px(14, 18, 4, 18, 0x1e1a24);
+      px(15, 18, 2, 18, 0x6b4a2a);
+      px(1, 1, 30, 19, 0x1e1a24);
+      px(2, 2, 28, 17, 0xe8dcc0);
+      // The anchor.
+      px(15, 4, 2, 12, 0x2b3f6a);
+      px(12, 6, 8, 2, 0x2b3f6a);
+      px(14, 3, 4, 2, 0x2b3f6a);
+      px(9, 13, 2, 2, 0x2b3f6a);
+      px(21, 13, 2, 2, 0x2b3f6a);
+      px(10, 15, 12, 2, 0x2b3f6a);
+      g.generateTexture('sign-port', 32, 36);
+      g.destroy();
+    }
+    const sign = this.add.image(p.door.x - 9, p.door.y + 2, 'sign-port').setOrigin(0.5, 1).setScale(0.5).setDepth(p.door.y + 2);
+    this.farObjects.push(sign, this.signGlow(sign));
+    const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
+    if (this.textures.exists(key)) fitHd(this.add.sprite(p.door.x + 6, p.door.y + 1, key, 'down-0')).setTint(0x9fb4e8).setDepth(p.door.y + 3);
+  }
+
+  /** The harbour master: the port's fixed ferry lines (no drawing – a ferry always sails the same way). */
+  private openPort(p: CityPlace, page = 0) {
+    const here = this.city.toLatLon(p.door.x, p.door.y);
+    // A ferry landing of the world map: the catalogue port it belongs to (its lines), if any.
+    let port = this.porty.get(p.id) ?? null;
+    if (!port && (port = portPrzy(here))) this.porty.set(p.id, port);
+    const title = `⚓ Kapitan portu – ${port?.nazwa ?? p.name}`;
+    // Back to the country's small ports only from those the hero has sailed to/from (owner, 13 Oct 2026).
+    const all = port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|'))) : [];
+    void mojeProsby(session.name).then((prosby) => {
+      // Answers to this player's earlier requests asked in this port (told once), and the ones still waiting.
+      const tu = prosby.filter((r) => r.lat !== null && r.lon !== null && odleglosc({ lat: r.lat, lon: r.lon! }, here) < 3);
+      const nowe = tu.filter((r) => r.status !== 'nowe' && !session.seen[`port-odp:${r.id}`]);
+      for (const r of nowe) session.seen[`port-odp:${r.id}`] = Date.now();
+      const wiesci = [
+        ...nowe.map((r) => r.status === 'dodana'
+          ? `„Pytałeś o: ${r.text}. Znalazłem kapitana, który zna drogę – sprawdź listę!${r.odpowiedz ? ` ${r.odpowiedz}` : ''}”`
+          : `„Pytałeś o: ${r.text}. Niestety, żaden kapitan nie zna tam drogi.${r.odpowiedz ? ` ${r.odpowiedz}` : ''}”`),
+        ...tu.filter((r) => r.status === 'nowe').map((r) => `„Wciąż wypytuję innych kapitanów o: ${r.text}.”`),
+      ];
+      this.portMenu(p, port, title, all, page, here, wiesci.length && !page ? `${wiesci.join('\n')}\n\n` : '');
+    });
+  }
+
+  private portMenu(p: CityPlace, port: Port | null, title: string, all: ReturnType<typeof rejsyZ>, page: number, here: { lat: number; lon: number }, wiesci: string) {
+    const n = PROM.naStronie;
+    const list = all.slice(page * n, page * n + n);
+    const more = all.length > (page + 1) * n;
+    const time = (km: number) => (session.immortal ? 'od razu' : rideText(km, 1, PROM.kmh));
+    const dokad = (r: Rejs) => `${r.siec === 'liniowiec' ? '🚢 ' : ''}${r.do.nazwa}${r.siec ? ` (${r.siec === 'flagowy' ? 'port główny, ' : r.siec === 'liniowiec' ? 'liniowiec, ' : ''}${nazwaKraju(krajPortu(r.do)[0])})` : ''}`;
+    const lines = list.map((r) => `• ${dokad(r)}: ${r.km} km, ${time(r.km)} – ${cenaRejsu(r.km)} monet`);
+    const intro = list.length
+      ? `„Ahoj! ${page ? 'A dalej pływamy tam:' : 'Stąd pływamy:'}” Masz ${session.coins} monet.\n\n${lines.join('\n')}\n\nProm płynie ok. ${PROM.kmh} km/h, naprawdę – także gdy zamkniesz grę. Po przypłynięciu grę wczytasz już w tamtym porcie.`
+      : '„Ahoj! Stąd na razie pływają tylko kutry rybackie. Ale powiedz, dokąd chciałbyś popłynąć – popytam innych kapitanów.”';
+    this.dialog({
+      title,
+      text: wiesci + intro,
+      buttons: [...list.map((r) => `⛴ ${dokad(r)} – ${cenaRejsu(r.km)} 💰`), ...(more ? ['Dalej…'] : []), '🧭 Inne miejsce…', ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
+      onChoose: (i) => {
+        if (more && i === list.length) return this.portMenu(p, port, title, all, page + 1, here, '');
+        if (i === list.length + (more ? 1 : 0)) return void this.askDestination(p, port, title, here);
+        if (i === list.length + (more ? 2 : 1) && !this.mamMapePodroznika()) return this.buyTravellerMap(() => this.openPort(p, page), title.replace(/^\S+\s/, ''));
+        const r = list[i];
+        if (!r) return;
+        const price = cenaRejsu(r.km);
+        if (PROM.odPoziomu && poziomPostaci(session.exp) < PROM.odPoziomu) return this.toast(`⛴ Promem pływa się od ${PROM.odPoziomu}. poziomu postaci.`);
+        if (session.coins < price) return this.toast(`Za mało monet: bilet kosztuje ${price}.`);
+        const to = { name: r.do.nazwa, lat: r.do.lat, lon: r.do.lon, key: `port|${r.do.nazwa}|${r.do.lat}`, mapId: portMapId(r.do), mapName: r.do.nazwa };
+        this.dialog({
+          title,
+          text: session.immortal
+            ? `Rejs do: ${r.do.nazwa} (${r.km} km). Postać testowa płynie od razu. Płyniesz?`
+            : `Rejs do: ${r.do.nazwa} (${r.km} km) potrwa ${time(r.km)}. Przez ten czas twoja postać będzie na promie – w tym czasie możesz zagrać inną postacią. Płyniesz?`,
+          buttons: [`⛴ Płynę – ${price} 💰`, 'Zostaję'],
+          onChoose: (k) => {
+            if (k === 0) this.travel({ to, km: r.km, via: null, price, statek: true });
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * „🧭 Inne miejsce…” (owner, 12 Oct 2026): the player names a country or a port; the captain asks the others
+   * and the request goes to us (table port_requests, admin ⚓ Porty). We check it, add a real line, and the
+   * captain tells the player on his next visit (`openPort`). Untrusted text – only a wish, never an order.
+   */
+  private async askDestination(p: CityPlace, port: Port | null, title: string, here: { lat: number; lon: number }) {
+    const text = (await askText(title, '„A gdzie to by szanowny chciał popłynąć? Napisz kraj albo port.”', 'np. Kopenhaga, Dania', { ok: 'Powiedz', upper: false }))?.trim();
+    if (!text) return;
+    // First the captain works out the way through the ferry network (flagship ports, with changes).
+    const t = port ? trasaDo(port, text) : null;
+    const [isoTu, morskiTu] = port ? krajPortu(port) : [null, false];
+    if (!t && port && isoTu && !morskiTu) {
+      return this.dialog({ title, text: `„${text}? Stąd pływamy tylko po tutejszych wodach. Na dalekie rejsy musisz dojść do portu nad morzem.”`, buttons: ['Rozumiem'], onChoose: () => {} });
+    }
+    if (t) {
+      if (!t.hops.length) return this.dialog({ title, text: `„${text}? Przecież tu jesteś!”`, buttons: ['Faktycznie'], onChoose: () => {} });
+      const droga = [port!.nazwa, ...t.hops.map((h) => h.nazwa)].join(' → ');
+      const dni = t.km / PROM.kmh / 24;
+      const czas = dni >= 1 ? `ok. ${Math.round(dni)} ${Math.round(dni) === 1 ? 'dnia' : 'dni'}` : `ok. ${Math.max(1, Math.round(dni * 24))} godz.`;
+      const pierwszy = t.hops[0];
+      const r = (port ? rejsyZ(port, session.byl.filter((b) => b.key.startsWith('port|')), true) : []).find((q) => q.do === pierwszy);
+      return this.dialog({
+        title,
+        text: `„${t.kraj}? ${t.przez ? `Tam promy nie pływają – najbliżej dopłyniesz do ${t.hops[t.hops.length - 1].nazwa} (${t.przez}), a dalej lądem. ` : ''}Stąd prosto się nie da, ale z przesiadkami w głównych portach owszem:\n${droga}\nRazem ok. ${t.km} km po morzu, ${czas} rejsu. Każdy odcinek kupujesz u kapitana w porcie przesiadki.”`,
+        buttons: [...(r ? [`⛴ ${pierwszy.nazwa} – ${cenaRejsu(r.km)} 💰`] : []), 'Dobrze'],
+        onChoose: (i) => {
+          if (i !== 0 || !r) return;
+          this.portMenu(p, port, title, [r], 0, here, '');
+        },
+      });
+    }
+    const ok = await poprosOLinie(session.name, port?.nazwa ?? p.name, here, text);
+    if (ok) void mojeProsby(session.name, true);
+    this.dialog({
+      title,
+      text: ok
+        ? `„${text}? Hmm… stąd tam nie pływamy. Porozmawiam z innymi kapitanami – może któryś zna drogę. Zajrzyj jutro.”`
+        : '„Na dziś dość pytań – kapitanowie i tak muszą się naradzić przy kuflu. Zajrzyj jutro.”',
+      buttons: ['Dobrze'],
+      onChoose: () => {},
     });
   }
 
@@ -3202,6 +3483,49 @@ export class GameScene extends Phaser.Scene {
   /** People spoken to per town (new towns' greeting, bug report 18). */
   private townTalks: Record<string, number> = {};
 
+  /**
+   * World maps: the town or village the hero is in, learnt only from a passer-by (bug report 67, owner:
+   * „sprawdzaj lokalizację dopiero po zapytaniu człowieka”). `name` '' = asked here, nothing nearby.
+   */
+  private localTown: { m: string; name: string; x: number; y: number; r: number; wies: boolean; ax: number; ay: number } | null = null;
+  private askingTown = false;
+
+  /** The town learnt from a passer-by, while the hero is still in it or near where he asked. */
+  private localNear(x = this.player.x, y = this.player.y) {
+    const t = this.localTown;
+    if (!t || t.m !== this.city.id) return null;
+    const inTown = t.name && Math.hypot(t.x - x, t.y - y) <= t.r * 1.3;
+    return inTown || Math.hypot(t.ax - x, t.ay - y) <= MIEJSCOWOSC.pamietajM * PX_PER_M ? t : null;
+  }
+
+  /** On a world map: the town to name at (x, y) – the one a passer-by told, else the map's own city near its centre, else none. */
+  private worldTown(x: number, y: number): string | null {
+    const t = this.localNear(x, y);
+    if (t) return t.name || null;
+    const o = worldOrigin(this.city.id);
+    if (!o) return null;
+    const c = this.city.fromLatLon(o.lat, o.lon);
+    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? mapName(this.city.id) : null;
+  }
+
+  /** Asks the world map which town this is (once per spot); then `then` runs (a passer-by's answer). */
+  private learnTown(then: () => void) {
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    const ax = this.player.x, ay = this.player.y, m = this.city.id;
+    this.askingTown = true;
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), MIEJSCOWOSC.czekajMs));
+    void Promise.race([nearestLocality(ll.lat, ll.lon, lang), timeout]).catch(() => null).then((p) => {
+      this.askingTown = false;
+      if (m !== this.city.id) return;
+      if (p) {
+        const c = this.city.fromLatLon(p.lat, p.lon);
+        this.localTown = { m, name: p.name, x: c.x, y: c.y, r: p.r * PX_PER_M, wies: p.size === 'village', ax, ay };
+      } else this.localTown = { m, name: '', x: ax, y: ay, r: 0, wies: false, ax, ay };
+      this.emitHud();
+      then();
+    });
+  }
+
   /** The town the hero is in, by name (null when the map knows none). */
   private townHere(): string | null {
     const w = this.whereIs(this.player.x, this.player.y);
@@ -3289,6 +3613,18 @@ export class GameScene extends Phaser.Scene {
           return null;
         }
       },
+      lamiglowka: offline.demo ? undefined : {
+        poziom: trudnoscZWieku(session.age),
+        rozwiazana: (dzien) => session.daily.lamiglowka?.d === dzien,
+        rozwiaz: (dzien, rodzaj, sekundy) => {
+          session.daily.lamiglowka = { d: dzien, n: 1, a: 1 };
+          session.exp += LAMIGLOWKA.nagrodaExp;
+          session.stats.lamiglowki = (session.stats.lamiglowki ?? 0) + 1;
+          this.emitHud();
+          void this.save();
+          void rpc('lamiglowka_rozwiazana', { p_token: session.token, p_dzien: dzien, p_poziom: trudnoscZWieku(session.age), p_rodzaj: rodzaj, p_sekundy: sekundy }).catch(() => {});
+        },
+      },
       wyslij: async (text) => {
         if (offline.demo) return 'ok';
         const ll = this.city.toLatLon(this.player.x, this.player.y);
@@ -3314,6 +3650,8 @@ export class GameScene extends Phaser.Scene {
 
   /** A passer-by: says hello, and some want a duel. */
   private talkToFolk(f: Folk) {
+    // World maps: which town this is, asked of the passer-by first (a quick look at the world map's place names).
+    if (worldOrigin(this.city.id) && !this.localNear() && !this.askingTown && !demo.on) return this.learnTown(() => this.talkToFolk(f));
     if (f.role === 'gazeciarz') return this.newsboy(f);
     const M = MIESZKANCY;
     let h = 2166136261;
@@ -3913,26 +4251,29 @@ export class GameScene extends Phaser.Scene {
     if (t.price) spend(t.price);
     // Remember where we set off from and where we go: a diamond takes the hero back later.
     const from = this.city.toLatLon(this.player.x, this.player.y);
-    this.remember({ name: this.stationHere(), ...from, key: `${this.city.id}|${this.stationHere()}`, mapId: this.city.id, mapName: mapName(this.city.id) });
+    const here = t.statek ? (this.portHere()?.nazwa ?? mapName(this.city.id)) : this.stationHere();
+    this.remember({ name: here, ...from, key: `${this.city.id}|${here}`, mapId: this.city.id, mapName: mapName(this.city.id) });
     this.remember(t.to);
     this.emitHud();
     this.keepFog();
-    this.toast(`🐴 Jedziemy do: ${t.to.name}…`, 3000);
+    this.toast(t.statek ? `⛴ Płyniemy do: ${t.to.name}…` : `🐴 Jedziemy do: ${t.to.name}…`, 3000);
     const cam = this.cameras.main;
     cam.fadeOut(900, 0, 0, 0);
     Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
       .then(async ([city]) => {
-        const st = city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
+        const st = t.statek ? undefined : city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
-        // A spot on the platform/street the hero can walk away from (not an island between the tracks).
-        session.arrive = st ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
+        // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
+        session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
         // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();
-          session.jazda = { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
+          session.jazda = t.statek
+            ? { from: here, to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times, PROM.kmh), statek: true }
+            : { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
           saveNow(this.player.hp).catch(() => {});
           await Promise.all([prepareMap(city), showJourney(session.jazda)]);
           session.jazda = null;
@@ -3954,7 +4295,7 @@ export class GameScene extends Phaser.Scene {
         session.diamenty += diamonds;
         this.travelling = false;
         cam.fadeIn(300);
-        this.toast(`Woźnica nie znalazł drogi: ${e.message}`);
+        this.toast(`${t.statek ? 'Kapitan' : 'Woźnica'} nie znalazł drogi: ${e.message}`);
         this.emitHud();
       });
   }
@@ -3967,6 +4308,7 @@ export class GameScene extends Phaser.Scene {
   private crossBorder(now: number) {
     if (this.travelling || demo.on || now < this.crossAt || this.player.isDead) return;
     this.crossAt = now + 500;
+    this.checkDroga();
     const lublin = cachedMap('lublin');
     if (!lublin) return;
     const { x, y } = this.player;
@@ -4686,6 +5028,7 @@ export class GameScene extends Phaser.Scene {
     const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
     const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
     const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
+    const mapBtn = this.mamMapePodroznika() ? null : `🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`;
     const entries: ShopEntry[] = [
       ...learn.map((_, i): ShopEntry => ({ id: 'learn:magic', index: i, name: 'Nauka magii', category: 'magic', picture: itemPictureUrl('ksiega'),
         description: 'Naucz się zaklęć, a potem wybierz różdżkę, kulę albo księgę.', price: NAUKA_MAGII, action: 'NAUCZ SIĘ', refresh: true })),
@@ -4694,14 +5037,16 @@ export class GameScene extends Phaser.Scene {
         category: 'services' as const, description: 'Porozmawiaj z bibliotekarką o wyprawie.', action: 'ROZMAWIAJ' }] : []),
       { id: 'library:riddle', index: learn.length + offers.length + Number(!!surveyBtn), name: riddleBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
         category: 'services', description: 'Bibliotekarka przygotowała zagadki.', action: 'ROZMAWIAJ' },
+      ...(mapBtn ? [{ id: 'library:mapa', index: learn.length + offers.length + Number(!!surveyBtn) + 1, name: 'Przepisz dworce z mapy', category: 'services' as const,
+        description: `Bibliotekarka pozwoli przepisać ze swojej mapy dworce i porty w promieniu ${MAPA_PODROZNIKA.promienKm} km.`, price: MAPA_PODROZNIKA.cena, action: 'PRZEPISZ' }] : []),
     ];
     this.shopDialog(p, {
       title: `📚 ${p.name}`,
       text: gear.magic
         ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
         : `W starych księgach zapisano sztukę magii. Po nauce będziesz też magiem: przytrzymaj atak z różdżką, kulą albo księgą w ręce, by rzucać zaklęcia. Masz ${session.coins} monet.`,
-      buttons: [...learn, ...offers.map((o) => this.label(o)), ...(surveyBtn ? [surveyBtn] : []), riddleBtn, 'Wyjdź'],
-      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), ...(surveyBtn ? [null] : []), null, null],
+      buttons: [...learn, ...offers.map((o) => this.label(o)), ...(surveyBtn ? [surveyBtn] : []), riddleBtn, ...(mapBtn ? [mapBtn] : []), 'Wyjdź'],
+      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), ...(surveyBtn ? [null] : []), null, ...(mapBtn ? [null] : []), null],
       onChoose: (i) => {
         const at = learn.length + offers.length;
         if (surveyBtn && i === at) {
@@ -4715,6 +5060,7 @@ export class GameScene extends Phaser.Scene {
           });
         }
         if (i === at + (surveyBtn ? 1 : 0)) return this.libraryRiddle(p);
+        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p), `Bibliotekarka – ${p.name}`);
         if (learn.length && i === 0) {
           if (session.coins < NAUKA_MAGII) {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
@@ -4746,6 +5092,7 @@ export class GameScene extends Phaser.Scene {
       title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
       text: `${r.question}\n\nTylko jedna próba!`,
       buttons: [...r.answers],
+      odpowiedzi: true,
       onChoose: (i) => {
         const right = i === r.correct;
         if (right) {
@@ -4930,7 +5277,7 @@ export class GameScene extends Phaser.Scene {
     if (m.zadanie.typ === 'brak' && !m.etapy?.length) {
       // Just a place (e.g. a partner with a secret code on a flyer).
       this.missionDialog(m, { title: who, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
-    } else if (st === 'new' && this.activeQuests().length >= ZADAN_NARAZ) {
+    } else if (st === 'new' && this.questCount() >= ZADAN_NARAZ) {
       this.missionDialog(m, {
         title: who,
         text: `${m.opis}\n\n${tx(`Masz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`, `You already have ${ZADAN_NARAZ} active quests. Finish one before accepting another. View active quests in your character sheet 👤.`)}`,
@@ -5246,13 +5593,91 @@ export class GameScene extends Phaser.Scene {
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
     const ids = new Set(list.map((q) => q.id));
     for (const k of [...questColors.keys()]) if (!ids.has(k)) questColors.delete(k);
-    return list.slice(0, ZADAN_NARAZ).map((q) => {
+    const out: QuestInfo[] = list.slice(0, ZADAN_NARAZ).map((q) => {
       if (q.main) return { ...q, color: KOLOR_GLOWNEGO };
       if (!questColors.has(q.id)) {
         const used = new Set(questColors.values());
-        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[0]);
+        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[questColors.size % KOLORY_ZADAN.length]);
       }
       return { ...q, color: questColors.get(q.id)! };
+    });
+    // The traveller's map's guide: its own arrow, not counted among the quests.
+    if (droga) {
+      const pos = this.city.fromLatLon(droga.lat, droga.lon);
+      const km = Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) / PX_PER_M / 1000;
+      out.push({ id: 'droga', main: false, title: `🧭 Droga do: ${droga.nazwa}`, text: `🧭 ${IKONA_HUBA[droga.rodzaj]} ${droga.nazwa} (${km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`})`, pos, color: MAPA_PODROZNIKA.kolor });
+    }
+    return out;
+  }
+
+  /** Quests counted for the limit (the traveller's map's guide is not one). */
+  private questCount() {
+    return this.activeQuests().filter((q) => q.id !== 'droga').length;
+  }
+
+  /**
+   * Has the hero copied this area's hubs onto his map? Each copy covers only the area around where it was done
+   * (owner, 13 Oct 2026: copied in Lublin, it says nothing about the station in Lębork).
+   */
+  mamMapePodroznika() {
+    const here = this.city.toLatLon(this.player.x, this.player.y);
+    return this.mapyPodroznika().some((m) => odleglosc(m, here) < MAPA_PODROZNIKA.promienKm * MAPA_PODROZNIKA.nowaOd);
+  }
+
+  /** The copies made (where, and which hubs). */
+  mapyPodroznika() {
+    return session.mapyPodroznika;
+  }
+
+  /** The hub the traveller's map guides to (map screen). */
+  drogaDo() {
+    return droga;
+  }
+
+  /** Map screen „🧭 Prowadź”: the arrow points to this hub (null = stop guiding). */
+  prowadzDo(h: Hub | null) {
+    droga = h;
+    if (h) this.toast(`🧭 Strzałka prowadzi do: ${h.nazwa}`, 2500);
+    this.emitHud();
+  }
+
+  /** Arrived at the guided hub: the guide ends. */
+  private checkDroga() {
+    if (!droga) return;
+    const pos = this.city.fromLatLon(droga.lat, droga.lon);
+    if (Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) > MAPA_PODROZNIKA.doszedlM * PX_PER_M) return;
+    this.toast(`🧭 Jesteś na miejscu: ${droga.nazwa}`, 3000);
+    droga = null;
+    this.emitHud();
+  }
+
+  /**
+   * Copying the hubs from a coachman's/captain's/librarian's map (owner, 13 Oct 2026: not an item – „No tak, nowe
+   * miejsce. Przepisz sobie z mojej mapy, co gdzie jest”): pay once, and at most MAPA_PODROZNIKA.maksIkon hubs
+   * around here (the nearest of each kind, the rest spread out) stay on the hero's map screen for good.
+   */
+  private buyTravellerMap(back: () => void, kto: string) {
+    if (this.mamMapePodroznika()) return back();
+    const cena = MAPA_PODROZNIKA.cena;
+    this.dialog({
+      title: `🗺 ${kto}`,
+      text: `„No tak, nowe miejsce. Przepisz sobie z mojej mapy, co gdzie jest – dworce, przystanki dyliżansów i porty w okolicy, do ${MAPA_PODROZNIKA.promienKm} km stąd.”\n\nZaznaczysz je na swojej mapie (🗺) na zawsze. Kosztuje ${cena} monet. Masz ${session.coins}.`,
+      buttons: [`Przepisuję – ${cena} 💰`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return back();
+        if (session.coins < cena) return this.toast(`Za mało monet: to kosztuje ${cena}.`);
+        const here = this.city.toLatLon(this.player.x, this.player.y);
+        this.toast('🗺 Przepisujesz…', 1500);
+        void hubyBlisko(here, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]).then((h) => {
+          if (!h.length) return this.toast('„Hm, w okolicy nie ma żadnego dworca ani portu.” Nic nie płacisz.', 3500);
+          if (session.coins < cena || this.mamMapePodroznika()) return;
+          spend(cena);
+          session.mapyPodroznika.push({ ...here, h: doZapisu(h) });
+          this.emitHud();
+          this.save();
+          this.toast(`🗺 Na twojej mapie: ${h.map((q) => `${IKONA_HUBA[q.rodzaj]} ${q.nazwa}`).join(', ')}. Otwórz mapę (🗺 albo M).`, 6000);
+        });
+      },
     });
   }
 
@@ -5284,7 +5709,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** The town the hero belongs to now: its name, centre and the radius counted as "in town". */
-  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean } {
+  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean; nieznana?: boolean } {
     const R = MIEJSCE_HUD;
     if (this.city.id === 'lublin') {
       const towns = this.city.townList();
@@ -5295,6 +5720,11 @@ export class GameScene extends Phaser.Scene {
       if (lub) return { ...lub, r: R.lublinM * PX_PER_M };
     }
     const o = worldOrigin(this.city.id);
+    if (o) {
+      const lt = this.localNear(x, y);
+      if (lt?.name) return { name: lt.name, x: lt.x, y: lt.y, r: lt.r, wies: lt.wies };
+      if (!this.worldTown(x, y)) return { name: tx('Nieznana okolica', 'Unknown area'), x, y, r: 0, nieznana: true };
+    }
     const c = o ? this.city.fromLatLon(o.lat, o.lon) : { x: (this.city.minX + this.city.width) / 2, y: (this.city.minY + this.city.height) / 2 };
     return { name: mapName(this.city.id), x: c.x, y: c.y, r: (o ? R.miastoM : R.miasteczkoM) * PX_PER_M };
   }
@@ -5309,6 +5739,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.townAt(x, y);
     const told = this.toldPlace;
     if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    if (t.nieznana) return { town: t.name, detail: tx('zapytaj przechodnia', 'ask a passer-by') };
     const dx = x - t.x;
     const dy = y - t.y;
     const dist = Math.hypot(dx, dy);
@@ -5327,6 +5758,7 @@ export class GameScene extends Phaser.Scene {
     if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
     const street = addr;
     let town = mapName(this.city.id);
+    if (worldOrigin(this.city.id)) town = this.worldTown(x, y) ?? 'Daleko';
     if (this.city.id === 'lublin') {
       // The Lublin map also holds Garbów, Jastków, Nałęczów and the villages around.
       const towns = this.city.townList();
@@ -5348,7 +5780,7 @@ export class GameScene extends Phaser.Scene {
 
   /** No room for another quest? Then says so. */
   private questsFull() {
-    if (this.activeQuests().length < ZADAN_NARAZ) return false;
+    if (this.questCount() < ZADAN_NARAZ) return false;
     this.toast(`Masz już ${ZADAN_NARAZ} zadania naraz. Skończ któreś, zanim weźmiesz kolejne.`, 3000);
     return true;
   }

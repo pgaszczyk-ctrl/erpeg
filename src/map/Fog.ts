@@ -83,6 +83,11 @@ export class Explored {
   }
 
   /** Bit-packed, base64 per chunk; positions depend on the map scale. */
+  /** Which chunks hold something explored (the map screen's rough "known land"), without encoding them. */
+  chunkKeys(): { s: number; chunks: Record<string, string> } {
+    return { s: PX_PER_M, chunks: Object.fromEntries([...this.chunks.keys()].map((k) => [k, ''])) };
+  }
+
   serialize(): { s: number; chunks: Record<string, string> } {
     const chunks: Record<string, string> = {};
     for (const [k, c] of this.chunks) {

@@ -116,7 +116,7 @@ export class UIScene extends Phaser.Scene {
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
-    this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
+    this.arrows = [0, 1, 2, 3].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit):
     // an icon and a clear bar with a light frame (the soft blurred one was too faint on the map).
@@ -313,6 +313,8 @@ export class UIScene extends Phaser.Scene {
       bron: this.weaponWindow(),
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
+    // One arrow per quest (no limit since 13 Oct 2026): more are made when needed.
+    while (this.arrows.length < s.quests.length) this.arrows.push(this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
@@ -658,7 +660,7 @@ export class UIScene extends Phaser.Scene {
     d.buttons.forEach((label, i) => {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
       const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
-      const color = stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
+      const color = d.odpowiedzi ? 0x2f6f9f : stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
       const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
       const key = d.icons?.[i];

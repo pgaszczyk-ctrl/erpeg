@@ -1,8 +1,8 @@
 /* The newsboy's paper: a printed sheet lying over the game (no window frame). Newspaper type:
    Playfair Display headlines, Old Standard TT body, UnifrakturMaguntia for a typeset masthead. */
-#gazeta.gz-screen{--ink:#231a12;--ink2:#5b4a36;--red:#8e2318;--paper:#efe3c4;position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:18px;background:radial-gradient(ellipse at center,#0c080566,#0c0805b8);font:17px/1.42 'Old Standard TT','Georgia',serif;color:var(--ink)}
+#gazeta.gz-screen{--ink:#231a12;--ink2:#5b4a36;--red:#8e2318;--paper:#efe3c4;position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:10px;background:radial-gradient(ellipse at center,#0c080566,#0c0805b8);font:17px/1.42 'Old Standard TT','Georgia',serif;color:var(--ink)}
 #gazeta *{box-sizing:border-box}
-#gazeta .gz-wrap{width:min(900px,100%);height:min(780px,calc(100dvh - 36px));display:flex;transform:rotate(-0.6deg);filter:drop-shadow(0 14px 22px #000a) drop-shadow(0 2px 2px #0006);animation:gz-in .28s ease-out}
+#gazeta .gz-wrap{width:min(1060px,100%);height:min(920px,calc(100dvh - 20px));display:flex;transform:rotate(-0.6deg);filter:drop-shadow(0 14px 22px #000a) drop-shadow(0 2px 2px #0006);animation:gz-in .28s ease-out}
 @keyframes gz-in{from{transform:rotate(-3deg) translateY(30px) scale(.96);opacity:0}}
 #gazeta .gz-sheet{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 26px 12px;
   background:
@@ -90,8 +90,96 @@
   #gazeta .gz-tab{flex:1 1 0;flex-direction:column;gap:0;padding:2px 1px;font-size:10px;letter-spacing:.3px;line-height:1.1;min-width:0}
   #gazeta .gz-tab+.gz-tab::before{display:none}
   #gazeta .gz-tab .gz-ic{font-size:18px}
+  #gazeta .gz-tab .gz-tl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
   #gazeta .gz-head{font-size:22px}
   #gazeta .gz-story h2{font-size:26px}
   #gazeta .gz-story h3{font-size:19px}
   #gazeta .gz-text{text-align:left}
 }
+/* Puzzle of the day (src/ui/lamiglowka.ts): printed grid, the player's digits in blue ink */
+#gazeta .gz-center{text-align:center}
+#gazeta .gz-puz .gz-text{max-width:640px;margin:4px auto 0;text-align:left}
+#gazeta .gz-board-wrap{display:flex;justify-content:center;margin:12px 0 6px}
+#gazeta .gz-board{--n:6;--cell:min(46px,calc((100vw - 64px) / var(--n)));position:relative;display:grid;grid-template-columns:repeat(var(--n),var(--cell));grid-auto-rows:var(--cell);border:2.5px solid var(--ink);background:#fbf3dc}
+#gazeta .gz-cell{display:flex;align-items:center;justify-content:center;min-width:0;padding:0;border:1px solid #231a1266;background:transparent;color:var(--ink);font:700 calc(var(--cell) * .5)/1 'Old Standard TT',serif;position:relative}
+#gazeta button.gz-cell{cursor:pointer}
+#gazeta .gz-cell.ink{color:#1d3d7a;font-family:'Playfair Display',serif;font-style:italic}
+#gazeta .gz-cell.sel{background:#e9c97a;box-shadow:inset 0 0 0 2px var(--red)}
+#gazeta .gz-sudoku .br{border-right:2.5px solid var(--ink)}
+#gazeta .gz-sudoku .bb{border-bottom:2.5px solid var(--ink)}
+#gazeta .gz-black{background:#3a2c1e;border-color:#231a12}
+#gazeta .gz-clue{background:linear-gradient(to top right,#3a2c1e calc(50% - 1px),#efe3c4 50%,#3a2c1e calc(50% + 1px));color:#f5ead0;font-size:calc(var(--cell) * .3)}
+#gazeta .gz-cp{position:absolute;right:3px;top:2px}
+#gazeta .gz-cd{position:absolute;left:3px;bottom:2px}
+#gazeta .gz-krzyzowka{border:0;background:none;gap:3px}
+#gazeta .gz-krzyzowka .gz-cell{border:1.5px solid var(--ink);background:#fbf3dc;border-radius:3px;font-size:calc(var(--cell) * .42)}
+#gazeta .gz-krzyzowka .gz-none{border:0;background:none}
+#gazeta .gz-krzyzowka .gz-op{background:#e8d9b3}
+#gazeta .gz-krzyzowka .gz-res{background:#f5ead0;border-width:2px}
+#gazeta .gz-krzyzowka .gz-cell.sel{background:#e9c97a}
+#gazeta .gz-trasa{border:2px solid var(--ink);background:#d9e4ee}
+#gazeta .gz-trasa .gz-dot{border:0;z-index:1}
+#gazeta .gz-trasa .gz-dot::before{content:'';position:absolute;inset:14%;border-radius:50%;background:#fbf3dc;border:1px solid #231a1288;z-index:-1}
+#gazeta .gz-trasa .gz-dot{font-size:calc(var(--cell) * .4)}
+#gazeta .gz-trasa .gz-dot.on::before{background:#e9c97a;border:2px solid var(--red)}
+#gazeta .gz-trasa .gz-start::after,#gazeta .gz-trasa .gz-meta::after{content:'';position:absolute;inset:4%;border-radius:50%;border:2px dashed var(--red)}
+#gazeta .gz-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#gazeta .gz-route polyline{fill:none;stroke:var(--red);stroke-width:.12;stroke-linejoin:round;stroke-linecap:round;opacity:.75}
+#gazeta .gz-krolowe .gz-cell{border-color:#231a12;font-size:calc(var(--cell) * .62);color:var(--ink)}
+#gazeta .gz-krolowe .gz-cell.zle{color:var(--red)}
+#gazeta .gz-krolowe .gz-q0{background:#f2c9a0}
+#gazeta .gz-krolowe .gz-q1{background:#bcd6a4}
+#gazeta .gz-krolowe .gz-q2{background:#a9c8e3}
+#gazeta .gz-krolowe .gz-q3{background:#e8b4b8}
+#gazeta .gz-krolowe .gz-q4{background:#e9dc94}
+#gazeta .gz-krolowe .gz-q5{background:#c9b6e0}
+#gazeta .gz-krolowe .gz-q6{background:#a6d8cf}
+#gazeta .gz-krolowe .gz-q7{background:#e2c2a4}
+#gazeta .gz-krolowe .gz-q8{background:#cfd0c2}
+#gazeta .gz-puz-main{display:flex;flex-direction:column;align-items:center}
+#gazeta .gz-puz-side{display:contents}
+#gazeta .gz-rules{order:0;max-width:640px;align-self:stretch}
+#gazeta .gz-rules .gz-text{margin:2px 0 0}
+#gazeta .gz-rules-sum{cursor:pointer;font:700 14px 'Old Standard TT',serif;letter-spacing:.06em;text-transform:uppercase;color:var(--red);text-align:center}
+#gazeta .gz-board-wrap{order:1}
+#gazeta .gz-pad{order:2}
+#gazeta .gz-puz-msg{order:3}
+#gazeta .gz-puz-btns{order:4}
+#gazeta .gz-rules .gz-note{margin:4px 0 0;font-size:12px}
+#gazeta .gz-puz-head .gz-dateline{margin:0}
+#gazeta .gz-puz-title{margin:2px 0 2px;font-size:22px}
+/* The puzzle page: a smaller masthead on a computer, none on a phone (only the sections strip stays). */
+#gazeta .gz-na-lamiglowce .gz-winieta{max-height:64px;width:auto;margin:0 auto;display:block}
+#gazeta .gz-na-lamiglowce .gz-sub{display:none}
+@media (max-width:699px){
+  #gazeta .gz-na-lamiglowce .gz-winieta,#gazeta .gz-na-lamiglowce .gz-title{display:none}
+  #gazeta .gz-puz-title{font-size:18px}
+  #gazeta .gz-key{min-width:40px;min-height:40px;font-size:20px}
+  #gazeta .gz-puz-btns .gz-stamp{padding:4px 18px;font-size:17px}
+  #gazeta .gz-puz-msg{margin-top:2px;min-height:1.2em}
+  #gazeta .gz-rules .gz-text{font-size:15px;line-height:1.3}
+  #gazeta .gz-rules .gz-note{font-size:11px}
+  #gazeta .gz-board-wrap{margin:6px 0 2px}
+  #gazeta .gz-pad{margin-top:4px;gap:5px}
+  #gazeta .gz-puz-btns .gz-stamp{margin:2px 0 0;min-height:40px;min-width:150px}
+  #gazeta .gz-puz-btns{gap:16px}
+}
+@media (min-width:700px){
+  #gazeta .gz-puz-main{flex-direction:row;align-items:center;justify-content:center;gap:22px;margin-top:6px}
+  #gazeta .gz-puz-main .gz-board-wrap{margin:0;flex:none;order:0}
+  #gazeta .gz-puz-side{order:1}
+  #gazeta .gz-rules-sum{display:none}
+  #gazeta .gz-puz-side{display:flex;flex-direction:column;gap:8px;max-width:330px;min-width:220px}
+  #gazeta .gz-puz-side .gz-rules .gz-text{margin:0;font-size:14px;line-height:1.3}
+  #gazeta .gz-puz-side .gz-pad{display:grid;grid-template-columns:repeat(6,44px);gap:5px;justify-content:start;margin:0}
+  #gazeta .gz-puz-side .gz-key{min-width:44px;min-height:40px;padding:0}
+  #gazeta .gz-puz-side .gz-stamp{padding:4px 18px;font-size:17px;min-width:150px;min-height:42px}
+  #gazeta .gz-puz-side .gz-puz-msg{text-align:left;margin:0}
+  #gazeta .gz-puz-side .gz-puz-btns{justify-content:flex-start}
+}
+#gazeta .gz-pad{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px auto 0;max-width:520px}
+#gazeta .gz-key{min-width:44px;min-height:44px;padding:0 8px;border:1.5px solid var(--ink);border-radius:4px;background:#fbf3dc;color:var(--ink);font:700 22px 'Old Standard TT',serif;cursor:pointer}
+#gazeta .gz-key:hover{background:#e9c97a}
+#gazeta .gz-puz-msg{min-height:1.4em;margin:8px 0 0;text-align:center;font-style:italic;color:var(--red)}
+#gazeta .gz-puz-msg.ok{font:700 19px 'Playfair Display',serif;color:#2c5a26}
+#gazeta .gz-puz-btns{justify-content:center;gap:24px}

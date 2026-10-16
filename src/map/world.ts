@@ -56,6 +56,124 @@ export function worldOrigin(id: string) {
   return m ? { lat: Number(m[1]), lon: Number(m[2]) } : null;
 }
 
+// ---------------------------------------------------------------- towns (asked of passers-by)
+
+/** A named town or village near a point: its centre, how far it reaches (m) and how big it is. */
+export type Miejscowosc = { name: string; lat: number; lon: number; r: number; size: 'city' | 'town' | 'village' };
+const ZASIEG_MIEJSCOWOSCI = { city: 6000, town: 2500, village: 1000 };
+const WAGA_MIEJSCOWOSCI = { city: 3, town: 2, village: 1 };
+const ZL = 11;
+const placesCache = new Map<string, Promise<Miejscowosc[]>>();
+
+/** The towns and villages of one zoom-11 world tile (~12 km), read once. */
+function placesOfTile(tx: number, ty: number, lang: 'pl' | 'en') {
+  const key = `${tx},${ty},${lang}`;
+  let p = placesCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const file = await worldFile();
+      const t = await file.getZxy(ZL, tx, ty);
+      if (!t) return [];
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.places;
+      const out: Miejscowosc[] = [];
+      const nn = 2 ** ZL;
+      for (let i = 0; l && i < l.length; i++) {
+        const f = l.feature(i);
+        const pr = f.properties;
+        const size = pr.kind === 'locality' && (pr.kind_detail === 'city' || pr.kind_detail === 'town' || pr.kind_detail === 'village') ? pr.kind_detail : null;
+        if (!size || !pr.name) continue;
+        const q = f.loadGeometry()[0]?.[0];
+        if (!q) continue;
+        const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+        const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+        const name = String((lang === 'pl' ? pr['name:pl'] : pr['name:en']) ?? pr.name);
+        out.push({ name, lat, lon: (x / nn) * 360 - 180, r: ZASIEG_MIEJSCOWOSCI[size], size });
+      }
+      return out;
+    })();
+    p.catch(() => placesCache.delete(key));
+    placesCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * Which town or village (lat, lon) belongs to (bug report 67: 50 km north of Toruń people still said „Toruń”):
+ * read only when a passer-by is asked. Inside a town's reach the biggest such town wins; else the nearest,
+ * a city counting as 3× nearer and a town 2× (the suburbs of a city belong to it).
+ */
+export async function nearestLocality(lat: number, lon: number, lang: 'pl' | 'en'): Promise<Miejscowosc | null> {
+  const nn = 2 ** ZL;
+  const tx = Math.floor(((lon + 180) / 360) * nn);
+  const ty = Math.floor(((1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const lists = await Promise.all([-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => placesOfTile(tx + dx, ty + dy, lang).catch(() => []))));
+  const all = lists.flat();
+  const m = (p: Miejscowosc) => Math.hypot((p.lat - lat) * 111_320, (p.lon - lon) * 111_320 * Math.cos((lat * Math.PI) / 180));
+  const inside = all.filter((p) => m(p) <= p.r).sort((a, b) => WAGA_MIEJSCOWOSCI[b.size] - WAGA_MIEJSCOWOSCI[a.size] || m(a) - m(b));
+  if (inside.length) return inside[0];
+  return all.sort((a, b) => m(a) / WAGA_MIEJSCOWOSCI[a.size] - m(b) / WAGA_MIEJSCOWOSCI[b.size])[0] ?? null;
+}
+
+// ---------------------------------------------------------------- continents (map screen)
+
+/** A land outline: [lat, lon, onTileEdge (1/0)] per point – edges along the tile's border are not coastline. */
+export type Lad = Float64Array[];
+const landCache = new Map<string, Promise<Lad[] | null>>();
+
+/** The land (Protomaps `earth`) of one low-zoom world tile, for the map screen's continent outlines. */
+export function landOfTile(z: number, tx: number, ty: number): Promise<Lad[] | null> {
+  const nn = 2 ** z;
+  tx = ((tx % nn) + nn) % nn;
+  const key = `${z}/${tx}/${ty}`;
+  let p = landCache.get(key);
+  if (!p) {
+    p = (async () => {
+      if (ty < 0 || ty >= nn) return null;
+      const file = await worldFile();
+      const t = await file.getZxy(z, tx, ty);
+      if (!t) return null; // not in this world file (test samples): leave it unknown
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.earth;
+      const out: Lad[] = [];
+      for (let i = 0; l && i < l.length; i++) {
+        const rings: Lad = [];
+        for (const ring of l.feature(i).loadGeometry()) {
+          const a = new Float64Array(ring.length * 3);
+          ring.forEach((q, j) => {
+            const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+            a[j * 3] = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+            a[j * 3 + 1] = (x / nn) * 360 - 180;
+            a[j * 3 + 2] = q.x <= 0 || q.y <= 0 || q.x >= l.extent || q.y >= l.extent ? 1 : 0;
+          });
+          rings.push(a);
+        }
+        out.push(rings);
+      }
+      return out;
+    })();
+    p.catch(() => landCache.delete(key));
+    landCache.set(key, p);
+  }
+  return p;
+}
+
+/** The tiles of zoom `z` covering a lat/lon box (at most 25). */
+export function tilesOver(z: number, s: number, w: number, n: number, e: number) {
+  const nn = 2 ** z;
+  const tx = (lon: number) => Math.floor(((lon + 180) / 360) * nn);
+  const ty = (lat: number) => Math.floor(((1 - Math.asinh(Math.tan((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const out: [number, number][] = [];
+  for (let x = tx(w); x <= tx(e); x++) for (let y = ty(n); y <= ty(s); y++) if (out.length < 25) out.push([x, y]);
+  return out;
+}
+
+/** Already read (for drawing without waiting). */
+export function landReady(z: number, tx: number, ty: number) {
+  const nn = 2 ** z;
+  return landCache.get(`${z}/${((tx % nn) + nn) % nn}/${ty}`);
+}
+
 // ---------------------------------------------------------------- tiles
 
 const n = 2 ** Z;
@@ -85,6 +203,9 @@ const LANDUSE: Record<string, string> = {
 
 const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', canal: 'stream', ditch: 'ditch', drain: 'ditch' };
 
+/** Ferry landings of the world map become ports with a captain (porty.ts sets it on the test server). */
+export const PORTY_Z_MAPY = { on: false };
+
 /** World map point of interest → the game's place. */
 function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   if (/\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
@@ -108,13 +229,14 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'hotel': case 'hostel': case 'guest_house': case 'motel': return 'hotel';
     case 'camp_site': case 'caravan_site': return 'camp';
     case 'station': case 'bus_station': return named ? 'station' : null;
+    case 'ferry_terminal': return PORTY_Z_MAPY.on ? 'port' : null;
     default: return null;
   }
 }
 
 const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   shop: 'Sklep', police: 'Komenda Policji', library: 'Biblioteka', bank: 'Bank', alchemist: 'Stacja paliw',
-  workshop: 'Warsztat samochodowy', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
+  workshop: 'Warsztat samochodowy', port: 'Przystań promowa', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
 };
 
 /**

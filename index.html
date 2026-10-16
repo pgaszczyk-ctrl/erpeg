@@ -51,6 +51,15 @@
       .mm-bar button { font: inherit; font-size: 22px; width: 52px; height: 44px; border: 2px solid rgba(255,255,255,0.6);
         border-radius: 4px; background: #4a4a55; color: #fff; }
       .mm-bar span { min-width: 110px; text-align: center; }
+      .mm-hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: min(90vw, 340px);
+        background: #fbf3dc; color: #1e1a24; border: 3px solid #b8892f; border-radius: 8px; padding: 12px 14px;
+        display: flex; flex-direction: column; gap: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); font-family: 'Alegreya Sans', sans-serif; }
+      .mm-hub b { font-size: 18px; }
+      .mm-hub span { font-size: 15px; opacity: 0.8; }
+      .mm-hub div { display: flex; gap: 8px; justify-content: flex-end; }
+      .mm-hub button { font: inherit; font-size: 16px; min-height: 44px; padding: 0 14px; border-radius: 6px; border: 2px solid #1e1a24;
+        background: #f7c531; color: #1e1a24; }
+      .mm-hub button:last-child { background: #e8dcb8; min-width: 44px; }
 
       /* Character sheet */
       #character { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center;

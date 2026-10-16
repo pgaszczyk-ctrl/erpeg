@@ -116,7 +116,7 @@ export type WorldLoader = (box: Box) => Promise<RawTile>;
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker' | 'workshop';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker' | 'workshop' | 'port';
   name: string;
   id: string;
   building: Building | null;
@@ -322,7 +322,9 @@ export class CityMap {
     // One station once (OSM often has it as a node, an area and a building).
     if (kind === 'station' && this.places.some((q) => q.kind === 'station' && q.name === name && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
     // Travelling merchants and coachmen stand in the street, not in a building.
-    const street = kind === 'merchant' || kind === 'station';
+    // Two landings of one ferry port (a node and an area in OSM): one captain.
+    if (kind === 'port' && this.places.some((q) => q.kind === 'port' && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
+    const street = kind === 'merchant' || kind === 'station' || kind === 'port';
     let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
     if (!b && !street) {
       let best = 40 * PX_PER_M;
@@ -339,7 +341,7 @@ export class CityMap {
       && this.places.some(p => p.building === b && p.kind !== 'maker' && p.kind !== 'workshop')) return null;
     if (b) this.placeBuildings.add(b);
     this.placeIds.add(id);
-    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y } };
+    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' || kind === 'port' ? this.freeNear(x, y) : { x, y } };
     this.places.push(place);
     return place;
   }
@@ -351,6 +353,20 @@ export class CityMap {
     const p = this.fromLatLon(lat, lon);
     return this.addPlace(kind, name, p.x, p.y, address,
       `${kind}:${lat.toFixed(7)}:${lon.toFixed(7)}${kind === 'workshop' ? `:${name}` : ''}`);
+  }
+
+  /**
+   * A ferry port from the world list (porty.ts): the captain stands on the nearest spot one can walk away
+   * from (the terminal may be on the quay). Call once its tile is loaded.
+   */
+  addPort(key: string, name: string, lat: number, lon: number) {
+    const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
+    if (this.placeIds.has(id)) return null;
+    const p = this.fromLatLon(lat, lon);
+    this.placeIds.add(id);
+    const place: Place = { kind: 'port', name, id, building: null, door: this.reachableNear(p.x, p.y) };
+    this.places.push(place);
+    return place;
   }
 
   /** World maps: called with the places each new tile brings. */
@@ -943,6 +959,8 @@ export class CityMap {
   private onRoad(lines: Line[], x: number, y: number) {
     // 2 m beyond the drawn edge: a narrow footbridge left the hero's feet a 3 px wide strip over a river (report 64).
     for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + 2 * PX_PER_M) return true;
+    // Railway bridges too (bug report 65): the tracks over water can be walked along, a little wider than the track bed.
+    for (const l of lines) if ((l.kind === 'rail' || l.kind === 'tram') && distToPolyline(l.pts, x, y) <= l.width / 2 + 1.5 * PX_PER_M) return true;
     return false;
   }
 

@@ -1,4 +1,5 @@
 import { gear } from './inventory';
+import { ustawGre } from './sesja';
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
@@ -60,6 +61,7 @@ watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
 // A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
 if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
 installLeaveGuard(game);
+ustawGre(game, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
 // A new version went live: a bar offers to save and reload (every 30 min).
 watchUpdates(game);
 // Reloading after lost graphics goes straight back into the game (the link loads the character).

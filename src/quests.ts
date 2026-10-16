@@ -1,4 +1,5 @@
 import { effectiveStage } from './content/questy/progress';
+import { sesjaWygasla, toWygasla } from './sesja';
 import { translateMission, legacyText } from './content/questy/text';
 import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
 import { lang, setLanguage, tx, tr, type Txt } from './i18n';
@@ -24,6 +25,7 @@ import { TEST } from './version';
 import { testLook } from './testAppearance';
 import { setTestVehicle } from './testTransport';
 import { odswiezSlownictwoMisji } from './content/slownictwo';
+import type { Proba } from './content/probyMaga';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -43,6 +45,23 @@ export interface Story {
   choice?: 'zabij' | 'zbadaj';
   /** Shown under the name, e.g. "Pogromca smoka". */
   title?: string;
+  /** The scale that fell from the shadow (content/probyMaga.ts). */
+  luska?: { m: string; x: number; y: number; s: number; done?: boolean };
+  /** The wizard's trials before the required level. */
+  proby?: {
+    k?: Proba;
+    done: Proba[];
+    /** EXP of skipped trials, added to the next one. */
+    carry: number;
+    /** Gangs broken up when the gang trial began. */
+    g0?: number;
+    /** The gang made for the trial (where it lies, on which map). */
+    gang?: { m: string; x: number; y: number; s: number };
+    /** The burnt circle (x, y) and where the arrow points (fx, fy). */
+    spot?: { m: string; x: number; y: number; fx: number; fy: number; s: number };
+    /** The wizard's "you are ready" note was delivered. */
+    gotowy?: boolean;
+  };
 }
 
 export const session = {
@@ -77,6 +96,8 @@ export const session = {
   mikstury: 0,
   /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
   bezStrzalki: [] as string[],
+  /** Hubs copied onto the hero's map (content/mapa.ts MAPA_PODROZNIKA): where it was done and what was copied. */
+  mapyPodroznika: [] as { lat: number; lon: number; h: [string, number, number, string][] }[],
   /** Multi-stage missions: the current stage number per mission id (saved as `etap`). */
   etap: {} as Record<string, number>,
   /** Story items (names) from mission stages – not in the backpack, can't be sold (saved as `fabula`). */
@@ -202,6 +223,7 @@ export function startSession(r: LoginResult) {
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
+  session.mapyPodroznika = Array.isArray(p.save.mapyPodroznika) ? p.save.mapyPodroznika.filter((m) => typeof m?.lat === 'number' && typeof m?.lon === 'number' && Array.isArray(m.h)).slice(-200) : [];
   session.etap = p.save.etap && typeof p.save.etap === 'object' ? { ...p.save.etap } : {};
   session.fabula = Array.isArray(p.save.fabula) ? p.save.fabula.filter((x) => typeof x === 'string').slice(0, 60) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
@@ -257,7 +279,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
+    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
@@ -266,6 +288,7 @@ export function saveNow(hp: number) {
   const snapshot=structuredClone(data), token=session.token, exp=session.exp;
   const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
   saveChain=next;
+  next.catch((e) => { if (toWygasla(e)) sesjaWygasla(token); });
   return next;
 }
 

@@ -148,6 +148,7 @@ export const STRONY = {
   warsztat: { pl: 'Z warsztatu', en: 'Workshop' } as Txt,
   zlecenie: { pl: 'Zlecenie', en: 'Assignment' } as Txt,
   list: { pl: 'Do redakcji', en: 'Letters' } as Txt,
+  lamiglowka: { pl: 'Łamigłówka', en: 'Puzzle' } as Txt,
   zamknij: { pl: 'Złóż gazetę', en: 'Fold the paper' } as Txt,
   sprzedaje: { pl: 'Sprzedaje: {kto}', en: 'Sold by {kto}' } as Txt,
   okolica: { pl: 'okolica', en: 'hereabouts' } as Txt,
@@ -184,6 +185,41 @@ export const STRONY = {
   blad: { pl: 'Nie udało się wysłać (brak internetu?). Spróbuj jeszcze raz.', en: 'Couldn’t send it (no internet?). Try again.' } as Txt,
 };
 
+/** „Łamigłówka dnia” (src/lamiglowki.ts, src/ui/lamiglowka.ts): one kind a day for everyone, the puzzle by the
+ *  character's difficulty level. The reward isn't told up front (owner's rule, 7 Oct 2026). */
+export const LAMIGLOWKA = {
+  nagrodaExp: 100,
+  tytul: { pl: 'Łamigłówka dnia', en: 'Puzzle of the day' } as Txt,
+  nazwy: {
+    sudoku: { pl: 'Sudoku 6×6', en: 'Sudoku 6×6' },
+    kakuro: { pl: 'Kakuro', en: 'Kakuro' },
+    krzyzowka: { pl: 'Matematyczna krzyżówka', en: 'Number crossword' },
+    trasa: { pl: 'Najkrótsza trasa', en: 'The shortest route' },
+    krolowe: { pl: 'Królowe', en: 'Queens' },
+  } as Record<string, Txt>,
+  zasady: {
+    sudoku: { pl: 'Wpisz cyfry od 1 do 6 tak, by w każdym wierszu, każdej kolumnie i każdym prostokącie 3×2 każda cyfra była dokładnie raz.', en: 'Fill in digits 1 to 6 so that every row, every column and every 3×2 box holds each digit exactly once.' },
+    kakuro: { pl: 'W białe pola wpisz cyfry od 1 do 9. Liczba nad ukośną kreską to suma cyfr w prawo, liczba pod nią – suma cyfr w dół. W jednym ciągu cyfry nie mogą się powtarzać.', en: 'Fill the white cells with digits 1 to 9. The number above the slash is the sum of the digits to the right, the one below it – of the digits downwards. No digit repeats within one run.' },
+    krzyzowka: { pl: 'W puste pola wpisz liczby lub znaki działań. Wiersze czytamy od lewej, kolumny z góry. Liczymy jak w szkole: najpierw mnożenie i dzielenie, potem dodawanie i odejmowanie.', en: 'Fill the empty cells with numbers or operation signs. Rows read from the left, columns from the top. Work it out like at school: multiplication and division first, then addition and subtraction.' },
+    trasa: { pl: 'Każda liczba to metry. Wyznacz drogę od startu w lewym dolnym rogu do mety w prawym górnym, krok po kroku w bok, w górę lub w dół, tak by suma metrów była najmniejsza. Dotknij pola obok końca trasy, by ją przedłużyć; dotknij pola na trasie, by ją do niego skrócić.', en: 'Every number is metres. Find the way from the start in the bottom-left corner to the finish in the top-right one, step by step sideways, up or down, so that the metres add up to the least. Tap a cell next to the end of the route to extend it; tap a cell on the route to cut it back there.' },
+    krolowe: { pl: 'Postaw po jednej królowej ♛ w każdym wierszu, każdej kolumnie i każdym kolorowym obszarze. Królowe nie mogą się stykać – nawet rogami. Dotknij pola raz, by postawić krzyżyk (tu nie ma królowej), drugi raz – królową, trzeci – by wyczyścić.', en: 'Place one queen ♛ in every row, every column and every coloured area. Queens may not touch – not even at the corners. Tap a cell once to mark a cross (no queen here), twice for a queen, a third time to clear it.' },
+  } as Record<string, Txt>,
+  zasadyTytul: { pl: 'Zasady', en: 'Rules' } as Txt,
+  poziom: { pl: 'Trudność: {poziom}', en: 'Difficulty: {poziom}' } as Txt,
+  sprawdz: { pl: 'Sprawdź', en: 'Check' } as Txt,
+  wyczysc: { pl: 'Od nowa', en: 'Start over' } as Txt,
+  niePelne: { pl: 'Jeszcze nie wszystkie pola są wypełnione.', en: 'Not every cell is filled in yet.' } as Txt,
+  malo: { pl: 'Postaw wszystkie {n} królowe.', en: 'Place all {n} queens.' } as Txt,
+  zle: { pl: 'Coś się nie zgadza… Popatrz jeszcze raz!', en: 'Something doesn’t add up… Take another look!' } as Txt,
+  dlugosc: { pl: 'Twoja trasa: {m} m', en: 'Your route: {m} m' } as Txt,
+  krotsza: { pl: 'Dotarłeś na metę ({m} m), ale da się krócej!', en: 'You reached the finish ({m} m), but there’s a shorter way!' } as Txt,
+  brawo: { pl: 'Brawo! Łamigłówka rozwiązana. +{exp} EXP', en: 'Well done! Puzzle solved. +{exp} EXP' } as Txt,
+  juz: { pl: 'Dzisiejsza łamigłówka rozwiązana – jutro w Kurierze nowa!', en: 'Today’s puzzle is solved – a new one in tomorrow’s Courier!' } as Txt,
+  start: { pl: 'Start', en: 'Start' } as Txt,
+  meta: { pl: 'Meta', en: 'Finish' } as Txt,
+  stopka: { pl: 'Codziennie nowa łamigłówka – ta sama dla wszystkich graczy na tym samym poziomie trudności.', en: 'A new puzzle every day – the same for every player on the same difficulty level.' } as Txt,
+};
+
 /** „Ludzie” – the daily rankings (RPC kurier_wydanie; test characters never appear). */
 export const RANKINGI = {
   tytul: { pl: 'Ludzie z naszych łamów', en: 'People in the news' } as Txt,
@@ -209,6 +245,26 @@ export interface Wiesc {
 
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
+  {
+    data: '15.10.2026', tytul: { pl: 'Nowa łamigłówka: Królowe', en: 'A new puzzle: Queens' },
+    tresc: { pl: 'Od dziś w Kurierze także Królowe: po jednej królowej w każdym wierszu, kolumnie i kolorowym obszarze, a żadne dwie się nie stykają. Pięć rodzajów łamigłówek zmienia się codziennie.', en: 'From today the Courier also prints Queens: one queen in every row, column and coloured area, and no two of them touching. Five kinds of puzzle take turns every day, and the number crossword now works like at school: multiplication and division first.' },
+  },
+  {
+    data: '13.10.2026', tytul: { pl: 'Promy po całym świecie', en: 'Ferries all over the world' },
+    tresc: { pl: 'W portach czekają kapitanowie. Z każdego portu nad morzem dopłyniesz do głównego portu kraju, a stamtąd do krajów obok i liniowcami za ocean. Zapytaj kapitana o dowolny kraj – wyznaczy drogę z przesiadkami. Rejs trwa naprawdę, także gdy zamkniesz grę.', en: 'Captains wait in the ports. From any sea port you can sail to the country’s main port, from there to the countries next door, and by ocean liner across the sea. Ask a captain about any country – he will plan a way with changes. The voyage takes real time, even with the game closed.' },
+  },
+  {
+    data: '13.10.2026', tytul: { pl: 'Mapa podróżnika', en: 'The traveller’s map' },
+    tresc: { pl: 'Woźnica, kapitan albo bibliotekarka dadzą ci przepisać ze swojej mapy dworce i porty okolicy. Na twojej mapie zostaną na zawsze, a dotykając ikonki ustawisz strzałkę, która cię tam zaprowadzi.', en: 'A coachman, a captain or a librarian will let you copy the stations and ports of the area from their map. They stay on your map for good, and tapping one sets an arrow that leads you there.' },
+  },
+  {
+    data: '13.10.2026', tytul: { pl: 'Próby maga i bez limitu zadań', en: 'The wizard’s trials and no quest limit' },
+    tresc: { pl: 'Zanim zmierzysz się ze smokiem, mag zleci ci próby: rozbić gang, wysłuchać lekcji, znaleźć wypalony krąg i przynieść owoce alchemikowi. Możesz też brać tyle zadań naraz, ile chcesz. Mapa pokazuje teraz kontury lądów, a dzikie smoki dymią z legowisk widocznych z daleka.', en: 'Before you face the dragon, the wizard sets you trials: break up a gang, hear a lesson, find a burnt circle and bring fruit to the alchemist. You can also take as many quests at once as you like. The map now shows the coastlines, and wild dragons’ lairs smoke so you can see them from afar.' },
+  },
+  {
+    data: '12.10.2026', tytul: { pl: 'Łamigłówka dnia', en: 'Puzzle of the day' },
+    tresc: { pl: 'W Kurierze Parowym codziennie nowa łamigłówka: sudoku, kakuro, matematyczna krzyżówka albo najkrótsza trasa. Taka sama dla wszystkich na twoim poziomie trudności – porównajcie się ze znajomymi!', en: 'Every day the Steam Courier prints a new puzzle: sudoku, kakuro, a number crossword or the shortest route. The same for everyone on your difficulty level – compare with your friends!' },
+  },
   {
     data: '12.10.2026', tytul: { pl: 'Nowy herb i krótsze demo', en: 'A new emblem and a shorter demo' },
     tresc: { pl: 'Gra ma nowe logo – okrągły herb z globusem, który na początku dema obraca się jak moneta. Gazeta ma zawsze ten sam, duży rozmiar, a reporterskie zlecenia prowadzą do szkół, bibliotek i zwykłych adresów. Na laptopie na baterii gra rysuje prostszy obraz, żeby nie zwalniać.', en: 'The game has a new logo – a round emblem with a globe that spins like a coin at the start of the demo. The paper always keeps one large size, and reporter errands lead to schools, libraries and plain addresses. On a laptop running on battery the game draws a plainer picture to stay smooth.' },

@@ -1,3 +1,4 @@
+import { zamykamSesje } from './sesja';
 // Talks to the game server (a Supabase project "erpeg"). All reads and writes
 // go through database functions; the publishable key only allows calling them.
 
@@ -52,6 +53,8 @@ export interface SaveData {
   /** Imbued weapons (inventory.ts gear.imbue). */
   nasycenia?: Record<string, { e: string; until: number }>;
   bezStrzalki?: string[];
+  /** Hubs copied from a coachman's/captain's/librarian's map: where it was done and the hubs [name, lat, lon, kind k/a/p]. */
+  mapyPodroznika?: { lat: number; lon: number; h: [string, number, number, string][] }[];
   /** Multi-stage missions: current stage per mission id. */
   etap?: Record<string, number>;
   /** Story items from mission stages. */
@@ -107,6 +110,8 @@ export interface Stats {
   codes: number;
   /** Riddles answered right. */
   riddles?: number;
+  /** Puzzles of the day solved in the newspaper. */
+  lamiglowki?: number;
   /** Duels won against townsfolk. */
   duels?: number;
   /** Monster gangs broken up. */
@@ -170,7 +175,7 @@ export const api = {
     rpc<LoginResult>('login', { p_name: name, p_idik: code, p_password: password || null }),
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
-  logout: (token: string) => rpc<boolean>('logout', { p_token: token }),
+  logout: (token: string) => (zamykamSesje(token), rpc<boolean>('logout', { p_token: token })),
   /** Assigns a character (name + code) to the signed-in account (no limit since 11 Oct 2026). */
   linkGoogle: (name: string, code: string, token: string) => rpc<{ ok?: boolean }>('link_google', { p_name: name, p_idik: code }, false, token),
   /** The Google account's characters, most recently played first. */

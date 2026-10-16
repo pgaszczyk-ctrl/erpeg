@@ -190,12 +190,13 @@ export interface Wrogowie {
 // ----------------------------------------------------------------------------
 /**
  * Ile zadań naraz: główne (historia) + poboczne (misje, zlecenia, wyścigi,
- * trening). Nowego nie da się wziąć, gdy tyle jest aktywnych. Każde ma swój
- * kolor strzałki: główne złote, poboczne z listy KOLORY_ZADAN.
+ * trening). Bez limitu (właściciel, 13.10.2026: „jeśli user chce mieć 10, to
+ * niech ma; jeśli 100, to 100”) – wpisz liczbę, by go przywrócić. Każde ma swój
+ * kolor strzałki: główne złote, poboczne z listy KOLORY_ZADAN (po kolei, potem od nowa).
  */
-export const ZADAN_NARAZ = 3;
+export const ZADAN_NARAZ = Infinity;
 export const KOLOR_GLOWNEGO = '#f7c531';
-export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b'];
+export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b', '#ff9f43', '#c792ea', '#5ee6d0', '#ff6b6b', '#d4e157', '#f8a5c2', '#90caf9'];
 
 /** Jak daleko jest cel zadania – słownie (karta postaci → Zadania). Progi w kilometrach. */
 export const ODLEGLOSCI: [number, string][] = [

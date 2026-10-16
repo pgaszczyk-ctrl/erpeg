@@ -28,7 +28,7 @@ export interface RodzajGangu {
 export const GANGI: RodzajGangu[] = [
   { nazwa: 'Banda', promienM: 92, czlonkow: [4, 6], naKm2: 0.45, herszt: 'herszt', nagroda: { monety: 25, exp: 40 }, zenska: true },
   { nazwa: 'Mały gang', promienM: 184, czlonkow: [6, 9], naKm2: 0.25, herszt: 'herszt', nagroda: { monety: 40, exp: 60 } },
-  { nazwa: 'Wielki gang', promienM: 376, czlonkow: [12, 18], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
+  { nazwa: 'Wielki gang', promienM: 230, czlonkow: [14, 20], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
 ];
 
 /** Bez gangów: środek gangu co najmniej tyle metrów od ważnych miejsc, członkowie tyle od drzwi. */
@@ -37,7 +37,19 @@ export const GANG_CZLONEK_OD_DRZWI_M = 50;
 /** Po tylu sekundach od rozbicia gangu wracają mieszkańcy. */
 export const GANG_POWROT_S = 60;
 /** Czerwona mgiełka: kolor i przezroczystość. */
-export const GANG_MGLA = { kolor: 0xe43b44, alfa: 0.3 };
+export const GANG_MGLA = {
+  kolor: 0xe43b44,
+  /** Lekka mgiełka w środku terenu (bez twardej krawędzi – zanika ku granicy). */
+  alfa: 0.22,
+  /** Granica to kłęby czerwonego dymu: co ile pikseli świata kłąb, jak duże (średnica px) i jak gęste. */
+  klebyCoPx: 9,
+  klebyPx: [18, 40] as [number, number],
+  klebyAlfa: [0.3, 0.6] as [number, number],
+  /** Jak daleko od granicy (px) kłęby się rozrzucają do środka/na zewnątrz. */
+  klebyRozrzut: 12,
+  /** Kłęby powoli pulsują (sekundy jednego oddechu). */
+  oddechS: [3, 6] as [number, number],
+};
 /** Muszki nad terenem gangu: siatka co coPx pikseli świata, muszka w co coIleKratek-tej kratce (więcej = mniej muszek), kolor. */
 export const GANG_MUSZKI = { coPx: 22, kolor: 0xb3202c, coIleKratek: 8 };
 
