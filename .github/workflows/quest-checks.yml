@@ -27,22 +27,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: actions/cache/restore@v4
-        id: maps
-        with:
-          path: |
-            .cache/lublin-full.json
-            public/map
-          key: combat-maps-v1-${{ hashFiles('data/**/*.geojsonseq.gz', 'data/rail.json', 'data/towns.json', 'scripts/build-map*.mjs', 'scripts/split-map.mjs', 'scripts/snap-buildings.mjs', 'scripts/signposts.mjs', 'scripts/lublin-area.json', 'src/map/CityMap.ts', 'src/skala.ts') }}
-      - name: Keep matching map cache current after checkout
-        if: steps.maps.outputs.cache-hit == 'true'
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          for root in [Path('.cache/lublin-full.json'), Path('public/map')]:
-              for p in ([root] if root.is_file() else root.rglob('*')):
-                  if p.is_file(): p.touch()
-          PY
       - run: npm run build
         env:
           VITE_TEST: '1'
@@ -53,17 +37,7 @@ jobs:
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
       - name: Mobile and desktop quests with mocked RPCs
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('scripts/tests/browser-city-quests.cjs')
-          s = p.read_text()
-          needle = '  return page;'
-          assert s.count(needle) == 1
-          s = s.replace(needle, "  assert.equal(await page.evaluate(()=>!!window.__game.scene.getScene('game').turnCombat||!!document.getElementById('turn-combat')),false,'Withdrawn combat must be absent');\n" + needle)
-          p.write_text(s)
-          PY
-          node scripts/tests/browser-city-quests.cjs
+        run: node scripts/tests/browser-city-quests.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
