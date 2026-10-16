@@ -289,10 +289,2280 @@
 - 1.023 = full release of the test server (13 Oct 2026, owner: „wrzuć to wszystko na produkcję”): wizard's trials before level 5, smaller/denser big gangs with smoky borders, map views following the hero with coastlines, reports 65–67 (iron rail bridges, dragon lairs' smoke, towns asked of passers-by), traveller's map (copy hubs for 300 coins), no quest limit, and the ferry network – ports/captains now on production too (PORTY_Z_MAPY.on and portsNear no longer TEST-gated; not in the demo). Sign light cone and dialog portraits stay TEST-only.
 - Sign light only from a lamp (owner, 13 Oct 2026: „jak coś nie ma latarni, np. wózek targowy lub port, to świeci się dziwny trójkąt”): the artist's light cone (`snop`) stays only under signs on posts (`signPost`); wall signs, market stalls/carts and the port board (`signGlow`) get the soft production halo (`oldSignGlow`, data `bezLampy`, old pulse in cullFar) until the artist's order 37-P001 (docs/poczta/do-grafika/2026-10-13_37-P001_port_wozek_swiatlo.md + 37_port_wozek/: a harbour master's post with its own lantern instead of the code-drawn anchor board, a market handcart with a lantern in 3 looks instead of the code stalls, light layers from those lanterns, optional wall-sign bracket lamp).
 - Queens in the puzzle of the day (owner, 13 Oct 2026: „w quizach gazetowych umiesz dodać queens?”): fifth kind `krolowe` in src/lamiglowki.ts – an n×n board (5/6/7/8/9 by level) cut into n coloured areas, one queen per row/column/area, none touching even at a corner. Generator: a random no-touching queen placement, areas grown from the queens' cells, then while `rozwiazaniaKrolowych` finds another solution one of its queen cells (never ours) is handed to a neighbouring area keeping it in one piece – always exactly one solution (9×9 < 0.1 s). Rotation: days before KROLOWE_OD (15 Oct 2026) keep the old 4-kind blocks, from then shuffled blocks of 5 (`lamiglowki-blok5`), never the same kind twice in a row. UI (ui/lamiglowka.ts): pastel areas with thick borders, tap cycles empty → × → ♛, clashing queens red, solved as soon as n right queens stand; TEST-only `?lamiglowka=<kind>` shows any kind today. SQL allow-list in lamiglowka_rozwiazana has 'krolowe' (DB updated); admin preview prints areas as letters. Test: scripts/tests/browser-krolowe.mjs (TELEFON=1) + scripts/test-lamiglowki.mjs.
-- Puzzle page fit + school arithmetic (owner, 14 Oct 2026: „na komputerze trzeba scrollować”; „3+1×7 = 10, nie 28”): the number crossword uses the school order of operations (`licz` in lamiglowki.ts: × ÷ first, every division whole, the running sum never below 0; the same puzzles' numbers, results recomputed). Layout (ui/lamiglowka.ts + gazeta.css): on ≥ 700 px the board stands left and a side column right (rules, a 6-wide key grid, message, buttons); on phones everything stacks and the rules are a <details> folded once that kind has been played on the device (localStorage `exp-lamiglowki-znane`); the footer line sits inside the rules. `dopasuj` binary-searches the cell size (24/28 … 58/46 px) for the biggest board that leaves `.gz-body` without a scrollbar (ResizeObserver). On the puzzle page the masthead is small on a computer and gone on a phone (sheet class `gz-na-lamiglowce`). The paper itself is bigger: min(1060 px, screen) × min(920 px, screen − 20 px). Checked: 823×720, 1280×720, 1920×1080, 390×844 all kinds/levels without scrolling; 360×740 only Hardkor crossword/kakuro/route scroll a little.
-- Port lists (owner, 14 Oct 2026: „za dużo portów, nie da się przesuwać listy; jak z pociągami, 3 max, 1 lokalny jeśli jest, 2 sąsiednich krajów”): `rejsyZ` gathers every candidate (request lines, own flagship, real lines, neighbour flagships/liners, visited home ports) and keeps one in the port's own country (request > flagship > nearest real line > visited) plus the two nearest foreign countries (one port per country, requests first); a side short of choices gives its places to the other. `rejsyZ(p, odw, true)` returns all candidates – used for the first leg of a „🧭 Inne miejsce…” route, so any routed leg can still be bought. Test: browser-promy-siec.mjs checks ≤ 3 and one port per country.
-- 1.024 = full release of the test server (14 Oct 2026, owner: „wyślij na produkcję”): Queens in the puzzle of the day (from 15 Oct), the number crossword with school order of operations, the puzzle page without scrolling and a bigger newspaper, ports with at most 3 lines (1 home, 2 neighbouring countries), sign light cone only under signs on posts (others keep the soft halo). Dialog portraits and the sign light cone stay TEST-only.
-- Answer buttons (owner, 14 Oct 2026, screenshot of the librarian's riddle: the last answer was grey – the right one, a giveaway): stacked dialogs grey the last button as a way out, so DialogRequest `odpowiedzi: true` paints every button blue; set on the librarian's riddle (libraryRiddle) and the wizard's lesson (Story.lesson), the riddles without „Później”. 1.025 = this fix (14 Oct 2026, owner: „popraw też na produkcji”).
-- Lost session (owner, 14 Oct 2026: „jeśli sesja wygaśnie, wciąż pozwalasz grać… zapisuj albo wyloguj”): the key dies when the same character is loaded in another tab/device or logged out there; heartbeat then answers false and save_game raises „Sesja wygasła”. `src/sesja.ts` `sesjaWygasla(token)` (from GameScene's heartbeat and quests.ts saveNow) sleeps the game loop and shows a blocking „Sesja wygasła” window (`#sesja-wygasla`, the leave guard lets it through): „Wczytaj postać ponownie” (code link → fresh login from the last save) or „Do menu”. Saving from the stale tab is deliberately not done (it could overwrite the other session's newer progress). Keys we close ourselves (api.logout → `zamykamSesje`) never trigger it; network errors don't either (only an explicit false/the message). Test: scripts/tests/browser-sesja.mjs. 1.026 = this (14 Oct 2026).
+- Puzzle page fit + school arithmetic (owner, 14 Oct 2026: „na komputerze trzeba scrollować”; „3+1×7 = 10, nie 28”): the number crossword uses the school order of operations (`licz` in lamiglowki.ts: × ÷ first, every division whole, the running sum never below 0; the same puzzles' numbers, results recomputed). Layout (ui/lamiglowka.ts + gazeta.css): on ≥ 700 px the board stands left and a side column right (rules, a 6-wide key grid, message, buttons); on phones everything stacks and the rules are a <details> folded once that kind has been played …122733 tokens truncated… x0: px - 60, y0: py - 60, x1: px + 60, y1: py + 60 };
+      if (!this.city.ready(box) || !this.city.isFree(px, py + FEET.dy, 6, 6) || this.streets.blocks(px, py)) continue;
+      const kinds = this.city.areaKindsAt(px, py);
+      const kind = ['forest', 'farmland', 'scrub', 'grass'].find((k) => kinds.includes(k));
+      if (!kind && t < 150) continue;
+      if (this.city.places.some((p) => Math.hypot(p.door.x - px, p.door.y - py) < 150 * PX_PER_M)) continue;
+      return { x: px, y: py, kind: kind ?? '' };
+    }
+    return null;
+  }
 
-- (16 Oct 2026, owner; TEST prototype) Encounters and turn combat: `src/combat/TurnCombat.ts` + DOM-free `rules.ts`, parameters `content/spotkania.ts`, owner spec and implementation notes in `docs/walka/`. On TEST outside the QR demo, hostile creatures wait for Approach/Avoid; neutral creatures and story dragons retain dialogue/choice. Hero moves 3/4/5 at levels1/5/12, move/attack/heal1, strong2; bounded collision-aware route previews, up to3 responding opponents per wave, no free approach+attack, bosses queue for a later wave. Static/moving compact gang formations (nucleus with close orbiting members) retain the old territory sizes. Legacy damage/projectiles/status timers stop while planning; lightning once/turn; action results and random state checkpoint in TEST-only `save.testCombat` plus browser recovery. Menu has TEST demonstrations; deterministic luck via turnCombat.forceLuck. Production pin/version unchanged; full parameters, limitations and validation status in PROTOTYP_TEST.md.
+  private offerFolkQuest(f: Folk, h: number): boolean {
+    const spot = this.questSpot(f.x, f.y);
+    if (!spot) return false;
+    const P = PROSBY;
+    const zguba = P.zguby[(h >>> 4) % P.zguby.length];
+    const gdzie = spot.kind === 'forest' ? 'do lasu' : spot.kind === 'farmland' ? 'w pole' : spot.kind === 'scrub' ? 'w zarośla' : spot.kind === 'grass' ? 'na łąkę' : 'za zabudowania';
+    const ang = Math.atan2(spot.y - f.y, spot.x - f.x);
+    const kierunek = ['wschód', 'południowy wschód', 'południe', 'południowy zachód', 'zachód', 'północny zachód', 'północ', 'północny wschód'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+    const m = Math.round(Math.hypot(spot.x - f.x, spot.y - f.y) / PX_PER_M / 50) * 50;
+    const text = P.prosba[(h >>> 7) % P.prosba.length].replace('{co}', zguba.co).replace('{gdzie}', gdzie).replace('{m}', String(m)).replace('{kierunek}', kierunek);
+    this.dialog({
+      title: `😟 ${f.name}`,
+      text, // no reward told up front (owner 7 Oct 2026)
+      buttons: ['Pomogę! ⚔', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0 || this.folkQuest || this.questsFull()) return;
+        const enemies: Enemy[] = [];
+        for (let k = 0; k < P.ile; k++) {
+          for (let t = 0; t < 60; t++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 6 + Math.random() * 30;
+            const x = spot.x + Math.cos(a) * r;
+            const y = spot.y + Math.sin(a) * r;
+            if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
+            const e = this.spawnEnemy(x, y, undefined, 'glut');
+            e.temp = true;
+            e.folkQuest = true;
+            e.roam = 30;
+            enemies.push(e);
+            break;
+          }
+        }
+        if (!enemies.length) return;
+        enemies[Math.floor(Math.random() * enemies.length)].carrier = true;
+        f.waiting = true;
+        this.folkQuest = { folk: f, zguba, target: { x: spot.x, y: spot.y }, gdzie, kierunek, enemies, got: false };
+        this.emitHud();
+      },
+    });
+    return true;
+  }
+
+  /** One of the thieves fell; the one carrying the loot drops it. */
+  private folkQuestKill(e: Enemy) {
+    const q = this.folkQuest;
+    if (!q) return;
+    q.enemies = q.enemies.filter((x) => x !== e);
+    if (e.carrier && !q.got && !q.item) {
+      const item = this.add.image(e.x, e.y, TEX.questItem).setDepth(e.y - 8);
+      item.setData('kind', 'quest');
+      this.pickups.push(item);
+      q.item = item;
+      this.toast(`${q.zguba.ikona} Chochlik upuścił: ${q.zguba.nazwa}!`, 2500);
+    }
+    this.emitHud();
+  }
+
+  private folkQuestTalk() {
+    const q = this.folkQuest!;
+    const f = q.folk;
+    if (!q.got) {
+      this.dialog({ title: `😟 ${f.name}`, text: PROSBY.czekam.replace('{gdzie}', q.gdzie).replace('{kierunek}', q.kierunek), buttons: ['Już idę!'], onChoose: () => {} });
+      return;
+    }
+    const r = PROSBY.nagroda;
+    earn(r.monety);
+    session.exp += r.exp;
+    session.stats.missions++;
+    f.waiting = false;
+    session.daily[`pomoc:${f.id}`] = { d: today(), n: 1, a: 1 };
+    for (const k of Object.keys(session.daily)) if (k.startsWith('pomoc:') && session.daily[k].d !== today()) delete session.daily[k];
+    for (const e of q.enemies) e.temp = true;
+    this.folkQuest = null;
+    this.dialog({ title: `😊 ${f.name}`, text: `${PROSBY.dziekuje.replace('{nazwa}', q.zguba.nazwa)}\n\n+${r.monety} monet, +${r.exp} EXP`, buttons: ['Nie ma za co!'], onChoose: () => {} });
+    this.emitHud();
+    this.save();
+  }
+
+  /** Where a passer-by is going today (by the day of the week) and the way there. */
+  private errandFor(f: Folk): { text: string; route: number[] } | null {
+    const M = MIESZKANCY.sprawa;
+    const day = new Date().getDay(); // 0 = Sunday
+    const DAYS = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę'];
+    const kind = day === 0 ? 'kosciol' : day === 5 ? 'boisko' : day === 6 ? 'sklep' : f.id.length % 2 ? 'bank' : 'sklep';
+    const R = 900 * PX_PER_M;
+    let to: { x: number; y: number; name: string } | null = null;
+    if (kind === 'boisko') {
+      const p = this.training.pitchesAround(f.x, f.y, 50 * PX_PER_M, R).sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y))[0];
+      if (p) to = { ...this.city.freeNear(p.x, p.y), name: this.city.streetNear(p.x, p.y, 200) ?? 'bez nazwy' };
+    } else {
+      const want = kind === 'kosciol' ? 'church' : kind === 'bank' ? 'bank' : 'shop';
+      const p = this.city.places.filter((q) => q.kind === want && Math.hypot(q.door.x - f.x, q.door.y - f.y) < R)
+        .sort((a, b) => Math.hypot(a.door.x - f.x, a.door.y - f.y) - Math.hypot(b.door.x - f.x, b.door.y - f.y))[0];
+      if (p) to = { x: p.door.x, y: p.door.y, name: p.name };
+    }
+    if (!to) return null;
+    const route = this.city.roadPath({ x: f.x, y: f.y }, to);
+    if (!route) return null;
+    const lines = M[kind];
+    const text = lines[f.id.length % lines.length].replace('{nazwa}', to.name).replace('{dzien}', DAYS[day]).replace('{ulica}', to.name);
+    return { text, route };
+  }
+
+  /**
+   * The townsman becomes a fighter: his life and blows are a share of the
+   * hero's (difficulty `pojedynek`); the hero fights on 3 purple hearts.
+   */
+  private startDuel(f: Folk) {
+    if (this.duelHp !== null) return;
+    const k = session.level.pojedynek;
+    const hearts = MIESZKANCY.serduszka * 2;
+    const e = this.spawnEnemy(f.x, f.y, 'duel', 'wojownik');
+    e.setTexture(isHd(f.tex) ? ensureRed(this, f.tex) : `${f.tex}-red`, 'down-0').setOrigin(0.5, 0.6);
+    if (isHd(f.tex)) fitHd(e);
+    e.walkAnim = `${f.tex}-red-walk`;
+    // As many of the hero's blows as he has hearts, times the difficulty share.
+    e.hp = Math.max(1, Math.round(hearts * k * meleeDamage()));
+    e.chasing = true;
+    e.duel = { folk: f, dmg: k };
+    this.folk.away(f, true);
+    this.duelHp = hearts;
+    this.duelCarry = 0;
+    this.toast(`⚔ Pojedynek! Masz ${MIESZKANCY.serduszka} fioletowe serduszka.`, 2500);
+    this.emitHud();
+  }
+
+  private endDuel(e: Enemy, won: boolean) {
+    const f = e.duel!.folk;
+    this.enemies = this.enemies.filter((x) => x !== e);
+    if (!won) e.destroy();
+    this.duelHp = null;
+    this.duelCarry = 0;
+    f.x = f.walker.x;
+    f.y = f.walker.y;
+    this.folk.away(f, false);
+    const M = MIESZKANCY;
+    if (won) {
+      f.beaten = true;
+      session.exp += M.nagrodaExp;
+      session.stats.duels = (session.stats.duels ?? 0) + 1;
+      this.dialog({ title: `🏆 ${f.name}`, text: `${M.wygrana[session.stats.duels % M.wygrana.length]}\n\n+${M.nagrodaExp} EXP`, buttons: ['Dziękuję za walkę!'], onChoose: () => {} });
+    } else {
+      // No death in a duel: just one real heart lost.
+      this.player.hp = Math.max(1, this.player.hp - 2);
+      this.dialog({ title: `😵 ${f.name}`, text: `${M.przegrana[Math.floor(Math.random() * M.przegrana.length)]}\n\nTracisz jedno serduszko.`, buttons: ['Następnym razem…'], onChoose: () => {} });
+    }
+    this.emitHud();
+  }
+
+  /** A bank: deposits for a few days that come back with interest. */
+  private async openBank(p: CityPlace) {
+    const title = `🏦 ${p.name}`;
+    let now: number;
+    try {
+      now = new Date(await api.now()).getTime();
+    } catch {
+      this.dialog({ title, text: 'Bank chwilowo nieczynny (brak połączenia z serwerem).', buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const DAY = 86_400_000;
+    const ends = (l: (typeof session.lokaty)[number]) => l.od + l.dni * DAY;
+    const interest = (l: (typeof session.lokaty)[number]) => Math.floor((l.kwota * l.procent) / 100);
+    const ready = session.lokaty.filter((l) => ends(l) <= now);
+    const waiting = session.lokaty.filter((l) => ends(l) > now);
+    const left = (l: (typeof session.lokaty)[number]) => {
+      const h = Math.ceil((ends(l) - now) / 3_600_000);
+      return h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${h} h`;
+    };
+    const lines = [
+      ...ready.map((l) => `• ${l.kwota} monet (+${l.procent}%) – gotowa, odbierzesz ${l.kwota + interest(l)}`),
+      ...waiting.map((l) => `• ${l.kwota} monet (+${l.procent}%) – zostało ${left(l)}`),
+    ];
+    const buttons: string[] = [];
+    const acts: (() => void)[] = [];
+    if (ready.length) {
+      const sum = ready.reduce((s, l) => s + l.kwota + interest(l), 0);
+      buttons.push(`💰 Odbierz ${sum} monet`);
+      acts.push(() => {
+        for (const l of ready) {
+          session.coins += l.kwota;
+          earn(interest(l));
+        }
+        session.lokaty = waiting;
+        this.emitHud();
+        this.save();
+        this.toast(`Odebrałeś ${sum} monet z odsetkami!`, 2500);
+      });
+    }
+    if (session.lokaty.length < BANK.maksLokat && session.coins >= BANK.minKwota) {
+      buttons.push('📈 Załóż lokatę');
+      acts.push(() => this.newDeposit(title));
+    }
+    if (waiting.length) {
+      buttons.push('Zerwij lokatę (bez odsetek)');
+      acts.push(() => this.breakDeposit(title, waiting, left));
+    }
+    buttons.push('💎 Diamenty');
+    acts.push(() => this.buyDiamond(title));
+    buttons.push('Wyjdź');
+    this.dialog({
+      title,
+      text: `Masz ${session.coins} monet.${lines.length ? `\n\nTwoje lokaty:\n${lines.join('\n')}` : '\n\nOddaj nam monety na kilka dni, a oddamy więcej! Odebrać możesz w każdym banku.'}`,
+      buttons,
+      onChoose: (i) => acts[i]?.(),
+    });
+  }
+
+  /** Diamonds (premium currency): for coins now, for real money later. */
+  private buyDiamond(title: string) {
+    const d = DIAMENT;
+    const fmt = (n: number) => n.toLocaleString('pl-PL');
+    this.dialog({
+      title,
+      text: `💎 Diament to waluta premium. U woźnicy za ${d.dowolneMiasto} 💎 pojedziesz do dowolnego miasta, w którym już byłeś, a za kolejny ${d.szybciej} 💎 dojedziesz ${d.razySzybciej}× szybciej.\n\nCena: ${fmt(d.monet)} monet. ${DIAMENT_WSPIERAJACY}\n\nMasz ${fmt(session.coins)} monet i ${session.diamenty} 💎.`,
+      buttons: [`Kup za ${fmt(d.monet)} 💰`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i === 0) {
+          if (session.coins < d.monet) return this.toast(`Za mało monet – diament kosztuje ${fmt(d.monet)}.`, 2500);
+          spend(d.monet);
+          session.diamenty++;
+          this.emitHud();
+          this.save();
+          this.toast(`💎 Masz ${session.diamenty} ${session.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500);
+        }
+      },
+    });
+  }
+
+  private newDeposit(title: string) {
+    this.dialog({
+      title,
+      text: `Na jak długo? Lokatę można założyć od ${BANK.minKwota} do ${BANK.maksKwota} monet.`,
+      buttons: [...LOKATY.map((l) => `${l.nazwa}: +${l.procent}%`), 'Anuluj'],
+      onChoose: async (i) => {
+        const l = LOKATY[i];
+        if (!l) return;
+        this.scene.pause();
+        const max = Math.min(session.coins, BANK.maksKwota);
+        const txt = await askText('🏦 Lokata ' + l.nazwa, `Ile monet wpłacasz? Masz ${session.coins}. Po ${l.dni} ${l.dni === 1 ? 'dniu' : 'dniach'} dostaniesz ${l.procent}% więcej.`, String(max), { value: String(max), ok: 'Wpłacam', number: true });
+        this.scene.resume();
+        consumeAttack();
+        if (txt === null) return;
+        const kwota = Math.floor(Number(txt.replace(/\s/g, '')) || max);
+        if (kwota < BANK.minKwota || kwota > max) {
+          this.toast(`Kwota musi być od ${BANK.minKwota} do ${max} monet.`, 2500);
+          return;
+        }
+        let now: number;
+        try {
+          now = new Date(await api.now()).getTime();
+        } catch {
+          this.toast('Brak połączenia z bankiem – spróbuj za chwilę.', 2500);
+          return;
+        }
+        session.coins -= kwota;
+        session.lokaty.push({ kwota, od: now, dni: l.dni, procent: l.procent });
+        this.emitHud();
+        this.save();
+        this.toast(`Wpłaciłeś ${kwota} monet ${l.nazwa}. Odbierzesz ${kwota + Math.floor((kwota * l.procent) / 100)}.`, 3000);
+      },
+    });
+  }
+
+  private breakDeposit(title: string, waiting: typeof session.lokaty, left: (l: (typeof session.lokaty)[number]) => string) {
+    this.dialog({
+      title,
+      text: 'Którą lokatę zerwać? Dostaniesz z powrotem same monety, bez odsetek.',
+      buttons: [...waiting.map((l) => `${l.kwota} monet (zostało ${left(l)})`), 'Anuluj'],
+      onChoose: (i) => {
+        const l = waiting[i];
+        if (!l) return;
+        session.lokaty = session.lokaty.filter((x) => x !== l);
+        session.coins += l.kwota;
+        this.emitHud();
+        this.save();
+        this.toast(`Zerwałeś lokatę: wraca ${l.kwota} monet.`, 2500);
+      },
+    });
+  }
+
+  /** A hotel: saves the game here, and the next login starts at this door. */
+  private openHotel(p: CityPlace) {
+    const here = session.at && session.at.m === this.city.id && Math.hypot(session.at.x - p.door.x, session.at.y - p.door.y) < 4;
+    const title = `🏨 ${p.name}`;
+    // In the hotel where the hero sleeps the chest (the same one as at home) is in the room.
+    const chest = here ? ['📦 Skrzynia w pokoju'] : [];
+    if (session.coins < HOTEL_CENA) {
+      this.dialog({
+        title, text: `Nocleg kosztuje ${HOTEL_CENA} monet, a masz ${session.coins}. Recepcjonista kręci głową.`, buttons: [...chest, 'OK'],
+        onChoose: (i) => (chest.length && i === 0 ? this.openChest('w pokoju hotelowym') : undefined),
+      });
+      return;
+    }
+    this.dialog({
+      title,
+      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\nWyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.${here ? '\n\nTo twój obecny hotel – w pokoju czeka twoja skrzynia.' : ''}`,
+      buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, ...chest, 'Nie teraz'],
+      onChoose: (i) => {
+        if (chest.length && i === 1) return this.openChest('w pokoju hotelowym');
+        if (i !== 0) return;
+        spend(HOTEL_CENA);
+        session.at = { m: this.city.id, x: p.door.x, y: p.door.y };
+        this.player.heal(PLAYER.maxHp);
+        // Well rested: blue hearts and faster walking for a while.
+        const until = Date.now() + HOTEL_PREMIA.minut * 60_000;
+        this.player.extra = HOTEL_PREMIA.niebieskichSerc * 2;
+        this.player.extraUntil = until;
+        this.player.boost = HOTEL_PREMIA.szybciej;
+        this.player.boostUntil = until;
+        this.emitHud();
+        this.save();
+        this.toast(`🛏 Wyspany! Gra zapisana. ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i szybszy krok na ${HOTEL_PREMIA.minut} minut.`, 3500);
+      },
+    });
+  }
+
+  /** A night under canvas: save, load point here, half the health back. */
+  private sleepInTent(x: number, y: number, what: string) {
+    session.at = { m: this.city.id, x, y };
+    this.player.heal(Math.round(PLAYER.maxHp / 2));
+    this.emitHud();
+    this.save();
+    this.toast(`⛺ ${what} Gra zapisana – tu zaczniesz po wczytaniu.`, 3000);
+  }
+
+  /** A camp site (a real one, or one in a village). */
+  private openCamp(p: CityPlace) {
+    const title = `⛺ ${p.name}`;
+    const price = session.namioty.length ? 0 : NAMIOT.cenaPola;
+    this.dialog({
+      title,
+      text: `Trawa, ognisko i miejsce na namiot. Nocleg ${price ? `kosztuje ${price} monet (masz ${session.coins})` : 'jest za darmo – masz własny namiot (zużyje się o jeden nocleg)'}: zapis gry i tu zaczniesz po wczytaniu. Na ziemi śpi się gorzej niż w hotelu – odzyskasz połowę zdrowia.`,
+      buttons: [price ? `⛺ Śpię tu (${price} 💰)` : '⛺ Rozbijam namiot', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        if (price && session.coins < price) return this.toast(`Za mało monet – nocleg kosztuje ${price}.`, 2500);
+        if (price) spend(price);
+        else this.wearTent();
+        this.sleepInTent(p.door.x, p.door.y, 'Dobranoc przy ognisku!');
+      },
+    });
+  }
+
+  /** DIY and sports shops: tents (a small one for 20 nights, a super one for 500). */
+  private openGearShop(p: CityPlace) {
+    const kinds = NAMIOT.rodzaje;
+    const have = session.namioty.length ? `\n\nTwoje namioty: ${this.tentsText()}.` : '';
+    // The axe: buy one, or sharpen a blunt one.
+    const ax = item('siekiera')!;
+    const owned = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].find((id) => id === ax.id);
+    const fixes = this.sellsAxe(p) ? repairable().filter(id => item(id)?.miejsce === 'bron') : [];
+    const tools: [string, () => void][] = !this.sellsAxe(p) || owned ? [] : [[this.label(ax), () => this.buy(ax)]];
+    const vehicles = SIEKIERA.sportowy.test(p.name)
+      ? PRZEDMIOTY.filter((it) => it.pojazd && !this.ownsVehicle(it.id)) : [];
+    const entries: ShopEntry[] = [
+      ...vehicles.map((v, i) => shopItem(v, i, this.cenaDla(v))),
+      ...fixes.map((id, i): ShopEntry => ({ id: `repair:${id}`, index: vehicles.length + tools.length + kinds.length + i,
+        name: `Napraw: ${item(id)!.nazwa}`, category: 'services', picture: itemPictureUrl(id),
+        description: 'Warsztat budowlany naprawi twoją broń i narzędzia.',
+        stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', refresh: true })),
+      ...tools.map((_, i) => shopItem(ax, vehicles.length + i, this.cenaDla(ax))),
+      ...kinds.map((k, i): ShopEntry => ({ id: `tent:${i}`, index: vehicles.length + tools.length + i, name: k.nazwa,
+        category: 'supplies', description: 'Rozłożysz go w lesie albo na polu z karty postaci. Nocleg zapisuje grę i miejsce startu.',
+        stats: [['Noclegi', String(k.noclegow)]], price: k.cena, action: 'KUP', refresh: true })),
+    ];
+    this.shopDialog(p, {
+      title: `🏕 ${p.name}`,
+      text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}${vehicles.length ? ' oraz pojazdy' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''}${vehicles.length ? ' Pojazd trzymaj w plecaku; wsiądziesz obrazkiem w panelu gry.' : ''} Masz ${session.coins} monet${vehicles.length ? ` i ${session.diamenty} 💎` : ''}.${have}`,
+      buttons: [...vehicles.map((v) => this.label(v)), ...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`),
+        ...fixes.map(id => `Napraw: ${item(id)!.nazwa} – ${repairCost(id)} monet`), 'Wyjdź'],
+      icons: [...vehicles.map((v) => itemTexture(v.id)), ...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), ...fixes.map(id => itemTexture(id)), null],
+      onChoose: (i) => {
+        if (vehicles[i]) return this.buy(vehicles[i]);
+        i -= vehicles.length;
+        if (tools[i]) return tools[i][1]();
+        const fix = fixes[i - tools.length - kinds.length];
+        if (fix) return this.repairItem(fix);
+        const k = kinds[i - tools.length];
+        if (!k) return;
+        if (session.coins < k.cena) return this.toast(`Za mało monet – ${k.nazwa.toLowerCase()} kosztuje ${k.cena}.`, 2500);
+        spend(k.cena);
+        session.namioty.push({ max: k.noclegow, left: k.noclegow });
+        this.emitHud();
+        this.save();
+        this.toast(`⛺ Kupiony: ${k.nazwa} (${k.noclegow} noclegów). Rozłożysz go w lesie albo na polu z karty postaci.`, 3000);
+      },
+    }, entries, () => this.openGearShop(p), 'Namioty i wyposażenie na kolejną wyprawę.');
+  }
+
+  /** Mechanics buy iron ore/wood and repair owned equipment. */
+  private openWorkshop(p: CityPlace, tab = 0) {
+    const fixes = repairable();
+    const goods = (['ruda_zelaza', 'drewno'] as Owoc[]).filter(f => fruitCount(f) > 0);
+    const entries: ShopEntry[] = tab === 0 ? fixes.map((id, index) => ({
+      id: `repair:${id}`, index, name: `Napraw: ${item(id)!.nazwa}`, category: 'services',
+      picture: itemPictureUrl(id), description: 'Mechanik przywróci sprzętowi pełną wytrzymałość.',
+      stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]],
+      price: repairCost(id), action: 'NAPRAW', refresh: true,
+    })) : goods.map((f, index) => ({
+      id: `sell:${f}`, index, name: OWOCE[f].nazwa, category: 'supplies', picture: goodsPicture(f),
+      description: 'Mechanik odkupi cały zapas tego surowca z plecaka.',
+      stats: [['Liczba', String(fruitCount(f))], ['Za sztukę', `${OWOCE[f].cena} monet`]],
+      price: fruitCount(f) * OWOCE[f].cena, action: 'SPRZEDAJ', refresh: true,
+    }));
+    const text = tab === 0 ? 'Napraw sprzęt u mechanika. Jeśli jest sprawny, naprawa nie jest potrzebna.'
+      : `Mechanik skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
+    this.shopDialog(p, {
+      title: `Warsztat — ${p.name}`, text,
+      tabs: { labels: ['NAPRAW', 'SPRZEDAJ'], active: tab, colors: [0x2f6f9f, 0x3fa34d] },
+      buttons: [...entries.map(e => e.name), 'Wyjdź'],
+      onChoose: i => {
+        if (i < 0) return this.openWorkshop(p, -1 - i);
+        if (i >= entries.length) return;
+        if (tab === 0) this.repairItem(fixes[i]);
+        else {
+          const f = goods[i], n = fruitCount(f);
+          if (!n || !takeFruit(f, n)) return;
+          const value = n * OWOCE[f].cena;
+          earn(value); this.emitHud(); this.save(); this.toast(`Sprzedane za ${value} monet!`);
+        }
+      },
+    }, entries, () => this.openWorkshop(p, tab), text);
+  }
+
+  /** Exchange the recipe's ingredient group and money for a saved item; failures take nothing. */
+  private openProducer(p: CityPlace) {
+    const r = producerRecipe(p.name);
+    if (!r) return;
+    const count = foodCount(r.item);
+    const ingredient = r.group === 'owoce' ? 'owoców' : 'warzyw';
+    this.shopDialog(p, {
+      title: `Wytwórca — ${p.name}`,
+      text: `Przynieś ${r.amount} ${ingredient} i ${r.coins} monet.`,
+      buttons: [`${r.icon} Wytwórz: ${r.name}`, 'Wyjdź'],
+      onChoose: i => {
+        if (i !== 0) return;
+        if (session.coins < r.coins) return this.toast(`Za mało monet — potrzeba ${r.coins}.`);
+        if (groupCount(r.group) < r.amount) return this.toast(`Za mało ${ingredient} — potrzeba ${r.amount}, masz ${groupCount(r.group)}.`);
+        const previous = structuredClone(gear.bag);
+        takeGroup(r.group, r.amount);
+        if (!addItem(r.item)) {
+          gear.bag = previous;
+          return this.toast('Plecak pełny! Zrób miejsce na przygotowane jedzenie.');
+        }
+        spend(r.coins);
+        this.emitHud(); this.save();
+        this.toast(`${r.icon} Gotowe: ${r.name}! Masz ${foodCount(r.item)}.`);
+      },
+    }, [{ id: `make:${r.item}`, index: 0, name: r.name, category: 'food', icon: r.icon,
+      description: `Przynieś ${GRUPY[r.group].nazwa.toLowerCase()} i zapłać za przygotowanie. ${r.group === 'warzywa' ? 'Burger jest wyłącznie warzywny. ' : ''}Jedzenie leczy po miksturach i jadalnych zbiorach; możesz też zachować je do zadań.`,
+      stats: [[GRUPY[r.group].nazwa, `${groupCount(r.group)}/${r.amount}`], ['Masz', String(count)], ['Leczenie', `+${r.hearts} ${r.hearts === 1 ? 'serce' : r.hearts < 5 ? 'serca' : 'serc'}`]],
+      price: r.coins, costNote: `${r.amount} ${ingredient.toUpperCase()}`, action: 'WYTWÓRZ', badge: String(count), refresh: true }],
+    () => this.openProducer(p), 'Przynieś składniki. Wytwórca przygotuje jedzenie na drogę.');
+  }
+
+  /** "Namiot 19/20, Super namiot 480/500". */
+  tentsText() {
+    return session.namioty.map((t) => `${t.max > 20 ? 'Super namiot' : 'Namiot'} ${t.left}/${t.max}`).join(', ');
+  }
+
+  /** A night in an own tent wears it: the most worn one first. Tells how much is left. */
+  private wearTent() {
+    const t = session.namioty.filter((x) => x.left > 0).sort((a, b) => a.left - b.left)[0];
+    if (!t) return;
+    t.left--;
+    const name = t.max > 20 ? 'Super namiot' : 'Namiot';
+    if (t.left <= 0) {
+      session.namioty = session.namioty.filter((x) => x !== t);
+      this.dialog({ title: '⛺ Namiot się podarł', text: `${name} służył ci ${t.max} nocy i właśnie się rozpadł. ${session.namioty.length ? `Zostały ci: ${this.tentsText()}.` : 'Nowy kupisz w sklepie budowlanym albo sportowym.'}`, buttons: ['OK'], onChoose: () => {} });
+    } else {
+      this.time.delayedCall(3200, () => this.toast(`⛺ ${name} trochę się zużył: zostało ${t.left} z ${t.max} noclegów.`, 3000));
+    }
+  }
+
+  /** Where the own tent can go: in a forest or a field, not in a fight. */
+  tentSpot(): { ok: boolean; why: string } {
+    if (!session.namioty.length) return { ok: false, why: '' };
+    if (this.inCombat()) return { ok: false, why: 'Nie w trakcie walki!' };
+    const kinds = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy);
+    if (!kinds.some((k) => NAMIOT.gdzie.includes(k))) return { ok: false, why: 'Namiot rozłożysz tylko w lesie albo na polu.' };
+    return { ok: true, why: '' };
+  }
+
+  /** Pitch the own tent here and sleep. */
+  pitchTent() {
+    const t = this.tentSpot();
+    if (!t.ok) return this.toast(t.why, 2500);
+    this.add.image(this.player.x + 10, this.player.y - 4, TEX.tent).setDepth(this.player.y - 1);
+    this.sleepInTent(this.player.x, this.player.y, 'Namiot rozbity, dobranoc!');
+    this.wearTent();
+  }
+
+  /** Rides to another station: loads its map and starts there. */
+  /** The station the hero leaves from (for the ride screen). */
+  /** Adds a station to the places a diamond ride can go back to. */
+  private remember(s: Stop) {
+    session.byl = [...session.byl.filter((b) => b.key !== s.key), s].slice(-40);
+  }
+
+  private stationHere() {
+    let best: CityPlace | null = null;
+    for (const p of this.city.places) {
+      if (p.kind !== 'station') continue;
+      if (!best || Math.hypot(p.door.x - this.player.x, p.door.y - this.player.y) < Math.hypot(best.door.x - this.player.x, best.door.y - this.player.y)) best = p;
+    }
+    return best?.name ?? mapName(this.city.id);
+  }
+
+  private travel(t: Offer, times = 1, diamonds = 0) {
+    if (this.travelling) return;
+    this.travelling = true;
+    if (t.price) spend(t.price);
+    // Remember where we set off from and where we go: a diamond takes the hero back later.
+    const from = this.city.toLatLon(this.player.x, this.player.y);
+    const here = t.statek ? (this.portHere()?.nazwa ?? mapName(this.city.id)) : this.stationHere();
+    this.remember({ name: here, ...from, key: `${this.city.id}|${here}`, mapId: this.city.id, mapName: mapName(this.city.id) });
+    this.remember(t.to);
+    this.emitHud();
+    this.keepFog();
+    this.toast(t.statek ? `⛴ Płyniemy do: ${t.to.name}…` : `🐴 Jedziemy do: ${t.to.name}…`, 3000);
+    const cam = this.cameras.main;
+    cam.fadeOut(900, 0, 0, 0);
+    Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
+      .then(async ([city]) => {
+        const st = t.statek ? undefined : city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
+        const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
+        await city.ensure(to.x, to.y, LOAD_RADIUS);
+        // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
+        session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
+        // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
+        session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
+        if (!session.immortal) {
+          await syncClock();
+          const start = serverNow();
+          session.jazda = t.statek
+            ? { from: here, to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times, PROM.kmh), statek: true }
+            : { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
+          saveNow(this.player.hp).catch(() => {});
+          await Promise.all([prepareMap(city), showJourney(session.jazda)]);
+          session.jazda = null;
+        } else await prepareMap(city);
+        saveNow(this.player.hp).catch(() => {});
+        session.hp = this.player.hp;
+        this.justRode = true;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      })
+      .catch((e: Error) => {
+        // Could not load that map: the money (and diamonds) come back.
+        if (t.price) {
+          earn(t.price);
+          session.stats.earned -= t.price;
+          session.stats.spent -= t.price;
+        }
+        session.diamenty += diamonds;
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`${t.statek ? 'Kapitan' : 'Woźnica'} nie znalazł drogi: ${e.message}`);
+        this.emitHud();
+      });
+  }
+
+  /**
+   * On foot between the Lublin map and the world map (content/mapa.ts GRANICA): coming from another town
+   * the hero steps onto the real Lublin map (its cobbles, missions and fixed characters), and pushing out
+   * through Lublin's edge takes him onto the world map there.
+   */
+  private crossBorder(now: number) {
+    if (this.travelling || demo.on || now < this.crossAt || this.player.isDead) return;
+    this.crossAt = now + 500;
+    this.checkDroga();
+    const lublin = cachedMap('lublin');
+    if (!lublin) return;
+    const { x, y } = this.player;
+    if (worldOrigin(this.city.id)) {
+      const ll = this.city.toLatLon(x, y);
+      const p = lublin.fromLatLon(ll.lat, ll.lon);
+      const m = GRANICA.wejscieM * PX_PER_M;
+      if ([[0, 0], [m, 0], [-m, 0], [0, m], [0, -m]].every(([dx, dy]) => lublin.insideCity(p.x + dx, p.y + dy))) {
+        this.walkOnto('lublin', ll, '🏰 Wchodzisz do Lublina.');
+      }
+      return;
+    }
+    if (this.city.id !== 'lublin' || this.player.vel.lengthSq() === 0) {
+      this.pushOut = 0;
+      return;
+    }
+    const f = this.player.facing;
+    const d = GRANICA.wyjscieM * PX_PER_M;
+    if (this.city.insideCity(x + f.x * d, y + f.y * d)) {
+      this.pushOut = 0;
+      return;
+    }
+    this.pushOut += 0.5;
+    if (this.pushOut < GRANICA.wyjscieS) return;
+    // Just past the edge, on a world map whose origin is the nearest 0.1° (the same squares come back, so does their fog).
+    const ll = this.city.toLatLon(x + f.x * d * 3, y + f.y * d * 3);
+    this.walkOnto(`w:${(Math.round(ll.lat * 10) / 10).toFixed(4)},${(Math.round(ll.lon * 10) / 10).toFixed(4)}`, ll, '🌍 Wychodzisz poza Lublin.');
+  }
+
+  /** Restarts the scene on another map with the hero at (lat, lon) – no coach, no fee. */
+  private walkOnto(mapId: string, ll: { lat: number; lon: number }, word: string) {
+    this.travelling = true;
+    this.keepFog();
+    const cam = this.cameras.main;
+    cam.fadeOut(500, 0, 0, 0);
+    getMap(mapId)
+      .then(async (city) => {
+        const to = city.fromLatLon(ll.lat, ll.lon);
+        await city.ensure(to.x, to.y, LOAD_RADIUS);
+        session.arrive = city.reachableNear(to.x, to.y);
+        await prepareMap(city);
+        session.hp = this.player.hp;
+        this.walkedIn = word;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      })
+      .catch((e: Error) => {
+        this.travelling = false;
+        this.crossAt = this.time.now + 10_000;
+        cam.fadeIn(300);
+        this.toast(`Nie da się tu przejść: ${e.message}`);
+      });
+  }
+
+  /** Finds the hero's house next to the start point and marks it. */
+  private setUpHome() {
+    const sx = session.startX;
+    const sy = session.startY;
+    const R = 40 * PX_PER_M;
+    let best: Building | null = null;
+    let bestD = Infinity;
+    for (const b of this.city.query({ x0: sx - R, y0: sy - R, x1: sx + R, y1: sy + R }).buildings) {
+      const d = this.city.entranceOf(b);
+      const dist = Math.hypot(d.x - sx, d.y - sy);
+      if (dist < bestD) {
+        bestD = dist;
+        best = b;
+      }
+    }
+    this.home = best;
+    let at = { x: sx, y: sy - 3 };
+    if (best) {
+      // A house-sized building gets a homely red roof; a big block keeps its own.
+      if (best.x1 - best.x0 < 30 * PX_PER_M && best.y1 - best.y0 < 30 * PX_PER_M) this.mapView.highlight.set(best, { roof: '#c75b4a', wall: '#f3e2a0' });
+      const cx = (best.x0 + best.x1) / 2;
+      const cy = (best.y0 + best.y1) / 2;
+      // On the roof: the middle of the house if that is inside it, else by the door.
+      // On the roof just inside the edge nearest the start point: walk from
+      // the start towards the house until we are over its roof.
+      let found = false;
+      for (const t of [{ x: cx, y: cy }, this.city.entranceOf(best)]) {
+        const dx = t.x - sx;
+        const dy = t.y - sy;
+        const len = Math.hypot(dx, dy) || 1;
+        for (let d = 0; d < len + 40 && !found; d += 2) {
+          const x = sx + (dx / len) * d;
+          const y = sy + (dy / len) * d;
+          if (this.city.buildingAt(x, y) === best) {
+            at = { x: x + (dx / len) * 5, y: y + (dy / len) * 5 };
+            if (this.city.buildingAt(at.x, at.y) !== best) at = { x, y };
+            found = true;
+          }
+        }
+        if (found) break;
+      }
+    }
+    this.homeAt = at;
+    // A small, soft house sign sitting on the roof.
+    this.add.image(at.x, at.y, TEX.home).setScale(0.55).setAlpha(0.85).setDepth(1_100_000);
+  }
+
+  /** A swing that lands on the house (or right by it) opens the door. */
+  private hitsHome(x: number, y: number) {
+    if (this.home && this.city.buildingAt(x, y) === this.home) return true;
+    return Math.hypot(x - this.homeAt.x, y - this.homeAt.y) < 12;
+  }
+
+  /** Home: full health, the chest and money kept there. */
+  private openHome() {
+    const hurt = this.player.hp < PLAYER.maxHp;
+    this.player.heal(PLAYER.maxHp);
+    this.emitHud();
+    this.dialog({
+      title: '🏠 Twój domek',
+      text: `${hurt ? 'Odpocząłeś w domu – zdrowie w pełni!' : 'Dom, słodki dom.'}\n\nW skrzyni masz ${session.chest.coins} monet i ${session.chest.slots.filter(Boolean).length} rzeczy.`,
+      buttons: ['📦 Otwórz skrzynię', 'Wyjdź'],
+      onChoose: (i) => {
+        if (i === 0) this.openChest();
+      },
+    });
+  }
+
+  /** The chest (home, or the room of the hotel the hero sleeps in). */
+  private openChest(where?: string) {
+    this.scene.pause();
+    showChest(() => {
+      this.scene.resume();
+      consumeAttack();
+      this.gearChanged();
+      this.save();
+    }, where);
+  }
+
+  /** A riddle with one try (fixed characters); answers are shuffled by `seed`. */
+  private askRiddle(
+    title: string,
+    intro: string,
+    z: ZagadkaPL,
+    exp: number,
+    seed: string,
+    after: (right: boolean) => void,
+    opts: { coins?: number; then?: (right: boolean) => void; retry?: boolean } = {},
+  ) {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+    const r = rng(h >>> 0);
+    const order = z.odpowiedzi.map((_, i) => i).sort(() => r() - 0.5);
+    const answers = order.map((i) => tr(z.odpowiedzi[i]));
+    const correct = order.indexOf(0);
+    const coins = opts.coins ?? 0;
+    const prize = [exp ? `${exp} EXP` : '', coins ? tx(`${coins} monet`, `${coins} coins`) : ''].filter(Boolean).join(' + ');
+    const rule = opts.retry ? '' : tx('Tylko jedna próba!', 'Only one try!');
+    const foot = rule; // no reward told up front (owner 7 Oct 2026)
+    void prize;
+    this.dialog({
+      title,
+      text: `${intro}\n\n${tr(z.pytanie)}${foot ? `\n\n${foot}` : ''}`,
+      buttons: [...answers, tx('Później', 'Later')],
+      onChoose: (i) => {
+        if (i >= answers.length) return;
+        const right = i === correct;
+        after(right);
+        if (right) {
+          session.exp += exp;
+          if (coins) earn(coins);
+          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
+          this.emitHud();
+        }
+        this.dialog({
+          title: right ? tx('🎉 Brawo!', '🎉 Well done!') : tx('😕 Niestety…', '😕 Not quite…'),
+          text: right ? (prize ? `+${prize}` : tx('Dobra odpowiedź!', 'Right answer!')) : opts.retry ? tx('To nie to. Pomyśl jeszcze i spróbuj ponownie.', 'That is not it. Think again and try once more.') : tx(`Dobra odpowiedź to: ${answers[correct]}.`, `The right answer is: ${answers[correct]}.`),
+          buttons: ['OK'],
+          onChoose: () => opts.then?.(right),
+        });
+        this.save();
+      },
+    });
+  }
+
+  /** A riddle-giver: one riddle a day, one try. */
+  private openRiddle(n: Npc) {
+    const day = today();
+    if (session.riddles[n.id] === day) {
+      this.dialog({ title: n.name, text: 'Dziękuję za pomoc! Na dziś to wszystko – wpadnij jutro.', buttons: ['Do jutra!'], onChoose: () => {} });
+      return;
+    }
+    // A request "from life" (content/prosby.ts), never the same one within 60 days.
+    const where = this.city.toLatLon(n.x, n.y);
+    const r = requestFor(n, day, session.age, session.seen, Number.isFinite(where.lat) ? where : null);
+    this.dialog({
+      title: `❓ ${n.name}`,
+      text: `${n.greeting}\n\n${r.question}\n\nTylko jedna próba!`, // no reward told up front (owner 7 Oct 2026)
+      buttons: [...r.answers, 'Później'],
+      onChoose: (i) => {
+        if (i >= r.answers.length) return;
+        // Remember only today's answers; requests heard stay for 60 days.
+        for (const [k, v] of Object.entries(session.riddles)) if (v !== day) delete session.riddles[k];
+        session.riddles[n.id] = day;
+        const dn = dayNumber(day);
+        session.seen[r.key] = dn;
+        for (const [k, v] of Object.entries(session.seen)) if (dn - v >= NIE_POWTARZAJ_DNI) delete session.seen[k];
+        const ok = i === r.correct;
+        session.stats.riddles = (session.stats.riddles ?? 0) + (ok ? 1 : 0);
+        let got = r.coins ? `${r.coins} monet` : `${r.apples} jabłka`;
+        if (ok) {
+          if (r.coins) earn(r.coins);
+          let added = 0;
+          for (let k = 0; k < r.apples; k++) if (addFruit('jablko')) added++;
+          if (r.apples && added < r.apples) got = added ? `${added} jabłko (plecak pełny)` : 'nic – plecak pełny';
+          session.exp += r.exp;
+          this.emitHud();
+        }
+        this.dialog({
+          title: ok ? '🎉 Dziękuję!' : '😕 Hmm…',
+          text: ok ? `Bardzo mi pomogłeś! Proszę: ${got} i ${r.exp} EXP.` : `Chyba jednak nie… Dobra odpowiedź to: ${r.answers[r.correct]}.\nWpadnij jutro!`,
+          buttons: ['OK'],
+          onChoose: () => {},
+        });
+        this.save();
+      },
+    });
+  }
+
+  private openHospital(p: CityPlace) {
+    const hurt = this.player.hp < PLAYER.maxHp;
+    this.player.heal(PLAYER.maxHp);
+    this.emitHud();
+    this.dialog({
+      title: `🏥 ${p.name}`,
+      text: hurt ? 'Lekarz opatrzył twoje rany. Zdrowie w pełni – i to za darmo!' : 'Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.',
+      buttons: ['Dziękuję'],
+      onChoose: () => {},
+    });
+    if (hurt) this.save();
+  }
+
+  /** Swing speed and reach from the sword-fighting level. */
+  private applySkill() {
+    this.refreshLook();
+    // The reach no longer grows with the level (owner): only speed and accuracy do.
+    this.player.attackCooldown = cooldown(this.handSkill());
+    this.player.reach = 1;
+  }
+
+  /** One use of a skill; tells the player when it levels up. */
+  private practiced(skill: Umiejetnosc, points = 1) {
+    const up = practice(skill, points);
+    const pr = skillProgress(skill);
+    this.game.events.emit('practice', { skill, ...pr, max: pr.level >= MAKS_POZIOM, gain: points });
+    if (up) {
+      this.toast(`${UMIEJETNOSCI[skill].nazwa}: poziom ${up}! Szybsze ataki.`, 2200);
+      this.applySkill();
+      this.emitHud();
+    }
+  }
+
+  // ------------------------------------------------------------------ ranged
+
+  /** Direction of the current aim, or null when not aiming. */
+  private aimDirection(): { x: number; y: number } | null {
+    if (!hold.active) return null;
+    const held = performance.now() - hold.start;
+    if (held < AIM_DELAY && !hold.dragged) return null;
+    return this.dirFor(hold.mode, hold.dx, hold.dy, hold.dragged);
+  }
+
+  private dirFor(mode: 'touch' | 'mouse' | 'key', dx: number, dy: number, dragged: boolean) {
+    let v = { x: this.player.facing.x, y: this.player.facing.y };
+    if (mode === 'touch' && dragged) v = { x: dx, y: dy };
+    if (mode === 'mouse') {
+      const cam = this.cameras.main;
+      v = { x: mouse.x * OSTROSC - (this.player.x - cam.worldView.x) * cam.zoom, y: mouse.y * OSTROSC - (this.player.y - cam.worldView.y) * cam.zoom };
+    }
+    const l = Math.hypot(v.x, v.y) || 1;
+    return { x: v.x / l, y: v.y / l };
+  }
+
+  /** Press and hold to aim, let go to shoot (bow or magic). */
+  private updateRanged(now: number, lingering: boolean) {
+    const weapon = rangedWeapon();
+    const aim = weapon && !lingering ? this.aimDirection() : null;
+    this.aimLine.clear();
+    // Holding: a golden ring fills around the hero; full = the strong attack is ready.
+    if (hold.active && !lingering) {
+      const held = performance.now() - hold.start;
+      if (held > AIM_DELAY) {
+        const t = Math.min(1, held / WALKA.mocnyPoMs);
+        const cx = this.player.x, cy = this.player.y - 4;
+        this.aimLine.lineStyle(2, 0x1e1a24, 0.5).strokeCircle(cx, cy, 13);
+        this.aimLine.lineStyle(1.5, 0xffd84a, t >= 1 ? 0.6 + 0.4 * Math.sin(now / 80) : 0.9);
+        this.aimLine.beginPath();
+        this.aimLine.arc(cx, cy, 13, -Math.PI / 2, -Math.PI / 2 + t * Math.PI * 2);
+        this.aimLine.strokePath();
+      }
+    }
+    if (aim) {
+      // Dotted aim line.
+      const range = weapon!.rodzaj === 'magia' ? MAGIC_RANGE : ARROW_RANGE;
+      this.aimLine.fillStyle(weapon!.rodzaj === 'magia' ? 0x9be7ff : 0xffffff, 0.85);
+      for (let d = 10; d < range; d += 7) this.aimLine.fillRect(this.player.x + aim.x * d - 1, this.player.y + aim.y * d - 1, 2, 2);
+      this.player.facing.set(aim.x, aim.y);
+    }
+    const r = consumeRelease();
+    if (!r || lingering) return;
+    const strong = r.held >= WALKA.mocnyPoMs;
+    // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
+    if (!weapon) {
+      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) {
+        this.faceFoe(WALKA.zasiegMiecz);
+        this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      }
+      return;
+    }
+    if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only
+    const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+    if (now - this.lastShot < cooldown(skill)) return;
+    this.fireShot(weapon, this.dirFor(r.mode, r.dx, r.dy, r.dragged), strong, now);
+  }
+
+  /**
+   * Aim help: the nearest target (a visible monster, or a training target/crystal for this skill) within the range
+   * and within WALKA.celowanieStopnie of `dir`, with nothing built in between – the shot flies straight at it.
+   */
+  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia'): { x: number; y: number } {
+    const range = skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE;
+    const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
+    const px = this.player.x, py = this.player.y;
+    const points: { x: number; y: number }[] = [];
+    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
+    for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 * SKALA_POSTACI });
+    let best: { x: number; y: number } | null = null;
+    let bestScore = Infinity;
+    for (const t of points) {
+      const dx = t.x - px, dy = t.y - py, d = Math.hypot(dx, dy);
+      if (d < 2 || d > range) continue;
+      const cos = (dx * dir.x + dy * dir.y) / d;
+      if (cos < maxCos) continue;
+      // Nothing built in between (walls stop shots anyway).
+      let clear = true;
+      for (let s = 6; s < d && clear; s += 6) if (this.city.buildingAt(px + (dx * s) / d, py + (dy * s) / d) !== undefined) clear = false;
+      if (!clear) continue;
+      // Closer and better lined up wins.
+      const score = d * (2 - cos);
+      if (score < bestScore) {
+        bestScore = score;
+        best = { x: dx / d, y: dy / d };
+      }
+    }
+    return best ?? dir;
+  }
+
+  /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
+  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
+    const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+    dir = this.aimAssist(dir, skill);
+    this.lastShot = now;
+    // A bow needs arrows (a crossbow bolts, the steam pistol bullets), and every shot wears it.
+    const ammo = ammoOf(weapon);
+    if (ammo) {
+      if (!takeAmmo(ammo)) {
+        const a = AMUNICJA[ammo];
+        if (now - this.noArrowsToast > 2500) this.toast(`${a.ikona} Brak: ${a.nazwa.toLowerCase()}! Kup je w sklepie.`, 2000);
+        this.noArrowsToast = now;
+        return;
+      }
+      this.wearWeapon(weapon.id);
+      this.emitHud();
+    }
+    this.player.facing.set(dir.x, dir.y);
+    const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
+    // Starts at the hero, so nothing standing right next to them is skipped.
+    const sprite = this.add
+      .image(this.player.x, this.player.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
+      .setRotation(Math.atan2(dir.y, dir.x))
+      .setDepth(1_040_000);
+    // Held long enough: a strong shot (bigger, golden, harder).
+    if (strong) sprite.setScale(1.5).setTint(0xffd84a);
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon) * (strong ? strongFactor(skill) : 1), skill, weapon: weapon.id, strong, missed: new Set() });
+  }
+
+  private updateShots(dt: number) {
+    const now = this.time.now;
+    for (const shot of [...this.shots]) {
+      const step = Math.hypot(shot.vx, shot.vy) * dt;
+      const sp = shot.sprite;
+      const ox = sp.x;
+      const oy = sp.y;
+      sp.x += shot.vx * dt;
+      sp.y += shot.vy * dt;
+      shot.left -= step;
+      // Check the whole path of this frame (walls and enemies), so a shot
+      // never slips through.
+      let done = shot.left <= 0;
+      for (let t = 0.25; t <= 1 && !done; t += 0.25) {
+        if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
+      }
+      if (!done) {
+        const foe = this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
+        if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
+          // Missed: the arrow flies on past it.
+          shot.missed.add(foe);
+          this.practiced(shot.skill);
+          this.missText(foe.x, foe.y - 4 * foe.kind.scale);
+        } else if (foe) {
+          done = true;
+          this.practiced(shot.skill);
+          const imb = imbueOf(shot.weapon)?.e;
+          // An arrow may kill an ordinary monster at once.
+          const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();
+          if (foe.hit(new Phaser.Math.Vector2(sp.x - shot.vx, sp.y - shot.vy), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe))) this.onEnemyKilled(foe);
+          else this.essenceHit(imb, foe, now);
+        } else if (this.training.hitAt(sp.x, sp.y, 8, shot.skill)) {
+          done = true;
+          this.practiced(shot.skill);
+        } else if (this.training.anyAt(sp.x, sp.y, 6)) done = true;
+      }
+      if (done) {
+        this.shots = this.shots.filter((x) => x !== shot);
+        this.tweens.add({ targets: sp, alpha: 0, duration: 120, onComplete: () => sp.destroy() });
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ shops, schools, library
+
+  private shopDialog(p: CityPlace, req: DialogRequest, entries: ShopEntry[], refresh: () => void, subtitle: string) {
+    this.dialog({
+      ...req,
+      shop: { id: p.id, banner: /decathlon/i.test(p.name) ? 'decathlon' : 'kupiec_01', subtitle, entries,
+        sellsAmmo: p.kind === 'shop' || p.kind === 'merchant',
+        emptyText: p.kind === 'workshop' ? subtitle : undefined },
+      onChoose: (i) => {
+        req.onChoose(i);
+        if (entries.find(e => e.index === i)?.refresh) refresh();
+      },
+    });
+  }
+
+  /** Buys an item: pays, equips it or puts it in the backpack. */
+  private buy(p: Przedmiot) {
+    if (p.pojazd && this.ownsVehicle(p.id)) return this.toast('Masz już ten pojazd.');
+    const diamonds = p.cenaDiamenty ?? 0;
+    if (diamonds ? session.diamenty < diamonds : session.coins < this.cenaDla(p)) {
+      this.toast(diamonds ? `Za mało diamentów – ${p.nazwa} kosztuje ${diamonds} 💎.` : `Za mało monet – ${p.nazwa} kosztuje ${this.cenaDla(p)}.`);
+      return;
+    }
+    const where = addItem(p.id);
+    if (!where) {
+      this.toast('Plecak pełny! Zrób miejsce w karcie postaci.');
+      return;
+    }
+    if (diamonds) session.diamenty -= diamonds;
+    else spend(this.cenaDla(p));
+    repair(p.id); // a new one is whole
+    const kind = ammoOf(p);
+    const arrows = kind ? Math.min(STRZALY.zLukiem, ammoRoom(kind)) : 0;
+    if (kind) addAmmo(kind, arrows);
+    this.applySkill();
+    this.emitHud();
+    this.toast((where === 'equipped' ? `Kupiłeś i założyłeś: ${p.nazwa}!` : `Kupiłeś: ${p.nazwa} (w plecaku).`) + (kind && arrows ? ` Do tego ${arrows} ${AMUNICJA[kind].wielu}.` : ''));
+    this.save();
+  }
+
+  private repairItem(id: string) {
+    const cost = repairCost(id);
+    if (!cost) return;
+    if (session.coins < cost) return this.toast(`Za mało monet – naprawa kosztuje ${cost}.`, 2200);
+    spend(cost);
+    repair(id);
+    this.emitHud();
+    this.toast(`🔧 ${item(id)!.nazwa} jak nowy!`, 2000);
+    this.save();
+  }
+
+  private buyArrows(k: Amunicja, n: number) {
+    const a = AMUNICJA[k];
+    const cost = n * a.cena;
+    if (session.coins < cost) return this.toast(`Za mało monet – ${n} ${a.wielu} kosztuje ${cost}.`, 2200);
+    spend(cost);
+    addAmmo(k, n);
+    this.emitHud();
+    this.toast(`${a.ikona} +${n} ${a.wielu} (masz ${gear.ammo[k]}).`, 1800);
+    this.save();
+  }
+
+  /** The weapon's state for the HUD line: worn %, broken, arrows left. */
+  private wearLabel() {
+    const id = gear.equip.bron;
+    const c = condition(id);
+    let out = '';
+    if (c && (session.level.zuzycie || item(id)?.szklany)) {
+      const pct = Math.max(1, Math.floor((100 * c.left) / c.max));
+      if (c.left <= 0) out += ' · 🔧0%';
+      else if (item(id)?.szklany) out += ` · ${c.left}/${c.max}`;
+      else if (pct < 100) out += ` · ${pct}%`;
+    }
+    const k = ammoOf(item(id));
+    if (k) out += ` · ${AMUNICJA[k].ikona}${gear.ammo[k]}`;
+    return out;
+  }
+
+  /**
+   * The glass sword bursts in the hero's hand: the artist's 4 frames once (100/100/100/180 ms, never
+   * looped, one anchor for all frames), then the remains fade out (ikony12 B animation, 5 Oct 2026).
+   */
+  private shatterGlass() {
+    if (!this.textures.exists('szklo-peka')) return;
+    const size = WALKA.wielkoscBroni * 1.6 * SKALA_POSTACI;
+    const img = this.add.image(this.player.x + 4 * SKALA_POSTACI, this.player.y - 8 * SKALA_POSTACI, 'szklo-peka', 0)
+      .setDisplaySize(size, size).setDepth(this.player.depth + 2);
+    const times = [100, 100, 100, 180];
+    let at = 0;
+    times.forEach((ms, f) => {
+      this.time.delayedCall(at, () => img.active && img.setFrame(f));
+      at += ms;
+    });
+    this.time.delayedCall(at, () => this.tweens.add({ targets: img, alpha: 0, duration: 250, onComplete: () => img.destroy() }));
+  }
+
+  /** One blow or shot wore the weapon: say when it got blunt, broke or shattered. */
+  private wearWeapon(id: string | null | undefined) {
+    const p = item(id);
+    const r = useWeapon(id, session.level.zuzycie);
+    if (!p || r === 'ok') return;
+    if (r === 'warn') this.toast(`⚠️ ${p.nazwa} się tępi – napraw go w sklepie.`, 2600);
+    else if (r === 'broken') this.toast(`🔧 ${p.nazwa} się zepsuł! Bije jak kijek, dopóki go nie naprawisz w sklepie.`, 3500);
+    else {
+      const spare = gear.bag.some((sl) => 'item' in sl && item(sl.item)?.miejsce === 'bron');
+      this.toast(`💥 ${p.nazwa} pękł! ${spare ? 'Załóż inną broń z plecaka (karta postaci).' : 'Został ci kijek.'}`, 3000);
+      if (p.szklany) this.shatterGlass();
+      this.applySkill();
+    }
+    this.emitHud();
+  }
+
+  /** The next better item of each kind this place sells. */
+  private offers(where: 'sklep' | 'biblioteka') {
+    const out: Przedmiot[] = [];
+    const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
+      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
+    for (const [miejsce, rodzaj] of groups) {
+      const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
+      if (miejsce === 'helm') {
+        // Headwear is also about looks: every one not owned yet is on offer.
+        out.push(...all.filter((p) => !owns(p.id)));
+        continue;
+      }
+      const best = Math.max(0, ...all.filter((p) => owns(p.id)).map((p) => p.moc), miejsce === 'bron' && !rodzaj ? 1 : 0);
+      const next = all.filter((p) => p.moc > best).sort((a, b) => a.moc - b.moc)[0];
+      if (next) out.push(next);
+    }
+    // A side branch: the glass sword, always on offer while not owned.
+    if (where === 'sklep') out.push(...PRZEDMIOTY.filter((p) => p.szklany && p.cena > 0 && !owns(p.id)));
+    return out;
+  }
+
+  private label(p: Przedmiot) {
+    if (p.pojazd) return `${p.nazwa} – ${p.cenaDiamenty ? `${p.cenaDiamenty} 💎` : `${this.cenaDla(p)} monet`} (+${Math.round((POJAZDY[p.pojazd].szybkosc - 1) * 100)}% prędkości)`;
+    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `obrona ${p.moc}`;
+    return `${p.nazwa} – ${this.cenaDla(p)} monet (${what})`;
+  }
+
+  private ownsVehicle(id: string) {
+    return owns(id) || session.chest.slots.some((s) => s && 'item' in s && s.item === id);
+  }
+
+  private openShop(p: CityPlace, tab = 0) {
+    const offers = this.offers('sklep');
+    if (this.sellsAxe(p) && !ownsAxe()) offers.unshift(item('siekiera')!);
+    const title = p.kind === 'merchant' ? `🛒 Stragany (${p.name})` : `🛒 ${p.name}`;
+    const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
+    const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);
+    if (tab === 1) {
+      // Selling: each kind of goods in the backpack separately, and everything at once.
+      const groups = (Object.keys(GRUPY) as Grupa[]).filter((g) => groupCount(g) > 0);
+      const total = fruitValue();
+      const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
+      const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
+      const text = groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
+      this.shopDialog(p, {
+        title, text, tabs,
+        buttons: [...all, ...lines, 'Wyjdź'],
+        onChoose: (i) => {
+          if (i < 0) return switchTab(i);
+          let v = 0;
+          if (all.length && i === 0) v = sellAllFruit();
+          else if (groups[i - all.length]) v = sellGroup(groups[i - all.length]);
+          else return;
+          earn(v);
+          this.emitHud();
+          this.toast(`Sprzedane za ${v} monet!`);
+          this.save();
+          this.openShop(p, 1);
+        },
+      }, [
+        ...(all.length ? [{ id: 'sell:all', index: 0, name: 'Wszystkie zbiory', category: 'supplies' as const,
+          picture: goodsPicture('owoce'), description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka.', price: total, action: 'SPRZEDAJ WSZYSTKO' }] : []),
+        ...groups.map((g, i) => shopGoods(g, i + all.length, GRUPY[g].nazwa, groupCount(g), groupValue(g))),
+      ], () => this.openShop(p, 1), 'Kupiec odkupi twoje zbiory.');
+      return;
+    }
+    // Grandma Grażynka's garden tools wait at the shop nearest her village.
+    const tools = this.fixed.grazynkaStep() === 'sklep' && this.fixed.grazynkaShop()?.id === p.id ? ['🧺 Odbierz narzędzia babci Grażynki'] : [];
+    // Repairs of worn weapons, and ammunition for every ranged weapon owned (+50, +100, full).
+    const fixes = repairable();
+    const packs = ownedAmmo().flatMap((k) => {
+      const room = ammoRoom(k);
+      return room > 0 ? [...new Set([50, 100].filter((n) => n < room).concat(room))].map((n) => ({ k, n, full: n === room })) : [];
+    });
+    const extra: [string, () => void][] = [
+      ...fixes.map((id): [string, () => void] => {
+        const c = condition(id)!;
+        return [`🔧 Napraw: ${item(id)!.nazwa} (${Math.round((100 * c.left) / c.max)}%) – ${repairCost(id)} monet`, () => this.repairItem(id)];
+      }),
+      ...packs.map(({ k, n, full }): [string, () => void] => [`${AMUNICJA[k].nazwa} +${n}${full ? ' (do pełna)' : ''} – ${n * AMUNICJA[k].cena} monet`, () => this.buyArrows(k, n)]),
+    ];
+    const quiver = ownedAmmo().map((k) => `\n${AMUNICJA[k].ikona} ${AMUNICJA[k].nazwa}: ${gear.ammo[k]}/${STRZALY.kolczan}`).join('');
+    const entries: ShopEntry[] = [
+      ...tools.map((name, i): ShopEntry => ({ id: 'grazynka:tools', index: i, name, category: 'services',
+        description: 'Narzędzia czekają dla babci Grażynki.', action: 'ODBIERZ' })),
+      ...fixes.map((id, i): ShopEntry => ({ id: `repair:${id}`, index: tools.length + i, name: `Napraw: ${item(id)!.nazwa}`,
+        category: 'services', picture: itemPictureUrl(id), description: 'Przywróć przedmiotowi pełną wytrzymałość.',
+        stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', badge: '↻' })),
+      ...packs.map(({ k, n }, i): ShopEntry => ({ id: `ammo:${k}:${n}`, index: tools.length + fixes.length + i,
+        name: `${AMUNICJA[k].nazwa} +${n}`, category: 'ammo', picture: `items/${k}.png`,
+        description: 'Uzupełnij zapas amunicji.', stats: [['Masz', `${gear.ammo[k]}/${STRZALY.kolczan}`],
+          ['W zestawie', String(n)], ['Po zakupie', `${gear.ammo[k] + n}/${STRZALY.kolczan}`]],
+        price: n * AMUNICJA[k].cena, action: 'KUP' })),
+      ...offers.map((o, i) => shopItem(o, tools.length + extra.length + i, this.cenaDla(o))),
+    ];
+    this.shopDialog(p, {
+      title, tabs,
+      text: (p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
+      icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
+      onChoose: (i) => {
+        if (i < 0) return switchTab(i);
+        if (tools.length && i === 0) {
+          if (this.fixed.pickUpTools()) this.dialog({ title: '🧺 Narzędzia', text: tr(GRAZYNKA.wSklepie), buttons: ['OK'], onChoose: () => {} });
+          this.emitHud();
+          return;
+        }
+        const e = extra[i - tools.length];
+        if (e) {
+          e[1]();
+          return this.openShop(p, 0);
+        }
+        const o = offers[i - tools.length - extra.length];
+        if (o) this.buy(o);
+      },
+    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : 'Kowal za ladą poleca swój towar.');
+  }
+
+  /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
+  private openSchool(p: CityPlace) {
+    // d.a = questions answered today, d.n = when the break ends (minutes after midnight).
+    const d = this.dailyCount(`szkola:${p.id}`);
+    const title = `🏫 ${p.name}`;
+    const now = new Date();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    if (d.a >= SZKOLA_QUIZ.naSzkoleDziennie) {
+      this.dialog({ title, text: 'Na dziś koniec lekcji w tej szkole. Wróć jutro albo zajrzyj do innej szkoły!', buttons: ['Do jutra!'], onChoose: () => {} });
+      return;
+    }
+    if (d.a > 0 && d.a % SZKOLA_QUIZ.naLekcje === 0 && mins < d.n) {
+      const hh = Math.floor(d.n / 60) % 24;
+      const mm = String(d.n % 60).padStart(2, '0');
+      this.dialog({ title, text: `🔔 Przerwa! Nauczyciele piją herbatę. Kolejne lekcje o ${hh}:${mm} – wróć wtedy.`, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    this.dialog({
+      title,
+      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie – im dalej, tym trudniejsze.`, // no reward told up front (owner 7 Oct 2026)
+      buttons: ['🧠 Quiz', 'Wyjdź'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        const ll = this.city.toLatLon(p.door.x, p.door.y);
+        const z = schoolQuiz(p.id, d.d, d.a, session.age, krajMapy(session.mapId, ll.lat, ll.lon));
+        const nth = d.a;
+        const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+        const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
+        this.askRiddle(title, `📝 ${z.kategoria}${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
+          d.a++;
+          quizAnswered(z);
+          // After a lesson (naLekcje questions) a break: back in przerwaMin minutes, rounded up to :x0/:x5.
+          if (d.a % SZKOLA_QUIZ.naLekcje === 0) {
+            const t = new Date();
+            d.n = Math.ceil((t.getHours() * 60 + t.getMinutes() + SZKOLA_QUIZ.przerwaMin) / 5) * 5;
+          }
+          // A wizard also gets better at magic by thinking hard.
+          if (right && gear.magic && SZKOLA_QUIZ.magia) this.practiced('magia', SZKOLA_QUIZ.magia);
+        }, { coins: SZKOLA_QUIZ.monety, then: () => this.openSchool(p) });
+      },
+    });
+  }
+
+  /** A per-day counter kept in the save (session.daily). */
+  private dailyCount(id: string) {
+    const day = today();
+    // Yesterday's school counters are not needed any more.
+    for (const k of Object.keys(session.daily)) if (k.startsWith('szkola:') && session.daily[k].d !== day) delete session.daily[k];
+    const d = session.daily[id];
+    if (!d || d.d !== day) session.daily[id] = { d: day, n: 0, a: 0 };
+    return session.daily[id];
+  }
+
+  /** Libraries teach magic and sell magic items. */
+  private openLibrary(p: CityPlace) {
+    const offers = gear.magic ? this.offers('biblioteka') : [];
+    const learn = gear.magic ? [] : [`Naucz się magii – ${NAUKA_MAGII} monet`];
+    const left = BIBLIOTEKA_ZAGADKI.naSesje - session.libRiddles;
+    // The learned society's survey: the way to a village (one per library per login).
+    const known = this.missions.find((rm) => rm.m.placeId === p.id && (rm.m.id.endsWith(`-${session.nonce}`) || session.gen[rm.m.id]));
+    const survey = known ? null : mapMissionForLibrary(this.city, p);
+    // A finished survey from any library can be handed in here.
+    const report = this.missions.find((rm) => rm.m.dowolnaBiblioteka && missionState(rm.m) === 'goal');
+    const surveyBtn = report ? `📜 Oddaj relację: ${report.m.tytul}` : known ? `🗺 ${known.m.tytul}` : survey ? `🗺 ${survey.tytul} (+${survey.doswiadczenie} EXP)` : null;
+    const riddleBtn = left > 0 ? `🧩 Zagadka bibliotekarki (zostały ${left})` : '🧩 Zagadki na dziś wyczerpane';
+    const mapBtn = this.mamMapePodroznika() ? null : `🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`;
+    const entries: ShopEntry[] = [
+      ...learn.map((_, i): ShopEntry => ({ id: 'learn:magic', index: i, name: 'Nauka magii', category: 'magic', picture: itemPictureUrl('ksiega'),
+        description: 'Naucz się zaklęć, a potem wybierz różdżkę, kulę albo księgę.', price: NAUKA_MAGII, action: 'NAUCZ SIĘ', refresh: true })),
+      ...offers.map((o, i) => shopItem(o, learn.length + i, this.cenaDla(o))),
+      ...(surveyBtn ? [{ id: 'library:survey', index: learn.length + offers.length, name: surveyBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
+        category: 'services' as const, description: 'Porozmawiaj z bibliotekarką o wyprawie.', action: 'ROZMAWIAJ' }] : []),
+      { id: 'library:riddle', index: learn.length + offers.length + Number(!!surveyBtn), name: riddleBtn.replace(/^[^\p{L}\p{N}]+/u, ''),
+        category: 'services', description: 'Bibliotekarka przygotowała zagadki.', action: 'ROZMAWIAJ' },
+      ...(mapBtn ? [{ id: 'library:mapa', index: learn.length + offers.length + Number(!!surveyBtn) + 1, name: 'Przepisz dworce z mapy', category: 'services' as const,
+        description: `Bibliotekarka pozwoli przepisać ze swojej mapy dworce i porty w promieniu ${MAPA_PODROZNIKA.promienKm} km.`, price: MAPA_PODROZNIKA.cena, action: 'PRZEPISZ' }] : []),
+    ];
+    this.shopDialog(p, {
+      title: `📚 ${p.name}`,
+      text: gear.magic
+        ? `Bibliotekarka szepcze: magii nie ćwiczy się w ciszy. Masz ${session.coins} monet.`
+        : `W starych księgach zapisano sztukę magii. Po nauce będziesz też magiem: przytrzymaj atak z różdżką, kulą albo księgą w ręce, by rzucać zaklęcia. Masz ${session.coins} monet.`,
+      buttons: [...learn, ...offers.map((o) => this.label(o)), ...(surveyBtn ? [surveyBtn] : []), riddleBtn, ...(mapBtn ? [mapBtn] : []), 'Wyjdź'],
+      icons: [...learn.map(() => null), ...offers.map((o) => itemTexture(o.id)), ...(surveyBtn ? [null] : []), null, ...(mapBtn ? [null] : []), null],
+      onChoose: (i) => {
+        const at = learn.length + offers.length;
+        if (surveyBtn && i === at) {
+          if (report) return this.openMissionDialog(report);
+          if (known) return this.openMissionDialog(known);
+          const m = survey!;
+          const rm: ResolvedMission = { m, door: { ...p.door, building: p.building ?? undefined }, target: resolvePlace(this.city, m.zadanie.miejsce) };
+          return this.openMissionDialog(rm, () => {
+            session.gen[m.id] = m;
+            this.addMission(rm, false);
+          });
+        }
+        if (i === at + (surveyBtn ? 1 : 0)) return this.libraryRiddle(p);
+        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p), `Bibliotekarka – ${p.name}`);
+        if (learn.length && i === 0) {
+          if (session.coins < NAUKA_MAGII) {
+            this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
+            return;
+          }
+          spend(NAUKA_MAGII);
+          gear.magic = true;
+          this.emitHud();
+          this.toast('Jesteś teraz także magiem! Kup różdżkę, by rzucać zaklęcia.', 3000);
+          this.save();
+          return;
+        }
+        const o = offers[i - learn.length];
+        if (o) this.buy(o);
+      },
+    }, entries, () => this.openLibrary(p), 'Księgi, magia i opowieści z dalekich wypraw.');
+  }
+
+  /** A librarian's riddle: at most BIBLIOTEKA_ZAGADKI.naSesje per session, one try each. */
+  private libraryRiddle(p: CityPlace) {
+    const { naSesje, exp } = BIBLIOTEKA_ZAGADKI;
+    if (session.libRiddles >= naSesje) {
+      this.dialog({ title: `📚 ${p.name}`, text: `Bibliotekarka uśmiecha się: „Na dziś wystarczy – zadałam ci już ${naSesje} zagadki. Wróć następnym razem!”`, buttons: ['OK'], onChoose: () => {} });
+      return;
+    }
+    const n = session.libRiddles++;
+    const r = riddleFor({ id: `lib:${p.id}:${session.nonce}:${n}`, x: 0, y: 0, name: '', greeting: '', difficulty: 0 }, today(), session.age);
+    this.dialog({
+      title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
+      text: `${r.question}\n\nTylko jedna próba!`,
+      buttons: [...r.answers],
+      odpowiedzi: true,
+      onChoose: (i) => {
+        const right = i === r.correct;
+        if (right) {
+          session.exp += exp;
+          session.stats.riddles = (session.stats.riddles ?? 0) + 1;
+          this.emitHud();
+        }
+        this.dialog({
+          title: right ? '🎉 Brawo!' : '😕 Niestety…',
+          text: right ? `Dobra odpowiedź! +${exp} EXP.` : `Dobra odpowiedź to: ${r.answers[r.correct]}.`,
+          buttons: ['OK'],
+          onChoose: () => {},
+        });
+        this.save();
+      },
+    });
+  }
+
+  /**
+   * The heal button (🧪/🍎, key H): a potion when 2+ hearts are missing (or
+   * there isn't enough fruit), else 20 fruit for one heart.
+   */
+  /** Fruit eaten for one heart (fewer in the QR demo). */
+  fruitPerHeart() {
+    return demo.on ? SEN.owocowNaSerce : LECZENIE_OWOCAMI.owocow;
+  }
+
+  /**
+   * The HUD's heal button (and key H), as the spec says: a potion when there is one,
+   * else fruit (LECZENIE_OWOCAMI.owocow for one heart).
+   */
+  healButton() {
+    if (this.player.isDead) return;
+    if (this.player.hp >= PLAYER.maxHp) return this.toast('Masz pełne zdrowie.', 1200);
+    if (session.mikstury > 0) return this.drinkPotion();
+    if (totalFruit() >= this.fruitPerHeart()) return this.eatFruit();
+    if (nextFood()) return this.eatPreparedFood();
+    this.toast(`Nie masz czym się uleczyć: zbierz ${this.fruitPerHeart()} owoców albo kup miksturę u alchemika (stacja benzynowa).`, 3000);
+  }
+
+  quickHeal() {
+    return this.healButton();
+  }
+
+  private eatPreparedFood() {
+    const food = nextFood();
+    if (!food || this.player.isDead || this.player.hp >= PLAYER.maxHp) return;
+    if (!takeItem(food.id)) return;
+    this.player.heal(2 * food.leczenie!);
+    this.emitHud(); this.save();
+    this.toast(`${foodIcon(food.id) ?? '🥣'} Zjedzone: ${food.nazwa}. +${food.leczenie} ${food.leczenie === 1 ? 'serce' : food.leczenie! < 5 ? 'serca' : 'serc'}.`);
+  }
+
+  /** A potion: full health and a bonus (blue) heart for a while; it also cures a dragon's poison, burns and acid. */
+  private drinkPotion() {
+    session.mikstury--;
+    this.stany = {};
+    this.player.heal(PLAYER.maxHp);
+    this.player.extra = ALCHEMIK.premiaSerc * 2;
+    this.player.extraUntil = Date.now() + ALCHEMIK.premiaMinut * 60_000;
+    this.toast(`🧪 Glup, glup! Pełne zdrowie i dodatkowe serduszko na ${ALCHEMIK.premiaMinut} minut.`, 2500);
+    this.emitHud();
+  }
+
+  /** The alchemist at a petrol station: 50 fruit → a healing potion. */
+  private openAlchemist(p: CityPlace) {
+    // The hermit's recipe (flag receptura_alchemika, Stary Gród Q6): a potion from 30 fruit instead of 50.
+    const n = session.flagi.receptura_alchemika ? Math.min(ALCHEMIK.owocow, 30) : ALCHEMIK.owocow;
+    const have = totalFruit();
+    this.dialog({
+      title: `⚗️ Alchemik – ${p.name}`,
+      text: `Na zapleczu stacji bulgocze kociołek. Alchemik mruczy: „Daj mi ${n} owoców albo grzybów, a uwarzę ci miksturę: wyleczy cię całego i przez ${ALCHEMIK.premiaMinut} minut da ci dodatkowe serduszko.”\n\nMasz ${have} owoców i ${session.mikstury} ${session.mikstury === 1 ? 'miksturę' : 'mikstur'}. Miksturę wypijesz przyciskiem 🧪 (klawisz H).`,
+      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, ...ESENCJE.map((e) => `${e.ikona} ${e.nazwa} (${this.recipeText(e)})`), 'Wyjdź'],
+      onChoose: (i) => {
+        if (i >= 1 && i <= ESENCJE.length) return this.brewEssence(ESENCJE[i - 1]);
+        if (i !== 0) return;
+        if (!eatInventoryFruit(n)) return this.toast(`Za mało owoców – potrzeba ${n}, masz ${have}.`, 2500);
+        session.mikstury++;
+        this.toast('🧪 Masz nową miksturę!', 1800);
+        this.emitHud();
+        this.save();
+      },
+    });
+  }
+
+  private recipeText(e: Esencja) {
+    return (Object.entries(e.przepis) as [Grupa, number][]).map(([g, n]) => `${n} ${GRUPY[g].nazwa.toLowerCase()}`).join(', ');
+  }
+
+  /** An essence (content/esencje.ts): the alchemist brews a flask into the backpack from what the recipe asks. */
+  private brewEssence(e: Esencja) {
+    const need = Object.entries(e.przepis) as [Grupa, number][];
+    const short = need.filter(([g, n]) => groupCount(g) < n);
+    if (short.length) return this.toast(`Alchemik kręci głową: „Potrzebuję: ${this.recipeText(e)}” (masz ${need.map(([g]) => `${GRUPY[g].nazwa.toLowerCase()} ${groupCount(g)}`).join(', ')}).`, 3500);
+    if (gear.bag.length >= PLECAK.miejsc) return this.toast('Plecak pełny – nie ma gdzie schować flakonika.', 2500);
+    for (const [g, n] of need) takeGroup(g, n);
+    addEssence(e.id);
+    this.toast(`${e.ikona} ${e.nazwa} jest w plecaku. Przeciągnij ją na broń (karta postaci → Ekwipunek): działa ${e.minut} minut.`, 4000);
+    this.emitHud();
+    this.save();
+  }
+
+  /** How much harder a blow lands with the weapon's essence (frost on the creatures sensitive to it). */
+  private essenceBoost(e: Esencja | undefined, s: Enemy) {
+    return e?.wrazliwe?.includes(s.kindId) ? e.mnoznik ?? 1 : 1;
+  }
+
+  /** The essence's side effect on a creature that survived the blow: stunned (oak) or frozen (frost). */
+  private essenceHit(e: Esencja | undefined, s: Enemy, now: number) {
+    if (!e || s.isDead || Math.random() >= e.szansa) return;
+    if (e.efekt === 'oglusz') s.daze(now, e.ms);
+    else s.daze(now, e.ms, '❄️', 0x9be7ff);
+  }
+
+  /** Eating fruit (character sheet): 20 fruit = one heart. Returns the new health, or null. */
+  eatFruit(): number | null {
+    if (this.player.isDead || this.player.hp >= PLAYER.maxHp) return null;
+    if (!eatInventoryFruit(this.fruitPerHeart())) return null;
+    this.player.heal(2 * LECZENIE_OWOCAMI.serduszek);
+    this.emitHud();
+    this.toast('Mniam! +1 ❤', 1200);
+    return this.player.hp;
+  }
+
+  /** After things were put on or off in the character sheet. */
+  /** What the hero wears that shows on the sprite. */
+  private worn() {
+    return { helm: gear.equip.helm, armor: gear.equip.zbroja, boots: gear.equip.buty };
+  }
+
+  /** Redraws the hero when a helmet, armour or boots go on or off. */
+  private refreshLook() {
+    if (hdOn) {
+      // The new heroes: only the chosen character (character sheet) changes the picture.
+      const key = `hd-${heroSkin(session.look.postac, session.name).id}`;
+      if (this.player.texture.key === key) return;
+      const frame = this.player.frame.name;
+      this.player.anims.stop();
+      this.player.setTexture(useHdHero(this, session.look.postac, session.name), frame);
+      fitHd(this.player);
+      this.game.events.emit('hero-look');
+      return;
+    }
+    const w = JSON.stringify(this.worn());
+    if (w === this.wornKey) return;
+    this.wornKey = w;
+    const frame = this.player.frame.name;
+    makePlayerTexture(this, session.look, this.worn());
+    this.player.setTexture(PLAYER_TEX, frame);
+  }
+
+  gearChanged() {
+    this.applySkill();
+    this.vision = []; // a glowing sword changes how far we see
+    this.emitHud();
+  }
+
+  /** For automated browser checks. */
+  debugSession() {
+    return session;
+  }
+
+  debugGear() {
+    return gear;
+  }
+
+  debugAddFruit(f: Owoc) {
+    return addFruit(f);
+  }
+
+  /** Shops and schools for the map screen. */
+  placeMarkers() {
+    return this.city.places.map((p) => ({ x: p.door.x, y: p.door.y, kind: p.kind }));
+  }
+
+  /** `onAccept` is for random missions: they join the game only when taken. */
+  private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
+    const m = rm.m;
+    const st = missionState(m);
+    // The giver speaks (Misja.postac): their name over the mission's.
+    const who = m.postac ? `${m.postac.imie} – ${m.tytul}` : m.tytul;
+    if (m.zadanie.typ === 'brak' && !m.etapy?.length) {
+      // Just a place (e.g. a partner with a secret code on a flyer).
+      this.missionDialog(m, { title: who, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
+    } else if (st === 'new' && this.questCount() >= ZADAN_NARAZ) {
+      this.missionDialog(m, {
+        title: who,
+        text: `${m.opis}\n\n${tx(`Masz już ${ZADAN_NARAZ} zadania naraz – wróć, gdy skończysz któreś. (Aktywne zadania zobaczysz w karcie postaci 👤.)`, `You already have ${ZADAN_NARAZ} active quests. Finish one before accepting another. View active quests in your character sheet 👤.`)}`,
+        buttons: ['OK'],
+        onChoose: () => {},
+      });
+    } else if (st === 'new') {
+      this.missionDialog(m, {
+        title: who,
+        // Owner 7 Oct 2026: no reward told when a quest is offered – only the explorers' (library) survey says it, so the player knows how far it sends him.
+        text: m.opis + (m.dowolnaBiblioteka ? `\n\n${this.rewardText(m)}.` : '') + (m.wymaga?.zabierz && m.wymaga.przedmiot ? `\n\n(Oddajesz: ${item(m.wymaga.przedmiot)?.nazwa ?? m.wymaga.przedmiot})` : ''),
+        buttons: [tx('Przyjmuję','Accept'), tx('Nie teraz','Not now')],
+        onChoose: (i) => {
+          if (i !== 0 || this.questsFull()) return;
+          const w = m.wymaga;
+          if (w?.zabierz && w.przedmiot) {
+            if (!takeItem(w.przedmiot)) return this.toast(`Nie masz już: ${item(w.przedmiot)?.nazwa ?? w.przedmiot}`, 2500);
+            this.gearChanged();
+          }
+          // Refuse a stale offer if another place already bound this scenario.
+          if (m.scenariusz && (session.gen[m.id] || missionState(m) !== 'new')) return;
+          if (m.scenariusz) session.gen[m.id] = m;
+          setMissionState(m, 'active');
+          session.etap[m.id] = 0;
+          rm.target = stageTarget(this.city, m, rm.door);
+          if (onAccept) onAccept(); // adds it, which also spawns its enemies
+          else this.startMissionGoal(rm);
+          this.refreshMarkers();
+          this.emitHud();
+          this.save();
+          this.etapy.begin(rm);
+        },
+      });
+    } else if (st === 'active') {
+      // A talk, riddle, choice… happening right at this door: start it (again) instead of „not yet”.
+      if (this.etapy.poke(rm)) return;
+      const z = zadanieOf(m);
+      const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
+      const part = stageCount(m) > 1 ? tx(` (etap ${stageIndex(m) + 1} z ${stageCount(m)})`, ` (stage ${stageIndex(m) + 1} of ${stageCount(m)})`) : '';
+      this.missionDialog(m, { title: who, text: `${tx('Jeszcze nie skończyłeś','Still in progress')}${part}.\n\n${tx('Cel','Goal')}: ${z.cel}${count}`, buttons: ['OK'], onChoose: () => {} });
+    } else if (st === 'goal') {
+      this.finishMission(rm);
+    } else {
+      this.missionDialog(m, { title: who, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
+    }
+  }
+
+  /** A shop price: the steam pistol costs half with the gunsmith's drawing (flag schemat_pistoletu, Stary Gród Q2). */
+  private cenaDla(p: { id: string; cena: number }) {
+    return p.id === 'pistolet_parowy' && session.flagi.schemat_pistoletu ? Math.round(p.cena / 2) : p.cena;
+  }
+
+  /** "Nagroda: 150 EXP, 20 monet, Gwizdek Maszynisty i 1 💎" for the mission dialogs. */
+  private rewardText(m: Misja) {
+    const parts = [
+      m.nagroda ? `${m.nagroda} ${tx('monet','coins')}` : '',
+      `${missionExp(m)} EXP`,
+      m.przedmiot ? item(m.przedmiot)?.nazwa ?? '' : '',
+      ...(m.przedmioty ?? []).map((id) => item(id)?.nazwa ?? ''),
+      m.tytul_bohatera ? `tytuł „${m.tytul_bohatera}”` : '',
+      m.diamenty ? `${m.diamenty} 💎` : '',
+      m.flaga ? FLAGI_NAZWY[m.flaga] : '',
+    ].filter(Boolean);
+    const last = parts.pop();
+    return `${tx('Nagroda','Reward')}: ${parts.length ? `${parts.join(', ')} ${tx('i','and')} ${last}` : last}`;
+  }
+
+  /** The reward dialog: at the mission's door, or right at the goal for „zakończ na miejscu” missions. */
+  private finishMission(rm: ResolvedMission) {
+    const m = rm.m;
+    // Who says the closing words: the person at the goal for missions ending there, else the giver.
+    const z = zadanieOf(m);
+    const speaker = (m.naMiejscu || m.etapy?.length) && z.postac ? z.postac.imie : m.postac?.imie;
+    this.missionDialog(m, {
+      title: speaker ? `${speaker} – ${m.tytul}` : m.tytul,
+      text: `${m.zakonczenie}\n\n${this.rewardText(m)}`,
+      buttons: [tx('Dziękuję!','Thank you!')],
+      onChoose: () => {
+        if (missionState(m) !== 'goal') return; // already handed in (a double tap)
+        const z = m.zadanie;
+        if (!m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) {
+          // Refuse a stale offer if another place already bound this scenario.
+          if (m.scenariusz && (session.gen[m.id] || missionState(m) !== 'new')) return;
+          if (m.scenariusz) session.gen[m.id] = m;
+          setMissionState(m, 'active');
+          this.refreshMarkers();
+          this.toast('Czegoś jednak brakuje w plecaku!');
+          return;
+        }
+        earn(m.nagroda);
+        session.stats.missions++;
+        session.exp += missionExp(m);
+        if (m.diamenty) {
+          session.diamenty += m.diamenty;
+          this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${m.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500));
+        }
+        const gifts = [m.przedmiot, ...(m.przedmioty ?? [])].filter((x): x is string => !!x && !!item(x));
+        if (gifts.length) {
+          const lost = gifts.filter((id) => !addItem(id));
+          const got = gifts.filter((id) => !lost.includes(id));
+          this.toast([got.length ? `Dostałeś: ${got.map((id) => item(id)!.nazwa).join(', ')}!` : '', lost.length ? `Plecak pełny – przepadło: ${lost.map((id) => item(id)!.nazwa).join(', ')}.` : ''].filter(Boolean).join('\n'), 2500);
+          this.gearChanged();
+        }
+        if (m.flaga && m.flaga !== 'znizka_woznica' && !session.flagi[m.flaga]) {
+          session.flagi[m.flaga] = 1;
+          const what = m.flaga;
+          this.time.delayedCall(2600, () => this.toast(what === 'schemat_pistoletu' ? '📜 Schemat pistoletu: pistolet parowy w sklepach za pół ceny!' : '📜 Receptura alchemika: mikstura z 30 owoców zamiast 50!', 4000));
+        }
+        if (m.tytul_bohatera) {
+          session.story.title = m.tytul_bohatera;
+          this.time.delayedCall(1200, () => this.toast(`🏅 Nowy tytuł: ${m.tytul_bohatera}!`, 3000));
+        }
+        delete session.etap[m.id];
+        if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
+          session.flagi.znizka_woznica = 1;
+          session.flagi.przejazd = (session.flagi.przejazd ?? 0) + 1;
+          this.time.delayedCall(2600, () => this.toast(`🐴 Zniżka u woźniców: −${Math.round(WOZNICA.znizka * 100)}% na zawsze, a na dworcu ${WOZNICA.gratisNaStacji} jeden kurs gratis!`, 4000));
+        }
+        setMissionState(m, 'done');
+        this.plainAgain(m.id);
+        this.refreshMarkers();
+        this.emitHud();
+        this.save(); // finishing a mission is a save point
+      },
+    });
+  }
+
+  /**
+   * The goal is reached (enemies beaten, spot reached, things gathered, riddle solved): back to the
+   * door for the reward, or – „zakończ na miejscu” – the reward right here, so a chain flows on.
+   */
+  private reachGoal(rm: ResolvedMission, said?: string) {
+    setMissionState(rm.m, 'goal');
+    this.refreshMarkers();
+    // Multi-stage missions end where their last stage happens (its last stage is usually the talk with the giver).
+    if (rm.m.naMiejscu || rm.m.etapy?.length) {
+      this.finishMission(rm);
+      return;
+    }
+    if (said !== undefined) this.toast(`${said} ${tx('Wróć do', 'Return to')}: ${rm.m.adres}`);
+  }
+
+  /**
+   * The current stage is done: its story items change hands, its closing words show, and the mission moves
+   * on to the next stage – or, after the last one, to its reward (reachGoal). One-stage missions go straight on.
+   */
+  completeStage(rm: ResolvedMission, said?: string) {
+    const m = rm.m;
+    if (missionState(m) !== 'active') return;
+    const z = zadanieOf(m);
+    const completedIndex = stageIndex(m);
+    if (m.etapy?.length && z.typ === 'zbierz' && z.towar && !takeFruit(z.towar, z.ile ?? 1)) return;
+    giveStory(z.daje);
+    takeStory(z.zabiera);
+    const last = stageIndex(m) >= stageCount(m) - 1;
+    const after = () => {
+      if (missionState(m) !== 'active' || stageIndex(m) !== completedIndex) return;
+      if (last) return this.reachGoal(rm, said);
+      session.etap[m.id] = stageIndex(m) + 1;
+      rm.target = stageTarget(this.city, m, rm.door);
+      this.startMissionGoal(rm);
+      this.emitHud();
+      this.save();
+      if (said && !m.scenariusz) this.toast(`${said}Dalej: ${zadanieOf(m).cel}`, 2500);
+      this.etapy.begin(rm);
+    };
+    if (m.scenariusz && said && z.typ === 'decyzja') z.komunikat = said;
+    const gave = z.daje?.length ? `\n\n📜 Masz: ${z.daje.join(', ')}` : '';
+    // The closing words (komunikat), then the next stage. One-stage missions keep their old messages.
+    if (m.etapy?.length && (z.komunikat || gave)) this.dialog({ ...z.dialogueMeta, title: m.tytul, text: `${z.komunikat ?? ''}${gave}`.trim(), buttons: [tx('Dalej','Next')], onChoose: after });
+    else after();
+  }
+
+  /** A timed walk ran out: back to the stage before it, no penalty. */
+  stageBack(rm: ResolvedMission) {
+    const m = rm.m;
+    session.etap[m.id] = Math.max(0, stageIndex(m) - 1);
+    rm.target = stageTarget(this.city, m, rm.door);
+    this.startMissionGoal(rm);
+    this.emitHud();
+    this.dialog({ title: `⏱ ${m.tytul}`, text: 'Czas minął! Spróbuj jeszcze raz.', buttons: ['Jeszcze raz'], onChoose: () => {} });
+  }
+
+  /** A mission dialog; where a secret code can be told, it gets one more button. */
+  private missionDialog(m: Misja, req: DialogRequest) {
+    if (!session.secrets.has(m.id)) return this.dialog(req);
+    const secret = '🤫 Psst, mam tajemne hasło';
+    this.dialog({
+      ...req,
+      buttons: [...req.buttons.slice(0, -1), secret, ...req.buttons.slice(-1)],
+      onChoose: (i) => {
+        const at = req.buttons.length - 1;
+        if (i === at) this.tellSecret(m);
+        else req.onChoose(i > at ? i - 1 : i);
+      },
+    });
+  }
+
+  /** Asks for a code (from a flyer in the real place) and gives its reward. */
+  private async tellSecret(m: Misja) {
+    if (gear.bag.length >= PLECAK.miejsc) {
+      this.toast('Zrób najpierw miejsce w plecaku – nagroda musi się zmieścić!', 3000);
+      return;
+    }
+    this.scene.pause();
+    const code = await askText('🤫 Tajemne hasło', 'Ktoś tu nachyla się i szepcze: „Znasz hasło?”', 'hasło z ulotki');
+    this.scene.resume();
+    consumeAttack();
+    if (!code) return;
+    try {
+      const { reward } = await api.redeem(session.token, m.id, code);
+      const p = item(reward);
+      if (!p || !addItem(reward)) throw new Error('Nie udało się odebrać nagrody.');
+      session.stats.codes++;
+      this.gearChanged();
+      this.dialog({
+        title: '✨ Hasło przyjęte!',
+        text: `Dostajesz: ${p.nazwa}!${p.opis ? `\n\n${p.opis}` : ''}`,
+        buttons: ['Wow, dzięki!'],
+        onChoose: () => {},
+      });
+      this.save();
+    } catch (e) {
+      this.toast((e as Error).message, 3000);
+    }
+  }
+
+  private markersAt = 0;
+  private clockAt = 0;
+
+  private checkGoals() {
+    // Chains: a mission shows up as soon as its requirements are met (level, earlier mission, an item).
+    if (this.time.now > this.markersAt) {
+      this.markersAt = this.time.now + 1000;
+      this.refreshMarkers();
+    }
+    this.etapy.update(this.missions, this.time.now, this.game.loop.delta);
+    // A timed walk: the HUD line counts down.
+    if (this.time.now > this.clockAt && this.missions.some((rm) => this.etapy.secondsLeft(rm.m.id, this.time.now) !== null)) {
+      this.clockAt = this.time.now + 1000;
+      this.emitHud();
+    }
+    for (const rm of this.missions) {
+      const z = zadanieOf(rm.m);
+      const st = missionState(rm.m);
+      const multi = !!rm.m.etapy?.length;
+      if (z.typ === 'zbierz' && z.towar) {
+        // Enough in the backpack: take it back. (Sold or eaten meanwhile: not yet.)
+        const have = fruitCount(z.towar) >= (z.ile ?? 1);
+        if (st === 'active' && have) {
+          if (multi) this.completeStage(rm, 'Masz wszystko! ');
+          else this.reachGoal(rm, 'Masz wszystko! ');
+        } else if (!multi && st === 'goal' && !have) {
+          setMissionState(rm.m, 'active');
+          this.refreshMarkers();
+        }
+        continue;
+      }
+      if (z.typ !== 'idz' || st !== 'active' || !rm.target) continue;
+      if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
+        if (!multi && z.komunikat && !rm.m.naMiejscu) {
+          setMissionState(rm.m, 'goal');
+          this.refreshMarkers();
+          this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
+        } else this.completeStage(rm, 'Dotarłeś! ');
+      }
+    }
+  }
+
+  /** Mission doors for the map screen. */
+  missionMarkers() {
+    return this.missions.filter((rm) => missionAvailable(rm.m) && missionState(rm.m) !== 'done').map((rm) => ({ x: rm.door.x, y: rm.door.y, done: false }));
+  }
+
+  goalPosition() {
+    return this.activeQuests().find((q) => q.pos)?.pos ?? null;
+  }
+
+  /** Radius (px) of the area to search, for wanted villains; 0 otherwise. */
+  goalRadius() {
+    const rm = this.missions.find((r) => missionState(r.m) === 'active');
+    return rm && zadanieOf(rm.m).szukaj ? SEARCH_RADIUS + 10 : 0;
+  }
+
+  private appliedLevel = '';
+
+  /** The level bonus (and worn items' life/speed): more life (the new part comes filled) and faster walking. */
+  private applyLevel() {
+    const lvl = poziomPostaci(session.exp);
+    const zycie = gearLifeBonus();
+    const bieg = gearSpeedBonus();
+    const key = `${lvl}|${zycie}|${bieg}`;
+    if (key === this.appliedLevel && this.player.speed !== PLAYER.speed) return;
+    this.appliedLevel = key;
+    const max = zyciePostaci(session.level.serca, session.exp) + zycie;
+    if (max > PLAYER.maxHp && !this.player.isDead) this.player.hp += max - PLAYER.maxHp;
+    PLAYER.maxHp = max;
+    this.player.hp = Math.min(this.player.hp, max);
+    // The demo's protection from death must not grant the administrator's fivefold speed.
+    this.player.speed = PLAYER.speed * szybkoscPostaci(session.exp) * (1 + bieg) * (session.immortal && !demo.on ? ADMIN_SZYBKOSC : 1);
+  }
+
+  /**
+   * Active quests (the story first, then challenges and missions), at most
+   * ZADAN_NARAZ, each with its arrow colour (kept while it stays active).
+   */
+  activeQuests(): QuestInfo[] {
+    const list: Omit<QuestInfo, 'color'>[] = [];
+    // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
+    // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
+    const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
+    if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
+    for (const q of this.sideQuests()) list.push({ ...q, main: false });
+    const ids = new Set(list.map((q) => q.id));
+    for (const k of [...questColors.keys()]) if (!ids.has(k)) questColors.delete(k);
+    const out: QuestInfo[] = list.slice(0, ZADAN_NARAZ).map((q) => {
+      if (q.main) return { ...q, color: KOLOR_GLOWNEGO };
+      if (!questColors.has(q.id)) {
+        const used = new Set(questColors.values());
+        questColors.set(q.id, KOLORY_ZADAN.find((c) => !used.has(c)) ?? KOLORY_ZADAN[questColors.size % KOLORY_ZADAN.length]);
+      }
+      return { ...q, color: questColors.get(q.id)! };
+    });
+    // The traveller's map's guide: its own arrow, not counted among the quests.
+    if (droga) {
+      const pos = this.city.fromLatLon(droga.lat, droga.lon);
+      const km = Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) / PX_PER_M / 1000;
+      out.push({ id: 'droga', main: false, title: `🧭 Droga do: ${droga.nazwa}`, text: `🧭 ${IKONA_HUBA[droga.rodzaj]} ${droga.nazwa} (${km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`})`, pos, color: MAPA_PODROZNIKA.kolor });
+    }
+    return out;
+  }
+
+  /** Quests counted for the limit (the traveller's map's guide is not one). */
+  private questCount() {
+    return this.activeQuests().filter((q) => q.id !== 'droga').length;
+  }
+
+  /**
+   * Has the hero copied this area's hubs onto his map? Each copy covers only the area around where it was done
+   * (owner, 13 Oct 2026: copied in Lublin, it says nothing about the station in Lębork).
+   */
+  mamMapePodroznika() {
+    const here = this.city.toLatLon(this.player.x, this.player.y);
+    return this.mapyPodroznika().some((m) => odleglosc(m, here) < MAPA_PODROZNIKA.promienKm * MAPA_PODROZNIKA.nowaOd);
+  }
+
+  /** The copies made (where, and which hubs). */
+  mapyPodroznika() {
+    return session.mapyPodroznika;
+  }
+
+  /** The hub the traveller's map guides to (map screen). */
+  drogaDo() {
+    return droga;
+  }
+
+  /** Map screen „🧭 Prowadź”: the arrow points to this hub (null = stop guiding). */
+  prowadzDo(h: Hub | null) {
+    droga = h;
+    if (h) this.toast(`🧭 Strzałka prowadzi do: ${h.nazwa}`, 2500);
+    this.emitHud();
+  }
+
+  /** Arrived at the guided hub: the guide ends. */
+  private checkDroga() {
+    if (!droga) return;
+    const pos = this.city.fromLatLon(droga.lat, droga.lon);
+    if (Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) > MAPA_PODROZNIKA.doszedlM * PX_PER_M) return;
+    this.toast(`🧭 Jesteś na miejscu: ${droga.nazwa}`, 3000);
+    droga = null;
+    this.emitHud();
+  }
+
+  /**
+   * Copying the hubs from a coachman's/captain's/librarian's map (owner, 13 Oct 2026: not an item – „No tak, nowe
+   * miejsce. Przepisz sobie z mojej mapy, co gdzie jest”): pay once, and at most MAPA_PODROZNIKA.maksIkon hubs
+   * around here (the nearest of each kind, the rest spread out) stay on the hero's map screen for good.
+   */
+  private buyTravellerMap(back: () => void, kto: string) {
+    if (this.mamMapePodroznika()) return back();
+    const cena = MAPA_PODROZNIKA.cena;
+    this.dialog({
+      title: `🗺 ${kto}`,
+      text: `„No tak, nowe miejsce. Przepisz sobie z mojej mapy, co gdzie jest – dworce, przystanki dyliżansów i porty w okolicy, do ${MAPA_PODROZNIKA.promienKm} km stąd.”\n\nZaznaczysz je na swojej mapie (🗺) na zawsze. Kosztuje ${cena} monet. Masz ${session.coins}.`,
+      buttons: [`Przepisuję – ${cena} 💰`, 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return back();
+        if (session.coins < cena) return this.toast(`Za mało monet: to kosztuje ${cena}.`);
+        const here = this.city.toLatLon(this.player.x, this.player.y);
+        this.toast('🗺 Przepisujesz…', 1500);
+        void hubyBlisko(here, MAPA_PODROZNIKA.promienKm, MAPA_PODROZNIKA.maksIkon).catch(() => [] as Hub[]).then((h) => {
+          if (!h.length) return this.toast('„Hm, w okolicy nie ma żadnego dworca ani portu.” Nic nie płacisz.', 3500);
+          if (session.coins < cena || this.mamMapePodroznika()) return;
+          spend(cena);
+          session.mapyPodroznika.push({ ...here, h: doZapisu(h) });
+          this.emitHud();
+          this.save();
+          this.toast(`🗺 Na twojej mapie: ${h.map((q) => `${IKONA_HUBA[q.rodzaj]} ${q.nazwa}`).join(', ')}. Otwórz mapę (🗺 albo M).`, 6000);
+        });
+      },
+    });
+  }
+
+  /** The quest log for the character sheet: where each began, what now, how far (in words) and its arrow. */
+  questLog(): QuestLine[] {
+    // Story items (mission stages) show under the quests: „Masz: soczewka, korzeń dębu”.
+    const items = session.fabula.length ? `\n📜 Masz: ${session.fabula.join(', ')}` : '';
+    return this.activeQuests().map((q, i) => {
+      const mission=session.gen[q.id] ?? this.missions.find(r=>r.m.id===q.id)?.m;
+      const notes=mission ? missionNotes(mission) : '';
+      return {
+      id: q.id, title: q.title, text: `${q.text}${notes ? `\n${notes}` : ''}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
+      far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
+      arrow: !session.bezStrzalki.includes(q.id),
+    };});
+  }
+
+  /**
+   * Where an NPC last told the hero he is (HUD plaque, second line): set by any talk,
+   * forgotten MIEJSCE_HUD.wiedzaM away from that spot (owner's HUD spec, 5 Oct 2026).
+   */
+  private toldPlace: { name: string; x: number; y: number; map: string } | null = null;
+
+  private learnPlace() {
+    const x = this.player.x;
+    const y = this.player.y;
+    const name = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '').replace(/,.*$/, '') ?? null;
+    if (name) this.toldPlace = { name, x, y, map: this.city.id };
+  }
+
+  /** The town the hero belongs to now: its name, centre and the radius counted as "in town". */
+  private townAt(x: number, y: number): { name: string; x: number; y: number; r: number; wies?: boolean; nieznana?: boolean } {
+    const R = MIEJSCE_HUD;
+    if (this.city.id === 'lublin') {
+      const towns = this.city.townList();
+      const d = (t: { x: number; y: number }) => Math.hypot(t.x - x, t.y - y);
+      const lub = towns.find((t) => t.name === 'Lublin');
+      const near = towns.filter((t) => t.name !== 'Lublin').sort((a, b) => d(a) - d(b))[0];
+      if (near && (!lub || d(near) < 1500 * PX_PER_M && d(near) < d(lub) || d(lub) > 12_000 * PX_PER_M)) return { ...near, r: R.wsM * PX_PER_M, wies: !R.miasta.includes(near.name) };
+      if (lub) return { ...lub, r: R.lublinM * PX_PER_M };
+    }
+    const o = worldOrigin(this.city.id);
+    if (o) {
+      const lt = this.localNear(x, y);
+      if (lt?.name) return { name: lt.name, x: lt.x, y: lt.y, r: lt.r, wies: lt.wies };
+      if (!this.worldTown(x, y)) return { name: tx('Nieznana okolica', 'Unknown area'), x, y, r: 0, nieznana: true };
+    }
+    const c = o ? this.city.fromLatLon(o.lat, o.lon) : { x: (this.city.minX + this.city.width) / 2, y: (this.city.minY + this.city.height) / 2 };
+    return { name: mapName(this.city.id), x: c.x, y: c.y, r: (o ? R.miastoM : R.miasteczkoM) * PX_PER_M };
+  }
+
+  /**
+   * The plaque's two lines: the town, and where we are – the place an NPC named while
+   * near it, else "w mieście / za miastem · gdzieś na północy" counted from the town's centre.
+   */
+  private placeInfo(): { town: string; detail: string } {
+    const x = this.player.x;
+    const y = this.player.y;
+    const t = this.townAt(x, y);
+    const told = this.toldPlace;
+    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    if (t.nieznana) return { town: t.name, detail: tx('zapytaj przechodnia', 'ask a passer-by') };
+    const dx = x - t.x;
+    const dy = y - t.y;
+    const dist = Math.hypot(dx, dy);
+    const inTown = dist < t.r;
+    if (inTown && dist < t.r * MIEJSCE_HUD.centrum) return { town: t.name, detail: 'w centrum' };
+    const strony = ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
+    const k = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
+    const where = t.wies ? (inTown ? 'we wsi' : 'za wsią') : inTown ? 'w mieście' : 'za miastem';
+    return { town: t.name, detail: `${where} · gdzieś ${strony[k]}` };
+  }
+
+  /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
+  private whereIs(x: number, y: number) {
+    // A street line if that part of the map is loaded, else the nearest known address without its number.
+    const addr = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '') ?? null;
+    if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
+    const street = addr;
+    let town = mapName(this.city.id);
+    if (worldOrigin(this.city.id)) town = this.worldTown(x, y) ?? 'Daleko';
+    if (this.city.id === 'lublin') {
+      // The Lublin map also holds Garbów, Jastków, Nałęczów and the villages around.
+      const towns = this.city.townList();
+      const d = (t: { x: number; y: number }) => Math.hypot(t.x - x, t.y - y);
+      const lub = towns.find((t) => t.name === 'Lublin');
+      const near = towns.filter((t) => t.name !== 'Lublin').sort((a, b) => d(a) - d(b))[0];
+      if (near && d(near) < 1500 * PX_PER_M && (!lub || d(near) < d(lub))) town = near.name;
+      else if (!lub || d(lub) > 12_000 * PX_PER_M) town = near?.name ?? town;
+    }
+    return street ? `${street}, ${town}` : town;
+  }
+
+  /** Switches a quest's guiding arrow on or off (character sheet). */
+  toggleArrow(id: string) {
+    const off = session.bezStrzalki;
+    session.bezStrzalki = off.includes(id) ? off.filter((x) => x !== id) : [...off, id];
+    this.emitHud();
+  }
+
+  /** No room for another quest? Then says so. */
+  private questsFull() {
+    if (this.questCount() < ZADAN_NARAZ) return false;
+    this.toast(`Masz już ${ZADAN_NARAZ} zadania naraz. Skończ któreś, zanim weźmiesz kolejne.`, 3000);
+    return true;
+  }
+
+  /** Side quests: a sports challenge and missions in progress. */
+  private sideQuests(): { id: string; title: string; text: string; pos: { x: number; y: number } | null; start?: string }[] {
+    const out: { id: string; title: string; text: string; pos: { x: number; y: number } | null; start?: string }[] = [];
+    const px = this.player.x;
+    const py = this.player.y;
+    const dist = (p: { x: number; y: number }) => Phaser.Math.Distance.Between(p.x, p.y, px, py);
+    const c = this.challenge;
+    if (c?.kind === 'kukly') {
+      const left = Math.max(0, (c.until - this.time.now) / 1000).toFixed(1).replace('.', ',');
+      const title = 'Trening u trenera';
+      if (c.step === 'a') out.push({ id: 'sport', title, text: `⏱ ${left} s · Uderz kukłę ${c.hits}/${SPORT.uderzen}`, pos: c.a });
+      else if (c.step === 'b') out.push({ id: 'sport', title, text: `⏱ ${left} s · Biegnij do drugiej kukły i uderz ją`, pos: c.b });
+      else out.push({ id: 'sport', title, text: `⏱ ${left} s · Wracaj do trenera!`, pos: c.npc });
+    }
+    if (c?.kind === 'wyscig') {
+      const t = ((this.time.now - c.start) / 1000).toFixed(1).replace('.', ',');
+      out.push({ id: 'sport', title: 'Wyścig', text: `⏱ ${t} s · Biegnij do boiska ${c.name}!`, pos: c.to });
+    }
+    const fq = this.folkQuest;
+    const n0 = out.length;
+    if (fq) {
+      const title = `${fq.zguba.ikona} ${fq.zguba.nazwa}`;
+      if (fq.got) out.push({ id: 'folk-quest', title, text: `Oddaj: ${fq.zguba.nazwa} – ${fq.folk.name}`, pos: { x: fq.folk.x, y: fq.folk.y } });
+      else if (fq.item) out.push({ id: 'folk-quest', title, text: `Podnieś: ${fq.zguba.nazwa}`, pos: { x: fq.item.x, y: fq.item.y } });
+      else {
+        const foes = fq.enemies.filter((e) => e.active && !e.isDead);
+        const near = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : null;
+        out.push({ id: 'folk-quest', title, text: `Odbij: ${fq.zguba.nazwa} (chochliki ${PROSBY.ile - foes.length}/${PROSBY.ile})`, pos: near ? { x: near.x, y: near.y } : fq.target });
+      }
+    }
+    if (fq && out.length > n0) {
+      const st = this.city.streetNear(fq.folk.x, fq.folk.y);
+      out[out.length - 1].start = `${fq.folk.name}${st ? `, ${st}` : ''}`;
+    }
+    const gq = this.fixed.grazynkaQuest();
+    if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', start: 'Kościelna, Garbów', ...gq });
+    const mq = this.fixed.martinQuest();
+    if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', start: 'Martin, Irysowa', ...mq });
+    for (const rm of this.missions) {
+      const st = missionState(rm.m);
+      const q = { id: rm.m.id, title: missionTitle(rm.m, this.missions.map((r) => r.m)), start: rm.m.adres };
+      const z = zadanieOf(rm.m);
+      // Multi-stage: which stage, and a timed walk's countdown.
+      const part = stageCount(rm.m) > 1 ? `[${stageIndex(rm.m) + 1}/${stageCount(rm.m)}] ` : '';
+      const left = this.etapy.secondsLeft(rm.m.id, this.time.now);
+      const clock = left !== null ? ` ⏱ ${left} s` : '';
+      if (st === 'active' && rm.target && z.typ === 'zbierz') {
+        out.push({ ...q, text: `${part}${z.cel} (${fruitCount(z.towar!)}/${z.ile})`, pos: rm.target });
+      } else if (st === 'active' && rm.target) {
+        // For fights, point at the nearest remaining enemy of that mission; things to pick up / fix: the nearest one.
+        const foes = z.szukaj ? [] : this.enemies.filter((e) => e.missionId === rm.m.id);
+        const thing = z.szukaj ? null : this.etapy.arrowFor(rm.m.id);
+        const pos = foes.length ? foes.reduce((a, b) => (dist(a) < dist(b) ? a : b)) : thing ?? rm.target;
+        out.push({ ...q, text: `${part}${z.cel}${this.etapy.progress(rm.m.id)}${clock}`, pos: { x: pos.x, y: pos.y } });
+      } else if (st === 'goal' && rm.m.dowolnaBiblioteka) {
+        const lib = this.city.places.filter((p) => p.kind === 'library').reduce<CityPlace | null>((a, p) => (!a || dist(p.door) < dist(a.door) ? p : a), null);
+        out.push({ ...q, text: `Oddaj relację w bibliotece${lib ? `: ${lib.name}` : ''}`, pos: lib ? lib.door : rm.door });
+      } else if (st === 'goal') out.push({ ...q, text: `Wróć do: ${rm.m.adres}`, pos: rm.door });
+    }
+    // Accepted elsewhere stays in the journal, with no arrow on this map.
+    for (const m of Object.values(session.gen)) {
+      if (isWithdrawnCityQuest(m.id)) continue;
+      if (!m.scenariusz || m.scenariusz.mapId === this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
+      out.push({ id:m.id, title:m.tytul, start:m.adres,
+        text:`${tx('Kontynuuj w', 'Continue in')} ${m.scenariusz.mapName}: ${zadanieOf(m).cel}`, pos:null });
+    }
+    return out;
+  }
+
+  /** A place sharing a mission's door: the mission dialog gets a button to go in there. */
+  private doorPlace: CityPlace | null = null;
+
+  /** Who the hero talks to and where (for the dialog's portrait); cleared when he walks away. */
+  private rozmowca: { kto: Rozmowca; x: number; y: number } | null = null;
+
+  /** The person at a talk spot: the nearest character sprite (an artist sheet with a front frame) by it. */
+  private zapamietajRozmowce(x: number, y: number) {
+    let best: Phaser.GameObjects.Sprite | null = null, bd = 30;
+    for (const o of this.children.list) {
+      if (!(o instanceof Phaser.GameObjects.Sprite) || o === this.player || !o.visible) continue;
+      const key = o.texture.key;
+      if (!key.startsWith('hd-') || !o.texture.has('down-1')) continue;
+      const d = Math.min(Math.hypot(o.x - x, o.y - y), Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
+      if (d < bd) [best, bd] = [o, d];
+    }
+    this.rozmowca = best ? { kto: { tex: best.texture.key.replace(/-red$/, '') }, x: this.player.x, y: this.player.y } : null;
+  }
+
+  /** A place's door: its sign as the speaker's picture. */
+  private rozmowcaMiejsca(p: CityPlace | null | undefined) {
+    const sign = p ? PLACE_LOOK[p.kind as keyof typeof PLACE_LOOK]?.sign : undefined;
+    this.rozmowca = sign ? { kto: { obraz: sign }, x: this.player.x, y: this.player.y } : null;
+  }
+
+  private dialog(req: DialogRequest) {
+    // The speaker's portrait (owner, 12 Oct 2026): the one talked to a moment ago, while the hero stays by them.
+    const r = this.rozmowca;
+    if (req.kto === undefined && r && Math.hypot(r.x - this.player.x, r.y - this.player.y) < 64) req = { ...req, kto: r.kto };
+    // At a school or church: "ask about the shadows" as one more option, before the last button.
+    const place = this.storyPlace;
+    const door = this.doorPlace;
+    const extras: [string, () => void][] = [];
+    const ask = place && this.story.askLabel();
+    if (place && ask) extras.push([ask, () => this.story.ask(place)]);
+    if (door) extras.push([`🚪 ${door.name || 'Wejdź do środka'}`, () => this.openPlace(door)]);
+    if (extras.length) {
+      this.storyPlace = null;
+      this.doorPlace = null;
+      const at = req.buttons.length - 1;
+      const orig = req;
+      req = {
+        ...req,
+        buttons: [...req.buttons.slice(0, at), ...extras.map(([l]) => l), ...req.buttons.slice(at)],
+        shop: req.shop ? { ...req.shop, entries: [...req.shop.entries,
+          ...extras.map(([name], i): ShopEntry => ({ id: `place:extra:${i}`, index: at + i, name,
+            category: 'services', description: 'Porozmawiaj o tym miejscu.', action: 'ROZMAWIAJ' }))] } : undefined,
+        onChoose: (i) => (i >= at && i < at + extras.length ? extras[i - at][1]() : orig.onChoose(i >= at + extras.length ? i - extras.length : i)),
+      };
+    }
+    req = { ...req, title: legacyText(req.title), text: legacyText(req.text), buttons:req.buttons.map(legacyText) };
+    const metadata = dialogueMetadata(req.text);
+    req = { ...req, language:metadata.textId ? lang : req.language ?? lang, localHumor:req.localHumor ?? metadata.localHumor, textId:req.textId ?? metadata.textId,
+      buttonMetadata:req.buttons.map(label => ({ language:lang, ...dialogueMetadata(label) })) };
+    this.player.vel.set(0, 0);
+    this.player.anims.stop();
+    this.scene.pause();
+    note(`okno: ${req.title} | ${req.text.slice(0, 70)}`);
+    this.game.events.emit('dialog', {
+      ...req,
+      onChoose: (i: number) => {
+        note(`→ ${req.buttons[i] ?? i}`);
+        consumeAttack(); // the tap/key that closed the dialog shouldn't swing the sword
+        // …nor, a moment later, start the same talk again.
+        this.talkReadyAt = performance.now() + TALK_PAUSE_MS;
+        // Nobody attacks during a talk (the scene is paused), nor right after it.
+        this.noHurtUntil = this.game.loop.time + 1500;
+        this.scene.resume();
+        req.onChoose(i);
+      },
+    } satisfies DialogRequest);
+  }
+
+  /** Where the hero is, in words and numbers (bug reports). */
+  whereText() {
+    const p = this.player;
+    const ll = this.city.toLatLon(p.x, p.y);
+    return `${this.city.id} ${Math.round(p.x)},${Math.round(p.y)}${ll ? ` (${ll.lat.toFixed(5)}, ${ll.lon.toFixed(5)})` : ''} ${this.city.streetNear(p.x, p.y) ?? ''}`.trim();
+  }
+
+  /** What a bug report carries besides the player's words. */
+  bugContext() {
+    const p = this.player;
+    const ll = this.city.toLatLon(p.x, p.y);
+    return {
+      map: this.city.id, x: Math.round(p.x), y: Math.round(p.y), lat: ll?.lat, lon: ll?.lon,
+      street: this.city.streetNear(p.x, p.y), hp: p.hp, maxHp: PLAYER.maxHp, coins: session.coins, exp: session.exp,
+      level: session.level.nazwa, story: session.story.st, quests: this.activeQuests().map((q) => q.title),
+      tex: p.texture.key, visible: p.visible, alpha: p.alpha, depth: Math.round(p.depth),
+      fps: Math.round(this.game.loop.actualFps), zoom: this.cameras.main.zoom,
+    };
+  }
+
+  private toast(text: string, ms?: number) {
+    note(`napis: ${text}`);
+    this.game.events.emit('toast', text, ms);
+  }
+
+  /** Share of the way to the next character level (1 at the top level). */
+  private expShare() {
+    const lvl = poziomPostaci(session.exp);
+    if (lvl >= MAKS_POZIOM_POSTACI) return 1;
+    const from = expNaPoziom(lvl);
+    return Math.max(0, Math.min(0.999, (session.exp - from) / (expNaPoziom(lvl + 1) - from)));
+  }
+
+  private emitHud() {
+    this.applyLevel();
+    const quests = this.activeQuests();
+    const preparedFood = nextFood();
+    const state: HudState = {
+      hp: this.player.hp,
+      maxHp: PLAYER.maxHp,
+      extra: this.player.extra,
+      zatruty: !!this.stany.zatrucie,
+      heal: this.player.hp >= PLAYER.maxHp || this.player.isDead
+        ? null
+        : session.mikstury > 0
+          ? { icon: '🧪', n: session.mikstury }
+          : totalFruit() >= this.fruitPerHeart()
+            ? { icon: '🍎', n: Math.floor(totalFruit() / this.fruitPerHeart()) }
+            : preparedFood ? { icon: foodIcon(preparedFood.id) ?? '🥣', n: foodCount(preparedFood.id) } : null,
+      coins: session.coins,
+      exp: session.exp,
+      level: poziomPostaci(session.exp),
+      duel: this.duelHp,
+      duelMax: MIESZKANCY.serduszka * 2,
+      title: session.story.title ? `${session.name}, ${session.story.title}` : null,
+      sword: `${item(gear.equip.bron)?.nazwa ?? 'Kijek'} · poz. ${skillLevel(this.handSkill())}` + this.wearLabel() + (item(gear.equip.dystans) ? `  ✋ ${item(gear.equip.dystans)!.nazwa}` : ''),
+      swordWarn: isBroken(gear.equip.bron) || (!!ammoOf(rangedWeapon() ?? undefined) && gear.ammo[ammoOf(rangedWeapon() ?? undefined)!] < STRZALY.malo),
+      fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
+      fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
+      // Not while the diamonds may still save the hero (the question waits on top).
+      dead: this.player.isDead && !session.immortal && (this.rescueDeclined || !!this.demoRun),
+      lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
+      street: this.city.streetNear(this.player.x, this.player.y),
+      pogoda: weatherLabel(isNight()),
+      quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
+      potions: session.mikstury,
+      fruit: totalFruit(),
+      fruitPerHeal: this.fruitPerHeart(),
+      expShare: this.expShare(),
+      ...this.placeInfo(),
+      goods: goodsByKind(),
+    };
+    this.registry.set('hud', state);
+    this.game.events.emit('hud', state);
+  }
+}

@@ -145,7 +145,7 @@ export async function enterWorld(game: Phaser.Game) {
   let city = maps.get('lublin')!;
   // Reloaded for a new version (update.ts): back where the hero stood, once.
   const back = takeResume(session.name);
-  let at = session.testCombat ? { m: session.testCombat.map, x: session.testCombat.hero.x, y: session.testCombat.hero.y } : back ?? session.at;
+  let at = back ?? session.at;
   if (at) {
     try {
       city = await getMap(at.m);

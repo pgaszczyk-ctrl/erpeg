@@ -25,7 +25,7 @@ import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
 const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
   [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
 );
-import { touchInput, resetTouch, cancelPress, setCombatInput, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome } from '../controls';
+import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
@@ -597,10 +597,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   private showDialog(d: DialogRequest) {
-    if((this.scene.get('game') as GameScene).turnCombat?.active){
-      setCombatInput(false);
-      const combat=document.getElementById('turn-combat');if(combat)combat.hidden=true;
-    }
     if (d.shop) {
       if (this.shop) { this.dialogChoose = d.onChoose; this.shop.update(d); return; }
       this.closeDialog();
@@ -759,12 +755,8 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)', '⚔ Spotkania (test)'] : []), 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (i) => {
-        if(i===6&&TEST){
-          this.showDialog({title:'⚔ Spotkania (test)',text:'Próby na bieżącej mapie.',buttons:['Rozmowa ze smokiem','Jeden przeciwnik','Mała grupa','Wędrująca grupka','Grupka na postoju','Anuluj'],onChoose:(j)=>{const k=['neutral','single','group','mobile','static'][j];if(k)game.testEncounter(k);}});
-          return;
-        }
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());
           this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
@@ -806,10 +798,6 @@ export class UIScene extends Phaser.Scene {
       },
     });
   }
-
-  /** Turn combat keeps the normal menu/exit rules and pauses for the menu dialog. */
-  combatMenu() { this.openGameMenu(); }
-  combatBlocked() { return this.hasDialog || !!this.overlay; }
 
   private chooseShop(index: number) {
     const shop = this.shop;
