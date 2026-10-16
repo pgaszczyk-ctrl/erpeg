@@ -476,6 +476,7 @@ export class GameScene extends Phaser.Scene {
       hud:()=>this.emitHud(),
       menu:()=>(this.scene.get('ui') as UIScene).combatMenu(),
       blocked:()=>(this.scene.get('ui') as UIScene).combatBlocked(),
+      mayOffer:()=>!this.story.busy&&!this.anomalia?.busy&&!(this.scene.get('ui') as UIScene).combatBlocked(),
     };
   }
 

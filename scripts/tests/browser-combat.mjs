@@ -53,6 +53,11 @@ try {
     await dismiss();
     // Avoid does not reopen or start damage; conscious selecting can approach again.
     await page.evaluate(()=>window.__game.scene.getScene('game').testEncounter('single'));
+    // Story/menu dialogs take priority and cannot leave an orphaned encounter input lock.
+    await page.evaluate(()=>window.__game.scene.getScene('game').dialog({title:'Pierwszeństwo rozmowy',text:'Próba.',buttons:['OK'],onChoose:()=>{}}));
+    assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.prompting),false);
+    await dismiss(false);
+    await page.evaluate(()=>{const g=window.__game.scene.getScene('game');g.turnCombat.offer(g.enemies.find(e=>e.missionId?.startsWith('test-spotkanie')&&!e.peaceful));});
     const hp=await page.evaluate(()=>window.__game.scene.getScene('game').player.hp);
     await dismiss();await page.waitForTimeout(650);
     assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),hp);

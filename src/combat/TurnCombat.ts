@@ -30,7 +30,7 @@ export interface TurnHost {
   duel(e: Enemy): SavedEnemy['duel'];
   life(): [number, number];
   save(state: CombatSave | null): Promise<unknown>;
-  hud(): void; menu(): void; blocked(): boolean;
+  hud(): void; menu(): void; blocked(): boolean; mayOffer(): boolean;
 }
 
 type Mode = 'attack' | 'move' | 'special';
@@ -74,6 +74,9 @@ export class TurnCombat {
   private nextLuck: 'krytyk' | 'unik' | 'blok' | 'dodatkowy' | null = null;
   private destroyed = false;
   private origin = '';
+  private prompt: DialogRequest | null = null;
+  private dialogPriority=(request:DialogRequest)=>{if(this.prompting&&request!==this.prompt){this.prompting=false;this.prompt=null;}};
+  private showPrompt(request:DialogRequest){this.prompt=request;this.h.scene.game.events.emit('dialog',request);}
 
   constructor(private h: TurnHost) {
     document.getElementById('turn-combat')?.remove();
@@ -87,6 +90,7 @@ export class TurnCombat {
     this.g = h.scene.add.graphics().setDepth(999_500); // under the actual fog of war
     window.addEventListener('keydown', this.key, true);
     window.addEventListener('exp-session-expired',this.expired);
+    h.scene.game.events.on('dialog',this.dialogPriority);
     h.scene.events.once('shutdown', () => this.destroy());
   }
 
@@ -178,7 +182,7 @@ export class TurnCombat {
       else if (this.moves < Math.min(...Object.values(C.koszt))) this.endTurn();
       return;
     }
-    if (this.prompting || now < this.nextScan) return;
+    if (this.prompting || !this.h.mayOffer() || now < this.nextScan) return;
     this.nextScan = now + 350;
     const hero = this.h.player;
     for (const [key, at] of this.ignored) if (distance(hero, at) > C.interakcjaM * PX_PER_M * 1.6) this.ignored.delete(key);
@@ -208,8 +212,9 @@ export class TurnCombat {
   offerTalk(key: string, point: Point, talk: () => void) {
     if (this.held) return;
     this.mark(key,point,true);
+    this.ignored.set(key,{x:point.x,y:point.y});
     this.prompting = true; resetTouch(); resetKeys(); this.h.player.vel.set(0, 0);
-    this.h.scene.game.events.emit('dialog', {
+    this.showPrompt({
       title: tx('Spotkanie', 'Encounter'), text: tx('Widzisz kogoś w pobliżu. Możesz podejść i porozmawiać.', 'Someone is nearby. You can approach and talk.'),
       buttons: [tx('Podejdź bliżej', 'Approach'), tx('Uniknij', 'Avoid')],
       onChoose: (i: number) => { this.prompting = false; this.ignored.set(key, { ...point }); cancelPress(); resetTouch(); resetKeys(); if (i === 0) talk(); },
@@ -221,10 +226,11 @@ export class TurnCombat {
     const key = this.groupKey(e);
     this.mark(key,e.gang?.formation??e,!!e.peaceful);
     if (e.peaceful) return this.offerTalk(key, e, () => this.h.talkDragon(e));
+    this.ignored.set(key,{x:e.x,y:e.y});
     this.prompting = true; resetTouch(); resetKeys(); this.h.player.vel.set(0, 0);
     const known = this.visibleEnemies().filter((q) => this.groupKey(q) === key);
     const strong = known.some((q) => ['smok','herszt','wielki_herszt','koziol','wielki_glut'].includes(q.kindId));
-    this.h.scene.game.events.emit('dialog', {
+    this.showPrompt({
       title: tx('Spotkanie', 'Encounter'),
       text: (known.length > 1 ? tx('Widzisz zwartą grupkę przeciwników.', 'You see a close group of opponents.') : tx(`W pobliżu: ${e.kind.name}.`, `Nearby: ${e.kindId === 'smok' ? 'a dragon' : 'an opponent'}.`)) + '\n\n' + tx('Ta grupa jest wroga. Podejście rozpocznie starcie.', 'They are hostile. Approaching starts combat.') + (strong ? '\n⚠ ' + tx('To silniejszy przeciwnik.', 'This is a stronger opponent.') : ''),
       buttons: [tx('Podejdź bliżej', 'Approach'), tx('Uniknij', 'Avoid')],
@@ -478,7 +484,7 @@ export class TurnCombat {
     for(const [id,t] of this.intents){const e=this.wave.find(q=>this.id(q)===id);if(!e||!this.live(e)||!this.h.visible(e))continue;const half=C.stozekStopnie*Math.PI/360;this.g.fillStyle(0xe97845,.22);this.g.beginPath();this.g.moveTo(t.x,t.y);this.g.arc(t.x,t.y,t.reach,t.angle-half,t.angle+half);this.g.closePath();this.g.fillPath();this.g.lineStyle(.8,0xffba80,.9);this.g.strokePath();}
   }
 
-  destroy() {this.destroyed=true;setCombatInput(false);window.removeEventListener('keydown',this.key,true);window.removeEventListener('exp-session-expired',this.expired);this.root.remove();this.g.destroy();for(const im of this.mists.values())im.destroy();document.body.classList.remove('turn-combat');cancelPress();resetTouch();resetKeys();}
+  destroy() {this.destroyed=true;setCombatInput(false);window.removeEventListener('keydown',this.key,true);window.removeEventListener('exp-session-expired',this.expired);this.h.scene.game.events.off('dialog',this.dialogPriority);this.root.remove();this.g.destroy();for(const im of this.mists.values())im.destroy();document.body.classList.remove('turn-combat');cancelPress();resetTouch();resetKeys();}
 }
 
 // Avoid importing the entire scene or a second copy of the level curve.
