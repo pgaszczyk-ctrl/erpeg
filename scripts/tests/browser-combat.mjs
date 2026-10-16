@@ -7,7 +7,7 @@ const { chromium }=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 await mkdir('.cache',{recursive:true});
 const production=process.env.COMBAT_PRODUCTION==='1';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--enable-unsafe-swiftshader'],chromiumSandbox:false});
-const results=[];
+const results=[];let currentPage=null,currentErrors=[];
 try {
   for(const mobile of production?[false]:[false,true]){
     const size=mobile?'phone':'desktop';
@@ -17,7 +17,7 @@ try {
     await ctx.route('**/*.supabase.co/**',route=>{
       const path=new URL(route.request().url()).pathname;
       let body=null;
-      if(path.endsWith('/login'))body={token:'combat-fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:3000,start_y:3000,map_scale:1.92,save,exp,dead:false,age:12}};
+      if(path.endsWith('/login'))body={token:'combat-fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:3000,start_y:3000,map_scale:1.92,save,exp,dead:false,age:9}};
       if(/game_content|school_quizzes|game_ports|kurier_wiesci/.test(path))body=[];
       if(path.endsWith('/game_settings'))body={};
       if(path.endsWith('/save_game')){const data=route.request().postDataJSON();save=data.p_save;exp=data.p_exp;body=true;}
@@ -27,7 +27,8 @@ try {
       if(path.endsWith('/settings'))body={external:{google:false}};
       return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
     });
-    const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
+    const page=await ctx.newPage();currentPage=page;currentErrors=errors;page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+    await page.addInitScript(()=>{window.__combatNear=e=>{const g=window.__game.scene.getScene('game');for(let r=6;r<=10;r+=2)for(let a=0;a<Math.PI*2;a+=Math.PI/12){const p={x:g.player.x+Math.cos(a)*r,y:g.player.y+Math.sin(a)*r};if(g.turnFree(p.x,p.y)){e.setPosition(p.x,p.y);if(g.turnCombat.line(e))return;}}throw new Error('No reachable adjacent fixture point');};});
     const game=()=>page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.inspect());
     const ready=()=>page.waitForFunction(()=>{const g=window.__game?.scene.getScene('game');return g?.turnCombat?.active&&!g.turnCombat.inspect().locked&&g.scene.isActive();},null,{timeout:30000});
     async function dismiss(last=true){
@@ -42,7 +43,7 @@ try {
       assert.deepEqual(errors,[]);results.push({production:true,pass:true});await ctx.close();continue;
     }
     await dismiss();
-    await page.evaluate(()=>{const g=window.__game.scene.getScene('game');g.turnCombat.nextScan=1e12;g.turnCombat.prompting=false;});
+    await page.evaluate(()=>{const g=window.__game.scene.getScene('game');g.turnCombat.nextScan=1e12;g.turnCombat.prompting=false;g.turnCombat.rng=123;window.__session.level.celnosc=15;});
 
     // Neutral dragon is an explicit talk encounter, never an attack based on species.
     await page.evaluate(()=>window.__game.scene.getScene('game').testEncounter('neutral'));
@@ -59,6 +60,9 @@ try {
     await page.evaluate(()=>{const g=window.__game.scene.getScene('game');const e=g.enemies.find(e=>e.missionId?.startsWith('test-spotkanie')&&!e.peaceful);g.turnCombat.offer(e);});
     await dismiss(false);await ready();
     let before=await game();assert.equal(before.max,3);
+    if(mobile)await page.getByRole('button',{name:/Ruch.*1 ruch/}).tap();
+    else await page.keyboard.press('2');
+    assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.mode),'move','Touch/keyboard changes mode without spending a move');
     // Idle time does not advance rounds, attacks, projectiles or free healing.
     await page.waitForTimeout(1000);assert.deepEqual(await game(),before);
     // Invalid movement and a cancelled preview do not cost moves or reveal fog.
@@ -85,7 +89,7 @@ try {
     await page.getByRole('button',{name:/Specjalne/}).click();
     assert.equal(await page.getByRole('button',{name:'Zatwierdź',exact:true}).isEnabled(),false,'2-move attack unavailable at one move');
     // Reload keeps moves, round, participant health and RNG, including after a paid move.
-    const saved=await game();await page.reload();
+    const saved=await game();await page.evaluate(()=>{location.hash='postac=Jam&kod=ANGELIKA';});await page.reload();
     await page.waitForFunction(()=>window.__game?.scene.getScene('game')?.turnCombat?.active&&!document.querySelector('#loading-map:not([hidden])'),null,{timeout:150000});await ready();
     const restored=await game();for(const k of ['moves','max','round','phase','rng'])assert.deepEqual(restored[k],saved[k],`reload: ${k}`);
     assert.deepEqual(restored.wave,saved.wave);
@@ -95,14 +99,58 @@ try {
     await page.waitForFunction(round=>{const b=window.__game.scene.getScene('game').turnCombat.inspect();return b.round>round&&b.phase==='hero'&&!b.locked;},restored.round,{timeout:30000});
     const bonus=await game();assert.equal(bonus.max,4);assert.equal(bonus.moves,4);
     await page.screenshot({path:`.cache/combat-${size}-luck.png`});
+    // Dodge and block are resolved on incoming attacks, not when browsing targets.
+    for(const [effect,label] of [['unik','Unik'],['blok','Blok']]){
+      const health=await page.evaluate(()=>window.__game.scene.getScene('game').player.hp);
+      const r=(await game()).round;
+      await page.evaluate(effect=>{const g=window.__game.scene.getScene('game'),b=g.turnCombat,e=b.wave[0];window.__combatNear(e);b.forceLuck(effect);b.endTurn();},effect);
+      await page.waitForFunction(r=>{const b=window.__game.scene.getScene('game').turnCombat.inspect();return b.round>r&&b.phase==='hero'&&!b.locked;},r,{timeout:30000});
+      assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').player.hp),health,`${effect} prevents the hit`);
+      assert.match(await page.locator('.tc-luck').innerText(),new RegExp(label));
+    }
     // A completed single encounter awards normal EXP once and restores ordinary controls.
     await page.evaluate(()=>{const g=window.__game.scene.getScene('game'),b=g.turnCombat,e=b.wave[0];e.hp=.1;b.mode='attack';b.target=e;b.forceLuck('krytyk');b.moves=3;for(let r=6;r<20;r+=2){const p={x:g.player.x+r,y:g.player.y};if(g.turnFree(p.x,p.y)){e.setPosition(p.x,p.y);if(!b.reason())break;}}b.confirm();});
     await page.waitForFunction(()=>!window.__game.scene.getScene('game').turnCombat.active,null,{timeout:30000});
     assert.equal(await page.evaluate(()=>document.body.classList.contains('turn-combat')),false);
     assert(exp>=5,'Original EXP callback executed');
     await page.screenshot({path:`.cache/combat-${size}-finished.png`});
+    // Level progression and the boss's queued phase, on a compact group.
+    await page.evaluate(()=>{window.__session.exp=1000;const g=window.__game.scene.getScene('game');g.turnCombat.rng=123;g.testEncounter('group');});
+    await dismiss(false);await ready();assert.equal((await game()).max,4,'Level 5 gets four base moves');
+    const gangId=await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.gang.id);
+    for(let i=0,n=(await game()).wave.length;i<n;i++){
+      await page.evaluate(()=>{const g=window.__game.scene.getScene('game'),b=g.turnCombat,e=b.wave.find(e=>e.active&&!e.isDead);e.hp=.1;window.__combatNear(e);b.choose('attack');b.target=e;b.forceLuck('krytyk');b.confirm();});
+      await ready();
+    }
+    await page.waitForFunction(()=>{const b=window.__game.scene.getScene('game').turnCombat;return b.wave.some(e=>e.kindId==='herszt')&&!b.inspect().locked;},null,{timeout:30000});
+    assert.equal((await game()).phase,'hero','Boss phase gives the hero the first decision');
+    assert.equal(await page.evaluate(id=>window.__game.scene.getScene('game').turnCombat.gang.id===id,gangId),true);
+    await page.screenshot({path:`.cache/combat-${size}-boss.png`});
+    // Finish the fixture phase via normal paid attacks. Escort actions also remain in the queue.
+    for(let attempt=0;attempt<12&&await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.active);attempt++){
+      await ready();
+      await page.evaluate(()=>{const g=window.__game.scene.getScene('game'),b=g.turnCombat;if(b.moves<1){b.endTurn();return;}const e=b.wave.find(e=>e.active&&!e.isDead);if(!e)return;e.hp=.1;window.__combatNear(e);b.choose('attack');b.target=e;b.forceLuck('krytyk');b.confirm();});
+      await page.waitForTimeout(600);
+    }
+    await page.waitForFunction(()=>!window.__game.scene.getScene('game').turnCombat.active,null,{timeout:30000});
+    assert.equal(await page.evaluate(()=>window.__session.stats.gangs),1,'Gang reward exactly once');
+    // Static nuclei stay put; moving nuclei retain close followers and respect the same obstacles.
+    await page.evaluate(()=>{const g=window.__game.scene.getScene('game');g.turnCombat.nextScan=1e12;g.testEncounter('static');g.testEncounter('mobile');});
+    const formations=await page.evaluate(()=>{const g=window.__game.scene.getScene('game'),gs=g.streets.gangs.filter(g=>g.kind.nazwa==='Grupka testowa'&&!g.clearedAt),start=gs.map(g=>({x:g.formation.x,y:g.formation.y}));for(let frame=0;frame<500;frame++)g.streets.formations(g.time.now+frame*50,.05,(x,y)=>g.turnFree(x,y));return gs.map((a,i)=>({mobile:a.formation.mobile,d:Math.hypot(a.formation.x-start[i].x,a.formation.y-start[i].y),farthest:Math.max(...[...a.members.values()].map(e=>Math.hypot(e.x-a.formation.x,e.y-a.formation.y)))}));});
+    assert.equal(formations.find(g=>!g.mobile).d,0);
+    assert(formations.find(g=>g.mobile).d>0,'Mobile nucleus moves');
+    assert(formations.every(g=>g.farthest<32),'Followers stay near the nucleus');
+    await page.screenshot({path:`.cache/combat-${size}-formations.png`});
     const layout=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth>innerWidth,oldInputs:window.__game.scene.getScene('game').turnCombat.active}));assert.equal(layout.scroll,false);
     assert.deepEqual(errors,[],JSON.stringify(errors));results.push({size,pass:true,exp});await ctx.close();
   }
   await writeFile('.cache/combat-results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results));
+}catch(error){
+  if(currentPage&&!currentPage.isClosed()){
+    const diagnostic=await currentPage.evaluate(()=>{const g=window.__game?.scene.getScene('game');return {menu:!!document.getElementById('menu'),loading:!!document.querySelector('#loading-map:not([hidden])'),active:g?.scene.isActive(),paused:g?.scene.isPaused(),player:g?.player?{x:g.player.x,y:g.player.y,hp:g.player.hp}:null,combat:g?.turnCombat?.inspect(),checkpoint:!!window.__session?.testCombat};}).catch(e=>({error:e.message}));
+    console.log('combat failure',JSON.stringify({error:error.message,errors:currentErrors,diagnostic}));
+    await currentPage.screenshot({path:'.cache/combat-failure.png'}).catch(()=>{});
+    await writeFile('.cache/combat-failure.json',JSON.stringify({error:error.message,errors:currentErrors,diagnostic},null,2));
+  }
+  throw error;
 }finally{await browser.close();}

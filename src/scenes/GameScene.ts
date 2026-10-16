@@ -430,10 +430,11 @@ export class GameScene extends Phaser.Scene {
       visible:(p)=>pointInPolygon(this.vision,p.x,p.y),
       free:(x,y)=>this.turnFree(x,y),
       hit:(e,damage,skill,strong)=>{
+        const usedWeapon=gear.equip.bron;
         if(skill) this.practiced(skill);
-        if(skill && (skill!=='miecz'||damage>0))this.wearWeapon(gear.equip.bron);
+        if(skill && (skill!=='miecz'||damage>0))this.wearWeapon(usedWeapon);
         if(damage<=0){this.missText(e.x,e.y-8);return;}
-        const imb=imbueOf(gear.equip.bron)?.e;
+        const imb=imbueOf(usedWeapon)?.e;
         const heavy=e.heavy;e.heavy=true;
         const dead=e.hit(new Phaser.Math.Vector2(this.player.x,this.player.y),this.time.now,damage*this.essenceBoost(imb,e));
         e.heavy=heavy;e.vel.set(0,0);
@@ -468,6 +469,8 @@ export class GameScene extends Phaser.Scene {
       mist:(p,neutral)=>this.streets.smallMist(p.x,p.y,neutral),
       restore:(s)=>this.restoreTurnCombat(s),
       loot:()=>this.pickups.filter(i=>i.active&&i.getData('combatLoot')).map(i=>({x:i.getData('lootX')??i.x,y:i.getData('lootY')??i.y,kind:i.getData('kind'),n:i.getData('n')??1,texture:i.texture.key,frame:i.frame.name,scale:i.scaleX})),
+      duel:(e)=>e.duel?{folkId:e.duel.folk.id,hp:this.duelHp??MIESZKANCY.serduszka*2,damage:e.duel.dmg,carry:this.duelCarry}:undefined,
+      life:()=>this.duelHp!==null?[this.duelHp,MIESZKANCY.serduszka*2]:[this.player.hp,PLAYER.maxHp],
       save:async(state)=>{session.testCombat=state;this.keepFog();await saveNow(this.player.hp);},
       hud:()=>this.emitHud(),
       menu:()=>(this.scene.get('ui') as UIScene).combatMenu(),
@@ -476,8 +479,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private restoreTurnCombat(s: CombatSave): Enemy[] {
+    if(s.enemies.some(e=>e.duel))this.folk.update(0,s.hero.x,s.hero.y,this.time.now,()=>true);
     let gang: Gang|undefined;
-    if(s.gang){gang={...s.gang,alive:new Set(s.gang.alive),members:new Map(),clearedAt:0};this.streets.adopt(gang);}
+    if(s.gang){gang={...s.gang,alive:new Set(s.gang.alive),members:new Map(),clearedAt:s.gang.boss==='dead'?this.time.now:0};this.streets.adopt(gang);}
     const missionIds=new Set(s.enemies.map(e=>e.missionId).filter(Boolean));
     const storyDragon=this.story.dragonSprite;
     for(const e of [...this.enemies])if(e!==storyDragon&&(e.gang?.id===s.gang?.id&&!!e.gang||e.missionId&&missionIds.has(e.missionId))){e.destroy();this.enemies=this.enemies.filter(q=>q!==e);}
@@ -485,7 +489,13 @@ export class GameScene extends Phaser.Scene {
       const e=raw.missionId==='story-smok'&&storyDragon?storyDragon as Enemy:this.spawnEnemy(raw.x,raw.y,raw.missionId,raw.kind);
       e.setPosition(raw.x,raw.y);e.hp=raw.hp;e.gang=gang;e.ambient=raw.ambient;e.temp=raw.temp;e.folkQuest=raw.folkQuest;e.carrier=raw.carrier;e.gatunek=raw.gatunek;e.power=raw.power;
       if(raw.berserk)e.makeBerserk(BERSERKER.zycie,BERSERKER.auraKolor,BERSERKER.mrugMs,BERSERKER.predkosc);
+      if(raw.kind==='smok')this.dragonFight(e);
       e.hp=raw.hp;
+      if(raw.duel){
+        const f=this.folk.byId(raw.duel.folkId);
+        if(f){e.duel={folk:f,dmg:raw.duel.damage};this.duelHp=raw.duel.hp;this.duelCarry=raw.duel.carry;this.folk.away(f,true);e.setTexture(isHd(f.tex)?ensureRed(this,f.tex):`${f.tex}-red`,'down-0');if(isHd(f.tex))fitHd(e);e.walkAnim=`${f.tex}-red-walk`;}
+        else{e.hp=0;this.duelHp=null;this.toast('Przeciwnik zrezygnował z pojedynku.');}
+      }
       if(gang){if(raw.slot!==undefined)gang.members.set(raw.slot,e);if(raw.boss)gang.bossObj=e;e.leash={x:gang.x,y:gang.y,r:gang.r};}
       return e;
     });
@@ -2907,6 +2917,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private save() {
+    if(this.turnCombat?.active)return; // the controller checkpoints the complete action exactly once
     this.keepFog();
     saveNow(this.player.hp)
       // The demo saves nothing (offline.demo), so it says nothing either.
@@ -3996,6 +4007,7 @@ export class GameScene extends Phaser.Scene {
     this.duelCarry = 0;
     this.toast(`⚔ Pojedynek! Masz ${MIESZKANCY.serduszka} fioletowe serduszka.`, 2500);
     this.emitHud();
+    this.turnCombat?.start(e);
   }
 
   private endDuel(e: Enemy, won: boolean) {

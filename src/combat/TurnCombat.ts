@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Player } from '../objects/Player';
 import type { Enemy, DialogRequest } from '../scenes/GameScene';
 import type { Gang } from '../scenes/Ambient';
-import { SPOTKANIA as C, ruchyPoziomu, kosztRuchow } from '../content/spotkania';
+import { SPOTKANIA as C, ruchyPoziomu, kosztRuchow, aktywnaFala } from '../content/spotkania';
 import { WALKA } from '../content/walka';
 import { PX_PER_M } from '../map/CityMap';
 import { PLAYER } from '../objects/Player';
@@ -14,6 +14,7 @@ import { resetTouch, resetKeys, cancelPress, typingInField, setCombatInput } fro
 import { clearSegment, distance, pathLength, route, roll, incoming, type Point } from './rules';
 import { storeCombat, type CombatSave, type SavedEnemy, type CombatLoot } from './state';
 import '../ui/turnCombat.css';
+import { itemPictureUrl } from '../ui/itemIcon';
 
 export interface TurnHost {
   scene: Phaser.Scene; player: Player; map: string;
@@ -26,6 +27,8 @@ export interface TurnHost {
   mist(p: Point, neutral: boolean): Phaser.GameObjects.Image;
   restore(state: CombatSave): Enemy[];
   loot(): CombatLoot[];
+  duel(e: Enemy): SavedEnemy['duel'];
+  life(): [number, number];
   save(state: CombatSave | null): Promise<unknown>;
   hud(): void; menu(): void; blocked(): boolean;
 }
@@ -70,6 +73,7 @@ export class TurnCombat {
   private pending = session.testCombat;
   private nextLuck: 'krytyk' | 'unik' | 'blok' | 'dodatkowy' | null = null;
   private destroyed = false;
+  private origin = '';
 
   constructor(private h: TurnHost) {
     document.getElementById('turn-combat')?.remove();
@@ -82,10 +86,12 @@ export class TurnCombat {
     this.mapInput.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); if (this.ready()) this.pick(this.world(e.clientX, e.clientY)); });
     this.g = h.scene.add.graphics().setDepth(999_500); // under the actual fog of war
     window.addEventListener('keydown', this.key, true);
+    window.addEventListener('exp-session-expired',this.expired);
     h.scene.events.once('shutdown', () => this.destroy());
   }
 
   private id(e: Enemy) { let n = this.ids.get(e); if (!n) { n = this.nextId++; this.ids.set(e, n); } return n; }
+  private expired=()=>{storeCombat(session.name,null);session.testCombat=null;};
   private live(e: Enemy) { return e.active && !e.isDead; }
   private ready() { return this.active && this.phase === 'hero' && !this.locked && this.h.scene.scene.isActive() && !document.getElementById('sesja-wygasla'); }
   get held() { return this.active || this.prompting || !!this.pending; }
@@ -96,7 +102,7 @@ export class TurnCombat {
   inspect() { return { active: this.active, phase: this.phase, round: this.round, moves: this.moves, max: this.max, locked: this.locked, rng: this.rng, wave: this.wave.map((e) => ({ id: this.id(e), hp: e.hp, x: e.x, y: e.y })), intents: [...this.intents] }; }
 
   private key = (e: KeyboardEvent) => {
-    if (!this.active || typingInField(e) || !this.h.scene.scene.isActive() || document.getElementById('sesja-wygasla')) return;
+    if (!this.active || this.h.blocked() || typingInField(e) || !this.h.scene.scene.isActive() || document.getElementById('sesja-wygasla')) return;
     if (e.key === 'Escape') {
       e.preventDefault(); e.stopImmediatePropagation();
       if (this.path || this.target) { this.path = null; this.target = undefined; this.render(); }
@@ -221,6 +227,7 @@ export class TurnCombat {
 
   start(e: Enemy) {
     if (this.active) return;
+    this.origin=session.testCombatBase;
     this.gang = e.gang;
     const key = this.groupKey(e);
     this.group = this.h.enemies().filter((q) => this.live(q) && !q.peaceful && (this.groupKey(q) === key || !q.gang && !q.missionId && !e.gang && !e.missionId && distance(q, e) < C.grupaM * PX_PER_M * 2));
@@ -237,7 +244,7 @@ export class TurnCombat {
     }
   }
   private nextWave() {
-    this.wave = this.group.filter((e) => this.live(e)).slice(0, C.aktywnych);
+    this.wave = this.group.filter((e) => this.live(e)).sort((a,b)=>Number(this.h.visible(b))-Number(this.h.visible(a))||distance(a,this.h.player)-distance(b,this.h.player)).slice(0, aktywnaFala(PLAYER.maxHp));
     this.target = this.wave.find((e) => this.h.visible(e)); this.mode = 'attack'; this.path = null;
   }
   private newTurn() {
@@ -255,6 +262,7 @@ export class TurnCombat {
   private pick(p: Point) {
     if (this.mode === 'move') {
       this.path = route(this.h.player, p, C.krokM * PX_PER_M, this.h.free, C.siatkaPx);
+      if(this.path&&pathLength(this.path)<1)this.path=null;
       this.message = this.path ? `${(pathLength(this.path) / PX_PER_M).toFixed(1)} m · ${this.cost(C.koszt.ruch)}` : tx('Nie ma dostępnej drogi w zasięgu. Ruchy pozostają bez zmian.', 'No reachable route in range. No moves spent.');
     } else {
       this.target = this.wave.filter((e) => this.live(e) && this.h.visible(e)).sort((a,b) => distance(a,p)-distance(b,p)).find((e) => distance(e,p) < e.size + 14);
@@ -266,7 +274,7 @@ export class TurnCombat {
   private line(e: Point) { return clearSegment(this.h.player, e, (x,y) => this.h.free(x,y)); }
   private reach(strong: boolean) {
     const weapon = rangedWeapon();
-    return weapon ? (weapon.rodzaj === 'magia' ? 45 : 55) * PX_PER_M : (PLAYER.attackReach + PLAYER.attackRadius) * this.h.player.reach * (strong ? WALKA.zasiegMiecz : 1);
+    return weapon ? (weapon.rodzaj === 'magia' ? C.magiaM : C.lukM) * PX_PER_M : (PLAYER.attackReach + PLAYER.attackRadius) * this.h.player.reach * (strong ? WALKA.zasiegMiecz : 1);
   }
   private reason() {
     if (!this.ready()) return tx('Poczekaj na swoją turę.', 'Wait for your turn.');
@@ -377,9 +385,9 @@ export class TurnCombat {
   }
 
   private serialize(): CombatSave {
-    const enemies: SavedEnemy[] = this.group.filter((e)=>this.live(e)).map((e)=>({id:this.id(e),x:e.x,y:e.y,hp:e.hp,kind:e.kindId,missionId:e.missionId,temp:e.temp,ambient:e.ambient,folkQuest:e.folkQuest,carrier:e.carrier,gatunek:e.gatunek,berserk:e.berserk,power:e.power,slot:this.gang ? [...this.gang.members].find(([,m])=>m===e)?.[0] : undefined,boss:this.gang?.bossObj===e}));
+    const enemies: SavedEnemy[] = this.group.filter((e)=>this.live(e)).map((e)=>({id:this.id(e),x:e.x,y:e.y,hp:e.hp,kind:e.kindId,missionId:e.missionId,temp:e.temp,ambient:e.ambient,folkQuest:e.folkQuest,carrier:e.carrier,gatunek:e.gatunek,berserk:e.berserk,power:e.power,slot:this.gang ? [...this.gang.members].find(([,m])=>m===e)?.[0] : undefined,boss:this.gang?.bossObj===e,duel:this.h.duel(e)}));
     const g=this.gang, p=this.h.player;
-    return {version:1,stamp:Date.now(),map:this.h.map,scale:PX_PER_M,nonce:session.nonce,phase:this.phase,round:this.round,moves:this.moves,max:this.max,rng:this.rng,active:this.wave.map((e)=>this.id(e)),responded:[...this.responded],enemies,hero:{x:p.x,y:p.y,hp:p.hp,extra:p.extra,extraUntil:p.extraUntil},intents:[...this.intents],stunned:[...this.stunned],loot:this.h.loot(),gang:g?{id:g.id,kind:g.kind,x:g.x,y:g.y,r:g.r,spots:g.spots,alive:[...g.alive],boss:g.boss,formation:g.formation}:undefined,progress:structuredClone({exp:session.exp,coins:session.coins,stats:session.stats,missions:session.missions,story:session.story,mikstury:session.mikstury,etap:session.etap,fabula:session.fabula,flagi:session.flagi,gear:saveGear()})};
+    return {version:1,origin:this.origin,stamp:Date.now(),map:this.h.map,scale:PX_PER_M,nonce:session.nonce,phase:this.phase,round:this.round,moves:this.moves,max:this.max,rng:this.rng,active:this.wave.map((e)=>this.id(e)),responded:[...this.responded],enemies,hero:{x:p.x,y:p.y,hp:p.hp,extra:p.extra,extraUntil:p.extraUntil},intents:[...this.intents],stunned:[...this.stunned],loot:this.h.loot(),gang:g?{id:g.id,kind:g.kind,x:g.x,y:g.y,r:g.r,spots:g.spots,alive:[...g.alive],boss:g.boss,formation:g.formation}:undefined,progress:structuredClone({exp:session.exp,coins:session.coins,stats:session.stats,missions:session.missions,story:session.story,mikstury:session.mikstury,etap:session.etap,fabula:session.fabula,flagi:session.flagi,gear:saveGear()})};
   }
 
   private commit() {
@@ -397,8 +405,9 @@ export class TurnCombat {
   }
 
   private resume(s: CombatSave) {
+    this.origin=s.origin;
     this.group=this.h.restore(s); this.group.forEach((e,i)=>this.ids.set(e,s.enemies[i].id)); this.nextId=Math.max(0,...s.enemies.map(e=>e.id))+1;
-    this.gang=this.group.find(e=>e.gang)?.gang; this.wave=this.group.filter(e=>s.active.includes(this.id(e)));
+    this.gang=this.group.find(e=>e.gang)?.gang; this.wave=s.active.map(id=>this.group.find(e=>this.id(e)===id)).filter((e):e is Enemy=>!!e);
     this.active=true; this.phase=s.phase; this.round=s.round; this.moves=s.moves; this.max=s.max; this.rng=s.rng;
     this.responded=new Set(s.responded);this.intents=new Map(s.intents);this.stunned=new Set(s.stunned);
     this.target=this.wave.find(e=>this.h.visible(e));this.message=tx('Wracasz do przerwanego starcia. Pozostałe ruchy i wyniki losowań są zachowane.', 'Resuming your encounter. Remaining moves and random results are preserved.');
@@ -419,13 +428,16 @@ export class TurnCombat {
     const row=document.createElement('div');row.className='tc-status';
     const title=document.createElement('h2');title.textContent=this.phase==='hero'?tx('Twoja tura','Your turn'):tx('Ruch przeciwników','Opponents’ turn');
     const count=document.createElement('span');count.textContent=`${tx('Ruchy','Moves')}: ${this.moves}/${this.max}`;row.append(title,count);this.panel.append(row);
-    const life=document.createElement('span');life.textContent=`♥ ${Math.ceil(this.h.player.hp)}/${PLAYER.maxHp}`;row.append(life);
+    const life=document.createElement('span');const [hp,maxHp]=this.h.life();life.textContent=`♥ ${Math.ceil(hp)}/${maxHp}`;row.append(life);
     const info=document.createElement('p');info.setAttribute('role','status');info.textContent=this.message||this.reason()||tx('Zatwierdź wybrane działanie.','Confirm the selected action.');this.panel.append(info);
+    if(this.group.some(e=>this.live(e)&&!this.wave.includes(e)&&this.h.visible(e))){const q=document.createElement('small');q.textContent=tx('Pozostali widoczni przeciwnicy czekają na następną falę.','The other visible opponents are waiting for the next wave.');this.panel.append(q);}
     const buttons=(cls='tc-actions')=>{const el=document.createElement('div');el.className=cls;this.panel.append(el);return el;};
     const button=(parent:HTMLElement,label:string,fn:()=>void,disabled=false,active=false)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=disabled;b.setAttribute('aria-pressed',String(active));b.onclick=(e)=>{e.stopPropagation();fn();};parent.append(b);return b;};
     const actions=buttons(), w=rangedWeapon(), attackIcon=w?.rodzaj==='magia'?'✨':w?'🏹':'⚔';
     for(const [m,label,cost] of [['attack',`${attackIcon} ${tx('Atak','Attack')}`,C.koszt.atak],['move',`↗ ${tx('Ruch','Move')}`,C.koszt.ruch],['special',`✦ ${tx('Specjalne','Special')}`,C.koszt.leczenie]] as const){
-      const b=button(actions,label,()=>this.choose(m),!this.ready(),this.mode===m);const small=document.createElement('small');small.textContent=m==='special'?`${this.cost(cost)}–${this.cost(C.koszt.mocny)}`:this.cost(cost);b.append(small);
+      const b=button(actions,label,()=>this.choose(m),!this.ready(),this.mode===m);
+      if(m==='attack'){const url=itemPictureUrl(gear.equip.bron??'kijek');if(url){b.textContent=tx('Atak','Attack');const img=document.createElement('img');img.src=url;img.alt='';img.className='tc-wpn';b.prepend(img);}}
+      const small=document.createElement('small');small.textContent=m==='special'?`${this.cost(cost)}–${this.cost(C.koszt.mocny)}`:this.cost(cost);b.append(small);
     }
     if(this.mode==='special'){
       const r=buttons();button(r,`${tx('Mocny atak','Heavy attack')} · ${this.cost(C.koszt.mocny)}`,()=>{this.special='strong';this.render();},!this.ready(),this.special==='strong');
@@ -454,7 +466,7 @@ export class TurnCombat {
     for(const [id,t] of this.intents){const e=this.wave.find(q=>this.id(q)===id);if(!e||!this.live(e)||!this.h.visible(e))continue;const half=C.stozekStopnie*Math.PI/360;this.g.fillStyle(0xe97845,.22);this.g.beginPath();this.g.moveTo(t.x,t.y);this.g.arc(t.x,t.y,t.reach,t.angle-half,t.angle+half);this.g.closePath();this.g.fillPath();this.g.lineStyle(.8,0xffba80,.9);this.g.strokePath();}
   }
 
-  destroy() {this.destroyed=true;setCombatInput(false);window.removeEventListener('keydown',this.key,true);this.root.remove();this.g.destroy();for(const im of this.mists.values())im.destroy();document.body.classList.remove('turn-combat');cancelPress();resetTouch();resetKeys();}
+  destroy() {this.destroyed=true;setCombatInput(false);window.removeEventListener('keydown',this.key,true);window.removeEventListener('exp-session-expired',this.expired);this.root.remove();this.g.destroy();for(const im of this.mists.values())im.destroy();document.body.classList.remove('turn-combat');cancelPress();resetTouch();resetKeys();}
 }
 
 // Avoid importing the entire scene or a second copy of the level curve.

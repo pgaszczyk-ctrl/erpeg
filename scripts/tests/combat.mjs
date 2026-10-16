@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { route, clearSegment, pathLength, incoming, roll } from '../../src/combat/rules.ts';
-import { ruchyPoziomu, kosztRuchow, SPOTKANIA as C } from '../../src/content/spotkania.ts';
+import { ruchyPoziomu, kosztRuchow, aktywnaFala, SPOTKANIA as C } from '../../src/content/spotkania.ts';
 
 assert.equal(ruchyPoziomu(1),3);
 assert.equal(ruchyPoziomu(5),4);
@@ -25,7 +25,7 @@ for(let i=0;i<20;i++)assert.equal(roll(a),roll(b),'Persisted random state reprod
 const checkpoint=structuredClone(a),next=roll(a);
 assert.equal(roll(checkpoint),next,'A resumed turn continues the sequence');
 // The full starting group cannot kill a healthy age-appropriate hero in one ordinary reply.
-for(const health of [4,6,10]) for(const difficulty of [0.3,0.5,0.7,1]) {
-  assert(C.aktywnych*C.obrazeniaWroga*difficulty<health);
+for(const health of [4,6,10]) for(const difficulty of [0.25,0.5,1,2]) {
+  assert(aktywnaFala(health)*C.obrazeniaWroga*difficulty*1.2<health,'Also survive rain-strengthened blobs on Hardcore');
 }
 console.log('OK: moves, route budget, walls/water, mutually exclusive luck, resumed randomness, first-reply damage');

@@ -12,8 +12,10 @@ export interface SavedEnemy extends Point {
   id: number; hp: number; kind: RodzajWroga; missionId?: string; temp?: boolean;
   ambient?: boolean; folkQuest?: boolean; carrier?: boolean; gatunek?: GatunekId;
   berserk?: boolean; power?: number; slot?: number; boss?: boolean;
+  duel?: { folkId: string; hp: number; damage: number; carry: number };
 }
 export interface CombatSave {
+  origin: string;
   version: 1; stamp: number; map: string; scale: number; nonce: number;
   phase: 'hero' | 'enemy'; round: number; moves: number; max: number; rng: number;
   active: number[]; responded: number[]; enemies: SavedEnemy[];
@@ -26,6 +28,15 @@ export interface CombatSave {
 }
 
 const key = (name: string) => `exp-test-combat-v1:${name}`;
+/** Compare recovery against the actual last server save, without storing a credential. */
+export function combatBase(save: unknown, exp: number) {
+  const plain=JSON.parse(JSON.stringify(save)) as Record<string,unknown>;
+  delete plain.testCombat;
+  const stable=(v:unknown):unknown=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>[k,stable(x)])):v;
+  const text=JSON.stringify([exp,stable(plain)]);let h=2166136261;
+  for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);
+  return (h>>>0).toString(16);
+}
 export function localCombat(name: string): CombatSave | null {
   try { const s = JSON.parse(localStorage.getItem(key(name)) ?? 'null'); return s?.version === 1 && Array.isArray(s.enemies) && s.enemies.length <= 60 ? s : null; } catch { return null; }
 }

@@ -4,11 +4,14 @@ export const SPOTKANIA = {
   koszt: { atak: 1, ruch: 1, mocny: 2, leczenie: 1 },
   krokM: 12,
   krokWrogaM: 9,
+  lukM: 55,
+  magiaM: 45,
   siatkaPx: 3,
   mglaM: 30,
   interakcjaM: 24,
   grupaM: 8,
   aktywnych: 3,
+  aktywnychPrzy4Hp: 2,
   czlonkowie: [[2, 3], [3, 4], [6, 8]] as [number, number][],
   wedrowne: 0.45,
   wedrowkaMNaS: 1.5,
@@ -26,6 +29,8 @@ export function ruchyPoziomu(level: number) {
   for (const [od, pula] of SPOTKANIA.ruchy) if (level >= od) n = pula;
   return n;
 }
+
+export function aktywnaFala(maxHp: number) { return maxHp < 6 ? SPOTKANIA.aktywnychPrzy4Hp : SPOTKANIA.aktywnych; }
 
 export function kosztRuchow(n: number, en = false) {
   if (en) return `${n} ${n === 1 ? 'move' : 'moves'}`;

@@ -9,7 +9,7 @@ import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
-import { localCombat, type CombatSave } from './combat/state';
+import { localCombat, combatBase, type CombatSave } from './combat/state';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
@@ -67,6 +67,7 @@ export interface Story {
 
 export const session = {
   testCombat: null as CombatSave | null,
+  testCombatBase: '',
   token: '',
   name: '',
   idik: '',
@@ -260,8 +261,13 @@ export function startSession(r: LoginResult) {
   }
   session.abandoned = a;
   session.testCombat = null;
+  session.testCombatBase=TEST?combatBase(p.save,p.exp):'';
   if (TEST) {
-    const states = [p.save.testCombat, a?.testCombat, localCombat(p.name)].filter((s): s is CombatSave => !!s && s.version === 1 && s.scale === PX_PER_M);
+    const remote=[p.save.testCombat,a?.testCombat].filter((s):s is CombatSave=>!!s&&s.version===1&&s.scale===PX_PER_M).sort((x,y)=>y.stamp-x.stamp)[0];
+    const local=localCombat(p.name);
+    // A local checkpoint may recover a pending action, never overwrite newer progress from production/another battle.
+    const recover=local&&(remote?local.nonce===remote.nonce:local.origin===session.testCombatBase)?local:null;
+    const states = [remote,recover].filter((s): s is CombatSave => !!s && s.version === 1 && s.scale === PX_PER_M);
     const state = states.sort((x,y) => y.stamp-x.stamp)[0];
     if (state) {
       session.testCombat = state;
@@ -305,6 +311,7 @@ export function saveNow(hp: number) {
   // a newer completion; snapshot before queuing so later choices cannot mutate a pending save.
   const snapshot=structuredClone(data), token=session.token, exp=session.exp;
   const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
+  if(TEST)next.then(()=>{if(session.token===token)session.testCombatBase=combatBase(snapshot,exp);},()=>{});
   saveChain=next;
   next.catch((e) => { if (toWygasla(e)) sesjaWygasla(token); });
   return next;

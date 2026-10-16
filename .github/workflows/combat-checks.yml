@@ -22,10 +22,33 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/cache/restore@v4
+        id: maps
+        with:
+          path: |
+            .cache/lublin-full.json
+            public/map
+          key: combat-maps-v1-${{ hashFiles('data/**/*.geojsonseq.gz', 'data/rail.json', 'data/towns.json', 'scripts/build-map*.mjs', 'scripts/split-map.mjs', 'scripts/snap-buildings.mjs', 'scripts/signposts.mjs', 'scripts/lublin-area.json', 'src/map/CityMap.ts', 'src/skala.ts') }}
+      - name: Keep matching map cache current after checkout
+        if: steps.maps.outputs.cache-hit == 'true'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for root in [Path('.cache/lublin-full.json'), Path('public/map')]:
+              for p in ([root] if root.is_file() else root.rglob('*')):
+                  if p.is_file(): p.touch()
+          PY
       - run: node --experimental-strip-types scripts/tests/combat.mjs
       - run: npm run build
         env:
           VITE_TEST: '1'
+      - uses: actions/cache/save@v4
+        if: steps.maps.outputs.cache-hit != 'true'
+        with:
+          path: |
+            .cache/lublin-full.json
+            public/map
+          key: ${{ steps.maps.outputs.cache-primary-key }}
       - name: Install browser
         run: |
           npm install --no-save --package-lock=false playwright
@@ -39,8 +62,8 @@ jobs:
           VITE_TEST: '1'
       - name: Production isolation
         run: |
-          npx vite build --outDir .cache/combat-production
-          npx vite preview --outDir .cache/combat-production --host 127.0.0.1 --port 4174 > /tmp/preview-production.log 2>&1 &
+          npx vite build --outDir .cache/production-check
+          npx vite preview --outDir .cache/production-check --host 127.0.0.1 --port 4174 > /tmp/preview-production.log 2>&1 &
           COMBAT_PRODUCTION=1 node scripts/tests/browser-combat.mjs
       - uses: actions/upload-artifact@v4
         if: always()

@@ -6,6 +6,7 @@
 #turn-combat .tc-actions { display:flex; gap:6px; margin:6px 0; }
 #turn-combat button { min-height:46px; flex:1; border:1px solid #c29a61; border-radius:7px; padding:6px 9px; color:#fff2d4; background:#385366; font:700 17px 'Alegreya Sans',sans-serif; cursor:pointer; touch-action:manipulation; }
 #turn-combat button small { display:block; font-size:13px; font-weight:normal; }
+#turn-combat .tc-wpn { width:24px; height:24px; object-fit:contain; image-rendering:pixelated; vertical-align:middle; margin-right:4px; }
 #turn-combat button[aria-pressed=true] { background:#856334; outline:2px solid #edc783; }
 #turn-combat button:disabled { opacity:.45; cursor:default; }
 #turn-combat .tc-minor { font-size:15px; background:#29353c; }
