@@ -1,5 +1,7 @@
 # Exp-lore — spotkania i walka półturowa na mapie
 
+**ARCHIWUM — 16.10.2026 właściciel polecił wycofać wdrożenie i odłożyć doprecyzowanie. Dokument nie jest aktualnym poleceniem wdrażania.**
+
 Data: 16 października 2026. Wersja: 1.0, po korektach właściciela do makiety.
 
 Status: specyfikacja do wykonania prototypu na serwerze TEST. Ten dokument nie oznacza, że mechanika została wdrożona. Nie wykonywać wydania produkcyjnego.

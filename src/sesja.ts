@@ -25,7 +25,6 @@ export function zamykamSesje(token: string) {
 /** Shows the blocking window (once) when the server refused `token`. */
 export function sesjaWygasla(token: string) {
   if (zamkniete.has(token) || document.getElementById('sesja-wygasla')) return;
-  window.dispatchEvent(new Event('exp-session-expired'));
   try {
     gra?.loop.sleep();
   } catch {

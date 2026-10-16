@@ -12,8 +12,6 @@
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
 export const JOY_RADIUS = 56;
-export let combatInput = false;
-export function setCombatInput(on: boolean) { combatInput = on; cancelPress(); resetTouch(); resetKeys(); }
 /** Where the joystick is shown while idle (a hint; set by UIScene's layout). */
 export const joyHome = { x: 0, y: 0 };
 /** The attack button (set by UIScene's layout): only a touch on it attacks. */
@@ -207,7 +205,6 @@ export function installTouchControls(el: HTMLElement) {
   };
 
   const start = (e: TouchEvent) => {
-    if (combatInput) return;
     e.preventDefault();
     touchInput.used = true;
     sync(e);
@@ -242,7 +239,6 @@ export function installTouchControls(el: HTMLElement) {
   };
 
   const move = (e: TouchEvent) => {
-    if (combatInput) return;
     e.preventDefault();
     sync(e);
     for (const t of Array.from(e.touches)) {
@@ -257,7 +253,6 @@ export function installTouchControls(el: HTMLElement) {
   };
 
   const end = (e: TouchEvent) => {
-    if (combatInput) return;
     // Only swallow touches on the game itself, so taps on HTML menus still click.
     if (e.cancelable && el.contains(e.target as Node)) e.preventDefault();
     sync(e);
@@ -283,7 +278,7 @@ export function installTouchControls(el: HTMLElement) {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (combatInput || menuOpen() || typingInField(e)) return;
+      if (menuOpen() || typingInField(e)) return;
       const code = e.code || e.key;
       if (KEY_DIRS[code]) {
         heldKeys.add(code);
@@ -323,7 +318,6 @@ export function installTouchControls(el: HTMLElement) {
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
   });
   el.addEventListener('mousedown', (e) => {
-    if (combatInput) return;
     if (e.button !== 0) return;
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;

@@ -72,7 +72,6 @@ function lengthM(l: Line) {
 }
 
 export class Townsfolk {
-  byId(id: string) { for(const list of this.cells.values()){const f=list.find(f=>f.id===id);if(f)return f;}return null; }
   private cells = new Map<string, Folk[]>();
   private active = new Set<Folk>();
   private next = 0;

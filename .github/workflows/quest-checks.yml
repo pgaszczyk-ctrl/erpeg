@@ -53,7 +53,17 @@ jobs:
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
       - name: Mobile and desktop quests with mocked RPCs
-        run: node scripts/tests/browser-city-quests.cjs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/tests/browser-city-quests.cjs')
+          s = p.read_text()
+          needle = '  return page;'
+          assert s.count(needle) == 1
+          s = s.replace(needle, "  assert.equal(await page.evaluate(()=>!!window.__game.scene.getScene('game').turnCombat||!!document.getElementById('turn-combat')),false,'Withdrawn combat must be absent');\n" + needle)
+          p.write_text(s)
+          PY
+          node scripts/tests/browser-city-quests.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
