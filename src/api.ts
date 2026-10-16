@@ -34,6 +34,8 @@ export async function rpc<T>(fn: string, args: Record<string, unknown>, keepaliv
 }
 
 export interface SaveData {
+  /** TEST prototype only; production neither reads nor executes it. */
+  testCombat?: import('./combat/state').CombatSave | null;
   language?: import('./i18n').Lang;
   questResults?: Record<string, import('./content/questy/scenarios').QuestResult>;
   coins?: number;
@@ -146,6 +148,7 @@ export interface PlayerInfo {
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
 export interface Snapshot {
+  testCombat?: import('./combat/state').CombatSave | null;
   /** Pixels per metre the positions are in. */
   s?: number;
   /** The map: 'lublin' (or missing) or a town id. */

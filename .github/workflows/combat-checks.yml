@@ -1,0 +1,52 @@
+name: TEST turn combat checks
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/tests/*combat*'
+      - '.github/workflows/combat-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: combat-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --experimental-strip-types scripts/tests/combat.mjs
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: TEST desktop and phone
+        run: |
+          npx vite build
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
+          node scripts/tests/browser-combat.mjs
+        env:
+          VITE_TEST: '1'
+      - name: Production isolation
+        run: |
+          npx vite build --outDir .cache/combat-production
+          npx vite preview --outDir .cache/combat-production --host 127.0.0.1 --port 4174 > /tmp/preview-production.log 2>&1 &
+          COMBAT_PRODUCTION=1 node scripts/tests/browser-combat.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: combat-checks
+          path: .cache/combat-*
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

@@ -9,6 +9,7 @@ import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
 import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
+import { localCombat, type CombatSave } from './combat/state';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
@@ -65,6 +66,7 @@ export interface Story {
 }
 
 export const session = {
+  testCombat: null as CombatSave | null,
   token: '',
   name: '',
   idik: '',
@@ -257,6 +259,21 @@ export function startSession(r: LoginResult) {
     }
   }
   session.abandoned = a;
+  session.testCombat = null;
+  if (TEST) {
+    const states = [p.save.testCombat, a?.testCombat, localCombat(p.name)].filter((s): s is CombatSave => !!s && s.version === 1 && s.scale === PX_PER_M);
+    const state = states.sort((x,y) => y.stamp-x.stamp)[0];
+    if (state) {
+      session.testCombat = state;
+      const z = state.progress;
+      session.nonce = state.nonce; session.hp = state.hero.hp;
+      session.exp=z.exp; session.coins=z.coins; session.stats=structuredClone(z.stats); session.missions={...z.missions}; session.story=structuredClone(z.story); session.mikstury=z.mikstury;
+      session.etap={...z.etap};session.fabula=[...(z.fabula??[])];session.flagi={...z.flagi};
+      loadGear(z.gear);
+      // The TEST checkpoint replaces the legacy abandoned-session replay.
+      session.abandoned=null;
+    }
+  }
 }
 
 /** What the Księga osiągnięć counts, from the session (also the newspaper's daily badges). */
@@ -279,6 +296,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
+    ...(TEST ? { testCombat: session.testCombat } : {}),
     language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
