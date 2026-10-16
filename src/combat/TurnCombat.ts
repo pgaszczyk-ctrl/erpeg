@@ -133,6 +133,11 @@ export class TurnCombat {
 
   private visibleEnemies() { return this.h.enemies().filter((e) => this.live(e) && this.h.visible(e)); }
   private groupKey(e: Enemy) { return e.gang ? `g:${e.gang.id}` : e.missionId ? `m:${e.missionId}` : `e:${this.id(e)}`; }
+  private mark(key: string, p: Point, neutral: boolean) {
+    let mist=this.mists.get(key);
+    if(!mist){mist=this.h.mist(p,neutral);this.mists.set(key,mist);}
+    mist.setPosition(p.x,p.y);
+  }
 
   /** Called before the old player/AI loop; a held turn runs no real-time game mechanics. */
   update(now: number, dt: number) {
@@ -202,6 +207,7 @@ export class TurnCombat {
 
   offerTalk(key: string, point: Point, talk: () => void) {
     if (this.held) return;
+    this.mark(key,point,true);
     this.prompting = true; resetTouch(); resetKeys(); this.h.player.vel.set(0, 0);
     this.h.scene.game.events.emit('dialog', {
       title: tx('Spotkanie', 'Encounter'), text: tx('Widzisz kogoś w pobliżu. Możesz podejść i porozmawiać.', 'Someone is nearby. You can approach and talk.'),
@@ -213,6 +219,7 @@ export class TurnCombat {
   offer(e: Enemy) {
     if (this.held || !this.live(e)) return;
     const key = this.groupKey(e);
+    this.mark(key,e.gang?.formation??e,!!e.peaceful);
     if (e.peaceful) return this.offerTalk(key, e, () => this.h.talkDragon(e));
     this.prompting = true; resetTouch(); resetKeys(); this.h.player.vel.set(0, 0);
     const known = this.visibleEnemies().filter((q) => this.groupKey(q) === key);
@@ -309,9 +316,10 @@ export class TurnCombat {
       const skill = w ? w.rodzaj === 'magia' ? 'magia' : 'luk' : 'miecz';
       this.moves -= strong ? C.koszt.mocny : C.koszt.atak;
       this.h.player.face(e.x - this.h.player.x, e.y - this.h.player.y);
-      const critical = this.nextLuck === 'krytyk' || roll(this) < C.szczescie.krytyk;
+      const forcedCritical=this.nextLuck==='krytyk';
+      const critical = forcedCritical || roll(this) < C.szczescie.krytyk;
       if (this.nextLuck === 'krytyk') this.nextLuck = null;
-      if (roll(this) < hitChance(skill, strong, session.level.celnosc + gearAimBonus())) {
+      if (forcedCritical || roll(this) < hitChance(skill, strong, session.level.celnosc + gearAimBonus())) {
         const instant=skill==='luk'&&!WALKA.bezNatychmiast.includes(e.kindId)&&roll(this)<instaKillChance();
         const damage = instant?e.hp:(w ? shotDamage(w) : meleeDamage()) * (strong ? strongFactor(skill) : 1) * (critical ? C.szczescie.mnoznik : 1);
         this.h.hit(e, damage, skill, strong);
@@ -349,7 +357,9 @@ export class TurnCombat {
     } else {
       const a = Math.atan2(e.y-hero.y,e.x-hero.x), r = Math.max(4, reach-1);
       const goal = { x: hero.x + Math.cos(a)*r, y: hero.y + Math.sin(a)*r };
-      const full = route(e, goal, Math.min(180, distance(e,goal)*1.6+20), this.h.free, C.siatkaPx);
+      const leash=e.leash??(e.gang?{x:e.gang.x,y:e.gang.y,r:e.gang.r}:null);
+      const free=(x:number,y:number)=>this.h.free(x,y)&&(!leash||Math.hypot(x-leash.x,y-leash.y)<=leash.r);
+      const full = route(e, goal, Math.min(180, distance(e,goal)*1.6+20), free, C.siatkaPx);
       if (full) {
         const path: Point[] = [full[0]]; let left = C.krokWrogaM * PX_PER_M;
         for (let i=1;i<full.length && left>0;i++) { const p=path.at(-1)!, q=full[i], d=distance(p,q); path.push(d<=left?q:{x:p.x+(q.x-p.x)*left/d,y:p.y+(q.y-p.y)*left/d}); left-=d; }
@@ -408,6 +418,7 @@ export class TurnCombat {
     this.origin=s.origin;
     this.group=this.h.restore(s); this.group.forEach((e,i)=>this.ids.set(e,s.enemies[i].id)); this.nextId=Math.max(0,...s.enemies.map(e=>e.id))+1;
     this.gang=this.group.find(e=>e.gang)?.gang; this.wave=s.active.map(id=>this.group.find(e=>this.id(e)===id)).filter((e):e is Enemy=>!!e);
+    const first=this.group[0];if(first)this.mark(this.groupKey(first),this.gang?.formation??first,false);
     this.active=true; this.phase=s.phase; this.round=s.round; this.moves=s.moves; this.max=s.max; this.rng=s.rng;
     this.responded=new Set(s.responded);this.intents=new Map(s.intents);this.stunned=new Set(s.stunned);
     this.target=this.wave.find(e=>this.h.visible(e));this.message=tx('Wracasz do przerwanego starcia. Pozostałe ruchy i wyniki losowań są zachowane.', 'Resuming your encounter. Remaining moves and random results are preserved.');

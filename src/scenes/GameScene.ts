@@ -966,6 +966,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.player.isDead || this.leaving || this.travelling) return;
     if (this.turnCombat) {
+      if(!this.turnCombat.held)this.clearHomeArea();
       this.turnCombat.update(now, dt);
       if (this.turnCombat.held) {
         this.player.vel.set(0, 0);

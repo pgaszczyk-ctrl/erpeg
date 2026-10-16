@@ -54,5 +54,5 @@ export function roll(state: { rng: number }) {
 
 export function incoming(random: () => number, dodge: number, block: number): 'unik' | 'blok' | 'hit' {
   if (random() < dodge) return 'unik';
-  return random() < block ? 'blok' : 'hit';
+  return block > 0 && random() < block ? 'blok' : 'hit';
 }

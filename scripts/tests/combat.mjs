@@ -21,6 +21,7 @@ let calls=0;
 assert.equal(incoming(()=>{calls++;return 0;},.08,1),'unik');
 assert.equal(calls,1,'Dodge excludes block on the same hit');
 assert.equal(incoming(()=>.5,0,1),'blok');
+calls=0;assert.equal(incoming(()=>{calls++;return .5;},0,0),'hit');assert.equal(calls,1,'No block roll without eligible defence');
 const a={rng:123},b={rng:123};
 for(let i=0;i<20;i++)assert.equal(roll(a),roll(b),'Persisted random state reproduces rolls');
 const checkpoint=structuredClone(a),next=roll(a);
