@@ -144,7 +144,9 @@ try {
     await page.screenshot({path:`.cache/combat-${size}-boss.png`});
     // Finish the fixture phase via normal paid attacks. Escort actions also remain in the queue.
     for(let attempt=0;attempt<12&&await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.active);attempt++){
-      await ready();
+      // The final hit can finish its animation/save between loop entry and this wait.
+      await page.waitForFunction(()=>{const b=window.__game.scene.getScene('game').turnCombat;return !b.active||(!b.inspect().locked&&b.inspect().phase==='hero');},null,{timeout:30000});
+      if(!(await game()).active)break;
       await page.evaluate(()=>{const g=window.__game.scene.getScene('game'),b=g.turnCombat;if(b.moves<1){b.endTurn();return;}const e=b.wave.find(e=>e.active&&!e.isDead);if(!e)return;e.hp=.1;window.__combatNear(e);b.choose('attack');b.target=e;b.forceLuck('krytyk');b.confirm();});
       await page.waitForTimeout(600);
     }
