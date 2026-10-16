@@ -114,6 +114,17 @@ try {
     assert.equal(await page.evaluate(()=>document.body.classList.contains('turn-combat')),false);
     assert(exp>=5,'Original EXP callback executed');
     await page.screenshot({path:`.cache/combat-${size}-finished.png`});
+    // Existing ranged training still works; its real-time shot cannot hurt an unaccepted encounter.
+    const drill=await page.evaluate(()=>{
+      const g=window.__game.scene.getScene('game'),gear=window.__gear;
+      const e=g.spawnEnemy(g.player.x+3,g.player.y,'test-training','glut');e.temp=true;
+      const hp=e.hp,before=gear.skills.luk,original=g.training.hitAt,any=g.training.anyAt;
+      g.training.hitAt=(_x,_y,_r,skill)=>skill==='luk'?{}:null;g.training.anyAt=()=>null;
+      g.fireShot({id:'luk',rodzaj:'luk',moc:4,amunicja:'strzaly'},{x:1,y:0},false,g.time.now);g.updateShots(.001);
+      g.training.hitAt=original;g.training.anyAt=any;
+      const result={before,after:gear.skills.luk,hp,afterHp:e.hp};e.destroy();g.enemies=g.enemies.filter(q=>q!==e);return result;
+    });
+    assert.equal(drill.after,drill.before+1);assert.equal(drill.afterHp,drill.hp);
     // Level progression and the boss's queued phase, on a compact group.
     await page.evaluate(()=>{window.__session.exp=1000;const g=window.__game.scene.getScene('game');g.turnCombat.rng=123;g.testEncounter('group');});
     await dismiss(false);await ready();assert.equal((await game()).max,4,'Level 5 gets four base moves');
@@ -141,6 +152,13 @@ try {
     assert(formations.find(g=>g.mobile).d>0,'Mobile nucleus moves');
     assert(formations.every(g=>g.farthest<32),'Followers stay near the nucleus');
     await page.screenshot({path:`.cache/combat-${size}-formations.png`});
+    // Defeat releases tactical input and hands control to the existing resurrection dialog.
+    await page.evaluate(()=>window.__game.scene.getScene('game').testEncounter('single'));
+    await dismiss(false);await ready();
+    await page.evaluate(()=>{const g=window.__game.scene.getScene('game');g.player.hp=.1;g.turnCombat.h.hurt(g.turnCombat.wave[0],1);});
+    assert.equal(await page.evaluate(()=>window.__game.scene.getScene('game').turnCombat.active),false);
+    assert.equal(await page.evaluate(()=>document.body.classList.contains('turn-combat')),false);
+    assert.match(await page.evaluate(()=>window.__game.scene.getScene('ui').dialogBox?.list.filter(x=>x.type==='Text').map(x=>x.text).join(' ')),/Porażka/);
     const layout=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth>innerWidth,oldInputs:window.__game.scene.getScene('game').turnCombat.active}));assert.equal(layout.scroll,false);
     assert.deepEqual(errors,[],JSON.stringify(errors));results.push({size,pass:true,exp});await ctx.close();
   }

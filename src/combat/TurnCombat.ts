@@ -419,7 +419,8 @@ export class TurnCombat {
     this.group.forEach(e=>{e.vel.set(0,0);this.ignored.set(this.groupKey(e),{x:e.x,y:e.y});});
     cancelPress();resetTouch();resetKeys();this.h.player.vel.set(0,0);this.h.hud();
     // Clear the local recovery checkpoint after the server has acknowledged completion.
-    this.h.save(null).then(()=>storeCombat(session.name,null),()=>{});
+    const name=session.name;
+    this.h.save(null).then(()=>storeCombat(name,null),()=>{});
   }
 
   private render(retry=false) {

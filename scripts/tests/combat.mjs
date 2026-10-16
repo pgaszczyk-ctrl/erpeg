@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { route, clearSegment, pathLength, incoming, roll } from '../../src/combat/rules.ts';
 import { ruchyPoziomu, kosztRuchow, aktywnaFala, SPOTKANIA as C } from '../../src/content/spotkania.ts';
+import { combatBase } from '../../src/combat/state.ts';
 
 assert.equal(ruchyPoziomu(1),3);
 assert.equal(ruchyPoziomu(5),4);
@@ -24,6 +25,8 @@ const a={rng:123},b={rng:123};
 for(let i=0;i<20;i++)assert.equal(roll(a),roll(b),'Persisted random state reproduces rolls');
 const checkpoint=structuredClone(a),next=roll(a);
 assert.equal(roll(checkpoint),next,'A resumed turn continues the sequence');
+assert.equal(combatBase({coins:5,hp:10},0),combatBase({hp:10,coins:5,testCombat:{stamp:99}},0),'Server JSON key order and checkpoint contents do not change the save identity');
+assert.notEqual(combatBase({coins:5,hp:10},0),combatBase({coins:6,hp:10},0),'Newer real progress invalidates a stale local recovery');
 // The full starting group cannot kill a healthy age-appropriate hero in one ordinary reply.
 for(const health of [4,6,10]) for(const difficulty of [0.25,0.5,1,2]) {
   assert(aktywnaFala(health)*C.obrazeniaWroga*difficulty*1.2<health,'Also survive rain-strengthened blobs on Hardcore');

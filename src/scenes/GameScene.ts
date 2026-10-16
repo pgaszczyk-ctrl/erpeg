@@ -318,6 +318,7 @@ const STORY_PLACES = new Set(['school', 'church', 'university']);
 
 export class GameScene extends Phaser.Scene {
   turnCombat?: TurnCombat;
+  private testEncounterSequence = 0;
   private cityQuestEpoch = 0;
   private cityQuestPlanning = false;
   city!: CityMap;
@@ -1484,7 +1485,7 @@ export class GameScene extends Phaser.Scene {
     if (arc && (fighting || drill)) this.drawSweep(aim, arc, reach);
     // An enemy right on top of the hero is always hit too.
     const onHero = (s: Enemy) => Phaser.Math.Distance.Between(this.player.x, this.player.y + 2, s.x, s.y) < s.size + 7;
-    for (const s of [...this.enemies]) {
+    for (const s of this.turnCombat ? [] : [...this.enemies]) {
       if (s.isDead || s.inAir) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
       hits++;
@@ -1974,7 +1975,7 @@ export class GameScene extends Phaser.Scene {
     if(kind==='single'){const e=this.spawnEnemy(points[0].x,points[0].y,`test-spotkanie:${Date.now()}`,'glut');e.temp=true;this.turnCombat.offer(e);return;}
     const n=kind==='single'?1:Math.min(3,points.length);
     const at=points[0];
-    const g:Gang={id:`test:${Date.now()}`,kind:{nazwa:'Grupka testowa',promienM:92,czlonkow:[n,n],naKm2:0,herszt:'herszt',nagroda:{monety:25,exp:40}},x:at.x,y:at.y,r:92*PX_PER_M,spots:points.slice(0,n).map(p=>({...p,kind:'glut'})),alive:new Set(Array.from({length:n},(_,i)=>i)),members:new Map(),boss:'none',clearedAt:0,formation:{x:at.x,y:at.y,angle:0,mobile:kind==='mobile',turn:0}};
+    const g:Gang={id:`test:${Date.now()}:${++this.testEncounterSequence}`,kind:{nazwa:'Grupka testowa',promienM:92,czlonkow:[n,n],naKm2:0,herszt:'herszt',nagroda:{monety:25,exp:40}},x:at.x,y:at.y,r:92*PX_PER_M,spots:points.slice(0,n).map(p=>({...p,kind:'glut'})),alive:new Set(Array.from({length:n},(_,i)=>i)),members:new Map(),boss:'none',clearedAt:0,formation:{x:at.x,y:at.y,angle:0,mobile:kind==='mobile',turn:0}};
     this.streets.adopt(g);
     for(let i=0;i<n;i++){const p=points[i];const e=this.spawnEnemy(p.x,p.y,`test-spotkanie:${Date.now()}`,'glut');e.temp=true;e.ambient=true;e.gang=g;g.members.set(i,e);}
     if(kind!=='mobile'&&kind!=='static')this.turnCombat.offer(g.members.get(0) as Enemy);
@@ -4736,7 +4737,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Press and hold to aim, let go to shoot (bow or magic). */
   private updateRanged(now: number, lingering: boolean) {
-    if (this.turnCombat) { consumeRelease(); return; }
+    if (this.turnCombat?.held) { consumeRelease(); return; }
     const weapon = rangedWeapon();
     const aim = weapon && !lingering ? this.aimDirection() : null;
     this.aimLine.clear();
@@ -4786,7 +4787,7 @@ export class GameScene extends Phaser.Scene {
     const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
     const px = this.player.x, py = this.player.y;
     const points: { x: number; y: number }[] = [];
-    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
+    if(!this.turnCombat)for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
     for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 * SKALA_POSTACI });
     let best: { x: number; y: number } | null = null;
     let bestScore = Infinity;
@@ -4811,7 +4812,7 @@ export class GameScene extends Phaser.Scene {
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
   private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
-    if (this.turnCombat) return; // TEST attacks are committed through the turn controller
+    if (this.turnCombat?.held) return; // Outside combat TEST shots can still train at stations.
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     dir = this.aimAssist(dir, skill);
     this.lastShot = now;
@@ -4856,7 +4857,7 @@ export class GameScene extends Phaser.Scene {
         if (this.city.buildingAt(ox + (sp.x - ox) * t, oy + (sp.y - oy) * t) !== undefined) done = true;
       }
       if (!done) {
-        const foe = this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
+        const foe = this.turnCombat ? undefined : this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
         if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
