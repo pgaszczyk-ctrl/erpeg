@@ -1,4 +1,6 @@
-# Spotkania i walka półturowa — prototyp TEST
+# Spotkania i walka półturowa — wycofany prototyp TEST
+
+**WYCOFANE 16.10.2026 na polecenie właściciela.** Wygląd i działanie prototypu zostały odrzucone. Poniżej wyłącznie historia próby; kod i zachowanie gry wracają do stanu sprzed wdrożenia. Nie reaktywować bez nowych ustaleń.
 
 Zamówienie: załączona specyfikacja właściciela z 16.10.2026 (`SPECYFIKACJA_TEST.md`). Dodatkowa decyzja z rozmowy: gang jest zwartą grupką; część grupek wędruje jako jądro z bliskimi „elektronami”, część stoi w miejscu (np. przy znalezionym plecaku). Plecak jest przykładem fabularnym, nie nowym przedmiotem ani zadaniem.
 
