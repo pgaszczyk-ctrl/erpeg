@@ -1,0 +1,117 @@
+name: Hela production release check
+on:
+  pull_request:
+    paths:
+      - 'src/api.ts'
+      - 'produkcja/1.027-serce-zebatka.patch'
+      - 'scripts/tests/browser-serce-zebatka.mjs'
+      - '.github/workflows/serce-zebatka.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare the production candidate with the published maps
+        run: |
+          cp scripts/tests/browser-serce-zebatka.mjs /tmp/browser-serce-zebatka.mjs
+          mkdir -p /tmp/release-patches
+          cp produkcja/*.patch /tmp/release-patches/
+          git checkout --quiet "$(tr -d ' \n\r' < PRODUKCJA)"
+          for p in /tmp/release-patches/*.patch; do git apply "$p"; done
+          cp /tmp/browser-serce-zebatka.mjs scripts/tests/browser-serce-zebatka.mjs
+          mkdir -p public/map
+          curl --fail --max-time 30 https://exp-lore.app/map/lublin.json -o public/map/lublin.json
+          curl --fail --max-time 30 https://exp-lore.app/map/world.json -o public/map/world.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit && npx vite build
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Test production with the published map tiles and mocked player RPCs
+        run: |
+          set -o pipefail
+          mkdir -p .cache
+          node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
+        env:
+          LIVE_CONTENT: '1'
+          LIVE_MAPS: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: serce-published-map-screenshots
+          path: .cache/serce-*
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect the live mission catalogue without player access
+        run: |
+          node --input-type=module - <<'JS' > catalogue-check.json
+          import {readFileSync} from 'node:fs';
+          const s = readFileSync('src/api.ts','utf8');
+          const base = /const URL = '([^']+)'/.exec(s)[1], key = /const KEY = '([^']+)'/.exec(s)[1];
+          try {
+            const r = await fetch(base+'game_content',{method:'POST',headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({p_all:true}),signal:AbortSignal.timeout(20000)});
+            const rows = await r.json();
+            console.log(JSON.stringify({status:r.status,missions:Array.isArray(rows)?rows.map(m=>({id:m.id,adres:m.adres,tylkoTest:m.tylkoTest,postac:m.postac})):rows},null,2));
+          } catch(e) { console.log(JSON.stringify({error:e.message,cause:e.cause?.message})); }
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catalogue-check
+          path: catalogue-check.json
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build the precise production release candidate
+        run: |
+          cp scripts/tests/browser-serce-zebatka.mjs /tmp/browser-serce-zebatka.mjs
+          mkdir -p /tmp/release-patches
+          cp produkcja/*.patch /tmp/release-patches/
+          git checkout --quiet "$(tr -d ' \n\r' < PRODUKCJA)"
+          for p in /tmp/release-patches/*.patch; do git apply "$p"; done
+          cp /tmp/browser-serce-zebatka.mjs scripts/tests/browser-serce-zebatka.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx vite build
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Read live catalogue; test phone and desktop with mocked player RPCs
+        run: |
+          set -o pipefail
+          mkdir -p .cache
+          node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
+        env:
+          LIVE_CONTENT: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: serce-zebatka-screenshots
+          path: .cache/serce-*
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

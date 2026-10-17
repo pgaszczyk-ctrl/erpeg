@@ -4,7 +4,7 @@
 // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
 // code with VITE_TEST=1 and says so on screen.
 
-export const WERSJA = '1.026';
+export const WERSJA = '1.027';
 
 /** Built for the test server? */
 export const TEST = import.meta.env.VITE_TEST === '1';
