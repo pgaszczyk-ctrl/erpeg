@@ -40,6 +40,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test production with the published map tiles and mocked player RPCs
         run: |
+          set -o pipefail
           mkdir -p .cache
           node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
         env:
@@ -101,6 +102,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Read live catalogue; test phone and desktop with mocked player RPCs
         run: |
+          set -o pipefail
           mkdir -p .cache
           node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
         env:

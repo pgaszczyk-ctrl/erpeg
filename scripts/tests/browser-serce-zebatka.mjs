@@ -50,8 +50,11 @@ try {
       if (['logout', 'heartbeat'].includes(fn)) json = true;
       await route.fulfill({ json });
     });
+    let loginAttempt = 0;
     async function login() {
-      await page.goto('http://127.0.0.1:4173/?lang=pl&ostrosc=1#wczytaj');
+      // A different query forces a new document; adding only #wczytaj during play
+      // is a same-document navigation and does not reopen the start menu.
+      await page.goto(`http://127.0.0.1:4173/?lang=pl&ostrosc=1&test-login=${loginAttempt++}#wczytaj`);
       await page.waitForSelector('#menu', { timeout: 60000 });
       start = await page.evaluate(() => {
         const city = window.__game.registry.get('city');
