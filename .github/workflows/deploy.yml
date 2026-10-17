@@ -109,23 +109,27 @@ jobs:
         uses: actions/deploy-pages@v4
       - name: Verify the published production code
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import hashlib, re, time, urllib.request
-          html = Path('site/index.html').read_text()
-          entry = re.search(r'<script[^>]+src="([^"]+\.js)"', html).group(1)
-          path = entry.removeprefix('./').lstrip('/')
-          expected = hashlib.sha256(Path('site', path).read_bytes()).hexdigest()
-          for attempt in range(6):
-              try:
-                  req = urllib.request.Request('https://exp-lore.app/?release-check=' + str(time.time_ns()), headers={'Cache-Control': 'no-cache'})
-                  published = urllib.request.urlopen(req, timeout=20).read().decode()
-                  assert path in published, 'Public HTML still references an older game'
-                  code = urllib.request.urlopen('https://exp-lore.app/' + path, timeout=20).read()
-                  assert hashlib.sha256(code).hexdigest() == expected, 'Public game differs from the production artifact'
-                  print('PASS: exp-lore.app serves the exact production JavaScript:', path, expected)
-                  break
-              except Exception:
-                  if attempt == 5: raise
-                  time.sleep(5)
-          PY
+          node --input-type=module - <<'JS'
+          import {readFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const html = readFileSync('site/index.html','utf8');
+          const entry = /<script[^>]+src="([^"]+\.js)"/.exec(html)[1];
+          const path = entry.replace(/^\.\//,'').replace(/^\//,'');
+          const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+          const expected = hash(readFileSync('site/'+path));
+          const headers = {'Cache-Control':'no-cache','User-Agent':'Mozilla/5.0 HelaReleaseCheck'};
+          for(let attempt=0;attempt<6;attempt++) {
+            try {
+              const r = await fetch('https://exp-lore.app/?release-check='+Date.now(),{headers,signal:AbortSignal.timeout(20000)});
+              if(!r.ok || !(await r.text()).includes(path)) throw new Error('Public HTML has not reached this release');
+              const code = await fetch('https://exp-lore.app/'+path,{headers,signal:AbortSignal.timeout(20000)});
+              if(!code.ok || hash(Buffer.from(await code.arrayBuffer()))!==expected) throw new Error('Public JavaScript differs from the production artifact');
+              console.log('PASS: exact production JavaScript published:',path,expected);
+              break;
+            } catch(e) {
+              console.log('Public verification attempt',attempt+1,e.message);
+              if(attempt===5) throw e;
+              await new Promise(resolve=>setTimeout(resolve,5000));
+            }
+          }
+          JS
