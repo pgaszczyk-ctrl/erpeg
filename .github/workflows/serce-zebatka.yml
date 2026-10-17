@@ -10,6 +10,26 @@ on:
 permissions:
   contents: read
 jobs:
+  catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect the live mission catalogue without player access
+        run: |
+          node --input-type=module - <<'JS' > catalogue-check.json
+          import {readFileSync} from 'node:fs';
+          const s = readFileSync('src/api.ts','utf8');
+          const base = /const URL = '([^']+)'/.exec(s)[1], key = /const KEY = '([^']+)'/.exec(s)[1];
+          try {
+            const r = await fetch(base+'game_content',{method:'POST',headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({p_all:true}),signal:AbortSignal.timeout(20000)});
+            const rows = await r.json();
+            console.log(JSON.stringify({status:r.status,missions:Array.isArray(rows)?rows.map(m=>({id:m.id,adres:m.adres,tylkoTest:m.tylkoTest,postac:m.postac})):rows},null,2));
+          } catch(e) { console.log(JSON.stringify({error:e.message,cause:e.cause?.message})); }
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catalogue-check
+          path: catalogue-check.json
   production:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -37,14 +57,16 @@ jobs:
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
       - name: Read live catalogue; test phone and desktop with mocked player RPCs
-        run: node scripts/tests/browser-serce-zebatka.mjs
+        run: |
+          mkdir -p .cache
+          node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
         env:
           LIVE_CONTENT: '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: serce-zebatka-screenshots
-          path: .cache/serce-*.png
+          path: .cache/serce-*
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
