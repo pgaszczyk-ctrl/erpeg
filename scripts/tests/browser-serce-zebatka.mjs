@@ -93,6 +93,7 @@ try {
     await page.waitForFunction(() => [...window.__game.scene.getScene('game').etapy.givers.values()].some(g => g.imie === 'Hela Trybik'));
     await page.screenshot({ path: `.cache/serce-${name}-targi.png` });
     for (const [i, id] of expected.entries()) {
+      console.log(`${name}: accepting ${id}`);
       await page.evaluate(id => {
         const s = window.__game.scene.getScene('game');
         s.openMissionDialog(s.missions.find(r => r.m.id === id));
@@ -102,7 +103,9 @@ try {
         await page.screenshot({ path: `.cache/serce-${name}-hela.png` });
       }
       await click('Przyjmuję');
-      await page.waitForFunction(id => window.__session.missions[id] === 'active', id);
+      // The final destination is Hela, where this fixture already stands: the
+      // game may reach the goal in the frame immediately after acceptance.
+      await page.waitForFunction(id => ['active', 'goal'].includes(window.__session.missions[id]), id);
       if (!i) {
         await page.waitForTimeout(500);
         assert.equal(saved.missions.sz_jarmark, 'active');
@@ -115,7 +118,7 @@ try {
         const s = window.__game.scene.getScene('game');
         const rm = s.missions.find(r => r.m.id === id);
         if (!rm.target) throw new Error(`Missing target ${id}`);
-        s.completeStage(rm);
+        if (window.__session.missions[id] === 'active') s.completeStage(rm);
       }, id);
       await click('Dziękuję!');
       await page.waitForFunction(id => window.__session.missions[id] === 'done', id);
