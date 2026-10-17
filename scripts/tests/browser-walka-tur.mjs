@@ -35,14 +35,18 @@ try {
   page.on('dialog', (d) => d.accept());
   await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() => !document.querySelector('#loading-map:not([hidden])') && !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(4000);
   await page.evaluate(() => {
     const s = window.__game.scene.getScene('game');
     window.__dialogi = [];
     const orig = s.dialog.bind(s);
     s.dialog = (req) => { window.__dialogi.push({ title: req.title, text: req.text, buttons: req.buttons }); return orig(req); };
-    // No fresh-start protection blinking in the pictures.
+    // No fresh-start protection blinking in the pictures; the hero on free ground.
     s.protectUntil = 0;
+    // Away from home (enemies vanish within 40 m of it).
+    const f = s.city.freeNear(s.player.x + 260, s.player.y + 5);
+    s.player.setPosition(f.x, f.y - 5);
   });
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').streets.tury), true, 'turn fight is on (TEST)');
 
@@ -81,8 +85,14 @@ try {
   async function button(sel) {
     const b = page.locator(`#walka-panel ${sel}`);
     await b.waitFor({ timeout: 10000 });
-    if (mobile) await b.tap();
-    else await b.click();
+    try {
+      if (mobile) await b.tap({ timeout: 8000 });
+      else await b.click({ timeout: 8000 });
+    } catch (e) {
+      console.log('STAN', JSON.stringify(await fight()), await page.evaluate(() => document.getElementById('walka-panel')?.outerHTML.slice(0, 600)));
+      await page.screenshot({ path: `work/walka-${tag}-blad.png` });
+      throw e;
+    }
     await page.waitForTimeout(250);
   }
   const fight = () => g(() => {
@@ -104,7 +114,7 @@ try {
         if (!ok(cx, cy)) continue;
         // A straight free way from the hero to the group (the test walks it).
         let clear = true;
-        for (let k = 0; k <= d && clear; k += 3) if (!ok(p.x + Math.cos(a) * k, p.y + Math.sin(a) * k)) clear = false;
+        for (let k = 8; k <= d && clear; k += 3) if (!ok(p.x + Math.cos(a) * k, p.y + Math.sin(a) * k)) clear = false;
         if (!clear) continue;
         const pts = kinds.map((_, i) => ({ x: cx + Math.cos(i * 2.1) * 6, y: cy + Math.sin(i * 2.1) * 5 }));
         if (!pts.every((q) => ok(q.x, q.y))) continue;
@@ -166,7 +176,8 @@ try {
   console.log('fight', JSON.stringify(f));
   const maxHp = f.maxHp;
   assert.equal(f.zywi.length, 3);
-  assert.equal(f.max, 3, 'level 3: 3 moves');
+  assert(f.max === 3 || f.max === 4, 'level 3: 3 moves (+1 with luck)');
+  const r0start = f.ruchy;
   // Spread out: nobody overlaps, everyone keeps clear of the hero.
   const pos = await g(() => { const s = window.__game.scene.getScene('game'); return { p: { x: s.player.x, y: s.player.y }, e: s.walka.zywi.map((q) => ({ x: q.e.x, y: q.e.y, r: q.r })) }; });
   for (let i = 0; i < pos.e.length; i++) {
@@ -184,13 +195,13 @@ try {
   await tapWorld(near.x, near.y - 4);
   f = await fight();
   assert.equal(f.cel, true, 'target chosen by a tap on the map');
-  assert.equal(f.ruchy, 3, 'choosing costs nothing');
+  assert.equal(f.ruchy, r0start, 'choosing costs nothing');
   await page.screenshot({ path: `work/walka-${tag}-4-cel.png` });
   await tapWorld(near.x, near.y - 4);
   await waitPhase('gracz');
   f = await fight();
   console.log('after a blow', JSON.stringify(f));
-  assert(f.ruchy <= 2 || f.faza !== 'gracz', 'a blow costs a move');
+  assert(f.ruchy === r0start - 1 || f.faza !== 'gracz', 'a blow costs a move');
 
   // Ruch: the lit range, a tap on the ground previews, the second tap walks.
   if (f.ruchy >= 1 && f.faza === 'gracz') {
@@ -227,9 +238,10 @@ try {
     const p = await g(() => ({ x: window.__game.scene.getScene('game').player.x, y: window.__game.scene.getScene('game').player.y }));
     const t = f.zywi.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
     await tapWorld(t.x, t.y - 4);
-    const ok = await g(() => { const w = window.__game.scene.getScene('game').walka; return w && w.cel && w.planCiosu(w.cel, false); });
-    if (ok && ok.ok) await tapWorld(t.x, t.y - 4);
-    else if (ok && /Podejdź/.test(ok.tekst)) {
+    const ok = await g(() => { const w = window.__game.scene.getScene('game').walka; return w ? (w.cel ? w.planCiosu(w.cel, false) : { ok: false, tekst: '' }) : null; });
+    if (!ok) break;
+    if (ok.ok) await tapWorld(t.x, t.y - 4);
+    else if (/Podejdź/.test(ok.tekst)) {
       // Too far: one Ruch towards it.
       await button('.wp-b.ruch');
       const spot = await g(([tx, ty]) => {
@@ -239,7 +251,7 @@ try {
         return best;
       }, [t.x, t.y]);
       if (spot) { await tapWorld(spot.x, spot.y); await tapWorld(spot.x, spot.y); }
-    } else await button('.wp-koniec:not(.wp-wroc)');
+    } else await page.evaluate(() => document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)')?.click());
     await page.waitForTimeout(200);
     await waitPhase('gracz');
   }

@@ -111,7 +111,7 @@ import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weath
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
 import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
-import { TuryWalki, type WynikWalki } from '../walka/TuryWalki';
+import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
 import { tury } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA } from '../content/walkaTurowa';
@@ -1864,7 +1864,7 @@ export class GameScene extends Phaser.Scene {
       // or path (so they can't end up shut in a courtyard).
       for (let t = 0; t < 120; t++) {
         const a = Math.random() * Math.PI * 2;
-        const r = 8 + Math.random() * spread;
+        const r = 8 + Math.random() * (tury() ? Math.min(spread, 14) : spread);
         const x = p.x + Math.cos(a) * r;
         const y = p.y + Math.sin(a) * r;
         if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
@@ -1892,7 +1892,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (kind === 'wodnik') s.brain = (now) => this.wodnikThink(s, now);
     // Turn fight (test server): nobody chases; groups wait to be met.
-    if (tury()) s.spokojny = true;
+    if (tury()) {
+      s.spokojny = true;
+      s.roam = 6; // a group stays together (walka/Spotkania.ts finds it by chains of near members)
+    }
     this.enemies.push(s);
     return s;
   }
@@ -1945,6 +1948,7 @@ export class GameScene extends Phaser.Scene {
     consumeRelease();
     this.player.move(0, 0, this.time.now);
     this.player.vel.set(0, 0);
+    this.spotkania?.ukryj();
     mapaWalki.fn = (x, y) => {
       const cam = this.cameras.main;
       const wx = (x * OSTROSC) / cam.zoom + cam.worldView.x;
@@ -2019,7 +2023,7 @@ export class GameScene extends Phaser.Scene {
     consumeRelease();
     consumeHeal();
     this.walka!.update();
-    this.player.setDepth(this.player.y);
+    this.player.setDepth(this.player.y + NAD_KORONAMI);
     this.updateFog();
     this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
     this.animateCrops(now);
@@ -3961,14 +3965,14 @@ export class GameScene extends Phaser.Scene {
         for (let k = 0; k < P.ile; k++) {
           for (let t = 0; t < 60; t++) {
             const a = Math.random() * Math.PI * 2;
-            const r = 6 + Math.random() * 30;
+            const r = 6 + Math.random() * (tury() ? 12 : 30);
             const x = spot.x + Math.cos(a) * r;
             const y = spot.y + Math.sin(a) * r;
             if (!this.city.isFree(x, y + FEET.dy, FEET.hw, FEET.hh)) continue;
             const e = this.spawnEnemy(x, y, undefined, 'glut');
             e.temp = true;
             e.folkQuest = true;
-            e.roam = 30;
+            e.roam = tury() ? 6 : 30;
             enemies.push(e);
             break;
           }

@@ -76,6 +76,8 @@ type Tryb = 'cios' | 'mocny' | 'ruch' | null;
 const HERO_R = 0.3 * W;
 const GLEB_ZIEMI = -1e8 + 3;
 const GLEB_GORA = 1_050_000;
+/** Fighters' depth bonus: above tree crowns and tall buildings while the fight lasts. */
+export const NAD_KORONAMI = 200_000;
 
 export class TuryWalki {
   aktywna = true;
@@ -187,8 +189,7 @@ export class TuryWalki {
       if (kto === p) p.move((b.x - a.x) / len, (b.y - a.y) / len, now);
       else this.patrz(kto as WrogWalki, b.x - a.x, b.y - a.y, true);
       await this.tween(kto, { x: b.x, y: b.y }, Math.max(80, (len / W) * 170));
-      if (kto !== p) (kto as WrogWalki).setDepth(b.y + (kto as WrogWalki).depthOff);
-      else p.setDepth(p.y);
+
     }
     if (kto === p) p.move(0, 0, this.h.scene.time.now);
   }
@@ -833,7 +834,9 @@ export class TuryWalki {
       g.lineStyle(sel ? 1.6 : 1, sel ? 0xffd34a : 0xff6a5a, sel ? 1 : 0.7).strokeEllipse(e.x, feet(e.y), q.r * 2 + 4, q.r + 3);
       // A small life bar over each, bigger over the chosen one.
       const w = sel ? 14 : 9;
-      const top = e.y - (e.hd ? 20 * 0.66 : 9) * e.kind.scale - 3;
+      // Fighters stand out over tree crowns and roofs for the whole fight.
+      e.setDepth(e.y + NAD_KORONAMI);
+      const top = e.y - (e.hd ? 12 : 9) * e.kind.scale;
       const part = Math.max(0, e.hp) / Math.max(e.hp, q.hp0, 1);
       t.fillStyle(0x1e1a24, 0.9).fillRect(e.x - w / 2 - 0.5, top - 0.5, w + 1, sel ? 2.6 : 2);
       t.fillStyle(sel ? 0xff5a4a : 0xc23a30, 1).fillRect(e.x - w / 2, top, w * Math.min(1, part), sel ? 1.6 : 1);
@@ -847,7 +850,7 @@ export class TuryWalki {
         g.fillStyle(0xffe08a, 0.95);
         for (const q of droga(this.zas, plan.z.k)) g.fillCircle(q.x, feet(q.y), 0.8);
       }
-      this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - 22 * 0.66 * c.e.kind.scale - 4).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
+      this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - (c.e.hd ? 12 : 9) * c.e.kind.scale - 3).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
     } else this.etykieta.setVisible(false);
   }
 

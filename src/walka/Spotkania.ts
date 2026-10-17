@@ -58,6 +58,11 @@ export class Spotkania {
     this.gfx.destroy();
   }
 
+  /** No rings while a fight is on (they come back with the next update after it). */
+  ukryj() {
+    this.gfx.clear();
+  }
+
   /** The groups near the hero (chains of members close to one another). */
   private zbierz(): Grupka[] {
     const p = this.h.player;

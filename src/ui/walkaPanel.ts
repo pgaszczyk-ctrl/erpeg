@@ -60,9 +60,9 @@ body.walka-tur #hud .hud-m, body.walka-tur #hud .hud-picks { display: none !impo
 #walka-panel .wp-podp b { font: 700 11px 'Pixelify Sans', monospace; letter-spacing: 1px; color: #e9c46a; margin-right: 6px; }
 #walka-panel .wp-rzad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 #walka-panel button { font: inherit; color: inherit; cursor: pointer; }
-#walka-panel .wp-b { position: relative; min-height: 56px; border-radius: 9px; border: 2px solid #7d5a2a; background: linear-gradient(#5a4130, #3a2a1e);
+#walka-panel .wp-b { position: relative; min-height: 52px; border-radius: 9px; border: 2px solid #7d5a2a; background: linear-gradient(#5a4130, #3a2a1e);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; box-shadow: inset 0 1px 0 #ffffff22, 0 2px 0 #1e1a24; }
-#walka-panel .wp-b img, #walka-panel .wp-b svg { width: 26px; height: 26px; image-rendering: pixelated; }
+#walka-panel .wp-b img, #walka-panel .wp-b svg { width: 24px; height: 24px; image-rendering: pixelated; }
 #walka-panel .wp-b .n { font-weight: 800; font-size: 15px; line-height: 1; letter-spacing: 0.5px; text-transform: uppercase; }
 #walka-panel .wp-b .k { font-size: 11px; opacity: 0.8; line-height: 1; }
 #walka-panel .wp-b.on { border-color: #ffd34a; background: linear-gradient(#7a5826, #4e3818); box-shadow: 0 0 0 2px #ffd34a55, inset 0 1px 0 #fff3; }
@@ -70,7 +70,7 @@ body.walka-tur #hud .hud-m, body.walka-tur #hud .hud-picks { display: none !impo
 #walka-panel .wp-b.gotowy::after { content: '✔'; position: absolute; top: 3px; right: 6px; font-size: 13px; color: #9dff9a; }
 #walka-panel .wp-b:disabled { opacity: 0.42; cursor: default; }
 #walka-panel .wp-dol { display: flex; gap: 6px; margin-top: 5px; }
-#walka-panel .wp-koniec { flex: 1; min-height: 36px; border-radius: 8px; border: 2px solid #7d5a2a; background: linear-gradient(#3a2a1e, #2a1d14); font-weight: 700; font-size: 15px; }
+#walka-panel .wp-koniec { flex: 1; min-height: 34px; border-radius: 8px; border: 2px solid #7d5a2a; background: linear-gradient(#3a2a1e, #2a1d14); font-weight: 700; font-size: 15px; }
 #walka-panel .wp-koniec:disabled { opacity: 0.45; }
 #walka-panel.czekaj .wp-rzad, #walka-panel.czekaj .wp-dol { opacity: 0.5; pointer-events: none; }
 @media (max-height: 560px) { #walka-panel .wp-b { min-height: 50px; } #walka-panel .wp-b img, #walka-panel .wp-b svg { width: 22px; height: 22px; } }
