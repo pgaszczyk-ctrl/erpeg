@@ -297,3 +297,5 @@
 
 
 - (16 Oct 2026, owner) The TEST turn-combat prototype was rejected and withdrawn. Restore the pre-prototype combat and controls from 25bb220; do not re-enable src/combat or encounter formations. docs/walka/ is historical material awaiting new owner specifications, not an active implementation order.
+
+- (17 Oct 2026, owner: „Na produkcji musi być”, „Włączaj”) Hela Trybik at Targi Lublin (Dworcowa 11), all eight `sz_*` missions of „Serce Zębatka” and Bruno's `sz_cukiernia` are released by the 1.027 production patch. `api.content` fetches the full active server catalogue and permits only these nine explicit test-marked IDs on production; other test stories remain hidden. No SQL/player-data change. Production candidate verification: `.github/workflows/serce-zebatka.yml`, read-only live catalogue plus mocked phone/desktop chain progression and reload in `scripts/tests/browser-serce-zebatka.mjs`.

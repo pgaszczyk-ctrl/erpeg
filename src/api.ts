@@ -190,8 +190,13 @@ export const api = {
   resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
   /** Missions made in the admin panel. */
   quizzes: () => rpc<[number, number, string, string, string[], string | null][]>('school_quizzes', { p_all: true }),
-  // The test server also gets missions marked „tylko serwer testowy” (production's game_content() leaves them out).
-  content: () => rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', TEST ? { p_all: true } : {}),
+  // Owner, 17 Oct 2026: release Hela Trybik's entire chain, including Bruno's shop.
+  // Other test-only stories remain hidden on production, even though we fetch the full catalogue.
+  content: async () => {
+    const list = await rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', { p_all: true });
+    const released = new Set(['sz_jarmark', 'sz_para', 'sz_chochliki', 'sz_czarcia_lapa', 'sz_slodki_trop', 'sz_herszt', 'sz_zegarmistrz', 'sz_serce', 'sz_cukiernia']);
+    return TEST ? list : list.filter((m) => !m.tylkoTest || released.has(m.id));
+  },
   redeem: (token: string, missionId: string, code: string) =>
     rpc<{ reward: string }>('redeem_code', { p_token: token, p_mission_id: missionId, p_code: code }),
 };

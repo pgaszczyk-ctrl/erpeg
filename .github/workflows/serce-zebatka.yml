@@ -1,0 +1,50 @@
+name: Hela production release check
+on:
+  pull_request:
+    paths:
+      - 'src/api.ts'
+      - 'produkcja/1.027-serce-zebatka.patch'
+      - 'scripts/tests/browser-serce-zebatka.mjs'
+      - '.github/workflows/serce-zebatka.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build the precise production release candidate
+        run: |
+          cp scripts/tests/browser-serce-zebatka.mjs /tmp/browser-serce-zebatka.mjs
+          mkdir -p /tmp/release-patches
+          cp produkcja/*.patch /tmp/release-patches/
+          git checkout --quiet "$(tr -d ' \n\r' < PRODUKCJA)"
+          for p in /tmp/release-patches/*.patch; do git apply "$p"; done
+          cp /tmp/browser-serce-zebatka.mjs scripts/tests/browser-serce-zebatka.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx vite build
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Read live catalogue; test phone and desktop with mocked player RPCs
+        run: node scripts/tests/browser-serce-zebatka.mjs
+        env:
+          LIVE_CONTENT: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: serce-zebatka-screenshots
+          path: .cache/serce-*.png
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
