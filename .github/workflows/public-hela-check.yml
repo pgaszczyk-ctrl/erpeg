@@ -1,0 +1,39 @@
+name: Verify public Hela release
+on:
+  push:
+    branches: [chatgpt/praca]
+    paths: ['.github/workflows/public-hela-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect published production files
+        run: |
+          node --input-type=module - <<'JS' > public-hela-check.json
+          const base = 'https://exp-lore.app/';
+          const result = { pages: [] };
+          const headers = {'Cache-Control':'no-cache','User-Agent':'Mozilla/5.0 HelaReleaseCheck'};
+          try {
+            const r = await fetch(base+'?hela-release='+Date.now(),{headers,signal:AbortSignal.timeout(20000)});
+            const html = await r.text();
+            const entry = /<script[^>]+src="([^"]+\.js)"/.exec(html)?.[1];
+            result.pages.push({status:r.status,url:r.url,entry,title:/<title>([^<]+)/.exec(html)?.[1],head:html.slice(0,300)});
+            if(entry) {
+              const url = new URL(entry,base);
+              const js = await(await fetch(url,{headers,signal:AbortSignal.timeout(20000)})).text();
+              const chunks = [...new Set([...js.matchAll(/["'](\.\/[\w.-]+\.js)["']/g)].map(m=>m[1]))].filter(p=>!p.includes('phaser'));
+              let code = js;
+              for(const chunk of chunks) { const u=new URL(chunk,url);const s=await(await fetch(u,{headers,signal:AbortSignal.timeout(20000)})).text();code+='\n'+s;result.pages.push({url:String(u),bytes:s.length}); }
+              result.version1027=code.includes('1.027');
+              result.releasedIds=['sz_jarmark','sz_para','sz_chochliki','sz_czarcia_lapa','sz_slodki_trop','sz_herszt','sz_zegarmistrz','sz_serce','sz_cukiernia'].filter(id=>code.includes(id));
+            }
+          } catch(e) {result.error=e.message;}
+          console.log(JSON.stringify(result,null,2));
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-hela-check
+          path: public-hela-check.json
