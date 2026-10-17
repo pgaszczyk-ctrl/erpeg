@@ -57,6 +57,15 @@ export const hold = {
   id: -1,
 };
 export const mouse = { x: 0, y: 0 };
+
+/**
+ * The turn fight (walka/TuryWalki.ts): while set, a short tap or click on the map is a pick (target or spot)
+ * – no joystick, no swing. A drag doesn't count (it isn't a tap).
+ */
+export const mapaWalki: { fn: ((x: number, y: number) => void) | null } = { fn: null };
+const pickStarts = new Map<number, { x: number; y: number; t: number }>();
+const PICK_DRAG = 12;
+const PICK_MS = 700;
 /** Set when a hold ends; the game reads and clears it. */
 export let release: { mode: 'touch' | 'mouse' | 'key'; dx: number; dy: number; dragged: boolean; held: number } | null = null;
 
@@ -210,6 +219,12 @@ export function installTouchControls(el: HTMLElement) {
     sync(e);
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
+      if (mapaWalki.fn) {
+        // Turn fight: remember the touch, it becomes a pick on release.
+        if (!onMenuButton(p.x, p.y)) pickStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
+        tapListeners.forEach((fn) => fn(p.x, p.y));
+        continue;
+      }
       if (onHeal(p.x, p.y)) {
         healRequest = true;
       } else if (joyId !== null && p.y > 70) {
@@ -255,6 +270,13 @@ export function installTouchControls(el: HTMLElement) {
   const end = (e: TouchEvent) => {
     // Only swallow touches on the game itself, so taps on HTML menus still click.
     if (e.cancelable && el.contains(e.target as Node)) e.preventDefault();
+    for (const t of Array.from(e.changedTouches)) {
+      const s = pickStarts.get(t.identifier);
+      if (!s) continue;
+      pickStarts.delete(t.identifier);
+      const p = local(t);
+      if (e.type === 'touchend' && mapaWalki.fn && Math.hypot(p.x - s.x, p.y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(p.x, p.y);
+    }
     sync(e);
   };
 
@@ -316,11 +338,23 @@ export function installTouchControls(el: HTMLElement) {
   });
   window.addEventListener('mouseup', (e) => {
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
+    const s = pickStarts.get(-2);
+    if (e.button === 0 && s) {
+      pickStarts.delete(-2);
+      const r = el.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
+    }
   });
   el.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (mapaWalki.fn) {
+      if (!onMenuButton(e.offsetX, e.offsetY)) pickStarts.set(-2, { x: e.offsetX, y: e.offsetY, t: performance.now() });
+      tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
+      return;
+    }
     if (onHeal(e.offsetX, e.offsetY)) {
       healRequest = true;
       return;

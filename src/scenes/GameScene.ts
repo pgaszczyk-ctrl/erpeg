@@ -111,6 +111,11 @@ import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weath
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
 import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
+import { TuryWalki, type WynikWalki } from '../walka/TuryWalki';
+import { Spotkania } from '../walka/Spotkania';
+import { tury } from '../walka/tryb';
+import { WALKA_TUROWA, SPOTKANIA } from '../content/walkaTurowa';
+import { mapaWalki } from '../controls';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -405,6 +410,9 @@ export class GameScene extends Phaser.Scene {
   private smokiNaMapie?: SmokiNaMapie;
   /** Blows that beat the story's dragon (its life is set when the fight starts). */
   static readonly SMOK_CIOSOW = 10;
+  /** The turn fight in progress (walka/TuryWalki.ts, test server), and meeting groups on the map. */
+  private walka: TuryWalki | null = null;
+  private spotkania: Spotkania | null = null;
 
   constructor() {
     super('game');
@@ -427,6 +435,10 @@ export class GameScene extends Phaser.Scene {
       for (const p of WORKSHOP_LOCATIONS) this.city.addProducer(p.name, p.address, p.lat, p.lon, 'workshop');
     }
     this.enemies = [];
+    this.walka = null;
+    mapaWalki.fn = null;
+    document.body.classList.remove('walka-tur');
+    document.getElementById('walka-panel')?.remove();
     this.dragons = new Map();
     this.stany = {};
     this.smokCarry = 0;
@@ -567,7 +579,7 @@ export class GameScene extends Phaser.Scene {
       save: () => this.save(),
       hud: () => this.emitHud(),
       visible: (x, y) => pointInPolygon(this.vision, x, y),
-      spawnDragon: (x, y) => this.spawnEnemy(x, y, undefined, 'smok'),
+      spawnDragon: (x, y) => this.bezTur(this.spawnEnemy(x, y, undefined, 'smok')),
       scare: (x, y) => {
         for (const e of this.enemies) {
           if (e.isDead || e.kindId === 'smok' || Math.hypot(e.x - x, e.y - y) > 320) continue;
@@ -701,8 +713,8 @@ export class GameScene extends Phaser.Scene {
       (sp, g) => {
         const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
         e.ambient = true;
-        // They stand at their spot; they only come out when they see the hero.
-        e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
+        // They stand at their spot; they only come out when they see the hero (turn fight: they just sit in their group).
+        e.roam = this.streets?.tury ? 4 : g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
         e.leash = { x: g.x, y: g.y, r: g.r };
         if (sp.berserk) e.makeBerserk(BERSERKER.zycie, BERSERKER.auraKolor, BERSERKER.mrugMs, BERSERKER.predkosc);
         return e;
@@ -724,6 +736,13 @@ export class GameScene extends Phaser.Scene {
         pora: () => ({ noc: isNight(), mokro: isWet() }),
         bossOut: (g) => this.toast(`⚠ Cały gang pokonany – wychodzi ${ENEMY_KINDS[g.kind.herszt].name.toLowerCase()}!`, 3000),
         cleared: (g) => {
+          if (g.paid) {
+            // Paid off (turn fight): the territory is free, but no reward.
+            session.stats.gangs = (session.stats.gangs ?? 0) + 1;
+            this.emitHud();
+            this.toast(`🕊 ${g.kind.nazwa} ${g.kind.zenska ? 'się wyniosła' : 'się wyniósł'}. Mieszkańcy wrócą za minutę.`, 3500);
+            return;
+          }
           const coins = luckyCoins(g.kind.nagroda.monety);
           earn(coins);
           session.exp += g.kind.nagroda.exp;
@@ -733,6 +752,10 @@ export class GameScene extends Phaser.Scene {
         },
       },
     );
+
+    this.streets.tury = tury();
+    this.spotkania?.destroy();
+    this.spotkania = tury() ? this.makeSpotkania() : null;
 
     // Fixed enemy spots.
     for (const w of inLublin ? WROGOWIE : []) {
@@ -795,7 +818,7 @@ export class GameScene extends Phaser.Scene {
         orchards: this.orchards,
         dialog: (req) => this.dialog(req),
         toast: (t, ms) => this.toast(t, ms),
-        spawnDragon: (x, y) => this.spawnEnemy(x, y, undefined, 'smok'),
+        spawnDragon: (x, y) => this.bezTur(this.spawnEnemy(x, y, undefined, 'smok')),
         hurt: (from, dmg) => {
           if (!this.player.hurt(from, this.time.now, dmg)) return;
           this.emitHud();
@@ -871,6 +894,8 @@ export class GameScene extends Phaser.Scene {
       this.demoRun.update(now, dt);
       if (this.demoRun.frozen) return;
     }
+    // A turn fight: the live loop stands still (no walking, swings or monsters), the world keeps drawing.
+    if (this.walka?.aktywna) return this.updateWalka(now, dt);
 
     const lingering = now < this.lingerUntil;
     if (this.protectUntil < 0) {
@@ -975,6 +1000,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
     this.streets.update(this.player.x, this.player.y, now);
+    if (!lingering && !this.story.busy && !this.anomalia?.busy) this.spotkania?.update(now);
     this.clearHomeArea();
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
@@ -996,6 +1022,15 @@ export class GameScene extends Phaser.Scene {
       }
       // Far from the hero: asleep (saves work on phones).
       if (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380) continue;
+      // Turn fight: they wait in their group to be met (walka/Spotkania.ts) – no chasing, no touch damage.
+      if (s.spokojny) {
+        if (s.kindId === 'smok') s.vel.set(0, 0);
+        else s.think(target, now);
+        this.moveActor(s, dt);
+        s.updateLook();
+        s.setDepth(s.y + s.depthOff);
+        continue;
+      }
       // Where one goes, its friends follow.
       if (!s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
       // A dragon in a fight has its own way (claws, backing off, fire).
@@ -1189,12 +1224,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Moves a sprite by its velocity, sliding along walls, buildings and water. */
+  /** Can feet stand at this point (map, trees, training stations, landmarks)? */
+  private freeFeet(x: number, y: number) {
+    return this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.mapView.korony.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
+  }
+
   private moveActor(a: Player | Slime, dt: number) {
     const dx = a.vel.x * dt;
     const dy = a.vel.y * dt;
     const fy = a.y + FEET.dy;
-    const free = (x: number, y: number) =>
-      this.city.isFree(x, y, FEET.hw, FEET.hh) && !this.orchards.blocked(x, y) && !this.forest.blocked(x, y) && !this.mapView.korony.blocked(x, y) && !this.training.blocked(x, y) && !this.landmarks.blocked(x, y);
+    const free = (x: number, y: number) => this.freeFeet(x, y);
     // The whole step first: on a narrow diagonal way (a footbridge over water) each single-axis half-step pushes a
     // corner of the feet over the edge, so moving x then y left the hero stuck mid-bridge (report 64, 12 Oct 2026).
     if (dx && dy && free(a.x + dx, fy + dy)) {
@@ -1369,6 +1408,11 @@ export class GameScene extends Phaser.Scene {
     for (const s of [...this.enemies]) {
       if (s.isDead || s.inAir) continue;
       if (Phaser.Math.Distance.Between(hit.x, hit.y, s.x, s.y) > PLAYER.attackRadius * this.player.reach * (strong ? WALKA.zasiegMiecz : 1) + s.size && !inArc(s) && !onHero(s)) continue;
+      // Turn fight: a swing at a waiting group only asks whether to fight it.
+      if (s.spokojny) {
+        this.spotkania?.zaczep(s);
+        return;
+      }
       hits++;
       if (Math.random() >= chance) {
         this.missText(s.x, s.y - 4 * s.kind.scale);
@@ -1847,8 +1891,166 @@ export class GameScene extends Phaser.Scene {
       s.hp = Math.max(1, Math.round(s.hp * w.sila));
     }
     if (kind === 'wodnik') s.brain = (now) => this.wodnikThink(s, now);
+    // Turn fight (test server): nobody chases; groups wait to be met.
+    if (tury()) s.spokojny = true;
     this.enemies.push(s);
     return s;
+  }
+
+  /** Enemies that keep the live fight even on the turn-fight server (the story's dragon, the demo's). */
+  private bezTur(e: Enemy) {
+    e.spokojny = false;
+    return e;
+  }
+
+  // ------------------------------------------------------------------ turn fight (test server)
+
+  /** Meeting groups on the map: the ring, Podejdź / Odejdź, talks, fees (walka/Spotkania.ts). */
+  private makeSpotkania() {
+    return new Spotkania({
+      scene: this,
+      player: this.player,
+      wrogowie: () => this.enemies,
+      mozna: (e) => {
+        const q = e as Enemy;
+        return !q.duel && !q.peaceful && q !== this.story.dragonSprite && !this.demoRun?.isDragon(q);
+      },
+      wolne: (x, y) => this.freeFeet(x, y + FEET.dy),
+      dialog: (req) => this.dialog(req),
+      zajety: () => !!this.walka?.aktywna || this.player.isDead || this.scene.isPaused() || this.time.now < this.lingerUntil || this.story.busy || !!this.anomalia?.busy || this.travelling || this.leaving,
+      walcz: (kto) => this.startWalka(kto as Enemy[]),
+      odchodza: (kto) => {
+        for (const e of kto as Enemy[]) {
+          this.enemies = this.enemies.filter((x) => x !== e);
+          this.tweens.add({ targets: e, alpha: 0, duration: 500, onComplete: () => e.destroy() });
+        }
+        this.streets.paidOff(kto);
+      },
+      monety: () => session.coins,
+      zaplac: (n) => {
+        spend(n);
+        this.emitHud();
+      },
+      poziom: () => poziomPostaci(session.exp),
+      toast: (t, ms) => this.toast(t, ms),
+    });
+  }
+
+  /** Starts a turn fight with these enemies on this very spot of the map. */
+  private startWalka(kto: Enemy[]) {
+    if (this.walka?.aktywna || !kto.length) return;
+    resetTouch();
+    resetKeys();
+    consumeAttack();
+    consumeRelease();
+    this.player.move(0, 0, this.time.now);
+    this.player.vel.set(0, 0);
+    mapaWalki.fn = (x, y) => {
+      const cam = this.cameras.main;
+      const wx = (x * OSTROSC) / cam.zoom + cam.worldView.x;
+      const wy = (y * OSTROSC) / cam.zoom + cam.worldView.y;
+      // The finger's area: 22 CSS px around the tap (44 px across).
+      this.walka?.tap(wx, wy, (22 * OSTROSC) / cam.zoom);
+    };
+    this.walka = new TuryWalki({
+      scene: this,
+      player: this.player,
+      wolne: (x, y) => this.freeFeet(x, y + FEET.dy),
+      widac: (ax, ay, bx, by) => {
+        const d = Math.hypot(bx - ax, by - ay);
+        for (let t = 3; t < d; t += 3) if (this.city.buildingAt(ax + ((bx - ax) * t) / d, ay + ((by - ay) * t) / d) !== undefined) return false;
+        return true;
+      },
+      zabity: (e) => this.onEnemyKilled(e as Enemy),
+      cwiczenie: (skill, pkt) => this.practiced(skill, pkt),
+      zuzyj: (id) => this.wearWeapon(id),
+      hud: () => this.emitHud(),
+      toast: (t, ms) => this.toast(t, ms),
+      lecz: () => {
+        const hp = this.player.hp, extra = this.player.extra;
+        this.healButton();
+        return this.player.hp > hp || this.player.extra > extra;
+      },
+      ranBohatera: (e, dmg) => {
+        const q = e as Enemy;
+        if (q.duel) {
+          // A duel takes the purple hearts, never the real ones.
+          const pending = this.duelCarry + q.duel.dmg;
+          const whole = Math.floor(pending);
+          this.duelCarry = pending - whole;
+          this.duelHp = Math.max(0, (this.duelHp ?? 0) - whole);
+          this.emitHud();
+          if (this.duelHp > 0) return false;
+          this.endDuel(q, false);
+          return true;
+        }
+        this.player.drain(dmg);
+        this.emitHud();
+        return this.player.hp <= 0;
+      },
+      koniec: (wynik, kto) => this.koniecWalki(wynik, kto as Enemy[]),
+      pudlo: (x, y) => this.missText(x, y),
+      napis: (x, y, t, c, ms) => this.floatText(x, y, t, c, ms),
+      zamach: (aim, strong) => this.swingWeapon(aim, strong),
+      wzmocnienie: (e) => this.essenceBoost(imbueOf(gear.equip.bron)?.e, e as Enemy),
+      nasycenie: (e, now) => this.essenceHit(imbueOf(gear.equip.bron)?.e, e as Enemy, now),
+      zoomZwykly: () => {
+        const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
+        const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
+        return przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z;
+      },
+      wrocKamere: () => {
+        const cam = this.cameras.main;
+        cam.pan(this.player.x, this.player.y, 300, 'Sine.easeInOut', false, (_c: Phaser.Cameras.Scene2D.Camera, t: number) => {
+          if (t >= 1) cam.startFollow(this.player, true, 0.15, 0.15);
+        });
+        this.fitZoom();
+      },
+      poziom: () => poziomPostaci(session.exp),
+      wyspany: () => (session.flagi.wyspany ?? 0) > Date.now(),
+    }, kto);
+    this.emitHud();
+  }
+
+  /** Every frame of a turn fight: only the fight and the world's drawing. */
+  private updateWalka(now: number, dt: number) {
+    // Swings, shots and heals pressed meanwhile never wait for after the fight.
+    consumeAttack();
+    consumeRelease();
+    consumeHeal();
+    this.walka!.update();
+    this.player.setDepth(this.player.y);
+    this.updateFog();
+    this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
+    this.animateCrops(now);
+    this.cullFar(now);
+    this.updatePosts(now);
+    this.zabytki.update(this.player.x, this.player.y);
+    this.hudTimer -= dt * 1000;
+    if (this.hudTimer <= 0) {
+      this.hudTimer = 400;
+      this.emitHud();
+    }
+  }
+
+  private koniecWalki(wynik: WynikWalki, kto: Enemy[]) {
+    this.walka = null;
+    mapaWalki.fn = null;
+    resetTouch();
+    resetKeys();
+    this.talkReadyAt = performance.now() + TALK_PAUSE_MS;
+    this.noHurtUntil = this.time.now + 1500;
+    if (wynik === 'wygrana') {
+      // After a won fight the hero rests a moment: full life back (owner, 17 Oct 2026).
+      if (!this.player.isDead) this.player.hp = PLAYER.maxHp;
+      this.damageCarry = 0;
+      this.toast(`🏆 ${SPOTKANIA.wygrana}`, 2600);
+    } else if (wynik === 'ucieczka') {
+      this.spotkania?.uniknij(kto.filter((e) => e.active && !e.isDead));
+    } else if (wynik === 'smierc') {
+      this.onPlayerDeath();
+    }
+    this.emitHud();
   }
 
   /**
@@ -2660,8 +2862,9 @@ export class GameScene extends Phaser.Scene {
       m: this.city.id,
       x: Math.round(this.player.x),
       y: Math.round(this.player.y),
-      hp: this.player.hp,
-      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, k: e.kindId })),
+      // Mid turn fight the tab may close: next time the hero comes back with the life from before it.
+      hp: this.walka?.aktywna ? this.walka.hpPrzed : this.player.hp,
+      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: tury() ? e.kind.hp : e.hp, k: e.kindId })),
     };
   }
 
@@ -2701,6 +2904,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Is any enemy close enough to be fighting us? */
   inCombat() {
+    if (tury()) return !!this.walka?.aktywna;
     return this.enemies.some((e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 120);
   }
 
@@ -3861,6 +4065,11 @@ export class GameScene extends Phaser.Scene {
     this.duelCarry = 0;
     this.toast(`⚔ Pojedynek! Masz ${MIESZKANCY.serduszka} fioletowe serduszka.`, 2500);
     this.emitHud();
+    // Turn fight: the duel is fought in turns at once (the challenge was the question).
+    if (tury()) {
+      e.chasing = false;
+      this.startWalka([e]);
+    }
   }
 
   private endDuel(e: Enemy, won: boolean) {
@@ -4032,7 +4241,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.dialog({
       title,
-      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\nWyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.${here ? '\n\nTo twój obecny hotel – w pokoju czeka twoja skrzynia.' : ''}`,
+      text: `Nocleg z zapisem gry kosztuje ${HOTEL_CENA} monet (masz ${session.coins}). Po wczytaniu postaci zaczniesz właśnie tutaj.\n\n${tury()
+        ? `Wyśpisz się: pełne zdrowie, a przez ${WALKA_TUROWA.hotel.minut} minut po pobudce więcej szczęścia w walce, jeden ruch więcej w każdej turze i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok.`
+        : `Wyśpisz się: pełne zdrowie, ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i o ${Math.round(HOTEL_PREMIA.szybciej * 100)}% szybszy krok przez ${HOTEL_PREMIA.minut} minut.`}${here ? '\n\nTo twój obecny hotel – w pokoju czeka twoja skrzynia.' : ''}`,
       buttons: [`🛏 Śpię tu (${HOTEL_CENA} 💰)`, ...chest, 'Nie teraz'],
       onChoose: (i) => {
         if (chest.length && i === 1) return this.openChest('w pokoju hotelowym');
@@ -4042,13 +4253,20 @@ export class GameScene extends Phaser.Scene {
         this.player.heal(PLAYER.maxHp);
         // Well rested: blue hearts and faster walking for a while.
         const until = Date.now() + HOTEL_PREMIA.minut * 60_000;
-        this.player.extra = HOTEL_PREMIA.niebieskichSerc * 2;
-        this.player.extraUntil = until;
+        if (tury()) {
+          // Turn fight (owner, 17 Oct 2026): instead of blue hearts more luck and one more move per turn (kept in the save).
+          session.flagi.wyspany = Date.now() + WALKA_TUROWA.hotel.minut * 60_000;
+        } else {
+          this.player.extra = HOTEL_PREMIA.niebieskichSerc * 2;
+          this.player.extraUntil = until;
+        }
         this.player.boost = HOTEL_PREMIA.szybciej;
         this.player.boostUntil = until;
         this.emitHud();
         this.save();
-        this.toast(`🛏 Wyspany! Gra zapisana. ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i szybszy krok na ${HOTEL_PREMIA.minut} minut.`, 3500);
+        this.toast(tury()
+          ? `🛏 Wyspany! Gra zapisana. Przez ${WALKA_TUROWA.hotel.minut} minut: ☘ więcej szczęścia i +1 ruch w każdej turze walki.`
+          : `🛏 Wyspany! Gra zapisana. ${HOTEL_PREMIA.niebieskichSerc} niebieskie serduszka i szybszy krok na ${HOTEL_PREMIA.minut} minut.`, 3500);
       },
     });
   }
@@ -4708,7 +4926,11 @@ export class GameScene extends Phaser.Scene {
       }
       if (!done) {
         const foe = this.enemies.find((e) => !e.isDead && !e.inAir && !shot.missed.has(e) && distToSegment(e.x, e.y, ox, oy, sp.x, sp.y) < e.size + 3);
-        if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
+        if (foe?.spokojny) {
+          // Turn fight: a shot at a waiting group provokes the question, no damage.
+          done = true;
+          this.spotkania?.zaczep(foe);
+        } else if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
           this.practiced(shot.skill);

@@ -90,6 +90,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   leash: { x: number; y: number; r: number } | null = null;
   /** Not pushed back by blows (the demo's Wawel dragon). */
   heavy = false;
+  /** Turn fight (test server): never chases, never hurts by touch – it waits in its group to be met (walka/Spotkania.ts). */
+  spokojny = false;
   /** In the air (a mountain dragon's flight): unseen and can't be hit. */
   inAir = false;
   /** Its own way of moving, called instead of think() (the demo's Wawel dragon). */
@@ -250,7 +252,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
 
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-    if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
+    if (this.spokojny) this.chasing = false;
+    else if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
     if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
     const l = this.leash;
     if (this.chasing && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
