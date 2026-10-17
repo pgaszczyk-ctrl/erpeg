@@ -107,3 +107,25 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify the published production code
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, re, time, urllib.request
+          html = Path('site/index.html').read_text()
+          entry = re.search(r'<script[^>]+src="([^"]+\.js)"', html).group(1)
+          path = entry.removeprefix('./').lstrip('/')
+          expected = hashlib.sha256(Path('site', path).read_bytes()).hexdigest()
+          for attempt in range(6):
+              try:
+                  req = urllib.request.Request('https://exp-lore.app/?release-check=' + str(time.time_ns()), headers={'Cache-Control': 'no-cache'})
+                  published = urllib.request.urlopen(req, timeout=20).read().decode()
+                  assert path in published, 'Public HTML still references an older game'
+                  code = urllib.request.urlopen('https://exp-lore.app/' + path, timeout=20).read()
+                  assert hashlib.sha256(code).hexdigest() == expected, 'Public game differs from the production artifact'
+                  print('PASS: exp-lore.app serves the exact production JavaScript:', path, expected)
+                  break
+              except Exception:
+                  if attempt == 5: raise
+                  time.sleep(5)
+          PY
