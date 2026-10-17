@@ -10,6 +10,49 @@ on:
 permissions:
   contents: read
 jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare the production candidate with the published maps
+        run: |
+          cp scripts/tests/browser-serce-zebatka.mjs /tmp/browser-serce-zebatka.mjs
+          mkdir -p /tmp/release-patches
+          cp produkcja/*.patch /tmp/release-patches/
+          git checkout --quiet "$(tr -d ' \n\r' < PRODUKCJA)"
+          for p in /tmp/release-patches/*.patch; do git apply "$p"; done
+          cp /tmp/browser-serce-zebatka.mjs scripts/tests/browser-serce-zebatka.mjs
+          mkdir -p public/map
+          curl --fail --max-time 30 https://exp-lore.app/map/lublin.json -o public/map/lublin.json
+          curl --fail --max-time 30 https://exp-lore.app/map/world.json -o public/map/world.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit && npx vite build
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Test production with the published map tiles and mocked player RPCs
+        run: |
+          mkdir -p .cache
+          node scripts/tests/browser-serce-zebatka.mjs 2>&1 | tee .cache/serce-test.log
+        env:
+          LIVE_CONTENT: '1'
+          LIVE_MAPS: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: serce-published-map-screenshots
+          path: .cache/serce-*
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
   catalogue:
     runs-on: ubuntu-latest
     steps:

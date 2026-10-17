@@ -31,6 +31,10 @@ try {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('dialog', d => d.accept());
+    if (process.env.LIVE_MAPS === '1') await page.route('**/map/lublin/**', async route => {
+      const path = new URL(route.request().url()).pathname;
+      await route.fulfill({ response: await route.fetch({ url: 'https://exp-lore.app' + path }) });
+    });
     let start;
     let saved = { coins: 10, story: { st: 'koniec', walked: 0 } };
     await page.route('**/rest/v1/rpc/**', async route => {
@@ -47,7 +51,7 @@ try {
       await route.fulfill({ json });
     });
     async function login() {
-      await page.goto('http://127.0.0.1:4173/?lang=pl&ostrosc=1');
+      await page.goto('http://127.0.0.1:4173/?lang=pl&ostrosc=1#wczytaj');
       await page.waitForSelector('#menu', { timeout: 60000 });
       start = await page.evaluate(() => {
         const city = window.__game.registry.get('city');
