@@ -45,7 +45,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
   page.on('dialog', (d) => d.accept());
-  await page.goto('http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8');
+  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}`);
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });
@@ -127,7 +127,7 @@ try {
   // 5. The portrait tutorial → the Kufer with the code and the account link.
   await page.waitForSelector('#samouczek', { timeout: 15000 });
   await page.screenshot({ path: `work/onb-${name}-5-portret.png` });
-  const av = await page.evaluate(() => { const r = document.querySelector('#hud .hud-av').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const av = await page.evaluate(() => { const r = (document.querySelector('.tel-portret') ?? document.querySelector('#hud .hud-av')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   await page.mouse.click(av.x, av.y);
   // The code sits on Statystyki (on a phone its own tab).
   if (phone) await page.locator('#character button', { hasText: 'Statystyki' }).click();
@@ -144,6 +144,24 @@ try {
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').witam), false);
   assert.equal(await page.evaluate(() => !!document.getElementById('demo-end')), false);
+  // The hero walks after waking up (owner, 18 Oct 2026: the joystick didn't work in front of Targi).
+  const gdzie = () => page.evaluate(() => { const p = window.__game.scene.getScene('game').player; return { x: p.x, y: p.y }; });
+  const p0 = await gdzie();
+  if (phone) {
+    const cdp = await page.context().newCDPSession(page);
+    const W = page.viewportSize();
+    const x0 = W.width * 0.3, y0 = W.height * 0.6;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+    for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + i * 10, y: y0 }] }); await page.waitForTimeout(50); }
+    await page.waitForTimeout(1500);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } else {
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(1500);
+    await page.keyboard.up('ArrowRight');
+  }
+  const p1 = await gdzie();
+  assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
   assert.deepEqual(errors, []);
   console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), czarnoMs, awake }));
 } finally {
