@@ -152,6 +152,16 @@ export class Spotkania {
     const p = this.h.player;
     p.move(0, 0, this.h.scene.time.now);
     const smok = g.kto.find((e) => e.kindId === 'smok');
+    // The story's dragon after the hero chose to fight it: no small talk.
+    if (smok?.missionId === 'story-smok') {
+      this.h.dialog({
+        title: '🐉 Cień smoka',
+        text: SPOTKANIA.smokFabuly,
+        buttons: ['⚔ Walcz', '↩ Odejdź'],
+        onChoose: (i) => (i === 0 ? this.h.walcz([smok]) : this.odejdz(g)),
+      });
+      return;
+    }
     const rozmowni = !smok && (g.kto.some((e) => e.kindId === 'herszt' || e.kindId === 'wielki_herszt') || g.kto.filter((e) => ROZMOWNI.includes(e.kindId)).length * 2 >= g.kto.length);
     const kto = this.opis(g);
     const text = smok ? SPOTKANIA.smok(kto) : rozmowni ? SPOTKANIA.rozmowni(kto) : SPOTKANIA.narwani(kto);
@@ -204,7 +214,12 @@ export class Spotkania {
   private rozmowaSmoka(g: Grupka, smok: WrogSpotkania) {
     const linia = SPOTKANIA.smokMowi[Math.floor(Math.random() * SPOTKANIA.smokMowi.length)];
     const nazwa = smok.gatunek ? GATUNKI_SMOKOW[smok.gatunek]?.nazwa ?? 'Smok' : 'Smok';
-    this.h.dialog({ title: `🐉 ${nazwa}`, text: linia, buttons: ['Dziękuję, idę dalej'], onChoose: () => this.odejdz(g, false) });
+    this.h.dialog({
+      title: `🐉 ${nazwa}`,
+      text: `${linia}\n\n${SPOTKANIA.smokWyzwanie}`,
+      buttons: ['⚔ Walcz', 'Dziękuję, idę dalej'],
+      onChoose: (i) => (i === 0 ? this.h.walcz([smok]) : this.odejdz(g, false)),
+    });
   }
 
   /** Steps the hero back out of the ring (free); the group won't ask again until he is far. */

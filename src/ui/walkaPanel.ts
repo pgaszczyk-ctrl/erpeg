@@ -22,7 +22,9 @@ export interface StanPanelu {
   celOk: boolean;
   punkt: boolean;
   busy: boolean;
-  koszt: { cios: number; ruch: number; mocny: number; lecz: number; ucieczka: number };
+  koszt: { cios: number; ruch: number; mocny: number; lecz: number; ucieczka: number; oslona: number };
+  /** Osłona on: the next enemies' blows hurt less (dragons' announced attacks above all). */
+  oslona: boolean;
 }
 
 export interface ObslugaPanelu {
@@ -32,6 +34,7 @@ export interface ObslugaPanelu {
   mocny(): void;
   lecz(): void;
   ucieczka(): void;
+  oslona(): void;
   wroc(): void;
   koniecTury(): void;
 }
@@ -59,6 +62,7 @@ body.walka-tur #hud .hud-m, body.walka-tur #hud .hud-picks { display: none !impo
 #walka-panel .wp-podp { min-height: 16px; font-size: 13px; text-align: center; color: #f6e7c2; margin-bottom: 4px; line-height: 1.15; }
 #walka-panel .wp-podp b { font: 700 11px 'Pixelify Sans', monospace; letter-spacing: 1px; color: #e9c46a; margin-right: 6px; }
 #walka-panel .wp-rzad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#walka-panel .wp-rzad.cztery { grid-template-columns: repeat(4, 1fr); gap: 5px; }
 #walka-panel button { font: inherit; color: inherit; cursor: pointer; }
 #walka-panel .wp-b { position: relative; min-height: 52px; border-radius: 9px; border: 2px solid #7d5a2a; background: linear-gradient(#5a4130, #3a2a1e);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; box-shadow: inset 0 1px 0 #ffffff22, 0 2px 0 #1e1a24; }
@@ -114,6 +118,20 @@ const IKONY = {
     '..orrrrrro..',
     '...orrrro...',
     '....oooo....',
+    '............',
+  ], K),
+  oslona: piksele([
+    '............',
+    '..oooooooo..',
+    '..oBBbbbbo..',
+    '..oBbbbbbo..',
+    '..obbYYbbo..',
+    '..obYYYYbo..',
+    '..obbYYbbo..',
+    '...obbbbo...',
+    '...obbbbo...',
+    '....obbo....',
+    '.....oo.....',
     '............',
   ], K),
   ucieczka: piksele([
@@ -199,7 +217,8 @@ export class WalkaPanel {
     if (!s) return;
     if (e.code === 'Digit1') s.podmenu ? this.on.mocny() : this.on.cios();
     else if (e.code === 'Digit2') s.podmenu ? this.on.lecz() : this.on.ruch();
-    else if (e.code === 'Digit3') s.podmenu ? this.on.ucieczka() : this.on.specjalne();
+    else if (e.code === 'Digit3') s.podmenu ? this.on.oslona() : this.on.specjalne();
+    else if (e.code === 'Digit4' && s.podmenu) this.on.ucieczka();
     else if (e.code === 'KeyE') this.on.koniecTury();
     else if (e.code === 'Backspace') this.on.wroc();
     else return;
@@ -237,6 +256,7 @@ export class WalkaPanel {
     el.querySelector<HTMLButtonElement>('.wp-koniec')!.disabled = s.tura !== 'gracz' || s.busy;
     const rzad = el.querySelector<HTMLElement>('.wp-rzad')!;
     rzad.textContent = '';
+    rzad.classList.toggle('cztery', s.podmenu);
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bronUrl = itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek');
     const bronImg = `<img src="${bronUrl}" alt="">`;
@@ -251,6 +271,7 @@ export class WalkaPanel {
       rzad.append(
         this.przycisk('mocny', bronImg.replace('<img', '<img style="filter: drop-shadow(0 0 3px #ffd34a)"'), 'Mocny', ruchyTxt(s.koszt.mocny), () => this.on.mocny(), { on: s.tryb === 'mocny', gotowy: s.tryb === 'mocny' && s.celOk, off: s.ruchy < s.koszt.mocny }),
         this.przycisk('lecz', IKONY.lecz, 'Lecz', ruchyTxt(s.koszt.lecz), () => this.on.lecz(), { off: s.ruchy < s.koszt.lecz || s.hp >= s.maxHp }),
+        this.przycisk('oslona', IKONY.oslona, 'Osłona', ruchyTxt(s.koszt.oslona), () => this.on.oslona(), { on: s.oslona, off: s.oslona || s.ruchy < s.koszt.oslona }),
         this.przycisk('uciekaj', IKONY.ucieczka, 'Ucieczka', `−1 ♥`, () => this.on.ucieczka()),
       );
     }

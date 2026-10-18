@@ -1,7 +1,14 @@
-# Smok w walce turowej – propozycja (18.10.2026)
+# Smok w walce turowej (18.10.2026)
 
-Właściciel: „walka ze smokiem też ma być turowa, przemyślmy jak to zrobić”.
-Ten plik to propozycja do decyzji, jeszcze nie kod.
+Właściciel: „walka ze smokiem też ma być turowa, przemyślmy jak to zrobić”, potem
+„1 tak, 2 zostaw, 3 tak – rób”. Zrobione na serwerze testowym (walka/smokTury.ts,
+liczby w content/walkaTurowa.ts SMOK_W_TURACH, test scripts/tests/browser-smok-tury.mjs).
+
+Decyzje: dzikie smoki mają „⚔ Walcz” obok rozmowy; demo (Wawel) zostaje na żywo
+(zmienia się w innym czacie); wygrana ze smokiem leczy do pełna.
+Smok z historii po wyborze „walcz” walczy od razu w turach; gdy gracz ucieknie,
+przy następnym podejściu pyta „Walcz / Odejdź”. Smok robi najwyżej jedno
+ugryzienie w turze (drugie działanie to ruch).
 
 ## Stan dziś
 

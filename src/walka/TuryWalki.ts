@@ -23,6 +23,10 @@ import {
 import { AMUNICJA } from '../content/zuzycie';
 import { WALKA } from '../content/walka';
 import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
+import { SmokWTurach } from './smokTury';
+import { SMOK_W_TURACH } from '../content/walkaTurowa';
+import { TRUDNOSC_SMOKOW } from '../content/smoki';
+import { TRUDNOSCI } from '../content/trudnosc';
 
 /** An Arena Cechu ghost (another player's fighter, content/arena.ts): its own blows, aim, armour and moves. */
 export interface DuchWalki {
@@ -120,6 +124,10 @@ export class TuryWalki {
   private podmenu = false;
   private podpowiedz = '';
   private wszyscy: WrogWalki[];
+  /** A dragon in the fight: its announced attacks and lasting areas (walka/smokTury.ts). */
+  private smok: SmokWTurach | null = null;
+  /** Osłona: the enemies' blows hurt less until the end of their turn. */
+  private oslona = false;
 
   constructor(private h: WalkaHost, wrogowie: WrogWalki[], private opcje: OpcjeWalki = {}) {
     const s = h.scene;
@@ -133,6 +141,17 @@ export class TuryWalki {
       t.turyZycie = true;
       this.u.push({ e, rola, r: Math.max(3, e.size * 0.7), oglusz: false, hp0: e.hp });
     }
+    if (wrogowie.some((e) => e.kindId === 'smok')) this.smok = new SmokWTurach({
+      scene: s,
+      player: h.player,
+      miejsce: (x, y, r, bez) => this.miejsce(x, y, r, bez),
+      napis: (x, y, t, c, ms) => h.napis(x, y, t, c, ms),
+      czekaj: (ms) => this.czekaj(ms),
+      ran: (e, czesc) => this.ranSmokiem(e, czesc),
+      wZasiegu: (q) => this.dist(q.e.x, q.e.y, h.player.x, h.player.y) <= q.e.size + HERO_R + 0.35 * W && h.widac(q.e.x, q.e.y, h.player.x, h.player.y),
+      ugryz: (q, czesc) => this.ugryzSmoka(q, czesc),
+      podejdz: (q, ruchW) => this.podejdzWrog(q, 'natarcie', ruchW),
+    });
     this.gfx = s.add.graphics().setDepth(GLEB_ZIEMI);
     this.gfxTop = s.add.graphics().setDepth(GLEB_GORA);
     this.etykieta = s.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '7px', color: '#fff4d0', stroke: '#1e1a24', strokeThickness: 2.5, resolution: 6 })
@@ -145,6 +164,7 @@ export class TuryWalki {
       mocny: () => this.przycisk('mocny'),
       lecz: () => this.lecz(),
       ucieczka: () => this.uciekaj(),
+      oslona: () => this.oslon(),
       wroc: () => this.anuluj(),
       koniecTury: () => this.koniecTury(),
     });
@@ -174,7 +194,7 @@ export class TuryWalki {
     const p = this.h.player;
     if (bez !== 'hero' && this.dist(x, y, p.x, p.y) < r + HERO_R + WT.odstepPx) return false;
     for (const q of this.zywi) {
-      if (q.e === bez) continue;
+      if (q.e === bez || q.e.inAir) continue;
       if (this.dist(x, y, q.e.x, q.e.y) < r + q.r + WT.odstepPx) return false;
     }
     return true;
@@ -348,6 +368,13 @@ export class TuryWalki {
     let n = 0;
     for (const [od, ile] of WT.ruchy) if (lvl >= od) n = ile;
     if (this.h.wyspany() && !this.opcje.pvp) n += WT.hotel.ruchow;
+    this.oslona = false;
+    // A dragon's poison cloud: fewer moves this turn.
+    if (this.smok?.zatrucie) {
+      n = Math.max(1, n - this.smok.zatrucie);
+      this.smok.zatrucie = 0;
+      this.h.napis(this.h.player.x, this.h.player.y - 1.3 * W, '☠ −1 ruch', '#d0a8ff', 1100);
+    }
     this.maxRuchy = n;
     this.ruchy = n;
     this.faza = 'gracz';
@@ -359,8 +386,9 @@ export class TuryWalki {
     this.tryb = null;
     this.punkt = null;
     this.ustawPodmenu(false);
-    if (this.cel && (this.cel.e.isDead || !this.cel.e.active)) this.cel = null;
-    this.podpowiedz = this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.';
+    if (this.cel && (this.cel.e.isDead || !this.cel.e.active || !this.cel.e.visible)) this.cel = null;
+    const zap = this.smok?.tekst() ?? '';
+    this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
     this.przelicz();
   }
 
@@ -394,6 +422,9 @@ export class TuryWalki {
     this.odswiez();
     const p = this.h.player;
     await this.czekaj(250);
+    // The hero ended his turn in burning ground, acid or the poison cloud.
+    const smokE = this.zywi.find((q) => q.e.kindId === 'smok')?.e;
+    if (this.smok && smokE && await this.smok.tik(smokE)) return;
     const kolej = [...this.zywi].sort((a, b) => this.dist(a.e.x, a.e.y, p.x, p.y) - this.dist(b.e.x, b.e.y, p.x, p.y));
     // At most two melee attackers (those already in reach first), and a limited volley of shots.
     const wZasiegu = (q: Uczestnik) => this.dist(q.e.x, q.e.y, p.x, p.y) <= q.e.size + HERO_R + 0.35 * W && this.h.widac(q.e.x, q.e.y, p.x, p.y);
@@ -401,10 +432,14 @@ export class TuryWalki {
     const natarcie = new Set([...wrecz.filter(wZasiegu), ...wrecz.filter((q) => !wZasiegu(q))].slice(0, WT.wrog.natarcieWrecz));
     let salwa = WT.wrog.salwa;
     // The boss and a berserker act twice.
-    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.e.pvp ? 1 : q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
+    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.e.pvp || q.e.kindId === 'smok' ? 1 : q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
     for (const q of tura) {
       if (!this.aktywna) return;
       if (q.e.isDead || !q.e.active) continue;
+      if (this.smok && q.e.kindId === 'smok') {
+        if (await this.smok.tura(q)) return;
+        continue;
+      }
       if (q.oglusz) {
         q.oglusz = false;
         this.h.napis(q.e.x, q.e.y - 1.1 * W, '💫', '#ffe08a', 700);
@@ -472,9 +507,9 @@ export class TuryWalki {
   }
 
   /** One enemy walks: up to the hero (natarcie), to a waiting ring (czeka), or into shooting range (dystans). */
-  private async podejdzWrog(q: Uczestnik, cel: 'natarcie' | 'czeka' | 'dystans') {
+  private async podejdzWrog(q: Uczestnik, cel: 'natarcie' | 'czeka' | 'dystans', ruchW?: number) {
     const p = this.h.player;
-    const z = zasieg(q.e.x, q.e.y, (q.e.pvp ? WT.ruchW : WT.wrog.ruchW) * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, q.r, q.e));
+    const z = zasieg(q.e.x, q.e.y, (ruchW ?? (q.e.pvp ? WT.ruchW : WT.wrog.ruchW)) * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, q.r, q.e));
     const reach = q.e.size + HERO_R + 0.35 * W;
     let best: string | null = null;
     let bd = Infinity;
@@ -552,7 +587,13 @@ export class TuryWalki {
     // A ghost hits like a hero: its blow in weapon units, ARENA.jednostka of them to a half-heart (same rules both ways).
     const pending = this.carry + (q.e.pvp
       ? ((q.e.pvp.strzal ?? q.e.pvp.atak) * mnoznik * (Math.random() < WT.szczescie.krytyk ? WT.szczescie.krytykMnoznik : 1)) / ARENA.jednostka
-      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia);
+      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia) * (this.oslona && !q.e.pvp ? SMOK_W_TURACH.oslona : 1);
+    return this.zadaj(q.e, pending);
+  }
+
+  /** Damage (half-hearts, fractions carried over) to the hero; true if the fight ended. */
+  private zadaj(e: WrogWalki, pending: number) {
+    const p = this.h.player;
     const dmg = Math.floor(pending);
     this.carry = pending - dmg;
     if (dmg <= 0) {
@@ -563,13 +604,39 @@ export class TuryWalki {
     p.setTint(0xff6a6a);
     this.h.scene.time.delayedCall(140, () => p.clearTint());
     this.h.napis(p.x, p.y - 1.1 * W, `−${dmg % 2 ? (dmg / 2).toFixed(1) : dmg / 2} ♥`, '#ff8a8a', 900);
-    const end = this.h.ranBohatera(q.e, dmg);
+    const end = this.h.ranBohatera(e, dmg);
     this.odswiez();
     if (end) {
       this.zakoncz(p.hp <= 0 ? 'smierc' : 'przerwana');
       return true;
     }
     return false;
+  }
+
+  /** A dragon's attack: a share of the hero's full life (difficulty, luck, Osłona). True if the fight ended. */
+  private ranSmokiem(e: WrogWalki, czesc: number) {
+    if (Math.random() < WT.szczescie.unik * this.szczescie()) {
+      this.koniczynka('Unik!');
+      return false;
+    }
+    const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    const pending = this.carry + czesc * PLAYER.maxHp * (TRUDNOSC_SMOKOW.obrazenia[lvl] ?? 1) * (this.oslona ? SMOK_W_TURACH.oslona : 1);
+    if (this.oslona) this.h.napis(this.h.player.x + 0.6 * W, this.h.player.y - 0.6 * W, '🛡', '#cfe6ff', 600);
+    return this.zadaj(e, pending);
+  }
+
+  /** A dragon's bite: a lunge at the hero, armour may block it. */
+  private async ugryzSmoka(q: Uczestnik, czesc: number) {
+    const p = this.h.player;
+    const e = q.e;
+    const sx = e.x, sy = e.y;
+    await this.tween(e, { x: sx + (p.x - sx) * 0.25, y: sy + (p.y - sy) * 0.25 }, 140);
+    let koniec = false;
+    if (Math.random() < blockChance()) this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
+    else koniec = this.ranSmokiem(e, czesc);
+    if (this.aktywna) await this.tween(e, { x: sx, y: sy }, 180);
+    await this.czekaj(160);
+    return koniec;
   }
 
   // ------------------------------------------------------------------ the hero's actions
@@ -612,7 +679,7 @@ export class TuryWalki {
   private ustawPodmenu(on: boolean) {
     if (on && (this.faza !== 'gracz' || this.busy)) return;
     this.podmenu = on;
-    if (on) this.podpowiedz = 'Mocny cios, leczenie albo ucieczka.';
+    if (on) this.podpowiedz = 'Mocny cios, leczenie, osłona albo ucieczka.';
     this.odswiez();
   }
 
@@ -801,6 +868,21 @@ export class TuryWalki {
     this.po();
   }
 
+  private oslon() {
+    if (this.faza !== 'gracz' || this.busy || this.oslona) return;
+    if (this.ruchy < WT.koszt.oslona) {
+      this.podpowiedz = 'Za mało ruchów.';
+      return this.odswiez();
+    }
+    this.ruchy -= WT.koszt.oslona;
+    this.oslona = true;
+    this.ustawPodmenu(false);
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.2 * W, '🛡 Osłona', '#cfe6ff', 1000);
+    this.podpowiedz = 'Osłona: ciosy przeciwników do końca ich tury bolą mniej.';
+    this.po();
+  }
+
   private uciekaj() {
     if (this.faza !== 'gracz' || this.busy) return;
     const p = this.h.player;
@@ -937,6 +1019,7 @@ export class TuryWalki {
       punkt: !!this.punkt,
       busy: this.busy,
       koszt: WT.koszt,
+      oslona: this.oslona,
     };
     this.panel.ustaw(st);
     this.rysuj();
@@ -962,8 +1045,10 @@ export class TuryWalki {
         g.lineStyle(1.2, 0xbfeaff, 1).strokeEllipse(this.punkt.x, feet(this.punkt.y), HERO_R * 2 + 4, HERO_R + 3);
       }
     }
+    this.smok?.rysuj(this.h.scene.time.now);
     for (const q of this.zywi) {
       const e = q.e;
+      if (!e.visible) continue;
       const sel = q === this.cel;
       g.lineStyle(sel ? 1.6 : 1, sel ? 0xffd34a : 0xff6a5a, sel ? 1 : 0.7).strokeEllipse(e.x, feet(e.y), q.r * 2 + 4, q.r + 3);
       // A small life bar over each, bigger over the chosen one.
@@ -997,6 +1082,7 @@ export class TuryWalki {
     this.gfx.destroy();
     this.gfxTop.destroy();
     this.etykieta.destroy();
+    this.smok?.zakoncz();
     this.panel.zamknij();
     document.body.classList.remove('walka-tur');
     this.h.player.move(0, 0, this.h.scene.time.now);

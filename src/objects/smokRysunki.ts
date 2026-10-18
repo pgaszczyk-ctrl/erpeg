@@ -126,3 +126,27 @@ export function zaladujEfektyAtakow(scene: Phaser.Scene): Promise<boolean> {
   });
   return efektyAtakow;
 }
+
+/**
+ * A dragon waiting on the map for a turn fight (no live SmokAI): the artist's sheet and stance once it has loaded,
+ * else the code-drawn dragon tinted by its species (content/smoki.ts).
+ */
+export function ubierzSmoka(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite & { ownLook?: boolean; sizeOverride?: number; depthOff?: number }, g: GatunekId, kolor: number, skala: number) {
+  if (skala !== 1) d.setScale(d.scaleX * skala);
+  if (kolor !== 0xffffff) d.setTint(kolor);
+  const r = RYSUNKI_SMOKOW[g];
+  if (!r) return;
+  void zaladujSmoka(scene, g).then((ok) => {
+    if (!ok || !d.active) return;
+    d.anims.stop();
+    d.clearTint();
+    d.setTexture(kluczSmoka(g), klatkaSmoka(g, r.tylkoBok ? 'stoi_bok_1' : 'stoi_przod_1'));
+    d.setScale(SKALA_RYSUNKU);
+    d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
+    d.ownLook = true;
+    d.sizeOverride = Math.round(r.komorka[0] * SKALA_RYSUNKU * 0.24);
+    d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * SKALA_RYSUNKU : 0;
+    const k = r.tylkoBok ? 'bok' : 'przod';
+    if (maAnimacje(scene, g, 'stoi', k)) d.anims.play(`${kluczSmoka(g)}-stoi_${k}`, true);
+  });
+}
