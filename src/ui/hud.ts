@@ -301,6 +301,8 @@ const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
 
 export function mountHud(on: HudHandlers) {
   unmountHud();
+  // New elements: the purse must be written again even if the sum is the same (empty after the demo's wake-up).
+  lastMoney = '';
   if (!document.getElementById('hud-css')) {
     const st = document.createElement('style');
     st.id = 'hud-css';
