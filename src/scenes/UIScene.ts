@@ -16,7 +16,7 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
 import { PORTRETY_POSTACI } from '../content/portrety';
@@ -37,6 +37,9 @@ import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
+
+/** The telescopic HUD's first menu line: the character sheet. */
+const KUFER = '🧳 Kufer – postać, ekwipunek, zasoby';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -139,7 +142,11 @@ export class UIScene extends Phaser.Scene {
       zoomOn: przyblizenie(),
       camera: () => this.takePhoto(),
       vehicle: (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle),
+      menu: () => this.openGameMenu(),
+      brakPojazdu: () => this.toast('🚲 Nie masz pojazdu. Rower i hulajnogę kupisz w sklepie sportowym.', 3000),
     });
+    // The telescopic HUD's portrait takes the ☰ corner; its first button opens the same menu.
+    this.menuBtn.setVisible(!teleskop());
     this.layout();
     this.heroAvatar();
     const onLook = () => this.heroAvatar();
@@ -311,6 +318,7 @@ export class UIScene extends Phaser.Scene {
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
       coins: s.coins, diamonds: session.diamenty,
       bron: this.weaponWindow(),
+      poziom: s.level,
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
     // One arrow per quest (no limit since 13 Oct 2026): more are made when needed.
@@ -455,7 +463,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Dotknij czerwonej rurki u góry ekranu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
@@ -683,7 +691,7 @@ export class UIScene extends Phaser.Scene {
   private onDialogTap(x: number, y: number) {
     if (loadingGame()) return;
     if (this.shop) return;
-    if (!this.hasDialog && !this.overlay && onMenuButton(x, y)) {
+    if (!this.hasDialog && !this.overlay && !teleskop() && onMenuButton(x, y)) {
       this.openGameMenu();
       return;
     }
@@ -748,6 +756,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Top-left menu: leave the game properly. */
+  // (KUFER: the telescopic HUD's way to the character sheet, the first line of this menu.)
   private openGameMenu() {
     if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
@@ -755,8 +764,14 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
-      onChoose: (i) => {
+      buttons: [...(teleskop() ? [KUFER] : []), 'Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      onChoose: (k) => {
+        // The Kufer (postać, ekwipunek, zasoby) comes first in the telescopic HUD's menu; the rest keep their numbers.
+        if (teleskop()) {
+          if (k === 0) return this.openCharacter('eq');
+          k--;
+        }
+        const i = k;
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());
           this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
