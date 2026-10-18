@@ -14,7 +14,9 @@ import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { bootImageUrl } from '../bootImages';
 import { loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
-import { dreamPlaces } from '../demo';
+import { dreamPlaces, dreamMap } from '../demo';
+import { demoStartForm } from '../ui/demoStart';
+import { PX_PER_M } from '../map/CityMap';
 import type { GameScene } from './GameScene';
 import { letGo } from '../guard';
 
@@ -99,7 +101,7 @@ export class BootScene extends Phaser.Scene {
         const qr = demoFromLink();
         if (qr) {
           text.setText('');
-          return this.playDemo(qr);
+          return this.playDemo(qr, city);
         }
         text.setText('');
         return showMenu(city).then(() => enterWorld(this.game));
@@ -112,15 +114,21 @@ export class BootScene extends Phaser.Scene {
   }
 
   /** The QR demo: the logo opening over the world map runs while the dream's map is prepared, then the game shows. */
-  private async playDemo(qr: NonNullable<ReturnType<typeof demoFromLink>>) {
+  private async playDemo(qr: NonNullable<ReturnType<typeof demoFromLink>>, city: CityMap) {
     const game = this.game;
     const scene = game.scene.getScene('game') as GameScene;
     let markReady: () => void = () => {};
     const ready = new Promise<void>((ok) => { markReady = ok; });
     const { start } = dreamPlaces();
+    // The dream's map downloads while the player types the name (owner, 18 Oct 2026: the name comes first).
+    if (dreamMap() === 'lublin') {
+      const p = city.fromLatLon(start.lat, start.lon);
+      void city.ensure(p.x, p.y, 600 * PX_PER_M).catch(() => {});
+    }
+    const { r, look } = await demoStartForm(city);
     const intro = demoIntro(start.lat, start.lon, ready);
     const created = new Promise<void>((ok) => scene.events.once('create', ok));
-    await startDemo(game, qr);
+    await startDemo(game, qr, r, look);
     await created;
     const deadline = performance.now() + 60_000;
     while (!scene.firstViewReady() && performance.now() < deadline) await new Promise((ok) => setTimeout(ok, 100));

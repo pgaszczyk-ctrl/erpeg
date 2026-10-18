@@ -93,7 +93,8 @@ import { GAZETA, LAMIGLOWKA, ROZMOWA, STRONY as GZ } from '../content/gazeta';
 import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
-import { demo } from '../demo';
+import { demo, powitanie, blackout } from '../demo';
+import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
@@ -106,7 +107,7 @@ import { trzesienieWlaczone } from '../ustawieniaGracza';
 import { SmokiNaMapie } from './SmokiNaMapie';
 import { Etapy } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
-import { SEN, JAWA } from '../content/demo';
+import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
 import { Anomalia } from './Anomalia';
@@ -403,6 +404,8 @@ export class GameScene extends Phaser.Scene {
   private safeAt = { x: 0, y: 0 };
   /** The QR demo (null in a normal game). */
   private demoRun: DemoRun | null = null;
+  /** Waking up after the demo's dream: the hero stands still until the welcome and the portrait tutorial are over. */
+  private witam = false;
   private introSince: number | null = null;
   /** Dragons fighting the hero (content: objects/Dragon.ts). */
   private dragons = new Map<Enemy, { update(now: number, dt: number): void; destroy(): void }>();
@@ -833,9 +836,13 @@ export class GameScene extends Phaser.Scene {
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
         ready: () => this.firstViewReady(),
-        newsboy: (x, y) => this.folk.newsboyAt(x, y),
       });
       this.demoRun.start();
+    }
+    this.witam = false;
+    if (powitanie.czeka) {
+      powitanie.czeka = false;
+      this.welcome();
     }
 
     this.scene.launch('ui');
@@ -912,7 +919,7 @@ export class GameScene extends Phaser.Scene {
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
-    if (lingering || this.story.busy || this.demoRun?.busy || this.anomalia?.busy) this.player.move(0, 0, now);
+    if (lingering || this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy) this.player.move(0, 0, now);
     else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
     this.player.vel.scale(vehicleSpeed());
     if (this.player.vel.x || this.player.vel.y) {
@@ -966,7 +973,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Dodatkowe serduszko z mikstury znikło.', 2000);
       this.emitHud();
     }
-    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy && !this.anomalia?.busy) {
+    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy && !this.witam && !this.anomalia?.busy) {
       // A mouse click swings towards where it clicked (the hero turns there).
       this.clickWorld = null;
       if (attackAim) {
@@ -3092,6 +3099,34 @@ export class GameScene extends Phaser.Scene {
     this.keepFog();
     keepResume(session.name, this.city.id, this.player.x, this.player.y);
     await saveNow(this.player.hp).catch(() => {});
+  }
+
+  /**
+   * After the demo's dream (src/demo.ts wakeUp): the real character wakes up in front of Targi Lublin behind the
+   * blackout; once the view is painted the screen clears, a short word, then the HUD portrait is shown – it holds
+   * the character's code and the account link (Kufer). Then the ordinary game, nothing ends after some metres.
+   */
+  private welcome() {
+    this.witam = true;
+    const reveal = () => {
+      if (!this.sys.isActive()) return;
+      if (!this.firstViewReady()) { this.time.delayedCall(100, reveal); return; }
+      blackout(false, 900);
+      this.time.delayedCall(900, () => this.dialog({
+        title: DEMO_TEKSTY.pobudkaTytul,
+        text: DEMO_TEKSTY.pobudka(session.name),
+        buttons: ['Rozejrzę się'],
+        onChoose: () => this.time.delayedCall(350, () => {
+          const close = pokazGdzieKliknac('#hud .hud-av', DEMO_TEKSTY.portret(session.name, session.konto), () => {
+            close();
+            this.witam = false;
+            document.querySelector<HTMLElement>('#hud .hud-av')?.click();
+          });
+          this.events.once('shutdown', close);
+        }),
+      }));
+    };
+    this.time.delayedCall(100, reveal);
   }
 
   /** "Wyjdź": close the session properly and go back to the start screen. */

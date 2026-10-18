@@ -1,28 +1,33 @@
 import type Phaser from 'phaser';
-import { session, freshStats, freshChest } from './quests';
-import { offline } from './api';
-import { DEMO_KODY, DEMO_TEKSTY, SEN, type Pobudka, PO_DEMO_KLUCZ, PO_DEMO_START } from './content/demo';
+import { session, freshStats, freshChest, startSession, loadContent } from './quests';
+import { api, offline, type LoginResult } from './api';
+import { DEMO_KODY, SEN, type Pobudka } from './content/demo';
 import { TRUDNOSCI } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci } from './content/historia';
 import { loadGear, pointsForLevel, type Gear } from './inventory';
 import { MAKS_POZIOM } from './content/przedmioty';
-import { randomLook } from './look';
+import type { Look } from './look';
+import { codeLink } from './ui/codeCard';
 import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
-import { logoImage } from './ui/logo';
-import { TEST } from './version';
-import { letGo } from './guard';
 
-// The QR demo: `?d=<code>` (content/demo.ts) plays without a character or a
-// menu. Nothing is written on the server (api.ts `offline`). The phases:
-// 'jedzenie' (by Wawel, eat fruit) → 'smok' (fight the Wawel dragon) →
-// a blackout → 'jawa' (a few steps in front of Targi Lublin) →
-// 'koniec' (dimmed, "Zacznij własną przygodę"). scenes/Demo.ts runs them in the game.
+// The QR demo: `?d=<code>` (content/demo.ts) – since 18 Oct 2026 the way new players start. The name form
+// (ui/demoStart.ts) makes a real character first; then the dream plays offline (api.ts `offline`, nothing saved):
+// 'jedzenie' (below Zamek Lubelski, eat apples) → 'smok' (the dragon in the castle wall's gap) → a blackout →
+// the character logs in for real at home in front of Targi Lublin (`wakeUp`), the demo is over and GameScene
+// shows where the hero's portrait is (`powitanie`). scenes/Demo.ts runs the dream in the game.
 
-export type DemoPhase = 'jedzenie' | 'smok' | 'jawa' | 'koniec';
+export type DemoPhase = 'jedzenie' | 'smok';
 
-export const demo = { on: false, phase: 'jedzenie' as DemoPhase, pobudka: null as Pobudka | null };
+export const demo = {
+  on: false, phase: 'jedzenie' as DemoPhase, pobudka: null as Pobudka | null,
+  /** The character made on the name form (logged in for real on waking up). */
+  postac: null as { name: string; idik: string } | null,
+};
+
+/** Set by `wakeUp`: the next GameScene starts behind the blackout with the welcome and the portrait tutorial. */
+export const powitanie = { czeka: false };
 
 /** The demo a link asks for (null: a normal game). */
 export function demoFromLink(): Pobudka | null {
@@ -31,6 +36,11 @@ export function demoFromLink(): Pobudka | null {
 }
 
 const mapId = (p: { lat: number; lon: number }) => `w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+
+/** The dream's map: Lublin (the castle), or a world map when `?sen=` moves it elsewhere for tests. */
+export function dreamMap() {
+  return new URLSearchParams(location.search).has('sen') ? mapId(dreamPlaces().start) : 'lublin';
+}
 
 /** Where the dream happens; `?sen=lat,lon` moves it for tests (the dragon keeps its distance). */
 export function dreamPlaces() {
@@ -42,7 +52,8 @@ export function dreamPlaces() {
 /** Loads a map around a spot and puts the scene's hero there (also its "home" point). */
 async function arriveAt(game: Phaser.Game, city: CityMap, p: { x: number; y: number }) {
   await city.ensure(p.x, p.y, 600 * PX_PER_M);
-  const free = city.freeNear(p.x, p.y);
+  // The exact spot when it is free (freeNear snaps to the nearest path: below the castle that was its courtyard).
+  const free = city.isFree(p.x, p.y, 6, 6) ? { x: p.x, y: p.y } : city.freeNear(p.x, p.y);
   session.arrive = free;
   session.startX = free.x;
   session.startY = free.y;
@@ -50,62 +61,50 @@ async function arriveAt(game: Phaser.Game, city: CityMap, p: { x: number; y: num
   game.registry.set('city', city);
 }
 
-/**
- * While the dream goes on, fetch the Lublin map around Targi Lublin in the background (owner, 12 Oct 2026: waking
- * up took long). Waking up then only paints the first view; the downloads are already in the browser.
- */
-let lublinNaZapas: Promise<unknown> | null = null;
-export function preloadLublin() {
-  lublinNaZapas ??= (async () => {
-    const city = await getMap('lublin');
-    const at = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
-    await city.ensure(at.x, at.y, 600 * PX_PER_M);
-    // The Targi Lublin picture and its turning signs come straight from the browser's cache later.
-    for (const f of ['targi_lublin', 'rzezba_smok_d20', 'obrot_d20_12klatek', 'obrot_starfest_12klatek', 'obrot_targi_12klatek'].map((n) => `swiat/zabytki/targi/${n}.png`)) {
-      const img = new Image();
-      img.src = new URL(f, document.baseURI).href;
-    }
-  })().catch(() => { lublinNaZapas = null; });
-  return lublinNaZapas;
-}
-
-/** The dream: a nameless hero at level 20 with the best gear, one heart short, by Wawel. */
-export async function startDemo(game: Phaser.Game, p: Pobudka) {
+/** The dream: the new character at level 20 with the best gear, one heart short, below Zamek Lubelski. */
+export async function startDemo(game: Phaser.Game, p: Pobudka, r: LoginResult, look: Look) {
   offline.demo = true;
   demo.on = true;
   demo.phase = 'jedzenie';
   demo.pobudka = p;
+  demo.postac = { name: r.player.name, idik: r.player.idik };
   Object.assign(session, {
-    token: '', idik: '', name: '',
+    token: '', idik: '', name: r.player.name, konto: !!r.player.konto,
     age: 6, level: { ...TRUDNOSCI[0], potwory: 0 }, exp: SEN.exp, coins: 0, missions: {}, fog: undefined, fogs: {},
     lokaty: [], story: { st: 'koniec', walked: 0 }, immortal: false, mikstury: 0, bezStrzalki: [], namioty: [], at: null,
     gen: {}, questResults: {}, libRiddles: 0, nonce: Math.floor(Math.random() * 1e9), abandoned: null, stats: freshStats(), extra: [],
-    secrets: new Set<string>(), chest: freshChest(), riddles: {}, seen: {}, daily: {}, look: randomLook(),
+    secrets: new Set<string>(), chest: freshChest(), riddles: {}, seen: {}, daily: {}, look: { ...look },
   });
   const pts = pointsForLevel(MAKS_POZIOM);
   loadGear({ equip: { ...SEN.ekwipunek } as Gear['equip'], skills: { miecz: pts, luk: pts, magia: pts }, magic: true });
   PLAYER.maxHp = zyciePostaci(session.level.serca, session.exp);
   session.hp = PLAYER.maxHp - 2;
   const { start } = dreamPlaces();
-  const city = await getMap(mapId(start));
+  const city = await getMap(dreamMap());
   await arriveAt(game, city, city.fromLatLon(start.lat, start.lon));
   game.scene.start('game');
 }
 
-/** Awake before Targi Lublin: an unnamed hero (level 1, a stick, 10 coins) who can't die. */
+/**
+ * Waking up: the demo ends and the character made on the name form logs in for real – home in front of Targi
+ * Lublin, level 1, a fresh save. From here on it is the ordinary game (saves, heartbeat, no metre limit).
+ */
 export async function wakeUp(scene: Phaser.Scene) {
-  session.exp = 0;
-  session.coins = 10;
-  session.immortal = true;
-  session.level = { ...TRUDNOSCI[0] };
-  loadGear({});
-  PLAYER.maxHp = zyciePostaci(session.level.serca, 0);
-  session.hp = PLAYER.maxHp;
-  // All existing QR links now lead from the Wawel dream to the same Targi prologue.
+  const who = demo.postac;
+  if (!who) throw new Error('Brak postaci');
+  offline.demo = false;
+  const [r] = await Promise.all([api.login(who.name, who.idik), loadContent()]);
+  demo.on = false;
+  demo.pobudka = null;
+  startSession(r);
+  // A reload now loads this character, not the demo again (the boot clears the code from the address bar).
+  history.replaceState(null, '', new URL(codeLink(r.player.name, r.player.idik)).pathname + new URL(codeLink(r.player.name, r.player.idik)).hash);
   const city = await getMap('lublin');
-  const at = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
-  await arriveAt(scene.game, city, at);
-  demo.phase = 'jawa';
+  session.arrive = null;
+  await city.ensure(session.startX, session.startY, 600 * PX_PER_M);
+  await prepareMap(city);
+  scene.game.registry.set('city', city);
+  powitanie.czeka = true;
   scene.scene.stop('ui');
   scene.scene.restart();
 }
@@ -144,29 +143,4 @@ export function bigText(text: string, ms = 2400) {
     t.style.opacity = '0';
     setTimeout(() => el.remove(), 400);
   }, ms);
-}
-
-/** The end: the game dims, the name and the invitation stay. */
-export function finale() {
-  const el = layer('demo-end', 'background:rgba(10,8,14,0);transition:background 2.5s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;pointer-events:auto;font-family:monospace;');
-  const logo = logoImage(220, '');
-  logo.style.cssText = 'width:min(220px,60vw);height:auto;opacity:0;transition:opacity 1.5s 1s;';
-  const btn = document.createElement('button');
-  btn.textContent = DEMO_TEKSTY.koniec;
-  btn.style.cssText = 'font:bold 22px monospace;padding:14px 22px;background:#3fa34d;color:#fff;border:3px solid #9be29b;border-radius:10px;cursor:pointer;opacity:0;transition:opacity 1s 2s;';
-  // Straight to a new character, starting on the square in front of Targi Lublin (owner 7.10.2026: no choosing after the demo).
-  btn.onclick = () => {
-    try { localStorage.setItem(PO_DEMO_KLUCZ, '1'); } catch { /* private mode: the normal form then */ }
-    // Test demos also lead to real character creation; the test server only loads test characters.
-    letGo();
-    location.href = location.origin + (TEST ? '/' : location.pathname) + '#nowa';
-  };
-  const sub = document.createElement('div');
-  sub.textContent = DEMO_TEKSTY.koniecPodpis;
-  sub.style.cssText = 'color:#ddd;font-size:16px;opacity:0;transition:opacity 1s 2.4s;';
-  el.append(logo, btn, sub);
-  requestAnimationFrame(() => {
-    el.style.background = 'rgba(10,8,14,0.82)';
-    for (const x of [logo, btn, sub]) x.style.opacity = '1';
-  });
 }

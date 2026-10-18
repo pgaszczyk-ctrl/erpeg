@@ -145,6 +145,8 @@ export interface PlayerInfo {
   age?: number;
   /** Test characters: can't die (set by hand in the database). */
   immortal?: boolean;
+  /** Assigned to a player account (e-mail or Google). */
+  konto?: boolean;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */

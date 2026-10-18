@@ -18,6 +18,7 @@ import { OSIAGNIECIA } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
 import { TEST } from '../version';
 import { rememberTestLook } from '../testAppearance';
+import { prettyCode, shareCode, linkToAccount } from './codeCard';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -41,6 +42,48 @@ function skinPicker(changed: () => void) {
   next.onclick = () => go(1);
   row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
   return row;
+}
+
+/**
+ * The character's code and, until it is done, linking it to an account (owner, 18 Oct 2026: the HUD portrait opens
+ * this, so a new player finds the code there instead of a screen before the game).
+ */
+function kodPostaci() {
+  const box = el('div', 'k-kod');
+  if (!session.idik) return box;
+  const share = el('button', 'c-btn', '📤 Wyślij sobie') as HTMLButtonElement;
+  share.type = 'button';
+  share.onclick = () => void shareCode(session.name, session.idik);
+  const msg = el('div', 'k-kod-msg');
+  const row = el('div', 'k-kod-row');
+  row.append(share);
+  if (!session.konto) {
+    const link = el('button', 'c-btn k-kod-konto', '👤 Połącz z kontem') as HTMLButtonElement;
+    link.type = 'button';
+    link.onclick = async () => {
+      link.disabled = true;
+      msg.textContent = '';
+      try {
+        const email = await linkToAccount(session.name, session.idik);
+        if (email === null) return;
+        session.konto = true;
+        link.remove();
+        msg.textContent = `✅ Postać połączona z kontem ${email}. Wczytasz ją z listy, bez kodu.`.replace('  ', ' ');
+      } catch (e) {
+        msg.textContent = `❌ ${(e as Error).message}`;
+      } finally {
+        link.disabled = false;
+      }
+    };
+    row.append(link);
+  }
+  box.append(
+    el('div', 'k-kod-title', `🔑 Kod postaci ${session.name}`),
+    el('div', 'k-kod-code', prettyCode(session.idik)),
+    el('div', 'k-kod-note', session.konto ? 'Imię + kod wczytują postać na każdym urządzeniu.' : 'Imię + kod wczytują postać. Zapisz kod albo połącz postać z kontem, żeby jej nie zgubić.'),
+    row, msg,
+  );
+  return box;
 }
 
 // The "Kufer" (owner's spec from the 🎨 Grafika chat, 5 Oct 2026): a steampunk trunk of dark
@@ -289,6 +332,7 @@ function show(host: CharacterHost) {
     pic.setAttribute('aria-label', 'Twoja postać');
     frame.append(pic);
     doll.append(left, frame, right);
+    s.append(kodPostaci());
     const tal = el('div', 'k-tal');
     for (const m of ['talizman', 'talizman2', 'talizman3'] as Miejsce[]) tal.append(cell(m));
     const bag = el('div', 'sl-grid sl-bag');

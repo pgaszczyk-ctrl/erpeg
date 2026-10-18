@@ -44,6 +44,18 @@ function googleLink(name: string, code: string) {
   return el('div', { className: 'm-card' }, [btn, msg]);
 }
 
+/**
+ * Links the character to a player account (e-mail or Google). Resolves with the account's e-mail (or '')
+ * once linked, null when the player gave up.
+ */
+export async function linkToAccount(name: string, code: string): Promise<string | null> {
+  const u = await askAccount('Zaloguj się albo załóż konto – postać przypisana do konta wczytasz z listy, bez kodu.');
+  const token = u ? await googleToken() : null;
+  if (!token) return null;
+  await api.linkGoogle(name, code, token);
+  return u?.email || '';
+}
+
 /** The code with a space in the middle, easier to read and copy by hand. */
 export function prettyCode(code: string) {
   return code.length === 8 ? `${code.slice(0, 4)} ${code.slice(4)}` : code;
@@ -77,7 +89,7 @@ export function codeCard(name: string, code: string): HTMLElement {
  * e-mail…), with the code picture where the phone allows files; without a
  * share menu (most computers) it opens WhatsApp with the message ready.
  */
-async function shareCode(name: string, code: string, link: string) {
+export async function shareCode(name: string, code: string, link = codeLink(name, code)) {
   const text = `Exp-lore – moja postać\nImię: ${name}\nKod: ${prettyCode(code)}\nGraj: ${link}`;
   try {
     if (navigator.share) {

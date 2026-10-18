@@ -2,8 +2,9 @@ import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
-import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
-import { demo, dreamPlaces, blackout, bigText, finale, wakeUp, preloadLublin } from '../demo';
+import { SEN, DEMO_TEKSTY } from '../content/demo';
+import { demo, dreamPlaces, blackout, bigText, wakeUp } from '../demo';
+import { session } from '../quests';
 import { meleeDamage, totalFruit } from '../inventory';
 import { pokazOdlot, zaladujSmoka } from '../objects/smokRysunki';
 import type { Slime } from '../objects/Slime';
@@ -13,10 +14,10 @@ import type { DialogRequest } from './GameScene';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { loadingMapVisible } from '../ui/loadingMap';
 
-// The QR demo inside the game (the phases are described in src/demo.ts):
-// fruit trees by the start, the goal line and arrow, the "I know who I am!"
-// moment, the Wawel dragon's airborne retreats, the blackout, a few steps
-// in front of Targi Lublin and the invitation to create a character.
+// The QR demo's dream inside the game (the phases are described in src/demo.ts): apple trees south of
+// Zamek Lubelski with "Kliknij, żeby strącić owoce" over the nearest one, the goal line and arrow, the
+// "I know who I am!" moment with the player's name, the dragon in the castle wall's gap with its airborne
+// retreats, then the blackout and waking up for real (src/demo.ts wakeUp).
 
 export interface DemoHost {
   player: Player;
@@ -30,8 +31,6 @@ export interface DemoHost {
   hud: () => void;
   heal: () => void;
   ready: () => boolean;
-  /** Puts a newsboy at a spot (the wake-up in front of Targi Lublin). */
-  newsboy: (x: number, y: number) => void;
 }
 
 
@@ -47,9 +46,8 @@ export class DemoRun {
   private zamknijSamouczek: (() => void) | null = null;
   private dragon: Slime | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
-  /** Last position while walking after waking up. */
-  private wokeAt: { x: number; y: number } | null = null;
-  private walked = 0;
+  /** "Kliknij, żeby strącić owoce" over the apple tree next to the hero. */
+  private hint: Phaser.GameObjects.Text | null = null;
   /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
   private dreamWalked = 0;
   private dreamLast: { x: number; y: number } | null = null;
@@ -58,37 +56,15 @@ export class DemoRun {
 
   start() {
     const p = this.host.player;
-    if (demo.phase === 'jedzenie') {
-      this.plantTrees();
-      // Lublin is needed when the dream ends: fetch it now, a moment after the dream's own first view.
-      this.scene.time.delayedCall(6000, () => void preloadLublin());
-      this.healTo = p.hp + 2;
-      // The first words only once the opening (logo over the world map) has gone.
-      const hello = () => {
-        if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
-        this.scene.time.delayedCall(600, () =>
-          this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }));
-      };
-      hello();
-    } else if (demo.phase === 'jawa') {
-      this.busy = true;
-      // Keep the blackout until ground, building and roof layers are ready.
-      const reveal = () => {
-        if (!this.host.ready()) { this.scene.time.delayedCall(100, reveal); return; }
-        this.placeNewsboy();
-        blackout(false, 900);
-        this.scene.time.delayedCall(900, () => this.host.dialog({
-          title: DEMO_TEKSTY.pobudkaTytul,
-          text: DEMO_TEKSTY.pobudka,
-          buttons: ['Rozejrzę się'],
-          onChoose: () => {
-            this.busy = false;
-            this.wokeAt = { x: p.x, y: p.y };
-          },
-        }));
-      };
-      this.scene.time.delayedCall(100, reveal);
-    }
+    this.plantTrees();
+    this.healTo = p.hp + 2;
+    // The first words only once the opening (logo over the world map) has gone.
+    const hello = () => {
+      if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
+      this.scene.time.delayedCall(600, () =>
+        this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }));
+    };
+    hello();
   }
 
   /** The goal line and where its arrow points. */
@@ -132,7 +108,7 @@ export class DemoRun {
       this.busy = false;
     }
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
-    const w = this.wokeAt;
+    this.showHint();
     const p = this.host.player;
     if ((demo.phase === 'jedzenie' || demo.phase === 'smok') && !this.busy) {
       const l = this.dreamLast;
@@ -141,22 +117,11 @@ export class DemoRun {
       this.dreamLast = { x: p.x, y: p.y };
       if (this.dreamWalked >= SEN.limitM * PX_PER_M) {
         this.busy = true;
+        this.hint?.setVisible(false);
         bigText(DEMO_TEKSTY.zaDaleko, 1800);
         this.scene.time.delayedCall(2000, () => this.sleep());
         return;
       }
-    }
-    if (demo.phase === 'jawa' && w) {
-      // Count actual steps, also when turning back or walking around a tree.
-      this.walked += Math.hypot(p.x - w.x, p.y - w.y);
-      this.wokeAt = { x: p.x, y: p.y };
-    }
-    if (demo.phase === 'jawa' && w && this.walked >= JAWA.koniecM * PX_PER_M) {
-      demo.phase = 'koniec';
-      this.frozen = true;
-      this.host.player.vel.set(0, 0);
-      this.host.player.anims.stop();
-      finale();
     }
   }
 
@@ -182,23 +147,24 @@ export class DemoRun {
     this.scene.time.delayedCall(2000, () => this.sleep());
   }
 
-  /** A newsboy a few steps from the hero after waking up: something to be curious about at once. */
-  private placeNewsboy() {
+  /** The apple-tree hint: over the nearest tree with fruit while the hero stands close and still needs apples. */
+  private showHint() {
     const p = this.host.player;
-    const at = this.host.city.fromLatLon(JAWA.gazeciarz.lat, JAWA.gazeciarz.lon);
-    if (this.host.city.isFree(at.x, at.y, 4, 4) && Math.hypot(at.x - p.x, at.y - p.y) < 80 * PX_PER_M) {
-      this.host.newsboy(at.x, at.y);
+    const want = demo.phase === 'jedzenie' && !this.busy && totalFruit() < SEN.owocowNaSerce;
+    const t = want ? this.trees.filter((q) => q.left > 0).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0] : undefined;
+    if (!t || Math.hypot(t.x - p.x, t.y - p.y) > SEN.podpowiedzM * PX_PER_M) {
+      this.hint?.setVisible(false);
       return;
     }
-    const m = JAWA.gazeciarzM * PX_PER_M;
-    for (const [dx, dy] of [[1, 0.3], [-1, 0.3], [0.4, 1], [-0.4, 1], [0.6, -0.8], [-0.6, -0.8]]) {
-      const x = p.x + dx * m, y = p.y + dy * m;
-      if (!this.host.city.isFree(x, y, 4, 4) || this.host.city.buildingAt(x, y)) continue;
-      this.host.newsboy(x, y);
-      return;
+    if (!this.hint) {
+      this.hint = this.scene.add.text(0, 0, DEMO_TEKSTY.podpowiedz, {
+        fontFamily: '"Alegreya Sans", sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#fff2a8',
+        stroke: '#1e1a24', strokeThickness: 5, align: 'center', resolution: 3,
+      }).setOrigin(0.5, 0).setDepth(1_250_000).setScale(1 / 3);
+      this.scene.tweens.add({ targets: this.hint, alpha: 0.55, duration: 650, yoyo: true, repeat: -1 });
     }
-    const q = this.host.city.freeNear(p.x + m, p.y);
-    this.host.newsboy(q.x, q.y);
+    // Under the trunk: toasts and the goal arrow already sit above the hero and the crown.
+    this.hint.setVisible(true).setPosition(t.x, t.y + 3 + Math.sin(this.scene.time.now / 300) * 1.5);
   }
 
   // ------------------------------------------------------------ the dream
@@ -228,14 +194,15 @@ export class DemoRun {
     this.scene.tweens.add({ targets: ex, y: ex.y - 3, duration: 200, yoyo: true, repeat: 5 });
     // A light tremor (owner, 11 Oct 2026: still too dramatic at 500 ms / 0.003).
     this.scene.cameras.main.shake(300, 0.0012);
-    bigText(DEMO_TEKSTY.olsnienie, 2600);
-    this.scene.time.delayedCall(2800, () => {
+    bigText(DEMO_TEKSTY.olsnienie, 2400);
+    this.scene.time.delayedCall(2600, () => bigText(DEMO_TEKSTY.imie(session.name), 2200));
+    this.scene.time.delayedCall(5000, () => {
       ex.destroy();
       demo.phase = 'smok';
       void this.placeDragon().then(() => {
         if (!this.scene.sys.isActive() || this.frozen) return;
         this.busy = false;
-        this.host.toast(DEMO_TEKSTY.kimJestem, 4500);
+        this.host.toast(DEMO_TEKSTY.kimJestem(session.name), 5500);
         this.host.hud();
       }).catch(() => {
         this.busy = false;
@@ -251,7 +218,8 @@ export class DemoRun {
     await this.host.city.ensure(at.x, at.y, 200 * PX_PER_M);
     await zaladujSmoka(this.scene, 'gorski');
     if (!this.scene.sys.isActive() || this.frozen) return;
-    const spot = this.host.city.freeNear(at.x, at.y);
+    // Exactly in the wall's gap when it is free (freeNear would snap to the courtyard's path).
+    const spot = this.host.city.isFree(at.x, at.y, 8, 8) ? at : this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
     const d = this.host.spawnDragon(spot.x, spot.y);
     // GameScene gives the demo dragon SmokAI's airborne-retreat options.
@@ -268,7 +236,7 @@ export class DemoRun {
     this.scene.time.delayedCall(2000, () => {
       wakeUp(this.scene).catch(() => {
         blackout(false);
-        this.host.dialog({ title: 'Nie udało się wczytać Lublina', text: 'Spróbuj ponownie, żeby obudzić się przed Targami Lublin.',
+        this.host.dialog({ title: 'Nie udało się wczytać postaci', text: 'Spróbuj ponownie, żeby obudzić się przed Targami Lublin.',
           buttons: ['Spróbuj ponownie'], onChoose: () => { this.frozen = false; this.sleep(); } });
       });
     });

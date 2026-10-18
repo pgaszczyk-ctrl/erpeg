@@ -68,6 +68,8 @@ export const session = {
   token: '',
   name: '',
   idik: '',
+  /** The character is assigned to a player account (Kufer then doesn't offer it). */
+  konto: false,
   startX: 0,
   startY: 0,
   coins: 0,
@@ -192,6 +194,7 @@ export function startSession(r: LoginResult) {
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
+  session.konto = !!p.konto;
   session.age = p.age ?? 7;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
   // Hearts by difficulty, plus the level bonus (half-hearts count, like hp).
