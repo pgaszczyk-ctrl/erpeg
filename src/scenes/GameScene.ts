@@ -115,7 +115,7 @@ import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
-import { tury } from '../walka/tryb';
+import { tury, turyNaSerwerze } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
 import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
@@ -851,6 +851,14 @@ export class GameScene extends Phaser.Scene {
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
         ready: () => this.firstViewReady(),
+        walcz: (d) => {
+          // The test server's demo: the dragon fights in turns (owner, 18 Oct 2026), flying off after a few hits.
+          if (!turyNaSerwerze()) return false;
+          const e = d as Enemy;
+          e.gatunek = 'gorski';
+          this.startWalka([e]);
+          return true;
+        },
       });
       this.demoRun.start();
     }
@@ -2198,6 +2206,15 @@ export class GameScene extends Phaser.Scene {
       },
       poziom: () => poziomPostaci(session.exp),
       wyspany: () => (session.flagi.wyspany ?? 0) > Date.now(),
+      trafiony: (e, hp0) => {
+        const q = e as Enemy;
+        if (!this.demoRun?.isDragon(q) || !this.demoRun.trafiony(q, hp0)) return false;
+        // The demo's dragon flies off after its last hit: out of the fight and the map.
+        this.enemies = this.enemies.filter((x) => x !== q);
+        this.time.delayedCall(450, () => this.demoRun?.onDragonKilled(q, true));
+        return true;
+      },
+      krok: (co) => this.demoRun?.krokWalki(co),
     }, kto);
     this.emitHud();
   }
@@ -2225,6 +2242,7 @@ export class GameScene extends Phaser.Scene {
 
   private koniecWalki(wynik: WynikWalki, kto: Enemy[]) {
     this.walka = null;
+    this.demoRun?.poWalce(wynik);
     mapaWalki.fn = null;
     mapaWalki.drag = null;
     resetTouch();

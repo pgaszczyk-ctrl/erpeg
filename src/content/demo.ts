@@ -47,6 +47,11 @@ export const SEN = {
   limitM: 1000,
   /** "Kliknij, żeby strącić owoce" shows over an apple tree this close to the hero (m). */
   podpowiedzM: 9,
+  /**
+   * Turn fight in the dream (test server, owner 18 Oct 2026): the hero starts with this share of his life (the apples
+   * he picks are his healing in the fight), the dragon flies off after this many hits.
+   */
+  tury: { zycie: 0.75, ciosow: 3 },
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
@@ -80,6 +85,13 @@ export const DEMO_TEKSTY = {
   wPrzod: 'Smok mnie zauważył!',
   celSmok: 'Pokonaj smoka na dziedzińcu zamku!',
   smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
+  /** The turn-fight tutorial (test server): one short line at a time, the panel button it talks about glows. */
+  walkaStart: 'Walka na tury! Dotknij smoka, a potem przycisk ⚔ CIOS.',
+  walkaLecz: 'Masz tylko 3/4 życia – czerwony pasek na dole. Otwórz ✨ SPECJALNE i wybierz LECZ: zjesz zebrane jabłka.',
+  walkaLeczTeraz: 'Teraz LECZ – kosztuje jeden ruch.',
+  walkaDobij: (n: number) => `Brawo! Dobij smoka – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}. Gdy skończą się ruchy, smok odpowie.`,
+  walkaRuchy: 'Każda akcja kosztuje ruchy (licznik po prawej). Gdy się skończą, rusza smok.',
+  smokUciekl: 'Smok uciekł w przestworza!',
   zaDaleko: 'Oczy same się zamykają… Ten sen zaraz się skończy.',
   pobudkaTytul: '💤 Pobudka',
   pobudka: (imie: string) => `To dopiero ekscytujący sen…\n\nJestem w Lublinie, na placu przed Targami Lublin. Smoki, zamki… Czas na prawdziwą przygodę, ${imie}!`,

@@ -11,6 +11,7 @@ import type { Look } from './look';
 import { codeLink } from './ui/codeCard';
 import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
+import { turyNaSerwerze } from './walka/tryb';
 
 // The QR demo: `?d=<code>` (content/demo.ts) – since 18 Oct 2026 the way new players start. The name form
 // (ui/demoStart.ts) makes a real character first; then the dream plays offline (api.ts `offline`, nothing saved):
@@ -85,7 +86,8 @@ export async function startDemo(game: Phaser.Game, p: Pobudka, r: LoginResult, l
   const pts = pointsForLevel(MAKS_POZIOM);
   loadGear({ equip: { ...SEN.ekwipunek } as Gear['equip'], skills: { miecz: pts, luk: pts, magia: pts }, magic: true });
   PLAYER.maxHp = zyciePostaci(session.level.serca, session.exp);
-  session.hp = PLAYER.maxHp - 2;
+  // Test server (turn fights): 3/4 of life – the apples picked in the dream heal in the fight (owner, 18 Oct 2026).
+  session.hp = turyNaSerwerze() ? Math.round(PLAYER.maxHp * SEN.tury.zycie) : PLAYER.maxHp - 2;
   const { start } = dreamPlaces();
   const city = await getMap(dreamMap());
   await arriveAt(game, city, city.fromLatLon(start.lat, start.lon));
