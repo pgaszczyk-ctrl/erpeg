@@ -1,0 +1,228 @@
+{
+  "version": "39-G002/teleskop-v2",
+  "scale": {
+    "phone": 1,
+    "desktop": 2
+  },
+  "anchor": "top-left + safe-area",
+  "portrait": {
+    "x": 0,
+    "y": 0,
+    "w": 52,
+    "h": 52,
+    "window": {
+      "cx": 26,
+      "cy": 26,
+      "diameter": 36
+    }
+  },
+  "xp": {
+    "x": 60,
+    "y": 8,
+    "fillX": 68,
+    "fillY": 12,
+    "fillW": 88,
+    "fillH": 8
+  },
+  "level": {
+    "x": 60,
+    "y": 30,
+    "w": 28,
+    "h": 14
+  },
+  "column": {
+    "bounds": [
+      0,
+      0,
+      52,
+      260
+    ],
+    "gap": 8,
+    "step": 52,
+    "iconInset": 10,
+    "buttons": [
+      {
+        "action": "menu",
+        "x": 4,
+        "y": 60,
+        "w": 44,
+        "h": 44
+      },
+      {
+        "action": "journal",
+        "x": 4,
+        "y": 112,
+        "w": 44,
+        "h": 44
+      },
+      {
+        "action": "camera",
+        "x": 4,
+        "y": 164,
+        "w": 44,
+        "h": 44
+      },
+      {
+        "action": "vehicle",
+        "x": 4,
+        "y": 216,
+        "w": 44,
+        "h": 44
+      }
+    ]
+  },
+  "animation": {
+    "staggerMs": 55,
+    "durationMs": 120,
+    "totalMs": 285,
+    "easing": "easeOutCubic",
+    "reverseOnClose": true,
+    "reducedMotion": "instant"
+  },
+  "files": [
+    {
+      "path": "grafiki/A_awans_1.png",
+      "size": [
+        52,
+        52
+      ],
+      "sha256": "83d5d0e46bd0ff3e8a39cdc2bab21ac15e0afd8c667e5691587a41737c1536b9"
+    },
+    {
+      "path": "grafiki/A_awans_2.png",
+      "size": [
+        52,
+        52
+      ],
+      "sha256": "87cc43ab7b7a650e3d66bfa733652afe16b7498115fdd861e7d33ff6f02d3226"
+    },
+    {
+      "path": "grafiki/A_awans_3.png",
+      "size": [
+        52,
+        52
+      ],
+      "sha256": "83d5d0e46bd0ff3e8a39cdc2bab21ac15e0afd8c667e5691587a41737c1536b9"
+    },
+    {
+      "path": "grafiki/A_exp_obudowa.png",
+      "size": [
+        104,
+        16
+      ],
+      "sha256": "b7d93e7290128ae9baef7a760c1d7cddcd8994af2c857dbfdc0828fe03d0178e"
+    },
+    {
+      "path": "grafiki/A_exp_wypelnienie.png",
+      "size": [
+        88,
+        8
+      ],
+      "sha256": "0d070ca407f734f041d05bedcf1231a966121999dd139f387c86832d907194fe"
+    },
+    {
+      "path": "grafiki/A_portret_oprawa.png",
+      "size": [
+        52,
+        52
+      ],
+      "sha256": "af7381e95d448e072dfdb718e281701540b0f571d14541ae9566cfb567310f80"
+    },
+    {
+      "path": "grafiki/A_poziom_pusty.png",
+      "size": [
+        28,
+        14
+      ],
+      "sha256": "f807c911d2d1c35342e1907882dc7300305f628b0d16018e8f6bd361c740a0ac"
+    },
+    {
+      "path": "grafiki/C_aktywny.png",
+      "size": [
+        44,
+        44
+      ],
+      "sha256": "275a0c146fccdbeaa56d2205de539ad836e96288b4a7807eeb9741ad25486825"
+    },
+    {
+      "path": "grafiki/C_niedostepny.png",
+      "size": [
+        44,
+        44
+      ],
+      "sha256": "99b58c968866ba79f08c39df4ac64c6af6c92a9681656428ea7f4840dd0d2c28"
+    },
+    {
+      "path": "grafiki/C_normalny.png",
+      "size": [
+        44,
+        44
+      ],
+      "sha256": "45e50bdc4c7782046542fd132a6a45f963cea6044e5d731ec71d927ef617a578"
+    },
+    {
+      "path": "grafiki/C_wcisniety.png",
+      "size": [
+        44,
+        44
+      ],
+      "sha256": "4602d12cc10b31bf97121844cd7e4f826996b89814cac51924348199b8c8bc2f"
+    },
+    {
+      "path": "grafiki/D_aparat.png",
+      "size": [
+        24,
+        24
+      ],
+      "sha256": "a23072b7d281905afc0d4468888d63e2c473585bf877b32c458d3d9a7aeed7d3"
+    },
+    {
+      "path": "grafiki/D_dziennik.png",
+      "size": [
+        24,
+        24
+      ],
+      "sha256": "9c2c9f87a104a61fd66f1a5c7865c8b7b4343effbe47f47c395997e30669f0c6"
+    },
+    {
+      "path": "grafiki/D_hulajnoga.png",
+      "size": [
+        24,
+        24
+      ],
+      "sha256": "e0f14376f1827420a5d34240156f26fb6149f83cfcccc2ce2c4198a1efae51f8"
+    },
+    {
+      "path": "grafiki/D_menu.png",
+      "size": [
+        24,
+        24
+      ],
+      "sha256": "ad7ef0b87eb416eddcf38f4d977fdac54bbe2770caaf79ab05602466278e599d"
+    },
+    {
+      "path": "grafiki/D_welocyped.png",
+      "size": [
+        24,
+        24
+      ],
+      "sha256": "f6d630f37080499157c3ccdc7dfabb6a2fa828de07a7897aae42080cdca98b92"
+    },
+    {
+      "path": "grafiki/E_lacznik_12x8.png",
+      "size": [
+        12,
+        8
+      ],
+      "sha256": "3744f04e098c89dfeee3bc362fbd22a580fb00c50516b0447fa74359dac77cb0"
+    },
+    {
+      "path": "grafiki/E_zaslepka_12x6.png",
+      "size": [
+        12,
+        6
+      ],
+      "sha256": "e674a7d6a697beb6ed3a820772b58a854fdc8a98dd20b3ea727af2fadc768210"
+    }
+  ]
+}
