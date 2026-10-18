@@ -24,7 +24,7 @@ export const WALKA_TUROWA = {
 
   /** Ruchy na turę według poziomu postaci: [od poziomu, ile]. */
   ruchy: [[1, 3], [5, 4], [12, 5]] as [number, number][],
-  koszt: { cios: 1, ruch: 1, mocny: 2, lecz: 1, ucieczka: 1 },
+  koszt: { cios: 1, ruch: 1, mocny: 2, lecz: 1, ucieczka: 1, oslona: 1 },
   /** Zasięg jednego „Ruchu” bohatera (długość prawdziwej drogi, W). */
   ruchW: 3.4,
   /** Krótki doskok wliczony w cios (droga, W) i powrót na miejsce. */
@@ -89,6 +89,7 @@ export const ROLA_WROGA: Partial<Record<RodzajWroga, RolaWWalce>> = {
   herszt: 'szef',
   wielki_herszt: 'szef',
   koziol: 'szef',
+  smok: 'szef',
 };
 
 /** Z kim da się pogadać przed walką (owner: bandyci i herszt); reszta jest narwana. */
@@ -113,6 +114,39 @@ export const SPOTKANIA = {
     '– Moi bracia śpią w górach. Kiedyś znów zaśpiewamy razem.',
     '– Pachniesz mosiądzem i parą. Ludzie znów budują… Uważaj, żeby nie obudzić tego, co śpi.',
   ],
+  smokWyzwanie: 'Możesz iść dalej… albo stanąć z nim do walki. Smok zapowiada swoje ataki – patrz na czerwone pola.',
+  smokFabuly: 'Smok czeka na ciebie. Tym razem nie odleci. Uważaj na czerwone pola – tam spadnie jego atak.',
   wygrana: 'Wygrana! Odpoczywasz chwilę – wracają wszystkie siły.',
   ucieczka: 'Uciekasz! Dostajesz jeszcze po plecach, ale grupka zostaje w miejscu.',
+};
+
+/**
+ * Smok w walce turowej (właściciel 18.10.2026: „walka ze smokiem też ma być turowa”; docs/walka/SMOK_TUROWY.md).
+ * Smok zapowiada swój atak specjalny czerwonym polem na ziemi pod koniec tury, gracz ma swoją turę na wyjście,
+ * cios albo Osłonę, w następnej turze smoka atak spada na pole. Obrażenia = część pełnego życia bohatera
+ * (× TRUDNOSC_SMOKOW.obrazenia), Osłona je zmniejsza. Liczby do wyważenia później.
+ */
+export const SMOK_W_TURACH = {
+  /** Działania na turę (ruch, ugryzienie, wykonanie zapowiedzi). */
+  akcje: 2,
+  /** Zasięg ruchu smoka (W). */
+  ruchW: 2.2,
+  /** Po wykonaniu ataku specjalnego tyle tur smoka bez nowej zapowiedzi. */
+  odpoczynek: 1,
+  /** Życie smoka z historii w turach: tyle zwykłych ciosów bohatera. Dzikie: życie gatunku (content/smoki.ts). */
+  ciosowFabuly: 16,
+  ugryzienie: { obrazenia: 0.12 },
+  ogien: { dlugoscW: 4.6, polkat: 34, obrazenia: 0.3, plonieTur: 2, plonieObrazenia: 0.08 },
+  kwas: { promienW: 1.1, rozrzutW: 1.8, obrazenia: 0.18, kaluzaTur: 3, kaluzaObrazenia: 0.07 },
+  dym: { promienW: 3, odSmokaW: 2, tur: 3, obrazenia: 0.07, ruchowMniej: 1 },
+  lot: { promienW: 2.6, obrazeniaSrodek: 0.4, obrazeniaBrzeg: 0.12, ogluszenieTur: 1 },
+  /** Osłona: obrażenia × tyle (do końca tury przeciwników). */
+  oslona: 0.5,
+  zapowiedzi: {
+    ogien: '🔥 Smok nabiera powietrza – ogień spadnie na czerwone pole!',
+    kwas: '🧪 Smok zbiera kwas w pysku – wyjdź z czerwonych kół!',
+    dym: '☠ Smok wciąga powietrze – trujący obłok wypełni czerwone koło!',
+    lot: '🪽 Smok wzbija się w powietrze – wyląduje na cieniu!',
+  },
+  napisy: { ogien: 'Ogień!', kwas: 'Kwas!', dym: 'Trujący obłok!', lot: 'Lądowanie!', ogluszony: 'Smok ogłuszony!' },
 };

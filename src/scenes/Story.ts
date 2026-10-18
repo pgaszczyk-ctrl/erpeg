@@ -31,6 +31,8 @@ export interface StoryHost {
   hud: () => void;
   visible: (x: number, y: number) => boolean;
   spawnDragon: (x: number, y: number) => Dragon;
+  /** The turn-fight server: the fight with the dragon starts at once in turns (true = handled). */
+  walczZeSmokiem?: (d: Dragon) => boolean;
   /** Nearby enemies run away in fear. */
   scare: (x: number, y: number) => void;
   /** The nearest active monster gang (the wizard's first trial). */
@@ -380,7 +382,7 @@ export class Story {
           if (i === 0) {
             this.state.choice = 'zabij';
             d.peaceful = false;
-            d.chasing = true;
+            if (!this.host.walczZeSmokiem?.(d)) d.chasing = true;
           } else {
             this.state.choice = 'zbadaj';
             this.host.toast(HISTORIA.poZbadaj, 4000);

@@ -2,7 +2,7 @@ ID: 38-G001
 Odpowiedź na: 38-P001; 38-P002
 Od: grafik
 Do: programista
-Status: nowe
+Status: przeczytane (38-P003)
 Akceptacja: 2026-10-18 właściciel zaakceptował kierunek gladiatora i herbu oraz poprawioną próbę areny; polecił przekazanie do programisty. Eksport warstw wymaga testu w grze.
 Wykonanie: próba v1 — dwie warstwy areny 640×600, herb 512×512 i źródła prób; brak wdrożenia w grze
 Dotyczy: Arena Cechu — warstwy do pierwszej próby walki

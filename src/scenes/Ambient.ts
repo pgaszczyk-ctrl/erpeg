@@ -5,7 +5,7 @@ import { GROUND_DEPTH } from '../map/MapRenderer';
 import { WYGLAD_09 } from '../map/Podloze09';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { TRENING } from '../content/swiat';
-import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
+import { PX_PER_M, pointInRings, type CityMap, type Area, type Building } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
@@ -14,6 +14,8 @@ import { rng } from '../rng';
 import { tury } from '../walka/tryb';
 import { hdOn, ensureHd, fitHd } from '../sprites';
 import { GRUPKI_GANGU, GRUPKA } from '../content/walkaTurowa';
+import { choragiewKraju, wczytajChoragiew } from '../arenaChoragiew';
+import { krajMapy } from '../kraj';
 
 /** The hero's height on the map (px): turn-fight groups are sized by it. */
 const W_BOH = 56 * 0.36 * SKALA_POSTACI;
@@ -866,9 +868,41 @@ export interface SportNpc {
   y: number;
   area: Area;
   sprite?: Phaser.GameObjects.Sprite;
+  /** The Arena's banners on poles by the pitch / the stadium's gate (judges only). */
+  flagi?: Phaser.GameObjects.GameObject[];
+  flagSpots?: Set<string>;
 }
 
 export const SPORTY_TEX = 'sporty';
+
+/** The Arena banners' iron pole: map px tall (drawn at 2 picture px per map px). */
+const MASZT_H = 26;
+/** The notice board in front of an arena (loaded with the banners). */
+const TABLICA = 'arena-tablica';
+function maszt(scene: Phaser.Scene) {
+  const key = 'arena-maszt';
+  if (scene.textures.exists(key)) return key;
+  const w = 5, h = MASZT_H * 2;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#1e1a24';
+  g.fillRect(1, 2, 3, h - 2);
+  g.fillStyle = '#5b5568';
+  g.fillRect(2, 3, 1, h - 5);
+  // A brass knob on top and a stone foot.
+  g.fillStyle = '#1e1a24';
+  g.fillRect(0, 0, 5, 4);
+  g.fillStyle = '#d8b25a';
+  g.fillRect(1, 1, 3, 2);
+  g.fillStyle = '#1e1a24';
+  g.fillRect(0, h - 3, 5, 3);
+  g.fillStyle = '#8a8478';
+  g.fillRect(1, h - 2, 3, 1);
+  scene.textures.addCanvas(key, c);
+  scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return key;
+}
 
 /**
  * Big pitches (content/sport.ts): a dummy (sword), a target (bow), a crystal
@@ -897,6 +931,8 @@ export class Training {
 
   /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
   private hasStations(a: Area) {
+    // A stadium's bowl is the Arena's sand (test server, owner 18 Oct 2026): no dummies there.
+    if (a.arena && tury()) return false;
     const m2 = Training.sizeM2(a);
     if (m2 < SPORT.kuklyOdM2) return false;
     const r = SPORT.sasiedziM * PX_PER_M;
@@ -1007,17 +1043,27 @@ export class Training {
     if (!tury()) return null;
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
-    if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
+    const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
+    // A stadium (its stands cut open from the south): the judge waits in front of the gate, by the
+    // notice board; one judge per stadium even when OSM has the stadium and its pitch as two areas.
+    const sb = this.stadiumOf(a);
+    if (sb?.brama) {
+      const kto = this.gateJudge.get(sb);
+      if (!kto || kto === a) {
+        this.gateJudge.set(sb, a);
+        const gx = (sb.brama.x0 + sb.brama.x1) / 2, gy = Math.max(sb.brama.y0, sb.brama.y1);
+        const p = this.city.isFree(gx + 13, gy + 21, 3, 2) ? { x: gx + 13, y: gy + 21 } : this.city.freeNear(gx + 13, gy + 21);
+        npc = { id, role: 'sedzia', x: p.x, y: p.y - 5, area: a };
+      }
+    } else if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
       const st = this.stationsOf(a).find((s) => s.kind === 'miecz' && !s.far);
-      const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
       if (st) for (const [dx, dy] of [[-18, 14], [18, 14], [0, -18], [0, 18]]) {
         if (this.city.isFree(st.x + dx, st.y + dy + 5, 3, 2)) {
           npc = { id, role: 'sedzia', x: st.x + dx, y: st.y + dy, area: a };
           break;
         }
       }
-      // A stadium closed by its stands (Arena Lublin): the pitch can't be walked into, so the judge waits
-      // outside, on the nearest spot that is reachable from the streets.
+      // A stadium closed by its stands with no gate: the judge waits outside, on the nearest spot reachable from the streets.
       if (npc && !this.city.reachesFar(npc.x, npc.y + 5)) {
         const p = this.city.reachableNear(npc.x, npc.y + 5);
         npc.x = p.x;
@@ -1026,6 +1072,13 @@ export class Training {
     }
     this.people.set(a, npc);
     return npc;
+  }
+
+  private gateJudge = new Map<Building, Area>();
+  /** The stadium building whose bowl holds this pitch (gated by CityMap.stadiumGate), if any. */
+  private stadiumOf(a: Area): Building | null {
+    const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+    return this.city.query({ x0: cx - 1, y0: cy - 1, x1: cx + 1, y1: cy + 1 }).buildings.find((b) => b.misa && pointInRings([b.misa], cx, cy)) ?? null;
   }
 
   /** The two dummies of a coach's pitch. */
@@ -1064,7 +1117,10 @@ export class Training {
   update(px: number, py: number, now: number, hide: (x: number, y: number) => boolean = () => false) {
     if (now < this.next) return;
     this.next = now + 600;
-    for (const n of this.activeNpcs) n.sprite?.setVisible(!hide(n.x, n.y));
+    for (const n of this.activeNpcs) {
+      n.sprite?.setVisible(!hide(n.x, n.y));
+      for (const f of n.flagi ?? []) { const im = f as Phaser.GameObjects.Image; im.setVisible(!hide(im.x, im.y)); }
+    }
     for (const s of [...this.active]) {
       if (Math.hypot(s.x - px, s.y - py) > FAR) {
         s.sprite?.destroy();
@@ -1076,11 +1132,15 @@ export class Training {
       if (Math.hypot(n.x - px, n.y - py) <= FAR) continue;
       n.sprite?.destroy();
       n.sprite = undefined;
+      for (const f of n.flagi ?? []) f.destroy();
+      n.flagi = undefined;
+      n.flagSpots = undefined;
       this.activeNpcs.delete(n);
     }
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
     for (const a of areas) {
-      if (a.kind !== 'pitch') continue;
+      // Not before the pitch's tiles are in: unloaded ground is blocked, and an empty list would stay cached.
+      if (a.kind !== 'pitch' || !this.city.ready(a)) continue;
       for (const s of this.stationsOf(a)) {
         if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
         const key = s.far && this.scene.textures.exists(TEX.dummyFar) ? TEX.dummyFar : STATION_TEX[s.kind];
@@ -1104,6 +1164,38 @@ export class Training {
         n.sprite.setVisible(!hide(n.x, n.y));
         this.activeNpcs.add(n);
       }
+    }
+    for (const n of this.activeNpcs) if (n.role === 'sedzia') this.flagsOf(n);
+  }
+
+  /** Banners in the country's colours on iron poles: at a stadium's gate, else at the pitch's corners. */
+  private flagsOf(n: SportNpc) {
+    if (n.flagi || !wczytajChoragiew(this.scene)) return;
+    const a = n.area;
+    const { lat, lon } = this.city.toLatLon((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2);
+    const key = choragiewKraju(this.scene, krajMapy(this.city.id, lat, lon));
+    if (!key) return;
+    const st = this.stadiumOf(a);
+    const spots: [number, number][] = st?.brama
+      ? [[st.brama.x0 - 4, st.brama.y0 + 5], [st.brama.x1 + 4, st.brama.y1 + 5]]
+      : [[a.x0 + 4, a.y0 + 4], [a.x1 - 4, a.y0 + 4], [a.x0 + 4, a.y1 - 2], [a.x1 - 4, a.y1 - 2]];
+    const pole = maszt(this.scene);
+    n.flagi = [];
+    spots.forEach(([x, y], i) => {
+      const k = `${Math.round(x)},${Math.round(y)}`;
+      if (this.city.isBlocked(x, y) || [...this.activeNpcs].some((m) => m !== n && m.flagSpots?.has(k))) return;
+      (n.flagSpots ??= new Set()).add(k);
+      const p = this.scene.add.image(x, y, pole).setOrigin(0.5, 1).setScale(0.5).setDepth(y);
+      const b = this.scene.add.image(x + 0.6, y - MASZT_H + 1.5, key).setOrigin(0, 0).setScale(0.45).setDepth(y + 0.01);
+      // The cloth flutters a little, each one in its own rhythm.
+      this.scene.tweens.add({ targets: b, scaleX: 0.4, duration: 700 + i * 90, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      n.flagi!.push(p, b);
+    });
+    // The notice board by the judge (the artist's plaza notice case): the Arena's posters.
+    if (this.scene.textures.exists(TABLICA)) {
+      const [tx, ty] = st?.brama ? [(st.brama.x0 + st.brama.x1) / 2 - 16, Math.max(st.brama.y0, st.brama.y1) + 26] : [n.x - 13, n.y + 6];
+      const t = this.scene.add.image(tx, ty, TABLICA).setOrigin(0.5, 1).setScale(0.5).setDepth(ty);
+      n.flagi.push(t);
     }
   }
 

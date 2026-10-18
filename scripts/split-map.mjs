@@ -43,7 +43,8 @@ city.areas.forEach((a) => {
   if (a.kind === 'paved' || a.x1 - a.x0 > T || a.y1 - a.y0 > T) bigAreas.push(raw);
   else put(a, 'a', raw);
 });
-city.lines.forEach((l) => put(l, 'l', [l.id, ...full.lines[l.id]]));
+// Lines the game makes itself (a stadium's gate path, negative ids) are not map data: each tile makes them again.
+city.lines.forEach((l) => l.id >= 0 && put(l, 'l', [l.id, ...full.lines[l.id]]));
 city.buildings.forEach((b) => put(b, 'b', [b.id, ...full.buildings[b.id]]));
 
 // Buildings with an address or a name, and those of places: known up front.

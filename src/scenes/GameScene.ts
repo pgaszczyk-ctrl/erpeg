@@ -115,7 +115,8 @@ import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
 import { tury } from '../walka/tryb';
-import { WALKA_TUROWA, SPOTKANIA } from '../content/walkaTurowa';
+import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
+import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
 import { ARENA, ARENA_TEKSTY } from '../content/arena';
 import type { ArenaDane } from './ArenaScene';
@@ -586,7 +587,20 @@ export class GameScene extends Phaser.Scene {
       save: () => this.save(),
       hud: () => this.emitHud(),
       visible: (x, y) => pointInPolygon(this.vision, x, y),
-      spawnDragon: (x, y) => this.bezTur(this.spawnEnemy(x, y, undefined, 'smok')),
+      spawnDragon: (x, y) => {
+        const e = this.spawnEnemy(x, y, undefined, 'smok');
+        // On the turn-fight server the story's dragon fights in turns too (owner, 18 Oct 2026).
+        if (tury()) {
+          e.gatunek = 'cien';
+          return e;
+        }
+        return this.bezTur(e);
+      },
+      walczZeSmokiem: (d) => {
+        if (!tury()) return false;
+        this.startWalka([d as Enemy]);
+        return true;
+      },
       scare: (x, y) => {
         for (const e of this.enemies) {
           if (e.isDead || e.kindId === 'smok' || Math.hypot(e.x - x, e.y - y) > 320) continue;
@@ -1892,6 +1906,8 @@ export class GameScene extends Phaser.Scene {
   spawnDragon(x: number, y: number, g: GatunekId) {
     const e = this.spawnEnemy(x, y, undefined, 'smok');
     e.gatunek = g;
+    // Turn fight: no live SmokAI dresses it, so it gets its look (the artist's sheet) now.
+    if (tury()) ubierzSmoka(this, e, g, GATUNKI_SMOKOW[g].kolor, GATUNKI_SMOKOW[g].skala);
     return e;
   }
 
@@ -2067,7 +2083,7 @@ export class GameScene extends Phaser.Scene {
       wrogowie: () => this.enemies,
       mozna: (e) => {
         const q = e as Enemy;
-        return !q.duel && !q.peaceful && q !== this.story.dragonSprite && !this.demoRun?.isDragon(q);
+        return !q.duel && !q.peaceful && !this.demoRun?.isDragon(q);
       },
       wolne: (x, y) => this.freeFeet(x, y + FEET.dy),
       dialog: (req) => this.dialog(req),
@@ -2100,6 +2116,17 @@ export class GameScene extends Phaser.Scene {
     this.player.move(0, 0, this.time.now);
     this.player.vel.set(0, 0);
     this.spotkania?.ukryj();
+    // Dragons' life in turns: the story's dragon = SMOK_W_TURACH.ciosowFabuly blows of the hero's sword, wild ones their species'.
+    for (const e of kto) {
+      if (e.kindId !== 'smok' || e.getData('smokZycie')) continue;
+      e.setData('smokZycie', true);
+      const g: GatunekId = e.gatunek ?? (e === this.story.dragonSprite ? 'cien' : 'lesny');
+      e.gatunek = g;
+      e.heavy = true;
+      e.hp = e === this.story.dragonSprite
+        ? Math.round((SMOK_W_TURACH.ciosowFabuly * meleeDamage() * (e.power ?? 1)) / WALKA_TUROWA.wrog.zycie)
+        : Math.round((GATUNKI_SMOKOW[g].zycie || 400) * (e.power ?? 1));
+    }
     const naSwiat = (x: number, y: number) => {
       const cam = this.cameras.main;
       return { x: (x * OSTROSC) / cam.zoom + cam.worldView.x, y: (y * OSTROSC) / cam.zoom + cam.worldView.y, r: (22 * OSTROSC) / cam.zoom };

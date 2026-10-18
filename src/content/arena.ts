@@ -51,6 +51,18 @@ export const GODLO_W_PIASKU = { logo: 'logo-256.png', srednica: 0.36, rozmycie: 
 export const ARENA_RYSUNEK = {
   plyta: 'swiat/arena/arena_plyta.png',
   tyl: 'swiat/arena/arena_tyl.png',
+  /** 38-G002: spectators (2 frames 640×600: sitting / cheering), the front arc (in front of the fighters), a floor
+   *  grate (20×15) and a grey banner (24×32) with its mask (white = cloth, tinted with the country's flag). */
+  widzowie: 'swiat/arena/arena_widzowie_2kl.png',
+  przod: 'swiat/arena/arena_przod.png',
+  kratka: 'swiat/arena/arena_kratka.png',
+  choragiew: 'swiat/arena/arena_choragiew.png',
+  choragiewMaska: 'swiat/arena/arena_choragiew_maska.png',
+  /** How long the crowd cheers after a blow (ms). */
+  wiwatMs: 700,
+  /** Grates on the floor (picture px) and banners hung on the gate's pillars and the stand posts (their tops). */
+  kratki: [[165, 290], [475, 290], [150, 470], [490, 470]] as [number, number][],
+  choragwie: [[258, 88], [380, 88], [161, 130], [470, 130], [87, 192], [550, 192]] as [number, number][],
   plotno: [640, 600] as [number, number],
   srodek: [320, 380] as [number, number],
   polosX: 240,
