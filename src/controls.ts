@@ -62,7 +62,12 @@ export const mouse = { x: 0, y: 0 };
  * The turn fight (walka/TuryWalki.ts): while set, a short tap or click on the map is a pick (target or spot)
  * – no joystick, no swing. A drag doesn't count (it isn't a tap).
  */
-export const mapaWalki: { fn: ((x: number, y: number) => void) | null } = { fn: null };
+export const mapaWalki: {
+  fn: ((x: number, y: number) => void) | null;
+  /** A drag on the map (from where it began to where the finger is; `koniec` on release). */
+  drag: ((x0: number, y0: number, x: number, y: number, koniec: boolean) => void) | null;
+} = { fn: null, drag: null };
+const pickDragged = new Set<number>();
 const pickStarts = new Map<number, { x: number; y: number; t: number }>();
 const PICK_DRAG = 12;
 const PICK_MS = 700;
@@ -256,6 +261,16 @@ export function installTouchControls(el: HTMLElement) {
   const move = (e: TouchEvent) => {
     e.preventDefault();
     sync(e);
+    // Turn fight: dragging (the hero onto a spot) previews a move.
+    for (const t of Array.from(e.changedTouches)) {
+      const s = pickStarts.get(t.identifier);
+      if (!s || !mapaWalki.drag) continue;
+      const p = local(t);
+      if (pickDragged.has(t.identifier) || Math.hypot(p.x - s.x, p.y - s.y) >= PICK_DRAG) {
+        pickDragged.add(t.identifier);
+        mapaWalki.drag(s.x, s.y, p.x, p.y, false);
+      }
+    }
     for (const t of Array.from(e.touches)) {
       if (hold.active && hold.mode === 'touch' && t.identifier === hold.id) {
         const p = local(t);
@@ -275,6 +290,10 @@ export function installTouchControls(el: HTMLElement) {
       if (!s) continue;
       pickStarts.delete(t.identifier);
       const p = local(t);
+      if (pickDragged.delete(t.identifier)) {
+        if (e.type === 'touchend') mapaWalki.drag?.(s.x, s.y, p.x, p.y, true);
+        continue;
+      }
       if (e.type === 'touchend' && mapaWalki.fn && Math.hypot(p.x - s.x, p.y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(p.x, p.y);
     }
     sync(e);
@@ -335,6 +354,11 @@ export function installTouchControls(el: HTMLElement) {
   el.addEventListener('mousemove', (e) => {
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    const s = pickStarts.get(-2);
+    if (s && mapaWalki.drag && (pickDragged.has(-2) || Math.hypot(e.offsetX - s.x, e.offsetY - s.y) >= PICK_DRAG)) {
+      pickDragged.add(-2);
+      mapaWalki.drag(s.x, s.y, e.offsetX, e.offsetY, false);
+    }
   });
   window.addEventListener('mouseup', (e) => {
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
@@ -343,7 +367,8 @@ export function installTouchControls(el: HTMLElement) {
       pickStarts.delete(-2);
       const r = el.getBoundingClientRect();
       const x = e.clientX - r.left, y = e.clientY - r.top;
-      if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
+      if (pickDragged.delete(-2)) mapaWalki.drag?.(s.x, s.y, x, y, true);
+      else if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
     }
   });
   el.addEventListener('mousedown', (e) => {

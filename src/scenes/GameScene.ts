@@ -437,6 +437,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.walka = null;
     mapaWalki.fn = null;
+    mapaWalki.drag = null;
     document.body.classList.remove('walka-tur');
     document.getElementById('walka-panel')?.remove();
     this.dragons = new Map();
@@ -1949,12 +1950,19 @@ export class GameScene extends Phaser.Scene {
     this.player.move(0, 0, this.time.now);
     this.player.vel.set(0, 0);
     this.spotkania?.ukryj();
-    mapaWalki.fn = (x, y) => {
+    const naSwiat = (x: number, y: number) => {
       const cam = this.cameras.main;
-      const wx = (x * OSTROSC) / cam.zoom + cam.worldView.x;
-      const wy = (y * OSTROSC) / cam.zoom + cam.worldView.y;
+      return { x: (x * OSTROSC) / cam.zoom + cam.worldView.x, y: (y * OSTROSC) / cam.zoom + cam.worldView.y, r: (22 * OSTROSC) / cam.zoom };
+    };
+    mapaWalki.fn = (x, y) => {
       // The finger's area: 22 CSS px around the tap (44 px across).
-      this.walka?.tap(wx, wy, (22 * OSTROSC) / cam.zoom);
+      const w = naSwiat(x, y);
+      this.walka?.tap(w.x, w.y, w.r);
+    };
+    // Dragging the hero onto a spot = a move (owner, 18 Oct 2026).
+    mapaWalki.drag = (x0, y0, x, y, koniec) => {
+      const a = naSwiat(x0, y0), b = naSwiat(x, y);
+      this.walka?.przeciagnij(a.x, a.y, b.x, b.y, koniec, a.r);
     };
     this.walka = new TuryWalki({
       scene: this,
@@ -2040,6 +2048,7 @@ export class GameScene extends Phaser.Scene {
   private koniecWalki(wynik: WynikWalki, kto: Enemy[]) {
     this.walka = null;
     mapaWalki.fn = null;
+    mapaWalki.drag = null;
     resetTouch();
     resetKeys();
     this.talkReadyAt = performance.now() + TALK_PAUSE_MS;

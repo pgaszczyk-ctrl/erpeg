@@ -462,7 +462,7 @@ export class StreetEnemies {
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
     const extra = places < GANG_WIES.miejscMniejNiz ? GANG_WIES.mnoznik : 1;
     GANGI.forEach((kind, ki) => {
-      const want = kind.naKm2 * this.density * extra;
+      const want = kind.naKm2 * this.density * extra * (this.tury ? GRUPKA.gestosc : 1);
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         for (let t = 0; t < 12; t++) {

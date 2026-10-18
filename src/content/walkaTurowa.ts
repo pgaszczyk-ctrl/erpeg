@@ -40,7 +40,16 @@ export const WALKA_TUROWA = {
   rozstaw: { wreczW: 2.6, dystansW: 4.4, szefW: 4.0, bokW: 1.45 },
 
   /** Wróg: zasięg ruchu (W), ilu naraz bije wręcz, ilu naraz strzela, szansa trafienia, mnożnik obrażeń, mnożnik życia. */
-  wrog: { ruchW: 2.6, natarcieWrecz: 2, salwa: 2, trafienie: 0.7, obrazenia: 0.65, zycie: 0.5, strzalW: 6.5 },
+  // Właściciel 18.10: „bardzo łatwo, nawet z hersztem nie czułem zagrożenia” – mocniej i częściej, życie bliżej zwykłego.
+  wrog: { ruchW: 2.6, natarcieWrecz: 2, salwa: 2, trafienie: 0.8, obrazenia: 1.3, zycie: 0.8, strzalW: 6.5 },
+  /** Herszt i berserker robią tyle działań w swojej turze (herszt zawsze może bić, poza limitem natarcia). */
+  akcjeSzefa: 2,
+  akcjeBerserkera: 2,
+  /**
+   * Po ciosie bohater cofa się tylko część drogi doskoku: na poziomie 1 `od`, rośnie do `do` na poziomie `pelnyOd`
+   * (właściciel 18.10: „powinienem być trochę bliżej, zwłaszcza na niskim poziomie”). Cios pada z miejsca jak najbliżej celu.
+   */
+  powrot: { od: 0.15, do: 0.8, pelnyOd: 15 },
   /** Ćwiczenie umiejętności za jeden cios w turach (dawniej jeden z tysięcy szybkich ciosów). */
   cwiczenie: 6,
   /** Ucieczka: tyle połówek serca kosztuje (nigdy do śmierci). */
@@ -69,7 +78,8 @@ export const GRUPKI_GANGU: Record<string, { grupek: number; czlonkow: [number, n
   'Mały gang': { grupek: 1, czlonkow: [3, 4], herszt: true },
   'Wielki gang': { grupek: 3, czlonkow: [3, 4], herszt: true },
 };
-export const GRUPKA = { zbitaW: 1.1, odstepW: 11, odSrodka: 0.6 };
+export const GRUPKA = { zbitaW: 1.1, odstepW: 11, odSrodka: 0.6, gestosc: 2.5 };
+// gestosc – w walce turowej gangów jest tyle razy więcej (właściciel 18.10: „trudno je znaleźć”).
 
 /** Kto jak się rozstawia w walce. */
 export type RolaWWalce = 'wrecz' | 'dystans' | 'szef';

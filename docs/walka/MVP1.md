@@ -39,3 +39,10 @@ Na TEST noc w hotelu zamiast niebieskich serduszek daje przez 30 minut od pobudk
 - Uproszczenie HUD po walce (leczenie poza walką jest mniej potrzebne).
 
 Test przeglądarkowy: `scripts/tests/browser-walka-tur.mjs` (`TELEFON=1` – telefon 390×844).
+
+## Poprawki po pierwszej grze właściciela (18.10.2026)
+
+- **Ruch przeciągnięciem**: złap bohatera palcem (albo myszką) i przeciągnij w bok – pokazuje się trasa do najbliższego osiągalnego miejsca, puszczenie = ruch (1 ruch). Bez wciskania „Ruch”.
+- **Trudniej**: wrogowie mają 0,8 zwykłego życia (było 0,5), biją ×1,3 (było 0,65), trafiają w 80% (było 70%). Herszt i berserker robią **dwa działania** w turze, a herszt bije zawsze (poza limitem dwóch napastników).
+- **Bliżej po ciosie**: cios pada z miejsca jak najbliżej celu, a bohater cofa się tylko część doskoku – na poziomie 1 o 15%, do 80% na poziomie 15 (`WALKA_TUROWA.powrot`).
+- **Więcej gangów**: w walce turowej ×2,5 (`GRUPKA.gestosc`).

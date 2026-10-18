@@ -359,10 +359,12 @@ export class TuryWalki {
     const kolej = [...this.zywi].sort((a, b) => this.dist(a.e.x, a.e.y, p.x, p.y) - this.dist(b.e.x, b.e.y, p.x, p.y));
     // At most two melee attackers (those already in reach first), and a limited volley of shots.
     const wZasiegu = (q: Uczestnik) => this.dist(q.e.x, q.e.y, p.x, p.y) <= q.e.size + HERO_R + 0.35 * W && this.h.widac(q.e.x, q.e.y, p.x, p.y);
-    const wrecz = kolej.filter((q) => q.rola !== 'dystans');
+    const wrecz = kolej.filter((q) => q.rola === 'wrecz');
     const natarcie = new Set([...wrecz.filter(wZasiegu), ...wrecz.filter((q) => !wZasiegu(q))].slice(0, WT.wrog.natarcieWrecz));
     let salwa = WT.wrog.salwa;
-    for (const q of kolej) {
+    // The boss and a berserker act twice.
+    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
+    for (const q of tura) {
       if (!this.aktywna) return;
       if (q.e.isDead || !q.e.active) continue;
       if (q.oglusz) {
@@ -379,7 +381,7 @@ export class TuryWalki {
         } else await this.podejdzWrog(q, 'dystans');
         continue;
       }
-      if (natarcie.has(q)) {
+      if (natarcie.has(q) || q.rola === 'szef') {
         if (wZasiegu(q)) {
           if (await this.ciosWroga(q)) return;
         } else await this.podejdzWrog(q, 'natarcie');
@@ -559,7 +561,9 @@ export class TuryWalki {
     if (z) for (const [k, c] of z) {
       if (c.d > WT.doskokW * W) continue;
       if (this.dist(c.x, c.y, q.e.x, q.e.y) > reach - 2 || !this.h.widac(c.x, c.y, q.e.x, q.e.y)) continue;
-      if (c.d < bd) [best, bd] = [k, c.d];
+      // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).
+      const score = this.dist(c.x, c.y, q.e.x, q.e.y) + c.d * 0.25;
+      if (score < bd) [best, bd] = [k, score];
     }
     if (!best) return { ok: false, tekst: 'Podejdź bliżej (Ruch)' };
     const c = z!.get(best)!;
@@ -596,7 +600,13 @@ export class TuryWalki {
       await this.tween(p, { x: sx + Math.cos(aim) * 3, y: sy + Math.sin(aim) * 3 }, 90);
       this.rozstrzygnijCios(q, mocny);
       await this.tween(p, { x: sx, y: sy }, 90);
-      if (plan.z) await this.idz(p, [{ x: p.x, y: p.y }, start]);
+      // Back only part of the hop: a beginner stays close, a veteran springs back further.
+      if (plan.z) {
+        const P = WT.powrot;
+        const f = P.od + (P.do - P.od) * Math.min(1, Math.max(0, (this.h.poziom() - 1) / (P.pelnyOd - 1)));
+        const cel = { x: p.x + (start.x - p.x) * f, y: p.y + (start.y - p.y) * f };
+        if (f > 0.02 && this.prosto(HERO_R, 'hero')({ x: p.x, y: p.y }, cel)) await this.idz(p, [{ x: p.x, y: p.y }, cel]);
+      }
     }
     this.busy = false;
     this.po();
@@ -772,6 +782,41 @@ export class TuryWalki {
       this.cel = null;
       this.punkt = null;
       this.podpowiedz = '';
+      this.odswiez();
+    }
+  }
+
+  /** Is a drag of the hero on (it began on him)? */
+  private ciagnie = false;
+
+  /**
+   * A drag on the map: begun on the hero, it picks the reachable spot nearest the finger (shown as the move's
+   * preview) and walks there on release – no need to press „Ruch” first (owner, 18 Oct 2026).
+   */
+  przeciagnij(x0: number, y0: number, x: number, y: number, koniec: boolean, promien: number) {
+    if (!this.aktywna || this.faza !== 'gracz' || this.busy) return;
+    const p = this.h.player;
+    if (!this.ciagnie) {
+      const naBohaterze = Math.min(this.dist(x0, y0, p.x, p.y), this.dist(x0, y0, p.x, p.y - 0.4 * W)) < Math.max(promien, HERO_R + 6);
+      if (!naBohaterze || this.ruchy < WT.koszt.ruch) return;
+      this.ciagnie = true;
+      this.tryb = 'ruch';
+      this.ustawPodmenu(false);
+    }
+    const k = this.zas ? najblizsza(this.zas, x, y) : null;
+    if (k && k !== '0,0') {
+      const c = this.zas!.get(k)!;
+      this.punkt = { k, x: c.x, y: c.y };
+      this.podpowiedz = 'Puść, żeby tam pójść (1 ruch).';
+    } else {
+      this.punkt = null;
+      this.podpowiedz = 'Brak przejścia.';
+    }
+    if (!koniec) return this.odswiez();
+    this.ciagnie = false;
+    if (this.punkt) void this.wykonajRuch();
+    else {
+      this.tryb = null;
       this.odswiez();
     }
   }

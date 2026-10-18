@@ -223,6 +223,30 @@ try {
     f = await fight();
     assert(f.ruchy === r0 - 1 || f.faza !== 'gracz');
   }
+  // Drag and drop the hero onto a spot = a move (computer: mouse drag).
+  if (!mobile && (await fight())?.faza === 'gracz' && (await fight()).ruchy >= 1) {
+    const r0 = (await fight()).ruchy;
+    const dd = await g(() => {
+      const s = window.__game.scene.getScene('game');
+      const w = s.walka, cam = s.cameras.main, r = s.game.canvas.getBoundingClientRect();
+      const css = cam.zoom / (s.scale.width / r.width);
+      const scr = (x, y) => ({ x: r.left + (x - cam.worldView.x) * css, y: r.top + (y - cam.worldView.y) * css });
+      const cells = [...w.zas.values()].filter((c) => c.d > 18 && c.d < 34);
+      const c = cells[Math.floor(cells.length / 3)];
+      return { from: scr(s.player.x, s.player.y - 4), to: scr(c.x, c.y), cel: { x: c.x, y: c.y } };
+    });
+    await page.mouse.move(dd.from.x, dd.from.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(dd.from.x + ((dd.to.x - dd.from.x) * i) / 8, dd.from.y + ((dd.to.y - dd.from.y) * i) / 8);
+    await page.screenshot({ path: `work/walka-${tag}-5b-przeciaganie.png` });
+    await page.mouse.up();
+    await waitPhase('gracz');
+    const pd = await g(() => ({ x: window.__game.scene.getScene('game').player.x, y: window.__game.scene.getScene('game').player.y }));
+    console.log('drag', JSON.stringify(dd.cel), JSON.stringify(pd));
+    assert(Math.hypot(pd.x - dd.cel.x, pd.y - dd.cel.y) < 4, 'dragged the hero there');
+    const f2 = await fight();
+    assert(!f2 || f2.ruchy === r0 - 1 || f2.faza !== 'gracz', 'the drag cost one move');
+  }
   // End the turn: the enemies answer.
   if ((await fight())?.faza === 'gracz') await button('.wp-koniec:not(.wp-wroc)');
   await waitPhase('gracz');
