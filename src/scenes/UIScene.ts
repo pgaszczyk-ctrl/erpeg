@@ -39,7 +39,6 @@ export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
 
 /** The telescopic HUD's first menu line: the character sheet. */
-const KUFER = '🧳 Kufer – postać, ekwipunek, zasoby';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -466,7 +465,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Dotknij czerwonej rurki u góry ekranu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Uciekaj od potworów!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
@@ -759,7 +758,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Top-left menu: leave the game properly. */
-  // (KUFER: the telescopic HUD's way to the character sheet, the first line of this menu.)
   private openGameMenu() {
     if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
@@ -767,13 +765,8 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: [...(teleskop() ? [KUFER] : []), 'Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (k) => {
-        // The Kufer (postać, ekwipunek, zasoby) comes first in the telescopic HUD's menu; the rest keep their numbers.
-        if (teleskop()) {
-          if (k === 0) return this.openCharacter('eq');
-          k--;
-        }
         const i = k;
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());

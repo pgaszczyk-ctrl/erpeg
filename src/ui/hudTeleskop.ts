@@ -1,36 +1,42 @@
-// The telescopic HUD (artist 39-G002 „teleskop_v2”, owner 18 Oct 2026; test server with turn fights).
-// Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait inside an EXP ring (the
-// artist's ring from 39-G001 „proba_v1”, owner 18 Oct 2026: the tube took too much room at the top) and the level plate; a tap on the portrait slides four round buttons out downwards, one from under the other like the
-// segments of a telescope (Menu → Dziennik → Aparat → Transport), each pulled out by a short rigid rod. A tap only
+// The telescopic HUD with the glass EXP reservoir (artist 39-G004/39-G005 „zbiornik_v3.1”, owner 18 Oct 2026; test
+// server with turn fights). Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait
+// inside a brass ring whose glass chamber holds the EXP liquid (its share of the chamber's area = the share of EXP to
+// the next level), the level plate under it. On a phone the liquid's surface stays level with the ground while the
+// phone tilts (device orientation, a little inertia). A tap on the portrait slides four round buttons out downwards,
+// one from under the other like the segments of a telescope (Menu → Plecak/Kufer → Aparat → Pojazd). A tap only
 // opens; a button acts on the next tap, once the column has stopped. It folds back in reverse order after 4 s idle or
-// after a choice. Life is not shown at all: healing happens only in turn fights, which have their own panel.
+// after a choice. Life is not shown: healing happens only in turn fights, which have their own panel.
 // Plain HTML outside #game, so no tap on it ever reaches the joystick or the map.
 
-const BASE = (import.meta.env.BASE_URL || '/') + 'hud/teleskop/';
+const BASE = (import.meta.env.BASE_URL || '/') + 'hud/zbiornik/';
 
-/** The artist's layout (layout.json), in phone CSS px from the portrait's top-left corner. */
+/** The artist's layout.json (CSS px from the column's top-left corner; textures are @3x). */
 const L = {
-  portret: { x: 0, y: 0, w: 52, okno: 36 },
-  /** The level plate: by the ring's lower right, clear of the button column's rods. */
-  poziom: { x: 54, y: 38, w: 28, h: 14 },
-  kolo: { x: 4, w: 44, ikona: 10, pierwszeY: 60, skok: 52 },
-  lacznik: { x: 20, w: 12, h: 8 },
-  zaslepka: { x: 20, y: 52, w: 12, h: 6 },
+  portret: 56,
+  poziom: { x: 16, y: 52, w: 24, h: 12 },
+  /** Hit areas 44×44 (x 6, from y 72 every 52), the 36×36 picture 4 px inside, the icon 8 px inside that. */
+  kolo: { x: 6, hit: 44, art: 36, wciecie: 4, ikona: 20, ikonaOd: 8, pierwszeY: 72, skok: 52 },
+  lacznik: { x: 24, w: 8, h: 16 },
   /** Phone margin from the screen's corner (plus the safe area). */
-  margines: { x: 12, y: 20 },
-  /** Starts of the four buttons, each one's travel and the whole opening (ms). */
+  margines: { x: 12, y: 16 },
   start: 55,
   ruch: 120,
 };
+/** The reservoir texture: 168×168, centre 84, chamber radii 56–74, portrait radius 47. */
+const N = 168;
+const C = 84;
+const RI = 56;
+const RO = 74;
+const RP = 47;
 const CALOSC = L.start * 3 + L.ruch;
 const ZWIN_PO_MS = 4000;
 
-export type AkcjaTeleskopu = 'menu' | 'dziennik' | 'aparat' | 'transport';
+export type AkcjaTeleskopu = 'menu' | 'plecak' | 'aparat' | 'transport';
 const AKCJE: { a: AkcjaTeleskopu; ikona: string; nazwa: string }[] = [
-  { a: 'menu', ikona: 'D_menu', nazwa: 'Menu i Kufer' },
-  { a: 'dziennik', ikona: 'D_dziennik', nazwa: 'Dziennik zadań' },
-  { a: 'aparat', ikona: 'D_aparat', nazwa: 'Aparat – zrób zdjęcie' },
-  { a: 'transport', ikona: 'D_welocyped', nazwa: 'Pojazd' },
+  { a: 'menu', ikona: 'ikona_menu', nazwa: 'Menu i ustawienia' },
+  { a: 'plecak', ikona: 'ikona_plecak', nazwa: 'Plecak – postać i ekwipunek' },
+  { a: 'aparat', ikona: 'ikona_aparat', nazwa: 'Aparat – zrób zdjęcie' },
+  { a: 'transport', ikona: 'ikona_welocyped', nazwa: 'Pojazd' },
 ];
 
 export interface TeleskopObsluga {
@@ -46,23 +52,24 @@ export interface TeleskopStan {
 
 const CSS = `
 #hud-tel { position: fixed; left: calc(env(safe-area-inset-left) + var(--tel-mx)); top: calc(env(safe-area-inset-top) + var(--tel-my));
-  z-index: 6; pointer-events: none; transform-origin: 0 0; width: 82px; height: 260px; }
+  z-index: 6; pointer-events: none; transform-origin: 0 0; width: 56px; height: 272px; }
 #hud-tel.off { display: none; }
 #hud-tel.dim { opacity: 0.45; }
 #hud-tel.dim * { pointer-events: none !important; }
-#hud-tel img, #hud-tel canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; pointer-events: none; display: block; }
+#hud-tel img, #hud-tel canvas { position: absolute; pointer-events: none; display: block; }
 #hud-tel button { position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto;
   -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 #hud-tel button:focus-visible { outline: 2px solid #f1e3c2; outline-offset: 1px; border-radius: 50%; }
 #hud-tel .tel-kolo { width: 44px; height: 44px; }
 #hud-tel .tel-kolo[data-ukryty] { pointer-events: none; visibility: hidden; }
-#hud-tel .tel-kolo img { left: 0; top: 0; }
-#hud-tel .tel-kolo .ik { left: 10px; top: 10px; }
-#hud-tel .tel-kolo.wcisniety .ik { top: 11px; }
-#hud-tel .tel-lacz { overflow: hidden; width: 12px; }
-#hud-tel .tel-lacz img { left: 0; top: 0; }
-#hud-tel .tel-poziom { position: absolute; width: 28px; height: 14px; display: flex; align-items: center; justify-content: center;
-  font: 700 10px/1 'Pixelify Sans', monospace; color: #f3dfb0; text-shadow: 0 1px 0 #1e1a24; pointer-events: none; }
+#hud-tel .tel-kolo .tlo { left: 4px; top: 4px; width: 36px; height: 36px; }
+#hud-tel .tel-kolo .ik { left: 12px; top: 12px; width: 20px; height: 20px; }
+#hud-tel .tel-kolo.wcisniety .ik { top: 13px; }
+#hud-tel .tel-kolo[data-brak] .ik { opacity: 0.55; }
+#hud-tel .tel-lacz { overflow: hidden; width: 8px; }
+#hud-tel .tel-lacz img { left: 0; bottom: 0; width: 8px; height: 16px; }
+#hud-tel .tel-poziom { position: absolute; width: 24px; height: 12px; display: flex; align-items: center; justify-content: center;
+  font: 800 9px/12px 'Alegreya Sans', sans-serif; color: #2b1a0e; padding-bottom: 1px; box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
 body.hud-teleskop #test-badge { top: auto; bottom: calc(4px + env(safe-area-inset-bottom)); }
 `;
@@ -73,11 +80,8 @@ let obsl: TeleskopObsluga | null = null;
 const el: {
   kola: { b: HTMLButtonElement; tlo: HTMLImageElement; ik: HTMLImageElement }[];
   lacz: HTMLDivElement[];
-  zaslepka?: HTMLImageElement;
-  pierscien?: HTMLCanvasElement;
+  zbiornik?: HTMLCanvasElement;
   poziom?: HTMLDivElement;
-  awans?: HTMLImageElement;
-  av?: HTMLCanvasElement;
   portret?: HTMLButtonElement;
 } = { kola: [], lacz: [] };
 
@@ -88,16 +92,21 @@ function obraz(n: string) {
   if (!i) {
     i = new Image();
     i.src = `${BASE}${n}.png`;
+    i.addEventListener('load', () => rysujZbiornik(), { once: true });
     obrazy.set(n, i);
   }
   return i;
 }
-function img(n: string, x: number, y: number) {
+const gotowy = (n: string) => {
+  const i = obraz(n);
+  return i.complete && i.naturalWidth > 0;
+};
+function img(n: string, cls = '') {
   const i = document.createElement('img');
   i.src = `${BASE}${n}.png`;
   i.alt = '';
   i.draggable = false;
-  Object.assign(i.style, { left: `${x}px`, top: `${y}px` });
+  if (cls) i.className = cls;
   return i;
 }
 
@@ -114,35 +123,30 @@ let otwartoOd = 0;
 const easeOutCubic = (u: number) => 1 - (1 - u) ** 3;
 const bezRuchu = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Where button i stands at the telescope's time t: slides from under the one above (the portrait for the first). */
+/** Where button i's hit area stands at the telescope's time t: slides from under the one above (the portrait for the first). */
 function polozenie(i: number, czas: number) {
   const u = Math.min(1, Math.max(0, (czas - i * L.start) / L.ruch));
   const cel = L.kolo.pierwszeY + i * L.kolo.skok;
-  // Hidden start: centred under the element above (portrait centre for the first one).
-  const zrodlo = i === 0 ? L.portret.w / 2 - L.kolo.w / 2 : L.kolo.pierwszeY + (i - 1) * L.kolo.skok;
+  const zrodlo = i === 0 ? (L.portret - L.kolo.hit) / 2 : L.kolo.pierwszeY + (i - 1) * L.kolo.skok;
   return { y: Math.round(zrodlo + (cel - zrodlo) * easeOutCubic(u)), u };
 }
 
 function ustawKolumne() {
   const otwarta = t >= CALOSC;
-  let gornyDol = L.portret.w; // bottom of the portrait / the button above
+  let gornyDol = L.portret; // bottom of the portrait / the picture above
   el.kola.forEach((k, i) => {
     const { y, u } = polozenie(i, t);
     k.b.style.top = `${y}px`;
-    const widac = u > 0;
-    if (widac) k.b.removeAttribute('data-ukryty');
+    if (u > 0) k.b.removeAttribute('data-ukryty');
     else k.b.setAttribute('data-ukryty', '');
-    // Taps only once the column has stopped.
     k.b.tabIndex = otwarta ? 0 : -1;
     k.b.setAttribute('aria-hidden', String(!otwarta));
-    // The rod between the one above and this one: as long as the gap it bridges (pulled out with the button).
-    const lacz = el.lacz[i];
-    const h = Math.max(0, Math.min(L.lacznik.h, y - gornyDol));
-    Object.assign(lacz.style, { top: `${gornyDol}px`, height: `${h}px` });
-    gornyDol = y + L.kolo.w;
+    // The joint between the picture above and this one, pulled out with the button (never longer than its 16 px).
+    const gora = y + L.kolo.wciecie;
+    const h = Math.max(0, Math.min(L.lacznik.h, gora - gornyDol));
+    Object.assign(el.lacz[i].style, { top: `${gora - h}px`, height: `${h}px` });
+    gornyDol = gora + L.kolo.art;
   });
-  // The cap under the portrait shows only while folded (the first rod takes its place).
-  if (el.zaslepka) el.zaslepka.style.visibility = t <= 0 ? 'visible' : 'hidden';
   root?.classList.toggle('otwarta', otwarta);
   el.portret?.setAttribute('aria-expanded', String(t > 0 && kierunek !== -1));
 }
@@ -190,8 +194,78 @@ export function zwinTeleskop() {
   if (t > 0) rusz(-1);
 }
 
-/** Open or opening = true. */
 const rozwiniety = () => (t > 0 && kierunek !== -1) || kierunek === 1;
+
+// ------------------------------------------------------------------ the liquid's tilt (phones only)
+
+/** The surface's angle on screen (degrees), smoothed with a little inertia, and where the sensors want it. */
+let kat = 0;
+let katCel = 0;
+let katV = 0;
+let katRaf = 0;
+let katOstatni = 0;
+let czujnikiOn = false;
+let narysowanyKat = NaN;
+
+const telefon = () => window.matchMedia('(pointer: coarse)').matches;
+
+/** Device orientation → the down vector in screen axes (x right, y down) → the liquid surface's angle. */
+function naOrientacje(e: DeviceOrientationEvent) {
+  if (e.beta == null || e.gamma == null) return;
+  const b = (e.beta * Math.PI) / 180;
+  const g = (e.gamma * Math.PI) / 180;
+  // Earth's down in the device's natural screen axes.
+  let gx = Math.sin(g) * Math.cos(b);
+  let gy = Math.sin(b);
+  // Lying flat: no clear down on the screen – keep the last angle.
+  if (Math.hypot(gx, gy) < 0.25) return;
+  const a = (((screen.orientation?.angle ?? (window as unknown as { orientation?: number }).orientation ?? 0) as number) * Math.PI) / 180;
+  [gx, gy] = [gx * Math.cos(a) - gy * Math.sin(a), gx * Math.sin(a) + gy * Math.cos(a)];
+  katCel = Math.max(-90, Math.min(90, (Math.atan2(-gx, gy) * 180) / Math.PI));
+  if (!katRaf) {
+    katOstatni = performance.now();
+    katRaf = requestAnimationFrame(krokKata);
+  }
+}
+
+/** A damped spring towards the sensors' angle; stops when settled. */
+function krokKata(teraz: number) {
+  const dt = Math.min(0.05, (teraz - katOstatni) / 1000);
+  katOstatni = teraz;
+  katV += ((katCel - kat) * 60 - katV * 9) * dt;
+  kat += katV * dt;
+  if (Math.abs(kat - narysowanyKat) > 0.4) rysujZbiornik();
+  if (Math.abs(katCel - kat) < 0.3 && Math.abs(katV) < 0.5) {
+    kat = katCel;
+    katV = 0;
+    katRaf = 0;
+    rysujZbiornik();
+    return;
+  }
+  katRaf = requestAnimationFrame(krokKata);
+}
+
+function wlaczCzujniki() {
+  if (czujnikiOn || !telefon() || bezRuchu() || !('DeviceOrientationEvent' in window)) return;
+  czujnikiOn = true;
+  window.addEventListener('deviceorientation', naOrientacje);
+}
+
+function wylaczCzujniki() {
+  window.removeEventListener('deviceorientation', naOrientacje);
+  czujnikiOn = false;
+  if (katRaf) cancelAnimationFrame(katRaf);
+  katRaf = 0;
+}
+
+/** iPhones ask first, and only from a tap: the first tap on the portrait asks once (a refusal = a level surface). */
+let pytano = false;
+function zapytajOCzujniki() {
+  if (pytano || !telefon() || bezRuchu()) return;
+  pytano = true;
+  const D = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+  if (D?.requestPermission) D.requestPermission().then((s) => s === 'granted' && (czujnikiOn = false, wlaczCzujniki())).catch(() => {});
+}
 
 // ------------------------------------------------------------------ building it
 
@@ -207,17 +281,13 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
   document.body.classList.add('hud-teleskop');
   root = document.createElement('div');
   root.id = 'hud-tel';
-  const stop = (b: HTMLElement) => {
-    // pointerdown, not click: the game's own touch handling must never see it.
-    b.addEventListener('pointerdown', (e) => e.stopPropagation());
-  };
-  // Rods first (drawn behind the buttons), then the buttons from the bottom one up, so each upper one covers the one
-  // sliding out from under it; the portrait last, on top of the first.
+  const stop = (b: HTMLElement) => b.addEventListener('pointerdown', (e) => e.stopPropagation());
+  // Joints first (behind the buttons), then the buttons, each upper one over the one sliding out from under it.
   for (let i = 0; i < 4; i++) {
     const d = document.createElement('div');
     d.className = 'tel-lacz';
     d.style.left = `${L.lacznik.x}px`;
-    d.append(img('E_lacznik_12x8', 0, 0));
+    d.append(img('lacznik'));
     el.lacz.push(d);
   }
   root.append(...el.lacz);
@@ -229,15 +299,14 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     b.title = a.nazwa;
     b.style.left = `${L.kolo.x}px`;
     b.style.zIndex = String(10 - i);
-    const tlo = img('C_normalny', 0, 0);
-    const ik = img(a.ikona, L.kolo.ikona, L.kolo.ikona);
-    ik.className = 'ik';
+    const tlo = img('przycisk_normalny', 'tlo');
+    const ik = img(a.ikona, 'ik');
     b.append(tlo, ik);
     stop(b);
     b.addEventListener('pointerdown', () => {
       if (b.dataset.brak === undefined) {
         b.classList.add('wcisniety');
-        tlo.src = `${BASE}C_wcisniety.png`;
+        tlo.src = `${BASE}przycisk_wcisniety.png`;
       }
     });
     const pusc = () => {
@@ -249,7 +318,6 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     b.addEventListener('pointercancel', pusc);
     b.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Only a fully open column acts, and never on the touch that opened it.
       if (t < CALOSC || kierunek !== 0 || performance.now() < otwartoOd) return;
       zwinTeleskop();
       obsl?.akcja(a.a);
@@ -257,59 +325,49 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     return { b, tlo, ik };
   });
   root.append(...el.kola.map((k) => k.b));
-  el.zaslepka = img('E_zaslepka_12x6', L.zaslepka.x, L.zaslepka.y);
-  root.append(el.zaslepka);
 
-  // The portrait: the face (drawn by the game) in the window, the frame over it, the level-up glint over that.
+  // The portrait with its reservoir: one canvas, drawn from the artist's layers.
   const p = document.createElement('button');
   p.type = 'button';
   p.className = 'tel-portret';
-  Object.assign(p.style, { left: '0px', top: '0px', width: `${L.portret.w}px`, height: `${L.portret.w}px`, zIndex: '20', borderRadius: '50%' });
+  Object.assign(p.style, { left: '0px', top: '0px', width: `${L.portret}px`, height: `${L.portret}px`, zIndex: '20', borderRadius: '50%' });
   p.setAttribute('aria-label', 'Menu postaci');
   p.title = 'Menu postaci';
   p.setAttribute('aria-expanded', 'false');
-  const av = document.createElement('canvas');
-  const o = (L.portret.w - L.portret.okno) / 2;
-  Object.assign(av.style, { left: `${o}px`, top: `${o}px`, width: `${L.portret.okno}px`, height: `${L.portret.okno}px`, borderRadius: '50%' });
-  el.av = av;
-  const awans = img('A_awans_1', 0, 0);
-  awans.style.visibility = 'hidden';
-  el.awans = awans;
-  // The EXP ring around the frame: the empty track, then the full ring cut to the progress (clockwise from the top).
-  const ring = document.createElement('canvas');
-  ring.width = ring.height = L.portret.w;
-  Object.assign(ring.style, { left: '0px', top: '0px', width: `${L.portret.w}px`, height: `${L.portret.w}px` });
-  el.pierscien = ring;
-  p.append(av, img('A_pierscien_tor', 0, 0), ring, img('A_medalion_oprawa', 0, 0), awans);
+  const zb = document.createElement('canvas');
+  Object.assign(zb.style, { left: '0px', top: '0px', width: `${L.portret}px`, height: `${L.portret}px` });
+  el.zbiornik = zb;
+  p.append(zb);
   stop(p);
   p.addEventListener('click', (e) => {
     e.stopPropagation();
+    zapytajOCzujniki();
     if (rozwiniety()) zwinTeleskop();
     else rozwinTeleskop();
   });
   el.portret = p;
 
-  // The level plate with the game's digits.
+  const pozImg = img('poziom_pusty');
+  Object.assign(pozImg.style, { left: `${L.poziom.x}px`, top: `${L.poziom.y}px`, width: `${L.poziom.w}px`, height: `${L.poziom.h}px`, zIndex: '21' });
   const poz = document.createElement('div');
   poz.className = 'tel-poziom';
   poz.style.left = `${L.poziom.x}px`;
   poz.style.top = `${L.poziom.y}px`;
-  const pozImg = img('A_poziom_pusty', L.poziom.x, L.poziom.y);
   el.poziom = poz;
 
-  root.append(pozImg, poz, p);
+  root.append(p, pozImg, poz);
   document.body.append(root);
-  // Any touch elsewhere keeps an open column for a while (the 4 s count from the last use of the HUD).
   root.addEventListener('pointerdown', () => { if (rozwiniety()) odliczZwiniecie(); });
-  for (const n of ['A_pierscien_pelny', 'C_normalny', 'C_aktywny', 'C_niedostepny', 'C_wcisniety', 'A_awans_1', 'A_awans_2', 'A_awans_3', 'D_hulajnoga']) obraz(n);
-  obraz('A_pierscien_pelny').addEventListener('load', () => rysujPierscien(), { once: true });
+  for (const n of WARSTWY) obraz(n);
+  for (const n of ['przycisk_wcisniety', 'przycisk_aktywny', 'przycisk_niedostepny', 'ikona_hulajnoga']) obraz(n);
   t = 0;
   kierunek = 0;
   ustawKolumne();
   uklad();
   window.addEventListener('resize', uklad);
-  rysujAwatar();
+  wlaczCzujniki();
   if (stan) ustawTeleskop(stan);
+  rysujZbiornik();
 }
 
 export function odmontujTeleskop() {
@@ -317,21 +375,24 @@ export function odmontujTeleskop() {
   window.clearTimeout(zwin);
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
+  wylaczCzujniki();
   root?.remove();
   root = null;
   el.kola = [];
   el.lacz = [];
+  el.zbiornik = undefined;
   document.body.classList.remove('hud-teleskop');
 }
 
-/** Phone ×1, computer ×2 (nearest neighbour), whole steps only. */
+/** Phone ×1, computer ×2 (the @3x pictures stay smooth at both). */
+let skala = 1;
 function uklad() {
   if (!root) return;
-  const telefon = window.matchMedia('(pointer: coarse)').matches;
-  const s = telefon || window.innerHeight < 560 ? 1 : 2;
+  skala = telefon() || window.innerHeight < 560 ? 1 : 2;
   root.style.setProperty('--tel-mx', `${L.margines.x}px`);
   root.style.setProperty('--tel-my', `${L.margines.y}px`);
-  root.style.transform = s === 1 ? '' : `scale(${s})`;
+  root.style.transform = skala === 1 ? '' : `scale(${skala})`;
+  rysujZbiornik();
 }
 
 export const szerokoscTeleskopu = () => (root ? root.getBoundingClientRect().right : 0);
@@ -342,17 +403,121 @@ export function teleskopWidoczny(tryb: 'on' | 'dim' | 'off') {
   if (tryb !== 'on') zwinTeleskop();
 }
 
+// ------------------------------------------------------------------ the reservoir (artist's renderer.js, in TypeScript)
+
+const WARSTWY = ['portret_oprawa', 'portret_maska', 'zbiornik_tlo', 'zbiornik_maska', 'zbiornik_plyn', 'zbiornik_szklo', 'zbiornik_tafla'];
+
+function kolkoPod(r: number, h: number) {
+  if (h <= -r) return Math.PI * r * r;
+  if (h >= r) return 0;
+  return r * r * Math.acos(h / r) - h * Math.sqrt(Math.max(0, r * r - h * h));
+}
+
+/** The surface's distance from the centre (along the tilted vertical) that leaves `p` of the chamber's area under it. */
+function wysokoscTafli(p: number) {
+  if (p <= 0) return RO + 1;
+  if (p >= 1) return -RO - 1;
+  const cel = p * Math.PI * (RO * RO - RI * RI);
+  let lo = -RO;
+  let hi = RO;
+  for (let i = 0; i < 32; i++) {
+    const m = (lo + hi) / 2;
+    if (kolkoPod(RO, m) - kolkoPod(RI, m) > cel) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
+const plotno = () => {
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  return c;
+};
+let warstwy: { out: HTMLCanvasElement; ciecz: HTMLCanvasElement; twarz: HTMLCanvasElement } | null = null;
+
+/** Portrait under its mask, the empty chamber, the liquid cut by the chamber and the tilted surface, glass, frame. */
+function rysujZbiornik() {
+  const c = el.zbiornik;
+  if (!c || !stan) return;
+  if (!WARSTWY.every(gotowy)) return;
+  warstwy ??= { out: plotno(), ciecz: plotno(), twarz: plotno() };
+  const { out, ciecz, twarz } = warstwy;
+  const oc = out.getContext('2d')!;
+  const lc = ciecz.getContext('2d')!;
+  const fc = twarz.getContext('2d')!;
+  const p = Math.min(1, Math.max(0, stan.expShare || 0));
+  const h = wysokoscTafli(p);
+  const a = (kat * Math.PI) / 180;
+  narysowanyKat = kat;
+  oc.clearRect(0, 0, N, N);
+  // The face.
+  fc.globalCompositeOperation = 'source-over';
+  fc.clearRect(0, 0, N, N);
+  fc.fillStyle = '#3a2c22';
+  fc.fillRect(C - RP, C - RP, RP * 2, RP * 2);
+  if (portretObraz) {
+    fc.imageSmoothingEnabled = true;
+    fc.imageSmoothingQuality = 'high';
+    fc.drawImage(portretObraz, C - RP, C - RP, RP * 2, RP * 2);
+  } else if (glowa) {
+    fc.imageSmoothingEnabled = false;
+    fc.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], C - RP, C - RP, RP * 2, RP * 2);
+  }
+  fc.globalCompositeOperation = 'destination-in';
+  fc.drawImage(obraz('portret_maska'), 0, 0);
+  fc.globalCompositeOperation = 'source-over';
+  oc.drawImage(twarz, 0, 0);
+  oc.drawImage(obraz('zbiornik_tlo'), 0, 0);
+  // The liquid.
+  if (p > 0) {
+    lc.globalCompositeOperation = 'source-over';
+    lc.clearRect(0, 0, N, N);
+    lc.save();
+    lc.translate(C, C);
+    lc.rotate(a);
+    lc.beginPath();
+    lc.rect(-N * 2, h, N * 4, N * 4);
+    lc.clip();
+    lc.setTransform(1, 0, 0, 1, 0, 0);
+    lc.drawImage(obraz('zbiornik_plyn'), 0, 0);
+    lc.restore();
+    if (p < 1) {
+      lc.save();
+      lc.translate(C, C);
+      lc.rotate(a);
+      lc.drawImage(obraz('zbiornik_tafla'), -N / 2, h - 4.5);
+      lc.restore();
+    }
+    lc.globalCompositeOperation = 'destination-in';
+    lc.drawImage(obraz('zbiornik_maska'), 0, 0);
+    lc.globalCompositeOperation = 'source-over';
+    oc.drawImage(ciecz, 0, 0);
+  }
+  oc.drawImage(obraz('zbiornik_szklo'), 0, 0);
+  oc.drawImage(obraz('portret_oprawa'), 0, 0);
+  // Onto the screen at device pixels.
+  const d = Math.max(1, Math.min(3, Math.round((window.devicePixelRatio || 1) * skala)));
+  const w = L.portret * d;
+  if (c.width !== w) c.width = c.height = w;
+  const g = c.getContext('2d')!;
+  g.clearRect(0, 0, w, w);
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(out, 0, 0, w, w);
+}
+
 // ------------------------------------------------------------------ what it shows
 
 let ostatniPoziom = 0;
 let ostatnieKola = '';
+let ostatniExp = -1;
 
 function odswiezKola() {
   if (!stan) return;
   const v = stan.pojazd;
   const k = el.kola[3];
   if (!k) return;
-  k.ik.src = `${BASE}D_${v.ikona}.png`;
+  k.ik.src = `${BASE}ikona_${v.ikona}.png`;
   if (v.brak) k.b.dataset.brak = '';
   else delete k.b.dataset.brak;
   const nazwa = v.brak ? 'Nie masz pojazdu' : v.jedzie ? `Zsiądź z ${v.ikona === 'welocyped' ? 'roweru' : 'hulajnogi'}` : `Wsiądź na ${v.ikona === 'welocyped' ? 'rower' : 'hulajnogę'}`;
@@ -360,57 +525,28 @@ function odswiezKola() {
   k.b.title = nazwa;
   for (const [i, x] of el.kola.entries()) {
     if (x.b.classList.contains('wcisniety')) continue;
-    const plik = i === 3 ? (v.brak ? 'C_niedostepny' : v.jedzie ? 'C_aktywny' : 'C_normalny') : 'C_normalny';
+    const plik = i === 3 ? (v.brak ? 'przycisk_niedostepny' : v.jedzie ? 'przycisk_aktywny' : 'przycisk_normalny') : 'przycisk_normalny';
     if (!x.tlo.src.endsWith(`${plik}.png`)) x.tlo.src = `${BASE}${plik}.png`;
   }
 }
 
-/** The full ring cut to the share of EXP: a pie slice from 12 o'clock clockwise (pixels never stretched). */
-function rysujPierscien() {
-  const c = el.pierscien;
-  if (!stan || !c) return;
-  const src = obraz('A_pierscien_pelny');
-  if (!src.complete || !src.naturalWidth) return;
-  const g = c.getContext('2d')!;
-  g.clearRect(0, 0, c.width, c.height);
-  const czesc = Math.min(1, Math.max(0, stan.expShare));
-  if (czesc <= 0) return;
-  const r = c.width / 2;
-  g.save();
-  g.beginPath();
-  g.moveTo(r, r);
-  g.arc(r, r, r * 2, -Math.PI / 2, -Math.PI / 2 + czesc * Math.PI * 2);
-  g.closePath();
-  g.clip();
-  g.drawImage(src, 0, 0);
-  g.restore();
-}
-
 export function ustawTeleskop(v: TeleskopStan) {
-  const awans = stan && v.poziom > ostatniPoziom && ostatniPoziom > 0;
   stan = v;
   if (!root) return;
   ostatniPoziom = v.poziom;
   if (el.poziom && el.poziom.textContent !== String(v.poziom)) el.poziom.textContent = String(v.poziom);
-  rysujPierscien();
+  if (Math.abs(v.expShare - ostatniExp) > 0.001) {
+    ostatniExp = v.expShare;
+    rysujZbiornik();
+  }
   const klucz = `${v.pojazd.ikona}|${v.pojazd.jedzie}|${v.pojazd.brak}`;
   if (klucz !== ostatnieKola) {
     ostatnieKola = klucz;
     odswiezKola();
   }
-  if (awans) blyskAwansu();
 }
 
-/** The artist's three glint frames over the portrait, played twice. */
-function blyskAwansu() {
-  const a = el.awans;
-  if (!a) return;
-  const kl = [1, 2, 3, 1, 2, 3];
-  kl.forEach((n, i) => window.setTimeout(() => { a.src = `${BASE}A_awans_${n}.png`; a.style.visibility = 'visible'; }, i * 100));
-  window.setTimeout(() => { a.style.visibility = 'hidden'; }, kl.length * 100);
-}
-
-/** The hero's illustrated portrait (public/portrety/bohater_NN.webp); while it is missing or loading, the sheet's head. */
+/** The hero's painted portrait (public/portrety/bohater_NN.webp); while it is missing or loading, the sheet's head. */
 let portretUrl: string | null = null;
 let portretObraz: HTMLImageElement | null = null;
 let glowa: [CanvasImageSource, number, number, number, number] | null = null;
@@ -419,39 +555,28 @@ export function teleskopPortret(url: string | null) {
   if (url === portretUrl) return;
   portretUrl = url;
   portretObraz = null;
-  if (!url) return rysujAwatar();
+  if (!url) return rysujZbiornik();
   const i = new Image();
   i.onload = () => {
     if (portretUrl !== url) return;
     portretObraz = i;
-    rysujAwatar();
+    rysujZbiornik();
   };
   i.src = url;
 }
 
 export function teleskopAwatar(src: CanvasImageSource | null, sx: number, sy: number, sw: number, sh: number) {
   glowa = src ? [src, sx, sy, sw, sh] : null;
-  rysujAwatar();
+  rysujZbiornik();
 }
 
-function rysujAwatar() {
-  const c = el.av;
-  if (!c) return;
-  const d = Math.max(1, Math.round(window.devicePixelRatio || 1)) * 2;
-  c.width = L.portret.okno * d;
-  c.height = L.portret.okno * d;
-  const g = c.getContext('2d')!;
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = '#3a2c22';
-  g.fillRect(0, 0, c.width, c.height);
-  if (portretObraz) {
-    // A painted picture: shrunk smoothly, never blocky.
-    g.imageSmoothingEnabled = true;
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(portretObraz, 0, 0, c.width, c.height);
-  } else if (glowa) g.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], 0, 0, c.width, c.height);
-}
-
-/** For tests: the column's time and buttons. */
-export const teleskopStan = () => ({ t, kierunek, otwarta: t >= CALOSC, kola: el.kola.map((k) => ({ top: k.b.style.top, ukryty: k.b.hasAttribute('data-ukryty') })) });
+/** For tests: the column's time and buttons, the liquid's angle and level. */
+export const teleskopStan = () => ({
+  t, kierunek, otwarta: t >= CALOSC, kat, poziom: ostatniPoziom, portret: !!portretObraz,
+  kola: el.kola.map((k) => ({ top: k.b.style.top, ukryty: k.b.hasAttribute('data-ukryty') })),
+  /** Tests: the reservoir's picture. */
+  obraz: () => el.zbiornik?.toDataURL() ?? '',
+  /** Tests on a desktop: pretend the phone is tilted (degrees of the surface on screen). */
+  przechyl: (st: number) => { katCel = st; if (!katRaf) { katOstatni = performance.now(); katRaf = requestAnimationFrame(krokKata); } },
+});
 (window as unknown as { __teleskop?: typeof teleskopStan }).__teleskop = teleskopStan;

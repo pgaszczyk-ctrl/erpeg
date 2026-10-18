@@ -416,7 +416,7 @@ export function mountHud(on: HudHandlers) {
     zamontujTeleskop({
       akcja: (a: AkcjaTeleskopu) => {
         if (a === 'menu') on.menu?.();
-        else if (a === 'dziennik') on.quests();
+        else if (a === 'plecak') on.character();
         else if (a === 'aparat') on.camera();
         else if (telPojazd) on.vehicle?.(telPojazd);
         else on.brakPojazdu?.();
@@ -444,7 +444,7 @@ export function unmountHud() {
 }
 
 /** Room the telescopic HUD takes at the top left (margin + portrait + EXP tube + a gap), phone CSS px. */
-const L_TELESKOPU = 12 + 82 + 8;
+const L_TELESKOPU = 12 + 56 + 8;
 
 /** The telescopic HUD's transport button: what it rides, and whether riding now. */
 let telPojazd: 'rower' | 'hulajnoga' | null = null;

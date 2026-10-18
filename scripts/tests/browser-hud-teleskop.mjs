@@ -1,6 +1,7 @@
-// The telescopic HUD (artist 39-G002, test server with turn fights): folded at the start, a tap on the portrait slides
-// the four buttons out one after another, a button does nothing while moving or on the opening touch, works once open
-// (Dziennik → Kufer at the quest log), folds by itself after 4 s; life shows only while hurt and a tap on it heals.
+// The telescopic HUD with the EXP reservoir (artist 39-G004/G005, test server with turn fights): folded at the start, the
+// portrait (painted bohater_NN) inside the liquid ring, a tap slides the four buttons out one after another, a button
+// does nothing while moving or on the opening touch, works once open (Plecak → Kufer), folds by itself after 4 s; no
+// life shown even while hurt; no Kufer line in the game menu; the liquid tilts (__teleskop().przechyl).
 // Run: VITE_TEST=1 npx vite build && npx vite preview --port 4173 & node scripts/tests/browser-hud-teleskop.mjs   (TELEFON=1)
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -43,10 +44,11 @@ try {
   };
   assert(await page.locator('#hud-tel').count(), 'telescopic HUD mounted');
   assert.equal(await g(() => getComputedStyle(document.querySelector('#hud .hud-m')).display), 'none', 'no boiler at the bottom');
-  // Full life: no life tube.
   await g(() => { const s = window.__game.scene.getScene('game'); s.emitHud(); });
-  await page.waitForTimeout(600);
-  assert.equal(await page.locator('#hud-tel .tel-zycie').isHidden(), true, 'life hidden at full health');
+  await page.waitForTimeout(1200);
+  const st0 = await g(() => window.__teleskop());
+  console.log('start', JSON.stringify({ poziom: st0.poziom, portret: st0.portret }));
+  assert(st0.portret, 'painted portrait in the medallion');
   await page.screenshot({ path: `work/teleskop-${tag}-zwiniety.png` });
   // Open: mid-way and fully out.
   await tap('#hud-tel .tel-portret');
@@ -59,14 +61,14 @@ try {
   const otw = await g(() => window.__teleskop());
   console.log('otwarty', JSON.stringify(otw));
   assert.equal(otw.otwarta, true);
-  assert.deepEqual(otw.kola.map((k) => k.top), ['60px', '112px', '164px', '216px'], 'final positions 52 px apart');
+  assert.deepEqual(otw.kola.map((k) => k.top), ['72px', '124px', '176px', '228px'], 'final positions 52 px apart');
   await page.screenshot({ path: `work/teleskop-${tag}-otwarty.png` });
-  // Dziennik → Kufer at the quest log; the column folds.
+  // Plecak → Kufer; the column folds.
   await tap('#hud-tel .tel-kolo:nth-of-type(2)');
   await page.waitForTimeout(700);
   const kufer = await g(() => !!document.querySelector('.k-box, #character, .k-wrap'));
   console.log('kufer', kufer);
-  assert(kufer, 'Dziennik opened the Kufer');
+  assert(kufer, 'Plecak opened the Kufer');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(600);
   assert.equal((await g(() => window.__teleskop())).t, 0, 'folded after the choice');
@@ -74,16 +76,25 @@ try {
   await tap('#hud-tel .tel-portret');
   await page.waitForTimeout(4700);
   assert.equal((await g(() => window.__teleskop())).t, 0, 'folded by itself after 4 s');
-  // Hurt: life tube, a tap heals with a potion.
+  // Hurt: still no life on the HUD.
   await g(() => { const s = window.__game.scene.getScene('game'); s.player.hp = 3; s.emitHud(); });
-  await page.waitForTimeout(700);
-  assert.equal(await page.locator('#hud-tel .tel-zycie').isVisible(), true, 'life shown while hurt');
-  await page.screenshot({ path: `work/teleskop-${tag}-ranny.png` });
-  await tap('#hud-tel .tel-zycie');
   await page.waitForTimeout(500);
-  const hp = await g(() => window.__game.scene.getScene('game').player.hp);
-  console.log('po leczeniu', hp);
-  assert(hp > 3, 'a tap on the life tube healed');
+  assert.equal(await page.locator('#hud-tel .tel-zycie').count(), 0, 'no life tube');
+  // The liquid tilts with inertia and settles.
+  await g(() => window.__teleskop().przechyl(30));
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: `work/teleskop-${tag}-przechyl.png`, clip: { x: 0, y: 0, width: 200, height: 200 } });
+  await page.waitForTimeout(1500);
+  const kat = (await g(() => window.__teleskop())).kat;
+  console.log('kat', kat);
+  assert(Math.abs(kat - 30) < 1, 'liquid settled at the tilt');
+  await page.screenshot({ path: `work/teleskop-${tag}-przechyl-koniec.png`, clip: { x: 0, y: 0, width: 200, height: 200 } });
+  // No Kufer line in the game menu.
+  await g(() => window.__game.scene.getScene('ui').openGameMenu());
+  await page.waitForTimeout(500);
+  const przyciski = await g(() => { const z = []; const w = (o) => { if (typeof o?.text === 'string') z.push(o.text); (o?.list || []).forEach(w); }; w(window.__game.scene.getScene('ui').dialogBox); return z.join('|'); });
+  console.log('menu', przyciski);
+  assert(!/Kufer/.test(przyciski), 'no Kufer in the menu');
   assert.deepEqual(errors, []);
   console.log('OK teleskop', tag, vw);
 } finally {
