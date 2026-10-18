@@ -24,9 +24,6 @@ export const ARENA = {
   duchMocny: 0.3,
   /** Promień płyty areny (W = wysokość bohatera) i odległość startowa. */
   promienW: 9,
-  /** Behind the arena: the town where the judge stands, blurred (px) and dimmed (alpha of the dark veil). */
-  tloRozmycie: 3,
-  tloPrzyciemnienie: 0.6,
   startW: 6,
   /** Mechaniczny Gladiator: przeciętna postać na danym poziomie (atak i trafienie z poziomu). */
   gladiator: { atak: (lvl: number) => 2.5 + lvl * 0.9, trafienie: (lvl: number) => Math.min(0.9, 0.6 + lvl * 0.015), blok: 0.05 },
@@ -61,8 +58,13 @@ export const ARENA_RYSUNEK = {
   tlo: '#22180f',
   maszty: [[258, 86], [380, 86], [161, 128], [470, 128], [87, 190], [550, 190], [50, 287], [587, 287]] as [number, number][],
   tabliczka: [320, 103, 70] as [number, number, number],
-  /** Top of the gate's flags (the framed view starts here). */
-  gora: 66,
+  /** The framed view (shares of the arena's radius): the floor across ±kadrX, from kadrGora above to kadrDol below
+   *  its middle – a closer view than the whole building (owner: „powiększ arenę”), the sand goes on around it. */
+  kadrX: 0.75,
+  kadrGora: 1.15,
+  kadrDol: 0.6,
+  /** Sand all around the building: a tile made by code from the floor's colour, a shade darker. */
+  piasekWokol: 0.9,
 };
 
 export const ARENA_TEKSTY = {

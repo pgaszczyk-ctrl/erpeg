@@ -1016,6 +1016,13 @@ export class Training {
           break;
         }
       }
+      // A stadium closed by its stands (Arena Lublin): the pitch can't be walked into, so the judge waits
+      // outside, on the nearest spot that is reachable from the streets.
+      if (npc && !this.city.reachesFar(npc.x, npc.y + 5)) {
+        const p = this.city.reachableNear(npc.x, npc.y + 5);
+        npc.x = p.x;
+        npc.y = p.y - 5;
+      }
     }
     this.people.set(a, npc);
     return npc;

@@ -152,7 +152,7 @@ export class ArenaScene extends Phaser.Scene {
       poziom: () => d.poziom,
       wyspany: () => false,
       // The artist's arena: the whole floor across, the gate and its plaque on top.
-      kadr: () => this.rysunek ? { x0: -R - 4, x1: R + 4, y0: (ARENA_RYSUNEK.gora - ARENA_RYSUNEK.srodek[1]) * R / ARENA_RYSUNEK.polosX, y1: R * ARENA_RYSUNEK.spłaszczenie + 4 } : null,
+      kadr: () => this.rysunek ? { x0: -R * ARENA_RYSUNEK.kadrX, x1: R * ARENA_RYSUNEK.kadrX, y0: -R * ARENA_RYSUNEK.kadrGora, y1: R * ARENA_RYSUNEK.kadrDol } : null,
     }, [e], { pvp: true });
     d.toast(d.gladiator ? `⚙ ${ARENA_TEKSTY.gladiator} wchodzi na arenę!` : `⚔ Duch ${r.name} wchodzi na arenę!`, 2500);
   }
@@ -182,6 +182,32 @@ export class ArenaScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 200, onComplete: () => g.destroy() });
   }
 
+  /** A 64 px tile of loose sand around the arena: the floor's colour a shade darker, two tones of grains, faint ripples. */
+  private piasekWokol(rgb: number[]) {
+    const key = `arena-piach:${rgb.join(',')}`;
+    if (this.textures.exists(key)) return key;
+    const N = 64, c = document.createElement('canvas');
+    c.width = c.height = N;
+    const ctx = c.getContext('2d')!;
+    const k = ARENA_RYSUNEK.piasekWokol;
+    const col = (f: number) => `rgb(${rgb.map((v) => Math.round(Math.min(255, v * k * f))).join(',')})`;
+    ctx.fillStyle = col(1);
+    ctx.fillRect(0, 0, N, N);
+    let s = 7;
+    const los = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    // Wind ripples: soft darker rows, wrapping at the tile's edges.
+    for (let y = 0; y < N; y += 8) {
+      ctx.fillStyle = col(0.95);
+      for (let x = 0; x < N; x++) ctx.fillRect(x, (y + Math.round(2 * Math.sin((x / N) * Math.PI * 2))) & (N - 1), 1, 1);
+    }
+    for (let i = 0; i < 260; i++) {
+      ctx.fillStyle = col(los() < 0.5 ? 0.9 : 1.07);
+      ctx.fillRect(Math.floor(los() * N), Math.floor(los() * N), 1, 1);
+    }
+    this.textures.addCanvas(key, c);
+    return key;
+  }
+
   /**
    * The artist's arena (38-G001): sand floor at the very bottom, the town's arms (or the Exp-lore logo) raked into
    * it, then the back stands with the gate. Both pictures share one frame; the floor's middle lies ARENA_RYSUNEK.srodek
@@ -196,12 +222,14 @@ export class ArenaScene extends Phaser.Scene {
     const [cx, cy] = A.srodek;
     const naSwiat = (px: number, py: number) => ({ x: (px - cx) * K, y: (py - cy) * K });
     const o = naSwiat(A.plotno[0] / 2, A.plotno[1] / 2);
-    // No backdrop of its own: the paused town shows through, under a dark veil.
-    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
-    this.add.rectangle(0, 0, 4000, 4000, 0x1a120a, ARENA.tloPrzyciemnienie).setDepth(-2e8).setScrollFactor(0);
-    // A soft shadow under the whole building, so it sits on the town instead of floating over it.
-    for (const [k, a] of [[1.25, 0.18], [1.12, 0.22], [1.02, 0.25]] as [number, number][])
-      this.add.ellipse(0, -R * 0.15, R * 2 * k, R * 2 * k * 0.95, 0x0d0905, a).setDepth(-2e8 + 1);
+    // Sand all around the building (owner: no black, no see-through town).
+    this.cameras.main.setBackgroundColor(A.tlo);
+    const c0 = this.textures.getPixel(cx, cy + 40, 'arena-plyta');
+    const piach = this.piasekWokol(c0 ? [c0.red, c0.green, c0.blue] : [232, 200, 144]);
+    this.add.tileSprite(0, 0, 4000, 4000, piach).setDepth(-2e8);
+    // A soft shadow under the stands, so the building sits on the sand.
+    for (const [k, a] of [[1.2, 0.08], [1.1, 0.1], [1.03, 0.12]] as [number, number][])
+      this.add.ellipse(0, -R * 0.2, R * 2 * k, R * 2 * k * 0.92, 0x5a3a1a, a).setDepth(-2e8 + 1);
     this.add.image(o.x, o.y, 'arena-plyta').setScale(K).setDepth(-1e8);
     // Behind the fighters (they stand at y + 200 000), over the floor and the arms.
     this.add.image(o.x, o.y, 'arena-tyl').setScale(K).setDepth(1000);
