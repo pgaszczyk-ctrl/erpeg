@@ -14,8 +14,9 @@ const BASE = (import.meta.env.BASE_URL || '/') + 'hud/zbiornik/';
 const L = {
   portret: 56,
   poziom: { x: 16, y: 52, w: 24, h: 12 },
-  /** Hit areas 44×44 (x 6, from y 72 every 52), the 36×36 picture 4 px inside, the icon 8 px inside that. */
-  kolo: { x: 6, hit: 44, art: 36, wciecie: 4, ikona: 20, ikonaOd: 8, pierwszeY: 72, skok: 52 },
+  /** Hit areas 44×44 (x 6), the 36×36 picture 4 px inside, the icon 8 px inside that. Closer than the artist's layout
+   * (owner, 18 Oct 2026: „odległości od kulek są za duże”): 10 px between the pictures, bridged by a pipe joint. */
+  kolo: { x: 6, hit: 44, art: 36, wciecie: 4, ikona: 20, ikonaOd: 8, pierwszeY: 66, skok: 46 },
   lacznik: { x: 24, w: 8, h: 16 },
   /** Phone margin from the screen's corner (plus the safe area). */
   margines: { x: 12, y: 16 },
@@ -66,11 +67,49 @@ const CSS = `
 #hud-tel .tel-kolo .ik { left: 12px; top: 12px; width: 20px; height: 20px; }
 #hud-tel .tel-kolo.wcisniety .ik { top: 13px; }
 #hud-tel .tel-kolo[data-brak] .ik { opacity: 0.55; }
-#hud-tel .tel-lacz { overflow: hidden; width: 8px; }
-#hud-tel .tel-lacz img { left: 0; bottom: 0; width: 8px; height: 16px; }
+#hud-tel .tel-lacz { position: absolute; overflow: hidden; width: 8px; }
+#hud-tel .tel-lacz img { left: 0; top: 0; width: 8px; height: 16px; }
 #hud-tel .tel-poziom { position: absolute; width: 24px; height: 12px; display: flex; align-items: center; justify-content: center;
   font: 800 9px/12px 'Alegreya Sans', sans-serif; color: #2b1a0e; padding-bottom: 1px; box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
+/* The plaque on the right in the reservoir's style (owner, 18 Oct 2026: the pixel plates didn't fit the new HUD):
+   polished brass rims, dark glass, smooth icons, round buttons from the artist's set, a pipe joint between the plates. */
+body.hud-teleskop #hud { font-family: 'Alegreya Sans', sans-serif; }
+body.hud-teleskop #hud .hud-plate, body.hud-teleskop #hud .hud-money, body.hud-teleskop #hud .hud-quest {
+  background: radial-gradient(120% 140% at 50% -20%, rgba(255,226,160,0.10), transparent 60%),
+    linear-gradient(180deg, rgba(46,38,34,0.92), rgba(22,18,17,0.92)) !important;
+  border: 0 !important; border-radius: 999px !important;
+  box-shadow: 0 0 0 1px #2a1a0c, 0 0 0 3px #c9953f, 0 0 0 4px #7a5220, 0 0 0 5px rgba(20,12,6,0.85),
+    inset 0 1px 0 rgba(255,236,190,0.18), inset 0 -6px 10px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.35) !important;
+  color: #f6e6c2; }
+body.hud-teleskop #hud .hud-plate { padding: 4px 16px 4px 5px; gap: 6px; margin: 5px 5px 0 0; }
+body.hud-teleskop #hud .hud-money { padding: 4px 16px 4px 10px; gap: 14px; font-size: 18px; font-weight: 800; color: #ffe2a0; margin-right: 5px; }
+body.hud-teleskop #hud .hud-money img, body.hud-teleskop #hud .hud-money svg { width: 24px; height: 24px; image-rendering: auto; }
+body.hud-teleskop #hud .hud-quest { padding: 3px 14px 3px 6px !important; font-size: 14px; margin-right: 5px; }
+body.hud-teleskop #hud .hud-quest .dot { box-shadow: 0 0 0 1px #2a1a0c, 0 0 0 2px #c9953f; }
+body.hud-teleskop #hud .hud-town { font-size: 16px; font-weight: 800; letter-spacing: 0.01em; }
+body.hud-teleskop #hud .hud-weather { font-size: 14px; color: #e6cf9c; }
+body.hud-teleskop #hud .hud-l2 { font-size: 12.5px; color: #cdb88c; }
+body.hud-teleskop #hud .hud-compass { width: 40px; height: 40px; border: 0 !important; border-radius: 50% !important; box-shadow: none !important;
+  background: url(${BASE}przycisk_normalny.png) center / 100% 100% no-repeat !important; }
+body.hud-teleskop #hud .hud-compass:active { background-image: url(${BASE}przycisk_wcisniety.png) !important; }
+body.hud-teleskop #hud .hud-zoom.on { background-image: url(${BASE}przycisk_aktywny.png) !important; }
+body.hud-teleskop #hud .hud-compass svg { width: 22px; height: 22px; }
+body.hud-teleskop #hud .hud-money:not(.top)::before, body.hud-teleskop #hud .hud-quest::before {
+  right: 26px; top: -15px; width: 8px; height: 16px; background: url(${BASE}lacznik.png) center / 100% 100% no-repeat; border: 0; z-index: -1; }
+body.hud-teleskop #hud .hud-money:not(.top)::after, body.hud-teleskop #hud .hud-quest::after { display: none; }
+body.hud-teleskop #hud .hud-pick { font-weight: 700; border-radius: 999px; box-shadow: 0 0 0 2px #c9953f, 0 0 0 3px #2a1a0c; }
+body.hud-teleskop #hud .hud-pick img { image-rendering: auto; }
+@media (pointer: coarse) {
+  body.hud-teleskop #hud .hud-compass { width: 34px; height: 34px; }
+  body.hud-teleskop #hud .hud-compass svg { width: 19px; height: 19px; }
+  body.hud-teleskop #hud .hud-town { font-size: 13.5px; }
+  body.hud-teleskop #hud .hud-weather { font-size: 12px; }
+  body.hud-teleskop #hud .hud-l2 { font-size: 10.5px; }
+  body.hud-teleskop #hud .hud-money { font-size: 16px; padding: 3px 13px 3px 8px; }
+  body.hud-teleskop #hud .hud-money img, body.hud-teleskop #hud .hud-money svg { width: 21px; height: 21px; }
+  body.hud-teleskop #hud .hud-quest { font-size: 12.5px; }
+}
 body.hud-teleskop #test-badge { top: auto; bottom: calc(4px + env(safe-area-inset-bottom)); }
 `;
 
@@ -133,7 +172,7 @@ function polozenie(i: number, czas: number) {
 
 function ustawKolumne() {
   const otwarta = t >= CALOSC;
-  let gornyDol = L.portret; // bottom of the portrait / the picture above
+  let gornyDol = L.poziom.y + L.poziom.h; // bottom of the level plate under the portrait / the picture above
   el.kola.forEach((k, i) => {
     const { y, u } = polozenie(i, t);
     k.b.style.top = `${y}px`;
@@ -141,10 +180,12 @@ function ustawKolumne() {
     else k.b.setAttribute('data-ukryty', '');
     k.b.tabIndex = otwarta ? 0 : -1;
     k.b.setAttribute('aria-hidden', String(!otwarta));
-    // The joint between the picture above and this one, pulled out with the button (never longer than its 16 px).
+    // The pipe joint between the picture above and this one, centred in the gap with its ends under both rims; it
+    // shows only while there is a gap (the buttons, drawn over it, hide the rest).
     const gora = y + L.kolo.wciecie;
-    const h = Math.max(0, Math.min(L.lacznik.h, gora - gornyDol));
-    Object.assign(el.lacz[i].style, { top: `${gora - h}px`, height: `${h}px` });
+    const luz = gora - gornyDol;
+    const sr = (gora + gornyDol) / 2;
+    Object.assign(el.lacz[i].style, { top: `${Math.round(sr - L.lacznik.h / 2)}px`, height: `${luz > 0 && u > 0 ? L.lacznik.h : 0}px` });
     gornyDol = gora + L.kolo.art;
   });
   root?.classList.toggle('otwarta', otwarta);
@@ -580,3 +621,17 @@ export const teleskopStan = () => ({
   przechyl: (st: number) => { katCel = st; if (!katRaf) { katOstatni = performance.now(); katRaf = requestAnimationFrame(krokKata); } },
 });
 (window as unknown as { __teleskop?: typeof teleskopStan }).__teleskop = teleskopStan;
+
+// ------------------------------------------------------------------ smooth icons for the plaque on the right
+
+/** A folded paper map with a dotted route and a red cross. */
+export const MAPA_GLADKA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.2l6-2.2 6 2.2 6-2.2v13.8l-6 2.2-6-2.2-6 2.2z" fill="#f3e6c4" stroke="#3a2614" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 4v13.8M15 6.2V20" stroke="#b39566" stroke-width="1.1"/><path d="M4.8 15.5c2-1.3 3.3-4.6 6-3.6s3.4 3.2 6.1.2" fill="none" stroke="#9a5a2a" stroke-width="1.2" stroke-dasharray="1.8 1.4" stroke-linecap="round"/><path d="M17 8.4l2.4 2.4m0-2.4L17 10.8" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+/** A brass magnifier: „+” off, „−” on. */
+export const lupaGladka = (on: boolean) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 14.6l6 6" stroke="#3a2614" stroke-width="4.4" stroke-linecap="round"/><path d="M14.6 14.6l6 6" stroke="#8a5a26" stroke-width="2.6" stroke-linecap="round"/><circle cx="10" cy="10" r="6.4" fill="rgba(190,225,245,0.55)" stroke="#3a2614" stroke-width="2.2"/><circle cx="10" cy="10" r="6.4" fill="none" stroke="#e0b056" stroke-width="1"/><path d="M7 10h6${on ? '' : 'M10 7v6'}" stroke="#2a1a0c" stroke-width="1.8" stroke-linecap="round"/><path d="M6.6 7.6a4 4 0 0 1 2.4-2.2" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="1.1" stroke-linecap="round"/></svg>`;
+
+/** A leather purse tied with a gold cord. */
+export const SAKIEWKA_GLADKA = `<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="tel-sak" cx="40%" cy="40%" r="70%"><stop offset="0" stop-color="#c08850"/><stop offset="1" stop-color="#6e4220"/></radialGradient></defs><path d="M8.2 3.4h7.6l-2.2 4.2h-3.2z" fill="#8a5a2b" stroke="#2a1a0c" stroke-width="1.1" stroke-linejoin="round"/><path d="M10 8.2c-5 1.8-7.4 6-6.4 9.4.8 2.8 4 3.6 8.4 3.6s7.6-.8 8.4-3.6c1-3.4-1.4-7.6-6.4-9.4z" fill="url(#tel-sak)" stroke="#2a1a0c" stroke-width="1.2"/><path d="M8.6 8.2h6.8" stroke="#e8bd62" stroke-width="2" stroke-linecap="round"/><path d="M7.4 13.2c.6-1.6 1.8-2.6 3-3" fill="none" stroke="#e7b77a" stroke-opacity="0.7" stroke-width="1.1" stroke-linecap="round"/></svg>`;
+
+/** A cut diamond. */
+export const DIAMENT_GLADKI = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 4h11.6l4 5.2L12 21 2.2 9.2z" fill="#8fe3f6" stroke="#174a5c" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.2 9.2h19.6M8.6 4L7 9.2 12 21l5-11.8L15.4 4M7 9.2L12 4l5 5.2" fill="none" stroke="#2c86a0" stroke-width="0.9" stroke-linejoin="round"/><path d="M7 9.2L12 4 8.6 4z" fill="#d8f8ff"/></svg>`;

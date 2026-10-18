@@ -61,7 +61,7 @@ try {
   const otw = await g(() => window.__teleskop());
   console.log('otwarty', JSON.stringify(otw));
   assert.equal(otw.otwarta, true);
-  assert.deepEqual(otw.kola.map((k) => k.top), ['72px', '124px', '176px', '228px'], 'final positions 52 px apart');
+  assert.deepEqual(otw.kola.map((k) => k.top), ['66px', '112px', '158px', '204px'], 'final positions 46 px apart');
   await page.screenshot({ path: `work/teleskop-${tag}-otwarty.png` });
   // Plecak → Kufer; the column folds.
   await tap('#hud-tel .tel-kolo:nth-of-type(2)');
