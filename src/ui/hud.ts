@@ -1,13 +1,13 @@
 import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
 import { zamontujTeleskop, odmontujTeleskop, ustawTeleskop, teleskopAwatar, teleskopWidoczny, type AkcjaTeleskopu } from './hudTeleskop';
-import { tury } from '../walka/tryb';
+import { turyNaSerwerze } from '../walka/tryb';
 const hudStyle = new URLSearchParams(location.search).get('hud');
 /**
- * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): on the turn-fight server it replaces the
+ * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): on the turn-fight server (the QR demo too) it replaces the
  * boiler at the bottom (life shows only while hurt); `?hud=kociol` brings the boiler back for comparison.
  */
-export const teleskop = () => tury() && !hudStyle;
+export const teleskop = () => turyNaSerwerze() && !hudStyle;
 /** The steampunk boiler HUD everywhere – test, demo and the ordinary game (owner, 11 Oct 2026: „nie chcę starego huda”); `?hud=old` / `?hud=v5` stay only for comparison. */
 const newMachine = hudStyle !== 'old';
 const reservoir = newMachine && hudStyle !== 'v5';

@@ -11,6 +11,7 @@ import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
+import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { loadingMapVisible } from '../ui/loadingMap';
 
@@ -102,7 +103,7 @@ export class DemoRun {
       this.host.player.anims.stop();
       this.scene.time.delayedCall(450, () => {
         if (this.frozen) return;
-        this.zamknijSamouczek = pokazGdzieKliknac('#hud .hud-heal', DEMO_TEKSTY.jablka + (matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz), () => this.host.heal());
+        this.zamknijSamouczek = pokazGdzieKliknac(teleskop() ? '#hud-tel .tel-zycie' : '#hud .hud-heal', (teleskop() ? DEMO_TEKSTY.jablkaTeleskop : DEMO_TEKSTY.jablka) + (matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz), () => this.host.heal());
       });
       return;
     }
