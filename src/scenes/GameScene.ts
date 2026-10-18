@@ -94,6 +94,7 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo, powitanie, blackout } from '../demo';
+import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
@@ -3144,12 +3145,22 @@ export class GameScene extends Phaser.Scene {
         text: DEMO_TEKSTY.pobudka(session.name),
         buttons: ['Rozejrzę się'],
         onChoose: () => this.time.delayedCall(350, () => {
-          const close = pokazGdzieKliknac('#hud .hud-av', DEMO_TEKSTY.portret(session.name, session.konto), () => {
-            close();
-            this.witam = false;
-            document.querySelector<HTMLElement>('#hud .hud-av')?.click();
-          });
-          this.events.once('shutdown', close);
+          // The portrait of whichever HUD is shown (the telescope HUD on the test server has no boiler avatar).
+          const sel = teleskop() ? '.tel-portret' : '#hud .hud-av';
+          const widac = () => (document.querySelector(sel)?.getBoundingClientRect().width ?? 0) > 0;
+          // The hero walks again at once: the tutorial only points, it never holds him (with no portrait on the
+          // screen the old version kept him frozen for good – owner, 18 Oct 2026: no joystick after waking up).
+          this.witam = false;
+          if (!widac()) return;
+          let zamknij = () => {};
+          const close = pokazGdzieKliknac(sel, DEMO_TEKSTY.portret(session.name, session.konto), () => {
+            zamknij();
+            (this.scene.get('ui') as unknown as { openCharacter(p?: 'eq'): void }).openCharacter('eq');
+          }, () => zamknij()); // a tap anywhere else just closes it – the next touch is the joystick
+          // Gone after a while too, so it never blocks the screen.
+          const t = this.time.delayedCall(15000, () => zamknij());
+          zamknij = () => { close(); t.remove(); };
+          this.events.once('shutdown', zamknij);
         }),
       }));
     };
