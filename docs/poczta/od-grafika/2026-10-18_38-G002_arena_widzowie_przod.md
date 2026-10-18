@@ -2,7 +2,7 @@ ID: 38-G002
 Odpowiedź na: 38-P002; 38-P003
 Od: grafik
 Do: programista
-Status: nowe
+Status: przeczytane (38-P004)
 Akceptacja: 2026-10-18 właściciel polecił „Wysyłaj” po próbach widzów, przedniego łuku, kratki i szarej chorągwi. Publikacja w tym samym publicznym repozytorium zatwierdzona w rozmowie.
 Wykonanie: próba v2 gotowa do testu; wdrożenie w grze niepotwierdzone
 Dotyczy: Arena Cechu — widzowie, przedni łuk, kratka, neutralna chorągiew

@@ -48,6 +48,7 @@ export class ArenaScene extends Phaser.Scene {
 
   init(d: ArenaDane) {
     this.dane = d;
+    this.widzowie = null;
     this.leczenie = true;
   }
 
@@ -56,6 +57,12 @@ export class ArenaScene extends Phaser.Scene {
     const base = import.meta.env.BASE_URL;
     if (!this.textures.exists('arena-plyta')) this.load.image('arena-plyta', `${base}${ARENA_RYSUNEK.plyta}`);
     if (!this.textures.exists('arena-tyl')) this.load.image('arena-tyl', `${base}${ARENA_RYSUNEK.tyl}`);
+    const A = ARENA_RYSUNEK;
+    if (!this.textures.exists('arena-widzowie')) this.load.spritesheet('arena-widzowie', `${base}${A.widzowie}`, { frameWidth: A.plotno[0], frameHeight: A.plotno[1] });
+    if (!this.textures.exists('arena-przod')) this.load.image('arena-przod', `${base}${A.przod}`);
+    if (!this.textures.exists('arena-kratka')) this.load.image('arena-kratka', `${base}${A.kratka}`);
+    if (!this.textures.exists('arena-choragiew')) this.load.image('arena-choragiew', `${base}${A.choragiew}`);
+    if (!this.textures.exists('arena-choragiew-maska')) this.load.image('arena-choragiew-maska', `${base}${A.choragiewMaska}`);
   }
 
   create() {
@@ -143,7 +150,7 @@ export class ArenaScene extends Phaser.Scene {
       },
       koniec: (wynik) => this.koniec(wynik === 'wygrana'),
       pudlo: (x, y) => this.napis(x, y, 'pudło!', '#e8e4f0', 650),
-      napis: (x, y, t, c, ms) => this.napis(x, y, t, c, ms),
+      napis: (x, y, t, c, ms) => { if (/^[−-]\d|Krytyk/.test(t)) this.wiwat(); this.napis(x, y, t, c, ms); },
       zamach: (aim) => this.zamach(aim),
       wzmocnienie: () => 1,
       nasycenie: () => {},
@@ -180,6 +187,60 @@ export class ArenaScene extends Phaser.Scene {
     const r = (PLAYER.attackReach + PLAYER.attackRadius) * 0.9;
     g.lineStyle(1.5, 0xffffff, 0.8).beginPath().arc(this.player.x, this.player.y - 2, r, aim - 0.9, aim + 0.9).strokePath();
     this.tweens.add({ targets: g, alpha: 0, duration: 200, onComplete: () => g.destroy() });
+  }
+
+  private widzowie: Phaser.GameObjects.Image | null = null;
+  private wiwatDo = 0;
+
+  /** The crowd cheers for a moment (a blow landed, a strong blow, a shout). */
+  private wiwat() {
+    if (!this.widzowie) return;
+    this.widzowie.setFrame(1);
+    this.wiwatDo = this.time.now + ARENA_RYSUNEK.wiwatMs;
+    this.time.delayedCall(ARENA_RYSUNEK.wiwatMs + 20, () => {
+      if (this.widzowie?.active && this.time.now >= this.wiwatDo) this.widzowie.setFrame(0);
+    });
+  }
+
+  /** The artist's grey banner with its cloth tinted by the country's flag (stripes top to bottom, shading kept). */
+  private choragiew(kraj: string | null): string | null {
+    if (!this.textures.exists('arena-choragiew') || !this.textures.exists('arena-choragiew-maska')) return null;
+    const key = `arena-choragiew:${kraj ?? '-'}`;
+    if (this.textures.exists(key)) return key;
+    const wzor = (kraj && FLAGI[kraj]) || FLAGA_NIEZNANA;
+    const src = this.textures.get('arena-choragiew').getSourceImage() as HTMLImageElement;
+    const msk = this.textures.get('arena-choragiew-maska').getSourceImage() as HTMLImageElement;
+    const w = src.width, h = src.height;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(msk, 0, 0);
+    const m = ctx.getImageData(0, 0, w, h).data;
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(src, 0, 0);
+    const img = ctx.getImageData(0, 0, w, h);
+    const px = img.data;
+    // The cloth's box: the flag pattern is stretched over it.
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[(y * w + x) * 4 + 3] > 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const rows = wzor.length, cols = wzor[0].length;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const i = (y * w + x) * 4;
+      if (m[i + 3] <= 128 || px[i + 3] === 0) continue;
+      const ch = wzor[Math.min(rows - 1, Math.floor(((y - y0) / (y1 - y0 + 1)) * rows))][Math.min(cols - 1, Math.floor(((x - x0) / (x1 - x0 + 1)) * cols))];
+      const kol = KOLORY_FLAG[ch];
+      if (!kol) continue;
+      const v = Number.parseInt(kol.slice(1), 16);
+      // The grey cloth's shade (≈ 0.7 … 0.85 light) keeps the folds: light 0.8 gives the flag's own colour.
+      const l = (px[i] + px[i + 1] + px[i + 2]) / 3 / 255 / 0.8;
+      px[i] = Math.min(255, ((v >> 16) & 255) * l);
+      px[i + 1] = Math.min(255, ((v >> 8) & 255) * l);
+      px[i + 2] = Math.min(255, (v & 255) * l);
+    }
+    ctx.putImageData(img, 0, 0);
+    this.textures.addCanvas(key, c);
+    this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return key;
   }
 
   /** A 64 px tile of loose sand around the arena: the floor's colour a shade darker, two tones of grains, faint ripples. */
@@ -236,18 +297,28 @@ export class ArenaScene extends Phaser.Scene {
     // The sand's own colour, so the arms mix into exactly this sand.
     const c = this.textures.getPixel(cx, cy + 40, 'arena-plyta');
     this.godloWPiasku([c ? (c.red << 16) | (c.green << 8) | c.blue : 0xe8c890], R);
-    // Country flags on the tops of the stand posts and the gate's pillars, waving.
-    const wzor = (d.kraj && FLAGI[d.kraj]) || FLAGA_NIEZNANA;
-    A.maszty.forEach(([px, py], i) => {
+    // The crowd on the back stands (sitting; cheers for a moment at every blow – `wiwat`).
+    if (this.textures.exists('arena-widzowie')) this.widzowie = this.add.image(o.x, o.y, 'arena-widzowie', 0).setScale(K).setDepth(1005);
+    // The front arc stands in front of the fighters (they are at y + 200 000).
+    if (this.textures.exists('arena-przod')) this.add.image(o.x, o.y, 'arena-przod').setScale(K).setDepth(1_020_000);
+    // Grates in the floor with steam puffing now and then.
+    if (this.textures.exists('arena-kratka')) A.kratki.forEach(([px, py], i) => {
       const { x, y } = naSwiat(px, py);
-      const f = this.add.graphics().setDepth(1001 + i);
-      f.fillStyle(0x3a2a1a, 1).fillRect(x, y - 12, 1, 12);
-      f.fillStyle(0xffe08a, 1).fillRect(x, y - 13, 1, 1);
-      wzor.forEach((row, ry) => [...row].forEach((ch, rx) => {
-        const kol = KOLORY_FLAG[ch];
-        if (kol) f.fillStyle(Number.parseInt(kol.slice(1), 16), 1).fillRect(x + 1 + rx * 1.2, y - 12 + ry * 1.2, 1.2, 1.2);
-      }));
-      this.tweens.add({ targets: f, scaleY: 0.97, duration: 700 + i * 60, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.add.image(x, y, 'arena-kratka').setScale(K).setDepth(-1e8 + 2);
+      const puff = () => {
+        if (!this.sys.isActive()) return;
+        const p = this.add.circle(x, y - 1, 2, 0xe8e4f0, 0.55).setDepth(1004);
+        this.tweens.add({ targets: p, y: y - 16, scale: 2.4, alpha: 0, duration: 1400, onComplete: () => p.destroy() });
+        this.time.delayedCall(1300 + ((i * 577) % 900), puff);
+      };
+      this.time.delayedCall(i * 450, puff);
+    });
+    // Banners in the colours of the country the hero came from, hung on the gate's pillars and the stand posts.
+    const ch = this.choragiew(d.kraj);
+    if (ch) A.choragwie.forEach(([px, py], i) => {
+      const { x, y } = naSwiat(px, py);
+      const b = this.add.image(x, y - 2, ch).setOrigin(0.5, 0).setScale(K).setDepth(1010 + i);
+      this.tweens.add({ targets: b, scaleY: K * 0.95, duration: 800 + i * 70, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     });
     // The empty plaque over the gate gets the town's name (else the Cech's).
     const p = naSwiat(A.tabliczka[0], A.tabliczka[1]);

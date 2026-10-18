@@ -12,6 +12,9 @@ OUT = 'public/swiat/arena'
 os.makedirs(OUT, exist_ok=True)
 for a, b in [('arena_plyta.png', 'arena_plyta.png'), ('arena_tyl.png', 'arena_tyl.png'), ('herb_lublin_512.png', 'herb_lublin.png')]:
     shutil.copyfile(f'{SRC}/{a}', f'{OUT}/{b}')
+# 38-G002: spectators (2 frames of 640×600 side by side), the front arc, the floor grate, the grey banner + its mask.
+for a in ['arena_widzowie_2kl.png', 'arena_przod.png', 'arena_kratka.png', 'arena_choragiew.png', 'arena_choragiew_maska.png']:
+    shutil.copyfile(f'docs/poczta/od-grafika/arena/v2/{a}', f'{OUT}/{a}')
 
 def postac(src, out, wys):
     im = Image.open(src).convert('RGBA')
