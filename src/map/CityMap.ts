@@ -215,9 +215,9 @@ const reversed = (pts: number[]) => {
  * `w` px through the stands south of the hole, so the outer ring and the hole become one
  * C-shaped outline. Null when the shape doesn't allow a clean cut.
  */
-export function stadiumGate(outer: number[], hole: number[], w: number): { ring: number[]; a: Cut; b: Cut; ha: Cut; hb: Cut } | null {
+export function stadiumGate(outer: number[], hole: number[], w: number, srodek?: number): { ring: number[]; a: Cut; b: Cut; ha: Cut; hb: Cut } | null {
   const hb = bbox(hole);
-  const cx = (hb.x0 + hb.x1) / 2;
+  const cx = srodek ?? (hb.x0 + hb.x1) / 2;
   w = Math.min(w, (hb.x1 - hb.x0) * 0.4);
   const a = cx - w / 2, b = cx + w / 2;
   const south = (cs: Cut[]) => cs.reduce<Cut | null>((m, c) => (!m || c.y > m.y ? c : m), null);
@@ -239,6 +239,143 @@ export function stadiumGate(outer: number[], hole: number[], w: number): { ring:
   else return null;
   // Ob → (around the outside) → Oa → up the gate's west wall → Ha → (around the bowl) → Hb → down to Ob.
   return { ring: [...oLong, ...hLong], a: Oa, b: Ob, ha: Ha, hb: Hb };
+}
+
+/** Smallest courtyard (a building's hole) that gets a way out (m²; owner: „większy niż 50 m² plus minus”). */
+const PODWORKO_M2 = 50;
+/** Width of the hole cut through a courtyard's thinnest wall (m). */
+const PODWORKO_PRZEJSCIE_M = 6;
+
+const obroc = (r: number[], c: number, s: number) => {
+  const out: number[] = [];
+  for (let i = 0; i < r.length; i += 2) out.push(r[i] * c - r[i + 1] * s, r[i] * s + r[i + 1] * c);
+  return out;
+};
+/**
+ * A closed courtyard (owner, 18 Oct 2026: „unikaj zamkniętych budynków… zrób dziurę w ścianie”): find the
+ * thinnest wall between the hole and the outside (the hole's point nearest to the outer ring), turn both
+ * rings so that way points down, cut a gate there with stadiumGate and turn the C-shaped outline back.
+ */
+export function courtyardGate(outer: number[], hole: number[], w: number): number[] | null {
+  // Every few px along the hole's edge: the nearest outer point (wall thickness) and the edge's own normal.
+  const kandydaci: { d: number; px: number; py: number; kier: [number, number][] }[] = [];
+  const n = hole.length / 2;
+  for (let i = 0; i < n; i++) {
+    const ax = hole[i * 2], ay = hole[i * 2 + 1], bx = hole[((i + 1) % n) * 2], by = hole[((i + 1) % n) * 2 + 1];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 0.5) continue;
+    const kroki = Math.max(1, Math.ceil(len / 4));
+    for (let k = 0; k < kroki; k++) {
+      const x = ax + ((bx - ax) * (k + 0.5)) / kroki, y = ay + ((by - ay) * (k + 0.5)) / kroki;
+      let best = Infinity, qx = 0, qy = 0;
+      for (let j = 0, m = outer.length / 2; j < m; j++) {
+        const cx = outer[j * 2], cy = outer[j * 2 + 1], dx = outer[((j + 1) % m) * 2] - cx, dy = outer[((j + 1) % m) * 2 + 1] - cy;
+        const l2 = dx * dx + dy * dy;
+        let t = l2 ? ((x - cx) * dx + (y - cy) * dy) / l2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d = Math.hypot(cx + t * dx - x, cy + t * dy - y);
+        if (d < best) { best = d; qx = cx + t * dx; qy = cy + t * dy; }
+      }
+      if (best < 0.01) continue;
+      // Two ways through the wall: straight to the nearest outer point, and square to the courtyard's edge.
+      const nx = -(by - ay) / len, ny = (bx - ax) / len;
+      const sNorm: [number, number] = (qx - x) * nx + (qy - y) * ny >= 0 ? [nx, ny] : [-nx, -ny];
+      kandydaci.push({ d: best, px: x, py: y, kier: [[(qx - x) / best, (qy - y) / best], sNorm] });
+    }
+  }
+  kandydaci.sort((p, q) => p.d - q.d);
+  for (const k of kandydaci.slice(0, 16)) {
+    for (const [dx, dy] of k.kier) {
+      const ring = gateAlong(outer, hole, w, k.px, k.py, dx, dy);
+      if (ring) return ring;
+    }
+  }
+  return null;
+}
+
+/** A yard counts as closed when its mouth is narrower than this (m): build-map's merging leaves cracks. */
+const PODWORKO_GARDLO_M = 6;
+/**
+ * A yard closed but for a narrow crack (owner, 18 Oct 2026: a U-shaped school whose wings almost touch):
+ * find two corners of the outline closer than PODWORKO_GARDLO_M but far apart along it, with the yard
+ * (≥ minArea) behind them; close the crack and cut a proper gate with courtyardGate. Null when there is none.
+ */
+export function openNarrowYard(ring: number[], minArea: number, w: number): number[] | null {
+  const n = ring.length / 2;
+  if (n < 6 || n > 600) return null;
+  const gardlo = PODWORKO_GARDLO_M * PX_PER_M;
+  // Arc length to every vertex (to skip neighbours along the outline).
+  const cum = [0];
+  for (let i = 1; i <= n; i++) cum.push(cum[i - 1] + Math.hypot(ring[(i % n) * 2] - ring[(i - 1) * 2], ring[(i % n) * 2 + 1] - ring[(i - 1) * 2 + 1]));
+  const total = cum[n];
+  const odcinek = (i: number, j: number) => { const out: number[] = []; for (let k = i; ; k = (k + 1) % n) { out.push(ring[k * 2], ring[k * 2 + 1]); if (k === j) break; } return out; };
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      const d = Math.hypot(ring[i * 2] - ring[j * 2], ring[i * 2 + 1] - ring[j * 2 + 1]);
+      if (d > gardlo) continue;
+      const luk = cum[j] - cum[i];
+      if (luk < 20 * PX_PER_M || total - luk < 20 * PX_PER_M) continue;
+      // The crack's middle is outside the building, and one side of it encloses a yard.
+      if (pointInRings([ring], (ring[i * 2] + ring[j * 2]) / 2, (ring[i * 2 + 1] + ring[j * 2 + 1]) / 2)) continue;
+      const a = odcinek(i, j), b = odcinek(j, i);
+      const [kieszen, reszta] = ringArea(a) < ringArea(b) ? [a, b] : [b, a];
+      if (ringArea(kieszen) < minArea) continue;
+      const g = courtyardGate(reszta, kieszen, w);
+      if (g) return g;
+    }
+  }
+  return null;
+}
+
+/** One try: a gate of width w from the courtyard's edge point (px, py) in the direction (dx, dy). */
+function gateAlong(outer: number[], hole: number[], w: number, px: number, py: number, dx: number, dy: number): number[] | null {
+  // Turn so that (dx, dy) points along +y, cut there along two lines x = a, x = b, turn back.
+  const f = Math.atan2(dx, dy), c = Math.cos(f), sn = Math.sin(f);
+  const o2 = obroc(outer, c, sn), h2 = obroc(hole, c, sn);
+  const X = px * c - py * sn, Y = px * sn + py * c;
+  const hb = bbox(h2);
+  w = Math.min(w, (hb.x1 - hb.x0) * 0.6, (hb.y1 - hb.y0) * 0.6);
+  // Keep both lines inside the courtyard.
+  const Xc = Math.min(Math.max(X, hb.x0 + w / 2 + 0.5), hb.x1 - w / 2 - 0.5);
+  const g = cutGate(o2, h2, Xc - w / 2, Xc + w / 2, Y);
+  if (!g) return null;
+  // A sane result: the old wall area minus about the gate's own area (a cut through the wrong place removes much more).
+  const przed = ringArea(o2) - ringArea(h2), po = ringArea(g.ring);
+  if (!(po < przed + 1 && po > przed - 2 * w * g.glebokosc - 4)) return null;
+  return obroc(g.ring, c, -sn);
+}
+
+const dlugosc = (pts: number[]) => {
+  let l = 0;
+  for (let i = 2; i < pts.length; i += 2) l += Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]);
+  return l;
+};
+/**
+ * Joins a hole to its outer ring through a gate between the lines x = a and x = b, starting at the hole's edge
+ * near y0 and going +y to the outside. The cut-out arcs are the short ones between the cut points.
+ */
+function cutGate(outer: number[], hole: number[], a: number, b: number, y0: number): { ring: number[]; glebokosc: number } | null {
+  const naj = (cs: Cut[]) => cs.reduce<Cut | null>((m, q) => (!m || Math.abs(q.y - y0) < Math.abs(m.y - y0) ? q : m), null);
+  const Ha = naj(crossings(hole, a)), Hb = naj(crossings(hole, b));
+  if (!Ha || !Hb) return null;
+  const ponizej = (cs: Cut[], y: number) => cs.filter((q) => q.y > y).reduce<Cut | null>((m, q) => (!m || q.y < m.y ? q : m), null);
+  const Oa = ponizej(crossings(outer, a), Ha.y), Ob = ponizej(crossings(outer, b), Hb.y);
+  if (!Oa || !Ob) return null;
+  // Both sides of the gate go through the same wall (similar depth), else the cut would slice the building.
+  const da = Oa.y - Ha.y, db = Ob.y - Hb.y;
+  if (Math.abs(da - db) > Math.max(1.5 * PX_PER_M, 0.25 * Math.min(da, db))) return null;
+  const oF = arc(outer, Oa, Ob), oB = arc(outer, Ob, Oa);
+  const oLong = dlugosc(oF) < dlugosc(oB) ? oB : reversed(oF);
+  const hF = arc(hole, Ha, Hb), hB = arc(hole, Hb, Ha);
+  const hLong = dlugosc(hF) < dlugosc(hB) ? reversed(hB) : hF;
+  const ring = [...oLong, ...hLong];
+  // The gate must be open across its whole width, from the courtyard to the outside.
+  for (let u = 0.15; u <= 0.86; u += 0.175) {
+    const x = a + (b - a) * u;
+    const y0g = Math.max(Ha.y, Hb.y), y1g = Math.min(Oa.y, Ob.y);
+    for (const t of [0.25, 0.5, 0.75]) if (pointInRings([ring], x, y0g + (y1g - y0g) * t)) return null;
+  }
+  return { ring, glebokosc: (da + db) / 2 };
 }
 
 export function pointInRings(rings: number[][], x: number, y: number) {
@@ -392,6 +529,7 @@ export class CityMap {
     raw.lines.forEach(([kind, flags, pts, name], i) => this.addLine(i, kind, flags, pts, name));
     raw.buildings.forEach(([rings, addr, name, levels], i) => this.addBuilding(i, rings, addr, name, levels));
     this.cutStadiums();
+    this.cutCourtyards();
     for (const b of this.buildings) {
       for (const a of b.addresses) {
         const key = normAddress(a);
@@ -498,10 +636,14 @@ export class CityMap {
     this.buildings.push(b);
     this.buildingGrid.add(b);
     if (abs.length > 1) this.newHoled.push(b);
+    // Every building is checked once for closed yards (holes or narrow-mouthed pockets).
+    if (!open) this.podworka.add(b);
   }
 
   private newPitches: Area[] = [];
   private newHoled: Building[] = [];
+  /** Buildings whose courtyards still wait for a way out (cutCourtyards). */
+  private podworka = new Set<Building>();
   private gated = new Set<Building>();
   /**
    * Stadiums closed by their stands (owner: „zrób wyrwę, zawsze od południa”): a ring-shaped
@@ -516,6 +658,7 @@ export class CityMap {
     };
     for (const a of this.newPitches) for (const b of this.buildingGrid.at((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2)) tryPair(b, a);
     for (const b of this.newHoled) for (const a of this.areaGrid.query(b)) if (a.kind === 'pitch') tryPair(b, a);
+    for (const b of this.newHoled) this.podworka.add(b);
     this.newPitches = [];
     this.newHoled = [];
     for (const [b, a] of pairs) {
@@ -535,6 +678,40 @@ export class CityMap {
       const top = Math.min(g.ha.y, g.hb.y);
       const y0 = gy + 18 * PX_PER_M, y1 = top - 6 * PX_PER_M;
       this.addLine(-1 - b.id, 'pedestrian', 0, [gx / this.k, y0 / this.k, 0, (y1 - y0) / this.k], 0);
+    }
+  }
+
+  /**
+   * Courtyards (holes ≥ PODWORKO_M2) get a way out through their thinnest wall, so no closed yard traps the hero.
+   * A hole big enough to be a stadium bowl waits until its tiles are in and no pitch lies in it (cutStadiums
+   * gives those their southern gate).
+   */
+  private cutCourtyards() {
+    const min = PODWORKO_M2 * PX_PER_M * PX_PER_M, misa = STADION_MISA_M2 * PX_PER_M * PX_PER_M;
+    for (const b of [...this.podworka]) {
+      let czeka = false;
+      const pominiete = new Set<number[]>();
+      for (let guard = 0; guard < 8; guard++) {
+        const hi = b.rings.findIndex((r, i) => {
+          if (i === 0 || pominiete.has(r) || ringArea(r) < min) return false;
+          if (ringArea(r) < misa) return true;
+          const bb = bbox(r);
+          if (!this.ready(bb)) { czeka = true; return false; }
+          return ![...this.areaGrid.query(bb)].some((a) => a.kind === 'pitch' && pointInRings([r], (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2));
+        });
+        if (hi < 0) break;
+        const ring = courtyardGate(b.rings[0], b.rings[hi], PODWORKO_PRZEJSCIE_M * PX_PER_M);
+        // Not cuttable cleanly: this hole stays as it is.
+        if (!ring) { pominiete.add(b.rings[hi]); continue; }
+        b.rings = [ring, ...b.rings.filter((_, i) => i > 0 && i !== hi)];
+      }
+      // Yards whose mouth is only a crack (merged wings almost touching).
+      for (let guard = 0; guard < 4; guard++) {
+        const r = openNarrowYard(b.rings[0], min, PODWORKO_PRZEJSCIE_M * PX_PER_M);
+        if (!r) break;
+        b.rings = [r, ...b.rings.slice(1)];
+      }
+      if (!czeka) this.podworka.delete(b);
     }
   }
 
@@ -622,6 +799,7 @@ export class CityMap {
       }
     }
     this.cutStadiums();
+    this.cutCourtyards();
     for (const [x, y] of t.q ?? []) this.posts.push({ x, y });
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });

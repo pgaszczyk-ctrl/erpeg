@@ -3138,8 +3138,8 @@ export class GameScene extends Phaser.Scene {
     const reveal = () => {
       if (!this.sys.isActive()) return;
       if (!this.firstViewReady()) { this.time.delayedCall(100, reveal); return; }
-      blackout(false, 900);
-      this.time.delayedCall(900, () => this.dialog({
+      blackout(false, 500);
+      this.time.delayedCall(500, () => this.dialog({
         title: DEMO_TEKSTY.pobudkaTytul,
         text: DEMO_TEKSTY.pobudka(session.name),
         buttons: ['Rozejrzę się'],

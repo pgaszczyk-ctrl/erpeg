@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { SEN, DEMO_TEKSTY } from '../content/demo';
-import { demo, dreamPlaces, blackout, bigText, wakeUp } from '../demo';
+import { demo, dreamPlaces, blackout, bigText, wakeUp, przygotujPobudke } from '../demo';
 import { session } from '../quests';
 import { meleeDamage, totalFruit } from '../inventory';
 import { pokazOdlot, zaladujSmoka, ubierzSmoka } from '../objects/smokRysunki';
@@ -149,6 +149,7 @@ export class DemoRun {
     d.setVisible(false);
     this.dragon = null;
     bigText(DEMO_TEKSTY.smokPokonany, 1800);
+    void przygotujPobudke().catch(() => {});
     this.scene.time.delayedCall(2000, () => this.sleep());
   }
 
@@ -254,8 +255,10 @@ export class DemoRun {
     if (this.frozen) return;
     this.frozen = true;
     this.host.player.vel.set(0, 0);
-    blackout(true, 700);
-    this.scene.time.delayedCall(2000, () => {
+    void przygotujPobudke().catch(() => {});
+    blackout(true, 600);
+    // Just the fade to black, then straight on (the login and the map were started already).
+    this.scene.time.delayedCall(650, () => {
       wakeUp(this.scene).catch(() => {
         blackout(false);
         this.host.dialog({ title: 'Nie udało się wczytać postaci', text: 'Spróbuj ponownie, żeby obudzić się przed Targami Lublin.',

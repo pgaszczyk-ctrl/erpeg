@@ -43,6 +43,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
   page.on('dialog', (d) => d.accept());
   await page.goto('http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8');
 
@@ -109,6 +110,12 @@ try {
 
   // 4. Beat it: blackout, real login at home in front of Targi Lublin.
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.dragons.get(d).destroy?.(); if (d.hit(s.player, s.time.now, d.hp + 1)) s.onEnemyKilled(d); });
+  // How long the screen stays black after the dragon (owner, 18 Oct 2026: it was annoying).
+  await page.waitForFunction(() => { const b = document.getElementById('demo-black'); return b && getComputedStyle(b).opacity === '1'; }, null, { timeout: 30000 });
+  const czarnyOd = Date.now();
+  await page.waitForFunction(() => { const b = document.getElementById('demo-black'); return !b || Number(getComputedStyle(b).opacity) < 0.5; }, null, { timeout: 90000 });
+  const czarnoMs = Date.now() - czarnyOd;
+  console.log(name, 'czarny ekran ms', czarnoMs);
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.sys.isActive() && !s.demoRun && window.__session.token === 'tok-login'; }, null, { timeout: 90000 });
   assert(calls.includes('login'));
   const awake = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { exp: window.__session.exp, ...s.city.toLatLon(s.player.x, s.player.y), url: location.href }; });
@@ -122,6 +129,8 @@ try {
   await page.screenshot({ path: `work/onb-${name}-5-portret.png` });
   const av = await page.evaluate(() => { const r = document.querySelector('#hud .hud-av').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   await page.mouse.click(av.x, av.y);
+  // The code sits on Statystyki (on a phone its own tab).
+  if (phone) await page.locator('#character button', { hasText: 'Statystyki' }).click();
   await page.waitForSelector('#character .k-kod-code', { timeout: 10000 });
   assert.equal((await page.locator('#character .k-kod-code').textContent()).replace(/\s/g, ''), 'TESTKOD1');
   await page.locator('#character .k-kod-btn').click();
@@ -136,7 +145,7 @@ try {
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').witam), false);
   assert.equal(await page.evaluate(() => !!document.getElementById('demo-end')), false);
   assert.deepEqual(errors, []);
-  console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), awake }));
+  console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), czarnoMs, awake }));
 } finally {
   await browser.close();
 }
