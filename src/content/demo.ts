@@ -18,14 +18,19 @@ export const DEMO_KODY: Record<string, Pobudka> = {
 
 /**
  * The dream: below Zamek Lubelski on the Lublin map (owner, 18 Oct 2026; it used to be Wawel in Kraków). Apple trees
- * south of the castle, the dragon in the gap of the castle's east (right-hand) wall – between the north wing and the
- * chapel, where OSM leaves the courtyard open.
+ * in the park ~150 m south-west of the castle, the dragon waits in the middle of the courtyard; the fight starts once
+ * the hero walks in through the gap in the castle's east (right-hand) wall – between the north wing and the chapel,
+ * where OSM leaves the courtyard open.
  */
 export const SEN = {
-  /** Where the hero wakes up in the dream: on the slope south of the castle. */
-  start: { lat: 51.24983, lon: 22.57235 },
-  /** At the gap in the castle's east wall, on the grass just outside it (in the gap itself it stood on the chapel's roof). */
-  smok: { lat: 51.25042, lon: 22.57335 },
+  /** Where the hero wakes up in the dream: in the park below the castle (owner: 150 m lower and to the left – a walk first). */
+  start: { lat: 51.24870, lon: 22.57120 },
+  /** The middle of the castle's courtyard: the dragon stands there, still, until the hero comes in (owner, 18 Oct 2026). */
+  smok: { lat: 51.25050, lon: 22.57245 },
+  /** Just outside the gap in the east wall: the arrow leads here first. */
+  wylom: { lat: 51.25041, lon: 22.57325 },
+  /** The courtyard (lat/lon box): the hero inside it = he came through the gap, the fight starts. */
+  dziedziniec: { s: 51.25030, n: 51.25066, w: 22.57180, e: 22.57310 },
   /** Fruit trees planted next to the start: how many, fruit on each, how far (m). */
   drzewa: { ile: 3, owocow: 3, odM: 10, doM: 24 },
   /** Fruit eaten to heal one heart in the demo (the normal game needs 20). */
@@ -68,8 +73,10 @@ export const DEMO_TEKSTY = {
   jablkaKlawisz: ' Możesz też nacisnąć H.',
   olsnienie: 'OOooo, już wiem kim jestem!',
   imie: (imie: string) => `Jestem ${imie}!`,
-  kimJestem: (imie: string) => `Nazywam się ${imie} i poluję na smoki! Jeden czai się przy wyłomie we wschodnim murze zamku.`,
-  celSmok: 'Pokonaj smoka przy wyłomie w murze zamku!',
+  kimJestem: (imie: string) => `Nazywam się ${imie} i poluję na smoki! Jeden zaszył się na dziedzińcu zamku – wejdę przez wyłom we wschodnim murze.`,
+  celWylom: 'Wejdź na dziedziniec zamku przez wyłom we wschodnim murze',
+  wPrzod: 'Smok mnie zauważył!',
+  celSmok: 'Pokonaj smoka na dziedzińcu zamku!',
   smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
   zaDaleko: 'Oczy same się zamykają… Ten sen zaraz się skończy.',
   pobudkaTytul: '💤 Pobudka',

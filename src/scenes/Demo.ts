@@ -6,7 +6,7 @@ import { SEN, DEMO_TEKSTY } from '../content/demo';
 import { demo, dreamPlaces, blackout, bigText, wakeUp } from '../demo';
 import { session } from '../quests';
 import { meleeDamage, totalFruit } from '../inventory';
-import { pokazOdlot, zaladujSmoka } from '../objects/smokRysunki';
+import { pokazOdlot, zaladujSmoka, ubierzSmoka } from '../objects/smokRysunki';
 import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
@@ -25,7 +25,7 @@ export interface DemoHost {
   orchards: Orchards;
   dialog: (req: DialogRequest) => void;
   toast: (text: string, ms?: number) => void;
-  spawnDragon: (x: number, y: number) => Slime;
+  spawnDragon: (x: number, y: number) => Slime & { peaceful?: boolean };
   /** A fireball reached the hero. */
   hurt: (from: Phaser.Math.Vector2, damage: number) => void;
   hud: () => void;
@@ -44,8 +44,10 @@ export class DemoRun {
   private fruitHintShown = false;
   /** Closes the eating spotlight (tutorial). */
   private zamknijSamouczek: (() => void) | null = null;
-  private dragon: Slime | null = null;
+  private dragon: (Slime & { peaceful?: boolean }) | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
+  /** Just outside the gap in the castle's east wall. */
+  private wylom: { x: number; y: number } | null = null;
   /** "Kliknij, żeby strącić owoce" over the apple tree next to the hero. */
   private hint: Phaser.GameObjects.Text | null = null;
   /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
@@ -80,6 +82,8 @@ export class DemoRun {
     }
     if (demo.phase === 'smok' && this.dragonSpot) {
       const d = this.dragon;
+      // First through the gap in the east wall (the arrow straight at the dragon led into the castle's walls).
+      if (d?.peaceful && this.wylom) return { text: DEMO_TEKSTY.celWylom, pos: this.wylom };
       return { text: DEMO_TEKSTY.celSmok, pos: d && d.active && !d.isDead ? { x: d.x, y: d.y } : this.dragonSpot };
     }
     return null;
@@ -109,6 +113,7 @@ export class DemoRun {
     }
     if (demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
     this.showHint();
+    this.wakeDragon();
     const p = this.host.player;
     if ((demo.phase === 'jedzenie' || demo.phase === 'smok') && !this.busy) {
       const l = this.dreamLast;
@@ -145,6 +150,20 @@ export class DemoRun {
     this.dragon = null;
     bigText(DEMO_TEKSTY.smokPokonany, 1800);
     this.scene.time.delayedCall(2000, () => this.sleep());
+  }
+
+  /** The dragon waits, still, until the hero walks into the courtyard through the gap – then the fight starts. */
+  private wakeDragon() {
+    const d = this.dragon;
+    if (demo.phase !== 'smok' || this.busy || !d?.peaceful || !d.active) return;
+    const p = this.host.player;
+    const z = dreamPlaces().dziedziniec;
+    const ll = this.host.city.toLatLon(p.x, p.y);
+    if (ll.lat < z.s || ll.lat > z.n || ll.lon < z.w || ll.lon > z.e) return;
+    d.peaceful = false;
+    d.chasing = true;
+    this.host.toast(DEMO_TEKSTY.wPrzod, 2500);
+    this.host.hud();
   }
 
   /** The apple-tree hint: over the nearest tree with fruit while the hero stands close and still needs apples. */
@@ -213,17 +232,20 @@ export class DemoRun {
   }
 
   private async placeDragon() {
-    const { smok } = dreamPlaces();
+    const { smok, wylom } = dreamPlaces();
     const at = this.host.city.fromLatLon(smok.lat, smok.lon);
     await this.host.city.ensure(at.x, at.y, 200 * PX_PER_M);
     await zaladujSmoka(this.scene, 'gorski');
     if (!this.scene.sys.isActive() || this.frozen) return;
-    // Exactly in the wall's gap when it is free (freeNear would snap to the courtyard's path).
+    // Exactly in the courtyard's middle when it is free (freeNear would snap to the nearest path).
     const spot = this.host.city.isFree(at.x, at.y, 8, 8) ? at : this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
+    this.wylom = this.host.city.fromLatLon(wylom.lat, wylom.lon);
     const d = this.host.spawnDragon(spot.x, spot.y);
-    // GameScene gives the demo dragon SmokAI's airborne-retreat options.
+    // GameScene gives the demo dragon SmokAI's airborne-retreat options once it wakes up (wakeDragon).
     d.hp = SEN.ciosow * meleeDamage();
+    d.peaceful = true;
+    ubierzSmoka(this.scene, d, 'gorski', 0xffffff, 1);
     this.dragon = d;
   }
 

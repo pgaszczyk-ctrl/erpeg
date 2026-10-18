@@ -49,40 +49,44 @@ function skinPicker(changed: () => void) {
  * this, so a new player finds the code there instead of a screen before the game).
  */
 function kodPostaci() {
+  // Owner, 18 Oct 2026: smaller, narrower, quieter; one icon on the right opens the choice (send / link an account).
   const box = el('div', 'k-kod');
   if (!session.idik) return box;
-  const share = el('button', 'c-btn', '📤 Wyślij sobie') as HTMLButtonElement;
-  share.type = 'button';
-  share.onclick = () => void shareCode(session.name, session.idik);
   const msg = el('div', 'k-kod-msg');
-  const row = el('div', 'k-kod-row');
-  row.append(share);
-  if (!session.konto) {
-    const link = el('button', 'c-btn k-kod-konto', '👤 Połącz z kontem') as HTMLButtonElement;
-    link.type = 'button';
-    link.onclick = async () => {
-      link.disabled = true;
+  const menu = el('div', 'k-kod-menu');
+  menu.hidden = true;
+  const btn = el('button', 'k-kod-btn', '📤') as HTMLButtonElement;
+  btn.type = 'button';
+  btn.title = 'Wyślij kod albo połącz postać z kontem';
+  btn.setAttribute('aria-label', btn.title);
+  const pozycja = (tekst: string, fn: () => void) => {
+    const b = el('button', 'k-kod-opcja', tekst) as HTMLButtonElement;
+    b.type = 'button';
+    b.onclick = () => { menu.hidden = true; fn(); };
+    return b;
+  };
+  const pokazMenu = () => {
+    menu.replaceChildren(pozycja('📤 Wyślij sobie kod', () => void shareCode(session.name, session.idik)));
+    if (!session.konto) menu.append(pozycja('👤 Połącz z kontem e-mail', async () => {
       msg.textContent = '';
       try {
         const email = await linkToAccount(session.name, session.idik);
         if (email === null) return;
         session.konto = true;
-        link.remove();
-        msg.textContent = `✅ Postać połączona z kontem ${email}. Wczytasz ją z listy, bez kodu.`.replace('  ', ' ');
+        msg.textContent = `✅ Połączona z kontem${email ? ' ' + email : ''}.`;
       } catch (e) {
         msg.textContent = `❌ ${(e as Error).message}`;
-      } finally {
-        link.disabled = false;
       }
-    };
-    row.append(link);
-  }
-  box.append(
-    el('div', 'k-kod-title', `🔑 Kod postaci ${session.name}`),
-    el('div', 'k-kod-code', prettyCode(session.idik)),
-    el('div', 'k-kod-note', session.konto ? 'Imię + kod wczytują postać na każdym urządzeniu.' : 'Imię + kod wczytują postać. Zapisz kod albo połącz postać z kontem, żeby jej nie zgubić.'),
-    row, msg,
-  );
+    }));
+    menu.append(pozycja('Anuluj', () => {}));
+    menu.hidden = false;
+  };
+  btn.onclick = () => (menu.hidden ? pokazMenu() : (menu.hidden = true));
+  const tekst = el('div', 'k-kod-tekst');
+  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci'), el('span', 'k-kod-code', prettyCode(session.idik)));
+  const row = el('div', 'k-kod-row');
+  row.append(tekst, btn);
+  box.append(row, menu, msg);
   return box;
 }
 
@@ -93,7 +97,7 @@ function kodPostaci() {
 // osiągnięć (seals from content/osiagniecia.ts + statistics). On a phone the three columns are
 // tabs of their own (owner, 6 Oct 2026: scrolling down the trunk was a pain), and what still
 // doesn't fit scrolls with a brass slider on the right (`brassScroll`). The camera is only the
-// HUD's button (ui/brag.ts showPhoto). Closed with the red valve, Escape or the phone's back button.
+// HUD's button (ui/brag.ts showPhoto). Closed with the brass ✕ button, Escape or the phone's back button.
 
 let open: HTMLDivElement | null = null;
 
@@ -244,7 +248,8 @@ function show(host: CharacterHost) {
   valve.type = 'button';
   valve.setAttribute('aria-label', 'Zamknij kufer');
   valve.title = 'Zamknij (Esc)';
-  valve.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7"/></svg>';
+  // A plain ✕ on brass (owner, 18 Oct 2026: the red valve wasn't understood as „close”).
+  valve.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   valve.onclick = closeCharacter;
   top.append(tabs, valve);
   const body = el('div', 'k-body');

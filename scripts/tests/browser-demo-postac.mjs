@@ -57,7 +57,7 @@ try {
   assert.equal(await page.evaluate(() => window.__session.name), 'Zosia');
   const startLL = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { map: s.city.id, ...s.city.toLatLon(s.player.x, s.player.y) }; });
   assert.equal(startLL.map, 'lublin');
-  assert(startLL.lat < 51.2502 && Math.abs(startLL.lon - 22.5724) < 0.002, `Starts south of the castle: ${JSON.stringify(startLL)}`);
+  assert(Math.hypot((startLL.lat - 51.24870) * 111320, (startLL.lon - 22.57120) * 69700) < 30, `Starts in the park ~150 m below the castle: ${JSON.stringify(startLL)}`);
 
   const choose = async (index) => {
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 60000 });
@@ -92,10 +92,19 @@ try {
   await page.screenshot({ path: `work/onb-${name}-3-imie.png` });
   await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon, null, { timeout: 90000 });
   const smok = await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; return s.city.toLatLon(d.x, d.y); });
-  const dM = Math.hypot((smok.lat - 51.25042) * 111320, (smok.lon - 22.57335) * 69700);
-  assert(dM < 25, `The dragon stands in the castle wall's gap: ${dM.toFixed(1)} m away`);
-  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.player.setPosition(d.x, d.y + 40); s.noHurtUntil = s.time.now + 120000; });
-  await page.waitForTimeout(2500);
+  const dM = Math.hypot((smok.lat - 51.25050) * 111320, (smok.lon - 22.57245) * 69700);
+  assert(dM < 15, `The dragon stands in the middle of the courtyard: ${dM.toFixed(1)} m away`);
+  // Still until the hero comes through the gap; the arrow leads to the gap first.
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true);
+  const cel = await page.evaluate(() => window.__game.scene.getScene('game').demoRun.goal().text);
+  assert(/wyłom/.test(cel), cel);
+  // Outside the gap: still asleep; in the courtyard: awake.
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), w = s.demoRun.wylom; s.player.setPosition(w.x, w.y); s.noHurtUntil = s.time.now + 120000; });
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true, 'Outside the gap the dragon still waits');
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), w = s.demoRun.wylom; s.player.setPosition(w.x - 40, w.y); });
+  await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
+  await page.waitForTimeout(2000);
   await page.screenshot({ path: `work/onb-${name}-4-smok.png` });
 
   // 4. Beat it: blackout, real login at home in front of Targi Lublin.
@@ -115,8 +124,12 @@ try {
   await page.mouse.click(av.x, av.y);
   await page.waitForSelector('#character .k-kod-code', { timeout: 10000 });
   assert.equal((await page.locator('#character .k-kod-code').textContent()).replace(/\s/g, ''), 'TESTKOD1');
-  assert.equal(await page.locator('#character .k-kod-konto').count(), 1, 'Offers linking to an account');
+  await page.locator('#character .k-kod-btn').click();
+  await page.waitForSelector('#character .k-kod-menu:not([hidden])');
+  const opcje = await page.locator('#character .k-kod-opcja').allTextContents();
+  assert(opcje.some((t) => /Wyślij/.test(t)) && opcje.some((t) => /kontem/.test(t)), `Send / link options: ${opcje}`);
   await page.screenshot({ path: `work/onb-${name}-6-kufer.png` });
+  await page.locator('#character .k-kod-opcja', { hasText: 'Anuluj' }).click();
   // Close the Kufer: the hero walks freely, nothing ends after some metres.
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);

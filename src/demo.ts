@@ -46,7 +46,14 @@ export function dreamMap() {
 export function dreamPlaces() {
   const t = new URLSearchParams(location.search).get('sen')?.split(',').map(Number);
   const start = t?.length === 2 && t.every(Number.isFinite) ? { lat: t[0], lon: t[1] } : SEN.start;
-  return { start, smok: { lat: start.lat + SEN.smok.lat - SEN.start.lat, lon: start.lon + SEN.smok.lon - SEN.start.lon } };
+  const dLat = start.lat - SEN.start.lat, dLon = start.lon - SEN.start.lon;
+  const z = SEN.dziedziniec;
+  return {
+    start,
+    smok: { lat: SEN.smok.lat + dLat, lon: SEN.smok.lon + dLon },
+    wylom: { lat: SEN.wylom.lat + dLat, lon: SEN.wylom.lon + dLon },
+    dziedziniec: { s: z.s + dLat, n: z.n + dLat, w: z.w + dLon, e: z.e + dLon },
+  };
 }
 
 /** Loads a map around a spot and puts the scene's hero there (also its "home" point). */
