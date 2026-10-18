@@ -38,11 +38,29 @@ export const ARENY_WYGLADY = [
 
 /** The town's coat of arms raked into the arena sand: town name (as kurierMiejsce gives it) → picture in public/.
  *  Waiting for the artist (docs/poczta/do-grafika/…38-P001); until then every arena shows the Exp-lore emblem. */
-export const HERBY_ARENY: Record<string, string> = {};
+export const HERBY_ARENY: Record<string, string> = { Lublin: 'swiat/arena/herb_lublin.png' };
 
 /** How the emblem lies in the sand: share of the arena's diameter, blur in map px, colour kept (rest = sand),
  *  sand drifts over it, overall opacity. */
 export const GODLO_W_PIASKU = { logo: 'logo-256.png', srednica: 0.36, rozmycie: 0.6, mieszanie: 0.45, nasyp: 0.7, krycie: 0.8 };
+
+/** The artist's arena pictures (38-G001, docs/poczta/od-grafika/2026-10-18_38-G001_arena_warstwy_proba.md; copied by
+ *  scripts/arena-grafiki.py): one 640×600 frame for both layers, the sand's middle at `srodek`, its half-width `polosX`
+ *  picture px (= the arena's radius in the game), height/width `spłaszczenie`; flag poles on post tops, the plaque
+ *  (x, y, usable width) – all in picture px. */
+export const ARENA_RYSUNEK = {
+  plyta: 'swiat/arena/arena_plyta.png',
+  tyl: 'swiat/arena/arena_tyl.png',
+  plotno: [640, 600] as [number, number],
+  srodek: [320, 380] as [number, number],
+  polosX: 240,
+  spłaszczenie: 0.85,
+  tlo: '#22180f',
+  maszty: [[258, 86], [380, 86], [161, 128], [470, 128], [87, 190], [550, 190], [50, 287], [587, 287]] as [number, number][],
+  tabliczka: [320, 103, 70] as [number, number, number],
+  /** Top of the gate's flags (the framed view starts here). */
+  gora: 66,
+};
 
 export const ARENA_TEKSTY = {
   sedzia: 'Sędzia Areny',

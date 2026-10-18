@@ -57,7 +57,7 @@ const ROW = { down: 0, side: 1, up: 2 } as const;
 export const hdOn = NOWE_POSTACIE;
 
 const ENEMIES = WROGOWIE_HD.map((w) => w.postac);
-const human = (p: Postac | undefined) => !!p && p !== CHOCHLIK && p !== STALE_HD.pies && !ENEMIES.includes(p);
+const human = (p: Postac | undefined) => !!p && p !== CHOCHLIK && p !== STALE_HD.pies && p !== STALE_HD.gladiator && !ENEMIES.includes(p);
 const ALL = () => [...BOHATEROWIE, ...MIESZKANCY_HD, CHOCHLIK, ...ENEMIES, ...Object.values(STALE_HD)];
 
 /**

@@ -1083,9 +1083,9 @@ export class Training {
       }
       const n = this.personOf(a);
       if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR && n.role === 'sedzia') {
-        // The Arena's judge: the coachman's figure in brass livery (until the artist draws him).
-        const key = hdOn ? ensureHd(this.scene, 'hd-woznica') : SPORTY_TEX;
-        n.sprite = this.scene.add.sprite(n.x, n.y, key, 'down-0').setDepth(n.y).setTint(0xf0c878);
+        // The Arena's judge (the artist's trial 38-G001, standing poses only).
+        const key = hdOn ? ensureHd(this.scene, 'hd-sedzia') : SPORTY_TEX;
+        n.sprite = this.scene.add.sprite(n.x, n.y, key, 'down-1').setDepth(n.y);
         if (hdOn) fitHd(n.sprite);
         else n.sprite.setOrigin(0.5, 0.6);
         n.sprite.setVisible(!hide(n.x, n.y));

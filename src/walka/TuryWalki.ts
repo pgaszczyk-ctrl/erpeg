@@ -87,6 +87,8 @@ export interface WalkaHost {
   poziom(): number;
   /** Hotel bonus active (more luck, one more move). */
   wyspany(): boolean;
+  /** A fixed stage to frame whole instead of following the fighters (the Arena). */
+  kadr?(): { x0: number; x1: number; y0: number; y1: number } | null;
 }
 
 type Tryb = 'cios' | 'mocny' | 'ruch' | null;
@@ -312,6 +314,18 @@ export class TuryWalki {
     const zw = this.h.zoomZwykly();
     cam.stopFollow();
     let z = cam.zoom;
+    const kadr = this.h.kadr?.();
+    if (kadr) {
+      // A fixed stage (the Arena): the biggest whole zoom that shows it above the panel, framed once.
+      if (!zoom) return;
+      const fit = (zz: number) => (kadr.x1 - kadr.x0) * zz / OSTROSC <= cam.width / OSTROSC - 8 && (kadr.y1 - kadr.y0) * zz / OSTROSC <= cam.height / OSTROSC - WT.panelPx - 40;
+      z = 1;
+      while (z < 12 && fit(z + 1)) z++;
+      cam.setZoom(z);
+      const sh = (WT.panelPx / 2 - 10) * OSTROSC / z;
+      cam.centerOn((kadr.x0 + kadr.x1) / 2, (kadr.y0 + kadr.y1) / 2 + sh);
+      return;
+    }
     if (zoom) {
       // CSS px of the view; the panel covers the bottom.
       const fit = (zz: number) => (x1 - x0) * zz / OSTROSC < cam.width / OSTROSC - 24 && (y1 - y0) * zz / OSTROSC < cam.height / OSTROSC - WT.panelPx - 90;

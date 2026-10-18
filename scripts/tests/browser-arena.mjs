@@ -32,7 +32,7 @@ try {
     if (path.endsWith('/settings')) body = { external: { google: false } };
     if (path.endsWith('/save_game') || path.endsWith('/heartbeat')) body = true;
     if (path.endsWith('/arena_rywal')) { calls.push('rywal'); body = { bilet: '00000000-0000-0000-0000-000000000001', poziom: 3, zostalo_godz: 4, zostalo_dzis: 14,
-      rywal: { name: 'Zbyszko', poziom: 3, wygrane: 7, punkty: 1040, snap: { postac: 4, name: 'Zbyszko', poziom: 3, maxHp: 10, atak: 3, trafienie: 0.75, blok: 0.05, mocny: 3 } } }; }
+      rywal: process.env.GLADIATOR ? null : { name: 'Zbyszko', poziom: 3, wygrane: 7, punkty: 1040, snap: { postac: 4, name: 'Zbyszko', poziom: 3, maxHp: 10, atak: 3, trafienie: 0.75, blok: 0.05, mocny: 3 } } }; }
     if (path.endsWith('/arena_wynik')) { calls.push('wynik:' + JSON.parse(route.request().postData()).p_wygrana); body = { punkty: 1016, delta: 16, wygrane: 1, przegrane: 0 }; }
     if (path.endsWith('/arena_listy')) body = [{ dzien: '2026-10-17', walk: 4, wygranych: 3 }];
     if (path.endsWith('/arena_odbierz')) { calls.push('odbierz'); body = 30; }
@@ -115,10 +115,12 @@ try {
 
   const coins = () => g(() => window.__session.coins);
   const c0 = await coins();
+  // LUBLIN=1: the arena of Lublin (its coat of arms in the sand).
+  if (process.env.LUBLIN) await g(() => { window.__game.scene.getScene('game').kurierMiejsce = () => ({ k: 'PL', c: 'Lublin' }); });
   await g(() => window.__game.scene.getScene('game').talkSport({ role: 'sedzia' }));
   await press(await dialogNext(/Sędzia Areny/), 'Walka');
   const offer = await dialogNext(/Arena Cechu/);
-  assert.match(offer.text, /Zbyszko/);
+  assert.match(offer.text, process.env.GLADIATOR ? /Gladiator/ : /Zbyszko/);
   await press(offer, 'Walcz');
   await page.waitForFunction(() => window.__game.scene.isActive('arena') && window.__game.scene.getScene('arena').walka?.faza === 'gracz', null, { timeout: 20000 });
   assert.equal(await coins(), c0 - 100, 'entry fee paid');

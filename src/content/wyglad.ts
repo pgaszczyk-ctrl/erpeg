@@ -93,7 +93,7 @@ export const MIESZKANCY_HD: Postac[] = [
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'chochlik', bokWPrawo: false, skala: 0.32, maska: false };
 
 /** Fixed characters (pack „postacie stałe 01”): each has one look (no recolouring). Key = who in FixedNpcs/Story. */
-export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies' | 'gazeciarz', Postac> = {
+export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies' | 'gazeciarz' | 'sedzia' | 'gladiator', Postac> = {
   mag: { id: 'mag', nazwa: 'Mag Albrecht', plik: 'mag', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
   margo: { id: 'margo', nazwa: 'Siostra Margo', plik: 'siostra_margo', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'dorosly' },
   marek: { id: 'marek', nazwa: 'Dziadek Marek', plik: 'dziadek_marek', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
@@ -107,6 +107,10 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
   pies: { id: 'pies', nazwa: 'Biało-czarny pies', plik: 'pies', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
   // The newsboy, artist's trial v2 (order 32, 32-G003): only standing front + side frames, so newsboys stand still
   // (gazeciarz_proba.png = those two frames copied into a 3×3 sheet; up uses the front until a back frame arrives). Standing vs walking: the owner's decision is pending (32-G004).
+  // Arena Cechu (38-G001): the judge and the Mechanical Gladiator, trial front + side standing poses only
+  // (scripts/arena-grafiki.py puts them into 3×3 sheets like the newsboy's; they stand, no walk yet).
+  sedzia: { id: 'sedzia', nazwa: 'Sędzia Areny', plik: 'sedzia_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dorosly' },
+  gladiator: { id: 'gladiator', nazwa: 'Mechaniczny Gladiator', plik: 'gladiator_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
   gazeciarz: { id: 'gazeciarz', nazwa: 'Gazeciarz', plik: 'gazeciarz_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dziecko' },
 };
 

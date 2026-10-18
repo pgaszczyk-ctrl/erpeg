@@ -15,7 +15,7 @@ import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
 import type { DuchAreny } from '../api';
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
-import { ARENY_WYGLADY, HERBY_ARENY, GODLO_W_PIASKU } from '../content/arena';
+import { ARENY_WYGLADY, HERBY_ARENY, GODLO_W_PIASKU, ARENA_RYSUNEK } from '../content/arena';
 
 export interface ArenaDane {
   /** The rival (a ghost's snapshot, or the Gladiator made for this level). */
@@ -39,6 +39,8 @@ export class ArenaScene extends Phaser.Scene {
   private player!: Player;
   private leczenie = true;
   private R = 0;
+  /** Drawn from the artist's pictures (else the old code-drawn arena). */
+  private rysunek = false;
 
   constructor() {
     super('arena');
@@ -49,6 +51,13 @@ export class ArenaScene extends Phaser.Scene {
     this.leczenie = true;
   }
 
+  preload() {
+    // The artist's arena (38-G001): the sand floor and the back stands, both 640×600 with one common anchor.
+    const base = import.meta.env.BASE_URL;
+    if (!this.textures.exists('arena-plyta')) this.load.image('arena-plyta', `${base}${ARENA_RYSUNEK.plyta}`);
+    if (!this.textures.exists('arena-tyl')) this.load.image('arena-tyl', `${base}${ARENA_RYSUNEK.tyl}`);
+  }
+
   create() {
     const d = this.dane;
     this.R = ARENA.promienW * W;
@@ -56,7 +65,8 @@ export class ArenaScene extends Phaser.Scene {
     cam.setBackgroundColor('#2a1d14');
     cam.setZoom(d.zoom);
     cam.centerOn(0, 0);
-    this.rysujArene();
+    if (this.textures.exists('arena-plyta') && this.textures.exists('arena-tyl')) this.rysujArene();
+    else this.rysujAreneKodem();
 
     // The hero (the player's own picture, full life: the real hero's life is untouched).
     const start = (ARENA.startW * W) / 2;
@@ -71,12 +81,12 @@ export class ArenaScene extends Phaser.Scene {
     const r = d.rywal;
     const e = new Slime(this, 0, -start, 'wojownik') as WrogWalki;
     if (hdOn) {
-      const key = ensureRed(this, `hd-${heroSkin(r.postac, r.name).id}`);
+      const key = ensureRed(this, d.gladiator ? 'hd-gladiator' : `hd-${heroSkin(r.postac, r.name).id}`);
       e.setTexture(key, 'down-0');
       fitHd(e);
       e.walkAnim = `${key}-walk`;
     }
-    if (d.gladiator) e.setTint(0xd8a860);
+    if (d.gladiator && !hdOn) e.setTint(0xd8a860);
     e.hp = Math.max(4, Math.round(r.maxHp * ARENA.jednostka));
     let akcje = 0;
     for (const [od, ile] of WT.ruchy) if (r.poziom >= od) akcje = ile;
@@ -108,7 +118,11 @@ export class ArenaScene extends Phaser.Scene {
     this.walka = new TuryWalki({
       scene: this,
       player: this.player,
-      wolne: (x, y) => Math.hypot(x, y + 5) < R - 6,
+      // The artist's floor is an ellipse (height = spłaszczenie × width); the code-drawn one was a circle.
+      wolne: (x, y) => {
+        const ry = (this.rysunek ? R * ARENA_RYSUNEK.spłaszczenie : R) - 6;
+        return (x / (R - 6)) ** 2 + ((y + (this.rysunek ? 0 : 5)) / ry) ** 2 < 1;
+      },
       widac: () => true,
       zabity: () => {},
       cwiczenie: (s, p) => d.cwiczenie(s, p),
@@ -137,6 +151,8 @@ export class ArenaScene extends Phaser.Scene {
       wrocKamere: () => {},
       poziom: () => d.poziom,
       wyspany: () => false,
+      // The artist's arena: the whole floor across, the gate and its plaque on top.
+      kadr: () => this.rysunek ? { x0: -R - 4, x1: R + 4, y0: (ARENA_RYSUNEK.gora - ARENA_RYSUNEK.srodek[1]) * R / ARENA_RYSUNEK.polosX, y1: R * ARENA_RYSUNEK.spłaszczenie + 4 } : null,
     }, [e], { pvp: true });
     d.toast(d.gladiator ? `⚙ ${ARENA_TEKSTY.gladiator} wchodzi na arenę!` : `⚔ Duch ${r.name} wchodzi na arenę!`, 2500);
   }
@@ -164,6 +180,47 @@ export class ArenaScene extends Phaser.Scene {
     const r = (PLAYER.attackReach + PLAYER.attackRadius) * 0.9;
     g.lineStyle(1.5, 0xffffff, 0.8).beginPath().arc(this.player.x, this.player.y - 2, r, aim - 0.9, aim + 0.9).strokePath();
     this.tweens.add({ targets: g, alpha: 0, duration: 200, onComplete: () => g.destroy() });
+  }
+
+  /**
+   * The artist's arena (38-G001): sand floor at the very bottom, the town's arms (or the Exp-lore logo) raked into
+   * it, then the back stands with the gate. Both pictures share one frame; the floor's middle lies ARENA_RYSUNEK.srodek
+   * in it, so the fight's centre (0, 0) is that point. Country flags on the stand posts, the town on the gate's plaque.
+   */
+  private rysujArene() {
+    const d = this.dane;
+    const R = this.R;
+    const A = ARENA_RYSUNEK;
+    this.rysunek = true;
+    const K = R / A.polosX;
+    const [cx, cy] = A.srodek;
+    const naSwiat = (px: number, py: number) => ({ x: (px - cx) * K, y: (py - cy) * K });
+    const o = naSwiat(A.plotno[0] / 2, A.plotno[1] / 2);
+    this.cameras.main.setBackgroundColor(A.tlo);
+    this.add.image(o.x, o.y, 'arena-plyta').setScale(K).setDepth(-1e8);
+    // Behind the fighters (they stand at y + 200 000), over the floor and the arms.
+    this.add.image(o.x, o.y, 'arena-tyl').setScale(K).setDepth(1000);
+    // The sand's own colour, so the arms mix into exactly this sand.
+    const c = this.textures.getPixel(cx, cy + 40, 'arena-plyta');
+    this.godloWPiasku([c ? (c.red << 16) | (c.green << 8) | c.blue : 0xe8c890], R);
+    // Country flags on the tops of the stand posts and the gate's pillars, waving.
+    const wzor = (d.kraj && FLAGI[d.kraj]) || FLAGA_NIEZNANA;
+    A.maszty.forEach(([px, py], i) => {
+      const { x, y } = naSwiat(px, py);
+      const f = this.add.graphics().setDepth(1001 + i);
+      f.fillStyle(0x3a2a1a, 1).fillRect(x, y - 12, 1, 12);
+      f.fillStyle(0xffe08a, 1).fillRect(x, y - 13, 1, 1);
+      wzor.forEach((row, ry) => [...row].forEach((ch, rx) => {
+        const kol = KOLORY_FLAG[ch];
+        if (kol) f.fillStyle(Number.parseInt(kol.slice(1), 16), 1).fillRect(x + 1 + rx * 1.2, y - 12 + ry * 1.2, 1.2, 1.2);
+      }));
+      this.tweens.add({ targets: f, scaleY: 0.97, duration: 700 + i * 60, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    });
+    // The empty plaque over the gate gets the town's name (else the Cech's).
+    const p = naSwiat(A.tabliczka[0], A.tabliczka[1]);
+    const tw = this.add.text(p.x, p.y, (d.miasto ?? 'Arena Cechu').toUpperCase(), { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#2a1d14', resolution: 8 })
+      .setOrigin(0.5).setDepth(1100);
+    tw.setScale(Math.min(1, (A.tabliczka[2] * K) / tw.width));
   }
 
   /**
@@ -201,7 +258,8 @@ export class ArenaScene extends Phaser.Scene {
         const a = px[i + 3] / 255;
         if (a < 0.02) { px[i + 3] = 0; continue; }
         const dx = x / N - 0.5, dy = y / N - 0.5;
-        const r = Math.sqrt(dx * dx + dy * dy) * 2;
+        // Square-ish edge, so a shield's corners stay (the round logo is transparent outside its circle anyway).
+        const r = Math.max(Math.abs(dx), Math.abs(dy)) * 2;
         const brzeg = Math.max(0, Math.min(1, (1 - r) / 0.18 + (szum(x, y) - 0.5) * 0.8));
         const nasyp = Math.max(0, fala(x, y) - 0.45) * GODLO_W_PIASKU.nasyp * 2;
         const ziarno = szum(x * 1.7, y * 2.3);
@@ -214,7 +272,7 @@ export class ArenaScene extends Phaser.Scene {
       ctx.putImageData(img, 0, 0);
       const t = `arena-piasek:${plik}:${piasek[0]}:${D}`;
       if (!this.textures.exists(t)) this.textures.addCanvas(t, c);
-      this.add.image(0, 0, t).setScale(1 / K).setDepth(-1e8 + 1).setAlpha(GODLO_W_PIASKU.krycie);
+      this.add.image(0, 0, t).setScale(1 / K, (1 / K) * ARENA_RYSUNEK.spłaszczenie).setDepth(-1e8 + 1).setAlpha(GODLO_W_PIASKU.krycie);
     };
     if (this.textures.exists(klucz)) poloz();
     else {
@@ -224,7 +282,7 @@ export class ArenaScene extends Phaser.Scene {
     }
   }
 
-  private rysujArene() {
+  private rysujAreneKodem() {
     const R = this.R;
     const d = this.dane;
     let h = 0;
