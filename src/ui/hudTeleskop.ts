@@ -1,89 +1,115 @@
-// The telescopic HUD (artist 39-G002 „teleskop_v2”, owner 18 Oct 2026; test server with turn fights).
-// Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait with the EXP tube and the
-// level plate; a tap on the portrait slides four round buttons out downwards, one from under the other like the
-// segments of a telescope (Menu → Dziennik → Aparat → Transport), each pulled out by a short rigid rod. A tap only
+// The telescopic HUD with the glass EXP reservoir (artist 39-G004/39-G005 „zbiornik_v3.1”, owner 18 Oct 2026; test
+// server with turn fights). Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait
+// inside a brass ring whose glass chamber holds the EXP liquid (its share of the chamber's area = the share of EXP to
+// the next level), the level plate under it. On a phone the liquid's surface stays level with the ground while the
+// phone tilts (device orientation, a little inertia). A tap on the portrait slides four round buttons out downwards,
+// one from under the other like the segments of a telescope (Menu → Plecak/Kufer → Aparat → Pojazd). A tap only
 // opens; a button acts on the next tap, once the column has stopped. It folds back in reverse order after 4 s idle or
-// after a choice. Life is not shown while walking (turn fights have their own panel): only while hurt a small red tube
-// under the EXP one appears, and a tap on it heals.
+// after a choice. Life is not shown: healing happens only in turn fights, which have their own panel.
 // Plain HTML outside #game, so no tap on it ever reaches the joystick or the map.
 
-const BASE = (import.meta.env.BASE_URL || '/') + 'hud/teleskop/';
+const BASE = (import.meta.env.BASE_URL || '/') + 'hud/zbiornik/';
 
-/** The artist's layout (layout.json), in phone CSS px from the portrait's top-left corner. */
+/** The artist's layout.json (CSS px from the column's top-left corner; textures are @3x). */
 const L = {
-  portret: { x: 0, y: 0, w: 52, okno: 36 },
-  exp: { x: 60, y: 8, w: 104, h: 16, fx: 68, fy: 12, fw: 88, fh: 8 },
-  poziom: { x: 60, y: 30, w: 28, h: 14 },
-  /** The life tube (only while hurt): the EXP tube's pictures, recoloured red, under the level plate. */
-  zycie: { x: 60, y: 48 },
-  kolo: { x: 4, w: 44, ikona: 10, pierwszeY: 60, skok: 52 },
-  lacznik: { x: 20, w: 12, h: 8 },
-  zaslepka: { x: 20, y: 52, w: 12, h: 6 },
+  portret: 56,
+  poziom: { x: 16, y: 52, w: 24, h: 12 },
+  /** Hit areas 44×44 (x 6), the 36×36 picture 4 px inside, the icon 8 px inside that. Closer than the artist's layout
+   * (owner, 18 Oct 2026: „odległości od kulek są za duże”): 10 px between the pictures, bridged by a pipe joint. */
+  kolo: { x: 6, hit: 44, art: 36, wciecie: 4, ikona: 20, ikonaOd: 8, pierwszeY: 66, skok: 46 },
+  lacznik: { x: 24, w: 8, h: 16 },
   /** Phone margin from the screen's corner (plus the safe area). */
-  margines: { x: 12, y: 20 },
-  /** Starts of the four buttons, each one's travel and the whole opening (ms). */
+  margines: { x: 12, y: 16 },
   start: 55,
   ruch: 120,
 };
+/** The reservoir texture: 168×168, centre 84, chamber radii 56–74, portrait radius 47. */
+const N = 168;
+const C = 84;
+const RI = 56;
+const RO = 74;
+const RP = 47;
 const CALOSC = L.start * 3 + L.ruch;
 const ZWIN_PO_MS = 4000;
 
-export type AkcjaTeleskopu = 'menu' | 'dziennik' | 'aparat' | 'transport';
+export type AkcjaTeleskopu = 'menu' | 'plecak' | 'aparat' | 'transport';
 const AKCJE: { a: AkcjaTeleskopu; ikona: string; nazwa: string }[] = [
-  { a: 'menu', ikona: 'D_menu', nazwa: 'Menu i Kufer' },
-  { a: 'dziennik', ikona: 'D_dziennik', nazwa: 'Dziennik zadań' },
-  { a: 'aparat', ikona: 'D_aparat', nazwa: 'Aparat – zrób zdjęcie' },
-  { a: 'transport', ikona: 'D_welocyped', nazwa: 'Pojazd' },
+  { a: 'menu', ikona: 'ikona_menu', nazwa: 'Menu i ustawienia' },
+  { a: 'plecak', ikona: 'ikona_plecak', nazwa: 'Plecak – postać i ekwipunek' },
+  { a: 'aparat', ikona: 'ikona_aparat', nazwa: 'Aparat – zrób zdjęcie' },
+  { a: 'transport', ikona: 'ikona_welocyped', nazwa: 'Pojazd' },
 ];
 
 export interface TeleskopObsluga {
   akcja(a: AkcjaTeleskopu): void;
-  /** Tap on the life tube. */
-  lecz(): void;
 }
 
 export interface TeleskopStan {
   expShare: number;
   poziom: number;
-  hp: number;
-  maxHp: number;
-  extra: number;
-  zatruty?: boolean;
-  /** Nothing to heal with (the life tube is dimmed). */
-  bezLeczenia: boolean;
-  /** Potions or fruit portions left for the badge on the life tube. */
-  leczen: number;
   /** The transport button: which picture, ridden now, or nothing to ride. */
   pojazd: { ikona: 'welocyped' | 'hulajnoga'; jedzie: boolean; brak: boolean };
 }
 
 const CSS = `
 #hud-tel { position: fixed; left: calc(env(safe-area-inset-left) + var(--tel-mx)); top: calc(env(safe-area-inset-top) + var(--tel-my));
-  z-index: 6; pointer-events: none; transform-origin: 0 0; width: 164px; height: 260px; }
+  z-index: 6; pointer-events: none; transform-origin: 0 0; width: 56px; height: 272px; }
 #hud-tel.off { display: none; }
 #hud-tel.dim { opacity: 0.45; }
 #hud-tel.dim * { pointer-events: none !important; }
-#hud-tel img, #hud-tel canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; pointer-events: none; display: block; }
+#hud-tel img, #hud-tel canvas { position: absolute; pointer-events: none; display: block; }
 #hud-tel button { position: absolute; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto;
   -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 #hud-tel button:focus-visible { outline: 2px solid #f1e3c2; outline-offset: 1px; border-radius: 50%; }
 #hud-tel .tel-kolo { width: 44px; height: 44px; }
 #hud-tel .tel-kolo[data-ukryty] { pointer-events: none; visibility: hidden; }
-#hud-tel .tel-kolo img { left: 0; top: 0; }
-#hud-tel .tel-kolo .ik { left: 10px; top: 10px; }
-#hud-tel .tel-kolo.wcisniety .ik { top: 11px; }
-#hud-tel .tel-lacz { overflow: hidden; width: 12px; }
-#hud-tel .tel-lacz img { left: 0; top: 0; }
-#hud-tel .tel-poziom { position: absolute; width: 28px; height: 14px; display: flex; align-items: center; justify-content: center;
-  font: 700 10px/1 'Pixelify Sans', monospace; color: #f3dfb0; text-shadow: 0 1px 0 #1e1a24; pointer-events: none; }
-#hud-tel .tel-zycie { width: 104px; height: 16px; }
-#hud-tel .tel-zycie[hidden] { display: none; }
-#hud-tel .tel-zycie.pusto { opacity: 0.6; }
-#hud-tel .tel-zycie.nisko .tel-ciecz { animation: tel-puls 0.9s ease-in-out infinite; }
-@keyframes tel-puls { 50% { filter: brightness(1.45); } }
-#hud-tel .tel-licz { position: absolute; left: 106px; top: 1px; min-width: 14px; height: 14px; padding: 0 3px; box-sizing: border-box; background: #1a110b;
-  border: 1px solid #b8893b; color: #f1e3c2; font: 700 10px/12px 'Pixelify Sans', monospace; text-align: center; pointer-events: none; }
+#hud-tel .tel-kolo .tlo { left: 4px; top: 4px; width: 36px; height: 36px; }
+#hud-tel .tel-kolo .ik { left: 12px; top: 12px; width: 20px; height: 20px; }
+#hud-tel .tel-kolo.wcisniety .ik { top: 13px; }
+#hud-tel .tel-kolo[data-brak] .ik { opacity: 0.55; }
+#hud-tel .tel-lacz { position: absolute; overflow: hidden; width: 8px; }
+#hud-tel .tel-lacz img { left: 0; top: 0; width: 8px; height: 16px; }
+#hud-tel .tel-poziom { position: absolute; width: 24px; height: 12px; display: flex; align-items: center; justify-content: center;
+  font: 800 9px/12px 'Alegreya Sans', sans-serif; color: #2b1a0e; padding-bottom: 1px; box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
+/* The plaque on the right in the reservoir's style (owner, 18 Oct 2026: the pixel plates didn't fit the new HUD):
+   polished brass rims, dark glass, smooth icons, round buttons from the artist's set, a pipe joint between the plates. */
+body.hud-teleskop #hud { font-family: 'Alegreya Sans', sans-serif; }
+body.hud-teleskop #hud .hud-plate, body.hud-teleskop #hud .hud-money, body.hud-teleskop #hud .hud-quest {
+  background: radial-gradient(120% 140% at 50% -20%, rgba(255,226,160,0.10), transparent 60%),
+    linear-gradient(180deg, rgba(46,38,34,0.92), rgba(22,18,17,0.92)) !important;
+  border: 0 !important; border-radius: 999px !important;
+  box-shadow: 0 0 0 1px #2a1a0c, 0 0 0 3px #c9953f, 0 0 0 4px #7a5220, 0 0 0 5px rgba(20,12,6,0.85),
+    inset 0 1px 0 rgba(255,236,190,0.18), inset 0 -6px 10px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.35) !important;
+  color: #f6e6c2; }
+body.hud-teleskop #hud .hud-plate { padding: 4px 16px 4px 5px; gap: 6px; margin: 5px 5px 0 0; }
+body.hud-teleskop #hud .hud-money { padding: 4px 16px 4px 10px; gap: 14px; font-size: 18px; font-weight: 800; color: #ffe2a0; margin-right: 5px; }
+body.hud-teleskop #hud .hud-money img, body.hud-teleskop #hud .hud-money svg { width: 24px; height: 24px; image-rendering: auto; }
+body.hud-teleskop #hud .hud-quest { padding: 3px 14px 3px 6px !important; font-size: 14px; margin-right: 5px; }
+body.hud-teleskop #hud .hud-quest .dot { box-shadow: 0 0 0 1px #2a1a0c, 0 0 0 2px #c9953f; }
+body.hud-teleskop #hud .hud-town { font-size: 16px; font-weight: 800; letter-spacing: 0.01em; }
+body.hud-teleskop #hud .hud-weather { font-size: 14px; color: #e6cf9c; }
+body.hud-teleskop #hud .hud-l2 { font-size: 12.5px; color: #cdb88c; }
+body.hud-teleskop #hud .hud-compass { width: 40px; height: 40px; border: 0 !important; border-radius: 50% !important; box-shadow: none !important;
+  background: url(${BASE}przycisk_normalny.png) center / 100% 100% no-repeat !important; }
+body.hud-teleskop #hud .hud-compass:active { background-image: url(${BASE}przycisk_wcisniety.png) !important; }
+body.hud-teleskop #hud .hud-zoom.on { background-image: url(${BASE}przycisk_aktywny.png) !important; }
+body.hud-teleskop #hud .hud-compass svg { width: 22px; height: 22px; }
+body.hud-teleskop #hud .hud-money:not(.top)::before, body.hud-teleskop #hud .hud-quest::before {
+  right: 26px; top: -15px; width: 8px; height: 16px; background: url(${BASE}lacznik.png) center / 100% 100% no-repeat; border: 0; z-index: -1; }
+body.hud-teleskop #hud .hud-money:not(.top)::after, body.hud-teleskop #hud .hud-quest::after { display: none; }
+body.hud-teleskop #hud .hud-pick { font-weight: 700; border-radius: 999px; box-shadow: 0 0 0 2px #c9953f, 0 0 0 3px #2a1a0c; }
+body.hud-teleskop #hud .hud-pick img { image-rendering: auto; }
+@media (pointer: coarse) {
+  body.hud-teleskop #hud .hud-compass { width: 34px; height: 34px; }
+  body.hud-teleskop #hud .hud-compass svg { width: 19px; height: 19px; }
+  body.hud-teleskop #hud .hud-town { font-size: 13.5px; }
+  body.hud-teleskop #hud .hud-weather { font-size: 12px; }
+  body.hud-teleskop #hud .hud-l2 { font-size: 10.5px; }
+  body.hud-teleskop #hud .hud-money { font-size: 16px; padding: 3px 13px 3px 8px; }
+  body.hud-teleskop #hud .hud-money img, body.hud-teleskop #hud .hud-money svg { width: 21px; height: 21px; }
+  body.hud-teleskop #hud .hud-quest { font-size: 12.5px; }
+}
 body.hud-teleskop #test-badge { top: auto; bottom: calc(4px + env(safe-area-inset-bottom)); }
 `;
 
@@ -93,14 +119,8 @@ let obsl: TeleskopObsluga | null = null;
 const el: {
   kola: { b: HTMLButtonElement; tlo: HTMLImageElement; ik: HTMLImageElement }[];
   lacz: HTMLDivElement[];
-  zaslepka?: HTMLImageElement;
-  expFill?: HTMLCanvasElement;
+  zbiornik?: HTMLCanvasElement;
   poziom?: HTMLDivElement;
-  awans?: HTMLImageElement;
-  av?: HTMLCanvasElement;
-  zycie?: HTMLButtonElement;
-  zycieFill?: HTMLCanvasElement;
-  zycieLicz?: HTMLDivElement;
   portret?: HTMLButtonElement;
 } = { kola: [], lacz: [] };
 
@@ -111,16 +131,21 @@ function obraz(n: string) {
   if (!i) {
     i = new Image();
     i.src = `${BASE}${n}.png`;
+    i.addEventListener('load', () => rysujZbiornik(), { once: true });
     obrazy.set(n, i);
   }
   return i;
 }
-function img(n: string, x: number, y: number) {
+const gotowy = (n: string) => {
+  const i = obraz(n);
+  return i.complete && i.naturalWidth > 0;
+};
+function img(n: string, cls = '') {
   const i = document.createElement('img');
   i.src = `${BASE}${n}.png`;
   i.alt = '';
   i.draggable = false;
-  Object.assign(i.style, { left: `${x}px`, top: `${y}px` });
+  if (cls) i.className = cls;
   return i;
 }
 
@@ -137,35 +162,32 @@ let otwartoOd = 0;
 const easeOutCubic = (u: number) => 1 - (1 - u) ** 3;
 const bezRuchu = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Where button i stands at the telescope's time t: slides from under the one above (the portrait for the first). */
+/** Where button i's hit area stands at the telescope's time t: slides from under the one above (the portrait for the first). */
 function polozenie(i: number, czas: number) {
   const u = Math.min(1, Math.max(0, (czas - i * L.start) / L.ruch));
   const cel = L.kolo.pierwszeY + i * L.kolo.skok;
-  // Hidden start: centred under the element above (portrait centre for the first one).
-  const zrodlo = i === 0 ? L.portret.w / 2 - L.kolo.w / 2 : L.kolo.pierwszeY + (i - 1) * L.kolo.skok;
+  const zrodlo = i === 0 ? (L.portret - L.kolo.hit) / 2 : L.kolo.pierwszeY + (i - 1) * L.kolo.skok;
   return { y: Math.round(zrodlo + (cel - zrodlo) * easeOutCubic(u)), u };
 }
 
 function ustawKolumne() {
   const otwarta = t >= CALOSC;
-  let gornyDol = L.portret.w; // bottom of the portrait / the button above
+  let gornyDol = L.poziom.y + L.poziom.h; // bottom of the level plate under the portrait / the picture above
   el.kola.forEach((k, i) => {
     const { y, u } = polozenie(i, t);
     k.b.style.top = `${y}px`;
-    const widac = u > 0;
-    if (widac) k.b.removeAttribute('data-ukryty');
+    if (u > 0) k.b.removeAttribute('data-ukryty');
     else k.b.setAttribute('data-ukryty', '');
-    // Taps only once the column has stopped.
     k.b.tabIndex = otwarta ? 0 : -1;
     k.b.setAttribute('aria-hidden', String(!otwarta));
-    // The rod between the one above and this one: as long as the gap it bridges (pulled out with the button).
-    const lacz = el.lacz[i];
-    const h = Math.max(0, Math.min(L.lacznik.h, y - gornyDol));
-    Object.assign(lacz.style, { top: `${gornyDol}px`, height: `${h}px` });
-    gornyDol = y + L.kolo.w;
+    // The pipe joint between the picture above and this one, centred in the gap with its ends under both rims; it
+    // shows only while there is a gap (the buttons, drawn over it, hide the rest).
+    const gora = y + L.kolo.wciecie;
+    const luz = gora - gornyDol;
+    const sr = (gora + gornyDol) / 2;
+    Object.assign(el.lacz[i].style, { top: `${Math.round(sr - L.lacznik.h / 2)}px`, height: `${luz > 0 && u > 0 ? L.lacznik.h : 0}px` });
+    gornyDol = gora + L.kolo.art;
   });
-  // The cap under the portrait shows only while folded (the first rod takes its place).
-  if (el.zaslepka) el.zaslepka.style.visibility = t <= 0 ? 'visible' : 'hidden';
   root?.classList.toggle('otwarta', otwarta);
   el.portret?.setAttribute('aria-expanded', String(t > 0 && kierunek !== -1));
 }
@@ -213,8 +235,78 @@ export function zwinTeleskop() {
   if (t > 0) rusz(-1);
 }
 
-/** Open or opening = true. */
 const rozwiniety = () => (t > 0 && kierunek !== -1) || kierunek === 1;
+
+// ------------------------------------------------------------------ the liquid's tilt (phones only)
+
+/** The surface's angle on screen (degrees), smoothed with a little inertia, and where the sensors want it. */
+let kat = 0;
+let katCel = 0;
+let katV = 0;
+let katRaf = 0;
+let katOstatni = 0;
+let czujnikiOn = false;
+let narysowanyKat = NaN;
+
+const telefon = () => window.matchMedia('(pointer: coarse)').matches;
+
+/** Device orientation → the down vector in screen axes (x right, y down) → the liquid surface's angle. */
+function naOrientacje(e: DeviceOrientationEvent) {
+  if (e.beta == null || e.gamma == null) return;
+  const b = (e.beta * Math.PI) / 180;
+  const g = (e.gamma * Math.PI) / 180;
+  // Earth's down in the device's natural screen axes.
+  let gx = Math.sin(g) * Math.cos(b);
+  let gy = Math.sin(b);
+  // Lying flat: no clear down on the screen – keep the last angle.
+  if (Math.hypot(gx, gy) < 0.25) return;
+  const a = (((screen.orientation?.angle ?? (window as unknown as { orientation?: number }).orientation ?? 0) as number) * Math.PI) / 180;
+  [gx, gy] = [gx * Math.cos(a) - gy * Math.sin(a), gx * Math.sin(a) + gy * Math.cos(a)];
+  katCel = Math.max(-90, Math.min(90, (Math.atan2(-gx, gy) * 180) / Math.PI));
+  if (!katRaf) {
+    katOstatni = performance.now();
+    katRaf = requestAnimationFrame(krokKata);
+  }
+}
+
+/** A damped spring towards the sensors' angle; stops when settled. */
+function krokKata(teraz: number) {
+  const dt = Math.min(0.05, (teraz - katOstatni) / 1000);
+  katOstatni = teraz;
+  katV += ((katCel - kat) * 60 - katV * 9) * dt;
+  kat += katV * dt;
+  if (Math.abs(kat - narysowanyKat) > 0.4) rysujZbiornik();
+  if (Math.abs(katCel - kat) < 0.3 && Math.abs(katV) < 0.5) {
+    kat = katCel;
+    katV = 0;
+    katRaf = 0;
+    rysujZbiornik();
+    return;
+  }
+  katRaf = requestAnimationFrame(krokKata);
+}
+
+function wlaczCzujniki() {
+  if (czujnikiOn || !telefon() || bezRuchu() || !('DeviceOrientationEvent' in window)) return;
+  czujnikiOn = true;
+  window.addEventListener('deviceorientation', naOrientacje);
+}
+
+function wylaczCzujniki() {
+  window.removeEventListener('deviceorientation', naOrientacje);
+  czujnikiOn = false;
+  if (katRaf) cancelAnimationFrame(katRaf);
+  katRaf = 0;
+}
+
+/** iPhones ask first, and only from a tap: the first tap on the portrait asks once (a refusal = a level surface). */
+let pytano = false;
+function zapytajOCzujniki() {
+  if (pytano || !telefon() || bezRuchu()) return;
+  pytano = true;
+  const D = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+  if (D?.requestPermission) D.requestPermission().then((s) => s === 'granted' && (czujnikiOn = false, wlaczCzujniki())).catch(() => {});
+}
 
 // ------------------------------------------------------------------ building it
 
@@ -230,17 +322,13 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
   document.body.classList.add('hud-teleskop');
   root = document.createElement('div');
   root.id = 'hud-tel';
-  const stop = (b: HTMLElement) => {
-    // pointerdown, not click: the game's own touch handling must never see it.
-    b.addEventListener('pointerdown', (e) => e.stopPropagation());
-  };
-  // Rods first (drawn behind the buttons), then the buttons from the bottom one up, so each upper one covers the one
-  // sliding out from under it; the portrait last, on top of the first.
+  const stop = (b: HTMLElement) => b.addEventListener('pointerdown', (e) => e.stopPropagation());
+  // Joints first (behind the buttons), then the buttons, each upper one over the one sliding out from under it.
   for (let i = 0; i < 4; i++) {
     const d = document.createElement('div');
     d.className = 'tel-lacz';
     d.style.left = `${L.lacznik.x}px`;
-    d.append(img('E_lacznik_12x8', 0, 0));
+    d.append(img('lacznik'));
     el.lacz.push(d);
   }
   root.append(...el.lacz);
@@ -252,15 +340,14 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     b.title = a.nazwa;
     b.style.left = `${L.kolo.x}px`;
     b.style.zIndex = String(10 - i);
-    const tlo = img('C_normalny', 0, 0);
-    const ik = img(a.ikona, L.kolo.ikona, L.kolo.ikona);
-    ik.className = 'ik';
+    const tlo = img('przycisk_normalny', 'tlo');
+    const ik = img(a.ikona, 'ik');
     b.append(tlo, ik);
     stop(b);
     b.addEventListener('pointerdown', () => {
       if (b.dataset.brak === undefined) {
         b.classList.add('wcisniety');
-        tlo.src = `${BASE}C_wcisniety.png`;
+        tlo.src = `${BASE}przycisk_wcisniety.png`;
       }
     });
     const pusc = () => {
@@ -272,7 +359,6 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     b.addEventListener('pointercancel', pusc);
     b.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Only a fully open column acts, and never on the touch that opened it.
       if (t < CALOSC || kierunek !== 0 || performance.now() < otwartoOd) return;
       zwinTeleskop();
       obsl?.akcja(a.a);
@@ -280,84 +366,49 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
     return { b, tlo, ik };
   });
   root.append(...el.kola.map((k) => k.b));
-  el.zaslepka = img('E_zaslepka_12x6', L.zaslepka.x, L.zaslepka.y);
-  root.append(el.zaslepka);
 
-  // The portrait: the face (drawn by the game) in the window, the frame over it, the level-up glint over that.
+  // The portrait with its reservoir: one canvas, drawn from the artist's layers.
   const p = document.createElement('button');
   p.type = 'button';
   p.className = 'tel-portret';
-  Object.assign(p.style, { left: '0px', top: '0px', width: `${L.portret.w}px`, height: `${L.portret.w}px`, zIndex: '20', borderRadius: '50%' });
+  Object.assign(p.style, { left: '0px', top: '0px', width: `${L.portret}px`, height: `${L.portret}px`, zIndex: '20', borderRadius: '50%' });
   p.setAttribute('aria-label', 'Menu postaci');
   p.title = 'Menu postaci';
   p.setAttribute('aria-expanded', 'false');
-  const av = document.createElement('canvas');
-  const o = (L.portret.w - L.portret.okno) / 2;
-  Object.assign(av.style, { left: `${o}px`, top: `${o}px`, width: `${L.portret.okno}px`, height: `${L.portret.okno}px`, borderRadius: '50%' });
-  el.av = av;
-  const awans = img('A_awans_1', 0, 0);
-  awans.style.visibility = 'hidden';
-  el.awans = awans;
-  p.append(av, img('A_portret_oprawa', 0, 0), awans);
+  const zb = document.createElement('canvas');
+  Object.assign(zb.style, { left: '0px', top: '0px', width: `${L.portret}px`, height: `${L.portret}px` });
+  el.zbiornik = zb;
+  p.append(zb);
   stop(p);
   p.addEventListener('click', (e) => {
     e.stopPropagation();
+    zapytajOCzujniki();
     if (rozwiniety()) zwinTeleskop();
     else rozwinTeleskop();
   });
   el.portret = p;
 
-  // EXP: the empty tube, the fill cut to the progress (never stretched), the level plate with the game's digits.
-  const exp = img('A_exp_obudowa', L.exp.x, L.exp.y);
-  const fill = document.createElement('canvas');
-  fill.width = L.exp.fw;
-  fill.height = L.exp.fh;
-  Object.assign(fill.style, { left: `${L.exp.fx}px`, top: `${L.exp.fy}px`, width: `${L.exp.fw}px`, height: `${L.exp.fh}px` });
-  el.expFill = fill;
+  const pozImg = img('poziom_pusty');
+  Object.assign(pozImg.style, { left: `${L.poziom.x}px`, top: `${L.poziom.y}px`, width: `${L.poziom.w}px`, height: `${L.poziom.h}px`, zIndex: '21' });
   const poz = document.createElement('div');
   poz.className = 'tel-poziom';
   poz.style.left = `${L.poziom.x}px`;
   poz.style.top = `${L.poziom.y}px`;
-  const pozImg = img('A_poziom_pusty', L.poziom.x, L.poziom.y);
   el.poziom = poz;
 
-  // Life (only while hurt): the same tube in red; a tap heals.
-  const zy = document.createElement('button');
-  zy.type = 'button';
-  zy.className = 'tel-zycie';
-  zy.hidden = true;
-  Object.assign(zy.style, { left: `${L.zycie.x}px`, top: `${L.zycie.y}px` });
-  zy.setAttribute('aria-label', 'Życie – dotknij, żeby się wyleczyć');
-  zy.title = 'Życie – dotknij, żeby się wyleczyć (H)';
-  const zf = document.createElement('canvas');
-  zf.className = 'tel-ciecz';
-  zf.width = L.exp.fw;
-  zf.height = L.exp.fh;
-  Object.assign(zf.style, { left: `${L.exp.fx - L.exp.x}px`, top: `${L.exp.fy - L.exp.y}px`, width: `${L.exp.fw}px`, height: `${L.exp.fh}px` });
-  el.zycieFill = zf;
-  const zl = document.createElement('div');
-  zl.className = 'tel-licz';
-  el.zycieLicz = zl;
-  zy.append(img('A_exp_obudowa', 0, 0), zf, zl);
-  stop(zy);
-  zy.addEventListener('click', (e) => {
-    e.stopPropagation();
-    obsl?.lecz();
-  });
-  el.zycie = zy;
-
-  root.append(exp, fill, pozImg, poz, zy, p);
+  root.append(p, pozImg, poz);
   document.body.append(root);
-  // Any touch elsewhere keeps an open column for a while (the 4 s count from the last use of the HUD).
   root.addEventListener('pointerdown', () => { if (rozwiniety()) odliczZwiniecie(); });
-  for (const n of ['A_exp_wypelnienie', 'C_normalny', 'C_aktywny', 'C_niedostepny', 'C_wcisniety', 'A_awans_1', 'A_awans_2', 'A_awans_3', 'D_hulajnoga']) obraz(n);
-  obraz('A_exp_wypelnienie').addEventListener('load', () => rysujPaski(), { once: true });
+  for (const n of WARSTWY) obraz(n);
+  for (const n of ['przycisk_wcisniety', 'przycisk_aktywny', 'przycisk_niedostepny', 'ikona_hulajnoga']) obraz(n);
   t = 0;
   kierunek = 0;
   ustawKolumne();
   uklad();
   window.addEventListener('resize', uklad);
+  wlaczCzujniki();
   if (stan) ustawTeleskop(stan);
+  rysujZbiornik();
 }
 
 export function odmontujTeleskop() {
@@ -365,21 +416,24 @@ export function odmontujTeleskop() {
   window.clearTimeout(zwin);
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
+  wylaczCzujniki();
   root?.remove();
   root = null;
   el.kola = [];
   el.lacz = [];
+  el.zbiornik = undefined;
   document.body.classList.remove('hud-teleskop');
 }
 
-/** Phone ×1, computer ×2 (nearest neighbour), whole steps only. */
+/** Phone ×1, computer ×2 (the @3x pictures stay smooth at both). */
+let skala = 1;
 function uklad() {
   if (!root) return;
-  const telefon = window.matchMedia('(pointer: coarse)').matches;
-  const s = telefon || window.innerHeight < 560 ? 1 : 2;
+  skala = telefon() || window.innerHeight < 560 ? 1 : 2;
   root.style.setProperty('--tel-mx', `${L.margines.x}px`);
   root.style.setProperty('--tel-my', `${L.margines.y}px`);
-  root.style.transform = s === 1 ? '' : `scale(${s})`;
+  root.style.transform = skala === 1 ? '' : `scale(${skala})`;
+  rysujZbiornik();
 }
 
 export const szerokoscTeleskopu = () => (root ? root.getBoundingClientRect().right : 0);
@@ -390,17 +444,121 @@ export function teleskopWidoczny(tryb: 'on' | 'dim' | 'off') {
   if (tryb !== 'on') zwinTeleskop();
 }
 
+// ------------------------------------------------------------------ the reservoir (artist's renderer.js, in TypeScript)
+
+const WARSTWY = ['portret_oprawa', 'portret_maska', 'zbiornik_tlo', 'zbiornik_maska', 'zbiornik_plyn', 'zbiornik_szklo', 'zbiornik_tafla'];
+
+function kolkoPod(r: number, h: number) {
+  if (h <= -r) return Math.PI * r * r;
+  if (h >= r) return 0;
+  return r * r * Math.acos(h / r) - h * Math.sqrt(Math.max(0, r * r - h * h));
+}
+
+/** The surface's distance from the centre (along the tilted vertical) that leaves `p` of the chamber's area under it. */
+function wysokoscTafli(p: number) {
+  if (p <= 0) return RO + 1;
+  if (p >= 1) return -RO - 1;
+  const cel = p * Math.PI * (RO * RO - RI * RI);
+  let lo = -RO;
+  let hi = RO;
+  for (let i = 0; i < 32; i++) {
+    const m = (lo + hi) / 2;
+    if (kolkoPod(RO, m) - kolkoPod(RI, m) > cel) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
+const plotno = () => {
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  return c;
+};
+let warstwy: { out: HTMLCanvasElement; ciecz: HTMLCanvasElement; twarz: HTMLCanvasElement } | null = null;
+
+/** Portrait under its mask, the empty chamber, the liquid cut by the chamber and the tilted surface, glass, frame. */
+function rysujZbiornik() {
+  const c = el.zbiornik;
+  if (!c || !stan) return;
+  if (!WARSTWY.every(gotowy)) return;
+  warstwy ??= { out: plotno(), ciecz: plotno(), twarz: plotno() };
+  const { out, ciecz, twarz } = warstwy;
+  const oc = out.getContext('2d')!;
+  const lc = ciecz.getContext('2d')!;
+  const fc = twarz.getContext('2d')!;
+  const p = Math.min(1, Math.max(0, stan.expShare || 0));
+  const h = wysokoscTafli(p);
+  const a = (kat * Math.PI) / 180;
+  narysowanyKat = kat;
+  oc.clearRect(0, 0, N, N);
+  // The face.
+  fc.globalCompositeOperation = 'source-over';
+  fc.clearRect(0, 0, N, N);
+  fc.fillStyle = '#3a2c22';
+  fc.fillRect(C - RP, C - RP, RP * 2, RP * 2);
+  if (portretObraz) {
+    fc.imageSmoothingEnabled = true;
+    fc.imageSmoothingQuality = 'high';
+    fc.drawImage(portretObraz, C - RP, C - RP, RP * 2, RP * 2);
+  } else if (glowa) {
+    fc.imageSmoothingEnabled = false;
+    fc.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], C - RP, C - RP, RP * 2, RP * 2);
+  }
+  fc.globalCompositeOperation = 'destination-in';
+  fc.drawImage(obraz('portret_maska'), 0, 0);
+  fc.globalCompositeOperation = 'source-over';
+  oc.drawImage(twarz, 0, 0);
+  oc.drawImage(obraz('zbiornik_tlo'), 0, 0);
+  // The liquid.
+  if (p > 0) {
+    lc.globalCompositeOperation = 'source-over';
+    lc.clearRect(0, 0, N, N);
+    lc.save();
+    lc.translate(C, C);
+    lc.rotate(a);
+    lc.beginPath();
+    lc.rect(-N * 2, h, N * 4, N * 4);
+    lc.clip();
+    lc.setTransform(1, 0, 0, 1, 0, 0);
+    lc.drawImage(obraz('zbiornik_plyn'), 0, 0);
+    lc.restore();
+    if (p < 1) {
+      lc.save();
+      lc.translate(C, C);
+      lc.rotate(a);
+      lc.drawImage(obraz('zbiornik_tafla'), -N / 2, h - 4.5);
+      lc.restore();
+    }
+    lc.globalCompositeOperation = 'destination-in';
+    lc.drawImage(obraz('zbiornik_maska'), 0, 0);
+    lc.globalCompositeOperation = 'source-over';
+    oc.drawImage(ciecz, 0, 0);
+  }
+  oc.drawImage(obraz('zbiornik_szklo'), 0, 0);
+  oc.drawImage(obraz('portret_oprawa'), 0, 0);
+  // Onto the screen at device pixels.
+  const d = Math.max(1, Math.min(3, Math.round((window.devicePixelRatio || 1) * skala)));
+  const w = L.portret * d;
+  if (c.width !== w) c.width = c.height = w;
+  const g = c.getContext('2d')!;
+  g.clearRect(0, 0, w, w);
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(out, 0, 0, w, w);
+}
+
 // ------------------------------------------------------------------ what it shows
 
 let ostatniPoziom = 0;
 let ostatnieKola = '';
+let ostatniExp = -1;
 
 function odswiezKola() {
   if (!stan) return;
   const v = stan.pojazd;
   const k = el.kola[3];
   if (!k) return;
-  k.ik.src = `${BASE}D_${v.ikona}.png`;
+  k.ik.src = `${BASE}ikona_${v.ikona}.png`;
   if (v.brak) k.b.dataset.brak = '';
   else delete k.b.dataset.brak;
   const nazwa = v.brak ? 'Nie masz pojazdu' : v.jedzie ? `Zsiądź z ${v.ikona === 'welocyped' ? 'roweru' : 'hulajnogi'}` : `Wsiądź na ${v.ikona === 'welocyped' ? 'rower' : 'hulajnogę'}`;
@@ -408,89 +566,72 @@ function odswiezKola() {
   k.b.title = nazwa;
   for (const [i, x] of el.kola.entries()) {
     if (x.b.classList.contains('wcisniety')) continue;
-    const plik = i === 3 ? (v.brak ? 'C_niedostepny' : v.jedzie ? 'C_aktywny' : 'C_normalny') : 'C_normalny';
+    const plik = i === 3 ? (v.brak ? 'przycisk_niedostepny' : v.jedzie ? 'przycisk_aktywny' : 'przycisk_normalny') : 'przycisk_normalny';
     if (!x.tlo.src.endsWith(`${plik}.png`)) x.tlo.src = `${BASE}${plik}.png`;
   }
 }
 
-/** The fill pictures cut to their share (left part only, pixels never stretched); the red one recoloured from the EXP one. */
-function rysujPaski() {
-  if (!stan) return;
-  const src = obraz('A_exp_wypelnienie');
-  if (!src.complete || !src.naturalWidth) return;
-  const rysuj = (c: HTMLCanvasElement | undefined, czesc: number, kolor: ((r: number, g: number, b: number) => [number, number, number]) | null) => {
-    if (!c) return;
-    const g = c.getContext('2d')!;
-    g.clearRect(0, 0, c.width, c.height);
-    const w = Math.round(c.width * Math.min(1, Math.max(0, czesc)));
-    if (w <= 0) return;
-    g.drawImage(src, 0, 0, w, c.height, 0, 0, w, c.height);
-    if (!kolor) return;
-    const d = g.getImageData(0, 0, w, c.height);
-    for (let i = 0; i < d.data.length; i += 4) {
-      if (!d.data[i + 3]) continue;
-      [d.data[i], d.data[i + 1], d.data[i + 2]] = kolor(d.data[i], d.data[i + 1], d.data[i + 2]);
-    }
-    g.putImageData(d, 0, 0);
-  };
-  rysuj(el.expFill, stan.expShare, null);
-  const v = stan;
-  const czesc = v.maxHp > 0 ? v.hp / v.maxHp : 0;
-  // Amber → red by brightness (the shading of the artist's liquid stays); poisoned = green.
-  const na = v.zatruty ? [90, 200, 90] : [230, 64, 52];
-  rysuj(el.zycieFill, czesc, (r, g, b) => {
-    const j = (r + g + b) / 3 / 170;
-    return [Math.min(255, na[0] * j), Math.min(255, na[1] * j), Math.min(255, na[2] * j)];
-  });
-}
-
 export function ustawTeleskop(v: TeleskopStan) {
-  const awans = stan && v.poziom > ostatniPoziom && ostatniPoziom > 0;
   stan = v;
   if (!root) return;
   ostatniPoziom = v.poziom;
   if (el.poziom && el.poziom.textContent !== String(v.poziom)) el.poziom.textContent = String(v.poziom);
-  rysujPaski();
-  // Life only while hurt.
-  const ranny = v.hp < v.maxHp;
-  if (el.zycie) {
-    el.zycie.hidden = !ranny;
-    el.zycie.classList.toggle('pusto', v.bezLeczenia);
-    el.zycie.classList.toggle('nisko', v.hp <= v.maxHp / 3);
+  if (Math.abs(v.expShare - ostatniExp) > 0.001) {
+    ostatniExp = v.expShare;
+    rysujZbiornik();
   }
-  if (el.zycieLicz) el.zycieLicz.textContent = v.bezLeczenia ? '' : String(v.leczen);
-  if (el.zycieLicz) el.zycieLicz.style.display = v.bezLeczenia ? 'none' : '';
   const klucz = `${v.pojazd.ikona}|${v.pojazd.jedzie}|${v.pojazd.brak}`;
   if (klucz !== ostatnieKola) {
     ostatnieKola = klucz;
     odswiezKola();
   }
-  if (awans) blyskAwansu();
 }
 
-/** The artist's three glint frames over the portrait, played twice. */
-function blyskAwansu() {
-  const a = el.awans;
-  if (!a) return;
-  const kl = [1, 2, 3, 1, 2, 3];
-  kl.forEach((n, i) => window.setTimeout(() => { a.src = `${BASE}A_awans_${n}.png`; a.style.visibility = 'visible'; }, i * 100));
-  window.setTimeout(() => { a.style.visibility = 'hidden'; }, kl.length * 100);
+/** The hero's painted portrait (public/portrety/bohater_NN.webp); while it is missing or loading, the sheet's head. */
+let portretUrl: string | null = null;
+let portretObraz: HTMLImageElement | null = null;
+let glowa: [CanvasImageSource, number, number, number, number] | null = null;
+
+export function teleskopPortret(url: string | null) {
+  if (url === portretUrl) return;
+  portretUrl = url;
+  portretObraz = null;
+  if (!url) return rysujZbiornik();
+  const i = new Image();
+  i.onload = () => {
+    if (portretUrl !== url) return;
+    portretObraz = i;
+    rysujZbiornik();
+  };
+  i.src = url;
 }
 
-/** The hero's head into the portrait's round window (the same crop the old HUD used). */
 export function teleskopAwatar(src: CanvasImageSource | null, sx: number, sy: number, sw: number, sh: number) {
-  const c = el.av;
-  if (!c) return;
-  const d = Math.max(1, Math.round(window.devicePixelRatio || 1)) * 2;
-  c.width = L.portret.okno * d;
-  c.height = L.portret.okno * d;
-  const g = c.getContext('2d')!;
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = '#3a2c22';
-  g.fillRect(0, 0, c.width, c.height);
-  if (src) g.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  glowa = src ? [src, sx, sy, sw, sh] : null;
+  rysujZbiornik();
 }
 
-/** For tests: the column's time and buttons. */
-export const teleskopStan = () => ({ t, kierunek, otwarta: t >= CALOSC, kola: el.kola.map((k) => ({ top: k.b.style.top, ukryty: k.b.hasAttribute('data-ukryty') })) });
+/** For tests: the column's time and buttons, the liquid's angle and level. */
+export const teleskopStan = () => ({
+  t, kierunek, otwarta: t >= CALOSC, kat, poziom: ostatniPoziom, portret: !!portretObraz,
+  kola: el.kola.map((k) => ({ top: k.b.style.top, ukryty: k.b.hasAttribute('data-ukryty') })),
+  /** Tests: the reservoir's picture. */
+  obraz: () => el.zbiornik?.toDataURL() ?? '',
+  /** Tests on a desktop: pretend the phone is tilted (degrees of the surface on screen). */
+  przechyl: (st: number) => { katCel = st; if (!katRaf) { katOstatni = performance.now(); katRaf = requestAnimationFrame(krokKata); } },
+});
 (window as unknown as { __teleskop?: typeof teleskopStan }).__teleskop = teleskopStan;
+
+// ------------------------------------------------------------------ smooth icons for the plaque on the right
+
+/** A folded paper map with a dotted route and a red cross. */
+export const MAPA_GLADKA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.2l6-2.2 6 2.2 6-2.2v13.8l-6 2.2-6-2.2-6 2.2z" fill="#f3e6c4" stroke="#3a2614" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 4v13.8M15 6.2V20" stroke="#b39566" stroke-width="1.1"/><path d="M4.8 15.5c2-1.3 3.3-4.6 6-3.6s3.4 3.2 6.1.2" fill="none" stroke="#9a5a2a" stroke-width="1.2" stroke-dasharray="1.8 1.4" stroke-linecap="round"/><path d="M17 8.4l2.4 2.4m0-2.4L17 10.8" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+/** A brass magnifier: „+” off, „−” on. */
+export const lupaGladka = (on: boolean) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 14.6l6 6" stroke="#3a2614" stroke-width="4.4" stroke-linecap="round"/><path d="M14.6 14.6l6 6" stroke="#8a5a26" stroke-width="2.6" stroke-linecap="round"/><circle cx="10" cy="10" r="6.4" fill="rgba(190,225,245,0.55)" stroke="#3a2614" stroke-width="2.2"/><circle cx="10" cy="10" r="6.4" fill="none" stroke="#e0b056" stroke-width="1"/><path d="M7 10h6${on ? '' : 'M10 7v6'}" stroke="#2a1a0c" stroke-width="1.8" stroke-linecap="round"/><path d="M6.6 7.6a4 4 0 0 1 2.4-2.2" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="1.1" stroke-linecap="round"/></svg>`;
+
+/** A leather purse tied with a gold cord. */
+export const SAKIEWKA_GLADKA = `<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="tel-sak" cx="40%" cy="40%" r="70%"><stop offset="0" stop-color="#c08850"/><stop offset="1" stop-color="#6e4220"/></radialGradient></defs><path d="M8.2 3.4h7.6l-2.2 4.2h-3.2z" fill="#8a5a2b" stroke="#2a1a0c" stroke-width="1.1" stroke-linejoin="round"/><path d="M10 8.2c-5 1.8-7.4 6-6.4 9.4.8 2.8 4 3.6 8.4 3.6s7.6-.8 8.4-3.6c1-3.4-1.4-7.6-6.4-9.4z" fill="url(#tel-sak)" stroke="#2a1a0c" stroke-width="1.2"/><path d="M8.6 8.2h6.8" stroke="#e8bd62" stroke-width="2" stroke-linecap="round"/><path d="M7.4 13.2c.6-1.6 1.8-2.6 3-3" fill="none" stroke="#e7b77a" stroke-opacity="0.7" stroke-width="1.1" stroke-linecap="round"/></svg>`;
+
+/** A cut diamond. */
+export const DIAMENT_GLADKI = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 4h11.6l4 5.2L12 21 2.2 9.2z" fill="#8fe3f6" stroke="#174a5c" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.2 9.2h19.6M8.6 4L7 9.2 12 21l5-11.8L15.4 4M7 9.2L12 4l5 5.2" fill="none" stroke="#2c86a0" stroke-width="0.9" stroke-linejoin="round"/><path d="M7 9.2L12 4 8.6 4z" fill="#d8f8ff"/></svg>`;

@@ -16,7 +16,7 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudPortrait, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
 import { PORTRETY_POSTACI } from '../content/portrety';
@@ -39,7 +39,6 @@ export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
 
 /** The telescopic HUD's first menu line: the character sheet. */
-const KUFER = '🧳 Kufer – postać, ekwipunek, zasoby';
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -358,6 +357,9 @@ export class UIScene extends Phaser.Scene {
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;
+    // The 25 heroes' painted portraits (public/portrety/bohater_NN.webp, also used in dialogs).
+    const m = hd && /lista([a-y])$/.exec(hd.key);
+    setHudPortrait(m ? `${import.meta.env.BASE_URL || '/'}portrety/bohater_${String(m[1].charCodeAt(0) - 96).padStart(2, '0')}.webp` : null);
     if (!tex || !fr) return setHudAvatar(null);
     setHudAvatar(tex.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36);
   }
@@ -463,7 +465,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Dotknij czerwonej rurki u góry ekranu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Uciekaj od potworów!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
@@ -756,7 +758,6 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Top-left menu: leave the game properly. */
-  // (KUFER: the telescopic HUD's way to the character sheet, the first line of this menu.)
   private openGameMenu() {
     if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
@@ -764,13 +765,8 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: [...(teleskop() ? [KUFER] : []), 'Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (k) => {
-        // The Kufer (postać, ekwipunek, zasoby) comes first in the telescopic HUD's menu; the rest keep their numbers.
-        if (teleskop()) {
-          if (k === 0) return this.openCharacter('eq');
-          k--;
-        }
         const i = k;
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());
