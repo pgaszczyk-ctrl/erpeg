@@ -44,7 +44,13 @@ const ROUGH_AREAS = new Set(['rock', 'glacier']);
 interface Box { x0: number; y0: number; x1: number; y1: number }
 
 /** `id`: the feature's index in the whole map (stable across tiles; seeds use it). */
-export interface Area extends Box { kind: string; rings: number[][]; id: number }
+export interface Area extends Box {
+  kind: string;
+  rings: number[][];
+  id: number;
+  /** A pitch inside a stadium's bowl (stadiumGate): the Arena's sand on the test server. */
+  arena?: boolean;
+}
 /** Smallest width of a passage through a building (m). */
 const PRZEJSCIE_M = 4;
 
@@ -60,6 +66,10 @@ export interface Building extends Box {
   door?: { x: number; y: number };
   /** A small shed or garage (world maps): drawn, but doesn't stop the hero or shots. */
   open?: boolean;
+  /** A stadium's gate cut through its stands from the south: its two outer corners. */
+  brama?: { x0: number; x1: number; y0: number; y1: number };
+  /** The stadium's bowl (its hole before the gate was cut). */
+  misa?: number[];
 }
 
 type RawMap = {
@@ -150,6 +160,85 @@ function bbox(pts: number[], pad = 0): Box {
     if (pts[i + 1] > y1) y1 = pts[i + 1];
   }
   return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+}
+
+/** Smallest stadium bowl (a building's hole with a pitch in it) that gets a gate (m²). */
+const STADION_MISA_M2 = 3000;
+/** Width of the gate cut through a stadium's stands, from the south (m). */
+const STADION_BRAMA_M = 12;
+
+function ringArea(r: number[]) {
+  let s = 0;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) s += (r[j] - r[i]) * (r[j + 1] + r[i + 1]);
+  return Math.abs(s / 2);
+}
+
+type Cut = { seg: number; t: number; x: number; y: number };
+/** Where the vertical line x = X crosses the ring (every crossing). */
+function crossings(r: number[], X: number): Cut[] {
+  const out: Cut[] = [];
+  const n = r.length / 2;
+  for (let i = 0; i < n; i++) {
+    const ax = r[i * 2], ay = r[i * 2 + 1], bx = r[((i + 1) % n) * 2], by = r[((i + 1) % n) * 2 + 1];
+    if ((ax <= X) === (bx <= X)) continue;
+    const t = (X - ax) / (bx - ax);
+    out.push({ seg: i, t, x: X, y: ay + t * (by - ay) });
+  }
+  return out;
+}
+/** The ring's points from cut P forward to cut Q (both included). */
+function arc(r: number[], P: Cut, Q: Cut): number[] {
+  const n = r.length / 2;
+  const out = [P.x, P.y];
+  if (!(P.seg === Q.seg && P.t <= Q.t)) {
+    let i = (P.seg + 1) % n;
+    for (let k = 0; k < n; k++) {
+      out.push(r[i * 2], r[i * 2 + 1]);
+      if (i === Q.seg) break;
+      i = (i + 1) % n;
+    }
+  }
+  out.push(Q.x, Q.y);
+  return out;
+}
+const inStrip = (pts: number[], a: number, b: number) => {
+  for (let i = 2; i < pts.length - 2; i += 2) if (pts[i] < a - 0.5 || pts[i] > b + 0.5) return false;
+  return true;
+};
+const reversed = (pts: number[]) => {
+  const out: number[] = [];
+  for (let i = pts.length - 2; i >= 0; i -= 2) out.push(pts[i], pts[i + 1]);
+  return out;
+};
+/**
+ * A stadium closed by its stands (a ring-shaped building, the pitch in its hole): cut a gate of
+ * `w` px through the stands south of the hole, so the outer ring and the hole become one
+ * C-shaped outline. Null when the shape doesn't allow a clean cut.
+ */
+export function stadiumGate(outer: number[], hole: number[], w: number): { ring: number[]; a: Cut; b: Cut; ha: Cut; hb: Cut } | null {
+  const hb = bbox(hole);
+  const cx = (hb.x0 + hb.x1) / 2;
+  w = Math.min(w, (hb.x1 - hb.x0) * 0.4);
+  const a = cx - w / 2, b = cx + w / 2;
+  const south = (cs: Cut[]) => cs.reduce<Cut | null>((m, c) => (!m || c.y > m.y ? c : m), null);
+  const Ha = south(crossings(hole, a)), Hb = south(crossings(hole, b));
+  if (!Ha || !Hb) return null;
+  const below = (cs: Cut[], y: number) => cs.filter((c) => c.y > y).reduce<Cut | null>((m, c) => (!m || c.y < m.y ? c : m), null);
+  const Oa = below(crossings(outer, a), Ha.y), Ob = below(crossings(outer, b), Hb.y);
+  if (!Oa || !Ob) return null;
+  // The short arcs (inside the gate's strip) go; the long ones stay.
+  let oLong: number[];
+  const oF = arc(outer, Oa, Ob);
+  if (inStrip(oF, a, b)) oLong = arc(outer, Ob, Oa);
+  else if (inStrip(arc(outer, Ob, Oa), a, b)) oLong = reversed(oF);
+  else return null;
+  let hLong: number[];
+  const hF = arc(hole, Ha, Hb);
+  if (inStrip(hF, a, b)) hLong = reversed(arc(hole, Hb, Ha));
+  else if (inStrip(arc(hole, Hb, Ha), a, b)) hLong = hF;
+  else return null;
+  // Ob → (around the outside) → Oa → up the gate's west wall → Ha → (around the bowl) → Hb → down to Ob.
+  return { ring: [...oLong, ...hLong], a: Oa, b: Ob, ha: Ha, hb: Hb };
 }
 
 export function pointInRings(rings: number[][], x: number, y: number) {
@@ -302,6 +391,7 @@ export class CityMap {
     raw.areas.forEach(([kind, ...rings], i) => this.addArea(i, kind, rings));
     raw.lines.forEach(([kind, flags, pts, name], i) => this.addLine(i, kind, flags, pts, name));
     raw.buildings.forEach(([rings, addr, name, levels], i) => this.addBuilding(i, rings, addr, name, levels));
+    this.cutStadiums();
     for (const b of this.buildings) {
       for (const a of b.addresses) {
         const key = normAddress(a);
@@ -382,6 +472,7 @@ export class CityMap {
     const a: Area = { kind, rings: abs, id, ...bbox(abs[0]) };
     this.areas.push(a);
     this.areaGrid.add(a);
+    if (kind === 'pitch') this.newPitches.push(a);
   }
 
   private addLine(id: number, kind: string, flags: number, pts: number[], name: string | 0) {
@@ -406,6 +497,45 @@ export class CityMap {
     if (open) b.open = true;
     this.buildings.push(b);
     this.buildingGrid.add(b);
+    if (abs.length > 1) this.newHoled.push(b);
+  }
+
+  private newPitches: Area[] = [];
+  private newHoled: Building[] = [];
+  private gated = new Set<Building>();
+  /**
+   * Stadiums closed by their stands (owner: „zrób wyrwę, zawsze od południa”): a ring-shaped
+   * building whose hole holds a pitch gets a gate through its stands from the south.
+   */
+  private cutStadiums() {
+    const pairs = new Set<[Building, Area]>();
+    const tryPair = (b: Building, a: Area) => {
+      if (this.gated.has(b)) {
+        if (b.misa && pointInRings([b.misa], (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2)) a.arena = true;
+      } else if (b.rings.length > 1) pairs.add([b, a]);
+    };
+    for (const a of this.newPitches) for (const b of this.buildingGrid.at((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2)) tryPair(b, a);
+    for (const b of this.newHoled) for (const a of this.areaGrid.query(b)) if (a.kind === 'pitch') tryPair(b, a);
+    this.newPitches = [];
+    this.newHoled = [];
+    for (const [b, a] of pairs) {
+      if (this.gated.has(b)) continue;
+      const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+      const hi = b.rings.findIndex((r, i) => i > 0 && ringArea(r) >= STADION_MISA_M2 * PX_PER_M * PX_PER_M && pointInRings([r], cx, cy));
+      if (hi < 0) continue;
+      const g = stadiumGate(b.rings[0], b.rings[hi], STADION_BRAMA_M * PX_PER_M);
+      if (!g) continue;
+      this.gated.add(b);
+      b.misa = b.rings[hi];
+      b.rings = [g.ring, ...b.rings.filter((_, i) => i > 0 && i !== hi)];
+      b.brama = { x0: g.a.x, y0: g.a.y, x1: g.b.x, y1: g.b.y };
+      for (const q of this.areaGrid.query(b)) if (q.kind === 'pitch' && pointInRings([b.misa], (q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2)) q.arena = true;
+      // A paved way through the gate (no tree grows in it, and it shows the way in).
+      const gx = (g.a.x + g.b.x) / 2, gy = Math.max(g.a.y, g.b.y);
+      const top = Math.min(g.ha.y, g.hb.y);
+      const y0 = gy + 18 * PX_PER_M, y1 = top - 6 * PX_PER_M;
+      this.addLine(-1 - b.id, 'pedestrian', 0, [gx / this.k, y0 / this.k, 0, (y1 - y0) / this.k], 0);
+    }
   }
 
   /** A tiled map: the index (boundary, big areas, addresses, places, streets). */
@@ -491,6 +621,7 @@ export class CityMap {
         for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
       }
     }
+    this.cutStadiums();
     for (const [x, y] of t.q ?? []) this.posts.push({ x, y });
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });

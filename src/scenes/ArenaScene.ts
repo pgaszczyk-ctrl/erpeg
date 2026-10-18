@@ -15,6 +15,7 @@ import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
 import type { DuchAreny } from '../api';
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
+import { choragiewKraju } from '../arenaChoragiew';
 import { ARENY_WYGLADY, HERBY_ARENY, GODLO_W_PIASKU, ARENA_RYSUNEK } from '../content/arena';
 
 export interface ArenaDane {
@@ -202,45 +203,9 @@ export class ArenaScene extends Phaser.Scene {
     });
   }
 
-  /** The artist's grey banner with its cloth tinted by the country's flag (stripes top to bottom, shading kept). */
+  /** The artist's grey banner with its cloth tinted by the country's flag (shared with the world's stadiums). */
   private choragiew(kraj: string | null): string | null {
-    if (!this.textures.exists('arena-choragiew') || !this.textures.exists('arena-choragiew-maska')) return null;
-    const key = `arena-choragiew:${kraj ?? '-'}`;
-    if (this.textures.exists(key)) return key;
-    const wzor = (kraj && FLAGI[kraj]) || FLAGA_NIEZNANA;
-    const src = this.textures.get('arena-choragiew').getSourceImage() as HTMLImageElement;
-    const msk = this.textures.get('arena-choragiew-maska').getSourceImage() as HTMLImageElement;
-    const w = src.width, h = src.height;
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d')!;
-    ctx.drawImage(msk, 0, 0);
-    const m = ctx.getImageData(0, 0, w, h).data;
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(src, 0, 0);
-    const img = ctx.getImageData(0, 0, w, h);
-    const px = img.data;
-    // The cloth's box: the flag pattern is stretched over it.
-    let x0 = w, y0 = h, x1 = 0, y1 = 0;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[(y * w + x) * 4 + 3] > 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-    const rows = wzor.length, cols = wzor[0].length;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = (y * w + x) * 4;
-      if (m[i + 3] <= 128 || px[i + 3] === 0) continue;
-      const ch = wzor[Math.min(rows - 1, Math.floor(((y - y0) / (y1 - y0 + 1)) * rows))][Math.min(cols - 1, Math.floor(((x - x0) / (x1 - x0 + 1)) * cols))];
-      const kol = KOLORY_FLAG[ch];
-      if (!kol) continue;
-      const v = Number.parseInt(kol.slice(1), 16);
-      // The grey cloth's shade (≈ 0.7 … 0.85 light) keeps the folds: light 0.8 gives the flag's own colour.
-      const l = (px[i] + px[i + 1] + px[i + 2]) / 3 / 255 / 0.8;
-      px[i] = Math.min(255, ((v >> 16) & 255) * l);
-      px[i + 1] = Math.min(255, ((v >> 8) & 255) * l);
-      px[i + 2] = Math.min(255, (v & 255) * l);
-    }
-    ctx.putImageData(img, 0, 0);
-    this.textures.addCanvas(key, c);
-    this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    return key;
+    return choragiewKraju(this, kraj);
   }
 
   /** A 64 px tile of loose sand around the arena: the floor's colour a shade darker, two tones of grains, faint ripples. */
