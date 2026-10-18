@@ -70,7 +70,8 @@ export const DEMO_TEKSTY = {
   celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu',
   jablka: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij baniaka życia z jabłkiem.',
   /** Added on a computer (no touch screen). */
-  jablkaTeleskop: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij czerwonej rurki życia u góry ekranu.',
+  jablkaTeleskop: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły.',
+  jablkaPrzycisk: '🍎 Zjedz jabłka',
   jablkaKlawisz: ' Możesz też nacisnąć H.',
   olsnienie: 'OOooo, już wiem kim jestem!',
   imie: (imie: string) => `Jestem ${imie}!`,

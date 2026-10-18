@@ -103,7 +103,23 @@ export class DemoRun {
       this.host.player.anims.stop();
       this.scene.time.delayedCall(450, () => {
         if (this.frozen) return;
-        this.zamknijSamouczek = pokazGdzieKliknac(teleskop() ? '#hud-tel .tel-zycie' : '#hud .hud-heal', (teleskop() ? DEMO_TEKSTY.jablkaTeleskop : DEMO_TEKSTY.jablka) + (matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz), () => this.host.heal());
+        const klawisz = matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz;
+        if (!teleskop()) {
+          this.zamknijSamouczek = pokazGdzieKliknac('#hud .hud-heal', DEMO_TEKSTY.jablka + klawisz, () => this.host.heal());
+          return;
+        }
+        // The telescope HUD (test server) shows no life at all, so the demo puts its own apple button where the
+        // spotlight can point at it.
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.id = 'demo-zjedz';
+        b.textContent = DEMO_TEKSTY.jablkaPrzycisk;
+        Object.assign(b.style, { position: 'fixed', left: '50%', bottom: '22%', transform: 'translateX(-50%)', zIndex: '6',
+          font: '600 20px "Alegreya Sans", sans-serif', padding: '12px 22px', borderRadius: '24px', cursor: 'pointer',
+          color: '#2b1a0c', background: 'linear-gradient(#f3d27a, #c8963a)', border: '2px solid #6b4a1c', boxShadow: '0 3px 8px #0008' });
+        document.body.append(b);
+        const zamknij = pokazGdzieKliknac('#demo-zjedz', DEMO_TEKSTY.jablkaTeleskop + klawisz, () => this.host.heal());
+        this.zamknijSamouczek = () => { zamknij(); b.remove(); };
       });
       return;
     }

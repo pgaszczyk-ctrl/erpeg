@@ -83,7 +83,7 @@ try {
   // On the test server the demo has the telescope HUD too (owner, 18 Oct 2026).
   assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), process.env.TURY !== '0', 'Telescope HUD in the demo');
   await page.screenshot({ path: `work/onb-${name}-3-jedzenie.png` });
-  const healAt = await page.evaluate(() => { const r = (document.querySelector('#hud-tel .tel-zycie') ?? document.querySelector('#hud .hud-heal')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const healAt = await page.evaluate(() => { const r = (document.querySelector('#demo-zjedz') ?? document.querySelector('#hud .hud-heal')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   await page.mouse.click(healAt.x, healAt.y);
   await page.waitForFunction(() => !document.getElementById('samouczek'), null, { timeout: 5000 });
   try {
