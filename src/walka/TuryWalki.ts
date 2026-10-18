@@ -8,6 +8,7 @@
 
 import Phaser from 'phaser';
 import { WALKA_TUROWA as WT, ROLA_WROGA, SPOTKANIA, type RolaWWalce } from '../content/walkaTurowa';
+import { ARENA } from '../content/arena';
 import { W } from './tryb';
 import { zasieg, droga, najblizsza, uprosc, type Zasieg } from './siatka';
 import { PLAYER, type Player } from '../objects/Player';
@@ -23,7 +24,24 @@ import { AMUNICJA } from '../content/zuzycie';
 import { WALKA } from '../content/walka';
 import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
 
-export type WrogWalki = Slime & { power?: number; duel?: unknown; peaceful?: boolean };
+/** An Arena Cechu ghost (another player's fighter, content/arena.ts): its own blows, aim, armour and moves. */
+export interface DuchWalki {
+  /** Blow (weapon units: skill + 1.5 × weapon power), its hit chance, armour block chance, strong-blow factor. */
+  atak: number;
+  trafienie: number;
+  blok: number;
+  mocny: number;
+  /** Actions per turn = the owner's moves by level. */
+  akcje: number;
+  /** One shared heal left. */
+  leczenie: boolean;
+  /** A shot instead of a blow (bow/wand in hand). */
+  strzal?: number;
+}
+export type WrogWalki = Slime & { power?: number; duel?: unknown; peaceful?: boolean; pvp?: DuchWalki };
+
+/** Options: an arena fight (fair rules: no difficulty bonuses, no hotel, a single shared heal) starts without the group's spread. */
+export interface OpcjeWalki { pvp?: boolean }
 
 export interface Uczestnik {
   e: WrogWalki;
@@ -101,7 +119,7 @@ export class TuryWalki {
   private podpowiedz = '';
   private wszyscy: WrogWalki[];
 
-  constructor(private h: WalkaHost, wrogowie: WrogWalki[]) {
+  constructor(private h: WalkaHost, wrogowie: WrogWalki[], private opcje: OpcjeWalki = {}) {
     const s = h.scene;
     this.hpPrzed = h.player.hp;
     this.wszyscy = [...wrogowie];
@@ -109,7 +127,7 @@ export class TuryWalki {
       const rola = ROLA_WROGA[e.kindId] ?? 'wrecz';
       // Turn fights are shorter: less life (once per creature; a duel sets its own).
       const t = e as WrogWalki & { turyZycie?: boolean };
-      if (!t.turyZycie && !e.duel) e.hp = Math.max(1, Math.round(e.hp * WT.wrog.zycie));
+      if (!t.turyZycie && !e.duel && !e.pvp) e.hp = Math.max(1, Math.round(e.hp * WT.wrog.zycie));
       t.turyZycie = true;
       this.u.push({ e, rola, r: Math.max(3, e.size * 0.7), oglusz: false, hp0: e.hp });
     }
@@ -129,7 +147,13 @@ export class TuryWalki {
       koniecTury: () => this.koniecTury(),
     });
     document.body.classList.add('walka-tur');
-    void this.rozstaw();
+    if (opcje.pvp) {
+      // The arena: both already stand facing each other.
+      h.player.face(wrogowie[0].x - h.player.x, wrogowie[0].y - h.player.y);
+      for (const q of this.u) this.patrz(q.e, h.player.x - q.e.x, h.player.y - q.e.y);
+      this.kadruj(true);
+      h.scene.time.delayedCall(400, () => this.nowaTuraGracza());
+    } else void this.rozstaw();
   }
 
   // ------------------------------------------------------------------ helpers
@@ -309,7 +333,7 @@ export class TuryWalki {
     const lvl = this.h.poziom();
     let n = 0;
     for (const [od, ile] of WT.ruchy) if (lvl >= od) n = ile;
-    if (this.h.wyspany()) n += WT.hotel.ruchow;
+    if (this.h.wyspany() && !this.opcje.pvp) n += WT.hotel.ruchow;
     this.maxRuchy = n;
     this.ruchy = n;
     this.faza = 'gracz';
@@ -327,7 +351,7 @@ export class TuryWalki {
   }
 
   private szczescie() {
-    return this.h.wyspany() ? WT.hotel.szczescieRazy : 1;
+    return this.h.wyspany() && !this.opcje.pvp ? WT.hotel.szczescieRazy : 1;
   }
 
   private koniczynka(co: string) {
@@ -363,7 +387,7 @@ export class TuryWalki {
     const natarcie = new Set([...wrecz.filter(wZasiegu), ...wrecz.filter((q) => !wZasiegu(q))].slice(0, WT.wrog.natarcieWrecz));
     let salwa = WT.wrog.salwa;
     // The boss and a berserker act twice.
-    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
+    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.e.pvp ? 1 : q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
     for (const q of tura) {
       if (!this.aktywna) return;
       if (q.e.isDead || !q.e.active) continue;
@@ -371,6 +395,10 @@ export class TuryWalki {
         q.oglusz = false;
         this.h.napis(q.e.x, q.e.y - 1.1 * W, '💫', '#ffe08a', 700);
         await this.czekaj(300);
+        continue;
+      }
+      if (q.e.pvp) {
+        if (await this.turaDucha(q)) return;
         continue;
       }
       if (q.rola === 'dystans') {
@@ -391,10 +419,48 @@ export class TuryWalki {
     if (this.aktywna) this.nowaTuraGracza();
   }
 
+  /**
+   * An arena ghost's turn: as many actions as its owner has moves. Heals once when low, shoots when it holds a bow
+   * or wand, strikes (sometimes strongly, 2 actions) in reach, else walks up. True if the fight ended.
+   */
+  private async turaDucha(q: Uczestnik) {
+    const d = q.e.pvp!;
+    const p = this.h.player;
+    let akcje = d.akcje;
+    const reach = q.e.size + HERO_R + 0.35 * W;
+    while (akcje > 0 && this.aktywna && !q.e.isDead && q.e.active) {
+      if (d.leczenie && q.e.hp < q.hp0 * ARENA.duchLeczyPonizej) {
+        d.leczenie = false;
+        q.e.hp = Math.min(q.hp0, q.e.hp + q.hp0 * ARENA.leczenie);
+        this.h.napis(q.e.x, q.e.y - 1.2 * W, '✚ leczy się', '#9dff9a', 900);
+        akcje--;
+        await this.czekaj(380);
+        continue;
+      }
+      const dist = this.dist(q.e.x, q.e.y, p.x, p.y);
+      const widac = this.h.widac(q.e.x, q.e.y, p.x, p.y);
+      if (d.strzal && dist <= WT.strzalW * W && widac) {
+        akcje--;
+        if (await this.strzalWroga(q)) return true;
+        continue;
+      }
+      if (!d.strzal && dist <= reach && widac) {
+        const mocny = akcje >= 2 && Math.random() < ARENA.duchMocny;
+        akcje -= mocny ? 2 : 1;
+        if (mocny) this.h.napis(q.e.x, q.e.y - 1.3 * W, 'Mocny cios!', '#ffd34a', 700);
+        if (await this.ciosWroga(q, mocny ? d.mocny : 1)) return true;
+        continue;
+      }
+      akcje--;
+      await this.podejdzWrog(q, d.strzal ? 'dystans' : 'natarcie');
+    }
+    return false;
+  }
+
   /** One enemy walks: up to the hero (natarcie), to a waiting ring (czeka), or into shooting range (dystans). */
   private async podejdzWrog(q: Uczestnik, cel: 'natarcie' | 'czeka' | 'dystans') {
     const p = this.h.player;
-    const z = zasieg(q.e.x, q.e.y, WT.wrog.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, q.r, q.e));
+    const z = zasieg(q.e.x, q.e.y, (q.e.pvp ? WT.ruchW : WT.wrog.ruchW) * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, q.r, q.e));
     const reach = q.e.size + HERO_R + 0.35 * W;
     let best: string | null = null;
     let bd = Infinity;
@@ -418,14 +484,14 @@ export class TuryWalki {
   }
 
   /** A melee blow at the hero; true if the fight ended. */
-  private async ciosWroga(q: Uczestnik) {
+  private async ciosWroga(q: Uczestnik, mnoznik = 1) {
     const p = this.h.player;
     const e = q.e;
     this.patrz(e, p.x - e.x, p.y - e.y);
     const sx = e.x, sy = e.y;
     const k = 0.35;
     await this.tween(e, { x: sx + (p.x - sx) * k, y: sy + (p.y - sy) * k }, 120);
-    const koniec = this.trafBohatera(q);
+    const koniec = this.trafBohatera(q, mnoznik);
     await this.tween(e, { x: sx, y: sy }, 160);
     await this.czekaj(140);
     return koniec;
@@ -447,13 +513,13 @@ export class TuryWalki {
   }
 
   /** Does an enemy's attack land? Luck, armour, then damage (fractions add up). True if the fight ended. */
-  private trafBohatera(q: Uczestnik) {
+  private trafBohatera(q: Uczestnik, mnoznik = 1) {
     const p = this.h.player;
     if (Math.random() < WT.szczescie.unik * this.szczescie()) {
       this.koniczynka('Unik!');
       return false;
     }
-    if (Math.random() >= WT.wrog.trafienie) {
+    if (Math.random() >= (q.e.pvp ? (mnoznik > 1 ? 1 : q.e.pvp.trafienie) : WT.wrog.trafienie)) {
       this.h.pudlo(p.x, p.y - 0.3 * W);
       return false;
     }
@@ -469,7 +535,10 @@ export class TuryWalki {
       this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
       return false;
     }
-    const pending = this.carry + q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia;
+    // A ghost hits like a hero: its blow in weapon units, ARENA.jednostka of them to a half-heart (same rules both ways).
+    const pending = this.carry + (q.e.pvp
+      ? ((q.e.pvp.strzal ?? q.e.pvp.atak) * mnoznik * (Math.random() < WT.szczescie.krytyk ? WT.szczescie.krytykMnoznik : 1)) / ARENA.jednostka
+      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia);
     const dmg = Math.floor(pending);
     this.carry = pending - dmg;
     if (dmg <= 0) {
@@ -617,7 +686,7 @@ export class TuryWalki {
     const e = q.e;
     const now = this.h.scene.time.now;
     this.h.cwiczenie('miecz', WT.cwiczenie);
-    if (Math.random() >= hitChance('miecz', mocny, session.level.celnosc + gearAimBonus())) {
+    if (Math.random() >= hitChance('miecz', mocny, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
       this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
       return;
     }
@@ -644,7 +713,7 @@ export class TuryWalki {
     await this.tween(pocisk, { x: e.x, y: e.y }, Math.max(140, this.dist(p.x, p.y, e.x, e.y) * 3));
     pocisk.destroy();
     this.h.cwiczenie(skill, WT.cwiczenie);
-    if (Math.random() >= hitChance(skill, mocny, session.level.celnosc + gearAimBonus())) {
+    if (Math.random() >= hitChance(skill, mocny, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
       this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
       return;
     }
@@ -661,6 +730,11 @@ export class TuryWalki {
   private trafWroga(q: Uczestnik, dmg: number, from: Phaser.Math.Vector2, now: number, mocny: boolean) {
     const e = q.e;
     const x = e.x, y = e.y;
+    // A ghost's armour blocks like the hero's.
+    if (e.pvp && !mocny && Math.random() < e.pvp.blok) {
+      this.h.napis(x, y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
+      return;
+    }
     const zabity = e.hit(from, now, dmg);
     // No knock-back in turns: everyone keeps their spot.
     e.vel.set(0, 0);
@@ -716,6 +790,7 @@ export class TuryWalki {
   private uciekaj() {
     if (this.faza !== 'gracz' || this.busy) return;
     const p = this.h.player;
+    if (this.opcje.pvp) return this.zakoncz('ucieczka'); // giving up an arena fight = a loss, nothing else
     p.hp = Math.max(1, p.hp - WT.ucieczkaPolowek);
     this.h.toast(`🏃 ${SPOTKANIA.ucieczka}`, 2500);
     // They rest: back to full life.

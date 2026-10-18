@@ -116,6 +116,9 @@ import { Spotkania } from '../walka/Spotkania';
 import { tury } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA } from '../content/walkaTurowa';
 import { mapaWalki } from '../controls';
+import { ARENA, ARENA_TEKSTY } from '../content/arena';
+import type { ArenaDane } from './ArenaScene';
+import type { DuchAreny } from '../api';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -755,6 +758,8 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.streets.tury = tury();
+    this.listyAreny = [];
+    if (tury() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
     this.spotkania?.destroy();
     this.spotkania = tury() ? this.makeSpotkania() : null;
 
@@ -1901,6 +1906,144 @@ export class GameScene extends Phaser.Scene {
     return s;
   }
 
+  // ------------------------------------------------------------------ Arena Cechu (asynchronous PvP, test server)
+
+  /** Letters from the Arena waiting in the home chest (loaded at the start). */
+  private listyAreny: { dzien: string; walk: number; wygranych: number }[] = [];
+
+  /** My fighter as other players meet it (my ghost): everything a fight needs, the same rules both ways. */
+  private mojDuch(): DuchAreny {
+    const r = rangedWeapon();
+    const skill = r ? (r.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz';
+    return {
+      postac: session.look.postac, name: session.name, poziom: poziomPostaci(session.exp), maxHp: PLAYER.maxHp,
+      atak: Math.round(meleeDamage() * 10) / 10, trafienie: Math.round(hitChance(skill, false, gearAimBonus()) * 100) / 100,
+      blok: Math.round(blockChance() * 100) / 100, mocny: Math.round(strongFactor('miecz') * 10) / 10, bron: gear.equip.bron ?? null,
+      ...(r ? { strzal: Math.round(shotDamage(r) * 10) / 10 } : {}),
+    };
+  }
+
+  /** The Arena's judge (big pitches): explains, then a fight, the ranking or goodbye. */
+  private openArena() {
+    const T = ARENA_TEKSTY;
+    this.dialog({
+      title: `⚖ ${T.sedzia}`,
+      text: T.powitanie.replace('{wpisowe}', String(ARENA.wpisowe)).replace('{nagroda}', String(ARENA.nagroda)),
+      buttons: [`⚔ Walka na Arenie Cechu (${ARENA.wpisowe} 💰)`, '🏆 Ranking Areny', 'Do widzenia'],
+      onChoose: (i) => {
+        if (i === 0) this.arenaRywal();
+        else if (i === 1) this.arenaRanking();
+      },
+    });
+  }
+
+  private arenaRywal() {
+    const T = ARENA_TEKSTY;
+    const title = `⚖ ${T.sedzia}`;
+    if (session.coins < ARENA.wpisowe) return this.dialog({ title, text: T.brakMonet(ARENA.wpisowe, session.coins), buttons: ['OK'], onChoose: () => {} });
+    const mine = this.mojDuch();
+    api.arenaRywal(session.token, mine).then((res) => {
+      if (res.blad === 'godzina') return this.dialog({ title, text: T.limitGodzina(res.za_min ?? 60), buttons: ['OK'], onChoose: () => {} });
+      if (res.blad === 'dzien') return this.dialog({ title, text: T.limitDzien, buttons: ['OK'], onChoose: () => {} });
+      if (res.blad || !res.bilet) return this.dialog({ title, text: T.blad, buttons: ['OK'], onChoose: () => {} });
+      const lvl = res.poziom ?? mine.poziom;
+      const G = ARENA.gladiator;
+      const rywal: DuchAreny = res.rywal?.snap ?? { name: T.gladiator, poziom: lvl, maxHp: PLAYER.maxHp, atak: G.atak(lvl), trafienie: G.trafienie(lvl), blok: G.blok, mocny: 3, postac: 1 };
+      rywal.name = res.rywal?.name ?? rywal.name;
+      const kto = res.rywal
+        ? `Rywal: duch ${res.rywal.name}, poziom ${res.rywal.poziom}, ${res.rywal.wygrane} ${res.rywal.wygrane === 1 ? 'wygrana' : 'wygranych'} na arenie.`
+        : `Dziś nikt na twoim poziomie jeszcze nie walczył – na arenę wychodzi ${T.gladiator} (poziom ${lvl}).`;
+      this.dialog({
+        title: '⚔ Arena Cechu',
+        text: `${kto}\n\nWpisowe ${ARENA.wpisowe} monet, zwycięzca bierze ${ARENA.nagroda}. W walce każdy ma jedno leczenie – mikstury zostają w plecaku.\n\nDziś zostało jeszcze ${res.zostalo_dzis ?? 0} walk (w tej godzinie ${res.zostalo_godz ?? 0}).`,
+        buttons: [`⚔ Walcz (${ARENA.wpisowe} 💰)`, 'Nie teraz'],
+        onChoose: (i) => {
+          if (i !== 0) return;
+          if (session.coins < ARENA.wpisowe) return this.dialog({ title, text: T.brakMonet(ARENA.wpisowe, session.coins), buttons: ['OK'], onChoose: () => {} });
+          spend(ARENA.wpisowe);
+          this.save();
+          this.startArena(res.bilet!, rywal, !res.rywal, lvl);
+        },
+      });
+    }).catch(() => this.dialog({ title, text: T.blad, buttons: ['OK'], onChoose: () => {} }));
+  }
+
+  /** Off to the Arena Cechu (its own scene); the map waits paused and hidden under it. */
+  private startArena(bilet: string, rywal: DuchAreny, gladiator: boolean, poziom: number) {
+    this.player.move(0, 0, this.time.now);
+    resetTouch();
+    resetKeys();
+    const zoom = this.cameras.main.zoom;
+    this.scene.pause();
+    this.scene.setVisible(false);
+    const dane: ArenaDane = {
+      rywal, gladiator, poziom, zoom,
+      hero: { postac: session.look.postac, name: session.name },
+      ...(() => { const m = this.kurierMiejsce(); return { kraj: m.k, miasto: m.c }; })(),
+      cwiczenie: (skill, pkt) => this.practiced(skill, pkt),
+      toast: (t, ms) => this.toast(t, ms),
+      koniec: (wygrana) => this.arenaKoniec(bilet, wygrana, rywal.name),
+    };
+    this.scene.launch('arena', dane);
+  }
+
+  private arenaKoniec(bilet: string, wygrana: boolean, rywal: string) {
+    this.scene.stop('arena');
+    this.scene.setVisible(true);
+    this.scene.resume();
+    resetTouch();
+    resetKeys();
+    document.body.classList.remove('walka-tur');
+    if (wygrana) {
+      earn(ARENA.nagroda);
+      session.stats.arena = (session.stats.arena ?? 0) + 1;
+    } else session.stats.arenaPrzegrane = (session.stats.arenaPrzegrane ?? 0) + 1;
+    this.emitHud();
+    this.save();
+    const T = ARENA_TEKSTY;
+    const pokaz = (delta: number | null, punkty?: number) => this.dialog({
+      title: wygrana ? '🏆 Arena Cechu' : '⚔ Arena Cechu',
+      text: `${wygrana ? T.wygrana(ARENA.nagroda, delta ?? 0) : T.przegrana(delta ?? 0)}${punkty !== undefined ? `\n\nTwoje punkty: ${punkty}.` : ''}\n\nRywal: ${rywal}. Wygranych na arenie: ${session.stats.arena ?? 0}.`,
+      buttons: ['OK'],
+      onChoose: () => {},
+    });
+    api.arenaWynik(session.token, bilet, wygrana)
+      .then((r) => pokaz(r.delta ?? null, r.punkty))
+      .catch(() => pokaz(null));
+  }
+
+  private arenaRanking() {
+    const title = '🏆 Ranking Areny Cechu';
+    api.arenaRanking(session.token).then((r) => {
+      const top = r.top.map((q, i) => `${i + 1}. ${q.name} (poz. ${q.poziom}) – ${q.punkty} pkt, ${q.wygrane} wygr.`).join('\n') || 'Na razie nikt nie walczył.';
+      const ja = r.ja ? `\n\nTy: ${r.ja.miejsce}. miejsce, ${r.ja.punkty} pkt, ${r.ja.wygrane} wygranych, ${r.ja.przegrane} przegranych, twój duch obronił się ${r.ja.obrony} razy.` : '\n\nStocz pierwszą walkę, żeby trafić do rankingu.';
+      this.dialog({ title, text: top + ja, buttons: ['OK'], onChoose: () => {} });
+    }).catch(() => this.dialog({ title, text: ARENA_TEKSTY.blad, buttons: ['OK'], onChoose: () => {} }));
+  }
+
+  /** Opens the oldest letter: the ghost's fights of that day, 10 gold per win (once – the server keeps track). */
+  private otworzListAreny() {
+    const l = this.listyAreny.shift();
+    if (!l) return;
+    const zloto = l.wygranych * ARENA.zaObrone;
+    this.dialog({
+      title: '📜 List z Areny Cechu',
+      text: ARENA_TEKSTY.list(l.dzien, l.walk, l.wygranych, zloto),
+      buttons: [zloto ? '✉ Otwórz kopertę' : 'Odłóż list'],
+      onChoose: () => {
+        api.arenaOdbierz(session.token, l.dzien).then((g) => {
+          if (g > 0) {
+            earn(g);
+            this.emitHud();
+            this.save();
+            this.toast(`💰 +${g} złota z Areny Cechu`, 2500);
+          }
+          if (this.listyAreny.length) this.otworzListAreny();
+        }).catch(() => this.listyAreny.unshift(l));
+      },
+    });
+  }
+
   /** Enemies that keep the live fight even on the turn-fight server (the story's dragon, the demo's). */
   private bezTur(e: Enemy) {
     e.spokojny = false;
@@ -2917,6 +3060,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Is any enemy close enough to be fighting us? */
   inCombat() {
+    if (this.scene.isActive('arena')) return true;
     if (tury()) return !!this.walka?.aktywna;
     return this.enemies.some((e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 120);
   }
@@ -3569,6 +3713,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The coach (dummies against the clock) or the runner (a race to another pitch). */
   private talkSport(n: SportNpc) {
+    if (n.role === 'sedzia') return this.openArena();
     const now = this.time.now;
     if (n.role === 'trener') {
       const { a, b } = this.training.dummiesOf(n.area);
@@ -4653,12 +4798,15 @@ export class GameScene extends Phaser.Scene {
     const hurt = this.player.hp < PLAYER.maxHp;
     this.player.heal(PLAYER.maxHp);
     this.emitHud();
+    // Letters from the Arena Cechu wait in the chest (the ghost's wins of earlier days).
+    const listy = this.listyAreny.length;
     this.dialog({
       title: '🏠 Twój domek',
-      text: `${hurt ? 'Odpocząłeś w domu – zdrowie w pełni!' : 'Dom, słodki dom.'}\n\nW skrzyni masz ${session.chest.coins} monet i ${session.chest.slots.filter(Boolean).length} rzeczy.`,
-      buttons: ['📦 Otwórz skrzynię', 'Wyjdź'],
+      text: `${hurt ? 'Odpocząłeś w domu – zdrowie w pełni!' : 'Dom, słodki dom.'}\n\nW skrzyni masz ${session.chest.coins} monet i ${session.chest.slots.filter(Boolean).length} rzeczy.${listy ? `\n\nNa skrzyni leży ${listy === 1 ? 'list' : `${listy} listy`} z pieczęcią Cechu Zbrojmistrzów.` : ''}`,
+      buttons: ['📦 Otwórz skrzynię', ...(listy ? [`📜 List z Areny${listy > 1 ? ` (${listy})` : ''}`] : []), 'Wyjdź'],
       onChoose: (i) => {
         if (i === 0) this.openChest();
+        else if (listy && i === 1) this.otworzListAreny();
       },
     });
   }

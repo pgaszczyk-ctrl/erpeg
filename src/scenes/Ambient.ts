@@ -11,6 +11,8 @@ import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
 import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
+import { tury } from '../walka/tryb';
+import { hdOn, ensureHd, fitHd } from '../sprites';
 import { GRUPKI_GANGU, GRUPKA } from '../content/walkaTurowa';
 
 /** The hero's height on the map (px): turn-fight groups are sized by it. */
@@ -859,7 +861,7 @@ export interface Station {
 /** The sporty people: a coach by the dummies of big pitches, a runner on small ones. */
 export interface SportNpc {
   id: string;
-  role: 'trener' | 'biegacz';
+  role: 'trener' | 'biegacz' | 'sedzia';
   x: number;
   y: number;
   area: Area;
@@ -975,7 +977,7 @@ export class Training {
   }
 
   private personOf(a: Area): SportNpc | null {
-    if (!SPORT.ludzie) return null;
+    if (!SPORT.ludzie) return this.judgeOf(a);
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
     const m2 = Training.sizeM2(a);
@@ -995,6 +997,25 @@ export class Training {
       const cy = (a.y0 + a.y1) / 2;
       const p = this.city.isFree(cx, cy + 5, 3, 2) ? { x: cx, y: cy } : this.city.freeNear(cx, cy);
       npc = { id, role: 'biegacz', x: p.x, y: p.y, area: a };
+    }
+    this.people.set(a, npc);
+    return npc;
+  }
+
+  /** Arena Cechu (turn fight, test server): the Arena's judge by the dummies of every big pitch / stadium. */
+  private judgeOf(a: Area): SportNpc | null {
+    if (!tury()) return null;
+    if (this.people.has(a)) return this.people.get(a)!;
+    let npc: SportNpc | null = null;
+    if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
+      const st = this.stationsOf(a).find((s) => s.kind === 'miecz' && !s.far);
+      const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
+      if (st) for (const [dx, dy] of [[-18, 14], [18, 14], [0, -18], [0, 18]]) {
+        if (this.city.isFree(st.x + dx, st.y + dy + 5, 3, 2)) {
+          npc = { id, role: 'sedzia', x: st.x + dx, y: st.y + dy, area: a };
+          break;
+        }
+      }
     }
     this.people.set(a, npc);
     return npc;
@@ -1061,7 +1082,15 @@ export class Training {
         this.active.add(s);
       }
       const n = this.personOf(a);
-      if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
+      if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR && n.role === 'sedzia') {
+        // The Arena's judge: the coachman's figure in brass livery (until the artist draws him).
+        const key = hdOn ? ensureHd(this.scene, 'hd-woznica') : SPORTY_TEX;
+        n.sprite = this.scene.add.sprite(n.x, n.y, key, 'down-0').setDepth(n.y).setTint(0xf0c878);
+        if (hdOn) fitHd(n.sprite);
+        else n.sprite.setOrigin(0.5, 0.6);
+        n.sprite.setVisible(!hide(n.x, n.y));
+        this.activeNpcs.add(n);
+      } else if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
         n.sprite = this.scene.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6).setDepth(n.y);
         // A little jog on the spot, so they look sporty.
         this.scene.tweens.add({ targets: n.sprite, y: n.y - 1.5, duration: 260, yoyo: true, repeat: -1 });

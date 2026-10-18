@@ -116,6 +116,9 @@ export interface Stats {
   duels?: number;
   /** Monster gangs broken up. */
   gangs?: number;
+  /** Arena Cechu fights won / lost (the server keeps the ranking). */
+  arena?: number;
+  arenaPrzegrane?: number;
 }
 
 export interface PlayerInfo {
@@ -167,7 +170,32 @@ export interface LoginResult {
   new_code?: boolean;
 }
 
+/** A fighter for the Arena Cechu (a ghost): what another player meets (content/arena.ts). */
+export interface DuchAreny {
+  postac?: number;
+  name: string;
+  poziom: number;
+  maxHp: number;
+  atak: number;
+  trafienie: number;
+  blok: number;
+  mocny: number;
+  bron?: string | null;
+  /** Ranged: damage of a shot (bow/wand in hand). */
+  strzal?: number;
+}
+export interface RywalAreny { bilet?: string; poziom?: number; zostalo_godz?: number; zostalo_dzis?: number; blad?: string; za_min?: number;
+  rywal: { name: string; poziom: number; snap: DuchAreny; wygrane: number; punkty: number } | null }
+
 export const api = {
+  /** Arena Cechu (docs/sql/arena.sql): draw a rival (and keep my ghost), report the result, letters, ranking. */
+  arenaRywal: (token: string, snap: DuchAreny) => rpc<RywalAreny>('arena_rywal', { p_token: token, p_snap: snap }),
+  arenaWynik: (token: string, bilet: string, wygrana: boolean) =>
+    rpc<{ punkty?: number; delta?: number; wygrane?: number; przegrane?: number; blad?: string }>('arena_wynik', { p_token: token, p_bilet: bilet, p_wygrana: wygrana }),
+  arenaListy: (token: string) => rpc<{ dzien: string; walk: number; wygranych: number }[]>('arena_listy', { p_token: token }),
+  arenaOdbierz: (token: string, dzien: string) => rpc<number>('arena_odbierz', { p_token: token, p_dzien: dzien }),
+  arenaRanking: (token: string) => rpc<{ top: { name: string; poziom: number; punkty: number; wygrane: number; przegrane: number }[];
+    ja: { punkty: number; wygrane: number; przegrane: number; miejsce: number; obrony: number } | null }>('arena_ranking', { p_token: token }),
   createCharacter: (name: string, startPlace: string, x: number, y: number, scale: number, age: number, look: import('./look').Look) =>
     rpc<LoginResult>('create_character', { p_name: name, p_start_place: startPlace, p_start_x: x, p_start_y: y, p_scale: scale, p_age: age, p_look: look }),
   /** `password` only for old characters (6-character IDIK); they get a new code. */
