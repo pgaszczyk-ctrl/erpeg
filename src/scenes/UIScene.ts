@@ -16,7 +16,7 @@ import { wersjaNapis, TEST } from '../version';
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudPortrait, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
 import { PORTRETY_POSTACI } from '../content/portrety';
@@ -358,6 +358,9 @@ export class UIScene extends Phaser.Scene {
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;
+    // The 25 heroes' painted portraits (public/portrety/bohater_NN.webp, also used in dialogs).
+    const m = hd && /lista([a-y])$/.exec(hd.key);
+    setHudPortrait(m ? `${import.meta.env.BASE_URL || '/'}portrety/bohater_${String(m[1].charCodeAt(0) - 96).padStart(2, '0')}.webp` : null);
     if (!tex || !fr) return setHudAvatar(null);
     setHudAvatar(tex.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36);
   }

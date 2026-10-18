@@ -1,6 +1,6 @@
 import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
-import { zamontujTeleskop, odmontujTeleskop, ustawTeleskop, teleskopAwatar, teleskopWidoczny, type AkcjaTeleskopu } from './hudTeleskop';
+import { zamontujTeleskop, odmontujTeleskop, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, type AkcjaTeleskopu } from './hudTeleskop';
 import { tury } from '../walka/tryb';
 const hudStyle = new URLSearchParams(location.search).get('hud');
 /**
@@ -421,7 +421,6 @@ export function mountHud(on: HudHandlers) {
         else if (telPojazd) on.vehicle?.(telPojazd);
         else on.brakPojazdu?.();
       },
-      lecz: on.heal,
     });
     if (avatar) teleskopAwatar(avatar.src, avatar.sx, avatar.sy, avatar.sw, avatar.sh);
   }
@@ -445,7 +444,7 @@ export function unmountHud() {
 }
 
 /** Room the telescopic HUD takes at the top left (margin + portrait + EXP tube + a gap), phone CSS px. */
-const L_TELESKOPU = 12 + 164 + 8;
+const L_TELESKOPU = 12 + 82 + 8;
 
 /** The telescopic HUD's transport button: what it rides, and whether riding now. */
 let telPojazd: 'rower' | 'hulajnoga' | null = null;
@@ -531,7 +530,7 @@ function layout() {
   parts.money.style.top = top ? `${M}px` : '';
   // The ☰ button top left, or the telescopic HUD's portrait + EXP tube there.
   // On a narrow phone (320 px) the plaque doesn't fit beside the tubes: it goes under them, right of the button column.
-  const ciasno = teleskop() && window.innerWidth - M - L_TELESKOPU < 230;
+  const ciasno = teleskop() && window.innerWidth - M - L_TELESKOPU < 190;
   const menuW = ciasno ? 76 : teleskop() ? L_TELESKOPU : 64;
   const share = ciasno ? 1 : window.matchMedia('(pointer: coarse)').matches ? 0.52 : 0.6;
   Object.assign(parts.p.style, { right: `${M}px`, top: `${ciasno ? M + 74 : M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * share), window.innerWidth - M - menuW)}px` });
@@ -550,8 +549,7 @@ export function setHud(v: HudView) {
   view = v;
   if (!parts) return;
   if (teleskop()) ustawTeleskop({
-    expShare: v.expShare, poziom: v.poziom ?? 1, hp: v.hp, maxHp: v.maxHp, extra: v.extra, zatruty: v.zatruty,
-    bezLeczenia: v.noHeal, leczen: v.potions > 0 ? v.potions : Math.floor(v.fruit / Math.max(1, v.fruitPerHeal)) || v.preparedFood?.n || 0,
+    expShare: v.expShare, poziom: v.poziom ?? 1,
     pojazd: { ikona: telPojazd === 'hulajnoga' ? 'hulajnoga' : 'welocyped', jedzie: telJedzie, brak: !telPojazd },
   });
   const money = `${v.coins}|${v.diamonds}`;
@@ -708,6 +706,11 @@ function drawBottomRail(c: CanvasRenderingContext2D, baseLoaded: boolean) {
       c.fillRect(x + i, BY + j, 1, 1);
     }
   });
+}
+
+/** The hero's illustrated portrait for the telescopic HUD's medallion (null = the sheet's head instead). */
+export function setHudPortrait(url: string | null) {
+  teleskopPortret(url);
 }
 
 /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
