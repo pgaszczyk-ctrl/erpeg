@@ -36,6 +36,14 @@ export const ARENY_WYGLADY = [
   { nazwa: 'ogrodowa', tlo: '#1f2a1a', trybuny: [0x3f5a2e, 0x4c6a36], piasek: [0xd2b98a, 0xbfa475, 0xe0cc9e], barierka: [0x6a4a2a, 0xc8a060] },
 ];
 
+/** The town's coat of arms raked into the arena sand: town name (as kurierMiejsce gives it) → picture in public/.
+ *  Waiting for the artist (docs/poczta/do-grafika/…38-P001); until then every arena shows the Exp-lore emblem. */
+export const HERBY_ARENY: Record<string, string> = {};
+
+/** How the emblem lies in the sand: share of the arena's diameter, blur in map px, colour kept (rest = sand),
+ *  sand drifts over it, overall opacity. */
+export const GODLO_W_PIASKU = { logo: 'logo-256.png', srednica: 0.36, rozmycie: 0.6, mieszanie: 0.45, nasyp: 0.7, krycie: 0.8 };
+
 export const ARENA_TEKSTY = {
   sedzia: 'Sędzia Areny',
   powitanie: 'Cech Zbrojmistrzów zaprasza na Arenę! Walczysz z duchem innego śmiałka – jego bronią, jego zbroją, jego sprytem. Wpisowe {wpisowe} monet, zwycięzca bierze {nagroda}.\n\nKto stoczy dziś choć jedną walkę, tego duch walczy też za niego – a jutro w domowej skrzyni czeka list z wynikami.',

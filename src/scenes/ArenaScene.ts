@@ -15,7 +15,7 @@ import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
 import type { DuchAreny } from '../api';
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
-import { ARENY_WYGLADY } from '../content/arena';
+import { ARENY_WYGLADY, HERBY_ARENY, GODLO_W_PIASKU } from '../content/arena';
 
 export interface ArenaDane {
   /** The rival (a ghost's snapshot, or the Gladiator made for this level). */
@@ -170,6 +170,60 @@ export class ArenaScene extends Phaser.Scene {
    * The arena drawn by code: sand with speckles and raked rings, a railing with rivets, stands with spectators,
    * steam, flags of the country around and the town's name on a plaque. Its look (ARENY_WYGLADY) is fixed per town.
    */
+  /** The emblem pressed into the sand like the Targi Lublin mosaic: blurred, mixed with the sand, drifted over, ragged edge. */
+  private godloWPiasku(piasek: number[], R: number) {
+    const herb = this.dane.miasto ? HERBY_ARENY[this.dane.miasto] : undefined;
+    const plik = herb ?? GODLO_W_PIASKU.logo;
+    const klucz = `arena-godlo:${plik}`;
+    const poloz = () => {
+      if (!this.sys.isActive() && !this.sys.isPaused()) return;
+      const src = this.textures.get(klucz).getSourceImage() as HTMLImageElement;
+      const D = Math.round(R * 2 * GODLO_W_PIASKU.srednica), K = 2;
+      const N = D * K;
+      const c = document.createElement('canvas');
+      c.width = c.height = N;
+      const ctx = c.getContext('2d')!;
+      ctx.filter = `blur(${GODLO_W_PIASKU.rozmycie * K}px)`;
+      ctx.drawImage(src, 0, 0, N, N);
+      ctx.filter = 'none';
+      const img = ctx.getImageData(0, 0, N, N);
+      const px = img.data;
+      const sr = (piasek[0] >> 16) & 255, sg = (piasek[0] >> 8) & 255, sb = piasek[0] & 255;
+      const szum = (x: number, y: number) => {
+        const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        return v - Math.floor(v);
+      };
+      // Soft value noise for sand drifts.
+      const fala = (x: number, y: number) => 0.5 + 0.25 * Math.sin(x * 0.09 + Math.sin(y * 0.05) * 2) + 0.25 * Math.sin(y * 0.11 - x * 0.03);
+      const mieszaj = GODLO_W_PIASKU.mieszanie;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = (y * N + x) * 4;
+        const a = px[i + 3] / 255;
+        if (a < 0.02) { px[i + 3] = 0; continue; }
+        const dx = x / N - 0.5, dy = y / N - 0.5;
+        const r = Math.sqrt(dx * dx + dy * dy) * 2;
+        const brzeg = Math.max(0, Math.min(1, (1 - r) / 0.18 + (szum(x, y) - 0.5) * 0.8));
+        const nasyp = Math.max(0, fala(x, y) - 0.45) * GODLO_W_PIASKU.nasyp * 2;
+        const ziarno = szum(x * 1.7, y * 2.3);
+        const k = mieszaj * (1 - nasyp) * (ziarno < 0.25 ? 0.55 : 1);
+        px[i] = sr + (px[i] - sr) * k;
+        px[i + 1] = sg + (px[i + 1] - sg) * k;
+        px[i + 2] = sb + (px[i + 2] - sb) * k;
+        px[i + 3] = 255 * a * brzeg * (ziarno < 0.03 ? 0 : 1);
+      }
+      ctx.putImageData(img, 0, 0);
+      const t = `arena-piasek:${plik}:${piasek[0]}:${D}`;
+      if (!this.textures.exists(t)) this.textures.addCanvas(t, c);
+      this.add.image(0, 0, t).setScale(1 / K).setDepth(-1e8 + 1).setAlpha(GODLO_W_PIASKU.krycie);
+    };
+    if (this.textures.exists(klucz)) poloz();
+    else {
+      this.load.image(klucz, `${import.meta.env.BASE_URL}${plik}`);
+      this.load.once(Phaser.Loader.Events.COMPLETE, poloz);
+      this.load.start();
+    }
+  }
+
   private rysujArene() {
     const R = this.R;
     const d = this.dane;
@@ -203,12 +257,8 @@ export class ArenaScene extends Phaser.Scene {
       g.fillStyle(los() < 0.5 ? wyg.piasek[1] : wyg.piasek[2], 1).fillRect(Math.round(Math.cos(a) * dd), Math.round(Math.sin(a) * dd), 1, 1);
     }
     for (let k = 1; k < 4; k++) g.lineStyle(0.6, wyg.piasek[1], 0.6).strokeCircle(0, 0, (R * k) / 4);
-    // The Cech's emblem in the middle: a cog drawn into the sand.
-    g.lineStyle(1, 0xa47e48, 0.8).strokeCircle(0, 0, 9);
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      g.fillStyle(0xa47e48, 0.8).fillRect(Math.round(Math.cos(a) * 11) - 1, Math.round(Math.sin(a) * 11) - 1, 2, 2);
-    }
+    // In the middle the town's coat of arms raked into the sand (HERBY_ARENY), else the Exp-lore emblem.
+    this.godloWPiasku(wyg.piasek, R);
     // Brass railing with rivets.
     g.lineStyle(3, wyg.barierka[0], 1).strokeCircle(0, 0, R + 4);
     g.lineStyle(1.5, wyg.barierka[1], 1).strokeCircle(0, 0, R + 4);
