@@ -1968,14 +1968,17 @@ export class GameScene extends Phaser.Scene {
     }).catch(() => this.dialog({ title, text: T.blad, buttons: ['OK'], onChoose: () => {} }));
   }
 
-  /** Off to the Arena Cechu (its own scene); the map waits paused and hidden under it. */
+  private arenaRozmycie: Phaser.Filters.Controller | null = null;
+
+  /** Off to the Arena Cechu (its own scene); the map waits paused under it, blurred. */
   private startArena(bilet: string, rywal: DuchAreny, gladiator: boolean, poziom: number) {
     this.player.move(0, 0, this.time.now);
     resetTouch();
     resetKeys();
     const zoom = this.cameras.main.zoom;
     this.scene.pause();
-    this.scene.setVisible(false);
+    // The town stays behind the arena, blurred and dimmed (owner: no plain black background).
+    if (ARENA.tloRozmycie > 0) this.arenaRozmycie = this.cameras.main.filters.external.addBlur(0, ARENA.tloRozmycie, ARENA.tloRozmycie, 1);
     const dane: ArenaDane = {
       rywal, gladiator, poziom, zoom,
       hero: { postac: session.look.postac, name: session.name },
@@ -1989,6 +1992,8 @@ export class GameScene extends Phaser.Scene {
 
   private arenaKoniec(bilet: string, wygrana: boolean, rywal: string) {
     this.scene.stop('arena');
+    if (this.arenaRozmycie) this.cameras.main.filters.external.remove(this.arenaRozmycie);
+    this.arenaRozmycie = null;
     this.scene.setVisible(true);
     this.scene.resume();
     resetTouch();

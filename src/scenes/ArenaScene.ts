@@ -196,7 +196,12 @@ export class ArenaScene extends Phaser.Scene {
     const [cx, cy] = A.srodek;
     const naSwiat = (px: number, py: number) => ({ x: (px - cx) * K, y: (py - cy) * K });
     const o = naSwiat(A.plotno[0] / 2, A.plotno[1] / 2);
-    this.cameras.main.setBackgroundColor(A.tlo);
+    // No backdrop of its own: the paused town shows through, under a dark veil.
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+    this.add.rectangle(0, 0, 4000, 4000, 0x1a120a, ARENA.tloPrzyciemnienie).setDepth(-2e8).setScrollFactor(0);
+    // A soft shadow under the whole building, so it sits on the town instead of floating over it.
+    for (const [k, a] of [[1.25, 0.18], [1.12, 0.22], [1.02, 0.25]] as [number, number][])
+      this.add.ellipse(0, -R * 0.15, R * 2 * k, R * 2 * k * 0.95, 0x0d0905, a).setDepth(-2e8 + 1);
     this.add.image(o.x, o.y, 'arena-plyta').setScale(K).setDepth(-1e8);
     // Behind the fighters (they stand at y + 200 000), over the floor and the arms.
     this.add.image(o.x, o.y, 'arena-tyl').setScale(K).setDepth(1000);

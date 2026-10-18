@@ -125,6 +125,7 @@ try {
   await page.waitForFunction(() => window.__game.scene.isActive('arena') && window.__game.scene.getScene('arena').walka?.faza === 'gracz', null, { timeout: 20000 });
   assert.equal(await coins(), c0 - 100, 'entry fee paid');
   await page.waitForTimeout(800);
+  if (process.env.DEBUG) console.log(JSON.stringify(await g(() => { const gs = window.__game.scene.getScene('game'); const a = window.__game.scene.getScene('arena'); return { vis: gs.sys.settings.visible, st: gs.sys.settings.status, camVis: gs.cameras.main.visible, alpha: gs.cameras.main.alpha, tr: a.cameras.main.transparent, bg: a.cameras.main.backgroundColor.rgba, order: window.__game.scene.scenes.map((s) => s.sys.settings.key) }; })));
   await page.screenshot({ path: `work/arena-${tag}-1-start.png` });
   const af = () => g(() => {
     const a = window.__game.scene.getScene('arena');

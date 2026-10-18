@@ -24,6 +24,9 @@ export const ARENA = {
   duchMocny: 0.3,
   /** Promień płyty areny (W = wysokość bohatera) i odległość startowa. */
   promienW: 9,
+  /** Behind the arena: the town where the judge stands, blurred (px) and dimmed (alpha of the dark veil). */
+  tloRozmycie: 3,
+  tloPrzyciemnienie: 0.6,
   startW: 6,
   /** Mechaniczny Gladiator: przeciętna postać na danym poziomie (atak i trafienie z poziomu). */
   gladiator: { atak: (lvl: number) => 2.5 + lvl * 0.9, trafienie: (lvl: number) => Math.min(0.9, 0.6 + lvl * 0.015), blok: 0.05 },
