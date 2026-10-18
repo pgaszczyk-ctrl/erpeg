@@ -21,8 +21,8 @@ Co dziś się nie zgadza:
 | Smok | Skąd jest | Co jest nie tak |
 |---|---|---|
 | górski (niebieski) | zam. 15/20 | ma inną komórkę (216×194), stopy wypadają w innym miejscu, a kolorów jest 194 (reszta ma do 16). Wszystkie 41 klatek to w grze tylko 2 obrazki (stoi z boku i stoi z przodu), więc nie widać chodu, ugryzienia ani lotu. Tyłu nie ma wcale. |
-| ognisty (czerwony) | „smoki_chochlik_v3” | pełny komplet 39 klatek. Wzór stylu razem z kwasowym. |
-| kwasowy (zielono-fioletowy) | „smoki_chochlik_v3” | pełny komplet 39 klatek. **Wzór stylu** (właściciel: „o taki styl chodzi”). |
+| ognisty (czerwony) | „smoki_chochlik_v3” | pełny komplet 39 klatek. **Wzór stylu** (właściciel 18.10.2026: „lekko straszny i majestatyczny, a nie totalnie bajkowy i nie przerażający – dobry balans”). |
+| kwasowy (zielono-fioletowy) | „smoki_chochlik_v3” | pełny komplet 39 klatek. Kolory dobre, ale sylwetka jest bardziej bajkowa i pulchna niż u ognistego, więc trzeba ją zbliżyć do ognistego. |
 | leśny (morski) | próba 23 v2 | są tylko 2 próbne klatki z boku. Jest smukły, „realistyczny” i stoi wyżej na nogach, więc nie pasuje do pulchnego kwasowego. Nie ma przodu ani tyłu. |
 | trujący (fioletowy) | próba 23 v2 | też tylko 2 klatki z boku. Jest płaski i długi, jak jaszczurka. Nie ma przodu ani tyłu. |
 
@@ -32,12 +32,14 @@ smoka (`obecny_zastepczy_z_kodu_x4.png`).
 
 ## Wspólny styl (dla wszystkich)
 
-- Wzorem jest **kwasowy** (i ognisty z tej samej paczki): pulchna, bajkowa
-  sylwetka, duża głowa, krótkie mocne łapy, okrągły tułów, rzut z góry pod
-  kątem ok. 60° jak cały świat gry. To ma być sympatyczny przeciwnik dla
-  dzieci, a nie potwór z horroru.
+- Wzorem jest **ognisty (czerwony)**. Właściciel: „jest jednocześnie lekko
+  straszny i majestatyczny, a nie totalnie bajkowy i nie przerażający – dobry
+  balans”. Chodzi o ten balans: smok ma budzić respekt (dumna głowa, rogi,
+  pazury, długi ogon, skrzydła złożone wzdłuż grzbietu), ale nie może być
+  krwawy, chudy ani mroczny jak z horroru. Nie może też być pluszakiem.
+  Rzut z góry pod kątem ok. 60°, jak cały świat gry i jak ognisty.
 - Duże, gładkie płaszczyzny po 3 odcienie (światło, ton, cień), bez drobnych łusek i szumu.
-- Dwie barwy na smoka: ciało w jednym kolorze, kolce/kryza/błony skrzydeł w drugim, dopełniającym. Kolory jasne i nasycone.
+- Dwie barwy na smoka, jak u ognistego: ciało w jednym kolorze (z jaśniejszymi „żyłkami” lub wzorem), skrzydła, rogi i kolce w drugim, spokojniejszym. Kolory nasycone, ale nie cukierkowe.
 - Obrys 1 px #1e1a24, najwyżej 16 kolorów na smoka, światło z lewej-góry.
 - **Wszystkie smoki tej samej wielkości i w tej samej pozie bazowej.** Różnią
   się kolorem, kształtem głowy, rogów, kolców i skrzydeł oraz jednym znakiem
@@ -49,14 +51,14 @@ smoka (`obecny_zastepczy_z_kodu_x4.png`).
 | Smok | Barwy | Znak rozpoznawczy | Atak specjalny (pozy) |
 |---|---|---|---|
 | leśny | jasna zieleń liści + mchowe złoto | kryza i skrzydła jak liście/paprocie, grzybki lub kwiatki na grzbiecie | brak (tylko ugryzienie) |
-| kwasowy | limonka + fiolet | zostaje jak jest (wzór) | `pluj` |
+| kwasowy | limonka + fiolet (zostają) | sylwetka i proporcje do poprawienia na wzór ognistego: smuklejsza szyja, dumniejsza głowa, mniej „pluszowy” | `pluj` |
 | trujący | śliwkowy fiolet + świecąca limonka/turkus | worki z jadem, bańki na grzbiecie | `dmuch` (wydech chmury) |
-| ognisty | czerwień + grafit | zostaje jak jest (wzór) | `ziej` |
+| ognisty | czerwień + grafit | zostaje jak jest (**wzór**) | `ziej` |
 | górski | szaroniebieski + śnieżna biel | skalne płyty i szron na grzbiecie, największe skrzydła | `start`, `lot_gora`, `ladowanie` (lot i upadek) |
-| Cień smoka (boss, opcjonalnie) | głęboki granat + złote oczy i żyłki | większe rogi, „dymiące” końce skrzydeł; ciemny, ale w tym samym bajkowym stylu | `ziej` + `pluj` + `dmuch` + lot (ataki w fazach) |
+| Cień smoka (boss, opcjonalnie) | głęboki granat + złote oczy i żyłki | większe rogi, „dymiące” końce skrzydeł; najbardziej majestatyczny z nich, ale w tym samym stylu co ognisty | `ziej` + `pluj` + `dmuch` + lot (ataki w fazach) |
 
-Kwasowy i ognisty mogą zostać bez zmian. Jeśli przy ujednolicaniu wolisz
-je lekko poprawić (np. ten sam kształt łap u wszystkich), to śmiało.
+Ognisty zostaje bez zmian. Pozostałe (także kwasowy) rysujemy tak, żeby
+stojąc obok ognistego wyglądały jak ten sam gatunek.
 
 ## Klatki (na smoka, tak jak dziś u kwasowego)
 
