@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '18.10.2026', tytul: { pl: 'Nowy początek przygody', en: 'A new start to the adventure' },
+    tresc: { pl: 'Nowi gracze zaczynają od snu pod Zamkiem Lubelskim: wystarczy wpisać imię. Jabłko spada na głowę, wraca pamięć, a na dziedzińcu czeka smok – walka idzie na tury, z podpowiedziami jak uderzać i jak się leczyć. Po pobudce przed Targami Lublin czeka Hela Trybik, a kod postaci jest w Kufrze, w zakładce Statystyki. Zamknięte podwórka mają teraz bramy.', en: 'New players start with a dream below Lublin Castle: just type a name. An apple falls on your head, your memory comes back, and a dragon waits in the courtyard – the fight is turn-based, with hints on how to strike and heal. After waking up in front of Targi Lublin, Hela Trybik is waiting, and your character code is in the Trunk, on the Statistics tab. Closed courtyards now have gates.' },
+  },
+  {
     data: '15.10.2026', tytul: { pl: 'Nowa łamigłówka: Królowe', en: 'A new puzzle: Queens' },
     tresc: { pl: 'Od dziś w Kurierze także Królowe: po jednej królowej w każdym wierszu, kolumnie i kolorowym obszarze, a żadne dwie się nie stykają. Pięć rodzajów łamigłówek zmienia się codziennie.', en: 'From today the Courier also prints Queens: one queen in every row, column and coloured area, and no two of them touching. Five kinds of puzzle take turns every day, and the number crossword now works like at school: multiplication and division first.' },
   },

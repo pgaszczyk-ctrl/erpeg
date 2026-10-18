@@ -13,6 +13,7 @@ await mkdir('work', { recursive: true });
 const phone = !!process.env.TELEFON;
 const viewport = phone ? { width: 390, height: 844 } : { width: 1280, height: 900 };
 const name = phone ? 'phone' : 'desktop';
+const HELA = {"id": "sz_jarmark", "opis": "Hela…", "adres": "Dworcowa 11", "seria": "Serce Zębatka", "tytul": "Jarmark Wynalazców", "postac": {"imie": "Hela Trybik", "kobieta": true}, "nagroda": 0, "zadanie": {"cel": "Znajdź maszynistę Bolka", "typ": "idz", "postac": {"imie": "Maszynista Bolek"}, "miejsce": "51.23177, 22.56962"}, "naMiejscu": true, "tylkoTest": true, "zakonczenie": "…", "doswiadczenie": 50};
 const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 try {
   const context = await browser.newContext({ viewport, isMobile: phone, hasTouch: phone, locale: 'pl-PL', deviceScaleFactor: phone ? 2 : 1 });
@@ -29,7 +30,7 @@ try {
     else if (fn === 'server_now') body = new Date().toISOString();
     else if (fn === 'weather') body = { cell: 'test', at: new Date().toISOString(), h: [] };
     else if (fn === 'settings') body = { external: { google: false } };
-    else if (fn === 'game_content') body = [];
+    else if (fn === 'game_content') body = [HELA];
     else if (fn === 'create_character') {
       made = { name: arg.p_name, idik: 'TESTKOD1', start_place: arg.p_start_place, start_x: arg.p_start_x, start_y: arg.p_start_y, map_scale: arg.p_scale, age: arg.p_age, save: { look: arg.p_look }, exp: 0, dead: false, died_at: null, konto: false };
       body = { token: 'tok-create', player: made };
@@ -46,6 +47,7 @@ try {
   page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
   page.on('dialog', (d) => d.accept());
   const tury = process.env.TURY !== '0';
+  const PROD = !!process.env.PROD;
   await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}`);
 
   // 1. The simplified form: only the name (and an optional account).
@@ -81,20 +83,15 @@ try {
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.pickups.filter((i) => i.getData('kind') === 'fruit:jablko').length + window.__session.stats.fruit >= 5; }, null, { timeout: 30000 });
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); for (const i of [...s.pickups]) if (i.getData('kind') === 'fruit:jablko') s.collect(i); });
   // On the test server the demo has the telescope HUD too (owner, 18 Oct 2026).
-  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury, 'Telescope HUD in the demo');
+  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury && !PROD, 'Telescope HUD in the demo (test server only)');
   if (tury) {
     // Turn fights: 3/4 of life, the apples wait for the fight (no eating step).
     const zycie = await page.evaluate(() => ({ hp: window.__game.scene.getScene('game').player.hp, max: window.__session.hp }));
     console.log(name, 'życie na starcie', JSON.stringify(zycie));
   } else {
-    await page.waitForSelector('#samouczek', { timeout: 60000 });
-    await page.screenshot({ path: `work/onb-${name}-3-jedzenie.png` });
-    const healAt = await page.evaluate(() => { const r = (document.querySelector('#demo-zjedz') ?? document.querySelector('#hud .hud-heal')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
-    await page.mouse.click(healAt.x, healAt.y);
-    await page.waitForFunction(() => !document.getElementById('samouczek'), null, { timeout: 5000 });
   }
   try {
-    await page.waitForFunction(() => document.getElementById('demo-big')?.textContent === 'Jestem Zosia!', null, { timeout: 60000 });
+    await page.waitForFunction(() => /uderzyło mnie w głowę![\s\S]*jestem Zosia/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 60000 });
   } catch (e) {
     console.log(await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ hp: s.player.hp, healTo: s.demoRun.healTo, busy: s.demoRun.busy, phase: window.__demo?.phase, big: document.getElementById('demo-big')?.textContent, fps: window.__game.loop.actualFps }); }));
     await page.screenshot({ path: `work/onb-${name}-err.png` });
@@ -142,6 +139,15 @@ try {
       });
       await page.waitForTimeout(900);
     };
+    if (process.env.UCIECZKA) {
+      // Run away and wander off: after 300 m of the dream the hero wakes up anyway (owner, 18 Oct 2026).
+      await mojaTura();
+      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
+      await page.waitForTimeout(200);
+      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.uciekaj').click());
+      await page.waitForFunction(() => !document.getElementById('walka-panel'), null, { timeout: 5000 });
+      await page.evaluate(() => { window.__game.scene.getScene('game').demoRun.dreamWalked += 600; });
+    } else {
     await uderz();
     await page.waitForFunction(() => /SPECJALNE/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
     assert.equal((await rada()).w, 'spec');
@@ -156,6 +162,7 @@ try {
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
     await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 30000 });
     console.log(name, 'walka turowa OK', JSON.stringify(hp0));
+    }
   } else {
     await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
     await page.waitForTimeout(2000);
@@ -197,6 +204,12 @@ try {
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').witam), false);
   assert.equal(await page.evaluate(() => !!document.getElementById('demo-end')), false);
+  // Hela Trybik stands at Targi after waking up (owner, 18 Oct 2026: „zniknęła Hela Trybik”).
+  await page.waitForFunction(() => window.__game.scene.getScene('game').etapy.givers.has('sz_jarmark'), null, { timeout: 20000 }).catch(async () => {
+    console.log(name, 'HELA BRAK', await page.evaluate(() => JSON.stringify({ extra: window.__session.extra?.map((m) => m.id), done: window.__session.missions })));
+    throw new Error('Hela Trybik is missing after waking up');
+  });
+  console.log(name, 'HELA', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const g = s.etapy.givers.get('sz_jarmark'); return JSON.stringify({ x: g.x, y: g.y, hx: s.player.x, hy: s.player.y, who: g.who.map((w) => ({ v: w.visible, a: w.alpha, tex: w.texture?.key, d: w.depth })) }); }));
   // The hero walks after waking up (owner, 18 Oct 2026: the joystick didn't work in front of Targi).
   const gdzie = () => page.evaluate(() => { const p = window.__game.scene.getScene('game').player; return { x: p.x, y: p.y }; });
   const p0 = await gdzie();

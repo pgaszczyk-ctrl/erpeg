@@ -11,9 +11,7 @@ import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
-import { teleskop } from '../ui/hud';
-import { pokazGdzieKliknac } from '../ui/samouczek';
-import { turyNaSerwerze } from '../walka/tryb';
+import { turyWDemo } from '../walka/tryb';
 import { PLAYER } from '../objects/Player';
 import { loadingMapVisible } from '../ui/loadingMap';
 
@@ -33,6 +31,10 @@ export interface DemoHost {
   hurt: (from: Phaser.Math.Vector2, damage: number) => void;
   hud: () => void;
   heal: () => void;
+  /** Puts every fruit lying on the ground into the backpack. */
+  zbierzOwoce: () => void;
+  /** Fruit pickups lying on the ground. */
+  owoceNaZiemi: () => number;
   ready: () => boolean;
   /** Starts the turn fight with the dragon (test server); false when there are no turn fights. */
   walcz: (d: Slime) => boolean;
@@ -56,10 +58,6 @@ export class DemoRun {
   /** Nothing moves any more (the blackout, the end). */
   frozen = false;
   private trees: FruitTree[] = [];
-  private healTo = 0;
-  private fruitHintShown = false;
-  /** Closes the eating spotlight (tutorial). */
-  private zamknijSamouczek: (() => void) | null = null;
   private dragon: (Slime & { peaceful?: boolean }) | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
   /** Just outside the gap in the castle's east wall. */
@@ -69,8 +67,10 @@ export class DemoRun {
   /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
   private dreamWalked = 0;
   private dreamLast: { x: number; y: number } | null = null;
-  /** Test server: the dragon fights in turns, flies off after SEN.tury.ciosow hits, the fight has its own tutorial. */
-  private tury = turyNaSerwerze();
+  /** The dragon fights in turns (every server unless ?tury=0), flies off after SEN.tury.ciosow hits, the fight has its own tutorial. */
+  private tury = turyWDemo();
+  /** Dream metres walked when the hero ran from the fight (SEN.tury.poUcieczceM later he wakes up anyway). */
+  private uciekalOd: number | null = null;
   private walczy = false;
   /** The hero ran away from the turn fight: it starts again only after he left the courtyard. */
   private czekaWyjscie = false;
@@ -80,9 +80,7 @@ export class DemoRun {
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
 
   start() {
-    const p = this.host.player;
     this.plantTrees();
-    this.healTo = p.hp + 2;
     // The first words only once the opening (logo over the world map) has gone.
     const hello = () => {
       if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
@@ -98,10 +96,10 @@ export class DemoRun {
     if (this.busy) return null;
     if (demo.phase === 'jedzenie') {
       const n = SEN.owocowNaSerce;
-      if (totalFruit() >= n) return { text: DEMO_TEKSTY.celZjedz, pos: null };
+      const masz = totalFruit() + this.host.owoceNaZiemi();
       const left = this.trees.filter((t) => t.left > 0);
       const near = left.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-      return { text: DEMO_TEKSTY.celZbierz(totalFruit(), n), pos: near ? { x: near.x, y: near.y } : null };
+      return { text: DEMO_TEKSTY.celZbierz(Math.min(masz, n), n), pos: near ? { x: near.x, y: near.y } : null };
     }
     if (this.walczy) return null;
     if (demo.phase === 'smok' && this.dragonSpot) {
@@ -117,46 +115,12 @@ export class DemoRun {
     void now;
     void dt;
     if (this.frozen) return;
-    // Turn fights: the apples are kept for healing in the fight – picked them, remembered who I am.
-    if (this.tury && demo.phase === 'jedzenie' && !this.busy && totalFruit() >= SEN.owocowNaSerce) {
+    // The 5th apple knocked down falls on the hero's head – and he remembers who he is (owner, 18 Oct 2026: no
+    // eating step any more; the apples go to the backpack and heal in the dragon fight).
+    if (demo.phase === 'jedzenie' && !this.busy && totalFruit() + this.host.owoceNaZiemi() >= SEN.owocowNaSerce) {
       this.remember();
       return;
     }
-    if (!this.tury && demo.phase === 'jedzenie' && !this.busy && !this.fruitHintShown && totalFruit() >= SEN.owocowNaSerce && this.host.player.hp < this.healTo) {
-      // The demo is the first tutorial: the player eats the apples alone (owner, 11 Oct 2026 – a dialog button
-      // here got pressed by the taps on the tree). Everything else goes dark, the heal control is shown.
-      this.fruitHintShown = true;
-      this.busy = true;
-      this.host.player.vel.set(0, 0);
-      this.host.player.anims.stop();
-      this.scene.time.delayedCall(450, () => {
-        if (this.frozen) return;
-        const klawisz = matchMedia('(pointer: coarse)').matches ? '' : DEMO_TEKSTY.jablkaKlawisz;
-        if (!teleskop()) {
-          this.zamknijSamouczek = pokazGdzieKliknac('#hud .hud-heal', DEMO_TEKSTY.jablka + klawisz, () => this.host.heal());
-          return;
-        }
-        // The telescope HUD (test server) shows no life at all, so the demo puts its own apple button where the
-        // spotlight can point at it.
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.id = 'demo-zjedz';
-        b.textContent = DEMO_TEKSTY.jablkaPrzycisk;
-        Object.assign(b.style, { position: 'fixed', left: '50%', bottom: '22%', transform: 'translateX(-50%)', zIndex: '6',
-          font: '600 20px "Alegreya Sans", sans-serif', padding: '12px 22px', borderRadius: '24px', cursor: 'pointer',
-          color: '#2b1a0c', background: 'linear-gradient(#f3d27a, #c8963a)', border: '2px solid #6b4a1c', boxShadow: '0 3px 8px #0008' });
-        document.body.append(b);
-        const zamknij = pokazGdzieKliknac('#demo-zjedz', DEMO_TEKSTY.jablkaTeleskop + klawisz, () => this.host.heal());
-        this.zamknijSamouczek = () => { zamknij(); b.remove(); };
-      });
-      return;
-    }
-    if (this.zamknijSamouczek && this.host.player.hp >= this.healTo) {
-      this.zamknijSamouczek();
-      this.zamknijSamouczek = null;
-      this.busy = false;
-    }
-    if (!this.tury && demo.phase === 'jedzenie' && !this.busy && this.host.player.hp >= this.healTo) this.remember();
     this.showHint();
     this.wakeDragon();
     const p = this.host.player;
@@ -165,7 +129,8 @@ export class DemoRun {
       const step = l ? Math.hypot(p.x - l.x, p.y - l.y) : 0;
       if (step < 40) this.dreamWalked += step; // a jump (unstick, landing) isn't walking
       this.dreamLast = { x: p.x, y: p.y };
-      if (this.dreamWalked >= SEN.limitM * PX_PER_M) {
+      const uciekl = this.uciekalOd !== null && this.dreamWalked - this.uciekalOd >= SEN.tury.poUcieczceM * PX_PER_M;
+      if (uciekl || this.dreamWalked >= SEN.limitM * PX_PER_M) {
         this.busy = true;
         this.hint?.setVisible(false);
         bigText(DEMO_TEKSTY.zaDaleko, 1800);
@@ -275,8 +240,8 @@ export class DemoRun {
     this.scene.tweens.add({ targets: ex, y: ex.y - 3, duration: 200, yoyo: true, repeat: 5 });
     // A light tremor (owner, 11 Oct 2026: still too dramatic at 500 ms / 0.003).
     this.scene.cameras.main.shake(300, 0.0012);
-    bigText(DEMO_TEKSTY.olsnienie, 2400);
-    this.scene.time.delayedCall(2600, () => bigText(DEMO_TEKSTY.imie(session.name), 2200));
+    this.host.zbierzOwoce();
+    bigText(DEMO_TEKSTY.jablkoWGlowe(session.name), 3600);
     this.scene.time.delayedCall(5000, () => {
       ex.destroy();
       demo.phase = 'smok';
@@ -336,7 +301,10 @@ export class DemoRun {
     if (!this.walczy) return;
     this.walczy = false;
     this.pokazRade(null);
-    if (wynik === 'ucieczka') this.czekaWyjscie = true;
+    if (wynik === 'ucieczka') {
+      this.czekaWyjscie = true;
+      this.uciekalOd = this.dreamWalked;
+    }
   }
 
   /** The tutorial inside the turn fight: how to strike, then how to heal, then finish the dragon. */

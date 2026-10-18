@@ -115,7 +115,7 @@ import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
-import { tury, turyNaSerwerze } from '../walka/tryb';
+import { tury, turyWDemo } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
 import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
@@ -850,10 +850,14 @@ export class GameScene extends Phaser.Scene {
         },
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
+        zbierzOwoce: () => {
+          for (const i of [...this.pickups]) if (String(i.getData('kind') ?? '').startsWith('fruit:')) this.collect(i);
+        },
+        owoceNaZiemi: () => this.pickups.filter((i) => String(i.getData('kind') ?? '').startsWith('fruit:')).length,
         ready: () => this.firstViewReady(),
         walcz: (d) => {
           // The test server's demo: the dragon fights in turns (owner, 18 Oct 2026), flying off after a few hits.
-          if (!turyNaSerwerze()) return false;
+          if (!turyWDemo()) return false;
           const e = d as Enemy;
           e.gatunek = 'gorski';
           this.startWalka([e]);
