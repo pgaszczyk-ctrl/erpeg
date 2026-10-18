@@ -931,6 +931,8 @@ export class Training {
 
   /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
   private hasStations(a: Area) {
+    // A stadium's bowl is the Arena's sand (test server, owner 18 Oct 2026): no dummies there.
+    if (a.arena && tury()) return false;
     const m2 = Training.sizeM2(a);
     if (m2 < SPORT.kuklyOdM2) return false;
     const r = SPORT.sasiedziM * PX_PER_M;
@@ -1041,27 +1043,24 @@ export class Training {
     if (!tury()) return null;
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
-    if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
+    const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
+    // A stadium (its stands cut open from the south): the judge waits in front of the gate, by the
+    // notice board; one judge per stadium even when OSM has the stadium and its pitch as two areas.
+    const sb = this.stadiumOf(a);
+    if (sb?.brama) {
+      const kto = this.gateJudge.get(sb);
+      if (!kto || kto === a) {
+        this.gateJudge.set(sb, a);
+        const gx = (sb.brama.x0 + sb.brama.x1) / 2, gy = Math.max(sb.brama.y0, sb.brama.y1);
+        const p = this.city.isFree(gx + 13, gy + 21, 3, 2) ? { x: gx + 13, y: gy + 21 } : this.city.freeNear(gx + 13, gy + 21);
+        npc = { id, role: 'sedzia', x: p.x, y: p.y - 5, area: a };
+      }
+    } else if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
       const st = this.stationsOf(a).find((s) => s.kind === 'miecz' && !s.far);
-      const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
       if (st) for (const [dx, dy] of [[-18, 14], [18, 14], [0, -18], [0, 18]]) {
         if (this.city.isFree(st.x + dx, st.y + dy + 5, 3, 2)) {
           npc = { id, role: 'sedzia', x: st.x + dx, y: st.y + dy, area: a };
           break;
-        }
-      }
-      // A stadium (its stands cut open from the south): the judge waits in front of the gate, by the
-      // notice board; one judge per stadium even when OSM has the stadium and its pitch as two areas.
-      const sb = npc && this.stadiumOf(a);
-      if (npc && sb?.brama) {
-        const kto = this.gateJudge.get(sb);
-        if (kto && kto !== a) npc = null;
-        else {
-          this.gateJudge.set(sb, a);
-          const gx = (sb.brama.x0 + sb.brama.x1) / 2, gy = Math.max(sb.brama.y0, sb.brama.y1);
-          const p = this.city.isFree(gx + 13, gy + 21, 3, 2) ? { x: gx + 13, y: gy + 21 } : this.city.freeNear(gx + 13, gy + 21);
-          npc.x = p.x;
-          npc.y = p.y - 5;
         }
       }
       // A stadium closed by its stands with no gate: the judge waits outside, on the nearest spot reachable from the streets.

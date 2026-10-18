@@ -62,6 +62,9 @@ try {
   console.log('od', y0, 'do', JSON.stringify(p));
   await page.screenshot({ path: `work/stadion-${tag}-boisko.png` });
   assert(p.y < by - 25, 'the hero walked in through the gate');
+  const kukly = await g(() => { const s = window.__game.scene.getScene('game'); const b = s.city.buildings.find((b) => b.misa); return [...s.training.active].filter((q) => b && window.__pip?.(b.misa, q.x, q.y)).length + [...s.training.active].filter((q) => q.x > 13810 && q.x < 13960 && q.y > 13590 && q.y < 13811).length; });
+  console.log('kukły w misie', kukly);
+  assert.equal(kukly, 0, 'no training dummies in the stadium bowl');
   // An open pitch's arena: banners at its corners.
   const inny = await g(() => { const n = [...window.__game.scene.getScene('game').training.activeNpcs].find((n) => n.role === 'sedzia' && n.flagi?.length === 8); return n && { x: n.x, y: n.y }; });
   if (inny) {
