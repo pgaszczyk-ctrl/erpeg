@@ -57,7 +57,6 @@ export function dreamPlaces() {
   return {
     start,
     smok: { lat: SEN.smok.lat + dLat, lon: SEN.smok.lon + dLon },
-    wylom: { lat: SEN.wylom.lat + dLat, lon: SEN.wylom.lon + dLon },
     dziedziniec: { s: z.s + dLat, n: z.n + dLat, w: z.w + dLon, e: z.e + dLon },
   };
 }

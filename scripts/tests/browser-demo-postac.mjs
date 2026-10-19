@@ -127,17 +127,23 @@ try {
   await page.screenshot({ path: `work/onb-${name}-3-imie.png` });
   await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon, null, { timeout: 90000 });
   const smok = await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; return s.city.toLatLon(d.x, d.y); });
-  const dM = Math.hypot((smok.lat - 51.25050) * 111320, (smok.lon - 22.57245) * 69700);
-  assert(dM < 15, `The dragon stands in the middle of the courtyard: ${dM.toFixed(1)} m away`);
-  // Still until the hero comes through the gap; the arrow leads to the gap first.
+  const dM = Math.hypot((smok.lat - 51.25130) * 111320, (smok.lon - 22.57245) * 69700);
+  assert(dM < 15, `The dragon stands on the open crossing north of the castle: ${dM.toFixed(1)} m away`);
+  // Still until the hero comes up; the arrow leads straight to it.
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true);
   const cel = await page.evaluate(() => window.__game.scene.getScene('game').demoRun.goal().text);
-  assert(/wyłom/.test(cel), cel);
-  // Outside the gap: still asleep; in the courtyard: awake.
-  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), w = s.demoRun.wylom; s.player.setPosition(w.x, w.y); s.noHurtUntil = s.time.now + 120000; });
+  assert(/północy/.test(cel), cel);
+  // A walking route from the dream's start (around the castle hill), and the dragon's spot is clear of buildings.
+  console.log(name, 'droga do smoka', await page.evaluate(() => {
+    const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon, st = s.city.fromLatLon(51.24870, 22.57120);
+    const r = s.city.roadPath(st, { x: d.x, y: d.y });
+    return JSON.stringify({ punkty: r ? r.length / 2 : null, wBudynku: !!s.city.buildingAt(d.x, d.y) });
+  }));
+  // 70 m west: still asleep; 15 m: awake.
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.player.setPosition(d.x - 135, d.y); s.noHurtUntil = s.time.now + 120000; });
   await page.waitForTimeout(1500);
-  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true, 'Outside the gap the dragon still waits');
-  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), w = s.demoRun.wylom; s.player.setPosition(w.x - 40, w.y); });
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true, 'Far away the dragon still waits');
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.player.setPosition(d.x - 30, d.y); });
   if (tury) {
     // 4. The turn fight with its tutorial: strike, heal (Specjalne → Lecz), strike until it flies off after 3 hits.
     await page.waitForSelector('#walka-panel', { timeout: 15000 });

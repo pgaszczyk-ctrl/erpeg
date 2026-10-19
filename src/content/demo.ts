@@ -18,19 +18,16 @@ export const DEMO_KODY: Record<string, Pobudka> = {
 
 /**
  * The dream: below Zamek Lubelski on the Lublin map (owner, 18 Oct 2026; it used to be Wawel in Kraków). Apple trees
- * in the park ~150 m south-west of the castle, the dragon waits in the middle of the courtyard; the fight starts once
- * the hero walks in through the gap in the castle's east (right-hand) wall – between the north wing and the chapel,
- * where OSM leaves the courtyard open.
+ * in the park ~150 m south-west of the castle; the dragon waits on the open crossing just north of the castle (owner,
+ * 19 Oct 2026: in the courtyard it covered the castle) and the fight starts once the hero walks up to it.
  */
 export const SEN = {
   /** Where the hero wakes up in the dream: in the park below the castle (owner: 150 m lower and to the left – a walk first). */
   start: { lat: 51.24870, lon: 22.57120 },
-  /** The middle of the castle's courtyard: the dragon stands there, still, until the hero comes in (owner, 18 Oct 2026). */
-  smok: { lat: 51.25050, lon: 22.57245 },
-  /** Just outside the gap in the east wall: the arrow leads here first. */
-  wylom: { lat: 51.25041, lon: 22.57325 },
-  /** The courtyard (lat/lon box): the hero inside it = he came through the gap, the fight starts. */
-  dziedziniec: { s: 51.25030, n: 51.25066, w: 22.57180, e: 22.57310 },
+  /** The open paved crossing north of the castle: the dragon stands there, still, until the hero comes up. */
+  smok: { lat: 51.25130, lon: 22.57245 },
+  /** Around the dragon (lat/lon box, ~25 m each way): the hero inside it = the fight starts. */
+  dziedziniec: { s: 51.25107, n: 51.25153, w: 22.57209, e: 22.57281 },
   /** Fruit trees planted next to the start: how many, fruit on each, how far (m). */
   drzewa: { ile: 3, owocow: 3, odM: 10, doM: 24 },
   /** Fruit eaten to heal one heart in the demo (the normal game needs 20). */
@@ -74,10 +71,9 @@ export const DEMO_TEKSTY = {
   podpowiedz: 'Kliknij, żeby strącić owoce',
   /** The 5th apple knocked down falls on the hero's head (owner, 18 Oct 2026). */
   jablkoWGlowe: (imie: string) => `Auć, jabłko uderzyło mnie w głowę!\nAle już pamiętam, jestem ${imie}…`,
-  kimJestem: (imie: string) => `Nazywam się ${imie} i poluję na smoki! Jeden zaszył się na dziedzińcu zamku – wejdę przez wyłom we wschodnim murze.`,
-  celWylom: 'Wejdź na dziedziniec zamku przez wyłom we wschodnim murze',
+  kimJestem: (imie: string) => `Nazywam się ${imie} i poluję na smoki! Jeden przysiadł tuż za zamkiem, od północy – obejdę wzgórze.`,
   wPrzod: 'Smok mnie zauważył!',
-  celSmok: 'Pokonaj smoka na dziedzińcu zamku!',
+  celSmok: 'Obejdź zamek – smok czeka na placu od północy!',
   smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
   /** The turn-fight tutorial (test server): one short line at a time, the panel button it talks about glows. */
   walkaStart: 'Walka na tury! Dotknij smoka, a potem przycisk ⚔ CIOS.',

@@ -60,8 +60,6 @@ export class DemoRun {
   private trees: FruitTree[] = [];
   private dragon: (Slime & { peaceful?: boolean }) | null = null;
   private dragonSpot: { x: number; y: number } | null = null;
-  /** Just outside the gap in the castle's east wall. */
-  private wylom: { x: number; y: number } | null = null;
   /** "Kliknij, żeby strącić owoce" over the apple tree next to the hero. */
   private hint: Phaser.GameObjects.Text | null = null;
   /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
@@ -128,8 +126,6 @@ export class DemoRun {
     if (this.walczy) return null;
     if (demo.phase === 'smok' && this.dragonSpot) {
       const d = this.dragon;
-      // First through the gap in the east wall (the arrow straight at the dragon led into the castle's walls).
-      if (d?.peaceful && this.wylom) return { text: DEMO_TEKSTY.celWylom, pos: this.wylom };
       return { text: DEMO_TEKSTY.celSmok, pos: d && d.active && !d.isDead ? { x: d.x, y: d.y } : this.dragonSpot };
     }
     return null;
@@ -288,15 +284,14 @@ export class DemoRun {
   }
 
   private async placeDragon() {
-    const { smok, wylom } = dreamPlaces();
+    const { smok } = dreamPlaces();
     const at = this.host.city.fromLatLon(smok.lat, smok.lon);
     await this.host.city.ensure(at.x, at.y, 200 * PX_PER_M);
     await zaladujSmoka(this.scene, 'gorski');
     if (!this.scene.sys.isActive() || this.frozen) return;
-    // Exactly in the courtyard's middle when it is free (freeNear would snap to the nearest path).
+    // Exactly on its spot when it is free (freeNear would snap to the nearest path).
     const spot = this.host.city.isFree(at.x, at.y, 8, 8) ? at : this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
-    this.wylom = this.host.city.fromLatLon(wylom.lat, wylom.lon);
     const d = this.host.spawnDragon(spot.x, spot.y);
     // GameScene gives the demo dragon SmokAI's airborne-retreat options once it wakes up (wakeDragon).
     d.hp = SEN.ciosow * meleeDamage();
