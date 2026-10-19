@@ -188,6 +188,8 @@ export class SmokWTurach {
     } else if (atak === 'dym') {
       const o = Math.min(d, S.dym.odSmokaW * W + S.dym.promienW * W * 0.4);
       ksztalty.push({ typ: 'kolo', x: e.x + Math.cos(kat) * o, y: e.y + Math.sin(kat) * o, r: S.dym.promienW * W });
+      this.graj(q, 'dmuch', p.x - e.x, p.y - e.y);
+      e.anims.pause();
     } else {
       ksztalty.push({ typ: 'kolo', x: p.x, y: p.y, r: S.lot.promienW * W });
     }

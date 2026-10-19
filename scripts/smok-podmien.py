@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# UWAGA (19.10.2026): arkusze smoków robi teraz scripts/smoki-40.py (paczka 40-G002). Ten skrypt nadpisze je starymi
+# klatkami – po nim zawsze uruchom ponownie scripts/smoki-40.py (efekty ognia/kwasu/uderzenia nadal stąd).
 """Wkleja uproszczone klatki smoka górskiego od grafika (zamówienie 20, już w rozmiarze gry: 220×200 na magencie)
 w arkusz public/swiat/smoki/smok_gorski.png w miejsce klatek o tych samych nazwach, z tym samym zaczepieniem co reszta
 (środek masy sylwetki w punkcie `srodek` komórki). Uruchamiać po scripts/smok-gorski.py (który odtwarza stary arkusz).

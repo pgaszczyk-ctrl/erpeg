@@ -1,0 +1,1604 @@
+{
+  "frameCount": 265,
+  "speciesCounts": {
+    "ognisty": 39,
+    "gorski": 50,
+    "kwasowy": 39,
+    "lesny": 30,
+    "trujacy": 39,
+    "cien": 68
+  },
+  "inGameTested": false,
+  "checks": [
+    {
+      "file": "ognisty/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "ognisty/ziej_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ladowanie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ladowanie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ladowanie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/lot_gora_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/lot_gora_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/start_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/szpony_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "gorski/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/pluj_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "kwasowy/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "lesny/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/dmuch_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "trujacy/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/dmuch_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_bok_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_przod_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/idzie_tyl_4.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ladowanie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ladowanie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ladowanie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/lot_gora_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/lot_gora_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/pluj_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/smierc_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/smierc_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/smierc_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/start_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/stoi_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ugryzienie_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_bok_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_bok_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_bok_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_przod_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_przod_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_przod_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_tyl_1.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_tyl_2.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    },
+    {
+      "file": "cien/ziej_tyl_3.png",
+      "colors": 15,
+      "binaryAlpha": true,
+      "borderClear": true
+    }
+  ]
+}

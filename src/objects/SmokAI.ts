@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Slime } from './Slime';
 import type { Player } from './Player';
 import { TEX } from '../art';
-import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU, zaladujEfektyAtakow, kluczAtaku, pokazOdlot, type EfektAtaku } from './smokRysunki';
+import { zaladujSmoka, kluczSmoka, kluczEfektu, klatkaSmoka, maAnimacje, SKALA_RYSUNKU, skalaSmoka, rozmiarCiala, zaladujEfektyAtakow, kluczAtaku, pokazOdlot, type EfektAtaku } from './smokRysunki';
 import { RYSUNKI_SMOKOW, EFEKTY_ATAKOW } from '../content/smoki';
 import { ATAKI_SMOKA as A, GATUNKI_SMOKOW, TRUDNOSC_SMOKOW, LIMIT_EFEKTOW, PRZERWA_MIEDZY_ATAKAMI, type AtakSmoka, type GatunekId } from '../content/smoki';
 
@@ -96,13 +96,13 @@ export class SmokAI {
       d.anims.stop();
       d.clearTint();
       d.setTexture(kluczSmoka(gatunek), klatkaSmoka(gatunek, 'stoi_przod_1'));
-      d.setScale(SKALA_RYSUNKU);
+      d.setScale(skalaSmoka(gatunek));
       // Punkt smoka = środek ciała (nie łapy): duży smok zatrzymuje się przed bohaterką, a nie staje na niej.
       d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
       d.ownLook = true;
-      d.sizeOverride = Math.round(r.komorka[0] * SKALA_RYSUNKU * 0.24);
-      d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * SKALA_RYSUNKU : 0;
-      this.skala = SKALA_RYSUNKU;
+      d.sizeOverride = rozmiarCiala(gatunek);
+      d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * skalaSmoka(gatunek) : 0;
+      this.skala = skalaSmoka(gatunek);
       this.rysunek = true;
     });
   }
@@ -137,7 +137,7 @@ export class SmokAI {
   /** Jedna klatka ataku specjalnego (ziej/pluj nr 1–3) w kierunku celu, bez animacji. */
   private pozaAtaku(nr: number, vx: number, vy: number, atak = this.atak) {
     if (!this.rysunek) return;
-    const akcja = atak === 'ogien' ? 'ziej' : atak === 'kwas' ? 'pluj' : '';
+    const akcja = atak === 'ogien' ? 'ziej' : atak === 'kwas' ? 'pluj' : atak === 'dym' ? 'dmuch' : '';
     if (!akcja) return;
     let { k, lustro } = this.kierunek(vx, vy);
     let f = klatkaSmoka(this.gatunek, `${akcja}_${k}_${nr}`);
@@ -319,8 +319,10 @@ export class SmokAI {
       g.strokeCircle(this.cel.x, this.cel.y, A.kwas.kaluza.promien * W);
       g.lineBetween(p.x, p.y, this.cel.x, this.cel.y);
     } else if (this.atak === 'dym') {
-      d.setTint(0xc8b8e0);
-      d.setScale(d.scaleX, d.scaleX * 0.9); // przykuca
+      const p = this.host.player;
+      // Wydech z arkusza (40-G002 „dmuch”); bez niego zaślepka: fiolet i przykucnięcie.
+      if (this.rysunek && klatkaSmoka(this.gatunek, 'dmuch_bok_1') >= 0) this.pozaAtaku(1, p.x - d.x, p.y - d.y);
+      else { d.setTint(0xc8b8e0); d.setScale(d.scaleX, d.scaleX * 0.9); } // przykuca
       g.strokeCircle(d.x, d.y, A.dym.promien * W);
     }
   }
@@ -363,6 +365,13 @@ export class SmokAI {
       return;
     }
     if (this.atak === 'dym') {
+      if (this.rysunek && klatkaSmoka(this.gatunek, 'dmuch_bok_2') >= 0) {
+        const p = this.host.player;
+        this.pozaAtaku(2, p.x - d.x, p.y - d.y);
+        this.pozaKier = { x: p.x - d.x, y: p.y - d.y };
+        this.pozaWyrzutDo = now + 260;
+        this.pozaPowrotDo = now + 520;
+      }
       chmura(this.scene, d.x, d.y, A.dym.promien * W, now, this.host);
       this.koniecAtaku(now, A.dym.odnowienie);
       return;
