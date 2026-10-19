@@ -9,7 +9,9 @@
 import Phaser from 'phaser';
 import { WALKA_TUROWA as WT, ROLA_WROGA, SPOTKANIA, type RolaWWalce } from '../content/walkaTurowa';
 import { ARENA } from '../content/arena';
-import { W } from './tryb';
+import { W, nowyPanel } from './tryb';
+import { demo } from '../demo';
+import { mouse } from '../controls';
 import { zasieg, droga, najblizsza, uprosc, type Zasieg } from './siatka';
 import { PLAYER, type Player } from '../objects/Player';
 import type { Slime } from '../objects/Slime';
@@ -23,6 +25,7 @@ import {
 import { AMUNICJA } from '../content/zuzycie';
 import { WALKA } from '../content/walka';
 import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
+import { WalkaKolo, type StanKola } from '../ui/walkaKolo';
 import { SmokWTurach } from './smokTury';
 import { SMOK_W_TURACH } from '../content/walkaTurowa';
 import { TRUDNOSC_SMOKOW } from '../content/smoki';
@@ -106,6 +109,24 @@ export type KrokWalki = 'tura' | 'cios' | 'specjalne' | 'wroc' | 'lecz';
 
 type Tryb = 'cios' | 'mocny' | 'ruch' | null;
 
+/** How the hero would attack a target: from where, for how many moves, and what it says. */
+interface PlanCiosu {
+  ok: boolean;
+  z?: { x: number; y: number; k: string } | null;
+  tekst: string;
+  /** Moves it costs in all (a walk up included). */
+  koszt: number;
+  /** A full walk up before the blow (new controls): the hero stays there, no hop back. */
+  dojscie?: boolean;
+  /** Only a walk closer: not enough moves left for the blow, or the target is beyond one walk. */
+  tylko?: boolean;
+}
+
+/** First-fights tips (new controls): each shown in at most this many fights, counted on the device. */
+const RADY_RAZY = 2;
+const RADY_KLUCZ = 'exp-walka-rady';
+const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(pointer: coarse)').matches;
+
 const HERO_R = 0.3 * W;
 const GLEB_ZIEMI = -1e8 + 3;
 const GLEB_GORA = 1_050_000;
@@ -129,8 +150,17 @@ export class TuryWalki {
   private gfx: Phaser.GameObjects.Graphics;
   private gfxTop: Phaser.GameObjects.Graphics;
   private etykieta: Phaser.GameObjects.Text;
-  private panel: WalkaPanel;
+  private panel: WalkaPanel | WalkaKolo;
+  /** New controls (walka/tryb.ts nowyPanel): tap enemy = approach + strike, ground = walk, hero = the ring (podmenu). */
+  private nowy = nowyPanel();
   private podmenu = false;
+  /** Ucieczka tapped once in the ring: the next tap runs. */
+  private ucieczkaPytanie = false;
+  /** The hint line is a first-fights tip. */
+  private radaTekst = '';
+  private radyTeraz = new Set<string>();
+  private plany = new Map<string, PlanCiosu>();
+  private myszBylo = '';
   private podpowiedz = '';
   private wszyscy: WrogWalki[];
   /** A dragon in the fight: its announced attacks and lasting areas (walka/smokTury.ts). */
@@ -167,7 +197,7 @@ export class TuryWalki {
     this.etykieta = s.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '7px', color: '#fff4d0', stroke: '#1e1a24', strokeThickness: 2.5, resolution: 6 })
       .setOrigin(0.5, 1).setDepth(GLEB_GORA + 1).setVisible(false);
     h.player.move(0, 0, s.time.now);
-    this.panel = new WalkaPanel({
+    const obsluga = {
       cios: () => this.przycisk('cios'),
       ruch: () => this.przycisk('ruch'),
       specjalne: () => this.ustawPodmenu(true),
@@ -177,7 +207,16 @@ export class TuryWalki {
       oslona: () => this.oslon(),
       wroc: () => this.anuluj(),
       koniecTury: () => this.koniecTury(),
-    });
+    };
+    this.panel = this.nowy
+      ? new WalkaKolo({
+        ...obsluga,
+        ucieczka: () => this.uciekajPytaj(),
+        potwierdz: () => this.potwierdz(),
+        nastepny: () => this.nastepnyCel(),
+        kolo: () => this.ustawPodmenu(!this.podmenu),
+      })
+      : new WalkaPanel(obsluga);
     document.body.classList.add('walka-tur');
     if (opcje.pvp) {
       // The arena: both already stand facing each other.
@@ -348,23 +387,28 @@ export class TuryWalki {
     if (kadr) {
       // A fixed stage (the Arena): the biggest whole zoom that shows it above the panel, framed once.
       if (!zoom) return;
-      const fit = (zz: number) => (kadr.x1 - kadr.x0) * zz / OSTROSC <= cam.width / OSTROSC - 8 && (kadr.y1 - kadr.y0) * zz / OSTROSC <= cam.height / OSTROSC - WT.panelPx - 40;
+      const fit = (zz: number) => (kadr.x1 - kadr.x0) * zz / OSTROSC <= cam.width / OSTROSC - 8 && (kadr.y1 - kadr.y0) * zz / OSTROSC <= cam.height / OSTROSC - this.panelPx() - 40;
       z = 1;
       while (z < 12 && fit(z + 1)) z++;
       cam.setZoom(z);
-      const sh = (WT.panelPx / 2 - 10) * OSTROSC / z;
+      const sh = (this.nowy ? -this.panelPx() / 2 : WT.panelPx / 2 - 10) * OSTROSC / z;
       cam.centerOn((kadr.x0 + kadr.x1) / 2, (kadr.y0 + kadr.y1) / 2 + sh);
       return;
     }
     if (zoom) {
       // CSS px of the view; the panel covers the bottom.
-      const fit = (zz: number) => (x1 - x0) * zz / OSTROSC < cam.width / OSTROSC - 24 && (y1 - y0) * zz / OSTROSC < cam.height / OSTROSC - WT.panelPx - 90;
+      const fit = (zz: number) => (x1 - x0) * zz / OSTROSC < cam.width / OSTROSC - 24 && (y1 - y0) * zz / OSTROSC < cam.height / OSTROSC - this.panelPx() - 90;
       z = fit(zw + OSTROSC) ? zw + OSTROSC : zw;
       cam.zoomTo(z, 350);
     }
-    // The panel takes the bottom: centre the fight in the part above it.
-    const shift = (WT.panelPx / 2 - 30) * OSTROSC / z;
+    // The panel takes the bottom (new controls: a bar at the top): centre the fight in the part left free.
+    const shift = (this.nowy ? -this.panelPx() / 2 : WT.panelPx / 2 - 30) * OSTROSC / z;
     cam.pan((x0 + x1) / 2, (y0 + y1) / 2 + shift, 350, 'Sine.easeInOut');
+  }
+
+  /** Screen height the panel covers (CSS px): the old one at the bottom, the new bar at the top. */
+  private panelPx() {
+    return this.nowy ? WT.panelNowyPx : WT.panelPx;
   }
 
   // ------------------------------------------------------------------ turns
@@ -398,9 +442,44 @@ export class TuryWalki {
     this.ustawPodmenu(false);
     if (this.cel && (this.cel.e.isDead || !this.cel.e.active || !this.cel.e.visible)) this.cel = null;
     const zap = this.smok?.tekst() ?? '';
-    this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
+    if (this.nowy) {
+      this.plany.clear();
+      this.podpowiedz = this.rada(zap) || zap || (komputer
+        ? 'Kliknij wroga – atak · pole – ruch · siebie – więcej'
+        : 'Dotknij wroga – atak · pole – ruch · siebie – więcej');
+    } else this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
     this.przelicz();
     this.h.krok?.('tura');
+  }
+
+  /** A first-fights tip for this turn (new controls, not in the QR demo – it has its own tutorial), or ''. */
+  private rada(zap: string) {
+    if (demo.on || this.opcje.pvp) return (this.radaTekst = '');
+    let licz: Record<string, number> = {};
+    try {
+      licz = JSON.parse(localStorage.getItem(RADY_KLUCZ) || '{}');
+    } catch { /* private window */ }
+    const p = this.h.player;
+    const dotknij = komputer ? 'Kliknij' : 'Dotknij';
+    const lista: [string, boolean, string][] = [
+      ['smok', !!zap, `${zap} Wyjdź z czerwonego pola albo ${dotknij.toLowerCase()} bohatera → Osłona.`],
+      ['lecz', p.hp <= PLAYER.maxHp / 3, `Mało życia! ${dotknij} swojego bohatera i wybierz Lecz.`],
+      ['wrog', this.tura === 1, komputer
+        ? 'Najedź na wroga – zobaczysz koszt i obrażenia. Kliknij, żeby podejść i uderzyć.'
+        : 'Dotknij wroga – zobaczysz koszt i obrażenia. Dotknij drugi raz, żeby podejść i uderzyć.'],
+      ['bohater', this.tura === 2, `${dotknij} swojego bohatera – mocny cios, leczenie, osłona, ucieczka.`],
+      ['pole', this.tura === 3, `${dotknij} pole w niebieskim zasięgu, żeby tam pójść. Gdy ruchy się skończą, tura przechodzi sama.`],
+    ];
+    for (const [k, warunek, tekst] of lista) {
+      if (!warunek || this.radyTeraz.has(k) || (licz[k] ?? 0) >= RADY_RAZY) continue;
+      this.radyTeraz.add(k);
+      licz[k] = (licz[k] ?? 0) + 1;
+      try {
+        localStorage.setItem(RADY_KLUCZ, JSON.stringify(licz));
+      } catch { /* private window */ }
+      return (this.radaTekst = tekst);
+    }
+    return (this.radaTekst = '');
   }
 
   private szczescie() {
@@ -416,6 +495,7 @@ export class TuryWalki {
   private przelicz() {
     const p = this.h.player;
     this.zas = zasieg(p.x, p.y, WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
+    this.plany.clear();
     this.odswiez();
   }
 
@@ -662,6 +742,22 @@ export class TuryWalki {
       this.odswiez();
       return;
     }
+    if (this.nowy && t === 'mocny') {
+      // From the ring: the next enemy tapped gets a strong blow.
+      if (this.ruchy < WT.koszt.mocny) {
+        this.podpowiedz = `Za mało ruchów na mocny cios (${WT.koszt.mocny}).`;
+        return this.odswiez();
+      }
+      this.tryb = this.tryb === 'mocny' ? null : 'mocny';
+      this.punkt = null;
+      this.ustawPodmenu(false);
+      this.plany.clear();
+      const dotknij = komputer ? 'Kliknij' : 'Dotknij';
+      this.podpowiedz = this.tryb === 'mocny'
+        ? (this.cel ? `${this.planCiosu(this.cel, true).tekst} – ${dotknij.toLowerCase()} wroga.` : `Mocny cios: ${dotknij.toLowerCase()} wroga.`)
+        : 'Zwykły cios.';
+      return this.odswiez();
+    }
     if (this.tryb === t && this.cel) return void this.wykonajCios(t === 'mocny');
     this.tryb = t;
     this.punkt = null;
@@ -676,6 +772,18 @@ export class TuryWalki {
   }
 
   private anuluj() {
+    if (this.nowy) {
+      // Escape / Backspace: close the ring, else drop the strong blow and the previews.
+      if (this.podmenu) this.ustawPodmenu(false);
+      else {
+        if (this.tryb === 'mocny') this.tryb = null;
+        this.cel = null;
+        this.punkt = null;
+      }
+      this.ucieczkaPytanie = false;
+      this.podpowiedz = '';
+      return this.odswiez();
+    }
     if (this.podmenu) {
       this.ustawPodmenu(false);
       if (this.tryb === 'mocny') this.tryb = null;
@@ -691,7 +799,8 @@ export class TuryWalki {
     if (on && (this.faza !== 'gracz' || this.busy)) return;
     const bylo = this.podmenu;
     this.podmenu = on;
-    if (on) this.podpowiedz = 'Mocny cios, leczenie, osłona albo ucieczka.';
+    if (!on) this.ucieczkaPytanie = false;
+    if (on) this.podpowiedz = this.nowy ? 'Wybierz akcję. Dotknięcie obok zamyka kółko.' : 'Mocny cios, leczenie, osłona albo ucieczka.';
     this.odswiez();
     if (on !== bylo) this.h.krok?.(on ? 'specjalne' : 'wroc');
   }
@@ -701,36 +810,85 @@ export class TuryWalki {
     return rangedWeapon();
   }
 
-  /** Where the hero would strike from (a cell within the short hop) and the cost, or why not. */
-  private planCiosu(q: Uczestnik, mocny: boolean): { ok: boolean; z?: { x: number; y: number; k: string } | null; tekst: string } {
+  /** Where the hero would strike from (a cell within the short hop, or a whole walk up with the new controls) and the cost, or why not. */
+  private planCiosu(q: Uczestnik, mocny: boolean): PlanCiosu {
+    if (!this.nowy) return this.planCiosuOblicz(q, mocny);
+    const k = `${this.u.indexOf(q)}|${mocny}|${this.ruchy}`;
+    let plan = this.plany.get(k);
+    if (!plan) this.plany.set(k, (plan = this.planCiosuOblicz(q, mocny)));
+    return plan;
+  }
+
+  private planCiosuOblicz(q: Uczestnik, mocny: boolean): PlanCiosu {
     const p = this.h.player;
     const koszt = mocny ? WT.koszt.mocny : WT.koszt.cios;
+    const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bron = this.broni();
-    if (bron) {
-      const d = this.dist(p.x, p.y, q.e.x, q.e.y);
-      if (d > WT.strzalW * W) return { ok: false, tekst: 'Za daleko na strzał – podejdź bliżej' };
-      if (!this.h.widac(p.x, p.y, q.e.x, q.e.y)) return { ok: false, tekst: 'Coś zasłania cel' };
-      const ammo = ammoOf(bron);
-      if (ammo && (gear.ammo[ammo] ?? 0) <= 0) return { ok: false, tekst: `Brak: ${AMUNICJA[ammo].nazwa.toLowerCase()}` };
-      return { ok: this.ruchy >= koszt, z: null, tekst: `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''} · ${koszt} ${koszt === 1 ? 'ruch' : 'ruchy'}` };
-    }
+    const szac = this.nowy ? ` ${this.szacunek(q, mocny)}` : '';
+    const nazwa = bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
+    // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
     const reach = PLAYER.attackReach + PLAYER.attackRadius + q.e.size;
-    const etykieta = `${mocny ? 'Mocny cios' : 'Cios'} · ${koszt} ${koszt === 1 ? 'ruch' : 'ruchy'}`;
-    if (this.dist(p.x, p.y, q.e.x, q.e.y) <= reach && this.h.widac(p.x, p.y, q.e.x, q.e.y)) return { ok: this.ruchy >= koszt, z: null, tekst: etykieta };
-    // A short hop: the nearest cell within WT.doskokW from which the target is in reach (no blows through walls).
+    const stad = (x: number, y: number) => bron
+      ? this.dist(x, y, q.e.x, q.e.y) <= WT.strzalW * W && this.h.widac(x, y, q.e.x, q.e.y)
+      : this.dist(x, y, q.e.x, q.e.y) <= reach - (x === p.x && y === p.y ? 0 : 2) && this.h.widac(x, y, q.e.x, q.e.y);
+    if (bron) {
+      const ammo = ammoOf(bron);
+      if (ammo && (gear.ammo[ammo] ?? 0) <= 0) return { ok: false, koszt, tekst: `Brak: ${AMUNICJA[ammo].nazwa.toLowerCase()}` };
+    }
+    if (stad(p.x, p.y)) return { ok: this.ruchy >= koszt, z: null, koszt, tekst: `${nazwa}${szac} · ${ruchyTxt(koszt)}` };
     const z = this.zas;
+    if (!bron && z) {
+      // A short hop: the nearest cell within WT.doskokW from which the target is in reach (no blows through walls).
+      let best: string | null = null;
+      let bd = Infinity;
+      for (const [k, c] of z) {
+        if (c.d > WT.doskokW * W || !stad(c.x, c.y)) continue;
+        // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).
+        const score = this.dist(c.x, c.y, q.e.x, q.e.y) + c.d * 0.25;
+        if (score < bd) [best, bd] = [k, score];
+      }
+      if (best) {
+        const c = z.get(best)!;
+        return { ok: this.ruchy >= koszt, z: { x: c.x, y: c.y, k: best }, koszt, tekst: `${nazwa}${szac} · ${ruchyTxt(koszt)}` };
+      }
+    }
+    if (!this.nowy) return { ok: false, koszt, tekst: bron ? (this.dist(p.x, p.y, q.e.x, q.e.y) > WT.strzalW * W ? 'Za daleko na strzał – podejdź bliżej' : 'Coś zasłania cel') : 'Podejdź bliżej (Ruch)' };
+    // New controls: walk up (one move) and strike in the same tap – or, short of moves or reach, just walk closer.
+    const ruch = WT.koszt.ruch;
+    if (!z || this.ruchy < ruch) return { ok: false, koszt: ruch + koszt, tekst: 'Za daleko – brak ruchów' };
     let best: string | null = null;
     let bd = Infinity;
-    if (z) for (const [k, c] of z) {
-      if (c.d > WT.doskokW * W) continue;
-      if (this.dist(c.x, c.y, q.e.x, q.e.y) > reach - 2 || !this.h.widac(c.x, c.y, q.e.x, q.e.y)) continue;
-      // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).
-      const score = this.dist(c.x, c.y, q.e.x, q.e.y) + c.d * 0.25;
+    for (const [k, c] of z) {
+      if (!stad(c.x, c.y)) continue;
+      const score = c.d + this.dist(c.x, c.y, q.e.x, q.e.y) * 0.3;
       if (score < bd) [best, bd] = [k, score];
     }
-    if (!best) return { ok: false, tekst: 'Podejdź bliżej (Ruch)' };
-    const c = z!.get(best)!;
-    return { ok: this.ruchy >= koszt, z: { x: c.x, y: c.y, k: best }, tekst: etykieta };
+    if (best) {
+      const c = z.get(best)!;
+      if (this.ruchy >= ruch + koszt) return { ok: true, z: { x: c.x, y: c.y, k: best }, koszt: ruch + koszt, dojscie: true, tekst: `Podejdź + ${nazwa.toLowerCase()}${szac} · ${ruchyTxt(ruch + koszt)}` };
+      return { ok: true, z: { x: c.x, y: c.y, k: best }, koszt: ruch, dojscie: true, tylko: true, tekst: `Podejdź · ${ruchyTxt(ruch)} (na cios zabraknie ruchów)` };
+    }
+    // Out of one walk's reach: as close as one walk gets.
+    const teraz = this.dist(p.x, p.y, q.e.x, q.e.y);
+    let blizej: string | null = null;
+    let bb = teraz - W;
+    for (const [k, c] of z) {
+      const d = this.dist(c.x, c.y, q.e.x, q.e.y);
+      if (d < bb) [blizej, bb] = [k, d];
+    }
+    if (!blizej) return { ok: false, koszt: ruch, tekst: bron ? 'Coś zasłania cel' : 'Nie da się podejść' };
+    const c = z.get(blizej)!;
+    return { ok: true, z: { x: c.x, y: c.y, k: blizej }, koszt: ruch, dojscie: true, tylko: true, tekst: `Za daleko – podejdź bliżej · ${ruchyTxt(ruch)}` };
+  }
+
+  /** „~6 · 80%” (or „pokona · 80%”): what the blow would do, for the preview. */
+  private szacunek(q: Uczestnik, mocny: boolean) {
+    const bron = this.broni();
+    const skill = bron ? (bron.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz';
+    const bonus = (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus();
+    const dmg = (bron ? shotDamage(bron) : meleeDamage()) * (mocny ? strongFactor(skill) : 1) * this.h.wzmocnienie(q.e);
+    const szansa = Math.round(Math.min(1, hitChance(skill, mocny, bonus)) * 100);
+    return `${dmg >= q.e.hp ? 'pokona' : `~${Math.max(1, Math.round(dmg))}`} (${szansa}%)`;
   }
 
   private opisCiosu(q: Uczestnik, mocny: boolean) {
@@ -742,22 +900,33 @@ export class TuryWalki {
     if (!q || this.busy) return;
     const plan = this.planCiosu(q, mocny);
     if (!plan.ok) {
-      this.podpowiedz = this.ruchy < (mocny ? WT.koszt.mocny : WT.koszt.cios) ? 'Za mało ruchów.' : plan.tekst;
+      this.podpowiedz = this.ruchy < plan.koszt ? 'Za mało ruchów.' : plan.tekst;
       this.odswiez();
       return;
     }
     this.busy = true;
-    this.ruchy -= mocny ? WT.koszt.mocny : WT.koszt.cios;
+    this.ruchy -= plan.koszt;
+    this.ustawPodmenu(false);
     this.odswiez();
     const p = this.h.player;
     const bron = this.broni();
+    if (plan.dojscie && plan.z && this.zas) {
+      // New controls: the walk up first (the hero stays where it ends).
+      await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
+      if (plan.tylko) {
+        this.busy = false;
+        this.podpowiedz = '';
+        return void this.po();
+      }
+    }
     if (bron) {
       await this.strzal(q, bron, mocny);
       this.h.krok?.('cios');
     }
     else {
       const start = { x: p.x, y: p.y };
-      if (plan.z && this.zas) await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
+      const doskok = !!plan.z && !plan.dojscie;
+      if (doskok && plan.z && this.zas) await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
       p.face(q.e.x - p.x, q.e.y - (p.y + 2));
       const aim = Math.atan2(q.e.y - (p.y + 2), q.e.x - p.x);
       this.h.zamach(aim, mocny);
@@ -768,7 +937,7 @@ export class TuryWalki {
       this.h.krok?.('cios');
       await this.tween(p, { x: sx, y: sy }, 90);
       // Back only part of the hop: a beginner stays close, a veteran springs back further.
-      if (plan.z) {
+      if (doskok) {
         const P = WT.powrot;
         const f = P.od + (P.do - P.od) * Math.min(1, Math.max(0, (this.h.poziom() - 1) / (P.pelnyOd - 1)));
         const cel = { x: p.x + (start.x - p.x) * f, y: p.y + (start.y - p.y) * f };
@@ -776,6 +945,11 @@ export class TuryWalki {
       }
     }
     this.busy = false;
+    if (this.nowy) {
+      // A strong blow is one blow; a target down leaves no preview behind.
+      if (this.tryb === 'mocny') this.tryb = null;
+      this.podpowiedz = '';
+    }
     this.po();
   }
 
@@ -869,7 +1043,8 @@ export class TuryWalki {
     this.odswiez();
     await this.idz(this.h.player, uprosc(droga(this.zas, pt.k), this.prosto(HERO_R, 'hero')));
     this.busy = false;
-    this.tryb = this.cel ? 'cios' : null;
+    this.tryb = this.nowy && this.tryb === 'mocny' ? 'mocny' : this.cel ? 'cios' : null;
+    if (this.nowy) this.podpowiedz = '';
     this.po();
   }
 
@@ -909,6 +1084,42 @@ export class TuryWalki {
     this.po();
   }
 
+  /** New controls: the ring's Ucieczka asks once („Na pewno?”), the second tap runs. */
+  private uciekajPytaj() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (this.ucieczkaPytanie) return this.uciekaj();
+    this.ucieczkaPytanie = true;
+    this.podpowiedz = this.opcje.pvp ? 'Poddać walkę na arenie? Dotknij „Na pewno?”.' : 'Ucieczka kosztuje 1 ♥ – dotknij „Na pewno?”, żeby uciec.';
+    this.odswiez();
+  }
+
+  /** Enter / Space (new controls): carries out what is previewed. */
+  private potwierdz() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (this.cel) return void this.wykonajCios(this.tryb === 'mocny');
+    if (this.punkt) return void this.wykonajRuch();
+  }
+
+  /** Tab (new controls): the next enemy, nearest first. */
+  private nastepnyCel() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const p = this.h.player;
+    const lista = this.zywi.filter((q) => q.e.visible).sort((a, b) => this.dist(a.e.x, a.e.y, p.x, p.y) - this.dist(b.e.x, b.e.y, p.x, p.y));
+    if (!lista.length) return;
+    const i = this.cel ? lista.indexOf(this.cel) : -1;
+    this.wybierz(lista[(i + 1) % lista.length]);
+  }
+
+  /** New controls: an enemy chosen (preview of the walk, cost and damage). */
+  private wybierz(q: Uczestnik) {
+    this.cel = q;
+    this.punkt = null;
+    if (this.tryb !== 'mocny') this.tryb = 'cios';
+    const plan = this.planCiosu(q, this.tryb === 'mocny');
+    this.podpowiedz = plan.ok ? `${plan.tekst} – ${komputer ? 'kliknij' : 'dotknij jeszcze raz'}` : plan.tekst;
+    this.odswiez();
+  }
+
   private uciekaj() {
     if (this.faza !== 'gracz' || this.busy) return;
     const p = this.h.player;
@@ -926,7 +1137,7 @@ export class TuryWalki {
     if (!this.zywi.length) return this.zakoncz('wygrana');
     this.przelicz();
     if (this.ruchy <= 0) {
-      this.podpowiedz = '';
+      this.podpowiedz = this.nowy ? 'Koniec ruchów – teraz przeciwnicy.' : '';
       this.odswiez();
       this.h.scene.time.delayedCall(350, () => {
         if (this.aktywna && this.faza === 'gracz' && !this.busy) void this.turaWrogow();
@@ -939,6 +1150,7 @@ export class TuryWalki {
   /** A tap on the map (world px); `promien` = the finger's area in world px. */
   tap(x: number, y: number, promien: number) {
     if (!this.aktywna || this.faza !== 'gracz' || this.busy) return;
+    if (this.nowy) return this.tapNowy(x, y, promien);
     // The nearest figure whose tap area holds the point (one point = at most one candidate).
     let kto: Uczestnik | null = null;
     let bd = Infinity;
@@ -983,6 +1195,112 @@ export class TuryWalki {
     }
   }
 
+  /** The enemy under a point (body or feet), if any, and how far. */
+  private ktoTu(x: number, y: number, promien: number): [Uczestnik | null, number] {
+    let kto: Uczestnik | null = null;
+    let bd = Infinity;
+    for (const q of this.zywi) {
+      if (!q.e.visible) continue;
+      const d = Math.min(this.dist(x, y, q.e.x, q.e.y - 0.4 * W * q.e.kind.scale), this.dist(x, y, q.e.x, q.e.y));
+      if (d < Math.max(promien, q.r + 4) && d < bd) [kto, bd] = [q, d];
+    }
+    return [kto, bd];
+  }
+
+  /**
+   * New controls: a tap on an enemy previews the walk up, cost and damage, a second tap (or a click under the mouse's
+   * preview) carries it out; on the ground the same for a walk; on the hero it opens the ring. With the ring open any
+   * tap only closes it.
+   */
+  private tapNowy(x: number, y: number, promien: number) {
+    const p = this.h.player;
+    if (this.podmenu) {
+      this.ustawPodmenu(false);
+      this.podpowiedz = '';
+      return this.odswiez();
+    }
+    const [kto, dk] = this.ktoTu(x, y, promien);
+    const dh = Math.min(this.dist(x, y, p.x, p.y), this.dist(x, y, p.x, p.y - 0.4 * W));
+    if (dh < Math.max(promien * 0.8, HERO_R + 6) && (!kto || dh < dk)) {
+      this.ustawPodmenu(true);
+      return;
+    }
+    if (kto) {
+      // A computer: the hover was the preview, the click carries it out.
+      if ((this.cel === kto && !this.punkt) || komputer) {
+        this.cel = kto;
+        this.punkt = null;
+        if (this.tryb !== 'mocny') this.tryb = 'cios';
+        return void this.wykonajCios(this.tryb === 'mocny');
+      }
+      return this.wybierz(kto);
+    }
+    if (this.ruchy < WT.koszt.ruch) {
+      this.podpowiedz = 'Brak ruchów – tura zaraz przejdzie.';
+      return this.odswiez();
+    }
+    const k = this.zas ? najblizsza(this.zas, x, y, Math.max(6, promien * 0.5)) : null;
+    if (!k || k === '0,0') {
+      this.h.napis(x, y, '✕', '#ff9a9a', 600);
+      this.cel = null;
+      this.punkt = null;
+      this.podpowiedz = 'Tam nie dojdziesz w jednym ruchu – wybierz pole w niebieskim zasięgu.';
+      return this.odswiez();
+    }
+    const c = this.zas!.get(k)!;
+    if (this.punkt && this.dist(this.punkt.x, this.punkt.y, c.x, c.y) < Math.max(6, promien * 0.5)) return void this.wykonajRuch();
+    this.cel = null;
+    this.punkt = { k, x: c.x, y: c.y };
+    if (komputer) return void this.wykonajRuch();
+    this.podpowiedz = komputer ? 'Kliknij, żeby tam pójść · 1 ruch.' : 'Dotknij jeszcze raz, żeby tam pójść · 1 ruch.';
+    this.odswiez();
+  }
+
+  /** New controls on a computer: the mouse's hover is the first tap (preview), a click carries it out. */
+  private najazd() {
+    if (!this.nowy || !komputer || this.faza !== 'gracz' || this.busy || this.podmenu || this.ciagnie) return;
+    const klucz = `${mouse.x},${mouse.y}`;
+    if (klucz === this.myszBylo) return;
+    this.myszBylo = klucz;
+    const cam = this.h.scene.cameras.main;
+    const x = (mouse.x * OSTROSC) / cam.zoom + cam.worldView.x, y = (mouse.y * OSTROSC) / cam.zoom + cam.worldView.y;
+    const r = (12 * OSTROSC) / cam.zoom;
+    const [kto] = this.ktoTu(x, y, r);
+    if (kto) {
+      if (this.cel !== kto || this.punkt) {
+        this.cel = kto;
+        this.punkt = null;
+        if (this.tryb !== 'mocny') this.tryb = 'cios';
+        this.odswiez();
+      }
+      return;
+    }
+    const k = this.zas && this.ruchy >= WT.koszt.ruch ? najblizsza(this.zas, x, y, 4) : null;
+    const c = k && k !== '0,0' ? this.zas!.get(k)! : null;
+    if (c) {
+      if (!this.punkt || this.punkt.k !== k) {
+        this.cel = null;
+        this.punkt = { k: k!, x: c.x, y: c.y };
+        this.odswiez();
+      }
+    } else if (this.cel || this.punkt) {
+      this.cel = null;
+      this.punkt = null;
+      this.odswiez();
+    }
+  }
+
+  /** Keeps the ring on the hero (CSS px of the viewport). */
+  private koloNaBohaterze() {
+    if (!(this.panel instanceof WalkaKolo)) return;
+    const s = this.h.scene;
+    const cam = s.cameras.main;
+    const rect = s.game.canvas.getBoundingClientRect();
+    const k = rect.width / Math.max(1, s.scale.width);
+    const p = this.h.player;
+    this.panel.pozycja(rect.left + (p.x - cam.worldView.x) * cam.zoom * k, rect.top + (p.y - 0.3 * W - cam.worldView.y) * cam.zoom * k);
+  }
+
   /** Is a drag of the hero on (it began on him)? */
   private ciagnie = false;
 
@@ -997,7 +1315,8 @@ export class TuryWalki {
       const naBohaterze = Math.min(this.dist(x0, y0, p.x, p.y), this.dist(x0, y0, p.x, p.y - 0.4 * W)) < Math.max(promien, HERO_R + 6);
       if (!naBohaterze || this.ruchy < WT.koszt.ruch) return;
       this.ciagnie = true;
-      this.tryb = 'ruch';
+      if (!this.nowy || this.tryb !== 'mocny') this.tryb = 'ruch';
+      this.cel = this.nowy ? null : this.cel;
       this.ustawPodmenu(false);
     }
     const k = this.zas ? najblizsza(this.zas, x, y) : null;
@@ -1013,7 +1332,7 @@ export class TuryWalki {
     this.ciagnie = false;
     if (this.punkt) void this.wykonajRuch();
     else {
-      this.tryb = null;
+      this.tryb = this.nowy && this.tryb === 'mocny' ? 'mocny' : null;
       this.odswiez();
     }
   }
@@ -1023,6 +1342,8 @@ export class TuryWalki {
   /** Called every frame while the fight is on. */
   update() {
     if (!this.aktywna) return;
+    this.najazd();
+    this.koloNaBohaterze();
     this.rysuj();
   }
 
@@ -1047,7 +1368,10 @@ export class TuryWalki {
       koszt: WT.koszt,
       oslona: this.oslona,
     };
-    this.panel.ustaw(st);
+    if (this.panel instanceof WalkaKolo) {
+      const nk: StanKola = { ...st, kolo: this.podmenu, ucieczkaPytanie: this.ucieczkaPytanie, zapowiedz: !!this.smok?.tekst(), rada: !!this.radaTekst && this.podpowiedz === this.radaTekst };
+      this.panel.ustaw(nk);
+    } else this.panel.ustaw(st);
     this.rysuj();
   }
 
@@ -1059,9 +1383,17 @@ export class TuryWalki {
     const feet = (y: number) => y + 5;
     // The hero's ring.
     g.lineStyle(1.2, 0x7fe0ff, 0.95).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 4, HERO_R + 3);
-    // Reachable ground for a move.
-    if (this.faza === 'gracz' && this.tryb === 'ruch' && this.zas && this.ruchy >= WT.koszt.ruch) {
-      g.fillStyle(0x59c8ff, 0.18);
+    const now = this.h.scene.time.now;
+    const wskaz = this.panel instanceof WalkaKolo ? this.panel.wskaz() : null;
+    const puls = 0.5 + 0.5 * Math.sin(now / 160);
+    // New controls: the hero's ring pulses when the tutorial points at it (the ring of actions).
+    if (wskaz === 'spec' && this.faza === 'gracz' && !this.podmenu) {
+      g.lineStyle(1.6, 0xffd34a, 0.5 + 0.5 * puls).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 8 + 4 * puls, HERO_R + 6 + 2 * puls);
+    }
+    // Reachable ground for a move (new controls: the whole turn, while moves are left).
+    const pokazZasieg = this.nowy ? this.faza === 'gracz' && !this.busy && !this.podmenu : this.faza === 'gracz' && this.tryb === 'ruch';
+    if (pokazZasieg && this.zas && this.ruchy >= WT.koszt.ruch) {
+      g.fillStyle(0x59c8ff, this.nowy ? 0.12 : 0.18);
       const k = WT.kratkaPx;
       for (const c of this.zas.values()) g.fillRect(c.x - k / 2, feet(c.y) - k / 2, k, k);
       if (this.punkt) {
@@ -1071,12 +1403,25 @@ export class TuryWalki {
         g.lineStyle(1.2, 0xbfeaff, 1).strokeEllipse(this.punkt.x, feet(this.punkt.y), HERO_R * 2 + 4, HERO_R + 3);
       }
     }
-    this.smok?.rysuj(this.h.scene.time.now);
+    this.smok?.rysuj(now);
     for (const q of this.zywi) {
       const e = q.e;
       if (!e.visible) continue;
       const sel = q === this.cel;
       g.lineStyle(sel ? 1.6 : 1, sel ? 0xffd34a : 0xff6a5a, sel ? 1 : 0.7).strokeEllipse(e.x, feet(e.y), q.r * 2 + 4, q.r + 3);
+      if (this.nowy && this.faza === 'gracz' && !this.busy) {
+        // A crosshair on everyone the hero can strike this turn (walk up included); gold and pulsing when the tutorial points.
+        const plan = this.planCiosu(q, this.tryb === 'mocny');
+        const naCel = wskaz === 'cios';
+        if ((plan.ok && !plan.tylko) || naCel) {
+          const rx = q.r + 4 + (naCel ? 2 * puls : 0), ry = (q.r + 3) / 2 + (naCel ? puls : 0);
+          const cy = feet(e.y);
+          g.lineStyle(naCel ? 1.6 : 1.2, naCel ? 0xffd34a : 0xff4a3a, naCel ? 0.6 + 0.4 * puls : 0.95);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            g.lineBetween(e.x + dx * (rx + 1), cy + dy * (ry + 1), e.x + dx * (rx + 4), cy + dy * (ry + 3));
+          }
+        }
+      }
       // A small life bar over each, bigger over the chosen one.
       const w = sel ? 14 : 9;
       // Fighters stand out over tree crowns and roofs for the whole fight.
@@ -1096,6 +1441,8 @@ export class TuryWalki {
         for (const q of droga(this.zas, plan.z.k)) g.fillCircle(q.x, feet(q.y), 0.8);
       }
       this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - (c.e.hd ? 12 : 9) * c.e.kind.scale - 3).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
+    } else if (this.nowy && this.punkt && this.faza === 'gracz') {
+      this.etykieta.setText('Idź · 1 ruch').setPosition(this.punkt.x, this.punkt.y - 1.1 * W).setVisible(true).setColor('#d8f4ff');
     } else this.etykieta.setVisible(false);
   }
 

@@ -64,6 +64,8 @@ export const WALKA_TUROWA = {
   okupZaCzlonka: 8,
   /** Kamera w walce: o jeden stopień bliżej, jeśli wszyscy się mieszczą; wysokość dolnego panelu (CSS px) do ominięcia. */
   panelPx: 168,
+  /** Nowe sterowanie (serwer testowy): pasek tury u góry zakrywa tyle CSS px. */
+  panelNowyPx: 84,
   /** Czas jednego kroku animacji (ms). */
   animMs: 260,
 };

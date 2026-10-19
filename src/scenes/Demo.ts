@@ -11,7 +11,7 @@ import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
-import { turyWDemo } from '../walka/tryb';
+import { turyWDemo, nowyPanel } from '../walka/tryb';
 import { PLAYER } from '../objects/Player';
 import { loadingMapVisible } from '../ui/loadingMap';
 
@@ -49,6 +49,7 @@ const RADA_CSS = `
 @keyframes demo-wskaz { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
 #walka-panel[data-wskaz="cios"] .wp-b.cios, #walka-panel[data-wskaz="spec"] .wp-b.spec,
 #walka-panel[data-wskaz="lecz"] .wp-b.lecz { border-color: #ffd34a; animation: demo-wskaz 0.9s ease-in-out infinite; }
+#demo-rada.gora::after { content: none; }
 `;
 
 
@@ -349,44 +350,46 @@ export class DemoRun {
   /** The tutorial inside the turn fight: how to strike, then how to heal, then finish the dragon. */
   krokWalki(co: 'tura' | 'cios' | 'specjalne' | 'wroc' | 'lecz') {
     if (!this.walczy) return;
+    // New controls (test server): the same steps, worded for taps on the map and the ring around the hero.
+    const T = nowyPanel() ? { ...DEMO_TEKSTY, ...DEMO_TEKSTY.kolo } : DEMO_TEKSTY;
     const p = this.host.player;
     const ranny = p.hp < PLAYER.maxHp;
     const n = SEN.tury.ciosow;
     const zostalo = Math.max(1, n - this.trafien);
     // After the 2nd hit: the dragon's answer, then one more blow and it flies off.
     if (this.trafien >= n - 1) {
-      if (co === 'cios' && !this.zaatakowal) return this.pokazRade(DEMO_TEKSTY.walkaSmokAtakuje);
+      if (co === 'cios' && !this.zaatakowal) return this.pokazRade(T.walkaSmokAtakuje);
       if (co === 'tura' && !this.zaatakowal) {
         this.zaatakowal = true;
         this.rada = 'dobij';
-        return this.pokazRade(DEMO_TEKSTY.walkaOstatni, 'cios');
+        return this.pokazRade(T.walkaOstatni, 'cios');
       }
-      if (this.zaatakowal && (co === 'lecz' || co === 'wroc')) return this.pokazRade(DEMO_TEKSTY.walkaOstatni, 'cios');
-      if (this.zaatakowal && co === 'specjalne') return this.pokazRade(DEMO_TEKSTY.walkaLeczTeraz, 'lecz');
+      if (this.zaatakowal && (co === 'lecz' || co === 'wroc')) return this.pokazRade(T.walkaOstatni, 'cios');
+      if (this.zaatakowal && co === 'specjalne') return this.pokazRade(T.walkaLeczTeraz, 'lecz');
       return;
     }
     if (co === 'lecz' || (this.rada === 'lecz' && !ranny)) {
       this.rada = 'dobij';
-      return this.pokazRade(DEMO_TEKSTY.walkaDobij(zostalo), 'cios');
+      return this.pokazRade(T.walkaDobij(zostalo), 'cios');
     }
     if (this.rada === null && co === 'tura') {
       this.rada = 'start';
-      return this.pokazRade(DEMO_TEKSTY.walkaStart, 'cios');
+      return this.pokazRade(T.walkaStart, 'cios');
     }
     if (this.rada === 'start' && co === 'cios') {
       if (!ranny) {
         this.rada = 'dobij';
-        return this.pokazRade(DEMO_TEKSTY.walkaDobij(zostalo), 'cios');
+        return this.pokazRade(T.walkaDobij(zostalo), 'cios');
       }
       this.rada = 'lecz';
-      return this.pokazRade(DEMO_TEKSTY.walkaLecz, 'spec');
+      return this.pokazRade(T.walkaLecz, 'spec');
     }
     if (this.rada === 'lecz') {
-      if (co === 'specjalne') return this.pokazRade(DEMO_TEKSTY.walkaLeczTeraz, 'lecz');
-      if (co === 'wroc' || co === 'tura') return this.pokazRade(DEMO_TEKSTY.walkaLecz, 'spec');
+      if (co === 'specjalne') return this.pokazRade(T.walkaLeczTeraz, 'lecz');
+      if (co === 'wroc' || co === 'tura') return this.pokazRade(T.walkaLecz, 'spec');
     }
     if (this.rada === 'dobij' && (co === 'cios' || co === 'tura')) {
-      return this.pokazRade(co === 'tura' ? DEMO_TEKSTY.walkaDobij(zostalo) : DEMO_TEKSTY.walkaRuchy, 'cios');
+      return this.pokazRade(co === 'tura' ? T.walkaDobij(zostalo) : T.walkaRuchy, 'cios');
     }
   }
 
@@ -415,8 +418,16 @@ export class DemoRun {
     const nad = () => {
       const e = document.getElementById('demo-rada');
       if (!e) return;
-      const top = document.getElementById('walka-panel')?.getBoundingClientRect().top;
-      if (top) e.style.bottom = `${Math.round(innerHeight - top + 30)}px`;
+      const panel = document.getElementById('walka-panel');
+      const r = panel?.getBoundingClientRect();
+      if (panel?.classList.contains('wn')) {
+        // New controls: the turn bar is at the top – the tip hangs under it.
+        e.classList.add('gora');
+        if (r) {
+          e.style.top = `${Math.round(r.bottom + 8)}px`;
+          e.style.bottom = 'auto';
+        }
+      } else if (r?.top) e.style.bottom = `${Math.round(innerHeight - r.top + 30)}px`;
       requestAnimationFrame(nad);
     };
     if (!el.dataset.sledzi) {

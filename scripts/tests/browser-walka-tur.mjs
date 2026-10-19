@@ -2,6 +2,7 @@
 // Odejdź steps back for free, Podejdź starts a fight on the map: the group spreads out, a target is picked by
 // tapping it, the second tap strikes, Ruch walks inside the lit range, the enemies answer, a win heals fully.
 // Bandits talk and take a fee; a hotel night gives one more move per turn.
+// The old bottom panel (production's demo); the new controls: browser-walka-kolo.mjs.
 // Run: VITE_TEST=1 npm run build && npx vite preview --port 4173 & node scripts/tests/browser-walka-tur.mjs   (TELEFON=1 for the phone)
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -33,7 +34,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text()));
   page.on('dialog', (d) => d.accept());
-  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&panel=stary#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   await page.waitForFunction(() => !document.querySelector('#loading-map:not([hidden])') && !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(4000);

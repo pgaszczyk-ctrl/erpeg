@@ -36,3 +36,24 @@ export function turyNaSerwerze() {
 
 /** The hero's height on the map (px): the unit of every distance in the turn fight. */
 export const W = 56 * 0.36 * SKALA_POSTACI;
+
+const panelWymuszony = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('panel');
+    if (q === 'stary' || q === 'nowy') localStorage.setItem('exp-panel-walki', q);
+    return localStorage.getItem('exp-panel-walki');
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * The turn fight's controls (owner, 19 Oct 2026, test server): a tap on an enemy = approach and strike, a tap on
+ * the ground = walk, a tap on the hero = a ring of the rarer actions; the turn shown in a bar at the top.
+ * Production (the QR demo) keeps the old bottom panel. `?panel=stary|nowy` switches it (remembered on the device).
+ */
+export function nowyPanel() {
+  if (panelWymuszony === 'stary') return false;
+  if (panelWymuszony === 'nowy') return true;
+  return TEST;
+}

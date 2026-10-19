@@ -87,6 +87,15 @@ export const DEMO_TEKSTY = {
   /** On a computer (no touch): how to walk, until the hero has walked a few steps. */
   sterowanie: 'Chodzisz strzałkami ← ↑ → ↓ albo klawiszami W A S D',
   walkaRuchy: 'Każda akcja kosztuje ruchy (licznik po prawej). Gdy się skończą, rusza smok.',
+  /** The same tutorial for the new controls (test server, walka/tryb.ts nowyPanel): no buttons, taps on the map. */
+  kolo: {
+    walkaStart: 'Walka na tury! Dotknij smoka – zobaczysz, ile zabierze cios. Dotknij drugi raz, żeby podejść i uderzyć.',
+    walkaLecz: 'Masz tylko 3/4 życia – pasek u góry. Dotknij swojego bohatera: wokół niego są akcje.',
+    walkaLeczTeraz: 'Teraz LECZ – zjesz zebrane jabłka. Kosztuje jeden ruch.',
+    walkaDobij: (n: number) => `Brawo! Bij dalej – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}. Gdy skończą się ruchy (kropki u góry), smok odpowie.`,
+    walkaOstatni: 'Smok słabnie! Dotknij go jeszcze raz, a odleci. (Ranny? Dotknij bohatera → Lecz.)',
+    walkaRuchy: 'Każda akcja zjada kropki ruchów u góry. Gdy zgasną, rusza smok.',
+  },
   smokUciekl: 'Smok uciekł w przestworza!',
   zaDaleko: 'Oczy same się zamykają… Ten sen zaraz się skończy.',
   pobudkaTytul: '💤 Pobudka',
