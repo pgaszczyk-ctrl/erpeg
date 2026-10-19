@@ -152,6 +152,12 @@ try {
     await page.waitForFunction(() => /CIOS/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
     assert.equal((await rada()).w, 'cios');
     await page.screenshot({ path: `work/onb-${name}-4-walka-cios.png` });
+    // Nobody strolls near the dragon (owner, 19 Oct 2026).
+    const ludzie = await page.evaluate(() => {
+      const s = window.__game.scene.getScene('game'), d = s.demoRun.dragonSpot;
+      return [...s.folk.active].filter((f) => f.sprite?.visible && Math.hypot(f.x - d.x, f.y - d.y) < 90 * 1.92).map((f) => Math.round(Math.hypot(f.x - d.x, f.y - d.y) / 1.92));
+    });
+    assert.deepEqual(ludzie, [], 'Townsfolk near the dragon (m): ' + JSON.stringify(ludzie));
     const smokNaEkranie = () => page.evaluate(() => {
       const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon, cam = s.cameras.main, o = window.devicePixelRatio >= 2 ? 2 : 1;
       if (!d || !d.visible) return null;

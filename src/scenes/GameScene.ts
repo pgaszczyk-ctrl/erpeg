@@ -1034,7 +1034,10 @@ export class GameScene extends Phaser.Scene {
     this.forest.update(this.player.x, this.player.y, now);
     this.landmarks.update(this.player.x, this.player.y);
     this.updateHarvests(now);
-    this.folk.fear = this.story.dragonAt();
+    // The QR demo's dragon: nobody strolls near it (owner, 19 Oct 2026: a granny walked right into it).
+    const smokDemo = this.demoRun?.smokDoOminiecia() ?? null;
+    this.folk.fear = smokDemo ?? this.story.dragonAt();
+    this.folk.fearM = smokDemo ? SEN.bezLudziM : null;
     this.folk.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     if (this.duelHp !== null) {
       // Walked away from the duel: the townsman gives up.
@@ -1126,7 +1129,7 @@ export class GameScene extends Phaser.Scene {
     this.testRide.update(this.player, session.look.postac, session.name);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
-    this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y), (n) => session.riddles[n.id] === today());
+    this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y) && !this.demoRun?.przySmoku(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
     this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
     this.drawMagic(now);

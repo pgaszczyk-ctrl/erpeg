@@ -28,6 +28,8 @@ export const SEN = {
   smok: { lat: 51.25130, lon: 22.57245 },
   /** Around the dragon (lat/lon box, ~25 m each way): the hero inside it = the fight starts. */
   dziedziniec: { s: 51.25107, n: 51.25153, w: 22.57209, e: 22.57281 },
+  /** No townsfolk or riddle-givers within this many metres of the dragon (owner, 19 Oct 2026). */
+  bezLudziM: 90,
   /** Fruit trees planted next to the start: how many, fruit on each, how far (m). */
   drzewa: { ile: 3, owocow: 3, odM: 10, doM: 24 },
   /** Fruit eaten to heal one heart in the demo (the normal game needs 20). */

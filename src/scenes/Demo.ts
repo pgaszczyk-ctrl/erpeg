@@ -171,6 +171,16 @@ export class DemoRun {
     return true;
   }
 
+  /** Where people must keep away from in the dream: the dragon's spot until it has flown off. */
+  smokDoOminiecia() {
+    return (demo.phase === 'jedzenie' || demo.phase === 'smok') && !this.frozen ? this.dragonSpot : null;
+  }
+
+  przySmoku(x: number, y: number) {
+    const s = this.smokDoOminiecia();
+    return !!s && Math.hypot(x - s.x, y - s.y) < SEN.bezLudziM * PX_PER_M;
+  }
+
   isDragon(e: Slime) {
     return e === this.dragon;
   }

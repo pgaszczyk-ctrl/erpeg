@@ -77,6 +77,8 @@ export class Townsfolk {
   private next = 0;
   /** Where the story's dragon is: nobody goes near it. */
   fear: { x: number; y: number } | null = null;
+  /** How far (m) people keep from `fear`; null = MIESZKANCY.strachPrzedSmokiem (the QR demo uses its own). */
+  fearM: number | null = null;
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {
     // A few looks to share (drawn like the hero). The new characters are made in sprites.ts.
@@ -279,7 +281,7 @@ export class Townsfolk {
         }
       }
     }
-    const fearR = MIESZKANCY.strachPrzedSmokiem * PX_PER_M;
+    const fearR = (this.fearM ?? MIESZKANCY.strachPrzedSmokiem) * PX_PER_M;
     for (const f of this.active) {
       if (f.away || f.gone || !f.sprite) {
         f.umbrella?.setVisible(false);
