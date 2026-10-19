@@ -9,8 +9,8 @@ import type { StanPanelu, ObslugaPanelu } from './walkaPanel';
 import { itemPictureUrl } from './itemIcon';
 
 /** One attack in the ring around an enemy (content/atakiTurowe.ts): label, cost line, greyed when it can't be done
- * now, `zamek` = not unlocked yet (padlock; a tap says what it needs). */
-export interface PrzyciskAtaku { id: string; tekst: string; koszt: string; off: boolean; zamek?: boolean }
+ * now. Only unlocked attacks are listed; with many of them the ring pages („więcej”). */
+export interface PrzyciskAtaku { id: string; tekst: string; koszt: string; off: boolean }
 
 export interface StanKola extends StanPanelu {
   /** Which ring is open: around the hero, around an enemy, or none. */
@@ -98,8 +98,6 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; animation: wk-zloto 1.3s ease-in-out infinite; }
 #walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 2px #fff1a8) drop-shadow(0 0 6px #ffd34a) drop-shadow(0 0 10px #ffb020); }
 #walka-kolo .wk-b.mocny .n { color: #ffe08a; }
-#walka-kolo .wk-b.zamek { filter: grayscale(1) brightness(0.7); opacity: 0.6; animation: none; box-shadow: 0 3px 8px #000a; }
-#walka-kolo .wk-b.zamek::after { content: '🔒'; position: absolute; right: -2px; top: -4px; font-size: 18px; filter: none; }
 #walka-kolo .wk-b .n { max-width: 92px; white-space: normal; }
 @keyframes wk-zloto { 0%, 100% { box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; }
   50% { box-shadow: 0 0 16px 6px #ffd34acc, 0 0 32px 10px #ffb02088, 0 3px 8px #000a; } }
@@ -226,6 +224,20 @@ const IKONY = {
     '...oho......',
     '............',
   ], { ...K, s: '#c8a46a', h: '#e4473b' }),
+  wiecej: piksele([
+    '............',
+    '............',
+    '............',
+    '............',
+    '.oo..oo..oo.',
+    'oYYooYYooYYo',
+    'oYYooYYooYYo',
+    '.oo..oo..oo.',
+    '............',
+    '............',
+    '............',
+    '............',
+  ], K),
   ucieczka: piksele([
     '......oo....',
     '.....owwo...',
@@ -413,12 +425,12 @@ export class WalkaKolo {
     this.ring.textContent = '';
     if (otwarte === 'wrog' && s.ataki) {
       const bron = `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
-      const ikona: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa };
+      const ikona: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa, wiecej: IKONY.wiecej };
       const luk = LUK[Math.min(4, s.ataki.length)] ?? LUK[4];
       this.katy = luk.katy;
       this.promien = luk.r;
-      s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(`${a.id}${a.zamek ? ' zamek' : ''}`, ikona[a.id] ?? bron, a.tekst, a.koszt, () => this.on.atak(a.id), i, {
-        off: a.off && !a.zamek, blysk: wskaz === 'cios' && i === 0,
+      s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(a.id, ikona[a.id] ?? bron, a.tekst, a.koszt, () => this.on.atak(a.id), i, {
+        off: a.off, blysk: wskaz === 'cios' && i === 0,
       })));
     } else {
       this.ring.append(

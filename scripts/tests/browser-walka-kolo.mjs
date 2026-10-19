@@ -220,8 +220,8 @@ try {
   for (const z of zasiegi) if (z.d > z.max + 1) assert(z.dojscie && z.koszt >= 2, `a far enemy (${z.d.toFixed(1)} px) needs a walk-up`);
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
   console.log('enemy ring', JSON.stringify(ringW));
-  assert.equal(ringW.length, 3, 'three attacks in the enemy ring (Cios, Mocny cios, locked Zamach)');
-  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]) && /zamach zamek/.test(ringW[2]), 'Cios, Mocny cios and a locked Zamach');
+  assert.equal(ringW.length, 2, 'only the unlocked attacks in the enemy ring (Cios, Mocny cios) – no locked Zamach');
+  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]), 'Cios and Mocny cios');
   assert(!/%|pokona/.test(await page.evaluate(() => document.body.innerText + window.__game.scene.getScene('game').walka.etykieta.text)), 'no percentages, no „pokona”');
   const plan = await g(() => { const w = window.__game.scene.getScene('game').walka; return w.planCiosu(w.cel, false); });
   console.log('plan', JSON.stringify(plan));
@@ -341,7 +341,7 @@ try {
   await page.waitForTimeout(400);
   const ringZ = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
   console.log('ring with zamach', JSON.stringify(ringZ));
-  assert(ringZ.some((k) => /zamach/.test(k) && !/zamek/.test(k)), 'Zamach unlocked');
+  assert(ringZ.some((k) => /zamach/.test(k) ), 'Zamach unlocked');
   await page.screenshot({ path: `work/walka-${tag}-8-zamach.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
   await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
@@ -362,7 +362,7 @@ try {
   await page.waitForTimeout(400);
   const ringM = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
   console.log('ring with a wand', JSON.stringify(ringM));
-  assert(ringM.some((k) => /czar/.test(k)) && ringM.some((k) => /wachlarz/.test(k) && !/zamek/.test(k)), 'Czar and Wachlarz ognia');
+  assert(ringM.some((k) => /czar/.test(k)) && ringM.some((k) => /wachlarz/.test(k) ), 'Czar and Wachlarz ognia');
   await page.screenshot({ path: `work/walka-${tag}-8b-wachlarz.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.wachlarz').click());
   await page.waitForTimeout(150);
@@ -372,6 +372,27 @@ try {
   const spaleni = f.zywi.filter((q, i) => q.hp < hp1[i]).length;
   console.log('fan hit', spaleni, 'of', f.zywi.length);
   assert(spaleni >= 2, `Wachlarz ognia burns several (${spaleni})`);
+  // Many attacks: pages of 3 + „Więcej”, locked ones never shown.
+  await g(() => {
+    for (const id of ['proba1', 'proba2', 'proba3']) window.__ataki.push({ id, nazwa: id, bron: 'magia', koszt: 1, mnoznik: 1, obszar: 'jeden', opis: '' });
+    window.__ataki.push({ id: 'probaZamk', nazwa: 'zamk', bron: 'magia', koszt: 1, mnoznik: 1, obszar: 'jeden', opis: '', wymaga: { poziomPostaci: 99 } });
+    const w = window.__game.scene.getScene('game').walka; w.ruchy = 5; w.przelicz();
+  });
+  f = await fight();
+  await tapWorld(f.zywi[1].x, f.zywi[1].y - 4);
+  await page.waitForTimeout(400);
+  const strona1 = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
+  console.log('ring page 1', JSON.stringify(strona1));
+  assert.equal(strona1.length, 4, 'four buttons at most');
+  assert(/wiecej/.test(strona1[3]) && /1\/2/.test(strona1[3]), '„Więcej” with 1/2');
+  await page.screenshot({ path: `work/walka-${tag}-8d-wiecej.png` });
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.wiecej').click());
+  await page.waitForTimeout(400);
+  const strona2 = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
+  console.log('ring page 2', JSON.stringify(strona2));
+  assert(strona2.some((k) => /proba3/.test(k)) && /2\/2/.test(strona2[strona2.length - 1]), 'page 2 shows the rest');
+  assert(![...strona1, ...strona2].some((k) => /probaZamk|zamk/.test(k)), 'locked attack never shown');
+  await g(() => { window.__ataki.splice(window.__ataki.findIndex((a) => a.id === 'proba1'), 4); const w = window.__game.scene.getScene('game').walka; w.koloWroga = null; w.odswiez(); });
   await g(() => { window.__gear.equip.bron = 'kijek'; });
   await g(() => { window.__game.scene.getScene('game').player.hp = 3; window.__game.scene.getScene('game').walka.odswiez(); });
   await tapScr(await heroScr());

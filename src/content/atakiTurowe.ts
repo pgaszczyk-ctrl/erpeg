@@ -2,8 +2,8 @@
 //  RODZAJE ATAKÓW W WALCE TUROWEJ (nowe sterowanie, serwer testowy)
 //  Właściciel 19.10.2026: „rodzaje ataków będziemy mogli dodawać po osiągnięciu
 //  odpowiednich kryteriów, np. sweep, co bije kilku naraz, albo u maga wachlarz ognia”.
-//  Kółko przy wrogu pokazuje ataki pasujące do broni w ręce: odblokowane działają,
-//  zablokowane są szare z kłódką i mówią, czego trzeba. Nowy atak = nowy wpis tutaj
+//  Kółko przy wrogu pokazuje tylko odblokowane ataki broni w ręce (właściciel:
+//  „szarych nie może być”); przy więcej niż 4 – po 3 na stronę + „Więcej”. Nowy atak = nowy wpis tutaj
 //  (+ ewentualnie ikonka w ui/walkaKolo.ts). Liczby to próba do strojenia.
 // ============================================================================
 

@@ -26,6 +26,7 @@ import { AMUNICJA } from '../content/zuzycie';
 import { WALKA } from '../content/walka';
 import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
 import { WalkaKolo, type StanKola, type PrzyciskAtaku } from '../ui/walkaKolo';
+import { TEST } from '../version';
 import { ATAKI, brakujeDoAtaku, type RodzajAtaku, type BronAtaku } from '../content/atakiTurowe';
 import { SmokWTurach } from './smokTury';
 import { SMOK_W_TURACH } from '../content/walkaTurowa';
@@ -129,6 +130,9 @@ const RADY_KLUCZ = 'exp-walka-rady';
 const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(pointer: coarse)').matches;
 
 const HERO_R = 0.3 * W;
+if (TEST && typeof window !== 'undefined') (window as unknown as { __ataki: typeof ATAKI }).__ataki = ATAKI;
+/** Most buttons on the enemy's ring at once; more attacks → pages of NA_KOLE − 1 + „Więcej”. */
+const NA_KOLE = 4;
 const GLEB_ZIEMI = -1e8 + 3;
 const GLEB_GORA = 1_050_000;
 /** Fighters' depth bonus: above tree crowns and tall buildings while the fight lasts. */
@@ -159,6 +163,7 @@ export class TuryWalki {
   private ucieczkaPytanie = false;
   /** New controls: the enemy whose ring of blows (Cios / Mocny cios) is open. */
   private koloWroga: Uczestnik | null = null;
+  private koloStrona = 0;
   /** New controls' Unik: each enemy attack may miss until their turn ends (WT.unik). */
   private unik = false;
   /** The hint line is a first-fights tip. */
@@ -216,7 +221,7 @@ export class TuryWalki {
     this.panel = this.nowy
       ? new WalkaKolo({
         ...obsluga,
-        cios: () => this.atakZKola(this.atakiBroni()[0]?.id ?? 'cios'),
+        cios: () => this.atakZKola(this.atakiDostepne()[0]?.id ?? 'cios'),
         mocny: () => this.atakZKola('mocny'),
         atak: (id: string) => this.atakZKola(id),
         ucieczka: () => this.uciekajPytaj(),
@@ -1183,6 +1188,11 @@ export class TuryWalki {
     return ATAKI.filter((a) => a.bron === r);
   }
 
+  /** Only the attacks already unlocked, in catalogue order (the plain one first). */
+  private atakiDostepne() {
+    return this.atakiBroni().filter((a) => !this.brakuje(a));
+  }
+
   /** What an attack still needs, or null when it's unlocked. */
   private brakuje(a: RodzajAtaku) {
     return brakujeDoAtaku(a.wymaga, { poziomPostaci: this.h.poziom(), magia: gear.magic, umiejetnosc: (u) => skillLevel(u) });
@@ -1196,15 +1206,14 @@ export class TuryWalki {
       this.podpowiedz = komputer ? 'Najpierw kliknij wroga.' : 'Najpierw dotknij wroga.';
       return this.odswiez();
     }
-    const atak = this.atakiBroni().find((a) => a.id === id);
-    if (!atak) return;
-    const brak = this.brakuje(atak);
-    if (brak) {
-      this.podpowiedz = `🔒 ${atak.nazwa}: ${atak.opis} Odblokujesz za: ${brak}.`;
+    if (id === 'wiecej') {
+      this.koloStrona++;
       return this.odswiez();
     }
+    const atak = this.atakiDostepne().find((a) => a.id === id);
+    if (!atak) return;
     const plan = this.planCiosu(q, !!atak.mocny, atak);
-    const pierwszy = atak === this.atakiBroni()[0];
+    const pierwszy = atak === this.atakiDostepne()[0];
     if (!plan.ok || (plan.tylko && !pierwszy)) {
       this.podpowiedz = plan.ok ? `Na ten atak zabraknie ruchów – wybierz „Podejdź”.` : this.ruchy < plan.koszt ? `Za mało ruchów (${plan.koszt}).` : plan.tekst;
       return this.odswiez();
@@ -1379,6 +1388,7 @@ export class TuryWalki {
       this.punkt = null;
       this.tryb = 'cios';
       this.koloWroga = kto;
+      this.koloStrona = 0;
       const plan = this.planCiosu(kto, false);
       this.podpowiedz = plan.ok ? 'Wybierz rodzaj ataku.' : plan.tekst;
       return this.odswiez();
@@ -1531,20 +1541,29 @@ export class TuryWalki {
     if (this.panel instanceof WalkaKolo) {
       const qw = this.koloWroga && !this.koloWroga.e.isDead && this.koloWroga.e.active ? this.koloWroga : null;
       if (!qw) this.koloWroga = null;
-      const ataki: PrzyciskAtaku[] | null = qw ? this.atakiBroni().map((a, i) => {
-        const brak = this.brakuje(a);
-        if (brak) return { id: a.id, tekst: a.nazwa, koszt: '🔒', off: true, zamek: true };
-        const plan = this.planCiosu(qw, !!a.mocny, a);
-        const ruchy = `${plan.koszt} ${plan.koszt === 1 ? 'ruch' : 'ruchy'}`;
-        // Short of moves for the blow: the first (plain) attack becomes „Podejdź”, the others grey out.
-        const tylko = plan.tylko && i === 0;
-        return {
-          id: a.id,
-          tekst: tylko ? 'Podejdź' : a.nazwa,
-          koszt: plan.dojscie && !plan.tylko ? `${ruchy} · z podejściem` : ruchy,
-          off: !plan.ok || (!!plan.tylko && i > 0),
-        };
-      }) : null;
+      // Only what the hero can do (owner, 19 Oct 2026: „szarych nie może być”); many attacks → pages of 3 + „Więcej”.
+      let ataki: PrzyciskAtaku[] | null = null;
+      if (qw) {
+        const wszystkie = this.atakiDostepne().map((a, i) => {
+          const plan = this.planCiosu(qw, !!a.mocny, a);
+          const ruchy = `${plan.koszt} ${plan.koszt === 1 ? 'ruch' : 'ruchy'}`;
+          // Short of moves for the blow: the first (plain) attack becomes „Podejdź”, the others dim.
+          const tylko = plan.tylko && i === 0;
+          return {
+            id: a.id,
+            tekst: tylko ? 'Podejdź' : a.nazwa,
+            koszt: plan.dojscie && !plan.tylko ? `${ruchy} · z podejściem` : ruchy,
+            off: !plan.ok || (!!plan.tylko && i > 0),
+          };
+        });
+        if (wszystkie.length <= NA_KOLE) ataki = wszystkie;
+        else {
+          const stron = Math.ceil(wszystkie.length / (NA_KOLE - 1));
+          this.koloStrona %= stron;
+          ataki = [...wszystkie.slice(this.koloStrona * (NA_KOLE - 1), (this.koloStrona + 1) * (NA_KOLE - 1)),
+            { id: 'wiecej', tekst: 'Więcej', koszt: `${this.koloStrona + 1}/${stron}`, off: false }];
+        }
+      }
       const nk: StanKola = {
         ...st,
         kolo: this.podmenu ? 'bohater' : qw ? 'wrog' : null,
