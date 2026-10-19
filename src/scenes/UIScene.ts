@@ -37,6 +37,7 @@ import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
+import { offline } from '../api';
 
 /** The telescopic HUD's first menu line: the character sheet. */
 
@@ -765,7 +766,7 @@ export class UIScene extends Phaser.Scene {
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, `⚖ Poziom trudności: ${session.level.nazwa}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (k) => {
         const i = k;
         if (i === 3) {
@@ -778,7 +779,13 @@ export class UIScene extends Phaser.Scene {
           this.toast(efektGorWlaczony() ? '⛰ Efekt gór włączony' : '⛰ Efekt gór wyłączony – bez rozmycia i mgły w dole', 2000);
           return;
         }
-        if (i === 5 && TEST) {
+        if (i === 5) {
+          // Once a day (owner, 19 Oct 2026); the QR demo's dream has no real character yet.
+          if (offline.demo) this.toast('Poziom wybierzesz po przebudzeniu.', 2500);
+          else game.wyborTrudnosci(false);
+          return;
+        }
+        if (i === 6 && TEST) {
           // Test server only: call a dragon of any kind next to the hero (all its attacks), for checks and tuning.
           const ids = Object.keys(GATUNKI_SMOKOW) as GatunekId[];
           this.showDialog({

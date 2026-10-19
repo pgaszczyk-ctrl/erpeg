@@ -70,6 +70,9 @@ export const session = {
   idik: '',
   /** The character is assigned to a player account (Kufer then doesn't offer it). */
   konto: false,
+  /** The difficulty was chosen (after the demo the game asks once); changed today = no more changes until tomorrow. */
+  trudnoscWybrana: true,
+  trudnoscDzis: false,
   startX: 0,
   startY: 0,
   coins: 0,
@@ -223,6 +226,8 @@ export function startSession(r: LoginResult) {
   session.name = p.name;
   session.idik = p.idik;
   session.konto = !!p.konto;
+  session.trudnoscWybrana = p.trudnosc_wybrana !== false;
+  session.trudnoscDzis = !!p.trudnosc_dzis;
   session.age = p.age ?? 7;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
   // Hearts by difficulty, plus the level bonus (half-hearts count, like hp).

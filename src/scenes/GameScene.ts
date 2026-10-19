@@ -50,7 +50,7 @@ import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
-import { WIDOK, TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
+import { WIDOK, TRUDNOSCI, trudnoscZWieku, WYBOR_TRUDNOSCI } from '../content/trudnosc';
 import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
@@ -3182,7 +3182,11 @@ export class GameScene extends Phaser.Scene {
         title: DEMO_TEKSTY.pobudkaTytul,
         text: DEMO_TEKSTY.pobudka(session.name),
         buttons: ['Rozejrzę się'],
-        onChoose: () => this.time.delayedCall(350, () => {
+        // First the difficulty (owner, 19 Oct 2026: „po pobudce każ wybrać poziom”), then the portrait tutorial.
+        onChoose: () => (session.trudnoscWybrana ? portret() : this.time.delayedCall(250, () => this.wyborTrudnosci(true, portret))),
+      }));
+    };
+    const portret = () => this.time.delayedCall(350, () => {
           // The portrait of whichever HUD is shown (the telescope HUD on the test server has no boiler avatar).
           const sel = teleskop() ? '.tel-portret' : '#hud .hud-av';
           const widac = () => (document.querySelector(sel)?.getBoundingClientRect().width ?? 0) > 0;
@@ -3199,10 +3203,55 @@ export class GameScene extends Phaser.Scene {
           const t = this.time.delayedCall(15000, () => zamknij());
           zamknij = () => { close(); t.remove(); };
           this.events.once('shutdown', zamknij);
-        }),
-      }));
-    };
+        });
     this.time.delayedCall(100, reveal);
+  }
+
+  /**
+   * The difficulty window: after the QR demo (`pierwszy`: free, no way to skip it – Escape keeps the current level)
+   * and from the game menu (once a day, checked by the server).
+   */
+  wyborTrudnosci(pierwszy: boolean, potem?: () => void) {
+    const W = WYBOR_TRUDNOSCI;
+    const dalej = () => potem?.();
+    if (!pierwszy && session.trudnoscDzis) {
+      this.dialog({ title: W.tytul, text: W.juzDzis, buttons: ['OK'], onChoose: dalej });
+      return;
+    }
+    const teraz = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    this.dialog({
+      title: W.tytul,
+      text: `${pierwszy ? W.poDemo : W.wMenu}\n\n${TRUDNOSCI.map((t, i) => `• ${t.nazwa} – ${W.krotko[i]}`).join('\n')}`,
+      buttons: [...TRUDNOSCI.map((t, i) => (i === teraz ? `${t.nazwa} ✓` : t.nazwa)), pierwszy ? `Zostaję przy: ${TRUDNOSCI[teraz].nazwa}` : 'Anuluj'],
+      odpowiedzi: pierwszy,
+      onChoose: (k) => {
+        const i = k < TRUDNOSCI.length ? k : pierwszy ? teraz : -1;
+        if (i < 0 || (i === teraz && !pierwszy)) return dalej();
+        void this.ustawTrudnosc(TRUDNOSCI[i].wiek, !session.trudnoscWybrana).then(dalej);
+      },
+    });
+  }
+
+  private async ustawTrudnosc(age: number, pierwszy: boolean) {
+    const W = WYBOR_TRUDNOSCI;
+    let r: Awaited<ReturnType<typeof api.zmienTrudnosc>> | null = null;
+    try { r = await api.zmienTrudnosc(session.token, age, pierwszy); } catch { r = null; }
+    if (!r?.ok) {
+      if (r?.blad === 'dzis') session.trudnoscDzis = true;
+      this.toast(r?.blad === 'dzis' ? W.juzDzis : W.blad, 3000);
+      return;
+    }
+    if (!pierwszy) session.trudnoscDzis = true;
+    session.trudnoscWybrana = true;
+    session.age = age;
+    session.level = TRUDNOSCI[trudnoscZWieku(age)];
+    // Everything that reads the level at a moment: monsters' pace, hearts (new ones come filled), the view.
+    Slime.tempo = session.level.tempo;
+    this.appliedLevel = '';
+    this.applyLevel();
+    this.lastVision = { x: NaN, y: NaN, a: NaN };
+    this.emitHud();
+    this.toast(W.zmieniony(session.level.nazwa), 2500);
   }
 
   /** "Wyjdź": close the session properly and go back to the start screen. */

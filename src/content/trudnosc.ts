@@ -56,6 +56,27 @@ export const TRUDNOSCI: Trudnosc[] = [
 export const DOMYSLNA_TRUDNOSC = 0;
 
 /**
+ * Choosing the difficulty after the QR demo and changing it later in the game menu (owner, 19 Oct 2026: once a
+ * day – the server refuses a second change on the same Warsaw day; the first choice after the demo is free).
+ */
+export const WYBOR_TRUDNOSCI = {
+  tytul: '⚖ Poziom trudności',
+  poDemo: 'Zanim ruszysz w miasto: jak trudno ma być? Poziom możesz potem zmienić w menu gry – raz dziennie.',
+  wMenu: 'Poziom możesz zmieniać raz dziennie. Postać, ekwipunek i postęp zostają.',
+  /** One short line per level (TRUDNOSCI order). */
+  krotko: [
+    'potwory słabe i wolne, łatwe zagadki, szeroki cios',
+    'potwory słabsze, zagadki dla 7–10 lat',
+    'zwykła walka, broń się tępi',
+    'zagadki dla dorosłych, 3 serca',
+    'więcej i silniejszych potworów, 2 serca',
+  ],
+  juzDzis: 'Dziś już zmieniałeś poziom trudności. Następna zmiana – jutro.',
+  zmieniony: (nazwa: string) => `⚖ Poziom trudności: ${nazwa}`,
+  blad: 'Nie udało się zmienić poziomu – spróbuj za chwilę.',
+};
+
+/**
  * The level is kept as an age (players.age: 6, 9, 12, 18 or 19); characters
  * made before the slider keep the age they typed.
  */

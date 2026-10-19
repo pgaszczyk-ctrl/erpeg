@@ -147,6 +147,10 @@ export interface PlayerInfo {
   immortal?: boolean;
   /** Assigned to a player account (e-mail or Google). */
   konto?: boolean;
+  /** The difficulty was chosen after the QR demo (or changed since); the first choice is free. */
+  trudnosc_wybrana?: boolean;
+  /** The difficulty was already changed today (Warsaw day): the next change tomorrow. */
+  trudnosc_dzis?: boolean;
 }
 
 /** What the game remembers of an unfinished session (sent every few seconds). */
@@ -203,6 +207,9 @@ export const api = {
   /** `password` only for old characters (6-character IDIK); they get a new code. */
   login: (name: string, code: string, password?: string) =>
     rpc<LoginResult>('login', { p_name: name, p_idik: code, p_password: password || null }),
+  /** Difficulty as an age (6/9/12/18/19): the first choice after the demo is free, later once a day (server-checked). */
+  zmienTrudnosc: (token: string, age: number, pierwszy: boolean) =>
+    rpc<{ ok: boolean; age?: number; blad?: 'sesja' | 'poziom' | 'dzis' }>('zmien_trudnosc', { p_token: token, p_age: age, p_pierwszy: pierwszy }),
   save: (token: string, save: SaveData, exp: number) => rpc<boolean>('save_game', { p_token: token, p_save: save, p_exp: exp }),
   heartbeat: (token: string, snapshot: Snapshot) => rpc<boolean>('heartbeat', { p_token: token, p_snapshot: snapshot }, true),
   logout: (token: string) => (zamykamSesje(token), rpc<boolean>('logout', { p_token: token })),

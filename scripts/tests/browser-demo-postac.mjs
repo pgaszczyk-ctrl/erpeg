@@ -18,6 +18,7 @@ const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-
 try {
   const context = await browser.newContext({ viewport, isMobile: phone, hasTouch: phone, locale: 'pl-PL', deviceScaleFactor: phone ? 2 : 1 });
   const calls = [];
+  const zmiany = [];
   let made = null;
   await context.route('**/*.supabase.co/**', async (route) => {
     const req = route.request();
@@ -32,12 +33,15 @@ try {
     else if (fn === 'settings') body = { external: { google: false } };
     else if (fn === 'game_content') { if (process.env.WOLNA) await new Promise((r) => setTimeout(r, Number(process.env.WOLNA))); body = [HELA]; }
     else if (fn === 'create_character') {
-      made = { name: arg.p_name, idik: 'TESTKOD1', start_place: arg.p_start_place, start_x: arg.p_start_x, start_y: arg.p_start_y, map_scale: arg.p_scale, age: arg.p_age, save: { look: arg.p_look }, exp: 0, dead: false, died_at: null, konto: false };
+      made = { name: arg.p_name, idik: 'TESTKOD1', start_place: arg.p_start_place, start_x: arg.p_start_x, start_y: arg.p_start_y, map_scale: arg.p_scale, age: arg.p_age, save: { look: arg.p_look }, exp: 0, dead: false, died_at: null, konto: false, trudnosc_wybrana: false, trudnosc_dzis: false };
       body = { token: 'tok-create', player: made };
     } else if (fn === 'login') {
       assert.equal(arg.p_name, made?.name);
       assert.equal(arg.p_idik, 'TESTKOD1');
       body = { token: 'tok-login', player: made };
+    } else if (fn === 'zmien_trudnosc') {
+      zmiany.push(arg);
+      body = { ok: true, age: arg.p_age };
     } else if (['heartbeat', 'save_game', 'logout'].includes(fn)) body = true;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
@@ -219,6 +223,12 @@ try {
   assert(!awake.url.includes('d=ShgD6aib8'), 'The demo link is gone from the address bar');
   assert(new URL(awake.url).pathname === '/' && awake.url.includes('#postac=Zosia'), `After waking up the address loads the character: ${awake.url}`);
   await choose(0); // "Rozejrzę się"
+  // The difficulty after waking up (owner, 19 Oct 2026): free first choice, Średni here.
+  await page.waitForFunction(() => /Poziom trudności/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 15000 });
+  await page.screenshot({ path: `work/onb-${name}-5-trudnosc.png` });
+  await choose(2);
+  await page.waitForFunction(() => window.__session.level.nazwa === 'Średni', null, { timeout: 10000 });
+  assert.deepEqual(zmiany.map((z) => [z.p_age, z.p_pierwszy]), [[12, true]], 'One free choice, as an age');
 
   // 5. The portrait tutorial → the Kufer with the code and the account link.
   await page.waitForSelector('#samouczek', { timeout: 15000 });
@@ -265,6 +275,18 @@ try {
   }
   const p1 = await gdzie();
   assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
+  // Changing the difficulty from the game menu: once a day (the 2nd try says „jutro”), hearts follow (Hardkor: 2).
+  await page.evaluate(() => window.__game.scene.getScene('game').wyborTrudnosci(false));
+  await choose(4);
+  await page.waitForFunction(() => window.__session.level.nazwa === 'Hardkor', null, { timeout: 10000 });
+  assert.deepEqual(zmiany.map((z) => [z.p_age, z.p_pierwszy]).slice(1), [[19, false]]);
+  const serca = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: window.__game.scene.getScene('game').player.maxHp ?? null }; });
+  await page.evaluate(() => window.__game.scene.getScene('game').wyborTrudnosci(false));
+  await page.waitForFunction(() => /jutro/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
+  await page.screenshot({ path: `work/onb-${name}-7-jutro.png` });
+  await choose(0);
+  assert.equal(zmiany.length, 2, 'No second change today');
+  console.log(name, 'trudnosc OK', JSON.stringify(serca));
   assert.deepEqual(errors, []);
   console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), czarnoMs, awake }));
 } finally {
