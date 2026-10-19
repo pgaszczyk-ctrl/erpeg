@@ -1,5 +1,5 @@
 // The turn fight's controls, version 2 (owner, 19 Oct 2026, test server; walka/tryb.ts nowyPanel):
-// no bottom panel. A bar at the top says whose turn it is (moves as dots, life, „Uciekaj”, „Zakończ turę”) with
+// no bottom panel. A bar at the top says whose turn it is (life, „Uciekaj”, „Zakończ turę”) with
 // one hint line; the map does the rest (TuryWalki.tap): ground = walk, an enemy = a small ring of blows around it
 // (Cios / Mocny cios; a bow or wand shoots on the second tap), the hero = a ring with Leczenie / Unik.
 // Plain HTML outside #game, so its taps never reach the map; the rings' middles are empty, so a tap there goes
@@ -8,9 +8,12 @@
 import type { StanPanelu, ObslugaPanelu } from './walkaPanel';
 import { itemPictureUrl } from './itemIcon';
 
-/** One attack in the ring around an enemy (content/atakiTurowe.ts): label, cost line, greyed when it can't be done
- * now. Only unlocked attacks are listed; with many of them the ring pages („więcej”). */
-export interface PrzyciskAtaku { id: string; tekst: string; koszt: string; off: boolean }
+/** One attack in the ring around an enemy (content/atakiTurowe.ts): label, its own cost and the walk up (boots) as
+ * small ambers, greyed when it can't be done now. Only unlocked attacks are listed; many of them page („więcej”). */
+export interface PrzyciskAtaku { id: string; tekst: string; koszt: number; podejscie: number; off: boolean; wybrany: boolean; strona?: string }
+
+/** Moves this turn as ambers under the hero (owner, 19 Oct 2026, „czytelność walki” stage 1). */
+export interface PodgladRuchow { but: number; cios: number }
 
 export interface StanKola extends StanPanelu {
   /** Which ring is open: around the hero, around an enemy, or none. */
@@ -25,6 +28,12 @@ export interface StanKola extends StanPanelu {
   unik: boolean;
   /** The hint is a first-fights tip (drawn brighter). */
   rada: boolean;
+  /** Moves beyond the level's own (hotel, luck, later items): the last ones get a bright rim. */
+  bonus: number;
+  /** What a previewed action would spend: boots = walk up, swords = the blow. */
+  podglad: PodgladRuchow | null;
+  /** The attack picked in the enemy's ring: „Uderz” carries it out (disabled when moves are short). */
+  uderz: { ok: boolean; id: string; nazwa: string; brak: number; daleko: boolean } | null;
 }
 
 export interface ObslugaKola extends ObslugaPanelu {
@@ -33,6 +42,7 @@ export interface ObslugaKola extends ObslugaPanelu {
   kolo(): void;
   unik(): void;
   atak(id: string): void;
+  uderz(): void;
 }
 
 const CSS = `
@@ -45,9 +55,6 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-panel.wn.wrog .wn-pas { background: linear-gradient(#5a1f1a, #3a1410); border-color: #ff6a5a; }
 #walka-panel.wn .wn-tura { font: 700 15px 'Pixelify Sans', monospace; letter-spacing: 1px; color: #ffd34a; white-space: nowrap; }
 #walka-panel.wn.wrog .wn-tura { color: #ffb0a0; }
-#walka-panel.wn .wn-kropki { display: flex; gap: 4px; flex: none; }
-#walka-panel.wn .wn-kropki i { width: 11px; height: 11px; border-radius: 50%; background: #ffcf6a; box-shadow: 0 0 6px #ff9a2a99, inset 0 -2px 0 #c9851d; }
-#walka-panel.wn .wn-kropki i.pusta { background: #1e1a24; box-shadow: inset 0 0 0 1.5px #8a6630; }
 #walka-panel.wn .wn-zycie { flex: 1; min-width: 40px; }
 #walka-panel.wn .wn-tuba { position: relative; height: 8px; border-radius: 5px; background: #1e1a24; border: 1px solid #8a6630; overflow: hidden; }
 #walka-panel.wn .wn-tuba i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#ff7a64, #c1281e); }
@@ -73,8 +80,6 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   #walka-panel.wn { left: 66px; right: 6px; width: auto; min-width: 0; transform: none; }
   #walka-panel.wn .wn-pas { gap: 6px; padding: 4px 4px 4px 8px; }
   #walka-panel.wn .wn-tura { font-size: 12px; letter-spacing: 0.5px; }
-  #walka-panel.wn .wn-kropki { gap: 3px; }
-  #walka-panel.wn .wn-kropki i { width: 9px; height: 9px; }
   #walka-panel.wn .wn-zl { display: none; }
   #walka-panel.wn .wn-zycie { min-width: 24px; }
   #walka-panel.wn .wn-koniec { font-size: 11px; padding: 0 6px; min-height: 32px; }
@@ -82,6 +87,44 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   #walka-panel.wn .wn-ucieczka span { display: none; }
   #walka-panel.wn .wn-podp { font-size: 13px; }
 }
+/* Moves as ambers under the hero: full = bright amber, spent = dark, bonus moves with a light rim. */
+#walka-bursztyny { position: fixed; left: 0; top: 0; z-index: 6; pointer-events: none; transform: translate(-9999px, 0); }
+#walka-bursztyny .bz-w { position: absolute; left: 0; top: 0; transform: translateX(-50%); display: grid; gap: 3px; justify-items: center;
+  padding: 3px 4px; border-radius: 9px; background: #1e1a24a8; }
+#walka-bursztyny.ukryj .bz-w { display: none; }
+.bz { position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0 14%, #ffc64a 30%, #e08a1a 70%, #9a5410 100%);
+  border: 1px solid #6a3a0c; box-shadow: 0 0 5px #ffae3088; }
+.bz.pusty { background: radial-gradient(circle at 35% 30%, #5a4428 0 12%, #3a2a1a 45%, #241810 100%); border-color: #5a4022; box-shadow: none; }
+.bz.bonus { border: 2px solid #fff1c8; box-shadow: 0 0 6px #fff1a8cc; }
+.bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
+.bz.but { background: radial-gradient(circle at 35% 30%, #ffffff 0 16%, #fff0b8 40%, #ffd96a 100%); border-color: #c98a1a; animation: bz-puls 0.8s ease-in-out infinite; }
+.bz.cios { background: radial-gradient(circle at 35% 30%, #ffc49a 0 14%, #c8602a 45%, #7a2e10 100%); border-color: #4a1a08; animation: bz-puls 0.8s ease-in-out infinite; }
+.bz.miga { animation: bz-miga 0.5s steps(2, jump-none) infinite; }
+.bz.brak { background: none; border: 2px dashed #ff4a3a; box-shadow: none; animation: bz-miga 0.5s steps(2, jump-none) infinite; }
+.bz-wiele { display: flex; align-items: center; gap: 3px; font: 700 13px 'Pixelify Sans', monospace; color: #ffd98a; text-shadow: 0 1px 1px #000; white-space: nowrap; }
+.bz-wiele b { color: #ffb08a; font-weight: 700; }
+.bz-wiele b.zle { color: #ff6a5a; }
+@keyframes bz-puls { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.25); filter: brightness(1.35); } }
+@keyframes bz-miga { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
+/* Small ambers on the ring's buttons, in place of the cost text. */
+.bz-mini { display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 2px; }
+.bz-mini .bz { width: 10px; height: 10px; box-shadow: none; animation: none; }
+.bz-mini .bz.bonus { border-width: 1px; }
+.bz-mini .bz.but { animation: none; }
+/* „Uderz”: the picked attack is only a preview until this is pressed (owner, 19 Oct 2026). */
+#walka-uderz { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 8;
+  min-width: 190px; min-height: 58px; padding: 6px 20px; border-radius: 30px; display: none; align-items: center; justify-content: center; gap: 10px;
+  font: 800 22px 'Alegreya Sans', sans-serif; letter-spacing: 1px; color: #2a1606; cursor: pointer;
+  background: linear-gradient(#ffe08a, #e0a030); border: 3px solid #7a4a10; box-shadow: 0 4px 12px #000a, inset 0 2px 0 #fff4c8; }
+#walka-uderz.on { display: flex; }
+#walka-uderz img, #walka-uderz svg { width: 30px; height: 30px; image-rendering: pixelated; }
+#walka-uderz .bz-mini { margin: 0; }
+#walka-uderz .bz-mini .bz { width: 12px; height: 12px; }
+#walka-uderz[aria-disabled="true"] { background: linear-gradient(#6a5a4a, #3e342a); color: #d8c8b0; border-color: #4a3a2a; font-size: 17px; letter-spacing: 0; }
+#walka-uderz.blysk { animation: wk-blysk 0.9s ease-in-out infinite; }
+#walka-kolo .wk-b.wybrany { border-color: #fff1a8; box-shadow: 0 0 0 3px #ffd34a, 0 0 14px 4px #ffd34acc, 0 3px 8px #000a; }
+@media (prefers-reduced-motion: reduce) { .bz.but, .bz.cios, .bz.miga, .bz.brak { animation: none; } }
 #walka-kolo { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 7; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; }
 #walka-kolo .wk-b { position: absolute; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; pointer-events: auto; cursor: pointer;
   border: 2px solid #b8893a; background: radial-gradient(circle at 40% 35%, #6a4c32, #2f2017); box-shadow: 0 3px 8px #000a, inset 0 1px 0 #ffffff33;
@@ -111,6 +154,10 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-panel[data-wskaz="cios"] ~ #walka-kolo .wk-b.cios,
 #walka-panel[data-wskaz="lecz"] ~ #walka-kolo .wk-b.lecz { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
+/* Ambers inside buttons: after the ring's icon sizes, so those don't blow them up. */
+#walka-kolo.wrog .wk-b .bz-mini svg.but-ik, #walka-kolo .wk-b .bz-mini svg.but-ik { width: 12px; height: 12px; }
+#walka-kolo.wrog .wk-b .bz svg, #walka-kolo .wk-b .bz svg, #walka-uderz .bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
+#walka-uderz .bz-mini svg.but-ik { width: 16px; height: 16px; }
 @media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.mocny { animation: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
 `;
 
@@ -254,6 +301,42 @@ const IKONY = {
   ], K),
 };
 
+/** Small marks inside the ambers: a boot (walk up) and a sword (the blow). */
+const BUT = piksele([
+  '........',
+  '..ooo...',
+  '..ooo...',
+  '..ooo...',
+  '..oooo..',
+  '..ooooo.',
+  '.oooooo.',
+  '........',
+], { o: '#5a3410' });
+const MIECZYK = piksele([
+  '......o.',
+  '.....oo.',
+  '....oo..',
+  '.o.oo...',
+  '..oo....',
+  '.o.o....',
+  'o.......',
+  '........',
+], { o: '#fff1d8' });
+/** A boot drawn beside the small ambers on a button (the walk up). */
+const BUT_IKONA = BUT.replace('<svg ', '<svg class="but-ik" ');
+
+/** Amber-mark HTML: `stan` = full/spent/preview kinds. */
+function bz(kl: string) {
+  const ik = /\bbut\b/.test(kl) ? BUT : /\bcios\b/.test(kl) ? MIECZYK : '';
+  return `<i class="bz ${kl}">${ik}</i>`;
+}
+
+/** Small ambers for a cost: boots + their dots for the walk up, then the blow's own. */
+function koszty(but: number, cios: number) {
+  if (!but && !cios) return '';
+  return `<span class="bz-mini">${but ? BUT_IKONA + bz('but').repeat(but) : ''}${bz('').repeat(cios)}</span>`;
+}
+
 /** Ring radius (CSS px) and the two buttons' places: upper left and upper right of the figure (not on it). */
 const PROMIEN = 54;
 /** The enemy ring is wider: its buttons are bigger. */
@@ -270,6 +353,9 @@ const KATY = [-150, -30];
 export class WalkaKolo {
   private el: HTMLDivElement;
   private ring: HTMLDivElement;
+  private pula!: HTMLDivElement;
+  private uderzBtn!: HTMLButtonElement;
+  private pulaKlucz = '';
   private klawisze = (e: KeyboardEvent) => this.klawisz(e);
   private stan: StanKola | null = null;
 
@@ -290,7 +376,6 @@ export class WalkaKolo {
     el.innerHTML = `
       <div class="wn-pas">
         <span class="wn-tura"></span>
-        <span class="wn-kropki" aria-hidden="true"></span>
         <div class="wn-zycie"><div class="wn-tuba"><i></i><b></b></div><div class="wn-zl"></div></div>
         <button class="wn-ucieczka" type="button" aria-label="Ucieczka">${IKONY.ucieczka}<span>Uciekaj</span></button>
         <button class="wn-koniec" type="button">Zakończ<br>turę</button>
@@ -302,9 +387,22 @@ export class WalkaKolo {
     ring.id = 'walka-kolo';
     document.body.appendChild(ring);
     this.ring = ring;
-    for (const n of [el, ring]) for (const ev of ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click'] as const) n.addEventListener(ev, (e) => {
+    document.getElementById('walka-bursztyny')?.remove();
+    document.getElementById('walka-uderz')?.remove();
+    const pula = document.createElement('div');
+    pula.id = 'walka-bursztyny';
+    pula.innerHTML = '<div class="bz-w" role="img"></div>';
+    document.body.appendChild(pula);
+    this.pula = pula;
+    const uderz = document.createElement('button');
+    uderz.id = 'walka-uderz';
+    uderz.type = 'button';
+    document.body.appendChild(uderz);
+    this.uderzBtn = uderz;
+    uderz.onclick = () => this.on.uderz();
+    for (const n of [el, ring, uderz]) for (const ev of ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click'] as const) n.addEventListener(ev, (e) => {
       // Only the buttons swallow taps: the ring's empty middle lets them through to the map (the hero).
-      if (n === el || (e.target as HTMLElement).closest('.wk-b')) e.stopPropagation();
+      if (n !== ring || (e.target as HTMLElement).closest('.wk-b')) e.stopPropagation();
     });
     el.querySelector<HTMLButtonElement>('.wn-koniec')!.onclick = () => this.on.koniecTury();
     el.querySelector<HTMLButtonElement>('.wn-ucieczka')!.onclick = () => this.on.ucieczka();
@@ -349,18 +447,65 @@ export class WalkaKolo {
     this.ring.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
   }
 
+  /** The ambers' place: just under the hero's feet (CSS px of the viewport). */
+  bursztyny(x: number, y: number) {
+    this.pula.style.transform = `translate(${Math.round(x)}px, ${Math.round(Math.min(y, innerHeight - 60))}px)`;
+  }
+
+  /**
+   * The pool of moves under the hero: up to 5 in a row, from 6 two rows of 4, above 8 one amber with ×N.
+   * A preview pulses the ones that would go (boots = walk up, rust with a sword = the blow); short of moves the
+   * ones left blink and the missing ones are dashed red rings.
+   */
+  private rysujPule(s: StanKola) {
+    const gracz = s.tura === 'gracz';
+    const max = Math.max(s.maxRuchy, s.ruchy);
+    const pg = gracz && !s.busy ? s.podglad : null;
+    const klucz = JSON.stringify([gracz, s.ruchy, max, s.bonus, pg]);
+    if (klucz === this.pulaKlucz) return;
+    this.pulaKlucz = klucz;
+    this.pula.classList.toggle('ukryj', !gracz);
+    const w = this.pula.querySelector<HTMLElement>('.bz-w')!;
+    const wyda = pg ? pg.but + pg.cios : 0;
+    const brak = Math.max(0, wyda - s.ruchy);
+    w.setAttribute('aria-label', `Ruchy: ${s.ruchy} z ${max}${wyda ? `, ta akcja: ${wyda}` : ''}${brak ? `, brakuje ${brak}` : ''}`);
+    if (max > 8) {
+      // Many moves: one amber and a counter (×N, and what the preview takes or misses).
+      const po = s.ruchy - wyda;
+      w.style.gridTemplateColumns = '';
+      w.innerHTML = `<span class="bz-wiele">${bz(s.ruchy ? (pg ? (brak ? 'miga' : pg.cios ? 'cios' : 'but') : '') : 'pusty')}×${s.ruchy}${wyda ? (brak ? ` <b class="zle">brak ${brak}</b>` : ` <b>→ ×${po}</b>`) : ''}</span>`;
+      return;
+    }
+    const klasy: string[] = [];
+    // The first ones are the level's own, the last `bonus` ones came from the hotel / luck (bright rim).
+    for (let i = 0; i < max; i++) {
+      const k: string[] = [i < s.ruchy ? 'pelny' : 'pusty'];
+      if (i >= max - s.bonus) k.push('bonus');
+      if (pg && i < s.ruchy) {
+        if (brak) k.push('miga');
+        else if (i >= s.ruchy - wyda) k.push(i < s.ruchy - pg.cios ? 'but' : 'cios');
+      }
+      klasy.push(k.join(' '));
+    }
+    for (let i = 0; i < brak; i++) klasy.push('brak');
+    const n = klasy.length;
+    w.style.gridTemplateColumns = `repeat(${n >= 6 ? 4 : Math.max(1, n)}, 14px)`;
+    w.innerHTML = klasy.map(bz).join('');
+  }
+
   private promien = PROMIEN;
   private katy = KATY;
 
-  private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean } = {}) {
+  /** `koszt` = small ambers' HTML (koszty()) or a short text („1/2”, „gotowy”); `opis` = its words for readers. */
+  private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean; wybrany?: boolean; opis?: string } = {}) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `wk-b ${klasa}${opts.blysk ? ' blysk' : ''}${opts.on ? ' on' : ''}${opts.uwaga ? ' uwaga' : ''}`;
-    // „2 ruchy · z podejściem” in two short lines, so neighbouring buttons' captions don't run into each other.
-    b.innerHTML = `${ikona}<span class="n">${nazwa}${koszt ? `<small>${koszt.split(' · ').join('<br>')}</small>` : ''}</span>`;
-    b.setAttribute('aria-label', `${nazwa} ${koszt}`);
+    b.className = `wk-b ${klasa}${opts.blysk ? ' blysk' : ''}${opts.on ? ' on' : ''}${opts.uwaga ? ' uwaga' : ''}${opts.wybrany ? ' wybrany' : ''}`;
+    b.innerHTML = `${ikona}<span class="n">${nazwa}${koszt.startsWith('<') ? koszt : koszt ? `<small>${koszt}</small>` : ''}</span>`;
+    b.setAttribute('aria-label', `${nazwa}${opts.opis ? `, ${opts.opis}` : ''}`);
+    if (opts.wybrany) b.setAttribute('aria-pressed', 'true');
     // Disabled ones still answer with why (TuryWalki says it in the hint line).
-    if (opts.off) b.setAttribute('aria-disabled', 'true'), b.style.filter = 'grayscale(0.8)', b.style.opacity = '0.5';
+    if (opts.off) b.setAttribute('aria-disabled', 'true'), b.style.filter = 'grayscale(0.8)', b.style.opacity = opts.wybrany ? '0.8' : '0.5';
     const a = ((this.katy[i] ?? KATY[i] ?? -90) * Math.PI) / 180;
     const dx = Math.round(Math.cos(a) * this.promien), dy = Math.round(Math.sin(a) * this.promien);
     b.style.left = `${dx}px`;
@@ -380,15 +525,7 @@ export class WalkaKolo {
     const gracz = s.tura === 'gracz';
     el.classList.toggle('wrog', s.tura === 'wrogowie');
     el.querySelector<HTMLElement>('.wn-tura')!.textContent = gracz ? 'TWOJA TURA' : s.tura === 'wrogowie' ? 'TURA WROGA…' : 'ROZSTAWIENIE…';
-    const kropki = el.querySelector<HTMLElement>('.wn-kropki')!;
-    kropki.textContent = '';
-    kropki.style.display = gracz ? '' : 'none';
-    for (let i = 0; i < Math.max(s.maxRuchy, s.ruchy); i++) {
-      const d = document.createElement('i');
-      if (i >= s.ruchy) d.className = 'pusta';
-      kropki.append(d);
-    }
-    kropki.setAttribute('aria-label', `Ruchy ${s.ruchy} z ${s.maxRuchy}`);
+    this.rysujPule(s);
     const full = Math.max(s.maxHp, 1);
     el.querySelector<HTMLElement>('.wn-zl')!.textContent = `♥ ${s.hp}/${s.maxHp}${s.extra ? ` +${s.extra}` : ''}`;
     el.querySelector<HTMLElement>('.wn-tuba i')!.style.width = `${(100 * Math.min(s.hp, full)) / full}%`;
@@ -407,6 +544,26 @@ export class WalkaKolo {
     podp.textContent = gracz ? s.podpowiedz : s.tura === 'wrogowie' ? 'Przeciwnicy odpowiadają – poczekaj.' : 'Grupka się rozstawia…';
     podp.classList.toggle('rada', gracz && s.rada);
 
+    // „Uderz”: the picked attack's picture, the word and its cost; short of moves it says how many are missing.
+    const u = gracz && !s.busy && s.kolo === 'wrog' ? s.uderz : null;
+    const ub = this.uderzBtn;
+    const uk = JSON.stringify([u, s.podglad, s.bronId, this.wskaz()]);
+    if (ub.dataset.k !== uk) {
+      ub.dataset.k = uk;
+      ub.classList.toggle('on', !!u);
+      if (u) {
+        const ik: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa, mocny: IKONY.mocny };
+        const obraz = ik[u.id] ?? `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
+        const pg = s.podglad;
+        ub.setAttribute('aria-disabled', u.ok ? 'false' : 'true');
+        ub.innerHTML = u.ok
+          ? `${obraz}<span>UDERZ</span>${pg ? koszty(pg.but, pg.cios) : ''}`
+          : `${obraz}<span>${u.daleko ? 'Za daleko' : `Brakuje ${u.brak} ${u.brak === 1 ? 'ruchu' : 'ruchów'}`}</span>`;
+        ub.setAttribute('aria-label', u.ok ? `Uderz: ${u.nazwa}` : `${u.nazwa} – ${u.daleko ? 'za daleko' : `brakuje ${u.brak}`}`);
+        ub.classList.toggle('blysk', u.ok && this.wskaz() === 'cios');
+      }
+    }
+
     // The ring: rebuilt only when what it shows changes (its buttons animate in).
     const otwarte = gracz && !s.busy ? s.kolo : null;
     const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.unik, s.zapowiedz, s.bron, s.bronId, s.ataki, this.wskaz()]);
@@ -418,6 +575,7 @@ export class WalkaKolo {
       return;
     }
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
+    const ruchy = (n: number) => koszty(0, n);
     const wskaz = this.wskaz();
     this.ring.classList.toggle('wrog', otwarte === 'wrog');
     this.promien = PROMIEN;
@@ -429,15 +587,20 @@ export class WalkaKolo {
       const luk = LUK[Math.min(4, s.ataki.length)] ?? LUK[4];
       this.katy = luk.katy;
       this.promien = luk.r;
-      s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(a.id, ikona[a.id] ?? bron, a.tekst, a.koszt, () => this.on.atak(a.id), i, {
-        off: a.off, blysk: wskaz === 'cios' && i === 0,
-      })));
+      const ktos = s.ataki.some((a) => a.wybrany);
+      s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(a.id, ikona[a.id] ?? bron, a.tekst,
+        a.strona ?? koszty(a.podejscie, a.koszt), () => this.on.atak(a.id), i, {
+          off: a.off, wybrany: a.wybrany, blysk: wskaz === 'cios' && i === 0 && !ktos,
+          opis: a.strona ? `strona ${a.strona}` : `${ruchyTxt(a.koszt)}${a.podejscie ? ` i ${ruchyTxt(a.podejscie)} na podejście` : ''}`,
+        })));
     } else {
       this.ring.append(
-        this.przycisk('lecz', IKONY.lecz, 'Leczenie', ruchyTxt(s.koszt.lecz), () => this.on.lecz(), 0, {
+        this.przycisk('lecz', IKONY.lecz, 'Leczenie', ruchy(s.koszt.lecz), () => this.on.lecz(), 0, {
+          opis: ruchyTxt(s.koszt.lecz),
           off: s.ruchy < s.koszt.lecz || s.hp >= s.maxHp, blysk: wskaz === 'lecz' || (s.hp <= s.maxHp / 2 && s.ruchy >= s.koszt.lecz),
         }),
-        this.przycisk('unik', IKONY.unik, s.unik ? 'Unik ✔' : 'Unik', s.unik ? 'gotowy' : ruchyTxt(s.koszt.oslona), () => this.on.unik(), 1, {
+        this.przycisk('unik', IKONY.unik, s.unik ? 'Unik ✔' : 'Unik', s.unik ? 'gotowy' : ruchy(s.koszt.oslona), () => this.on.unik(), 1, {
+          opis: ruchyTxt(s.koszt.oslona),
           off: s.unik || s.ruchy < s.koszt.oslona, blysk: s.zapowiedz && !s.unik, on: s.unik,
         }),
       );
@@ -455,5 +618,7 @@ export class WalkaKolo {
     document.body.classList.remove('walka-kolo');
     this.el.remove();
     this.ring.remove();
+    this.pula.remove();
+    this.uderzBtn.remove();
   }
 }

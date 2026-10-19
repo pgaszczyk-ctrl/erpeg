@@ -195,7 +195,11 @@ try {
         // A phone: the second tap strikes (a computer struck on the click); nothing to do → end the turn.
         // The dragon's ring of blows: „Cios” (nothing to do → end the turn).
         const zrobil = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
-        if (!zrobil) await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
+        // Picking „Cios” only previews it (the ambers pulse); „Uderz” strikes (19 Oct 2026).
+        if (zrobil) {
+          await page.waitForTimeout(200);
+          await page.evaluate(() => document.querySelector('#walka-uderz.on:not([aria-disabled="true"])')?.click());
+        } else await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
       } else await page.evaluate(() => {
         const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
         b?.click();
