@@ -51,7 +51,18 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   background: #1e1a24d8; border-radius: 9px; padding: 4px 10px; }
 #walka-panel.wn .wn-podp:empty { display: none; }
 #walka-panel.wn .wn-podp.rada { border: 2px solid #e9c46a; font-weight: 700; }
-@media (max-width: 420px) { #walka-panel.wn .wn-tura { font-size: 13px; } #walka-panel.wn .wn-zl { display: none; } #walka-panel.wn .wn-koniec { font-size: 12px; padding: 0 6px; } }
+@media (max-width: 600px) {
+  /* Phones: the bar from just right of the ☰ corner to the right edge. */
+  #walka-panel.wn { left: 66px; right: 6px; width: auto; min-width: 0; transform: none; }
+  #walka-panel.wn .wn-pas { gap: 6px; padding: 4px 4px 4px 8px; }
+  #walka-panel.wn .wn-tura { font-size: 12px; letter-spacing: 0.5px; }
+  #walka-panel.wn .wn-kropki { gap: 3px; }
+  #walka-panel.wn .wn-kropki i { width: 9px; height: 9px; }
+  #walka-panel.wn .wn-zl { display: none; }
+  #walka-panel.wn .wn-zycie { min-width: 24px; }
+  #walka-panel.wn .wn-koniec { font-size: 11px; padding: 0 6px; min-height: 32px; }
+  #walka-panel.wn .wn-podp { font-size: 13px; }
+}
 #walka-kolo { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 7; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; }
 #walka-kolo .wk-b { position: absolute; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; pointer-events: auto; cursor: pointer;
   border: 2px solid #b8893a; background: radial-gradient(circle at 40% 35%, #6a4c32, #2f2017); box-shadow: 0 3px 8px #000a, inset 0 1px 0 #ffffff33;
@@ -66,6 +77,7 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-kolo .wk-b.blysk { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 #walka-kolo .wk-b.on { border-color: #ffd34a; background: radial-gradient(circle at 40% 35%, #8a6a2a, #4e3818); }
 #walka-kolo .wk-b.uwaga { border-color: #ff6a5a; background: radial-gradient(circle at 40% 35%, #7a2a22, #3a1410); }
+#walka-panel[data-wskaz="lecz"] ~ #walka-kolo .wk-b.lecz { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
 @media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
 `;

@@ -54,7 +54,7 @@ try {
         const t = document.getElementById(id)?.textContent;
         if (t && window.__widziane[window.__widziane.length - 1] !== t) window.__widziane.push(t);
       }
-      const z = /Życie\s*(\d+)/.exec(document.getElementById('walka-panel')?.textContent ?? '')?.[1];
+      const z = /(?:Życie\s*|♥ )(\d+)/.exec(document.getElementById('walka-panel')?.textContent ?? '')?.[1];
       if (z && window.__zycieOst !== z) { window.__zycieOst = z; window.__widziane.push('♥' + z); }
     }).observe(document, { subtree: true, childList: true, characterData: true });
   });
@@ -64,7 +64,9 @@ try {
   page.on('dialog', (d) => d.accept());
   const tury = process.env.TURY !== '0';
   const PROD = !!process.env.PROD;
-  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}`);
+  // The turn fight's new controls (test server; walka/tryb.ts nowyPanel) unless PANEL=stary or a production build.
+  const nowy = !PROD && process.env.PANEL !== 'stary';
+  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}${nowy || PROD ? '' : '&panel=stary'}`);
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });
@@ -149,7 +151,7 @@ try {
     await page.waitForSelector('#walka-panel', { timeout: 15000 });
     const rada = () => page.evaluate(() => ({ t: document.getElementById('demo-rada')?.textContent ?? '', w: document.getElementById('walka-panel')?.getAttribute('data-wskaz') ?? '' }));
     const hp0 = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: s.player.maxHp ?? null }; });
-    await page.waitForFunction(() => /CIOS/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
+    await page.waitForFunction((nowy) => (nowy ? /Dotknij smoka/ : /CIOS/).test(document.getElementById('demo-rada')?.textContent ?? ''), nowy, { timeout: 30000 });
     assert.equal((await rada()).w, 'cios');
     await page.screenshot({ path: `work/onb-${name}-4-walka-cios.png` });
     // Nobody strolls near the dragon (owner, 19 Oct 2026).
@@ -165,14 +167,36 @@ try {
       return { x: (d.x - cam.worldView.x) * k, y: (d.y - 6 - cam.worldView.y) * k };
     });
     const klik = (x, y) => (phone ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
-    const mojaTura = () => page.waitForFunction(() => { const p = document.getElementById('walka-panel'); return !p || (!p.classList.contains('czekaj')); }, null, { timeout: 60000 });
+    const mojaTura = () => page.waitForFunction(() => {
+      const p = document.getElementById('walka-panel'), w = window.__game.scene.getScene('game').walka;
+      return !p || (!p.classList.contains('czekaj') && !p.classList.contains('wrog') && (!w || (w.faza === 'gracz' && !w.busy)));
+    }, null, { timeout: 60000 });
+    const bohaterNaEkranie = () => page.evaluate(() => {
+      const s = window.__game.scene.getScene('game'), cam = s.cameras.main;
+      const k = cam.zoom / (cam.width / document.querySelector('#game canvas').getBoundingClientRect().width);
+      return { x: (s.player.x - cam.worldView.x) * k, y: (s.player.y - 4 - cam.worldView.y) * k };
+    });
+    const kolo = async (sel) => {
+      // New controls: tap the hero, then the ring's button.
+      const h = await bohaterNaEkranie();
+      await klik(h.x, h.y);
+      await page.waitForSelector(`#walka-kolo .wk-b.${sel}`, { timeout: 5000 });
+      await page.waitForTimeout(250);
+      await page.evaluate((sel) => document.querySelector(`#walka-kolo .wk-b.${sel}`).click(), sel);
+      await page.waitForTimeout(200);
+    };
     const uderz = async () => {
       await mojaTura();
       const at = await smokNaEkranie();
       if (!at || !(await page.$('#walka-panel'))) return;
       await klik(at.x, at.y);
       await page.waitForTimeout(250);
-      await page.evaluate(() => {
+      if (nowy) {
+        // A phone: the second tap strikes (a computer struck on the click); nothing to do → end the turn.
+        const w = await page.evaluate(() => { const w = window.__game.scene.getScene('game').walka; return w && { cel: !!w.cel, busy: w.busy, ruchy: w.ruchy }; });
+        if (w && w.cel && !w.busy && phone) await klik(at.x, at.y);
+        else if (w && !w.busy && !w.cel) await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
+      } else await page.evaluate(() => {
         const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
         b?.click();
       });
@@ -181,21 +205,38 @@ try {
     if (process.env.UCIECZKA) {
       // Run away and wander off: after 300 m of the dream the hero wakes up anyway (owner, 18 Oct 2026).
       await mojaTura();
-      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
-      await page.waitForTimeout(200);
-      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.uciekaj').click());
+      if (nowy) {
+        await kolo('uciekaj');
+        await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.uciekaj').click());
+      } else {
+        await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
+        await page.waitForTimeout(200);
+        await page.evaluate(() => document.querySelector('#walka-panel .wp-b.uciekaj').click());
+      }
       await page.waitForFunction(() => !document.getElementById('walka-panel'), null, { timeout: 5000 });
       await page.evaluate(() => { window.__game.scene.getScene('game').demoRun.dreamWalked += 600; });
     } else {
     await uderz();
-    await page.waitForFunction(() => /SPECJALNE/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
+    await page.waitForFunction((nowy) => (nowy ? /Dotknij swojego bohatera/ : /SPECJALNE/).test(document.getElementById('demo-rada')?.textContent ?? ''), nowy, { timeout: 30000 });
     assert.equal((await rada()).w, 'spec');
     await page.screenshot({ path: `work/onb-${name}-4-walka-lecz.png` });
     await mojaTura();
-    await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
-    await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
-    const przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
-    await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
+    let przed;
+    if (nowy) {
+      const h = await bohaterNaEkranie();
+      await klik(h.x, h.y);
+      await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
+      await page.waitForSelector('#walka-kolo .wk-b.lecz.blysk', { timeout: 5000 });
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: `work/onb-${name}-4-walka-kolo.png` });
+      przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
+      await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.lecz').click());
+    } else {
+      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
+      await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
+      przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
+      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
+    }
     await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
     await page.waitForFunction(() => /Bij dalej|Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();

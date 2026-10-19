@@ -801,8 +801,9 @@ export class TuryWalki {
     this.podmenu = on;
     if (!on) this.ucieczkaPytanie = false;
     if (on) this.podpowiedz = this.nowy ? 'Wybierz akcję. Dotknięcie obok zamyka kółko.' : 'Mocny cios, leczenie, osłona albo ucieczka.';
-    this.odswiez();
+    // The tutorial first (it may point at a ring button), then the ring is drawn.
     if (on !== bylo) this.h.krok?.(on ? 'specjalne' : 'wroc');
+    this.odswiez();
   }
 
   /** Weapon in hand decides the attack: sword (melee with a short hop) or a shot (bow/wand). */

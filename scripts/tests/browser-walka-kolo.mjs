@@ -261,7 +261,7 @@ try {
   }
 
   // ---- 6. Out of moves (or „Zakończ turę”): the enemies' turn shows red, then the hero's again.
-  if ((await fight())?.faza === 'gracz') await page.locator('#walka-panel .wn-koniec').click();
+  if ((await fight())?.faza === 'gracz') await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
   await page.waitForFunction(() => document.querySelector('#walka-panel.wrog') || !window.__game.scene.getScene('game').walka, null, { timeout: 10000 });
   await page.screenshot({ path: `work/walka-${tag}-5-tura-wroga.png` });
   await waitPhase('gracz');
@@ -274,15 +274,13 @@ try {
     if (f.faza !== 'gracz') { await waitPhase('gracz'); continue; }
     p = await heroPos();
     t = near(f, p);
+    const r0 = f.ruchy;
     await tapWorld(t.x, t.y - 4);
-    const w = await fight();
-    if (w?.cel && w.faza === 'gracz') {
-      if (mobile) await tapWorld(t.x, t.y - 4);
-    } else if (w?.faza === 'gracz') await page.locator('#walka-panel .wn-koniec').click();
-    await page.waitForTimeout(150);
-    await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || (!w.busy && w.faza !== 'rozstaw'); }, null, { timeout: 30000 });
+    if (mobile && (await fight())?.cel && !(await fight()).busy) await tapWorld(t.x, t.y - 4);
+    await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 30000 });
     const w2 = await fight();
-    if (w2 && w2.faza === 'gracz' && w2.ruchy === w.ruchy && !w2.busy) await page.locator('#walka-panel .wn-koniec').click();
+    // Nothing done (e.g. no way up): end the turn by the bar's button.
+    if (w2 && w2.faza === 'gracz' && w2.ruchy === r0) await page.evaluate(() => { const b = document.querySelector('#walka-panel .wn-koniec'); if (b && !b.disabled) b.click(); });
     await waitPhase('gracz');
   }
   assert.equal(await fight(), null, 'fight over');
