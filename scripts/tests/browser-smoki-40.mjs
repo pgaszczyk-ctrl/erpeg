@@ -39,7 +39,7 @@ try {
     await g(([gt]) => {
       const s = window.__game.scene.getScene('game');
       s.protectUntil = Date.now() + 1e9;
-      for (const e of s.enemies.filter((e) => e.kind === 'smok')) e.destroy();
+      for (const e of s.enemies.filter((e) => String(e.texture?.key).startsWith('smok-') || e.kind === 'smok')) e.destroy();
       const f = s.city.freeNear(s.player.x + 260, s.player.y);
       s.player.setPosition(f.x, f.y);
       window.__smok(gt);
@@ -64,6 +64,27 @@ try {
       await page.waitForTimeout(300);
     }
   }
+  // Cała szóstka w rzędzie, z boku, obok bohaterki: porównanie wielkości i stylu (work/smoki40-<tag>-razem.png).
+  await g(() => {
+    const s = window.__game.scene.getScene('game');
+    for (const e of s.enemies.filter((e) => String(e.texture?.key).startsWith('smok-'))) e.destroy();
+    const gat = ['ognisty', 'gorski', 'kwasowy', 'lesny', 'trujacy', 'cien'];
+    gat.forEach((gt, i) => {
+      window.__smok(gt);
+      const d = s.enemies[s.enemies.length - 1];
+      d.peaceful = true;
+      d.setPosition(s.player.x - 150 + (i % 3) * 100, s.player.y - 40 + Math.floor(i / 3) * 90);
+      d.vel?.set?.(0, 0);
+      d.roam = 0;
+    });
+  });
+  await page.waitForTimeout(2500);
+  await g(() => {
+    const s = window.__game.scene.getScene('game');
+    for (const d of s.enemies.filter((e) => e.active && String(e.texture?.key).startsWith('smok-'))) { d.anims.play(`${d.texture.key}-stoi_bok`); d.setFlipX(false); }
+  });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `work/smoki40-${tag}-razem.png` });
   assert.deepEqual(errors, []);
   console.log('OK', tag);
 } finally {
