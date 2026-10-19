@@ -13,7 +13,9 @@ const BASE = (import.meta.env.BASE_URL || '/') + 'hud/zbiornik/';
 /** The artist's layout.json (CSS px from the column's top-left corner; textures are @3x). */
 const L = {
   portret: 56,
-  poziom: { x: 16, y: 52, w: 24, h: 12 },
+  /** The level plate: a small dark-glass pill with a brass rim like the purse on the right (owner, 19 Oct 2026: the
+   * number didn't fit the artist's tiny light plate and floated over it), hanging from the ring's bottom. */
+  poziom: { x: 15, y: 51, w: 26, h: 14 },
   /** Hit areas 44×44 (x 6), the 36×36 picture 4 px inside, the icon 8 px inside that. Closer than the artist's layout
    * (owner, 18 Oct 2026: „odległości od kulek są za duże”): 10 px between the pictures, bridged by a pipe joint. */
   kolo: { x: 6, hit: 44, art: 36, wciecie: 4, ikona: 20, ikonaOd: 8, pierwszeY: 66, skok: 46 },
@@ -69,8 +71,12 @@ const CSS = `
 #hud-tel .tel-kolo[data-brak] .ik { opacity: 0.55; }
 #hud-tel .tel-lacz { position: absolute; overflow: hidden; width: 8px; }
 #hud-tel .tel-lacz img { left: 0; top: 0; width: 8px; height: 16px; }
-#hud-tel .tel-poziom { position: absolute; width: 24px; height: 12px; display: flex; align-items: center; justify-content: center;
-  font: 800 9px/12px 'Alegreya Sans', sans-serif; color: #2b1a0e; padding-bottom: 1px; box-sizing: border-box; pointer-events: none; z-index: 21; }
+#hud-tel .tel-poziom { position: absolute; width: 26px; height: 14px; display: flex; align-items: center; justify-content: center;
+  font: 800 10px/1 'Alegreya Sans', sans-serif; color: #ffe2a0; padding: 0 0 0.5px; font-variant-numeric: lining-nums tabular-nums;
+  text-shadow: 0 0.5px 0 #000a; border-radius: 999px;
+  background: radial-gradient(120% 140% at 50% -20%, rgba(255,226,160,0.12), transparent 60%), linear-gradient(180deg, #2e2622, #161211);
+  box-shadow: 0 0 0 0.5px #2a1a0c, 0 0 0 1.5px #c9953f, 0 0 0 2px #7a5220, 0 0 0 2.5px rgba(20,12,6,0.85),
+    inset 0 0.5px 0 rgba(255,236,190,0.2), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1.5px 3px rgba(0,0,0,0.4); box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
 /* The plaque on the right in the reservoir's style (owner, 18 Oct 2026: the pixel plates didn't fit the new HUD):
    polished brass rims, dark glass, smooth icons, round buttons from the artist's set, a pipe joint between the plates. */
@@ -388,15 +394,13 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
   });
   el.portret = p;
 
-  const pozImg = img('poziom_pusty');
-  Object.assign(pozImg.style, { left: `${L.poziom.x}px`, top: `${L.poziom.y}px`, width: `${L.poziom.w}px`, height: `${L.poziom.h}px`, zIndex: '21' });
   const poz = document.createElement('div');
   poz.className = 'tel-poziom';
   poz.style.left = `${L.poziom.x}px`;
   poz.style.top = `${L.poziom.y}px`;
   el.poziom = poz;
 
-  root.append(p, pozImg, poz);
+  root.append(p, poz);
   document.body.append(root);
   root.addEventListener('pointerdown', () => { if (rozwiniety()) odliczZwiniecie(); });
   for (const n of WARSTWY) obraz(n);
@@ -425,11 +429,12 @@ export function odmontujTeleskop() {
   document.body.classList.remove('hud-teleskop');
 }
 
-/** Phone ×1, computer ×2 (the @3x pictures stay smooth at both). */
+/** Phone ×1, computer ×2 … ×3 by the window's height (owner, 19 Oct 2026: „na komputerze może być większe”;
+ * the @3x pictures stay smooth at any of these). */
 let skala = 1;
 function uklad() {
   if (!root) return;
-  skala = telefon() || window.innerHeight < 560 ? 1 : 2;
+  skala = telefon() || window.innerHeight < 560 ? 1 : Math.min(3, Math.max(2, Math.round(window.innerHeight / 330 * 4) / 4));
   root.style.setProperty('--tel-mx', `${L.margines.x}px`);
   root.style.setProperty('--tel-my', `${L.margines.y}px`);
   root.style.transform = skala === 1 ? '' : `scale(${skala})`;

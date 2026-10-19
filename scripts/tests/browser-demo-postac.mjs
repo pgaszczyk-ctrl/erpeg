@@ -42,6 +42,18 @@ try {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   const page = await context.newPage();
+  // Every tutorial line shown (fight advice, the keys hint) and the hero's lowest life in the fight.
+  await page.addInitScript(() => {
+    window.__widziane = [];
+    new MutationObserver(() => {
+      for (const id of ['demo-rada', 'demo-klawisze']) {
+        const t = document.getElementById(id)?.textContent;
+        if (t && window.__widziane[window.__widziane.length - 1] !== t) window.__widziane.push(t);
+      }
+      const z = /Życie\s*(\d+)/.exec(document.getElementById('walka-panel')?.textContent ?? '')?.[1];
+      if (z && window.__zycieOst !== z) { window.__zycieOst = z; window.__widziane.push('♥' + z); }
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+  });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
@@ -70,6 +82,14 @@ try {
     await page.mouse.click(at.x, at.y);
   };
   await choose(0);
+  // On a computer: how to walk (arrows / WASD); on a phone nothing (the joystick).
+  await page.waitForTimeout(600);
+  const klawisze = await page.evaluate(() => document.getElementById('demo-klawisze')?.textContent ?? null);
+  if (phone) assert.equal(klawisze, null, 'No keys hint on a phone');
+  else {
+    assert(/W A S D/.test(klawisze ?? ''), 'Keys hint on a computer: ' + klawisze);
+    await page.screenshot({ path: `work/onb-${name}-1-klawisze.png` });
+  }
 
   // 2. Walk next to an apple tree: the hint shows over it.
   await page.waitForTimeout(800);
@@ -158,11 +178,22 @@ try {
     const przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
     await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
     await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
-    await page.waitForFunction(() => /Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Bij dalej|Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
-    console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
+    console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, zaatak: s.demoRun?.zaatakowal, w: window.__widziane, pod: document.getElementById('walka-panel')?.textContent?.slice(0,200), dv: s.demoRun?.dragon?.visible, dact: s.demoRun?.dragon?.active, dhp: s.demoRun?.dragon?.hp, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
     await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? '') || document.getElementById('demo-black'), null, { timeout: 30000 });
-    console.log(name, 'walka turowa OK', JSON.stringify(hp0));
+    // Owner, 19 Oct 2026: 3 hits, then the dragon's turn (it strikes, the hero lives), then the finishing blow.
+    const w = await page.evaluate(() => window.__widziane);
+    const iKolej = w.findIndex((t) => /jego kolej/.test(t));
+    assert(iKolej >= 0, 'The dragon gets its turn after the 3rd hit: ' + JSON.stringify(w));
+    const zycie = w.filter((t, i) => t[0] === '♥' && i < iKolej).map((t) => +t.slice(1));
+    const iOst = w.findIndex((t) => /jednym/.test(t));
+    const poAtaku = w.slice(iKolej, iOst).filter((t) => t[0] === '♥').map((t) => +t.slice(1));
+    assert(poAtaku.length && poAtaku[poAtaku.length - 1] < zycie[zycie.length - 1], 'The dragon bit: ' + JSON.stringify(w));
+    assert(w.slice(iKolej).some((t) => /jednym/.test(t)), 'Then: finish it with one blow');
+    const koniec = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { trafien: s.demoRun.trafien, zaatakowal: s.demoRun.zaatakowal, hp: s.player.hp }; });
+    assert(koniec.trafien >= 4 && koniec.zaatakowal && koniec.hp >= 1, JSON.stringify(koniec));
+    console.log(name, 'walka turowa OK', JSON.stringify(hp0), JSON.stringify(koniec));
     }
   } else {
     await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });

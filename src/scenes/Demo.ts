@@ -75,6 +75,8 @@ export class DemoRun {
   /** The hero ran away from the turn fight: it starts again only after he left the courtyard. */
   private czekaWyjscie = false;
   private trafien = 0;
+  /** The dragon has had its turn after the hero's SEN.tury.ciosow hits (the finishing blow is allowed then). */
+  private zaatakowal = false;
   private rada: 'start' | 'lecz' | 'dobij' | null = null;
 
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
@@ -85,10 +87,32 @@ export class DemoRun {
     const hello = () => {
       if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
       this.scene.time.delayedCall(600, () =>
-        this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => {} }));
+        this.host.dialog({ title: DEMO_TEKSTY.przebudzenieTytul, text: DEMO_TEKSTY.przebudzenie, buttons: ['Rozejrzę się'], onChoose: () => this.klawisze(true) }));
     };
     hello();
   }
+
+  /**
+   * On a computer: „Chodzisz strzałkami albo W A S D” at the bottom until the hero has walked a few metres (owner,
+   * 19 Oct 2026). Phones have the joystick under the thumb, so nothing there.
+   */
+  private klawisze(pokaz: boolean) {
+    const el = document.getElementById('demo-klawisze');
+    if (!pokaz) return el?.remove();
+    if (el || matchMedia('(pointer: coarse)').matches) return;
+    const d = document.createElement('div');
+    d.id = 'demo-klawisze';
+    d.setAttribute('aria-live', 'polite');
+    d.textContent = DEMO_TEKSTY.sterowanie;
+    Object.assign(d.style, {
+      position: 'fixed', left: '50%', bottom: '28px', transform: 'translateX(-50%)', zIndex: '8', pointerEvents: 'none',
+      font: "600 18px/1.3 'Alegreya Sans', sans-serif", color: '#fff4d0', background: '#1e1a24e8', border: '2px solid #e9c46a',
+      borderRadius: '12px', padding: '10px 16px', boxShadow: '0 4px 14px #0009', whiteSpace: 'nowrap',
+    });
+    document.body.append(d);
+    this.klawiszeOd = this.dreamWalked;
+  }
+  private klawiszeOd: number | null = null;
 
   /** The goal line and where its arrow points. */
   goal(): { text: string; pos: { x: number; y: number } | null } | null {
@@ -128,6 +152,10 @@ export class DemoRun {
       const l = this.dreamLast;
       const step = l ? Math.hypot(p.x - l.x, p.y - l.y) : 0;
       if (step < 40) this.dreamWalked += step; // a jump (unstick, landing) isn't walking
+      if (this.klawiszeOd !== null && this.dreamWalked - this.klawiszeOd > 12 * PX_PER_M) {
+        this.klawiszeOd = null;
+        this.klawisze(false);
+      }
       this.dreamLast = { x: p.x, y: p.y };
       const uciekl = this.uciekalOd !== null && this.dreamWalked - this.uciekalOd >= SEN.tury.poUcieczceM * PX_PER_M;
       if (uciekl || this.dreamWalked >= SEN.limitM * PX_PER_M) {
@@ -183,6 +211,7 @@ export class DemoRun {
       this.walczy = true;
       this.rada = null;
       this.host.toast(DEMO_TEKSTY.wPrzod, 2500);
+      this.klawisze(false);
       if (this.host.walcz(d)) return;
       this.walczy = false;
       this.tury = false;
@@ -283,17 +312,22 @@ export class DemoRun {
 
   // ------------------------------------------------------------ the turn fight (test server)
 
-  /** The dragon took a hit in the turn fight: its bar drops by a third; true after the last one (it flies off). */
-  trafiony(e: Slime, hp0: number) {
+  /**
+   * The dragon took a hit in the turn fight (owner, 19 Oct 2026: too short – „3 ciosy, które go nie zabiją, potem smok
+   * atakuje, bohater przeżywa, potem bohater dobija”): SEN.tury.ciosow hits each take a quarter of its bar, the 3rd one
+   * ends the hero's turn ('koniecTury') so the dragon strikes back (never missing, never killing), and the first hit
+   * after that strike makes it fly off (true).
+   */
+  trafiony(e: Slime, hp0: number): boolean | 'koniecTury' {
     if (e !== this.dragon) return false;
     this.trafien++;
     const n = SEN.tury.ciosow;
-    if (this.trafien >= n) {
+    if (this.trafien > n && this.zaatakowal) {
       this.busy = true; // nothing restarts the fight before it has flown off
       return true;
     }
-    e.hp = Math.max(1, (hp0 * (n - this.trafien)) / n);
-    return false;
+    e.hp = Math.max(1, (hp0 * Math.max(1, n + 1 - this.trafien)) / (n + 1));
+    return this.trafien >= n ? 'koniecTury' : false;
   }
 
   /** The fight is over without the dragon flying off: ran away (try again after leaving the courtyard). */
@@ -312,7 +346,20 @@ export class DemoRun {
     if (!this.walczy) return;
     const p = this.host.player;
     const ranny = p.hp < PLAYER.maxHp;
-    const zostalo = SEN.tury.ciosow - this.trafien;
+    const n = SEN.tury.ciosow;
+    const zostalo = Math.max(1, n - this.trafien);
+    // After the 3rd hit: the dragon's answer, then one finishing blow.
+    if (this.trafien >= n) {
+      if (co === 'cios' && !this.zaatakowal) return this.pokazRade(DEMO_TEKSTY.walkaSmokAtakuje);
+      if (co === 'tura' && !this.zaatakowal) {
+        this.zaatakowal = true;
+        this.rada = 'dobij';
+        return this.pokazRade(DEMO_TEKSTY.walkaOstatni, 'cios');
+      }
+      if (this.zaatakowal && (co === 'lecz' || co === 'wroc')) return this.pokazRade(DEMO_TEKSTY.walkaOstatni, 'cios');
+      if (this.zaatakowal && co === 'specjalne') return this.pokazRade(DEMO_TEKSTY.walkaLeczTeraz, 'lecz');
+      return;
+    }
     if (co === 'lecz' || (this.rada === 'lecz' && !ranny)) {
       this.rada = 'dobij';
       return this.pokazRade(DEMO_TEKSTY.walkaDobij(zostalo), 'cios');
@@ -379,6 +426,7 @@ export class DemoRun {
   private sleep() {
     if (this.frozen) return;
     this.frozen = true;
+    this.klawisze(false);
     this.host.player.vel.set(0, 0);
     void przygotujPobudke().catch(() => {});
     blackout(true, 600);

@@ -2197,6 +2197,8 @@ export class GameScene extends Phaser.Scene {
           this.endDuel(q, false);
           return true;
         }
+        // The QR demo's dream fight: the hero lives through whatever the dragon does (owner, 19 Oct 2026).
+        if (this.demoRun && demo.phase === 'smok') dmg = Math.min(dmg, Math.max(0, this.player.hp - 1));
         this.player.drain(dmg);
         this.emitHud();
         return this.player.hp <= 0;
@@ -2223,13 +2225,15 @@ export class GameScene extends Phaser.Scene {
       wyspany: () => (session.flagi.wyspany ?? 0) > Date.now(),
       trafiony: (e, hp0) => {
         const q = e as Enemy;
-        if (!this.demoRun?.isDragon(q) || !this.demoRun.trafiony(q, hp0)) return false;
+        const co = this.demoRun?.isDragon(q) ? this.demoRun.trafiony(q, hp0) : false;
+        if (co !== true) return co;
         // The demo's dragon flies off after its last hit: out of the fight and the map.
         this.enemies = this.enemies.filter((x) => x !== q);
         this.time.delayedCall(450, () => this.demoRun?.onDragonKilled(q, true));
         return true;
       },
       krok: (co) => this.demoRun?.krokWalki(co),
+      pewnyAtak: (e) => !!this.demoRun?.isDragon(e as Enemy),
     }, kto);
     this.emitHud();
   }

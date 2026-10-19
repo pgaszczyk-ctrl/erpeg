@@ -36,6 +36,8 @@ export interface SmokHostTur {
   ugryz(q: Uczestnik, czesc: number): Promise<boolean>;
   /** The dragon walks up to the hero (its own range, W). */
   podejdz(q: Uczestnik, ruchW: number): Promise<void>;
+  /** Only bites, no announced specials (the QR demo: one clear strike, then the finishing blow). */
+  tylkoGryzie?(e: WrogWalki): boolean;
 }
 
 const czerwony = 0xff3a2a;
@@ -137,6 +139,7 @@ export class SmokWTurach {
       }
       this.stoj(q);
     }
+    if (this.h.tylkoGryzie?.(e)) return false;
     if (st.odpoczynek > 0) st.odpoczynek--;
     else {
       const a = this.wybierz(q, st);

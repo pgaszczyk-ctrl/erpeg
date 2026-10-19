@@ -93,8 +93,11 @@ export interface WalkaHost {
   wyspany(): boolean;
   /** A fixed stage to frame whole instead of following the fighters (the Arena). */
   kadr?(): { x0: number; x1: number; y0: number; y1: number } | null;
-  /** An enemy took a blow and lived; true = it leaves the fight at once (the QR demo's dragon flies off after 3 hits). */
-  trafiony?(e: WrogWalki, hp0: number): boolean;
+  /** An enemy took a blow and lived; true = it leaves the fight at once (the QR demo's dragon flies off), 'koniecTury'
+   * = the hero's turn ends now (the QR demo: after the 3rd hit the dragon strikes back). */
+  trafiony?(e: WrogWalki, hp0: number): boolean | 'koniecTury';
+  /** This enemy's attacks never miss (no dodge, no block) and a dragon only bites: the QR demo's dragon must be seen to strike. */
+  pewnyAtak?(e: WrogWalki): boolean;
   /** What just happened, for a tutorial (the QR demo): the hero's turn began, a blow, the special row opened/closed, a heal. */
   krok?(co: KrokWalki): void;
 }
@@ -157,6 +160,7 @@ export class TuryWalki {
       wZasiegu: (q) => this.dist(q.e.x, q.e.y, h.player.x, h.player.y) <= q.e.size + HERO_R + 0.35 * W && h.widac(q.e.x, q.e.y, h.player.x, h.player.y),
       ugryz: (q, czesc) => this.ugryzSmoka(q, czesc),
       podejdz: (q, ruchW) => this.podejdzWrog(q, 'natarcie', ruchW),
+      tylkoGryzie: (e) => !!h.pewnyAtak?.(e),
     });
     this.gfx = s.add.graphics().setDepth(GLEB_ZIEMI);
     this.gfxTop = s.add.graphics().setDepth(GLEB_GORA);
@@ -622,7 +626,7 @@ export class TuryWalki {
 
   /** A dragon's attack: a share of the hero's full life (difficulty, luck, Osłona). True if the fight ended. */
   private ranSmokiem(e: WrogWalki, czesc: number) {
-    if (Math.random() < WT.szczescie.unik * this.szczescie()) {
+    if (!this.h.pewnyAtak?.(e) && Math.random() < WT.szczescie.unik * this.szczescie()) {
       this.koniczynka('Unik!');
       return false;
     }
@@ -639,7 +643,7 @@ export class TuryWalki {
     const sx = e.x, sy = e.y;
     await this.tween(e, { x: sx + (p.x - sx) * 0.25, y: sy + (p.y - sy) * 0.25 }, 140);
     let koniec = false;
-    if (Math.random() < blockChance()) this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
+    if (!this.h.pewnyAtak?.(e) && Math.random() < blockChance()) this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
     else koniec = this.ranSmokiem(e, czesc);
     if (this.aktywna) await this.tween(e, { x: sx, y: sy }, 180);
     await this.czekaj(160);
@@ -839,7 +843,9 @@ export class TuryWalki {
       this.h.zabity(e);
       return;
     }
-    if (this.h.trafiony?.(e, q.hp0)) {
+    const wynik = this.h.trafiony?.(e, q.hp0);
+    if (wynik === 'koniecTury') this.ruchy = 0;
+    else if (wynik) {
       // It leaves the fight (flies off): no longer one of the fighters.
       if (this.cel === q) this.cel = null;
       this.u = this.u.filter((x) => x !== q);
