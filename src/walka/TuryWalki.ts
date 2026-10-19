@@ -19,13 +19,14 @@ import { TEX } from '../art';
 import { OSTROSC } from '../screen';
 import { session } from '../quests';
 import {
-  meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, blockChance, rangedWeapon, gear,
+  meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, blockChance, rangedWeapon, gear, skillLevel,
   ammoOf, takeAmmo,
 } from '../inventory';
 import { AMUNICJA } from '../content/zuzycie';
 import { WALKA } from '../content/walka';
 import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
-import { WalkaKolo, type StanKola } from '../ui/walkaKolo';
+import { WalkaKolo, type StanKola, type PrzyciskAtaku } from '../ui/walkaKolo';
+import { ATAKI, brakujeDoAtaku, type RodzajAtaku, type BronAtaku } from '../content/atakiTurowe';
 import { SmokWTurach } from './smokTury';
 import { SMOK_W_TURACH } from '../content/walkaTurowa';
 import { TRUDNOSC_SMOKOW } from '../content/smoki';
@@ -215,8 +216,9 @@ export class TuryWalki {
     this.panel = this.nowy
       ? new WalkaKolo({
         ...obsluga,
-        cios: () => this.ciosZKola(false),
-        mocny: () => this.ciosZKola(true),
+        cios: () => this.atakZKola(this.atakiBroni()[0]?.id ?? 'cios'),
+        mocny: () => this.atakZKola('mocny'),
+        atak: (id: string) => this.atakZKola(id),
         ucieczka: () => this.uciekajPytaj(),
         unik: () => this.unikaj(),
         potwierdz: () => this.potwierdz(),
@@ -823,20 +825,20 @@ export class TuryWalki {
   }
 
   /** Where the hero would strike from (a cell within the short hop, or a whole walk up with the new controls) and the cost, or why not. */
-  private planCiosu(q: Uczestnik, mocny: boolean): PlanCiosu {
+  private planCiosu(q: Uczestnik, mocny: boolean, atak?: RodzajAtaku): PlanCiosu {
     if (!this.nowy) return this.planCiosuOblicz(q, mocny);
-    const k = `${this.u.indexOf(q)}|${mocny}|${this.ruchy}`;
+    const k = `${this.u.indexOf(q)}|${atak?.id ?? mocny}|${this.ruchy}`;
     let plan = this.plany.get(k);
-    if (!plan) this.plany.set(k, (plan = this.planCiosuOblicz(q, mocny)));
+    if (!plan) this.plany.set(k, (plan = this.planCiosuOblicz(q, mocny, atak)));
     return plan;
   }
 
-  private planCiosuOblicz(q: Uczestnik, mocny: boolean): PlanCiosu {
+  private planCiosuOblicz(q: Uczestnik, mocny: boolean, atak?: RodzajAtaku): PlanCiosu {
     const p = this.h.player;
-    const koszt = mocny ? WT.koszt.mocny : WT.koszt.cios;
+    const koszt = atak ? atak.koszt : mocny ? WT.koszt.mocny : WT.koszt.cios;
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bron = this.broni();
-    const nazwa = bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
+    const nazwa = atak ? atak.nazwa : bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
     // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
     // New controls (owner, 19 Oct 2026: „wciąż mogę doskoczyć z daleka – zmniejsz radius do kilku metrów”):
     // a blow reaches only WT.zasiegWreczW beyond touching; farther takes a walk-up move.
@@ -909,10 +911,10 @@ export class TuryWalki {
     return this.planCiosu(q, mocny);
   }
 
-  private async wykonajCios(mocny: boolean) {
+  private async wykonajCios(mocny: boolean, atak?: RodzajAtaku) {
     const q = this.cel;
     if (!q || this.busy) return;
-    const plan = this.planCiosu(q, mocny);
+    const plan = this.planCiosu(q, mocny, atak);
     if (!plan.ok) {
       this.podpowiedz = this.ruchy < plan.koszt ? 'Za mało ruchów.' : plan.tekst;
       this.odswiez();
@@ -934,8 +936,15 @@ export class TuryWalki {
         return void this.po();
       }
     }
+    const mnoz = atak?.mnoznik ?? 1;
     if (bron) {
-      await this.strzal(q, bron, mocny);
+      if (atak?.obszar === 'stozek') await this.wachlarz(q, bron, atak);
+      else if (atak?.obszar === 'salwa') {
+        // One shot at the target and one at each of its nearest neighbours, a moment apart.
+        const cele = [q, ...this.zywi.filter((o) => o !== q && o.e.visible && this.dist(o.e.x, o.e.y, q.e.x, q.e.y) <= (atak.zasiegW ?? 2.5) * W)
+          .sort((a, b) => this.dist(a.e.x, a.e.y, q.e.x, q.e.y) - this.dist(b.e.x, b.e.y, q.e.x, q.e.y))].slice(0, atak.ileCelow ?? 3);
+        await Promise.all(cele.map((c, i) => this.czekaj(i * 90).then(() => this.strzal(c, bron, false, mnoz))));
+      } else await this.strzal(q, bron, mocny, mnoz);
       this.h.krok?.('cios');
     }
     else {
@@ -944,11 +953,22 @@ export class TuryWalki {
       if (doskok && plan.z && this.zas) await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
       p.face(q.e.x - p.x, q.e.y - (p.y + 2));
       const aim = Math.atan2(q.e.y - (p.y + 2), q.e.x - p.x);
-      this.h.zamach(aim, mocny);
+      this.h.zamach(aim, mocny || atak?.obszar === 'zamach');
       // A small lunge with the blow.
       const sx = p.x, sy = p.y;
       await this.tween(p, { x: sx + Math.cos(aim) * 3, y: sy + Math.sin(aim) * 3 }, 90);
-      this.rozstrzygnijCios(q, mocny);
+      if (atak?.obszar === 'zamach') {
+        // A wide swing: the target and every enemy in reach on the same side.
+        const pol = ((atak.katStopnie ?? 140) / 2) * (Math.PI / 180);
+        const zasieg = (o: Uczestnik) => o.r + HERO_R + WT.odstepPx + 1.5 + WT.zasiegWreczW * W + 2;
+        this.zamachLuk(aim, pol);
+        for (const o of [...this.zywi]) {
+          if (o !== q && (!o.e.visible || o.e.inAir)) continue;
+          const d = this.dist(p.x, p.y, o.e.x, o.e.y);
+          const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - p.y, o.e.x - p.x) - aim));
+          if (o === q || (d <= zasieg(o) && kat <= pol && this.h.widac(p.x, p.y, o.e.x, o.e.y))) this.rozstrzygnijCios(o, false, mnoz);
+        }
+      } else this.rozstrzygnijCios(q, mocny, mnoz);
       this.h.krok?.('cios');
       await this.tween(p, { x: sx, y: sy }, 90);
       // Back only part of the hop: a beginner stays close, a veteran springs back further.
@@ -968,7 +988,50 @@ export class TuryWalki {
     this.po();
   }
 
-  private rozstrzygnijCios(q: Uczestnik, mocny: boolean) {
+  /** A wide golden arc for the sweep (code-drawn until the artist's effect). */
+  private zamachLuk(aim: number, pol: number) {
+    const p = this.h.player;
+    const g = this.h.scene.add.graphics().setDepth(GLEB_GORA);
+    const r = HERO_R + WT.zasiegWreczW * W + 6;
+    g.lineStyle(2.5, 0xffe08a, 0.9).beginPath().arc(p.x, p.y - 2, r, aim - pol, aim + pol).strokePath();
+    g.lineStyle(1, 0xffffff, 0.8).beginPath().arc(p.x, p.y - 2, r - 2, aim - pol * 0.8, aim + pol * 0.8).strokePath();
+    this.h.scene.tweens.add({ targets: g, alpha: 0, duration: 380, onComplete: () => g.destroy() });
+  }
+
+  /** Wachlarz ognia: flames fan out from the hero; everyone in the cone may get burnt. */
+  private async wachlarz(q: Uczestnik, bron: NonNullable<ReturnType<typeof rangedWeapon>>, atak: RodzajAtaku) {
+    const p = this.h.player;
+    const aim = Math.atan2(q.e.y - p.y, q.e.x - p.x);
+    const pol = ((atak.katStopnie ?? 60) / 2) * (Math.PI / 180);
+    const zasieg = Math.max((atak.zasiegW ?? 4) * W, this.dist(p.x, p.y, q.e.x, q.e.y) + q.r);
+    p.face(q.e.x - p.x, q.e.y - p.y);
+    const g = this.h.scene.add.graphics().setDepth(GLEB_GORA);
+    const kolory = [0xff4a1a, 0xff8a2a, 0xffd34a];
+    kolory.forEach((k, i) => {
+      const r = zasieg * (1 - i * 0.22);
+      g.fillStyle(k, 0.55).slice(p.x, p.y - 2, r, aim - pol * (1 - i * 0.15), aim + pol * (1 - i * 0.15), false).fillPath();
+    });
+    g.setScale(0.2);
+    g.setPosition(p.x * 0.8, (p.y - 2) * 0.8);
+    await this.tween(g, { scale: 1, x: 0, y: 0 }, 220);
+    this.h.cwiczenie('magia', WT.cwiczenie);
+    const now = this.h.scene.time.now;
+    for (const o of [...this.zywi]) {
+      if (o !== q && (!o.e.visible || o.e.inAir)) continue;
+      const d = this.dist(p.x, p.y, o.e.x, o.e.y);
+      const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - p.y, o.e.x - p.x) - aim));
+      if (o !== q && (d > zasieg + o.r || kat > pol || !this.h.widac(p.x, p.y, o.e.x, o.e.y))) continue;
+      if (Math.random() >= hitChance('magia', false, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
+        this.h.pudlo(o.e.x, o.e.y - 4 * o.e.kind.scale);
+        continue;
+      }
+      this.trafWroga(o, shotDamage(bron) * atak.mnoznik * this.h.wzmocnienie(o.e), new Phaser.Math.Vector2(p.x, p.y), now, false);
+    }
+    this.h.scene.tweens.add({ targets: g, alpha: 0, duration: 320, onComplete: () => g.destroy() });
+    await this.czekaj(200);
+  }
+
+  private rozstrzygnijCios(q: Uczestnik, mocny: boolean, mnoz = 1) {
     const p = this.h.player;
     const e = q.e;
     const now = this.h.scene.time.now;
@@ -977,7 +1040,7 @@ export class TuryWalki {
       this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
       return;
     }
-    let dmg = meleeDamage() * (mocny ? strongFactor('miecz') : 1) * this.h.wzmocnienie(e);
+    let dmg = meleeDamage() * (mocny ? strongFactor('miecz') : 1) * mnoz * this.h.wzmocnienie(e);
     if (Math.random() < WT.szczescie.krytyk * this.szczescie()) {
       dmg *= WT.szczescie.krytykMnoznik;
       this.koniczynka('Krytyk!');
@@ -986,7 +1049,7 @@ export class TuryWalki {
     this.trafWroga(q, dmg, new Phaser.Math.Vector2(p.x, p.y), now, mocny);
   }
 
-  private async strzal(q: Uczestnik, bron: NonNullable<ReturnType<typeof rangedWeapon>>, mocny: boolean) {
+  private async strzal(q: Uczestnik, bron: NonNullable<ReturnType<typeof rangedWeapon>>, mocny: boolean, mnoz = 1) {
     const p = this.h.player;
     const e = q.e;
     const skill = bron.rodzaj === 'magia' ? 'magia' : 'luk';
@@ -1006,7 +1069,7 @@ export class TuryWalki {
     }
     const now = this.h.scene.time.now;
     const natychmiast = skill === 'luk' && !WALKA.bezNatychmiast.includes(e.kindId) && !e.duel && Math.random() < instaKillChance();
-    let dmg = natychmiast ? e.hp : shotDamage(bron) * (mocny ? strongFactor(skill) : 1) * this.h.wzmocnienie(e);
+    let dmg = natychmiast ? e.hp : shotDamage(bron) * (mocny ? strongFactor(skill) : 1) * mnoz * this.h.wzmocnienie(e);
     if (!natychmiast && Math.random() < WT.szczescie.krytyk * this.szczescie()) {
       dmg *= WT.szczescie.krytykMnoznik;
       this.koniczynka('Krytyk!');
@@ -1108,23 +1171,48 @@ export class TuryWalki {
     this.odswiez();
   }
 
-  /** New controls: Cios / Mocny cios from the enemy's ring (or keys 1 / 2 on the chosen enemy). */
-  private ciosZKola(mocny: boolean) {
+  /** Which hand is fighting: melee, bow (crossbow, gun) or magic. */
+  private rodzajBroni(): BronAtaku {
+    const b = this.broni();
+    return !b ? 'wrecz' : b.rodzaj === 'magia' ? 'magia' : 'luk';
+  }
+
+  /** The attacks of the weapon in hand (content/atakiTurowe.ts), unlocked or not. */
+  private atakiBroni() {
+    const r = this.rodzajBroni();
+    return ATAKI.filter((a) => a.bron === r);
+  }
+
+  /** What an attack still needs, or null when it's unlocked. */
+  private brakuje(a: RodzajAtaku) {
+    return brakujeDoAtaku(a.wymaga, { poziomPostaci: this.h.poziom(), magia: gear.magic, umiejetnosc: (u) => skillLevel(u) });
+  }
+
+  /** New controls: an attack from the enemy's ring (or keys on the chosen enemy). */
+  private atakZKola(id: string) {
     if (this.faza !== 'gracz' || this.busy) return;
     const q = this.koloWroga ?? this.cel;
     if (!q) {
       this.podpowiedz = komputer ? 'Najpierw kliknij wroga.' : 'Najpierw dotknij wroga.';
       return this.odswiez();
     }
-    const plan = this.planCiosu(q, mocny);
-    if (!plan.ok || (plan.tylko && mocny)) {
-      this.podpowiedz = plan.ok ? 'Na mocny cios zabraknie ruchów – wybierz „Podejdź”.' : this.ruchy < plan.koszt ? `Za mało ruchów (${plan.koszt}).` : plan.tekst;
+    const atak = this.atakiBroni().find((a) => a.id === id);
+    if (!atak) return;
+    const brak = this.brakuje(atak);
+    if (brak) {
+      this.podpowiedz = `🔒 ${atak.nazwa}: ${atak.opis} Odblokujesz za: ${brak}.`;
+      return this.odswiez();
+    }
+    const plan = this.planCiosu(q, !!atak.mocny, atak);
+    const pierwszy = atak === this.atakiBroni()[0];
+    if (!plan.ok || (plan.tylko && !pierwszy)) {
+      this.podpowiedz = plan.ok ? `Na ten atak zabraknie ruchów – wybierz „Podejdź”.` : this.ruchy < plan.koszt ? `Za mało ruchów (${plan.koszt}).` : plan.tekst;
       return this.odswiez();
     }
     this.cel = q;
-    this.tryb = mocny ? 'mocny' : 'cios';
+    this.tryb = atak.mocny ? 'mocny' : 'cios';
     this.koloWroga = null;
-    void this.wykonajCios(mocny);
+    void this.wykonajCios(!!atak.mocny, atak);
   }
 
   /** New controls' Unik (owner, 19 Oct 2026, in place of Osłona): each attack until the enemies' turn ends may miss. */
@@ -1285,14 +1373,14 @@ export class TuryWalki {
       this.ustawPodmenu(true);
       return;
     }
-    if (kto && !this.broni() && this.tryb !== 'mocny') {
-      // Melee (owner, 19 Oct 2026): a ring of blows around the enemy – Cios / Mocny cios.
+    if (kto) {
+      // A ring of attacks around the enemy (owner, 19 Oct 2026): Cios / Mocny cios and the ones unlocked later.
       this.cel = kto;
       this.punkt = null;
       this.tryb = 'cios';
       this.koloWroga = kto;
       const plan = this.planCiosu(kto, false);
-      this.podpowiedz = plan.ok ? 'Wybierz cios albo mocny cios.' : plan.tekst;
+      this.podpowiedz = plan.ok ? 'Wybierz rodzaj ataku.' : plan.tekst;
       return this.odswiez();
     }
     if (kto) {
@@ -1443,20 +1531,24 @@ export class TuryWalki {
     if (this.panel instanceof WalkaKolo) {
       const qw = this.koloWroga && !this.koloWroga.e.isDead && this.koloWroga.e.active ? this.koloWroga : null;
       if (!qw) this.koloWroga = null;
-      const przycisk = (mocny: boolean) => {
-        const plan = this.planCiosu(qw!, mocny);
+      const ataki: PrzyciskAtaku[] | null = qw ? this.atakiBroni().map((a, i) => {
+        const brak = this.brakuje(a);
+        if (brak) return { id: a.id, tekst: a.nazwa, koszt: '🔒', off: true, zamek: true };
+        const plan = this.planCiosu(qw, !!a.mocny, a);
         const ruchy = `${plan.koszt} ${plan.koszt === 1 ? 'ruch' : 'ruchy'}`;
-        const tylko = plan.tylko && !mocny;
+        // Short of moves for the blow: the first (plain) attack becomes „Podejdź”, the others grey out.
+        const tylko = plan.tylko && i === 0;
         return {
-          tekst: tylko ? 'Podejdź' : mocny ? 'Mocny cios' : 'Cios',
+          id: a.id,
+          tekst: tylko ? 'Podejdź' : a.nazwa,
           koszt: plan.dojscie && !plan.tylko ? `${ruchy} · z podejściem` : ruchy,
-          off: !plan.ok || (mocny && !!plan.tylko),
+          off: !plan.ok || (!!plan.tylko && i > 0),
         };
-      };
+      }) : null;
       const nk: StanKola = {
         ...st,
         kolo: this.podmenu ? 'bohater' : qw ? 'wrog' : null,
-        wrog: qw ? { cios: przycisk(false), mocny: przycisk(true) } : null,
+        ataki,
         ucieczkaPytanie: this.ucieczkaPytanie,
         zapowiedz: !!this.smok?.tekst(),
         unik: this.unik,

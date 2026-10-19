@@ -8,14 +8,15 @@
 import type { StanPanelu, ObslugaPanelu } from './walkaPanel';
 import { itemPictureUrl } from './itemIcon';
 
-/** One button of the ring around an enemy: its label and cost line, greyed when it can't be done now. */
-export interface PrzyciskWroga { tekst: string; koszt: string; off: boolean }
+/** One attack in the ring around an enemy (content/atakiTurowe.ts): label, cost line, greyed when it can't be done
+ * now, `zamek` = not unlocked yet (padlock; a tap says what it needs). */
+export interface PrzyciskAtaku { id: string; tekst: string; koszt: string; off: boolean; zamek?: boolean }
 
 export interface StanKola extends StanPanelu {
   /** Which ring is open: around the hero, around an enemy, or none. */
   kolo: 'bohater' | 'wrog' | null;
-  /** The enemy ring's two blows (melee). */
-  wrog: { cios: PrzyciskWroga; mocny: PrzyciskWroga } | null;
+  /** The enemy ring's attacks for the weapon in hand. */
+  ataki: PrzyciskAtaku[] | null;
   /** Ucieczka was tapped once: the next tap runs away. */
   ucieczkaPytanie: boolean;
   /** A dragon has announced an attack: Unik is worth it. */
@@ -31,6 +32,7 @@ export interface ObslugaKola extends ObslugaPanelu {
   nastepny(): void;
   kolo(): void;
   unik(): void;
+  atak(id: string): void;
 }
 
 const CSS = `
@@ -96,6 +98,9 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; animation: wk-zloto 1.3s ease-in-out infinite; }
 #walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 2px #fff1a8) drop-shadow(0 0 6px #ffd34a) drop-shadow(0 0 10px #ffb020); }
 #walka-kolo .wk-b.mocny .n { color: #ffe08a; }
+#walka-kolo .wk-b.zamek { filter: grayscale(1) brightness(0.7); opacity: 0.6; animation: none; box-shadow: 0 3px 8px #000a; }
+#walka-kolo .wk-b.zamek::after { content: '🔒'; position: absolute; right: -2px; top: -4px; font-size: 18px; filter: none; }
+#walka-kolo .wk-b .n { max-width: 92px; white-space: normal; }
 @keyframes wk-zloto { 0%, 100% { box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; }
   50% { box-shadow: 0 0 16px 6px #ffd34acc, 0 0 32px 10px #ffb02088, 0 3px 8px #000a; } }
 #walka-kolo .wk-b .n { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; white-space: nowrap;
@@ -179,6 +184,48 @@ const IKONY = {
     '....o.......',
     '............',
   ], K),
+  zamach: piksele([
+    '............',
+    '...yyyyyy...',
+    '..y......y..',
+    '.y...oo...y.',
+    'y...oSSo...y',
+    'y..oSso....y',
+    '..oSso......',
+    '.oyso.......',
+    'ohyo........',
+    'oho.........',
+    '.o..........',
+    '............',
+  ], K),
+  ogien: piksele([
+    '.....r......',
+    '....rR...r..',
+    '...rRR..rR..',
+    '..rRYRr.rRr.',
+    '..rRYYRrRYr.',
+    '.rRYYYYRYYr.',
+    '.rRYYYYYYRr.',
+    '.rRYYwYYYRr.',
+    '..rRYwwYRr..',
+    '..rrRYYRrr..',
+    '...rrrrrr...',
+    '............',
+  ], { ...K, r: '#c1281e', R: '#ff6a2a', Y: '#ffd34a', w: '#fff6c8' }),
+  salwa: piksele([
+    '.o......o...',
+    'oso....oso..',
+    '.s......s...',
+    '.s..o...s...',
+    '.s.oso..s...',
+    '.s..s...s...',
+    '.s..s...s...',
+    'oho.s..oho..',
+    'oho.s..oho..',
+    '...oho......',
+    '...oho......',
+    '............',
+  ], { ...K, s: '#c8a46a', h: '#e4473b' }),
   ucieczka: piksele([
     '......oo....',
     '.....owwo...',
@@ -199,6 +246,13 @@ const IKONY = {
 const PROMIEN = 54;
 /** The enemy ring is wider: its buttons are bigger. */
 const PROMIEN_WROGA = 64;
+/** Places of n buttons in an arc above the figure (degrees) and the arc's radius, so neighbours don't touch. */
+const LUK: Record<number, { katy: number[]; r: number }> = {
+  1: { katy: [-90], r: 64 },
+  2: { katy: [-150, -30], r: 64 },
+  3: { katy: [-160, -90, -20], r: 76 },
+  4: { katy: [-172, -118, -62, -8], r: 88 },
+};
 const KATY = [-150, -30];
 
 export class WalkaKolo {
@@ -256,10 +310,15 @@ export class WalkaKolo {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     if (!this.stan) return;
     const c = e.code;
-    if (c === 'Digit1') this.on.cios();
-    else if (c === 'Digit2') this.on.mocny();
-    else if (c === 'Digit3') this.on.lecz();
-    else if (c === 'Digit4') this.on.unik();
+    const cyfra = /^Digit([1-9])$/.exec(c);
+    if (cyfra) {
+      // 1…n = the open ring's buttons; with no ring open 1 = the plain attack on the chosen enemy.
+      const b = this.ring.querySelectorAll<HTMLButtonElement>('.wk-b')[+cyfra[1] - 1];
+      if (b) b.click();
+      else if (cyfra[1] === '1') this.on.cios();
+      else return;
+    }
+    else if (c === 'KeyH') this.on.lecz();
     else if (c === 'KeyU') this.on.ucieczka();
     else if (c === 'KeyE') this.on.koniecTury();
     else if (c === 'Enter' || c === 'Space') this.on.potwierdz();
@@ -279,6 +338,7 @@ export class WalkaKolo {
   }
 
   private promien = PROMIEN;
+  private katy = KATY;
 
   private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean } = {}) {
     const b = document.createElement('button');
@@ -289,7 +349,7 @@ export class WalkaKolo {
     b.setAttribute('aria-label', `${nazwa} ${koszt}`);
     // Disabled ones still answer with why (TuryWalki says it in the hint line).
     if (opts.off) b.setAttribute('aria-disabled', 'true'), b.style.filter = 'grayscale(0.8)', b.style.opacity = '0.5';
-    const a = (KATY[i] * Math.PI) / 180;
+    const a = ((this.katy[i] ?? KATY[i] ?? -90) * Math.PI) / 180;
     const dx = Math.round(Math.cos(a) * this.promien), dy = Math.round(Math.sin(a) * this.promien);
     b.style.left = `${dx}px`;
     b.style.top = `${dy}px`;
@@ -337,7 +397,7 @@ export class WalkaKolo {
 
     // The ring: rebuilt only when what it shows changes (its buttons animate in).
     const otwarte = gracz && !s.busy ? s.kolo : null;
-    const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.unik, s.zapowiedz, s.bron, s.bronId, s.wrog, this.wskaz()]);
+    const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.unik, s.zapowiedz, s.bron, s.bronId, s.ataki, this.wskaz()]);
     if (this.ring.dataset.k === klucz) return;
     this.ring.dataset.k = klucz;
     if (!otwarte) {
@@ -348,15 +408,18 @@ export class WalkaKolo {
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const wskaz = this.wskaz();
     this.ring.classList.toggle('wrog', otwarte === 'wrog');
-    this.promien = otwarte === 'wrog' ? PROMIEN_WROGA : PROMIEN;
+    this.promien = PROMIEN;
+    this.katy = KATY;
     this.ring.textContent = '';
-    if (otwarte === 'wrog' && s.wrog) {
+    if (otwarte === 'wrog' && s.ataki) {
       const bron = `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
-      const w = s.wrog;
-      this.ring.append(
-        this.przycisk('cios', bron, w.cios.tekst, w.cios.koszt, () => this.on.cios(), 0, { off: w.cios.off, blysk: wskaz === 'cios' }),
-        this.przycisk('mocny', bron, w.mocny.tekst, w.mocny.koszt, () => this.on.mocny(), 1, { off: w.mocny.off }),
-      );
+      const ikona: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa };
+      const luk = LUK[Math.min(4, s.ataki.length)] ?? LUK[4];
+      this.katy = luk.katy;
+      this.promien = luk.r;
+      s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(`${a.id}${a.zamek ? ' zamek' : ''}`, ikona[a.id] ?? bron, a.tekst, a.koszt, () => this.on.atak(a.id), i, {
+        off: a.off && !a.zamek, blysk: wskaz === 'cios' && i === 0,
+      })));
     } else {
       this.ring.append(
         this.przycisk('lecz', IKONY.lecz, 'Leczenie', ruchyTxt(s.koszt.lecz), () => this.on.lecz(), 0, {

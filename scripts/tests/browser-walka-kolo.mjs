@@ -220,8 +220,8 @@ try {
   for (const z of zasiegi) if (z.d > z.max + 1) assert(z.dojscie && z.koszt >= 2, `a far enemy (${z.d.toFixed(1)} px) needs a walk-up`);
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
   console.log('enemy ring', JSON.stringify(ringW));
-  assert.equal(ringW.length, 2, 'two blows in the enemy ring');
-  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]), 'Cios and Mocny cios');
+  assert.equal(ringW.length, 3, 'three attacks in the enemy ring (Cios, Mocny cios, locked Zamach)');
+  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]) && /zamach zamek/.test(ringW[2]), 'Cios, Mocny cios and a locked Zamach');
   assert(!/%|pokona/.test(await page.evaluate(() => document.body.innerText + window.__game.scene.getScene('game').walka.etykieta.text)), 'no percentages, no „pokona”');
   const plan = await g(() => { const w = window.__game.scene.getScene('game').walka; return w.planCiosu(w.cel, false); });
   console.log('plan', JSON.stringify(plan));
@@ -319,11 +319,60 @@ try {
   assert.equal(won.hp, maxHp, 'full life after a won fight');
 
   // ---- 8. Hurt: Leczenie glows in the hero's ring; Uciekaj in the bar asks once, the second tap runs away.
-  const c = await group(['glut'], 90);
+  const c = await group(['glut', 'glut', 'glut'], 90);
   await page.waitForTimeout(600);
   await walkTo(c.x, c.y);
   await press(await dialogNext(/Grupka/), 'Podejdź');
   await waitPhase('gracz');
+  // Unlocked Zamach (sword level 5): one swing hits several imps standing together.
+  await g(() => {
+    window.__gear.skills.miecz = 1e6;
+    window.__session.level = { ...window.__session.level, celnosc: 100 };
+    const s = window.__game.scene.getScene('game'), w = s.walka, p = s.player;
+    const ang = [-0.5, 0, 0.5];
+    w.zywi.forEach((q, i) => { const d = q.r + 0.3 * 56 * 0.36 * (2 / 3) + 2 + 2; q.e.setPosition(p.x + Math.cos(-Math.PI / 2 + ang[i]) * d, p.y + Math.sin(-Math.PI / 2 + ang[i]) * d); q.e.hp = 999; });
+    w.ruchy = 5;
+    w.przelicz();
+  });
+  f = await fight();
+  assert.equal(f.zywi.length, 3, 'three imps for the sweep');
+  const hp0 = f.zywi.map((q) => q.hp);
+  await tapWorld(f.zywi[1].x, f.zywi[1].y - 4);
+  await page.waitForTimeout(400);
+  const ringZ = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
+  console.log('ring with zamach', JSON.stringify(ringZ));
+  assert(ringZ.some((k) => /zamach/.test(k) && !/zamek/.test(k)), 'Zamach unlocked');
+  await page.screenshot({ path: `work/walka-${tag}-8-zamach.png` });
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
+  await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
+  f = await fight();
+  const trafieni = f.zywi.filter((q, i) => q.hp < hp0[i]).length;
+  console.log('zamach hit', trafieni, 'of', f.zywi.length);
+  assert(trafieni >= 2, `Zamach hits several (${trafieni})`);
+  // A wand in hand + magic level 3: the ring shows Czar and Wachlarz ognia, the fan burns several.
+  await g(() => {
+    window.__gear.equip.bron = 'rozdzka'; window.__gear.magic = true; window.__gear.skills.magia = 1e6;
+    const w = window.__game.scene.getScene('game').walka;
+    w.zywi.forEach((q) => { q.e.hp = 999; });
+    w.ruchy = 5; w.przelicz();
+  });
+  f = await fight();
+  const hp1 = f.zywi.map((q) => q.hp);
+  await tapWorld(f.zywi[1].x, f.zywi[1].y - 4);
+  await page.waitForTimeout(400);
+  const ringM = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
+  console.log('ring with a wand', JSON.stringify(ringM));
+  assert(ringM.some((k) => /czar/.test(k)) && ringM.some((k) => /wachlarz/.test(k) && !/zamek/.test(k)), 'Czar and Wachlarz ognia');
+  await page.screenshot({ path: `work/walka-${tag}-8b-wachlarz.png` });
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.wachlarz').click());
+  await page.waitForTimeout(150);
+  await page.screenshot({ path: `work/walka-${tag}-8c-ogien.png` });
+  await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
+  f = await fight();
+  const spaleni = f.zywi.filter((q, i) => q.hp < hp1[i]).length;
+  console.log('fan hit', spaleni, 'of', f.zywi.length);
+  assert(spaleni >= 2, `Wachlarz ognia burns several (${spaleni})`);
+  await g(() => { window.__gear.equip.bron = 'kijek'; });
   await g(() => { window.__game.scene.getScene('game').player.hp = 3; window.__game.scene.getScene('game').walka.odswiez(); });
   await tapScr(await heroScr());
   assert.equal(await page.locator('#walka-kolo .wk-b.lecz.blysk').count(), 1, 'Leczenie glows when hurt');
