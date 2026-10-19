@@ -89,11 +89,11 @@ export const DEMO_TEKSTY = {
   walkaRuchy: 'Każda akcja kosztuje ruchy (licznik po prawej). Gdy się skończą, rusza smok.',
   /** The same tutorial for the new controls (test server, walka/tryb.ts nowyPanel): no buttons, taps on the map. */
   kolo: {
-    walkaStart: 'Walka na tury! Dotknij smoka – zobaczysz, ile zabierze cios. Dotknij drugi raz, żeby podejść i uderzyć.',
+    walkaStart: 'Walka na tury! Dotknij smoka i wybierz CIOS – bohater sam podejdzie.',
     walkaLecz: 'Masz tylko 3/4 życia – pasek u góry. Dotknij swojego bohatera: wokół niego są akcje.',
-    walkaLeczTeraz: 'Teraz LECZ – zjesz zebrane jabłka. Kosztuje jeden ruch.',
+    walkaLeczTeraz: 'Teraz LECZENIE – zjesz zebrane jabłka. Kosztuje jeden ruch.',
     walkaDobij: (n: number) => `Brawo! Bij dalej – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}. Gdy skończą się ruchy (kropki u góry), smok odpowie.`,
-    walkaOstatni: 'Smok słabnie! Dotknij go jeszcze raz, a odleci. (Ranny? Dotknij bohatera → Lecz.)',
+    walkaOstatni: 'Smok słabnie! Dotknij go i wybierz CIOS, a odleci. (Ranny? Dotknij bohatera → Leczenie.)',
     walkaRuchy: 'Każda akcja zjada kropki ruchów u góry. Gdy zgasną, rusza smok.',
   },
   smokUciekl: 'Smok uciekł w przestworza!',

@@ -1,18 +1,27 @@
 // The turn fight's controls, version 2 (owner, 19 Oct 2026, test server; walka/tryb.ts nowyPanel):
-// no bottom panel. A bar at the top says whose turn it is (moves as dots, life, „Zakończ turę”) with one hint
-// line; the map does the rest (TuryWalki.tap): enemy = approach and strike, ground = walk, the hero = this ring
-// of the rarer actions around him (Mocny cios, Lecz, Osłona, Ucieczka). Plain HTML outside #game, so its taps
-// never reach the map; the ring's middle is empty, so a tap on the hero there closes it again.
+// no bottom panel. A bar at the top says whose turn it is (moves as dots, life, „Uciekaj”, „Zakończ turę”) with
+// one hint line; the map does the rest (TuryWalki.tap): ground = walk, an enemy = a small ring of blows around it
+// (Cios / Mocny cios; a bow or wand shoots on the second tap), the hero = a ring with Leczenie / Unik.
+// Plain HTML outside #game, so its taps never reach the map; the rings' middles are empty, so a tap there goes
+// to the map and closes the ring.
 
 import type { StanPanelu, ObslugaPanelu } from './walkaPanel';
+import { itemPictureUrl } from './itemIcon';
+
+/** One button of the ring around an enemy: its label and cost line, greyed when it can't be done now. */
+export interface PrzyciskWroga { tekst: string; koszt: string; off: boolean }
 
 export interface StanKola extends StanPanelu {
-  /** The ring is open. */
-  kolo: boolean;
+  /** Which ring is open: around the hero, around an enemy, or none. */
+  kolo: 'bohater' | 'wrog' | null;
+  /** The enemy ring's two blows (melee). */
+  wrog: { cios: PrzyciskWroga; mocny: PrzyciskWroga } | null;
   /** Ucieczka was tapped once: the next tap runs away. */
   ucieczkaPytanie: boolean;
-  /** A dragon has announced an attack: Osłona is worth it. */
+  /** A dragon has announced an attack: Unik is worth it. */
   zapowiedz: boolean;
+  /** Unik is on until the enemies' turn ends. */
+  unik: boolean;
   /** The hint is a first-fights tip (drawn brighter). */
   rada: boolean;
 }
@@ -21,6 +30,7 @@ export interface ObslugaKola extends ObslugaPanelu {
   potwierdz(): void;
   nastepny(): void;
   kolo(): void;
+  unik(): void;
 }
 
 const CSS = `
@@ -47,6 +57,11 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   font-weight: 800; font-size: 13px; line-height: 1.05; }
 #walka-panel.wn .wn-koniec:disabled { opacity: 0.4; }
 #walka-panel.wn .wn-koniec.teraz { border-color: #ffd34a; box-shadow: 0 0 0 2px #ffd34a55; }
+#walka-panel.wn .wn-ucieczka { flex: none; min-height: 34px; padding: 0 7px; border-radius: 8px; border: 2px solid #6a3a2a; background: linear-gradient(#4a2a20, #2e1a14);
+  font-weight: 700; font-size: 12px; line-height: 1.05; display: flex; align-items: center; gap: 3px; }
+#walka-panel.wn .wn-ucieczka svg { width: 16px; height: 16px; }
+#walka-panel.wn .wn-ucieczka.pyta { border-color: #ff6a5a; background: linear-gradient(#7a2a22, #3a1410); }
+#walka-panel.wn .wn-ucieczka:disabled { opacity: 0.4; }
 #walka-panel.wn .wn-podp { margin: 5px auto 0; width: fit-content; max-width: 100%; font-size: 14px; line-height: 1.2; text-align: center; color: #fff4d0;
   background: #1e1a24d8; border-radius: 9px; padding: 4px 10px; }
 #walka-panel.wn .wn-podp:empty { display: none; }
@@ -61,6 +76,8 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   #walka-panel.wn .wn-zl { display: none; }
   #walka-panel.wn .wn-zycie { min-width: 24px; }
   #walka-panel.wn .wn-koniec { font-size: 11px; padding: 0 6px; min-height: 32px; }
+  #walka-panel.wn .wn-ucieczka { padding: 0 4px; min-height: 32px; }
+  #walka-panel.wn .wn-ucieczka span { display: none; }
   #walka-panel.wn .wn-podp { font-size: 13px; }
 }
 #walka-kolo { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 7; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; }
@@ -69,7 +86,8 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   display: flex; align-items: center; justify-content: center; color: #f3dfb0; padding: 0; transform: scale(0.3); opacity: 0;
   transition: transform 0.14s ease-out, opacity 0.14s; }
 #walka-kolo.on .wk-b { transform: scale(1); opacity: 1; }
-#walka-kolo .wk-b svg { width: 26px; height: 26px; }
+#walka-kolo .wk-b svg, #walka-kolo .wk-b img { width: 26px; height: 26px; image-rendering: pixelated; }
+#walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 3px #ffd34a); }
 #walka-kolo .wk-b .n { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; white-space: nowrap;
   font-size: 12px; font-weight: 800; line-height: 1.1; text-align: center; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
 #walka-kolo .wk-b .n small { display: block; font-weight: 600; font-size: 10px; opacity: 0.85; }
@@ -77,6 +95,7 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-kolo .wk-b.blysk { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 #walka-kolo .wk-b.on { border-color: #ffd34a; background: radial-gradient(circle at 40% 35%, #8a6a2a, #4e3818); }
 #walka-kolo .wk-b.uwaga { border-color: #ff6a5a; background: radial-gradient(circle at 40% 35%, #7a2a22, #3a1410); }
+#walka-panel[data-wskaz="cios"] ~ #walka-kolo .wk-b.cios,
 #walka-panel[data-wskaz="lecz"] ~ #walka-kolo .wk-b.lecz { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
 @media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
@@ -136,6 +155,20 @@ const IKONY = {
     '.....oo.....',
     '............',
   ], K),
+  unik: piksele([
+    '.......oo...',
+    '......owwo..',
+    '.......oo...',
+    '.....oowo...',
+    'BB..owwwwo..',
+    '...o.owwoo..',
+    'BBB..owwo...',
+    '....owoowo..',
+    'BB..ow..owo.',
+    '...ow....oo.',
+    '....o.......',
+    '............',
+  ], K),
   ucieczka: piksele([
     '......oo....',
     '.....owwo...',
@@ -152,9 +185,9 @@ const IKONY = {
   ], K),
 };
 
-/** Ring radius (CSS px) and the four buttons' places: top, right, bottom, left. */
-const PROMIEN = 66;
-const KATY = [-90, 0, 90, 180];
+/** Ring radius (CSS px) and the two buttons' places: upper left and upper right of the figure (not on it). */
+const PROMIEN = 54;
+const KATY = [-150, -30];
 
 export class WalkaKolo {
   private el: HTMLDivElement;
@@ -181,6 +214,7 @@ export class WalkaKolo {
         <span class="wn-tura"></span>
         <span class="wn-kropki" aria-hidden="true"></span>
         <div class="wn-zycie"><div class="wn-tuba"><i></i><b></b></div><div class="wn-zl"></div></div>
+        <button class="wn-ucieczka" type="button" aria-label="Ucieczka">${IKONY.ucieczka}<span>Uciekaj</span></button>
         <button class="wn-koniec" type="button">Zakończ<br>turę</button>
       </div>
       <div class="wn-podp" aria-live="polite"></div>`;
@@ -195,6 +229,7 @@ export class WalkaKolo {
       if (n === el || (e.target as HTMLElement).closest('.wk-b')) e.stopPropagation();
     });
     el.querySelector<HTMLButtonElement>('.wn-koniec')!.onclick = () => this.on.koniecTury();
+    el.querySelector<HTMLButtonElement>('.wn-ucieczka')!.onclick = () => this.on.ucieczka();
     document.body.classList.add('walka-kolo');
     window.addEventListener('keydown', this.klawisze);
   }
@@ -209,10 +244,11 @@ export class WalkaKolo {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     if (!this.stan) return;
     const c = e.code;
-    if (c === 'Digit1') this.on.mocny();
-    else if (c === 'Digit2') this.on.lecz();
-    else if (c === 'Digit3') this.on.oslona();
-    else if (c === 'Digit4') this.on.ucieczka();
+    if (c === 'Digit1') this.on.cios();
+    else if (c === 'Digit2') this.on.mocny();
+    else if (c === 'Digit3') this.on.lecz();
+    else if (c === 'Digit4') this.on.unik();
+    else if (c === 'KeyU') this.on.ucieczka();
     else if (c === 'KeyE') this.on.koniecTury();
     else if (c === 'Enter' || c === 'Space') this.on.potwierdz();
     else if (c === 'Tab') this.on.nastepny();
@@ -222,11 +258,11 @@ export class WalkaKolo {
     e.preventDefault();
   }
 
-  /** Follows the hero on the screen (CSS px of the viewport), kept so the buttons stay on screen. */
+  /** Follows the hero / the chosen enemy on the screen (CSS px of the viewport), kept so the buttons stay on screen. */
   pozycja(x: number, y: number) {
-    const m = PROMIEN + 34;
+    const m = PROMIEN + 46;
     const cx = Math.min(Math.max(x, m), innerWidth - m);
-    const cy = Math.min(Math.max(y, m + 60), innerHeight - m - 14);
+    const cy = Math.min(Math.max(y, PROMIEN + 130), innerHeight - 40);
     this.ring.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
   }
 
@@ -269,6 +305,10 @@ export class WalkaKolo {
     b.style.left = `${(100 * Math.min(s.hp, full)) / full}%`;
     b.style.width = `${(100 * Math.min(s.extra, full)) / full}%`;
     el.classList.toggle('nisko', s.hp <= s.maxHp / 3);
+    const ucieczka = el.querySelector<HTMLButtonElement>('.wn-ucieczka')!;
+    ucieczka.disabled = !gracz || s.busy;
+    ucieczka.classList.toggle('pyta', s.ucieczkaPytanie);
+    ucieczka.querySelector('span')!.textContent = s.ucieczkaPytanie ? 'Na pewno?' : 'Uciekaj';
     const koniec = el.querySelector<HTMLButtonElement>('.wn-koniec')!;
     koniec.disabled = !gracz || s.busy;
     koniec.classList.toggle('teraz', gracz && !s.busy && s.ruchy > 0 && s.ruchy < s.koszt.cios);
@@ -277,8 +317,8 @@ export class WalkaKolo {
     podp.classList.toggle('rada', gracz && s.rada);
 
     // The ring: rebuilt only when what it shows changes (its buttons animate in).
-    const otwarte = s.kolo && gracz && !s.busy;
-    const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.oslona, s.ucieczkaPytanie, s.zapowiedz, s.bron, this.wskaz()]);
+    const otwarte = gracz && !s.busy ? s.kolo : null;
+    const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.unik, s.zapowiedz, s.bron, s.bronId, s.wrog, this.wskaz()]);
     if (this.ring.dataset.k === klucz) return;
     this.ring.dataset.k = klucz;
     if (!otwarte) {
@@ -288,21 +328,29 @@ export class WalkaKolo {
     }
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const wskaz = this.wskaz();
-    const mocnyNazwa = s.bron === 'magia' ? 'Mocny czar' : s.bron ? 'Mocny strzał' : 'Mocny cios';
     this.ring.textContent = '';
-    this.ring.append(
-      this.przycisk('mocny', IKONY.mocny, mocnyNazwa, ruchyTxt(s.koszt.mocny), () => this.on.mocny(), 0, { off: s.ruchy < s.koszt.mocny, on: s.tryb === 'mocny' }),
-      this.przycisk('lecz', IKONY.lecz, 'Lecz', ruchyTxt(s.koszt.lecz), () => this.on.lecz(), 1, {
-        off: s.ruchy < s.koszt.lecz || s.hp >= s.maxHp, blysk: wskaz === 'lecz' || (s.hp <= s.maxHp / 2 && s.ruchy >= s.koszt.lecz),
-      }),
-      this.przycisk('oslona', IKONY.oslona, s.oslona ? 'Osłona ✔' : 'Osłona', s.oslona ? 'działa' : ruchyTxt(s.koszt.oslona), () => this.on.oslona(), 2, {
-        off: s.oslona || s.ruchy < s.koszt.oslona, blysk: s.zapowiedz && !s.oslona, on: s.oslona,
-      }),
-      this.przycisk('uciekaj', IKONY.ucieczka, s.ucieczkaPytanie ? 'Na pewno?' : 'Ucieczka', '−1 ♥', () => this.on.ucieczka(), 3, { uwaga: s.ucieczkaPytanie }),
-    );
-    // Next frame, so the buttons grow out of the hero.
-    if (!bylo?.kolo || !this.ring.classList.contains('on')) requestAnimationFrame(() => this.ring.classList.add('on'));
-    else this.ring.classList.add('on');
+    if (otwarte === 'wrog' && s.wrog) {
+      const bron = `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
+      const w = s.wrog;
+      this.ring.append(
+        this.przycisk('cios', bron, w.cios.tekst, w.cios.koszt, () => this.on.cios(), 0, { off: w.cios.off, blysk: wskaz === 'cios' }),
+        this.przycisk('mocny', bron, w.mocny.tekst, w.mocny.koszt, () => this.on.mocny(), 1, { off: w.mocny.off }),
+      );
+    } else {
+      this.ring.append(
+        this.przycisk('lecz', IKONY.lecz, 'Leczenie', ruchyTxt(s.koszt.lecz), () => this.on.lecz(), 0, {
+          off: s.ruchy < s.koszt.lecz || s.hp >= s.maxHp, blysk: wskaz === 'lecz' || (s.hp <= s.maxHp / 2 && s.ruchy >= s.koszt.lecz),
+        }),
+        this.przycisk('unik', IKONY.unik, s.unik ? 'Unik ✔' : 'Unik', s.unik ? 'gotowy' : ruchyTxt(s.koszt.oslona), () => this.on.unik(), 1, {
+          off: s.unik || s.ruchy < s.koszt.oslona, blysk: s.zapowiedz && !s.unik, on: s.unik,
+        }),
+      );
+    }
+    // Next frame, so the buttons grow out of the figure.
+    if (!bylo?.kolo || bylo.kolo !== otwarte || !this.ring.classList.contains('on')) {
+      this.ring.classList.remove('on');
+      requestAnimationFrame(() => this.ring.classList.add('on'));
+    } else this.ring.classList.add('on');
   }
 
   zamknij() {

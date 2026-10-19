@@ -193,9 +193,9 @@ try {
       await page.waitForTimeout(250);
       if (nowy) {
         // A phone: the second tap strikes (a computer struck on the click); nothing to do → end the turn.
-        const w = await page.evaluate(() => { const w = window.__game.scene.getScene('game').walka; return w && { cel: !!w.cel, busy: w.busy, ruchy: w.ruchy }; });
-        if (w && w.cel && !w.busy && phone) await klik(at.x, at.y);
-        else if (w && !w.busy && !w.cel) await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
+        // The dragon's ring of blows: „Cios” (nothing to do → end the turn).
+        const zrobil = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
+        if (!zrobil) await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
       } else await page.evaluate(() => {
         const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
         b?.click();
@@ -206,8 +206,9 @@ try {
       // Run away and wander off: after 300 m of the dream the hero wakes up anyway (owner, 18 Oct 2026).
       await mojaTura();
       if (nowy) {
-        await kolo('uciekaj');
-        await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.uciekaj').click());
+        await page.evaluate(() => document.querySelector('#walka-panel .wn-ucieczka').click());
+        await page.waitForTimeout(150);
+        await page.evaluate(() => document.querySelector('#walka-panel .wn-ucieczka').click());
       } else {
         await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
         await page.waitForTimeout(200);

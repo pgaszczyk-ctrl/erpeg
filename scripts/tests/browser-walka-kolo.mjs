@@ -1,7 +1,7 @@
 // The turn fight's new controls (test server, walka/tryb.ts nowyPanel; ui/walkaKolo.ts): the turn bar at the top
-// (moves as dots, a first-fight tip), a tap on an enemy previews cost/damage and the second tap walks up and strikes,
-// a tap on the ground previews a walk and the second walks, a tap on the hero opens the ring (Mocny/Lecz/Osłona/
-// Ucieczka), out of moves the turn passes by itself; on a computer the mouse's hover is the preview.
+// (moves as dots, a first-fight tip, Uciekaj with „Na pewno?”), a tap on an enemy opens its ring (Cios / Mocny cios –
+// the hero walks up and strikes from close by), a tap on the ground previews a walk and the second walks, a tap on
+// the hero opens his ring (Leczenie / Unik), out of moves the turn passes by itself; on a computer the hover previews.
 // Run: VITE_TEST=1 npm run build && npx vite preview --port 4173 & node scripts/tests/browser-walka-tur.mjs   (TELEFON=1 for the phone)
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -200,27 +200,42 @@ try {
     assert.equal(f.cel, true, 'hover = preview');
   }
 
-  // ---- 3. Tap the nearest imp: preview (cost, damage, chance), then strike (with a walk up when needed).
+  // ---- 3. Tap the nearest imp: its ring of blows; „Cios” walks up and strikes from close by.
   const r0 = f.ruchy;
-  if (mobile) {
-    await tapWorld(t.x, t.y - 4);
-    f = await fight();
-    assert.equal(f.cel, true, 'chosen by a tap');
-    assert.equal(f.ruchy, r0, 'choosing costs nothing');
-  }
-  const plan = await g(() => { const w = window.__game.scene.getScene('game').walka; return w.planCiosu(w.cel, false); });
-  const label = await g(() => window.__game.scene.getScene('game').walka.etykieta.text);
-  console.log('plan', JSON.stringify(plan), '|', label);
-  assert.match(label, /%/, 'the preview shows the hit chance');
-  assert(plan.ok, 'reachable this turn');
-  await page.screenshot({ path: `work/walka-${tag}-2-podglad.png` });
   await tapWorld(t.x, t.y - 4);
-  await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
   f = await fight();
-  console.log('after a blow', JSON.stringify(f));
+  assert.equal(f.ruchy, r0, 'choosing costs nothing');
+  const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
+  console.log('enemy ring', JSON.stringify(ringW));
+  assert.equal(ringW.length, 2, 'two blows in the enemy ring');
+  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]), 'Cios and Mocny cios');
+  assert(!/%|pokona/.test(await page.evaluate(() => document.body.innerText + window.__game.scene.getScene('game').walka.etykieta.text)), 'no percentages, no „pokona”');
+  const plan = await g(() => { const w = window.__game.scene.getScene('game').walka; return w.planCiosu(w.cel, false); });
+  console.log('plan', JSON.stringify(plan));
+  assert(plan.ok, 'reachable this turn');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `work/walka-${tag}-2-kolo-wroga.png` });
+  const cel = { x: t.x, y: t.y };
+  const przed = await heroPos();
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios').click());
+  await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || w.busy; }, null, { timeout: 5000 }).catch(() => {});
+  // Closest point of the strike (sampled while it lasts).
+  let najblizej = Infinity;
+  let zdjecie = false;
+  for (let i = 0; i < 40; i++) {
+    if (!zdjecie && i === 6) { zdjecie = true; await page.screenshot({ path: `work/walka-${tag}-2b-cios.png` }); }
+    const st = await g(([x, y]) => { const s = window.__game.scene.getScene('game'); return { d: Math.hypot(s.player.x - x, s.player.y - y), busy: !!s.walka?.busy }; }, [cel.x, cel.y]);
+    najblizej = Math.min(najblizej, st.d);
+    if (!st.busy) break;
+    await page.waitForTimeout(40);
+  }
+  f = await fight();
+  console.log('after a blow', JSON.stringify(f), 'closest', najblizej.toFixed(1), 'from', Math.hypot(przed.x - cel.x, przed.y - cel.y).toFixed(1));
   assert(!f || f.ruchy === r0 - plan.koszt || f.faza !== 'gracz', `a blow costs ${plan.koszt}`);
-  const po = await heroPos();
-  if (plan.dojscie) assert(Math.hypot(po.x - p.x, po.y - p.y) > 4, 'walked up to strike');
+  // Touching = both figures' ground rings side by side (TuryWalki.miejsce keeps them apart by that).
+  const styk = await g(() => { const w = window.__game.scene.getScene('game').walka; const q = w.zywi[0]; return q.r + 0.3 * 56 * 0.36 * (2 / 3) + 2 + 1.5; });
+  console.log('touching at', styk.toFixed(1));
+  assert(najblizej <= styk * 1.25, `struck from close by (${najblizej.toFixed(1)} px, touching ${styk.toFixed(1)})`);
 
   // ---- 4. Tap the hero: the ring of four; a tap beside it closes it.
   if ((await fight())?.faza === 'gracz') {
@@ -228,7 +243,7 @@ try {
     f = await fight();
     const ring = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => { const r = b.getBoundingClientRect(); return { k: b.className, x: r.left, y: r.top, w: r.width, r: r.right, b: r.bottom }; }));
     console.log('ring', JSON.stringify(ring.map((q) => q.k)));
-    assert.equal(ring.length, 4, 'four actions in the ring');
+    assert.deepEqual(ring.map((q) => q.k.split(' ')[1]), ['lecz', 'unik'], 'Leczenie and Unik around the hero');
     const W = mobile ? Number(process.env.SZER || 390) : 1280, H = mobile ? 844 : 860;
     for (const q of ring) assert(q.x >= 0 && q.r <= W && q.y >= 0 && q.b <= H, 'ring on screen');
     await page.waitForTimeout(300);
@@ -276,11 +291,12 @@ try {
     t = near(f, p);
     const r0 = f.ruchy;
     await tapWorld(t.x, t.y - 4);
-    if (mobile && (await fight())?.cel && !(await fight()).busy) await tapWorld(t.x, t.y - 4);
+    const zrob = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
+    await page.waitForTimeout(150);
     await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 30000 });
     const w2 = await fight();
     // Nothing done (e.g. no way up): end the turn by the bar's button.
-    if (w2 && w2.faza === 'gracz' && w2.ruchy === r0) await page.evaluate(() => { const b = document.querySelector('#walka-panel .wn-koniec'); if (b && !b.disabled) b.click(); });
+    if (w2 && w2.faza === 'gracz' && (w2.ruchy === r0 || !zrob)) await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
     await waitPhase('gracz');
   }
   assert.equal(await fight(), null, 'fight over');
@@ -289,21 +305,24 @@ try {
   assert.equal(won.kolo, false, 'ring gone');
   assert.equal(won.hp, maxHp, 'full life after a won fight');
 
-  // ---- 8. Ring: Ucieczka asks once, the second tap runs away.
+  // ---- 8. Hurt: Leczenie glows in the hero's ring; Uciekaj in the bar asks once, the second tap runs away.
   const c = await group(['glut'], 90);
   await page.waitForTimeout(600);
   await walkTo(c.x, c.y);
   await press(await dialogNext(/Grupka/), 'Podejdź');
   await waitPhase('gracz');
-  await g(() => { window.__game.scene.getScene('game').player.hp = 3; });
+  await g(() => { window.__game.scene.getScene('game').player.hp = 3; window.__game.scene.getScene('game').walka.odswiez(); });
   await tapScr(await heroScr());
-  assert.equal(await page.locator('#walka-kolo .wk-b.lecz.blysk').count(), 1, 'Lecz glows when hurt');
-  const ucieczka = page.locator('#walka-kolo .wk-b.uciekaj');
+  assert.equal(await page.locator('#walka-kolo .wk-b.lecz.blysk').count(), 1, 'Leczenie glows when hurt');
+  await page.screenshot({ path: `work/walka-${tag}-6-kolo-bohatera.png` });
+  const h2 = await heroScr();
+  await tapScr({ x: h2.x, y: h2.y + 170 });
+  const ucieczka = page.locator('#walka-panel .wn-ucieczka');
   if (mobile) await ucieczka.tap(); else await ucieczka.click();
   await page.waitForTimeout(250);
   assert.notEqual(await fight(), null, 'first tap only asks');
-  assert.match(await ucieczka.textContent(), /Na pewno/);
-  await page.screenshot({ path: `work/walka-${tag}-6-ucieczka.png` });
+  assert.match(await page.locator('#walka-panel .wn-ucieczka').getAttribute('class'), /pyta/);
+  await page.screenshot({ path: `work/walka-${tag}-7-ucieczka.png` });
   if (mobile) await ucieczka.tap(); else await ucieczka.click();
   await page.waitForTimeout(250);
   assert.equal(await fight(), null, 'ran away');

@@ -154,8 +154,12 @@ export class TuryWalki {
   /** New controls (walka/tryb.ts nowyPanel): tap enemy = approach + strike, ground = walk, hero = the ring (podmenu). */
   private nowy = nowyPanel();
   private podmenu = false;
-  /** Ucieczka tapped once in the ring: the next tap runs. */
+  /** Ucieczka tapped once: the next tap runs. */
   private ucieczkaPytanie = false;
+  /** New controls: the enemy whose ring of blows (Cios / Mocny cios) is open. */
+  private koloWroga: Uczestnik | null = null;
+  /** New controls' Unik: each enemy attack may miss until their turn ends (WT.unik). */
+  private unik = false;
   /** The hint line is a first-fights tip. */
   private radaTekst = '';
   private radyTeraz = new Set<string>();
@@ -211,7 +215,10 @@ export class TuryWalki {
     this.panel = this.nowy
       ? new WalkaKolo({
         ...obsluga,
+        cios: () => this.ciosZKola(false),
+        mocny: () => this.ciosZKola(true),
         ucieczka: () => this.uciekajPytaj(),
+        unik: () => this.unikaj(),
         potwierdz: () => this.potwierdz(),
         nastepny: () => this.nastepnyCel(),
         kolo: () => this.ustawPodmenu(!this.podmenu),
@@ -423,6 +430,9 @@ export class TuryWalki {
     for (const [od, ile] of WT.ruchy) if (lvl >= od) n = ile;
     if (this.h.wyspany() && !this.opcje.pvp) n += WT.hotel.ruchow;
     this.oslona = false;
+    this.unik = false;
+    this.koloWroga = null;
+    this.ucieczkaPytanie = false;
     // A dragon's poison cloud: fewer moves this turn.
     if (this.smok?.zatrucie) {
       n = Math.max(1, n - this.smok.zatrucie);
@@ -445,8 +455,8 @@ export class TuryWalki {
     if (this.nowy) {
       this.plany.clear();
       this.podpowiedz = this.rada(zap) || zap || (komputer
-        ? 'Kliknij wroga – atak · pole – ruch · siebie – więcej'
-        : 'Dotknij wroga – atak · pole – ruch · siebie – więcej');
+        ? 'Kliknij wroga – atak · pole – ruch · siebie – leczenie, unik'
+        : 'Dotknij wroga – atak · pole – ruch · siebie – leczenie, unik');
     } else this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
     this.przelicz();
     this.h.krok?.('tura');
@@ -462,12 +472,10 @@ export class TuryWalki {
     const p = this.h.player;
     const dotknij = komputer ? 'Kliknij' : 'Dotknij';
     const lista: [string, boolean, string][] = [
-      ['smok', !!zap, `${zap} Wyjdź z czerwonego pola albo ${dotknij.toLowerCase()} bohatera → Osłona.`],
-      ['lecz', p.hp <= PLAYER.maxHp / 3, `Mało życia! ${dotknij} swojego bohatera i wybierz Lecz.`],
-      ['wrog', this.tura === 1, komputer
-        ? 'Najedź na wroga – zobaczysz koszt i obrażenia. Kliknij, żeby podejść i uderzyć.'
-        : 'Dotknij wroga – zobaczysz koszt i obrażenia. Dotknij drugi raz, żeby podejść i uderzyć.'],
-      ['bohater', this.tura === 2, `${dotknij} swojego bohatera – mocny cios, leczenie, osłona, ucieczka.`],
+      ['smok', !!zap, `${zap} Wyjdź z czerwonego pola albo ${dotknij.toLowerCase()} bohatera → Unik.`],
+      ['lecz', p.hp <= PLAYER.maxHp / 3, `Mało życia! ${dotknij} swojego bohatera i wybierz Leczenie.`],
+      ['wrog', this.tura === 1, `${dotknij} wroga i wybierz cios albo mocny cios – bohater sam podejdzie.`],
+      ['bohater', this.tura === 2, `${dotknij} swojego bohatera – leczenie i unik.`],
       ['pole', this.tura === 3, `${dotknij} pole w niebieskim zasięgu, żeby tam pójść. Gdy ruchy się skończą, tura przechodzi sama.`],
     ];
     for (const [k, warunek, tekst] of lista) {
@@ -659,6 +667,7 @@ export class TuryWalki {
       this.koniczynka('Unik!');
       return false;
     }
+    if (this.uniknal(q.e)) return false;
     if (Math.random() >= (q.e.pvp ? (mnoznik > 1 ? 1 : q.e.pvp.trafienie) : WT.wrog.trafienie)) {
       this.h.pudlo(p.x, p.y - 0.3 * W);
       return false;
@@ -710,6 +719,7 @@ export class TuryWalki {
       this.koniczynka('Unik!');
       return false;
     }
+    if (this.uniknal(e)) return false;
     const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
     const pending = this.carry + czesc * PLAYER.maxHp * (TRUDNOSC_SMOKOW.obrazenia[lvl] ?? 1) * (this.oslona ? SMOK_W_TURACH.oslona : 1);
     if (this.oslona) this.h.napis(this.h.player.x + 0.6 * W, this.h.player.y - 0.6 * W, '🛡', '#cfe6ff', 600);
@@ -773,8 +783,9 @@ export class TuryWalki {
 
   private anuluj() {
     if (this.nowy) {
-      // Escape / Backspace: close the ring, else drop the strong blow and the previews.
-      if (this.podmenu) this.ustawPodmenu(false);
+      // Escape / Backspace: close a ring, else drop the strong blow and the previews.
+      if (this.koloWroga) this.koloWroga = null;
+      else if (this.podmenu) this.ustawPodmenu(false);
       else {
         if (this.tryb === 'mocny') this.tryb = null;
         this.cel = null;
@@ -799,8 +810,8 @@ export class TuryWalki {
     if (on && (this.faza !== 'gracz' || this.busy)) return;
     const bylo = this.podmenu;
     this.podmenu = on;
-    if (!on) this.ucieczkaPytanie = false;
-    if (on) this.podpowiedz = this.nowy ? 'Wybierz akcję. Dotknięcie obok zamyka kółko.' : 'Mocny cios, leczenie, osłona albo ucieczka.';
+    if (on) this.koloWroga = null;
+    if (on) this.podpowiedz = this.nowy ? 'Leczenie albo unik. Dotknięcie obok zamyka kółko.' : 'Mocny cios, leczenie, osłona albo ucieczka.';
     // The tutorial first (it may point at a ring button), then the ring is drawn.
     if (on !== bylo) this.h.krok?.(on ? 'specjalne' : 'wroc');
     this.odswiez();
@@ -825,7 +836,6 @@ export class TuryWalki {
     const koszt = mocny ? WT.koszt.mocny : WT.koszt.cios;
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bron = this.broni();
-    const szac = this.nowy ? ` ${this.szacunek(q, mocny)}` : '';
     const nazwa = bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
     // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
     const reach = PLAYER.attackReach + PLAYER.attackRadius + q.e.size;
@@ -836,37 +846,48 @@ export class TuryWalki {
       const ammo = ammoOf(bron);
       if (ammo && (gear.ammo[ammo] ?? 0) <= 0) return { ok: false, koszt, tekst: `Brak: ${AMUNICJA[ammo].nazwa.toLowerCase()}` };
     }
-    if (stad(p.x, p.y)) return { ok: this.ruchy >= koszt, z: null, koszt, tekst: `${nazwa}${szac} · ${ruchyTxt(koszt)}` };
+    const tutaj = (): PlanCiosu => ({ ok: this.ruchy >= koszt, z: null, koszt, tekst: `${nazwa} · ${ruchyTxt(koszt)}` });
+    // New controls (owner, 19 Oct 2026: „cios można oddać z bliższej odległości”): melee goes right up to the target.
+    const blisko = q.r + HERO_R + WT.odstepPx + 1.5;
+    const przyNim = (x: number, y: number) => bron || !this.nowy || this.dist(x, y, q.e.x, q.e.y) <= blisko * 1.25;
+    if (stad(p.x, p.y) && przyNim(p.x, p.y)) return tutaj();
     const z = this.zas;
     if (!bron && z) {
-      // A short hop: the nearest cell within WT.doskokW from which the target is in reach (no blows through walls).
+      // A short hop: a cell within WT.doskokW from which the target is in reach (no blows through walls).
       let best: string | null = null;
       let bd = Infinity;
+      // New controls: when the target is already within a blow's reach, the hop goes all the way up to it.
+      // Otherwise a hop that wouldn't end right next to it doesn't count – a walk up (one move more) does it.
+      const skok = this.nowy ? (stad(p.x, p.y) ? Infinity : 2 * WT.doskokW * W) : WT.doskokW * W;
       for (const [k, c] of z) {
-        if (c.d > WT.doskokW * W || !stad(c.x, c.y)) continue;
+        if (c.d > skok || !stad(c.x, c.y) || !przyNim(c.x, c.y)) continue;
         // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).
-        const score = this.dist(c.x, c.y, q.e.x, q.e.y) + c.d * 0.25;
+        const d = this.dist(c.x, c.y, q.e.x, q.e.y);
+        const score = this.nowy ? Math.abs(d - blisko) + c.d * 0.1 : d + c.d * 0.25;
         if (score < bd) [best, bd] = [k, score];
       }
       if (best) {
         const c = z.get(best)!;
-        return { ok: this.ruchy >= koszt, z: { x: c.x, y: c.y, k: best }, koszt, tekst: `${nazwa}${szac} · ${ruchyTxt(koszt)}` };
+        return { ok: this.ruchy >= koszt, z: { x: c.x, y: c.y, k: best }, koszt, tekst: `${nazwa} · ${ruchyTxt(koszt)}` };
       }
     }
+    // In reach from here (no closer spot within the hop): strike from here.
+    if (stad(p.x, p.y)) return tutaj();
     if (!this.nowy) return { ok: false, koszt, tekst: bron ? (this.dist(p.x, p.y, q.e.x, q.e.y) > WT.strzalW * W ? 'Za daleko na strzał – podejdź bliżej' : 'Coś zasłania cel') : 'Podejdź bliżej (Ruch)' };
-    // New controls: walk up (one move) and strike in the same tap – or, short of moves or reach, just walk closer.
+    // New controls: walk up (one move) and strike in the same go – or, short of moves or reach, just walk closer.
     const ruch = WT.koszt.ruch;
     if (!z || this.ruchy < ruch) return { ok: false, koszt: ruch + koszt, tekst: 'Za daleko – brak ruchów' };
     let best: string | null = null;
     let bd = Infinity;
     for (const [k, c] of z) {
       if (!stad(c.x, c.y)) continue;
-      const score = c.d + this.dist(c.x, c.y, q.e.x, q.e.y) * 0.3;
+      const d = this.dist(c.x, c.y, q.e.x, q.e.y);
+      const score = c.d * 0.3 + (bron ? 0 : Math.abs(d - blisko));
       if (score < bd) [best, bd] = [k, score];
     }
     if (best) {
       const c = z.get(best)!;
-      if (this.ruchy >= ruch + koszt) return { ok: true, z: { x: c.x, y: c.y, k: best }, koszt: ruch + koszt, dojscie: true, tekst: `Podejdź + ${nazwa.toLowerCase()}${szac} · ${ruchyTxt(ruch + koszt)}` };
+      if (this.ruchy >= ruch + koszt) return { ok: true, z: { x: c.x, y: c.y, k: best }, koszt: ruch + koszt, dojscie: true, tekst: `Podejdź + ${nazwa.toLowerCase()} · ${ruchyTxt(ruch + koszt)}` };
       return { ok: true, z: { x: c.x, y: c.y, k: best }, koszt: ruch, dojscie: true, tylko: true, tekst: `Podejdź · ${ruchyTxt(ruch)} (na cios zabraknie ruchów)` };
     }
     // Out of one walk's reach: as close as one walk gets.
@@ -880,16 +901,6 @@ export class TuryWalki {
     if (!blizej) return { ok: false, koszt: ruch, tekst: bron ? 'Coś zasłania cel' : 'Nie da się podejść' };
     const c = z.get(blizej)!;
     return { ok: true, z: { x: c.x, y: c.y, k: blizej }, koszt: ruch, dojscie: true, tylko: true, tekst: `Za daleko – podejdź bliżej · ${ruchyTxt(ruch)}` };
-  }
-
-  /** „~6 · 80%” (or „pokona · 80%”): what the blow would do, for the preview. */
-  private szacunek(q: Uczestnik, mocny: boolean) {
-    const bron = this.broni();
-    const skill = bron ? (bron.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz';
-    const bonus = (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus();
-    const dmg = (bron ? shotDamage(bron) : meleeDamage()) * (mocny ? strongFactor(skill) : 1) * this.h.wzmocnienie(q.e);
-    const szansa = Math.round(Math.min(1, hitChance(skill, mocny, bonus)) * 100);
-    return `${dmg >= q.e.hp ? 'pokona' : `~${Math.max(1, Math.round(dmg))}`} (${szansa}%)`;
   }
 
   private opisCiosu(q: Uczestnik, mocny: boolean) {
@@ -907,6 +918,7 @@ export class TuryWalki {
     }
     this.busy = true;
     this.ruchy -= plan.koszt;
+    this.koloWroga = null;
     this.ustawPodmenu(false);
     this.odswiez();
     const p = this.h.player;
@@ -1090,8 +1102,51 @@ export class TuryWalki {
     if (this.faza !== 'gracz' || this.busy) return;
     if (this.ucieczkaPytanie) return this.uciekaj();
     this.ucieczkaPytanie = true;
-    this.podpowiedz = this.opcje.pvp ? 'Poddać walkę na arenie? Dotknij „Na pewno?”.' : 'Ucieczka kosztuje 1 ♥ – dotknij „Na pewno?”, żeby uciec.';
+    this.podpowiedz = this.opcje.pvp ? 'Poddać walkę na arenie? Dotknij „Na pewno?” u góry.' : 'Ucieczka kosztuje 1 ♥ – dotknij „Na pewno?” u góry, żeby uciec.';
     this.odswiez();
+  }
+
+  /** New controls: Cios / Mocny cios from the enemy's ring (or keys 1 / 2 on the chosen enemy). */
+  private ciosZKola(mocny: boolean) {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const q = this.koloWroga ?? this.cel;
+    if (!q) {
+      this.podpowiedz = komputer ? 'Najpierw kliknij wroga.' : 'Najpierw dotknij wroga.';
+      return this.odswiez();
+    }
+    const plan = this.planCiosu(q, mocny);
+    if (!plan.ok || (plan.tylko && mocny)) {
+      this.podpowiedz = plan.ok ? 'Na mocny cios zabraknie ruchów – wybierz „Podejdź”.' : this.ruchy < plan.koszt ? `Za mało ruchów (${plan.koszt}).` : plan.tekst;
+      return this.odswiez();
+    }
+    this.cel = q;
+    this.tryb = mocny ? 'mocny' : 'cios';
+    this.koloWroga = null;
+    void this.wykonajCios(mocny);
+  }
+
+  /** New controls' Unik (owner, 19 Oct 2026, in place of Osłona): each attack until the enemies' turn ends may miss. */
+  private unikaj() {
+    if (this.faza !== 'gracz' || this.busy || this.unik) return;
+    if (this.ruchy < WT.koszt.oslona) {
+      this.podpowiedz = 'Za mało ruchów.';
+      return this.odswiez();
+    }
+    this.ruchy -= WT.koszt.oslona;
+    this.unik = true;
+    this.ustawPodmenu(false);
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.2 * W, '💨 Unik', '#cfe6ff', 1000);
+    this.podpowiedz = 'Unik: do końca tury przeciwników ich ataki często chybią.';
+    this.po();
+  }
+
+  /** Did Unik make this attack miss? (never against an attack that must land – the QR demo's dragon) */
+  private uniknal(e: WrogWalki) {
+    if (!this.unik || this.h.pewnyAtak?.(e) || Math.random() >= WT.unik) return false;
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.1 * W, '💨 Unik!', '#cfe6ff', 800);
+    return true;
   }
 
   /** Enter / Space (new controls): carries out what is previewed. */
@@ -1215,7 +1270,9 @@ export class TuryWalki {
    */
   private tapNowy(x: number, y: number, promien: number) {
     const p = this.h.player;
-    if (this.podmenu) {
+    this.ucieczkaPytanie = false;
+    if (this.podmenu || this.koloWroga) {
+      this.koloWroga = null;
       this.ustawPodmenu(false);
       this.podpowiedz = '';
       return this.odswiez();
@@ -1226,8 +1283,18 @@ export class TuryWalki {
       this.ustawPodmenu(true);
       return;
     }
+    if (kto && !this.broni() && this.tryb !== 'mocny') {
+      // Melee (owner, 19 Oct 2026): a ring of blows around the enemy – Cios / Mocny cios.
+      this.cel = kto;
+      this.punkt = null;
+      this.tryb = 'cios';
+      this.koloWroga = kto;
+      const plan = this.planCiosu(kto, false);
+      this.podpowiedz = plan.ok ? 'Wybierz cios albo mocny cios.' : plan.tekst;
+      return this.odswiez();
+    }
     if (kto) {
-      // A computer: the hover was the preview, the click carries it out.
+      // A shot (or a strong blow chosen with a key): the hover / first tap was the preview, the next carries it out.
       if ((this.cel === kto && !this.punkt) || komputer) {
         this.cel = kto;
         this.punkt = null;
@@ -1259,7 +1326,7 @@ export class TuryWalki {
 
   /** New controls on a computer: the mouse's hover is the first tap (preview), a click carries it out. */
   private najazd() {
-    if (!this.nowy || !komputer || this.faza !== 'gracz' || this.busy || this.podmenu || this.ciagnie) return;
+    if (!this.nowy || !komputer || this.faza !== 'gracz' || this.busy || this.podmenu || this.koloWroga || this.ciagnie) return;
     const klucz = `${mouse.x},${mouse.y}`;
     if (klucz === this.myszBylo) return;
     this.myszBylo = klucz;
@@ -1298,8 +1365,10 @@ export class TuryWalki {
     const cam = s.cameras.main;
     const rect = s.game.canvas.getBoundingClientRect();
     const k = rect.width / Math.max(1, s.scale.width);
-    const p = this.h.player;
-    this.panel.pozycja(rect.left + (p.x - cam.worldView.x) * cam.zoom * k, rect.top + (p.y - 0.3 * W - cam.worldView.y) * cam.zoom * k);
+    const q = this.koloWroga;
+    const x = q ? q.e.x : this.h.player.x;
+    const y = q ? q.e.y - 0.3 * W * q.e.kind.scale : this.h.player.y - 0.3 * W;
+    this.panel.pozycja(rect.left + (x - cam.worldView.x) * cam.zoom * k, rect.top + (y - cam.worldView.y) * cam.zoom * k);
   }
 
   /** Is a drag of the hero on (it began on him)? */
@@ -1370,7 +1439,27 @@ export class TuryWalki {
       oslona: this.oslona,
     };
     if (this.panel instanceof WalkaKolo) {
-      const nk: StanKola = { ...st, kolo: this.podmenu, ucieczkaPytanie: this.ucieczkaPytanie, zapowiedz: !!this.smok?.tekst(), rada: !!this.radaTekst && this.podpowiedz === this.radaTekst };
+      const qw = this.koloWroga && !this.koloWroga.e.isDead && this.koloWroga.e.active ? this.koloWroga : null;
+      if (!qw) this.koloWroga = null;
+      const przycisk = (mocny: boolean) => {
+        const plan = this.planCiosu(qw!, mocny);
+        const ruchy = `${plan.koszt} ${plan.koszt === 1 ? 'ruch' : 'ruchy'}`;
+        const tylko = plan.tylko && !mocny;
+        return {
+          tekst: tylko ? 'Podejdź' : mocny ? 'Mocny cios' : 'Cios',
+          koszt: plan.dojscie && !plan.tylko ? `z podejściem · ${ruchy}` : ruchy,
+          off: !plan.ok || (mocny && !!plan.tylko),
+        };
+      };
+      const nk: StanKola = {
+        ...st,
+        kolo: this.podmenu ? 'bohater' : qw ? 'wrog' : null,
+        wrog: qw ? { cios: przycisk(false), mocny: przycisk(true) } : null,
+        ucieczkaPytanie: this.ucieczkaPytanie,
+        zapowiedz: !!this.smok?.tekst(),
+        unik: this.unik,
+        rada: !!this.radaTekst && this.podpowiedz === this.radaTekst,
+      };
       this.panel.ustaw(nk);
     } else this.panel.ustaw(st);
     this.rysuj();
@@ -1435,7 +1524,7 @@ export class TuryWalki {
     }
     // The chosen target: the short way of the hop and the label with the cost.
     const c = this.cel;
-    if (c && this.faza === 'gracz') {
+    if (c && this.faza === 'gracz' && !this.koloWroga) {
       const plan = this.planCiosu(c, this.tryb === 'mocny');
       if (plan.z && this.zas) {
         g.fillStyle(0xffe08a, 0.95);
