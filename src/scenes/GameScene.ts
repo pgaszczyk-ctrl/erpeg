@@ -83,7 +83,7 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
-  session, saveNow, stanOsiagniec, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, newsboyDelivers, newsboyDelivery, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
+  session, saveNow, ustawPozycjeGracza, stanOsiagniec, earn, spend, missionForPlace, mapMissionForLibrary, newsboyMission, newsboyDelivers, newsboyDelivery, missionState, setMissionState, missionExp, resolveMissions, resolvePlace, missionAvailable, missionTitle,
   zadanieOf, stageIndex, stageCount, stageTarget, levelLock, giveStory, takeStory,
   type ResolvedMission, type Place,
 } from '../quests';
@@ -492,6 +492,8 @@ export class GameScene extends Phaser.Scene {
     const at = session.arrive ?? { x: session.startX, y: session.startY };
     session.arrive = null;
     this.travelling = false;
+    // Every save remembers where the hero stood: the next login starts there (quests.ts saveNow).
+    ustawPozycjeGracza(() => (this.travelling || demo.on || !this.player || this.player.isDead ? null : { m: this.city.id, x: this.player.x, y: this.player.y }));
     // No enemies by home (or, in a town, by the station the coach stopped at).
     this.safeAt = inLublin ? { x: session.startX, y: session.startY } : { ...at };
     if (hdOn) {
@@ -3054,7 +3056,7 @@ export class GameScene extends Phaser.Scene {
       : `\n\nBrakuje ci ${miss} 💎 (diament kosztuje ${fmt(d.monet)} monet; masz ${fmt(session.coins)} monet). ${DIAMENT_WSPIERAJACY}`;
     this.dialog({
       title: '💀 Porażka',
-      text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\n${have} Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.${buy}`,
+      text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\n${have} Wrócisz do życia tam, gdzie ostatnio zapisała się gra.${buy}`,
       buttons,
       onChoose: (i) => actions[i]?.(),
     });
@@ -3126,11 +3128,12 @@ export class GameScene extends Phaser.Scene {
     // Survived: the lingering foes leave and the character goes home.
     this.enemies.filter((e) => e.temp).forEach((e) => e.destroy());
     this.enemies = this.enemies.filter((e) => !e.temp);
-    // Back to the last save point: the hotel slept in, or home.
-    const back = session.at && session.at.m === this.city.id ? session.at : { x: session.startX, y: session.startY };
+    // Back to the last save point (or home).
+    const zap = session.zapis ?? session.at;
+    const back = zap && zap.m === this.city.id ? zap : { x: session.startX, y: session.startY };
     this.player.setPosition(back.x, back.y);
     this.cameras.main.centerOn(this.player.x, this.player.y);
-    this.toast(session.at ? 'Przetrwałeś! Wracasz do hotelu, w którym ostatnio spałeś.' : 'Przetrwałeś! Wracasz do domu.');
+    this.toast(zap && zap.m === this.city.id ? 'Przetrwałeś! Wracasz tam, gdzie ostatnio zapisała się gra.' : 'Przetrwałeś! Wracasz do domu.');
     this.emitHud();
   }
 
@@ -3264,6 +3267,15 @@ export class GameScene extends Phaser.Scene {
     // The QR demo: out to the ordinary start screen (without the demo link).
     if (demo.on) {
       location.href = location.origin + sciezkaGry();
+      return;
+    }
+    // Leaving saves the game here: the next login starts on this spot (owner, 19 Oct 2026).
+    this.keepFog();
+    try {
+      await saveNow(this.player.hp);
+    } catch {
+      this.leaving = false;
+      this.toast('Nie udało się zapisać gry – sprawdź internet i spróbuj wyjść jeszcze raz.', 4000);
       return;
     }
     try {
@@ -3848,7 +3860,7 @@ export class GameScene extends Phaser.Scene {
     this.damageCarry = 0;
     this.player.hp = PLAYER.maxHp;
     session.hp = PLAYER.maxHp;
-    const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
+    const at = session.zapis ?? session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
     this.toast(`💎 Moc diamentów cię ocaliła – wracasz do życia! Zostało ${session.diamenty} 💎.`, 4000);
     if (at.m === this.city.id) {
       this.player.setPosition(at.x, at.y);
@@ -4807,6 +4819,7 @@ export class GameScene extends Phaser.Scene {
         session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
         // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
+        session.zapis = { ...session.at };
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();

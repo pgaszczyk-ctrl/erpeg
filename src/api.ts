@@ -70,7 +70,9 @@ export interface SaveData {
   namiot?: boolean;
   /** Bank deposits: coins, when put in (server ms), for how many days, at what %. */
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
-  /** The last hotel slept in: the next login starts there (none: at home). */
+  /** Where the game was last saved (owner, 19 Oct 2026): the next login starts there (none: `at`, else home). */
+  zapis?: { m: string; x: number; y: number; s: number } | null;
+  /** The hotel room (its chest) or a ride's arrival station; old saves: the load point. */
   at?: { m: string; x: number; y: number; s: number } | null;
   /** A ride under way (journey.ts): the load point `at` is already its arrival station. */
   jazda?: import('./journey').Journey | null;

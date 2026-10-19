@@ -132,8 +132,8 @@ export async function prepareMap(city: CityMap) {
 }
 
 /**
- * Starts the game where the character was last saved: the last hotel (on
- * its map), or home. There are no teleports.
+ * Starts the game where the character was last saved (session.zapis; old saves: the last hotel),
+ * or home. There are no teleports.
  */
 export async function enterWorld(game: Phaser.Game) {
   // Still on the way: the ride screen until the cart arrives (the load point is its station already).
@@ -145,7 +145,7 @@ export async function enterWorld(game: Phaser.Game) {
   let city = maps.get('lublin')!;
   // Reloaded for a new version (update.ts): back where the hero stood, once.
   const back = takeResume(session.name);
-  let at = back ?? session.at;
+  let at = back ?? session.zapis ?? session.at;
   if (at) {
     try {
       city = await getMap(at.m);

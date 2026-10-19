@@ -765,7 +765,7 @@ export class UIScene extends Phaser.Scene {
     if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
     this.showDialog({
       title: 'Menu',
-      text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      text: `Wyjście zapisuje grę. Następnym razem zaczniesz dokładnie tutaj.\n\nGra: ${wersjaNapis()}`,
       buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, `⚖ Poziom trudności: ${session.level.nazwa}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
       onChoose: (k) => {
         const i = k;

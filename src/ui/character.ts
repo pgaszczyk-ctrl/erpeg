@@ -82,10 +82,25 @@ function kodPostaci() {
     menu.hidden = false;
   };
   btn.onclick = () => (menu.hidden ? pokazMenu() : (menu.hidden = true));
+  // Owner, 19 Oct 2026: hidden until the player asks – a screenshot of the Kufer must not give the character away.
   const tekst = el('div', 'k-kod-tekst');
-  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci'), el('span', 'k-kod-code', prettyCode(session.idik)));
+  const kod = el('span', 'k-kod-code k-kod-ukryty', '••••••••');
+  const oko = el('button', 'k-kod-btn k-kod-oko', '👁') as HTMLButtonElement;
+  oko.type = 'button';
+  let zgas = 0;
+  const ustaw = (widac: boolean) => {
+    window.clearTimeout(zgas);
+    kod.textContent = widac ? prettyCode(session.idik) : '••••••••';
+    kod.classList.toggle('k-kod-ukryty', !widac);
+    oko.title = widac ? 'Ukryj kod' : 'Pokaż kod (nie pokazuj go nikomu)';
+    oko.setAttribute('aria-label', oko.title);
+    if (widac) zgas = window.setTimeout(() => ustaw(false), 20_000);
+  };
+  oko.onclick = () => ustaw(kod.classList.contains('k-kod-ukryty'));
+  ustaw(false);
+  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci'), kod);
   const row = el('div', 'k-kod-row');
-  row.append(tekst, btn);
+  row.append(tekst, oko, btn);
   box.append(row, menu, msg);
   return box;
 }

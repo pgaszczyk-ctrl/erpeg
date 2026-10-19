@@ -109,7 +109,9 @@ export const session = {
   fabula: [] as string[],
   /** Own tents: nights left of each. */
   namioty: [] as { max: number; left: number }[],
-  /** Load point: the last hotel (map and position); null = home. */
+  /** Load point (owner, 19 Oct 2026): where the game was last saved – mission, shop, home, hotel, „Wyjdź”…; null = `at`, else home. */
+  zapis: null as { m: string; x: number; y: number } | null,
+  /** The hotel room (its chest) or a ride's arrival station; null = home. */
   at: null as { m: string; x: number; y: number } | null,
   /** A ride under way (journey.ts), shown until it arrives. */
   jazda: null as import('./journey').Journey | null,
@@ -267,6 +269,8 @@ export function startSession(r: LoginResult) {
   session.arrive = null;
   const at = p.save.at;
   session.at = at ? { m: at.m, x: (at.x * PX_PER_M) / (at.s || PX_PER_M), y: (at.y * PX_PER_M) / (at.s || PX_PER_M) } : null;
+  const z = p.save.zapis;
+  session.zapis = z ? { m: z.m, x: (z.x * PX_PER_M) / (z.s || PX_PER_M), y: (z.y * PX_PER_M) / (z.s || PX_PER_M) } : null;
   session.jazda = p.save.jazda ?? null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
@@ -304,10 +308,17 @@ export function stanOsiagniec(): StanDoOsiagniec {
   };
 }
 
+/** Where the hero stands now (GameScene sets it; null while riding/dead/not in the world). */
+let pozycjaGracza: (() => { m: string; x: number; y: number } | null) | null = null;
+export function ustawPozycjeGracza(f: typeof pozycjaGracza) { pozycjaGracza = f; }
+
 /** Sends the current progress to the server. */
 let saveChain: Promise<unknown> = Promise.resolve();
 export function saveNow(hp: number) {
   session.hp = hp;
+  // Every save is the load point (owner, 19 Oct 2026); on a ride its arrival station already is.
+  const tu = session.jazda ? session.at : pozycjaGracza?.();
+  if (tu) session.zapis = { m: tu.m, x: tu.x, y: tu.y };
   // Keep states of story missions and of random ones still in progress.
   const gen = Object.values(session.gen).filter((m) => ['active', 'goal'].includes(session.missions[m.id]));
   const missions: Record<string, MissionState> = {};
@@ -317,6 +328,7 @@ export function saveNow(hp: number) {
   const data: SaveData = {
     language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
+    zapis: session.zapis && { m: session.zapis.m, x: Math.round(session.zapis.x), y: Math.round(session.zapis.y), s: PX_PER_M },
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
   // Card/clue checkpoints can happen close together. An older request must never overwrite
