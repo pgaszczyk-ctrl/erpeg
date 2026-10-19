@@ -51,7 +51,7 @@ export const SEN = {
    * Turn fight in the dream (test server, owner 18 Oct 2026): the hero starts with this share of his life (the apples
    * he picks are his healing in the fight), the dragon flies off after this many hits.
    */
-  tury: { zycie: 0.75, ciosow: 3 },
+  tury: { zycie: 0.75, ciosow: 3, poUcieczceM: 300 },
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
@@ -72,14 +72,8 @@ export const DEMO_TEKSTY = {
   celZbierz: (masz: number, trzeba: number) => `Podejdź do jabłonki i kliknij, żeby strącić owoce (${masz}/${trzeba})`,
   /** Over the apple tree next to the hero. */
   podpowiedz: 'Kliknij, żeby strącić owoce',
-  celZjedz: 'Zjedz jabłka – dotknij baniaka życia u dołu ekranu',
-  jablka: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły – dotknij baniaka życia z jabłkiem.',
-  /** Added on a computer (no touch screen). */
-  jablkaTeleskop: 'Masz już dość jabłek. Zjedz je, żeby odzyskać siły.',
-  jablkaPrzycisk: '🍎 Zjedz jabłka',
-  jablkaKlawisz: ' Możesz też nacisnąć H.',
-  olsnienie: 'OOooo, już wiem kim jestem!',
-  imie: (imie: string) => `Jestem ${imie}!`,
+  /** The 5th apple knocked down falls on the hero's head (owner, 18 Oct 2026). */
+  jablkoWGlowe: (imie: string) => `Auć, jabłko uderzyło mnie w głowę!\nAle już pamiętam, jestem ${imie}…`,
   kimJestem: (imie: string) => `Nazywam się ${imie} i poluję na smoki! Jeden zaszył się na dziedzińcu zamku – wejdę przez wyłom we wschodnim murze.`,
   celWylom: 'Wejdź na dziedziniec zamku przez wyłom we wschodnim murze',
   wPrzod: 'Smok mnie zauważył!',

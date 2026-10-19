@@ -115,7 +115,7 @@ import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
-import { tury, turyNaSerwerze } from '../walka/tryb';
+import { tury, turyWDemo } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
 import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
@@ -621,6 +621,17 @@ export class GameScene extends Phaser.Scene {
     const { missions, missing } = inLublin ? resolveMissions(this.city) : { missions: [], missing: [] as string[] };
     this.missions = [];
     for (const rm of missions) this.addMission(rm, true);
+    // Missions that came late from the server (slow phone/network): added when they arrive.
+    if (inLublin) {
+      const pozne = () => {
+        if (!this.sys.isActive() && !this.sys.isPaused()) return;
+        const mam = new Set(this.missions.map((x) => x.m.id));
+        for (const rm of resolveMissions(this.city).missions) if (!mam.has(rm.m.id)) this.addMission(rm, true);
+        this.refreshMarkers();
+      };
+      window.addEventListener('exp-tresc', pozne);
+      this.events.once('shutdown', () => window.removeEventListener('exp-tresc', pozne));
+    }
     // Random missions taken earlier (churches, offices, police) and not finished.
     for (const m of Object.values(session.gen)) {
       if (isWithdrawnCityQuest(m.id)) continue;
@@ -851,10 +862,14 @@ export class GameScene extends Phaser.Scene {
         },
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
+        zbierzOwoce: () => {
+          for (const i of [...this.pickups]) if (String(i.getData('kind') ?? '').startsWith('fruit:')) this.collect(i);
+        },
+        owoceNaZiemi: () => this.pickups.filter((i) => String(i.getData('kind') ?? '').startsWith('fruit:')).length,
         ready: () => this.firstViewReady(),
         walcz: (d) => {
           // The test server's demo: the dragon fights in turns (owner, 18 Oct 2026), flying off after a few hits.
-          if (!turyNaSerwerze()) return false;
+          if (!turyWDemo()) return false;
           const e = d as Enemy;
           e.gatunek = 'gorski';
           this.startWalka([e]);

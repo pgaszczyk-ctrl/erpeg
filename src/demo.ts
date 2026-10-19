@@ -11,7 +11,7 @@ import type { Look } from './look';
 import { codeLink } from './ui/codeCard';
 import { getMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
-import { turyNaSerwerze } from './walka/tryb';
+import { turyWDemo } from './walka/tryb';
 
 // The QR demo: `?d=<code>` (content/demo.ts) – since 18 Oct 2026 the way new players start. The name form
 // (ui/demoStart.ts) makes a real character first; then the dream plays offline (api.ts `offline`, nothing saved):
@@ -92,7 +92,7 @@ export async function startDemo(game: Phaser.Game, p: Pobudka, r: LoginResult, l
   loadGear({ equip: { ...SEN.ekwipunek } as Gear['equip'], skills: { miecz: pts, luk: pts, magia: pts }, magic: true });
   PLAYER.maxHp = zyciePostaci(session.level.serca, session.exp);
   // Test server (turn fights): 3/4 of life – the apples picked in the dream heal in the fight (owner, 18 Oct 2026).
-  session.hp = turyNaSerwerze() ? Math.round(PLAYER.maxHp * SEN.tury.zycie) : PLAYER.maxHp - 2;
+  session.hp = turyWDemo() ? Math.round(PLAYER.maxHp * SEN.tury.zycie) : PLAYER.maxHp - 2;
   const { start } = dreamPlaces();
   const city = await getMap(dreamMap());
   await arriveAt(game, city, city.fromLatLon(start.lat, start.lon));
@@ -191,7 +191,7 @@ export function bigText(text: string, ms = 2400) {
   const el = layer('demo-big', 'display:flex;align-items:center;justify-content:center;padding:16px;');
   const t = document.createElement('div');
   t.textContent = text;
-  t.style.cssText = `font:bold clamp(28px,9vw,64px) monospace;color:#f7c531;text-align:center;text-shadow:0 0 0 #000,-3px -3px 0 #1e1a24,3px -3px 0 #1e1a24,-3px 3px 0 #1e1a24,3px 3px 0 #1e1a24,0 6px 0 #1e1a24;transform:scale(.3);opacity:0;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .35s;`;
+  t.style.cssText = `white-space:pre-line;font:bold ${text.length > 30 ? 'clamp(22px,6vw,46px)' : 'clamp(28px,9vw,64px)'} monospace;color:#f7c531;text-align:center;text-shadow:0 0 0 #000,-3px -3px 0 #1e1a24,3px -3px 0 #1e1a24,-3px 3px 0 #1e1a24,3px 3px 0 #1e1a24,0 6px 0 #1e1a24;transform:scale(.3);opacity:0;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .35s;`;
   el.append(t);
   requestAnimationFrame(() => {
     t.style.transform = 'scale(1)';

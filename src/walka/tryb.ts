@@ -19,6 +19,14 @@ export function tury() {
   return turyNaSerwerze();
 }
 
+/**
+ * The QR demo's dragon fights in turns on every server (owner, 18 Oct 2026: „włącz wszystko na produkcję”);
+ * `?tury=0` still brings back the live fight for comparison.
+ */
+export function turyWDemo() {
+  return wymuszone !== '0';
+}
+
 /** The same switch without the demo exception – the telescope HUD goes with it, also in the demo (owner, 18 Oct 2026). */
 export function turyNaSerwerze() {
   if (wymuszone === '0') return false;
