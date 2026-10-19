@@ -43,8 +43,10 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
   page.on('dialog', (d) => d.accept());
-  await page.goto('http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8');
+  const tury = process.env.TURY !== '0';
+  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}`);
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });
@@ -81,10 +83,19 @@ try {
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); let n = 0; for (const t of s.demoRun.trees) while (n < 5 && s.orchards.shake(t)) { s.dropFruit(t.x, t.y, t.fruit); n++; } });
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.pickups.filter((i) => i.getData('kind') === 'fruit:jablko').length + window.__session.stats.fruit >= 5; }, null, { timeout: 30000 });
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); for (const i of [...s.pickups]) if (i.getData('kind') === 'fruit:jablko') s.collect(i); });
-  await page.waitForSelector('#samouczek', { timeout: 60000 });
-  const healAt = await page.evaluate(() => { const r = document.querySelector('#hud .hud-heal').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
-  await page.mouse.click(healAt.x, healAt.y);
-  await page.waitForFunction(() => !document.getElementById('samouczek'), null, { timeout: 5000 });
+  // On the test server the demo has the telescope HUD too (owner, 18 Oct 2026).
+  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury, 'Telescope HUD in the demo');
+  if (tury) {
+    // Turn fights: 3/4 of life, the apples wait for the fight (no eating step).
+    const zycie = await page.evaluate(() => ({ hp: window.__game.scene.getScene('game').player.hp, max: window.__session.hp }));
+    console.log(name, 'życie na starcie', JSON.stringify(zycie));
+  } else {
+    await page.waitForSelector('#samouczek', { timeout: 60000 });
+    await page.screenshot({ path: `work/onb-${name}-3-jedzenie.png` });
+    const healAt = await page.evaluate(() => { const r = (document.querySelector('#demo-zjedz') ?? document.querySelector('#hud .hud-heal')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.mouse.click(healAt.x, healAt.y);
+    await page.waitForFunction(() => !document.getElementById('samouczek'), null, { timeout: 5000 });
+  }
   try {
     await page.waitForFunction(() => document.getElementById('demo-big')?.textContent === 'Jestem Zosia!', null, { timeout: 60000 });
   } catch (e) {
@@ -106,12 +117,61 @@ try {
   await page.waitForTimeout(1500);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true, 'Outside the gap the dragon still waits');
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'), w = s.demoRun.wylom; s.player.setPosition(w.x - 40, w.y); });
-  await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
-  await page.waitForTimeout(2000);
-  await page.screenshot({ path: `work/onb-${name}-4-smok.png` });
-
-  // 4. Beat it: blackout, real login at home in front of Targi Lublin.
-  await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.dragons.get(d).destroy?.(); if (d.hit(s.player, s.time.now, d.hp + 1)) s.onEnemyKilled(d); });
+  if (tury) {
+    // 4. The turn fight with its tutorial: strike, heal (Specjalne → Lecz), strike until it flies off after 3 hits.
+    await page.waitForSelector('#walka-panel', { timeout: 15000 });
+    const rada = () => page.evaluate(() => ({ t: document.getElementById('demo-rada')?.textContent ?? '', w: document.getElementById('walka-panel')?.getAttribute('data-wskaz') ?? '' }));
+    const hp0 = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: s.player.maxHp ?? null }; });
+    await page.waitForFunction(() => /CIOS/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
+    assert.equal((await rada()).w, 'cios');
+    await page.screenshot({ path: `work/onb-${name}-4-walka-cios.png` });
+    const smokNaEkranie = () => page.evaluate(() => {
+      const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon, cam = s.cameras.main, o = window.devicePixelRatio >= 2 ? 2 : 1;
+      if (!d || !d.visible) return null;
+      const k = cam.zoom / (cam.width / document.querySelector('#game canvas').getBoundingClientRect().width);
+      return { x: (d.x - cam.worldView.x) * k, y: (d.y - 6 - cam.worldView.y) * k };
+    });
+    const klik = (x, y) => (phone ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
+    const mojaTura = () => page.waitForFunction(() => { const p = document.getElementById('walka-panel'); return !p || (!p.classList.contains('czekaj')); }, null, { timeout: 60000 });
+    const uderz = async () => {
+      await mojaTura();
+      const at = await smokNaEkranie();
+      if (!at || !(await page.$('#walka-panel'))) return;
+      await klik(at.x, at.y);
+      await page.waitForTimeout(250);
+      await page.evaluate(() => {
+        const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
+        b?.click();
+      });
+      await page.waitForTimeout(900);
+    };
+    await uderz();
+    await page.waitForFunction(() => /SPECJALNE/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 30000 });
+    assert.equal((await rada()).w, 'spec');
+    await page.screenshot({ path: `work/onb-${name}-4-walka-lecz.png` });
+    await mojaTura();
+    await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
+    await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
+    const przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
+    await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
+    await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
+    await page.waitForFunction(() => /Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
+    for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
+    await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 30000 });
+    console.log(name, 'walka turowa OK', JSON.stringify(hp0));
+  } else {
+    await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
+    await page.waitForTimeout(2000);
+    await page.screenshot({ path: `work/onb-${name}-4-smok.png` });
+    // 4. Beat it: blackout, real login at home in front of Targi Lublin.
+    await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.dragons.get(d).destroy?.(); if (d.hit(s.player, s.time.now, d.hp + 1)) s.onEnemyKilled(d); });
+  }
+  // How long the screen stays black after the dragon (owner, 18 Oct 2026: it was annoying).
+  await page.waitForFunction(() => { const b = document.getElementById('demo-black'); return b && getComputedStyle(b).opacity === '1'; }, null, { timeout: 30000 });
+  const czarnyOd = Date.now();
+  await page.waitForFunction(() => { const b = document.getElementById('demo-black'); return !b || Number(getComputedStyle(b).opacity) < 0.5; }, null, { timeout: 90000 });
+  const czarnoMs = Date.now() - czarnyOd;
+  console.log(name, 'czarny ekran ms', czarnoMs);
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.sys.isActive() && !s.demoRun && window.__session.token === 'tok-login'; }, null, { timeout: 90000 });
   assert(calls.includes('login'));
   const awake = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { exp: window.__session.exp, ...s.city.toLatLon(s.player.x, s.player.y), url: location.href }; });
@@ -124,8 +184,10 @@ try {
   // 5. The portrait tutorial → the Kufer with the code and the account link.
   await page.waitForSelector('#samouczek', { timeout: 15000 });
   await page.screenshot({ path: `work/onb-${name}-5-portret.png` });
-  const av = await page.evaluate(() => { const r = document.querySelector('#hud .hud-av').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const av = await page.evaluate(() => { const r = (document.querySelector('.tel-portret') ?? document.querySelector('#hud .hud-av')).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   await page.mouse.click(av.x, av.y);
+  // The code sits on Statystyki (on a phone its own tab).
+  if (phone) await page.locator('#character button', { hasText: 'Statystyki' }).click();
   await page.waitForSelector('#character .k-kod-code', { timeout: 10000 });
   assert.equal((await page.locator('#character .k-kod-code').textContent()).replace(/\s/g, ''), 'TESTKOD1');
   await page.locator('#character .k-kod-btn').click();
@@ -139,8 +201,26 @@ try {
   await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').witam), false);
   assert.equal(await page.evaluate(() => !!document.getElementById('demo-end')), false);
+  // The hero walks after waking up (owner, 18 Oct 2026: the joystick didn't work in front of Targi).
+  const gdzie = () => page.evaluate(() => { const p = window.__game.scene.getScene('game').player; return { x: p.x, y: p.y }; });
+  const p0 = await gdzie();
+  if (phone) {
+    const cdp = await page.context().newCDPSession(page);
+    const W = page.viewportSize();
+    const x0 = W.width * 0.3, y0 = W.height * 0.6;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+    for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + i * 10, y: y0 }] }); await page.waitForTimeout(50); }
+    await page.waitForTimeout(1500);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  } else {
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(1500);
+    await page.keyboard.up('ArrowRight');
+  }
+  const p1 = await gdzie();
+  assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
   assert.deepEqual(errors, []);
-  console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), awake }));
+  console.log(name, 'OK', JSON.stringify({ startLL, smokM: dM.toFixed(1), czarnoMs, awake }));
 } finally {
   await browser.close();
 }

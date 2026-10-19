@@ -19,7 +19,7 @@ const CSS = `
  * Shows where to tap: everything but the element `selector` is dimmed, `text` explains why.
  * A tap inside the element calls `onTap`; the spotlight stays until the returned `close` is called.
  */
-export function pokazGdzieKliknac(selector: string, text: string, onTap: () => void): () => void {
+export function pokazGdzieKliknac(selector: string, text: string, onTap: () => void, onMiss?: () => void): () => void {
   if (!document.getElementById('samouczek-css')) {
     const st = document.createElement('style');
     st.id = 'samouczek-css';
@@ -70,6 +70,7 @@ export function pokazGdzieKliknac(selector: string, text: string, onTap: () => v
     if (!rect) return;
     const pad = 8;
     if (e.clientX >= rect.left - pad && e.clientX <= rect.right + pad && e.clientY >= rect.top - pad && e.clientY <= rect.bottom + pad) onTap();
+    else onMiss?.();
   };
   const swallow = (e: Event) => { e.preventDefault(); e.stopPropagation(); };
   root.addEventListener('pointerdown', tap);

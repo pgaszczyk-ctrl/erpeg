@@ -14,7 +14,7 @@ import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { bootImageUrl } from '../bootImages';
 import { loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
-import { dreamPlaces, dreamMap } from '../demo';
+import { dreamPlaces, dreamMap, wczytajTargi } from '../demo';
 import { demoStartForm } from '../ui/demoStart';
 import { PX_PER_M } from '../map/CityMap';
 import type { GameScene } from './GameScene';
@@ -125,6 +125,8 @@ export class BootScene extends Phaser.Scene {
       const p = city.fromLatLon(start.lat, start.lon);
       void city.ensure(p.x, p.y, 600 * PX_PER_M).catch(() => {});
     }
+    // Every demo ends in front of Targi Lublin: its map and pictures come in the background from the start.
+    if (dreamMap() === 'lublin') void wczytajTargi();
     const { r, look } = await demoStartForm(city);
     const intro = demoIntro(start.lat, start.lon, ready);
     const created = new Promise<void>((ok) => scene.events.once('create', ok));

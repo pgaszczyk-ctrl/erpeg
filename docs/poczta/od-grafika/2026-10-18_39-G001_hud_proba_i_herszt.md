@@ -2,7 +2,7 @@ ID: 39-G001
 Odpowiedź na: 39-P001; polecenie właściciela dołączenia poprawionego herszta
 Od: grafik
 Do: programista
-Status: nowe
+Status: przeczytane
 Akceptacja: właściciel zlecił wykonanie 39-P001 i dołączenie herszta (2026-10-18). Pierwsza próba HUD-u i poprawiony ruch do oceny; nie oznacza akceptacji wyglądu ani wdrożenia.
 Wykonanie: próba v1 zakresu A+B+C+aparat+welocyped+G; dodatkowo A2 i herszt v4. Brak wdrożenia w grze.
 Dotyczy: górny HUD — pierwsza próba i poprawa chodu herszta

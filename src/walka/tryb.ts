@@ -16,6 +16,11 @@ const wymuszone = (() => {
 
 export function tury() {
   if (demo.on) return false;
+  return turyNaSerwerze();
+}
+
+/** The same switch without the demo exception – the telescope HUD goes with it, also in the demo (owner, 18 Oct 2026). */
+export function turyNaSerwerze() {
   if (wymuszone === '0') return false;
   if (wymuszone === '1') return true;
   return TEST;

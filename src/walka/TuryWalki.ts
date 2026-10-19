@@ -93,7 +93,13 @@ export interface WalkaHost {
   wyspany(): boolean;
   /** A fixed stage to frame whole instead of following the fighters (the Arena). */
   kadr?(): { x0: number; x1: number; y0: number; y1: number } | null;
+  /** An enemy took a blow and lived; true = it leaves the fight at once (the QR demo's dragon flies off after 3 hits). */
+  trafiony?(e: WrogWalki, hp0: number): boolean;
+  /** What just happened, for a tutorial (the QR demo): the hero's turn began, a blow, the special row opened/closed, a heal. */
+  krok?(co: KrokWalki): void;
 }
+
+export type KrokWalki = 'tura' | 'cios' | 'specjalne' | 'wroc' | 'lecz';
 
 type Tryb = 'cios' | 'mocny' | 'ruch' | null;
 
@@ -390,6 +396,7 @@ export class TuryWalki {
     const zap = this.smok?.tekst() ?? '';
     this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
     this.przelicz();
+    this.h.krok?.('tura');
   }
 
   private szczescie() {
@@ -678,9 +685,11 @@ export class TuryWalki {
 
   private ustawPodmenu(on: boolean) {
     if (on && (this.faza !== 'gracz' || this.busy)) return;
+    const bylo = this.podmenu;
     this.podmenu = on;
     if (on) this.podpowiedz = 'Mocny cios, leczenie, osłona albo ucieczka.';
     this.odswiez();
+    if (on !== bylo) this.h.krok?.(on ? 'specjalne' : 'wroc');
   }
 
   /** Weapon in hand decides the attack: sword (melee with a short hop) or a shot (bow/wand). */
@@ -738,7 +747,10 @@ export class TuryWalki {
     this.odswiez();
     const p = this.h.player;
     const bron = this.broni();
-    if (bron) await this.strzal(q, bron, mocny);
+    if (bron) {
+      await this.strzal(q, bron, mocny);
+      this.h.krok?.('cios');
+    }
     else {
       const start = { x: p.x, y: p.y };
       if (plan.z && this.zas) await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
@@ -749,6 +761,7 @@ export class TuryWalki {
       const sx = p.x, sy = p.y;
       await this.tween(p, { x: sx + Math.cos(aim) * 3, y: sy + Math.sin(aim) * 3 }, 90);
       this.rozstrzygnijCios(q, mocny);
+      this.h.krok?.('cios');
       await this.tween(p, { x: sx, y: sy }, 90);
       // Back only part of the hop: a beginner stays close, a veteran springs back further.
       if (plan.z) {
@@ -826,6 +839,12 @@ export class TuryWalki {
       this.h.zabity(e);
       return;
     }
+    if (this.h.trafiony?.(e, q.hp0)) {
+      // It leaves the fight (flies off): no longer one of the fighters.
+      if (this.cel === q) this.cel = null;
+      this.u = this.u.filter((x) => x !== q);
+      return;
+    }
     this.h.nasycenie(e, now);
     if (mocny && e.kindId !== 'smok') q.oglusz = true;
   }
@@ -865,6 +884,7 @@ export class TuryWalki {
     this.ruchy -= WT.koszt.lecz;
     this.ustawPodmenu(false);
     this.podpowiedz = '';
+    this.h.krok?.('lecz');
     this.po();
   }
 

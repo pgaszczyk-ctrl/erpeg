@@ -106,7 +106,7 @@ type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Stan'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
     : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
 const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
@@ -337,13 +337,24 @@ function show(host: CharacterHost) {
     pic.setAttribute('aria-label', 'Twoja postać');
     frame.append(pic);
     doll.append(left, frame, right);
-    s.append(kodPostaci());
     const tal = el('div', 'k-tal');
     for (const m of ['talizman', 'talizman2', 'talizman3'] as Miejsce[]) tal.append(cell(m));
     const bag = el('div', 'sl-grid sl-bag');
     for (let i = 0; i < PLECAK.miejsc; i++) bag.append(slotCell(gear.bag[i] ?? null, { zone: 'bag', i }));
     wrap.append(doll, tal, actions, el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`), bag);
     s.append(wrap, el('div', 'c-note', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
+    // Gear you use rather than wear (owner, 18 Oct 2026: moved here from Statystyki).
+    if (session.namioty.length && tent) {
+      const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
+      tb.disabled = !tent.ok;
+      tb.onclick = () => {
+        closeCharacter();
+        tent.pitch();
+      };
+      s.append(tb);
+      if (!tent.ok && tent.why) s.append(el('div', 'c-note', tent.why));
+    }
+
     dispose?.();
     dispose = slotDrag(wrap, {
       drop: (from, to) => {
@@ -378,7 +389,9 @@ function show(host: CharacterHost) {
 
   // ---------------------------------------------------------------- Kufer: Stan
   const sectionStan = () => {
-    const s = section('Stan');
+    const s = section('Statystyki');
+    // The character's code lives here (owner, 18 Oct 2026), not on the equipment page.
+    s.append(kodPostaci());
     const lvl = poziomPostaci(session.exp);
     const max = lvl >= MAKS_POZIOM_POSTACI;
     const lv = el('div', 'k-level');
@@ -415,16 +428,6 @@ function show(host: CharacterHost) {
       render();
     };
     s.append(eatBtn);
-    if (session.namioty.length && tent) {
-      const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
-      tb.disabled = !tent.ok;
-      tb.onclick = () => {
-        closeCharacter();
-        tent.pitch();
-      };
-      s.append(tb);
-      if (!tent.ok && tent.why) s.append(el('div', 'c-note', tent.why));
-    }
     s.append(el('div', 'k-sub k-head', 'Umiejętności'));
     for (const k of availableSkills()) {
       const pr = skillProgress(k);

@@ -94,6 +94,7 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo, powitanie, blackout } from '../demo';
+import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
@@ -114,7 +115,7 @@ import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
-import { tury } from '../walka/tryb';
+import { tury, turyNaSerwerze } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
 import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
@@ -851,6 +852,14 @@ export class GameScene extends Phaser.Scene {
         hud: () => this.emitHud(),
         heal: () => this.healButton(),
         ready: () => this.firstViewReady(),
+        walcz: (d) => {
+          // The test server's demo: the dragon fights in turns (owner, 18 Oct 2026), flying off after a few hits.
+          if (!turyNaSerwerze()) return false;
+          const e = d as Enemy;
+          e.gatunek = 'gorski';
+          this.startWalka([e]);
+          return true;
+        },
       });
       this.demoRun.start();
     }
@@ -2198,6 +2207,15 @@ export class GameScene extends Phaser.Scene {
       },
       poziom: () => poziomPostaci(session.exp),
       wyspany: () => (session.flagi.wyspany ?? 0) > Date.now(),
+      trafiony: (e, hp0) => {
+        const q = e as Enemy;
+        if (!this.demoRun?.isDragon(q) || !this.demoRun.trafiony(q, hp0)) return false;
+        // The demo's dragon flies off after its last hit: out of the fight and the map.
+        this.enemies = this.enemies.filter((x) => x !== q);
+        this.time.delayedCall(450, () => this.demoRun?.onDragonKilled(q, true));
+        return true;
+      },
+      krok: (co) => this.demoRun?.krokWalki(co),
     }, kto);
     this.emitHud();
   }
@@ -2225,6 +2243,7 @@ export class GameScene extends Phaser.Scene {
 
   private koniecWalki(wynik: WynikWalki, kto: Enemy[]) {
     this.walka = null;
+    this.demoRun?.poWalce(wynik);
     mapaWalki.fn = null;
     mapaWalki.drag = null;
     resetTouch();
@@ -3139,18 +3158,28 @@ export class GameScene extends Phaser.Scene {
     const reveal = () => {
       if (!this.sys.isActive()) return;
       if (!this.firstViewReady()) { this.time.delayedCall(100, reveal); return; }
-      blackout(false, 900);
-      this.time.delayedCall(900, () => this.dialog({
+      blackout(false, 500);
+      this.time.delayedCall(500, () => this.dialog({
         title: DEMO_TEKSTY.pobudkaTytul,
         text: DEMO_TEKSTY.pobudka(session.name),
         buttons: ['Rozejrzę się'],
         onChoose: () => this.time.delayedCall(350, () => {
-          const close = pokazGdzieKliknac('#hud .hud-av', DEMO_TEKSTY.portret(session.name, session.konto), () => {
-            close();
-            this.witam = false;
-            document.querySelector<HTMLElement>('#hud .hud-av')?.click();
-          });
-          this.events.once('shutdown', close);
+          // The portrait of whichever HUD is shown (the telescope HUD on the test server has no boiler avatar).
+          const sel = teleskop() ? '.tel-portret' : '#hud .hud-av';
+          const widac = () => (document.querySelector(sel)?.getBoundingClientRect().width ?? 0) > 0;
+          // The hero walks again at once: the tutorial only points, it never holds him (with no portrait on the
+          // screen the old version kept him frozen for good – owner, 18 Oct 2026: no joystick after waking up).
+          this.witam = false;
+          if (!widac()) return;
+          let zamknij = () => {};
+          const close = pokazGdzieKliknac(sel, DEMO_TEKSTY.portret(session.name, session.konto), () => {
+            zamknij();
+            (this.scene.get('ui') as unknown as { openCharacter(p?: 'eq'): void }).openCharacter('eq');
+          }, () => zamknij()); // a tap anywhere else just closes it – the next touch is the joystick
+          // Gone after a while too, so it never blocks the screen.
+          const t = this.time.delayedCall(15000, () => zamknij());
+          zamknij = () => { close(); t.remove(); };
+          this.events.once('shutdown', zamknij);
         }),
       }));
     };
