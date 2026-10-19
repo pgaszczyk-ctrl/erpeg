@@ -1,5 +1,6 @@
 import { tx } from './i18n';
 import { RPC } from './api';
+import { sciezkaGry } from './sciezka';
 
 // Player accounts (Supabase Auth): e-mail + password, or Google. One account
 // holds up to 3 characters (link_google / my_characters on the server work
@@ -83,7 +84,7 @@ export function catchGoogleReturn(): boolean {
 }
 
 const PAGE = 'font:18px/1.5 Georgia,serif;color:#f3e6c4;background:#1b140e;min-height:100vh;box-sizing:border-box;margin:0;padding:48px 20px;text-align:center';
-const gameUrl = () => `${location.origin}${location.pathname}`;
+const gameUrl = () => `${location.origin}${sciezkaGry()}`;
 
 async function verifyEmailLink(tokenHash: string, type: string) {
   document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1><p>${tx('Sprawdzam link…', 'Checking the link…')}</p></div>`;
@@ -129,7 +130,7 @@ export async function googleEnabled(): Promise<boolean> {
 
 /** Opens Google sign-in and resolves once it's done (or fails). */
 export function googleSignIn(): Promise<GoogleSession> {
-  const back = `${location.origin}${location.pathname}?google=1`;
+  const back = `${location.origin}${sciezkaGry()}?google=1`;
   const url = `${AUTH}/authorize?provider=google&redirect_to=${encodeURIComponent(back)}`;
   try {
     localStorage.removeItem(`${KEY}-error`);
@@ -202,7 +203,7 @@ export async function googleToken(): Promise<string | null> {
 // ---------------------------------------------------------------- e-mail + password
 
 /** Where links in account e-mails lead back to (this page, caught by catchGoogleReturn). */
-const backUrl = () => `${location.origin}${location.pathname}?google=1`;
+const backUrl = () => `${location.origin}${sciezkaGry()}?google=1`;
 
 const POLISH: [RegExp, string][] = [
   [/invalid login credentials/i, 'Zły e-mail albo hasło.'],

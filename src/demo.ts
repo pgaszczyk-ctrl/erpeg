@@ -29,9 +29,14 @@ export const demo = {
 /** Set by `wakeUp`: the next GameScene starts behind the blackout with the welcome and the portrait tutorial. */
 export const powitanie = { czeka: false };
 
+/** The QR code of the demo: index.html moves it from `?d=` into window.__demoKod and leaves …/demo in the address bar. */
+export function demoKod(): string | null {
+  return (window as unknown as { __demoKod?: string }).__demoKod ?? new URLSearchParams(location.search).get('d');
+}
+
 /** The demo a link asks for (null: a normal game). */
 export function demoFromLink(): Pobudka | null {
-  const code = new URLSearchParams(location.search).get('d');
+  const code = demoKod();
   return code ? DEMO_KODY[code] ?? null : null;
 }
 

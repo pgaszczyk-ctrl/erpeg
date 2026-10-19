@@ -48,6 +48,9 @@ try {
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });
+  // The address bar shows only …/demo (owner, 19 Oct 2026), the other parameters stay.
+  const demoUrl = await page.evaluate(() => location.pathname + location.search);
+  assert.equal(demoUrl, '/demo?lang=pl', `Address bar: ${demoUrl}`);
   await page.screenshot({ path: `work/onb-${name}-1-form.png` });
   assert.equal(await page.locator('#menu.m-demo input').count(), 1, 'Only the name field');
   await page.locator('#menu.m-demo input').fill('Zosia');
@@ -115,6 +118,7 @@ try {
   assert.equal(awake.exp, 0);
   assert(Math.hypot((awake.lat - 51.23471) * 111320, (awake.lon - 22.56526) * 69700) < 60, `Wakes up at Targi: ${JSON.stringify(awake)}`);
   assert(!awake.url.includes('d=ShgD6aib8'), 'The demo link is gone from the address bar');
+  assert(new URL(awake.url).pathname === '/' && awake.url.includes('#postac=Zosia'), `After waking up the address loads the character: ${awake.url}`);
   await choose(0); // "Rozejrzę się"
 
   // 5. The portrait tutorial → the Kufer with the code and the account link.

@@ -18,6 +18,7 @@ import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY } from '../content/sklepy';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
+import { sciezkaGry } from '../sciezka';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -463,7 +464,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     }
     // Links from the landing page (/news): #nowa, #wczytaj, #konto open that screen.
     const goTo = location.hash.slice(1);
-    if (['nowa', 'wczytaj', 'konto'].includes(goTo)) history.replaceState(null, '', location.pathname + location.search);
+    if (['nowa', 'wczytaj', 'konto'].includes(goTo)) history.replaceState(null, '', sciezkaGry() + location.search);
     if (goTo === 'nowa' && !TEST) newCharacter();
     else if (goTo === 'wczytaj') load();
     else if (goTo === 'konto' && !TEST) {
