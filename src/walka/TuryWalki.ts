@@ -838,7 +838,10 @@ export class TuryWalki {
     const bron = this.broni();
     const nazwa = bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
     // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
-    const reach = PLAYER.attackReach + PLAYER.attackRadius + q.e.size;
+    // New controls (owner, 19 Oct 2026: „wciąż mogę doskoczyć z daleka – zmniejsz radius do kilku metrów”):
+    // a blow reaches only WT.zasiegWreczW beyond touching; farther takes a walk-up move.
+    const blisko = q.r + HERO_R + WT.odstepPx + 1.5;
+    const reach = this.nowy ? blisko + WT.zasiegWreczW * W : PLAYER.attackReach + PLAYER.attackRadius + q.e.size;
     const stad = (x: number, y: number) => bron
       ? this.dist(x, y, q.e.x, q.e.y) <= WT.strzalW * W && this.h.widac(x, y, q.e.x, q.e.y)
       : this.dist(x, y, q.e.x, q.e.y) <= reach - (x === p.x && y === p.y ? 0 : 2) && this.h.widac(x, y, q.e.x, q.e.y);
@@ -848,7 +851,6 @@ export class TuryWalki {
     }
     const tutaj = (): PlanCiosu => ({ ok: this.ruchy >= koszt, z: null, koszt, tekst: `${nazwa} · ${ruchyTxt(koszt)}` });
     // New controls (owner, 19 Oct 2026: „cios można oddać z bliższej odległości”): melee goes right up to the target.
-    const blisko = q.r + HERO_R + WT.odstepPx + 1.5;
     const przyNim = (x: number, y: number) => bron || !this.nowy || this.dist(x, y, q.e.x, q.e.y) <= blisko * 1.25;
     if (stad(p.x, p.y) && przyNim(p.x, p.y)) return tutaj();
     const z = this.zas;
@@ -858,7 +860,7 @@ export class TuryWalki {
       let bd = Infinity;
       // New controls: when the target is already within a blow's reach, the hop goes all the way up to it.
       // Otherwise a hop that wouldn't end right next to it doesn't count – a walk up (one move more) does it.
-      const skok = this.nowy ? (stad(p.x, p.y) ? Infinity : 2 * WT.doskokW * W) : WT.doskokW * W;
+      const skok = this.nowy ? (stad(p.x, p.y) ? Infinity : -1) : WT.doskokW * W;
       for (const [k, c] of z) {
         if (c.d > skok || !stad(c.x, c.y) || !przyNim(c.x, c.y)) continue;
         // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).

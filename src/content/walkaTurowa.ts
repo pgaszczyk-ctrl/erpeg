@@ -27,6 +27,8 @@ export const WALKA_TUROWA = {
   koszt: { cios: 1, ruch: 1, mocny: 2, lecz: 1, ucieczka: 1, oslona: 1 },
   /** Nowe sterowanie (test): Unik za koszt.oslona – każdy atak wroga do końca jego tury chybia z tą szansą. */
   unik: 0.5,
+  /** Nowe sterowanie: cios bez podchodzenia sięga tyle W ponad styk (właściciel: „kilka metrów”); dalej = podejście za 1 ruch. */
+  zasiegWreczW: 0.5,
   /** Zasięg jednego „Ruchu” bohatera (długość prawdziwej drogi, W). */
   ruchW: 3.4,
   /** Krótki doskok wliczony w cios (droga, W) i powrót na miejsce. */

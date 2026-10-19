@@ -83,9 +83,10 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-kolo { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 7; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; }
 #walka-kolo .wk-b { position: absolute; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; pointer-events: auto; cursor: pointer;
   border: 2px solid #b8893a; background: radial-gradient(circle at 40% 35%, #6a4c32, #2f2017); box-shadow: 0 3px 8px #000a, inset 0 1px 0 #ffffff33;
-  display: flex; align-items: center; justify-content: center; color: #f3dfb0; padding: 0; transform: scale(0.3); opacity: 0;
-  transition: transform 0.14s ease-out, opacity 0.14s; }
-#walka-kolo.on .wk-b { transform: scale(1); opacity: 1; }
+  display: flex; align-items: center; justify-content: center; color: #f3dfb0; padding: 0;
+  transform: translate(var(--ox, 0), var(--oy, 0)) scale(0.15); opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.16s ease-out; }
+#walka-kolo.on .wk-b { transform: none; opacity: 1; }
 #walka-kolo .wk-b svg, #walka-kolo .wk-b img { width: 26px; height: 26px; image-rendering: pixelated; }
 #walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 3px #ffd34a); }
 #walka-kolo .wk-b .n { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; white-space: nowrap;
@@ -275,9 +276,13 @@ export class WalkaKolo {
     // Disabled ones still answer with why (TuryWalki says it in the hint line).
     if (opts.off) b.setAttribute('aria-disabled', 'true'), b.style.filter = 'grayscale(0.8)', b.style.opacity = '0.5';
     const a = (KATY[i] * Math.PI) / 180;
-    b.style.left = `${Math.round(Math.cos(a) * PROMIEN)}px`;
-    b.style.top = `${Math.round(Math.sin(a) * PROMIEN)}px`;
-    b.style.transitionDelay = `${i * 30}ms`;
+    const dx = Math.round(Math.cos(a) * PROMIEN), dy = Math.round(Math.sin(a) * PROMIEN);
+    b.style.left = `${dx}px`;
+    b.style.top = `${dy}px`;
+    // Grows out of the figure: starts at the ring's middle (owner, 19 Oct 2026).
+    b.style.setProperty('--ox', `${-dx}px`);
+    b.style.setProperty('--oy', `${-dy}px`);
+    b.style.transitionDelay = `${i * 60}ms`;
     b.onclick = onClick;
     return b;
   }
@@ -349,7 +354,8 @@ export class WalkaKolo {
     // Next frame, so the buttons grow out of the figure.
     if (!bylo?.kolo || bylo.kolo !== otwarte || !this.ring.classList.contains('on')) {
       this.ring.classList.remove('on');
-      requestAnimationFrame(() => this.ring.classList.add('on'));
+      void this.ring.offsetWidth; // the start pose is laid out before the grow begins
+      requestAnimationFrame(() => requestAnimationFrame(() => this.ring.classList.add('on')));
     } else this.ring.classList.add('on');
   }
 

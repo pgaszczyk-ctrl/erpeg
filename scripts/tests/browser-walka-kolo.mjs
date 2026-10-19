@@ -205,6 +205,19 @@ try {
   await tapWorld(t.x, t.y - 4);
   f = await fight();
   assert.equal(f.ruchy, r0, 'choosing costs nothing');
+  // The blows grow out of the creature: right after the tap they are still small, a moment later full size.
+  const poczatek = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b'); return b && getComputedStyle(b).transform; });
+  await page.waitForTimeout(500);
+  const koniec = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b'); return b && getComputedStyle(b).transform; });
+  console.log('grow', poczatek, '→', koniec);
+  assert(poczatek && poczatek !== 'none' && koniec === 'none', 'the ring grows out of the creature');
+  // A blow without walking reaches only a little beyond touching: farther enemies need a walk-up move.
+  const zasiegi = await g(() => {
+    const w = window.__game.scene.getScene('game').walka, p = w.h.player, W = 56 * 0.36 * (2 / 3);
+    return w.zywi.map((q) => { const pl = w.planCiosu(q, false); return { d: Math.hypot(q.e.x - p.x, q.e.y - p.y), max: q.r + 0.3 * W + 2 + 1.5 + 0.5 * W, dojscie: !!pl.dojscie, koszt: pl.koszt }; });
+  });
+  console.log('reach', JSON.stringify(zasiegi));
+  for (const z of zasiegi) if (z.d > z.max + 1) assert(z.dojscie && z.koszt >= 2, `a far enemy (${z.d.toFixed(1)} px) needs a walk-up`);
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
   console.log('enemy ring', JSON.stringify(ringW));
   assert.equal(ringW.length, 2, 'two blows in the enemy ring');
