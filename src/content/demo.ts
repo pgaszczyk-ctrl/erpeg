@@ -49,7 +49,7 @@ export const SEN = {
   podpowiedzM: 9,
   /**
    * Turn fight in the dream (test server, owner 18 Oct 2026): the hero starts with this share of his life (the apples
-   * he picks are his healing in the fight); after this many hits the dragon strikes back, the next hit makes it fly off.
+   * he picks are his healing in the fight); after ciosow − 1 hits the dragon bites back, the last hit makes it fly off.
    */
   tury: { zycie: 0.75, ciosow: 3, poUcieczceM: 300 },
   /** Best gear (equip slots of inventory.ts). */
@@ -83,9 +83,9 @@ export const DEMO_TEKSTY = {
   walkaStart: 'Walka na tury! Dotknij smoka, a potem przycisk ⚔ CIOS.',
   walkaLecz: 'Masz tylko 3/4 życia – czerwony pasek na dole. Otwórz ✨ SPECJALNE i wybierz LECZ: zjesz zebrane jabłka.',
   walkaLeczTeraz: 'Teraz LECZ – kosztuje jeden ruch.',
-  walkaDobij: (n: number) => `Brawo! Bij dalej – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}, a smok się wścieknie.`,
+  walkaDobij: (n: number) => `Brawo! Bij dalej – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}. Gdy skończą się ruchy, smok odpowie.`,
   walkaSmokAtakuje: 'Smok się wścieka – teraz jego kolej! Spokojnie, przeżyjesz.',
-  walkaOstatni: 'Smok ledwo stoi! Dobij go jednym ⚔ CIOSEM. (Ranny? ✨ SPECJALNE → LECZ.)',
+  walkaOstatni: 'Smok słabnie! Jeszcze jeden ⚔ CIOS, a odleci. (Ranny? ✨ SPECJALNE → LECZ.)',
   /** On a computer (no touch): how to walk, until the hero has walked a few steps. */
   sterowanie: 'Chodzisz strzałkami ← ↑ → ↓ albo klawiszami W A S D',
   walkaRuchy: 'Każda akcja kosztuje ruchy (licznik po prawej). Gdy się skończą, rusza smok.',

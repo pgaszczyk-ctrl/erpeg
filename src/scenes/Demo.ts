@@ -75,7 +75,7 @@ export class DemoRun {
   /** The hero ran away from the turn fight: it starts again only after he left the courtyard. */
   private czekaWyjscie = false;
   private trafien = 0;
-  /** The dragon has had its turn after the hero's SEN.tury.ciosow hits (the finishing blow is allowed then). */
+  /** The dragon has had its turn after the hero's 2nd hit (the 3rd hit then makes it fly off). */
   private zaatakowal = false;
   private rada: 'start' | 'lecz' | 'dobij' | null = null;
 
@@ -313,21 +313,21 @@ export class DemoRun {
   // ------------------------------------------------------------ the turn fight (test server)
 
   /**
-   * The dragon took a hit in the turn fight (owner, 19 Oct 2026: too short – „3 ciosy, które go nie zabiją, potem smok
-   * atakuje, bohater przeżywa, potem bohater dobija”): SEN.tury.ciosow hits each take a quarter of its bar, the 3rd one
-   * ends the hero's turn ('koniecTury') so the dragon strikes back (never missing, never killing), and the first hit
-   * after that strike makes it fly off (true).
+   * The dragon took a hit in the turn fight (owner, 19 Oct 2026: „pozwól smokowi odlecieć, nie ubijaj – po 3. ciosie
+   * niech po prostu odlatuje”, and earlier: it must strike once itself, the hero survives whatever happens): each hit
+   * takes a third of its bar, the 2nd ends the hero's turn ('koniecTury') so the dragon bites back (never missing, never
+   * killing), and the 3rd hit after that bite makes it fly off (true) – it is never beaten.
    */
   trafiony(e: Slime, hp0: number): boolean | 'koniecTury' {
     if (e !== this.dragon) return false;
     this.trafien++;
     const n = SEN.tury.ciosow;
-    if (this.trafien > n && this.zaatakowal) {
+    if (this.trafien >= n && this.zaatakowal) {
       this.busy = true; // nothing restarts the fight before it has flown off
       return true;
     }
-    e.hp = Math.max(1, (hp0 * Math.max(1, n + 1 - this.trafien)) / (n + 1));
-    return this.trafien >= n ? 'koniecTury' : false;
+    e.hp = Math.max(1, (hp0 * Math.max(1, n - this.trafien)) / n);
+    return this.trafien >= n - 1 && !this.zaatakowal ? 'koniecTury' : false;
   }
 
   /** The fight is over without the dragon flying off: ran away (try again after leaving the courtyard). */
@@ -348,8 +348,8 @@ export class DemoRun {
     const ranny = p.hp < PLAYER.maxHp;
     const n = SEN.tury.ciosow;
     const zostalo = Math.max(1, n - this.trafien);
-    // After the 3rd hit: the dragon's answer, then one finishing blow.
-    if (this.trafien >= n) {
+    // After the 2nd hit: the dragon's answer, then one more blow and it flies off.
+    if (this.trafien >= n - 1) {
       if (co === 'cios' && !this.zaatakowal) return this.pokazRade(DEMO_TEKSTY.walkaSmokAtakuje);
       if (co === 'tura' && !this.zaatakowal) {
         this.zaatakowal = true;

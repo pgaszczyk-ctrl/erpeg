@@ -65,11 +65,11 @@ export const WYBOR_TRUDNOSCI = {
   wMenu: 'Poziom możesz zmieniać raz dziennie. Postać, ekwipunek i postęp zostają.',
   /** One short line per level (TRUDNOSCI order). */
   krotko: [
-    'potwory słabe i wolne, łatwe zagadki, szeroki cios',
-    'potwory słabsze, zagadki dla 7–10 lat',
-    'zwykła walka, broń się tępi',
-    'zagadki dla dorosłych, 3 serca',
-    'więcej i silniejszych potworów, 2 serca',
+    'potwory słabe i wolne, łatwe zagadki',
+    'potwory słabsze, zagadki dla 7–10-latków',
+    'zbalansowane, zagadki dla młodzieży',
+    'walka może być wyzwaniem, zagadki dla starszych',
+    'wyzwanie dla najodważniejszych!',
   ],
   juzDzis: 'Dziś już zmieniałeś poziom trudności. Następna zmiana – jutro.',
   zmieniony: (nazwa: string) => `⚖ Poziom trudności: ${nazwa}`,

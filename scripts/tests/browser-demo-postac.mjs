@@ -189,17 +189,21 @@ try {
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
     console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, zaatak: s.demoRun?.zaatakowal, w: window.__widziane, pod: document.getElementById('walka-panel')?.textContent?.slice(0,200), dv: s.demoRun?.dragon?.visible, dact: s.demoRun?.dragon?.active, dhp: s.demoRun?.dragon?.hp, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
     await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? '') || document.getElementById('demo-black'), null, { timeout: 30000 });
+    // It flies off (take-off picture), never dies.
+    const odlot = await page.evaluate(() => !!window.__game.scene.getScene('game').children.getByName('smok-odlot'));
+    await page.screenshot({ path: `work/onb-${name}-4-odlot.png` });
     // Owner, 19 Oct 2026: 3 hits, then the dragon's turn (it strikes, the hero lives), then the finishing blow.
     const w = await page.evaluate(() => window.__widziane);
     const iKolej = w.findIndex((t) => /jego kolej/.test(t));
     assert(iKolej >= 0, 'The dragon gets its turn after the 3rd hit: ' + JSON.stringify(w));
     const zycie = w.filter((t, i) => t[0] === '♥' && i < iKolej).map((t) => +t.slice(1));
-    const iOst = w.findIndex((t) => /jednym/.test(t));
+    const iOst = w.findIndex((t) => /odleci/.test(t));
     const poAtaku = w.slice(iKolej, iOst).filter((t) => t[0] === '♥').map((t) => +t.slice(1));
     assert(poAtaku.length && poAtaku[poAtaku.length - 1] < zycie[zycie.length - 1], 'The dragon bit: ' + JSON.stringify(w));
-    assert(w.slice(iKolej).some((t) => /jednym/.test(t)), 'Then: finish it with one blow');
+    assert(w.slice(iKolej).some((t) => /odleci/.test(t)), 'Then: one more blow and it flies off');
     const koniec = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { trafien: s.demoRun.trafien, zaatakowal: s.demoRun.zaatakowal, hp: s.player.hp }; });
-    assert(koniec.trafien >= 4 && koniec.zaatakowal && koniec.hp >= 1, JSON.stringify(koniec));
+    assert(odlot, 'The dragon flies away');
+    assert(koniec.trafien === 3 && koniec.zaatakowal && koniec.hp >= 1, JSON.stringify(koniec));
     console.log(name, 'walka turowa OK', JSON.stringify(hp0), JSON.stringify(koniec));
     }
   } else {
