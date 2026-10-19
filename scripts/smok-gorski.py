@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# UWAGA (19.10.2026): arkusze smoków robi teraz scripts/smoki-40.py (paczka 40-G002). Ten skrypt nadpisze je starymi
+# klatkami – po nim zawsze uruchom ponownie scripts/smoki-40.py (efekty ognia/kwasu/uderzenia nadal stąd).
 """Smok górski i efekty uderzenia od grafika (zamówienie 15b, paczka „koziol_i_smok_gorski” 7.10.2026) → arkusze do gry.
 
 Źródła: scripts/smoki-zrodla/smok_gorski/*.png (klatki 512×512 na magencie) i scripts/smoki-zrodla/efekty/*.png.

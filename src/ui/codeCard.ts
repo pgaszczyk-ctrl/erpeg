@@ -2,6 +2,7 @@ import { api } from '../api';
 import { googleToken } from '../google';
 import { askAccount } from './account';
 import { pixelLogo } from './logo';
+import { sciezkaGry } from '../sciezka';
 
 // The character's code: shown big as text, as a picture to save, and shared
 // to any app (WhatsApp, SMS…) with the phone's share menu (with a link that
@@ -9,7 +10,7 @@ import { pixelLogo } from './logo';
 
 /** Link that opens the game and loads this character. */
 export function codeLink(name: string, code: string) {
-  return `${location.origin}${location.pathname}#postac=${encodeURIComponent(name)}&kod=${code}`;
+  return `${location.origin}${sciezkaGry()}#postac=${encodeURIComponent(name)}&kod=${code}`;
 }
 
 /** Reads a character from a link like the one above (and clears it from the address bar). */
@@ -18,7 +19,7 @@ export function codeFromLink(): { name: string; code: string } | null {
   const name = h.get('postac');
   const code = h.get('kod');
   if (!name || !code) return null;
-  history.replaceState(null, '', location.pathname + location.search);
+  history.replaceState(null, '', sciezkaGry() + location.search);
   return { name, code };
 }
 

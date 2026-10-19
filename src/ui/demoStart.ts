@@ -8,6 +8,7 @@ import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
+import { sciezkaGry } from '../sciezka';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
 // only the name, and below it – optional – an account (e-mail or Google). The character is made at once
@@ -42,10 +43,10 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       );
     };
     showKonto();
-    const mam = el('a', { href: `${location.pathname}#wczytaj`, className: 'm-demo-mam' }, ['Mam już postać – wczytaj']);
+    const mam = el('a', { href: `${sciezkaGry()}#wczytaj`, className: 'm-demo-mam' }, ['Mam już postać – wczytaj']);
     mam.onclick = (e) => {
       e.preventDefault();
-      location.href = `${location.origin}${location.pathname}#wczytaj`;
+      location.href = `${location.origin}${sciezkaGry()}#wczytaj`;
     };
     const logo = logoImage(110, 'm-demo-logo');
     box.append(

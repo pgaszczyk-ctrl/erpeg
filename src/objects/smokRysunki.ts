@@ -6,7 +6,13 @@ import { RYSUNKI_SMOKOW, EFEKTY_SMOKOW, EFEKTY_ATAKOW, type GatunekId } from '..
 
 export const SKALA_RYSUNKU = 0.5;
 
-const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4, ziej: 6, pluj: 6 };
+/** Skala rysunku tego gatunku (arkusz 40-G002 może być mniejszy niż reszta: `skala` w RYSUNKI_SMOKOW). */
+export const skalaSmoka = (g: GatunekId) => SKALA_RYSUNKU * (RYSUNKI_SMOKOW[g]?.skala ?? 1);
+
+/** Ciało smoka do kolizji: szerokość klatki 220 z zamówień 15–40 (komórki arkuszy są szersze o zapas na ogon i skrzydła). */
+export const rozmiarCiala = (g: GatunekId) => Math.round(220 * skalaSmoka(g) * 0.24);
+
+const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4, ziej: 6, pluj: 6, dmuch: 6, szpony: 7 };
 
 const ladowanie = new Map<string, Promise<boolean>>();
 
@@ -141,11 +147,11 @@ export function ubierzSmoka(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite & 
     d.anims.stop();
     d.clearTint();
     d.setTexture(kluczSmoka(g), klatkaSmoka(g, r.tylkoBok ? 'stoi_bok_1' : 'stoi_przod_1'));
-    d.setScale(SKALA_RYSUNKU);
+    d.setScale(skalaSmoka(g));
     d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
     d.ownLook = true;
-    d.sizeOverride = Math.round(r.komorka[0] * SKALA_RYSUNKU * 0.24);
-    d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * SKALA_RYSUNKU : 0;
+    d.sizeOverride = rozmiarCiala(g);
+    d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * skalaSmoka(g) : 0;
     const k = r.tylkoBok ? 'bok' : 'przod';
     if (maAnimacje(scene, g, 'stoi', k)) d.anims.play(`${kluczSmoka(g)}-stoi_${k}`, true);
   });

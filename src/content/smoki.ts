@@ -100,40 +100,47 @@ export const RYSUNKI_SMOKOW: Partial<Record<GatunekId, { plik: string; komorka: 
   /** Zawsze bok (lustrem w prawo): gatunek z rysunkiem tylko z boku. */
   tylkoBok?: boolean;
   /** Idąc w górę ekranu pokazuj bok (lustrem jak w poziomie): gatunek bez narysowanego tyłu w nowym stylu. */
-  tylJakBok?: boolean }>> = {
+  tylJakBok?: boolean;
+  /** Skala rysunku gatunku względem SKALA_RYSUNKU (arkusz grafika mniejszy niż reszta). */
+  skala?: number }>> = {
+  // Zamówienie 40, paczka 40-G002 „pełny zestaw v2” (19.10.2026): wszystkie smoki w jednym stylu, pełne komplety ruchów.
+  // scripts/smoki-40.py przesuwa każdą klatkę tak, żeby jej zaczep od grafika (stopy) był w [133, 163] wspólnej komórki
+  // 266×232 (szersza od 220×200 o ogony i skrzydła), i wyrównuje skalę klatek do skali gatunku (`skala`).
   gorski: {
-    plik: 'swiat/smoki/smok_gorski.png', komorka: [216, 194], srodek: [108, 89], doLap: 65.6,
-    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "ladowanie_przod_1", "ladowanie_przod_2", "ladowanie_przod_3", "lot_gora_1", "lot_gora_2", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "start_bok_1", "start_bok_2", "start_bok_3", "start_przod_1", "start_przod_2", "start_przod_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
+    plik: 'swiat/smoki/smok_gorski.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163,
+    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "ladowanie_przod_1", "ladowanie_przod_2", "ladowanie_przod_3", "lot_gora_1", "lot_gora_2", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "start_bok_1", "start_bok_2", "start_bok_3", "start_przod_1", "start_przod_2", "start_przod_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "szpony_bok_1", "szpony_bok_2", "szpony_bok_3", "szpony_przod_1", "szpony_przod_2", "szpony_przod_3", "szpony_tyl_1", "szpony_tyl_2", "szpony_tyl_3", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
     efekty: true,
-    // Właściciel 7.10.2026: „smok zmienia sprita w trakcie walki” – wszystkie klatki z 2 uproszczonych (scripts/smok-podmien.py).
-    tylJakBok: true,
+    pysk: { bok: [72, 102], przod: [133, 174], tyl: [133, 62] },
   },
-  // Paczka „smoki_swinka_dekoracje” (7.10.2026, zamówienie 15b): klatki 220×200 już w skali gry, stopy w [110, 170]
-  // (scripts/smoki-nowe.py skleja arkusze); ziej/pluj: 1 zapowiada, 2 wyrzuca, 3 wraca.
   ognisty: {
-    plik: 'swiat/smoki/smok_ognisty.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
+    plik: 'swiat/smoki/smok_ognisty.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163,
     klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3", "ziej_bok_1", "ziej_bok_2", "ziej_bok_3", "ziej_przod_1", "ziej_przod_2", "ziej_przod_3", "ziej_tyl_1", "ziej_tyl_2", "ziej_tyl_3"],
     efekty: false,
-    pysk: { bok: [30, 122], przod: [70, 125], tyl: [185, 35] },
+    pysk: { bok: [61, 93], przod: [133, 142], tyl: [133, 58] },
   },
   kwasowy: {
-    plik: 'swiat/smoki/smok_kwasowy.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
+    plik: 'swiat/smoki/smok_kwasowy.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163,
     klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "pluj_bok_1", "pluj_bok_2", "pluj_bok_3", "pluj_przod_1", "pluj_przod_2", "pluj_przod_3", "pluj_tyl_1", "pluj_tyl_2", "pluj_tyl_3", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
     efekty: false,
-    pysk: { bok: [32, 120], przod: [80, 152], tyl: [167, 52] },
+    pysk: { bok: [49, 100], przod: [133, 142], tyl: [133, 43] },
   },
-  // Paczka „23_smoki_proba_v2” (8.10.2026): leśny i trujący mają na razie tylko 2 próbne klatki z boku (scripts/smoki-nowe.py).
   lesny: {
-    plik: 'swiat/smoki/smok_lesny.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
-    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3"],
-    efekty: false, tylkoBok: true,
-    pysk: { bok: [32, 100], przod: [32, 100], tyl: [32, 100] },
+    plik: 'swiat/smoki/smok_lesny.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163,
+    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
+    efekty: false,
+    pysk: { bok: [34, 103], przod: [133, 147], tyl: [133, 60] },
   },
   trujacy: {
-    plik: 'swiat/smoki/smok_trujacy.png', komorka: [220, 200], srodek: [110, 130], doLap: 40, stopy: 170,
-    klatki: ["idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3"],
-    efekty: false, tylkoBok: true,
-    pysk: { bok: [32, 149], przod: [32, 149], tyl: [32, 149] },
+    plik: 'swiat/smoki/smok_trujacy.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163,
+    klatki: ["dmuch_bok_1", "dmuch_bok_2", "dmuch_bok_3", "dmuch_przod_1", "dmuch_przod_2", "dmuch_przod_3", "dmuch_tyl_1", "dmuch_tyl_2", "dmuch_tyl_3", "idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3"],
+    efekty: false,
+    pysk: { bok: [51, 122], przod: [133, 141], tyl: [133, 37] },
+  },
+  cien: {
+    plik: 'swiat/smoki/smok_cien.png', komorka: [266, 232], srodek: [133, 123], doLap: 40, stopy: 163, skala: 1.058,
+    klatki: ["dmuch_bok_1", "dmuch_bok_2", "dmuch_bok_3", "dmuch_przod_1", "dmuch_przod_2", "dmuch_przod_3", "dmuch_tyl_1", "dmuch_tyl_2", "dmuch_tyl_3", "idzie_bok_1", "idzie_bok_2", "idzie_bok_3", "idzie_bok_4", "idzie_przod_1", "idzie_przod_2", "idzie_przod_3", "idzie_przod_4", "idzie_tyl_1", "idzie_tyl_2", "idzie_tyl_3", "idzie_tyl_4", "ladowanie_przod_1", "ladowanie_przod_2", "ladowanie_przod_3", "lot_gora_1", "lot_gora_2", "pluj_bok_1", "pluj_bok_2", "pluj_bok_3", "pluj_przod_1", "pluj_przod_2", "pluj_przod_3", "pluj_tyl_1", "pluj_tyl_2", "pluj_tyl_3", "smierc_bok_1", "smierc_bok_2", "smierc_bok_3", "start_bok_1", "start_bok_2", "start_bok_3", "start_przod_1", "start_przod_2", "start_przod_3", "stoi_bok_1", "stoi_bok_2", "stoi_przod_1", "stoi_przod_2", "stoi_tyl_1", "stoi_tyl_2", "ugryzienie_bok_1", "ugryzienie_bok_2", "ugryzienie_bok_3", "ugryzienie_przod_1", "ugryzienie_przod_2", "ugryzienie_przod_3", "ugryzienie_tyl_1", "ugryzienie_tyl_2", "ugryzienie_tyl_3", "ziej_bok_1", "ziej_bok_2", "ziej_bok_3", "ziej_przod_1", "ziej_przod_2", "ziej_przod_3", "ziej_tyl_1", "ziej_tyl_2", "ziej_tyl_3"],
+    efekty: false,
+    pysk: { bok: [59, 105], przod: [133, 147], tyl: [133, 60] },
   },
 };
 

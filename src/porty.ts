@@ -7,7 +7,7 @@ import { TEST } from './version';
 import { PORTY_Z_MAPY } from './map/world';
 
 // Stage 1 is on the test server only: ferry landings of the world map get captains there.
-PORTY_Z_MAPY.on = !new URLSearchParams(location.search).has('d'); // not in the QR demo
+PORTY_Z_MAPY.on = !(window as unknown as { __demoKod?: string }).__demoKod && !new URLSearchParams(location.search).has('d'); // not in the QR demo
 
 export interface Port { id: number; nazwa: string; lat: number; lon: number; terminal: string | null }
 export interface Rejs {

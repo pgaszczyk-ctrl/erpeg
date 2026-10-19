@@ -122,6 +122,7 @@ import { mapaWalki } from '../controls';
 import { ARENA, ARENA_TEKSTY } from '../content/arena';
 import type { ArenaDane } from './ArenaScene';
 import type { DuchAreny } from '../api';
+import { sciezkaGry } from '../sciezka';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -3210,7 +3211,7 @@ export class GameScene extends Phaser.Scene {
     this.leaving = true;
     // The QR demo: out to the ordinary start screen (without the demo link).
     if (demo.on) {
-      location.href = location.origin + location.pathname;
+      location.href = location.origin + sciezkaGry();
       return;
     }
     try {
