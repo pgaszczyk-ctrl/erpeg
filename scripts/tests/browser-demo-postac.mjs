@@ -30,7 +30,7 @@ try {
     else if (fn === 'server_now') body = new Date().toISOString();
     else if (fn === 'weather') body = { cell: 'test', at: new Date().toISOString(), h: [] };
     else if (fn === 'settings') body = { external: { google: false } };
-    else if (fn === 'game_content') body = [HELA];
+    else if (fn === 'game_content') { if (process.env.WOLNA) await new Promise((r) => setTimeout(r, Number(process.env.WOLNA))); body = [HELA]; }
     else if (fn === 'create_character') {
       made = { name: arg.p_name, idik: 'TESTKOD1', start_place: arg.p_start_place, start_x: arg.p_start_x, start_y: arg.p_start_y, map_scale: arg.p_scale, age: arg.p_age, save: { look: arg.p_look }, exp: 0, dead: false, died_at: null, konto: false };
       body = { token: 'tok-create', player: made };
@@ -160,7 +160,8 @@ try {
     await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
     await page.waitForFunction(() => /Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
-    await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 30000 });
+    console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
+    await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? '') || document.getElementById('demo-black'), null, { timeout: 30000 });
     console.log(name, 'walka turowa OK', JSON.stringify(hp0));
     }
   } else {
@@ -205,11 +206,12 @@ try {
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').witam), false);
   assert.equal(await page.evaluate(() => !!document.getElementById('demo-end')), false);
   // Hela Trybik stands at Targi after waking up (owner, 18 Oct 2026: „zniknęła Hela Trybik”).
-  await page.waitForFunction(() => window.__game.scene.getScene('game').etapy.givers.has('sz_jarmark'), null, { timeout: 20000 }).catch(async () => {
+  await page.waitForFunction(() => window.__game.scene.getScene('game').etapy.givers.has('sz_jarmark'), null, { timeout: 20000 + Number(process.env.WOLNA || 0) }).catch(async () => {
     console.log(name, 'HELA BRAK', await page.evaluate(() => JSON.stringify({ extra: window.__session.extra?.map((m) => m.id), done: window.__session.missions })));
     throw new Error('Hela Trybik is missing after waking up');
   });
-  console.log(name, 'HELA', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const g = s.etapy.givers.get('sz_jarmark'); return JSON.stringify({ x: g.x, y: g.y, hx: s.player.x, hy: s.player.y, who: g.who.map((w) => ({ v: w.visible, a: w.alpha, tex: w.texture?.key, d: w.depth })) }); }));
+  await page.screenshot({ path: `work/onb-${name}-6b-hela.png` });
+  console.log(name, 'HELA', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const g = s.etapy.givers.get('sz_jarmark'); return JSON.stringify({ wBud: s.city.buildingAt(g.x, g.y) !== undefined, widac: s.vision ? (function(p, x, y){ let c=false; for(let i=0,j=p.length-1;i<p.length;j=i++){ const a=p[i], b=p[j]; if((a.y>y)!==(b.y>y) && x < (b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x) c=!c; } return c; })(s.vision, g.x, g.y) : null, x: g.x, y: g.y, hx: s.player.x, hy: s.player.y, who: g.who.map((w) => ({ v: w.visible, a: w.alpha, tex: w.texture?.key, d: w.depth })) }); }));
   // The hero walks after waking up (owner, 18 Oct 2026: the joystick didn't work in front of Targi).
   const gdzie = () => page.evaluate(() => { const p = window.__game.scene.getScene('game').player; return { x: p.x, y: p.y }; });
   const p0 = await gdzie();

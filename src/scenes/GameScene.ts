@@ -620,6 +620,17 @@ export class GameScene extends Phaser.Scene {
     const { missions, missing } = inLublin ? resolveMissions(this.city) : { missions: [], missing: [] as string[] };
     this.missions = [];
     for (const rm of missions) this.addMission(rm, true);
+    // Missions that came late from the server (slow phone/network): added when they arrive.
+    if (inLublin) {
+      const pozne = () => {
+        if (!this.sys.isActive() && !this.sys.isPaused()) return;
+        const mam = new Set(this.missions.map((x) => x.m.id));
+        for (const rm of resolveMissions(this.city).missions) if (!mam.has(rm.m.id)) this.addMission(rm, true);
+        this.refreshMarkers();
+      };
+      window.addEventListener('exp-tresc', pozne);
+      this.events.once('shutdown', () => window.removeEventListener('exp-tresc', pozne));
+    }
     // Random missions taken earlier (churches, offices, police) and not finished.
     for (const m of Object.values(session.gen)) {
       if (isWithdrawnCityQuest(m.id)) continue;

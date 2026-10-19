@@ -1,3 +1,4 @@
+import { trescSerwera } from '../quests';
 import Phaser from 'phaser';
 import { createArt, useArtistArt, useCropIcons, CROP_ICONS } from '../art';
 import { createHeroAnims } from '../objects/Player';
@@ -127,6 +128,8 @@ export class BootScene extends Phaser.Scene {
     }
     // Every demo ends in front of Targi Lublin: its map and pictures come in the background from the start.
     if (dreamMap() === 'lublin') void wczytajTargi();
+    // The server's missions (Hela Trybik at Targi) start coming now, long before waking up.
+    void trescSerwera().catch(() => {});
     const { r, look } = await demoStartForm(city);
     const intro = demoIntro(start.lat, start.lon, ready);
     const created = new Promise<void>((ok) => scene.events.once('create', ok));

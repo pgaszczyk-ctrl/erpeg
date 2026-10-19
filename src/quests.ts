@@ -165,6 +165,33 @@ export function spend(n: number) {
   session.stats.spent += n;
 }
 
+/**
+ * The server's missions (admin panel, stories), fetched once per page and retried: a phone that is busy with
+ * map tiles (the QR demo) could miss loadContent's 5 s wait, and then Hela Trybik never showed (owner, 19 Oct 2026).
+ */
+let tresc: Promise<Awaited<ReturnType<typeof api.content>>> | null = null;
+export function trescSerwera() {
+  tresc ??= (async () => {
+    for (let i = 0; ; i++) {
+      try {
+        return await api.content();
+      } catch (e) {
+        if (i >= 2) throw e;
+        await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+      }
+    }
+  })().catch((e) => {
+    tresc = null;
+    throw e;
+  });
+  return tresc;
+}
+
+function ustawTresc(list: Awaited<ReturnType<typeof api.content>>) {
+  session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(m));
+  session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
+}
+
 /** Loads the missions made in the admin panel; the game works without them too. */
 export async function loadContent() {
   // The admin panel's knobs (prices, speed…), in parallel with the missions.
@@ -173,17 +200,18 @@ export async function loadContent() {
   Promise.race([api.quizzes(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
     .then(setServerQuizzes)
     .catch(() => {});
+  const p = trescSerwera();
   try {
     // Never hold up the start for long.
-    const list = await Promise.race([
-      api.content(),
-      new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000)),
-    ]);
-    session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(m));
-    session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
+    ustawTresc(await Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000))]));
   } catch {
     session.extra = [];
     session.secrets = new Set();
+    // Late missions still join the game when they come (GameScene listens for 'exp-tresc').
+    p.then((list) => {
+      ustawTresc(list);
+      window.dispatchEvent(new Event('exp-tresc'));
+    }).catch(() => {});
   }
   await settings;
 }
