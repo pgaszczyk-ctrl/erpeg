@@ -1449,7 +1449,7 @@ export class TuryWalki {
         const tylko = plan.tylko && !mocny;
         return {
           tekst: tylko ? 'Podejdź' : mocny ? 'Mocny cios' : 'Cios',
-          koszt: plan.dojscie && !plan.tylko ? `z podejściem · ${ruchy}` : ruchy,
+          koszt: plan.dojscie && !plan.tylko ? `${ruchy} · z podejściem` : ruchy,
           off: !plan.ok || (mocny && !!plan.tylko),
         };
       };

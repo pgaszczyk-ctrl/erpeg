@@ -88,7 +88,16 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
   transition: transform 0.26s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.16s ease-out; }
 #walka-kolo.on .wk-b { transform: none; opacity: 1; }
 #walka-kolo .wk-b svg, #walka-kolo .wk-b img { width: 26px; height: 26px; image-rendering: pixelated; }
-#walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 3px #ffd34a); }
+/* The enemy ring's blows are bigger (owner, 19 Oct 2026); the strong one glows gold (until the artist's icon). */
+#walka-kolo.wrog .wk-b { width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+#walka-kolo.wrog .wk-b svg, #walka-kolo.wrog .wk-b img { width: 38px; height: 38px; }
+#walka-kolo.wrog .wk-b .n { font-size: 13px; }
+#walka-kolo .wk-b.mocny { border: 3px solid #ffd34a; background: radial-gradient(circle at 40% 35%, #a7792c, #5a3a12);
+  box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; animation: wk-zloto 1.3s ease-in-out infinite; }
+#walka-kolo .wk-b.mocny img { filter: drop-shadow(0 0 2px #fff1a8) drop-shadow(0 0 6px #ffd34a) drop-shadow(0 0 10px #ffb020); }
+#walka-kolo .wk-b.mocny .n { color: #ffe08a; }
+@keyframes wk-zloto { 0%, 100% { box-shadow: 0 0 10px 3px #ffc83aaa, 0 0 22px 6px #ffb02066, 0 3px 8px #000a; }
+  50% { box-shadow: 0 0 16px 6px #ffd34acc, 0 0 32px 10px #ffb02088, 0 3px 8px #000a; } }
 #walka-kolo .wk-b .n { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 1px; white-space: nowrap;
   font-size: 12px; font-weight: 800; line-height: 1.1; text-align: center; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
 #walka-kolo .wk-b .n small { display: block; font-weight: 600; font-size: 10px; opacity: 0.85; }
@@ -99,7 +108,7 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-panel[data-wskaz="cios"] ~ #walka-kolo .wk-b.cios,
 #walka-panel[data-wskaz="lecz"] ~ #walka-kolo .wk-b.lecz { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
-@media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
+@media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.mocny { animation: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
 `;
 
 /** Small pixel icons from rows of letters. */
@@ -188,6 +197,8 @@ const IKONY = {
 
 /** Ring radius (CSS px) and the two buttons' places: upper left and upper right of the figure (not on it). */
 const PROMIEN = 54;
+/** The enemy ring is wider: its buttons are bigger. */
+const PROMIEN_WROGA = 64;
 const KATY = [-150, -30];
 
 export class WalkaKolo {
@@ -261,22 +272,25 @@ export class WalkaKolo {
 
   /** Follows the hero / the chosen enemy on the screen (CSS px of the viewport), kept so the buttons stay on screen. */
   pozycja(x: number, y: number) {
-    const m = PROMIEN + 46;
+    const m = PROMIEN_WROGA + 50;
     const cx = Math.min(Math.max(x, m), innerWidth - m);
-    const cy = Math.min(Math.max(y, PROMIEN + 130), innerHeight - 40);
+    const cy = Math.min(Math.max(y, PROMIEN_WROGA + 130), innerHeight - 40);
     this.ring.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
   }
+
+  private promien = PROMIEN;
 
   private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean } = {}) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `wk-b ${klasa}${opts.blysk ? ' blysk' : ''}${opts.on ? ' on' : ''}${opts.uwaga ? ' uwaga' : ''}`;
-    b.innerHTML = `${ikona}<span class="n">${nazwa}${koszt ? `<small>${koszt}</small>` : ''}</span>`;
+    // „2 ruchy · z podejściem” in two short lines, so neighbouring buttons' captions don't run into each other.
+    b.innerHTML = `${ikona}<span class="n">${nazwa}${koszt ? `<small>${koszt.split(' · ').join('<br>')}</small>` : ''}</span>`;
     b.setAttribute('aria-label', `${nazwa} ${koszt}`);
     // Disabled ones still answer with why (TuryWalki says it in the hint line).
     if (opts.off) b.setAttribute('aria-disabled', 'true'), b.style.filter = 'grayscale(0.8)', b.style.opacity = '0.5';
     const a = (KATY[i] * Math.PI) / 180;
-    const dx = Math.round(Math.cos(a) * PROMIEN), dy = Math.round(Math.sin(a) * PROMIEN);
+    const dx = Math.round(Math.cos(a) * this.promien), dy = Math.round(Math.sin(a) * this.promien);
     b.style.left = `${dx}px`;
     b.style.top = `${dy}px`;
     // Grows out of the figure: starts at the ring's middle (owner, 19 Oct 2026).
@@ -333,6 +347,8 @@ export class WalkaKolo {
     }
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const wskaz = this.wskaz();
+    this.ring.classList.toggle('wrog', otwarte === 'wrog');
+    this.promien = otwarte === 'wrog' ? PROMIEN_WROGA : PROMIEN;
     this.ring.textContent = '';
     if (otwarte === 'wrog' && s.wrog) {
       const bron = `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
