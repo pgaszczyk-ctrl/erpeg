@@ -38,6 +38,7 @@ import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
 import { offline } from '../api';
+import { modulGracza, modulPortret, modulKlucz, PORTRET_PX } from '../ui/modulPostac';
 
 /** The telescopic HUD's first menu line: the character sheet. */
 
@@ -355,6 +356,16 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
+    // Test server (owner, 20 Oct 2026): the portrait is the modular hero's head (pack „20 postaci, osie v5”).
+    if (TEST) {
+      const ml = modulGracza(session.look, session.name);
+      void modulPortret(ml).then((c) => {
+        if (modulKlucz(modulGracza(session.look, session.name)) !== modulKlucz(ml)) return;
+        setHudPortrait(c.toDataURL());
+        setHudAvatar(c, 0, 0, PORTRET_PX, PORTRET_PX);
+      });
+      return;
+    }
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;
@@ -561,6 +572,19 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's dialog portrait (public/portrety/bohater_NN.webp for the 25 heroes); loads it on first use. */
   private portretBohatera(gotowy?: () => void): string | null {
+    if (TEST) {
+      const ml = modulGracza(session.look, session.name);
+      const key = `portret-modul-${modulKlucz(ml)}`;
+      if (this.textures.exists(key)) return key;
+      if (!this.portretLaduje.has(key)) {
+        this.portretLaduje.add(key);
+        void modulPortret(ml).then((c) => {
+          if (!this.textures.exists(key)) this.textures.addCanvas(key, c);
+          gotowy?.();
+        });
+      }
+      return null;
+    }
     const hp = heroPortrait();
     const m = hp && /lista([a-y])$/.exec(hp.key);
     if (!m) return null;

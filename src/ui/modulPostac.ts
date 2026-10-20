@@ -110,3 +110,50 @@ export async function modulCanvas(look: ModulLook): Promise<HTMLCanvasElement> {
   ctx.drawImage(tmp, Math.round(b.nx - h.mx), by + Math.round(b.ny - h.my));
   return c;
 }
+
+/** The hero's modular look: the one picked at creation, else a stable one from the name (same head every time). */
+export function modulGracza(look: { modul?: ModulLook }, name: string): ModulLook {
+  if (look.modul) return look.modul;
+  let h = 2166136261;
+  for (const ch of name) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const r = (n: number) => {
+    h = (Math.imul(h, 1103515245) + 12345) >>> 0;
+    return (h >>> 8) % n;
+  };
+  const p: 'k' | 'm' = r(2) ? 'k' : 'm';
+  const hs = GLOWY_MODUL.filter((x) => x.plec === p), bs = CIALA_MODUL.filter((x) => x.plec === p);
+  return { g: hs[r(hs.length)].id, c: bs[r(bs.length)].id, p, s: r(2), w: r(WLOSY_MODUL.length), u: r(UBRANIA_MODUL.length), u2: r(UBRANIA_MODUL.length) };
+}
+
+/** Portrait size: the head's 48×48 crop enlarged ×8 blocky, so smooth shrinking in the HUD stays crisp. */
+export const PORTRET_PX = 384;
+const portrety = new Map<string, Promise<HTMLCanvasElement>>();
+
+/** The head alone (recoloured, no body), centred on the eyes' axis, as a PORTRET_PX square. */
+export function modulPortret(look: ModulLook): Promise<HTMLCanvasElement> {
+  const key = modulKlucz(look);
+  let p = portrety.get(key);
+  if (!p) {
+    p = loadParts().then((d) => {
+      const hi = GLOWY_MODUL.findIndex((h) => h.id === look.g);
+      const h = GLOWY_MODUL[hi];
+      const tmp = document.createElement('canvas');
+      tmp.width = tmp.height = F;
+      tmp.getContext('2d')!.putImageData(part(d.glowy, d.glowy_maska, hi, look, h.skora, h.wlosy), 0, 0);
+      const c = document.createElement('canvas');
+      c.width = c.height = PORTRET_PX;
+      const ctx = c.getContext('2d')!;
+      ctx.imageSmoothingEnabled = false;
+      const S = 48, x0 = Math.round(h.mx - S / 2), y0 = 2;
+      ctx.drawImage(tmp, x0, y0, S, S, 0, 0, PORTRET_PX, PORTRET_PX);
+      return c;
+    });
+    portrety.set(key, p);
+  }
+  return p;
+}
+
+/** A short key of a look (texture names, caches). */
+export function modulKlucz(l: ModulLook) {
+  return `${l.g}-${l.c}-${l.p}-${l.s}-${l.w}-${l.u}-${l.u2}`;
+}
