@@ -77,7 +77,9 @@ for i, h in enumerate(m['heads']):
     box = Counter(px[x, y][:3] for x in range(ax - 8, ax + 9) for y in range(ey - 3, ey + 5)
                   if px[x, y][3] and sum(px[x, y][:3]) > 200 and px[x, y][0] > px[x, y][1] > px[x, y][2])
     ref = [c for c, _ in box.most_common(3)]
-    skin = {(x, y) for x in range(64) for y in range(64) if px[x, y][3] and any(similar(px[x, y], r, 0.03, 0.55, 1.25) for r in ref)}
+    # Bald heads have skin up to the crown; elsewhere skin-coloured pixels high in the hair are highlights, not skin.
+    top = 0 if k in ('02', '10') else ey - 9
+    skin = {(x, y) for x in range(64) for y in range(top, 64) if px[x, y][3] and any(similar(px[x, y], r, 0.03, 0.55, 1.25) for r in ref)}
     wl = WLOSY.get(k, {})
     seeds = [tuple(s) for s in wl.get('s', [])]
     ban = skin | {(x, y) for x in range(64) for y in range(wl.get('ymin', 0))}
