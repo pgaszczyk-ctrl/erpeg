@@ -205,6 +205,10 @@ try {
   // Nothing open: the hero and attackable enemies pulse by turns; the reachable ground has an edge.
   const zach = await g(() => { const w = window.__game.scene.getScene('game').walka; const z = w.zas; let brzeg = 0; for (const k of z.keys()) { const [i, j] = k.split(',').map(Number); if (!z.has(`${i + 1},${j}`)) brzeg++; } return { brzeg, n: z.size }; });
   assert(zach.brzeg > 3 && zach.brzeg < zach.n, 'an edge of the range');
+  // The range is blue smoke (a soft inside + puffs on the edge), not pixel squares.
+  const dym = await g(() => { const d = window.__game.scene.getScene('game').walka.dym; return d && { wnetrze: d.wnetrze.visible, kleby: d.kleby.length, widac: d.kleby.filter((k) => k.visible).length }; });
+  console.log('range smoke', JSON.stringify(dym));
+  assert(dym && dym.wnetrze && dym.kleby > 10 && dym.widac === dym.kleby, 'the range is drawn as smoke');
   // Stage 2: a cost plaque over every enemy.
   const plak = await g(() => { const w = window.__game.scene.getScene('game').walka; return { widac: [...w.plakietki.values()].filter((t) => t.visible).map((t) => t.text), wrogow: w.zywi.length }; });
   console.log('plaques', JSON.stringify(plak));

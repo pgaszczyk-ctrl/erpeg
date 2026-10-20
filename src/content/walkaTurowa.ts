@@ -156,3 +156,21 @@ export const SMOK_W_TURACH = {
   },
   napisy: { ogien: 'Ogień!', kwas: 'Kwas!', dym: 'Trujący obłok!', lot: 'Lądowanie!', ogluszony: 'Smok ogłuszony!' },
 };
+
+/**
+ * Zasięg ruchu w walce (nowe sterowanie) jako niebieski dymek – jak granica terenu gangu (właściciel 20.10.2026:
+ * „mniej pikselowe, dymek jak na terenie gangu, tylko niebieski”): miękkie wnętrze i kłęby wzdłuż granicy.
+ */
+export const DYM_ZASIEGU = {
+  kolor: 0x59c8ff,
+  /** Jaśniejszy odcień części kłębów. */
+  kolorJasny: 0xbfeaff,
+  /** Gęstość wnętrza (zanika miękko ku granicy). */
+  alfa: 0.26,
+  /** Co ile pikseli świata kłąb na granicy, ich średnica (px) i gęstość. */
+  klebyCoPx: 6,
+  klebyPx: [9, 17] as [number, number],
+  klebyAlfa: [0.3, 0.55] as [number, number],
+  /** Jeden oddech kłębu (sekundy). */
+  oddechS: [2.5, 5] as [number, number],
+};

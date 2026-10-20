@@ -29,7 +29,7 @@ import { WalkaKolo, type StanKola, type PrzyciskAtaku } from '../ui/walkaKolo';
 import { TEST } from '../version';
 import { ATAKI, brakujeDoAtaku, type RodzajAtaku, type BronAtaku } from '../content/atakiTurowe';
 import { SmokWTurach } from './smokTury';
-import { SMOK_W_TURACH } from '../content/walkaTurowa';
+import { SMOK_W_TURACH, DYM_ZASIEGU } from '../content/walkaTurowa';
 import { TRUDNOSC_SMOKOW } from '../content/smoki';
 import { TRUDNOSCI } from '../content/trudnosc';
 
@@ -532,6 +532,7 @@ export class TuryWalki {
     const p = this.h.player;
     this.zas = zasieg(p.x, p.y, WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
     this.zasD = null;
+    this.budujDym();
     this.plany.clear();
     this.odswiez();
   }
@@ -1709,12 +1710,13 @@ export class TuryWalki {
     }
     // Reachable ground for a move (new controls: the whole turn, while moves are left).
     const pokazZasieg = this.nowy ? this.faza === 'gracz' && !this.busy && !this.podmenu : this.faza === 'gracz' && this.tryb === 'ruch';
+    this.oddychajDym(pokazZasieg && !!this.zas && this.ruchy >= WT.koszt.ruch, now);
     if (pokazZasieg && this.zas && this.ruchy >= WT.koszt.ruch) {
-      g.fillStyle(0x59c8ff, this.nowy ? 0.12 : 0.18);
-      const k = WT.kratkaPx;
-      for (const c of this.zas.values()) g.fillRect(c.x - k / 2, feet(c.y) - k / 2, k, k);
-      // New controls: a clear edge of the reachable ground (owner, 20 Oct 2026: „wyraźniejsza granica ruchu”).
-      if (this.nowy) this.granica(g, k, feet);
+      if (!this.nowy) {
+        g.fillStyle(0x59c8ff, 0.18);
+        const k = WT.kratkaPx;
+        for (const c of this.zas.values()) g.fillRect(c.x - k / 2, feet(c.y) - k / 2, k, k);
+      }
       if (this.punkt) {
         if (this.nowy) this.sciezka(g, t, this.zas, this.punkt.k, feet, WT.koszt.ruch);
         else {
@@ -1888,19 +1890,112 @@ export class TuryWalki {
     tx.setPosition(x0 + 5.3, y0 + h / 2);
   }
 
-  /** The edge of the reachable ground: lines along every cell side with no reachable neighbour. */
-  private granica(g: Phaser.GameObjects.Graphics, k: number, feet: (y: number) => number) {
+  /** The move range as blue smoke (new controls): a soft inside and breathing puffs along its edge. */
+  private dym: { wnetrze: Phaser.GameObjects.Image; kleby: Phaser.GameObjects.Image[]; klucz: string } | null = null;
+  private dymNr = 0;
+
+  /**
+   * Builds the range's smoke from the one-move grid (owner, 20 Oct 2026: „mniej pikselowe – dymek jak na terenie
+   * gangu, tylko niebieski”): the cells go 1 px each into a small canvas, blurred twice by a 3×3 box and shown
+   * smoothly enlarged, so the inside fades softly at the edge; puffs (like the gang's border) sit on the edge cells.
+   */
+  private budujDym() {
+    this.usunDym();
     const z = this.zas;
-    if (!z) return;
-    const h = k / 2;
-    g.lineStyle(1.2, 0xbfeaff, 0.85);
+    if (!this.nowy || !z || !z.size) return;
+    const s = this.h.scene;
+    const D = DYM_ZASIEGU;
+    const k = WT.kratkaPx;
+    const o = z.get('0,0')!;
+    let i0 = Infinity, i1 = -Infinity, j0 = Infinity, j1 = -Infinity;
+    const komorki: [number, number][] = [];
+    for (const key of z.keys()) {
+      const [i, j] = key.split(',').map(Number);
+      komorki.push([i, j]);
+      i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j);
+    }
+    const pad = 3;
+    const w = i1 - i0 + 1 + pad * 2, h = j1 - j0 + 1 + pad * 2;
+    let a = new Float32Array(w * h);
+    for (const [i, j] of komorki) a[(j - j0 + pad) * w + (i - i0 + pad)] = 1;
+    for (let r = 0; r < 2; r++) {
+      const b = new Float32Array(w * h);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        let sum = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sum += a[(y + dy) * w + x + dx];
+        b[y * w + x] = sum / 9;
+      }
+      a = b;
+    }
+    const klucz = `walka-dym-${this.dymNr++}`;
+    const tex = s.textures.createCanvas(klucz, w, h)!;
+    const ctx = tex.getContext();
+    const img = ctx.createImageData(w, h);
+    for (let n = 0; n < w * h; n++) {
+      img.data[n * 4] = img.data[n * 4 + 1] = img.data[n * 4 + 2] = 255;
+      img.data[n * 4 + 3] = Math.round(255 * Math.min(1, a[n] * 1.15));
+    }
+    ctx.putImageData(img, 0, 0);
+    tex.refresh();
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    // Pixel (x, y) of the canvas = cell (i0 − pad + x, j0 − pad + y); cells are centred on o + (i, j)·k, feet 5 px lower.
+    const wnetrze = s.add.image(o.x + (i0 - pad) * k - k / 2, o.y + 5 + (j0 - pad) * k - k / 2, klucz)
+      .setOrigin(0, 0).setScale(k).setTint(D.kolor).setAlpha(D.alfa).setDepth(GLEB_ZIEMI);
+    if (!s.textures.exists('walka-klab')) {
+      const n = 48;
+      const c = s.textures.createCanvas('walka-klab', n, n)!;
+      const cx = c.getContext();
+      const im = cx.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+        const q = (y * n + x) * 4;
+        im.data[q] = im.data[q + 1] = im.data[q + 2] = 255;
+        im.data[q + 3] = Math.round(255 * (r >= 1 ? 0 : (1 - r * r) ** 1.6));
+      }
+      cx.putImageData(im, 0, 0);
+      c.refresh();
+      c.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    // Puffs on the edge cells, at least klebyCoPx apart.
+    const kleby: Phaser.GameObjects.Image[] = [];
+    const stoja: { x: number; y: number }[] = [];
     for (const [key, c] of z) {
       const [i, j] = key.split(',').map(Number);
-      const cy = feet(c.y);
-      if (!z.has(`${i - 1},${j}`)) g.lineBetween(c.x - h, cy - h, c.x - h, cy + h);
-      if (!z.has(`${i + 1},${j}`)) g.lineBetween(c.x + h, cy - h, c.x + h, cy + h);
-      if (!z.has(`${i},${j - 1}`)) g.lineBetween(c.x - h, cy - h, c.x + h, cy - h);
-      if (!z.has(`${i},${j + 1}`)) g.lineBetween(c.x - h, cy + h, c.x + h, cy + h);
+      if (z.has(`${i - 1},${j}`) && z.has(`${i + 1},${j}`) && z.has(`${i},${j - 1}`) && z.has(`${i},${j + 1}`)) continue;
+      if (stoja.some((p) => Math.abs(p.x - c.x) < D.klebyCoPx && Math.abs(p.y - c.y) < D.klebyCoPx)) continue;
+      stoja.push({ x: c.x, y: c.y });
+      const r = Math.random;
+      const size = D.klebyPx[0] + r() * (D.klebyPx[1] - D.klebyPx[0]);
+      const alfa = D.klebyAlfa[0] + r() * (D.klebyAlfa[1] - D.klebyAlfa[0]);
+      const p = s.add.image(c.x + (r() - 0.5) * 3, c.y + 5 + (r() - 0.5) * 3, 'walka-klab')
+        .setDisplaySize(size, size * (0.75 + r() * 0.3)).setTint(r() < 0.35 ? D.kolorJasny : D.kolor).setAlpha(alfa).setDepth(GLEB_ZIEMI + 0.5);
+      p.setData('a', alfa).setData('s', p.scaleX).setData('f', r() * Math.PI * 2).setData('t', D.oddechS[0] + r() * (D.oddechS[1] - D.oddechS[0]));
+      kleby.push(p);
+    }
+    this.dym = { wnetrze, kleby, klucz };
+  }
+
+  private usunDym() {
+    if (!this.dym) return;
+    this.dym.wnetrze.destroy();
+    for (const p of this.dym.kleby) p.destroy();
+    this.h.scene.textures.remove(this.dym.klucz);
+    this.dym = null;
+  }
+
+  /** Shows/hides the range's smoke and lets its puffs breathe slowly (like the gang's border). */
+  private oddychajDym(widac: boolean, now: number) {
+    const d = this.dym;
+    if (!d) return;
+    d.wnetrze.setVisible(widac);
+    const t = now / 1000;
+    for (const p of d.kleby) {
+      p.setVisible(widac);
+      if (!widac) continue;
+      const fala = Math.sin((t * Math.PI * 2) / (p.getData('t') as number) + (p.getData('f') as number));
+      p.setAlpha((p.getData('a') as number) * (0.8 + 0.2 * fala));
+      const sk = (p.getData('s') as number) * (1 + 0.08 * fala);
+      p.setScale(sk, sk * (p.scaleY / p.scaleX));
     }
   }
 
@@ -1913,6 +2008,7 @@ export class TuryWalki {
     this.gfx.destroy();
     this.gfxTop.destroy();
     this.etykieta.destroy();
+    this.usunDym();
     for (const n of this.numerki) n.destroy();
     for (const n of this.plakietki.values()) n.destroy();
     this.smok?.zakoncz();
