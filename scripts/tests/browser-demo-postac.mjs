@@ -112,7 +112,7 @@ try {
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.pickups.filter((i) => i.getData('kind') === 'fruit:jablko').length + window.__session.stats.fruit >= 5; }, null, { timeout: 30000 });
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); for (const i of [...s.pickups]) if (i.getData('kind') === 'fruit:jablko') s.collect(i); });
   // On the test server the demo has the telescope HUD too (owner, 18 Oct 2026).
-  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury && !PROD, 'Telescope HUD in the demo (test server only)');
+  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury, 'Telescope HUD in the demo (every server since 1.032)');
   if (tury) {
     // Turn fights: 3/4 of life, the apples wait for the fight (no eating step).
     const zycie = await page.evaluate(() => ({ hp: window.__game.scene.getScene('game').player.hp, max: window.__session.hp }));

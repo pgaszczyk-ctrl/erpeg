@@ -9,7 +9,6 @@ import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
-import { TEST } from '../version';
 import { kreatorModul } from './kreatorModul';
 import type { ModulLook } from './modulPostac';
 
@@ -52,10 +51,10 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       location.href = `${location.origin}${sciezkaGry()}#wczytaj`;
     };
     const logo = logoImage(110, 'm-demo-logo');
-    // Test server (owner, 20 Oct 2026): pick the hero's look – gender, skin tone, „Losuj”.
+    // Pick the hero's look – gender, skin tone, „Losuj” (owner, 20 Oct 2026; every server since 1.032).
     let modul: ModulLook | undefined;
-    const kreator = TEST ? kreatorModul((l) => { modul = l; }) : null;
-    const wyglad = kreator ? [el('div', { className: 'm-demo-wyglad' }, [kreator.preview]), kreator.box] : [];
+    const kreator = kreatorModul((l) => { modul = l; });
+    const wyglad = [el('div', { className: 'm-demo-wyglad' }, [kreator.preview]), kreator.box];
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),

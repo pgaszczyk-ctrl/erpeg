@@ -254,8 +254,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           })]);
       loadSheet();
       paint();
-      // Modular heroes (owner, 20 Oct 2026; test server): the game still walks one of the 25 heroes until the parts get side/back frames.
-      const modul = TEST;
+      // Modular heroes (owner, 20 Oct 2026; every server since 1.032).
+      const modul = true;
       const kreator = modul ? kreatorModul((l) => { look.modul = l; }) : null;
       const mPreview = kreator?.preview, mBox = kreator?.box;
       screen(

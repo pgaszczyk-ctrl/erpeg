@@ -356,8 +356,8 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
-    // Test server (owner, 20 Oct 2026): the portrait is the modular hero's head (pack „20 postaci, osie v5”).
-    if (TEST) {
+    // A modular hero (owner, 20 Oct 2026): the portrait is its head; older characters keep their hero's.
+    if (session.look.modul) {
       const ml = modulGracza(session.look, session.name);
       void modulPortret(ml).then((c) => {
         if (modulKlucz(modulGracza(session.look, session.name)) !== modulKlucz(ml)) return;
@@ -572,7 +572,7 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's dialog portrait (public/portrety/bohater_NN.webp for the 25 heroes); loads it on first use. */
   private portretBohatera(gotowy?: () => void): string | null {
-    if (TEST) {
+    if (session.look.modul) {
       const ml = modulGracza(session.look, session.name);
       const key = `portret-modul-${modulKlucz(ml)}`;
       if (this.textures.exists(key)) return key;
@@ -644,8 +644,8 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.view;
     const w = Math.min(width - 24, 620);
     const x = (width - w) / 2;
-    // Portraits (test, owner 12 Oct 2026): who speaks on the left, the hero on the right.
-    const P = TEST && d.kto ? (this.touch ? 60 : 78) : 0;
+    // Portraits (owner 12 Oct 2026; every server since 1.032): who speaks on the left, the hero on the right.
+    const P = d.kto ? (this.touch ? 60 : 78) : 0;
     const side = P ? P + 10 : 0;
     // A book-like readable font (owner 7.10.2026: the monospace dialogs were „zbyt nieczytelne”).
     const title = this.add.text(x + 16 + side, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 - 2 * side } });

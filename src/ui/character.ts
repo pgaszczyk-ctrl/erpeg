@@ -308,8 +308,9 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Kufer: Postać
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
-    // Test server: the modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026); else ◀ ▶ among the 25 heroes.
-    if (BOHATER_MODUL) {
+    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
+    // the 25) until they pick „Nowy wygląd”.
+    if (BOHATER_MODUL && session.look.modul) {
       const k = kreatorModul((l) => {
         session.look = { ...session.look, modul: l };
         session.productionLook = { ...session.productionLook, modul: l };
@@ -317,10 +318,24 @@ function show(host: CharacterHost) {
         render();
       }, modulGracza(session.look, session.name));
       s.append(k.box);
-    } else if (NOWE_POSTACIE) s.append(skinPicker(() => {
-      onChange();
-      render();
-    }));
+    } else if (NOWE_POSTACIE) {
+      s.append(skinPicker(() => {
+        onChange();
+        render();
+      }));
+      if (BOHATER_MODUL) {
+        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
+        nowy.type = 'button';
+        nowy.onclick = () => {
+          const l = modulGracza(session.look, session.name);
+          session.look = { ...session.look, modul: l };
+          session.productionLook = { ...session.productionLook, modul: l };
+          onChange();
+          render();
+        };
+        s.append(nowy);
+      }
+    }
     const wrap = el('div', 'sl-wrap k-wrap');
     const cell = (m: Miejsce) => {
       const id = gear.equip[m];
@@ -341,7 +356,7 @@ function show(host: CharacterHost) {
     if (NOWE_POSTACIE) {
       // The standing frame facing us (column 2, row 1 of the artist's 3×3 sheet).
       const hero = el('div', 'k-dag-hero');
-      if (BOHATER_MODUL) void modulArkuszUrl(modulGracza(session.look, session.name)).then((u) => { if (hero.isConnected) hero.style.backgroundImage = `url(${u})`; });
+      if (BOHATER_MODUL && session.look.modul) void modulArkuszUrl(modulGracza(session.look, session.name)).then((u) => { if (hero.isConnected) hero.style.backgroundImage = `url(${u})`; });
       else heroPreviewBackground(hero, heroSkin(session.look.postac, session.name).plik);
       pic.append(hero);
     }

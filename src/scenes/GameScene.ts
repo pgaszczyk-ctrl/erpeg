@@ -192,8 +192,8 @@ function kierunekSlownie(a: { lat: number; lon: number }, b: { lat: number; lon:
 }
 // Feet collision box (half sizes) relative to the sprite centre.
 const FEET = { dy: 5, hw: 2, hh: 1.5 };
-/** The new sign light (cone + flicker) is a test-server trial until the artist draws it (owner, 12 Oct 2026). */
-const SNOP = TEST;
+/** The sign light (cone + flicker) under signs on posts – every server since 1.032 (owner, 20 Oct 2026). */
+const SNOP = true;
 /** The player asked the device for less motion: the sign boards hang still and the lights don't blink fast. */
 const MNIEJ_RUCHU = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 

@@ -4,14 +4,13 @@ import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, MIESZKANCY_HD, NOWE_POSTA
 import { HERO_DIRS } from './art';
 import { cleanHumanSheet, liftFeet } from './spriteCleanup';
 import { WYGLAD_09 } from './map/Podloze09';
-import { TEST } from './version';
 import { modulGracza, modulArkuszTeraz, modulKlucz, modulZObrazow, modulPlik, PLIKI_MODUL, type ModulLook } from './ui/modulPostac';
 
 /**
  * Test server (owner, 20 Oct 2026): the hero is the modular one – head + body from the pack „postacie modułowe
  * v6.1”, picked at creation (look.modul) or, for older characters, a stable one from the name.
  */
-export const BOHATER_MODUL = TEST && NOWE_POSTACIE;
+export const BOHATER_MODUL = NOWE_POSTACIE;
 
 /**
  * Characters on the world's pixel grid (GESTOSC_PIKSELI.md variant B; released in 1.015):
@@ -527,11 +526,11 @@ function ensureModul(scene: Phaser.Scene, ml: ModulLook): string | null {
 
 /** The texture the hero should wear now (refreshLook compares it with the current one). */
 export function heroTextureKey(postac: number | undefined, name: string, look?: { modul?: ModulLook }) {
-  return BOHATER_MODUL && look ? modulKey(modulGracza(look, name)) : `hd-${heroSkin(postac, name).id}`;
+  return BOHATER_MODUL && look?.modul ? modulKey(modulGracza(look, name)) : `hd-${heroSkin(postac, name).id}`;
 }
 
 export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name: string, look?: { modul?: ModulLook }) {
-  const modul = BOHATER_MODUL && look ? ensureModul(scene, modulGracza(look, name)) : null;
+  const modul = BOHATER_MODUL && look?.modul ? ensureModul(scene, modulGracza(look, name)) : null;
   const key = modul ?? ensureHd(scene, `hd-${heroSkin(postac, name).id}`);
   heroKeyNow = key;
   if (modul) {

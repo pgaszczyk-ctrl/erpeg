@@ -1,6 +1,5 @@
-// Is the turn fight on? Test server only (owner, 17 Oct 2026), never in the QR demo.
+// Is the turn fight on? Every server since 1.032 (owner, 20 Oct 2026), never in the QR demo (its dragon: turyWDemo).
 // `?tury=0|1` switches it for comparison and is remembered on the device (localStorage `exp-tury`).
-import { TEST } from '../version';
 import { demo } from '../demo';
 import { SKALA_POSTACI } from '../skala';
 
@@ -30,8 +29,8 @@ export function turyWDemo() {
 /** The same switch without the demo exception – the telescope HUD goes with it, also in the demo (owner, 18 Oct 2026). */
 export function turyNaSerwerze() {
   if (wymuszone === '0') return false;
-  if (wymuszone === '1') return true;
-  return TEST;
+  // Every server since 1.032 (owner, 20 Oct 2026: „wyrównaj wszystko do testu”).
+  return true;
 }
 
 /** The hero's height on the map (px): the unit of every distance in the turn fight. */
@@ -56,5 +55,5 @@ const panelWymuszony = (() => {
 export function nowyPanel() {
   if (panelWymuszony === 'stary') return false;
   if (panelWymuszony === 'nowy') return true;
-  return TEST || demo.on;
+  return true;
 }

@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.10.2026', tytul: { pl: 'Walka na tury i Arena Cechu', en: 'Turn-based fights and the Guild Arena' },
+    tresc: { pl: 'Potwory czekają teraz w grupkach – możesz podejść i walczyć na tury, odejść, a z bandytami nawet się dogadać. Smoki też walczą na tury. Na stadionach stoją sędziowie Areny Cechu. Nowy HUD: portret w lewym górnym rogu, dotknij go, by otworzyć menu i plecak. Nowe postacie składasz z płci i koloru skóry, a starzy bohaterowie mogą w Kufrze wybrać „Nowy wygląd”.', en: 'Monsters now wait in small groups – walk up and fight them in turns, walk away, or even make a deal with bandits. Dragons fight in turns too. Arena judges stand at the stadiums. A new HUD: your portrait at the top left – tap it for the menu and backpack. New heroes are made from a gender and skin tone, and older heroes can pick „New look” in the Trunk.' },
+  },
+  {
     data: '18.10.2026', tytul: { pl: 'Nowy początek przygody', en: 'A new start to the adventure' },
     tresc: { pl: 'Nowi gracze zaczynają od snu pod Zamkiem Lubelskim: wystarczy wpisać imię. Jabłko spada na głowę, wraca pamięć, a na dziedzińcu czeka smok – walka idzie na tury, z podpowiedziami jak uderzać i jak się leczyć. Po pobudce przed Targami Lublin czeka Hela Trybik, a kod postaci jest w Kufrze, w zakładce Statystyki. Zamknięte podwórka mają teraz bramy.', en: 'New players start with a dream below Lublin Castle: just type a name. An apple falls on your head, your memory comes back, and a dragon waits in the courtyard – the fight is turn-based, with hints on how to strike and heal. After waking up in front of Targi Lublin, Hela Trybik is waiting, and your character code is in the Trunk, on the Statistics tab. Closed courtyards now have gates.' },
   },
