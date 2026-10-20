@@ -19,8 +19,7 @@ import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
 import { sciezkaGry } from '../sciezka';
-import { modulCanvas, randomModul, MODUL_W, MODUL_H } from './modulPostac';
-import { SKORY_MODUL, PLEC_NAPIS } from '../content/modul';
+import { kreatorModul } from './kreatorModul';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character, memorial board. Resolves once a character is ready to play.
@@ -255,43 +254,14 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           })]);
       loadSheet();
       paint();
-      // Modular heroes (owner, 20 Oct 2026; test server): gender, skin tone and „Losuj” (a head and body of that
-      // gender, hair and clothes colours). The game still walks one of the 25 heroes until the parts get side/back frames.
+      // Modular heroes (owner, 20 Oct 2026; test server): the game still walks one of the 25 heroes until the parts get side/back frames.
       const modul = TEST;
-      let mlook = randomModul(Math.random() < 0.5 ? 'k' : 'm');
-      const mPreview = el('canvas', { className: 'm-hero m-hero-modul', width: MODUL_W, height: MODUL_H });
-      let mReq = 0;
-      const mPaint = () => {
-        look.modul = mlook;
-        const req = ++mReq;
-        void modulCanvas(mlook).then((c) => {
-          if (req !== mReq) return;
-          const ctx = mPreview.getContext('2d')!;
-          ctx.clearRect(0, 0, MODUL_W, MODUL_H);
-          ctx.drawImage(c, 0, 0);
-        });
-      };
-      const plecBtn: HTMLButtonElement = button(PLEC_NAPIS[mlook.p](), () => {
-        mlook = randomModul(mlook.p === 'k' ? 'm' : 'k', mlook.s);
-        plecBtn.textContent = PLEC_NAPIS[mlook.p]();
-        mPaint();
-      });
-      const mBox = el('div', { className: 'm-look' }, [el('div', { className: 'm-skinrow' }, [
-        plecBtn,
-        button(tx('🎨 Kolor skóry', '🎨 Skin tone'), () => {
-          mlook = { ...mlook, s: (mlook.s + 1) % SKORY_MODUL.length };
-          mPaint();
-        }),
-        button(tx('🎲 Losuj', '🎲 Random'), () => {
-          mlook = randomModul(mlook.p, mlook.s);
-          mPaint();
-        }),
-      ])]);
-      if (modul) mPaint();
+      const kreator = modul ? kreatorModul((l) => { look.modul = l; }) : null;
+      const mPreview = kreator?.preview, mBox = kreator?.box;
       screen(
         el('h2', {}, ['Nowa postać']),
-        el('div', { className: 'm-namerow' }, [modul ? mPreview : preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
-        modul ? mBox : lookBox,
+        el('div', { className: 'm-namerow' }, [mPreview ?? preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
+        mBox ?? lookBox,
         // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
         poDemo
           ? el('div', { className: 'm-field' }, [el('span', {}, ['Start przygody']), el('small', {}, [`🏛 ${PO_DEMO_START.nazwa}`])])

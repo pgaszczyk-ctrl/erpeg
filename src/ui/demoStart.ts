@@ -9,6 +9,9 @@ import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
+import { TEST } from '../version';
+import { kreatorModul } from './kreatorModul';
+import type { ModulLook } from './modulPostac';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
 // only the name, and below it – optional – an account (e-mail or Google). The character is made at once
@@ -49,10 +52,15 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       location.href = `${location.origin}${sciezkaGry()}#wczytaj`;
     };
     const logo = logoImage(110, 'm-demo-logo');
+    // Test server (owner, 20 Oct 2026): pick the hero's look – gender, skin tone, „Losuj”.
+    let modul: ModulLook | undefined;
+    const kreator = TEST ? kreatorModul((l) => { modul = l; }) : null;
+    const wyglad = kreator ? [el('div', { className: 'm-demo-wyglad' }, [kreator.preview]), kreator.box] : [];
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
       el('label', { className: 'm-field' }, [el('span', {}, ['Imię']), name, el('small', {}, ['Imienia nie można później zmienić.'])]),
+      ...wyglad,
       err, go, konto, mam,
     );
     if (!document.getElementById('demo-start-css')) {
@@ -66,6 +74,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
         #menu.m-demo .m-primary { font-size: 20px; padding: 12px; }
         #menu.m-demo .m-demo-konto { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #5a4f3a; }
         #menu.m-demo .m-demo-konto span { color: #c9bfa6; font-size: 13px; }
+        #menu.m-demo .m-demo-wyglad { display: flex; justify-content: center; }
         #menu.m-demo .m-demo-mam { color: #9aa39a; font-size: 13px; text-align: center; }
       `;
       document.head.append(st);
@@ -81,7 +90,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       const label = go.textContent;
       go.textContent = 'Chwileczkę…';
       try {
-        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length) };
+        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), ...(modul ? { modul } : {}) };
         const p = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
         const r = await api.createCharacter(imie, PO_DEMO_START.nazwa, p.x, p.y, PX_PER_M, TRUDNOSCI[DOMYSLNA_TRUDNOSC].wiek, look);
         rememberTestLook(look, r.player.name);
