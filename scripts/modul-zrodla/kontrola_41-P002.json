@@ -1,0 +1,657 @@
+{
+  "reference": "41-P002",
+  "revision": "6.1",
+  "bodies_checked": 180,
+  "detached_body_components": 0,
+  "pairings_checked": 3600,
+  "neck_gaps": 0,
+  "foot_edge_mismatches": 0,
+  "mask_outside_alpha": 0,
+  "binary_alpha_errors": 0,
+  "nn_mismatches": 0,
+  "head_changes": [
+    {
+      "file": "parts_64/01_warkocze_f_back_step_a_head.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/01_warkocze_f_back_idle_head.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/01_warkocze_f_back_step_b_head.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_step_a_head.png",
+      "changed_pixels": 3
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_idle_head.png",
+      "changed_pixels": 3
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_step_b_head.png",
+      "changed_pixels": 3
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_step_a_head.png",
+      "changed_pixels": 10
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_idle_head.png",
+      "changed_pixels": 10
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_step_b_head.png",
+      "changed_pixels": 10
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_step_a_head.png",
+      "changed_pixels": 22
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_idle_head.png",
+      "changed_pixels": 22
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_step_b_head.png",
+      "changed_pixels": 22
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_step_a_head.png",
+      "changed_pixels": 9
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_idle_head.png",
+      "changed_pixels": 9
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_step_b_head.png",
+      "changed_pixels": 9
+    }
+  ],
+  "body_changes": [
+    {
+      "file": "parts_64/01_warkocze_f_front_step_a_body.png",
+      "changed_pixels": 84
+    },
+    {
+      "file": "parts_64/01_warkocze_f_front_idle_body.png",
+      "changed_pixels": 84
+    },
+    {
+      "file": "parts_64/01_warkocze_f_front_step_b_body.png",
+      "changed_pixels": 89
+    },
+    {
+      "file": "parts_64/01_warkocze_f_left_step_a_body.png",
+      "changed_pixels": 67
+    },
+    {
+      "file": "parts_64/01_warkocze_f_left_idle_body.png",
+      "changed_pixels": 68
+    },
+    {
+      "file": "parts_64/01_warkocze_f_left_step_b_body.png",
+      "changed_pixels": 69
+    },
+    {
+      "file": "parts_64/01_warkocze_f_back_step_a_body.png",
+      "changed_pixels": 113
+    },
+    {
+      "file": "parts_64/01_warkocze_f_back_idle_body.png",
+      "changed_pixels": 109
+    },
+    {
+      "file": "parts_64/01_warkocze_f_back_step_b_body.png",
+      "changed_pixels": 114
+    },
+    {
+      "file": "parts_64/03_pilotka_f_front_step_a_body.png",
+      "changed_pixels": 52
+    },
+    {
+      "file": "parts_64/03_pilotka_f_front_idle_body.png",
+      "changed_pixels": 57
+    },
+    {
+      "file": "parts_64/03_pilotka_f_front_step_b_body.png",
+      "changed_pixels": 53
+    },
+    {
+      "file": "parts_64/03_pilotka_f_left_step_a_body.png",
+      "changed_pixels": 171
+    },
+    {
+      "file": "parts_64/03_pilotka_f_left_idle_body.png",
+      "changed_pixels": 178
+    },
+    {
+      "file": "parts_64/03_pilotka_f_left_step_b_body.png",
+      "changed_pixels": 182
+    },
+    {
+      "file": "parts_64/03_pilotka_f_back_step_a_body.png",
+      "changed_pixels": 112
+    },
+    {
+      "file": "parts_64/03_pilotka_f_back_idle_body.png",
+      "changed_pixels": 100
+    },
+    {
+      "file": "parts_64/03_pilotka_f_back_step_b_body.png",
+      "changed_pixels": 111
+    },
+    {
+      "file": "parts_64/04_profesor_m_front_step_a_body.png",
+      "changed_pixels": 3
+    },
+    {
+      "file": "parts_64/04_profesor_m_front_step_b_body.png",
+      "changed_pixels": 6
+    },
+    {
+      "file": "parts_64/04_profesor_m_left_step_a_body.png",
+      "changed_pixels": 73
+    },
+    {
+      "file": "parts_64/04_profesor_m_left_idle_body.png",
+      "changed_pixels": 75
+    },
+    {
+      "file": "parts_64/04_profesor_m_left_step_b_body.png",
+      "changed_pixels": 72
+    },
+    {
+      "file": "parts_64/04_profesor_m_back_step_a_body.png",
+      "changed_pixels": 142
+    },
+    {
+      "file": "parts_64/04_profesor_m_back_idle_body.png",
+      "changed_pixels": 147
+    },
+    {
+      "file": "parts_64/04_profesor_m_back_step_b_body.png",
+      "changed_pixels": 148
+    },
+    {
+      "file": "parts_64/05_kucharka_f_front_step_a_body.png",
+      "changed_pixels": 89
+    },
+    {
+      "file": "parts_64/05_kucharka_f_front_idle_body.png",
+      "changed_pixels": 105
+    },
+    {
+      "file": "parts_64/05_kucharka_f_front_step_b_body.png",
+      "changed_pixels": 107
+    },
+    {
+      "file": "parts_64/05_kucharka_f_left_step_a_body.png",
+      "changed_pixels": 73
+    },
+    {
+      "file": "parts_64/05_kucharka_f_left_idle_body.png",
+      "changed_pixels": 82
+    },
+    {
+      "file": "parts_64/05_kucharka_f_left_step_b_body.png",
+      "changed_pixels": 70
+    },
+    {
+      "file": "parts_64/05_kucharka_f_back_step_a_body.png",
+      "changed_pixels": 126
+    },
+    {
+      "file": "parts_64/05_kucharka_f_back_idle_body.png",
+      "changed_pixels": 120
+    },
+    {
+      "file": "parts_64/05_kucharka_f_back_step_b_body.png",
+      "changed_pixels": 117
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_a_body.png",
+      "changed_pixels": 85
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_idle_body.png",
+      "changed_pixels": 74
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_b_body.png",
+      "changed_pixels": 81
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_left_step_a_body.png",
+      "changed_pixels": 72
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_left_idle_body.png",
+      "changed_pixels": 74
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_left_step_b_body.png",
+      "changed_pixels": 71
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_back_step_a_body.png",
+      "changed_pixels": 198
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_back_idle_body.png",
+      "changed_pixels": 202
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_back_step_b_body.png",
+      "changed_pixels": 201
+    },
+    {
+      "file": "parts_64/07_maszynista_m_front_step_a_body.png",
+      "changed_pixels": 5
+    },
+    {
+      "file": "parts_64/07_maszynista_m_front_idle_body.png",
+      "changed_pixels": 5
+    },
+    {
+      "file": "parts_64/07_maszynista_m_front_step_b_body.png",
+      "changed_pixels": 5
+    },
+    {
+      "file": "parts_64/07_maszynista_m_left_step_a_body.png",
+      "changed_pixels": 56
+    },
+    {
+      "file": "parts_64/07_maszynista_m_left_idle_body.png",
+      "changed_pixels": 61
+    },
+    {
+      "file": "parts_64/07_maszynista_m_left_step_b_body.png",
+      "changed_pixels": 60
+    },
+    {
+      "file": "parts_64/08_kurierka_f_front_step_a_body.png",
+      "changed_pixels": 18
+    },
+    {
+      "file": "parts_64/08_kurierka_f_front_idle_body.png",
+      "changed_pixels": 18
+    },
+    {
+      "file": "parts_64/08_kurierka_f_front_step_b_body.png",
+      "changed_pixels": 15
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_step_a_body.png",
+      "changed_pixels": 11
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_idle_body.png",
+      "changed_pixels": 18
+    },
+    {
+      "file": "parts_64/08_kurierka_f_left_step_b_body.png",
+      "changed_pixels": 13
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_step_a_body.png",
+      "changed_pixels": 9
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_idle_body.png",
+      "changed_pixels": 8
+    },
+    {
+      "file": "parts_64/08_kurierka_f_back_step_b_body.png",
+      "changed_pixels": 11
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_front_step_a_body.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_front_idle_body.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_front_step_b_body.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_left_step_b_body.png",
+      "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_back_step_a_body.png",
+      "changed_pixels": 46
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_back_idle_body.png",
+      "changed_pixels": 42
+    },
+    {
+      "file": "parts_64/09_wynalazca_m_back_step_b_body.png",
+      "changed_pixels": 44
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_front_step_a_body.png",
+      "changed_pixels": 53
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_front_idle_body.png",
+      "changed_pixels": 54
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_front_step_b_body.png",
+      "changed_pixels": 55
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_left_step_a_body.png",
+      "changed_pixels": 136
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_left_idle_body.png",
+      "changed_pixels": 145
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_left_step_b_body.png",
+      "changed_pixels": 133
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_step_a_body.png",
+      "changed_pixels": 41
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_idle_body.png",
+      "changed_pixels": 38
+    },
+    {
+      "file": "parts_64/11_czarodziej_m_back_step_b_body.png",
+      "changed_pixels": 50
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_front_step_a_body.png",
+      "changed_pixels": 38
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_front_idle_body.png",
+      "changed_pixels": 46
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_front_step_b_body.png",
+      "changed_pixels": 37
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_left_step_a_body.png",
+      "changed_pixels": 28
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_left_idle_body.png",
+      "changed_pixels": 27
+    },
+    {
+      "file": "parts_64/12_zwiadowca_m_left_step_b_body.png",
+      "changed_pixels": 27
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_left_step_a_body.png",
+      "changed_pixels": 48
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_left_idle_body.png",
+      "changed_pixels": 47
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_left_step_b_body.png",
+      "changed_pixels": 46
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_back_step_a_body.png",
+      "changed_pixels": 34
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_back_idle_body.png",
+      "changed_pixels": 40
+    },
+    {
+      "file": "parts_64/13_dzentelmen_m_back_step_b_body.png",
+      "changed_pixels": 34
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_front_step_a_body.png",
+      "changed_pixels": 122
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_front_idle_body.png",
+      "changed_pixels": 121
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_front_step_b_body.png",
+      "changed_pixels": 120
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_left_step_a_body.png",
+      "changed_pixels": 115
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_left_idle_body.png",
+      "changed_pixels": 114
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_left_step_b_body.png",
+      "changed_pixels": 113
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_back_step_a_body.png",
+      "changed_pixels": 146
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_back_idle_body.png",
+      "changed_pixels": 139
+    },
+    {
+      "file": "parts_64/14_podroznik_senior_m_back_step_b_body.png",
+      "changed_pixels": 136
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_front_step_a_body.png",
+      "changed_pixels": 67
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_front_idle_body.png",
+      "changed_pixels": 78
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_front_step_b_body.png",
+      "changed_pixels": 67
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_left_step_a_body.png",
+      "changed_pixels": 85
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_left_idle_body.png",
+      "changed_pixels": 82
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_left_step_b_body.png",
+      "changed_pixels": 76
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_back_step_a_body.png",
+      "changed_pixels": 40
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_back_idle_body.png",
+      "changed_pixels": 44
+    },
+    {
+      "file": "parts_64/15_gospodyni_f_back_step_b_body.png",
+      "changed_pixels": 40
+    },
+    {
+      "file": "parts_64/16_straznik_m_left_step_a_body.png",
+      "changed_pixels": 53
+    },
+    {
+      "file": "parts_64/16_straznik_m_left_idle_body.png",
+      "changed_pixels": 51
+    },
+    {
+      "file": "parts_64/16_straznik_m_left_step_b_body.png",
+      "changed_pixels": 51
+    },
+    {
+      "file": "parts_64/16_straznik_m_back_step_a_body.png",
+      "changed_pixels": 118
+    },
+    {
+      "file": "parts_64/16_straznik_m_back_idle_body.png",
+      "changed_pixels": 119
+    },
+    {
+      "file": "parts_64/16_straznik_m_back_step_b_body.png",
+      "changed_pixels": 118
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_front_step_a_body.png",
+      "changed_pixels": 174
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_front_idle_body.png",
+      "changed_pixels": 171
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_front_step_b_body.png",
+      "changed_pixels": 167
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_left_step_a_body.png",
+      "changed_pixels": 225
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_left_idle_body.png",
+      "changed_pixels": 194
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_left_step_b_body.png",
+      "changed_pixels": 199
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_step_a_body.png",
+      "changed_pixels": 82
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_idle_body.png",
+      "changed_pixels": 72
+    },
+    {
+      "file": "parts_64/17_rudobrody_m_back_step_b_body.png",
+      "changed_pixels": 82
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_front_step_a_body.png",
+      "changed_pixels": 73
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_front_idle_body.png",
+      "changed_pixels": 74
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_front_step_b_body.png",
+      "changed_pixels": 71
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_left_step_a_body.png",
+      "changed_pixels": 68
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_left_idle_body.png",
+      "changed_pixels": 67
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_left_step_b_body.png",
+      "changed_pixels": 66
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_back_step_a_body.png",
+      "changed_pixels": 67
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_back_idle_body.png",
+      "changed_pixels": 66
+    },
+    {
+      "file": "parts_64/18_luczniczka_f_back_step_b_body.png",
+      "changed_pixels": 68
+    },
+    {
+      "file": "parts_64/19_listonosz_m_front_step_a_body.png",
+      "changed_pixels": 77
+    },
+    {
+      "file": "parts_64/19_listonosz_m_front_idle_body.png",
+      "changed_pixels": 70
+    },
+    {
+      "file": "parts_64/19_listonosz_m_front_step_b_body.png",
+      "changed_pixels": 69
+    },
+    {
+      "file": "parts_64/19_listonosz_m_left_step_a_body.png",
+      "changed_pixels": 55
+    },
+    {
+      "file": "parts_64/19_listonosz_m_left_idle_body.png",
+      "changed_pixels": 54
+    },
+    {
+      "file": "parts_64/19_listonosz_m_left_step_b_body.png",
+      "changed_pixels": 56
+    },
+    {
+      "file": "parts_64/19_listonosz_m_back_step_a_body.png",
+      "changed_pixels": 83
+    },
+    {
+      "file": "parts_64/19_listonosz_m_back_idle_body.png",
+      "changed_pixels": 87
+    },
+    {
+      "file": "parts_64/19_listonosz_m_back_step_b_body.png",
+      "changed_pixels": 73
+    },
+    {
+      "file": "parts_64/20_mechanik_m_front_idle_body.png",
+      "changed_pixels": 5
+    },
+    {
+      "file": "parts_64/20_mechanik_m_left_step_a_body.png",
+      "changed_pixels": 109
+    },
+    {
+      "file": "parts_64/20_mechanik_m_left_idle_body.png",
+      "changed_pixels": 99
+    },
+    {
+      "file": "parts_64/20_mechanik_m_left_step_b_body.png",
+      "changed_pixels": 98
+    },
+    {
+      "file": "parts_64/20_mechanik_m_back_step_a_body.png",
+      "changed_pixels": 100
+    },
+    {
+      "file": "parts_64/20_mechanik_m_back_idle_body.png",
+      "changed_pixels": 99
+    },
+    {
+      "file": "parts_64/20_mechanik_m_back_step_b_body.png",
+      "changed_pixels": 97
+    }
+  ],
+  "unchanged_anchors": true
+}

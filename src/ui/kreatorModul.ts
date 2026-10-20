@@ -5,12 +5,15 @@ import { tx } from '../i18n';
 import { SKORY_MODUL, PLEC_NAPIS } from '../content/modul';
 import { modulCanvas, randomModul, MODUL_W, MODUL_H, type ModulLook } from './modulPostac';
 
-export function kreatorModul(onChange: (l: ModulLook) => void) {
-  let look = randomModul(Math.random() < 0.5 ? 'k' : 'm');
+export function kreatorModul(onChange: (l: ModulLook) => void, start?: ModulLook) {
+  let look = start ?? randomModul(Math.random() < 0.5 ? 'k' : 'm');
+  let pierwszy = !!start;
   const preview = Object.assign(document.createElement('canvas'), { className: 'm-hero m-hero-modul', width: MODUL_W, height: MODUL_H });
   let req = 0;
   const paint = () => {
-    onChange(look);
+    // The starting look is only shown, not reported as a change.
+    if (pierwszy) pierwszy = false;
+    else onChange(look);
     const r = ++req;
     void modulCanvas(look).then((c) => {
       if (r !== req) return;

@@ -11,7 +11,9 @@ import {
 import { session, stanOsiagniec } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
-import { heroSkin } from '../sprites';
+import { heroSkin, BOHATER_MODUL } from '../sprites';
+import { kreatorModul } from './kreatorModul';
+import { modulGracza, modulArkuszUrl } from './modulPostac';
 import { heroPreviewBackground } from './heroPreview';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA } from '../content/osiagniecia';
@@ -306,7 +308,16 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Kufer: Postać
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
-    if (NOWE_POSTACIE) s.append(skinPicker(() => {
+    // Test server: the modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026); else ◀ ▶ among the 25 heroes.
+    if (BOHATER_MODUL) {
+      const k = kreatorModul((l) => {
+        session.look = { ...session.look, modul: l };
+        session.productionLook = { ...session.productionLook, modul: l };
+        onChange();
+        render();
+      }, modulGracza(session.look, session.name));
+      s.append(k.box);
+    } else if (NOWE_POSTACIE) s.append(skinPicker(() => {
       onChange();
       render();
     }));
@@ -330,7 +341,8 @@ function show(host: CharacterHost) {
     if (NOWE_POSTACIE) {
       // The standing frame facing us (column 2, row 1 of the artist's 3×3 sheet).
       const hero = el('div', 'k-dag-hero');
-      heroPreviewBackground(hero, heroSkin(session.look.postac, session.name).plik);
+      if (BOHATER_MODUL) void modulArkuszUrl(modulGracza(session.look, session.name)).then((u) => { if (hero.isConnected) hero.style.backgroundImage = `url(${u})`; });
+      else heroPreviewBackground(hero, heroSkin(session.look.postac, session.name).plik);
       pic.append(hero);
     }
     pic.setAttribute('role', 'img');

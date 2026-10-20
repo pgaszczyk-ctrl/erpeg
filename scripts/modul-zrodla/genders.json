@@ -1,0 +1,122 @@
+[
+  {
+    "id": "01_warkocze",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "01_warkocze_f_body.png"
+  },
+  {
+    "id": "02_kowal",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "02_kowal_m_body.png"
+  },
+  {
+    "id": "03_pilotka",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "03_pilotka_f_body.png"
+  },
+  {
+    "id": "04_profesor",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "04_profesor_m_body.png"
+  },
+  {
+    "id": "05_kucharka",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "05_kucharka_f_body.png"
+  },
+  {
+    "id": "06_ogrodniczka",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "06_ogrodniczka_f_body.png"
+  },
+  {
+    "id": "07_maszynista",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "07_maszynista_m_body.png"
+  },
+  {
+    "id": "08_kurierka",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "08_kurierka_f_body.png"
+  },
+  {
+    "id": "09_wynalazca",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "09_wynalazca_m_body.png"
+  },
+  {
+    "id": "10_karczmarz",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "10_karczmarz_m_body.png"
+  },
+  {
+    "id": "11_czarodziej",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "11_czarodziej_m_body.png"
+  },
+  {
+    "id": "12_zwiadowca",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "12_zwiadowca_m_body.png"
+  },
+  {
+    "id": "13_dzentelmen",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "13_dzentelmen_m_body.png"
+  },
+  {
+    "id": "14_podroznik_senior",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "14_podroznik_senior_m_body.png"
+  },
+  {
+    "id": "15_gospodyni",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "15_gospodyni_f_body.png"
+  },
+  {
+    "id": "16_straznik",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "16_straznik_m_body.png"
+  },
+  {
+    "id": "17_rudobrody",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "17_rudobrody_m_body.png"
+  },
+  {
+    "id": "18_luczniczka",
+    "gender": "f",
+    "plec": "k",
+    "new_body_filename": "18_luczniczka_f_body.png"
+  },
+  {
+    "id": "19_listonosz",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "19_listonosz_m_body.png"
+  },
+  {
+    "id": "20_mechanik",
+    "gender": "m",
+    "plec": "m",
+    "new_body_filename": "20_mechanik_m_body.png"
+  }
+]

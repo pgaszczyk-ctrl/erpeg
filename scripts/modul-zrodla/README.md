@@ -1,29 +1,71 @@
-# Exp-lore — 20 postaci, głowa + ciałko, osie v5
+# Exp-lore — postacie modułowe v6.1
 
-## Zawartość
-20 głów (wraz z włosami, kapeluszem i zarostem), 20 całych ciałek, 20 masek ubrania i 20 pustych masek głowy. PNG przezroczyste, 64×64 oraz dokładne powiększenie NN 8× do 512×512. Tylko przód i bezruch, bez animacji.
+20 postaci, po 2 części: głowa z włosami/zarostem/nakryciem oraz kompletne ciałko. 7 ciałek `f` i 13 ciałek `m`. Oznaczenie dotyczy przypisania do pierwowzoru postaci.
 
-## Montaż — programista
-Nie nakładaj wszystkich PNG w (0,0). Nie wyznaczaj środka z granic włosów, kucyka, kapelusza ani całego ciałka. Każda część ma osobne dane.
+## Korekta 41-P002 — rewizja 6.1
 
-`manifest.json`: head.eyes zawiera prostokąty oczu i ich środki; head.axis_x i head.mount.x są średnią środków oczu. head.mount.y wskazuje poziom styku pod brodą. body.neck to osobno oznaczony punkt szyi/kołnierza w ciałku. Punkty mogą mieć współrzędne połówkowe.
+Oczyszczono ciałka z odłączonych i przyklejonych pozostałości włosów, bród i nakryć głowy. Pod nimi odtworzono kołnierze i ubrania. Usunięto również wskazane odłamki głów. Kotwice oraz dotychczasowe nazwy części są zachowane. Manifest utrzymuje `version: 6`, a dodatkowe `revision: "6.1"` identyfikuje poprawkę. Plik `kontrola_41-P002.json` zawiera wyniki kontroli i listę zmienionych części. Podglądy kontrolne w `preview/41-P002_*` pokazują wszystkie klatki samych ciałek i złożenia z głową kowala lub hełmem strażnika.
 
-Położenie głowy względem ciałka:
+## Nazwy i płeć
+
+`01_warkocze_f_front_idle_body.png` — żeńskie ciałko w widoku przód, stanie.
+`02_kowal_m_left_step_a_body.png` — męskie ciałko w lewym profilu, krok A.
+Maska otrzymuje dodatkowe `_mask`. Arkusze: `01_warkocze_f_body_3x3.png`.
+
+- `f`: 01 warkocze, 03 pilotka, 05 kucharka, 06 ogrodniczka, 08 kurierka, 15 gospodyni, 18 łuczniczka.
+- `m`: 02 kowal, 04 profesor, 07 maszynista, 09 wynalazca, 10 karczmarz, 11 czarodziej, 12 zwiadowca, 13 dżentelmen, 14 podróżnik senior, 16 strażnik, 17 rudobrody, 19 listonosz, 20 mechanik.
+
+Manifest podaje `gender: f/m` i zgodne ze starszym systemem `plec: k/m`. Stabilne `id` nie zawiera dopisku płci, więc można zachować zapisane identyfikatory. Listy `heads` i `bodies` zawierają także ścieżki i kotwice nieruchomego przodu dla dotychczasowego kreatora. Pełna animacja jest w `characters[].directions`.
+
+## Arkusze 3×3
+
+Każda komórka ma 64×64 px. Arkusz: 192×192 px. Wersje większe są powiększone 8× metodą nearest-neighbor: klatka 512×512, arkusz 1536×1536.
+
+| Rząd / kolumna | 0: krok A | 1: stanie | 2: krok B |
+|---|---|---|---|
+| 0 | przód | przód | przód |
+| 1 | lewy profil | lewy profil | lewy profil |
+| 2 | tył | tył | tył |
+
+Cykl chodu: kolumny `0,1,2,1`, przykładowe czasy `180,110,180,110 ms`. Głowa jest identyczna w trzech klatkach jednego kierunku. Ciałko ma trzy różne klatki. Punkt szyi i punkt montażu głowy są stałe w obrębie kierunku.
+
+Prawy profil powstaje przez lustrzane odbicie całego złożenia lewego profilu. Nie przeliczaj osobno zaokrąglonego przesunięcia dla lustra — połówki pikseli mogłyby dodać błąd 1 px. Lustrzane odbicie części wokół komórki 64×64 daje kotwicę `x' = 64 − x` i przesunięcie `dx' = −dx`.
+
+## Montaż
+
+Najpierw narysuj ciałko, potem głowę:
+
 ```js
-dx = Math.round(body.neck.x - head.mount.x);
-dy = Math.round(body.neck.y - head.mount.y);
+dx = Math.round(bodyFrame.neck.x - headFrame.head_mount.x);
+dy = Math.round(bodyFrame.neck.y - headFrame.head_mount.y);
 ```
-Narysuj ciałko, potem głowę z tym przesunięciem. Dla 512×512 współrzędne i przesunięcia z 64×64 pomnóż przez 8. Nie licz zaokrąglenia ponownie na innym poziomie skali. Wyłącz wygładzanie. Maksymalny błąd zaokrąglenia wynosi 0,5 piksela na osi. Początek współrzędnych to lewy górny róg obrazu; środek pierwszego piksela to (0,5; 0,5).
 
-Broda lub warkocz może wystawać poniżej head.mount.y — to celowe. Nie używaj ostatniego nieprzezroczystego rzędu głowy jako punktu montażu. Daj postaci margines na przesunięcie głowy; nie przycinaj automatycznie całego złożenia do 64×64. Przykłady podglądu korzystają z płótna 96×96.
+Współrzędne w manifeście dotyczą komórki 64×64 i krawędzi pikseli: środek pierwszego piksela to `(0.5,0.5)`. Dla wersji 512 pomnóż gotowe przesunięcie przez 8. Nie dopasowuj niczego do granic włosów, kapelusza ani brody. W przodzie oś głowy jest środkiem pomiędzy oczami. W profilu i z tyłu punkty odpowiadają projekcji szyi — nie ma tam pary oczu wyznaczającej oś.
 
-`developer/assemble_character.mjs` zawiera funkcję położenia i rysowania. `podglad_interaktywny.html` działa lokalnie po otwarciu w przeglądarce, bez instalacji: wybór głowy/ciałka, kolory oraz osie.
+Zalecane płótno do złożenia: 96×96 z początkiem ciałka w `(16,16)`, ponieważ głowa może wyjść poza pierwotną komórkę po dopasowaniu do innego ciałka. Głowy frontowe zachowano z v5, usuwając odłamki pod warkoczami 01. Bok i tył oraz ciałka z chodem powstały z nowych arkuszy tego samego stylu. Nie skalowano osobno szerokości i wysokości.
+
+We wszystkich 180 klatkach ciałek dolna krawędź stóp to `y=61` (ostatni zajęty rząd ma indeks 60). Dotyczy to również 09 i 18. Nie dodawaj już dawnych korekt podnoszących te dwa ciałka.
 
 ## Maski kolorów
-Dokładnie czerwony #FF0000 = główne ubranie, zielony #00FF00 = drugi materiał, alpha=0 = bez zmiany. Głowy mają puste maski: skóra, włosy, zarost, czapki nie są tu kolorowane. Nie nakładaj maski jako widocznej warstwy. Podmieniaj barwę z zachowaniem jasności oryginału; przykład jest w module JS. Maski są celowo zachowawcze przy dłoniach, szyi i obrysie.
 
-## Kontrola
-Sprawdzono obliczenia przesunięć dla wszystkich 400 kombinacji; wyniki w kontroli JSON. To kontrola punktów montażowych, nie deklaracja automatycznej oceny estetyki każdego połączenia. Osie i punkty pokazano osobno w `osie_i_punkty_montazu.png`; w czystych sprite’ach nie ma oznaczeń. Różowa linia = oś oczu, żółty krzyż = punkt montażowy głowy, zielony = oś i punkt szyi ciałka.
+| Dokładny RGB maski | Znaczenie |
+|---|---|
+| `#FF0000` | główne ubranie |
+| `#00FF00` | drugi materiał ubrania |
+| `#0000FF` | skóra: twarz, uszy, dłonie, szyja, dekolt |
+| `#FFFF00` | włosy, brwi i zarost |
+| alpha 0 | bez zmian |
 
-## Pochodzenie i zakres
-18 baz wygenerowano narzędziem imagegen w zaakceptowanym stylu, wynalazcę i łuczniczkę zachowano z wcześniejszej próby. Przy eksporcie wykonano podział, proporcjonalne pomniejszenie, wyrównanie wielkości oczu, maski materiałów i oznaczenia punktów. Nie zmodyfikowano repozytorium ani gry.
+Nakrycia głowy, gogle, obrys i oczy pozostają poza maskami. Niektóre kierunki mają mało widocznych włosów lub wcale, np. tył strażnika pod hełmem. Maski głów i ciałek korzystają z tego samego kodowania.
+
+Nie nakładaj maski jako widocznej grafiki. Podmieniaj kolor z zachowaniem oryginalnego alpha i względnego cieniowania materiału. Wartość jasności należy odnieść do jasności danego materiału, a nie do bieli: inaczej czarne włosy pozostaną ciemne po wyborze blondu. `developer/modular_character.mjs` zawiera przykład oraz funkcję obliczania kotwic i odbijania profilu. Dla spójności kolorów w chodzie można używać poziomów odniesienia materiału wyliczonych z klatki stania w danym kierunku.
+
+## Kontrola i podglądy
+
+- 3600 obliczeń montażu: 20 głów × 20 ciałek × 3 kierunki × 3 klatki.
+- Sprawdzono niezmienne kotwice, identyczne głowy w danym kierunku, odmienne klatki kroków, wspólne stopy, binarne alpha, kodowanie masek i dokładne powiększenie NN.
+- `podglad_interaktywny.html`: lokalny wybór głowy, ciałka, kierunku, animacji i kolorów.
+- `animations`: 20 plików GIF, po trzy kierunki obok siebie.
+- `kierunki_i_kolory.png`: widoki bazowe i przykłady przebarwienia.
+
+Kontrola kotwic i łączności nie zastępuje oceny wyglądu każdej kombinacji w działającej grze. Paczka nie została automatycznie wdrożona do repozytorium ani na serwer.

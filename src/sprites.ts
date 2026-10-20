@@ -4,6 +4,14 @@ import { BOHATEROWIE, CHOCHLIK, WROGOWIE_HD, STALE_HD, MIESZKANCY_HD, NOWE_POSTA
 import { HERO_DIRS } from './art';
 import { cleanHumanSheet, liftFeet } from './spriteCleanup';
 import { WYGLAD_09 } from './map/Podloze09';
+import { TEST } from './version';
+import { modulGracza, modulArkuszTeraz, modulKlucz, modulZObrazow, modulPlik, PLIKI_MODUL, type ModulLook } from './ui/modulPostac';
+
+/**
+ * Test server (owner, 20 Oct 2026): the hero is the modular one – head + body from the pack „postacie modułowe
+ * v6.1”, picked at creation (look.modul) or, for older characters, a stable one from the name.
+ */
+export const BOHATER_MODUL = TEST && NOWE_POSTACIE;
 
 /**
  * Characters on the world's pixel grid (GESTOSC_PIKSELI.md variant B; released in 1.015):
@@ -92,6 +100,7 @@ export function enemyTexture(scene: Phaser.Scene, kind: string): string | null {
 
 export function loadHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
+  if (BOHATER_MODUL) for (const n of PLIKI_MODUL) scene.load.image(`modul-${n}`, modulPlik(n));
   for (const p of ALL()) {
     scene.load.image(`hdsrc-${p.id}`, `postacie/${p.plik}.png`);
     if (p.maska !== false) scene.load.image(`hdmask-${p.id}`, `postacie/${p.plik}_maska.png`);
@@ -143,6 +152,11 @@ const sheets = new Map<string, HTMLCanvasElement>();
  */
 export function createHdSprites(scene: Phaser.Scene) {
   if (!hdOn) return;
+  if (BOHATER_MODUL) {
+    const obrazy = Object.fromEntries(PLIKI_MODUL.map((n) => [n, scene.textures.exists(`modul-${n}`) ? scene.textures.get(`modul-${n}`).getSourceImage() as HTMLImageElement : undefined]));
+    modulZObrazow(obrazy);
+    for (const n of PLIKI_MODUL) if (scene.textures.exists(`modul-${n}`)) scene.textures.remove(`modul-${n}`);
+  }
   for (const p of ALL()) {
     // The artist's sheets are only read when painting: keep the pictures, give the graphics card its memory back (~11 MB).
     for (const [k, map] of [[`hdsrc-${p.id}`, srcImg], [`hdmask-${p.id}`, maskImg]] as const) {
@@ -239,7 +253,8 @@ function sheetPixels(scene: Phaser.Scene, p: Postac) {
   ctx.drawImage(img, 0, 0);
   if (p.bokWPrawo) mirrorRow(c, 1);
   const data = ctx.getImageData(0, 0, c.width, c.height);
-  if (human(p)) cleanHumanSheet(data, p.plik);
+  // The modular hero is put together from clean parts: no speck/pupil fixes.
+  if (human(p) && p.plik !== 'modul') cleanHumanSheet(data, p.plik);
   // The 25-hero pack keeps both feet still from the front and back: lift one foot per step (until redrawn).
   if (p.plik.startsWith('lista25_')) liftFeet(data);
   else for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) dropSpecks(data, col * F, r * F);
@@ -491,9 +506,43 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 let heroKeyNow = '';
 
 /** Makes the player's walk animations (`me-walk-*`) use the chosen new hero; returns its texture. */
-export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name: string) {
-  const key = ensureHd(scene, `hd-${heroSkin(postac, name).id}`);
+/** The modular hero's texture key: `hd-modul…` with letters only (digits → a–j), as baseOf needs. */
+function modulKey(ml: ModulLook) {
+  return `hd-modul${modulKlucz(ml).replace(/\d/g, (d) => String.fromCharCode(97 + +d)).replace(/-/g, 'x')}`;
+}
+
+/** Makes the modular hero's texture (once its parts are loaded); null when they aren't. */
+function ensureModul(scene: Phaser.Scene, ml: ModulLook): string | null {
+  const key = modulKey(ml);
+  if (scene.textures.exists(key)) return key;
+  const sheet = modulArkuszTeraz(ml);
+  if (!sheet) return null;
+  const id = key.slice(3);
+  const p: Postac = { id, nazwa: 'Bohater', plik: 'modul', bokWPrawo: false, skala: 0.36, maska: false, przebarwiaj: false, plec: ml.p, wiek: 'dorosly' };
+  srcImg.set(id, sheet as unknown as HTMLImageElement);
+  skala.set(key, p.skala);
+  pending.set(key, p);
+  return ensureHd(scene, key);
+}
+
+/** The texture the hero should wear now (refreshLook compares it with the current one). */
+export function heroTextureKey(postac: number | undefined, name: string, look?: { modul?: ModulLook }) {
+  return BOHATER_MODUL && look ? modulKey(modulGracza(look, name)) : `hd-${heroSkin(postac, name).id}`;
+}
+
+export function useHdHero(scene: Phaser.Scene, postac: number | undefined, name: string, look?: { modul?: ModulLook }) {
+  const modul = BOHATER_MODUL && look ? ensureModul(scene, modulGracza(look, name)) : null;
+  const key = modul ?? ensureHd(scene, `hd-${heroSkin(postac, name).id}`);
   heroKeyNow = key;
+  if (modul) {
+    // The artist's walk: step A – standing – step B – standing in every direction.
+    for (const dir of HERO_DIRS) {
+      const anim = `me-walk-${dir}`;
+      if (scene.anims.exists(anim)) scene.anims.remove(anim);
+      scene.anims.create({ key: anim, frames: WALK_FOLK.map((f) => ({ key, frame: `${dir}-${f}` })), frameRate: WALK_FOLK_FPS, repeat: -1 });
+    }
+    return key;
+  }
   for (const dir of HERO_DIRS) {
     const anim = `me-walk-${dir}`;
     if (scene.anims.exists(anim)) scene.anims.remove(anim);

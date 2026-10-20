@@ -11,7 +11,7 @@ import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale, peakTexture } from '../art';
 import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../screen';
-import { hdOn, fitHd, useHdHero, heroSkin, isHd, ensureRed, ensureHd } from '../sprites';
+import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
 import { LOOK_TOP, LOOK_H } from '../look';
@@ -496,7 +496,7 @@ export class GameScene extends Phaser.Scene {
     this.safeAt = inLublin ? { x: session.startX, y: session.startY } : { ...at };
     if (hdOn) {
       // The new detailed heroes (content/wyglad.ts): worn gear doesn't show on them.
-      this.player = new Player(this, at.x, at.y, useHdHero(this, session.look.postac, session.name), 'me');
+      this.player = new Player(this, at.x, at.y, useHdHero(this, session.look.postac, session.name, session.look), 'me');
       fitHd(this.player);
     } else {
       this.player = new Player(this, at.x, at.y, PLAYER_TEX, 'me');
@@ -5773,11 +5773,11 @@ export class GameScene extends Phaser.Scene {
   private refreshLook() {
     if (hdOn) {
       // The new heroes: only the chosen character (character sheet) changes the picture.
-      const key = `hd-${heroSkin(session.look.postac, session.name).id}`;
+      const key = heroTextureKey(session.look.postac, session.name, session.look);
       if (this.player.texture.key === key) return;
       const frame = this.player.frame.name;
       this.player.anims.stop();
-      this.player.setTexture(useHdHero(this, session.look.postac, session.name), frame);
+      this.player.setTexture(useHdHero(this, session.look.postac, session.name, session.look), frame);
       fitHd(this.player);
       this.game.events.emit('hero-look');
       return;
