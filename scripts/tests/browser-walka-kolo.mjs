@@ -191,6 +191,10 @@ try {
   // Nothing open: the hero and attackable enemies pulse by turns; the reachable ground has an edge.
   const zach = await g(() => { const w = window.__game.scene.getScene('game').walka; const z = w.zas; let brzeg = 0; for (const k of z.keys()) { const [i, j] = k.split(',').map(Number); if (!z.has(`${i + 1},${j}`)) brzeg++; } return { brzeg, n: z.size }; });
   assert(zach.brzeg > 3 && zach.brzeg < zach.n, 'an edge of the range');
+  // Stage 2: a cost plaque over every enemy.
+  const plak = await g(() => { const w = window.__game.scene.getScene('game').walka; return { widac: [...w.plakietki.values()].filter((t) => t.visible).map((t) => t.text), wrogow: w.zywi.length }; });
+  console.log('plaques', JSON.stringify(plak));
+  assert.equal(plak.widac.length, plak.wrogow, 'a plaque over every enemy');
   await page.screenshot({ path: `work/walka-${tag}-1-start.png` });
   await page.waitForTimeout(900);
   await page.screenshot({ path: `work/walka-${tag}-1b-puls.png` });
@@ -260,6 +264,9 @@ try {
   assert.equal(pg.szybko, 'wk-wybrany', 'the picked attack pulses fast');
   assert.match(pg.podp, /jeszcze raz/);
   assert(pg.wybrany, 'the picked attack is marked');
+  const numerki = await g(() => window.__game.scene.getScene('game').walka.numerki.filter((t) => t.visible).map((t) => t.text));
+  console.log('path numbers', JSON.stringify(numerki));
+  if (plan.podejscie) assert.deepEqual(numerki, ['1'], 'a one-move walk up is numbered 1');
   await page.screenshot({ path: `work/walka-${tag}-2a-podglad.png` });
   // The second tap on the same attack attacks.
   if (mobile) await page.locator('#walka-kolo .wk-b.cios').tap({ force: true });
@@ -358,6 +365,16 @@ try {
   await walkTo(c.x, c.y);
   await press(await dialogNext(/Grupka/), 'Podejdź');
   await waitPhase('gracz');
+  // The random group sometimes joins the fight with fewer imps (where it landed): top it up to three, quiet ones.
+  await g(() => {
+    const s = window.__game.scene.getScene('game'), w = s.walka, p = s.player;
+    while (w.zywi.length < 3) {
+      const e = s.spawnEnemy(p.x, p.y - 20, undefined, 'glut');
+      e.spokojny = true;
+      w.u.push({ e, rola: 'wrecz', r: Math.max(3, e.size * 0.7), oglusz: false, hp0: e.hp });
+      w.wszyscy.push(e);
+    }
+  });
   // Unlocked Zamach (sword level 5): one swing hits several imps standing together.
   await g(() => {
     window.__gear.skills.miecz = 1e6;
@@ -376,9 +393,12 @@ try {
   const ringZ = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
   console.log('ring with zamach', JSON.stringify(ringZ));
   assert(ringZ.some((k) => /zamach/.test(k) ), 'Zamach unlocked');
-  await page.screenshot({ path: `work/walka-${tag}-8-zamach.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(250);
+  // Stage 2: the sweep previewed rings every enemy it would reach – the same list the swing uses.
+  const obszar = await g(() => { const w = window.__game.scene.getScene('game').walka, v = w.podgladAtaku(); return w.celeObszaru(v.q, v.atak, v.plan.z ?? w.h.player).length; });
+  assert.equal(obszar, 3, 'the sweep preview rings all three');
+  await page.screenshot({ path: `work/walka-${tag}-8-zamach.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
   await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
   f = await fight();
@@ -432,10 +452,46 @@ try {
   assert(![...strona1, ...strona2].some((k) => /probaZamk|zamk/.test(k)), 'locked attack never shown');
   await g(() => { window.__ataki.splice(window.__ataki.findIndex((a) => a.id === 'proba1'), 4); const w = window.__game.scene.getScene('game').walka; w.koloWroga = null; w.odswiez(); });
   await g(() => { window.__gear.equip.bron = 'kijek'; });
+  // Stage 2: an enemy two moves away – the walk up over two moves is numbered 1, 2 and done in one go.
+  const daleko = await g(() => {
+    const s = window.__game.scene.getScene('game'), w = s.walka, p = s.player;
+    w.ruchy = 5; w.maxRuchy = 5; w.koloWroga = null; w.wybranyAtak = null; w.przelicz();
+    const krok = 3.4 * 56 * 0.36 * (2 / 3);
+    const q = w.zywi[0];
+    const zd = w.zasDalej();
+    const kom = [...zd.values()].filter((c) => c.d > krok * 1.75 && c.d < krok * 2.0 && Math.hypot(c.x - p.x, c.y - p.y) > krok * 1.2)
+      .find((c) => w.zywi.every((o) => o === q || Math.hypot(o.e.x - c.x, o.e.y - c.y) > 25));
+    if (!kom) return null;
+    q.e.setPosition(kom.x, kom.y);
+    w.przelicz();
+    const a = w.atakiDostepne()[0];
+    const pl = w.planCiosu(q, false, a);
+    return { x: q.e.x, y: q.e.y, pod: pl.podejscie, koszt: pl.koszt, ok: pl.ok };
+  });
+  console.log('two moves away', JSON.stringify(daleko));
+  if (daleko) {
+    assert.equal(daleko.pod, 2, 'a walk up of two moves');
+    assert(daleko.ok, 'affordable with 5 moves');
+    await tapWorld(daleko.x, daleko.y - 4);
+    await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios').click());
+    await page.waitForTimeout(300);
+    const nr = await g(() => window.__game.scene.getScene('game').walka.numerki.filter((t) => t.visible).map((t) => t.text));
+    console.log('path numbers (2 moves)', JSON.stringify(nr));
+    assert.deepEqual(nr, ['1', '2'], 'the walk is numbered 1, 2');
+    await page.screenshot({ path: `work/walka-${tag}-7a-dwa-ruchy.png` });
+    await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios').click());
+    await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
+    const po = await g(([x, y]) => { const s = window.__game.scene.getScene('game'); return { ruchy: s.walka?.ruchy, d: Math.hypot(s.player.x - x, s.player.y - y) }; }, [daleko.x, daleko.y]);
+    console.log('after the long walk up', JSON.stringify(po));
+    assert.equal(po.ruchy, 5 - daleko.koszt, 'two moves of walking + the blow spent');
+    assert(po.d < 16, 'the hero ended next to it');
+  }
   // Short of moves: 1 left, Mocny cios (2) – the amber left blinks, the missing one is a dashed ring, nothing happens.
   await g(() => { const w = window.__game.scene.getScene('game').walka; w.ruchy = 1; w.maxRuchy = 5; w.przelicz(); });
   f = await fight();
-  await tapWorld(f.zywi[1].x, f.zywi[1].y - 4);
+  const blisko = near(f, await heroPos());
+  await tapWorld(blisko.x, blisko.y - 4);
   await page.waitForTimeout(400);
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.mocny').click());
   await page.waitForTimeout(300);

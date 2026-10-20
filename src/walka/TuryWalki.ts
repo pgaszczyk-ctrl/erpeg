@@ -124,9 +124,14 @@ interface PlanCiosu {
   tylko?: boolean;
   /** New controls: moves of the walk up (boots in the amber preview) – the rest of `koszt` is the blow itself. */
   podejscie?: number;
-  /** New controls: the target is beyond one walk (no blow this go; `koszt` is an estimate). */
+  /** New controls: the target is beyond the walks this turn could ever reach (no blow this go; `koszt` is an estimate). */
   daleko?: boolean;
+  /** `z.k` is a cell of the multi-move grid (zasDalej), not of the one-move one. */
+  dal?: boolean;
 }
+
+/** The multi-move grid looks this many moves ahead at most (a preview of what is missing, not balance). */
+const DROGA_MAKS_RUCHOW = 7;
 
 /** First-fights tips (new controls): each shown in at most this many fights, counted on the device. */
 const RADY_RAZY = 2;
@@ -154,6 +159,11 @@ export class TuryWalki {
   private cel: Uczestnik | null = null;
   private punkt: { k: string; x: number; y: number } | null = null;
   private zas: Zasieg | null = null;
+  /** New controls: the ground reachable in several moves (computed only when a walk up needs it, dropped by przelicz). */
+  private zasD: Zasieg | null = null;
+  /** Numbered markers of a previewed walk and the cost plaques over enemies (stage 2 of the fight readability). */
+  private numerki: Phaser.GameObjects.Text[] = [];
+  private plakietki = new Map<Uczestnik, Phaser.GameObjects.Text>();
   private busy = false;
   private carry = 0;
   private gfx: Phaser.GameObjects.Graphics;
@@ -521,8 +531,19 @@ export class TuryWalki {
   private przelicz() {
     const p = this.h.player;
     this.zas = zasieg(p.x, p.y, WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
+    this.zasD = null;
     this.plany.clear();
     this.odswiez();
+  }
+
+  /** The ground reachable in up to a few more moves than are left (walks up over several moves, previews of what is missing). */
+  private zasDalej() {
+    if (!this.zasD) {
+      const p = this.h.player;
+      const ruchow = Math.min(DROGA_MAKS_RUCHOW, Math.max(this.ruchy, 1) + 2);
+      this.zasD = zasieg(p.x, p.y, ruchow * WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
+    }
+    return this.zasD;
   }
 
   private koniecTury() {
@@ -895,25 +916,27 @@ export class TuryWalki {
     // In reach from here (no closer spot within the hop): strike from here.
     if (stad(p.x, p.y)) return tutaj();
     if (!this.nowy) return { ok: false, koszt, tekst: bron ? (this.dist(p.x, p.y, q.e.x, q.e.y) > WT.strzalW * W ? 'Za daleko na strzał – podejdź bliżej' : 'Coś zasłania cel') : 'Podejdź bliżej (Ruch)' };
-    // New controls: walk up (one move) and strike in the same go – or, short of moves or reach, just walk closer.
+    // New controls: walk up – over as many moves as it takes – and strike in the same go (stage 2, owner 19 Oct 2026).
+    // The cheapest number of moves wins, then the spot closest to touching; short of moves it is shown, never done.
     const ruch = WT.koszt.ruch;
-    if (!z || this.ruchy < ruch) return { ok: false, koszt: ruch + koszt, podejscie: ruch, dojscie: true, tekst: 'Za daleko – brak ruchów' };
+    const krok = WT.ruchW * W;
+    const zd = this.zasDalej();
     let best: string | null = null;
-    let bd = Infinity;
-    for (const [k, c] of z) {
-      if (!stad(c.x, c.y)) continue;
-      const d = this.dist(c.x, c.y, q.e.x, q.e.y);
-      const score = c.d * 0.3 + (bron ? 0 : Math.abs(d - blisko));
-      if (score < bd) [best, bd] = [k, score];
+    let bn = Infinity, bs = Infinity;
+    for (const [k, c] of zd) {
+      if (k === '0,0' || !stad(c.x, c.y)) continue;
+      const n = Math.max(1, Math.ceil(c.d / krok - 1e-6));
+      const s = (bron ? 0 : Math.abs(this.dist(c.x, c.y, q.e.x, q.e.y) - blisko)) + c.d * 0.05;
+      if (n < bn || (n === bn && s < bs)) [best, bn, bs] = [k, n, s];
     }
     if (best) {
-      const c = z.get(best)!;
-      // Short of moves: not done at all (the amber preview shows what is missing).
-      return { ok: this.ruchy >= ruch + koszt, z: { x: c.x, y: c.y, k: best }, koszt: ruch + koszt, podejscie: ruch, dojscie: true, tekst: nazwa };
+      const c = zd.get(best)!;
+      const pod = bn * ruch;
+      return { ok: this.ruchy >= pod + koszt, z: { x: c.x, y: c.y, k: best }, dal: true, koszt: pod + koszt, podejscie: pod, dojscie: true, tekst: nazwa };
     }
-    // Out of one walk's reach: no blow this go – a rough count of the walks it would take (the player walks first).
+    // Beyond every walk this turn could reach: a rough count of the walks it would take (the player walks first).
     const zostaje = this.dist(p.x, p.y, q.e.x, q.e.y) - (bron ? WT.strzalW * W : reach);
-    const ile = Math.max(2, Math.ceil(zostaje / (WT.ruchW * W))) * ruch;
+    const ile = Math.max(2, Math.ceil(zostaje / krok)) * ruch;
     return { ok: false, koszt: ile + koszt, podejscie: ile, dojscie: true, daleko: true, tekst: bron ? 'Za daleko na strzał' : 'Za daleko' };
   }
 
@@ -937,9 +960,10 @@ export class TuryWalki {
     this.odswiez();
     const p = this.h.player;
     const bron = this.broni();
-    if (plan.dojscie && plan.z && this.zas) {
+    const siec = plan.dal ? this.zasDalej() : this.zas;
+    if (plan.dojscie && plan.z && siec) {
       // New controls: the walk up first (the hero stays where it ends).
-      await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
+      await this.idz(p, uprosc(droga(siec, plan.z.k), this.prosto(HERO_R, 'hero')));
       if (plan.tylko) {
         this.busy = false;
         this.podpowiedz = '';
@@ -951,8 +975,7 @@ export class TuryWalki {
       if (atak?.obszar === 'stozek') await this.wachlarz(q, bron, atak);
       else if (atak?.obszar === 'salwa') {
         // One shot at the target and one at each of its nearest neighbours, a moment apart.
-        const cele = [q, ...this.zywi.filter((o) => o !== q && o.e.visible && this.dist(o.e.x, o.e.y, q.e.x, q.e.y) <= (atak.zasiegW ?? 2.5) * W)
-          .sort((a, b) => this.dist(a.e.x, a.e.y, q.e.x, q.e.y) - this.dist(b.e.x, b.e.y, q.e.x, q.e.y))].slice(0, atak.ileCelow ?? 3);
+        const cele = this.celeObszaru(q, atak, p);
         await Promise.all(cele.map((c, i) => this.czekaj(i * 90).then(() => this.strzal(c, bron, false, mnoz))));
       } else await this.strzal(q, bron, mocny, mnoz);
       this.h.krok?.('cios');
@@ -969,15 +992,8 @@ export class TuryWalki {
       await this.tween(p, { x: sx + Math.cos(aim) * 3, y: sy + Math.sin(aim) * 3 }, 90);
       if (atak?.obszar === 'zamach') {
         // A wide swing: the target and every enemy in reach on the same side.
-        const pol = ((atak.katStopnie ?? 140) / 2) * (Math.PI / 180);
-        const zasieg = (o: Uczestnik) => o.r + HERO_R + WT.odstepPx + 1.5 + WT.zasiegWreczW * W + 2;
-        this.zamachLuk(aim, pol);
-        for (const o of [...this.zywi]) {
-          if (o !== q && (!o.e.visible || o.e.inAir)) continue;
-          const d = this.dist(p.x, p.y, o.e.x, o.e.y);
-          const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - p.y, o.e.x - p.x) - aim));
-          if (o === q || (d <= zasieg(o) && kat <= pol && this.h.widac(p.x, p.y, o.e.x, o.e.y))) this.rozstrzygnijCios(o, false, mnoz);
-        }
+        this.zamachLuk(aim, ((atak.katStopnie ?? 140) / 2) * (Math.PI / 180));
+        for (const o of this.celeObszaru(q, atak, p)) this.rozstrzygnijCios(o, false, mnoz);
       } else this.rozstrzygnijCios(q, mocny, mnoz);
       this.h.krok?.('cios');
       await this.tween(p, { x: sx, y: sy }, 90);
@@ -996,6 +1012,32 @@ export class TuryWalki {
       this.podpowiedz = '';
     }
     this.po();
+  }
+
+  /**
+   * Who an attack reaches when struck at `q` from the spot `s`: the target alone, or for a sweep every enemy in reach on
+   * the same side, for a fan everyone in the cone, for a volley the target and its nearest neighbours. Shared by the
+   * preview (red rings, from where the walk up ends) and the attack itself, so they always agree.
+   */
+  private celeObszaru(q: Uczestnik, atak: RodzajAtaku | undefined, s: { x: number; y: number }): Uczestnik[] {
+    const obszar = atak?.obszar ?? 'jeden';
+    if (obszar === 'jeden' || !atak) return [q];
+    const zywi = this.zywi.filter((o) => o === q || (o.e.visible && !o.e.inAir));
+    if (obszar === 'salwa') {
+      return [q, ...zywi.filter((o) => o !== q && this.dist(o.e.x, o.e.y, q.e.x, q.e.y) <= (atak.zasiegW ?? 2.5) * W)
+        .sort((a, b) => this.dist(a.e.x, a.e.y, q.e.x, q.e.y) - this.dist(b.e.x, b.e.y, q.e.x, q.e.y))].slice(0, atak.ileCelow ?? 3);
+    }
+    const zamach = obszar === 'zamach';
+    const aim = Math.atan2(q.e.y - (s.y + (zamach ? 2 : 0)), q.e.x - s.x);
+    const pol = ((atak.katStopnie ?? (zamach ? 140 : 60)) / 2) * (Math.PI / 180);
+    const stozek = Math.max((atak.zasiegW ?? 4) * W, this.dist(s.x, s.y, q.e.x, q.e.y) + q.r);
+    return zywi.filter((o) => {
+      if (o === q) return true;
+      const d = this.dist(s.x, s.y, o.e.x, o.e.y);
+      const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - s.y, o.e.x - s.x) - aim));
+      const sieg = zamach ? o.r + HERO_R + WT.odstepPx + 1.5 + WT.zasiegWreczW * W + 2 : stozek + o.r;
+      return d <= sieg && kat <= pol && this.h.widac(s.x, s.y, o.e.x, o.e.y);
+    });
   }
 
   /** A wide golden arc for the sweep (code-drawn until the artist's effect). */
@@ -1026,11 +1068,7 @@ export class TuryWalki {
     await this.tween(g, { scale: 1, x: 0, y: 0 }, 220);
     this.h.cwiczenie('magia', WT.cwiczenie);
     const now = this.h.scene.time.now;
-    for (const o of [...this.zywi]) {
-      if (o !== q && (!o.e.visible || o.e.inAir)) continue;
-      const d = this.dist(p.x, p.y, o.e.x, o.e.y);
-      const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - p.y, o.e.x - p.x) - aim));
-      if (o !== q && (d > zasieg + o.r || kat > pol || !this.h.widac(p.x, p.y, o.e.x, o.e.y))) continue;
+    for (const o of this.celeObszaru(q, atak, p)) {
       if (Math.random() >= hitChance('magia', false, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
         this.h.pudlo(o.e.x, o.e.y - 4 * o.e.kind.scale);
         continue;
@@ -1643,6 +1681,10 @@ export class TuryWalki {
     const g = this.gfx, t = this.gfxTop;
     g.clear();
     t.clear();
+    for (const n of this.numerki) n.setVisible(false);
+    for (const n of this.plakietki.values()) n.setVisible(false);
+    this.numerkow = 0;
+    this.miejscaPlakietek.length = 0;
     const p = this.h.player;
     const feet = (y: number) => y + 5;
     // The hero's ring.
@@ -1663,9 +1705,12 @@ export class TuryWalki {
       // New controls: a clear edge of the reachable ground (owner, 20 Oct 2026: „wyraźniejsza granica ruchu”).
       if (this.nowy) this.granica(g, k, feet);
       if (this.punkt) {
-        const pts = droga(this.zas, this.punkt.k);
-        g.fillStyle(0xbfeaff, 0.9);
-        pts.forEach((q, i) => i % 2 === 0 && g.fillCircle(q.x, feet(q.y), 0.9));
+        if (this.nowy) this.sciezka(g, t, this.zas, this.punkt.k, feet, WT.koszt.ruch);
+        else {
+          const pts = droga(this.zas, this.punkt.k);
+          g.fillStyle(0xbfeaff, 0.9);
+          pts.forEach((q, i) => i % 2 === 0 && g.fillCircle(q.x, feet(q.y), 0.9));
+        }
         g.lineStyle(1.2, 0xbfeaff, 1).strokeEllipse(this.punkt.x, feet(this.punkt.y), HERO_R * 2 + 4, HERO_R + 3);
       }
     }
@@ -1684,6 +1729,8 @@ export class TuryWalki {
         if (pl.ok) g.lineStyle(2, 0xffd34a, 0.4 + 0.6 * fala).strokeEllipse(q.e.x, feet(q.e.y), q.r * 2 + 8 + 5 * fala, q.r + 5 + 2.5 * fala);
       }
     }
+    // Stage 2: over every enemy the total cost of the cheapest attack (walk up included), grey when not affordable.
+    const tani = this.nowy && this.faza === 'gracz' && !this.busy ? this.atakiDostepne().slice().sort((a, b) => a.koszt - b.koszt)[0] : undefined;
     for (const q of this.zywi) {
       const e = q.e;
       if (!e.visible) continue;
@@ -1711,15 +1758,22 @@ export class TuryWalki {
       t.fillStyle(0x1e1a24, 0.9).fillRect(e.x - w / 2 - 0.5, top - 0.5, w + 1, sel ? 2.6 : 2);
       t.fillStyle(sel ? 0xff5a4a : 0xc23a30, 1).fillRect(e.x - w / 2, top, w * Math.min(1, part), sel ? 1.6 : 1);
       if (q.oglusz) t.fillStyle(0xffe08a, 1).fillCircle(e.x + w / 2 + 2, top + 0.5, 1);
+      if (tani && q !== this.koloWroga) this.plakietka(t, q, this.planCiosu(q, !!tani.mocny, tani), top);
     }
     // The chosen target: the short way of the hop and the label with the cost.
     const c = this.cel;
     // New controls: no cost texts on the map – the ambers under the hero show it (owner, 19 Oct 2026).
     if (this.nowy) {
       const plan = c && this.faza === 'gracz' && !this.busy ? (this.podgladAtaku()?.plan ?? (komputer && !this.koloWroga ? this.planCiosu(c, false, this.atakiDostepne()[0]) : null)) : null;
-      if (plan?.z && this.zas && !plan.daleko) {
-        g.fillStyle(0xffe08a, 0.95);
-        for (const q of droga(this.zas, plan.z.k)) g.fillCircle(q.x, feet(q.y), 0.8);
+      const siec = plan?.dal ? this.zasDalej() : this.zas;
+      if (plan?.z && siec && !plan.daleko) this.sciezka(g, t, siec, plan.z.k, feet, plan.podejscie ?? 0);
+      // An area attack previewed: a red ring round everyone it would reach (from where the walk up ends).
+      const w = this.podgladAtaku();
+      if (w && w.atak.obszar !== 'jeden' && !w.plan.daleko) {
+        for (const o of this.celeObszaru(w.q, w.atak, w.plan.z ?? p)) {
+          g.lineStyle(2, 0xff3a2a, 0.55 + 0.45 * puls).strokeEllipse(o.e.x, feet(o.e.y), o.r * 2 + 9 + 2 * puls, o.r + 6 + puls);
+          g.lineStyle(1, 0xffd0c0, 0.6).strokeEllipse(o.e.x, feet(o.e.y), o.r * 2 + 5, o.r + 3.5);
+        }
       }
       this.etykieta.setVisible(false);
     } else if (c && this.faza === 'gracz' && !this.koloWroga) {
@@ -1730,6 +1784,97 @@ export class TuryWalki {
       }
       this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - (c.e.hd ? 12 : 9) * c.e.kind.scale - 3).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
     } else this.etykieta.setVisible(false);
+  }
+
+  private numerkow = 0;
+  /** Plaques drawn this frame (x0, y0, w, h): the next one moves up instead of covering them. */
+  private miejscaPlakietek: [number, number, number, number][] = [];
+
+  /** A small number on the map (pooled Text objects, hidden at the start of every frame). */
+  private numerek(tekst: string, x: number, y: number, kolor: string) {
+    let tx = this.numerki[this.numerkow];
+    if (!tx) {
+      tx = this.h.scene.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '5px', fontStyle: 'bold', color: '#1e1a24', resolution: 8 })
+        .setOrigin(0.5, 0.55).setDepth(GLEB_GORA + 2);
+      this.numerki.push(tx);
+    }
+    this.numerkow++;
+    return tx.setText(tekst).setColor(kolor).setPosition(x, y).setVisible(true);
+  }
+
+  /**
+   * A previewed walk (stage 2): a dashed line along the real way and a numbered marker where each move ends,
+   * amber while the moves left cover it, red past them. `ruchow` = moves of the walk (the last marker's number).
+   */
+  private sciezka(g: Phaser.GameObjects.Graphics, t: Phaser.GameObjects.Graphics, siec: Zasieg, k: string, feet: (y: number) => number, ruchow: number) {
+    const pts = droga(siec, k);
+    if (pts.length < 2) return;
+    const krok = WT.ruchW * W;
+    const kreska = 3, przerwa = 2;
+    const stac = (m: number) => m <= this.ruchy;
+    const kolor = (d: number) => (stac(Math.max(1, Math.ceil(d / krok - 1e-6))) ? 0xffe08a : 0xff5a4a);
+    let calosc = 0;
+    for (let i = 1; i < pts.length; i++) calosc += this.dist(pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y);
+    const znaki: { x: number; y: number; n: number }[] = [];
+    let s = 0;
+    let nast = krok;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const len = this.dist(a.x, a.y, b.x, b.y);
+      if (len < 1e-6) continue;
+      const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+      let pos = 0;
+      while (pos < len) {
+        const faza = (s + pos) % (kreska + przerwa);
+        if (faza < kreska) {
+          const end = Math.min(len, pos + kreska - faza);
+          g.lineStyle(1.3, kolor(s + pos + 0.01), 0.95)
+            .lineBetween(a.x + ux * pos, feet(a.y + uy * pos), a.x + ux * end, feet(a.y + uy * end));
+          pos = end;
+        } else pos += kreska + przerwa - faza;
+      }
+      while (nast <= s + len && nast < calosc - krok * 0.15) {
+        const o = nast - s;
+        znaki.push({ x: a.x + ux * o, y: a.y + uy * o, n: Math.round(nast / krok) });
+        nast += krok;
+      }
+      s += len;
+    }
+    const koniec = pts[pts.length - 1];
+    // A short step into reach costs nothing extra (it's part of the blow): a dashed line without numbers.
+    if (ruchow <= 0) return;
+    znaki.push({ x: koniec.x, y: koniec.y, n: Math.max(1, Math.round(ruchow / WT.koszt.ruch)) });
+    for (const z of znaki) {
+      const ok = stac(z.n);
+      t.fillStyle(ok ? 0xffd25a : 0xff5a4a, 1).fillCircle(z.x, feet(z.y), 2.9);
+      t.lineStyle(0.8, 0x1e1a24, 1).strokeCircle(z.x, feet(z.y), 2.9);
+      this.numerek(String(z.n), z.x, feet(z.y), ok ? '#1e1a24' : '#fff1e8');
+    }
+  }
+
+  /** The cost plaque over an enemy (stage 2): an amber dot and the total moves, grey when there aren't enough. */
+  private plakietka(t: Phaser.GameObjects.Graphics, q: Uczestnik, plan: PlanCiosu, top: number) {
+    let tx = this.plakietki.get(q);
+    if (!tx) {
+      tx = this.h.scene.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '5px', fontStyle: 'bold', color: '#ffe7a8', resolution: 8 })
+        .setOrigin(0, 0.55).setDepth(GLEB_GORA + 2);
+      this.plakietki.set(q, tx);
+    }
+    const ok = plan.ok;
+    tx.setText(`${plan.koszt}${plan.daleko ? '+' : ''}`).setColor(ok ? '#ffe7a8' : '#b4b4b4').setVisible(true);
+    const w = tx.displayWidth + 7.5, h = 6.4;
+    const x0 = q.e.x - w / 2;
+    let y0 = top - 3.2 - h;
+    for (let i = 0; i < 6; i++) {
+      const kolizja = this.miejscaPlakietek.find(([x, y, ww, hh]) => x0 < x + ww && x < x0 + w && y0 < y + hh && y < y0 + h);
+      if (!kolizja) break;
+      y0 = kolizja[1] - h - 0.8;
+    }
+    this.miejscaPlakietek.push([x0, y0, w, h]);
+    t.fillStyle(0x1e1a24, 0.86).fillRoundedRect(x0, y0, w, h, 2);
+    t.lineStyle(0.7, ok ? 0xd9a032 : 0x7a7a7a, 1).strokeRoundedRect(x0, y0, w, h, 2);
+    t.fillStyle(ok ? 0xffc64a : 0x8a8a8a, 1).fillCircle(x0 + 3, y0 + h / 2, 1.5);
+    tx.setPosition(x0 + 5.3, y0 + h / 2);
   }
 
   /** The edge of the reachable ground: lines along every cell side with no reachable neighbour. */
@@ -1757,6 +1902,8 @@ export class TuryWalki {
     this.gfx.destroy();
     this.gfxTop.destroy();
     this.etykieta.destroy();
+    for (const n of this.numerki) n.destroy();
+    for (const n of this.plakietki.values()) n.destroy();
     this.smok?.zakoncz();
     this.panel.zamknij();
     document.body.classList.remove('walka-tur');
