@@ -1,4 +1,5 @@
 import { tx } from './i18n';
+import { cleanModul, type ModulLook } from './ui/modulPostac';
 
 // The hero's look, chosen when creating a character: head shape, build,
 // outfit, hairstyle and colours. Drawn pixel by pixel into a 16×16 frame
@@ -17,6 +18,8 @@ export interface Look {
   bottom: number;
   /** Which of the new detailed heroes (content/wyglad.ts BOHATEROWIE); none = picked by the name. */
   postac?: number;
+  /** The modular hero picked at creation (head + body + colours, ui/modulPostac.ts; test server, front picture only so far). */
+  modul?: ModulLook;
 }
 
 export const HEADS = () => [tx('Kwadratowa', 'Square'), tx('Okrągła', 'Round'), tx('Pociągła', 'Long')];
@@ -29,7 +32,7 @@ export const CLOTHES = ['#3fa34d', '#3f7fd8', '#e43b44', '#f7c531', '#7a5ab8', '
 
 export const DEFAULT_LOOK: Look = { head: 0, build: 1, outfit: 0, hair: 1, skin: 0, hairColor: 0, top: 0, bottom: 7 };
 
-const LIMITS: Record<Exclude<keyof Look, 'postac'>, number> = {
+const LIMITS: Record<Exclude<keyof Look, 'postac' | 'modul'>, number> = {
   head: 3, build: 4, outfit: 6, hair: 6, skin: SKINS.length, hairColor: HAIR_COLORS.length, top: CLOTHES.length, bottom: CLOTHES.length,
 };
 
@@ -43,6 +46,8 @@ export function cleanLook(v: unknown): Look {
     }
     const p = (v as Record<string, unknown>).postac;
     if (typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < 100) out.postac = p;
+    const mod = cleanModul((v as Record<string, unknown>).modul);
+    if (mod) out.modul = mod;
   }
   return out;
 }

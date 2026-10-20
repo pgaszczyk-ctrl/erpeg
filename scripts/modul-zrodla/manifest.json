@@ -1,0 +1,1217 @@
+{
+  "version": 5,
+  "canvas_64": [
+    64,
+    64
+  ],
+  "canvas_512": [
+    512,
+    512
+  ],
+  "scale_512": 8,
+  "coordinate_system": "image edges; pixel (0,0) occupies [0,1)x[0,1); anchor values may be half pixels",
+  "directions": [
+    "front"
+  ],
+  "animation": "idle only",
+  "head_axis": "mean of the two eye centers; never hair or hat bounding box",
+  "head_mount_y": "neck/jaw contact baseline; beard and long hair can extend below",
+  "body_neck": "independently marked center of neck/collar contact",
+  "placement_formula": {
+    "dx": "Math.round(body.neck.x - head.mount.x)",
+    "dy": "Math.round(body.neck.y - head.mount.y)"
+  },
+  "stack": [
+    "body",
+    "head"
+  ],
+  "mask_channels": {
+    "red": "primary clothing",
+    "green": "secondary clothing",
+    "alpha_0": "excluded"
+  },
+  "heads": [
+    {
+      "id": "01_warkocze",
+      "image_64": "heads_64/01_warkocze.png",
+      "image_512": "heads_512/01_warkocze.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            26,
+            2,
+            5
+          ],
+          "center": {
+            "x": 26.0,
+            "y": 28.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            26,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 28.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 28.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 36
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/01_warkocze_head.png",
+      "mask_512": "masks_512/01_warkocze_head.png"
+    },
+    {
+      "id": "02_kowal",
+      "image_64": "heads_64/02_kowal.png",
+      "image_512": "heads_512/02_kowal.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            24,
+            20,
+            3,
+            5
+          ],
+          "center": {
+            "x": 25.5,
+            "y": 22.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            20,
+            3,
+            5
+          ],
+          "center": {
+            "x": 37.5,
+            "y": 22.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 22.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 34
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/02_kowal_head.png",
+      "mask_512": "masks_512/02_kowal_head.png"
+    },
+    {
+      "id": "03_pilotka",
+      "image_64": "heads_64/03_pilotka.png",
+      "image_512": "heads_512/03_pilotka.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 26.0,
+            "y": 29.5
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 29.5
+          }
+        },
+        "midpoint": {
+          "x": 31.0,
+          "y": 29.5
+        }
+      },
+      "axis_x": 31.0,
+      "mount": {
+        "x": 31.0,
+        "y": 38
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/03_pilotka_head.png",
+      "mask_512": "masks_512/03_pilotka_head.png"
+    },
+    {
+      "id": "04_profesor",
+      "image_64": "heads_64/04_profesor.png",
+      "image_512": "heads_512/04_profesor.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            29,
+            2,
+            4
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 31.0
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            29,
+            2,
+            4
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 31.0
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 31.0
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 39
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "starszy",
+      "mask_64": "masks_64/04_profesor_head.png",
+      "mask_512": "masks_512/04_profesor_head.png"
+    },
+    {
+      "id": "05_kucharka",
+      "image_64": "heads_64/05_kucharka.png",
+      "image_512": "heads_512/05_kucharka.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            30,
+            2,
+            4
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 32.0
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            30,
+            2,
+            4
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 32.0
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 32.0
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 40
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/05_kucharka_head.png",
+      "mask_512": "masks_512/05_kucharka_head.png"
+    },
+    {
+      "id": "06_ogrodniczka",
+      "image_64": "heads_64/06_ogrodniczka.png",
+      "image_512": "heads_512/06_ogrodniczka.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            29,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 31.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            29,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 31.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 31.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 39
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/06_ogrodniczka_head.png",
+      "mask_512": "masks_512/06_ogrodniczka_head.png"
+    },
+    {
+      "id": "07_maszynista",
+      "image_64": "heads_64/07_maszynista.png",
+      "image_512": "heads_512/07_maszynista.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 26.0,
+            "y": 29.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 29.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 29.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 37
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/07_maszynista_head.png",
+      "mask_512": "masks_512/07_maszynista_head.png"
+    },
+    {
+      "id": "08_kurierka",
+      "image_64": "heads_64/08_kurierka.png",
+      "image_512": "heads_512/08_kurierka.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            28,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 30.5
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            28,
+            2,
+            5
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 30.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 30.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 37
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/08_kurierka_head.png",
+      "mask_512": "masks_512/08_kurierka_head.png"
+    },
+    {
+      "id": "09_wynalazca",
+      "image_64": "heads_64/09_wynalazca.png",
+      "image_512": "heads_512/09_wynalazca.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            26,
+            3,
+            5
+          ],
+          "center": {
+            "x": 26.5,
+            "y": 28.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            26,
+            3,
+            5
+          ],
+          "center": {
+            "x": 37.5,
+            "y": 28.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 28.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 36
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/09_wynalazca_head.png",
+      "mask_512": "masks_512/09_wynalazca_head.png"
+    },
+    {
+      "id": "10_karczmarz",
+      "image_64": "heads_64/10_karczmarz.png",
+      "image_512": "heads_512/10_karczmarz.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            24,
+            19,
+            3,
+            5
+          ],
+          "center": {
+            "x": 25.5,
+            "y": 21.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            19,
+            3,
+            5
+          ],
+          "center": {
+            "x": 37.5,
+            "y": 21.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 21.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 35
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/10_karczmarz_head.png",
+      "mask_512": "masks_512/10_karczmarz_head.png"
+    },
+    {
+      "id": "11_czarodziej",
+      "image_64": "heads_64/11_czarodziej.png",
+      "image_512": "heads_512/11_czarodziej.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            30,
+            2,
+            4
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 32.0
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            30,
+            2,
+            4
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 32.0
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 32.0
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 36
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "starszy",
+      "mask_64": "masks_64/11_czarodziej_head.png",
+      "mask_512": "masks_512/11_czarodziej_head.png"
+    },
+    {
+      "id": "12_zwiadowca",
+      "image_64": "heads_64/12_zwiadowca.png",
+      "image_512": "heads_512/12_zwiadowca.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            29,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 31.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            29,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 31.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 31.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 38
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/12_zwiadowca_head.png",
+      "mask_512": "masks_512/12_zwiadowca_head.png"
+    },
+    {
+      "id": "13_dzentelmen",
+      "image_64": "heads_64/13_dzentelmen.png",
+      "image_512": "heads_512/13_dzentelmen.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            29,
+            2,
+            4
+          ],
+          "center": {
+            "x": 26.0,
+            "y": 31.0
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            29,
+            2,
+            4
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 31.0
+          }
+        },
+        "midpoint": {
+          "x": 31.0,
+          "y": 31.0
+        }
+      },
+      "axis_x": 31.0,
+      "mount": {
+        "x": 31.0,
+        "y": 38
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/13_dzentelmen_head.png",
+      "mask_512": "masks_512/13_dzentelmen_head.png"
+    },
+    {
+      "id": "14_podroznik_senior",
+      "image_64": "heads_64/14_podroznik_senior.png",
+      "image_512": "heads_512/14_podroznik_senior.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            24,
+            28,
+            2,
+            6
+          ],
+          "center": {
+            "x": 25.0,
+            "y": 31.0
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            28,
+            2,
+            6
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 31.0
+          }
+        },
+        "midpoint": {
+          "x": 31.0,
+          "y": 31.0
+        }
+      },
+      "axis_x": 31.0,
+      "mount": {
+        "x": 31.0,
+        "y": 40
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "starszy",
+      "mask_64": "masks_64/14_podroznik_senior_head.png",
+      "mask_512": "masks_512/14_podroznik_senior_head.png"
+    },
+    {
+      "id": "15_gospodyni",
+      "image_64": "heads_64/15_gospodyni.png",
+      "image_512": "heads_512/15_gospodyni.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            30,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 32.5
+          }
+        },
+        "right": {
+          "bbox": [
+            35,
+            30,
+            2,
+            5
+          ],
+          "center": {
+            "x": 36.0,
+            "y": 32.5
+          }
+        },
+        "midpoint": {
+          "x": 31.5,
+          "y": 32.5
+        }
+      },
+      "axis_x": 31.5,
+      "mount": {
+        "x": 31.5,
+        "y": 39
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "starszy",
+      "mask_64": "masks_64/15_gospodyni_head.png",
+      "mask_512": "masks_512/15_gospodyni_head.png"
+    },
+    {
+      "id": "16_straznik",
+      "image_64": "heads_64/16_straznik.png",
+      "image_512": "heads_512/16_straznik.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            28,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 30.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            28,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 30.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 30.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 38
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/16_straznik_head.png",
+      "mask_512": "masks_512/16_straznik_head.png"
+    },
+    {
+      "id": "17_rudobrody",
+      "image_64": "heads_64/17_rudobrody.png",
+      "image_512": "heads_512/17_rudobrody.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            26,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 28.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            26,
+            2,
+            5
+          ],
+          "center": {
+            "x": 37.0,
+            "y": 28.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 28.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 35
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/17_rudobrody_head.png",
+      "mask_512": "masks_512/17_rudobrody_head.png"
+    },
+    {
+      "id": "18_luczniczka",
+      "image_64": "heads_64/18_luczniczka.png",
+      "image_512": "heads_512/18_luczniczka.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            25,
+            26,
+            3,
+            5
+          ],
+          "center": {
+            "x": 26.5,
+            "y": 28.5
+          }
+        },
+        "right": {
+          "bbox": [
+            36,
+            26,
+            3,
+            5
+          ],
+          "center": {
+            "x": 37.5,
+            "y": 28.5
+          }
+        },
+        "midpoint": {
+          "x": 32.0,
+          "y": 28.5
+        }
+      },
+      "axis_x": 32.0,
+      "mount": {
+        "x": 32.0,
+        "y": 36
+      },
+      "direction": "front",
+      "plec": "k",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/18_luczniczka_head.png",
+      "mask_512": "masks_512/18_luczniczka_head.png"
+    },
+    {
+      "id": "19_listonosz",
+      "image_64": "heads_64/19_listonosz.png",
+      "image_512": "heads_512/19_listonosz.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            26,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 27.0,
+            "y": 29.5
+          }
+        },
+        "right": {
+          "bbox": [
+            37,
+            27,
+            2,
+            5
+          ],
+          "center": {
+            "x": 38.0,
+            "y": 29.5
+          }
+        },
+        "midpoint": {
+          "x": 32.5,
+          "y": 29.5
+        }
+      },
+      "axis_x": 32.5,
+      "mount": {
+        "x": 32.5,
+        "y": 39
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "starszy",
+      "mask_64": "masks_64/19_listonosz_head.png",
+      "mask_512": "masks_512/19_listonosz_head.png"
+    },
+    {
+      "id": "20_mechanik",
+      "image_64": "heads_64/20_mechanik.png",
+      "image_512": "heads_512/20_mechanik.png",
+      "eyes": {
+        "left": {
+          "bbox": [
+            28,
+            26,
+            2,
+            6
+          ],
+          "center": {
+            "x": 29.0,
+            "y": 29.0
+          }
+        },
+        "right": {
+          "bbox": [
+            39,
+            26,
+            2,
+            6
+          ],
+          "center": {
+            "x": 40.0,
+            "y": 29.0
+          }
+        },
+        "midpoint": {
+          "x": 34.5,
+          "y": 29.0
+        }
+      },
+      "axis_x": 34.5,
+      "mount": {
+        "x": 34.5,
+        "y": 39
+      },
+      "direction": "front",
+      "plec": "m",
+      "wiek": "dorosly",
+      "mask_64": "masks_64/20_mechanik_head.png",
+      "mask_512": "masks_512/20_mechanik_head.png"
+    }
+  ],
+  "bodies": [
+    {
+      "id": "01_warkocze",
+      "image_64": "bodies_64/01_warkocze.png",
+      "image_512": "bodies_512/01_warkocze.png",
+      "mask_64": "masks_64/01_warkocze_body.png",
+      "mask_512": "masks_512/01_warkocze_body.png",
+      "neck": {
+        "x": 32,
+        "y": 37
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "02_kowal",
+      "image_64": "bodies_64/02_kowal.png",
+      "image_512": "bodies_512/02_kowal.png",
+      "mask_64": "masks_64/02_kowal_body.png",
+      "mask_512": "masks_512/02_kowal_body.png",
+      "neck": {
+        "x": 32,
+        "y": 35
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "03_pilotka",
+      "image_64": "bodies_64/03_pilotka.png",
+      "image_512": "bodies_512/03_pilotka.png",
+      "mask_64": "masks_64/03_pilotka_body.png",
+      "mask_512": "masks_512/03_pilotka_body.png",
+      "neck": {
+        "x": 32,
+        "y": 39
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "04_profesor",
+      "image_64": "bodies_64/04_profesor.png",
+      "image_512": "bodies_512/04_profesor.png",
+      "mask_64": "masks_64/04_profesor_body.png",
+      "mask_512": "masks_512/04_profesor_body.png",
+      "neck": {
+        "x": 32,
+        "y": 40
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "05_kucharka",
+      "image_64": "bodies_64/05_kucharka.png",
+      "image_512": "bodies_512/05_kucharka.png",
+      "mask_64": "masks_64/05_kucharka_body.png",
+      "mask_512": "masks_512/05_kucharka_body.png",
+      "neck": {
+        "x": 32.5,
+        "y": 41
+      },
+      "axis_x": 32.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "06_ogrodniczka",
+      "image_64": "bodies_64/06_ogrodniczka.png",
+      "image_512": "bodies_512/06_ogrodniczka.png",
+      "mask_64": "masks_64/06_ogrodniczka_body.png",
+      "mask_512": "masks_512/06_ogrodniczka_body.png",
+      "neck": {
+        "x": 32,
+        "y": 40
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "07_maszynista",
+      "image_64": "bodies_64/07_maszynista.png",
+      "image_512": "bodies_512/07_maszynista.png",
+      "mask_64": "masks_64/07_maszynista_body.png",
+      "mask_512": "masks_512/07_maszynista_body.png",
+      "neck": {
+        "x": 31.5,
+        "y": 38
+      },
+      "axis_x": 31.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "08_kurierka",
+      "image_64": "bodies_64/08_kurierka.png",
+      "image_512": "bodies_512/08_kurierka.png",
+      "mask_64": "masks_64/08_kurierka_body.png",
+      "mask_512": "masks_512/08_kurierka_body.png",
+      "neck": {
+        "x": 31.5,
+        "y": 38
+      },
+      "axis_x": 31.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "09_wynalazca",
+      "image_64": "bodies_64/09_wynalazca.png",
+      "image_512": "bodies_512/09_wynalazca.png",
+      "mask_64": "masks_64/09_wynalazca_body.png",
+      "mask_512": "masks_512/09_wynalazca_body.png",
+      "neck": {
+        "x": 32.5,
+        "y": 36
+      },
+      "axis_x": 32.5,
+      "direction": "front",
+      "foot_bottom_y": 56
+    },
+    {
+      "id": "10_karczmarz",
+      "image_64": "bodies_64/10_karczmarz.png",
+      "image_512": "bodies_512/10_karczmarz.png",
+      "mask_64": "masks_64/10_karczmarz_body.png",
+      "mask_512": "masks_512/10_karczmarz_body.png",
+      "neck": {
+        "x": 32,
+        "y": 36
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "11_czarodziej",
+      "image_64": "bodies_64/11_czarodziej.png",
+      "image_512": "bodies_512/11_czarodziej.png",
+      "mask_64": "masks_64/11_czarodziej_body.png",
+      "mask_512": "masks_512/11_czarodziej_body.png",
+      "neck": {
+        "x": 31.5,
+        "y": 37
+      },
+      "axis_x": 31.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "12_zwiadowca",
+      "image_64": "bodies_64/12_zwiadowca.png",
+      "image_512": "bodies_512/12_zwiadowca.png",
+      "mask_64": "masks_64/12_zwiadowca_body.png",
+      "mask_512": "masks_512/12_zwiadowca_body.png",
+      "neck": {
+        "x": 32,
+        "y": 39
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "13_dzentelmen",
+      "image_64": "bodies_64/13_dzentelmen.png",
+      "image_512": "bodies_512/13_dzentelmen.png",
+      "mask_64": "masks_64/13_dzentelmen_body.png",
+      "mask_512": "masks_512/13_dzentelmen_body.png",
+      "neck": {
+        "x": 31,
+        "y": 39
+      },
+      "axis_x": 31,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "14_podroznik_senior",
+      "image_64": "bodies_64/14_podroznik_senior.png",
+      "image_512": "bodies_512/14_podroznik_senior.png",
+      "mask_64": "masks_64/14_podroznik_senior_body.png",
+      "mask_512": "masks_512/14_podroznik_senior_body.png",
+      "neck": {
+        "x": 31.5,
+        "y": 41
+      },
+      "axis_x": 31.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "15_gospodyni",
+      "image_64": "bodies_64/15_gospodyni.png",
+      "image_512": "bodies_512/15_gospodyni.png",
+      "mask_64": "masks_64/15_gospodyni_body.png",
+      "mask_512": "masks_512/15_gospodyni_body.png",
+      "neck": {
+        "x": 32,
+        "y": 40
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "16_straznik",
+      "image_64": "bodies_64/16_straznik.png",
+      "image_512": "bodies_512/16_straznik.png",
+      "mask_64": "masks_64/16_straznik_body.png",
+      "mask_512": "masks_512/16_straznik_body.png",
+      "neck": {
+        "x": 32,
+        "y": 39
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "17_rudobrody",
+      "image_64": "bodies_64/17_rudobrody.png",
+      "image_512": "bodies_512/17_rudobrody.png",
+      "mask_64": "masks_64/17_rudobrody_body.png",
+      "mask_512": "masks_512/17_rudobrody_body.png",
+      "neck": {
+        "x": 32,
+        "y": 36
+      },
+      "axis_x": 32,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "18_luczniczka",
+      "image_64": "bodies_64/18_luczniczka.png",
+      "image_512": "bodies_512/18_luczniczka.png",
+      "mask_64": "masks_64/18_luczniczka_body.png",
+      "mask_512": "masks_512/18_luczniczka_body.png",
+      "neck": {
+        "x": 31,
+        "y": 36
+      },
+      "axis_x": 31,
+      "direction": "front",
+      "foot_bottom_y": 59
+    },
+    {
+      "id": "19_listonosz",
+      "image_64": "bodies_64/19_listonosz.png",
+      "image_512": "bodies_512/19_listonosz.png",
+      "mask_64": "masks_64/19_listonosz_body.png",
+      "mask_512": "masks_512/19_listonosz_body.png",
+      "neck": {
+        "x": 32.5,
+        "y": 40
+      },
+      "axis_x": 32.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    },
+    {
+      "id": "20_mechanik",
+      "image_64": "bodies_64/20_mechanik.png",
+      "image_512": "bodies_512/20_mechanik.png",
+      "mask_64": "masks_64/20_mechanik_body.png",
+      "mask_512": "masks_512/20_mechanik_body.png",
+      "neck": {
+        "x": 34.5,
+        "y": 40
+      },
+      "axis_x": 34.5,
+      "direction": "front",
+      "foot_bottom_y": 61
+    }
+  ]
+}
