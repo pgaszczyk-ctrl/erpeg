@@ -22,24 +22,30 @@ export function kreatorModul(onChange: (l: ModulLook) => void, start?: ModulLook
       ctx.drawImage(c, 0, 0);
     });
   };
-  const btn = (text: string, fn: () => void) => {
-    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: text });
+  // The artist's icons only (41-G003, public/ui/kreator/; owner: no words), the full name for screen readers.
+  const btn = (ikona: string, opis: string, fn: () => void) => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn m-ikbtn', title: opis });
+    b.setAttribute('aria-label', opis);
+    const img = Object.assign(document.createElement('img'), { src: `${import.meta.env.BASE_URL}ui/kreator/${ikona}.png`, alt: '' });
+    b.append(img);
     b.onclick = fn;
     return b;
   };
-  const plec = btn(PLEC_NAPIS[look.p](), () => {
+  const opisPlci = () => `${tx('Zmień płeć', 'Change gender')} (${PLEC_NAPIS[look.p]()})`;
+  const plec = btn('plec', opisPlci(), () => {
     look = randomModul(look.p === 'k' ? 'm' : 'k', look.s);
-    plec.textContent = PLEC_NAPIS[look.p]();
+    plec.title = opisPlci();
+    plec.setAttribute('aria-label', opisPlci());
     paint();
   });
   const row = Object.assign(document.createElement('div'), { className: 'm-skinrow' });
   row.append(
     plec,
-    btn(tx('🎨 Kolor skóry', '🎨 Skin tone'), () => {
+    btn('kolory', tx('Zmień kolor skóry', 'Change skin tone'), () => {
       look = { ...look, s: (look.s + 1) % SKORY_MODUL.length };
       paint();
     }),
-    btn(tx('🎲 Losuj', '🎲 Random'), () => {
+    btn('losuj', tx('Losuj wygląd', 'Random look'), () => {
       look = randomModul(look.p, look.s);
       paint();
     }),

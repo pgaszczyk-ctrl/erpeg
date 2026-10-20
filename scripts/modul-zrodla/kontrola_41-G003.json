@@ -1,0 +1,184 @@
+{
+  "compared_body_frames": 180,
+  "body_pixels_unchanged": true,
+  "anchors_unchanged": true,
+  "mask_changes": [
+    {
+      "character": "01_warkocze",
+      "direction": "front",
+      "skin_pixels_before": 247,
+      "skin_pixels_after": 275,
+      "added_skin_pixels": 28
+    },
+    {
+      "character": "01_warkocze",
+      "direction": "left",
+      "skin_pixels_before": 124,
+      "skin_pixels_after": 145,
+      "added_skin_pixels": 21
+    },
+    {
+      "character": "02_kowal",
+      "direction": "front",
+      "skin_pixels_before": 425,
+      "skin_pixels_after": 469,
+      "added_skin_pixels": 44
+    },
+    {
+      "character": "04_profesor",
+      "direction": "front",
+      "skin_pixels_before": 176,
+      "skin_pixels_after": 278,
+      "added_skin_pixels": 102
+    },
+    {
+      "character": "06_ogrodniczka",
+      "direction": "front",
+      "skin_pixels_before": 215,
+      "skin_pixels_after": 227,
+      "added_skin_pixels": 12
+    },
+    {
+      "character": "06_ogrodniczka",
+      "direction": "left",
+      "skin_pixels_before": 92,
+      "skin_pixels_after": 109,
+      "added_skin_pixels": 17
+    },
+    {
+      "character": "08_kurierka",
+      "direction": "front",
+      "skin_pixels_before": 222,
+      "skin_pixels_after": 245,
+      "added_skin_pixels": 23
+    },
+    {
+      "character": "09_wynalazca",
+      "direction": "front",
+      "skin_pixels_before": 226,
+      "skin_pixels_after": 251,
+      "added_skin_pixels": 25
+    },
+    {
+      "character": "09_wynalazca",
+      "direction": "left",
+      "skin_pixels_before": 124,
+      "skin_pixels_after": 144,
+      "added_skin_pixels": 20
+    },
+    {
+      "character": "11_czarodziej",
+      "direction": "left",
+      "skin_pixels_before": 83,
+      "skin_pixels_after": 84,
+      "added_skin_pixels": 1
+    },
+    {
+      "character": "12_zwiadowca",
+      "direction": "front",
+      "skin_pixels_before": 212,
+      "skin_pixels_after": 246,
+      "added_skin_pixels": 34
+    },
+    {
+      "character": "13_dzentelmen",
+      "direction": "front",
+      "skin_pixels_before": 140,
+      "skin_pixels_after": 155,
+      "added_skin_pixels": 15
+    },
+    {
+      "character": "13_dzentelmen",
+      "direction": "left",
+      "skin_pixels_before": 65,
+      "skin_pixels_after": 78,
+      "added_skin_pixels": 13
+    },
+    {
+      "character": "14_podroznik_senior",
+      "direction": "front",
+      "skin_pixels_before": 256,
+      "skin_pixels_after": 288,
+      "added_skin_pixels": 32
+    },
+    {
+      "character": "14_podroznik_senior",
+      "direction": "left",
+      "skin_pixels_before": 125,
+      "skin_pixels_after": 148,
+      "added_skin_pixels": 23
+    },
+    {
+      "character": "15_gospodyni",
+      "direction": "front",
+      "skin_pixels_before": 206,
+      "skin_pixels_after": 219,
+      "added_skin_pixels": 13
+    },
+    {
+      "character": "16_straznik",
+      "direction": "front",
+      "skin_pixels_before": 210,
+      "skin_pixels_after": 222,
+      "added_skin_pixels": 12
+    },
+    {
+      "character": "16_straznik",
+      "direction": "left",
+      "skin_pixels_before": 93,
+      "skin_pixels_after": 109,
+      "added_skin_pixels": 16
+    },
+    {
+      "character": "17_rudobrody",
+      "direction": "front",
+      "skin_pixels_before": 119,
+      "skin_pixels_after": 186,
+      "added_skin_pixels": 67
+    },
+    {
+      "character": "17_rudobrody",
+      "direction": "left",
+      "skin_pixels_before": 90,
+      "skin_pixels_after": 108,
+      "added_skin_pixels": 18
+    },
+    {
+      "character": "18_luczniczka",
+      "direction": "left",
+      "skin_pixels_before": 102,
+      "skin_pixels_after": 116,
+      "added_skin_pixels": 14
+    },
+    {
+      "character": "19_listonosz",
+      "direction": "front",
+      "skin_pixels_before": 168,
+      "skin_pixels_after": 193,
+      "added_skin_pixels": 25
+    },
+    {
+      "character": "19_listonosz",
+      "direction": "left",
+      "skin_pixels_before": 91,
+      "skin_pixels_after": 110,
+      "added_skin_pixels": 19
+    }
+  ],
+  "head_graphic_changes": [
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_a_head.png",
+      "pixels_removed": 13
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_idle_head.png",
+      "pixels_removed": 13
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_b_head.png",
+      "pixels_removed": 13
+    }
+  ],
+  "body_masks_unchanged": true,
+  "revision": "6.2"
+}
