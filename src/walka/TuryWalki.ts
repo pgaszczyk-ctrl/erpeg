@@ -235,7 +235,6 @@ export class TuryWalki {
         ucieczka: () => this.uciekajPytaj(),
         unik: () => this.unikaj(),
         potwierdz: () => this.potwierdz(),
-        uderz: () => this.uderz(),
         nastepny: () => this.nastepnyCel(),
         kolo: () => this.ustawPodmenu(!this.podmenu),
       })
@@ -493,7 +492,7 @@ export class TuryWalki {
     const lista: [string, boolean, string][] = [
       ['smok', !!zap, `${zap} Wyjdź z czerwonego pola albo ${dotknij.toLowerCase()} bohatera → Unik.`],
       ['lecz', p.hp <= PLAYER.maxHp / 3, `Mało życia! ${dotknij} swojego bohatera i wybierz Leczenie.`],
-      ['wrog', this.tura === 1, `${dotknij} wroga, wybierz atak i „Uderz” – bohater sam podejdzie. Bursztynki pod bohaterem to ruchy.`],
+      ['wrog', this.tura === 1, `${dotknij} wroga, potem dwa razy w atak – bohater sam podejdzie. Bursztynki pod bohaterem to ruchy.`],
       ['bohater', this.tura === 2, `${dotknij} swojego bohatera – leczenie i unik.`],
       ['pole', this.tura === 3, `${dotknij} pole w niebieskim zasięgu, żeby tam pójść. Gdy ruchy się skończą, tura przechodzi sama.`],
     ];
@@ -614,7 +613,7 @@ export class TuryWalki {
       if (!d.strzal && dist <= reach && widac) {
         const mocny = akcje >= 2 && Math.random() < ARENA.duchMocny;
         akcje -= mocny ? 2 : 1;
-        if (mocny) this.h.napis(q.e.x, q.e.y - 1.3 * W, 'Mocny cios!', '#ffd34a', 700);
+        if (mocny) this.h.napis(q.e.x, q.e.y - 1.3 * W, this.nowy ? 'Mocny atak!' : 'Mocny cios!', '#ffd34a', 700);
         if (await this.ciosWroga(q, mocny ? d.mocny : 1)) return true;
         continue;
       }
@@ -856,7 +855,7 @@ export class TuryWalki {
     const koszt = atak ? atak.koszt : mocny ? WT.koszt.mocny : WT.koszt.cios;
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bron = this.broni();
-    const nazwa = atak ? atak.nazwa : bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? 'Mocny cios' : 'Cios';
+    const nazwa = atak ? atak.nazwa : bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? (this.nowy ? 'Mocny atak' : 'Mocny cios') : (this.nowy ? 'Atak' : 'Cios');
     // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
     // New controls (owner, 19 Oct 2026: „wciąż mogę doskoczyć z daleka – zmniejsz radius do kilku metrów”):
     // a blow reaches only WT.zasiegWreczW beyond touching; farther takes a walk-up move.
@@ -1218,7 +1217,9 @@ export class TuryWalki {
     }
     const atak = this.atakiDostepne().find((a) => a.id === id);
     if (!atak) return;
-    // Picking an attack only previews it (the ambers that would go pulse); „Uderz” carries it out.
+    // The second tap on the picked attack carries it out (owner, 20 Oct 2026: no separate „Uderz” button).
+    if (this.wybranyAtak === atak.id && this.koloWroga === q) return this.uderz();
+    // The first tap only previews it: the ambers that would go pulse, the button pulses faster.
     this.cel = q;
     this.koloWroga = q;
     this.tryb = atak.mocny ? 'mocny' : 'cios';
@@ -1229,7 +1230,7 @@ export class TuryWalki {
 
   /** The one short hint for a previewed attack. */
   private opisPlanu(plan: PlanCiosu) {
-    if (plan.ok) return 'Naciśnij „Uderz”';
+    if (plan.ok) return komputer ? 'Kliknij jeszcze raz, żeby zaatakować' : 'Dotknij jeszcze raz, żeby zaatakować';
     if (plan.daleko) return komputer ? 'Za daleko – najpierw podejdź (kliknij pole)' : 'Za daleko – najpierw podejdź (dotknij pole)';
     const brak = plan.koszt - this.ruchy;
     if (brak > 0) return `Brakuje ${brak} ${brak === 1 ? 'ruchu' : 'ruchów'} – wybierz tańszy atak albo zakończ turę`;
@@ -1243,7 +1244,7 @@ export class TuryWalki {
     return q && atak ? { q, atak, plan: this.planCiosu(q, !!atak.mocny, atak) } : null;
   }
 
-  /** „Uderz” (or Enter): carries out the previewed attack – only when there are moves enough. */
+  /** The second tap on the picked attack (or Enter): carries it out – only when there are moves enough. */
   private uderz() {
     if (this.faza !== 'gracz' || this.busy) return;
     const w = this.podgladAtaku();
@@ -1626,7 +1627,6 @@ export class TuryWalki {
         ...st,
         bonus: this.bonusRuchy,
         podglad,
-        uderz: nasz && w ? { ok: w.plan.ok, id: w.atak.id, nazwa: w.atak.nazwa, brak: Math.max(0, w.plan.koszt - this.ruchy), daleko: !!w.plan.daleko } : null,
         kolo: this.podmenu ? 'bohater' : qw ? 'wrog' : null,
         ataki,
         ucieczkaPytanie: this.ucieczkaPytanie,
@@ -1660,6 +1660,8 @@ export class TuryWalki {
       g.fillStyle(0x59c8ff, this.nowy ? 0.12 : 0.18);
       const k = WT.kratkaPx;
       for (const c of this.zas.values()) g.fillRect(c.x - k / 2, feet(c.y) - k / 2, k, k);
+      // New controls: a clear edge of the reachable ground (owner, 20 Oct 2026: „wyraźniejsza granica ruchu”).
+      if (this.nowy) this.granica(g, k, feet);
       if (this.punkt) {
         const pts = droga(this.zas, this.punkt.k);
         g.fillStyle(0xbfeaff, 0.9);
@@ -1668,6 +1670,20 @@ export class TuryWalki {
       }
     }
     this.smok?.rysuj(now);
+    // New controls, nothing open: by turns the enemies the cheapest attack reaches now and the hero pulse – what can be tapped.
+    const zacheta = this.nowy && this.faza === 'gracz' && !this.busy && !this.podmenu && !this.koloWroga && !this.punkt && !wskaz
+      ? (Math.floor(now / 900) % 2 === 0 ? 'wrog' : 'bohater') : null;
+    const fala = 0.5 - 0.5 * Math.cos(((now % 900) / 900) * Math.PI * 2);
+    if (zacheta === 'bohater') {
+      g.lineStyle(2, 0x9fe8ff, 0.4 + 0.6 * fala).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 6 + 5 * fala, HERO_R + 4 + 2.5 * fala);
+    }
+    const najtanszy = zacheta === 'wrog' ? this.atakiDostepne().slice().sort((a, b) => a.koszt - b.koszt)[0] : undefined;
+    for (const q of this.zywi) {
+      if (najtanszy && q.e.visible) {
+        const pl = this.planCiosu(q, !!najtanszy.mocny, najtanszy);
+        if (pl.ok) g.lineStyle(2, 0xffd34a, 0.4 + 0.6 * fala).strokeEllipse(q.e.x, feet(q.e.y), q.r * 2 + 8 + 5 * fala, q.r + 5 + 2.5 * fala);
+      }
+    }
     for (const q of this.zywi) {
       const e = q.e;
       if (!e.visible) continue;
@@ -1714,6 +1730,22 @@ export class TuryWalki {
       }
       this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - (c.e.hd ? 12 : 9) * c.e.kind.scale - 3).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
     } else this.etykieta.setVisible(false);
+  }
+
+  /** The edge of the reachable ground: lines along every cell side with no reachable neighbour. */
+  private granica(g: Phaser.GameObjects.Graphics, k: number, feet: (y: number) => number) {
+    const z = this.zas;
+    if (!z) return;
+    const h = k / 2;
+    g.lineStyle(1.2, 0xbfeaff, 0.85);
+    for (const [key, c] of z) {
+      const [i, j] = key.split(',').map(Number);
+      const cy = feet(c.y);
+      if (!z.has(`${i - 1},${j}`)) g.lineBetween(c.x - h, cy - h, c.x - h, cy + h);
+      if (!z.has(`${i + 1},${j}`)) g.lineBetween(c.x + h, cy - h, c.x + h, cy + h);
+      if (!z.has(`${i},${j - 1}`)) g.lineBetween(c.x - h, cy - h, c.x + h, cy - h);
+      if (!z.has(`${i},${j + 1}`)) g.lineBetween(c.x - h, cy + h, c.x + h, cy + h);
+    }
   }
 
   // ------------------------------------------------------------------ the end

@@ -32,8 +32,6 @@ export interface StanKola extends StanPanelu {
   bonus: number;
   /** What a previewed action would spend: boots = walk up, swords = the blow. */
   podglad: PodgladRuchow | null;
-  /** The attack picked in the enemy's ring: „Uderz” carries it out (disabled when moves are short). */
-  uderz: { ok: boolean; id: string; nazwa: string; brak: number; daleko: boolean } | null;
 }
 
 export interface ObslugaKola extends ObslugaPanelu {
@@ -42,7 +40,6 @@ export interface ObslugaKola extends ObslugaPanelu {
   kolo(): void;
   unik(): void;
   atak(id: string): void;
-  uderz(): void;
 }
 
 const CSS = `
@@ -112,19 +109,13 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 .bz-mini .bz { width: 10px; height: 10px; box-shadow: none; animation: none; }
 .bz-mini .bz.bonus { border-width: 1px; }
 .bz-mini .bz.but { animation: none; }
-/* „Uderz”: the picked attack is only a preview until this is pressed (owner, 19 Oct 2026). */
-#walka-uderz { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 8;
-  min-width: 190px; min-height: 58px; padding: 6px 20px; border-radius: 30px; display: none; align-items: center; justify-content: center; gap: 10px;
-  font: 800 22px 'Alegreya Sans', sans-serif; letter-spacing: 1px; color: #2a1606; cursor: pointer;
-  background: linear-gradient(#ffe08a, #e0a030); border: 3px solid #7a4a10; box-shadow: 0 4px 12px #000a, inset 0 2px 0 #fff4c8; }
-#walka-uderz.on { display: flex; }
-#walka-uderz img, #walka-uderz svg { width: 30px; height: 30px; image-rendering: pixelated; }
-#walka-uderz .bz-mini { margin: 0; }
-#walka-uderz .bz-mini .bz { width: 12px; height: 12px; }
-#walka-uderz[aria-disabled="true"] { background: linear-gradient(#6a5a4a, #3e342a); color: #d8c8b0; border-color: #4a3a2a; font-size: 17px; letter-spacing: 0; }
-#walka-uderz.blysk { animation: wk-blysk 0.9s ease-in-out infinite; }
-#walka-kolo .wk-b.wybrany { border-color: #fff1a8; box-shadow: 0 0 0 3px #ffd34a, 0 0 14px 4px #ffd34acc, 0 3px 8px #000a; }
-@media (prefers-reduced-motion: reduce) { .bz.but, .bz.cios, .bz.miga, .bz.brak { animation: none; } }
+/* Picked attack: pulses fast – tap it again to attack (owner, 20 Oct 2026). Before a pick the cheapest one pulses slowly. */
+#walka-kolo .wk-b.wybrany { border-color: #fff1a8; animation: wk-wybrany 0.42s ease-in-out infinite !important; }
+#walka-kolo .wk-b.zacheta { animation: wk-zacheta 1.6s ease-in-out infinite; }
+@keyframes wk-wybrany { 0%, 100% { box-shadow: 0 0 0 3px #ffd34a, 0 0 10px 3px #ffd34aaa, 0 3px 8px #000a; transform: scale(1); }
+  50% { box-shadow: 0 0 0 5px #fff1a8, 0 0 22px 9px #ffd34add, 0 3px 8px #000a; transform: scale(1.1); } }
+@keyframes wk-zacheta { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a66, 0 3px 8px #000a; } 50% { box-shadow: 0 0 0 4px #ffd34acc, 0 0 14px 4px #ffd34a88, 0 3px 8px #000a; } }
+@media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b.zacheta { animation: none; } #walka-kolo .wk-b.wybrany { animation: none !important; box-shadow: 0 0 0 4px #fff1a8; } .bz.but, .bz.cios, .bz.miga, .bz.brak { animation: none; } }
 #walka-kolo { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 7; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; }
 #walka-kolo .wk-b { position: absolute; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; pointer-events: auto; cursor: pointer;
   border: 2px solid #b8893a; background: radial-gradient(circle at 40% 35%, #6a4c32, #2f2017); box-shadow: 0 3px 8px #000a, inset 0 1px 0 #ffffff33;
@@ -156,8 +147,7 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
 /* Ambers inside buttons: after the ring's icon sizes, so those don't blow them up. */
 #walka-kolo.wrog .wk-b .bz-mini svg.but-ik, #walka-kolo .wk-b .bz-mini svg.but-ik { width: 12px; height: 12px; }
-#walka-kolo.wrog .wk-b .bz svg, #walka-kolo .wk-b .bz svg, #walka-uderz .bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
-#walka-uderz .bz-mini svg.but-ik { width: 16px; height: 16px; }
+#walka-kolo.wrog .wk-b .bz svg, #walka-kolo .wk-b .bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
 @media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.mocny { animation: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
 `;
 
@@ -354,7 +344,6 @@ export class WalkaKolo {
   private el: HTMLDivElement;
   private ring: HTMLDivElement;
   private pula!: HTMLDivElement;
-  private uderzBtn!: HTMLButtonElement;
   private pulaKlucz = '';
   private klawisze = (e: KeyboardEvent) => this.klawisz(e);
   private stan: StanKola | null = null;
@@ -388,19 +377,12 @@ export class WalkaKolo {
     document.body.appendChild(ring);
     this.ring = ring;
     document.getElementById('walka-bursztyny')?.remove();
-    document.getElementById('walka-uderz')?.remove();
     const pula = document.createElement('div');
     pula.id = 'walka-bursztyny';
     pula.innerHTML = '<div class="bz-w" role="img"></div>';
     document.body.appendChild(pula);
     this.pula = pula;
-    const uderz = document.createElement('button');
-    uderz.id = 'walka-uderz';
-    uderz.type = 'button';
-    document.body.appendChild(uderz);
-    this.uderzBtn = uderz;
-    uderz.onclick = () => this.on.uderz();
-    for (const n of [el, ring, uderz]) for (const ev of ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click'] as const) n.addEventListener(ev, (e) => {
+    for (const n of [el, ring]) for (const ev of ['touchstart', 'touchend', 'mousedown', 'mouseup', 'click'] as const) n.addEventListener(ev, (e) => {
       // Only the buttons swallow taps: the ring's empty middle lets them through to the map (the hero).
       if (n !== ring || (e.target as HTMLElement).closest('.wk-b')) e.stopPropagation();
     });
@@ -497,10 +479,10 @@ export class WalkaKolo {
   private katy = KATY;
 
   /** `koszt` = small ambers' HTML (koszty()) or a short text („1/2”, „gotowy”); `opis` = its words for readers. */
-  private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean; wybrany?: boolean; opis?: string } = {}) {
+  private przycisk(klasa: string, ikona: string, nazwa: string, koszt: string, onClick: () => void, i: number, opts: { off?: boolean; blysk?: boolean; on?: boolean; uwaga?: boolean; wybrany?: boolean; zacheta?: boolean; opis?: string } = {}) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `wk-b ${klasa}${opts.blysk ? ' blysk' : ''}${opts.on ? ' on' : ''}${opts.uwaga ? ' uwaga' : ''}${opts.wybrany ? ' wybrany' : ''}`;
+    b.className = `wk-b ${klasa}${opts.blysk ? ' blysk' : ''}${opts.on ? ' on' : ''}${opts.uwaga ? ' uwaga' : ''}${opts.wybrany ? ' wybrany' : ''}${opts.zacheta ? ' zacheta' : ''}`;
     b.innerHTML = `${ikona}<span class="n">${nazwa}${koszt.startsWith('<') ? koszt : koszt ? `<small>${koszt}</small>` : ''}</span>`;
     b.setAttribute('aria-label', `${nazwa}${opts.opis ? `, ${opts.opis}` : ''}`);
     if (opts.wybrany) b.setAttribute('aria-pressed', 'true');
@@ -544,26 +526,6 @@ export class WalkaKolo {
     podp.textContent = gracz ? s.podpowiedz : s.tura === 'wrogowie' ? 'Przeciwnicy odpowiadają – poczekaj.' : 'Grupka się rozstawia…';
     podp.classList.toggle('rada', gracz && s.rada);
 
-    // „Uderz”: the picked attack's picture, the word and its cost; short of moves it says how many are missing.
-    const u = gracz && !s.busy && s.kolo === 'wrog' ? s.uderz : null;
-    const ub = this.uderzBtn;
-    const uk = JSON.stringify([u, s.podglad, s.bronId, this.wskaz()]);
-    if (ub.dataset.k !== uk) {
-      ub.dataset.k = uk;
-      ub.classList.toggle('on', !!u);
-      if (u) {
-        const ik: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa, mocny: IKONY.mocny };
-        const obraz = ik[u.id] ?? `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
-        const pg = s.podglad;
-        ub.setAttribute('aria-disabled', u.ok ? 'false' : 'true');
-        ub.innerHTML = u.ok
-          ? `${obraz}<span>UDERZ</span>${pg ? koszty(pg.but, pg.cios) : ''}`
-          : `${obraz}<span>${u.daleko ? 'Za daleko' : `Brakuje ${u.brak} ${u.brak === 1 ? 'ruchu' : 'ruchów'}`}</span>`;
-        ub.setAttribute('aria-label', u.ok ? `Uderz: ${u.nazwa}` : `${u.nazwa} – ${u.daleko ? 'za daleko' : `brakuje ${u.brak}`}`);
-        ub.classList.toggle('blysk', u.ok && this.wskaz() === 'cios');
-      }
-    }
-
     // The ring: rebuilt only when what it shows changes (its buttons animate in).
     const otwarte = gracz && !s.busy ? s.kolo : null;
     const klucz = JSON.stringify([otwarte, s.ruchy, s.hp, s.tryb, s.unik, s.zapowiedz, s.bron, s.bronId, s.ataki, this.wskaz()]);
@@ -588,9 +550,11 @@ export class WalkaKolo {
       this.katy = luk.katy;
       this.promien = luk.r;
       const ktos = s.ataki.some((a) => a.wybrany);
+      // Nothing picked yet: the cheapest affordable attack pulses slowly, as a hint where to tap.
+      const tani = ktos ? null : s.ataki.filter((a) => !a.off && !a.strona).sort((a, b) => a.koszt + a.podejscie - b.koszt - b.podejscie)[0] ?? null;
       s.ataki.slice(0, 4).forEach((a, i) => this.ring.append(this.przycisk(a.id, ikona[a.id] ?? bron, a.tekst,
         a.strona ?? koszty(a.podejscie, a.koszt), () => this.on.atak(a.id), i, {
-          off: a.off, wybrany: a.wybrany, blysk: wskaz === 'cios' && i === 0 && !ktos,
+          off: a.off, wybrany: a.wybrany, zacheta: a === tani && wskaz !== 'cios', blysk: wskaz === 'cios' && i === 0 && !ktos,
           opis: a.strona ? `strona ${a.strona}` : `${ruchyTxt(a.koszt)}${a.podejscie ? ` i ${ruchyTxt(a.podejscie)} na podejście` : ''}`,
         })));
     } else {
@@ -619,6 +583,5 @@ export class WalkaKolo {
     this.el.remove();
     this.ring.remove();
     this.pula.remove();
-    this.uderzBtn.remove();
   }
 }

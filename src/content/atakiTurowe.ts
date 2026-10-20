@@ -50,8 +50,8 @@ export interface RodzajAtaku {
 }
 
 export const ATAKI: RodzajAtaku[] = [
-  { id: 'cios', nazwa: 'Cios', bron: 'wrecz', koszt: 1, mnoznik: 1, obszar: 'jeden', opis: 'Zwykły cios.' },
-  { id: 'mocny', nazwa: 'Mocny cios', bron: 'wrecz', koszt: 2, mnoznik: 1, mocny: true, obszar: 'jeden', opis: 'Zawsze trafia i ogłusza na turę.' },
+  { id: 'cios', nazwa: 'Atak', bron: 'wrecz', koszt: 1, mnoznik: 1, obszar: 'jeden', opis: 'Zwykły atak.' },
+  { id: 'mocny', nazwa: 'Mocny atak', bron: 'wrecz', koszt: 2, mnoznik: 1, mocny: true, obszar: 'jeden', opis: 'Zawsze trafia i ogłusza na turę.' },
   {
     id: 'zamach', nazwa: 'Zamach', bron: 'wrecz', koszt: 2, mnoznik: 0.7, obszar: 'zamach', katStopnie: 140,
     wymaga: { umiejetnosc: { u: 'miecz', poziom: 5 } }, opis: 'Szeroki zamach – trafia wszystkich wrogów obok celu.',

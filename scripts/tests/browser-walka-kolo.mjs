@@ -188,7 +188,12 @@ try {
   assert.equal(bar.stare, 0, 'no old buttons');
   assert(bar.top < 20 && bar.bottom < 140, 'the bar is at the top');
   assert(bar.left >= 0 && bar.right <= (mobile ? Number(process.env.SZER || 390) : 1280), 'the bar fits the screen');
+  // Nothing open: the hero and attackable enemies pulse by turns; the reachable ground has an edge.
+  const zach = await g(() => { const w = window.__game.scene.getScene('game').walka; const z = w.zas; let brzeg = 0; for (const k of z.keys()) { const [i, j] = k.split(',').map(Number); if (!z.has(`${i + 1},${j}`)) brzeg++; } return { brzeg, n: z.size }; });
+  assert(zach.brzeg > 3 && zach.brzeg < zach.n, 'an edge of the range');
   await page.screenshot({ path: `work/walka-${tag}-1-start.png` });
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `work/walka-${tag}-1b-puls.png` });
 
   // ---- 2. A computer: hovering an enemy previews, no move spent.
   let p = await heroPos();
@@ -227,7 +232,9 @@ try {
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
   console.log('enemy ring', JSON.stringify(ringW));
   assert.equal(ringW.length, 2, 'only the unlocked attacks in the enemy ring (Cios, Mocny cios) – no locked Zamach');
-  assert(/cios/.test(ringW[0]) && /mocny/.test(ringW[1]), 'Cios and Mocny cios');
+  assert(/\bcios\b.*Atak/.test(ringW[0]) && /\bmocny\b.*Mocny atak/.test(ringW[1]), 'Atak and Mocny atak');
+  // Before a pick the cheapest attack pulses slowly.
+  assert.equal(await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zacheta')?.classList.contains('cios')), true, 'Atak pulses as a hint');
   assert(!/%|pokona|Podejdź \+|\d ruch(y|ów)?\b|z podejściem/.test(await page.evaluate(() => document.body.innerText + window.__game.scene.getScene('game').walka.etykieta.text)), 'no percentages, no cost texts');
   const mini = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => ({ k: b.className, bz: b.querySelectorAll('.bz-mini .bz:not(.but)').length, but: b.querySelectorAll('.bz-mini .bz.but').length, ik: !!b.querySelector('.but-ik') })));
   console.log('small ambers', JSON.stringify(mini));
@@ -244,16 +251,19 @@ try {
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios').click());
   await page.waitForTimeout(350);
   // Picking is a preview: nothing spent, the ambers that would go pulse, „Uderz” shows.
-  const pg = await page.evaluate(() => ({ but: document.querySelectorAll('#walka-bursztyny .bz.but').length, cios: document.querySelectorAll('#walka-bursztyny .bz.cios').length, uderz: document.querySelector('#walka-uderz.on')?.getAttribute('aria-disabled'), podp: document.querySelector('#walka-panel .wn-podp').textContent, wybrany: !!document.querySelector('#walka-kolo .wk-b.cios.wybrany') }));
+  const pg = await page.evaluate(() => ({ but: document.querySelectorAll('#walka-bursztyny .bz.but').length, cios: document.querySelectorAll('#walka-bursztyny .bz.cios').length, podp: document.querySelector('#walka-panel .wn-podp').textContent, wybrany: !!document.querySelector('#walka-kolo .wk-b.cios.wybrany'), szybko: document.querySelector('#walka-kolo .wk-b.cios') && getComputedStyle(document.querySelector('#walka-kolo .wk-b.cios')).animationName, stary: !!document.getElementById('walka-uderz') }));
   console.log('preview', JSON.stringify(pg));
   assert.equal((await fight()).ruchy, r0, 'picking an attack spends nothing');
   assert.equal(pg.but + pg.cios, plan.koszt, 'the ambers to be spent pulse');
   assert.equal(pg.cios, 1, 'one for the blow');
-  assert.equal(pg.uderz, 'false', '„Uderz” ready');
+  assert.equal(pg.stary, false, 'no „Uderz” button');
+  assert.equal(pg.szybko, 'wk-wybrany', 'the picked attack pulses fast');
+  assert.match(pg.podp, /jeszcze raz/);
   assert(pg.wybrany, 'the picked attack is marked');
   await page.screenshot({ path: `work/walka-${tag}-2a-podglad.png` });
-  if (mobile) await page.locator('#walka-uderz').tap();
-  else await page.locator('#walka-uderz').click();
+  // The second tap on the same attack attacks.
+  if (mobile) await page.locator('#walka-kolo .wk-b.cios').tap({ force: true });
+  else await page.locator('#walka-kolo .wk-b.cios').click({ force: true });
   await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || w.busy; }, null, { timeout: 5000 }).catch(() => {});
   // Closest point of the strike (sampled while it lasts).
   let najblizej = Infinity;
@@ -328,7 +338,7 @@ try {
     const r0 = f.ruchy;
     await tapWorld(t.x, t.y - 4);
     const zrob = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
-    if (zrob) { await page.waitForTimeout(100); await page.evaluate(() => document.querySelector('#walka-uderz.on:not([aria-disabled="true"])')?.click()); }
+    if (zrob) { await page.waitForTimeout(100); await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios.wybrany:not([aria-disabled="true"])')?.click()); }
     await page.waitForTimeout(150);
     await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 30000 });
     const w2 = await fight();
@@ -369,7 +379,7 @@ try {
   await page.screenshot({ path: `work/walka-${tag}-8-zamach.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
   await page.waitForTimeout(150);
-  await page.evaluate(() => document.querySelector('#walka-uderz').click());
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());
   await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
   f = await fight();
   const trafieni = f.zywi.filter((q, i) => q.hp < hp0[i]).length;
@@ -392,7 +402,7 @@ try {
   await page.screenshot({ path: `work/walka-${tag}-8b-wachlarz.png` });
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.wachlarz').click());
   await page.waitForTimeout(150);
-  await page.evaluate(() => document.querySelector('#walka-uderz').click());
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.wachlarz').click());
   await page.waitForTimeout(150);
   await page.screenshot({ path: `work/walka-${tag}-8c-ogien.png` });
   await page.waitForFunction(() => { const w = window.__game.scene.getScene('game').walka; return !w || !w.busy; }, null, { timeout: 20000 });
@@ -429,16 +439,15 @@ try {
   await page.waitForTimeout(400);
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.mocny').click());
   await page.waitForTimeout(300);
-  const krotko = await page.evaluate(() => ({ brak: document.querySelectorAll('#walka-bursztyny .bz.brak').length, miga: document.querySelectorAll('#walka-bursztyny .bz.miga').length, off: document.querySelector('#walka-kolo .wk-b.mocny').getAttribute('aria-disabled'), uderz: document.querySelector('#walka-uderz.on')?.getAttribute('aria-disabled'), napis: document.querySelector('#walka-uderz').textContent, podp: document.querySelector('#walka-panel .wn-podp').textContent }));
+  const krotko = await page.evaluate(() => ({ brak: document.querySelectorAll('#walka-bursztyny .bz.brak').length, miga: document.querySelectorAll('#walka-bursztyny .bz.miga').length, off: document.querySelector('#walka-kolo .wk-b.mocny').getAttribute('aria-disabled'), podp: document.querySelector('#walka-panel .wn-podp').textContent }));
   console.log('short', JSON.stringify(krotko));
   assert(krotko.brak >= 1 && krotko.miga === 1, 'missing ambers dashed, the left one blinks');
   assert.equal(krotko.off, 'true', 'the button greyed');
-  assert.equal(krotko.uderz, 'true', '„Uderz” disabled');
   assert.match(krotko.podp, /^Brakuje 1 ruchu/);
   await page.screenshot({ path: `work/walka-${tag}-7-brakuje.png` });
-  await page.evaluate(() => document.querySelector('#walka-uderz').click());
+  await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.mocny').click());
   await page.waitForTimeout(300);
-  assert.equal((await fight()).ruchy, 1, 'nothing done');
+  assert.equal((await fight()).ruchy, 1, 'a second tap does nothing when short');
   // 7 moves, 2 of them from the hotel/luck: two rows of 4, bright rims; 10 moves: one amber with ×10.
   await g(() => { const w = window.__game.scene.getScene('game').walka; w.koloWroga = null; w.wybranyAtak = null; w.ruchy = 6; w.maxRuchy = 7; w.bonusRuchy = 2; w.przelicz(); });
   const siedem = await page.evaluate(() => ({ n: document.querySelectorAll('#walka-bursztyny .bz').length, bonus: document.querySelectorAll('#walka-bursztyny .bz.bonus').length, kol: getComputedStyle(document.querySelector('#walka-bursztyny .bz-w')).gridTemplateColumns.split(' ').length }));

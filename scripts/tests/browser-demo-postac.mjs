@@ -195,10 +195,10 @@ try {
         // A phone: the second tap strikes (a computer struck on the click); nothing to do → end the turn.
         // The dragon's ring of blows: „Cios” (nothing to do → end the turn).
         const zrobil = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
-        // Picking „Cios” only previews it (the ambers pulse); „Uderz” strikes (19 Oct 2026).
+        // Picking „Atak” only previews it (the ambers pulse); the second tap attacks (20 Oct 2026).
         if (zrobil) {
           await page.waitForTimeout(200);
-          await page.evaluate(() => document.querySelector('#walka-uderz.on:not([aria-disabled="true"])')?.click());
+          await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios.wybrany:not([aria-disabled="true"])')?.click());
         } else await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
       } else await page.evaluate(() => {
         const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
@@ -243,7 +243,7 @@ try {
       await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
     }
     await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
-    await page.waitForFunction(() => /Bij dalej|Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Bij dalej|Atakuj dalej|Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
     for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
     console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, zaatak: s.demoRun?.zaatakowal, w: window.__widziane, pod: document.getElementById('walka-panel')?.textContent?.slice(0,200), dv: s.demoRun?.dragon?.visible, dact: s.demoRun?.dragon?.active, dhp: s.demoRun?.dragon?.hp, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
     await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? '') || document.getElementById('demo-black'), null, { timeout: 30000 });
