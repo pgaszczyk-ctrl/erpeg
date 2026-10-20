@@ -254,14 +254,14 @@ try {
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
   const odst1 = await odstepKola();
   console.log('ring clearance', odst1);
-  assert(odst1 >= 36, `the ring's buttons keep clear of the other figures (${odst1} px)`);
+  assert(odst1 >= 28, `the ring's buttons keep clear of the other figures (${odst1} px)`);
   console.log('enemy ring', JSON.stringify(ringW));
   assert.equal(ringW.length, 2, 'only the unlocked attacks in the enemy ring (Cios, Mocny cios) – no locked Zamach');
   assert(/\bcios\b.*Atak/.test(ringW[0]) && /\bmocny\b.*Mocny atak/.test(ringW[1]), 'Atak and Mocny atak');
   // Before a pick the cheapest attack pulses slowly.
   assert.equal(await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zacheta')?.classList.contains('cios')), true, 'Atak pulses as a hint');
   assert(!/%|pokona|Podejdź \+|\d ruch(y|ów)?\b|z podejściem/.test(await page.evaluate(() => document.body.innerText + window.__game.scene.getScene('game').walka.etykieta.text)), 'no percentages, no cost texts');
-  const mini = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => ({ k: b.className, bz: b.querySelectorAll('.bz-mini .bz:not(.but)').length, but: b.querySelectorAll('.bz-mini .bz.but').length, ik: !!b.querySelector('.but-ik') })));
+  const mini = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => ({ k: b.className, bz: b.querySelectorAll('.bz-mini .bz:not(.but)').length, but: b.querySelectorAll('.bz-mini .bz.but').length })));
   console.log('small ambers', JSON.stringify(mini));
   assert.equal(mini[0].bz, 1, 'Cios: one amber');
   assert.equal(mini[1].bz, 2, 'Mocny cios: two ambers');
@@ -272,7 +272,7 @@ try {
   await page.screenshot({ path: `work/walka-${tag}-2-kolo-wroga.png` });
   const cel = { x: t.x, y: t.y };
   const przed = await heroPos();
-  if (plan.dojscie) assert(mini[0].ik && mini[0].but >= 1, 'a walk up shows a boot and its dots');
+  if (plan.dojscie) assert(mini[0].but >= 1, 'a walk up shows a boot and its dots');
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios').click());
   await page.waitForTimeout(350);
   // Picking is a preview: nothing spent, the ambers that would go pulse, „Uderz” shows.

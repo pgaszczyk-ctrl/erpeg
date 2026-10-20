@@ -50,10 +50,11 @@ const panelWymuszony = (() => {
 /**
  * The turn fight's controls (owner, 19 Oct 2026, test server): a tap on an enemy = approach and strike, a tap on
  * the ground = walk, a tap on the hero = a ring of the rarer actions; the turn shown in a bar at the top.
- * Production (the QR demo) keeps the old bottom panel. `?panel=stary|nowy` switches it (remembered on the device).
+ * Production's QR demo uses it too since 1.031 (owner, 20 Oct 2026: „oba dema i na produkcję”).
+ * `?panel=stary|nowy` switches it (remembered on the device).
  */
 export function nowyPanel() {
   if (panelWymuszony === 'stary') return false;
   if (panelWymuszony === 'nowy') return true;
-  return TEST;
+  return TEST || demo.on;
 }

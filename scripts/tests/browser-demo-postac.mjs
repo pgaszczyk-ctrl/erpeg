@@ -64,9 +64,9 @@ try {
   page.on('dialog', (d) => d.accept());
   const tury = process.env.TURY !== '0';
   const PROD = !!process.env.PROD;
-  // The turn fight's new controls (test server; walka/tryb.ts nowyPanel) unless PANEL=stary or a production build.
-  const nowy = !PROD && process.env.PANEL !== 'stary';
-  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}${nowy || PROD ? '' : '&panel=stary'}`);
+  // The turn fight's new controls (walka/tryb.ts nowyPanel: test server and every QR demo) unless PANEL=stary.
+  const nowy = process.env.PANEL !== 'stary';
+  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}${nowy ? '' : '&panel=stary'}`);
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });

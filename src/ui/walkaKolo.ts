@@ -42,6 +42,8 @@ export interface ObslugaKola extends ObslugaPanelu {
   atak(id: string): void;
 }
 
+/** Where the artist's ambers lie (public/walka/bursztynki, pack bursztynki v1). */
+const AMBER = (import.meta.env.BASE_URL || '/') + 'walka/bursztynki/';
 const CSS = `
 body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-quest, body.walka-tur.walka-kolo #hud .hud-money { display: none !important; }
 #walka-panel.wn { position: fixed; left: 50%; top: max(6px, env(safe-area-inset-top)); transform: translateX(-50%);
@@ -89,16 +91,16 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-bursztyny .bz-w { position: absolute; left: 0; top: 0; transform: translateX(-50%); display: grid; gap: 3px; justify-items: center;
   padding: 3px 4px; border-radius: 9px; background: #1e1a24a8; }
 #walka-bursztyny.ukryj .bz-w { display: none; }
-.bz { position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
-  background: radial-gradient(circle at 35% 30%, #fff3c4 0 14%, #ffc64a 30%, #e08a1a 70%, #9a5410 100%);
-  border: 1px solid #6a3a0c; box-shadow: 0 0 5px #ffae3088; }
-.bz.pusty { background: radial-gradient(circle at 35% 30%, #5a4428 0 12%, #3a2a1a 45%, #241810 100%); border-color: #5a4022; box-shadow: none; }
-.bz.bonus { border: 2px solid #fff1c8; box-shadow: 0 0 6px #fff1a8cc; }
-.bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
-.bz.but { background: radial-gradient(circle at 35% 30%, #ffffff 0 16%, #fff0b8 40%, #ffd96a 100%); border-color: #c98a1a; animation: bz-puls 0.8s ease-in-out infinite; }
-.bz.cios { background: radial-gradient(circle at 35% 30%, #ffc49a 0 14%, #c8602a 45%, #7a2e10 100%); border-color: #4a1a08; animation: bz-puls 0.8s ease-in-out infinite; }
+/* The artist's ambers (pack bursztynki v1, 48 px, shown smaller): full, spent, from an item (brass setting),
+   walk-up cost (boot), blow cost (sword), missing (dashed). */
+.bz { position: relative; display: inline-block; width: 18px; height: 18px; box-sizing: border-box;
+  background: url(${AMBER}amber_full.png) center / contain no-repeat; }
+.bz.pusty { background-image: url(${AMBER}amber_spent.png); }
+.bz.bonus.pelny { background-image: url(${AMBER}amber_item.png); }
+.bz.but { background-image: url(${AMBER}amber_cost_move.png); animation: bz-puls 0.8s ease-in-out infinite; }
+.bz.cios { background-image: url(${AMBER}amber_cost_strike.png); animation: bz-puls 0.8s ease-in-out infinite; }
 .bz.miga { animation: bz-miga 0.5s steps(2, jump-none) infinite; }
-.bz.brak { background: none; border: 2px dashed #ff4a3a; box-shadow: none; animation: bz-miga 0.5s steps(2, jump-none) infinite; }
+.bz.brak { background-image: url(${AMBER}amber_missing.png); animation: bz-miga 0.5s steps(2, jump-none) infinite; }
 .bz-wiele { display: flex; align-items: center; gap: 3px; font: 700 13px 'Pixelify Sans', monospace; color: #ffd98a; text-shadow: 0 1px 1px #000; white-space: nowrap; }
 .bz-wiele b { color: #ffb08a; font-weight: 700; }
 .bz-wiele b.zle { color: #ff6a5a; }
@@ -106,9 +108,7 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 @keyframes bz-miga { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
 /* Small ambers on the ring's buttons, in place of the cost text. */
 .bz-mini { display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 2px; }
-.bz-mini .bz { width: 10px; height: 10px; box-shadow: none; animation: none; }
-.bz-mini .bz.bonus { border-width: 1px; }
-.bz-mini .bz.but { animation: none; }
+.bz-mini .bz { width: 14px; height: 14px; animation: none; }
 /* Picked attack: pulses fast – tap it again to attack (owner, 20 Oct 2026). Before a pick the cheapest one pulses slowly. */
 #walka-kolo .wk-b.wybrany { border-color: #fff1a8; animation: wk-wybrany 0.42s ease-in-out infinite !important; }
 #walka-kolo .wk-b.zacheta { animation: wk-zacheta 1.6s ease-in-out infinite; }
@@ -146,8 +146,6 @@ body.walka-tur.walka-kolo #hud .hud-plate, body.walka-tur.walka-kolo #hud .hud-q
 #walka-panel[data-wskaz="lecz"] ~ #walka-kolo .wk-b.lecz { border-color: #ffd34a; animation: wk-blysk 0.9s ease-in-out infinite; }
 @keyframes wk-blysk { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
 /* Ambers inside buttons: after the ring's icon sizes, so those don't blow them up. */
-#walka-kolo.wrog .wk-b .bz-mini svg.but-ik, #walka-kolo .wk-b .bz-mini svg.but-ik { width: 12px; height: 12px; }
-#walka-kolo.wrog .wk-b .bz svg, #walka-kolo .wk-b .bz svg { position: absolute; inset: 1px; width: calc(100% - 2px); height: calc(100% - 2px); }
 @media (prefers-reduced-motion: reduce) { #walka-kolo .wk-b { transition: none; } #walka-kolo .wk-b.mocny { animation: none; } #walka-kolo .wk-b.blysk { animation: none; box-shadow: 0 0 0 3px #ffd34a; } }
 `;
 
@@ -291,40 +289,15 @@ const IKONY = {
   ], K),
 };
 
-/** Small marks inside the ambers: a boot (walk up) and a sword (the blow). */
-const BUT = piksele([
-  '........',
-  '..ooo...',
-  '..ooo...',
-  '..ooo...',
-  '..oooo..',
-  '..ooooo.',
-  '.oooooo.',
-  '........',
-], { o: '#5a3410' });
-const MIECZYK = piksele([
-  '......o.',
-  '.....oo.',
-  '....oo..',
-  '.o.oo...',
-  '..oo....',
-  '.o.o....',
-  'o.......',
-  '........',
-], { o: '#fff1d8' });
-/** A boot drawn beside the small ambers on a button (the walk up). */
-const BUT_IKONA = BUT.replace('<svg ', '<svg class="but-ik" ');
-
-/** Amber-mark HTML: `stan` = full/spent/preview kinds. */
+/** Amber-mark HTML: the classes pick the artist's picture (CSS above). */
 function bz(kl: string) {
-  const ik = /\bbut\b/.test(kl) ? BUT : /\bcios\b/.test(kl) ? MIECZYK : '';
-  return `<i class="bz ${kl}">${ik}</i>`;
+  return `<i class="bz ${kl}"></i>`;
 }
 
 /** Small ambers for a cost: boots + their dots for the walk up, then the blow's own. */
 function koszty(but: number, cios: number) {
   if (!but && !cios) return '';
-  return `<span class="bz-mini">${but ? BUT_IKONA + bz('but').repeat(but) : ''}${bz('').repeat(cios)}</span>`;
+  return `<span class="bz-mini">${bz('but').repeat(but)}${bz('pelny').repeat(cios)}</span>`;
 }
 
 /** Ring radius (CSS px) and the two buttons' places: upper left and upper right of the figure (not on it). */
@@ -511,7 +484,7 @@ export class WalkaKolo {
     }
     for (let i = 0; i < brak; i++) klasy.push('brak');
     const n = klasy.length;
-    w.style.gridTemplateColumns = `repeat(${n >= 6 ? 4 : Math.max(1, n)}, 14px)`;
+    w.style.gridTemplateColumns = `repeat(${n >= 6 ? 4 : Math.max(1, n)}, 18px)`;
     w.innerHTML = klasy.map(bz).join('');
   }
 
