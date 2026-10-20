@@ -1,6 +1,16 @@
-# Exp-lore — postacie modułowe v6.1
+# Exp-lore — postacie modułowe v6.3
 
 20 postaci, po 2 części: głowa z włosami/zarostem/nakryciem oraz kompletne ciałko. 7 ciałek `f` i 13 ciałek `m`. Oznaczenie dotyczy przypisania do pierwowzoru postaci.
+
+## Korekta 41-G004 — szyja, rewizja 6.3
+
+Zmieniono punkty szyi: każde `neck.y` jest o 1 px niżej niż w v6.2, przy granicy kołnierza. Głowa zasłania przez to wystający fragment szyi. Osie X, punkty głów i wszystkie piksele części oraz masek są zachowane. Użyj nowego manifestu albo gotowego `dla_programisty/src/content/modulDane.ts`. Nie dodawaj osobnego przesunięcia w kodzie. W `dla_programisty/` są też cztery gotowe paski PNG do repozytorium.
+
+Porównanie: `preview/41-G004_szyja_przed_po.png`. Pełny opis: `developer/41-G004_szyja.md`. Podgląd HTML i główne GIF-y pokazują nowy montaż; podglądy z numerami wcześniejszych wiadomości pozostają dokumentacją historyczną.
+
+## Korekta 41-G003 — rewizja 6.2
+
+Uzupełniono maski skóry na policzkach, uszach i pod okularami w 23 widokach głów. Usunięto 13 luźnych pikseli z frontowej głowy 06. Wszystkie ciałka, ich maski i wszystkie kotwice są identyczne z v6.1. Dodano trzy ikony w `ui_icons/`, diagnozę i minimalną poprawkę CSS w `developer/41-G003_*` oraz porównanie przed/po w `preview/41-G003_maski_i_sepia.png`. Wyłączyć sepię na całej postaci, aby podgląd pokazywał wybrane kolory.
 
 ## Korekta 41-P002 — rewizja 6.1
 

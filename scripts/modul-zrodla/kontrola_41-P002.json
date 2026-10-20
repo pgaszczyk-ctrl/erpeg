@@ -1,6 +1,6 @@
 {
   "reference": "41-P002",
-  "revision": "6.1",
+  "revision": "6.2",
   "bodies_checked": 180,
   "detached_body_components": 0,
   "pairings_checked": 3600,
@@ -21,6 +21,18 @@
     {
       "file": "parts_64/01_warkocze_f_back_step_b_head.png",
       "changed_pixels": 2
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_a_head.png",
+      "changed_pixels": 13
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_idle_head.png",
+      "changed_pixels": 13
+    },
+    {
+      "file": "parts_64/06_ogrodniczka_f_front_step_b_head.png",
+      "changed_pixels": 13
     },
     {
       "file": "parts_64/08_kurierka_f_left_step_a_head.png",

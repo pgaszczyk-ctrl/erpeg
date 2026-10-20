@@ -1,0 +1,5 @@
+/* Load after the existing rules in index.html. */
+.k-dag-pic { filter: none; }
+.k-dag-hero { image-rendering: pixelated; }
+/* The filter must be removed from the parent .k-dag-pic.
+   Setting filter:none on the child alone cannot undo the parent's sepia. */

@@ -1,8 +1,8 @@
 {
   "version": 6,
   "source_version": 5,
-  "revision": "6.1",
-  "correction": "41-P002",
+  "revision": "6.3",
+  "correction": "41-G004 neck seam",
   "gender_values": {
     "f": "female",
     "m": "male"
@@ -67,7 +67,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -99,7 +99,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -117,7 +117,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -135,7 +135,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -151,7 +151,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -177,7 +177,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -195,7 +195,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -213,7 +213,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -229,7 +229,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -248,7 +248,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -266,7 +266,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -284,7 +284,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -312,7 +312,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -344,7 +344,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -362,7 +362,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -380,7 +380,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -396,7 +396,7 @@
           },
           "neck": {
             "x": 34.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 34.0,
@@ -422,7 +422,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -440,7 +440,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -458,7 +458,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -474,7 +474,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 34.0
+            "y": 35.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -493,7 +493,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -511,7 +511,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -529,7 +529,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -557,7 +557,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.0,
@@ -589,7 +589,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -607,7 +607,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -625,7 +625,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -641,7 +641,7 @@
           },
           "neck": {
             "x": 31.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 31.0,
@@ -667,7 +667,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -685,7 +685,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -703,7 +703,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -719,7 +719,7 @@
           },
           "neck": {
             "x": 31.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 31.0,
@@ -738,7 +738,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -756,7 +756,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -774,7 +774,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -802,7 +802,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -834,7 +834,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -852,7 +852,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -870,7 +870,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -886,7 +886,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -912,7 +912,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -930,7 +930,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -948,7 +948,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -964,7 +964,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 34.0
+            "y": 35.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -983,7 +983,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1001,7 +1001,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1019,7 +1019,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 34.0
+                "y": 35.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1047,7 +1047,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -1079,7 +1079,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1097,7 +1097,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1115,7 +1115,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1131,7 +1131,7 @@
           },
           "neck": {
             "x": 31.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 31.0,
@@ -1157,7 +1157,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1175,7 +1175,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1193,7 +1193,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1209,7 +1209,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -1228,7 +1228,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -1246,7 +1246,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1264,7 +1264,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1292,7 +1292,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -1324,7 +1324,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1342,7 +1342,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1360,7 +1360,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -1376,7 +1376,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -1402,7 +1402,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1420,7 +1420,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1438,7 +1438,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -1454,7 +1454,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -1473,7 +1473,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1491,7 +1491,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1509,7 +1509,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1537,7 +1537,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -1569,7 +1569,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1587,7 +1587,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1605,7 +1605,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1621,7 +1621,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -1647,7 +1647,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1665,7 +1665,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1683,7 +1683,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1699,7 +1699,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -1718,7 +1718,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1736,7 +1736,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1754,7 +1754,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1782,7 +1782,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -1814,7 +1814,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -1832,7 +1832,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1850,7 +1850,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -1866,7 +1866,7 @@
           },
           "neck": {
             "x": 30.0,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 30.0,
@@ -1892,7 +1892,7 @@
               },
               "neck": {
                 "x": 30.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1910,7 +1910,7 @@
               },
               "neck": {
                 "x": 30.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1928,7 +1928,7 @@
               },
               "neck": {
                 "x": 30.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1944,7 +1944,7 @@
           },
           "neck": {
             "x": 30.5,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 30.5,
@@ -1963,7 +1963,7 @@
               },
               "neck": {
                 "x": 30.5,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1981,7 +1981,7 @@
               },
               "neck": {
                 "x": 30.5,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -1999,7 +1999,7 @@
               },
               "neck": {
                 "x": 30.5,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2027,7 +2027,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -2059,7 +2059,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2077,7 +2077,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2095,7 +2095,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2111,7 +2111,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -2137,7 +2137,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -2155,7 +2155,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2173,7 +2173,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -2189,7 +2189,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -2208,7 +2208,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2226,7 +2226,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2244,7 +2244,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2272,7 +2272,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -2304,7 +2304,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2322,7 +2322,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2340,7 +2340,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2356,7 +2356,7 @@
           },
           "neck": {
             "x": 34.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 34.0,
@@ -2382,7 +2382,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2400,7 +2400,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2418,7 +2418,7 @@
               },
               "neck": {
                 "x": 34.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2434,7 +2434,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -2453,7 +2453,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -2471,7 +2471,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2489,7 +2489,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -2517,7 +2517,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -2549,7 +2549,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -2567,7 +2567,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2585,7 +2585,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2601,7 +2601,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -2627,7 +2627,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2645,7 +2645,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2663,7 +2663,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2679,7 +2679,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -2698,7 +2698,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2716,7 +2716,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2734,7 +2734,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2762,7 +2762,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -2794,7 +2794,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2812,7 +2812,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2830,7 +2830,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2846,7 +2846,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -2872,7 +2872,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2890,7 +2890,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2908,7 +2908,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2924,7 +2924,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -2943,7 +2943,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2961,7 +2961,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -2979,7 +2979,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3007,7 +3007,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 40.0
+            "y": 41.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.0,
@@ -3039,7 +3039,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 40.0
+                "y": 41.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3057,7 +3057,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 40.0
+                "y": 41.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3075,7 +3075,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 40.0
+                "y": 41.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3091,7 +3091,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -3117,7 +3117,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3135,7 +3135,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3153,7 +3153,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -3169,7 +3169,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -3188,7 +3188,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3206,7 +3206,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3224,7 +3224,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3252,7 +3252,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.0,
@@ -3284,7 +3284,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3302,7 +3302,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3320,7 +3320,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3336,7 +3336,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -3362,7 +3362,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -3380,7 +3380,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3398,7 +3398,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -3414,7 +3414,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -3433,7 +3433,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3451,7 +3451,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3469,7 +3469,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3497,7 +3497,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 31.5,
@@ -3529,7 +3529,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3547,7 +3547,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3565,7 +3565,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3581,7 +3581,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -3607,7 +3607,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3625,7 +3625,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3643,7 +3643,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -3659,7 +3659,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -3678,7 +3678,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3696,7 +3696,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3714,7 +3714,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3742,7 +3742,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -3774,7 +3774,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3792,7 +3792,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3810,7 +3810,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3826,7 +3826,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -3852,7 +3852,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3870,7 +3870,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3888,7 +3888,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3904,7 +3904,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -3923,7 +3923,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3941,7 +3941,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3959,7 +3959,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -3987,7 +3987,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -4019,7 +4019,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4037,7 +4037,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4055,7 +4055,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4071,7 +4071,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -4097,7 +4097,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4115,7 +4115,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4133,7 +4133,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -4149,7 +4149,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -4168,7 +4168,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4186,7 +4186,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4204,7 +4204,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4232,7 +4232,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.0,
@@ -4264,7 +4264,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4282,7 +4282,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4300,7 +4300,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4316,7 +4316,7 @@
           },
           "neck": {
             "x": 28.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 28.0,
@@ -4342,7 +4342,7 @@
               },
               "neck": {
                 "x": 28.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4360,7 +4360,7 @@
               },
               "neck": {
                 "x": 28.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4378,7 +4378,7 @@
               },
               "neck": {
                 "x": 28.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4394,7 +4394,7 @@
           },
           "neck": {
             "x": 31.0,
-            "y": 36.0
+            "y": 37.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 31.0,
@@ -4413,7 +4413,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4431,7 +4431,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4449,7 +4449,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 36.0
+                "y": 37.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4477,7 +4477,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 32.5,
@@ -4509,7 +4509,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4527,7 +4527,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4545,7 +4545,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4561,7 +4561,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 32.0,
@@ -4587,7 +4587,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4605,7 +4605,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4623,7 +4623,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4639,7 +4639,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 35.0
+            "y": 36.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 32.0,
@@ -4658,7 +4658,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4676,7 +4676,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4694,7 +4694,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 35.0
+                "y": 36.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 1
@@ -4722,7 +4722,7 @@
           },
           "neck": {
             "x": 32.0,
-            "y": 39.0
+            "y": 40.0
           },
           "axis_method": "midpoint_of_front_eyes",
           "head_axis_x": 34.5,
@@ -4754,7 +4754,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4772,7 +4772,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4790,7 +4790,7 @@
               },
               "neck": {
                 "x": 32.0,
-                "y": 39.0
+                "y": 40.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4806,7 +4806,7 @@
           },
           "neck": {
             "x": 29.0,
-            "y": 37.0
+            "y": 38.0
           },
           "axis_method": "profile_neck_projection",
           "head_axis_x": 29.0,
@@ -4832,7 +4832,7 @@
               },
               "neck": {
                 "x": 29.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": -1
@@ -4850,7 +4850,7 @@
               },
               "neck": {
                 "x": 29.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4868,7 +4868,7 @@
               },
               "neck": {
                 "x": 29.0,
-                "y": 37.0
+                "y": 38.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4884,7 +4884,7 @@
           },
           "neck": {
             "x": 31.0,
-            "y": 38.0
+            "y": 39.0
           },
           "axis_method": "back_neck_center",
           "head_axis_x": 31.0,
@@ -4903,7 +4903,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4921,7 +4921,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -4939,7 +4939,7 @@
               },
               "neck": {
                 "x": 31.0,
-                "y": 38.0
+                "y": 39.0
               },
               "foot_bottom_edge_y": 61,
               "source_registration_dx": 0
@@ -5906,7 +5906,7 @@
       "mask_512": "masks_512/01_warkocze_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 36.0
+        "y": 37.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -5923,7 +5923,7 @@
       "mask_512": "masks_512/02_kowal_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 36.0
+        "y": 37.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -5940,7 +5940,7 @@
       "mask_512": "masks_512/03_pilotka_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 38.0
+        "y": 39.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -5957,7 +5957,7 @@
       "mask_512": "masks_512/04_profesor_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -5974,7 +5974,7 @@
       "mask_512": "masks_512/05_kucharka_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -5991,7 +5991,7 @@
       "mask_512": "masks_512/06_ogrodniczka_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6008,7 +6008,7 @@
       "mask_512": "masks_512/07_maszynista_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 37.0
+        "y": 38.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6025,7 +6025,7 @@
       "mask_512": "masks_512/08_kurierka_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 36.0
+        "y": 37.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6042,7 +6042,7 @@
       "mask_512": "masks_512/09_wynalazca_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6059,7 +6059,7 @@
       "mask_512": "masks_512/10_karczmarz_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6076,7 +6076,7 @@
       "mask_512": "masks_512/11_czarodziej_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 38.0
+        "y": 39.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6093,7 +6093,7 @@
       "mask_512": "masks_512/12_zwiadowca_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6110,7 +6110,7 @@
       "mask_512": "masks_512/13_dzentelmen_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 40.0
+        "y": 41.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6127,7 +6127,7 @@
       "mask_512": "masks_512/14_podroznik_senior_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 38.0
+        "y": 39.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6144,7 +6144,7 @@
       "mask_512": "masks_512/15_gospodyni_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 38.0
+        "y": 39.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6161,7 +6161,7 @@
       "mask_512": "masks_512/16_straznik_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 38.0
+        "y": 39.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6178,7 +6178,7 @@
       "mask_512": "masks_512/17_rudobrody_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 36.0
+        "y": 37.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6195,7 +6195,7 @@
       "mask_512": "masks_512/18_luczniczka_f_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 36.0
+        "y": 37.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6212,7 +6212,7 @@
       "mask_512": "masks_512/19_listonosz_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6229,7 +6229,7 @@
       "mask_512": "masks_512/20_mechanik_m_front_idle_body_mask.png",
       "neck": {
         "x": 32.0,
-        "y": 39.0
+        "y": 40.0
       },
       "axis_x": 32.0,
       "foot_bottom_edge_y": 61,
@@ -6244,5 +6244,6 @@
   "canvas_512": [
     512,
     512
-  ]
+  ],
+  "neck_attachment": "At the collar/root boundary, 1px below v6.2; head mount and x axes unchanged. Use these anchors once; do not add a separate dy correction."
 }

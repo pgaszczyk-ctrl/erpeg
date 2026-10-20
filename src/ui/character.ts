@@ -341,6 +341,8 @@ function show(host: CharacterHost) {
     if (NOWE_POSTACIE) {
       // The standing frame facing us (column 2, row 1 of the artist's 3×3 sheet).
       const hero = el('div', 'k-dag-hero');
+      // Modular heroes show their real colours: no sepia (41-G003 – it changed the skin/hair the player picked).
+      if (BOHATER_MODUL) pic.classList.add('k-dag-modul');
       if (BOHATER_MODUL) void modulArkuszUrl(modulGracza(session.look, session.name)).then((u) => { if (hero.isConnected) hero.style.backgroundImage = `url(${u})`; });
       else heroPreviewBackground(hero, heroSkin(session.look.postac, session.name).plik);
       pic.append(hero);

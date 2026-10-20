@@ -22,27 +22,34 @@ export function kreatorModul(onChange: (l: ModulLook) => void, start?: ModulLook
       ctx.drawImage(c, 0, 0);
     });
   };
-  const btn = (text: string, fn: () => void) => {
-    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: text });
+  // The artist's icons (41-G003, public/ui/kreator/), a short caption under each, the full name for screen readers.
+  const btn = (ikona: string, napis: string, opis: string, fn: () => void) => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn m-ikbtn', title: opis });
+    b.setAttribute('aria-label', opis);
+    const img = Object.assign(document.createElement('img'), { src: `${import.meta.env.BASE_URL}ui/kreator/${ikona}.png`, alt: '' });
+    const t = Object.assign(document.createElement('span'), { textContent: napis });
+    b.append(img, t);
     b.onclick = fn;
-    return b;
+    return { b, t };
   };
-  const plec = btn(PLEC_NAPIS[look.p](), () => {
+  const napisPlci = () => PLEC_NAPIS[look.p]().replace(/^\S+\s/, '');
+  const plecBtn = btn('plec', napisPlci(), tx('Zmień płeć', 'Change gender'), () => {
     look = randomModul(look.p === 'k' ? 'm' : 'k', look.s);
-    plec.textContent = PLEC_NAPIS[look.p]();
+    plecBtn.t.textContent = napisPlci();
     paint();
   });
+  const plec = plecBtn.b;
   const row = Object.assign(document.createElement('div'), { className: 'm-skinrow' });
   row.append(
     plec,
-    btn(tx('🎨 Kolor skóry', '🎨 Skin tone'), () => {
+    btn('kolory', tx('Skóra', 'Skin'), tx('Zmień kolor skóry', 'Change skin tone'), () => {
       look = { ...look, s: (look.s + 1) % SKORY_MODUL.length };
       paint();
-    }),
-    btn(tx('🎲 Losuj', '🎲 Random'), () => {
+    }).b,
+    btn('losuj', tx('Losuj', 'Random'), tx('Losuj wygląd', 'Random look'), () => {
       look = randomModul(look.p, look.s);
       paint();
-    }),
+    }).b,
   );
   const box = Object.assign(document.createElement('div'), { className: 'm-look' });
   box.append(row);
