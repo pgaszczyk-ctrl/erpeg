@@ -22,34 +22,33 @@ export function kreatorModul(onChange: (l: ModulLook) => void, start?: ModulLook
       ctx.drawImage(c, 0, 0);
     });
   };
-  // The artist's icons (41-G003, public/ui/kreator/), a short caption under each, the full name for screen readers.
-  const btn = (ikona: string, napis: string, opis: string, fn: () => void) => {
+  // The artist's icons only (41-G003, public/ui/kreator/; owner: no words), the full name for screen readers.
+  const btn = (ikona: string, opis: string, fn: () => void) => {
     const b = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn m-ikbtn', title: opis });
     b.setAttribute('aria-label', opis);
     const img = Object.assign(document.createElement('img'), { src: `${import.meta.env.BASE_URL}ui/kreator/${ikona}.png`, alt: '' });
-    const t = Object.assign(document.createElement('span'), { textContent: napis });
-    b.append(img, t);
+    b.append(img);
     b.onclick = fn;
-    return { b, t };
+    return b;
   };
-  const napisPlci = () => PLEC_NAPIS[look.p]().replace(/^\S+\s/, '');
-  const plecBtn = btn('plec', napisPlci(), tx('Zmień płeć', 'Change gender'), () => {
+  const opisPlci = () => `${tx('Zmień płeć', 'Change gender')} (${PLEC_NAPIS[look.p]()})`;
+  const plec = btn('plec', opisPlci(), () => {
     look = randomModul(look.p === 'k' ? 'm' : 'k', look.s);
-    plecBtn.t.textContent = napisPlci();
+    plec.title = opisPlci();
+    plec.setAttribute('aria-label', opisPlci());
     paint();
   });
-  const plec = plecBtn.b;
   const row = Object.assign(document.createElement('div'), { className: 'm-skinrow' });
   row.append(
     plec,
-    btn('kolory', tx('Skóra', 'Skin'), tx('Zmień kolor skóry', 'Change skin tone'), () => {
+    btn('kolory', tx('Zmień kolor skóry', 'Change skin tone'), () => {
       look = { ...look, s: (look.s + 1) % SKORY_MODUL.length };
       paint();
-    }).b,
-    btn('losuj', tx('Losuj', 'Random'), tx('Losuj wygląd', 'Random look'), () => {
+    }),
+    btn('losuj', tx('Losuj wygląd', 'Random look'), () => {
       look = randomModul(look.p, look.s);
       paint();
-    }).b,
+    }),
   );
   const box = Object.assign(document.createElement('div'), { className: 'm-look' });
   box.append(row);
