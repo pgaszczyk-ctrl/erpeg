@@ -156,6 +156,20 @@ try {
     else await page.mouse.click(at.x, at.y);
     await page.waitForTimeout(300);
   };
+  /** The open ring's buttons vs the other figures on screen: the nearest distance (CSS px) of a button's centre. */
+  const odstepKola = () => g(() => {
+    const s = window.__game.scene.getScene('game'), w = s.walka, cam = s.cameras.main, r = s.game.canvas.getBoundingClientRect();
+    const css = cam.zoom / (s.scale.width / r.width);
+    const scr = (x, y) => ({ x: r.left + (x - cam.worldView.x) * css, y: r.top + (y - cam.worldView.y) * css });
+    const inni = w.zywi.filter((o) => o !== w.koloWroga && o.e.visible).map((o) => scr(o.e.x, o.e.y - 3));
+    if (w.koloWroga) inni.push(scr(s.player.x, s.player.y - 3));
+    let min = Infinity;
+    for (const b of document.querySelectorAll('#walka-kolo .wk-b')) {
+      const q = b.getBoundingClientRect();
+      for (const o of inni) min = Math.min(min, Math.hypot(q.left + q.width / 2 - o.x, q.top + q.height / 2 - o.y));
+    }
+    return Math.round(min);
+  });
   const near = (f, p) => f.zywi.slice().sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
   const heroPos = () => g(() => ({ x: window.__game.scene.getScene('game').player.x, y: window.__game.scene.getScene('game').player.y }));
 
@@ -234,6 +248,9 @@ try {
   console.log('reach', JSON.stringify(zasiegi));
   for (const z of zasiegi) if (z.d > z.max + 1) assert(z.dojscie && z.koszt >= 2, `a far enemy (${z.d.toFixed(1)} px) needs a walk-up`);
   const ringW = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className + ' ' + b.textContent));
+  const odst1 = await odstepKola();
+  console.log('ring clearance', odst1);
+  assert(odst1 >= 36, `the ring's buttons keep clear of the other figures (${odst1} px)`);
   console.log('enemy ring', JSON.stringify(ringW));
   assert.equal(ringW.length, 2, 'only the unlocked attacks in the enemy ring (Cios, Mocny cios) – no locked Zamach');
   assert(/\bcios\b.*Atak/.test(ringW[0]) && /\bmocny\b.*Mocny atak/.test(ringW[1]), 'Atak and Mocny atak');
@@ -391,6 +408,7 @@ try {
   await tapWorld(f.zywi[1].x, f.zywi[1].y - 4);
   await page.waitForTimeout(400);
   const ringZ = await page.evaluate(() => [...document.querySelectorAll('#walka-kolo .wk-b')].map((b) => b.className));
+  console.log('ring clearance (packed)', await odstepKola());
   console.log('ring with zamach', JSON.stringify(ringZ));
   assert(ringZ.some((k) => /zamach/.test(k) ), 'Zamach unlocked');
   await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.zamach').click());

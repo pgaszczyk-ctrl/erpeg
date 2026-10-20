@@ -1559,9 +1559,18 @@ export class TuryWalki {
     const x = q ? q.e.x : this.h.player.x;
     const y = q ? q.e.y - 0.3 * W * q.e.kind.scale : this.h.player.y - 0.3 * W;
     const scr = (wx: number, wy: number) => [rect.left + (wx - cam.worldView.x) * cam.zoom * k, rect.top + (wy - cam.worldView.y) * cam.zoom * k] as const;
-    this.panel.pozycja(...scr(x, y));
-    // The moves' ambers just under the hero's feet (his ground ring is at y + 5).
+    const pkt = (wx: number, wy: number) => { const [sx, sy] = scr(wx, wy); return { x: sx, y: sy }; };
+    // What the ring's fan should keep clear of: every figure's body and head (plaque), the hero and his ambers.
     const p = this.h.player;
+    // (The hero's own body doesn't count for his own ring – it sits in its middle.)
+    const przeszkody = q ? [pkt(p.x, p.y - 3), pkt(p.x, p.y - 12), pkt(p.x, p.y + 12)] : [pkt(p.x, p.y + 12)];
+    for (const o of this.zywi) {
+      if (!o.e.visible || o === q) continue;
+      const sk = o.e.kind.scale;
+      przeszkody.push(pkt(o.e.x, o.e.y - 3 * sk), pkt(o.e.x, o.e.y - 13 * sk), pkt(o.e.x, o.e.y - 13 * sk - 7));
+    }
+    this.panel.pozycja(...scr(x, y), przeszkody);
+    // The moves' ambers just under the hero's feet (his ground ring is at y + 5).
     this.panel.bursztyny(...scr(p.x, p.y + 5 + (HERO_R + 3) / 2));
   }
 
@@ -1672,6 +1681,8 @@ export class TuryWalki {
         unik: this.unik,
         rada: !!this.radaTekst && this.podpowiedz === this.radaTekst,
       };
+      // Where the ring will stand (and what's around it) before it is built, so its fan turns the right way.
+      this.koloNaBohaterze();
       this.panel.ustaw(nk);
     } else this.panel.ustaw(st);
     this.rysuj();

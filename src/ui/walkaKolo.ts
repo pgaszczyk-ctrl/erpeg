@@ -329,15 +329,17 @@ function koszty(but: number, cios: number) {
 
 /** Ring radius (CSS px) and the two buttons' places: upper left and upper right of the figure (not on it). */
 const PROMIEN = 54;
-/** The enemy ring is wider: its buttons are bigger. */
-const PROMIEN_WROGA = 64;
-/** Places of n buttons in an arc above the figure (degrees) and the arc's radius, so neighbours don't touch. */
+/** Places of n buttons in an arc above the figure (degrees) and the arc's radius, so neighbours don't touch.
+ * A bit farther out than at first (owner, 20 Oct 2026: they covered the enemies); the whole fan then turns
+ * towards the side with the fewest figures (`obrot`). */
 const LUK: Record<number, { katy: number[]; r: number }> = {
-  1: { katy: [-90], r: 64 },
-  2: { katy: [-150, -30], r: 64 },
-  3: { katy: [-160, -90, -20], r: 76 },
-  4: { katy: [-172, -118, -62, -8], r: 88 },
+  1: { katy: [-90], r: 72 },
+  2: { katy: [-150, -30], r: 72 },
+  3: { katy: [-160, -90, -20], r: 84 },
+  4: { katy: [-172, -118, -62, -8], r: 96 },
 };
+/** Turns of the fan tried (degrees from „above”, the first = preferred when nothing is in the way). */
+const OBROTY = [0, -25, 25, -50, 50, -80, 80, -110, 110, -140, 140, 180];
 const KATY = [-150, -30];
 
 export class WalkaKolo {
@@ -421,12 +423,50 @@ export class WalkaKolo {
     e.preventDefault();
   }
 
-  /** Follows the hero / the chosen enemy on the screen (CSS px of the viewport), kept so the buttons stay on screen. */
-  pozycja(x: number, y: number) {
-    const m = PROMIEN_WROGA + 50;
-    const cx = Math.min(Math.max(x, m), innerWidth - m);
-    const cy = Math.min(Math.max(y, PROMIEN_WROGA + 130), innerHeight - 40);
+  /** Where the ring's middle is and the figures it should keep clear of (CSS px of the viewport). */
+  private srodek: { x: number; y: number } | null = null;
+  private przeszkody: { x: number; y: number }[] = [];
+
+  /**
+   * Follows the hero / the chosen enemy on the screen (CSS px of the viewport). `przeszkody` = points of the other
+   * figures (bodies, heads, the ambers) – the fan of buttons is turned away from them when it opens.
+   */
+  pozycja(x: number, y: number, przeszkody: { x: number; y: number }[] = []) {
+    const gora = this.el.getBoundingClientRect().bottom + 30;
+    const cx = Math.min(Math.max(x, 44), innerWidth - 44);
+    const cy = Math.min(Math.max(y, gora), innerHeight - 44);
+    this.srodek = { x: cx, y: cy };
+    this.przeszkody = przeszkody;
     this.ring.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
+  }
+
+  /**
+   * The fan's turn (degrees) that covers the fewest figures and keeps every button and its caption on screen
+   * (owner, 20 Oct 2026: „ustaw je w wachlarzu po stronie, gdzie jest mniej wrogów”). Chosen once per opening.
+   */
+  private obrot(katy: number[], r: number, rozm: number) {
+    const s = this.srodek;
+    if (!s) return 0;
+    const gora = this.el.getBoundingClientRect().bottom + 4;
+    let best = 0, bw = Infinity;
+    for (const rot of OBROTY) {
+      let w = Math.abs(rot) * 0.05;
+      for (const k of katy) {
+        const a = ((k + rot) * Math.PI) / 180;
+        const bx = s.x + Math.cos(a) * r, by = s.y + Math.sin(a) * r;
+        if (bx - rozm / 2 < 2 || bx + rozm / 2 > innerWidth - 2) w += 1000;
+        if (by - rozm / 2 < gora || by + rozm / 2 + 30 > innerHeight - 4) w += 1000;
+        for (const o of this.przeszkody) {
+          // The button itself and its caption under it.
+          for (const [px, py, lim] of [[bx, by, rozm / 2 + 24], [bx, by + rozm / 2 + 14, 30]]) {
+            const d = Math.hypot(px - o.x, py - o.y);
+            if (d < lim) w += (lim - d) * (lim - d);
+          }
+        }
+      }
+      if (w < bw) [bw, best] = [w, rot];
+    }
+    return best;
   }
 
   /** The ambers' place: just under the hero's feet (CSS px of the viewport). */
@@ -547,8 +587,9 @@ export class WalkaKolo {
       const bron = `<img src="${itemPictureUrl(s.bronId ?? 'kijek') ?? itemPictureUrl('kijek')}" alt="">`;
       const ikona: Record<string, string> = { zamach: IKONY.zamach, wachlarz: IKONY.ogien, salwa: IKONY.salwa, wiecej: IKONY.wiecej };
       const luk = LUK[Math.min(4, s.ataki.length)] ?? LUK[4];
-      this.katy = luk.katy;
       this.promien = luk.r;
+      const rot = this.obrot(luk.katy, luk.r, 64);
+      this.katy = luk.katy.map((k) => k + rot);
       const ktos = s.ataki.some((a) => a.wybrany);
       // Nothing picked yet: the cheapest affordable attack pulses slowly, as a hint where to tap.
       const tani = ktos ? null : s.ataki.filter((a) => !a.off && !a.strona).sort((a, b) => a.koszt + a.podejscie - b.koszt - b.podejscie)[0] ?? null;
@@ -558,6 +599,8 @@ export class WalkaKolo {
           opis: a.strona ? `strona ${a.strona}` : `${ruchyTxt(a.koszt)}${a.podejscie ? ` i ${ruchyTxt(a.podejscie)} na podejście` : ''}`,
         })));
     } else {
+      const rot = this.obrot(KATY, PROMIEN, 50);
+      this.katy = KATY.map((k) => k + rot);
       this.ring.append(
         this.przycisk('lecz', IKONY.lecz, 'Leczenie', ruchy(s.koszt.lecz), () => this.on.lecz(), 0, {
           opis: ruchyTxt(s.koszt.lecz),
