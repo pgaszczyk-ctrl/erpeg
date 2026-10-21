@@ -78,7 +78,7 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
 
  const r=canvas.getBoundingClientRect();if(width!==r.width||height!==r.height){width=r.width;height=r.height;const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
  ctx.fillStyle='#16291f';ctx.fillRect(0,0,width,height);
- polygon([[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]],data.corridors?'#a5a382':'#849a6b','#c3ca9b');
+ polygon([[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]],data.artPreview?'#91aa76':data.corridors?'#a5a382':'#849a6b','#c3ca9b');
  ctx.save();ctx.beginPath();[[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]].forEach((p,i)=>i?ctx.lineTo(...screen(p)):ctx.moveTo(...screen(p)));ctx.closePath();ctx.clip();
  const shown=new Set(ordered.slice(0,visibleCount).map(b=>b.id));
  if(data.corridors){
@@ -86,7 +86,8 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
   if(cacheKey!==groundKey){
    groundKey=cacheKey;groundCache=document.createElement('canvas');groundCache.width=width;groundCache.height=height;const mainContext=ctx;ctx=groundCache.getContext('2d');
   for(const region of data.ground){ctx.beginPath();for(const ring of region.rings){ring.forEach((p,i)=>i?ctx.lineTo(...screen(p)):ctx.moveTo(...screen(p)));ctx.closePath();}ctx.fillStyle=region.color;ctx.fill('evenodd');}
-  for(const surface of data.corridors.surfaces)if(shown.has(blockAt(surface.polygon[0])?.id))polygon(surface.polygon,surface.color);
+  for(const surface of data.corridors.surfaces)if(shown.has(blockAt(surface.polygon[0])?.id))polygon(surface.polygon,surface.color,data.corridors.gridStepGameM?'#aa946766':null);
+  if(data.corridors.gridStepGameM){const step=data.corridors.gridStepGameM;for(let x=data.box[0];x<data.box[2];x+=step)line([[x,data.box[1]],[x,data.box[3]]],'#31492d22',.5);for(let y=data.box[1];y<data.box[3];y+=step)line([[data.box[0],y],[data.box[2],y]],'#31492d22',.5);}
    ctx=mainContext;
   }
   ctx.drawImage(groundCache,0,0);
@@ -132,7 +133,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(
 function refreshInfo(){
  $('next').disabled=!!data.synthetic;$('home').textContent=data.synthetic?'Środek galerii':'Guliwera 4';
  $('scene-name').textContent=data.artPreview?'Guliwera 4 · grafiki 2×2 na rzeczywistej siatce OSM':data.synthetic?'Próbka SYNTETYCZNA — kształty i złącza':'Guliwera 4 · rzeczywisty OSM · '+(data.comparisonRole==='before'?'PRZED zmianą':'PO zmianie');
- $('scale-info').textContent=data.artPreview?data.previewNote+' Grafiki 512×512 px, romb 128×64 px przy zbliżeniu 64 px/m.':data.synthetic?'Galeria techniczna: L, U, 4×2, 3×3 i trzy różne segmenty szeregu. Nie przedstawia rzeczywistego miejsca.':`Skala 1:${data.scale.denominator.toFixed(2)}. Komórka = ${data.report.cellRealM.toFixed(1)} m terenu; bloczek = ${data.report.blockRealM.toFixed(1)} m. Spacer ${data.scale.walkSpeedGameMps} m gry/s. Model Lublin–Warszawa: ${data.scale.referenceDistanceRealM/1000} km → ${data.scale.referenceGameM/1000} km gry → 30 min bez zatrzymań. Pełna trasa nie została jeszcze wygenerowana ani przechodzona.`;
+ $('scale-info').textContent=data.artPreview?'Drogi na siatce: ścieżka 1 pas, ulica 2 pasy. Pole 0,25 m gry; skrzyżowania szersze. Zieleń tła poglądowa. '+data.previewNote+' Grafiki 512×512 px, romb 128×64 px przy zbliżeniu 64 px/m.':data.synthetic?'Galeria techniczna: L, U, 4×2, 3×3 i trzy różne segmenty szeregu. Nie przedstawia rzeczywistego miejsca.':`Skala 1:${data.scale.denominator.toFixed(2)}. Komórka = ${data.report.cellRealM.toFixed(1)} m terenu; bloczek = ${data.report.blockRealM.toFixed(1)} m. Spacer ${data.scale.walkSpeedGameMps} m gry/s. Model Lublin–Warszawa: ${data.scale.referenceDistanceRealM/1000} km → ${data.scale.referenceGameM/1000} km gry → 30 min bez zatrzymań. Pełna trasa nie została jeszcze wygenerowana ani przechodzona.`;
  $('metrics').innerHTML=[...(data.coverageComparison? [['Drogi — udział terenu', (data.comparisonRole==='before'?data.coverageComparison.beforeRoadPct:data.coverageComparison.afterRoadPct)+'%'],['Zieleń OSM bez zabudowy i dróg',(data.comparisonRole==='before'?data.coverageComparison.beforeUncoveredSourceGreenPct:data.coverageComparison.afterUncoveredSourceGreenPct)+'%']]:[]),['Moduły budynków',data.report.modules],['Budynki na wielu bloczkach',data.report.multiBlockModules],['Wspólne ściany',data.report.buildingJoins],['Kolizje budynków',data.report.buildingBuildingCollisions],['Kolizje z drogą',data.report.buildingRoadCollisions]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('');
 }
 refreshInfo();if(artPreview){$('compare-ground').hidden=true;$('art').value='elven';$('home').textContent='Guliwera · detal 1:1';}

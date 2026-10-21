@@ -1,3 +1,4 @@
+import {gridRoads} from './grid-roads.mjs';
 import {makeCorridors,extractGround,SurfaceIndex,coverageMask} from './ground-geometry.mjs';
 import {assembleBuildings} from './assemble-buildings.mjs';
 import {moduleBoxes} from './public/building-geometry.mjs';
@@ -90,7 +91,8 @@ export function generateBlocks(world, options={}) {
   }
   const balanced=!!options.balancedRoads;
   const ground=balanced?extractGround(world.terrain||[],halo):[];
-  const corridors=balanced?makeCorridors(sourceRoads,world.config?.realToGame||.1):null;
+  const continuous=balanced?makeCorridors(sourceRoads,world.config?.realToGame||.1):null;
+  const corridors=options.gridRoads?gridRoads(continuous):continuous;
   const constraints=balanced?{roads:new SurfaceIndex(corridors.surfaces,true),green:new SurfaceIndex(ground.filter(s=>s.protected),false)}:null;
   const water=[];
   for(const t of world.terrain||[])if(t.tags.natural==='water'||t.tags.landuse==='reservoir') {

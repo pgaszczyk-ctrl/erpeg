@@ -1,5 +1,5 @@
 import fs from 'node:fs';import {calibratedScale,rescaleWorld} from './scale.mjs';import {generateBlocks,auditBlocks} from './blocks.mjs';
 const scale=calibratedScale(JSON.parse(fs.readFileSync('public/layout.json'))),kit=JSON.parse(fs.readFileSync('public/building-kit.json'));kit.templates=kit.templates.filter(t=>t.id==='house-2x2');
-const world=rescaleWorld(JSON.parse(fs.readFileSync(process.argv[2]||'public/world.json')),scale),sample=generateBlocks(world,{sideBlocks:Math.ceil(scale.sampleSideRealM*scale.realToGame/3),kit,balancedRoads:true});
+const world=rescaleWorld(JSON.parse(fs.readFileSync(process.argv[2]||'public/world.json')),scale),sample=generateBlocks(world,{sideBlocks:Math.ceil(scale.sampleSideRealM*scale.realToGame/3),kit,balancedRoads:true,gridRoads:true});
 sample.artPreview=true;sample.previewNote='Guliwera: rzeczywiste drogi i pokrycie OSM, zabudowa poglądowa z dostępnych modeli 2×2, ponownie rozmieszczona w wolnych miejscach. Nie jest wiernym odwzorowaniem brył.';
 const audit=auditBlocks(sample);if(Object.values(audit).some(a=>a.length))throw Error(JSON.stringify(audit));fs.writeFileSync('public/art-world.json',JSON.stringify(sample));console.log({modules:sample.modules.length,audit});
