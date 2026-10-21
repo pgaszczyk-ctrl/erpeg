@@ -15,7 +15,7 @@ npm test
 npm start
 ```
 
-Otwórz http://localhost:4174. Generowanie trwa około 8 sekund na użytym serwerze.
+Otwórz http://localhost:4174. Generowanie trwa około 9–21 sekund na użytym serwerze.
 Dane wejściowe już są w repo: `../../data/lublin-osm.geojsonseq.gz`.
 `extract.py` strumieniowo ogranicza plik do lokalnego kontekstu, `generate.mjs`
 przetwarza go i zapisuje `public/world.json`, `data/snapshot.geojsonseq.gz`
@@ -112,7 +112,7 @@ przy poprawce palety. Nie zastępują brakujących testów zgodności grafu z ru
 mostów, wejść i przebudowy zabudowy fragmentu. Playwright sprawdził pięć widoków,
 trasę 7 komórek i zachowanie poprawki po odświeżeniu w 1280×900 i 390×844;
 bez błędów JavaScript. Nie jest to test fizycznego telefonu. Wyniki rysowania
-w headless Chromium są zmienne i wynosiły kilkadziesiąt ms/klatkę po zmianach widoku.
+w headless Chromium są zmienne i wynosiły 41,5 ms (układ telefonu) i 103,6 ms (komputer) po zmianach widoku.
 Plik świata ma około 72 MB; potrzebuje kompresji formatu i strumieniowania fragmentów.
 Indeks przestrzenny ogranicza rysowanie do widocznych obiektów, ale ładowany jest cały plik.
 
