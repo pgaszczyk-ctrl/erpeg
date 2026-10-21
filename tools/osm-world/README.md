@@ -7,6 +7,77 @@ https://exp-lore-osm-laboratorium.snugsnow32.chatgpt.site
 Osobny eksperyment, bez zależności od gry, logowania, serwera danych ani wdrożenia.
 **Działający podgląd rzeczywistych danych, ale nie zakończony test akceptacyjny z wytycznych.**
 
+
+## Nowa próbka: bloczki 3×3 (21 października 2026)
+
+Domyślny podgląd pokazuje teraz **próbkę 1,2 × 1,2 km** wokół Guliwera 4.
+Poprzedni pełny wycinek jest pod `legacy.html`. Nie rozszerzamy próby na cały świat.
+
+```sh
+cd tools/osm-world
+npm run generate
+npm run generate:blocks
+npm run test:blocks
+npm start
+```
+
+Do wygenerowania tylko nowej próbki z wcześniej zapisanej wersji świata:
+
+```sh
+node generate-blocks.mjs /sciezka/world.json
+```
+
+`blocks.mjs` działa przed uruchomieniem podglądu. Komórka ma **1 m gry = 10 m
+terenu**, bloczek to **3×3 komórki = 30×30 m terenu**. To osobna wersja układu
+`blocks-3x3-v1`, bez zmiany konfiguracji starego świata. Początek siatki pozostaje
+stały w EPSG:2180. Generator pobiera dodatkowy pas sąsiednich bloczków jako kontekst.
+
+Najpierw rasteryzowane są drogi OSM (supercover). Wspólna krawędź dwóch komórek
+należących do tej samej drogi definiuje jeden kanoniczny portal, na który wskazują
+oba bloczki. Każdy bloczek zachowuje swoją maskę 9 komórek, maski czterech sąsiadów
+i listę wspólnych wejść. Zewnętrzne wyjścia próbki są jawnie oznaczone.
+
+Dopiero później układane są moduły. Obrysy w jednym bloczku są łączone w jeden
+moduł ze źródłową listą identyfikatorów zastępczych. Moduł zajmuje wolny prostokąt
+2×2, 2×1 lub 1×1 komórek i ma szczelinę 0,3 m gry. Nigdy nie wychodzi poza własny
+bloczek ani nie zajmuje komórki drogi/wody. Kolejność danych i zmiana rozmiaru
+próbki nie przesuwają wspólnych modułów. To prosta agregacja według siatki,
+jeszcze bez analizy funkcji kwartału i historycznej pierzei.
+
+Drogi są rysowane jako powierzchnie komórek w tej samej izometrii co podstawy
+budynków, a nie jako kreski o stałej szerokości ekranu. Budynki mają dachy dwuspadowe.
+Warstwy: izometria, bloczki i sąsiedzi, wejścia dróg oraz rzeczywiste wektory OSM 2D.
+„Następny bloczek” wybiera przykład z drogą i zabudową. „Buduj krokami” odtwarza
+kolejne gotowe bloczki; nie wykonuje importu w pętli renderowania. Spacer działa
+po rzeczywistych komórkach dróg próbki, z blokowaniem trawnika i budynków.
+
+Wynik: 1600 bloczków, 4191 komórek dróg, **1586 wspólnych wewnętrznych portali**,
+1159 obrysów źródłowych → **690 modułów**, 4 bloczki zabudowy pominięte z braku
+miejsca. 73 wyjścia na zewnętrznej granicy. Niezależny audyt zajętości: **0 kolizji
+budynek–budynek, 0 kolizji budynek–droga, 0 błędnych portali**. 2 drogi na innych
+poziomach jawnie pominięte. Generowanie około 1,6–2,2 s na poprzednio opisanym
+serwerze; plik `public/blocks.json` jest ignorowany w git. Raporty: `data/blocks-*`.
+
+Testy sprawdzają ciągłość ruchu przez granice, ukośne przejścia, ujemne indeksy,
+niezmienność po zmianie kolejności danych i rozmiaru próbki, wspólne portale,
+agregację i kolizje. Audyt wykrywa także celowo wprowadzone kolizje. Playwright
+sprawdza cztery widoki, inspekcję sąsiadów, kroki budowy i **faktyczny ruch pionka**
+na komputerze i w układzie telefonu. Test przeglądarkowy można powtórzyć:
+
+```sh
+PLAYWRIGHT_MODULE=/sciezka/playwright/index.mjs node blocks-browser-check.mjs
+```
+
+Ograniczenia: komórka 10 m upraszcza i schodkuje drogi, może sklejać pobliskie
+chodniki. Portale sprawdzają zgodność rasteryzacji, nie odzyskują utraconych ID
+węzłów OSM. Mosty/tunele nie są jeszcze obsługiwane w tej próbce. Łączenie w tym
+samym bloczku może połączyć różne funkcje budynków; POI nie mają jeszcze osobnych
+wejść. Nie uruchomiono wielodniowego zadania ani generowania całego obszaru.
+
+---
+
+Poniżej dokumentacja starszego eksperymentu (`legacy.html`).
+
 ## Uruchomienie
 
 Wymagane Node 22+ i Python 3 (biblioteki standardowe; bez instalacji pakietów).

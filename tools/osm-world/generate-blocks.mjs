@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import { performance } from 'node:perf_hooks';
+import { generateBlocks, auditBlocks } from './blocks.mjs';
+const start=performance.now();
+const world=JSON.parse(fs.readFileSync(process.argv[2]||'public/world.json','utf8'));
+const sample=generateBlocks(world);
+const audit=auditBlocks(sample);
+sample.report.buildingRoadCollisions=audit.roadCollisions.length;
+sample.report.buildingBuildingCollisions=audit.moduleCollisions.length;
+sample.report.invalidPorts=audit.invalidPorts.length;
+if(Object.values(audit).some(a=>a.length))throw Error('Failed block audit: '+JSON.stringify(audit));
+sample.report.generationMs=Math.round(performance.now()-start);
+fs.writeFileSync('public/blocks.json',JSON.stringify(sample));
+fs.writeFileSync('data/blocks-report.json',JSON.stringify(sample.report,null,2)+'\n');
+console.log(JSON.stringify(sample.report,null,2));
