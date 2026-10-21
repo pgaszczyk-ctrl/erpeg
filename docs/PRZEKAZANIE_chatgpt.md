@@ -541,3 +541,5 @@
 - Końcowy pomiar klawiatury w galerii: ~2,96 i 2,97 m gry/s dla dwóch kierunków (z narzutem narzędzia); travel-speed-browser-check.mjs i raport data/travel-speed-report.json. Potwierdza jednakowe tempo, nie pełną podróż. Rejestr przyszłych assetów wybiera deterministycznie spośród wielu zgodnych grafik tego samego shape_id/style; segmenty szeregu wymagają dokładnych joined_sides i eaves_game_m, aby nie podstawić środka za zakończenie.
 
 - Laboratorium OSM v5: osobne pasy dróg, ochrona zieleni OSM, porównanie przed/po; szczegóły i ograniczenia w tools/osm-world/README.md. Zmiana wyłącznie tools/docs, bez wdrożenia gry.
+
+- 2026-10-21: makieta grafiki tools/osm-world/public/makieta.html + makieta.js. Oryginalne cztery PNG 512×512, siatka 128×64, podgląd 1:1, oba style, podstawy, pobieranie PNG 1800×1300. Syntetyczny układ ośmiu ustawień, bez rozciągania, bez zmiany gry. Paczka ma binarną alfę i odsunięte ściany, nie udaje gotowych modułów szeregu. Weryfikacja: node --check; Playwright desktop/telefon, przełączniki, skala 1:1 i pobieranie PNG.
