@@ -55,8 +55,8 @@ def wytnij(a, lab, box):
     """The part's pixels (RGBA float) with only its own connected piece opaque."""
     y0, x0, y1, x1 = box
     c = a[y0:y1, x0:x1].astype(np.float32).copy()
-    ids = np.unique(lab[y0:y1, x0:x1][a[y0:y1, x0:x1, 3] > 128])
-    wlasne = np.isin(lab[y0:y1, x0:x1], ids[ids > 0])
+    ids, ile = np.unique(lab[y0:y1, x0:x1][a[y0:y1, x0:x1, 3] > 128], return_counts=True)
+    wlasne = lab[y0:y1, x0:x1] == ids[ile.argmax()]   # the box's own piece, not a neighbour's corner
     # keep soft edge pixels next to the piece, drop other pieces
     blisko = ndimage.binary_dilation(wlasne, iterations=2) & (lab[y0:y1, x0:x1] == 0)
     c[..., 3] *= wlasne | blisko
