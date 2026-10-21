@@ -1,0 +1,208 @@
+{
+  "center": [
+    22.4871666,
+    51.2390715
+  ],
+  "radiusRealM": 3000,
+  "sourceFeatures": 88505,
+  "countsScope": "Context buffer 3500m; display clipped to 3000m",
+  "roads": 21574,
+  "sourceBuildings": 17860,
+  "renderedBuildings": 6995,
+  "omittedBuildings": 10865,
+  "terrain": 10111,
+  "pois": 168,
+  "counts": {
+    "place=village": 6,
+    "natural=tree": 34,
+    "leisure=sports_centre": 39,
+    "place=suburb": 22,
+    "leisure=fitness_centre": 8,
+    "leisure=indoor_play": 2,
+    "building=dormitory": 35,
+    "landuse=education": 40,
+    "building=yes": 13309,
+    "building=retail": 345,
+    "leisure=park": 141,
+    "leisure=garden": 579,
+    "landuse=allotments": 77,
+    "landuse=orchard": 530,
+    "landuse=forest": 245,
+    "landuse=cemetery": 4,
+    "building=university": 27,
+    "building=church": 32,
+    "building=apartments": 1856,
+    "building=sports_hall": 2,
+    "building=garages": 384,
+    "building=government": 8,
+    "building=office": 68,
+    "building=public": 4,
+    "building=semidetached_house": 780,
+    "building=garage": 636,
+    "building=school": 97,
+    "building=kindergarten": 58,
+    "building=detached": 1786,
+    "building=terrace": 1836,
+    "leisure=playground": 682,
+    "landuse=grass": 8980,
+    "building=commercial": 220,
+    "building=residential": 317,
+    "building=house": 10414,
+    "natural=water": 148,
+    "building=greenhouse": 72,
+    "building=hospital": 30,
+    "landuse=recreation_ground": 38,
+    "leisure=pitch": 274,
+    "landuse=village_green": 159,
+    "building=service": 246,
+    "building=college": 2,
+    "building=roof": 154,
+    "building=outbuilding": 686,
+    "building=shed": 816,
+    "landuse=commercial": 8,
+    "building=hotel": 18,
+    "natural=wood": 736,
+    "building=warehouse": 56,
+    "natural=scrub": 1210,
+    "building=ruins": 14,
+    "building=stable": 4,
+    "landuse=basin": 4,
+    "landuse=meadow": 549,
+    "building=industrial": 112,
+    "natural=wetland": 36,
+    "leisure=track": 22,
+    "building=hangar": 572,
+    "building=supermarket": 8,
+    "building=barn": 6,
+    "building=hut": 10,
+    "building=allotment_house": 8,
+    "building=civic": 1,
+    "building=bungalow": 8,
+    "landuse=greenhouse_horticulture": 10,
+    "building=farm_auxiliary": 334,
+    "landuse=school": 2,
+    "landuse=farmland": 730,
+    "leisure=swimming_pool": 4,
+    "building=monastery": 3,
+    "natural=grassland": 151,
+    "building=fire_station": 4,
+    "building=kiosk": 8,
+    "leisure=stadium": 2,
+    "building=carport": 2,
+    "building=storage_tank": 4,
+    "building=presbytery": 4,
+    "building=cabin": 2,
+    "building=chapel": 6,
+    "leisure=sports_hall": 6,
+    "landuse=construction": 2,
+    "building=no": 10,
+    "leisure=bleachers": 2,
+    "building=sports_centre": 2,
+    "place=islet": 2,
+    "building=wayside_shrine": 2,
+    "building=construction": 266,
+    "building=parking": 2,
+    "building=container": 8,
+    "building=sty": 2,
+    "natural=shrubbery": 4,
+    "building=bridge": 2,
+    "landuse=residential": 4
+  },
+  "routes": [
+    {
+      "id": "content:f34582f5",
+      "reachable": true
+    },
+    {
+      "id": "content:26e9b479",
+      "reachable": true
+    },
+    {
+      "id": "content:93b54315",
+      "reachable": true
+    }
+  ],
+  "topologyVerified": false,
+  "aggregationExamples": [],
+  "selectedPOIs": [
+    {
+      "name": "Biedronka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.7825540396023807
+    },
+    {
+      "name": "Stokrotka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 1.2271044053613465
+    },
+    {
+      "name": "Biedronka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 2.000352801886736
+    },
+    {
+      "name": "Miejska Biblioteka Publiczna w Lublinie Filia nr 35",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 1.3171977521023241
+    },
+    {
+      "name": "Best",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.07961390666609393
+    },
+    {
+      "name": "Szkoła Podstawowa",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.5456744060369563
+    },
+    {
+      "name": "E. Leclerc",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.1889773940442095
+    },
+    {
+      "name": "Stokrotka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.8660676375895908
+    },
+    {
+      "name": "Stokrotka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 1.0511124012891484
+    },
+    {
+      "name": "Biedronka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 1.5766625420598035
+    },
+    {
+      "name": "Biedronka",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 0.5940656726253422
+    },
+    {
+      "name": "Miejska Biblioteka Publiczna w Lublinie Filia nr 24",
+      "access": "Punkt interakcji przy drodze (przybliżony)",
+      "distanceGameM": 1.0987578484092975
+    }
+  ],
+  "updateDemo": "Palette-only local override; geometry and roads unchanged. See tests.",
+  "timings": {
+    "importMs": 6178.736116,
+    "generationMs": 14327.932302999998
+  },
+  "environment": {
+    "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "node": "v24.19.0"
+  },
+  "snapshotBytes": 5514841,
+  "worldBytes": 71982283,
+  "limitations": [
+    "No real-OSM topology validation without original node IDs",
+    "No building aggregation or frontage/corner/gate synthesis yet",
+    "Overpass relation assembly not yet supported; use GeoJSON for multipolygons",
+    "No full collision model for water/bridges and non-road movement; route on reserved road cells only",
+    "POIs use approximate roadside interaction cells, not verified entrances",
+    "No claim of completed acceptance test"
+  ]
+}

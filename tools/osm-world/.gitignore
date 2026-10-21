@@ -1,0 +1,3 @@
+data/*.gz
+public/world.json
+artifacts/

@@ -1,0 +1,22 @@
+{
+  "layoutVersion": "pl-2180-v1",
+  "generatorVersion": "0.1.0",
+  "seed": "exp-lore-2026",
+  "center": [
+    22.4871666,
+    51.2390715
+  ],
+  "address": "Guliwera 4, Lublin, Polska",
+  "centerSource": "../../data/lublin-osm.geojsonseq.gz; exact addr:street=Guliwera, addr:housenumber=4, addr:city=Lublin point",
+  "verification": "Exact address feature in repository snapshot; independent online verification unavailable",
+  "radiusRealM": 3000,
+  "contextRealM": 500,
+  "realToGame": 0.1,
+  "cellGameM": 0.5,
+  "chunkCells": 128,
+  "georeference": {
+    "type": "EPSG:2180",
+    "axisOrder": "easting,northing",
+    "note": "Polish local MVP only; GRS80 transverse Mercator adapter, fixed global CS92 grid"
+  }
+}
