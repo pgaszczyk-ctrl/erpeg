@@ -2,8 +2,9 @@ import {hash} from './core.mjs';
 import { moduleBoxes } from './building-geometry.mjs';
 import { FreeWalk } from './free-walk.mjs?v=4';
 const $=id=>document.getElementById(id),canvas=$('map');let ctx=canvas.getContext('2d');
+const artPreview=new URLSearchParams(location.search).has('grafika');
 let data;
-try {const r=await fetch('blocks.json',{cache:'no-store'});if(!r.ok)throw Error(r.status);data=await r.json();}
+try {const r=await fetch(artPreview?'art-world.json':'blocks.json',{cache:'no-store'});if(!r.ok)throw Error(r.status);data=await r.json();}
 catch(e){$('progress').textContent='Nie udało się wczytać próbki. Odśwież stronę.';throw e;}
 let nav=new FreeWalk(data.box,data.modules,{water:data.water||[]});
 const manifest=await fetch('assets/building-pilot-v1/manifest.json').then(r=>r.json());
@@ -19,14 +20,15 @@ function artFor(m){
  const pool=[...artwork.values()].filter(item=>{const a=item.asset;return a.shape_id===m.shapeId&&a.style===$('art').value&&(!m.rowId||a.party_wall_profile==='flat-parapet-v1'&&a.eaves_game_m===m.height&&JSON.stringify([...(a.joined_sides||[])].sort())===JSON.stringify([...m.joinedSides].sort()));}).sort((a,b)=>a.asset.id.localeCompare(b.asset.id));
  if(pool.length)return pool[parseInt(hash(m.id),16)%pool.length];
  if(m.rowId||m.cells.length!==4||Math.abs(m.w-1.7)>.001||Math.abs(m.d-1.7)>.001)return null;
- const kind=m.kind==='dom'?'house-large':m.kind==='blok mieszkalny'?'apartment':null;return kind?artwork.get(kind+'-'+$('art').value):null;
+ const kind=m.kind==='dom'?'house-large':m.kind==='blok mieszkalny'||data.artPreview?'apartment':null;return kind?artwork.get(kind+'-'+$('art').value):null;
 }
 
 let blockMap=new Map(data.blocks.map(b=>[b.id,b])),ports=new Map(data.ports.map(p=>[p.id,p]));
 let roads=new Set(data.roadCells.map(c=>c.xy.join(','))),palette=['#bb7856','#78949b','#9a8058','#b58d7f','#7b8d69','#a29a76','#8d7790','#ad9267','#66908d','#8f6756'];
 const blockSize=data.blockCells;
-let camera=[...data.addressCenter],zoom=22,view='iso',selected=null,pointer=null,width=0,height=0,path=[],actor=null,last=performance.now(),visibleCount=data.blocks.length,building=false,buildClock=0,selectedIndex=-1;
+let camera=[...data.addressCenter],zoom=artPreview?64:22,view='iso',selected=null,pointer=null,width=0,height=0,path=[],actor=null,last=performance.now(),visibleCount=data.blocks.length,building=false,buildClock=0,selectedIndex=-1;
 let ordered=[...data.blocks].sort((a,b)=>(a.xy[0]+a.xy[1])-(b.xy[0]+b.xy[1])||a.xy[0]-b.xy[0]);
+if(artPreview){const focus=[...data.modules].sort((a,b)=>Math.hypot(a.pos[0]-data.addressCenter[0],a.pos[1]-data.addressCenter[1])-Math.hypot(b.pos[0]-data.addressCenter[0],b.pos[1]-data.addressCenter[1]))[0];if(focus)camera=focus.pos.map(v=>v-1.5);}
 function screen([x,y],z=0){x-=camera[0];y-=camera[1];return view==='source'?[width/2+x*zoom,height/2-y*zoom]:[width/2+(x-y)*zoom,height/2+(x+y)*zoom*.5-z*zoom];}
 function inverse([x,y]){x=(x-width/2)/zoom;y=(y-height/2)/zoom;return view==='source'?[camera[0]+x,camera[1]-y]:[camera[0]+x/2+y,camera[1]-x/2+y];}
 function polygon(points,color,stroke=null,z=0){ctx.beginPath();points.forEach((p,i)=>{const s=screen(p,z);i?ctx.lineTo(...s):ctx.moveTo(...s)});ctx.closePath();if(color){ctx.fillStyle=color;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke()}}
@@ -34,7 +36,7 @@ function line(points,color,lineWidth=1){ctx.beginPath();points.forEach((p,i)=>{c
 function square([x,y],size=1){return [[x,y],[x+size,y],[x+size,y+size],[x,y+size]];}
 function inView(pos,margin=100){const p=screen(pos);return p[0]>-margin&&p[1]>-margin&&p[0]<width+margin&&p[1]<height+margin;}
 function moduleDraw(m){
- const art=artFor(m);if(art){const {asset,image}=art,anchor=screen([Math.max(...m.cells.map(p=>p[0]))+1,Math.max(...m.cells.map(p=>p[1]))+1]),factor=zoom/64,x=anchor[0]-asset.anchor_px[0]*factor,y=anchor[1]-asset.anchor_px[1]*factor;const p=screen(actor),[bx,by,bw,bh]=asset.opaque_bbox_px||[0,0,...asset.canvas_px];const covers=actor[0]+actor[1]<m.pos[0]+m.pos[1]+2&&p[0]>=x+bx*factor&&p[0]<=x+(bx+bw)*factor&&p[1]>=y+by*factor&&p[1]-15<=y+(by+bh)*factor;ctx.globalAlpha=covers?.35:1;ctx.imageSmoothingEnabled=false;ctx.drawImage(image,x,y,asset.canvas_px[0]*factor,asset.canvas_px[1]*factor);ctx.globalAlpha=1;return;}
+ const art=artFor(m);if(art){const {asset,image}=art,anchor=screen([Math.max(...m.cells.map(p=>p[0]))+1,Math.max(...m.cells.map(p=>p[1]))+1]),factor=zoom/64,x=anchor[0]-asset.anchor_px[0]*factor,y=anchor[1]-asset.anchor_px[1]*factor;const p=screen(actor),[bx,by,bw,bh]=asset.opaque_bbox_px||[0,0,...asset.canvas_px];const covers=actor[0]+actor[1]<m.pos[0]+m.pos[1]+2&&p[0]>=x+bx*factor&&p[0]<=x+(bx+bw)*factor&&p[1]>=y+by*factor&&p[1]-15<=y+(by+bh)*factor;ctx.globalAlpha=covers?.35:1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(image,x,y,asset.canvas_px[0]*factor,asset.canvas_px[1]*factor);ctx.globalAlpha=1;return;}
  if(m.parts){
   const color=palette[m.palette],h=m.height;
   for(const part of [...m.parts].sort((a,b)=>(a.cell[0]+a.cell[1])-(b.cell[0]+b.cell[1]))){
@@ -74,7 +76,7 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
  if(input.some(v=>v)){path=[];actor=nav.move(actor,input.map(v=>v*dt*(data.scale?.walkSpeedGameMps||3)));if(!inView(actor, -60))camera=[...actor];}
  else if(path.length){const q=path[0],d=Math.hypot(q[0]-actor[0],q[1]-actor[1]),step=dt*(data.scale?.walkSpeedGameMps||3);const next=d<step?q:actor.map((v,i)=>v+(q[i]-v)/d*step);if(nav.clear(actor,next)){actor=next;if(d<=step)path.shift();}else{path=[];$('error').textContent='Przejście zablokowane.';}}
 
- const r=canvas.getBoundingClientRect();if(width!==r.width||height!==r.height){width=r.width;height=r.height;canvas.width=width;canvas.height=height;}
+ const r=canvas.getBoundingClientRect();if(width!==r.width||height!==r.height){width=r.width;height=r.height;const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
  ctx.fillStyle='#16291f';ctx.fillRect(0,0,width,height);
  polygon([[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]],data.corridors?'#a5a382':'#849a6b','#c3ca9b');
  ctx.save();ctx.beginPath();[[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]].forEach((p,i)=>i?ctx.lineTo(...screen(p)):ctx.moveTo(...screen(p)));ctx.closePath();ctx.clip();
@@ -119,21 +121,21 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
  $('progress').textContent=`Bloczki ${visibleCount}/${data.blocks.length} · ${view==='source'?'źródłowe OSM':'wspólna izometria dróg i budynków'} · ${zoom.toFixed(1)} px/m gry`;
  requestAnimationFrame(draw);
 }
-$('view').onchange=e=>{view=e.target.value};$('home').onclick=()=>{camera=[...data.addressCenter];zoom=22};$('overview').onclick=fit;
-$('plus').onclick=()=>zoom=Math.min(55,zoom*1.3);$('minus').onclick=()=>zoom=Math.max(2,zoom/1.3);
+$('view').onchange=e=>{view=e.target.value};$('home').onclick=()=>{camera=[...data.addressCenter];zoom=artPreview?64:22};$('overview').onclick=fit;
+$('plus').onclick=()=>zoom=Math.min(96,zoom*1.3);$('minus').onclick=()=>zoom=Math.max(2,zoom/1.3);
 $('next').onclick=()=>{const candidates=ordered.filter(b=>b.roadMask&&b.sourceIds.length).sort((a,b)=>Math.hypot(a.xy[0]*3+1.5-data.addressCenter[0],a.xy[1]*3+1.5-data.addressCenter[1])-Math.hypot(b.xy[0]*3+1.5-data.addressCenter[0],b.xy[1]*3+1.5-data.addressCenter[1]));selectedIndex=(selectedIndex+1)%candidates.length;select(candidates[selectedIndex]);camera=selected.xy.map(v=>v*3+1.5);view='grid';$('view').value=view;zoom=32;};
 $('build').onclick=()=>{if(building){building=false;$('build').textContent='Wznów budowę';}else{if(visibleCount===data.blocks.length)visibleCount=0;building=true;$('build').textContent='Zatrzymaj budowę';}};
 canvas.onpointerdown=e=>{pointer={start:[e.clientX,e.clientY],camera:[...camera],moved:false};canvas.setPointerCapture(e.pointerId)};
 canvas.onpointermove=e=>{if(!pointer)return;const dx=(e.clientX-pointer.start[0])/zoom,dy=(e.clientY-pointer.start[1])/zoom;if(Math.hypot(dx,dy)*zoom>5)pointer.moved=true;camera=view==='source'?[pointer.camera[0]-dx,pointer.camera[1]+dy]:[pointer.camera[0]-dx/2-dy,pointer.camera[1]+dx/2-dy]};
 canvas.onpointerup=e=>{if(pointer&&!pointer.moved){const r=canvas.getBoundingClientRect(),p=inverse([e.clientX-r.left,e.clientY-r.top]);if($('walking').checked)route(p);else select(blockAt(p))}pointer=null};canvas.onpointercancel=()=>pointer=null;
-canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(55,zoom*(e.deltaY<0?1.15:.87)))},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(96,zoom*(e.deltaY<0?1.15:.87)))},{passive:false});
 function refreshInfo(){
  $('next').disabled=!!data.synthetic;$('home').textContent=data.synthetic?'Środek galerii':'Guliwera 4';
- $('scene-name').textContent=data.synthetic?'Próbka SYNTETYCZNA — kształty i złącza':'Guliwera 4 · rzeczywisty OSM · '+(data.comparisonRole==='before'?'PRZED zmianą':'PO zmianie');
- $('scale-info').textContent=data.synthetic?'Galeria techniczna: L, U, 4×2, 3×3 i trzy różne segmenty szeregu. Nie przedstawia rzeczywistego miejsca.':`Skala 1:${data.scale.denominator.toFixed(2)}. Komórka = ${data.report.cellRealM.toFixed(1)} m terenu; bloczek = ${data.report.blockRealM.toFixed(1)} m. Spacer ${data.scale.walkSpeedGameMps} m gry/s. Model Lublin–Warszawa: ${data.scale.referenceDistanceRealM/1000} km → ${data.scale.referenceGameM/1000} km gry → 30 min bez zatrzymań. Pełna trasa nie została jeszcze wygenerowana ani przechodzona.`;
+ $('scene-name').textContent=data.artPreview?'Guliwera 4 · grafiki 2×2 na rzeczywistej siatce OSM':data.synthetic?'Próbka SYNTETYCZNA — kształty i złącza':'Guliwera 4 · rzeczywisty OSM · '+(data.comparisonRole==='before'?'PRZED zmianą':'PO zmianie');
+ $('scale-info').textContent=data.artPreview?data.previewNote+' Grafiki 512×512 px, romb 128×64 px przy zbliżeniu 64 px/m.':data.synthetic?'Galeria techniczna: L, U, 4×2, 3×3 i trzy różne segmenty szeregu. Nie przedstawia rzeczywistego miejsca.':`Skala 1:${data.scale.denominator.toFixed(2)}. Komórka = ${data.report.cellRealM.toFixed(1)} m terenu; bloczek = ${data.report.blockRealM.toFixed(1)} m. Spacer ${data.scale.walkSpeedGameMps} m gry/s. Model Lublin–Warszawa: ${data.scale.referenceDistanceRealM/1000} km → ${data.scale.referenceGameM/1000} km gry → 30 min bez zatrzymań. Pełna trasa nie została jeszcze wygenerowana ani przechodzona.`;
  $('metrics').innerHTML=[...(data.coverageComparison? [['Drogi — udział terenu', (data.comparisonRole==='before'?data.coverageComparison.beforeRoadPct:data.coverageComparison.afterRoadPct)+'%'],['Zieleń OSM bez zabudowy i dróg',(data.comparisonRole==='before'?data.coverageComparison.beforeUncoveredSourceGreenPct:data.coverageComparison.afterUncoveredSourceGreenPct)+'%']]:[]),['Moduły budynków',data.report.modules],['Budynki na wielu bloczkach',data.report.multiBlockModules],['Wspólne ściany',data.report.buildingJoins],['Kolizje budynków',data.report.buildingBuildingCollisions],['Kolizje z drogą',data.report.buildingRoadCollisions]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('');
 }
-refreshInfo();
+refreshInfo();if(artPreview){$('compare-ground').hidden=true;$('art').value='elven';$('home').textContent='Guliwera · detal 1:1';}
 const liveData=data;
 function activateScene(next){
  data=next;

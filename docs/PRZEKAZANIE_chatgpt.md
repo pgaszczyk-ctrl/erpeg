@@ -543,3 +543,5 @@
 - Laboratorium OSM v5: osobne pasy dróg, ochrona zieleni OSM, porównanie przed/po; szczegóły i ograniczenia w tools/osm-world/README.md. Zmiana wyłącznie tools/docs, bez wdrożenia gry.
 
 - 2026-10-21: makieta grafiki tools/osm-world/public/makieta.html + makieta.js. Oryginalne cztery PNG 512×512, siatka 128×64, podgląd 1:1, oba style, podstawy, pobieranie PNG 1800×1300. Syntetyczny układ ośmiu ustawień, bez rozciągania, bez zmiany gry. Paczka ma binarną alfę i odsunięte ściany, nie udaje gotowych modułów szeregu. Weryfikacja: node --check; Playwright desktop/telefon, przełączniki, skala 1:1 i pobieranie PNG.
+
+- Guliwera grafika: public/?grafika=1 w tools/osm-world, dane generate-art-world.mjs (2×2 only, 20 modułów bez kolizji na rzeczywistych drogach i terenie OSM). Osobny wariant poglądowy, bazowy generator bez zmian. Natywny zoom64, wygładzanie i płótno DPR2; bez rozciągania innych kształtów. Sprawdzono desktop/telefon, wszystkie moduły mają grafikę.
