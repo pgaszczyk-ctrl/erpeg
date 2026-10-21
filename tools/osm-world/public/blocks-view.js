@@ -1,4 +1,4 @@
-import { astar } from './core.mjs';
+import { findRoadPath } from './road-surface.mjs';
 const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d');
 let data;
 try {const r=await fetch('blocks.json');if(!r.ok)throw Error(r.status);data=await r.json();}
@@ -30,7 +30,7 @@ function select(b){if(!b)return;selected=b;const mask=Array.from({length:3},(_,y
 function nearest(p){let best=Infinity,out=null;for(const c of data.roadCells){const d=Math.hypot(p[0]-c.xy[0]-.5,p[1]-c.xy[1]-.5);if(d<best){best=d;out=c.xy}}return out;}
 const start=nearest(data.addressCenter);actor=start.map(v=>v+.5);
 function route(p){const cell=p.map(Math.floor);if(!roads.has(cell.join(','))){$('error').textContent='Wybierz komórkę drogi. Budynki i trawniki nie są przechodnie w tej próbce.';return false;}
- const result=astar(nearest(actor),cell,roads);path=result?result.map(p=>p.map(v=>v+.5)):[];$('error').textContent=result?'':'Brak połączenia w źródłowym wycinku.';return !!result;}
+ const result=findRoadPath(nearest(actor),cell,roads,data.roadSurface.diagonalLinks);path=result?result.map(p=>p.map(v=>v+.5)):[];$('error').textContent=result?'':'Brak połączenia w źródłowym wycinku.';return !!result;}
 function fit(){camera=[...data.center];zoom=Math.min(width/(data.box[2]-data.box[0])/2.1,height/(data.box[3]-data.box[1])/1.2);}
 function portDraw(p){const [a,b]=p.cells,x=Math.max(a[0],b[0]),y=Math.max(a[1],b[1]);const edge=a[0]!==b[0]?[[x,y],[x,y+1]]:[[x,y],[x+1,y]];line(edge,p.boundary?'#e8ae65':'#8ff8de',3);}
 function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
@@ -46,9 +46,10 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
  }else{
   // Road surface is ground geometry, transformed by the same isometric mapping
   // as plots and buildings. No constant-width screen-space road strokes.
-  for(const c of data.roadCells){if(!shown.has(blockAt(c.xy)?.id)||!inView(c.xy))continue;polygon(square(c.xy),'#d0bd8b');
-   if(view==='grid'||view==='ports')polygon(square(c.xy),null,'#a29169');
-  }
+  if(view==='iso'){
+   for(const tile of data.roadSurface.tiles)if(shown.has(blockAt(tile.xy)?.id)&&inView(tile.xy))polygon(tile.polygon,'#d0bd8b');
+   for(const c of data.roadSurface.connectors)if(c.cells.every(p=>shown.has(blockAt(p)?.id))&&inView(c.xy))polygon(c.polygon,'#d0bd8b');
+  }else for(const c of data.roadCells){if(!shown.has(blockAt(c.xy)?.id)||!inView(c.xy))continue;polygon(square(c.xy),'#d0bd8b','#a29169');}
   if(view==='grid'||view==='ports')for(const b of data.blocks){const pos=b.xy.map(v=>v*3);if(!inView(pos,180))continue;polygon(square(pos,3),null,'#647a58');
    if(view==='grid')for(let i=1;i<3;i++){line([[pos[0]+i,pos[1]],[pos[0]+i,pos[1]+3]],'#758965',.5);line([[pos[0],pos[1]+i],[pos[0]+3,pos[1]+i]],'#758965',.5)}
   }

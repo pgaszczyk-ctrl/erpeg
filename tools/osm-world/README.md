@@ -202,3 +202,24 @@ PLAYWRIGHT_MODULE=/sciezka/node_modules/playwright/index.mjs node browser-check.
 ```
 
 Wyniki zapisuje w `data/browser-report.json`, obrazy w `artifacts/`.
+
+## Przekątne zamiast schodków (21 października 2026)
+
+Widok świata łączy schodki przekątnymi: zewnętrzne narożniki drogi są ścinane,
+a wewnętrzne uzupełniane trójkątnym łącznikiem. Łącznik powstaje tylko między
+komórkami wspólnej drogi źródłowej, gdy nie przecina obrysu modułu i wody.
+Siatka rezerwacji, budynki i dotychczasowe portale nie przesuwają się. W siatce
+diagnostycznej nadal widać bazowe kwadraty; w świecie izometrycznym widać
+powierzchnię z przekątnymi. Ruch pionka korzysta z jawnych połączeń ukośnych
+(bez dowolnego cięcia narożników), a test próbuje punkty na każdym odcinku
+po widocznej nawierzchni. BFS minimalizuje liczbę kroków, a nie koszt geometryczny
+przekątnej; nie jest to nawigacja po dozwolonych trasach w rzeczywistym mieście.
+
+W próbce: 1402 trójkątne łączniki i 1472 połączenia ukośne. Niezależny test
+sprawdza brak kolizji łączników z budynkami oraz pokrycie trasy geometrią drogi.
+Budynki są identyczne jak przed zmianą.
+
+Aktualna biblioteka: **3 kategorie logiczne, jedna bryła proceduralna, 4 rozmiary
+podstawy i 10 palet**. Liczby modułów: dom 668, usługi 16, blok mieszkalny 6.
+Zalecany zestaw grafik oraz kotwice i podstawy opisano w [ART_BRIEF.md](ART_BRIEF.md).
+Importer własnych sprite'ów pozostaje kolejnym krokiem po otrzymaniu próbnej grafiki.

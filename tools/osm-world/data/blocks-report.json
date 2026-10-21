@@ -1,4 +1,6 @@
 {
+  "diagonalConnectors": 1402,
+  "diagonalLinks": 1472,
   "blocks": 1600,
   "roadCells": 4191,
   "internalPorts": 1586,
@@ -13,5 +15,5 @@
   "buildingRoadCollisions": 0,
   "buildingBuildingCollisions": 0,
   "invalidPorts": 0,
-  "generationMs": 1285
+  "generationMs": 2240
 }

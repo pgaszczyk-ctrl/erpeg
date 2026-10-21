@@ -3,14 +3,14 @@
     "name": "desktop",
     "errors": [],
     "partialBlocks": 64,
-    "routeCells": 7,
+    "routeCells": 5,
     "actorMoved": true
   },
   {
     "name": "phone",
     "errors": [],
     "partialBlocks": 64,
-    "routeCells": 7,
+    "routeCells": 5,
     "actorMoved": true
   }
 ]
