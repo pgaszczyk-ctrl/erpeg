@@ -213,7 +213,8 @@ export function modulPortret(look: ModulLook): Promise<HTMLCanvasElement> {
       c.width = c.height = PORTRET_PX;
       const ctx = c.getContext('2d')!;
       ctx.imageSmoothingEnabled = false;
-      const S = 48, x0 = F + Math.round(h.kier[0].mx - S / 2), y0 = 2;
+      // v8 heads are whole (beards, chins): the 48 px square ends a few px under the mount point
+      const S = 48, x0 = F + Math.round(h.kier[0].mx - S / 2), y0 = Math.max(0, Math.min(F - S, Math.round(h.kier[0].my) + 6 - S));
       ctx.drawImage(glowy, x0, y0, S, S, 0, 0, PORTRET_PX, PORTRET_PX);
       return c;
     });

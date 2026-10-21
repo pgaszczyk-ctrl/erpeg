@@ -8,13 +8,16 @@ step A / standing / step B – their masks and manifest.json) and writes
 Masks are the artist's: red/green = clothes, blue = skin, yellow = hair/beard/brows. The reference colour of
 each material (the 75th-percentile brightest pixel of the standing front frame) lets recolouring keep the
 material's own shading – dark hair turns into a dark-to-light blond, not a black one.
-Run: python3 scripts/postacie-modul.py
+Run: python3 scripts/postacie-modul.py   (reads scripts/modul-zrodla/v8 when present; `v6` = the old v6.3 parts)
 """
-import json, os
+import json, os, sys
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 Z = os.path.join(ROOT, 'scripts', 'modul-zrodla')
+# v8 (21 Oct 2026, shorter legs, whole heads): the parts made by scripts/postacie-modul-v8.py from the artist's boards
+if os.path.isdir(os.path.join(Z, 'v8')) and 'v6' not in sys.argv[1:]:
+    Z = os.path.join(Z, 'v8')
 OUT = os.path.join(ROOT, 'public', 'postacie', 'modul')
 m = json.load(open(os.path.join(Z, 'manifest.json')))
 NAZWY = {'01': 'Warkocze', '02': 'Kowal', '03': 'Pilotka', '04': 'Profesor', '05': 'Kucharka', '06': 'Ogrodniczka',

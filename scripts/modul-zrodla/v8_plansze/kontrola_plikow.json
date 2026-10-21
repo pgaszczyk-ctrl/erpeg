@@ -1,0 +1,111 @@
+{
+  "png_count": 20,
+  "image_size": [
+    1536,
+    1024
+  ],
+  "format": "RGBA PNG",
+  "visual_review": "Przód, lewy bok i tył; krótsze nogi w postaci złożonej i ciałku. Plansze źródłowe, bez walidacji montażu w silniku gry.",
+  "files": [
+    {
+      "file": "plansze/01_warkocze_f.png",
+      "sha256": "db50e8e03445cbae91a3fbe42d1a15a1d6556f03443dc2e0d710c6377757db62",
+      "bytes": 1515107
+    },
+    {
+      "file": "plansze/02_kowal_m.png",
+      "sha256": "71ff24ade301a49489ac25f95aea7f19d858fe1c27f4bfc31b3f422b66c34041",
+      "bytes": 1470228
+    },
+    {
+      "file": "plansze/03_pilotka_f.png",
+      "sha256": "d402a164b84711d93b0acf8e01fdc6c1c3bda4d30cdca860184c67e0d316d6bb",
+      "bytes": 1535319
+    },
+    {
+      "file": "plansze/04_profesor_m.png",
+      "sha256": "8e31f31c418b8e5450e1d98cc45afb1c51051e23f4d7695ffe86d1ae5768adb2",
+      "bytes": 1588055
+    },
+    {
+      "file": "plansze/05_kucharka_f.png",
+      "sha256": "0b0c10156b39d374725a584da4b5ed5e587f6e2cd893b5d1f5811a6c0d9e25d7",
+      "bytes": 1499160
+    },
+    {
+      "file": "plansze/06_ogrodniczka_f.png",
+      "sha256": "62a85dee23bc6a23f98d50891aa0a2d11822558c1330608572ab2ce7ab0b8368",
+      "bytes": 1574147
+    },
+    {
+      "file": "plansze/07_maszynista_m.png",
+      "sha256": "09f367020eb9b2497a2eab3aeb220de04fff34f83adef2487b395c7c690199ca",
+      "bytes": 1470303
+    },
+    {
+      "file": "plansze/08_kurierka_f.png",
+      "sha256": "c4d034d27e1a784f7d4e7c3517888486d8b1d9bc905fa0d6c1acdea23d7e63bb",
+      "bytes": 1624364
+    },
+    {
+      "file": "plansze/09_wynalazca_m.png",
+      "sha256": "8a8f73be81c3348ab67dc90499f83bdfe552d6a55c2b018da14930e21de39ad4",
+      "bytes": 1597294
+    },
+    {
+      "file": "plansze/10_karczmarz_m.png",
+      "sha256": "8dbe30a70a19c5f28d71360a431e2a1dc5ced1fe152c57c72f081869b02be1b7",
+      "bytes": 1468458
+    },
+    {
+      "file": "plansze/11_czarodziej_m.png",
+      "sha256": "18fb0cee55e98ef0b6c199ff64de727251fbb89cda534d7d356230881bcb8b77",
+      "bytes": 1605085
+    },
+    {
+      "file": "plansze/12_zwiadowca_m.png",
+      "sha256": "2c26804c0917babc5c332d4337e317ec75059d03cc331a968518c192d3b8363f",
+      "bytes": 1516746
+    },
+    {
+      "file": "plansze/13_dzentelmen_m.png",
+      "sha256": "d3608dcc3e911d68b1858be5ff69269273bb16027555441b3706237da7c7f143",
+      "bytes": 1547094
+    },
+    {
+      "file": "plansze/14_podroznik_senior_m.png",
+      "sha256": "b09e4b894936faccc28f1ddbe58d7e3040709c11fabd7cb4d1b6f9d747c35db3",
+      "bytes": 1529747
+    },
+    {
+      "file": "plansze/15_gospodyni_f.png",
+      "sha256": "799943b776d4b49a3d89b96095ceaa25c3c25c6c3f72b3e9da5e4f5cfccc43f1",
+      "bytes": 1579220
+    },
+    {
+      "file": "plansze/16_straznik_m.png",
+      "sha256": "1d745654080ec9149968e53e321a9197acdc54a84c9db541064db961adc0a4d9",
+      "bytes": 1541376
+    },
+    {
+      "file": "plansze/17_rudobrody_m.png",
+      "sha256": "9f67e0384b951602a5bc23c18fffdcb787bf771b451c231f4a809685f25e60ef",
+      "bytes": 1571520
+    },
+    {
+      "file": "plansze/18_luczniczka_f.png",
+      "sha256": "ba34696432f1940149d61162b63702907618b982db4faf6ae5d4625ce548d5b5",
+      "bytes": 1623480
+    },
+    {
+      "file": "plansze/19_listonosz_m.png",
+      "sha256": "f97f8403a978e81e4792ac2092512182cf0bd03132040a9c0b15484f1b360ff6",
+      "bytes": 1519009
+    },
+    {
+      "file": "plansze/20_mechanik_m.png",
+      "sha256": "b4654b5a863783c8064a4f191bf35699b583fa202a4f82707d61bd03404fe256",
+      "bytes": 1532240
+    }
+  ]
+}

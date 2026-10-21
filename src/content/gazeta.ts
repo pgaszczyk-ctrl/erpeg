@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '21.10.2026', tytul: { pl: 'Nowe ludziki', en: 'New little people' },
+    tresc: { pl: 'Postacie, które składasz z głowy i ciałka, dostały nowe rysunki: krótsze, pękate nóżki i całe głowy – brody, warkocze i podbródki nie są już ucięte.', en: 'The heroes you build from a head and a body got new drawings: shorter, chubby legs and whole heads – beards, braids and chins are no longer cut off.' },
+  },
+  {
     data: '20.10.2026', tytul: { pl: 'Walka na tury i Arena Cechu', en: 'Turn-based fights and the Guild Arena' },
     tresc: { pl: 'Potwory czekają teraz w grupkach – możesz podejść i walczyć na tury, odejść, a z bandytami nawet się dogadać. Smoki też walczą na tury. Na stadionach stoją sędziowie Areny Cechu. Nowy HUD: portret w lewym górnym rogu, dotknij go, by otworzyć menu i plecak. Nowe postacie składasz z płci i koloru skóry, a starzy bohaterowie mogą w Kufrze wybrać „Nowy wygląd”.', en: 'Monsters now wait in small groups – walk up and fight them in turns, walk away, or even make a deal with bandits. Dragons fight in turns too. Arena judges stand at the stadiums. A new HUD: your portrait at the top left – tap it for the menu and backpack. New heroes are made from a gender and skin tone, and older heroes can pick „New look” in the Trunk.' },
   },
