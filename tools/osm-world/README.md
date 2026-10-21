@@ -1,3 +1,17 @@
+## Nowa makieta: Guliwera 2, 3 km, planowanie 5×5
+
+Otwórz `public/miasto.html`. To odrębna, uproszczona reprezentacja miasta, nie zmiana gry ani wierności OSM. Punkt adresowy z repozytoryjnego snapshotu: 22.4873796, 51.2389732. Źródło world.json ma bufor 3,5 km wokół Guliwera 4, wystarczający również dla promienia 3 km wokół numeru 2. Maska kołowa oparta na środkach pól, brzegi schodkowe.
+
+Parametry: 15 m rzeczywistych = 1 m gry. Pole 75×75 m rzeczywistych = 5×5 m gry; kwadrat planowania 5×5 pól = 375×375 m rzeczywistych = 25×25 m gry. Prędkość 20 km/h = 5,5556 m gry/s = 1,1111 pola/s. 150 km → 10 km gry → 1800 s. Średnica makiety 6 km → 400 m gry → 72 s prostego ruchu; przeszkody i zakręty wydłużają trasę. Nie wygenerowano Lublin–Warszawa.
+
+Generator `simplified-city.mjs`: zbiera dowody źródłowych połączeń między sąsiednimi kwadratami 375 m. Pomija ścieżki, serwisowe, nienazwane lokalne i inne poziomy. Łączy wiele ulic w jedną krawędź; zachowuje główny szkielet i wybiera lokalny las połączeń. Wspólne kotwice kwadratów oraz lokalne wyszukiwanie trasy omijają pola wody. Szerokość lokalna 1 pole, główna 2 pola; skrzyżowania mogą być szersze. Nie jest to wierna topologia ani model przejezdności oryginalnego OSM.
+
+Teren: dominująca klasa z 9 próbek pola. Zieleń/woda nie są przeznaczane pod budynki. Wolne tło bez klasyfikacji jest poglądową zielenią gry, nie twierdzeniem o istnieniu parku. Zabudowa: do trzech reprezentantów na zabudowany kwadrat, wybieranych według liczby obrysów i dostępnego miejsca. Rezerwacje globalne, także przez granice kwadratów. Cztery dostarczone modele 2×2 (512×512), bez rozciągania. Model 2×2 oznacza działkę 10×10 m gry, nie dosłowny budynek 150 m. Brak grafik złączy szeregu; modele są wolnostojące. Style przypisane poglądowo dzielnicom, nie danym OSM. Powtórzenia są ograniczeniem czterech grafik.
+
+Wynik: 11821 obrysów → 208 modeli, 224 kwadraty planowania, 193 połączenia z 275 kandydatów. Drogi 28,8% pól, wolna zieleń (w tym tło gry) 54,4%. Nie wszystkie grupy źródłowe mają model: 85 kwadratów z obrysami nie znalazło zgodnego wolnego miejsca. Raport: `data/city-5x5-report.json`.
+
+Generowanie: `node generate-simplified-city.mjs /ścieżka/do/world.json`. Publikować też ignorowany `public/city-5x5.json`. Testy: `npm run test:city`, `npm run test:blocks`, opcjonalnie `node city-browser-check.mjs` (PLAYWRIGHT_MODULE, CITY_PREVIEW_URL, CITY_ARTIFACT_DIR). Testy obejmują skalę i tempo, zakres, wspólne drogi, wodę, rezerwacje budynków, oba ekrany, grafiki i swobodny spacer. Eksporty mają binarną alfę; wygładzanie na płótnie DPR2 nie dodaje detalu do oryginału.
+
 ## Bilans terenu — próba v5
 
 Drogi są ciągłymi pasami w płaszczyźnie świata, niezależnymi od komórek budynków. OSM width lub domyślna szerokość według klasy; minimum czytelności 0,085 m gry dla ścieżek i 0,14 m dla ulic. Nie zalewamy wysepek. Równoległe chodniki blisko ulic scalane wizualnie, zachowane aliasy źródeł. Siatka i porty pozostają diagnostyką osi, nie szerokości drogi.

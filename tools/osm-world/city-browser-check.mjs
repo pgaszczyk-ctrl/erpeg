@@ -1,0 +1,14 @@
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');import assert from 'node:assert/strict';import fs from 'node:fs';
+const artifactDir=process.env.CITY_ARTIFACT_DIR||'/tmp/exp-lore-city-check';fs.mkdirSync(artifactDir,{recursive:true});
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});const results=[];
+for(const [name,viewport] of [['desktop',{width:1440,height:1000}],['phone',{width:390,height:844}]]){
+ const page=await browser.newPage({viewport,deviceScaleFactor:2}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(process.env.CITY_PREVIEW_URL||'http://127.0.0.1:4176/public/miasto.html');await page.waitForFunction(()=>window.__cityTest,{timeout:60000});await page.waitForTimeout(300);
+ const initial=await page.evaluate(()=>{const t=window.__cityTest;return {modules:t.data.modules.length,center:t.data.config.center,assets:t.images.size,speed:t.speedCellsPerSecond*5,actor:t.actor,free:t.nav.free(t.actor)};});assert.equal(initial.assets,4);assert.ok(initial.free);assert.ok(Math.abs(initial.speed-20/3.6)<1e-10);
+ await page.screenshot({path:`${artifactDir}/city-neighborhood-${name}.png`,fullPage:true});
+ await page.click('#overview');await page.screenshot({path:`${artifactDir}/city-overview-${name}.png`,fullPage:true});
+ await page.click('#home');await page.click('#native');assert.equal(await page.evaluate(()=>window.__cityTest.zoom),64);await page.selectOption('#style','elven');await page.screenshot({path:`${artifactDir}/city-native-${name}.png`,fullPage:true});await page.selectOption('#style','steam');await page.uncheck('#grid');await page.check('#grid');
+ await page.uncheck('#walking');const box=await page.locator('#map').boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);assert.ok(await page.locator('#inspector').textContent());await page.check('#walking');
+ const target=await page.evaluate(()=>{const t=window.__cityTest,a=t.actor;for(let i=0;i<64;i++){const p=[a[0]+1.03*Math.cos(i*Math.PI/32),a[1]+1.03*Math.sin(i*Math.PI/32)];if(t.nav.clear(a,p)&&t.route(p))return p;}throw Error('No route');});const started=Date.now();await page.waitForFunction(p=>Math.hypot(window.__cityTest.actor[0]-p[0],window.__cityTest.actor[1]-p[1])<.01,target,{timeout:7000});const durationMs=Date.now()-started;assert.ok(durationMs>500&&durationMs<3000);
+ const moved=await page.evaluate(()=>window.__cityTest.walkedGameM);assert.ok(Math.abs(moved-5.15)<.1);assert.deepEqual(errors,[]);
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);assert.equal(overflow,false);results.push({name,...initial,durationMs,walkedGameM:moved,overflow,errors});await page.close();
+}await browser.close();fs.writeFileSync(new URL('./data/city-browser-report.json',import.meta.url),JSON.stringify(results,null,2)+'\n');console.log(JSON.stringify(results,null,2));

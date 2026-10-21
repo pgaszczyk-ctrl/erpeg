@@ -1,0 +1,40 @@
+[
+  {
+    "name": "desktop",
+    "modules": 208,
+    "center": [
+      22.4873796,
+      51.2389732
+    ],
+    "assets": 4,
+    "speed": 5.555555555555555,
+    "actor": [
+      -2.5,
+      -0.5
+    ],
+    "free": true,
+    "durationMs": 1068,
+    "walkedGameM": 5.15,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "phone",
+    "modules": 208,
+    "center": [
+      22.4873796,
+      51.2389732
+    ],
+    "assets": 4,
+    "speed": 5.555555555555555,
+    "actor": [
+      -2.5,
+      -0.5
+    ],
+    "free": true,
+    "durationMs": 901,
+    "walkedGameM": 5.149999999999999,
+    "overflow": false,
+    "errors": []
+  }
+]

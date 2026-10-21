@@ -1,0 +1,19 @@
+{
+  "sourceBuildings": 11821,
+  "sourceRoads": 1574,
+  "excludedRoads": 20000,
+  "candidateConnections": 275,
+  "selectedConnections": 193,
+  "unroutableConnections": 0,
+  "planningBlocks": 224,
+  "modules": 208,
+  "omittedGroups": 85,
+  "tiles": 5024,
+  "roadTiles": 1447,
+  "roadPct": 28.8,
+  "greenPct": 54.4,
+  "gameDiameterM": 400,
+  "diameterSeconds": 72,
+  "referenceGameM": 10000,
+  "referenceSeconds": 1800
+}
