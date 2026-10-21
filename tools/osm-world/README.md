@@ -1,5 +1,9 @@
 # Exp-lore: lokalne laboratorium świata OSM
 
+Uruchomiony prywatny podgląd właściciela (Sites):
+https://exp-lore-osm-laboratorium.snugsnow32.chatgpt.site
+
+
 Osobny eksperyment, bez zależności od gry, logowania, serwera danych ani wdrożenia.
 **Działający podgląd rzeczywistych danych, ale nie zakończony test akceptacyjny z wytycznych.**
 
