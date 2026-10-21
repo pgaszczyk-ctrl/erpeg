@@ -167,6 +167,23 @@ def ze_skora(base, czesc):
     return np.concatenate([kol, SKORY[czesc][0]]), np.concatenate([kl, SKORY[czesc][1]]), len(kol)
 
 
+# Hair redrawn in a colour this character's old parts use for something else (leather, hat brims), so the
+# vote calls it fixed: these new hair/beard colours are hair (heads only; hats keep other colours).
+WLOSY_RECZNIE = {
+    '12_zwiadowca_m': [(104, 70, 40), (104, 56, 40), (56, 38, 22), (56, 24, 22), (104, 70, 54), (72, 40, 22), (88, 56, 40)],
+    '16_straznik_m': [(104, 56, 40)],
+    '19_listonosz_m': [(120, 56, 40), (104, 56, 40), (88, 40, 22), (72, 40, 22), (88, 40, 40)],
+    '13_dzentelmen_m': [(136, 120, 120), (120, 120, 104), (120, 104, 104), (136, 120, 104)],
+}
+
+
+def wlosy_recznie(base, obraz, mask):
+    for rgb in WLOSY_RECZNIE.get(base, []):
+        bliskie = (obraz[..., 3] > 0) & (np.abs(obraz[..., :3].astype(int) - rgb).max(2) <= 10)
+        mask[bliskie] = (255, 255, 0, 255)
+    return mask
+
+
 def maska(obraz, stare):
     kol, kl, wlasnych = stare
     out = np.zeros_like(obraz)
@@ -274,7 +291,10 @@ def main():
         for czesc in ('head', 'body'):
             obraz = arkusz[czesc]
             Image.fromarray(obraz).save(os.path.join(OUT, 'sheets_192', f'{base}_{czesc}_3x3.png'), optimize=True)
-            Image.fromarray(maska(obraz, ze_skora(base, czesc))).save(
+            mk = maska(obraz, ze_skora(base, czesc))
+            if czesc == 'head':
+                mk = wlosy_recznie(base, obraz, mk)
+            Image.fromarray(mk).save(
                 os.path.join(OUT, 'mask_sheets_192', f'{base}_{czesc}_mask_3x3.png'), optimize=True)
         nowa = dict(c)
         nowa['directions'] = {dn: dict(c['directions'][dn], **kier[dn]) for dn in KIER}
@@ -286,4 +306,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if sys.argv[1:] == ['wlosy']:   # only re-apply WLOSY_RECZNIE to the head masks already made
+        for base in WLOSY_RECZNIE:
+            obraz = np.array(Image.open(os.path.join(OUT, 'sheets_192', f'{base}_head_3x3.png')).convert('RGBA'))
+            sciezka = os.path.join(OUT, 'mask_sheets_192', f'{base}_head_mask_3x3.png')
+            mk = np.array(Image.open(sciezka).convert('RGBA'))
+            Image.fromarray(wlosy_recznie(base, obraz, mk)).save(sciezka, optimize=True)
+    else:
+        main()
