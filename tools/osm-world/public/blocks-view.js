@@ -1,7 +1,7 @@
 import {hash} from './core.mjs';
 import { moduleBoxes } from './building-geometry.mjs';
 import { FreeWalk } from './free-walk.mjs?v=4';
-const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id),canvas=$('map');let ctx=canvas.getContext('2d');
 let data;
 try {const r=await fetch('blocks.json',{cache:'no-store'});if(!r.ok)throw Error(r.status);data=await r.json();}
 catch(e){$('progress').textContent='Nie udało się wczytać próbki. Odśwież stronę.';throw e;}
@@ -54,7 +54,11 @@ function select(b){if(!b)return;selected=b;const mask=Array.from({length:3},(_,y
  const info=b.ports.map(id=>ports.get(id));const selectedModules=data.modules.filter(m=>b.modules.includes(m.id));$('inspector').textContent=`Bloczek ${b.id}\n\nDroga w komórkach:\n${mask}\n\nWejścia do sąsiadów: ${info.length}\n${info.map(p=>p.blocks.filter(k=>k!==b.id).join('')+(p.boundary?' (brzeg próbki)':' ✓ wspólne')).join('\n')}\n\nObrysy źródłowe: ${b.sourceIds.length}\nModuły: ${b.modules.length}\n${selectedModules.map(m=>m.shapeId+' · '+(m.blocks||[m.block]).length+' bloczków · '+m.joinIds.length+' złączy').join('\n')}\n\nSąsiedzi:\n${b.neighbors.map(n=>`${n.id}: ${(n.roadMask?'droga':'bez drogi')+(n.outside?' (kontekst poza próbką)':'')}`).join('\n')}`;
 }
 function nearest(p){let best=Infinity,out=null;for(const c of data.roadCells){const d=Math.hypot(p[0]-c.xy[0]-.5,p[1]-c.xy[1]-.5);if(d<best){best=d;out=c.xy}}return out;}
-const start=nearest(data.addressCenter);actor=start.map(v=>v+.5);
+function spawn(){
+ const candidates=data.corridors?data.corridors.surfaces.map(s=>s.polygon.reduce((a,p)=>[a[0]+p[0]/s.polygon.length,a[1]+p[1]/s.polygon.length],[0,0])):data.roadCells.map(c=>c.xy.map(v=>v+.5));
+ return candidates.sort((a,b)=>Math.hypot(a[0]-data.addressCenter[0],a[1]-data.addressCenter[1])-Math.hypot(b[0]-data.addressCenter[0],b[1]-data.addressCenter[1])).find(p=>nav.free(p))||data.center;
+}
+actor=spawn();
 function route(p){
  if(!nav.free(p)){$('error').textContent='Ten punkt zajmuje budynek, woda albo granica próbki. Wybierz wolne miejsce.';return false;}
  const result=nav.route(actor,p);path=result?result.slice(1):[];$('error').textContent=result?'':'Nie znalazłem bezpiecznego dojścia do tego punktu.';return !!result;
@@ -63,6 +67,7 @@ function inputVector(){const right=(keys.has('arrowright')||keys.has('d')?1:0)-(
 
 function fit(){camera=[...data.center];zoom=Math.min(width/(data.box[2]-data.box[0])/2.1,height/(data.box[3]-data.box[1])/1.2);}
 function portDraw(p){const [a,b]=p.cells,x=Math.max(a[0],b[0]),y=Math.max(a[1],b[1]);const edge=a[0]!==b[0]?[[x,y],[x,y+1]]:[[x,y],[x+1,y]];line(edge,p.boundary?'#e8ae65':'#8ff8de',3);}
+let groundCache=null,groundKey="";
 function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
  if(building){buildClock+=dt;if(buildClock>.035){visibleCount=Math.min(data.blocks.length,visibleCount+8);buildClock=0;if(visibleCount===data.blocks.length){building=false;$('build').textContent='Buduj krokami'}}}
  const input=$('walking').checked?inputVector():[0,0];
@@ -71,16 +76,28 @@ function draw(now){const dt=Math.min(.05,(now-last)/1000);last=now;
 
  const r=canvas.getBoundingClientRect();if(width!==r.width||height!==r.height){width=r.width;height=r.height;canvas.width=width;canvas.height=height;}
  ctx.fillStyle='#16291f';ctx.fillRect(0,0,width,height);
- polygon([[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]],'#849a6b','#c3ca9b');
+ polygon([[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]],data.corridors?'#a5a382':'#849a6b','#c3ca9b');
  ctx.save();ctx.beginPath();[[data.box[0],data.box[1]],[data.box[2],data.box[1]],[data.box[2],data.box[3]],[data.box[0],data.box[3]]].forEach((p,i)=>i?ctx.lineTo(...screen(p)):ctx.moveTo(...screen(p)));ctx.closePath();ctx.clip();
  const shown=new Set(ordered.slice(0,visibleCount).map(b=>b.id));
+ if(data.corridors){
+  const cacheKey=JSON.stringify([data.version,camera,zoom,view,width,height,visibleCount]);
+  if(cacheKey!==groundKey){
+   groundKey=cacheKey;groundCache=document.createElement('canvas');groundCache.width=width;groundCache.height=height;const mainContext=ctx;ctx=groundCache.getContext('2d');
+  for(const region of data.ground){ctx.beginPath();for(const ring of region.rings){ring.forEach((p,i)=>i?ctx.lineTo(...screen(p)):ctx.moveTo(...screen(p)));ctx.closePath();}ctx.fillStyle=region.color;ctx.fill('evenodd');}
+  for(const surface of data.corridors.surfaces)if(shown.has(blockAt(surface.polygon[0])?.id))polygon(surface.polygon,surface.color);
+   ctx=mainContext;
+  }
+  ctx.drawImage(groundCache,0,0);
+ }
+
  if(view==='source'){
   for(const s of data.sourceBuildings)if(inView(s.pos))for(const ring of s.rings)polygon(ring,'#b5ab90','#767c68');
   for(const road of data.sourceRoads)for(const seg of road.segments)line(seg,'#d9c69c',3);
  }else{
   // Road surface is ground geometry, transformed by the same isometric mapping
   // as plots and buildings. No constant-width screen-space road strokes.
-  if(view==='iso'){
+  if(data.corridors){/* Physical roads were drawn independently of coarse cells above. */}
+  else if(view==='iso'){
    for(const tile of data.roadSurface.tiles)if(shown.has(blockAt(tile.xy)?.id)&&inView(tile.xy))polygon(tile.polygon,'#d0bd8b');
    for(const p of data.terrainCleanup.paving)if(shown.has(blockAt(p)?.id)&&inView(p))polygon(square(p),'#d0bd8b');
    for(const c of data.roadSurface.connectors)if(c.cells.every(p=>shown.has(blockAt(p)?.id))&&inView(c.xy))polygon(c.polygon,'#d0bd8b');
@@ -112,20 +129,23 @@ canvas.onpointerup=e=>{if(pointer&&!pointer.moved){const r=canvas.getBoundingCli
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(55,zoom*(e.deltaY<0?1.15:.87)))},{passive:false});
 function refreshInfo(){
  $('next').disabled=!!data.synthetic;$('home').textContent=data.synthetic?'Środek galerii':'Guliwera 4';
- $('scene-name').textContent=data.synthetic?'Próbka SYNTETYCZNA — kształty i złącza':'Guliwera 4 · rzeczywisty OSM · próbka około 1,2 × 1,2 km';
+ $('scene-name').textContent=data.synthetic?'Próbka SYNTETYCZNA — kształty i złącza':'Guliwera 4 · rzeczywisty OSM · '+(data.comparisonRole==='before'?'PRZED zmianą':'PO zmianie');
  $('scale-info').textContent=data.synthetic?'Galeria techniczna: L, U, 4×2, 3×3 i trzy różne segmenty szeregu. Nie przedstawia rzeczywistego miejsca.':`Skala 1:${data.scale.denominator.toFixed(2)}. Komórka = ${data.report.cellRealM.toFixed(1)} m terenu; bloczek = ${data.report.blockRealM.toFixed(1)} m. Spacer ${data.scale.walkSpeedGameMps} m gry/s. Model Lublin–Warszawa: ${data.scale.referenceDistanceRealM/1000} km → ${data.scale.referenceGameM/1000} km gry → 30 min bez zatrzymań. Pełna trasa nie została jeszcze wygenerowana ani przechodzona.`;
- $('metrics').innerHTML=[['Moduły budynków',data.report.modules],['Budynki na wielu bloczkach',data.report.multiBlockModules],['Wspólne ściany',data.report.buildingJoins],['Kolizje budynków',data.report.buildingBuildingCollisions],['Kolizje z drogą',data.report.buildingRoadCollisions]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('');
+ $('metrics').innerHTML=[...(data.coverageComparison? [['Drogi — udział terenu', (data.comparisonRole==='before'?data.coverageComparison.beforeRoadPct:data.coverageComparison.afterRoadPct)+'%'],['Zieleń OSM bez zabudowy i dróg',(data.comparisonRole==='before'?data.coverageComparison.beforeUncoveredSourceGreenPct:data.coverageComparison.afterUncoveredSourceGreenPct)+'%']]:[]),['Moduły budynków',data.report.modules],['Budynki na wielu bloczkach',data.report.multiBlockModules],['Wspólne ściany',data.report.buildingJoins],['Kolizje budynków',data.report.buildingBuildingCollisions],['Kolizje z drogą',data.report.buildingRoadCollisions]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('');
 }
 refreshInfo();
 const liveData=data;
-$('kit-demo').onclick=async()=>{
- data=data.synthetic?liveData:await fetch('kit-demo.json',{cache:'no-store'}).then(r=>r.json());
+function activateScene(next){
+ data=next;
  nav=new FreeWalk(data.box,data.modules,{water:data.water||[]});
  blockMap=new Map(data.blocks.map(b=>[b.id,b]));ports=new Map(data.ports.map(p=>[p.id,p]));roads=new Set(data.roadCells.map(c=>c.xy.join(',')));
  ordered=[...data.blocks].sort((a,b)=>(a.xy[0]+a.xy[1])-(b.xy[0]+b.xy[1]));
- actor=nearest(data.addressCenter).map(v=>v+.5);selected=null;path=[];camera=[...data.center];visibleCount=data.blocks.length;building=false;selectedIndex=-1;
- $('kit-demo').textContent=data.synthetic?'Wróć do mapy':'Kształty i szereg';view='iso';$('view').value=view;$('inspector').textContent='Wybierz bloczek, aby obejrzeć maskę i złącza.';refreshInfo();fit();
-};
+ actor=spawn();selected=null;path=[];camera=[...data.center];visibleCount=data.blocks.length;building=false;selectedIndex=-1;
+ $('kit-demo').textContent=data.synthetic?'Wróć do mapy':'Kształty i szereg';view='iso';$('view').value=view;$('inspector').textContent='Wybierz bloczek, aby obejrzeć maskę i złącza.';refreshInfo();fit();$('compare-ground').textContent=data.comparisonRole==='before'?'Pokaż po zmianie':'Porównaj: przed zmianą';
+}
+$('kit-demo').onclick=async()=>activateScene(data.synthetic?liveData:await fetch('kit-demo.json',{cache:'no-store'}).then(r=>r.json()));
+let beforeData;
+$('compare-ground').onclick=async()=>{beforeData ||= await fetch('blocks-before.json',{cache:'no-store'}).then(r=>r.json());activateScene(data.comparisonRole==='before'?liveData:beforeData);};
 
 window.__blocksTest={get data(){return data},route,select,get nav(){return nav},manifest,artwork,artFor,get actor(){return actor},get path(){return path},get visibleCount(){return visibleCount},get selected(){return selected}};
 requestAnimationFrame(draw);

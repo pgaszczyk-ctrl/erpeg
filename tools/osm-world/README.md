@@ -1,3 +1,13 @@
+## Bilans terenu — próba v5
+
+Drogi są ciągłymi pasami w płaszczyźnie świata, niezależnymi od komórek budynków. OSM width lub domyślna szerokość według klasy; minimum czytelności 0,085 m gry dla ścieżek i 0,14 m dla ulic. Nie zalewamy wysepek. Równoległe chodniki blisko ulic scalane wizualnie, zachowane aliasy źródeł. Siatka i porty pozostają diagnostyką osi, nie szerokości drogi.
+
+Zieleń, lasy, pola i woda z OSM chronione przed bryłami budynków; parking osobno. Tło bez klasyfikacji nie jest liczone jako zieleń. Budynki testowane rzeczywistymi częściami L/U, nie całym prostokątem obwiedni. Widok przed/po przełącza cały wynik, również budynki i kolizje spaceru. Skala i zakres bez zmian.
+
+Próbka: drogi 64,10% → 12,04%; nieprzykryta zieleń OSM 9,57% → 33,44% całego terenu. Szacunek sumy powierzchni co 0,05 m gry, nie udział pikseli ekranu. Moduły 166 → 138; pominięte grupy 7 → 26: ochrona zieleni zmniejsza zabudowę. Nie są to docelowe proporcje dla wszystkich miast. Brak rozstrzygnięcia konfliktów/niedokładności źródłowych OSM; szerokości bez width są przybliżone. Pełna trasa do Warszawy nadal nie wygenerowana.
+
+Walidacja: `npm run test:blocks`; przeglądarka desktop i 390×844: oba wyniki, galeria, swobodny spacer, brak błędów JS. Dane porównania: `data/ground-comparison-report.json`. Do publikacji generować także `public/blocks-before.json` (ignorowany przez Git).
+
 # Exp-lore: lokalne laboratorium świata OSM
 
 Uruchomiony prywatny podgląd właściciela (Sites):

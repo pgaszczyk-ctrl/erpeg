@@ -1,3 +1,5 @@
+import {coverageMask} from './ground-geometry.mjs';
+import {moduleBoxes} from './public/building-geometry.mjs';
 import {validateKit} from './public/building-geometry.mjs';
 import {calibratedScale,rescaleWorld} from './scale.mjs';
 import fs from 'node:fs';
@@ -8,7 +10,21 @@ const world=JSON.parse(fs.readFileSync(process.argv[2]||'public/world.json','utf
 const scale=calibratedScale(JSON.parse(fs.readFileSync('public/layout.json')));
 const kit=JSON.parse(fs.readFileSync('public/building-kit.json'));
 validateKit(kit);
-const sample=generateBlocks(rescaleWorld(world,scale),{sideBlocks:Math.ceil(scale.sampleSideRealM*scale.realToGame/3),kit});
+const scaled=rescaleWorld(world,scale),options={sideBlocks:Math.ceil(scale.sampleSideRealM*scale.realToGame/3),kit};
+const baseline=generateBlocks(scaled,options);
+const sample=generateBlocks(scaled,{...options,balancedRoads:true});
+const square=p=>({polygon:[p,[p[0]+1,p[1]],[p[0]+1,p[1]+1],[p[0],p[1]+1]]});
+const bodySurfaces=modules=>modules.flatMap(m=>moduleBoxes(m).map(b=>({polygon:[[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]]]})));
+const beforeMask=coverageMask([...baseline.roadSurface.tiles,...baseline.roadSurface.connectors,...baseline.terrainCleanup.paving.map(square)],sample.box);
+const afterMask=coverageMask(sample.corridors.surfaces,sample.box);
+const greenMask=coverageMask(sample.ground,sample.box,.05,true);
+const beforeBodies=coverageMask(bodySurfaces(baseline.modules),sample.box),afterBodies=coverageMask(bodySurfaces(sample.modules),sample.box);
+const total=afterMask.length,count=m=>m.reduce((a,v)=>a+v,0),pct=n=>Math.round(n/total*10000)/100;
+let beforeGreen=0,afterGreen=0,beforeFree=0,afterFree=0;for(let i=0;i<total;i++){if(greenMask[i]&&!beforeMask[i]&&!beforeBodies[i])beforeGreen++;if(greenMask[i]&&!afterMask[i]&&!afterBodies[i])afterGreen++;if(!beforeMask[i]&&!beforeBodies[i])beforeFree++;if(!afterMask[i]&&!afterBodies[i])afterFree++;}
+const comparison={method:'union of surface polygons sampled at 0.05 game m, same world-aligned grid for both versions',sampleCount:total,stepGameM:.05,beforeRoadPct:pct(count(beforeMask)),afterRoadPct:pct(count(afterMask)),sourceGreenPct:pct(count(greenMask)),beforeUncoveredSourceGreenPct:pct(beforeGreen),afterUncoveredSourceGreenPct:pct(afterGreen),beforeFreeLandPct:pct(beforeFree),afterFreeLandPct:pct(afterFree),mergedSidewalkSegments:sample.corridors.aliases.length,oldModules:baseline.modules.length,newModules:sample.modules.length,definition:'Percent of ground footprint, not screen pixels. Unknown/unbuilt ground is not labelled as sourced green land.'};
+sample.coverageComparison=comparison;sample.comparisonRole='after';baseline.coverageComparison=comparison;baseline.comparisonRole='before';sample.report.coverageComparison=comparison;
+fs.writeFileSync('public/blocks-before.json',JSON.stringify(baseline));
+fs.writeFileSync('data/ground-comparison-report.json',JSON.stringify(comparison,null,2)+'\n');
 const audit=auditBlocks(sample);
 sample.report.buildingRoadCollisions=audit.roadCollisions.length;
 sample.report.buildingBuildingCollisions=audit.moduleCollisions.length;

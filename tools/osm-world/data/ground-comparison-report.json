@@ -1,0 +1,16 @@
+{
+  "method": "union of surface polygons sampled at 0.05 game m, same world-aligned grid for both versions",
+  "sampleCount": 608400,
+  "stepGameM": 0.05,
+  "beforeRoadPct": 64.1,
+  "afterRoadPct": 12.04,
+  "sourceGreenPct": 34.46,
+  "beforeUncoveredSourceGreenPct": 9.57,
+  "afterUncoveredSourceGreenPct": 33.44,
+  "beforeFreeLandPct": 19.73,
+  "afterFreeLandPct": 78.23,
+  "mergedSidewalkSegments": 526,
+  "oldModules": 166,
+  "newModules": 138,
+  "definition": "Percent of ground footprint, not screen pixels. Unknown/unbuilt ground is not labelled as sourced green land."
+}

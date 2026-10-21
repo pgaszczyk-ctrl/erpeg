@@ -8,11 +8,12 @@ function rowEvidence(buildings){
  for(const b of buildings)for(const ring of b.rings||[])for(let i=1;i<ring.length;i++){const k=[ring[i-1],ring[i]].map(p=>p.map(v=>v.toFixed(6)).join(',')).sort().join('|');if(!edges.has(k))edges.set(k,[]);edges.get(k).push(b);}
  for(const entries of edges.values())if(new Set(entries.flatMap(b=>b.sourceIds)).size>=2)for(const b of entries)result.add(b.id);return result;
 }
-export function assembleBuildings(buildings,roads,box,water,kit){
+export function assembleBuildings(buildings,roads,box,water,kit,constraints=null){
  const macros=new Map(),occupied=new Set(),modules=[],joins=[],omitted=[],assigned=new Set();
  for(const b of buildings){const k=macro(b.pos);if(!macros.has(k))macros.set(k,[]);macros.get(k).push(b);}
  const templates=new Map(kit.templates.map(t=>[t.id,t]));
- const collides=cells=>cells.some(p=>occupied.has(cellId(p))||roads.has(cellId(p))||water.some(r=>inside(p.map(v=>v+.5),r)));
+ const collides=cells=>cells.some(p=>occupied.has(cellId(p))||(!constraints&&roads.has(cellId(p)))||water.some(r=>inside(p.map(v=>v+.5),r)));
+ const validity=new Map();
  for(const [mk,all] of [...macros].sort(([a],[b])=>a.localeCompare(b))){
   const rowIds=rowEvidence(all);
   const [mx,my]=mk.split(',').map(Number).map(v=>v*MACRO),groups=new Map();
@@ -31,6 +32,7 @@ export function assembleBuildings(buildings,roads,box,water,kit){
      if(Math.hypot(x+width/2-target[0],y+depth/2-target[1])>4.5)continue;
      const cells=maskCells(t,[x,y]);if(isRow)cells.push(...maskCells(t,[x+(horizontal?t.mask[0].length:0),y+(!horizontal?t.mask.length:0)]));
      if(cells.some(p=>p[0]<box[0]||p[1]<box[1]||p[0]>=box[2]||p[1]>=box[3])||collides(cells))continue;
+     if(constraints){const vk=`${tid}:${x},${y}`;if(!validity.has(vk)){const pieces=isRow?createRow(t,[x,y],count).modules:[createModule(t,[x,y])];validity.set(vk,!pieces.some(m=>m.parts.some(p=>constraints.roads.hits(p.box)||constraints.green.hits(p.box))));}if(!validity.get(vk))continue;}
      const reward=isRow?30:Math.min(cells.length,sources.length>=3?9:4);
      choices.push({t,origin:[x,y],cells,count,score:reward*10-Math.hypot(x+width/2-target[0],y+depth/2-target[1])*2-(t.id==='court-U'?1:0)});
     }

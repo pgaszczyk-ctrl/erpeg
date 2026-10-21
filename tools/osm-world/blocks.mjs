@@ -1,3 +1,4 @@
+import {makeCorridors,extractGround,SurfaceIndex,coverageMask} from './ground-geometry.mjs';
 import {assembleBuildings} from './assemble-buildings.mjs';
 import {moduleBoxes} from './public/building-geometry.mjs';
 import { cleanIslands } from './terrain-cleanup.mjs';
@@ -87,6 +88,10 @@ export function generateBlocks(world, options={}) {
     const block=blocks.get(blockKey(b.pos));
     block.sourceIds.push(...b.sourceIds);sourceBuildings.push({id:b.id,rings:b.rings,pos:b.pos,block:block.id});
   }
+  const balanced=!!options.balancedRoads;
+  const ground=balanced?extractGround(world.terrain||[],halo):[];
+  const corridors=balanced?makeCorridors(sourceRoads,world.config?.realToGame||.1):null;
+  const constraints=balanced?{roads:new SurfaceIndex(corridors.surfaces,true),green:new SurfaceIndex(ground.filter(s=>s.protected),false)}:null;
   const water=[];
   for(const t of world.terrain||[])if(t.tags.natural==='water'||t.tags.landuse==='reservoir') {
     for(const rings of t.geometry.type==='Polygon'?[t.geometry.coordinates]:t.geometry.coordinates)water.push(rings);
@@ -95,22 +100,22 @@ export function generateBlocks(world, options={}) {
   if(options.kit){
    const bounds=[Math.floor(box[0]/9)*9,Math.floor(box[1]/9)*9,Math.ceil(box[2]/9)*9,Math.ceil(box[3]/9)*9];
    const all=world.buildings.filter(b=>b.pos[0]>=bounds[0]&&b.pos[1]>=bounds[1]&&b.pos[0]<bounds[2]&&b.pos[1]<bounds[3]).sort((a,b)=>compare(a.id,b.id));
-   const result=assembleBuildings(all,context,bounds,water,options.kit);
+   const result=assembleBuildings(all,context,bounds,water,options.kit,constraints);
    modules=result.modules.filter(m=>m.cells.some(p=>isIn(p)));omitted=result.omitted;
    const ids=new Set(modules.map(m=>m.id));buildingJoins=result.joins.filter(j=>ids.has(j.a)||ids.has(j.b)).map(j=>({...j,boundary:!ids.has(j.a)||!ids.has(j.b)}));
   }else{
    // Compatibility adapter: old tests/importers still use the original small kit.
    const kit={styles:['mechanical'],templates:[{id:'house-2x2',mask:['##','##'],height:1.3},{id:'narrow-2x1',mask:['##'],height:1},{id:'narrow-1x2',mask:['#','#'],height:1},{id:'small-1x1',mask:['#'],height:1}]};
-   const result=assembleBuildings(buildings,context,box,water,kit);modules=result.modules;omitted=result.omitted;
+   const result=assembleBuildings(buildings,context,box,water,kit,constraints);modules=result.modules;omitted=result.omitted;
   }
   for(const b of blocks.values())b.modules=[];
   for(const m of modules)for(const k of m.blocks)if(blocks.has(k))blocks.get(k).modules.push(m.id);
   const protectedRings=(world.terrain||[]).filter(t=>['park','garden','playground'].includes(t.tags.leisure)||['forest','cemetery'].includes(t.tags.landuse)||['water','wood'].includes(t.tags.natural)).flatMap(t=>t.geometry.type==='Polygon'?[t.geometry.coordinates]:t.geometry.coordinates);
-  const terrainCleanup=cleanIslands(roadCells,modules,box,protectedRings);
+  const terrainCleanup=balanced?{paving:[],retained:[],disabled:true,reason:'Nie zalewamy wysepek; teren pochodzi z OSM'}:cleanIslands(roadCells,modules,box,protectedRings);
   const roadSurface=buildRoadSurface(roadCells,modules,box,poly=>water.some(r=>poly.some(p=>inside(p,r))||inside(poly.reduce((a,p)=>a.map((v,i)=>v+p[i]/poly.length),[0,0]),r)));
   const portalList=[...ports.values()].sort((a,b)=>compare(a.id,b.id));
   const blockList=[...blocks.values()].map(b=>({...b,ports:b.ports.sort(compare)}));
-  return {version:'blocks-multishape-v4',scale:world.scale||null,buildingJoins,roadSurface,terrainCleanup,water:water.filter(r=>{const xs=r[0].map(p=>p[0]),ys=r[0].map(p=>p[1]);return Math.max(...xs)>=box[0]&&Math.min(...xs)<=box[2]&&Math.max(...ys)>=box[1]&&Math.min(...ys)<=box[3]}),cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
+  return {version:balanced?'blocks-balanced-ground-v5':'blocks-multishape-v4',ground,corridors,scale:world.scale||null,buildingJoins,roadSurface,terrainCleanup,water:water.filter(r=>{const xs=r[0].map(p=>p[0]),ys=r[0].map(p=>p[1]);return Math.max(...xs)>=box[0]&&Math.min(...xs)<=box[2]&&Math.max(...ys)>=box[1]&&Math.min(...ys)<=box[3]}),cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
     report:{multiBlockModules:modules.filter(m=>m.blocks.length>1).length,buildingJoins:buildingJoins.filter(j=>!j.boundary).length,externalBuildingJoins:buildingJoins.filter(j=>j.boundary).length,shapes:Object.fromEntries([...new Set(modules.map(m=>m.shapeId))].map(k=>[k,modules.filter(m=>m.shapeId===k).length])),pavedIslandCells:terrainCleanup.paving.length,retainedSmallIslands:terrainCleanup.retained.length,diagonalConnectors:roadSurface.connectors.length,diagonalLinks:roadSurface.diagonalLinks.length,blocks:blockList.length,roadCells:roadCells.length,internalPorts:portalList.filter(p=>!p.boundary).length,boundaryPorts:portalList.filter(p=>p.boundary).length,sourceBuildings:sourceBuildings.length,modules:modules.length,omittedBlocks:omitted.length,excludedElevatedRoads:excluded.length,realSideM:side*BLOCK/(world.config?.realToGame||.1),cellRealM:1/(world.config?.realToGame||.1),blockRealM:3/(world.config?.realToGame||.1),buildingRoadCollisions:0,buildingBuildingCollisions:0},
     limitations:['Siatka 10 m terenu na komórkę upraszcza zakręty i może scalać bliskie drogi','To próbka; sąsiedztwo nie zastępuje utraconych w źródle ID węzłów OSM','Drogi na mostach, w tunelach i na innych poziomach są jawnie pominięte','Dobór masek jest lokalną interpretacją danych; pełna analiza pierzei i wejść POI nadal wymaga pracy']};
 }
@@ -121,11 +126,12 @@ export function auditBlocks(sample) {
   const byBlock=new Map(sample.blocks.map(b=>[b.id,b]));
   for(const m of sample.modules)for(const p of m.cells) {
     const k=cellKey(p);
-    if(roads.has(k))roadCollisions.push({module:m.id,cell:k});
+    if(!sample.corridors&&roads.has(k))roadCollisions.push({module:m.id,cell:k});
     if(occupied.has(k))moduleCollisions.push({modules:[occupied.get(k),m.id],cell:k});
     occupied.set(k,m.id);
     if(!(m.blocks||[m.block]).includes(blockKey(p)))outsideBlocks.push({module:m.id,cell:k});
   }
+  if(sample.corridors){const index=new SurfaceIndex(sample.corridors.surfaces,true);for(const m of sample.modules)for(const box of moduleBoxes(m))if(index.hits(box))roadCollisions.push({module:m.id,box});}
   for(const p of sample.ports) {
     const [a,b]=p.cells;
     if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])!==1)invalidPorts.push(p.id);

@@ -3,3 +3,5 @@ public/world.json
 artifacts/
 public/blocks.json
 public/kit-demo.json
+
+public/blocks-before.json

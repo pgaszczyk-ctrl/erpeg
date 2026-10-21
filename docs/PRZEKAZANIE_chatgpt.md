@@ -539,3 +539,5 @@
 - Zakres tylko narzędzie i istniejący prywatny Site; pliki produkcji, wersja, Supabase i serwer testowy nietknięte. Pełnego przetwarzania starej mapy gry nie uruchamiano ponownie. Nowy podgląd używa public/layout.json, a config.json pozostaje opisem starego wejścia/cache.
 
 - Końcowy pomiar klawiatury w galerii: ~2,96 i 2,97 m gry/s dla dwóch kierunków (z narzutem narzędzia); travel-speed-browser-check.mjs i raport data/travel-speed-report.json. Potwierdza jednakowe tempo, nie pełną podróż. Rejestr przyszłych assetów wybiera deterministycznie spośród wielu zgodnych grafik tego samego shape_id/style; segmenty szeregu wymagają dokładnych joined_sides i eaves_game_m, aby nie podstawić środka za zakończenie.
+
+- Laboratorium OSM v5: osobne pasy dróg, ochrona zieleni OSM, porównanie przed/po; szczegóły i ograniczenia w tools/osm-world/README.md. Zmiana wyłącznie tools/docs, bez wdrożenia gry.
