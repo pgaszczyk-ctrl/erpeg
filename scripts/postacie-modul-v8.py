@@ -160,9 +160,11 @@ def ze_skora(base, czesc):
     if czesc not in SKORY:
         wszystkie = [klasy_starych(n[:-len(f'_{czesc}_3x3.png')], czesc)
                      for n in sorted(os.listdir(os.path.join(Z, 'sheets_192'))) if n.endswith(f'_{czesc}_3x3.png')]
-        SKORY[czesc] = np.concatenate([k[l == 1] for k, l in wszystkie])
+        # heads also get every hair colour (the scout's hair is brown now, it was near-black)
+        SKORY[czesc] = (np.concatenate([k[(l == 1) | ((l == 2) & (czesc == 'head'))] for k, l in wszystkie]),
+                        np.concatenate([l[(l == 1) | ((l == 2) & (czesc == 'head'))] for k, l in wszystkie]))
     kol, kl = klasy_starych(base, czesc)
-    return np.concatenate([kol, SKORY[czesc]]), np.concatenate([kl, np.ones(len(SKORY[czesc]), int)]), len(kol)
+    return np.concatenate([kol, SKORY[czesc][0]]), np.concatenate([kl, SKORY[czesc][1]]), len(kol)
 
 
 def maska(obraz, stare):
