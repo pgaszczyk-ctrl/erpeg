@@ -7,6 +7,6 @@
     "test": "node --test test.mjs",
     "start": "node serve.mjs",
     "generate:blocks": "node generate-blocks.mjs",
-    "test:blocks": "node --test blocks.test.mjs road-surface.test.mjs"
+    "test:blocks": "node --test blocks.test.mjs road-surface.test.mjs free-walk.test.mjs"
   }
 }

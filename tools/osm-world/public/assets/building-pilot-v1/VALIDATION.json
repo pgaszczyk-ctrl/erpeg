@@ -1,0 +1,87 @@
+{
+  "status": "passed",
+  "checks": "files_alpha_bounds_anchor_front_ground_envelope",
+  "integration_in_game_tested": false,
+  "assets": [
+    {
+      "id": "house-large-steam",
+      "passed": true,
+      "canvas_px": [
+        512,
+        512
+      ],
+      "actual_alpha_values": [
+        0,
+        255
+      ],
+      "max_ground_front_envelope_error_px": 0.1,
+      "opaque_ground_pixels_outside_horizontal_setback": 0,
+      "anchor_px": [
+        256,
+        448
+      ],
+      "opaque_bottom_y": 438,
+      "anchor_to_opaque_bottom_px": 10
+    },
+    {
+      "id": "apartment-steam",
+      "passed": true,
+      "canvas_px": [
+        512,
+        512
+      ],
+      "actual_alpha_values": [
+        0,
+        255
+      ],
+      "max_ground_front_envelope_error_px": 0.1,
+      "opaque_ground_pixels_outside_horizontal_setback": 0,
+      "anchor_px": [
+        256,
+        448
+      ],
+      "opaque_bottom_y": 438,
+      "anchor_to_opaque_bottom_px": 10
+    },
+    {
+      "id": "house-large-elven",
+      "passed": true,
+      "canvas_px": [
+        512,
+        512
+      ],
+      "actual_alpha_values": [
+        0,
+        255
+      ],
+      "max_ground_front_envelope_error_px": 0.1,
+      "opaque_ground_pixels_outside_horizontal_setback": 0,
+      "anchor_px": [
+        256,
+        448
+      ],
+      "opaque_bottom_y": 438,
+      "anchor_to_opaque_bottom_px": 10
+    },
+    {
+      "id": "apartment-elven",
+      "passed": true,
+      "canvas_px": [
+        512,
+        512
+      ],
+      "actual_alpha_values": [
+        0,
+        255
+      ],
+      "max_ground_front_envelope_error_px": 0.1,
+      "opaque_ground_pixels_outside_horizontal_setback": 0,
+      "anchor_px": [
+        256,
+        448
+      ],
+      "opaque_bottom_y": 438,
+      "anchor_to_opaque_bottom_px": 10
+    }
+  ]
+}

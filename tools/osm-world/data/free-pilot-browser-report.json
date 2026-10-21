@@ -1,0 +1,30 @@
+[
+  {
+    "name": "desktop",
+    "assets": 4,
+    "pilots": 531,
+    "water": 0,
+    "grass": 61,
+    "freeGrassTarget": [
+      74333.5991204675,
+      38049.89968343236
+    ],
+    "keyboardMoved": true,
+    "blockedBuilding": true,
+    "errors": []
+  },
+  {
+    "name": "phone",
+    "assets": 4,
+    "pilots": 531,
+    "water": 0,
+    "grass": 61,
+    "freeGrassTarget": [
+      74333.5991204675,
+      38049.89968343236
+    ],
+    "keyboardMoved": true,
+    "blockedBuilding": true,
+    "errors": []
+  }
+]

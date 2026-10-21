@@ -1,5 +1,7 @@
 # Exp-lore — grafika budynków do próbki bloczkowej
 
+**Aktualizacja:** pilot v1 od użytkownika jest już wczytywany w podglądzie: dom i blok 2×2 w stylu parowym i elfickim. Poniższy brief opisuje założenia zamówienia sprzed otrzymania paczki. Import działa przez manifest, zachowuje kotwicę i nie rozciąga grafik. Pozostałe rozmiary i kategorie wciąż wymagają kolejnych zasobów.
+
 Stan obecny: 3 kategorie logiczne (dom, usługi, blok mieszkalny), ale jedna
 proceduralna bryła ze spadzistym dachem, 4 rozmiary podstawy i 10 kolorów.
 Próbka zawiera 668 domów, 16 usług i 6 bloków. Nie są to 690 różnych grafik.

@@ -1,3 +1,4 @@
+import { cleanIslands } from './terrain-cleanup.mjs';
 import { buildRoadSurface } from './public/road-surface.mjs';
 import { supercover, hash, inside } from './core.mjs';
 
@@ -120,11 +121,13 @@ export function generateBlocks(world, options={}) {
     for(const p of m.cells){const k=cellKey(p);if(occupied.has(k))throw Error('Module overlap');occupied.add(k);}
     b.modules.push(id);modules.push(m);
   }
+  const protectedRings=(world.terrain||[]).filter(t=>['park','garden','playground'].includes(t.tags.leisure)||['forest','cemetery'].includes(t.tags.landuse)||['water','wood'].includes(t.tags.natural)).flatMap(t=>t.geometry.type==='Polygon'?[t.geometry.coordinates]:t.geometry.coordinates);
+  const terrainCleanup=cleanIslands(roadCells,modules,box,protectedRings);
   const roadSurface=buildRoadSurface(roadCells,modules,box,poly=>water.some(r=>poly.some(p=>inside(p,r))||inside(poly.reduce((a,p)=>a.map((v,i)=>v+p[i]/poly.length),[0,0]),r)));
   const portalList=[...ports.values()].sort((a,b)=>compare(a.id,b.id));
   const blockList=[...blocks.values()].map(b=>({...b,ports:b.ports.sort(compare)}));
-  return {version:'blocks-3x3-diagonal-v2',roadSurface,cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
-    report:{diagonalConnectors:roadSurface.connectors.length,diagonalLinks:roadSurface.diagonalLinks.length,blocks:blockList.length,roadCells:roadCells.length,internalPorts:portalList.filter(p=>!p.boundary).length,boundaryPorts:portalList.filter(p=>p.boundary).length,sourceBuildings:sourceBuildings.length,modules:modules.length,omittedBlocks:omitted.length,excludedElevatedRoads:excluded.length,realSideM:side*BLOCK*10,cellRealM:10,blockRealM:30,buildingRoadCollisions:0,buildingBuildingCollisions:0},
+  return {version:'blocks-3x3-free-v3',roadSurface,terrainCleanup,water:water.filter(r=>{const xs=r[0].map(p=>p[0]),ys=r[0].map(p=>p[1]);return Math.max(...xs)>=box[0]&&Math.min(...xs)<=box[2]&&Math.max(...ys)>=box[1]&&Math.min(...ys)<=box[3]}),cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
+    report:{pavedIslandCells:terrainCleanup.paving.length,retainedSmallIslands:terrainCleanup.retained.length,diagonalConnectors:roadSurface.connectors.length,diagonalLinks:roadSurface.diagonalLinks.length,blocks:blockList.length,roadCells:roadCells.length,internalPorts:portalList.filter(p=>!p.boundary).length,boundaryPorts:portalList.filter(p=>p.boundary).length,sourceBuildings:sourceBuildings.length,modules:modules.length,omittedBlocks:omitted.length,excludedElevatedRoads:excluded.length,realSideM:side*BLOCK*10,cellRealM:10,blockRealM:30,buildingRoadCollisions:0,buildingBuildingCollisions:0},
     limitations:['Siatka 10 m terenu na komórkę upraszcza zakręty i może scalać bliskie drogi','To próbka; sąsiedztwo nie zastępuje utraconych w źródle ID węzłów OSM','Drogi na mostach, w tunelach i na innych poziomach są jawnie pominięte','Łączenie zabudowy jest na razie według wspólnego bloczka; bez rozpoznawania pierzei i wejść POI']};
 }
 

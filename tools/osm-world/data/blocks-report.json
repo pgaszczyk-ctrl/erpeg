@@ -1,4 +1,6 @@
 {
+  "pavedIslandCells": 61,
+  "retainedSmallIslands": 7,
   "diagonalConnectors": 1402,
   "diagonalLinks": 1472,
   "blocks": 1600,
@@ -15,5 +17,5 @@
   "buildingRoadCollisions": 0,
   "buildingBuildingCollisions": 0,
   "invalidPorts": 0,
-  "generationMs": 2240
+  "generationMs": 2283
 }

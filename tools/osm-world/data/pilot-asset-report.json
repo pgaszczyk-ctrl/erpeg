@@ -1,0 +1,38 @@
+[
+  {
+    "id": "house-large-steam",
+    "size": [
+      512,
+      512
+    ],
+    "binaryAlpha": true,
+    "transparentAnchor": true
+  },
+  {
+    "id": "apartment-steam",
+    "size": [
+      512,
+      512
+    ],
+    "binaryAlpha": true,
+    "transparentAnchor": true
+  },
+  {
+    "id": "house-large-elven",
+    "size": [
+      512,
+      512
+    ],
+    "binaryAlpha": true,
+    "transparentAnchor": true
+  },
+  {
+    "id": "apartment-elven",
+    "size": [
+      512,
+      512
+    ],
+    "binaryAlpha": true,
+    "transparentAnchor": true
+  }
+]

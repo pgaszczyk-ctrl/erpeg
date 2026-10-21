@@ -8,6 +8,51 @@ Osobny eksperyment, bez zależności od gry, logowania, serwera danych ani wdro�
 **Działający podgląd rzeczywistych danych, ale nie zakończony test akceptacyjny z wytycznych.**
 
 
+
+## Aktualnie: swobodny spacer, czyszczenie resztek i pilot grafiki
+
+Domyślnie podgląd pozwala chodzić po całym wolnym terenie — także trawie i
+podwórkach. Kliknięcie zachowuje dokładny cel, WASD/strzałki i dotykowy joystick
+sterują ciągłą pozycją. Ruch sprawdza przemiatany odcinek, z promieniem postaci
+0,1 m gry, oraz ślizga się wzdłuż ścian. Kliknięcie budynku jest odrzucane.
+`free-walk.mjs` używa pomocniczej siatki 0,1 m wyłącznie do szukania trasy,
+a potem wygładza ją odcinkami widoczności. Postać nie skacze po polach.
+Limit wyszukiwania 300 tys. węzłów może odrzucić skrajnie złożoną trasę.
+Kolizje są konserwatywnymi prostokątami rozszerzonymi o rozmiar postaci.
+Woda jest blokadą poligonową; w tej próbce nie ma wody i nie zaliczamy
+na jej podstawie kompleksowego testu brzegów z promieniem postaci.
+Walka nie jest dodawana w laboratorium; właściciel dopuszcza w niej siatkę.
+
+`terrain-cleanup.mjs` wypełnia brukiem drobne, zamknięte resztki do 3 komórek
+bez budynków i ważnego źródłowego pokrycia terenu (park/ogród/plac zabaw/las/woda).
+Wypełniono 61 pól; 7 małych podwórek lub chronionych obszarów zachowano.
+Duże trawniki i podwórka pozostają; bruk nie dodaje fikcyjnych dróg do OSM.
+Bez względu na kolor nawierzchni wolny teren pozostaje przechodni.
+
+Dostarczona paczka `Exp_lore_budynki_pilot_v1.zip`: cztery PNG 512×512, manifest
+i opis pochodzenia w `public/assets/building-pilot-v1/`. Oryginały nie były
+przerabiane. Wczytywane są warianty domu i bloku w stylu steam/elven, tylko na
+modułach **2×2** odpowiedniej kategorii. Podmieniono 531 zgodnych modułów; usługi
+i mniejsze podstawy pozostają proceduralne. Wybór stylu jest w menu, przyciski
+„Dom pilota” i „Blok pilota” ustawiają kamerę na rzeczywistych modułach.
+
+Kotwica używa `[256,448]` z manifestu, rzutowana z narożnika max x/max y
+**zajętości**, nie z pomniejszonej bryły. Jednolity współczynnik skali zoom/64,
+bez rozciągania i lustrzanego odbicia. Dostarczono tylko orientację 0. Grafiki
+nie zmieniają położenia, footprintu, ID ani kolizji. Przy zasłonięciu pionka
+budynek jest przygaszany (przybliżone sprawdzenie bbox sprite'a); znacznik stóp
+pozostaje czytelny. Nie ma jeszcze podziału długich sprite'ów na segmenty głębi.
+
+Testy: `npm run test:blocks`; niezależna kontrola wymiarów, alpha i kotwic
+PNG w data/pilot-asset-report.json; testy przeglądarkowe obu stylów i podstaw,
+precyzyjnego celu poza drogą, faktycznego ruchu, blokady budynku oraz odrębny
+test dotykowego joysticka z zatrzymaniem po puszczeniu. Wynik przy 1280×900
+i 390×844 bez błędów JS. Nie jest to test fizycznego telefonu.
+
+```sh
+PLAYWRIGHT_MODULE=/sciezka/playwright/index.mjs node free-pilot-browser-check.mjs
+```
+
 ## Nowa próbka: bloczki 3×3 (21 października 2026)
 
 Domyślny podgląd pokazuje teraz **próbkę 1,2 × 1,2 km** wokół Guliwera 4.

@@ -1,0 +1,256 @@
+{
+  "schema": "exp-lore-building-pilot/1",
+  "status": "test_assets_not_integrated",
+  "version": "1.0.0",
+  "date": "2026-10-21",
+  "projection": {
+    "type": "orthographic-isometric",
+    "ratio": [
+      2,
+      1
+    ],
+    "cell_diamond_px": [
+      128,
+      64
+    ],
+    "axis_x_px": [
+      64,
+      32
+    ],
+    "axis_y_px": [
+      -64,
+      32
+    ],
+    "cell_game_m": 1,
+    "cell_real_m": 10,
+    "ground_origin_px": [
+      256,
+      320
+    ],
+    "vertical_px_per_game_m": 64,
+    "anchor_world_cells": [
+      2,
+      2
+    ],
+    "anchor_definition": "nearest occupancy corner: world max x, max y"
+  },
+  "geometry": {
+    "occupancy_polygon_px": [
+      [
+        256,
+        320
+      ],
+      [
+        384,
+        384
+      ],
+      [
+        256,
+        448
+      ],
+      [
+        128,
+        384
+      ]
+    ],
+    "setback_cells": 0.15,
+    "body_bounds_world_cells": {
+      "min": [
+        0.15,
+        0.15
+      ],
+      "max": [
+        1.85,
+        1.85
+      ]
+    },
+    "body_ground_polygon_px": [
+      [
+        256,
+        329.6
+      ],
+      [
+        364.8,
+        384
+      ],
+      [
+        256,
+        438.4
+      ],
+      [
+        147.2,
+        384
+      ]
+    ],
+    "pixel_rounding_tolerance_px": 1
+  },
+  "rendering": {
+    "natural_size_px": [
+      512,
+      512
+    ],
+    "runtime_stretch": false,
+    "positions_collisions_sources": "owned_by_generator",
+    "shadow_in_sprite": false,
+    "alpha": "binary",
+    "light": "upper-left"
+  },
+  "assets": [
+    {
+      "id": "house-large-steam",
+      "file": "sprites/house-large-steam-0.png",
+      "style": "steam",
+      "logical_category": "house-large",
+      "footprint_cells": [
+        2,
+        2
+      ],
+      "orientation": 0,
+      "front_normal_world": [
+        1,
+        0
+      ],
+      "cell_diamond_px": [
+        128,
+        64
+      ],
+      "anchor_px": [
+        256,
+        448
+      ],
+      "canvas_px": [
+        512,
+        512
+      ],
+      "height_game_m": 3.5,
+      "height_game_m_status": "nominal_for_scale_test",
+      "storeys": 2,
+      "shadow_file": null,
+      "material_masks": null,
+      "overlay_file": "overlays/house-large-steam-0-overlay.png",
+      "opaque_bbox_px": [
+        129,
+        172,
+        251,
+        267
+      ]
+    },
+    {
+      "id": "apartment-steam",
+      "file": "sprites/apartment-steam-0.png",
+      "style": "steam",
+      "logical_category": "apartment",
+      "footprint_cells": [
+        2,
+        2
+      ],
+      "orientation": 0,
+      "front_normal_world": [
+        1,
+        0
+      ],
+      "cell_diamond_px": [
+        128,
+        64
+      ],
+      "anchor_px": [
+        256,
+        448
+      ],
+      "canvas_px": [
+        512,
+        512
+      ],
+      "height_game_m": 5,
+      "height_game_m_status": "nominal_for_scale_test",
+      "storeys": 4,
+      "shadow_file": null,
+      "material_masks": null,
+      "overlay_file": "overlays/apartment-steam-0-overlay.png",
+      "opaque_bbox_px": [
+        136,
+        80,
+        237,
+        359
+      ]
+    },
+    {
+      "id": "house-large-elven",
+      "file": "sprites/house-large-elven-0.png",
+      "style": "elven",
+      "logical_category": "house-large",
+      "footprint_cells": [
+        2,
+        2
+      ],
+      "orientation": 0,
+      "front_normal_world": [
+        1,
+        0
+      ],
+      "cell_diamond_px": [
+        128,
+        64
+      ],
+      "anchor_px": [
+        256,
+        448
+      ],
+      "canvas_px": [
+        512,
+        512
+      ],
+      "height_game_m": 3.3,
+      "height_game_m_status": "nominal_for_scale_test",
+      "storeys": 2,
+      "shadow_file": null,
+      "material_masks": null,
+      "overlay_file": "overlays/house-large-elven-0-overlay.png",
+      "opaque_bbox_px": [
+        131,
+        187,
+        251,
+        252
+      ]
+    },
+    {
+      "id": "apartment-elven",
+      "file": "sprites/apartment-elven-0.png",
+      "style": "elven",
+      "logical_category": "apartment",
+      "footprint_cells": [
+        2,
+        2
+      ],
+      "orientation": 0,
+      "front_normal_world": [
+        1,
+        0
+      ],
+      "cell_diamond_px": [
+        128,
+        64
+      ],
+      "anchor_px": [
+        256,
+        448
+      ],
+      "canvas_px": [
+        512,
+        512
+      ],
+      "height_game_m": 4,
+      "height_game_m_status": "nominal_for_scale_test",
+      "storeys": 3,
+      "shadow_file": null,
+      "material_masks": null,
+      "overlay_file": "overlays/apartment-elven-0-overlay.png",
+      "opaque_bbox_px": [
+        132,
+        158,
+        248,
+        281
+      ]
+    }
+  ]
+}
