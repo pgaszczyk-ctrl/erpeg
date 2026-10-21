@@ -67,3 +67,42 @@ zaczepienia. Programista sprawdzi grafikę w miejscu obecnego modułu i zachowa
 jego zajętość. Import sprite'ów i manifestu nie jest jeszcze zaimplementowany;
 obecny renderer rysuje bryłę kodem. Najpierw sprawdzamy pierwszą dostarczoną
 bryłę, potem wdrażamy podmianę i rozszerzamy bibliotekę.
+
+
+## Nowe maski i złącza (wersja układu v4)
+
+Baza grafiki wciąż wynosi 128×64 px na komórkę; zmiana skali geografii
+na około 1:31,48 nie oznacza pomniejszania grafiki, drzwi i postaci.
+Jedna komórka świata odpowiada obecnie około 31,48 m rzeczywistej geografii.
+Katalog `public/building-kit.json` przyjmuje maski komórek, np.:
+
+```text
+4×2       L         U
+####      ###       ###
+####      #..       #.#
+          #..       #.#
+```
+
+Pola `.` są otwartą przestrzenią i nie wolno ich zakryć parterem. Sama
+podstawa 3×3 ma romb 384×192 px. PNG musi pasować do konkretnej maski,
+nie tylko do jej prostokąta. Kotwica nadal jest rzutem narożnika max x/max y
+całego obszaru zajętości (może leżeć poza bryłą w kształcie L).
+Rzeczywiste współrzędne `anchor_px` zależą od wybranego płótna i położenia
+rysunku. Nie kopiować kotwicy pilota do innego footprintu bez obliczenia.
+
+Do szeregu przygotować osobno początek, środek i zakończenie. Fasady, okna,
+kolory i szerokości mogą się różnić, ale stykająca się ściana musi mieć zgodny
+profil i wysokość. Pierwszy obsługiwany profil to `flat-parapet-v1`, gzyms
+1,4 m świata gry. Przy normalnej skali eksportu jest to 89,6 px ponad ziemią.
+Boczne odcinki styku określają `sockets` w katalogu. Na wspólnej ścianie nie
+rysować odstępu, wystającego cokołu ani ozdób uniemożliwiających połączenie.
+Endcap musi zamykać stronę bez sąsiada; PNG środkowego segmentu nie zastępuje
+automatycznie zakończenia. Nie obracać gotowego PNG w ekranie.
+
+Wpis `assets` opisuje `shape_id`, `style`, `asset_file`, `canvas_px`,
+`anchor_px` i opcjonalny `opaque_bbox_px`. Dla szeregu wymagane są również
+`party_wall_profile`, `eaves_game_m` i dokładny zestaw `joined_sides`
+(np. `["west","east"]` tylko dla środkowego segmentu). Rejestr może zawierać
+wiele grafik dla tej samej maski i stylu: wariant jest wybierany deterministycznie
+według ID modułu, bez zmiany kolizji. Gotowych grafik innych niż pilot nadal
+nie dostarczono; ich miejsce pokazują proceduralne bryły i galeria syntetyczna.

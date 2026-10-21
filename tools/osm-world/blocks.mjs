@@ -1,3 +1,5 @@
+import {assembleBuildings} from './assemble-buildings.mjs';
+import {moduleBoxes} from './public/building-geometry.mjs';
 import { cleanIslands } from './terrain-cleanup.mjs';
 import { buildRoadSurface } from './public/road-surface.mjs';
 import { supercover, hash, inside } from './core.mjs';
@@ -28,7 +30,7 @@ export function generateBlocks(world, options={}) {
   const focus=options.center || world.center;
   const origin=focus.map(v=>Math.floor(v/BLOCK)-Math.floor(side/2));
   const box=[origin[0]*BLOCK,origin[1]*BLOCK,(origin[0]+side)*BLOCK,(origin[1]+side)*BLOCK];
-  const halo=box.map((v,i)=>v+(i<2?-BLOCK:BLOCK));
+  const halo=box.map((v,i)=>v+(i<2?-9:9));
   const isIn=(p,b=box)=>p[0]>=b[0]&&p[1]>=b[1]&&p[0]<b[2]&&p[1]<b[3];
   const context=new Map(),sourceRoads=[],excluded=[];
   for(const road of [...world.roads].sort((a,b)=>compare(a.id,b.id))) {
@@ -89,46 +91,28 @@ export function generateBlocks(world, options={}) {
   for(const t of world.terrain||[])if(t.tags.natural==='water'||t.tags.landuse==='reservoir') {
     for(const rings of t.geometry.type==='Polygon'?[t.geometry.coordinates]:t.geometry.coordinates)water.push(rings);
   }
-  const modules=[],omitted=[],occupied=new Set();
-  for(const b of blocks.values()) {
-    if(!b.sourceIds.length)continue;
-    b.sourceIds=[...new Set(b.sourceIds)].sort(compare);
-    const sources=buildings.filter(s=>blockKey(s.pos)===b.id);
-    const target=[0,1].map(i=>sources.reduce((sum,s)=>sum+s.pos[i],0)/sources.length);
-    const choices=[];
-    // Every module is contained in its own 3×3 block, including a visible gap.
-    // No dependency on the order in which neighboring blocks are generated.
-    for(const [width,depth] of [[2,2],[2,1],[1,2],[1,1]]) {
-      for(let y=0;y<=BLOCK-depth;y++)for(let x=0;x<=BLOCK-width;x++) {
-        const cells=[];let free=true;
-        for(let dy=0;dy<depth;dy++)for(let dx=0;dx<width;dx++) {
-          const p=[b.xy[0]*BLOCK+x+dx,b.xy[1]*BLOCK+y+dy];
-          if(context.has(cellKey(p))||water.some(r=>inside(p.map(v=>v+.5),r)))free=false;
-          cells.push(p);
-        }
-        if(!free)continue;
-        const pos=[b.xy[0]*BLOCK+x+width/2,b.xy[1]*BLOCK+y+depth/2];
-        choices.push({cells,pos,w:width-.3,d:depth-.3,score:width*depth*100-Math.hypot(pos[0]-target[0],pos[1]-target[1])});
-      }
-    }
-    choices.sort((a,b)=>b.score-a.score);
-    if(!choices.length){omitted.push({block:b.id,sourceIds:b.sourceIds,reason:'Brak wolnej komórki po rezerwacji dróg/wody'});continue;}
-    const chosen=choices[0],important=sources.some(s=>s.tags.amenity||s.tags.shop);
-    const kind=important?'usługi':sources.some(s=>s.tags.building==='apartments')?'blok mieszkalny':'dom';
-    const id=`module:${b.id}`;
-    const m={...chosen,id,block:b.id,sourceIds:b.sourceIds,kind,palette:parseInt(hash(b.id),16)%10,height:kind==='blok mieszkalny'?1.5:1,reason:`${sources.length} obrysów w tym samym bloczku; moduł zmniejszony do wolnych komórek`};
-    delete m.score;
-    for(const p of m.cells){const k=cellKey(p);if(occupied.has(k))throw Error('Module overlap');occupied.add(k);}
-    b.modules.push(id);modules.push(m);
+  let modules,omitted,buildingJoins=[];
+  if(options.kit){
+   const bounds=[Math.floor(box[0]/9)*9,Math.floor(box[1]/9)*9,Math.ceil(box[2]/9)*9,Math.ceil(box[3]/9)*9];
+   const all=world.buildings.filter(b=>b.pos[0]>=bounds[0]&&b.pos[1]>=bounds[1]&&b.pos[0]<bounds[2]&&b.pos[1]<bounds[3]).sort((a,b)=>compare(a.id,b.id));
+   const result=assembleBuildings(all,context,bounds,water,options.kit);
+   modules=result.modules.filter(m=>m.cells.some(p=>isIn(p)));omitted=result.omitted;
+   const ids=new Set(modules.map(m=>m.id));buildingJoins=result.joins.filter(j=>ids.has(j.a)||ids.has(j.b)).map(j=>({...j,boundary:!ids.has(j.a)||!ids.has(j.b)}));
+  }else{
+   // Compatibility adapter: old tests/importers still use the original small kit.
+   const kit={styles:['mechanical'],templates:[{id:'house-2x2',mask:['##','##'],height:1.3},{id:'narrow-2x1',mask:['##'],height:1},{id:'narrow-1x2',mask:['#','#'],height:1},{id:'small-1x1',mask:['#'],height:1}]};
+   const result=assembleBuildings(buildings,context,box,water,kit);modules=result.modules;omitted=result.omitted;
   }
+  for(const b of blocks.values())b.modules=[];
+  for(const m of modules)for(const k of m.blocks)if(blocks.has(k))blocks.get(k).modules.push(m.id);
   const protectedRings=(world.terrain||[]).filter(t=>['park','garden','playground'].includes(t.tags.leisure)||['forest','cemetery'].includes(t.tags.landuse)||['water','wood'].includes(t.tags.natural)).flatMap(t=>t.geometry.type==='Polygon'?[t.geometry.coordinates]:t.geometry.coordinates);
   const terrainCleanup=cleanIslands(roadCells,modules,box,protectedRings);
   const roadSurface=buildRoadSurface(roadCells,modules,box,poly=>water.some(r=>poly.some(p=>inside(p,r))||inside(poly.reduce((a,p)=>a.map((v,i)=>v+p[i]/poly.length),[0,0]),r)));
   const portalList=[...ports.values()].sort((a,b)=>compare(a.id,b.id));
   const blockList=[...blocks.values()].map(b=>({...b,ports:b.ports.sort(compare)}));
-  return {version:'blocks-3x3-free-v3',roadSurface,terrainCleanup,water:water.filter(r=>{const xs=r[0].map(p=>p[0]),ys=r[0].map(p=>p[1]);return Math.max(...xs)>=box[0]&&Math.min(...xs)<=box[2]&&Math.max(...ys)>=box[1]&&Math.min(...ys)<=box[3]}),cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
-    report:{pavedIslandCells:terrainCleanup.paving.length,retainedSmallIslands:terrainCleanup.retained.length,diagonalConnectors:roadSurface.connectors.length,diagonalLinks:roadSurface.diagonalLinks.length,blocks:blockList.length,roadCells:roadCells.length,internalPorts:portalList.filter(p=>!p.boundary).length,boundaryPorts:portalList.filter(p=>p.boundary).length,sourceBuildings:sourceBuildings.length,modules:modules.length,omittedBlocks:omitted.length,excludedElevatedRoads:excluded.length,realSideM:side*BLOCK*10,cellRealM:10,blockRealM:30,buildingRoadCollisions:0,buildingBuildingCollisions:0},
-    limitations:['Siatka 10 m terenu na komórkę upraszcza zakręty i może scalać bliskie drogi','To próbka; sąsiedztwo nie zastępuje utraconych w źródle ID węzłów OSM','Drogi na mostach, w tunelach i na innych poziomach są jawnie pominięte','Łączenie zabudowy jest na razie według wspólnego bloczka; bez rozpoznawania pierzei i wejść POI']};
+  return {version:'blocks-multishape-v4',scale:world.scale||null,buildingJoins,roadSurface,terrainCleanup,water:water.filter(r=>{const xs=r[0].map(p=>p[0]),ys=r[0].map(p=>p[1]);return Math.max(...xs)>=box[0]&&Math.min(...xs)<=box[2]&&Math.max(...ys)>=box[1]&&Math.min(...ys)<=box[3]}),cellGameM:CELL,blockCells:BLOCK,box,center:box.slice(0,2).map((v,i)=>(v+box[i+2])/2),addressCenter:world.center,blocks:blockList,roadCells,ports:portalList,modules,sourceRoads,sourceBuildings,omitted,excluded,
+    report:{multiBlockModules:modules.filter(m=>m.blocks.length>1).length,buildingJoins:buildingJoins.filter(j=>!j.boundary).length,externalBuildingJoins:buildingJoins.filter(j=>j.boundary).length,shapes:Object.fromEntries([...new Set(modules.map(m=>m.shapeId))].map(k=>[k,modules.filter(m=>m.shapeId===k).length])),pavedIslandCells:terrainCleanup.paving.length,retainedSmallIslands:terrainCleanup.retained.length,diagonalConnectors:roadSurface.connectors.length,diagonalLinks:roadSurface.diagonalLinks.length,blocks:blockList.length,roadCells:roadCells.length,internalPorts:portalList.filter(p=>!p.boundary).length,boundaryPorts:portalList.filter(p=>p.boundary).length,sourceBuildings:sourceBuildings.length,modules:modules.length,omittedBlocks:omitted.length,excludedElevatedRoads:excluded.length,realSideM:side*BLOCK/(world.config?.realToGame||.1),cellRealM:1/(world.config?.realToGame||.1),blockRealM:3/(world.config?.realToGame||.1),buildingRoadCollisions:0,buildingBuildingCollisions:0},
+    limitations:['Siatka 10 m terenu na komórkę upraszcza zakręty i może scalać bliskie drogi','To próbka; sąsiedztwo nie zastępuje utraconych w źródle ID węzłów OSM','Drogi na mostach, w tunelach i na innych poziomach są jawnie pominięte','Dobór masek jest lokalną interpretacją danych; pełna analiza pierzei i wejść POI nadal wymaga pracy']};
 }
 
 export function auditBlocks(sample) {
@@ -140,7 +124,7 @@ export function auditBlocks(sample) {
     if(roads.has(k))roadCollisions.push({module:m.id,cell:k});
     if(occupied.has(k))moduleCollisions.push({modules:[occupied.get(k),m.id],cell:k});
     occupied.set(k,m.id);
-    if(blockKey(p)!==m.block)outsideBlocks.push({module:m.id,cell:k});
+    if(!(m.blocks||[m.block]).includes(blockKey(p)))outsideBlocks.push({module:m.id,cell:k});
   }
   for(const p of sample.ports) {
     const [a,b]=p.cells;

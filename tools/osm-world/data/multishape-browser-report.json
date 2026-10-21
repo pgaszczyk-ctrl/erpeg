@@ -1,0 +1,54 @@
+[
+  {
+    "name": "desktop",
+    "modules": 166,
+    "multi": 52,
+    "joins": 17,
+    "denominator": 31.481481481481485,
+    "modelSeconds": 1799.9999999999998,
+    "gallery": {
+      "joints": 2,
+      "shapes": [
+        "hall-4x2",
+        "house-3x3",
+        "wing-L",
+        "court-U",
+        "house-2x2",
+        "house-2x2",
+        "row-3x2",
+        "row-2x2",
+        "row-3x2"
+      ],
+      "courtyardFree": true,
+      "parts": 5
+    },
+    "continuousMovement": true,
+    "errors": []
+  },
+  {
+    "name": "phone",
+    "modules": 166,
+    "multi": 52,
+    "joins": 17,
+    "denominator": 31.481481481481485,
+    "modelSeconds": 1799.9999999999998,
+    "gallery": {
+      "joints": 2,
+      "shapes": [
+        "hall-4x2",
+        "house-3x3",
+        "wing-L",
+        "court-U",
+        "house-2x2",
+        "house-2x2",
+        "row-3x2",
+        "row-2x2",
+        "row-3x2"
+      ],
+      "courtyardFree": true,
+      "parts": 5
+    },
+    "continuousMovement": true,
+    "errors": []
+  }
+]

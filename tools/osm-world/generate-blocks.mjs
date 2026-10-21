@@ -1,9 +1,14 @@
+import {validateKit} from './public/building-geometry.mjs';
+import {calibratedScale,rescaleWorld} from './scale.mjs';
 import fs from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { generateBlocks, auditBlocks } from './blocks.mjs';
 const start=performance.now();
 const world=JSON.parse(fs.readFileSync(process.argv[2]||'public/world.json','utf8'));
-const sample=generateBlocks(world);
+const scale=calibratedScale(JSON.parse(fs.readFileSync('public/layout.json')));
+const kit=JSON.parse(fs.readFileSync('public/building-kit.json'));
+validateKit(kit);
+const sample=generateBlocks(rescaleWorld(world,scale),{sideBlocks:Math.ceil(scale.sampleSideRealM*scale.realToGame/3),kit});
 const audit=auditBlocks(sample);
 sample.report.buildingRoadCollisions=audit.roadCollisions.length;
 sample.report.buildingBuildingCollisions=audit.moduleCollisions.length;

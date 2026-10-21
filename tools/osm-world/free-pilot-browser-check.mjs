@@ -3,10 +3,11 @@ fs.mkdirSync("artifacts",{recursive:true});
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox']});const results=[];
 for(const [name,viewport] of [['desktop',{width:1280,height:900}],['phone',{width:390,height:844}]]){
  const page=await browser.newPage({viewport});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:4174');await page.waitForFunction(()=>window.__blocksTest,{timeout:60000});
- const load=await page.evaluate(()=>{const t=window.__blocksTest;return {assets:t.artwork.size,pilots:t.data.modules.filter(m=>t.artFor(m)).length,water:t.data.water.length,grass:t.data.terrainCleanup.paving.length}});assert.equal(load.assets,4);assert.ok(load.pilots>400);
+ const load=await page.evaluate(()=>{const t=window.__blocksTest;return {assets:t.artwork.size,pilots:t.data.modules.filter(m=>t.artFor(m)).length,water:t.data.water.length,grass:t.data.terrainCleanup.paving.length}});assert.equal(load.assets,4);assert.ok(load.pilots>0);
  await page.locator('#pilot-house').click();await page.screenshot({path:`artifacts/pilot-house-${name}.png`});
  await page.locator('#pilot-apartment').click();await page.screenshot({path:`artifacts/pilot-apartment-${name}.png`});
  await page.selectOption('#art','elven');await page.screenshot({path:`artifacts/pilot-elven-${name}.png`});await page.selectOption('#art','simple');assert.equal(await page.evaluate(()=>window.__blocksTest.data.modules.filter(m=>window.__blocksTest.artFor(m)).length),0);await page.selectOption('#art','steam');
+ if(await page.evaluate(()=>window.__blocksTest.data.synthetic===true)){await page.locator('#kit-demo').click();await page.waitForFunction(()=>!window.__blocksTest.data.synthetic);}
  await page.locator('#home').click();
  const target=await page.evaluate(()=>{const t=window.__blocksTest,a=t.actor,roads=new Set(t.data.roadCells.map(c=>c.xy.join(',')));for(let radius=1;radius<4;radius+=.5)for(let i=0;i<32;i++){const angle=i*Math.PI/16,p=[a[0]+Math.cos(angle)*radius+.023,a[1]+Math.sin(angle)*radius+.017];if(!roads.has(p.map(Math.floor).join(','))&&t.nav.free(p)&&t.nav.clear(a,p)){if(t.route(p))return p;}}throw Error('No nearby free grass target');});
  await page.waitForFunction(p=>Math.hypot(window.__blocksTest.actor[0]-p[0],window.__blocksTest.actor[1]-p[1])<.005,target,{timeout:7000});

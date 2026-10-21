@@ -1,0 +1,16 @@
+{
+  "measured": [
+    {
+      "key": "d",
+      "distance": 1.4999999999999862,
+      "speedGameMps": 2.959163543113821
+    },
+    {
+      "key": "w",
+      "distance": 1.4999999999999838,
+      "speedGameMps": 2.9738302934266754
+    }
+  ],
+  "modelOnly": true,
+  "fullLublinWarsawRouteTested": false
+}

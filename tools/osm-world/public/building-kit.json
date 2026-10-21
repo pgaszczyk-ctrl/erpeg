@@ -1,0 +1,300 @@
+{
+  "schema": "exp-lore-building-kit/1",
+  "cellGameM": 1,
+  "styles": [
+    "mechanical",
+    "elven",
+    "dwarven",
+    "scientific"
+  ],
+  "templates": [
+    {
+      "id": "house-2x2",
+      "mask": [
+        "##",
+        "##"
+      ],
+      "family": "detached",
+      "height": 1.3
+    },
+    {
+      "id": "hall-4x2",
+      "mask": [
+        "####",
+        "####"
+      ],
+      "family": "large",
+      "height": 1.3
+    },
+    {
+      "id": "hall-2x4",
+      "mask": [
+        "##",
+        "##",
+        "##",
+        "##"
+      ],
+      "family": "large",
+      "height": 1.3
+    },
+    {
+      "id": "house-3x3",
+      "mask": [
+        "###",
+        "###",
+        "###"
+      ],
+      "family": "large",
+      "height": 1.5
+    },
+    {
+      "id": "wing-L",
+      "mask": [
+        "###",
+        "#..",
+        "#.."
+      ],
+      "family": "compound",
+      "height": 1.3
+    },
+    {
+      "id": "court-U",
+      "mask": [
+        "###",
+        "#.#",
+        "#.#"
+      ],
+      "family": "compound",
+      "height": 1.3
+    },
+    {
+      "id": "narrow-2x1",
+      "mask": [
+        "##"
+      ],
+      "family": "detached",
+      "height": 1
+    },
+    {
+      "id": "narrow-1x2",
+      "mask": [
+        "#",
+        "#"
+      ],
+      "family": "detached",
+      "height": 1
+    },
+    {
+      "id": "small-1x1",
+      "mask": [
+        "#"
+      ],
+      "family": "detached",
+      "height": 1
+    },
+    {
+      "id": "row-3x2",
+      "mask": [
+        "###",
+        "###"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "west",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "east",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-2x3",
+      "mask": [
+        "##",
+        "##",
+        "##"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "north",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "south",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-3x1",
+      "mask": [
+        "###"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "west",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "east",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-1x3",
+      "mask": [
+        "#",
+        "#",
+        "#"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "north",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "south",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-2x2",
+      "mask": [
+        "##",
+        "##"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "west",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "east",
+          "span": [
+            0.15,
+            1.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-2x1",
+      "mask": [
+        "##"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "west",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "east",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    },
+    {
+      "id": "row-1x2",
+      "mask": [
+        "#",
+        "#"
+      ],
+      "family": "terrace",
+      "height": 1.4,
+      "sockets": [
+        {
+          "side": "north",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        },
+        {
+          "side": "south",
+          "span": [
+            0.15,
+            0.85
+          ],
+          "eaves": 1.4,
+          "profile": "flat-parapet-v1"
+        }
+      ]
+    }
+  ],
+  "assets": []
+}

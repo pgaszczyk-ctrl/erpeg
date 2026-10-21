@@ -9,6 +9,93 @@ Osobny eksperyment, bez zależności od gry, logowania, serwera danych ani wdro�
 
 
 
+## Aktualnie: większe maski, łączenie szeregu i kalibracja podróży
+
+Generator używa `public/building-kit.json`: podstawy 4×2, 2×4, 3×3, L i U
+oraz segmenty szeregu. Maska `#` wyznacza zajęte komórki, `.` pozostawia wolny
+teren (także dziedziniec). Jedna bryła może objąć wiele bloczków; wszystkie
+odwołują się do tego samego ID modułu. Kolizje i nowe łączniki dróg sprawdzają
+**części maski**, nie pełny prostokąt obejmujący dziedziniec.
+
+Katalog jest walidowany: spójna maska, poprawne wymiary, brak pustych lub
+oderwanych części i rzeczywista ściana pod złączem. Złącza szeregu mają wspólny
+profil, wysokość gzymsu, styl i odcinek styku. Zgodne segmenty o różnych
+szerokościach i fasadach mogą się łączyć. Ściany stykają się bez szczeliny,
+wewnętrzne ściany nie są rysowane. Dziś używamy profilu płaskiego parapetu;
+nie obiecujemy pasowania dowolnych, nieprzygotowanych dachów PNG.
+
+Rozpoznanie szeregu opiera się na `building=terrace` albo dokładnie wspólnej
+krawędzi dwóch obrysów, nie tylko bliskości centroidów. Rezerwacja obejmuje
+stały obszar właścicielski 9×9 komórek. Daje to deterministyczny wybór po
+przestawieniu danych i przy zmianie obszaru podglądu. Przebudowa większej bryły
+wymaga ponownego przeliczenia jej obszaru właścicielskiego. Na brzegu próbki
+zachowujemy pełną definicję przecinanej bryły i złącza, a rysowanie przycinamy.
+
+Bieżąca próbka OSM: 1197 obrysów w polu podglądu, 166 modułów (część ma źródła
+z kontekstu), **52 wielobloczkowe moduły i 14 wewnętrznych wspólnych ścian**.
+Pominięto 7 grup, dla których nie udało się znaleźć miejsca. Zera kolizji
+potwierdza audyt. To lokalne upakowanie z uproszczonym doborem funkcji, nadal
+nie pełna analiza kwartałów. Zachowujemy źródłowe identyfikatory zastępcze i
+tożsamości nazwanych/ważnych budynków wewnątrz agregatu.
+
+Przycisk **„Kształty i szereg”** otwiera wyraźnie oznaczoną **próbkę syntetyczną**
+z dziedzińcem U, L i trzema różnymi segmentami szeregu. To demonstracja
+kontraktu grafiki i kolizji, nie fikcyjna dzielnica Lublina. Nowe maski są
+rysowane kodem; pilot PNG nadal służy jedynie pasującym, wolnostojącym 2×2.
+Nowe PNG można zarejestrować w `building-kit.json` → `assets`, bez zmiany maski:
+
+```json
+{
+  "id":"workshop-L-steam", "shape_id":"wing-L", "style":"steam",
+  "asset_file":"assets/workshop-L-steam.png",
+  "canvas_px":[512,512], "anchor_px":[256,448],
+  "opaque_bbox_px":[0,0,512,512],
+  "party_wall_profile":null, "joined_sides":[]
+}
+```
+
+To przykład pól, nie istniejący plik ani gotowa geometria kotwicy L. Grafik
+podaje rzeczywistą kotwicę rzutu narożnika max x/max y całej zajętości, przy
+bazie komórki 128×64 px. Obraz jest skalowany jednolicie zoom/64. Grafika do
+szeregu musi jawnie deklarować obsługiwane strony styku i zgodny profil
+`flat-parapet-v1`; bez tego renderer pozostawi bryłę proceduralną.
+
+### Skala i 30 minut Lublin–Warszawa
+
+`public/layout.json` to nowe, wersjonowane ustawienie. Źródłowy cache świata
+pozostaje w starym 1:10, ale `scale.mjs` przelicza wszystkie współrzędne
+wektorowe **przed** rasteryzacją i upakowaniem. Nie zmieniamy zoomu ani
+rozmiaru postaci/grafik, aby udawać zmianę skali.
+
+Przyjęto referencyjne **170 km** na podstawie
+[opisu trasy Lublin–Warszawa](https://conadrogach.pl/wyznaczanie-trasy/lublin-warszawa/),
+sprawdzonego 21.10.2026. Jest to odniesienie drogowe, nie wyznaczona trasa
+piesza i nie ograniczenie nawigacyjne gry. Przy tempie **3 m gry/s** i
+**1800 s**: realToGame = 3×1800/170000 = 0,03176470588, czyli **1:31,48148**.
+170 km daje 5,4 km gry i modelowe 30 minut ciągłego marszu bez postojów,
+walk i objazdów. Poprzedni model 1:10 dawał około 94,4 minuty przy tym samym
+tempie. Obecna geografia jest liniowo około 3,15 razy krótsza.
+
+Komórka odpowiada teraz 31,48 m terenu, bloczek 94,44 m. Pole 13×13 bloczków
+obejmuje około 1,228 km, zachowując dotychczasowy mały obszar testu. Nie
+wygenerowano całego połączenia Warszawa–Lublin i nie przeprowadzono takiej
+podróży w grze. Po ustaleniu rzeczywistej długości grywalnej trasy trzeba
+ponowić kalibrację. To jawnie model czasu, a nie zaliczony test całej trasy.
+
+Pomiar w przeglądarce dał około 2,96–2,97 m gry/s z narzutem pomiaru; raport data/travel-speed-report.json jawnie oznacza model i brak pełnego testu trasy.
+
+Dodatkowo wyrównano prędkość klawiatury we wszystkich kierunkach: pełne
+wychylenie/klawisz oznacza 3 m gry/s; analogowy joystick zachowuje regulację.
+Testy obejmują zmianę prawdziwych współrzędnych, czas modelu, dopasowanie i
+odrzucanie złączy, ruch na dziedzińcu, agregację, stabilność po zmianie
+obszaru i kolejności źródeł oraz rzeczywisty i syntetyczny audyt kolizji.
+
+```sh
+npm run generate:blocks
+npm run test:blocks
+PLAYWRIGHT_MODULE=/sciezka/playwright/index.mjs node multishape-browser-check.mjs
+```
+
 ## Aktualnie: swobodny spacer, czyszczenie resztek i pilot grafiki
 
 Domyślnie podgląd pozwala chodzić po całym wolnym terenie — także trawie i

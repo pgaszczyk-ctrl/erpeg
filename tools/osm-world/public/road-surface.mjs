@@ -1,3 +1,4 @@
+import {moduleBoxes} from './building-geometry.mjs';
 const key=p=>p.join(',');
 const edgeKey=(a,b)=>[key(a),key(b)].sort().join('|');
 export function polygonIntersectsBox(poly,box){
@@ -30,7 +31,7 @@ export function buildRoadSurface(cells,modules,box,blocked=()=>false){
   for(const [sx,sy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
    const a=[x+sx,y],b=[x,y+sy],diag=[x+sx,y+sy],ids=shared(a,b,diag);if(!ids.length)continue;
    const v=[x+(sx>0?1:0),y+(sy>0?1:0)],poly=[v,[v[0]-sx*.5,v[1]],[v[0],v[1]-sy*.5]];
-   if(blocked(poly)||modules.some(m=>polygonIntersectsBox(poly,[m.pos[0]-m.w/2,m.pos[1]-m.d/2,m.pos[0]+m.w/2,m.pos[1]+m.d/2])))continue;
+   if(blocked(poly)||modules.some(m=>moduleBoxes(m).some(b=>polygonIntersectsBox(poly,b))))continue;
    const id=`corner:${k}:${sx},${sy}`;connectors.push({id,xy:[x,y],polygon:poly,sourceIds:ids,cells:[a,b]});addLink(a,b,ids);
   }
  }

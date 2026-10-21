@@ -1,9 +1,10 @@
+import {moduleBoxes} from './building-geometry.mjs';
 // Fine search lattice is an implementation detail. Position, collision sweeps,
 // keyboard movement and the final smoothed path all use continuous game metres.
 export class FreeWalk {
   constructor(box,modules,{step=.1,radius=.1,water=[]}={}) {
     this.box=box;this.step=step;this.radius=radius;this.water=water;
-    this.obstacles=modules.map(m=>[m.pos[0]-m.w/2-radius,m.pos[1]-m.d/2-radius,m.pos[0]+m.w/2+radius,m.pos[1]+m.d/2+radius]);
+    this.obstacles=modules.flatMap(m=>moduleBoxes(m).map(b=>[b[0]-radius,b[1]-radius,b[2]+radius,b[3]+radius]));
     this.width=Math.round((box[2]-box[0])/step)+1;this.height=Math.round((box[3]-box[1])/step)+1;
     this.blocked=new Uint8Array(this.width*this.height);
     for(const r of this.obstacles){const lo=[Math.max(0,Math.ceil((r[0]-box[0])/step)),Math.max(0,Math.ceil((r[1]-box[1])/step))],hi=[Math.min(this.width-1,Math.floor((r[2]-box[0])/step)),Math.min(this.height-1,Math.floor((r[3]-box[1])/step))];for(let y=lo[1];y<=hi[1];y++)for(let x=lo[0];x<=hi[0];x++)this.blocked[y*this.width+x]=1;}

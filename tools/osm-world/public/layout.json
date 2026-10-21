@@ -1,0 +1,12 @@
+{
+  "version": "pl-cs92-travel-170km-30min-v4",
+  "walkSpeedGameMps": 3,
+  "referenceDistanceRealM": 170000,
+  "targetTravelSeconds": 1800,
+  "sampleSideRealM": 1200,
+  "distanceStatus": "reference road distance, not a generated pedestrian route or an end-to-end playtest",
+  "distanceSource": "https://conadrogach.pl/wyznaczanie-trasy/lublin-warszawa/",
+  "checkedAt": "2026-10-21",
+  "cellGameM": 1,
+  "blockCells": 3
+}
