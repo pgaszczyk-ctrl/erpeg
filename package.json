@@ -9,17 +9,22 @@
     "build": "node scripts/build-maps.mjs && tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "test:quests": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/city-quests.mjs && node scripts/tests/quest-variants.mjs",
-    "test:quest-maps": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/real-city-quests.mjs"
+    "test:quest-maps": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/real-city-quests.mjs",
+    "map:combat3d": "node scripts/build-combat3d-map.mjs",
+    "test:combat3d": "node --experimental-strip-types --no-warnings scripts/tests/combat3d-rules.mjs",
+    "test:combat3d:browser": "node scripts/tests/browser-combat3d.mjs"
   },
   "dependencies": {
     "@mapbox/vector-tile": "^3.0.0",
     "pbf": "^5.1.2",
     "phaser": "^4.2.1",
     "pmtiles": "^4.5.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.6",
+    "@types/three": "^0.186.0",
     "clipper-lib": "^6.4.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"

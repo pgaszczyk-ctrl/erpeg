@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
-      input: { main: 'index.html', admin: 'admin.html', test2: 'test2.html' },
+      input: { main: 'index.html', admin: 'admin.html', test2: 'test2.html', combat3d: 'combat3d.html' },
       output: {
         // Phaser is large and unchanged between game updates; let browsers keep it cached.
         manualChunks(id) {
