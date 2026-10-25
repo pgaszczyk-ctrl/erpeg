@@ -13,8 +13,9 @@ export type Miejsce = string | { lat: number; lon: number };
  * glut = chochlik (3 życia), wielki_glut = wielki chochlik (18 życia, mocno bije),
  * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
  * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
+ * wilk / warg – test pilota „łowiska” (content/lowiska.ts, scenes/Lowiska.ts, tylko gdy lowiska() włączone).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol' | 'wilk' | 'warg';
 
 /**
  * Rodzaj zadania (albo etapu misji wieloetapowej):

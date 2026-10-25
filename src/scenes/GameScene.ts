@@ -80,6 +80,9 @@ import {
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
+import { Lowiska, type Pakiet } from './Lowiska';
+import { lowiska, LOWISKA } from '../content/lowiska';
+import { WilkAI, type WilkHost } from '../objects/WilkAI';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -311,6 +314,8 @@ type Enemy = Slime & {
   power?: number;
   /** A wodnik's conjured blobs, and a blob's wodnik. */
   minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
+  /** Łowiska test pilot (scenes/Lowiska.ts): a wolf-pack member; its territory (centre + radius, world px). */
+  lowisko?: boolean; lowiskoHome?: { x: number; y: number; r: number };
 };
 
 /** Permanent mission rewards, as named in the reward line. */
@@ -422,6 +427,16 @@ export class GameScene extends Phaser.Scene {
   /** The turn fight in progress (walka/TuryWalki.ts, test server), and meeting groups on the map. */
   private walka: TuryWalki | null = null;
   private spotkania: Spotkania | null = null;
+  /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
+  private lowiska: Lowiska | null = null;
+  private wilki = new Map<Enemy, WilkAI>();
+  /** Seconds of ACTIVE simulation (never advances while paused/hidden/in a dialog): the łowiska respawn clock. */
+  private lowiskaCzasS = 0;
+  /** Shared limiter for simultaneous wolf attack sequences (brief: max 2 melee + 1 ranged around the hero). */
+  private atakiWrecz = 0;
+  private atakiDystans = 0;
+  /** Fractions of a half-heart from wolf charges add up here (like smokCarry/damageCarry). */
+  private wilkCarry = 0;
 
   constructor() {
     super('game');
@@ -788,6 +803,47 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.streets.tury = tury();
+
+    // Łowiska test pilot (?lowiska=1): isolated from everything above – its own class, never tury().
+    this.wilki.forEach((ai) => ai.destroy());
+    this.wilki.clear();
+    this.lowiska = lowiska()
+      ? new Lowiska(
+          this.city,
+          avoid,
+          (sp, p) => {
+            const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
+            e.lowisko = true;
+            e.lowiskoHome = { x: p.x, y: p.y, r: p.r };
+            e.roam = 20;
+            return e;
+          },
+          (u) => {
+            const e = u as Enemy;
+            if (!e.active || e.isDead) return true;
+            if (e.chasing) return false;
+            this.wilki.get(e)?.destroy();
+            this.wilki.delete(e);
+            this.enemies = this.enemies.filter((x) => x !== e);
+            e.destroy();
+            return true;
+          },
+          () => this.lowiskaCzasS,
+          {
+            // Nie dotykamy session.stats.gangs (to licznik prawdziwych gangów, czyta go próba maga)
+            // – test pilota ma własną, osobną nagrodę za rozbicie watahy.
+            rozbity: (p: Pakiet) => {
+              const n = p.big ? LOWISKA.nagrodaWieksze : LOWISKA.nagrodaPakiet;
+              const coins = luckyCoins(n.monety);
+              earn(coins);
+              session.exp += n.exp;
+              this.emitHud();
+              this.toast(`🏆 Wataha rozbita! +${coins} monet, +${n.exp} EXP. Nowa pojawi się po jakimś czasie.`, 3500);
+            },
+          },
+        )
+      : null;
+
     this.listyAreny = [];
     if (tury() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
     this.spotkania?.destroy();
@@ -1055,6 +1111,12 @@ export class GameScene extends Phaser.Scene {
     }
     this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
     this.streets.update(this.player.x, this.player.y, now);
+    if (this.lowiska) {
+      // Active-simulation clock for łowiska respawns: only advances here, i.e. never while paused/hidden/in
+      // a dialog (this line isn't reached then – same guards as the rest of this method).
+      this.lowiskaCzasS += dt;
+      this.lowiska.update(this.player.x, this.player.y);
+    }
     if (!lingering && !this.story.busy && !this.anomalia?.busy) this.spotkania?.update(now);
     this.clearHomeArea();
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
@@ -1091,14 +1153,18 @@ export class GameScene extends Phaser.Scene {
       // A dragon in a fight has its own way (claws, backing off, fire).
       if (s.kindId === 'smok' && !this.dragons.has(s)) this.dragonFight(s);
       const dragon = this.dragons.get(s);
+      // Łowiska wolves (test pilot): their own telegraph→charge→rest cycle, never the generic touch damage below.
+      if (s.lowisko && !this.wilki.has(s)) this.wilki.set(s, new WilkAI(this.wilkHost(), s, s.lowiskoHome!, s.kindId === 'warg'));
+      const wilk = this.wilki.get(s);
       if (dragon) dragon.update(now, dt);
+      else if (wilk) wilk.update(now);
       else if (s.brain) s.brain(now);
       else s.think(target, now);
       this.moveActor(s, dt);
       s.updateLook();
       s.setDepth(s.y + s.depthOff);
       if (now < this.noHurtUntil) continue; // just back from a talk: a moment of peace
-      if (dragon) continue; // its claws hurt, not touching it
+      if (dragon || wilk) continue; // their own attack deals the damage, not touching them
       if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         // A duel takes the purple hearts, never the real ones.
         if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, 0)) {
@@ -1826,6 +1892,46 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
+  // ------------------------------------------------------------------ Łowiska test pilot (wolf packs)
+
+  /** Wspólny limit równoczesnych sekwencji ataku wokół bohatera (brief: 2 wręcz + 1 dystans). */
+  private rezerwujAtak(typ: 'wrecz' | 'dystans'): boolean {
+    const limit = LOWISKA.limitAtakow[typ];
+    if (typ === 'wrecz') {
+      if (this.atakiWrecz >= limit) return false;
+      this.atakiWrecz++;
+      return true;
+    }
+    if (this.atakiDystans >= limit) return false;
+    this.atakiDystans++;
+    return true;
+  }
+
+  private zwolnijAtak(typ: 'wrecz' | 'dystans') {
+    if (typ === 'wrecz') this.atakiWrecz = Math.max(0, this.atakiWrecz - 1);
+    else this.atakiDystans = Math.max(0, this.atakiDystans - 1);
+  }
+
+  private wilkHost(): WilkHost {
+    return {
+      scene: this,
+      player: this.player,
+      hurt: (from: Phaser.Math.Vector2, obrazenie: number) => {
+        if (this.time.now < this.noHurtUntil || this.player.isDead) return;
+        const blocked = Math.random() < blockChance();
+        const pending = this.wilkCarry + obrazenie * session.level.obrazenia;
+        const dmg = Math.floor(pending);
+        if (!this.player.hurt(from, this.time.now, blocked ? 0 : dmg)) return;
+        if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
+        else this.wilkCarry = pending - dmg;
+        this.emitHud();
+        if (this.player.isDead) this.onPlayerDeath();
+      },
+      rezerwuj: () => this.rezerwujAtak('wrecz'),
+      zwolnij: () => this.zwolnijAtak('wrecz'),
+    };
+  }
+
   /** A lingering effect's tick (burning, acid, poison): no knock-back; fractions add up. */
   private smokDrain(czesc: number) {
     if (this.player.isDead || session.immortal && this.player.hp <= 1) return;
@@ -1873,6 +1979,8 @@ export class GameScene extends Phaser.Scene {
     if (s.minions && WODNIK.blobyZnikajaZNim) for (const m of s.minions) this.dissolve(m);
     this.dragons.get(s)?.destroy();
     this.dragons.delete(s);
+    this.wilki.get(s)?.destroy();
+    this.wilki.delete(s);
     if (s.duel) return this.endDuel(s, true);
     if (this.demoRun?.isDragon(s)) {
       this.enemies = this.enemies.filter((e) => e !== s);
@@ -1900,8 +2008,9 @@ export class GameScene extends Phaser.Scene {
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
+    if (s.lowisko) this.lowiska?.killed(s);
     if (s.folkQuest) this.folkQuestKill(s);
-    if (s.temp || s.ambient) return;
+    if (s.temp || s.ambient || s.lowisko) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
       if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.completeStage(rm, 'Zadanie wykonane! ');
@@ -1948,8 +2057,9 @@ export class GameScene extends Phaser.Scene {
       s.hp = Math.max(1, Math.round(s.hp * w.sila));
     }
     if (kind === 'wodnik') s.brain = (now) => this.wodnikThink(s, now);
-    // Turn fight (test server): nobody chases; groups wait to be met.
-    if (tury()) {
+    // Turn fight (test server): nobody chases; groups wait to be met. Łowiska wolves (test pilot) are
+    // always real-time, isolated from the turn system regardless of this switch (brief, 25 Oct 2026).
+    if (tury() && kind !== 'wilk' && kind !== 'warg') {
       s.spokojny = true;
       s.roam = 6; // a group stays together (walka/Spotkania.ts finds it by chains of near members)
     }
