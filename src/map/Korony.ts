@@ -291,15 +291,20 @@ export class Korony {
     });
   }
 
-  /** Co klatkę gry: wiatr i prześwit koron w widoku. `hx, hy` = stopy postaci (px mapy). */
-  update(now: number, dt: number, cam: Phaser.Geom.Rectangle, hx: number, hy: number) {
+  /**
+   * Co klatkę gry: wiatr i prześwit koron w widoku. `punkty[0]` = stopy postaci (px mapy, jak dotąd);
+   * kolejne punkty – inne rzeczy, pod którymi korona też ma się rozchylić (łowiska: pobliskie wilki/wargi,
+   * właściciel 25.10.2026: „walka w lesie musi pokazywać gdzie jest wróg” – inaczej ginęły pod liśćmi).
+   * Dla każdej korony bierzemy pierwszy pasujący punkt (postać ma pierwszeństwo przed wrogiem).
+   */
+  update(now: number, dt: number, cam: Phaser.Geom.Rectangle, punkty: { x: number; y: number }[]) {
     const T = now / 1000;
     if (this.obloczki.size) this.updateSteam(T, cam);
     if (this.wyrzuty.size) this.updateWyrzuty(T, cam);
     if (this.fale.size) this.updateFale(T, cam);
     const S = Math.max(0.1, Math.min(2.2, weather.wind / 7));
-    // Środek postaci w px generatora.
-    const px = hx * GEN_DOTS, py = (hy - KORONY.srodekPostaci) * GEN_DOTS;
+    // Każdy punkt w px generatora, jak „stopy postaci” (środek nad stopami o tę samą wysokość).
+    const pktGen = punkty.map((p) => ({ my: p.y, px: p.x * GEN_DOTS, py: (p.y - KORONY.srodekPostaci) * GEN_DOTS }));
     const m = 40;
     for (const k of this.wszystkie) {
       const im = k.im;
@@ -309,9 +314,17 @@ export class Korony {
         continue;
       }
       if (!im.visible) im.setVisible(true);
-      // Prześwit: tylko korona przed postacią (podstawa niżej niż stopy), gdy postać stoi pod jej liśćmi.
-      const lx = Math.round(px - (k.t.x - k.a.kx)), ly = Math.round(py - (k.t.y - k.a.ky));
-      const pod = k.t.y > hy * GEN_DOTS && lx >= 0 && ly >= 0 && lx < k.a.w && ly < k.a.h && zaslania(k.a.klatki[2], lx, ly);
+      // Prześwit: pierwszy punkt (postać, potem pobliski wróg), nad którym ta korona stoi (podstawa niżej niż on).
+      let px = 0, py = 0, pod = false;
+      for (const q of pktGen) {
+        if (k.t.y <= q.my * GEN_DOTS) continue;
+        const lx = Math.round(q.px - (k.t.x - k.a.kx)), ly = Math.round(q.py - (k.t.y - k.a.ky));
+        if (lx < 0 || ly < 0 || lx >= k.a.w || ly >= k.a.h || !zaslania(k.a.klatki[2], lx, ly)) continue;
+        px = q.px;
+        py = q.py;
+        pod = true;
+        break;
+      }
       const cel = pod ? KORONY.promien : 0;
       if (pod && k.r < 0.5) k.szelest = 1;
       k.r += (cel - k.r) * Math.min(1, dt * KORONY.szybkoscPrzeswitu);

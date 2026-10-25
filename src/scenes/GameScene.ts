@@ -966,7 +966,13 @@ export class GameScene extends Phaser.Scene {
     // A hidden scene does not run the render pass that normally updates worldView.
     if (intro) this.cameras.main.preRender();
     this.mapView.update(this.cameras.main, intro ? 1 : 2);
-    if (this.player) this.mapView.updateTrees(now, dt, this.cameras.main, this.player.x, this.player.y);
+    if (this.player) {
+      // Łowiska (owner, 25 Oct 2026): a nearby wolf/warg also opens a hole in the crown over it, so it
+      // doesn't vanish under dense canopy mid-fight – same mechanism as the hero's own see-through.
+      const punkty = [{ x: this.player.x, y: this.player.y }];
+      if (this.lowiska) for (const e of this.enemies) if ((e.kindId === 'wilk' || e.kindId === 'warg') && !e.isDead) punkty.push({ x: e.x, y: e.y });
+      this.mapView.updateTrees(now, dt, this.cameras.main, punkty);
+    }
     if (this.player) this.gory?.update(now, dt, this.player.x, this.player.y);
     // Tiled maps: keep the map loaded around the hero.
     if (now >= this.nextTiles && this.player) {
