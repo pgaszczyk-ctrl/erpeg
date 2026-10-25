@@ -53,20 +53,25 @@ try {
 
   await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.protectUntil = 0; s.player.setPosition(x, y); }, [spot.x, spot.y]);
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.city.ready({ x0: s.player.x - 300, y0: s.player.y - 300, x1: s.player.x + 300, y1: s.player.y + 300 }); }, null, { timeout: 60000 });
+  // Teleportacja na środek lasu niekoniecznie wypada w promieniu aktywacji (220 m) żadnej z losowych
+  // watah w okolicznych komórkach 1 km – odczekaj aż Lowiska zaplanuje siedliska, potem stań TOCZNIE
+  // na najbliższym, zamiast zgadywać przesunięciami.
+  await page.waitForFunction(() => (window.__game.scene.getScene('game').lowiska?.pakiety?.length ?? 0) > 0, null, { timeout: 20000 });
+  const pakiet = await g(() => {
+    const s = window.__game.scene.getScene('game');
+    const ps = s.lowiska.pakiety;
+    let best = ps[0], bd = Infinity;
+    for (const p of ps) { const d = Math.hypot(p.x - s.player.x, p.y - s.player.y); if (d < bd) { bd = d; best = p; } }
+    return { x: best.x, y: best.y, r: best.r, n: ps.length };
+  });
+  console.log('najbliższy pakiet', JSON.stringify(pakiet), 'z', pakiet.n, 'zaplanowanych');
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); }, [pakiet.x, pakiet.y]);
   await page.waitForTimeout(3000);
 
   const po1 = await g(() => { const s = window.__game.scene.getScene('game'); return s.enemies.filter((e) => e.kindId === 'wilk' || e.kindId === 'warg').length; });
   console.log('wilki w pobliżu', po1);
   await page.screenshot({ path: `work/lowiska-${tag}-las.png` });
-  if (po1 === 0) {
-    // Ten konkretny punkt mógł nie mieć watahy (losowanie per km²) – spróbuj paru przesunięć w tym samym lesie.
-    for (const [dx, dy] of [[150, 0], [-150, 0], [0, 150], [0, -150], [300, 300]]) {
-      await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); }, [spot.x + dx, spot.y + dy]);
-      await page.waitForTimeout(1500);
-      const n = await g(() => { const s = window.__game.scene.getScene('game'); return s.enemies.filter((e) => e.kindId === 'wilk' || e.kindId === 'warg').length; });
-      if (n > 0) break;
-    }
-  }
+  assert(po1 > 0, 'a wolf pack actually spawned once standing on a planned habitat slot');
   const hp0 = await g(() => window.__game.scene.getScene('game').player.hp);
   console.log('hp przed', hp0);
 
@@ -102,6 +107,13 @@ try {
     await page.waitForTimeout(120);
   }
   await page.waitForTimeout(500);
+  // Ten pętlowy test teleportuje bohatera z celu na cel bez odwrotu i leczenia – to celowo najgorszy
+  // scenariusz (stój i walcz z całą dużą watahą naraz), nie przepis na normalną grę. Jeśli bohater przy
+  // tym zginął, to realny sygnał do zbalansowania (duże spotkanie + brak odwrotu = może zabić), nie błąd
+  // testu – zgłaszamy to wprost zamiast cichym leczeniem ukrywać.
+  const stan = await g(() => { const s = window.__game.scene.getScene('game'); return { martwy: s.player.isDead, hp: s.player.hp }; });
+  if (stan.martwy) console.log('UWAGA: bohater zginął podczas bitewnej pętli (stój-i-walcz z całą dużą watahą, bez odwrotu) – sygnał do balansu, nie błąd mechaniki');
+  else console.log('bohater przeżył, hp', stan.hp);
   const ostatni = await g(() => { const s = window.__game.scene.getScene('game'); return s.enemies.filter((e) => (e.kindId === 'wilk' || e.kindId === 'warg') && !e.isDead).length; });
   console.log('wilki żywe po bitwie', ostatni);
   assert.equal(ostatni, 0, 'the whole encountered pack was beaten');
@@ -111,9 +123,9 @@ try {
   await page.screenshot({ path: `work/lowiska-${tag}-rozbita.png` });
 
   // Odejdź i wróć od razu – bez nowej generacji (odnawianie wymaga sekund aktywnej symulacji, a nie było ich jeszcze 25).
-  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x + 1000, y + 1000); }, [spot.x, spot.y]);
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x + 1000, y + 1000); }, [pakiet.x, pakiet.y]);
   await page.waitForTimeout(800);
-  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); }, [spot.x, spot.y]);
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); }, [pakiet.x, pakiet.y]);
   await page.waitForTimeout(1500);
   const odrazu = await g(() => { const s = window.__game.scene.getScene('game'); return s.enemies.filter((e) => (e.kindId === 'wilk' || e.kindId === 'warg') && !e.isDead).length; });
   console.log('wilki od razu po rozbiciu', odrazu);
