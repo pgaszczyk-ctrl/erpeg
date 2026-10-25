@@ -87,8 +87,8 @@ try {
   assert(hpTeraz < hp0, 'a telegraphed charge actually hurt the hero while standing in the pack territory');
   assert(maxJednoczesnie <= 2, 'the shared melee-attack reservation never exceeds the brief\'s limit of 2');
 
-  // Zabij całą napotkaną watahę mieczem (tap ataku na każdym wilku w zasięgu).
-  const coins0 = await g(() => window.__session.coins);
+  // Zabij całą napotkaną watahę mieczem (tap ataku na każdym wilku w zasięgu) – ciągłe EXP, bez premii za „rozbicie".
+  const exp0 = await g(() => window.__session.exp);
   for (let i = 0; i < 300; i++) {
     const done = await g(() => {
       const s = window.__game.scene.getScene('game');
@@ -105,9 +105,9 @@ try {
   const ostatni = await g(() => { const s = window.__game.scene.getScene('game'); return s.enemies.filter((e) => (e.kindId === 'wilk' || e.kindId === 'warg') && !e.isDead).length; });
   console.log('wilki żywe po bitwie', ostatni);
   assert.equal(ostatni, 0, 'the whole encountered pack was beaten');
-  const coins1 = await g(() => window.__session.coins);
-  console.log('monety', coins0, '→', coins1);
-  assert(coins1 > coins0, 'coins were rewarded for the kills/pack bonus (once, no duplicate)');
+  const exp1 = await g(() => window.__session.exp);
+  console.log('exp', exp0, '→', exp1);
+  assert(exp1 > exp0, 'EXP was granted per kill (continuous farming, no "pack cleared" bonus event)');
   await page.screenshot({ path: `work/lowiska-${tag}-rozbita.png` });
 
   // Odejdź i wróć od razu – bez nowej generacji (odnawianie wymaga sekund aktywnej symulacji, a nie było ich jeszcze 25).

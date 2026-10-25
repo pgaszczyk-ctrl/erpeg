@@ -80,7 +80,7 @@ import {
 } from '../inventory';
 import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
-import { Lowiska, type Pakiet } from './Lowiska';
+import { Lowiska } from './Lowiska';
 import { lowiska, LOWISKA } from '../content/lowiska';
 import { WilkAI, type WilkHost } from '../objects/WilkAI';
 import { SPORT } from '../content/sport';
@@ -118,7 +118,7 @@ import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
-import { tury, turyWDemo } from '../walka/tryb';
+import { tury, turyWDemo, arenaOn } from '../walka/tryb';
 import { WALKA_TUROWA, SPOTKANIA, SMOK_W_TURACH } from '../content/walkaTurowa';
 import { ubierzSmoka } from '../objects/smokRysunki';
 import { mapaWalki } from '../controls';
@@ -829,23 +829,11 @@ export class GameScene extends Phaser.Scene {
             return true;
           },
           () => this.lowiskaCzasS,
-          {
-            // Nie dotykamy session.stats.gangs (to licznik prawdziwych gangów, czyta go próba maga)
-            // – test pilota ma własną, osobną nagrodę za rozbicie watahy.
-            rozbity: (p: Pakiet) => {
-              const n = p.big ? LOWISKA.nagrodaWieksze : LOWISKA.nagrodaPakiet;
-              const coins = luckyCoins(n.monety);
-              earn(coins);
-              session.exp += n.exp;
-              this.emitHud();
-              this.toast(`🏆 Wataha rozbita! +${coins} monet, +${n.exp} EXP. Nowa pojawi się po jakimś czasie.`, 3500);
-            },
-          },
         )
       : null;
 
     this.listyAreny = [];
-    if (tury() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
+    if (arenaOn() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
     this.spotkania?.destroy();
     this.spotkania = tury() ? this.makeSpotkania() : null;
 

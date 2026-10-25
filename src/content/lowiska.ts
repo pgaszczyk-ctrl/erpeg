@@ -10,6 +10,11 @@
 //  localStorage „exp-lowiska”), domyślnie wyłączone nawet na serwerze
 //  testowym. `?lowiska=0` wyłącza z powrotem.
 //
+//  Właściciel, 25 Oct 2026: to NIE jest gang, który się „rozbija" dla jednorazowej
+//  nagrody – watacha nie ma bossa i nie ma specjalnej premii za pokonanie ostatniego
+//  członka. Każdy zabity wilk/warg daje EXP z osobna (ciągłe farmienie), a głębiej
+//  w dziczy (dalej od miast/miejsc) trafiają się silniejsze wargi – patrz LOWISKA.glebia*.
+//
 //  Wszystkie liczby poniżej są WARTOŚCIAMI DO TESTU (brief, rozdz. 4 i 8),
 //  nie zatwierdzonym bilansem. Jednostki metryczne (m, m/s) przeliczane na
 //  piksele świata przez PX_PER_M w miejscu użycia – tak jak przy gangach
@@ -63,8 +68,15 @@ export const LOWISKA = {
   pakiet: [3, 6] as [number, number],
   /** Większe spotkanie: rzadsze, więcej przeciwników naraz (bez salwy całej grupy – patrz limitAtakow). */
   wieksze: { czlonkow: [8, 12] as [number, number], szansa: 0.25 },
-  /** Szansa, że jeden zwykły członek watahy to silniejszy warg (nigdy obowiązkowy do przejścia). */
-  szansaWarga: 0.15,
+  /**
+   * Trudniejsze stworki głębiej w dziczy (właściciel, 25 Oct 2026) – udział silniejszego warga w watasze
+   * rośnie z odległością jej środka od najbliższego znanego miejsca (drzwi/dom – ta sama lista `avoid` co
+   * przy stawianiu siedlisk): 0 do `glebiaOdM`, rośnie do `wargMax` przy `glebiaPelnaOdM`. Nigdy 100% i
+   * nigdy obowiązkowy do przejścia – to tylko udział, każdy członek losowany z osobna.
+   */
+  glebiaOdM: 400,
+  glebiaPelnaOdM: 1800,
+  wargMax: 0.5,
   /** Sekundy AKTYWNEJ symulacji (nie zegara ściennego) od rozbicia, zanim miejsce może dać nową generację. */
   odnowieniePoS: 25,
   /** Odnowienie czeka, gdy bohater jest bliżej niż to (m) – musi być większe niż promień aktywacji poniżej,
@@ -92,8 +104,4 @@ export const LOWISKA = {
     zapowiedzMs: 950, doskokMs: 360, odpoczynekMs: 1400,
     obrazenie: 4, // 2 serca
   } as WilkParam,
-
-  /** Nagroda za rozbicie całego pakietu (oprócz EXP/łupu z każdego wilka z osobna). */
-  nagrodaPakiet: { monety: 20, exp: 25 },
-  nagrodaWieksze: { monety: 60, exp: 80 },
 };

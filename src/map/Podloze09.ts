@@ -1,5 +1,5 @@
 import type { Rodzaj } from '../gen';
-import { tury } from '../walka/tryb';
+import { arenaOn } from '../walka/tryb';
 import type { Area, Line } from './CityMap';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, obrazBudynku, type Zlecenie, type Rodzaj09, type Budynek09 } from './ziemia09';
 import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
@@ -52,7 +52,7 @@ function rodzajObszaru(a: Area): Rodzaj09 {
     case 'farmland': return a.id % 2 ? 'pole_orka' : 'pole_zboze';
     case 'cemetery': return 'cmentarz';
     case 'allotments': return 'laka'; // działki: łąka z drzewami owocowymi (drzewa09.ts)
-    case 'pitch': return a.arena && tury() ? 'piasek' : 'trawa'; // a stadium's bowl = the Arena's sand (no trees)
+    case 'pitch': return a.arena && arenaOn() ? 'piasek' : 'trawa'; // a stadium's bowl = the Arena's sand (no trees)
     case 'playground': return 'plac';
     case 'parking': return 'targ'; // parkingi jako plac targowy ze straganami (targ09.ts)
     case 'plaza': return 'plac';

@@ -11,7 +11,7 @@ import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
 import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
 import { rng } from '../rng';
-import { tury } from '../walka/tryb';
+import { arenaOn } from '../walka/tryb';
 import { hdOn, ensureHd, fitHd } from '../sprites';
 import { GRUPKI_GANGU, GRUPKA } from '../content/walkaTurowa';
 import { choragiewKraju, wczytajChoragiew } from '../arenaChoragiew';
@@ -931,8 +931,8 @@ export class Training {
 
   /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
   private hasStations(a: Area) {
-    // A stadium's bowl is the Arena's sand (test server, owner 18 Oct 2026): no dummies there.
-    if (a.arena && tury()) return false;
+    // A stadium's bowl is the Arena's sand (owner 18 Oct 2026; arenaOn() – kept even with real-time combat).
+    if (a.arena && arenaOn()) return false;
     const m2 = Training.sizeM2(a);
     if (m2 < SPORT.kuklyOdM2) return false;
     const r = SPORT.sasiedziM * PX_PER_M;
@@ -1038,9 +1038,9 @@ export class Training {
     return npc;
   }
 
-  /** Arena Cechu (turn fight, test server): the Arena's judge by the dummies of every big pitch / stadium. */
+  /** Arena Cechu (its own turn fight, independent of exploration combat): the judge by the dummies of every big pitch / stadium. */
   private judgeOf(a: Area): SportNpc | null {
-    if (!tury()) return null;
+    if (!arenaOn()) return null;
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
     const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;

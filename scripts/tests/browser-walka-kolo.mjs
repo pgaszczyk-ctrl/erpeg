@@ -34,7 +34,9 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text()));
   page.on('dialog', (d) => d.accept());
-  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&panel=nowy#postac=Jam&kod=ANGELIKA');
+  // 25 Oct 2026: exploration combat defaults to real time now (owner: „nie chcę walki turowej") – this
+  // script still regression-tests the turn-fight controls themselves, so it explicitly asks for it back.
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&tury=1&panel=nowy#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   await page.waitForFunction(() => !document.querySelector('#loading-map:not([hidden])') && !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(4000);

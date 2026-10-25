@@ -70,12 +70,18 @@ export class Lowiska {
     private spawn: (s: LowiskoSpawn, p: Pakiet) => unknown,
     private despawn: (u: unknown) => boolean,
     private czasAktywny: () => number,
-    private events: { rozbity: (p: Pakiet) => void },
   ) {}
 
   private nearAvoid(x: number, y: number, m: number) {
     const d = m * PX_PER_M;
     return this.avoid.some((pt) => Math.abs(pt.x - x) < d && Math.abs(pt.y - y) < d && Math.hypot(pt.x - x, pt.y - y) < d);
+  }
+
+  /** Jak głęboko w dziczy (m) – odległość do najbliższego znanego miejsca (drzwi/dom). Im dalej, tym trudniejsze stworki. */
+  private glebiaM(x: number, y: number) {
+    let best = Infinity;
+    for (const pt of this.avoid) best = Math.min(best, Math.hypot(pt.x - x, pt.y - y));
+    return best === Infinity ? LOWISKA.glebiaPelnaOdM : best / PX_PER_M;
   }
 
   /** Siedliska jednej komórki 1 km – stabilny seed (bez loginowego nonce'u), to samo miejsce po każdym wejściu. */
@@ -100,37 +106,39 @@ export class Lowiska {
     }
   }
 
-  /** Losuje skład nowej generacji (miejsca w terytorium, kto jest wargiem). */
+  /** Losuje skład nowej generacji (miejsca w terytorium, kto jest wargiem – zależnie od głębi w dziczy). */
   private makeSpots(p: Pakiet) {
     const r = rng(hashSeed(`${p.id}:${p.gen}`));
     const [lo, hi] = p.big ? LOWISKA.wieksze.czlonkow : LOWISKA.pakiet;
     const want = lo + Math.floor(r() * (hi - lo + 1));
+    const glebia = this.glebiaM(p.x, p.y);
+    const udzialWarga = LOWISKA.wargMax * Math.max(0, Math.min(1, (glebia - LOWISKA.glebiaOdM) / (LOWISKA.glebiaPelnaOdM - LOWISKA.glebiaOdM)));
     const spots: LowiskoSpawn[] = [];
     for (let t = 0; spots.length < want && t < want * 40; t++) {
       const a = r() * Math.PI * 2;
       const d = Math.sqrt(r()) * p.r * 0.8;
       const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
       if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, 30)) continue;
-      spots.push({ x, y, kind: 'wilk' });
+      // Nigdy obowiązkowy: każdy członek losowany z osobna, nawet głęboko w dziczy część watahy to zwykłe wilki.
+      spots.push({ x, y, kind: r() < udzialWarga ? 'warg' : 'wilk' });
     }
-    // Warg: nigdy obowiązkowy (jedna watacha nie staje się przez to nieprzechodnia).
-    if (spots.length && r() < LOWISKA.szansaWarga) spots[Math.floor(r() * spots.length)].kind = 'warg';
     p.spots = spots;
     p.alive = new Set(spots.map((_, i) => i));
     p.members = new Map();
   }
 
-  /** Wataha rozbita: wszyscy jej aktywni członkowie zostali pokonani. */
+  /**
+   * Wataha rozbita: wszyscy jej aktywni członkowie pokonani. Tylko zegar odnowienia – żadnej premii czy
+   * komunikatu o „rozbiciu" (właściciel, 25 Oct 2026: to nie jest gang; ciągłe EXP z każdego zabitego,
+   * nie jednorazowa nagroda za opróżnienie terytorium).
+   */
   killed(e: unknown) {
     for (const p of this.pakiety) {
       for (const [i, m] of p.members) {
         if (m !== e) continue;
         p.members.delete(i);
         p.alive.delete(i);
-        if (!p.alive.size) {
-          p.clearedAtS = this.czasAktywny();
-          this.events.rozbity(p);
-        }
+        if (!p.alive.size) p.clearedAtS = this.czasAktywny();
         return;
       }
     }
