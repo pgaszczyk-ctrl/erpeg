@@ -31,7 +31,9 @@ try {
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text()));
-  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
+  // 25 Oct 2026: the telescope HUD is tied to tury() (teleskop() = tury() with no ?hud= override), and
+  // exploration combat now defaults to real time (owner: „nie chcę walki turowej") – ask for it explicitly.
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&tury=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   await page.waitForFunction(() => !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(2500);

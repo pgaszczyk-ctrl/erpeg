@@ -195,7 +195,7 @@ class LabScene extends Phaser.Scene {
     }
     this.cameras.main.preRender();
     this.mapView.update(this.cameras.main);
-    this.mapView.updateTrees(now, dt, this.cameras.main, p.x, p.y);
+    this.mapView.updateTrees(now, dt, this.cameras.main, [{ x: p.x, y: p.y }]);
     for (const station of this.city.places) {
       if (station.kind !== 'station' || this.shownStations.has(station.id) || Math.hypot(station.door.x - p.x, station.door.y - p.y) > this.radius()) continue;
       const rail = torStacji(this.city, station);

@@ -29,7 +29,20 @@ export function turyWDemo() {
 /** The same switch without the demo exception – the telescope HUD goes with it, also in the demo (owner, 18 Oct 2026). */
 export function turyNaSerwerze() {
   if (wymuszone === '0') return false;
-  // Every server since 1.032 (owner, 20 Oct 2026: „wyrównaj wszystko do testu”).
+  if (wymuszone === '1') return true;
+  // Owner, 25 Oct 2026: „Nie chcę walki turowej” – exploration combat is real-time again (the pre-turn
+  // baseline, now also used by the łowiska wolf packs). `?tury=1` still brings the turn fight back for
+  // comparison; it stays the engine behind Arena Cechu (arenaOn() below), which is deliberately unaffected.
+  return false;
+}
+
+/**
+ * Arena Cechu's own switch, independent of exploration combat (turyNaSerwerze()): the judge NPC, the
+ * stadium's sand floor and its country-flag banners (Ambient.ts, Podloze09.ts) keep showing up on every
+ * server even now that the open world fights in real time – the arena is its own self-contained turn-based
+ * duel, not the thing the owner asked to remove. Its fight itself still runs on TuryWalki/ArenaScene.
+ */
+export function arenaOn() {
   return true;
 }
 

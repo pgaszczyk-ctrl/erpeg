@@ -43,6 +43,11 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   wodnik: { name: 'Wodnik', hp: 30, wanderSpeed: 12, chaseSpeed: 30, sightRange: 120, loseRange: 220, scale: 1.05, damage: 1, exp: 25, tint: 0x9fe8ff },
   // The story's dragon (its reward comes from content/historia.ts).
   smok: { name: 'Smok', hp: 200, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
+  // Łowiska test pilot (content/lowiska.ts, scenes/Lowiska.ts): real-time only, never scaled by level.
+  // chaseSpeed/sightRange/loseRange here are unused once a WilkAI brain is attached (it drives vel itself);
+  // kept sane in case generic Slime code (fleeing a dragon's shadow, etc.) ever reads them.
+  wilk: { name: 'Wilk', hp: 10, wanderSpeed: 14, chaseSpeed: 44, sightRange: 160, loseRange: 260, scale: 1, damage: 2, exp: 12, tint: 0x7a6a58 },
+  warg: { name: 'Warg', hp: 32, wanderSpeed: 11, chaseSpeed: 40, sightRange: 190, loseRange: 300, scale: 1.3, damage: 4, exp: 45, tint: 0x5a3a2a },
 };
 
 /** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); was 200, the owner wants them to stay close. */
@@ -111,7 +116,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
-    const person = kind === 'bandyta' || kind === 'wojownik';
+    // Wilk/warg have no art yet (łowiska test pilot): placeholder on the bandit's humanoid sheet, tinted –
+    // same idiom the game already used for koziol/the grey dragon before their own art arrived.
+    const person = kind === 'bandyta' || kind === 'wojownik' || kind === 'wilk' || kind === 'warg';
     // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
     const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(scene, kind) : null;
     const hd = !!hdTex && scene.textures.exists(hdTex);
@@ -136,7 +143,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.home = new Phaser.Math.Vector2(x, y);
     if (hd) this.setFrame('down-0');
     else if (kind === 'smok') this.anims.play('dragon-flap');
-    else if (!detailedBlob && kind !== 'bandyta' && kind !== 'wojownik') this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
+    else if (!detailedBlob && !person) this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
   }
 
   /** How far from its centre a sword swing or a touch reaches it. */
@@ -156,7 +163,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
       if (Math.abs(this.vel.x) > 1) this.setFlipX(this.vel.x > 0);
       return;
     }
-    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik' && !this.hd) return;
+    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik' && this.kindId !== 'wilk' && this.kindId !== 'warg' && !this.hd) return;
     const v = this.vel;
     if (v.lengthSq() < 1) {
       this.anims.stop();

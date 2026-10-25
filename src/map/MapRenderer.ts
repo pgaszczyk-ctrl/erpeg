@@ -713,11 +713,15 @@ export class MapRenderer {
         if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
   }
 
-  /** Wind and see-through of the crowns in view; call every frame (overhaul 09). */
-  updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, hx: number, hy: number) {
+  /**
+   * Wind and see-through of the crowns in view; call every frame (overhaul 09). `punkty[0]` is the hero
+   * (also used for the tall-building cut-out); any further points (łowiska: nearby wolves) also open a
+   * hole in a crown standing over them, so an enemy under the canopy isn't invisible.
+   */
+  updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, punkty: { x: number; y: number }[]) {
     if (WYGLAD_09) {
-      this.korony.update(now, dt, cam.worldView, hx, hy);
-      this.wysokie.update(cam.worldView, hx, hy);
+      this.korony.update(now, dt, cam.worldView, punkty);
+      this.wysokie.update(cam.worldView, punkty[0].x, punkty[0].y);
     }
   }
 
