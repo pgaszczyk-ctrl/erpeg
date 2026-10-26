@@ -136,6 +136,19 @@ const pickDragged = new Set<number>();
 const pickStarts = new Map<number, { x: number; y: number; t: number }>();
 const PICK_DRAG = 12;
 const PICK_MS = 700;
+
+/**
+ * A dialog too tall for the screen (UIScene.showDialog): its brass rail can be dragged or tapped to scroll,
+ * like the Kufer's own rail (ui/character.ts). Set only while such a dialog is open; a mouse wheel over the
+ * game scrolls it too. Touches/clicks the rail swallows never reach the joystick or a dialog button.
+ */
+export const dialogRail: {
+  hit: ((x: number, y: number) => boolean) | null;
+  set: ((y: number) => void) | null;
+  wheel: ((dy: number) => void) | null;
+} = { hit: null, set: null, wheel: null };
+let railTouchId: number | null = null;
+let railMouseDown = false;
 /** Set when a hold ends; the game reads and clears it. */
 export let release: { mode: 'touch' | 'mouse' | 'key'; dx: number; dy: number; dragged: boolean; held: number } | null = null;
 
@@ -241,6 +254,8 @@ export function resetTouch() {
   release = null;
   joyId = null;
   attackIds = new Set();
+  railTouchId = null;
+  railMouseDown = false;
   touchInput.x = touchInput.y = 0;
   touchInput.attack = false;
   touchInput.attackHeld = false;
@@ -272,6 +287,7 @@ export function installTouchControls(el: HTMLElement) {
 
   const sync = (e: TouchEvent) => {
     const alive = new Set(Array.from(e.touches, (t) => t.identifier));
+    if (railTouchId !== null && !alive.has(railTouchId)) railTouchId = null;
     if (joyId !== null && !alive.has(joyId)) {
       joyId = null;
       touchInput.x = touchInput.y = 0;
@@ -290,6 +306,11 @@ export function installTouchControls(el: HTMLElement) {
     sync(e);
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
+      if (dialogRail.hit?.(p.x, p.y)) {
+        railTouchId = t.identifier;
+        dialogRail.set?.(p.y);
+        continue;
+      }
       if (mapaWalki.fn) {
         // Turn fight: remember the touch, it becomes a pick on release.
         if (!onMenuButton(p.x, p.y)) pickStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
@@ -351,6 +372,10 @@ export function installTouchControls(el: HTMLElement) {
       }
     }
     for (const t of Array.from(e.touches)) {
+      if (t.identifier === railTouchId) {
+        dialogRail.set?.(local(t).y);
+        continue;
+      }
       if (hold.active && hold.mode === 'touch' && t.identifier === hold.id) {
         const p = local(t);
         hold.dx = p.x - holdOrigin.x;
@@ -443,6 +468,10 @@ export function installTouchControls(el: HTMLElement) {
   el.addEventListener('mousemove', (e) => {
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (railMouseDown) {
+      dialogRail.set?.(e.offsetY);
+      return;
+    }
     const s = pickStarts.get(-2);
     if (s && mapaWalki.drag && (pickDragged.has(-2) || Math.hypot(e.offsetX - s.x, e.offsetY - s.y) >= PICK_DRAG)) {
       pickDragged.add(-2);
@@ -450,6 +479,7 @@ export function installTouchControls(el: HTMLElement) {
     }
   });
   window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) railMouseDown = false;
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
     const s = pickStarts.get(-2);
     if (e.button === 0 && s) {
@@ -464,6 +494,11 @@ export function installTouchControls(el: HTMLElement) {
     if (e.button !== 0) return;
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (dialogRail.hit?.(e.offsetX, e.offsetY)) {
+      railMouseDown = true;
+      dialogRail.set?.(e.offsetY);
+      return;
+    }
     if (mapaWalki.fn) {
       if (!onMenuButton(e.offsetX, e.offsetY)) pickStarts.set(-2, { x: e.offsetX, y: e.offsetY, t: performance.now() });
       tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
@@ -483,5 +518,11 @@ export function installTouchControls(el: HTMLElement) {
     }
     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
   });
+  // A computer's wheel scrolls an open dialog too tall for the screen (no need to find its rail).
+  el.addEventListener('wheel', (e) => {
+    if (!dialogRail.wheel) return;
+    e.preventDefault();
+    dialogRail.wheel(e.deltaY);
+  }, { passive: false });
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 }
