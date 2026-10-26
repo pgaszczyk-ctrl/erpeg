@@ -68,6 +68,8 @@ export interface Lowisko {
   /** Promień całości (px). */
   r: number;
   pakiety: Pakiet[];
+  /** Małe łowisko w parku: sama warstwa zewnętrzna. */
+  park?: boolean;
   mgla?: Phaser.GameObjects.Image[];
   kleby?: Phaser.GameObjects.Image[];
 }
@@ -148,6 +150,42 @@ export class Lowiska {
       this.lowiska.push(this.zbuduj(`${this.city.id}:lowisko:${key}`, x, y, R, r));
       return;
     }
+    this.planPark(cx, cy, r);
+  }
+
+  /** Miejski park (owner: „nawet w miejskich parkach mogą czasem być”): małe łowisko z samym obrzeżem. */
+  private planPark(cx: number, cy: number, r: () => number) {
+    const P = LOWISKA_EPI.park;
+    if (r() > P.szansa) return;
+    const R = P.promienM * M;
+    for (let t = 0; t < 30; t++) {
+      const x = (cx + 0.1 + r() * 0.8) * this.komorka, y = (cy + 0.1 + r() * 0.8) * this.komorka;
+      if (!this.city.areaKindsAt(x, y).includes('park') || this.city.isBlocked(x, y) || this.nearAvoid(x, y, P.odMiejscM)) continue;
+      if (this.lowiska.some((l) => Math.hypot(l.x - x, l.y - y) < l.r + R)) continue;
+      let ok = 0;
+      const prob = 16;
+      for (let i = 0; i < prob; i++) {
+        const a = (i / prob) * Math.PI * 2, d = R * (0.3 + 0.6 * ((i * 7) % 5) / 4);
+        if (this.city.areaKindsAt(x + Math.cos(a) * d, y + Math.sin(a) * d).includes('park')) ok++;
+      }
+      if (ok / prob < P.minParku) continue;
+      const id = `${this.city.id}:park:${cx},${cy}`;
+      const l: Lowisko = { id, x, y, r: R, pakiety: [], park: true };
+      const start = r() * Math.PI * 2;
+      for (let i = 0; i < P.miejsc; i++) {
+        for (let k = 0; k < 10; k++) {
+          const a = start + (i / P.miejsc) * Math.PI * 2 + (r() - 0.5) * 0.8, d = R * (0.25 + r() * 0.45);
+          const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+          if (!this.city.isFree(px, py, 6, 6) || !this.city.areaKindsAt(px, py).includes('park')) continue;
+          l.pakiety.push({ id: `${id}:${i}`, x: px, y: py, r: R * 0.5, warstwa: 'obrzeze', gen: 0, spots: null, alive: new Set(), members: new Map(), clearedAtS: null });
+          break;
+        }
+      }
+      if (!l.pakiety.length) return;
+      this.lowiska.push(l);
+      this.pakiety.push(...l.pakiety);
+      return;
+    }
   }
 
   /** Miejsca grup w trzech warstwach (każde sprawdzone osobno). */
@@ -187,18 +225,29 @@ export class Lowiska {
     const r = rng(hashSeed(`${p.id}:${p.gen}`));
     const spots: LowiskoSpawn[] = [];
     const kinds: RodzajWroga[] = [];
+    const ile = ([lo, hi]: [number, number]) => lo + Math.floor(r() * (hi - lo + 1));
     if (p.warstwa === 'rdzen') {
       kinds.push(E.rdzen.boss as RodzajWroga);
       for (let i = 0; i < E.rdzen.obstawa; i++) kinds.push('warg');
+    } else if (p.id.includes(':park:')) {
+      const imps = r() < E.park.chochliki;
+      for (let i = ile(E.park.czlonkow); i > 0; i--) kinds.push(imps ? 'glut' : 'wilk');
+    } else if (p.warstwa === 'obrzeze') {
+      for (let i = ile(E.obrzeze.czlonkow); i > 0; i--) kinds.push('wilk');
     } else {
-      const [lo, hi] = p.warstwa === 'obrzeze' ? E.obrzeze.czlonkow : E.glebia.czlonkow;
-      const n = lo + Math.floor(r() * (hi - lo + 1));
-      for (let i = 0; i < n; i++) kinds.push(p.warstwa === 'obrzeze' ? 'wilk' : r() < 0.75 ? 'warg' : 'wilk');
+      // Głębia: wargi wręcz i chochliki leśne rzucające żołędziami z dystansu (bestiariusz: acorn).
+      for (let i = ile(E.glebia.czlonkow); i > 0; i--) kinds.push(r() < 0.8 ? 'warg' : 'wilk');
+      for (let i = ile(E.glebia.chochlikow); i > 0; i--) kinds.push('glut');
     }
-    for (let i = 0, t = 0; i < kinds.length && t < kinds.length * 40; t++) {
-      const a = r() * Math.PI * 2, d = i === 0 && p.warstwa === 'rdzen' ? 0 : Math.sqrt(r()) * p.r * 0.45;
+    // Rozproszeni po całym terenie grupy, z odstępami (nie w jednym kłębku).
+    const odstep = E.odstepM * M;
+    const [r0, r1] = E.rozrzut;
+    for (let i = 0, t = 0; i < kinds.length && t < kinds.length * 60; t++) {
+      const boss = i === 0 && p.warstwa === 'rdzen';
+      const a = r() * Math.PI * 2, d = boss ? 0 : p.r * (r0 + Math.sqrt(r()) * (r1 - r0)) * (kinds[i] === 'glut' ? 1 : 0.9);
       const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
       if (!this.city.isFree(x, y, 4, 4)) continue;
+      if (!boss && spots.some((q) => Math.hypot(q.x - x, q.y - y) < odstep) && t < kinds.length * 40) continue;
       spots.push({ x, y, kind: kinds[i] });
       i++;
     }
@@ -243,6 +292,7 @@ export class Lowiska {
     for (const l of this.lowiska) {
       const d = Math.hypot(l.x - x, l.y - y);
       if (d >= l.r) continue;
+      if (l.park) return 'obrzeze';
       return d < l.r * E.rdzenOd ? 'rdzen' : d < l.r * E.glebiaOd ? 'glebia' : 'obrzeze';
     }
     return null;
@@ -258,10 +308,10 @@ export class Lowiska {
     const E = LOWISKA_EPI;
     const d = GROUND_DEPTH + 1;
     const kolo = (rr: number, a: number) => this.scene.add.image(l.x, l.y, 'gang-wnetrze').setDisplaySize(rr * 2, rr * 2).setTint(GANG_MGLA.kolor).setAlpha(a).setDepth(d);
-    l.mgla = [kolo(l.r, E.mgla.obrzeze), kolo(l.r * E.glebiaOd, E.mgla.glebia), kolo(l.r * E.rdzenOd, E.mgla.rdzen)];
+    l.mgla = l.park ? [kolo(l.r, E.mgla.obrzeze)] : [kolo(l.r, E.mgla.obrzeze), kolo(l.r * E.glebiaOd, E.mgla.glebia), kolo(l.r * E.rdzenOd, E.mgla.rdzen)];
     const r = rng(hashSeed(`${l.id}:mgla`));
     const kleby: Phaser.GameObjects.Image[] = [];
-    for (const [rr, gest, alfa] of [[l.r, 1, 1], [l.r * E.glebiaOd, 0.45, 0.6]] as [number, number, number][]) {
+    for (const [rr, gest, alfa] of (l.park ? [[l.r, 1, 1]] : [[l.r, 1, 1], [l.r * E.glebiaOd, 0.45, 0.6]]) as [number, number, number][]) {
       const n = Math.max(16, Math.round(((Math.PI * 2 * rr) / E.mgla.klebyCoPx) * gest));
       for (let i = 0; i < n; i++) {
         const a = ((i + r() * 0.8) / n) * Math.PI * 2;
@@ -335,7 +385,8 @@ export class Lowiska {
     const w = this.warstwaW(px, py);
     if (w !== this.ostatniaWarstwa) {
       const glebiej = (w === 'glebia' && this.ostatniaWarstwa !== 'rdzen') || w === 'rdzen' || (w === 'obrzeze' && this.ostatniaWarstwa === null);
-      if (glebiej && w) this.powiedz(w === 'obrzeze' ? '🐺 Łowisko: wilki w okolicy. Głębiej będzie groźniej.' : w === 'glebia' ? '⚠ Głębia łowiska: wargi – silniejsze od wilków.' : '☠ Rdzeń łowiska: tu mieszka coś naprawdę groźnego!');
+      const park = this.lowiska.some((l) => l.park && Math.hypot(l.x - px, l.y - py) < l.r);
+      if (glebiej && w) this.powiedz(park ? '🌳 W parku coś się czai – uważaj na czerwoną mgiełkę.' : w === 'obrzeze' ? '🐺 Łowisko: wilki w okolicy. Głębiej będzie groźniej.' : w === 'glebia' ? '⚠ Głębia łowiska: wargi i chochliki z żołędziami.' : '☠ Rdzeń łowiska: tu mieszka coś naprawdę groźnego!');
       if (!w && this.ostatniaWarstwa) this.powiedz('Wyszedłeś z łowiska – tu odpoczniesz.');
       this.ostatniaWarstwa = w;
     }

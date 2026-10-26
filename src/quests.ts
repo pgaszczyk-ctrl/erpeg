@@ -6,7 +6,7 @@ import { lang, setLanguage, tx, tr, type Txt } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
-import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
+import { api, rpc, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
 import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
@@ -19,6 +19,7 @@ import { PLAYER } from './objects/Player';
 import { zyciePostaci, poziomPostaci } from './content/historia';
 import type { StanDoOsiagniec } from './content/osiagniecia';
 import { loadSettings } from './settings';
+import { ustawStwory, type WierszLupu } from './content/stwory';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
 import { TEST } from './version';
@@ -204,6 +205,10 @@ function ustawTresc(list: Awaited<ReturnType<typeof api.content>>) {
 export async function loadContent() {
   // The admin panel's knobs (prices, speed…), in parallel with the missions.
   const settings = loadSettings();
+  // Creatures' loot/EXP from the admin panel (tab „🐺 Stworki”): only the new-fight test uses them; no waiting.
+  Promise.race([rpc<Record<string, { exp?: number | null; lup?: WierszLupu[] }>>('game_stwory', {}), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+    .then(ustawStwory)
+    .catch(() => {});
   // Today's school quizzes (no waiting for them: the built-in ones fill in).
   Promise.race([api.quizzes(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
     .then(setServerQuizzes)

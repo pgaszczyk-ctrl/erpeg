@@ -44,7 +44,7 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   // The story's dragon (its reward comes from content/historia.ts).
   smok: { name: 'Smok', hp: 200, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
   // Łowiska test pilot (content/lowiska.ts, scenes/Lowiska.ts): real-time only, never scaled by level.
-  // chaseSpeed/sightRange/loseRange here are unused once a WilkAI brain is attached (it drives vel itself);
+  // chaseSpeed/sightRange/loseRange here are unused once a StworAI brain is attached (it drives vel itself);
   // kept sane in case generic Slime code (fleeing a dragon's shadow, etc.) ever reads them.
   wilk: { name: 'Wilk', hp: 10, wanderSpeed: 14, chaseSpeed: 44, sightRange: 160, loseRange: 260, scale: 1, damage: 2, exp: 12, tint: 0x7a6a58 },
   warg: { name: 'Warg', hp: 32, wanderSpeed: 11, chaseSpeed: 40, sightRange: 190, loseRange: 300, scale: 1.3, damage: 4, exp: 45, tint: 0x5a3a2a },
@@ -210,6 +210,11 @@ export class Slime extends Phaser.GameObjects.Sprite {
         if (this.kind.tint) this.setTint(this.kind.tint);
       });
     }
+  }
+
+  /** Still thrown back by a blow (the knock-back owns `vel` meanwhile). */
+  ogluszony(now: number) {
+    return now < this.knockUntil;
   }
 
   isDazed(now: number) {

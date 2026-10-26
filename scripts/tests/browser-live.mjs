@@ -21,6 +21,7 @@ try {
     let body = null;
     if (path.endsWith('/login')) body = { token: 't', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000, map_scale: 1.92, save: { coins: 500, story: { st: 'start', walked: 0 } }, exp: 400, dead: false, died_at: null, age: 12 } };
     if (path.endsWith('/game_settings')) body = {};
+    if (path.endsWith('/game_stwory')) body = { wilk: { exp: 99, lup: [{ co: 'kiel', ile: 2, szansa: 100 }, { co: 'zloto', ile: 3, szansa: 100 }, { co: 'jablko', ile: 1, szansa: 0 }] } };
     if (path.endsWith('/game_content') || path.endsWith('/school_quizzes')) body = [];
     if (path.endsWith('/server_now')) body = new Date().toISOString();
     if (path.endsWith('/weather')) body = { cell: 'test', at: new Date().toISOString(), h: [] };
@@ -42,11 +43,10 @@ try {
   const g = (fn, arg) => page.evaluate(fn, arg);
   const S = 'window.__game.scene.getScene("game")';
 
-  // 1. Tilted camera: zoomY = zoomX × 0.8, sprites stretched back.
+  // 1. Camera straight from above again (owner, 26 Oct 2026: „poprzednia była lepsza”).
   const cam = await g(() => { const c = window.__game.scene.getScene('game').cameras.main; return { x: c.zoomX, y: c.zoomY, w: c.wyprost }; });
   console.log('kamera', JSON.stringify(cam));
-  assert(Math.abs(cam.y / cam.x - 0.8) < 0.01, 'camera squashed vertically');
-  assert(Math.abs(cam.w - 1.25) < 0.01, 'sprites stretched back');
+  assert(Math.abs(cam.y - cam.x) < 0.001, 'camera not squashed');
 
   // 3. New HUD + controls.
   // The production telescope HUD (portrait with the EXP reservoir) + the two tubes; no life flask any more.
@@ -119,6 +119,67 @@ try {
     await page.waitForTimeout(600);
   }
 
+  // 3b. Creatures fight readably (StworAI): telegraph → attack → rest, never by touch; imps throw acorns.
+  for (let i = 0; i < 4 && await g(() => !window.__game.scene.isActive('game')); i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
+  await page.waitForTimeout(900);
+  const fight = async (kind, dm) => {
+    await g(([kind, dm]) => {
+      const s = window.__game.scene.getScene('game');
+      for (const e of [...s.enemies]) if (!e.isDead) { s.wilki.get(e)?.destroy(); s.wilki.delete(e); e.destroy(); }
+      s.enemies = [];
+      window.__session.immortal = true;
+      // An open spot: the hero and the creature both on free ground with nothing between them.
+      if (!window.__plac) {
+        const free = (x, y) => { for (let dx = -40; dx <= 40; dx += 4) for (let dy = -12; dy <= 12; dy += 4) if (s.city.isBlocked(x + dx, y + dy)) return false; return true; };
+        outer: for (let r = 0; r < 600; r += 12) for (let a = 0; a < 6.28; a += 0.4) { const x = s.player.x + Math.cos(a) * r, y = s.player.y + Math.sin(a) * r; if (free(x, y)) { window.__plac = { x, y }; break outer; } }
+      }
+      s.player.setPosition(window.__plac.x - 20, window.__plac.y);
+      const p = { x: window.__plac.x - 20 + dm * 1.92, y: window.__plac.y };
+      window.__stan = [];
+      window.__e = s.spawnEnemy(p.x, p.y, undefined, kind);
+    }, [kind, dm]);
+    for (let i = 0; i < 70; i++) {
+      await page.waitForTimeout(60);
+      const st = await g(() => { const s = window.__game.scene.getScene('game'); const ai = s.wilki.get(window.__e); return ai ? `${ai.stan}:${ai.atak}:${ai.pociski.length}` : `brak(${s.scene.isActive()})`; });
+      await g((st) => { if (window.__stan.at(-1) !== st) window.__stan.push(st); }, st);
+    }
+    return g(() => window.__stan);
+  };
+  const wilk = await fight('wilk', 14);
+  console.log('debug', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const e = window.__e; return { act: s.scene.isActive(), paused: s.scene.isPaused(), px: s.player.x, py: s.player.y, ex: e.x, ey: e.y, vel: [e.vel.x, e.vel.y], dead: e.isDead, inList: s.enemies.includes(e), stan: s.wilki.get(e)?.stan, nohurt: s.noHurtUntil - s.time.now }; })));
+  console.log('wilk', wilk.join(' → '));
+  assert(wilk.some((x) => x.startsWith('zapowiedz:doskok')), 'wolf telegraphs its lunge');
+  assert(wilk.some((x) => x.startsWith('atak:doskok')), 'wolf lunges');
+  assert(wilk.some((x) => x.startsWith('odpoczynek')), 'wolf rests after');
+  const imp = await fight('glut', 16);
+  console.log('chochlik', imp.join(' → '));
+  assert(imp.some((x) => x.startsWith('zapowiedz:rzut')), 'imp telegraphs a throw');
+  assert(imp.some((x) => /:rzut:[1-9]/.test(x)), 'acorn flies');
+  const boss = await fight('koziol', 12);
+  console.log('kozioł', boss.join(' → '));
+  assert(boss.some((x) => /zapowiedz:(taran|tupniecie|rogi)/.test(x)), 'boss telegraphs');
+  await page.screenshot({ path: `work/live-${tag}-boss.png` });
+  // Loot from the admin panel's table: 2 fangs + 3 gold on the ground, EXP 99 instead of 12.
+  const lup = await g(async () => {
+    const s = window.__game.scene.getScene('game');
+    for (const e of [...s.enemies]) { s.wilki.get(e)?.destroy(); s.wilki.delete(e); e.destroy(); }
+    s.enemies = [];
+    const e = s.spawnEnemy(s.player.x + 30, s.player.y, undefined, 'wilk');
+    const exp0 = window.__session.exp;
+    s.onEnemyKilled(e);
+    e.destroy();
+    await new Promise((r) => setTimeout(r, 600));
+    const kinds = s.pickups.map((p) => p.getData('kind'));
+    return { exp: window.__session.exp - exp0, kly: kinds.filter((k) => k === 'fruit:kiel').length, jablka: kinds.filter((k) => k === 'fruit:jablko').length, zloto: kinds.filter((k) => String(k).startsWith('coin')).length, kinds };
+  });
+  console.log('łup', JSON.stringify(lup));
+  assert.equal(lup.exp, 99, 'EXP from the panel');
+  assert.equal(lup.kly, 2, 'two fangs');
+  assert.equal(lup.jablka, 0, '0 % never drops');
+
   // 7. Saved spot.
   await g(() => window.__game.scene.getScene('game').save());
   await page.waitForTimeout(800);
@@ -140,10 +201,10 @@ try {
     await g(([dx, dy]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(3000 + dx, 3000 + dy); }, [dx, dy]);
     await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.city.ready({ x0: s.player.x - 1500, y0: s.player.y - 1500, x1: s.player.x + 1500, y1: s.player.y + 1500 }); }, null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1500);
-    low = await g(() => { const L = window.__game.scene.getScene('game').lowiska; return L?.lowiska?.length ? L.lowiska.map((l) => ({ x: l.x, y: l.y, r: l.r, n: l.pakiety.length, w: l.pakiety.map((p) => p.warstwa) })) : null; });
+    low = await g(() => { const L = window.__game.scene.getScene('game').lowiska; const ls = (L?.lowiska ?? []).filter((l) => !l.park); window.__parki = (L?.lowiska ?? []).filter((l) => l.park).length; return ls.length ? ls.map((l) => ({ x: l.x, y: l.y, r: l.r, n: l.pakiety.length, w: l.pakiety.map((p) => p.warstwa) })) : null; });
     if (low) break;
   }
-  console.log('łowiska', JSON.stringify(low?.slice(0, 3)));
+  console.log('łowiska', JSON.stringify(low?.slice(0, 3)), 'w parkach:', await g(() => window.__parki));
   assert(low && low.length, 'a hunting ground was planned in open land');
   const l0 = low[0];
   assert(l0.w.includes('obrzeze'), 'outer layer with packs');
