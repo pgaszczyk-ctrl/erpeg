@@ -78,6 +78,27 @@ const CSS = `
   box-shadow: 0 0 0 0.5px #2a1a0c, 0 0 0 1.5px #c9953f, 0 0 0 2px #7a5220, 0 0 0 2.5px rgba(20,12,6,0.85),
     inset 0 0.5px 0 rgba(255,236,190,0.2), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1.5px 3px rgba(0,0,0,0.4); box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
+/* New-controls test (walka/live.ts, owner 26 Oct 2026: „użyj tego HUD-u, tylko dodaj 2 rurki”): two thin glass tubes right
+   of the portrait – life (red, a potion's bonus blue on top) and stamina (gold; mana blue with a magic weapon) – fed by a
+   short brass pipe from the ring. Code-drawn until the artist's version (order 43-P001). */
+#hud-tel .tel-rurki { position: absolute; left: 58px; top: 2px; width: 30px; height: 62px; pointer-events: none; display: none; }
+#hud-tel.rurki .tel-rurki { display: block; }
+#hud-tel .tel-rura { position: absolute; top: 4px; width: 10px; height: 52px; border-radius: 5px; overflow: hidden;
+  background: linear-gradient(90deg, rgba(20,14,10,0.92), rgba(48,38,32,0.88) 45%, rgba(20,14,10,0.92));
+  box-shadow: 0 0 0 1px #2a1a0c, 0 0 0 2px #c9953f, 0 0 0 2.5px #7a5220, 0 1.5px 3px rgba(0,0,0,0.45); }
+#hud-tel .tel-rura i { position: absolute; left: 0; right: 0; bottom: 0; transition: height .15s linear; }
+#hud-tel .tel-rura.hp i.p { background: linear-gradient(90deg, #7d0e0a, #e33a2c 45%, #ff7a64 60%, #9a150f); }
+#hud-tel .tel-rura.hp.zatruty i.p { background: linear-gradient(90deg, #2f5a14, #7fc84a 45%, #b8ec84 60%, #3a6a18); }
+#hud-tel .tel-rura.hp i.b { background: linear-gradient(90deg, #1d4f9c, #4aa3ff 50%, #1d4f9c); }
+#hud-tel .tel-rura.st i.p { background: linear-gradient(90deg, #8a5a0c, #f0b429 45%, #ffe48a 60%, #a8700f); }
+#hud-tel .tel-rura.st.mana i.p { background: linear-gradient(90deg, #1d3f8c, #3d8fe0 45%, #bfe6ff 60%, #1d4f9c); }
+#hud-tel .tel-rura.st.slabo i.p { background: linear-gradient(90deg, #8e2c10, #d2552a 45%, #ffb08a 60%, #8e2c10); }
+#hud-tel .tel-rura::after { content: ''; position: absolute; left: 2px; top: 3px; width: 2px; bottom: 3px; border-radius: 1px; background: rgba(255,255,255,0.28); }
+#hud-tel .tel-rura .kreski { position: absolute; inset: 0; background: repeating-linear-gradient(180deg, transparent 0 9px, rgba(255,226,160,0.35) 9px 10px); }
+#hud-tel .tel-czapka { position: absolute; width: 14px; height: 5px; border-radius: 2px; background: linear-gradient(180deg, #f2cf7c, #a8722a 60%, #6a4416);
+  box-shadow: 0 0 0 0.5px #2a1a0c; }
+#hud-tel .tel-fajka { position: absolute; left: -4px; top: 26px; width: 8px; height: 5px; background: linear-gradient(180deg, #e8c070, #9a6424 70%, #5e3a12);
+  box-shadow: 0 0 0 0.5px #2a1a0c; }
 /* The plaque on the right in the reservoir's style (owner, 18 Oct 2026: the pixel plates didn't fit the new HUD):
    polished brass rims, dark glass, smooth icons, round buttons from the artist's set, a pipe joint between the plates. */
 body.hud-teleskop #hud { font-family: 'Alegreya Sans', sans-serif; }
@@ -415,7 +436,81 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
   rysujZbiornik();
 }
 
+// ------------------------------------------------------------------ the two tubes (new-controls test)
+
+const rurki: { hp?: HTMLDivElement; st?: HTMLDivElement; hpP?: HTMLElement; hpB?: HTMLElement; stP?: HTMLElement } = {};
+
+function zbudujRurki() {
+  if (!root || rurki.hp) return;
+  const box = document.createElement('div');
+  box.className = 'tel-rurki';
+  const rura = (cls: string, x: number, tytul: string) => {
+    const r = document.createElement('div');
+    r.className = `tel-rura ${cls}`;
+    r.style.left = `${x}px`;
+    r.title = tytul;
+    const p = document.createElement('i');
+    p.className = 'p';
+    const b = document.createElement('i');
+    b.className = 'b';
+    const k = document.createElement('span');
+    k.className = 'kreski';
+    r.append(p, b, k);
+    const czapka = (top: number) => {
+      const c = document.createElement('div');
+      c.className = 'tel-czapka';
+      Object.assign(c.style, { left: `${x - 2}px`, top: `${top}px` });
+      return c;
+    };
+    box.append(czapka(1), czapka(54));
+    box.append(r);
+    return { r, p, b };
+  };
+  const fajka = document.createElement('div');
+  fajka.className = 'tel-fajka';
+  box.append(fajka);
+  const fajka2 = document.createElement('div');
+  fajka2.className = 'tel-fajka';
+  Object.assign(fajka2.style, { left: '10px', width: '6px' });
+  box.append(fajka2);
+  const h = rura('hp', 2, 'Życie');
+  const st = rura('st', 16, 'Siły');
+  rurki.hp = h.r;
+  rurki.hpP = h.p;
+  rurki.hpB = h.b;
+  rurki.st = st.r;
+  rurki.stP = st.p;
+  root.append(box);
+}
+
+/** Shows the two tubes (life, stamina/mana) beside the portrait. */
+export function teleskopRurki(on: boolean) {
+  if (!root) return;
+  if (on) zbudujRurki();
+  root.classList.toggle('rurki', on);
+}
+
+/** Fills the tubes: `hp`/`extra` in half-hearts of `hpMax`; stamina or mana `s` of `sMax`. Missing parts stay. */
+export function ustawRurki(v: { hp?: number; hpMax?: number; extra?: number; zatruty?: boolean; s?: number; sMax?: number; mana?: boolean; slabo?: boolean }) {
+  if (!rurki.hp) return;
+  if (v.hp !== undefined && v.hpMax) {
+    const f = Math.max(0, Math.min(1, v.hp / v.hpMax));
+    const e = Math.max(0, Math.min(1 - f, (v.extra ?? 0) / v.hpMax));
+    rurki.hpP!.style.height = `${f * 100}%`;
+    Object.assign(rurki.hpB!.style, { bottom: `${f * 100}%`, height: `${e * 100}%` });
+    rurki.hp.classList.toggle('zatruty', !!v.zatruty);
+    rurki.hp.title = `Życie ${Math.round((v.hp / 2) * 10) / 10} / ${v.hpMax / 2}`;
+  }
+  if (v.s !== undefined && v.sMax) {
+    rurki.stP!.style.height = `${Math.max(0, Math.min(1, v.s / v.sMax)) * 100}%`;
+    rurki.st!.classList.toggle('mana', !!v.mana);
+    rurki.st!.classList.toggle('slabo', !v.mana && !!v.slabo);
+    rurki.st!.title = `${v.mana ? 'Mana' : 'Siły'} ${Math.round(v.s)} / ${Math.round(v.sMax)}`;
+  }
+}
+
 export function odmontujTeleskop() {
+  rurki.hp = rurki.st = undefined;
   window.removeEventListener('resize', uklad);
   window.clearTimeout(zwin);
   if (raf) cancelAnimationFrame(raf);

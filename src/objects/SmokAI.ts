@@ -648,7 +648,7 @@ function kaluza(scene: Phaser.Scene, x: number, y: number, r: number, now: numbe
 /** Rysunek efektu od grafika zaczepiony w swoim punkcie, przeskalowany do `dl` punktów mapy (długość/szerokość rysunku). */
 function efektAtaku(scene: Phaser.Scene, n: EfektAtaku, x: number, y: number, dl: number) {
   const e = EFEKTY_ATAKOW[n];
-  return scene.add.sprite(x, y, kluczAtaku(n), 0).setOrigin(e.kotwica[0] / e.bok, e.kotwica[1] / e.bok).setScale(dl / e.dlugosc);
+  return Object.assign(scene.add.sprite(x, y, kluczAtaku(n), 0).setOrigin(e.kotwica[0] / e.bok, e.kotwica[1] / e.bok).setScale(dl / e.dlugosc), { plaski: true });
 }
 
 /** Płomień od grafika w jednym z 8 kierunków (lewe lustrem), wylot w pysku; null bez rysunków. */
@@ -719,7 +719,7 @@ function fala(scene: Phaser.Scene, x: number, y: number, R: number) {
 /** Upadek z rysunkami grafika: fala (4 klatki), pył (3), pęknięcia (świeże → wyblakłe), odłamki rozrzucone kodem. */
 function efektyUderzenia(scene: Phaser.Scene, x: number, y: number, ms: number, now: number) {
   const K = SKALA_RYSUNKU;
-  const fala = scene.add.sprite(x, y, kluczEfektu('fala'), 0).setScale(K).setDepth(POWIETRZE);
+  const fala = Object.assign(scene.add.sprite(x, y, kluczEfektu('fala'), 0).setScale(K).setDepth(POWIETRZE), { plaski: true });
   let f = 0;
   scene.time.addEvent({ delay: 90, repeat: 3, callback: () => { f++; if (f < 4) fala.setFrame(f); else scene.tweens.add({ targets: fala, alpha: 0, duration: 200, onComplete: () => fala.destroy() }); } });
   for (let i = 0; i < 3; i++) {

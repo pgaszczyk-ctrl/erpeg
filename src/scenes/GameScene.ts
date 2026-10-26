@@ -78,7 +78,7 @@ import {
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
-import { hold, mouse, consumeRelease, consumeHeal } from '../controls';
+import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
 import { lowiska, LOWISKA } from '../content/lowiska';
@@ -126,6 +126,11 @@ import { ARENA, ARENA_TEKSTY } from '../content/arena';
 import type { ArenaDane } from './ArenaScene';
 import type { DuchAreny } from '../api';
 import { sciezkaGry } from '../sciezka';
+import { live, skrotKamery } from '../walka/live';
+import { wymusPoziom, zwolnijPoziom } from '../ui/poziomo';
+import { ZASOBY, zasoby, wydajStamine, wydajMane, udzialStaminy, wyczerpany, regenerujZasoby, maxStaminy, maxMany } from '../content/zasoby';
+import { ustawZasobyHud } from '../ui/hudLive';
+import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -152,6 +157,8 @@ const PEAK_REACH_M = 30;
 const OCHRONA_MS = 10_000;
 const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
+/** New controls: how near the hero a double tap must land to start something there (map px). */
+const INTERAKCJA_PX = 70;
 const HEARTBEAT_MS = 3000;
 /** How often the heartbeat carries the newspaper's daily numbers (kurier_dni). */
 const KURIER_CO_MS = 60_000;
@@ -300,6 +307,8 @@ interface Shot {
   strong: boolean;
   /** Enemies it already flew past (missed). */
   missed: Set<Enemy>;
+  /** New controls test: a tired archer aims worse (hit-chance points off). */
+  celnoscMinus?: number;
 }
 
 type Challenge =
@@ -371,6 +380,8 @@ export class GameScene extends Phaser.Scene {
   private landmarks!: Landmarks;
   private trailAt = 0;
   private shots: Shot[] = [];
+  private noManaToast = 0;
+  private bezKosztuStrzalu = false;
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
@@ -803,12 +814,15 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.streets.tury = tury();
+    this.streets.slabe = live();
 
     // Łowiska test pilot (?lowiska=1): isolated from everything above – its own class, never tury().
     this.wilki.forEach((ai) => ai.destroy());
     this.wilki.clear();
+    this.lowiska?.destroy();
     this.lowiska = lowiska()
       ? new Lowiska(
+          this,
           this.city,
           avoid,
           (sp, p) => {
@@ -829,6 +843,7 @@ export class GameScene extends Phaser.Scene {
             return true;
           },
           () => this.lowiskaCzasS,
+          (t) => this.toast(t, 2600),
         )
       : null;
 
@@ -882,6 +897,11 @@ export class GameScene extends Phaser.Scene {
     cam.setBackgroundColor('#1f4d24');
     this.fitZoom();
     cam.centerOn(this.player.x, this.player.y);
+    // New controls test: phones play landscape, like a game pad (ui/poziomo.ts).
+    if (live()) {
+      wymusPoziom(this.game);
+      this.events.once('shutdown', () => zwolnijPoziom());
+    }
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
 
@@ -940,7 +960,11 @@ export class GameScene extends Phaser.Scene {
   private fitZoom() {
     const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
     const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
-    this.cameras.main.setZoom(przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z);
+    const zz = przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z;
+    // The tilted camera (walka/live.ts): the map squashed vertically, sprites stretched back when drawn (main.ts).
+    const k = skrotKamery();
+    this.cameras.main.setZoom(zz, zz * k);
+    (this.cameras.main as unknown as { wyprost: number }).wyprost = 1 / k;
   }
 
   /** Switches the bigger picture on/off (kept on the device); returns whether it is on. */
@@ -1009,8 +1033,20 @@ export class GameScene extends Phaser.Scene {
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
     if (lingering || this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy) this.player.move(0, 0, now);
-    else this.player.move(moving ? kd.x : touchInput.x, moving ? kd.y : touchInput.y, now);
+    else {
+      // Screen directions → map directions: on the tilted camera (walka/live.ts) a push "up the screen" covers
+      // more map ground vertically; the push's strength (joystick distance) stays.
+      let ix = moving ? kd.x : touchInput.x, iy = moving ? kd.y : touchInput.y;
+      const k = skrotKamery();
+      if (k !== 1 && (ix || iy)) {
+        const len = Math.min(1, Math.hypot(ix, iy)), ny = iy / k, l2 = Math.hypot(ix, ny);
+        ix = (ix / l2) * len;
+        iy = (ny / l2) * len;
+      }
+      this.player.move(ix, iy, now);
+    }
     this.player.vel.scale(vehicleSpeed());
+    if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.vel.scale(ZASOBY.wyczerpanyChod);
     if (this.player.vel.x || this.player.vel.y) {
       // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
       this.player.vel.scale(PODLOZE[this.city.surfaceAt(this.player.x, this.player.y)]);
@@ -1056,6 +1092,12 @@ export class GameScene extends Phaser.Scene {
     this.crossBorder(now);
     this.portsNear(now);
     if (consumeHeal()) this.healButton();
+    if (live()) {
+      const it = consumeInteraction();
+      if (it) this.interact(it.x, it.y);
+      if (consumeStrong()) this.specjalny(now);
+      this.updateZasoby(dt, bx, by);
+    }
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
       this.player.extra = 0;
@@ -1067,12 +1109,16 @@ export class GameScene extends Phaser.Scene {
       this.clickWorld = null;
       if (attackAim) {
         const cam = this.cameras.main;
-        this.clickWorld = { x: (attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x, y: (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y };
-        this.player.face((attackAim.x * OSTROSC) / cam.zoom + cam.worldView.x - this.player.x, (attackAim.y * OSTROSC) / cam.zoom + cam.worldView.y - (this.player.y + 2));
+        this.clickWorld = { x: (attackAim.x * OSTROSC) / cam.zoomX + cam.worldView.x, y: (attackAim.y * OSTROSC) / cam.zoomY + cam.worldView.y };
+        this.player.face(this.clickWorld.x - this.player.x, this.clickWorld.y - (this.player.y + 2));
       }
       // An enemy near the hero wins over a tree, a bush or the mouse's aim (owner, 6 Oct 2026: fighting in the forest).
       this.faceFoe();
+      // New controls test: exhausted (no stamina left), the sword comes slower.
+      const cd = this.player.attackCooldown;
+      if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.attackCooldown = cd * ZASOBY.wyczerpanyCios;
       const hit = this.player.tryAttack(now);
+      this.player.attackCooldown = cd;
       if (hit) this.resolveAttack(hit, now);
     }
     this.updateRanged(now, lingering);
@@ -1148,7 +1194,7 @@ export class GameScene extends Phaser.Scene {
       if (s.kindId === 'smok' && !this.dragons.has(s)) this.dragonFight(s);
       const dragon = this.dragons.get(s);
       // Łowiska wolves (test pilot): their own telegraph→charge→rest cycle, never the generic touch damage below.
-      if (s.lowisko && !this.wilki.has(s)) this.wilki.set(s, new WilkAI(this.wilkHost(), s, s.lowiskoHome!, s.kindId === 'warg'));
+      if (s.lowisko && (s.kindId === 'wilk' || s.kindId === 'warg') && !this.wilki.has(s)) this.wilki.set(s, new WilkAI(this.wilkHost(), s, s.lowiskoHome!, s.kindId === 'warg'));
       const wilk = this.wilki.get(s);
       if (dragon) dragon.update(now, dt);
       else if (wilk) wilk.update(now);
@@ -1186,6 +1232,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.player.setDepth(this.player.y);
+    if (live()) this.rysujHpNad();
     this.testRide.update(this.player, session.look.postac, session.name);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
@@ -1443,6 +1490,163 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 140, onComplete: () => g.destroy() });
   }
 
+  /**
+   * New controls (walka/live.ts): a double tap/click at screen (sx, sy) – or E, (-1, -1) = right by the hero –
+   * starts what is there: a talk, home, a stall, a train/cart, a door, or the quest spot the hero stands at.
+   */
+  private interact(sx: number, sy: number) {
+    if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.time.now < this.lingerUntil) return;
+    const cam = this.cameras.main;
+    const near = sx < 0;
+    const w = near
+      ? this.player.hitPoint()
+      : new Phaser.Math.Vector2((sx * OSTROSC) / cam.zoomX + cam.worldView.x, (sy * OSTROSC) / cam.zoomY + cam.worldView.y);
+    this.clickWorld = near ? null : { x: w.x, y: w.y };
+    const far = Math.hypot(w.x - this.player.x, w.y - this.player.y) > INTERAKCJA_PX;
+    this.rozmowca = null;
+    if (!far) {
+      if (!near) this.player.face(w.x - this.player.x, w.y - (this.player.y + 2));
+      // Quest spots first: the hero went there to do exactly that.
+      if (this.questTap()) return;
+      if (this.interactChain(w, false, false)) return;
+      // Nothing at the tap: maybe right by the hero.
+      if (!near && this.interactChain(this.player.hitPoint(), false, false)) return;
+      // A training station (dummy, target, crystal): the place to change sword/bow skills.
+      if (this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 2.5, 'miecz') || this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 2.5, 'luk'))
+        this.wyborUmiejetnosci(['miecz', 'luk'], '🎯 Ośrodek treningowy');
+      return;
+    }
+    // Too far: say so if there is something to talk to or go into there.
+    if (this.talkableAt(w.x, w.y, 14) || this.city.places.some((q) => Math.hypot(q.door.x - w.x, q.door.y - (w.y + FEET.dy)) < DOOR_RADIUS) || this.cartAt(w.x, w.y) || this.pociagi?.stacjaPrzy(w.x, w.y)) this.toast('👣 Podejdź bliżej.', 1200);
+  }
+
+  private hpWas = -1;
+  private zycieCarry = 0;
+  private zasobyAt = 0;
+
+  /**
+   * New controls test (content/zasoby.ts): stamina and mana come back (faster outside every red mist = a safe
+   * zone), running inside a mist tires, an exhausted hero walks slower, and outside the mist life comes back too.
+   * Runs only on active frames (never while paused/in a dialog), so no free regeneration.
+   */
+  private updateZasoby(dt: number, bx: number, by: number) {
+    const lvl = poziomPostaci(session.exp);
+    const x = this.player.x, y = this.player.y;
+    const wMgle = this.streets.wMgle(x, y) || !!this.lowiska?.wMgle(x, y);
+    this.bezpiecznie = !wMgle;
+    if (this.player.hp < this.hpWas) zasoby.ranyAt = zasoby.czas;
+    regenerujZasoby(dt, lvl, !wMgle);
+    const ruch = Math.hypot(x - bx, y - by) / Math.max(dt, 1e-3);
+    if (wMgle && ruch > this.player.speed * 0.6) wydajStamine(ZASOBY.koszt.biegNaS * dt, lvl, false);
+    if (!wMgle && !this.inCombat() && zasoby.czas - zasoby.ranyAt > ZASOBY.zyciePoS && this.player.hp > 0 && this.player.hp < PLAYER.maxHp) {
+      this.zycieCarry += ZASOBY.zycieNaS * dt;
+      if (this.zycieCarry >= 1) {
+        this.zycieCarry -= 1;
+        this.player.heal(1);
+        this.emitHud();
+      }
+    } else this.zycieCarry = 0;
+    this.hpWas = this.player.hp;
+    if (this.time.now > this.zasobyAt) {
+      this.zasobyAt = this.time.now + 120;
+      this.emitZasoby();
+    }
+  }
+
+  private hpNad?: Phaser.GameObjects.Graphics;
+
+  /** New controls test (owner, point 4): the hero's life as a small bar over his head (the red screen edges stay). */
+  private rysujHpNad() {
+    if (!this.hpNad || !this.hpNad.active) this.hpNad = this.add.graphics();
+    const g = this.hpNad;
+    g.clear();
+    if (!this.player.visible && this.player.alpha === 0) return;
+    const p = this.player;
+    const k = skrotKamery();
+    // Sprites are stretched back by 1/k when drawn (main.ts), so the head is that much higher on the map.
+    const top = p.y - (p.displayHeight * p.originY) / k - 3;
+    const w = 16, h = 2.5, x = p.x - w / 2;
+    const max = Math.max(1, PLAYER.maxHp);
+    const f = Math.max(0, Math.min(1, p.hp / max));
+    const e = Math.max(0, Math.min(1 - f, p.extra / max));
+    g.fillStyle(0x1e1a24, 0.85).fillRect(x - 0.6, top - 0.6, w + 1.2, h + 1.2);
+    g.fillStyle(f > 0.5 ? 0x5fd35a : f > 0.25 ? 0xf0b429 : 0xe43b44, 1).fillRect(x, top, w * f, h);
+    if (e) g.fillStyle(0x4aa3ff, 1).fillRect(x + w * f, top, w * e, h);
+    g.setDepth(p.depth + 2);
+  }
+
+  /** Is the hero outside every red mist (new controls test: life and stamina come back there)? */
+  bezpiecznie = true;
+
+  /** Stamina/mana for the HUD (ui/hudLive.ts). */
+  emitZasoby() {
+    if (!live()) return;
+    const lvl = poziomPostaci(session.exp);
+    const u = this.umiejetnosc();
+    ustawZasobyHud({
+      s: zasoby.s, sMax: maxStaminy(lvl), m: zasoby.m, mMax: maxMany(lvl),
+      magia: this.handSkill() === 'magia', wyczerpany: wyczerpany(lvl), bezpiecznie: this.bezpiecznie,
+      umiej: u, gotowy: zasoby.czas - zasoby.mocnyAt >= ZASOBY.mocnyCooldownS,
+      stac: u.bron === 'magia' ? zasoby.m >= ZASOBY.koszt.mocnyCzar : zasoby.s >= ZASOBY.koszt.mocny,
+    });
+  }
+
+  /** A quest stage or goal right where the hero stands (new controls: they no longer go off by themselves). */
+  private questTap(): boolean {
+    for (const rm of this.missions) {
+      const z = zadanieOf(rm.m);
+      if (z.typ !== 'idz' || missionState(rm.m) !== 'active' || !rm.target) continue;
+      if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) >= GOAL_RADIUS * 1.3) continue;
+      this.arriveGoal(rm);
+      return true;
+    }
+    return this.etapy.dotknij();
+  }
+
+  /** Home, a talk, a stall, a train/cart or a door at `hit` (or right by the hero): opened, true. */
+  private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
+    if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
+      session.at = null; // the next login starts at home
+      this.save();
+      this.openHome();
+      return true;
+    }
+    // A swing at a character (with no enemy in the way) starts a talk.
+    const talk = foeNear || strong ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
+    if (talk) {
+      if (performance.now() >= this.talkReadyAt) {
+        this.learnPlace();
+        this.zapamietajRozmowce(hit.x, hit.y);
+        talk();
+      }
+      return true;
+    }
+    // A swing at a merchant's stall (or a click on one near the hero, or standing by it): the merchant's shop.
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.stalls.length) {
+      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
+      const st = this.stallAt(hit.x, hit.y, 10) ?? (c && this.stallAt(c.x, c.y, 9)) ?? this.stallAt(this.player.x, this.player.y, 13);
+      if (st) {
+        this.learnPlace();
+        this.openShop(st);
+        return true;
+      }
+    }
+    // A swing at a train (any carriage), a click on it near the hero, or a swing while standing by it: its station's conductor.
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.pociagi || this.wozy.length)) {
+      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
+      const st = this.pociagi?.stacjaPrzy(hit.x, hit.y) ?? (c && this.pociagi?.stacjaPrzy(c.x, c.y, 2)) ?? this.pociagi?.stacjaPrzy(this.player.x, this.player.y, 8)
+        ?? this.cartAt(hit.x, hit.y) ?? (c && this.cartAt(c.x, c.y)) ?? this.cartAt(this.player.x, this.player.y, 6);
+      if (st) {
+        this.learnPlace();
+        this.openCoach(st);
+        return true;
+      }
+    }
+    // A swing at a building door (or while standing at one) goes in.
+    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy, true))) return true;
+    return false;
+  }
+
   private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
     this.rozmowca = null; // a talk or a door below names the new speaker
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
@@ -1457,46 +1661,10 @@ export class GameScene extends Phaser.Scene {
       if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
       else this.faintSwing(swingAim);
     }
-    if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
-      session.at = null; // the next login starts at home
-      this.save();
-      this.openHome();
-      return;
-    }
-    // A swing at a character (with no enemy in the way) starts a talk.
+    // Old controls: a swing also talks, opens doors and stalls, calls a coachman. New controls (walka/live.ts):
+    // only a double tap does (interact()), a swing is only a swing.
     const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
-    const talk = foeNear || strong ? null : this.talkableAt(hit.x, hit.y, 14) ?? this.talkableAt(this.player.x, this.player.y, NPC_RADIUS + 4);
-    if (talk) {
-      if (performance.now() >= this.talkReadyAt) {
-        this.learnPlace();
-        this.zapamietajRozmowce(hit.x, hit.y);
-        talk();
-      }
-      return;
-    }
-    // A swing at a merchant's stall (or a click on one near the hero, or standing by it): the merchant's shop.
-    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && this.stalls.length) {
-      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
-      const st = this.stallAt(hit.x, hit.y, 10) ?? (c && this.stallAt(c.x, c.y, 9)) ?? this.stallAt(this.player.x, this.player.y, 13);
-      if (st) {
-        this.learnPlace();
-        this.openShop(st);
-        return;
-      }
-    }
-    // A swing at a train (any carriage), a click on it near the hero, or a swing while standing by it: its station's conductor.
-    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.pociagi || this.wozy.length)) {
-      const c = this.clickWorld && Math.hypot(this.clickWorld.x - this.player.x, this.clickWorld.y - this.player.y) < 90 ? this.clickWorld : null;
-      const st = this.pociagi?.stacjaPrzy(hit.x, hit.y) ?? (c && this.pociagi?.stacjaPrzy(c.x, c.y, 2)) ?? this.pociagi?.stacjaPrzy(this.player.x, this.player.y, 8)
-        ?? this.cartAt(hit.x, hit.y) ?? (c && this.cartAt(c.x, c.y)) ?? this.cartAt(this.player.x, this.player.y, 6);
-      if (st) {
-        this.learnPlace();
-        this.openCoach(st);
-        return;
-      }
-    }
-    // A swing at a building door (or while standing at one) goes in.
-    if (!foeNear && !strong && performance.now() >= this.talkReadyAt && (this.openDoorAt(hit.x, hit.y + FEET.dy) || this.openDoorAt(this.player.x, this.player.y + FEET.dy, true))) return;
+    if (!live() && this.interactChain(hit, strong, foeNear)) return;
     if (ranged && !gathering) {
       if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
       return;
@@ -1544,6 +1712,11 @@ export class GameScene extends Phaser.Scene {
     }
     // A blow that landed wears the sword (content/zuzycie.ts).
     if (landed) this.wearWeapon(gear.equip.bron);
+    // New controls test: a swing at an enemy tires (a swing at nothing is free; a strong one was paid before).
+    if (live() && hits && !strong) {
+      wydajStamine(ZASOBY.koszt.cios, poziomPostaci(session.exp), false);
+      this.emitZasoby();
+    }
     // In a fight the swing is only for the enemies.
     if (fighting) {
       if (hits) this.practiced('miecz');
@@ -2084,10 +2257,11 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title: `⚖ ${T.sedzia}`,
       text: T.powitanie.replace('{wpisowe}', String(ARENA.wpisowe)).replace('{nagroda}', String(ARENA.nagroda)),
-      buttons: [`⚔ Walka na Arenie Cechu (${ARENA.wpisowe} 💰)`, '🏆 Ranking Areny', 'Do widzenia'],
+      buttons: [`⚔ Walka na Arenie Cechu (${ARENA.wpisowe} 💰)`, '🏆 Ranking Areny', ...(live() ? ['🎯 Trening umiejętności (miecz, łuk)'] : []), 'Do widzenia'],
       onChoose: (i) => {
         if (i === 0) this.arenaRywal();
         else if (i === 1) this.arenaRanking();
+        else if (i === 2 && live()) this.wyborUmiejetnosci(['miecz', 'luk'], `⚖ ${T.sedzia}`);
       },
     });
   }
@@ -2128,7 +2302,7 @@ export class GameScene extends Phaser.Scene {
     this.player.move(0, 0, this.time.now);
     resetTouch();
     resetKeys();
-    const zoom = this.cameras.main.zoom;
+    const zoom = this.cameras.main.zoomX;
     this.scene.pause();
     this.scene.setVisible(false);
     const dane: ArenaDane = {
@@ -2261,7 +2435,7 @@ export class GameScene extends Phaser.Scene {
     }
     const naSwiat = (x: number, y: number) => {
       const cam = this.cameras.main;
-      return { x: (x * OSTROSC) / cam.zoom + cam.worldView.x, y: (y * OSTROSC) / cam.zoom + cam.worldView.y, r: (22 * OSTROSC) / cam.zoom };
+      return { x: (x * OSTROSC) / cam.zoomX + cam.worldView.x, y: (y * OSTROSC) / cam.zoomY + cam.worldView.y, r: (22 * OSTROSC) / cam.zoomX };
     };
     mapaWalki.fn = (x, y) => {
       // The finger's area: 22 CSS px around the tap (44 px across).
@@ -3401,6 +3575,8 @@ export class GameScene extends Phaser.Scene {
 
   private save() {
     this.keepFog();
+    // New controls test (walka/live.ts, point 7): every save keeps the hero's spot; the next login starts there.
+    if (live() && !this.player.isDead) session.tu = { m: this.city.id, x: this.player.x, y: this.player.y };
     saveNow(this.player.hp)
       // The demo saves nothing (offline.demo), so it says nothing either.
       .then(() => { if (!demo.on) this.toast('Gra zapisana'); })
@@ -5224,10 +5400,10 @@ export class GameScene extends Phaser.Scene {
 
   private dirFor(mode: 'touch' | 'mouse' | 'key', dx: number, dy: number, dragged: boolean) {
     let v = { x: this.player.facing.x, y: this.player.facing.y };
-    if (mode === 'touch' && dragged) v = { x: dx, y: dy };
+    if (mode === 'touch' && dragged) v = { x: dx, y: dy / skrotKamery() };
     if (mode === 'mouse') {
       const cam = this.cameras.main;
-      v = { x: mouse.x * OSTROSC - (this.player.x - cam.worldView.x) * cam.zoom, y: mouse.y * OSTROSC - (this.player.y - cam.worldView.y) * cam.zoom };
+      v = { x: (mouse.x * OSTROSC) / cam.zoomX + cam.worldView.x - this.player.x, y: (mouse.y * OSTROSC) / cam.zoomY + cam.worldView.y - this.player.y };
     }
     const l = Math.hypot(v.x, v.y) || 1;
     return { x: v.x / l, y: v.y / l };
@@ -5263,16 +5439,123 @@ export class GameScene extends Phaser.Scene {
     const strong = r.held >= WALKA.mocnyPoMs;
     // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
     if (!weapon) {
-      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) {
+      if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead && this.zaplacMocny('miecz')) {
         this.faceFoe(WALKA.zasiegMiecz);
         this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      } else if (!strong && live() && r.mode === 'touch' && (r.dragged || r.held >= AIM_DELAY) && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) {
+        // The attack stick (new controls): dragged = swing that way, held a moment = swing at the nearest enemy.
+        if (r.dragged) {
+          const d = this.dirFor(r.mode, r.dx, r.dy, true);
+          this.player.face(d.x, d.y);
+        } else this.faceFoe();
+        const hit = this.player.tryAttack(now);
+        if (hit) this.resolveAttack(hit, now);
       }
       return;
     }
     if (r.held < AIM_DELAY && !r.dragged) return; // a plain click: melee only
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     if (now - this.lastShot < cooldown(skill)) return;
-    this.fireShot(weapon, this.dirFor(r.mode, r.dx, r.dy, r.dragged), strong, now);
+    this.fireShot(weapon, this.dirFor(r.mode, r.dx, r.dy, r.dragged), strong && this.zaplacMocny(skill), now);
+  }
+
+  /**
+   * New controls test (content/zasoby.ts): a strong attack costs stamina (sword, bow) or mana (magic) and has its
+   * own cooldown. Not enough: false and a word why (nothing taken). Old controls: always free.
+   */
+  private zaplacMocny(skill: Umiejetnosc): boolean {
+    if (!live()) return true;
+    const lvl = poziomPostaci(session.exp);
+    if (zasoby.czas - zasoby.mocnyAt < ZASOBY.mocnyCooldownS) return false;
+    const ok = skill === 'magia' ? wydajMane(ZASOBY.koszt.mocnyCzar, lvl) : wydajStamine(ZASOBY.koszt.mocny, lvl);
+    if (!ok) {
+      if (this.time.now - this.noManaToast > 1500) this.toast(skill === 'magia' ? '💧 Za mało many na mocny czar.' : '😮‍💨 Za mało sił na mocny atak – odpocznij chwilę.', 1500);
+      this.noManaToast = this.time.now;
+      return false;
+    }
+    zasoby.mocnyAt = zasoby.czas;
+    this.emitZasoby();
+    return true;
+  }
+
+  /** The chosen skill of the weapon in hand (content/umiejetnosci.ts; changed only at training places). */
+  umiejetnosc(): Umiej {
+    const b = this.handSkill();
+    const id = session.umiej[b];
+    return SPECJALNE.find((u) => u.id === id && u.bron === b) ?? domyslnaUmiejetnosc(b);
+  }
+
+  /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
+  private specjalny(now: number) {
+    if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.player.isDead || now < this.lingerUntil) return;
+    const u = this.umiejetnosc();
+    if (!this.zaplacMocny(u.bron)) return;
+    const weapon = rangedWeapon();
+    if (u.id === 'mocny') {
+      this.faceFoe(WALKA.zasiegMiecz);
+      this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      return;
+    }
+    if (u.id === 'zamach') return this.zamach(now);
+    if (!weapon) return;
+    const foe = this.nearestFoe(u.bron === 'magia' ? MAGIC_RANGE : ARROW_RANGE);
+    const base = foe ? { x: foe.x - this.player.x, y: foe.y - this.player.y } : { x: this.player.facing.x, y: this.player.facing.y };
+    const a0 = Math.atan2(base.y, base.x);
+    const katy = u.id === 'salwa' ? [-0.2, 0, 0.2] : u.id === 'wachlarz' ? [-0.5, -0.25, 0, 0.25, 0.5] : [0];
+    this.bezKosztuStrzalu = true; // the skill was paid as a whole above
+    for (const k of katy) {
+      // A volley's side arrows fly where they are aimed (no aim help that would bring them all onto one target).
+      this.fireShot(weapon, { x: Math.cos(a0 + k), y: Math.sin(a0 + k) }, katy.length === 1, now);
+      this.lastShot = now;
+    }
+    this.bezKosztuStrzalu = false;
+  }
+
+  /**
+   * Choosing the skill of the special button (new controls test). Only at a training place (owner, 26 Oct 2026):
+   * the stadium judge and training stations for sword/bow, a library for magic. A skill needs its weapon level.
+   */
+  private wyborUmiejetnosci(bronie: Umiejetnosc[], title: string) {
+    const lista = SPECJALNE.filter((u) => bronie.includes(u.bron));
+    const nazwyBroni: Record<Umiejetnosc, string> = { miecz: 'miecz', luk: 'łuk', magia: 'magia' };
+    const aktywna = (u: Umiej) => (session.umiej[u.bron] ?? domyslnaUmiejetnosc(u.bron).id) === u.id;
+    const buttons = lista.map((u) => {
+      const lvl = skillLevel(u.bron);
+      if (lvl < u.poziom) return `🔒 ${u.nazwa} (${nazwyBroni[u.bron]} – poziom ${u.poziom}, masz ${lvl})`;
+      return `${aktywna(u) ? '✅' : u.ikona} ${u.nazwa} (${nazwyBroni[u.bron]})`;
+    });
+    this.dialog({
+      title,
+      text: `Tu ćwiczysz umiejętność, którą masz pod złotym przyciskiem (Q). Kosztuje siły (miecz, łuk) albo manę (magia).\n\n${lista.map((u) => `${u.ikona} ${u.nazwa}: ${u.opis}`).join('\n')}`,
+      buttons: [...buttons, 'Wyjdź'],
+      onChoose: (i) => {
+        const u = lista[i];
+        if (!u) return;
+        if (skillLevel(u.bron) < u.poziom) return this.toast(`🔒 ${u.nazwa}: potrzebny poziom ${u.poziom} (${nazwyBroni[u.bron]}).`, 2200);
+        session.umiej[u.bron] = u.id;
+        this.toast(`🎯 ${u.nazwa} – gotowa pod złotym przyciskiem.`, 2200);
+        this.emitZasoby();
+        this.save();
+      },
+    });
+  }
+
+  /** Zamach (sword skill): a full turn with the weapon, every enemy around takes a blow (×0.8). */
+  private zamach(now: number) {
+    const reach = this.swingReach(1.3);
+    this.drawSweep(0, Math.PI * 2, reach);
+    this.swingWeapon(Math.atan2(this.player.facing.y, this.player.facing.x), true);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * 0.8)) this.onEnemyKilled(e);
+    }
+    if (landed) {
+      this.wearWeapon(gear.equip.bron);
+      this.practiced('miecz');
+    }
   }
 
   /**
@@ -5324,6 +5607,23 @@ export class GameScene extends Phaser.Scene {
       this.wearWeapon(weapon.id);
       this.emitHud();
     }
+    // New controls test (content/zasoby.ts): a bow tires the archer (worse and weaker when tired), a spell takes mana
+    // (with none left it still goes, but weak). A strong one is paid by its button (specjalny) or here when held.
+    let sila = 1, celnoscMinus = 0;
+    if (live() && !this.bezKosztuStrzalu) {
+      const lvl = poziomPostaci(session.exp);
+      if (skill === 'luk') {
+        const f = udzialStaminy(lvl);
+        sila = ZASOBY.lukSilaMin + (1 - ZASOBY.lukSilaMin) * f;
+        celnoscMinus = ZASOBY.lukCelnoscMinus * (1 - f);
+        wydajStamine(ZASOBY.koszt.strzal, lvl, false);
+      } else if (!wydajMane(ZASOBY.koszt.czar, lvl)) {
+        sila = ZASOBY.czarBezMany;
+        if (now - this.noManaToast > 3000) this.toast('💧 Brak many – czar jest słaby. Mana sama wraca.', 1800);
+        this.noManaToast = now;
+      }
+      this.emitZasoby();
+    }
     this.player.facing.set(dir.x, dir.y);
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
     // Starts at the hero, so nothing standing right next to them is skipped.
@@ -5333,7 +5633,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(1_040_000);
     // Held long enough: a strong shot (bigger, golden, harder).
     if (strong) sprite.setScale(1.5).setTint(0xffd84a);
-    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon) * (strong ? strongFactor(skill) : 1), skill, weapon: weapon.id, strong, missed: new Set() });
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
   }
 
   private updateShots(dt: number) {
@@ -5358,7 +5658,7 @@ export class GameScene extends Phaser.Scene {
           // Turn fight: a shot at a waiting group provokes the question, no damage.
           done = true;
           this.spotkania?.zaczep(foe);
-        } else if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus())) {
+        } else if (foe && Math.random() >= hitChance(shot.skill, shot.strong, session.level.celnosc + gearAimBonus() - (shot.celnoscMinus ?? 0))) {
           // Missed: the arrow flies on past it.
           shot.missed.add(foe);
           this.practiced(shot.skill);
@@ -5667,7 +5967,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Libraries teach magic and sell magic items. */
-  private openLibrary(p: CityPlace) {
+  private openLibrary(p: CityPlace, wSrodku = false) {
+    // New controls test: magic skills are changed only here (owner: „biblioteki w przypadku magów”).
+    if (live() && !wSrodku) {
+      return this.dialog({
+        title: `📚 ${p.name}`,
+        text: 'Cicha czytelnia, a za regałami sala ćwiczeń magii. W co się zagłębisz?',
+        buttons: ['📚 Wejdź do biblioteki', '🎯 Ćwicz umiejętności magii', 'Wyjdź'],
+        onChoose: (i) => {
+          if (i === 0) this.openLibrary(p, true);
+          else if (i === 1) this.wyborUmiejetnosci(['magia'], `📚 ${p.name}`);
+        },
+      });
+    }
     const offers = gear.magic ? this.offers('biblioteka') : [];
     const learn = gear.magic ? [] : [`Naucz się magii – ${NAUKA_MAGII} monet`];
     const left = BIBLIOTEKA_ZAGADKI.naSesje - session.libRiddles;
@@ -5710,7 +6022,7 @@ export class GameScene extends Phaser.Scene {
           });
         }
         if (i === at + (surveyBtn ? 1 : 0)) return this.libraryRiddle(p);
-        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p), `Bibliotekarka – ${p.name}`);
+        if (mapBtn && i === at + (surveyBtn ? 1 : 0) + 1) return this.buyTravellerMap(() => this.openLibrary(p, true), `Bibliotekarka – ${p.name}`);
         if (learn.length && i === 0) {
           if (session.coins < NAUKA_MAGII) {
             this.toast(`Za mało monet – nauka kosztuje ${NAUKA_MAGII}.`);
@@ -5726,7 +6038,7 @@ export class GameScene extends Phaser.Scene {
         const o = offers[i - learn.length];
         if (o) this.buy(o);
       },
-    }, entries, () => this.openLibrary(p), 'Księgi, magia i opowieści z dalekich wypraw.');
+    }, entries, () => this.openLibrary(p, true), 'Księgi, magia i opowieści z dalekich wypraw.');
   }
 
   /** A librarian's riddle: at most BIBLIOTEKA_ZAGADKI.naSesje per session, one try each. */
@@ -6188,13 +6500,30 @@ export class GameScene extends Phaser.Scene {
       }
       if (z.typ !== 'idz' || st !== 'active' || !rm.target) continue;
       if (Phaser.Math.Distance.Between(rm.target.x, rm.target.y, this.player.x, this.player.y) < GOAL_RADIUS) {
-        if (!multi && z.komunikat && !rm.m.naMiejscu) {
-          setMissionState(rm.m, 'goal');
-          this.refreshMarkers();
-          this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
-        } else this.completeStage(rm, 'Dotarłeś! ');
+        // New controls: arriving only shows how to finish it – a double tap does (questTap).
+        if (live()) {
+          if (this.goalHinted !== rm.m.id) {
+            this.goalHinted = rm.m.id;
+            this.toast(`👆👆 Jesteś na miejscu – stuknij dwa razy (albo E), żeby: ${rm.m.tytul}`, 3200);
+          }
+          continue;
+        }
+        this.arriveGoal(rm);
       }
     }
+  }
+
+  private goalHinted = '';
+
+  /** The hero reached a walk goal: what the mission says there, or the stage done. */
+  private arriveGoal(rm: ResolvedMission) {
+    const z = zadanieOf(rm.m);
+    const multi = !!rm.m.etapy?.length;
+    if (!multi && z.komunikat && !rm.m.naMiejscu) {
+      setMissionState(rm.m, 'goal');
+      this.refreshMarkers();
+      this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
+    } else this.completeStage(rm, 'Dotarłeś! ');
   }
 
   /** Mission doors for the map screen. */

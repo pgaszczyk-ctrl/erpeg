@@ -21,6 +21,8 @@
 //  (content/gangi.ts GANG_OD_MIEJSC_M itd.).
 // ============================================================================
 
+import { live } from '../walka/live';
+
 const wymuszone = (() => {
   try {
     const q = new URLSearchParams(location.search).get('lowiska');
@@ -31,10 +33,55 @@ const wymuszone = (() => {
   }
 })();
 
-/** Czy nowy pilot łowisk jest włączony w tej sesji (patrz nagłówek pliku). */
+/** Czy nowy pilot łowisk jest włączony w tej sesji (patrz nagłówek pliku). Pakiet „nowa walka” (walka/live.ts) też go włącza. */
 export function lowiska() {
-  return wymuszone === '1';
+  if (wymuszone === '0') return false;
+  return wymuszone === '1' || live();
 }
+
+/**
+ * Łowiska epicentryczne (właściciel, 26.10.2026, brief „walka i łowiska” 5A): stała kotwica w otwartym terenie
+ * (las, pole, łąka, zarośla, mokradła – nie park miejski), z dala od skupisk zabudowy i bardzo głównych dróg,
+ * i trzy warstwy: obrzeże (wilki), głębia (wargi), rdzeń (silny przeciwnik – na razie zastępczy boss QA).
+ * Układ nie zależy od loginu ani postaci (to samo miejsce dla każdego); odnawiają się tylko zwykłe grupy.
+ * WARTOŚCI DO TESTU.
+ */
+export const LOWISKA_EPI = {
+  /** Komórka planowania (km): w każdej najwyżej jedno łowisko. */
+  komorkaKm: 1.5,
+  /** Szansa, że komórka w ogóle dostanie łowisko (gdy znajdzie się dobre miejsce). */
+  szansa: 0.85,
+  /** Promień całego łowiska (m) i granice warstw (udział promienia). */
+  promienM: 260,
+  glebiaOd: 0.68,
+  rdzenOd: 0.3,
+  /** Otwarty teren, na którym może leżeć łowisko (rodzaje obszarów mapy). */
+  teren: ['forest', 'farmland', 'grass', 'scrub', 'wetland'],
+  /** Ile z próbek w promieniu musi być otwartym terenem. */
+  minOtwartego: 0.65,
+  /** Skupisko zabudowy: więcej niż tyle budynków w promieniu `osadaM` od kotwicy wyklucza miejsce
+   *  (1–2 samotne domy są dopuszczalne – brief: „jeden lub dwa domki”). */
+  maksDomow: 3,
+  osadaM: 330,
+  /** Rdzeń i głębia z dala od bardzo głównych dróg (autostrady, ekspresówki, krajowe – linie 'major'). */
+  odGlownejM: 220,
+  /** Grupa nie stoi bliżej budynku niż tyle (m) ani bliżej głównej drogi niż `grupaOdGlownejM` (obrzeże: tylko wilki). */
+  grupaOdDomuM: 45,
+  grupaOdGlownejM: 70,
+  /** Kotwica co najmniej tyle (m) od ważnych miejsc (drzwi, dom). */
+  odMiejscM: 450,
+  /** Miejsca grup w warstwach i ich skład. */
+  obrzeze: { miejsc: 5, czlonkow: [3, 5] as [number, number] },
+  glebia: { miejsc: 3, czlonkow: [2, 4] as [number, number] },
+  /** Rdzeń: boss + obstawa (zastępczy boss QA: Mosiężny Kozioł – nie jest to bazyliszek). */
+  rdzen: { boss: 'koziol', obstawa: 2 },
+  /** Promień jednej grupy (m) – za tą granicą wilk przestaje gonić i wraca. */
+  grupaM: 60,
+  /** Boss odradza się dopiero po tylu sekundach aktywnej gry (osobno od zwykłych grup). */
+  bossOdnowienieS: 900,
+  /** Mgiełka: przezroczystość wnętrza każdej warstwy (mocniej = groźniej). */
+  mgla: { obrzeze: 0.09, glebia: 0.16, rdzen: 0.26, klebyCoPx: 14 },
+};
 
 export interface WilkParam {
   /** Z jakiej odległości (m) wataha zauważa bohatera. */

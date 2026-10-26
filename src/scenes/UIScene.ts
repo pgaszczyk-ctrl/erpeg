@@ -25,6 +25,7 @@ import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
 const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
   [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
 );
+import { live } from '../walka/live';
 import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
@@ -281,7 +282,7 @@ export class UIScene extends Phaser.Scene {
     this.skillBar.setPosition(width / 2, height * 0.6);
 
     const r = JOY_RADIUS;
-    this.joyHome.set(pad + r + 16, height - pad - r - 16);
+    this.joyHome.set(pad + r + 16, height - pad - r - (live() ? 30 : 16));
     joyHome.x = this.joyHome.x;
     joyHome.y = this.joyHome.y;
     this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
@@ -477,7 +478,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Uciekaj od potworów!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(live() ? '❤ Mało życia! Wyjdź z czerwonej mgły – tam życie wraca – albo naciśnij zielony przycisk Lecz (H).' : s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Uciekaj od potworów!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
@@ -525,8 +526,8 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       const cam = game.cameras.main;
-      const sx = ((pos.x - cam.worldView.x) * cam.zoom) / OSTROSC;
-      const sy = ((pos.y - cam.worldView.y) * cam.zoom) / OSTROSC;
+      const sx = ((pos.x - cam.worldView.x) * cam.zoomX) / OSTROSC;
+      const sy = ((pos.y - cam.worldView.y) * cam.zoomY) / OSTROSC;
       const { width, height } = this.view;
       const m = 40;
       arrow.setVisible(true);
@@ -536,8 +537,8 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       // Off screen: on a ring around the hero (owner, 6 Oct 2026: at the screen edge they hid under the HUD).
-      const cx = ((game.player.x - cam.worldView.x) * cam.zoom) / OSTROSC;
-      const cy = ((game.player.y - 10 - cam.worldView.y) * cam.zoom) / OSTROSC;
+      const cx = ((game.player.x - cam.worldView.x) * cam.zoomX) / OSTROSC;
+      const cy = ((game.player.y - 10 - cam.worldView.y) * cam.zoomY) / OSTROSC;
       const ang = Math.atan2(sy - cy, sx - cx);
       const t = Math.max(60, Math.min(width, height) * STRZALKI_ZADAN.promien);
       arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
@@ -868,6 +869,15 @@ export class UIScene extends Phaser.Scene {
       for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(true);
     }
     const t = touchInput;
+    if (live()) {
+      // New controls test: the joystick always stands bottom-left; the knob follows the thumb.
+      for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(!this.hasDialog && !this.overlay);
+      this.joyBase.setPosition(this.joyHome.x, this.joyHome.y).setAlpha(t.joyActive ? 1 : 0.75);
+      this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
+      if (t.joyActive) this.joyKnob.setPosition(t.joyX, t.joyY);
+      else this.joyKnob.setPosition(this.joyHome.x, this.joyHome.y);
+      return;
+    }
     // The joystick shows only while a thumb holds it. The blinking hint at its old corner is gone (owner, 12 Oct 2026:
     // it blinked under the HUD, also while walking; players find the joystick by themselves).
     for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive);

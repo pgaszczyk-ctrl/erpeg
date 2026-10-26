@@ -26,6 +26,7 @@ import { testLook } from './testAppearance';
 import { setTestVehicle } from './testTransport';
 import { odswiezSlownictwoMisji } from './content/slownictwo';
 import type { Proba } from './content/probyMaga';
+import { zapiszZasoby, wczytajZasoby } from './content/zasoby';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -111,6 +112,10 @@ export const session = {
   namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
+  /** New controls test: where the hero stood at the last save (walka/live.ts, point 7). */
+  tu: null as { m: string; x: number; y: number } | null,
+  /** Skill chosen per weapon kind (content/umiejetnosci.ts). */
+  umiej: {} as Record<string, string>,
   /** A ride under way (journey.ts), shown until it arrives. */
   jazda: null as import('./journey').Journey | null,
   /** Random missions taken in this or earlier sessions and not finished. */
@@ -267,12 +272,16 @@ export function startSession(r: LoginResult) {
   session.arrive = null;
   const at = p.save.at;
   session.at = at ? { m: at.m, x: (at.x * PX_PER_M) / (at.s || PX_PER_M), y: (at.y * PX_PER_M) / (at.s || PX_PER_M) } : null;
+  const tu = p.save.tu;
+  session.tu = tu ? { m: tu.m, x: (tu.x * PX_PER_M) / (tu.s || PX_PER_M), y: (tu.y * PX_PER_M) / (tu.s || PX_PER_M) } : null;
+  session.umiej = p.save.umiej && typeof p.save.umiej === 'object' ? { ...p.save.umiej } : {};
   session.jazda = p.save.jazda ?? null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   // The test server's first essences were a count and a blow counter: now flasks in the backpack.
   for (let i = 0; i < Math.min(20, p.save.esencje ?? 0); i++) addEssence('dab');
   session.exp = p.exp;
+  wczytajZasoby(p.save.zasoby, poziomPostaci(p.exp));
   session.hp = Math.max(1, Math.min(PLAYER.maxHp, p.save.hp ?? PLAYER.maxHp));
   session.missions = { ...(p.save.missions ?? {}) };
   session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
@@ -317,6 +326,8 @@ export function saveNow(hp: number) {
   const data: SaveData = {
     language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
+    tu: session.tu && { m: session.tu.m, x: Math.round(session.tu.x), y: Math.round(session.tu.y), s: PX_PER_M },
+    zasoby: zapiszZasoby(), umiej: session.umiej,
     jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
   // Card/clue checkpoints can happen close together. An older request must never overwrite
