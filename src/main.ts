@@ -27,6 +27,27 @@ if (TEST) {
   document.body.append(b);
 }
 
+// The tilted camera (walka/live.ts SKROT): the game camera squashes the map vertically (`setZoom(z, z·SKROT)`),
+// so every sprite drawn by a camera with `wyprost` set is stretched back by it around its own origin – people,
+// monsters, carts stand upright instead of looking flattened. Images (map chunks, mist, decals) stay flat.
+// Patched before any sprite exists: a game object keeps the render function it had when it was made.
+{
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proto = Phaser.GameObjects.Sprite.prototype as unknown as { renderWebGL: (...a: any[]) => void };
+  const orig = proto.renderWebGL;
+  proto.renderWebGL = function (this: unknown, renderer: unknown, src: { _scaleY: number; plaski?: boolean }, ctx: { camera: { wyprost?: number } }, parent: unknown) {
+    const k = ctx?.camera?.wyprost;
+    if (!k || k === 1 || src.plaski) return orig.call(this, renderer, src, ctx, parent);
+    const sy = src._scaleY;
+    src._scaleY = sy * k;
+    try {
+      orig.call(this, renderer, src, ctx, parent);
+    } finally {
+      src._scaleY = sy;
+    }
+  };
+}
+
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',

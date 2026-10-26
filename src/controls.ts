@@ -11,7 +11,68 @@
 // handled, or that share a timestamp with the previous one, which left keys
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
+import { live } from './walka/live';
+
 export const JOY_RADIUS = 56;
+
+/**
+ * New controls of the test package (walka/live.ts): the joystick stands still bottom-left, the right side has
+ * HTML buttons (ui/sterowanie.ts: attack, strong attack/skill, heal) and talks, doors, rides and quest spots
+ * start on a DOUBLE tap/click (owner, 26 Oct 2026: a ride or a quest went off by accident). `E` interacts near
+ * the hero, `Q` is the strong attack.
+ */
+let interakcja: { x: number; y: number } | null = null;
+/** A double tap/click since the last call: where (CSS px on the game), or (-1, -1) = near the hero (E key). */
+export function consumeInteraction() {
+  const i = interakcja;
+  interakcja = null;
+  return i;
+}
+let strongRequest = false;
+/** The strong attack / skill button or Q since the last call. */
+export function consumeStrong() {
+  const s = strongRequest;
+  strongRequest = false;
+  return s;
+}
+export function requestStrong() {
+  strongRequest = true;
+}
+export function requestHeal() {
+  healRequest = true;
+}
+/** The HTML attack button (ui/sterowanie.ts): pressed (a swing; holding aims a bow/wand) and let go. */
+export function pressAttack() {
+  touchInput.attack = true;
+  touchInput.attackHeld = true;
+  startHold('touch', -9);
+  holdOrigin.x = 0;
+  holdOrigin.y = 0;
+}
+export function dragAttack(dx: number, dy: number) {
+  if (!hold.active || hold.id !== -9) return;
+  hold.dx = dx;
+  hold.dy = dy;
+  if (Math.hypot(dx, dy) > 14) hold.dragged = true;
+}
+export function releaseAttack() {
+  touchInput.attackHeld = false;
+  if (hold.active && hold.id === -9) endHold();
+}
+const DBL_MS = 380;
+const DBL_PX = 36;
+let lastTap: { x: number; y: number; t: number } | null = null;
+/** A short tap (or click) at (x, y): a second one soon after near the first is an interaction. */
+function tapped(x: number, y: number) {
+  const now = performance.now();
+  if (lastTap && now - lastTap.t < DBL_MS && Math.hypot(x - lastTap.x, y - lastTap.y) < DBL_PX) {
+    interakcja = { x, y };
+    lastTap = null;
+    return;
+  }
+  lastTap = { x, y, t: now };
+}
+const tapStarts = new Map<number, { x: number; y: number; t: number }>();
 /** Where the joystick is shown while idle (a hint; set by UIScene's layout). */
 export const joyHome = { x: 0, y: 0 };
 /** The attack button (set by UIScene's layout): only a touch on it attacks. */
@@ -171,6 +232,7 @@ export function resetKeys() {
 }
 
 export function resetTouch() {
+  tapStarts.clear();
   hold.active = false;
   release = null;
   joyId = null;
@@ -210,7 +272,7 @@ export function installTouchControls(el: HTMLElement) {
       joyId = null;
       touchInput.x = touchInput.y = 0;
       // A quick tap on the joystick (no steering) is a sword swing: one-handed play.
-      if (performance.now() - joyTap.start < JOY_TAP_MS && joyTap.maxDrag < JOY_TAP_DRAG) touchInput.attack = true;
+      if (!live() && performance.now() - joyTap.start < JOY_TAP_MS && joyTap.maxDrag < JOY_TAP_DRAG) touchInput.attack = true;
     }
     for (const id of attackIds) if (!alive.has(id)) attackIds.delete(id);
     if (hold.active && hold.mode === 'touch' && !alive.has(hold.id)) endHold();
@@ -227,6 +289,19 @@ export function installTouchControls(el: HTMLElement) {
       if (mapaWalki.fn) {
         // Turn fight: remember the touch, it becomes a pick on release.
         if (!onMenuButton(p.x, p.y)) pickStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
+        tapListeners.forEach((fn) => fn(p.x, p.y));
+        continue;
+      }
+      if (live()) {
+        // Fixed joystick bottom-left: a thumb anywhere near it steers from its centre.
+        if (joyId === null && p.y > 70 && Math.hypot(p.x - joyHome.x, p.y - joyHome.y) < JOY_RADIUS * 2.4) {
+          joyId = t.identifier;
+          touchInput.joyOriginX = joyHome.x;
+          touchInput.joyOriginY = joyHome.y;
+          joyTap.start = performance.now();
+          joyTap.maxDrag = 0;
+          steer(p);
+        } else if (!onMenuButton(p.x, p.y)) tapStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
         tapListeners.forEach((fn) => fn(p.x, p.y));
         continue;
       }
@@ -286,6 +361,12 @@ export function installTouchControls(el: HTMLElement) {
     // Only swallow touches on the game itself, so taps on HTML menus still click.
     if (e.cancelable && el.contains(e.target as Node)) e.preventDefault();
     for (const t of Array.from(e.changedTouches)) {
+      const tap = tapStarts.get(t.identifier);
+      if (tap) {
+        tapStarts.delete(t.identifier);
+        const p = local(t);
+        if (e.type === 'touchend' && Math.hypot(p.x - tap.x, p.y - tap.y) < 14 && performance.now() - tap.t < 450) tapped(p.x, p.y);
+      }
       const s = pickStarts.get(t.identifier);
       if (!s) continue;
       pickStarts.delete(t.identifier);
@@ -327,6 +408,10 @@ export function installTouchControls(el: HTMLElement) {
         e.preventDefault();
       } else if (code === 'KeyH') {
         if (!e.repeat) healRequest = true;
+      } else if (live() && code === 'KeyE') {
+        if (!e.repeat) interakcja = { x: -1, y: -1 };
+      } else if (live() && code === 'KeyQ') {
+        if (!e.repeat) strongRequest = true;
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
@@ -384,6 +469,8 @@ export function installTouchControls(el: HTMLElement) {
       healRequest = true;
       return;
     }
+    // New controls: a double click is an interaction (talk, door, ride, quest spot), the click itself still swings.
+    if (live() && !onMenuButton(e.offsetX, e.offsetY)) tapped(e.offsetX, e.offsetY);
     // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
     if (!onMenuButton(e.offsetX, e.offsetY)) {
       startHold('mouse');

@@ -8,6 +8,7 @@ import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
 import { takeResume } from './update';
+import { live } from './walka/live';
 import { flyToGameLocation, loadingGame, revealLoadedGame } from './ui/loadingMap';
 import type { GameScene } from './scenes/GameScene';
 
@@ -137,6 +138,8 @@ export async function prepareMap(city: CityMap) {
  */
 export async function enterWorld(game: Phaser.Game) {
   // Still on the way: the ride screen until the cart arrives (the load point is its station already).
+  // New controls test (walka/live.ts): a finished ride makes the arrival station the start, not the last spot.
+  if (session.jazda) session.tu = null;
   if (session.jazda) {
     await syncClock();
     if (serverNow() < session.jazda.end) await showJourney(session.jazda);
@@ -145,7 +148,8 @@ export async function enterWorld(game: Phaser.Game) {
   let city = maps.get('lublin')!;
   // Reloaded for a new version (update.ts): back where the hero stood, once.
   const back = takeResume(session.name);
-  let at = back ?? session.at;
+  // New controls test: the spot of the last save (walka/live.ts, point 7) wins over the hotel/home.
+  let at = back ?? ((live() && session.tu) || session.at);
   if (at) {
     try {
       city = await getMap(at.m);

@@ -2,6 +2,8 @@ import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
 import { MAPA_GLADKA, lupaGladka, SAKIEWKA_GLADKA, DIAMENT_GLADKI, zamontujTeleskop, odmontujTeleskop, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, type AkcjaTeleskopu } from './hudTeleskop';
 import { turyNaSerwerze } from '../walka/tryb';
+import { live } from '../walka/live';
+import { zamontujHudLive, odmontujHudLive, hudLiveWidoczny, ustawHudLive } from './hudLive';
 const hudStyle = new URLSearchParams(location.search).get('hud');
 /**
  * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): on the turn-fight server (the QR demo too) it replaces the
@@ -412,7 +414,12 @@ export function mountHud(on: HudHandlers) {
   document.body.append(root);
   parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic, vehicles };
   if (newMachine) machineV5 = reservoir ? createReservoirHud(parts) : createMachineV5(parts);
-  if (teleskop()) {
+  if (live()) {
+    // New controls test (walka/live.ts): life flask, stamina and EXP top left (ui/hudLive.ts), attack/skill/heal
+    // buttons bottom right – the machine at the bottom would sit under them.
+    m.style.display = 'none';
+    zamontujHudLive({ character: on.character, camera: on.camera });
+  } else if (teleskop()) {
     // No machine at the bottom: the column at the top left does its work.
     m.style.display = 'none';
     zamontujTeleskop({
@@ -434,6 +441,7 @@ export function mountHud(on: HudHandlers) {
 
 export function unmountHud() {
   odmontujTeleskop();
+  odmontujHudLive();
   window.removeEventListener('resize', layout);
   window.clearInterval(timer);
   machineV5?.destroy();
@@ -477,6 +485,7 @@ export function setHudVehicles(rower: boolean, hulajnoga: boolean, active: 'pies
 /** Dimmed (still visible, taps go through) while a dialog is open; hidden behind the game-over screen (owner, 6 Oct 2026). */
 export function showHud(mode: 'on' | 'dim' | 'off') {
   teleskopWidoczny(mode);
+  hudLiveWidoczny(mode);
   root?.classList.toggle('off', mode === 'off');
   root?.classList.toggle('dim', mode === 'dim');
 }
@@ -543,6 +552,7 @@ function layout() {
     : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
   if (machineV5) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(16px + env(safe-area-inset-bottom) + ${parts.m.style.height})` });
   if (teleskop()) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(${M}px + env(safe-area-inset-bottom))` });
+  if (live()) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(210px + env(safe-area-inset-bottom))` });
   draw();
 }
 
@@ -550,6 +560,7 @@ let lastMoney = '';
 export function setHud(v: HudView) {
   view = v;
   if (!parts) return;
+  if (live()) ustawHudLive({ hp: v.hp, maxHp: v.maxHp, extra: v.extra, zatruty: v.zatruty, expShare: v.expShare, poziom: v.poziom ?? 1, potions: v.potions, fruit: v.fruit, noHeal: v.noHeal, bron: v.bron });
   if (teleskop()) ustawTeleskop({
     expShare: v.expShare, poziom: v.poziom ?? 1,
     pojazd: { ikona: telPojazd === 'hulajnoga' ? 'hulajnoga' : 'welocyped', jedzie: telJedzie, brak: !telPojazd },

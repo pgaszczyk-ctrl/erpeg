@@ -31,6 +31,13 @@ export const GANGI: RodzajGangu[] = [
   { nazwa: 'Wielki gang', promienM: 230, czlonkow: [14, 20], naKm2: 0.06, herszt: 'wielki_herszt', nagroda: { monety: 150, exp: 250 } },
 ];
 
+/**
+ * Nowe sterowanie (test, walka/live.ts; właściciel 26.10.2026): zamiast band i gangów tylko NAJSŁABSZE grupki
+ * w losowych miejscach – 3 chochliki albo 3 wilki – w czerwonym dymku ok. 3 razy mniejszym niż Banda.
+ * Bez herszta: pokonanie ostatniego rozbija grupkę (mała nagroda). Wartości do testu.
+ */
+export const GRUPKA_SLABA: RodzajGangu = { nazwa: 'Grupka', promienM: 32, czlonkow: [3, 3], naKm2: 0.8, herszt: 'glut', nagroda: { monety: 8, exp: 15 }, zenska: true };
+
 /** Bez gangów: środek gangu co najmniej tyle metrów od ważnych miejsc, członkowie tyle od drzwi. */
 export const GANG_OD_MIEJSC_M = 200;
 export const GANG_CZLONEK_OD_DRZWI_M = 50;

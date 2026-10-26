@@ -16,6 +16,7 @@ import { consumeAttack } from '../controls';
 import type { DialogRequest } from './GameScene';
 import { saveNow, resolvePlace } from '../quests';
 import { progressKey, readProgress, addClue, arrangeCard, missionNotes } from '../content/questy/progress';
+import { live } from '../walka/live';
 
 // Mission stages beyond the old four tasks (owner, 6–7 Oct 2026: „Serce Zębatka”, „Przebudzenie Starego
 // Grodu”): talks, riddle lists, choices, paragraph pages, melodies on the spot; things to pick up; spots to
@@ -204,6 +205,45 @@ export class Etapy {
     return true;
   }
 
+  private podpowiedziane = new Set<string>();
+
+  /** New controls: once per spot, how to start what is here. */
+  private podpowiedz(key: string) {
+    if (this.podpowiedziane.has(key)) return;
+    this.podpowiedziane.add(key);
+    this.host.toast(tx('👆👆 Tu coś jest – stuknij dwa razy (albo E), żeby zacząć.', '👆👆 Something is here – double tap (or E) to start.'), 3000);
+  }
+
+  /** New controls: a double tap by the hero – the quest stage or clue right here, if any (true = started). */
+  dotknij(): boolean {
+    const p = this.host.player;
+    for (const rm of this.rms) {
+      if (missionState(rm.m) !== 'active' || !rm.target) continue;
+      const l = this.live.get(rm.m.id);
+      if (!l) continue;
+      const z = zadanieOf(rm.m);
+      if (z.typ === 'badanie') {
+        const found = readProgress(this.choices(rm), progressKey(stageIndex(rm.m), 'clues'), (z.tropy ?? []).map((t) => t.id));
+        const clue = (z.tropy ?? []).find((c) => {
+          const at = resolvePlace(this.host.city, c.miejsce);
+          return at && !found.includes(c.id) && Math.hypot(at.x - p.x, at.y - p.y) < BLISKO * 1.3;
+        });
+        if (clue) {
+          l.clueArmed.delete(clue.id);
+          this.inspectClue(rm, z, clue);
+          return true;
+        }
+        continue;
+      }
+      if (SPOT.has(z.typ) && Math.hypot(rm.target.x - p.x, rm.target.y - p.y) < BLISKO * 1.3) {
+        l.armed = false;
+        this.fire(rm, z, l);
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** A stage just began (accepted, or the previous one done): its opening words. */
   begin(rm: ResolvedMission) {
     const z = zadanieOf(rm.m);
@@ -365,7 +405,10 @@ export class Etapy {
         if (point && found.includes(clue.id) && !point.done) {
           point.done=true; (point.icon.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy(); point.icon.setTint(0x7fd35a).setAlpha(0.5);
         }
-        if (!found.includes(clue.id) && d<BLISKO && l.clueArmed.delete(clue.id)) {this.inspectClue(rm,z,clue);return;}
+        if (!found.includes(clue.id) && d<BLISKO && l.clueArmed.has(clue.id)) {
+          if (live()) { this.podpowiedz(`${rm.m.id}:${clue.id}`); continue; }
+          l.clueArmed.delete(clue.id); this.inspectClue(rm,z,clue); return;
+        }
       }
       return;
     }
@@ -373,6 +416,11 @@ export class Etapy {
       const d = Math.hypot(t.x - p.x, t.y - p.y);
       if (d > BLISKO * 2) l.armed = true;
       else if (d < BLISKO && l.armed) {
+        // New controls (walka/live.ts): arriving doesn't start it – a double tap does (dotknij).
+        if (live()) {
+          this.podpowiedz(l.key);
+          return;
+        }
         l.armed = false;
         this.fire(rm, z, l);
       }

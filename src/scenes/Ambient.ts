@@ -9,7 +9,10 @@ import { PX_PER_M, pointInRings, type CityMap, type Area, type Building } from '
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, GRUPKA_SLABA, stanGangu, type RodzajGangu } from '../content/gangi';
+
+/** Green land where the weakest groups are wolves instead of imps (new controls test). */
+const ZIELONE = new Set(['forest', 'park', 'grass', 'meadow', 'farmland', 'scrub', 'heath', 'orchard', 'allotments']);
 import { rng } from '../rng';
 import { arenaOn } from '../walka/tryb';
 import { hdOn, ensureHd, fitHd } from '../sprites';
@@ -429,9 +432,38 @@ function hashStr2(s: string) {
  * their spots and come out when they see the hero. The last one falling
  * brings out the boss; beating him breaks the gang up.
  */
+/** The red mist's two soft textures (a puff, an even inside): shared by gangs and hunting grounds (Lowiska.ts). */
+export function mgielkaTekstury(scene: Phaser.Scene) {
+    const tex = scene.textures;
+    const soft = (key: string, n: number, alpha: (r: number) => number) => {
+      if (tex.exists(key)) return;
+      const c = tex.createCanvas(key, n, n)!;
+      const ctx = c.getContext();
+      const img = ctx.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+        const i = (y * n + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+        img.data[i + 3] = Math.round(255 * Math.max(0, Math.min(1, alpha(r))));
+      }
+      ctx.putImageData(img, 0, 0);
+      c.refresh();
+    };
+    // A puff: dense in the middle, fading out smoothly.
+    soft('gang-klab', 64, (r) => (r >= 1 ? 0 : (1 - r * r) ** 1.6));
+    // The inside: even, then fading in the outer fifth (the puffs cover the border).
+    soft('gang-wnetrze', 256, (r) => (r < 0.8 ? 1 : r >= 1 ? 0 : 1 - (r - 0.8) / 0.2));
+  }
+
+
 export class StreetEnemies {
   /** Turn fight (test server): members sit in tight groups, the boss with the last one, nobody comes out later. */
   tury = false;
+  /**
+   * New controls test (walka/live.ts, owner 26 Oct 2026): only the WEAKEST small groups (GRUPKA_SLABA: 3 imps or 3
+   * wolves) at random spots, in red-mist areas 3× smaller; no boss, no berserker, no night/rain swaps.
+   */
+  slabe = false;
   private gangs: Gang[] = [];
   private planned = new Set<string>();
   private next = 0;
@@ -465,7 +497,7 @@ export class StreetEnemies {
     const box = { x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM };
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
     const extra = places < GANG_WIES.miejscMniejNiz ? GANG_WIES.mnoznik : 1;
-    GANGI.forEach((kind, ki) => {
+    (this.slabe ? [GRUPKA_SLABA] : GANGI).forEach((kind, ki) => {
       const want = kind.naKm2 * this.density * extra * (this.tury ? GRUPKA.gestosc : 1);
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
@@ -491,6 +523,26 @@ export class StreetEnemies {
   /** Where the members stand, once the territory is loaded. */
   private makeSpots(g: Gang) {
     if (this.tury) return this.makeGroups(g);
+    if (this.slabe) {
+      const r = rng(hashStr2(`${g.id}:${this.seed}:slabe`));
+      const [lo, hi] = g.kind.czlonkow;
+      const want = lo + Math.floor(r() * (hi - lo + 1));
+      // One kind per group: wolves out in the green, imps elsewhere.
+      const zielono = this.city.areaKindsAt(g.x, g.y).some((k) => ZIELONE.has(k));
+      const kind: RodzajWroga = zielono ? 'wilk' : 'glut';
+      const spots: StreetSpawn[] = [];
+      for (let t = 0; spots.length < want && t < want * 40; t++) {
+        const a = r() * Math.PI * 2;
+        const d = Math.sqrt(r()) * g.r * 0.7;
+        const x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
+        if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+        spots.push({ x, y, kind });
+      }
+      g.spots = spots;
+      g.boss = 'out'; // no boss comes out: the last member down breaks the group up
+      spots.forEach((_, i) => g.alive.add(i));
+      return;
+    }
     const r = rng(hashStr2(`${g.id}:${this.seed}:spots`));
     const [lo, hi] = g.kind.czlonkow;
     const want = lo + Math.floor(r() * (hi - lo + 1));
@@ -562,7 +614,7 @@ export class StreetEnemies {
    * in the rain water blobs, and every few of them their master, a wodnik. Fixed per spot (no reshuffling on every respawn).
    */
   private forNow(s: StreetSpawn, i: number, g: Gang): StreetSpawn {
-    if (s.kind !== 'glut') return s;
+    if (s.kind !== 'glut' || this.slabe) return s;
     const pora = this.events.pora?.() ?? { noc: false, mokro: false };
     const h = hashStr2(`${g.id}:${i}:kto`) / 4294967296;
     const S = SKLAD_GANGOW;
@@ -596,6 +648,11 @@ export class StreetEnemies {
       }
     }
     return best ? { x: best.x, y: best.y, r: best.r } : null;
+  }
+
+  /** Inside any active red mist (new controls test: outside it life and stamina come back). */
+  wMgle(x: number, y: number) {
+    return this.gangs.some((g) => !g.clearedAt && Math.abs(g.x - x) < g.r && Math.abs(g.y - y) < g.r && Math.hypot(g.x - x, g.y - y) < g.r);
   }
 
   /** The active gang whose territory the point is in, if any. */
@@ -638,7 +695,7 @@ export class StreetEnemies {
         if (m !== e) continue;
         g.members.delete(i);
         g.alive.delete(i);
-        if (this.tury) {
+        if (this.tury || this.slabe) {
           // Every group (the boss's too) beaten: the gang is broken up.
           if (!g.alive.size) {
             g.boss = 'dead';
@@ -721,25 +778,7 @@ export class StreetEnemies {
 
   /** Soft round textures for the gang mist: a puff of smoke and an inside that fades towards its edge. */
   private mistTextures() {
-    const tex = this.scene.textures;
-    const soft = (key: string, n: number, alpha: (r: number) => number) => {
-      if (tex.exists(key)) return;
-      const c = tex.createCanvas(key, n, n)!;
-      const ctx = c.getContext();
-      const img = ctx.createImageData(n, n);
-      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
-        const i = (y * n + x) * 4;
-        img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
-        img.data[i + 3] = Math.round(255 * Math.max(0, Math.min(1, alpha(r))));
-      }
-      ctx.putImageData(img, 0, 0);
-      c.refresh();
-    };
-    // A puff: dense in the middle, fading out smoothly.
-    soft('gang-klab', 64, (r) => (r >= 1 ? 0 : (1 - r * r) ** 1.6));
-    // The inside: even, then fading in the outer fifth (the puffs cover the border).
-    soft('gang-wnetrze', 256, (r) => (r < 0.8 ? 1 : r >= 1 ? 0 : 1 - (r - 0.8) / 0.2));
+    mgielkaTekstury(this.scene);
   }
 
   private makeMist(g: Gang) {

@@ -72,6 +72,12 @@ export interface SaveData {
   lokaty?: { kwota: number; od: number; dni: number; procent: number }[];
   /** The last hotel slept in: the next login starts there (none: at home). */
   at?: { m: string; x: number; y: number; s: number } | null;
+  /** New controls test (walka/live.ts): where the hero stood at the last save – the next login starts there. */
+  tu?: { m: string; x: number; y: number; s: number } | null;
+  /** Stamina and mana (content/zasoby.ts). */
+  zasoby?: { s: number; m: number };
+  /** The skill chosen per weapon kind at a training place (content/umiejetnosci.ts). */
+  umiej?: Record<string, string>;
   /** A ride under way (journey.ts): the load point `at` is already its arrival station. */
   jazda?: import('./journey').Journey | null;
   /** Old saves only: the sword in use and the school level. */
