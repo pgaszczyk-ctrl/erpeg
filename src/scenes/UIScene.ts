@@ -25,6 +25,8 @@ const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
   [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
 );
 import { live } from '../walka/live';
+import { ODSTEP_OD_KRAWEDZI } from '../ui/hudLive';
+import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
@@ -281,7 +283,8 @@ export class UIScene extends Phaser.Scene {
     this.skillBar.setPosition(width / 2, height * 0.6);
 
     const r = JOY_RADIUS;
-    this.joyHome.set(pad + r + 16, height - pad - r - (live() ? 30 : 16));
+    // Live mode (fixed joystick): further in from the screen's edge, where the thumb rests (owner, 26 Oct 2026).
+    this.joyHome.set(pad + r + (live() ? 16 + ODSTEP_OD_KRAWEDZI : 16), height - pad - r - (live() ? 30 : 16));
     joyHome.x = this.joyHome.x;
     joyHome.y = this.joyHome.y;
     this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
@@ -787,12 +790,22 @@ export class UIScene extends Phaser.Scene {
     if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
     if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
+    // „📲 Zainstaluj grę” (an app icon on the phone/computer) – not when it already runs as the installed app.
+    const INSTALUJ = '📲 Zainstaluj grę';
+    const guziki = ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, `⚖ Poziom trudności: ${session.level.nazwa}`, ...(TEST ? ['🐉 Smok (test)'] : []), ...(jakoAplikacja() || offline.demo ? [] : [INSTALUJ]), 'Graj dalej'];
     this.showDialog({
       title: 'Menu',
       text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, `⚖ Poziom trudności: ${session.level.nazwa}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      buttons: guziki,
       onChoose: (k) => {
         const i = k;
+        if (guziki[k] === INSTALUJ) {
+          void zainstaluj().then((r) => {
+            if (r.ok) this.toast('📲 Gra zainstalowana – szukaj ikony Exp-lore na pulpicie.', 3500);
+            else if (r.jak) this.showDialog({ title: '📲 Gra jako aplikacja', text: r.jak, buttons: ['OK'], onChoose: () => {} });
+          });
+          return;
+        }
         if (i === 3) {
           ustawTrzesienie(!trzesienieWlaczone());
           this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);

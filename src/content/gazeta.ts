@@ -317,6 +317,7 @@ export const NOWOSCI: Wiesc[] = [
 
 /** „Plany redakcji” – what we are working on (no dates promised). */
 export const PLANY: Wiesc[] = [
+  { data: 'w planach', tytul: { pl: 'Diamentowa ochrona', en: 'Diamond protection' }, tresc: { pl: 'Diamenty wrócą do gry jako ochrona: po porażce uratują złoto z plecaka i doświadczenie.', en: 'Diamonds will come back as protection: after a defeat they will save the gold in your backpack and your experience.' } },
   { data: 'wkrótce', tytul: { pl: 'Gazeciarz z prawdziwego zdarzenia', en: 'A proper newsboy' }, tresc: { pl: 'Nasz rysownik szkicuje gazeciarzy i gazeciarki z torbą pełną gazet oraz nową, papierową szatę Kuriera.', en: 'Our artist is sketching newsboys and newsgirls with bags full of papers, and the Courier’s new paper look.' } },
   { data: 'wkrótce', tytul: { pl: 'Smoki w pełnej krasie', en: 'Dragons in full glory' }, tresc: { pl: 'Leśny i trujący smok dostaną nowe, bajkowe rysunki i pełne ruchy.', en: 'The forest and poison dragons will get new fairy-tale drawings and full animations.' } },
   { data: 'w planach', tytul: { pl: 'Zabytki Lublina', en: 'Lublin’s landmarks' }, tresc: { pl: 'Nowy Ratusz, Archikatedra z Wieżą Trynitarską – rysowane jak Zamek i Brama Krakowska.', en: 'The New Town Hall, the Cathedral and the Trinitarian Tower – drawn like the Castle and the Kraków Gate.' } },

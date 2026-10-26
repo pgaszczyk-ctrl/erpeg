@@ -14,6 +14,7 @@ import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
 import { zapamietanaPostac, zapomnijPostac } from '../pamiecPostaci';
+import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
@@ -120,12 +121,21 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       return [b, err, forget];
     };
 
+    // „📲 Zainstaluj grę” under the start buttons (owner, 26 Oct 2026: an icon on the phone/computer like an app).
+    const instaluj = () => {
+      if (jakoAplikacja()) return [];
+      const info = el('small', { className: 'm-geo' });
+      const b = el('button', { type: 'button', className: 'm-link', onclick: () => void zainstaluj().then((r) => { info.textContent = r.ok ? '✅ Zainstalowana – szukaj ikony Exp-lore.' : r.jak ?? ''; }) }, ['📲 Zainstaluj grę jako aplikację']);
+      return [b, info];
+    };
+
     // The test server: only loading the test characters (and the one played last on this device).
     const main = () =>
       TEST ? load() : screen(
         ...kontynuuj(),
         button('Nowa postać', newCharacter, zapamietanaPostac() ? '' : 'm-primary'),
         button('Wczytaj postać', load),
+        ...instaluj(),
       );
 
     const newCharacter = () => {

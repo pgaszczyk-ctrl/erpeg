@@ -3410,10 +3410,8 @@ export class GameScene extends Phaser.Scene {
     const strata = Math.floor((session.exp - od) / 2);
     session.exp -= strata;
     this.emitHud();
-    const kara = [
-      zloto > 0 ? `Zgubiłeś ${zloto.toLocaleString('pl-PL')} złota z plecaka` : 'Plecak był bez złota – nic nie zginęło',
-      strata > 0 ? `i ${strata} EXP (połowę postępu na tym poziomie).` : '.',
-    ].join(strata > 0 ? ' ' : '');
+    // The EXP lost isn't spelled out (owner, 26 Oct 2026): only a hint that experience must be earned again.
+    const kara = `${zloto > 0 ? `Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.` : 'W plecaku nie było złota – nic nie przepadło.'}${strata > 0 ? ' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.' : ''}`;
     const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     this.cameras.main.fadeOut(700, 0, 0, 0);

@@ -86,7 +86,20 @@ function kodPostaci() {
   };
   btn.onclick = () => (menu.hidden ? pokazMenu() : (menu.hidden = true));
   const tekst = el('div', 'k-kod-tekst');
-  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci'), el('span', 'k-kod-code', prettyCode(session.idik)));
+  // Hidden until tapped (owner, 26 Oct 2026): nobody reads it over the player's shoulder or from a screenshot.
+  const kod = el('button', 'k-kod-code k-kod-ukryty', '•••• ••••') as HTMLButtonElement;
+  kod.type = 'button';
+  kod.title = 'Pokaż kod';
+  kod.setAttribute('aria-label', 'Pokaż kod postaci');
+  let widac = false;
+  kod.onclick = () => {
+    widac = !widac;
+    kod.textContent = widac ? prettyCode(session.idik) : '•••• ••••';
+    kod.classList.toggle('k-kod-ukryty', !widac);
+    kod.title = widac ? 'Ukryj kod' : 'Pokaż kod';
+    kod.setAttribute('aria-label', kod.title);
+  };
+  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci · dotknij, by pokazać'), kod);
   const row = el('div', 'k-kod-row');
   row.append(tekst, btn);
   box.append(row, menu, msg);
@@ -314,6 +327,10 @@ function show(host: CharacterHost) {
   // ---------------------------------------------------------------- Kufer: Postać
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
+    // Phones held sideways (owner, 26 Oct 2026): the hero on the left, the backpack on the right – one column only
+    // on tall screens. The look controls go above the hero, the item card under the backpack.
+    const lewa = el('div', 'k-lewa');
+    const prawa = el('div', 'k-prawa');
     // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
     // the 25) until they pick „Nowy wygląd”.
     if (BOHATER_MODUL && session.look.modul) {
@@ -323,9 +340,9 @@ function show(host: CharacterHost) {
         onChange();
         render();
       }, modulGracza(session.look, session.name));
-      s.append(k.box);
+      lewa.append(k.box);
     } else if (NOWE_POSTACIE) {
-      s.append(skinPicker(() => {
+      lewa.append(skinPicker(() => {
         onChange();
         render();
       }));
@@ -339,7 +356,7 @@ function show(host: CharacterHost) {
           onChange();
           render();
         };
-        s.append(nowy);
+        lewa.append(nowy);
       }
     }
     const wrap = el('div', 'sl-wrap k-wrap');
@@ -376,7 +393,9 @@ function show(host: CharacterHost) {
     for (const m of ['talizman', 'talizman2', 'talizman3'] as Miejsce[]) tal.append(cell(m));
     const bag = el('div', 'sl-grid sl-bag');
     for (let i = 0; i < PLECAK.miejsc; i++) bag.append(slotCell(gear.bag[i] ?? null, { zone: 'bag', i }));
-    wrap.append(doll, tal, actions, el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`), bag);
+    lewa.append(doll, tal);
+    prawa.append(el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`), bag, actions);
+    wrap.append(lewa, prawa);
     s.append(wrap, el('div', 'c-note', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
     // Gear you use rather than wear (owner, 18 Oct 2026: moved here from Statystyki).
     if (session.namioty.length && tent) {

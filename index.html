@@ -9,6 +9,9 @@
     <title>Exp-lore</title>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Exp-lore" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Pixelify+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
@@ -103,6 +106,18 @@
       #character .c-skin-pic { display: none; }
       .k-head { color: #f0c46a; font-size: 15px; margin-top: 6px; }
       .k-wrap { --sl: min(54px, 13.5vw); gap: 10px; }
+      .k-lewa, .k-prawa { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+      .k-prawa .c-actions { width: 100%; }
+      /* Phones held sideways (owner, 26 Oct 2026): the hero left, the backpack right. */
+      @media (max-width: 960px) and (orientation: landscape) {
+        #character .k-wrap { --sl: min(44px, 9.5vh, 8vw); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; column-gap: 18px; gap: 6px 18px; }
+        #character .k-lewa, #character .k-prawa { gap: 6px; }
+        #character #k-postac > .k-plate { display: none; }
+        #character .k-lewa .m-look .m-btn, #character .k-lewa .k-nowy-wyglad { padding: 4px 10px; min-height: 0; font-size: 15px; }
+        #character .k-lewa .m-ikbtn img { width: 28px; height: 28px; }
+        #character .k-lewa .m-skinrow { gap: 6px; }
+        #character .k-lewa .c-skin .c-btn { padding: 4px 12px; min-height: 0; }
+      }
       .k-doll { display: flex; align-items: center; justify-content: center; gap: 10px; }
       .k-col { display: flex; flex-direction: column; gap: 8px; }
       .k-tal { display: flex; gap: 8px; justify-content: center; }
@@ -112,6 +127,8 @@
       .k-kod-tekst { flex: 1; display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
       .k-kod-title { font-size: 11px; opacity: .75; }
       .k-kod-code { font: bold 16px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; color: #f0dfb4; user-select: all; -webkit-user-select: all; }
+      button.k-kod-code { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+      .k-kod-code.k-kod-ukryty { user-select: none; -webkit-user-select: none; letter-spacing: 3px; color: #b9a67c; }
       .k-kod-btn { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #a8742a; background: #3a2612; color: #fff; font-size: 16px; cursor: pointer; }
       .k-kod-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 8px; background: #2a1b0e; border: 1px solid #a8742a; box-shadow: 0 4px 12px rgba(0,0,0,.6); min-width: 210px; }
       .k-kod-menu[hidden] { display: none; }

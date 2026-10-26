@@ -53,6 +53,26 @@ async function zablokuj() {
   }
 }
 
+/**
+ * Full screen at once on phones (owner, 26 Oct 2026: „od razu rób full screen”): browsers allow it only from a touch,
+ * so the very first touch on the page – also on the start menu – asks for it. After the phone leaves full screen by
+ * itself (the app was in the background), the next touch asks again; when the player closes it on purpose (the
+ * browser's back gesture) we don't fight it until the page is hidden and shown again.
+ */
+export function pelnyEkranOdDotyku() {
+  let prosic = true;
+  const tap = () => {
+    if (!prosic || !telefon() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+    prosic = false;
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+      if (gra) void (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
+    }).catch(() => {});
+  };
+  window.addEventListener('touchend', tap, { passive: true, capture: true });
+  window.addEventListener('pointerup', tap, { passive: true, capture: true });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') prosic = true; });
+}
+
 export function wymusPoziom(game: Phaser.Game) {
   gra = game;
   if (!el) {
