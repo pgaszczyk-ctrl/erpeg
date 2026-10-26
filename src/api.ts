@@ -231,6 +231,8 @@ export const api = {
   memorial: () =>
     rpc<{ name: string; exp: number; died_at: string; death_place: string | null; resurrected: boolean }[]>('memorial', { p_limit: 100 }),
   resurrect: (name: string, code: string) => rpc<LoginResult>('resurrect', { p_name: name, p_idik: code }),
+  /** A character that died in the old game (death was final then) comes back free, with the hospital's penalty (docs/sql/szpital.sql). */
+  szpitalPowrot: (name: string, code: string) => rpc<LoginResult>('szpital_powrot', { p_name: name, p_idik: code }),
   /** Missions made in the admin panel. */
   quizzes: () => rpc<[number, number, string, string, string[], string | null][]>('school_quizzes', { p_all: true }),
   // Owner, 17 Oct 2026: release Hela Trybik's entire chain, including Bruno's shop.

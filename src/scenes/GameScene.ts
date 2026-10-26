@@ -51,7 +51,7 @@ import { PODLOZE } from '../content/podloze';
 import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI, trudnoscZWieku, WYBOR_TRUDNOSCI } from '../content/trudnosc';
-import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
+import { DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
 import { WOZNICA } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
@@ -103,6 +103,7 @@ import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
+import { SamouczekStartu } from './SamouczekStartu';
 import { keepResume } from '../update';
 import { sesjaWygasla } from '../sesja';
 import { DemoRun } from './Demo';
@@ -390,7 +391,11 @@ export class GameScene extends Phaser.Scene {
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   /** The hero said no to the diamonds' rescue: now it's the game-over screen. */
-  private rescueDeclined = false;
+  /** Carried to the hospital after a defeat (between the fade out and getting up). */
+  private naNoszach = false;
+  /** The start tutorial (new characters) and where its arrow points (the nearest newsboy). */
+  private samouczek: SamouczekStartu | null = null;
+  private samouczekCel: { x: number; y: number; name: string } | null = null;
   private noArrowsToast = -1e9;
   private glow!: Phaser.GameObjects.Graphics;
   private npcs!: Npcs;
@@ -491,7 +496,7 @@ export class GameScene extends Phaser.Scene {
     this.markers = new Map();
     this.leaving = false;
     this.lingerUntil = 0;
-    this.rescueDeclined = false;
+    this.naNoszach = false;
     this.toldPlace = null;
     this.localTown = null;
     this.askingTown = false;
@@ -953,6 +958,7 @@ export class GameScene extends Phaser.Scene {
       powitanie.czeka = false;
       this.welcome();
     }
+    this.startSamouczek();
 
     this.scene.launch('ui');
     this.emitHud();
@@ -1126,6 +1132,7 @@ export class GameScene extends Phaser.Scene {
       if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.attackCooldown = cd * ZASOBY.wyczerpanyCios;
       const hit = this.player.tryAttack(now);
       this.player.attackCooldown = cd;
+      this.samouczek?.uderzyl();
       if (hit) this.resolveAttack(hit, now);
     }
     this.updateRanged(now, lingering);
@@ -3383,63 +3390,81 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * "Porażka": the diamonds' power may save the hero. Without enough of them
-   * the missing ones can be bought here (coins, or real money – soon).
-   * Escape picks the last button, which never means death.
+   * Death isn't final (owner, 26 Oct 2026): the hero comes to in the hospital nearest to where he fell, on the map he
+   * was on (no hospital there: the load point – last hotel or home). He loses the gold in his backpack (the chest keeps
+   * its own) and half of the progress made in his current level (never a level down).
    */
   private offerRescue() {
-    const cost = WSKRZESZENIE.diamentow;
-    const d = DIAMENT;
-    const fmt = (n: number) => n.toLocaleString('pl-PL');
-    const miss = Math.max(0, cost - session.diamenty);
-    const coins = miss * d.monet;
-    const buttons = ['Nie, to koniec'];
-    const actions: (() => void)[] = [() => this.dieForGood()];
-    if (miss > 0 && session.coins >= coins) {
-      buttons.push(`💰 Kup ${miss} 💎 za ${fmt(coins)} monet`);
-      actions.push(() => {
-        spend(coins);
-        session.diamenty += miss;
-        this.emitHud();
-        this.offerRescue();
-      });
-    }
-    if (miss === 0) {
-      buttons.push(`💎 Tak, ocal mnie (${cost} 💎)`);
-      actions.push(() => this.reviveWithDiamonds());
-    }
-    const have = `Kosztuje ${cost} 💎 – masz ${session.diamenty} 💎.`;
-    const buy = miss === 0 ? '' : session.coins >= coins
-      ? `\n\nBrakuje ci ${miss} 💎 – możesz je teraz dokupić (${fmt(d.monet)} monet za diament, masz ${fmt(session.coins)}).`
-      : `\n\nBrakuje ci ${miss} 💎 (diament kosztuje ${fmt(d.monet)} monet; masz ${fmt(session.coins)} monet). ${DIAMENT_WSPIERAJACY}`;
-    this.dialog({
-      title: '💀 Porażka',
-      text: `Moc diamentów może cię ocalić. Czy chcesz to zrobić?\n\n${have} Wrócisz do życia w hotelu, w którym ostatnio spałeś, albo w domu.${buy}`,
-      buttons,
-      onChoose: (i) => actions[i]?.(),
-    });
-  }
-
-  /** Death is final: the character goes to the memorial board. */
-  private dieForGood() {
-    this.rescueDeclined = true;
+    if (this.naNoszach) return;
+    this.naNoszach = true;
     this.lingerUntil = 0;
+    this.damageCarry = 0;
+    this.stany = {};
     this.player.anims.stop();
     this.player.setFrame('down-0');
     this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
+    const zloto = session.coins;
+    session.coins = 0;
+    const lvl = poziomPostaci(session.exp);
+    const od = expNaPoziom(lvl);
+    const strata = Math.floor((session.exp - od) / 2);
+    session.exp -= strata;
     this.emitHud();
-    const inLublin = this.city.id === 'lublin';
-    const place = inLublin ? this.city.describe(this.player.x, this.player.y) : `${mapName(this.city.id)}, ${this.city.describe(this.player.x, this.player.y)}`;
-    // The ghost screen shows Lublin: someone who died in a town haunts home.
-    const x = Math.round(inLublin ? this.player.x : session.startX);
-    const y = Math.round(inLublin ? this.player.y : session.startY);
-    this.deathSaved = new Promise<void>((done) => {
-      const report = () =>
-        api.die(session.token, session.exp, place, x, y, PX_PER_M, session.stats)
-          .then(() => done())
-          .catch(() => setTimeout(report, 3000));
-      report();
+    const kara = [
+      zloto > 0 ? `Zgubiłeś ${zloto.toLocaleString('pl-PL')} złota z plecaka` : 'Plecak był bez złota – nic nie zginęło',
+      strata > 0 ? `i ${strata} EXP (połowę postępu na tym poziomie).` : '.',
+    ].join(strata > 0 ? ' ' : '');
+    const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
+    const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
+    this.cameras.main.fadeOut(700, 0, 0, 0);
+    this.time.delayedCall(800, () => {
+      if (szpital) {
+        void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
+          const at = this.city.reachableNear(szpital.door.x, szpital.door.y);
+          this.wstanWSzpitalu(at, `🏥 ${szpital.name}`, kara);
+        });
+        return;
+      }
+      const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
+      if (at.m === this.city.id) return this.wstanWSzpitalu(at, '🛏 Ocknąłeś się', kara, true);
+      // The load point is on another map: go there (the dialog waits for the next scene).
+      session.hp = PLAYER.maxHp;
+      this.travelling = true;
+      this.keepFog();
+      void getMap(at.m).then(async (city) => {
+        session.arrive = { x: at.x, y: at.y };
+        await prepareMap(city);
+        this.game.registry.set('city', city);
+        saveNow(PLAYER.maxHp).catch(() => {});
+        this.scene.stop('ui');
+        this.scene.restart();
+      });
     });
+  }
+
+  /** Back on his feet after a defeat, at `at` (hospital door or the load point), with the dialog that says what was lost. */
+  private wstanWSzpitalu(at: { x: number; y: number }, title: string, kara: string, bezSzpitala = false) {
+    this.player.setAngle(0);
+    this.player.hp = PLAYER.maxHp;
+    session.hp = PLAYER.maxHp;
+    this.player.setPosition(at.x, at.y);
+    this.cameras.main.centerOn(at.x, at.y);
+    this.enemies.forEach((e) => (e.chasing = false));
+    this.naNoszach = false;
+    this.protect(this.time.now);
+    this.cameras.main.fadeIn(600, 0, 0, 0);
+    this.emitHud();
+    this.save();
+    // After the fade-in: a dialog pauses the scene, and a paused camera fade would stay black.
+    this.time.delayedCall(650, () => this.dialog({
+      title,
+      text: (bezSzpitala
+        ? 'Ktoś znalazł cię nieprzytomnego i zaniósł tam, gdzie ostatnio spałeś. Rany się zagoiły.'
+        : 'Ktoś znalazł cię nieprzytomnego i przyniósł do szpitala. Lekarz opatrzył rany – zdrowie w pełni.')
+        + `\n\n${kara}`,
+      buttons: ['Wstaję'],
+      onChoose: () => {},
+    }));
   }
 
   // ------------------------------------------------------------------ sessions
@@ -3535,6 +3560,44 @@ export class GameScene extends Phaser.Scene {
    * blackout; once the view is painted the screen clears, a short word, then the HUD portrait is shown – it holds
    * the character's code and the account link (Kufer). Then the ordinary game, nothing ends after some metres.
    */
+  /**
+   * The start tutorial (owner, 26 Oct 2026): walking, the blow, talking, then the arrow to the nearest newsboy.
+   * For characters that haven't done it yet and are still fresh (a few EXP, a few hundred metres).
+   */
+  private startSamouczek() {
+    this.samouczek?.usun();
+    this.samouczek = null;
+    this.samouczekCel = null;
+    if (this.demoRun || demo.on || session.flagi.samouczek || session.immortal) return;
+    if (session.exp >= 100 || (session.stats.m ?? 0) > 800) return;
+    this.samouczek = new SamouczekStartu({
+      hero: () => ({ x: this.player.x, y: this.player.y }),
+      pxNaM: PX_PER_M,
+      zajete: () => !this.sys.isActive() || this.scene.isPaused() || !!this.walka?.aktywna || this.witam || this.travelling,
+      gazeciarz: () => {
+        let best: Folk | null = null;
+        let bd = Infinity;
+        for (const f of this.folk.newsboys()) {
+          const d = Phaser.Math.Distance.Between(f.x, f.y, this.player.x, this.player.y);
+          if (d < bd) { bd = d; best = f; }
+        }
+        return best ? { x: best.x, y: best.y, name: best.name } : null;
+      },
+      prowadz: (c) => {
+        this.samouczekCel = c;
+        this.emitHud();
+      },
+      koniec: () => {
+        session.flagi.samouczek = 1;
+        this.samouczek = null;
+        this.samouczekCel = null;
+        this.emitHud();
+        this.save();
+      },
+    });
+    this.events.once('shutdown', () => this.samouczek?.usun());
+  }
+
   private welcome() {
     this.witam = true;
     const reveal = () => {
@@ -4203,37 +4266,6 @@ export class GameScene extends Phaser.Scene {
     this.travel(t, times, diamonds);
   }
 
-  /** The diamonds' power: back to life at the load point (last hotel, or home). */
-  private reviveWithDiamonds() {
-    session.diamenty -= WSKRZESZENIE.diamentow;
-    this.lingerUntil = 0;
-    this.damageCarry = 0;
-    this.player.hp = PLAYER.maxHp;
-    session.hp = PLAYER.maxHp;
-    const at = session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
-    this.toast(`💎 Moc diamentów cię ocaliła – wracasz do życia! Zostało ${session.diamenty} 💎.`, 4000);
-    if (at.m === this.city.id) {
-      this.player.setPosition(at.x, at.y);
-      this.cameras.main.centerOn(at.x, at.y);
-      this.enemies.forEach((e) => (e.chasing = false));
-      this.protect(this.time.now);
-      this.emitHud();
-      this.save();
-      return;
-    }
-    // The load point is on another map: go there.
-    this.travelling = true;
-    this.keepFog();
-    getMap(at.m).then(async (city) => {
-      session.arrive = { x: at.x, y: at.y };
-      await prepareMap(city);
-      this.game.registry.set('city', city);
-      saveNow(PLAYER.maxHp).catch(() => {});
-      this.scene.stop('ui');
-      this.scene.restart();
-    });
-  }
-
   // ------------------------------------------------------------------ sports
 
   /** The coach (dummies against the clock) or the runner (a race to another pitch). */
@@ -4432,6 +4464,7 @@ export class GameScene extends Phaser.Scene {
    * choice first – read the paper, help deliver papers (every ROZNOSZENIE.co-th newsboy), goodbye.
    */
   private newsboy(f: Folk) {
+    this.samouczek?.gazeciarz();
     const day = new Date().toISOString().slice(0, 10);
     let h = 0;
     for (const ch of `${f.id}:${day}`) h = (h * 31 + ch.charCodeAt(0)) | 0;
@@ -6662,6 +6695,12 @@ export class GameScene extends Phaser.Scene {
       }
       return { ...q, color: questColors.get(q.id)! };
     });
+    // The start tutorial's arrow to the nearest newsboy (not a quest either).
+    if (this.samouczekCel) {
+      const c = this.samouczekCel;
+      const m = Phaser.Math.Distance.Between(c.x, c.y, this.player.x, this.player.y) / PX_PER_M;
+      out.push({ id: 'samouczek', main: false, title: `🗞 ${c.name}`, text: `🗞 ${c.name} – pierwsze zlecenie (${Math.round(m)} m)`, pos: { x: c.x, y: c.y }, color: '#ffd76a' });
+    }
     // The traveller's map's guide: its own arrow, not counted among the quests.
     if (droga) {
       const pos = this.city.fromLatLon(droga.lat, droga.lon);
@@ -6673,7 +6712,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Quests counted for the limit (the traveller's map's guide is not one). */
   private questCount() {
-    return this.activeQuests().filter((q) => q.id !== 'droga').length;
+    return this.activeQuests().filter((q) => q.id !== 'droga' && q.id !== 'samouczek').length;
   }
 
   /**
@@ -7048,7 +7087,7 @@ export class GameScene extends Phaser.Scene {
       fruits: `🍎${fruitCount('jablko')} 🟣${fruitCount('sliwka')} 🍇${fruitCount('winogrono')}`,
       fruitN: [groupCount('owoce'), groupCount('warzywa'), groupCount('grzyby')],
       // Not while the diamonds may still save the hero (the question waits on top).
-      dead: this.player.isDead && !session.immortal && (this.rescueDeclined || !!this.demoRun),
+      dead: this.player.isDead && !session.immortal && !!this.demoRun,
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
       pogoda: weatherLabel(isNight()),

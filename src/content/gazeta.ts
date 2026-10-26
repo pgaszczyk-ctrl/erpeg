@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '26.10.2026', tytul: { pl: 'Porażka to nie koniec', en: 'Defeat is not the end' },
+    tresc: { pl: 'Pokonany bohater budzi się w najbliższym szpitalu. Traci złoto z plecaka i połowę postępu na bieżącym poziomie – ale żyje dalej. Nowe postacie od razu wchodzą do gry z krótkim samouczkiem, który prowadzi do gazeciarza po pierwsze zlecenie. Urządzenie pamięta twoją postać, ale kod zapisz sobie w Kufrze albo połącz postać z kontem.', en: 'A defeated hero wakes up in the nearest hospital, losing the gold in the backpack and half of the progress in the current level – but lives on. New characters go straight into the game with a short tutorial that leads to a newsboy for the first errand. Your device remembers your character, but keep the code from the Trunk or link the character to an account.' },
+  },
+  {
     data: '21.10.2026', tytul: { pl: 'Nowe ludziki', en: 'New little people' },
     tresc: { pl: 'Postacie, które składasz z głowy i ciałka, dostały nowe rysunki: krótsze, pękate nóżki i całe głowy – brody, warkocze i podbródki nie są już ucięte.', en: 'The heroes you build from a head and a body got new drawings: shorter, chubby legs and whole heads – beards, braids and chins are no longer cut off.' },
   },

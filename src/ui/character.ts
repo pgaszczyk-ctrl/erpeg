@@ -21,6 +21,7 @@ import { MISJE } from '../content/fabula';
 import { TEST } from '../version';
 import { rememberTestLook } from '../testAppearance';
 import { prettyCode, shareCode, linkToAccount } from './codeCard';
+import { pokazGdzieKliknac } from './samouczek';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -120,6 +121,9 @@ let page: Page = 'kufer';
 let closed: (() => void) | null = null;
 /** Our entry in the browser history (the phone's back button closes the trunk). */
 let historyEntry = false;
+/** Closes the spotlight on the code (first visit without an account). */
+let zamknijPokaz: (() => void) | null = null;
+const POKAZANY_KOD = 'exp-kod-pokazany:';
 
 export function isCharacterOpen() {
   return !!open;
@@ -132,6 +136,8 @@ const onBack = () => {
 
 export function closeCharacter() {
   if (!open) return;
+  zamknijPokaz?.();
+  zamknijPokaz = null;
   dispose?.();
   dispose = null;
   open.remove();
@@ -655,6 +661,34 @@ function show(host: CharacterHost) {
 
   render();
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
+  pokazKodRaz(render);
+}
+
+/**
+ * Owner, 26 Oct 2026: the first time a character without an account opens the trunk, everything goes dark but the
+ * button that shows and sends the code – one may play without signing in, but must keep the code somewhere.
+ */
+function pokazKodRaz(render: () => void) {
+  if (session.konto || !session.idik || session.immortal) return;
+  const klucz = POKAZANY_KOD + session.name.toLowerCase();
+  try {
+    if (localStorage.getItem(klucz)) return;
+    localStorage.setItem(klucz, '1');
+  } catch { /* no storage: show it every time is worse than never – skip */ return; }
+  if (narrow() && page !== 'stan') {
+    page = 'stan';
+    render();
+  }
+  const btn = () => open?.querySelector<HTMLButtonElement>('.k-kod-btn') ?? null;
+  btn()?.scrollIntoView({ block: 'center' });
+  window.setTimeout(() => {
+    if (!open || !btn()) return;
+    const zamknij = pokazGdzieKliknac('#character .k-kod-btn',
+      'Grasz bez konta – zapisz sobie kod postaci! Tu go zobaczysz, wyślesz sobie albo połączysz postać z e-mailem lub Google.',
+      () => { zamknij(); zamknijPokaz = null; btn()?.click(); },
+      () => { zamknij(); zamknijPokaz = null; });
+    zamknijPokaz = zamknij;
+  }, 350);
 }
 
 /**

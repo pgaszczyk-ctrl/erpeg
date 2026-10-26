@@ -2,7 +2,6 @@ import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
-import { WSKRZESZENIE } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showPhoto } from '../ui/brag';
@@ -901,7 +900,7 @@ export class UIScene extends Phaser.Scene {
       .text(width / 2, 0, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
       .setOrigin(0.5, 0);
     const info = this.add
-      .text(width / 2, 0, `Śmierć jest ostateczna.\nTwoje imię trafia na Tablicę Pamięci.\n\nZdobyte doświadczenie: ${s?.exp ?? 0} EXP\n\nPierwsze wskrzeszenie jest za darmo, każde kolejne kosztuje ${WSKRZESZENIE.diamentow} 💎.`, {
+      .text(width / 2, 0, `Zdobyte doświadczenie: ${s?.exp ?? 0} EXP`, {
         fontFamily: 'monospace', fontSize: '17px', color: '#ffffff', align: 'center', wordWrap: { width: width - 40 }, lineSpacing: 4,
       })
       .setOrigin(0.5, 0);

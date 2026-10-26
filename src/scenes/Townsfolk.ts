@@ -193,6 +193,13 @@ export class Townsfolk {
     else this.extra.set(key, [...(this.extra.get(key) ?? []).filter((g) => g.id !== id), f]);
     this.next = 0;
   }
+  /** Every newsboy made so far on this map (the start tutorial leads to the nearest one). */
+  newsboys(): Folk[] {
+    const out: Folk[] = [];
+    for (const list of this.cells.values()) for (const f of list) if (f.role === 'gazeciarz') out.push(f);
+    for (const list of this.extra.values()) for (const f of list) if (f.role === 'gazeciarz') out.push(f);
+    return out;
+  }
   /** People placed on purpose in squares not made yet (newsboyAt). */
   private extra = new Map<string, Folk[]>();
 
