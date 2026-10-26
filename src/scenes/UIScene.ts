@@ -665,7 +665,7 @@ export class UIScene extends Phaser.Scene {
     title.setY(y + 16 + (headH - title.height) / 2);
     body.setY(y + 16 + headH + 10 + (tabH ? tabH + 10 : 0));
 
-    const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
+    const panel = ramkaKomiks(this, x, y, w, h, 0x241a12, { alfa: 0.96, gruba: 3, cien: 6 });
     const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
     if (P && d.kto) {
       const kto = d.kto;
@@ -687,9 +687,10 @@ export class UIScene extends Phaser.Scene {
       d.tabs.labels.forEach((label, t) => {
         const c = d.tabs!.colors?.[t] ?? 0x2f6f9f;
         const on = t === d.tabs!.active;
-        const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, on ? c : 0x2a2632).setOrigin(0).setStrokeStyle(on ? 3 : 2, on ? 0xffffff : c, on ? 0.9 : 1);
-        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: DIALOG_FONT, fontSize: '18px', color: on ? '#ffffff' : '#c8c8d0', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
-        items.push(rect, text);
+        const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, 0, 0).setOrigin(0);
+        const g = ramkaKomiks(this, rect.x, ty, tw, tabH, on ? c : 0x2c2118, { gruba: 2, cien: on ? 3 : 2 });
+        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: DIALOG_FONT, fontSize: '18px', color: on ? '#ffffff' : '#c8b896', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
+        items.push(g, rect, text);
         if (!on) this.dialogButtons.push({ rect, index: -1 - t });
       });
     }
@@ -698,14 +699,17 @@ export class UIScene extends Phaser.Scene {
     d.buttons.forEach((label, i) => {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
       const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
-      const color = d.odpowiedzi ? 0x2f6f9f : stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
-      const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
+      // Brass for the main choices, verdigris-patinated metal for the way out (owner, 26 Oct 2026: no greens/blues).
+      const cicho = d.odpowiedzi ? false : stacked ? i === last : i !== 0;
+      const color = cicho ? 0x4f7f72 : 0xc9953f;
+      const rect = this.add.rectangle(bx, by, bw, btnH, 0, 0).setOrigin(0);
+      items.push(ramkaKomiks(this, bx, by, bw, btnH, color, { gruba: 2, cien: 3 }));
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
       const key = d.icons?.[i];
       const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setDisplaySize(32, 32) : null;
       const pad = pic ? 40 : 0;
       const text = this.add
-        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })
+        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: cicho ? '#e8f4ee' : '#2a1608', align: 'center', wordWrap: { width: bw - 12 - pad } })
         .setOrigin(0.5);
       items.push(rect, text);
       if (pic) items.push(pic);
@@ -945,4 +949,27 @@ export class UIScene extends Phaser.Scene {
       this.events.once('shutdown', offTap);
     });
   }
+}
+
+/**
+ * A comic frame with a pixel touch (owner, 26 Oct 2026; the same look as the HTML windows' CSS in index.html): a
+ * hard drop shadow, an ink outline whose corners step like pixel art, the fill, a light top/left edge and a dark
+ * bottom/right edge. No rounded corners, no blur.
+ */
+export function ramkaKomiks(scene: Phaser.Scene, x: number, y: number, w: number, h: number, kolor: number,
+  o: { alfa?: number; gruba?: number; cien?: number } = {}) {
+  const g = scene.add.graphics();
+  const b = o.gruba ?? 2;
+  const cien = o.cien ?? 3;
+  const ink = 0x1e1a24;
+  const c = Phaser.Display.Color.IntegerToColor(kolor);
+  const jasny = Phaser.Display.Color.GetColor(Math.min(255, c.red + 45), Math.min(255, c.green + 40), Math.min(255, c.blue + 30));
+  const ciemny = Phaser.Display.Color.GetColor(c.red * 0.62, c.green * 0.62, c.blue * 0.62);
+  if (cien) g.fillStyle(0x000000, 0.45).fillRect(x + cien, y + cien + b, w, h - b).fillRect(x + cien + b, y + cien, w - 2 * b, h);
+  g.fillStyle(ink, 1).fillRect(x, y + b, w, h - 2 * b).fillRect(x + b, y, w - 2 * b, h);
+  g.fillStyle(kolor, o.alfa ?? 1).fillRect(x + b, y + b, w - 2 * b, h - 2 * b);
+  const e = Math.max(2, b);
+  g.fillStyle(jasny, (o.alfa ?? 1) * 0.9).fillRect(x + b, y + b, w - 2 * b, e).fillRect(x + b, y + b, e, h - 2 * b);
+  g.fillStyle(ciemny, (o.alfa ?? 1) * 0.9).fillRect(x + b, y + h - b - e - 1, w - 2 * b, e + 1).fillRect(x + w - b - e, y + b, e, h - 2 * b);
+  return g;
 }

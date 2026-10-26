@@ -456,6 +456,63 @@
       .m-level { grid-template-columns: 1fr 96px; }
       .m-share { background: #25a55f; }
       .m-link { background: none; border: none; color: #9ac7ff; font: inherit; font-size: 14px; text-decoration: underline; padding: 0; }
+
+      /* ===== Comic frames everywhere (owner, 26 Oct 2026: „przenieś styl na pozostałe ramki”) =====
+         The Kufer's look for every other window: square corners, an ink outline drawn as 4 offset shadows (so the
+         corners step like pixel art), flat fills, hard light/dark inner edges, a hard drop shadow, no blur or glow.
+         Main buttons are brass, the others verdigris-patinated metal (no greens). `html body` wins over the styles the
+         game's modules add later. The newspaper keeps its print look; the telescope HUD keeps the artist's brass. */
+      :root { --ink: #1e1a24;
+        --ramka3: 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink);
+        --ramka2: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink);
+        --krawedz: inset 0 3px 0 #3d2b1b, inset 3px 0 0 #3d2b1b, inset 0 -3px 0 #120b06, inset -3px 0 0 #120b06;
+        --mosiadz: inset 0 -3px 0 #8a5f22, inset 0 2px 0 #f0cf86, inset 2px 0 0 #e0b45c, 3px 3px 0 rgba(0,0,0,.5);
+        --patyna: inset 0 -3px 0 #2f544a, inset 0 2px 0 #7fb3a2, inset 2px 0 0 #6a9b8c, 3px 3px 0 rgba(0,0,0,.5); }
+      html body .m-box, html body #minimap .mm-hub, html body .lm-error, html body #update-bar, html body #quit-ask > div,
+      html body #samouczek .sm-tekst, html body #samouczek-krok, html body .moneta-napis, html body .k-photo {
+        border: 0 !important; border-radius: 0 !important; background: #241a12 !important; color: #f6e6c2;
+        box-shadow: var(--ramka3), var(--krawedz), 8px 8px 0 rgba(0,0,0,.45) !important; }
+      html body #minimap .mm-hub, html body .k-photo { color: #f6e6c2; }
+      html body .m-box h2, html body .m-box h1 { color: #f0c66a; }
+      html body .m-link { color: #e9c77e; }
+      html body .m-btn, html body .lm-error button, html body #update-bar button, html body #quit-ask button, html body #minimap .mm-hub button, html body #minimap button {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #4f7f72 !important; color: #e8f4ee !important;
+        text-shadow: 1px 1px 0 rgba(0,0,0,.4); box-shadow: var(--patyna) !important; }
+      html body .m-btn.m-primary, html body #update-bar button[data-a="go"], html body #quit-ask button[data-a="stay"], html body .c-btn {
+        background: #c9953f !important; color: #2a1608 !important; font-weight: 700; text-shadow: 1px 1px 0 rgba(255,236,190,.45); box-shadow: var(--mosiadz) !important; }
+      html body .c-btn { border: 2px solid var(--ink); border-radius: 0; }
+      html body .c-btn.c-muted { background: #4f7f72 !important; color: #e8f4ee !important; text-shadow: 1px 1px 0 rgba(0,0,0,.4); box-shadow: var(--patyna) !important; }
+      html body .m-btn.m-google { background: #fff !important; color: #1f1f1f !important; text-shadow: none; box-shadow: inset 0 -3px 0 #c9c9c9, 3px 3px 0 rgba(0,0,0,.5) !important; }
+      html body .m-btn:active, html body .c-btn:active { transform: translate(1px, 1px); }
+      html body .m-btn:disabled { filter: grayscale(.6); }
+      html body .m-input, html body .m-field input, html body .m-eye, html body .ph-own, html body .m-box select, html body .ch-amount {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #120c08 !important; color: #f6e6c2;
+        box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 0 0 0 1px #6b4a1f !important; }
+      html body .m-input:focus, html body .m-field input:focus { box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 0 0 0 2px #e2b25a !important; }
+      html body .m-row, html body .m-idik, html body .m-look, html body .m-hero, html body .c-quest, html body .c-skill, html body .c-cell, html body .c-xcell,
+      html body .ch-cell, html body .sl-cell, html body .k-seal, html body .k-gold, html body .ph-chip, html body .ph-img, html body .ph-thumb img, html body .m-deathmap {
+        border-radius: 0 !important; border-color: var(--ink) !important; border-style: solid !important; }
+      html body .sl-cell { background: #2c1f14; box-shadow: inset 2px 2px 0 rgba(255,214,140,.13), inset -2px -2px 0 rgba(0,0,0,.45); }
+      html body .sl-cell.sl-empty { background: #1d140d; box-shadow: inset 2px 2px 0 rgba(0,0,0,.4); }
+      html body #minimap canvas { border: 3px solid var(--ink) !important; border-radius: 0 !important; box-shadow: 0 0 0 2px #b8893b, 6px 6px 0 rgba(0,0,0,.45); }
+      html body .m-idik { background: #120c08; color: #ffe2a0; border-width: 2px; }
+      /* The shop window (ui/shop.css): the ridge bevels become ink outlines. */
+      html body #shop .s26-box { border: 0 !important; border-radius: 0 !important; box-shadow: var(--ramka3), var(--krawedz), 8px 8px 0 rgba(0,0,0,.45) !important; }
+      html body #shop .s26-box:before, html body #shop .s26-box:after { border-radius: 0; }
+      html body #shop .s26-tab, html body #shop .s26-banner, html body #shop .s26-backpack, html body #shop .s26-category, html body #shop .s26-stock-card,
+      html body #shop .s26-cell, html body #shop .s26-bag-cell, html body #shop .s26-right, html body #shop .s26-bubble {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; }
+      html body #shop .s26-cell, html body #shop .s26-bag-cell { box-shadow: inset 2px 2px 0 rgba(255,214,140,.13), inset -2px -2px 0 rgba(0,0,0,.45), 2px 2px 0 rgba(0,0,0,.4) !important; }
+      html body #shop .s26-action, html body #shop .s26-exit { border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #c9953f !important; box-shadow: var(--mosiadz) !important; }
+      html body #shop .s26-exit { background: #4f7f72 !important; color: #e8f4ee !important; box-shadow: var(--patyna) !important; }
+      html body #shop .s26-right:before { border-radius: 0; }
+      /* The boiler HUD's plates (production HUD; the telescope keeps the artist's round brass). */
+      html body:not(.hud-teleskop) #hud .hud-plate, html body:not(.hud-teleskop) #hud .hud-money, html body:not(.hud-teleskop) #hud .hud-quest, html body #hud .hud-pick {
+        border: 0 !important; border-radius: 0 !important; box-shadow: var(--ramka2), inset 0 2px 0 rgba(255,214,140,.15), inset 0 -2px 0 rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,.45) !important; }
+      /* Turn-fight bars and buttons. */
+      html body #walka-panel .wn-pas, html body #walka-panel .wp-skrzynia, html body #walka-panel .wp-b, html body #walka-panel .wp-koniec,
+      html body #walka-panel .wn-koniec, html body #walka-panel .wn-ucieczka {
+        border-radius: 0 !important; border-color: var(--ink) !important; box-shadow: inset 0 2px 0 rgba(255,214,140,.15), inset 0 -2px 0 rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,.45) !important; }
     </style>
   </head>
   <body>
