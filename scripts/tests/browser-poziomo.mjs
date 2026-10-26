@@ -6,7 +6,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const b = await chromium.launch({ args: ['--no-sandbox'] });
-const ctx = await b.newContext({ viewport: { width: 932, height: 430 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+for (const [W, H] of [[932, 430], [844, 390], [740, 360]]) {
+const ctx = await b.newContext({ viewport: { width: W, height: H }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
 await ctx.route('**/*.supabase.co/**', (r) => {
   const n = new URL(r.request().url()).pathname.split('/').pop();
   let body = null;
@@ -21,19 +22,30 @@ const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 await p.goto('http://127.0.0.1:4174/?ostrosc=1#postac=Jam&kod=ANGELIKA');
 await p.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
 await p.waitForTimeout(5000);
-await p.screenshot({ path: 'work/poziomo-gra.png' });
+await p.screenshot({ path: `work/poziomo-gra-${W}.png` });
+await p.evaluate(() => { window.__session.namioty.push({ max: 20, left: 20 }); window.__gear.bag.push({ item: 'zelazny' }); });
 await p.evaluate(() => window.__game.scene.getScene('ui').openCharacter('eq'));
 await p.waitForTimeout(1200);
 // close the first-visit spotlight if any
 await p.evaluate(() => document.getElementById('samouczek')?.dispatchEvent(new PointerEvent('pointerdown', { clientX: 5, clientY: 5, bubbles: true })));
 await p.waitForTimeout(300);
-await p.screenshot({ path: 'work/poziomo-kufer-stat.png' });
+await p.screenshot({ path: `work/poziomo-kufer-stat-${W}.png` });
 await p.evaluate(() => [...document.querySelectorAll('#character .k-tab')].find((t) => t.textContent.includes('Postać'))?.click());
 await p.waitForTimeout(800);
-await p.screenshot({ path: 'work/poziomo-kufer.png' });
+const kom = p.locator('#character .sl-bag .sl-cell').first();
+const bb = await kom.boundingBox();
+await p.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2);
+await p.waitForTimeout(500);
+await p.screenshot({ path: `work/poziomo-kufer-${W}.png` });
+const przewijanie = await p.evaluate(() => { const b = document.querySelector('#character .k-body'); return b.scrollHeight - b.clientHeight; });
+console.log(W, H, 'przewijanie', przewijanie);
+assert(przewijanie <= 2, `the equipment page scrolls at ${W}x${H}`);
 const man = await p.evaluate(async () => (await fetch('manifest.webmanifest')).ok);
 const uklad = await p.evaluate(() => { const l = document.querySelector('#character .k-lewa').getBoundingClientRect(); const r = document.querySelector('#character .k-prawa').getBoundingClientRect(); return { obok: r.left >= l.right - 1, kod: document.querySelector('#character .k-kod-code')?.textContent }; });
 console.log(uklad);
 assert(uklad.obok, 'backpack beside the hero'); assert(man, 'manifest');
-console.log({ errs, man }); assert.deepEqual(errs, []); console.log('OK');
+console.log({ errs, man }); assert.deepEqual(errs, []);
+await ctx.close();
+}
+console.log('OK');
 await b.close();

@@ -394,19 +394,24 @@ function show(host: CharacterHost) {
     const bag = el('div', 'sl-grid sl-bag');
     for (let i = 0; i < PLECAK.miejsc; i++) bag.append(slotCell(gear.bag[i] ?? null, { zone: 'bag', i }));
     lewa.append(doll, tal);
-    prawa.append(el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`), bag, actions);
+    const glowkaPlecaka = el('div', 'k-bag-head');
+    glowkaPlecaka.append(el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`));
+    prawa.append(glowkaPlecaka, bag, actions);
     wrap.append(lewa, prawa);
-    s.append(wrap, el('div', 'c-note', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
+    s.append(wrap, el('div', 'c-note k-podpowiedz', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
     // Gear you use rather than wear (owner, 18 Oct 2026: moved here from Statystyki).
+    // The own tent: a small button by the backpack's label (owner, 26 Oct 2026: the page mustn't scroll); when it
+    // can't go up here, a tap says why on the item card.
     if (session.namioty.length && tent) {
-      const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
-      tb.disabled = !tent.ok;
+      const tb = el('button', `c-btn k-namiot${tent.ok ? '' : ' c-muted'}`, '⛺ Śpij w namiocie') as HTMLButtonElement;
+      tb.type = 'button';
+      tb.title = 'Rozbij namiot i śpij (zapis)';
       tb.onclick = () => {
+        if (!tent.ok) return ask(tent.why || 'Tu nie rozbijesz namiotu.', []);
         closeCharacter();
         tent.pitch();
       };
-      s.append(tb);
-      if (!tent.ok && tent.why) s.append(el('div', 'c-note', tent.why));
+      glowkaPlecaka.append(tb);
     }
 
     dispose?.();
