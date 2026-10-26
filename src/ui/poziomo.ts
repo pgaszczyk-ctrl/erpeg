@@ -94,7 +94,7 @@ export function wymusPoziom(game: Phaser.Game) {
     el.id = 'obroc-telefon';
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-label', 'Obróć telefon poziomo');
-    el.innerHTML = '<div class="tablica"><i class="nit n1"></i><i class="nit n2"></i><i class="nit n3"></i><i class="nit n4"></i><div class="tel"></div><div class="tytul">Obróć telefon poziomo</div><small>Trzymaj go oburącz jak pada do konsoli: lewy kciuk chodzi, prawy walczy.</small></div>';
+    el.innerHTML = '<div class="tablica"><i class="nit n1"></i><i class="nit n2"></i><i class="nit n3"></i><i class="nit n4"></i><div class="tel"></div><div class="tytul">Przekręć urządzenie na bok</div><small>Mapa rozkłada się szeroko, jak na stole kartografa. Lewy kciuk prowadzi bohatera, prawy dzierży oręż.</small></div>';
     document.body.append(el);
     window.addEventListener('resize', sprawdz);
     window.addEventListener('orientationchange', () => setTimeout(sprawdz, 150));
