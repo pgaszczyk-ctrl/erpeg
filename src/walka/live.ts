@@ -43,7 +43,9 @@ export const SKROT = (() => {
   } catch {
     /* no URL */
   }
-  return 0.8;
+  // Owner, 26 Oct 2026: „zmień z powrotem kamerę, poprzednia była lepsza” – straight from above again;
+  // `?skrot=0.8` still shows the tilted try.
+  return 1;
 })();
 
 /** The vertical squash for the game camera now (1 when the package is off). */

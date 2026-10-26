@@ -11,6 +11,7 @@ import { POKRETLA } from '../content/ustawienia';
 import { etapyEditor } from './etapyEditor';
 import { lamiglowkaDnia, rodzajDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, type Lamiglowka } from '../lamiglowki';
 import { LAMIGLOWKA } from '../content/gazeta';
+import { STWORY, lupOpcje, type WierszLupu } from '../content/stwory';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -123,7 +124,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -149,6 +150,7 @@ function render() {
   else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
   else if (tab === 'puzzles') void puzzlesTab(main);
+  else if (tab === 'stwory') void stworyTab(main);
   else settings(main);
 }
 
@@ -993,6 +995,82 @@ async function portyTab(main: HTMLElement) {
         el('td', {}, [el('small', {}, [`${l.a_nazwa} (${llText(l.a_lat, l.a_lon)}) ↔ ${l.b_nazwa} (${llText(l.b_lat, l.b_lon)})`])])]);
     })),
   ])]));
+}
+
+/**
+ * Creatures: EXP and loot per kind (owner, 26 Oct 2026). Every loot row is rolled on its own: item, amount, chance %.
+ * Table `stwory_lup` (docs/sql/stwory-lup.sql); the game reads it at the start (content/stwory.ts), new-fight test only.
+ */
+async function stworyTab(main: HTMLElement) {
+  type U = { exp: number | null; lup: WierszLupu[] };
+  main.append(el('h2', {}, ['🐺 Stworki – łup i EXP']), el('p', { className: 'muted' }, [
+    'Każdy wiersz łupu losowany osobno: „Złoto 2 – 50 %” i „Złoto 1 – 30 %” razem dają 0, 1, 2 albo 3 złota. Szansa w procentach, można ułamki (0,05 = raz na 2000). ',
+    'Puste EXP = domyślne z gry. Bez wierszy łupu stworek daje to, co dawał dotąd. Działa w nowej walce (serwer testowy) od następnego wejścia gracza do gry.',
+  ]));
+  const box = el('div');
+  main.append(box);
+  let dane: Record<string, U>;
+  try {
+    dane = (await call<{ stwory: Record<string, U> }>('admin_stwory', {})).stwory ?? {};
+  } catch (e) {
+    box.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`]));
+    return;
+  }
+  const opcje = lupOpcje();
+  const grupy = [...new Set(opcje.map((o) => o.grupa))];
+  const wybor = (co: string) => {
+    const sel = el('select', { style: 'min-width: 190px' });
+    for (const g of grupy) {
+      const og = el('optgroup', { label: g });
+      for (const o of opcje.filter((q) => q.grupa === g)) og.append(el('option', { value: o.id, selected: o.id === co }, [o.nazwa]));
+      sel.append(og);
+    }
+    return sel;
+  };
+  for (const st of STWORY) {
+    const u: U = dane[st.id] ?? { exp: null, lup: [] };
+    const exp = el('input', { type: 'number', min: '0', max: '100000', step: '1', value: u.exp === null ? '' : String(u.exp), placeholder: String(st.exp), style: 'width: 90px' });
+    const wiersze = el('div');
+    const msg = el('small', { className: 'muted' }, [u.lup.length || u.exp !== null ? 'ustawione' : 'domyślne z gry']);
+    const dodaj = (w: WierszLupu) => {
+      const sel = wybor(w.co);
+      const ile = el('input', { type: 'number', min: '1', max: '100000', step: '1', value: String(w.ile), style: 'width: 70px', title: 'Ilość' });
+      const szansa = el('input', { type: 'number', min: '0', max: '100', step: 'any', value: String(w.szansa), style: 'width: 80px', title: 'Szansa %' });
+      const row = el('div', { className: 'lup-wiersz', style: 'display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 3px 0' }, [
+        sel, el('span', {}, ['×']), ile, el('span', {}, ['szansa']), szansa, el('span', {}, ['%']),
+      ]);
+      row.append(btn('🗑', () => row.remove()));
+      (row as HTMLElement & { odczyt?: () => WierszLupu }).odczyt = () => ({ co: sel.value, ile: Number(ile.value), szansa: Number(String(szansa.value).replace(',', '.')) });
+      wiersze.append(row);
+    };
+    u.lup.forEach(dodaj);
+    const zapisz = async () => {
+      const lup = [...wiersze.children].map((r) => (r as HTMLElement & { odczyt: () => WierszLupu }).odczyt());
+      const zle = lup.find((w) => !(w.ile >= 1 && w.ile <= 100000) || !(w.szansa >= 0 && w.szansa <= 100));
+      if (zle) return void ((msg.className = 'msg bad'), (msg.textContent = 'Ilość od 1, szansa od 0 do 100 %.'));
+      const e = exp.value.trim() === '' ? null : Math.round(Number(exp.value));
+      try {
+        await call('admin_stwory_zapisz', { p_rodzaj: st.id, p_exp: e, p_lup: lup });
+        msg.className = 'msg ok';
+        msg.textContent = 'Zapisane.';
+      } catch (err) {
+        msg.className = 'msg bad';
+        msg.textContent = (err as Error).message;
+      }
+    };
+    box.append(el('div', { className: 'card', style: 'max-width: 720px' }, [
+      el('h3', { style: 'margin: 0 0 4px' }, [st.nazwa, el('small', { className: 'muted' }, [`  (${st.id})`])]),
+      el('p', { className: 'muted', style: 'margin: 0 0 8px' }, [st.gdzie]),
+      el('label', { style: 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px' }, [el('span', {}, ['EXP za pokonanie']), exp, el('small', { className: 'muted' }, [`domyślnie ${st.exp}`])]),
+      el('b', {}, ['Łup']),
+      wiersze,
+      el('div', { style: 'display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap' }, [
+        btn('＋ Dodaj przedmiot', () => dodaj({ co: 'zloto', ile: 1, szansa: 50 })),
+        btn('Zapisz', () => void zapisz(), 'b p'),
+        msg,
+      ]),
+    ]));
+  }
 }
 
 function settings(main: HTMLElement) {

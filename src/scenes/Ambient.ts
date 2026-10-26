@@ -533,9 +533,11 @@ export class StreetEnemies {
       const spots: StreetSpawn[] = [];
       for (let t = 0; spots.length < want && t < want * 40; t++) {
         const a = r() * Math.PI * 2;
-        const d = Math.sqrt(r()) * g.r * 0.7;
+        const d = (0.2 + 0.65 * Math.sqrt(r())) * g.r;
         const x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
         if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+        // Spread out (owner 26 Oct 2026: „bardziej rozproszone”), not in one heap.
+        if (t < want * 30 && spots.some((q) => Math.hypot(q.x - x, q.y - y) < 10)) continue;
         spots.push({ x, y, kind });
       }
       g.spots = spots;

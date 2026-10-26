@@ -984,8 +984,24 @@ export const GOODS_TEX = {
   // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
   chrust: 'item-chrust',
   // From dragons (content/smoki.ts): a code-drawn scale until the artist's icon.
-  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza',
+  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza', kiel: 'goods-kiel',
 } as const;
+
+/** A wolf fang (placeholder): a curved ivory tooth with the outline. */
+function drawFang(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, 'goods-kiel', 8, 8);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.moveTo(1, 1); ctx.quadraticCurveTo(7, 1, 6, 8); ctx.quadraticCurveTo(4, 4, 1, 3.5);
+  ctx.fill();
+  ctx.fillStyle = '#efe4c4';
+  ctx.beginPath();
+  ctx.moveTo(1.8, 1.9); ctx.quadraticCurveTo(6, 2, 5.5, 6.3); ctx.quadraticCurveTo(3.8, 3.8, 1.8, 2.8);
+  ctx.fill();
+  px(ctx, 2, 2, 2, 1, '#fffaf0');
+  px(ctx, 5, 4, 1, 1, '#b8a678');
+  tex.refresh();
+}
 
 /** A dragon scale (placeholder): a green-gold teardrop with a light edge. */
 function drawScale(scene: Phaser.Scene) {
@@ -1464,6 +1480,7 @@ export function createArt(scene: Phaser.Scene) {
   drawForestItems(scene);
   drawDragon(scene);
   drawScale(scene);
+  drawFang(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawVeg(scene);

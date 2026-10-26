@@ -81,8 +81,9 @@ import {
 import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
-import { lowiska, LOWISKA } from '../content/lowiska';
-import { WilkAI, type WilkHost } from '../objects/WilkAI';
+import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
+import { StworAI, type StworHost } from '../objects/StworAI';
+import { stwory, losujLup } from '../content/stwory';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -440,7 +441,10 @@ export class GameScene extends Phaser.Scene {
   private spotkania: Spotkania | null = null;
   /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
   private lowiska: Lowiska | null = null;
-  private wilki = new Map<Enemy, WilkAI>();
+  private wilki = new Map<Enemy, StworAI>();
+  /** Boss's stomp: the hero walks slower until then (one at a time, never stacked). */
+  private spowolnienieDo = 0;
+  private spowolnienie = 1;
   /** Seconds of ACTIVE simulation (never advances while paused/hidden/in a dialog): the łowiska respawn clock. */
   private lowiskaCzasS = 0;
   /** Shared limiter for simultaneous wolf attack sequences (brief: max 2 melee + 1 ranged around the hero). */
@@ -819,6 +823,8 @@ export class GameScene extends Phaser.Scene {
     // Łowiska test pilot (?lowiska=1): isolated from everything above – its own class, never tury().
     this.wilki.forEach((ai) => ai.destroy());
     this.wilki.clear();
+    this.atakiWrecz = this.atakiDystans = 0;
+    this.spowolnienieDo = 0;
     this.lowiska?.destroy();
     this.lowiska = lowiska()
       ? new Lowiska(
@@ -1076,6 +1082,7 @@ export class GameScene extends Phaser.Scene {
       // Picking a vegetable on the way: a short stop-and-go.
       if (now < this.cropSlowUntil) this.player.vel.scale(WARZYWA.zwolnienie);
       if (this.stany.zatrucie) this.player.vel.scale(ATAKI_SMOKA.dym.spowolnienie); // a dragon's poison slows the walk
+      if (now < this.spowolnienieDo) this.player.vel.scale(this.spowolnienie); // the boss's stomp (StworAI)
     }
     const bx = this.player.x;
     const by = this.player.y;
@@ -1194,10 +1201,15 @@ export class GameScene extends Phaser.Scene {
       if (s.kindId === 'smok' && !this.dragons.has(s)) this.dragonFight(s);
       const dragon = this.dragons.get(s);
       // Łowiska wolves (test pilot): their own telegraph→charge→rest cycle, never the generic touch damage below.
-      if (s.lowisko && (s.kindId === 'wilk' || s.kindId === 'warg') && !this.wilki.has(s)) this.wilki.set(s, new WilkAI(this.wilkHost(), s, s.lowiskoHome!, s.kindId === 'warg'));
+      // New fight (walka/live.ts) and the łowiska: every creature fights readably – telegraph → attack → rest
+      // (objects/StworAI.ts), never by touching the hero.
+      if ((live() || s.lowisko) && !this.wilki.has(s) && s.kindId !== 'smok' && !s.duel && !s.brain && !this.demoRun?.isDragon(s)) {
+        const home = s.lowiskoHome ?? (s.leash ? { x: s.leash.x, y: s.leash.y, r: Math.max(s.leash.r, 40 * PX_PER_M) } : { x: s.home.x, y: s.home.y, r: 90 * PX_PER_M });
+        this.wilki.set(s, new StworAI(this.wilkHost(), s, home, profilStwora(s.kindId, s.kind.damage * (s.power ?? 1))));
+      }
       const wilk = this.wilki.get(s);
       if (dragon) dragon.update(now, dt);
-      else if (wilk) wilk.update(now);
+      else if (wilk) wilk.update(now, dt);
       else if (s.brain) s.brain(now);
       else s.think(target, now);
       this.moveActor(s, dt);
@@ -2062,10 +2074,10 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ Łowiska test pilot (wolf packs)
 
   /** Wspólny limit równoczesnych sekwencji ataku wokół bohatera (brief: 2 wręcz + 1 dystans). */
-  private rezerwujAtak(typ: 'wrecz' | 'dystans'): boolean {
+  private rezerwujAtak(typ: 'wrecz' | 'dystans', zawsze = false): boolean {
     const limit = LOWISKA.limitAtakow[typ];
     if (typ === 'wrecz') {
-      if (this.atakiWrecz >= limit) return false;
+      if (this.atakiWrecz >= limit && !zawsze) return false;
       this.atakiWrecz++;
       return true;
     }
@@ -2079,7 +2091,7 @@ export class GameScene extends Phaser.Scene {
     else this.atakiDystans = Math.max(0, this.atakiDystans - 1);
   }
 
-  private wilkHost(): WilkHost {
+  private wilkHost(): StworHost {
     return {
       scene: this,
       player: this.player,
@@ -2094,8 +2106,19 @@ export class GameScene extends Phaser.Scene {
         this.emitHud();
         if (this.player.isDead) this.onPlayerDeath();
       },
-      rezerwuj: () => this.rezerwujAtak('wrecz'),
-      zwolnij: () => this.zwolnijAtak('wrecz'),
+      rezerwuj: (typ, zawsze) => this.rezerwujAtak(typ, zawsze),
+      zwolnij: (typ) => this.zwolnijAtak(typ),
+      spowolnij: (mnoznik, ms) => {
+        // Never stacked (brief: at least 50 % speed, at most 2 s).
+        this.spowolnienie = Math.max(0.5, mnoznik);
+        this.spowolnienieDo = this.time.now + Math.min(2000, ms);
+      },
+      sciana: (x, y) => this.city.isBlocked(x, y) || this.landmarks.blocked(x, y),
+      inni: (me) => {
+        const out: { x: number; y: number }[] = [];
+        for (const [e] of this.wilki) if (e !== me && !e.isDead && Math.abs(e.x - me.x) < 30 && Math.abs(e.y - me.y) < 30) out.push(e);
+        return out;
+      },
     };
   }
 
@@ -2169,9 +2192,13 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       return;
     }
-    this.dropLoot(s.x, s.y, s.kindId);
+    // New fight: loot/EXP set per creature in the admin panel (tab „🐺 Stworki”, content/stwory.ts), else the old drops.
+    const ustawione = live() ? stwory[s.kindId] : undefined;
+    const zPanelu = live() ? losujLup(s.kindId) : null;
+    if (zPanelu) this.lupZPanelu(s.x, s.y, zPanelu);
+    else this.dropLoot(s.x, s.y, s.kindId);
     this.enemies = this.enemies.filter((e) => e !== s);
-    session.exp += s.kind.exp;
+    session.exp += ustawione?.exp ?? s.kind.exp;
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
@@ -2567,6 +2594,61 @@ export class GameScene extends Phaser.Scene {
    * What a beaten enemy leaves: a coin or (sometimes) a heart. Dryads leave no
    * gold, only hearts and fruit; skeletons no hearts but 2–3 coins.
    */
+  /** Loot rolled from the admin panel's table (each row on its own): gold and goods fall on the ground, the rest goes to the bag. */
+  private lupZPanelu(x: number, y: number, lup: { co: string; ile: number }[]) {
+    const notki: string[] = [];
+    let rzut = 0;
+    const obok = () => {
+      const a = (rzut++ * 2.4) % (Math.PI * 2);
+      return { x: x + Math.cos(a) * (6 + rzut * 2), y: y + Math.sin(a) * (4 + rzut) };
+    };
+    for (const { co, ile } of lup) {
+      if (co === 'zloto') {
+        const n = luckyCoins(ile);
+        const kupki = Math.min(5, n);
+        let left = n;
+        for (let i = 0; i < kupki; i++) {
+          const k = i === kupki - 1 ? left : Math.max(1, Math.round(left / (kupki - i)));
+          left -= k;
+          const at = obok();
+          this.dropPickup(at.x, at.y, false, k);
+        }
+      } else if (co === 'diament') {
+        session.diamenty += ile;
+        notki.push(`💎 ${ile}`);
+      } else if (co === 'mikstura') {
+        session.mikstury += ile;
+        notki.push(`🧪 ${ile}`);
+      } else if (co === 'serce') {
+        for (let i = 0; i < Math.min(ile, 6); i++) {
+          const at = obok();
+          this.dropPickup(at.x, at.y, true);
+        }
+      } else if (co in OWOCE) {
+        const f = co as Owoc;
+        for (let i = 0; i < ile; i++) {
+          if (i < 8) this.dropFruit(x, y, f);
+          else if (!addFruit(f)) break;
+        }
+      } else if (co in AMUNICJA) {
+        addAmmo(co as Amunicja, ile);
+        notki.push(`${AMUNICJA[co as Amunicja].ikona} +${ile}`);
+      } else {
+        const it = PRZEDMIOTY.find((p) => p.id === co);
+        if (!it) continue;
+        for (let i = 0; i < ile; i++) {
+          if (!addItem(co)) {
+            notki.push(`${it.nazwa} (plecak pełny!)`);
+            break;
+          }
+          if (i === 0) notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
+        }
+      }
+    }
+    if (notki.length) this.toast(`Łup: ${notki.join(', ')}`, 2800);
+    this.gearChanged();
+  }
+
   private dropLoot(x: number, y: number, kind: RodzajWroga = 'glut') {
     if (kind === 'herszt' || kind === 'wielki_herszt' || kind === 'koziol') return this.dropBossLoot(x, y);
     if (kind === 'driada') {
