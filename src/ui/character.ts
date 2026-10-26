@@ -3,7 +3,7 @@ import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../conten
 
 /** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
 const openGroups = new Set<Grupa>();
-import { slotCell, slotDrag, slotLabel } from './slots';
+import { slotCell, slotDrag, slotLabel, slotIcon } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
@@ -287,10 +287,12 @@ function show(host: CharacterHost) {
     historyEntry = false;
   }
 
-  // The card of the thing tapped (cream paper), always the same height so nothing jumps.
+  // The card of the thing tapped (cream paper), always the same height so nothing jumps. The title can be plain
+  // text or a built-up card (itemCard: icon + name, then stat rows, then the description) – owner, 26 Oct 2026:
+  // one packed sentence ("Nazwa · umiejętność: opis Atak +N (założone: ...). Wytrzymałość: ...") was unreadable.
   const actions = el('div', 'c-actions k-card');
-  const ask = (title: string, choices: [string, () => boolean | void][]) => {
-    actions.replaceChildren(el('div', 'c-actions-title', title));
+  const ask = (title: string | Node, choices: [string, () => boolean | void][]) => {
+    actions.replaceChildren(typeof title === 'string' ? el('div', 'c-actions-title', title) : title);
     for (const [label, fn] of choices) {
       const b = el('button', 'c-btn', label) as HTMLButtonElement;
       b.onclick = () => {
@@ -307,15 +309,6 @@ function show(host: CharacterHost) {
   };
   const alertFull = () => {
     actions.replaceChildren(el('div', 'c-actions-title', 'Plecak pełny – najpierw coś wyrzuć.'));
-  };
-  const rows = (list: [string, string][]) => {
-    const out = el('div', 'c-statlist');
-    for (const [k, v] of list) {
-      const row = el('div', 'c-stat');
-      row.append(el('span', 'c-stat-k', k), el('span', 'c-stat-v', v));
-      out.append(row);
-    }
-    return out;
   };
   const section = (title: string, id?: string) => {
     const s = el('section', 'k-well');
@@ -444,11 +437,8 @@ function show(host: CharacterHost) {
         if (at.zone === 'eq') {
           const it = item(gear.equip[at.m]);
           if (!it) return ask(TALIZMANY.includes(at.m) ? 'Miejsce na talizman: przeciągnij tu talizman z plecaka, wtedy działa.' : `${MIEJSCA[at.m]}: pusto.`, []);
-          const imb = imbueOf(it.id);
-          const k = skillOfItem(it.id);
-          const info = `${it.nazwa}${k ? ` · ${UMIEJETNOSCI[k].nazwa.toLowerCase()} poz. ${skillLevel(k)}` : ''}${it.opis ? `: ${it.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}${statText(it.id)}${wearText(it.id)}`;
-          if (it.id === 'kijek') return ask(info, []);
-          return ask(info, [['Zdejmij do plecaka', () => (unequip(at.m) ? undefined : (alertFull(), false))]]);
+          if (it.id === 'kijek') return ask(itemCard(it.id), []);
+          return ask(itemCard(it.id), [['Zdejmij do plecaka', () => (unequip(at.m) ? undefined : (alertFull(), false))]]);
         }
         if (at.zone !== 'bag') return;
         const i = at.i;
@@ -456,7 +446,7 @@ function show(host: CharacterHost) {
         if (!sl) return;
         if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
-        ask(slotLabel(sl) + statText(sl.item) + wearText(sl.item), item(sl.item)?.pojazd || item(sl.item)?.leczenie
+        ask(itemCard(sl.item), item(sl.item)?.pojazd || item(sl.item)?.leczenie
           ? [['Wyrzuć', () => dropFromBag(i)]]
           : [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },
@@ -734,33 +724,73 @@ function pokazKodRaz(render: () => void) {
   }, 350);
 }
 
+/** A label/value list, one stat per row (the shop's item card uses the same pattern: `dl.s26-stats`). */
+function rows(list: [string, string][]) {
+  const out = el('div', 'c-statlist');
+  for (const [k, v] of list) {
+    const row = el('div', 'c-stat');
+    row.append(el('span', 'c-stat-k', k), el('span', 'c-stat-v', v));
+    out.append(row);
+  }
+  return out;
+}
+
 /**
- * " Atak +7 (w ręce: +4, ▲ +3)." – what the item adds, so two swords can be told apart (owner, 6 Oct 2026),
- * compared with what is worn in that place now.
+ * "Atak" +7, compared with what is worn in that place now – its own row, so two swords can be told apart
+ * (owner, 6 Oct 2026) without reading one packed sentence (owner, 26 Oct 2026: "bardzo nieczytelne").
  */
-function statText(id: string) {
+function statRows(id: string): [string, string][] {
   const it = item(id);
-  if (!it || !it.moc || it.miejsce === 'talizman' || it.miejsce === 'amulet') return '';
+  if (!it || !it.moc || it.miejsce === 'talizman' || it.miejsce === 'amulet') return [];
   const what = it.miejsce === 'bron'
     ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj ? 'Atak strzałem' : it.narzedzie ? 'Atak (narzędzie)' : 'Atak')
     : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Obrona') : 'Obrona';
-  let out = ` ${what} +${it.moc}`;
+  const out: [string, string][] = [[what, `+${it.moc}`]];
   const worn = item(gear.equip[it.miejsce]);
   if (worn && worn.id !== id && (worn.rodzaj ?? '') === (it.rodzaj ?? '')) {
     const d = it.moc - worn.moc;
-    out += ` (założone: +${worn.moc}${d ? `, ${d > 0 ? '▲ +' : '▼ '}${d}` : ', tyle samo'})`;
+    out.push(['Masz założone', `+${worn.moc}${d ? ` (${d > 0 ? '▲ +' : '▼ '}${d})` : ', tyle samo'}`]);
   }
-  return out + '.';
+  return out;
 }
 
-/** " Wytrzymałość: 312/600." for things that wear out (worn, broken, glass). */
-function wearText(id: string) {
+/** "Wytrzymałość" 312/600 – its own row, for things that wear out (worn, broken, glass). */
+function wearRow(id: string): [string, string] | null {
   const c = condition(id);
-  if (!c) return '';
+  if (!c) return null;
   const it = item(id);
   const wears = session.level.zuzycie || it?.szklany;
-  if (!wears) return ' Na tym poziomie trudności się nie zużywa.';
-  return c.left <= 0 ? ' 🔧 Zepsuty – napraw go w sklepie (do tego czasu bije jak kijek).' : ` Wytrzymałość: ${c.left}/${c.max}${it?.szklany ? ' (potem pęknie)' : ''}.`;
+  if (!wears) return ['Wytrzymałość', 'nie zużywa się na tym poziomie'];
+  return c.left <= 0
+    ? ['Wytrzymałość', '🔧 zepsuty – napraw w sklepie (do tego czasu bije jak kijek)']
+    : ['Wytrzymałość', `${c.left} / ${c.max}${it?.szklany ? ' (potem pęknie)' : ''}`];
+}
+
+/**
+ * The item's card: icon + name up top, then every stat on its own row (attack/defence vs. what's worn, the
+ * skill it trains, durability, an imbued essence), the description last as plain text (owner, 26 Oct 2026:
+ * the old single packed sentence – name, comma, a stat +1, a value – was unreadable; this is the same
+ * icon/name/stats/description layout the HTML shop already uses for its item card).
+ */
+function itemCard(id: string) {
+  const it = item(id);
+  const card = el('div', 'c-card-body');
+  const head = el('div', 'c-card-head');
+  const icon = el('span', 'c-card-icon');
+  icon.append(slotIcon({ item: id }));
+  head.append(icon, el('div', 'c-card-name', it?.nazwa ?? id));
+  card.append(head);
+  const list = statRows(id);
+  const k = skillOfItem(id);
+  if (k) list.push([UMIEJETNOSCI[k].nazwa, `poziom ${skillLevel(k)}`]);
+  const w = wearRow(id);
+  if (w) list.push(w);
+  const imb = imbueOf(id);
+  if (imb) list.push([`${imb.e.ikona} ${imb.e.nazwa}`, `jeszcze ${imb.minutes} min`]);
+  if (list.length) card.append(rows(list));
+  if (it?.opis) card.append(el('div', 'c-card-desc', it.opis));
+  if (it?.leczenie) card.append(el('div', 'c-card-desc', `Leczy: +${it.leczenie} ${it.leczenie === 1 ? 'serce' : it.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.`));
+  return card;
 }
 
 /**

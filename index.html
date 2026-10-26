@@ -263,6 +263,24 @@
         box-shadow: inset 0 3px 0 #b07a45, inset 0 -3px 0 #4d2f15, 3px 3px 0 rgba(0,0,0,.45); padding: 10px 14px; }
       #character .k-card .c-actions-title { color: #fff1cf; text-shadow: 1px 1px 0 #2a1608; }
       #character .k-card.c-actions:empty::before { color: #f0d79c; opacity: .85; }
+      /* An item's card on the board: icon + name, then its stats each on their own row (not one packed sentence –
+         owner, 26 Oct 2026), the description last in a quieter, slightly smaller line. */
+      #character .c-card-body { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+      #character .c-card-head { display: flex; align-items: center; gap: 9px; }
+      #character .c-card-icon { flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+        font-size: 24px; background: rgba(0,0,0,.18); border: 2px solid var(--ink); }
+      #character .c-card-icon .item-ico { width: 34px; height: 34px; }
+      #character .c-card-name { font-size: 17px; font-weight: 700; color: #fff1cf; text-shadow: 1px 1px 0 #2a1608; }
+      #character .c-card-body .c-statlist { margin: 0; gap: 3px; }
+      #character .c-card-body .c-stat { border-bottom-color: rgba(42,22,8,.35); font-size: 14px; }
+      #character .c-card-desc { font-size: 13px; font-style: italic; color: #e2caa0; margin-top: 1px; }
+      @media (max-width: 960px) and (orientation: landscape) {
+        #character .c-card-icon { width: 30px; height: 30px; font-size: 19px; }
+        #character .c-card-icon .item-ico { width: 26px; height: 26px; }
+        #character .c-card-name { font-size: 14px; }
+        #character .c-card-body .c-stat { font-size: 12px; }
+        #character .c-card-desc { font-size: 11px; }
+      }
       /* „Wygląd” tab: a big daguerreotype beside the look controls. */
       #character .k-wyglad-row { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
       #character .k-dag-duzy { --sl: max(48px, min(96px, calc((100dvh - 230px) / 3))); }
