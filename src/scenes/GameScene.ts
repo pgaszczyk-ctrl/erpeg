@@ -104,6 +104,7 @@ import { PROM } from '../content/porty';
 import { cenaRejsu, krajPortu, mojeProsby, nazwaKraju, odleglosc, poprosOLinie, portKey, portMapId, portPrzy, portyBlisko, rejsyZ, trasaDo, wczytajPorty, type Port, type Rejs } from '../porty';
 import { codeLink } from '../ui/codeCard';
 import { SamouczekStartu } from './SamouczekStartu';
+import { proponowac, zaproponowano, zainstaluj } from '../instalacja';
 import { keepResume } from '../update';
 import { sesjaWygasla } from '../sesja';
 import { DemoRun } from './Demo';
@@ -959,6 +960,8 @@ export class GameScene extends Phaser.Scene {
       this.welcome();
     }
     this.startSamouczek();
+    // Characters past the tutorial get the app-icon offer after a few minutes of play (once per device).
+    if (!this.samouczek) this.time.delayedCall(5 * 60 * 1000, () => this.zaproponujIkone());
 
     this.scene.launch('ui');
     this.emitHud();
@@ -3591,9 +3594,36 @@ export class GameScene extends Phaser.Scene {
         this.samouczekCel = null;
         this.emitHud();
         this.save();
+        // Right after the tutorial: the offer of an app icon (once per device).
+        this.time.delayedCall(6000, () => this.zaproponujIkone());
       },
     });
     this.events.once('shutdown', () => this.samouczek?.usun());
+  }
+
+  /**
+   * „📲 Exp-lore na pulpicie?” (owner, 26 Oct 2026): an icon on the phone/computer that opens the game full screen like
+   * an app. Once per device, never in the demo, a fight or another window; waits a moment when the screen is busy.
+   */
+  private zaproponujIkone(proba = 0) {
+    if (demo.on || !proponowac() || !this.sys.isActive()) return;
+    if (this.scene.isPaused() || this.walka?.aktywna || document.getElementById('character') || document.getElementById('samouczek')) {
+      if (proba < 20) this.time.delayedCall(15000, () => this.zaproponujIkone(proba + 1));
+      return;
+    }
+    zaproponowano();
+    this.dialog({
+      title: '📲 Exp-lore na pulpicie?',
+      text: 'Dodaj grę jako ikonę na telefonie albo komputerze – otworzy się jednym dotknięciem, na pełnym ekranie, bez paska przeglądarki. Twoja postać będzie czekać.',
+      buttons: ['📲 Dodaj ikonę', 'Nie teraz'],
+      onChoose: (i) => {
+        if (i !== 0) return;
+        void zainstaluj().then((r) => {
+          if (r.ok) this.toast('📲 Gotowe – szukaj ikony Exp-lore na pulpicie.', 3500);
+          else if (r.jak) this.dialog({ title: '📲 Ikona Exp-lore', text: r.jak, buttons: ['OK'], onChoose: () => {} });
+        });
+      },
+    });
   }
 
   private welcome() {

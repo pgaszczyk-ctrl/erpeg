@@ -37,3 +37,20 @@ export async function zainstaluj(): Promise<{ ok: boolean; jak?: string }> {
   if (matchMedia('(pointer: coarse)').matches) return { ok: false, jak: 'Otwórz menu przeglądarki (⋮ w rogu) i wybierz „Zainstaluj aplikację” albo „Dodaj do ekranu głównego”. Ikona Exp-lore pojawi się na pulpicie telefonu.' };
   return { ok: false, jak: 'W Chrome lub Edge kliknij ikonkę instalacji na końcu paska adresu (monitor ze strzałką) albo w menu ⋮ wybierz „Zainstaluj Exp-lore”. Gra otworzy się w osobnym oknie, z ikoną na pulpicie.' };
 }
+
+const POKAZANE = 'exp-instalacja-proponowana';
+
+/**
+ * Worth offering the icon here, once per device (owner, 26 Oct 2026: „instalować przy zakładaniu konta”): not when it
+ * already runs as the app; where the browser has its own one-tap install offer, or on a phone (steps from its menu).
+ * A computer without the browser's offer is skipped – a list of menu steps there would only get in the way.
+ */
+export function proponowac(): boolean {
+  if (jakoAplikacja()) return false;
+  try { if (localStorage.getItem(POKAZANE)) return false; } catch { return false; }
+  return !!oferta || iPhone() || matchMedia('(pointer: coarse)').matches;
+}
+
+export function zaproponowano() {
+  try { localStorage.setItem(POKAZANE, String(Date.now())); } catch { /* no storage */ }
+}
