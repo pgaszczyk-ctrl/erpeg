@@ -12,7 +12,7 @@ const mobile = process.env.TELEFON === '1';
 const tag = mobile ? 'tel' : 'pc';
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox', '--enable-unsafe-swiftshader'], chromiumSandbox: false });
 try {
-  const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 860 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
+  const context = await browser.newContext({ viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 860 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
   const errors = [];
   const saves = [];
   await context.route('**/*.supabase.co/**', (route) => {
@@ -49,9 +49,14 @@ try {
   assert(Math.abs(cam.w - 1.25) < 0.01, 'sprites stretched back');
 
   // 3. New HUD + controls.
-  assert(await page.locator('#hud-live .hl-flask').isVisible(), 'life flask visible');
-  assert(await page.locator('#hud-live .hl-bar').isVisible(), 'stamina bar visible');
-  assert(await page.locator('#hud-live .hl-th').isVisible(), 'EXP thermometer visible');
+  // The production telescope HUD (portrait with the EXP reservoir) + the two tubes; no life flask any more.
+  assert(await page.locator('#hud-tel .tel-portret').isVisible(), 'telescope portrait visible');
+  assert(await page.locator('#hud-tel .tel-rura.hp').isVisible(), 'life tube visible');
+  assert(await page.locator('#hud-tel .tel-rura.st').isVisible(), 'stamina tube visible');
+  assert.equal(await page.locator('#hud-live').count(), 0, 'no life flask panel');
+  const hpTube = await page.locator('#hud-tel .tel-rura.hp i.p').evaluate((e) => e.style.height);
+  console.log('rurka życia', hpTube);
+  assert(hpTube && hpTube !== '0%', 'life tube filled');
   assert(await page.locator('#hud-ster .hs-atak').isVisible(), 'attack button visible');
   assert(await page.locator('#hud-ster .hs-spec').isVisible(), 'skill button visible');
   assert(await page.locator('#hud-ster .hs-lecz').isVisible(), 'heal button visible');
@@ -159,6 +164,27 @@ try {
   assert(domy.every((n) => n <= 3), 'hunting grounds stay away from settlements');
 
   if (mobile) {
+    // Upright phone: the game sleeps under the „turn your phone” card; landscape again: it runs.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(800);
+    const karta = await page.locator('#obroc-telefon.on').isVisible();
+    const spi = await g(() => !window.__game.loop.running);
+    await page.screenshot({ path: `work/live-${tag}-obroc.png` });
+    console.log('pionowo: karta', karta, 'pętla śpi', spi);
+    assert(karta && spi, 'portrait phone: rotate card + game asleep');
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(800);
+    assert(!(await page.locator('#obroc-telefon.on').isVisible()), 'landscape: card gone');
+    assert(await g(() => window.__game.loop.running), 'landscape: game runs');
+    // The attack stick: a tap swings (attack cooldown starts).
+    const t0 = await g(() => window.__game.scene.getScene('game').player.lastAttack);
+    const box = await page.locator('#hud-ster .hs-atak').boundingBox();
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForFunction((v) => window.__game.scene.getScene('game').player.lastAttack !== v, t0, { timeout: 10000 }).catch(() => {});
+    const t1 = await g(() => window.__game.scene.getScene('game').player.lastAttack);
+    console.log('atak drążkiem', t0, '→', t1);
+    assert(t1 !== t0, 'a tap on the attack stick swings');
+    await page.screenshot({ path: `work/live-${tag}-poziomo.png` });
     // Touch: the attack button swings (tap), the joystick is fixed bottom-left.
     const joy = await g(() => { const u = window.__game.scene.getScene('ui'); return { vis: u.joyBase.visible, x: u.joyBase.x, y: u.joyBase.y }; });
     console.log('joystick', JSON.stringify(joy));

@@ -7,9 +7,9 @@ Działa **tylko na serwerze testowym** (`/test/`), nigdy w demie QR. Przełączn
 | # | Co | Gdzie w kodzie |
 |---|----|----------------|
 | 1 | Kamera „trochę w stronę izometrii”: mapa spłaszczona w pionie (`SKROT` 0,8; `?skrot=0.7` do prób), ludziki i potwory rysowane wyprostowane | `walka/live.ts`, `main.ts` (łatka `Sprite.renderWebGL`, `plaski` = nie prostuj), `GameScene.fitZoom` |
-| 2 | Sterowanie: stały joystick w lewym dolnym rogu, po prawej ATAK (przytrzymaj = celowanie / mocny cios), UMIEJĘTNOŚĆ, LECZ. Klawiatura: Spacja, Q, H, E | `controls.ts`, `ui/hudLive.ts`, `UIScene.updateTouch` |
+| 2 | Sterowanie jak w nowym exp-lore: stały joystick w lewym dolnym rogu, po prawej drążek ATAKU (dotknij = atak w najbliższego wroga, przeciągnij = celuj i puść, przytrzymaj = mocny cios), obok UMIEJĘTNOŚĆ, nad nim LECZ. Telefon tylko poziomo (jak pad): pionowo gra śpi pod kartą „Obróć telefon”, przy pierwszym dotyku pełny ekran + blokada poziomu, gdzie przeglądarka pozwala. Klawiatura: Spacja, Q, H, E | `controls.ts`, `ui/hudLive.ts`, `ui/poziomo.ts`, `UIScene.updateTouch` |
 | 3 | Walka na żywo + siły (miecz: wyczerpanie – wolniejsze ciosy, brak mocnego ataku; łuk: zmęczenie obniża celność i siłę strzału; magia: mana). Same się odnawiają, maksimum rośnie z poziomem | `content/zasoby.ts`, `GameScene.updateZasoby/zaplacMocny/specjalny`, `fireShot` |
-| 3 | HUD: u góry po lewej baniak życia, pod nim pasek sił (albo many z różdżką), pod nim termometr EXP; przyciski Kufer i aparat | `ui/hudLive.ts`, `ui/hud.ts` |
+| 3 | HUD: ten z produkcji (teleskop: portret ze zbiornikiem EXP, poziom, rozwijana kolumna Menu/Plecak/Aparat/Pojazd) + dwie rurki obok portretu: życie i siły (z różdżką mana). Bez baniaka. Rurki na razie z kodu – zamówienie u grafika 43-P001 | `ui/hudTeleskop.ts teleskopRurki/ustawRurki`, `ui/hud.ts` |
 | 3 | Umiejętność pod złotym przyciskiem zmienia się tylko w ośrodkach treningowych: sędzia stadionu i stanowiska treningowe (miecz, łuk), biblioteka (magia) | `content/umiejetnosci.ts`, `GameScene.wyborUmiejetnosci` |
 | 4 | Życie nad głową bohatera; czerwone brzegi ekranu zostają | `GameScene.rysujHpNad`, `UIScene.lowLife` |
 | 5 | Zamiast gangów tylko najsłabsze grupki po 3 (chochliki albo wilki na zieleni) w losowych miejscach, dymek ok. 3× mniejszy, bez herszta | `content/gangi.ts GRUPKA_SLABA`, `Ambient.ts StreetEnemies.slabe` |

@@ -127,6 +127,7 @@ import type { ArenaDane } from './ArenaScene';
 import type { DuchAreny } from '../api';
 import { sciezkaGry } from '../sciezka';
 import { live, skrotKamery } from '../walka/live';
+import { wymusPoziom, zwolnijPoziom } from '../ui/poziomo';
 import { ZASOBY, zasoby, wydajStamine, wydajMane, udzialStaminy, wyczerpany, regenerujZasoby, maxStaminy, maxMany } from '../content/zasoby';
 import { ustawZasobyHud } from '../ui/hudLive';
 import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
@@ -896,6 +897,11 @@ export class GameScene extends Phaser.Scene {
     cam.setBackgroundColor('#1f4d24');
     this.fitZoom();
     cam.centerOn(this.player.x, this.player.y);
+    // New controls test: phones play landscape, like a game pad (ui/poziomo.ts).
+    if (live()) {
+      wymusPoziom(this.game);
+      this.events.once('shutdown', () => zwolnijPoziom());
+    }
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
 
@@ -5436,6 +5442,14 @@ export class GameScene extends Phaser.Scene {
       if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead && this.zaplacMocny('miecz')) {
         this.faceFoe(WALKA.zasiegMiecz);
         this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
+      } else if (!strong && live() && r.mode === 'touch' && (r.dragged || r.held >= AIM_DELAY) && !this.story.busy && !this.demoRun?.busy && !this.player.isDead) {
+        // The attack stick (new controls): dragged = swing that way, held a moment = swing at the nearest enemy.
+        if (r.dragged) {
+          const d = this.dirFor(r.mode, r.dx, r.dy, true);
+          this.player.face(d.x, d.y);
+        } else this.faceFoe();
+        const hit = this.player.tryAttack(now);
+        if (hit) this.resolveAttack(hit, now);
       }
       return;
     }

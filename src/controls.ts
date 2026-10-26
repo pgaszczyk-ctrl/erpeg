@@ -43,7 +43,7 @@ export function requestHeal() {
 }
 /** The HTML attack button (ui/sterowanie.ts): pressed (a swing; holding aims a bow/wand) and let go. */
 export function pressAttack() {
-  touchInput.attack = true;
+  // The attack stick decides on release (exp-lore): a quick tap attacks, a drag aims, a long hold is the strong blow.
   touchInput.attackHeld = true;
   startHold('touch', -9);
   holdOrigin.x = 0;
@@ -57,8 +57,12 @@ export function dragAttack(dx: number, dy: number) {
 }
 export function releaseAttack() {
   touchInput.attackHeld = false;
-  if (hold.active && hold.id === -9) endHold();
+  if (!hold.active || hold.id !== -9) return;
+  if (!hold.dragged && performance.now() - hold.start < TAP_ATAK_MS) touchInput.attack = true;
+  endHold();
 }
+/** Shorter than this (and no drag) on the attack stick is a plain tap = attack (the game's AIM_DELAY). */
+const TAP_ATAK_MS = 250;
 const DBL_MS = 380;
 const DBL_PX = 36;
 let lastTap: { x: number; y: number; t: number } | null = null;
