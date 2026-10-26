@@ -117,13 +117,13 @@ function kodPostaci() {
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
+type Page = 'kufer' | 'postac' | 'wyglad' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 /** Narrow screens (the trunk's three columns would stack): each column gets a tab of its own. */
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
-    : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
+    ? [['postac', '🎒', 'Postać'], ['wyglad', '🎭', 'Wygląd'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    : [['kufer', '🧳', 'Kufer'], ['wyglad', '🎭', 'Wygląd'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
 const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
@@ -325,55 +325,8 @@ function show(host: CharacterHost) {
   };
 
   // ---------------------------------------------------------------- Kufer: Postać
-  const sectionPostac = () => {
-    const s = section('Postać', 'k-postac');
-    // Phones held sideways (owner, 26 Oct 2026): the hero on the left, the backpack on the right – one column only
-    // on tall screens. The look controls go above the hero, the item card under the backpack.
-    const lewa = el('div', 'k-lewa');
-    const prawa = el('div', 'k-prawa');
-    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
-    // the 25) until they pick „Nowy wygląd”.
-    if (BOHATER_MODUL && session.look.modul) {
-      const k = kreatorModul((l) => {
-        session.look = { ...session.look, modul: l };
-        session.productionLook = { ...session.productionLook, modul: l };
-        onChange();
-        render();
-      }, modulGracza(session.look, session.name));
-      lewa.append(k.box);
-    } else if (NOWE_POSTACIE) {
-      lewa.append(skinPicker(() => {
-        onChange();
-        render();
-      }));
-      if (BOHATER_MODUL) {
-        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
-        nowy.type = 'button';
-        nowy.onclick = () => {
-          const l = modulGracza(session.look, session.name);
-          session.look = { ...session.look, modul: l };
-          session.productionLook = { ...session.productionLook, modul: l };
-          onChange();
-          render();
-        };
-        lewa.append(nowy);
-      }
-    }
-    const wrap = el('div', 'sl-wrap k-wrap');
-    const cell = (m: Miejsce) => {
-      const id = gear.equip[m];
-      const c = slotCell(id ? { item: id } : null, { zone: 'eq', m }, TALIZMANY.includes(m) ? 'sl-tal' : '');
-      const k = skillOfItem(id);
-      if (k && (m === 'bron' || m === 'dystans')) c.append(el('span', 'k-nixbadge', String(skillLevel(k))));
-      if (id) c.classList.add('k-on');
-      return c;
-    };
-    const doll = el('div', 'k-doll');
-    const left = el('div', 'k-col');
-    for (const m of ['amulet', 'bron', 'dystans'] as Miejsce[]) left.append(cell(m));
-    const right = el('div', 'k-col');
-    for (const m of ['helm', 'zbroja', 'buty'] as Miejsce[]) right.append(cell(m));
-    // The hero as a sepia daguerreotype in an arched brass frame.
+  /** The hero as a sepia daguerreotype in an arched brass frame (equipment page, bigger on the look page). */
+  const dagerotyp = () => {
     const frame = el('div', 'k-dag');
     const pic = el('div', 'k-dag-pic');
     if (NOWE_POSTACIE) {
@@ -388,6 +341,71 @@ function show(host: CharacterHost) {
     pic.setAttribute('role', 'img');
     pic.setAttribute('aria-label', 'Twoja postać');
     frame.append(pic);
+    return frame;
+  };
+
+  // ---------------------------------------------------------------- Wygląd (its own tab, owner 26 Oct 2026: the look
+  // controls took the equipment's room – „przesuń na bok albo na osobną kartę”).
+  const sectionWyglad = () => {
+    const s = section('Wygląd', 'k-wyglad');
+    const row = el('div', 'k-wyglad-row');
+    const ster = el('div', 'k-wyglad-ster');
+    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
+    // the 25) until they pick „Nowy wygląd”.
+    if (BOHATER_MODUL && session.look.modul) {
+      const k = kreatorModul((l) => {
+        session.look = { ...session.look, modul: l };
+        session.productionLook = { ...session.productionLook, modul: l };
+        onChange();
+        render();
+      }, modulGracza(session.look, session.name));
+      ster.append(k.box);
+    } else if (NOWE_POSTACIE) {
+      ster.append(skinPicker(() => {
+        onChange();
+        render();
+      }));
+      if (BOHATER_MODUL) {
+        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
+        nowy.type = 'button';
+        nowy.onclick = () => {
+          const l = modulGracza(session.look, session.name);
+          session.look = { ...session.look, modul: l };
+          session.productionLook = { ...session.productionLook, modul: l };
+          onChange();
+          render();
+        };
+        ster.append(nowy);
+      }
+    }
+    const obraz = dagerotyp();
+    obraz.classList.add('k-dag-duzy');
+    row.append(obraz, ster);
+    s.append(row);
+    return s;
+  };
+
+  const sectionPostac = () => {
+    const s = section('Postać', 'k-postac');
+    // Phones held sideways (owner, 26 Oct 2026): the hero on the left, the backpack on the right – one column only
+    // on tall screens. The look controls go above the hero, the item card under the backpack.
+    const lewa = el('div', 'k-lewa');
+    const prawa = el('div', 'k-prawa');
+    const wrap = el('div', 'sl-wrap k-wrap');
+    const cell = (m: Miejsce) => {
+      const id = gear.equip[m];
+      const c = slotCell(id ? { item: id } : null, { zone: 'eq', m }, TALIZMANY.includes(m) ? 'sl-tal' : '');
+      const k = skillOfItem(id);
+      if (k && (m === 'bron' || m === 'dystans')) c.append(el('span', 'k-nixbadge', String(skillLevel(k))));
+      if (id) c.classList.add('k-on');
+      return c;
+    };
+    const doll = el('div', 'k-doll');
+    const left = el('div', 'k-col');
+    for (const m of ['amulet', 'bron', 'dystans'] as Miejsce[]) left.append(cell(m));
+    const right = el('div', 'k-col');
+    for (const m of ['helm', 'zbroja', 'buty'] as Miejsce[]) right.append(cell(m));
+    const frame = dagerotyp();
     doll.append(left, frame, right);
     const tal = el('div', 'k-tal');
     for (const m of ['talizman', 'talizman2', 'talizman3'] as Miejsce[]) tal.append(cell(m));
@@ -674,6 +692,7 @@ function show(host: CharacterHost) {
       dispose?.();
       dispose = null;
       if (page === 'stan') body.append(sectionStan());
+      else if (page === 'wyglad') body.append(sectionWyglad());
       else if (page === 'zasoby') body.append(sectionZasoby());
       else if (page === 'zadania') pageZadania();
       else pageKsiega();

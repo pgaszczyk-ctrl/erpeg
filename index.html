@@ -111,6 +111,7 @@
       /* Phones held sideways (owner, 26 Oct 2026): the hero left, the backpack right. */
       @media (max-width: 960px) and (orientation: landscape) {
         #character .k-podpowiedz { display: none; }
+        #character .k-lewa { --sl: max(32px, min(64px, calc((100dvh - 205px) / 4.4))); align-content: center; align-self: stretch; }
         #character .k-top { padding-top: 6px; }
         #character .k-valve { width: 40px; height: 40px; }
         #character .k-lewa .c-skin { margin: 0; }
@@ -262,6 +263,10 @@
         box-shadow: inset 0 3px 0 #b07a45, inset 0 -3px 0 #4d2f15, 3px 3px 0 rgba(0,0,0,.45); padding: 10px 14px; }
       #character .k-card .c-actions-title { color: #fff1cf; text-shadow: 1px 1px 0 #2a1608; }
       #character .k-card.c-actions:empty::before { color: #f0d79c; opacity: .85; }
+      /* „Wygląd” tab: a big daguerreotype beside the look controls. */
+      #character .k-wyglad-row { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+      #character .k-dag-duzy { --sl: max(48px, min(96px, calc((100dvh - 230px) / 3))); }
+      #character .k-wyglad-ster { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 240px; max-width: 380px; }
       #character .k-bag-head { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
       #character .k-namiot { padding: 3px 9px; font-size: 13px; }
       @media (max-width: 640px) {
