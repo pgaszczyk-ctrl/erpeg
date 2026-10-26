@@ -2,7 +2,6 @@ import type { CityMap } from '../map/CityMap';
 import { heroPreviewUrl } from './heroPreview';
 import { api, type LoginResult } from '../api';
 import { startSession, loadContent } from '../quests';
-import { drawCity } from './minimap';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
 import { lang, tx } from '../i18n';
@@ -14,7 +13,8 @@ import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
 import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
 import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
-import { WSKRZESZENIE, DIAMENT, DIAMENT_WSPIERAJACY } from '../content/sklepy';
+import { zapamietanaPostac, zapomnijPostac } from '../pamiecPostaci';
+import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
@@ -22,7 +22,7 @@ import { sciezkaGry } from '../sciezka';
 import { kreatorModul } from './kreatorModul';
 
 // The start screen (an HTML overlay above the game): new character, load
-// character, memorial board. Resolves once a character is ready to play.
+// character. Resolves once a character is ready to play.
 
 const DEFAULT_START = 'Plac Zamkowy';
 /** Living characters per account (the server checks it too). */
@@ -102,12 +102,40 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       resolve();
     };
 
-    // The test server: only loading the test characters.
+    // The character played last on this device (a cookie: owner, 26 Oct 2026 – „temporary account”):
+    // one tap carries on. Without the code or an account it's at the player's own risk.
+    const kontynuuj = () => {
+      const z = zapamietanaPostac();
+      if (!z) return [];
+      const err = error();
+      const b: HTMLButtonElement = button(`▶ Kontynuuj: ${z.name}`, () =>
+        busy(b, err, async () => {
+          try {
+            await login(z.name, z.code, undefined, undefined, true);
+          } catch (e) {
+            if (/Nie ma takiej postaci/i.test((e as Error).message)) zapomnijPostac();
+            throw e;
+          }
+        }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary');
+      const forget = el('button', { type: 'button', className: 'm-link', onclick: () => { zapomnijPostac(); main(); } }, ['Zapomnij tę postać na tym urządzeniu']);
+      return [b, err, forget];
+    };
+
+    // „📲 Zainstaluj grę” under the start buttons (owner, 26 Oct 2026: an icon on the phone/computer like an app).
+    const instaluj = () => {
+      if (jakoAplikacja()) return [];
+      const info = el('small', { className: 'm-geo' });
+      const b = el('button', { type: 'button', className: 'm-link', onclick: () => void zainstaluj().then((r) => { info.textContent = r.ok ? '✅ Zainstalowana – szukaj ikony Exp-lore.' : r.jak ?? ''; }) }, ['📲 Zainstaluj grę jako aplikację']);
+      return [b, info];
+    };
+
+    // The test server: only loading the test characters (and the one played last on this device).
     const main = () =>
       TEST ? load() : screen(
-        button('Nowa postać', newCharacter, 'm-primary'),
+        ...kontynuuj(),
+        button('Nowa postać', newCharacter, zapamietanaPostac() ? '' : 'm-primary'),
         button('Wczytaj postać', load),
-        button('Tablica pamięci', memorial),
+        ...instaluj(),
       );
 
     const newCharacter = () => {
@@ -187,7 +215,9 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
-          showCode(r, `Witaj, ${r.player.name}!`);
+          // Straight into the game (owner, 26 Oct 2026: no code screen first – the code waits in the Kufer,
+          // the HUD portrait reminds about it, the device remembers the character).
+          await play(r);
         }), 'm-primary');
       // How the hero looks: random (a new roll with the dice button), shown next to the name.
       // A new hero also gets one of all the drawn heroes (changeable in the character sheet).
@@ -289,7 +319,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
 
     /**
      * The account's characters: the last played on top, then "new
-     * character", then the others (the dead ones as ghosts).
+     * character", then the others.
      */
     const account = async () => {
       const err = error();
@@ -312,7 +342,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         const row = (c: (typeof chars)[number], first = false) => {
           const lvl = TRUDNOSCI.find((t) => t.wiek === c.age)?.nazwa ?? '';
           const b = el('button', { type: 'button', className: `m-btn m-char${first ? ' m-primary' : ''}` }, [
-            el('b', {}, [`${c.dead ? '👻 ' : ''}${c.name}`]),
+            el('b', {}, [c.name]),
             el('small', {}, [`${c.exp} EXP${lvl ? ` · ${lvl}` : ''}${c.last_seen ? ` · grano ${formatDate(c.last_seen)}` : ''}`]),
           ]);
           b.onclick = () => busy(b, err, () => login(c.name, c.idik), tx('Wchodzisz do gry…', 'Entering the game…'));
@@ -334,8 +364,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       const err = error();
       const go: HTMLButtonElement = button('Mam kod – graj', () => busy(go, err, async () => {
         remember(r.player.name, r.player.idik, box.querySelector<HTMLFormElement>('.m-remember'));
-        if (r.player.dead) dead(r);
-        else await play(r);
+        await play(r.player.dead ? await api.szpitalPowrot(r.player.name, r.player.idik) : r);
       }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary');
       screen(
         el('h2', {}, [title]),
@@ -346,15 +375,15 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       );
     };
 
-    const login = async (name: string, code: string, password?: string, form?: HTMLFormElement) => {
-      if (TEST && !TEST_POSTACIE.some((n) => n.toLowerCase() === name.toLowerCase())) {
+    const login = async (name: string, code: string, password?: string, form?: HTMLFormElement, zUrzadzenia = false) => {
+      if (TEST && !zUrzadzenia && !TEST_POSTACIE.some((n) => n.toLowerCase() === name.toLowerCase())) {
         throw new Error('Na serwerze testowym grają tylko postacie testowe.');
       }
       const r = await api.login(name, code.replace(/[^0-9a-z]/gi, ''), password);
       if (r.new_code) return showCode(r, 'Nowy kod postaci');
       remember(r.player.name, r.player.idik, form);
-      if (r.player.dead) dead(r);
-      else await play(r);
+      // Death isn't final any more (owner, 26 Oct 2026): a character that died in the old game wakes up in hospital.
+      await play(r.player.dead ? await api.szpitalPowrot(r.player.name, r.player.idik) : r);
     };
 
     const load = (prefill?: { name: string; code: string }, prefillError?: string) => {
@@ -394,70 +423,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           await signInThen(gErr, account);
         }), 'm-google');
       // (the test characters' names are not shown: they are only for the owner)
-      if (TEST) return screen(el('h2', {}, ['Wczytaj postać testową']), form);
+      if (TEST) return screen(...kontynuuj(), el('h2', {}, ['Wczytaj postać testową']), form);
       screen(el('h2', {}, ['Wczytaj postać']), gBtn, gErr, el('p', { className: 'm-or' }, ['albo imieniem i kodem:']), form, button('Wstecz', main));
-    };
-
-    /** A dead character: its ghost where it died, and the way back to life. */
-    const dead = (r: LoginResult) => {
-      const p = r.player;
-      const err = error();
-      const endless = !!p.infinite_resurrect;
-      const free = endless || (p.resurrections ?? 0) < 1;
-      const cost = WSKRZESZENIE.diamentow;
-      const have = Math.max(0, p.save?.diamenty ?? 0) + Math.max(0, p.save?.kamienie ?? 0) * cost;
-      // Missing diamonds can be bought with the character's coins (the server checks and takes them).
-      const miss = Math.max(0, cost - have);
-      const coins = miss * DIAMENT.monet;
-      const canBuy = miss > 0 && (p.save?.coins ?? 0) >= coins;
-      const label = endless ? '✨ Wskrześ (postać testowa – bez limitu)'
-        : free ? '✨ Wskrześ – pierwszy raz za darmo'
-        : miss === 0 ? `💎 Wskrześ za ${cost} 💎 (masz ${have})`
-        : `💎 Dokup ${miss} 💎 za ${coins.toLocaleString('pl-PL')} monet i wskrześ`;
-      const rise: HTMLButtonElement = free || miss === 0 || canBuy
-        ? button(label, () =>
-            busy(rise, err, async () => {
-              const back = await api.resurrect(p.name, p.idik);
-              await play(back);
-            }, tx('Wchodzisz do gry…', 'Entering the game…')), 'm-primary')
-        : el('button', { type: 'button', className: 'm-btn', disabled: true }, [`Brakuje ${miss} 💎`]);
-      screen(
-        el('h2', {}, [`👻 ${p.name} nie żyje`]),
-        ghostMap(city, p),
-        el('p', {}, [
-          `Postać zginęła ${formatDate(p.died_at)}${r.death_place ? ` (${r.death_place})` : ''}. `,
-          `Zdobyte doświadczenie: ${p.exp} EXP. ${endless ? 'To postać testowa – nie trafia na Tablicę Pamięci.' : 'Jej imię jest na Tablicy Pamięci.'}`,
-        ]),
-        el('p', { className: 'm-warn' }, [
-          free
-            ? 'Duch wciąż błąka się po mieście… Możesz go wskrzesić: postać wróci do punktu startowego z rzeczami i doświadczeniem z ostatniego zapisu.'
-            : `Ta postać była już raz wskrzeszona. Porażka… ale moc diamentów może ją ocalić: kolejne wskrzeszenie kosztuje ${WSKRZESZENIE.diamentow} 💎. ${DIAMENT_WSPIERAJACY}`,
-        ]),
-        err,
-        rise,
-        button('Tablica pamięci', memorial),
-        button('Wstecz', main),
-      );
-    };
-
-    const memorial = async () => {
-      const list = el('div', { className: 'm-list' }, ['Wczytuję…']);
-      screen(el('h2', {}, ['🕯 Tablica pamięci']), list, button('Wstecz', main));
-      try {
-        const rows = await api.memorial();
-        list.replaceChildren(
-          ...(rows.length
-            ? rows.map((r) =>
-                el('div', { className: 'm-row' }, [
-                  el('b', {}, [r.name]),
-                  el('span', {}, [`${r.exp} EXP`]),
-                  el('small', {}, [`${formatDate(r.died_at)}${r.death_place ? ` · ${r.death_place}` : ''}${r.resurrected ? ' · ✨ wskrzeszony' : ''}`]),
-                ]))
-            : ['Nikt jeszcze nie zginął. Jeszcze…']),
-        );
-      } catch (e) {
-        list.textContent = (e as Error).message;
-      }
     };
 
     // Opened from the QR code / shared link: load that character right away.
@@ -502,43 +469,4 @@ function rememberForm(name: string, code: string) {
   ]);
   f.onsubmit = (e) => e.preventDefault();
   return f;
-}
-
-/** A still map of where the character died, with its ghost. */
-function ghostMap(city: CityMap, p: LoginResult['player']) {
-  if (p.death_x == null || p.death_y == null) return el('div');
-  const k = PX_PER_M / (p.death_scale ?? 4);
-  const x = p.death_x * k;
-  const y = p.death_y * k;
-  const R = 110 * PX_PER_M;
-  const size = 300;
-  const canvas = el('canvas', { className: 'm-deathmap' });
-  canvas.width = canvas.height = size * Math.min(2, window.devicePixelRatio || 1);
-  const paint = () => {
-    drawCity(canvas, city, { x0: x - R, y0: y - R, x1: x + R, y1: y + R });
-    const ctx = canvas.getContext('2d')!;
-    // A soft grey mist over the place.
-    const g = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width * 0.12, canvas.width / 2, canvas.height / 2, canvas.width * 0.7);
-    g.addColorStop(0, 'rgba(30,26,36,0)');
-    g.addColorStop(1, 'rgba(30,26,36,0.75)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  };
-  // Tiled map: that part may not be loaded yet (paint again once it is).
-  if (city.ready({ x0: x - R, y0: y - R, x1: x + R, y1: y + R })) paint();
-  else city.ensure(x, y, R).then(paint, paint);
-  return el('div', { className: 'm-ghostwrap' }, [canvas, el('div', { className: 'm-ghost' }, [ghostSvg()])]);
-}
-
-function ghostSvg() {
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 40 48');
-  svg.setAttribute('width', '46');
-  svg.setAttribute('height', '55');
-  svg.innerHTML =
-    '<path d="M4 22a16 16 0 0 1 32 0v22l-5.3-4-5.4 4-5.3-4-5.3 4-5.4-4L4 44z" fill="#f4f1ff" fill-opacity="0.9" stroke="#1e1a24" stroke-width="2"/>' +
-    '<ellipse cx="14.5" cy="21" rx="3" ry="4" fill="#1e1a24"/><ellipse cx="25.5" cy="21" rx="3" ry="4" fill="#1e1a24"/>' +
-    '<ellipse cx="20" cy="31" rx="3" ry="2.2" fill="#1e1a24"/>';
-  return svg;
 }

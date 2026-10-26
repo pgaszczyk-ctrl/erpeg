@@ -1,3 +1,4 @@
+import { zapamietajPostac } from './pamiecPostaci';
 import { effectiveStage } from './content/questy/progress';
 import { sesjaWygasla, toWygasla } from './sesja';
 import { translateMission, legacyText } from './content/questy/text';
@@ -236,6 +237,7 @@ export function startSession(r: LoginResult) {
   session.name = p.name;
   session.idik = p.idik;
   session.konto = !!p.konto;
+  zapamietajPostac(p.name, p.idik);
   session.trudnoscWybrana = p.trudnosc_wybrana !== false;
   session.trudnoscDzis = !!p.trudnosc_dzis;
   session.age = p.age ?? 7;

@@ -1,6 +1,9 @@
+import { session } from '../quests';
+import { demo } from '../demo';
+import { obracajMonete, zatrzymajMonete } from './monetaPortretu';
 import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
-import { MAPA_GLADKA, lupaGladka, SAKIEWKA_GLADKA, DIAMENT_GLADKI, zamontujTeleskop, odmontujTeleskop, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, teleskopRurki, type AkcjaTeleskopu } from './hudTeleskop';
+import { MAPA_GLADKA, lupaGladka, SAKIEWKA_GLADKA, DIAMENT_GLADKI, zamontujTeleskop, odmontujTeleskop, twarzTeleskopu, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, teleskopRurki, type AkcjaTeleskopu } from './hudTeleskop';
 import { turyNaSerwerze } from '../walka/tryb';
 import { live } from '../walka/live';
 import { zamontujHudLive, odmontujHudLive, hudLiveWidoczny, ustawHudLive } from './hudLive';
@@ -435,6 +438,21 @@ export function mountHud(on: HudHandlers) {
     if (avatar) teleskopAwatar(avatar.src, avatar.sx, avatar.sy, avatar.sw, avatar.sh);
     if (live()) teleskopRurki(true);
   }
+  // The coin over the portrait while the character has no account (owner, 26 Oct 2026; ui/monetaPortretu.ts).
+  obracajMonete({
+    pokazuj: () => !!session.idik && !session.konto && !demo.on && !document.body.classList.contains('walka-tur'),
+    twarz: () => {
+      if (teleskop()) return twarzTeleskopu();
+      const r = avPic.getBoundingClientRect();
+      if (!r.width || avPic.closest('#hud')?.classList.contains('dim')) return null;
+      const k = r.width / 42;
+      const copy = document.createElement('canvas');
+      copy.width = copy.height = 32;
+      copy.getContext('2d')!.drawImage(avPic, 5, 5, 32, 32, 0, 0, 32, 32);
+      return { rect: new DOMRect(r.left + 5 * k, r.top + 5 * k, 32 * k, 32 * k), twarz: copy };
+    },
+    otworz: () => on.character(),
+  });
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -442,6 +460,7 @@ export function mountHud(on: HudHandlers) {
 }
 
 export function unmountHud() {
+  zatrzymajMonete();
   odmontujTeleskop();
   odmontujHudLive();
   window.removeEventListener('resize', layout);

@@ -21,6 +21,7 @@ import { MISJE } from '../content/fabula';
 import { TEST } from '../version';
 import { rememberTestLook } from '../testAppearance';
 import { prettyCode, shareCode, linkToAccount } from './codeCard';
+import { pokazGdzieKliknac } from './samouczek';
 
 /** Choosing which of the new heroes to be (saved with the look at the next save). */
 function skinPicker(changed: () => void) {
@@ -85,7 +86,20 @@ function kodPostaci() {
   };
   btn.onclick = () => (menu.hidden ? pokazMenu() : (menu.hidden = true));
   const tekst = el('div', 'k-kod-tekst');
-  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci'), el('span', 'k-kod-code', prettyCode(session.idik)));
+  // Hidden until tapped (owner, 26 Oct 2026): nobody reads it over the player's shoulder or from a screenshot.
+  const kod = el('button', 'k-kod-code k-kod-ukryty', '•••• ••••') as HTMLButtonElement;
+  kod.type = 'button';
+  kod.title = 'Pokaż kod';
+  kod.setAttribute('aria-label', 'Pokaż kod postaci');
+  let widac = false;
+  kod.onclick = () => {
+    widac = !widac;
+    kod.textContent = widac ? prettyCode(session.idik) : '•••• ••••';
+    kod.classList.toggle('k-kod-ukryty', !widac);
+    kod.title = widac ? 'Ukryj kod' : 'Pokaż kod';
+    kod.setAttribute('aria-label', kod.title);
+  };
+  tekst.append(el('span', 'k-kod-title', '🔑 Kod postaci · dotknij, by pokazać'), kod);
   const row = el('div', 'k-kod-row');
   row.append(tekst, btn);
   box.append(row, menu, msg);
@@ -103,13 +117,13 @@ function kodPostaci() {
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
+type Page = 'kufer' | 'postac' | 'wyglad' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 /** Narrow screens (the trunk's three columns would stack): each column gets a tab of its own. */
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
-    : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
+    ? [['postac', '🎒', 'Postać'], ['wyglad', '🎭', 'Wygląd'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    : [['kufer', '🧳', 'Kufer'], ['wyglad', '🎭', 'Wygląd'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
 const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
@@ -120,6 +134,9 @@ let page: Page = 'kufer';
 let closed: (() => void) | null = null;
 /** Our entry in the browser history (the phone's back button closes the trunk). */
 let historyEntry = false;
+/** Closes the spotlight on the code (first visit without an account). */
+let zamknijPokaz: (() => void) | null = null;
+const POKAZANY_KOD = 'exp-kod-pokazany:';
 
 export function isCharacterOpen() {
   return !!open;
@@ -132,6 +149,8 @@ const onBack = () => {
 
 export function closeCharacter() {
   if (!open) return;
+  zamknijPokaz?.();
+  zamknijPokaz = null;
   dispose?.();
   dispose = null;
   open.remove();
@@ -306,51 +325,8 @@ function show(host: CharacterHost) {
   };
 
   // ---------------------------------------------------------------- Kufer: Postać
-  const sectionPostac = () => {
-    const s = section('Postać', 'k-postac');
-    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
-    // the 25) until they pick „Nowy wygląd”.
-    if (BOHATER_MODUL && session.look.modul) {
-      const k = kreatorModul((l) => {
-        session.look = { ...session.look, modul: l };
-        session.productionLook = { ...session.productionLook, modul: l };
-        onChange();
-        render();
-      }, modulGracza(session.look, session.name));
-      s.append(k.box);
-    } else if (NOWE_POSTACIE) {
-      s.append(skinPicker(() => {
-        onChange();
-        render();
-      }));
-      if (BOHATER_MODUL) {
-        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
-        nowy.type = 'button';
-        nowy.onclick = () => {
-          const l = modulGracza(session.look, session.name);
-          session.look = { ...session.look, modul: l };
-          session.productionLook = { ...session.productionLook, modul: l };
-          onChange();
-          render();
-        };
-        s.append(nowy);
-      }
-    }
-    const wrap = el('div', 'sl-wrap k-wrap');
-    const cell = (m: Miejsce) => {
-      const id = gear.equip[m];
-      const c = slotCell(id ? { item: id } : null, { zone: 'eq', m }, TALIZMANY.includes(m) ? 'sl-tal' : '');
-      const k = skillOfItem(id);
-      if (k && (m === 'bron' || m === 'dystans')) c.append(el('span', 'k-nixbadge', String(skillLevel(k))));
-      if (id) c.classList.add('k-on');
-      return c;
-    };
-    const doll = el('div', 'k-doll');
-    const left = el('div', 'k-col');
-    for (const m of ['amulet', 'bron', 'dystans'] as Miejsce[]) left.append(cell(m));
-    const right = el('div', 'k-col');
-    for (const m of ['helm', 'zbroja', 'buty'] as Miejsce[]) right.append(cell(m));
-    // The hero as a sepia daguerreotype in an arched brass frame.
+  /** The hero as a sepia daguerreotype in an arched brass frame (equipment page, bigger on the look page). */
+  const dagerotyp = () => {
     const frame = el('div', 'k-dag');
     const pic = el('div', 'k-dag-pic');
     if (NOWE_POSTACIE) {
@@ -365,23 +341,95 @@ function show(host: CharacterHost) {
     pic.setAttribute('role', 'img');
     pic.setAttribute('aria-label', 'Twoja postać');
     frame.append(pic);
+    return frame;
+  };
+
+  // ---------------------------------------------------------------- Wygląd (its own tab, owner 26 Oct 2026: the look
+  // controls took the equipment's room – „przesuń na bok albo na osobną kartę”).
+  const sectionWyglad = () => {
+    const s = section('Wygląd', 'k-wyglad');
+    const row = el('div', 'k-wyglad-row');
+    const ster = el('div', 'k-wyglad-ster');
+    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
+    // the 25) until they pick „Nowy wygląd”.
+    if (BOHATER_MODUL && session.look.modul) {
+      const k = kreatorModul((l) => {
+        session.look = { ...session.look, modul: l };
+        session.productionLook = { ...session.productionLook, modul: l };
+        onChange();
+        render();
+      }, modulGracza(session.look, session.name));
+      ster.append(k.box);
+    } else if (NOWE_POSTACIE) {
+      ster.append(skinPicker(() => {
+        onChange();
+        render();
+      }));
+      if (BOHATER_MODUL) {
+        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
+        nowy.type = 'button';
+        nowy.onclick = () => {
+          const l = modulGracza(session.look, session.name);
+          session.look = { ...session.look, modul: l };
+          session.productionLook = { ...session.productionLook, modul: l };
+          onChange();
+          render();
+        };
+        ster.append(nowy);
+      }
+    }
+    const obraz = dagerotyp();
+    obraz.classList.add('k-dag-duzy');
+    row.append(obraz, ster);
+    s.append(row);
+    return s;
+  };
+
+  const sectionPostac = () => {
+    const s = section('Postać', 'k-postac');
+    // Phones held sideways (owner, 26 Oct 2026): the hero on the left, the backpack on the right – one column only
+    // on tall screens. The look controls go above the hero, the item card under the backpack.
+    const lewa = el('div', 'k-lewa');
+    const prawa = el('div', 'k-prawa');
+    const wrap = el('div', 'sl-wrap k-wrap');
+    const cell = (m: Miejsce) => {
+      const id = gear.equip[m];
+      const c = slotCell(id ? { item: id } : null, { zone: 'eq', m }, TALIZMANY.includes(m) ? 'sl-tal' : '');
+      const k = skillOfItem(id);
+      if (k && (m === 'bron' || m === 'dystans')) c.append(el('span', 'k-nixbadge', String(skillLevel(k))));
+      if (id) c.classList.add('k-on');
+      return c;
+    };
+    const doll = el('div', 'k-doll');
+    const left = el('div', 'k-col');
+    for (const m of ['amulet', 'bron', 'dystans'] as Miejsce[]) left.append(cell(m));
+    const right = el('div', 'k-col');
+    for (const m of ['helm', 'zbroja', 'buty'] as Miejsce[]) right.append(cell(m));
+    const frame = dagerotyp();
     doll.append(left, frame, right);
     const tal = el('div', 'k-tal');
     for (const m of ['talizman', 'talizman2', 'talizman3'] as Miejsce[]) tal.append(cell(m));
     const bag = el('div', 'sl-grid sl-bag');
     for (let i = 0; i < PLECAK.miejsc; i++) bag.append(slotCell(gear.bag[i] ?? null, { zone: 'bag', i }));
-    wrap.append(doll, tal, actions, el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`), bag);
-    s.append(wrap, el('div', 'c-note', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
+    lewa.append(doll, tal);
+    const glowkaPlecaka = el('div', 'k-bag-head');
+    glowkaPlecaka.append(el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`));
+    prawa.append(glowkaPlecaka, bag, actions);
+    wrap.append(lewa, prawa);
+    s.append(wrap, el('div', 'c-note k-podpowiedz', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
     // Gear you use rather than wear (owner, 18 Oct 2026: moved here from Statystyki).
+    // The own tent: a small button by the backpack's label (owner, 26 Oct 2026: the page mustn't scroll); when it
+    // can't go up here, a tap says why on the item card.
     if (session.namioty.length && tent) {
-      const tb = el('button', `c-btn${tent.ok ? '' : ' c-muted'}`, '⛺ Rozbij namiot i śpij (zapis)') as HTMLButtonElement;
-      tb.disabled = !tent.ok;
+      const tb = el('button', `c-btn k-namiot${tent.ok ? '' : ' c-muted'}`, '⛺ Śpij w namiocie') as HTMLButtonElement;
+      tb.type = 'button';
+      tb.title = 'Rozbij namiot i śpij (zapis)';
       tb.onclick = () => {
+        if (!tent.ok) return ask(tent.why || 'Tu nie rozbijesz namiotu.', []);
         closeCharacter();
         tent.pitch();
       };
-      s.append(tb);
-      if (!tent.ok && tent.why) s.append(el('div', 'c-note', tent.why));
+      glowkaPlecaka.append(tb);
     }
 
     dispose?.();
@@ -644,6 +692,7 @@ function show(host: CharacterHost) {
       dispose?.();
       dispose = null;
       if (page === 'stan') body.append(sectionStan());
+      else if (page === 'wyglad') body.append(sectionWyglad());
       else if (page === 'zasoby') body.append(sectionZasoby());
       else if (page === 'zadania') pageZadania();
       else pageKsiega();
@@ -655,6 +704,34 @@ function show(host: CharacterHost) {
 
   render();
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
+  pokazKodRaz(render);
+}
+
+/**
+ * Owner, 26 Oct 2026: the first time a character without an account opens the trunk, everything goes dark but the
+ * button that shows and sends the code – one may play without signing in, but must keep the code somewhere.
+ */
+function pokazKodRaz(render: () => void) {
+  if (session.konto || !session.idik || session.immortal) return;
+  const klucz = POKAZANY_KOD + session.name.toLowerCase();
+  try {
+    if (localStorage.getItem(klucz)) return;
+    localStorage.setItem(klucz, '1');
+  } catch { /* no storage: show it every time is worse than never – skip */ return; }
+  if (narrow() && page !== 'stan') {
+    page = 'stan';
+    render();
+  }
+  const btn = () => open?.querySelector<HTMLButtonElement>('.k-kod-btn') ?? null;
+  btn()?.scrollIntoView({ block: 'center' });
+  window.setTimeout(() => {
+    if (!open || !btn()) return;
+    const zamknij = pokazGdzieKliknac('#character .k-kod-btn',
+      'Grasz bez konta – zapisz sobie kod postaci! Tu go zobaczysz, wyślesz sobie albo połączysz postać z e-mailem lub Google.',
+      () => { zamknij(); zamknijPokaz = null; btn()?.click(); },
+      () => { zamknij(); zamknijPokaz = null; });
+    zamknijPokaz = zamknij;
+  }, 350);
 }
 
 /**

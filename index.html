@@ -9,6 +9,9 @@
     <title>Exp-lore</title>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Exp-lore" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Pixelify+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
@@ -103,6 +106,33 @@
       #character .c-skin-pic { display: none; }
       .k-head { color: #f0c46a; font-size: 15px; margin-top: 6px; }
       .k-wrap { --sl: min(54px, 13.5vw); gap: 10px; }
+      .k-lewa, .k-prawa { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+      .k-prawa .c-actions { width: 100%; }
+      /* Phones held sideways (owner, 26 Oct 2026): the hero left, the backpack right. */
+      @media (max-width: 960px) and (orientation: landscape) {
+        #character .k-podpowiedz { display: none; }
+        #character .k-lewa { --sl: max(32px, min(64px, calc((100dvh - 205px) / 4.4))); align-content: center; align-self: stretch; }
+        #character .k-top { padding-top: 6px; }
+        #character .k-valve { width: 40px; height: 40px; }
+        #character .k-lewa .c-skin { margin: 0; }
+        #character .k-card.c-actions { font-size: 13px; gap: 4px; }
+        #character .k-card .c-actions-title { font-size: 13px; }
+        #character .k-card .c-btn { padding: 3px 10px; font-size: 13px; }
+        #character .k-lewa { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+        #character .k-lewa > .k-doll, #character .k-lewa > .k-tal { flex-basis: 100%; }
+        #character .k-lewa > .c-skin, #character .k-lewa > .m-look { flex: 0 1 auto; width: auto; }
+        #character .k-tab { height: 40px; flex-direction: row; gap: 5px; padding: 0 10px; font-size: 13px; }
+        #character .k-body { padding-top: 8px; padding-bottom: 6px; }
+        #character #k-postac.k-well { padding: 8px 10px; }
+        #character .k-card.c-actions, #character .k-card.c-actions:empty { height: min(82px, calc(100dvh - 290px)); padding: 7px 12px; }
+        #character .k-wrap { --sl: max(24px, min(44px, 8vw, calc((100dvh - 270px) / 4))); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; column-gap: 18px; gap: 6px 18px; }
+        #character .k-lewa, #character .k-prawa { gap: 6px; }
+        #character #k-postac > .k-plate { display: none; }
+        #character .k-lewa .m-look .m-btn, #character .k-lewa .k-nowy-wyglad { padding: 4px 10px; min-height: 0; font-size: 15px; }
+        #character .k-lewa .m-ikbtn img { width: 28px; height: 28px; }
+        #character .k-lewa .m-skinrow { gap: 6px; }
+        #character .k-lewa .c-skin .c-btn { padding: 4px 12px; min-height: 0; }
+      }
       .k-doll { display: flex; align-items: center; justify-content: center; gap: 10px; }
       .k-col { display: flex; flex-direction: column; gap: 8px; }
       .k-tal { display: flex; gap: 8px; justify-content: center; }
@@ -112,6 +142,8 @@
       .k-kod-tekst { flex: 1; display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
       .k-kod-title { font-size: 11px; opacity: .75; }
       .k-kod-code { font: bold 16px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; color: #f0dfb4; user-select: all; -webkit-user-select: all; }
+      button.k-kod-code { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+      .k-kod-code.k-kod-ukryty { user-select: none; -webkit-user-select: none; letter-spacing: 3px; color: #b9a67c; }
       .k-kod-btn { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #a8742a; background: #3a2612; color: #fff; font-size: 16px; cursor: pointer; }
       .k-kod-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 8px; background: #2a1b0e; border: 1px solid #a8742a; box-shadow: 0 4px 12px rgba(0,0,0,.6); min-width: 210px; }
       .k-kod-menu[hidden] { display: none; }
@@ -189,6 +221,54 @@
       #character .sl-cell { background: radial-gradient(circle at 40% 30%, #3a2c22, #16100b); border-color: #8a6a32; }
       #character .sl-bag .sl-cell { border-color: #6b4a1f; }
       #character .sl-cell.sl-empty { border-color: #4a3a2c; }
+
+      /* Comic frames with a pixel touch (owner, 26 Oct 2026: „pozbyć się ramek, które wyglądają jak z AI”): no soft
+         rounded corners or blurred glows – a thick ink outline drawn as 4 offset shadows (so the corners step like
+         pixel art), flat fills, hard light/dark inner edges and a hard drop shadow. */
+      #character { --ink: #1e1a24; }
+      #character .k-box { border-radius: 0; box-shadow: 0 0 0 3px var(--ink), inset 0 0 0 3px #6b4a1f, 8px 8px 0 rgba(0,0,0,.45); }
+      #character .k-pipe { border-radius: 0; }
+      #character .k-well { border: 0; border-radius: 0; background: #22180f; margin: 3px;
+        box-shadow: 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink),
+          inset 0 3px 0 #3d2b1b, inset 3px 0 0 #3d2b1b, inset 0 -3px 0 #120b06, inset -3px 0 0 #120b06; }
+      #character .k-plate { border-radius: 0; border: 2px solid var(--ink); background: #d9a54c; box-shadow: inset 0 -3px 0 #a8742a, inset 0 2px 0 #f3d38a, 3px 3px 0 rgba(0,0,0,.45); }
+      #character .k-tab { border-radius: 0; border-width: 2px; border-color: var(--ink); box-shadow: inset 0 2px 0 rgba(255,230,170,.12); }
+      #character .k-tab-on { background: #e2ae55; box-shadow: inset 0 -3px 0 #a8742a, inset 0 2px 0 #f6dc9a; }
+      #character .sl-cell { border: 2px solid var(--ink); border-radius: 0; background: #2c1f14;
+        box-shadow: inset 2px 2px 0 rgba(255,214,140,.13), inset -2px -2px 0 rgba(0,0,0,.45); }
+      #character .sl-cell.sl-empty { border-style: solid; border-color: var(--ink); background: #1d140d; box-shadow: inset 2px 2px 0 rgba(0,0,0,.4); }
+      #character .sl-cell.k-on { border-color: var(--ink); box-shadow: 0 0 0 2px #e2b25a, inset 2px 2px 0 rgba(255,214,140,.2), inset -2px -2px 0 rgba(0,0,0,.45); }
+      #character .k-nixbadge { border-radius: 0; border-color: var(--ink); text-shadow: none; box-shadow: 1px 1px 0 rgba(0,0,0,.5); }
+      /* Buttons are brass (owner, 26 Oct 2026: „zamiast zieleni mosiądz albo zaśniedziały metal”); the quiet ones (Anuluj,
+         can't do it here) are verdigris-patinated metal. */
+      #character .c-btn { border: 2px solid var(--ink); border-radius: 0; background: #c9953f; color: #2a1608; text-shadow: 1px 1px 0 rgba(255,236,190,.45); font-weight: 700;
+        box-shadow: inset 0 -3px 0 #8a5f22, inset 0 2px 0 #f0cf86, inset 2px 0 0 #e0b45c, 2px 2px 0 rgba(0,0,0,.5); }
+      #character .c-btn.c-muted { background: #4f7f72; color: #e3f2e9; text-shadow: 1px 1px 0 rgba(0,0,0,.45);
+        box-shadow: inset 0 -3px 0 #2f544a, inset 0 2px 0 #7fb3a2, inset 2px 0 0 #6a9b8c, 2px 2px 0 rgba(0,0,0,.5); }
+      #character .c-btn:active { transform: translate(1px, 1px); box-shadow: inset 0 -2px 0 #8a5f22, 1px 1px 0 rgba(0,0,0,.5); }
+      #character .m-btn { border: 2px solid var(--ink); border-radius: 0; background: #c9953f; color: #2a1608; box-shadow: inset 0 -3px 0 #8a5f22, inset 0 2px 0 #f0cf86, 2px 2px 0 rgba(0,0,0,.5); }
+      #character .k-kod { border-radius: 0; border: 2px solid var(--ink); background: #2a1d13; box-shadow: inset 2px 2px 0 rgba(255,214,140,.1), 2px 2px 0 rgba(0,0,0,.4); }
+      #character .k-kod-btn { border-radius: 0; border: 2px solid var(--ink); box-shadow: inset 0 -2px 0 rgba(0,0,0,.4), 2px 2px 0 rgba(0,0,0,.4); }
+      #character .k-kod-menu, #character .k-kod-opcja { border-radius: 0; }
+      /* The item card: a wooden board – planks with dark seams, a little grain, four nails. */
+      #character .k-card.c-actions, #character .k-card.c-actions:empty { border: 3px solid var(--ink); border-radius: 0; color: #fbecc9; text-shadow: 1px 1px 0 #2a1608;
+        background:
+          radial-gradient(circle, #f0d79c 0 1px, #3a2412 1.6px, transparent 2.4px) left 4px top 4px / 7px 7px no-repeat,
+          radial-gradient(circle, #f0d79c 0 1px, #3a2412 1.6px, transparent 2.4px) right 4px top 4px / 7px 7px no-repeat,
+          radial-gradient(circle, #f0d79c 0 1px, #3a2412 1.6px, transparent 2.4px) left 4px bottom 4px / 7px 7px no-repeat,
+          radial-gradient(circle, #f0d79c 0 1px, #3a2412 1.6px, transparent 2.4px) right 4px bottom 4px / 7px 7px no-repeat,
+          repeating-linear-gradient(180deg, transparent 0 24px, #4a2c14 24px 26px, #b07a45 26px 27px),
+          repeating-linear-gradient(90deg, rgba(255,230,180,.05) 0 2px, transparent 2px 9px, rgba(40,20,8,.07) 9px 11px, transparent 11px 23px),
+          #8a5c30;
+        box-shadow: inset 0 3px 0 #b07a45, inset 0 -3px 0 #4d2f15, 3px 3px 0 rgba(0,0,0,.45); padding: 10px 14px; }
+      #character .k-card .c-actions-title { color: #fff1cf; text-shadow: 1px 1px 0 #2a1608; }
+      #character .k-card.c-actions:empty::before { color: #f0d79c; opacity: .85; }
+      /* „Wygląd” tab: a big daguerreotype beside the look controls. */
+      #character .k-wyglad-row { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+      #character .k-dag-duzy { --sl: max(48px, min(96px, calc((100dvh - 230px) / 3))); }
+      #character .k-wyglad-ster { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 240px; max-width: 380px; }
+      #character .k-bag-head { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+      #character .k-namiot { padding: 3px 9px; font-size: 13px; }
       @media (max-width: 640px) {
         #character { padding: 0; }
         .k-box { height: 100%; border-radius: 0; border-width: 4px; }
@@ -376,6 +456,63 @@
       .m-level { grid-template-columns: 1fr 96px; }
       .m-share { background: #25a55f; }
       .m-link { background: none; border: none; color: #9ac7ff; font: inherit; font-size: 14px; text-decoration: underline; padding: 0; }
+
+      /* ===== Comic frames everywhere (owner, 26 Oct 2026: „przenieś styl na pozostałe ramki”) =====
+         The Kufer's look for every other window: square corners, an ink outline drawn as 4 offset shadows (so the
+         corners step like pixel art), flat fills, hard light/dark inner edges, a hard drop shadow, no blur or glow.
+         Main buttons are brass, the others verdigris-patinated metal (no greens). `html body` wins over the styles the
+         game's modules add later. The newspaper keeps its print look; the telescope HUD keeps the artist's brass. */
+      :root { --ink: #1e1a24;
+        --ramka3: 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink);
+        --ramka2: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink);
+        --krawedz: inset 0 3px 0 #3d2b1b, inset 3px 0 0 #3d2b1b, inset 0 -3px 0 #120b06, inset -3px 0 0 #120b06;
+        --mosiadz: inset 0 -3px 0 #8a5f22, inset 0 2px 0 #f0cf86, inset 2px 0 0 #e0b45c, 3px 3px 0 rgba(0,0,0,.5);
+        --patyna: inset 0 -3px 0 #2f544a, inset 0 2px 0 #7fb3a2, inset 2px 0 0 #6a9b8c, 3px 3px 0 rgba(0,0,0,.5); }
+      html body .m-box, html body #minimap .mm-hub, html body .lm-error, html body #update-bar, html body #quit-ask > div,
+      html body #samouczek .sm-tekst, html body #samouczek-krok, html body .moneta-napis, html body .k-photo {
+        border: 0 !important; border-radius: 0 !important; background: #241a12 !important; color: #f6e6c2;
+        box-shadow: var(--ramka3), var(--krawedz), 8px 8px 0 rgba(0,0,0,.45) !important; }
+      html body #minimap .mm-hub, html body .k-photo { color: #f6e6c2; }
+      html body .m-box h2, html body .m-box h1 { color: #f0c66a; }
+      html body .m-link { color: #e9c77e; }
+      html body .m-btn, html body .lm-error button, html body #update-bar button, html body #quit-ask button, html body #minimap .mm-hub button, html body #minimap button {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #4f7f72 !important; color: #e8f4ee !important;
+        text-shadow: 1px 1px 0 rgba(0,0,0,.4); box-shadow: var(--patyna) !important; }
+      html body .m-btn.m-primary, html body #update-bar button[data-a="go"], html body #quit-ask button[data-a="stay"], html body .c-btn {
+        background: #c9953f !important; color: #2a1608 !important; font-weight: 700; text-shadow: 1px 1px 0 rgba(255,236,190,.45); box-shadow: var(--mosiadz) !important; }
+      html body .c-btn { border: 2px solid var(--ink); border-radius: 0; }
+      html body .c-btn.c-muted { background: #4f7f72 !important; color: #e8f4ee !important; text-shadow: 1px 1px 0 rgba(0,0,0,.4); box-shadow: var(--patyna) !important; }
+      html body .m-btn.m-google { background: #fff !important; color: #1f1f1f !important; text-shadow: none; box-shadow: inset 0 -3px 0 #c9c9c9, 3px 3px 0 rgba(0,0,0,.5) !important; }
+      html body .m-btn:active, html body .c-btn:active { transform: translate(1px, 1px); }
+      html body .m-btn:disabled { filter: grayscale(.6); }
+      html body .m-input, html body .m-field input, html body .m-eye, html body .ph-own, html body .m-box select, html body .ch-amount {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #120c08 !important; color: #f6e6c2;
+        box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 0 0 0 1px #6b4a1f !important; }
+      html body .m-input:focus, html body .m-field input:focus { box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 0 0 0 2px #e2b25a !important; }
+      html body .m-row, html body .m-idik, html body .m-look, html body .m-hero, html body .c-quest, html body .c-skill, html body .c-cell, html body .c-xcell,
+      html body .ch-cell, html body .sl-cell, html body .k-seal, html body .k-gold, html body .ph-chip, html body .ph-img, html body .ph-thumb img, html body .m-deathmap {
+        border-radius: 0 !important; border-color: var(--ink) !important; border-style: solid !important; }
+      html body .sl-cell { background: #2c1f14; box-shadow: inset 2px 2px 0 rgba(255,214,140,.13), inset -2px -2px 0 rgba(0,0,0,.45); }
+      html body .sl-cell.sl-empty { background: #1d140d; box-shadow: inset 2px 2px 0 rgba(0,0,0,.4); }
+      html body #minimap canvas { border: 3px solid var(--ink) !important; border-radius: 0 !important; box-shadow: 0 0 0 2px #b8893b, 6px 6px 0 rgba(0,0,0,.45); }
+      html body .m-idik { background: #120c08; color: #ffe2a0; border-width: 2px; }
+      /* The shop window (ui/shop.css): the ridge bevels become ink outlines. */
+      html body #shop .s26-box { border: 0 !important; border-radius: 0 !important; box-shadow: var(--ramka3), var(--krawedz), 8px 8px 0 rgba(0,0,0,.45) !important; }
+      html body #shop .s26-box:before, html body #shop .s26-box:after { border-radius: 0; }
+      html body #shop .s26-tab, html body #shop .s26-banner, html body #shop .s26-backpack, html body #shop .s26-category, html body #shop .s26-stock-card,
+      html body #shop .s26-cell, html body #shop .s26-bag-cell, html body #shop .s26-right, html body #shop .s26-bubble {
+        border: 2px solid var(--ink) !important; border-radius: 0 !important; }
+      html body #shop .s26-cell, html body #shop .s26-bag-cell { box-shadow: inset 2px 2px 0 rgba(255,214,140,.13), inset -2px -2px 0 rgba(0,0,0,.45), 2px 2px 0 rgba(0,0,0,.4) !important; }
+      html body #shop .s26-action, html body #shop .s26-exit { border: 2px solid var(--ink) !important; border-radius: 0 !important; background: #c9953f !important; box-shadow: var(--mosiadz) !important; }
+      html body #shop .s26-exit { background: #4f7f72 !important; color: #e8f4ee !important; box-shadow: var(--patyna) !important; }
+      html body #shop .s26-right:before { border-radius: 0; }
+      /* The boiler HUD's plates (production HUD; the telescope keeps the artist's round brass). */
+      html body:not(.hud-teleskop) #hud .hud-plate, html body:not(.hud-teleskop) #hud .hud-money, html body:not(.hud-teleskop) #hud .hud-quest, html body #hud .hud-pick {
+        border: 0 !important; border-radius: 0 !important; box-shadow: var(--ramka2), inset 0 2px 0 rgba(255,214,140,.15), inset 0 -2px 0 rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,.45) !important; }
+      /* Turn-fight bars and buttons. */
+      html body #walka-panel .wn-pas, html body #walka-panel .wp-skrzynia, html body #walka-panel .wp-b, html body #walka-panel .wp-koniec,
+      html body #walka-panel .wn-koniec, html body #walka-panel .wn-ucieczka {
+        border-radius: 0 !important; border-color: var(--ink) !important; box-shadow: inset 0 2px 0 rgba(255,214,140,.15), inset 0 -2px 0 rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,.45) !important; }
     </style>
   </head>
   <body>

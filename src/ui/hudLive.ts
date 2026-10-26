@@ -33,12 +33,16 @@ export interface LiveZasoby {
   stac: boolean;
 }
 
+/** How far the fixed joystick and the attack buttons stand in from the screen's edges (owner, 26 Oct 2026: they sat
+ * right at the edge – too far for the thumbs). */
+export const ODSTEP_OD_KRAWEDZI = 40;
+
 const CSS = `
 #hud-ster{position:fixed;inset:0;z-index:6;pointer-events:none;font-family:'Alegreya Sans',system-ui,sans-serif}
 #hud-ster.off{display:none}#hud-ster.dim{opacity:.4}#hud-ster.dim *{pointer-events:none!important}
 #hud-ster .hs{position:absolute;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   border-radius:50%;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff3ce}
-#hud-ster .hs-atak{right:calc(40px + env(safe-area-inset-right));bottom:calc(48px + env(safe-area-inset-bottom));width:100px;height:100px;
+#hud-ster .hs-atak{right:calc(${40 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(48px + env(safe-area-inset-bottom));width:100px;height:100px;
   border:2px solid #eac280;background:radial-gradient(circle at 50% 40%,rgba(217,156,62,.32),rgba(60,36,14,.45));
   box-shadow:inset 0 0 0 7px rgba(239,192,107,.22),0 4px 14px rgba(0,0,0,.35)}
 #hud-ster .hs-atak .nub{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
@@ -49,17 +53,17 @@ const CSS = `
 #hud-ster .hs-atak.on{border-color:#ffe2a0;box-shadow:inset 0 0 0 7px rgba(255,214,120,.4),0 0 18px rgba(255,190,80,.45)}
 #hud-ster small{position:absolute;left:50%;transform:translateX(-50%);bottom:-17px;font:800 10px/1 'Alegreya Sans',sans-serif;letter-spacing:1px;
   color:#fff3ce;text-shadow:0 1px 0 #000,0 0 3px #000;white-space:nowrap;pointer-events:none}
-#hud-ster .hs-spec{right:calc(154px + env(safe-area-inset-right));bottom:calc(50px + env(safe-area-inset-bottom));width:70px;height:70px;font-size:26px;
+#hud-ster .hs-spec{right:calc(${154 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(50px + env(safe-area-inset-bottom));width:70px;height:70px;font-size:26px;
   border:2px solid #f0ca87;background:radial-gradient(circle at 40% 35%,#3a5c55,#1d3833);box-shadow:0 4px 14px rgba(0,0,0,.4)}
-#hud-ster .hs-lecz{right:calc(62px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:22px;
+#hud-ster .hs-lecz{right:calc(${62 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:22px;
   border:2px solid #e8a3a0;background:radial-gradient(circle at 40% 35%,#7d2a26,#3d1210);box-shadow:0 4px 14px rgba(0,0,0,.4)}
 #hud-ster .nie{filter:grayscale(.85) brightness(.7)}
 #hud-ster .hs-n{position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:#24170b;border:1px solid #c9973f;
   font:700 11px/16px sans-serif;color:#fff;text-align:center;pointer-events:none}
 #hud-ster .hs-cd{position:absolute;inset:0;border-radius:50%;pointer-events:none;background:conic-gradient(rgba(0,0,0,.55) var(--cd,0%),transparent 0)}
 @media (max-height:420px){#hud-ster .hs-atak{bottom:calc(30px + env(safe-area-inset-bottom));width:90px;height:90px}
-  #hud-ster .hs-spec{bottom:calc(32px + env(safe-area-inset-bottom));right:calc(142px + env(safe-area-inset-right));width:62px;height:62px}
-  #hud-ster .hs-lecz{bottom:calc(140px + env(safe-area-inset-bottom));right:calc(58px + env(safe-area-inset-right));width:50px;height:50px}}
+  #hud-ster .hs-spec{bottom:calc(32px + env(safe-area-inset-bottom));right:calc(${142 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));width:62px;height:62px}
+  #hud-ster .hs-lecz{bottom:calc(140px + env(safe-area-inset-bottom));right:calc(${58 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));width:50px;height:50px}}
 @media (pointer:fine){#hud-ster .hs{transform:scale(.85);transform-origin:right bottom}}
 `;
 

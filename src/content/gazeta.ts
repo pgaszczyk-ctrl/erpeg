@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '26.10.2026', tytul: { pl: 'Porażka to nie koniec', en: 'Defeat is not the end' },
+    tresc: { pl: 'Pokonany bohater budzi się w najbliższym szpitalu. Traci złoto z plecaka i połowę postępu na bieżącym poziomie – ale żyje dalej. Nowe postacie od razu wchodzą do gry z krótkim samouczkiem, który prowadzi do gazeciarza po pierwsze zlecenie. Urządzenie pamięta twoją postać, ale kod zapisz sobie w Kufrze albo połącz postać z kontem.', en: 'A defeated hero wakes up in the nearest hospital, losing the gold in the backpack and half of the progress in the current level – but lives on. New characters go straight into the game with a short tutorial that leads to a newsboy for the first errand. Your device remembers your character, but keep the code from the Trunk or link the character to an account.' },
+  },
+  {
     data: '21.10.2026', tytul: { pl: 'Nowe ludziki', en: 'New little people' },
     tresc: { pl: 'Postacie, które składasz z głowy i ciałka, dostały nowe rysunki: krótsze, pękate nóżki i całe głowy – brody, warkocze i podbródki nie są już ucięte.', en: 'The heroes you build from a head and a body got new drawings: shorter, chubby legs and whole heads – beards, braids and chins are no longer cut off.' },
   },
@@ -313,6 +317,7 @@ export const NOWOSCI: Wiesc[] = [
 
 /** „Plany redakcji” – what we are working on (no dates promised). */
 export const PLANY: Wiesc[] = [
+  { data: 'w planach', tytul: { pl: 'Diamentowa ochrona', en: 'Diamond protection' }, tresc: { pl: 'Diamenty wrócą do gry jako ochrona: po porażce uratują złoto z plecaka i doświadczenie.', en: 'Diamonds will come back as protection: after a defeat they will save the gold in your backpack and your experience.' } },
   { data: 'wkrótce', tytul: { pl: 'Gazeciarz z prawdziwego zdarzenia', en: 'A proper newsboy' }, tresc: { pl: 'Nasz rysownik szkicuje gazeciarzy i gazeciarki z torbą pełną gazet oraz nową, papierową szatę Kuriera.', en: 'Our artist is sketching newsboys and newsgirls with bags full of papers, and the Courier’s new paper look.' } },
   { data: 'wkrótce', tytul: { pl: 'Smoki w pełnej krasie', en: 'Dragons in full glory' }, tresc: { pl: 'Leśny i trujący smok dostaną nowe, bajkowe rysunki i pełne ruchy.', en: 'The forest and poison dragons will get new fairy-tale drawings and full animations.' } },
   { data: 'w planach', tytul: { pl: 'Zabytki Lublina', en: 'Lublin’s landmarks' }, tresc: { pl: 'Nowy Ratusz, Archikatedra z Wieżą Trynitarską – rysowane jak Zamek i Brama Krakowska.', en: 'The New Town Hall, the Cathedral and the Trinitarian Tower – drawn like the Castle and the Kraków Gate.' } },

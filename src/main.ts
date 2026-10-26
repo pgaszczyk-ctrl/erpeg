@@ -15,10 +15,14 @@ import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
 import { TEST, WERSJA_TEST } from './version';
 import { OSTROSC, cssSize, watchSpeed } from './screen';
+import { lapOferteInstalacji } from './instalacja';
+import { pelnyEkranOdDotyku } from './ui/poziomo';
 
 // The Google sign-in window only stores the login and closes (no game there).
 if (catchGoogleReturn()) throw new Error('google sign-in window');
 installErrorLog();
+lapOferteInstalacji();
+pelnyEkranOdDotyku();
 // The test server says so all the time, so nobody mistakes it for the real game.
 if (TEST) {
   const b = document.createElement('div');

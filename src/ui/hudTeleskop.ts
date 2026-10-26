@@ -78,6 +78,7 @@ const CSS = `
   box-shadow: 0 0 0 0.5px #2a1a0c, 0 0 0 1.5px #c9953f, 0 0 0 2px #7a5220, 0 0 0 2.5px rgba(20,12,6,0.85),
     inset 0 0.5px 0 rgba(255,236,190,0.2), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1.5px 3px rgba(0,0,0,0.4); box-sizing: border-box; pointer-events: none; z-index: 21; }
 body.walka-tur #hud-tel { display: none; }
+
 /* New-controls test (walka/live.ts, owner 26 Oct 2026: „użyj tego HUD-u, tylko dodaj 2 rurki”): two thin glass tubes right
    of the portrait – life (red, a potion's bonus blue on top) and stamina (gold; mana blue with a magic weapon) – fed by a
    short brass pipe from the ring. Code-drawn until the artist's version (order 43-P001). */
@@ -735,3 +736,25 @@ export const SAKIEWKA_GLADKA = `<svg viewBox="0 0 24 24" aria-hidden="true"><def
 
 /** A cut diamond. */
 export const DIAMENT_GLADKI = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 4h11.6l4 5.2L12 21 2.2 9.2z" fill="#8fe3f6" stroke="#174a5c" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.2 9.2h19.6M8.6 4L7 9.2 12 21l5-11.8L15.4 4M7 9.2L12 4l5 5.2" fill="none" stroke="#2c86a0" stroke-width="0.9" stroke-linejoin="round"/><path d="M7 9.2L12 4 8.6 4z" fill="#d8f8ff"/></svg>`;
+
+// ------------------------------------------------------------------ the face for the coin (ui/monetaPortretu.ts)
+
+/** Where the portrait's face is on screen and a copy of it (null while the telescope isn't shown). */
+export function twarzTeleskopu(): { rect: DOMRect; twarz: HTMLCanvasElement | null; prawo?: number } | null {
+  const p = el.portret;
+  if (!root || !p || root.classList.contains('off')) return null;
+  const r = p.getBoundingClientRect();
+  if (!r.width) return null;
+  const k = r.width / N;
+  const rect = new DOMRect(r.left + (C - RP) * k, r.top + (C - RP) * k, RP * 2 * k, RP * 2 * k);
+  let twarz: HTMLCanvasElement | null = null;
+  if (warstwy) {
+    twarz = document.createElement('canvas');
+    twarz.width = twarz.height = RP * 2;
+    twarz.getContext('2d')!.drawImage(warstwy.twarz, C - RP, C - RP, RP * 2, RP * 2, 0, 0, RP * 2, RP * 2);
+  }
+  // The note goes right of the whole column, tubes included.
+  let prawo = r.right;
+  for (const e of root.querySelectorAll('.tel-rurki *')) prawo = Math.max(prawo, (e as HTMLElement).getBoundingClientRect().right);
+  return { rect, twarz, prawo };
+}
