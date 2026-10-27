@@ -470,6 +470,11 @@ export class MapRenderer {
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
 
+  /** The view's middle last frame, and which way it last moved (−1/0/1 on each axis). */
+  private lastMid = { x: NaN, y: NaN };
+  private ruchX = 0;
+  private ruchY = 0;
+
   /** Chunks drawn before a map tile arrived: redrawn in place (kept visible meanwhile). */
   private stale = new Set<string>();
 
@@ -513,16 +518,34 @@ export class MapRenderer {
     const v = cam.worldView;
     const want: [number, number, number][] = [];
     const M = CHUNK / 4;
-    const cx0 = Math.floor((v.x - M) / CHUNK), cx1 = Math.floor((v.right + M) / CHUNK);
-    const cy0 = Math.floor((v.y - M) / CHUNK), cy1 = Math.floor((v.bottom + M) / CHUNK);
+    // More room ahead in the direction the view moves (owner, 27 Oct 2026: on a phone a chunk takes ~3 s in the
+    // background, about as long as walking a quarter chunk – the ground popped in at the screen's edge).
+    const sx = v.centerX - this.lastMid.x, sy = v.centerY - this.lastMid.y;
+    if (Math.abs(sx) + Math.abs(sy) > 0.05 && Math.abs(sx) + Math.abs(sy) < 50) {
+      this.ruchX = sx > 0.05 ? 1 : sx < -0.05 ? -1 : 0;
+      this.ruchY = sy > 0.05 ? 1 : sy < -0.05 ? -1 : 0;
+    }
+    this.lastMid = { x: v.centerX, y: v.centerY };
+    const A = CHUNK / 2;
+    const cx0 = Math.floor((v.x - (this.ruchX < 0 ? A : M)) / CHUNK), cx1 = Math.floor((v.right + (this.ruchX > 0 ? A : M)) / CHUNK);
+    const cy0 = Math.floor((v.y - (this.ruchY < 0 ? A : M)) / CHUNK), cy1 = Math.floor((v.bottom + (this.ruchY > 0 ? A : M)) / CHUNK);
     const mx = v.centerX / CHUNK - 0.5, my = v.centerY / CHUNK - 0.5;
-    for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2]);
+    const vx0 = Math.floor(v.x / CHUNK), vx1 = Math.floor(v.right / CHUNK), vy0 = Math.floor(v.y / CHUNK), vy1 = Math.floor(v.bottom / CHUNK);
+    for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) {
+      // Visible chunks first, then the nearest; never more than the cap (the extra room ahead mustn't push the
+      // chunk count over it, or chunks would be dropped and painted again in turn).
+      const widac = cx >= vx0 && cx <= vx1 && cy >= vy0 && cy <= vy1;
+      want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2 + (widac ? 0 : 1000)]);
+    }
     if (srodowiskoTest2()) {
       // Prioritize the visible terrain; prefetch must fit the existing pixel budget.
       const visible = ([x, y]: [number, number, number]) => x >= Math.floor(v.x / CHUNK) && x <= Math.floor(v.right / CHUNK) && y >= Math.floor(v.y / CHUNK) && y <= Math.floor(v.bottom / CHUNK);
       want.sort((a, b) => Number(visible(b)) - Number(visible(a)) || a[2] - b[2]);
       want.length = Math.min(want.length, MAX_CHUNKS);
-    } else want.sort((a, b) => a[2] - b[2]);
+    } else {
+      want.sort((a, b) => a[2] - b[2]);
+      want.length = Math.min(want.length, MAX_CHUNKS);
+    }
     const keep = new Set(want.map(([x, y]) => `${x},${y}`));
 
     // Recycle chunks far from the view.
@@ -636,10 +659,18 @@ export class MapRenderer {
           if (czasyWorker.length > 20) czasyWorker.shift();
         }
         this.paint(ctx, x0, y0, ready.ziemia);
-        this.dropCrowns(c);
-        c.crowns = ready.drzewa.map((t) => this.korony.make(t));
+        // Tall buildings: take the new list before letting go of the old one, so a building this chunk keeps
+        // isn't destroyed and drawn again in the background (it blinked out for a moment on every repaint).
+        const stareWysokie = c.wysokie ?? [];
         c.wysokie = order.budynki.filter((b) => b.osobno);
         this.wysokie.trzymaj(c, c.wysokie, order.noc, order.miasto);
+        const noweId = new Set(c.wysokie.map((b) => b.id ?? b.seed));
+        this.wysokie.pusc(c, stareWysokie.filter((b) => !noweId.has(b.id ?? b.seed)));
+        const wysokieNowe = c.wysokie;
+        c.wysokie = undefined;
+        this.dropCrowns(c);
+        c.wysokie = wysokieNowe;
+        c.crowns = ready.drzewa.map((t) => this.korony.make(t));
         c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py)), ...ready.wyrzuty.map((z) => this.korony.wyrzut(z))];
         c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot, k: q.k }));
         c.ripe = this.onRipe ? c.zbior.filter((q) => !STAN.zebrane.has(q.id)).map((q) => this.onRipe!(q)).filter((im): im is Phaser.GameObjects.Image => !!im) : undefined;
@@ -834,7 +865,7 @@ export class MapRenderer {
         }
         return !nearby.some(q =>
           distToPolyline(q.pts, x, y) < (q.kind === 'rail' || q.kind === 'tram' ? 7 : trackWidth(q) / 2) + radius);
-      }, 500 * PX_PER_M);
+      }, 500 * PX_PER_M, { x0: x0 - 200, y0: y0 - 200, x1: x0 + CHUNK + 200, y1: y0 + CHUNK + 200 });
       for (const p of paths) {
         const xs=p.pts.filter((_,i)=>i%2===0), ys=p.pts.filter((_,i)=>i%2===1);
         if (Math.max(...xs)<x0-80 || Math.min(...xs)>x0+CHUNK+80 || Math.max(...ys)<y0-80 || Math.min(...ys)>y0+CHUNK+80) continue;
@@ -1507,7 +1538,11 @@ export class MapRenderer {
       if (L < 0.01) continue;
       let t = carry;
       while (t < L) {
-        f(ax + (dx * t) / L, ay + (dy * t) / L, dx / L, dy / L, side, n++);
+        const x = ax + (dx * t) / L, y = ay + (dy * t) / L;
+        // Only spots near the chunk being painted are checked (a street crossing it can be kilometres long;
+        // checking all of it for every chunk took ~250 ms on phones). Side and count go on, so every chunk agrees.
+        if (!clip || (x > clip.x0 && x < clip.x1 && y > clip.y0 && y < clip.y1)) f(x, y, dx / L, dy / L, side, n);
+        n++;
         side = -side;
         t += step;
       }
@@ -1615,6 +1650,11 @@ export class MapRenderer {
           const off = l.width / 2 + 2 * PX_PER_M;
           const x = ax + (dx * t) / L + (-dy / L) * off * side;
           const y = ay + (dy * t) / L + (dx / L) * off * side;
+          if (clip && (x < clip.x0 || x > clip.x1 || y < clip.y0 || y > clip.y1)) {
+            side = -side;
+            t += step;
+            continue;
+          }
           // At the road's edge: a little further out there is no more road (a dual carriageway's middle or a wide junction).
           const ox = x + (-dy / L) * 3 * PX_PER_M * side, oy = y + (dx / L) * 3 * PX_PER_M * side;
           const edge = m.buildingAt(ox, oy) || m.surfaceAt(ox, oy) !== 'asfalt';

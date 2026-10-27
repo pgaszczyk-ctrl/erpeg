@@ -5,8 +5,9 @@
 // GameScene multiplies its zoom by it.
 
 const forced = Number(new URLSearchParams(location.search).get('ostrosc'));
-/** Remembered on a phone that was too slow at the sharper picture (see watchSpeed). */
-const SLOW_KEY = 'exp-ostrosc';
+/** Remembered on a phone that was too slow at the sharper picture (see watchSpeed). A new key on 27 Oct 2026: the
+ * game got much lighter, so phones that were switched to the plain picture before get measured once more. */
+const SLOW_KEY = 'exp-ostrosc-2';
 const slow = (() => {
   try {
     return localStorage.getItem(SLOW_KEY) === '1';
@@ -78,10 +79,17 @@ let zoomPoziom = (() => {
 export const przyblizenie = () => zoomPoziom > 0;
 export const poziomPrzyblizenia = () => zoomPoziom;
 /** The game camera's zoom for the usual one `z` at the current step (whole canvas px per map px). */
-export function zoomZPrzyblizeniem(z: number) {
-  if (zoomPoziom === 2) return Math.round(z * PRZYBLIZENIE_MOCNE);
-  if (zoomPoziom === 1) return Math.max(z + 1, Math.round(z * PRZYBLIZENIE));
-  return z;
+export function zoomZPrzyblizeniem(z: number, krok = 1) {
+  // `krok`: the zoom is kept a multiple of it – the 09 world is painted at 2 picture px per map px, and at an odd zoom
+  // each of them fell on 1.5 or 2.5 screen px: the cobbles and roofs "crawled" and flickered while walking (owner,
+  // 27 Oct 2026). Every step is at least one `krok` closer than the one before.
+  const dol = (v: number) => Math.max(krok, Math.floor(v / krok) * krok);
+  const gora = (v: number) => Math.max(krok, Math.ceil(v / krok) * krok);
+  const z0 = dol(z);
+  const z1 = Math.max(z0 + krok, gora(z0 * PRZYBLIZENIE));
+  if (zoomPoziom === 1) return z1;
+  if (zoomPoziom === 2) return Math.max(z1 + krok, gora(z0 * PRZYBLIZENIE_MOCNE));
+  return z0;
 }
 /** The next step: 0 → 1 → 2 → 0. */
 export function nastepnePrzyblizenie() {

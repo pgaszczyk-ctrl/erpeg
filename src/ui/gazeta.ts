@@ -122,6 +122,7 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       done = true;
       window.removeEventListener('popstate', onPop);
       window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', ukladStron);
       root.remove();
       if (!viaHistory) history.back();
       resolve(took);
@@ -135,6 +136,15 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
     };
     window.addEventListener('popstate', onPop);
     window.addEventListener('keydown', onKey, true);
+    // A low, wide screen (a phone held sideways, also the turned page of src/obrot.ts – window.innerWidth/Height give the
+    // turned size there, CSS media queries don't): the paper opens as two pages – the masthead and sections on the left,
+    // the article on the right (owner, 27 Oct 2026: on a phone the title took 3/4 of the screen).
+    const ukladStron = () => {
+      root.classList.toggle('gz-dwie', window.innerWidth > window.innerHeight && window.innerHeight < 620 && window.innerWidth >= 560);
+      root.classList.toggle('gz-niska', window.innerHeight < 430);
+    };
+    ukladStron();
+    window.addEventListener('resize', ukladStron);
 
     // Server data, fetched once each (front page at once, rankings when first opened).
     const fetched = <T,>(f: (() => Promise<T | null>) | undefined) => {
@@ -373,7 +383,10 @@ export function showGazeta(h: GazetaHost): Promise<boolean> {
       body.append(...(strona === 'wiesci' ? pageWiesci() : strona === 'ludzie' ? pageLudzie() : strona === 'warsztat' ? pageWarsztat() : strona === 'zlecenie' ? pageZlecenie() : strona === 'lamiglowka' ? pagePuzzle() : pageList()));
       const foot = el('footer', 'gz-foot');
       foot.append(el('span', '', fmt(STRONY.sprzedaje, { kto: h.sprzedawca })), el('span', '', `exp-lore.app`));
-      sheet.append(fold, mast, nav, body, foot);
+      // The left page (masthead, sections, imprint); on a tall screen it is laid out as before (display: contents).
+      const lewa = el('div', 'gz-lewa');
+      lewa.append(mast, nav, foot);
+      sheet.append(fold, lewa, body);
       (strona === 'list' ? sheet.querySelector<HTMLTextAreaElement>('textarea') : sheet.querySelector<HTMLButtonElement>('.gz-tab.on'))?.focus({ preventScroll: true });
     };
     render();

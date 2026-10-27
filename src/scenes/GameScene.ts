@@ -344,6 +344,9 @@ const FLAGI_NAZWY: Record<NonNullable<Misja['flaga']>, string> = {
 /** Places where the story's question about the dragon's shadow can be asked. */
 const STORY_PLACES = new Set(['school', 'church', 'university']);
 
+/** How often (ms) the hero's sight and the fog picture are worked out while he moves (~16 a second). */
+const FOG_ODSTEP_MS = 60;
+
 export class GameScene extends Phaser.Scene {
   private cityQuestEpoch = 0;
   private cityQuestPlanning = false;
@@ -422,6 +425,9 @@ export class GameScene extends Phaser.Scene {
   /** What the hero sees right now (world polygon). */
   vision: number[] = [];
   private lastVision = { x: NaN, y: NaN, a: NaN };
+  /** When the sight was last worked out, and where the camera stood when the fog picture was last drawn. */
+  private wzrokAt = -Infinity;
+  private mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
   private leaving = false;
   private travelling = false;
   private justRode = false;
@@ -532,6 +538,8 @@ export class GameScene extends Phaser.Scene {
     this.fogView.podZiemia = !!this.city.loch;
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
+    this.wzrokAt = -Infinity;
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
 
     // Home: the nearest real house to the start point (hit it to go in).
     this.home = null;
@@ -1016,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
   private fitZoom() {
     const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
     const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
-    const zz = zoomZPrzyblizeniem(z);
+    const zz = zoomZPrzyblizeniem(z, WYGLAD_09 ? GEN_DOTS : 1);
     // The tilted camera (walka/live.ts): the map squashed vertically, sprites stretched back when drawn (main.ts).
     const k = skrotKamery();
     this.cameras.main.setZoom(zz, zz * k);
@@ -1028,6 +1036,8 @@ export class GameScene extends Phaser.Scene {
     const poziom = nastepnePrzyblizenie();
     this.fitZoom();
     this.lastVision = { x: NaN, y: NaN, a: NaN };
+    this.wzrokAt = -Infinity;
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
     this.toast(['🔍 Zwykły widok', '🔍 Widok powiększony', '🔍 Widok mocno powiększony (2×)'][poziom], 1200);
     return poziom === 2;
   }
@@ -1428,7 +1438,14 @@ export class GameScene extends Phaser.Scene {
     const a = Math.atan2(p.facing.y, p.facing.x);
     const lv = this.lastVision;
     // (written as !(<=) so the first frame, with NaN, always computes)
-    if (!this.vision.length || !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01)) {
+    // The sight and the fog picture are worked out at most every FOG_ODSTEP_MS (owner, 27 Oct 2026: the game stuttered on
+    // phones – both were redone on every frame while walking). The fog picture is pinned to the map, so between updates
+    // nothing jumps; only the cut-out trails the hero by a few px. Standing still, nothing is redone at all.
+    const teraz = this.time.now;
+    const cam = this.cameras.main.worldView;
+    const ruszyl = !(Math.abs(p.x - lv.x) <= 0.5 && Math.abs(p.y - lv.y) <= 0.5 && Math.abs(a - lv.a) <= 0.01);
+    if (!this.vision.length || (ruszyl && teraz - this.wzrokAt >= FOG_ODSTEP_MS)) {
+      this.wzrokAt = teraz;
       this.seenNow = new Set();
       this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow, session.level.tyl, this.viewCone());
       for (const b of this.seenNow) {
@@ -1438,7 +1455,11 @@ export class GameScene extends Phaser.Scene {
       }
       this.lastVision = { x: p.x, y: p.y, a };
     }
-    this.fogView.update(this.cameras.main, this.vision, this.seenNow);
+    const fv = this.mglaWidok;
+    if (this.wzrokAt === teraz || Math.abs(cam.x - fv.x) > 24 || Math.abs(cam.y - fv.y) > 24 || cam.width !== fv.w || teraz - fv.at > 1000 || teraz < fv.at) {
+      this.fogView.update(this.cameras.main, this.vision, this.seenNow);
+      this.mglaWidok = { x: cam.x, y: cam.y, w: cam.width, at: teraz };
+    }
     for (const e of this.enemies) if (!e.isDead) e.setVisible(!e.inAir && pointInPolygon(this.vision, e.x, e.y));
     // Off-screen pickups are simply hidden (no polygon test); hundreds of ripe crops on allotments (report 56).
     const v = this.cameras.main.worldView;
@@ -2588,7 +2609,7 @@ export class GameScene extends Phaser.Scene {
       zoomZwykly: () => {
         const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
         const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
-        return zoomZPrzyblizeniem(z);
+        return zoomZPrzyblizeniem(z, WYGLAD_09 ? GEN_DOTS : 1);
       },
       wrocKamere: () => {
         const cam = this.cameras.main;
@@ -3903,6 +3924,8 @@ export class GameScene extends Phaser.Scene {
     this.appliedLevel = '';
     this.applyLevel();
     this.lastVision = { x: NaN, y: NaN, a: NaN };
+    this.wzrokAt = -Infinity;
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
     this.emitHud();
     this.toast(W.zmieniony(session.level.nazwa), 2500);
   }

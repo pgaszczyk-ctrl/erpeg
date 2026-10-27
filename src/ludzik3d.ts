@@ -36,6 +36,9 @@ export const LUDZIK_3D = {
   swiatlo: 1.0,
   otoczenie: 2.4,
   obrys: [0x1e, 0x1a, 0x24] as const,
+  /** At most this many new pictures a second (owner, 27 Oct 2026: the game stuttered on phones; every picture is a
+   * render, a read-back from the graphics card and an upload). The drawn heroes walk at 5–8 frames a second. */
+  klatekNaS: 20,
 };
 
 const KLUCZ = 'exp-ludzik3d';
@@ -112,16 +115,15 @@ export class Ludzik3D {
   private laduje = false;
   private blad = false;
   private image?: Phaser.GameObjects.Image;
-  private wyjscie = document.createElement('canvas');
   private kat = 0;
   private klucz = 'ludzik3d';
   private pokazany = false;
+  /** What the last picture showed, and the time since it was drawn (s). */
+  private podpis = '';
+  private odKlatki = Infinity;
   private swiatla?: { amb: THREE.AmbientLight; sun: THREE.DirectionalLight };
 
-  constructor(private scene: Phaser.Scene) {
-    const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
-    this.wyjscie.width = this.wyjscie.height = n;
-  }
+  constructor(private scene: Phaser.Scene) {}
 
   /** Is the 3D hero drawn now (for tests). */
   get widoczny() { return this.pokazany; }
@@ -182,9 +184,12 @@ export class Ludzik3D {
         a.timeScale = LUDZIK_3D.tempoAtaku;
       }
       const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
+      renderer.autoClear = false;
       this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
       this.swiatla = { amb, sun };
-      this.scene.textures.addCanvas(this.klucz, this.wyjscie);
+      this.podpis = '';
+      // The game's texture reads the 3D canvas straight away (no copy through the processor, see narysuj).
+      this.scene.textures.addImage(this.klucz, canvas as unknown as HTMLImageElement);
       this.scene.textures.get(this.klucz).setFilter(Phaser.Textures.FilterMode.NEAREST);
     } catch (e) {
       this.blad = true;
@@ -209,6 +214,7 @@ export class Ludzik3D {
     if (!this.g || riding || player.isDead || !this.scene.textures.exists(this.klucz)) {
       if (this.pokazany) player.setVisible(true);
       this.image?.setVisible(false);
+      this.ustawObrys(0, 0, player, false);
       this.pokazany = false;
       return;
     }
@@ -245,16 +251,25 @@ export class Ludzik3D {
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
     g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
-    g.renderer.render(g.scene, g.camera);
-    this.obrysuj(g.renderer.domElement);
-    (this.scene.textures.get(this.klucz) as Phaser.Textures.CanvasTexture).refresh();
+    // A new picture only when it would look different (turned, a step further, a blow), at most klatekNaS a second;
+    // standing still nothing is drawn at all.
+    const podpis = `${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${g.atak.isRunning() ? Math.round(g.atak.time * 30) : '-'}|${g.atakGora.isRunning() ? Math.round(g.atakGora.time * 30) : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
+    this.odKlatki += s;
+    if (podpis !== this.podpis && (this.odKlatki >= 1 / LUDZIK_3D.klatekNaS || !this.pokazany)) {
+      this.podpis = podpis;
+      this.odKlatki = 0;
+      this.narysuj(g);
+      this.scene.textures.get(this.klucz).source[0].update();
+    }
 
     const sc = 0.36 * SKALA_POSTACI;
     const F = LUDZIK_3D.ramka;
+    const oy = (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F;
     if (!this.image) this.image = this.scene.add.image(player.x, player.y, this.klucz);
+    this.ustawObrys(sc, oy, player, true);
     this.image
       .setScale(sc / LUDZIK_3D.gestosc)
-      .setOrigin(0.5, (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F)
+      .setOrigin(0.5, oy)
       .setPosition(player.x, player.y)
       .setDepth(player.depth)
       .setAlpha(player.alpha)
@@ -265,37 +280,46 @@ export class Ludzik3D {
     this.pokazany = true;
   }
 
-  /** Copies the render and closes a dark outline around the figure, as thick as one sheet pixel. */
-  private obrysuj(src: HTMLCanvasElement) {
-    const n = this.wyjscie.width;
-    const ctx = this.wyjscie.getContext('2d', { willReadFrequently: true })!;
-    ctx.clearRect(0, 0, n, n);
-    ctx.drawImage(src, 0, 0);
-    const img = ctx.getImageData(0, 0, n, n);
-    const a = img.data;
-    const t = LUDZIK_3D.gestosc;
-    const pelny = new Uint8Array(n * n);
-    for (let i = 0; i < n * n; i++) {
-      pelny[i] = a[i * 4 + 3] > 110 ? 1 : 0;
-      a[i * 4 + 3] = pelny[i] ? 255 : 0;
-    }
-    const [r, gg, b] = LUDZIK_3D.obrys;
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-      const i = y * n + x;
-      if (pelny[i]) continue;
-      let blisko = false;
-      for (let dy = -t; dy <= t && !blisko; dy++) for (let dx = -t; dx <= t; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) > t) continue;
-        const xx = x + dx, yy = y + dy;
-        if (xx >= 0 && yy >= 0 && xx < n && yy < n && pelny[yy * n + xx]) { blisko = true; break; }
+  /**
+   * Draws the figure (one render). Its dark outline, one sheet pixel thick, is made by the game itself: copies of the
+   * same picture filled with the outline's colour, shifted by every offset within that thickness, lie under it
+   * (`obrysy`). It used to be read back to the processor and outlined pixel by pixel – on phones every picture stalled
+   * the game for a few ms (owner, 27 Oct 2026).
+   */
+  private narysuj(g: Gotowy) {
+    g.renderer.clear();
+    g.renderer.render(g.scene, g.camera);
+  }
+
+  /** The outline's copies under the figure (see narysuj): offsets in canvas px. */
+  private obrysy: { im: Phaser.GameObjects.Image; dx: number; dy: number }[] = [];
+
+  private ustawObrys(sc: number, oy: number, player: Player, widac: boolean) {
+    if (!this.obrysy.length && widac) {
+      const t = LUDZIK_3D.gestosc;
+      const [r, g, b] = LUDZIK_3D.obrys;
+      for (let dy = -t; dy <= t; dy++) for (let dx = -t; dx <= t; dx++) {
+        if ((!dx && !dy) || Math.abs(dx) + Math.abs(dy) > t) continue;
+        const im = this.scene.add.image(0, 0, this.klucz).setTint((r << 16) | (g << 8) | b).setTintMode(Phaser.TintModes.FILL);
+        this.obrysy.push({ im, dx, dy });
       }
-      if (!blisko) continue;
-      a[i * 4] = r; a[i * 4 + 1] = gg; a[i * 4 + 2] = b; a[i * 4 + 3] = 255;
     }
-    ctx.putImageData(img, 0, 0);
+    const u = sc / LUDZIK_3D.gestosc; // world px per canvas px
+    for (const o of this.obrysy) {
+      if (!widac) {
+        o.im.setVisible(false);
+        continue;
+      }
+      o.im.setScale(u).setOrigin(0.5, oy).setPosition(player.x + o.dx * u, player.y + o.dy * u)
+        .setDepth(player.depth - 0.001).setAlpha(player.alpha).setVisible(true);
+    }
   }
 
   destroy() {
+    for (const o of this.obrysy) o.im.destroy();
+    this.obrysy = [];
+    this.podpis = '';
+    this.odKlatki = Infinity;
     this.image?.destroy();
     this.image = undefined;
     this.g?.renderer.dispose();

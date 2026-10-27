@@ -183,3 +183,39 @@
 #gazeta .gz-puz-msg{min-height:1.4em;margin:8px 0 0;text-align:center;font-style:italic;color:var(--red)}
 #gazeta .gz-puz-msg.ok{font:700 19px 'Playfair Display',serif;color:#2c5a26}
 #gazeta .gz-puz-btns{justify-content:center;gap:24px}
+/* Order of the sheet's parts: .gz-lewa is display:contents on a tall screen, so its footer goes after the article. */
+#gazeta .gz-lewa{display:contents}
+#gazeta .gz-body{order:1}
+#gazeta .gz-foot{order:2}
+/* Two pages on a low, wide screen (a phone held sideways; class set in gazeta.ts): the left page holds a small masthead,
+   the sections as a list and the imprint; the right page the article. The fold runs between them. */
+#gazeta.gz-dwie.gz-screen{padding:6px;font-size:16px}
+#gazeta.gz-dwie .gz-wrap{width:min(1060px,100%);height:100%;transform:rotate(-0.4deg)}
+#gazeta.gz-dwie .gz-sheet{display:grid;grid-template-columns:minmax(190px,31%) 1fr;grid-template-rows:100%;column-gap:22px;padding:10px 18px 8px 16px;
+  background-image:linear-gradient(90deg,transparent calc(31% + 6px),#7a5a2a26 calc(31% + 12px),#fff7 calc(31% + 14px),transparent calc(31% + 22px)),radial-gradient(ellipse 120% 90% at 50% 45%,transparent 55%,#b08a4c55 100%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .13 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+#gazeta.gz-dwie .gz-lewa{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-bottom:44px;position:relative}
+#gazeta.gz-dwie .gz-mast{padding-bottom:2px}
+#gazeta.gz-dwie .gz-ears{flex-wrap:wrap;justify-content:space-between;gap:0 8px;padding:0 0 2px;font-size:10px;letter-spacing:.6px}
+#gazeta.gz-dwie .gz-ears span{display:inline}
+#gazeta.gz-dwie .gz-ears-mid{order:3;flex-basis:100%}
+#gazeta.gz-dwie .gz-winieta{margin:4px 0 0;max-width:100%}
+#gazeta.gz-dwie .gz-title{font-size:30px}
+#gazeta.gz-dwie .gz-sub{font-size:11px;line-height:1.2}
+#gazeta.gz-dwie .gz-nav{flex-direction:column;justify-content:flex-start;gap:0;margin:4px 0 0;padding:2px 0;min-height:0;overflow:auto}
+#gazeta.gz-dwie .gz-tab{flex:none;flex-direction:row;justify-content:flex-start;gap:8px;min-height:32px;padding:1px 4px;font-size:12px;letter-spacing:.8px;line-height:1.1;text-align:left}
+#gazeta.gz-dwie .gz-tab+.gz-tab{border-top:1px dotted #231a1255}
+#gazeta.gz-dwie .gz-tab+.gz-tab::before{display:none}
+#gazeta.gz-dwie .gz-tab .gz-ic{font-size:15px;width:20px;text-align:center}
+#gazeta.gz-dwie .gz-tab .gz-tl{max-width:none;overflow:visible;white-space:normal;font-size:12px}
+#gazeta.gz-dwie .gz-foot{margin-top:auto;flex-direction:column;gap:0;font-size:10px}
+#gazeta.gz-dwie .gz-fold{position:absolute;left:16px;bottom:8px;top:auto;right:auto;width:calc(31% - 6px);max-width:300px;min-width:174px;justify-content:center;transform:none;margin:0;min-height:34px}
+#gazeta.gz-dwie .gz-body{min-height:0;height:100%;padding:0 2px 4px}
+#gazeta.gz-dwie .gz-head{margin:2px 0 4px;font-size:21px}
+#gazeta.gz-dwie .gz-story h2{font-size:24px}
+#gazeta.gz-dwie .gz-story h3{font-size:18px}
+#gazeta.gz-dwie .gz-cols{columns:2 220px;column-gap:18px}
+#gazeta.gz-dwie .gz-lead .gz-text:first-of-type::first-letter{font-size:40px}
+#gazeta.gz-dwie .gz-na-lamiglowce .gz-winieta,#gazeta.gz-dwie .gz-na-lamiglowce .gz-title{display:block;max-height:none;width:100%}
+#gazeta.gz-dwie .gz-na-lamiglowce .gz-title{display:block}
+#gazeta.gz-dwie.gz-niska .gz-sub{display:none}
+#gazeta.gz-dwie.gz-niska .gz-tab{min-height:30px}
