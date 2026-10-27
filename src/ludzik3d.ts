@@ -25,6 +25,10 @@ export const LUDZIK_3D = {
   obrot: 14,
   /** Walking clip speed at the hero's normal pace (the clip's own pace looked like a march). */
   tempoChodu: 1.35,
+  /** The artist's steps are gentle and from the front go into the screen: every walking move is made this many
+   * times bigger (each part's turn about its own axis, so the parts stay joined), plus a small bob per step. */
+  krokSila: 1.9,
+  podskokPx: 1,
   /** Light from the north-west, like the world's buildings and trees (three.js units: ambient π = the flat palette). */
   swiatlo: 1.0,
   otoczenie: 2.4,
@@ -54,7 +58,47 @@ type Gotowy = {
   chod: THREE.AnimationAction;
   atak: THREE.AnimationAction;
   miecz?: THREE.Object3D;
+  /** Canvas px per model unit. */
+  jednostkaPx: number;
 };
+
+/**
+ * Makes a clip's moves k times bigger: every key of a part is a rigid move (turn q + shift t) from the rest pose;
+ * it is replaced by the same screw motion taken k times (k × the angle about the same axis through the same point,
+ * k × the slide along it), so hip/knee pivots stay where they are and joined parts stay joined.
+ */
+function wzmocnij(three: typeof THREE, clip: THREE.AnimationClip, k: number) {
+  const pos = new Map<string, THREE.KeyframeTrack>();
+  const rot = new Map<string, THREE.KeyframeTrack>();
+  for (const t of clip.tracks) {
+    const [node, prop] = t.name.split('.');
+    if (prop === 'position') pos.set(node, t);
+    if (prop === 'quaternion') rot.set(node, t);
+  }
+  const q = new three.Quaternion(), a = new three.Vector3(), tv = new three.Vector3(), c = new three.Vector3();
+  const tp = new three.Vector3(), cr = new three.Vector3(), rc = new three.Vector3();
+  for (const [node, rt] of rot) {
+    const pt = pos.get(node);
+    if (!pt || pt.times.length !== rt.times.length) continue;
+    for (let i = 0; i < rt.times.length; i++) {
+      q.fromArray(rt.values, i * 4).normalize();
+      if (q.w < 0) q.set(-q.x, -q.y, -q.z, -q.w);
+      tv.fromArray(pt.values, i * 3);
+      const th = 2 * Math.acos(Math.min(1, q.w));
+      if (th < 1e-5) { tv.multiplyScalar(k).toArray(pt.values, i * 3); continue; }
+      a.set(q.x, q.y, q.z).divideScalar(Math.sin(th / 2));
+      const d = tv.dot(a);
+      tp.copy(tv).addScaledVector(a, -d);
+      // A point on the screw axis: c = ½ (t⊥ + cot(θ/2) · a × t⊥).
+      c.copy(tp).add(cr.crossVectors(a, tp).multiplyScalar(1 / Math.tan(th / 2))).multiplyScalar(0.5);
+      q.setFromAxisAngle(a, th * k);
+      rc.copy(c).applyQuaternion(q);
+      tv.copy(c).sub(rc).addScaledVector(a, d * k);
+      q.toArray(rt.values, i * 4);
+      tv.toArray(pt.values, i * 3);
+    }
+  }
+}
 
 export class Ludzik3D {
   private g?: Gotowy;
@@ -117,12 +161,13 @@ export class Ludzik3D {
       camera.lookAt(0, ty, 0);
       const mixer = new three.AnimationMixer(model);
       const clip = (name: string) => gltf.animations.find((a) => a.name === name) ?? gltf.animations[0];
+      wzmocnij(three, clip('walk'), LUDZIK_3D.krokSila);
       const chod = mixer.clipAction(clip('walk'));
       const atak = mixer.clipAction(clip('attack'));
       atak.setLoop(three.LoopOnce, 1);
       atak.clampWhenFinished = false;
       const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
-      this.g = { three, renderer, scene, camera, model, mixer, chod, atak, miecz };
+      this.g = { three, renderer, scene, camera, model, mixer, chod, atak, miecz, jednostkaPx: k };
       this.swiatla = { amb, sun };
       this.scene.textures.addCanvas(this.klucz, this.wyjscie);
       this.scene.textures.get(this.klucz).setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -170,6 +215,9 @@ export class Ludzik3D {
     if (g.miecz) g.miecz.visible = atakuje;
     if (this.swiatla) { this.swiatla.amb.intensity = LUDZIK_3D.otoczenie; this.swiatla.sun.intensity = LUDZIK_3D.swiatlo; }
     g.mixer.update(s);
+    // A small bob per step (two per walking cycle), in sheet pixels.
+    const faza = g.chod.isRunning() ? g.chod.time / g.chod.getClip().duration : 0;
+    g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
     g.renderer.render(g.scene, g.camera);
     this.obrysuj(g.renderer.domElement);
     (this.scene.textures.get(this.klucz) as Phaser.Textures.CanvasTexture).refresh();
