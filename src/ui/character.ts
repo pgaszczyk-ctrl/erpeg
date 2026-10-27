@@ -95,10 +95,12 @@ type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
     : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
-const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
+// Owner, 27 Oct 2026: Statystyki and Zasoby left too much empty room as separate tabs – on narrow
+// screens they share one tab, side by side when there is room (`.k-cols2`), else one under the other.
+const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p === 'zasoby' ? 'stan' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
 let dispose: (() => void) | null = null;
 /** The page shown last (the trunk opens there again). */
@@ -225,7 +227,7 @@ function skillOfItem(id: string | null): Umiejetnosc | null {
 function show(host: CharacterHost) {
   let hp = host.hp;
   const { maxHp, onChange, eat, tent } = host;
-  const scrollTo = !narrow() && host.page === 'gold' ? 'k-zasoby' : null;
+  const scrollTo = host.page === 'gold' ? 'k-zasoby' : null;
   closed = host.onClose ?? null;
   const root = el('div') as HTMLDivElement;
   root.id = 'character';
@@ -614,7 +616,11 @@ function show(host: CharacterHost) {
     else {
       dispose?.();
       dispose = null;
-      if (page === 'stan') body.append(sectionStan());
+      if (page === 'stan') {
+        const cols = el('div', 'k-cols2');
+        cols.append(sectionStan(), sectionZasoby());
+        body.append(cols);
+      }
       else if (page === 'zasoby') body.append(sectionZasoby());
       else if (page === 'zadania') pageZadania();
       else pageKsiega();
