@@ -83,16 +83,17 @@ export class UIScene extends Phaser.Scene {
   private get hasDialog() { return !!this.dialogBox || !!this.shop; }
   private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number; scrollable: boolean }[] = [];
   private dialogChoose?: (i: number) => void;
-  // A dialog too tall for the screen (openGameMenu, long quest/riddle text…): its text + buttons scroll inside
-  // a masked window below the fixed title, with a brass rail on the right (owner, 26 Oct 2026 – it didn't fit
-  // and couldn't be moved in landscape). Drag the rail, tap it, or use the mouse wheel; see controls.dialogRail.
+  // A dialog too tall for the screen (openGameMenu, long quest/riddle text…): its text + buttons scroll below
+  // the fixed title, with a brass rail on the right (owner, 26 Oct 2026 – it didn't fit and couldn't be moved
+  // in landscape). Drag the rail, tap it, or use the mouse wheel; see controls.dialogRail. Phaser 4's
+  // GeometryMask only clips under the Canvas renderer, not this game's WebGL one, so instead of masking
+  // pixels, content is split into rows (one per line/button, `scrollRows`) and a row scrolled past the
+  // window is hidden whole rather than sliced – see `redrawScrollVisibility`.
   private dialogScroll?: Phaser.GameObjects.Container;
-  private dialogMask?: Phaser.GameObjects.Graphics;
+  private scrollRows: { y: number; h: number; objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] }[] = [];
   private dialogRailG?: Phaser.GameObjects.Graphics;
   private scrollY = 0;
   private scrollMax = 0;
-  /** The scroll window in screen px (CSS): buttons outside it are clipped away and must not react to taps. */
-  private scrollViewport?: { x: number; y: number; w: number; h: number };
   private railGeom?: { x: number; y0: number; w: number; viewportH: number; contentH: number };
 
   constructor() {
@@ -122,11 +123,10 @@ export class UIScene extends Phaser.Scene {
     this.duelHearts = [];
     this.dialogButtons = [];
     this.dialogScroll = undefined;
-    this.dialogMask = undefined;
+    this.scrollRows = [];
     this.dialogRailG = undefined;
     this.scrollY = 0;
     this.scrollMax = 0;
-    this.scrollViewport = undefined;
     this.railGeom = undefined;
     dialogRail.hit = null;
     dialogRail.set = null;
@@ -673,20 +673,24 @@ export class UIScene extends Phaser.Scene {
     const side = P ? P + 10 : 0;
     // A book-like readable font (owner 7.10.2026: the monospace dialogs were „zbyt nieczytelne”).
     const title = this.add.text(x + 16 + side, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 - 2 * side } });
-    const body = this.add.text(x + 16, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb', wordWrap: { width: w - 32 }, lineSpacing: 5 });
     const btnH = 44;
     // Up to two buttons side by side; longer lists (a shop) one under another.
     const stacked = d.buttons.length > 2;
-    const rows = stacked ? d.buttons.length : 1;
-    const btnsH = rows * btnH + (rows - 1) * 8;
+    const btnRows = stacked ? d.buttons.length : 1;
+    const btnsH = btnRows * btnH + (btnRows - 1) * 8;
     const tabH = d.tabs ? 38 : 0;
     const headH = Math.max(title.height, P);
-    const h = 16 + headH + 10 + (tabH ? tabH + 10 : 0) + body.height + 18 + btnsH + 16;
+    // Body text, measured line by line (Phaser 4's GeometryMask doesn't clip under WebGL – see below, the
+    // body/buttons scroll as whole rows instead, so each line is its own object rather than one big block).
+    const measure = this.add.text(0, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', wordWrap: { width: w - 32 }, lineSpacing: 5 });
+    const wrappedLines = measure.getWrappedText(d.text);
+    const bodyBlockH = measure.height;
+    measure.destroy();
+    const h = 16 + headH + 10 + (tabH ? tabH + 10 : 0) + bodyBlockH + 18 + btnsH + 16;
     const y = Math.max(12, height - h - (this.touch ? 150 : 40));
     title.setY(y + 16 + (headH - title.height) / 2);
     const ty = y + 16 + headH + 10;
     const y0 = ty + (tabH ? tabH + 10 : 0); // where the scrollable body/buttons begin
-    body.setY(y0);
 
     // A dialog with more inside it than the screen has room for (the game menu with every toggle, a long
     // riddle…) gets a shorter panel and scrolls instead of running off the bottom (owner, 26 Oct 2026).
@@ -725,18 +729,31 @@ export class UIScene extends Phaser.Scene {
         if (!on) this.dialogButtons.push({ rect, index: -1 - t, scrollable: false });
       });
     }
-    // Body text and every button scroll together below the (fixed) title/tabs.
-    const scrollItems: Phaser.GameObjects.GameObject[] = [body];
+    // Body text and every button scroll together below the (fixed) title/tabs, each line/button its own row
+    // (see `redrawScrollVisibility`): a row scrolled past the window is hidden whole, never sliced in half.
+    const scrollRows: { y: number; h: number; objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] }[] = [];
+    const scrollItems: Phaser.GameObjects.GameObject[] = [];
+    let cursorY = y0;
+    const lineH = wrappedLines.length ? (bodyBlockH - (wrappedLines.length - 1) * 5) / wrappedLines.length : 0;
+    for (let i = 0; i < wrappedLines.length; i++) {
+      const t = this.add.text(x + 16, cursorY, wrappedLines[i], { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb' });
+      scrollRows.push({ y: cursorY, h: lineH, objs: [t] });
+      scrollItems.push(t);
+      cursorY += lineH;
+      if (i < wrappedLines.length - 1) cursorY += 5; // between lines only; the body→buttons gap below is its own 18
+    }
+    cursorY += 18;
     const bw = stacked ? w - 32 : (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
     const last = d.buttons.length - 1;
+    const sideBySide: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] = [];
     d.buttons.forEach((label, i) => {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
-      const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
+      const by = cursorY;
       // Brass for the main choices, verdigris-patinated metal for the way out (owner, 26 Oct 2026: no greens/blues).
       const cicho = d.odpowiedzi ? false : stacked ? i === last : i !== 0;
       const color = cicho ? 0x4f7f72 : 0xc9953f;
       const rect = this.add.rectangle(bx, by, bw, btnH, 0, 0).setOrigin(0);
-      scrollItems.push(ramkaKomiks(this, bx, by, bw, btnH, color, { gruba: 2, cien: 3 }));
+      const g = ramkaKomiks(this, bx, by, bw, btnH, color, { gruba: 2, cien: 3 });
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
       const key = d.icons?.[i];
       const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setDisplaySize(32, 32) : null;
@@ -744,23 +761,24 @@ export class UIScene extends Phaser.Scene {
       const text = this.add
         .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: cicho ? '#e8f4ee' : '#2a1608', align: 'center', wordWrap: { width: bw - 12 - pad } })
         .setOrigin(0.5);
-      scrollItems.push(rect, text);
-      if (pic) scrollItems.push(pic);
+      const objs = pic ? [g, rect, text, pic] : [g, rect, text];
+      scrollItems.push(...objs);
       this.dialogButtons.push({ rect, index: i, scrollable: true });
+      if (stacked) { scrollRows.push({ y: by, h: btnH, objs }); cursorY += btnH + 8; }
+      else sideBySide.push(...objs);
     });
+    if (!stacked && d.buttons.length) { scrollRows.push({ y: cursorY, h: btnH, objs: sideBySide }); cursorY += btnH; }
+    const contentH = cursorY - y0;
+
     const scrollBox = this.add.container(0, 0, scrollItems);
     items.push(scrollBox);
     this.dialogScroll = scrollBox;
+    this.scrollRows = scrollRows;
     this.scrollY = 0;
-    const contentH = y + h - 16 - y0; // body.height + 18 + btnsH, measured from where scrolling starts
     this.scrollMax = needsScroll ? Math.max(0, contentH - viewportH) : 0;
-    this.scrollViewport = needsScroll ? { x, y: y0, w, h: viewportH } : undefined;
     this.railGeom = needsScroll ? { x, y0, w, viewportH, contentH } : undefined;
+    this.redrawScrollVisibility();
     if (needsScroll) {
-      const maskShape = this.make.graphics({}, false);
-      maskShape.fillStyle(0xffffff).fillRect(x, y0, w, viewportH);
-      scrollBox.setMask(maskShape.createGeometryMask());
-      this.dialogMask = maskShape;
       this.dialogRailG = this.add.graphics();
       items.push(this.dialogRailG);
       const geom = this.railGeom!;
@@ -783,7 +801,25 @@ export class UIScene extends Phaser.Scene {
     if (!this.dialogScroll) return;
     this.scrollY = Phaser.Math.Clamp(y, 0, this.scrollMax);
     this.dialogScroll.y = -this.scrollY;
+    this.redrawScrollVisibility();
     this.redrawDialogRail();
+  }
+
+  /**
+   * Phaser 4's GeometryMask only works under the Canvas renderer, not WebGL (this game's renderer) – so instead
+   * of clipping pixels, a scrolled row is hidden whole once it no longer fully fits the visible window, and
+   * shown again once it does; a half-cut line/button never appears. Runs once at open and on every scroll.
+   */
+  private redrawScrollVisibility() {
+    const r = this.railGeom;
+    if (!r) { for (const row of this.scrollRows) for (const o of row.objs) o.setVisible(true); return; }
+    const top = r.y0 - 0.5;
+    const bottom = r.y0 + r.viewportH + 0.5;
+    for (const row of this.scrollRows) {
+      const onScreenTop = row.y - this.scrollY;
+      const visible = onScreenTop >= top && onScreenTop + row.h <= bottom;
+      for (const o of row.objs) o.setVisible(visible);
+    }
   }
 
   private redrawDialogRail() {
@@ -820,8 +856,8 @@ export class UIScene extends Phaser.Scene {
     // Keyboard: Space/Enter picks the first button, or "Wyjdź" in a long list.
     if (x < 0) choice = real.length > 2 ? real.length - 1 : 0;
     for (const b of this.dialogButtons) {
-      // A scrolled-away button isn't drawn – a tap landing where it "would be" doesn't pick it either.
-      if (b.scrollable && this.scrollViewport && (y < this.scrollViewport.y || y > this.scrollViewport.y + this.scrollViewport.h)) continue;
+      // A scrolled-away button isn't drawn (see redrawScrollVisibility) – a tap at its old screen spot doesn't pick it.
+      if (b.scrollable && !b.rect.visible) continue;
       if (b.rect.getBounds().contains(x, y)) choice = b.index;
     }
     if (choice === null) return;
@@ -988,13 +1024,11 @@ export class UIScene extends Phaser.Scene {
     this.dialogBox = undefined;
     this.dialogButtons = [];
     this.dialogChoose = undefined;
-    this.dialogMask?.destroy();
-    this.dialogMask = undefined;
     this.dialogScroll = undefined;
+    this.scrollRows = [];
     this.dialogRailG = undefined;
     this.scrollY = 0;
     this.scrollMax = 0;
-    this.scrollViewport = undefined;
     this.railGeom = undefined;
     dialogRail.hit = null;
     dialogRail.set = null;
