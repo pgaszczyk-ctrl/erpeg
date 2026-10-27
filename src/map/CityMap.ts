@@ -4,6 +4,7 @@
 // collision tests, address search and spawn-point picking.
 
 import type { Terrain } from './terrain';
+import type { PlanLochu } from '../loch/plan';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
@@ -541,6 +542,9 @@ export class CityMap {
     // Shops and schools: inside a building, or the nearest one close by.
     for (const [kind, name, ux, uy, addr] of raw.pois ?? []) this.addPlace(kind as Place['kind'], name, ux * k, uy * k, addr, `${kind}:${Math.round(ux)}:${Math.round(uy)}`);
   }
+
+  /** An underground map (src/loch/mapa.ts): its maze plan; MapRenderer paints nothing, scenes/Lochy.ts does. */
+  loch?: PlanLochu;
 
   private placeBuildings = new Set<Building>();
   /** A place at (x, y) px: in the building there, or the nearest one close by. */

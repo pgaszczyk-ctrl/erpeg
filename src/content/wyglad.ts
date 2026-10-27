@@ -118,7 +118,7 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
 export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   { postac: { id: 'driada', nazwa: 'Driada', plik: 'driada', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['driada'] },
   { postac: { id: 'zombie', nazwa: 'Zombiak', plik: 'zombie', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['zombie', 'wodnik'] },
-  { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet'] },
+  { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet', 'upior'] },
   { postac: { id: 'bandyta', nazwa: 'Bandyta', plik: 'bandyta', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['bandyta'] },
   // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).
   { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt'] },

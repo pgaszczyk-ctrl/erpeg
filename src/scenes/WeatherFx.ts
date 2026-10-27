@@ -53,6 +53,9 @@ export class WeatherFx {
   private cloudAmount = -1;
   private drift = 0;
 
+  /** In a dungeon (src/loch/): the lamp burns, the weather stays outside. */
+  podZiemia = false;
+
   constructor(private scene: Phaser.Scene) {
     this.g = scene.add.graphics().setDepth(1_050_000);
     this.dark = scene.add.rectangle(0, 0, 10, 10, 0x0c1020, 0).setOrigin(0).setDepth(1_040_000);
@@ -156,6 +159,14 @@ export class WeatherFx {
 
   update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light = 1) {
     this.updateLamp(dt, hero, now, light);
+    if (this.podZiemia) {
+      // Underground (src/loch/): only the lamp – no rain, snow, mist, storm or cloud shadows.
+      this.g.clear();
+      this.dark.setFillStyle(0x0c1020, 0);
+      this.mist.setVisible(false);
+      this.clouds?.setVisible(false);
+      return;
+    }
     if (WYGLAD_09) this.updateClouds(dt, cam.worldView);
     const E = EFEKTY_POGODY[weather.kind];
     const v = cam.worldView;

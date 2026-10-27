@@ -33,6 +33,7 @@ export const STWORY: { id: string; nazwa: string; exp: number; gdzie: string }[]
   { id: 'zombie', nazwa: 'Zombie', exp: 10, gdzie: 'misje przy wodzie' },
   { id: 'szkielet', nazwa: 'Szkielet', exp: 10, gdzie: 'misje przy cmentarzu' },
   { id: 'herszt', nazwa: 'Herszt', exp: 60, gdzie: 'misje' },
+  { id: 'upior', nazwa: 'Upiór krypty (boss lochu)', exp: 90, gdzie: 'lochy pod cmentarzami' },
 ];
 
 /** Wszystko, co może wypaść (lista do wyboru w panelu). */

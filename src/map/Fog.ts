@@ -274,7 +274,9 @@ export class FogView {
   private lightAt = 0;
   private light = 1;
   /** Daylight 0 (night) … 1 (day) here, refreshed once a minute (the hero's lamp uses it). */
-  get daylight() { return this.light; }
+  get daylight() { return this.podZiemia ? 0 : this.light; }
+  /** Underground (src/loch/): unknown ground is plain black, known-but-unseen a dark veil, no parchment, no skew. */
+  podZiemia = false;
 
   constructor(private scene: Phaser.Scene, private explored: Explored, where?: { lat: number; lon: number }) {
     if (where) this.where = where;
@@ -308,7 +310,8 @@ export class FogView {
     const data = this.cellCtx.createImageData(gw, gh);
     const hz = this.hazeCtx.createImageData(gw, gh);
     const d = data.data, e = hz.data;
-    const [hr, hg, hb] = MGLA.mgielka;
+    const [hr, hg, hb] = this.podZiemia ? [6, 5, 10] : MGLA.mgielka;
+    const krycie = this.podZiemia ? 150 : MGLA.poznaneKrycie;
     for (let j = 0; j < gh; j++) {
       for (let i = 0; i < gw; i++) {
         const o = (j * gw + i) * 4;
@@ -316,7 +319,7 @@ export class FogView {
         d[o] = d[o + 1] = d[o + 2] = 0;
         d[o + 3] = seen ? 0 : 255;
         e[o] = hr; e[o + 1] = hg; e[o + 2] = hb;
-        e[o + 3] = seen ? MGLA.poznaneKrycie : 0;
+        e[o + 3] = seen ? krycie : 0;
       }
     }
     this.cellCtx.putImageData(data, 0, 0);
@@ -341,7 +344,7 @@ export class FogView {
       this.light = daylight(this.where.lat, this.where.lon);
     }
     ctx.globalCompositeOperation = 'source-atop';
-    if (this.paper) {
+    if (this.paper && !this.podZiemia) {
       // Pinned to the map, but drifting along with the hero at MGLA.paralaksa of his walk (a layer above the land).
       const drift = MGLA.paralaksa;
       this.paper.setTransform(new DOMMatrix([1, 0, 0, 1, (-gx0 * FOG_CELL + cam.midPoint.x * drift) / FOG_RES, (-gy0 * FOG_CELL + cam.midPoint.y * drift) / FOG_RES]));
@@ -352,7 +355,7 @@ export class FogView {
     ctx.globalCompositeOperation = 'destination-over';
     ctx.drawImage(this.haze, 0, 0, W, H);
     ctx.globalCompositeOperation = 'source-atop';
-    const dark = MGLA.nocCiemnosc * (1 - this.light);
+    const dark = this.podZiemia ? 0 : MGLA.nocCiemnosc * (1 - this.light);
     if (dark > 0.01) {
       ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;
       ctx.fillRect(0, 0, W, H);
@@ -386,7 +389,7 @@ export class FogView {
     mc.lineJoin = 'round';
     mc.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
-      const h = wallHeight(b) * (WALLS_UP ? -1 : 1);
+      const h = this.podZiemia ? 0 : wallHeight(b) * (WALLS_UP ? -1 : 1);
       for (const dy of [0, h / 2, h]) {
         const dx = dy * WALL_SKEW;
         mc.beginPath();

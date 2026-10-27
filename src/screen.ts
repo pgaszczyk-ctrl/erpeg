@@ -62,21 +62,34 @@ export function cssSize(el: HTMLElement) {
 
 /** The bigger picture for children (owner, 6 Oct 2026: kids couldn't make out the details): ~30 % closer. */
 export const PRZYBLIZENIE = 1.3;
+/** Third step (owner, 27 Oct 2026: „dodaj jeszcze jeden poziom zooma, 2x bliżej niż obecny default”). */
+export const PRZYBLIZENIE_MOCNE = 2;
 const ZOOM_KEY = 'exp-przyblizenie';
-let zoomOn = (() => {
+/** 0 = the usual picture, 1 = ~30 % closer, 2 = twice as close (remembered on this device). */
+let zoomPoziom = (() => {
   try {
-    return localStorage.getItem(ZOOM_KEY) === '1';
+    const v = Number(localStorage.getItem(ZOOM_KEY));
+    return v === 1 || v === 2 ? v : 0;
   } catch {
-    return false;
+    return 0;
   }
 })();
-/** Is the bigger picture on (remembered on this device)? */
-export const przyblizenie = () => zoomOn;
-export function ustawPrzyblizenie(on: boolean) {
-  zoomOn = on;
+/** Is a bigger picture on (any step)? */
+export const przyblizenie = () => zoomPoziom > 0;
+export const poziomPrzyblizenia = () => zoomPoziom;
+/** The game camera's zoom for the usual one `z` at the current step (whole canvas px per map px). */
+export function zoomZPrzyblizeniem(z: number) {
+  if (zoomPoziom === 2) return Math.round(z * PRZYBLIZENIE_MOCNE);
+  if (zoomPoziom === 1) return Math.max(z + 1, Math.round(z * PRZYBLIZENIE));
+  return z;
+}
+/** The next step: 0 → 1 → 2 → 0. */
+export function nastepnePrzyblizenie() {
+  zoomPoziom = (zoomPoziom + 1) % 3;
   try {
-    localStorage.setItem(ZOOM_KEY, on ? '1' : '0');
+    localStorage.setItem(ZOOM_KEY, String(zoomPoziom));
   } catch {
     /* no storage: only for this visit */
   }
+  return zoomPoziom;
 }

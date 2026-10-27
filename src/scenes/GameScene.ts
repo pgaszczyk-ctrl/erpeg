@@ -10,7 +10,7 @@ import { itemPictureUrl, goodsPicture, itemTexture } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale, peakTexture } from '../art';
-import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../screen';
+import { OSTROSC, zoomZPrzyblizeniem, nastepnePrzyblizenie } from '../screen';
 import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
@@ -82,6 +82,9 @@ import {
 import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
+import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
+import { idLochu } from '../loch/mapa';
+import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
 import { stwory, losujLup } from '../content/stwory';
@@ -450,6 +453,9 @@ export class GameScene extends Phaser.Scene {
   private spotkania: Spotkania | null = null;
   /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
   private lowiska: Lowiska | null = null;
+  /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
+  private lochy?: LochyWejscia;
+  private loch?: LochWnetrze;
   private wilki = new Map<Enemy, StworAI>();
   /** Boss's stomp: the hero walks slower until then (one at a time, never stacked). */
   private spowolnienieDo = 0;
@@ -519,10 +525,11 @@ export class GameScene extends Phaser.Scene {
     this.explored = new Explored();
     const inLublin = this.city.id === 'lublin';
     session.mapId = this.city.id;
-    this.explored.load(inLublin ? session.fog : session.fogs[this.city.id]);
+    this.explored.load(this.city.loch ? undefined : inLublin ? session.fog : session.fogs[this.city.id]);
     // Where the map lies (sunrise/sunset for the fog's parchment); world maps are endless: their origin.
     const mid = this.city.toLatLon(this.city.width / 2, this.city.height / 2);
     this.fogView = new FogView(this, this.explored, Number.isFinite(mid.lat) && Number.isFinite(mid.lon) && Math.abs(mid.lat) <= 90 ? mid : this.city.toLatLon(0, 0));
+    this.fogView.podZiemia = !!this.city.loch;
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
 
@@ -613,6 +620,7 @@ export class GameScene extends Phaser.Scene {
       this.folk.newsboyAt(g.x, g.y);
     }
     this.weatherFx = new WeatherFx(this);
+    this.weatherFx.podZiemia = !!this.city.loch;
     this.magicG = this.add.graphics().setDepth(1_030_000);
     this.watchWeather();
     this.bubbles = [];
@@ -884,6 +892,25 @@ export class GameScene extends Phaser.Scene {
     if (missing.length) console.warn('Nie znaleziono na mapie:', missing);
     this.registry.set('missing', missing);
 
+    // Dungeons (content/lochy.ts): entrances on the surface, or – underground – the maze, its monsters and chest.
+    this.lochy?.destroy();
+    this.lochy = live() && !demo.on && !this.city.loch ? new LochyWejscia(this, this.city) : undefined;
+    this.loch?.destroy();
+    this.loch = this.city.loch
+      ? new LochWnetrze({
+          scene: this,
+          nonce: session.nonce,
+          toast: (t, ms) => this.toast(t, ms),
+          spawn: (x, y, kind, home) => {
+            const e = this.spawnEnemy(x, y, undefined, kind);
+            e.lowiskoHome = home;
+            e.roam = 6;
+            return e;
+          },
+        }, this.city)
+      : undefined;
+    if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.opis.nazwa), 4500);
+
     this.replayAbandoned();
     if (this.walkedIn) this.toast(this.walkedIn, 4000);
     this.walkedIn = null;
@@ -914,9 +941,15 @@ export class GameScene extends Phaser.Scene {
     cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
     cam.startFollow(this.player, true, 0.15, 0.15);
     cam.setRoundPixels(true);
-    cam.setBackgroundColor('#1f4d24');
+    cam.setBackgroundColor(this.city.loch ? '#07070a' : '#1f4d24');
     this.fitZoom();
     cam.centerOn(this.player.x, this.player.y);
+    // Fell in a dungeon: carried up and to the nearest hospital (the loss was already taken there).
+    if (lochSesja.porazka !== null && !this.city.loch) {
+      const kara = lochSesja.porazka;
+      lochSesja.porazka = null;
+      this.time.delayedCall(50, () => this.poPorazceWLochu(kara));
+    }
     // New controls test: phones play landscape, like a game pad (ui/poziomo.ts).
     if (live()) {
       wymusPoziom(this.game);
@@ -983,21 +1016,20 @@ export class GameScene extends Phaser.Scene {
   private fitZoom() {
     const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
     const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
-    const zz = przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z;
+    const zz = zoomZPrzyblizeniem(z);
     // The tilted camera (walka/live.ts): the map squashed vertically, sprites stretched back when drawn (main.ts).
     const k = skrotKamery();
     this.cameras.main.setZoom(zz, zz * k);
     (this.cameras.main as unknown as { wyprost: number }).wyprost = 1 / k;
   }
 
-  /** Switches the bigger picture on/off (kept on the device); returns whether it is on. */
+  /** The next zoom step (usual → ~30 % closer → twice as close → usual, kept on the device); true = the closest. */
   toggleZoom() {
-    const on = !przyblizenie();
-    ustawPrzyblizenie(on);
+    const poziom = nastepnePrzyblizenie();
     this.fitZoom();
     this.lastVision = { x: NaN, y: NaN, a: NaN };
-    this.toast(on ? '🔍 Widok powiększony' : '🔍 Zwykły widok', 1200);
-    return on;
+    this.toast(['🔍 Zwykły widok', '🔍 Widok powiększony', '🔍 Widok mocno powiększony (2×)'][poziom], 1200);
+    return poziom === 2;
   }
 
   // ------------------------------------------------------------------ loop
@@ -1105,16 +1137,19 @@ export class GameScene extends Phaser.Scene {
     const by = this.player.y;
     this.moveActor(this.player, dt);
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
-    this.story.update(dt, this.player.x !== bx || this.player.y !== by);
-    if (!demo.on) this.anomalia?.update(now, this.player.x !== bx || this.player.y !== by);
+    const podZiemia = !!this.loch;
+    if (!podZiemia) this.story.update(dt, this.player.x !== bx || this.player.y !== by);
+    if (!demo.on && !podZiemia) this.anomalia?.update(now, this.player.x !== bx || this.player.y !== by);
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     // Protected after a fresh start: the hero blinks.
     this.player.setAlpha(now < this.protectUntil ? 0.45 + 0.55 * Math.abs(Math.sin(now / 120)) : hidden ? 0.5 : 1);
 
     this.unstickHero(now);
-    this.crossBorder(now);
-    this.portsNear(now);
+    if (!podZiemia) {
+      this.crossBorder(now);
+      this.portsNear(now);
+    }
     if (consumeHeal()) this.healButton();
     if (live()) {
       const it = consumeInteraction();
@@ -1150,6 +1185,10 @@ export class GameScene extends Phaser.Scene {
     this.updateShots(dt);
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
+    this.loch?.update(now, this.cameras.main, this.player);
+    this.lochy?.update(this.player.x, this.player.y, now);
+    // Underground: none of the surface's life (people, gangs, trees, hunting grounds, training).
+    if (!podZiemia) {
     this.orchards.update(this.player.x, this.player.y, now);
     if (this.chopping.size) this.updateChopping(now);
     this.forest.update(this.player.x, this.player.y, now);
@@ -1183,7 +1222,8 @@ export class GameScene extends Phaser.Scene {
       this.lowiska.update(this.player.x, this.player.y);
     }
     if (!lingering && !this.story.busy && !this.anomalia?.busy) this.spotkania?.update(now);
-    this.clearHomeArea();
+    }
+    if (!this.loch) this.clearHomeArea(); // underground the arrival spot is no safe home
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
     for (const s of this.enemies) {
       if (s.isDead) continue;
@@ -1276,8 +1316,10 @@ export class GameScene extends Phaser.Scene {
     this.cullFar(now);
     this.updateStany(now);
     aktualizujEfekty(now);
-    this.smokiNaMapie?.update(this.player.x, this.player.y);
-    this.smokiNaMapie?.dym(this.time.now);
+    if (!this.loch) {
+      this.smokiNaMapie?.update(this.player.x, this.player.y);
+      this.smokiNaMapie?.dym(this.time.now);
+    }
     this.updatePosts(now);
     this.zabytki.update(this.player.x, this.player.y);
     for (const item of [...this.pickups]) {
@@ -1368,6 +1410,8 @@ export class GameScene extends Phaser.Scene {
    * (half its diagonal, at least WIDOK.ekranMin× the old range, at most WIDOK.maks px).
    */
   private viewCone() {
+    // Underground: the lamp and torches reach only so far (the walls stop sight anyway).
+    if (this.loch) return { half: Math.PI + 0.5, range: LOCH.wzrokM * PX_PER_M };
     const v = this.cameras.main.worldView;
     const edge = Math.hypot(v.width, v.height) / 2;
     // Owner, 5 Oct 2026: no fog from the hero's sight any more – all around, to the screen's corners; only
@@ -1636,6 +1680,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Home, a talk, a stall, a train/cart or a door at `hit` (or right by the hero): opened, true. */
   private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
+    if (!strong && this.lochDotyk(hit)) return true;
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
       this.save();
@@ -2223,6 +2268,7 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
     if (s.lowisko) this.lowiska?.killed(s);
+    if (this.loch?.zabity(s)) return; // dungeon monsters never come back this login
     if (s.folkQuest) this.folkQuestKill(s);
     if (s.temp || s.ambient || s.lowisko) return;
     if (s.missionId) {
@@ -2541,7 +2587,7 @@ export class GameScene extends Phaser.Scene {
       zoomZwykly: () => {
         const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
         const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
-        return przyblizenie() ? Math.max(z + 1, Math.round(z * PRZYBLIZENIE)) : z;
+        return zoomZPrzyblizeniem(z);
       },
       wrocKamere: () => {
         const cam = this.cameras.main;
@@ -2670,7 +2716,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dropLoot(x: number, y: number, kind: RodzajWroga = 'glut') {
-    if (kind === 'herszt' || kind === 'wielki_herszt' || kind === 'koziol') return this.dropBossLoot(x, y);
+    if (kind === 'herszt' || kind === 'wielki_herszt' || kind === 'koziol' || kind === 'upior') return this.dropBossLoot(x, y);
     if (kind === 'driada') {
       if (this.player.hp < PLAYER.maxHp && Math.random() < 0.5) this.dropPickup(x, y, true);
       else this.dropFruit(x, y + 6, Math.random() < 0.5 ? 'jablko' : 'sliwka');
@@ -3429,6 +3475,8 @@ export class GameScene extends Phaser.Scene {
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     this.cameras.main.fadeOut(700, 0, 0, 0);
     this.time.delayedCall(800, () => {
+      // Fell in a dungeon: carried up the stairs, then to the hospital nearest the entrance (poPorazceWLochu).
+      if (this.loch) return this.wyjdzZLochu(kara);
       if (szpital) {
         void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
           const at = this.city.reachableNear(szpital.door.x, szpital.door.y);
@@ -3485,11 +3533,13 @@ export class GameScene extends Phaser.Scene {
     const near = this.enemies.filter(
       (e) => !e.isDead && Phaser.Math.Distance.Between(e.x, e.y, this.player.x, this.player.y) < 200,
     );
+    const tu = this.miejsceZapisu();
+    if (this.loch) near.length = 0; // a dungeon is never replayed: the next start is at its entrance, in peace
     return {
       s: PX_PER_M,
-      m: this.city.id,
-      x: Math.round(this.player.x),
-      y: Math.round(this.player.y),
+      m: tu.m,
+      x: Math.round(tu.x),
+      y: Math.round(tu.y),
       // Mid turn fight the tab may close: next time the hero comes back with the life from before it.
       hp: this.walka?.aktywna ? this.walka.hpPrzed : this.player.hp,
       enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: tury() ? e.kind.hp : e.hp, k: e.kindId })),
@@ -3530,6 +3580,144 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
+  // ------------------------------------------------------------------ dungeons (content/lochy.ts, src/loch/)
+
+  /** Where a save puts the hero: here, or – in a dungeon – by its entrance on the surface (a dungeon is never a start). */
+  private miejsceZapisu(): { m: string; x: number; y: number } {
+    if (this.loch) {
+      const p = lochSesja.powrot;
+      if (p) return { m: p.m, x: p.x, y: p.y };
+      return session.at ?? { m: 'lublin', x: session.startX, y: session.startY };
+    }
+    return { m: this.city.id, x: this.player.x, y: this.player.y };
+  }
+
+  /** A swing / double tap by a dungeon's entrance, its stairs up or its chest. */
+  private lochDotyk(hit: Phaser.Math.Vector2): boolean {
+    if (performance.now() < this.talkReadyAt) return false;
+    if (this.lochy) {
+      const w = this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
+      if (!w) return false;
+      if (this.inCombat()) {
+        this.toast(LOCH_TEKSTY.wWalce, 1800);
+        return true;
+      }
+      const opis = LOCHY[w.rodzaj];
+      this.dialog({
+        title: `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
+        text: opis.wejscie,
+        buttons: [LOCH_TEKSTY.schodze, LOCH_TEKSTY.nieTeraz],
+        onChoose: (i) => { if (i === 0) this.zejdzDoLochu(w); },
+      });
+      return true;
+    }
+    const loch = this.loch;
+    if (!loch) return false;
+    const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
+    if (co === 'schody') {
+      if (this.inCombat()) {
+        this.toast(LOCH_TEKSTY.wWalce, 1800);
+        return true;
+      }
+      this.dialog({
+        title: LOCH_TEKSTY.wyjsc,
+        text: LOCH_TEKSTY.wyjscPytanie(loch.zostalo),
+        buttons: [LOCH_TEKSTY.wychodze, LOCH_TEKSTY.zostaje],
+        onChoose: (i) => { if (i === 0) this.wyjdzZLochu(); },
+      });
+      return true;
+    }
+    if (co === 'skrzynia') {
+      this.otworzSkrzynieLochu();
+      return true;
+    }
+    return false;
+  }
+
+  /** Down the stairs: the dungeon is its own small map (src/loch/mapa.ts), like walking onto another map. */
+  private zejdzDoLochu(w: WejscieLochu) {
+    if (this.travelling) return;
+    this.travelling = true;
+    const ll = this.city.toLatLon(w.x, w.y);
+    lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: LOCHY[w.rodzaj].nazwa };
+    // Saved by the entrance first: a closed tab or a reload comes back up here.
+    this.save();
+    const cam = this.cameras.main;
+    cam.fadeOut(500, 0, 0, 0);
+    const id = idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
+    this.time.delayedCall(520, () => {
+      getMap(id).then((city) => {
+        const plan = city.loch!;
+        session.arrive = { x: (plan.start.x + 0.5) * plan.T, y: (plan.start.y + 0.5) * plan.T };
+        session.hp = this.player.hp;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      }).catch((e: Error) => {
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`Nie da się zejść: ${e.message}`);
+      });
+    });
+  }
+
+  /** Up the stairs, back where the hero went down (after a defeat: `porazka` = what was lost, for the hospital). */
+  private wyjdzZLochu(porazka: string | null = null) {
+    if (this.travelling && !porazka) return;
+    this.travelling = true;
+    const p = lochSesja.powrot ?? { ...(session.at ?? { m: 'lublin', x: session.startX, y: session.startY }), nazwa: '' };
+    const cam = this.cameras.main;
+    if (!porazka) cam.fadeOut(500, 0, 0, 0);
+    getMap(p.m)
+      .then(async (city) => {
+        await city.ensure(p.x, p.y, LOAD_RADIUS);
+        session.arrive = city.isBlocked(p.x, p.y) ? city.reachableNear(p.x, p.y) : { x: p.x, y: p.y };
+        await prepareMap(city);
+        session.hp = porazka ? PLAYER.maxHp : this.player.hp;
+        lochSesja.powrot = null;
+        lochSesja.porazka = porazka;
+        if (!porazka) this.walkedIn = LOCH_TEKSTY.wyszedl;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      })
+      .catch((e: Error) => {
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`Nie da się wyjść: ${e.message}`);
+      });
+  }
+
+  /** Back on the surface after a defeat underground: the nearest hospital (or here), as after any defeat. */
+  private poPorazceWLochu(kara: string) {
+    const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
+    const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
+    if (!szpital) return this.wstanWSzpitalu({ x: this.player.x, y: this.player.y }, '🛏 Ocknąłeś się', kara, true);
+    void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
+      this.wstanWSzpitalu(this.city.reachableNear(szpital.door.x, szpital.door.y), `🏥 ${szpital.name}`, kara);
+    });
+  }
+
+  /** The chest in the farthest chamber: once per login, after its guardian and escort are beaten. */
+  private otworzSkrzynieLochu() {
+    const loch = this.loch!;
+    const pow = loch.skrzyniaPowod();
+    if (pow === 'pusta') return this.toast(LOCH_TEKSTY.skrzyniaPusta, 2200);
+    if (pow === 'pilnowana') return this.toast(LOCH_TEKSTY.skrzyniaZamknieta, 2600);
+    const N = loch.opis.nagroda;
+    const monety = luckyCoins(N.monety[0] + Math.floor(Math.random() * (N.monety[1] - N.monety[0] + 1)));
+    earn(monety);
+    session.exp += N.exp;
+    session.mikstury += N.mikstura;
+    const diament = Math.random() < N.diament;
+    if (diament) session.diamenty += 1;
+    session.stats.lochy = (session.stats.lochy ?? 0) + 1;
+    loch.otworzSkrzynie();
+    this.emitHud();
+    const co = [`💰 ${monety} złota`, `✨ ${N.exp} EXP`, N.mikstura ? `🧪 mikstura leczenia${N.mikstura > 1 ? ` ×${N.mikstura}` : ''}` : '', diament ? '💎 diament!' : ''].filter(Boolean).join('\n');
+    this.dialog({ title: LOCH_TEKSTY.skrzynia, text: LOCH_TEKSTY.skrzyniaOtwarta(co), buttons: [LOCH_TEKSTY.zabrane], onChoose: () => this.save() });
+  }
+
   /** Is any enemy close enough to be fighting us? */
   inCombat() {
     if (this.scene.isActive('arena')) return true;
@@ -3548,7 +3736,7 @@ export class GameScene extends Phaser.Scene {
     this.keepFog();
     try {
       await saveNow(this.player.hp);
-      keepResume(session.name, this.city.id, this.player.x, this.player.y);
+      { const tu = this.miejsceZapisu(); keepResume(session.name, tu.m, tu.x, tu.y); }
       await api.logout(session.token);
     } catch {
       // Not saved: the reload still brings the new version, from the last save.
@@ -3562,7 +3750,7 @@ export class GameScene extends Phaser.Scene {
     if (this.player.isDead || demo.on) return;
     this.leaving = true;
     this.keepFog();
-    keepResume(session.name, this.city.id, this.player.x, this.player.y);
+    { const tu = this.miejsceZapisu(); keepResume(session.name, tu.m, tu.x, tu.y); }
     await saveNow(this.player.hp).catch(() => {});
   }
 
@@ -3752,6 +3940,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Puts what was explored on this map into the session (saved with the game). */
   private keepFog() {
+    if (this.loch) return; // a dungeon's fog is never kept (it is made again every visit)
     if (this.city.id === 'lublin') session.fog = this.explored.serialize();
     else session.fogs[this.city.id] = this.explored.serialize();
   }
@@ -3759,7 +3948,7 @@ export class GameScene extends Phaser.Scene {
   private save() {
     this.keepFog();
     // New controls test (walka/live.ts, point 7): every save keeps the hero's spot; the next login starts there.
-    if (live() && !this.player.isDead) session.tu = { m: this.city.id, x: this.player.x, y: this.player.y };
+    if (live() && !this.player.isDead) session.tu = this.miejsceZapisu();
     saveNow(this.player.hp)
       // The demo saves nothing (offline.demo), so it says nothing either.
       .then(() => { if (!demo.on) this.toast('Gra zapisana'); })
@@ -6745,6 +6934,14 @@ export class GameScene extends Phaser.Scene {
       const km = Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) / PX_PER_M / 1000;
       out.push({ id: 'droga', main: false, title: `🧭 Droga do: ${droga.nazwa}`, text: `🧭 ${IKONA_HUBA[droga.rodzaj]} ${droga.nazwa} (${km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`})`, pos, color: MAPA_PODROZNIKA.kolor });
     }
+    // Underground the surface's goals lie on another map: no arrows; one line about the dungeon instead (no arrow
+    // either – finding the way is the point).
+    if (this.loch) {
+      const n = this.loch.zostalo;
+      const skrzynia = this.loch.skrzyniaPowod();
+      const text = skrzynia === 'pusta' ? '🕯 Skrzynia otwarta – schody na górę czekają przy wejściu.' : n ? `🕯 ${this.loch.opis.nazwa}: ${n === 1 ? 'został 1 potwór' : `zostało ${n} potworów`}, skrzynia w najdalszej komnacie` : '🕯 Loch czysty – skrzynia czeka w najdalszej komnacie';
+      return [{ id: 'loch', main: false, title: `🕯 ${this.loch.opis.nazwa}`, text, pos: null, color: '#ffb35c' }, ...out.map((q) => ({ ...q, pos: null }))];
+    }
     return out;
   }
 
@@ -6872,6 +7069,7 @@ export class GameScene extends Phaser.Scene {
    * near it, else "w mieście / za miastem · gdzieś na północy" counted from the town's centre.
    */
   private placeInfo(): { town: string; detail: string } {
+    if (this.loch) return { town: this.loch.opis.nazwa, detail: lochSesja.powrot ? 'pod ziemią' : '' };
     const x = this.player.x;
     const y = this.player.y;
     const t = this.townAt(x, y);
