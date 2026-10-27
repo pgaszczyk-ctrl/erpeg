@@ -33,7 +33,7 @@ try {
   page.on('console', (m) => { if (/Ludzik 3D/.test(m.text())) errors.push(m.text()); });
   await page.goto(`${URL0}?lang=pl&ostrosc=1&ludzik3d=1&live=0`);
   await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.locator('.m-namerow input').fill('Zbyszko');
+  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   await page.waitForFunction(() => window.__game.scene.getScene('game').ludzik3d?.widoczny, null, { timeout: 60000 });
