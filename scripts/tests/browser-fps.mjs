@@ -26,19 +26,19 @@ try {
   });
   const page = await ctx.newPage();
   await page.goto('http://127.0.0.1:4173/?lang=pl');
-  await page.evaluate(() => Object.assign(window.__fps, { rozgrzewkaS: 0, oknoS: 3 }));
+  await page.evaluate(() => Object.assign(window.__fps, { rozgrzewkaS: 0, oknoS: 3, prog: 0, dlugichIle: 1e9 }));
   await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.locator('.m-namerow input').fill('Zbyszko');
+  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   const fpsGry = await page.evaluate(() => window.__game.loop.actualFps);
   console.log('actualFps', fpsGry.toFixed(1));
-  // Paused game (dialog): nothing is measured.
-  await page.evaluate(() => window.__game.scene.pause('game'));
+  // Sleeping loop (map screen, Kufer): nothing is measured.
+  await page.evaluate(() => window.__game.loop.sleep());
+  await page.evaluate(() => Object.assign(window.__fps, { prog: 40, dlugichIle: 4 }));
   await page.waitForTimeout(7000);
   assert.equal(raporty.filter((r) => r.p_kind === 'fps').length, 0, 'no report while paused');
-  await page.evaluate(() => window.__game.scene.resume('game'));
-  await page.waitForFunction(() => true);
+  await page.evaluate(() => window.__game.loop.wake());
   for (let i = 0; i < 20 && !raporty.some((r) => r.p_kind === 'fps'); i++) await page.waitForTimeout(1000);
   const fps = raporty.filter((r) => r.p_kind === 'fps');
   if (fpsGry < 40) {
