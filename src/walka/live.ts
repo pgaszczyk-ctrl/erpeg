@@ -8,9 +8,8 @@
 //  7. the hero's spot saved at every save point (the next login starts there),
 //  8. hunting grounds (łowiska) in open land away from buildings, epicentric layers (content/lowiska.ts),
 //  9. talks, doors, rides and quest spots start only on a double tap.
-// TEST build only, never in the QR demo (it has its own tutorial). `?live=0|1` switches it for comparison,
+// On every server since 1.034 (owner, 27 Oct 2026: „wydaję wszystko na prod”), never in the QR demo (it has its own tutorial). `?live=0|1` switches it for comparison,
 // remembered on the device (localStorage `exp-live`).
-import { TEST } from '../version';
 import { demo } from '../demo';
 
 const wymuszone = (() => {
@@ -28,7 +27,7 @@ export function live() {
   if (demo.on) return false;
   if (wymuszone === '0') return false;
   if (wymuszone === '1') return true;
-  return TEST;
+  return true;
 }
 
 /**

@@ -9,7 +9,6 @@ import type * as THREE from 'three';
 import type { Player } from './objects/Player';
 import { SKALA_POSTACI } from './skala';
 import { STOPY_PX } from './content/wyglad';
-import { TEST } from './version';
 import { testVehicle, hasTestVehicle } from './testTransport';
 
 export const LUDZIK_3D = {
@@ -41,7 +40,7 @@ export const LUDZIK_3D = {
 
 const KLUCZ = 'exp-ludzik3d';
 (window as unknown as { __ludzik3d: typeof LUDZIK_3D }).__ludzik3d = LUDZIK_3D;
-/** On by default on the test server; elsewhere only after `?ludzik3d=1` on this device. */
+/** On by default on every server since 1.034; `?ludzik3d=0` switches it off on this device. */
 export function ludzik3d(): boolean {
   try {
     const q = new URLSearchParams(location.search).get('ludzik3d');
@@ -49,7 +48,7 @@ export function ludzik3d(): boolean {
     const v = localStorage.getItem(KLUCZ);
     if (v === '0' || v === '1') return v === '1';
   } catch { /* storage blocked: default */ }
-  return TEST;
+  return true;
 }
 
 type Gotowy = {
