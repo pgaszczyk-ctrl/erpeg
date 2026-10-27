@@ -47,6 +47,8 @@ await p.evaluate(() => window.__game.scene.getScene('ui').openGameMenu());
 await p.waitForTimeout(800);
 await p.screenshot({ path: 'work/obrot-menu.png' });
 // Turned back upright: the page stands normally.
+await p.evaluate(() => document.fullscreenElement && document.exitFullscreen());
+await p.waitForTimeout(500);
 await p.setViewportSize({ width: 844, height: 390 });
 await p.waitForTimeout(1500);
 const st2 = await p.evaluate(() => ({ obrot: document.documentElement.classList.contains('exp-obrot'), w: innerWidth, gw: window.__game.scale.width }));
