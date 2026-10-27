@@ -1153,7 +1153,8 @@ export class GameScene extends Phaser.Scene {
     if (consumeHeal()) this.healButton();
     if (live()) {
       const it = consumeInteraction();
-      if (it) this.interact(it.x, it.y);
+      // Two quick attacks next to an enemy stay two blows; elsewhere they open what is by the hero.
+      if (it && !(it.atak && this.nearestFoe(this.swingReach() * 1.5))) this.interact(it.x, it.y);
       if (consumeStrong()) this.specjalny(now);
       this.updateZasoby(dt, bx, by);
     }

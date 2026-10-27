@@ -22,7 +22,20 @@ export const JOY_RADIUS = 56;
  * start on a DOUBLE tap/click (owner, 26 Oct 2026: a ride or a quest went off by accident). `E` interacts near
  * the hero, `Q` is the strong attack.
  */
-let interakcja: { x: number; y: number } | null = null;
+let interakcja: { x: number; y: number; atak?: boolean } | null = null;
+/**
+ * Two quick attacks (the ATTACK button or Space, owner 27 Oct 2026: „akcja na telefonie ma być wyzwalana dwukrotnym
+ * atakiem”) also interact right by the hero – entrances, doors, talks; `atak` lets the game skip it in a fight.
+ */
+const DBL_ATAK_MS = 450;
+let ostatniAtak = 0;
+function podwojnyAtak() {
+  const now = performance.now();
+  if (now - ostatniAtak < DBL_ATAK_MS) {
+    interakcja = { x: -1, y: -1, atak: true };
+    ostatniAtak = 0;
+  } else ostatniAtak = now;
+}
 /** A double tap/click since the last call: where (CSS px on the game), or (-1, -1) = near the hero (E key). */
 export function consumeInteraction() {
   const i = interakcja;
@@ -59,7 +72,10 @@ export function dragAttack(dx: number, dy: number) {
 export function releaseAttack() {
   touchInput.attackHeld = false;
   if (!hold.active || hold.id !== -9) return;
-  if (!hold.dragged && performance.now() - hold.start < TAP_ATAK_MS) touchInput.attack = true;
+  if (!hold.dragged && performance.now() - hold.start < TAP_ATAK_MS) {
+    touchInput.attack = true;
+    podwojnyAtak();
+  }
   endHold();
 }
 /** Shorter than this (and no drag) on the attack stick is a plain tap = attack (the game's AIM_DELAY). */
@@ -445,6 +461,7 @@ export function installTouchControls(el: HTMLElement) {
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
+          if (live()) podwojnyAtak();
           if (code === 'Space' || code === 'KeyJ') startHold('key');
           tapListeners.forEach((fn) => fn(-1, -1));
         }
