@@ -44,8 +44,8 @@ export const LOCHY: Record<RodzajLochu, OpisLochu> = {
     nagroda: { monety: [80, 160], exp: 150, mikstura: 1, diament: 0.03 },
   },
   podziemia: {
-    nazwa: 'Podziemia świątyni',
-    wejscie: 'Za świątynią, pod murem, okute drzwiczki prowadzą do starych podziemi. Ktoś je niedawno wyważył…\n\nZejść do podziemi?',
+    nazwa: 'Katakumby pod świątynią',
+    wejscie: 'Za świątynią, pod murem, okute drzwiczki prowadzą do starych katakumb. Ktoś je niedawno wyważył…\n\nZejść do katakumb?',
     wezly: [[3, 3], [4, 4]],
     potwory: ['glut', 'glut', 'szkielet', 'bandyta'],
     straznik: 'wielki_glut',
@@ -85,8 +85,10 @@ export const LOCH = {
   pochodniaCo: 7,
   /** Cmentarz musi mieć co najmniej tyle m², żeby mieć kryptę. */
   cmentarzOdM2: 2500,
-  /** Kościoły: wejście za co drugim (wg numeru miejsca). */
-  kosciolCo: 2,
+  /** Katakumby ma każda duża świątynia (właściciel, 27.10.2026: „duży kościół zawsze ma katakumby, inne nie”): budynek od tylu m². */
+  kosciolOdM2: 1200,
+  /** Kaplice nie mają (często stoją w szpitalu/szkole – liczyłaby się powierzchnia całego budynku). */
+  bezKatakumb: /kaplic|chapel|kapell/i,
   /** Jak blisko wejścia trzeba stanąć (m), żeby zejść/wyjść. */
   dotykM: 9,
   /** Jak daleko szukać wejść wokół bohatera (m). */

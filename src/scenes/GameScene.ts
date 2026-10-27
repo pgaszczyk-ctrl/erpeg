@@ -3596,7 +3596,7 @@ export class GameScene extends Phaser.Scene {
   private lochDotyk(hit: Phaser.Math.Vector2): boolean {
     if (performance.now() < this.talkReadyAt) return false;
     if (this.lochy) {
-      const w = this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
+      const w = this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
       if (!w) return false;
       if (this.inCombat()) {
         this.toast(LOCH_TEKSTY.wWalce, 1800);

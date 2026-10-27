@@ -7,6 +7,7 @@ import { wyposazPeron, type Peron09 } from './dworzec09';
 import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
+import { malujGroby } from './groby09';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
@@ -255,6 +256,8 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   const trzciny = malujWode(obraz, X0, Y0, rodzajW);
   for (const k of posiejRuno(X0, Y0, N, N, rodzajW)) runo(obraz, k.x - X0, k.y - Y0, k.rodzaj, k.seed, 0);
   for (const [x, y] of trzciny) runo(obraz, x - X0, y - Y0, 'trzcina', (hash(x, y, 77) * 1e6) | 0, 0);
+  // Cmentarze: rzędy grobów (bez nich wyglądały jak park).
+  malujGroby(obraz, X0, Y0, N, rodzajW);
   // Pola uprawne: całe obsiane pasami (uprawa wg pasa i miesiąca), część warzyw dojrzała do zebrania.
   const zbior: DoZebrania[] = [];
   const wycinek = { x0: X0 - 2, y0: Y0 - 2, x1: X0 + N + 2, y1: Y0 + N + 2 };

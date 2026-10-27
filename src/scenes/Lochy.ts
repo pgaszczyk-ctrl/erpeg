@@ -150,7 +150,7 @@ export class LochyWejscia {
   private cmentarz(a: { id: number; rings: number[][]; x0: number; y0: number; x1: number; y1: number }): WejscieLochu | null {
     if (poleRing(a.rings[0]) / (M * M) < LOCH.cmentarzOdM2) return null;
     const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
-    const ok = (x: number, y: number) => this.city.areaKindsAt(x, y).includes('cemetery') && this.city.isFree(x, y, 10, 9);
+    const ok = (x: number, y: number) => this.city.areaKindsAt(x, y).includes('cemetery') && this.miejsce(x, y);
     const seed = hashLochu(`${this.city.id}:krypta:${a.id}`);
     for (let r = 0; r < 200; r += 6) {
       for (let k = 0; k < 12; k++) {
@@ -163,23 +163,41 @@ export class LochyWejscia {
     return null;
   }
 
-  private swiatynia(p: { id: string; name: string; door: { x: number; y: number }; building: { x0: number; y0: number; x1: number; y1: number } | null }): WejscieLochu | null {
+  private swiatynia(p: { id: string; name: string; door: { x: number; y: number }; building: { x0: number; y0: number; x1: number; y1: number; rings: number[][] } | null }): WejscieLochu | null {
     const seed = hashLochu(`${this.city.id}:podziemia:${p.id}`);
-    if (!p.building || seed % LOCH.kosciolCo !== 0) return null;
+    if (!p.building || LOCH.bezKatakumb.test(p.name) || !p.building.rings?.length) return null;
+    if (poleRing(p.building.rings[0]) / (M * M) < LOCH.kosciolOdM2) return null;
     const b = p.building;
     const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1 - 20) / 2;
     const a0 = Math.atan2(cy - p.door.y, cx - p.door.x);
-    for (const da of [0, 0.5, -0.5, 1, -1, 1.5, -1.5]) {
+    const wejscie = (x: number, y: number): WejscieLochu => ({ id: `${this.city.id}:podziemia:${p.id}`, rodzaj: 'podziemia', x, y, seed, przy: p.name });
+    // Najpierw za świątynią (strona przeciwna drzwiom), potem coraz bardziej z boku – aż do frontu; każda duża świątynia
+    // ma katakumby (właściciel), więc szukamy miejsca dookoła, a w ostateczności obok drzwi.
+    const katy = [0];
+    for (let k = 1; k <= 8; k++) katy.push(k * 0.39, -k * 0.39);
+    for (const da of katy) {
       const dx = Math.cos(a0 + da), dy = Math.sin(a0 + da);
       // Ze środka na zewnątrz budynku, potem kilka metrów dalej.
       let d = 0;
       while (d < 400 && this.city.buildingAt(cx + dx * d, cy + dy * d)) d += 2;
-      for (let e = 4 * M; e < 16 * M; e += 2 * M) {
+      for (let e = 3 * M; e < 40 * M; e += 2 * M) {
         const x = cx + dx * (d + e), y = cy + dy * (d + e);
-        if (this.city.isFree(x, y, 10, 9)) return { id: `${this.city.id}:podziemia:${p.id}`, rodzaj: 'podziemia', x, y, seed, przy: p.name };
+        if (this.miejsce(x, y)) return wejscie(x, y);
       }
     }
+    for (let r = 4 * M; r < 30 * M; r += 3 * M) for (let k = 0; k < 12; k++) {
+      const x = p.door.x + Math.cos((k / 12) * Math.PI * 2) * r, y = p.door.y + Math.sin((k / 12) * Math.PI * 2) * r;
+      if (this.miejsce(x, y)) return wejscie(x, y);
+    }
     return null;
+  }
+
+  /** Room for the entrance and for the hero standing by it (owner's test: a hatch squeezed between the cathedral and its
+   * neighbour left no room for him – the game pushed him back onto the street). */
+  private miejsce(x: number, y: number) {
+    const c = this.city;
+    for (let dy = -10; dy <= 26; dy += 4) for (let dx = -14; dx <= 14; dx += 4) if (c.isBlocked(x + dx, y + dy)) return false;
+    return true;
   }
 
   update(px: number, py: number, now: number) {

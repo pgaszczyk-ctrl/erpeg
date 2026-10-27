@@ -176,21 +176,70 @@ try {
   assert(Math.hypot(gora.x - wej.k.x, gora.y - wej.k.y) < 60, 'back by the entrance');
   await page.screenshot({ path: `work/lochy-${tag}-powrot.png` });
 
-  // 6. Behind a church (if one has an entrance near the centre).
+  // Fog lifted around the hero for a screenshot (the test jumps to places nobody has walked yet).
+  const odkryj = () => g(() => {
+    const s = window.__game.scene.getScene('game');
+    for (let dy = -260; dy <= 260; dy += 3) for (let dx = -360; dx <= 360; dx += 3) s.explored.mark(s.player.x + dx, s.player.y + dy);
+    s.lastVision = { x: NaN, y: NaN, a: NaN };
+  });
+
+  // 6. Cmentarz przy Unickiej (owner: „narysowałeś park”): graves drawn, a crypt there.
   await g(async () => {
     const s = window.__game.scene.getScene('game');
-    const p = s.city.fromLatLon(51.2479, 22.5680);
+    const p = s.city.fromLatLon(51.2589, 22.5770);
     await s.city.ensure(p.x, p.y, 1500);
     s.player.setPosition(p.x, p.y);
   });
-  await page.waitForFunction(() => (window.__game.scene.getScene('game').lochy?.lista ?? []).some((w) => w.rodzaj === 'podziemia'), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForFunction(() => {
+    const s = window.__game.scene.getScene('game');
+    return (s.lochy?.lista ?? []).some((w) => w.rodzaj === 'krypta' && Math.hypot(w.x - s.player.x, w.y - s.player.y) < 300);
+  }, null, { timeout: 60000 });
+  const unicka = await g(() => { const s = window.__game.scene.getScene('game'); return { kinds: s.city.areaKindsAt(s.player.x, s.player.y), w: s.lochy.lista.find((w) => w.rodzaj === 'krypta' && Math.hypot(w.x - s.player.x, w.y - s.player.y) < 300) }; });
+  console.log('Unicka', JSON.stringify(unicka));
+  assert(unicka.kinds.includes('cemetery'), 'Unicka is a cemetery on the map');
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 8); }, [unicka.w.x, unicka.w.y]);
+  await odkryj();
+  await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady(), null, { timeout: 60000 });
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: `work/lochy-${tag}-unicka.png` });
+
+  // 7. Catacombs: every big church (≥ LOCH.kosciolOdM2), never a chapel.
+  await g(async () => {
+    const s = window.__game.scene.getScene('game');
+    const p = s.city.fromLatLon(51.2472, 22.5682);
+    await s.city.ensure(p.x, p.y, 1500);
+    s.player.setPosition(p.x, p.y);
+  });
+  await page.waitForFunction(() => (window.__game.scene.getScene('game').lochy?.lista ?? []).some((w) => w.rodzaj === 'podziemia' && /Archikatedra/.test(w.przy ?? '')), null, { timeout: 60000 });
   const pod = await g(() => window.__game.scene.getScene('game').lochy.lista.filter((w) => w.rodzaj === 'podziemia').map((w) => w.przy));
-  console.log('podziemia za świątyniami', JSON.stringify(pod));
-  assert(pod.length >= 1, 'an entrance behind a church');
-  const pw = await g(() => { const s = window.__game.scene.getScene('game'); return s.lochy.lista.find((w) => w.rodzaj === 'podziemia'); });
-  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 10); }, [pw.x, pw.y]);
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: `work/lochy-${tag}-swiatynia.png` });
+  console.log('katakumby', JSON.stringify(pod));
+  assert(!pod.some((n) => /Kaplica/i.test(n)), 'no chapel has catacombs');
+  // Every big church already looked at (its tiles in) has its catacombs.
+  const brak = await g(() => {
+    const s = window.__game.scene.getScene('game');
+    const pole = (r) => { let a = 0; for (let i = 0; i < r.length; i += 2) { const j = (i + 2) % r.length; a += r[i] * r[j + 1] - r[j] * r[i + 1]; } return Math.abs(a) / 2; };
+    const M = 1.92, R = 900 * M;
+    const maja = new Set(s.lochy.lista.filter((w) => w.rodzaj === 'podziemia').map((w) => w.przy));
+    return s.city.places.filter((p) => p.kind === 'church' && p.building?.rings?.length && !/kaplic|chapel|kapell/i.test(p.name)
+      && Math.abs(p.door.x - s.player.x) < R && Math.abs(p.door.y - s.player.y) < R
+      && s.city.ready({ x0: p.door.x - 60, y0: p.door.y - 60, x1: p.door.x + 60, y1: p.door.y + 60 })
+      && pole(p.building.rings[0]) / (M * M) >= 1200 && !maja.has(p.name)).map((p) => p.name);
+  });
+  console.log('duże bez katakumb', JSON.stringify(brak));
+  assert.equal(brak.length, 0, 'every big church has catacombs');
+  const pw = await g(() => { const s = window.__game.scene.getScene('game'); return s.lochy.lista.find((w) => w.rodzaj === 'podziemia' && /Archikatedra/.test(w.przy ?? '')); });
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 8); }, [pw.x, pw.y]);
+  await odkryj();
+  await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady(), null, { timeout: 60000 });
+  await page.waitForTimeout(4000);
+  await page.screenshot({ path: `work/lochy-${tag}-katedra.png` });
+  await hook();
+  await page.keyboard.press('KeyE');
+  await page.waitForFunction(() => window.__dialogi.some((d) => /Katakumby/.test(d.title)), null, { timeout: 10000 }).catch(async () => {
+    console.log('diagnoza', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const h = s.player.hitPoint(); return { toasty: window.__toasty, dialogi: window.__dialogi.map((d) => d.title), przy: s.lochy.przy(s.player.x, s.player.y), gracz: [s.player.x, s.player.y], ui: window.__game.scene.getScene('ui').hasDialog, aktywna: window.__game.scene.isActive('game'), walka: s.inCombat(), siatka: (() => { const w = s.lochy.lista.find((q) => /Archikatedra/.test(q.przy ?? '')); const rows = []; for (let dy = -15; dy <= 21; dy += 3) { let r = ''; for (let dx = -15; dx <= 15; dx += 3) r += s.city.isBlocked(w.x + dx, w.y + dy) ? '#' : (dx === 0 && dy === 0 ? 'o' : '.'); rows.push(r); } return rows; })() }; })));
+    throw new Error('katakumby się nie otworzyły');
+  });
+  console.log('pytanie', JSON.stringify(await g(() => window.__dialogi.at(-1).title)));
 
   const zle = errors.filter((e) => !/Failed to fetch|NetworkError|ERR_/.test(e));
   console.log('błędy', JSON.stringify(zle));
