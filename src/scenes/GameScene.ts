@@ -14,6 +14,7 @@ import { OSTROSC, PRZYBLIZENIE, przyblizenie, ustawPrzyblizenie } from '../scree
 import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
+import { Ludzik3D, ludzik3d } from '../ludzik3d';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim, resetTouch, resetKeys } from '../controls';
 import { loadingGame, loadingMapError } from '../ui/loadingMap';
@@ -347,6 +348,8 @@ export class GameScene extends Phaser.Scene {
   player!: Player;
   private mapView!: MapRenderer;
   private testRide!: TestRide;
+  /** The hero as a live 3D model (TEST, src/ludzik3d.ts); none = the drawn sheet. */
+  private ludzik3d?: Ludzik3D;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
   private missions: ResolvedMission[] = [];
@@ -503,6 +506,11 @@ export class GameScene extends Phaser.Scene {
     this.askingTown = false;
     this.mapView = new MapRenderer(this, this.city);
     this.testRide = new TestRide(this);
+    this.ludzik3d = ludzik3d() ? new Ludzik3D(this) : undefined;
+    if (this.ludzik3d) {
+      const l = this.ludzik3d;
+      this.events.once('shutdown', () => { l.destroy(); if (this.ludzik3d === l) this.ludzik3d = undefined; });
+    }
     this.zabytki = new Zabytki(this, this.city, this.mapView);
     // Góry v2 (world maps with terrain): blur, fog, shrinking and parallax of what lies below, on the graphics card.
     this.gory = GoryFiltr.make(this, this.city);
@@ -1256,6 +1264,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(this.player.y);
     if (live()) this.rysujHpNad();
     this.testRide.update(this.player, session.look.postac, session.name);
+    this.ludzik3d?.update(this.player, dt);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y) && !this.demoRun?.przySmoku(x, y), (n) => session.riddles[n.id] === today());
@@ -1680,6 +1689,7 @@ export class GameScene extends Phaser.Scene {
     const gathering = !!ranged && !fighting && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
     // The weapon flies across only in a fight or at a training station; otherwise just a faint trace of the arm.
     if (!ranged || gathering) {
+      this.ludzik3d?.atakuj(swingAim);
       if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
       else this.faintSwing(swingAim);
     }
