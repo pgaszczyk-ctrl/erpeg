@@ -38,7 +38,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${URL0}?lang=pl&ostrosc=1`);
   await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.locator('.m-namerow input').fill('Zbyszko');
+  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   assert.equal(await page.getByText('Mam kod – graj').count(), 0, 'no code screen');

@@ -225,17 +225,17 @@ try {
   assert(domy.every((n) => n <= 3), 'hunting grounds stay away from settlements');
 
   if (mobile) {
-    // Upright phone: the game sleeps under the „turn your phone” card; landscape again: it runs.
+    // Upright phone: the whole page is shown turned −90° and the game keeps running (owner, 27 Oct 2026).
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(800);
-    const karta = await page.locator('#obroc-telefon.on').isVisible();
-    const spi = await g(() => !window.__game.loop.running);
-    await page.screenshot({ path: `work/live-${tag}-obroc.png` });
-    console.log('pionowo: karta', karta, 'pętla śpi', spi);
-    assert(karta && spi, 'portrait phone: rotate card + game asleep');
+    const obrot = await page.evaluate(() => document.documentElement.classList.contains('exp-obrot'));
+    const biegnie = await g(() => window.__game.loop.running);
+    await page.screenshot({ path: `work/live-${tag}-obrot.png` });
+    console.log('pionowo: obrót', obrot, 'gra działa', biegnie);
+    assert(obrot && biegnie, 'portrait phone: page turned, game running');
     await page.setViewportSize({ width: 844, height: 390 });
     await page.waitForTimeout(800);
-    assert(!(await page.locator('#obroc-telefon.on').isVisible()), 'landscape: card gone');
+    assert(!(await page.evaluate(() => document.documentElement.classList.contains('exp-obrot'))), 'landscape: not turned');
     assert(await g(() => window.__game.loop.running), 'landscape: game runs');
     // The attack stick: a tap swings (attack cooldown starts).
     const t0 = await g(() => window.__game.scene.getScene('game').player.lastAttack);
