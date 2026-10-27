@@ -5,7 +5,7 @@ Do: grafik
 Status: nowe
 Akceptacja: zlecone przez właściciela 27.10.2026: „Przygotuj zamówienie dla grafika na nagrobki i wejścia. Wylistuj też jakie mamy npce i potworki i dodaj do zamówienia. Stworki mają być w 3d tak jak modele postaci zbudowane w three.js, wejścia itp jako dotychczasowe ilustracje pod przyjemnym kątem, nie na płasko.”
 Wykonanie: –
-Dotyczy: A) nagrobki, wejścia do krypt/katakumb i wnętrze lochów – ilustracje; B) wszystkie potworki, smoki i postacie niezależne – modele 3D jak Strażnik
+Dotyczy: A) nagrobki, wejścia do krypt/katakumb i wnętrze lochów – ilustracje; B) wszystkie potworki, smoki i postacie niezależne – modele 3D jak Strażnik; C) lista wszystkich zastępczych grafik (placeholderów) w grze
 
 # Zamówienie 44: cmentarze, wejścia do lochów i stworki w 3D
 
@@ -180,6 +180,87 @@ Smok jest duży (ok. 6 wysokości bohatera długości) – budżet do ok. 10–1
 
 1. Próba: **szkielet** i **wilk** (dwa różne rodzaje ciała), z klipami `idle/walk/attack/death`.
 2. Po akceptacji: reszta B1 (lochy i ulice), potem B2, na końcu B3.
+
+---
+
+## Część C – lista zastępczych grafik (placeholdery)
+
+Właściciel poprosił o pełną listę rzeczy, które w grze są dziś **narysowane kodem** albo **pożyczone od
+innej postaci**. Nie wszystko jest pilne – kolumna „Priorytet” mówi, co najbardziej razi. Pozycje z
+dopiskiem „zamówione” mają już osobne zamówienie – tu tylko dla porządku. Rzeczy w świecie = ilustracje
+(zasady z części A), rzeczy żywe = 3D (część B), ikony = jak dotychczasowe ikony 32×32 ×2.
+
+### C1. Postacie i stworki pożyczone od innych (→ część B, 3D)
+
+| Co | Dziś | Priorytet |
+|---|---|---|
+| Wilk, warg | arkusz bandyty zabarwiony | wysoki (B1) |
+| Upiór krypty | szkielet powiększony i rozjaśniony | wysoki (B1) |
+| Wodnik | zombiak na niebiesko | średni (B1) |
+| Wielki chochlik, Wielki herszt | zwykły chochlik/herszt powiększony | niski (wystarczy skala) |
+| Konduktor przy pociągu | woźnica | średni (B2) |
+| Kapitan portu | woźnica na granatowo | średni (B2) |
+| Mędrzec/mędrczyni poza Lublinem (wędrowny mag) | Mag Albrecht | niski (B2) |
+| Ludzie z misji (Hela Trybik, Maszynista Bolek…) i „mądrale” z zagadkami | wygląd losowego mieszkańca | niski – wystarczą mieszkańcy z B2 |
+| Bohater: każdy jest Strażnikiem | jeden model | osobny wątek (łuczniczka, mag, kobiece wersje) |
+
+### C2. Rzeczy w świecie rysowane kodem (→ ilustracje)
+
+| Co | Gdzie w grze | Priorytet |
+|---|---|---|
+| Nagrobki, wejścia do krypt/katakumb, wnętrze lochu | cmentarze, świątynie, lochy | **wysoki** (część A) |
+| Parasol przechodnia (z góry) | mieszkańcy w deszczu | średni |
+| Zwinięta gazeta nad głową gazeciarza | gazeciarze | niski |
+| Tablica z kotwicą przy porcie | porty | zamówione 37-P001 |
+| Stragany kupca (rondo) i wózek targowy z latarnią | ronda | zamówione 37-P001 |
+| Światło spod lampy szyldu | szyldy na słupach | dostarczone 36-G002 – wdrożenie po mojej stronie |
+| Wozy konne w 8 kierunkach, woźnica na koźle | dworce autobusowe | zamówione 34-P001 |
+| Lokomotywa, tender, wagony (z prostego modelu kodem) | stacje kolejowe | średni – **dobry kandydat do 3D** jak stworki (obracają się po torze) |
+| Kopczyk na szczycie z chorągiewką kraju | szczyty gór | niski |
+| Znaki szlaku (kamień biało-czerwony, słupek, kopczyk) | szlaki w górach | niski |
+| Głazy pod urwiskiem | strome zbocza | średni (z zamówieniem gór 16) |
+| Żelazny most kolejowy (kratownice) | rzeki pod torami | niski |
+| Mosiężny kocioł przy rurociągu ulicznym | ulice z rurami | średni |
+| Kukurydza, słonecznik, chmiel na polach | pola | niski |
+| Leżący przedmiot z misji (zguba) | prośby mieszkańców | średni |
+| Chorągwie Areny na masztach przy boiskach, tablica przy bramie stadionu | stadiony | niski (z zamówienia 38 jest tylko wnętrze) |
+
+### C3. Efekty i znaczniki (→ krótkie animacje 2D)
+
+| Co | Gdzie | Priorytet |
+|---|---|---|
+| Cień smoka przelatującego nad miastem (fabuła) | początek historii | średni |
+| Zapowiedzi ataków smoka: czerwony stożek, okrąg, pas | walka ze smokiem | niski (czytelne, ale „z kodu”) |
+| Kula kwasu i kłąb trującego dymu (gdy brak Twoich efektów) | smoki | niski |
+| Dym legowiska smoka (kłęby w kolorze gatunku) | legowiska | niski |
+| Czerwone kłęby na granicy gangu + muszki | tereny gangów | niski |
+| Niebieski dym zasięgu ruchu | walka turowa | niski |
+| Złoty łuk zamachu, wachlarz ognia | ataki obszarowe | średni |
+| Strzała i pocisk magii w locie | łuk, różdżka | średni |
+| Ślad cięcia mieczem | każdy atak | średni |
+| Dymek rozmowy i „!” nad głową | postacie z czymś do powiedzenia | średni |
+| Znacznik misji (złoty i „zrobione”), złota poświata rzeczy do podniesienia | misje | średni |
+| Złota poświata dojrzałych warzyw | pola | niski |
+| Moneta i serce leżące na ziemi | łup | średni |
+
+### C4. Ikony (→ 32×32 ×2, jak dotychczasowe)
+
+| Co | Dziś | Priorytet |
+|---|---|---|
+| Przedmioty z fabuły „Serce Zębatka”: gwizdek maszynisty, kluczyk-nakręcacz, kieszonkowy chronometr, zegarek czeladnika, filtr aetherowy, klasztorny pochłaniacz, płaszcz cechmistrza, karabin „Trybunał”, pączek | emoji | **wysoki** (misje są na produkcji) |
+| Hamburger (jarski, McDonald’s) | emoji | średni |
+| Łuska smocza | kwadracik z kodu | średni |
+| Kieł (łup z wilków) | brak | średni |
+| Namiot, esencje (dąb, mróz) | emoji / rysunek z kodu | niski |
+| Ataki w walce: Mocny atak (dziś złota poświata), Zamach, Salwa, Wachlarz ognia | piksele z kodu | średni |
+| Szyld kupca na rondzie, warsztatu samochodowego, wytwórcy jedzenia | szyld zwykłego sklepu | niski |
+
+### C5. HUD
+
+| Co | Priorytet |
+|---|---|
+| Dwie rurki przy portrecie (życie, siły/mana) | zamówione 43-P001 |
+| Portrety do rozmów dla postaci bez portretu | zamówione 35-P002 |
 
 ---
 
