@@ -723,7 +723,7 @@ async function errorsTab(main: HTMLElement) {
     } }, [
       el('td', {}, [new Date(e.at).toLocaleString('pl-PL')]),
       el('td', {}, [e.player ?? '—']),
-      el('td', {}, [el('span', { className: e.kind === 'freeze' ? 'badge bad' : 'badge' }, [e.kind])]),
+      el('td', {}, [el('span', { className: e.kind === 'freeze' ? 'badge bad' : e.kind === 'fps' ? 'badge warn' : 'badge' }, [e.kind])]),
       el('td', {}, [e.message.slice(0, 120)]),
       el('td', {}, [`${c.map ?? ''} ${c.x ?? ''},${c.y ?? ''}`]),
     ]);

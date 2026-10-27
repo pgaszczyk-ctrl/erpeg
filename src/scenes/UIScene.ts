@@ -691,15 +691,18 @@ export class UIScene extends Phaser.Scene {
     const bodyBlockH = measure.height;
     measure.destroy();
     const h = 16 + headH + 10 + (tabH ? tabH + 10 : 0) + bodyBlockH + 18 + btnsH + 16;
-    const y = Math.max(12, height - h - (this.touch ? 150 : 40));
+    // The bottom margin keeps the joystick corner free, but only while the whole window still fits; otherwise
+    // the window uses the whole height (owner, 27 Oct 2026: a phone held sideways scrolled a short dialog by
+    // one pixel and hid its buttons). Scrolling is only for windows taller than the screen itself.
+    const bottomMargin = this.touch ? 150 : 40;
+    const y = height - h - bottomMargin >= 12 ? height - h - bottomMargin : Math.max(12, (height - h) / 2);
     title.setY(y + 16 + (headH - title.height) / 2);
     const ty = y + 16 + headH + 10;
     const y0 = ty + (tabH ? tabH + 10 : 0); // where the scrollable body/buttons begin
 
     // A dialog with more inside it than the screen has room for (the game menu with every toggle, a long
     // riddle…) gets a shorter panel and scrolls instead of running off the bottom (owner, 26 Oct 2026).
-    const bottomMargin = this.touch ? 150 : 40;
-    const maxH = Math.max(140, height - y - bottomMargin);
+    const maxH = Math.max(140, height - y - 12);
     const needsScroll = h > maxH + 0.5;
     let viewportH = Math.max(20, y + Math.min(h, maxH) - 16 - y0);
     if (needsScroll) {
