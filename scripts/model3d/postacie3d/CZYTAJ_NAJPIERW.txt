@@ -1,0 +1,34 @@
+EXP-LORE — MODELE DO RĘCZNEGO WSTAWIENIA (27.10.2026)
+
+Zawartość public/modele/postacie3d/:
+16.glb — strażnik
+01.glb — strażniczka
+12.glb — łucznik
+18.glb — łuczniczka
+11.glb — młody mag, twarz strażnika, brązowe włosy, bez brody i wąsów
+mage_f.glb — magini
+
+Każdy GLB zawiera geometrię, kolory, pełne dłonie i animacje idle/walk/attack.
+Grupa Weapon zawiera broń (i animowane części cięciwy łuczników).
+Poprawiono plamy na włosach i oczach oraz skokowe wejście/wyjście z postawy łucznika.
+Podgląd.html działa samodzielnie w przeglądarce; wybierz postać, chód lub atak, obróć suwakiem lub przeciągnięciem.
+
+WDROŻENIE DO erpeg:
+1. Skopiuj katalog public/modele/postacie3d/ do takiego samego miejsca w repo.
+2. Istniejący src/ludzik3d.ts powinien ładować wybrany plik z tego katalogu. Opcjonalnie 16.glb może zastąpić public/modele/straznik.glb.
+3. W loaderze wyszukuj grupę Weapon zamiast wyłącznie starego Sword_at_hand_grip:
+   const miecz = model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip');
+   Pokazuj ją podczas ataku. W pliku jest właściwa broń dla danego wariantu.
+4. Dla części o.name === 'head' użyj MeshBasicMaterial({vertexColors:true}), żeby oświetlenie trójkątów nie dodawało plam do twarzy. Zachowaj dotychczasową przestrzeń kolorów renderer.outputColorSpace = LinearSRGBColorSpace.
+5. Pozostają klipy walk/attack oraz obecne rozdzielenie nóg i góry ciała przy ataku w marszu. Atak dystansowy powinien również uruchamiać animację (GameScene.fireShot).
+6. Nie zmieniaj PRODUKCJA ani WERSJA przy samym wstawianiu modeli. Najpierw test w grze.
+
+ISTOTNE OGRANICZENIA:
+Broń i animacja w danym GLB odpowiadają wariantowi postaci. Dynamiczne zakładanie łuku/różdżki strażnikowi wymaga jeszcze oddzielenia wyposażenia od skina i podpięcia odpowiednich animacji. Tego nie oznaczamy jako wdrożonego.
+Decyzja właściciela: w służbie zachowujemy mundur; dowolne bronie są możliwe. Zmiana skinów po questach strażników i odejściu ze służby; konkretne stany questów definiowane osobno.
+Nie odwzorowano wszystkich kombinacji kolorów i części kreatora; to sześć gotowych sylwetek.
+
+SPRAWDZENIE:
+Pliki GLB są kompletne (nagłówki/długości, bufory i klipy). Poprzednio sześć modeli przeszło walidację GLB bez błędów/ostrzeżeń. Strażnik na komputerze i łuczniczka w emulacji telefonu: obrót, cios i cios w marszu — OK, na kontrolowanej mapie z mockowanymi RPC. Nie testowano na fizycznym telefonie. Pełna przebudowa map OSM nie została ukończona.
+
+Źródło wyglądu: sprite’y właściciela w erpeg. Ukryte powierzchnie są rekonstrukcją; modele segmentowe, bez deformacji skóry i ruchomych palców.
