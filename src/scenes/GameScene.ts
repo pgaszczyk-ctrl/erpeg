@@ -5778,6 +5778,7 @@ export class GameScene extends Phaser.Scene {
       this.emitZasoby();
     }
     this.player.facing.set(dir.x, dir.y);
+    this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x));
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
     // Starts at the hero, so nothing standing right next to them is skipped.
     const sprite = this.add

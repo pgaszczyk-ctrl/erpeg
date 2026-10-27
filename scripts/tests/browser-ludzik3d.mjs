@@ -8,12 +8,21 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const TELEFON = process.env.TELEFON === '1';
 const sfx = TELEFON ? '-tel' : '';
 const URL0 = 'http://127.0.0.1:4173/';
-const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader'], chromiumSandbox: false });
+const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox', '--enable-unsafe-swiftshader'], chromiumSandbox: false });
 const gracz = (o = {}) => ({ name: 'Zbyszko', idik: 'ABCD1234', start_place: 'Plac Zamkowy', start_x: 0, start_y: 0, map_scale: 1.92, save: { coins: 250, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 } }, exp: 450, dead: false, died_at: null, age: 6, konto: true, ...o });
 try {
   const ctx = await browser.newContext(TELEFON
     ? { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, locale: 'pl-PL' }
     : { viewport: { width: 1280, height: 720 }, locale: 'pl-PL' });
+  if (process.env.MAP_FIXTURE === '1') await ctx.route('**/map/**', route => {
+    // Controlled flat map: test the character renderer and controls independently of OSM rebuilds.
+    const world = new URL(route.request().url()).pathname.endsWith('/world.json');
+    return route.fulfill({ json: world ? { lublin: [], towns: [], edges: [] } : {
+      unitsPerM: 2, bounds: { minLat: 51.1, maxLat: 51.4, minLon: 22.3, maxLon: 22.8 },
+      w: 20000, h: 20000, boundary: [[0,0,40000,0,0,40000,-40000,0]],
+      areas: [], lines: [['minor',0,[3000,3000,500,0],'Plac Zamkowy']], buildings: [], pois: []
+    } });
+  });
   let startXY = null;
   await ctx.route('**/*.supabase.co/**', (route) => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
@@ -29,9 +38,9 @@ try {
   });
   const page = await ctx.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => {errors.push(e.message);console.log('PAGE ERROR', e.message)});
   page.on('console', (m) => { if (/Ludzik 3D/.test(m.text())) errors.push(m.text()); });
-  await page.goto(`${URL0}?lang=pl&ostrosc=1&ludzik3d=1&live=0`);
+  await page.goto(`${URL0}?lang=pl&ostrosc=1&ludzik3d=1&live=0&model3d=${process.env.MODEL3D || '16'}`);
   await page.getByRole('button', { name: 'Nowa postać' }).click();
   await page.locator('.m-namerow input').fill('Zbyszko');
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
@@ -52,16 +61,16 @@ try {
   const blisko = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 0.35;
   assert(blisko(katy.prawo, Math.PI / 2) && blisko(katy.lewo, -Math.PI / 2) && blisko(katy.gora, Math.PI) && blisko(katy.dol, 0), 'turns to the walking direction');
   await page.keyboard.press('Space');
-  await page.waitForTimeout(250);
-  await page.screenshot({ path: `work/ludzik3d-cios${sfx}.png` });
+  await page.waitForFunction(() => window.__game.scene.getScene('game').ludzik3d.g.atak.isRunning());
   const cios = await page.evaluate(() => window.__game.scene.getScene('game').ludzik3d.g.atak.isRunning());
   assert(cios, 'a swing plays the blow');
+  await page.screenshot({ path: `work/ludzik3d-cios${sfx}.png` });
   // A swing while walking: the legs keep walking, the upper body strikes (owner, 27 Oct 2026).
   await page.waitForTimeout(1200);
   await page.keyboard.down('ArrowLeft');
   await page.waitForTimeout(500);
   await page.keyboard.press('Space');
-  await page.waitForTimeout(200);
+  await page.waitForFunction(() => { const g=window.__game.scene.getScene('game').ludzik3d.g; return g.chodNogi.isRunning() && g.atakGora.isRunning(); });
   const wMarszu = await page.evaluate(() => { const g = window.__game.scene.getScene('game').ludzik3d.g; return { nogi: g.chodNogi.isRunning(), gora: g.atakGora.isRunning(), tempo: g.chodNogi.timeScale }; });
   await page.screenshot({ path: `work/ludzik3d-cios-w-marszu${sfx}.png` });
   await page.keyboard.up('ArrowLeft');

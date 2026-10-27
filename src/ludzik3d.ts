@@ -132,7 +132,17 @@ export class Ludzik3D {
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${LUDZIK_3D.plik}`);
+      const { session } = await import('./quests');
+      const { modulGracza } = await import('./ui/modulPostac');
+      const look = modulGracza(session.look, session.name);
+      const female = look.p === 'k';
+      const automatic = look.c === '11' ? (female ? 'mage_f' : '11')
+        : ['12', '18'].includes(look.c) ? (female ? '18' : '12') : female ? '01' : '16';
+      const requested = new URLSearchParams(location.search).get('model3d');
+      const ids = ['16', '01', '12', '18', '11', 'mage_f'];
+      const id = requested && ids.includes(requested) ? requested : automatic;
+      const file = LUDZIK_3D.plik === 'modele/straznik.glb' ? `modele/postacie3d/${id}.glb` : LUDZIK_3D.plik;
+      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${file}`);
       const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = n;
@@ -148,7 +158,9 @@ export class Ludzik3D {
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
-        m.material = new three.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+        m.material = o.name === 'head'
+          ? new three.MeshBasicMaterial({ vertexColors: true })
+          : new three.MeshLambertMaterial({ vertexColors: true, flatShading: true });
       });
       scene.add(model);
       const amb = new three.AmbientLight(0xffffff, LUDZIK_3D.otoczenie);
@@ -182,7 +194,7 @@ export class Ludzik3D {
         a.clampWhenFinished = false;
         a.timeScale = LUDZIK_3D.tempoAtaku;
       }
-      const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
+      const miecz = model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip') ?? undefined;
       this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
       this.swiatla = { amb, sun };
       this.scene.textures.addCanvas(this.klucz, this.wyjscie);
