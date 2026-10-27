@@ -7,6 +7,7 @@ import { UIScene } from './scenes/UIScene';
 import { ArenaScene } from './scenes/ArenaScene';
 import { installTouchControls } from './controls';
 import { installErrorLog, watchGraphics, report } from './errlog';
+import { installFpsLog } from './fpslog';
 import { session } from './quests';
 import { codeLink } from './ui/codeCard';
 import { api } from './api';
@@ -84,6 +85,8 @@ const fit = () => {
 window.addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);
 watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
+// Under 40 frames a second (or many hitches) while playing: a report to the error log.
+installFpsLog(game);
 // A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
 if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
 installLeaveGuard(game);
