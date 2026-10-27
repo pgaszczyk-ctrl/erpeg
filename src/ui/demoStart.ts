@@ -9,8 +9,7 @@ import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
-import { kreatorModul } from './kreatorModul';
-import type { ModulLook } from './modulPostac';
+import { randomModul, type ModulLook } from './modulPostac';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
 // only the name, and below it – optional – an account (e-mail or Google). The character is made at once
@@ -51,15 +50,12 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       location.href = `${location.origin}${sciezkaGry()}#wczytaj`;
     };
     const logo = logoImage(110, 'm-demo-logo');
-    // Pick the hero's look – gender, skin tone, „Losuj” (owner, 20 Oct 2026; every server since 1.032).
-    let modul: ModulLook | undefined;
-    const kreator = kreatorModul((l) => { modul = l; });
-    const wyglad = [el('div', { className: 'm-demo-wyglad' }, [kreator.preview]), kreator.box];
+    // No look to pick: every hero starts as a young guard (owner, 27 Oct 2026).
+    const modul: ModulLook = randomModul(Math.random() < 0.5 ? 'k' : 'm');
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
       el('label', { className: 'm-field' }, [el('span', {}, ['Imię']), name, el('small', {}, ['Imienia nie można później zmienić.'])]),
-      ...wyglad,
       err, go, konto, mam,
     );
     if (!document.getElementById('demo-start-css')) {
@@ -73,7 +69,6 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
         #menu.m-demo .m-primary { font-size: 20px; padding: 12px; }
         #menu.m-demo .m-demo-konto { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #5a4f3a; }
         #menu.m-demo .m-demo-konto span { color: #c9bfa6; font-size: 13px; }
-        #menu.m-demo .m-demo-wyglad { display: flex; justify-content: center; }
         #menu.m-demo .m-demo-mam { color: #9aa39a; font-size: 13px; text-align: center; }
       `;
       document.head.append(st);

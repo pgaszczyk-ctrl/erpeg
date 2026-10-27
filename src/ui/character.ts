@@ -10,42 +10,15 @@ import {
 } from '../inventory';
 import { session, stanOsiagniec } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
-import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
+import { NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin, BOHATER_MODUL } from '../sprites';
-import { kreatorModul } from './kreatorModul';
 import { modulGracza, modulArkuszUrl } from './modulPostac';
 import { heroPreviewBackground } from './heroPreview';
 import { ENEMY_KINDS } from '../objects/Slime';
 import { OSIAGNIECIA } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
-import { TEST } from '../version';
-import { rememberTestLook } from '../testAppearance';
 import { prettyCode, shareCode, linkToAccount } from './codeCard';
 import { pokazGdzieKliknac } from './samouczek';
-
-/** Choosing which of the new heroes to be (saved with the look at the next save). */
-function skinPicker(changed: () => void) {
-  const now = heroSkin(session.look.postac, session.name);
-  const i = BOHATEROWIE.indexOf(now);
-  const row = el('div', 'c-skin');
-  const pic = el('div', 'c-skin-pic');
-  heroPreviewBackground(pic, now.plik);
-  const go = (d: number) => {
-    session.look = { ...session.look, postac: (i + d + BOHATEROWIE.length) % BOHATEROWIE.length };
-    if (TEST) rememberTestLook(session.look, session.name);
-    changed();
-  };
-  const prev = el('button', 'c-btn', '◀') as HTMLButtonElement;
-  prev.type = 'button';
-  prev.setAttribute('aria-label', 'Poprzednia postać');
-  prev.onclick = () => go(-1);
-  const next = el('button', 'c-btn', '▶') as HTMLButtonElement;
-  next.type = 'button';
-  next.setAttribute('aria-label', 'Następna postać');
-  next.onclick = () => go(1);
-  row.append(prev, pic, el('div', 'c-skin-name', `🎭 ${now.nazwa}`), next);
-  return row;
-}
 
 /**
  * The character's code and, until it is done, linking it to an account (owner, 18 Oct 2026: the HUD portrait opens
@@ -117,13 +90,13 @@ function kodPostaci() {
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'kufer' | 'postac' | 'wyglad' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
+type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 /** Narrow screens (the trunk's three columns would stack): each column gets a tab of its own. */
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['wyglad', '🎭', 'Wygląd'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
-    : [['kufer', '🧳', 'Kufer'], ['wyglad', '🎭', 'Wygląd'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
+    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zasoby', '🪙', 'Zasoby'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
 const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
@@ -337,46 +310,6 @@ function show(host: CharacterHost) {
     return frame;
   };
 
-  // ---------------------------------------------------------------- Wygląd (its own tab, owner 26 Oct 2026: the look
-  // controls took the equipment's room – „przesuń na bok albo na osobną kartę”).
-  const sectionWyglad = () => {
-    const s = section('Wygląd', 'k-wyglad');
-    const row = el('div', 'k-wyglad-row');
-    const ster = el('div', 'k-wyglad-ster');
-    // The modular hero – gender, skin tone, „Losuj” (owner, 20 Oct 2026). Older characters keep their hero (◀ ▶ among
-    // the 25) until they pick „Nowy wygląd”.
-    if (BOHATER_MODUL && session.look.modul) {
-      const k = kreatorModul((l) => {
-        session.look = { ...session.look, modul: l };
-        session.productionLook = { ...session.productionLook, modul: l };
-        onChange();
-        render();
-      }, modulGracza(session.look, session.name));
-      ster.append(k.box);
-    } else if (NOWE_POSTACIE) {
-      ster.append(skinPicker(() => {
-        onChange();
-        render();
-      }));
-      if (BOHATER_MODUL) {
-        const nowy = el('button', 'c-btn k-nowy-wyglad', '✨ Nowy wygląd') as HTMLButtonElement;
-        nowy.type = 'button';
-        nowy.onclick = () => {
-          const l = modulGracza(session.look, session.name);
-          session.look = { ...session.look, modul: l };
-          session.productionLook = { ...session.productionLook, modul: l };
-          onChange();
-          render();
-        };
-        ster.append(nowy);
-      }
-    }
-    const obraz = dagerotyp();
-    obraz.classList.add('k-dag-duzy');
-    row.append(obraz, ster);
-    s.append(row);
-    return s;
-  };
 
   const sectionPostac = () => {
     const s = section('Postać', 'k-postac');
@@ -682,7 +615,6 @@ function show(host: CharacterHost) {
       dispose?.();
       dispose = null;
       if (page === 'stan') body.append(sectionStan());
-      else if (page === 'wyglad') body.append(sectionWyglad());
       else if (page === 'zasoby') body.append(sectionZasoby());
       else if (page === 'zadania') pageZadania();
       else pageKsiega();
