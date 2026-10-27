@@ -176,6 +176,8 @@ export interface Snapshot {
 }
 
 export interface LoginResult {
+  /** Set only by this client after a successful normal create_character request. Never inferred from EXP. */
+  newCharacter?: boolean;
   token?: string;
   player: PlayerInfo;
   abandoned?: Snapshot | null;

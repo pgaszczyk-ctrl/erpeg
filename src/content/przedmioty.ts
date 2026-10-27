@@ -65,6 +65,11 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: POJAZDY.rower.monet, pojazd: 'rower', opis: 'Jazda o 25% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
   { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, cenaDiamenty: POJAZDY.hulajnoga.diamenty, pojazd: 'hulajnoga', opis: 'Jazda o 40% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
   // Broń do ręki (klik)
+  // Quest equipment has no resale value; one global reward per character.
+  { id: 'miecz_rekruta', nazwa: 'Miecz ćwiczebny straży', miejsce: 'bron', moc: 2, cena: 0 },
+  { id: 'luk_rekruta', nazwa: 'Stary łuk ćwiczebny', miejsce: 'bron', rodzaj: 'luk', moc: 2, cena: 0 },
+  { id: 'rozdzka_szkolna', nazwa: 'Różdżka szkoleniowa', miejsce: 'bron', rodzaj: 'magia', moc: 2, cena: 0 },
+  { id: 'kapelusz_szkolny', nazwa: 'Kapelusz szkoleniowy', miejsce: 'helm', moc: 1, cena: 0 },
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
   // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.

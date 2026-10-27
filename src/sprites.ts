@@ -511,7 +511,7 @@ function modulKey(ml: ModulLook) {
 }
 
 /** Makes the modular hero's texture (once its parts are loaded); null when they aren't. */
-function ensureModul(scene: Phaser.Scene, ml: ModulLook): string | null {
+export function ensureModul(scene: Phaser.Scene, ml: ModulLook): string | null {
   const key = modulKey(ml);
   if (scene.textures.exists(key)) return key;
   const sheet = modulArkuszTeraz(ml);

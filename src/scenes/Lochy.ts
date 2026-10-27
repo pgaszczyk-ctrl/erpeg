@@ -235,6 +235,10 @@ export class LochyWejscia {
     if (w && !this.lista.some((q) => Math.hypot(q.x - w.x, q.y - w.y) < 30 * M)) this.lista.push(w);
   }
 
+  addTutorial(w: WejscieLochu) {
+    if (!this.lista.some(q => q.id === w.id)) { this.lista.push(w); this.pokaz(w); }
+  }
+
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
     const img = s.add.image(w.x, w.y, `loch-wej-${w.rodzaj}`).setScale(1 / D).setOrigin(0.5, 0.75).setDepth(w.y - 6);
@@ -280,6 +284,8 @@ export interface LochHost {
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
   nonce: string | number;
+  /** Persistent progress only for the character's tutorial instance. */
+  progress?: { killed: number[]; chest: boolean };
 }
 
 export class LochWnetrze {
@@ -296,7 +302,7 @@ export class LochWnetrze {
   constructor(private h: LochHost, city: CityMap) {
     this.plan = city.loch!;
     this.key = `${h.nonce}|${city.id}`;
-    this.stan = stany.get(this.key) ?? { zabici: new Set(), skrzynia: false, ogloszony: false };
+    this.stan = h.progress ? { zabici: new Set(h.progress.killed), skrzynia: h.progress.chest, ogloszony: false } : stany.get(this.key) ?? { zabici: new Set(), skrzynia: false, ogloszony: false };
     stany.set(this.key, this.stan);
     tekstury(h.scene);
     this.maluj();
@@ -483,7 +489,9 @@ export class LochWnetrze {
     p.komnaty.forEach((k, i) => {
       if (!k.duza || k.wejscie) return;
       const kinds: { kind: RodzajWroga; straznik: boolean }[] = [];
-      if (k.skarb) {
+      if (p.tutorial) {
+        kinds.push({ kind: 'glut', straznik: false });
+      } else if (k.skarb) {
         kinds.push({ kind: O.straznik, straznik: true });
         for (const o of O.obstawa) kinds.push({ kind: o, straznik: false });
       } else {
@@ -529,6 +537,7 @@ export class LochWnetrze {
     if (i === undefined) return false;
     this.zywi.delete(e);
     this.stan.zabici.add(i);
+    if (this.h.progress && !this.h.progress.killed.includes(i)) this.h.progress.killed.push(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
     if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast('🧰 Strażnik pokonany – skrzynia stoi otworem!', 3200);
@@ -538,6 +547,15 @@ export class LochWnetrze {
     }
     return true;
   }
+
+  /** Tutorial adapter; the ordinary dungeon uses exactly the same generator and monsters. */
+  get firstChamber() {
+    return this.plan.komnaty.map((k, i) => ({ k, i })).filter(q => !q.k.wejscie)
+      .sort((a,b) => a.k.glebokosc-b.k.glebokosc || a.i-b.i)[0];
+  }
+  get magicSpot() { const k = this.firstChamber.k; return this.px(k.cx, k.cy); }
+  get firstGroupCleared() { return !this.lokatorzy.some((l, i) => l.komnata === this.firstChamber.i && !this.stan.zabici.has(i)); }
+  contains(e: unknown) { return this.zywi.has(e); }
 
   /** Zbliżył się do skarbca – raz ostrzega. */
   private ostrzegl = false;
@@ -560,6 +578,7 @@ export class LochWnetrze {
 
   otworzSkrzynie() {
     this.stan.skrzynia = true;
+    if (this.h.progress) this.h.progress.chest = true;
     this.skrzyniaImg.setFrame('o');
   }
 

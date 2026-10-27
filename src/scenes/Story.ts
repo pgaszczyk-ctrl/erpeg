@@ -92,6 +92,7 @@ export class Story {
 
   /** Called every frame; `moving` = the hero walked this frame. */
   update(dt: number, moving: boolean) {
+    if (session.story.prolog?.status === 'active') return;
     const st = this.state;
     if (st.st === 'start' && moving && !this.busy) {
       st.walked += dt;
