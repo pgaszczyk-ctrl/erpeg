@@ -177,6 +177,8 @@ export interface CharacterHost {
   goodsIcon?: (f: Owoc | Grupa) => string | undefined;
   /** When the trunk closes. */
   onClose?: () => void;
+  /** In a dungeon: the escape button (owner, 27 Oct 2026: „przycisk ucieczki z lochu, np. w eq”). */
+  ucieczka?: { tekst: string; fn: () => void };
 }
 
 export function toggleCharacter(host: CharacterHost) {
@@ -247,7 +249,20 @@ function show(host: CharacterHost) {
   // A plain ✕ on brass (owner, 18 Oct 2026: the red valve wasn't understood as „close”).
   valve.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   valve.onclick = closeCharacter;
-  top.append(tabs, valve);
+  top.append(tabs);
+  // In a dungeon: the escape button on the top bar, so every page shows it (owner, 27 Oct 2026).
+  if (host.ucieczka) {
+    const u = host.ucieczka;
+    const ub = el('button', 'c-btn k-ucieczka', u.tekst) as HTMLButtonElement;
+    ub.type = 'button';
+    ub.title = 'Wyjdź z lochu prosto na powierzchnię';
+    ub.onclick = () => {
+      closeCharacter();
+      u.fn();
+    };
+    top.append(ub);
+  }
+  top.append(valve);
   const body = el('div', 'k-body');
   box.append(top, el('div', 'k-pipe'), body);
   root.append(box);
@@ -266,7 +281,70 @@ function show(host: CharacterHost) {
   // text or a built-up card (itemCard: icon + name, then stat rows, then the description) – owner, 26 Oct 2026:
   // one packed sentence ("Nazwa · umiejętność: opis Atak +N (założone: ...). Wytrzymałość: ...") was unreadable.
   const actions = el('div', 'c-actions k-card');
+  // A pop-up card next to the thing (owner, 27 Oct 2026: on a phone the board's small text was unreadable): phones
+  // show it on a tap (with the buttons), a computer on mouse hover (the board keeps the buttons there).
+  const dotyk = matchMedia('(hover: none), (pointer: coarse)').matches;
+  if (dotyk) root.classList.add('k-dotyk');
+  let pop: HTMLElement | null = null;
+  let kotwica: HTMLElement | null = null;
+  const zamknijPop = () => {
+    pop?.remove();
+    pop = null;
+  };
+  /** Layout position of `e` inside the trunk's overlay (offsets, not screen rects: the page may be turned – obrot.ts). */
+  const wRoot = (e: HTMLElement) => {
+    let x = 0, y = 0;
+    for (let n: HTMLElement | null = e; n && n !== root; n = n.offsetParent as HTMLElement | null) { x += n.offsetLeft; y += n.offsetTop; }
+    for (let n = e.parentElement; n && n !== root; n = n.parentElement) { x -= n.scrollLeft; y -= n.scrollTop; }
+    return { x, y, w: e.offsetWidth, h: e.offsetHeight };
+  };
+  const pokazPop = (tresc: Node, przy: HTMLElement | null, hover: boolean) => {
+    zamknijPop();
+    const p = el('div', `k-pop${hover ? ' k-pop-hover' : ''}`);
+    p.setAttribute('role', hover ? 'tooltip' : 'dialog');
+    p.append(tresc);
+    root.append(p);
+    pop = p;
+    const W = root.clientWidth, H = root.clientHeight, m = 8;
+    const r = przy?.isConnected ? wRoot(przy) : { x: W / 2, y: H / 3, w: 0, h: 0 };
+    const w = p.offsetWidth, h = p.offsetHeight;
+    let x = r.x + r.w + 10, y = r.y + r.h / 2 - h / 2;
+    if (x + w > W - m) x = r.x - 10 - w;
+    if (x < m) {
+      // No room at either side: above or below the thing.
+      x = Math.max(m, Math.min(W - w - m, r.x + r.w / 2 - w / 2));
+      y = r.y + r.h + 8 + h <= H - m ? r.y + r.h + 8 : r.y - 8 - h;
+    }
+    p.style.left = `${Math.round(x)}px`;
+    p.style.top = `${Math.round(Math.max(m, Math.min(H - h - m, y)))}px`;
+  };
+  root.addEventListener('pointerdown', (e) => {
+    if (pop && !pop.classList.contains('k-pop-hover') && !pop.contains(e.target as Node)) zamknijPop();
+    if (pop?.classList.contains('k-pop-hover')) zamknijPop();
+    kotwica = (e.target as HTMLElement).closest?.('.sl-cell') as HTMLElement | null;
+  }, true);
   const ask = (title: string | Node, choices: [string, () => boolean | void][]) => {
+    if (dotyk) {
+      const c = el('div', 'c-actions k-pop-in');
+      c.append(typeof title === 'string' ? el('div', 'c-actions-title', title) : title);
+      const btns = el('div', 'k-pop-btns');
+      for (const [label, fn] of choices) {
+        const b = el('button', 'c-btn', label) as HTMLButtonElement;
+        b.onclick = () => {
+          zamknijPop();
+          if (fn() !== false) {
+            onChange();
+            render();
+          }
+        };
+        btns.append(b);
+      }
+      const cancel = el('button', 'c-btn c-muted', choices.length ? 'Anuluj' : 'OK') as HTMLButtonElement;
+      cancel.onclick = zamknijPop;
+      btns.append(cancel);
+      c.append(btns);
+      return pokazPop(c, kotwica, false);
+    }
     actions.replaceChildren(typeof title === 'string' ? el('div', 'c-actions-title', title) : title);
     for (const [label, fn] of choices) {
       const b = el('button', 'c-btn', label) as HTMLButtonElement;
@@ -282,9 +360,7 @@ function show(host: CharacterHost) {
     cancel.onclick = () => actions.replaceChildren();
     actions.append(cancel);
   };
-  const alertFull = () => {
-    actions.replaceChildren(el('div', 'c-actions-title', 'Plecak pełny – najpierw coś wyrzuć.'));
-  };
+  const alertFull = () => ask('Plecak pełny – najpierw coś wyrzuć.', []);
   const section = (title: string, id?: string) => {
     const s = el('section', 'k-well');
     if (id) s.id = id;
@@ -360,13 +436,33 @@ function show(host: CharacterHost) {
       glowkaPlecaka.append(tb);
     }
 
+    // A computer: the card pops up while the mouse is over a thing.
+    if (!dotyk) {
+      wrap.addEventListener('pointerover', (e) => {
+        if (e.pointerType !== 'mouse' || e.buttons) return;
+        const c = (e.target as HTMLElement).closest?.('.sl-cell') as HTMLElement | null;
+        if (!c || !c.dataset.full) return;
+        c.removeAttribute('title');
+        const z = c.dataset.zone, k = c.dataset.key ?? '';
+        const sl = z === 'eq' ? (gear.equip[k as Miejsce] ? { item: gear.equip[k as Miejsce]! } : null) : z === 'bag' ? gear.bag[Number(k)] ?? null : null;
+        if (!sl) return;
+        const t = 'item' in sl ? itemCard(sl.item) : el('div', 'c-actions-title', 'goods' in sl ? goodsLabel(sl) : slotLabel(sl));
+        const box = el('div', 'c-actions k-pop-in');
+        box.append(t);
+        pokazPop(box, c, true);
+      });
+      wrap.addEventListener('pointerout', (e) => {
+        const c = (e.target as HTMLElement).closest?.('.sl-cell');
+        if (c && !c.contains(e.relatedTarget as Node) && pop?.classList.contains('k-pop-hover')) zamknijPop();
+      });
+    }
     dispose?.();
     dispose = slotDrag(wrap, {
       drop: (from, to) => {
         const msg = moveThing(from, to);
         onChange();
         render();
-        if (msg) actions.replaceChildren(el('div', 'c-actions-title', msg));
+        if (msg) ask(msg, []);
       },
       tap: (at) => {
         if (at.zone === 'eq') {
@@ -592,6 +688,7 @@ function show(host: CharacterHost) {
 
   const render = () => {
     const keep = body.scrollTop;
+    zamknijPop();
     body.replaceChildren();
     tabs.replaceChildren();
     actions.replaceChildren();

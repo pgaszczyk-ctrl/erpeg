@@ -1403,10 +1403,16 @@ export class CityMap {
 
   /** Towns and villages a start address can name: the index's towns plus the villages. */
   townList(): { name: string; x: number; y: number }[] {
+    // Cached (the HUD asks every frame): rebuilt only when the villages or towns change.
+    const wsie = this.settlements();
+    if (this.townListCache && this.townListCache.wsie === wsie && this.townListCache.n === this.namedTowns.length) return this.townListCache.out;
     const out = [...this.namedTowns];
-    for (const s of this.settlements()) if (!out.some((t) => normAddress(t.name) === normAddress(s.name))) out.push(s);
+    const znane = new Set(out.map((t) => normAddress(t.name)));
+    for (const s of wsie) if (!znane.has(normAddress(s.name))) { out.push(s); znane.add(normAddress(s.name)); }
+    this.townListCache = { wsie, n: this.namedTowns.length, out };
     return out;
   }
+  private townListCache?: { wsie: unknown; n: number; out: { name: string; x: number; y: number }[] };
 
   /**
    * A start address that may name a town: "Garbów", "Kościelna 5, Garbów",

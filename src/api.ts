@@ -127,6 +127,8 @@ export interface Stats {
   arenaPrzegrane?: number;
   /** Dungeon chests opened (content/lochy.ts). */
   lochy?: number;
+  /** The deepest dungeon floor reached. */
+  lochPietro?: number;
 }
 
 export interface PlayerInfo {

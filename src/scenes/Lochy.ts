@@ -4,7 +4,7 @@
 import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { LOCH, LOCHY, type RodzajLochu } from '../content/lochy';
+import { LOCH, LOCHY, PIETRA, STOPNIE_LOCHU, type RodzajLochu } from '../content/lochy';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
 
@@ -84,6 +84,19 @@ function tekstury(scene: Phaser.Scene) {
       c.fillStyle = ink; c.fillRect(2, 8 + i * 7, 44, 1);
     }
     c.fillStyle = '#e8dcbc'; c.fillRect(2, 2, 44, 2);
+  });
+  // Schody w dół (w lochu), od góry: stopnie ciemniejące w głąb, obramowanie z kamienia.
+  plotno('loch-schody-dol', 48, 40, (c) => {
+    c.fillStyle = ink; c.fillRect(0, 0, 48, 40);
+    c.fillStyle = '#6d6f75'; c.fillRect(1, 1, 46, 38);
+    for (let i = 0; i < 5; i++) {
+      const v = 120 - i * 24;
+      c.fillStyle = `rgb(${v},${v - 6},${v - 14})`;
+      c.fillRect(5, 4 + i * 7, 38, 6);
+      c.fillStyle = ink; c.fillRect(5, 10 + i * 7, 38, 1);
+    }
+    c.fillStyle = '#050407'; c.fillRect(5, 32, 38, 6);
+    c.fillStyle = '#a8a9ad'; c.fillRect(1, 1, 46, 2);
   });
   // Skrzynia: zamknięta / otwarta.
   plotno('loch-skrzynia', 48, 24, (c) => {
@@ -276,10 +289,12 @@ const stany = new Map<string, { zabici: Set<number>; skrzynia: boolean; ogloszon
 
 export interface LochHost {
   scene: Phaser.Scene;
-  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean };
+  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean; hp: number };
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
   nonce: string | number;
+  /** Mnożnik liczby potworów (trudność: content/lochy.ts POTWORY_NA_TRUDNOSC). */
+  potworyMnoznik?: number;
 }
 
 export class LochWnetrze {
@@ -320,6 +335,26 @@ export class LochWnetrze {
   get schody() {
     const p = this.px(this.plan.schody.x, this.plan.schody.y);
     return { x: p.x, y: p.y + this.plan.T * 0.5 };
+  }
+
+  /** Schody w dół (środek ich dolnej krawędzi) albo null na ostatnim piętrze. */
+  get schodyDol() {
+    const d = this.plan.schodyDol;
+    if (!d) return null;
+    const p = this.px(d.x, d.y);
+    return { x: p.x, y: p.y + this.plan.T * 1.2 };
+  }
+
+  /** Ostatnie (najgłębsze) piętro? */
+  get dno() {
+    return this.plan.pietro >= this.plan.pieter;
+  }
+
+  /** Nagroda ze skrzyni tego piętra (rośnie z głębokością, na dnie najwięcej). */
+  get nagroda() {
+    const N = this.opis.nagroda, f = this.plan.pietro;
+    const x = (1 + PIETRA.nagrody * (f - 1)) * (this.dno && this.plan.pieter > 1 ? PIETRA.ostatniaNagroda : 1);
+    return { monety: [Math.round(N.monety[0] * x), Math.round(N.monety[1] * x)] as [number, number], exp: Math.round(N.exp * x), mikstura: N.mikstura + (this.dno && this.plan.pieter > 1 ? 1 : 0), diament: Math.min(0.9, N.diament * x * (this.dno ? 3 : 1)) };
   }
 
   get skrzynia() {
@@ -463,6 +498,13 @@ export class LochWnetrze {
     s.add.image(sch.x, sch.y - T * 0.5, 'loch-schody').setOrigin(0.5, 0).setScale(1 / D).setDepth(-1e8 + 1);
     const dzien = s.add.image(sch.x, sch.y + T * 0.6, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0xdfe8ff).setDisplaySize(T * 5, T * 4).setDepth(1_041_200).setAlpha(0.35);
     s.tweens.add({ targets: dzien, alpha: { from: 0.28, to: 0.4 }, duration: 2600, yoyo: true, repeat: -1 });
+    // Schody w dół (nie na ostatnim piętrze), z zimnym tchnieniem z głębi.
+    const sd = this.schodyDol;
+    if (sd) {
+      s.add.image(sd.x, sd.y - T * 1.7, 'loch-schody-dol').setOrigin(0.5, 0).setScale(1 / D).setDepth(-1e8 + 1);
+      const chlod = s.add.image(sd.x, sd.y, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0x7a9cff).setDisplaySize(T * 4, T * 3).setDepth(1_041_200).setAlpha(0.25);
+      s.tweens.add({ targets: chlod, alpha: { from: 0.15, to: 0.32 }, duration: 2200, yoyo: true, repeat: -1 });
+    }
     // Skrzynia.
     const sk = this.skrzynia;
     this.skrzyniaImg = s.add.image(sk.x, sk.y + T * 0.4, 'loch-skrzynia', this.stan.skrzynia ? 'o' : 'z').setOrigin(0.5, 1).setScale(1 / D).setDepth(sk.y);
@@ -479,18 +521,34 @@ export class LochWnetrze {
 
   private planujPotwory() {
     const p = this.plan, O = this.opis, T = p.T;
-    const r = rng(p.seed ^ 0x2545f491);
+    const St = STOPNIE_LOCHU[p.stopien - 1] ?? STOPNIE_LOCHU[0];
+    const r = rng(p.seed ^ 0x2545f491 ^ Math.imul(p.stopien, 0x51ed27));
+    const mn = (this.h.potworyMnoznik ?? 1) * (1 + PIETRA.potworow * (p.pietro - 1));
+    const zwykly = () => O.potwory[Math.floor(r() * O.potwory.length)];
+    // Strażnice (elita + obstawa): duże komnaty w połowie drogi do skarbu.
+    const kandydaci = p.komnaty.map((k, i) => ({ k, i })).filter(({ k }) => k.duza && !k.wejscie && !k.skarb && k.glebokosc >= 0.3 && k.glebokosc <= 0.9);
+    const straznice = new Set<number>();
+    for (let n = 0; n < St.straznice && kandydaci.length; n++) straznice.add(kandydaci.splice(Math.floor(r() * kandydaci.length), 1)[0].i);
     p.komnaty.forEach((k, i) => {
-      if (!k.duza || k.wejscie) return;
+      if (k.wejscie) return;
       const kinds: { kind: RodzajWroga; straznik: boolean }[] = [];
       if (k.skarb) {
         kinds.push({ kind: O.straznik, straznik: true });
         for (const o of O.obstawa) kinds.push({ kind: o, straznik: false });
+        for (let j = 0; j < Math.round((p.stopien - 1) * 0.75 * mn); j++) kinds.push({ kind: zwykly(), straznik: false });
+      } else if (straznice.has(i)) {
+        kinds.push({ kind: O.elita, straznik: true });
+        for (let j = 0; j < Math.round((2 + p.stopien * 0.5) * mn); j++) kinds.push({ kind: zwykly(), straznik: false });
+      } else if (k.duza) {
+        if (r() > St.szansaGrupy) return;
+        const [a, b] = St.wKomnacie;
+        const ile = Math.max(1, Math.round((a + (b - a) * (0.25 + 0.75 * k.glebokosc) * (0.6 + 0.4 * r())) * mn));
+        for (let j = 0; j < ile; j++) kinds.push({ kind: zwykly(), straznik: false });
       } else {
-        if (r() > LOCH.szansaGrupy) return;
-        const [a, b] = LOCH.wKomnacie;
-        const ile = Math.round(a + (b - a) * (0.25 + 0.75 * k.glebokosc) * (0.6 + 0.4 * r()));
-        for (let j = 0; j < ile; j++) kinds.push({ kind: O.potwory[Math.floor(r() * O.potwory.length)], straznik: false });
+        // Skrzyżowanie korytarzy albo nisza ślepej odnogi: pojedynczy czatownik (czasem dwóch).
+        if (r() >= (k.nisza ? St.wNiszy : St.naSkrzyzowaniu)) return;
+        const ile = r() < 0.3 * mn ? 2 : 1;
+        for (let j = 0; j < ile; j++) kinds.push({ kind: zwykly(), straznik: false });
       }
       for (const q of kinds) {
         for (let t = 0; t < 20; t++) {
@@ -509,6 +567,12 @@ export class LochWnetrze {
       const k = p.komnaty[l.komnata];
       const R = Math.max(k.x1 - k.x0, k.y1 - k.y0) * T * 0.9 + 4 * T;
       const e = this.h.spawn(l.x, l.y, l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
+      // The treasure room's boss grows with the floor; the deepest one is the strongest.
+      if (l.straznik && k.skarb) {
+        const f = p.pietro;
+        e.hp = Math.round(e.hp * (1 + PIETRA.bossZycia * (f - 1)) * (this.dno && p.pieter > 1 ? PIETRA.ostatniBoss : 1));
+        e.setScale(e.scaleX * (1 + PIETRA.bossWiekszy * (f - 1)));
+      }
       this.zywi.set(e, i);
     });
   }
@@ -531,7 +595,7 @@ export class LochWnetrze {
     this.stan.zabici.add(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
-    if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast('🧰 Strażnik pokonany – skrzynia stoi otworem!', 3200);
+    if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast(this.dno ? '🧰 Strażnik pokonany – skrzynia stoi otworem!' : '🧰 Strażnik pokonany – skrzynia otwarta, a schody w dół wolne!', 3200);
     else if (!this.zostalo && !this.stan.ogloszony) {
       this.stan.ogloszony = true;
       this.h.toast('🏆 Loch oczyszczony!', 3200);
@@ -543,12 +607,19 @@ export class LochWnetrze {
   private ostrzegl = false;
 
   /** Co jest w zasięgu ręki: schody albo skrzynia. */
-  przy(x: number, y: number): 'schody' | 'skrzynia' | null {
+  przy(x: number, y: number): 'schody' | 'skrzynia' | 'dol' | null {
     const r = LOCH.dotykM * M;
-    const s = this.schody, k = this.skrzynia;
+    const s = this.schody, k = this.skrzynia, d = this.schodyDol;
     if (Math.hypot(s.x - x, s.y - y) < r) return 'schody';
-    if (Math.hypot(k.x - x, k.y - y) < r) return 'skrzynia';
+    const dk = Math.hypot(k.x - x, k.y - y), dd = d ? Math.hypot(d.x - x, d.y - y) : Infinity;
+    if (dd < r && dd <= dk) return 'dol';
+    if (dk < r) return 'skrzynia';
     return null;
+  }
+
+  /** Zejście niżej zagrodzone, dopóki żyje strażnik komnaty skarbu. */
+  get dolZamkniety() {
+    return this.skrzyniaPilnowana();
   }
 
   /** Skrzynię można otworzyć? null = tak; inaczej powód. */

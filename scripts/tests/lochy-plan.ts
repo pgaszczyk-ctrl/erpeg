@@ -4,10 +4,15 @@ import { planLochu, podloga } from '../../src/loch/plan';
 
 let zle = 0;
 const t0 = performance.now();
-for (const rodzaj of ['krypta', 'podziemia'] as const) {
-  for (let seed = 1; seed <= 300; seed++) {
-    const p = planLochu(rodzaj, seed * 7919);
-    const q = planLochu(rodzaj, seed * 7919);
+for (const stopien of [1, 2, 3, 4, 5]) for (const rodzaj of ['krypta', 'podziemia'] as const) {
+  let komnat = 0, nisz = 0, kratek = 0, maks = 0;
+  for (let seed = 1; seed <= 150; seed++) {
+    const p = planLochu(rodzaj, seed * 7919, stopien, stopien, 8);
+    const q = planLochu(rodzaj, seed * 7919, stopien, stopien, 8);
+    komnat += p.komnaty.filter((k) => k.duza).length;
+    nisz += p.komnaty.filter((k) => k.nisza).length;
+    kratek += p.siatka.reduce((a, v) => a + v, 0);
+    maks = Math.max(maks, p.w * p.h);
     if (p.siatka.join() !== q.siatka.join()) { console.log('niedeterministyczny', rodzaj, seed); zle++; }
     // Spójność: zalewanie od startu.
     const byl = new Uint8Array(p.w * p.h);
@@ -23,6 +28,7 @@ for (const rodzaj of ['krypta', 'podziemia'] as const) {
     }
     const pod = p.siatka.reduce((a, v) => a + v, 0);
     if (kol.length !== pod) { console.log('niespójny', rodzaj, seed, kol.length, pod); zle++; }
+    if (p.schodyDol && !byl[p.schodyDol.y * p.w + p.schodyDol.x]) { console.log('schody w dół nieosiągalne', rodzaj, seed); zle++; }
     if (!byl[p.skrzynia.y * p.w + p.skrzynia.x]) { console.log('skrzynia nieosiągalna', rodzaj, seed); zle++; }
     // Ściany: każda podłoga ma dookoła skałę-ścianę albo podłogę (żadnej dziury na brzegu planu).
     for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) {
@@ -34,8 +40,8 @@ for (const rodzaj of ['krypta', 'podziemia'] as const) {
       if (!podloga(p, x, y)) continue;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!podloga(p, x + dx, y + dy) && !wSc(x + dx, y + dy)) { console.log('brak ściany', rodzaj, seed, x + dx, y + dy); zle++; }
     }
-    if (seed === 1) console.log(rodzaj, `${p.w}×${p.h} kratek, komnat ${p.komnaty.filter((k) => k.duza).length}/${p.komnaty.length}, ścian ${p.sciany.length}, pochodni ${p.pochodnie.length}, ozdób ${p.ozdoby.length}`);
   }
+  console.log(`stopień ${stopien} ${rodzaj}: średnio komnat ${(komnat / 150).toFixed(1)}, nisz ${(nisz / 150).toFixed(1)}, podłogi ${(kratek / 150).toFixed(0)} kratek, największy plan ${maks} kratek`);
 }
 console.log(`czas ${(performance.now() - t0).toFixed(0)} ms, błędów: ${zle}`);
 process.exit(zle ? 1 : 0);

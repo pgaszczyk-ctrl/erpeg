@@ -1,30 +1,31 @@
 // Loch jako mała osobna mapa (jak mapy miasteczek): ściany to „budynki” (zatrzymują bohatera, potwory, pociski
 // i wzrok – mgła wojny działa sama), podłoga to jeden utwardzony obszar (pełna prędkość). MapRenderer jej nie
 // maluje: rysunek robi scenes/Lochy.ts (LochWnetrze). Id mapy niesie wszystko, co potrzebne do odtworzenia:
-//   loch:<rodzaj>:<seed>:<lat>:<lon>
+//   loch:<rodzaj>:<seed>:p<piętro>-<pięter>:<lat>:<lon>  (pięter tyle, ile każe trudność – content/lochy.ts)
 import { CityMap, PX_PER_M } from '../map/CityMap';
-import type { RodzajLochu } from '../content/lochy';
+import { stopienPietra, type RodzajLochu } from '../content/lochy';
 import { planLochu, type PlanLochu } from './plan';
 
-export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number }
+export interface IdLochu { rodzaj: RodzajLochu; seed: number; pietro: number; pieter: number; lat: number; lon: number }
 
 export const jestLochem = (id: string) => id.startsWith('loch:');
 
 export function idLochu(l: IdLochu) {
-  return `loch:${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
+  return `loch:${l.rodzaj}:${l.seed}:p${l.pietro}-${l.pieter}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
+  // Stare id (sprzed pięter) nie mają `p<f>-<n>` – to jednopiętrowy loch.
+  const m = /^loch:(krypta|podziemia):(\d+):(?:p(\d+)-(\d+):)?(-?[\d.]+):(-?[\d.]+)$/.exec(id);
   if (!m) return null;
-  return { rodzaj: m[1] as RodzajLochu, seed: Number(m[2]), lat: Number(m[3]), lon: Number(m[4]) };
+  return { rodzaj: m[1] as RodzajLochu, seed: Number(m[2]), pietro: Number(m[3] ?? 1), pieter: Number(m[4] ?? 1), lat: Number(m[5]), lon: Number(m[6]) };
 }
 
 /** Mapa lochu z jej planem (`city.loch`). */
 export function mapaLochu(id: string): CityMap {
   const l = czytajIdLochu(id);
   if (!l) throw new Error('Nieznany loch');
-  const plan = planLochu(l.rodzaj, l.seed);
+  const plan = planLochu(l.rodzaj, (l.seed ^ Math.imul(l.pietro, 0x9e3779b1)) >>> 0, stopienPietra(l.pietro), l.pietro, l.pieter);
   const T = plan.T;
   const W = plan.w * T, H = plan.h * T;
   // Jednostki mapy = px (unitsPerM = PX_PER_M → k = 1); pierścienie zapisane różnicowo jak w plikach map.

@@ -54,6 +54,8 @@ export function markBuilding(explored: Explored, city: CityMap, b: Building) {
 export class Explored {
   private chunks = new Map<string, Uint8Array>(); // 1 byte per cell (0/1)
   dirty = false;
+  /** Grows with every newly explored cell (FogView redraws only when something changed). */
+  wersja = 0;
 
   private chunk(cx: number, cy: number, create: boolean) {
     const k = `${cx},${cy}`;
@@ -70,6 +72,7 @@ export class Explored {
     if (!c[i]) {
       c[i] = 1;
       this.dirty = true;
+      this.wersja++;
     }
   }
 
@@ -100,6 +103,7 @@ export class Explored {
 
   load(data: { s: number; chunks: Record<string, string> } | undefined) {
     this.chunks.clear();
+    this.wersja++;
     if (!data) return;
     const k = PX_PER_M / (data.s || PX_PER_M);
     for (const [key, v] of Object.entries(data.chunks)) {
@@ -290,6 +294,10 @@ export class FogView {
     });
   }
 
+  private znak = '';
+  private wzrok: number[] | null = null;
+  private budynki: Iterable<Building> | null = null;
+
   update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = []) {
     const v = cam.worldView;
     // Cell-aligned area a bit larger than the view.
@@ -301,6 +309,14 @@ export class FogView {
     const gy0 = Math.floor(v.y / FOG_CELL) - my;
     const gw = Math.ceil(v.width / FOG_CELL) + 2 * mx + 1;
     const gh = Math.ceil(v.height / FOG_CELL) + 2 * my + 1;
+    // Nothing changed (same area, same sight, nothing newly explored, the parchment's drift still on the same pixel):
+    // keep last frame's picture (FPS log, 27 Oct 2026: the fog was repainted, blurred and uploaded every frame).
+    const drift = MGLA.paralaksa;
+    const znak = `${gx0},${gy0},${gw},${gh},${Math.round((cam.midPoint.x * drift) / FOG_RES)},${Math.round((cam.midPoint.y * drift) / FOG_RES)},${this.explored.wersja},${this.light},${this.podZiemia}`;
+    if (znak === this.znak && vision === this.wzrok && buildings === this.budynki && Date.now() - this.lightAt <= 60_000) return;
+    this.znak = znak;
+    this.wzrok = vision;
+    this.budynki = buildings;
 
     // 1) Explored cells: grey; unexplored: black. One pixel per cell.
     if (this.cells.width !== gw || this.cells.height !== gh) {
@@ -346,7 +362,6 @@ export class FogView {
     ctx.globalCompositeOperation = 'source-atop';
     if (this.paper && !this.podZiemia) {
       // Pinned to the map, but drifting along with the hero at MGLA.paralaksa of his walk (a layer above the land).
-      const drift = MGLA.paralaksa;
       this.paper.setTransform(new DOMMatrix([1, 0, 0, 1, (-gx0 * FOG_CELL + cam.midPoint.x * drift) / FOG_RES, (-gy0 * FOG_CELL + cam.midPoint.y * drift) / FOG_RES]));
       ctx.fillStyle = this.paper;
       ctx.fillRect(0, 0, W, H);

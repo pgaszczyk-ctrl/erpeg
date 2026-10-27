@@ -2,6 +2,7 @@ import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
+import { LOCH_TEKSTY } from '../content/lochy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showPhoto } from '../ui/brag';
@@ -941,6 +942,7 @@ export class UIScene extends Phaser.Scene {
       hp: game.player.hp, maxHp: PLAYER.maxHp, fruitPerHeal: game.fruitPerHeart(), onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
+      ucieczka: game.city?.loch ? { tekst: LOCH_TEKSTY.ucieczka, fn: () => game.uciekajZLochu() } : undefined,
     });
   }
 

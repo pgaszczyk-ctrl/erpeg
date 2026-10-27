@@ -83,8 +83,9 @@ import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeSt
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
-import { idLochu } from '../loch/mapa';
-import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
+import { idLochu, czytajIdLochu } from '../loch/mapa';
+import { naLiscie } from '../naLiscie';
+import { LOCH, LOCHY, LOCH_TEKSTY, POTWORY_NA_TRUDNOSC, pieterLochu } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
 import { stwory, losujLup } from '../content/stwory';
@@ -500,6 +501,10 @@ export class GameScene extends Phaser.Scene {
     wyczyscEfekty();
     this.pickups = [];
     this.farObjects = [];
+    // Far objects taken off the display list (naLiscie) aren't cleared by the scene: destroyed here.
+    this.events.once('shutdown', () => {
+      for (const o of [...this.farObjects, ...this.posts.flatMap((q) => [q.lamp, q.pool])]) if (o.active && !o.displayList) o.destroy();
+    });
     this.signGlows = new Set();
     this.posts = [];
     this.postsNight = null;
@@ -900,6 +905,7 @@ export class GameScene extends Phaser.Scene {
       ? new LochWnetrze({
           scene: this,
           nonce: session.nonce,
+          potworyMnoznik: POTWORY_NA_TRUDNOSC[trudnoscZWieku(session.age)] ?? 1,
           toast: (t, ms) => this.toast(t, ms),
           spawn: (x, y, kind, home) => {
             const e = this.spawnEnemy(x, y, undefined, kind);
@@ -909,7 +915,11 @@ export class GameScene extends Phaser.Scene {
           },
         }, this.city)
       : undefined;
-    if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.opis.nazwa), 4500);
+    if (this.loch) {
+      const pl = this.loch.plan;
+      const naglowek = `${LOCH_TEKSTY.pietro(pl.pietro, pl.pieter)}${pl.pietro >= pl.pieter && pl.pieter > 1 ? ` – ${LOCH_TEKSTY.dno}` : ''}`;
+      this.toast(pl.pietro === 1 ? `${LOCH_TEKSTY.zszedl(this.loch.opis.nazwa)}\n${naglowek}` : `🕯 ${naglowek}`, 4500);
+    }
 
     this.replayAbandoned();
     if (this.walkedIn) this.toast(this.walkedIn, 4000);
@@ -938,7 +948,10 @@ export class GameScene extends Phaser.Scene {
     beat();
 
     const cam = this.cameras.main;
-    cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
+    // Underground the hero always stays in the middle (owner, 27 Oct 2026: the small dungeon map's edges pushed him to
+    // the side, under the HUD); outside the maze is just black rock.
+    if (this.city.loch) cam.removeBounds();
+    else cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
     cam.startFollow(this.player, true, 0.15, 0.15);
     cam.setRoundPixels(true);
     cam.setBackgroundColor(this.city.loch ? '#07070a' : '#1f4d24');
@@ -3004,10 +3017,12 @@ export class GameScene extends Phaser.Scene {
     const night = !!this.postsNight;
     for (const q of this.posts) {
       if (!q.post.visible) {
-        if (q.lamp.visible) q.lamp.setVisible(false);
-        if (q.pool.visible) q.pool.setVisible(false);
+        if (q.lamp.displayList || q.lamp.visible) naLiscie(q.lamp, false);
+        if (q.pool.displayList || q.pool.visible) naLiscie(q.pool, false);
         continue;
       }
+      if (!q.lamp.displayList) q.lamp.addToDisplayList();
+      if (!q.pool.displayList) q.pool.addToDisplayList();
       if (!SNOP) {
         // Production: the old lamp and its pool, at night only.
         if (q.lamp.visible !== night) q.lamp.setVisible(night);
@@ -3092,7 +3107,7 @@ export class GameScene extends Phaser.Scene {
     for (const o of this.farObjects) {
       if (!o.active) continue;
       const on = o.x > v.x - m && o.x < v.right + m && o.y > v.y - m && o.y < v.bottom + m * 2;
-      if (on !== o.visible) o.setVisible(on);
+      if (on !== !!o.displayList || on !== o.visible) naLiscie(o, on);
       if (on && this.signGlows.has(o)) {
         if (SNOP && !o.getData('bezLampy')) o.setAlpha(this.lightAlpha(now, o));
         else if (POSWIATA_SZYLDU.pulsMs) o.setAlpha(POSWIATA_SZYLDU.mocno * (0.875 + 0.125 * Math.sin(((now + (o.getData('faza') as number)) / POSWIATA_SZYLDU.pulsMs) * Math.PI)));
@@ -3606,7 +3621,7 @@ export class GameScene extends Phaser.Scene {
       const opis = LOCHY[w.rodzaj];
       this.dialog({
         title: `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
-        text: opis.wejscie,
+        text: `${opis.wejscie}\n\n${LOCH_TEKSTY.pieter(pieterLochu(trudnoscZWieku(session.age)))}`,
         buttons: [LOCH_TEKSTY.schodze, LOCH_TEKSTY.nieTeraz],
         onChoose: (i) => { if (i === 0) this.zejdzDoLochu(w); },
       });
@@ -3620,11 +3635,39 @@ export class GameScene extends Phaser.Scene {
         this.toast(LOCH_TEKSTY.wWalce, 1800);
         return true;
       }
+      const f = loch.plan.pietro;
+      if (f > 1) {
+        this.dialog({
+          title: LOCH_TEKSTY.schodyGora,
+          text: LOCH_TEKSTY.wyjscPietro(f - 1),
+          buttons: [LOCH_TEKSTY.wchodze, LOCH_TEKSTY.zostaje],
+          onChoose: (i) => { if (i === 0) this.naPietro(f - 1, 'z dołu'); },
+        });
+        return true;
+      }
       this.dialog({
         title: LOCH_TEKSTY.wyjsc,
         text: LOCH_TEKSTY.wyjscPytanie(loch.zostalo),
         buttons: [LOCH_TEKSTY.wychodze, LOCH_TEKSTY.zostaje],
         onChoose: (i) => { if (i === 0) this.wyjdzZLochu(); },
+      });
+      return true;
+    }
+    if (co === 'dol') {
+      if (loch.dolZamkniety) {
+        this.toast(LOCH_TEKSTY.schodyDolZamkniete, 2600);
+        return true;
+      }
+      if (this.inCombat()) {
+        this.toast(LOCH_TEKSTY.wWalce, 1800);
+        return true;
+      }
+      const f = loch.plan.pietro + 1, n = loch.plan.pieter;
+      this.dialog({
+        title: LOCH_TEKSTY.schodyDol,
+        text: LOCH_TEKSTY.schodyDolPytanie(f, n),
+        buttons: [LOCH_TEKSTY.schodzeNizej, LOCH_TEKSTY.zostaje],
+        onChoose: (i) => { if (i === 0) this.naPietro(f, 'z gory'); },
       });
       return true;
     }
@@ -3645,7 +3688,7 @@ export class GameScene extends Phaser.Scene {
     this.save();
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
-    const id = idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
+    const id = idLochu({ rodzaj: w.rodzaj, seed: w.seed, pietro: 1, pieter: pieterLochu(trudnoscZWieku(session.age)), lat: ll.lat, lon: ll.lon });
     this.time.delayedCall(520, () => {
       getMap(id).then((city) => {
         const plan = city.loch!;
@@ -3662,8 +3705,42 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Another floor of the same dungeon: down the stairs (arrive by the stairs up) or up (arrive by the stairs down). */
+  private naPietro(f: number, skad: 'z gory' | 'z dołu') {
+    const l = czytajIdLochu(this.city.id);
+    if (!l || this.travelling) return;
+    this.travelling = true;
+    session.stats.lochPietro = Math.max(session.stats.lochPietro ?? 0, f);
+    const cam = this.cameras.main;
+    cam.fadeOut(500, 0, 0, 0);
+    const id = idLochu({ ...l, pietro: f });
+    this.time.delayedCall(520, () => {
+      getMap(id).then((city) => {
+        const plan = city.loch!;
+        const T = plan.T;
+        const d = plan.schodyDol;
+        session.arrive = skad === 'z dołu' && d ? { x: (d.x + 0.5) * T, y: (d.y + 0.5) * T + T * 3 } : { x: (plan.start.x + 0.5) * T, y: (plan.start.y + 0.5) * T };
+        session.hp = this.player.hp;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      }).catch((e: Error) => {
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`Nie da się przejść: ${e.message}`);
+      });
+    });
+  }
+
+  /** The Kufer's escape button: straight up to the surface from any floor (owner, 27 Oct 2026). */
+  uciekajZLochu() {
+    if (!this.loch || this.travelling || this.player.isDead) return;
+    this.walkedIn = LOCH_TEKSTY.uciekl;
+    this.wyjdzZLochu(null, true);
+  }
+
   /** Up the stairs, back where the hero went down (after a defeat: `porazka` = what was lost, for the hospital). */
-  private wyjdzZLochu(porazka: string | null = null) {
+  private wyjdzZLochu(porazka: string | null = null, ucieczka = false) {
     if (this.travelling && !porazka) return;
     this.travelling = true;
     const p = lochSesja.powrot ?? { ...(session.at ?? { m: 'lublin', x: session.startX, y: session.startY }), nazwa: '' };
@@ -3677,7 +3754,7 @@ export class GameScene extends Phaser.Scene {
         session.hp = porazka ? PLAYER.maxHp : this.player.hp;
         lochSesja.powrot = null;
         lochSesja.porazka = porazka;
-        if (!porazka) this.walkedIn = LOCH_TEKSTY.wyszedl;
+        if (!porazka && !ucieczka) this.walkedIn = LOCH_TEKSTY.wyszedl;
         this.game.registry.set('city', city);
         this.scene.stop('ui');
         this.scene.restart();
@@ -3705,7 +3782,7 @@ export class GameScene extends Phaser.Scene {
     const pow = loch.skrzyniaPowod();
     if (pow === 'pusta') return this.toast(LOCH_TEKSTY.skrzyniaPusta, 2200);
     if (pow === 'pilnowana') return this.toast(LOCH_TEKSTY.skrzyniaZamknieta, 2600);
-    const N = loch.opis.nagroda;
+    const N = loch.nagroda;
     const monety = luckyCoins(N.monety[0] + Math.floor(Math.random() * (N.monety[1] - N.monety[0] + 1)));
     earn(monety);
     session.exp += N.exp;
@@ -6940,8 +7017,9 @@ export class GameScene extends Phaser.Scene {
     if (this.loch) {
       const n = this.loch.zostalo;
       const skrzynia = this.loch.skrzyniaPowod();
-      const text = skrzynia === 'pusta' ? '🕯 Skrzynia otwarta – schody na górę czekają przy wejściu.' : n ? `🕯 ${this.loch.opis.nazwa}: ${n === 1 ? 'został 1 potwór' : `zostało ${n} potworów`}, skrzynia w najdalszej komnacie` : '🕯 Loch czysty – skrzynia czeka w najdalszej komnacie';
-      return [{ id: 'loch', main: false, title: `🕯 ${this.loch.opis.nazwa}`, text, pos: null, color: '#ffb35c' }, ...out.map((q) => ({ ...q, pos: null }))];
+      const pl = this.loch.plan;
+      const text = skrzynia === 'pusta' ? (pl.pietro < pl.pieter ? `🕯 Skrzynia otwarta – schody w dół na piętro ${pl.pietro + 1} czekają obok.` : '🕯 Skrzynia otwarta – schody na górę czekają przy wejściu.') : n ? `🕯 ${this.loch.opis.nazwa}: ${n === 1 ? 'został 1 potwór' : `zostało ${n} potworów`}, skrzynia w najdalszej komnacie` : '🕯 Loch czysty – skrzynia czeka w najdalszej komnacie';
+      return [{ id: 'loch', main: false, title: `🕯 ${this.loch.opis.nazwa} · piętro ${pl.pietro}/${pl.pieter}`, text, pos: null, color: '#ffb35c' }, ...out.map((q) => ({ ...q, pos: null }))];
     }
     return out;
   }
@@ -7070,7 +7148,7 @@ export class GameScene extends Phaser.Scene {
    * near it, else "w mieście / za miastem · gdzieś na północy" counted from the town's centre.
    */
   private placeInfo(): { town: string; detail: string } {
-    if (this.loch) return { town: this.loch.opis.nazwa, detail: lochSesja.powrot ? 'pod ziemią' : '' };
+    if (this.loch) return { town: this.loch.opis.nazwa, detail: `piętro ${this.loch.plan.pietro} z ${this.loch.plan.pieter}` };
     const x = this.player.x;
     const y = this.player.y;
     const t = this.townAt(x, y);

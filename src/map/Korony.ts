@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { naLiscie } from '../naLiscie';
 import { klatkiWiatru, GATUNKI, para, klatkaPary, type Obraz, type ZrodloPary } from '../gen';
 import { drzewoZ, idDrzewa, OWOCOWE, STAN, type Drzewo09 } from './drzewa09';
 import { hash } from '../gen';
@@ -310,10 +311,10 @@ export class Korony {
       const im = k.im;
       // Off-screen crowns are not drawn at all (report 56: 5000 crowns alive, ~500 on screen, phone at 21 fps).
       if (im.x < cam.x - m || im.x > cam.right + m || im.y < cam.y - m || im.y > cam.bottom + 2 * m) {
-        if (im.visible && !k.pada) im.setVisible(false);
+        if (!k.pada && (im.visible || im.displayList)) naLiscie(im, false);
         continue;
       }
-      if (!im.visible) im.setVisible(true);
+      if (!im.visible || !im.displayList) naLiscie(im, true);
       // Prześwit: pierwszy punkt (postać, potem pobliski wróg), nad którym ta korona stoi (podstawa niżej niż on).
       let px = 0, py = 0, pod = false;
       for (const q of pktGen) {

@@ -37,6 +37,9 @@ export const LUDZIK_3D = {
   swiatlo: 1.0,
   otoczenie: 2.4,
   obrys: [0x1e, 0x1a, 0x24] as const,
+  /** At most this many new pictures a second (FPS log, 27 Oct 2026: rendering + reading the picture back from the
+   * graphics card + outlining every frame cost phones ~10 % of each frame); standing still draws nothing new; the drawn heroes walk at 5–8 frames a second. */
+  klatekNaS: 12,
 };
 
 const KLUCZ = 'exp-ludzik3d';
@@ -68,6 +71,10 @@ type Gotowy = {
   miecz?: THREE.Object3D;
   /** Canvas px per model unit. */
   jednostkaPx: number;
+  /** The model goes into this picture first; a shader pass then closes the outline straight into the canvas. */
+  rt: THREE.WebGLRenderTarget;
+  obrysScena: THREE.Scene;
+  obrysKamera: THREE.OrthographicCamera;
 };
 
 /**
@@ -113,16 +120,15 @@ export class Ludzik3D {
   private laduje = false;
   private blad = false;
   private image?: Phaser.GameObjects.Image;
-  private wyjscie = document.createElement('canvas');
   private kat = 0;
   private klucz = 'ludzik3d';
   private pokazany = false;
+  /** When the picture was last drawn, and what it showed (nothing new while standing still). */
+  private narysowany = -1e9;
+  private stanRysunku = '';
   private swiatla?: { amb: THREE.AmbientLight; sun: THREE.DirectionalLight };
 
-  constructor(private scene: Phaser.Scene) {
-    const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
-    this.wyjscie.width = this.wyjscie.height = n;
-  }
+  constructor(private scene: Phaser.Scene) {}
 
   /** Is the 3D hero drawn now (for tests). */
   get widoczny() { return this.pokazany; }
@@ -183,9 +189,35 @@ export class Ludzik3D {
         a.timeScale = LUDZIK_3D.tempoAtaku;
       }
       const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
-      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
+      // The outline on the graphics card (FPS log, 27 Oct 2026: reading the picture back to outline it on the CPU
+      // stalled phones): hard alpha, then a dark rim LUDZIK_3D.gestosc px wide (4-neighbour distance) around the figure.
+      const rt = new three.WebGLRenderTarget(n, n, { minFilter: three.NearestFilter, magFilter: three.NearestFilter, depthBuffer: true });
+      const T = Math.round(LUDZIK_3D.gestosc);
+      const [or, og, ob] = LUDZIK_3D.obrys;
+      const obrysMat = new three.ShaderMaterial({
+        uniforms: { tex: { value: rt.texture }, px: { value: new three.Vector2(1 / n, 1 / n) }, obrys: { value: new three.Vector3(or / 255, og / 255, ob / 255) } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `
+          uniform sampler2D tex; uniform vec2 px; uniform vec3 obrys; varying vec2 vUv;
+          void main() {
+            vec4 c = texture2D(tex, vUv);
+            if (c.a > ${(110 / 255).toFixed(4)}) { gl_FragColor = vec4(c.rgb, 1.0); return; }
+            for (int dy = -${T}; dy <= ${T}; dy++) for (int dx = -${T}; dx <= ${T}; dx++) {
+              if (abs(dx) + abs(dy) > ${T}) continue;
+              if (texture2D(tex, vUv + vec2(float(dx), float(dy)) * px).a > ${(110 / 255).toFixed(4)}) { gl_FragColor = vec4(obrys, 1.0); return; }
+            }
+            gl_FragColor = vec4(0.0);
+          }`,
+        depthTest: false,
+        depthWrite: false,
+      });
+      const obrysScena = new three.Scene();
+      obrysScena.add(new three.Mesh(new three.PlaneGeometry(2, 2), obrysMat));
+      const obrysKamera = new three.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k, rt, obrysScena, obrysKamera };
       this.swiatla = { amb, sun };
-      this.scene.textures.addCanvas(this.klucz, this.wyjscie);
+      // The WebGL canvas itself is the texture: uploaded graphics card to graphics card, never read back.
+      this.scene.textures.addImage(this.klucz, canvas as unknown as HTMLImageElement);
       this.scene.textures.get(this.klucz).setFilter(Phaser.Textures.FilterMode.NEAREST);
     } catch (e) {
       this.blad = true;
@@ -246,9 +278,19 @@ export class Ludzik3D {
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
     g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
-    g.renderer.render(g.scene, g.camera);
-    this.obrysuj(g.renderer.domElement);
-    (this.scene.textures.get(this.klucz) as Phaser.Textures.CanvasTexture).refresh();
+    // Draw only when the pose changed, and not more often than klatekNaS (the last still pose is drawn once).
+    const rusza = idzie || atakuje || Math.abs(d) > 0.004;
+    const stan = rusza ? 'ruch' : `stoi|${this.kat.toFixed(3)}|${g.miecz?.visible}`;
+    const teraz = performance.now();
+    if (rusza ? teraz - this.narysowany >= 1000 / LUDZIK_3D.klatekNaS : stan !== this.stanRysunku) {
+      this.narysowany = teraz;
+      this.stanRysunku = stan;
+      g.renderer.setRenderTarget(g.rt);
+      g.renderer.render(g.scene, g.camera);
+      g.renderer.setRenderTarget(null);
+      g.renderer.render(g.obrysScena, g.obrysKamera);
+      this.scene.textures.get(this.klucz).source[0].update();
+    }
 
     const sc = 0.36 * SKALA_POSTACI;
     const F = LUDZIK_3D.ramka;
@@ -266,39 +308,10 @@ export class Ludzik3D {
     this.pokazany = true;
   }
 
-  /** Copies the render and closes a dark outline around the figure, as thick as one sheet pixel. */
-  private obrysuj(src: HTMLCanvasElement) {
-    const n = this.wyjscie.width;
-    const ctx = this.wyjscie.getContext('2d', { willReadFrequently: true })!;
-    ctx.clearRect(0, 0, n, n);
-    ctx.drawImage(src, 0, 0);
-    const img = ctx.getImageData(0, 0, n, n);
-    const a = img.data;
-    const t = LUDZIK_3D.gestosc;
-    const pelny = new Uint8Array(n * n);
-    for (let i = 0; i < n * n; i++) {
-      pelny[i] = a[i * 4 + 3] > 110 ? 1 : 0;
-      a[i * 4 + 3] = pelny[i] ? 255 : 0;
-    }
-    const [r, gg, b] = LUDZIK_3D.obrys;
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-      const i = y * n + x;
-      if (pelny[i]) continue;
-      let blisko = false;
-      for (let dy = -t; dy <= t && !blisko; dy++) for (let dx = -t; dx <= t; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) > t) continue;
-        const xx = x + dx, yy = y + dy;
-        if (xx >= 0 && yy >= 0 && xx < n && yy < n && pelny[yy * n + xx]) { blisko = true; break; }
-      }
-      if (!blisko) continue;
-      a[i * 4] = r; a[i * 4 + 1] = gg; a[i * 4 + 2] = b; a[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(img, 0, 0);
-  }
-
   destroy() {
     this.image?.destroy();
     this.image = undefined;
+    this.g?.rt.dispose();
     this.g?.renderer.dispose();
     this.g = undefined;
     this.laduje = false;

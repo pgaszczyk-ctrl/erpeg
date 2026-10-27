@@ -119,6 +119,13 @@ try {
   const ostatni = saves.at(-1);
   console.log('zapis tu', JSON.stringify(ostatni?.p_save?.tu ?? ostatni?.tu ?? null));
   await page.screenshot({ path: `work/lochy-${tag}-start.png` });
+  // The camera keeps the hero in the middle even at the maze's edge (owner, 27 Oct 2026: he drifted under the HUD).
+  await g(() => { const s = window.__game.scene.getScene('game'); const p = s.loch.plan; const k = p.komnaty.reduce((a, b) => (b.cx + b.cy < a.cx + a.cy ? b : a)); s.player.setPosition((k.cx + 0.5) * p.T, (k.cy + 0.5) * p.T); });
+  await page.waitForTimeout(5000);
+  const srodek = await g(() => { const s = window.__game.scene.getScene('game'); const m = s.cameras.main.midPoint; return { dx: m.x - s.player.x, dy: m.y - s.player.y, stopien: s.loch.plan.stopien }; });
+  console.log('kamera', JSON.stringify(srodek));
+  assert(Math.abs(srodek.dx) < 6 && Math.abs(srodek.dy) < 6, 'hero centred at the maze corner');
+  assert(/:p1-\d+:/.test(wLochu.id), 'the id carries the floor');
 
   // 3. A fight: next to the nearest monster for a while (StworAI telegraphs).
   await g(() => {
@@ -160,6 +167,39 @@ try {
   const tu = saves.at(-1)?.p_save?.tu ?? null;
   console.log('zapis w lochu → tu', JSON.stringify(tu));
   if (tu) assert(!String(tu.m).startsWith('loch:'), 'a save in a dungeon keeps the entrance on the surface');
+
+  // 4b. Floors (owner, 27 Oct 2026: number of floors by difficulty, each harder): the stairs down by the chest lead
+  //     to floor 2 (a more tangled maze, more monsters, a stronger boss); its stairs up come back by floor 1's stairs down.
+  const p1 = await g(() => { const s = window.__game.scene.getScene('game'); const p = s.loch.plan; return { pietro: p.pietro, pieter: p.pieter, dol: s.loch.schodyDol, potworow: s.loch.zostalo }; });
+  console.log('piętro 1', JSON.stringify(p1));
+  assert.equal(p1.pieter, 5, 'Średni: 5 floors (2 × 1.5 rounded up… 3 × 1.5 = 4.5 → 5)');
+  assert(p1.dol, 'stairs down on floor 1');
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 4); }, [p1.dol.x, p1.dol.y]);
+  await page.waitForTimeout(800);
+  await page.keyboard.press('KeyE');
+  await page.waitForFunction(() => window.__dialogi.some((d) => /w dół/.test(d.title)), null, { timeout: 10000 });
+  await wybierz(0);
+  await page.waitForFunction(() => /:p2-5:/.test(window.__game.scene.getScene('game').city?.id ?? '') && window.__game.scene.isActive('game'), null, { timeout: 30000 });
+  await page.waitForTimeout(2500);
+  await hook();
+  const p2 = await g(() => { const s = window.__game.scene.getScene('game'); const p = s.loch.plan; return { id: s.city.id, pietro: p.pietro, komnat: p.komnaty.length, potworow: s.loch.zostalo, blocked: s.city.isBlocked(s.player.x, s.player.y) }; });
+  console.log('piętro 2', JSON.stringify(p2));
+  assert.equal(p2.pietro, 2);
+  assert(!p2.blocked, 'on the floor at floor 2');
+  await page.screenshot({ path: `work/lochy-${tag}-pietro2.png` });
+  const sch2 = await g(() => window.__game.scene.getScene('game').loch.schody);
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 8); }, [sch2.x, sch2.y]);
+  await page.waitForTimeout(800);
+  await page.keyboard.press('KeyE');
+  await page.waitForFunction(() => window.__dialogi.some((d) => /w górę/.test(d.title)), null, { timeout: 10000 });
+  await wybierz(0);
+  await page.waitForFunction(() => /:p1-5:/.test(window.__game.scene.getScene('game').city?.id ?? '') && window.__game.scene.isActive('game'), null, { timeout: 30000 });
+  await page.waitForTimeout(2000);
+  await hook();
+  const wrocil = await g(() => { const s = window.__game.scene.getScene('game'); const d = s.loch.schodyDol; return { d: Math.hypot(s.player.x - d.x, s.player.y - d.y), blocked: s.city.isBlocked(s.player.x, s.player.y), skrzynia: s.loch.skrzyniaPowod() }; });
+  console.log('z powrotem na 1.', JSON.stringify(wrocil));
+  assert(wrocil.d < 60 && !wrocil.blocked, 'back up by floor 1\'s stairs down');
+  assert.equal(wrocil.skrzynia, 'pusta', 'floor 1 remembers its opened chest');
 
   // 5. Up the stairs: back by the entrance.
   const schody = await g(() => window.__game.scene.getScene('game').loch.schody);
@@ -252,6 +292,23 @@ try {
     throw new Error('katakumby się nie otworzyły');
   });
   console.log('pytanie', JSON.stringify(await g(() => window.__dialogi.at(-1).title)));
+  // 8. The escape button in the Kufer (owner: „przycisk ucieczki z lochu, np. w eq”): straight up from the catacombs.
+  await wybierz(0);
+  await page.waitForFunction(() => window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game'), null, { timeout: 30000 });
+  await page.waitForTimeout(2500);
+  await g(() => window.__game.scene.getScene('ui').openCharacter('eq'));
+  await page.waitForSelector('#character .k-ucieczka', { timeout: 10000 }).catch(async (e) => {
+    await page.screenshot({ path: `work/lochy-${tag}-ucieczka-blad.png` });
+    console.log('kufer', JSON.stringify(await g(() => ({ html: document.querySelector('#character')?.className, przyciski: [...document.querySelectorAll('#character button')].map((b) => b.textContent), ui: window.__game.scene.getScene('ui').hasDialog, loch: !!window.__game.scene.getScene('game').city?.loch }))));
+    throw e;
+  });
+  await page.screenshot({ path: `work/lochy-${tag}-ucieczka.png` });
+  await page.click('#character .k-ucieczka');
+  await page.waitForFunction(() => !window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game'), null, { timeout: 60000 });
+  const poUcieczce = await g(() => { const s = window.__game.scene.getScene('game'); return { id: s.city.id, x: s.player.x, y: s.player.y }; });
+  console.log('po ucieczce', JSON.stringify(poUcieczce));
+  assert.equal(poUcieczce.id, 'lublin');
+  assert(Math.hypot(poUcieczce.x - pw.x, poUcieczce.y - pw.y) < 60, 'escaped by the catacombs\' entrance');
 
   const zle = errors.filter((e) => !/Failed to fetch|NetworkError|ERR_/.test(e));
   console.log('błędy', JSON.stringify(zle));
