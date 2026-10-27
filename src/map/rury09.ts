@@ -8,7 +8,8 @@ export interface Rura09 { pts: number[]; seed: number; kotly?: Kociol09[] }
  * Map scale is supplied by the caller: 500 real metres, not 500 screen pixels.
  */
 export function ruryPrzyUlicy(road: number[], id: number, width: number,
-  free: (x: number, y: number, radius?: number) => boolean, interval = 500 * 1.92): Rura09[] {
+  free: (x: number, y: number, radius?: number) => boolean, interval = 500 * 1.92,
+  box?: { x0: number; y0: number; x1: number; y1: number }): Rura09[] {
   if (hash(id, 0, 932) > 0.3) return [];
   const length = dlugosc(road);
   if (length < 35) return [];
@@ -29,12 +30,15 @@ export function ruryPrzyUlicy(road: number[], id: number, width: number,
     const steps = Math.max(1, Math.ceil(span / 2));
     for (let j = i ? 1 : 0; j <= steps; j++) {
       const x = ax + dx * j / steps, y = ay + dy * j / steps;
-      const open = free(x, y, 4);
+      // Far from the chunk being painted the pipe is only counted, not checked (it isn't drawn there anyway):
+      // checking a whole long street every 2 px for every chunk froze phones for a moment.
+      const blisko = !box || (x > box.x0 && x < box.x1 && y > box.y0 && y < box.y1);
+      const open = blisko ? free(x, y, 4) : true;
       if (open) run.push(x, y); else finish();
       const at = distance + span * j / steps;
       if (at >= station) {
         station += interval;
-        if (!open) continue;
+        if (!open || !blisko) continue;
         // Place the boiler away from the road; reserve its entire raised silhouette.
         for (const offset of [22, 30, 38]) {
           const bx = x - dy / span * side * offset, by = y + dx / span * side * offset;

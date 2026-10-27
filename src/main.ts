@@ -18,6 +18,7 @@ import { TEST, WERSJA_TEST } from './version';
 import { OSTROSC, cssSize, watchSpeed } from './screen';
 import { lapOferteInstalacji } from './instalacja';
 import { pelnyEkranOdDotyku } from './ui/poziomo';
+import { szybszeSortowanie } from './sortowanie';
 
 // The Google sign-in window only stores the login and closes (no game there).
 if (catchGoogleReturn()) throw new Error('google sign-in window');
@@ -31,6 +32,8 @@ if (TEST) {
   b.textContent = `SERWER TESTOWY · ${WERSJA_TEST}-test`;
   document.body.append(b);
 }
+
+szybszeSortowanie();
 
 // The tilted camera (walka/live.ts SKROT): the game camera squashes the map vertically (`setZoom(z, z·SKROT)`),
 // so every sprite drawn by a camera with `wyprost` set is stretched back by it around its own origin – people,

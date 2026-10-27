@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '27.10.2026', tytul: { pl: 'Płynniej i czytelniej', en: 'Smoother and easier to read' },
+    tresc: { pl: 'Gra działa płynniej na telefonach: mapa, mgła i bohater rysują się znacznie lżej, budynki i bruk nie migoczą już przy chodzeniu, a nowy kawałek miasta przygotowuje się wcześniej w stronę, w którą idziesz. Kurier Parowy na telefonie trzymanym poziomo otwiera się jak prawdziwa gazeta – po lewej tytuł i działy, po prawej artykuł.', en: 'The game runs more smoothly on phones: the map, the fog and the hero are much lighter to draw, buildings and cobbles no longer flicker while walking, and the next piece of the city is prepared earlier in the direction you walk. On a phone held sideways the Steam Courier opens like a real paper – the masthead and sections on the left, the article on the right.' },
+  },
+  {
     data: '26.10.2026', tytul: { pl: 'Porażka to nie koniec', en: 'Defeat is not the end' },
     tresc: { pl: 'Pokonany bohater budzi się w najbliższym szpitalu. Traci złoto z plecaka i połowę postępu na bieżącym poziomie – ale żyje dalej. Nowe postacie od razu wchodzą do gry z krótkim samouczkiem, który prowadzi do gazeciarza po pierwsze zlecenie. Urządzenie pamięta twoją postać, ale kod zapisz sobie w Kufrze albo połącz postać z kontem.', en: 'A defeated hero wakes up in the nearest hospital, losing the gold in the backpack and half of the progress in the current level – but lives on. New characters go straight into the game with a short tutorial that leads to a newsboy for the first errand. Your device remembers your character, but keep the code from the Trunk or link the character to an account.' },
   },
