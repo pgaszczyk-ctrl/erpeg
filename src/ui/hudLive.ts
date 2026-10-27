@@ -7,6 +7,7 @@
 //  - the movement joystick stays a Phaser drawing bottom-left (UIScene), fixed in place.
 // Plain HTML outside #game, so taps on it never reach the joystick or the map.
 import { pressAttack, dragAttack, releaseAttack, requestStrong, requestHeal } from '../controls';
+import { naEkranie } from '../obrot';
 import { ustawRurki } from './hudTeleskop';
 
 export interface LiveHudView {
@@ -112,13 +113,15 @@ export function zamontujHudLive() {
   atak.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     atak.setPointerCapture(e.pointerId);
-    start = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    const p0 = naEkranie(e.clientX, e.clientY);
+    start = { x: p0.x, y: p0.y, id: e.pointerId };
     atak.classList.add('on');
     pressAttack();
   });
   atak.addEventListener('pointermove', (e) => {
     if (start?.id !== e.pointerId) return;
-    const dx = e.clientX - start.x, dy = e.clientY - start.y, len = Math.hypot(dx, dy), r = atak.clientWidth * 0.34, k = Math.min(1, r / (len || 1));
+    const p = naEkranie(e.clientX, e.clientY);
+    const dx = p.x - start.x, dy = p.y - start.y, len = Math.hypot(dx, dy), r = atak.clientWidth * 0.34, k = Math.min(1, r / (len || 1));
     nub.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
     dragAttack(dx, dy);
   });
