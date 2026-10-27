@@ -526,7 +526,7 @@ export class LochWnetrze {
 
   /** Co jest w zasięgu ręki: schody albo skrzynia. */
   przy(x: number, y: number): 'schody' | 'skrzynia' | null {
-    const r = LOCH.dotykM * M * 0.8;
+    const r = LOCH.dotykM * M;
     const s = this.schody, k = this.skrzynia;
     if (Math.hypot(s.x - x, s.y - y) < r) return 'schody';
     if (Math.hypot(k.x - x, k.y - y) < r) return 'skrzynia';
@@ -545,12 +545,13 @@ export class LochWnetrze {
     this.skrzyniaImg.setFrame('o');
   }
 
-  update(now: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }) {
+  /** `znane`: the fog of war knows this spot (an unexplored room's torch doesn't shine through the dark). */
+  update(now: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }, znane: (x: number, y: number) => boolean = () => true) {
     const v = cam.worldView;
     this.ciemno.setPosition(v.x - 20, v.y - 20).setSize(v.width + 40, v.height + 40);
     const t = now / 1000;
     for (const q of this.plomienie) {
-      const on = q.fire.x > v.x - 60 && q.fire.x < v.right + 60 && q.fire.y > v.y - 60 && q.fire.y < v.bottom + 60;
+      const on = q.fire.x > v.x - 60 && q.fire.x < v.right + 60 && q.fire.y > v.y - 60 && q.fire.y < v.bottom + 60 && znane(q.fire.x, q.fire.y + this.plan.T);
       q.glow.setVisible(on);
       if (!on) continue;
       const m = 0.5 * Math.sin(t * 7.1 + q.f) + 0.3 * Math.sin(t * 13.3 + q.f * 2) + (Math.random() - 0.5) * 0.3;

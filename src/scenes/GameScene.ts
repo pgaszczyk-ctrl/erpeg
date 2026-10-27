@@ -32,7 +32,7 @@ import { WYGLAD_09 } from '../map/Podloze09';
 import { straganObraz } from '../map/targ09';
 import { GEN_DOTS } from '../map/ziemia09';
 import { DRZEWA_09 } from '../content/korony';
-import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding } from '../map/Fog';
+import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding, FOG_CELL } from '../map/Fog';
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
 import type { QuestLine } from '../ui/character';
@@ -1185,7 +1185,7 @@ export class GameScene extends Phaser.Scene {
     this.updateShots(dt);
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
-    this.loch?.update(now, this.cameras.main, this.player);
+    this.loch?.update(now, this.cameras.main, this.player, (x, y) => this.explored.hasCell(Math.floor(x / FOG_CELL), Math.floor(y / FOG_CELL)));
     this.lochy?.update(this.player.x, this.player.y, now);
     // Underground: none of the surface's life (people, gangs, trees, hunting grounds, training).
     if (!podZiemia) {
@@ -3613,7 +3613,7 @@ export class GameScene extends Phaser.Scene {
     }
     const loch = this.loch;
     if (!loch) return false;
-    const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
+    const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
     if (co === 'schody') {
       if (this.inCombat()) {
         this.toast(LOCH_TEKSTY.wWalce, 1800);

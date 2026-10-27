@@ -51,21 +51,26 @@ try {
     s.__hooked = true;
     const orig = s.dialog.bind(s);
     s.dialog = (req) => { window.__dialogi.push(req); return orig(req); };
+    window.__toasty = [];
+    const ot = s.toast.bind(s);
+    s.toast = (t, ms) => { window.__toasty.push(t); return ot(t, ms); };
   });
   const wybierz = (i) => g((k) => { const d = window.__dialogi.at(-1); window.__game.scene.getScene('ui').closeDialog?.(); d.onChoose(k); }, i);
 
-  // 1. Zoom: three steps.
-  const z0 = await g(() => window.__game.scene.getScene('game').cameras.main.zoomX);
-  await page.keyboard.press('KeyZ');
-  await page.waitForTimeout(300);
-  const z1 = await g(() => window.__game.scene.getScene('game').cameras.main.zoomX);
-  await page.keyboard.press('KeyZ');
-  await page.waitForTimeout(300);
-  const z2 = await g(() => window.__game.scene.getScene('game').cameras.main.zoomX);
-  await page.screenshot({ path: `work/lochy-${tag}-zoom2.png` });
-  await page.keyboard.press('KeyZ');
-  await page.waitForTimeout(300);
-  const z3 = await g(() => window.__game.scene.getScene('game').cameras.main.zoomX);
+  // 1. Zoom: three steps (key Z; the first press may still meet the loading cover, so step until it moves).
+  const zoom = () => g(() => window.__game.scene.getScene('game').cameras.main.zoomX);
+  const z0 = await zoom();
+  const kroki = [];
+  for (let i = 0; i < 3; i++) {
+    const przed = await zoom();
+    for (let t = 0; t < 10 && (await zoom()) === przed; t++) {
+      await page.keyboard.press('KeyZ');
+      await page.waitForTimeout(400);
+    }
+    kroki.push(await zoom());
+    if (i === 1) await page.screenshot({ path: `work/lochy-${tag}-zoom2.png` });
+  }
+  const [z1, z2, z3] = kroki;
   console.log('zoom', z0, z1, z2, z3);
   assert(z1 > z0 && z1 < z2, 'step 1 closer than usual');
   assert.equal(z2, z0 * 2, 'step 2 twice as close');
@@ -141,7 +146,10 @@ try {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `work/lochy-${tag}-skrzynia.png` });
   await page.keyboard.press('KeyE');
-  await page.waitForFunction(() => window.__dialogi.some((d) => /Skrzynia/.test(d.title)), null, { timeout: 10000 });
+  await page.waitForFunction(() => window.__dialogi.some((d) => /Skrzynia/.test(d.title)), null, { timeout: 10000 }).catch(async () => {
+    console.log('diagnoza', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const h = s.player.hitPoint(); return { toasty: window.__toasty, przy: s.loch.przy(h.x, h.y), hp: [h.x, h.y], gracz: [s.player.x, s.player.y], sk: s.loch.skrzynia, pow: s.loch.skrzyniaPowod(), aktywna: window.__game.scene.isActive('game'), ui: window.__game.scene.getScene('ui').hasDialog }; })));
+    throw new Error('skrzynia się nie otworzyła');
+  });
   const nagroda = await g(() => window.__dialogi.at(-1).text);
   console.log('skrzynia', JSON.stringify(nagroda));
   await wybierz(0);
