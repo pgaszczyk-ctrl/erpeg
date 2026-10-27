@@ -56,6 +56,17 @@ try {
   await page.screenshot({ path: `work/ludzik3d-cios${sfx}.png` });
   const cios = await page.evaluate(() => window.__game.scene.getScene('game').ludzik3d.g.atak.isRunning());
   assert(cios, 'a swing plays the blow');
+  // A swing while walking: the legs keep walking, the upper body strikes (owner, 27 Oct 2026).
+  await page.waitForTimeout(1200);
+  await page.keyboard.down('ArrowLeft');
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(200);
+  const wMarszu = await page.evaluate(() => { const g = window.__game.scene.getScene('game').ludzik3d.g; return { nogi: g.chodNogi.isRunning(), gora: g.atakGora.isRunning(), tempo: g.chodNogi.timeScale }; });
+  await page.screenshot({ path: `work/ludzik3d-cios-w-marszu${sfx}.png` });
+  await page.keyboard.up('ArrowLeft');
+  console.log('swing while walking', wMarszu);
+  assert(wMarszu.nogi && wMarszu.gora, 'legs walk while the upper body strikes');
   // Zoomed crop around the hero for a close look.
   const box = await page.evaluate(() => { const g = window.__game.scene.getScene('game'); const c = g.cameras.main; const p = g.player; const z = c.zoom / (window.devicePixelRatio > 1 ? 1 : 1); return { x: (p.x - c.worldView.x) * c.zoomX / (g.game.canvas.width / g.game.canvas.clientWidth), y: (p.y - c.worldView.y) * c.zoomY / (g.game.canvas.width / g.game.canvas.clientWidth) }; });
   await page.screenshot({ path: `work/ludzik3d-zblizenie${sfx}.png`, clip: { x: Math.max(0, box.x - 80), y: Math.max(0, box.y - 110), width: 160, height: 160 } });

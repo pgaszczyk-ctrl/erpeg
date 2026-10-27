@@ -24,7 +24,11 @@ export const LUDZIK_3D = {
   /** How fast the body turns to the walking direction (1/s). */
   obrot: 14,
   /** Walking clip speed at the hero's normal pace (the clip's own pace looked like a march). */
-  tempoChodu: 1.35,
+  /** Walking cycles (two steps each) per map px walked: the legs keep pace with the hero's real speed, also when he
+   * is faster (level, hotel, boots). 0.064 ≈ 2.4 cycles a second at the base 70 km/h, like the drawn heroes. */
+  cyklNaPx: 0.064,
+  /** The artist's blow takes 1.27 s; this many times faster so it keeps up with quick swings. */
+  tempoAtaku: 1.8,
   /** The artist's steps are gentle and from the front go into the screen: every walking move is made this many
    * times bigger (each part's turn about its own axis, so the parts stay joined), plus a small bob per step. */
   krokSila: 1.9,
@@ -55,8 +59,12 @@ type Gotowy = {
   camera: THREE.OrthographicCamera;
   model: THREE.Object3D;
   mixer: THREE.AnimationMixer;
-  chod: THREE.AnimationAction;
+  /** Walk split into legs and the rest, and the blow whole and without the legs: walking keeps the legs going while
+   * the upper body strikes (owner, 27 Oct 2026: a swing while walking froze the legs). */
+  chodNogi: THREE.AnimationAction;
+  chodGora: THREE.AnimationAction;
   atak: THREE.AnimationAction;
+  atakGora: THREE.AnimationAction;
   miecz?: THREE.Object3D;
   /** Canvas px per model unit. */
   jednostkaPx: number;
@@ -107,7 +115,6 @@ export class Ludzik3D {
   private image?: Phaser.GameObjects.Image;
   private wyjscie = document.createElement('canvas');
   private kat = 0;
-  private atakDo = 0;
   private klucz = 'ludzik3d';
   private pokazany = false;
   private swiatla?: { amb: THREE.AmbientLight; sun: THREE.DirectionalLight };
@@ -162,12 +169,21 @@ export class Ludzik3D {
       const mixer = new three.AnimationMixer(model);
       const clip = (name: string) => gltf.animations.find((a) => a.name === name) ?? gltf.animations[0];
       wzmocnij(three, clip('walk'), LUDZIK_3D.krokSila);
-      const chod = mixer.clipAction(clip('walk'));
-      const atak = mixer.clipAction(clip('attack'));
-      atak.setLoop(three.LoopOnce, 1);
-      atak.clampWhenFinished = false;
+      const nogi = (t: THREE.KeyframeTrack) => /^(thigh|shin|foot)/.test(t.name);
+      const czesc = (c: THREE.AnimationClip, nazwa: string, wez: (t: THREE.KeyframeTrack) => boolean) =>
+        new three.AnimationClip(nazwa, c.duration, c.tracks.filter(wez));
+      const walk = clip('walk'), attack = clip('attack');
+      const chodNogi = mixer.clipAction(czesc(walk, 'walk-nogi', nogi));
+      const chodGora = mixer.clipAction(czesc(walk, 'walk-gora', (t) => !nogi(t)));
+      const atak = mixer.clipAction(attack);
+      const atakGora = mixer.clipAction(czesc(attack, 'attack-gora', (t) => !nogi(t)));
+      for (const a of [atak, atakGora]) {
+        a.setLoop(three.LoopOnce, 1);
+        a.clampWhenFinished = false;
+        a.timeScale = LUDZIK_3D.tempoAtaku;
+      }
       const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
-      this.g = { three, renderer, scene, camera, model, mixer, chod, atak, miecz, jednostkaPx: k };
+      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
       this.swiatla = { amb, sun };
       this.scene.textures.addCanvas(this.klucz, this.wyjscie);
       this.scene.textures.get(this.klucz).setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -182,8 +198,9 @@ export class Ludzik3D {
     const g = this.g;
     if (!g) return;
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
-    g.atak.reset().play();
-    this.atakDo = performance.now() + g.atak.getClip().duration * 1000;
+    g.atak.stop();
+    g.atakGora.stop();
+    (g.chodNogi.isRunning() ? g.atakGora : g.atak).reset().play();
   }
 
   /** dt in seconds (GameScene.update's capped delta). */
@@ -206,17 +223,28 @@ export class Ludzik3D {
     this.kat = Math.atan2(Math.sin(this.kat), Math.cos(this.kat));
     g.model.rotation.y = this.kat;
     const idzie = player.vel.lengthSq() > 1;
-    const atakuje = performance.now() < this.atakDo;
+    // A whole-body blow that starts walking goes on with the upper body only, at the same moment.
+    if (idzie && g.atak.isRunning()) {
+      const t = g.atak.time;
+      g.atak.stop();
+      g.atakGora.reset().play();
+      g.atakGora.time = t;
+    }
+    const atakuje = g.atak.isRunning() || g.atakGora.isRunning();
+    if (idzie) {
+      if (!g.chodNogi.isRunning()) g.chodNogi.reset().play();
+      g.chodNogi.timeScale = Math.min(4, player.vel.length() * LUDZIK_3D.cyklNaPx * g.chodNogi.getClip().duration);
+    } else if (g.chodNogi.isRunning()) g.chodNogi.stop();
+    // Arms swing with the legs while walking, unless they are striking.
     if (idzie && !atakuje) {
-      if (!g.chod.isRunning()) g.chod.reset().play();
-      g.chod.timeScale = LUDZIK_3D.tempoChodu * Math.min(1.6, player.vel.length() / Math.max(1, player.speed));
-    } else if (g.chod.isRunning()) g.chod.stop();
-    if (!atakuje && g.atak.isRunning()) g.atak.stop();
+      if (!g.chodGora.isRunning()) { g.chodGora.reset().play(); g.chodGora.time = g.chodNogi.time; }
+      g.chodGora.timeScale = g.chodNogi.timeScale;
+    } else if (g.chodGora.isRunning()) g.chodGora.stop();
     if (g.miecz) g.miecz.visible = atakuje;
     if (this.swiatla) { this.swiatla.amb.intensity = LUDZIK_3D.otoczenie; this.swiatla.sun.intensity = LUDZIK_3D.swiatlo; }
     g.mixer.update(s);
     // A small bob per step (two per walking cycle), in sheet pixels.
-    const faza = g.chod.isRunning() ? g.chod.time / g.chod.getClip().duration : 0;
+    const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
     g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
     g.renderer.render(g.scene, g.camera);
     this.obrysuj(g.renderer.domElement);
