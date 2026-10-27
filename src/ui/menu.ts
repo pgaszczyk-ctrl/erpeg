@@ -1,5 +1,4 @@
 import type { CityMap } from '../map/CityMap';
-import { heroPreviewUrl } from './heroPreview';
 import { api, type LoginResult } from '../api';
 import { startSession, loadContent } from '../quests';
 import { PX_PER_M } from '../map/CityMap';
@@ -11,15 +10,15 @@ import { askAccount } from './account';
 import { logoTekst } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
-import { BOHATEROWIE, NOWE_POSTACIE } from '../content/wyglad';
-import { drawLook, randomLook, LOOK_H, LOOK_TOP, type Look } from '../look';
+import { BOHATEROWIE } from '../content/wyglad';
+import { randomLook, type Look } from '../look';
 import { zapamietanaPostac, zapomnijPostac } from '../pamiecPostaci';
 import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
 import { sciezkaGry } from '../sciezka';
-import { kreatorModul } from './kreatorModul';
+import { randomModul } from './modulPostac';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character. Resolves once a character is ready to play.
@@ -219,79 +218,12 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           // the HUD portrait reminds about it, the device remembers the character).
           await play(r);
         }), 'm-primary');
-      // How the hero looks: random (a new roll with the dice button), shown next to the name.
-      // A new hero also gets one of all the drawn heroes (changeable in the character sheet).
-      const newLook = (): Look => ({ ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length) });
-      const look: Look = newLook();
-      // The new heroes: the preview shows the artist's hero the game will use (it used to show the old
-      // pixel figure while another hero walked in the game), with ◀ ▶ to pick one.
-      const hd = NOWE_POSTACIE && BOHATEROWIE.length > 0;
-      const preview = el('canvas', { className: 'm-hero', width: hd ? 144 : 48, height: hd ? 60 : LOOK_H });
-      const sheet = new Image();
-      sheet.onload = () => paint();
-      let sheetRequest = 0;
-      const loadSheet = () => {
-        if (!hd) return;
-        const request = ++sheetRequest;
-        void heroPreviewUrl(BOHATEROWIE[look.postac ?? 0].plik).then(url => { if (request === sheetRequest) sheet.src = url; });
-      };
-      let frame = 0;
-      const paint = () => {
-        const ctx = preview.getContext('2d')!;
-        if (hd) {
-          ctx.clearRect(0, 0, 144, 60);
-          if (!sheet.complete || !sheet.naturalWidth) return;
-          ctx.imageSmoothingEnabled = false;
-          // Standing frames: down, side (turned to face right), up.
-          for (let row = 0; row < 3; row++) {
-            ctx.save();
-            if (row === 1) {
-              ctx.translate(144, 0);
-              ctx.scale(-1, 1);
-            }
-            ctx.drawImage(sheet, 64, row * 64, 64, 64, row === 1 ? 48 : row * 48, 4, 48, 48);
-            ctx.restore();
-          }
-          return;
-        }
-        ctx.clearRect(0, 0, 48, LOOK_H);
-        (['down', 'side', 'up'] as const).forEach((dir, i) => drawLook(ctx, i * 16, LOOK_TOP, dir, frame, look));
-      };
-      const timer = setInterval(() => {
-        if (!preview.isConnected) return clearInterval(timer);
-        if (hd) return;
-        frame = [1, 0, 2, 0][Math.floor(Date.now() / 220) % 4];
-        paint();
-      }, 110);
-      const pick = (d: number) => {
-        look.postac = ((look.postac ?? 0) + d + BOHATEROWIE.length) % BOHATEROWIE.length;
-        loadSheet();
-        paint();
-      };
-      const lookBox = el('div', { className: 'm-look' }, hd
-        ? [el('div', { className: 'm-skinrow' }, [
-            button('◀', () => pick(-1)),
-            button(tx('🎲 Losuj', '🎲 Random'), () => {
-              Object.assign(look, newLook());
-              loadSheet();
-              paint();
-            }),
-            button('▶', () => pick(1)),
-          ])]
-        : [button(tx('🎲 Losuj wygląd', '🎲 Random look'), () => {
-            Object.assign(look, newLook());
-            paint();
-          })]);
-      loadSheet();
-      paint();
-      // Modular heroes (owner, 20 Oct 2026; every server since 1.032).
-      const modul = true;
-      const kreator = modul ? kreatorModul((l) => { look.modul = l; }) : null;
-      const mPreview = kreator?.preview, mBox = kreator?.box;
+      // Every hero starts as a young guard (owner, 27 Oct 2026: „usuń wybór ludzików, obecnie jest tylko strażnik”;
+      // the story of the hero's growth comes later): the look is drawn at random, nothing to choose here.
+      const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(Math.random() < 0.5 ? 'k' : 'm') };
       screen(
         el('h2', {}, ['Nowa postać']),
-        el('div', { className: 'm-namerow' }, [mPreview ?? preview, field('Imię', name, '⚠ Imienia nie można później zmienić.')]),
-        mBox ?? lookBox,
+        field('Imię', name, '⚠ Imienia nie można później zmienić.'),
         // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
         poDemo
           ? el('div', { className: 'm-field' }, [el('span', {}, ['Start przygody']), el('small', {}, [`🏛 ${PO_DEMO_START.nazwa}`])])

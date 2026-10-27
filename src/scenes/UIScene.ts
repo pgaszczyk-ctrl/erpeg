@@ -90,7 +90,10 @@ export class UIScene extends Phaser.Scene {
   // pixels, content is split into rows (one per line/button, `scrollRows`) and a row scrolled past the
   // window is hidden whole rather than sliced – see `redrawScrollVisibility`.
   private dialogScroll?: Phaser.GameObjects.Container;
-  private scrollRows: { y: number; h: number; objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] }[] = [];
+  private scrollRows: ScrollRow[] = [];
+  // The row cut by the window's bottom edge peeks out (owner, 27 Oct 2026: „utnij fragment guzika, żeby
+  // zasugerować, że coś jest niżej”): its top part is drawn here and its text cropped.
+  private peekG?: Phaser.GameObjects.Graphics;
   private dialogRailG?: Phaser.GameObjects.Graphics;
   private scrollY = 0;
   private scrollMax = 0;
@@ -124,6 +127,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogButtons = [];
     this.dialogScroll = undefined;
     this.scrollRows = [];
+    this.peekG = undefined;
     this.dialogRailG = undefined;
     this.scrollY = 0;
     this.scrollMax = 0;
@@ -696,9 +700,26 @@ export class UIScene extends Phaser.Scene {
     // riddle…) gets a shorter panel and scrolls instead of running off the bottom (owner, 26 Oct 2026).
     const bottomMargin = this.touch ? 150 : 40;
     const maxH = Math.max(140, height - y - bottomMargin);
-    const panelH = Math.min(h, maxH);
     const needsScroll = h > maxH + 0.5;
-    const viewportH = Math.max(20, y + panelH - 16 - y0);
+    let viewportH = Math.max(20, y + Math.min(h, maxH) - 16 - y0);
+    if (needsScroll) {
+      // Row tops as laid out below (text lines, a gap, buttons); when the window's edge falls between rows,
+      // shorten it so the last row is cut through its middle – a sliced button says „there's more below”.
+      const lineH0 = wrappedLines.length ? (bodyBlockH - (wrappedLines.length - 1) * 5) / wrappedLines.length : 0;
+      const rows: { y: number; h: number }[] = [];
+      let cy = y0;
+      wrappedLines.forEach((_, i) => { rows.push({ y: cy, h: lineH0 }); cy += lineH0 + (i < wrappedLines.length - 1 ? 5 : 0); });
+      cy += 18;
+      if (stacked) d.buttons.forEach(() => { rows.push({ y: cy, h: btnH }); cy += btnH + 8; });
+      else if (d.buttons.length) rows.push({ y: cy, h: btnH });
+      const cut = y0 + viewportH + PEEK_PAD;
+      const cutRow = rows.find((r) => r.y < cut - 8 && r.y + r.h > cut);
+      if (!cutRow) {
+        const last = [...rows].reverse().find((r) => r.y + r.h <= cut);
+        if (last) viewportH = Math.max(20, last.y + last.h * 0.55 - PEEK_PAD - y0);
+      }
+    }
+    const panelH = needsScroll ? y0 - y + viewportH + 16 : h;
 
     const panel = ramkaKomiks(this, x, y, w, panelH, 0x241a12, { alfa: 0.96, gruba: 3, cien: 6 });
     const items: Phaser.GameObjects.GameObject[] = [panel, title];
@@ -731,13 +752,13 @@ export class UIScene extends Phaser.Scene {
     }
     // Body text and every button scroll together below the (fixed) title/tabs, each line/button its own row
     // (see `redrawScrollVisibility`): a row scrolled past the window is hidden whole, never sliced in half.
-    const scrollRows: { y: number; h: number; objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] }[] = [];
+    const scrollRows: ScrollRow[] = [];
     const scrollItems: Phaser.GameObjects.GameObject[] = [];
     let cursorY = y0;
     const lineH = wrappedLines.length ? (bodyBlockH - (wrappedLines.length - 1) * 5) / wrappedLines.length : 0;
     for (let i = 0; i < wrappedLines.length; i++) {
       const t = this.add.text(x + 16, cursorY, wrappedLines[i], { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb' });
-      scrollRows.push({ y: cursorY, h: lineH, objs: [t] });
+      scrollRows.push({ y: cursorY, h: lineH, objs: [t], texts: [t] });
       scrollItems.push(t);
       cursorY += lineH;
       if (i < wrappedLines.length - 1) cursorY += 5; // between lines only; the body→buttons gap below is its own 18
@@ -746,6 +767,8 @@ export class UIScene extends Phaser.Scene {
     const bw = stacked ? w - 32 : (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
     const last = d.buttons.length - 1;
     const sideBySide: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] = [];
+    const sideTexts: Phaser.GameObjects.Text[] = [];
+    const sideBtns: NonNullable<ScrollRow['btns']> = [];
     d.buttons.forEach((label, i) => {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
       const by = cursorY;
@@ -764,12 +787,15 @@ export class UIScene extends Phaser.Scene {
       const objs = pic ? [g, rect, text, pic] : [g, rect, text];
       scrollItems.push(...objs);
       this.dialogButtons.push({ rect, index: i, scrollable: true });
-      if (stacked) { scrollRows.push({ y: by, h: btnH, objs }); cursorY += btnH + 8; }
-      else sideBySide.push(...objs);
+      const peek = { x: bx, w: bw, kolor: color };
+      if (stacked) { scrollRows.push({ y: by, h: btnH, objs, texts: [text], btns: [peek] }); cursorY += btnH + 8; }
+      else { sideBySide.push(...objs); sideTexts.push(text); sideBtns.push(peek); }
     });
-    if (!stacked && d.buttons.length) { scrollRows.push({ y: cursorY, h: btnH, objs: sideBySide }); cursorY += btnH; }
+    if (!stacked && d.buttons.length) { scrollRows.push({ y: cursorY, h: btnH, objs: sideBySide, texts: sideTexts, btns: sideBtns }); cursorY += btnH; }
     const contentH = cursorY - y0;
 
+    this.peekG = this.add.graphics();
+    items.push(this.peekG);
     const scrollBox = this.add.container(0, 0, scrollItems);
     items.push(scrollBox);
     this.dialogScroll = scrollBox;
@@ -812,14 +838,42 @@ export class UIScene extends Phaser.Scene {
    */
   private redrawScrollVisibility() {
     const r = this.railGeom;
+    this.peekG?.clear();
     if (!r) { for (const row of this.scrollRows) for (const o of row.objs) o.setVisible(true); return; }
     const top = r.y0 - 0.5;
     const bottom = r.y0 + r.viewportH + 0.5;
+    const cut = r.y0 + r.viewportH + PEEK_PAD;
     for (const row of this.scrollRows) {
       const onScreenTop = row.y - this.scrollY;
       const visible = onScreenTop >= top && onScreenTop + row.h <= bottom;
+      for (const t of row.texts ?? []) t.setCrop();
       for (const o of row.objs) o.setVisible(visible);
+      if (visible || onScreenTop < top || onScreenTop >= cut - 4) continue;
+      // Cut by the bottom edge: only its top part shows (a button can't be tapped like this).
+      for (const b of row.btns ?? []) this.drawPeek(b.x, onScreenTop, b.w, cut - onScreenTop, b.kolor);
+      for (const t of row.texts ?? []) {
+        const tTop = t.y - this.scrollY - t.displayHeight * t.originY;
+        const vis = cut - tTop;
+        if (vis <= 2) continue;
+        t.setVisible(true);
+        if (vis < t.displayHeight) t.setCrop(0, 0, t.width, vis * (t.height / t.displayHeight));
+      }
     }
+  }
+
+  /** The top of a button sliced by the window's bottom edge: ink sides and top, its colour, no bottom edge. */
+  private drawPeek(x: number, y: number, w: number, h: number, kolor: number) {
+    const g = this.peekG;
+    if (!g || h <= 0) return;
+    const b = 2, ink = 0x1e1a24;
+    const c = Phaser.Display.Color.IntegerToColor(kolor);
+    const jasny = Phaser.Display.Color.GetColor(Math.min(255, c.red + 45), Math.min(255, c.green + 40), Math.min(255, c.blue + 30));
+    const ciemny = Phaser.Display.Color.GetColor(c.red * 0.62, c.green * 0.62, c.blue * 0.62);
+    g.fillStyle(0x000000, 0.45).fillRect(x + w, y + 3 + b, 3, h - 3 - b);
+    g.fillStyle(ink, 1).fillRect(x + b, y, w - 2 * b, h).fillRect(x, y + b, w, h - b);
+    g.fillStyle(kolor, 1).fillRect(x + b, y + b, w - 2 * b, h - b);
+    g.fillStyle(jasny, 0.9).fillRect(x + b, y + b, w - 2 * b, 2).fillRect(x + b, y + b, 2, h - b);
+    g.fillStyle(ciemny, 0.9).fillRect(x + w - b - 2, y + b, 2, h - b);
   }
 
   private redrawDialogRail() {
@@ -922,7 +976,7 @@ export class UIScene extends Phaser.Scene {
     const guziki = ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', 'Graj dalej'];
     this.showDialog({
       title: 'Menu',
-      text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      text: `Postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
       buttons: guziki,
       onChoose: (i) => {
         if (i === 1) { showCodeOverlay(session.name, session.idik); return; }
@@ -1026,6 +1080,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogChoose = undefined;
     this.dialogScroll = undefined;
     this.scrollRows = [];
+    this.peekG = undefined;
     this.dialogRailG = undefined;
     this.scrollY = 0;
     this.scrollMax = 0;
@@ -1114,6 +1169,17 @@ export class UIScene extends Phaser.Scene {
  * hard drop shadow, an ink outline whose corners step like pixel art, the fill, a light top/left edge and a dark
  * bottom/right edge. No rounded corners, no blur.
  */
+/** Space between a scrolling dialog's window and its frame, through which a cut row still peeks. */
+const PEEK_PAD = 12;
+
+type ScrollRow = {
+  y: number;
+  h: number;
+  objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[];
+  texts?: Phaser.GameObjects.Text[];
+  btns?: { x: number; w: number; kolor: number }[];
+};
+
 export function ramkaKomiks(scene: Phaser.Scene, x: number, y: number, w: number, h: number, kolor: number,
   o: { alfa?: number; gruba?: number; cien?: number } = {}) {
   const g = scene.add.graphics();

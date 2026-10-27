@@ -12,6 +12,7 @@
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
 import { live } from './walka/live';
+import { naEkranie } from './obrot';
 
 export const JOY_RADIUS = 56;
 
@@ -264,8 +265,8 @@ export function resetTouch() {
 
 export function installTouchControls(el: HTMLElement) {
   const local = (t: Touch) => {
-    const r = el.getBoundingClientRect();
-    return { x: t.clientX - r.left, y: t.clientY - r.top };
+    const p = naEkranie(t.clientX, t.clientY);
+    return { x: p.x - el.offsetLeft, y: p.y - el.offsetTop };
   };
 
   /** The knob follows the thumb (up to the rim); further out = faster. */
@@ -484,8 +485,8 @@ export function installTouchControls(el: HTMLElement) {
     const s = pickStarts.get(-2);
     if (e.button === 0 && s) {
       pickStarts.delete(-2);
-      const r = el.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
+      const p = naEkranie(e.clientX, e.clientY);
+      const x = p.x - el.offsetLeft, y = p.y - el.offsetTop;
       if (pickDragged.delete(-2)) mapaWalki.drag?.(s.x, s.y, x, y, true);
       else if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
     }

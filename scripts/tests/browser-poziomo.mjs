@@ -39,12 +39,8 @@ await p.waitForTimeout(500);
 await p.screenshot({ path: `work/poziomo-kufer-${W}.png` });
 const przewijanie = await p.evaluate(() => { const b = document.querySelector('#character .k-body'); return b.scrollHeight - b.clientHeight; });
 console.log(W, H, 'przewijanie', przewijanie);
-await p.evaluate(() => [...document.querySelectorAll('#character .k-tab')].find((t) => t.textContent.includes('Wygląd'))?.click());
-await p.waitForTimeout(800);
-await p.screenshot({ path: `work/poziomo-wyglad-${W}.png` });
-const wyglad = await p.evaluate(() => { const b = document.querySelector('#character .k-body'); return { scroll: b.scrollHeight - b.clientHeight, dag: !!document.querySelector('#character .k-dag-duzy') }; });
-console.log('wyglad', wyglad);
-assert(wyglad.dag && wyglad.scroll <= 2, 'the look tab');
+// No look tab any more (owner, 27 Oct 2026: every hero is the guard).
+assert(!(await p.evaluate(() => [...document.querySelectorAll('#character .k-tab')].some((t) => t.textContent.includes('Wygląd')))), 'no look tab');
 await p.evaluate(() => [...document.querySelectorAll('#character .k-tab')].find((t) => t.textContent.includes('Postać'))?.click());
 await p.waitForTimeout(500);
 assert(przewijanie <= 2, `the equipment page scrolls at ${W}x${H}`);
