@@ -213,7 +213,7 @@ dopiskiem „zamówione” mają już osobne zamówienie – tu tylko dla porzą
 | Zwinięta gazeta nad głową gazeciarza | gazeciarze | niski |
 | Tablica z kotwicą przy porcie | porty | zamówione 37-P001 |
 | Stragany kupca (rondo) i wózek targowy z latarnią | ronda | zamówione 37-P001 |
-| Światło spod lampy szyldu | szyldy na słupach | dostarczone 36-G002 – wdrożenie po mojej stronie |
+| Bujanie tablic innych niż sklep (dziś wychylane kodem) | szyldy na słupach | niski – 3 klatki jak tablica sklepu z 36-G002 |
 | Wozy konne w 8 kierunkach, woźnica na koźle | dworce autobusowe | zamówione 34-P001 |
 | Lokomotywa, tender, wagony (z prostego modelu kodem) | stacje kolejowe | średni – **dobry kandydat do 3D** jak stworki (obracają się po torze) |
 | Kopczyk na szczycie z chorągiewką kraju | szczyty gór | niski |
