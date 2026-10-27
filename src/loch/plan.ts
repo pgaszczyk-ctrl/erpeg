@@ -18,6 +18,7 @@ export interface Komnata {
 export interface PlanLochu {
   rodzaj: RodzajLochu;
   seed: number;
+  tutorial?: boolean;
   /** Kratki: szerokość, wysokość i bok w px mapy. */
   w: number;
   h: number;
@@ -44,13 +45,13 @@ export function hashLochu(s: string) {
   return h >>> 0;
 }
 
-export function planLochu(rodzaj: RodzajLochu, seed: number): PlanLochu {
+export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): PlanLochu {
   const r = rng(seed);
   const O = LOCHY[rodzaj];
   const L = LOCH;
   const losuj = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
-  const cols = losuj(O.wezly[0][0], O.wezly[1][0]);
-  const rows = losuj(O.wezly[0][1], O.wezly[1][1]);
+  const cols = tutorial ? 2 : losuj(O.wezly[0][0], O.wezly[1][0]);
+  const rows = tutorial ? 2 : losuj(O.wezly[0][1], O.wezly[1][1]);
   const S = L.odstep, kMax = L.komnata[1];
   const M = L.sciana + 2;
   const w = M * 2 + (cols - 1) * S + kMax + 2;
@@ -114,7 +115,7 @@ export function planLochu(rodzaj: RodzajLochu, seed: number): PlanLochu {
   const komnaty: Komnata[] = [];
   const pol = Math.floor(L.korytarz / 2);
   for (let k = 0; k < n; k++) {
-    const duza = k === wej || k === skarb || r() < L.szansaKomnaty;
+    const duza = tutorial || k === wej || k === skarb || r() < L.szansaKomnaty;
     let bw: number, bh: number;
     if (k === skarb) bw = bh = kMax;
     else if (k === wej) bw = bh = L.komnata[0] + 1;
@@ -198,7 +199,7 @@ export function planLochu(rodzaj: RodzajLochu, seed: number): PlanLochu {
     }
   }
 
-  return { rodzaj, seed, w, h, T: L.kratka, siatka: g, komnaty, schody, start, skrzynia, sciany, pochodnie, ozdoby };
+  return { rodzaj, seed, tutorial, w, h, T: L.kratka, siatka: g, komnaty, schody, start, skrzynia, sciany, pochodnie, ozdoby };
 }
 
 /** Kratka podłogi? (poza planem: skała) */

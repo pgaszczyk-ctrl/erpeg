@@ -1,3 +1,5 @@
+import { collectStoryItems } from '../prolog/rewards';
+import { tx } from '../i18n';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce, type Umiejetnosc } from '../content/przedmioty';
 import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../content/sklepy';
 
@@ -8,7 +10,7 @@ import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_P
 import {
   gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
-import { session, stanOsiagniec } from '../quests';
+import { session, stanOsiagniec, saveNow } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
 import { NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin, BOHATER_MODUL } from '../sprites';
@@ -342,6 +344,18 @@ function show(host: CharacterHost) {
     lewa.append(doll, tal);
     const glowkaPlecaka = el('div', 'k-bag-head');
     glowkaPlecaka.append(el('div', 'k-sub', `Plecak ${gear.bag.length}/${PLECAK.miejsc}`));
+    const pending = session.story.prolog?.pendingRewards;
+    if (pending?.length) {
+      const odbierz = el('button', 'c-btn', tx(`Odbierz depozyt (${pending.length})`, `Collect stored items (${pending.length})`)) as HTMLButtonElement;
+      odbierz.onclick = async () => {
+        odbierz.disabled = true;
+        collectStoryItems(session.story.prolog!,gear,PLECAK.miejsc);
+        host.onChange();
+        try { await saveNow(session.hp); render(); }
+        catch { odbierz.disabled = false; odbierz.textContent = tx('Ponów zapis depozytu', 'Retry saving stored items'); }
+      };
+      glowkaPlecaka.append(odbierz);
+    }
     prawa.append(glowkaPlecaka, bag, actions);
     wrap.append(lewa, prawa);
     s.append(wrap, el('div', 'c-note k-podpowiedz', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));

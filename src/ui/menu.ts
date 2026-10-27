@@ -1,6 +1,6 @@
 import type { CityMap } from '../map/CityMap';
 import { api, type LoginResult } from '../api';
-import { startSession, loadContent } from '../quests';
+import { startSession, loadContent, saveNow, session } from '../quests';
 import { PX_PER_M } from '../map/CityMap';
 import { codeCard, codeFromLink } from './codeCard';
 import { lang, tx } from '../i18n';
@@ -97,6 +97,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       // Show the response before session/scene preparation can occupy the thread.
       await Promise.all([contentReady, new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))]);
       startSession(r);
+      if (r.newCharacter) await saveNow(session.hp);
       root = null;
       resolve();
     };
@@ -212,6 +213,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę, ulicę i numer albo miejscowość, np. „Kościelna 5, Garbów”.`);
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
+          if (!poDemo) r.newCharacter = true;
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
           // Straight into the game (owner, 26 Oct 2026: no code screen first – the code waits in the Kufer,

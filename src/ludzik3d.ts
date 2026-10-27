@@ -9,6 +9,8 @@ import type * as THREE from 'three';
 import type { Player } from './objects/Player';
 import { SKALA_POSTACI } from './skala';
 import { STOPY_PX } from './content/wyglad';
+import { session } from './quests';
+import { gear, item } from './inventory';
 import { testVehicle, hasTestVehicle } from './testTransport';
 
 export const LUDZIK_3D = {
@@ -128,12 +130,64 @@ export class Ludzik3D {
   /** Is the 3D hero drawn now (for tests). */
   get widoczny() { return this.pokazany; }
 
+  private equipmentKey = '';
+  private changing = false;
+  private disposed = false;
+  private pendingAim: number | null = null;
+  private baseHead?: THREE.BufferGeometry;
+  private donors = new Map<string, Promise<import('three/examples/jsm/loaders/GLTFLoader.js').GLTF>>();
+
+  /** Keep the guard's body and identity; only weapon, attack pose and the matching headwear change. */
+  private async equipment() {
+    const g=this.g;
+    if(!g || !session.story.prolog || this.changing || this.disposed)return;
+    const female=session.look.modul?.p==='k';
+    const kind=item(gear.equip.bron)?.rodzaj ?? 'miecz';
+    const hat=gear.equip.helm==='kapelusz_szkolny';
+    const key=`${kind}:${hat}`;
+    if(key===this.equipmentKey)return;
+    this.changing=true;
+    try {
+      const load=(id:string)=>{
+        if(!this.donors.has(id))this.donors.set(id,import('three/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}modele/postacie3d/${id}.glb`)));
+        return this.donors.get(id)!;
+      };
+      const id=kind==='luk'?(female?'18':'12'):kind==='magia'?(female?'mage_f':'11'):(female?'01':'16');
+      const donor=await load(id);
+      const headDonor=await load(hat?(female?'mage_f':'11'):(female?'01':'16'));
+      if(this.disposed || this.g!==g)return;
+      g.mixer.stopAllAction();
+      const walkLegs=g.chodNogi.getClip(), walkUpper=g.chodGora.getClip();
+      g.mixer.uncacheRoot(g.model);
+      g.mixer=new g.three.AnimationMixer(g.model);
+      g.chodNogi=g.mixer.clipAction(walkLegs);g.chodGora=g.mixer.clipAction(walkUpper);
+      if(g.miecz){g.miecz.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh){const mats=Array.isArray(m.material)?m.material:[m.material];for(const mat of mats)mat.dispose();}});g.miecz.removeFromParent();}
+      const weapon=donor.scene.getObjectByName('Weapon')!.clone(true);
+      g.model.children[0].add(weapon);
+      g.miecz=weapon;
+      weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true});});
+      const head=g.model.getObjectByName('head') as THREE.Mesh;
+      const dh=headDonor.scene.getObjectByName('head') as THREE.Mesh;
+      this.baseHead ??= head.geometry;
+      head.geometry=dh.geometry; // the pack's male/female mage has exactly the same face and hair as its guard
+      const c=donor.animations.find(c=>c.name==='attack')!.clone();
+      const legs=(t:THREE.KeyframeTrack)=>/^(thigh|shin|foot)/.test(t.name);
+      g.atak=g.mixer.clipAction(c);
+      g.atakGora=g.mixer.clipAction(new g.three.AnimationClip(`attack-upper-${id}`,c.duration,c.tracks.filter(t=>!legs(t))));
+      for(const a of [g.atak,g.atakGora]){a.setLoop(g.three.LoopOnce,1);a.clampWhenFinished=false;a.timeScale=LUDZIK_3D.tempoAtaku;}
+      this.equipmentKey=key;
+    } catch(e) { console.warn('Ludzik 3D: wyposażenie',e); }
+    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim;this.pendingAim=null;this.atakuj(aim);}}
+  }
+
   private async zaladuj() {
     this.laduje = true;
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${LUDZIK_3D.plik}`);
+      const file=session.story.prolog ? `modele/postacie3d/${session.look.modul?.p==='k'?'01':'16'}.glb` : LUDZIK_3D.plik;
+      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${file}`);
+      if(this.disposed)return;
       const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = n;
@@ -149,7 +203,7 @@ export class Ludzik3D {
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
-        m.material = new three.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+        m.material = o.name === 'head' ? new three.MeshBasicMaterial({vertexColors:true}) : new three.MeshLambertMaterial({ vertexColors: true, flatShading: true });
       });
       scene.add(model);
       const amb = new three.AmbientLight(0xffffff, LUDZIK_3D.otoczenie);
@@ -183,7 +237,7 @@ export class Ludzik3D {
         a.clampWhenFinished = false;
         a.timeScale = LUDZIK_3D.tempoAtaku;
       }
-      const miecz = model.getObjectByName('Sword_at_hand_grip') ?? undefined;
+      const miecz = model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip') ?? undefined;
       renderer.autoClear = false;
       this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
       this.swiatla = { amb, sun };
@@ -201,6 +255,7 @@ export class Ludzik3D {
   atakuj(aim: number) {
     const g = this.g;
     if (!g) return;
+    if(this.changing){this.pendingAim=aim;return;}
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
     g.atak.stop();
     g.atakGora.stop();
@@ -219,6 +274,7 @@ export class Ludzik3D {
       return;
     }
     const g = this.g;
+    void this.equipment();
     const s = dt;
     // Turn towards the walking direction (screen down = towards the camera = model's +Z).
     const cel = Math.atan2(player.facing.x, player.facing.y);
@@ -253,7 +309,7 @@ export class Ludzik3D {
     g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
     // A new picture only when it would look different (turned, a step further, a blow), at most klatekNaS a second;
     // standing still nothing is drawn at all.
-    const podpis = `${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${g.atak.isRunning() ? Math.round(g.atak.time * 30) : '-'}|${g.atakGora.isRunning() ? Math.round(g.atakGora.time * 30) : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
+    const podpis = `${this.equipmentKey}|${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${g.atak.isRunning() ? Math.round(g.atak.time * 30) : '-'}|${g.atakGora.isRunning() ? Math.round(g.atakGora.time * 30) : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
     this.odKlatki += s;
     if (podpis !== this.podpis && (this.odKlatki >= 1 / LUDZIK_3D.klatekNaS || !this.pokazany)) {
       this.podpis = podpis;
@@ -316,13 +372,16 @@ export class Ludzik3D {
   }
 
   destroy() {
+    this.disposed = true;
     for (const o of this.obrysy) o.im.destroy();
     this.obrysy = [];
     this.podpis = '';
     this.odKlatki = Infinity;
     this.image?.destroy();
     this.image = undefined;
+    this.g?.mixer.stopAllAction();
     this.g?.renderer.dispose();
+    this.g?.renderer.forceContextLoss();
     this.g = undefined;
     this.laduje = false;
     if (this.scene.textures.exists(this.klucz)) this.scene.textures.remove(this.klucz);

@@ -6,25 +6,25 @@ import { CityMap, PX_PER_M } from '../map/CityMap';
 import type { RodzajLochu } from '../content/lochy';
 import { planLochu, type PlanLochu } from './plan';
 
-export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number }
+export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean }
 
 export const jestLochem = (id: string) => id.startsWith('loch:');
 
 export function idLochu(l: IdLochu) {
-  return `loch:${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
+  return `loch:${l.tutorial ? 'prolog:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
+  const m = /^loch:(prolog:)?(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
   if (!m) return null;
-  return { rodzaj: m[1] as RodzajLochu, seed: Number(m[2]), lat: Number(m[3]), lon: Number(m[4]) };
+  return { tutorial: !!m[1], rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]) };
 }
 
 /** Mapa lochu z jej planem (`city.loch`). */
 export function mapaLochu(id: string): CityMap {
   const l = czytajIdLochu(id);
   if (!l) throw new Error('Nieznany loch');
-  const plan = planLochu(l.rodzaj, l.seed);
+  const plan = planLochu(l.rodzaj, l.seed, l.tutorial);
   const T = plan.T;
   const W = plan.w * T, H = plan.h * T;
   // Jednostki mapy = px (unitsPerM = PX_PER_M → k = 1); pierścienie zapisane różnicowo jak w plikach map.

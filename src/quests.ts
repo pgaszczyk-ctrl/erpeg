@@ -28,6 +28,8 @@ import { testLook } from './testAppearance';
 import { setTestVehicle } from './testTransport';
 import { odswiezSlownictwoMisji } from './content/slownictwo';
 import type { Proba } from './content/probyMaga';
+import { live } from './walka/live';
+import { freshProlog } from './prolog/state';
 import { zapiszZasoby, wczytajZasoby } from './content/zasoby';
 
 // The logged-in character: progress lives here during play and is sent to the
@@ -40,6 +42,8 @@ export const MAX_HP = 6;
 
 /** The main story (content/historia.ts, scenes/Story.ts); positions carry their scale `s`. */
 export interface Story {
+  /** Global one-time recruit origin, never keyed by the current city. */
+  prolog?: import('./prolog/state').PrologState;
   st: 'start' | 'cien' | 'uczelnia' | 'smok' | 'koniec';
   /** Seconds walked before the dragon's shadow. */
   walked: number;
@@ -264,6 +268,7 @@ export function startSession(r: LoginResult) {
   session.fogs = { ...(p.save.fogs ?? {}) };
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
+  if (r.newCharacter && live() && !session.story.prolog) session.story.prolog = freshProlog();
   // Power stones are gone (4 Oct 2026): each old one is worth one diamond resurrection.
   session.diamenty = Math.max(0, p.save.diamenty ?? 0) + Math.max(0, p.save.kamienie ?? 0) * WSKRZESZENIE.diamentow;
   session.flagi = { ...(p.save.flagi ?? {}) };

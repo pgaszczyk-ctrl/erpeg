@@ -82,6 +82,8 @@ import {
 import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
+import { PrologRekruta } from './PrologRekruta';
+import { PROLOG_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
 import { idLochu } from '../loch/mapa';
 import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
@@ -460,6 +462,7 @@ export class GameScene extends Phaser.Scene {
   /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
   private lowiska: Lowiska | null = null;
   /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
+  private prolog?: PrologRekruta;
   private lochy?: LochyWejscia;
   private loch?: LochWnetrze;
   private wilki = new Map<Enemy, StworAI>();
@@ -908,6 +911,7 @@ export class GameScene extends Phaser.Scene {
       ? new LochWnetrze({
           scene: this,
           nonce: session.nonce,
+          progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon : undefined,
           toast: (t, ms) => this.toast(t, ms),
           spawn: (x, y, kind, home) => {
             const e = this.spawnEnemy(x, y, undefined, kind);
@@ -917,6 +921,21 @@ export class GameScene extends Phaser.Scene {
           },
         }, this.city)
       : undefined;
+    this.prolog?.destroy();
+    this.prolog = live() && !demo.on ? new PrologRekruta({
+      scene: this, city: this.city, player: this.player, mapName: mapName(this.city.id),
+      entrances: () => this.lochy, dungeon: () => this.loch,
+      dialog: d => this.dialog(d), toast: (t,ms) => this.toast(t,ms),
+      hud: () => this.emitHud(), refresh: () => this.refreshLook(),
+      ready: () => !this.witam && !this.travelling && !this.scene.isPaused() && this.firstViewReady(),
+      save: () => { this.keepFog(); session.tu = this.miejsceZapisu(); return saveNow(this.player.hp); },
+      spawn: (x,y) => this.spawnEnemy(x,y,PROLOG_ID,'glut'),
+    }) : undefined;
+    if (this.city.loch?.tutorial && this.loch) for (const e of this.enemies) {
+      if (this.loch.contains(e)) { e.hp = Math.max(2, meleeDamage()*2); e.power = .5; e.temp = true; }
+    }
+    const prolog = this.prolog;
+    this.events.once('shutdown', () => prolog?.destroy());
     if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.opis.nazwa), 4500);
 
     this.replayAbandoned();
@@ -1198,6 +1217,8 @@ export class GameScene extends Phaser.Scene {
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.loch?.update(now, this.cameras.main, this.player, (x, y) => this.explored.hasCell(Math.floor(x / FOG_CELL), Math.floor(y / FOG_CELL)));
     this.lochy?.update(this.player.x, this.player.y, now);
+    this.prolog?.update();
+    if (this.prolog?.protectingStart) this.noHurtUntil = Math.max(this.noHurtUntil, now + 1000);
     // Underground: none of the surface's life (people, gangs, trees, hunting grounds, training).
     if (!podZiemia) {
     this.orchards.update(this.player.x, this.player.y, now);
@@ -1702,6 +1723,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Home, a talk, a stall, a train/cart or a door at `hit` (or right by the hero): opened, true. */
   private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
+    if (!strong && this.prolog?.interact()) return true;
     if (!strong && this.lochDotyk(hit)) return true;
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
       session.at = null; // the next login starts at home
@@ -2290,7 +2312,8 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
     if (s.lowisko) this.lowiska?.killed(s);
-    if (this.loch?.zabity(s)) return; // dungeon monsters never come back this login
+    if (this.prolog?.killed(s)) return;
+    if (this.loch?.zabity(s)) { this.prolog?.dungeonChanged(); return; } // dungeon state is recorded before another interaction
     if (s.folkQuest) this.folkQuestKill(s);
     if (s.temp || s.ambient || s.lowisko) return;
     if (s.missionId) {
@@ -3657,16 +3680,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Down the stairs: the dungeon is its own small map (src/loch/mapa.ts), like walking onto another map. */
-  private zejdzDoLochu(w: WejscieLochu) {
+  private async zejdzDoLochu(w: WejscieLochu) {
     if (this.travelling) return;
     this.travelling = true;
     const ll = this.city.toLatLon(w.x, w.y);
     lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: LOCHY[w.rodzaj].nazwa };
-    // Saved by the entrance first: a closed tab or a reload comes back up here.
-    this.save();
+    // The tutorial owns its stable instance globally; entering the ordinary dungeon earlier never consumes it.
+    const tutorialId = this.prolog?.prepareDungeon(w);
+    try { session.tu = {m:this.city.id,x:w.x,y:w.y+6}; await saveNow(this.player.hp); }
+    catch { this.travelling=false; this.toast(tx('Nie udało się zapisać. Spróbuj ponownie zejść.', 'Could not save. Try entering again.')); return; }
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
-    const id = idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
+    const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
     this.time.delayedCall(520, () => {
       getMap(id).then((city) => {
         const plan = city.loch!;
@@ -3723,6 +3748,7 @@ export class GameScene extends Phaser.Scene {
   /** The chest in the farthest chamber: once per login, after its guardian and escort are beaten. */
   private otworzSkrzynieLochu() {
     const loch = this.loch!;
+    if (this.city.loch?.tutorial) { if (!this.prolog?.interact()) this.toast(tx('Sprawdź bieżący cel prologu.', 'Check your current prologue objective.')); return; }
     const pow = loch.skrzyniaPowod();
     if (pow === 'pusta') return this.toast(LOCH_TEKSTY.skrzyniaPusta, 2200);
     if (pow === 'pilnowana') return this.toast(LOCH_TEKSTY.skrzyniaZamknieta, 2600);
@@ -3789,6 +3815,7 @@ export class GameScene extends Phaser.Scene {
     this.samouczek?.usun();
     this.samouczek = null;
     this.samouczekCel = null;
+    if (session.story.prolog || session.missions[PROLOG_ID]) return;
     if (this.demoRun || demo.on || session.flagi.samouczek || session.immortal) return;
     if (session.exp >= 100 || (session.stats.m ?? 0) > 800) return;
     this.samouczek = new SamouczekStartu({
@@ -4080,7 +4107,9 @@ export class GameScene extends Phaser.Scene {
    * A building door a swing lands on (or the hero stands at): a shop, school,
    * church, mission building… Buildings open with a swing, not by walking in.
    */
-  private openDoorAt(x: number, y: number, standing = false): boolean {
+  private openDoorAt(x: number, y: number, standing = false, skipProlog = false): boolean {
+    const chief = this.city.places.find(p => p.kind === 'police' && Math.hypot(p.door.x-x,p.door.y-y) < DOOR_RADIUS);
+    if (!skipProlog && chief && this.prolog?.offerChief(() => this.openDoorAt(x,y,standing,true))) return true;
     const fx = x;
     const fy = y;
     let id: string | null = null;
@@ -4131,7 +4160,7 @@ export class GameScene extends Phaser.Scene {
         if (Math.abs(p.door.x - fx) > DOOR_RADIUS || Math.abs(p.door.y - fy) > DOOR_RADIUS) continue;
         if (Phaser.Math.Distance.Between(p.door.x, p.door.y, fx, fy) < DOOR_RADIUS) {
           id = p.id;
-          open = () => this.openPlace(p);
+          open = () => this.openPlace(p, false, skipProlog);
           savePoint = p.kind !== 'hotel'; // the hotel saves itself, with its spot
         }
       }
@@ -4189,7 +4218,8 @@ export class GameScene extends Phaser.Scene {
     this.mapView.redrawAround(rm.door.x, rm.door.y);
   }
 
-  private openPlace(p: CityPlace, venueChosen = false) {
+  private openPlace(p: CityPlace, venueChosen = false, skipProlog = false) {
+    if (!skipProlog && p.kind === 'police' && this.prolog?.offerChief(() => this.openPlace(p, venueChosen, true))) return;
     if (!venueChosen) {
       const shared = this.city.places.filter(q => Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 1);
       if (shared.length > 1 && shared.some(q => q.kind === 'maker' || q.kind === 'workshop')) {
@@ -5991,6 +6021,8 @@ export class GameScene extends Phaser.Scene {
       this.emitZasoby();
     }
     this.player.facing.set(dir.x, dir.y);
+    this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x));
+    this.prolog?.shot(skill);
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
     // Starts at the hero, so nothing standing right next to them is skipped.
     const sprite = this.add
@@ -6933,6 +6965,8 @@ export class GameScene extends Phaser.Scene {
     const list: Omit<QuestInfo, 'color'>[] = [];
     // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
     // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
+    const recruit = this.prolog?.goal();
+    if (recruit) return [recruit];
     const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
     if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
