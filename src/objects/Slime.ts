@@ -47,6 +47,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   // chaseSpeed/sightRange/loseRange here are unused once a StworAI brain is attached (it drives vel itself);
   // kept sane in case generic Slime code (fleeing a dragon's shadow, etc.) ever reads them.
   wilk: { name: 'Wilk', hp: 10, wanderSpeed: 14, chaseSpeed: 44, sightRange: 160, loseRange: 260, scale: 1, damage: 2, exp: 12, tint: 0x7a6a58 },
+  // The crypt's guardian (lochy, owner 27 Oct 2026): the skeleton's sheet, big and pale; fights like a boss (StworAI).
+  upior: { name: 'Upiór krypty', hp: 90, wanderSpeed: 10, chaseSpeed: 34, sightRange: 150, loseRange: 320, scale: 1.9, damage: 2, exp: 90, tint: 0xb8e8ff },
   warg: { name: 'Warg', hp: 32, wanderSpeed: 11, chaseSpeed: 40, sightRange: 190, loseRange: 300, scale: 1.3, damage: 4, exp: 45, tint: 0x5a3a2a },
 };
 
@@ -61,7 +63,7 @@ export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
 
 /** Pictures of the little creatures (all but the bandit). */
-const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, koziol: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
+const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, koziol: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, upior: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
 
 export function createSlimeAnims(scene: Phaser.Scene) {
   for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.blob]) {

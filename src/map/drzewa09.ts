@@ -11,7 +11,7 @@ interface Regula { odstep: number; gestosc: number; wagi: [string, number][]; sk
 /** Reguły po rodzaju podłoża; odstęp w px mapy (z gatunki_osm.json, już ×0,55), gęstość = szansa w kratce. */
 const REGULY: Partial<Record<Rodzaj, Regula>> = {
   park: { odstep: 12, gestosc: 0.63, ochrona: 'park', wagi: [['lipa', 0.3], ['dab', 0.25], ['buk', 0.15], ['brzoza', 0.15], ['krzak', 0.15]] },
-  cmentarz: { odstep: 11, gestosc: 0.42, ochrona: 'park', wagi: [['lipa', 0.4], ['brzoza', 0.2], ['swierk', 0.2], ['krzak', 0.2]] },
+  cmentarz: { odstep: 11, gestosc: 0.2, ochrona: 'park', wagi: [['lipa', 0.4], ['brzoza', 0.2], ['swierk', 0.2], ['krzak', 0.2]] },
   // Działki (w mapie rodzajów jako łąka): drzewa owocowe.
   laka: { odstep: 9, gestosc: 0.49, ochrona: 'sad', wagi: [['jablon', 0.45], ['sliwa', 0.25], ['grusza', 0.15], ['krzak', 0.15]] },
   mokradlo: { odstep: 9, gestosc: 0.56, chop: 0.2, wagi: [['olcha', 0.4], ['wierzba', 0.4], ['brzoza', 0.2]] },

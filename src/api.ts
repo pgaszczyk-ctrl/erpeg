@@ -125,6 +125,8 @@ export interface Stats {
   /** Arena Cechu fights won / lost (the server keeps the ranking). */
   arena?: number;
   arenaPrzegrane?: number;
+  /** Dungeon chests opened (content/lochy.ts). */
+  lochy?: number;
 }
 
 export interface PlayerInfo {

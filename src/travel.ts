@@ -11,6 +11,8 @@ import { takeResume } from './update';
 import { live } from './walka/live';
 import { flyToGameLocation, loadingGame, revealLoadedGame } from './ui/loadingMap';
 import type { GameScene } from './scenes/GameScene';
+import { jestLochem, mapaLochu, czytajIdLochu } from './loch/mapa';
+import { LOCHY } from './content/lochy';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -85,6 +87,8 @@ export function cachedMap(id: string) {
 export async function getMap(id: string) {
   const known = maps.get(id);
   if (known) return known;
+  // A dungeon (src/loch/): made from its id, never kept (small and quick to make again).
+  if (jestLochem(id)) return mapaLochu(id);
   const w = worldOrigin(id);
   if (w) {
     // Made from the world map as the hero walks (places come with the tiles).
@@ -150,6 +154,8 @@ export async function enterWorld(game: Phaser.Game) {
   const back = takeResume(session.name);
   // New controls test: the spot of the last save (walka/live.ts, point 7) wins over the hotel/home.
   let at = back ?? ((live() && session.tu) || session.at);
+  // Saved in a dungeon (shouldn't happen – saves keep its entrance): the hotel or home instead.
+  if (at && jestLochem(at.m)) at = session.at && !jestLochem(session.at.m) ? session.at : null;
   if (at) {
     try {
       city = await getMap(at.m);
@@ -195,6 +201,8 @@ export async function enterWorld(game: Phaser.Game) {
 }
 
 export function mapName(id: string) {
+  const loch = czytajIdLochu(id);
+  if (loch) return LOCHY[loch.rodzaj].nazwa;
   if (worldOrigin(id)) return worldNames.get(id) ?? 'Daleko';
   return id === 'lublin' ? 'Lublin' : world.towns.find((t) => t.id === id)?.name ?? id;
 }

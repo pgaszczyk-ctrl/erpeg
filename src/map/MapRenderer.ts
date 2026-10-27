@@ -509,6 +509,7 @@ export class MapRenderer {
 
   /** Draws the chunks around the camera; call every frame. */
   update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2) {
+    if (this.map.loch) return; // underground: scenes/Lochy.ts paints the maze
     const v = cam.worldView;
     const want: [number, number, number][] = [];
     const M = CHUNK / 4;
@@ -577,6 +578,7 @@ export class MapRenderer {
 
   /** The visible terrain has both its map data and its finished picture. */
   firstViewReady(cam: Phaser.Cameras.Scene2D.Camera) {
+    if (this.map.loch) return true;
     const v = cam.worldView;
     if (!this.map.ready({ x0: v.x, y0: v.y, x1: v.right, y1: v.bottom })) return false;
     for (let x = Math.floor(v.x / CHUNK); x <= Math.floor(v.right / CHUNK); x++) {
@@ -719,6 +721,7 @@ export class MapRenderer {
    * hole in a crown standing over them, so an enemy under the canopy isn't invisible.
    */
   updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, punkty: { x: number; y: number }[]) {
+    if (this.map.loch) return;
     if (WYGLAD_09) {
       this.korony.update(now, dt, cam.worldView, punkty);
       this.wysokie.update(cam.worldView, punkty[0].x, punkty[0].y);

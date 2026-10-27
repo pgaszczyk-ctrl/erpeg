@@ -50,7 +50,7 @@ function tekst(k: Krok): string {
         : '⚔ Uderzasz spacją albo kliknięciem myszy. Spróbuj!';
     case 'gadaj':
       return live()
-        ? '🗣 Żeby z kimś pogadać, podejdź i stuknij go dwa razy. Gazeciarz ma dla ciebie zlecenie – strzałka cię prowadzi!'
+        ? '🗣 Żeby z kimś pogadać, podejdź i naciśnij dwa razy ATAK (albo stuknij go dwa razy). Gazeciarz ma dla ciebie zlecenie – strzałka cię prowadzi!'
         : `🗣 Żeby z kimś pogadać, podejdź do niego i ${telefon ? 'stuknij w ekran' : 'uderz'} obok niego – nic mu nie zrobisz. Gazeciarz ma dla ciebie zlecenie – strzałka cię prowadzi!`;
     case 'gazeta':
       return '📰 Poproś o Kuriera – w gazecie, na stronie „Zlecenie”, czeka twoja pierwsza misja. Powodzenia!';

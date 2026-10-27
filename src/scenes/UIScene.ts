@@ -33,7 +33,7 @@ import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
-import { OSTROSC, przyblizenie } from '../screen';
+import { OSTROSC, poziomPrzyblizenia } from '../screen';
 import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
@@ -167,7 +167,7 @@ export class UIScene extends Phaser.Scene {
       quests: () => this.openCharacter('quests'),
       map: () => this.openMap(),
       zoom: () => (this.scene.get('game') as GameScene).toggleZoom(),
-      zoomOn: przyblizenie(),
+      zoomOn: poziomPrzyblizenia() === 2,
       camera: () => this.takePhoto(),
       vehicle: (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle),
       menu: () => this.openGameMenu(),

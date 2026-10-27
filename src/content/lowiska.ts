@@ -205,7 +205,7 @@ export function profilStwora(rodzaj: string, obrazenie: number): ProfilStwora {
   if (rodzaj === 'wilk') return STWORY_AI.wilk;
   if (rodzaj === 'warg') return STWORY_AI.warg;
   if (rodzaj === 'glut') return STWORY_AI.chochlik;
-  if (rodzaj === 'koziol') return STWORY_AI.boss;
+  if (rodzaj === 'koziol' || rodzaj === 'upior') return STWORY_AI.boss;
   const w = STWORY_AI.wrecz as ProfilDoskok;
   return { ...w, doskok: { ...w.doskok, obrazenie: Math.max(1, obrazenie) } };
 }

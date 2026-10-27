@@ -15,7 +15,7 @@ export type Miejsce = string | { lat: number; lon: number };
  * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
  * wilk / warg – test pilota „łowiska” (content/lowiska.ts, scenes/Lowiska.ts, tylko gdy lowiska() włączone).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol' | 'wilk' | 'warg';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol' | 'wilk' | 'warg' | 'upior';
 
 /**
  * Rodzaj zadania (albo etapu misji wieloetapowej):
