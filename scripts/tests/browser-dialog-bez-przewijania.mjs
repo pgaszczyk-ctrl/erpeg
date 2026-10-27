@@ -24,7 +24,7 @@ try {
   await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 240000 });
   await page.waitForFunction(() => !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(12000);
   const pokaz = (text, n) => page.evaluate(([text, n]) => {
     const s = window.__game.scene.getScene('game');
     const buttons = n === 2 ? ['🕯 Schodzę', 'Nie teraz'] : Array.from({ length: n }, (_, i) => 'Opcja ' + (i + 1));
