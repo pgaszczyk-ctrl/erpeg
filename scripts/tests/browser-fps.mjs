@@ -1,12 +1,12 @@
 // Slow-frame log (owner, 27 Oct 2026): while playing, a window under 40 fps (headless swiftshader always is)
 // sends one `fps` report to log_error with the measurement and context; paused/dialog time doesn't count.
-// Run: npm run build && npx vite preview --port 4173 & node scripts/tests/browser-fps.mjs
+// Run: npm run build (or VITE_TEST=1 npx vite build) && npx vite preview --port 4173 & node scripts/tests/browser-fps.mjs
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader'], chromiumSandbox: false });
-const gracz = (o = {}) => ({ name: 'Zbyszko', idik: 'ABCD1234', start_place: 'Plac Zamkowy', start_x: 0, start_y: 0, map_scale: 1.92, save: { coins: 250, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 } }, exp: 500, dead: false, died_at: null, age: 6, konto: true, ...o });
+const gracz = (o = {}) => ({ name: 'Jam', idik: 'ANGELIKA', start_place: 'Plac Zamkowy', start_x: 0, start_y: 0, map_scale: 1.92, save: { coins: 250, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 } }, exp: 500, dead: false, died_at: null, age: 6, konto: true, ...o });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'pl-PL' });
   const raporty = [];
@@ -25,11 +25,11 @@ try {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
   const page = await ctx.newPage();
-  await page.goto('http://127.0.0.1:4173/?lang=pl');
-  await page.evaluate(() => Object.assign(window.__fps, { rozgrzewkaS: 0, oknoS: 3, prog: 0, dlugichIle: 1e9 }));
-  await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
-  await page.getByRole('button', { name: 'Stwórz postać' }).click();
+  // The code link logs straight in (works on the test server too, whose menu lists only test characters).
+  await page.addInitScript(() => {
+    const t = setInterval(() => { if (window.__fps) { Object.assign(window.__fps, { rozgrzewkaS: 0, oknoS: 3, prog: 0, dlugichIle: 1e9 }); clearInterval(t); } }, 5);
+  });
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   const fpsGry = await page.evaluate(() => window.__game.loop.actualFps);
   console.log('actualFps', fpsGry.toFixed(1));
