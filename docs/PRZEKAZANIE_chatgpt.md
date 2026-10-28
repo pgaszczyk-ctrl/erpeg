@@ -554,3 +554,9 @@ Właściciel zlecił podłączenie wilków, zombie itd. do właściwej gry na TE
 Pliki: stwory3d.ts, Slime.ts, StworAI.ts, GameScene.ts, test:creatures3d, workflow creatures3d-checks. 12 GLB/14 typów, wspólny renderer, animacje związane z AI, korzeń zużywany raz, pocisk z dłoni, śmierć do końca klipu, retry/culling/fallback. Przy rotacji/restart wykryto i zabezpieczono brak kamery w fitZoom. Binarne zasoby, PRODUKCJA/WERSJA/produkcja i Supabase bez zmian.
 
 Lokalnie PASS: TypeScript, build/preview Vite, testy questów/prologu/600 planów lochów, test GLB PC i emulowany telefon z dotykiem/obrotem/restartem. Pełny build zimnych map i końcowe CI w toku; aktualny stan i ograniczenia: docs/TEST_STWORY3D_20261028.md. Pomiar 40 stworów pokazuje koszt modeli na programowym GPU, nie potwierdza fizycznego telefonu. Mieszkańcy, pies i smoki poza zakresem.
+
+### Zakończenie PR #35 — publikacja i sprawdzenie domeny
+
+Pełny build zimnych map PASS (102449 budynków/1052 kafle/124 miejscowości). PR #35 scalony jako 0cf5aaf; workflow 40734443884 test/production/publish success. Domena TEST potwierdza 0cf5aaf i main-BJjf-xo6.js (SHA256 8d0757109290564b52536ca8d729a98e80145598ebe66b184b15b1c371b52606). Dedykowany test modeli na plikach z domeny PASS PC i emulowany telefon z dotykiem/obrotem; wszystkie kontrole CI końcowego HEAD 50bdca7 success. Produkcja nadal 01c06c9, pin/wersja/łatki bez zmian.
+
+Normalna krypta: modele zombie/szkieletów widoczne, mgła i skrzynia działają. Osobny test skrótu wyjścia NIEZALICZONY także przy stwory3d=0 i Enterze, bez błędów JS; przyczyna niewyjaśniona, do osobnej diagnozy. Nie deklarujemy pełnego przejścia z powrotem z tej krypty. Raport i dowody: docs/TEST_STWORY3D_20261028.md oraz docs/testy-stwory3d/. Brak fizycznego telefonu/Safari. NPC, pies i smoki osobno.

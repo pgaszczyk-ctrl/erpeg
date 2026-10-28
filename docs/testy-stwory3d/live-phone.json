@@ -1,0 +1,82 @@
+{
+  "tag": "phone",
+  "browser": "153.0.8010.0",
+  "gallery": {
+    "stats": {
+      "contexts": 1,
+      "frames": 43,
+      "visible": 14,
+      "loaded": 12,
+      "draws": 211,
+      "atlasBytes": 2097152
+    },
+    "colors": 265,
+    "opaque": 31478,
+    "kinds": [
+      "wilk",
+      "warg",
+      "zombie",
+      "szkielet",
+      "glut",
+      "bandyta",
+      "upior",
+      "wodnik",
+      "blob",
+      "driada",
+      "herszt",
+      "koziol",
+      "wielki_glut",
+      "wielki_herszt"
+    ],
+    "paletteMatches": 24
+  },
+  "poses": 73,
+  "emission": {
+    "last": {
+      "name": "ThrowOrigin",
+      "result": {
+        "x": 3062.311914200972,
+        "y": 2881.88832224286
+      },
+      "now": 30429.7
+    },
+    "projectiles": 1,
+    "action": "throw"
+  },
+  "crowd": {
+    "contexts": 1,
+    "frames": 116,
+    "visible": 32,
+    "loaded": 12,
+    "draws": 561,
+    "atlasBytes": 2097152
+  },
+  "modelFrames": {
+    "fps": 43.809428983920014,
+    "p50": 16.700000000004366,
+    "p95": 49.900000000001455
+  },
+  "spriteFrames": {
+    "fps": 59.755004481614165,
+    "p50": 16.69999999999709,
+    "p95": 16.80000000000291
+  },
+  "wargRequests": 2,
+  "errors": [],
+  "expectedWarnings": 1,
+  "checks": [
+    "12 GLBs/14 kinds",
+    "real colored pixels",
+    "73 clip poses",
+    "root motion once",
+    "slot restoration",
+    "AI windup/lunge/recovery",
+    "hand emitter/projectile",
+    "hit",
+    "death via keyboard/touch",
+    "40 actor bound",
+    "scene restart",
+    "explicit off switch",
+    "portrait rotation"
+  ]
+}
