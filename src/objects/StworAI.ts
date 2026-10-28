@@ -76,6 +76,7 @@ export class StworAI {
     profil: ProfilStwora,
   ) {
     this.P = profil;
+    s.telegraphedCombat = true;
     this.gfx = h.scene.add.graphics().setDepth(1_000_000);
     this.gfxPociski = h.scene.add.graphics().setDepth(1_000_001);
     if (profil.rodzaj === 'boss') s.heavy = true;
@@ -163,7 +164,7 @@ export class StworAI {
 
       case 'zapowiedz':
         s.vel.set(0, 0);
-        // Pocisk i taran celują do końca zapowiedzi w miarę wolno – ostatnie 40% to blokada kierunku.
+        // Kierunek zablokowany w zacznij(): gracz może wyjść z zapowiedzianej linii, także przy szybszym rzucie.
         this.rysujZapowiedz(now);
         if (now >= this.until) this.uderz(now);
         return;
