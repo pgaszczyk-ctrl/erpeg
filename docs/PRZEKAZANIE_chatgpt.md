@@ -549,3 +549,11 @@
 - Korekta Guliwera grafika: drogi ponownie kafelkowe na wspólnej siatce 0,25 m gry, ścieżki 1 pas, ulice 2 pasy (skrzyżowania szersze). grid-roads.mjs i opcja gridRoads; nie zmienia bazowego wariantu bez tej opcji. Pozostały teren tła poglądowo zielony; dane OSM nakładane. 13 dostępnych brył 2×2, zero kolizji. Test szerokości 1/2 pasy i wyrównania siatki, desktop/telefon i wszystkie grafiki sprawdzone.
 
 - 2026-10-21: nowa odrębna makieta tools/osm-world/public/miasto.html, pełny promień 3 km od dokładnego punktu Guliwera 2. Uproszczone miasto w kwadratach 5×5, pole 75 m real / 5 m gry, skala 1:15, 20 km/h (150 km = 30 min modelowo). 11821 obrysów → 208 oryginalnych grafik, drogi 1–2 pola i wspólne połączenia sąsiadów, teren OSM uogólniony. Woda i zieleń chronione przy zabudowie; wolne tło poglądowo zielone. Testy generatora, regresja bloków i Playwright desktop/telefon, spacer 5,15 m, minimapa, style i 1:1. Bez zmiany/wdrożenia gry. Szczegóły i ograniczenia w tools/osm-world/README.md; raporty data/city-*.json.
+
+
+## 2026-10-28 — przekazanie zaakceptowanych modeli chibi 44-G008
+
+- Na polecenie właściciela „Wrzucaj do erpeg” przekazano 28 zaakceptowanych GLB (12 przeciwników, 15 wyglądów mieszkańców, pies) do `public/modele/swiat44/`; manifest URL i SHA256 obok modeli. Pełne źródła, fonty z licencją, referencje i porównanie G008: `docs/poczta/od-grafika/44_ruchomy_swiat_3d/`. Wiadomość dla programisty: `docs/poczta/od-grafika/2026-10-27_44-G008_modele_chibi.md`.
+- Dopisano do AGENTS obowiązek porównania każdej kolejnej partii z aktualnym chibi Strażnikiem; proporcje i właściwy model opisuje `referencja/STYL_CHIBI.md` w pakiecie. Starszy smukły Strażnik jest wyłącznie archiwalną referencją. G009 jest osobną partią do oceny i nie wchodzi do dostawy.
+- Kontrola paczki: 28 GLB / 152 klipy; geometria, pętle, podłoże, gripy i root motion; 18 190 macierzy JS/Python, rzeczywiste obrazy z GLB i wczytanie 28 modeli przez Three.js GLTFLoader. Przed zapisem do repo ponownie porównano Git SHA-1 wszystkich 116 plików ze spisem przekazania.
+- Zakres: zasoby i dokumentacja. Nie uruchamiano pełnego builda/przeglądarki gry erpeg ani testu fizycznego telefonu/GPU; podłączenie i wydajność trzeba sprawdzić w grze. Nie zmieniano kodu gry, PRODUKCJA, WERSJA, produkcja/ ani danych graczy. Nie wdrażano na serwer.
