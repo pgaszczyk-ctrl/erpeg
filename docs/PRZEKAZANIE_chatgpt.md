@@ -546,3 +546,11 @@ Wynik podglądu: PC 1363×936 — pełne przejście PASS (ukrycie przed oczyszcz
 Końcowa próba 844×390: PASS — poprawiony pasek nie nachodzi na zadanie; kliknięcie z komnaty skarbu wraca obok wejścia na powierzchni i usuwa pasek. Sprawdzono rzeczywisty obraz i natywne kliknięcie w przeglądarce podglądu. To test rozmiaru widoku telefonu w iframe, nie test fizycznego telefonu ani emulacja sprzętu dotykowego. Publikacja TEST uruchamiana przez merge; produkcja pozostaje przypięta do dotychczasowego wydania.
 
 Publikacja zakończona 28.10.2026: PR #33 scalony jako b57ae54fdeec9e1610f8c20d4d19f9e8dcf09231. GitHub Actions 40685842751 — production/test/publish success, w tym pełne npm run build z czystego checkoutu. Publiczny HTTPS potwierdził /test/version.json = b57ae54 2026-10-28 12:20 oraz rzeczywisty ./assets/main-Yu-_ghcV.js z tekstem Ucieknij z lochu, #loch-wyjscie i poprawką mobilną 120 px. Główna strona nadal wskazuje kod 01c06c9 (odtworzony w tym samym procesie); PRODUKCJA, WERSJA i łatki wydania bez zmian. Dodatkowy test w przeglądarce: wyczyść → wyjdź → wróć do oczyszczonego poziomu → wyjdź ponownie PASS, jeden pasek, bez odrodzenia przeciwników. Brak testu fizycznego telefonu; sprawdzony desktop i viewport 844×390.
+
+## 28.10.2026 — przejęcie zawieszonej pracy i integracja stworów G008 (PR #35)
+
+Właściciel zlecił podłączenie wilków, zombie itd. do właściwej gry na TEST. Po wyczyszczeniu środowiska odtworzono zmiany z przebiegu rozmowy i zabezpieczono je od razu na osobnej gałęzi chatgpt/stwory3d-20261028, opartej na 9a09c6f. Nie dołączano niezależnego PR #34.
+
+Pliki: stwory3d.ts, Slime.ts, StworAI.ts, GameScene.ts, test:creatures3d, workflow creatures3d-checks. 12 GLB/14 typów, wspólny renderer, animacje związane z AI, korzeń zużywany raz, pocisk z dłoni, śmierć do końca klipu, retry/culling/fallback. Przy rotacji/restart wykryto i zabezpieczono brak kamery w fitZoom. Binarne zasoby, PRODUKCJA/WERSJA/produkcja i Supabase bez zmian.
+
+Lokalnie PASS: TypeScript, build/preview Vite, testy questów/prologu/600 planów lochów, test GLB PC i emulowany telefon z dotykiem/obrotem/restartem. Pełny build zimnych map i końcowe CI w toku; aktualny stan i ograniczenia: docs/TEST_STWORY3D_20261028.md. Pomiar 40 stworów pokazuje koszt modeli na programowym GPU, nie potwierdza fizycznego telefonu. Mieszkańcy, pies i smoki poza zakresem.

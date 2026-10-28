@@ -4,7 +4,7 @@
 
 28 modeli GLB / 152 klipy: 12 przeciwników, 15 wyglądów mieszkańców, pies. Modele w `public/modele/swiat44/`, źródła i instrukcje w `docs/poczta/od-grafika/44_ruchomy_swiat_3d/`. Podgląd na teście: `/test/modele-swiata.html`. Osobny plik `public/modele/wzorzec-chibi.glb` służy wyłącznie porównaniu z aktualnym Strażnikiem.
 
-Publikacja zasobów i podglądu nie podmienia wyglądu przeciwników i NPC w grze. Obecny `src/ludzik3d.ts` obsługuje bohatera. Status integracji paczki G008 pozostaje otwarty.
+PR #35 podłącza 12 modeli przeciwników (14 typów gry) przez wspólny renderer `src/stwory3d.ts`, domyślnie na TEST. Sprawdzone GLB/animacje i walka PC/telefon emulowany; raport `docs/TEST_STWORY3D_20261028.md`. Mieszkańcy/NPC i pies pozostają do podłączenia. `src/ludzik3d.ts` nadal obsługuje bohatera. Status całej paczki G008 pozostaje częściowy.
 
 ## Do podłączenia przez programistę
 

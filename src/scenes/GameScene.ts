@@ -15,6 +15,7 @@ import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey } fro
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
 import { Ludzik3D, ludzik3d } from '../ludzik3d';
+import { Stwory3D, stwory3d } from '../stwory3d';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim, resetTouch, resetKeys } from '../controls';
 import { loadingGame, loadingMapError } from '../ui/loadingMap';
@@ -362,6 +363,7 @@ export class GameScene extends Phaser.Scene {
   private testRide!: TestRide;
   /** The hero as a live 3D model (TEST, src/ludzik3d.ts); none = the drawn sheet. */
   private ludzik3d?: Ludzik3D;
+  private stwory3d?: Stwory3D;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
   private missions: ResolvedMission[] = [];
@@ -525,6 +527,11 @@ export class GameScene extends Phaser.Scene {
     this.askingTown = false;
     this.mapView = new MapRenderer(this, this.city);
     this.testRide = new TestRide(this);
+    this.stwory3d = stwory3d() ? new Stwory3D(this) : undefined;
+    if (this.stwory3d) {
+      const models = this.stwory3d;
+      this.events.once('shutdown', () => { models.destroy(); if (this.stwory3d === models) this.stwory3d = undefined; });
+    }
     this.ludzik3d = ludzik3d() ? new Ludzik3D(this) : undefined;
     if (this.ludzik3d) {
       const l = this.ludzik3d;
@@ -1048,13 +1055,16 @@ export class GameScene extends Phaser.Scene {
    * at or above ×1.3 (phones with 2 canvas px per CSS px: 4 → 5, i.e. +25 %).
    */
   private fitZoom() {
+    // Phone orientation cleanup can emit resize after Phaser has removed this scene's camera.
+    const camera = this.cameras.main;
+    if (!camera) return;
     const short = Math.min(this.scale.width, this.scale.height) / OSTROSC;
     const z = Math.max(2, Math.floor(short / 176)) * OSTROSC;
     const zz = zoomZPrzyblizeniem(z, WYGLAD_09 ? GEN_DOTS : 1);
     // The tilted camera (walka/live.ts): the map squashed vertically, sprites stretched back when drawn (main.ts).
     const k = skrotKamery();
-    this.cameras.main.setZoom(zz, zz * k);
-    (this.cameras.main as unknown as { wyprost: number }).wyprost = 1 / k;
+    camera.setZoom(zz, zz * k);
+    (camera as unknown as { wyprost: number }).wyprost = 1 / k;
   }
 
   /** The next zoom step (usual → ~30 % closer → twice as close → usual, kept on the device); true = the closest. */
@@ -1349,6 +1359,7 @@ export class GameScene extends Phaser.Scene {
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y) && !this.demoRun?.przySmoku(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
     this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
+    this.stwory3d?.update(this.enemies, now);
     this.drawMagic(now);
 
     this.animateCrops(now);
@@ -2211,6 +2222,7 @@ export class GameScene extends Phaser.Scene {
     return {
       scene: this,
       player: this.player,
+      origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
         const blocked = Math.random() < blockChance();
@@ -3267,6 +3279,7 @@ export class GameScene extends Phaser.Scene {
     s.minions = new Set([...(s.minions ?? [])].filter((m) => m.active && !m.isDead));
     if (s.minions.size >= W.maksBlobow || now < (s.nextSummon ?? 0) || this.player.isDead) return;
     s.nextSummon = now + W.przerwaMs;
+    s.modelAttack = { clip: 'cast', start: now - 700, contact: now, end: now + 650, aim: Math.atan2(dy, dx) };
     for (let t = 0; t < 8; t++) {
       const a = Math.random() * Math.PI * 2;
       const r = (W.blobOdBohateraM[0] + Math.random() * (W.blobOdBohateraM[1] - W.blobOdBohateraM[0])) * PX_PER_M;
