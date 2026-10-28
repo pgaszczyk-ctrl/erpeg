@@ -28,8 +28,9 @@ export const OSTROSC = forced >= 1 && forced <= 3 ? Math.floor(forced) : slow ? 
   : komputer && !NA_BATERII ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
   : Math.max(1, Math.min(2, Math.floor(window.devicePixelRatio || 1)));
 
-/** Below this many frames a second the sharper picture is too much for the phone. */
-const MIN_FPS = 35;
+/** Below this many frames a second the sharper picture is too much for the phone. Was 35 (owner, 28 Oct 2026: still
+ * felt slow – a phone at ~39 fps kept 4× the pixels; its processor had become 3× lighter, so the plain picture runs smooth). */
+const MIN_FPS = 50;
 
 /**
  * After 15 s of playing, measures the frame rate for 10 s; a phone that can't

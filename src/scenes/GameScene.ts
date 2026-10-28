@@ -300,6 +300,10 @@ export interface DialogRequest {
   kto?: Rozmowca | null;
   /** Every button is an answer (riddles without „Później”): all in one colour, so the last one isn't greyed like a way out. */
   odpowiedzi?: boolean;
+  /** The button Escape (and Space/Enter in a long list) picks – the safe way out – instead of the last one. */
+  zamknij?: number;
+  /** A button painted dark red as a warning (e.g. „Wyjdź z gry” at the bottom of the menu). */
+  grozny?: number;
   onChoose: (index: number) => void;
 }
 
