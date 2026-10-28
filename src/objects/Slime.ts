@@ -97,6 +97,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   leash: { x: number; y: number; r: number } | null = null;
   /** Not pushed back by blows (the demo's Wawel dragon). */
   heavy = false;
+  /** Normal hits don't cancel telegraphed attacks; strong hits and essences can still daze. */
+  telegraphedCombat = false;
   /** Turn fight (test server): never chases, never hurts by touch – it waits in its group to be met (walka/Spotkania.ts). */
   spokojny = false;
   /** In the air (a mountain dragon's flight): unseen and can't be hit. */
@@ -321,10 +323,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (this.isDead || this.inAir) return false;
     this.hp -= damage;
     this.chasing = true;
-    this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
-    this.knockUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
-    this.vel.set(push.x, push.y);
+    if (!this.telegraphedCombat) {
+      this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
+      this.knockUntil = now + 300;
+      const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
+      this.vel.set(push.x, push.y);
+    }
 
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.scene.time.delayedCall(90, () => {

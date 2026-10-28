@@ -46,14 +46,22 @@ Właściciel: „walka jest kiepska – wciąż po prostu podchodzą jak stare c
 
 ## Wartości do strojenia (nie zatwierdzony balans)
 
-Siły 100 (+4/poziom), odnowa 15/s po 1,5 s (×1,6 poza dymkiem, ×0,7 w dymku); mana 60 (+8/poziom), 4/s po 3 s.
-Cios w wroga 4, mocny atak/umiejętność 25 (+2,5 s odnowienia), strzał 6, czar 6 (bez many czar ma 40% siły),
-mocny czar 20, bieg w dymku 3/s. Życie poza dymkiem: pół serca co 2 s, 4 s po ostatniej ranie.
+Siły 100 (+4/poziom), odnowa (10 + 0,25 × poziom)/s po 2,2 s od ostatniego zużycia (×1,6 w bezpieczeństwie, ×0,65 w zagrożeniu). Mana bez zmian: 60 (+8/poziom), (4 + 0,35 × poziom)/s po 3 s.
+Cios w zasięgu wroga 10, mocny atak/umiejętność 30 (+2,5 s odnowienia), zwykły strzał 10, czar 6 (bez many czar ma 40% siły), mocny czar 20. Zwykły ruch jest darmowy, również w dymku. Życie tylko w bezpieczeństwie: pół serca co 2 s, 4 s po ostatniej ranie. Zagrożenie obejmuje dymek, loch i pobliskiego przeciwnika.
+
+### Strojenie 28.10.2026 — presja od pierwszego poziomu
+
+- Chochlik: zapowiedź 550 ms + odpoczynek 450 ms (wcześniej 850 + 1100 ms), żołądź 36 m/s zamiast 24. Nadal tylko jeden zarezerwowany atak dystansowy; pociski respektują ściany i blokują kierunek na początku zapowiedzi.
+- Zwykłe trafienie stwora z StworAI nie odpycha ani nie przerywa jego ataku. Mocny cios i esencje zachowują jawne ogłuszenie; efekt trafienia i obrażenia zostają.
+- Dziesięć ciosów bez odpoczynku opróżnia pulę poziomu 1. Poniżej 20% zwykły miecz działa 1,8× wolniej i zadaje 60% obrażeń; mocna umiejętność wymaga pełnego kosztu. Ten sam czas odnowienia obowiązuje tapnięcie, klawiaturę i kierowany atak drążkiem.
+- Odwrót i omijanie czerwonych zapowiedzi pozwalają odpoczywać: brak zużycia sił i spowolnienia za sam ruch. Po ok. 6 s bez ataków w zagrożeniu wraca ok. 25–30 sił, nie cała pula.
+- Test zasobów: node scripts/tests/combat-balance.mjs. Test AI/HUD: node scripts/tests/browser-combat-balance.mjs (TELEFON=1), po buildzie i podglądzie na 4173.
+- Stan: build, osobny typecheck i test zasobów przeszły lokalnie. Środowisko wyłączono podczas prób przeglądarkowych; końcowego wyniku PC/telefonu brak. Ta gałąź wymaga dokończenia tych prób przed połączeniem z serwerem TEST. Balans pozostaje do oceny właściciela.
 
 ## Czego jeszcze nie ma
 
 - Stan łowisk (pokonane grupy, boss) żyje tylko w sesji – po nowym logowaniu grupy są pełne.
 - Mgiełka łowiska to koła (nie przycinana do kształtu lasu/pola); rdzeń nie ma własnego modelu bossa.
 - Chochliki/wargi/kozioł nie mają jeszcze osobnych klatek ataku – zapowiedź i atak widać po czerwonych obszarach.
-- Brak osobnego sprintu i aktywnego uniku; „bieg” = chodzenie po czerwonym dymku.
+- Brak osobnego sprintu i aktywnego uniku; unikanie odbywa się zwykłym, darmowym ruchem.
 - Siłowni (OSM leisure=fitness_centre) nie ma jeszcze w danych mapy.

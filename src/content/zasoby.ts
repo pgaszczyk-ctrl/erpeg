@@ -3,33 +3,31 @@
 
 export const ZASOBY = {
   /** Stamina: base maximum, + per character level above 1 („samo zwiększa ilość” – more on higher levels). */
-  stamina: { max: 100, naPoziom: 4, regen: 15, regenNaPoziom: 0.5, opoznienieS: 1.5 },
+  stamina: { max: 100, naPoziom: 4, regen: 10, regenNaPoziom: 0.25, opoznienieS: 2.2 },
   /** Mana: slower to come back than stamina. */
   mana: { max: 60, naPoziom: 8, regen: 4, regenNaPoziom: 0.35, opoznienieS: 3 },
-  /** Outside every red mist (a safe zone) both come back this many times faster. */
+  /** In safety (outside mist/dungeons and away from enemies) both recover this many times faster. */
   bezpiecznieRazy: 1.6,
-  /** Inside a red mist stamina comes back at this share (still enough to fight; owner: "szybko się odnawia"). */
-  wMgleRazy: 0.7,
+  /** In danger (mist, dungeon or active combat): recover while repositioning, after a pause in attacks. */
+  wMgleRazy: 0.65,
 
   /** Costs (paid once when the action starts). */
   koszt: {
     /** An ordinary sword swing that lands near an enemy (a swing at nothing is free). */
-    cios: 4,
+    cios: 10,
     /** The strong attack / skill with a sword or bow. */
-    mocny: 25,
+    mocny: 30,
     /** An ordinary bow shot. */
-    strzal: 6,
+    strzal: 10,
     /** An ordinary spell (with 0 mana it still goes, but weak: brief – zero never takes away defence). */
     czar: 6,
     /** The strong spell / magic skill. */
     mocnyCzar: 20,
-    /** Running inside a red mist, per second (D2-like: you can't run and fight forever). */
-    biegNaS: 3,
   },
-  /** Exhausted (stamina under this share): sword swings come slower, walking a bit slower. */
-  wyczerpanyPonizej: 0.12,
-  wyczerpanyCios: 1.6,
-  wyczerpanyChod: 0.85,
+  /** Exhaustion weakens/slows ordinary blows; walking stays free and full speed for dodging. */
+  wyczerpanyPonizej: 0.2,
+  wyczerpanyCios: 1.8,
+  wyczerpanySila: 0.6,
   /** Bow: at empty stamina the shot hits this much worse (points) and this much weaker (share of damage). */
   lukCelnoscMinus: 25,
   lukSilaMin: 0.6,

@@ -1134,7 +1134,6 @@ export class GameScene extends Phaser.Scene {
       this.player.move(ix, iy, now);
     }
     this.player.vel.scale(vehicleSpeed());
-    if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.vel.scale(ZASOBY.wyczerpanyChod);
     if (this.player.vel.x || this.player.vel.y) {
       // What the ground is (content/podloze.ts): roads full speed, paths, grass, forest, sand slower.
       this.player.vel.scale(PODLOZE[this.city.surfaceAt(this.player.x, this.player.y)]);
@@ -1189,7 +1188,7 @@ export class GameScene extends Phaser.Scene {
       // Two quick attacks next to an enemy stay two blows; elsewhere they open what is by the hero.
       if (it && !(it.atak && this.nearestFoe(this.swingReach() * 1.5))) this.interact(it.x, it.y);
       if (consumeStrong()) this.specjalny(now);
-      this.updateZasoby(dt, bx, by);
+      this.updateZasoby(dt);
     }
     // The potion's bonus heart runs out.
     if (this.player.extra && Date.now() > this.player.extraUntil) {
@@ -1208,10 +1207,7 @@ export class GameScene extends Phaser.Scene {
       // An enemy near the hero wins over a tree, a bush or the mouse's aim (owner, 6 Oct 2026: fighting in the forest).
       this.faceFoe();
       // New controls test: exhausted (no stamina left), the sword comes slower.
-      const cd = this.player.attackCooldown;
-      if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.attackCooldown = cd * ZASOBY.wyczerpanyCios;
-      const hit = this.player.tryAttack(now);
-      this.player.attackCooldown = cd;
+      const hit = this.zwyklyAtak(now);
       this.samouczek?.uderzyl();
       if (hit) this.resolveAttack(hit, now);
     }
@@ -1646,21 +1642,28 @@ export class GameScene extends Phaser.Scene {
   private zycieCarry = 0;
   private zasobyAt = 0;
 
+  /** Same exhaustion cooldown for keyboard, taps and directed attack-stick releases. */
+  private zwyklyAtak(now: number) {
+    const cd = this.player.attackCooldown;
+    if (live() && wyczerpany(poziomPostaci(session.exp))) this.player.attackCooldown = cd * ZASOBY.wyczerpanyCios;
+    const hit = this.player.tryAttack(now);
+    this.player.attackCooldown = cd;
+    return hit;
+  }
+
   /**
-   * New controls test (content/zasoby.ts): stamina and mana come back (faster outside every red mist = a safe
-   * zone), running inside a mist tires, an exhausted hero walks slower, and outside the mist life comes back too.
+   * Resources recover faster in safety. Mist, dungeons and nearby enemies all count as danger.
+   * Ordinary movement is free: recovery requires a pause in attacks, not standing still under fire.
    * Runs only on active frames (never while paused/in a dialog), so no free regeneration.
    */
-  private updateZasoby(dt: number, bx: number, by: number) {
+  private updateZasoby(dt: number) {
     const lvl = poziomPostaci(session.exp);
     const x = this.player.x, y = this.player.y;
     const wMgle = this.streets.wMgle(x, y) || !!this.lowiska?.wMgle(x, y);
-    this.bezpiecznie = !wMgle;
+    this.bezpiecznie = !wMgle && !this.city.loch && !this.inCombat();
     if (this.player.hp < this.hpWas) zasoby.ranyAt = zasoby.czas;
-    regenerujZasoby(dt, lvl, !wMgle);
-    const ruch = Math.hypot(x - bx, y - by) / Math.max(dt, 1e-3);
-    if (wMgle && ruch > this.player.speed * 0.6) wydajStamine(ZASOBY.koszt.biegNaS * dt, lvl, false);
-    if (!wMgle && !this.inCombat() && zasoby.czas - zasoby.ranyAt > ZASOBY.zyciePoS && this.player.hp > 0 && this.player.hp < PLAYER.maxHp) {
+    regenerujZasoby(dt, lvl, this.bezpiecznie);
+    if (this.bezpiecznie && zasoby.czas - zasoby.ranyAt > ZASOBY.zyciePoS && this.player.hp > 0 && this.player.hp < PLAYER.maxHp) {
       this.zycieCarry += ZASOBY.zycieNaS * dt;
       if (this.zycieCarry >= 1) {
         this.zycieCarry -= 1;
@@ -1800,7 +1803,7 @@ export class GameScene extends Phaser.Scene {
     const arc = (session.level.miecz * Math.PI) / 180;
     const aim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const reach = (PLAYER.attackReach + PLAYER.attackRadius) * this.player.reach * (strong ? WALKA.zasiegMiecz : 1);
-    const power = strong ? strongFactor('miecz') : 1;
+    const power = strong ? strongFactor('miecz') : live() && wyczerpany(poziomPostaci(session.exp)) ? ZASOBY.wyczerpanySila : 1;
     const chance = hitChance('miecz', strong, session.level.celnosc + gearAimBonus());
     const inArc = (s: Enemy) => {
       if (!arc) return false;
@@ -5849,7 +5852,7 @@ export class GameScene extends Phaser.Scene {
           const d = this.dirFor(r.mode, r.dx, r.dy, true);
           this.player.face(d.x, d.y);
         } else this.faceFoe();
-        const hit = this.player.tryAttack(now);
+        const hit = this.zwyklyAtak(now);
         if (hit) this.resolveAttack(hit, now);
       }
       return;

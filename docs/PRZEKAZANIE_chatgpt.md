@@ -526,3 +526,21 @@
 - Kontrola: SHA256/rozmiary i wczytanie 28 modeli przez Three.js GLTFLoader; TypeScript i Vite; Chromium/WebGL 1280×900 i 390×844 — 29 modeli ze wzorcem, 155 klipów, macierze, rzeczywisty obraz, sterowanie, brak błędów/404/overflow. Zrzuty obejrzano. Wyniki podglądu nie potwierdzają jeszcze działania modeli w walce.
 - Uruchomiono również pełny `VITE_TEST=1 npm run build`; przy przygotowaniu scalenia trwała niezmieniona część generująca mapy. TypeScript, Vite i podgląd przeszły wcześniej. Pełny build oraz publikacja wymagają sukcesu obowiązkowych jobów test/production/publish w GitHub Actions; stan zostanie zweryfikowany po scaleniu. Zmiany tego przekazania nie dotyczą generatora map ani runtime gry.
 - Nie podłączano modeli do GameScene, nie zmieniano kolizji/balansu/save/Supabase, PRODUKCJA, WERSJA ani produkcja/. Produkcja nadal korzysta z dotychczasowego wskazanego commitu.
+
+## 28.10.2026 — walka: presja od 1. poziomu, stamina i kontratak
+
+Polecenie właściciela: średni poziom jest za łatwy; chochliki mają częściej rzucać, zwykły cios nie może stale odpychać/przerywać przeciwnika, stamina ma wymagać przerw i unikania.
+
+Gałąź: chatgpt/walka-presja-20261028, baza 3a912efe006d7726190befedc7a26323d88c3419 (z zachowaniem pakietu modeli 44-G008). Praca lokalnie na chatgpt/praca; środowisko wykonawcze wyłączono podczas browser QA, więc zmiany zabezpieczono przez GitHub na osobnej gałęzi. Nie nadpisano wspólnej gałęzi pracy.
+
+- src/content/lowiska.ts: chochlik 550 ms zapowiedzi + 450 ms odpoczynku, pocisk 36 m/s; pozostały wspólny limit 2 wręcz + 1 dystans i geometria zapowiedzi.
+- src/objects/{Slime,StworAI}.ts: zwykłe trafienie nie powoduje odrzutu/ogłuszenia u wroga walczącego przez StworAI. Nie niszczy zapowiedzi ani prędkości rozpoczętego doskoku. Mocne ciosy i esencje nadal jawnie ogłuszają. Stara walka i własny mózg smoka zachowują dotychczasową reakcję.
+- src/content/zasoby.ts: koszt zwykłego ciosu/strzału 10, umiejętności fizycznej 30, regeneracja po 2,2 s, bazowo 10 + 0,25 × poziom/s, ×0,65 w zagrożeniu; poniżej 20% miecz 1,8× wolniej i 60% obrażeń.
+- src/scenes/GameScene.ts: wspólne ograniczenie wyczerpania dla tapu, klawiatury i kierowanej akcji drążkiem; zagrożenie = mgła, loch lub pobliski wróg. Sam ruch jest darmowy i nie spowalnia za brak staminy, aby dało się odpocząć, omijając ataki.
+- Dokumentacja: CLAUDE.md, docs/walka/LIVE.md; test zasobów i osobny test runtime dla fikcyjnej postaci na 1. poziomie/Średni.
+
+Sprawdzone przed utratą środowiska: npm ci; npm run build (pełna generacja mapy, tsc --noEmit, Vite); osobne npx tsc --noEmit; npx vite build; node scripts/tests/combat-balance.mjs; git diff --check; składnia testu przeglądarkowego. Test zasobów obejmował wyczerpanie po 10 ciosach, odmowę mocnej akcji bez pobrania zasobu, opóźnienie regeneracji, odzyskanie ok. 30 sił po odwrocie, spam bez regeneracji, 30/120 FPS, zapis/wczytanie i wzrost puli z poziomem.
+
+NIEDOKOŃCZONE: pełny test przeglądarkowy PC i emulowany telefon. Lokalny serwer był niedostępny dla lokalnego Playwrighta, uruchomiono więc podgląd przez dostępny kanał przeglądarkowy; odczytano realny obraz gry. Wykryto problem fikstury: przeciwnik przy domu znikał przez clearHomeArea, poprawiono missionId=balance-fixture. Środowisko wyłączono przed odczytaniem końcowego wyniku testu AI. Przeglądarka nie obsługiwała WebGL; widoczny był fallback 2D. Nie ma testu fizycznego telefonu ani oceny subiektywnego balansu przez właściciela.
+
+Dalej: uruchomić build + preview, node scripts/tests/browser-combat-balance.mjs oraz TELEFON=1; sprawdzić atakowanie stojąc, omijanie zablokowanego kierunku rzutu, ściany, ogłuszenie mocnym ciosem, HUD i mobilny drążek. Dopiero po przejściu wymaganych prób połączyć na TEST zwykłym merge. Bez zmian PRODUKCJA, WERSJA i produkcja/; bez migracji SQL ani zmian danych graczy. Na ten moment zmiany NIE SĄ opublikowane na serwerze TEST ani produkcji.
