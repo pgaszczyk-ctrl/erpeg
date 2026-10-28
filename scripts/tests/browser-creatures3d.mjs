@@ -14,7 +14,7 @@ for(const mesh of gltf.meshes)for(const p of mesh.primitives){
   const start=28+jsonSize+(v.byteOffset||0)+(a.byteOffset||0);
   for(let i=0;i<a.count;i++){const b=bytes.subarray(start+i*3,start+i*3+3);sourcePalette.add([...b].join(','));}
 }
-const server=await preview({preview:{host:'127.0.0.1',port:4173,strictPort:true}});
+const server=await preview({build:{outDir:process.env.PREVIEW_OUTDIR||'dist'},preview:{host:'127.0.0.1',port:4173,strictPort:true}});
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--enable-unsafe-swiftshader'],chromiumSandbox:false})
   .catch(async e=>{await new Promise(r=>server.httpServer.close(r));throw e;});
 await mkdir('work/creatures3d',{recursive:true});
@@ -47,6 +47,10 @@ const shot=name=>page.screenshot({path:`work/creatures3d/${tag}-${name}.png`});
 try{
   await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(()=>window.__game?.scene.getScene('game').ludzik3d?.widoczny&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
+  if(process.env.MODELS_OFF==='1'){
+    assert.equal(await game(()=>!!window.__game.scene.getScene('game').stwory3d),false);
+    assert.deepEqual(errors,[]);console.log('PASS: non-TEST build never enables creature GLBs');
+  }else{
   await game(()=>{const s=window.__game.scene.getScene('game');s.player.x+=150;s.cameras.main.setZoom(4);});await reset();
   await game(()=>{
     const s=window.__game.scene.getScene('game'),p=s.player;window.__actors=[];
@@ -95,8 +99,13 @@ try{
   await game(()=>{const s=window.__game.scene.getScene('game');window.__victim.hit(s.player,s.time.now,.01);});
   await page.waitForFunction(()=>window.__game.scene.getScene('game').stwory3d.slots.get(window.__victim)?.clip==='hit');await page.waitForTimeout(500);
   await game(()=>{window.__victim.hp=.001;window.__game.scene.getScene('game').player.face(1,0);});
-  if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
-  await page.waitForFunction(()=>window.__victim.isDead,null,{timeout:10000});
+  // The game deliberately rolls hit chance. A genuine miss must not make this browser check flaky.
+  for(let attempt=0;attempt<6;attempt++){
+    if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
+    if(await page.waitForFunction(()=>window.__victim.isDead,null,{timeout:650}).then(()=>true,()=>false))break;
+    await page.waitForTimeout(650);
+  }
+  assert(await game(()=>window.__victim.isDead),'real attack input kills the one-HP fixture');
   await page.waitForFunction(()=>window.__game.scene.getScene('game').stwory3d.slots.get(window.__victim)?.clip==='death');
   assert(await game(()=>window.__victim.active));await shot('death');await page.waitForFunction(()=>!window.__victim.active);
   await reset();await game(()=>{const s=window.__game.scene.getScene('game'),p=s.player;window.__crowd=[];
@@ -122,6 +131,7 @@ try{
     checks:['12 GLBs/14 kinds','real colored pixels','73 clip poses','root motion once','slot restoration','AI windup/lunge/recovery','hand emitter/projectile',
       'hit','death via keyboard/touch','40 actor bound','scene restart','explicit off switch',...(phone?['portrait rotation']:[])]};
   await writeFile(`work/creatures3d/${tag}.json`,JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+  }
 }catch(e){console.error(errors,warnings);console.error(await game(()=>{const s=window.__game?.scene.getScene('game');return{stats:s?.stwory3d?.stats,paused:s?.scene.isPaused(),trace:window.__trace?.slice(-10),actors:window.__actors?.map(e=>[e.kindId,e.visible,e.model3d])};}).catch(()=>null));
   await shot('failure').catch(()=>{});throw e;
 }finally{await browser.close();await new Promise(r=>server.httpServer.close(r));}
