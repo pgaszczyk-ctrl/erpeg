@@ -9,7 +9,7 @@ import { loadingMapVisible } from '../ui/loadingMap';
 import { tx } from '../i18n';
 import { ensureModul, fitHd } from '../sprites';
 import { TEX, artScale } from '../art';
-import { PROLOG_ID, freshProlog, mayStart, advance, claimOnce, recordKill, type AnchorKind, type PrologState } from '../prolog/state';
+import { PROLOG_ID, PROLOG_LEAD_ID, freshProlog, mayStart, advance, claimOnce, recordKill, type AnchorKind, type PrologState } from '../prolog/state';
 import { equipStoryItem } from '../prolog/rewards';
 import { planAnchors } from '../prolog/planner';
 import { idLochu } from '../loch/mapa';
@@ -272,7 +272,20 @@ export class PrologRekruta {
   }
 
   goal():QuestInfo|null{
-    const p=this.state;if(!p || p.status!=='active')return null;
+    const p=this.state;
+    if (mayStart(p, session.missions[PROLOG_ID]) && !this.h.city.loch) {
+      let nearest: { x: number; y: number } | null = null;
+      let distance = Infinity;
+      for (const place of this.h.city.places) {
+        if (place.kind !== 'police') continue;
+        const d = Math.hypot(place.door.x-this.h.player.x, place.door.y-this.h.player.y);
+        if (d < distance) { distance = d; nearest = place.door; }
+      }
+      return { id: PROLOG_LEAD_ID, main: true, title: tx('Skąd mam ten uniform?', 'Where did this uniform come from?'),
+        text: tx('Skąd mam ten uniform? Nic nie pamiętam. Muszę się dowiedzieć. Porozmawiaj z szefem straży na posterunku.', 'Where did this uniform come from? I remember nothing. I need to find out. Speak to the guard chief at the guard post.'),
+        pos: nearest, color: '#ffd76a' };
+    }
+    if(!p || p.status!=='active')return null;
     const titles:Record<string,[string,string,AnchorKind]>={
       intro:['Porozmawiaj ze starszym strażnikiem','Talk to the senior guard','mentor'],letter_deliver:['Dostarcz list do punktu straży','Deliver the letter to the guard post','outpost'],letter_return:['Oddaj potwierdzenie instruktorowi','Return the receipt to the instructor','mentor'],rescue_fight:['Obroń łucznika przed chochlikami','Defend the archer from imps','ambush'],rescue_reward:['Porozmawiaj z uratowanym łucznikiem','Talk to the rescued archer','ambush'],bow_trial:['Wypróbuj łuk lub wróć do instruktora','Try the bow or return to the instructor','bowPractice'],rescue_return:['Zdaj raport instruktorowi','Report to the instructor','mentor'],dungeon_enter:['Wejdź do kryjówki po misia','Enter the hideout and find the teddy','dungeonEntrance'],dungeon_first_group:['Oczyść pierwszą komnatę','Clear the first chamber','dungeonEntrance'],magic_pickup:['Dotknij różdżki i kapelusza','Touch the wand and hat','dungeonEntrance'],magic_trial:['Wypróbuj magię i odzyskaj misia','Try magic and recover the teddy','dungeonEntrance'],dungeon_recover:['Odzyskaj misia z kryjówki','Recover the teddy from the hideout','dungeonEntrance'],dungeon_return:['Oddaj misia instruktorowi','Return the teddy to the instructor','mentor'],library_visit:['Odwiedź bibliotekarza','Visit the librarian','library']};
     const t=titles[p.stage];if(!t)return null;

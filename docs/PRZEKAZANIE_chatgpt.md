@@ -505,3 +505,10 @@
 - Odczyt domeny potwierdził TEST575c51a, prolog.recruit.v1 w main-BfpER3NI.js i bajtową zgodność 6 GLB. Produkcja nadal z pinu01c06c9, bez prologu. Brak SQL i zmian danych graczy.
 - Dodatkowy pełny przebieg na domenie niepotwierdzony (certyfikat pośrednika, potem utrata lokalnego środowiska); pełne przebiegi lokalne i CI z atrapami RPC są potwierdzone. Fizycznego telefonu i prawdziwego zapisu gracza nie sprawdzano. Historyczny workflow Heli ma niezależny błąd braku produkcja/*.patch; szczegóły w docs/prolog/WDROZENIE.md.
 - Wdrożenie TEST zakończone; poczta P001 oznaczona jako gotowa. Uzupełnienie wyłącznie dokumentacyjne [skip ci].
+
+## 2026-10-28 — strzałka na posterunek dla istniejących postaci
+
+- Polecenie właściciela: po logowaniu starszą postacią cel o uniformie i utracie pamięci, prowadzący do najbliższego posterunku. PrologRekruta.goal wybiera najbliższe drzwi police, przed zapisanym startem prologu. Osobny PROLOG_LEAD_ID nie zmienia globalnej jednorazowości.
+- GameScene pokazuje wskazówkę jako pierwszą w HUD/dzienniku, zachowuje wcześniejsze zlecenia i ich limit; wyklucza konkurencyjny stary samouczek gazeciarza. Nowe postacie zachowują automatyczne intro, rozpoczęte/ukończone nigdy nie dostają ponownego zaproszenia. Bez znanego posterunku jest cel bez strzałki, bez fikcyjnego POI.
+- Pliki: src/prolog/state.ts, src/scenes/PrologRekruta.ts, src/scenes/GameScene.ts, scripts/tests/browser-prolog.mjs oraz CLAUDE.md/docs/prolog/WDROZENIE.md/ten dziennik. Baza wydania 1.036 (3d2117a); bez zmian pinów/łatek produkcyjnych, SQL i danych graczy.
+- Walidacja i publikacja w toku; końcowe wyniki poniżej.

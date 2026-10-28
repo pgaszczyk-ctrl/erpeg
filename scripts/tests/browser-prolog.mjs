@@ -112,12 +112,33 @@ try{
  saved.tu={m:'city-b',x:2880,y:2880,s:1.92};await go();await waitStage('completed');
  assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.offerChief(()=>{})),false,'another chief cannot restart a completed origin');
  assert.deepEqual(saved.story.prolog.rewardsClaimed,rewards);assert.deepEqual(saved.story.prolog.pendingRewards,pending);assert.equal(exp,doneExp);
- // Old low-EXP character stays old: no inferred enrollment.
- saved={coins:0,story:{st:'koniec',walked:0},flagi:{samouczek:1}};exp=0;await go();
+ // An old character is guided before opting in, even with low EXP and no completed old tutorial.
+ map.pois=[['police','Far post',3800,2880,0],['office','Closer office',2890,2880,0],['police','Nearest post',3100,2880,0]];
+ saved={coins:0,story:{st:'koniec',walked:0},flagi:{}};exp=0;await go();
+ const lead='prolog.recruit.v1:lead';
  assert.equal(await evalGame(()=>!!window.__game.scene.getScene('game').prolog.state),false);
- const chief=await evalGame(()=>{const s=window.__game.scene.getScene('game');s.city.places.push({id:'fixture-chief',kind:'police',name:'Chief',building:null,door:{x:s.player.x,y:s.player.y}});return s.openDoorAt(s.player.x,s.player.y);});
- assert(chief,'a real police door offers an old-character opt-in');
+ const guide=await evalGame(()=>window.__game.scene.getScene('game').activeQuests()[0]);
+ assert.equal(guide.id,lead);assert.deepEqual(guide.pos,{x:3100,y:2880},'nearest police door, not the first station or a closer office');
+ assert.match(guide.text,lang==='pl'?/Skąd mam ten uniform\? Nic nie pamiętam\. Muszę się dowiedzieć/:/Where did this uniform come from/);
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').samouczek),null,'no competing newsboy tutorial');
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').questCount()),0,'invitation does not occupy a mission slot');
+ await page.waitForFunction(()=>window.__game.scene.getScene('ui').arrows[0]?.visible);
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').questLog()[0].id),lead);
+ await page.screenshot({path:`work/prolog/${tag}-uniform-guide.png`});
+ await evalGame(()=>{const s=window.__game.scene.getScene('game');s.story.goal=()=>({text:'Existing story',pos:{x:2800,y:2900}});});
+ assert(await evalGame(()=>window.__game.scene.getScene('game').activeQuests().some(q=>q.id==='main')),'older quests remain available beside the invitation');
+ await go();assert.equal((await evalGame(()=>window.__game.scene.getScene('game').activeQuests()[0])).id,lead,'guide returns on relog without starting the quest');
+ const chief=await evalGame(()=>{const s=window.__game.scene.getScene('game');s.player.setPosition(3100,2880);return s.openDoorAt(3100,2880);});
+ assert(chief,'the indicated real police door offers an old-character opt-in');
  assert.match(await evalGame(()=>window.__dialogi.at(-1).title),/Szef straży|Guard chief/);
+ await choose(0);await waitStage('intro');
+ await page.waitForFunction(()=>{const p=window.__game.scene.getScene('game').prolog;return p.state.anchors.mentor&&!p.busy;});
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').activeQuests()[0]?.id==='prolog.recruit.v1');
+ assert(!(await evalGame(()=>window.__game.scene.getScene('game').activeQuests())).some(q=>q.id===lead),'acceptance replaces the invitation');
+ // A retained global completion marker alone must hide the invitation, also after changing city.
+ saved={coins:0,story:{st:'koniec',walked:0},missions:{'prolog.recruit.v1':'done'},flagi:{samouczek:1},tu:{m:'city-b',x:2880,y:2880,s:1.92}};await go();
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.goal()),null);
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.offerChief(()=>{})),false);
  assert.deepEqual(errors,[]);
- console.log(`Prolog ${tag}: full playthrough, save failure/retry, reload, full bag, bow/magic, persistent dungeon, other city active/completed, old character OK (${saves.length} saves)`);
+ console.log(`Prolog ${tag}: full playthrough, save failure/retry, reload, full bag, bow/magic, persistent dungeon, other city active/completed, old character nearest-post guide/relogin/acceptance/completion marker OK (${saves.length} saves)`);
 }catch(e){console.error('Prologue test failure',await page.evaluate(()=>({stage:window.__game?.scene.getScene('game')?.prolog?.state?.stage,dialog:window.__dialogi?.at(-1)?.title})));await page.screenshot({path:`work/prolog/${tag}-failure.png`}).catch(()=>{});throw e;}finally{await browser.close();await new Promise(resolve=>server.httpServer.close(resolve));}

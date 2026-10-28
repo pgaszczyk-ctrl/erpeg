@@ -55,3 +55,11 @@ Scalono [PR #28](https://github.com/pgaszczyk-ctrl/erpeg/pull/28) jako 575c51a2b
 - Stary [Hela production release check](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/40588238323) nie przeszedł przygotowania produkcji: cp zakłada istnienie produkcja/*.patch usuniętych przy pełnym wydaniu. Błąd przed uruchomieniem gry; odczyt katalogu przeszedł. Ten niezależny workflow i pin nie zostały zmienione.
 
 Wdrożenie TEST zakończone. Dokumentacyjne uzupełnienie [skip ci] nie zmienia gry ani ponownie jej nie publikuje.
+
+## 28.10.2026 — prowadzenie starszej postaci do posterunku
+
+Po zalogowaniu postać bez stanu prologu i bez globalnego znacznika dostaje cel „Skąd mam ten uniform? Nic nie pamiętam. Muszę się dowiedzieć. Porozmawiaj z szefem straży na posterunku.” (PL/EN). Złota strzałka wskazuje najbliższe drzwi `police` według odległości na bieżącej mapie. Nie wybiera urzędu ani pierwszego posterunku z listy. Dla map kafelkowych korzysta z indeksu miejsc; dla świata cel aktualizuje się wraz z dogrywaniem miejsc. Bez znanego posterunku cel pozostaje w dzienniku bez fałszywej strzałki; pod ziemią nie pokazuje celu z powierzchni.
+
+Wskazówka ma oddzielny identyfikator `prolog.recruit.v1:lead`. Nie zapisuje startu misji ani nagród, nie zabiera limitu zadań i nie ukrywa wcześniejszych zleceń. Stary samouczek gazeciarza nie konkuruje z tym prowadzeniem. Po przyjęciu pierwszej służby wskazówkę zastępuje prolog; rozpoczęty, ukończony lub zachowany sam globalny znacznik wyklucza powrót zaproszenia po logowaniu i w innym mieście.
+
+Sprawdzenie tej zmiany: rozszerzony browser-prolog obejmuje wybór najbliższego z dwóch posterunków mimo bliższego urzędu, widoczną strzałkę, dziennik, brak automatycznego startu, wznowienie wskazówki po logowaniu, zachowanie starszej historii, limit misji, przyjęcie u wskazanego szefa i brak wskazówki przy globalnym ukończeniu. Wyniki oraz publikacja: dziennik przekazania.
