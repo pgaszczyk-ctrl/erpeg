@@ -526,3 +526,19 @@
 - Kontrola: SHA256/rozmiary i wczytanie 28 modeli przez Three.js GLTFLoader; TypeScript i Vite; Chromium/WebGL 1280×900 i 390×844 — 29 modeli ze wzorcem, 155 klipów, macierze, rzeczywisty obraz, sterowanie, brak błędów/404/overflow. Zrzuty obejrzano. Wyniki podglądu nie potwierdzają jeszcze działania modeli w walce.
 - Uruchomiono również pełny `VITE_TEST=1 npm run build`; przy przygotowaniu scalenia trwała niezmieniona część generująca mapy. TypeScript, Vite i podgląd przeszły wcześniej. Pełny build oraz publikacja wymagają sukcesu obowiązkowych jobów test/production/publish w GitHub Actions; stan zostanie zweryfikowany po scaleniu. Zmiany tego przekazania nie dotyczą generatora map ani runtime gry.
 - Nie podłączano modeli do GameScene, nie zmieniano kolizji/balansu/save/Supabase, PRODUKCJA, WERSJA ani produkcja/. Produkcja nadal korzysta z dotychczasowego wskazanego commitu.
+
+## 28.10.2026 — pasek „Ucieknij z lochu” po oczyszczeniu poziomu
+
+Zlecenie właściciela: po wyczyszczeniu dungeona/poziomu pokazywać u góry pasek do wyjścia na powierzchnię.
+
+- src/ui/lochWyjscie.ts: zwykły przycisk HTML, styl komiks/mosiądz, wygodny obszar dotyku, PL/EN, górny środek pod stałym HUD-em.
+- src/scenes/Lochy.ts: widoczność po zliczeniu lokatorów oraz po każdym zabiciu, dopiero gdy zostalo === 0; działa również przy odtworzeniu oczyszczonego lochu. Usuwanie na shutdown/destroy.
+- src/scenes/GameScene.ts: użycie dotychczasowego przejścia wyjdzZLochu, bez wymagania odległości od schodów. Kontrola ostatniego przeciwnika, stanu życia i aktywności sceny; istniejąca ochrona przed wielokrotnym przejściem pozostaje. Skrzynia nie jest automatycznie otwierana.
+- scripts/tests/browser-lochy.mjs: sprawdzenie widoczności po oczyszczeniu i powrotu przyciskiem zamiast schodami; poprawiona fikstura zabicia (hp = 0 zamiast przypisania do gettera isDead).
+- scripts/tests/browser-loch-wyjscie.mjs: wydzielona próba wyjścia, w tym ostatni żywy przeciwnik, nagroda w skrzyni i zniknięcie paska na powierzchni.
+
+Sprawdzenie: tsc --noEmit i vite build przeszły. Pełne npm run build trafiło na obcięty odtworzony cache .cache/lublin-full.json; mapy nie są częścią tej zmiany. Lokalnego Chromium nie było, a jego oficjalny instalator otrzymał uszkodzony ZIP, więc do faktycznej próby użyto podglądu w dostępnej przeglądarce oraz fikcyjnego konta z przechwyconym fetch (bez kontaktu z zapisami graczy). Wynik prób i publikacji uzupełniany poniżej.
+
+PRODUKCJA, src/version.ts i produkcja/ bez zmian. Wcześniejsze strojenie walki z PR #32 odłożono do git stash i nie jest częścią tej zmiany.
+
+Wynik podglądu: PC 1363×936 — pełne przejście PASS (ukrycie przed oczyszczeniem, ostatni wróg, skrzynia nadal dostępna, wyjście z komnaty skarbu, powrót obok wejścia, usunięcie paska). W widoku 844×390 potwierdzono warunek ostatniego wroga i widoczność; pasek obniżono na wąskim ekranie do 120 px, żeby nie przykrywał linii zadania. Po tej korekcie typecheck i Vite build ponownie przeszły. Końcowe przejście telefonu i stan publikacji poniżej.
