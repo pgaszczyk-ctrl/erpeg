@@ -1,0 +1,270 @@
+{
+  "mloda_kobieta": {
+    "file": "modele/mloda_kobieta.glb",
+    "triangles": 1468,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 199788,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "chlopiec": {
+    "file": "modele/chlopiec.glb",
+    "triangles": 1168,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 169996,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "pan_z_wasem": {
+    "file": "modele/pan_z_wasem.glb",
+    "triangles": 1344,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 187208,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "babcia": {
+    "file": "modele/babcia.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 207668,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mlody_mezczyzna": {
+    "file": "modele/mlody_mezczyzna.glb",
+    "triangles": 1192,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 174972,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "dziewczynka_warkocze": {
+    "file": "modele/dziewczynka_warkocze.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 202472,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "chlopiec_2": {
+    "file": "modele/chlopiec_2.glb",
+    "triangles": 1192,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 171948,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "kobieta": {
+    "file": "modele/kobieta.glb",
+    "triangles": 1504,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 201992,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mezczyzna": {
+    "file": "modele/mezczyzna.glb",
+    "triangles": 1216,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 176900,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starszy_pan": {
+    "file": "modele/starszy_pan.glb",
+    "triangles": 1356,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 189532,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "dziewczynka": {
+    "file": "modele/dziewczynka.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 202448,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "urwis": {
+    "file": "modele/urwis.glb",
+    "triangles": 1204,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 173628,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starsza_pani": {
+    "file": "modele/starsza_pani.glb",
+    "triangles": 1570,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 210180,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starszy_pan_kapelusz": {
+    "file": "modele/starszy_pan_kapelusz.glb",
+    "triangles": 1528,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 204220,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mieszczka": {
+    "file": "modele/mieszczka.glb",
+    "triangles": 1480,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 200776,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "pies": {
+    "file": "modele/pies.glb",
+    "triangles": 1156,
+    "nodes": 24,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.95,
+      "sit": 1.45,
+      "wag": 1.4
+    },
+    "bytes": 156760,
+    "grips": []
+  }
+}

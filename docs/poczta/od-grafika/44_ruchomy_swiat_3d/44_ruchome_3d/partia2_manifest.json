@@ -1,0 +1,72 @@
+{
+  "chochlik": {
+    "file": "modele/chochlik.glb",
+    "triangles": 1202,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.8,
+      "attack": 1.15,
+      "hit": 0.3,
+      "death": 1.25,
+      "throw": 1.2
+    },
+    "bytes": 159348,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "bandyta": {
+    "file": "modele/bandyta.glb",
+    "triangles": 1294,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.9,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25
+    },
+    "bytes": 159984,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "zombiak": {
+    "file": "modele/zombiak.glb",
+    "triangles": 1134,
+    "nodes": 19,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.2,
+      "attack": 1.5,
+      "hit": 0.3,
+      "death": 1.25
+    },
+    "bytes": 148932,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "upior_krypty": {
+    "file": "modele/upior_krypty.glb",
+    "triangles": 978,
+    "nodes": 15,
+    "clips": {
+      "idle": 2.8,
+      "walk": 1.4,
+      "attack": 1.35,
+      "scream": 1.6,
+      "hit": 0.35,
+      "death": 1.7
+    },
+    "bytes": 143976,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  }
+}
