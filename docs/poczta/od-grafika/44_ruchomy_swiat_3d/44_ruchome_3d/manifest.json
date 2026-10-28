@@ -1,0 +1,531 @@
+{
+  "szkielet": {
+    "file": "modele/szkielet.glb",
+    "triangles": 2634,
+    "nodes": 18,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.85,
+      "attack": 1.3,
+      "hit": 0.28,
+      "death": 1.2
+    },
+    "bytes": 262544,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "wilk": {
+    "file": "modele/wilk.glb",
+    "triangles": 696,
+    "nodes": 24,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.95,
+      "attack": 1.25,
+      "lunge": 1.25,
+      "hit": 0.26,
+      "death": 1.25
+    },
+    "bytes": 169068,
+    "grips": []
+  },
+  "notes": {
+    "stage": "44-G008: corrected chibi residents and humanoids; not deployed",
+    "rigs": {
+      "szkielet": "humanoid_rigid_v1",
+      "wilk": "quadruped_canid_v2",
+      "reference_guard": "legacy_flat_baked"
+    },
+    "outline": "renderer, not GLB geometry",
+    "materials": "KHR_materials_unlit; vertex palette; no stock light response",
+    "rootMotion": {
+      "walk": false,
+      "attack": "vertical jump",
+      "lunge": "vertical + 0.44 forward"
+    },
+    "wolf_lunge": "distinct forward leap; impact 0.70 s, landing 0.90 s",
+    "batch2": "44-G005: increased profile volume in all four batch2 characters; approved skeleton and wolf unchanged",
+    "accepted_models": [
+      "szkielet",
+      "wilk",
+      "upior_krypty",
+      "wodny_blob",
+      "warg",
+      "pies"
+    ],
+    "awaiting_art_review": [
+      "mloda_kobieta",
+      "chlopiec",
+      "pan_z_wasem",
+      "babcia",
+      "mlody_mezczyzna",
+      "dziewczynka_warkocze",
+      "chlopiec_2",
+      "kobieta",
+      "mezczyzna",
+      "starszy_pan",
+      "dziewczynka",
+      "urwis",
+      "starsza_pani",
+      "starszy_pan_kapelusz",
+      "mieszczka",
+      "zombiak",
+      "bandyta",
+      "chochlik",
+      "wodnik",
+      "driada",
+      "herszt",
+      "mosiezny_koziol"
+    ],
+    "batch3": "44-G006: six new models, preserving G005 depth corrections",
+    "preserved_revision": "44-G005 profile depth",
+    "batch4": "Six resident body families / fifteen looks, umbrella demonstration and companion dog",
+    "current_style": "44-G008: latest chibi Strażnik 16 is mandatory reference; fifteen residents and seven humanoids corrected"
+  },
+  "chochlik": {
+    "file": "modele/chochlik.glb",
+    "triangles": 1202,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.8,
+      "attack": 1.15,
+      "hit": 0.3,
+      "death": 1.25,
+      "throw": 1.2
+    },
+    "bytes": 159348,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "bandyta": {
+    "file": "modele/bandyta.glb",
+    "triangles": 1294,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.9,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25
+    },
+    "bytes": 159984,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "zombiak": {
+    "file": "modele/zombiak.glb",
+    "triangles": 1134,
+    "nodes": 19,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.2,
+      "attack": 1.5,
+      "hit": 0.3,
+      "death": 1.25
+    },
+    "bytes": 148932,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "upior_krypty": {
+    "file": "modele/upior_krypty.glb",
+    "triangles": 978,
+    "nodes": 15,
+    "clips": {
+      "idle": 2.8,
+      "walk": 1.4,
+      "attack": 1.35,
+      "scream": 1.6,
+      "hit": 0.35,
+      "death": 1.7
+    },
+    "bytes": 143976,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "wodnik": {
+    "file": "modele/wodnik.glb",
+    "triangles": 1342,
+    "nodes": 22,
+    "clips": {
+      "idle": 2.8,
+      "walk": 1.1,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25,
+      "cast": 1.5
+    },
+    "bytes": 173888,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "wodny_blob": {
+    "file": "modele/wodny_blob.glb",
+    "triangles": 180,
+    "nodes": 3,
+    "clips": {
+      "idle": 2.2,
+      "walk": 0.72,
+      "wobble": 0.72,
+      "attack": 1.1,
+      "hit": 0.3,
+      "death": 1.0
+    },
+    "bytes": 27984,
+    "grips": []
+  },
+  "driada": {
+    "file": "modele/driada.glb",
+    "triangles": 1470,
+    "nodes": 23,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.05,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25,
+      "cast": 1.6
+    },
+    "bytes": 185020,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "herszt": {
+    "file": "modele/herszt.glb",
+    "triangles": 1426,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.1,
+      "attack": 1.4,
+      "hit": 0.3,
+      "death": 1.25,
+      "slam": 1.65
+    },
+    "bytes": 193624,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "warg": {
+    "file": "modele/warg.glb",
+    "triangles": 760,
+    "nodes": 24,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.05,
+      "attack": 1.05,
+      "lunge": 1.25,
+      "hit": 0.26,
+      "death": 1.25,
+      "bite": 1.05,
+      "pounce": 1.25
+    },
+    "bytes": 185468,
+    "grips": []
+  },
+  "mosiezny_koziol": {
+    "file": "modele/mosiezny_koziol.glb",
+    "triangles": 1442,
+    "nodes": 21,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.15,
+      "attack": 1.4,
+      "hit": 0.3,
+      "death": 1.25,
+      "horns": 1.4,
+      "charge": 1.5,
+      "stomp": 1.35
+    },
+    "bytes": 205248,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mloda_kobieta": {
+    "file": "modele/mloda_kobieta.glb",
+    "triangles": 1468,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 199788,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "chlopiec": {
+    "file": "modele/chlopiec.glb",
+    "triangles": 1168,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 169996,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "pan_z_wasem": {
+    "file": "modele/pan_z_wasem.glb",
+    "triangles": 1344,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 187208,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "babcia": {
+    "file": "modele/babcia.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 207668,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mlody_mezczyzna": {
+    "file": "modele/mlody_mezczyzna.glb",
+    "triangles": 1192,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 174972,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "dziewczynka_warkocze": {
+    "file": "modele/dziewczynka_warkocze.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 202472,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "chlopiec_2": {
+    "file": "modele/chlopiec_2.glb",
+    "triangles": 1192,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 171948,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "kobieta": {
+    "file": "modele/kobieta.glb",
+    "triangles": 1504,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 201992,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mezczyzna": {
+    "file": "modele/mezczyzna.glb",
+    "triangles": 1216,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 176900,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starszy_pan": {
+    "file": "modele/starszy_pan.glb",
+    "triangles": 1356,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 189532,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "dziewczynka": {
+    "file": "modele/dziewczynka.glb",
+    "triangles": 1540,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 202448,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "urwis": {
+    "file": "modele/urwis.glb",
+    "triangles": 1204,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.78,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.78
+    },
+    "bytes": 173628,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starsza_pani": {
+    "file": "modele/starsza_pani.glb",
+    "triangles": 1570,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 210180,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "starszy_pan_kapelusz": {
+    "file": "modele/starszy_pan_kapelusz.glb",
+    "triangles": 1528,
+    "nodes": 28,
+    "clips": {
+      "idle": 2.6,
+      "walk": 1.08,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 1.08
+    },
+    "bytes": 204220,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "mieszczka": {
+    "file": "modele/mieszczka.glb",
+    "triangles": 1480,
+    "nodes": 29,
+    "clips": {
+      "idle": 2.6,
+      "walk": 0.92,
+      "talk": 2.2,
+      "wave": 2.4,
+      "rain": 0.92
+    },
+    "bytes": 200776,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "pies": {
+    "file": "modele/pies.glb",
+    "triangles": 1156,
+    "nodes": 24,
+    "clips": {
+      "idle": 2.4,
+      "walk": 0.95,
+      "sit": 1.45,
+      "wag": 1.4
+    },
+    "bytes": 156760,
+    "grips": []
+  }
+}
