@@ -182,9 +182,9 @@ export const STWORY_AI: Record<'wilk' | 'warg' | 'chochlik' | 'boss' | 'wrecz', 
   },
   /** Chochlik leśny – rzuca żołędziami (towarzysz wargów w głębi łowiska i grupki w mieście). */
   chochlik: {
-    rodzaj: 'dystans', wzrokM: 40, gubiM: 70, predkosc: 10, odpoczynekMs: 1100,
+    rodzaj: 'dystans', wzrokM: 40, gubiM: 70, predkosc: 10, odpoczynekMs: 450,
     trzymaM: [12, 18], uciekaOdM: 8,
-    rzut: { zasiegM: 24, predkosc: 24, promienM: 0.5, zapowiedzMs: 850, obrazenie: 1 },
+    rzut: { zasiegM: 24, predkosc: 36, promienM: 0.5, zapowiedzMs: 550, obrazenie: 1 },
   },
   /** Mosiężny Kozioł (zastępczy boss QA rdzenia). */
   boss: {
