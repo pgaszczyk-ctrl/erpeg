@@ -115,6 +115,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Its own speed factor (a berserker runs faster). */
   pace = 1;
   private aura?: Phaser.GameObjects.Sprite;
+  /** The shared GLB renderer replaces only this actor's picture. */
+  model3d = false;
+  modelDeathMs = 1250;
+  modelHitAt = -Infinity;
+  modelDeathAt = -Infinity;
+  modelAttack?: { clip: string; start: number; contact: number; end: number; aim: number };
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
@@ -233,8 +239,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
     const sh = this.shadow;
     // Width from the drawn body: the artist's sheets leave a lot of empty frame around the figure.
-    const w = Math.max(8, this.displayWidth * (this.depthOff ? 0.6 : this.hd ? 0.95 : 1));
-    const feet = this.y + (this.depthOff || (this.hd ? 8 * SKALA_POSTACI : 0));
+    const w = Math.max(8, this.displayWidth * (this.model3d ? 0.45 : this.depthOff ? 0.6 : this.hd ? 0.95 : 1));
+    const feet = this.y + (this.depthOff || (this.model3d || this.hd ? 8 * SKALA_POSTACI : 0));
     const h = Math.max(3, Math.round(w * 0.36));
     // Light from the north-west like the trees and buildings: the shadow falls a little right and down from the feet.
     sh.setPosition(Math.round(this.x + w * 0.12), Math.round(feet + (this.depthOff ? -h * 0.2 : h * 0.1))).setDisplaySize(Math.round(w), h);
@@ -246,7 +252,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.updateShadow();
     const a = this.aura;
     if (a) {
-      a.setPosition(this.x, this.y).setFrame(this.frame.name).setFlipX(this.flipX).setDepth(this.depth - 0.01);
+      a.setPosition(this.x, this.y).setTexture(this.texture.key, this.frame.name).setOrigin(this.originX, this.originY).setFlipX(this.flipX).setDepth(this.depth - 0.01);
       a.setScale(this.scaleX * 1.14, this.scaleY * 1.1).setVisible(this.visible && this.alpha > 0.5);
     }
     const m = this.dazeMark;
@@ -306,7 +312,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Call after think(); keeps the sprite facing its movement. */
   updateLook() {
-    if (!this.ownLook) this.face();
+    if (!this.ownLook && !this.model3d) this.face();
   }
 
   /** Its look is driven from outside (a dragon with the artist's sheet: SmokAI picks the animation by direction). */
@@ -320,6 +326,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (this.isDead || this.inAir) return false;
     this.hp -= damage;
+    this.modelHitAt = now;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
     this.knockUntil = now + 300;
@@ -333,13 +340,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
     });
 
     if (this.isDead) {
+      this.modelDeathAt = now;
       this.vel.set(0, 0);
       this.scene.tweens.add({
         targets: this,
-        scaleX: this.scaleX * 1.6,
-        scaleY: this.scaleY * 0.3,
+        scaleX: this.scaleX * (this.model3d ? 1 : 1.6),
+        scaleY: this.scaleY * (this.model3d ? 1 : 0.3),
         alpha: 0,
-        delay: 120,
+        delay: this.model3d ? Math.max(120, this.modelDeathMs - 220) : 120,
         duration: 220,
         onComplete: () => this.destroy(),
       });

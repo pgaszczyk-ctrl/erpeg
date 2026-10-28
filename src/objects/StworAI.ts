@@ -39,6 +39,8 @@ export interface StworHost {
   sciana: (x: number, y: number) => boolean;
   /** Pozycje innych żywych stworków walczących wokół bohatera (odstępy). */
   inni: (s: Slime) => { x: number; y: number }[];
+  /** Optional GLB emitter, sampled at the actual combat event. */
+  origin?: (s: Slime, node: string, now: number) => { x: number; y: number } | undefined;
 }
 
 type Stan = 'patrol' | 'podejscie' | 'czeka' | 'zapowiedz' | 'atak' | 'odpoczynek' | 'powrot';
@@ -108,6 +110,7 @@ export class StworAI {
     // Ogłuszony ciosem bohatera / esencją: przerywa wszystko (odrzut prowadzi Slime).
     if (s.ogluszony(now) || s.isDazed(now)) {
       if (this.stan === 'zapowiedz' || this.stan === 'atak') {
+        s.modelAttack = undefined;
         this.gfx.clear();
         this.zwolnijRezerwacje();
         this.stan = 'odpoczynek';
@@ -118,6 +121,7 @@ export class StworAI {
     }
 
     if (this.stan !== 'patrol' && this.stan !== 'powrot' && odDomu > this.home.r * 1.3) {
+      s.modelAttack = undefined;
       this.zwolnijRezerwacje();
       this.gfx.clear();
       this.stan = 'powrot';
@@ -258,6 +262,14 @@ export class StworAI {
     this.kat = Math.atan2(p.y - s.y, p.x - s.x);
     s.vel.set(0, 0);
     this.until = now + this.zapowiedzMs();
+    const clip = atak === 'rzut' ? 'throw' : atak === 'taran' ? 'charge' : atak === 'tupniecie' ? 'stomp'
+      : atak === 'rogi' ? 'horns' : atak === 'skok' ? 'pounce' : atak === 'klin' ? 'bite'
+      : atak === 'doskok' && (s.kindId === 'wilk' || s.kindId === 'warg') ? 'lunge'
+      : s.kindId === 'wodnik' || s.kindId === 'driada' ? 'cast' : 'attack';
+    const motionMs = atak === 'taran' && P.rodzaj === 'boss' ? P.taran.dlugoscM / P.taran.predkosc * 1000
+      : atak === 'skok' && P.rodzaj === 'doskok' && P.skok ? P.skok.ms
+      : atak === 'doskok' && P.rodzaj === 'doskok' ? P.doskok.ms : 350;
+    s.modelAttack = { clip, start: now, contact: this.until, end: this.until + motionMs, aim: this.kat };
     if (atak === 'skok' && P.rodzaj === 'doskok' && P.skok) this.skokGotowyOd = now + P.skok.coMs;
     if (atak === 'taran' && P.rodzaj === 'boss') this.taranGotowyOd = now + P.taran.coMs;
   }
@@ -400,7 +412,8 @@ export class StworAI {
       case 'rzut':
         if (P.rodzaj === 'dystans') {
           const v = P.rzut.predkosc * M;
-          this.pociski.push({ x: s.x + dir.x * 4, y: s.y + dir.y * 4, vx: dir.x * v, vy: dir.y * v, zostalo: P.rzut.zasiegM * M, obrazenie: P.rzut.obrazenie, r: P.rzut.promienM * M + 3 });
+          const origin = this.h.origin?.(s, 'ThrowOrigin', now) ?? { x: s.x + dir.x * 4, y: s.y + dir.y * 4 };
+          this.pociski.push({ x: origin.x, y: origin.y, vx: dir.x * v, vy: dir.y * v, zostalo: P.rzut.zasiegM * M, obrazenie: P.rzut.obrazenie, r: P.rzut.promienM * M + 3 });
         }
         break;
     }
