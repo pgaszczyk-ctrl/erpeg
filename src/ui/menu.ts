@@ -17,6 +17,7 @@ import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { loadSettings } from '../settings';
 import { PO_DEMO_START, PO_DEMO_KLUCZ } from '../content/demo';
 import { showLoginMap, beginMapIntro } from './loadingMap';
+import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
 
@@ -82,9 +83,13 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       btn.disabled = true;
       btn.setAttribute('aria-busy', 'true');
       if (waiting) btn.replaceChildren(waiting);
+      // Entering the game: a phone turns sideways right now, in this tap (ui/poziomo.ts).
+      const wejscie = waiting === tx('Wchodzisz do gry…', 'Entering the game…');
+      if (wejscie) przedWejsciem();
       try {
         await fn();
       } catch (e) {
+        if (wejscie) anulujWejscie();
         err.textContent = (e as Error).message;
       } finally {
         btn.disabled = false;
@@ -93,6 +98,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       }
     };
     const play = async (r: LoginResult) => {
+      przedWejsciem(); // a code link logs in without a tap: the page still turns before the loading cover
       if (root) beginMapIntro(root);
       // Show the response before session/scene preparation can occupy the thread.
       await Promise.all([contentReady, new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))]);

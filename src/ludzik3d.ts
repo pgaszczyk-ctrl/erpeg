@@ -41,6 +41,8 @@ export const LUDZIK_3D = {
   /** At most this many new pictures a second (owner, 27 Oct 2026: the game stuttered on phones; every picture is a
    * render, a read-back from the graphics card and an upload). The drawn heroes walk at 5–8 frames a second. */
   klatekNaS: 20,
+  /** While the model loads the hero is hidden at most this long; then the drawn hero shows until it's in. */
+  czekajMs: 12000,
 };
 
 const KLUCZ = 'exp-ludzik3d';
@@ -125,7 +127,21 @@ export class Ludzik3D {
   private odKlatki = Infinity;
   private swiatla?: { amb: THREE.AmbientLight; sun: THREE.DirectionalLight };
 
-  constructor(private scene: Phaser.Scene) {}
+  /** When loading started (ms, performance.now). */
+  private ladujeOd = 0;
+
+  /** Loading starts at once, under the loading cover (owner, 28 Oct 2026: on phones the old drawn hero showed first
+   * and the 3D one replaced him a moment later). */
+  constructor(private scene: Phaser.Scene) {
+    void this.zaladuj();
+  }
+
+  /** Hides the drawn hero until the model is in (or LUDZIK_3D.czekajMs is up). */
+  ukryjNaStart(player: Player) {
+    if (this.g || this.blad) return;
+    player.setVisible(false);
+    this.pokazany = true;
+  }
 
   /** Is the 3D hero drawn now (for tests). */
   get widoczny() { return this.pokazany; }
@@ -181,7 +197,9 @@ export class Ludzik3D {
   }
 
   private async zaladuj() {
+    if (this.laduje) return;
     this.laduje = true;
+    this.ladujeOd = performance.now();
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
@@ -267,6 +285,13 @@ export class Ludzik3D {
     if (!this.g && !this.laduje && !this.blad) void this.zaladuj();
     const riding = testVehicle !== 'pieszo' && hasTestVehicle(testVehicle);
     if (!this.g || riding || player.isDead || !this.scene.textures.exists(this.klucz)) {
+      // Still loading: no drawn hero meanwhile (he'd be swapped for the 3D one a moment later); after
+      // LUDZIK_3D.czekajMs, or when the model failed, the drawn hero stays as the fallback.
+      if (!this.g && !this.blad && !riding && !player.isDead && performance.now() - this.ladujeOd < LUDZIK_3D.czekajMs) {
+        player.setVisible(false);
+        this.pokazany = true;
+        return;
+      }
       if (this.pokazany) player.setVisible(true);
       this.image?.setVisible(false);
       this.ustawObrys(0, 0, player, false);

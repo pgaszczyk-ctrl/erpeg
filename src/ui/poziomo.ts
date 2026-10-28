@@ -5,15 +5,22 @@
 import type Phaser from 'phaser';
 import { resetTouch, resetKeys } from '../controls';
 import { ustawObrot, ekranPionowo, jestObrocone } from '../obrot';
+import { live } from '../walka/live';
 
 let gra: Phaser.Game | null = null;
+/** The login button was tapped: the page turns already under the loading cover (przedWejsciem). */
+let wchodzi = false;
+/** The full-screen request made by the first touch, so a lock in the same tap can wait for it. */
+let wPelnym: Promise<void> | null = null;
+/** A scene restart ends one game scene and starts the next one: the page stays turned in between. */
+let zwolnij: ReturnType<typeof setTimeout> | null = null;
 let zablokowano = false;
 let sluchacze = false;
 
 const telefon = () => window.matchMedia('(pointer: coarse)').matches;
 
 function sprawdz() {
-  if (!gra) return;
+  if (!gra && !wchodzi) return;
   const obroc = telefon() && ekranPionowo();
   if (obroc === jestObrocone()) {
     if (obroc) ustawObrot(true); // keeps the turned size up to date
@@ -29,11 +36,45 @@ async function zablokuj() {
   if (zablokowano || !telefon()) return;
   zablokowano = true;
   try {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) await (wPelnym ?? document.documentElement.requestFullscreen({ navigationUI: 'hide' }));
+  } catch {
+    /* no full screen here */
+  }
+  try {
     await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape');
   } catch {
-    /* not allowed here (iPhone): the turned page shows the way */
+    // Not allowed here (iPhone; or no touch yet – a code link logs in by itself): the turned page shows the way,
+    // and the next touch in the game asks again.
+    zablokowano = false;
   }
+}
+
+function sluchaj() {
+  if (sluchacze) return;
+  sluchacze = true;
+  window.addEventListener('resize', sprawdz);
+  window.addEventListener('orientationchange', () => setTimeout(sprawdz, 150));
+  window.addEventListener('touchend', () => { if (gra) void zablokuj(); }, { passive: true });
+}
+
+/**
+ * Called from the tap on a login button (owner, 28 Oct 2026: the game started upright with the HUD in the wrong
+ * place, then turned in the middle of play): full screen + landscape lock right in that tap, and the page turned
+ * before the loading cover, so the game is laid out sideways from its first frame.
+ */
+export function przedWejsciem() {
+  if (!telefon() || !live()) return;
+  wchodzi = true;
+  sluchaj();
+  void zablokuj();
+  sprawdz();
+}
+
+/** The login failed: the menu upright again. */
+export function anulujWejscie() {
+  if (!wchodzi) return;
+  wchodzi = false;
+  if (!gra) ustawObrot(false);
 }
 
 /**
@@ -47,7 +88,8 @@ export function pelnyEkranOdDotyku() {
   const tap = () => {
     if (!prosic || !telefon() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
     prosic = false;
-    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+    wPelnym = document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    wPelnym.then(() => {
       if (gra) void (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {});
     }).catch(() => {});
   };
@@ -57,18 +99,16 @@ export function pelnyEkranOdDotyku() {
 }
 
 export function wymusPoziom(game: Phaser.Game) {
+  if (zwolnij) { clearTimeout(zwolnij); zwolnij = null; }
   gra = game;
-  if (!sluchacze) {
-    sluchacze = true;
-    window.addEventListener('resize', sprawdz);
-    window.addEventListener('orientationchange', () => setTimeout(sprawdz, 150));
-    window.addEventListener('touchend', () => { if (gra) void zablokuj(); }, { passive: true });
-  }
+  wchodzi = false;
+  sluchaj();
   sprawdz();
 }
 
-/** Leaving the game (menu): the page upright again. */
+/** Leaving the game (menu): the page upright again – a moment later, so a scene restart doesn't turn it back and forth. */
 export function zwolnijPoziom() {
   gra = null;
-  ustawObrot(false);
+  if (zwolnij) clearTimeout(zwolnij);
+  zwolnij = setTimeout(() => { zwolnij = null; if (!gra && !wchodzi) ustawObrot(false); }, 400);
 }

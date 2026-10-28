@@ -138,6 +138,9 @@ try {
   if (tu) assert(!String(tu.m).startsWith('loch:'), 'a save in a dungeon keeps the entrance on the surface');
 
   // 5. Cleared floor: return from the treasure room without walking to the stairs.
+  // The chest's dialog pauses the game for a moment after it closes; the button acts only in a running game.
+  await page.waitForFunction(() => window.__game.scene.isActive('game'), null, { timeout: 10000 });
+  await page.waitForTimeout(1000); // the button fades in
   await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).click();
   await page.waitForFunction(() => !window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 });
   await page.waitForTimeout(1500);
