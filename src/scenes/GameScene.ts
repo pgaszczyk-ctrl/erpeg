@@ -576,6 +576,8 @@ export class GameScene extends Phaser.Scene {
       // Taller frames (room for hair and hats): keep the feet where a 16×16 hero has them.
       this.player.setOrigin(0.5, (8 + LOOK_TOP) / LOOK_H);
     }
+    // The 3D hero is on its way: the drawn one must not show first (Ludzik3D.update shows him back if it never comes).
+    this.ludzik3d?.ukryjNaStart(this.player);
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
