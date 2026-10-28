@@ -54,7 +54,8 @@ export class Stwory3D {
           void main(){vec4 c=texture2D(picture,uv0);float edge=0.;
           for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)edge=max(edge,texture2D(picture,uv0+vec2(float(x),float(y))*texel).a);
           gl_FragColor=vec4(mix(vec3(.118,.102,.141),c.rgb,c.a),max(c.a,edge));
-          #include <colorspace_fragment>
+          // G008 stores display RGB in COLOR_0, as used by its accepted standalone preview.
+          // Pass those authored palette bytes through; a second sRGB transfer washes out every figure.
           }`,depthTest:false,depthWrite:false,
       }));post.add(quad);
       this.g={three,renderer,scene,camera,target,post,postCamera,quad};

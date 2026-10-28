@@ -1,11 +1,19 @@
 // Real built game + real GLBs. Map/login/save are isolated; no player data is accessed.
 import {createRequire} from 'node:module';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {preview} from 'vite';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const phone=process.env.TELEFON==='1',tag=phone?'phone':'desktop';
+// Accepted G008 preview passes COLOR_0 palette bytes directly to the display. Detect accidental gamma brightening.
+const bytes=await readFile('public/modele/swiat44/zombiak.glb');
+const jsonSize=bytes.readUInt32LE(12),gltf=JSON.parse(bytes.subarray(20,20+jsonSize)),sourcePalette=new Set();
+for(const mesh of gltf.meshes)for(const p of mesh.primitives){
+  const a=gltf.accessors[p.attributes.COLOR_0],v=gltf.bufferViews[a.bufferView];assert.equal(a.componentType,5121);
+  const start=28+jsonSize+(v.byteOffset||0)+(a.byteOffset||0);
+  for(let i=0;i<a.count;i++){const b=bytes.subarray(start+i*3,start+i*3+3);sourcePalette.add([...b].join(','));}
+}
 const server=await preview({preview:{host:'127.0.0.1',port:4173,strictPort:true}});
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--enable-unsafe-swiftshader'],chromiumSandbox:false})
   .catch(async e=>{await new Promise(r=>server.httpServer.close(r));throw e;});
@@ -50,9 +58,11 @@ try{
     const m=window.__game.scene.getScene('game').stwory3d,g=m.g,gl=g.renderer.getContext(),c=g.renderer.domElement;
     const pixels=new Uint8Array(c.width*c.height*4);gl.readPixels(0,0,c.width,c.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
     const colors=new Set();let opaque=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]){opaque++;colors.add(`${pixels[i]},${pixels[i+1]},${pixels[i+2]}`);}
-    return {stats:m.stats,colors:colors.size,opaque,kinds:window.__actors.map(e=>e.kindId)};
+    return {stats:m.stats,colors:colors.size,palette:[...colors],opaque,kinds:window.__actors.map(e=>e.kindId)};
   });
   assert.equal(gallery.stats.loaded,12);assert.equal(gallery.stats.contexts,1);assert.equal(gallery.stats.visible,14);assert.equal(wargRequests,2);
+  gallery.paletteMatches=gallery.palette.filter(c=>sourcePalette.has(c)).length;delete gallery.palette;
+  assert(gallery.paletteMatches>=12,'actual render preserves the accepted COLOR_0 palette');
   assert(gallery.colors>20&&gallery.opaque>1000);await shot('gallery');
   const poses=await game(()=>{
     const m=window.__game.scene.getScene('game').stwory3d;let n=0;
