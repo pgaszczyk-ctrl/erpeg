@@ -7,6 +7,7 @@ import { rng } from '../rng';
 import { LOCH, LOCHY, type RodzajLochu } from '../content/lochy';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
+import { pasekWyjsciaZLochu } from '../ui/lochWyjscie';
 
 const M = PX_PER_M;
 /** Rysunek lochu: tyle pikseli płótna na piksel mapy (jak postacie – piksel świata to pół piksela mapy). */
@@ -280,6 +281,8 @@ const stany = new Map<string, { zabici: Set<number>; skrzynia: boolean; ogloszon
 
 export interface LochHost {
   scene: Phaser.Scene;
+  /** Use the existing surface transition, keeping the character and entrance position. */
+  wyjdz: () => void;
   spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean };
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
@@ -298,6 +301,7 @@ export class LochWnetrze {
   private zywi = new Map<unknown, number>();
   private stan: { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean };
   private key: string;
+  private wyjscie: ReturnType<typeof pasekWyjsciaZLochu>;
 
   constructor(private h: LochHost, city: CityMap) {
     this.plan = city.loch!;
@@ -307,6 +311,11 @@ export class LochWnetrze {
     tekstury(h.scene);
     this.maluj();
     this.planujPotwory();
+    this.wyjscie = pasekWyjsciaZLochu(() => {
+      if (this.zostalo === 0) this.h.wyjdz();
+    });
+    this.wyjscie.ustawOczyszczony(this.zostalo === 0);
+    h.scene.events.once('shutdown', () => this.destroy());
   }
 
   get opis() {
@@ -537,6 +546,7 @@ export class LochWnetrze {
     if (i === undefined) return false;
     this.zywi.delete(e);
     this.stan.zabici.add(i);
+    this.wyjscie.ustawOczyszczony(this.zostalo === 0);
     if (this.h.progress && !this.h.progress.killed.includes(i)) this.h.progress.killed.push(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
@@ -606,5 +616,6 @@ export class LochWnetrze {
 
   destroy() {
     this.img?.destroy();
+    this.wyjscie?.usun();
   }
 }
