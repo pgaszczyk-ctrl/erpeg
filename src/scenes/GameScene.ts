@@ -914,6 +914,9 @@ export class GameScene extends Phaser.Scene {
     this.loch = this.city.loch
       ? new LochWnetrze({
           scene: this,
+          wyjdz: () => {
+            if (this.loch?.zostalo === 0 && !this.player.isDead && this.scene.isActive()) this.wyjdzZLochu();
+          },
           nonce: session.nonce,
           progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon : undefined,
           toast: (t, ms) => this.toast(t, ms),
