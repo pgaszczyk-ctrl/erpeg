@@ -120,6 +120,8 @@ try {
   console.log('zapis tu', JSON.stringify(ostatni?.p_save?.tu ?? ostatni?.tu ?? null));
   await page.screenshot({ path: `work/lochy-${tag}-start.png` });
 
+  assert(!(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible()), 'no shortcut before clearing the floor');
+
   // 3. A fight: next to the nearest monster for a while (StworAI telegraphs).
   await g(() => {
     const s = window.__game.scene.getScene('game');
@@ -138,9 +140,10 @@ try {
   await g(() => {
     const s = window.__game.scene.getScene('game');
     s.protectUntil = Infinity;
-    for (const e of [...s.enemies]) { e.isDead = true; s.onEnemyKilled(e); e.destroy(); }
+    for (const e of [...s.enemies]) { e.hp = 0; s.onEnemyKilled(e); e.destroy(); }
   });
   assert.equal(await g(() => window.__game.scene.getScene('game').loch.zostalo), 0, 'all monsters beaten');
+  assert(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible(), 'clearing the floor shows the exit bar before collecting the chest');
   const coins0 = await g(() => window.__session.coins);
   await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 12); }, [skrzynia.x, skrzynia.y]);
   await page.waitForTimeout(1200);
@@ -161,18 +164,14 @@ try {
   console.log('zapis w lochu → tu', JSON.stringify(tu));
   if (tu) assert(!String(tu.m).startsWith('loch:'), 'a save in a dungeon keeps the entrance on the surface');
 
-  // 5. Up the stairs: back by the entrance.
-  const schody = await g(() => window.__game.scene.getScene('game').loch.schody);
-  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 8); }, [schody.x, schody.y]);
-  await page.waitForTimeout(800);
-  await page.keyboard.press('KeyE');
-  await page.waitForFunction(() => window.__dialogi.some((d) => /Schody/.test(d.title)), null, { timeout: 10000 });
-  await wybierz(0);
+  // 5. Cleared floor: return from the treasure room without walking to the stairs.
+  await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).click();
   await page.waitForFunction(() => !window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 });
   await page.waitForTimeout(1500);
   const gora = await g(() => { const s = window.__game.scene.getScene('game'); return { id: s.city.id, x: s.player.x, y: s.player.y }; });
   console.log('na górze', JSON.stringify(gora));
   assert.equal(gora.id, 'lublin');
+  assert.equal(await page.locator('#loch-wyjscie').count(), 0, 'exit bar is removed on the surface');
   assert(Math.hypot(gora.x - wej.k.x, gora.y - wej.k.y) < 60, 'back by the entrance');
   await page.screenshot({ path: `work/lochy-${tag}-powrot.png` });
 
