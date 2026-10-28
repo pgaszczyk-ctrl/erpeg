@@ -83,7 +83,7 @@ import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeSt
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
 import { PrologRekruta } from './PrologRekruta';
-import { PROLOG_ID } from '../prolog/state';
+import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
 import { idLochu } from '../loch/mapa';
 import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
@@ -3820,6 +3820,7 @@ export class GameScene extends Phaser.Scene {
     this.samouczek = null;
     this.samouczekCel = null;
     if (session.story.prolog || session.missions[PROLOG_ID]) return;
+    if (this.prolog?.goal()) return;
     if (this.demoRun || demo.on || session.flagi.samouczek || session.immortal) return;
     if (session.exp >= 100 || (session.stats.m ?? 0) > 800) return;
     this.samouczek = new SamouczekStartu({
@@ -6970,7 +6971,7 @@ export class GameScene extends Phaser.Scene {
     // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
     // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
     const recruit = this.prolog?.goal();
-    if (recruit) return [recruit];
+    if (recruit && session.story.prolog) return [recruit];
     const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
     if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
@@ -6984,6 +6985,8 @@ export class GameScene extends Phaser.Scene {
       }
       return { ...q, color: questColors.get(q.id)! };
     });
+    // An old character's invitation leads the HUD without hiding accepted quests or using their slots.
+    if (recruit) out.unshift(recruit);
     // The start tutorial's arrow to the nearest newsboy (not a quest either).
     if (this.samouczekCel) {
       const c = this.samouczekCel;
@@ -7009,7 +7012,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Quests counted for the limit (the traveller's map's guide is not one). */
   private questCount() {
-    return this.activeQuests().filter((q) => q.id !== 'droga' && q.id !== 'samouczek').length;
+    return this.activeQuests().filter((q) => q.id !== 'droga' && q.id !== 'samouczek' && q.id !== PROLOG_LEAD_ID).length;
   }
 
   /**
