@@ -83,6 +83,8 @@ export class UIScene extends Phaser.Scene {
   private get hasDialog() { return !!this.dialogBox || !!this.shop; }
   private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number; scrollable: boolean }[] = [];
   private dialogChoose?: (i: number) => void;
+  /** The open dialog's safe way out for Escape/Space (DialogRequest.zamknij), else its last button. */
+  private dialogZamknij?: number;
   // A dialog too tall for the screen (openGameMenu, long quest/riddle text…): its text + buttons scroll below
   // the fixed title, with a brass rail on the right (owner, 26 Oct 2026 – it didn't fit and couldn't be moved
   // in landscape). Drag the rail, tap it, or use the mouse wheel; see controls.dialogRail. Phaser 4's
@@ -213,7 +215,7 @@ export class UIScene extends Phaser.Scene {
         else if (this.dialogBox) {
           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
           const choose = this.dialogChoose;
-          const last = this.dialogButtons.filter((b) => b.index >= 0).length - 1;
+          const last = this.dialogZamknij ?? this.dialogButtons.filter((b) => b.index >= 0).length - 1;
           this.closeDialog();
           choose?.(Math.max(0, last));
         } else this.openGameMenu();
@@ -776,8 +778,9 @@ export class UIScene extends Phaser.Scene {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
       const by = cursorY;
       // Brass for the main choices, verdigris-patinated metal for the way out (owner, 26 Oct 2026: no greens/blues).
-      const cicho = d.odpowiedzi ? false : stacked ? i === last : i !== 0;
-      const color = cicho ? 0x4f7f72 : 0xc9953f;
+      const grozny = d.grozny === i;
+      const cicho = grozny || (d.odpowiedzi || d.zamknij !== undefined ? false : stacked ? i === last : i !== 0);
+      const color = grozny ? 0x8e3324 : cicho ? 0x4f7f72 : 0xc9953f;
       const rect = this.add.rectangle(bx, by, bw, btnH, 0, 0).setOrigin(0);
       const g = ramkaKomiks(this, bx, by, bw, btnH, color, { gruba: 2, cien: 3 });
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
@@ -822,6 +825,7 @@ export class UIScene extends Phaser.Scene {
     }
     this.dialogBox = this.add.container(0, 0, items).setDepth(20);
     this.dialogChoose = d.onChoose;
+    this.dialogZamknij = d.zamknij;
     this.dialogOpenedAt = this.time.now;
   }
 
@@ -911,7 +915,7 @@ export class UIScene extends Phaser.Scene {
     let choice: number | null = null;
     const real = this.dialogButtons.filter((b) => b.index >= 0);
     // Keyboard: Space/Enter picks the first button, or "Wyjdź" in a long list.
-    if (x < 0) choice = real.length > 2 ? real.length - 1 : 0;
+    if (x < 0) choice = this.dialogZamknij ?? (real.length > 2 ? real.length - 1 : 0);
     for (const b of this.dialogButtons) {
       // A scrolled-away button isn't drawn (see redrawScrollVisibility) – a tap at its old screen spot doesn't pick it.
       if (b.scrollable && !b.rect.visible) continue;
@@ -976,11 +980,15 @@ export class UIScene extends Phaser.Scene {
     if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
     if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
-    const guziki = ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', 'Graj dalej'];
+    // „Wyjdź z gry” at the bottom, in red (owner, 28 Oct 2026: as the top button it was taken for closing the window).
+    // Escape/Space pick „Graj dalej”, never the way out of the game.
+    const guziki = ['▶ Graj dalej', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', '🚪 Wyjdź z gry'];
     this.showDialog({
       title: 'Menu',
-      text: `Postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      text: `Wyjście z gry: postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
       buttons: guziki,
+      zamknij: 0,
+      grozny: 4,
       onChoose: (i) => {
         if (i === 1) { showCodeOverlay(session.name, session.idik); return; }
         if (i === 2) {
@@ -993,7 +1001,7 @@ export class UIScene extends Phaser.Scene {
           return;
         }
         if (i === 3) { this.openSettingsMenu(); return; }
-        if (i !== 0) return; // "Graj dalej": nothing to do, the dialog already closed
+        if (i !== 4) return; // "Graj dalej": nothing to do, the dialog already closed
         if (game.inCombat()) {
           this.toast('Nie możesz wyjść w trakcie walki!');
           return;
@@ -1081,6 +1089,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogBox = undefined;
     this.dialogButtons = [];
     this.dialogChoose = undefined;
+    this.dialogZamknij = undefined;
     this.dialogScroll = undefined;
     this.scrollRows = [];
     this.peekG = undefined;
