@@ -498,3 +498,10 @@
 - Publikacja nie została wykonana: automatyczna kontrola odrzuciła pełny zapis i ponownie jego ograniczony wariant (sam runtime/testy i referencje modeli), wskazując publiczny zakres publikacji i istniejący klucz klienta API. Nie obchodzono blokady innym kanałem. Przygotowano lokalny patch/paczkę do przeglądu; wymagane wyraźne zatwierdzenie publikacji do pgaszczyk-ctrl/erpeg i testu.
 
 - Właściciel odpowiedział „Zatwierdzam” na wyraźne pytanie o publikację całego wdrożenia do pgaszczyk-ctrl/erpeg i uruchomienie TEST. Scalono również wydanie 1.035 (8b60202), zachowując jego pin i optymalizacje renderowania; klucz odświeżania obrazu bohatera uwzględnia sprzęt prologu. Publikacja wznowiona.
+
+## 2026-10-28 — zamknięcie wdrożenia prologu
+
+- PR28 scalony jako 575c51a, po integracji 1.035. Prolog CI40588238397: wszystkie 4 warianty success; city40588238252: pełny build i regresja PC/telefon success; deploy40588986778: success.
+- Odczyt domeny potwierdził TEST575c51a, prolog.recruit.v1 w main-BfpER3NI.js i bajtową zgodność 6 GLB. Produkcja nadal z pinu01c06c9, bez prologu. Brak SQL i zmian danych graczy.
+- Dodatkowy pełny przebieg na domenie niepotwierdzony (certyfikat pośrednika, potem utrata lokalnego środowiska); pełne przebiegi lokalne i CI z atrapami RPC są potwierdzone. Fizycznego telefonu i prawdziwego zapisu gracza nie sprawdzano. Historyczny workflow Heli ma niezależny błąd braku produkcja/*.patch; szczegóły w docs/prolog/WDROZENIE.md.
+- Wdrożenie TEST zakończone; poczta P001 oznaczona jako gotowa. Uzupełnienie wyłącznie dokumentacyjne [skip ci].

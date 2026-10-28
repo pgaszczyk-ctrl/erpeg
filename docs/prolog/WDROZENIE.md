@@ -1,6 +1,6 @@
 # Pierwsza służba — wdrożenie
 
-Stan: kod wdrożenia przygotowany i sprawdzony lokalnie. Właściciel wyraźnie zatwierdził publikację całego wdrożenia do pgaszczyk-ctrl/erpeg i uruchomienie na serwerze testowym (27.10.2026). Publikacja w toku.
+Stan: kod wdrożenia przygotowany i sprawdzony lokalnie. Właściciel wyraźnie zatwierdził publikację całego wdrożenia do pgaszczyk-ctrl/erpeg i uruchomienie na serwerze testowym (27.10.2026). Publikacja TEST zakończona; wyniki poniżej.
 
 27.10.2026. Scenariusz: PR #21, modele: PR #23. Ten dokument opisuje kod; PROLOG_REKRUTA.md pozostaje źródłowym projektem.
 
@@ -42,3 +42,16 @@ Model m/f zachowuje korpus munduru. Łuk/różdżka podmieniają grupę Weapon i
 - `scripts/tests/browser-prolog.mjs`: pełen ciąg w prawdziwej grze i z prawdziwymi modelami, ponowne logowania, błąd zapisu i ponowienie, pełny plecak, łuk, magia i zachowany korpus munduru, utrwalony loch, drugie miasto w trakcie i po ukończeniu, stara postać. RPC i dwie mapy są kontrolowanymi atrapami; pokonania testowe przechodzą przez hit/onEnemyKilled. Zrzuty w `work/prolog/`. Kontrola na komputerze PL i emulowanym telefonie EN; CI dodatkowo obejmuje pozostałe kombinacje.
 
 Nie wykonywano zapisów prawdziwych graczy ani testu na fizycznym telefonie. Nie zmieniono SQL/RLS. Nie zmieniamy produkcyjnego pinu, wersji ani plików produkcyjnych w ramach tego zadania. Publikacja dotyczy gałęzi i serwera testowego; wydanie produkcyjne wymaga osobnego zlecenia.
+
+## Końcowy wynik publikacji (uzupełnienie 28.10.2026)
+
+Scalono [PR #28](https://github.com/pgaszczyk-ctrl/erpeg/pull/28) jako 575c51a2b167b1b9183980d61fa6710ceaeb9fab, po integracji wydania 1.035. Zdalne drzewo implementacji jest identyczne z lokalnie sprawdzonym d7d40b665e0129993731334bb480a69f0693a322.
+
+- [Prolog CI](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/40588238397): sukces wszystkich czterech wariantów PL/EN × PC/emulowany telefon.
+- [City quest checks](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/40588238252): sukces pełnego buildu map, reguł i regresji przeglądarkowej istniejących questów.
+- [Publikacja](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/40588986778): success, w tym oba buildy i publish.
+- Publiczny odczyt po publikacji: /test/version.json = 575c51a 2026-10-27 21:53; main-BfpER3NI.js (SHA256 df1332d72a72792e51570b931814531fdf16870d8c9c1de3253687cd0a62d113) zawiera prolog.recruit.v1. Wszystkie sześć opublikowanych GLB jest bajtowo zgodne ze sprawdzonymi plikami. Produkcja nadal z niezmienionego pinu 01c06c9, bez prologu.
+- Dodatkowa próba pełnego przejścia bezpośrednio na domenie nie ma potwierdzonego wyniku: środowisko przeglądarki wymagało obsługi certyfikatu pośrednika, następnie utracono lokalne środowisko. Nie zastępuje to ani nie unieważnia zakończonych testów lokalnych/CI; nie deklarujemy przejścia na domenie ani fizycznym telefonie.
+- Stary [Hela production release check](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/40588238323) nie przeszedł przygotowania produkcji: cp zakłada istnienie produkcja/*.patch usuniętych przy pełnym wydaniu. Błąd przed uruchomieniem gry; odczyt katalogu przeszedł. Ten niezależny workflow i pin nie zostały zmienione.
+
+Wdrożenie TEST zakończone. Dokumentacyjne uzupełnienie [skip ci] nie zmienia gry ani ponownie jej nie publikuje.
