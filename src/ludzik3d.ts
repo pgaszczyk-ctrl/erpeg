@@ -134,50 +134,78 @@ export class Ludzik3D {
   private changing = false;
   private disposed = false;
   private pendingAim: number | null = null;
-  private baseHead?: THREE.BufferGeometry;
+  private pendingEquipment = '';
+  private modelFile = '';
+  private retryAt = 0;
   private donors = new Map<string, Promise<import('three/examples/jsm/loaders/GLTFLoader.js').GLTF>>();
+
+  private file() {
+    return session.story.prolog ? `modele/postacie3d/${session.look.modul?.p === 'k' ? '01' : '16'}.glb` : LUDZIK_3D.plik;
+  }
+
+  private wantedEquipment() {
+    return `${item(gear.equip.bron)?.rodzaj ?? 'miecz'}:${gear.equip.helm === 'kapelusz_szkolny'}`;
+  }
+
+  private weapon(model: THREE.Object3D) {
+    return model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip');
+  }
 
   /** Keep the guard's body and identity; only weapon, attack pose and the matching headwear change. */
   private async equipment() {
     const g=this.g;
-    if(!g || !session.story.prolog || this.changing || this.disposed)return;
+    if(!g || !session.story.prolog || this.changing || this.disposed || this.modelFile !== this.file())return;
     const female=session.look.modul?.p==='k';
     const kind=item(gear.equip.bron)?.rodzaj ?? 'miecz';
     const hat=gear.equip.helm==='kapelusz_szkolny';
     const key=`${kind}:${hat}`;
-    if(key===this.equipmentKey)return;
+    if(key===this.equipmentKey || performance.now() < this.retryAt)return;
     this.changing=true;
     try {
       const load=(id:string)=>{
-        if(!this.donors.has(id))this.donors.set(id,import('three/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}modele/postacie3d/${id}.glb`)));
+        if(!this.donors.has(id))this.donors.set(id,import('three/examples/jsm/loaders/GLTFLoader.js')
+          .then(({GLTFLoader})=>new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}modele/postacie3d/${id}.glb`))
+          .catch(e=>{this.donors.delete(id);throw e;}));
         return this.donors.get(id)!;
       };
       const id=kind==='luk'?(female?'18':'12'):kind==='magia'?(female?'mage_f':'11'):(female?'01':'16');
-      const donor=await load(id);
-      const headDonor=await load(hat?(female?'mage_f':'11'):(female?'01':'16'));
-      if(this.disposed || this.g!==g)return;
+      const [donor,headDonor]=await Promise.all([load(id),load(hat?(female?'mage_f':'11'):(female?'01':'16'))]);
+      // Equipment may have changed while a GLB was downloading. Never install an obsolete pose or replay its shot.
+      if(this.disposed || this.g!==g || key!==this.wantedEquipment() || this.modelFile!==this.file())return;
+      const sourceWeapon=this.weapon(donor.scene);
+      const attack=donor.animations.find(c=>c.name==='attack');
+      const head=g.model.getObjectByName('head') as THREE.Mesh | undefined;
+      const dh=headDonor.scene.getObjectByName('head') as THREE.Mesh | undefined;
+      if(!sourceWeapon || !attack || !head?.isMesh || !dh?.isMesh)throw new Error(`Niepełny model wyposażenia: ${id}`);
+      const weapon=sourceWeapon.clone(true);
+      // The legacy sword is attached to the hand; new Weapon groups live directly under the model root.
+      const parent=sourceWeapon.parent===donor.scene.children[0] ? g.model.children[0] : g.model.getObjectByName(sourceWeapon.parent!.name);
+      if(!parent)throw new Error(`Brak chwytu broni: ${id}`);
       g.mixer.stopAllAction();
       const walkLegs=g.chodNogi.getClip(), walkUpper=g.chodGora.getClip();
       g.mixer.uncacheRoot(g.model);
       g.mixer=new g.three.AnimationMixer(g.model);
       g.chodNogi=g.mixer.clipAction(walkLegs);g.chodGora=g.mixer.clipAction(walkUpper);
       if(g.miecz){g.miecz.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh){const mats=Array.isArray(m.material)?m.material:[m.material];for(const mat of mats)mat.dispose();}});g.miecz.removeFromParent();}
-      const weapon=donor.scene.getObjectByName('Weapon')!.clone(true);
-      g.model.children[0].add(weapon);
+      parent.add(weapon);
       g.miecz=weapon;
       weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true});});
-      const head=g.model.getObjectByName('head') as THREE.Mesh;
-      const dh=headDonor.scene.getObjectByName('head') as THREE.Mesh;
-      this.baseHead ??= head.geometry;
       head.geometry=dh.geometry; // the pack's male/female mage has exactly the same face and hair as its guard
-      const c=donor.animations.find(c=>c.name==='attack')!.clone();
+      const c=attack.clone();
       const legs=(t:THREE.KeyframeTrack)=>/^(thigh|shin|foot)/.test(t.name);
       g.atak=g.mixer.clipAction(c);
       g.atakGora=g.mixer.clipAction(new g.three.AnimationClip(`attack-upper-${id}`,c.duration,c.tracks.filter(t=>!legs(t))));
       for(const a of [g.atak,g.atakGora]){a.setLoop(g.three.LoopOnce,1);a.clampWhenFinished=false;a.timeScale=LUDZIK_3D.tempoAtaku;}
       this.equipmentKey=key;
-    } catch(e) { console.warn('Ludzik 3D: wyposażenie',e); }
-    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim;this.pendingAim=null;this.atakuj(aim);}}
+      this.retryAt=0;
+    } catch(e) { this.retryAt=performance.now()+3000;console.warn('Ludzik 3D: wyposażenie',e); }
+    finally {
+      this.changing=false;
+      if(this.pendingEquipment!==`${this.file()}|${this.wantedEquipment()}`)this.pendingAim=null;
+      if(!this.disposed && this.pendingAim!==null && this.equipmentKey===this.wantedEquipment() && this.modelFile===this.file()) {
+        const aim=this.pendingAim;this.pendingAim=null;this.atakuj(aim);
+      }
+    }
   }
 
   private async zaladuj() {
@@ -185,7 +213,7 @@ export class Ludzik3D {
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const file=session.story.prolog ? `modele/postacie3d/${session.look.modul?.p==='k'?'01':'16'}.glb` : LUDZIK_3D.plik;
+      const file=this.file();
       const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${file}`);
       if(this.disposed)return;
       const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
@@ -237,9 +265,10 @@ export class Ludzik3D {
         a.clampWhenFinished = false;
         a.timeScale = LUDZIK_3D.tempoAtaku;
       }
-      const miecz = model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip') ?? undefined;
+      const miecz = this.weapon(model);
       renderer.autoClear = false;
       this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
+      this.modelFile=file;
       this.swiatla = { amb, sun };
       this.podpis = '';
       // The game's texture reads the 3D canvas straight away (no copy through the processor, see narysuj).
@@ -251,11 +280,13 @@ export class Ludzik3D {
     }
   }
 
-  /** A melee swing: the model plays its blow, turned towards the aim (radians, screen axes). */
+  /** A swing or shot: the model plays the equipped attack, turned towards the aim (screen radians). */
   atakuj(aim: number) {
     const g = this.g;
     if (!g) return;
-    if(this.changing){this.pendingAim=aim;return;}
+    if(this.changing || (session.story.prolog && (this.equipmentKey!==this.wantedEquipment() || this.modelFile!==this.file()))) {
+      this.pendingAim=aim;this.pendingEquipment=`${this.file()}|${this.wantedEquipment()}`;void this.equipment();return;
+    }
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
     g.atak.stop();
     g.atakGora.stop();
@@ -264,6 +295,11 @@ export class Ludzik3D {
 
   /** dt in seconds (GameScene.update's capped delta). */
   update(player: Player, dt: number) {
+    // An existing character can enlist without a scene restart. Load the matching guard body at that moment too.
+    if(this.g && !this.changing && this.modelFile!==this.file()) {
+      this.clearRender();
+      this.equipmentKey='';this.retryAt=0;this.pendingAim=null;
+    }
     if (!this.g && !this.laduje && !this.blad) void this.zaladuj();
     const riding = testVehicle !== 'pieszo' && hasTestVehicle(testVehicle);
     if (!this.g || riding || player.isDead || !this.scene.textures.exists(this.klucz)) {
@@ -373,6 +409,11 @@ export class Ludzik3D {
 
   destroy() {
     this.disposed = true;
+    this.pendingAim = null;
+    this.clearRender();
+  }
+
+  private clearRender() {
     for (const o of this.obrysy) o.im.destroy();
     this.obrysy = [];
     this.podpis = '';

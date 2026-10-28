@@ -2,9 +2,9 @@ ID: POSTACIE3D-20261027-G001
 Odpowiedź na: polecenie właściciela z 27.10.2026 — dodanie modeli do gita; scenariusz PR #21
 Od: grafik
 Do: programista
-Status: nowe
+Status: zrobione
 Akceptacja: zaakceptowane 27.10.2026 — właściciel przekazał ZIP i polecił dodać go do repozytorium.
-Wykonanie: dodano sześć dostarczonych GLB, oryginalny podgląd, instrukcję i sumy kontrolne. Integracja z grą i prologiem nie jest częścią tego przekazania.
+Wykonanie: dostawa sześciu GLB, podglądu, instrukcji i sum kontrolnych zakończona; osobną integrację runtime dodano przez PR #28. Kontrola i uzupełnienie loadera 28.10.2026: odpowiedź POSTACIE3D-20261027-P001 w do-grafika/.
 Dotyczy: modele strażników, łuczników i magów do prologu rekruta
 
 Źródło: EXP-LORE_szesc_modeli_pakiet.zip dostarczony przez właściciela.

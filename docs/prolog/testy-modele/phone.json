@@ -1,0 +1,24 @@
+{
+  "tag": "phone",
+  "browser": "153.0.8010.0",
+  "loaded": [
+    "01.glb",
+    "18.glb",
+    "mage_f.glb"
+  ],
+  "bowRequests": 2,
+  "errors": [],
+  "expectedWarnings": 1,
+  "checks": [
+    "legacy fallback",
+    "enrollment m/f",
+    "sword/bow/wand input and animation",
+    "attack while walking",
+    "retry after 503",
+    "superseded download/queued shot",
+    "uniform",
+    "head material",
+    "return to sword/head",
+    "portrait touch"
+  ]
+}

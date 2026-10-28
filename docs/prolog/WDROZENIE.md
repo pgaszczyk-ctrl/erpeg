@@ -1,5 +1,7 @@
 # Pierwsza służba — wdrożenie
 
+Kontrola 28.10.2026: sześć modeli jest już w bazie przez PR #28. Nowe poprawki loadera, minimalny test PC/dotyk/obrót telefonu i ocena PR #23: [TEST_MODELI_20261028.md](TEST_MODELI_20261028.md). Ta kontrola nie publikuje nowego wydania.
+
 Stan: kod wdrożenia przygotowany i sprawdzony lokalnie. Właściciel wyraźnie zatwierdził publikację całego wdrożenia do pgaszczyk-ctrl/erpeg i uruchomienie na serwerze testowym (27.10.2026). Publikacja TEST zakończona; wyniki poniżej.
 
 27.10.2026. Scenariusz: PR #21, modele: PR #23. Ten dokument opisuje kod; PROLOG_REKRUTA.md pozostaje źródłowym projektem.

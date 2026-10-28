@@ -1,7 +1,7 @@
 # Pierwsza służba — prolog rekruta miejskiej straży
 
 Wersja: 1.0, 27.10.2026. Źródło decyzji: rozmowa właściciela z projektantem.
-Stan: przygotowany scenariusz i specyfikacja wdrożenia; jeszcze nie grywalny questline.
+Stan historyczny specyfikacji z 27.10.2026: przygotowany scenariusz. Grywalne wdrożenie dodano później w PR #28; aktualny stan i kontrola w [WDROZENIE.md](WDROZENIE.md).
 Sprawdzona baza kodu: `52cbdaff605975fc86edb5fbbbf33b60b616f79b` (`claude/bold-gauss-peehzd`).
 
 ## 1. Decyzje właściciela i zakres

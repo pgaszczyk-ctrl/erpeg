@@ -1,0 +1,14 @@
+Command: git merge-tree --write-tree 9a09c6fa5674a4db8f873dfeb51ccd5a2f8e50a0 8db714ad5342d611017999a8038c88a18f14bcee
+Exit code: 1
+6086777d6ddee9ae021796b32cc5f08cf3b4c466
+100644 faa7ea01046b38ab1617d3c96e92d07823ada9c9 1	CLAUDE.md
+100644 d5b2c1f19b3426168c63bfd029e9a3a05e36813c 2	CLAUDE.md
+100644 f934cbe9d24d9a51d420675f7922adaa79542626 3	CLAUDE.md
+100644 7fe18c18cbf2e1de4623d35277f24b5e1cc23f32 1	docs/PRZEKAZANIE_chatgpt.md
+100644 051171f68eac1425e016179836ea475571a062fe 2	docs/PRZEKAZANIE_chatgpt.md
+100644 03b95f0feb19f5cbf26c7bdd0c90ae8f117d1909 3	docs/PRZEKAZANIE_chatgpt.md
+
+Auto-merging CLAUDE.md
+CONFLICT (content): Merge conflict in CLAUDE.md
+Auto-merging docs/PRZEKAZANIE_chatgpt.md
+CONFLICT (content): Merge conflict in docs/PRZEKAZANIE_chatgpt.md

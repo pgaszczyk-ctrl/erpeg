@@ -45,10 +45,15 @@ jobs:
         env:
           JEZYK: '${{ matrix.language }}'
           TELEFON: '${{ matrix.phone }}'
+      - run: npm run test:prolog-models
+        env:
+          TELEFON: '${{ matrix.phone }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: prologue-${{ matrix.language }}-${{ matrix.phone }}
-          path: work/prolog/
+          path: |
+            work/prolog/
+            work/prolog-models/
           if-no-files-found: ignore
           retention-days: 7
