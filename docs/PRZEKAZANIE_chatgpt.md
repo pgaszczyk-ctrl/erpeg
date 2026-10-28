@@ -542,3 +542,5 @@ Sprawdzenie: tsc --noEmit i vite build przeszły. Pełne npm run build trafiło 
 PRODUKCJA, src/version.ts i produkcja/ bez zmian. Wcześniejsze strojenie walki z PR #32 odłożono do git stash i nie jest częścią tej zmiany.
 
 Wynik podglądu: PC 1363×936 — pełne przejście PASS (ukrycie przed oczyszczeniem, ostatni wróg, skrzynia nadal dostępna, wyjście z komnaty skarbu, powrót obok wejścia, usunięcie paska). W widoku 844×390 potwierdzono warunek ostatniego wroga i widoczność; pasek obniżono na wąskim ekranie do 120 px, żeby nie przykrywał linii zadania. Po tej korekcie typecheck i Vite build ponownie przeszły. Końcowe przejście telefonu i stan publikacji poniżej.
+
+Końcowa próba 844×390: PASS — poprawiony pasek nie nachodzi na zadanie; kliknięcie z komnaty skarbu wraca obok wejścia na powierzchni i usuwa pasek. Sprawdzono rzeczywisty obraz i natywne kliknięcie w przeglądarce podglądu. To test rozmiaru widoku telefonu w iframe, nie test fizycznego telefonu ani emulacja sprzętu dotykowego. Publikacja TEST uruchamiana przez merge; produkcja pozostaje przypięta do dotychczasowego wydania.
