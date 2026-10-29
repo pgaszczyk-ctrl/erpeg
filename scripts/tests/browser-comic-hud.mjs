@@ -20,7 +20,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  await context.route('**/map/world.json',r=>r.fulfill({json:{lublin:[],towns:[],edges:[]}}));
  await context.route('**/*.supabase.co/**',r=>{
   const fn=new URL(r.request().url()).pathname.split('/').pop();let body=null;
-  if(fn==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,exp:400,dead:false,age:12,konto:true,save:{coins:124,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'zelazny'},skills:{miecz:250,luk:0,magia:0},mikstury:3}}};
+  if(fn==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,exp:400,dead:false,age:12,konto:true,save:{coins:124,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'miecz_rekruta'},skills:{miecz:0,luk:0,magia:0},mikstury:3}}};
   if(fn==='save_game'){saves.push(r.request().postDataJSON());body=true;}
   if(['heartbeat','logout','log_error'].includes(fn))body=true;
   if(['game_content','school_quizzes','game_ports','kurier_wiesci','my_characters','game_stwory'].includes(fn))body=[];
