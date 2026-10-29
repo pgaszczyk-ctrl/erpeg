@@ -41,7 +41,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const tap=async(x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
  const checks=[];
  const physical=([x,y])=>name==='upright'?[y,height-x]:[x,y];
- for(const method of ['E','map-double','attack-double','touch-attack-double','touch-map-double','range-E']){
+ for(const method of (mobile ? ['E','map-double','attack-double','touch-attack-double','touch-map-double','range-E'] : ['E','map-double','attack-double','range-E'])){
   await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;s.player.setPosition(window.__w.x,window.__w.y+10);s.player.face(0,-1);window.__dialogs=[];});
   await page.waitForTimeout(600);
   const b=await page.locator('.hs-atak').boundingBox(),ax=b.x+b.width/2,ay=b.y+b.height/2;
@@ -76,3 +76,4 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
 }
 await writeFile('work/comic-hud/dungeon-diagnosis.json',JSON.stringify(results,null,2));
 } finally {await browser.close();await new Promise(r=>server.httpServer.close(r));}
+
