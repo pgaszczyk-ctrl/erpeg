@@ -44,8 +44,12 @@ html body.hud-comic-a #hud-tel .tel-kolo .tlo{visibility:hidden}
 html body.hud-comic-a #hud-tel .tel-kolo{background:${frameUrl} center/36px 38px no-repeat}
 html body.hud-comic-a #hud-tel .tel-kolo .ik{filter:brightness(0) invert(1) sepia(.5) drop-shadow(1px 1px #19171b)}
 html body.hud-comic-a #hud-tel .tel-rura{width:12px;border-radius:2px;background:#252224;box-shadow:0 0 0 1px #19171b,0 0 0 2.5px #c99741,1px 2px 0 3.5px #19171b}
-html body.hud-comic-a #hud-tel .tel-czapka{background:#d9aa51;border:2px solid #19171b;box-sizing:border-box;border-radius:1px;height:7px;box-shadow:inset 0 2px #ffe59a}
-html body.hud-comic-a #hud-tel .tel-fajka{height:7px;top:45px;background:#c99a43;box-shadow:0 0 0 2px #19171b}
+/* The comic frames replace the old tube caps and feed pipes completely. Keep the
+   frames apart, including their 3.5px ink shadows, at every telescope scale. */
+html body.hud-comic-a #hud-tel .tel-czapka,html body.hud-comic-a #hud-tel .tel-fajka{display:none}
+html body.hud-comic-a #hud-tel .tel-rurki{left:64px;top:6px;width:34px;height:52px}
+html body.hud-comic-a #hud-tel .tel-rura.hp{left:0!important}
+html body.hud-comic-a #hud-tel .tel-rura.st{left:22px!important}
 html body.hud-comic-a #hud-tel .tel-rura.hp i.p{background:#de4131;box-shadow:inset 3px 0 #ff8560,inset -3px 0 #9b231d}
 html body.hud-comic-a #hud-tel .tel-rura.st i.p{background:#e8ae2c;box-shadow:inset 3px 0 #ffe58b,inset -3px 0 #a36a20}
 html body.hud-comic-a #hud-tel .tel-rura.st.mana i.p{background:#398ad6;box-shadow:inset 3px 0 #9bd9ff,inset -3px 0 #245393}
