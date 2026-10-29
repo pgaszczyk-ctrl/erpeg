@@ -1082,7 +1082,7 @@ export class TuryWalki {
         this.h.pudlo(o.e.x, o.e.y - 4 * o.e.kind.scale);
         continue;
       }
-      this.trafWroga(o, shotDamage(bron) * atak.mnoznik * this.h.wzmocnienie(o.e), new Phaser.Math.Vector2(p.x, p.y), now, false);
+      this.trafWroga(o, shotDamage(bron, Math.random) * atak.mnoznik * this.h.wzmocnienie(o.e), new Phaser.Math.Vector2(p.x, p.y), now, false);
     }
     this.h.scene.tweens.add({ targets: g, alpha: 0, duration: 320, onComplete: () => g.destroy() });
     await this.czekaj(200);
@@ -1097,7 +1097,7 @@ export class TuryWalki {
       this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
       return;
     }
-    let dmg = meleeDamage() * (mocny ? strongFactor('miecz') : 1) * mnoz * this.h.wzmocnienie(e);
+    let dmg = meleeDamage(Math.random) * (mocny ? strongFactor('miecz') : 1) * mnoz * this.h.wzmocnienie(e);
     if (Math.random() < WT.szczescie.krytyk * this.szczescie()) {
       dmg *= WT.szczescie.krytykMnoznik;
       this.koniczynka('Krytyk!');
@@ -1127,7 +1127,7 @@ export class TuryWalki {
     }
     const now = this.h.scene.time.now;
     const natychmiast = skill === 'luk' && !WALKA.bezNatychmiast.includes(e.kindId) && !e.duel && Math.random() < instaKillChance();
-    let dmg = natychmiast ? e.hp : shotDamage(bron) * (mocny ? strongFactor(skill) : 1) * mnoz * this.h.wzmocnienie(e);
+    let dmg = natychmiast ? e.hp : shotDamage(bron, Math.random) * (mocny ? strongFactor(skill) : 1) * mnoz * this.h.wzmocnienie(e);
     if (!natychmiast && Math.random() < WT.szczescie.krytyk * this.szczescie()) {
       dmg *= WT.szczescie.krytykMnoznik;
       this.koniczynka('Krytyk!');

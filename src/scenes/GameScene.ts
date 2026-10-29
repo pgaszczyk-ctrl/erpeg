@@ -1866,7 +1866,7 @@ export class GameScene extends Phaser.Scene {
       }
       const imb = imbueOf(gear.equip.bron)?.e;
       landed = true;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * power * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * power * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
       else {
         this.essenceHit(imb, s, now);
         // A strong blow stuns for a moment (not dragons).
@@ -6016,7 +6016,7 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.inAir || e.peaceful) continue;
       if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage() * 0.8)) this.onEnemyKilled(e);
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * 0.8)) this.onEnemyKilled(e);
     }
     if (landed) {
       this.wearWeapon(gear.equip.bron);
@@ -6102,7 +6102,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(1_040_000);
     // Held long enough: a strong shot (bigger, golden, harder).
     if (strong) sprite.setScale(1.5).setTint(0xffd84a);
-    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
+    this.shots.push({ sprite, vx: dir.x * speed, vy: dir.y * speed, left: skill === 'magia' ? MAGIC_RANGE : ARROW_RANGE, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
   }
 
   private updateShots(dt: number) {
@@ -6270,7 +6270,7 @@ export class GameScene extends Phaser.Scene {
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
       where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
-      const all = PRZEDMIOTY.filter((p) => p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
+      const all = PRZEDMIOTY.filter((p) => (!p.baza || p.baza === p.id) && p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
       if (miejsce === 'helm') {
         // Headwear is also about looks: every one not owned yet is on offer.
         out.push(...all.filter((p) => !owns(p.id)));

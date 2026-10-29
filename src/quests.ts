@@ -1,3 +1,4 @@
+import { ustawPoziomBroni } from './inventory';
 import { zapamietajPostac } from './pamiecPostaci';
 import { effectiveStage } from './content/questy/progress';
 import { sesjaWygasla, toWygasla } from './sesja';
@@ -238,6 +239,7 @@ export async function loadContent() {
 }
 
 export function startSession(r: LoginResult) {
+  ustawPoziomBroni(() => poziomPostaci(session.exp));
   const p = r.player;
   setLanguage(p.save.language);
   session.token = r.token ?? '';

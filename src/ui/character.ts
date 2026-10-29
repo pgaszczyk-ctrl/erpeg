@@ -1,3 +1,4 @@
+import { UMIEJETNOSCI as ATAKI, domyslnaUmiejetnosc } from '../content/umiejetnosci';
 import { collectStoryItems } from '../prolog/rewards';
 import { tx } from '../i18n';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce, type Umiejetnosc } from '../content/przedmioty';
@@ -5,7 +6,7 @@ import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../conten
 
 /** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
 const openGroups = new Set<Grupa>();
-import { slotCell, slotDrag, slotLabel, slotIcon } from './slots';
+import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
@@ -356,8 +357,8 @@ function show(host: CharacterHost) {
       };
       glowkaPlecaka.append(odbierz);
     }
-    prawa.append(glowkaPlecaka, bag, actions);
-    wrap.append(lewa, prawa);
+    prawa.append(glowkaPlecaka, bag);
+    wrap.append(lewa, prawa, actions);
     s.append(wrap, el('div', 'c-note k-podpowiedz', 'Przeciągaj rzeczy, żeby je założyć, zdjąć albo zamienić; esencję przeciągnij na broń.'));
     // Gear you use rather than wear (owner, 18 Oct 2026: moved here from Statystyki).
     // The own tent: a small button by the backpack's label (owner, 26 Oct 2026: the page mustn't scroll); when it
@@ -400,6 +401,7 @@ function show(host: CharacterHost) {
           : [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
       },
     });
+    if (gear.equip.bron) ask(itemCard(gear.equip.bron), []);
     return s;
   };
 
@@ -694,6 +696,12 @@ function rows(list: [string, string][]) {
 function statRows(id: string): [string, string][] {
   const it = item(id);
   if (!it || !it.moc || it.miejsce === 'talizman' || it.miejsce === 'amulet') return [];
+  if (it.obrazenia) {
+    const rows: [string, string][] = [['Obrażenia broni', it.obrazenia.join('–')]];
+    const worn = item(gear.equip[it.miejsce]);
+    if (worn?.obrazenia && worn.id !== it.id) rows.push(['Masz założone', worn.obrazenia.join('–')]);
+    return rows;
+  }
   const what = it.miejsce === 'bron'
     ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj ? 'Atak strzałem' : it.narzedzie ? 'Atak (narzędzie)' : 'Atak')
     : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Obrona') : 'Obrona';
@@ -726,15 +734,20 @@ function wearRow(id: string): [string, string] | null {
  */
 function itemCard(id: string) {
   const it = item(id);
-  const card = el('div', 'c-card-body');
+  const card = el('div', `c-card-body${it?.miejsce === 'bron' ? ' weapon-card' : ''}`);
   const head = el('div', 'c-card-head');
   const icon = el('span', 'c-card-icon');
   icon.append(slotIcon({ item: id }));
+  if (it?.miejsce === 'bron') { const dots = qualityDots(id); if (dots) icon.append(dots); }
   head.append(icon, el('div', 'c-card-name', it?.nazwa ?? id));
   card.append(head);
   const list = statRows(id);
   const k = skillOfItem(id);
   if (k) list.push([UMIEJETNOSCI[k].nazwa, `poziom ${skillLevel(k)}`]);
+  if (it?.miejsce === 'bron' && k && gear.equip.bron === id) {
+    const special = ATAKI.find(u => u.id === session.umiej[k] && u.bron === k && u.poziom <= skillLevel(k)) ?? domyslnaUmiejetnosc(k);
+    list.push(['Aktywny atak specjalny', special.nazwa]);
+  }
   const w = wearRow(id);
   if (w) list.push(w);
   const imb = imbueOf(id);

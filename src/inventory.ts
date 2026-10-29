@@ -1,3 +1,4 @@
+import { obrazeniaBroni } from './content/bron';
 import { WALKA, zTabeli } from './content/walka';
 import {
   PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
@@ -175,6 +176,7 @@ export function hitChance(skill: Umiejetnosc, strong: boolean, bonus = 0) {
 
 /** How many times harder a strong attack of that kind hits. */
 export function strongFactor(skill: Umiejetnosc) {
+  if (item(gear.equip.bron)?.obrazenia) return 1.5;
   if (skill === 'miecz') return zTabeli(WALKA.miecz.mocnyMnoznik, skillLevel('miecz'));
   if (skill === 'luk') return WALKA.luk.mocnyMnoznik;
   return WALKA.mnoznikCzaru;
@@ -228,16 +230,28 @@ export function weaponEffect() {
 }
 
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */
-export function meleeDamage() {
+let poziomBroni = () => 1;
+export function ustawPoziomBroni(provider: () => number) { poziomBroni = provider; }
+
+/** Without a random source return the stable mean for HUD, enemy scaling and previews. */
+export function meleeDamage(los?: () => number) {
   const p = item(gear.equip.bron);
   // A bow or wand used as a club, or a broken sword, is no better than a stick.
+  if (p && !p.rodzaj && !isBroken(p.id)) {
+    const damage = obrazeniaBroni(p, poziomBroni(), skillLevel('miecz') - 1, los);
+    if (damage !== null) return damage;
+  }
   const moc = p && !p.rodzaj && !isBroken(p.id) ? p.moc : 1;
   return skillLevel('miecz') + WALKA.zaMoc * moc;
 }
 
 /** A shot of the bow / a spell of the wand in hand (a magic item in the other hand adds its power to spells). */
-export function shotDamage(weapon: Przedmiot) {
+export function shotDamage(weapon: Przedmiot, los?: () => number) {
   const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+  if (!isBroken(weapon.id)) {
+    const damage = obrazeniaBroni(weapon, poziomBroni(), skillLevel(skill) - 1, los);
+    if (damage !== null) return damage;
+  }
   const off = item(gear.equip.dystans);
   const extra = skill === 'magia' && off?.rodzaj === 'magia' ? off.moc : 0;
   return skillLevel(skill) + WALKA.zaMoc * ((isBroken(weapon.id) ? 1 : weapon.moc) + extra);

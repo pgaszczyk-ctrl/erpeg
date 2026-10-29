@@ -23,6 +23,10 @@ export interface Przedmiot {
   miejsce: Miejsce;
   /** Obrażenia (broń; kijek na 10. poziomie ≈ stalowy miecz 7 na 1.) albo obrona (zbroja, hełm, buty). */
   moc: number;
+  /** Shared artwork / weapon family. Existing IDs remain valid in saves and loot. */
+  baza?: string;
+  jakosc?: number;
+  obrazenia?: [number, number];
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
   /** Premium price; charged instead of coins. */
@@ -75,7 +79,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
   // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.
   { id: 'siekiera', nazwa: 'Siekiera', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'siekiera',
     opis: 'Ścięte drzewo daje drewno zamiast chrustu – wystarczy mieć ją w plecaku. Można też nią walczyć.' },
-  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
+  { id: 'zelazny', nazwa: 'Miecz treningowy', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
   // Drabinka z docs/ekonomia.md (kij → żelazo → mosiądz → stal → stal hartowana → damasceńska); ikony z paczki ikony12 B1.
   // Liczby tymczasowe, wpasowane między stare szczeble – do przeliczenia z nową gospodarką.
   { id: 'miecz_mosiezny', nazwa: 'Mosiężny miecz', miejsce: 'bron', moc: 5, cena: 3000, wytrzymalosc: 750, opis: 'Złocisty, z nitami i trybikiem przy jelcu.' },
@@ -134,6 +138,19 @@ export const PRZEDMIOTY: Przedmiot[] = [
     opis: 'Przygotowany wyłącznie z warzyw. Leczenie zużywa go po miksturach i jadalnych zbiorach.',
   },
 ];
+
+/** Five qualities for the three families whose ranges the owner approved (29 Oct 2026).
+ * Existing IDs are the ordinary quality; never rename save/quest identifiers. */
+export const JAKOSCI_BRONI = ['Kiepski', 'Zwykły', 'Solidny', 'Doskonały', 'Mistrzowski'];
+const RODZINY_BRONI: [string, number, number][] = [['kijek', 3, 5], ['zelazny', 5, 7], ['stalowy', 7, 10]];
+for (const [id, min, max] of RODZINY_BRONI) {
+  const p = PRZEDMIOTY.find(p => p.id === id)!;
+  const nazwa = p.nazwa;
+  p.baza = id; p.jakosc = 1; p.obrazenia = [min + 1, max + 1];
+  p.nazwa = `${nazwa} — ${JAKOSCI_BRONI[1].toLowerCase()}`;
+  for (const q of [0, 2, 3, 4]) PRZEDMIOTY.push({ ...p, id: `${id}_jakosc${q}`, jakosc: q,
+    nazwa: `${nazwa} — ${JAKOSCI_BRONI[q].toLowerCase()}`, obrazenia: [min + q, max + q] });
+}
 
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */
 export const SZYBKOSC_TALIZMANU = 0.04;

@@ -1,6 +1,6 @@
 import { itemIcon, goodsPicture } from './itemIcon';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
-import { MIEJSCA, type Miejsce } from '../content/przedmioty';
+import { JAKOSCI_BRONI, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
 import { esencja } from '../content/esencje';
 
@@ -20,6 +20,17 @@ function el(tag: string, cls = '', text = '') {
   if (cls) e.className = cls;
   if (text) e.textContent = text;
   return e;
+}
+
+/** Five pixel squares; the filled count is the quality rank, also accessible as text. */
+export function qualityDots(id: string) {
+  const q = item(id)?.jakosc;
+  if (q === undefined) return null;
+  const dots = el('span', 'weapon-quality');
+  dots.setAttribute('role', 'img'); dots.setAttribute('aria-label', `Jakość: ${JAKOSCI_BRONI[q]}, ${q + 1} z 5`);
+  dots.title = JAKOSCI_BRONI[q];
+  for (let i = 0; i < 5; i++) dots.append(el('i', i <= q ? 'filled' : ''));
+  return dots;
 }
 
 export function slotIcon(s: Slot): Node | string {
@@ -65,6 +76,7 @@ export function slotCell(s: Slot | null, place: Place, extra = '') {
     if ('goods' in s) c.append(el('span', 'sl-n', String(goodsN(s))));
     if ('esencja' in s) c.append(el('span', 'sl-flask', '🧪'));
     if ('item' in s) {
+      const dots = qualityDots(s.item); if (dots) c.append(dots);
       const imb = imbueOf(s.item);
       if (imb) {
         const b = el('span', 'sl-imb', `${imb.e.ikona}${imb.minutes}′`);

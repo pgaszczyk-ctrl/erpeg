@@ -533,6 +533,34 @@
       html body #walka-panel .wn-pas, html body #walka-panel .wp-skrzynia, html body #walka-panel .wp-b, html body #walka-panel .wp-koniec,
       html body #walka-panel .wn-koniec, html body #walka-panel .wn-ucieczka {
         border-radius: 0 !important; border-color: var(--ink) !important; box-shadow: inset 0 2px 0 rgba(255,214,140,.15), inset 0 -2px 0 rgba(0,0,0,.4), 3px 3px 0 rgba(0,0,0,.45) !important; }
+
+      /* Weapon inspection: gear, backpack and a readable side panel. */
+      #character .k-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #character .k-cols > #k-postac { grid-column: 1 / -1; }
+      #character .k-wrap { display: grid; grid-template-columns: minmax(160px, .9fr) minmax(180px, 1fr) minmax(220px, 1fr); align-items: start; gap: 14px; }
+      #character .k-wrap > .k-card.c-actions { height: auto; max-height: min(440px, calc(100dvh - 185px)); min-height: 240px; margin: 0; overflow-y: auto; align-self: stretch; }
+      #character .weapon-card .c-card-head { flex-direction: column; align-items: center; text-align: center; }
+      #character .weapon-card .c-card-icon { width: 128px; height: 140px; background: radial-gradient(ellipse, #73532c, #291b12); position: relative; }
+      #character .weapon-card .c-card-icon .item-ico { width: 112px; height: 112px; object-fit: contain; image-rendering: pixelated; }
+      .weapon-quality { display: flex; gap: 3px; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); pointer-events: none; }
+      .weapon-quality i { display: block; width: 4px; height: 4px; background: #382d25; border: 1px solid #160f0a; box-shadow: 1px 1px #160f0a; }
+      .weapon-quality i.filled { background: #ffcf64; }
+      #character .weapon-card .weapon-quality { bottom: 7px; gap: 5px; }
+      #character .weapon-card .weapon-quality i { width: 6px; height: 6px; }
+      #character .sl-cell > .weapon-quality { z-index: 2; bottom: 3px; }
+      #character .weapon-card .c-stat { gap: 8px; flex-wrap: wrap; }
+      #character .weapon-card .c-stat-v { overflow-wrap: anywhere; }
+      @media (max-width: 960px) and (orientation: landscape) {
+        #character .k-wrap { grid-template-columns: minmax(145px, .85fr) minmax(155px, 1fr) minmax(200px, 1.1fr); gap: 10px; }
+        #character .k-wrap > .k-card.c-actions { min-height: 160px; max-height: calc(100dvh - 130px); }
+        #character .weapon-card .c-card-icon { width: 88px; height: 96px; }
+        #character .weapon-card .c-card-icon .item-ico { width: 76px; height: 76px; }
+      }
+      @media (max-width: 600px) and (orientation: portrait) {
+        #character .k-wrap { grid-template-columns: minmax(0, 1fr); }
+        #character .k-wrap > .k-card.c-actions { max-height: 420px; }
+        #character .k-cols { grid-template-columns: minmax(0, 1fr); }
+      }
     </style>
   </head>
   <body>
