@@ -8,6 +8,15 @@ import { PRZEDMIOTY } from './przedmioty';
 import { OWOCE, type Owoc } from './sklepy';
 import { AMUNICJA, type Amunicja } from './zuzycie';
 
+/** Quality order: poor, ordinary, solid, excellent, masterwork. */
+export const SZANSE_JAKOSCI = [21, 22, 25, 22, 10] as const;
+export function losujJakosc(los: () => number) {
+  const n = Math.max(0, Math.min(.999999999, los())) * 100;
+  let sum = 0;
+  for (let q = 0; q < SZANSE_JAKOSCI.length; q++) { sum += SZANSE_JAKOSCI[q]; if (n < sum) return q; }
+  return 4;
+}
+
 export interface WierszLupu {
   /** Co: 'zloto', 'diament', 'mikstura', 'serce', id towaru (OWOCE), amunicji (AMUNICJA) albo przedmiotu (PRZEDMIOTY). */
   co: string;
@@ -45,7 +54,8 @@ export function lupOpcje(): { id: string; nazwa: string; grupa: string }[] {
     { id: 'serce', nazwa: 'Serce (leczy pół serca)', grupa: 'Leczenie' },
     ...(Object.keys(OWOCE) as Owoc[]).map((k) => ({ id: k, nazwa: OWOCE[k].nazwa, grupa: 'Towary' })),
     ...(Object.keys(AMUNICJA) as Amunicja[]).map((k) => ({ id: k, nazwa: AMUNICJA[k].nazwa, grupa: 'Amunicja' })),
-    ...PRZEDMIOTY.map((p) => ({ id: p.id, nazwa: p.nazwa, grupa: 'Przedmioty' })),
+    ...PRZEDMIOTY.filter(p => p.baza === p.id).map(p => ({ id: `los_${p.id}`, nazwa: `${p.nazwa.split(' — ')[0]} — losowa jakość (21/22/25/22/10%)`, grupa: 'Broń — losowa jakość' })),
+    ...PRZEDMIOTY.map((p) => ({ id: p.id, nazwa: `${p.nazwa}${p.obrazenia ? ` (${p.obrazenia.join('–')})` : ''}`, grupa: p.miejsce === 'bron' ? 'Broń — rodzaj i jakość' : 'Przedmioty' })),
   ];
 }
 
@@ -65,6 +75,17 @@ export function losujLup(rodzaj: string, los: () => number = Math.random): { co:
   const s = stwory[rodzaj];
   if (!s || !s.lup.length) return null;
   const out: { co: string; ile: number }[] = [];
-  for (const w of s.lup) if (los() * 100 < w.szansa) out.push({ co: w.co, ile: Math.round(w.ile) });
+  for (const w of s.lup) if (los() * 100 < w.szansa) {
+    const rodzina = w.co.startsWith('los_') ? PRZEDMIOTY.filter(p => p.baza === w.co.slice(4)) : [];
+    if (!rodzina.length) { out.push({ co: w.co, ile: Math.round(w.ile) }); continue; }
+    // Roll each copy independently, then group identical variants for the existing pickup path.
+    const counts = new Map<string, number>();
+    for (let i = 0; i < Math.round(w.ile); i++) {
+      const q = losujJakosc(los);
+      const id = rodzina.find(p => p.jakosc === q)!.id;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    for (const [co, ile] of counts) out.push({ co, ile });
+  }
   return out;
 }

@@ -1,3 +1,5 @@
+import { itemIcon } from '../ui/itemIcon';
+import { bronie, kluczBroni, kluczTrwalosci, kodujZakres, ustawBronie } from '../content/bron';
 import { rpc } from '../api';
 import { CityMap } from '../map/CityMap';
 import { drawCity } from '../map/drawCity';
@@ -50,6 +52,7 @@ const app = document.getElementById('app')!;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, children: (Node | string | null | false)[] = []) {
   const e = Object.assign(document.createElement(tag), props);
+  for (const [k, v] of Object.entries(props)) if (k.startsWith('aria-') || k.startsWith('data-')) e.setAttribute(k, String(v));
   for (const c of children) if (c) e.append(c);
   return e;
 }
@@ -124,7 +127,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -150,6 +153,7 @@ function render() {
   else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
   else if (tab === 'puzzles') void puzzlesTab(main);
+  else if (tab === 'bron') void bronTab(main);
   else if (tab === 'stwory') void stworyTab(main);
   else settings(main);
 }
@@ -1016,10 +1020,13 @@ async function stworyTab(main: HTMLElement) {
     box.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`]));
     return;
   }
+  try { ustawBronie((await call<{ values: Record<string, number> }>('admin_settings', {})).values); }
+  catch { box.append(el('p', { className: 'msg bad' }, ['Nie udało się odświeżyć zakresów broni; lista pokazuje wartości domyślne.'])); }
   const opcje = lupOpcje();
   const grupy = [...new Set(opcje.map((o) => o.grupa))];
   const wybor = (co: string) => {
-    const sel = el('select', { style: 'min-width: 190px' });
+    const sel = el('select', { style: 'min-width: 0; max-width: 100%; width: 300px', 'aria-label': 'Przedmiot łupu' });
+    if (!opcje.some(o => o.id === co)) sel.append(el('option', { value: co, selected: true }, [`Nieznany przedmiot (${co})`]));
     for (const g of grupy) {
       const og = el('optgroup', { label: g });
       for (const o of opcje.filter((q) => q.grupa === g)) og.append(el('option', { value: o.id, selected: o.id === co }, [o.nazwa]));
@@ -1071,6 +1078,63 @@ async function stworyTab(main: HTMLElement) {
       ]),
     ]));
   }
+}
+
+async function bronTab(main: HTMLElement) {
+  const field = (label: string, input: HTMLElement) => el('label', { className: 'f' }, [el('span', {}, [label]), input]);
+  main.append(el('h2', {}, ['⚔ Repozytorium broni']), el('p', { className: 'muted' }, [
+    'Wspólny katalog broni do łupów i nagród. Kijek, miecz treningowy i stalowy mają po pięć jakości ze wspólną grafiką. ',
+    'Pozostałe bronie zachowują dotychczasową moc, dopóki nie nadasz im zakresu. Bonus: +2% za poziom postaci ponad pierwszy i +6% za poziom wyszkolenia ponad początkowy. Zmiany od następnego wejścia do gry.',
+  ]));
+  let values: Record<string, number>;
+  try { values = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawBronie(values); }
+  catch (e) { main.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`])); return; }
+  const search = el('input', { type: 'search', placeholder: 'Szukaj broni lub jakości', 'aria-label': 'Szukaj broni', style: 'width: 100%; max-width: 500px' });
+  const list = el('div'); main.append(search, list);
+  for (const p of bronie()) {
+    const range = p.obrazenia;
+    const min = el('input', { type: 'number', min: '1', max: '10000', step: '1', value: range ? String(range[0]) : '', 'aria-label': 'Minimum obrażeń', style: 'width: 90px' });
+    const max = el('input', { type: 'number', min: '1', max: '10000', step: '1', value: range ? String(range[1]) : '', 'aria-label': 'Maksimum obrażeń', style: 'width: 90px' });
+    const msg = el('small', { className: 'muted' }, [range ? `Obrażenia ${range.join('–')}` : `Dotychczasowa moc: ${p.moc}`]);
+    const save = btn('Zapisz zakres', async () => {
+      try {
+        const n = kodujZakres(Number(min.value), Number(max.value)); save.disabled = true;
+        await call('admin_set_setting', { p_k: kluczBroni(p.id), p_v: n });
+        values[kluczBroni(p.id)] = n; ustawBronie(values); msg.className = 'msg ok'; msg.textContent = `Zapisane: ${min.value}–${max.value}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { save.disabled = false; }
+    }, 'b p');
+    const reset = btn('Przywróć domyślne', async () => {
+      reset.disabled = true;
+      try { await call('admin_set_setting', { p_k: kluczBroni(p.id), p_v: null }); delete values[kluczBroni(p.id)]; ustawBronie(values);
+        min.value = p.obrazenia ? String(p.obrazenia[0]) : ''; max.value = p.obrazenia ? String(p.obrazenia[1]) : '';
+        msg.className = 'msg ok'; msg.textContent = 'Przywrócono domyślne.';
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { reset.disabled = false; }
+    });
+    const life = el('input', { type: 'number', min: '1', max: '1000000', step: '1', value: p.wytrzymalosc ? String(p.wytrzymalosc) : '', 'aria-label': 'Wytrzymałość broni', style: 'width: 110px', placeholder: 'bez zużycia' });
+    const saveLife = btn('Zapisz wytrzymałość', async () => {
+      try {
+        const n = life.value.trim() === '' ? null : Number(life.value);
+        if (n !== null && (!Number.isInteger(n) || n < 1 || n > 1000000)) throw new Error('Wytrzymałość: od 1 do 1000000.');
+        saveLife.disabled = true;
+        await call('admin_set_setting', { p_k: kluczTrwalosci(p.id), p_v: n });
+        if (n === null) delete values[kluczTrwalosci(p.id)]; else values[kluczTrwalosci(p.id)] = n;
+        ustawBronie(values); life.value = p.wytrzymalosc ? String(p.wytrzymalosc) : '';
+        msg.className = 'msg ok'; msg.textContent = `Wytrzymałość zapisana: ${p.wytrzymalosc ?? 'bez zużycia'}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { saveLife.disabled = false; }
+    });
+    const icon = itemIcon(p.id);
+    if (icon) { icon.width = 40; icon.height = 40; icon.style.imageRendering = 'pixelated'; }
+    const card = el('div', { className: 'card', 'data-weapon': p.id }, [el('h3', { className: 'row' }, [icon, p.nazwa]),
+      el('p', { className: 'muted' }, [`${p.rodzaj === 'magia' ? 'Magia' : p.rodzaj === 'luk' ? 'Dystansowa' : 'Walka wręcz'} · Wytrzymałość: ${p.wytrzymalosc ?? 'nie zużywa się'} · ID: ${p.id}`]),
+      el('div', { className: 'row' }, [field('Minimum obrażeń', min), field('Maksimum obrażeń', max), save, reset]),
+      el('div', { className: 'row' }, [field('Wytrzymałość (puste = domyślna)', life), saveLife]), msg,
+    ]);
+    list.append(card);
+  }
+  search.oninput = () => { const q = search.value.toLocaleLowerCase('pl'); for (const card of list.children) (card as HTMLElement).hidden = !card.textContent?.toLocaleLowerCase('pl').includes(q); };
 }
 
 function settings(main: HTMLElement) {
