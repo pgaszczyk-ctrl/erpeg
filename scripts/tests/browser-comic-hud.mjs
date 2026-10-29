@@ -1,4 +1,6 @@
 // Actual built game; isolated map/account fixtures. No requests write real player state.
+// Like browser-live/lochy, use ostrosc=1: cooldown is active-play time, not wall time;
+// software-rendered 2x canvases on shared CI can otherwise time out before 2.5 active seconds.
 import {createRequire} from 'node:module';
 import {mkdir,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -25,7 +27,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
   if(fn==='game_settings')body={};if(fn==='server_now')body=new Date().toISOString();return r.fulfill({json:body});
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&live=1&ludzik3d=0#postac=Jam&kod=ANGELIKA');
+ await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=0#postac=Jam&kod=ANGELIKA');
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
  await page.waitForFunction(()=>document.body.classList.contains('hud-comic-a')&&document.querySelector('.tel-rura.hp'));
  const g=fn=>page.evaluate(fn);
@@ -65,7 +67,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  // Skills are actual existing game abilities, gated by weapon level. Selecting never casts or resets cooldown.
  await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby();});
  assert(await page.locator('.hs-picker').isVisible());
- await page.waitForFunction(()=>window.__zasoby.czas-window.__zasoby.mocnyAt>=2.5,null,{timeout:20000});
+ await page.waitForFunction(()=>window.__zasoby.czas-window.__zasoby.mocnyAt>=2.5,null,{timeout:60000});
  const before=await g(()=>({s:window.__zasoby.s,at:window.__zasoby.mocnyAt}));
  const slider=page.locator('.hs-picker input');await slider.focus();await page.keyboard.press('End');
  assert.equal(await g(()=>window.__session.umiej.miecz),'zamach');
