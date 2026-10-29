@@ -3743,8 +3743,17 @@ export class GameScene extends Phaser.Scene {
     lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: LOCHY[w.rodzaj].nazwa };
     // The tutorial owns its stable instance globally; entering the ordinary dungeon earlier never consumes it.
     const tutorialId = this.prolog?.prepareDungeon(w);
-    try { session.tu = {m:this.city.id,x:w.x,y:w.y+6}; await saveNow(this.player.hp); }
-    catch { this.travelling=false; this.toast(tx('Nie udało się zapisać. Spróbuj ponownie zejść.', 'Could not save. Try entering again.')); return; }
+    session.tu = { m: this.city.id, x: w.x, y: w.y + 6 };
+    this.keepFog(); // the scene restarts underground: what was explored here must already be in the session
+    if (tutorialId) {
+      // The prologue's dungeon is a checkpoint: go down only once it is saved.
+      try { await saveNow(this.player.hp); }
+      catch { this.travelling=false; this.toast(tx('Nie udało się zapisać. Spróbuj ponownie zejść.', 'Could not save. Try entering again.')); return; }
+    } else {
+      // An ordinary dungeon doesn't wait for the save (a big save took seconds, bug report 74, 29 Oct 2026);
+      // saves are queued in order, a failed one sends its fog again with the next.
+      void saveNow(this.player.hp).catch(() => {});
+    }
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
     const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
@@ -4050,7 +4059,10 @@ export class GameScene extends Phaser.Scene {
   private keepFog() {
     if (this.loch) return; // a dungeon's fog is never kept (it is made again every visit)
     if (this.city.id === 'lublin') session.fog = this.explored.serialize();
-    else session.fogs[this.city.id] = this.explored.serialize();
+    else {
+      session.fogs[this.city.id] = this.explored.serialize();
+      session.fogsZmienione.add(this.city.id);
+    }
   }
 
   private save(quiet = false) {

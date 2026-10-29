@@ -43,6 +43,8 @@ export interface SaveData {
   fog?: { s: number; chunks: Record<string, string> };
   /** Explored parts of the town maps (by town id), same format as fog. */
   fogs?: Record<string, { s: number; chunks: Record<string, string> }>;
+  /** Only the maps whose fog changed are in `fogs`; the server keeps the others (save_game merges them). */
+  fogsCzesc?: boolean;
   story?: import('./quests').Story;
   /** Old power stones (gone since 4 Oct 2026; each becomes WSKRZESZENIE.diamentow diamonds at login). */
   kamienie?: number;
