@@ -25,7 +25,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
   if(fn==='game_settings')body={};if(fn==='server_now')body=new Date().toISOString();return r.fulfill({json:body});
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:4181/?lang=pl&pogoda=czysto&live=1&ludzik3d=0#postac=Jam&kod=ANGELIKA');
+ await page.goto('http://127.0.0.1:4181/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=0#postac=Jam&kod=ANGELIKA');
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
  await page.waitForFunction(()=>document.body.classList.contains('hud-comic-a')&&document.querySelector('.tel-rura.hp'));
  const g=(fn,arg)=>page.evaluate(fn,arg);

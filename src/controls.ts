@@ -84,9 +84,9 @@ const DBL_MS = 380;
 const DBL_PX = 36;
 let lastTap: { x: number; y: number; t: number } | null = null;
 /** A short tap (or click) at (x, y): a second one soon after near the first is an interaction. */
-function tapped(x: number, y: number) {
+function tapped(x: number, y: number, nativeDouble = false) {
   const now = performance.now();
-  if (lastTap && now - lastTap.t < DBL_MS && Math.hypot(x - lastTap.x, y - lastTap.y) < DBL_PX) {
+  if (nativeDouble || (lastTap && now - lastTap.t < DBL_MS && Math.hypot(x - lastTap.x, y - lastTap.y) < DBL_PX)) {
     interakcja = { x, y };
     lastTap = null;
     return;
@@ -530,7 +530,8 @@ export function installTouchControls(el: HTMLElement) {
       return;
     }
     // New controls: a double click is an interaction (talk, door, ride, quest spot), the click itself still swings.
-    if (live() && !onMenuButton(e.offsetX, e.offsetY)) tapped(e.offsetX, e.offsetY);
+    // Native click count remains reliable when a slow frame delays event processing past DBL_MS.
+    if (live() && !onMenuButton(e.offsetX, e.offsetY)) tapped(e.offsetX, e.offsetY, e.detail === 2);
     // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
     if (!onMenuButton(e.offsetX, e.offsetY)) {
       startHold('mouse');
