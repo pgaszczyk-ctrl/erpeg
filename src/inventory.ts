@@ -140,6 +140,15 @@ export function skillLevel(skill: Umiejetnosc) {
   return l;
 }
 
+/** A weapon's own skill requirement, shared by click, drag, loot and combat. */
+export function weaponRequirement(id: string | null | undefined): string | null {
+  const p = item(id);
+  if (!p || p.miejsce !== 'bron') return null;
+  const skill: Umiejetnosc = p.rodzaj === 'magia' ? 'magia' : p.rodzaj === 'luk' ? 'luk' : 'miecz';
+  const required = p.wymaganySkill ?? 1;
+  return skillLevel(skill) < required ? `Wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${required}` : null;
+}
+
 /** Progress inside the current level, for the character sheet. */
 export function skillProgress(skill: Umiejetnosc) {
   const level = skillLevel(skill);
@@ -226,7 +235,7 @@ export function gearLifeBonus() {
 
 /** Special power of the weapon in hand (mythic items). */
 export function weaponEffect() {
-  return item(gear.equip.bron)?.efekt;
+  return weaponRequirement(gear.equip.bron) ? undefined : item(gear.equip.bron)?.efekt;
 }
 
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */
@@ -235,6 +244,7 @@ export function ustawPoziomBroni(provider: () => number) { poziomBroni = provide
 
 /** Without a random source return the stable mean for HUD, enemy scaling and previews. */
 export function meleeDamage(los?: () => number) {
+  if (weaponRequirement(gear.equip.bron)) return 0;
   const p = item(gear.equip.bron);
   // A bow or wand used as a club, or a broken sword, is no better than a stick.
   if (p && !p.rodzaj && !isBroken(p.id)) {
@@ -247,6 +257,7 @@ export function meleeDamage(los?: () => number) {
 
 /** A shot of the bow / a spell of the wand in hand (a magic item in the other hand adds its power to spells). */
 export function shotDamage(weapon: Przedmiot, los?: () => number) {
+  if (weaponRequirement(weapon.id)) return 0;
   const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
   if (!isBroken(weapon.id)) {
     const damage = obrazeniaBroni(weapon, poziomBroni(), skillLevel(skill) - 1, los);
@@ -355,7 +366,7 @@ export function ownedAmmo(): Amunicja[] {
 /** The equipped ranged weapon, if it can be used (magic needs the skill). */
 export function rangedWeapon(): Przedmiot | null {
   const r = item(gear.equip.bron);
-  if (!r?.rodzaj || r.miejsce !== 'bron') return null;
+  if (!r?.rodzaj || r.miejsce !== 'bron' || weaponRequirement(r.id)) return null;
   if (r.rodzaj === 'magia' && !gear.magic) return null;
   return r;
 }
@@ -393,7 +404,7 @@ export function addItem(id: string): 'equipped' | 'bag' | false {
     return 'bag';
   }
   const m = slotFor(p.miejsce);
-  if (!gear.equip[m] || gear.equip[m] === 'kijek') {
+  if (!weaponRequirement(id) && (!gear.equip[m] || gear.equip[m] === 'kijek')) {
     // A stick is not worth keeping when a real sword comes along (with a bow or wand it goes to the backpack).
     if (gear.equip[m] === 'kijek' && (p.rodzaj || p.narzedzie) && gear.bag.length < PLECAK.miejsc) gear.bag.push({ item: 'kijek' });
     gear.equip[m] = id;
@@ -415,7 +426,7 @@ export function equipFromBag(index: number) {
   const s = gear.bag[index];
   if (!s || !('item' in s)) return;
   const p = item(s.item)!;
-  if (p.pojazd || p.leczenie) return;
+  if (p.pojazd || p.leczenie || weaponRequirement(p.id)) return;
   const m = slotFor(p.miejsce);
   const worn = gear.equip[m];
   gear.equip[m] = s.item;
@@ -634,6 +645,7 @@ export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): stri
   }
   const b = get(to);
   if (to.zone === 'eq') {
+    if ('item' in a) { const why = weaponRequirement(a.item); if (why) return why; }
     if (!('item' in a) || !fits(a.item, to.m)) return 'To tu nie pasuje.';
     if (from.zone === 'eq') {
       put(to, a);
@@ -646,6 +658,7 @@ export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): stri
   }
   if (from.zone === 'eq') {
     // Taking something off: onto an empty cell, or swapping with a thing that fits there.
+    if (b && 'item' in b) { const why = weaponRequirement(b.item); if (why) return why; }
     if (b && !('item' in b && fits(b.item, from.m))) return 'Połóż to na wolnym miejscu.';
     put(to, a);
     put(from, b);

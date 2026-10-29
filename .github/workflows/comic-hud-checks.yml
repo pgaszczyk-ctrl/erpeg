@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'src/ui/comic*.ts'
+      - 'src/inventory.ts'
+      - 'src/ui/character.ts'
+      - 'src/ui/itemIcon.ts'
+      - 'index.html'
+      - 'scripts/tests/browser-weapon-eq.mjs'
       - 'src/ui/hudLive.ts'
       - 'src/ui/hudTeleskop.ts'
       - 'src/scenes/UIScene.ts'
@@ -31,6 +36,8 @@ jobs:
       - run: |
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
+      - run: node scripts/tests/bronie.mjs
+      - run: node scripts/tests/browser-weapon-eq.mjs
       - run: node scripts/tests/browser-comic-hud.mjs
       - uses: actions/upload-artifact@v4
         if: always()

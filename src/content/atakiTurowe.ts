@@ -68,14 +68,14 @@ export const ATAKI: RodzajAtaku[] = [
   },
 ];
 
-const UMIEJETNOSC: Record<Umiejetnosc, string> = { miecz: 'miecza', luk: 'łuku', magia: 'magii' };
+const UMIEJETNOSC: Record<Umiejetnosc, string> = { miecz: 'krzepy', luk: 'celności', magia: 'skupienia' };
 
-/** „Odblokujesz na poziomie miecza 5” – what's still missing, for the hint. */
+/** „Odblokujesz przy krzepie 5” – what's still missing, for the hint. */
 export function brakujeDoAtaku(w: WymogAtaku | undefined, stan: { poziomPostaci: number; magia: boolean; umiejetnosc(u: Umiejetnosc): number }): string | null {
   if (!w) return null;
   const braki: string[] = [];
   if (w.magia && !stan.magia) braki.push('naukę magii w bibliotece');
-  if (w.umiejetnosc && stan.umiejetnosc(w.umiejetnosc.u) < w.umiejetnosc.poziom) braki.push(`poziom ${UMIEJETNOSC[w.umiejetnosc.u]} ${w.umiejetnosc.poziom}`);
+  if (w.umiejetnosc && stan.umiejetnosc(w.umiejetnosc.u) < w.umiejetnosc.poziom) braki.push(`${UMIEJETNOSC[w.umiejetnosc.u]}: ${w.umiejetnosc.poziom}`);
   if (w.poziomPostaci && stan.poziomPostaci < w.poziomPostaci) braki.push(`poziom postaci ${w.poziomPostaci}`);
   return braki.length ? braki.join(' i ') : null;
 }

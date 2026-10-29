@@ -27,6 +27,8 @@ export interface Przedmiot {
   baza?: string;
   jakosc?: number;
   obrazenia?: [number, number];
+  /** Minimum weapon skill (never character level). Quality variants share the family threshold. */
+  wymaganySkill?: number;
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
   /** Premium price; charged instead of coins. */
@@ -139,6 +141,16 @@ export const PRZEDMIOTY: Przedmiot[] = [
   },
 ];
 
+// Training/prologue equipment remains usable at skill 1. Thresholds follow weapon families.
+const WYMAGANIA_BRONI: Record<string, number> = {
+  kijek: 1, miecz_rekruta: 1, luk_rekruta: 1, rozdzka_szkolna: 1,
+  zelazny: 3, miecz_mosiezny: 4, stalowy: 5, szabla_hartowana: 8, rycerski: 10,
+  karabela_damascenska: 12, szklany_miecz: 10, siekiera: 1,
+  luk: 1, luk_refleksyjny: 5, dlugi_luk: 7, kusza: 10, pistolet_parowy: 12,
+  rozdzka: 1, swietlisty: 8, gromowladny: 8, karabin_trybunal: 12,
+};
+for (const p of PRZEDMIOTY) if (p.miejsce === 'bron') p.wymaganySkill = WYMAGANIA_BRONI[p.id] ?? 1;
+
 /** Five qualities for the three families whose ranges the owner approved (29 Oct 2026).
  * Existing IDs are the ordinary quality; never rename save/quest identifiers. */
 export const JAKOSCI_BRONI = ['Kiepski', 'Zwykły', 'Solidny', 'Doskonały', 'Mistrzowski'];
@@ -193,10 +205,10 @@ export const PLECAK = { miejsc: 20, owocowNaMiejsce: 200 };
 //  Najwyżej poziom 20. Przerwy, celność i obrażenia: content/walka.ts
 //  (magia na razie po staremu: `przerwa` − poziom × `szybciejNaPoziom`).
 // ----------------------------------------------------------------------------
-export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; przerwa: number; szybciejNaPoziom: number }> = {
-  miecz: { nazwa: 'Walka wręcz', przerwa: 320, szybciejNaPoziom: 18 },
-  luk: { nazwa: 'Łucznictwo', przerwa: 650, szybciejNaPoziom: 35 },
-  magia: { nazwa: 'Magia', przerwa: 750, szybciejNaPoziom: 40 },
+export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; dopelniacz: string; przerwa: number; szybciejNaPoziom: number }> = {
+  miecz: { nazwa: 'Krzepa', dopelniacz: 'krzepy', przerwa: 320, szybciejNaPoziom: 18 },
+  luk: { nazwa: 'Celność', dopelniacz: 'celności', przerwa: 650, szybciejNaPoziom: 35 },
+  magia: { nazwa: 'Skupienie', dopelniacz: 'skupienia', przerwa: 750, szybciejNaPoziom: 40 },
 };
 export const PIERWSZY_POZIOM = 100;
 export const MNOZNIK_POZIOMU = 1.5;

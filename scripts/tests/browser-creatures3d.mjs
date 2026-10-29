@@ -27,7 +27,7 @@ await context.route('**/map/world.json',r=>r.fulfill({json:{lublin:[],towns:[],e
 await context.route('**/*.supabase.co/**',r=>{
   const name=new URL(r.request().url()).pathname.split('/').pop();let body=null;
   if(name==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,
-    exp:0,dead:false,age:12,konto:true,save:{coins:0,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'zelazny'}}}};
+    exp:0,dead:false,age:12,konto:true,save:{coins:0,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'zelazny'},skills:{miecz:250,luk:0,magia:0}}}};
   if(['heartbeat','logout','log_error','save_game'].includes(name))body=true;
   if(['game_content','school_quizzes','game_ports','kurier_wiesci','my_characters','game_stwory'].includes(name))body=[];
   if(name==='game_settings')body={};if(name==='server_now')body=new Date().toISOString();return r.fulfill({json:body});

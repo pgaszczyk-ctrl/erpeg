@@ -21,7 +21,7 @@ import { TEX } from '../art';
 import { OSTROSC } from '../screen';
 import { session } from '../quests';
 import {
-  meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, blockChance, rangedWeapon, gear, skillLevel,
+  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, blockChance, rangedWeapon, gear, skillLevel,
   ammoOf, takeAmmo,
 } from '../inventory';
 import { AMUNICJA } from '../content/zuzycie';
@@ -883,6 +883,8 @@ export class TuryWalki {
   private planCiosuOblicz(q: Uczestnik, mocny: boolean, atak?: RodzajAtaku): PlanCiosu {
     const p = this.h.player;
     const koszt = atak ? atak.koszt : mocny ? WT.koszt.mocny : WT.koszt.cios;
+    const requirement = weaponRequirement(gear.equip.bron);
+    if (requirement) return { ok: false, koszt, tekst: requirement };
     const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
     const bron = this.broni();
     const nazwa = atak ? atak.nazwa : bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? (this.nowy ? 'Mocny atak' : 'Mocny cios') : (this.nowy ? 'Atak' : 'Cios');
