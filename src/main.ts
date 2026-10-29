@@ -1,3 +1,5 @@
+import { updateMusic } from './music';
+import { loadingMapVisible } from './ui/loadingMap';
 import { gear } from './inventory';
 import { ustawGre } from './sesja';
 import Phaser from 'phaser';
@@ -118,3 +120,14 @@ setInterval(() => {
 (window as unknown as { __game: Phaser.Game }).__game = game;
 (window as unknown as { __session: typeof session }).__session = session;
 (window as unknown as { __gear: typeof gear }).__gear = gear;
+
+
+// Music starts with the authenticated, revealed map and continues through paused dialogs.
+game.events.on('step', () => {
+  const scene = game.scene.getScene('game') as GameScene | undefined;
+  const running = game.scene.isActive('game') || game.scene.isPaused('game');
+  const ready = running && scene?.player && session.token && !loadingMapVisible() && !document.getElementById('menu');
+  const state = ready ? scene.musicState() : null;
+  if (state && game.scene.isActive('arena')) state.combat = true;
+  updateMusic(state);
+});
