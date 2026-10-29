@@ -45,7 +45,7 @@ const reset=()=>game(()=>{
 });
 const shot=name=>page.screenshot({path:`work/creatures3d/${tag}-${name}.png`});
 try{
-  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=Jam&kod=ANGELIKA');
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1&mieszkancy3d=0#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(()=>window.__game?.scene.getScene('game').ludzik3d?.widoczny&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
   if(process.env.MODELS_OFF==='1'){
     assert.equal(await game(()=>!!window.__game.scene.getScene('game').stwory3d),false);
@@ -124,7 +124,7 @@ try{
   await page.waitForFunction(()=>window.__game.scene.getScene('game').stwory3d!==window.__oldModels);
   assert.equal(await game(()=>window.__oldModels.stats.contexts),0);assert.deepEqual(errors,[]);assert.equal(warnings.length,1);
   // Explicit comparison switch disables downloads and the shared renderer.
-  await page.goto('http://127.0.0.1:4173/?stwory3d=0&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
+  await page.goto('http://127.0.0.1:4173/?stwory3d=0&mieszkancy3d=0&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(()=>window.__game?.scene.getScene('game').player&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:60000});
   assert.equal(await game(()=>!!window.__game.scene.getScene('game').stwory3d),false);
   const result={tag,browser:browser.version(),gallery,poses,emission,crowd,modelFrames,spriteFrames,wargRequests,errors,expectedWarnings:warnings.length,

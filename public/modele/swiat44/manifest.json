@@ -464,15 +464,15 @@
   },
   "pies": {
     "file": "/modele/swiat44/pies.glb",
-    "triangles": 1156,
-    "nodes": 24,
+    "triangles": 3010,
+    "nodes": 26,
     "clips": {
       "idle": 2.4,
       "walk": 0.95,
-      "sit": 1.45,
+      "sit": 1.6,
       "wag": 1.4
     },
-    "bytes": 156760,
+    "bytes": 331516,
     "grips": []
   }
 }

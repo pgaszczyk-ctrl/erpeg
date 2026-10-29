@@ -12,7 +12,7 @@ html = next(ast.literal_eval(n.value) for n in module.body
             if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'html' for t in n.targets))
 start = html.index('<p>')
 end = html.index('</p>', start) + 4
-html = html[:start] + '<p>28 zaakceptowanych modeli G008: przeciwnicy, mieszkańcy i pies. Wybierz postać, animację i obrót. To podgląd zasobów — podłączenie tych modeli w świecie gry jest jeszcze do wykonania.</p>' + html[end:]
+html = html[:start] + '<p>28 modeli: przeciwnicy i mieszkańcy G008 oraz zaakceptowany pies chibi G010. Wybierz postać, animację i obrót. Te modele są podłączone w świecie gry na serwerze testowym.</p>' + html[end:]
 html = html.replace('Samodzielny podgląd offline.', 'Podgląd na serwerze testowym. Modele pobierane z tej samej paczki GLB, którą otrzymała gra.')
 html = html.replace('Obejrzyj dołączoną planszę i animacje GIF.', 'Spróbuj przeglądarki z obsługą WebGL.')
 html = html.replace('<p id="error"></p>', '<p id="error" role="status">Ładowanie modeli…</p>')
