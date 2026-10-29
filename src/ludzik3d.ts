@@ -148,7 +148,7 @@ export class Ludzik3D {
 
   /** The authored swing crosses its forward arc around 40% of the attack clip. */
   get attackEventMs(): number | undefined {
-    return this.g && this.pokazany ? this.g.atak.getClip().duration * .40 / LUDZIK_3D.tempoAtaku * 1000 : undefined;
+    return this.g && this.pokazany ? this.g.atak.getClip().duration * .40 / this.g.atak.timeScale * 1000 : undefined;
   }
 
   private equipmentKey = '';
@@ -283,6 +283,10 @@ export class Ludzik3D {
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
     g.atak.stop();
     g.atakGora.stop();
+    // A fast weapon must reach the audible part before the next legal attack restarts its clip.
+    const pace = (this.scene as Phaser.Scene & { player?: Player }).player?.attackCooldown ?? 320;
+    const speed = sound ? Math.max(LUDZIK_3D.tempoAtaku, g.atak.getClip().duration * .40 / (Math.max(80, pace) * .85 / 1000)) : LUDZIK_3D.tempoAtaku;
+    g.atak.timeScale = g.atakGora.timeScale = speed;
     (g.chodNogi.isRunning() ? g.atakGora : g.atak).reset().play();
     this.attackSound = sound ? { fn: sound, leadMs } : undefined;
     this.emitAttackSound();

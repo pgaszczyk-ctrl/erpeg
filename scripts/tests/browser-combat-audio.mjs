@@ -60,6 +60,19 @@ for (const phone of [false,true]) {
   assert(sound.remaining!==null&&Math.abs((sound.actionAt-sound.at)-sound.remaining)<5,`hero ${id} follows the actual mixer clock, including delayed frames`);
  }
  await reset();
+ // At high weapon skill a fresh legal blow must not restart the model before its sound can fire.
+ await g(()=>{const s=window.__game.scene.getScene('game');window.__gear.equip.bron='zelazny';
+  s.player.attackCooldown=130;s.player.lastAttack=-Infinity;window.__accepted=0;
+  window.__resolveAttack=s.resolveAttack;s.resolveAttack=function(...args){window.__accepted++;return window.__resolveAttack.apply(this,args);};});
+ for(let i=0;i<5;i++){
+  if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
+  await page.waitForTimeout(160);
+ }
+ await page.waitForTimeout(450);
+ const rapid=await g(()=>{const s=window.__game.scene.getScene('game');s.resolveAttack=window.__resolveAttack;s.player.attackCooldown=320;
+  return{accepted:window.__accepted,sounds:window.__sounds.filter(s=>s.id==='sword-light').length};});
+ assert(rapid.accepted>=3);assert.equal(rapid.sounds,rapid.accepted,'every accepted rapid attack has its own sound');
+ await reset();
  // Cue cropping aligns bow release / spell emergence with the real projectile creation.
  for(const [kind,strong,id] of [['luk',false,'bow-quick'],['luk',true,'bow-power'],['magia',false,'fireball'],['magia',true,'heatwave']]){
   const r=await g(([kind,strong])=>{const s=window.__game.scene.getScene('game');window.__gear.ammo.strzaly=20;
@@ -105,7 +118,7 @@ for (const phone of [false,true]) {
  await page.screenshot({path:`work/combat-audio/${tag}.png`});
  const stats=await g(()=>({ready:window.__game.scene.getScene('game').combatAudio.ready,starts:window.__audioStarts.length,running:window.__audioStarts.every(s=>s.state==='running')}));
  assert(stats.running);assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
- results.push({tag,stats,enemyResults,errors,failed});await context.close();
+ results.push({tag,rapid,stats,enemyResults,errors,failed});await context.close();
 }
 await writeFile('work/combat-audio/results.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
 }finally{await browser.close();await new Promise(r=>server.httpServer.close(r));}
