@@ -45,6 +45,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  assert(await page.locator('.c-card-name').evaluate(e=>getComputedStyle(e).fontFamily.includes('Comic Neue')));
  assert(await page.locator('.sl-cell > .weapon-quality').evaluateAll(nodes=>nodes.every(e=>{const s=e.parentElement.getBoundingClientRect();return [...e.children].every(i=>{const r=i.getBoundingClientRect();return r.left>=s.left+2&&r.right<=s.right-2&&r.bottom<=s.bottom-2;});})));
  assert((await page.locator('.weapon-card').innerText()).includes('Wymaga krzepy'));
+ assert(await page.locator('.c-actions button').last().evaluate(e=>{const r=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom;}),'action button fits the card without scrolling');
  await page.screenshot({path:`work/comic-hud/${name}-weapon.png`});
  // Tap a backpack weapon: it has one quality dot and its own base damage range.
  const slot=page.locator('.sl-cell[data-zone="bag"][data-key="0"]');
