@@ -116,16 +116,34 @@ export class Stwory3D {
       finally{this.requests.delete(id);}
     })();this.requests.set(id,request);
   }
+  private attackAnchor(model: Model, clipName: string, duration: number) {
+    const events = model.events;
+    const jump = ['lunge', 'pounce'].includes(clipName);
+    const event = clipName === 'throw' ? events.throwEvents?.release : clipName === 'stomp' ? events.stompEvents?.impact
+      : clipName === 'charge' ? events.chargeEvents?.windupEnd : jump ? (events.pounceEvents?.takeoff ?? events.attackEvents?.takeoff) : events.attackEvents?.impact;
+    return Math.min(duration - .01, event ?? duration * .5);
+  }
+  /** Use the exact same piecewise clip clock as rendering, including wolf takeoff → jaw impact. */
+  attackMarkerMs(actor: Slime, marker: 'impact'): number | undefined {
+    const attack = actor.modelAttack, id = MODELE_STWOROW[actor.kindId], model = id && this.models.get(id);
+    if (!attack || !model) return;
+    const clip = model.clips.get(attack.clip) ?? model.clips.get('attack');
+    if (!clip) return;
+    const event = (['lunge', 'pounce'].includes(attack.clip) ? model.events.pounceEvents?.[marker] : undefined) ?? model.events.attackEvents?.[marker];
+    if (event === undefined) return;
+    const anchor = this.attackAnchor(model, attack.clip, clip.duration);
+    const at = event <= anchor ? attack.start + event / Math.max(.01, anchor) * (attack.contact - attack.start)
+      : attack.contact + (event - anchor) / Math.max(.01, clip.duration - anchor) * (attack.end - attack.contact);
+    return at;
+  }
   private pose(actor:Slime,model:Model,now:number){
     if(actor.isDead)return {clip:'death',time:Math.max(0,now-actor.modelDeathAt)/1000};
     const hit=model.clips.get('hit');
     if(hit&&now-actor.modelHitAt<hit.duration*1000)return {clip:'hit',time:Math.max(0,now-actor.modelHitAt)/1000};
     const attack=actor.modelAttack;
     if(attack&&now<attack.end){
-      const clip=model.clips.get(attack.clip)??model.clips.get('attack')!,events=model.events;
-      const event=attack.clip==='throw'?events.throwEvents?.release:attack.clip==='stomp'?events.stompEvents?.impact
-        :attack.clip==='charge'?events.chargeEvents?.windupEnd:['lunge','pounce'].includes(attack.clip)?events.attackEvents?.takeoff:events.attackEvents?.impact;
-      const contact=Math.min(clip.duration-.01,event??clip.duration*.5);
+      const clip=model.clips.get(attack.clip)??model.clips.get('attack')!;
+      const contact=this.attackAnchor(model,attack.clip,clip.duration);
       const time=now<attack.contact?contact*(now-attack.start)/Math.max(1,attack.contact-attack.start)
         :contact+(clip.duration-contact)*(now-attack.contact)/Math.max(1,attack.end-attack.contact);
       return {clip:clip.name,time:Math.max(0,time)};

@@ -24,6 +24,8 @@ import Phaser from 'phaser';
 import type { Slime } from './Slime';
 import { PX_PER_M } from '../map/CityMap';
 import type { ProfilStwora } from '../content/lowiska';
+import type { CombatAudio } from '../audio/CombatAudio';
+import { enemyMeleeSound } from '../audio/combatCatalog';
 
 export interface StworHost {
   scene: Phaser.Scene;
@@ -41,6 +43,8 @@ export interface StworHost {
   inni: (s: Slime) => { x: number; y: number }[];
   /** Optional GLB emitter, sampled at the actual combat event. */
   origin?: (s: Slime, node: string, now: number) => { x: number; y: number } | undefined;
+  sounds?: CombatAudio;
+  attackMarker?: (s: Slime) => number | undefined;
 }
 
 type Stan = 'patrol' | 'podejscie' | 'czeka' | 'zapowiedz' | 'atak' | 'odpoczynek' | 'powrot';
@@ -69,6 +73,10 @@ export class StworAI {
   private taranGotowyOd = 0;
   private krazenie = Math.random() < 0.5 ? 1 : -1;
   private readonly P: ProfilStwora;
+  private soundStops: (() => void)[] = [];
+  private silence() { for (const stop of this.soundStops) stop(); this.soundStops = []; }
+  private audible = () => this.s.active && !this.s.isDead && this.s.visible && !this.s.isDazed(this.h.scene.time.now)
+    && Math.hypot(this.s.x - this.h.player.x, this.s.y - this.h.player.y) < 180;
 
   constructor(
     private h: StworHost,
@@ -88,6 +96,7 @@ export class StworAI {
   }
 
   destroy() {
+    this.silence();
     this.gfx.destroy();
     this.gfxPociski.destroy();
     this.pociski = [];
@@ -110,6 +119,7 @@ export class StworAI {
     // Ogłuszony ciosem bohatera / esencją: przerywa wszystko (odrzut prowadzi Slime).
     if (s.ogluszony(now) || s.isDazed(now)) {
       if (this.stan === 'zapowiedz' || this.stan === 'atak') {
+        this.silence();
         s.modelAttack = undefined;
         this.gfx.clear();
         this.zwolnijRezerwacje();
@@ -121,6 +131,7 @@ export class StworAI {
     }
 
     if (this.stan !== 'patrol' && this.stan !== 'powrot' && odDomu > this.home.r * 1.3) {
+      this.silence();
       s.modelAttack = undefined;
       this.zwolnijRezerwacje();
       this.gfx.clear();
@@ -255,6 +266,7 @@ export class StworAI {
   }
 
   private zacznij(now: number, atak: Atak) {
+    this.silence();
     const s = this.s, p = this.h.player, P = this.P;
     this.atak = atak;
     this.stan = 'zapowiedz';
@@ -270,6 +282,10 @@ export class StworAI {
       : atak === 'skok' && P.rodzaj === 'doskok' && P.skok ? P.skok.ms
       : atak === 'doskok' && P.rodzaj === 'doskok' ? P.doskok.ms : 350;
     s.modelAttack = { clip, start: now, contact: this.until, end: this.until + motionMs, aim: this.kat };
+    if (s.kindId === 'wilk' || s.kindId === 'warg') {
+      const stop = this.h.sounds?.at('wolf-growl', 0, this.audible);
+      if (stop) this.soundStops.push(stop);
+    }
     if (atak === 'skok' && P.rodzaj === 'doskok' && P.skok) this.skokGotowyOd = now + P.skok.coMs;
     if (atak === 'taran' && P.rodzaj === 'boss') this.taranGotowyOd = now + P.taran.coMs;
   }
@@ -369,6 +385,24 @@ export class StworAI {
     const s = this.s, p = this.h.player, P = this.P;
     this.gfx.clear();
     this.trafil = false;
+    const wolf = s.kindId === 'wilk' || s.kindId === 'warg';
+    const melee = enemyMeleeSound(s.kindId);
+    if (wolf) {
+      if (this.atak === 'klin') {
+        const stop = this.h.sounds?.at('wolf-bite', 0, this.audible); if (stop) this.soundStops.push(stop);
+      } else {
+        const stop = this.h.sounds?.at('wolf-leap', 0, this.audible); if (stop) this.soundStops.push(stop);
+        const sequence = s.modelAttack;
+        const jawAt = this.h.attackMarker?.(s) ?? now + ((sequence?.end ?? now + 300) - now) * .27;
+        const bite = this.h.sounds?.at('wolf-bite', Math.max(0, jawAt - now),
+          () => this.audible() && this.stan === 'atak' && s.modelAttack === sequence);
+        if (bite) this.soundStops.push(bite);
+      }
+    } else if (melee) {
+      const stop = this.h.sounds?.at(melee, 0, this.audible); if (stop) this.soundStops.push(stop);
+    } else if (this.atak === 'rzut' && (s.kindId === 'glut' || s.kindId === 'wielki_glut')) {
+      this.h.sounds?.at('chestnut-throw', 0, this.audible);
+    }
     const dir = new Phaser.Math.Vector2(Math.cos(this.kat), Math.sin(this.kat));
     switch (this.atak) {
       case 'doskok':
@@ -494,8 +528,12 @@ export class StworAI {
       for (let i = 0; i < n; i++) {
         q.x += (q.vx * dt) / n;
         q.y += (q.vy * dt) / n;
-        if (this.h.sciana(q.x, q.y)) return false; // ściana zatrzymuje
+        if (this.h.sciana(q.x, q.y)) {
+          if (this.s.kindId === 'glut' || this.s.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-hit', 0, this.audible);
+          return false;
+        }
         if (Phaser.Math.Distance.Between(q.x, q.y, p.x, p.y - 4) <= q.r + 3) {
+          if (this.s.kindId === 'glut' || this.s.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-hit', 0, this.audible);
           this.h.hurt(new Phaser.Math.Vector2(q.x - q.vx * 0.05, q.y - q.vy * 0.05), q.obrazenie);
           return false; // trafia najwyżej raz
         }
