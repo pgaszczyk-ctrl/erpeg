@@ -578,5 +578,11 @@ Pliki: controls.ts, ui/hudLive.ts, ui/comicHud.ts, ui/hudTeleskop.ts, scenes/UIS
 Wynik prób po poprawce: pełny build i typecheck OK, workflow „HUD dungeon interaction checks” dla commitu a20423c zakończył się sukcesem (desktop + telefon poziomo + telefon obrócony, rzeczywiste przejście do lochu). Dotyk jest sprawdzany w kontekstach z hasTouch, mysz i E także na komputerze. Test korzysta z ostrosc=1 tak jak pozostałe cięższe testy walki — nie zmienia domyślnej rozdzielczości gry. Wszystkie zapisy w teście są atrapą RPC; bez zmian prawdziwych postaci.
 
 
+### 2026-10-29 — usunięcie starych ozdób spod komiksowego HUD-u
+- `src/ui/comicHud.ts`: ukryte stare tel-czapka/tel-fajka w wariancie A; paski odsunięte od portretu i od siebie (x64/y6, rozstaw 22 px).
+- Weryfikacja: tsc --noEmit + VITE_TEST=1 vite build PASS; browser-comic-hud.mjs PASS desktop 1280×800, phone 844×390, upright 390×844, zrzuty obejrzane. Pełne npm run build uruchomione, generator mapy wciąż pracował przy zapisie notatki.
+- Zmiana wyłącznie TEST; PRODUKCJA bez zmian.
+
+
 ## 29.10.2026 — muzyka z MP3 właściciela
 Podłączono cztery przesłane public/audio/*.mp3 (zweryfikowane SHA) do powierzchni, lochów i walki/areny. Nowe src/music.ts + ui/music.ts; main.ts, GameScene, UIScene i StworAI zapewniają stan świata i osobne ustawienia włącz/wyłącz + głośność. Fade po walce 2 s, bez restartów od każdego ciosu. Wyniki: TypeScript/Vite OK, test prawdziwych MP3 w Playwright PC i obrócony telefon OK, w tym faktyczne zejście i wyjście z lochu, obie melodie Caravan, audio bus suwaka i tło/logout. Fizycznego iOS nie testowano. Szczegóły i odtwarzalny test: docs/MUZYKA_20261029.md, scripts/tests/browser-music.mjs. Produkcja i SQL bez zmian. Użyto osobnej gałęzi chatgpt/muzyka-20261029, ponieważ istniejąca chatgpt/praca jest rozbieżna z gałęzią testu (bez force push).
