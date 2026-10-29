@@ -12,8 +12,8 @@ await mkdir('work/prolog',{recursive:true});
 const ring=[0,0,5760,0,0,5760,-5760,0];
 const map={unitsPerM:1.92,w:3000,h:3000,bounds:{minLat:51.2,maxLat:51.3,minLon:22.4,maxLon:22.5},boundary:[ring],areas:[['paved',ring]],lines:[['minor',0,[0,2880,5760,0],'Test road']],buildings:[],pois:[],towns:[['Lublin',2880,2880]]};
 const fresh={version:1,status:'active',stage:'intro',originMapId:'',originName:'',anchors:{},rewardsClaimed:[],storyItems:[],pendingRewards:[],bowTried:false,magicTried:false,rescueKilled:[],dungeon:null,service:'guard'};
-let saved={coins:0,story:{st:'start',walked:0,prolog:fresh},flagi:{},bag:Array.from({length:20},()=>({item:'zelazny'})),equip:{bron:'zelazny',helm:'zelazny_helm'},language:lang,look:{modul:{g:mobile?'01':'16',c:mobile?'01':'16',p:mobile?'k':'m',s:0,w:2,u:2,u2:1}}},exp=0;
-const saves=[],errors=[];let failNext=false;
+let saved={coins:0,story:{st:'start',walked:0,prolog:fresh},flagi:{},bag:Array.from({length:20},()=>({item:'zelazny'})),equip:{bron:'zelazny',helm:'zelazny_helm'},language:lang,look:{guard3d:mobile?'k':'m',modul:{g:mobile?'01':'16',c:mobile?'01':'16',p:mobile?'k':'m',s:0,w:2,u:2,u2:1}}},exp=0;
+const saves=[],errors=[];let failNext=false,failOrigin=2,originAttempts=0;
 const context=await browser.newContext({viewport:mobile?{width:844,height:390}:{width:1280,height:800},isMobile:mobile,hasTouch:mobile,locale:lang==='pl'?'pl-PL':'en-US'});
 await context.route('**/map/lublin.json',r=>r.fulfill({json:map}));
 await context.route('**/map/towns/city-b.json',r=>r.fulfill({json:{...map,bounds:{...map.bounds,minLon:29,maxLon:29.1},towns:[['City B',2880,2880]]}}));
@@ -24,6 +24,11 @@ await context.route('**/*.supabase.co/**',route=>{
  if(name==='login') console.log('login',saved.tu?.m);
  if(name==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,save:saved,exp,dead:false,died_at:null,age:6,konto:true}};
  if(name==='save_game'){
+  const prolog=req.p_save.story?.prolog;
+  if(prolog?.originMapId && !Object.keys(prolog.anchors).length){
+   originAttempts++;
+   if(failOrigin>0){failOrigin--;return route.fulfill({status:500,json:{message:'canceling statement due to statement timeout'}});}
+  }
   if(failNext){failNext=false;return route.fulfill({status:503,json:{message:'Test save unavailable'}});}
   saved=structuredClone(req.p_save);exp=req.p_exp;saves.push(structuredClone(saved));body=true;
  }
@@ -51,7 +56,19 @@ const at=async key=>evalGame(key=>{const s=window.__game.scene.getScene('game'),
 const interact=async()=>{await evalGame(()=>{const s=window.__game.scene.getScene('game');s.talkReadyAt=0;s.interactChain(s.player.hitPoint(),false,false);});};
 const kill=async mode=>evalGame(mode=>{const s=window.__game.scene.getScene('game');const es=mode==='rescue'?[...s.prolog.enemies.keys()]:s.enemies.filter(e=>s.loch.contains(e));for(const e of es){if(e.hit(s.player.getCenter(),s.time.now,10000))s.onEnemyKilled(e);}},mode);
 try{
- await go();await page.waitForFunction(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)),null,{timeout:30000});
+ await go();
+ // An actual server timeout during origin saving is a save error, held until explicit retry.
+ await page.waitForFunction(()=>/Zapis prologu|Prologue checkpoint/.test(window.__dialogi.at(-1)?.title));
+ assert.equal(originAttempts,1);
+ await page.screenshot({path:`work/prolog/${tag}-origin-timeout.png`});
+ const failedOrigin=await evalGame(()=>window.__game.scene.getScene('game').prolog.state.originMapId);
+ await page.waitForTimeout(1200);assert.equal(originAttempts,1,'no per-frame retry storm');
+ await choose(0);
+ await page.waitForFunction(()=>window.__dialogi.filter(d=>/Zapis prologu|Prologue checkpoint/.test(d.title)).length===2);
+ assert.equal(originAttempts,2,'retry repeats the unconfirmed origin save');
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.state.originMapId),failedOrigin);
+ await choose(0);
+ await page.waitForFunction(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)),null,{timeout:30000});
  const anchors=await evalGame(()=>window.__game.scene.getScene('game').prolog.state.anchors);
  await page.screenshot({path:`work/prolog/${tag}-intro.png`});
  failNext=true;await choose(0);
@@ -114,7 +131,7 @@ try{
  assert.deepEqual(saved.story.prolog.rewardsClaimed,rewards);assert.deepEqual(saved.story.prolog.pendingRewards,pending);assert.equal(exp,doneExp);
  // An old character is guided before opting in, even with low EXP and no completed old tutorial.
  map.pois=[['police','Far post',3800,2880,0],['office','Closer office',2890,2880,0],['police','Nearest post',3100,2880,0]];
- saved={coins:0,story:{st:'koniec',walked:0},flagi:{}};exp=0;await go();
+ saved={coins:0,story:{st:'koniec',walked:0},flagi:{},look:{modul:{g:'01',c:'01',p:'k',s:0,w:2,u:2,u2:1}}};exp=0;await go();
  const lead='prolog.recruit.v1:lead';
  assert.equal(await evalGame(()=>!!window.__game.scene.getScene('game').prolog.state),false);
  const guide=await evalGame(()=>window.__game.scene.getScene('game').activeQuests()[0]);
@@ -128,6 +145,8 @@ try{
  await evalGame(()=>{const s=window.__game.scene.getScene('game');s.story.goal=()=>({text:'Existing story',pos:{x:2800,y:2900}});});
  assert(await evalGame(()=>window.__game.scene.getScene('game').activeQuests().some(q=>q.id==='main')),'older quests remain available beside the invitation');
  await go();assert.equal((await evalGame(()=>window.__game.scene.getScene('game').activeQuests()[0])).id,lead,'guide returns on relog without starting the quest');
+ await page.waitForFunction(()=>!!window.__game.scene.getScene('game').ludzik3d?.g);
+ const identity=await evalGame(()=>{const g=window.__game.scene.getScene('game').ludzik3d.g;return {core:g.model.getObjectByName('core').geometry.uuid,head:g.model.getObjectByName('head').geometry.uuid};});
  const chief=await evalGame(()=>{const s=window.__game.scene.getScene('game');s.player.setPosition(3100,2880);return s.openDoorAt(3100,2880);});
  assert(chief,'the indicated real police door offers an old-character opt-in');
  assert.match(await evalGame(()=>window.__dialogi.at(-1).title),/Szef straży|Guard chief/);
@@ -135,6 +154,10 @@ try{
  await page.waitForFunction(()=>{const p=window.__game.scene.getScene('game').prolog;return p.state.anchors.mentor&&!p.busy;});
  await page.waitForFunction(()=>window.__game.scene.getScene('game').activeQuests()[0]?.id==='prolog.recruit.v1');
  assert(!(await evalGame(()=>window.__game.scene.getScene('game').activeQuests())).some(q=>q.id===lead),'acceptance replaces the invitation');
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').ludzik3d?.equipmentKey==='miecz:false');
+ assert.deepEqual(await evalGame(()=>{const g=window.__game.scene.getScene('game').ludzik3d.g;return {core:g.model.getObjectByName('core').geometry.uuid,head:g.model.getObjectByName('head').geometry.uuid};}),identity,'enrollment preserves the visible legacy guard, despite hidden female modular look');
+ await page.screenshot({path:`work/prolog/${tag}-legacy-identity.png`});
+
  // A retained global completion marker alone must hide the invitation, also after changing city.
  saved={coins:0,story:{st:'koniec',walked:0},missions:{'prolog.recruit.v1':'done'},flagi:{samouczek:1},tu:{m:'city-b',x:2880,y:2880,s:1.92}};await go();
  assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.goal()),null);
