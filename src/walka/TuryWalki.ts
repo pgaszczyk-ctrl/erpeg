@@ -7,6 +7,8 @@
 // Damage, loot, EXP, practice and wear go through GameScene's usual code.
 
 import Phaser from 'phaser';
+import type { CombatAudio } from '../audio/CombatAudio';
+import { shotSound, enemyMeleeSound } from '../audio/combatCatalog';
 import { WALKA_TUROWA as WT, ROLA_WROGA, SPOTKANIA, type RolaWWalce } from '../content/walkaTurowa';
 import { ARENA } from '../content/arena';
 import { W, nowyPanel } from './tryb';
@@ -87,6 +89,7 @@ export interface WalkaHost {
   pudlo(x: number, y: number): void;
   napis(x: number, y: number, text: string, color: string, ms?: number): void;
   zamach(aim: number, strong: boolean): void;
+  sounds?: CombatAudio;
   wzmocnienie(e: WrogWalki): number;
   nasycenie(e: WrogWalki, now: number): void;
   /** The usual camera zoom (fitZoom). */
@@ -675,6 +678,9 @@ export class TuryWalki {
   private async ciosWroga(q: Uczestnik, mnoznik = 1) {
     const p = this.h.player;
     const e = q.e;
+    const wolf = e.kindId === 'wilk' || e.kindId === 'warg';
+    const sound = wolf ? 'wolf-bite' : enemyMeleeSound(e.kindId);
+    if (sound) this.h.sounds?.at(sound, 120, () => this.aktywna && e.active && !e.isDead);
     this.patrz(e, p.x - e.x, p.y - e.y);
     const sx = e.x, sy = e.y;
     const k = 0.35;
@@ -688,6 +694,7 @@ export class TuryWalki {
   private async strzalWroga(q: Uczestnik) {
     const p = this.h.player;
     const e = q.e;
+    if (e.kindId === 'glut' || e.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-throw');
     this.patrz(e, p.x - e.x, p.y - e.y);
     const s = this.h.scene;
     const tex = e.kindId === 'wodnik' ? TEX.magicShot : TEX.arrowShot;
@@ -695,6 +702,7 @@ export class TuryWalki {
     if (e.kindId === 'wodnik') pocisk.setTint(0x7fd4ff);
     await this.tween(pocisk, { x: p.x, y: p.y - 0.4 * W }, Math.max(160, this.dist(e.x, e.y, p.x, p.y) * 4));
     pocisk.destroy();
+    if (e.kindId === 'glut' || e.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-hit');
     const koniec = this.trafBohatera(q);
     await this.czekaj(220);
     return koniec;
@@ -1105,6 +1113,7 @@ export class TuryWalki {
     const ammo = ammoOf(bron);
     if (ammo && !takeAmmo(ammo)) return;
     if (ammo) this.h.zuzyj(bron.id);
+    this.h.sounds?.at(shotSound(skill, mocny));
     p.face(e.x - p.x, e.y - p.y);
     const pocisk = this.h.scene.add.image(p.x, p.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
       .setRotation(Math.atan2(e.y - p.y, e.x - p.x)).setDepth(GLEB_GORA);

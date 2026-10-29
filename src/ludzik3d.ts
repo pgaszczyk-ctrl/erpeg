@@ -146,10 +146,17 @@ export class Ludzik3D {
   /** Is the 3D hero drawn now (for tests). */
   get widoczny() { return this.pokazany; }
 
+  /** The authored swing crosses its forward arc around 40% of the attack clip. */
+  get attackEventMs(): number | undefined {
+    return this.g && this.pokazany ? this.g.atak.getClip().duration * .40 / LUDZIK_3D.tempoAtaku * 1000 : undefined;
+  }
+
   private equipmentKey = '';
   private changing = false;
   private disposed = false;
   private pendingAim: number | null = null;
+  private pendingSound?: { fn: (remainingMs: number) => void; leadMs: number };
+  private attackSound?: { fn: (remainingMs: number) => void; leadMs: number };
   private baseHead?: THREE.BufferGeometry;
   private donors = new Map<string, Promise<import('three/examples/jsm/loaders/GLTFLoader.js').GLTF>>();
 
@@ -192,7 +199,7 @@ export class Ludzik3D {
       for(const a of [g.atak,g.atakGora]){a.setLoop(g.three.LoopOnce,1);a.clampWhenFinished=false;a.timeScale=LUDZIK_3D.tempoAtaku;}
       this.equipmentKey=key;
     } catch(e) { console.warn('Ludzik 3D: wyposażenie',e); }
-    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim;this.pendingAim=null;this.atakuj(aim);}}
+    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim,sound=this.pendingSound;this.pendingAim=null;this.pendingSound=undefined;this.atakuj(aim,sound?.fn,sound?.leadMs);}}
   }
 
   private async zaladuj() {
@@ -269,14 +276,27 @@ export class Ludzik3D {
   }
 
   /** A melee swing: the model plays its blow, turned towards the aim (radians, screen axes). */
-  atakuj(aim: number) {
+  atakuj(aim: number, sound?: (remainingMs: number) => void, leadMs = 0): boolean {
     const g = this.g;
-    if (!g) return;
-    if(this.changing){this.pendingAim=aim;return;}
+    if (!g) return false;
+    if(this.changing){this.pendingAim=aim;this.pendingSound=sound?{fn:sound,leadMs}:undefined;return true;}
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
     g.atak.stop();
     g.atakGora.stop();
     (g.chodNogi.isRunning() ? g.atakGora : g.atak).reset().play();
+    this.attackSound = sound ? { fn: sound, leadMs } : undefined;
+    this.emitAttackSound();
+    return true;
+  }
+
+  private emitAttackSound() {
+    const g = this.g, sound = this.attackSound;
+    if (!g || !sound) return;
+    const a = g.atakGora.isRunning() ? g.atakGora : g.atak;
+    const remaining = Math.max(0, (a.getClip().duration * .40 - a.time) / a.timeScale * 1000);
+    if (remaining > sound.leadMs) return;
+    this.attackSound = undefined;
+    sound.fn(remaining);
   }
 
   /** dt in seconds (GameScene.update's capped delta). */
@@ -328,6 +348,7 @@ export class Ludzik3D {
     if (g.miecz) g.miecz.visible = atakuje;
     if (this.swiatla) { this.swiatla.amb.intensity = LUDZIK_3D.otoczenie; this.swiatla.sun.intensity = LUDZIK_3D.swiatlo; }
     g.mixer.update(s);
+    this.emitAttackSound();
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
     g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;

@@ -118,6 +118,8 @@ import { DemoRun } from './Demo';
 import { SmokAI, aktualizujEfekty, wyczyscEfekty, smokSmierc, type StanGracza } from '../objects/SmokAI';
 import { GATUNKI_SMOKOW, ATAKI_SMOKA, TRUDNOSC_SMOKOW, SMOKI_NA_MAPIE, type GatunekId } from '../content/smoki';
 import { trzesienieWlaczone } from '../ustawieniaGracza';
+import { CombatAudio } from '../audio/CombatAudio';
+import { COMBAT_SOUNDS, meleeSound, shotSound } from '../audio/combatCatalog';
 import { SmokiNaMapie } from './SmokiNaMapie';
 import { Etapy } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
@@ -474,6 +476,7 @@ export class GameScene extends Phaser.Scene {
   private lochy?: LochyWejscia;
   private loch?: LochWnetrze;
   private wilki = new Map<Enemy, StworAI>();
+  private combatAudio!: CombatAudio;
   /** Boss's stomp: the hero walks slower until then (one at a time, never stacked). */
   private spowolnienieDo = 0;
   private spowolnienie = 1;
@@ -490,6 +493,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.combatAudio?.destroy();
+    this.combatAudio = new CombatAudio(this);
     // Include create() itself: preparing the first chunks can occupy several seconds.
     this.introSince = loadingGame() ? this.time.now : null;
     // Keep workers/updates active without competing with the opaque intro for
@@ -1812,16 +1817,17 @@ export class GameScene extends Phaser.Scene {
     const drill = !!this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 1.5, ranged ? (ranged.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz');
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
     const gathering = !!ranged && !fighting && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    // An interaction is not a blow (and must not play its sound).
+    const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
+    if (!live() && this.interactChain(hit, strong, foeNear)) return;
     // The weapon flies across only in a fight or at a training station; otherwise just a faint trace of the arm.
     if (!ranged || gathering) {
-      this.ludzik3d?.atakuj(swingAim);
+      this.animateMelee(swingAim, strong);
       if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
       else this.faintSwing(swingAim);
     }
     // Old controls: a swing also talks, opens doors and stalls, calls a coachman. New controls (walka/live.ts):
     // only a double tap does (interact()), a swing is only a swing.
-    const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
-    if (!live() && this.interactChain(hit, strong, foeNear)) return;
     if (ranged && !gathering) {
       if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
       return;
@@ -2063,6 +2069,14 @@ export class GameScene extends Phaser.Scene {
 
   private swingSide = 1;
 
+  private animateMelee(aim: number, strong: boolean) {
+    const id = meleeSound(gear.equip.bron, strong);
+    const epoch = this.combatAudio.epoch;
+    const sound = (ms: number) => { if (this.combatAudio.epoch === epoch) this.combatAudio.at(id, ms, () => !this.player.isDead && !this.leaving); };
+    // The mixer fires when the arm reaches the sample's lead-in, also after an asynchronous weapon swap.
+    if (!this.ludzik3d?.atakuj(aim, sound, COMBAT_SOUNDS[id].cue * 1000)) sound(WALKA.ciosMs * (strong ? 1.6 : 1) * .206);
+  }
+
   /**
    * The weapon in hand flies across in front of the hero, from left to right
    * and next time from right to left (content/walka.ts WALKA). A strong
@@ -2241,6 +2255,8 @@ export class GameScene extends Phaser.Scene {
       scene: this,
       player: this.player,
       origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
+      sounds: this.combatAudio,
+      attackMarker: (s) => this.stwory3d?.attackMarkerMs(s, 'impact'),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
         const blocked = Math.random() < blockChance();
@@ -2663,7 +2679,8 @@ export class GameScene extends Phaser.Scene {
       koniec: (wynik, kto) => this.koniecWalki(wynik, kto as Enemy[]),
       pudlo: (x, y) => this.missText(x, y),
       napis: (x, y, t, c, ms) => this.floatText(x, y, t, c, ms),
-      zamach: (aim, strong) => this.swingWeapon(aim, strong),
+      zamach: (aim, strong) => { this.animateMelee(aim, strong); this.swingWeapon(aim, strong); },
+      sounds: this.combatAudio,
       wzmocnienie: (e) => this.essenceBoost(imbueOf(gear.equip.bron)?.e, e as Enemy),
       nasycenie: (e, now) => this.essenceHit(imbueOf(gear.equip.bron)?.e, e as Enemy, now),
       zoomZwykly: () => {
@@ -3538,6 +3555,7 @@ export class GameScene extends Phaser.Scene {
    */
   private offerRescue() {
     if (this.naNoszach) return;
+    this.combatAudio.stop();
     this.naNoszach = true;
     this.lingerUntil = 0;
     this.damageCarry = 0;
@@ -5938,9 +5956,9 @@ export class GameScene extends Phaser.Scene {
     const a0 = Math.atan2(base.y, base.x);
     const katy = u.id === 'salwa' ? [-0.2, 0, 0.2] : u.id === 'wachlarz' ? [-0.5, -0.25, 0, 0.25, 0.5] : [0];
     this.bezKosztuStrzalu = true; // the skill was paid as a whole above
-    for (const k of katy) {
+    for (const [i, k] of katy.entries()) {
       // A volley's side arrows fly where they are aimed (no aim help that would bring them all onto one target).
-      this.fireShot(weapon, { x: Math.cos(a0 + k), y: Math.sin(a0 + k) }, katy.length === 1, now);
+      this.fireShot(weapon, { x: Math.cos(a0 + k), y: Math.sin(a0 + k) }, katy.length === 1, now, i === 0);
       this.lastShot = now;
     }
     this.bezKosztuStrzalu = false;
@@ -5979,6 +5997,7 @@ export class GameScene extends Phaser.Scene {
   private zamach(now: number) {
     const reach = this.swingReach(1.3);
     this.drawSweep(0, Math.PI * 2, reach);
+    this.animateMelee(Math.atan2(this.player.facing.y, this.player.facing.x), true);
     this.swingWeapon(Math.atan2(this.player.facing.y, this.player.facing.x), true);
     let landed = false;
     for (const e of [...this.enemies]) {
@@ -6026,7 +6045,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
-  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number) {
+  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true) {
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     dir = this.aimAssist(dir, skill);
     this.lastShot = now;
@@ -6061,6 +6080,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.facing.set(dir.x, dir.y);
     this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x));
+    if (sound) this.combatAudio.at(shotSound(skill, strong || this.bezKosztuStrzalu), 0, () => !this.player.isDead && !this.leaving);
     this.prolog?.shot(skill);
     const speed = skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED;
     // Starts at the hero, so nothing standing right next to them is skipped.
