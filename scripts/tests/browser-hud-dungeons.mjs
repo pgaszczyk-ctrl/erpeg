@@ -40,27 +40,39 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const cdp=await context.newCDPSession(page);
  const tap=async(x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
  const checks=[];
+ const physical=([x,y])=>name==='upright'?[y,height-x]:[x,y];
  for(const method of ['E','map-double','attack-double','touch-attack-double','touch-map-double','range-E']){
   await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;s.player.setPosition(window.__w.x,window.__w.y+10);s.player.face(0,-1);window.__dialogs=[];});
   await page.waitForTimeout(600);
-  const physical=([x,y])=>name==='upright'?[y,height-x]:[x,y];
   const b=await page.locator('.hs-atak').boundingBox(),ax=b.x+b.width/2,ay=b.y+b.height/2;
-  const xy=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;return[(window.__w.x-c.worldView.x)*c.zoomX,(window.__w.y-c.worldView.y)*c.zoomY]});
+  const xy=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;const ratio=window.__game.scale.width/window.innerWidth;return[(window.__w.x-c.worldView.x)*c.zoomX/ratio,(window.__w.y-c.worldView.y)*c.zoomY/ratio]});
   const [mx,my]=physical(xy);
   if(method==='E')await page.keyboard.press('KeyE');
   if(method==='map-double')await page.mouse.dblclick(mx,my,{delay:75});
   if(method==='attack-double')await page.mouse.dblclick(ax,ay,{delay:75});
   if(method==='touch-attack-double'){await tap(ax,ay);await page.waitForTimeout(75);await tap(ax,ay);}
   if(method==='touch-map-double'){await tap(mx,my);await page.waitForTimeout(75);await tap(mx,my);}
-  if(method==='range-E'){await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby()});await page.locator('.hs-picker input').focus();await page.keyboard.press('KeyE');}
+  if(method==='range-E'){await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby()});await page.locator('.hs-picker input').focus();await page.keyboard.press('ArrowRight');assert.equal(await g(()=>window.__session.umiej.miecz),'zamach');await page.keyboard.press('KeyE');}
   await page.waitForTimeout(800);
   checks.push(await g(method=>{const s=window.__game.scene.getScene('game');return{method,dialogs:window.__dialogs.map(d=>d.title),ui:window.__game.scene.getScene('ui').hasDialog,hp:s.player.hp,dist:Math.hypot(s.player.x-window.__w.x,s.player.y-window.__w.y),combat:s.inCombat(),focus:document.activeElement?.outerHTML.slice(0,100)}},method));
  }
+ // The actual confirmation must use the drawn UI button, not its callback.
+ await g(()=>{document.activeElement?.blur();const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;window.__dialogs=[];});
+ await page.keyboard.press('KeyE');
+ await page.waitForFunction(()=>window.__game.scene.getScene('ui').hasDialog);
+ await page.waitForTimeout(400);
+ const button=await g(()=>{const u=window.__game.scene.getScene('ui'),b=u.dialogButtons.find(b=>b.index===0).rect.getBounds();return[b.centerX,b.centerY]});
+ const [bx,by]=physical(button);
+ await page.screenshot({path:`work/comic-hud/${name}-dungeon-confirm.png`});
+ if(mobile)await tap(bx,by);else await page.mouse.click(bx,by);
+ await page.waitForFunction(()=>!!window.__game.scene.getScene('game').city.loch&&window.__game.scene.isActive('game'),null,{timeout:30000});
+ checks.push({method:'confirm-enter',entered:true});
  console.log(name,JSON.stringify(checks));
+ for(const check of checks) if(check.method!=='confirm-enter') assert(check.dialogs.some(d=>/Krypta/.test(d)),`${name}: ${check.method} opens the crypt`);
+ assert.deepEqual(errors,[]);
  await page.screenshot({path:`work/comic-hud/${name}-dungeon-diagnosis.png`});
  await cdp.detach();
  results.push({name,checks,errors});await context.close();
 }
 await writeFile('work/comic-hud/dungeon-diagnosis.json',JSON.stringify(results,null,2));
 } finally {await browser.close();await new Promise(r=>server.httpServer.close(r));}
-

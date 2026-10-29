@@ -194,7 +194,10 @@ const tapListeners = new Set<TapListener>();
 /** A key pressed while typing in a text field (bug report, codes…) is the player's text, never a game key (report 58). */
 export function typingInField(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null;
-  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  // Range navigation stays native, but E/WASD/Space must still work after selecting a skill.
+  if (t?.tagName === 'INPUT' && (t as HTMLInputElement).type === 'range')
+    return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key);
+  return !!t && ((t.tagName === 'INPUT' && (t as HTMLInputElement).type !== 'range') || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
 }
 
 /** The ☰ menu button's corner of the screen (CSS px; UIScene opens the menu on a tap there). */
