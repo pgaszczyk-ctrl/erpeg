@@ -1,3 +1,5 @@
+import { openMusic } from '../ui/music';
+import { tx } from '../i18n';
 import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
@@ -1024,12 +1026,14 @@ export class UIScene extends Phaser.Scene {
     const game = this.scene.get('game') as GameScene;
     // „📲 Zainstaluj grę” (an app icon on the phone/computer) – not when it already runs as the installed app.
     const INSTALUJ = '📲 Zainstaluj grę';
+    const MUZYKA = tx('♫ Muzyka', '♫ Music');
     const SMOK = '🐉 Smok (test)';
     const WSTECZ = '⬅ Wstecz';
     const guziki = [
       `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`,
       `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`,
       `⚖ Poziom trudności: ${session.level.nazwa}`,
+      MUZYKA,
       ...(TEST ? [SMOK] : []),
       ...(jakoAplikacja() || offline.demo ? [] : [INSTALUJ]),
       WSTECZ,
@@ -1040,6 +1044,11 @@ export class UIScene extends Phaser.Scene {
       buttons: guziki,
       onChoose: (k) => {
         const label = guziki[k];
+        if (label === MUZYKA) {
+          game.scene.pause();
+          void openMusic().finally(() => { game.scene.resume(); this.openSettingsMenu(); });
+          return;
+        }
         if (label === WSTECZ) { this.openGameMenu(); return; }
         if (label === INSTALUJ) {
           void zainstaluj().then((r) => {
@@ -1217,3 +1226,4 @@ export function ramkaKomiks(scene: Phaser.Scene, x: number, y: number, w: number
   g.fillStyle(ciemny, (o.alfa ?? 1) * 0.9).fillRect(x + b, y + h - b - e - 1, w - 2 * b, e + 1).fillRect(x + w - b - e, y + b, e, h - 2 * b);
   return g;
 }
+

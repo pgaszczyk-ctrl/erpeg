@@ -91,6 +91,11 @@ export class StworAI {
     if (profil.rodzaj === 'boss') s.heavy = true;
   }
 
+  /** Chasing / attacking counts as a fight; retreating home does not. */
+  get inCombat() {
+    return this.s.active && !this.s.isDead && this.stan !== 'patrol' && this.stan !== 'powrot';
+  }
+
   get rodzaj() {
     return this.P.rodzaj;
   }
@@ -550,3 +555,4 @@ export class StworAI {
     });
   }
 }
+

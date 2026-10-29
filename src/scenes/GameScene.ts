@@ -1565,6 +1565,16 @@ export class GameScene extends Phaser.Scene {
     if (dy && free(a.x, fy + dy)) a.y += dy;
   }
 
+  /** Music observes encounter state, never the generic proximity/save restriction. */
+  musicState() {
+    if (this.leaving || this.player.isDead) return null;
+    return { underground: !!this.city?.loch,
+      combat: !!this.walka?.aktywna || this.duelHp !== null || this.atakiWrecz > 0 || this.atakiDystans > 0
+        || [...this.wilki.values()].some(ai => ai.inCombat)
+        || [...this.dragons.keys()].some(e => e.active && !e.isDead && Math.hypot(e.x - this.player.x, e.y - this.player.y) < 180),
+    };
+  }
+
   // ------------------------------------------------------------------ combat
 
   /**
