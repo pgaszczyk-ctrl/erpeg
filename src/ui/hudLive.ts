@@ -174,8 +174,12 @@ export function zamontujHudLive() {
   slider.type = 'range'; slider.min = '0'; slider.step = '1';
   slider.setAttribute('aria-label', 'Wybierz umiejętność');
   picker.append(slider);
-  for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'keyup'])
+  for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click'])
     picker.addEventListener(type, e => e.stopPropagation());
+  // Range navigation belongs to the selector; gameplay keys and Escape still reach the game.
+  for (const type of ['keydown', 'keyup']) picker.addEventListener(type, e => {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes((e as KeyboardEvent).key)) e.stopPropagation();
+  });
   slider.addEventListener('input', () => {
     const u = ostatnieZasoby?.wybor?.[Number(slider.value)];
     if (u) ostatnieZasoby?.wybierz?.(u.id);

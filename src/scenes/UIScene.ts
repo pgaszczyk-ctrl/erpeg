@@ -462,7 +462,7 @@ export class UIScene extends Phaser.Scene {
       this.joyBase = this.add.image(0, 0, 'comic-joystick').setDisplaySize(JOY_RADIUS * 2, JOY_RADIUS * 2.08);
     } else this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
-    if (comicHud && live()) this.joyKnob.setFillStyle(0x514d49, 1).setStrokeStyle(4, 0x19171b);
+    if (comicHud && live()) this.joyKnob.setFillStyle(0x514d49, 1).setStrokeStyle(3, 0x19171b);
     // Four arrows on the rim, so it reads as a joystick.
     const g = this.add.graphics();
     g.fillStyle(comicHud && live() ? 0xd5ab60 : 0xffffff, comicHud && live() ? 1 : 0.55);

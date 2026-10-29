@@ -535,6 +535,7 @@ function uklad() {
   skala = telefon() || window.innerHeight < 560 ? 1 : Math.min(3, Math.max(2, Math.round(window.innerHeight / 330 * 4) / 4));
   root.style.setProperty('--tel-mx', `${L.margines.x}px`);
   root.style.setProperty('--tel-my', `${L.margines.y}px`);
+  if (comicHud && document.body.classList.contains('hud-comic-a') && skala > 1) skala *= .8;
   root.style.transform = skala === 1 ? '' : `scale(${skala})`;
   rysujZbiornik();
 }
@@ -643,8 +644,8 @@ function rysujZbiornik() {
     // Keep the EXP chamber and current face; forge a broad comic rim over the old fine edge.
     oc.beginPath();
     for(let i=0;i<8;i++) { const a=(i+.5)*Math.PI/4, x=C+79*Math.cos(a), y=C+79*Math.sin(a);if(i)oc.lineTo(x,y);else oc.moveTo(x,y); }
-    oc.closePath();oc.strokeStyle='#19171b';oc.lineWidth=15;oc.stroke();
-    oc.strokeStyle='#d5a446';oc.lineWidth=9;oc.stroke();
+    oc.closePath();oc.strokeStyle='#19171b';oc.lineWidth=10;oc.stroke();
+    oc.strokeStyle='#d5a446';oc.lineWidth=6;oc.stroke();
     for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4;oc.beginPath();oc.arc(C+78*Math.cos(a),C+78*Math.sin(a),3,0,Math.PI*2);oc.fillStyle='#514235';oc.fill();}
   }
   // Onto the screen at device pixels.
