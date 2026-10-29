@@ -12,10 +12,12 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="apple-mobile-web-app-title" content="Exp-lore" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="preload" href="./fonts/ComicNeue-Bold.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800&family=Pixelify+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap" rel="stylesheet" />
     <style>
+      @font-face { font-family: "Comic Neue"; src: url("./fonts/ComicNeue-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
       html, body { margin: 0; padding: 0; height: 100%; background: #1b2a1b; overflow: hidden; touch-action: none; overscroll-behavior: none;
         -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
       #game { width: 100vw; height: 100vh; height: 100dvh; }
@@ -542,12 +544,13 @@
       #character .weapon-card .c-card-head { flex-direction: column; align-items: center; text-align: center; }
       #character .weapon-card .c-card-icon { width: 128px; height: 140px; background: radial-gradient(ellipse, #73532c, #291b12); position: relative; }
       #character .weapon-card .c-card-icon .item-ico { width: 112px; height: 112px; object-fit: contain; image-rendering: pixelated; }
-      .weapon-quality { display: flex; gap: 3px; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); pointer-events: none; }
-      .weapon-quality i { display: block; width: 4px; height: 4px; background: #382d25; border: 1px solid #160f0a; box-shadow: 1px 1px #160f0a; }
+      .weapon-quality { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: calc(100% - 10px); max-width: 32px; pointer-events: none; }
+      .weapon-quality i { display: block; box-sizing: border-box; min-width: 0; height: 5px; background: #382d25; border: 1px solid #160f0a; }
       .weapon-quality i.filled { background: #ffcf64; }
-      #character .weapon-card .weapon-quality { bottom: 7px; gap: 5px; }
-      #character .weapon-card .weapon-quality i { width: 6px; height: 6px; }
-      #character .sl-cell > .weapon-quality { z-index: 2; bottom: 3px; }
+      #character .weapon-card .weapon-quality { bottom: 7px; max-width: 48px; gap: 3px; }
+      #character .weapon-card .weapon-quality i { height: 7px; }
+      .sl-cell > .weapon-quality { z-index: 2; bottom: 3px; }
+      .sl-cell:has(> .weapon-quality) .sl-pic { transform: translateY(-3px); }
       #character .weapon-card .c-stat { gap: 8px; flex-wrap: wrap; }
       #character .weapon-card .c-stat-v { overflow-wrap: anywhere; }
       @media (max-width: 960px) and (orientation: landscape) {
@@ -560,6 +563,30 @@
         #character .k-wrap { grid-template-columns: minmax(0, 1fr); }
         #character .k-wrap > .k-card.c-actions { max-height: 420px; }
         #character .k-cols { grid-template-columns: minmax(0, 1fr); }
+      }
+
+      #character .c-requirement { color: #932e20; font-size: 14px; line-height: 1.2; }
+      html.exp-obrot #character .k-wrap { grid-template-columns: minmax(145px, .85fr) minmax(155px, 1fr) minmax(200px, 1.1fr); gap: 10px; }
+      html.exp-obrot #character .k-wrap > .k-card.c-actions { min-height: 160px; max-height: calc(var(--obr-h) - 130px); }
+      /* A comic equipment card pinned to the board, with its own readable surface. */
+      #character .k-wrap > .k-card.c-actions { padding: 10px; font-family: 'Comic Neue', cursive; font-weight: 700; }
+      #character .k-wrap .c-card-body { box-sizing: border-box; background: #eedab0; color: #352319; text-shadow: none; border: 2px solid #30221b; border-radius: 7px 4px 6px 3px; box-shadow: 2px 3px 0 #412919; padding: 10px; gap: 10px; }
+      #character .k-wrap .c-card-head { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; text-align: left; }
+      #character .k-wrap .c-card-icon { position: relative; width: 88px; height: 96px; border: 0; background: radial-gradient(ellipse, #d6ad66, transparent 72%); }
+      #character .k-wrap .c-card-icon .item-ico { width: 80px; height: 80px; object-fit: contain; }
+      #character .k-wrap .c-card-name { font: 700 22px/1.1 'Comic Neue', cursive; color: #352319; text-shadow: none; overflow-wrap: anywhere; }
+      #character .k-wrap .c-card-body .c-statlist { gap: 0; }
+      #character .k-wrap .c-card-body .c-stat { color: #513b29; font-size: 16px; line-height: 1.2; gap: 8px; padding: 7px 0; border-bottom: 1px dashed #ad8b56; }
+      #character .k-wrap .c-card-body .c-stat:first-child { font-size: 20px; color: #352319; border-block: 2px solid #76512b; }
+      #character .k-wrap .c-card-body .c-stat-v { color: #352319; text-align: right; }
+      #character .k-wrap .c-card-desc { color: #62442c; font: 700 14px/1.25 'Comic Neue', cursive; }
+      #character .k-wrap .c-actions .c-btn { font-family: 'Comic Neue', cursive; font-weight: 700; }
+      @media (max-height: 500px), (max-width: 500px) and (orientation: portrait) {
+        #character .k-wrap .c-card-body { padding: 7px; gap: 6px; }
+        #character .k-wrap .c-card-head { gap: 7px; }
+        #character .k-wrap .c-card-name { font-size: 18px; }
+        #character .k-wrap .c-card-body .c-stat { font-size: 13px; padding: 5px 0; }
+        #character .k-wrap .c-card-body .c-stat:first-child { font-size: 17px; }
       }
     </style>
   </head>

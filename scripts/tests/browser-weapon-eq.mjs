@@ -33,7 +33,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const g=fn=>page.evaluate(fn);
  await g(()=>{const s=window.__game.scene.getScene('game');s.noHurtUntil=Infinity;s.protectUntil=Infinity;window.__session.immortal=true;for(const e of s.enemies)e.destroy();s.enemies=[];});
 
- await g(()=>{window.__gear.equip.bron='stalowy_jakosc4';window.__gear.bag=[{item:'zelazny_jakosc0'}];window.__game.scene.getScene('ui').openCharacter('eq');});
+ await g(()=>{window.__gear.skills.miecz=2000;window.__gear.equip.bron='stalowy_jakosc4';window.__gear.bag=[{item:'zelazny_jakosc0'}];window.__game.scene.getScene('ui').openCharacter('eq');});
  await page.locator('#character .weapon-card').waitFor();
  assert.equal(await page.locator('.weapon-card .weapon-quality i.filled').count(),5);
  assert((await page.locator('.weapon-card').innerText()).includes('11–14'));
@@ -41,6 +41,10 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const img=page.locator('.weapon-card .c-card-icon img');
  assert(await img.evaluate(e=>e.complete && e.naturalWidth>0));
  assert((await img.boundingBox()).width>=76);
+ await page.evaluate(()=>document.fonts.ready);
+ assert(await page.locator('.c-card-name').evaluate(e=>getComputedStyle(e).fontFamily.includes('Comic Neue')));
+ assert(await page.locator('.sl-cell > .weapon-quality').evaluateAll(nodes=>nodes.every(e=>{const s=e.parentElement.getBoundingClientRect();return [...e.children].every(i=>{const r=i.getBoundingClientRect();return r.left>=s.left+2&&r.right<=s.right-2&&r.bottom<=s.bottom-2;});})));
+ assert((await page.locator('.weapon-card').innerText()).includes('Wymaga krzepy'));
  await page.screenshot({path:`work/comic-hud/${name}-weapon.png`});
  // Tap a backpack weapon: it has one quality dot and its own base damage range.
  const slot=page.locator('.sl-cell[data-zone="bag"][data-key="0"]');
@@ -49,6 +53,19 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  assert.equal(await page.locator('.weapon-card .weapon-quality i.filled').count(),1);
  assert((await page.locator('.weapon-card').innerText()).includes('5–7'));
  assert(!(await page.locator('.weapon-card').innerText()).includes('Aktywny atak specjalny'));
+ // Locked weapons show the requirement and cannot be equipped even with high character EXP.
+ await g(()=>{window.__gear.skills.miecz=0;window.__session.exp=1000000;});
+ await slot.dispatchEvent('pointerdown',{pointerId:2,clientX:1,clientY:1});
+ await slot.dispatchEvent('pointerup',{pointerId:2,clientX:1,clientY:1,bubbles:true});
+ assert((await page.locator('.weapon-card').innerText()).includes('Za niski poziom umiejętności'));
+ assert.equal(await page.locator('.c-actions button').filter({hasText:/^Załóż$/}).count(),0);
+ await page.screenshot({path:`work/comic-hud/${name}-locked.png`});
+ await g(()=>{window.__gear.bag[0]={item:'luk_rekruta'};});
+ await slot.dispatchEvent('pointerdown',{pointerId:3,clientX:1,clientY:1});
+ await slot.dispatchEvent('pointerup',{pointerId:3,clientX:1,clientY:1,bubbles:true});
+ assert((await page.locator('.weapon-card .c-card-icon img').getAttribute('src')).endsWith('items/luk.png'));
+ assert((await page.locator('.weapon-card').innerText()).includes('Wymaga celności'));
+ await page.screenshot({path:`work/comic-hud/${name}-bow.png`});
  assert.deepEqual(errors,[]);
  console.log(`PASS ${name}: large weapon card, image, damage, actual active skill, quality and bag selection`);
  await context.close();

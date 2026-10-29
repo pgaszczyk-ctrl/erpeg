@@ -15,6 +15,8 @@ export const ITEM_PICTURES = [
   'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera', 'cukierniczy_cylinder',
 ];
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
+const QUEST_PICTURES: Record<string, string> = { miecz_rekruta: 'zelazny', luk_rekruta: 'luk', rozdzka_szkolna: 'rozdzka', kapelusz_szkolny: 'czapka_maga' };
+const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
 const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
 
 /** Detailed illustrations released in 1.015, without resampling the original files. */
@@ -60,7 +62,7 @@ export const ITEM_VARIANTS = [...Object.values(CRACKED), ...AMMO_PICTURES, ...MA
 
 /** The picture file for an item now (its cracked variant when worn down). */
 function pictureOf(id: string) {
-  const base = PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
+  const base = pictureBase(id);
   const v = CRACKED[base];
   if (!v) return base;
   const c = condition(id);
@@ -69,17 +71,17 @@ function pictureOf(id: string) {
 
 /** Phaser texture key of an item's picture, or null. */
 export function itemTexture(id: string) {
-  return HAVE.has(PRZEDMIOTY.find(p => p.id === id)?.baza ?? id) ? `item-${pictureOf(id)}` : null;
+  return HAVE.has(pictureBase(id)) ? `item-${pictureOf(id)}` : null;
 }
 
 /** The picture's URL (relative, like the game's base ./), or null when the item has none yet. */
 export function itemPictureUrl(id: string): string | null {
-  return HAVE.has(PRZEDMIOTY.find(p => p.id === id)?.baza ?? id) ? itemAssetUrl(pictureOf(id)) : null;
+  return HAVE.has(pictureBase(id)) ? itemAssetUrl(pictureOf(id)) : null;
 }
 
 /** An <img> of the item, or null when it has no picture yet. */
 export function itemIcon(id: string, className = 'item-ico'): HTMLImageElement | null {
-  if (!HAVE.has(PRZEDMIOTY.find(p => p.id === id)?.baza ?? id)) return null;
+  if (!HAVE.has(pictureBase(id))) return null;
   const img = document.createElement('img');
   img.src = itemAssetUrl(pictureOf(id)); // relative: the game is built with base ./
   img.className = className;

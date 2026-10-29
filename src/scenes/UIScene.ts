@@ -278,7 +278,7 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [big, sub], alpha: 0, delay: 2600, duration: 600, onComplete: () => { big.destroy(); sub.destroy(); } });
   }
 
-  /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
+  /** "Krzepa – poziom 2" with a bar filling up to the next level. */
   private showPractice(p: { skill: string; into: number; need: number; max: boolean; gain?: number }) {
     this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
     const full = 70 * this.ui;

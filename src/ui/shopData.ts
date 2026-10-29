@@ -1,4 +1,4 @@
-import type { Przedmiot } from '../content/przedmioty';
+import { UMIEJETNOSCI, type Przedmiot } from '../content/przedmioty';
 import { itemPictureUrl, goodsPicture } from './itemIcon';
 import type { Grupa } from '../content/sklepy';
 
@@ -38,6 +38,7 @@ export function shopItem(p: Przedmiot, index: number, price: number): ShopEntry 
     description: p.opis ?? (p.miejsce === 'bron' ? 'Solidna broń na kolejne wyprawy.' : 'Ochrona przydatna podczas wędrówki.'),
     stats: [
       ...(!p.pojazd ? [[p.rodzaj === 'magia' ? 'Moc magii' : p.miejsce === 'bron' ? 'Obrażenia' : 'Obrona', String(p.moc)] as [string, string]] : []),
+      ...(p.miejsce === 'bron' ? [[`Wymaga ${UMIEJETNOSCI[p.rodzaj ?? 'miecz'].dopelniacz}:`, String(p.wymaganySkill ?? 1)] as [string, string]] : []),
       ...(p.wytrzymalosc ? [['Wytrzymałość', `${p.wytrzymalosc}/${p.wytrzymalosc}`] as [string, string]] : []),
     ],
     price: p.cenaDiamenty ?? price, diamonds: !!p.cenaDiamenty, action: 'KUP', refresh: true,

@@ -76,7 +76,7 @@ import { WORKSHOP_LOCATIONS } from '../content/warsztaty-miejsca';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
+  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
@@ -1819,6 +1819,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private resolveAttack(hit: Phaser.Math.Vector2, now: number, strong = false) {
+    const requirement = weaponRequirement(gear.equip.bron);
+    if (requirement) { this.toast(requirement, 1500); return; }
     this.rozmowca = null; // a talk or a door below names the new speaker
     const swingAim = Math.atan2(hit.y - (this.player.y + 2), hit.x - this.player.x);
     const ranged = rangedWeapon();
@@ -2458,7 +2460,7 @@ export class GameScene extends Phaser.Scene {
     this.dialog({
       title: `⚖ ${T.sedzia}`,
       text: T.powitanie.replace('{wpisowe}', String(ARENA.wpisowe)).replace('{nagroda}', String(ARENA.nagroda)),
-      buttons: [`⚔ Walka na Arenie Cechu (${ARENA.wpisowe} 💰)`, '🏆 Ranking Areny', ...(live() ? ['🎯 Trening umiejętności (miecz, łuk)'] : []), 'Do widzenia'],
+      buttons: [`⚔ Walka na Arenie Cechu (${ARENA.wpisowe} 💰)`, '🏆 Ranking Areny', ...(live() ? ['🎯 Trening krzepy i celności'] : []), 'Do widzenia'],
       onChoose: (i) => {
         if (i === 0) this.arenaRywal();
         else if (i === 1) this.arenaRanking();
@@ -5939,6 +5941,8 @@ export class GameScene extends Phaser.Scene {
    * own cooldown. Not enough: false and a word why (nothing taken). Old controls: always free.
    */
   private zaplacMocny(skill: Umiejetnosc): boolean {
+    const requirement = weaponRequirement(gear.equip.bron);
+    if (requirement) { this.toast(requirement, 1500); return false; }
     if (!live()) return true;
     const lvl = poziomPostaci(session.exp);
     if (zasoby.czas - zasoby.mocnyAt < ZASOBY.mocnyCooldownS) return false;
@@ -5962,6 +5966,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
   private specjalny(now: number) {
+    if (weaponRequirement(gear.equip.bron)) { this.toast(weaponRequirement(gear.equip.bron)!, 1500); return; }
     if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.player.isDead || now < this.lingerUntil) return;
     const u = this.umiejetnosc();
     if (!this.zaplacMocny(u.bron)) return;
@@ -5992,7 +5997,7 @@ export class GameScene extends Phaser.Scene {
    */
   private wyborUmiejetnosci(bronie: Umiejetnosc[], title: string) {
     const lista = SPECJALNE.filter((u) => bronie.includes(u.bron));
-    const nazwyBroni: Record<Umiejetnosc, string> = { miecz: 'miecz', luk: 'łuk', magia: 'magia' };
+    const nazwyBroni: Record<Umiejetnosc, string> = { miecz: UMIEJETNOSCI.miecz.nazwa, luk: UMIEJETNOSCI.luk.nazwa, magia: UMIEJETNOSCI.magia.nazwa };
     const aktywna = (u: Umiej) => (session.umiej[u.bron] ?? domyslnaUmiejetnosc(u.bron).id) === u.id;
     const buttons = lista.map((u) => {
       const lvl = skillLevel(u.bron);
@@ -6068,6 +6073,7 @@ export class GameScene extends Phaser.Scene {
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
   private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true) {
+    if (weaponRequirement(weapon.id)) return;
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
     dir = this.aimAssist(dir, skill);
     this.lastShot = now;
@@ -6451,8 +6457,8 @@ export class GameScene extends Phaser.Scene {
     if (live() && !wSrodku) {
       return this.dialog({
         title: `📚 ${p.name}`,
-        text: 'Cicha czytelnia, a za regałami sala ćwiczeń magii. W co się zagłębisz?',
-        buttons: ['📚 Wejdź do biblioteki', '🎯 Ćwicz umiejętności magii', 'Wyjdź'],
+        text: 'Cicha czytelnia, a za regałami sala ćwiczeń skupienia. W co się zagłębisz?',
+        buttons: ['📚 Wejdź do biblioteki', '🎯 Ćwicz skupienie', 'Wyjdź'],
         onChoose: (i) => {
           if (i === 0) this.openLibrary(p, true);
           else if (i === 1) this.wyborUmiejetnosci(['magia'], `📚 ${p.name}`);

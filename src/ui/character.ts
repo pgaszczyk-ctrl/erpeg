@@ -9,7 +9,7 @@ const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
+  gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
 import { session, stanOsiagniec, saveNow } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
@@ -398,7 +398,7 @@ function show(host: CharacterHost) {
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
         ask(itemCard(sl.item), item(sl.item)?.pojazd || item(sl.item)?.leczenie
           ? [['Wyrzuć', () => dropFromBag(i)]]
-          : [['Załóż', () => equipFromBag(i)], ['Wyrzuć', () => dropFromBag(i)]]);
+          : [...(weaponRequirement(sl.item) ? [] : [['Załóż', () => equipFromBag(i)] as [string, () => void]]), ['Wyrzuć', () => dropFromBag(i)]]);
       },
     });
     if (gear.equip.bron) ask(itemCard(gear.equip.bron), []);
@@ -743,8 +743,10 @@ function itemCard(id: string) {
   card.append(head);
   const list = statRows(id);
   const k = skillOfItem(id);
-  if (k) list.push([UMIEJETNOSCI[k].nazwa, `poziom ${skillLevel(k)}`]);
-  if (it?.miejsce === 'bron' && k && gear.equip.bron === id) {
+  if (k && it?.miejsce === 'bron') {
+    list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(it.wymaganySkill ?? 1)]);
+  }
+  if (it?.miejsce === 'bron' && k && gear.equip.bron === id && !weaponRequirement(id)) {
     const special = ATAKI.find(u => u.id === session.umiej[k] && u.bron === k && u.poziom <= skillLevel(k)) ?? domyslnaUmiejetnosc(k);
     list.push(['Aktywny atak specjalny', special.nazwa]);
   }
@@ -753,6 +755,7 @@ function itemCard(id: string) {
   const imb = imbueOf(id);
   if (imb) list.push([`${imb.e.ikona} ${imb.e.nazwa}`, `jeszcze ${imb.minutes} min`]);
   if (list.length) card.append(rows(list));
+  if (weaponRequirement(id)) card.append(el('div', 'c-requirement', 'Za niski poziom umiejętności — nie możesz używać tej broni.'));
   if (it?.opis) card.append(el('div', 'c-card-desc', it.opis));
   if (it?.leczenie) card.append(el('div', 'c-card-desc', `Leczy: +${it.leczenie} ${it.leczenie === 1 ? 'serce' : it.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.`));
   return card;

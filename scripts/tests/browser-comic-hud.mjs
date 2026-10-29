@@ -20,7 +20,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  await context.route('**/map/world.json',r=>r.fulfill({json:{lublin:[],towns:[],edges:[]}}));
  await context.route('**/*.supabase.co/**',r=>{
   const fn=new URL(r.request().url()).pathname.split('/').pop();let body=null;
-  if(fn==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,exp:400,dead:false,age:12,konto:true,save:{coins:124,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'zelazny'},skills:{miecz:0,luk:0,magia:0},mikstury:3}}};
+  if(fn==='login')body={token:'fixture',player:{name:'Jam',idik:'ANGELIKA',start_place:'Lublin',start_x:2880,start_y:2880,map_scale:1.92,exp:400,dead:false,age:12,konto:true,save:{coins:124,story:{st:'koniec',walked:99},flagi:{samouczek:1},equip:{bron:'zelazny'},skills:{miecz:250,luk:0,magia:0},mikstury:3}}};
   if(fn==='save_game'){saves.push(r.request().postDataJSON());body=true;}
   if(['heartbeat','logout','log_error'].includes(fn))body=true;
   if(['game_content','school_quizzes','game_ports','kurier_wiesci','my_characters','game_stwory'].includes(fn))body=[];
@@ -84,17 +84,17 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  await page.waitForTimeout(1000);
  const cd=await page.locator('.hs-cd').evaluate(e=>e.style.getPropertyValue('--cd'));
  assert(parseFloat(cd)>0&&parseFloat(cd)<100,'visible progressive cooldown');
- // Real enemy hit path: decimal damage, misses and lethal overkill, one popup per accepted hit.
+ // Real enemy hit path: rounded damage, misses and lethal overkill, one popup per accepted hit.
  const burst=await g(()=>{
   const s=window.__game.scene.getScene('game'),p=s.player;
   const e=s.spawnEnemy(p.x+12,p.y,'comic-fixture','wilk');e.brain=()=>e.vel.set(0,0);window.__comicVictim=e;
   const hp=e.hp;e.hit(p,s.time.now,2.5);s.missText(p.x-15,p.y);
   return {hp,bubbles:s.children.list.filter(o=>o.name?.startsWith('comic-')).map(o=>o.name)};
  });
- assert(burst.bubbles.includes('comic-hit:2,5!'));assert(burst.bubbles.includes('comic-miss:PUDŁO'));
+ assert(burst.bubbles.includes('comic-hit:3'));assert(burst.bubbles.includes('comic-miss:PUDŁO'));
  await page.screenshot({path:`work/comic-hud/${name}-combat.png`});
  await g(()=>{const s=window.__game.scene.getScene('game');window.__comicVictim.hit(s.player,s.time.now,10000);});
- assert(await g(()=>window.__game.scene.getScene('game').children.list.some(o=>o.name==='comic-hit:7,5!')),'overkill shows actual remaining HP');
+ assert(await g(()=>window.__game.scene.getScene('game').children.list.some(o=>o.name==='comic-hit:8')),'overkill shows actual remaining HP');
  await page.waitForTimeout(1300);
  assert.equal(await g(()=>window.__game.scene.getScene('game').children.list.filter(o=>o.name?.startsWith('comic-hit:')||o.name?.startsWith('comic-miss:')).length),0,'effects removed');
  if(mobile)assert(await g(()=>window.__game.scene.getScene('ui').joyBase.texture.key==='comic-joystick'));
