@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { comicHud } from '../ui/comicHud';
+import { comicBurst } from '../ui/comicBurst';
+import { live } from '../walka/live';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
@@ -325,7 +328,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (this.isDead || this.inAir) return false;
+    const applied = Math.min(Math.max(0, damage), this.hp);
     this.hp -= damage;
+    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied);
     this.modelHitAt = now;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);

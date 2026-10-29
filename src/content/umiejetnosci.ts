@@ -1,3 +1,5 @@
+// TEST HUD A (29 Oct 2026): the selector also switches level-unlocked skills of the current weapon.
+// Training-place selection stays available; production keeps its training-only rule until release.
 // The skill on the „special” button (new controls test, walka/live.ts). One active skill per weapon kind,
 // changed ONLY at a training place (owner, 26 Oct 2026: „umiejętności będziemy zmieniać tylko w ośrodkach
 // treningowych takich jak stadiony, siłownie lub biblioteki w przypadku magów”): sword and bow skills at a

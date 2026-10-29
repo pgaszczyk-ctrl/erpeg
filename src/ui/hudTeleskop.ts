@@ -1,3 +1,5 @@
+import { comicHud } from './comicHud';
+
 // The telescopic HUD with the glass EXP reservoir (artist 39-G004/39-G005 „zbiornik_v3.1”, owner 18 Oct 2026; test
 // server with turn fights). Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait
 // inside a brass ring whose glass chamber holds the EXP liquid (its share of the chamber's area = the share of EXP to
@@ -637,6 +639,14 @@ function rysujZbiornik() {
   }
   oc.drawImage(obraz('zbiornik_szklo'), 0, 0);
   oc.drawImage(obraz('portret_oprawa'), 0, 0);
+  if (comicHud && document.body.classList.contains('hud-comic-a')) {
+    // Keep the EXP chamber and current face; forge a broad comic rim over the old fine edge.
+    oc.beginPath();
+    for(let i=0;i<8;i++) { const a=(i+.5)*Math.PI/4, x=C+79*Math.cos(a), y=C+79*Math.sin(a);if(i)oc.lineTo(x,y);else oc.moveTo(x,y); }
+    oc.closePath();oc.strokeStyle='#19171b';oc.lineWidth=15;oc.stroke();
+    oc.strokeStyle='#d5a446';oc.lineWidth=9;oc.stroke();
+    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4;oc.beginPath();oc.arc(C+78*Math.cos(a),C+78*Math.sin(a),3,0,Math.PI*2);oc.fillStyle='#514235';oc.fill();}
+  }
   // Onto the screen at device pixels.
   const d = Math.max(1, Math.min(3, Math.round((window.devicePixelRatio || 1) * skala)));
   const w = L.portret * d;
