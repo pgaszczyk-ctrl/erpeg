@@ -4,6 +4,7 @@ import { wallHeight, WALL_SKEW, WALLS_UP } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
 import { MGLA } from '../content/mgla';
 import { SKALA_PLIKOW } from '../content/swiat';
+import { kodujKawalek, dekodujKawalek } from './mglaZapis';
 
 // Fog of war:
 // - clear: what the hero sees right now (a cone where they look, a small
@@ -23,19 +24,6 @@ const RAY_STEP_DEG = 2;
 const MARCH = 4; // px per ray step
 const FOG_RES = 2; // world px per fog-canvas pixel
 
-const b64 = {
-  enc(bytes: Uint8Array) {
-    let s = '';
-    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-    return btoa(s);
-  },
-  dec(str: string) {
-    const s = atob(str);
-    const out = new Uint8Array(s.length);
-    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
-    return out;
-  },
-};
 
 /** Marks a whole building (roof and walls) as seen. */
 export function markBuilding(explored: Explored, city: CityMap, b: Building) {
@@ -82,7 +70,7 @@ export class Explored {
     return c[(gy - cy * CHUNK_CELLS) * CHUNK_CELLS + (gx - cx * CHUNK_CELLS)] === 1;
   }
 
-  /** Bit-packed, base64 per chunk; positions depend on the map scale. */
+  /** One string per chunk (map/mgla.ts: run lengths or packed bits); positions depend on the map scale. */
   /** Which chunks hold something explored (the map screen's rough "known land"), without encoding them. */
   chunkKeys(): { s: number; chunks: Record<string, string> } {
     return { s: PX_PER_M, chunks: Object.fromEntries([...this.chunks.keys()].map((k) => [k, ''])) };
@@ -93,7 +81,7 @@ export class Explored {
     for (const [k, c] of this.chunks) {
       const bits = new Uint8Array(c.length / 8);
       for (let i = 0; i < c.length; i++) if (c[i]) bits[i >> 3] |= 1 << (i & 7);
-      chunks[k] = b64.enc(bits);
+      chunks[k] = kodujKawalek(bits);
     }
     return { s: PX_PER_M, chunks };
   }
@@ -103,7 +91,7 @@ export class Explored {
     if (!data) return;
     const k = PX_PER_M / (data.s || PX_PER_M);
     for (const [key, v] of Object.entries(data.chunks)) {
-      const bits = b64.dec(v);
+      const bits = dekodujKawalek(v);
       const c = new Uint8Array(CHUNK_CELLS * CHUNK_CELLS);
       for (let i = 0; i < c.length; i++) c[i] = (bits[i >> 3] >> (i & 7)) & 1;
       if (Math.abs(k - 1) < 1e-6) {

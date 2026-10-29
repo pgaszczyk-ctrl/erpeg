@@ -18,11 +18,13 @@ try {
   const context = await browser.newContext({ viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 860 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
   const errors = [];
   const saves = [];
-  await context.route('**/*.supabase.co/**', (route) => {
+  const PELNY_STARY = Buffer.alloc(512, 255).toString('base64'); // a fully seen chunk in the old format
+  let wolnyZapisMs = 0; // a slow save (bug report 74): going down must not wait for it
+  await context.route('**/*.supabase.co/**', async (route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
     let body = null;
-    if (path.endsWith('/login')) body = { token: 't', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000, map_scale: 1.92, save: { coins: 500, story: { st: 'start', walked: 0 } }, exp: 400, dead: false, died_at: null, age: 12 } };
+    if (path.endsWith('/login')) body = { token: 't', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000, map_scale: 1.92, save: { coins: 500, story: { st: 'start', walked: 0 }, fogs: { 'w:50.0000,20.0000': { s: 1.92, chunks: { '0,0': PELNY_STARY } } } }, exp: 400, dead: false, died_at: null, age: 12 } };
     if (path.endsWith('/game_settings')) body = {};
     if (path.endsWith('/game_stwory')) body = {};
     if (path.endsWith('/game_content') || path.endsWith('/school_quizzes')) body = [];
@@ -31,6 +33,7 @@ try {
     if (path.endsWith('/settings')) body = { external: { google: false } };
     if (path.endsWith('/save_game')) {
       try { saves.push(JSON.parse(req.postData() ?? '{}')); } catch { /* ignore */ }
+      if (wolnyZapisMs) await new Promise((r) => setTimeout(r, wolnyZapisMs));
       body = true;
     }
     if (path.endsWith('/heartbeat')) body = true;
@@ -73,7 +76,7 @@ try {
   const [z1, z2, z3] = kroki;
   console.log('zoom', z0, z1, z2, z3);
   assert(z1 > z0 && z1 < z2, 'step 1 closer than usual');
-  assert.equal(z2, z0 * 2, 'step 2 twice as close');
+  assert(z2 >= z0 * 2, 'step 2 at least twice as close (steps are whole multiples of GEN_DOTS)');
   assert.equal(z3, z0, 'back to the usual');
 
   // 2. The crypt by a cemetery (Cmentarz przy ul. Lipowej).
@@ -102,8 +105,14 @@ try {
   console.log('pytanie', JSON.stringify(d1));
   assert(/Krypta/.test(d1.title), 'the crypt asks first');
   const zapisowPrzed = saves.length;
+  wolnyZapisMs = 8000;
+  const t0 = Date.now();
   await wybierz(0);
   await page.waitForFunction(() => window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game'), null, { timeout: 30000 });
+  const wejscieMs = Date.now() - t0;
+  wolnyZapisMs = 0;
+  console.log('zejście trwało', wejscieMs, 'ms (zapis udaje 8 s)');
+  assert(wejscieMs < 7000, 'going down does not wait for a slow save');
   await page.waitForTimeout(2500);
   await hook();
   const wLochu = await g(() => {
@@ -117,6 +126,11 @@ try {
   assert(wLochu.lamp && wLochu.fogDark, 'dark: the lamp burns');
   assert(saves.length > zapisowPrzed, 'saved before going down');
   const ostatni = saves.at(-1);
+  // Old fog from the login went once, short; later saves leave that map out (the server keeps it).
+  const swiat = saves.map((z) => (z.p_save ?? z).fogs?.['w:50.0000,20.0000']).filter(Boolean);
+  assert(swiat.length >= 1 && swiat[0].chunks['0,0'] === '~AIAg', 'old world fog sent once in the short format');
+  assert.equal(swiat.length, 1, 'the unchanged world map is sent only once');
+  assert.equal((ostatni?.p_save ?? ostatni)?.fogsCzesc, true, 'only changed fog maps are sent (fogsCzesc)');
   console.log('zapis tu', JSON.stringify(ostatni?.p_save?.tu ?? ostatni?.tu ?? null));
   await page.screenshot({ path: `work/lochy-${tag}-start.png` });
 
@@ -165,6 +179,9 @@ try {
   if (tu) assert(!String(tu.m).startsWith('loch:'), 'a save in a dungeon keeps the entrance on the surface');
 
   // 5. Cleared floor: return from the treasure room without walking to the stairs.
+  // The chest's dialog pauses the game for a moment after it closes; the button acts only in a running game.
+  await page.waitForFunction(() => window.__game.scene.isActive('game'), null, { timeout: 10000 });
+  await page.waitForTimeout(1000); // the button fades in
   await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).click();
   await page.waitForFunction(() => !window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 });
   await page.waitForTimeout(1500);

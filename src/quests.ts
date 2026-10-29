@@ -31,6 +31,7 @@ import type { Proba } from './content/probyMaga';
 import { live } from './walka/live';
 import { freshProlog } from './prolog/state';
 import { zapiszZasoby, wczytajZasoby } from './content/zasoby';
+import { scisnijMgle } from './map/mglaZapis';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -89,6 +90,8 @@ export const session = {
   fog: undefined as SaveData['fog'],
   /** Explored parts of the town maps (by town id). */
   fogs: {} as NonNullable<SaveData['fogs']>,
+  /** Maps whose fog changed since the last save (only these are sent; the server keeps the rest). */
+  fogsZmienione: new Set<string>(),
   /** The map the hero is on: 'lublin' or a town id (a coachman takes them there). */
   mapId: 'lublin',
   /** Where the hero appears after a coach ride (the station on the new map). */
@@ -264,8 +267,17 @@ export function startSession(r: LoginResult) {
   const k = PX_PER_M / (p.map_scale ?? 4);
   session.startX = p.start_x * k;
   session.startY = p.start_y * k;
-  session.fog = p.save.fog;
+  // Fog in the short format (map/mglaZapis.ts); maps still in the old long one go with the next save.
+  session.fog = scisnijMgle(p.save.fog) ?? p.save.fog;
   session.fogs = { ...(p.save.fogs ?? {}) };
+  session.fogsZmienione = new Set();
+  for (const [id, m] of Object.entries(session.fogs)) {
+    const krotsza = scisnijMgle(m);
+    if (krotsza) {
+      session.fogs[id] = krotsza;
+      session.fogsZmienione.add(id);
+    }
+  }
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
   if (r.newCharacter && live() && !session.story.prolog) session.story.prolog = freshProlog();
@@ -325,6 +337,13 @@ export function stanOsiagniec(): StanDoOsiagniec {
   };
 }
 
+/** The fog of the maps explored since the last save (the server keeps the others, save_game). */
+function zmienioneMgly(): NonNullable<SaveData['fogs']> {
+  const out: NonNullable<SaveData['fogs']> = {};
+  for (const id of session.fogsZmienione) if (session.fogs[id]) out[id] = session.fogs[id];
+  return out;
+}
+
 /** Sends the current progress to the server. */
 let saveChain: Promise<unknown> = Promise.resolve();
 export function saveNow(hp: number) {
@@ -336,7 +355,7 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
+    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: zmienioneMgly(), fogsCzesc: true, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     tu: session.tu && { m: session.tu.m, x: Math.round(session.tu.x), y: Math.round(session.tu.y), s: PX_PER_M },
     zasoby: zapiszZasoby(), umiej: session.umiej,
@@ -345,9 +364,15 @@ export function saveNow(hp: number) {
   // Card/clue checkpoints can happen close together. An older request must never overwrite
   // a newer completion; snapshot before queuing so later choices cannot mutate a pending save.
   const snapshot=structuredClone(data), token=session.token, exp=session.exp;
+  const wyslane=Object.keys(data.fogs ?? {});
+  session.fogsZmienione.clear();
   const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
   saveChain=next;
-  next.catch((e) => { if (toWygasla(e)) sesjaWygasla(token); });
+  next.catch((e) => {
+    // Not saved: those maps' fog has to go with the next save.
+    for (const id of wyslane) session.fogsZmienione.add(id);
+    if (toWygasla(e)) sesjaWygasla(token);
+  });
   return next;
 }
 
