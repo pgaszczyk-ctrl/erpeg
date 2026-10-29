@@ -140,6 +140,8 @@ import { live, skrotKamery } from '../walka/live';
 import { wymusPoziom, zwolnijPoziom } from '../ui/poziomo';
 import { ZASOBY, zasoby, wydajStamine, wydajMane, udzialStaminy, wyczerpany, regenerujZasoby, maxStaminy, maxMany } from '../content/zasoby';
 import { ustawZasobyHud } from '../ui/hudLive';
+import { comicHud } from '../ui/comicHud';
+import { comicBurst } from '../ui/comicBurst';
 import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
 
 const HEART_DROP_CHANCE = 0.25;
@@ -1586,6 +1588,7 @@ export class GameScene extends Phaser.Scene {
 
   /** "pudło!" floating up over an enemy that was missed. */
   private missText(x: number, y: number) {
+    if (comicHud && live()) { comicBurst(this, x, y - 12, 'miss'); return; }
     const t = this.add
       .text(x, y - 12, 'pudło!', { fontFamily: 'monospace', fontSize: '7px', color: '#e8e4f0', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
       .setOrigin(0.5, 1)
@@ -1724,7 +1727,20 @@ export class GameScene extends Phaser.Scene {
     ustawZasobyHud({
       s: zasoby.s, sMax: maxStaminy(lvl), m: zasoby.m, mMax: maxMany(lvl),
       magia: this.handSkill() === 'magia', wyczerpany: wyczerpany(lvl), bezpiecznie: this.bezpiecznie,
-      umiej: u, gotowy: zasoby.czas - zasoby.mocnyAt >= ZASOBY.mocnyCooldownS,
+      umiej: u, aktywna: u.id,
+      wybor: comicHud ? SPECJALNE.filter(v => v.bron === u.bron && skillLevel(v.bron) >= v.poziom) : undefined,
+      wybierz: comicHud ? (id) => {
+        const next = SPECJALNE.find(v => v.id === id && v.bron === this.handSkill() && skillLevel(v.bron) >= v.poziom);
+        const hidden = document.querySelector('#hud-ster.off, #hud-ster.dim');
+        if (!next || this.player.isDead || this.witam || hidden || !this.scene.isActive()) return;
+        if (this.umiejetnosc().id === next.id) return;
+        session.umiej[next.bron] = next.id;
+        this.emitZasoby();
+        // Keep combat switching free of save-point side effects and success toasts.
+        if (!this.inCombat()) this.save(true);
+      } : undefined,
+      cooldown: 1 - (zasoby.czas - zasoby.mocnyAt) / ZASOBY.mocnyCooldownS,
+      gotowy: zasoby.czas - zasoby.mocnyAt >= ZASOBY.mocnyCooldownS,
       stac: u.bron === 'magia' ? zasoby.m >= ZASOBY.koszt.mocnyCzar : zasoby.s >= ZASOBY.koszt.mocny,
     });
   }
@@ -4019,13 +4035,13 @@ export class GameScene extends Phaser.Scene {
     else session.fogs[this.city.id] = this.explored.serialize();
   }
 
-  private save() {
+  private save(quiet = false) {
     this.keepFog();
     // New controls test (walka/live.ts, point 7): every save keeps the hero's spot; the next login starts there.
     if (live() && !this.player.isDead) session.tu = this.miejsceZapisu();
     saveNow(this.player.hp)
       // The demo saves nothing (offline.demo), so it says nothing either.
-      .then(() => { if (!demo.on) this.toast('Gra zapisana'); })
+      .then(() => { if (!demo.on && !quiet) this.toast('Gra zapisana'); })
       .catch((e: Error) => this.toast(`Nie udało się zapisać: ${e.message}`));
   }
 
@@ -5897,7 +5913,7 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
-  /** The chosen skill of the weapon in hand (content/umiejetnosci.ts; changed only at training places). */
+  /** The chosen weapon skill: training places, plus the TEST comic HUD selector (level-gated). */
   umiejetnosc(): Umiej {
     const b = this.handSkill();
     const id = session.umiej[b];

@@ -11,6 +11,7 @@ import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { wersjaNapis, TEST } from '../version';
+import { comicHud, paintBrassPad } from '../ui/comicHud';
 
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
@@ -62,7 +63,7 @@ export class UIScene extends Phaser.Scene {
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
-  private joyBase!: Phaser.GameObjects.Arc;
+  private joyBase!: Phaser.GameObjects.Arc | Phaser.GameObjects.Image;
   private joyKnob!: Phaser.GameObjects.Arc;
   private attackBtn!: Phaser.GameObjects.Arc;
   private attackLabel!: Phaser.GameObjects.Text;
@@ -453,13 +454,20 @@ export class UIScene extends Phaser.Scene {
   private createTouchControls() {
     // Phones/tablets show the controls right away; touch laptops once touched.
     this.touch = window.matchMedia('(pointer: coarse)').matches || touchInput.used;
-    this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
+    if (comicHud && live()) {
+      if (!this.textures.exists('comic-joystick')) {
+        const tex = this.textures.createCanvas('comic-joystick', 240, 250)!;
+        paintBrassPad(tex.getContext());tex.refresh();
+      }
+      this.joyBase = this.add.image(0, 0, 'comic-joystick').setDisplaySize(JOY_RADIUS * 2, JOY_RADIUS * 2.08);
+    } else this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
+    if (comicHud && live()) this.joyKnob.setFillStyle(0x514d49, 1).setStrokeStyle(4, 0x19171b);
     // Four arrows on the rim, so it reads as a joystick.
     const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.55);
-    const a = JOY_RADIUS * 0.78;
-    const w = 9;
+    g.fillStyle(comicHud && live() ? 0xd5ab60 : 0xffffff, comicHud && live() ? 1 : 0.55);
+    const a = JOY_RADIUS * (comicHud && live() ? 0.57 : 0.78);
+    const w = comicHud && live() ? 5 : 9;
     for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
       const tx = dx * a;
       const ty = dy * a;
@@ -1113,7 +1121,7 @@ export class UIScene extends Phaser.Scene {
     if (live()) {
       // New controls test: the joystick always stands bottom-left; the knob follows the thumb.
       for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(!this.hasDialog && !this.overlay);
-      this.joyBase.setPosition(this.joyHome.x, this.joyHome.y).setAlpha(t.joyActive ? 1 : 0.75);
+      this.joyBase.setPosition(this.joyHome.x, this.joyHome.y).setAlpha(comicHud ? 1 : t.joyActive ? 1 : 0.75);
       this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
       if (t.joyActive) this.joyKnob.setPosition(t.joyX, t.joyY);
       else this.joyKnob.setPosition(this.joyHome.x, this.joyHome.y);

@@ -9,6 +9,7 @@
 import { pressAttack, dragAttack, releaseAttack, requestStrong, requestHeal } from '../controls';
 import { naEkranie } from '../obrot';
 import { ustawRurki } from './hudTeleskop';
+import { comicHud, mountComicHud, comicIcon } from './comicHud';
 
 export interface LiveHudView {
   hp: number;
@@ -30,6 +31,10 @@ export interface LiveZasoby {
   wyczerpany: boolean;
   bezpiecznie: boolean;
   umiej: { nazwa: string; ikona: string };
+  wybor?: { id: string; nazwa: string }[];
+  wybierz?: (id: string) => void;
+  aktywna?: string;
+  cooldown?: number;
   gotowy: boolean;
   stac: boolean;
 }
@@ -72,6 +77,7 @@ let ster: HTMLDivElement | null = null;
 let el: {
   atak: HTMLButtonElement; nub: HTMLElement; atakImg: HTMLImageElement; atakTxt: HTMLElement;
   spec: HTMLButtonElement; specIk: HTMLElement; specSmall: HTMLElement; specCd: HTMLElement;
+  picker: HTMLDivElement; slider: HTMLInputElement;
   lecz: HTMLButtonElement; leczIk: HTMLElement; leczN: HTMLElement;
 } | null = null;
 
@@ -86,6 +92,7 @@ function style() {
 export function zamontujHudLive() {
   odmontujHudLive();
   style();
+  mountComicHud();
   ster = document.createElement('div');
   ster.id = 'hud-ster';
   const mk = (cls: string, label: string) => {
@@ -137,6 +144,7 @@ export function zamontujHudLive() {
 
   const spec = mk('hs-spec', 'Umiejętność (Q)');
   const specIk = document.createElement('span');
+  if (comicHud) specIk.className = 'hs-icon';
   const specCd = document.createElement('span');
   specCd.className = 'hs-cd';
   const specSmall = document.createElement('small');
@@ -148,6 +156,7 @@ export function zamontujHudLive() {
 
   const lecz = mk('hs-lecz', 'Lecz (H)');
   const leczIk = document.createElement('span');
+  if (comicHud) leczIk.className = 'hs-icon';
   const leczN = document.createElement('span');
   leczN.className = 'hs-n';
   const leczSmall = document.createElement('small');
@@ -158,12 +167,27 @@ export function zamontujHudLive() {
     requestHeal();
   });
 
-  ster.append(spec, lecz, atak);
+  // Separate selector: sliding never casts a skill or starts aiming/moving.
+  const picker = document.createElement('div');
+  picker.className = 'hs-picker'; picker.hidden = true;
+  const slider = document.createElement('input');
+  slider.type = 'range'; slider.min = '0'; slider.step = '1';
+  slider.setAttribute('aria-label', 'Wybierz umiejętność');
+  picker.append(slider);
+  for (const type of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'keyup'])
+    picker.addEventListener(type, e => e.stopPropagation());
+  slider.addEventListener('input', () => {
+    const u = ostatnieZasoby?.wybor?.[Number(slider.value)];
+    if (u) ostatnieZasoby?.wybierz?.(u.id);
+  });
+  ster.append(picker, spec, lecz, atak);
   document.body.append(ster);
-  el = { atak, nub, atakImg, atakTxt, spec, specIk, specSmall, specCd, lecz, leczIk, leczN };
+  el = { atak, nub, atakImg, atakTxt, spec, specIk, specSmall, specCd, picker, slider, lecz, leczIk, leczN };
 }
 
 export function odmontujHudLive() {
+  document.body.classList.remove('hud-comic-a');
+  ostatnieZasoby = null;
   ster?.remove();
   ster = null;
   el = null;
@@ -186,17 +210,31 @@ export function ustawHudLive(v: LiveHudView) {
     el.atakImg.hidden = true;
     el.atakTxt.hidden = false;
   }
-  el.leczIk.textContent = v.potions > 0 ? '🧪' : '🍎';
+  const heal = v.potions > 0 ? 'heal' : 'fruit';
+  if (comicHud) {
+    if (el.leczIk.dataset.icon !== heal) { el.leczIk.innerHTML = comicIcon(heal); el.leczIk.dataset.icon = heal; }
+  } else el.leczIk.textContent = v.potions > 0 ? '🧪' : '🍎';
   el.leczN.textContent = `${v.potions > 0 ? v.potions : v.fruit}`;
   el.lecz.classList.toggle('nie', v.noHeal || v.hp >= v.maxHp);
 }
 
+let ostatnieZasoby: LiveZasoby | null = null;
 export function ustawZasobyHud(z: LiveZasoby) {
+  ostatnieZasoby = z;
   ustawRurki({ s: z.magia ? z.m : z.s, sMax: z.magia ? z.mMax : z.sMax, mana: z.magia, slabo: z.wyczerpany });
   if (!el) return;
-  el.specIk.textContent = z.umiej.ikona;
+  if (comicHud) {
+    if (el.specIk.dataset.icon !== z.aktywna) { el.specIk.innerHTML = comicIcon(z.aktywna ?? 'mocny'); el.specIk.dataset.icon = z.aktywna; }
+  } else el.specIk.textContent = z.umiej.ikona;
   el.specSmall.textContent = z.umiej.nazwa.toUpperCase();
-  el.spec.title = el.spec.ariaLabel = `${z.umiej.nazwa} (Q) – zmienisz ją w ośrodku treningowym`;
+  el.spec.title = el.spec.ariaLabel = `${z.umiej.nazwa} (Q)`;
+  const choices = z.wybor ?? [];
+  el.picker.hidden = !comicHud || choices.length < 2;
+  el.slider.max = String(Math.max(0, choices.length - 1));
+  el.slider.value = String(Math.max(0, choices.findIndex(u => u.id === z.aktywna)));
+  el.slider.setAttribute('aria-valuetext', z.umiej.nazwa);
+  el.slider.title = `Przesuń, żeby zmienić umiejętność: ${choices.map(u => u.nazwa).join(' / ')}`;
+  el.spec.setAttribute('aria-disabled', String(!z.stac || !z.gotowy));
   el.spec.classList.toggle('nie', !z.stac);
-  el.specCd.style.setProperty('--cd', z.gotowy ? '0%' : '100%');
+  el.specCd.style.setProperty('--cd', `${Math.round(Math.max(0, Math.min(1, z.cooldown ?? (z.gotowy ? 0 : 1))) * 100)}%`);
 }
