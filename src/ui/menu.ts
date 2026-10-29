@@ -229,6 +229,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       // Every hero starts as a young guard (owner, 27 Oct 2026: „usuń wybór ludzików, obecnie jest tylko strażnik”;
       // the story of the hero's growth comes later): the look is drawn at random, nothing to choose here.
       const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(Math.random() < 0.5 ? 'k' : 'm') };
+      look.guard3d = look.modul!.p;
       screen(
         el('h2', {}, ['Nowa postać']),
         field('Imię', name, '⚠ Imienia nie można później zmienić.'),

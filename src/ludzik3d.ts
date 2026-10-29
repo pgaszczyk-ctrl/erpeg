@@ -157,7 +157,7 @@ export class Ludzik3D {
   private async equipment() {
     const g=this.g;
     if(!g || !session.story.prolog || this.changing || this.disposed)return;
-    const female=session.look.modul?.p==='k';
+    const female=session.look.guard3d==='k';
     const kind=item(gear.equip.bron)?.rodzaj ?? 'miecz';
     const hat=gear.equip.helm==='kapelusz_szkolny';
     const key=`${kind}:${hat}`;
@@ -170,7 +170,7 @@ export class Ludzik3D {
       };
       const id=kind==='luk'?(female?'18':'12'):kind==='magia'?(female?'mage_f':'11'):(female?'01':'16');
       const donor=await load(id);
-      const headDonor=await load(hat?(female?'mage_f':'11'):(female?'01':'16'));
+      const headDonor=hat ? await load(female?'mage_f':'11') : null;
       if(this.disposed || this.g!==g)return;
       g.mixer.stopAllAction();
       const walkLegs=g.chodNogi.getClip(), walkUpper=g.chodGora.getClip();
@@ -183,9 +183,8 @@ export class Ludzik3D {
       g.miecz=weapon;
       weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true});});
       const head=g.model.getObjectByName('head') as THREE.Mesh;
-      const dh=headDonor.scene.getObjectByName('head') as THREE.Mesh;
       this.baseHead ??= head.geometry;
-      head.geometry=dh.geometry; // the pack's male/female mage has exactly the same face and hair as its guard
+      head.geometry=headDonor ? (headDonor.scene.getObjectByName('head') as THREE.Mesh).geometry : this.baseHead;
       const c=donor.animations.find(c=>c.name==='attack')!.clone();
       const legs=(t:THREE.KeyframeTrack)=>/^(thigh|shin|foot)/.test(t.name);
       g.atak=g.mixer.clipAction(c);
@@ -203,7 +202,7 @@ export class Ludzik3D {
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const file=session.story.prolog ? `modele/postacie3d/${session.look.modul?.p==='k'?'01':'16'}.glb` : LUDZIK_3D.plik;
+      const file=session.look.guard3d==='k' ? 'modele/postacie3d/01.glb' : LUDZIK_3D.plik;
       const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${file}`);
       if(this.disposed)return;
       const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;

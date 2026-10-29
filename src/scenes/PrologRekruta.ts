@@ -42,6 +42,8 @@ export class PrologRekruta {
   private enemies = new Map<RecruitEnemy, number>();
   private rendered = '';
   private planning = false;
+  private planningFailed = false;
+  private originNeedsSave = false;
   private dirty = false;
   private destroyed = false;
   private introShown = false;
@@ -94,17 +96,28 @@ export class PrologRekruta {
     void this.change(() => {});
   }
   private async plan() {
-    if (this.planning || !this.state || this.state.status !== 'active') return;
+    if (this.planning || this.destroyed || !this.state || this.state.status !== 'active') return;
+    if (this.state.originMapId && !this.local) return;
     this.planning = true;
+    this.planningFailed = false;
+    let phase: 'save' | 'map' = 'map';
+    this.h.scene.scene.pause();
     try {
       const p = this.state;
       if (!p.originMapId) {
         p.originMapId = this.h.city.id; p.originName = this.h.mapName;
         // Record ownership before looking for POIs: another city cannot restart an interrupted plan.
         session.missions[PROLOG_ID] = 'active';
-        await this.h.save();
+        this.originNeedsSave = true;
       }
-      if (!this.local) return;
+      if (this.originNeedsSave) {
+        phase = 'save';
+        await this.h.save();
+        this.originNeedsSave = false;
+      }
+      if (this.destroyed) return;
+      if (!this.local) { this.h.scene.scene.resume(); return; }
+      phase = 'map';
       const hero = this.h.player;
       await this.h.city.ensure(hero.x, hero.y, 520*PX_PER_M);
       if (this.destroyed) return;
@@ -119,7 +132,18 @@ export class PrologRekruta {
         p.dungeon = { id: idLochu({ rodzaj: plan.dungeon.rodzaj, seed, lat: a.lat, lon: a.lon, tutorial: true }), seed, killed: [], chest: false };
       });
     } catch (e) {
-      this.h.dialog({ title: tx('Pierwsza służba', 'First duty'), text: tx('Nie udało się przygotować pobliskich, przechodnich celów. Spróbuj ponownie po dograniu mapy.', 'Nearby reachable objectives could not be prepared. Retry after the map has loaded.') + ` (${(e as Error).message})`, buttons: [tx('Spróbuj ponownie', 'Retry')], onChoose: () => { this.planning = false; void this.plan(); } });
+      if (this.destroyed) return;
+      // Wait for an explicit retry. update() must not open another dialog/request every frame.
+      this.planningFailed = true;
+      console.warn(`Prolog: ${phase}`, e);
+      this.h.dialog({
+        title: phase === 'save' ? tx('Zapis prologu', 'Prologue checkpoint') : tx('Pierwsza służba', 'First duty'),
+        text: phase === 'save'
+          ? tx('Serwer nie potwierdził zapisu rozpoczęcia służby. Postać i zadanie czekają tutaj. Ponów zapis, aby kontynuować.', 'The server did not confirm the start of your duty. Your character and quest are held here. Retry the save to continue.')
+          : tx('Nie udało się przygotować pobliskich, przechodnich celów. Spróbuj ponownie po dograniu mapy.', 'Nearby reachable objectives could not be prepared. Retry after the map has loaded.'),
+        buttons: [phase === 'save' ? tx('Ponów zapis', 'Retry save') : tx('Spróbuj ponownie', 'Retry')],
+        onChoose: () => { if (!this.destroyed) void this.plan(); },
+      });
     } finally { this.planning = false; }
   }
 
@@ -127,7 +151,7 @@ export class PrologRekruta {
     const p = this.state;
     if (!p || this.busy || this.destroyed) return;
     if (p.status !== 'active') { if (this.rendered !== p.status) { this.clearObjects(); this.rendered = p.status; if(p.status==='completed'&&this.local)this.label('mentor',tx('Starszy strażnik','Senior guard')); } return; }
-    if (!Object.keys(p.anchors).length) { if (this.h.ready()) void this.plan(); return; }
+    if (!Object.keys(p.anchors).length) { if (!this.planningFailed && this.h.ready() && !loadingMapVisible()) void this.plan(); return; }
     if (this.local && p.anchors.dungeonEntrance?.fallback) {
       const at = this.point('dungeonEntrance')!;
       this.h.entrances()?.addTutorial({ id:p.anchors.dungeonEntrance.id, ...at, seed:p.dungeon!.seed, rodzaj:'podziemia' });

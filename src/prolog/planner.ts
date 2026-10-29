@@ -44,12 +44,12 @@ export function planAnchors(city: CityMap, home: Pt, entrances: WejscieLochu[], 
   const routes = localRoutes(city, home, radius);
   if (routes.nodes.length < 4) throw new Error('Brak przechodniego miejsca zbiórki.');
   const anchor = (p: Pt, id: string, name: string, fallback: boolean): Anchor => ({ ...city.toLatLon(p.x, p.y), id, name, fallback });
-  const choose = (kinds: string[], max: number) => city.places.filter(p => kinds.includes(p.kind))
-    .map(p => ({ p, r: routes.route(p.door) })).filter(q => q.r && q.r.distance <= max)
+  const choose = (kinds: string[], max: number, min = 0) => city.places.filter(p => kinds.includes(p.kind))
+    .map(p => ({ p, r: routes.route(p.door) })).filter(q => q.r && q.r.distance >= min && q.r.distance <= max)
     .sort((a, b) => a.r!.distance - b.r!.distance)[0]?.p;
   const points = routes.nodes.filter(p => p.distance > 55 * PX_PER_M && p.distance < 160 * PX_PER_M);
   const first = points[0] ?? routes.nodes.at(-1)!;
-  const post = choose(['police'], 200 * PX_PER_M) ?? choose(['office'], 160 * PX_PER_M);
+  const post = choose(['police'], 200 * PX_PER_M, 55 * PX_PER_M) ?? choose(['office'], 160 * PX_PER_M, 55 * PX_PER_M);
   const out = post?.door ?? first;
   const v = { x: out.x - home.x, y: out.y - home.y };
   const candidates = routes.nodes.filter(p => p.distance > 75 * PX_PER_M && p.distance < 200 * PX_PER_M);

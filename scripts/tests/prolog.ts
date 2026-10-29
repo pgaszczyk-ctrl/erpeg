@@ -47,6 +47,14 @@ for(const city of [make('city-a',20),make('city-b',29)]){
  const dot=((out.x-home.x)*(amb.x-home.x)+(out.y-home.y)*(amb.y-home.y))/(Math.hypot(out.x-home.x,out.y-home.y)*Math.hypot(amb.x-home.x,amb.y-home.y));
  assert(dot<-.5,'rescue on the opposite side where reachable');
 }
+// Enrollment at a police door must send the letter somewhere else, not straight back to that door.
+const atPost=make('at-post',20),home={x:1500,y:1500};
+atPost.places.push({kind:'police',id:'current',name:'Current post',building:null,door:home});
+atPost.places.push({kind:'police',id:'other',name:'Other post',building:null,door:{x:home.x+100*PX_PER_M,y:home.y}});
+assert.equal(planAnchors(atPost,home,[],atPost.id).anchors.outpost.id,'other');
+atPost.places.pop();
+const fallback=planAnchors(atPost,home,[],atPost.id).anchors.outpost;
+assert(fallback.fallback && fallback.id!=='current','a distinct patrol point when no second post is nearby');
 for(let seed=1;seed<=100;seed++){
  const plan=planLochu('podziemia',seed,true);assert(plan.tutorial);assert.equal(plan.komnaty.length,4);
  const seen=new Set([plan.start.y*plan.w+plan.start.x]),q=[[plan.start.x,plan.start.y]];
