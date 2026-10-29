@@ -576,3 +576,9 @@ Ramy: kontur i fazy cieńsze o ok. 1/3, słabszy twardy cień, mniejszy rysunek 
 Pliki: controls.ts, ui/hudLive.ts, ui/comicHud.ts, ui/hudTeleskop.ts, scenes/UIScene.ts. Regresja: scripts/tests/browser-hud-dungeons.mjs + workflow hud-dungeon-checks.yml. Testy korzystają z izolowanego logowania/zapisu, próbują E, dwukliku w zejście i ATAK, dotyku na zejściu i ATAK, E po zmianie suwakiem, klikają rzeczywisty przycisk „Schodzę” i czekają na mapę lochu. Rozmiary 1280×800, 844×390, 390×844. Lokalnie pełny VITE_TEST=1 npm run build oraz tsc. Zrzuty i wynik przeglądarki w artefakcie CI hud-dungeon-interactions (lokalna przeglądarka usunięta przez utrzymanie środowiska, pobranie blokowane; przeglądarka uruchomiona w GitHub Actions). Produkcja bez wydania.
 
 Wynik prób po poprawce: pełny build i typecheck OK, workflow „HUD dungeon interaction checks” dla commitu a20423c zakończył się sukcesem (desktop + telefon poziomo + telefon obrócony, rzeczywiste przejście do lochu). Dotyk jest sprawdzany w kontekstach z hasTouch, mysz i E także na komputerze. Test korzysta z ostrosc=1 tak jak pozostałe cięższe testy walki — nie zmienia domyślnej rozdzielczości gry. Wszystkie zapisy w teście są atrapą RPC; bez zmian prawdziwych postaci.
+
+
+### 2026-10-29 — usunięcie starych ozdób spod komiksowego HUD-u
+- `src/ui/comicHud.ts`: ukryte stare tel-czapka/tel-fajka w wariancie A; paski odsunięte od portretu i od siebie (x64/y6, rozstaw 22 px).
+- Weryfikacja: tsc --noEmit + VITE_TEST=1 vite build PASS; browser-comic-hud.mjs PASS desktop 1280×800, phone 844×390, upright 390×844, zrzuty obejrzane. Pełne npm run build uruchomione, generator mapy wciąż pracował przy zapisie notatki.
+- Zmiana wyłącznie TEST; PRODUKCJA bez zmian.
