@@ -1,18 +1,18 @@
-# Ruchomy świat 3D — stan 28.10.2026
+# Ruchomy świat 3D — stan 29.10.2026
 
 ## Gotowe i zaakceptowane: G008
 
 28 modeli GLB / 152 klipy: 12 przeciwników, 15 wyglądów mieszkańców, pies. Modele w `public/modele/swiat44/`, źródła i instrukcje w `docs/poczta/od-grafika/44_ruchomy_swiat_3d/`. Podgląd na teście: `/test/modele-swiata.html`. Osobny plik `public/modele/wzorzec-chibi.glb` służy wyłącznie porównaniu z aktualnym Strażnikiem.
 
-PR #35 podłącza 12 modeli przeciwników (14 typów gry) przez wspólny renderer `src/stwory3d.ts`, domyślnie na TEST. Sprawdzone GLB/animacje i walka PC/telefon emulowany; raport `docs/TEST_STWORY3D_20261028.md`. Mieszkańcy/NPC i pies pozostają do podłączenia. `src/ludzik3d.ts` nadal obsługuje bohatera. Status całej paczki G008 pozostaje częściowy.
+PR #35 podłącza 12 modeli przeciwników (14 typów gry) przez wspólny renderer `src/stwory3d.ts`, domyślnie na TEST. Sprawdzone GLB/animacje i walka PC/telefon emulowany; raport `docs/TEST_STWORY3D_20261028.md`. 15 wyglądów przechodniów, mądrale i zaakceptowany pies chibi G010 są podłączone na TEST we wspólnym atlasie z przeciwnikami. `src/ludzik3d.ts` nadal obsługuje bohatera. Paczka G008 ma podłączone wszystkie 28 modeli (pies zastąpiony zaakceptowanym G010). Szczegóły: `docs/TEST_MIESZKANCY3D_20261029.md`.
 
-## Do podłączenia przez programistę
+## Podłączone na TEST
 
-- Mapowanie typów przeciwników i wyglądów mieszkańców na GLB; wielcy przeciwnicy korzystają ze skalowanych baz. Skala, stopa, zwrot, obrys, głębia, widoczność i efekt trafienia muszą odpowiadać dotychczasowej grze.
-- Animacje stania, ruchu, rozmowy, deszczu, ataku, trafienia i śmierci, z wydarzeniami walki powiązanymi z zamachem i emisją pocisku/efektu. Jednorazowo zużywać ruch korzenia skoku/szarży, z kolizjami.
-- Pies: chód/siad/merdanie; przechodnie: parasole i gesty; kolory strojów według grup palety.
-- Wspólne zarządzanie renderowaniem/cache/cullingiem. Nie tworzyć osobnego kontekstu WebGL dla każdego z 10–20 przeciwników. Zmierzyć FPS i pamięć przy grupie postaci oraz w lochu, również na fizycznym telefonie.
-- Pełny test gry: poruszanie, walka i jej zapowiedzi, pociski, śmierć/usuwanie, sceny/ponowne wczytanie, deszcz i rozmowy; brak zmiany kolizji i balansu.
+- 12 modeli przeciwników / 14 typów gry; 15 wyglądów mieszkańców dobieranych deterministycznie do płci i wieku istniejącej postaci; mądrale korzystają z tych samych baz; pies G010 na Guliwera/Cyda.
+- Chód i spoczynek, rozmowa przy zatrzymanej symulacji, deszcz z parasolem trzymanym w ręce. Pies chodzi, siada przy postoju i merda podczas rozmowy. Oryginalne zadania, nagrody, kolizje i pozycje są zachowane.
+- Jeden kontekst WebGL i atlas 32 miejsc wspólny z przeciwnikami; pierwszeństwo przeciwników, culling i powrót do sprite’a dla nadmiaru / błędu ładowania / utraty kontekstu. `?mieszkancy3d=0` wyłącza tylko mieszkańców, `?stwory3d=0` tylko przeciwników.
+- Pojedynek nadal korzysta z dotychczasowego wojownika 2D (modele mieszkańców nie zawierają attack/hit/death). Przechodzień znika na czas pojedynku i wraca później. Gazeciarz zachowuje własny wygląd.
+- Do pomiaru pozostaje fizyczny telefon; test automatyczny telefonu jest emulacją przeglądarki.
 
 ## Do przygotowania / akceptacji grafiki
 

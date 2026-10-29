@@ -5,19 +5,22 @@ import type { Slime } from './objects/Slime';
 import type { RodzajWroga } from './content/fabula';
 import { SKALA_POSTACI } from './skala';
 import { TEST } from './version';
+import { manageResident, mieszkancy3d, residentsFor, dialogueActor, releaseResidentBridge, type ResidentVisual, type ResidentSprite } from './mieszkancy3d';
 
 export const MODELE_STWOROW: Partial<Record<RodzajWroga, string>> = {
   wilk:'wilk', warg:'warg', glut:'chochlik', wielki_glut:'chochlik', bandyta:'bandyta', zombie:'zombiak',
   szkielet:'szkielet', upior:'upior_krypty', wodnik:'wodnik', blob:'wodny_blob', driada:'driada',
   herszt:'herszt', wielki_herszt:'herszt', koziol:'mosiezny_koziol',
 };
-export function stwory3d() { return TEST && new URLSearchParams(location.search).get('stwory3d') !== '0'; }
+function enemiesEnabled(){return TEST&&new URLSearchParams(location.search).get('stwory3d')!=='0';}
+export function stwory3d(){return enemiesEnabled()||mieszkancy3d();}
 const TILE=128, COLS=8, ROWS=4, LIMIT=32, FPS=15, VIEW=2.2, FEET=.82, SCALE=.27*SKALA_POSTACI;
 type Model={root:THREE.Object3D; mixer:THREE.AnimationMixer; clips:Map<string,THREE.AnimationClip>;
   events:Record<string,Record<string,number>>; current?:THREE.AnimationAction};
 type Slot={actor:Slime; index:number; angle:number; clip:string; time:number;
   saved:{texture:string; frame:string|number; sx:number; sy:number; ox:number; oy:number; flip:boolean}};
 
+type ResidentSlot={visual:ResidentVisual;index:number;image:Phaser.GameObjects.Image};
 export class Stwory3D {
   private key='stwory3d-atlas';
   private models=new Map<string,Model>();
@@ -25,6 +28,8 @@ export class Stwory3D {
   private retries=new Map<string,number>();
   private slots=new Map<Slime,Slot>();
   private retired=new Set<Slime>();
+  private residents=new Map<ResidentSprite,ResidentSlot>();
+  private speaking?:{actor:ResidentSprite;at:number;next:number;paused:boolean};
   private disposed=false;
   private failed=false;
   private starting=false;
@@ -33,7 +38,24 @@ export class Stwory3D {
     target:THREE.WebGLRenderTarget; post:THREE.Scene; postCamera:THREE.OrthographicCamera;
     quad:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>};
   readonly stats={contexts:0,frames:0,visible:0,loaded:0,draws:0,atlasBytes:TILE*COLS*TILE*ROWS*4};
-  constructor(private scene:Phaser.Scene) {}
+  constructor(private scene:Phaser.Scene) {scene.game.events.on('step',this.animateConversation);scene.game.events.on('dialog',this.onResidentDialog);}
+  private onResidentDialog=(dialog:{title:string})=>this.conversation(dialogueActor(this.scene,[...this.residents.values()].map(s=>s.visual),dialog.title));
+  residentRequests(now:number){return residentsFor(this.scene,now);}
+  /** Only the speaker animates while dialogue pauses the simulation. */
+  conversation(actor:ResidentSprite|undefined){this.speaking=actor?{actor,at:performance.now(),next:0,paused:false}:undefined;}
+  private animateConversation=()=>{
+    const speaking=this.speaking,g=this.g;if(!speaking||!g||this.failed||this.disposed)return;
+    // ScenePlugin.pause queues the pause until the next scene step. Keep the speaker through that frame.
+    if(!this.scene.scene.isPaused()){if(speaking.paused||performance.now()-speaking.at>1000)this.speaking=undefined;return;}
+    if(!speaking.paused){speaking.paused=true;speaking.at=performance.now();}
+    const slot=this.residents.get(speaking.actor),now=performance.now();
+    if(!slot||!speaking.actor.active||!speaking.actor.visible||now<speaking.next)return;
+    speaking.next=now+1000/FPS;
+    const clip=slot.visual.model==='pies'?'wag':'talk';
+    const visual={...slot.visual,clip,time:(now-speaking.at)/1000};
+    g.renderer.setRenderTarget(g.target);g.renderer.setScissorTest(true);
+    this.drawResident({...slot,visual});this.finishAtlas();
+  };
 
   private async start() {
     this.starting=true;
@@ -66,17 +88,18 @@ export class Stwory3D {
     } catch(e){this.failed=true;console.warn('Stwory 3D: renderer unavailable; keeping sprites',e);}
   }
   private contextLost=(e:Event)=>{e.preventDefault();this.failed=true;
-    for(const slot of this.slots.values())this.restore(slot);this.slots.clear();};
+    for(const slot of this.slots.values())this.restore(slot);this.slots.clear();
+    for(const slot of this.residents.values())this.restoreResident(slot);this.residents.clear();};
 
   private load(id:string) {
     if(this.requests.has(id)||performance.now()<(this.retries.get(id)??0))return;
     const request=(async()=>{
       try {
         const {GLTFLoader}=await import('three/examples/jsm/loaders/GLTFLoader.js');
-        const gltf=await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}modele/swiat44/${id}.glb`);
+        const gltf=await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}modele/swiat44/${id}.glb${id==='pies'?'?v=G010':''}`);
         if(this.disposed){this.disposeModel(gltf.scene);return;}
         const g=this.g!,root=gltf.scene,size=new g.three.Box3().setFromObject(root).getSize(new g.three.Vector3());
-        const height=id==='wilk'||id==='warg'?.8:id==='wodny_blob'?.65:1.25;
+        const height=id==='wilk'||id==='warg'?.8:id==='pies'?.70:id==='wodny_blob'?.65:/^(chlopiec|chlopiec_2|urwis|dziewczynka|dziewczynka_warkocze)$/.test(id)?.96:/^(babcia|starsza_pani|starszy_pan|starszy_pan_kapelusz)$/.test(id)?1.12:1.25;
         root.scale.setScalar(height/Math.max(.1,size.y));
         const clips=new Map<string,THREE.AnimationClip>();
         for(const original of gltf.animations){
@@ -130,7 +153,8 @@ export class Stwory3D {
     const p=socket.getWorldPosition(new g.three.Vector3()).project(g.camera),sc=SCALE*actor.kind.scale;
     return {x:actor.x+p.x*TILE/2*sc,y:actor.y+8*SKALA_POSTACI+((.5-p.y/2)-FEET)*TILE*sc};
   }
-  update(enemies:Slime[],now:number){
+  update(enemies:Slime[],now:number,people?:ResidentVisual[]){
+    people??=this.residentRequests(now);if(!enemiesEnabled())enemies=[];
     if(this.disposed||this.failed)return;
     // Killed actors immediately leave GameScene.enemies; finish their death clip until Slime destroys them.
     for(const [actor]of this.slots)if(actor.active&&actor.isDead)this.retired.add(actor);
@@ -140,11 +164,18 @@ export class Stwory3D {
       .sort((a,b)=>Math.hypot(a.x-view.centerX,a.y-view.centerY)-Math.hypot(b.x-view.centerX,b.y-view.centerY)).slice(0,LIMIT);
     for(const actor of this.retired)if(!actor.active)this.retired.delete(actor);
     for(const [actor,slot]of this.slots)if(!candidates.includes(actor)){this.restore(slot);this.slots.delete(actor);}
-    this.stats.visible=this.slots.size;if(!candidates.length)return;
+    const citizens=people.filter(v=>v.actor.active&&v.actor.visible&&v.actor.x>view.x-60&&v.actor.x<view.right+60&&v.actor.y>view.y-60&&v.actor.y<view.bottom+60)
+      .sort((a,b)=>Math.hypot(a.actor.x-view.centerX,a.actor.y-view.centerY)-Math.hypot(b.actor.x-view.centerX,b.actor.y-view.centerY)).slice(0,LIMIT-candidates.length);
+    for(const [actor,slot]of this.residents){
+      if(!citizens.some(v=>v.actor===actor)){this.restoreResident(slot);this.residents.delete(actor);}
+      else slot.image.setPosition(actor.x,actor.y).setDepth(actor.depth).setAlpha(actor.alpha).setVisible(actor.visible);
+    }
+    this.stats.visible=this.slots.size+this.residents.size;if(!candidates.length&&!citizens.length)return;
     if(!this.g){if(!this.starting)void this.start();return;}
     for(const actor of candidates){const id=MODELE_STWOROW[actor.kindId]!;if(!this.models.has(id))this.load(id);}
+    for(const visual of citizens)if(!this.models.has(visual.model))this.load(visual.model);
     if(now<this.nextFrame)return;this.nextFrame=now+1000/FPS;
-    const g=this.g,used=new Set([...this.slots.values()].map(s=>s.index));let draws=0;
+    const g=this.g,used=new Set([...this.slots.values(),...this.residents.values()].map(s=>s.index));let draws=0;
     g.renderer.setRenderTarget(g.target);g.renderer.setScissorTest(true);
     for(const actor of candidates){
       const model=this.models.get(MODELE_STWOROW[actor.kindId]!);if(!model)continue;
@@ -163,16 +194,43 @@ export class Stwory3D {
       g.renderer.setViewport(x,y,TILE,TILE);g.renderer.setScissor(x,y,TILE,TILE);g.renderer.clear();
       g.renderer.render(g.scene,g.camera);draws+=g.renderer.info.render.calls;g.scene.remove(model.root);
     }
+    for(const visual of citizens){
+      const actor=visual.actor;if(!this.models.has(visual.model))continue;
+      let slot=this.residents.get(actor);
+      if(!slot){let index=0;while(used.has(index))index++;used.add(index);
+        // Crop only the native picture; its animation, position, alpha and hit testing remain native.
+        // The overlay follows those values even between animation frames.
+        if(actor.isCropped)continue;
+        const image=this.scene.add.image(actor.x,actor.y,this.key,String(index)).setScale(SCALE)
+          .setOrigin(.5,FEET-8*SKALA_POSTACI/(TILE*SCALE)).setDepth(actor.depth).setAlpha(actor.alpha);
+        slot={visual,index,image};this.residents.set(actor,slot);actor.setCrop(0,0,0,0);manageResident(actor,true);
+      }
+      slot.visual=visual;visual.umbrella?.setVisible(false);this.drawResident(slot);draws+=g.renderer.info.render.calls;
+    }
+    this.finishAtlas();
+    this.stats.frames++;this.stats.visible=this.slots.size+this.residents.size;this.stats.draws=draws+1;
+  }
+  private drawResident(slot:ResidentSlot){
+    const g=this.g!,v=slot.visual,model=this.models.get(v.model);if(!model)return;
+    const clip=model.clips.get(v.clip)??model.clips.get('idle')!;
+    this.sample(model,clip.name,v.clip==='sit'?Math.min(v.time,clip.duration):v.time%clip.duration,v.angle);
+    g.scene.add(model.root);const x=slot.index%COLS*TILE,y=(ROWS-1-Math.floor(slot.index/COLS))*TILE;
+    g.renderer.setViewport(x,y,TILE,TILE);g.renderer.setScissor(x,y,TILE,TILE);g.renderer.clear();g.renderer.render(g.scene,g.camera);g.scene.remove(model.root);
+  }
+  private finishAtlas(){const g=this.g!;
     g.renderer.setRenderTarget(null);g.renderer.setScissorTest(false);g.renderer.setViewport(0,0,TILE*COLS,TILE*ROWS);
     g.renderer.clear();g.renderer.render(g.post,g.postCamera);this.scene.textures.get(this.key).source[0].update();
-    this.stats.frames++;this.stats.visible=this.slots.size;this.stats.draws=draws+1;
+  }
+  private restoreResident(slot:ResidentSlot){const a=slot.visual.actor;manageResident(a,false);slot.image.destroy();
+    if(!a.active)return;a.setCrop();slot.visual.umbrella?.setVisible(a.visible);
   }
   private restore(slot:Slot){const a=slot.actor;a.model3d=false;if(!a.active)return;const s=slot.saved;
     a.setTexture(s.texture,s.frame).setScale(s.sx,s.sy).setOrigin(s.ox,s.oy).setFlipX(s.flip);if(a.kind.tint)a.setTint(a.kind.tint);a.updateLook();}
   private disposeModel(root:THREE.Object3D){root.traverse(node=>{const m=node as THREE.Mesh;if(!m.isMesh)return;
     m.geometry.dispose();for(const mat of Array.isArray(m.material)?m.material:[m.material])mat.dispose();});}
   destroy(){
-    this.disposed=true;for(const slot of this.slots.values())this.restore(slot);this.slots.clear();this.retired.clear();
+    this.disposed=true;releaseResidentBridge(this.scene);this.scene.game.events.off('step',this.animateConversation);this.scene.game.events.off('dialog',this.onResidentDialog);this.speaking=undefined;for(const slot of this.slots.values())this.restore(slot);this.slots.clear();
+    for(const slot of this.residents.values())this.restoreResident(slot);this.residents.clear();this.retired.clear();
     for(const m of this.models.values()){m.mixer.stopAllAction();m.mixer.uncacheRoot(m.root);this.disposeModel(m.root);}this.models.clear();
     if(this.g){const g=this.g;g.renderer.domElement.removeEventListener('webglcontextlost',this.contextLost);
       g.quad.geometry.dispose();g.quad.material.dispose();g.target.dispose();g.renderer.dispose();g.renderer.forceContextLoss();this.g=undefined;}
