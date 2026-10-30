@@ -12,6 +12,7 @@ import { STOPY_PX } from './content/wyglad';
 import { session } from './quests';
 import { gear, item } from './inventory';
 import { testVehicle, hasTestVehicle } from './testTransport';
+import { wyrazistyMaterial } from './wyrazistosc3d';
 
 export const LUDZIK_3D = {
   plik: 'modele/straznik.glb',
@@ -188,7 +189,7 @@ export class Ludzik3D {
       const weapon=donor.scene.getObjectByName('Weapon')!.clone(true);
       g.model.children[0].add(weapon);
       g.miecz=weapon;
-      weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true});});
+      weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=wyrazistyMaterial(new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true}));});
       const head=g.model.getObjectByName('head') as THREE.Mesh;
       this.baseHead ??= head.geometry;
       head.geometry=headDonor ? (headDonor.scene.getObjectByName('head') as THREE.Mesh).geometry : this.baseHead;
@@ -227,7 +228,7 @@ export class Ludzik3D {
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
-        m.material = o.name === 'head' ? new three.MeshBasicMaterial({vertexColors:true}) : new three.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+        m.material = wyrazistyMaterial(o.name === 'head' ? new three.MeshBasicMaterial({vertexColors:true}) : new three.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
       });
       scene.add(model);
       const amb = new three.AmbientLight(0xffffff, LUDZIK_3D.otoczenie);
@@ -386,7 +387,7 @@ export class Ludzik3D {
   }
 
   /**
-   * Draws the figure (one render). Its dark outline, one sheet pixel thick, is made by the game itself: copies of the
+   * Draws the figure (one render). Its dark outline, two sheet pixels thick, is made by the game itself: copies of the
    * same picture filled with the outline's colour, shifted by every offset within that thickness, lie under it
    * (`obrysy`). It used to be read back to the processor and outlined pixel by pixel – on phones every picture stalled
    * the game for a few ms (owner, 27 Oct 2026).
@@ -403,8 +404,9 @@ export class Ludzik3D {
     if (!this.obrysy.length && widac) {
       const t = LUDZIK_3D.gestosc;
       const [r, g, b] = LUDZIK_3D.obrys;
-      for (let dy = -t; dy <= t; dy++) for (let dx = -t; dx <= t; dx++) {
-        if ((!dx && !dy) || Math.abs(dx) + Math.abs(dy) > t) continue;
+      for (const radius of [t, t * 2]) for (const y of [-1, 0, 1]) for (const x of [-1, 0, 1]) {
+        if (!x && !y) continue;
+        const dx = x * radius, dy = y * radius;
         const im = this.scene.add.image(0, 0, this.klucz).setTint((r << 16) | (g << 8) | b).setTintMode(Phaser.TintModes.FILL);
         this.obrysy.push({ im, dx, dy });
       }

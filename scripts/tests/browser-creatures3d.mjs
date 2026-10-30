@@ -6,7 +6,8 @@ import {preview} from 'vite';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const phone=process.env.TELEFON==='1',tag=phone?'phone':'desktop';
-// Accepted G008 preview passes COLOR_0 palette bytes directly to the display. Detect accidental gamma brightening.
+// Display-RGB COLOR_0 plus the intentional 30 Oct saturation/contrast pass.
+// Detect accidental gamma brightening; do not require the superseded muted palette.
 const bytes=await readFile('public/modele/swiat44/zombiak.glb');
 const jsonSize=bytes.readUInt32LE(12),gltf=JSON.parse(bytes.subarray(20,20+jsonSize)),sourcePalette=new Set();
 for(const mesh of gltf.meshes)for(const p of mesh.primitives){
@@ -61,12 +62,25 @@ try{
   const gallery=await game(()=>{
     const m=window.__game.scene.getScene('game').stwory3d,g=m.g,gl=g.renderer.getContext(),c=g.renderer.domElement;
     const pixels=new Uint8Array(c.width*c.height*4);gl.readPixels(0,0,c.width,c.height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+    const raw=new Uint8Array(pixels.length);g.renderer.readRenderTargetPixels(g.target,0,0,c.width,c.height,raw);
+    let deepOutline=0;
+    for(let y=1;y<c.height-1;y++)for(let x=1;x<c.width-1;x++){
+      if(!pixels[(y*c.width+x)*4+3]||raw[(y*c.width+x)*4+3])continue;
+      let near=false;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(raw[((y+dy)*c.width+x+dx)*4+3])near=true;
+      if(!near)deepOutline++;
+    }
     const colors=new Set();let opaque=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]){opaque++;colors.add(`${pixels[i]},${pixels[i+1]},${pixels[i+2]}`);}
-    return {stats:m.stats,colors:colors.size,palette:[...colors],opaque,kinds:window.__actors.map(e=>e.kindId)};
+    return {stats:m.stats,colors:colors.size,palette:[...colors],opaque,deepOutline,kinds:window.__actors.map(e=>e.kindId)};
   });
   assert.equal(gallery.stats.loaded,12);assert.equal(gallery.stats.contexts,1);assert.equal(gallery.stats.visible,14);assert.equal(wargRequests,2);
-  gallery.paletteMatches=gallery.palette.filter(c=>sourcePalette.has(c)).length;delete gallery.palette;
-  assert(gallery.paletteMatches>=12,'actual render preserves the accepted COLOR_0 palette');
+  const graded=[...sourcePalette].map(c=>{
+    const rgb=c.split(',').map(Number),grey=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+    return rgb.map(v=>Math.round(Math.max(0,Math.min(255,((grey+(v-grey)*1.28)-255*.45)*1.10+255*.45))));
+  });
+  gallery.paletteMatches=gallery.palette.filter(c=>{const rgb=c.split(',').map(Number);
+    return graded.some(expected=>expected.every((v,i)=>Math.abs(v-rgb[i])<=1));}).length;delete gallery.palette;
+  assert(gallery.paletteMatches>=12,'actual render applies saturation/contrast without gamma brightening');
+  assert(gallery.deepOutline>100,'silhouette remains wider than the old one-atlas-pixel outline');
   assert(gallery.colors>20&&gallery.opaque>1000);await shot('gallery');
   const poses=await game(()=>{
     const m=window.__game.scene.getScene('game').stwory3d;let n=0;

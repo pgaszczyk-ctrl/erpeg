@@ -5,6 +5,7 @@ import type { Slime } from './objects/Slime';
 import type { RodzajWroga } from './content/fabula';
 import { SKALA_POSTACI } from './skala';
 import { TEST } from './version';
+import { KOLOR_3D_GLSL } from './wyrazistosc3d';
 import { manageResident, mieszkancy3d, residentsFor, dialogueActor, releaseResidentBridge, type ResidentVisual, type ResidentSprite } from './mieszkancy3d';
 
 export const MODELE_STWOROW: Partial<Record<RodzajWroga, string>> = {
@@ -73,11 +74,20 @@ export class Stwory3D {
         uniforms:{picture:{value:target.texture},texel:{value:new three.Vector2(1/(TILE*COLS),1/(TILE*ROWS))}},
         vertexShader:'varying vec2 uv0;void main(){uv0=uv;gl_Position=vec4(position.xy,0.,1.);}',
         fragmentShader:`uniform sampler2D picture;uniform vec2 texel;varying vec2 uv0;
+          ${KOLOR_3D_GLSL}
           void main(){vec4 c=texture2D(picture,uv0);float edge=0.;
-          for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)edge=max(edge,texture2D(picture,uv0+vec2(float(x),float(y))*texel).a);
-          gl_FragColor=vec4(mix(vec3(.118,.102,.141),c.rgb,c.a),max(c.a,edge));
+          // Three atlas pixels = about one screen pixel at the usual map zoom.
+          // Two rings close thin limbs without a costly full 7x7 dilation or extra actor copies.
+          vec2 tileMin=floor(uv0/(texel*128.))*texel*128.+texel*.5;
+          vec2 tileMax=tileMin+texel*127.;
+          for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){
+            vec2 offset=vec2(float(x),float(y))*texel;
+            edge=max(edge,texture2D(picture,clamp(uv0+offset*1.5,tileMin,tileMax)).a);
+            edge=max(edge,texture2D(picture,clamp(uv0+offset*3.,tileMin,tileMax)).a);
+          }
+          gl_FragColor=vec4(mix(vec3(.118,.102,.141),wyrazistyKolor(c.rgb),c.a),max(c.a,edge));
           // G008 stores display RGB in COLOR_0, as used by its accepted standalone preview.
-          // Pass those authored palette bytes through; a second sRGB transfer washes out every figure.
+          // Grade those display bytes once; a second sRGB transfer would wash out every figure.
           }`,depthTest:false,depthWrite:false,
       }));post.add(quad);
       this.g={three,renderer,scene,camera,target,post,postCamera,quad};
