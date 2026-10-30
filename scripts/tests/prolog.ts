@@ -40,7 +40,7 @@ const make=(id:string,lon:number)=>new CityMap({unitsPerM:PX_PER_M,w:3000/PX_PER
 for(const city of [make('city-a',20),make('city-b',29)]){
  const home={x:1500,y:1500};const result=planAnchors(city,home,[],city.id);
  assert(result.anchors.outpost.fallback&&result.anchors.library.fallback&&result.anchors.dungeonEntrance.fallback);
- const local=localRoutes(city,home,PROLOG_PROMIEN_M*PX_PER_M,10*PX_PER_M,26000);
+ const local=localRoutes(city,home,PROLOG_PROMIEN_M*PX_PER_M,8*PX_PER_M,32000);
  for(const a of Object.values(result.anchors)){const at=city.fromLatLon(a.lat,a.lon);assert(local.route(at),`reachable ${a.id}`);}
  assert(result.walkM<8000,'bounded tutorial travel');
  // Owner 30 Oct 2026: ~20 s of walking between the characters, not a few steps.

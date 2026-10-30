@@ -28,7 +28,7 @@ export function localRoutes(city: Pick<CityMap, 'isFree'>, home: Pt, radius: num
   const route = (p: Pt) => {
     const gx = Math.round((p.x - home.x) / step), gy = Math.round((p.y - home.y) / step);
     let best: { distance: number; point: Pt } | null = null;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const n = seen.get(key(gx + dx, gy + dy));
       if (!n || !line(n, p)) continue;
       const distance = n.distance + Math.hypot(n.x - p.x, n.y - p.y);
@@ -49,11 +49,11 @@ export const PROLOG_PROMIEN_M = 760;
 
 export function planAnchors(city: CityMap, home: Pt, entrances: WejscieLochu[], mapName: string) {
   const radius = PROLOG_PROMIEN_M * PX_PER_M;
-  const routes = localRoutes(city, home, radius, 10 * PX_PER_M, 26000);
+  const routes = localRoutes(city, home, radius, 8 * PX_PER_M, 32000);
   if (routes.nodes.length < 4) throw new Error('Brak przechodniego miejsca zbiórki.');
   const MIN = PROLOG_MARSZ_M * PX_PER_M, MAX = MIN * 1.7;
   const anchor = (p: Pt, id: string, name: string, fallback: boolean): Anchor => ({ ...city.toLatLon(p.x, p.y), id, name, fallback });
-  const choose = (kinds: string[], max: number, min = 0) => city.places.filter(p => kinds.includes(p.kind))
+  const choose = (kinds: string[], max: number, min = 0, not?: string) => city.places.filter(p => kinds.includes(p.kind) && p.id !== not)
     .map(p => ({ p, r: routes.route(p.door) })).filter(q => q.r && q.r.distance >= min && q.r.distance <= max)
     .sort((a, b) => a.r!.distance - b.r!.distance)[0]?.p;
   /** Reachable points in the [MIN, MAX] route band; when the walkable area is small, the farthest ones there are. */
@@ -75,7 +75,7 @@ export function planAnchors(city: CityMap, home: Pt, entrances: WejscieLochu[], 
   const cellarPoint = apart([out, ambush]);
   const dungeon: WejscieLochu = entrance ?? { id: `prolog:${city.id}:cellar`, rodzaj: 'podziemia', ...cellarPoint, seed: 1, przy: 'Punkt patrolowy / Patrol post' };
   const library = choose(['library'], hi * 1.3, lo);
-  const office = library ?? choose(['office', 'school'], hi, lo);
+  const office = library ?? choose(['office', 'school'], hi, lo, post?.id);
   const librarianPoint = apart([out, ambush, dungeon]);
   const anchors: Record<AnchorKind, Anchor> = {
     mentor: anchor(near(home), 'prolog:mentor', 'Starszy strażnik', true),
