@@ -1462,7 +1462,7 @@ export class GameScene extends Phaser.Scene {
     const r = HOME_SAFE_M * PX_PER_M;
     for (const e of this.enemies) {
       const { x, y } = this.safeAt;
-      if (e.isDead || e.missionId || Math.abs(e.x - x) > r || Math.abs(e.y - y) > r) continue;
+      if (e.isDead || e.missionId || e.elzet || Math.abs(e.x - x) > r || Math.abs(e.y - y) > r) continue;
       if (Math.hypot(e.x - x, e.y - y) > r) continue;
       this.enemies = this.enemies.filter((x) => x !== e);
       this.tweens.add({ targets: e, alpha: 0, scaleX: e.scaleX * 0.25, scaleY: e.scaleY * 0.25, duration: 250, onComplete: () => e.destroy() });

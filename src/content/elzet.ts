@@ -30,6 +30,8 @@ export const ELZET = {
   start: { lat: 51.224225164808516, lon: 22.49834065154772 },
   /** Lidl przy Jana Pawła II 37 – tu chochliki biegają wokół zębatki. */
   lidl: { lat: 51.22543, lon: 22.50310 },
+  /** Zębatka: górny skraj parkingu przed Lidlem (właściciel, 30.10.2026). */
+  kolko: { lat: 51.22514, lon: 22.50250 },
   /** Nałęczowska 14 – plac między budynkami (sześciokąt między nr 14 i 16). */
   naleczowska: { lat: 51.24888, lon: 22.51782 },
   /** Domek nad Zalewem Zemborzyckim, wokół którego chodzi na końcu. */

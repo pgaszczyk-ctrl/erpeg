@@ -35,7 +35,7 @@ try {
     if (['logout', 'heartbeat'].includes(fn)) json = true;
     await route.fulfill({ json });
   });
-  await page.goto('http://127.0.0.1:4175/?lang=pl&ostrosc=1&ludzik3d=0#wczytaj');
+  await page.goto(`http://127.0.0.1:4175/?lang=pl&ostrosc=1${process.env.L3D === '1' ? '' : '&ludzik3d=0'}#wczytaj`);
   await page.waitForSelector('#menu', { timeout: 60000 });
   start = await page.evaluate(() => window.__game.registry.get('city').fromLatLon(51.22418, 22.49825));
   const inputs = page.locator('#menu input');
@@ -100,6 +100,8 @@ try {
   await page.waitForFunction(() => window.__game.scene.getScene('game').elzet.chochliki.length === 5, null, { timeout: 30000 });
   const a = await g(() => window.__game.scene.getScene('game').elzet.chochliki.map((c) => ({ x: c.x, y: c.y })));
   await page.waitForTimeout(1500);
+  await g(() => { const s = window.__game.scene.getScene('game'); const k = s.elzet.kolko; s.player.setPosition(k.x, k.y + 40); });
+  await page.waitForTimeout(600);
   const b = await g(() => window.__game.scene.getScene('game').elzet.chochliki.map((c) => ({ x: c.x, y: c.y })));
   assert(a.some((p, i) => Math.hypot(p.x - b[i].x, p.y - b[i].y) > 1), 'imps do not run round the cog');
   await shot('2-chochliki');
@@ -131,6 +133,7 @@ try {
   await g(() => { const s = window.__game.scene.getScene('game'); s.__ciosy = 0; const h = s.player.hurt.bind(s.player); s.player.hurt = (...a) => { const r = h(...a); if (r) s.__ciosy++; return r; }; });
   await page.waitForTimeout(5000);
   await shot('3-walka1');
+  if (process.env.DEBUG) console.log(await g(() => { const s = window.__game.scene.getScene('game'); const w = s.elzet.walka; const e = w?.s; return e && { stan: w.stan, i: w.i, x: e.x, y: e.y, px: s.player.x, py: s.player.y, vis: e.visible, active: e.active, inList: s.enemies.includes(e), alpha: e.alpha, tex: e.texture.key, vel: [e.vel.x, e.vel.y], scale: e.scaleX, noHurt: s.noHurtUntil - s.time.now }; }));
   assert(await g(() => window.__game.scene.getScene('game').__ciosy > 0), 'the robot never hit the hero');
   // The hero's blows: never below 10 %.
   await g(() => { const s = window.__game.scene.getScene('game'); const w = s.elzet.walka.s; w.hit({ x: w.x, y: w.y }, s.time.now, 99999); });
@@ -173,6 +176,8 @@ try {
   assert(Math.hypot(p0.x - p1.x, p0.y - p1.y) > 2, 'robot not walking round the house');
   await shot('6-jezioro');
   for (let i = 0; i < 10; i++) {
+    await g(() => { const s = window.__game.scene.getScene('game'); const n = s.elzet.npc; s.player.setPosition(n.x, n.y + 5); });
+    await page.waitForTimeout(400);
     st = await elzet();
     await g(({ x, y }) => window.__game.scene.getScene('game').talkableAt(x, y, 14)(), st.npc);
     await choose(0); // listen

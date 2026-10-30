@@ -369,7 +369,7 @@ export class Elzet {
     if (this.walka) {
       if (!this.walka.trwa) return;
       // Ran far away or died: the fight starts again from the beginning next time.
-      if (!this.blisko(this.walka.srodek, ELZET.ucieczkaM)) this.przerwijWalke();
+      if (!this.blisko(this.walka.srodek, ELZET.ucieczkaM) || !this.walka.s.active) this.przerwijWalke();
       return;
     }
     if (!tu) {
@@ -643,13 +643,24 @@ export class Elzet {
     }
     if (!this.kolko) {
       if (!this.blisko(lidl, C.pojawiajOdM) || !this.gotowe(lidl, 80)) return;
-      const at = this.h.city.reachableNear(lidl.x, lidl.y);
-      this.kolko = this.h.scene.add.image(at.x, at.y, teksturaKolka(this.h.scene)).setScale(0.75).setDepth(at.y);
+      // The upper edge of the parking in front of the Lidl (owner, 30 Oct 2026).
+      const city = this.h.city;
+      const miejsce = this.pt(ELZET.kolko);
+      const at = city.freeNear(miejsce.x, miejsce.y);
+      this.kolko = this.h.scene.add.image(at.x, at.y, teksturaKolka(this.h.scene)).setScale(1.1).setDepth(at.y);
+      const blask = this.h.scene.add.circle(at.x, at.y, 9, 0xffd76a, 0.28).setDepth(at.y - 1).setBlendMode(Phaser.BlendModes.ADD);
+      this.h.scene.tweens.add({ targets: blask, alpha: 0.08, scale: 1.4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.kolko.once('destroy', () => blask.destroy());
       this.h.scene.tweens.add({ targets: this.kolko, angle: 360, duration: 6000, repeat: -1 });
       this.chochliki = [];
       for (let i = 0; i < C.ile; i++) {
-        const a = (i / C.ile) * Math.PI * 2;
-        const e = this.h.spawn(at.x + Math.cos(a) * C.krazaM * M, at.y + Math.sin(a) * C.krazaM * M, 'glut');
+        let x = at.x, y = at.y;
+        for (let t = 0; t < 24; t++) {
+          const a = ((i + t * 0.37) / C.ile) * Math.PI * 2, r = C.krazaM * M * (1 - (t % 3) * 0.25);
+          const q = { x: at.x + Math.cos(a) * r, y: at.y + Math.sin(a) * r };
+          if (city.isFree(q.x, q.y + 5, 2, 1.5)) { x = q.x; y = q.y; break; }
+        }
+        const e = this.h.spawn(x, y, 'glut');
         e.temp = true;
         e.roam = 6;
         e.lowiskoHome = { x: at.x, y: at.y, r: 40 * M, krazy: C.krazaM * M };
