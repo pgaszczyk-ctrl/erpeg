@@ -1128,7 +1128,7 @@ async function bronTab(main: HTMLElement) {
     const icon = itemIcon(p.id);
     if (icon) { icon.width = 40; icon.height = 40; icon.style.imageRendering = 'pixelated'; }
     const card = el('div', { className: 'card', 'data-weapon': p.id }, [el('h3', { className: 'row' }, [icon, p.nazwa]),
-      el('p', { className: 'muted' }, [`${p.rodzaj === 'magia' ? 'Magia' : p.rodzaj === 'luk' ? 'Dystansowa' : 'Walka wręcz'} · Wytrzymałość: ${p.wytrzymalosc ?? 'nie zużywa się'} · ID: ${p.id}`]),
+      el('p', { className: 'muted' }, [`${UMIEJETNOSCI[p.rodzaj === 'magia' ? 'magia' : p.rodzaj === 'luk' ? 'luk' : 'miecz'].nazwa} · Wytrzymałość: ${p.wytrzymalosc ?? 'nie zużywa się'} · ID: ${p.id}`]),
       el('div', { className: 'row' }, [field('Minimum obrażeń', min), field('Maksimum obrażeń', max), save, reset]),
       el('div', { className: 'row' }, [field('Wytrzymałość (puste = domyślna)', life), saveLife]), msg,
     ]);
