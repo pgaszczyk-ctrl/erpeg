@@ -46,7 +46,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
   const result={bare:run(null),armor:run('skorzana_zbroja_jakosc0'),magic:run('skorzana_zbroja_jakosc4',false),weak:run('skorzana_zbroja_jakosc0',true,.1,70)};
   s.noHurtUntil=Infinity;p.hp=10;return result;
  });
- assert.equal(combat.bare.lost,35);assert.equal(combat.armor.lost,30);assert.equal(combat.magic.lost,35);
+ assert.equal(combat.bare.lost,35);assert(Math.abs(combat.armor.lost+combat.armor.carry-30)<1e-8);assert.equal(combat.magic.lost,35);
  assert(Math.abs(combat.weak.lost+combat.weak.carry-6)<1e-8,'weak hits retain fractional mitigation');
  await g(()=>{Object.assign(window.__gear.equip,{zbroja:'skorzana_zbroja_jakosc0',helm:'skorzany_helm',buty:'skorzane_buty'});window.__gear.bag=[{item:'skorzana_zbroja_jakosc4'}];window.__game.scene.getScene('ui').openCharacter('eq');});
  const worn=page.locator('.sl-cell[data-zone="eq"][data-key="zbroja"]');
