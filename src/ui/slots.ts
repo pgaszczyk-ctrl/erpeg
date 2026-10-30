@@ -1,6 +1,6 @@
 import { itemIcon, goodsPicture } from './itemIcon';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
-import { JAKOSCI_BRONI, MIEJSCA, type Miejsce } from '../content/przedmioty';
+import { JAKOSCI_BRONI, JAKOSCI_PANCERZA, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
 import { esencja } from '../content/esencje';
 
@@ -24,11 +24,13 @@ function el(tag: string, cls = '', text = '') {
 
 /** Five pixel squares; the filled count is the quality rank, also accessible as text. */
 export function qualityDots(id: string) {
-  const q = item(id)?.jakosc;
+  const p = item(id);
+  const q = p?.jakosc;
+  const nazwy = p?.miejsce === 'bron' ? JAKOSCI_BRONI : JAKOSCI_PANCERZA;
   if (q === undefined) return null;
   const dots = el('span', 'weapon-quality');
-  dots.setAttribute('role', 'img'); dots.setAttribute('aria-label', `Jakość: ${JAKOSCI_BRONI[q]}, ${q + 1} z 5`);
-  dots.title = JAKOSCI_BRONI[q];
+  dots.setAttribute('role', 'img'); dots.setAttribute('aria-label', `Jakość: ${nazwy[q]}, ${q + 1} z 5`);
+  dots.title = nazwy[q];
   for (let i = 0; i < 5; i++) dots.append(el('i', i <= q ? 'filled' : ''));
   return dots;
 }

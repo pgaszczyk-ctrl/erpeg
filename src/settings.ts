@@ -1,3 +1,4 @@
+import { ustawPancerze } from './content/pancerz';
 import { ustawBronie } from './content/bron';
 import { PLAYER } from './objects/Player';
 import { PX_PER_M } from './map/CityMap';
@@ -60,6 +61,7 @@ export function applySettings(values: Record<string, number>) {
     USTAW[p.k]?.(Number.isFinite(v) ? Math.min(p.max, Math.max(p.min, v)) : p.domyslnie);
   }
   ustawBronie(values);
+  ustawPancerze(values);
 }
 
 let loading: Promise<void> | null = null;

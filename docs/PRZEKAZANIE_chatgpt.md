@@ -598,3 +598,12 @@ Potwierdzone CI: https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/4101185841
 ## 30.10.2026 — zatwierdzone wydanie poprawki mgły 1.038
 
 Właściciel polecił „Publikuj”. Sprawdzony szkic łatki skopiowano bez zmian do produkcja/1.038-mgla-zgodnosc.patch. Zawiera odczyt obu formatów odkrytej mapy oraz numer produkcji 1.038; dotychczasowe PRODUKCJA, łatki 1.036/1.037, zachowanie zapisu produkcji i baza graczy pozostają bez zmian. Pełny build i test startu PC/telefon z zachowaniem odkrytych pól potwierdzono wcześniej (run 41011858417). Workflow testu uwzględnia już opublikowaną łatkę bez jej powtórnego nakładania. Po scaleniu PR45 działa standardowy Deploy to GitHub Pages; wynik publikacji i numer wersji na stronie trzeba potwierdzić.
+
+## 2026-10-30 — Pancerz, jakości i łup (TEST)
+- Polecenie: wdrożyć uzgodnione zbroje/hełmy/buty, pokazywać tylko Pancerz, bez procentów ochrony.
+- Katalog: 6 rodzin × 5 jakości, stare ID to zwykła jakość; grafika przez istniejące `baza`. Podstawowa zbroja 5/6/7/8/10, hełm 2/3/4/5/6, buty 1/2/3/4/5; mocniejsze dotychczasowe rodziny mają wyższe wartości. Nowa postać dostaje skórzaną zbroję jakości 0 (5), stare wyposażenie zostaje.
+- Mechanika: `content/pancerz.ts` — obrażenia fizyczne × 30/(30+pancerz), przed akumulacją ułamków serc. Brak losowego pełnego bloku; magia wodnika, kwas i okresowe efekty omijają pancerz. Zachowane tarcze/talizmany jako składniki sumy. Arena: nowe duchy noszą sumę pancerza i flagę magicznego ataku, stare mają odczyt dawnego pola `blok`.
+- Loot: dokładne i losowe jakości w panelu Stworki. Przy braku tabeli admina dodatkowe niezależne 12% na jeden element podstawowego kompletu, równy wybór miejsca, następnie dotychczasowe 21/22/25/22/10 jakości. Tabela admina całkowicie zastępuje ten domyślny łup.
+- UI: duże karty i kropki także dla pancerzy, porównanie liczb, łączny Pancerz w statystykach; zakładka Repozytorium pancerzy (wartość i reset przez istniejący RPC ustawień). Bez nowych wymagań umiejętności.
+- Pliki: katalog, inventory/quests/settings, GameScene/AI/TuryWalki/Arena/API, character/slots/shopData/admin; nowe testy pancerz.mjs, browser-pancerz.mjs, armour-checks.yml.
+- Lokalnie: tsc, vite build, pancerz.mjs i regresja broni przechodzą. Pełne npm run build jeszcze generuje istniejącą mapę. Brak lokalnego Chromium: pobieranie Playwright zwróciło uszkodzony pusty ZIP; kontrola PC/telefon przygotowana do GitHub Actions przed scaleniem. Zapisów graczy ani bazy nie zmieniano. Produkcja przypięta jak wcześniej.

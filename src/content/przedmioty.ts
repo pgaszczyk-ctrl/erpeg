@@ -100,7 +100,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
-  // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
+  // Pancerz sumuje się i zmniejsza obrażenia fizyczne (content/pancerz.ts).
   // Tarcze (paczka ikony12 B2): w drugiej ręce, dodają obronę jak zbroja. Liczby tymczasowe.
   { id: 'tarcza_drewniana', nazwa: 'Tarcza drewniana', miejsce: 'dystans', moc: 1, cena: 700, opis: 'Okrągła, z desek. W drugiej ręce: +1 do obrony.' },
   { id: 'tarcza_okuta', nazwa: 'Tarcza okuta', miejsce: 'dystans', moc: 3, cena: 4500, opis: 'Z żelaznym obrzeżem i mosiężnym umbem. W drugiej ręce: +3 do obrony.' },
@@ -164,6 +164,22 @@ for (const [id, min, max] of RODZINY_BRONI) {
     nazwa: `${nazwa} — ${JAKOSCI_BRONI[q].toLowerCase()}`, obrazenia: [min + q, max + q] });
 }
 
+/** Armour qualities share save IDs and artwork with their ordinary variant. */
+export const JAKOSCI_PANCERZA = ['Kiepska', 'Zwykła', 'Dobra', 'Świetna', 'Doskonała'];
+const RODZINY_PANCERZA: [string, number[]][] = [
+  ['skorzana_zbroja', [5, 6, 7, 8, 10]], ['kolczuga', [9, 10, 11, 12, 14]],
+  ['skorzany_helm', [2, 3, 4, 5, 6]], ['zelazny_helm', [4, 5, 6, 7, 8]],
+  ['skorzane_buty', [1, 2, 3, 4, 5]], ['zelazne_buty', [3, 4, 5, 6, 7]],
+];
+for (const [id, wartosci] of RODZINY_PANCERZA) {
+  const p = PRZEDMIOTY.find(p => p.id === id)!;
+  const nazwa = p.nazwa;
+  p.baza = id; p.jakosc = 1; p.moc = wartosci[1];
+  p.nazwa = `${nazwa} — jakość: ${JAKOSCI_PANCERZA[1].toLowerCase()}`;
+  for (const q of [0, 2, 3, 4]) PRZEDMIOTY.push({ ...p, id: `${id}_jakosc${q}`, jakosc: q,
+    nazwa: `${nazwa} — jakość: ${JAKOSCI_PANCERZA[q].toLowerCase()}`, moc: wartosci[q] });
+}
+
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */
 export const SZYBKOSC_TALIZMANU = 0.04;
 /** Przedmiot z efektem 'zycie': tyle połówek serca więcej (2 = jedno serce). */
@@ -190,8 +206,6 @@ export const MIEJSCA: Record<Miejsce, string> = {
   talizman3: 'Talizman',
 };
 
-export const OBRONA_ZA_PUNKT = 0.06;
-export const OBRONA_MAKS = 0.6;
 
 /** Plecak: ile miejsc i ile owoców mieści się w jednym miejscu. */
 /** Plecak: tyle miejsc; jedna grupa (owoce, warzywa…) mieści tyle sztuk na miejsce. */

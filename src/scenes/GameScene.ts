@@ -90,7 +90,9 @@ import { idLochu } from '../loch/mapa';
 import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
-import { stwory, losujLup } from '../content/stwory';
+import { poPancerzu, losujPancerz } from '../content/pancerz';
+import { defense } from '../inventory';
+import { stwory, losujLup, losujJakosc } from '../content/stwory';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -1347,13 +1349,11 @@ export class GameScene extends Phaser.Scene {
       }
       if (s.isDazed(now)) continue; // dazed by the stunning essence: can't strike
       if (Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
-        const blocked = Math.random() < blockChance();
-        // Difficulty scales the damage; fractions add up over hits.
-        const pending = this.damageCarry + s.kind.damage * (s.power ?? 1) * session.level.obrazenia;
+        // Armour mitigates physical damage before fractions of hearts accumulate.
+        const pending = this.damageCarry + poPancerzu(s.kind.damage * (s.power ?? 1) * session.level.obrazenia, defense(), s.kindId !== 'wodnik');
         const dmg = Math.floor(pending);
-        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, blocked ? 0 : dmg, s.berserk ? 1 / BERSERKER.szybciej : 1)) {
-          if (!blocked) this.damageCarry = pending - dmg;
-          if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
+        if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, dmg, s.berserk ? 1 / BERSERKER.szybciej : 1)) {
+          this.damageCarry = pending - dmg;
           this.emitHud();
           if (this.player.isDead) this.onPlayerDeath();
         }
@@ -2210,15 +2210,13 @@ export class GameScene extends Phaser.Scene {
       W: 56 * 0.36 * SKALA_POSTACI,
       trudnosc,
       blocked: (x: number, y: number) => this.city.isBlocked(x, y),
-      hurt: (from: Phaser.Math.Vector2, czesc: number) => {
+      hurt: (from: Phaser.Math.Vector2, czesc: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
         // Fractions of a half-heart add up (Dziecięcy: a bite is 4 % of life, less than half a heart).
-        const pending = this.smokCarry + czesc * PLAYER.maxHp * mult();
+        const pending = this.smokCarry + poPancerzu(czesc * PLAYER.maxHp * mult(), defense(), fizyczne);
         const dmg = Math.floor(pending);
-        const blocked = Math.random() < blockChance();
-        if (!this.player.hurt(from, this.time.now, blocked ? 0 : dmg)) return;
-        if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
-        else this.smokCarry = pending - dmg;
+        if (!this.player.hurt(from, this.time.now, dmg)) return;
+        this.smokCarry = pending - dmg;
         this.emitHud();
         if (this.player.isDead) this.onPlayerDeath();
       },
@@ -2269,14 +2267,12 @@ export class GameScene extends Phaser.Scene {
       origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
       sounds: this.combatAudio,
       attackMarker: (s) => this.stwory3d?.attackMarkerMs(s, 'impact'),
-      hurt: (from: Phaser.Math.Vector2, obrazenie: number) => {
+      hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
-        const blocked = Math.random() < blockChance();
-        const pending = this.wilkCarry + obrazenie * session.level.obrazenia;
+        const pending = this.wilkCarry + poPancerzu(obrazenie * session.level.obrazenia, defense(), fizyczne);
         const dmg = Math.floor(pending);
-        if (!this.player.hurt(from, this.time.now, blocked ? 0 : dmg)) return;
-        if (blocked) this.toast('Zbroja zatrzymała cios!', 700);
-        else this.wilkCarry = pending - dmg;
+        if (!this.player.hurt(from, this.time.now, dmg)) return;
+        this.wilkCarry = pending - dmg;
         this.emitHud();
         if (this.player.isDead) this.onPlayerDeath();
       },
@@ -2370,7 +2366,13 @@ export class GameScene extends Phaser.Scene {
     const ustawione = live() ? stwory[s.kindId] : undefined;
     const zPanelu = live() ? losujLup(s.kindId) : null;
     if (zPanelu) this.lupZPanelu(s.x, s.y, zPanelu);
-    else this.dropLoot(s.x, s.y, s.kindId);
+    else {
+      this.dropLoot(s.x, s.y, s.kindId);
+      if (live()) {
+        const id = losujPancerz(Math.random, losujJakosc);
+        if (id) this.lupZPanelu(s.x, s.y, [{ co: id, ile: 1 }]);
+      }
+    }
     this.enemies = this.enemies.filter((e) => e !== s);
     session.exp += ustawione?.exp ?? s.kind.exp;
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
@@ -2449,7 +2451,7 @@ export class GameScene extends Phaser.Scene {
     return {
       postac: session.look.postac, name: session.name, poziom: poziomPostaci(session.exp), maxHp: PLAYER.maxHp,
       atak: Math.round(meleeDamage() * 10) / 10, trafienie: Math.round(hitChance(skill, false, gearAimBonus()) * 100) / 100,
-      blok: Math.round(blockChance() * 100) / 100, mocny: Math.round(strongFactor('miecz') * 10) / 10, bron: gear.equip.bron ?? null,
+      pancerz: defense(), magicznyAtak: r?.rodzaj === 'magia', blok: blockChance(), mocny: Math.round(strongFactor('miecz') * 10) / 10, bron: gear.equip.bron ?? null,
       ...(r ? { strzal: Math.round(shotDamage(r) * 10) / 10 } : {}),
     };
   }
@@ -6303,7 +6305,7 @@ export class GameScene extends Phaser.Scene {
 
   private label(p: Przedmiot) {
     if (p.pojazd) return `${p.nazwa} – ${p.cenaDiamenty ? `${p.cenaDiamenty} 💎` : `${this.cenaDla(p)} monet`} (+${Math.round((POJAZDY[p.pojazd].szybkosc - 1) * 100)}% prędkości)`;
-    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `obrona ${p.moc}`;
+    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `pancerz ${p.moc}`;
     return `${p.nazwa} – ${this.cenaDla(p)} monet (${what})`;
   }
 

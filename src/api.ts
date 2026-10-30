@@ -190,6 +190,8 @@ export interface LoginResult {
 
 /** A fighter for the Arena Cechu (a ghost): what another player meets (content/arena.ts). */
 export interface DuchAreny {
+  pancerz?: number;
+  magicznyAtak?: boolean;
   postac?: number;
   name: string;
   poziom: number;

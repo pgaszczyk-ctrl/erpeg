@@ -54,8 +54,8 @@ export function lupOpcje(): { id: string; nazwa: string; grupa: string }[] {
     { id: 'serce', nazwa: 'Serce (leczy pół serca)', grupa: 'Leczenie' },
     ...(Object.keys(OWOCE) as Owoc[]).map((k) => ({ id: k, nazwa: OWOCE[k].nazwa, grupa: 'Towary' })),
     ...(Object.keys(AMUNICJA) as Amunicja[]).map((k) => ({ id: k, nazwa: AMUNICJA[k].nazwa, grupa: 'Amunicja' })),
-    ...PRZEDMIOTY.filter(p => p.baza === p.id).map(p => ({ id: `los_${p.id}`, nazwa: `${p.nazwa.split(' — ')[0]} — losowa jakość (21/22/25/22/10%)`, grupa: 'Broń — losowa jakość' })),
-    ...PRZEDMIOTY.map((p) => ({ id: p.id, nazwa: `${p.nazwa}${p.obrazenia ? ` (${p.obrazenia.join('–')})` : ''}`, grupa: p.miejsce === 'bron' ? 'Broń — rodzaj i jakość' : 'Przedmioty' })),
+    ...PRZEDMIOTY.filter(p => p.baza === p.id).map(p => ({ id: `los_${p.id}`, nazwa: `${p.nazwa.split(' — ')[0]} — losowa jakość (21/22/25/22/10%)`, grupa: p.miejsce === 'bron' ? 'Broń — losowa jakość' : 'Pancerze — losowa jakość' })),
+    ...PRZEDMIOTY.map((p) => ({ id: p.id, nazwa: `${p.nazwa}${p.obrazenia ? ` (${p.obrazenia.join('–')})` : ''}`, grupa: p.miejsce === 'bron' ? 'Broń — rodzaj i jakość' : ['zbroja', 'helm', 'buty'].includes(p.miejsce) ? 'Pancerze — rodzaj i jakość' : 'Przedmioty' })),
   ];
 }
 
