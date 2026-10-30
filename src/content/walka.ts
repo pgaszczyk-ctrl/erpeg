@@ -30,6 +30,10 @@ export const WALKA = {
   zaMoc: 1.5,
   mocnyPoMs: 1000,
   zasiegMiecz: 1.3,
+  /** 30.10.2026: Celność / Skupienie 1–3 = 2× miecz, potem +20% poprzedniego zasięgu. */
+  dystans: { start: 2, odPoziomu: 4, naPoziom: 1.2, mocny: 1.3, mocnyOd: 4, lotStartS: 0.55, lukLotuPx: 6 },
+  /** Zwykły cios wybiera jednego przeciwnika w tym kącie przed bohaterem. */
+  ciosStopnie: 70,
   miecz: {
     przerwa: [[1, 320], [2, 310], [3, 300], [5, 280], [10, 230], [15, 180], [20, 130]] as Tabela,
     trafienie: [[1, 85], [2, 90], [3, 93], [5, 96], [10, 99], [15, 100], [20, 100]] as Tabela,
@@ -60,6 +64,13 @@ export const WALKA = {
   /** Wielkość obrazka broni w punktach mapy (mocny cios trochę większy). */
   wielkoscBroni: 13,
 };
+
+/** Same distance for preview, aim assist and projectile collision; independent of character level. */
+export function zasiegDystansu(poziom: number, zasiegMiecza: number, mocny = false) {
+  const p = WALKA.dystans;
+  return zasiegMiecza * p.start * p.naPoziom ** Math.max(0, poziom - p.odPoziomu + 1)
+    * (mocny && poziom >= p.mocnyOd ? p.mocny : 1);
+}
 
 /** The table's value at that level (straight lines between its rows). */
 export function zTabeli(t: Tabela, poziom: number) {

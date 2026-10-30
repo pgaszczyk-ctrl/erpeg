@@ -71,6 +71,7 @@ export class StworAI {
   private pociski: Pocisk[] = [];
   private skokGotowyOd = 0;
   private taranGotowyOd = 0;
+  private seenProvocation = -Infinity;
   private krazenie = Math.random() < 0.5 ? 1 : -1;
   private readonly P: ProfilStwora;
   private soundStops: (() => void)[] = [];
@@ -100,6 +101,8 @@ export class StworAI {
     return this.P.rodzaj;
   }
 
+  get returning() { return this.stan === 'powrot'; }
+
   destroy() {
     this.silence();
     this.gfx.destroy();
@@ -120,6 +123,14 @@ export class StworAI {
     this.lotPociskow(dt);
     const dist = Phaser.Math.Distance.Between(s.x, s.y, p.x, p.y);
     const odDomu = Phaser.Math.Distance.Between(s.x, s.y, this.home.x, this.home.y);
+    if (s.lastProvokedAt > this.seenProvocation) {
+      this.seenProvocation = s.lastProvokedAt;
+      // Enough time to cover the whole shot distance, also at the rare level 20.
+      s.pursuitUntil = Math.max(s.pursuitUntil, now + dist / Math.max(1, P.predkosc * M) * 1000 + 15000);
+    }
+    const provoked = now < s.pursuitUntil;
+    if (provoked && (this.stan === 'patrol' || this.stan === 'powrot')) this.stan = 'podejscie';
+    s.chasing = this.inCombat;
 
     // Ogłuszony ciosem bohatera / esencją: przerywa wszystko (odrzut prowadzi Slime).
     if (s.ogluszony(now) || s.isDazed(now)) {
@@ -135,7 +146,7 @@ export class StworAI {
       return;
     }
 
-    if (this.stan !== 'patrol' && this.stan !== 'powrot' && odDomu > this.home.r * 1.3) {
+    if (!provoked && this.stan !== 'patrol' && this.stan !== 'powrot' && odDomu > this.home.r * 1.3) {
       this.silence();
       s.modelAttack = undefined;
       this.zwolnijRezerwacje();
@@ -162,7 +173,7 @@ export class StworAI {
 
       case 'podejscie':
       case 'czeka': {
-        if (dist > P.gubiM * M) {
+        if (!provoked && dist > P.gubiM * M) {
           s.vel.set(0, 0);
           this.stan = 'patrol';
           return;
@@ -196,7 +207,7 @@ export class StworAI {
         s.vel.set(0, 0);
         if (now >= this.until) {
           this.zwolnijRezerwacje();
-          this.stan = dist < P.gubiM * M ? 'podejscie' : 'patrol';
+          this.stan = provoked || dist < P.gubiM * M ? 'podejscie' : 'patrol';
         }
         return;
     }
