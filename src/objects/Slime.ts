@@ -277,9 +277,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
     if (this.spokojny) this.chasing = false;
     else if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
-    if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
+    if (this.chasing && now >= this.pursuitUntil && dist > this.kind.loseRange) this.chasing = false;
     const l = this.leash;
-    if (this.chasing && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
+    if (this.chasing && now >= this.pursuitUntil && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
       // Past the border of its gang's land: back home.
       this.chasing = false;
       this.nextThink = 0;
@@ -325,10 +325,18 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Depth below the position (map px): a big drawn dragon's point is its body centre, its feet are lower – trees in front of the feet must cover it, not its middle. */
   depthOff = 0;
 
+  /** Actual hits wake distant live enemies; each hit refreshes pursuit, never a miss. */
+  lastProvokedAt = -Infinity;
+  pursuitUntil = -Infinity;
+
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (this.isDead || this.inAir) return false;
     const applied = Math.min(Math.max(0, damage), this.hp);
+    if (live() && applied > 0) {
+      this.lastProvokedAt = now;
+      this.pursuitUntil = Math.max(this.pursuitUntil, now + 15000);
+    }
     this.hp -= damage;
     if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied);
     this.modelHitAt = now;

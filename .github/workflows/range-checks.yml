@@ -1,0 +1,39 @@
+name: Combat range checks
+on:
+  pull_request:
+    paths:
+      - 'src/content/walka.ts'
+      - 'src/objects/Slime.ts'
+      - 'src/objects/StworAI.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'src/inventory.ts'
+      - 'scripts/tests/browser-zasiegi.mjs'
+      - '.github/workflows/range-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ranges:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vite build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - run: node scripts/tests/browser-zasiegi.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: combat-range-desktop-and-phone
+          path: work/zasiegi/
+          if-no-files-found: ignore
