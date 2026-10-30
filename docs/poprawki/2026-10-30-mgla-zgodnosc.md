@@ -1,6 +1,6 @@
 # Błąd atob przy uruchamianiu produkcji po grze na teście
 
-Stan: przygotowana poprawka, bez publikacji produkcji.
+Stan: właściciel zatwierdził publikację poleceniem „Publikuj”. Sprawdzony szkic skopiowano bez zmian do `produkcja/1.038-mgla-zgodnosc.patch`; scalenie PR #45 uruchamia wydanie produkcji 1.038.
 
 Produkcja 1.037 (`PRODUKCJA` + dotychczasowe łatki 1.036 i 1.037) czyta fragmenty odkrytej mapy przez `b64.dec(v)` w `Explored.load`. Test od 29 października zapisuje część fragmentów jako `~` + Base64 długości serii. Oba środowiska korzystają z tych samych zapisów. `~AIAg` oznacza poprawny, całkowicie odkryty fragment, ale stary odczyt rzuca `InvalidCharacterError`, który trafia do komunikatu „Nie udało się przygotować mapy”. Błąd odtworzono na rzeczywistym kodzie `Explored.load` produkcji.
 
