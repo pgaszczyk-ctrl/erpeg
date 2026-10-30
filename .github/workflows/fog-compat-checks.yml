@@ -1,0 +1,51 @@
+name: Production fog compatibility candidate
+on:
+  pull_request:
+    paths:
+      - 'docs/poprawki/1.038-mgla-zgodnosc.patch'
+      - 'scripts/tests/browser-fog-compat.mjs'
+      - '.github/workflows/fog-compat-checks.yml'
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct production and apply the draft compatibility fix locally
+        run: |
+          set -euo pipefail
+          cp scripts/tests/browser-fog-compat.mjs /tmp/browser-fog-compat.mjs
+          cp docs/poprawki/1.038-mgla-zgodnosc.patch /tmp/fog-compat.patch
+          mkdir -p /tmp/published-patches
+          cp produkcja/*.patch /tmp/published-patches/
+          git checkout --quiet "$(tr -d ' \n\r' < PRODUKCJA)"
+          for p in /tmp/published-patches/*.patch; do git apply "$p"; done
+          git apply /tmp/fog-compat.patch
+          cp /tmp/browser-fog-compat.mjs scripts/tests/browser-fog-compat.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit && npx vite build
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Check mixed-format save on desktop and phone with fixture RPCs
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4175 --strictPort > /tmp/fog-preview.log 2>&1 &
+          for i in $(seq 1 30); do curl --silent --fail http://127.0.0.1:4175/ > /dev/null && break; sleep 1; done
+          node scripts/tests/browser-fog-compat.mjs
+        env:
+          PORT: '4175'
+          LIVE_MAPS: '1'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fog-compat-desktop-phone
+          path: work/fog-compat/
