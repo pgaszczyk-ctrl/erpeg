@@ -64,7 +64,7 @@ export function showLoginMap() {
   plate.style.opacity = '';
   resize = () => {
     if (flight) (flight.effect as KeyframeEffect).setKeyframes(flightFrames(r));
-    else plate.style.transform = point ? frame(r, point, finalScale(r)) : initialFrame(r);
+    else plate.style.transform = point ? frame(r, point, finalScale(r), true) : initialFrame(r);
   };
   window.addEventListener('resize', resize);
   preparePoster(r);
@@ -116,16 +116,17 @@ export function beginMapIntro(login: HTMLElement) {
 }
 
 const portrait = (r: HTMLElement) => r.clientHeight > r.clientWidth;
+// Fill the viewport proportionally: contain left abrupt blurred side strips on wide screens.
 const initialScale = (r: HTMLElement) => portrait(r)
   ? Math.max(r.clientWidth / 1280, r.clientHeight / 720) * 1.8
-  : Math.min(r.clientWidth / 1280, r.clientHeight / 720);
+  : Math.max(r.clientWidth / 1280, r.clientHeight / 720);
 const finalScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 3.2 : 14);
 
 /** Place a point on the actual image at the viewport's centre. */
 function frame(r: HTMLElement, p: { x: number; y: number }, scale: number, crop = false) {
   let x = (0.5 - p.x) * 1280 * scale, y = (0.5 - p.y) * 720 * scale;
   if (crop) {
-    // Keep the image covering portrait screens during the pan, even near its edges.
+    // Keep every viewport covered during the flight, including destinations near an image edge.
     const mx = Math.max(0, (1280 * scale - r.clientWidth) / 2);
     const my = Math.max(0, (720 * scale - r.clientHeight) / 2);
     x = Math.max(-mx, Math.min(mx, x)); y = Math.max(-my, Math.min(my, y));
@@ -133,7 +134,7 @@ function frame(r: HTMLElement, p: { x: number; y: number }, scale: number, crop 
   return `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
 }
 function initialFrame(r: HTMLElement) {
-  return frame(r, portrait(r) ? EUROPE : { x: 0.5, y: 0.5 }, initialScale(r), portrait(r));
+  return frame(r, portrait(r) ? EUROPE : { x: 0.5, y: 0.5 }, initialScale(r), true);
 }
 /**
  * One movement (owner, 11 Oct 2026: „nie centruj najpierw, tylko centruj zoomując”): after a short
@@ -143,7 +144,7 @@ function initialFrame(r: HTMLElement) {
  */
 function flightFrames(r: HTMLElement) {
   const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
-  const s0 = initialScale(r), s1 = finalScale(r), crop = portrait(r);
+  const s0 = initialScale(r), s1 = finalScale(r);
   const frames: Keyframe[] = [
     { offset: 0, transform: initialFrame(r), easing: 'linear' },
   ];
@@ -154,7 +155,7 @@ function flightFrames(r: HTMLElement) {
     const scale = s0 * (s1 / s0) ** u;
     const f = 1 - (1 - u) ** 2 * (s0 / scale);
     const p = { x: from.x + (point!.x - from.x) * f, y: from.y + (point!.y - from.y) * f };
-    frames.push({ offset: overviewOffset + (1 - overviewOffset) * t, transform: frame(r, p, scale, crop && k < N), easing: 'linear' });
+    frames.push({ offset: overviewOffset + (1 - overviewOffset) * t, transform: frame(r, p, scale, true), easing: 'linear' });
   }
   return frames;
 }
@@ -201,7 +202,7 @@ export async function flyToGameLocation(lat: number, lon: number, mapReady: Prom
     }
     await done;
   } else {
-    r.querySelector<HTMLElement>('.lm-plate')!.style.transform = frame(r, point, finalScale(r));
+    r.querySelector<HTMLElement>('.lm-plate')!.style.transform = frame(r, point, finalScale(r), true);
   }
   await fade;
   if (!r.hidden && !finished && r.dataset.phase === 'pan') {
@@ -261,11 +262,11 @@ function startDrift(r: HTMLElement) {
   const left = Math.random() < 0.5;
   const from = { x: left ? lo : hi, y }, to = { x: left ? hi : lo, y };
   if (reduced()) {
-    plate.style.transform = frame(r, { x: cx, y }, scale);
+    plate.style.transform = frame(r, { x: cx, y }, scale, true);
     drift = null;
     return;
   }
-  const anim = plate.animate([{ transform: frame(r, from, scale) }, { transform: frame(r, to, scale) }], { duration: DRYF_MS, easing: 'ease-in-out', fill: 'forwards' });
+  const anim = plate.animate([{ transform: frame(r, from, scale, true) }, { transform: frame(r, to, scale, true) }], { duration: DRYF_MS, easing: 'ease-in-out', fill: 'forwards' });
   drift = { anim, from, to, scale, ms: DRYF_MS };
 }
 /** Where the drifting wallpaper is now (the point at the screen centre) and its scale. */
@@ -293,7 +294,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   if (reduced()) {
     logoImg?.remove();
     drift?.anim.cancel();
-    plate.style.transform = frame(r, point, finalScale(r) / 2);
+    plate.style.transform = frame(r, point, finalScale(r) / 2, true);
     await mapReady;
     return;
   }
@@ -321,7 +322,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   const N = 30;
   for (let k = 0; k <= N; k++) {
     const t = k / N, u = t ** 1.5, scale = s0 * (s1 / s0) ** u, f = 1 - (1 - u) ** 2 * (s0 / scale);
-    frames.push({ offset: t, transform: frame(r, { x: p0.x + (point.x - p0.x) * f, y: p0.y + (point.y - p0.y) * f }, scale) });
+    frames.push({ offset: t, transform: frame(r, { x: p0.x + (point.x - p0.x) * f, y: p0.y + (point.y - p0.y) * f }, scale, true) });
   }
   flight = plate.animate(frames, { duration: 1700, easing: 'ease-in-out', fill: 'forwards' });
   await flight.finished.catch(() => {});
