@@ -80,7 +80,7 @@ export class PrologRekruta {
         this.busy = false; this.rendered = '';
         this.h.scene.scene.resume(); then?.();
         if(this.state?.stage==='letter_deliver' && this.state.rewardsClaimed.includes('starter_sword'))this.h.toast(
-          matchMedia('(pointer: coarse)').matches ? tx('Chodzisz lewym joystickiem. Przy rozmówcy naciśnij dwa razy ATAK lub stuknij go dwa razy.','Use the left joystick to walk. Near a person, press ATTACK twice or double-tap them.') : tx('Chodzisz WASD lub strzałkami. Podejdź i naciśnij E albo dwukrotnie ATAK.','Walk with WASD or arrow keys. Approach and press E or ATTACK twice.'),6500);
+          matchMedia('(pointer: coarse)').matches ? tx('Chodzisz lewym joystickiem. Przy rozmówcy naciśnij AKCJA.','Use the left joystick to walk. Near a person, press ACT.') : tx('Chodzisz WASD lub strzałkami. Podejdź i naciśnij E albo kliknij rozmówcę.','Walk with WASD or arrow keys. Approach and press E or click the person.'),6500);
       } catch {
         if (this.destroyed) return;
         this.h.dialog({ title: tx('Zapis prologu', 'Prologue checkpoint'), text: tx('Nie udało się potwierdzić zapisu. Postęp i przedmioty czekają tutaj. Spróbuj ponownie przed dalszą grą.', 'The save could not be confirmed. Your progress and items are held here. Retry before continuing.'), buttons: [tx('Ponów zapis', 'Retry save')], onChoose: () => { this.h.scene.scene.pause(); void write(); } });
@@ -223,6 +223,27 @@ export class PrologRekruta {
     if(['intro','letter_deliver','letter_return','rescue_fight','rescue_reward','bow_trial','rescue_return'].includes(p.stage))return null;
     if(p.stage==='dungeon_enter')advance(p,'dungeon_enter','dungeon_first_group');
     return p.dungeon.id;
+  }
+
+  /** Read-only hit test for the prologue's own characters and story objects. */
+  interactionAt(x: number, y: number): 'talk' | 'use' | null {
+    const p = this.state;
+    if (!p || this.busy || this.destroyed) return null;
+    const at = (q: {x:number;y:number} | undefined | null) => q && Math.hypot(q.x-x,q.y-y) < 16;
+    if (this.local) {
+      const keys: AnchorKind[] = [];
+      if (p.status === 'completed' || ['intro','letter_return','bow_trial','rescue_return','dungeon_return'].includes(p.stage)) keys.push('mentor');
+      if (p.status === 'active') {
+        if (p.stage === 'letter_deliver') keys.push('outpost');
+        if (['rescue_reward','bow_trial'].includes(p.stage)) keys.push('ambush');
+        if (p.stage === 'library_visit') keys.push('library');
+      }
+      if (keys.some(k => at(this.point(k)))) return 'talk';
+    }
+    const d = this.underground && this.h.dungeon();
+    if (d && p.status === 'active' && ((p.stage === 'magic_pickup' && at(d.magicSpot)) ||
+        (['magic_trial','dungeon_recover'].includes(p.stage) && at(d.skrzynia)))) return 'use';
+    return null;
   }
 
   interact(): boolean {

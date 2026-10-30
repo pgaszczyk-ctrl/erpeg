@@ -16,26 +16,13 @@ import { naEkranie } from './obrot';
 
 export const JOY_RADIUS = 56;
 
-/**
- * New controls of the test package (walka/live.ts): the joystick stands still bottom-left, the right side has
- * HTML buttons (ui/sterowanie.ts: attack, strong attack/skill, heal) and talks, doors, rides and quest spots
- * start on a DOUBLE tap/click (owner, 26 Oct 2026: a ride or a quest went off by accident). `E` interacts near
- * the hero, `Q` is the strong attack.
- */
-let interakcja: { x: number; y: number; atak?: boolean } | null = null;
-/**
- * Two quick attacks (the ATTACK button or Space, owner 27 Oct 2026: „akcja na telefonie ma być wyzwalana dwukrotnym
- * atakiem”) also interact right by the hero – entrances, doors, talks; `atak` lets the game skip it in a fight.
- */
-const DBL_ATAK_MS = 450;
-let ostatniAtak = 0;
-function podwojnyAtak() {
-  const now = performance.now();
-  if (now - ostatniAtak < DBL_ATAK_MS) {
-    interakcja = { x: -1, y: -1, atak: true };
-    ostatniAtak = 0;
-  } else ostatniAtak = now;
-}
+/** Explicit interaction input, shared by E, the HUD and object clicks. */
+let interakcja: { x: number; y: number } | null = null;
+export type InteractionKind = 'talk' | 'enter' | 'use';
+export interface WorldInteraction { kind: InteractionKind; run: () => void }
+/** Installed by the active game scene; querying never performs an action. */
+export const worldInteraction = { at: null as ((x: number, y: number) => WorldInteraction | null) | null };
+export function requestInteraction() { interakcja = { x: -1, y: -1 }; }
 /** A double tap/click since the last call: where (CSS px on the game), or (-1, -1) = near the hero (E key). */
 export function consumeInteraction() {
   const i = interakcja;
@@ -74,7 +61,6 @@ export function releaseAttack() {
   if (!hold.active || hold.id !== -9) return;
   if (!hold.dragged && performance.now() - hold.start < TAP_ATAK_MS) {
     touchInput.attack = true;
-    podwojnyAtak();
   }
   endHold();
 }
@@ -269,6 +255,8 @@ export function resetKeys() {
 }
 
 export function resetTouch() {
+  interakcja = null;
+  lastTap = null;
   tapStarts.clear();
   hold.active = false;
   release = null;
@@ -458,13 +446,12 @@ export function installTouchControls(el: HTMLElement) {
       } else if (code === 'KeyH') {
         if (!e.repeat) healRequest = true;
       } else if (live() && code === 'KeyE') {
-        if (!e.repeat) interakcja = { x: -1, y: -1 };
+        if (!e.repeat) requestInteraction();
       } else if (live() && code === 'KeyQ') {
         if (!e.repeat) strongRequest = true;
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
-          if (live()) podwojnyAtak();
           if (code === 'Space' || code === 'KeyJ') startHold('key');
           tapListeners.forEach((fn) => fn(-1, -1));
         }
@@ -529,9 +516,11 @@ export function installTouchControls(el: HTMLElement) {
       healRequest = true;
       return;
     }
-    // New controls: a double click is an interaction (talk, door, ride, quest spot), the click itself still swings.
-    // Native click count remains reliable when a slow frame delays event processing past DBL_MS.
-    if (live() && !onMenuButton(e.offsetX, e.offsetY)) tapped(e.offsetX, e.offsetY, e.detail === 2);
+    // Resolve again on click: the hero, camera or object may have moved since hover.
+    if (live() && !onMenuButton(e.offsetX, e.offsetY)) {
+      const target = worldInteraction.at?.(e.offsetX, e.offsetY);
+      if (target) { cancelPress(); target.run(); return; }
+    }
     // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
     if (!onMenuButton(e.offsetX, e.offsetY)) {
       startHold('mouse');
@@ -548,3 +537,4 @@ export function installTouchControls(el: HTMLElement) {
   }, { passive: false });
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 }
+

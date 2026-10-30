@@ -211,7 +211,7 @@ export class Etapy {
   private podpowiedz(key: string) {
     if (this.podpowiedziane.has(key)) return;
     this.podpowiedziane.add(key);
-    this.host.toast(tx('👆👆 Tu coś jest – stuknij dwa razy (albo E), żeby zacząć.', '👆👆 Something is here – double tap (or E) to start.'), 3000);
+    this.host.toast(tx('👆 Tu coś jest – naciśnij AKCJA lub E, żeby zacząć.', '👆 Something is here – press ACT or E to start.'), 3000);
   }
 
   /** New controls: a double tap by the hero – the quest stage or clue right here, if any (true = started). */

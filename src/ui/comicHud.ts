@@ -26,9 +26,10 @@ html body.hud-comic-a #hud-ster .hs .nub{box-sizing:border-box;width:48px;height
 html body.hud-comic-a #hud-ster .hs-atak.on{filter:brightness(1.14) drop-shadow(0 2px 0 #19171b)}
 html body.hud-comic-a #hud-ster small{font:900 11px/1.05 'Alegreya Sans','Trebuchet MS',sans-serif;letter-spacing:.4px;background:#272224;border:2px solid #171519;padding:2px 5px;bottom:-12px;color:#fff0bf;text-shadow:1px 2px #171519;max-width:112px;text-align:center;white-space:normal}
 html body.hud-comic-a #hud-ster .hs-spec,html body.hud-comic-a #hud-ster .hs-lecz{background-image:${frameUrl}}
+html body.hud-comic-a #hud-ster .hs-akcja{background-image:${frameUrl};width:58px;height:61px;bottom:calc(187px + env(safe-area-inset-bottom))}
 html body.hud-comic-a #hud-ster .hs-spec{width:76px;height:79px;bottom:calc(57px + env(safe-area-inset-bottom))}
 html body.hud-comic-a #hud-ster .hs-spec>span:first-child{font-size:30px;filter:drop-shadow(1px 2px 0 #19171b)}
-html body.hud-comic-a #hud-ster .hs-lecz{width:58px;height:61px;bottom:calc(187px + env(safe-area-inset-bottom))}
+html body.hud-comic-a #hud-ster .hs-lecz{width:58px;height:61px;bottom:calc(261px + env(safe-area-inset-bottom))}
 html body.hud-comic-a #hud-ster .hs-cd{inset:13%;border-radius:25%;background:conic-gradient(#171519b8 var(--cd,0%),transparent 0)}
 html body.hud-comic-a #hud-ster .hs-n{border:2px solid #19171b;border-radius:3px;background:#e4b34c;color:#201a17;font-weight:900;top:0;right:0}
 html body.hud-comic-a #hud-ster .nie{filter:grayscale(.8) brightness(.72)}
@@ -59,8 +60,9 @@ html body.hud-comic-a.hud-teleskop #hud .hud-plate,html body.hud-comic-a.hud-tel
 html body.hud-comic-a.hud-teleskop #hud .hud-compass{border-radius:0!important;background:${frameUrl} center/100% 100% no-repeat!important}
 html body.hud-comic-a.hud-teleskop #hud .hud-quest{font-weight:900}
 html body.hud-comic-a #hud-ster button:focus-visible,html body.hud-comic-a #hud-ster input:focus-visible{outline:3px solid #fff0ad;outline-offset:4px}
-@media(max-height:420px){html body.hud-comic-a #hud-ster .hs-atak{width:96px;height:100px;bottom:calc(30px + env(safe-area-inset-bottom))}html body.hud-comic-a #hud-ster .hs-spec,html body.hud-comic-a #hud-ster .hs-lecz{background-image:${frameUrl}}
+@media(max-height:420px), (orientation:portrait) and (pointer:coarse){html body.hud-comic-a #hud-ster .hs-atak{width:96px;height:100px;bottom:calc(30px + env(safe-area-inset-bottom))}html body.hud-comic-a #hud-ster .hs-spec,html body.hud-comic-a #hud-ster .hs-lecz{background-image:${frameUrl}}
 html body.hud-comic-a #hud-ster .hs-spec{width:66px;height:69px;bottom:calc(39px + env(safe-area-inset-bottom))}html body.hud-comic-a #hud-ster .hs-lecz{width:52px;height:55px;bottom:calc(149px + env(safe-area-inset-bottom))}#hud-ster .hs-picker{right:calc(177px + env(safe-area-inset-right));bottom:env(safe-area-inset-bottom);width:86px}}
+@media(max-height:420px), (orientation:portrait) and (pointer:coarse){html body.hud-comic-a #hud-ster .hs-akcja{right:calc(178px + env(safe-area-inset-right));width:52px;height:55px;bottom:calc(125px + env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){html body.hud-comic-a #hud-tel .tel-rura i{transition:none}}
 `;
   document.head.append(s);
@@ -86,6 +88,7 @@ export function paintBrassPad(c: CanvasRenderingContext2D) {
 /** Drawn icons stay legible on devices without colour emoji fonts. No baked labels. */
 export function comicIcon(id: string): string {
  const icons: Record<string,string> = {
+  interact: '<path d="M12 31L5 23Q2 19 6 18Q8 17 12 22V7Q12 3 15 3Q18 3 18 7V17V13Q18 10 21 11Q23 11 23 14V18V15Q23 12 26 14L28 20Q32 17 33 21L32 30L27 35H16Z" fill="#f3d398" stroke="#19171b" stroke-width="2.5" stroke-linejoin="round"/><path d="M17 30H28" stroke="#b78937" stroke-width="2.5"/>',
   mocny: '<path d="M12 3L17 10L25 7L24 15L31 19L23 24L25 32L16 29L10 36L7 27L0 26L4 18L0 11L9 11Z" fill="#f3b53b" stroke="#19171b" stroke-width="2.5"/><path d="M15 11L10 22H16L13 29L24 18H18L21 11Z" fill="#fff1b5" stroke="#a74c23" stroke-width="1.5"/>',
   zamach: '<path d="M23 13C16 4 3 11 6 22C9 34 30 29 29 16C28 4 10 0 2 11M2 4V12H10" fill="none" stroke="#f5bb49" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
   mocny_strzal: '<circle cx="16" cy="18" r="12" fill="#f6e2b1" stroke="#19171b" stroke-width="2.5"/><circle cx="16" cy="18" r="7" fill="#c54b31"/><circle cx="16" cy="18" r="2" fill="#f6e2b1"/><path d="M17 17L29 4M24 4H30V10" fill="none" stroke="#efbd50" stroke-width="2"/>',
@@ -97,3 +100,4 @@ export function comicIcon(id: string): string {
  };
  return `<svg viewBox="-3 -2 42 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${icons[id] ?? icons.mocny}</svg>`;
 }
+

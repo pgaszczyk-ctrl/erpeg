@@ -37,25 +37,55 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
   window.__w={id:'fixture-crypt',rodzaj:'krypta',x:s.player.x,y:s.player.y-10,seed:271};
   s.lochy.addTutorial(window.__w);s.player.face(0,-1);
  });
+ await page.screenshot({path:`work/comic-hud/${name}-interaction-controls.png`});
  const cdp=await context.newCDPSession(page);
  const tap=async(x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
  const checks=[];
  const physical=([x,y])=>name==='upright'?[y,height-x]:[x,y];
- for(const method of (mobile ? ['E','map-double','attack-double','touch-attack-double','touch-map-double','range-E'] : ['E','map-double','attack-double','range-E'])){
+ for(const method of (mobile ? ['E','action','touch-action','touch-map-double','range-E'] : ['E','map-single','action','range-E'])){
   await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;s.player.setPosition(window.__w.x,window.__w.y+10);s.player.face(0,-1);window.__dialogs=[];});
   await page.waitForTimeout(600);
+  await g(()=>{const s=window.__game.scene.getScene('game');window.__blows=0;const original=s.player.tryAttack.bind(s.player);if(!s.player.__watch){s.player.tryAttack=(...a)=>{window.__blows++;return original(...a)};s.player.__watch=true;}});
   const b=await page.locator('.hs-atak').boundingBox(),ax=b.x+b.width/2,ay=b.y+b.height/2;
   const xy=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;const ratio=window.__game.scale.width/window.innerWidth;return[(window.__w.x-c.worldView.x)*c.zoomX/ratio,(window.__w.y-c.worldView.y)*c.zoomY/ratio]});
   const [mx,my]=physical(xy);
   if(method==='E')await page.keyboard.press('KeyE');
-  if(method==='map-double')await page.mouse.dblclick(mx,my,{delay:75});
-  if(method==='attack-double')await page.mouse.dblclick(ax,ay,{delay:75});
-  if(method==='touch-attack-double'){await tap(ax,ay);await page.waitForTimeout(75);await tap(ax,ay);}
+  if(method==='map-single'){await page.mouse.move(mx,my);await page.waitForTimeout(200);assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'enter');await page.mouse.click(mx,my);}
+  if(method==='action')await page.locator('.hs-akcja').click();
+  if(method==='touch-action'){const b=await page.locator('.hs-akcja').boundingBox();await tap(b.x+b.width/2,b.y+b.height/2);}
   if(method==='touch-map-double'){await tap(mx,my);await page.waitForTimeout(75);await tap(mx,my);}
   if(method==='range-E'){await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby()});await page.locator('.hs-picker input').focus();await page.keyboard.press('ArrowRight');assert.equal(await g(()=>window.__session.umiej.miecz),'zamach');await page.keyboard.press('KeyE');}
   await page.waitForTimeout(800);
+  assert.equal(await g(()=>window.__blows),0,`${name}: ${method} never attacks`);
   checks.push(await g(method=>{const s=window.__game.scene.getScene('game');return{method,dialogs:window.__dialogs.map(d=>d.title),ui:window.__game.scene.getScene('ui').hasDialog,hp:s.player.hp,dist:Math.hypot(s.player.x-window.__w.x,s.player.y-window.__w.y),combat:s.inCombat(),focus:document.activeElement?.outerHTML.slice(0,100)}},method));
  }
+ if(!mobile){
+  await g(()=>{
+   const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;
+   window.__talks=0;window.__blows=0;window.__hoverNpc={x:s.player.x-24,y:s.player.y};
+   window.__oldFixedAt=s.fixed.at;window.__oldFixedTalk=s.fixed.talk;
+   s.fixed.at=(x,y,r)=>Math.hypot(x-window.__hoverNpc.x,y-window.__hoverNpc.y)<r?window.__hoverNpc:window.__oldFixedAt.call(s.fixed,x,y,r);
+   s.fixed.talk=n=>{if(n===window.__hoverNpc)window.__talks++;else window.__oldFixedTalk.call(s.fixed,n)};
+  });
+  const pos=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;return[(window.__hoverNpc.x-c.worldView.x)*c.zoomX,(window.__hoverNpc.y-c.worldView.y)*c.zoomY]});
+  await page.mouse.move(...pos);await page.waitForTimeout(250);
+  assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'talk');
+  assert.equal(await g(()=>window.__talks),0,'hover never opens a conversation');
+  await page.mouse.click(...pos);await page.waitForTimeout(200);
+  assert.equal(await g(()=>window.__talks),1,'single click talks to the selected person');
+  assert.equal(await g(()=>window.__blows),0,'talking never attacks');
+  await page.mouse.move(620,50);await page.waitForTimeout(250);
+  assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'normal','empty terrain restores base cursor');
+  await g(()=>{const s=window.__game.scene.getScene('game');s.fixed.at=window.__oldFixedAt;s.fixed.talk=window.__oldFixedTalk;});
+ }
+ // Repeated attacks (HUD and keyboard) must never open an entrance.
+ await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;window.__dialogs=[];});
+ await page.locator('.hs-atak').dblclick({delay:75});await page.waitForTimeout(600);
+ await page.keyboard.press('Space');await page.waitForTimeout(75);await page.keyboard.press('Space');await page.waitForTimeout(600);
+ assert.equal(await g(()=>window.__dialogs.length),0,'double attacks do not interact');
+ // Buttons have separate touch areas, including the rotated page.
+ const boxes=await g(()=>['.hs-lecz','.hs-akcja','.hs-atak'].map(q=>{const b=document.querySelector(q).getBoundingClientRect();return{x:b.x,y:b.y,w:b.width,h:b.height}}));
+ for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];assert(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,`${name}: separate button touch areas`)}
  // The actual confirmation must use the drawn UI button, not its callback.
  await g(()=>{document.activeElement?.blur();const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;window.__dialogs=[];});
  await page.keyboard.press('KeyE');
@@ -76,4 +106,5 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
 }
 await writeFile('work/comic-hud/dungeon-diagnosis.json',JSON.stringify(results,null,2));
 } finally {await browser.close();await new Promise(r=>server.httpServer.close(r));}
+
 
