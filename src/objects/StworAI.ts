@@ -83,7 +83,7 @@ export class StworAI {
     private h: StworHost,
     private s: Slime,
     /** Środek i promień terytorium (px) – za nim przerywa i wraca. */
-    private home: { x: number; y: number; r: number },
+    private home: { x: number; y: number; r: number; krazy?: number },
     profil: ProfilStwora,
   ) {
     this.P = profil;
@@ -157,6 +157,12 @@ export class StworAI {
     switch (this.stan) {
       case 'patrol':
         s.vel.set(0, 0);
+        // Running round something they guard (Elzet 10's cog by the Lidl): a slow circle about home.
+        if (this.home.krazy) {
+          const dx = s.x - this.home.x, dy = s.y - this.home.y, d = Math.hypot(dx, dy) || 1;
+          const v = P.predkosc * M * 0.55, radial = Phaser.Math.Clamp((this.home.krazy - d) / (3 * M), -1, 1);
+          s.vel.set((-dy / d + (dx / d) * radial) * v, (dx / d + (dy / d) * radial) * v);
+        }
         if (dist < P.wzrokM * M) this.stan = 'podejscie';
         return;
 

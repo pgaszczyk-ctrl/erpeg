@@ -220,7 +220,8 @@ export function luckyCoins(n: number) {
 
 /** Walking bonus from worn speed talismans (+SZYBKOSC_TALIZMANU each). */
 export function gearSpeedBonus() {
-  return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU;
+  return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU
+    + Object.values(gear.equip).reduce((n, id) => n + (item(id)?.bieg ?? 0), 0);
 }
 
 /** Extra hit chance (percentage points) from worn items with the 'celnosc' effect. */

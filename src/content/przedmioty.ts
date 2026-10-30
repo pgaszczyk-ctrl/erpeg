@@ -63,6 +63,8 @@ export interface Przedmiot {
   narzedzie?: 'siekiera';
   /** Vehicles stay in the backpack; their HUD buttons toggle riding. */
   pojazd?: 'rower' | 'hulajnoga';
+  /** Worn (any place): walking faster by this share (Buty biegacza 0.1 = +10%). */
+  bieg?: number;
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
@@ -131,6 +133,9 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'klasztorny_pochlaniacz', nazwa: 'Klasztorny pochłaniacz', miejsce: 'zbroja', moc: 5, cena: 0, opis: 'Nosili go dominikanie w czasach Wielkiej Wojny o Tryby.' },
   { id: 'plaszcz_cechmistrza', nazwa: 'Płaszcz Cechmistrza', miejsce: 'zbroja', moc: 6, cena: 0, opis: 'Dla Strażnika Serca Miasta.' },
   { id: 'karabin_trybunal', nazwa: 'Karabin „Trybunał”', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 16, cena: 0, wytrzymalosc: 1600, opis: 'Parowy karabin wyborowy. Wyrok zapada z daleka.' },
+  // Elzet 10 (owner's quest, 30 Oct 2026; content/elzet.ts): the robot's gifts. Numbers temporary.
+  { id: 'zlota_pilka', nazwa: 'Złota piłka na łańcuszku', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', opis: 'Została po Elzecie 10. Noszona jako talizman: trafiasz pewniej (+10% trafień).' },
+  { id: 'buty_biegacza', nazwa: 'Buty biegacza', miejsce: 'buty', moc: 2, cena: 0, bieg: 0.1, opis: 'Magiczne buty od Elzeta 10 („Prosto z butiku”). Chodzisz o 10% szybciej.' },
   { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true,
     leczenie: WYTWORCY.paczkarnia.hearts,
     opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },

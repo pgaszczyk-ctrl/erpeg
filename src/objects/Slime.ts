@@ -51,6 +51,8 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   // kept sane in case generic Slime code (fleeing a dragon's shadow, etc.) ever reads them.
   wilk: { name: 'Wilk', hp: 10, wanderSpeed: 14, chaseSpeed: 44, sightRange: 160, loseRange: 260, scale: 1, damage: 2, exp: 12, tint: 0x7a6a58 },
   // The crypt's guardian (lochy, owner 27 Oct 2026): the skeleton's sheet, big and pale; fights like a boss (StworAI).
+  // Elzet 10 (content/elzet.ts): life and damage are set from the hero at the fight's start (scenes/Elzet.ts).
+  elzet: { name: 'Elzet 10', hp: 100, wanderSpeed: 0, chaseSpeed: 40, sightRange: 0, loseRange: 9999, scale: 1.25, damage: 1, exp: 0 },
   upior: { name: 'Upiór krypty', hp: 90, wanderSpeed: 10, chaseSpeed: 34, sightRange: 150, loseRange: 320, scale: 1.9, damage: 2, exp: 90, tint: 0xb8e8ff },
   warg: { name: 'Warg', hp: 32, wanderSpeed: 11, chaseSpeed: 40, sightRange: 190, loseRange: 300, scale: 1.3, damage: 4, exp: 45, tint: 0x5a3a2a },
 };
@@ -104,6 +106,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
   spokojny = false;
   /** In the air (a mountain dragon's flight): unseen and can't be hit. */
   inAir = false;
+  /** Can't be hit now (Elzet 10 walking away after giving up). */
+  nietykalny = false;
+  /** Elzet 10: life never drops below `hp`; reaching it calls `fn` once (the fight stops there). */
+  prog?: { hp: number; fn: () => void };
   /** Its own way of moving, called instead of think() (the demo's Wawel dragon). */
   brain?: (now: number) => void;
   private nextThink = 0;
@@ -331,13 +337,21 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
-    if (this.isDead || this.inAir) return false;
+    if (this.isDead || this.inAir || this.nietykalny) return false;
+    const prog = this.prog;
+    if (prog) damage = Math.min(damage, Math.max(0, this.hp - prog.hp));
     const applied = Math.min(Math.max(0, damage), this.hp);
     if (live() && applied > 0) {
       this.lastProvokedAt = now;
       this.pursuitUntil = Math.max(this.pursuitUntil, now + 15000);
     }
     this.hp -= damage;
+    if (prog && this.hp <= prog.hp) {
+      this.hp = prog.hp;
+      this.prog = undefined;
+      this.nietykalny = true;
+      prog.fn();
+    }
     if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied);
     this.modelHitAt = now;
     this.chasing = true;

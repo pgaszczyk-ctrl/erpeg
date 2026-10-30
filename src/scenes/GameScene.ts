@@ -44,6 +44,7 @@ import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
 import { NIE_POWTARZAJ_DNI } from '../content/prosby';
 import { FixedNpcs } from './FixedNpcs';
+import { Elzet } from './Elzet';
 import { Story } from './Story';
 import { Landmarks } from './Landmarks';
 import { note } from '../log';
@@ -352,7 +353,9 @@ type Enemy = Slime & {
   /** A wodnik's conjured blobs, and a blob's wodnik. */
   minions?: Set<Enemy>; owner?: Enemy; nextSummon?: number;
   /** Łowiska test pilot (scenes/Lowiska.ts): a wolf-pack member; its territory (centre + radius, world px). */
-  lowisko?: boolean; lowiskoHome?: { x: number; y: number; r: number };
+  lowisko?: boolean; lowiskoHome?: { x: number; y: number; r: number; krazy?: number };
+  /** Elzet 10 (scenes/Elzet.ts): fights by its own brain, never by touching the hero. */
+  elzet?: boolean;
 };
 
 /** Permanent mission rewards, as named in the reward line. */
@@ -483,6 +486,8 @@ export class GameScene extends Phaser.Scene {
   private lowiska: Lowiska | null = null;
   /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
   private prolog?: PrologRekruta;
+  /** Elzet 10, the owner's robot quest (Lublin, live fight only). */
+  private elzet?: Elzet;
   private lochy?: LochyWejscia;
   private loch?: LochWnetrze;
   private wilki = new Map<Enemy, StworAI>();
@@ -651,6 +656,27 @@ export class GameScene extends Phaser.Scene {
       save: () => this.save(),
       trees: (x, y, r) => this.orchards.treesNear(x, y, r),
     });
+
+    this.elzet?.destroy();
+    this.elzet = this.city.id === 'lublin' && live() && !demo.on && !this.city.loch ? new Elzet({
+      scene: this, city: this.city, player: this.player,
+      dialog: (req) => this.dialog(req),
+      toast: (t, ms) => this.toast(t, ms),
+      spawn: (x, y, kind) => this.spawnEnemy(x, y, undefined, kind),
+      usun: (e) => {
+        this.wilki.get(e)?.destroy();
+        this.wilki.delete(e);
+        this.enemies = this.enemies.filter((q) => q !== e);
+        e.destroy();
+      },
+      hurt: (from, polowki, fizyczne) => this.wilkHost().hurt(from, polowki, fizyczne),
+      sciana: (x, y) => this.city.isBlocked(x, y) || this.landmarks.blocked(x, y),
+      widac: (x, y) => pointInPolygon(this.vision, x, y),
+      save: () => this.save(),
+      hud: () => this.emitHud(),
+      lup: (x, y, l) => this.lupZPanelu(x, y, l),
+    }) : undefined;
+    { const ez = this.elzet; this.events.once('shutdown', () => ez?.destroy()); }
 
     this.folk = new Townsfolk(this, this.city);
     this.folk.wet = isWet;
@@ -1361,7 +1387,7 @@ export class GameScene extends Phaser.Scene {
       s.updateLook();
       s.setDepth(s.y + s.depthOff);
       if (now < this.noHurtUntil) continue; // just back from a talk: a moment of peace
-      if (dragon || wilk) continue; // their own attack deals the damage, not touching them
+      if (dragon || wilk || s.elzet) continue; // their own attack deals the damage, not touching them
       if (s.duel && Phaser.Math.Distance.Between(s.x, s.y, this.player.x, this.player.y) < 5 + s.size) {
         // A duel takes the purple hearts, never the real ones.
         if (this.player.hurt(new Phaser.Math.Vector2(s.x, s.y), now, 0)) {
@@ -1392,6 +1418,7 @@ export class GameScene extends Phaser.Scene {
     this.ludzik3d?.update(this.player, dt);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
+    this.elzet?.update(now);
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y) && !this.demoRun?.przySmoku(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
     this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
@@ -1610,6 +1637,8 @@ export class GameScene extends Phaser.Scene {
    * Talking starts with a swing, not by bumping into them.
    */
   private talkableAt(x: number, y: number, r: number): (() => void) | null {
+    const robot = this.elzet?.talkAt(x, y, r);
+    if (robot) return robot;
     const fixed = this.fixed.at(x, y, r);
     if (fixed) return () => this.fixed.talk(fixed);
     const npc = this.npcs.at(x, y, r);
@@ -2458,6 +2487,7 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
     if (s.lowisko) this.lowiska?.killed(s);
+    if (this.elzet?.zabity(s)) return;
     if (this.prolog?.killed(s)) return;
     if (this.loch?.zabity(s)) { this.prolog?.dungeonChanged(); return; } // dungeon state is recorded before another interaction
     if (s.folkQuest) this.folkQuestKill(s);
@@ -7392,6 +7422,8 @@ export class GameScene extends Phaser.Scene {
     }
     const gq = this.fixed.grazynkaQuest();
     if (gq) out.push({ id: 'npc-grazynka', title: 'Babcia Grażynka', start: 'Kościelna, Garbów', ...gq });
+    const eq = this.elzet?.quest();
+    if (eq) out.push(eq);
     const mq = this.fixed.martinQuest();
     if (mq) out.push({ id: 'zmarzniety_smok', title: 'Zmarznięty smok', start: 'Martin, Irysowa', ...mq });
     for (const rm of this.missions) {
