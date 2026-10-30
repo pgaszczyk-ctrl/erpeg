@@ -6,7 +6,8 @@
 //    teleskopRurki/ustawRurki – owner: „użyj tego HUD-u, tylko dodaj 2 rurki”, no life flask);
 //  - the movement joystick stays a Phaser drawing bottom-left (UIScene), fixed in place.
 // Plain HTML outside #game, so taps on it never reach the joystick or the map.
-import { pressAttack, dragAttack, releaseAttack, requestStrong, requestHeal } from '../controls';
+import { pressAttack, dragAttack, releaseAttack, requestStrong, requestHeal, requestInteraction } from '../controls';
+import { tx } from '../i18n';
 import { naEkranie } from '../obrot';
 import { ustawRurki } from './hudTeleskop';
 import { comicHud, mountComicHud, comicIcon } from './comicHud';
@@ -61,15 +62,22 @@ const CSS = `
   color:#fff3ce;text-shadow:0 1px 0 #000,0 0 3px #000;white-space:nowrap;pointer-events:none}
 #hud-ster .hs-spec{right:calc(${154 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(50px + env(safe-area-inset-bottom));width:70px;height:70px;font-size:26px;
   border:2px solid #f0ca87;background:radial-gradient(circle at 40% 35%,#3a5c55,#1d3833);box-shadow:0 4px 14px rgba(0,0,0,.4)}
-#hud-ster .hs-lecz{right:calc(${62 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:22px;
+#hud-ster .hs-lecz{right:calc(${62 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));bottom:calc(242px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:22px;
   border:2px solid #e8a3a0;background:radial-gradient(circle at 40% 35%,#7d2a26,#3d1210);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#hud-ster .hs-akcja{right:calc(102px + env(safe-area-inset-right));bottom:calc(168px + env(safe-area-inset-bottom));width:56px;height:56px;
+ border:2px solid #f0ca87;background:radial-gradient(circle at 40% 35%,#54705a,#243d32);box-shadow:0 4px 14px #0006}
+#hud-ster .hs-akcja.gotowa{filter:brightness(1.25) drop-shadow(0 0 5px #ffd36a)}
+#hud-ster .hs-akcja:active{filter:brightness(1.3)}
+#hud-ster .hs-akcja .hs-icon{width:70%;height:70%;display:grid;place-items:center;pointer-events:none}
+#hud-ster .hs-akcja svg{width:100%;height:100%}
 #hud-ster .nie{filter:grayscale(.85) brightness(.7)}
 #hud-ster .hs-n{position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:#24170b;border:1px solid #c9973f;
   font:700 11px/16px sans-serif;color:#fff;text-align:center;pointer-events:none}
 #hud-ster .hs-cd{position:absolute;inset:0;border-radius:50%;pointer-events:none;background:conic-gradient(rgba(0,0,0,.55) var(--cd,0%),transparent 0)}
-@media (max-height:420px){#hud-ster .hs-atak{bottom:calc(30px + env(safe-area-inset-bottom));width:90px;height:90px}
+@media (max-height:420px), (orientation:portrait) and (pointer:coarse){#hud-ster .hs-atak{bottom:calc(30px + env(safe-area-inset-bottom));width:90px;height:90px}
   #hud-ster .hs-spec{bottom:calc(32px + env(safe-area-inset-bottom));right:calc(${142 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));width:62px;height:62px}
   #hud-ster .hs-lecz{bottom:calc(140px + env(safe-area-inset-bottom));right:calc(${58 + ODSTEP_OD_KRAWEDZI}px + env(safe-area-inset-right));width:50px;height:50px}}
+@media (max-height:420px), (orientation:portrait) and (pointer:coarse){#hud-ster .hs-akcja{bottom:calc(125px + env(safe-area-inset-bottom));right:calc(178px + env(safe-area-inset-right));width:50px;height:50px}}
 @media (pointer:fine){#hud-ster .hs{transform:scale(.85);transform-origin:right bottom}}
 `;
 
@@ -78,6 +86,7 @@ let el: {
   atak: HTMLButtonElement; nub: HTMLElement; atakImg: HTMLImageElement; atakTxt: HTMLElement;
   spec: HTMLButtonElement; specIk: HTMLElement; specSmall: HTMLElement; specCd: HTMLElement;
   picker: HTMLDivElement; slider: HTMLInputElement;
+  akcja: HTMLButtonElement;
   lecz: HTMLButtonElement; leczIk: HTMLElement; leczN: HTMLElement;
 } | null = null;
 
@@ -167,6 +176,14 @@ export function zamontujHudLive() {
     requestHeal();
   });
 
+  const akcja = mk('hs-akcja', tx('Interakcja (E): rozmowa / wejście', 'Interact (E): talk / enter'));
+  const akcjaIk = document.createElement('span'); akcjaIk.className = 'hs-icon';
+  akcjaIk.innerHTML = comicIcon('interact');
+  const akcjaSmall = document.createElement('small'); akcjaSmall.textContent = tx('AKCJA', 'ACT');
+  akcja.append(akcjaIk, akcjaSmall);
+  // Native button click supports touch, mouse and Enter without sending a weapon press.
+  akcja.addEventListener('click', e => { e.preventDefault(); requestInteraction(); });
+
   // Separate selector: sliding never casts a skill or starts aiming/moving.
   const picker = document.createElement('div');
   picker.className = 'hs-picker'; picker.hidden = true;
@@ -184,9 +201,9 @@ export function zamontujHudLive() {
     const u = ostatnieZasoby?.wybor?.[Number(slider.value)];
     if (u) ostatnieZasoby?.wybierz?.(u.id);
   });
-  ster.append(picker, spec, lecz, atak);
+  ster.append(picker, spec, lecz, akcja, atak);
   document.body.append(ster);
-  el = { atak, nub, atakImg, atakTxt, spec, specIk, specSmall, specCd, picker, slider, lecz, leczIk, leczN };
+  el = { atak, nub, atakImg, atakTxt, spec, specIk, specSmall, specCd, picker, slider, lecz, leczIk, leczN, akcja };
 }
 
 export function odmontujHudLive() {
@@ -241,4 +258,10 @@ export function ustawZasobyHud(z: LiveZasoby) {
   el.spec.setAttribute('aria-disabled', String(!z.stac || !z.gotowy));
   el.spec.classList.toggle('nie', !z.stac);
   el.specCd.style.setProperty('--cd', `${Math.round(Math.max(0, Math.min(1, z.cooldown ?? (z.gotowy ? 0 : 1))) * 100)}%`);
+}
+
+
+/** Availability is a hint only: E and ACT always use the same interaction chain. */
+export function ustawInterakcjeHud(ready: boolean) {
+  el?.akcja.classList.toggle('gotowa', ready);
 }

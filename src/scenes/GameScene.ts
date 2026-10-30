@@ -80,7 +80,8 @@ import {
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
-import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong } from '../controls';
+import { updateGameCursor, mountGameCursor } from '../ui/gameCursor';
+import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong, worldInteraction, type WorldInteraction } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
 import { PrologRekruta } from './PrologRekruta';
@@ -143,7 +144,7 @@ import { sciezkaGry } from '../sciezka';
 import { live, skrotKamery } from '../walka/live';
 import { wymusPoziom, zwolnijPoziom } from '../ui/poziomo';
 import { ZASOBY, zasoby, wydajStamine, wydajMane, udzialStaminy, wyczerpany, regenerujZasoby, maxStaminy, maxMany } from '../content/zasoby';
-import { ustawZasobyHud } from '../ui/hudLive';
+import { ustawZasobyHud, ustawInterakcjeHud } from '../ui/hudLive';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
 import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
@@ -1009,6 +1010,15 @@ export class GameScene extends Phaser.Scene {
     }
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
+    if (live()) {
+      const targetAt = (x: number, y: number) => this.worldTargetAt(x, y);
+      worldInteraction.at = targetAt;
+      mountGameCursor(this.game.canvas);
+      this.events.once('shutdown', () => {
+        if (worldInteraction.at === targetAt) worldInteraction.at = null;
+        updateGameCursor(this.game.canvas, null);
+      });
+    }
 
     // Under the intro, submit chunks over successive updates instead of a
     // single burst that interrupts the zoom. Uncovered travel/demos stay as before.
@@ -1210,8 +1220,17 @@ export class GameScene extends Phaser.Scene {
     if (consumeHeal()) this.healButton();
     if (live()) {
       const it = consumeInteraction();
-      // Two quick attacks next to an enemy stay two blows; elsewhere they open what is by the hero.
-      if (it && !(it.atak && this.nearestFoe(this.swingReach() * 1.5))) this.interact(it.x, it.y);
+      if (it) this.interact(it.x, it.y);
+      if (now >= this.cursorAt) {
+        this.cursorAt = now + 100;
+        if (window.matchMedia('(hover:hover) and (pointer:fine)').matches)
+          updateGameCursor(this.game.canvas, worldInteraction.at?.(mouse.x, mouse.y)?.kind ?? null);
+        const p = this.player, h = p.hitPoint();
+        ustawInterakcjeHud(!!(this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
+          this.lochy?.przy(p.x, p.y) || this.loch?.przy(p.x, p.y) || this.talkableAt(p.x, p.y, NPC_RADIUS + 4) ||
+          this.hitsHome(p.x, p.y) || this.stallAt(p.x, p.y, 13) || this.cartAt(p.x, p.y, 6) || this.pociagi?.stacjaPrzy(p.x, p.y, 8) ||
+          this.city.places.some(q => Math.hypot(q.door.x - p.x, q.door.y - (p.y + FEET.dy)) < DOOR_RADIUS)));
+      }
       if (consumeStrong()) this.specjalny(now);
       this.updateZasoby(dt, bx, by);
     }
@@ -1676,6 +1695,47 @@ export class GameScene extends Phaser.Scene {
     if (this.talkableAt(w.x, w.y, 14) || this.city.places.some((q) => Math.hypot(q.door.x - w.x, q.door.y - (w.y + FEET.dy)) < DOOR_RADIUS) || this.cartAt(w.x, w.y) || this.pociagi?.stacjaPrzy(w.x, w.y)) this.toast('👣 Podejdź bliżej.', 1200);
   }
 
+  /** Exact hovered object: no near-hero fallback and no side effects until run(). */
+  private worldTargetAt(sx: number, sy: number): WorldInteraction | null {
+    if (!this.player || this.player.isDead || !this.scene.isActive() || this.travelling ||
+        this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy ||
+        this.time.now < this.lingerUntil || loadingGame()) return null;
+    const cam = this.cameras.main;
+    const x = sx * OSTROSC / cam.zoomX + cam.worldView.x;
+    const y = sy * OSTROSC / cam.zoomY + cam.worldView.y;
+    if (!pointInPolygon(this.vision, x, y)) return null;
+    const hit = new Phaser.Math.Vector2(x, y);
+    const make = (kind: WorldInteraction['kind'], action: () => void): WorldInteraction => ({ kind, run: () => {
+      if (!this.scene.isActive() || this.player.isDead || performance.now() < this.talkReadyAt) return;
+      if (Math.hypot(x - this.player.x, y - this.player.y) > INTERAKCJA_PX) {
+        this.toast(tx('👣 Podejdź bliżej.', '👣 Come closer.'), 1200); return;
+      }
+      this.clickWorld = { x, y };
+      this.player.face(x - this.player.x, y - (this.player.y + 2));
+      action();
+    }});
+    const prologKind = this.prolog?.interactionAt(x, y);
+    if (prologKind) return make(prologKind, () => { this.prolog?.interact(); });
+    if (this.lochy?.przy(x, y + FEET.dy) || this.loch?.przy(x, y))
+      return make(this.loch?.przy(x, y) === 'skrzynia' ? 'use' : 'enter', () => { this.lochDotyk(hit); });
+    // A character's body extends above its feet; prefer its own hit test over a nearby door.
+    const talk = this.talkableAt(x, y, 14) ?? this.talkableAt(x, y + 14, 10);
+    if (talk) return make('talk', () => { this.learnPlace(); this.zapamietajRozmowce(x, y); talk(); });
+    if (this.hitsHome(x, y)) return make('enter', () => {
+      if (this.inCombat()) return;
+      session.at = null; this.save(); this.openHome();
+    });
+    const stall = this.stallAt(x, y, 10);
+    if (stall) return make('use', () => { this.learnPlace(); this.openShop(stall); });
+    const station = this.pociagi?.stacjaPrzy(x, y) ?? this.cartAt(x, y);
+    if (station) return make('use', () => { this.learnPlace(); this.openCoach(station); });
+    const door = (q: { x: number; y: number }) => Math.hypot(q.x - x, q.y - (y + FEET.dy)) < DOOR_RADIUS;
+    if (this.city.places.some(p => door(p.door)) || this.missions.some(r => missionAvailable(r.m) && door(r.door)))
+      return make('enter', () => { this.openDoorAt(x, y + FEET.dy); });
+    return null;
+  }
+
+  private cursorAt = 0;
   private hpWas = -1;
   private zycieCarry = 0;
   private zasobyAt = 0;
@@ -6991,7 +7051,7 @@ export class GameScene extends Phaser.Scene {
         if (live()) {
           if (this.goalHinted !== rm.m.id) {
             this.goalHinted = rm.m.id;
-            this.toast(`👆👆 Jesteś na miejscu – stuknij dwa razy (albo E), żeby: ${rm.m.tytul}`, 3200);
+            this.toast(`👆 Jesteś na miejscu – naciśnij AKCJA lub E, żeby: ${rm.m.tytul}`, 3200);
           }
           continue;
         }
@@ -7488,3 +7548,4 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit('hud', state);
   }
 }
+
