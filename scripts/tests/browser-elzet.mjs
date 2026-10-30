@@ -79,6 +79,11 @@ try {
     return { krok: window.__session.flagi.elzet ?? 0, npc: e.npc ? { x: e.npc.x, y: e.npc.y, vis: e.npc.visible } : null, walka: !!e.walka, imps: e.chochliki.filter((c) => c.active).length, kolko: !!e.kolko, zarty: window.__session.flagi.elzet_zarty ?? 0 };
   });
 
+  // 0. The imps are at the Lidl from the start, before anyone has met the robot.
+  await teleport(51.2250, 22.5025);
+  await page.waitForFunction(() => window.__game.scene.getScene('game').elzet.chochliki.length === 5, null, { timeout: 30000 });
+  await teleport(51.22418, 22.49825);
+
   // 1. The sitting robot on Kryształowa.
   await page.waitForFunction(() => !!window.__game.scene.getScene('game').elzet?.npc, null, { timeout: 30000 });
   let st = await elzet();
@@ -181,7 +186,12 @@ try {
     st = await elzet();
     await g(({ x, y }) => window.__game.scene.getScene('game').talkableAt(x, y, 14)(), st.npc);
     await choose(0); // listen
-    await choose(0); // laugh, close
+    await choose(0); // laugh
+    if (i === 4 || i === 9) {
+      await page.waitForFunction(() => window.__dialog?.title?.includes('🎁'), null, { timeout: 5000 });
+      await shot(`7-nagroda-${i + 1}`);
+      await choose(0); // the reward has its own window
+    }
     await resume();
   }
   st = await elzet();

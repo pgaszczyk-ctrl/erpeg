@@ -63,7 +63,7 @@ export const ELZET = {
   /** Robot na wolnym biegu: podchodząc tak blisko (m), zaczynasz walkę 2 / wracasz do walki 1. */
   zaczepM: 12,
   /** Nad jeziorem chodzi wolno (× prędkość bohatera) po kółku wokół domku. */
-  spacer: 0.25,
+  spacer: 0.08,
   /** Po ilu żartach jabłka, po ilu buty. */
   jablkaPo: 5,
   jablek: 10,
@@ -78,6 +78,8 @@ export const ELZET_TEKSTY = {
     'Na pancerzu świeże rysy. Ktoś musiał go niedawno uszkodzić.\n\nNa tabliczce: „ELZET 10”.',
   celSzukaj: 'Elzet 10: znajdź brakującą zębatkę (podobno chochliki kręcą się przy Lidlu)',
   pilnuja: 'Chochliki nie dają podejść do zębatki – najpierw je przegoń!',
+  znalezione: '⚙ Zębate kółko! Wygląda na część jakiejś maszyny… Podobno na Kryształowej siedzi zepsuty robot.',
+  celZnalezione: 'Zębatka od maszyny – może pasuje do robota na Kryształowej?',
   mamKolko: '⚙ Masz zębate kółko! Pasuje jak ulał do robota z Kryształowej.',
   celWroc: 'Elzet 10: zanieś zębatkę robotowi (Kryształowa)',
   wloz: '⚙ Włóż zębatkę',
@@ -96,6 +98,8 @@ export const ELZET_TEKSTY = {
   celJezioro: 'Elzet 10: podobno widziano go nad Zalewem Zemborzyckim',
   celZarty: (n: number) => `Elzet 10 opowiada żarty nad Zalewem (${n}/10)`,
   jedz: 'Dobrze rozmawiać. Jeść?',
+  nagrodaJablka: (n: number) => `Elzet 10 wyciąga z klapy w brzuchu ${n} jabłek i podaje ci je z dumą.`,
+  nagrodaButy: 'Elzet 10 wyjmuje z pancerza parę lekkich butów. Dostajesz Buty biegacza – chodzisz w nich o 10% szybciej.',
   buty: 'Trzymaj. Prosto z butiku.',
   posluchaj: '😄 Posłuchaj żartu',
   pa: 'Do zobaczenia',

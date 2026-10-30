@@ -407,7 +407,7 @@ export class Elzet {
       // Sitting, switched off: lower, greyed, tilted.
       s.setScale(s.scaleX, s.scaleY * 0.78).setAngle(-6).setTint(0xa8a4a0);
     }
-    const imie = k >= KROK.szuka ? ELZET.imie : 'Robot';
+    const imie = k >= KROK.szuka && !session.flagi.elzet_bez_robota ? ELZET.imie : 'Robot';
     this.napis = sc.add.text(at.x, at.y - 30 * SKALA_POSTACI, imie, { fontFamily: 'monospace', fontSize: '7px', color: '#fff8e0', stroke: '#1e1a24', strokeThickness: 3, resolution: 4 })
       .setOrigin(0.5, 1).setDepth(1_150_000);
   }
@@ -488,7 +488,7 @@ export class Elzet {
 
   private rozmowa() {
     const k = krok();
-    const tytul = `🤖 ${k >= KROK.szuka ? ELZET.imie : 'Robot'}`;
+    const tytul = `🤖 ${k >= KROK.szuka && !session.flagi.elzet_bez_robota ? ELZET.imie : 'Robot'}`;
     const bzzt = T.bzzt[Math.floor(Math.random() * T.bzzt.length)];
     if (k === KROK.nic) {
       ustaw(KROK.szuka);
@@ -498,8 +498,13 @@ export class Elzet {
     }
     if (k === KROK.szuka) return this.h.dialog({ title: tytul, text: `„${bzzt}”\n\nW boku robota wciąż brakuje zębatki.`, buttons: ['OK'], onChoose: () => {} });
     if (k === KROK.kolko) {
+      const pierwszy = !!session.flagi.elzet_bez_robota;
+      if (pierwszy) {
+        delete session.flagi.elzet_bez_robota;
+        this.napis?.setText(ELZET.imie);
+      }
       return this.h.dialog({
-        title: tytul, text: `„${bzzt}”`, buttons: [T.wloz, 'Jeszcze nie'],
+        title: tytul, text: pierwszy ? `„${bzzt}”\n\n${T.ogledziny}\n\nZębatka z Lidla wygląda, jakby pasowała idealnie.` : `„${bzzt}”`, buttons: [T.wloz, 'Jeszcze nie'],
         onChoose: (i) => { if (i === 0) this.wlozKolko(); },
       });
     }
@@ -557,20 +562,26 @@ export class Elzet {
         if (i !== 0) return;
         const m = n + 1;
         session.flagi.elzet_zarty = m;
-        let text = T.zarty[n];
+        const text = T.zarty[n];
         const pl = this.h.player;
-        if (m === ELZET.jablkaPo) {
-          text += `\n\n…\n\n${T.jedz}`;
-          this.h.lup(pl.x, pl.y, [{ co: 'jablko', ile: ELZET.jablek }]);
-        }
+        let nagroda: { text: string; lup: { co: string; ile: number }[] } | null = null;
+        if (m === ELZET.jablkaPo) nagroda = { text: `${T.jedz}\n\n${T.nagrodaJablka(ELZET.jablek)}`, lup: [{ co: 'jablko', ile: ELZET.jablek }] };
         if (m === ELZET.butyPo) {
-          text += `\n\n…\n\n${T.buty}`;
-          this.h.lup(pl.x, pl.y, [{ co: 'buty_biegacza', ile: 1 }]);
+          nagroda = { text: `${T.buty}\n\n${T.nagrodaButy}`, lup: [{ co: 'buty_biegacza', ile: 1 }] };
           ustaw(KROK.koniec);
         }
+        if (nagroda) this.h.lup(pl.x, pl.y, nagroda.lup);
         this.h.save();
         this.h.hud();
-        this.h.dialog({ title: tytul, text, buttons: m < T.zarty.length ? ['Ha… ha.', 'Jeszcze jeden!'] : ['Dzięki, Elzet!'], onChoose: (j) => { if (j === 1) this.zart(); } });
+        const dalej = (j: number) => { if (j === 1 && m < T.zarty.length) this.zart(); };
+        // The joke first; a reward comes in a window of its own after it (owner, 30 Oct 2026).
+        this.h.dialog({
+          title: tytul, text, buttons: nagroda ? ['Ha… ha.'] : ['Ha… ha.', 'Jeszcze jeden!'],
+          onChoose: (j) => {
+            if (!nagroda) return dalej(j);
+            this.h.dialog({ title: `🎁 ${ELZET.imie}`, text: nagroda.text, buttons: m < T.zarty.length ? ['Dzięki!', 'Jeszcze jeden żart!'] : ['Dzięki, Elzet!'], onChoose: dalej });
+          },
+        });
       },
     });
   }
@@ -628,7 +639,8 @@ export class Elzet {
 
   private chochlikiILidl(now: number) {
     const k = krok();
-    if (k !== KROK.szuka) {
+    // The imps circle the cog from the very start, before anyone has met the robot (owner, 30 Oct 2026).
+    if (k !== KROK.szuka && k !== KROK.nic) {
       if (this.kolko) { this.kolko.destroy(); this.kolko = undefined; }
       return;
     }
@@ -679,9 +691,11 @@ export class Elzet {
     }
     c.destroy();
     this.kolko = undefined;
+    // Found before the robot was met: the hero doesn't know what it fits yet.
+    if (k === KROK.nic) session.flagi.elzet_bez_robota = 1;
     ustaw(KROK.kolko);
     if (!session.fabula.includes('Zębate kółko')) session.fabula.push('Zębate kółko');
-    this.h.toast(T.mamKolko, 3500);
+    this.h.toast(k === KROK.nic ? T.znalezione : T.mamKolko, 4000);
     this.h.save();
     this.h.hud();
     void now;
@@ -697,7 +711,7 @@ export class Elzet {
   quest(): { id: string; title: string; text: string; pos: Pt | null; start: string } | null {
     const k = krok();
     if (k === KROK.nic || k === KROK.koniec) return null;
-    const base = { id: 'elzet', title: `🤖 ${ELZET.imie}`, start: 'Kryształowa' };
+    const base = { id: 'elzet', title: session.flagi.elzet_bez_robota ? '⚙ Zębate kółko' : `🤖 ${ELZET.imie}`, start: session.flagi.elzet_bez_robota ? 'Lidl, Jana Pawła II' : 'Kryształowa' };
     const pl = this.h.player;
     const najblizszy = (l: Pt[]) => l.reduce<Pt | null>((a, b) => (!a || Math.hypot(b.x - pl.x, b.y - pl.y) < Math.hypot(a.x - pl.x, a.y - pl.y) ? b : a), null);
     switch (k) {
@@ -707,7 +721,7 @@ export class Elzet {
         return { ...base, text: zywe.length ? `${T.celSzukaj} (${ELZET.chochliki.ile - zywe.length}/${ELZET.chochliki.ile})` : T.celSzukaj, pos: pos && { x: pos.x, y: pos.y } };
       }
       case KROK.kolko:
-        return { ...base, text: T.celWroc, pos: this.npc ? { x: this.npc.x, y: this.npc.y } : this.pt(ELZET.start) };
+        return { ...base, text: session.flagi.elzet_bez_robota ? T.celZnalezione : T.celWroc, pos: this.npc ? { x: this.npc.x, y: this.npc.y } : this.pt(ELZET.start) };
       case KROK.walka1:
         return { ...base, text: T.celWalka1, pos: this.walka ? { x: this.walka.s.x, y: this.walka.s.y } : this.npc ? { x: this.npc.x, y: this.npc.y } : this.pt(ELZET.start) };
       case KROK.walka2:
