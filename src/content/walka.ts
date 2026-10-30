@@ -44,7 +44,7 @@ export const WALKA = {
     przerwa: [[1, 650], [2, 630], [3, 610], [5, 570], [10, 470], [15, 370], [20, 270]] as Tabela,
     /** Łuk nie strzela częściej niż co tyle ms, choćby tabela mówiła mniej. */
     najkrotszaPrzerwa: 400,
-    trafienie: [[1, 40], [2, 52], [3, 61], [5, 74], [10, 81], [15, 86], [20, 90]] as Tabela,
+    trafienie: [[1, 52], [2, 52], [3, 61], [5, 74], [10, 81], [15, 86], [20, 90]] as Tabela,
     mocnyTrafienie: [[1, 80], [2, 83], [3, 86], [5, 92], [10, 97], [15, 99], [20, 100]] as Tabela,
     mocnyMnoznik: 1.8,
     natychmiast: [[1, 5], [20, 15]] as Tabela,
