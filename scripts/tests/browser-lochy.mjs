@@ -99,7 +99,7 @@ try {
   await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 10); }, [wej.k.x, wej.k.y]);
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `work/lochy-${tag}-wejscie.png` });
-  await page.keyboard.press('KeyE');
+  await page.keyboard.press('KeyF');
   await page.waitForFunction(() => window.__dialogi.length > 0, null, { timeout: 10000 });
   const d1 = await g(() => ({ title: window.__dialogi.at(-1).title, buttons: window.__dialogi.at(-1).buttons }));
   console.log('pytanie', JSON.stringify(d1));
@@ -162,7 +162,7 @@ try {
   await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 12); }, [skrzynia.x, skrzynia.y]);
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `work/lochy-${tag}-skrzynia.png` });
-  await page.keyboard.press('KeyE');
+  await page.keyboard.press('KeyF');
   await page.waitForFunction(() => window.__dialogi.some((d) => /Skrzynia/.test(d.title)), null, { timeout: 10000 }).catch(async () => {
     console.log('diagnoza', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const h = s.player.hitPoint(); return { toasty: window.__toasty, przy: s.loch.przy(h.x, h.y), hp: [h.x, h.y], gracz: [s.player.x, s.player.y], sk: s.loch.skrzynia, pow: s.loch.skrzyniaPowod(), aktywna: window.__game.scene.isActive('game'), ui: window.__game.scene.getScene('ui').hasDialog }; })));
     throw new Error('skrzynia się nie otworzyła');

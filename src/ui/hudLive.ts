@@ -176,7 +176,7 @@ export function zamontujHudLive() {
     requestHeal();
   });
 
-  const akcja = mk('hs-akcja', tx('Interakcja (E): rozmowa / wejście', 'Interact (E): talk / enter'));
+  const akcja = mk('hs-akcja', tx('Interakcja (F): rozmowa / wejście', 'Interact (F): talk / enter'));
   const akcjaIk = document.createElement('span'); akcjaIk.className = 'hs-icon';
   akcjaIk.innerHTML = comicIcon('interact');
   const akcjaSmall = document.createElement('small'); akcjaSmall.textContent = tx('AKCJA', 'ACT');
@@ -261,7 +261,7 @@ export function ustawZasobyHud(z: LiveZasoby) {
 }
 
 
-/** Availability is a hint only: E and ACT always use the same interaction chain. */
+/** Availability is a hint only: F and ACT always use the same interaction chain. */
 export function ustawInterakcjeHud(ready: boolean) {
   el?.akcja.classList.toggle('gotowa', ready);
 }

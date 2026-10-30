@@ -31,7 +31,7 @@ export const WALKA = {
   mocnyPoMs: 1000,
   zasiegMiecz: 1.3,
   /** 30.10.2026: Celność / Skupienie 1–3 = 2× miecz, potem +20% poprzedniego zasięgu. */
-  dystans: { start: 2, odPoziomu: 4, naPoziom: 1.2, mocny: 1.3, mocnyOd: 4, lotStartS: 0.55, lukLotuPx: 6 },
+  dystans: { start: 2, odPoziomu: 4, naPoziom: 1.2, mocny: 1.3, mocnyOd: 4, lotStartS: 0.55, lukLotuPx: 6, czarLotS: 0.3 },
   /** Zwykły cios wybiera jednego przeciwnika w tym kącie przed bohaterem. */
   ciosStopnie: 70,
   miecz: {

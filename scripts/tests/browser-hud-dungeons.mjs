@@ -42,19 +42,19 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const tap=async(x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
  const checks=[];
  const physical=([x,y])=>name==='upright'?[y,height-x]:[x,y];
- for(const method of (mobile ? ['E','action','touch-action','touch-map-double','range-E'] : ['E','map-single','action','range-E'])){
+ for(const method of (mobile ? ['F','action','touch-action','touch-map-double','range-F'] : ['F','map-single','action','range-F'])){
   await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;s.player.setPosition(window.__w.x,window.__w.y+10);s.player.face(0,-1);window.__dialogs=[];});
   await page.waitForTimeout(600);
   await g(()=>{const s=window.__game.scene.getScene('game');window.__blows=0;const original=s.player.tryAttack.bind(s.player);if(!s.player.__watch){s.player.tryAttack=(...a)=>{window.__blows++;return original(...a)};s.player.__watch=true;}});
   const b=await page.locator('.hs-atak').boundingBox(),ax=b.x+b.width/2,ay=b.y+b.height/2;
   const xy=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;const ratio=window.__game.scale.width/window.innerWidth;return[(window.__w.x-c.worldView.x)*c.zoomX/ratio,(window.__w.y-c.worldView.y)*c.zoomY/ratio]});
   const [mx,my]=physical(xy);
-  if(method==='E')await page.keyboard.press('KeyE');
+  if(method==='F')await page.keyboard.press('KeyF');
   if(method==='map-single'){await page.mouse.move(mx,my);await page.waitForTimeout(200);assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'enter');await page.mouse.click(mx,my);}
   if(method==='action')await page.locator('.hs-akcja').click();
   if(method==='touch-action'){const b=await page.locator('.hs-akcja').boundingBox();await tap(b.x+b.width/2,b.y+b.height/2);}
   if(method==='touch-map-double'){await tap(mx,my);await page.waitForTimeout(75);await tap(mx,my);}
-  if(method==='range-E'){await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby()});await page.locator('.hs-picker input').focus();await page.keyboard.press('ArrowRight');assert.equal(await g(()=>window.__session.umiej.miecz),'zamach');await page.keyboard.press('KeyE');}
+  if(method==='range-F'){await g(()=>{window.__gear.skills.miecz=1000;window.__game.scene.getScene('game').emitZasoby()});await page.locator('.hs-picker input').focus();await page.keyboard.press('ArrowRight');assert.equal(await g(()=>window.__session.umiej.miecz),'zamach');await page.keyboard.press('KeyF');}
   await page.waitForTimeout(800);
   assert.equal(await g(()=>window.__blows),0,`${name}: ${method} never attacks`);
   checks.push(await g(method=>{const s=window.__game.scene.getScene('game');return{method,dialogs:window.__dialogs.map(d=>d.title),ui:window.__game.scene.getScene('ui').hasDialog,hp:s.player.hp,dist:Math.hypot(s.player.x-window.__w.x,s.player.y-window.__w.y),combat:s.inCombat(),focus:document.activeElement?.outerHTML.slice(0,100)}},method));
@@ -88,7 +88,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];assert(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,`${name}: separate button touch areas`)}
  // The actual confirmation must use the drawn UI button, not its callback.
  await g(()=>{document.activeElement?.blur();const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;window.__dialogs=[];});
- await page.keyboard.press('KeyE');
+ await page.keyboard.press('KeyF');
  await page.waitForFunction(()=>window.__game.scene.getScene('ui').hasDialog);
  await page.waitForTimeout(400);
  const button=await g(()=>{const u=window.__game.scene.getScene('ui'),b=u.dialogButtons.find(b=>b.index===0).rect.getBounds();return[b.centerX,b.centerY]});

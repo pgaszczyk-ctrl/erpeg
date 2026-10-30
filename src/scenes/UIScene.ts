@@ -209,7 +209,7 @@ export class UIScene extends Phaser.Scene {
       if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.hasDialog) {
         hudZoom((this.scene.get('game') as GameScene).toggleZoom());
       }
-      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.hasDialog) {
+      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I' || ((e.key === 'e' || e.key === 'E') && !document.body.classList.contains('walka-tur'))) && !document.getElementById('menu') && !this.hasDialog) {
         this.openCharacter();
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {

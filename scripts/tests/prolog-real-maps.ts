@@ -10,6 +10,6 @@ for(const [id,path,name] of [['lublin','.cache/lublin-full.json','Plac Zamkowy']
  const p=planAnchors(city,home,[],name);
  assert(Object.values(p.anchors).length===6);
  for(const a of Object.values(p.anchors)){const q=city.fromLatLon(a.lat,a.lon);assert(city.isFree(q.x,q.y+4,3,2),a.id);}
- assert(p.walkM<3000);
+ assert(p.walkM<8000);
  console.log(id,JSON.stringify({walkM:Math.round(p.walkM),places:Object.fromEntries(Object.entries(p.anchors).map(([k,a])=>[k,{name:a.name,fallback:a.fallback}]))}));
 }

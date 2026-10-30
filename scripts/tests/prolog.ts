@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { freshProlog, mayStart, advance, claimOnce, recordKill, PROLOG_ID } from '../../src/prolog/state';
 import { equipStoryItem, collectStoryItems } from '../../src/prolog/rewards';
 import type { Gear } from '../../src/inventory';
-import { localRoutes, planAnchors } from '../../src/prolog/planner';
+import { localRoutes, planAnchors, PROLOG_MARSZ_M, PROLOG_PROMIEN_M } from '../../src/prolog/planner';
 import { CityMap, PX_PER_M } from '../../src/map/CityMap';
 import { planLochu, podloga } from '../../src/loch/plan';
 import { mapaLochu, idLochu, czytajIdLochu } from '../../src/loch/mapa';
@@ -40,9 +40,13 @@ const make=(id:string,lon:number)=>new CityMap({unitsPerM:PX_PER_M,w:3000/PX_PER
 for(const city of [make('city-a',20),make('city-b',29)]){
  const home={x:1500,y:1500};const result=planAnchors(city,home,[],city.id);
  assert(result.anchors.outpost.fallback&&result.anchors.library.fallback&&result.anchors.dungeonEntrance.fallback);
- const local=localRoutes(city,home,480*PX_PER_M);
+ const local=localRoutes(city,home,PROLOG_PROMIEN_M*PX_PER_M,10*PX_PER_M,26000);
  for(const a of Object.values(result.anchors)){const at=city.fromLatLon(a.lat,a.lon);assert(local.route(at),`reachable ${a.id}`);}
- assert(result.walkM<3000,'bounded tutorial travel');
+ assert(result.walkM<8000,'bounded tutorial travel');
+ // Owner 30 Oct 2026: ~20 s of walking between the characters, not a few steps.
+ const pts=(['outpost','ambush','dungeonEntrance','library'] as const).map(k=>city.fromLatLon(result.anchors[k].lat,result.anchors[k].lon));
+ for(const q of pts)assert(local.route(q)!.distance>=PROLOG_MARSZ_M*PX_PER_M*0.99,'far from the senior guard');
+ for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)assert(Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y)>150*PX_PER_M,'spread apart');
  const out=city.fromLatLon(result.anchors.outpost.lat,result.anchors.outpost.lon),amb=city.fromLatLon(result.anchors.ambush.lat,result.anchors.ambush.lon);
  const dot=((out.x-home.x)*(amb.x-home.x)+(out.y-home.y)*(amb.y-home.y))/(Math.hypot(out.x-home.x,out.y-home.y)*Math.hypot(amb.x-home.x,amb.y-home.y));
  assert(dot<-.5,'rescue on the opposite side where reachable');
@@ -50,7 +54,7 @@ for(const city of [make('city-a',20),make('city-b',29)]){
 // Enrollment at a police door must send the letter somewhere else, not straight back to that door.
 const atPost=make('at-post',20),home={x:1500,y:1500};
 atPost.places.push({kind:'police',id:'current',name:'Current post',building:null,door:home});
-atPost.places.push({kind:'police',id:'other',name:'Other post',building:null,door:{x:home.x+100*PX_PER_M,y:home.y}});
+atPost.places.push({kind:'police',id:'other',name:'Other post',building:null,door:{x:home.x+450*PX_PER_M,y:home.y}});
 assert.equal(planAnchors(atPost,home,[],atPost.id).anchors.outpost.id,'other');
 atPost.places.pop();
 const fallback=planAnchors(atPost,home,[],atPost.id).anchors.outpost;

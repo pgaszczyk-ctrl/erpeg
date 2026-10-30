@@ -324,6 +324,11 @@ interface Shot {
   originY: number;
   range: number;
   arc: number;
+  /** Arrow: the creature aim assist picked; the arrow steers onto it (owner 30 Oct 2026: arcs nearly never hit). */
+  target?: Enemy;
+  /** Ground distance flown so far and the whole planned flight (the drawn arc lands at its end). */
+  travelled: number;
+  flight: number;
   vx: number;
   vy: number;
   left: number;
@@ -6124,14 +6129,14 @@ export class GameScene extends Phaser.Scene {
    * Aim help: the nearest target (a visible monster, or a training target/crystal for this skill) within the range
    * and within WALKA.celowanieStopnie of `dir`, with nothing built in between – the shot flies straight at it.
    */
-  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false): { x: number; y: number } {
+  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false): { x: number; y: number; foe?: Enemy } {
     const range = this.shotRange(skill, strong);
     const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
     const px = this.player.x, py = this.player.y;
-    const points: { x: number; y: number }[] = [];
-    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
+    const points: { x: number; y: number; foe?: Enemy }[] = [];
+    for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible && !e.inAir) points.push({ x: e.x, y: e.y, foe: e });
     for (const st of this.training.targetsOf(skill)) points.push({ x: st.x, y: st.y - 7 * SKALA_POSTACI });
-    let best: { x: number; y: number } | null = null;
+    let best: { x: number; y: number; foe?: Enemy } | null = null;
     let bestScore = Infinity;
     for (const t of points) {
       const dx = t.x - px, dy = t.y - py, d = Math.hypot(dx, dy);
@@ -6146,17 +6151,22 @@ export class GameScene extends Phaser.Scene {
       const score = d * (2 - cos);
       if (score < bestScore) {
         bestScore = score;
-        best = { x: dx / d, y: dy / d };
+        best = { x: dx / d, y: dy / d, foe: t.foe };
       }
     }
-    return best ?? dir;
+    return best ?? { x: dir.x, y: dir.y };
   }
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
   private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true, assist = true) {
     if (weaponRequirement(weapon.id)) return;
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
-    if (assist) dir = this.aimAssist(dir, skill, strong);
+    let foe: Enemy | undefined;
+    if (assist) {
+      const a = this.aimAssist(dir, skill, strong);
+      foe = a.foe;
+      dir = { x: a.x, y: a.y };
+    }
     this.lastShot = now;
     // A bow needs arrows (a crossbow bolts, the steam pistol bullets), and every shot wears it.
     const ammo = ammoOf(weapon);
@@ -6187,12 +6197,20 @@ export class GameScene extends Phaser.Scene {
       }
       this.emitZasoby();
     }
+    const range = this.shotRange(skill, strong);
+    // A spell flies straight and fast; an arrow takes its slower lob (WALKA.dystans).
+    const speed = Math.min(skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED,
+      live() ? range / (skill === 'magia' ? WALKA.dystans.czarLotS : WALKA.dystans.lotStartS) : Infinity);
+    // A spell can't turn: it is aimed where the creature will be when it gets there.
+    if (skill === 'magia' && foe) {
+      const t = Math.min(0.6, Math.hypot(foe.x - this.player.x, foe.y - this.player.y) / speed);
+      const lx = foe.x + foe.vel.x * t - this.player.x, ly = foe.y + foe.vel.y * t - this.player.y, ld = Math.hypot(lx, ly);
+      if (ld > 2) dir = { x: lx / ld, y: ly / ld };
+    }
     this.player.facing.set(dir.x, dir.y);
     this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x));
     if (sound) this.combatAudio.at(shotSound(skill, strong || this.bezKosztuStrzalu), 0, () => !this.player.isDead && !this.leaving);
     this.prolog?.shot(skill);
-    const range = this.shotRange(skill, strong);
-    const speed = Math.min(skill === 'magia' ? MAGIC_SPEED : ARROW_SPEED, live() ? range / WALKA.dystans.lotStartS : Infinity);
     // Starts at the hero, so nothing standing right next to them is skipped.
     const sprite = this.add
       .image(this.player.x, this.player.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
@@ -6201,7 +6219,9 @@ export class GameScene extends Phaser.Scene {
     // Held long enough: a strong shot (bigger, golden, harder).
     if (strong) sprite.setScale(1.5).setTint(0xffd84a);
     this.shots.push({ sprite, x: this.player.x, y: this.player.y, originX: this.player.x, originY: this.player.y, range,
-      arc: live() && !strong && skillLevel(skill) <= 3 ? WALKA.dystans.lukLotuPx : 0,
+      arc: live() && skill === 'luk' && !strong && skillLevel(skill) <= 3 ? WALKA.dystans.lukLotuPx : 0,
+      target: skill === 'luk' ? foe : undefined, travelled: 0,
+      flight: foe ? Math.min(range, Math.hypot(foe.x - this.player.x, foe.y - this.player.y)) : range,
       vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
   }
 
@@ -6209,6 +6229,17 @@ export class GameScene extends Phaser.Scene {
     const now = this.time.now;
     for (const shot of [...this.shots]) {
       const speed = Math.hypot(shot.vx, shot.vy);
+      // An arrow aimed at a creature steers onto it while it can still be hit (a dodge = a missed roll, „pudło!”).
+      const t = shot.target;
+      if (t && (t.isDead || t.inAir || shot.missed.has(t) || !t.active)) shot.target = undefined;
+      else if (t) {
+        const dx = t.x - shot.x, dy = t.y - shot.y, d = Math.hypot(dx, dy);
+        if (d > 0.5) {
+          shot.vx = (dx / d) * speed;
+          shot.vy = (dy / d) * speed;
+        }
+        shot.flight = Math.max(1, Math.min(shot.travelled + d, shot.travelled + shot.left));
+      }
       const step = Math.min(shot.left, speed * dt);
       const sp = shot.sprite;
       let done = false;
@@ -6219,6 +6250,7 @@ export class GameScene extends Phaser.Scene {
         shot.x += shot.vx / speed * step / n;
         shot.y += shot.vy / speed * step / n;
         shot.left = Math.max(0, shot.left - step / n);
+        shot.travelled += step / n;
         if (this.city.buildingAt(shot.x, shot.y) !== undefined) { done = true; break; }
         const foe = this.enemies.filter(e => !e.isDead && !e.inAir && !e.peaceful && !shot.missed.has(e)
           // The body / falling animation must never extend the shot's actual range.
@@ -6244,16 +6276,29 @@ export class GameScene extends Phaser.Scene {
           this.practiced(shot.skill);
         } else if (this.training.anyAt(shot.x, shot.y, 6)) done = true;
       }
-      const u = 1 - shot.left / shot.range;
+      const u = Math.min(1, shot.travelled / shot.flight);
       sp.setPosition(shot.x, shot.y - Math.sin(Math.PI * u) * shot.arc);
-      if (shot.arc) sp.setRotation(Math.atan2(shot.vy - Math.cos(Math.PI * u) * Math.PI * shot.arc * speed / shot.range, shot.vx));
+      if (shot.arc) sp.setRotation(Math.atan2(shot.vy - Math.cos(Math.PI * u) * Math.PI * shot.arc * speed / shot.flight, shot.vx));
       done ||= shot.left <= 1e-7;
       if (done) {
         this.shots = this.shots.filter(x => x !== shot);
         // A spent shot falls and fades only; there are no more collision checks.
-        this.tweens.add({ targets: sp, y: sp.y + (shot.arc ? 3 : 0), alpha: 0, duration: 120, onComplete: () => sp.destroy() });
+        if (shot.skill === 'magia') this.popSpell(sp);
+        else this.tweens.add({ targets: sp, y: sp.y + (shot.arc ? 3 : 0), alpha: 0, duration: 120, onComplete: () => sp.destroy() });
       }
     }
+  }
+
+  /** A spell's end: it bursts like a soap bubble (a quick swell + a ring), never dropping to the ground. */
+  private popSpell(sp: Phaser.GameObjects.Image) {
+    const ring = this.add.circle(sp.x, sp.y, 2.2).setFillStyle().setStrokeStyle(0.7, 0xcfefff, 0.95).setDepth(sp.depth + 1);
+    this.tweens.add({ targets: ring, scale: 2.6, alpha: 0, duration: 220, ease: 'Quad.out', onComplete: () => ring.destroy() });
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + Math.random() * 0.6;
+      const kropla = this.add.circle(sp.x, sp.y, 0.45, 0xe6f7ff, 0.9).setDepth(sp.depth + 1);
+      this.tweens.add({ targets: kropla, x: sp.x + Math.cos(a) * 5, y: sp.y + Math.sin(a) * 5, alpha: 0, duration: 260, ease: 'Quad.out', onComplete: () => kropla.destroy() });
+    }
+    this.tweens.add({ targets: sp, scale: sp.scale * 1.8, alpha: 0, duration: 110, onComplete: () => sp.destroy() });
   }
 
   // ------------------------------------------------------------------ shops, schools, library
@@ -7077,7 +7122,7 @@ export class GameScene extends Phaser.Scene {
         if (live()) {
           if (this.goalHinted !== rm.m.id) {
             this.goalHinted = rm.m.id;
-            this.toast(`👆 Jesteś na miejscu – naciśnij AKCJA lub E, żeby: ${rm.m.tytul}`, 3200);
+            this.toast(`👆 Jesteś na miejscu – naciśnij AKCJA lub F, żeby: ${rm.m.tytul}`, 3200);
           }
           continue;
         }

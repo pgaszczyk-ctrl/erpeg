@@ -445,7 +445,7 @@ export function installTouchControls(el: HTMLElement) {
         e.preventDefault();
       } else if (code === 'KeyH') {
         if (!e.repeat) healRequest = true;
-      } else if (live() && code === 'KeyE') {
+      } else if (live() && code === 'KeyF') {
         if (!e.repeat) requestInteraction();
       } else if (live() && code === 'KeyQ') {
         if (!e.repeat) strongRequest = true;

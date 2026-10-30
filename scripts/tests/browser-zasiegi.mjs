@@ -43,7 +43,8 @@ try{for(const mobile of [false,true]){
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);
  const q=s.shots[0];if(!q)throw Error('no projectile');
  if(Math.abs(q.left-expected)>1e-7)throw Error('projectile range differs');
- if(level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<100))throw Error('missing slow arc');
+ if(skill==='luk'&&level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<100))throw Error('missing slow arc');
+ if(skill==='magia'&&q.arc!==0)throw Error('spell must fly straight');
  s.updateShots(100);if(s.shots.length)throw Error('projectile did not expire');
  if(Math.hypot(q.x-q.originX,q.y-q.originY)>expected+1e-6)throw Error('projectile overshot');
  ranges.push({skill,level,range:expected});
@@ -67,6 +68,15 @@ try{for(const mobile of [false,true]){
  reset();gear.equip.bron='luk_rekruta';gear.skills.luk=0;const missed=spawn(20);window.__session.level.celnosc=-100;
  s.fireShot({id:'luk_rekruta',miejsce:'bron',rodzaj:'luk',moc:2},{x:1,y:0},false,s.time.now,false,false);s.updateShots(5);
  if(missed.hp!==10000||missed.pursuitUntil!==-Infinity)throw Error('miss damaged or provoked');
+ // Owner 30 Oct 2026: aim assist stays; a lobbed arrow steers onto a moving creature, a spell leads it in a straight line.
+ window.__session.level.celnosc=100;
+ for(const skill of ['luk','magia']){
+ reset();gear.skills[skill]=0;gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';const mover=spawn(30,-4);mover.vel.set(0,40);
+ s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,true);const q=s.shots[0];
+ if(skill==='magia'&&!(q.vy>0))throw Error('spell not led onto the moving target');
+ for(let i=0;i<30&&s.shots.length;i++){mover.y+=40*0.03;s.updateShots(0.03);}
+ if(mover.hp===10000)throw Error(skill+' missed a moving assisted target');
+ }
  window.__session.level.celnosc=accuracy;s.city.buildingAt=build;reset();
  // Let the actual loop create an AI first; the next evaluation exercises its real update.
  window.__rangeEnemy=spawn(600);window.__rangeEnemy.leash={x:window.__rangeEnemy.x,y:window.__rangeEnemy.y,r:20};

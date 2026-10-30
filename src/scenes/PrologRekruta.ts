@@ -80,7 +80,7 @@ export class PrologRekruta {
         this.busy = false; this.rendered = '';
         this.h.scene.scene.resume(); then?.();
         if(this.state?.stage==='letter_deliver' && this.state.rewardsClaimed.includes('starter_sword'))this.h.toast(
-          matchMedia('(pointer: coarse)').matches ? tx('Chodzisz lewym joystickiem. Przy rozmówcy naciśnij AKCJA.','Use the left joystick to walk. Near a person, press ACT.') : tx('Chodzisz WASD lub strzałkami. Podejdź i naciśnij E albo kliknij rozmówcę.','Walk with WASD or arrow keys. Approach and press E or click the person.'),6500);
+          matchMedia('(pointer: coarse)').matches ? tx('Chodzisz lewym joystickiem. Przy rozmówcy naciśnij AKCJA.','Use the left joystick to walk. Near a person, press ACT.') : tx('Chodzisz WASD lub strzałkami. Podejdź i naciśnij F albo kliknij rozmówcę.','Walk with WASD or arrow keys. Approach and press F or click the person.'),6500);
       } catch {
         if (this.destroyed) return;
         this.h.dialog({ title: tx('Zapis prologu', 'Prologue checkpoint'), text: tx('Nie udało się potwierdzić zapisu. Postęp i przedmioty czekają tutaj. Spróbuj ponownie przed dalszą grą.', 'The save could not be confirmed. Your progress and items are held here. Retry before continuing.'), buttons: [tx('Ponów zapis', 'Retry save')], onChoose: () => { this.h.scene.scene.pause(); void write(); } });
@@ -119,7 +119,7 @@ export class PrologRekruta {
       if (!this.local) { this.h.scene.scene.resume(); return; }
       phase = 'map';
       const hero = this.h.player;
-      await this.h.city.ensure(hero.x, hero.y, 520*PX_PER_M);
+      await this.h.city.ensure(hero.x, hero.y, 900*PX_PER_M);
       if (this.destroyed) return;
       this.h.entrances()?.update(hero.x, hero.y, this.h.scene.time.now);
       const plan = planAnchors(this.h.city, hero, this.h.entrances()?.lista ?? [], this.h.mapName);
@@ -192,8 +192,14 @@ export class PrologRekruta {
     if (this.underground && ['magic_pickup','magic_trial','dungeon_recover'].includes(p.stage)) {
       const d = this.h.dungeon()!;
       const at = p.stage === 'magic_pickup' ? d.magicSpot : d.skrzynia;
-      const text = this.h.scene.add.text(at.x,at.y-8,p.stage === 'magic_pickup' ? '🪄 🎩' : '🧸',{fontSize:'22px'}).setOrigin(.5).setDepth(at.y+2);
-      this.objects.push(text);
+      // Small crisp pixel placeholders (owner 30 Oct 2026: the emoji were giant and blurry; art comes later).
+      const ikony = p.stage === 'magic_pickup' ? ['rozdzka', 'kapelusz'] as const : ['mis'] as const;
+      ikony.forEach((k, i) => {
+        const x = at.x + (i - (ikony.length - 1) / 2) * 7;
+        const img = this.h.scene.add.image(x, at.y - 3, prologIkona(this.h.scene, k)).setOrigin(.5, 1).setScale(.5).setDepth(at.y + 2);
+        this.h.scene.tweens.add({ targets: img, y: img.y - 1.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        this.objects.push(img);
+      });
     }
   }
   private spawnRescue() {
@@ -341,4 +347,28 @@ export class PrologRekruta {
   }
   private clearObjects(){for(const o of this.objects)o.destroy();this.objects=[];}
   destroy(){this.destroyed=true;this.clearObjects();}
+}
+
+/** 12×12 pixel pictures (shown at half size = 6 map px): the dungeon's wand, hat and teddy until the artist draws them. */
+const PROLOG_IKONY: Record<'rozdzka' | 'kapelusz' | 'mis', { k: Record<string, string>; r: string[] }> = {
+  rozdzka: { k: { o: '#1e1a24', d: '#5a3a22', l: '#8a5a34', s: '#ffe27a', w: '#fffbe0' }, r: [
+    '.........s..', '........sws.', '.........s..', '........o...', '.......old..', '......old...',
+    '.....old....', '....old.....', '...old......', '..old.......', '..oo........', '............'] },
+  kapelusz: { k: { o: '#1e1a24', b: '#3a3f9a', l: '#5a63c8', y: '#ffd84a' }, r: [
+    '.....oo.....', '....obbo....', '....obyo....', '...oblbbo...', '...obbbbo...', '..obblbbbo..',
+    '..obbbbybo..', '.oobbbbbboo.', 'obbbbbbbbbbo', 'oyyyyyyyyyyo', '.oooooooooo.', '............'] },
+  mis: { k: { o: '#1e1a24', b: '#8a5530', l: '#c08a58', e: '#1e1a24', p: '#e8b88a' }, r: [
+    '.oo......oo.', 'oblo....olbo', 'obbooooooobo', '.obbbbbbbbo.', '.obebbbbebo.', '.obbbppbbbo.',
+    '..obbeebbo..', '.oobbbbbboo.', 'obbbllllbbbo', 'obbbllllbbbo', '.obbooobbbo.', '..oo...oo...'] },
+};
+function prologIkona(scene: Phaser.Scene, k: keyof typeof PROLOG_IKONY) {
+  const key = `prolog-${k}`;
+  if (scene.textures.exists(key)) return key;
+  const { k: kolory, r } = PROLOG_IKONY[k];
+  const c = document.createElement('canvas');
+  c.width = 12; c.height = 12;
+  const g = c.getContext('2d')!;
+  r.forEach((row, y) => [...row].forEach((ch, x) => { if (kolory[ch]) { g.fillStyle = kolory[ch]; g.fillRect(x, y, 1, 1); } }));
+  scene.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return key;
 }

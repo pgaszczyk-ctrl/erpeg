@@ -109,7 +109,7 @@ try {
     await page.keyboard.press('Space');
     await page.waitForTimeout(500);
     assert(!(await g(() => window.__game.scene.getScene('ui').hasDialog)), 'a swing does not open a door any more');
-    await page.keyboard.press('KeyE');
+    await page.keyboard.press('KeyF');
     await page.waitForTimeout(800);
     const after = await g(() => window.__game.scene.getScene('ui').hasDialog || !!document.querySelector('.s26, #shop26, .shop26'));
     console.log('dialog po E', after);
