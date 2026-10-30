@@ -586,3 +586,15 @@ Wynik prób po poprawce: pełny build i typecheck OK, workflow „HUD dungeon in
 
 ## 29.10.2026 — muzyka z MP3 właściciela
 Podłączono cztery przesłane public/audio/*.mp3 (zweryfikowane SHA) do powierzchni, lochów i walki/areny. Nowe src/music.ts + ui/music.ts; main.ts, GameScene, UIScene i StworAI zapewniają stan świata i osobne ustawienia włącz/wyłącz + głośność. Fade po walce 2 s, bez restartów od każdego ciosu. Wyniki: TypeScript/Vite OK, test prawdziwych MP3 w Playwright PC i obrócony telefon OK, w tym faktyczne zejście i wyjście z lochu, obie melodie Caravan, audio bus suwaka i tło/logout. Fizycznego iOS nie testowano. Szczegóły i odtwarzalny test: docs/MUZYKA_20261029.md, scripts/tests/browser-music.mjs. Produkcja i SQL bez zmian. Użyto osobnej gałęzi chatgpt/muzyka-20261029, ponieważ istniejąca chatgpt/praca jest rozbieżna z gałęzią testu (bez force push).
+
+## 30.10.2026 — błąd atob po nowym formacie mgły
+
+Odtworzono wyjątek `InvalidCharacterError` w rzeczywistym produkcyjnym `Explored.load` dla poprawnego fragmentu `~AIAg`. Test i produkcja mają wspólne zapisy, a produkcja 1.037 nie zna formatu RLE wdrożonego 29.10 na teście. Przygotowano czytnik zgodny z oboma formatami w szkicu `docs/poprawki/1.038-mgla-zgodnosc.patch`, poza `produkcja/` (brak publikacji). Poprawka zachowuje stary zapis produkcyjny. Bez SQL lub zmian danych graczy.
+
+Sprawdzono kod produkcji przed/po, stare/nowe/uszkodzone fragmenty, zapis i ponowny odczyt bez utraty pól, 4000 przypadków kodeka, nakładanie łatki na odtworzoną produkcję oraz pełne npm run build i osobne TypeScript/Vite. Lokalny Playwright zablokowany brakiem przeglądarki i nieudaną instalacją; dodano test browser-fog-compat.mjs i workflow fog-compat-checks.yml do sprawdzenia rzeczywistego startu na PC/telefonie przez CI. Status testu CI należy sprawdzić przed wydaniem. Produkcja wymaga wyraźnego polecenia właściciela zgodnie z AGENTS.md; PRODUKCJA, src/version.ts i produkcja/ w gałęzi roboczej nietknięte.
+
+Potwierdzone CI: https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/41011858417 — test PC i telefonu zakończony sukcesem, bez błędów JS; oba formaty zachowały sprawdzane odkryte pola. Zrzuty after-desktop.png i after-phone.png pobrano i obejrzano: mapa pokazana, brak komunikatu atob. Test używa fikcyjnego logowania, bez zmian zapisów graczy i bez próby na fizycznym urządzeniu. Produkcja nadal niewydana.
+
+## 30.10.2026 — zatwierdzone wydanie poprawki mgły 1.038
+
+Właściciel polecił „Publikuj”. Sprawdzony szkic łatki skopiowano bez zmian do produkcja/1.038-mgla-zgodnosc.patch. Zawiera odczyt obu formatów odkrytej mapy oraz numer produkcji 1.038; dotychczasowe PRODUKCJA, łatki 1.036/1.037, zachowanie zapisu produkcji i baza graczy pozostają bez zmian. Pełny build i test startu PC/telefon z zachowaniem odkrytych pól potwierdzono wcześniej (run 41011858417). Workflow testu uwzględnia już opublikowaną łatkę bez jej powtórnego nakładania. Po scaleniu PR45 działa standardowy Deploy to GitHub Pages; wynik publikacji i numer wersji na stronie trzeba potwierdzić.
