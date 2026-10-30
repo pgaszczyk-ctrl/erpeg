@@ -21,7 +21,7 @@ export interface SmokHost {
   trudnosc: number;
   blocked: (x: number, y: number) => boolean;
   /** Cios (z odrzutem): ułamek pełnego zdrowia, już przemnożony przez trudność. */
-  hurt: (from: Phaser.Math.Vector2, czesc: number) => void;
+  hurt: (from: Phaser.Math.Vector2, czesc: number, fizyczne?: boolean) => void;
   /** Tik trwającego działania (bez odrzutu i bez chwili nietykalności). */
   drain: (czesc: number) => void;
   /** Stan na gracza na `ms` (przedłuża, nie skraca). */
@@ -512,7 +512,7 @@ export class SmokAI {
       b.zostalo -= dt;
       const trafiony = Math.hypot(b.img.x - p.x, b.img.y - (p.y - 3)) < 6;
       if (trafiony) {
-        this.host.hurt(new Phaser.Math.Vector2(b.img.x, b.img.y), A.kwas.obrazenia);
+        this.host.hurt(new Phaser.Math.Vector2(b.img.x, b.img.y), A.kwas.obrazenia, false);
         this.host.stan('oparzenie', A.kwas.oparzenie.ms);
       }
       if (trafiony || b.zostalo <= 0 || this.host.blocked(b.img.x, b.img.y)) {

@@ -98,7 +98,7 @@ export class ArenaScene extends Phaser.Scene {
     e.hp = Math.max(4, Math.round(r.maxHp * ARENA.jednostka));
     let akcje = 0;
     for (const [od, ile] of WT.ruchy) if (r.poziom >= od) akcje = ile;
-    const duch: DuchWalki = { atak: r.atak, trafienie: r.trafienie, blok: r.blok, mocny: r.mocny, akcje, leczenie: true, strzal: r.strzal };
+    const duch: DuchWalki = { atak: r.atak, trafienie: r.trafienie, blok: r.blok, pancerz: r.pancerz, magicznyAtak: r.magicznyAtak, mocny: r.mocny, akcje, leczenie: true, strzal: r.strzal };
     e.pvp = duch;
     e.setDepth(-start);
     // The name over the ghost.

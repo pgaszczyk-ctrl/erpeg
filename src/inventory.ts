@@ -1,7 +1,7 @@
 import { obrazeniaBroni } from './content/bron';
 import { WALKA, zTabeli } from './content/walka';
 import {
-  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
+  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM,
   PODKOWA, TALIZMANY, SZYBKOSC_TALIZMANU, ZYCIE_PRZEDMIOTU, CELNOSC_PRZEDMIOTU, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
@@ -380,10 +380,8 @@ export function defense() {
   return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield + charms);
 }
 
-/** Chance that a hit does no harm, from armour. */
-export function blockChance() {
-  return Math.min(OBRONA_MAKS, defense() * OBRONA_ZA_PUNKT);
-}
+/** Legacy arena snapshots keep their field; armour now mitigates damage instead. */
+export function blockChance() { return 0; }
 
 export function owns(id: string) {
   return Object.values(gear.equip).includes(id) || gear.bag.some((s) => 'item' in s && s.item === id);

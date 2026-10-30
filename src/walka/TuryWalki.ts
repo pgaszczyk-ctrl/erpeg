@@ -1,3 +1,4 @@
+import { poPancerzu } from '../content/pancerz';
 // The turn fight on the map (MVP 1, test server; content/walkaTurowa.ts).
 // Walking stays live; once the hero chooses to fight a group, the game stops
 // the live loop and runs turns here: the group spreads out like in HoMM
@@ -21,7 +22,7 @@ import { TEX } from '../art';
 import { OSTROSC } from '../screen';
 import { session } from '../quests';
 import {
-  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, blockChance, rangedWeapon, gear, skillLevel,
+  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, defense, rangedWeapon, gear, skillLevel,
   ammoOf, takeAmmo,
 } from '../inventory';
 import { AMUNICJA } from '../content/zuzycie';
@@ -41,6 +42,8 @@ export interface DuchWalki {
   atak: number;
   trafienie: number;
   blok: number;
+  pancerz?: number;
+  magicznyAtak?: boolean;
   mocny: number;
   /** Actions per turn = the owner's moves by level. */
   akcje: number;
@@ -728,14 +731,10 @@ export class TuryWalki {
       if (end) this.zakoncz('przerwana');
       return end;
     }
-    if (Math.random() < blockChance()) {
-      this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
-      return false;
-    }
     // A ghost hits like a hero: its blow in weapon units, ARENA.jednostka of them to a half-heart (same rules both ways).
-    const pending = this.carry + (q.e.pvp
+    const pending = this.carry + poPancerzu((q.e.pvp
       ? ((q.e.pvp.strzal ?? q.e.pvp.atak) * mnoznik * (Math.random() < WT.szczescie.krytyk ? WT.szczescie.krytykMnoznik : 1)) / ARENA.jednostka
-      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia) * (this.oslona && !q.e.pvp ? SMOK_W_TURACH.oslona : 1);
+      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia) * (this.oslona && !q.e.pvp ? SMOK_W_TURACH.oslona : 1), defense(), q.e.kindId !== 'wodnik' && !q.e.pvp?.magicznyAtak);
     return this.zadaj(q.e, pending);
   }
 
@@ -781,8 +780,7 @@ export class TuryWalki {
     const sx = e.x, sy = e.y;
     await this.tween(e, { x: sx + (p.x - sx) * 0.25, y: sy + (p.y - sy) * 0.25 }, 140);
     let koniec = false;
-    if (!this.h.pewnyAtak?.(e) && Math.random() < blockChance()) this.h.napis(p.x, p.y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
-    else koniec = this.ranSmokiem(e, czesc);
+    koniec = this.ranSmokiem(e, poPancerzu(czesc, defense()));
     if (this.aktywna) await this.tween(e, { x: sx, y: sy }, 180);
     await this.czekaj(160);
     return koniec;
@@ -1145,6 +1143,7 @@ export class TuryWalki {
       this.h.napis(x, y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
       return;
     }
+    if (e.pvp?.pancerz) dmg = poPancerzu(dmg, e.pvp.pancerz, this.broni()?.rodzaj !== 'magia');
     const zabity = e.hit(from, now, dmg);
     // No knock-back in turns: everyone keeps their spot.
     e.vel.set(0, 0);

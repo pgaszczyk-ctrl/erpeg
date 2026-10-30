@@ -9,7 +9,7 @@ const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, blockChance, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
+  gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
 import { session, stanOsiagniec, saveNow } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
@@ -433,7 +433,7 @@ function show(host: CharacterHost) {
     s.append(life, tube(hp / maxHp, 'hp', `Zdrowie ${hp / 2} z ${maxHp / 2}`));
     s.append(rows([
       ['📈 Premia za poziom', `+${Math.round(czescPremii(lvl) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
-      ['🛡 Obrona', `${defense()} (${Math.round(blockChance() * 100)}% bloku)`],
+      ['🛡 Pancerz', String(defense())],
     ]));
     const n = host.fruitPerHeal ?? LECZENIE_OWOCAMI.owocow;
     const canEat = totalFruit() >= n && hp < maxHp;
@@ -695,7 +695,7 @@ function rows(list: [string, string][]) {
  */
 function statRows(id: string): [string, string][] {
   const it = item(id);
-  if (!it || !it.moc || it.miejsce === 'talizman' || it.miejsce === 'amulet') return [];
+  if (!it || it.miejsce === 'talizman' || it.miejsce === 'amulet') return [];
   if (it.obrazenia) {
     const rows: [string, string][] = [['Obrażenia broni', it.obrazenia.join('–')]];
     const worn = item(gear.equip[it.miejsce]);
@@ -704,12 +704,12 @@ function statRows(id: string): [string, string][] {
   }
   const what = it.miejsce === 'bron'
     ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj ? 'Atak strzałem' : it.narzedzie ? 'Atak (narzędzie)' : 'Atak')
-    : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Obrona') : 'Obrona';
-  const out: [string, string][] = [[what, `+${it.moc}`]];
+    : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Pancerz') : 'Pancerz';
+  const out: [string, string][] = [[what, what === 'Pancerz' ? String(it.moc) : `+${it.moc}`]];
   const worn = item(gear.equip[it.miejsce]);
   if (worn && worn.id !== id && (worn.rodzaj ?? '') === (it.rodzaj ?? '')) {
     const d = it.moc - worn.moc;
-    out.push(['Masz założone', `+${worn.moc}${d ? ` (${d > 0 ? '▲ +' : '▼ '}${d})` : ', tyle samo'}`]);
+    out.push(['Masz założone', `${what === 'Pancerz' ? '' : '+'}${worn.moc}${d ? ` (${d > 0 ? '▲ +' : '▼ '}${d})` : ', tyle samo'}`]);
   }
   return out;
 }
@@ -734,11 +734,11 @@ function wearRow(id: string): [string, string] | null {
  */
 function itemCard(id: string) {
   const it = item(id);
-  const card = el('div', `c-card-body${it?.miejsce === 'bron' ? ' weapon-card' : ''}`);
+  const card = el('div', `c-card-body${it && ['bron', 'zbroja', 'helm', 'buty'].includes(it.miejsce) ? ' weapon-card' : ''}`);
   const head = el('div', 'c-card-head');
   const icon = el('span', 'c-card-icon');
   icon.append(slotIcon({ item: id }));
-  if (it?.miejsce === 'bron') { const dots = qualityDots(id); if (dots) icon.append(dots); }
+  if (it?.jakosc !== undefined) { const dots = qualityDots(id); if (dots) icon.append(dots); }
   head.append(icon, el('div', 'c-card-name', it?.nazwa ?? id));
   card.append(head);
   const list = statRows(id);

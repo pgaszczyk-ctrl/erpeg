@@ -1,0 +1,45 @@
+name: Armour checks
+on:
+  pull_request:
+    paths:
+      - 'src/content/pancerz.ts'
+      - 'src/content/przedmioty.ts'
+      - 'src/content/stwory.ts'
+      - 'src/inventory.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'src/objects/StworAI.ts'
+      - 'src/walka/TuryWalki.ts'
+      - 'src/ui/character.ts'
+      - 'src/admin/admin.ts'
+      - 'scripts/tests/*pancerz.mjs'
+      - '.github/workflows/armour-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  armour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vite build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - run: node scripts/tests/pancerz.mjs
+      - run: node scripts/tests/bronie.mjs
+      - run: node scripts/tests/browser-pancerz.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: armour-desktop-and-phone
+          path: work/pancerz/
+          if-no-files-found: ignore

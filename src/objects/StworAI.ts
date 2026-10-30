@@ -31,7 +31,7 @@ export interface StworHost {
   scene: Phaser.Scene;
   player: { x: number; y: number };
   /** Obrażenia (połówki serca) na bohatera. */
-  hurt: (from: Phaser.Math.Vector2, obrazenie: number) => void;
+  hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne?: boolean) => void;
   /** Spowolnienie bohatera (mnożnik prędkości, ms) – nie kumuluje się. */
   spowolnij: (mnoznik: number, ms: number) => void;
   /** Wspólny limit sekwencji ataku; `zawsze` = boss (zajmuje miejsce, ale nie czeka). */
@@ -539,7 +539,7 @@ export class StworAI {
         }
         if (Phaser.Math.Distance.Between(q.x, q.y, p.x, p.y - 4) <= q.r + 3) {
           if (this.s.kindId === 'glut' || this.s.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-hit', 0, this.audible);
-          this.h.hurt(new Phaser.Math.Vector2(q.x - q.vx * 0.05, q.y - q.vy * 0.05), q.obrazenie);
+          this.h.hurt(new Phaser.Math.Vector2(q.x - q.vx * 0.05, q.y - q.vy * 0.05), q.obrazenie, this.s.kindId !== 'wodnik');
           return false; // trafia najwyżej raz
         }
       }

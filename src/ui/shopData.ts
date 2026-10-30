@@ -37,7 +37,7 @@ export function shopItem(p: Przedmiot, index: number, price: number): ShopEntry 
     id: `buy:${p.id}`, index, name: p.nazwa, category, picture: itemPictureUrl(p.id),
     description: p.opis ?? (p.miejsce === 'bron' ? 'Solidna broń na kolejne wyprawy.' : 'Ochrona przydatna podczas wędrówki.'),
     stats: [
-      ...(!p.pojazd ? [[p.rodzaj === 'magia' ? 'Moc magii' : p.miejsce === 'bron' ? 'Obrażenia' : 'Obrona', String(p.moc)] as [string, string]] : []),
+      ...(!p.pojazd ? [[p.rodzaj === 'magia' ? 'Moc magii' : p.miejsce === 'bron' ? 'Obrażenia' : 'Pancerz', String(p.moc)] as [string, string]] : []),
       ...(p.miejsce === 'bron' ? [[`Wymaga ${UMIEJETNOSCI[p.rodzaj ?? 'miecz'].dopelniacz}:`, String(p.wymaganySkill ?? 1)] as [string, string]] : []),
       ...(p.wytrzymalosc ? [['Wytrzymałość', `${p.wytrzymalosc}/${p.wytrzymalosc}`] as [string, string]] : []),
     ],

@@ -1,4 +1,5 @@
 import { itemIcon } from '../ui/itemIcon';
+import { pancerze, kluczPancerza, ustawPancerze } from '../content/pancerz';
 import { bronie, kluczBroni, kluczTrwalosci, kodujZakres, ustawBronie } from '../content/bron';
 import { rpc } from '../api';
 import { CityMap } from '../map/CityMap';
@@ -127,7 +128,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -154,6 +155,7 @@ function render() {
   else if (tab === 'quizzes') quizzesTab(main);
   else if (tab === 'puzzles') void puzzlesTab(main);
   else if (tab === 'bron') void bronTab(main);
+  else if (tab === 'pancerze') void pancerzTab(main);
   else if (tab === 'stwory') void stworyTab(main);
   else settings(main);
 }
@@ -1020,7 +1022,7 @@ async function stworyTab(main: HTMLElement) {
     box.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`]));
     return;
   }
-  try { ustawBronie((await call<{ values: Record<string, number> }>('admin_settings', {})).values); }
+  try { const v = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawBronie(v); ustawPancerze(v); }
   catch { box.append(el('p', { className: 'msg bad' }, ['Nie udało się odświeżyć zakresów broni; lista pokazuje wartości domyślne.'])); }
   const opcje = lupOpcje();
   const grupy = [...new Set(opcje.map((o) => o.grupa))];
@@ -1133,6 +1135,41 @@ async function bronTab(main: HTMLElement) {
       el('div', { className: 'row' }, [field('Wytrzymałość (puste = domyślna)', life), saveLife]), msg,
     ]);
     list.append(card);
+  }
+  search.oninput = () => { const q = search.value.toLocaleLowerCase('pl'); for (const card of list.children) (card as HTMLElement).hidden = !card.textContent?.toLocaleLowerCase('pl').includes(q); };
+}
+
+async function pancerzTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['🛡 Repozytorium pancerzy']), el('p', { className: 'muted' }, [
+    'Zbroje, hełmy i buty. Pancerz założonych elementów sumuje się i osłabia ciosy fizyczne. Magia i trucizny go pomijają. ',
+    'Pięć jakości dzieli grafikę. Łup i losową jakość ustawisz w zakładce Stworki. Zmiany od następnego wejścia do gry.',
+  ]));
+  let values: Record<string, number>;
+  try { values = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawPancerze(values); }
+  catch (e) { main.append(el('p', { className: 'msg bad' }, [(e as Error).message])); return; }
+  const search = el('input', { type: 'search', placeholder: 'Szukaj pancerza lub jakości', 'aria-label': 'Szukaj pancerza' });
+  const list = el('div'); main.append(search, list);
+  for (const p of pancerze()) {
+    const value = el('input', { type: 'number', min: '0', max: '10000', step: '1', value: String(p.moc), 'aria-label': 'Pancerz', style: 'width: 110px' });
+    const msg = el('small', { className: 'muted' });
+    const set = async (n: number | null) => {
+      try {
+        if (n !== null && (!Number.isInteger(n) || n < 0 || n > 10000)) throw new Error('Pancerz: liczba całkowita od 0 do 10000.');
+        save.disabled = reset.disabled = true;
+        await call('admin_set_setting', { p_k: kluczPancerza(p.id), p_v: n });
+        if (n === null) delete values[kluczPancerza(p.id)]; else values[kluczPancerza(p.id)] = n;
+        ustawPancerze(values); value.value = String(p.moc);
+        msg.className = 'msg ok'; msg.textContent = `Zapisane. Pancerz: ${p.moc}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { save.disabled = reset.disabled = false; }
+    };
+    const save = btn('Zapisz pancerz', () => { if (value.value.trim() === '') { msg.textContent = 'Wpisz wartość pancerza.'; return; } void set(Number(value.value)); }, 'b p');
+    const reset = btn('Przywróć domyślne', () => void set(null));
+    const icon = itemIcon(p.id); if (icon) { icon.width = 64; icon.height = 64; }
+    list.append(el('div', { className: 'card', 'data-armour': p.id }, [
+      el('h3', { className: 'row' }, [icon, p.nazwa]), el('p', { className: 'muted' }, [`ID: ${p.id}`]),
+      el('div', { className: 'row' }, [el('label', { className: 'f' }, [el('span', {}, ['Pancerz']), value]), save, reset]), msg,
+    ]));
   }
   search.oninput = () => { const q = search.value.toLocaleLowerCase('pl'); for (const card of list.children) (card as HTMLElement).hidden = !card.textContent?.toLocaleLowerCase('pl').includes(q); };
 }

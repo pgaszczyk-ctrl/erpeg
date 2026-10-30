@@ -10,7 +10,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
 import { api, rpc, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
+import { gear, loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
@@ -304,6 +304,7 @@ export function startSession(r: LoginResult) {
   session.jazda = p.save.jazda ?? null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
+  if (r.newCharacter && !gear.equip.zbroja) gear.equip.zbroja = 'skorzana_zbroja_jakosc0';
   // The test server's first essences were a count and a blow counter: now flasks in the backpack.
   for (let i = 0; i < Math.min(20, p.save.esencje ?? 0); i++) addEssence('dab');
   session.exp = p.exp;
