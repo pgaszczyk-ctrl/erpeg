@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
+import { tr } from '../i18n';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { session } from '../quests';
 import { fixedSprite, hdOn, ensureRed, fitHd } from '../sprites';
@@ -553,7 +554,7 @@ export class Elzet {
     const n = session.flagi.elzet_zarty ?? 0;
     const tytul = `🤖 ${ELZET.imie}`;
     if (n >= T.zarty.length) {
-      const z = T.zarty[Math.floor(Math.random() * T.zarty.length)];
+      const z = tr(T.zarty[Math.floor(Math.random() * T.zarty.length)]);
       return this.h.dialog({ title: tytul, text: `${T.potem}\n\n(Powtórka:) ${z}`, buttons: [T.pa], onChoose: () => {} });
     }
     this.h.dialog({
@@ -562,7 +563,7 @@ export class Elzet {
         if (i !== 0) return;
         const m = n + 1;
         session.flagi.elzet_zarty = m;
-        const text = T.zarty[n];
+        const text = tr(T.zarty[n]);
         const pl = this.h.player;
         let nagroda: { text: string; lup: { co: string; ile: number }[] } | null = null;
         if (m === ELZET.jablkaPo) nagroda = { text: `${T.jedz}\n\n${T.nagrodaJablka(ELZET.jablek)}`, lup: [{ co: 'jablko', ile: ELZET.jablek }] };

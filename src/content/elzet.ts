@@ -106,16 +106,18 @@ export const ELZET_TEKSTY = {
   powitanie: 'BZZT. Organizm! Dobrze, że jesteś. Mam nowy moduł: humor. Test?',
   potem:
     'BZZT. Żarty: wyczerpane. Kiedyś może pójdę z tobą w drogę. Na razie pilnuję domku.',
+  /** The owner's list (31 Oct 2026); Polish and English jokes are separate, not translations. */
   zarty: [
-    'Dlaczego robot nie gra w chowanego? Bo zawsze go namierzą. Bzzt. Ha. Ha.',
-    'Co mówi robot na randce? „Jesteś moją ulubioną aktualizacją.” Bzt.',
-    'Ile robotów trzeba, żeby wkręcić żarówkę? Jednego. Ale z instrukcją na 400 stron.',
-    'Mój ulubiony taniec? Robot. Tańczę go od zawsze. Nie mam wyboru.',
-    'Dlaczego robot poszedł do lekarza? Miał wirusa. Lekarz kazał go zrestartować. Bzzt.',
-    'Co robot je na śniadanie? Mikroczipsy. Ha. Ha. Ha.',
-    'Spotyka się dwóch robotów. Jeden mówi: „Bzzt”. Drugi: „Wiem, wiem”.',
-    'Dlaczego robot nie kłamie? Bo potem rdzewieje mu sumienie.',
-    'Najlepsza rada od taty-robota? „Synu, zawsze miej zapasową zębatkę.” Dziś wiem dlaczego.',
-    'Puk, puk. – Kto tam? – Robot. – Jaki robot? – Ten, który już dawno skończył, a ty wciąż czekasz. Bzzt.',
+    { pl: "Jak nazywa się bumerang, który nie wraca? Patyk.", en: "What do you call a boomerang that won’t come back? A stick." },
+    { pl: "Dlaczego książka do matematyki jest zawsze smutna? Bo ma pełno problemów.", en: "Why did the math book look sad? Because it had too many problems." },
+    { pl: "Co mówi ściana do ściany? Spotkajmy się w rogu.", en: "What do you call a fake noodle? An impasta." },
+    { pl: "Czym się różni Manchester United od trójkąta? Trójkąt regularnie ma trzy punkty.", en: "What’s the difference between Manchester United and a triangle? A triangle actually has three points." },
+    { pl: "Jak się nazywa pies, który umie sztuczki magiczne? Labrakadabrador.", en: "What do you call a magic dog? A labracadabrador." },
+    { pl: "Dlaczego szkielety nigdy się nie biją? Bo nie mają do tego serca.", en: "Why don't skeletons fight each other? They don't have the guts." },
+    { pl: "Jaką rybę matematycy lubią łowić najbardziej? Suma.", en: "What do you call cheese that isn't yours? Nacho cheese." },
+    { pl: "Dlaczego wąż nie bije brawa? Bo nie ma rąk.", en: "Why couldn't the bicycle stand up by itself? It was two tired." },
+    { pl: "Jak się nazywa żona rosyjskiego księdza (popa)? Popażona.", en: "What do you call a factory that makes just okay products? A satisfactory." },
+    { pl: "Co mówi ksiądz zaraz po ślubie informatyka? Pobieranie zakończone.", en: "Why did the scarecrow win an award? Because he was outstanding in his field." },
   ],
+
 } as const;
