@@ -1,7 +1,6 @@
 // Isolated presentation adapter: the existing game/NPC/quest modules remain unchanged.
 import type Phaser from 'phaser';
 import { personOf } from './sprites';
-import { TEST } from './version';
 import { tr } from './i18n';
 import { PIES } from './content/postacie';
 import type { Folk } from './scenes/Townsfolk';
@@ -12,7 +11,7 @@ export const MIESZKANCY_MODELE={
   k_dziecko:['dziewczynka_warkocze','dziewczynka'],m_dziecko:['chlopiec','chlopiec_2','urwis'],
   k_starszy:['babcia','starsza_pani'],m_starszy:['starszy_pan','starszy_pan_kapelusz'],
 };
-export function mieszkancy3d(){return TEST&&new URLSearchParams(location.search).get('mieszkancy3d')!=='0';}
+export function mieszkancy3d(){return new URLSearchParams(location.search).get('mieszkancy3d')!=='0';}
 const managed=new WeakSet<ResidentSprite>();
 export function manageResident(sprite:ResidentSprite,on:boolean){if(on)managed.add(sprite);else managed.delete(sprite);}
 function residentModel(tex:string,id:string){

@@ -4,7 +4,6 @@ import type * as THREE from 'three';
 import type { Slime } from './objects/Slime';
 import type { RodzajWroga } from './content/fabula';
 import { SKALA_POSTACI } from './skala';
-import { TEST } from './version';
 import { KOLOR_3D_GLSL } from './wyrazistosc3d';
 import { manageResident, mieszkancy3d, residentsFor, dialogueActor, releaseResidentBridge, type ResidentVisual, type ResidentSprite } from './mieszkancy3d';
 
@@ -13,7 +12,7 @@ export const MODELE_STWOROW: Partial<Record<RodzajWroga, string>> = {
   szkielet:'szkielet', upior:'upior_krypty', wodnik:'wodnik', blob:'wodny_blob', driada:'driada',
   herszt:'herszt', wielki_herszt:'herszt', koziol:'mosiezny_koziol',
 };
-function enemiesEnabled(){return TEST&&new URLSearchParams(location.search).get('stwory3d')!=='0';}
+function enemiesEnabled(){return new URLSearchParams(location.search).get('stwory3d')!=='0';}
 export function stwory3d(){return enemiesEnabled()||mieszkancy3d();}
 const TILE=128, COLS=8, ROWS=4, LIMIT=32, FPS=15, VIEW=2.2, FEET=.82, SCALE=.27*SKALA_POSTACI;
 type Model={root:THREE.Object3D; mixer:THREE.AnimationMixer; clips:Map<string,THREE.AnimationClip>;

@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { audio } from '../sfx';
-import { TEST } from '../version';
+// On every server since 1.041 (owner, 31 Oct 2026); `?dzwieki=0` switches combat sounds off.
+const TEST = typeof location === 'undefined' || new URLSearchParams(location.search).get('dzwieki') !== '0';
 import { COMBAT_SOUNDS, soundTiming, type CombatSound } from './combatCatalog';
 
 const buffers = new Map<string, AudioBuffer>();
