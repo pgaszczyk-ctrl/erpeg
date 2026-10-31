@@ -19,6 +19,8 @@ osmium tags-filter "$WORK/lublin.pbf" \
   wr/building \
   w/highway \
   w/railway=rail,tram,light_rail \
+  nwr/aeroway=aerodrome,terminal,runway,taxiway,apron,gate \
+  nw/barrier \
   wr/railway=platform \
   n/railway=station,halt \
   w/waterway=river,stream,canal,ditch,drain \
@@ -33,7 +35,7 @@ osmium tags-filter "$WORK/lublin.pbf" \
   nwr/office=government \
   -o "$WORK/filtered.pbf"
 
-osmium export "$WORK/filtered.pbf" -f geojsonseq -o "$WORK/lublin.geojsonseq"
+osmium export "$WORK/filtered.pbf" --add-unique-id=type_id -f geojsonseq -o "$WORK/lublin.geojsonseq"
 ls -lh "$WORK/lublin.geojsonseq"
 
 mkdir -p data

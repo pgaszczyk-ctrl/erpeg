@@ -34,6 +34,7 @@ export async function rpc<T>(fn: string, args: Record<string, unknown>, keepaliv
 }
 
 export interface SaveData {
+  artilleryHero?: import('./artillery/state').HeroState | null;
   language?: import('./i18n').Lang;
   questResults?: Record<string, import('./content/questy/scenarios').QuestResult>;
   coins?: number;

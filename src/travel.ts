@@ -1,3 +1,4 @@
+import { recoverArtillery,finishArtilleryRecovery,rollbackArtilleryRecovery,artilleryTransit } from './artillery/client';
 import type Phaser from 'phaser';
 import { CityMap, PX_PER_M } from './map/CityMap';
 import { PIES, MARTIN } from './content/postacie';
@@ -141,6 +142,8 @@ export async function prepareMap(city: CityMap) {
  * its map), or home. There are no teleports.
  */
 export async function enterWorld(game: Phaser.Game) {
+  await recoverArtillery();
+  try {
   // Still on the way: the ride screen until the cart arrives (the load point is its station already).
   // New controls test (walka/live.ts): a finished ride makes the arrival station the start, not the last spot.
   if (session.jazda) session.tu = null;
@@ -151,7 +154,7 @@ export async function enterWorld(game: Phaser.Game) {
   }
   let city = maps.get('lublin')!;
   // Reloaded for a new version (update.ts): back where the hero stood, once.
-  const back = takeResume(session.name);
+  const back = artilleryTransit.active ? null : takeResume(session.name);
   // New controls test: the spot of the last save (walka/live.ts, point 7) wins over the hotel/home.
   let at = back ?? ((live() && session.tu) || session.at);
   // Saved in a dungeon (shouldn't happen – saves keep its entrance): the hotel or home instead.
@@ -160,6 +163,7 @@ export async function enterWorld(game: Phaser.Game) {
     try {
       city = await getMap(at.m);
     } catch {
+      if(artilleryTransit.active)throw new Error('Artillery destination map unavailable');
       at = null; // that map is gone: home
     }
   }
@@ -178,9 +182,9 @@ export async function enterWorld(game: Phaser.Game) {
   if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
   game.registry.set('city', city);
   const scene = game.scene.getScene('game') as GameScene;
-  const created = intro ? new Promise<void>((resolve) => scene.events.once('create', resolve)) : Promise.resolve();
+  const created = intro || artilleryTransit.active ? new Promise<void>((resolve) => scene.events.once('create', resolve)) : Promise.resolve();
   game.scene.start('game');
-  if (!intro) return;
+  if (!intro && !artilleryTransit.active) return;
   await created;
   const deadline = performance.now() + 60_000;
   const ready = async () => {
@@ -197,7 +201,12 @@ export async function enterWorld(game: Phaser.Game) {
   scene.scene.setVisible(true, 'ui');
   // Allow the completed textures to pass through a rendered frame before fading the cover.
   await new Promise<void>((resolve) => game.events.once('postrender', resolve));
+  await finishArtilleryRecovery();
   await revealLoadedGame();
+  } catch(e){
+    if(artilleryTransit.active&&await rollbackArtilleryRecovery()){game.scene.stop('ui');game.scene.stop('game');await enterWorld(game);return;}
+    throw e;
+  }
 }
 
 export function mapName(id: string) {

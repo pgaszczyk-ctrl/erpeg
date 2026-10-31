@@ -127,6 +127,7 @@ export const session = {
   /** Skill chosen per weapon kind (content/umiejetnosci.ts). */
   umiej: {} as Record<string, string>,
   /** A ride under way (journey.ts), shown until it arrives. */
+  artilleryHero: null as import('./artillery/state').HeroState | null,
   jazda: null as import('./journey').Journey | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
@@ -302,6 +303,7 @@ export function startSession(r: LoginResult) {
   session.tu = tu ? { m: tu.m, x: (tu.x * PX_PER_M) / (tu.s || PX_PER_M), y: (tu.y * PX_PER_M) / (tu.s || PX_PER_M) } : null;
   session.umiej = p.save.umiej && typeof p.save.umiej === 'object' ? { ...p.save.umiej } : {};
   session.jazda = p.save.jazda ?? null;
+  session.artilleryHero=p.save.artilleryHero??null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
   if (r.newCharacter && !gear.equip.zbroja) gear.equip.zbroja = 'skorzana_zbroja_jakosc0';
@@ -362,7 +364,7 @@ export function saveNow(hp: number) {
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     tu: session.tu && { m: session.tu.m, x: Math.round(session.tu.x), y: Math.round(session.tu.y), s: PX_PER_M },
     zasoby: zapiszZasoby(), umiej: session.umiej,
-    jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
+    artilleryHero:session.artilleryHero, jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
   // Card/clue checkpoints can happen close together. An older request must never overwrite
   // a newer completion; snapshot before queuing so later choices cannot mutate a pending save.

@@ -1,0 +1,246 @@
+{
+  "scope": "Generator validation on real OSM extracts; full in-game collision/reachability checks are Lublin only. No cross-city edges.",
+  "cities": [
+    {
+      "id": "lublin",
+      "name": "Lublin",
+      "population": 334681,
+      "scope": [
+        22.32,
+        51.15,
+        22.78,
+        51.33
+      ],
+      "sourceSha256": "de754c3a2bbc8472cf79decfbb7afd199d52b99819e9bd63b594041a6099f52c",
+      "stops": 9,
+      "airports": [
+        {
+          "name": "Port Lotniczy Lublin",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Władysława Grabskiego",
+              "km": 8.16,
+              "airport": false
+            },
+            {
+              "to": "Plac Zamkowy",
+              "km": 10.09,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "Lotnisko Radawiec",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Bieszczadzka",
+              "km": 6.28,
+              "airport": false
+            },
+            {
+              "to": "Morwowa",
+              "km": 8.2,
+              "airport": false
+            }
+          ]
+        }
+      ],
+      "edges": 14,
+      "maxDirections": 4,
+      "maxLegs": 3,
+      "maxTransfers": 2,
+      "meanLegs": 1.6944444444444444,
+      "coveredCells": 852,
+      "totalCells": 2677,
+      "coveragePercent": 31.8,
+      "uncoveredCells": 1825,
+      "waterRejected": 3148,
+      "missing": [],
+      "normalAnimationPerLegS": 5.35,
+      "normalAnimationLongestRouteS": 16
+    },
+    {
+      "id": "warszawa",
+      "name": "Warszawa",
+      "population": 1863845,
+      "scope": [
+        20.75,
+        52.05,
+        21.3,
+        52.45
+      ],
+      "sourceSha256": "d04dbea3c7e78f597b6cd9ea042b8b3530e03a30d5f415b96246f2805f1a76c8",
+      "stops": 42,
+      "airports": [
+        {
+          "name": "Lotnisko Chopina",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Łopuszańska",
+              "km": 2.06,
+              "airport": false
+            },
+            {
+              "to": "Cybernetyki",
+              "km": 2.7,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "Lądowisko Gassy",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Przewodowa",
+              "km": 10.77,
+              "airport": false
+            },
+            {
+              "to": "Złotej Jesieni",
+              "km": 11.12,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "Walendów",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Sporna",
+              "km": 11.39,
+              "airport": false
+            },
+            {
+              "to": "Traktorzystów",
+              "km": 13.08,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "Lotnisko Warszawa-Babice",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Andrzeja Sołtana",
+              "km": 1.1,
+              "airport": false
+            },
+            {
+              "to": "Wolumen",
+              "km": 2.2,
+              "airport": false
+            }
+          ]
+        }
+      ],
+      "edges": 80,
+      "maxDirections": 4,
+      "maxLegs": 5,
+      "maxTransfers": 4,
+      "meanLegs": 2.746806039488966,
+      "coveredCells": 4870,
+      "totalCells": 9659,
+      "coveragePercent": 50.4,
+      "uncoveredCells": 4789,
+      "waterRejected": 13442,
+      "missing": [],
+      "normalAnimationPerLegS": 5.35,
+      "normalAnimationLongestRouteS": 26.8
+    },
+    {
+      "id": "istanbul",
+      "name": "İstanbul",
+      "population": 15701602,
+      "scope": [
+        28.5,
+        40.9,
+        29.4,
+        41.35
+      ],
+      "sourceSha256": "b1b2c4cb531479263bded5b832880f78d0aa5d9dbc603adbdabdda264c23026c",
+      "stops": 44,
+      "airports": [
+        {
+          "name": "Sabiha Gökçen Havalimanı (SAW)",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Gülsün Sokağı",
+              "km": 2,
+              "airport": false
+            },
+            {
+              "to": "Antalya Caddesi",
+              "km": 4.67,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "İstanbul Atatürk Havalimanı",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Dr. Tevfik Sağlam",
+              "km": 3.73,
+              "airport": false
+            },
+            {
+              "to": "Koç Sokağı",
+              "km": 5.32,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "İstanbul Havalimanı",
+          "directions": 1,
+          "links": [
+            {
+              "to": "2046. Sokak",
+              "km": 20.25,
+              "airport": false
+            }
+          ]
+        },
+        {
+          "name": "Samandıra Hava Üssü",
+          "directions": 2,
+          "links": [
+            {
+              "to": "Atayolu Caddesi",
+              "km": 2.04,
+              "airport": false
+            },
+            {
+              "to": "Menekşe Sokağı",
+              "km": 2.68,
+              "airport": false
+            }
+          ]
+        }
+      ],
+      "edges": 83,
+      "maxDirections": 4,
+      "maxLegs": 6,
+      "maxTransfers": 5,
+      "meanLegs": 2.8308668076109935,
+      "coveredCells": 5602,
+      "totalCells": 22821,
+      "coveragePercent": 24.5,
+      "uncoveredCells": 17219,
+      "waterRejected": 5305,
+      "missing": [
+        "Aerodrome: incomplete runway/access data"
+      ],
+      "normalAnimationPerLegS": 5.35,
+      "normalAnimationLongestRouteS": 32.1
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "cityStops": 7,
+  "maxStops": 10,
+  "minSpacingM": 900,
+  "clearM": 12
+}
