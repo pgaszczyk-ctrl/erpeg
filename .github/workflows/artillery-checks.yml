@@ -1,0 +1,44 @@
+name: Municipal artillery checks
+on:
+  pull_request:
+    paths:
+      [
+        "src/artillery/**",
+        "scripts/artillery/**",
+        "scripts/tests/*artillery*",
+        "docs/sql/artillery.sql",
+        "data/artillery*",
+        "public/artillery/**",
+        "src/travel.ts",
+        ".github/workflows/artillery-checks.yml",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  artillery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/tests/artillery.mjs
+      - run: |
+          npm install --no-save --package-lock=false @electric-sql/pglite@0.5.13 playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - run: node scripts/tests/artillery-db.mjs
+      - run: npm run build
+        env:
+          VITE_TEST: "1"
+      - run: node scripts/tests/browser-artillery.mjs
+      - run: node scripts/tests/browser-artillery-diagnostic.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artillery-browser-checks
+          path: work/artillery/
+          retention-days: 7

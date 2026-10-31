@@ -1,3 +1,5 @@
+import { restoreHero } from '../artillery/state';
+import { Artillery,artilleryTransit } from '../artillery/client';
 import { missionNotes } from '../content/questy/progress';
 import { planCityQuests } from '../content/questy/planner';
 import { CITY_SCENARIOS, isWithdrawnCityQuest } from '../content/questy/scenarios';
@@ -455,6 +457,7 @@ export class GameScene extends Phaser.Scene {
   private mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
   private leaving = false;
   private travelling = false;
+  private artillery?: Artillery;
   private justRode = false;
   /** Walked onto another map (GRANICA): a word on arrival. */
   private walkedIn: string | null = null;
@@ -997,6 +1000,16 @@ export class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => prolog?.destroy());
     if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.opis.nazwa), 4500);
 
+    if(session.artilleryHero){restoreHero(this.player,session.artilleryHero);session.artilleryHero=null;}
+    this.artillery = new Artillery(this,this.city,this.player,{
+      visible:(x,y)=>pointInPolygon(this.vision,x,y),combat:()=>this.inCombat(), busy:()=>this.travelling||this.witam||this.player.isDead||this.leaving||this.story.busy||!!this.anomalia?.busy||this.time.now<this.lingerUntil,
+      hold:v=>{this.travelling=v;this.player.vel.set(0,0);},
+      checkpoint:async()=>{this.keepFog();session.tu=this.miejsceZapisu();await api.heartbeat(session.token,this.snapshot());await saveNow(this.player.hp);},
+      hero:()=>{const model=this.ludzik3d?.flightPortrait();if(model)return model;const f=this.player.frame,c=document.createElement('canvas');c.width=f.cutWidth;c.height=f.cutHeight;c.getContext('2d')?.drawImage(f.source.image as CanvasImageSource,f.cutX,f.cutY,f.cutWidth,f.cutHeight,0,0,c.width,c.height);return c.toDataURL();},
+      restart:async city=>{this.game.registry.set('city',city);const created=new Promise<void>(resolve=>this.events.once('create',resolve));this.scene.stop('ui');this.scene.restart();await created;const until=performance.now()+45000;while(!this.firstViewReady()){if(performance.now()>until)throw Error(tx('Nie udało się przygotować celu.','Could not prepare the destination.'));await new Promise(resolve=>setTimeout(resolve,100));}await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));},
+      toast:s=>this.toast(s),
+    });
+    const artillery=this.artillery;this.events.once('shutdown',()=>artillery?.destroy());
     this.replayAbandoned();
     if (this.walkedIn) this.toast(this.walkedIn, 4000);
     this.walkedIn = null;
@@ -1005,7 +1018,7 @@ export class GameScene extends Phaser.Scene {
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
     const beat = (e?: Event) => {
-      if (this.leaving || this.player.isDead) return;
+      if (this.leaving || this.player.isDead || artilleryTransit.active) return;
       const snap = this.snapshot();
       // About once a minute (and when the page goes away) also the newspaper's daily numbers.
       if (e || Date.now() - this.kurAt >= KURIER_CO_MS) {
@@ -1141,7 +1154,7 @@ export class GameScene extends Phaser.Scene {
 
   update(now: number, delta: number) {
     const dt = Math.min(delta, 50) / 1000;
-    const intro = loadingGame();
+    const intro = loadingGame() || artilleryTransit.active;
     // A hidden scene does not run the render pass that normally updates worldView.
     if (intro) this.cameras.main.preRender();
     this.mapView.update(this.cameras.main, intro ? 1 : 2);
@@ -1159,6 +1172,7 @@ export class GameScene extends Phaser.Scene {
       this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
     }
     if (intro) {
+      if(artilleryTransit.active)this.ludzik3d?.update(this.player,dt);
       this.introSince ??= now;
       this.updateFog();
       this.zabytki.update(this.player.x, this.player.y);
@@ -1170,6 +1184,7 @@ export class GameScene extends Phaser.Scene {
       resetTouch();
       resetKeys();
     }
+    this.artillery?.update(now);
     if (this.player.isDead || this.leaving || this.travelling) return;
     if (this.demoRun) {
       this.demoRun.update(now, dt);
@@ -1259,7 +1274,7 @@ export class GameScene extends Phaser.Scene {
         if (window.matchMedia('(hover:hover) and (pointer:fine)').matches)
           updateGameCursor(this.game.canvas, worldInteraction.at?.(mouse.x, mouse.y)?.kind ?? null);
         const p = this.player, h = p.hitPoint();
-        ustawInterakcjeHud(!!(this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
+        ustawInterakcjeHud(!!(this.artillery?.at(p.x,p.y)||this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
           this.lochy?.przy(p.x, p.y) || this.loch?.przy(p.x, p.y) || this.talkableAt(p.x, p.y, NPC_RADIUS + 4) ||
           this.hitsHome(p.x, p.y) || this.stallAt(p.x, p.y, 13) || this.cartAt(p.x, p.y, 6) || this.pociagi?.stacjaPrzy(p.x, p.y, 8) ||
           this.city.places.some(q => Math.hypot(q.door.x - p.x, q.door.y - (p.y + FEET.dy)) < DOOR_RADIUS)));
@@ -1756,6 +1771,7 @@ export class GameScene extends Phaser.Scene {
       this.player.face(x - this.player.x, y - (this.player.y + 2));
       action();
     }});
+    const cannon=this.artillery?.at(x,y);if(cannon)return make('use',()=>this.artillery?.open(cannon));
     const prologKind = this.prolog?.interactionAt(x, y);
     if (prologKind) return make(prologKind, () => { this.prolog?.interact(); });
     if (this.lochy?.przy(x, y + FEET.dy) || this.loch?.przy(x, y))
@@ -1876,6 +1892,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Home, a talk, a stall, a train/cart or a door at `hit` (or right by the hero): opened, true. */
   private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
+    const cannon=!strong&&!foeNear&&(this.artillery?.at(hit.x,hit.y)??this.artillery?.at(this.player.x,this.player.y));
+    if(cannon){this.artillery?.open(cannon);return true;}
     if (!strong && this.prolog?.interact()) return true;
     if (!strong && this.lochDotyk(hit)) return true;
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
