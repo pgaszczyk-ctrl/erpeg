@@ -6,17 +6,28 @@ Status: nowe
 Akceptacja: właściciel zlecił (31.10.2026: „chcę, żeby grafik je poprawił”)
 Wykonanie: —
 Dotyczy: ikony przedmiotów (ekwipunek, kufer, sklep, HUD)
+Wersja: 2 (31.10.2026 – wzór jakości: skórzana zbroja z paczki 31)
 
 # Zamówienie 45 – poprawa słabych ikon i brakujące przedmioty
 
 Plansza wszystkich obecnych ikon (×2): `45_ikony/obecne_ikony_x2.png`.
 
-## Format (jak ikony12)
-- PNG 64×64 = siatka 32×32 powiększona ×2 (NEAREST), przezroczyste tło, twarda alfa (bez półprzezroczystych pikseli).
-- Obrys 1 px (na siatce 32) w kolorze #1e1a24, najwyżej ~16 kolorów, światło z lewej góry.
-- Wzorzec stylu (dobre, zostają): `tarcza_drewniana`, `tarcza_okuta`, `siekiera`, `kusza`, `pistolet_parowy`, `miecz_mosiezny`, `szabla_hartowana`, `karabela_damascenska`, `ogniwo`, `szklany_miecz`.
+## Wzór jakości (decyzja właściciela, 31.10.2026)
+**Wszystkie ikony mają dorównać skórzanej zbroi z paczki 31** – plik `45_ikony/WZOR_skorzana_zbroja_proby31.png` (w grze `public/proby31/skorzana_zbroja.png`).
+
+Co w niej jest dobre i ma się powtórzyć w każdej ikonie:
+- przedmiot wypełnia prawie cały kadr, pełna, masywna sylwetka (nie cienka kreska),
+- pikselowy wygląd z dużymi, wyraźnymi pikselami (siatka ok. 45–50 px na szerokość ikony, nie 32 i nie 16),
+- każdy materiał w 3–4 tonach (skóra: cień / środek / światło / odblask), światło z lewej góry,
+- wyraźne detale, które mówią czym rzecz jest: klamry, nity, szwy, okucia – złoto/mosiądz jako akcent,
+- gruby ciemny obrys (#1e1a24 albo bardzo ciemny brąz/fiolet), czytelny także w 32 px na telefonie,
+- przezroczyste tło, bez ramki i cienia pod spodem.
+
+## Format dostawy
+- Oryginał w dużym rozmiarze jak wzór (kwadrat ok. 1024–1254 px), PNG z przezroczystością. Nie zmniejszamy go skryptem – gra pokazuje plik tak, jak przyjdzie.
+- Jeśli możesz, dołącz też wersję „na siatce” (każdy duży piksel = 1 px), żeby dało się sprawdzić równość pikseli.
 - Nazwa pliku = id przedmiotu (podane niżej), np. `korona.png`.
-- Ikona musi być czytelna także w 32×32 px na telefonie – jedna wyraźna sylwetka, nie drobne detale.
+- Wszystkie ikony jednym stylem i w tej samej skali przedmiotu: miecz i hełm mają wyglądać jak z jednej gry.
 
 ## A. Bardzo słabe – stare 16×16 (najpilniejsze)
 Rozmazane klocki, inny styl niż reszta.
@@ -44,10 +55,12 @@ Rozmazane klocki, inny styl niż reszta.
 | `kula` | Szklana kula | wygładzona, ~400 kolorów, inny styl; przerysować w pikselach |
 | `zlom`, `zlom_miedziany` | złom | szum, nieczytelne – kilka wyraźnych części (trybik, rura, blacha) |
 
-## C. Inny styl niż reszta (dużo kolorów, wygładzenie)
-Te są ładne, ale „malowane” – odstają od pikselowych. Właściciel woli szczegółowe ilustracje, jeśli są czytelne, więc proszę o propozycję: albo przerysować do stylu ikony12, albo uznać ten bardziej szczegółowy styl za docelowy i dorobić resztę w nim. Najpierw 2 próbki, decyzja właściciela.
+## C. Szczegółowe, ale do ujednolicenia ze wzorem
+Te są bliżej wzoru niż reszta, ale wygładzone/„malowane” i w małym rozmiarze. Przerysować w stylu i rozmiarze zbroi z paczki 31:
 - `zelazny_helm`, `zelazne_buty`, `skorzane_buty`, `podkowa_szczescia`, `cukierniczy_cylinder`
-- nowe wersje: skórzana zbroja (`proby31/skorzana_zbroja.png`) i skórzany hełm (`sklepy/skorzany_helm.png`) – w tym samym duchu.
+- `skorzany_helm` (dziś `sklepy/skorzany_helm.png`, 64 px) – zrobić jako komplet do skórzanej zbroi.
+
+Tak samo dotyczy to ikon, które w pierwszej wersji listy uznałem za dobre (`tarcza_drewniana`, `siekiera`, `kusza`, `pistolet_parowy`, `miecz_mosiezny`, `szabla_hartowana`, `karabela_damascenska`, `szklany_miecz` + pęknięty i animacja pękania, amunicja, materiały, pojazdy). Są poprawne, ale słabsze od wzoru – idą na koniec kolejki, po częściach A, B i D.
 
 ## D. Przedmioty bez obrazka (dziś emoji albo pożyczony obrazek)
 
@@ -90,6 +103,7 @@ Te są ładne, ale „malowane” – odstają od pikselowych. Właściciel woli
 Kijek, miecz treningowy, stalowy miecz i pancerze mają po 5 jakości (kiepski … mistrzowski), dziś z jednym obrazkiem. Wystarczy, jeśli zaproponujesz 5 kolorów ramki/poświaty jakości (rysujemy ją kodem), nie trzeba 5 wersji każdej ikony.
 
 ## Kolejność
-1. Próba: `rycerski`, `korona`, `kijek`, po jednej próbce stylu z części C → akceptacja właściciela.
-2. Reszta A i B.
+1. Próba: `rycerski`, `korona`, `kijek`, `zelazny_helm` w stylu wzoru → akceptacja właściciela.
+2. Reszta A, B i C.
 3. D (prolog i nagrody misji pierwsze), potem zasoby.
+4. Na koniec przerysowanie pozostałych obecnych ikon do poziomu wzoru (patrz koniec części C).
