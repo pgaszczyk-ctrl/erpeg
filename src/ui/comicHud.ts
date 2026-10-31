@@ -1,6 +1,6 @@
 // Variant A: small native vector assets, shared by the DOM attack stick and Phaser movement stick.
-import { TEST } from '../version';
-export const comicHud = TEST;
+// On every server since 1.040 (owner, 31 Oct 2026); `?komiks=0` shows the older look for comparison.
+export const comicHud = typeof location === 'undefined' || new URLSearchParams(location.search).get('komiks') !== '0';
 const outer = '27,3 73,3 97,27 97,73 73,97 27,97 3,73 3,27';
 const inner = '28,9 72,9 91,28 91,72 72,91 28,91 9,72 9,28';
 export const brassPadSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 104">
