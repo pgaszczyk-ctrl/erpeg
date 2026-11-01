@@ -5,6 +5,8 @@
 create table if not exists public.ma_miasta(id int primary key,name text not null,cc text not null,lat float8 not null,lon float8 not null,pop int not null);
 create table if not exists public.ma_lotniska(id text primary key,name text not null,lat float8 not null,lon float8 not null);
 create index if not exists ma_lotniska_lat on public.ma_lotniska(lat);
+-- Bitmask of generated stations (0..n-1) that fall on sea/big lakes and are left out (scripts/artillery/woda.mjs).
+alter table public.ma_miasta add column if not exists woda bigint not null default 0;
 alter table public.ma_miasta enable row level security;
 alter table public.ma_lotniska enable row level security;
 revoke all on public.ma_miasta,public.ma_lotniska from public,anon,authenticated;
@@ -18,49 +20,43 @@ create or replace function public.ma_m(lat1 float8,lon1 float8,lat2 float8,lon2 
 
 -- Stations of one city: k, lat, lon, kind (centrum/dzielnica/rogatka/lotnisko).
 create or replace function public.ma_siec(p_city int) returns table(k int,lat float8,lon float8,rodzaj text) language plpgsql stable set search_path='public' as $$
-declare m public.ma_miasta;rad float8;n int;mIn int;mOut int;a0 float8;a1 float8;a2 float8;a float8;r float8;j int;c float8;i int:=0;
- la float8[]:='{}';lo float8[]:='{}';ro text[]:='{}';l record;
+declare m public.ma_miasta;rad float8;n int;mIn int;mOut int;a0 float8;a1 float8;a2 float8;a float8;r float8;j int;c float8;i int:=0;idx int:=0;
+ la float8[]:='{}';lo float8[]:='{}';ro text[]:='{}';l record;pla float8;plo float8;
 begin
  select * into m from ma_miasta where id=p_city;
  if m.id is null then return;end if;
  rad=9.5*sqrt(m.pop::float8);
  n=least(20,greatest(5,floor(5+2.4*(ln(m.pop::float8/100000)/ln(2))+0.5)::int));
  c=cos(m.lat*pi()/180);
- a0=2*pi()*ma_u(m.id,1);
- foreach a in array array[a0,a0+pi()] loop
-  la=la||(m.lat+0.08*rad*cos(a)/111132);lo=lo||(m.lon+0.08*rad*sin(a)/(111320*c));ro=ro||'centrum'::text;
- end loop;
  mIn=floor((n-2)/3.0)::int;mOut=n-2-mIn;
- a1=2*pi()*ma_u(m.id,2);
- for j in 0..mIn-1 loop
-  a=a1+2*pi()*j/mIn;
-  la=la||(m.lat+0.55*rad*cos(a)/111132);lo=lo||(m.lon+0.55*rad*sin(a)/(111320*c));ro=ro||'dzielnica'::text;
- end loop;
- a2=2*pi()*ma_u(m.id,3);
- for j in 0..mOut-1 loop
-  a=a2+2*pi()*j/mOut+(ma_u(m.id,10+j)-0.5)*0.35*(2*pi()/mOut);
-  r=1.5*rad*(1+(ma_u(m.id,40+j)-0.5)*0.12);
-  la=la||(m.lat+r*cos(a)/111132);lo=lo||(m.lon+r*sin(a)/(111320*c));ro=ro||'rogatka'::text;
+ a0=2*pi()*ma_u(m.id,1);a1=2*pi()*ma_u(m.id,2);a2=2*pi()*ma_u(m.id,3);
+ for idx in 0..n-1 loop
+  if idx<2 then a=a0+pi()*idx;r=0.08*rad;rodzaj='centrum';
+  elsif idx<2+mIn then j=idx-2;a=a1+2*pi()*j/mIn;r=0.55*rad;rodzaj='dzielnica';
+  else j=idx-2-mIn;a=a2+2*pi()*j/mOut+(ma_u(m.id,10+j)-0.5)*0.35*(2*pi()/mOut);r=1.5*rad*(1+(ma_u(m.id,40+j)-0.5)*0.12);rodzaj='rogatka';
+  end if;
+  if (m.woda>>idx)&1=0 then la=la||(m.lat+r*cos(a)/111132);lo=lo||(m.lon+r*sin(a)/(111320*c));ro=ro||rodzaj;end if;
  end loop;
  for l in select x.lat,x.lon from (select t.lat,t.lon,t.id,ma_m(m.lat,m.lon,t.lat,t.lon) d from ma_lotniska t where t.lat between m.lat-1 and m.lat+1) x
    where x.d<=greatest(25000,1.8*rad) and x.d>=0.3*rad order by x.d,x.id collate "C" limit 2 loop
   la=la||l.lat;lo=lo||l.lon;ro=ro||'lotnisko'::text;
  end loop;
+ if array_length(la,1) is null then return;end if;
  for i in 1..array_length(la,1) loop k=i-1;lat=la[i];lon=lo[i];rodzaj=ro[i];return next;end loop;
 end $$;
 
 -- Links of one city (a < b).
 create or replace function public.ma_krawedzie(p_city int) returns table(a int,b int) language plpgsql stable set search_path='public' as $$
-declare s record;wew int[]:='{}';zew int[]:='{}';lot int[]:='{}';miej int[]:='{}';la float8[]:='{}';lo float8[]:='{}';
- aa int[]:='{}';bb int[]:='{}';j int;x int;y int;best int;r int[];
+declare s record;cen int[]:='{}';wew int[]:='{}';zew int[]:='{}';lot int[]:='{}';miej int[]:='{}';la float8[]:='{}';lo float8[]:='{}';
+ aa int[]:='{}';bb int[]:='{}';j int;x int;y int;best int;r int[];doz int[];
 begin
  for s in select * from ma_siec(p_city) order by k loop
   la=la||s.lat;lo=lo||s.lon;
-  if s.rodzaj='dzielnica' then wew=wew||s.k;elsif s.rodzaj='rogatka' then zew=zew||s.k;elsif s.rodzaj='lotnisko' then lot=lot||s.k;end if;
+  if s.rodzaj='centrum' then cen=cen||s.k;elsif s.rodzaj='dzielnica' then wew=wew||s.k;elsif s.rodzaj='rogatka' then zew=zew||s.k;else lot=lot||s.k;end if;
   if s.rodzaj<>'lotnisko' then miej=miej||s.k;end if;
  end loop;
  if array_length(la,1) is null then return;end if;
- aa=aa||0;bb=bb||1;
+ if coalesce(array_length(cen,1),0)=2 then aa=aa||cen[1];bb=bb||cen[2];end if;
  for j in 1..2 loop
   r=case when j=1 then wew else zew end;
   if coalesce(array_length(r,1),0)=2 then aa=aa||least(r[1],r[2]);bb=bb||greatest(r[1],r[2]);
@@ -68,14 +64,15 @@ begin
    for x in 1..array_length(r,1) loop y=r[(x % array_length(r,1))+1];aa=aa||least(r[x],y);bb=bb||greatest(r[x],y);end loop;
   end if;
  end loop;
- foreach x in array wew loop
-  select q into best from unnest(array[0,1]) with ordinality t(q,o) order by ma_m(la[x+1],lo[x+1],la[q+1],lo[q+1]),o limit 1;
+ if cen<>'{}' then foreach x in array wew loop
+  select q into best from unnest(cen) with ordinality t(q,o) order by ma_m(la[x+1],lo[x+1],la[q+1],lo[q+1]),o limit 1;
   aa=aa||least(x,best);bb=bb||greatest(x,best);
- end loop;
- foreach x in array zew loop
-  select q into best from unnest(case when wew<>'{}' then wew else array[0,1] end) with ordinality t(q,o) order by ma_m(la[x+1],lo[x+1],la[q+1],lo[q+1]),o limit 1;
+ end loop;end if;
+ doz=case when wew<>'{}' then wew else cen end;
+ if doz<>'{}' then foreach x in array zew loop
+  select q into best from unnest(doz) with ordinality t(q,o) order by ma_m(la[x+1],lo[x+1],la[q+1],lo[q+1]),o limit 1;
   aa=aa||least(x,best);bb=bb||greatest(x,best);
- end loop;
+ end loop;end if;
  foreach x in array lot loop
   for best in select q from unnest(miej) q order by ma_m(la[x+1],lo[x+1],la[q+1],lo[q+1]),q limit 2 loop
    aa=aa||least(x,best);bb=bb||greatest(x,best);

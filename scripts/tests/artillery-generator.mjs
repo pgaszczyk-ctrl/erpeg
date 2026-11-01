@@ -17,7 +17,7 @@ await db.exec(fs.readFileSync("docs/sql/artillery-generator.sql", "utf8"));
 await db.exec(fs.readFileSync("docs/sql/artillery-swiat-dane.sql", "utf8"));
 
 // 1) Parity on a spread of cities (every 15th + chosen ones).
-const chosen = new Set(["Lublin", "Warsaw", "Istanbul", "Radom", "Tokyo", "Lagos", "Reykjavík", "Quito", "Auckland"]);
+const chosen = new Set(["Lublin", "Warsaw", "Istanbul", "Chicago", "Copenhagen", "Gdańsk", "Radom", "Tokyo", "Lagos", "Reykjavík", "Quito", "Auckland"]);
 const sample = swiat.miasta.filter((m, i) => i % 15 === 0 || chosen.has(m[1]));
 let stations = 0, links = 0, maxDiff = 0;
 for (const m of sample) {
@@ -36,6 +36,8 @@ for (const m of sample) {
   stations += js.stacje.length;
   links += js.krawedzie.length;
 }
+const masked = sample.filter((m) => m[6]).length;
+assert(masked > 10, "the sample includes coastal cities with stations left out on water");
 console.log(`parity OK: ${sample.length} cities, ${stations} stations, ${links} links, max ${maxDiff.toExponential(1)} m`);
 
 // 2) Lublin: airports, counts, every station linked, network connected.

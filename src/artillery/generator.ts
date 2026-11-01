@@ -24,7 +24,9 @@ export const GENERATOR = {
   zaKm: 13,
 };
 
-export type Miasto = [id: number, name: string, cc: string, lat: number, lon: number, pop: number];
+/** woda = bitmask of the city's generated stations (order 0..n-1) that fall on sea/big lakes and are left out
+ *  (scripts/artillery/woda.mjs, from Natural Earth land/lakes). */
+export type Miasto = [id: number, name: string, cc: string, lat: number, lon: number, pop: number, woda?: number];
 export type Lotnisko = [ident: string, name: string, lat: number, lon: number];
 export type Swiat = { wersja: number; miasta: Miasto[]; lotniska: Lotnisko[] };
 export type Stacja = {
@@ -62,28 +64,33 @@ const kierunek = (a: number) => {
 };
 
 export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
-  const [id, , , lat, lon, pop] = m;
+  const [id, , , lat, lon, pop] = m, woda = m[6] ?? 0;
   const R = promien(pop), n = liczbaStacji(pop), G = GENERATOR;
   const st: Stacja[] = [];
-  const dodaj = (p: { lat: number; lon: number }, rodzaj: Stacja['rodzaj'], a: number, nazwa?: string) =>
+  let idx = 0; // candidate number, also for the ones on water (woda bits)
+  const dodaj = (p: { lat: number; lon: number }, rodzaj: Stacja['rodzaj'], a: number, nazwa?: string) => {
+    if (rodzaj !== 'lotnisko' && Math.floor(woda / 2 ** idx++) % 2 === 1) return -1;
     st.push({ id: `c${id}:${st.length}`, k: st.length, lat: p.lat, lon: p.lon, rodzaj, kierunek: kierunek(a), nazwa });
+    return st.length - 1;
+  };
+  const cen: number[] = [], wew: number[] = [], zew: number[] = [];
+  const wez = (lista: number[], k: number) => {
+    if (k >= 0) lista.push(k);
+  };
   const a0 = 2 * Math.PI * u(id, 1);
-  dodaj(punkt(lat, lon, G.centrum * R, a0), 'centrum', a0);
-  dodaj(punkt(lat, lon, G.centrum * R, a0 + Math.PI), 'centrum', a0 + Math.PI);
+  wez(cen, dodaj(punkt(lat, lon, G.centrum * R, a0), 'centrum', a0));
+  wez(cen, dodaj(punkt(lat, lon, G.centrum * R, a0 + Math.PI), 'centrum', a0 + Math.PI));
   const mIn = Math.floor((n - 2) / 3), mOut = n - 2 - mIn;
   const a1 = 2 * Math.PI * u(id, 2);
-  const wew: number[] = [], zew: number[] = [];
   for (let j = 0; j < mIn; j++) {
     const a = a1 + (2 * Math.PI * j) / mIn;
-    wew.push(st.length);
-    dodaj(punkt(lat, lon, G.wewnatrz * R, a), 'dzielnica', a);
+    wez(wew, dodaj(punkt(lat, lon, G.wewnatrz * R, a), 'dzielnica', a));
   }
   const a2 = 2 * Math.PI * u(id, 3);
   for (let j = 0; j < mOut; j++) {
     const a = a2 + (2 * Math.PI * j) / mOut + (u(id, 10 + j) - 0.5) * 0.35 * ((2 * Math.PI) / mOut);
     const r = G.zewnatrz * R * (1 + (u(id, 40 + j) - 0.5) * 0.12);
-    zew.push(st.length);
-    dodaj(punkt(lat, lon, r, a), 'rogatka', a);
+    wez(zew, dodaj(punkt(lat, lon, r, a), 'rogatka', a));
   }
   // Airports: the nearest ones with scheduled flights, in ident order on ties.
   const srodek = { lat, lon };
@@ -94,9 +101,8 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
     .slice(0, G.maksLotnisk);
   const lotN: number[] = [];
   for (const { l } of lot) {
-    lotN.push(st.length);
     const a = Math.atan2((l[3] - lon) * Math.cos((lat * Math.PI) / 180), l[2] - lat);
-    dodaj({ lat: l[2], lon: l[3] }, 'lotnisko', a, l[1]);
+    lotN.push(dodaj({ lat: l[2], lon: l[3] }, 'lotnisko', a, l[1]));
   }
   // Links.
   const kr = new Set<string>();
@@ -111,20 +117,23 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
     }
     return best;
   };
-  lacz(0, 1);
+  if (cen.length === 2) lacz(cen[0], cen[1]);
   const pierscien = (r: number[]) => {
     if (r.length === 2) lacz(r[0], r[1]);
     else if (r.length > 2) for (let j = 0; j < r.length; j++) lacz(r[j], r[(j + 1) % r.length]);
   };
   pierscien(wew);
   pierscien(zew);
-  for (const k of wew) lacz(k, najblizszy(k, [0, 1]));
-  for (const k of zew) lacz(k, najblizszy(k, wew.length ? wew : [0, 1]));
+  // Spokes: districts to the nearest centre, gates to the nearest district (each level falls back to the next one in).
+  if (cen.length) for (const k of wew) lacz(k, najblizszy(k, cen));
+  const doZew = wew.length ? wew : cen;
+  if (doZew.length) for (const k of zew) lacz(k, najblizszy(k, doZew));
   const miejskie = st.filter((s) => s.rodzaj !== 'lotnisko').map((s) => s.k);
   for (const k of lotN) {
+    if (miejskie.length < 1) break;
     const bl = [...miejskie].sort((a, b) => metry(st[k], st[a]) - metry(st[k], st[b]) || a - b);
     lacz(k, bl[0]);
-    lacz(k, bl[1]);
+    if (bl.length > 1) lacz(k, bl[1]);
   }
   const krawedzie = [...kr].map((s) => s.split(',').map(Number) as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   return { miasto: m, stacje: st, krawedzie };
