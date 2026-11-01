@@ -118,6 +118,16 @@ function jednostkaPx() {
   return (56 * 0.36 * SKALA_POSTACI * ARMATA_3D.skala) / ARMATA_3D.straznikJednostek;
 }
 
+/** The landing net and the exit spot as map offsets from the base (model: NetBounce/LandingSocket and ExitSocket;
+ *  the net always points east). A point at height h shows h·cos(pitch) higher, one south by z shows z·sin(pitch) lower. */
+export function punktySiatki() {
+  const k = jednostkaPx(), e = (ARMATA_3D.pochylenie * Math.PI) / 180;
+  return {
+    siatka: { dx: 3.65 * k, dy: -(3.12 - 0.57) * k * Math.cos(e) },
+    wyjscie: { dx: 4.65 * k, dy: 1.3 * k * Math.sin(e) },
+  };
+}
+
 /** Visible extent above and below the base centre on screen, in units (orthographic camera tilted by `pochylenie`). */
 function ramka() {
   const A = ARMATA_3D, e = (A.pochylenie * Math.PI) / 180;

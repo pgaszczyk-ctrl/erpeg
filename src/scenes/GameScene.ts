@@ -1,3 +1,4 @@
+import { gameShot } from '../ui/snapshot';
 import { restoreHero } from '../artillery/state';
 import { Artillery,artilleryTransit } from '../artillery/client';
 import { missionNotes } from '../content/questy/progress';
@@ -1014,6 +1015,9 @@ export class GameScene extends Phaser.Scene {
       hero:()=>{const model=this.ludzik3d?.flightPortrait();if(model)return model;const f=this.player.frame,c=document.createElement('canvas');c.width=f.cutWidth;c.height=f.cutHeight;c.getContext('2d')?.drawImage(f.source.image as CanvasImageSource,f.cutX,f.cutY,f.cutWidth,f.cutHeight,0,0,c.width,c.height);return c.toDataURL();},
       restart:async city=>{this.game.registry.set('city',city);const created=new Promise<void>(resolve=>this.events.once('create',resolve));this.scene.stop('ui');this.scene.restart();await created;const until=performance.now()+45000;while(!this.firstViewReady()){if(performance.now()>until)throw Error(tx('Nie udało się przygotować celu.','Could not prepare the destination.'));await new Promise(resolve=>setTimeout(resolve,100));}await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));},
       toast:s=>this.toast(s),
+      kadr:(x,y)=>{const v=this.cameras.main.worldView;return{fx:(x-v.x)/v.width,fy:(y-v.y)/v.height,px:window.innerWidth/v.width};},
+      zdjecie:async()=>{await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));return gameShot(this.game,{withHud:false,maxW:this.game.canvas.width});},
+      obecna:()=>({player:this.player,artillery:this.artillery}),
     });
     const artillery=this.artillery;this.events.once('shutdown',()=>artillery?.destroy());
     this.replayAbandoned();

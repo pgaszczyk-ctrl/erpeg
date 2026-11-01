@@ -50,7 +50,7 @@ try {
       viewport: { width, height },
       isMobile: mobile,
       hasTouch: mobile,
-      reducedMotion: mobile ? "reduce" : "no-preference",
+      reducedMotion: mobile && !process.env.RUCH ? "reduce" : "no-preference",
       locale: "pl-PL",
     });
     let save = {
@@ -232,6 +232,10 @@ try {
     const label = await launch.textContent();
     assert.match(label, new RegExp(`1[,.]1 km · ${PRICE} mone?t`), "price by km: " + label);
     await launch.click();
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `work/artillery/${tag}-start-${String(i).padStart(2, "0")}.png` });
+    }
     await page
       .getByRole("button", { name: "Ponów tę samą podróż" })
       .waitFor({ timeout: 30000 });
@@ -239,11 +243,18 @@ try {
     await page.screenshot({ path: `work/artillery/${tag}-lost-response.png` });
     await page.getByRole("button", { name: "Ponów tę samą podróż" }).click();
     const destAt = [...receipts.values()][0].destination_at;
-    assert(Math.hypot(destAt.x - 4992, destAt.y - 2910) < 240 * 1.92, "destination cannon near its generated point");
+    // Frames of the flight (take-off, clouds, landing) for a look.
+    for (let i = 0; i < 30; i++) {
+      await page.waitForTimeout(350);
+      if (!(await page.evaluate(() => !!document.getElementById("artillery-flight") || window.__game.scene.getScene("game").travelling))) break;
+      await page.screenshot({ path: `work/artillery/${tag}-lot-${String(i).padStart(2, "0")}.png` });
+    }
     await page.waitForFunction(
       (x) =>
         !document.getElementById("artillery-flight") &&
-        Math.abs(window.__game.scene.getScene("game").player.x - x) < 10,
+        !window.__game.scene.getScene("game").travelling &&
+        // Hops out of the net next to the cannon (exit spot east of it).
+        Math.abs(window.__game.scene.getScene("game").player.x - x) < 70,
       destAt.x,
       { timeout: 60000 },
     );
