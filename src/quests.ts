@@ -4,7 +4,7 @@ import { effectiveStage } from './content/questy/progress';
 import { sesjaWygasla, toWygasla } from './sesja';
 import { translateMission, legacyText } from './content/questy/text';
 import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
-import { lang, setLanguage, tx, tr, type Txt } from './i18n';
+import { lang, setLanguage, tx, tr, wybierzJezyk, type Txt } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
@@ -206,8 +206,11 @@ export function trescSerwera() {
   return tresc;
 }
 
+/** The server's list as it came (texts may be { pl, en }); put in the player's language again after login. */
+let surowaTresc: Awaited<ReturnType<typeof api.content>> = [];
 function ustawTresc(list: Awaited<ReturnType<typeof api.content>>) {
-  session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(m));
+  surowaTresc = list;
+  session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(wybierzJezyk(m)));
   session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
 }
 
@@ -243,6 +246,8 @@ export function startSession(r: LoginResult) {
   ustawPoziomBroni(() => poziomPostaci(session.exp));
   const p = r.player;
   setLanguage(p.save.language);
+  // The profile's language may differ from the device's one the missions were read in.
+  if (surowaTresc.length) session.extra = surowaTresc.map(({ sekret, ...m }) => odswiezSlownictwoMisji(wybierzJezyk(m)));
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;

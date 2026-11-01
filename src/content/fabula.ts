@@ -23,9 +23,10 @@ export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada'
  * 'brak' – samo miejsce, 'zagadka' – jedno pytanie, 'zagadki' – kilka pytań po kolei,
  * 'rozmowa' – ktoś coś mówi (po dojściu na miejsce), 'podnies' – podnieś rzeczy leżące na ziemi,
  * 'napraw' – postój przy miejscu, aż pasek się napełni, 'wybor' – przekonaj zagadką albo zapłać,
- * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce.
+ * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce,
+ * 'loch' – zejście w miejscu etapu do lochu misji (zawsze ten sam układ); etap kończy otwarcie skrzyni po strażniku.
  */
-export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja' | 'badanie' | 'uklad';
+export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja' | 'badanie' | 'uklad' | 'loch';
 
 /** Pytanie z trzema (lub więcej) odpowiedziami; `dobra` = numer dobrej (0 = pierwsza). */
 export interface Pytanie {
@@ -115,6 +116,11 @@ export interface Etap extends Zadanie {
   strony?: Strona[];
   /** 'idz': trzeba zdążyć (czas jak w wyzwaniach sportowych); po czasie etap cofa się o jeden. */
   naCzas?: boolean;
+  /**
+   * 'loch': jaki loch czeka pod wejściem (rysunek i potwory jak krypta albo katakumby), jego nazwa i strażnik
+   * skrzyni (domyślnie strażnik danego rodzaju). Układ zależy od misji i numeru etapu – zawsze ten sam.
+   */
+  loch?: { rodzaj: import('./lochy').RodzajLochu; nazwa?: string; straznik?: RodzajWroga };
 }
 
 /**

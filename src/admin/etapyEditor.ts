@@ -33,6 +33,7 @@ export const RODZAJE_ETAPOW: Record<TypEtapu, string> = {
   decyzja: 'Decyzja (bez utraty serc, zapisany wybór)',
   badanie: 'Badanie (dowolne tropy na mapie)',
   uklad: 'Układanie kart (zapis częściowego rozwiązania)',
+  loch: 'Loch (zejście w miejscu etapu, skrzynia po strażniku)',
   brak: 'Samo miejsce (bez zadania)',
 };
 const NUTY = ['Do', 'Re', 'Mi', 'Fa', 'Sol'];
@@ -199,6 +200,8 @@ function stageCard(e: Partial<Etap>, enemies: Record<string, string>, onChange: 
     if (e.warianty) out.warianty=e.warianty;
     if (typ === 'wybor') out.zaplac = Math.max(0, Number(f.zaplac.value) || 0);
     if (typ === 'paragraf') out.strony = pages.read().filter((s) => s.tekst);
+    // A dungeon stage keeps its settings as written (no form fields yet).
+    if (typ === 'loch') out.loch = e.loch ?? { rodzaj: 'krypta' };
     if (typ === 'melodia') opt('nuty', f.nuty.value.split(/\s+/).map((x) => NUTY.findIndex((n) => n.toLowerCase() === x.toLowerCase())).filter((i) => i >= 0));
     return out;
   };

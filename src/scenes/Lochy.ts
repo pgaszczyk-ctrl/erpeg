@@ -4,7 +4,7 @@
 import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { LOCH, LOCHY, type RodzajLochu } from '../content/lochy';
+import { LOCH, LOCHY, LOCH_TEKSTY, type RodzajLochu } from '../content/lochy';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
 import { pasekWyjsciaZLochu } from '../ui/lochWyjscie';
@@ -24,6 +24,8 @@ export interface WejscieLochu {
   seed: number;
   /** Nazwa miejsca (świątynia) – do podpisu. */
   przy?: string;
+  /** A mission stage's own entrance (Etap typ 'loch'): which mission and stage, the dungeon's name and guardian. */
+  misja?: { id: string; etap: number; nazwa?: string; straznik?: RodzajWroga };
 }
 
 function poleRing(r: number[]) {
@@ -240,6 +242,32 @@ export class LochyWejscia {
     if (!this.lista.some(q => q.id === w.id)) { this.lista.push(w); this.pokaz(w); }
   }
 
+  /** A mission stage's entrance (Etap typ 'loch'): shown at once, even next to an ordinary one. */
+  dodajMisyjne(w: WejscieLochu) {
+    this.usun(w.id);
+    this.lista.unshift(w);
+    this.pokaz(w);
+  }
+
+  /** Takes an entrance away (a mission stage that is over). */
+  usun(id: string) {
+    const i = this.lista.findIndex((q) => q.id === id);
+    if (i >= 0) this.lista.splice(i, 1);
+    for (const o of this.obrazki.get(id) ?? []) o.destroy();
+    this.obrazki.delete(id);
+  }
+
+  /** The nearest spot within ~40 m of (x, y) with room for an entrance and the hero by it (null: none). */
+  wolneMiejsce(x: number, y: number): { x: number; y: number } | null {
+    if (this.miejsce(x, y)) return { x, y };
+    for (let r = 4; r < 40 * M; r += 4) for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2;
+      const qx = x + Math.cos(a) * r, qy = y + Math.sin(a) * r;
+      if (this.miejsce(qx, qy)) return { x: qx, y: qy };
+    }
+    return null;
+  }
+
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
     const img = s.add.image(w.x, w.y, `loch-wej-${w.rodzaj}`).setScale(1 / D).setOrigin(0.5, 0.75).setDepth(w.y - 6);
@@ -271,6 +299,8 @@ export class LochyWejscia {
 /** Between the scenes (not saved): where the dungeon's stairs come out, and a defeat down there waiting for the hospital. */
 export const lochSesja = {
   powrot: null as { m: string; x: number; y: number; nazwa: string } | null,
+  /** Down in a mission stage's dungeon: which mission/stage (its chest completes the stage). */
+  misja: null as WejscieLochu['misja'] | null,
   porazka: null as string | null,
 };
 
@@ -289,6 +319,9 @@ export interface LochHost {
   nonce: string | number;
   /** Persistent progress only for the character's tutorial instance. */
   progress?: { killed: number[]; chest: boolean };
+  /** A mission dungeon's own name and chest guardian (Etap.loch). */
+  nazwa?: string;
+  straznik?: RodzajWroga;
 }
 
 export class LochWnetrze {
@@ -319,7 +352,10 @@ export class LochWnetrze {
   }
 
   get opis() {
-    return LOCHY[this.plan.rodzaj];
+    const o = LOCHY[this.plan.rodzaj];
+    if (!this.h.nazwa && !this.h.straznik) return o;
+    // Getters (nazwa/wejscie in the player's language) don't survive a spread, so the base is read field by field.
+    return { nazwa: this.h.nazwa ?? o.nazwa, wejscie: o.wejscie, wezly: o.wezly, potwory: o.potwory, straznik: this.h.straznik ?? o.straznik, obstawa: o.obstawa, kolory: o.kolory, nagroda: o.nagroda };
   }
 
   /** Środek kratki w px mapy. */
@@ -550,10 +586,10 @@ export class LochWnetrze {
     if (this.h.progress && !this.h.progress.killed.includes(i)) this.h.progress.killed.push(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
-    if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast('🧰 Strażnik pokonany – skrzynia stoi otworem!', 3200);
+    if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast(LOCH_TEKSTY.straznikPokonany, 3200);
     else if (!this.zostalo && !this.stan.ogloszony) {
       this.stan.ogloszony = true;
-      this.h.toast('🏆 Loch oczyszczony!', 3200);
+      this.h.toast(LOCH_TEKSTY.oczyszczony, 3200);
     }
     return true;
   }
@@ -609,7 +645,7 @@ export class LochWnetrze {
       const k = this.skrzynia;
       if (Math.hypot(k.x - hero.x, k.y - hero.y) < 14 * this.plan.T) {
         this.ostrzegl = true;
-        this.h.toast('☠ Coś wielkiego pilnuje tu skrzyni…', 2800);
+        this.h.toast(LOCH_TEKSTY.straznik, 2800);
       }
     }
   }

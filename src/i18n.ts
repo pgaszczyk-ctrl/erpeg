@@ -36,3 +36,19 @@ export function tr(t: Txt | string): string {
 export function tx(pl: string, en: string) {
   return lang === 'pl' ? pl : en;
 }
+
+/**
+ * Server missions (and other stored content) may give any text as { pl, en } (owner, 1 Nov 2026: „wszystko musi być
+ * po polsku i angielsku”). This walks the whole object and puts the player's language in place of every such pair,
+ * so the rest of the game keeps reading plain strings. Anything else is copied unchanged.
+ */
+export function wybierzJezyk<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(wybierzJezyk) as T;
+  if (!v || typeof v !== 'object') return v;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length === 2 && typeof o.pl === 'string' && typeof o.en === 'string') return o[lang] as T;
+  const out: Record<string, unknown> = {};
+  for (const k of keys) out[k] = wybierzJezyk(o[k]);
+  return out as T;
+}

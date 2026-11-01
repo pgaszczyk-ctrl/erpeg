@@ -71,9 +71,20 @@ function spotOf(addr: unknown): { x: number; y: number } | null {
   return b ? city.entranceOf(b) : null;
 }
 
+/** Missions with texts as { pl, en } (two-language stories, docs/historie/*.json): the panel shows the Polish ones. */
+const para = (v: unknown): v is { pl: string; en: string } =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 2 && typeof (v as { pl?: unknown }).pl === 'string' && typeof (v as { en?: unknown }).en === 'string';
+function poPolsku<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(poPolsku) as T;
+  if (para(v)) return v.pl as T;
+  if (!v || typeof v !== 'object') return v;
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, poPolsku(x)])) as T;
+}
+const dwujezyczna = (v: unknown): boolean => para(v) || (!!v && typeof v === 'object' && Object.values(v).some(dwujezyczna));
+
 const allMissions = (): { id: string; m: Misja; fromCode: boolean; active: boolean }[] => [
   ...MISJE.map((m) => ({ id: m.id, m, fromCode: true, active: true })),
-  ...(data?.missions ?? []).map((d) => ({ id: d.id, m: { ...d.data, id: d.id }, fromCode: false, active: d.active })),
+  ...(data?.missions ?? []).map((d) => ({ id: d.id, m: { ...poPolsku(d.data), id: d.id }, fromCode: false, active: d.active })),
 ];
 
 function skillLevel(points: number) {
@@ -306,7 +317,7 @@ function missions(main: HTMLElement) {
 
 function missionEditor(id: string | null, kreator = false) {
   const existing = id ? data!.missions.find((d) => d.id === id) : undefined;
-  const m: Misja = existing ? { ...existing.data } : {
+  const m: Misja = existing ? { ...poPolsku(existing.data) } : {
     id: '', adres: '', tytul: '', opis: '', zakonczenie: '', nagroda: 50,
     zadanie: { typ: 'pokonaj', miejsce: '', ile: 3, wrog: 'glut', cel: '' },
   };
@@ -482,6 +493,12 @@ function missionEditor(id: string | null, kreator = false) {
   refresh = update;
 
   const save = btn('💾 Zapisz', async () => {
+    // Saving from the form would drop the English texts: two-language stories are edited in docs/historie and SQL.
+    if (existing && dwujezyczna(existing.data)) {
+      msg.className = 'msg bad';
+      msg.textContent = 'Ta misja ma teksty po polsku i angielsku – zapis z panelu skasowałby wersję angielską. Zmiany wprowadza programista (docs/historie).';
+      return;
+    }
     const mm = read();
     if (!mm.tytul || !mm.adres) {
       msg.className = 'msg bad';

@@ -12,7 +12,7 @@ import { takeResume } from './update';
 import { live } from './walka/live';
 import { flyToGameLocation, loadingGame, revealLoadedGame } from './ui/loadingMap';
 import type { GameScene } from './scenes/GameScene';
-import { jestLochem, mapaLochu, czytajIdLochu } from './loch/mapa';
+import { jestLochem, mapaLochu, czytajIdLochu, nazwyLochow } from './loch/mapa';
 import { LOCHY } from './content/lochy';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
@@ -211,7 +211,7 @@ export async function enterWorld(game: Phaser.Game) {
 
 export function mapName(id: string) {
   const loch = czytajIdLochu(id);
-  if (loch) return LOCHY[loch.rodzaj].nazwa;
+  if (loch) return nazwyLochow.get(id) ?? LOCHY[loch.rodzaj].nazwa;
   if (worldOrigin(id)) return worldNames.get(id) ?? 'Daleko';
   return id === 'lublin' ? 'Lublin' : world.towns.find((t) => t.id === id)?.name ?? id;
 }

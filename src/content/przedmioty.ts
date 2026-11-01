@@ -1,3 +1,4 @@
+import { tx } from '../i18n';
 // ============================================================================
 //  PRZEDMIOTY I UMIEJĘTNOŚCI
 //  Gracz zaczyna jako wojownik z kijkiem. W bibliotece może nauczyć się
@@ -128,6 +129,8 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kieszonkowy_chronometr', nazwa: 'Kieszonkowy Chronometr', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Tyka równo jak serce Zębatka. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'cukierniczy_cylinder', nazwa: 'Cukierniczy Cylinder', miejsce: 'helm', moc: 1, cena: 0, efekt: 'zycie', opis: 'Pachnie lukrem. Daje jedno serce życia więcej.' },
   // „Przebudzenie Starego Grodu” (owner's spec, 6 Oct 2026): rewards of its chain; numbers as in the spec.
+  // „Czarci Wyrok” (owner, 1 Nov 2026): the name and description in both languages (getters: read in the player's language).
+  { id: 'pioro_trybunalu', get nazwa() { return tx('Pióro Trybunału', 'Tribunal Quill'); }, miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', get opis() { return tx('Pióro, którym zapisano sprawiedliwy wyrok. Z nim trafiasz, w co celujesz (+10% trafień).', 'The quill that wrote a just verdict. With it you hit what you aim at (+10% hits).'); } },
   { id: 'zegarek_czeladnika', nazwa: 'Zegarek czeladnika', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', opis: 'Tyka równo jak serce. Z nim trafiasz, w co celujesz (+10% trafień).' },
   { id: 'filtr_aetherowy', nazwa: 'Filtr aetherowy', miejsce: 'talizman', moc: 1, cena: 0, efekt: 'obrona', opis: 'Od Pustelnika ze Starego Gaju. Dziki aether omija cię bokiem (obrona +1).' },
   { id: 'klasztorny_pochlaniacz', nazwa: 'Klasztorny pochłaniacz', miejsce: 'zbroja', moc: 5, cena: 0, opis: 'Nosili go dominikanie w czasach Wielkiej Wojny o Tryby.' },

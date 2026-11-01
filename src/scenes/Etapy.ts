@@ -17,6 +17,7 @@ import type { DialogRequest } from './GameScene';
 import { saveNow, resolvePlace } from '../quests';
 import { progressKey, readProgress, addClue, arrangeCard, missionNotes } from '../content/questy/progress';
 import { live } from '../walka/live';
+import type { LochyWejscia } from './Lochy';
 
 // Mission stages beyond the old four tasks (owner, 6–7 Oct 2026: „Serce Zębatka”, „Przebudzenie Starego
 // Grodu”): talks, riddle lists, choices, paragraph pages, melodies on the spot; things to pick up; spots to
@@ -40,7 +41,12 @@ export interface StageHost {
   pay(n: number): boolean;
   /** A swing at a mission's giver: the mission's dialog, as at its door. */
   talkMission(rm: ResolvedMission): void;
+  /** The surface's dungeon entrances (none underground / without the new fight). */
+  lochy(): LochyWejscia | undefined;
 }
+
+/** Stage 'loch': the key (in the mission's saved choices) set when its dungeon chest was opened. */
+export const lochKlucz = (etap: number) => `loch:${etap}`;
 
 /** How near the stage's place the hero must come (map px), and how far away it re-arms. */
 const BLISKO = 40;
@@ -63,6 +69,8 @@ interface Live {
   /** Where the stage's person stands (null: none). */
   at: { x: number; y: number; imie: string } | null;
   clueArmed: Set<string>;
+  /** Stage 'loch': its entrance (placed once the ground around the stage's place is loaded). */
+  wejscie?: { id: string; x: number; y: number };
 }
 
 /** A mission's giver standing at its door. */
@@ -152,7 +160,7 @@ export class Etapy {
         if (SPOT.has(z.typ)) {
           l.armed = false;
           this.fire(rm, z, l);
-        } else this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: ['Dobrze'], onChoose: () => {} });
+        } else this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: [tx('Dobrze', 'All right')], onChoose: () => {} });
       };
     }
     return null;
@@ -170,6 +178,7 @@ export class Etapy {
     if (!l) return null;
     const p = this.host.player;
     const near = <T extends { x: number; y: number }>(list: T[]) => list.reduce<T | null>((a, b) => (!a || Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a), null);
+    if (l.wejscie) return l.wejscie;
     if (l.items.length) return near(l.items);
     const left = l.points.filter((q) => !q.done);
     return left.length ? near(left) : null;
@@ -248,7 +257,7 @@ export class Etapy {
   begin(rm: ResolvedMission) {
     const z = zadanieOf(rm.m);
     // A talk says its words on arrival; other stages may open with a few words right away.
-    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: rm.m.tytul, text: z.tekst, buttons: ['Ruszam!'], onChoose: () => {} });
+    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: rm.m.tytul, text: z.tekst, buttons: [tx('Ruszam!', 'Let’s go!')], onChoose: () => {} });
   }
 
   destroy() {
@@ -386,6 +395,7 @@ export class Etapy {
       q.bar.destroy();
     }
     for (const w of l.who) w.destroy();
+    if (l.wejscie) this.host.lochy()?.usun(l.wejscie.id);
   }
 
   // ------------------------------------------------------------------ every frame
@@ -393,6 +403,24 @@ export class Etapy {
   private tick(rm: ResolvedMission, z: Etap, l: Live, now: number, dt: number) {
     const p = this.host.player;
     const t = rm.target!;
+    if (z.typ === 'loch') {
+      const idx = stageIndex(rm.m);
+      // The chest down there was opened (it records this and saves): the stage is done on the way back up.
+      if (this.choices(rm)[lochKlucz(idx)]) {
+        this.host.stageDone(rm, tx('Loch przeszukany! ', 'Dungeon searched! '));
+        return;
+      }
+      const L = this.host.lochy();
+      if (!L || l.wejscie) return;
+      const R = 50 * PX_PER_M;
+      if (!this.host.city.ready({ x0: t.x - R, y0: t.y - R, x1: t.x + R, y1: t.y + R })) return;
+      const at = L.wolneMiejsce(t.x, t.y) ?? t;
+      const id = `misja:${rm.m.id}:${idx}`;
+      const o = z.loch;
+      L.dodajMisyjne({ id, rodzaj: o?.rodzaj ?? 'krypta', x: at.x, y: at.y, seed: hash(`${rm.m.id}:${idx}`), przy: o?.nazwa, misja: { id: rm.m.id, etap: idx, nazwa: o?.nazwa, straznik: o?.straznik } });
+      l.wejscie = { id, x: at.x, y: at.y };
+      return;
+    }
     if (z.typ === 'badanie') {
       const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
       if (found.length >= (z.ile ?? 2)) {this.host.stageDone(rm);return;}
@@ -481,7 +509,7 @@ export class Etapy {
       case 'zagadki': {
         const list = z.pytania ?? [];
         const next = () => {
-          if (l.step >= list.length) return this.host.stageDone(rm, 'Wszystko dobrze! ');
+          if (l.step >= list.length) return this.host.stageDone(rm, tx('Wszystko dobrze! ', 'All correct! '));
           this.ask(rm, `${title} (${l.step + 1}/${list.length})`, list[l.step], undefined, () => {
             l.step++;
             next();
@@ -584,7 +612,7 @@ export class Etapy {
   /** „Przekonaj” (one quiz question by the player's age) or pay. */
   private choose(rm: ResolvedMission, z: Etap, title: string, l: Live) {
     const pay = z.zaplac ?? 0;
-    const buttons = ['🧠 Przekonaj', ...(pay ? [`💰 Zapłać ${pay} monet`] : []), 'Później'];
+    const buttons = [tx('🧠 Przekonaj', '🧠 Persuade'), ...(pay ? [tx(`💰 Zapłać ${pay} monet`, `💰 Pay ${pay} coins`)] : []), tx('Później', 'Later')];
     this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title,
       text: z.tekst || z.cel,
@@ -595,10 +623,10 @@ export class Etapy {
           const q = schoolQuiz(`etap:${rm.m.id}`, today(), l.step++, session.age, ll ? krajMapy(session.mapId, ll.lat, ll.lon) : 'PL');
           const r = rng(hash(`${rm.m.id}:${l.step}`));
           const order = q.odpowiedzi.map((_, k) => k).sort(() => r() - 0.5);
-          this.ask(rm, title, { pytanie: q.pytanie, odpowiedzi: order.map((k) => q.odpowiedzi[k]), dobra: order.indexOf(0) }, undefined, () => this.host.stageDone(rm, 'Przekonany! '));
+          this.ask(rm, title, { pytanie: q.pytanie, odpowiedzi: order.map((k) => q.odpowiedzi[k]), dobra: order.indexOf(0) }, undefined, () => this.host.stageDone(rm, tx('Przekonany! ', 'Convinced! ')));
         } else if (pay && i === 1) {
           if (this.host.pay(pay)) this.host.stageDone(rm);
-          else this.host.toast(`Za mało monet – potrzeba ${pay}.`, 2000);
+          else this.host.toast(tx(`Za mało monet – potrzeba ${pay}.`, `Not enough coins – you need ${pay}.`), 2000);
         }
       },
     });
@@ -613,11 +641,11 @@ export class Etapy {
     this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `📖 ${rm.m.tytul}`,
       text: pg.tekst,
-      buttons: ways.length ? ways.map((w) => w.tekst) : [l.step === pages.length - 1 ? 'Koniec' : 'Dalej'],
+      buttons: ways.length ? ways.map((w) => w.tekst) : [l.step === pages.length - 1 ? tx('Koniec', 'The end') : tx('Dalej', 'Next')],
       onChoose: (i) => {
         if (ways.length && ways[i] && ways[i].dobry === false) {
           this.host.hurtStory();
-          this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: '💥 Auć!', text: 'To nie była dobra droga. Tracisz serce – spróbuj inaczej.', buttons: ['Jeszcze raz'], onChoose: () => this.page(rm, z, l) });
+          this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: tx('💥 Auć!', '💥 Ouch!'), text: tx('To nie była dobra droga. Tracisz serce – spróbuj inaczej.', 'That was not the right way. You lose a heart – try another.'), buttons: [tx('Jeszcze raz', 'Again')], onChoose: () => this.page(rm, z, l) });
           return;
         }
         l.step++;

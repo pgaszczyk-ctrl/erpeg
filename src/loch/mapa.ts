@@ -6,18 +6,21 @@ import { CityMap, PX_PER_M } from '../map/CityMap';
 import type { RodzajLochu } from '../content/lochy';
 import { planLochu, type PlanLochu } from './plan';
 
-export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean }
+export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean; /** A mission stage's dungeon (Etap typ 'loch'). */ misja?: boolean }
 
 export const jestLochem = (id: string) => id.startsWith('loch:');
 
+/** Names of mission dungeons by map id (set when going down; the HUD and map screen read them). */
+export const nazwyLochow = new Map<string, string>();
+
 export function idLochu(l: IdLochu) {
-  return `loch:${l.tutorial ? 'prolog:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
+  return `loch:${l.tutorial ? 'prolog:' : l.misja ? 'misja:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(prolog:)?(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
+  const m = /^loch:(prolog:|misja:)?(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
   if (!m) return null;
-  return { tutorial: !!m[1], rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]) };
+  return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]) };
 }
 
 /** Mapa lochu z jej planem (`city.loch`). */

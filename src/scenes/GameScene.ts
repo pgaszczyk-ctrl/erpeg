@@ -37,7 +37,7 @@ import { GEN_DOTS } from '../map/ziemia09';
 import { DRZEWA_09 } from '../content/korony';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding, FOG_CELL } from '../map/Fog';
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
-import { WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
+import { MISJE, WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
 import type { QuestLine } from '../ui/character';
 import { ESENCJE, type Esencja } from '../content/esencje';
 import { WALKA, zasiegDystansu } from '../content/walka';
@@ -90,7 +90,7 @@ import { Lowiska } from './Lowiska';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
-import { idLochu } from '../loch/mapa';
+import { idLochu, nazwyLochow, czytajIdLochu } from '../loch/mapa';
 import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
@@ -127,7 +127,7 @@ import { trzesienieWlaczone } from '../ustawieniaGracza';
 import { CombatAudio } from '../audio/CombatAudio';
 import { COMBAT_SOUNDS, meleeSound, shotSound } from '../audio/combatCatalog';
 import { SmokiNaMapie } from './SmokiNaMapie';
-import { Etapy } from './Etapy';
+import { Etapy, lochKlucz } from './Etapy';
 import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey';
 import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
@@ -627,6 +627,7 @@ export class GameScene extends Phaser.Scene {
         return true;
       },
       talkMission: (rm) => this.openMissionDialog(rm),
+      lochy: () => this.lochy,
     });
     this.orchards = new Orchards(this, this.city);
     this.forest = new Forest(
@@ -973,7 +974,10 @@ export class GameScene extends Phaser.Scene {
             if (this.loch?.zostalo === 0 && !this.player.isDead && this.scene.isActive()) this.wyjdzZLochu();
           },
           nonce: session.nonce,
-          progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon : undefined,
+          progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon
+            : this.lochMisji() ? { killed: [], chest: this.lochMisjiOtwarty() } : undefined,
+          nazwa: this.lochMisji()?.nazwa,
+          straznik: this.lochMisji()?.straznik,
           toast: (t, ms) => this.toast(t, ms),
           spawn: (x, y, kind, home) => {
             const e = this.spawnEnemy(x, y, undefined, kind);
@@ -2514,7 +2518,7 @@ export class GameScene extends Phaser.Scene {
     if (s.temp || s.ambient || s.lowisko) return;
     if (s.missionId) {
       const rm = this.missions.find((r) => r.m.id === s.missionId);
-      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.completeStage(rm, 'Zadanie wykonane! ');
+      if (rm && !this.enemies.some((e) => e.missionId === s.missionId)) this.completeStage(rm, tx('Zadanie wykonane! ', 'Task done! '));
     } else {
       // Fixed spots come back after a while.
       const home = s.home.clone();
@@ -3848,7 +3852,7 @@ export class GameScene extends Phaser.Scene {
       }
       const opis = LOCHY[w.rodzaj];
       this.dialog({
-        title: `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
+        title: w.misja?.nazwa ? `🕯 ${w.misja.nazwa}` : `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
         text: opis.wejscie,
         buttons: [LOCH_TEKSTY.schodze, LOCH_TEKSTY.nieTeraz],
         onChoose: (i) => { if (i === 0) this.zejdzDoLochu(w); },
@@ -3883,7 +3887,8 @@ export class GameScene extends Phaser.Scene {
     if (this.travelling) return;
     this.travelling = true;
     const ll = this.city.toLatLon(w.x, w.y);
-    lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: LOCHY[w.rodzaj].nazwa };
+    lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: w.misja?.nazwa ?? LOCHY[w.rodzaj].nazwa };
+    lochSesja.misja = w.misja ?? null;
     // The tutorial owns its stable instance globally; entering the ordinary dungeon earlier never consumes it.
     const tutorialId = this.prolog?.prepareDungeon(w);
     session.tu = { m: this.city.id, x: w.x, y: w.y + 6 };
@@ -3899,7 +3904,8 @@ export class GameScene extends Phaser.Scene {
     }
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
-    const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon });
+    const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon, misja: !!w.misja });
+    if (w.misja?.nazwa) nazwyLochow.set(id, w.misja.nazwa);
     this.time.delayedCall(520, () => {
       getMap(id).then((city) => {
         const plan = city.loch!;
@@ -3957,8 +3963,9 @@ export class GameScene extends Phaser.Scene {
   private otworzSkrzynieLochu() {
     const loch = this.loch!;
     if (this.city.loch?.tutorial) { if (!this.prolog?.interact()) this.toast(tx('Sprawdź bieżący cel prologu.', 'Check your current prologue objective.')); return; }
+    const misja = this.lochMisji();
     const pow = loch.skrzyniaPowod();
-    if (pow === 'pusta') return this.toast(LOCH_TEKSTY.skrzyniaPusta, 2200);
+    if (pow === 'pusta') return this.toast(misja ? tx('Skrzynia jest pusta – to, po co przyszedłeś, już masz.', 'The chest is empty – you already have what you came for.') : LOCH_TEKSTY.skrzyniaPusta, 2200);
     if (pow === 'pilnowana') return this.toast(LOCH_TEKSTY.skrzyniaZamknieta, 2600);
     const N = loch.opis.nagroda;
     const monety = luckyCoins(N.monety[0] + Math.floor(Math.random() * (N.monety[1] - N.monety[0] + 1)));
@@ -3970,8 +3977,32 @@ export class GameScene extends Phaser.Scene {
     session.stats.lochy = (session.stats.lochy ?? 0) + 1;
     loch.otworzSkrzynie();
     this.emitHud();
-    const co = [`💰 ${monety} złota`, `✨ ${N.exp} EXP`, N.mikstura ? `🧪 mikstura leczenia${N.mikstura > 1 ? ` ×${N.mikstura}` : ''}` : '', diament ? '💎 diament!' : ''].filter(Boolean).join('\n');
-    this.dialog({ title: LOCH_TEKSTY.skrzynia, text: LOCH_TEKSTY.skrzyniaOtwarta(co), buttons: [LOCH_TEKSTY.zabrane], onChoose: () => this.save() });
+    const co = [`💰 ${monety} ${LOCH_TEKSTY.zloto}`, `✨ ${N.exp} EXP`, N.mikstura ? `🧪 ${LOCH_TEKSTY.mikstura}${N.mikstura > 1 ? ` ×${N.mikstura}` : ''}` : '', diament ? LOCH_TEKSTY.diament : ''].filter(Boolean).join('\n');
+    // A mission stage's dungeon: what the stage gives lies in the chest; the stage itself is done back on the surface.
+    let fabula = '';
+    if (misja) {
+      const m = this.misjaLochu(misja.id);
+      const z = m?.etapy?.[misja.etap];
+      (session.questResults[misja.id] ??= { originMap: 'lublin', routeM: 0, choices: {} }).choices[lochKlucz(misja.etap)] = '1';
+      if (z?.daje?.length) fabula = `\n\n${LOCH_TEKSTY.misyjna}\n📜 ${z.daje.join(', ')}`;
+    }
+    this.dialog({ title: LOCH_TEKSTY.skrzynia, text: LOCH_TEKSTY.skrzyniaOtwarta(co) + fabula, buttons: [LOCH_TEKSTY.zabrane], onChoose: () => this.save() });
+  }
+
+  /** Down in a mission stage's dungeon (its entrance's mission/stage), or null. */
+  private lochMisji() {
+    return this.city.loch && czytajIdLochu(this.city.id)?.misja ? lochSesja.misja : null;
+  }
+
+  /** This mission dungeon's chest was already opened (the stage waits to be finished on the surface). */
+  private lochMisjiOtwarty() {
+    const q = lochSesja.misja;
+    return !!q && !!session.questResults[q.id]?.choices?.[lochKlucz(q.etap)];
+  }
+
+  /** A mission by id, in the player's language (built-in or from the server). */
+  private misjaLochu(id: string) {
+    return [...MISJE, ...session.extra].find((m) => m.id === id);
   }
 
   /** Is any enemy close enough to be fighting us? */
@@ -6861,7 +6892,7 @@ export class GameScene extends Phaser.Scene {
     const who = m.postac ? `${m.postac.imie} – ${m.tytul}` : m.tytul;
     if (m.zadanie.typ === 'brak' && !m.etapy?.length) {
       // Just a place (e.g. a partner with a secret code on a flyer).
-      this.missionDialog(m, { title: who, text: m.opis, buttons: ['Do widzenia'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: m.opis, buttons: [tx('Do widzenia', 'Goodbye')], onChoose: () => {} });
     } else if (st === 'new' && this.questCount() >= ZADAN_NARAZ) {
       this.missionDialog(m, {
         title: who,
@@ -6906,7 +6937,7 @@ export class GameScene extends Phaser.Scene {
     } else if (st === 'goal') {
       this.finishMission(rm);
     } else {
-      this.missionDialog(m, { title: who, text: 'Dziękujemy jeszcze raz za pomoc!', buttons: ['OK'], onChoose: () => {} });
+      this.missionDialog(m, { title: who, text: tx('Dziękujemy jeszcze raz za pomoc!', 'Thanks again for your help!'), buttons: ['OK'], onChoose: () => {} });
     }
   }
 
@@ -6922,7 +6953,7 @@ export class GameScene extends Phaser.Scene {
       `${missionExp(m)} EXP`,
       m.przedmiot ? item(m.przedmiot)?.nazwa ?? '' : '',
       ...(m.przedmioty ?? []).map((id) => item(id)?.nazwa ?? ''),
-      m.tytul_bohatera ? `tytuł „${m.tytul_bohatera}”` : '',
+      m.tytul_bohatera ? tx(`tytuł „${m.tytul_bohatera}”`, `the title “${m.tytul_bohatera}”`) : '',
       m.diamenty ? `${m.diamenty} 💎` : '',
       m.flaga ? FLAGI_NAZWY[m.flaga] : '',
     ].filter(Boolean);
@@ -6949,7 +6980,7 @@ export class GameScene extends Phaser.Scene {
           if (m.scenariusz) session.gen[m.id] = m;
           setMissionState(m, 'active');
           this.refreshMarkers();
-          this.toast('Czegoś jednak brakuje w plecaku!');
+          this.toast(tx('Czegoś jednak brakuje w plecaku!', 'Something is missing from your backpack after all!'));
           return;
         }
         earn(m.nagroda);
@@ -6957,13 +6988,13 @@ export class GameScene extends Phaser.Scene {
         session.exp += missionExp(m);
         if (m.diamenty) {
           session.diamenty += m.diamenty;
-          this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${m.diamenty === 1 ? 'diament' : 'diamenty'}!`, 2500));
+          this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${tx(m.diamenty === 1 ? 'diament' : 'diamenty', m.diamenty === 1 ? 'diamond' : 'diamonds')}!`, 2500));
         }
         const gifts = [m.przedmiot, ...(m.przedmioty ?? [])].filter((x): x is string => !!x && !!item(x));
         if (gifts.length) {
           const lost = gifts.filter((id) => !addItem(id));
           const got = gifts.filter((id) => !lost.includes(id));
-          this.toast([got.length ? `Dostałeś: ${got.map((id) => item(id)!.nazwa).join(', ')}!` : '', lost.length ? `Plecak pełny – przepadło: ${lost.map((id) => item(id)!.nazwa).join(', ')}.` : ''].filter(Boolean).join('\n'), 2500);
+          this.toast([got.length ? `${tx('Dostałeś', 'You got')}: ${got.map((id) => item(id)!.nazwa).join(', ')}!` : '', lost.length ? `${tx('Plecak pełny – przepadło', 'Backpack full – lost')}: ${lost.map((id) => item(id)!.nazwa).join(', ')}.` : ''].filter(Boolean).join('\n'), 2500);
           this.gearChanged();
         }
         if (m.flaga && m.flaga !== 'znizka_woznica' && !session.flagi[m.flaga]) {
@@ -6973,7 +7004,7 @@ export class GameScene extends Phaser.Scene {
         }
         if (m.tytul_bohatera) {
           session.story.title = m.tytul_bohatera;
-          this.time.delayedCall(1200, () => this.toast(`🏅 Nowy tytuł: ${m.tytul_bohatera}!`, 3000));
+          this.time.delayedCall(1200, () => this.toast(`🏅 ${tx('Nowy tytuł', 'New title')}: ${m.tytul_bohatera}!`, 3000));
         }
         delete session.etap[m.id];
         if (m.flaga === 'znizka_woznica' && !session.flagi.znizka_woznica) {
@@ -7026,11 +7057,11 @@ export class GameScene extends Phaser.Scene {
       this.startMissionGoal(rm);
       this.emitHud();
       this.save();
-      if (said && !m.scenariusz) this.toast(`${said}Dalej: ${zadanieOf(m).cel}`, 2500);
+      if (said && !m.scenariusz) this.toast(`${said}${tx('Dalej', 'Next')}: ${zadanieOf(m).cel}`, 2500);
       this.etapy.begin(rm);
     };
     if (m.scenariusz && said && z.typ === 'decyzja') z.komunikat = said;
-    const gave = z.daje?.length ? `\n\n📜 Masz: ${z.daje.join(', ')}` : '';
+    const gave = z.daje?.length ? `\n\n📜 ${tx('Masz', 'You have')}: ${z.daje.join(', ')}` : '';
     // The closing words (komunikat), then the next stage. One-stage missions keep their old messages.
     if (m.etapy?.length && (z.komunikat || gave)) this.dialog({ ...z.dialogueMeta, title: m.tytul, text: `${z.komunikat ?? ''}${gave}`.trim(), buttons: [tx('Dalej','Next')], onChoose: after });
     else after();
@@ -7043,7 +7074,7 @@ export class GameScene extends Phaser.Scene {
     rm.target = stageTarget(this.city, m, rm.door);
     this.startMissionGoal(rm);
     this.emitHud();
-    this.dialog({ title: `⏱ ${m.tytul}`, text: 'Czas minął! Spróbuj jeszcze raz.', buttons: ['Jeszcze raz'], onChoose: () => {} });
+    this.dialog({ title: `⏱ ${m.tytul}`, text: tx('Czas minął! Spróbuj jeszcze raz.', 'Time is up! Try again.'), buttons: [tx('Jeszcze raz', 'Again')], onChoose: () => {} });
   }
 
   /** A mission dialog; where a secret code can be told, it gets one more button. */
@@ -7113,8 +7144,8 @@ export class GameScene extends Phaser.Scene {
         // Enough in the backpack: take it back. (Sold or eaten meanwhile: not yet.)
         const have = fruitCount(z.towar) >= (z.ile ?? 1);
         if (st === 'active' && have) {
-          if (multi) this.completeStage(rm, 'Masz wszystko! ');
-          else this.reachGoal(rm, 'Masz wszystko! ');
+          if (multi) this.completeStage(rm, tx('Masz wszystko! ', 'You have it all! '));
+          else this.reachGoal(rm, tx('Masz wszystko! ', 'You have it all! '));
         } else if (!multi && st === 'goal' && !have) {
           setMissionState(rm.m, 'active');
           this.refreshMarkers();
@@ -7127,7 +7158,7 @@ export class GameScene extends Phaser.Scene {
         if (live()) {
           if (this.goalHinted !== rm.m.id) {
             this.goalHinted = rm.m.id;
-            this.toast(`👆 Jesteś na miejscu – naciśnij AKCJA lub E, żeby: ${rm.m.tytul}`, 3200);
+            this.toast(tx(`👆 Jesteś na miejscu – naciśnij AKCJA lub E, żeby: ${rm.m.tytul}`, `👆 You are here – press ACT or E to: ${rm.m.tytul}`), 3200);
           }
           continue;
         }
@@ -7145,8 +7176,8 @@ export class GameScene extends Phaser.Scene {
     if (!multi && z.komunikat && !rm.m.naMiejscu) {
       setMissionState(rm.m, 'goal');
       this.refreshMarkers();
-      this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: ['Wracam!'], onChoose: () => this.emitHud() });
-    } else this.completeStage(rm, 'Dotarłeś! ');
+      this.dialog({ title: `🗺 ${rm.m.tytul}`, text: z.komunikat, buttons: [tx('Wracam!', 'Heading back!')], onChoose: () => this.emitHud() });
+    } else this.completeStage(rm, tx('Dotarłeś! ', 'You made it! '));
   }
 
   /** Mission doors for the map screen. */
