@@ -53,6 +53,8 @@ try {for(const phone of [false,true]) {
  await page.waitForFunction(()=>window.__music.some(m=>m.src.endsWith('caravan-trails-1.mp3')&&!m.paused&&m.__gain.gain.value>.9),null,{timeout:30000});
  const stream=await page.evaluate(()=>window.__music.map(m=>({url:m.src,duration:m.duration,error:m.error?.code})));
  assert(stream.every(m=>m.url.includes('/test/audio/')),'base URL supports TEST subpath');
+ const start=await page.evaluate(()=>window.__music[0].currentTime);
+ assert(start>3&&start<stream[0].duration*.8+5,`music starts at a random point (${start.toFixed(1)} s)`);
  const state=()=>page.evaluate(()=>window.__music.map(m=>({name:m.src.split('/').pop(),paused:m.paused,time:m.currentTime,mix:m.__gain.gain.value,master:m.__master.gain.value,error:m.error?.code})));
  // Preserve the real state's wiring, then isolate the transition tests from AI time.
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');window.__originalMusicState=s.musicState;window.__desiredMusic={underground:false,combat:false};s.musicState=()=>window.__desiredMusic;});
