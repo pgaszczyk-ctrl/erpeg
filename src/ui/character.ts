@@ -7,6 +7,7 @@ import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../conten
 /** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
 const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
+import { rzeczUrl } from './itemIcon';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
@@ -479,7 +480,8 @@ function show(host: CharacterHost) {
       pic.src = `${import.meta.env.BASE_URL}items/diament.png`;
       s.append(line(pic, 'Diamenty', session.diamenty, 4));
     }
-    s.append(line('🧪', 'Mikstury', session.mikstury, 4));
+    const obrazek = (url: string | null, zast: string) => (url ? Object.assign(document.createElement('img'), { src: url, alt: '' }) : zast);
+    s.append(line(obrazek(rzeczUrl('mikstura'), '🧪'), 'Mikstury', session.mikstury, 4));
     for (const k of ownedAmmo()) {
       const pic = document.createElement('img');
       pic.src = `${import.meta.env.BASE_URL}items/${k}.png`;
@@ -513,7 +515,7 @@ function show(host: CharacterHost) {
       };
       s.append(list);
     }
-    if (session.namioty.length) s.append(line('⛺', 'Noce w namiotach', session.namioty.reduce((a, t) => a + t.left, 0), 4));
+    if (session.namioty.length) s.append(line(obrazek(rzeczUrl('namiot'), '⛺'), 'Noce w namiotach', session.namioty.reduce((a, t) => a + t.left, 0), 4));
     if (!Object.values(goods).some(Boolean)) s.append(el('div', 'k-sub', 'Plecak bez zbiorów: owoce, warzywa, grzyby i drewno pojawią się tu, gdy je zbierzesz.'));
     return s;
   };

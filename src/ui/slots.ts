@@ -1,4 +1,4 @@
-import { itemIcon, goodsPicture } from './itemIcon';
+import { itemIcon, goodsPicture, rzeczUrl } from './itemIcon';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
 import { JAKOSCI_BRONI, JAKOSCI_PANCERZA, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
@@ -46,7 +46,16 @@ export function slotIcon(s: Slot): Node | string {
     img.draggable = false;
     return img;
   }
-  if ('esencja' in s) return esencja(s.esencja)?.ikona ?? '🧪';
+  if ('esencja' in s) {
+    const url = rzeczUrl(`esencja_${s.esencja}`);
+    if (!url) return esencja(s.esencja)?.ikona ?? '🧪';
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'item-ico sl-ico';
+    img.alt = '';
+    img.draggable = false;
+    return img;
+  }
   const p = item(s.item);
   if (!p) return '?';
   return itemIcon(p.id, 'item-ico sl-ico') ?? ITEM_EMOJI[p.id] ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
@@ -76,7 +85,7 @@ export function slotCell(s: Slot | null, place: Place, extra = '') {
     pic.append(slotIcon(s));
     c.append(pic);
     if ('goods' in s) c.append(el('span', 'sl-n', String(goodsN(s))));
-    if ('esencja' in s) c.append(el('span', 'sl-flask', '🧪'));
+    if ('esencja' in s && !rzeczUrl(`esencja_${s.esencja}`)) c.append(el('span', 'sl-flask', '🧪'));
     if ('item' in s) {
       const dots = qualityDots(s.item); if (dots) c.append(dots);
       const imb = imbueOf(s.item);

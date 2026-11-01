@@ -13,9 +13,14 @@ export const ITEM_PICTURES = [
   'skorzana_zbroja', 'kolczuga', 'skorzany_helm', 'zelazny_helm', 'kapelusz', 'czapka_maga', 'korona',
   'skorzane_buty', 'zelazne_buty', 'podkowa_szczescia',
   'szklany_miecz', 'tarcza_drewniana', 'tarcza_okuta', 'siekiera', 'cukierniczy_cylinder',
+  // Order 45 stage D: recruit kit, story rewards/talismans, food.
+  'miecz_rekruta', 'luk_rekruta', 'rozdzka_szkolna', 'kapelusz_szkolny', 'karabin_trybunal', 'klasztorny_pochlaniacz',
+  'plaszcz_cechmistrza', 'buty_biegacza', 'gwizdek_maszynisty', 'kluczyk_nakrecacz', 'kieszonkowy_chronometr',
+  'zegarek_czeladnika', 'filtr_aetherowy', 'zlota_pilka', 'paczek', 'hamburger',
 ];
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
-const QUEST_PICTURES: Record<string, string> = { miecz_rekruta: 'zelazny', luk_rekruta: 'luk', rozdzka_szkolna: 'rozdzka', kapelusz_szkolny: 'czapka_maga' };
+// (Order 45 D gave the recruit kit its own pictures; no stand-ins left.)
+const QUEST_PICTURES: Record<string, string> = {};
 const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
 const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
 
@@ -27,6 +32,12 @@ const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
 const HD = new Set([
   'swietlisty', 'gromowladny', 'kolczuga', 'ksiega', 'czapka_maga', 'kapelusz', 'zelazny', 'stalowy',
   'luk', 'luk_refleksyjny', 'dlugi_luk', 'rozdzka', 'kula', 'zlom', 'zlom_miedziany',
+  // stage D
+  'miecz_rekruta', 'luk_rekruta', 'rozdzka_szkolna', 'kapelusz_szkolny', 'karabin_trybunal', 'klasztorny_pochlaniacz',
+  'plaszcz_cechmistrza', 'buty_biegacza', 'gwizdek_maszynisty', 'kluczyk_nakrecacz', 'kieszonkowy_chronometr',
+  'zegarek_czeladnika', 'filtr_aetherowy', 'zlota_pilka', 'paczek', 'hamburger',
+  'jablko', 'sliwka', 'winogrono', 'marchewka', 'brokul', 'salata', 'grzyb', 'kiel', 'luska',
+  'esencja_dab', 'esencja_mroz', 'mikstura', 'namiot',
 ]);
 
 /** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
@@ -59,16 +70,25 @@ export const MATERIAL_PICTURES = [
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
 const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = {
   drewno: 'drewno', chrust: 'chrust', ruda_zelaza: 'ruda_zelaza',
+  // Order 45 D
+  jablko: 'jablko', sliwka: 'sliwka', winogrono: 'winogrono', marchewka: 'marchewka', brokul: 'brokul', salata: 'salata',
+  grzyb: 'grzyb', kiel: 'kiel', luska: 'luska',
   // Backpack groups instead of the bright, detailed emoji (owner, 5 Oct 2026): the artist's apple (HUD pack) and
   // Noto emoji run through docs/paczka-dla-artysty/8_wyrownanie/wyrownaj.py (24 px, world palette, outline; sources
   // in scripts/ikony-grup/), centred in 32×32 and shown 2× like the other icons.
-  owoce: 'grupa_owoce', warzywa: 'grupa_warzywa', grzyby: 'grupa_grzyby',
+  // Since order 45 D (1 Nov 2026) the groups use the artist's new apple/carrot/mushroom (grupa_* files kept).
+  owoce: 'jablko', warzywa: 'marchewka', grzyby: 'grzyb',
 };
 
 /** The picture URL of a backpack good or goods group, if it has one. */
 export function goodsPicture(what: Owoc | Grupa): string | undefined {
   const f = GOODS_PICTURES[what];
-  return f ? `items/${f}.png` : undefined;
+  return f ? itemAssetUrl(f) : undefined;
+}
+
+/** Pictures of things that aren't items or goods (order 45 D): essence flasks `esencja_<id>`, the potion, the rolled tent. */
+export function rzeczUrl(id: 'mikstura' | 'namiot' | `esencja_${string}`): string | null {
+  return HD.has(id) ? itemAssetUrl(id) : null;
 }
 
 /** Ammunition pictures (ikony12 C2), textures `item-<kind>`: arrows, bolts, bullets, a magic charge. */
