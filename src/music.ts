@@ -41,13 +41,30 @@ function play(i: number, prime = false) {
     if (!state || stopped || document.hidden || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
   }).catch(() => { t.pending = false; t.retryAt = performance.now() + 1000; });
 }
+/**
+ * The recordings pan instruments hard left/right and back within half a second (skirmish ±9 dB,
+ * caravan-trails-2 ±6 dB; owner 1 Nov 2026: „muzyka skacze z prawego na lewy głośnik”). Mix each side
+ * partly into the other: L' = a·L + b·R, R' = b·L + a·R, a = (1 + SZEROKOSC) / 2, b = (1 − SZEROKOSC) / 2.
+ * 1 = untouched, 0 = mono. Swings become ~3 dB, the music still sounds stereo.
+ */
+const SZEROKOSC_STEREO = .4;
+function zwezStereo(ctx: AudioContext, input: AudioNode): AudioNode {
+  const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
+  const a = (1 + SZEROKOSC_STEREO) / 2, b = (1 - SZEROKOSC_STEREO) / 2;
+  const g = (v: number) => { const n = ctx.createGain(); n.gain.value = v; return n; };
+  input.connect(split);
+  split.connect(g(a), 0).connect(merge, 0, 0); split.connect(g(b), 1).connect(merge, 0, 0);
+  split.connect(g(b), 0).connect(merge, 0, 1); split.connect(g(a), 1).connect(merge, 0, 1);
+  return merge;
+}
 /** Also called in the login gesture, BEFORE asynchronous login/map loading (Safari). */
 function unlock() {
   if (document.hidden || !enabled || !volume) return;
   try {
     if (!context) {
       context = new AudioContext();
-      master = context.createGain(); master.gain.value = volume; master.connect(context.destination);
+      master = context.createGain(); master.gain.value = volume;
+      zwezStereo(context, master).connect(context.destination);
       tracks = FILES.map((name, i) => {
         const media = new Audio(`${import.meta.env.BASE_URL}audio/${name}.mp3`);
         media.preload = 'none'; media.loop = i >= 2;

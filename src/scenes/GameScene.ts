@@ -315,6 +315,8 @@ export interface DialogRequest {
   zamknij?: number;
   /** A button painted dark red as a warning (e.g. „Wyjdź z gry” at the bottom of the menu). */
   grozny?: number;
+  /** Show the text at once (menus), not letter by letter. */
+  natychmiast?: boolean;
   onChoose: (index: number) => void;
 }
 
