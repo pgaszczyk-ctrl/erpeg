@@ -70,7 +70,7 @@ try {
       viewport: { width, height },
       isMobile: mobile,
       hasTouch: mobile,
-      reducedMotion: mobile ? "reduce" : "no-preference",
+      reducedMotion: mobile && !process.env.RUCH ? "reduce" : "no-preference",
       locale: "pl-PL",
     });
     let save = {

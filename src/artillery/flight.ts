@@ -224,11 +224,13 @@ export function flight(
     const chce = Math.round(gestosc * 26);
     let zywych = 0;
     for (const c of chmury) if (c.a > 0) zywych++;
-    for (let i = zywych; i < chce; i++) nowaChmura(chmury.length < 4 && gestosc > 0.9);
+    for (let i = zywych; i < chce; i++) nowaChmura(still || (chmury.length < 4 && gestosc > 0.9));
     const diag = Math.hypot(W, H);
     for (let i = chmury.length - 1; i >= 0; i--) {
       const c = chmury[i];
-      if (rozstep > 0) {
+      if (still) {
+        if (rozstep > 0) c.a = 0;
+      } else if (rozstep > 0) {
         // Parting: pushed away from the middle and fading.
         const ox = c.x - W / 2, oy = c.y - H / 2, d = Math.hypot(ox, oy) || 1;
         c.x += (ox / d) * dt * (300 + 900 * rozstep);
@@ -239,8 +241,11 @@ export function flight(
         c.y -= dir.y * c.v * dt;
       }
       const w = c.obraz.width * c.s, h = c.obraz.height * c.s;
-      const odSrodka = (c.x - W / 2) * dir.x + (c.y - H / 2) * dir.y;
-      if (c.a <= 0 || odSrodka < -diag / 2 - w || Math.hypot(c.x - W / 2, c.y - H / 2) > diag + w) {
+      // Same reach as where clouds are spawned (nowaChmura), so a fresh one isn't dropped at once on small screens.
+      const zasieg = diag / 2 + w;
+      const ox = c.x - W / 2, oy = c.y - H / 2;
+      const odSrodka = ox * dir.x + oy * dir.y, wBok = Math.abs(-ox * dir.y + oy * dir.x);
+      if (c.a <= 0 || odSrodka < -zasieg || wBok > zasieg * 1.5 || Math.hypot(ox, oy) > zasieg * 2.2) {
         chmury.splice(i, 1);
         continue;
       }
@@ -319,12 +324,12 @@ export function flight(
       pokrywa(pokryte, t);
       // The hero: out of the muzzle to just behind the middle, growing (closer to us), turning head-first.
       const hx = start.fx * W + (W / 2 - dir.x * W * 0.06 - start.fx * W) * ease(u);
-      const hy = start.fy * H + (H * 0.45 - dir.y * H * 0.06 - start.fy * H) * ease(u);
+      const hy = start.fy * H + (H * 0.38 - dir.y * H * 0.06 - start.fy * H) * ease(u);
       const wys = bohWys * (1 + (LOT.wLocie - 1) * easeOut(u));
       const obrot = (start.kat + Math.PI / 2) * easeOut(clamp(u * 1.6)) + Math.sin(t / 260) * 0.08;
       // His shadow stays on the map under him and fades as he climbs.
       if (pokryte < 1) cien(hx + 18 * u, hy + bohWys * 0.5 + 40 * u, bohWys * 0.35 * skala * (1 - 0.5 * u), 0.35 * (1 - u) * (1 - pokryte));
-      if (!still) rysujChmury(dt, pokryte, 0);
+      rysujChmury(still ? 0 : dt, pokryte, 0);
       bohater(hx, hy + Math.sin(t / 330) * 4 * u, wys, obrot, t);
       if (!napisChmury && t > LOT.tekstChmury) {
         napisChmury = true;
@@ -355,11 +360,11 @@ export function flight(
     ctx.fillStyle = `rgba(207,230,238,${0.45 * (1 - z)})`;
     ctx.fillRect(0, 0, W, H);
     pokrywa(1 - clamp(L / 650), t);
-    if (!still) rysujChmury(dt, 0, clamp(L / 650) + 0.01);
+    rysujChmury(still ? 0 : dt, 0, clamp(L / 650) + 0.01);
     // The hero: from the middle, big, down an arc into the net, shrinking to his map size, turning feet-first.
     const bohLad = LOT.bohaterPx * lad.px;
     const k = easeOut(u);
-    const ax = W / 2, ay = H * 0.45, bx = nx, by = ny - bohLad * 0.5;
+    const ax = W / 2, ay = H * 0.38, bx = nx, by = ny - bohLad * 0.5;
     const hx = ax + (bx - ax) * k, hy = ay + (by - ay) * k - Math.sin(Math.PI * u) * H * 0.08;
     const wys = bohLad * (LOT.wLocie + (1 - LOT.wLocie) * k);
     const obrot = (start.kat + Math.PI / 2) * (1 - ease(clamp(u * 1.3)));
@@ -423,19 +428,25 @@ export function flight(
       clearTimeout(tekstTimer);
       text.classList.remove("znika");
       text.textContent = message;
+      // The timed lines mustn't replace the error.
+      napisChmury = napisWczytuje = true;
       await new Promise<void>((resolve) => {
         const buttons = actions.map((action) => {
           const b = document.createElement("button");
           b.textContent = action.label;
           b.onclick = async () => {
-            buttons.forEach((b) => (b.disabled = true));
+            // Hidden while it runs: a retry flies on over the clouds without the error window.
+            buttons.forEach((b) => ((b.disabled = true), (b.hidden = true)));
+            pisz(tx("Ponawiam lot…", "Retrying the flight…"));
             try {
               await action.run();
               buttons.forEach((b) => b.remove());
               resolve();
             } catch (e) {
+              clearTimeout(tekstTimer);
+              text.classList.remove("znika");
               text.textContent = describe(e);
-              buttons.forEach((b) => (b.disabled = false));
+              buttons.forEach((b) => ((b.disabled = false), (b.hidden = false)));
             }
           };
           root.append(b);
