@@ -456,7 +456,7 @@ export class GameScene extends Phaser.Scene {
   private lastVision = { x: NaN, y: NaN, a: NaN };
   /** When the sight was last worked out, and where the camera stood when the fog picture was last drawn. */
   private wzrokAt = -Infinity;
-  private mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
+  private mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity, armaty: 0 };
   private leaving = false;
   private travelling = false;
   private artillery?: Artillery;
@@ -580,7 +580,7 @@ export class GameScene extends Phaser.Scene {
     this.vision = [];
     this.lastVision = { x: NaN, y: NaN, a: NaN };
     this.wzrokAt = -Infinity;
-    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity, armaty: 0 };
 
     // Home: the nearest real house to the start point (hit it to go in).
     this.home = null;
@@ -1146,7 +1146,7 @@ export class GameScene extends Phaser.Scene {
     this.fitZoom();
     this.lastVision = { x: NaN, y: NaN, a: NaN };
     this.wzrokAt = -Infinity;
-    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity, armaty: 0 };
     this.toast(['🔍 Zwykły widok', '🔍 Widok powiększony', '🔍 Widok mocno powiększony (2×)'][poziom], 1200);
     return poziom === 2;
   }
@@ -1581,9 +1581,10 @@ export class GameScene extends Phaser.Scene {
       this.lastVision = { x: p.x, y: p.y, a };
     }
     const fv = this.mglaWidok;
-    if (this.wzrokAt === teraz || Math.abs(cam.x - fv.x) > 24 || Math.abs(cam.y - fv.y) > 24 || cam.width !== fv.w || teraz - fv.at > 1000 || teraz < fv.at) {
-      this.fogView.update(this.cameras.main, this.vision, this.seenNow);
-      this.mglaWidok = { x: cam.x, y: cam.y, w: cam.width, at: teraz };
+    const armaty = this.artillery?.odkryteWMgle() ?? [];
+    if (this.wzrokAt === teraz || Math.abs(cam.x - fv.x) > 24 || Math.abs(cam.y - fv.y) > 24 || cam.width !== fv.w || teraz - fv.at > 1000 || teraz < fv.at || armaty.length !== fv.armaty) {
+      this.fogView.update(this.cameras.main, this.vision, this.seenNow, armaty);
+      this.mglaWidok = { x: cam.x, y: cam.y, w: cam.width, at: teraz, armaty: armaty.length };
     }
     for (const e of this.enemies) if (!e.isDead) e.setVisible(!e.inAir && pointInPolygon(this.vision, e.x, e.y));
     // Off-screen pickups are simply hidden (no polygon test); hundreds of ripe crops on allotments (report 56).
@@ -4194,7 +4195,7 @@ export class GameScene extends Phaser.Scene {
     this.applyLevel();
     this.lastVision = { x: NaN, y: NaN, a: NaN };
     this.wzrokAt = -Infinity;
-    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity };
+    this.mglaWidok = { x: NaN, y: NaN, w: 0, at: -Infinity, armaty: 0 };
     this.emitHud();
     this.toast(W.zmieniony(session.level.nazwa), 2500);
   }

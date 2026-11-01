@@ -278,7 +278,9 @@ export class FogView {
     });
   }
 
-  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = []) {
+  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = [],
+    /** Tall things seen from afar (artillery cannons): their exact silhouette is cut out of the fog, no soft edge. */
+    odkryte: Iterable<{ canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number }> = []) {
     const v = cam.worldView;
     // Cell-aligned area a bit larger than the view.
     // Generous margin: the camera eases after the hero, so the view can be
@@ -401,6 +403,7 @@ export class FogView {
       ctx.drawImage(this.mask, -(W + 50), 0);
       ctx.restore();
     } else ctx.drawImage(this.mask, 0, 0);
+    for (const o of odkryte) ctx.drawImage(o.canvas, (o.x - ox) / FOG_RES, (o.y - oy) / FOG_RES, o.w / FOG_RES, o.h / FOG_RES);
     ctx.globalCompositeOperation = 'source-over';
     this.tex.refresh();
     this.img.setPosition(ox, oy);
