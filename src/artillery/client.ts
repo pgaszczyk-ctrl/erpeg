@@ -8,6 +8,7 @@ import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
+import { Armata3D } from "./armata3d";
 import { RULES, type Network, type Stop } from "./network";
 import { getMap, prepareMap, nameWorldMap } from "../travel";
 import { resetKeys, resetTouch } from "../controls";
@@ -137,6 +138,9 @@ export class Artillery {
     {
       body: Phaser.GameObjects.Graphics;
       barrel: Phaser.GameObjects.Graphics;
+      armata: Armata3D;
+      model: boolean;
+      visible: boolean;
       x: number;
       y: number;
     }
@@ -170,7 +174,15 @@ export class Artillery {
       /* Migration/registry unavailable: decorative stations only, no client wallet fallback. */
     }
   }
+  private last = 0;
+  /** Moves the 3D cannons (aim, shot, net). Called every frame, also while a trip holds the game. */
+  animate(now: number) {
+    const dt = this.last ? Math.min(0.1, (now - this.last) / 1000) : 0;
+    this.last = now;
+    for (const a of this.art.values()) a.armata.update(dt);
+  }
   update(now: number) {
+    this.animate(now);
     if (!this.registry || this.dead || now < this.next) return;
     this.next = now + 700;
     for (const s of this.registry.stops) {
@@ -191,11 +203,22 @@ export class Artillery {
       ) {
         art = this.draw(p.x, p.y);
         this.art.set(s.id, art);
+        const a = art;
+        void a.armata.ready.then((ok) => {
+          if (!ok || this.dead) return;
+          a.model = true;
+          a.body.setVisible(false);
+          a.barrel.setVisible(false);
+          // Arriving by cannon: the landing net at the destination bounces.
+          if (artilleryTransit.active && Math.hypot(a.x - this.player.x, a.y - this.player.y) < 80 * PX_PER_M) a.armata.lap();
+        });
       }
       if (art) {
         const visible = near && this.host.visible(p.x, p.y);
-        art.body.setVisible(visible);
-        art.barrel.setVisible(visible);
+        art.visible = visible;
+        art.armata.setVisible(visible);
+        art.body.setVisible(visible && !art.model);
+        art.barrel.setVisible(visible && !art.model);
       }
       if (
         near &&
@@ -238,7 +261,7 @@ export class Artillery {
   }
   at(x: number, y: number, r = 26) {
     for (const [id, a] of this.art)
-      if (a.body.visible && Math.hypot(x - a.x, y - a.y) < r)
+      if (a.visible && Math.hypot(x - a.x, y - a.y) < r)
         return this.registry!.stops.find((s) => s.id === id);
     return undefined;
   }
@@ -291,7 +314,7 @@ export class Artillery {
     barrel.strokeRoundedRect(-4, -9, 31, 17, 4);
     barrel.fillStyle(ink);
     barrel.fillEllipse(27, -1, 7, 17);
-    return { body, barrel, x, y };
+    return { body, barrel, armata: new Armata3D(this.scene, x, y), model: false, visible: true, x, y };
   }
   open(s: Stop) {
     if (this.opened || this.host.busy()) return;
@@ -402,11 +425,22 @@ export class Artillery {
     const carry = captureHero(this.player);
     session.artilleryHero = carry;
     const station=this.art.get(from.id);
-    if(station){const ll=this.ll(to),p=this.city.fromLatLon(ll.lat,ll.lon),angle=Math.atan2(p.y-station.y,p.x-station.x),turn=station.barrel.rotation+Math.atan2(Math.sin(angle-station.barrel.rotation),Math.cos(angle-station.barrel.rotation));
-      if(matchMedia('(prefers-reduced-motion:reduce)').matches)station.barrel.rotation=turn;
+    const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if(station?.model){
+      // The artist's cannon: turn to the target, the hero climbs into the barrel, the shot – then the flight scene.
+      const ll=this.ll(to),p=this.city.fromLatLon(ll.lat,ll.lon);
+      await station.armata.celuj(p.x-station.x,p.y-station.y,still);
+      if(!still)await new Promise<void>(resolve=>this.scene.tweens.add({targets:this.player,x:station.x,y:station.y-2,duration:350,ease:'Sine.easeInOut',onComplete:()=>resolve()}));
+      this.player.setAlpha(0);
+      await station.armata.strzel();
+      if(!still)await new Promise(resolve=>setTimeout(resolve,380));
+    } else if(station){const ll=this.ll(to),p=this.city.fromLatLon(ll.lat,ll.lon),angle=Math.atan2(p.y-station.y,p.x-station.x),turn=station.barrel.rotation+Math.atan2(Math.sin(angle-station.barrel.rotation),Math.cos(angle-station.barrel.rotation));
+      if(still)station.barrel.rotation=turn;
       else {await new Promise<void>(resolve=>this.scene.tweens.add({targets:station.barrel,rotation:turn,duration:650,ease:'Sine.easeInOut',onComplete:()=>resolve()}));await new Promise<void>(resolve=>this.scene.tweens.add({targets:this.player,x:station.x+Math.cos(angle)*7,y:station.y-4+Math.sin(angle)*7,duration:350,ease:'Sine.easeInOut',onComplete:()=>resolve()}));}
     }
     const overlay = flight(this.host.hero(), message);
+    // The flight scene covers the map now; the hero is visible again if the trip is called off.
+    this.player.setAlpha(1);
     let receipt: Receipt | undefined,
       checkpointDone = false;
     const nonce = crypto.randomUUID();
@@ -471,7 +505,7 @@ export class Artillery {
           p = this.city.fromLatLon(ll.lat, ll.lon);
         a.barrel.rotation = Math.atan2(p.y - a.y, p.x - a.x);
       }
-      if (b) b.body.setVisible(true);
+      if (b) b.body.setVisible(!b.model);
       await perform();
     } catch (e) {
       await overlay.recover(
@@ -538,6 +572,7 @@ export class Artillery {
     for (const a of this.art.values()) {
       a.body.destroy();
       a.barrel.destroy();
+      a.armata.destroy();
     }
     this.art.clear();
   }

@@ -1173,6 +1173,8 @@ export class GameScene extends Phaser.Scene {
     }
     if (intro) {
       if(artilleryTransit.active)this.ludzik3d?.update(this.player,dt);
+      // The cannon keeps turning/firing while the trip is held.
+      if(artilleryTransit.active)this.artillery?.animate(now);
       this.introSince ??= now;
       this.updateFog();
       this.zabytki.update(this.player.x, this.player.y);

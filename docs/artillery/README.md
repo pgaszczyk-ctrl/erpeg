@@ -16,7 +16,7 @@ Transport jest lokalny. Każdy rejestr jest osobną siecią; nie ma krawędzi po
 - `data/artillery-<id>-overrides.json`: poprawki po ID, np. `{"ID":{"x":123,"y":456,"name":"Nowa nazwa","disabled":false}}`. Współrzędne w metrach projekcji rejestru. Korekta ma pierwszeństwo, nie zmienia ID, wyłączenie nie usuwa odkryć. Import SQL stosuje poprawki jawnie i zachowuje pozostałe pozycje.
 - `artillery.html`: diagnostyka z punktami, krawędziami, nieobsłużoną zabudową i przyczynami odrzuceń; pan, zoom, wskazanie trasy, desktop/telefon.
 - `src/artillery/client.ts`: wspólna interakcja E / AKCJA / kursor użycia, odkrywanie po podejściu, panel bezpośrednich kierunków, transakcja i odzyskiwanie podróży. Brak interakcji przez podwójny atak.
-- `src/artillery/flight.ts`: osobna lekka scena chmur, obrót i zbliżenie aktualnego wizerunku GLB, spadochron, siatka i odbicie. Ładowanie mapy odbywa się pod osłoną; sterowanie wraca po przygotowaniu pierwszego widoku i potwierdzeniu transakcji. Ograniczenie animacji systemowe jest respektowane. Grafikę stanowiska rysuje kod; to prototyp, nie zamówiony nowy GLB.
+- `src/artillery/flight.ts`: osobna lekka scena chmur, obrót i zbliżenie aktualnego wizerunku GLB, spadochron, siatka i odbicie. Ładowanie mapy odbywa się pod osłoną; sterowanie wraca po przygotowaniu pierwszego widoku i potwierdzeniu transakcji. Ograniczenie animacji systemowe jest respektowane. Stanowisko to model grafika `public/modele/armata_C.glb` (zamówienie 45, `src/artillery/armata3d.ts`): wieża obraca się do celu, bohater wchodzi do lufy, klip `fire`, przy przylocie `catch` na siatce. Dopóki model się nie wczyta (albo przy błędzie) widać stary rysunek kodem.
 
 ## Uruchomienie i reprodukcja
 
