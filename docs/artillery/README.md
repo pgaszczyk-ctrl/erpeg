@@ -1,3 +1,16 @@
+# Miejska Artyleria Pasażerska — generator dla całego świata (1.11.2026)
+
+Właściciel: „miasta zbliżone wielkością mają mieć system transportu, na całym świecie, oparte na generatorze”. Zastępuje to
+rejestry liczone osobno dla każdego miasta (opis niżej zostaje jako historia; `public/artillery/<miasto>.json` i `artillery.html` są już tylko diagnostyką starej wersji).
+
+- **Lista miast i lotnisk:** `scripts/artillery/swiat.py` (wejście: GeoNames `cities500.json` z liczbą ludności, mirror lmfmaier/cities-json, oraz OurAirports `airports.csv`; ścieżki w nagłówku skryptu) → `public/artillery/swiat.json` (miasta ≥ 100 tys., bez dzielnic leżących w zabudowie większego miasta; lotniska large/medium z lotami rejsowymi) + `docs/sql/artillery-swiat-dane.sql`. Teraz 4727 miast, 3270 lotnisk.
+- **Przepis:** `src/artillery/generator.ts` `generujSiec` – liczba armat 5…20 z liczby ludności (Lublin 9), promień zabudowy R = 9,5 m × √ludność; 2 w centrum (0,08 R), pierścień dzielnic (0,55 R, co trzecia), rogatki na 1,5 R (w Lublinie wszystkie za granicą miasta), do 2 lotnisk w promieniu max(25 km, 1,8 R); połączenia: centra, pierścienie, dzielnica → centrum, rogatka → dzielnica, lotnisko → 2 najbliższe. Cena 13 monet/km (zaokrąglona). Nie trzeba niczego odkrywać.
+- **Miejsce armaty:** `src/artillery/miejsce.ts` `miejsceStacji` – najbliższe wolne miejsce (nie na jezdni, z wyjściem) do 240 m od punktu z przepisu, szukane zawsze w tej samej kolejności.
+- **Serwer:** `docs/sql/artillery-generator.sql` (w bazie od 1.11.2026) – bliźniak przepisu (`ma_siec`, `ma_krawedzie`), `ma_stan`, `ma_lot(token, nonce, from, to, p_dest)`: sprawdza połączenie, bohatera ≤ 330 m od armaty startowej, cel ≤ 270 m od punktu z przepisu, liczy cenę sam. Tabele `ma_miasta`, `ma_lotniska`. Rachunek/zwrot (`ma_settle`, `ma_trips`) bez zmian. Nadal tylko Arceus/Jam (serwer testowy).
+- **Testy:** `node --experimental-strip-types scripts/tests/artillery-generator.mjs` (PGlite: gra = serwer na 325 miastach, ceny, odmowy), `scripts/tests/browser-artillery.mjs` (wymyślone miasto, pełna podróż, utracona odpowiedź, odświeżenie, zwrot), `node scripts/artillery/sprawdz-lublin.mjs [miasto]` (miejsca armat na prawdziwej mapie Lublina).
+
+---
+
 # Miejska Artyleria Pasażerska — TEST
 
 ## Zakres uzgodniony 30.10.2026

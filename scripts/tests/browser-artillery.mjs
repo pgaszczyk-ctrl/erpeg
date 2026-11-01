@@ -29,35 +29,15 @@ const map = {
   pois: [],
   towns: [["Lublin", 2880, 2880]],
 };
-const stops = [
-  { id: "a", x: 1500, y: 1515.625, name: "West", anchor: "a" },
-  { id: "b", x: 2600, y: 1515.625, name: "East", anchor: "b" },
-];
-const registry = {
-  id: "lublin",
-  version: 1,
-  origin: { lon: 22.4, lat: 51.3 },
-  projection: { mLon, mLat },
-  stops,
-  edges: [["a", "b"]],
-  rules: { price: 5 },
-  diagnostics: {
-    rejected: [],
-    uncovered: [],
-    missing: [],
-    covered: 2,
-    demands: 2,
-    maxWalkM: 1750,
-    diameter: 1,
-    meanHops: 1,
-  },
-};
-const at = (id) => ({
-  m: "lublin",
-  x: id === "a" ? 2880 : 4992,
-  y: 2910,
-  s: 1.92,
-});
+// A made-up city of the generated artillery (src/artillery/generator.ts): id 9565 puts its two central cannons
+// east and west of the centre (u(id,1) = 0.25); population 523 725 makes them 0.16 R = 1100 m apart,
+// nominally at map px (2880, 2910) and (4992, 2910). The other stations fall outside this small fixture map.
+const CITY = 9565,
+  centre = { lat: 51.3 - 1515.625 / mLat, lon: 22.4 + 2050 / mLon },
+  swiat = { wersja: 1, miasta: [[CITY, "Testowo", "PL", centre.lat, centre.lon, 523725]], lotniska: [] },
+  WEST = `c${CITY}:1`,
+  EAST = `c${CITY}:0`,
+  PRICE = 14; // 1.1 km × 13 coins, rounded
 await mkdir("work/artillery", { recursive: true });
 const results = [];
 try {
@@ -80,7 +60,6 @@ try {
         equip: { bron: "zelazny" },
         skills: { miecz: 0, luk: 0, magia: 0 },
       },
-      discovered = ["b"],
       receipts = new Map(),
       failBegin = true,
       chargeCount = 0,
@@ -90,12 +69,7 @@ try {
     await context.route("**/map/world.json", (r) =>
       r.fulfill({ json: { lublin: [], towns: [], edges: [] } }),
     );
-    await context.route("**/artillery/index.json", (r) =>
-      r.fulfill({ json: [{ id: "lublin", bounds: [22.3, 51.1, 22.8, 51.4] }] }),
-    );
-    await context.route("**/artillery/lublin.json", (r) =>
-      r.fulfill({ json: registry }),
-    );
+    await context.route("**/artillery/swiat.json", (r) => r.fulfill({ json: swiat }));
     await context.route("**/*.supabase.co/**", async (r) => {
       const fn = new URL(r.request().url()).pathname.split("/").pop(),
         data = r.request().postDataJSON();
@@ -136,20 +110,14 @@ try {
         body = [];
       if (fn === "game_settings") body = {};
       if (fn === "server_now") body = new Date().toISOString();
-      if (fn === "ma_state")
+      if (fn === "ma_stan")
         body = {
           enabled: true,
-          version: 1,
-          price: 5,
-          discovered,
+          zaKm: 13,
           pending:
             [...receipts.values()].find((r) => r.state === "pending") ?? null,
         };
-      if (fn === "ma_discover") {
-        if (!discovered.includes(data.p_stop)) discovered.push(data.p_stop);
-        body = true;
-      }
-      if (fn === "ma_begin") {
+      if (fn === "ma_lot") {
         let receipt = receipts.get(data.p_nonce);
         if (!receipt) {
           chargeCount++;
@@ -158,10 +126,10 @@ try {
             origin: data.p_from,
             destination: data.p_to,
             state: "pending",
-            price: 5,
-            coins_after: save.coins - 5,
-            origin_at: at(data.p_from),
-            destination_at: at(data.p_to),
+            price: PRICE,
+            coins_after: save.coins - PRICE,
+            origin_at: save.tu,
+            destination_at: data.p_dest,
             hero: save.artilleryHero,
           };
           receipts.set(data.p_nonce, receipt);
@@ -186,7 +154,7 @@ try {
           if (data.p_cancel)
             save = {
               ...save,
-              coins: receipt.coins_after + 5,
+              coins: receipt.coins_after + receipt.price,
               tu: receipt.origin_at,
             };
         }
@@ -224,23 +192,24 @@ try {
       s.player.boostUntil = Date.now() + 300000;
     });
     await page.waitForFunction(
-      () => window.__game.scene.getScene("game").artillery?.art.size > 0,
-      null,
-      { timeout: 20000 },
+      (id) => window.__game.scene.getScene("game").artillery?.art.has(id),
+      WEST,
+      { timeout: 30000 },
     );
-    await page.waitForFunction(() =>
-      window.__game.scene
-        .getScene("game")
-        .artillery?.state.discovered.includes("a"),
-    );
+    // The generated cannon stands near its nominal spot; the hero steps up to it.
+    const P1 = await page.evaluate((id) => {
+      const s = window.__game.scene.getScene("game"), a = s.artillery.art.get(id);
+      s.player.setPosition(a.x, a.y + 16);
+      return { m: "lublin", x: a.x, y: a.y, s: 1.92 };
+    }, WEST);
+    assert(Math.hypot(P1.x - 2880, P1.y - 2910) < 240 * 1.92, "cannon within 240 m of its generated point");
     await page.waitForFunction(()=>window.__game.scene.getScene('game').ludzik3d?.widoczny,null,{timeout:30000});
     const rig=await page.evaluate(()=>{const l=window.__game.scene.getScene('game').ludzik3d,j=l.g.model.getObjectByName('upperL'),before=j.quaternion.toArray(),frames=l.flightPortrait();return{frames:frames.length,different:new Set(frames).size,before,after:j.quaternion.toArray()};});assert.equal(rig.frames,6);assert(rig.different>1);assert.deepEqual(rig.before,rig.after,'preview wave poses restore the live rig');
     const identity = await page.evaluate(() => ({
       look: JSON.stringify(window.__session.look),
       equip: JSON.stringify(window.__gear.equip),
     }));
-    assert(discovered.includes("a"), "approach discovers and writes to server");
-    assert(requests.includes("ma_discover"));
+    assert(!requests.includes("ma_discover"), "no discovery needed any more");
     // In-combat panel cannot expose a launch button.
     await page.evaluate(() => {
       const s = window.__game.scene.getScene("game");
@@ -259,9 +228,9 @@ try {
     await page.screenshot({ path: `work/artillery/${tag}-panel.png` });
     const launch = page.locator("#artillery-panel button").first();
     assert(await launch.isEnabled());
-    // Price by distance (13 coins/km, owner 1 Nov 2026): the two fixture stops are 1.1 km apart.
+    // Price by distance (13 coins/km, owner 1 Nov 2026): the two central cannons are 1.1 km apart.
     const label = await launch.textContent();
-    assert.match(label, /1[,.]1 km · 14 mone?t|1[,.]1 km · 14 coins/, "price by km: " + label);
+    assert.match(label, new RegExp(`1[,.]1 km · ${PRICE} mone?t`), "price by km: " + label);
     await launch.click();
     await page
       .getByRole("button", { name: "Ponów tę samą podróż" })
@@ -269,11 +238,13 @@ try {
     assert.equal(chargeCount, 1);
     await page.screenshot({ path: `work/artillery/${tag}-lost-response.png` });
     await page.getByRole("button", { name: "Ponów tę samą podróż" }).click();
+    const destAt = [...receipts.values()][0].destination_at;
+    assert(Math.hypot(destAt.x - 4992, destAt.y - 2910) < 240 * 1.92, "destination cannon near its generated point");
     await page.waitForFunction(
-      () =>
+      (x) =>
         !document.getElementById("artillery-flight") &&
-        Math.abs(window.__game.scene.getScene("game").player.x - 4992) < 10,
-      null,
+        Math.abs(window.__game.scene.getScene("game").player.x - x) < 10,
+      destAt.x,
       { timeout: 60000 },
     );
     assert.equal(chargeCount, 1, "retry reuses nonce, no second fee");
@@ -298,7 +269,7 @@ try {
       0.3,
     );
     assert.equal(settleCount, 1);
-    assert.equal(await page.evaluate(() => window.__session.coins), 95);
+    assert.equal(await page.evaluate(() => window.__session.coins), 100 - PRICE);
     assert.equal(
       await page.evaluate(
         () => window.__game.scene.getScene("game").travelling,
@@ -311,16 +282,16 @@ try {
     const nonce = "00000000-0000-4000-8000-000000000001";
     receipts.set(nonce, {
       nonce,
-      origin: "b",
-      destination: "a",
+      origin: EAST,
+      destination: WEST,
       state: "pending",
       price: 5,
       coins_after: 90,
-      origin_at: at("b"),
-      destination_at: at("a"),
+      origin_at: destAt,
+      destination_at: P1,
       hero: [...receipts.values()][0].hero,
     });
-    save = { ...save, coins: 90, tu: at("a") };
+    save = { ...save, coins: 90, tu: P1 };
     const before = chargeCount;
     console.log(tag, "reload recovery");
     await page.evaluate((url) => history.replaceState(null, "", url), start);
@@ -348,11 +319,11 @@ try {
       Math.abs(
         (await page.evaluate(
           () => window.__game.scene.getScene("game").player.x,
-        )) - 2880,
+        )) - P1.x,
       ) < 10,
     );
     // Failure while loading the destination returns to the original cannon and refunds exactly once.
-    await page.evaluate(() => {
+    await page.evaluate((dx) => {
       const s = window.__game.scene.getScene("game");
       s.witam = false;
       s.lingerUntil = 0;
@@ -360,13 +331,14 @@ try {
       s.noHurtUntil = Infinity;
       const ensure = s.city.ensure.bind(s.city);
       s.city.ensure = async (...args) => {
-        if (Math.abs(args[0] - 4992) < 10 && !window.__failedDestination) {
+        // Only the arrival's own loading (after the charge), not the search for the landing spot.
+        if (Math.abs(args[0] - dx) < 10 && args[2] > 1500 && !window.__failedDestination) {
           window.__failedDestination = true;
           throw Error("Fixture destination loading failure");
         }
         return ensure(...args);
       };
-    });
+    }, destAt.x);
     if (mobile) await page.locator(".hs-akcja").click();
     else await page.keyboard.press("KeyE");
     await page.locator("#artillery-panel button").first().click();
@@ -385,7 +357,7 @@ try {
       Math.abs(
         (await page.evaluate(
           () => window.__game.scene.getScene("game").player.x,
-        )) - 2880,
+        )) - P1.x,
       ) < 10,
     );
     console.log(tag, "recovered");
@@ -394,7 +366,6 @@ try {
       tag,
       chargeCount,
       settleCount,
-      discoveries: discovered,
       errors,
     });
     console.log("PASS", tag, JSON.stringify(results.at(-1)));

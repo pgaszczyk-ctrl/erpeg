@@ -9,7 +9,19 @@ import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
 import { Armata3D } from "./armata3d";
-import { RULES, cenaLotu, type Network, type Stop } from "./network";
+import { miejsceStacji, MIEJSCE_M } from "./miejsce";
+import { RULES, type Network, type Stop } from "./network";
+import {
+  generujSiec,
+  miastoPrzy,
+  nazwaStacji,
+  metry,
+  cenaZaMetry,
+  GENERATOR,
+  type Siec,
+  type Swiat,
+} from "./generator";
+import { lang } from "../i18n";
 import { getMap, prepareMap, nameWorldMap } from "../travel";
 import { resetKeys, resetTouch } from "../controls";
 export type Registry = Network & {
@@ -33,9 +45,6 @@ type Receipt = {
 };
 type State = {
   enabled: boolean;
-  version: number;
-  price: number;
-  discovered: string[];
   pending?: Receipt | null;
 };
 type Host = {
@@ -50,31 +59,41 @@ type Host = {
 };
 export const artilleryTransit = { active: false };
 let recovery: Receipt | null = null;
-const registryPromises = new Map<string, Promise<Registry | null>>();
-let indexPromise: Promise<{ id: string; bounds: number[] }[]> | null = null;
-export async function loadRegistry(ll?: { lat: number; lon: number }) {
-  const index: { id: string; bounds: number[] }[] = await (indexPromise ??=
-    fetch("artillery/index.json")
-      .then(async (r) => (r.ok ? await r.json() : []))
-      .catch(() => []));
-  const entry = ll
-    ? index.find(
-        (e) =>
-          ll.lon >= e.bounds[0] &&
-          ll.lat >= e.bounds[1] &&
-          ll.lon <= e.bounds[2] &&
-          ll.lat <= e.bounds[3],
-      )
-    : index[0];
-  if (!entry) return null;
-  let p = registryPromises.get(entry.id);
-  if (!p) {
-    p = fetch(`artillery/${encodeURIComponent(entry.id)}.json`)
-      .then(async (r) => (r.ok ? await r.json() : null))
-      .catch(() => null);
-    registryPromises.set(entry.id, p);
-  }
-  return p;
+let swiatPromise: Promise<Swiat | null> | null = null;
+/** The world list of big cities and airports (public/artillery/swiat.json), fetched once. */
+export function wczytajSwiat() {
+  return (swiatPromise ??= fetch("artillery/swiat.json")
+    .then(async (r) => (r.ok ? ((await r.json()) as Swiat) : null))
+    .catch(() => null));
+}
+/** The generated network of the big city around a spot, as the Registry the rest of this file uses. */
+export async function siecPrzy(ll: { lat: number; lon: number }): Promise<Registry | null> {
+  const swiat = await wczytajSwiat();
+  const m = swiat && miastoPrzy(swiat, ll);
+  if (!swiat || !m) return null;
+  return naRejestr(generujSiec(m, swiat.lotniska));
+}
+function naRejestr(siec: Siec): Registry {
+  const [id, name, , lat, lon] = siec.miasto,
+    mLon = 111320 * Math.cos((lat * Math.PI) / 180),
+    mLat = 111132,
+    en = lang === "en";
+  return {
+    id: `c${id}`,
+    version: 1,
+    city: { name },
+    origin: { lat, lon },
+    projection: { mLon, mLat },
+    rules: RULES,
+    stops: siec.stacje.map((s) => ({
+      id: s.id,
+      name: nazwaStacji(s, siec, en),
+      x: (s.lon - lon) * mLon,
+      y: (lat - s.lat) * mLat,
+      airport: s.rodzaj === "lotnisko",
+    })) as unknown as Stop[],
+    edges: siec.krawedzie.map(([a, b]) => [siec.stacje[a].id, siec.stacje[b].id]),
+  } as unknown as Registry;
 }
 function message(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -91,6 +110,11 @@ function message(error: unknown): string {
       "Not enough coins for this journey.",
     ],
     ["Come closer", "Podejdź bliżej armaty.", "Come closer to the cannon."],
+    [
+      "Destination is unsafe",
+      "Cel nie jest bezpieczny. Wybierz inny.",
+      "The destination is unsafe. Choose another.",
+    ],
     [
       "Discover both stops first",
       "Najpierw odkryj oba stanowiska.",
@@ -127,12 +151,7 @@ function message(error: unknown): string {
 }
 export class Artillery {
   private registry: Registry | null = null;
-  private state: State = {
-    enabled: false,
-    version: 0,
-    price: RULES.price,
-    discovered: [],
-  };
+  private state: State = { enabled: false };
   private art = new Map<
     string,
     {
@@ -147,7 +166,7 @@ export class Artillery {
   >();
   private dead = false;
   private next = 0;
-  private discovering = new Set<string>();
+  private cityCheck = 0;
   private opened = false;
   constructor(
     private scene: Phaser.Scene,
@@ -158,17 +177,14 @@ export class Artillery {
     if (TEST && !offline.demo && !city.loch) void this.load();
   }
   private async load() {
-    this.registry = await loadRegistry(
+    this.registry = await siecPrzy(
       this.city.toLatLon(this.player.x, this.player.y),
     );
     if (!this.registry || this.dead) return;
     if (this.city.id.startsWith("w:") && this.registry.city?.name)
       nameWorldMap(this.city.id, this.registry.city.name);
     try {
-      const state = await rpc<State>("ma_state", {
-        p_token: session.token,
-        p_network: this.registry.id,
-      });
+      const state = await rpc<State>("ma_stan", { p_token: session.token });
       if (state) this.state = state;
     } catch {
       /* Migration/registry unavailable: decorative stations only, no client wallet fallback. */
@@ -183,74 +199,63 @@ export class Artillery {
   }
   update(now: number) {
     this.animate(now);
-    if (!this.registry || this.dead || now < this.next) return;
+    if (this.dead || now < this.next) return;
     this.next = now + 700;
+    // Walked into another big city (world maps are endless): its own network.
+    if (now > this.cityCheck && this.swiatGotowy) {
+      this.cityCheck = now + 5000;
+      void wczytajSwiat().then((sw) => {
+        const m = sw && miastoPrzy(sw, this.city.toLatLon(this.player.x, this.player.y));
+        if (this.dead || (m ? `c${m[0]}` : null) === (this.registry?.id ?? null)) return;
+        this.clearArt();
+        this.registry = m && sw ? naRejestr(generujSiec(m, sw.lotniska)) : null;
+        if (this.registry && this.city.id.startsWith("w:")) nameWorldMap(this.city.id, this.registry.city!.name);
+      });
+    }
+    if (!this.registry) return;
     for (const s of this.registry.stops) {
-      if (s.disabled) continue;
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
-      const p = this.city.fromLatLon(ll.lat, ll.lon),
+      const g = this.city.fromLatLon(ll.lat, ll.lon),
         near =
-          Phaser.Math.Distance.Between(p.x, p.y, this.player.x, this.player.y) <
+          Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) <
           1200 * PX_PER_M;
       let art = this.art.get(s.id);
-      if (
-        !art &&
-        near &&
-        this.city.isFree(p.x, p.y, 14, 14) &&
-        (!this.city.roadAt(p.x, p.y) ||
-          ["path", "pedestrian"].includes(this.city.roadAt(p.x, p.y)!.kind))
-      ) {
-        art = this.draw(p.x, p.y);
-        this.art.set(s.id, art);
-        const a = art;
-        void a.armata.ready.then((ok) => {
-          if (!ok || this.dead) return;
-          a.model = true;
-          a.body.setVisible(false);
-          a.barrel.setVisible(false);
-          // Arriving by cannon: the landing net at the destination bounces.
-          if (artilleryTransit.active && Math.hypot(a.x - this.player.x, a.y - this.player.y) < 80 * PX_PER_M) a.armata.lap();
-        });
+      if (!art && near) {
+        const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+        if (p) {
+          art = this.draw(p.x, p.y);
+          this.art.set(s.id, art);
+          const a = art;
+          void a.armata.ready.then((ok) => {
+            if (!ok || this.dead) return;
+            a.model = true;
+            a.body.setVisible(false);
+            a.barrel.setVisible(false);
+            // Arriving by cannon: the landing net at the destination bounces.
+            if (artilleryTransit.active && Math.hypot(a.x - this.player.x, a.y - this.player.y) < 80 * PX_PER_M) a.armata.lap();
+          });
+        }
       }
       if (art) {
-        const visible = near && this.host.visible(p.x, p.y);
+        const visible = near && this.host.visible(art.x, art.y);
         art.visible = visible;
         art.armata.setVisible(visible);
         art.body.setVisible(visible && !art.model);
         art.barrel.setVisible(visible && !art.model);
       }
-      if (
-        near &&
-        art &&
-        this.state.enabled &&
-        !this.state.discovered.includes(s.id) &&
-        !this.discovering.has(s.id) &&
-        Math.hypot(p.x - this.player.x, p.y - this.player.y) < 45 * PX_PER_M &&
-        !this.host.combat() &&
-        !this.host.busy()
-      ) {
-        this.discovering.add(s.id);
-        void this.host
-          .checkpoint()
-          .then(() =>
-            rpc<boolean>("ma_discover", {
-              p_token: session.token,
-              p_stop: s.id,
-            }),
-          )
-          .then((ok) => {
-            if (ok) {
-              this.state.discovered.push(s.id);
-              this.host.toast(
-                tx("Odkryto stanowisko: ", "Station discovered: ") + s.name,
-              );
-            }
-          })
-          .catch(() => {})
-          .finally(() => this.discovering.delete(s.id));
-      }
     }
+  }
+  private get swiatGotowy() {
+    return swiatPromise !== null;
+  }
+  private clearArt() {
+    for (const a of this.art.values()) {
+      a.body.destroy();
+      a.barrel.destroy();
+      a.armata.destroy();
+    }
+    this.art.clear();
   }
   private ll(s: Stop) {
     const r = this.registry!;
@@ -375,12 +380,11 @@ export class Artillery {
       const to = this.registry!.stops.find((s) => s.id === id)!;
       const b = document.createElement("button");
       b.className = "m-btn";
-      const price = cenaLotu(this.ll(s), this.ll(to)),
-        km = Math.hypot(to.x - s.x, to.y - s.y) / 1000,
+      const m = metry(this.ll(s), this.ll(to)),
+        price = cenaZaMetry(m),
+        km = m / 1000,
         available =
           this.state.enabled &&
-          this.state.version === this.registry!.version &&
-          !to.disabled &&
           session.coins >= price &&
           !this.host.combat();
       b.textContent = `${to.name} · ${km.toFixed(1).replace(".", tx(",", "."))} km · ${price} ${tx("monet", "coins")}`;
@@ -401,8 +405,8 @@ export class Artillery {
             "This station awaits network approval and travel service activation.",
           )
         : tx(
-            `Cena zależy od odległości: ${RULES.perKm} monet za kilometr.`,
-            `The price depends on distance: ${RULES.perKm} coins per kilometre.`,
+            `Cena zależy od odległości: ${GENERATOR.zaKm} monet za kilometr.`,
+            `The price depends on distance: ${GENERATOR.zaKm} coins per kilometre.`,
           );
     box.append(p);
     const b = document.createElement("button");
@@ -443,13 +447,34 @@ export class Artillery {
     let receipt: Receipt | undefined,
       checkpointDone = false;
     const nonce = crypto.randomUUID();
-    const begin = () =>
-      rpc<Receipt>("ma_begin", {
+    // Where the destination cannon stands (the same spot every visitor sees there): found before paying.
+    let dest: At | undefined;
+    const cel = async (): Promise<At> => {
+      const ll = this.ll(to);
+      let id = this.city.id;
+      if (!this.city.hasLatLon(ll.lat, ll.lon)) {
+        const lub = await getMap("lublin").catch(() => null);
+        id = lub?.hasLatLon(ll.lat, ll.lon)
+          ? "lublin"
+          : `w:${(Math.round(ll.lat * 10) / 10).toFixed(4)},${(Math.round(ll.lon * 10) / 10).toFixed(4)}`;
+      }
+      const city = await getMap(id),
+        g = city.fromLatLon(ll.lat, ll.lon);
+      await city.ensure(g.x, g.y, (MIEJSCE_M + 200) * PX_PER_M);
+      const p = miejsceStacji(city, to.id, ll.lat, ll.lon);
+      if (!p) throw Error("Destination is unsafe");
+      return { m: city.id, x: p.x, y: p.y, s: PX_PER_M };
+    };
+    const begin = async () => {
+      dest ??= await cel();
+      return rpc<Receipt>("ma_lot", {
         p_token: session.token,
         p_nonce: nonce,
         p_from: from.id,
         p_to: to.id,
+        p_dest: dest,
       });
+    };
     const perform = async () => {
       if (!checkpointDone) {
         await this.host.checkpoint();
@@ -523,9 +548,8 @@ export class Artillery {
             label: tx("Wróć do armaty", "Return to the cannon"),
             run: async () => {
               if (!receipt) {
-                const state = await rpc<State>("ma_state", {
+                const state = await rpc<State>("ma_stan", {
                   p_token: session.token,
-                  p_network: this.registry!.id,
                 });
                 if (!state?.pending) {
                   artilleryTransit.active = false;
@@ -581,10 +605,7 @@ export async function recoverArtillery() {
   if (!TEST || offline.demo) return;
   let state: State;
   try {
-    state = await rpc<State>("ma_state", {
-      p_token: session.token,
-      p_network: "",
-    });
+    state = await rpc<State>("ma_stan", { p_token: session.token });
   } catch {
     return;
   }
