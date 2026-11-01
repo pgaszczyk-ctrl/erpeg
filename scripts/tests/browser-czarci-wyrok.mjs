@@ -104,7 +104,9 @@ try {
   for (let i = 0; i < misja.etapy.length; i++) {
     const z = misja.etapy[i];
     assert.equal(await etap(), i, `on stage ${i + 1}`);
-    await page.waitForFunction(() => !window.__game.scene.getScene('ui').hasDialog && window.__game.scene.isActive('game'), null, { timeout: 15000 });
+    await page.waitForFunction(() => !window.__game.scene.getScene('ui').hasDialog && window.__game.scene.isActive('game'), null, { timeout: 15000 }).catch(async () => {
+      throw new Error(`still held: ${JSON.stringify(await g(() => ({ d: window.__dialogi.slice(-3).map((q) => [q.title, q.buttons]), ui: window.__game.scene.getScene('ui').hasDialog, act: window.__game.scene.isActive('game'), paused: window.__game.scene.isPaused('game'), sleep: window.__game.loop.sleeping, obrot: document.documentElement.className })))}`);
+    });
     const t = await cel();
     console.log(`etap ${i + 1} ${z.typ}`, JSON.stringify(t));
     if (z.typ === 'zagadka' || z.typ === 'rozmowa' || z.typ === 'paragraf' || z.typ === 'decyzja') {
@@ -174,7 +176,8 @@ try {
       await E();
       await dialog(n);
       await wybierz(0);
-      await gotowa();
+      // Back on the surface the stage's closing dialog pauses the scene at once.
+      await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.city && !s.city.loch && s.firstViewReady?.() && (window.__game.scene.isActive('game') || window.__game.scene.isPaused('game')); }, null, { timeout: 120000 });
       await page.waitForTimeout(1500);
       await hook();
       await page.waitForFunction((id) => (window.__session.etap[id] ?? 0) > 0 && window.__dialogi.length > 0, misja.id, { timeout: 20000 });
