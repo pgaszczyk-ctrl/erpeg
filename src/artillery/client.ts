@@ -238,13 +238,23 @@ export class Artillery {
         }
       }
       if (art) {
-        const visible = near && this.host.visible(art.x, art.y);
-        art.visible = visible;
-        art.armata.setVisible(visible);
-        art.body.setVisible(visible && !art.model);
-        art.barrel.setVisible(visible && !art.model);
+        // A tall landmark: drawn whenever it is near, above the fog of war (owner, 1 Nov 2026); only using it
+        // needs the hero to see it.
+        art.visible = near && this.host.visible(art.x, art.y);
+        art.armata.setVisible(near);
+        art.body.setVisible(art.visible && !art.model);
+        art.barrel.setVisible(art.visible && !art.model);
       }
     }
+  }
+  /** Cannon pictures the fog of war must leave uncovered (FogView.update). */
+  odkryteWMgle() {
+    const out: NonNullable<Armata3D["wyciecie"]>[] = [];
+    for (const a of this.art.values()) {
+      const w = a.armata.wyciecie;
+      if (w) out.push(w);
+    }
+    return out;
   }
   private get swiatGotowy() {
     return swiatPromise !== null;
