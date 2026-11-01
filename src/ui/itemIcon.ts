@@ -19,8 +19,24 @@ const QUEST_PICTURES: Record<string, string> = { miecz_rekruta: 'zelazny', luk_r
 const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
 const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
 
+/**
+ * Order 45 (A+B): the artist's 64 px exports are machine reductions of smooth 1254 px drawings, so their diagonal
+ * edges step unevenly and look ragged when enlarged (owner, 1 Nov 2026). HTML windows show the original shrunk
+ * smoothly to 256 px (public/items_hd, image-rendering auto via CSS); Phaser keeps the 64 px file (`phaserItemUrl`).
+ */
+const HD = new Set([
+  'swietlisty', 'gromowladny', 'kolczuga', 'ksiega', 'czapka_maga', 'kapelusz', 'zelazny', 'stalowy',
+  'luk', 'luk_refleksyjny', 'dlugi_luk', 'rozdzka', 'kula', 'zlom', 'zlom_miedziany',
+]);
+
+/** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
+export function phaserItemUrl(id: string) {
+  return HD.has(id) ? `items/${id}.png` : itemAssetUrl(id);
+}
+
 /** Detailed illustrations released in 1.015, without resampling the original files. */
 export function itemAssetUrl(id: string) {
+  if (HD.has(id)) return `items_hd/${id}.png`;
   if (id === 'skorzana_zbroja') return 'proby31/skorzana_zbroja.png';
   return id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
 }
