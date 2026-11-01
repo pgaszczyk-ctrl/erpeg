@@ -25,6 +25,14 @@ export function itemAssetUrl(id: string) {
   return id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
 }
 
+/** Items with a 256 px picture from the artist's original (order 45) for big views: the Kufer's item card and the shop's preview. */
+const DUZE = new Set(['rycerski', 'korona', 'kijek', 'zelazny_helm']);
+/** The picture's URL for a big view (over 64 px), else the ordinary one. */
+export function itemLargeUrl(id: string): string | null {
+  const pic = pictureOf(id);
+  return DUZE.has(pic) ? `items/duze/${pic}.png` : itemPictureUrl(id);
+}
+
 /** Pictures that change with wear: the glass sword shows its cracks once a third of its blows is left (ikony12 B2). */
 const CRACKED: Record<string, string> = { szklany_miecz: 'szklany_miecz_pekniety' };
 /**

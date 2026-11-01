@@ -7,6 +7,7 @@ import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../conten
 /** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
 const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
+import { itemLargeUrl } from './itemIcon';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
@@ -738,6 +739,10 @@ function itemCard(id: string) {
   const head = el('div', 'c-card-head');
   const icon = el('span', 'c-card-icon');
   icon.append(slotIcon({ item: id }));
+  // Big item card: the artist's 256 px picture instead of enlarging the 64 px icon (order 45).
+  const big = card.classList.contains('weapon-card') ? itemLargeUrl(id) : null;
+  const pic = icon.querySelector('img');
+  if (big && pic && big !== pic.getAttribute('src')) { pic.src = big; pic.classList.add('item-hd'); }
   if (it?.jakosc !== undefined) { const dots = qualityDots(id); if (dots) icon.append(dots); }
   head.append(icon, el('div', 'c-card-name', it?.nazwa ?? id));
   card.append(head);
