@@ -4,13 +4,18 @@
 import Phaser from 'phaser';
 import type * as THREE from 'three';
 import { SKALA_POSTACI } from '../skala';
+import { PALETA_SWIATA } from '../content/paleta';
 
 export const ARMATA_3D = {
   plik: 'modele/armata_C.glb',
   /** The guard model is 1.25 units tall; the hero is 56 × 0.36 × SKALA_POSTACI map px. */
   straznikJednostek: 1.25,
-  /** Size multiplier over the artist's scale (1 = about four heroes tall). */
-  skala: 1,
+  /** Size multiplier over the artist's scale (1 = about four heroes tall; owner 1 Nov 2026: 30 % smaller). */
+  skala: 0.7,
+  /** Pixel art like the buildings (owner, 1 Nov 2026: „odrobinę rozpikselizuj”): the render is averaged into blocks of
+   *  this many canvas px, snapped to the world palette (PALETA_SWIATA), hard alpha, and outlined one block thick.
+   *  2 = one block per map px (the buildings' pixels are 0.5 map px, so a touch chunkier); 1 = palette only. */
+  piksel: 2,
   /** Camera angle above the horizon. The artist previewed at 60°; characters use 22°, which hides the muzzle. */
   pochylenie: 50,
   /** Canvas px per map px. */
@@ -111,6 +116,69 @@ function zabarwPasmami(three: typeof THREE, root: THREE.Object3D) {
     };
     m.material = Array.isArray(m.material) ? m.material.map(zamien) : zamien(m.material);
   });
+}
+
+const OBRYS_RGB = [0x1e, 0x1a, 0x24];
+const PALETA_RGB = PALETA_SWIATA.map((c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255]);
+const kolorPalety = new Map<number, number>();
+/** The nearest world-palette colour (cached by a 5-bit-per-channel key). */
+function naPalete(r: number, g: number, b: number) {
+  const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+  let i = kolorPalety.get(key);
+  if (i === undefined) {
+    let bd = Infinity;
+    i = 0;
+    for (let j = 0; j < PALETA_RGB.length; j++) {
+      const q = PALETA_RGB[j], e = 2 * (q[0] - r) ** 2 + 4 * (q[1] - g) ** 2 + 3 * (q[2] - b) ** 2;
+      if (e < bd) { bd = e; i = j; }
+    }
+    kolorPalety.set(key, i);
+  }
+  return PALETA_RGB[i];
+}
+
+/** In place: blocks of B×B px averaged (alpha-weighted), alpha ≥ ½ kept as an opaque palette colour, the rest cleared,
+ *  then one block of outline around the silhouette (8 neighbours). Blocks are counted from the canvas' bottom centre,
+ *  where the base stands, so the grid doesn't crawl when the frame size changes. */
+export function pikselizuj(d: Uint8ClampedArray, W: number, H: number, B: number) {
+  const ox = (Math.round(W / 2) % B), oy = H % B;
+  const bw = Math.ceil((W + B) / B), bh = Math.ceil((H + B) / B);
+  const pelny = new Uint8Array(bw * bh), kol = new Uint8Array(bw * bh * 3);
+  for (let by = 0; by < bh; by++)
+    for (let bx = 0; bx < bw; bx++) {
+      const x0 = bx * B - (B - ox) % B, y0 = by * B - (B - oy) % B;
+      let r = 0, g = 0, b = 0, a = 0, n = 0;
+      for (let y = Math.max(0, y0); y < Math.min(H, y0 + B); y++)
+        for (let x = Math.max(0, x0); x < Math.min(W, x0 + B); x++) {
+          const i = (y * W + x) * 4, al = d[i + 3] / 255;
+          r += d[i] * al; g += d[i + 1] * al; b += d[i + 2] * al; a += al; n++;
+        }
+      if (!n || a / n < 0.5) continue;
+      const q = naPalete(r / a, g / a, b / a), k = by * bw + bx;
+      pelny[k] = 1;
+      kol[k * 3] = q[0]; kol[k * 3 + 1] = q[1]; kol[k * 3 + 2] = q[2];
+    }
+  for (let by = 0; by < bh; by++)
+    for (let bx = 0; bx < bw; bx++) {
+      const k = by * bw + bx;
+      if (pelny[k]) continue;
+      let obok = false;
+      for (let v = -1; v <= 1 && !obok; v++)
+        for (let u = -1; u <= 1; u++) {
+          const x = bx + u, y = by + v;
+          if (x >= 0 && y >= 0 && x < bw && y < bh && pelny[y * bw + x] === 1) { obok = true; break; }
+        }
+      if (obok) {
+        pelny[k] = 2;
+        kol[k * 3] = OBRYS_RGB[0]; kol[k * 3 + 1] = OBRYS_RGB[1]; kol[k * 3 + 2] = OBRYS_RGB[2];
+      }
+    }
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const k = Math.floor((y + (B - oy) % B) / B) * bw + Math.floor((x + (B - ox) % B) / B), i = (y * W + x) * 4;
+      if (!pelny[k]) { d[i + 3] = 0; continue; }
+      d[i] = kol[k * 3]; d[i + 1] = kol[k * 3 + 1]; d[i + 2] = kol[k * 3 + 2]; d[i + 3] = 255;
+    }
 }
 
 /** Map px per model unit. */
@@ -287,7 +355,7 @@ export class Armata3D {
     this.narysuj();
   }
 
-  /** Renders the model and gives it the world's 1 map px dark outline. */
+  /** Renders the model, turns it into pixel art in the world's palette and gives it the dark outline. */
   private narysuj() {
     const g = wczytywanieGotowe;
     if (!g || !this.root || !this.textura || !this.tmp) return;
@@ -295,16 +363,16 @@ export class Armata3D {
     g.renderer.clear();
     g.renderer.render(g.scene, g.camera);
     g.scene.remove(this.root);
-    const t = this.tmp.getContext('2d')!;
+    const t = this.tmp.getContext('2d', { willReadFrequently: true })!;
     t.globalCompositeOperation = 'copy';
     t.drawImage(g.canvas, 0, 0);
-    t.globalCompositeOperation = 'source-in';
-    t.fillStyle = ARMATA_3D.obrys;
-    t.fillRect(0, 0, this.tmp.width, this.tmp.height);
-    const c = this.textura.context, r = ARMATA_3D.gestosc;
-    c.clearRect(0, 0, this.tmp.width, this.tmp.height);
-    for (const [dx, dy] of [[-r, 0], [r, 0], [0, -r], [0, r], [-r, -r], [r, r], [-r, r], [r, -r]]) c.drawImage(this.tmp, dx, dy);
-    c.drawImage(g.canvas, 0, 0);
+    t.globalCompositeOperation = 'source-over';
+    const W = this.tmp.width, H = this.tmp.height;
+    const obraz = t.getImageData(0, 0, W, H);
+    pikselizuj(obraz.data, W, H, Math.max(1, Math.round(ARMATA_3D.piksel)));
+    t.putImageData(obraz, 0, 0); // the silhouette for the shadow
+    const c = this.textura.context;
+    c.putImageData(obraz, 0, 0);
     this.textura.refresh();
     this.narysujCien();
   }

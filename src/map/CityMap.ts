@@ -1312,6 +1312,31 @@ export class CityMap {
     return !this.nearPath(x, y);
   }
 
+  /** Is any building (walkable sheds too) closer than r px to (x, y), or is the point inside one? */
+  buildingWithin(x: number, y: number, r: number) {
+    for (const b of this.buildingGrid.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })) {
+      if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) return true;
+      for (const ring of b.rings) {
+        if (ring.length < 4) continue;
+        if (distToPolyline(ring, x, y) < r) return true;
+        // Closing edge (rings are not repeated at the end).
+        const n = ring.length;
+        if (distToPolyline([ring[n - 2], ring[n - 1], ring[0], ring[1]], x, y) < r) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Buildings whose bounding box touches the box. */
+  buildingsIn(b: Box): Building[] {
+    return [...this.buildingGrid.query(b)];
+  }
+
+  /** Areas whose bounding box touches the box. */
+  areasIn(b: Box): Area[] {
+    return [...this.areaGrid.query(b)];
+  }
+
   /** Is a feet box of the given half size free at (x, y)? */
   isFree(x: number, y: number, hw: number, hh: number) {
     return !(

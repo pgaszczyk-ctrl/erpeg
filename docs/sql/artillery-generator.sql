@@ -128,9 +128,9 @@ begin
  if exists(select 1 from jsonb_array_elements(coalesce(v.snapshot->'enemies','[]'::jsonb)) e where coalesce((e->>'hp')::float,0)>0 and sqrt(power((e->>'x')::float-(v.snapshot->>'x')::float,2)+power((e->>'y')::float-(v.snapshot->>'y')::float,2))<120) then raise exception 'Finish combat first';end if;
  a=v.save->'tu';
  select * into h from ma_ll(a);
- if h.lat is null or ma_m(h.lat,h.lon,f.lat,f.lon)>330 then raise exception 'Come closer';end if;
+ if h.lat is null or ma_m(h.lat,h.lon,f.lat,f.lon)>990 then raise exception 'Come closer';end if;
  select * into q from ma_ll(p_dest);
- if q.lat is null or ma_m(q.lat,q.lon,d.lat,d.lon)>270 then raise exception 'Destination is unsafe';end if;
+ if q.lat is null or ma_m(q.lat,q.lon,d.lat,d.lon)>930 then raise exception 'Destination is unsafe';end if;
  dest=jsonb_build_object('m',p_dest->>'m','x',(p_dest->>'x')::float8,'y',(p_dest->>'y')::float8,'s',coalesce((p_dest->>'s')::float8,1.92));
  cena=greatest(1,floor(ma_m(f.lat,f.lon,d.lat,d.lon)/1000*13+0.5)::int);
  coins=coalesce((v.save->>'coins')::int,0);

@@ -8,7 +8,7 @@ import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
-import { Armata3D, punktySiatki } from "./armata3d";
+import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
 import { miejsceStacji, MIEJSCE_M } from "./miejsce";
 import { wSiatke } from "./ladowanie";
 import { RULES, type Network, type Stop } from "./network";
@@ -224,12 +224,13 @@ export class Artillery {
     for (const s of this.registry.stops) {
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
-      const g = this.city.fromLatLon(ll.lat, ll.lon),
-        near =
-          Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) <
-          1200 * PX_PER_M;
+      const g = this.city.fromLatLon(ll.lat, ll.lon);
       let art = this.art.get(s.id);
-      if (!art && near) {
+      // The cannon may stand up to MIEJSCE_M from its generated point (on a square or car park).
+      if (
+        !art &&
+        Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) < (1200 + MIEJSCE_M) * PX_PER_M
+      ) {
         const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
         if (p) {
           art = this.draw(p.x, p.y);
@@ -240,13 +241,13 @@ export class Artillery {
             a.model = true;
             a.body.setVisible(false);
             a.barrel.setVisible(false);
-            // Arriving by cannon: the landing net at the destination bounces.
           });
         }
       }
       if (art) {
         // A tall landmark: drawn whenever it is near, above the fog of war (owner, 1 Nov 2026); only using it
         // needs the hero to see it.
+        const near = Phaser.Math.Distance.Between(art.x, art.y, this.player.x, this.player.y) < 1200 * PX_PER_M;
         art.visible = near && this.host.visible(art.x, art.y);
         art.armata.setVisible(near);
         art.body.setVisible(art.visible && !art.model);
@@ -327,11 +328,11 @@ export class Artillery {
     const body = this.scene.add
         .graphics({ x, y })
         .setDepth(y + 1)
-        .setScale(0.4),
+        .setScale(0.4 * ARMATA_3D.skala),
       barrel = this.scene.add
         .graphics({ x, y: y - 4 })
         .setDepth(y + 3)
-        .setScale(0.65);
+        .setScale(0.65 * ARMATA_3D.skala);
     const ink = 0x252c30,
       brass = 0xd3a246;
     body.lineStyle(3, ink, 1);
@@ -431,6 +432,9 @@ export class Artillery {
     );
     for (const id of destinations) {
       const to = this.registry!.stops.find((s) => s.id === id)!;
+      // No square/car park ≥ 50 m from buildings there: that station has no cannon on this map.
+      const tll = this.ll(to);
+      if (this.city.hasLatLon(tll.lat, tll.lon) && miejsceStacji(this.city, to.id, tll.lat, tll.lon) === null) continue;
       const b = document.createElement("button");
       b.className = "m-btn";
       const m = metry(this.ll(s), this.ll(to)),
@@ -521,7 +525,13 @@ export class Artillery {
         g = city.fromLatLon(ll.lat, ll.lon);
       await city.ensure(g.x, g.y, (MIEJSCE_M + 200) * PX_PER_M);
       const p = miejsceStacji(city, to.id, ll.lat, ll.lon);
-      if (!p) throw Error("Destination is unsafe");
+      if (!p)
+        throw Error(
+          tx(
+            "Przy tamtej armacie nie ma bezpiecznego placu do lądowania. Nic nie zapłacono.",
+            "There is no safe square to land by that cannon. Nothing was charged.",
+          ),
+        );
       return { m: city.id, x: p.x, y: p.y, s: PX_PER_M };
     };
     const begin = async () => {
