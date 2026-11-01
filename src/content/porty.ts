@@ -11,8 +11,8 @@
 // ----------------------------------------------------------------------------
 
 export const PROM = {
-  /** Prędkość promu, km/h (ok. 19 węzłów). */
-  kmh: 35,
+  /** Prędkość promu, km/h (właściciel, 1.11.2026: 70, było 35). */
+  kmh: 70,
   /** Cena: opłata portowa + za każdy km drogi po wodzie, zaokrąglona w górę. */
   oplata: 150,
   zaKm: 6,

@@ -75,13 +75,17 @@ try {
       s.openPort(s.city.places.find((q) => q.kind === 'port'));
     });
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 10000 });
-    const text = await page.evaluate(() => {
-      const ui = window.__game.scene.getScene('ui');
-      return ui.dialogBox.list?.filter((o) => o.text).map((o) => o.text).join(' | ') ?? '';
-    });
+    // The text the dialog was given (the comic-frame dialog keeps it in nested containers).
+    const text = await page.evaluate(() => `${window.__ostatni.title} | ${window.__ostatni.text} | ${window.__ostatni.buttons.join(' | ')}`);
     console.log(name, 'dialog', text.replace(/\n/g, ' ').slice(0, 300));
     assert(/Wały Chrobrego/.test(text), 'The line is listed');
     assert(/Pytałeś o: Kopenhaga/.test(text), 'The answer to an earlier request');
+    // Speed and prices (content/porty.ts PROM: 70 km/h, 150 + 6/km rounded up to 10).
+    assert(/Prom płynie ok\. 70 km\/h/.test(text), 'ferry speed 70 km/h');
+    for (const m of text.matchAll(/• [^:]+: (\d+) km, (.+?) – (\d+) monet/g)) {
+      const km = +m[1];
+      assert(+m[3] >= Math.ceil((150 + (km - 0.5) * 6) / 10) * 10 && +m[3] <= Math.ceil((150 + (km + 0.5) * 6) / 10) * 10, `ferry price ${m[0]}`);
+    }
     await page.screenshot({ path: `work/porty-${name}-dialog.png` });
     const chooseLabel = async (prefix) => {
       const i = await page.evaluate((prefix) => window.__ostatni.buttons.findIndex((b) => b.startsWith(prefix)), prefix);
@@ -97,7 +101,7 @@ try {
     await chooseLabel('🧭');
     await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Atlantyda');
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => /Zajrzyj jutro/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
+    await page.waitForFunction(() => /Zajrzyj jutro/.test(`${window.__ostatni?.text ?? ''} ${window.__ostatni?.buttons?.join(' ') ?? ''}`), null, { timeout: 10000 });
     await page.screenshot({ path: `work/porty-${name}-inne.png` });
     assert.equal(asked.length, 1);
     assert.equal(asked[0].p_text, 'Atlantyda');
@@ -109,8 +113,8 @@ try {
     await chooseLabel('🧭');
     await page.locator('#prompt input, .prompt input, input[type=text]').first().fill('Kenia');
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => /Dar es Salaam/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
-    console.log(name, 'kenia', (await page.evaluate(() => window.__game.scene.getScene('ui').dialogBox.list.map((o) => o.text ?? '').join(' | '))).replace(/\n/g, ' ').slice(0, 400));
+    await page.waitForFunction(() => /Dar es Salaam/.test(`${window.__ostatni?.text ?? ''} ${window.__ostatni?.buttons?.join(' ') ?? ''}`), null, { timeout: 10000 });
+    console.log(name, 'kenia', (await page.evaluate(() => `${window.__ostatni.text} | ${window.__ostatni.buttons.join(' | ')}`)).replace(/\n/g, ' ').slice(0, 400));
     await page.screenshot({ path: `work/porty-${name}-kenia.png` });
     assert.equal(asked.length, 1, 'no request to us for a country the network reaches');
     await chooseLabel('Dobrze');

@@ -58,14 +58,14 @@ import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI, trudnoscZWieku, WYBOR_TRUDNOSCI } from '../content/trudnosc';
 import { DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
 import { STRZALY, AMUNICJA, type Amunicja } from '../content/zuzycie';
-import { WOZNICA } from '../content/pociagi';
+import { WOZNICA, POCIAG } from '../content/pociagi';
 import { Zabytki } from '../map/Zabytki';
 import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/swiat';
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
 import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
 import { worldOrigin, nearestLocality } from '../map/world';
-import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
+import { cachedMap, coachOffers, coachSide, rideKmh, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz, quizAnswered } from '../quizzes';
@@ -4507,12 +4507,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const where = (t: Trip) => (t.to.mapName === t.to.name || t.to.name.startsWith(t.to.mapName) ? t.to.name : `${t.to.name} (${t.to.mapName})`);
-    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km, ${session.immortal ? 'od razu' : rideText(t.km)} – ${t.gratis ? 'gratis 🎟' : `${t.price} monet`}${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
+    const lines = trips.map((t) => `• ${t.level ? '🚂 ' : ''}${where(t)}: ${t.km.toFixed(0)} km, ${session.immortal ? 'od razu' : rideText(t.km, 1, rideKmh(t.train))} – ${t.gratis ? 'gratis 🎟' : `${t.price} monet`}${t.level ? ` (od ${t.level}. poziomu)` : ''}`);
     const next = new Date(Math.ceil(Date.now() / 1_800_000) * 1_800_000);
     const hh = `${next.getHours()}:${String(next.getMinutes()).padStart(2, '0')}`;
     this.dialog({
       title,
-      text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}${free ? 'Za odzyskanego konia jeden kurs masz u mnie gratis! ' : ''}Dziś jadę tam:” Masz ${session.coins} monet.${cut < 1 ? ` Twoja zniżka: −${Math.round(WOZNICA.znizka * 100)}%.` : ''}\n\n${lines.join('\n')}\n\nJedziemy ok. 80 km/h. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
+      text: `„Wio, koniku! ${side ? `Jeżdżę ${STRONY[side]}. ` : ''}${free ? 'Za odzyskanego konia jeden kurs masz u mnie gratis! ' : ''}Dziś jadę tam:” Masz ${session.coins} monet.${cut < 1 ? ` Twoja zniżka: −${Math.round(WOZNICA.znizka * 100)}%.` : ''}\n\n${lines.join('\n')}\n\nKoniem jedziemy ok. ${WOZNICA.kmh} km/h${trips.some((t) => t.train) ? `, pociągiem 🚂 ok. ${POCIAG.kmh} km/h` : ''}. Po przyjeździe grę wczytasz już na tamtym peronie. Nowe kursy od ${hh}.`,
       buttons: [...trips.map((t) => `${t.level ? '🚂 ' : ''}${where(t)} – ${t.gratis ? 'gratis 🎟' : `${t.price} 💰`}`), `💎 Dowolne miasto, w którym byłeś`, ...(this.mamMapePodroznika() ? [] : [`🗺 Przepisz dworce z mapy – ${MAPA_PODROZNIKA.cena} 💰`]), 'Zostaję'],
       onChoose: (i) => {
         if (i === trips.length) return this.diamondRide(title);
@@ -4734,7 +4734,7 @@ export class GameScene extends Phaser.Scene {
           return;
         }
         const k = dist(to);
-        this.chooseSpeed(title, { to, km: k, via: null, price: 0 }, d.dowolneMiasto);
+        this.chooseSpeed(title, { to, km: k, via: null, price: 0, train: to.mapId.startsWith('w:') }, d.dowolneMiasto);
       },
     });
   }
@@ -4748,7 +4748,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.dialog({
       title,
-      text: `Zwykle: ${rideText(t.km)}. Za ${d.szybciej} 💎 więcej: ${rideText(t.km, d.razySzybciej)}.`,
+      text: `Zwykle: ${rideText(t.km, 1, rideKmh(t.train))}. Za ${d.szybciej} 💎 więcej: ${rideText(t.km, d.razySzybciej, rideKmh(t.train))}.`,
       buttons: ['Zwykle', `⚡ ${d.razySzybciej}× szybciej (+${d.szybciej} 💎)`],
       onChoose: (i) => this.payAndTravel(t, diamonds + (i === 1 ? d.szybciej : 0), i === 1 ? d.razySzybciej : 1),
     });
@@ -5693,14 +5693,14 @@ export class GameScene extends Phaser.Scene {
         await city.ensure(to.x, to.y, LOAD_RADIUS);
         // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
         session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
-        // The ride takes time (80 km/h in a straight line, journey.ts); its station is the load point at once.
+        // The ride takes time (WOZNICA/POCIAG km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();
           session.jazda = t.statek
             ? { from: here, to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times, PROM.kmh), statek: true }
-            : { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times), train: !!t.level || t.to.mapId.startsWith('w:') };
+            : { from: this.stationHere(), to: t.to.name, km: t.km, start, end: start + rideMs(t.km, times, rideKmh(t.train)), train: !!t.train };
           saveNow(this.player.hp).catch(() => {});
           await Promise.all([prepareMap(city), showJourney(session.jazda)]);
           session.jazda = null;

@@ -97,17 +97,27 @@ begin
 end $$;
 
 -- Who may fly (TEST characters for now).
+-- Coins per km of a cannon flight: the admin knob `armata_za_km` (game_settings), else 13 (src/artillery/generator.ts).
+create or replace function public.ma_za_km() returns float8 language plpgsql stable security definer set search_path='public' as $$
+declare v float8;
+begin
+ if to_regclass('public.game_settings') is not null then
+  execute 'select v from public.game_settings where k=''armata_za_km''' into v;
+ end if;
+ return greatest(0,least(10000,coalesce(v,13)));
+end $$;
+
 create or replace function public.ma_stan(p_token text) returns jsonb language plpgsql security definer set search_path='public','extensions' as $$
 declare v_id uuid;v_name text;
 begin
  select p.id,p.name into v_id,v_name from players p join public._player_by_token(p_token) auth on auth.id=p.id;
  if v_id is null then raise exception 'Session expired';end if;
- return jsonb_build_object('enabled',v_name in ('Arceus','Jam'),'zaKm',13,
+ return jsonb_build_object('enabled',v_name in ('Arceus','Jam'),'zaKm',public.ma_za_km(),
   'pending',(select to_jsonb(t) from ma_trips t where player=v_id and state='pending'));
 end $$;
 
 -- A flight between two linked generated stations. p_dest = where the game put the destination cannon (snapped near
--- its nominal point): {m, x, y, s}. Price = 13 coins per km between the nominal points.
+-- its nominal point): {m, x, y, s}. Price = ma_za_km() (default 13) coins per km between the nominal points.
 create or replace function public.ma_lot(p_token text,p_nonce uuid,p_from text,p_to text,p_dest jsonb) returns jsonb language plpgsql security definer set search_path='public','extensions' as $$
 declare v public.players;t public.ma_trips;coins int;a jsonb;cena int;city int;kf int;kt int;f record;d record;h record;q record;dest jsonb;
 begin
@@ -132,7 +142,7 @@ begin
  select * into q from ma_ll(p_dest);
  if q.lat is null or ma_m(q.lat,q.lon,d.lat,d.lon)>270 then raise exception 'Destination is unsafe';end if;
  dest=jsonb_build_object('m',p_dest->>'m','x',(p_dest->>'x')::float8,'y',(p_dest->>'y')::float8,'s',coalesce((p_dest->>'s')::float8,1.92));
- cena=greatest(1,floor(ma_m(f.lat,f.lon,d.lat,d.lon)/1000*13+0.5)::int);
+ cena=greatest(1,floor(ma_m(f.lat,f.lon,d.lat,d.lon)/1000*public.ma_za_km()+0.5)::int);
  coins=coalesce((v.save->>'coins')::int,0);
  if coins<cena then raise exception 'Not enough coins';end if;
  insert into ma_trips(player,nonce,origin,destination,state,price,coins_after,origin_at,destination_at,hero) values(v.id,p_nonce,p_from,p_to,'pending',cena,coins-cena,a,dest,coalesce(v.save->'artilleryHero','{}'::jsonb)) returning * into t;

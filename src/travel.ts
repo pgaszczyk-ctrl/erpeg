@@ -5,7 +5,7 @@ import { PIES, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
-import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
+import { DUZE_MIASTA, POWROT, WOZNICA, POCIAG } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
 import { takeResume } from './update';
@@ -37,9 +37,6 @@ export interface Trip {
   price: number;
 }
 
-/** Coins for a ride: a fixed fee plus a bit per kilometre. */
-export const COACH_FEE = 100;
-export const COACH_PER_KM = 30;
 /** How many destinations a coachman offers. */
 const MAX_TRIPS = 5;
 
@@ -222,7 +219,7 @@ export function nameWorldMap(id: string, name: string) {
   if (!worldNames.has(id)) worldNames.set(id, name);
 }
 
-export type Offer = Trip & { level?: number; statek?: boolean };
+export type Offer = Trip & { level?: number; statek?: boolean; train?: boolean };
 
 function hashStr(s: string) {
   let h = 2166136261;
@@ -234,8 +231,14 @@ function hashStr(s: string) {
 export type Strona = 'N' | 'S' | 'E' | 'W';
 export const STRONY: Record<Strona, string> = { N: 'na północ', S: 'na południe', E: 'na wschód', W: 'na zachód' };
 
-/** Price of a ride: the fee + per km, rounded up (content/pociagi.ts). */
-export const ridePrice = (d: number) => Math.ceil((COACH_FEE + d * COACH_PER_KM) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie;
+/** Price of a ride: the fee + per km, rounded up (content/pociagi.ts WOZNICA / POCIAG). */
+export const ridePrice = (d: number, train = false) => {
+  const t = train ? POCIAG : WOZNICA;
+  return Math.ceil((t.oplata + d * t.zaKm) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie;
+};
+
+/** Speed of a ride, km/h: a long-distance train or a coach. */
+export const rideKmh = (train?: boolean) => (train ? POCIAG.kmh : WOZNICA.kmh);
 
 const slotNow = () => Math.floor(Date.now() / (WOZNICA.zmianaCoMin * 60_000));
 
@@ -288,7 +291,7 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
     if (!c) return;
     const to: Stop = { name: c.nazwa, lat: c.lat, lon: c.lon, key: `w|${c.nazwa}`, mapId: cityMapId(c), mapName: c.nazwa };
     const d = km(here, to);
-    out.push({ to, km: d, via: null, price: ridePrice(d), level: WOZNICA.odPoziomu });
+    out.push({ to, km: d, via: null, price: ridePrice(d, true), level: WOZNICA.odPoziomu, train: true });
   };
   if (worldOrigin(mapId)) {
     // A far city: rides to other cities within reach (Lublin is just one of them); no forced way home.
@@ -304,7 +307,8 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
     for (const to of [nearest, other]) {
       if (!to) continue;
       const d = km(here, to);
-      out.push({ to, km: d, via: null, price: ridePrice(d), level: to.mapId === 'lublin' ? undefined : WOZNICA.odPoziomu });
+      // Between far cities (Lublin included) it's always a long-distance train.
+      out.push({ to, km: d, via: null, price: ridePrice(d, true), level: to.mapId === 'lublin' ? undefined : WOZNICA.odPoziomu, train: true });
     }
     return out;
   }
@@ -357,7 +361,7 @@ export function stopFor(mapId: string, name: string, lat?: number, lon?: number)
  * without timetable data, the nearest stations.
  */
 export function tripsFrom(from: Stop): Trip[] {
-  const price = ridePrice;
+  const price = (d: number) => ridePrice(d);
   const out = new Map<string, Trip>();
   const add = (to: Stop | undefined, via: string | null) => {
     if (!to || to.key === from.key) return;

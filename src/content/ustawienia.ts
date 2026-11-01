@@ -22,6 +22,16 @@ export interface Pokretlo {
 
 export const POKRETLA: Pokretlo[] = [
   { k: 'predkosc_kmh', grupa: 'Ruch', nazwa: 'Prędkość pieszo (km/h)', domyslnie: 70, min: 20, max: 150 },
+  { k: 'woznica_oplata', grupa: 'Podróże', nazwa: 'Woźnica: opłata za kurs (monet)', domyslnie: 100, min: 0, max: 100000 },
+  { k: 'woznica_za_km', grupa: 'Podróże', nazwa: 'Woźnica: za każdy km (monet)', domyslnie: 30, min: 0, max: 10000 },
+  { k: 'woznica_kmh', grupa: 'Podróże', nazwa: 'Woźnica: prędkość (km/h)', domyslnie: 80, min: 5, max: 2000 },
+  { k: 'pociag_oplata', grupa: 'Podróże', nazwa: 'Pociąg: opłata za kurs (monet)', domyslnie: 100, min: 0, max: 100000 },
+  { k: 'pociag_za_km', grupa: 'Podróże', nazwa: 'Pociąg: za każdy km (monet)', domyslnie: 15, min: 0, max: 10000 },
+  { k: 'pociag_kmh', grupa: 'Podróże', nazwa: 'Pociąg: prędkość (km/h)', domyslnie: 120, min: 5, max: 2000 },
+  { k: 'prom_oplata', grupa: 'Podróże', nazwa: 'Statek: opłata portowa (monet)', domyslnie: 150, min: 0, max: 100000 },
+  { k: 'prom_za_km', grupa: 'Podróże', nazwa: 'Statek: za każdy km (monet)', domyslnie: 6, min: 0, max: 10000 },
+  { k: 'prom_kmh', grupa: 'Podróże', nazwa: 'Statek: prędkość (km/h)', domyslnie: 70, min: 5, max: 2000 },
+  { k: 'armata_za_km', grupa: 'Podróże', nazwa: 'Armata: za każdy km (monet)', domyslnie: 13, min: 0, max: 10000 },
   { k: 'wskrzeszenie_diamenty', grupa: 'Diamenty', nazwa: 'Wskrzeszenie kosztuje (💎)', domyslnie: 10, min: 1, max: 1000 },
   { k: 'diament_monet', grupa: 'Diamenty', nazwa: 'Diament w banku kosztuje (monet)', domyslnie: 1_000_000, min: 1000, max: 1e9, krok: 1000 },
   { k: 'ceny_przedmiotow', grupa: 'Ceny', nazwa: 'Ceny przedmiotów w sklepach (× mnożnik)', domyslnie: 1, min: 0.1, max: 10, krok: 0.05 },
