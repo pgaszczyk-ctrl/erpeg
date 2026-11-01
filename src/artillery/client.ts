@@ -9,7 +9,7 @@ import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
 import { Armata3D } from "./armata3d";
-import { RULES, type Network, type Stop } from "./network";
+import { RULES, cenaLotu, type Network, type Stop } from "./network";
 import { getMap, prepareMap, nameWorldMap } from "../travel";
 import { resetKeys, resetTouch } from "../controls";
 export type Registry = Network & {
@@ -375,16 +375,15 @@ export class Artillery {
       const to = this.registry!.stops.find((s) => s.id === id)!;
       const b = document.createElement("button");
       b.className = "m-btn";
-      const known = this.state.discovered.includes(id),
+      const price = cenaLotu(this.ll(s), this.ll(to)),
+        km = Math.hypot(to.x - s.x, to.y - s.y) / 1000,
         available =
           this.state.enabled &&
-          this.state.discovered.includes(s.id) &&
           this.state.version === this.registry!.version &&
           !to.disabled &&
-          known &&
-          session.coins >= this.state.price &&
+          session.coins >= price &&
           !this.host.combat();
-      b.textContent = `${to.name} · ${this.state.price} ${tx("monet", "coins")}${!known ? " · " + tx("nieodkryty", "undiscovered") : ""}`;
+      b.textContent = `${to.name} · ${km.toFixed(1).replace(".", tx(",", "."))} km · ${price} ${tx("monet", "coins")}`;
       b.disabled = !available;
       b.onclick = () => {
         if (this.host.combat()) return;
@@ -402,8 +401,8 @@ export class Artillery {
             "This station awaits network approval and travel service activation.",
           )
         : tx(
-            "Najpierw odwiedź cel pieszo. Podróże służą także do szybkich powrotów.",
-            "Visit a destination on foot first. Travel also provides quick return journeys.",
+            `Cena zależy od odległości: ${RULES.perKm} monet za kilometr.`,
+            `The price depends on distance: ${RULES.perKm} coins per kilometre.`,
           );
     box.append(p);
     const b = document.createElement("button");

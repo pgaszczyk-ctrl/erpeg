@@ -259,6 +259,9 @@ try {
     await page.screenshot({ path: `work/artillery/${tag}-panel.png` });
     const launch = page.locator("#artillery-panel button").first();
     assert(await launch.isEnabled());
+    // Price by distance (13 coins/km, owner 1 Nov 2026): the two fixture stops are 1.1 km apart.
+    const label = await launch.textContent();
+    assert.match(label, /1[,.]1 km · 14 mone?t|1[,.]1 km · 14 coins/, "price by km: " + label);
     await launch.click();
     await page
       .getByRole("button", { name: "Ponów tę samą podróż" })

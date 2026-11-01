@@ -70,8 +70,18 @@ export const RULES = {
   airportDegree: 2,
   airportMaxM: 22000,
   price: 5,
+  /** Coins per kilometre of a cannon flight (owner, 1 Nov 2026), rounded to whole coins. */
+  perKm: 13,
 };
 export type Rules = typeof RULES;
+/** Flight price between two stops by straight-line km (same formula as SQL ma_price). */
+export function cenaLotu(a: { lat: number; lon: number }, b: { lat: number; lon: number }, perKm = RULES.perKm) {
+  const lat = ((a.lat + b.lat) / 2) * Math.PI / 180,
+    dx = (b.lon - a.lon) * 111320 * Math.cos(lat),
+    dy = (b.lat - a.lat) * 111132,
+    km = Math.hypot(dx, dy) / 1000;
+  return Math.max(1, Math.floor(km * perKm + 0.5));
+}
 export const distance = (a: Point, b: Point) =>
   Math.hypot(a.x - b.x, a.y - b.y);
 export function inside(p: Point, rings: Point[][]) {
