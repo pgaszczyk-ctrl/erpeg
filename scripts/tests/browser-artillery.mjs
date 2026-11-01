@@ -260,16 +260,28 @@ try {
     const launch = page.locator("#artillery-panel button").first();
     assert(await launch.isEnabled());
     await launch.click();
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `work/artillery/${tag}-start-${String(i).padStart(2, "0")}.png` });
+    }
     await page
       .getByRole("button", { name: "Ponów tę samą podróż" })
       .waitFor({ timeout: 30000 });
     assert.equal(chargeCount, 1);
     await page.screenshot({ path: `work/artillery/${tag}-lost-response.png` });
     await page.getByRole("button", { name: "Ponów tę samą podróż" }).click();
+    // Frames of the flight (take-off, clouds, landing) for a look.
+    for (let i = 0; i < 30; i++) {
+      await page.waitForTimeout(350);
+      if (!(await page.evaluate(() => !!document.getElementById("artillery-flight") || window.__game.scene.getScene("game").travelling))) break;
+      await page.screenshot({ path: `work/artillery/${tag}-lot-${String(i).padStart(2, "0")}.png` });
+    }
     await page.waitForFunction(
       () =>
         !document.getElementById("artillery-flight") &&
-        Math.abs(window.__game.scene.getScene("game").player.x - 4992) < 10,
+        !window.__game.scene.getScene("game").travelling &&
+        // Hops out of the net next to the cannon (exit spot east of it).
+        Math.abs(window.__game.scene.getScene("game").player.x - 4992) < 70,
       null,
       { timeout: 60000 },
     );

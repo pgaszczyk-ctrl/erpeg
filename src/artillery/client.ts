@@ -8,7 +8,8 @@ import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
-import { Armata3D } from "./armata3d";
+import { Armata3D, punktySiatki } from "./armata3d";
+import { wSiatke } from "./ladowanie";
 import { RULES, type Network, type Stop } from "./network";
 import { getMap, prepareMap, nameWorldMap } from "../travel";
 import { resetKeys, resetTouch } from "../controls";
@@ -47,6 +48,12 @@ type Host = {
   hero: () => string | string[] | undefined;
   restart: (city: CityMap) => Promise<void>;
   toast: (s: string) => void;
+  /** Where a map point is on screen (share of the view) and CSS px per map px. */
+  kadr: (x: number, y: number) => { fx: number; fy: number; px: number };
+  /** A picture of the map without the HUD. */
+  zdjecie: () => Promise<HTMLCanvasElement | null>;
+  /** The scene's current hero and cannons (they are new after a restart). */
+  obecna: () => { player: Player; artillery?: Artillery };
 };
 export const artilleryTransit = { active: false };
 let recovery: Receipt | null = null;
@@ -149,13 +156,14 @@ export class Artillery {
   private next = 0;
   private discovering = new Set<string>();
   private opened = false;
+  private loaded: Promise<void> = Promise.resolve();
   constructor(
     private scene: Phaser.Scene,
     private city: CityMap,
     private player: Player,
     private host: Host,
   ) {
-    if (TEST && !offline.demo && !city.loch) void this.load();
+    if (TEST && !offline.demo && !city.loch) this.loaded = this.load();
   }
   private async load() {
     this.registry = await loadRegistry(
@@ -209,8 +217,6 @@ export class Artillery {
           a.model = true;
           a.body.setVisible(false);
           a.barrel.setVisible(false);
-          // Arriving by cannon: the landing net at the destination bounces.
-          if (artilleryTransit.active && Math.hypot(a.x - this.player.x, a.y - this.player.y) < 80 * PX_PER_M) a.armata.lap();
         });
       }
       if (art) {
@@ -258,6 +264,39 @@ export class Artillery {
       lon: r.origin.lon + s.x / r.projection.mLon,
       lat: r.origin.lat - s.y / r.projection.mLat,
     };
+  }
+  /** The station nearest a point (an arrival by cannon), made at once and waited for (≤ 4 s), even while the trip
+   *  holds the game (update() doesn't run then). */
+  async stacjaPrzy(x: number, y: number) {
+    await this.loaded;
+    if (!this.registry || this.dead) return null;
+    let best: { s: Stop; x: number; y: number; d: number } | null = null;
+    for (const s of this.registry.stops) {
+      if (s.disabled) continue;
+      const ll = this.ll(s);
+      if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
+      const p = this.city.fromLatLon(ll.lat, ll.lon), d = Math.hypot(p.x - x, p.y - y);
+      if (d < 120 * PX_PER_M && (!best || d < best.d)) best = { s, x: p.x, y: p.y, d };
+    }
+    if (!best) return null;
+    let art = this.art.get(best.s.id);
+    if (!art) {
+      art = this.draw(best.x, best.y);
+      this.art.set(best.s.id, art);
+    }
+    const a = art;
+    const ok = await Promise.race([a.armata.ready, new Promise<boolean>((r) => setTimeout(() => r(false), 4000))]);
+    if (this.dead) return null;
+    if (ok) {
+      a.model = true;
+      a.body.setVisible(false);
+      a.barrel.setVisible(false);
+    }
+    a.visible = true;
+    a.armata.setVisible(true);
+    a.body.setVisible(!a.model);
+    a.barrel.setVisible(!a.model);
+    return a;
   }
   at(x: number, y: number, r = 26) {
     for (const [id, a] of this.art)
@@ -426,6 +465,9 @@ export class Artillery {
     session.artilleryHero = carry;
     const station=this.art.get(from.id);
     const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    this.host.toast(tx(`Armata celuje w: ${to.name}`, `The cannon aims at: ${to.name}`));
+    const llCel=this.ll(to),pCel=this.city.fromLatLon(llCel.lat,llCel.lon);
+    const kat=station?Math.atan2(pCel.y-station.y,pCel.x-station.x):0;
     if(station?.model){
       // The artist's cannon: turn to the target, the hero climbs into the barrel, the shot – then the flight scene.
       const ll=this.ll(to),p=this.city.fromLatLon(ll.lat,ll.lon);
@@ -438,7 +480,10 @@ export class Artillery {
       if(still)station.barrel.rotation=turn;
       else {await new Promise<void>(resolve=>this.scene.tweens.add({targets:station.barrel,rotation:turn,duration:650,ease:'Sine.easeInOut',onComplete:()=>resolve()}));await new Promise<void>(resolve=>this.scene.tweens.add({targets:this.player,x:station.x+Math.cos(angle)*7,y:station.y-4+Math.sin(angle)*7,duration:350,ease:'Sine.easeInOut',onComplete:()=>resolve()}));}
     }
-    const overlay = flight(this.host.hero(), message);
+    // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
+    const shot = await this.host.zdjecie();
+    const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
+    const overlay = flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,
@@ -485,7 +530,6 @@ export class Artillery {
       // The same live hero/GLB/equipment remain: no appearance or inventory reconstruction.
       session.hp = hp;
       await this.host.restart(city);
-      await overlay.land();
       const settled = await rpc<Receipt>("ma_settle", {
         p_token: session.token,
         p_nonce: nonce,
@@ -493,9 +537,21 @@ export class Artillery {
       });
       if (settled.state !== "done") throw Error("Trip not completed");
       session.stats.spent += settled.price;
+      // Landing: the destination's cannon and net, a picture of that map for the zoom-in, then the net on the real map.
+      const now = this.host.obecna(), hero = now.player;
+      const cel = await now.artillery?.stacjaPrzy(hero.x, hero.y);
+      const off = punktySiatki();
+      const net = cel ? { x: cel.x + off.siatka.dx, y: cel.y + off.siatka.dy } : { x: hero.x, y: hero.y };
+      let exit = cel ? { x: cel.x + off.wyjscie.dx, y: cel.y + off.wyjscie.dy } : { x: hero.x, y: hero.y };
+      if (!city.isFree(exit.x, exit.y, 10, 10)) exit = { x: hero.x, y: hero.y };
+      hero.setAlpha(0);
+      const view = await this.host.zdjecie();
+      await overlay.land({ shot: view, ...this.host.kadr(net.x, net.y), cel: to.name });
+      overlay.close();
+      await wSiatke(this.scene, hero, net, exit, cel?.model ? cel.armata : undefined, still);
+      this.host.toast(tx(`Złapany w siatkę! Witaj: ${to.name}`, `Caught in the net! Welcome to ${to.name}`));
       artilleryTransit.active = false;
       this.host.hold(false);
-      overlay.close();
     };
     try {
       const a = this.art.get(from.id),
