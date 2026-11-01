@@ -28,7 +28,7 @@
     },
     "zadanie": {
       "typ": "zagadka",
-      "miejsce": "51.24770, 22.56800",
+      "miejsce": "51.24765, 22.56800",
       "postac": {
         "imie": {
           "pl": "Pisarz Trybunału",
@@ -74,7 +74,7 @@
     "etapy": [
       {
         "typ": "zagadka",
-        "miejsce": "51.24770, 22.56800",
+        "miejsce": "51.24765, 22.56800",
         "postac": {
           "imie": {
             "pl": "Pisarz Trybunału",
@@ -280,7 +280,7 @@
       },
       {
         "typ": "loch",
-        "miejsce": "51.25075, 22.53286",
+        "miejsce": "51.25068, 22.53286",
         "loch": {
           "rodzaj": "podziemia",
           "nazwa": {

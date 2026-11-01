@@ -5,12 +5,12 @@ import json, pathlib
 def t(pl, en):
     return {"pl": pl, "en": en}
 
-TRYBUNAL_PLAC = "51.24770, 22.56800"
+TRYBUNAL_PLAC = "51.24765, 22.56800"
 KRYPTA = "51.25880, 22.57720"
 KALINA = "51.25590, 22.58610"
 FARA = "51.24891, 22.56926"
 WAWOZ = ["51.25383, 22.53599", "51.25453, 22.53659", "51.25486, 22.53690"]
-MLYN = "51.25075, 22.53286"
+MLYN = "51.25068, 22.53286"
 ZAMEK = "Zamek w Lublinie"
 
 AGATA = {"imie": t("Wdowa Agata", "Widow Agata"), "kobieta": True}
