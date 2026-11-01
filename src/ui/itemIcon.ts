@@ -38,6 +38,10 @@ const HD = new Set([
   'zegarek_czeladnika', 'filtr_aetherowy', 'zlota_pilka', 'paczek', 'hamburger',
   'jablko', 'sliwka', 'winogrono', 'marchewka', 'brokul', 'salata', 'grzyb', 'kiel', 'luska',
   'esencja_dab', 'esencja_mroz', 'mikstura', 'namiot',
+  // C1 (weapons, shields, boots, talisman, hats)
+  'rycerski', 'miecz_mosiezny', 'szabla_hartowana', 'karabela_damascenska', 'szklany_miecz', 'szklany_miecz_pekniety',
+  'kusza', 'pistolet_parowy', 'siekiera', 'tarcza_drewniana', 'tarcza_okuta', 'skorzany_helm', 'skorzane_buty',
+  'zelazne_buty', 'podkowa_szczescia', 'cukierniczy_cylinder',
 ]);
 
 /** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
