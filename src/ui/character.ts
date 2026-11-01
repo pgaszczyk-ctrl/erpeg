@@ -7,7 +7,7 @@ import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../conten
 /** Goods groups opened in Kufer → Zasoby (kept while the game runs). */
 const openGroups = new Set<Grupa>();
 import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
-import { rzeczUrl } from './itemIcon';
+import { rzeczUrl, itemAssetUrl } from './itemIcon';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
   gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
@@ -477,14 +477,14 @@ function show(host: CharacterHost) {
     s.append(gold);
     if (session.diamenty) {
       const pic = document.createElement('img');
-      pic.src = `${import.meta.env.BASE_URL}items/diament.png`;
+      pic.src = `${import.meta.env.BASE_URL}${itemAssetUrl('diament')}`;
       s.append(line(pic, 'Diamenty', session.diamenty, 4));
     }
     const obrazek = (url: string | null, zast: string) => (url ? Object.assign(document.createElement('img'), { src: url, alt: '' }) : zast);
     s.append(line(obrazek(rzeczUrl('mikstura'), '🧪'), 'Mikstury', session.mikstury, 4));
     for (const k of ownedAmmo()) {
       const pic = document.createElement('img');
-      pic.src = `${import.meta.env.BASE_URL}items/${k}.png`;
+      pic.src = `${import.meta.env.BASE_URL}${itemAssetUrl(k)}`;
       pic.className = 'k-res-pic';
       s.append(line(pic, AMUNICJA[k].nazwa, gear.ammo[k], 3));
     }

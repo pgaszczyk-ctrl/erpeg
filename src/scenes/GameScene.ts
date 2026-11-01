@@ -8,7 +8,7 @@ import { legacyText, dialogueMetadata } from '../content/questy/text';
 import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
-import { itemPictureUrl, goodsPicture, itemTexture } from '../ui/itemIcon';
+import { itemPictureUrl, goodsPicture, itemTexture, itemAssetUrl } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale, peakTexture } from '../art';
@@ -6507,7 +6507,7 @@ export class GameScene extends Phaser.Scene {
         category: 'services', picture: itemPictureUrl(id), description: 'Przywróć przedmiotowi pełną wytrzymałość.',
         stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', badge: '↻' })),
       ...packs.map(({ k, n }, i): ShopEntry => ({ id: `ammo:${k}:${n}`, index: tools.length + fixes.length + i,
-        name: `${AMUNICJA[k].nazwa} +${n}`, category: 'ammo', picture: `items/${k}.png`,
+        name: `${AMUNICJA[k].nazwa} +${n}`, category: 'ammo', picture: itemAssetUrl(k),
         description: 'Uzupełnij zapas amunicji.', stats: [['Masz', `${gear.ammo[k]}/${STRZALY.kolczan}`],
           ['W zestawie', String(n)], ['Po zakupie', `${gear.ammo[k] + n}/${STRZALY.kolczan}`]],
         price: n * AMUNICJA[k].cena, action: 'KUP' })),

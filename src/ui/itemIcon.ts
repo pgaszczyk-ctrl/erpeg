@@ -42,6 +42,10 @@ const HD = new Set([
   'rycerski', 'miecz_mosiezny', 'szabla_hartowana', 'karabela_damascenska', 'szklany_miecz', 'szklany_miecz_pekniety',
   'kusza', 'pistolet_parowy', 'siekiera', 'tarcza_drewniana', 'tarcza_okuta', 'skorzany_helm', 'skorzane_buty',
   'zelazne_buty', 'podkowa_szczescia', 'cukierniczy_cylinder',
+  // C2 (the artist sent ready 256 px versions): ammo, materials, vehicles, crops, group icons
+  'strzaly', 'belty', 'naboje', 'ladunek_magii', 'drewno', 'chrust', 'kij', 'kilof', 'wegiel', 'ruda_zelaza', 'miedz',
+  'piasek', 'odlamek_komety', 'sztaba_zelaza', 'sztaba_stali', 'sztaba_mosiadzu', 'szklo', 'ogniwo', 'ogniwo_puste',
+  'diament', 'rower', 'hulajnoga_parowa', 'ziemniak', 'kapusta', 'burak', 'dynia', 'grupa_owoce', 'grupa_warzywa', 'grupa_grzyby',
 ]);
 
 /** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
@@ -76,12 +80,12 @@ const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = {
   drewno: 'drewno', chrust: 'chrust', ruda_zelaza: 'ruda_zelaza',
   // Order 45 D
   jablko: 'jablko', sliwka: 'sliwka', winogrono: 'winogrono', marchewka: 'marchewka', brokul: 'brokul', salata: 'salata',
-  grzyb: 'grzyb', kiel: 'kiel', luska: 'luska',
+  grzyb: 'grzyb', kiel: 'kiel', luska: 'luska', ziemniak: 'ziemniak', kapusta: 'kapusta', burak: 'burak', dynia: 'dynia',
   // Backpack groups instead of the bright, detailed emoji (owner, 5 Oct 2026): the artist's apple (HUD pack) and
   // Noto emoji run through docs/paczka-dla-artysty/8_wyrownanie/wyrownaj.py (24 px, world palette, outline; sources
   // in scripts/ikony-grup/), centred in 32×32 and shown 2× like the other icons.
-  // Since order 45 D (1 Nov 2026) the groups use the artist's new apple/carrot/mushroom (grupa_* files kept).
-  owoce: 'jablko', warzywa: 'marchewka', grzyby: 'grzyb',
+  // Order 45 C2 (1 Nov 2026): the artist's own group icons.
+  owoce: 'grupa_owoce', warzywa: 'grupa_warzywa', grzyby: 'grupa_grzyby',
 };
 
 /** The picture URL of a backpack good or goods group, if it has one. */
