@@ -45,6 +45,8 @@ export interface Budynek09 {
 }
 
 export interface Zlecenie {
+  /** Keep old footprints for nature placement; omit only old building artwork/shadows. */
+  hideArchitecture?: boolean;
   ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean;
   /** Drzewa ścięte w tej sesji (idDrzewa): zamiast pnia pieniek, bez korony i cienia. */
   sciete: string[];
@@ -126,9 +128,9 @@ function zapamietaj(klucz: string, b: ReturnType<typeof budynek>) {
 }
 
 /** Budynki i pnie drzew: cienie na ziemi, potem wszystko od północy na południe (dach kopertowy z kalenicami, ściany, okna; pień). */
-function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean, sciete: Set<string>, miasto: WielkoscMiasta, wyrzuty: ZrodloPary[]) {
+function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], drzewa: Drzewo09[], noc: boolean, sciete: Set<string>, miasto: WielkoscMiasta, wyrzuty: ZrodloPary[], hideArchitecture = false) {
   const cien = new Uint8Array(o.w * o.h);
-  for (const b of budynki) cienBudynku(b.r, b.h, cien, o.w, o.h, X0, Y0);
+  if (!hideArchitecture) for (const b of budynki) cienBudynku(b.r, b.h, cien, o.w, o.h, X0, Y0);
   for (const t of drzewa) if (!sciete.has(idDrzewa(t))) cienDrzewa(t, cien, o.w, o.h, X0, Y0);
   for (let k = 0; k < cien.length; k++) if (cien[k] && o.px[k]) o.px[k] = ciemniej(o.px[k]);
   const lista: [number, Budynek09 | Drzewo09][] = [
@@ -144,7 +146,7 @@ function malujBudynki(o: Obraz, X0: number, Y0: number, budynki: Budynek09[], dr
       naloz(o, pien, rzecz.x - d.kotwica[0] - X0, rzecz.y - d.kotwica[1] - Y0);
       continue;
     }
-    malujBudynek(o, X0, Y0, rzecz, noc, miasto, wyrzuty);
+    if (!hideArchitecture) malujBudynek(o, X0, Y0, rzecz, noc, miasto, wyrzuty);
   }
 }
 
@@ -321,7 +323,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
   const wyrzuty: ZrodloPary[] = [];
-  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete, z.miasto ?? 'srednie', wyrzuty);
+  if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete, z.miasto ?? 'srednie', wyrzuty, z.hideArchitecture);
   const swoje = drzewa.filter((t) => t.x >= X0 && t.y >= Y0 && t.x < X0 + N && t.y < Y0 + N && !sciete.has(idDrzewa(t)));
   // Zmarszczki na wodzie (gra je animuje): kratka 14 px, z dala od brzegu, co trzecia–czwarta.
   const fale: [number, number][] = [];

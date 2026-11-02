@@ -1,0 +1,176 @@
+[
+  {
+    "sourceLevels": 1,
+    "file": "heights/1.png",
+    "levels": 1,
+    "wallHeight": 10.395000000000001,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -21,
+      "width": 92,
+      "height": 91,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "sourceLevels": 3,
+    "file": "heights/3.png",
+    "levels": 1,
+    "wallHeight": 10.395000000000001,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -21,
+      "width": 92,
+      "height": 91,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "sourceLevels": 4,
+    "file": "heights/4.png",
+    "levels": 2,
+    "wallHeight": 20.790000000000003,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -31.333333333333332,
+      "width": 92,
+      "height": 122,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "sourceLevels": 6,
+    "file": "heights/6.png",
+    "levels": 2,
+    "wallHeight": 20.790000000000003,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -31.333333333333332,
+      "width": 92,
+      "height": 122,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "sourceLevels": 7,
+    "file": "heights/7.png",
+    "levels": 3,
+    "wallHeight": 31.185000000000002,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -41.666666666666664,
+      "width": 92,
+      "height": 153,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "sourceLevels": 11,
+    "file": "heights/11.png",
+    "levels": 3,
+    "wallHeight": 31.185000000000002,
+    "door": [
+      -3.061467458920724,
+      7.391036260090292
+    ],
+    "center": [
+      0,
+      0
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -15.333333333333334,
+      "y": -41.666666666666664,
+      "width": 92,
+      "height": 153,
+      "density": 3,
+      "projection": 0.72
+    }
+  }
+]

@@ -443,6 +443,17 @@ export interface Uprawa09 { id: string; x: number; y: number; veg: string; /** T
 
 
 export class MapRenderer {
+  /** Read-only ground crop for architecture shadow colours. No terrain pixels are rewritten. */
+  groundSample(x:number,y:number,width:number,height:number):Uint8ClampedArray|null {
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d')!;ctx.imageSmoothingEnabled=false;let any=false;
+    for(const [key,c]of this.chunks){
+      const [cx,cy]=key.split(',').map(Number),px=cx*CHUNK,py=cy*CHUNK;
+      if(px+CHUNK<x||py+CHUNK<y||px>x+width||py>y+height||c.paintedVer!==c.ver)continue;
+      ctx.drawImage(c.tex.canvas,px-x,py-y,CHUNK,CHUNK);any=true;
+    }
+    return any?ctx.getImageData(0,0,width,height).data:null;
+  }
   private chunks = new Map<string, Chunk>();
   private free: Chunk[] = [];
   /** Test2 reports allocated pixel storage; this is not total browser/GPU memory. */
@@ -485,7 +496,7 @@ export class MapRenderer {
     return this.map.places.length > 150 ? 'srednie' : 'wies';
   }
 
-  constructor(private scene: Phaser.Scene, private map: CityMap) {
+  constructor(private scene: Phaser.Scene, private map: CityMap, private architectureOnly = false) {
     this.korony = new Korony(scene);
     this.wysokie = new Wysokie(scene, this.korony);
     const off = map.onTile((b) => {
@@ -841,7 +852,7 @@ export class MapRenderer {
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),
         h: k.poziomy * k.poziom,
         poziom: k.poziom,
-        osobno: !zabytek && k.poziomy >= POZIOMY.osobnoOd,
+        osobno: !this.architectureOnly && !zabytek && k.poziomy >= POZIOMY.osobnoOd,
         id: b.id,
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
@@ -886,7 +897,7 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
+    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
   }
 
   /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */

@@ -1,0 +1,212 @@
+[
+  {
+    "name": "Collegium Jana Pawła II",
+    "file": "massing/0.png",
+    "main": 1,
+    "connectors": 0,
+    "levels": 3,
+    "door": [
+      -11.085943830419128,
+      -2.6496730456886652
+    ],
+    "center": [
+      1.0012374047232082,
+      1.5307026761188545
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -25,
+      "y": -61.333333333333336,
+      "width": 150,
+      "height": 268,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Collegium Norwidianum",
+    "file": "massing/1.png",
+    "main": 1,
+    "connectors": 0,
+    "levels": 2,
+    "door": [
+      -1.8790736947900761,
+      5.397904161635404
+    ],
+    "center": [
+      1.5202607463537918,
+      -4.8352081212093285
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -37.333333333333336,
+      "y": -39.333333333333336,
+      "width": 224,
+      "height": 165,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Gmach Główny KUL",
+    "file": "massing/2.png",
+    "main": 4,
+    "connectors": 0,
+    "levels": 2,
+    "door": [
+      -10.118547282436207,
+      -14.27920245490806
+    ],
+    "center": [
+      5.215609885326669,
+      -9.227648616528734
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -45.333333333333336,
+      "y": -64.33333333333333,
+      "width": 275,
+      "height": 314,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Szczytowa 11",
+    "file": "massing/3.png",
+    "main": 7,
+    "connectors": 2,
+    "levels": 2,
+    "door": [
+      16.87611035079737,
+      1.4986473148145905
+    ],
+    "center": [
+      -1.2211206791333664,
+      -2.3842260696855453
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -60,
+      "y": -67,
+      "width": 291,
+      "height": 367,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Dziewanny 10",
+    "file": "massing/4.png",
+    "main": 3,
+    "connectors": 2,
+    "levels": 1,
+    "door": [
+      -4.6725305081963455,
+      2.8556492205905397
+    ],
+    "center": [
+      0.5480675106581469,
+      0.9338301329170579
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -24.666666666666668,
+      "y": -44.666666666666664,
+      "width": 200,
+      "height": 201,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Dziewanny 9",
+    "file": "massing/5.png",
+    "main": 4,
+    "connectors": 1,
+    "levels": 2,
+    "door": [
+      5.838249443735826,
+      2.5321472918728034
+    ],
+    "center": [
+      1.2716341556833781,
+      1.2475048078460569
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -25.666666666666668,
+      "y": -62.666666666666664,
+      "width": 140,
+      "height": 319,
+      "density": 3,
+      "projection": 0.72
+    }
+  },
+  {
+    "name": "Dziewanny 14",
+    "file": "massing/6.png",
+    "main": 2,
+    "connectors": 1,
+    "levels": 2,
+    "door": [
+      -2.6435615909134995,
+      -0.18552040474192388
+    ],
+    "center": [
+      1.897229846760445,
+      0.9079205983603411
+    ],
+    "openings": {
+      "doorWidth": 6.125000000000001,
+      "doorHeight": 7.875000000000001,
+      "windowWidth": 3.9375,
+      "windowHeight": 3.375,
+      "spacing": 9.296875
+    },
+    "raster": {
+      "x": -23.333333333333332,
+      "y": -39,
+      "width": 172,
+      "height": 186,
+      "density": 3,
+      "projection": 0.72
+    }
+  }
+]

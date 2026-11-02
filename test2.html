@@ -13,13 +13,21 @@
     <div id="lab-game"></div>
     <div id="lab-ui">
       <header>
-        <div class="brand"><strong>EXP-LORE <span>TEST2</span></strong><small>Próba rzutu · stare budynki</small></div>
+        <div class="brand"><strong>EXP-LORE <span>TEST2</span></strong><small>Architektura · pixel art z OSM</small></div>
         <nav aria-label="Rzut mapy"><a id="normal-view">Obecny</a><a id="iso-view">Niższy kąt</a></nav>
         <button id="panel-toggle" aria-expanded="false" aria-controls="lab-panel">Pomiary</button>
       </header>
       <section id="lab-panel" hidden>
-        <p>Dotychczasowe budynki i grafiki z OSM. „Niższy kąt” skraca obraz mapy w pionie; przełącznik pozwala od razu porównać oba rzuty w tym samym miejscu. To próba kamery, bez walki i zapisywania postaci.</p>
+        <p>Nowe budynki z danych OSM, wspólnej palety i regionalnych stylów. Porównaj oba warianty w tym samym miejscu. Laboratorium bez logowania i zapisu postaci.</p>
+        <div class="architecture-controls">
+          <label>Budynki<select id="arch-mode"><option value="1">Nowe</option><option value="0">Dotychczasowe</option></select></label>
+          <label>Skala<select id="building-scale"><option value="1">Obrys z mapy</option><option value="2">2,0×</option><option value="1.5">1,5×</option></select></label>
+          <label>Kąty<select id="angle-snap"><option value="22.5">Co 22,5°</option><option value="0">Wzdłuż ulicy</option></select></label>
+          <label>Kontur<select id="outline-mode"><option value="1">Włączony</option><option value="0">Wyłączony</option></select></label>
+          <label>Style i źródła<select id="style-overlay"><option value="0">Ukryte</option><option value="1">Pokaż</option></select></label>
+        </div>
         <div class="locations"><button data-location="station">Dworzec Lublin</button><button data-location="homes">Domy w Lublinie</button><button data-location="krakow">Kraków · mapa świata</button></div>
+        <div class="locations"><button data-location="oldtown">Stare Miasto</button><button data-location="apartments">Osiedle</button><button data-location="kul">KUL</button><button data-location="dziewanny">Dziewanny</button><button data-location="szczytowa">Szczytowa</button><button data-location="industrial">Przemysł</button><button data-location="bergen">Bergen</button><button data-location="seville">Sewilla</button><button data-location="kyoto">Kioto</button></div>
         <form id="coordinates"><label>Szerokość geogr.<input id="lat" type="number" step="any" min="-85" max="85" required></label><label>Długość geogr.<input id="lon" type="number" step="any" min="-180" max="180" required></label><button>Przejdź · mapa świata</button></form>
         <div id="metrics" aria-live="off"></div>
         <p class="fine">Pamięć pikseli to część zużycia: przeglądarka, grafika i procesy w tle przechowują dodatkowe dane. Obrysy mapy nadal gromadzą się podczas długiego spaceru. FPS tutaj nie obejmuje walki ani pełnej obsady gry.</p>
@@ -29,6 +37,7 @@
     <div id="walk-hint">Przeciągnij, aby iść · na komputerze WASD / strzałki</div>
     <div id="zoom-controls"><button id="zoom-out" aria-label="Oddal widok">−</button><button id="zoom-in" aria-label="Przybliż widok">+</button></div>
     <div id="stick" hidden><i></i></div>
+    <a id="osm-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a>
     <script type="module" src="/src/test2/main.ts"></script>
   </body>
 </html>

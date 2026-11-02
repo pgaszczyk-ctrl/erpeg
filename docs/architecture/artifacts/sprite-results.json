@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "variants": 21,
+  "families": 7,
+  "frames": 126,
+  "dimensions": [
+    288,
+    1344
+  ],
+  "opaque_colors": 11,
+  "binary_alpha": true,
+  "all_colors_in_palette": true,
+  "atlas_sha256": "ceeb7e1848f149ba3abcee10835bb6048ae957ebf4f17ed522446acdf98e83b6"
+}

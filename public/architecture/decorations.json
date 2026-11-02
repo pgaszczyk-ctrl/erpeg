@@ -1,0 +1,269 @@
+{
+  "version": 1,
+  "frame_width": 48,
+  "frame_height": 64,
+  "frames_per_variant": 6,
+  "variants": 3,
+  "anchor": [
+    24,
+    54
+  ],
+  "palette": "palette.png",
+  "alpha": "binary",
+  "outline": 0,
+  "animation_ms": 160,
+  "entries": [
+    {
+      "kind": "boiler",
+      "variant": 0,
+      "row": 0,
+      "frames": 6,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "boiler",
+      "variant": 1,
+      "row": 1,
+      "frames": 6,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "boiler",
+      "variant": 2,
+      "row": 2,
+      "frames": 6,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tesla",
+      "variant": 0,
+      "row": 3,
+      "frames": 4,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tesla",
+      "variant": 1,
+      "row": 4,
+      "frames": 4,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tesla",
+      "variant": 2,
+      "row": 5,
+      "frames": 4,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "chimney",
+      "variant": 0,
+      "row": 6,
+      "frames": 6,
+      "anchor_type": "chimney",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "chimney",
+      "variant": 1,
+      "row": 7,
+      "frames": 6,
+      "anchor_type": "chimney",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "chimney",
+      "variant": 2,
+      "row": 8,
+      "frames": 6,
+      "anchor_type": "chimney",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "water-tower",
+      "variant": 0,
+      "row": 9,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "water-tower",
+      "variant": 1,
+      "row": 10,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "water-tower",
+      "variant": 2,
+      "row": 11,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tank",
+      "variant": 0,
+      "row": 12,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tank",
+      "variant": 1,
+      "row": 13,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "tank",
+      "variant": 2,
+      "row": 14,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "valve",
+      "variant": 0,
+      "row": 15,
+      "frames": 1,
+      "anchor_type": "wall",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "valve",
+      "variant": 1,
+      "row": 16,
+      "frames": 1,
+      "anchor_type": "wall",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "valve",
+      "variant": 2,
+      "row": 17,
+      "frames": 1,
+      "anchor_type": "wall",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "turret",
+      "variant": 0,
+      "row": 18,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "turret",
+      "variant": 1,
+      "row": 19,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    },
+    {
+      "kind": "turret",
+      "variant": 2,
+      "row": 20,
+      "frames": 1,
+      "anchor_type": "ridge",
+      "anchor": [
+        24,
+        54
+      ],
+      "maximum_overhang_fraction": 0.3
+    }
+  ]
+}
