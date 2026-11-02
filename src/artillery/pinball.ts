@@ -1,11 +1,15 @@
 import { tx } from "../i18n";
 import { resetKeys, resetTouch } from "../controls";
 import { audio } from "../sfx";
+import { Hala, HALA, Tor, kulociagGotowy, postacZ, wczytajKulociag, type Postac } from "./kulociag";
 
 // The underground pinball ride (owner, 2 Nov 2026: in metro cities instead of the cannon): the hero, in a glass ball,
 // sits on the spring of a launcher in a brick chamber under the hatch; the spring is pulled and lets go, the ball shoots
 // into brass tubes and rushes past flashing bumpers while the destination loads, then steam brakes slow it into the
-// arrival chamber and light falls from the opening hatch. Same interface as flight.ts. Code-drawn until the artist's.
+// arrival chamber and light falls from the opening hatch. Same interface as flight.ts.
+// Since the artist's pack 48-G001 (owner, 2 Nov 2026) the launch and the arrival happen in his station hall
+// (kulociag.ts: lane 0 = the hero, the spring holds until the destination is loaded, then the impulse shot); only the
+// tubes between stations are still code-drawn (no tunnel art yet). Without the hall's pictures: the old code chamber.
 
 export const PINBALL = {
   /** Spring pulled back, then let go. */
@@ -21,12 +25,39 @@ export const PINBALL = {
   kula: 0.11,
   tekstRury: 1700,
   tekstWczytuje: 4000,
+  ciemnienieMs: 600,
+  /** Wait at most this long for the hall's pictures before falling back to the code chamber. */
+  czekajNaHaleMs: 2500,
+  /** After the shot: the WHOOP! stays this long, then the view goes dark (ciemnienieMs) into the arrival hall. */
+  poWystrzaleMs: 2000,
+  /** Reduced motion: the arrival hall stays this long. */
+  przyjazdStillMs: 1200,
 };
 
 const INK = "#1e1a24";
 const ease = (t: number) => t * t * (3 - 2 * t);
 const easeOut = (t: number) => 1 - (1 - t) * (1 - t);
 const clamp = (t: number) => Math.max(0, Math.min(1, t));
+
+/** The shot's whoosh: a burst of noise swept from low to high through a band filter, with a short spring twang. */
+function swist() {
+  const a = audio();
+  if (!a) return;
+  const n = Math.floor(a.sampleRate * 0.7), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = buf;
+  f.type = "bandpass";
+  f.Q.value = 2.5;
+  f.frequency.setValueAtTime(300, a.currentTime);
+  f.frequency.exponentialRampToValueAtTime(2600, a.currentTime + 0.45);
+  g.gain.setValueAtTime(0.0001, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.35, a.currentTime + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.7);
+  src.connect(f).connect(g).connect(a.destination);
+  src.start();
+  ding(330);
+}
 
 function ding(freq: number) {
   const a = audio();
@@ -45,6 +76,7 @@ export function pinball(
   hero: string | string[] | undefined,
   describe: (e: unknown) => string = (e) => (e instanceof Error ? e.message : String(e)),
   cel = "",
+  stacje: { z?: string; krajZ?: string | null; krajDo?: string | null } = {},
 ) {
   resetKeys();
   resetTouch();
@@ -77,13 +109,47 @@ export function pinball(
       text.classList.remove("znika");
     }, 220);
   };
-  pisz(tx("Komnata wyrzutni – sprężyna się napina…", "The launcher chamber – the spring tightens…"));
+  if (!kulociagGotowy()) pisz(tx("Schodzisz do hali Kulociągu…", "Down into the Ballway hall…"));
 
   const klatki = (Array.isArray(hero) ? hero : hero ? [hero] : []).map((src) => {
     const i = new Image();
     i.src = src;
     return i;
   });
+
+  // The hero as a passenger of the artist's ball: each frame's opaque box, filled as the pictures load.
+  const bohater: Postac[] = [];
+  klatki.forEach((i) => {
+    const dodaj = () => { if (i.naturalWidth) bohater.push(postacZ(i)); };
+    if (i.complete) dodaj();
+    else i.addEventListener("load", dodaj, { once: true });
+  });
+  const hala = new Hala(!still);
+  hala.stacja(stacje.z ?? "", stacje.krajZ ?? null);
+  let tryb: "hala" | "kod" | null = kulociagGotowy() ? "hala" : null;
+  let etap: "hala" | "przyjazd" = "hala";
+  let tPrzyjazd = 0, poWystrzale = 0;
+  let koniecPrzyjazdu: (() => void) | null = null;
+  const zacznijHale = () => {
+    tryb = "hala";
+    hala.tory[0].depart(bohater, false);
+    if (still) hala.tory[0].update(10);
+    pisz(
+      stacje.z
+        ? tx(`Kulociąg Parowy – stacja ${stacje.z}. Siłowniki ściskają sprężynę…`, `Steam Ballway – ${stacje.z} station. The pistons press the spring…`)
+        : tx("Kulociąg Parowy – siłowniki ściskają sprężynę…", "Steam Ballway – the pistons press the spring…"),
+    );
+  };
+  const decyzja = new Promise<void>((ok) => {
+    if (tryb) return ok();
+    const zegar = setTimeout(() => { if (!tryb) tryb = "kod"; ok(); }, PINBALL.czekajNaHaleMs);
+    void wczytajKulociag().then((jest) => {
+      clearTimeout(zegar);
+      if (!tryb) jest ? zacznijHale() : (tryb = "kod");
+      ok();
+    });
+  });
+  if (tryb === "hala") zacznijHale();
 
   let W = 0, H = 0, dpr = 1;
   const rozmiar = () => {
@@ -216,11 +282,115 @@ export function pinball(
     ctx.globalAlpha = 1;
   };
 
+  let tKod = 0;
+  /** Comic „WHOOP!” burst over the view: pops in, wobbles, fades out (screen px). */
+  const whoop = (od: number) => {
+    if (od > PINBALL.poWystrzaleMs + PINBALL.ciemnienieMs) return;
+    const wej = still ? 1 : easeOut(clamp(od / 160));
+    const zn = clamp((od - (PINBALL.poWystrzaleMs - 400)) / 400);
+    const m = Math.min(W, H);
+    const x = W * 0.5, y = H * 0.32;
+    const sk = (0.4 + 0.75 * wej) * (1 + (still ? 0 : Math.sin(od / 70) * 0.03 * (1 - zn)));
+    ctx.save();
+    ctx.globalAlpha = 1 - zn;
+    ctx.translate(x, y);
+    ctx.rotate(-0.12);
+    ctx.scale(sk, sk);
+    const R = m * 0.2;
+    // Starburst.
+    ctx.beginPath();
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * Math.PI * 2, rr = i % 2 ? R * 0.68 : R * (1.02 + ((i * 7) % 5) * 0.03);
+      ctx.lineTo(Math.cos(a) * rr * 1.45, Math.sin(a) * rr * 0.82);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "#1e1a24";
+    ctx.translate(5, 5);
+    ctx.fill();
+    ctx.translate(-5, -5);
+    ctx.fillStyle = "#f2c230";
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#1e1a24";
+    ctx.stroke();
+    const tekst = tx("WHOOP!", "WHOOSH!");
+    ctx.font = `900 ${Math.round(R * 0.55)}px 'Alegreya Sans', Impact, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(4, R * 0.08);
+    ctx.strokeStyle = "#1e1a24";
+    ctx.strokeText(tekst, 0, 0);
+    ctx.fillStyle = "#d8323c";
+    ctx.fillText(tekst, 0, 0);
+    ctx.restore();
+  };
+  /** The hall fitted to the view: covers it, but crops at most ~15 % so the sign and the launcher stay in sight. */
+  const rysujHale = (now: number) => {
+    const sc = Math.max(W / HALA.w, H / HALA.h), sn = Math.min(W / HALA.w, H / HALA.h);
+    const s = Math.min(sc, sn * 1.18);
+    // Cropped sideways (narrow views): keep the hero's launcher (x ≈ 1028) near the middle.
+    const iw = HALA.w * s;
+    const ox = iw <= W ? (W - iw) / 2 : Math.min(0, Math.max(W - iw, W / 2 - 1000 * s));
+    const oy = (H - HALA.h * s) / 2;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#141216";
+    ctx.fillRect(0, 0, W, H);
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
+    ctx.imageSmoothingEnabled = s * dpr < 0.95;
+    hala.draw(ctx);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    const t0r = etap === "przyjazd" ? now - tPrzyjazd : 0;
+    if (etap === "przyjazd" && t0r < 450) {
+      ctx.globalAlpha = 1 - t0r / 450;
+      ctx.fillStyle = "#141216";
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+    const p0 = hala.tory[0].phase;
+    if (etap === "hala") {
+      if (!poWystrzale && (p0 === "recoil" || p0 === "empty") && hala.tory[0].ready) {
+        poWystrzale = now;
+        pisz(tx("PSTRYK! Kula mknie w rurę…", "PING! The ball shoots into the tube…"));
+        swist();
+      }
+      if (poWystrzale) {
+        // Owner, 2 Nov 2026: no tube ride after the shot – a whoosh and a comic WHOOP!, then the dark and the arrival.
+        const od = now - poWystrzale;
+        whoop(od);
+        const u = clamp((od - PINBALL.poWystrzaleMs) / PINBALL.ciemnienieMs);
+        if (u > 0) {
+          ctx.globalAlpha = ease(u);
+          ctx.fillStyle = "#141216";
+          ctx.fillRect(0, 0, W, H);
+          ctx.globalAlpha = 1;
+        }
+        if (u >= 1) przyjazd(now);
+      } else if (!poWystrzale && !napisWczytuje && now - t0 > PINBALL.tekstWczytuje) {
+        napisWczytuje = true;
+        pisz(tx("Sprężyna trzyma – zwrotnice ustawiają tor do celu…", "The spring holds – the switches set the track…"));
+      }
+    } else if (etap === "przyjazd" && koniecPrzyjazdu && (still ? now - tPrzyjazd > PINBALL.przyjazdStillMs : p0 === "idle")) {
+      const done = koniecPrzyjazdu;
+      koniecPrzyjazdu = null;
+      done();
+    }
+  };
+  const przyjazd = (now: number) => {
+    if (etap === "przyjazd") return;
+    etap = "przyjazd";
+    tPrzyjazd = now;
+    hala.stacja(cel, stacje.krajDo ?? null);
+    hala.tory[0] = new Tor(0, hala.tory[0].x);
+    if (!still) hala.tory[0].arrive(bohater);
+    pisz(cel ? tx(`Hamulce parowe! Stacja: ${cel}`, `Steam brakes! Station: ${cel}`) : tx("Hamulce parowe!", "Steam brakes!"));
+  };
   let napisRury = false, napisWczytuje = false;
   const klatka = (now: number) => {
     if (koniec) return;
     raf = requestAnimationFrame(klatka);
-    const dt = Math.min(0.05, (now - ostatnio) / 1000);
+    const dt = Math.max(0, Math.min(0.05, (now - ostatnio) / 1000));
     ostatnio = now;
     const t = now - t0;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -228,11 +398,27 @@ export function pinball(
     const r = Math.min(W, H) * PINBALL.kula;
     const cx = W / 2;
 
-    if (!lad && t < PINBALL.komnataMs && !still) {
+    if (!tryb) {
+      // Waiting a moment for the hall's pictures.
+      ctx.fillStyle = "#141216";
+      ctx.fillRect(0, 0, W, H);
+      return;
+    }
+    if (tryb === "hala") {
+      if (!still) hala.update(dt);
+      rysujHale(now);
+      return;
+    }
+    if (tryb === "kod" && !tKod) {
+      tKod = now;
+      pisz(tx("Komnata wyrzutni – sprężyna się napina…", "The launcher chamber – the spring tightens…"));
+    }
+    const tk = now - (tKod || t0);
+    if (tryb === "kod" && !lad && tk < PINBALL.komnataMs && !still) {
       // The chamber: brick walls, a launch lane with brass rails, the spring under the ball.
       cegly(0);
-      const napiecie = ease(clamp(t / PINBALL.napinanieMs));
-      const strzal = clamp((t - PINBALL.napinanieMs) / PINBALL.wystrzalMs);
+      const napiecie = ease(clamp(tk / PINBALL.napinanieMs));
+      const strzal = clamp((tk - PINBALL.napinanieMs) / PINBALL.wystrzalMs);
       if (strzal > 0 && !wystrzelony) {
         wystrzelony = true;
         pisz(tx("PSTRYK!", "PING!"));
@@ -367,6 +553,16 @@ export function pinball(
     launch() {},
     /** Steam brakes slow the ball into the arrival chamber; resolves when the hatch's light fills the view. */
     async land(k: { cel: string }) {
+      await decyzja;
+      if (tryb === "hala") {
+        if (k.cel) cel = k.cel;
+        await new Promise<void>((done) => {
+          koniecPrzyjazdu = done;
+          hala.tory[0].ready = true;
+          if (still) przyjazd(performance.now());
+        });
+        return;
+      }
       const zostalo = t0 + PINBALL.minJazdaMs - performance.now();
       if (!still && zostalo > 0) await new Promise((r) => setTimeout(r, zostalo));
       pisz(

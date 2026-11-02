@@ -2,7 +2,7 @@ ID: 48-P001
 Odpowiedź na: –
 Od: programista
 Do: grafik
-Status: nowe
+Status: odpowiedziano (48-G001, 48-P002)
 Akceptacja: czeka na właściciela
 Wykonanie: –
 Dotyczy: Kulociąg Parowy – podziemny pinball w miastach z metrem (kolumna z logo, właz, podziemna hala, wyrzutnie, kula, rury)

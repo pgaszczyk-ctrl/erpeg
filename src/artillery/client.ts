@@ -12,6 +12,7 @@ import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
 import { miejsceStacji, miejsceWlazu, MIEJSCE_MAKS_M, type Wysun } from "./miejsce";
 import { Wlaz } from "./wlaz";
 import { pinball } from "./pinball";
+import { krajWPunkcie } from "../kraj";
 import { maMetro } from "../content/metro";
 import { zWlazu } from "./ladowanie";
 import { wSiatke } from "./ladowanie";
@@ -297,6 +298,11 @@ export class Artillery {
     }
     this.art.clear();
   }
+  /** The country a station stands in (the Ballway hall's floor mosaic shows its flag). */
+  private krajStacji(s: Stop) {
+    const ll = this.ll(s);
+    return krajWPunkcie(ll.lat, ll.lon);
+  }
   private ll(s: Stop) {
     const r = this.registry!;
     return {
@@ -552,7 +558,7 @@ export class Artillery {
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
     const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = metro ? pinball(this.host.hero(), message, to.name) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to) }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,
