@@ -1,3 +1,4 @@
+import { stylRegionu } from '../content/styleRegionow';
 import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
@@ -480,6 +481,18 @@ export class MapRenderer {
   private patterns?: Patterns;
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
+  /** Styl regionu świata dla budynku (kraj z jego położenia), pamiętany na mapie. Mapy bez położenia: Polska. */
+  private regiony = new WeakMap<Building, string>();
+  private regionBudynku(b: Building): string {
+    let r = this.regiony.get(b);
+    if (r === undefined) {
+      const m = this.map, x = b.rings[0]?.[0] ?? 0, y = b.rings[0]?.[1] ?? 0;
+      const ll = m.loch ? null : m.toLatLon(x, y);
+      r = ll && Number.isFinite(ll.lat) ? stylRegionu(ll.lat, ll.lon).id : 'umiarkowany';
+      this.regiony.set(b, r);
+    }
+    return r;
+  }
 
   /** The view's middle last frame, and which way it last moved (−1/0/1 on each axis). */
   private lastMid = { x: NaN, y: NaN };
@@ -857,6 +870,7 @@ export class MapRenderer {
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
+        region: this.regionBudynku(b),
       };
     });
     const G2 = GEN_DOTS;

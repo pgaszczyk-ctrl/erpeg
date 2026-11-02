@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { budynek, ksztaltBudynku } from '../src/gen/budynki';
 const blend = (d: number, c: number) => { const t = (c >>> 24) / 255, m = (s: number) => Math.round(((d >>> s) & 255) + (((c >>> s) & 255) - ((d >>> s) & 255)) * t); return ((255 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)) >>> 0; };
-import { hex } from '../src/gen/wspolne';
+import { stylPoId } from '../src/content/styleRegionow';
+import { hex, hash } from '../src/gen/wspolne';
 const G = 3.84, X0 = -110 * G, Y0 = -77 * G, W = Math.round(220 * G), H = Math.round(154 * G);
 const px = new Uint32Array(W * H).fill(hex('#7d7a74'));
 const bud = JSON.parse(readFileSync('.cache/starowka.json', 'utf8')) as { rings: number[][][]; lv?: string }[];
@@ -14,7 +15,9 @@ for (const { b, i, r } of items) {
   let a = 0; const o = b.rings[0]; for (let k = 0; k < o.length; k++) { const p = o[k], q = o[(k + 1) % o.length]; a += p[0] * q[1] - q[0] * p[1]; }
   const k = ksztaltBudynku(Number(b.lv) || 3, Math.abs(a) / 2), poziom = Math.max(13, Math.round(k.poziom * 0.56 * 1.3));
   const ring = r[0].slice(0, -2), pts = ring; let cx = 0, cy = 0, best = -1e9; for (let j = 0; j < pts.length; j += 2) if (pts[j + 1] > best) { best = pts[j + 1]; cx = pts[j]; cy = pts[j + 1]; }
-  const img = budynek(ring, { wysokosc: k.poziomy * poziom, poziom, dach: DACH[i % 5], sciana: SCI[(i * 3) % 5], seed: i * 7 + 1, drzwi: [cx, cy], dziury: r.slice(1).map((h) => h.slice(0, -2)), komin: i % 3 === 0 });
+  const R = stylPoId(process.env.REGION), pick = (l: [string, number][], u: number) => { let t = u * l.reduce((a, [, w]) => a + w, 0); for (const [k, w] of l) if ((t -= w) < 0) return k; return l[0][0]; };
+  const plaski = hash(i * 7 + 1, 11, 7) < R.plaskie ? true : undefined;
+  const img = budynek(ring, { wysokosc: k.poziomy * poziom, poziom, dach: process.env.REGION ? pick(R.dachy, hash(i, 3, 91)) : DACH[i % 5], sciana: process.env.REGION ? pick(R.sciany, hash(i, 5, 17)) : SCI[(i * 3) % 5], plaski, dachPlaski: plaski ? R.dachPlaski : undefined, seed: i * 7 + 1, drzwi: [cx, cy], dziury: r.slice(1).map((h) => h.slice(0, -2)), komin: i % 3 === 0 });
   for (let j = 0; j < img.obraz.h; j++) for (let x = 0; x < img.obraz.w; x++) { const c = img.obraz.px[j * img.obraz.w + x]; if (c >>> 24) { const X = Math.round(img.x0 + x - X0), Y = Math.round(img.y0 + j - Y0 - k.poziomy * poziom); if (X >= 0 && Y >= 0 && X < W && Y < H) px[Y * W + X] = blend(px[Y * W + X], c); } }
 }
 const S = 2, w = W * S, h = H * S, raw = Buffer.alloc((w * 4 + 1) * h);

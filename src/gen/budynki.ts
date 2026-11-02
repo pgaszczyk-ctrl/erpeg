@@ -99,6 +99,21 @@ export const MATERIALY: Record<string, Material> = {
   cegla: M(['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c'], '#3a1e1a', 'cegla'),
   drewno: M(['#3e2a1c', '#5a3e28', '#765436', '#926c46', '#ae8858'], '#2e2016', 'deski'),
   kamien: M(['#4c4848', '#666060', '#807a78', '#9a9490', '#b4aea8'], '#3a3636', 'kamien'),
+  // ——— style regionalne (src/content/styleRegionow.ts) ———
+  dachowka_terakota: M(['#6e341c', '#944626', '#b65c34', '#cc7648', '#de9462'], '#eab07c', 'dachowka'),
+  dachowka_glazura: M(['#1c2430', '#283444', '#36465a', '#4a5e74', '#64788e'], '#a8b8c8', 'dachowka'),
+  dachowka_glazura_zielona: M(['#1e3a2c', '#2a5038', '#3a6a48', '#4e865c', '#6aa274'], '#c8a040', 'dachowka'),
+  strzecha: M(['#5a4220', '#7a5a2c', '#9a7638', '#b89448', '#d0ae60'], '#e0c478', 'gont'),
+  blacha_falista: M(['#4a4c50', '#62656a', '#7c8086', '#989ca2', '#b4b8bc'], '#d0d4d8', 'blacha'),
+  blacha_rdzawa: M(['#4e2a1a', '#6e3c22', '#8c5030', '#a86840', '#c08458'], '#d49a70', 'blacha'),
+  tynk_bialy: M(['#8a8680', '#b4b0a8', '#d4d0c6', '#e6e2d8', '#f4f0e6'], '#6a665e', 'gladki'),
+  tynk_ochra: M(['#7a4e24', '#a0682e', '#c4843c', '#d89c52', '#e8b46c'], '#5a3818', 'gladki'),
+  tynk_piaskowy: M(['#7a6040', '#a08058', '#c0a070', '#d4b886', '#e4cc9c'], '#5a4630', 'gladki'),
+  tynk_terakota: M(['#6a3020', '#8c4028', '#ac5436', '#c46c48', '#d6865e'], '#4a2016', 'gladki'),
+  tynk_blekitny: M(['#3a5068', '#4e6a88', '#6888a6', '#86a4c0', '#a6c0d6'], '#2a3a4c', 'gladki'),
+  tynk_rozowy: M(['#7a4a50', '#a0626a', '#c07e84', '#d49a9e', '#e4b6b8'], '#5a3438', 'gladki'),
+  drewno_czerwone: M(['#4a1814', '#6a221a', '#8a2e22', '#a43c2c', '#bc5038'], '#e8e0d0', 'deski'),
+  drewno_zolte: M(['#6e5420', '#94722c', '#b8903a', '#ccaa52', '#dcc06c'], '#e8e0d0', 'deski'),
 };
 const MOSIADZ = ['#6b4a22', '#9a6420', '#c8963e', '#e9c56a'].map(hex);
 const SZYBA = ['#2a3450', '#56709a'].map(hex), SWIATLO = ['#d9a84a', '#f2d888'].map(hex);
@@ -119,6 +134,8 @@ export interface OpcjeBudynku {
   ozdoby?: string[];
   /** Dach płaski z attyką (domyślnie tylko przy 3 poziomach gry). */
   plaski?: boolean;
+  /** Materiał (klucz MATERIALY) płaskiego dachu zamiast palety DACHY_PLASKIE – np. glina w krajach suchych. */
+  dachPlaski?: string;
   /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
   poziom?: number;
 }
@@ -323,9 +340,9 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       }
       c = D.tony[t];
       if (PLASKI) { // dach płaski (wysokie budynki): attyka – jasny brzeg, ciemny pas cienia pod nią, papa z lekką fakturą, świetliki
-        const P = DACHY_PLASKIE[op.seed % DACHY_PLASKIE.length];
-        c = d < 1.5 ? P[4] : d < 2.5 ? (lum > 0.05 ? P[3] : P[0]) : d < 3.5 && lum > 0.05 ? P[1] : (hash(x >> 1, y >> 1, op.seed) < 0.08 ? P[3] : P[2]);
-        if (d > 6 && Math.floor(x / 9) % 3 === 0 && Math.floor(y / 6) % 4 === 1 && (x % 9) < 4 && (y % 6) < 3) c = (y % 6) === 0 ? P[4] : SZYBA[1];
+        const P = op.dachPlaski && MATERIALY[op.dachPlaski] ? MATERIALY[op.dachPlaski].tony : DACHY_PLASKIE[op.seed % DACHY_PLASKIE.length];
+        c = d < 1.5 ? P[4] : d < 2.5 ? (lum > 0.05 ? P[3] : P[0]) : d < 3.5 && lum > 0.05 ? P[1] : (!op.dachPlaski && hash(x >> 1, y >> 1, op.seed) < 0.08 ? P[3] : P[2]);
+        if (!op.dachPlaski && d > 6 && Math.floor(x / 9) % 3 === 0 && Math.floor(y / 6) % 4 === 1 && (x % 9) < 4 && (y % 6) < 3) c = (y % 6) === 0 ? P[4] : SZYBA[1];
       } else {
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
       if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
