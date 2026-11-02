@@ -1,0 +1,68 @@
+{
+  "id": "mediterranean",
+  "countries": [
+    "ESP",
+    "PRT",
+    "ITA",
+    "GRC",
+    "MLT",
+    "CYP"
+  ],
+  "bounds": [[-12,33,42,45]],
+  "default_style": "modern",
+  "roofs": [
+    {
+      "type": "hip",
+      "weight": 4
+    },
+    {
+      "type": "flat",
+      "weight": 4
+    },
+    {
+      "type": "gable",
+      "weight": 2
+    }
+  ],
+  "pitch_multiplier": 0.45,
+  "overhang": 0.35,
+  "subpalette": {
+    "roof": [
+      [
+        3,
+        6,
+        11
+      ],
+      [
+        1,
+        4,
+        11
+      ]
+    ],
+    "wall": [
+      [
+        10,
+        13,
+        15
+      ],
+      [
+        8,
+        13,
+        15
+      ]
+    ],
+    "trim": [
+      [
+        0,
+        1,
+        3
+      ],
+      [
+        1,
+        3,
+        6
+      ]
+    ]
+  },
+  "sparse_windows": false
+}

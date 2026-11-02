@@ -19,38 +19,69 @@ create or replace function public.ma_m(lat1 float8,lon1 float8,lat2 float8,lon2 
  select sqrt(power((lon2-lon1)*111320*cos((lat1+lat2)/2*pi()/180),2)+power((lat2-lat1)*111132,2)) $$;
 
 -- Stations of one city: k, lat, lon, kind (centrum/dzielnica/rogatka/lotnisko).
-create or replace function public.ma_siec(p_city int) returns table(k int,lat float8,lon float8,rodzaj text) language plpgsql stable set search_path='public' as $$
+-- 7 km rule (owner, 2 Nov 2026): centres ≤ L apart, districts ≤ L from a centre, gates slid in until ≤ L from a district
+-- (L = 7000 × 0.95), airports only within 7000 m of a city station; links longer than 7000 m are not made.
+create or replace function public.ma_siec_surowa(p_city int) returns table(k int,lat float8,lon float8,rodzaj text) language plpgsql stable set search_path='public' as $$
 declare m public.ma_miasta;rad float8;n int;mIn int;mOut int;a0 float8;a1 float8;a2 float8;a float8;r float8;j int;c float8;i int:=0;idx int:=0;
  la float8[]:='{}';lo float8[]:='{}';ro text[]:='{}';l record;pla float8;plo float8;
+ lim float8:=7000*0.95;rcen float8;rwew float8;cla float8[]:='{}';clo float8[]:='{}';dla float8[]:='{}';dlo float8[]:='{}';
+ zla float8[];zlo float8[];dmin float8;lo_ float8;hi float8;mid float8;it int;q int;
 begin
  select * into m from ma_miasta where id=p_city;
  if m.id is null then return;end if;
  rad=9.5*sqrt(m.pop::float8);
  n=least(20,greatest(5,floor(5+2.4*(ln(m.pop::float8/100000)/ln(2))+0.5)::int));
  c=cos(m.lat*pi()/180);
+ rcen=least(0.08*rad,lim/2);
+ rwew=least(0.55*rad,sqrt(greatest(0,lim*lim-rcen*rcen)));
  mIn=floor((n-2)/3.0)::int;mOut=n-2-mIn;
  a0=2*pi()*ma_u(m.id,1);a1=2*pi()*ma_u(m.id,2);a2=2*pi()*ma_u(m.id,3);
  for idx in 0..n-1 loop
-  if idx<2 then a=a0+pi()*idx;r=0.08*rad;rodzaj='centrum';
-  elsif idx<2+mIn then j=idx-2;a=a1+2*pi()*j/mIn;r=0.55*rad;rodzaj='dzielnica';
+  if idx<2 then a=a0+pi()*idx;r=rcen;rodzaj='centrum';
+  elsif idx<2+mIn then j=idx-2;a=a1+2*pi()*j/mIn;r=rwew;rodzaj='dzielnica';
   else j=idx-2-mIn;a=a2+2*pi()*j/mOut+(ma_u(m.id,10+j)-0.5)*0.35*(2*pi()/mOut);r=1.5*rad*(1+(ma_u(m.id,40+j)-0.5)*0.12);rodzaj='rogatka';
+   -- gates: the nearest kept district (else centre) must be within lim, else slide in (40 halvings, as generator.ts)
+   if coalesce(array_length(dla,1),0)>0 then zla=dla;zlo=dlo;else zla=cla;zlo=clo;end if;
+   if coalesce(array_length(zla,1),0)>0 then
+    dmin='Infinity'::float8;pla=m.lat+r*cos(a)/111132;plo=m.lon+r*sin(a)/(111320*c);
+    for q in 1..array_length(zla,1) loop dmin=least(dmin,ma_m(pla,plo,zla[q],zlo[q]));end loop;
+    if dmin>lim then
+     lo_=0;hi=r;
+     for it in 1..40 loop
+      mid=(lo_+hi)/2;pla=m.lat+mid*cos(a)/111132;plo=m.lon+mid*sin(a)/(111320*c);dmin='Infinity'::float8;
+      for q in 1..array_length(zla,1) loop dmin=least(dmin,ma_m(pla,plo,zla[q],zlo[q]));end loop;
+      if dmin<=lim then lo_=mid;else hi=mid;end if;
+     end loop;
+     r=lo_;
+    end if;
+   end if;
   end if;
-  if (m.woda>>idx)&1=0 then la=la||(m.lat+r*cos(a)/111132);lo=lo||(m.lon+r*sin(a)/(111320*c));ro=ro||rodzaj;end if;
+  if (m.woda>>idx)&1=0 then
+   pla=m.lat+r*cos(a)/111132;plo=m.lon+r*sin(a)/(111320*c);
+   la=la||pla;lo=lo||plo;ro=ro||rodzaj;
+   if rodzaj='centrum' then cla=cla||pla;clo=clo||plo;elsif rodzaj='dzielnica' then dla=dla||pla;dlo=dlo||plo;end if;
+  end if;
  end loop;
+ -- airports: nearest first, only those within one flight (7000 m) of a city station, at most 2
  for l in select x.lat,x.lon from (select t.lat,t.lon,t.id,ma_m(m.lat,m.lon,t.lat,t.lon) d from ma_lotniska t where t.lat between m.lat-1 and m.lat+1) x
-   where x.d<=greatest(25000,1.8*rad) and x.d>=0.3*rad order by x.d,x.id collate "C" limit 2 loop
-  la=la||l.lat;lo=lo||l.lon;ro=ro||'lotnisko'::text;
+   where x.d<=greatest(25000,1.8*rad) and x.d>=0.3*rad order by x.d,x.id collate "C" loop
+  exit when i>=2;
+  dmin='Infinity'::float8;
+  if coalesce(array_length(ro,1),0)>0 then
+   for q in 1..array_length(ro,1) loop if ro[q]<>'lotnisko' then dmin=least(dmin,ma_m(l.lat,l.lon,la[q],lo[q]));end if;end loop;
+  end if;
+  if dmin<=7000 then la=la||l.lat;lo=lo||l.lon;ro=ro||'lotnisko'::text;i=i+1;end if;
  end loop;
  if array_length(la,1) is null then return;end if;
  for i in 1..array_length(la,1) loop k=i-1;lat=la[i];lon=lo[i];rodzaj=ro[i];return next;end loop;
 end $$;
 
--- Links of one city (a < b).
-create or replace function public.ma_krawedzie(p_city int) returns table(a int,b int) language plpgsql stable set search_path='public' as $$
+-- Links of one city before keeping its biggest part (a < b).
+create or replace function public.ma_krawedzie_surowe(p_city int) returns table(a int,b int) language plpgsql stable set search_path='public' as $$
 declare s record;cen int[]:='{}';wew int[]:='{}';zew int[]:='{}';lot int[]:='{}';miej int[]:='{}';la float8[]:='{}';lo float8[]:='{}';
  aa int[]:='{}';bb int[]:='{}';j int;x int;y int;best int;r int[];doz int[];
 begin
- for s in select * from ma_siec(p_city) order by k loop
+ for s in select * from ma_siec_surowa(p_city) order by k loop
   la=la||s.lat;lo=lo||s.lon;
   if s.rodzaj='centrum' then cen=cen||s.k;elsif s.rodzaj='dzielnica' then wew=wew||s.k;elsif s.rodzaj='rogatka' then zew=zew||s.k;else lot=lot||s.k;end if;
   if s.rodzaj<>'lotnisko' then miej=miej||s.k;end if;
@@ -78,8 +109,44 @@ begin
    aa=aa||least(x,best);bb=bb||greatest(x,best);
   end loop;
  end loop;
- return query select distinct t.a,t.b from unnest(aa,bb) t(a,b) where t.a<>t.b order by 1,2;
+ return query select distinct t.a,t.b from unnest(aa,bb) t(a,b) where t.a<>t.b and ma_m(la[t.a+1],lo[t.a+1],la[t.b+1],lo[t.b+1])<=7000 order by 1,2;
 end $$;
+
+-- The raw stations (k) of the biggest connected part: coastal cities lose inner stations to the sea and nothing joins
+-- the rest within 7 km. Ties go to the part with the lowest station; fewer than 2 stations = no network. As generator.ts.
+create or replace function public.ma_skladowa(p_city int) returns int[] language plpgsql stable set search_path='public' as $$
+declare n int;cz int[];e record;ea int[]:='{}';eb int[]:='{}';s0 int;n0 int;ros boolean;najw int:=-1;ile int:=0;x int;
+begin
+ select count(*) into n from ma_siec_surowa(p_city);
+ if n=0 then return '{}';end if;
+ cz=array_fill(-1,array[n]);
+ for e in select t.a,t.b from ma_krawedzie_surowe(p_city) t loop ea=ea||e.a;eb=eb||e.b;end loop;
+ for s0 in 0..n-1 loop
+  continue when cz[s0+1]>=0;
+  cz[s0+1]=s0;n0=1;ros=true;
+  while ros loop
+   ros=false;
+   if array_length(ea,1) is not null then
+    for x in 1..array_length(ea,1) loop
+     if (cz[ea[x]+1]=s0)<>(cz[eb[x]+1]=s0) then cz[ea[x]+1]=s0;cz[eb[x]+1]=s0;n0=n0+1;ros=true;end if;
+    end loop;
+   end if;
+  end loop;
+  if n0>ile then ile=n0;najw=s0;end if;
+ end loop;
+ if ile<2 then return '{}';end if;
+ return array(select i-1 from generate_subscripts(cz,1) i where cz[i]=najw order by i);
+end $$;
+
+-- Stations of one city, renumbered 0..n-1 after keeping its biggest part.
+create or replace function public.ma_siec(p_city int) returns table(k int,lat float8,lon float8,rodzaj text) language sql stable set search_path='public' as $$
+ with z as (select ma_skladowa(p_city) z)
+ select (row_number() over (order by s.k))::int-1,s.lat,s.lon,s.rodzaj from ma_siec_surowa(p_city) s,z where s.k=any(z.z) order by s.k $$;
+
+-- Links of one city (a < b), in the renumbered stations.
+create or replace function public.ma_krawedzie(p_city int) returns table(a int,b int) language sql stable set search_path='public' as $$
+ with z as (select t.k,(t.o-1)::int nk from unnest(ma_skladowa(p_city)) with ordinality t(k,o))
+ select za.nk,zb.nk from ma_krawedzie_surowe(p_city) e join z za on za.k=e.a join z zb on zb.k=e.b order by 1,2 $$;
 
 -- lat/lon of a saved game position {m, x, y, s} on the Lublin map or a world map ('w:lat,lon'); null elsewhere.
 create or replace function public.ma_ll(a jsonb,out lat float8,out lon float8) language plpgsql immutable set search_path='public' as $$
@@ -128,9 +195,9 @@ begin
  if exists(select 1 from jsonb_array_elements(coalesce(v.snapshot->'enemies','[]'::jsonb)) e where coalesce((e->>'hp')::float,0)>0 and sqrt(power((e->>'x')::float-(v.snapshot->>'x')::float,2)+power((e->>'y')::float-(v.snapshot->>'y')::float,2))<120) then raise exception 'Finish combat first';end if;
  a=v.save->'tu';
  select * into h from ma_ll(a);
- if h.lat is null or ma_m(h.lat,h.lon,f.lat,f.lon)>990 then raise exception 'Come closer';end if;
+ if h.lat is null or ma_m(h.lat,h.lon,f.lat,f.lon)>1590 then raise exception 'Come closer';end if;
  select * into q from ma_ll(p_dest);
- if q.lat is null or ma_m(q.lat,q.lon,d.lat,d.lon)>930 then raise exception 'Destination is unsafe';end if;
+ if q.lat is null or ma_m(q.lat,q.lon,d.lat,d.lon)>1530 then raise exception 'Destination is unsafe';end if;
  dest=jsonb_build_object('m',p_dest->>'m','x',(p_dest->>'x')::float8,'y',(p_dest->>'y')::float8,'s',coalesce((p_dest->>'s')::float8,1.92));
  cena=greatest(1,floor(ma_m(f.lat,f.lon,d.lat,d.lon)/1000*13+0.5)::int);
  coins=coalesce((v.save->>'coins')::int,0);
@@ -139,6 +206,6 @@ begin
  update players set save=jsonb_set(jsonb_set(save,'{coins}',to_jsonb(coins-cena)),'{tu}',dest),snapshot=null where id=v.id;
  return to_jsonb(t);
 end $$;
-revoke all on function public.ma_u(float8,float8),public.ma_m(float8,float8,float8,float8),public.ma_siec(int),public.ma_krawedzie(int),public.ma_ll(jsonb) from public,anon,authenticated;
+revoke all on function public.ma_u(float8,float8),public.ma_m(float8,float8,float8,float8),public.ma_siec(int),public.ma_krawedzie(int),public.ma_siec_surowa(int),public.ma_krawedzie_surowe(int),public.ma_skladowa(int),public.ma_ll(jsonb) from public,anon,authenticated;
 revoke all on function public.ma_stan(text),public.ma_lot(text,uuid,text,text,jsonb) from public;
 grant execute on function public.ma_stan(text),public.ma_lot(text,uuid,text,text,jsonb) to anon,authenticated;

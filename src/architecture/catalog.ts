@@ -1,0 +1,17 @@
+import oldTown from './styles/old-town.json';
+import timber from './styles/half-timber.json';
+import wooden from './styles/wooden.json';
+import apartments from './styles/apartments.json';
+import industrial from './styles/industrial.json';
+import modern from './styles/modern.json';
+import landmark from './styles/landmark.json';
+import north from './regions/north.json';
+import mediterranean from './regions/mediterranean.json';
+import arid from './regions/arid.json';
+import eastAsia from './regions/east-asia.json';
+import palette from './palette.json';
+import type { Region, Style, StyleId } from './types';
+export const STYLES = Object.fromEntries([oldTown, timber, wooden, apartments, industrial, modern, landmark].map(s => [s.id, s])) as Record<StyleId, Style>;
+export const REGIONS = [north, mediterranean, arid, eastAsia] as unknown as Region[];
+export const PALETTE = palette.colors;
+export const OUTLINE_COLOR = palette.colors[palette.outline];

@@ -12,7 +12,7 @@ import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { Terrain } from './terrain';
 import { SZOPY } from '../content/budynki';
-import { CityMap, PX_PER_M, type Place, type RawTile, type WorldLoader } from './CityMap';
+import { CityMap, PX_PER_M, type Building, type Place, type RawTile, type WorldLoader } from './CityMap';
 
 /** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
 export const WORLD_BASE = 'https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev';
@@ -407,7 +407,7 @@ function worldLoader(map: CityMap): WorldLoader {
       });
     });
     // Buildings, then their house numbers (with the nearest named street).
-    const blds: { rings: number[][][]; box: number[]; addr: string[]; levels: number; id: number }[] = [];
+    const blds: { rings: number[][][]; box: number[]; addr: string[]; levels: number; id: number; architecture: Building['architecture'] }[] = [];
     const nums: { x: number; y: number; n: string }[] = [];
     each('buildings', (f, i, pr) => {
       if (f.type === 1 && f.properties.addr_housenumber) {
@@ -418,7 +418,11 @@ function worldLoader(map: CityMap): WorldLoader {
         polygons(f).forEach((poly, j) => {
           const rings = poly.map((r) => r.map(pr));
           const xs = rings[0].map((q) => q[0]), ys = rings[0].map((q) => q[1]);
-          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: h ? Math.max(1, Math.round(h / 3)) : SZOPY.domyslniePieter, id: idOf(3, i * 8 + (j & 7)) });
+          const tags: Record<string,string> = {};
+          for (const key of ['building','building:architecture','building:material','building:levels','roof:shape','roof:material','start_date','historic','amenity']) if (f.properties[key] != null) tags[key] = String(f.properties[key]);
+          if (!tags.building && f.properties.kind_detail) tags.building = String(f.properties.kind_detail);
+          const sourceId = f.id != null ? `feature:${f.id}${j ? `:part:${j}` : ''}` : `tile:${tx}:${ty}:${i}:${j}`;
+          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: h ? Math.max(1, Math.round(h / 3)) : SZOPY.domyslniePieter, id: idOf(3, i * 8 + (j & 7)), architecture: { sourceId, idSource:'feature', tags } });
         });
       }
     });
@@ -491,7 +495,8 @@ function worldLoader(map: CityMap): WorldLoader {
       if (!b.addr.length && m2 < SZOPY.usunM2) continue;
       const open = !b.addr.length && m2 < SZOPY.przejscieM2 ? 1 : 0;
       const castle = castles.find((c) => c.x >= b.box[0] && c.x <= b.box[2] && c.y >= b.box[1] && c.y <= b.box[3] && inside(b.rings[0], c.x, c.y));
-      out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, castle?.name || 0, b.levels, open]);
+      if (castle && b.architecture) b.architecture.tags.historic = 'castle';
+      out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, castle?.name || 0, b.levels, open, b.architecture]);
     }
     return out;
   };

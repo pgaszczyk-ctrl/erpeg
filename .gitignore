@@ -1,6 +1,7 @@
 node_modules
 dist
 public/map
+public/architecture/lublin
 .cache
 
 # Screenshots written by scripts/tests/browser-demo.mjs

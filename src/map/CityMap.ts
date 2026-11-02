@@ -57,6 +57,8 @@ const PRZEJSCIE_M = 4;
 
 export interface Line extends Box { kind: string; pts: number[]; width: number; bridge: boolean; pass: boolean; name: string | null; id: number }
 export interface Building extends Box {
+  /** Additive metadata for test2, separate from the existing gameplay ID. */
+  architecture?: { sourceId: string; osmId?: string; idSource: 'osm' | 'feature' | 'geometry'; tags: Record<string,string> };
   rings: number[][];
   addresses: string[];
   name: string | null;
@@ -141,7 +143,7 @@ export type RawTile = {
   a: [number, string, ...number[][]][];
   l: [number, string, number, number[], string | 0][];
   /** [id, rings, addresses, name, levels, open (world maps: a shed you walk through)] */
-  b: [number, number[][], string | 0, string | 0, number, (0 | 1)?][];
+  b: [number, number[][], string | 0, string | 0, number, (0 | 1)?, Building['architecture']?][];
   /** World map tiles only: places found there [kind, name, x, y] (px). */
   p?: [Place['kind'], string, number, number][];
   /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
@@ -658,7 +660,7 @@ export class CityMap {
     this.lineGrid.add(l);
   }
 
-  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1) {
+  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1, architecture?: Building['architecture']) {
     if (this.haveBuilding.has(id)) return;
     this.haveBuilding.add(id);
     const abs = rings.map((r) => decode(r, this.k));
@@ -668,6 +670,7 @@ export class CityMap {
     const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: seedOf(id), id, ...bb, y1: bb.y1 + 20 };
     if (stub) Object.assign(stub, { rings: abs, levels, ...bb, y1: bb.y1 + 20 });
     if (open) b.open = true;
+    if (architecture) b.architecture = architecture;
     this.buildings.push(b);
     this.buildingGrid.add(b);
     if (abs.length > 1) this.newHoled.push(b);
@@ -826,8 +829,8 @@ export class CityMap {
   private addTile(cx: number, cy: number, t: RawTile) {
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
-    for (const [bid, rings, addr, name, levels, open] of t.b) {
-      this.addBuilding(bid, rings, addr, name, levels, open);
+    for (const [bid, rings, addr, name, levels, open, architecture] of t.b) {
+      this.addBuilding(bid, rings, addr, name, levels, open, architecture);
       if (this.world && addr) {
         const b = this.buildings[this.buildings.length - 1];
         for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
@@ -1269,7 +1272,7 @@ export class CityMap {
     return undefined;
   }
 
-  isBlocked(x: number, y: number): boolean {
+  isBlocked(x: number, y: number, ignoreBuildings = false): boolean {
     if (x < this.minX || y < this.minY || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
     // Not loaded yet: nobody walks there until it is.
     if (this.tileSet && !this.loadedTiles.has(this.tileKey(x, y)) && this.tileSet.has(this.tileKey(x, y))) return true;
@@ -1284,7 +1287,7 @@ export class CityMap {
       // fits (a footway's 2.5 m left a strip of under a pixel – the owner saw the arch but couldn't get through).
       if (l.pass && d <= Math.max(l.width / 2, (PRZEJSCIE_M / 2) * PX_PER_M)) onPassage = true;
     }
-    if (!onPassage && this.buildingAt(x, y)) return true;
+    if (!ignoreBuildings && !onPassage && this.buildingAt(x, y)) return true;
     if (onBridge) return false;
     if (this.terrain && this.roughOffPath(x, y)) return true;
     // Water blocks, but a road or path over it always wins: many bridges,
@@ -1369,10 +1372,10 @@ export class CityMap {
   }
 
   /** Is a feet box of the given half size free at (x, y)? */
-  isFree(x: number, y: number, hw: number, hh: number) {
+  isFree(x: number, y: number, hw: number, hh: number, ignoreBuildings = false) {
     return !(
-      this.isBlocked(x - hw, y - hh) || this.isBlocked(x + hw, y - hh) ||
-      this.isBlocked(x - hw, y + hh) || this.isBlocked(x + hw, y + hh)
+      this.isBlocked(x - hw, y - hh, ignoreBuildings) || this.isBlocked(x + hw, y - hh, ignoreBuildings) ||
+      this.isBlocked(x - hw, y + hh, ignoreBuildings) || this.isBlocked(x + hw, y + hh, ignoreBuildings)
     );
   }
 

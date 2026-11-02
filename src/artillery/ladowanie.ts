@@ -104,3 +104,43 @@ export function wSiatke(
     });
   });
 }
+
+/** Pinball arrival (metro cities): the lid flies open with steam, the hero springs out of the hatch and lands beside it,
+ *  the lid closes. Resolves when he stands at `wyjscie`. */
+export function zWlazu(
+  scene: Phaser.Scene,
+  player: Player,
+  wlaz: { x: number; y: number; lap(): void; zamknij(): Promise<void> } | undefined,
+  wyjscie: { x: number; y: number },
+  still = false,
+): Promise<void> {
+  const od = wlaz ? { x: wlaz.x, y: wlaz.y } : { ...wyjscie };
+  player.setAlpha(1);
+  if (still || !wlaz) {
+    player.setPosition(wyjscie.x, wyjscie.y);
+    return Promise.resolve();
+  }
+  wlaz.lap();
+  player.setPosition(od.x, od.y);
+  const L = LADOWANIE, stan = { t: 0 };
+  return new Promise((done) => {
+    scene.time.delayedCall(140, () =>
+      scene.tweens.add({
+        targets: stan,
+        t: 1,
+        duration: L.zeskokMs + 120,
+        ease: 'Linear',
+        onUpdate: () => {
+          const t = stan.t;
+          player.setPosition(od.x + (wyjscie.x - od.x) * t, od.y + (wyjscie.y - od.y) * t - Math.sin(Math.PI * t) * L.zeskokPx * 2);
+        },
+        onComplete: () => {
+          player.setPosition(wyjscie.x, wyjscie.y);
+          dymek(scene, wyjscie.x, wyjscie.y + 6, wyjscie.y + 8);
+          void wlaz.zamknij();
+          done();
+        },
+      }),
+    );
+  });
+}

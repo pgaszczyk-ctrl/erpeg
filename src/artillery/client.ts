@@ -9,7 +9,11 @@ import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
 import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
-import { miejsceStacji, MIEJSCE_M } from "./miejsce";
+import { miejsceStacji, miejsceWlazu, MIEJSCE_MAKS_M, type Wysun } from "./miejsce";
+import { Wlaz } from "./wlaz";
+import { pinball } from "./pinball";
+import { maMetro } from "../content/metro";
+import { zWlazu } from "./ladowanie";
 import { wSiatke } from "./ladowanie";
 import { RULES, type Network, type Stop } from "./network";
 import {
@@ -31,6 +35,8 @@ export type Registry = Network & {
   projection: { mLon: number; mLat: number };
   rules: typeof RULES;
   arrivals?: Record<string, At>;
+  /** A city with a real metro rides the underground pinball (hatches) instead of cannons. */
+  metro?: boolean;
 };
 type At = { m: string; x: number; y: number; s: number };
 type Receipt = {
@@ -80,6 +86,11 @@ export async function siecPrzy(ll: { lat: number; lon: number }): Promise<Regist
   if (!swiat || !m) return null;
   return naRejestr(generujSiec(m, swiat.lotniska));
 }
+const wysunOf = (s: Stop) => (s as Stop & { wysun?: Wysun }).wysun;
+/** Where a station stands on a map: a hatch in metro cities, else a cannon (square/car park or a pushed-out gate). */
+function miejsceNa(city: CityMap, s: Stop, ll: { lat: number; lon: number }, metro: boolean | undefined) {
+  return metro ? miejsceWlazu(city, s.id, ll.lat, ll.lon) : miejsceStacji(city, s.id, ll.lat, ll.lon, wysunOf(s));
+}
 function naRejestr(siec: Siec): Registry {
   const [id, name, , lat, lon] = siec.miasto,
     mLon = 111320 * Math.cos((lat * Math.PI) / 180),
@@ -89,6 +100,7 @@ function naRejestr(siec: Siec): Registry {
     id: `c${id}`,
     version: 1,
     city: { name },
+    metro: maMetro(siec.miasto[2], name, id),
     origin: { lat, lon },
     projection: { mLon, mLat },
     rules: RULES,
@@ -98,6 +110,16 @@ function naRejestr(siec: Siec): Registry {
       x: (s.lon - lon) * mLon,
       y: (lat - s.lat) * mLat,
       airport: s.rodzaj === "lotnisko",
+      // A gate with no square near is pushed outwards (miejsce.ts), within 7 km of the stations it links to.
+      wysun:
+        s.rodzaj === "rogatka"
+          ? {
+              centrum: { lat, lon },
+              partnerzy: siec.krawedzie
+                .filter(([a, b]) => a === s.k || b === s.k)
+                .map(([a, b]) => siec.stacje[a === s.k ? b : a]),
+            }
+          : undefined,
     })) as unknown as Stop[],
     edges: siec.krawedzie.map(([a, b]) => [siec.stacje[a].id, siec.stacje[b].id]),
   } as unknown as Registry;
@@ -164,7 +186,7 @@ export class Artillery {
     {
       body: Phaser.GameObjects.Graphics;
       barrel: Phaser.GameObjects.Graphics;
-      armata: Armata3D;
+      armata: Armata3D | Wlaz;
       model: boolean;
       visible: boolean;
       x: number;
@@ -226,12 +248,12 @@ export class Artillery {
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
       const g = this.city.fromLatLon(ll.lat, ll.lon);
       let art = this.art.get(s.id);
-      // The cannon may stand up to MIEJSCE_M from its generated point (on a square or car park).
+      // The cannon may stand up to MIEJSCE_MAKS_M from its generated point (square/car park, or a gate pushed out).
       if (
         !art &&
-        Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) < (1200 + MIEJSCE_M) * PX_PER_M
+        Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) < (1200 + MIEJSCE_MAKS_M) * PX_PER_M
       ) {
-        const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+        const p = miejsceNa(this.city, s, ll, this.registry.metro);
         if (p) {
           art = this.draw(p.x, p.y);
           this.art.set(s.id, art);
@@ -293,7 +315,7 @@ export class Artillery {
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
       // Where its cannon really stands (moved off its generated point onto a square or car park).
-      const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+      const p = miejsceNa(this.city, s, ll, this.registry.metro);
       if (!p) continue;
       const d = Math.hypot(p.x - x, p.y - y);
       if (d < 120 * PX_PER_M && (!best || d < best.d)) best = { s, x: p.x, y: p.y, d };
@@ -341,6 +363,11 @@ export class Artillery {
     return undefined;
   }
   private draw(x: number, y: number) {
+    if (this.registry?.metro) {
+      // A pinball hatch: no code-drawn cannon underneath.
+      const body = this.scene.add.graphics({ x, y }).setVisible(false), barrel = this.scene.add.graphics({ x, y }).setVisible(false);
+      return { body, barrel, armata: new Wlaz(this.scene, x, y) as Armata3D | Wlaz, model: false, visible: true, x, y };
+    }
     const body = this.scene.add
         .graphics({ x, y })
         .setDepth(y + 1)
@@ -389,7 +416,7 @@ export class Artillery {
     barrel.strokeRoundedRect(-4, -9, 31, 17, 4);
     barrel.fillStyle(ink);
     barrel.fillEllipse(27, -1, 7, 17);
-    return { body, barrel, armata: new Armata3D(this.scene, x, y), model: false, visible: true, x, y };
+    return { body, barrel, armata: new Armata3D(this.scene, x, y) as Armata3D | Wlaz, model: false, visible: true, x, y };
   }
   open(s: Stop) {
     if (this.opened || this.host.busy()) return;
@@ -407,10 +434,9 @@ export class Artillery {
     box.style.maxWidth = "520px";
     root.append(box);
     const h = document.createElement("h2");
-    h.textContent = tx(
-      "Miejska Artyleria Pasażerska",
-      "Municipal Passenger Artillery",
-    );
+    h.textContent = this.registry?.metro
+      ? tx("Podziemny Pinball Miejski", "Municipal Underground Pinball")
+      : tx("Miejska Artyleria Pasażerska", "Municipal Passenger Artillery");
     box.append(h);
     const sub = document.createElement("p");
     sub.textContent = s.name;
@@ -450,7 +476,7 @@ export class Artillery {
       const to = this.registry!.stops.find((s) => s.id === id)!;
       // No square/car park ≥ 50 m from buildings there: that station has no cannon on this map.
       const tll = this.ll(to);
-      if (this.city.hasLatLon(tll.lat, tll.lon) && miejsceStacji(this.city, to.id, tll.lat, tll.lon) === null) continue;
+      if (this.city.hasLatLon(tll.lat, tll.lon) && miejsceNa(this.city, to, tll, this.registry!.metro) === null) continue;
       const b = document.createElement("button");
       b.className = "m-btn";
       const m = metry(this.ll(s), this.ll(to)),
@@ -502,7 +528,12 @@ export class Artillery {
     session.artilleryHero = carry;
     const station=this.art.get(from.id);
     const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
-    this.host.toast(tx(`Armata celuje w: ${to.name}`, `The cannon aims at: ${to.name}`));
+    const metro = !!this.registry?.metro;
+    this.host.toast(
+      metro
+        ? tx(`Właz się otwiera – kierunek: ${to.name}`, `The hatch opens – heading for: ${to.name}`)
+        : tx(`Armata celuje w: ${to.name}`, `The cannon aims at: ${to.name}`),
+    );
     const llCel=this.ll(to),pCel=this.city.fromLatLon(llCel.lat,llCel.lon);
     const kat=station?Math.atan2(pCel.y-station.y,pCel.x-station.x):0;
     if(station?.model){
@@ -518,9 +549,9 @@ export class Artillery {
       else {await new Promise<void>(resolve=>this.scene.tweens.add({targets:station.barrel,rotation:turn,duration:650,ease:'Sine.easeInOut',onComplete:()=>resolve()}));await new Promise<void>(resolve=>this.scene.tweens.add({targets:this.player,x:station.x+Math.cos(angle)*7,y:station.y-4+Math.sin(angle)*7,duration:350,ease:'Sine.easeInOut',onComplete:()=>resolve()}));}
     }
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
-    const shot = await this.host.zdjecie();
+    const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, to.name) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,
@@ -539,8 +570,8 @@ export class Artillery {
       }
       const city = await getMap(id),
         g = city.fromLatLon(ll.lat, ll.lon);
-      await city.ensure(g.x, g.y, (MIEJSCE_M + 200) * PX_PER_M);
-      const p = miejsceStacji(city, to.id, ll.lat, ll.lon);
+      await city.ensure(g.x, g.y, (MIEJSCE_MAKS_M + 200) * PX_PER_M);
+      const p = miejsceNa(city, to, ll, this.registry?.metro);
       if (!p)
         throw Error(
           tx(
@@ -604,6 +635,19 @@ export class Artillery {
       // Landing: the destination's cannon and net, a picture of that map for the zoom-in, then the net on the real map.
       const now = this.host.obecna(), hero = now.player;
       const cel = await now.artillery?.stacjaPrzy(hero.x, hero.y);
+      if (metro) {
+        // Out of the hatch beside the destination's post.
+        let exit = cel ? { x: cel.x - 2, y: cel.y + 12 } : { x: hero.x, y: hero.y };
+        if (!city.isFree(exit.x, exit.y, 10, 10)) exit = { x: hero.x, y: hero.y };
+        hero.setAlpha(0);
+        await overlay.land({ shot: null, fx: 0.5, fy: 0.5, px: 4, cel: to.name });
+        overlay.close();
+        await zWlazu(this.scene, hero, cel?.model && cel.armata instanceof Wlaz ? cel.armata : undefined, exit, still);
+        this.host.toast(tx(`Wyskakujesz z włazu! Witaj: ${to.name}`, `You spring out of the hatch! Welcome to ${to.name}`));
+        artilleryTransit.active = false;
+        this.host.hold(false);
+        return;
+      }
       const off = punktySiatki();
       const net = cel ? { x: cel.x + off.siatka.dx, y: cel.y + off.siatka.dy } : { x: hero.x, y: hero.y };
       let exit = cel ? { x: cel.x + off.wyjscie.dx, y: cel.y + off.wyjscie.dy } : { x: hero.x, y: hero.y };
@@ -612,7 +656,7 @@ export class Artillery {
       const view = await this.host.zdjecie();
       await overlay.land({ shot: view, ...this.host.kadr(net.x, net.y), cel: to.name });
       overlay.close();
-      await wSiatke(this.scene, hero, net, exit, cel?.model ? cel.armata : undefined, still);
+      await wSiatke(this.scene, hero, net, exit, cel?.model && cel.armata instanceof Armata3D ? cel.armata : undefined, still);
       this.host.toast(tx(`Złapany w siatkę! Witaj: ${to.name}`, `Caught in the net! Welcome to ${to.name}`));
       artilleryTransit.active = false;
       this.host.hold(false);
@@ -641,7 +685,7 @@ export class Artillery {
             run: perform,
           },
           {
-            label: tx("Wróć do armaty", "Return to the cannon"),
+            label: metro ? tx("Wróć do włazu", "Return to the hatch") : tx("Wróć do armaty", "Return to the cannon"),
             run: async () => {
               if (!receipt) {
                 const state = await rpc<State>("ma_stan", {

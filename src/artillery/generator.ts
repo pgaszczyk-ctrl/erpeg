@@ -22,6 +22,10 @@ export const GENERATOR = {
   maksLotnisk: 2,
   /** Coins per km of a flight, rounded. */
   zaKm: 13,
+  /** The longest flight, metres (owner, 2 Nov 2026: „max ok. 7 km”). Links longer than this are not made; stations are
+   *  pulled in so every one keeps a link of at most `maksSkok × zapas` to the next one towards the centre. */
+  maksSkok: 7000,
+  zapas: 0.95,
 };
 
 /** woda = bitmask of the city's generated stations (order 0..n-1) that fall on sea/big lakes and are left out
@@ -37,6 +41,7 @@ export type Stacja = {
   rodzaj: 'centrum' | 'dzielnica' | 'rogatka' | 'lotnisko';
   kierunek: number; // 0..7 from north, clockwise
   nazwa?: string; // airport name
+  kand?: number; // candidate number of a city station (bit of the `woda` mask)
 };
 export type Siec = { miasto: Miasto; stacje: Stacja[]; krawedzie: [number, number][] };
 
@@ -66,11 +71,16 @@ const kierunek = (a: number) => {
 export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
   const [id, , , lat, lon, pop] = m, woda = m[6] ?? 0;
   const R = promien(pop), n = liczbaStacji(pop), G = GENERATOR;
+  // Within reach of one flight: centres ≤ L apart, every district ≤ L from a centre, every gate ≤ L from a district.
+  const L = G.maksSkok * G.zapas;
+  const rCen = Math.min(G.centrum * R, L / 2);
+  const rWew = Math.min(G.wewnatrz * R, Math.sqrt(Math.max(0, L * L - rCen * rCen)));
   const st: Stacja[] = [];
   let idx = 0; // candidate number, also for the ones on water (woda bits)
   const dodaj = (p: { lat: number; lon: number }, rodzaj: Stacja['rodzaj'], a: number, nazwa?: string) => {
-    if (rodzaj !== 'lotnisko' && Math.floor(woda / 2 ** idx++) % 2 === 1) return -1;
-    st.push({ id: `c${id}:${st.length}`, k: st.length, lat: p.lat, lon: p.lon, rodzaj, kierunek: kierunek(a), nazwa });
+    const kand = rodzaj === 'lotnisko' ? undefined : idx++;
+    if (kand !== undefined && Math.floor(woda / 2 ** kand) % 2 === 1) return -1;
+    st.push({ id: `c${id}:${st.length}`, k: st.length, lat: p.lat, lon: p.lon, rodzaj, kierunek: kierunek(a), nazwa, kand });
     return st.length - 1;
   };
   const cen: number[] = [], wew: number[] = [], zew: number[] = [];
@@ -78,26 +88,45 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
     if (k >= 0) lista.push(k);
   };
   const a0 = 2 * Math.PI * u(id, 1);
-  wez(cen, dodaj(punkt(lat, lon, G.centrum * R, a0), 'centrum', a0));
-  wez(cen, dodaj(punkt(lat, lon, G.centrum * R, a0 + Math.PI), 'centrum', a0 + Math.PI));
+  wez(cen, dodaj(punkt(lat, lon, rCen, a0), 'centrum', a0));
+  wez(cen, dodaj(punkt(lat, lon, rCen, a0 + Math.PI), 'centrum', a0 + Math.PI));
   const mIn = Math.floor((n - 2) / 3), mOut = n - 2 - mIn;
   const a1 = 2 * Math.PI * u(id, 2);
   for (let j = 0; j < mIn; j++) {
     const a = a1 + (2 * Math.PI * j) / mIn;
-    wez(wew, dodaj(punkt(lat, lon, G.wewnatrz * R, a), 'dzielnica', a));
+    wez(wew, dodaj(punkt(lat, lon, rWew, a), 'dzielnica', a));
   }
   const a2 = 2 * Math.PI * u(id, 3);
+  const doZew = wew.length ? wew : cen;
+  const najblizej = (p: { lat: number; lon: number }, z: number[]) => {
+    let d = Infinity;
+    for (const k of z) d = Math.min(d, metry(p, st[k]));
+    return d;
+  };
   for (let j = 0; j < mOut; j++) {
     const a = a2 + (2 * Math.PI * j) / mOut + (u(id, 10 + j) - 0.5) * 0.35 * ((2 * Math.PI) / mOut);
-    const r = G.zewnatrz * R * (1 + (u(id, 40 + j) - 0.5) * 0.12);
+    let r = G.zewnatrz * R * (1 + (u(id, 40 + j) - 0.5) * 0.12);
+    // Too far from every district: slide in along its direction (40 halvings, the same in SQL).
+    if (doZew.length && najblizej(punkt(lat, lon, r, a), doZew) > L) {
+      let lo = 0, hi = r;
+      for (let i = 0; i < 40; i++) {
+        const mid = (lo + hi) / 2;
+        if (najblizej(punkt(lat, lon, mid, a), doZew) <= L) lo = mid;
+        else hi = mid;
+      }
+      r = lo;
+    }
     wez(zew, dodaj(punkt(lat, lon, r, a), 'rogatka', a));
   }
-  // Airports: the nearest ones with scheduled flights, in ident order on ties.
+  // Airports: the nearest ones with scheduled flights, in ident order on ties – only those within one flight of a
+  // city station.
   const srodek = { lat, lon };
+  const miejskieTeraz = st.map((s) => s.k);
   const lot = lotniska
     .map((l) => ({ l, d: metry(srodek, { lat: l[2], lon: l[3] }) }))
     .filter((x) => x.d <= Math.max(G.airportKm * 1000, G.airportR * R) && x.d >= G.airportOdR * R)
     .sort((a, b) => a.d - b.d || (a.l[0] < b.l[0] ? -1 : 1))
+    .filter((x) => najblizej({ lat: x.l[2], lon: x.l[3] }, miejskieTeraz) <= G.maksSkok)
     .slice(0, G.maksLotnisk);
   const lotN: number[] = [];
   for (const { l } of lot) {
@@ -107,7 +136,7 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
   // Links.
   const kr = new Set<string>();
   const lacz = (a: number, b: number) => {
-    if (a !== b) kr.add(a < b ? `${a},${b}` : `${b},${a}`);
+    if (a !== b && metry(st[a], st[b]) <= G.maksSkok) kr.add(a < b ? `${a},${b}` : `${b},${a}`);
   };
   const najblizszy = (from: number, z: number[]) => {
     let best = z[0], bd = Infinity;
@@ -126,7 +155,6 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
   pierscien(zew);
   // Spokes: districts to the nearest centre, gates to the nearest district (each level falls back to the next one in).
   if (cen.length) for (const k of wew) lacz(k, najblizszy(k, cen));
-  const doZew = wew.length ? wew : cen;
   if (doZew.length) for (const k of zew) lacz(k, najblizszy(k, doZew));
   const miejskie = st.filter((s) => s.rodzaj !== 'lotnisko').map((s) => s.k);
   for (const k of lotN) {
@@ -135,8 +163,39 @@ export function generujSiec(m: Miasto, lotniska: Lotnisko[]): Siec {
     lacz(k, bl[0]);
     if (bl.length > 1) lacz(k, bl[1]);
   }
-  const krawedzie = [...kr].map((s) => s.split(',').map(Number) as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  return { miasto: m, stacje: st, krawedzie };
+  const surowe = [...kr].map((s) => s.split(',').map(Number) as [number, number]);
+  // Only the biggest connected part stays (coastal cities lose inner stations to the sea, and nothing joins the rest
+  // within 7 km); ties go to the part with the lowest station; fewer than 2 stations = no network. Same in SQL.
+  const czesc = new Array<number>(st.length).fill(-1);
+  let najw = -1, ile = 0;
+  for (let s0 = 0; s0 < st.length; s0++) {
+    if (czesc[s0] >= 0) continue;
+    czesc[s0] = s0;
+    let n0 = 1;
+    for (let rosnie = true; rosnie; ) {
+      rosnie = false;
+      for (const [a, b] of surowe)
+        if ((czesc[a] === s0) !== (czesc[b] === s0)) {
+          czesc[a] = czesc[b] = s0;
+          n0++;
+          rosnie = true;
+        }
+    }
+    if (n0 > ile) (ile = n0), (najw = s0);
+  }
+  if (ile < 2) return { miasto: m, stacje: [], krawedzie: [] };
+  const nowy = new Array<number>(st.length).fill(-1);
+  const stacje: Stacja[] = [];
+  for (const s0 of st)
+    if (czesc[s0.k] === najw) {
+      nowy[s0.k] = stacje.length;
+      stacje.push({ ...s0, id: `c${id}:${stacje.length}`, k: stacje.length });
+    }
+  const krawedzie = surowe
+    .filter(([a]) => czesc[a] === najw)
+    .map(([a, b]) => [nowy[a], nowy[b]] as [number, number])
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return { miasto: m, stacje, krawedzie };
 }
 
 /** The city whose network serves a spot: the nearest kept city whose outer ring (+ 3 km) reaches it. */
