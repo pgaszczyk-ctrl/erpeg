@@ -3,7 +3,10 @@ on:
   pull_request:
     paths:
       - 'src/architecture/**'
-      - 'src/test2/main.ts'
+      - 'src/test2/**'
+      - 'test2.html'
+      - 'scripts/architecture/lublin.mjs'
+      - 'scripts/architecture/build-locator.mjs'
       - 'scripts/architecture/occlusion.mjs'
       - 'scripts/architecture/motion.mjs'
       - '.github/workflows/architecture-motion.yml'
@@ -44,6 +47,7 @@ jobs:
           mkdir -p public/map public/architecture/lublin
           cp -a .cache/motion-before/map/. public/map/
           cp -a .cache/motion-before/architecture/lublin/. public/architecture/lublin/
+      - run: node --experimental-strip-types --no-warnings scripts/architecture/build-locator.mjs
       - run: npx tsc --noEmit
       - run: npx vite build
         env:
@@ -58,6 +62,7 @@ jobs:
         env:
           MOTION_BASELINE_DIST: .cache/motion-before
           MOTION_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
+      - run: node scripts/architecture/lublin.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -65,4 +70,5 @@ jobs:
           path: |
             work/architecture-motion/
             work/architecture-occlusion/
+            work/lublin-reference/
           retention-days: 7

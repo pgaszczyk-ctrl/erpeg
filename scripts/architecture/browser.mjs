@@ -12,8 +12,8 @@ const root=process.cwd(),output='docs/architecture/artifacts';await mkdir(output
 execFileSync(process.execPath,['node_modules/vite/bin/vite.js','build'],{stdio:'inherit'});
 const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader'],chromiumSandbox:false,timeout:15000});
 const results=[];
-const places=[['kul',51.2476,22.5446,'lublin'],['dziewanny',51.2351,22.5166,'lublin'],['szczytowa',51.2230,22.5349,'lublin'],['old-town',51.2483,22.5679,'lublin'],['apartments',51.2314,22.534,'lublin'],['homes',51.2434,22.5344,'lublin'],['industrial',51.2308,22.599,'lublin'],['bergen',60.3971,5.3245,'world'],['seville',37.3886,-5.9953,'world'],['kyoto',35.003,135.778,'world']].filter(p=>!process.env.ARCHITECTURE_PLACES||process.env.ARCHITECTURE_PLACES.split(',').includes(p[0]));
-const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.png':'image/png','.webp':'image/webp','.glb':'model/gltf-binary','.woff2':'font/woff2'};
+const places=[['kul',51.2476,22.5446,'lublin'],['dziewanny',51.2351,22.5166,'lublin'],['szczytowa',51.2230,22.5349,'lublin'],['old-town',51.2483,22.5679,'lublin'],['apartments',51.2314,22.534,'lublin'],['homes',51.2434,22.5344,'lublin'],['industrial',51.2308,22.599,'lublin']].filter(p=>!process.env.ARCHITECTURE_PLACES||process.env.ARCHITECTURE_PLACES.split(',').includes(p[0]));
+const mime={'.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.html':'text/html','.json':'application/json','.png':'image/png','.webp':'image/webp','.glb':'model/gltf-binary','.woff2':'font/woff2'};
 async function staticFiles(route){
  const url=new URL(route.request().url());
  if(url.hostname!=='exp-lore.local'){

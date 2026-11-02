@@ -2,6 +2,7 @@ node_modules
 dist
 public/map
 public/architecture/lublin
+public/architecture/lublin-reference.svg
 .cache
 
 # Screenshots written by scripts/tests/browser-demo.mjs

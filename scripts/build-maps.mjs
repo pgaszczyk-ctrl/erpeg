@@ -27,6 +27,11 @@ await new Promise((ok, no) => {
   p.on('close', (code) => (code === 0 ? ok() : no(new Error(`split-map failed (${code})`))));
 });
 
+await new Promise((ok, no) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/architecture/build-locator.mjs'], { stdio: 'inherit' });
+  p.on('close', code => code === 0 ? ok() : no(new Error(`Lublin locator failed (${code})`)));
+});
+
 mkdirSync('public/map', { recursive: true });
 if (!existsSync('data/towns.json')) {
   writeFileSync('public/map/world.json', JSON.stringify({ lublin: [], towns: [], edges: [] }));
