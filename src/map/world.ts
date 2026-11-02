@@ -228,6 +228,22 @@ const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', c
 /** Ferry landings of the world map become ports with a captain (porty.ts sets it on the test server). */
 export const PORTY_Z_MAPY = { on: false };
 
+/** World map point of interest → an odd place for the boards' scouting notes (as scripts/tablice/osobliwosci.mjs). */
+function rodzajOsobliwosci(p: Record<string, unknown>): string | null {
+  switch (String(p.kind ?? '')) {
+    case 'ruins': return 'ruiny';
+    case 'archaeological_site': return 'stanowisko';
+    case 'fortification': case 'fort': case 'bunker': return 'fort';
+    case 'technical_monument': return 'zabytek';
+    case 'water_tower': return 'wieza';
+    case 'windmill': return 'wiatrak';
+    case 'watermill': return 'mlyn';
+    case 'wayside_shrine': case 'wayside_cross': return 'kapliczka';
+    case 'viewpoint': return 'widok';
+    default: return null;
+  }
+}
+
 /** World map point of interest → the game's place. */
 function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   if (/\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
@@ -346,7 +362,7 @@ function worldLoader(map: CityMap): WorldLoader {
   const done = new Map<number, Promise<RawTile>>();
 
   const convert = async (tx: number, ty: number): Promise<RawTile> => {
-    const out: RawTile = { a: [], l: [], b: [], p: [], k: [], q: [] };
+    const out: RawTile = { a: [], l: [], b: [], p: [], k: [], q: [], o: [] };
     const file = await worldFile();
     const t = await file.getZxy(Z, tx, ty);
     if (!t) return out;
@@ -461,6 +477,11 @@ function worldLoader(map: CityMap): WorldLoader {
         const [qx, qy] = pr(f.loadGeometry()[0][0]);
         out.q!.push([qx * k, qy * k]);
         return;
+      }
+      const odd = rodzajOsobliwosci(f.properties);
+      if (odd) {
+        const [ox, oy] = pr(f.loadGeometry()[0][0]);
+        out.o!.push([odd, nm ?? '', ox * k, oy * k]);
       }
       // Castles and palaces: their building keeps its name (drawn whole, never cut into parts).
       if (['castle', 'fort', 'palace'].includes(String(f.properties.kind)) && nm) {

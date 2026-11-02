@@ -109,6 +109,8 @@ type RawMap = {
   towns?: [string, number, number][];
   /** City boards with the city's map (split-map, scripts/tablice/tablice.mjs). */
   tablice?: { plan: PlanMiasta; miejsca: [number, number][] };
+  /** Odd places for the boards' scouting notes: [x, y, kind, name] (split-map, scripts/tablice/osobliwosci.mjs). */
+  osobliwe?: [number, number, string, string][];
 };
 
 /**
@@ -150,6 +152,8 @@ export type RawTile = {
   k?: [string, number, number, number][];
   /** World maps: post offices, post boxes, parcel lockers (px). */
   q?: [number, number][];
+  /** World maps: odd places (ruins, towers, shrines…) [kind, name, x, y] (px). */
+  o?: [string, string, number, number][];
 };
 
 /** Loads the features of one tile of a world map (see map/world.ts). */
@@ -520,6 +524,8 @@ export class CityMap {
   readonly posts: { x: number; y: number }[] = [];
   /** City boards (tablice z mapką miasta): where they stand, and what their map shows (map px, already scaled). */
   readonly tablice: { x: number; y: number; plan?: PlanMiasta; miasto?: string }[] = [];
+  /** Odd places (ruins, water towers, mills, shrines…) for the boards' scouting notes (map px). */
+  readonly osobliwe: { x: number; y: number; rodzaj: string; nazwa: string }[] = [];
   plan: PlanMiasta | null = null;
   /** World maps: named mountain peaks with their height (they come with the tiles). */
   readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];
@@ -534,6 +540,7 @@ export class CityMap {
     // Pixel values in the map files are at PLIK_PX_PER_M.
     const sp = PX_PER_M / PLIK_PX_PER_M;
     for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x: x * sp, y: y * sp });
+    for (const [x, y, rodzaj, nazwa] of raw.osobliwe ?? []) this.osobliwe.push({ x: x * sp, y: y * sp, rodzaj, nazwa });
     if (raw.tablice) {
       for (const [x, y] of raw.tablice.miejsca) this.tablice.push({ x: x * sp, y: y * sp });
       this.plan = skalujPlan(raw.tablice.plan, sp);
@@ -839,6 +846,9 @@ export class CityMap {
     this.cutStadiums();
     this.cutCourtyards();
     for (const [x, y] of t.q ?? []) this.posts.push({ x, y });
+    for (const [rodzaj, nazwa, x, y] of t.o ?? []) {
+      if (!this.osobliwe.some((q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40)) this.osobliwe.push({ x, y, rodzaj, nazwa });
+    }
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });
     }

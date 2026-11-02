@@ -7,13 +7,14 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { CityMap, PX_PER_M } from '../src/map/CityMap.ts';
 import { tablice } from './tablice/tablice.mjs';
+import { osobliwosci } from './tablice/osobliwosci.mjs';
 
 const SRC = '.cache/lublin-full.json';
 const OUT = 'public/map/lublin.json';
 const DIR = 'public/map/lublin';
 const TILE_M = 1000;
 
-const newest = Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs, statSync(new URL('./tablice/tablice.mjs', import.meta.url)).mtimeMs, statSync('data/tablice-miejscowosci.json').mtimeMs, statSync(new URL('../src/map/CityMap.ts', import.meta.url)).mtimeMs);
+const newest = Math.max(statSync(SRC).mtimeMs, statSync(new URL(import.meta.url)).mtimeMs, statSync(new URL('./tablice/tablice.mjs', import.meta.url)).mtimeMs, statSync(new URL('./tablice/osobliwosci.mjs', import.meta.url)).mtimeMs, statSync('data/tablice-miejscowosci.json').mtimeMs, statSync(new URL('../src/map/CityMap.ts', import.meta.url)).mtimeMs);
 if (existsSync(OUT) && statSync(OUT).mtimeMs > newest) {
   console.log('tiles: up to date');
   process.exit(0);
@@ -70,6 +71,8 @@ for (const l of city.lines) {
 // City boards with the city's map and its ways out (scripts/tablice/tablice.mjs; replaced the 5 km road signs).
 const area = JSON.parse(readFileSync(new URL('./lublin-area.json', import.meta.url), 'utf8'));
 const boards = tablice(city, area.centre, { src: 'data/lublin-osm.geojsonseq.gz', nazwa: 'Lublin', miejscowosci: 'data/tablice-miejscowosci.json' });
+// Odd places for the boards' scouting notes (ruins, water towers, mills…).
+const osobliwe = osobliwosci(city, 'data/lublin-osm.geojsonseq.gz');
 // Towns a start address can name (villages come from the addresses in the game).
 const towns = [['Lublin', area.centre], ...area.extra.map((t) => [t.name, t])].map(([name, t]) => {
   const p = city.fromLatLon(t.lat, t.lon);
@@ -104,8 +107,10 @@ const index = {
   postsPx: city.posts.map((p) => [r(p.x), r(p.y)]),
   streets,
   tablice: boards,
+  osobliwe,
   towns,
 };
 const json = JSON.stringify(index);
 writeFileSync(OUT, json);
 console.log(`tiles: ${tiles.size} tiles of ${TILE_M} m (${(bytes / 1e6).toFixed(1)} MB, ${(bytes / tiles.size / 1e3).toFixed(0)} kB each), index ${(json.length / 1e6).toFixed(1)} MB (${bld.length} buildings with address, ${places.length} places, ${streets.length} streets)`);
+console.log(`osobliwości: ${osobliwe.length}`);

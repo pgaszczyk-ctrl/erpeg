@@ -66,7 +66,7 @@ import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
 import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
 import type { TablicaHost, PunktTablicy, KartkaNaTablicy } from '../ui/tablicaMiasta';
-import { kartkaTablicy, kluczTablicy } from '../tablice/kartki';
+import { kartkaTablicy, kluczTablicy, type RodzajZlecenia } from '../tablice/kartki';
 import { miastoPrzy, planMiasta, wolneMiejsce, blisko as tablicaBlisko, type MiastoTablic } from '../tablice/swiatowe';
 import { TABLICE_SWIAT } from '../content/tablice';
 import type { PlanMiasta } from '../map/CityMap';
@@ -4360,13 +4360,13 @@ export class GameScene extends Phaser.Scene {
    * the generator (src/tablice/kartki.ts) runs here; taking it starts the job like a temple's random job and marks
    * the board used until tomorrow (`session.daily['tablica:<board>']`).
    */
-  private kartkaNaTablicy(t: { x: number; y: number }): KartkaNaTablicy | undefined {
+  private kartkaNaTablicy(t: { x: number; y: number }, wymus?: RodzajZlecenia): KartkaNaTablicy | undefined {
     if (demo.on || this.city.loch) return undefined;
     const dzien = today();
     const klucz = kluczTablicy(this.city, t);
     const dk = `tablica:${klucz}`;
     for (const k of Object.keys(session.daily)) if (k.startsWith('tablica:') && session.daily[k].d !== dzien) delete session.daily[k];
-    const k = kartkaTablicy(this.city, t, dzien);
+    const k = kartkaTablicy(this.city, t, dzien, wymus);
     if (!k) return undefined;
     const m = session.gen[k.misja.id] ?? k.misja;
     if (session.daily[dk]?.d === dzien) return { rodzaj: k.rodzaj, tytul: m.tytul, tresc: m.opis, zleca: k.zlecaNazwa, stan: 'wzieta', przyjmij: () => {} };
