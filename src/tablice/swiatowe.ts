@@ -309,7 +309,7 @@ export function wolneMiejsce(city: CityMap, sp: Spot) {
 }
 
 /** Is there a way-out board within reach of its spot already (avoid two boards on one spot after a restart)? */
-export function blisko(city: CityMap, x: number, y: number) {
-  return city.tablice.some((t) => Math.hypot(t.x - x, t.y - y) < T.odstepM * PX_PER_M * 0.5);
+export function blisko(city: CityMap, x: number, y: number, m = T.odstepM * 0.5) {
+  return city.tablice.some((t) => Math.hypot(t.x - x, t.y - y) < m * PX_PER_M);
 }
 

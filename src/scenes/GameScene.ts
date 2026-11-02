@@ -73,6 +73,8 @@ import type { PlanMiasta } from '../map/CityMap';
 /** Town boards worked out this page load, per map and town (src/tablice/swiatowe.ts); which spots are done. */
 const PLANY_TABLIC = new Map<string, { gotowy: Awaited<ReturnType<typeof planMiasta>> | null; postawione: Set<number> }>();
 (window as unknown as { __planyTablic: typeof PLANY_TABLIC }).__planyTablic = PLANY_TABLIC; // browser tests
+/** Cannons (map id | station id) that already got their board this page load. */
+const ARMATY_Z_TABLICA = new Set<string>();
 import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -1290,6 +1292,7 @@ export class GameScene extends Phaser.Scene {
       this.crossBorder(now);
       this.portsNear(now);
       this.tabliceSwiata(now);
+      this.tabliceArmat(now);
     }
     if (consumeHeal()) this.healButton();
     if (live()) {
@@ -4336,7 +4339,7 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.city.places)
       if (p.kind === 'station' && !p.id.includes('#'))
         punkty.push({ nazwa: p.name, x: p.door.x, y: p.door.y, rodzaj: /autobus/i.test(p.name) ? 'autobus' : 'kolej', adres: p.building?.addresses[0] });
-    for (const a of this.artillery?.naPlanie() ?? []) punkty.push({ ...a, rodzaj: 'armata' });
+    for (const a of this.artillery?.naPlanie() ?? []) punkty.push({ nazwa: a.nazwa, x: a.x, y: a.y, rodzaj: 'armata' });
     const blisko = (x: number, y: number) => {
       if (!droga) return false;
       const q = this.city.fromLatLon(droga.lat, droga.lon);
@@ -4362,6 +4365,49 @@ export class GameScene extends Phaser.Scene {
     const glow = this.signGlow(img);
     glow.setPosition(t.x, t.y - 14);
     this.farObjects.push(img, glow);
+  }
+
+  /** Cannons that already got their board (per map: station id). */
+  private tabliceArmatOd = 0;
+
+  /**
+   * A city board by every cannon – the pinball „metro” (owner, 2 Nov 2026: „stawiaj je też przy każdej armacie”):
+   * once the cannon's real spot is known and the ground around it is loaded, a board goes up on free ground 14–30 m
+   * from it, south side first (in front of the cannon as the camera sees it). It shows the town's plan: Lublin's
+   * own, else the plan worked out for the town the hero is in (none yet = try again later).
+   */
+  private tabliceArmat(now: number) {
+    if (now < this.tabliceArmatOd || !this.artillery || this.city.loch || demo.on) return;
+    this.tabliceArmatOd = now + 2000;
+    const plan = this.city.plan ?? this.planMiastaTeraz();
+    if (!plan) return;
+    const M = PX_PER_M;
+    const r = TABLICE_SWIAT.stawiajM * M;
+    for (const a of this.artillery.naPlanie()) {
+      const key = `${this.city.id}|${a.id}`;
+      if (!a.pewne || ARMATY_Z_TABLICA.has(key) || Math.abs(a.x - this.player.x) > r || Math.abs(a.y - this.player.y) > r) continue;
+      if (!this.city.ready({ x0: a.x - 80, y0: a.y - 80, x1: a.x + 80, y1: a.y + 80 })) continue;
+      ARMATY_Z_TABLICA.add(key);
+      let q: { x: number; y: number } | null = null;
+      // South first (in front of the cannon), then round it.
+      for (const odM of [14, 18, 23, 30]) {
+        for (const kat of [90, 60, 120, 30, 150, 0, 180, 210, 330, 240, 300, 270]) {
+          const x = a.x + Math.cos((kat * Math.PI) / 180) * odM * M, y = a.y + Math.sin((kat * Math.PI) / 180) * odM * M;
+          if (this.city.isFree(x, y, 6, 4)) { q = { x: Math.round(x), y: Math.round(y) }; break; }
+        }
+        if (q) break;
+      }
+      if (!q || tablicaBlisko(this.city, q.x, q.y, 6)) continue;
+      const t = { ...q, plan, miasto: this.city.plan ? mapName(this.city.id) : this.miastoTablic ? tx(this.miastoTablic.pl, this.miastoTablic.en) : mapName(this.city.id) };
+      this.city.tablice.push(t);
+      this.postawTablice(t);
+    }
+  }
+
+  /** The board plan of the town the hero is in on a non-Lublin map (once worked out), else null. */
+  private planMiastaTeraz() {
+    const m = this.miastoTablic;
+    return m ? PLANY_TABLIC.get(`${this.city.id}|${m.id}`)?.gotowy?.plan ?? null : null;
   }
 
   /** The town the hero is in (towns of the whole world, src/tablice/swiatowe.ts) and when to look again. */

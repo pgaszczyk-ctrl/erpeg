@@ -320,16 +320,17 @@ export class Artillery {
   }
   /** This city's cannons on this map, for the city boards' map (ui/tablicaMiasta.ts): where each stands (its generated
    *  point while the tiles there aren't loaded yet). */
-  naPlanie(): { nazwa: string; x: number; y: number }[] {
+  naPlanie(): { id: string; nazwa: string; x: number; y: number; pewne: boolean }[] {
     if (!this.registry) return [];
-    const out: { nazwa: string; x: number; y: number }[] = [];
+    const out: { id: string; nazwa: string; x: number; y: number; pewne: boolean }[] = [];
     for (const s of this.registry.stops) {
       if (s.disabled) continue;
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
       const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
       if (p === null) continue;
-      out.push({ nazwa: s.name, ...(p ?? this.city.fromLatLon(ll.lat, ll.lon)) });
+      // pewne = the cannon's real spot is known (its tiles are loaded), not just its generated point.
+      out.push({ id: s.id, nazwa: s.name, ...(p ?? this.city.fromLatLon(ll.lat, ll.lon)), pewne: !!p });
     }
     return out;
   }
