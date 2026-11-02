@@ -6,7 +6,7 @@ import { worldInfo } from './travel';
 import { wczytajPorty, portyBlisko, odleglosc } from './porty';
 
 /** 'armata' (a municipal cannon) and 'wylot' (where a road leaves the city): city boards' „Prowadź”, ui/tablicaMiasta.ts. */
-export type RodzajHuba = 'kolej' | 'autobus' | 'port' | 'armata' | 'wylot';
+export type RodzajHuba = 'kolej' | 'autobus' | 'port' | 'armata' | 'metro' | 'wylot';
 export interface Hub { nazwa: string; lat: number; lon: number; rodzaj: RodzajHuba; km: number }
 
 let indeks: Promise<Set<string>> | null = null;
@@ -80,8 +80,8 @@ export function wybierz(list: Hub[], ile: number): Hub[] {
   return out.sort((a, b) => a.km - b.km);
 }
 
-const KOD: Record<RodzajHuba, string> = { kolej: 'k', autobus: 'a', port: 'p', armata: 'c', wylot: 'w' };
-const RODZAJ: Record<string, RodzajHuba> = { k: 'kolej', a: 'autobus', p: 'port', c: 'armata', w: 'wylot' };
+const KOD: Record<RodzajHuba, string> = { kolej: 'k', autobus: 'a', port: 'p', armata: 'c', metro: 'm', wylot: 'w' };
+const RODZAJ: Record<string, RodzajHuba> = { k: 'kolej', a: 'autobus', p: 'port', c: 'armata', m: 'metro', w: 'wylot' };
 
 /** Hubs as kept in the save: [name, lat, lon, kind letter]. */
 export function doZapisu(h: Hub[]): [string, number, number, string][] {
@@ -98,4 +98,4 @@ export function przepisane(mapy: { h: [string, number, number, string][] }[], at
   return out.sort((a, b) => a.km - b.km);
 }
 
-export const IKONA_HUBA: Record<RodzajHuba, string> = { kolej: '🚂', autobus: '🚌', port: '⚓', armata: '💥', wylot: '➜' };
+export const IKONA_HUBA: Record<RodzajHuba, string> = { kolej: '🚂', autobus: '🚌', port: '⚓', armata: '💥', metro: '🚇', wylot: '➜' };

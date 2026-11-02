@@ -195,7 +195,7 @@ function hubPopup(game: GameScene, root: HTMLDivElement, h: Hub, redraw: () => v
   const box = document.createElement('div');
   box.className = 'mm-hub';
   const prowadzi = game.drogaDo()?.nazwa === h.nazwa && game.drogaDo()?.lat === h.lat;
-  const nazwa = { kolej: 'Dworzec kolejowy', autobus: 'Dworzec autobusowy', port: 'Port promowy', armata: 'Armata miejska', wylot: 'Wylot z miasta' }[h.rodzaj];
+  const nazwa = { kolej: 'Dworzec kolejowy', autobus: 'Dworzec autobusowy', port: 'Port promowy', armata: 'Armata miejska', metro: 'Właz metra (pinball)', wylot: 'Wylot z miasta' }[h.rodzaj];
   box.innerHTML = `<b>${IKONA_HUBA[h.rodzaj]} ${h.nazwa.replace(/</g, '&lt;')}</b><span>${nazwa} · ${h.km < 1 ? `${Math.round(h.km * 1000)} m` : `${h.km.toFixed(h.km < 10 ? 1 : 0)} km`} stąd</span>`;
   const row = document.createElement('div');
   const b = (text: string, fn: () => void) => {

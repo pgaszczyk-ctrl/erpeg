@@ -489,7 +489,7 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   }
   // Stations and cannons (the pinball „metro”).
   for (const { p, sx, sy } of kropki) {
-    medalion(n, sx, sy, p.rodzaj === 'ty' ? '' : IKONA_HUBA[p.rodzaj], p.rodzaj === 'armata');
+    medalion(n, sx, sy, p.rodzaj === 'ty' ? '' : IKONA_HUBA[p.rodzaj], p.rodzaj === 'armata' || p.rodzaj === 'metro');
     cele.push({ p, sx, sy });
   }
   // You are here: a red enamel pin.
@@ -510,7 +510,8 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   cele.push({ p: { nazwa: tu, x: h.hero.x, y: h.hero.y, rodzaj: 'ty' }, sx: hx, sy: hy });
   // Legend on a brass strip.
   const legenda = [`${IKONA_HUBA.kolej} ${tx('dworzec', 'station')}`];
-  if (h.punkty.some((p) => p.rodzaj === 'armata')) legenda.push(`${IKONA_HUBA.armata} ${tx('metro armatnie', 'cannon metro')}`);
+  if (h.punkty.some((p) => p.rodzaj === 'armata')) legenda.push(`${IKONA_HUBA.armata} ${tx('armata', 'cannon')}`);
+  if (h.punkty.some((p) => p.rodzaj === 'metro')) legenda.push(`${IKONA_HUBA.metro} ${tx('metro (pinball)', 'metro (pinball)')}`);
   legenda.push(tx('stuknij znak', 'tap a sign'));
   n.font = "500 14px 'Pixelify Sans', sans-serif";
   n.textAlign = 'left';

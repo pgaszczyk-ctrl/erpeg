@@ -4339,7 +4339,7 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.city.places)
       if (p.kind === 'station' && !p.id.includes('#'))
         punkty.push({ nazwa: p.name, x: p.door.x, y: p.door.y, rodzaj: /autobus/i.test(p.name) ? 'autobus' : 'kolej', adres: p.building?.addresses[0] });
-    for (const a of this.artillery?.naPlanie() ?? []) punkty.push({ nazwa: a.nazwa, x: a.x, y: a.y, rodzaj: 'armata' });
+    for (const a of this.artillery?.naPlanie() ?? []) punkty.push({ nazwa: a.nazwa, x: a.x, y: a.y, rodzaj: a.metro ? 'metro' : 'armata' });
     const blisko = (x: number, y: number) => {
       if (!droga) return false;
       const q = this.city.fromLatLon(droga.lat, droga.lon);

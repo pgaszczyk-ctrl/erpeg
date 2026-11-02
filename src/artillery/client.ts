@@ -342,17 +342,18 @@ export class Artillery {
   }
   /** This city's cannons on this map, for the city boards' map (ui/tablicaMiasta.ts): where each stands (its generated
    *  point while the tiles there aren't loaded yet). */
-  naPlanie(): { id: string; nazwa: string; x: number; y: number; pewne: boolean }[] {
+  naPlanie(): { id: string; nazwa: string; x: number; y: number; pewne: boolean; metro: boolean }[] {
     if (!this.registry) return [];
-    const out: { id: string; nazwa: string; x: number; y: number; pewne: boolean }[] = [];
+    const out: { id: string; nazwa: string; x: number; y: number; pewne: boolean; metro: boolean }[] = [];
     for (const s of this.registry.stops) {
       if (s.disabled) continue;
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
-      const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+      // A hatch in metro cities (the pinball), else a cannon – exactly where the game puts it.
+      const p = miejsceNa(this.city, s, ll, this.registry.metro);
       if (p === null) continue;
-      // pewne = the cannon's real spot is known (its tiles are loaded), not just its generated point.
-      out.push({ id: s.id, nazwa: s.name, ...(p ?? this.city.fromLatLon(ll.lat, ll.lon)), pewne: !!p });
+      // pewne = the station's real spot is known (its tiles are loaded), not just its generated point.
+      out.push({ id: s.id, nazwa: s.name, ...(p ?? this.city.fromLatLon(ll.lat, ll.lon)), pewne: !!p, metro: !!this.registry.metro });
     }
     return out;
   }
