@@ -1,3 +1,4 @@
+import { composeSurfaces, revealBounds, revealPixels, type Surface, type PixelRect, type Reveal } from './occlusion';
 import Phaser from 'phaser';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { GROUND_DEPTH, type MapRenderer } from '../map/MapRenderer';
@@ -11,7 +12,7 @@ import type { DebugSettings } from './debug';
 import { characterReference, type CharacterReference } from './proportions';
 import type { BuildingPlan, PlanInput, PlanResult, Point } from './types';
 
-interface SpriteEntry { image:Phaser.GameObjects.Image; key:string; bytes:number; lod:number; label?:Phaser.GameObjects.Text; decorations:Phaser.GameObjects.Image[]; shadow?:Phaser.GameObjects.Image; shadowKey?:string; signature:string }
+interface SpriteEntry { image:Phaser.GameObjects.Image; key:string; bytes:number; lod:number; label?:Phaser.GameObjects.Text; decorations:Phaser.GameObjects.Image[]; shadow?:Phaser.GameObjects.Image; shadowKey?:string; signature:string; texture:Phaser.Textures.CanvasTexture; surface:Surface; composed:ImageData; revealKey?:string; revealRect?:PixelRect }
 interface Pending { resolve:(value:any)=>void; reject:(error:Error)=>void }
 const ART_DENSITY=2,MAX_TEXTURE_BYTES=32*1024*1024;
 let serial=0;
@@ -41,6 +42,10 @@ export class ArchitectureLayer {
   private started=performance.now();
   private firstReadyMs=0;
   private visiblePlans:BuildingPlan[]=[];
+  private occlusionDirty=true;
+  private occlusionKey='';
+  private hiddenSurfacePixels=0;
+  private revealedBuildings=0;
   private lastInput?:PlanInput;
   private off:()=>void;
   constructor(private scene:Phaser.Scene,private city:CityMap,private terrain:MapRenderer,readonly settings:DebugSettings,private character:CharacterReference=characterReference()){
@@ -71,17 +76,19 @@ export class ArchitectureLayer {
     }catch(error){this.failures.push(error instanceof Error?error.message:String(error));this.dirty=true;}
     finally{this.planning=false;}
   }
-  update(camera:Phaser.Cameras.Scene2D.Camera,now:number){
+  update(camera:Phaser.Cameras.Scene2D.Camera,now:number,actor?:Phaser.GameObjects.Sprite){
     if(this.disposed)return;
     const v=camera.worldView,cx=v.centerX,cy=v.centerY;
     if((this.dirty||distance(this.lastOrigin,[cx,cy])>80*PX_PER_M||this.city.buildings.length!==this.lastTileCount)&&now-this.lastRefresh>600){
       this.lastRefresh=now;void this.refresh(cx,cy,Math.max(300,Math.hypot(v.width,v.height)/PX_PER_M/2));
     }
     if(!this.plan)return;
-    // Cull by the actual projected body, including tall walls rather than only the footprint.
+    // Actual image bounds when available; conservative projected body bounds before rasterization.
     this.visiblePlans=this.plan.buildings.filter(b=>{
+      const im=this.sprites.get(b.id)?.image;
+      if(im&&im.x+im.displayWidth>v.left&&im.x<v.right&&im.y+im.displayHeight>v.top&&im.y<v.bottom)return true;
       const p=b.roofFootprints.flat(),xs=p.map(p=>p[0]*PX_PER_M),ys=p.map(p=>p[1]*PX_PER_M);
-      return Math.max(...xs)+(b.wallHeight+b.roofHeight)*.25*PX_PER_M>v.left-40&&Math.min(...xs)<v.right+40&&Math.max(...ys)>v.top-40&&Math.min(...ys)-(b.wallHeight+b.roofHeight+20)*PX_PER_M<v.bottom+40;
+      return Math.max(...xs)>v.left&&Math.min(...xs)<v.right&&Math.max(...ys)>v.top&&Math.min(...ys)-(b.wallHeight+b.roofHeight+20)*PX_PER_M/this.projection<v.bottom;
     });
     const visible=new Set(this.visiblePlans.map(b=>b.id));
     // Keep the same world anchor as terrain, tree trunks, shadows and decorations.
@@ -105,6 +112,9 @@ export class ArchitectureLayer {
         if(deco){const frame=Math.floor(now/160+hash(id)%6)%(deco.kind==='tesla'?4:6);d.setFrame((deco.variant+['boiler','tesla','chimney','water-tower','tank','valve','turret'].indexOf(deco.kind)*3)*6+frame);}
       }
     }
+    this.compose(visible);
+    this.revealedBuildings=0;
+    for(const entry of this.sprites.values())if(this.reveal(entry,actor))this.revealedBuildings++;
     if(this.ready()&&!this.firstReadyMs)this.firstReadyMs=performance.now()-this.started;
   }
   private async render(b:BuildingPlan,signature:string,lod:number){
@@ -115,11 +125,12 @@ export class ArchitectureLayer {
       const r=response.raster as Raster;this.backend=r.backend;
       this.remove(b.id);
       const key=`architecture-${++serial}`,canvas=document.createElement('canvas');canvas.width=r.width;canvas.height=r.height;
-      canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(r.pixels),r.width,r.height),0,0);
-      this.scene.textures.addImage(key,canvas as unknown as HTMLImageElement)!.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      const pixels=new Uint8ClampedArray(r.pixels),composed=new ImageData(pixels.slice(),r.width,r.height);
+      canvas.getContext('2d')!.putImageData(composed,0,0);
+      const texture=this.scene.textures.addCanvas(key,canvas)!;texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       const x=Math.round((b.center[0]+r.x)*PX_PER_M*ART_DENSITY)/ART_DENSITY,y=Math.round((b.center[1]+r.y/this.projection)*PX_PER_M*ART_DENSITY*this.projection)/(ART_DENSITY*this.projection);
       const bottom=Math.max(...b.footprints.flat().map(p=>p[1]))*PX_PER_M;
-      const image=this.scene.add.image(x,y,key).setOrigin(0).setScale(1/ART_DENSITY,1/ART_DENSITY/this.projection).setDepth(bottom);
+      const image=this.scene.add.image(x,y,key).setOrigin(0).setScale(1/ART_DENSITY,1/ART_DENSITY/this.projection).setDepth(bottom).setVisible(false);
       const label=this.settings.overlay?this.scene.add.text(b.center[0]*PX_PER_M,b.center[1]*PX_PER_M-b.wallHeight*PX_PER_M/this.projection,`${STYLES[b.decision.style].name}\n${b.decision.source} · ${b.decision.region}\n${b.source.idSource}: ${b.id}`,{fontSize:'8px',fontFamily:'monospace',color:'#ece6d6',backgroundColor:'#1e1a24',padding:{x:3,y:2}}).setDepth(1e7).setOrigin(.5,1):undefined;
       const decorations:Phaser.GameObjects.Image[]=[];
       if(!lod&&this.scene.textures.exists('architecture-decorations'))for(const deco of b.decorations){
@@ -129,10 +140,49 @@ export class ArchitectureLayer {
         // Billboards keep the painted north-west light; mirroring would reverse their shading.
         decorations.push(d);
       }
-      const entry:SpriteEntry={image,key,bytes:r.pixels.byteLength,lod,label,decorations,signature};
-      this.sprites.set(b.id,entry);this.textureBytes+=entry.bytes;
+      const surface:Surface={id:b.id,x:Math.round(x*ART_DENSITY),y:Math.round(y*ART_DENSITY*this.projection),width:r.width,height:r.height,pixels,depth:r.depth,depthOffset:y/PX_PER_M-r.y/this.projection};
+      const entry:SpriteEntry={image,key,bytes:r.pixels.byteLength*3+r.depth.byteLength,lod,label,decorations,signature,texture,surface,composed};
+      this.sprites.set(b.id,entry);this.textureBytes+=entry.bytes;this.occlusionDirty=true;
     }catch(error){this.failed.set(b.id,signature);this.failures.push(`${b.id}: ${error instanceof Error?error.message:String(error)}`);}
     finally{this.jobs.delete(b.id);}
+  }
+  private compose(visible:Set<string>){
+    const entries=[...this.sprites.entries()].filter(([id])=>visible.has(id));
+    const key=entries.map(([id,s])=>`${id}:${s.key}`).sort().join('|');
+    if(!this.occlusionDirty&&key===this.occlusionKey)return;
+    const composed=composeSurfaces(entries.map(([,s])=>s.surface));this.hiddenSurfacePixels=0;
+    for(const [id,s]of entries){
+      const pixels=composed.get(id)!;
+      for(let i=3;i<pixels.length;i+=4)if(s.surface.pixels[i]&&!pixels[i])this.hiddenSurfacePixels++;
+      s.composed=new ImageData(new Uint8ClampedArray(pixels),s.surface.width,s.surface.height);
+      s.texture.context.putImageData(s.composed,0,0);s.texture.refresh();
+      s.revealKey=undefined;s.revealRect=undefined;
+    }
+    this.occlusionKey=key;this.occlusionDirty=false;
+  }
+  private reveal(entry:SpriteEntry,actor?:Phaser.GameObjects.Sprite):boolean{
+    let window:Reveal|undefined;
+    if(actor&&entry.image.visible&&entry.image.depth>actor.depth){
+      const b=actor.getBounds();
+      window={x:Math.round((b.centerX-entry.image.x)*ART_DENSITY),y:Math.round((b.centerY-entry.image.y)*ART_DENSITY*this.projection),rx:Math.ceil(b.width*.65*ART_DENSITY+2),ry:Math.ceil(b.height*.62*ART_DENSITY*this.projection+2)};
+      if(!revealBounds(window,entry.surface.width,entry.surface.height))window=undefined;
+    }
+    const key=window?`${window.x},${window.y},${window.rx},${window.ry}`:'off';
+    if(key!==entry.revealKey){
+      let changed=false;
+      if(entry.revealRect){const r=entry.revealRect;entry.texture.context.putImageData(entry.composed,0,0,r.x,r.y,r.width,r.height);entry.revealRect=undefined;changed=true;}
+      if(window){
+        const patch=revealPixels(entry.surface,entry.composed.data,window);
+        if(patch?.removed){entry.texture.context.putImageData(new ImageData(new Uint8ClampedArray(patch.pixels),patch.rect.width,patch.rect.height),patch.rect.x,patch.rect.y);entry.revealRect=patch.rect;changed=true;}
+      }
+      entry.revealKey=key;if(changed)entry.texture.refresh();
+    }
+    // A roof decoration must not hide the character inside the cut-away either.
+    const bounds=actor?.getBounds();
+    for(const d of entry.decorations){const q=d.getBounds(),touch=bounds&&q.right>bounds.left&&q.left<bounds.right&&q.bottom>bounds.top&&q.top<bounds.bottom;
+      d.setDepth(entry.revealRect&&actor&&touch?actor.depth-.01:entry.image.depth+.01);
+    }
+    return Boolean(entry.revealRect);
   }
   private shadow(b:BuildingPlan,entry:SpriteEntry){
     const dx=b.wallHeight*.32,dy=b.wallHeight*.25;
@@ -173,10 +223,10 @@ export class ArchitectureLayer {
     const q=candidates.find(q=>this.isFree(q[0]*PX_PER_M,q[1]*PX_PER_M));
     return q?[q[0]*PX_PER_M,q[1]*PX_PER_M]:null;
   }
-  ready(){return Boolean(this.plan&&!this.planning&&this.jobs.size===0&&this.visiblePlans.every(b=>this.sprites.has(b.id)));}
-  diagnostics(){return {ready:this.ready(),buildings:this.plan?.buildings.length??0,visible:this.visiblePlans.length,rejected:this.plan?.rejected.length??0,planning:this.planning,pending:this.jobs.size,workerMs:this.plan?.milliseconds??0,textureBytes:this.textureBytes,textureBudget:MAX_TEXTURE_BYTES,backend:this.backend,sourceFallback:this.sourceFallback,firstReadyMs:this.firstReadyMs,failures:[...new Set(this.failures)].slice(-10),styles:Object.fromEntries(Object.keys(STYLES).map(id=>[id,this.plan?.buildings.filter(b=>b.decision.style===id).length??0])),idFallbacks:this.lastInput?.sources.filter(s=>s.idSource!=='osm').length??0};}
+  ready(){return Boolean(this.plan&&!this.planning&&!this.occlusionDirty&&this.jobs.size===0&&this.visiblePlans.every(b=>this.sprites.has(b.id)));}
+  diagnostics(){return {ready:this.ready(),buildings:this.plan?.buildings.length??0,visible:this.visiblePlans.length,rejected:this.plan?.rejected.length??0,planning:this.planning,pending:this.jobs.size,workerMs:this.plan?.milliseconds??0,textureBytes:this.textureBytes,textureBudget:MAX_TEXTURE_BYTES,backend:this.backend,hiddenSurfacePixels:this.hiddenSurfacePixels,revealedBuildings:this.revealedBuildings,sourceFallback:this.sourceFallback,firstReadyMs:this.firstReadyMs,failures:[...new Set(this.failures)].slice(-10),styles:Object.fromEntries(Object.keys(STYLES).map(id=>[id,this.plan?.buildings.filter(b=>b.decision.style===id).length??0])),idFallbacks:this.lastInput?.sources.filter(s=>s.idSource!=='osm').length??0};}
   inspect(){return {input:this.lastInput,plan:this.plan};}
-  private remove(id:string){const s=this.sprites.get(id);if(!s)return;s.image.destroy();s.label?.destroy();s.decorations.forEach(d=>d.destroy());s.shadow?.destroy();this.scene.textures.remove(s.key);if(s.shadowKey)this.scene.textures.remove(s.shadowKey);this.textureBytes-=s.bytes;this.sprites.delete(id);}
+  private remove(id:string){const s=this.sprites.get(id);if(!s)return;s.image.destroy();s.label?.destroy();s.decorations.forEach(d=>d.destroy());s.shadow?.destroy();this.scene.textures.remove(s.key);if(s.shadowKey)this.scene.textures.remove(s.shadowKey);this.textureBytes-=s.bytes;this.sprites.delete(id);this.occlusionDirty=true;}
   destroy(){if(this.disposed)return;this.disposed=true;this.off();this.worker.terminate();this.data.dispose();for(const id of this.sprites.keys())this.remove(id);for(const p of this.pending.values())p.reject(new Error('Warstwa została zamknięta'));this.pending.clear();}
 }
 function convexHull(points:Point[]):Point[]{

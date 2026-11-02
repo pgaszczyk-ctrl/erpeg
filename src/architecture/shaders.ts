@@ -9,13 +9,14 @@ varying vec3 vNormal;
 varying vec2 vUV;
 varying vec3 vTones;
 varying float vKind;
+varying float vDepth;
 void main(){
   vec3 p=position;
   vec2 screen=vec2(p.x,p.y*uProjection.y-p.z);
   vec2 ndc=(screen-uBounds.xy)/uBounds.zw*2.0-1.0;
   float depth=(p.y+p.z*.7-uDepthRange.x)/uDepthRange.y;
   gl_Position=vec4(ndc.x,-ndc.y,1.0-depth*1.9,1.0);
-  vNormal=normal;vUV=uv;vTones=aTones;vKind=aKind;
+  vNormal=normal;vUV=uv;vTones=aTones;vKind=aKind;vDepth=depth;
 }`;
 export const BUILDING_FRAGMENT = /* glsl */`
 precision highp float;
@@ -25,6 +26,7 @@ varying vec3 vNormal;
 varying vec2 vUV;
 varying vec3 vTones;
 varying float vKind;
+varying float vDepth;
 void main(){
   float light=dot(normalize(vNormal),normalize(vec3(-1.0,-1.0,2.0)));
   float tone=light<0.05?0.0:(light<0.65?1.0:2.0);
@@ -40,8 +42,10 @@ void main(){
   int index=int(tone<0.5?vTones.x:(tone<1.5?vTones.y:vTones.z));
   vec3 color=vec3(0.0);
   for(int i=0;i<16;i++){if(i==index)color=uPalette[i];}
-  // Separate ID buffer; alpha is always binary. Its depth texture shares the same geometry.
-  gl_FragColor=uPass>0.5?vec4(1.0/255.0,0.0,0.0,1.0):vec4(color,1.0);
+  // R = object ID; GB = 16-bit surface depth for compositing separate houses.
+  // Alpha stays binary; the depth texture is retained for the one-pixel outline.
+  float encodedDepth=floor(clamp(vDepth,0.0,1.0)*65535.0+0.5);
+  gl_FragColor=uPass>0.5?vec4(1.0/255.0,floor(encodedDepth/256.0)/255.0,mod(encodedDepth,256.0)/255.0,1.0):vec4(color,1.0);
 }`;
 export const OUTLINE_VERTEX = /* glsl */`
 varying vec2 vUV;
@@ -64,7 +68,7 @@ void main(){
     vec2 offset=i==0?vec2(1.,0.):i==1?vec2(-1.,0.):i==2?vec2(0.,1.):vec2(0.,-1.);
     vec2 uv=vUV+offset*uTexel;
     vec4 other=texture2D(uID,uv);
-    if(distance(id.rgb,other.rgb)>0.001&&(other.a<0.5||texture2D(uDepth,uv).r>depth+0.00001))edge=true;
+    if(abs(id.r-other.r)>0.001&&(other.a<0.5||texture2D(uDepth,uv).r>depth+0.00001))edge=true;
   }
   gl_FragColor=uOutline&&id.a>0.5&&edge?vec4(uInk,1.0):color;
 }`;

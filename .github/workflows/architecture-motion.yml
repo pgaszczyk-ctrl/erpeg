@@ -2,7 +2,9 @@ name: Test2 building motion
 on:
   pull_request:
     paths:
-      - 'src/architecture/layer.ts'
+      - 'src/architecture/**'
+      - 'src/test2/main.ts'
+      - 'scripts/architecture/occlusion.mjs'
       - 'scripts/architecture/motion.mjs'
       - '.github/workflows/architecture-motion.yml'
   workflow_dispatch:
@@ -52,9 +54,15 @@ jobs:
         env:
           MOTION_BASELINE_DIST: .cache/motion-before
           MOTION_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
+      - run: node scripts/architecture/occlusion.mjs
+        env:
+          MOTION_BASELINE_DIST: .cache/motion-before
+          MOTION_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test2-building-motion
-          path: work/architecture-motion/
+          path: |
+            work/architecture-motion/
+            work/architecture-occlusion/
           retention-days: 7

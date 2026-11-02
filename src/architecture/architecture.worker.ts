@@ -17,9 +17,9 @@ self.onmessage=(event:MessageEvent<{id:number;input:PlanInput}|{id:number;buildi
       const mesh=buildingMesh(m.building,m.lod);
       try{raster=rasterizer?rasterizer.render(mesh,m.density,m.projection,m.outline):softwareRaster(mesh,m.density,m.projection,m.outline);}
       catch(error){if(!rasterizer)throw error;rasterizer.dispose();rasterizer=undefined;unavailable=true;raster=softwareRaster(mesh,m.density,m.projection,m.outline);}
-      cache.set(key,raster);bytes+=raster.pixels.byteLength;
-      while(bytes>MAX_BYTES&&cache.size>1){const first=cache.keys().next().value!;bytes-=cache.get(first)!.pixels.byteLength;cache.delete(first);}
+      cache.set(key,raster);bytes+=raster.pixels.byteLength+raster.depth.byteLength;
+      while(bytes>MAX_BYTES&&cache.size>1){const first=cache.keys().next().value!;bytes-=cache.get(first)!.pixels.byteLength+cache.get(first)!.depth.byteLength;cache.delete(first);}
     }
-    const pixels=raster.pixels.slice();(self as unknown as Worker).postMessage({id:m.id,raster:{...raster,pixels}},[pixels.buffer]);
+    const pixels=raster.pixels.slice(),depth=raster.depth.slice();(self as unknown as Worker).postMessage({id:m.id,raster:{...raster,pixels,depth}},[pixels.buffer,depth.buffer]);
   }catch(error){(self as unknown as Worker).postMessage({id:m.id,error:error instanceof Error?error.message:String(error)});}
 };

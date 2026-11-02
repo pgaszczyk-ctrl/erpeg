@@ -1,3 +1,4 @@
+import { composeSurfaces, revealPixels, type Surface } from '../../src/architecture/occlusion';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { massing, components, connectorHeight, exposedWalls } from '../../src/architecture/massing';
@@ -147,6 +148,42 @@ check('all roofs/angles rasterize into strictly palette-only pixels; facade coll
   assert(opaque>300);statistics.push({roof,deg,opaque});
  }
  return statistics;
+});
+check('neighbour roof occlusion matches a merged 3D scene, including an L-shaped tall house',()=>{
+ const base=planArchitecture({...input,roads:[],sources:[source('occlusion-fixture')]}).buildings[0];
+ let conflictingPixels=0,compared=0;
+ for(const angle of [0,Math.PI/8,3*Math.PI/8])for(const projection of [.72,1]){
+  const tall={...base,id:'tall',angle,levels:2,wallHeight:base.wallHeight*2,rectangles:[{x:-20,y:-8,w:40,d:16},{x:-20,y:8,w:8,d:32}],connectors:[]};
+  const small={...base,id:'small',angle,rectangles:[{x:-4,y:12,w:16,d:16}],connectors:[]};
+  const a=buildingMesh(tall),b=buildingMesh(small);a.tones.fill(4);b.tones.fill(11);
+  const join=(x:Float32Array,y:Float32Array)=>new Float32Array([...x,...y]);
+  const merged={positions:join(a.positions,b.positions),normals:join(a.normals,b.normals),uv:join(a.uv,b.uv),tones:join(a.tones,b.tones),kinds:join(a.kinds,b.kinds),indices:new Uint32Array(a.indices.length+b.indices.length)};
+  const density=3.84,aa=softwareRaster(a,density,projection,false),bb=softwareRaster(b,density,projection,false),reference=softwareRaster(merged,density,projection,false);
+  const surface=(id:string,r:typeof aa):Surface=>({id,x:Math.round(r.x*density),y:Math.round(r.y*density),width:r.width,height:r.height,pixels:r.pixels,depth:r.depth,depthOffset:0});
+  const sa=surface('tall',aa),sb=surface('small',bb),composed=composeSurfaces([sa,sb]);
+  assert.deepEqual(composed,composeSurfaces([sb,sa]));
+  const x0=Math.max(sa.x,sb.x),y0=Math.max(sa.y,sb.y),x1=Math.min(sa.x+sa.width,sb.x+sb.width),y1=Math.min(sa.y+sa.height,sb.y+sb.height);
+  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+   const ia=(y-sa.y)*sa.width+x-sa.x,ib=(y-sb.y)*sb.width+x-sb.x;
+   if(!sa.pixels[ia*4+3]||!sb.pixels[ib*4+3])continue;
+   const at=((y-Math.round(reference.y*density))*reference.width+x-Math.round(reference.x*density))*4;
+   const expected=[...reference.pixels.subarray(at,at+4)];
+   const alphaA=composed.get('tall')![ia*4+3],alphaB=composed.get('small')![ib*4+3];
+   assert.equal(Number(alphaA>0)+Number(alphaB>0),1,'One real front surface owns each overlapping pixel');
+   const actual=alphaA?sa.pixels.subarray(ia*4,ia*4+4):sb.pixels.subarray(ib*4,ib*4+4);
+   assert.deepEqual([...actual],expected,`Ray occlusion at ${x},${y}, angle=${angle}`);compared++;
+   if(!alphaA)conflictingPixels++;
+  }
+ }
+ assert(compared>500);assert(conflictingPixels>100,'Fixture must expose the incorrect whole-house baseline sort');
+ return {compared,conflictingPixels};
+});
+check('hero cut-away has binary alpha and leaves the composed surface intact for restoration',()=>{
+ const pixels=new Uint8ClampedArray(40*40*4).fill(255),surface:Surface={id:'wall',x:3,y:7,width:40,height:40,pixels,depth:new Float32Array(1600),depthOffset:0};
+ const saved=pixels.slice(),patch=revealPixels(surface,pixels,{x:20,y:20,rx:8,ry:12});assert(patch);assert(patch.removed>100);
+ const center=((20-patch.rect.y)*patch.rect.width+20-patch.rect.x)*4;assert.equal(patch.pixels[center+3],0);
+ for(let i=3;i<patch.pixels.length;i+=4)assert([0,255].includes(patch.pixels[i]));
+ assert.deepEqual(pixels,saved);assert.equal(revealPixels(surface,pixels,{x:-100,y:-100,rx:8,ry:12}),null);
 });
 check('architecture-free ground, tree positions and pipes stay byte-identical',()=>{
  const N=96,S=N+2*MARGINES,ids=new Uint8Array(S*S).fill(RODZAJE.indexOf('trawa'));
