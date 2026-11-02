@@ -9,7 +9,7 @@ try{({chromium}=require('playwright'));}catch{({chromium}=createRequire('/worksp
 const output='work/architecture-occlusion';await mkdir(output,{recursive:true});
 const baseline=process.env.MOTION_BASELINE_DIST?path.resolve(process.env.MOTION_BASELINE_DIST):null;
 const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader'],timeout:15000});
-const results=[],mime={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.webp':'image/webp'};
+const results=[],mime={'.svg':'image/svg+xml','.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.webp':'image/webp'};
 async function files(route){
  const url=new URL(route.request().url());if(url.hostname!=='exp-lore.local')return route.abort();
  const prefix=url.pathname.startsWith('/before/')?'/before/':'/after/',root=prefix==='/before/'?baseline:path.resolve('dist');

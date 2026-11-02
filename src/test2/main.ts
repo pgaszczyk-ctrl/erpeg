@@ -3,7 +3,8 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { MapRenderer } from '../map/MapRenderer';
 import { przygotujRysunkiUpraw } from '../map/Podloze09';
-import { worldMap } from '../map/world';
+import { LUBLIN_PLACES } from './locations';
+import { LublinLocator } from './locator';
 import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
 import { OSTROSC } from '../screen';
@@ -15,25 +16,13 @@ const architectureSettings = debugSettings();
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const query = new URLSearchParams(location.search);
-const locations = {
-  station: { lat: 51.2317, lon: 22.5682, mapa: 'lublin' },
-  kul: { lat: 51.2476, lon: 22.5446, mapa: 'lublin' },
-  dziewanny: { lat: 51.2351, lon: 22.5166, mapa: 'lublin' },
-  szczytowa: { lat: 51.2230, lon: 22.5349, mapa: 'lublin' },
-  homes: { lat: 51.2434, lon: 22.5344, mapa: 'lublin' },
-  krakow: { lat: 50.0637, lon: 19.9348, mapa: 'world' },
-  oldtown: { lat: 51.2483, lon: 22.5679, mapa: 'lublin' },
-  apartments: { lat: 51.2314, lon: 22.5340, mapa: 'lublin' },
-  industrial: { lat: 51.2308, lon: 22.5990, mapa: 'lublin' },
-  bergen: { lat: 60.3971, lon: 5.3245, mapa: 'world' },
-  seville: { lat: 37.3886, lon: -5.9953, mapa: 'world' },
-  kyoto: { lat: 35.0030, lon: 135.7780, mapa: 'world' },
-};
-const initial = locations.station;
+const locations = LUBLIN_PLACES;
+const initial = locations.oldtown;
 const validNumber = (s: string | null, fallback: number, limit: number) => s !== null && s.trim() !== '' && Number.isFinite(+s) && Math.abs(+s) <= limit ? +s : fallback;
 const lat = validNumber(query.get('lat'), initial.lat, 85);
 const lon = validNumber(query.get('lon'), initial.lon, 180);
-const mapa = query.get('mapa') === 'world' ? 'world' : 'lublin';
+// Public laboratory focuses on the real Lublin map before worldwide generation.
+const mapa = 'lublin';
 let zoom = Math.min(5, Math.max(1, validNumber(query.get('zoom'), 3, 10)));
 const LOWER_VIEW = 0.72;
 let lowerView = query.get('view') !== 'normal';
@@ -50,7 +39,7 @@ function setArchitectureParameter(key:string,value:string){
 const status = (message: string | null) => { $('lab-status').hidden = message === null; if (message !== null) $('lab-status').textContent = message; };
 const navigate = (point: { lat: number; lon: number; mapa: string }) => {
   const url = new URL(location.href);
-  for (const [key, value] of Object.entries({ ...point, view: lowerView ? 'lower' : 'normal', zoom })) url.searchParams.set(key, String(value));
+  for (const [key, value] of Object.entries({ lat:point.lat,lon:point.lon,mapa:'lublin',view: lowerView ? 'lower' : 'normal', zoom })) url.searchParams.set(key, String(value));
   location.href = url.href;
 };
 const refreshLinks = () => {
@@ -78,6 +67,10 @@ for (const [id, lower] of [['iso-view', true], ['normal-view', false]] as const)
     refreshLinks();
   };
 }
+for(const [id,enabled]of [['compare-before',false],['compare-after',true]] as const){
+  const button=$(id);button.classList.toggle('active',architectureSettings.enabled===enabled);button.setAttribute('aria-pressed',String(architectureSettings.enabled===enabled));
+  button.onclick=()=>{if(architectureSettings.enabled!==enabled)setArchitectureParameter('arch',enabled?'1':'0');};
+}
 $('lat').setAttribute('value', String(lat)); $('lon').setAttribute('value', String(lon));
 $('panel-toggle').onclick = () => {
   const open = $('lab-panel').hidden;
@@ -87,7 +80,9 @@ $('panel-toggle').onclick = () => {
 document.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(b => { b.onclick = () => navigate(locations[b.dataset.location as keyof typeof locations]); });
 $('coordinates').onsubmit = e => {
   e.preventDefault();
-  navigate({ lat: Number($<HTMLInputElement>('lat').value), lon: Number($<HTMLInputElement>('lon').value), mapa: 'world' });
+  const lat=Number($<HTMLInputElement>('lat').value),lon=Number($<HTMLInputElement>('lon').value);
+  if(scene?.city){const p=scene.city.fromLatLon(lat,lon);if(!scene.city.insideCity(p.x,p.y)){status('Ten punkt leży poza mapą Lublina. Wybierz jeden ze skrótów.');return;}}
+  navigate({lat,lon,mapa:'lublin'});
 };
 for (const [id, d] of [['zoom-out', -1], ['zoom-in', 1]] as const) $(''+id).onclick = () => { zoom = Math.max(1, Math.min(5, zoom + d)); scene?.fit(); refreshLinks(); };
 window.addEventListener('keydown', e => {
@@ -113,6 +108,7 @@ class LabScene extends Phaser.Scene {
   private direction = 'down';
   private trains?: Pociagi;
   private shownStations = new Set<string>();
+  private locator=new LublinLocator($<HTMLCanvasElement>('lublin-map'),$('where-label'),$<HTMLAnchorElement>('osm-location'),$<HTMLButtonElement>('map-extent'));
   private readonly heroScale = labHeroScale(SKALA_POSTACI);
   constructor() { super('test2'); }
   preload() {
@@ -146,7 +142,7 @@ class LabScene extends Phaser.Scene {
     const w = this.scale.width / OSTROSC, h = this.scale.height / OSTROSC / LOWER_VIEW;
     const minZoom = Math.max(1, Math.min(Math.max(Math.ceil(w / 490), Math.ceil(h / 980)), Math.max(Math.ceil(w / 980), Math.ceil(h / 490))));
     zoom = Math.max(minZoom, zoom);
-    if(architectureSettings.enabled&&zoom*OSTROSC%2)zoom=Math.min(6,zoom+1);
+    if(zoom*OSTROSC%2)zoom=Math.min(6,zoom+1);
     this.cameras.main.setZoom(zoom * OSTROSC, zoom * OSTROSC * verticalRatio());
     // The hero is a standing sprite; keep its proportions and foot anchor.
     this.player?.setScale(this.heroScale, this.heroScale / verticalRatio());
@@ -159,12 +155,17 @@ class LabScene extends Phaser.Scene {
   }
   private async loadMap() {
     try {
-      const city = mapa === 'world' ? worldMap(lat, lon) : await CityMap.load('map/lublin.json');
-      const start = city.fromLatLon(lat, lon);
+      const city = await CityMap.load('map/lublin.json');
+      let start = city.fromLatLon(lat, lon);
+      if(!city.insideCity(start.x,start.y))start=city.fromLatLon(initial.lat,initial.lon);
       const r = this.radius();
       await Promise.all([city.ensure(start.x, start.y, r), przygotujRysunkiUpraw()]);
       this.city = city;
       const p = city.freeNear(start.x, start.y);
+      const actual=city.toLatLon(p.x,p.y),url=new URL(location.href);
+      for(const [key,value]of Object.entries({...actual,mapa:'lublin'}))url.searchParams.set(key,String(value));
+      history.replaceState(null,'',url.href);
+      $<HTMLInputElement>('lat').value=String(actual.lat);$<HTMLInputElement>('lon').value=String(actual.lon);
       this.player = this.add.sprite(p.x, p.y, 'lab-hero', 0).setOrigin(0.5, 56 / 64).setDepth(p.y);
       this.fit();
       this.mapView = new MapRenderer(this, city, architectureSettings.enabled);
@@ -181,6 +182,7 @@ class LabScene extends Phaser.Scene {
     const frames = [...this.frames].sort((a, b) => a - b);
     const duration = this.frames.reduce((a, b) => a + b, 0);
     return {
+      mapId:this.city?.id,mapMode:architectureSettings.enabled?'generator':'reference',
       variant: lowerView ? 'lower' : 'current', projection: { x: 1, y: verticalRatio() }, ready: this.ready,
       fps: duration ? 1000 * this.frames.length / duration : 0,
       frameP95: frames[Math.floor(frames.length * 0.95)] ?? 0,
@@ -234,6 +236,7 @@ class LabScene extends Phaser.Scene {
       const error=this.architecture?.diagnostics().failures.at(-1);
       if(error)status(`Architektura: ${error}`);
     } catch (error) { status(error instanceof Error ? error.message : String(error)); }
+    this.locator.update(this.city,p.x,p.y,this.cameras.main,this.architecture?.inspect().plan?.buildings??[],now);
     if (now - this.lastUi > 1000) {
       this.lastUi = now; refreshLinks();
       const m = this.metrics(), r = m.renderer;
