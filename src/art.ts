@@ -70,6 +70,7 @@ export const TEX = {
   /** The campsite's sign (artist's picture only; else the drawn tent). */
   signCamp: 'sign-camp',
   signpost: 'signpost',
+  tablicaMiasta: 'tablica-miasta',
   peak: 'peak',
   mapIcon: 'map-icon',
   heartBonus: 'heart-bonus',
@@ -630,6 +631,41 @@ function drawSignpost(scene: Phaser.Scene) {
   board(1, true);
   board(7, false);
   tex.refresh();
+}
+
+/**
+ * A city board (tablica z mapką miasta, owner 2 Nov 2026): a brass-framed parchment map of the town on two posts
+ * under a little roof, drawn at 2 picture px per map px (shown at 0.5) and clearly taller than a person, so it is
+ * seen from afar. Placeholder until the artist draws one.
+ */
+function drawTablicaMiasta(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.tablicaMiasta, 44, 46);
+  // Posts.
+  for (const x of [8, 32]) { px(ctx, x, 24, 4, 22, OUTLINE); px(ctx, x + 1, 25, 2, 21, '#7a4a24'); px(ctx, x + 1, 25, 1, 21, '#9a6634'); }
+  // Roof.
+  px(ctx, 1, 2, 42, 4, OUTLINE);
+  px(ctx, 3, 0, 38, 2, OUTLINE);
+  px(ctx, 2, 3, 40, 2, '#5a3a22');
+  px(ctx, 4, 1, 36, 1, '#7a5030');
+  // Brass frame and parchment.
+  px(ctx, 2, 6, 40, 23, OUTLINE);
+  px(ctx, 3, 7, 38, 21, '#c8a24a');
+  px(ctx, 3, 27, 38, 1, '#8a6a2a');
+  px(ctx, 40, 7, 1, 21, '#8a6a2a');
+  px(ctx, 5, 9, 34, 17, '#efe2b8');
+  // The town (a greyish blob), a river, roads out and a red „you are here”.
+  px(ctx, 11, 11, 20, 12, '#d6c7a0');
+  px(ctx, 9, 13, 24, 8, '#d6c7a0');
+  px(ctx, 5, 22, 10, 1, '#5aa0d0'); px(ctx, 14, 21, 8, 1, '#5aa0d0'); px(ctx, 21, 20, 18, 1, '#5aa0d0');
+  px(ctx, 5, 16, 34, 2, '#6a4a2a');
+  px(ctx, 20, 9, 2, 17, '#6a4a2a');
+  for (let i = 0; i < 6; i++) px(ctx, 26 + i, 10 + i, 2, 1, '#6a4a2a');
+  px(ctx, 5, 15, 2, 1, OUTLINE); px(ctx, 37, 15, 2, 1, OUTLINE);
+  px(ctx, 16, 12, 4, 4, OUTLINE); px(ctx, 17, 13, 2, 2, '#e43b44');
+  // Rivets.
+  for (const [x, y] of [[4, 8], [38, 8], [4, 25], [38, 25]]) px(ctx, x, y, 1, 1, '#fff0b0');
+  tex.refresh();
+  ART_SCALE.set(TEX.tablicaMiasta, 0.5);
 }
 
 /** A mountain top: a small cairn with a flag (world map peaks); `flaga` = 4 rows of 6 colour letters (content/flagi.ts). */
@@ -1485,6 +1521,7 @@ export function createArt(scene: Phaser.Scene) {
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawVeg(scene);
   drawSigns(scene);
+  drawTablicaMiasta(scene);
   drawHome(scene);
   drawDog(scene);
   drawCart(scene);

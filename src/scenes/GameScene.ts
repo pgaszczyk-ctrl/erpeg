@@ -65,6 +65,7 @@ import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/sw
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
 import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
+import type { TablicaHost, PunktTablicy } from '../ui/tablicaMiasta';
 import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -171,7 +172,6 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
 const HOME_SAFE_M = 40;
 /** After a dialog closes, swings don't start a talk for this long (ms). */
 /** How close (m) the hero reads a road sign. */
-const SIGN_READ_M = 25;
 /** How near a mountain top counts as standing on it (world maps). */
 const PEAK_REACH_M = 30;
 /** Protection after a fresh start (ms). */
@@ -825,9 +825,13 @@ export class GameScene extends Phaser.Scene {
       }
     };
     for (const p of this.city.places) showPlace(p);
-    // Road signs on the ways out of town (split-map): read when walking past.
-    for (const sg of this.city.signs) this.farObjects.push(this.add.image(sg.x, sg.y + 2, TEX.signpost).setOrigin(0.5, 1).setScale(artScale(TEX.signpost)).setDepth(sg.y));
-    this.signRead = -1;
+    // City boards with the city's map (split-map, scripts/tablice): opened like a door (AKCJA/E/click/a swing).
+    for (const t of this.city.tablice) {
+      const img = this.add.image(t.x, t.y, TEX.tablicaMiasta).setOrigin(0.5, 1).setScale(artScale(TEX.tablicaMiasta)).setDepth(t.y);
+      const glow = this.signGlow(img);
+      glow.setPosition(t.x, t.y - 14);
+      this.farObjects.push(img, glow);
+    }
     this.applySkill();
 
     this.training = new Training(this, this.city);
@@ -1291,7 +1295,7 @@ export class GameScene extends Phaser.Scene {
         if (window.matchMedia('(hover:hover) and (pointer:fine)').matches)
           updateGameCursor(this.game.canvas, worldInteraction.at?.(mouse.x, mouse.y)?.kind ?? null);
         const p = this.player, h = p.hitPoint();
-        ustawInterakcjeHud(!!(this.artillery?.at(p.x,p.y)||this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
+        ustawInterakcjeHud(!!(this.artillery?.at(p.x,p.y)||this.tablicaPrzy()||this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
           this.lochy?.przy(p.x, p.y) || this.loch?.przy(p.x, p.y) || this.talkableAt(p.x, p.y, NPC_RADIUS + 4) ||
           this.hitsHome(p.x, p.y) || this.stallAt(p.x, p.y, 13) || this.cartAt(p.x, p.y, 6) || this.pociagi?.stacjaPrzy(p.x, p.y, 8) ||
           this.city.places.some(q => Math.hypot(q.door.x - p.x, q.door.y - (p.y + FEET.dy)) < DOOR_RADIUS)));
@@ -1473,7 +1477,6 @@ export class GameScene extends Phaser.Scene {
 
     if (!lingering) this.checkGoals();
     this.updateBubbles();
-    this.readSign();
     if (this.city.peaks.length) this.updatePeaks();
     if (now > this.trailAt) {
       // Where the hero walks, for bug reports (log.ts).
@@ -1790,6 +1793,8 @@ export class GameScene extends Phaser.Scene {
       action();
     }});
     const cannon=this.artillery?.at(x,y);if(cannon)return make('use',()=>this.artillery?.open(cannon));
+    const tablica = this.tablicaAt(x, y);
+    if (tablica) return make('use', () => this.otworzTablice(tablica));
     const prologKind = this.prolog?.interactionAt(x, y);
     if (prologKind) return make(prologKind, () => { this.prolog?.interact(); });
     if (this.lochy?.przy(x, y + FEET.dy) || this.loch?.przy(x, y))
@@ -1912,6 +1917,8 @@ export class GameScene extends Phaser.Scene {
   private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
     const cannon=!strong&&!foeNear&&(this.artillery?.at(hit.x,hit.y)??this.artillery?.at(this.player.x,this.player.y));
     if(cannon){this.artillery?.open(cannon);return true;}
+    const tablica = !strong && !foeNear && (this.tablicaAt(hit.x, hit.y) ?? this.tablicaPrzy());
+    if (tablica) { this.otworzTablice(tablica); return true; }
     if (!strong && this.prolog?.interact()) return true;
     if (!strong && this.lochDotyk(hit)) return true;
     if (!strong && this.hitsHome(hit.x, hit.y) && !this.inCombat()) {
@@ -4305,19 +4312,43 @@ export class GameScene extends Phaser.Scene {
     this.toast('Wychodzisz na ulicę.', 1500);
   }
 
-  /** The road sign the hero last read (shown again only after walking away). */
-  private signRead = -1;
+  /** A city board at (x, y): its foot within r map px (the board is drawn above its foot, so a tap on it counts too). */
+  tablicaAt(x: number, y: number) {
+    return this.city.tablice.find((t) => Math.abs(t.x - x) < 13 && y > t.y - 25 && y < t.y + 5 && pointInPolygon(this.vision, t.x, t.y - 4));
+  }
 
-  /** Walking past a road sign shows where the road leads and how far. */
-  private readSign() {
-    const r = SIGN_READ_M * PX_PER_M;
-    const i = this.city.signs.findIndex((sg) => Math.abs(sg.x - this.player.x) < r && Math.abs(sg.y - this.player.y) < r && Math.hypot(sg.x - this.player.x, sg.y - this.player.y) < r);
-    if (i === this.signRead) return;
-    this.signRead = i;
-    if (i < 0) return;
-    const [back, ...ahead] = this.city.signs[i].to;
-    const lines = [...ahead.map((t) => `➜ ${t.name} – ${t.km} km`), `↩ ${back.name} (centrum) – ${back.km} km`];
-    this.toast(`🪧 Kierunkowskaz\n${lines.join('\n')}`, 5000);
+  /** A city board the hero stands by (AKCJA/E, the HUD's hand lights up). */
+  private tablicaPrzy() {
+    const x = this.player.x, y = this.player.y + FEET.dy;
+    return this.city.tablice.find((t) => Math.hypot(t.x - x, (t.y - y) * 1.3) < 26);
+  }
+
+  /** What a city board shows (ui/tablicaMiasta.ts): the city's plan, the hero, the stations and the cannons. */
+  tablicaHost(): TablicaHost | null {
+    const plan = this.city.plan;
+    if (!plan) return null;
+    const punkty: PunktTablicy[] = [];
+    for (const p of this.city.places)
+      if (p.kind === 'station' && !p.id.includes('#'))
+        punkty.push({ nazwa: p.name, x: p.door.x, y: p.door.y, rodzaj: /autobus/i.test(p.name) ? 'autobus' : 'kolej', adres: p.building?.addresses[0] });
+    for (const a of this.artillery?.naPlanie() ?? []) punkty.push({ ...a, rodzaj: 'armata' });
+    const blisko = (x: number, y: number) => {
+      if (!droga) return false;
+      const q = this.city.fromLatLon(droga.lat, droga.lon);
+      return Math.hypot(q.x - x, q.y - y) < 20;
+    };
+    return {
+      plan, miasto: mapName(this.city.id), hero: { x: this.player.x, y: this.player.y }, punkty,
+      adres: (x, y) => this.city.nearestAddress(x, y, 150) ?? this.whereIs(x, y),
+      prowadzi: blisko,
+      prowadz: (p) => this.prowadzDo(p && p.rodzaj !== 'ty' ? { nazwa: p.nazwa, ...this.city.toLatLon(p.x, p.y), rodzaj: p.rodzaj, km: 0 } : null),
+    };
+  }
+
+  /** Opens a city board's map (ui/tablicaMiasta.ts) – the world sleeps meanwhile, like the map screen. */
+  private otworzTablice(t: { x: number; y: number }) {
+    if (!this.city.plan) return;
+    (this.scene.get('ui') as unknown as { openTablica(t: { x: number; y: number }): void }).openTablica(t);
   }
 
   /** Mountain peaks (world maps): their names on the map, and a cheer on reaching the top. */

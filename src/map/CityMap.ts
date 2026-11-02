@@ -105,9 +105,34 @@ type RawMap = {
   streets?: [string, number, number][];
   /** Named towns on the map (split-map: Lublin's centre and lublin-area places): name, x, y. */
   towns?: [string, number, number][];
-  /** Road signs (split-map): x, y, then 'Name|km' (the first is the way back to Lublin). */
-  signs?: (number | string)[][];
+  /** City boards with the city's map (split-map, scripts/tablice/tablice.mjs). */
+  tablice?: { plan: PlanMiasta; miejsca: [number, number][] };
 };
+
+/**
+ * What a city board's map draws (file px): the city boundary, main roads ([1 = major | 0 = medium, x, y…]),
+ * railways, rivers (water areas start with -1), and the ways out: x, y, arrow angle (rad), then the town on the
+ * way and the big city [name PL, name EN, km] (0 when none).
+ */
+export interface PlanMiasta {
+  granica: number[][];
+  drogi: number[][];
+  tory: number[][];
+  woda: number[][];
+  wyloty: [number, number, number, string | 0, string | 0, number, string | 0, string | 0, number][];
+  srodek: [number, number];
+}
+function skalujPlan(p: PlanMiasta, sp: number): PlanMiasta {
+  if (sp === 1) return p;
+  const xy = (r: number[]) => r.map((v) => v * sp);
+  const sk = (r: number[]) => [r[0], ...xy(r.slice(1))];
+  return {
+    granica: p.granica.map(xy), drogi: p.drogi.map(sk), tory: p.tory.map(xy),
+    woda: p.woda.map((r) => (r.length % 2 ? sk(r) : xy(r))),
+    wyloty: p.wyloty.map((w) => [w[0] * sp, w[1] * sp, ...w.slice(2)] as PlanMiasta['wyloty'][number]),
+    srodek: [p.srodek[0] * sp, p.srodek[1] * sp],
+  };
+}
 
 export type RawTile = {
   a: [number, string, ...number[][]][];
@@ -488,8 +513,9 @@ export class CityMap {
   private streets = new Map<string, { x: number; y: number }>();
   /** Post offices, post boxes and parcel lockers (decorations: the pneumatic post pillar). */
   readonly posts: { x: number; y: number }[] = [];
-  /** Road signs on the roads out of town: where to and how many km along the roads. */
-  readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
+  /** City boards (tablice z mapką miasta): where they stand, and what their map shows (map px, already scaled). */
+  readonly tablice: { x: number; y: number }[] = [];
+  plan: PlanMiasta | null = null;
   /** World maps: named mountain peaks with their height (they come with the tiles). */
   readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];
   private namedTowns: { name: string; x: number; y: number }[] = [];
@@ -503,8 +529,10 @@ export class CityMap {
     // Pixel values in the map files are at PLIK_PX_PER_M.
     const sp = PX_PER_M / PLIK_PX_PER_M;
     for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x: x * sp, y: y * sp });
-    for (const [x, y, ...to] of raw.signs ?? [])
-      this.signs.push({ x: (x as number) * sp, y: (y as number) * sp, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
+    if (raw.tablice) {
+      for (const [x, y] of raw.tablice.miejsca) this.tablice.push({ x: x * sp, y: y * sp });
+      this.plan = skalujPlan(raw.tablice.plan, sp);
+    }
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;

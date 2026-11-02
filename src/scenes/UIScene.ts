@@ -33,6 +33,7 @@ import { zainstaluj, jakoAplikacja } from '../instalacja';
 import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, dialogRail } from '../controls';
 import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
+import { otworzTablice, tablicaOtwarta } from '../ui/tablicaMiasta';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
@@ -1098,6 +1099,17 @@ export class UIScene extends Phaser.Scene {
     if (isMinimapOpen()) return closeMinimap();
     this.sleepWorld();
     toggleMinimap(game, () => this.wakeWorld());
+  }
+
+  /** A city board's map (GameScene.otworzTablice): the world sleeps meanwhile, like the map screen. */
+  openTablica(_t: { x: number; y: number }) {
+    const game = this.scene.get('game') as GameScene;
+    if (!game.player || this.overlay || this.hasDialog || isCharacterOpen() || isMinimapOpen() || tablicaOtwarta()) return;
+    const h = game.tablicaHost();
+    if (!h) return;
+    touchInput.attack = false;
+    this.sleepWorld();
+    otworzTablice(h, () => this.wakeWorld());
   }
 
   /**
