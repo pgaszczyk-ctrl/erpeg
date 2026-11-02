@@ -115,6 +115,28 @@ export async function nearestLocality(lat: number, lon: number, lang: 'pl' | 'en
   return all.sort((a, b) => m(a) / WAGA_MIEJSCOWOSCI[a.size] - m(b) / WAGA_MIEJSCOWOSCI[b.size])[0] ?? null;
 }
 
+// ---------------------------------------------------------------- low-zoom tiles (city boards)
+
+const kafleCache = new Map<string, Promise<VectorTile | null>>();
+
+/** Any world tile, read once (city boards read zoom 6/8/9 tiles: main roads, built-up land, water, towns). */
+export function kafelSwiata(z: number, tx: number, ty: number): Promise<VectorTile | null> {
+  const nn = 2 ** z;
+  tx = ((tx % nn) + nn) % nn;
+  const key = `${z}/${tx}/${ty}`;
+  let p = kafleCache.get(key);
+  if (!p) {
+    p = (async () => {
+      if (ty < 0 || ty >= nn) return null;
+      const t = await (await worldFile()).getZxy(z, tx, ty);
+      return t ? new VectorTile(new PbfReader(new Uint8Array(t.data))) : null;
+    })();
+    p.catch(() => kafleCache.delete(key));
+    kafleCache.set(key, p);
+  }
+  return p;
+}
+
 // ---------------------------------------------------------------- continents (map screen)
 
 /** A land outline: [lat, lon, onTileEdge (1/0)] per point – edges along the tile's border are not coastline. */

@@ -23,8 +23,6 @@ const BLISKO = { minKm: 12, maxKm: 75, minLudzi: 1500, maxLudzi: 70_000, srodekK
 const DALEKO = { minKm: 45, maxKm: 450, minLudzi: 100_000, zapas: { minLudzi: 40_000, maxKm: 200 } };
 /** How far off the road's direction a town may lie (degrees). */
 const KAT = 35;
-/** Road distance ≈ straight line × this. */
-const DROGA_RAZY = 1.2;
 /** Boards: the board by a way out stands this far inside the city; boards closer than ODSTEP_M are merged. */
 const W_GLAB_M = 600;
 const ODSTEP_M = 900;
@@ -253,7 +251,8 @@ export function tablice(city, centre, opts) {
     const near = wybierz(w.kierunek, blisko.filter((m) => m !== far && (!far || km(centre, m) < km(centre, far) * 0.8)),
       (m, d, a) => 1.2 * (a / KAT) ** 2 + Math.abs(d - BLISKO.srodekKm) / 60 - 0.15 * Math.log10(m.ludzi / 1500));
     if (!far && !near) continue;
-    const nazwa = (m) => (m ? [m.pl, m.en, Math.max(1, Math.round(km(centre, m) * DROGA_RAZY))] : [0, 0, 0]);
+    // Directions only, no kilometres (owner, 2 Nov 2026: steampunk boards, not real road signs).
+    const nazwa = (m) => (m ? [m.pl, m.en] : [0, 0]);
     plWylot.push([Math.round(w.x), Math.round(w.y), Math.round(Math.atan2(w.dy, w.dx) * 100) / 100, ...nazwa(near), ...nazwa(far)]);
     w.plan = true;
   }
@@ -317,25 +316,46 @@ export function tablice(city, centre, opts) {
   }
 
   // ---------------------------------------------------------------- the board's map
-  const tol = 8 * M;
+  // Drawn like a map burnt into wood (owner, 2 Nov 2026): a rough outline, only the main roads, railways and rivers
+  // smoothed hard, lakes as blue patches (an ellipse each), short bits (slip roads, sidings) dropped.
+  const tol = 40 * M;
+  const dlugosc = (pts) => { let d = 0; for (let i = 2; i < pts.length; i += 2) d += Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]); return d; };
   const plan = {
-    granica: rings.map((r) => uprosc(r, 15 * M)),
+    granica: rings.map((r) => uprosc(r, 120 * M)).filter((r) => r.length >= 6),
     drogi: [],
     tory: [],
-    woda: [],
+    rzeki: [],
+    jeziora: [],
     wyloty: plWylot,
     srodek: [Math.round(c.x), Math.round(c.y)],
   };
   for (const l of city.lines) {
     if (!wRamce(l)) continue;
-    if (l.kind === 'major' || l.kind === 'medium') plan.drogi.push([l.kind === 'major' ? 1 : 0, ...uprosc(l.pts, tol)]);
-    else if (l.kind === 'rail') plan.tory.push(uprosc(l.pts, tol));
-    else if (l.kind === 'river') plan.woda.push(uprosc(l.pts, tol));
+    if (l.kind === 'major' && dlugosc(l.pts) > 300 * M) plan.drogi.push(uprosc(l.pts, tol));
+    else if (l.kind === 'rail' && dlugosc(l.pts) > 400 * M) plan.tory.push(uprosc(l.pts, tol));
+    else if (l.kind === 'river' && dlugosc(l.pts) > 500 * M) plan.rzeki.push(uprosc(l.pts, tol));
   }
+  // Lakes: the outer ring's centre and spread along its main direction → [x, y, rx, ry, angle].
   for (const a of city.areas) {
     if (a.kind !== 'water' || !wRamce(a) || (a.x1 - a.x0) * (a.y1 - a.y0) < (300 * M) ** 2) continue;
-    plan.woda.push([-1, ...uprosc(a.rings[0], tol)]);
+    const r = a.rings[0], n = r.length / 2;
+    let sx = 0, sy = 0;
+    for (let i = 0; i < r.length; i += 2) { sx += r[i]; sy += r[i + 1]; }
+    const mx = sx / n, my = sy / n;
+    let xx = 0, yy = 0, xy = 0;
+    for (let i = 0; i < r.length; i += 2) { const dx = r[i] - mx, dy = r[i + 1] - my; xx += dx * dx; yy += dy * dy; xy += dx * dy; }
+    const kat = 0.5 * Math.atan2(2 * xy, xx - yy);
+    // Half-widths: the farthest outline point along and across that direction, a bit less (a blob, not a box).
+    let ra = 0, rb = 0;
+    for (let i = 0; i < r.length; i += 2) {
+      const dx = r[i] - mx, dy = r[i + 1] - my;
+      ra = Math.max(ra, Math.abs(dx * Math.cos(kat) + dy * Math.sin(kat)));
+      rb = Math.max(rb, Math.abs(-dx * Math.sin(kat) + dy * Math.cos(kat)));
+    }
+    // Long thin water (pieces of a river drawn as areas) is left to the river lines.
+    if (rb < ra * 0.35) continue;
+    plan.jeziora.push([Math.round(mx), Math.round(my), Math.round(ra * 0.85), Math.round(rb * 0.85), Math.round(kat * 100) / 100]);
   }
-  console.log(`tablice: ${miejsca.length} boards (${Object.entries(ile).map(([k, v]) => `${k} ${v}`).join(', ')}), ${plWylot.length} ways out: ${plWylot.map((w) => `${w[3] || '–'}/${w[6] || '–'}`).join(', ')} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+  console.log(`tablice: ${miejsca.length} boards (${Object.entries(ile).map(([k, v]) => `${k} ${v}`).join(', ')}), ${plWylot.length} ways out: ${plWylot.map((w) => `${w[3] || '–'}/${w[5] || '–'}`).join(', ')} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
   return { plan, miejsca: miejsca.map((m) => [m.x, m.y]) };
 }

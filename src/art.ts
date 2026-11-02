@@ -634,36 +634,40 @@ function drawSignpost(scene: Phaser.Scene) {
 }
 
 /**
- * A city board (tablica z mapką miasta, owner 2 Nov 2026): a brass-framed parchment map of the town on two posts
- * under a little roof, drawn at 2 picture px per map px (shown at 0.5) and clearly taller than a person, so it is
+ * A city board (tablica z mapką miasta, owner 2 Nov 2026): a brass-framed wooden map of the town (burnt-in city,
+ * carved roads, blue lake) on two brass posts under a cog crest, drawn at 2 picture px per map px (shown at 0.5) and clearly taller than a person, so it is
  * seen from afar. Placeholder until the artist draws one.
  */
 function drawTablicaMiasta(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.tablicaMiasta, 44, 46);
-  // Posts.
-  for (const x of [8, 32]) { px(ctx, x, 24, 4, 22, OUTLINE); px(ctx, x + 1, 25, 2, 21, '#7a4a24'); px(ctx, x + 1, 25, 1, 21, '#9a6634'); }
-  // Roof.
-  px(ctx, 1, 2, 42, 4, OUTLINE);
-  px(ctx, 3, 0, 38, 2, OUTLINE);
-  px(ctx, 2, 3, 40, 2, '#5a3a22');
-  px(ctx, 4, 1, 36, 1, '#7a5030');
-  // Brass frame and parchment.
-  px(ctx, 2, 6, 40, 23, OUTLINE);
-  px(ctx, 3, 7, 38, 21, '#c8a24a');
-  px(ctx, 3, 27, 38, 1, '#8a6a2a');
-  px(ctx, 40, 7, 1, 21, '#8a6a2a');
-  px(ctx, 5, 9, 34, 17, '#efe2b8');
-  // The town (a greyish blob), a river, roads out and a red „you are here”.
-  px(ctx, 11, 11, 20, 12, '#d6c7a0');
-  px(ctx, 9, 13, 24, 8, '#d6c7a0');
-  px(ctx, 5, 22, 10, 1, '#5aa0d0'); px(ctx, 14, 21, 8, 1, '#5aa0d0'); px(ctx, 21, 20, 18, 1, '#5aa0d0');
-  px(ctx, 5, 16, 34, 2, '#6a4a2a');
-  px(ctx, 20, 9, 2, 17, '#6a4a2a');
-  for (let i = 0; i < 6; i++) px(ctx, 26 + i, 10 + i, 2, 1, '#6a4a2a');
-  px(ctx, 5, 15, 2, 1, OUTLINE); px(ctx, 37, 15, 2, 1, OUTLINE);
-  px(ctx, 16, 12, 4, 4, OUTLINE); px(ctx, 17, 13, 2, 2, '#e43b44');
+  const { tex, ctx } = canvasTexture(scene, TEX.tablicaMiasta, 44, 48);
+  const BR = '#d9a441', BRJ = '#f5d98a', BRC = '#8a5e1e', DR = '#5a3418', DRJ = '#7a4a24', DRC = '#3a2010';
+  // Brass posts with a gold cap.
+  for (const x of [7, 33]) { px(ctx, x, 26, 4, 22, OUTLINE); px(ctx, x + 1, 27, 2, 21, BR); px(ctx, x + 1, 27, 1, 21, BRJ); px(ctx, x, 44, 4, 1, BRC); }
+  // A cog on top (the city's crest).
+  px(ctx, 17, 0, 10, 8, OUTLINE);
+  px(ctx, 15, 2, 14, 4, OUTLINE);
+  px(ctx, 18, 1, 8, 6, BR); px(ctx, 16, 3, 12, 2, BR);
+  px(ctx, 19, 2, 2, 1, BRJ); px(ctx, 21, 3, 2, 2, DRC);
+  // Board: a brass frame round a dark wooden plank map.
+  px(ctx, 1, 7, 42, 22, OUTLINE);
+  px(ctx, 2, 8, 40, 20, BR);
+  px(ctx, 2, 8, 40, 1, BRJ); px(ctx, 2, 8, 1, 20, BRJ);
+  px(ctx, 2, 27, 40, 1, BRC); px(ctx, 41, 8, 1, 20, BRC);
+  px(ctx, 4, 10, 36, 16, DR);
+  for (const y of [14, 19, 23]) px(ctx, 4, y, 36, 1, DRC);
+  px(ctx, 6, 11, 9, 1, DRJ); px(ctx, 24, 16, 12, 1, DRJ); px(ctx, 9, 21, 14, 1, DRJ);
+  // The city burnt in, a blue lake, carved roads and a red pin.
+  px(ctx, 12, 12, 18, 11, '#4a2810'); px(ctx, 10, 14, 22, 7, '#4a2810');
+  px(ctx, 6, 21, 6, 3, '#4f93bd'); px(ctx, 7, 20, 4, 1, '#8cc4de');
+  px(ctx, 4, 17, 36, 1, DRC); px(ctx, 4, 18, 36, 1, '#c8904e');
+  px(ctx, 21, 10, 1, 16, DRC); px(ctx, 22, 10, 1, 16, '#c8904e');
+  for (let k = 0; k < 6; k++) px(ctx, 27 + k, 11 + k, 1, 1, '#c8904e');
+  px(ctx, 16, 13, 4, 4, OUTLINE); px(ctx, 17, 14, 2, 2, '#e43b44');
+  // Gold signpost arrows at the edges.
+  px(ctx, 36, 15, 3, 1, BRJ); px(ctx, 38, 14, 1, 3, BRJ);
+  px(ctx, 5, 15, 3, 1, BRJ); px(ctx, 5, 14, 1, 3, BRJ);
   // Rivets.
-  for (const [x, y] of [[4, 8], [38, 8], [4, 25], [38, 25]]) px(ctx, x, y, 1, 1, '#fff0b0');
+  for (const [x, y] of [[3, 9], [40, 9], [3, 26], [40, 26]]) px(ctx, x, y, 1, 1, '#fff1bf');
   tex.refresh();
   ART_SCALE.set(TEX.tablicaMiasta, 0.5);
 }

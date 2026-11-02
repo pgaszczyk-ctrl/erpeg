@@ -1102,10 +1102,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** A city board's map (GameScene.otworzTablice): the world sleeps meanwhile, like the map screen. */
-  openTablica(_t: { x: number; y: number }) {
+  openTablica(t: { x: number; y: number }) {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay || this.hasDialog || isCharacterOpen() || isMinimapOpen() || tablicaOtwarta()) return;
-    const h = game.tablicaHost();
+    const h = game.tablicaHost(t);
     if (!h) return;
     touchInput.attack = false;
     this.sleepWorld();

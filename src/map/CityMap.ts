@@ -110,25 +110,28 @@ type RawMap = {
 };
 
 /**
- * What a city board's map draws (file px): the city boundary, main roads ([1 = major | 0 = medium, x, y…]),
- * railways, rivers (water areas start with -1), and the ways out: x, y, arrow angle (rad), then the town on the
- * way and the big city [name PL, name EN, km] (0 when none).
+ * What a city board's map draws (file px), carved-in-wood style: the city outline, main roads, railways and rivers
+ * (smoothed polylines), lakes as ellipses [x, y, rx, ry, angle], and the ways out: x, y, arrow angle (rad), then the
+ * town on the way and the big city, each [name PL, name EN] (0 when none). No kilometres – directions only.
  */
 export interface PlanMiasta {
   granica: number[][];
   drogi: number[][];
   tory: number[][];
-  woda: number[][];
-  wyloty: [number, number, number, string | 0, string | 0, number, string | 0, string | 0, number][];
+  rzeki: number[][];
+  jeziora: number[][];
+  /** Big water (the sea at a coastal town): rough patches. */
+  morza?: number[][];
+  wyloty: [number, number, number, string | 0, string | 0, string | 0, string | 0][];
   srodek: [number, number];
 }
 function skalujPlan(p: PlanMiasta, sp: number): PlanMiasta {
   if (sp === 1) return p;
   const xy = (r: number[]) => r.map((v) => v * sp);
-  const sk = (r: number[]) => [r[0], ...xy(r.slice(1))];
   return {
-    granica: p.granica.map(xy), drogi: p.drogi.map(sk), tory: p.tory.map(xy),
-    woda: p.woda.map((r) => (r.length % 2 ? sk(r) : xy(r))),
+    granica: p.granica.map(xy), drogi: p.drogi.map(xy), tory: p.tory.map(xy), rzeki: p.rzeki.map(xy),
+    jeziora: p.jeziora.map(([x, y, a, b, k]) => [x * sp, y * sp, a * sp, b * sp, k]),
+    morza: p.morza?.map(xy),
     wyloty: p.wyloty.map((w) => [w[0] * sp, w[1] * sp, ...w.slice(2)] as PlanMiasta['wyloty'][number]),
     srodek: [p.srodek[0] * sp, p.srodek[1] * sp],
   };
@@ -514,7 +517,7 @@ export class CityMap {
   /** Post offices, post boxes and parcel lockers (decorations: the pneumatic post pillar). */
   readonly posts: { x: number; y: number }[] = [];
   /** City boards (tablice z mapką miasta): where they stand, and what their map shows (map px, already scaled). */
-  readonly tablice: { x: number; y: number }[] = [];
+  readonly tablice: { x: number; y: number; plan?: PlanMiasta; miasto?: string }[] = [];
   plan: PlanMiasta | null = null;
   /** World maps: named mountain peaks with their height (they come with the tiles). */
   readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];

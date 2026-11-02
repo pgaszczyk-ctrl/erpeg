@@ -66,6 +66,13 @@ import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
 import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
 import type { TablicaHost, PunktTablicy } from '../ui/tablicaMiasta';
+import { miastoPrzy, planMiasta, wolneMiejsce, blisko as tablicaBlisko, type MiastoTablic } from '../tablice/swiatowe';
+import { TABLICE_SWIAT } from '../content/tablice';
+import type { PlanMiasta } from '../map/CityMap';
+
+/** Town boards worked out this page load, per map and town (src/tablice/swiatowe.ts); which spots are done. */
+const PLANY_TABLIC = new Map<string, { gotowy: Awaited<ReturnType<typeof planMiasta>> | null; postawione: Set<number> }>();
+(window as unknown as { __planyTablic: typeof PLANY_TABLIC }).__planyTablic = PLANY_TABLIC; // browser tests
 import { worldOrigin, nearestLocality } from '../map/world';
 import { cachedMap, coachOffers, coachSide, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
@@ -826,12 +833,9 @@ export class GameScene extends Phaser.Scene {
     };
     for (const p of this.city.places) showPlace(p);
     // City boards with the city's map (split-map, scripts/tablice): opened like a door (AKCJA/E/click/a swing).
-    for (const t of this.city.tablice) {
-      const img = this.add.image(t.x, t.y, TEX.tablicaMiasta).setOrigin(0.5, 1).setScale(artScale(TEX.tablicaMiasta)).setDepth(t.y);
-      const glow = this.signGlow(img);
-      glow.setPosition(t.x, t.y - 14);
-      this.farObjects.push(img, glow);
-    }
+    for (const t of this.city.tablice) this.postawTablice(t);
+    this.miastoTablic = null;
+    this.szukajMiastaOd = 0;
     this.applySkill();
 
     this.training = new Training(this, this.city);
@@ -1285,6 +1289,7 @@ export class GameScene extends Phaser.Scene {
     if (!podZiemia) {
       this.crossBorder(now);
       this.portsNear(now);
+      this.tabliceSwiata(now);
     }
     if (consumeHeal()) this.healButton();
     if (live()) {
@@ -4324,8 +4329,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** What a city board shows (ui/tablicaMiasta.ts): the city's plan, the hero, the stations and the cannons. */
-  tablicaHost(): TablicaHost | null {
-    const plan = this.city.plan;
+  tablicaHost(t?: { x: number; y: number; plan?: PlanMiasta; miasto?: string }): TablicaHost | null {
+    const plan = t?.plan ?? this.city.plan;
     if (!plan) return null;
     const punkty: PunktTablicy[] = [];
     for (const p of this.city.places)
@@ -4338,7 +4343,7 @@ export class GameScene extends Phaser.Scene {
       return Math.hypot(q.x - x, q.y - y) < 20;
     };
     return {
-      plan, miasto: mapName(this.city.id), hero: { x: this.player.x, y: this.player.y }, punkty,
+      plan, miasto: t?.miasto ?? mapName(this.city.id), hero: { x: this.player.x, y: this.player.y }, punkty,
       adres: (x, y) => this.city.nearestAddress(x, y, 150) ?? this.whereIs(x, y),
       prowadzi: blisko,
       prowadz: (p) => this.prowadzDo(p && p.rodzaj !== 'ty' ? { nazwa: p.nazwa, ...this.city.toLatLon(p.x, p.y), rodzaj: p.rodzaj, km: 0 } : null),
@@ -4346,9 +4351,62 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Opens a city board's map (ui/tablicaMiasta.ts) – the world sleeps meanwhile, like the map screen. */
-  private otworzTablice(t: { x: number; y: number }) {
-    if (!this.city.plan) return;
+  private otworzTablice(t: { x: number; y: number; plan?: PlanMiasta; miasto?: string }) {
+    if (!t.plan && !this.city.plan) return;
     (this.scene.get('ui') as unknown as { openTablica(t: { x: number; y: number }): void }).openTablica(t);
+  }
+
+  /** A city board on the map: its picture with the soft golden halo (far objects: hidden off screen). */
+  private postawTablice(t: { x: number; y: number }) {
+    const img = this.add.image(t.x, t.y, TEX.tablicaMiasta).setOrigin(0.5, 1).setScale(artScale(TEX.tablicaMiasta)).setDepth(t.y);
+    const glow = this.signGlow(img);
+    glow.setPosition(t.x, t.y - 14);
+    this.farObjects.push(img, glow);
+  }
+
+  /** The town the hero is in (towns of the whole world, src/tablice/swiatowe.ts) and when to look again. */
+  private miastoTablic: MiastoTablic | null = null;
+  private szukajMiastaOd = 0;
+  private tabliceOd = 0;
+
+  /**
+   * City boards outside Lublin (owner, 2 Nov 2026: „dla każdego miasta świata”): in a town of ≥ 15 000 people its
+   * board map is worked out from the world map's low-zoom tiles (once per town and map), and boards go up by its
+   * ways out and main crossings as soon as the ground there is loaded.
+   */
+  private tabliceSwiata(now: number) {
+    if (now < this.tabliceOd || this.city.id === 'lublin' || this.city.loch || demo.on) return;
+    this.tabliceOd = now + 1500;
+    const ll = this.city.toLatLon(this.player.x, this.player.y);
+    const m = this.miastoTablic;
+    const daleko = !m || Math.hypot((ll.lat - m.lat) * 111_132, (ll.lon - m.lon) * 111_320 * Math.cos((ll.lat * Math.PI) / 180)) > m.r * 1.5;
+    if (daleko && now >= this.szukajMiastaOd) {
+      this.szukajMiastaOd = now + 8000;
+      const city = this.city;
+      void miastoPrzy(ll).then((t) => { if (city === this.city) this.miastoTablic = t; }).catch(() => {});
+    }
+    if (!m) return;
+    const key = `${this.city.id}|${m.id}`;
+    let p = PLANY_TABLIC.get(key);
+    if (!p) {
+      p = { gotowy: null, postawione: new Set() };
+      PLANY_TABLIC.set(key, p);
+      const wpis = p, city = this.city;
+      void planMiasta(city, m).then((r) => (wpis.gotowy = r)).catch(() => PLANY_TABLIC.delete(key));
+    }
+    if (!p.gotowy) return;
+    const { plan, spoty } = p.gotowy;
+    const r = TABLICE_SWIAT.stawiajM * PX_PER_M;
+    spoty.forEach((sp, i) => {
+      if (p.postawione.has(i) || Math.abs(sp.x - this.player.x) > r || Math.abs(sp.y - this.player.y) > r) return;
+      if (!this.city.ready({ x0: sp.x - 90, y0: sp.y - 90, x1: sp.x + 90, y1: sp.y + 90 })) return;
+      p.postawione.add(i);
+      const q = wolneMiejsce(this.city, sp);
+      if (!q || tablicaBlisko(this.city, q.x, q.y)) return;
+      const t = { ...q, plan, miasto: tx(m.pl, m.en) };
+      this.city.tablice.push(t);
+      this.postawTablice(t);
+    });
   }
 
   /** Mountain peaks (world maps): their names on the map, and a cheer on reaching the top. */
