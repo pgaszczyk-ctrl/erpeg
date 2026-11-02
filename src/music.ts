@@ -8,11 +8,30 @@ try {
   if (saved !== null && Number.isFinite(Number(saved))) volume = Math.max(0, Math.min(1, Number(saved)));
   enabled = localStorage.getItem(ENABLED_KEY) !== '0';
 } catch { /* Private storage must not block the game. */ }
-type Track = { media: HTMLAudioElement; gain: GainNode; mix: number; pending: boolean; retryAt: number; failed: boolean };
+type Track = { media: HTMLAudioElement; gain: GainNode; mix: number; pending: boolean; retryAt: number; failed: boolean; losuj: boolean };
+/**
+ * Owner, 1 Nov 2026: „muzykę rozpoczynaj w losowym miejscu utworu, nie zawsze od początku”.
+ * A track that starts anew (first time, after fading out, after logout, the next surface piece)
+ * jumps to a random point within the first LOSOWY_START_DO of its length; a pause in the background
+ * keeps its place.
+ */
+const LOSOWY_START_DO = .8;
+function losujMiejsce(t: Track) {
+  const d = t.media.duration;
+  if (!t.losuj || !Number.isFinite(d) || d <= 0) return;
+  t.losuj = false;
+  try { t.media.currentTime = Math.random() * d * LOSOWY_START_DO; } catch { /* seeking is optional */ }
+}
 let context: AudioContext | undefined, master: GainNode | undefined;
 let tracks: Track[] = [], state: MusicState = null;
 let surface = 0, desired = -1, previous = 0, lastCombat = -Infinity;
 let stopped = true;
+/** Held while the game waits for „Gram dalej” after the tab came back (powrot.ts): nothing plays. */
+let wstrzymana = false;
+export function wstrzymajMuzyke(v: boolean) {
+  wstrzymana = v;
+  if (v) pause(); else if (state) unlock();
+}
 export const musicVolume = () => volume;
 export const musicEnabled = () => enabled;
 export function setMusicVolume(value: number) {
@@ -33,12 +52,13 @@ function applyVolume() {
 function pause() { for (const t of tracks) t.media.pause(); }
 function play(i: number, prime = false) {
   const t = tracks[i];
-  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || !enabled || !volume) return;
+  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || wstrzymana || !enabled || !volume) return;
   if (!prime && (!state || i !== desired || performance.now() < t.retryAt)) return;
+  losujMiejsce(t);
   t.pending = true;
   void t.media.play().then(() => {
     t.pending = false;
-    if (!state || stopped || document.hidden || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
+    if (!state || stopped || document.hidden || wstrzymana || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
   }).catch(() => { t.pending = false; t.retryAt = performance.now() + 1000; });
 }
 /**
@@ -70,9 +90,10 @@ function unlock() {
         media.preload = 'none'; media.loop = i >= 2;
         const gain = context!.createGain(); gain.gain.value = 0;
         context!.createMediaElementSource(media).connect(gain).connect(master!);
-        const track: Track = { media, gain, mix: 0, pending: false, retryAt: 0, failed: false };
+        const track: Track = { media, gain, mix: 0, pending: false, retryAt: 0, failed: false, losuj: true };
+        media.addEventListener('loadedmetadata', () => losujMiejsce(track));
         media.addEventListener('error', () => { track.failed = true; });
-        media.addEventListener('ended', () => { if (i < 2) { surface = 1 - i; media.currentTime = 0; } });
+        media.addEventListener('ended', () => { if (i < 2) { surface = 1 - i; media.currentTime = 0; track.losuj = true; } });
         return track;
       });
       // Silent priming grants each streamed element permission in the native gesture.
@@ -91,13 +112,13 @@ export function updateMusic(next: MusicState, now = performance.now()) {
   else if (next.combat) lastCombat = now;
   const target = !next ? -1 : now - lastCombat < 800 ? 3 : next.underground ? 2 : surface;
   desired = target; stopped = !next;
-  if (document.hidden || !enabled || !volume) return;
+  if (document.hidden || wstrzymana || !enabled || !volume) return;
   if (!context) {
     if (next && navigator.userActivation?.hasBeenActive) unlock();
     return;
   }
   // Stop immediately on logout; no previous encounter can leak into another login.
-  if (!next) { pause(); tracks.forEach(t => { t.mix = 0; t.gain.gain.value = 0; }); return; }
+  if (!next) { pause(); tracks.forEach(t => { t.mix = 0; t.gain.gain.value = 0; t.losuj = true; }); return; }
   if (target >= 0) play(target);
   const ready = target >= 0 && tracks[target].media.readyState >= 2 && !tracks[target].media.paused;
   tracks.forEach((t, i) => {
@@ -106,9 +127,19 @@ export function updateMusic(next: MusicState, now = performance.now()) {
     const seconds = target === 3 ? 1.2 : 2;
     t.mix += Math.sign(goal - t.mix) * Math.min(Math.abs(goal - t.mix), dt / seconds);
     t.gain.gain.setTargetAtTime(t.mix, context!.currentTime, .015);
-    if (t.mix === 0 && i !== target) t.media.pause();
+    if (t.mix === 0 && i !== target && !t.media.paused) { t.media.pause(); t.losuj = true; }
   });
 }
 for (const event of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(event, unlock, { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); else if (state) unlock(); });
+/**
+ * A short trip to another tab/app (owner, 2 Nov 2026: „krótkie wyjścia nawet na 10 sekund niech nie przerywają”)
+ * keeps the music playing; only after this long away does it stop (and powrot.ts asks „Gram dalej?” on return).
+ */
+export const KROTKIE_WYJSCIE_MS = 3_000;
+let pauzaWTle: ReturnType<typeof setTimeout> | undefined;
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(pauzaWTle);
+  if (document.hidden) pauzaWTle = setTimeout(() => { if (document.hidden) pause(); }, KROTKIE_WYJSCIE_MS);
+  else if (state) unlock();
+});
 window.addEventListener('pagehide', () => { state = null; stopped = true; pause(); });

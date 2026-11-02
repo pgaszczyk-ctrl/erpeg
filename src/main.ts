@@ -16,6 +16,7 @@ import { api } from './api';
 import { watchUpdates } from './update';
 import { catchGoogleReturn } from './google';
 import { installLeaveGuard } from './guard';
+import { pilnujPowrotu } from './powrot';
 import { TEST, WERSJA_TEST } from './version';
 import { OSTROSC, cssSize, watchSpeed } from './screen';
 import { lapOferteInstalacji } from './instalacja';
@@ -95,6 +96,7 @@ installFpsLog(game);
 // A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
 if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
 installLeaveGuard(game);
+pilnujPowrotu(game);
 ustawGre(game, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
 // A new version went live: a bar offers to save and reload (every 30 min).
 watchUpdates(game);
