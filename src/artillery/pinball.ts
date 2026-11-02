@@ -284,8 +284,30 @@ export function pinball(
 
   let tKod = 0;
   /** Comic „WHOOP!” burst over the view: pops in, wobbles, fades out (screen px). */
+  // The artist's comic burst (48-G002 v2: 320×200, frames 0 → 1 → 2 → 1 for 80/160/80/… ms, then hold 1, 2 s in all);
+  // the code-drawn burst below only while the pictures are missing.
+  const whoopKlatki = [0, 1, 2].map((i) => {
+    const im = new Image();
+    im.src = `${import.meta.env.BASE_URL || "/"}swiat/kulociag/comic/${tx("whoop_pl", "whoosh_en")}_${i}.png`;
+    return im;
+  });
+  const whoopArtysty = (od: number) => {
+    const k = still ? 1 : od < 80 ? 0 : od < 240 ? 1 : od < 320 ? 2 : 1;
+    const im = whoopKlatki[k];
+    if (!im.complete || !im.naturalWidth) return false;
+    const zn = clamp((od - (PINBALL.poWystrzaleMs - 400)) / 400);
+    // A whole number of screen pixels per picture pixel, about half the shorter side of the view.
+    const sk = Math.max(1, Math.round(Math.min((W * 0.55) / 320, (H * 0.45) / 200) * dpr)) / dpr;
+    ctx.save();
+    ctx.globalAlpha = 1 - zn;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(im, Math.round((W / 2 - 160 * sk) * dpr) / dpr, Math.round((H * 0.32 - 100 * sk) * dpr) / dpr, 320 * sk, 200 * sk);
+    ctx.restore();
+    return true;
+  };
   const whoop = (od: number) => {
     if (od > PINBALL.poWystrzaleMs + PINBALL.ciemnienieMs) return;
+    if (whoopArtysty(od)) return;
     const wej = still ? 1 : easeOut(clamp(od / 160));
     const zn = clamp((od - (PINBALL.poWystrzaleMs - 400)) / 400);
     const m = Math.min(W, H);
