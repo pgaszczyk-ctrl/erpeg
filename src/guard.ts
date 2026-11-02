@@ -16,7 +16,7 @@ export function letGo() {
 }
 
 /** A character is out in the world (not in the menu, not after "Wyjdź"). */
-function exploring(game: Phaser.Game) {
+export function exploring(game: Phaser.Game) {
   const s = game.scene.getScene('game') as (Phaser.Scene & { leaving?: boolean; player?: { isDead: boolean } }) | null;
   if (!s || !s.sys.settings.active && !game.scene.isPaused('game')) return false;
   if (leaving) return false;

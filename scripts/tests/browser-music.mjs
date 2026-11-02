@@ -53,6 +53,8 @@ try {for(const phone of [false,true]) {
  await page.waitForFunction(()=>window.__music.some(m=>m.src.endsWith('caravan-trails-1.mp3')&&!m.paused&&m.__gain.gain.value>.9),null,{timeout:30000});
  const stream=await page.evaluate(()=>window.__music.map(m=>({url:m.src,duration:m.duration,error:m.error?.code})));
  assert(stream.every(m=>m.url.includes('/test/audio/')),'base URL supports TEST subpath');
+ const start=await page.evaluate(()=>window.__music[0].currentTime);
+ assert(start>3&&start<stream[0].duration*.8+5,`music starts at a random point (${start.toFixed(1)} s)`);
  const state=()=>page.evaluate(()=>window.__music.map(m=>({name:m.src.split('/').pop(),paused:m.paused,time:m.currentTime,mix:m.__gain.gain.value,master:m.__master.gain.value,error:m.error?.code})));
  // Preserve the real state's wiring, then isolate the transition tests from AI time.
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');window.__originalMusicState=s.musicState;window.__desiredMusic={underground:false,combat:false};s.musicState=()=>window.__desiredMusic;});
@@ -109,11 +111,31 @@ try {for(const phone of [false,true]) {
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');s.scene.resume();s.wyjdzZLochu();});
  await page.waitForFunction(()=>!window.__game.scene.getScene('game').city?.loch&&window.__game.scene.isActive('game'),null,{timeout:30000});
  await page.waitForFunction(()=>window.__music.slice(0,2).some(m=>m.__gain.gain.value>.95)&&window.__music[2].paused,null,{timeout:15000});
- // Backgrounding pauses every stream; returning resumes only the desired one.
- await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
- assert((await state()).every(m=>m.paused));
- await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- await page.waitForFunction(()=>window.__music.some(m=>!m.paused));
+ // A longer trip away: the game and the music wait for „Gram dalej” (owner, 2 Nov 2026).
+ const hide=()=>page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+ const show=()=>page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+ // A short trip (under 3 s) doesn't stop the music nor ask anything.
+ await hide();await page.waitForTimeout(1500);
+ assert((await state()).some(m=>!m.paused),'music keeps playing during a short trip away');
+ await show();await page.waitForTimeout(500);
+ assert.equal(await page.locator('#powrot').count(),0,'no window after a short trip');
+ assert(await page.evaluate(()=>window.__game.loop.running),'game runs on after a short trip');
+ await hide();await page.waitForTimeout(3600);
+ assert((await state()).every(m=>m.paused),'music stops after 3 s away');
+ await show();
+ await page.locator('#powrot').waitFor();
+ await page.waitForTimeout(800);
+ assert((await state()).every(m=>m.paused),'music waits for the player after returning');
+ assert.equal(await page.evaluate(()=>window.__game.loop.running),false,'game loop waits for the player');
+ await page.screenshot({path:`work/music/${phone?'phone':'desktop'}-powrot.png`});
+ await page.locator('#powrot [data-a="graj"]').click();
+ await page.waitForFunction(()=>window.__music.some(m=>!m.paused)&&window.__game.loop.running);
+ assert.equal(await page.locator('#powrot').count(),0);
+ // „Wyłącz grę” leaves to the menu.
+ await hide();await page.waitForTimeout(3600);await show();
+ await page.locator('#powrot [data-a="wyjdz"]').click();
+ await page.locator('#menu').waitFor({timeout:15000});
+ await page.waitForFunction(()=>window.__music.every(m=>m.paused));
  // Logout / leaving the active map stops immediately, also from a settings dialog.
  await page.evaluate(()=>{window.__session.token=null;});
  await page.waitForFunction(()=>window.__music.every(m=>m.paused));

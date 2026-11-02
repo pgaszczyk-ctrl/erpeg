@@ -1,0 +1,277 @@
+diff --git a/src/guard.ts b/src/guard.ts
+index 002900a..9038f28 100644
+--- a/src/guard.ts
++++ b/src/guard.ts
+@@ -16,7 +16,7 @@ export function letGo() {
+ }
+ 
+ /** A character is out in the world (not in the menu, not after "Wyjdź"). */
+-function exploring(game: Phaser.Game) {
++export function exploring(game: Phaser.Game) {
+   const s = game.scene.getScene('game') as (Phaser.Scene & { leaving?: boolean; player?: { isDead: boolean } }) | null;
+   if (!s || !s.sys.settings.active && !game.scene.isPaused('game')) return false;
+   if (leaving) return false;
+diff --git a/src/main.ts b/src/main.ts
+index 83140be..50bc0a3 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -16,6 +16,7 @@ import { api } from './api';
+ import { watchUpdates } from './update';
+ import { catchGoogleReturn } from './google';
+ import { installLeaveGuard } from './guard';
++import { pilnujPowrotu } from './powrot';
+ import { TEST, WERSJA_TEST } from './version';
+ import { OSTROSC, cssSize, watchSpeed } from './screen';
+ import { lapOferteInstalacji } from './instalacja';
+@@ -95,6 +96,7 @@ installFpsLog(game);
+ // A picture enlarged by an uneven amount (phone 3× over a 2× canvas) looks better smoothed than blocky.
+ if ((window.devicePixelRatio || 1) / OSTROSC !== Math.round((window.devicePixelRatio || 1) / OSTROSC)) game.canvas.style.imageRendering = 'auto';
+ installLeaveGuard(game);
++pilnujPowrotu(game);
+ ustawGre(game, () => (session.name && session.idik ? codeLink(session.name, session.idik) : null));
+ // A new version went live: a bar offers to save and reload (every 30 min).
+ watchUpdates(game);
+diff --git a/src/music.ts b/src/music.ts
+index 9ba5cc9..45d53d0 100644
+--- a/src/music.ts
++++ b/src/music.ts
+@@ -8,11 +8,30 @@ try {
+   if (saved !== null && Number.isFinite(Number(saved))) volume = Math.max(0, Math.min(1, Number(saved)));
+   enabled = localStorage.getItem(ENABLED_KEY) !== '0';
+ } catch { /* Private storage must not block the game. */ }
+-type Track = { media: HTMLAudioElement; gain: GainNode; mix: number; pending: boolean; retryAt: number; failed: boolean };
++type Track = { media: HTMLAudioElement; gain: GainNode; mix: number; pending: boolean; retryAt: number; failed: boolean; losuj: boolean };
++/**
++ * Owner, 1 Nov 2026: „muzykę rozpoczynaj w losowym miejscu utworu, nie zawsze od początku”.
++ * A track that starts anew (first time, after fading out, after logout, the next surface piece)
++ * jumps to a random point within the first LOSOWY_START_DO of its length; a pause in the background
++ * keeps its place.
++ */
++const LOSOWY_START_DO = .8;
++function losujMiejsce(t: Track) {
++  const d = t.media.duration;
++  if (!t.losuj || !Number.isFinite(d) || d <= 0) return;
++  t.losuj = false;
++  try { t.media.currentTime = Math.random() * d * LOSOWY_START_DO; } catch { /* seeking is optional */ }
++}
+ let context: AudioContext | undefined, master: GainNode | undefined;
+ let tracks: Track[] = [], state: MusicState = null;
+ let surface = 0, desired = -1, previous = 0, lastCombat = -Infinity;
+ let stopped = true;
++/** Held while the game waits for „Gram dalej” after the tab came back (powrot.ts): nothing plays. */
++let wstrzymana = false;
++export function wstrzymajMuzyke(v: boolean) {
++  wstrzymana = v;
++  if (v) pause(); else if (state) unlock();
++}
+ export const musicVolume = () => volume;
+ export const musicEnabled = () => enabled;
+ export function setMusicVolume(value: number) {
+@@ -33,12 +52,13 @@ function applyVolume() {
+ function pause() { for (const t of tracks) t.media.pause(); }
+ function play(i: number, prime = false) {
+   const t = tracks[i];
+-  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || !enabled || !volume) return;
++  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || wstrzymana || !enabled || !volume) return;
+   if (!prime && (!state || i !== desired || performance.now() < t.retryAt)) return;
++  losujMiejsce(t);
+   t.pending = true;
+   void t.media.play().then(() => {
+     t.pending = false;
+-    if (!state || stopped || document.hidden || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
++    if (!state || stopped || document.hidden || wstrzymana || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
+   }).catch(() => { t.pending = false; t.retryAt = performance.now() + 1000; });
+ }
+ /**
+@@ -70,9 +90,10 @@ function unlock() {
+         media.preload = 'none'; media.loop = i >= 2;
+         const gain = context!.createGain(); gain.gain.value = 0;
+         context!.createMediaElementSource(media).connect(gain).connect(master!);
+-        const track: Track = { media, gain, mix: 0, pending: false, retryAt: 0, failed: false };
++        const track: Track = { media, gain, mix: 0, pending: false, retryAt: 0, failed: false, losuj: true };
++        media.addEventListener('loadedmetadata', () => losujMiejsce(track));
+         media.addEventListener('error', () => { track.failed = true; });
+-        media.addEventListener('ended', () => { if (i < 2) { surface = 1 - i; media.currentTime = 0; } });
++        media.addEventListener('ended', () => { if (i < 2) { surface = 1 - i; media.currentTime = 0; track.losuj = true; } });
+         return track;
+       });
+       // Silent priming grants each streamed element permission in the native gesture.
+@@ -91,13 +112,13 @@ export function updateMusic(next: MusicState, now = performance.now()) {
+   else if (next.combat) lastCombat = now;
+   const target = !next ? -1 : now - lastCombat < 800 ? 3 : next.underground ? 2 : surface;
+   desired = target; stopped = !next;
+-  if (document.hidden || !enabled || !volume) return;
++  if (document.hidden || wstrzymana || !enabled || !volume) return;
+   if (!context) {
+     if (next && navigator.userActivation?.hasBeenActive) unlock();
+     return;
+   }
+   // Stop immediately on logout; no previous encounter can leak into another login.
+-  if (!next) { pause(); tracks.forEach(t => { t.mix = 0; t.gain.gain.value = 0; }); return; }
++  if (!next) { pause(); tracks.forEach(t => { t.mix = 0; t.gain.gain.value = 0; t.losuj = true; }); return; }
+   if (target >= 0) play(target);
+   const ready = target >= 0 && tracks[target].media.readyState >= 2 && !tracks[target].media.paused;
+   tracks.forEach((t, i) => {
+@@ -106,9 +127,19 @@ export function updateMusic(next: MusicState, now = performance.now()) {
+     const seconds = target === 3 ? 1.2 : 2;
+     t.mix += Math.sign(goal - t.mix) * Math.min(Math.abs(goal - t.mix), dt / seconds);
+     t.gain.gain.setTargetAtTime(t.mix, context!.currentTime, .015);
+-    if (t.mix === 0 && i !== target) t.media.pause();
++    if (t.mix === 0 && i !== target && !t.media.paused) { t.media.pause(); t.losuj = true; }
+   });
+ }
+ for (const event of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(event, unlock, { capture: true, passive: true });
+-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); else if (state) unlock(); });
++/**
++ * A short trip to another tab/app (owner, 2 Nov 2026: „krótkie wyjścia nawet na 10 sekund niech nie przerywają”)
++ * keeps the music playing; only after this long away does it stop (and powrot.ts asks „Gram dalej?” on return).
++ */
++export const KROTKIE_WYJSCIE_MS = 3_000;
++let pauzaWTle: ReturnType<typeof setTimeout> | undefined;
++document.addEventListener('visibilitychange', () => {
++  clearTimeout(pauzaWTle);
++  if (document.hidden) pauzaWTle = setTimeout(() => { if (document.hidden) pause(); }, KROTKIE_WYJSCIE_MS);
++  else if (state) unlock();
++});
+ window.addEventListener('pagehide', () => { state = null; stopped = true; pause(); });
+diff --git a/src/powrot.ts b/src/powrot.ts
+new file mode 100644
+index 0000000..fcefa84
+--- /dev/null
++++ b/src/powrot.ts
+@@ -0,0 +1,106 @@
++import type Phaser from 'phaser';
++import { tx } from './i18n';
++import { exploring } from './guard';
++import { wstrzymajMuzyke, KROTKIE_WYJSCIE_MS } from './music';
++import { resetTouch } from './controls';
++
++// Back from another tab or app (owner, 2 Nov 2026: „po powrocie do zakładki muzyka ani gra nie ruszała,
++// dopóki gracz nie potwierdzi”): while the page is hidden the game loop is put to sleep and the music held;
++// on return a dimmed window asks „Gram dalej” / „Wyłącz grę”, and only „Gram dalej” wakes both.
++
++/** Trips away shorter than this (owner, 2 Nov 2026: „nawet na 10 sekund”) don't ask and keep the music on. */
++const POWROT_OD_MS = KROTKIE_WYJSCIE_MS;
++
++type GraScena = Phaser.Scene & { inCombat?: () => boolean; leave?: () => Promise<void>; poPowrocie?: () => void };
++
++export function pilnujPowrotu(game: Phaser.Game) {
++  let ukrytoO = 0;
++  /** The loop was running when the page hid (the Kufer/map screen keep it asleep on their own). */
++  let obudzic = false;
++  let czeka = false;
++  /** The music is held only once the trip away gets long. */
++  let wstrzymanie: ReturnType<typeof setTimeout> | undefined;
++
++  document.addEventListener('visibilitychange', () => {
++    if (document.hidden) {
++      if (czeka || !exploring(game)) return;
++      ukrytoO = performance.now();
++      obudzic = game.loop.running;
++      if (obudzic) game.loop.sleep();
++      czeka = true;
++      wstrzymanie = setTimeout(() => { if (document.hidden) wstrzymajMuzyke(true); }, POWROT_OD_MS);
++      return;
++    }
++    clearTimeout(wstrzymanie);
++    if (!czeka || document.getElementById('powrot')) return;
++    if (performance.now() - ukrytoO < POWROT_OD_MS) { graj(); return; }
++    wstrzymajMuzyke(true); // timers sleep in background tabs: hold it now, not only when the timer fires
++    pokaz();
++  });
++
++  function graj() {
++    czeka = false;
++    document.getElementById('powrot')?.remove();
++    resetTouch();
++    if (obudzic && !game.loop.running) game.loop.wake();
++    (game.scene.getScene('game') as GraScena | null)?.poPowrocie?.();
++    wstrzymajMuzyke(false);
++  }
++
++  function pokaz() {
++    const box = document.createElement('div');
++    box.id = 'powrot';
++    box.className = 'm-screen';
++    box.style.zIndex = '90';
++    box.style.background = 'rgba(8,6,12,.72)';
++    box.innerHTML = `<div class="m-box" style="max-width:360px;text-align:center"><h2></h2><p></p><p class="powrot-uwaga" style="color:#f0a0a0;display:none"></p><button class="m-btn m-primary" type="button" data-a="graj"></button><button class="m-btn" type="button" data-a="wyjdz"></button></div>`;
++    box.querySelector('h2')!.textContent = tx('Gra wstrzymana', 'Game paused');
++    box.querySelector('p')!.textContent = tx('Wróciłeś do gry. Grasz dalej?', 'Welcome back. Carry on playing?');
++    const [graBtn, wyjdzBtn] = box.querySelectorAll('button');
++    graBtn.textContent = tx('▶ Gram dalej', '▶ Keep playing');
++    wyjdzBtn.textContent = tx('🚪 Wyłącz grę', '🚪 Quit the game');
++    const uwaga = box.querySelector('.powrot-uwaga') as HTMLElement;
++    graBtn.onclick = () => { zdejmij(); graj(); };
++    wyjdzBtn.onclick = () => {
++      const s = game.scene.getScene('game') as GraScena | null;
++      if (s?.inCombat?.()) {
++        uwaga.textContent = tx('Nie możesz wyjść w trakcie walki!', "You can't quit during a fight!");
++        uwaga.style.display = '';
++        return;
++      }
++      zdejmij();
++      graj();
++      void s?.leave?.();
++    };
++    // Keys go to the window only: Enter/Space/Escape = „Gram dalej”, nothing reaches the game meanwhile.
++    const klawisz = (e: KeyboardEvent) => {
++      e.stopImmediatePropagation();
++      if (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape')) {
++        e.preventDefault();
++        zdejmij();
++        graj();
++      }
++    };
++    const zdejmij = () => {
++      window.removeEventListener('keydown', klawisz, true);
++      window.removeEventListener('keyup', klawisz, true);
++    };
++    window.addEventListener('keydown', klawisz, true);
++    window.addEventListener('keyup', klawisz, true);
++    document.body.append(box);
++    graBtn.focus();
++  }
++
++  (window as unknown as { __powrot: { pokaz: () => void; czeka: () => boolean } }).__powrot = {
++    pokaz: () => {
++      clearTimeout(wstrzymanie);
++      ukrytoO = performance.now() - POWROT_OD_MS;
++      obudzic = game.loop.running;
++      if (obudzic) game.loop.sleep();
++      wstrzymajMuzyke(true);
++      czeka = true;
++      pokaz();
++    },
++    czeka: () => czeka,
++  };
++}
+diff --git a/src/scenes/GameScene.ts b/src/scenes/GameScene.ts
+index 1841d6e..3c69909 100644
+--- a/src/scenes/GameScene.ts
++++ b/src/scenes/GameScene.ts
+@@ -400,6 +400,11 @@ export class GameScene extends Phaser.Scene {
+   /** A fresh start (login, resurrection, the power stone): enemies can't hurt for OCHRONA_MS; the hero blinks. */
+   private protectUntil = 0;
+ 
++  /** Back from another tab (powrot.ts): a moment's grace before enemies may hit. */
++  poPowrocie() {
++    this.noHurtUntil = Math.max(this.noHurtUntil, this.time.now + 1500);
++  }
++
+   private protect(now: number) {
+     this.protectUntil = now + OCHRONA_MS;
+     this.noHurtUntil = Math.max(this.noHurtUntil, this.protectUntil);
+diff --git a/src/version.ts b/src/version.ts
+index a6efbff..ccd4ee5 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -4,7 +4,7 @@
+ // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
+ // code with VITE_TEST=1 and says so on screen.
+ 
+-export const WERSJA = '1.042';
++export const WERSJA = '1.043';
+ 
+ /** Built for the test server? */
+ export const TEST = import.meta.env.VITE_TEST === '1';
