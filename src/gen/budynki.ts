@@ -3,6 +3,21 @@
 // Wszystkie miary w px obrazu (0,5 px mapy): ściany 8 / 12 / 16 px.
 import { Obraz, nowy, hex, hash, rng, OBRYS, mieszaj } from './wspolne';
 
+/**
+ * Kolor wyróżnienia miejsca (sklep, policja…) przygaszony do palety świata: połowa nasycenia mniej i odrobina
+ * ciepłej szarości. Jaskrawe niebieskie/fioletowe dachy biły po oczach i zlewały się w „mozaikę” (właściciel 2.11.2026).
+ */
+export function stonuj(c: number): number {
+  const r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255, l = 0.3 * r + 0.59 * g + 0.11 * b;
+  const s = 0.55, m = 0.12, w = [138, 122, 102];
+  const f = (v: number, k: number) => Math.round((l + (v - l) * s) * (1 - m) + w[k] * m);
+  return mieszaj(c, ((255 << 24) | (f(b, 2) << 16) | (f(g, 1) << 8) | f(r, 0)) >>> 0, 1);
+}
+/** Pięć tonów materiału z jednego koloru wyróżnienia: ciemniej do cienia, jaśniej ku bieli (odcień zostaje). */
+export function tonyZKoloru(kolor: number): { tony: number[]; krawedz: number } {
+  const c = stonuj(kolor), bial = 0xffeef4f6, cien = 0xff2a1a1e;
+  return { tony: [mieszaj(c, cien, 0.55), mieszaj(c, cien, 0.28), c, mieszaj(c, bial, 0.16), mieszaj(c, bial, 0.3)], krawedz: mieszaj(c, bial, 0.42) };
+}
 /** Cień: ten sam kolor ciemniej, bez zmiany odcienia (piksel ABGR). */
 const przyciemnij = (c: number, f: number) => ((c & 0xff000000) | (Math.round(((c >> 16) & 255) * f) << 16) | (Math.round(((c >> 8) & 255) * f) << 8) | Math.round((c & 255) * f)) >>> 0;
 
@@ -234,7 +249,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       // Rzędy dachówek w kręgach, spoiny wzdłuż obwodu co ~4 px (gęściej przy okapie, rzadziej przy szczycie).
       const kat = Math.atan2(dy, dx), along = kat * stozek.r;
-      if (D.wzor === 'dachowka' || D.wzor === 'gont') { if (Math.floor(d) % 3 === 2 || (Math.floor(along + Math.floor(d / 3) * 2) % 4 === 0 && d > 1)) t = Math.max(0, t - 1); }
+      if (D.wzor === 'dachowka' || D.wzor === 'gont') { if (Math.floor(d) % 4 === 3 || (Math.floor(along + Math.floor(d / 4) * 3) % 6 === 0 && Math.floor(d) % 4 === 1 && d > 1)) t = Math.max(0, t - 1); }
       else if (D.wzor === 'lupek') { if (Math.floor(d) % 2 === 1) t = Math.max(0, t - 1); }
       else if (D.wzor === 'blacha') { if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); }
       c = D.tony[t];
@@ -247,9 +262,10 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       const along = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy;
       switch (D.wzor) {
-        case 'dachowka': if (Math.floor(d) % 3 === 2) t = Math.max(0, t - 1); else if (Math.floor(along + Math.floor(d / 3) * 2) % 4 === 0 && d > 1) t = Math.max(0, t - 1); break;
-        case 'lupek': if (Math.floor(d) % 2 === 1 || Math.floor(along + (Math.floor(d / 2) % 2) * 2 + 400) % 4 === 0) t = Math.max(0, t - 1); break;
-        case 'gont': if (Math.floor(d) % 2 === 1 || Math.floor(along + (Math.floor(d / 2) % 3)) % 3 === 0) t = Math.max(0, t - 1); break;
+        // Spokojne rzędy (co 4 px) i rzadkie spoiny tylko w środku rzędu: duże płaskie plamy, czytelne z daleka.
+        case 'dachowka': if (Math.floor(d) % 4 === 3) t = Math.max(0, t - 1); else if (Math.floor(d) % 4 === 1 && Math.floor(along + Math.floor(d / 4) * 3) % 6 === 0 && d > 1) t = Math.max(0, t - 1); break;
+        case 'lupek': if (Math.floor(d) % 3 === 2 || (Math.floor(d) % 3 === 0 && Math.floor(along + (Math.floor(d / 3) % 2) * 3 + 400) % 6 === 0)) t = Math.max(0, t - 1); break;
+        case 'gont': if (Math.floor(d) % 3 === 2 || (Math.floor(d) % 3 === 0 && Math.floor(along + (Math.floor(d / 3) % 3) * 2) % 5 === 0)) t = Math.max(0, t - 1); break;
         case 'blacha': if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); break;
       }
       c = D.tony[t];
@@ -272,7 +288,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       if (S.wzor === 'cegla') { if (hh % 3 === 0 || (Math.floor(along + (Math.floor(hh / 3) % 2) * 2) % 4 === 0 && hash(Math.floor(along), hh, 7) < 0.6)) t = Math.max(0, t - 1); }
       else if (S.wzor === 'deski') { if (Math.floor(along) % 3 === 0) t = Math.max(0, t - 1); }
       else if (S.wzor === 'kamien') { if ((hh % 4 === 0) || Math.floor(along + (Math.floor(hh / 4) % 2) * 3) % 6 === 0) t = Math.max(0, t - 1); }
-      else if (hash(x, y, op.seed) < 0.1) t = Math.min(4, t + 1);
+      // gładki tynk bez losowych jasnych kropek (z daleka migotały jak szum)
       c = S.tony[t];
       let okno = false;
       if (op.poziom === undefined) { // stary układ: rzędy małych okien co 7 px wysokości, co 7 px wzdłuż ściany, z dala od narożników
@@ -294,7 +310,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const ww = Math.max(4, Math.round(L * 0.4)), wh = Math.max(5, Math.round(L * 0.55)), wb = Math.round(L * 0.24) + (f === 0 ? 1 : 0);
       const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt, al = Math.floor(along);
       const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), u = m - wx, v = hl - wb, nr = Math.floor((al + off) / pt);
-      const okCale = al - u > 2 && al - u + ww < e.L - 2;
+      // Ściany wschodnia/zachodnia widać jako wąski skośny pasek: okna wyglądały tam jak białe kreski (szum).
+      const okCale = al - u > 2 && al - u + ww < e.L - 2 && Math.abs(e.nx) < 0.6;
       const ciemnaSciana = S.wzor === 'cegla' || S.wzor === 'kamien' || S.wzor === 'deski';
       const RAMA = ciemnaSciana ? hex('#e6dcc6') : hex('#4e3424'), BELKA = [hex('#3a2618'), hex('#5a3c26')];
       const szach = !PLASKI && S.wzor === 'gladki' && hash(op.seed, 3, 11) < 0.45; // mur pruski (karczma)
@@ -342,6 +359,9 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     }
     o.px[j * W + i] = c;
   }
+  // Gruba obwódka jak u rysunków grafika (właz do metra): jeden piksel tuszu także na zewnątrz sylwetki,
+  // razem 2 px obrazu = 1 px mapy. Na zewnątrz, więc okna i drzwi nie tracą miejsca.
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (!kind[j * W + i] && (K(i - 1, j) || K(i + 1, j) || K(i, j - 1) || K(i, j + 1) || K(i - 1, j - 1) || K(i + 1, j - 1) || K(i - 1, j + 1) || K(i + 1, j + 1))) o.px[j * W + i] = OBRYS;
   if (op.komin && maxD > 6) { // komin ceglany w ok. 1/3 od lewej-góry
     let best = -1, bx = 0, by = 0;
     for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }

@@ -8,7 +8,7 @@ import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
 import { malujGroby } from './groby09';
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
+import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, budynek, cienBudynku, tonyZKoloru, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -98,8 +98,7 @@ const losuj = (lista: [string, number][], u: number) => {
 function materialZKoloru(kolor: string, wzor: 'dachowka' | 'gladki') {
   const klucz = `hl_${wzor}_${kolor}`;
   if (!MATERIALY[klucz]) {
-    const c = hex(kolor);
-    MATERIALY[klucz] = { tony: [ciemniej(ciemniej(c)), ciemniej(c), c, jasniej(c), jasniej(jasniej(c))], krawedz: jasniej(jasniej(c)), wzor };
+    MATERIALY[klucz] = { ...tonyZKoloru(hex(kolor)), wzor };
   }
   return klucz;
 }
