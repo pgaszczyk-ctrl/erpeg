@@ -1,0 +1,30 @@
+{
+  "tool": "image_gen built-in",
+  "projection": "artistic orthographic target, elevation 50 degrees",
+  "assets": [
+    [
+      "plac_pompa_parowa",
+      "Redraw this brass steam pump as a compact cylinder with a clearly visible broad elliptical top lid (height 77 percent of width), deep block base with visible top and right side, gauge on upright front, side flywheel. Keep its identity and chunky pixel aesthetic. Final consumer canvas 23x23 pixels."
+    ],
+    [
+      "wentylator",
+      "Redraw this THREE FRAME horizontal spritesheet: exactly three identical brass rooftop ventilation housings, only inner rotor changes angle 0,40,80 degrees. View the whole housing from 50 degrees above horizontal, show top of housing and mounting foot. A tilted vertical rotor face, not a flat circle on the ground. Each cell 13x13, total sheet 39x13. Equal cells, identical centering and silhouette in all 3 cells."
+    ],
+    [
+      "plac_teleskop",
+      "Redraw brass telescope in 50 degree elevated overhead view. Show top of the long tube, elliptical brass rim and dark blue lens, tripod legs spread on a ground plane with one rear foot clearly behind. Aim diagonally upper left. Final canvas 22x28 pixels."
+    ],
+    [
+      "plac_donica_miedziana",
+      "Redraw copper flower pot in 50 degree overhead view, broad elliptical rim with ellipse height 77 percent width, clearly visible dark soil and a small green plant, shorter shaded cylindrical side and stable foot. Final canvas 18x18 pixels."
+    ],
+    [
+      "plac_zegar_uliczny",
+      "Redraw brass street clock in 50 degree overhead view. Vertical cream clock face stays legible and near circular (it is upright); show upper surface of thick clock housing and wide stepped plinth with visible broad elliptical top. Slim post, small side gear. Final canvas 18x45 pixels."
+    ],
+    [
+      "plac_gablota_ogloszen",
+      "Redraw noticeboard in 50 degree overhead view. Noticeboard remains upright with two cream notices. Clearly show the broad upper roof slope, thickness of frame and side, and two deep foot bases with visible tops. Final canvas 24x28 pixels."
+    ]
+  ]
+}

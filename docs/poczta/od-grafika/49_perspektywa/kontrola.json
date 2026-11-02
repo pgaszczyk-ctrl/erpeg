@@ -1,0 +1,62 @@
+[
+  {
+    "file": "public/swiat/ozdoby/plac_pompa_parowa.png",
+    "size": [
+      23,
+      23
+    ],
+    "frames": 1,
+    "alpha": "binary",
+    "source": "exec-8f57766e-aef7-46cf-859e-c3b08aac278d.png"
+  },
+  {
+    "file": "public/swiat/ozdoby/wentylator.png",
+    "size": [
+      39,
+      13
+    ],
+    "frames": 3,
+    "alpha": "binary",
+    "source": "exec-de50de7c-c4b5-4865-99a7-0e666d8725ff.png"
+  },
+  {
+    "file": "public/swiat/ozdoby/plac_teleskop.png",
+    "size": [
+      22,
+      28
+    ],
+    "frames": 1,
+    "alpha": "binary",
+    "source": "exec-2c00fcad-d488-40ac-8a33-bb0bf036e757.png"
+  },
+  {
+    "file": "public/swiat/ozdoby/plac_donica_miedziana.png",
+    "size": [
+      18,
+      18
+    ],
+    "frames": 1,
+    "alpha": "binary",
+    "source": "exec-02925301-484d-4886-8750-d9e88b60bace.png"
+  },
+  {
+    "file": "public/swiat/ozdoby/plac_zegar_uliczny.png",
+    "size": [
+      18,
+      45
+    ],
+    "frames": 1,
+    "alpha": "binary",
+    "source": "exec-99fcb064-550b-4fa3-b274-6abfedad60dd.png"
+  },
+  {
+    "file": "public/swiat/ozdoby/plac_gablota_ogloszen.png",
+    "size": [
+      24,
+      28
+    ],
+    "frames": 1,
+    "alpha": "binary",
+    "source": "exec-ac62e493-6f69-4a14-a948-1c6dd5eabe1d.png"
+  }
+]
