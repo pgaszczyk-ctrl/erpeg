@@ -10,7 +10,7 @@ try{({chromium}=require('playwright'));}catch{({chromium}=createRequire('/worksp
 const root=process.cwd(),output='work/architecture-motion';await mkdir(output,{recursive:true});
 const before=process.env.MOTION_BASELINE_DIST?path.resolve(process.env.MOTION_BASELINE_DIST):null;
 const browser=await chromium.launch({...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader'],timeout:15000});
-const mime={'.html':'text/html','.js':'text/javascript','.json':'application/json','.png':'image/png','.webp':'image/webp','.css':'text/css','.woff2':'font/woff2'};
+const mime={'.svg':'image/svg+xml','.html':'text/html','.js':'text/javascript','.json':'application/json','.png':'image/png','.webp':'image/webp','.css':'text/css','.woff2':'font/woff2'};
 const results=[];
 async function files(route){
  const url=new URL(route.request().url());if(url.hostname!=='exp-lore.local')return route.abort();
