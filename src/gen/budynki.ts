@@ -18,6 +18,60 @@ export function tonyZKoloru(kolor: number): { tony: number[]; krawedz: number } 
   const c = stonuj(kolor), bial = 0xffeef4f6, cien = 0xff2a1a1e;
   return { tony: [mieszaj(c, cien, 0.55), mieszaj(c, cien, 0.28), c, mieszaj(c, bial, 0.16), mieszaj(c, bial, 0.3)], krawedz: mieszaj(c, bial, 0.42) };
 }
+/** Grubość tuszu (połowa szerokości linii, px obrazu): obrys sylwetki i krawędź dach–ściana. */
+export const OBWODKA = { zewn: 1.0, wewn: 0.85 };
+
+/** Zob. budynek(): wygładzona obwódka sylwetki i krawędzi dach–ściana z odcinków geometrii (antyaliasing). */
+function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: number, y0: number, pierscienie: number[][], H: number, sk: number) {
+  // Odcinki: [ax, ay, bx, by, czyDach] w px obrazu.
+  const seg: number[] = [], ox = H * sk, oy = H;
+  for (const r of pierscienie) {
+    const m = r.length / 2;
+    for (let k = 0; k < m; k++) {
+      const ax = r[2 * k] - x0, ay = r[2 * k + 1] - y0, bx = r[(2 * k + 2) % r.length] - x0, by = r[(2 * k + 3) % r.length] - y0;
+      seg.push(ax, ay, bx, by, 1, ax + ox, ay + oy, bx + ox, by + oy, 0, ax, ay, ax + ox, ay + oy, 0);
+    }
+  }
+  const C = 8, GW = Math.ceil(W / C) + 1, GH = Math.ceil(Hh / C) + 1, siatka: number[][] = Array.from({ length: GW * GH }, () => []);
+  for (let s = 0; s < seg.length; s += 5) {
+    const ax = seg[s], ay = seg[s + 1], bx = seg[s + 2], by = seg[s + 3];
+    const c0 = Math.max(0, Math.floor((Math.min(ax, bx) - 3) / C)), c1 = Math.min(GW - 1, Math.floor((Math.max(ax, bx) + 3) / C));
+    const r0 = Math.max(0, Math.floor((Math.min(ay, by) - 3) / C)), r1 = Math.min(GH - 1, Math.floor((Math.max(ay, by) + 3) / C));
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) siatka[r * GW + c].push(s);
+  }
+  const odl = (px: number, py: number, tylkoDach: boolean) => {
+    let best = 9;
+    for (const s of siatka[Math.floor(py / C) * GW + Math.floor(px / C)] ?? []) {
+      if (tylkoDach && !seg[s + 4]) continue;
+      const ax = seg[s], ay = seg[s + 1], dx = seg[s + 2] - ax, dy = seg[s + 3] - ay, L2 = dx * dx + dy * dy;
+      const t = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
+      const d = Math.hypot(ax + dx * t - px, ay + dy * t - py);
+      if (d < best) best = d;
+    }
+    return best;
+  };
+  const Kd = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= Hh ? 0 : kind[j * W + i]);
+  const [ir, ig, ib] = [OBRYS & 255, (OBRYS >>> 8) & 255, (OBRYS >>> 16) & 255];
+  const wynik = new Uint32Array(o.px);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+    const k = Kd(i, j);
+    let pusto = false, inny = false;
+    for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) { const q = Kd(i + a, j + b); if (k ? !q : q) pusto = true; else if (k && q && q !== k) inny = true; }
+    if (!pusto && !inny) continue;
+    const px = i + 0.5, py = j + 0.5;
+    let al = 0;
+    if (pusto) al = Math.max(al, Math.min(1, OBWODKA.zewn + 0.5 - odl(px, py, false)));
+    if (inny) al = Math.max(al, Math.min(1, OBWODKA.wewn + 0.5 - odl(px, py, true)));
+    if (al <= 0) continue;
+    const c = o.px[j * W + i], ca = (c >>> 24) / 255;
+    if (ca <= 0) { wynik[j * W + i] = ((Math.round(al * 255) << 24) | (ib << 16) | (ig << 8) | ir) >>> 0; continue; }
+    // Tusz na kolorze (piksel budynku albo już częściowo zakryty brzeg).
+    const r = c & 255, g = (c >>> 8) & 255, bb = (c >>> 16) & 255, na = Math.max(ca, al);
+    wynik[j * W + i] = ((Math.round(na * 255) << 24) | (Math.round(bb + (ib - bb) * al) << 16) | (Math.round(g + (ig - g) * al) << 8) | Math.round(r + (ir - r) * al)) >>> 0;
+  }
+  o.px.set(wynik);
+}
+
 /** Cień: ten sam kolor ciemniej, bez zmiany odcienia (piksel ABGR). */
 const przyciemnij = (c: number, f: number) => ((c & 0xff000000) | (Math.round(((c >> 16) & 255) * f) << 16) | (Math.round(((c >> 8) & 255) * f) << 8) | Math.round((c & 255) * f)) >>> 0;
 
@@ -117,18 +171,13 @@ export function klatkaPary(z: ZrodloPary, tSek: number): number {
 }
 /** `pierscien` = [x0, y0, x1, y1, …] w px obrazu (świat). Zwraca obraz budynku i jego lewy-górny róg w świecie. */
 /** Zwraca też `para`: źródła pary (patrz `ZrodloPary`, `klatkaPary`) – gra stawia tam animowane obłoczki `para()` tylko w chwili wyrzutu. */
-/** Tolerancja prostowania obrysu budynku w px obrazu (3,84 px = 1 m). */
-export const PROSTUJ = 8;
-
 export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: ZrodloPary[] } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
   const PLASKI = op.plaski ?? Math.round(H / Math.max(10, op.poziom ?? H)) >= 3; // dach płaski tylko na najwyższych (3 poziomy gry)
   // Obrys z podwórkami (dziury): maska ścian i dachu bierze wszystkie pierścienie (parzysto-nieparzyście).
   // Drobne „zęby” z zaokrąglonych narożników (pogrubianie i łączenie budynków w build-map) wygładzone,
   // żeby krawędzie szły równymi schodkami pikseli (właściciel 5.10.2026: domy wyglądały na poszarpane).
-  // Mocniej (właściciel 2.11.2026: „jedna ciągła linia, a nie schodki”): załamania do PROSTUJ px (~2 m) znikają,
-  // ściana idzie jedną prostą krawędzią zamiast łamanej z wielu krótkich odcinków OSM.
-  const pierscienie = [pierscien, ...(op.dziury ?? [])].map((r, k) => (r.length > 8 ? uprosc(r, k ? PROSTUJ * 0.75 : PROSTUJ) : r));
+  const pierscienie = [pierscien, ...(op.dziury ?? [])].map((r) => (r.length > 8 ? uprosc(r, 1.6) : r));
   const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
@@ -259,7 +308,6 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       else if (D.wzor === 'blacha') { if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); }
       c = D.tony[t];
       if (r < 1.2) c = D.krawedz; // szpic
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else if (k === 1) {
       const k = j * W + i, q = { i1: qI1[k], i2: qI2[k], d1: qD1[k], d2: qD2[k] }, e = E[q.i1], d = q.d1;
       const [gnx, gny] = gladkaNormalna(e, x + 0.5, y + 0.5);
@@ -284,7 +332,6 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
       }
       // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else {
       const s = sOf[j * W + i], hh = H - s, px = x - s * sk, py = y - s;
       najblizsze(px + 0.5, py + 0.5); const q = { i1 }, e = E[q.i1];
@@ -313,15 +360,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const L = Math.max(10, op.poziom), NP = Math.max(1, Math.round(H / L));
       const f = Math.min(NP - 1, Math.floor(hh / L)), hl = hh - f * L;
       const ww = Math.max(4, Math.round(L * 0.4)), wh = Math.max(5, Math.round(L * 0.55)), wb = Math.round(L * 0.24) + (f === 0 ? 1 : 0);
-      const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt;
-      // Miejsce wzdłuż ściany liczone tam, gdzie PROSTY pion ekranu przez ten piksel dotyka podstawy ściany: okna,
-      // drzwi i okiennice są prostokątami na ekranie, jak u grafika (wzdłuż skosu i przechyłu ścian łamały się w schodki).
-      const alF = Math.abs(e.nx) < 0.6 ? (x + 0.5 - e.ax - H * sk) / e.ux : along, al = Math.floor(alF);
-      const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), nr = Math.floor((al + off) / pt);
-      const u = m - wx;
-      // Wysokość w oknie liczona od podstawy ściany pod środkiem okna: okno ma równą górę i dół (bez ząbka na skosie).
-      const ac = nr * pt - off + wx + ww / 2;
-      const v = Math.abs(e.nx) < 0.6 ? Math.floor(e.ay + e.uy * ac + H - (y + 0.5)) - f * L - wb : hl - wb;
+      const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt, al = Math.floor(along);
+      const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), u = m - wx, v = hl - wb, nr = Math.floor((al + off) / pt);
       // Ściany wschodnia/zachodnia widać jako wąski skośny pasek: okna wyglądały tam jak białe kreski (szum).
       const okCale = al - u > 2 && al - u + ww < e.L - 2 && Math.abs(e.nx) < 0.6;
       const ciemnaSciana = S.wzor === 'cegla' || S.wzor === 'kamien' || S.wzor === 'deski';
@@ -333,7 +373,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let przyDrzwiach = false;
       if (op.drzwi && f === 0 && drzwiI1 === q.i1) {
         const [dx, dy] = op.drzwi;
-        const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy, dw = Math.max(5, Math.round(L * 0.5)) | 1, dh = Math.round(L * 0.8), du = alF - (da - dw / 2);
+        const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy, dw = Math.max(5, Math.round(L * 0.5)) | 1, dh = Math.round(L * 0.8), du = along - (da - dw / 2);
         if (Math.abs(al - u + ww / 2 - da) < (ww + dw) / 2 + 3) przyDrzwiach = true;
         const lukY = dh - dw / 2, wDrzwiach = (pd: number) => du >= -pd && du < dw + pd && (hh < lukY || Math.hypot(du - (dw - 1) / 2, hh - lukY) <= dw / 2 + pd);
         if (wDrzwiach(1)) { okno = true; c = wDrzwiach(0) ? (Math.floor(du) % 3 === 0 ? BELKA[0] : hex('#6a4426')) : S.tony[4];
@@ -367,13 +407,14 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
         if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && hash(Math.floor((along + (op.seed % 5)) / 7), f, op.seed + 5) < 0.3) { const cx = 3, cy = lo + 1.5, d = Math.hypot(m - cx, hh - cy); c = d > 1.2 ? MOSIADZ[2] : (op.noc ? SWIATLO[0] : SZYBA[1]); } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j + 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0) c = OBRYS;
     }
     o.px[j * W + i] = c;
   }
-  // Gruba obwódka jak u rysunków grafika (właz do metra): jeden piksel tuszu także na zewnątrz sylwetki,
-  // razem 2 px obrazu = 1 px mapy. Na zewnątrz, więc okna i drzwi nie tracą miejsca.
-  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (!kind[j * W + i] && (K(i - 1, j) || K(i + 1, j) || K(i, j - 1) || K(i, j + 1) || K(i - 1, j - 1) || K(i + 1, j - 1) || K(i - 1, j + 1) || K(i + 1, j + 1))) o.px[j * W + i] = OBRYS;
+  // Obwódka jako ciągła linia (właściciel 2.11.2026: „jedna ciągła wektorowa linia, a nie schodki”): tusz liczony
+  // z prawdziwych odcinków obrysu (dach), podstawy ścian (obrys przesunięty o wysokość) i pionów w narożnikach.
+  // Każdy piksel przy krawędzi dostaje tyle tuszu, ile wynika z jego odległości od linii – brzeg jest gładki,
+  // kształt budynku bez zmian. Krawędź dach–ściana tak samo, cieńsza.
+  obwodkaGladka(o, kind, W, Hh, x0, y0, pierscienie, H, sk);
   if (op.komin && maxD > 6) { // komin ceglany w ok. 1/3 od lewej-góry
     let best = -1, bx = 0, by = 0;
     for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }

@@ -169,16 +169,22 @@ function cienDrzewa(t: Drzewo09, cien: Uint8Array, w: number, h: number, X0: num
   }
 }
 
-/** Nakłada obraz (pomijając przezroczyste piksele). */
+/** Nakłada obraz (pomijając przezroczyste piksele, półprzezroczyste mieszając). */
 function naloz(o: Obraz, src: Obraz, x: number, y: number) {
   for (let j = 0; j < src.h; j++) {
     const yy = y + j;
     if (yy < 0 || yy >= o.h) continue;
     for (let i = 0; i < src.w; i++) {
       const c = src.px[j * src.w + i];
-      if (!(c >>> 24)) continue;
+      const a = c >>> 24;
+      if (!a) continue;
       const xx = x + i;
-      if (xx >= 0 && xx < o.w) o.px[yy * o.w + xx] = c;
+      if (xx < 0 || xx >= o.w) continue;
+      if (a === 255) { o.px[yy * o.w + xx] = c; continue; }
+      // Gładki brzeg obwódki budynku: mieszamy z tym, co pod spodem.
+      const d = o.px[yy * o.w + xx], t = a / 255;
+      const r = (d & 255) + ((c & 255) - (d & 255)) * t, g = ((d >>> 8) & 255) + (((c >>> 8) & 255) - ((d >>> 8) & 255)) * t, b = ((d >>> 16) & 255) + (((c >>> 16) & 255) - ((d >>> 16) & 255)) * t;
+      o.px[yy * o.w + xx] = ((Math.max(d >>> 24, a) << 24) | (Math.round(b) << 16) | (Math.round(g) << 8) | Math.round(r)) >>> 0;
     }
   }
 }

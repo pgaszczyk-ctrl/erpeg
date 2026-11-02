@@ -391,7 +391,7 @@ export function ksztalt09(b: Building) {
   const m2 = Math.abs(a) / 2 / (PX_PER_M * PX_PER_M);
   const f = (56 * 0.36 * SKALA_POSTACI * GEN_DOTS) / POZIOMY.wzorBohatera;
   const { poziomy, poziom } = ksztaltBudynku(b.levels || 1, m2);
-  const p = Math.max(10, Math.round(poziom * f));
+  const p = Math.max(Math.round(10 * POZIOMY.wyzej), Math.round(poziom * f * POZIOMY.wyzej));
   k = { poziomy, poziom: p, h: (poziomy * p) / GEN_DOTS };
   if (r.length) ksztalty.set(b, k);
   return k;

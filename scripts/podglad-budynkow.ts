@@ -2,12 +2,13 @@
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { budynek, MATERIALY, tonyZKoloru } from '../src/gen/budynki';
+const blend = (d: number, c: number) => { const t = (c >>> 24) / 255, m = (s: number) => Math.round(((d >>> s) & 255) + (((c >>> s) & 255) - ((d >>> s) & 255)) * t); return ((255 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)) >>> 0; };
 import { hex, ciemniej, jasniej } from '../src/gen/wspolne';
 const out = process.argv[2];
 const W = 360, H = 200, px = new Uint32Array(W * H).fill(hex('#5f8a3a'));
 for (let i = 0; i < px.length; i++) if (((i % W) >> 3) % 5 === 0) px[i] = hex('#9a7b52');
 const hl = (c: string, k: string, w: 'dachowka'|'gladki') => { const kk = `hl_${w}_${c}`; MATERIALY[kk] = { ...tonyZKoloru(hex(c)), wzor: w } as any; return kk; };
-const put = (r: number[], o: any) => { const b = budynek(r, o); for (let j = 0; j < b.obraz.h; j++) for (let i = 0; i < b.obraz.w; i++) { const c = b.obraz.px[j * b.obraz.w + i]; if (c >>> 24) { const x = b.x0 + i, y = b.y0 + j; if (x >= 0 && y >= 0 && x < W && y < H) px[y * W + x] = c; } } };
+const put = (r: number[], o: any) => { const b = budynek(r, o); for (let j = 0; j < b.obraz.h; j++) for (let i = 0; i < b.obraz.w; i++) { const c = b.obraz.px[j * b.obraz.w + i]; if (c >>> 24) { const x = b.x0 + i, y = b.y0 + j; if (x >= 0 && y >= 0 && x < W && y < H) px[y * W + x] = blend(px[y * W + x], c); } } };
 const P = 10;
 put([20, 30, 70, 30, 70, 64, 20, 64], { wysokosc: P, poziom: P, dach: 'dachowka_czerwona', sciana: 'tynk_kremowy', seed: 3, drzwi: [45, 64] });
 put([95, 20, 160, 20, 160, 44, 125, 44, 125, 80, 95, 80], { wysokosc: P, poziom: P, dach: 'lupek', sciana: 'cegla', seed: 8, drzwi: [110, 80] });
