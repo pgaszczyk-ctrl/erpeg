@@ -8,13 +8,26 @@ import { Pociagi } from '../map/Pociagi';
 import { torStacji } from '../map/perony';
 import { OSTROSC } from '../screen';
 import { SKALA_POSTACI } from '../skala';
+import { ArchitectureLayer } from '../architecture/layer';
+import { debugSettings } from '../architecture/debug';
+import { characterReference, labHeroScale } from '../architecture/proportions';
+const architectureSettings = debugSettings();
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const query = new URLSearchParams(location.search);
 const locations = {
   station: { lat: 51.2317, lon: 22.5682, mapa: 'lublin' },
+  kul: { lat: 51.2476, lon: 22.5446, mapa: 'lublin' },
+  dziewanny: { lat: 51.2351, lon: 22.5166, mapa: 'lublin' },
+  szczytowa: { lat: 51.2230, lon: 22.5349, mapa: 'lublin' },
   homes: { lat: 51.2434, lon: 22.5344, mapa: 'lublin' },
   krakow: { lat: 50.0637, lon: 19.9348, mapa: 'world' },
+  oldtown: { lat: 51.2483, lon: 22.5679, mapa: 'lublin' },
+  apartments: { lat: 51.2314, lon: 22.5340, mapa: 'lublin' },
+  industrial: { lat: 51.2308, lon: 22.5990, mapa: 'lublin' },
+  bergen: { lat: 60.3971, lon: 5.3245, mapa: 'world' },
+  seville: { lat: 37.3886, lon: -5.9953, mapa: 'world' },
+  kyoto: { lat: 35.0030, lon: 135.7780, mapa: 'world' },
 };
 const initial = locations.station;
 const validNumber = (s: string | null, fallback: number, limit: number) => s !== null && s.trim() !== '' && Number.isFinite(+s) && Math.abs(+s) <= limit ? +s : fallback;
@@ -29,10 +42,14 @@ const keys = new Set<string>();
 let stick = { x: 0, y: 0 };
 let drag: { id: number; x: number; y: number } | null = null;
 let scene: LabScene | undefined;
+function setArchitectureParameter(key:string,value:string){
+  const url=new URL(location.href),p=scene?.city&&scene.player?scene.city.toLatLon(scene.player.x,scene.player.y):{lat,lon};
+  for(const [k,v]of Object.entries({[key]:value,lat:p.lat,lon:p.lon,mapa,zoom}))url.searchParams.set(k,String(v));
+  location.href=url.href;
+}
 const status = (message: string | null) => { $('lab-status').hidden = message === null; if (message !== null) $('lab-status').textContent = message; };
 const navigate = (point: { lat: number; lon: number; mapa: string }) => {
   const url = new URL(location.href);
-  url.searchParams.delete('arch');
   for (const [key, value] of Object.entries({ ...point, view: lowerView ? 'lower' : 'normal', zoom })) url.searchParams.set(key, String(value));
   location.href = url.href;
 };
@@ -40,7 +57,6 @@ const refreshLinks = () => {
   const p = scene?.city && scene.player ? scene.city.toLatLon(scene.player.x, scene.player.y) : { lat, lon };
   for (const [id, view] of [['iso-view', 'lower'], ['normal-view', 'normal']]) {
     const a = $<HTMLAnchorElement>(id), url = new URL(location.href);
-    url.searchParams.delete('arch');
     for (const [key, value] of Object.entries({ ...p, mapa, view, zoom })) url.searchParams.set(key, String(value));
     a.href = url.href;
     a.classList.toggle('active', lowerView === (view === 'lower'));
@@ -56,7 +72,6 @@ for (const [id, lower] of [['iso-view', true], ['normal-view', false]] as const)
     scene?.fit();
     if (scene) scene.frames.length = 0;
     const url = new URL(location.href);
-    url.searchParams.delete('arch');
     url.searchParams.set('view', lower ? 'lower' : 'normal');
     url.searchParams.set('zoom', String(zoom));
     history.replaceState(null, '', url);
@@ -83,6 +98,7 @@ window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('blur', () => { keys.clear(); stick = { x: 0, y: 0 }; });
 
 class LabScene extends Phaser.Scene {
+  architecture?: ArchitectureLayer;
   city?: CityMap;
   mapView?: MapRenderer;
   player?: Phaser.GameObjects.Sprite;
@@ -97,9 +113,12 @@ class LabScene extends Phaser.Scene {
   private direction = 'down';
   private trains?: Pociagi;
   private shownStations = new Set<string>();
-  private readonly heroScale = SKALA_POSTACI === 2 / 3 ? 0.25 : 0.36 * SKALA_POSTACI;
+  private readonly heroScale = labHeroScale(SKALA_POSTACI);
   constructor() { super('test2'); }
-  preload() { this.load.spritesheet('lab-hero', 'postacie/lista25_01.png', { frameWidth: 64, frameHeight: 64 }); }
+  preload() {
+    this.load.spritesheet('lab-hero', 'postacie/lista25_01.png', { frameWidth: 64, frameHeight: 64 });
+    if(architectureSettings.enabled)this.load.spritesheet('architecture-decorations','architecture/decorations.png',{frameWidth:48,frameHeight:64});
+  }
   create() {
     scene = this;
     for (const [i, dir] of ['down', 'up', 'side'].entries()) this.anims.create({ key: `lab-${dir}`, frames: [{ key: 'lab-hero', frame: i * 3 + 1 }, { key: 'lab-hero', frame: i * 3 + 2 }], frameRate: 7, repeat: -1 });
@@ -127,9 +146,11 @@ class LabScene extends Phaser.Scene {
     const w = this.scale.width / OSTROSC, h = this.scale.height / OSTROSC / LOWER_VIEW;
     const minZoom = Math.max(1, Math.min(Math.max(Math.ceil(w / 490), Math.ceil(h / 980)), Math.max(Math.ceil(w / 980), Math.ceil(h / 490))));
     zoom = Math.max(minZoom, zoom);
+    if(architectureSettings.enabled&&zoom*OSTROSC%2)zoom=Math.min(6,zoom+1);
     this.cameras.main.setZoom(zoom * OSTROSC, zoom * OSTROSC * verticalRatio());
     // The hero is a standing sprite; keep its proportions and foot anchor.
     this.player?.setScale(this.heroScale, this.heroScale / verticalRatio());
+    this.architecture?.setProjection(verticalRatio());
     if (this.mapView) {
       this.cameras.main.preRender();
       this.ready = false;
@@ -146,12 +167,13 @@ class LabScene extends Phaser.Scene {
       const p = city.freeNear(start.x, start.y);
       this.player = this.add.sprite(p.x, p.y, 'lab-hero', 0).setOrigin(0.5, 56 / 64).setDepth(p.y);
       this.fit();
-      this.mapView = new MapRenderer(this, city);
+      this.mapView = new MapRenderer(this, city, architectureSettings.enabled);
+      if(architectureSettings.enabled){this.architecture=new ArchitectureLayer(this,city,this.mapView,architectureSettings,characterReference(this.heroScale,PX_PER_M));this.architecture.setProjection(verticalRatio());}
       this.trains = new Pociagi(this, this.mapView);
       this.cameras.main.startFollow(this.player, true, 1, 1);
       this.cameras.main.centerOn(p.x, p.y);
       this.loading = false;
-      Object.assign(window, { __test2: { scene: this, city, renderer: this.mapView, player: this.player, metrics: () => this.metrics(), ready: () => this.ready } });
+      Object.assign(window, { __test2: { scene: this, city, renderer: this.mapView, architecture: this.architecture, player: this.player, metrics: () => this.metrics(), ready: () => this.ready } });
     } catch (error) { status(`Nie udało się wczytać mapy: ${error instanceof Error ? error.message : error}. Odśwież stronę, aby spróbować ponownie.`); }
   }
   private radius() { return Math.max(400, Math.hypot(this.scale.width / (zoom * OSTROSC), this.scale.height / (zoom * OSTROSC * verticalRatio())) / 2 + 150); }
@@ -163,6 +185,7 @@ class LabScene extends Phaser.Scene {
       fps: duration ? 1000 * this.frames.length / duration : 0,
       frameP95: frames[Math.floor(frames.length * 0.95)] ?? 0,
       renderer: this.mapView?.diagnostics(),
+      architecture: this.architecture?.diagnostics(),
       loaded: this.city ? { buildings: this.city.buildings.length, lines: this.city.lines.length, areas: this.city.areas.length } : null,
       distanceM: this.distanceM, textures: this.game.textures.getTextureKeys().length,
     };
@@ -180,9 +203,13 @@ class LabScene extends Phaser.Scene {
     const length = Math.hypot(dx, dy);
     if (length > 1) { dx /= length; dy /= length; }
     const p = this.player, oldX = p.x, oldY = p.y;
+    if(this.architecture?.hasPlan()&&!this.architecture.isFree(p.x,p.y)){
+      const free=this.architecture.freeNear(p.x,p.y);if(free)p.setPosition(free[0],free[1]);
+    }
     const speed = 90 * dt;
-    if (this.city.isFree(p.x + dx * speed, p.y, 2, 2)) p.x += dx * speed;
-    if (this.city.isFree(p.x, p.y + dy * speed, 2, 2)) p.y += dy * speed;
+    const free=(x:number,y:number)=>this.architecture?this.architecture.isFree(x,y):this.city!.isFree(x,y,2,2);
+    if (free(p.x + dx * speed, p.y)) p.x += dx * speed;
+    if (free(p.x, p.y + dy * speed)) p.y += dy * speed;
     this.distanceM += Math.hypot(p.x - oldX, p.y - oldY) / PX_PER_M;
     if (length > 0.1) {
       this.direction = Math.abs(dx) > Math.abs(dy) ? 'side' : dy < 0 ? 'up' : 'down';
@@ -195,6 +222,7 @@ class LabScene extends Phaser.Scene {
     }
     this.cameras.main.preRender();
     this.mapView.update(this.cameras.main);
+    this.architecture?.update(this.cameras.main,now);
     this.mapView.updateTrees(now, dt, this.cameras.main, [{ x: p.x, y: p.y }]);
     for (const station of this.city.places) {
       if (station.kind !== 'station' || this.shownStations.has(station.id) || Math.hypot(station.door.x - p.x, station.door.y - p.y) > this.radius()) continue;
@@ -202,14 +230,17 @@ class LabScene extends Phaser.Scene {
       if (rail !== undefined) { this.shownStations.add(station.id); if (rail) this.trains?.postaw(station, rail); }
     }
     try {
-      if (!this.ready && this.mapView.firstViewReady(this.cameras.main)) { this.ready = true; status(null); }
+      if (!this.ready && this.mapView.firstViewReady(this.cameras.main) && (!this.architecture||this.architecture.ready())) { this.ready = true; status(null); }
+      const error=this.architecture?.diagnostics().failures.at(-1);
+      if(error)status(`Architektura: ${error}`);
     } catch (error) { status(error instanceof Error ? error.message : String(error)); }
     if (now - this.lastUi > 1000) {
       this.lastUi = now; refreshLinks();
       const m = this.metrics(), r = m.renderer;
       const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
       const mib = r ? (r.chunkRgbaBytes + r.buildingRgbaBytes) / 1048576 : 0;
-      $('metrics').innerHTML = `<div><strong>${m.fps.toFixed(0)} FPS</strong><small>Ostatnie klatki spaceru</small></div><div><strong>${m.frameP95.toFixed(0)} ms</strong><small>Czas klatki · 95 percentyl</small></div><div><strong>${median(r?.computeMs ?? []).toFixed(0)} ms</strong><small>Rysowanie fragmentu · mediana</small></div><div><strong>${median(r?.readyMs ?? [])} ms</strong><small>Fragment · z oczekiwaniem w kolejce</small></div><div><strong>${mib.toFixed(1)} MiB</strong><small>Piksele podłoża i wysokich budynków</small></div><div><strong>${r?.allocatedChunks ?? 0} / ${r?.maxChunks ?? 0}</strong><small>Obrazy fragmentów w pamięci</small></div><div><strong>${m.loaded?.buildings ?? 0}</strong><small>Wczytane obrysy budynków</small></div><div><strong>${(m.distanceM).toFixed(0)} m</strong><small>Przebyta droga</small></div>`;
+      const a=m.architecture;
+      $('metrics').innerHTML = `<div><strong>${m.fps.toFixed(0)} FPS</strong><small>Ostatnie klatki spaceru</small></div><div><strong>${m.frameP95.toFixed(0)} ms</strong><small>Czas klatki · 95 percentyl</small></div><div><strong>${median(r?.computeMs ?? []).toFixed(0)} ms</strong><small>Rysowanie fragmentu · mediana</small></div><div><strong>${median(r?.readyMs ?? [])} ms</strong><small>Fragment · z oczekiwaniem w kolejce</small></div><div><strong>${mib.toFixed(1)} MiB</strong><small>Piksele podłoża i wysokich budynków</small></div><div><strong>${r?.allocatedChunks ?? 0} / ${r?.maxChunks ?? 0}</strong><small>Obrazy fragmentów w pamięci</small></div><div><strong>${m.loaded?.buildings ?? 0}</strong><small>Wczytane obrysy budynków</small></div><div><strong>${(m.distanceM).toFixed(0)} m</strong><small>Przebyta droga</small></div>${a?`<div><strong>${a.visible} / ${a.buildings}</strong><small>Nowe budynki · widoczne / zaplanowane</small></div><div><strong>${a.workerMs.toFixed(0)} ms</strong><small>Planowanie w workerze</small></div><div><strong>${(a.textureBytes/1048576).toFixed(1)} MiB</strong><small>Tekstury nowej architektury</small></div><div><strong>${a.idFallbacks}</strong><small>Identyfikatory zastępcze</small></div>`:''}`;
     }
   }
 }
@@ -222,3 +253,7 @@ const game = new Phaser.Game({
 });
 window.addEventListener('resize', () => game.scale.resize(container.clientWidth * OSTROSC, container.clientHeight * OSTROSC));
 Object.assign(window, { __game: game });
+for(const [id,value,key]of [
+  ['arch-mode',architectureSettings.enabled?'1':'0','arch'],['building-scale',String(architectureSettings.scale),'BUILDING_SCALE'],
+  ['angle-snap',String(architectureSettings.angleSnap),'ANGLE_SNAP'],['outline-mode',architectureSettings.outline?'1':'0','OUTLINE'],['style-overlay',architectureSettings.overlay?'1':'0','styles'],
+] as const){const select=$<HTMLSelectElement>(id);select.value=value;select.onchange=()=>setArchitectureParameter(key,select.value);}

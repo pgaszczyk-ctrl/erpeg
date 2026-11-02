@@ -1,0 +1,362 @@
+{
+  "generatedAt": "2026-11-02T06:16:36.659Z",
+  "tests": [
+    {
+      "name": "7 styles + 4 regional profiles; all material indices in master palette",
+      "result": "PASS",
+      "details": [
+        "#1e1a24",
+        "#4a3216",
+        "#3a3540",
+        "#6b4a22",
+        "#b2453a",
+        "#67615b",
+        "#9a6420",
+        "#4c7c3e",
+        "#847d74",
+        "#61924a",
+        "#948d80",
+        "#c8963e",
+        "#93b75a",
+        "#bab3a2",
+        "#bcd884",
+        "#ece6d6"
+      ]
+    },
+    {
+      "name": "canonical fallback ID survives ring rotation/winding",
+      "result": "PASS"
+    },
+    {
+      "name": "rectangular decomposition preserves a courtyard and removes small teeth",
+      "result": "PASS",
+      "details": {
+        "rectangles": 4
+      }
+    },
+    {
+      "name": "real KUL and irregular estates reproduce the accepted major wings and flat links",
+      "result": "PASS",
+      "details": [
+        {
+          "name": "Collegium Jana Pawła II",
+          "main": 1,
+          "connectors": 0,
+          "levels": 3,
+          "triangles": 1230
+        },
+        {
+          "name": "Collegium Norwidianum",
+          "main": 1,
+          "connectors": 0,
+          "levels": 2,
+          "triangles": 790
+        },
+        {
+          "name": "Gmach Główny KUL",
+          "main": 4,
+          "connectors": 0,
+          "levels": 2,
+          "triangles": 2222
+        },
+        {
+          "name": "Szczytowa 11",
+          "main": 7,
+          "connectors": 2,
+          "levels": 2,
+          "triangles": 2852
+        },
+        {
+          "name": "Dziewanny 10",
+          "main": 3,
+          "connectors": 2,
+          "levels": 1,
+          "triangles": 744
+        },
+        {
+          "name": "Dziewanny 9",
+          "main": 4,
+          "connectors": 1,
+          "levels": 2,
+          "triangles": 1404
+        },
+        {
+          "name": "Dziewanny 14",
+          "main": 2,
+          "connectors": 1,
+          "levels": 2,
+          "triangles": 940
+        }
+      ]
+    },
+    {
+      "name": "joined wings have no internal facade, lower links expose upper walls, and empty geometry is safe",
+      "result": "PASS"
+    },
+    {
+      "name": "full scale, street orientation, road and neighbour separation",
+      "result": "PASS",
+      "details": {
+        "kept": 3,
+        "rejected": 9
+      }
+    },
+    {
+      "name": "load order and reload determinism, including source decision and geometry",
+      "result": "PASS"
+    },
+    {
+      "name": "tag precedence and seven architectural families",
+      "result": "PASS"
+    },
+    {
+      "name": "one footprint, OSM 1–3 / 4–6 / >6 compress to 1 / 2 / 3, with a fixed-size entrance",
+      "result": "PASS",
+      "details": {
+        "character": {
+          "width": 5.46875,
+          "height": 7.03125
+        },
+        "doorHeightToCharacter": 1.12,
+        "doorWidthToCharacter": 1.12,
+        "wallHeights": {
+          "1": 10.395000000000001,
+          "2": 10.395000000000001,
+          "3": 10.395000000000001,
+          "4": 20.790000000000003,
+          "5": 20.790000000000003,
+          "6": 20.790000000000003,
+          "7": 31.185000000000002,
+          "11": 31.185000000000002,
+          "99": 31.185000000000002
+        }
+      }
+    },
+    {
+      "name": "regional selection is data-driven: Bergen, Seville, Kyoto, dry climate",
+      "result": "PASS",
+      "details": [
+        [
+          5.3245,
+          60.3971,
+          "north"
+        ],
+        [
+          -5.9953,
+          37.3886,
+          "mediterranean"
+        ],
+        [
+          135.778,
+          35.003,
+          "east-asia"
+        ],
+        [
+          31.23,
+          30.04,
+          "arid"
+        ]
+      ]
+    },
+    {
+      "name": "all roofs/angles rasterize into strictly palette-only pixels; facade collision matches mesh",
+      "result": "PASS",
+      "details": [
+        {
+          "roof": "gabled",
+          "deg": 0,
+          "opaque": 3926
+        },
+        {
+          "roof": "gabled",
+          "deg": 22.5,
+          "opaque": 4167
+        },
+        {
+          "roof": "gabled",
+          "deg": 67.5,
+          "opaque": 3803
+        },
+        {
+          "roof": "hipped",
+          "deg": 0,
+          "opaque": 3656
+        },
+        {
+          "roof": "hipped",
+          "deg": 22.5,
+          "opaque": 3898
+        },
+        {
+          "roof": "hipped",
+          "deg": 67.5,
+          "opaque": 3690
+        },
+        {
+          "roof": "flat",
+          "deg": 0,
+          "opaque": 3656
+        },
+        {
+          "roof": "flat",
+          "deg": 22.5,
+          "opaque": 3969
+        },
+        {
+          "roof": "flat",
+          "deg": 67.5,
+          "opaque": 3752
+        },
+        {
+          "roof": "sawtooth",
+          "deg": 0,
+          "opaque": 3656
+        },
+        {
+          "roof": "sawtooth",
+          "deg": 22.5,
+          "opaque": 3949
+        },
+        {
+          "roof": "sawtooth",
+          "deg": 67.5,
+          "opaque": 3817
+        },
+        {
+          "roof": "round",
+          "deg": 0,
+          "opaque": 3656
+        },
+        {
+          "roof": "round",
+          "deg": 22.5,
+          "opaque": 4004
+        },
+        {
+          "roof": "round",
+          "deg": 67.5,
+          "opaque": 3951
+        },
+        {
+          "roof": "onion",
+          "deg": 0,
+          "opaque": 3656
+        },
+        {
+          "roof": "onion",
+          "deg": 22.5,
+          "opaque": 3999
+        },
+        {
+          "roof": "onion",
+          "deg": 67.5,
+          "opaque": 3938
+        }
+      ]
+    },
+    {
+      "name": "architecture-free ground, tree positions and pipes stay byte-identical",
+      "result": "PASS",
+      "details": {
+        "pixels": 9216,
+        "trees": 2
+      }
+    },
+    {
+      "name": "real Lublin source plans: collision audit in four districts",
+      "result": "PASS",
+      "details": [
+        {
+          "name": "old-town",
+          "sources": 916,
+          "kept": 121,
+          "styles": [
+            "old-town",
+            "half-timber",
+            "modern",
+            "apartments",
+            "landmark",
+            "wooden"
+          ],
+          "angles": [
+            23,
+            0,
+            -45,
+            -67,
+            45,
+            -90,
+            -22,
+            68
+          ],
+          "milliseconds": 700.9874380000001
+        },
+        {
+          "name": "apartments",
+          "sources": 359,
+          "kept": 66,
+          "styles": [
+            "half-timber",
+            "apartments",
+            "old-town",
+            "wooden",
+            "modern"
+          ],
+          "angles": [
+            23,
+            0,
+            45,
+            -67,
+            -45,
+            -22,
+            68,
+            -90
+          ],
+          "milliseconds": 210.59981199999993
+        },
+        {
+          "name": "homes",
+          "sources": 828,
+          "kept": 142,
+          "styles": [
+            "half-timber",
+            "old-town",
+            "modern",
+            "apartments",
+            "landmark"
+          ],
+          "angles": [
+            23,
+            0,
+            -22,
+            -45,
+            45,
+            68
+          ],
+          "milliseconds": 479.09306100000003
+        },
+        {
+          "name": "industrial",
+          "sources": 905,
+          "kept": 177,
+          "styles": [
+            "landmark",
+            "half-timber",
+            "old-town",
+            "modern",
+            "wooden",
+            "industrial"
+          ],
+          "angles": [
+            23,
+            45,
+            -22,
+            0,
+            -67,
+            68
+          ],
+          "milliseconds": 491.7746140000004
+        }
+      ]
+    }
+  ]
+}

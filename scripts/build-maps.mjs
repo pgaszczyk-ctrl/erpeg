@@ -17,6 +17,11 @@ const run = (args) =>
 
 // Lublin: the whole map, then cut into an index and 1 km tiles for the game.
 process.stdout.write(await run(['--out', '.cache/lublin-full.json']));
+// Separate, unmerged architecture source for the anonymous /test2/ renderer.
+await new Promise((ok, no) => {
+  const p = spawn(process.execPath, ['scripts/architecture/build-data.mjs'], { stdio: 'inherit' });
+  p.on('close', (code) => code === 0 ? ok() : no(new Error(`architecture data failed (${code})`)));
+});
 await new Promise((ok, no) => {
   const p = spawn(process.execPath, ['--experimental-strip-types', '--no-warnings', 'scripts/split-map.mjs'], { stdio: 'inherit' });
   p.on('close', (code) => (code === 0 ? ok() : no(new Error(`split-map failed (${code})`))));

@@ -11,7 +11,11 @@
     "test:quests": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/city-quests.mjs && node scripts/tests/quest-variants.mjs",
     "test:quest-maps": "node scripts/tests/build-quest-tests.mjs && node scripts/tests/real-city-quests.mjs",
     "test:prolog": "node scripts/tests/prolog.mjs",
-    "test:creatures3d": "node scripts/tests/browser-creatures3d.mjs"
+    "test:creatures3d": "node scripts/tests/browser-creatures3d.mjs",
+    "test:architecture": "node scripts/architecture/test.mjs",
+    "test:architecture:browser": "node scripts/architecture/browser.mjs",
+    "architecture:palette": "python scripts/architecture/extract-palette.py",
+    "architecture:decorations": "python scripts/architecture/draw-decorations.py"
   },
   "dependencies": {
     "@mapbox/vector-tile": "^3.0.0",
