@@ -37,11 +37,24 @@ const land = index(landFile), lakes = index(lakesFile);
 const swiat = JSON.parse(fs.readFileSync("public/artillery/swiat.json"));
 let masked = 0, cities = 0;
 for (const m of swiat.miasta) {
-  const s = G.generujSiec([m[0], m[1], m[2], m[3], m[4], m[5], 0], []);
+  // Gates are pulled in towards the districts that are kept (7 km rule), so the mask is repeated until it settles.
+  // Bits count candidates (generator `idx`), not kept stations.
   let woda = 0;
-  for (const st of s.stacje) if (!land(st.lat, st.lon) || lakes(st.lat, st.lon)) woda += 2 ** st.k;
+  for (let runda = 0; runda < 6; runda++) {
+    const s = G.generujSiec([m[0], m[1], m[2], m[3], m[4], m[5], woda], []);
+    let nowa = woda;
+    for (const st of s.stacje) {
+      if (!land(st.lat, st.lon) || lakes(st.lat, st.lon)) nowa |= 2 ** st.kand;
+    }
+    if (nowa === woda) break;
+    woda = nowa;
+  }
   m.length = 6;
-  if (woda) m.push(woda), (masked += s.stacje.filter((st) => (Math.floor(woda / 2 ** st.k) % 2) === 1).length), cities++;
+  if (woda) {
+    m.push(woda);
+    for (let b = 0; b < 31; b++) if ((woda >> b) & 1) masked++;
+    cities++;
+  }
 }
 fs.writeFileSync("public/artillery/swiat.json", JSON.stringify(swiat));
 const q = (s) => "'" + String(s).replaceAll("'", "''") + "'";

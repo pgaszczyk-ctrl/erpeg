@@ -1,6 +1,7 @@
 // Where a generated artillery station's cannon stands on a game map (no Phaser: also used by Node checks).
 import type { CityMap } from "../map/CityMap";
 import { PX_PER_M, pointInRings } from "../map/CityMap";
+import { metry } from "./generator";
 
 /** Rules for a cannon's spot (owner, 1 Nov 2026: „zawsze przynajmniej 50 m od budynków z każdej strony; koniecznie na
  *  placu lub parkingu, nie tuż obok bloków”). */
@@ -13,10 +14,20 @@ export const MIEJSCE = {
   podstawaM: 6,
   /** Candidate grid on the squares/car parks, metres (world-aligned, so every player gets the same spot). */
   krokM: 4,
+  /** A city gate with no square/car park near (owner, 2 Nov 2026: „nie usuwaj, wysuń dalej w tym samym kierunku z dala
+   *  od zabudowy”): searched outwards along its direction, up to this far, on open ground ≥ odBudynkowM from buildings,
+   *  never farther than one flight (maksSkokM) from the stations it links to. */
+  wysunM: 1500,
+  wysunKrokM: 8,
+  maksSkokM: 7000,
 };
-/** How far from its generated point a cannon may stand (the server allows a little more: ma_lot). Without a square or
- *  car park that far, the station has no cannon on this map. */
+/** A gate's way out: the city centre (direction) and the stations it links to (the 7 km limit). */
+export type Wysun = { centrum: { lat: number; lon: number }; partnerzy: { lat: number; lon: number }[] };
+/** How far from its generated point a cannon may stand on a square/car park; a gate may move up to MIEJSCE.wysunM
+ *  (the server allows a little more: ma_lot). Nowhere suitable = the station has no cannon on this map. */
 export const MIEJSCE_M = 900;
+/** The farthest any cannon may stand from its generated point (tiles to load around it). */
+export const MIEJSCE_MAKS_M = Math.max(MIEJSCE_M, MIEJSCE.wysunM);
 const miejsca = new Map<string, { x: number; y: number } | null>();
 
 /**
@@ -24,7 +35,7 @@ const miejsca = new Map<string, { x: number; y: number } | null>();
  * at least MIEJSCE.odBudynkowM from every building, not on a car road, with room and a way out.
  * undefined = the tiles there aren't loaded yet; null = nowhere suitable.
  */
-export function miejsceStacji(city: CityMap, id: string, lat: number, lon: number) {
+export function miejsceStacji(city: CityMap, id: string, lat: number, lon: number, wysun?: Wysun) {
   const key = city.id + "|" + id;
   if (miejsca.has(key)) return miejsca.get(key);
   if (!city.hasLatLon(lat, lon)) return null;
@@ -33,9 +44,47 @@ export function miejsceStacji(city: CityMap, id: string, lat: number, lon: numbe
     B = MIEJSCE.odBudynkowM * PX_PER_M,
     box = { x0: p.x - R, y0: p.y - R, x1: p.x + R, y1: p.y + R };
   if (!city.ready({ x0: box.x0 - B, y0: box.y0 - B, x1: box.x1 + B, y1: box.y1 + B })) return undefined;
-  const found = szukaj(city, p, R, B, box);
+  let found = szukaj(city, p, R, B, box);
+  if (!found && wysun) {
+    const w = wysunGdzie(city, p, B, wysun);
+    if (w === undefined) return undefined;
+    found = w;
+  }
   miejsca.set(key, found);
   return found;
+}
+
+/** A gate pushed outwards from the city along its own direction onto open ground. */
+function wysunGdzie(city: CityMap, p: { x: number; y: number }, B: number, w: Wysun) {
+  const c = city.fromLatLon(w.centrum.lat, w.centrum.lon);
+  let dx = p.x - c.x, dy = p.y - c.y;
+  const dl = Math.hypot(dx, dy);
+  if (dl < 1) return null;
+  (dx /= dl), (dy /= dl);
+  const D = MIEJSCE.wysunM * PX_PER_M, krok = MIEJSCE.wysunKrokM * PX_PER_M;
+  const kx = p.x + dx * D, ky = p.y + dy * D;
+  const box = { x0: Math.min(p.x, kx) - B, y0: Math.min(p.y, ky) - B, x1: Math.max(p.x, kx) + B, y1: Math.max(p.y, ky) + B };
+  if (!city.ready(box)) return undefined;
+  const blisko = mapaBudynkow(city, box, B, MIEJSCE.krokM * PX_PER_M);
+  const wZasiegu = (x: number, y: number) => {
+    const ll = city.toLatLon(x, y);
+    return w.partnerzy.every((q) => metry(ll, q) <= MIEJSCE.maksSkokM);
+  };
+  let drogie = 0;
+  for (let d = krok; d <= D; d += krok) {
+    // Past the 7 km limit going further out only gets worse.
+    if (!wZasiegu(p.x + dx * d, p.y + dy * d)) return null;
+    for (const bok of [0, 1, -1, 2, -2]) {
+      const x = p.x + dx * d - dy * bok * krok, y = p.y + dy * d + dx * bok * krok;
+      if (blisko(x, y) || !city.isFree(x, y, 14, 14)) continue;
+      const road = city.roadAt(x, y);
+      if (road && !["path", "pedestrian", "footway", "track", "service"].includes(road.kind)) continue;
+      if (city.buildingWithin(x, y, B) || !wZasiegu(x, y)) continue;
+      if (++drogie > 12) return null;
+      if (city.reachesFar(x, y, 100)) return { x, y };
+    }
+  }
+  return null;
 }
 
 function szukaj(

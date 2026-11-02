@@ -58,6 +58,7 @@ for (const m of sample) {
     for (const [a, b] of s.krawedzie) if (ok.has(a) !== ok.has(b)) ok.add(a), ok.add(b), (grew = true);
   }
   assert.equal(ok.size, s.stacje.length, `${m[1]} connected`);
+  for (const [a, b] of s.krawedzie) assert(G.metry(s.stacje[a], s.stacje[b]) <= G.GENERATOR.maksSkok, `${m[1]}: link ${a}-${b} over 7 km`);
 }
 assert.equal(G.miastoPrzy(swiat, { lat: 51.2478, lon: 22.5686 })?.[1], "Lublin");
 assert.equal(G.miastoPrzy(swiat, { lat: 52.19, lon: 21.03 })?.[1], "Warsaw", "Mokotów belongs to Warsaw");
@@ -81,13 +82,13 @@ const lot = (from, to, dest, nonce = crypto.randomUUID()) =>
   db.query(`select ma_lot('tok',$1,$2,$3,$4) r`, [nonce, `c${lublin[0]}:${from}`, `c${lublin[0]}:${to}`, JSON.stringify(dest)]);
 const nonLinked = L.stacje.map((s) => s.k).find((k) => k !== a && !L.krawedzie.some(([x, y]) => (x === a && y === k) || (y === a && x === k)));
 await assert.rejects(lot(a, nonLinked, at(sq[nonLinked])), /Route unavailable/);
-await assert.rejects(lot(a, b, at(sq[b], 600)), /unsafe/);
+await assert.rejects(lot(a, b, at(sq[b], 1600)), /unsafe/);
 const r = (await lot(a, b, at(sq[b], 150))).rows[0].r;
 const price = G.cenaZaMetry(G.metry(L.stacje[a], L.stacje[b]));
 assert.equal(r.price, price, "server price = game price");
 assert.equal(r.coins_after, 1000 - price);
 console.log(`ma_lot OK: ${G.metry(L.stacje[a], L.stacje[b]).toFixed(0)} m → ${price} coins`);
-const far = (await db.query(`update players set save=jsonb_set(save,'{tu}',$1) returning 1`, [JSON.stringify(at(sq[a], 800))]));
+const far = (await db.query(`update players set save=jsonb_set(save,'{tu}',$1) returning 1`, [JSON.stringify(at(sq[a], 1700))]));
 await db.query(`update ma_trips set state='done'`);
 await assert.rejects(lot(a, b, at(sq[b])), /Come closer/);
 console.log("PASS artillery generator");

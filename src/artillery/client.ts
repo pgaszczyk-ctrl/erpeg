@@ -9,7 +9,7 @@ import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight } from "./flight";
 import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
-import { miejsceStacji, MIEJSCE_M } from "./miejsce";
+import { miejsceStacji, MIEJSCE_MAKS_M, type Wysun } from "./miejsce";
 import { wSiatke } from "./ladowanie";
 import { RULES, type Network, type Stop } from "./network";
 import {
@@ -80,6 +80,7 @@ export async function siecPrzy(ll: { lat: number; lon: number }): Promise<Regist
   if (!swiat || !m) return null;
   return naRejestr(generujSiec(m, swiat.lotniska));
 }
+const wysunOf = (s: Stop) => (s as Stop & { wysun?: Wysun }).wysun;
 function naRejestr(siec: Siec): Registry {
   const [id, name, , lat, lon] = siec.miasto,
     mLon = 111320 * Math.cos((lat * Math.PI) / 180),
@@ -98,6 +99,16 @@ function naRejestr(siec: Siec): Registry {
       x: (s.lon - lon) * mLon,
       y: (lat - s.lat) * mLat,
       airport: s.rodzaj === "lotnisko",
+      // A gate with no square near is pushed outwards (miejsce.ts), within 7 km of the stations it links to.
+      wysun:
+        s.rodzaj === "rogatka"
+          ? {
+              centrum: { lat, lon },
+              partnerzy: siec.krawedzie
+                .filter(([a, b]) => a === s.k || b === s.k)
+                .map(([a, b]) => siec.stacje[a === s.k ? b : a]),
+            }
+          : undefined,
     })) as unknown as Stop[],
     edges: siec.krawedzie.map(([a, b]) => [siec.stacje[a].id, siec.stacje[b].id]),
   } as unknown as Registry;
@@ -226,12 +237,12 @@ export class Artillery {
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
       const g = this.city.fromLatLon(ll.lat, ll.lon);
       let art = this.art.get(s.id);
-      // The cannon may stand up to MIEJSCE_M from its generated point (on a square or car park).
+      // The cannon may stand up to MIEJSCE_MAKS_M from its generated point (square/car park, or a gate pushed out).
       if (
         !art &&
-        Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) < (1200 + MIEJSCE_M) * PX_PER_M
+        Phaser.Math.Distance.Between(g.x, g.y, this.player.x, this.player.y) < (1200 + MIEJSCE_MAKS_M) * PX_PER_M
       ) {
-        const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+        const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon, wysunOf(s));
         if (p) {
           art = this.draw(p.x, p.y);
           this.art.set(s.id, art);
@@ -293,7 +304,7 @@ export class Artillery {
       const ll = this.ll(s);
       if (!this.city.hasLatLon(ll.lat, ll.lon)) continue;
       // Where its cannon really stands (moved off its generated point onto a square or car park).
-      const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon);
+      const p = miejsceStacji(this.city, s.id, ll.lat, ll.lon, wysunOf(s));
       if (!p) continue;
       const d = Math.hypot(p.x - x, p.y - y);
       if (d < 120 * PX_PER_M && (!best || d < best.d)) best = { s, x: p.x, y: p.y, d };
@@ -434,7 +445,7 @@ export class Artillery {
       const to = this.registry!.stops.find((s) => s.id === id)!;
       // No square/car park ≥ 50 m from buildings there: that station has no cannon on this map.
       const tll = this.ll(to);
-      if (this.city.hasLatLon(tll.lat, tll.lon) && miejsceStacji(this.city, to.id, tll.lat, tll.lon) === null) continue;
+      if (this.city.hasLatLon(tll.lat, tll.lon) && miejsceStacji(this.city, to.id, tll.lat, tll.lon, wysunOf(to)) === null) continue;
       const b = document.createElement("button");
       b.className = "m-btn";
       const m = metry(this.ll(s), this.ll(to)),
@@ -523,8 +534,8 @@ export class Artillery {
       }
       const city = await getMap(id),
         g = city.fromLatLon(ll.lat, ll.lon);
-      await city.ensure(g.x, g.y, (MIEJSCE_M + 200) * PX_PER_M);
-      const p = miejsceStacji(city, to.id, ll.lat, ll.lon);
+      await city.ensure(g.x, g.y, (MIEJSCE_MAKS_M + 200) * PX_PER_M);
+      const p = miejsceStacji(city, to.id, ll.lat, ll.lon, wysunOf(to));
       if (!p)
         throw Error(
           tx(
