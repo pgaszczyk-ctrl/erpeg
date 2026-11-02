@@ -70,8 +70,6 @@ type Host = {
   zdjecie: () => Promise<HTMLCanvasElement | null>;
   /** The scene's current hero and cannons (they are new after a restart). */
   obecna: () => { player: Player; artillery?: Artillery };
-  /** A pinball hatch got drawn: put a stall beside it (sell something for the ticket). */
-  stragan?: (x: number, y: number, id: string) => void;
 };
 export const artilleryTransit = { active: false };
 let recovery: Receipt | null = null;
@@ -371,9 +369,8 @@ export class Artillery {
         return this.registry!.stops.find((s) => s.id === id);
     return undefined;
   }
-  private draw(x: number, y: number, id = "") {
+  private draw(x: number, y: number, _id = "") {
     if (this.registry?.metro) {
-      this.host.stragan?.(x, y, id);
       // A pinball hatch: no code-drawn cannon underneath.
       const body = this.scene.add.graphics({ x, y }).setVisible(false), barrel = this.scene.add.graphics({ x, y }).setVisible(false);
       return { body, barrel, armata: new Wlaz(this.scene, x, y) as Armata3D | Wlaz, model: false, visible: true, x, y };
@@ -428,7 +425,18 @@ export class Artillery {
     barrel.fillEllipse(27, -1, 7, 17);
     return { body, barrel, armata: new Armata3D(this.scene, x, y) as Armata3D | Wlaz, model: false, visible: true, x, y };
   }
-  open(s: Stop) {
+  /** A metro city: its stations are pinball hatches with a walkable hall under them. */
+  get metro() {
+    return !!this.registry?.metro;
+  }
+  llStacji(s: Stop) {
+    return this.ll(s);
+  }
+  krajNaStacji(s: Stop) {
+    return this.krajStacji(s);
+  }
+  /** The destination list; from the pinball hall `zHali` closes the hall first and rides from that launcher. */
+  open(s: Stop, zHali?: { tor: number; przed: () => void }) {
     if (this.opened || this.host.busy()) return;
     this.opened = true;
     this.host.hold(true);
@@ -501,7 +509,8 @@ export class Artillery {
       b.onclick = () => {
         if (this.host.combat()) return;
         close();
-        void this.start(s, to);
+        zHali?.przed();
+        void this.start(s, to, zHali?.tor ?? 0);
       };
       box.append(b);
     }
@@ -527,7 +536,7 @@ export class Artillery {
     b.focus();
     this.scene.events.once("shutdown", close);
   }
-  private async start(from: Stop, to: Stop) {
+  private async start(from: Stop, to: Stop, tor = 0) {
     if (this.host.combat() || this.host.busy()) return;
     audio();
     this.host.hold(true);
@@ -561,7 +570,7 @@ export class Artillery {
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
     const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to) }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to), tor }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,

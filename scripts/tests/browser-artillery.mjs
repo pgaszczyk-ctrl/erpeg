@@ -43,6 +43,45 @@ const CITY = 9565,
   PRICE = 14; // 1.1 km × 13 coins, rounded
 await mkdir("work/artillery", { recursive: true });
 const DIR = PINBALL ? "pinball" : "artillery";
+// PINBALL: the hatch leads down into the walkable hall (scenes/HalaScene.ts); a ticket is bought at a launcher.
+async function akcja(page, mobile) {
+  if (mobile) await page.locator(".hs-akcja").click();
+  else await page.keyboard.press("KeyE");
+}
+async function przezHale(page, mobile, tag, sprawdz) {
+  await page.waitForFunction(() => window.__game.scene.isActive("hala") && !!window.__game.scene.getScene("hala").player, null, { timeout: 30000 });
+  await page.waitForTimeout(400);
+  const h = await page.evaluate(() => {
+    const g = window.__game.scene.getScene("game"), s = window.__game.scene.getScene("hala");
+    return { gameVisible: g.sys.settings.visible, heroScale: s.player.scaleX, newsboy: !!s.gazeciarz, trader: !!s.sprzedawca, y: s.player.y };
+  });
+  assert.equal(h.gameVisible, false, "street hidden under the hall");
+  assert(h.heroScale > 0.9 && h.heroScale < 1.1, "hero at the hall's scale: " + h.heroScale);
+  if (sprawdz) {
+    await page.screenshot({ path: `work/${DIR}/${tag}-hala.png` });
+    assert(h.newsboy && h.trader, "newsboy and trader stand in the hall");
+    // The walk mask stops the hero at the machines; walking away and back into the landing goes up the stairs.
+    await page.evaluate(() => window.__game.scene.getScene("hala").player.setPosition(251, 470));
+    await page.waitForTimeout(200);
+    await page.evaluate(() => window.__game.scene.getScene("hala").player.setPosition(251, 326));
+    await page.waitForFunction(() => !window.__game.scene.isActive("hala") && window.__game.scene.getScene("game").sys.settings.visible, null, { timeout: 5000 });
+    await akcja(page, mobile);
+    await page.waitForFunction(() => window.__game.scene.isActive("hala") && !!window.__game.scene.getScene("hala").player, null, { timeout: 30000 });
+    // The trader's shop opens on its selling tab and freezes the hall.
+    const [sx, sy] = await page.evaluate(() => { const c = window.__game.scene.getScene("hala").cele.find((c) => c.kind === "use" && c.r === 70); return [c.x, c.y]; });
+    await page.evaluate(([x, y]) => window.__game.scene.getScene("hala").player.setPosition(x, y), [sx, sy]);
+    await page.waitForTimeout(150);
+    await akcja(page, mobile);
+    await page.locator("#shop").waitFor({ timeout: 10000 });
+    await page.screenshot({ path: `work/${DIR}/${tag}-hala-sklep.png` });
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.getElementById("shop"), null, { timeout: 5000 });
+  }
+  await page.evaluate(() => window.__game.scene.getScene("hala").player.setPosition(907, 607));
+  await page.waitForTimeout(150);
+  await akcja(page, mobile);
+}
+
 await mkdir(`work/${DIR}`, { recursive: true });
 const results = [];
 try {
@@ -232,6 +271,7 @@ try {
     });
     if (mobile) await page.locator(".hs-akcja").click();
     else await page.keyboard.press("KeyE");
+    if (PINBALL) await przezHale(page, mobile, tag, true);
     await page.locator("#artillery-panel").waitFor();
     await page.screenshot({ path: `work/${DIR}/${tag}-panel.png` });
     const launch = page.locator("#artillery-panel button").first();
@@ -360,6 +400,7 @@ try {
     }, destAt.x);
     if (mobile) await page.locator(".hs-akcja").click();
     else await page.keyboard.press("KeyE");
+    if (PINBALL) await przezHale(page, mobile, tag, false);
     await page.locator("#artillery-panel button").first().click();
     await page.getByRole("button", { name: PINBALL ? "Wróć do włazu" : "Wróć do armaty" }).waitFor();
     await page.getByRole("button", { name: PINBALL ? "Wróć do włazu" : "Wróć do armaty" }).click();

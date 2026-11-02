@@ -76,7 +76,7 @@ export function pinball(
   hero: string | string[] | undefined,
   describe: (e: unknown) => string = (e) => (e instanceof Error ? e.message : String(e)),
   cel = "",
-  stacje: { z?: string; krajZ?: string | null; krajDo?: string | null } = {},
+  stacje: { z?: string; krajZ?: string | null; krajDo?: string | null; tor?: number } = {},
 ) {
   resetKeys();
   resetTouch();
@@ -125,6 +125,8 @@ export function pinball(
     else i.addEventListener("load", dodaj, { once: true });
   });
   const hala = new Hala(!still);
+  /** The launcher the hero boards (the one he bought the ticket at in the walkable hall). */
+  const L = Math.max(0, Math.min(2, stacje.tor ?? 0));
   hala.stacja(stacje.z ?? "", stacje.krajZ ?? null);
   let tryb: "hala" | "kod" | null = kulociagGotowy() ? "hala" : null;
   let etap: "hala" | "przyjazd" = "hala";
@@ -132,8 +134,8 @@ export function pinball(
   let koniecPrzyjazdu: (() => void) | null = null;
   const zacznijHale = () => {
     tryb = "hala";
-    hala.tory[0].depart(bohater, false);
-    if (still) hala.tory[0].update(10);
+    hala.tory[L].depart(bohater, false);
+    if (still) hala.tory[L].update(10);
     pisz(
       stacje.z
         ? tx(`Kulociąg Parowy – stacja ${stacje.z}. Siłowniki ściskają sprężynę…`, `Steam Ballway – ${stacje.z} station. The pistons press the spring…`)
@@ -370,9 +372,9 @@ export function pinball(
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
-    const p0 = hala.tory[0].phase;
+    const p0 = hala.tory[L].phase;
     if (etap === "hala") {
-      if (!poWystrzale && (p0 === "recoil" || p0 === "empty") && hala.tory[0].ready) {
+      if (!poWystrzale && (p0 === "recoil" || p0 === "empty") && hala.tory[L].ready) {
         poWystrzale = now;
         pisz(tx("PSTRYK! Kula mknie w rurę…", "PING! The ball shoots into the tube…"));
         swist();
@@ -404,8 +406,8 @@ export function pinball(
     etap = "przyjazd";
     tPrzyjazd = now;
     hala.stacja(cel, stacje.krajDo ?? null);
-    hala.tory[0] = new Tor(0, hala.tory[0].x);
-    if (!still) hala.tory[0].arrive(bohater);
+    hala.tory[L] = new Tor(L, hala.tory[L].x);
+    if (!still) hala.tory[L].arrive(bohater);
     pisz(cel ? tx(`Hamulce parowe! Stacja: ${cel}`, `Steam brakes! Station: ${cel}`) : tx("Hamulce parowe!", "Steam brakes!"));
   };
   let napisRury = false, napisWczytuje = false;
@@ -580,7 +582,7 @@ export function pinball(
         if (k.cel) cel = k.cel;
         await new Promise<void>((done) => {
           koniecPrzyjazdu = done;
-          hala.tory[0].ready = true;
+          hala.tory[L].ready = true;
           if (still) przyjazd(performance.now());
         });
         return;

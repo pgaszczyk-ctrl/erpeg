@@ -1,6 +1,9 @@
 import { gameShot } from '../ui/snapshot';
 import { restoreHero } from '../artillery/state';
 import { Artillery,artilleryTransit } from '../artillery/client';
+import type { Stop as StacjaArtylerii } from '../artillery/network';
+import type { HalaDane } from './HalaScene';
+import { GAZETA as GAZETA_HALI } from '../content/gazeta';
 import { missionNotes } from '../content/questy/progress';
 import { planCityQuests } from '../content/questy/planner';
 import { CITY_SCENARIOS, isWithdrawnCityQuest } from '../content/questy/scenarios';
@@ -39,7 +42,7 @@ import { DRZEWA_09 } from '../content/korony';
 import { Explored, FogView, visionPolygon, BASE_VIEW_RANGE, pointInPolygon, markBuilding, FOG_CELL } from '../map/Fog';
 import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { MISJE, WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
-import type { QuestLine } from '../ui/character';
+import { isCharacterOpen, type QuestLine } from '../ui/character';
 import { ESENCJE, type Esencja } from '../content/esencje';
 import { WALKA, zasiegDystansu } from '../content/walka';
 import { askText } from '../ui/prompt';
@@ -1034,7 +1037,6 @@ export class GameScene extends Phaser.Scene {
       kadr:(x,y)=>{const v=this.cameras.main.worldView;return{fx:(x-v.x)/v.width,fy:(y-v.y)/v.height,px:window.innerWidth/v.width};},
       zdjecie:async()=>{await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));return gameShot(this.game,{withHud:false,maxW:this.game.canvas.width});},
       obecna:()=>({player:this.player,artillery:this.artillery}),
-      stragan:(x,y,id)=>this.straganPrzyWlazie(x,y,id),
     });
     const artillery=this.artillery;this.events.once('shutdown',()=>artillery?.destroy());
     this.replayAbandoned();
@@ -1180,6 +1182,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(now: number, delta: number) {
+    // In the Kulociąg hall (scenes/HalaScene.ts) the street waits: hidden, the hero stays by the hatch.
+    if (this.wHali) return;
     const dt = Math.min(delta, 50) / 1000;
     const intro = loadingGame() || artilleryTransit.active;
     // A hidden scene does not run the render pass that normally updates worldView.
@@ -1802,7 +1806,7 @@ export class GameScene extends Phaser.Scene {
       this.player.face(x - this.player.x, y - (this.player.y + 2));
       action();
     }});
-    const cannon=this.artillery?.at(x,y);if(cannon)return make('use',()=>this.artillery?.open(cannon));
+    const cannon=this.artillery?.at(x,y);if(cannon)return make(this.artillery?.metro?'enter':'use',()=>this.otworzStacje(cannon));
     const tablica = this.tablicaAt(x, y);
     if (tablica) return make('use', () => this.otworzTablice(tablica));
     const prologKind = this.prolog?.interactionAt(x, y);
@@ -1926,7 +1930,7 @@ export class GameScene extends Phaser.Scene {
   /** Home, a talk, a stall, a train/cart or a door at `hit` (or right by the hero): opened, true. */
   private interactChain(hit: Phaser.Math.Vector2, strong: boolean, foeNear: boolean): boolean {
     const cannon=!strong&&!foeNear&&(this.artillery?.at(hit.x,hit.y)??this.artillery?.at(this.player.x,this.player.y));
-    if(cannon){this.artillery?.open(cannon);return true;}
+    if(cannon){this.otworzStacje(cannon);return true;}
     const tablica = !strong && !foeNear && (this.tablicaAt(hit.x, hit.y) ?? this.tablicaPrzy());
     if (tablica) { this.otworzTablice(tablica); return true; }
     if (!strong && this.prolog?.interact()) return true;
@@ -3079,30 +3083,61 @@ export class GameScene extends Phaser.Scene {
     return key;
   }
 
+  /** In the walkable hall of a pinball station (the street map waits, hidden). */
+  private wHali = false;
+
+  /** A cannon opens its destination list; a pinball hatch leads down into its hall first. */
+  private otworzStacje(s: StacjaArtylerii) {
+    if (this.artillery?.metro) this.zejdzDoHali(s);
+    else this.artillery?.open(s);
+  }
+
   /**
-   * A stall beside every pinball hatch (owner, 2 Nov 2026: „postaw straganiarzy – ktoś będzie potrzebował sprzedać coś,
-   * żeby mieć na bilet”): the hall is only seen from inside the ball, so the trader stands on the street where the
-   * hero waits. It opens the shop on its selling tab. Placed once the ground there is loaded; fixed by the hatch id.
+   * Down the hatch into the Kulociąg hall (owner, 2 Nov 2026: a normal descent – walk, talk to the newsboy, trade
+   * at the stall, buy the ticket at a launcher). The street scene keeps running underneath but does nothing
+   * (update returns), so the dialogs/shop/newspaper it opens work as usual and a reload starts by the hatch.
    */
-  private straganPrzyWlazie(x: number, y: number, id: string) {
-    if (!WYGLAD_09) return;
-    const pid = `wlaz:${id}`;
-    if (this.stalls.some((s) => s.p.id === pid)) return;
-    if (!this.city.ready({ x0: x - 50, y0: y - 50, x1: x + 50, y1: y + 50 })) {
-      this.time.delayedCall(2000, () => this.straganPrzyWlazie(x, y, id));
-      return;
-    }
+  private zejdzDoHali(s: StacjaArtylerii) {
+    const art = this.artillery;
+    if (!art || this.wHali || this.inCombat() || this.travelling || this.player.isDead) return;
+    this.player.move(0, 0, this.time.now);
+    this.player.vel.set(0, 0);
+    resetTouch();
+    resetKeys();
     let h = 2166136261;
-    for (let i = 0; i < pid.length; i++) h = Math.imul(h ^ pid.charCodeAt(i), 16777619);
-    const p: CityPlace = { kind: 'merchant', name: tx('Straganiarz przy włazie', 'Stall by the hatch'), id: pid, building: null, door: { x, y } };
-    for (const [dx, dy] of [[-26, 4], [26, 4], [-22, 16], [22, 16], [0, 22], [-34, -6], [34, -6]]) {
-      const sx = x + dx, sy = y + dy;
-      if (this.city.isBlocked(sx - 7, sy) || this.city.isBlocked(sx + 7, sy) || this.city.isBlocked(sx, sy - 10)) continue;
-      const img = this.add.image(sx, sy, this.teksturaStraganu(h >>> 8)).setOrigin(17 / 34, 29 / 32).setScale(0.5).setDepth(sy).setFlipX(dx > 0);
-      this.farObjects.push(img, this.signGlow(img));
-      this.stalls.push({ x: sx, y: sy - 5, p });
-      return;
-    }
+    for (let i = 0; i < s.id.length; i++) h = Math.imul(h ^ s.id.charCodeAt(i), 16777619);
+    const gazeciarz = {
+      id: `hala:${s.id}:gazeta`, role: 'gazeciarz', x: this.player.x, y: this.player.y,
+      name: tr(GAZETA_HALI.imiona[(h >>> 0) % GAZETA_HALI.imiona.length]), tex: GAZETA_HALI.wyglad,
+    } as unknown as Folk;
+    const stragan: CityPlace = { kind: 'merchant', name: tx('Kulociąg', 'Ballway'), id: `wlaz:${s.id}`, building: null, door: { x: this.player.x, y: this.player.y } };
+    this.wHali = true;
+    this.scene.setVisible(false);
+    const dane: HalaDane = {
+      nazwa: s.name,
+      kraj: art.krajNaStacji(s),
+      seed: h >>> 0,
+      hero: { postac: session.look.postac, name: session.name, look: session.look },
+      stoi: () => this.scene.isPaused() || this.travelling || !!document.querySelector('#artillery-panel, #gazeta, #shop, #prompt, #chest') || isCharacterOpen(),
+      gazeciarz: () => this.newsboy(gazeciarz),
+      straganiarz: () => this.openShop(stragan, 1),
+      bilet: (tor) => art.open(s, { tor, przed: () => this.wyjdzZHali(false) }),
+      wyjdz: () => this.wyjdzZHali(true),
+    };
+    this.scene.launch('hala', dane);
+    this.scene.bringToTop('ui');
+    this.toast(tx(`Kulociąg Parowy – ${s.name}. Bilet kupisz przy wyrzutni.`, `Steam Ballway – ${s.name}. Buy a ticket at a launcher.`), 4500);
+  }
+
+  /** Back on the street by the hatch (up the stairs), or – after buying a ticket – straight into the ride. */
+  private wyjdzZHali(naUlice: boolean) {
+    if (!this.wHali) return;
+    this.scene.stop('hala');
+    this.wHali = false;
+    this.scene.setVisible(true);
+    resetTouch();
+    resetKeys();
+    if (naUlice) this.toast(tx('Wychodzisz z włazu na ulicę.', 'You climb out of the hatch.'), 2500);
   }
 
   /** The stall under a swing / click / next to the hero, if any. */
@@ -6723,7 +6758,7 @@ export class GameScene extends Phaser.Scene {
       const total = fruitValue();
       const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
       const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
-      const przyWlazie = p.id.startsWith('wlaz:') ? tx('Straganiarz skupuje towar – na bilet do kulociągu się przyda. ', 'The trader buys goods – handy for a Ballway ticket. ') : '';
+      const przyWlazie = p.id.startsWith('wlaz:') ? tx('Straganiarz skupuje towar – na bilet się przyda. ', 'The trader buys goods – handy for a ticket. ') : '';
       const text = groups.length ? `${przyWlazie}Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
       this.shopDialog(p, {
         title, text, tabs,
@@ -6778,7 +6813,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.shopDialog(p, {
       title, tabs,
-      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz przy włazie kulociągu.`, `The trader by the Ballway hatch.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz w hali kulociągu.`, `The trader in the Ballway hall.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {

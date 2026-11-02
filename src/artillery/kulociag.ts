@@ -5,7 +5,6 @@
 // The game adds: the station name on the wall sign, a mosaic in the country's flag colours on the floor, passengers
 // (the hero in lane 0, townsfolk in lanes 1–2 that come and go on their own). Coordinates = the source canvas 1672×941.
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
-import { straganObraz } from '../map/targ09';
 
 const BAZA = `${import.meta.env.BASE_URL || '/'}swiat/kulociag/`;
 export const HALA = { w: 1672, h: 941 };
@@ -97,6 +96,13 @@ export function wczytajKulociag(): Promise<boolean> {
   return (wczytywanie ??= Promise.all(NAZWY.map(async (n) => { OBRAZY[n.replace(/\.\w+$/, '')] = await obraz(BAZA + n); }))
     .then(() => true, () => { wczytywanie = null; return false; }));
 }
+/** Warms the browser's cache with the walkable hall's biggest pictures (scenes/HalaScene.ts loads them on entry). */
+let halaZamowiona = false;
+export function przygotujHale() {
+  if (halaZamowiona) return;
+  halaZamowiona = true;
+  for (const n of ['hala/hala.webp', 'hala/maska.png']) void obraz(BAZA + n).catch(() => {});
+}
 export const kulociagGotowy = () => !!OBRAZY['station/hala'] && Object.keys(OBRAZY).length >= NAZWY.length;
 
 /** The opaque box of a picture (computed once). */
@@ -173,13 +179,8 @@ export class Hala {
     const g = c.getContext('2d')!;
     g.imageSmoothingEnabled = false;
     g.drawImage(OBRAZY['station/hala'], 0, 0);
-    mozaika(g, this.kraj);
-    tablica(g, this.nazwa);
-    // The trader and his stall's look follow the station's name (same station, same trader).
-    let h = 2166136261;
-    for (let i = 0; i < this.nazwa.length; i++) h = Math.imul(h ^ this.nazwa.charCodeAt(i), 16777619);
-    h >>>= 0;
-    straganiarz(g, this.ludzie.length ? this.ludzie[h % this.ludzie.length] : undefined, (h >>> 4) % 1000);
+    // The traders stand in the walkable hall now (scenes/HalaScene.ts), not in this short animation.
+    nazwaIMozaika(g, this.nazwa, this.kraj);
     this.tloKlucz = klucz;
     return c;
   }
@@ -242,6 +243,12 @@ export class Hala {
   }
 }
 
+/** The station's name on the wall sign and its country's flag in the floor mosaic, painted onto a hall picture. */
+export function nazwaIMozaika(g: CanvasRenderingContext2D, nazwa: string, kraj: string | null) {
+  mozaika(g, kraj);
+  tablica(g, nazwa);
+}
+
 /** A passenger with its feet at (x, y), scaled to `wys` px tall; several pictures = an animation. */
 function rysujPostac(g: CanvasRenderingContext2D, klatki: Postac[], czas: number, x: number, y: number, wys: number) {
   const k = klatki[Math.floor(czas * 8) % klatki.length];
@@ -295,31 +302,6 @@ function tablica(g: CanvasRenderingContext2D, nazwa: string) {
   g.imageSmoothingEnabled = false;
   g.globalAlpha = 0.88;
   g.drawImage(c, R.x + Math.floor((R.w - w * P) / 2), R.y + Math.floor((R.h - h * P) / 2), w * P, h * P);
-  g.restore();
-}
-
-/**
- * A trader on the platform (owner, 2 Nov 2026): a market stall from the world's generator (targ09) with a townsperson
- * behind it, at the hall's furniture scale, on the free floor by the stairs. Only decoration – the hero is in the ball
- * the whole time; the real trader stands on the street by the hatch (GameScene.straganPrzyWlazie).
- */
-const STRAGAN_HALA = { x: 330, y: 660, skala: 4.2, sprzedawca: 104 };
-function straganiarz(g: CanvasRenderingContext2D, kto: Postac | undefined, seed: number) {
-  const S = STRAGAN_HALA;
-  const { o, bx, by } = straganObraz(seed);
-  const c = document.createElement('canvas');
-  c.width = o.w;
-  c.height = o.h;
-  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(o.px.buffer as ArrayBuffer, o.px.byteOffset, o.px.byteLength).slice(), o.w, o.h), 0, 0);
-  g.save();
-  g.imageSmoothingEnabled = false;
-  // Soft ground shadow.
-  g.fillStyle = 'rgba(20,14,10,0.35)';
-  g.beginPath();
-  g.ellipse(S.x + 8, S.y + 2, o.w * S.skala * 0.55, 10, 0, 0, Math.PI * 2);
-  g.fill();
-  if (kto) rysujPostac(g, [kto], 0, S.x + 4, S.y - 52, S.sprzedawca);
-  g.drawImage(c, Math.round(S.x - bx * S.skala), Math.round(S.y - by * S.skala), Math.round(o.w * S.skala), Math.round(o.h * S.skala));
   g.restore();
 }
 

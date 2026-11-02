@@ -7,6 +7,7 @@ import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ArenaScene } from './scenes/ArenaScene';
+import { HalaScene } from './scenes/HalaScene';
 import { installTouchControls } from './controls';
 import { installErrorLog, watchGraphics, report } from './errlog';
 import { installFpsLog } from './fpslog';
@@ -79,7 +80,7 @@ const game = new Phaser.Game({
   input: { touch: false, keyboard: false },
   // Phaser's own sound is not used (sfx.ts makes the few sounds); without it iPhones don't fail to start an audio device.
   audio: { noAudio: true },
-  scene: [BootScene, GameScene, ArenaScene, UIScene],
+  scene: [BootScene, GameScene, ArenaScene, HalaScene, UIScene],
 });
 
 installTouchControls(document.getElementById('game')!);

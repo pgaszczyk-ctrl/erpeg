@@ -3,7 +3,7 @@
 // Code-drawn pixel art at 2 canvas px per map px until the artist's picture. Same surface as Armata3D (client.ts).
 import Phaser from 'phaser';
 import { dymek } from './ladowanie';
-import { wczytajKulociag } from './kulociag';
+import { przygotujHale, wczytajKulociag } from './kulociag';
 
 export const WLAZ_RYS = {
   /** Lid half-width/half-height, map px (seen from above at a slant). */
@@ -128,6 +128,7 @@ export class Wlaz {
     tekstury(scene);
     // The Ballway hall's pictures (~2 MB) start loading as soon as a hatch is on the map.
     void wczytajKulociag();
+    przygotujHale();
     const s = 1 / D;
     this.otwor = scene.add.image(x, y, 'wlaz-otwor').setScale(s).setDepth(-1e7 + 2);
     this.pokrywa = scene.add.image(x, y, 'wlaz-pokrywa').setScale(s).setDepth(-1e7 + 3);
