@@ -19,7 +19,7 @@ export function composeSurfaces(surfaces:Surface[]):Map<string,Uint8ClampedArray
       const ia=(y-a.y)*a.width+x-a.x,ib=(y-b.y)*b.width+x-b.x;
       if(!a.pixels[ia*4+3]||!b.pixels[ib*4+3])continue;
       // Stable ID tie-break avoids order-dependent seams on coincident coplanar pixels.
-      if(a.depth[ia]+a.depthOffset>b.depth[ib]+b.depthOffset+.0001)bb[ib*4+3]=0;
+      if(a.depth[ia]+a.depthOffset>b.depth[ib]+b.depthOffset)bb[ib*4+3]=0;
       else aa[ia*4+3]=0;
     }
   }return result;

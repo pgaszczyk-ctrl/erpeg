@@ -28,7 +28,7 @@ async function oracle(page){
     const ia=(y-aa.y)*aa.width+x-aa.x,ib=(y-bb.y)*bb.width+x-bb.x;if(!aa.pixels[ia*4+3]||!bb.pixels[ib*4+3])continue;
     overlapping++;if((x+y)%3||samples.length>=1600||seen.has(`${x},${y}`))continue;
     const candidates=surfaces.filter(s=>x>=s.x&&x<s.x+s.width&&y>=s.y&&y<s.y+s.height&&s.pixels[((y-s.y)*s.width+x-s.x)*4+3]);
-    candidates.sort((a,b)=>{const da=a.depth[(y-a.y)*a.width+x-a.x]+a.depthOffset,db=b.depth[(y-b.y)*b.width+x-b.x]+b.depthOffset;return Math.abs(da-db)>.0001?db-da:b.id.localeCompare(a.id);});
+    candidates.sort((a,b)=>{const da=a.depth[(y-a.y)*a.width+x-a.x]+a.depthOffset,db=b.depth[(y-b.y)*b.width+x-b.x]+b.depthOffset;return db-da||b.id.localeCompare(a.id);});
     const winner=candidates[0],r=winner.reveal;
     if(r&&x-winner.x>=r.x&&x-winner.x<r.x+r.width&&y-winner.y>=r.y&&y-winner.y<r.y+r.height)continue;
     samples.push({x,y,winner:winner.id});seen.add(`${x},${y}`);

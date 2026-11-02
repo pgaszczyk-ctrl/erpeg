@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T11:26:12.119Z",
+  "generatedAt": "2026-11-02T11:31:54.396Z",
   "tests": [
     {
       "name": "7 styles + 4 regional profiles; all material indices in master palette",
@@ -267,6 +267,10 @@
       }
     },
     {
+      "name": "three almost coplanar neighbours retain exactly one nearest surface",
+      "result": "PASS"
+    },
+    {
       "name": "hero cut-away has binary alpha and leaves the composed surface intact for restoration",
       "result": "PASS"
     },
@@ -307,7 +311,7 @@
             68,
             135
           ],
-          "milliseconds": 663.559659
+          "milliseconds": 619.8381989999998
         },
         {
           "name": "apartments",
@@ -332,7 +336,7 @@
             45,
             90
           ],
-          "milliseconds": 229.78617699999995
+          "milliseconds": 265.64222100000006
         },
         {
           "name": "homes",
@@ -357,7 +361,7 @@
             90,
             -22
           ],
-          "milliseconds": 461.260722
+          "milliseconds": 547.802455
         },
         {
           "name": "industrial",
@@ -382,7 +386,7 @@
             68,
             -22
           ],
-          "milliseconds": 513.0539480000002
+          "milliseconds": 554.1048330000003
         }
       ]
     }

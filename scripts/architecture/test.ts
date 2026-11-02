@@ -178,6 +178,12 @@ check('neighbour roof occlusion matches a merged 3D scene, including an L-shaped
  assert(compared>500);assert(conflictingPixels>100,'Fixture must expose the incorrect whole-house baseline sort');
  return {compared,conflictingPixels};
 });
+check('three almost coplanar neighbours retain exactly one nearest surface',()=>{
+ const make=(id:string,d:number):Surface=>({id,x:0,y:0,width:1,height:1,pixels:new Uint8ClampedArray([10,20,30,255]),depth:new Float32Array([d]),depthOffset:0});
+ const layers=[make('a',.00015),make('b',.000075),make('c',0)],result=composeSurfaces(layers);
+ assert.equal(result.get('a')![3],255);assert.equal(result.get('b')![3],0);assert.equal(result.get('c')![3],0);
+ assert.deepEqual(result,composeSurfaces([...layers].reverse()));
+});
 check('hero cut-away has binary alpha and leaves the composed surface intact for restoration',()=>{
  const pixels=new Uint8ClampedArray(40*40*4).fill(255),surface:Surface={id:'wall',x:3,y:7,width:40,height:40,pixels,depth:new Float32Array(1600),depthOffset:0};
  const saved=pixels.slice(),patch=revealPixels(surface,pixels,{x:20,y:20,rx:8,ry:12});assert(patch);assert(patch.removed>100);
