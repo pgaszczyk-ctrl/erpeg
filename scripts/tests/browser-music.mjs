@@ -116,6 +116,23 @@ try {for(const phone of [false,true]) {
  assert((await state()).every(m=>m.paused));
  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
  await page.waitForFunction(()=>window.__music.some(m=>!m.paused));
+ // A longer trip away: the game and the music wait for „Gram dalej” (owner, 2 Nov 2026).
+ const hide=()=>page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+ const show=()=>page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+ await hide();await page.waitForTimeout(1200);await show();
+ await page.locator('#powrot').waitFor();
+ await page.waitForTimeout(800);
+ assert((await state()).every(m=>m.paused),'music waits for the player after returning');
+ assert.equal(await page.evaluate(()=>window.__game.loop.running),false,'game loop waits for the player');
+ await page.screenshot({path:`work/music/${phone?'phone':'desktop'}-powrot.png`});
+ await page.locator('#powrot [data-a="graj"]').click();
+ await page.waitForFunction(()=>window.__music.some(m=>!m.paused)&&window.__game.loop.running);
+ assert.equal(await page.locator('#powrot').count(),0);
+ // „Wyłącz grę” leaves to the menu.
+ await hide();await page.waitForTimeout(1200);await show();
+ await page.locator('#powrot [data-a="wyjdz"]').click();
+ await page.locator('#menu').waitFor({timeout:15000});
+ await page.waitForFunction(()=>window.__music.every(m=>m.paused));
  // Logout / leaving the active map stops immediately, also from a settings dialog.
  await page.evaluate(()=>{window.__session.token=null;});
  await page.waitForFunction(()=>window.__music.every(m=>m.paused));

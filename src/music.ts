@@ -26,6 +26,12 @@ let context: AudioContext | undefined, master: GainNode | undefined;
 let tracks: Track[] = [], state: MusicState = null;
 let surface = 0, desired = -1, previous = 0, lastCombat = -Infinity;
 let stopped = true;
+/** Held while the game waits for „Gram dalej” after the tab came back (powrot.ts): nothing plays. */
+let wstrzymana = false;
+export function wstrzymajMuzyke(v: boolean) {
+  wstrzymana = v;
+  if (v) pause(); else if (state) unlock();
+}
 export const musicVolume = () => volume;
 export const musicEnabled = () => enabled;
 export function setMusicVolume(value: number) {
@@ -46,13 +52,13 @@ function applyVolume() {
 function pause() { for (const t of tracks) t.media.pause(); }
 function play(i: number, prime = false) {
   const t = tracks[i];
-  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || !enabled || !volume) return;
+  if (!t || t.pending || t.failed || !t.media.paused || document.hidden || wstrzymana || !enabled || !volume) return;
   if (!prime && (!state || i !== desired || performance.now() < t.retryAt)) return;
   losujMiejsce(t);
   t.pending = true;
   void t.media.play().then(() => {
     t.pending = false;
-    if (!state || stopped || document.hidden || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
+    if (!state || stopped || document.hidden || wstrzymana || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
   }).catch(() => { t.pending = false; t.retryAt = performance.now() + 1000; });
 }
 /**
@@ -106,7 +112,7 @@ export function updateMusic(next: MusicState, now = performance.now()) {
   else if (next.combat) lastCombat = now;
   const target = !next ? -1 : now - lastCombat < 800 ? 3 : next.underground ? 2 : surface;
   desired = target; stopped = !next;
-  if (document.hidden || !enabled || !volume) return;
+  if (document.hidden || wstrzymana || !enabled || !volume) return;
   if (!context) {
     if (next && navigator.userActivation?.hasBeenActive) unlock();
     return;

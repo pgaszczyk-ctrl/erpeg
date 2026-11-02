@@ -402,6 +402,11 @@ export class GameScene extends Phaser.Scene {
   /** A fresh start (login, resurrection, the power stone): enemies can't hurt for OCHRONA_MS; the hero blinks. */
   private protectUntil = 0;
 
+  /** Back from another tab (powrot.ts): a moment's grace before enemies may hit. */
+  poPowrocie() {
+    this.noHurtUntil = Math.max(this.noHurtUntil, this.time.now + 1500);
+  }
+
   private protect(now: number) {
     this.protectUntil = now + OCHRONA_MS;
     this.noHurtUntil = Math.max(this.noHurtUntil, this.protectUntil);
