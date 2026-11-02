@@ -2,7 +2,7 @@
 
 **Stan: implementacja laboratoryjna; odbiór wizualny i pomiar Androida pozostają otwarte.** Nie wykonano publikacji ani wydania produkcyjnego.
 
-Wykonano `npm run build`, sprawdzenie TypeScript, 13 testów architektury oraz oględziny programowo renderowanego arkusza brył i atlasu dekoracji. Dane pomiarowe: [artifacts/unit-results.json](artifacts/unit-results.json). Podgląd techniczny: [artifacts/preview.html](artifacts/preview.html). Te obrazy **nie są zrzutami gry**.
+Wykonano `npm run build`, sprawdzenie TypeScript, 14 testów architektury oraz oględziny programowo renderowanego arkusza brył i atlasu dekoracji. Dane pomiarowe: [artifacts/unit-results.json](artifacts/unit-results.json). Podgląd techniczny: [artifacts/preview.html](artifacts/preview.html). Te obrazy **nie są zrzutami gry**.
 
 **Aktualna decyzja właściciela:** źródłowe 1–3 kondygnacje dają jedną w grze, 4–6 dają dwie, powyżej 6 daje trzy. Każdy poziom ma duże okna, otwór drzwiowy pozostaje o 12% wyższy i szerszy od postaci. Test obejmuje progi 3/4 i 6/7 oraz źródłowe 11/99; wysokość już przeliczonych dwóch/trzech poziomów nie jest kompresowana drugi raz. Szeroki parter pozostaje niski. Sprawdzono większą postać i drzwi w dalekim LOD. [Porównanie wysokości z ludzikiem](artifacts/height-comparison.png). [Podział KUL i osiedla](massing/README.md) jest już w lokalnym generatorze gry: 4 skrzydła KUL, 2–4 na Dziewanny, 7 na Szczytowej, z niskimi płaskimi łącznikami. [Podglądy generatora](artifacts/massing/index.html) nie są zrzutami sceny. Przy skali 2.0 wskazane przykłady są odrzucane przez kontrolę ulic; problem rozmieszczenia pozostaje otwarty.
 

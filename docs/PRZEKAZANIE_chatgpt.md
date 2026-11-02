@@ -686,3 +686,5 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 - Zdalna gałąź testowa zawiera nowsze niezależne zmiany (a12b063). Zachowano dodane tam 3 metody CityMap i nowe fakty CLAUDE.md przy przygotowaniu integracji; publikacja ma bazować na aktualnej gałęzi, bez nadpisywania pracy Claude'a. PRODUKCJA, WERSJA, assety przyrody/dróg i dane graczy nietknięte.
 
 - Repozytorium: lokalny commit 9f4b941; komplet architektury wysłany jako 22961cb na chatgpt/praca, szkic PR https://github.com/pgaszczyk-ctrl/erpeg/pull/50. Przy otwarciu PR baza miała już 1b3fb78 (powrót/muzyka); scalanie zachowuje te niezależne zmiany. Bezpośredni git fetch blokuje lokalny proxy; do przesłania wykorzystano GitHub connector. CI przeglądarki nie wystartowało przy konflikcie dokumentacji; wynik trzeba potwierdzić po synchronizacji.
+
+- Dalsza korekta: orientację modulo 90° ograniczono do złożonych skrzydeł; prosty dom zachowuje kierunek najbliższej ulicy (regresja 67,5°). 14 lokalnych testów zaliczone. Cienie łączników uwzględniają ich niższą własną wysokość. Zdalny run 41409046042 na 020f217 nadal trwa; publiczny test2 niepodmieniony.

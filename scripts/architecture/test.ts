@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { massing, components, connectorHeight, exposedWalls } from '../../src/architecture/massing';
 import { buildingMesh } from '../../src/architecture/mesh';
 import { planArchitecture, blockedByPlans } from '../../src/architecture/planner';
-import { centroid, contains, decompose, geometryId, overlap, rectangleRing, ringArea, roadCollision } from '../../src/architecture/geometry';
+import { centroid, contains, decompose, geometryId, overlap, rectangleRing, rotate, ringArea, roadCollision } from '../../src/architecture/geometry';
 import { decideStyle, regionFor } from '../../src/architecture/style';
 import { PALETTE, STYLES, REGIONS } from '../../src/architecture/catalog';
 import { softwareRaster } from '../../src/architecture/raster';
@@ -78,6 +78,15 @@ check('full scale, street orientation, road and neighbour separation',()=>{
  const result=planArchitecture({...input,sources});assert(result.buildings.length>0);assert(result.rejected.length>0);
  for(const b of result.buildings){assert(b.wallHeight>=b.roofHeight);assert(Math.abs(b.angle/(Math.PI/8)-Math.round(b.angle/(Math.PI/8)))<1e-8);assert(!b.roofFootprints.some(r=>roadCollision(r,input.roads)));for(const c of result.buildings)if(c.id!==b.id)assert(!b.roofFootprints.some(r=>c.roofFootprints.some(q=>overlap(r,q))));}
  return {kept:result.buildings.length,rejected:result.rejected.length};
+});
+check('single houses keep street heading; complex wings use the nearest equivalent source axis',()=>{
+ const angle=3*Math.PI/8;
+ const street={...road,points:[rotate([-500,36],angle),rotate([500,36],angle)]};
+ const single=planArchitecture({...input,roads:[street]}).buildings[0];assert(single);assert.equal(single.angle,angle);
+ const irregular=source('irregular-heading');irregular.rings=[[[0,0],[40,0],[40,10],[10,10],[10,40],[0,40]]];
+ const cross={...road,points:[[50,-100],[50,100]] as Point[]};
+ const complex=planArchitecture({...input,sources:[irregular],roads:[cross],settings:{...DEFAULT_SETTINGS,scale:1}}).buildings[0];
+ assert(complex);assert(complex.rectangles.length>1);assert.equal(complex.angle,0);
 });
 check('load order and reload determinism, including source decision and geometry',()=>{
  const sources=Array.from({length:20},(_,i)=>source(`w${i}`,i*19,(i%3)*65));

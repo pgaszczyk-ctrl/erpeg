@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T06:16:36.659Z",
+  "generatedAt": "2026-11-02T08:01:00.704Z",
   "tests": [
     {
       "name": "7 styles + 4 regional profiles; all material indices in master palette",
@@ -100,6 +100,10 @@
         "kept": 3,
         "rejected": 9
       }
+    },
+    {
+      "name": "single houses keep street heading; complex wings use the nearest equivalent source axis",
+      "result": "PASS"
     },
     {
       "name": "load order and reload determinism, including source decision and geometry",
@@ -269,26 +273,29 @@
         {
           "name": "old-town",
           "sources": 916,
-          "kept": 121,
+          "kept": 125,
           "styles": [
             "old-town",
             "half-timber",
+            "landmark",
             "modern",
             "apartments",
-            "landmark",
             "wooden"
           ],
           "angles": [
             23,
+            113,
             0,
             -45,
-            -67,
+            90,
             45,
-            -90,
+            180,
             -22,
-            68
+            158,
+            68,
+            135
           ],
-          "milliseconds": 700.9874380000001
+          "milliseconds": 659.2055410000003
         },
         {
           "name": "apartments",
@@ -304,19 +311,21 @@
           "angles": [
             23,
             0,
-            45,
+            113,
+            180,
+            135,
             -67,
-            -45,
-            -22,
             68,
-            -90
+            158,
+            45,
+            90
           ],
-          "milliseconds": 210.59981199999993
+          "milliseconds": 235.80215399999997
         },
         {
           "name": "homes",
           "sources": 828,
-          "kept": 142,
+          "kept": 140,
           "styles": [
             "half-timber",
             "old-town",
@@ -325,14 +334,18 @@
             "landmark"
           ],
           "angles": [
-            23,
-            0,
-            -22,
-            -45,
+            113,
+            180,
+            158,
             45,
-            68
+            0,
+            23,
+            135,
+            68,
+            90,
+            -22
           ],
-          "milliseconds": 479.09306100000003
+          "milliseconds": 506.1032559999994
         },
         {
           "name": "industrial",
@@ -348,13 +361,16 @@
           ],
           "angles": [
             23,
+            113,
             45,
-            -22,
+            158,
+            135,
+            90,
             0,
-            -67,
-            68
+            68,
+            -22
           ],
-          "milliseconds": 491.7746140000004
+          "milliseconds": 549.0781459999998
         }
       ]
     }

@@ -29,7 +29,8 @@ export function planArchitecture(input: PlanInput): PlanResult {
     const split = massing(s.rings, center), road = nearestRoad(center,localRoads);
     // Undirected road axes are equivalent modulo 90 degrees; never turn a courtyard
     // sideways merely because its nearest path points across its short side.
-    const roadAxis=road.angle-Math.round((road.angle-split.angle)/(Math.PI/2))*(Math.PI/2);
+    const complex=split.rectangles.length>1||split.connectors.length>0;
+    const roadAxis=complex?road.angle-Math.round((road.angle-split.angle)/(Math.PI/2))*(Math.PI/2):road.angle;
     const axis = road.distance < 100 ? roadAxis : split.angle;
     const step = input.settings.angleSnap * Math.PI / 180;
     const angle = step ? Math.round(axis / step) * step : axis;

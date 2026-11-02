@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import { GROUND_DEPTH, type MapRenderer } from '../map/MapRenderer';
 import { PALETTE, STYLES } from './catalog';
+import { connectorHeight } from './massing';
 import { blockedByPlans } from './collision';
 import { closest, distance, hash } from './geometry';
 import { ArchitectureData } from './source';
@@ -140,8 +141,9 @@ export class ArchitectureLayer {
     const w=Math.ceil((Math.max(...points.map(p=>p[0]))+dx)*PX_PER_M-x0)+2,h=Math.ceil((Math.max(...points.map(p=>p[1]))+dy)*PX_PER_M-y0)+2;
     if(w*h>1_000_000)return;
     const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d')!;
-    for(const ring of b.footprints){
-      const hull=convexHull([...ring,...ring.map(p=>[p[0]+dx,p[1]+dy] as Point)]);
+    for(const [index,ring]of b.footprints.entries()){
+      const height=index<b.rectangles.length?b.wallHeight:connectorHeight(b.wallHeight,b.openings.doorHeight);
+      const hull=convexHull([...ring,...ring.map(p=>[p[0]+height*.32,p[1]+height*.25] as Point)]);
       ctx.beginPath();hull.forEach((p,i)=>{const x=p[0]*PX_PER_M-x0,y=p[1]*PX_PER_M-y0;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();ctx.fill();
     }
     const mask=ctx.getImageData(0,0,w,h),colors=PALETTE.map(c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)));
