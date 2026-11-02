@@ -5,6 +5,7 @@
 // The game adds: the station name on the wall sign, a mosaic in the country's flag colours on the floor, passengers
 // (the hero in lane 0, townsfolk in lanes 1–2 that come and go on their own). Coordinates = the source canvas 1672×941.
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
+import { straganObraz } from '../map/targ09';
 
 const BAZA = `${import.meta.env.BASE_URL || '/'}swiat/kulociag/`;
 export const HALA = { w: 1672, h: 941 };
@@ -164,7 +165,7 @@ export class Hala {
 
   /** Static background with the name and the mosaic baked in (redrawn only when the station changes). */
   private tloStacji() {
-    const klucz = `${this.nazwa}|${this.kraj}`;
+    const klucz = `${this.nazwa}|${this.kraj}|${this.ludzie.length}`;
     if (this.tlo && this.tloKlucz === klucz) return this.tlo;
     const c = (this.tlo ??= document.createElement('canvas'));
     c.width = HALA.w;
@@ -174,6 +175,11 @@ export class Hala {
     g.drawImage(OBRAZY['station/hala'], 0, 0);
     mozaika(g, this.kraj);
     tablica(g, this.nazwa);
+    // The trader and his stall's look follow the station's name (same station, same trader).
+    let h = 2166136261;
+    for (let i = 0; i < this.nazwa.length; i++) h = Math.imul(h ^ this.nazwa.charCodeAt(i), 16777619);
+    h >>>= 0;
+    straganiarz(g, this.ludzie.length ? this.ludzie[h % this.ludzie.length] : undefined, (h >>> 4) % 1000);
     this.tloKlucz = klucz;
     return c;
   }
@@ -240,26 +246,81 @@ export class Hala {
 function rysujPostac(g: CanvasRenderingContext2D, klatki: Postac[], czas: number, x: number, y: number, wys: number) {
   const k = klatki[Math.floor(czas * 8) % klatki.length];
   if (!k) return;
-  const s = Math.min(wys / k.sh, 42 / k.sw);
+  const s = Math.min(wys / k.sh, (wys * 1.05) / k.sw);
   const w = k.sw * s, h = k.sh * s;
   g.drawImage(k.img, k.sx, k.sy, k.sw, k.sh, Math.round(x - w / 2), Math.round(y - h), Math.round(w), Math.round(h));
 }
 
-/** The station name on the enamel sign, as big as fits. */
+/**
+ * The station name on the enamel sign (owner, 2 Nov 2026: „przygaszona, wtopiona, lekko rozpikselizowana”): written
+ * small at 1/NAPIS_PIKSEL of the hall's size with hard edges (no smoothing), in worn brass-cream with a dark carved
+ * shadow, then enlarged block by block, so its pixels match the drawing; laid in at partial strength.
+ */
+const NAPIS_PIKSEL = 3;
 function tablica(g: CanvasRenderingContext2D, nazwa: string) {
   if (!nazwa) return;
-  const R = TABLICA;
-  let px = 40;
+  const R = TABLICA, P = NAPIS_PIKSEL;
+  const w = Math.floor(R.w / P), h = Math.floor(R.h / P);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const m = c.getContext('2d', { willReadFrequently: true })!;
+  let px = 15;
   const font = (n: number) => `700 ${n}px 'Alegreya Sans', 'Georgia', serif`;
-  g.font = font(px);
-  while (px > 14 && g.measureText(nazwa).width > R.w - 24) g.font = font(--px);
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  const x = R.x + R.w / 2, y = R.y + R.h / 2 + 2;
-  g.fillStyle = '#0c1612';
-  g.fillText(nazwa, x + 2, y + 2);
-  g.fillStyle = '#f0dca8';
-  g.fillText(nazwa, x, y);
+  m.font = font(px);
+  while (px > 7 && m.measureText(nazwa).width > w - 8) m.font = font(--px);
+  m.textAlign = 'center';
+  m.textBaseline = 'middle';
+  m.fillStyle = '#000';
+  m.fillText(nazwa, w / 2, h / 2 + 1);
+  // Hard pixels: keep only clearly covered ones (canvas text is smoothed).
+  const d = m.getImageData(0, 0, w, h);
+  const pelne = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) pelne[i] = d.data[i * 4 + 3] > 110 ? 1 : 0;
+  const out = m.createImageData(w, h);
+  const kolor = (i: number, r: number, gg: number, b: number, a: number) => { out.data.set([r, gg, b, a], i * 4); };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (pelne[i]) {
+      // Worn letters: a little darker towards the bottom, a speck of wear here and there.
+      const zuz = ((x * 92821) ^ (y * 68917)) % 11 === 0 ? 0.82 : 1;
+      const k = (1 - (y / h) * 0.18) * zuz;
+      kolor(i, 205 * k, 182 * k, 128 * k, 225);
+    } else if ((x > 0 && pelne[i - 1]) || (y > 0 && pelne[i - w]) || (x > 0 && y > 0 && pelne[i - w - 1])) {
+      kolor(i, 14, 22, 18, 150); // carved shadow down-right of each stroke
+    }
+  }
+  m.putImageData(out, 0, 0);
+  g.save();
+  g.imageSmoothingEnabled = false;
+  g.globalAlpha = 0.88;
+  g.drawImage(c, R.x + Math.floor((R.w - w * P) / 2), R.y + Math.floor((R.h - h * P) / 2), w * P, h * P);
+  g.restore();
+}
+
+/**
+ * A trader on the platform (owner, 2 Nov 2026): a market stall from the world's generator (targ09) with a townsperson
+ * behind it, at the hall's furniture scale, on the free floor by the stairs. Only decoration – the hero is in the ball
+ * the whole time; the real trader stands on the street by the hatch (GameScene.straganPrzyWlazie).
+ */
+const STRAGAN_HALA = { x: 330, y: 660, skala: 4.2, sprzedawca: 104 };
+function straganiarz(g: CanvasRenderingContext2D, kto: Postac | undefined, seed: number) {
+  const S = STRAGAN_HALA;
+  const { o, bx, by } = straganObraz(seed);
+  const c = document.createElement('canvas');
+  c.width = o.w;
+  c.height = o.h;
+  c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(o.px.buffer as ArrayBuffer, o.px.byteOffset, o.px.byteLength).slice(), o.w, o.h), 0, 0);
+  g.save();
+  g.imageSmoothingEnabled = false;
+  // Soft ground shadow.
+  g.fillStyle = 'rgba(20,14,10,0.35)';
+  g.beginPath();
+  g.ellipse(S.x + 8, S.y + 2, o.w * S.skala * 0.55, 10, 0, 0, Math.PI * 2);
+  g.fill();
+  if (kto) rysujPostac(g, [kto], 0, S.x + 4, S.y - 52, S.sprzedawca);
+  g.drawImage(c, Math.round(S.x - bx * S.skala), Math.round(S.y - by * S.skala), Math.round(o.w * S.skala), Math.round(o.h * S.skala));
+  g.restore();
 }
 
 /** Floor mosaic in the colours of the country's flag: small stones with joints, laid into the paving. */

@@ -70,6 +70,8 @@ type Host = {
   zdjecie: () => Promise<HTMLCanvasElement | null>;
   /** The scene's current hero and cannons (they are new after a restart). */
   obecna: () => { player: Player; artillery?: Artillery };
+  /** A pinball hatch got drawn: put a stall beside it (sell something for the ticket). */
+  stragan?: (x: number, y: number, id: string) => void;
 };
 export const artilleryTransit = { active: false };
 let recovery: Receipt | null = null;
@@ -256,7 +258,7 @@ export class Artillery {
       ) {
         const p = miejsceNa(this.city, s, ll, this.registry.metro);
         if (p) {
-          art = this.draw(p.x, p.y);
+          art = this.draw(p.x, p.y, s.id);
           this.art.set(s.id, art);
           const a = art;
           void a.armata.ready.then((ok) => {
@@ -329,7 +331,7 @@ export class Artillery {
     if (!best) return null;
     let art = this.art.get(best.s.id);
     if (!art) {
-      art = this.draw(best.x, best.y);
+      art = this.draw(best.x, best.y, best.s.id);
       this.art.set(best.s.id, art);
     }
     const a = art;
@@ -369,8 +371,9 @@ export class Artillery {
         return this.registry!.stops.find((s) => s.id === id);
     return undefined;
   }
-  private draw(x: number, y: number) {
+  private draw(x: number, y: number, id = "") {
     if (this.registry?.metro) {
+      this.host.stragan?.(x, y, id);
       // A pinball hatch: no code-drawn cannon underneath.
       const body = this.scene.add.graphics({ x, y }).setVisible(false), barrel = this.scene.add.graphics({ x, y }).setVisible(false);
       return { body, barrel, armata: new Wlaz(this.scene, x, y) as Armata3D | Wlaz, model: false, visible: true, x, y };

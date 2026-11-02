@@ -1034,6 +1034,7 @@ export class GameScene extends Phaser.Scene {
       kadr:(x,y)=>{const v=this.cameras.main.worldView;return{fx:(x-v.x)/v.width,fy:(y-v.y)/v.height,px:window.innerWidth/v.width};},
       zdjecie:async()=>{await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));return gameShot(this.game,{withHud:false,maxW:this.game.canvas.width});},
       obecna:()=>({player:this.player,artillery:this.artillery}),
+      stragan:(x,y,id)=>this.straganPrzyWlazie(x,y,id),
     });
     const artillery=this.artillery;this.events.once('shutdown',()=>artillery?.destroy());
     this.replayAbandoned();
@@ -1816,7 +1817,7 @@ export class GameScene extends Phaser.Scene {
       session.at = null; this.save(); this.openHome();
     });
     const stall = this.stallAt(x, y, 10);
-    if (stall) return make('use', () => { this.learnPlace(); this.openShop(stall); });
+    if (stall) return make('use', () => { this.learnPlace(); this.openShop(stall, stall.id.startsWith('wlaz:') ? 1 : 0); });
     const station = this.pociagi?.stacjaPrzy(x, y) ?? this.cartAt(x, y);
     if (station) return make('use', () => { this.learnPlace(); this.openCoach(station); });
     const door = (q: { x: number; y: number }) => Math.hypot(q.x - x, q.y - (y + FEET.dy)) < DOOR_RADIUS;
@@ -1952,7 +1953,7 @@ export class GameScene extends Phaser.Scene {
       const st = this.stallAt(hit.x, hit.y, 10) ?? (c && this.stallAt(c.x, c.y, 9)) ?? this.stallAt(this.player.x, this.player.y, 13);
       if (st) {
         this.learnPlace();
-        this.openShop(st);
+        this.openShop(st, st.id.startsWith('wlaz:') ? 1 : 0);
         return true;
       }
     }
@@ -3051,14 +3052,7 @@ export class GameScene extends Phaser.Scene {
       const x = at.x + dx + Math.round((los() - 0.5) * 4), y = at.y + dy + Math.round((los() - 0.5) * 3);
       if (this.city.isBlocked(x - 7, y) || this.city.isBlocked(x + 7, y) || this.city.isBlocked(x, y - 10)) continue;
       const seed = Math.floor(los() * 1e6);
-      const key = `stragan-${seed % 40}`;
-      if (!this.textures.exists(key)) {
-        const { o } = straganObraz((seed % 40) * 37 + 11); // 40 looks: awning colours and goods from the seed
-        const t = this.textures.createCanvas(key, o.w, o.h)!;
-        t.getContext().putImageData(new ImageData(new Uint8ClampedArray(o.px.buffer as ArrayBuffer, o.px.byteOffset, o.px.byteLength).slice(), o.w, o.h), 0, 0);
-        t.refresh();
-        t.setFilter(Phaser.Textures.FilterMode.NEAREST);
-      }
+      const key = this.teksturaStraganu(seed);
       // Generator px: 2 per map px; the table's foot (17, 29) on the spot.
       const img = this.add.image(x, y, key).setOrigin(17 / 34, 29 / 32).setScale(0.5).setDepth(y).setFlipX(los() < 0.5);
       this.farObjects.push(img);
@@ -3069,6 +3063,45 @@ export class GameScene extends Phaser.Scene {
     if (!postawione) {
       const img = this.add.image(at.x, at.y, TEX.cart).setDepth(900_000);
       this.farObjects.push(img, this.signGlow(img));
+    }
+  }
+
+  /** One of the 40 stall looks (awning colours and goods from the seed), made once. */
+  private teksturaStraganu(seed: number) {
+    const key = `stragan-${seed % 40}`;
+    if (!this.textures.exists(key)) {
+      const { o } = straganObraz((seed % 40) * 37 + 11);
+      const t = this.textures.createCanvas(key, o.w, o.h)!;
+      t.getContext().putImageData(new ImageData(new Uint8ClampedArray(o.px.buffer as ArrayBuffer, o.px.byteOffset, o.px.byteLength).slice(), o.w, o.h), 0, 0);
+      t.refresh();
+      t.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    return key;
+  }
+
+  /**
+   * A stall beside every pinball hatch (owner, 2 Nov 2026: „postaw straganiarzy – ktoś będzie potrzebował sprzedać coś,
+   * żeby mieć na bilet”): the hall is only seen from inside the ball, so the trader stands on the street where the
+   * hero waits. It opens the shop on its selling tab. Placed once the ground there is loaded; fixed by the hatch id.
+   */
+  private straganPrzyWlazie(x: number, y: number, id: string) {
+    if (!WYGLAD_09) return;
+    const pid = `wlaz:${id}`;
+    if (this.stalls.some((s) => s.p.id === pid)) return;
+    if (!this.city.ready({ x0: x - 50, y0: y - 50, x1: x + 50, y1: y + 50 })) {
+      this.time.delayedCall(2000, () => this.straganPrzyWlazie(x, y, id));
+      return;
+    }
+    let h = 2166136261;
+    for (let i = 0; i < pid.length; i++) h = Math.imul(h ^ pid.charCodeAt(i), 16777619);
+    const p: CityPlace = { kind: 'merchant', name: tx('Straganiarz przy włazie', 'Stall by the hatch'), id: pid, building: null, door: { x, y } };
+    for (const [dx, dy] of [[-26, 4], [26, 4], [-22, 16], [22, 16], [0, 22], [-34, -6], [34, -6]]) {
+      const sx = x + dx, sy = y + dy;
+      if (this.city.isBlocked(sx - 7, sy) || this.city.isBlocked(sx + 7, sy) || this.city.isBlocked(sx, sy - 10)) continue;
+      const img = this.add.image(sx, sy, this.teksturaStraganu(h >>> 8)).setOrigin(17 / 34, 29 / 32).setScale(0.5).setDepth(sy).setFlipX(dx > 0);
+      this.farObjects.push(img, this.signGlow(img));
+      this.stalls.push({ x: sx, y: sy - 5, p });
+      return;
     }
   }
 
@@ -6690,7 +6723,8 @@ export class GameScene extends Phaser.Scene {
       const total = fruitValue();
       const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
       const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
-      const text = groups.length ? `Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
+      const przyWlazie = p.id.startsWith('wlaz:') ? tx('Straganiarz skupuje towar – na bilet do kulociągu się przyda. ', 'The trader buys goods – handy for a Ballway ticket. ') : '';
+      const text = groups.length ? `${przyWlazie}Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
       this.shopDialog(p, {
         title, text, tabs,
         buttons: [...all, ...lines, 'Wyjdź'],
@@ -6744,7 +6778,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.shopDialog(p, {
       title, tabs,
-      text: (p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz przy włazie kulociągu.`, `The trader by the Ballway hatch.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
