@@ -671,13 +671,13 @@ function drawTablicaMiasta(scene: Phaser.Scene) {
   for (const [x, y] of [[3, 9], [40, 9], [3, 26], [40, 26]]) px(ctx, x, y, 1, 1, '#fff1bf');
   tex.refresh();
   ART_SCALE.set(TEX.tablicaMiasta, 0.5);
-  // The same board with a note pinned on its right side (a job to take today).
+  // The same board with a note nailed over its top-left corner (a job to take today).
   const k = canvasTexture(scene, TEX.tablicaMiastaKartka, 44, 48);
   k.ctx.drawImage(tex.getSourceImage() as HTMLCanvasElement, 0, 0);
-  px(k.ctx, 27, 9, 12, 13, OUTLINE);
-  px(k.ctx, 28, 10, 10, 11, '#efe2c0');
-  px(k.ctx, 29, 13, 8, 1, '#8a7a5a'); px(k.ctx, 29, 15, 7, 1, '#8a7a5a'); px(k.ctx, 29, 17, 8, 1, '#8a7a5a');
-  px(k.ctx, 32, 9, 2, 2, '#c8962e');
+  px(k.ctx, 0, 5, 13, 14, OUTLINE);
+  px(k.ctx, 1, 6, 11, 12, '#efe2c0');
+  px(k.ctx, 3, 10, 7, 1, '#8a7a5a'); px(k.ctx, 3, 12, 6, 1, '#8a7a5a'); px(k.ctx, 3, 14, 7, 1, '#8a7a5a');
+  px(k.ctx, 2, 7, 2, 2, '#c8962e');
   k.tex.refresh();
   ART_SCALE.set(TEX.tablicaMiastaKartka, 0.5);
 }

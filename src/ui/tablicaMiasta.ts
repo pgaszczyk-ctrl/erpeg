@@ -85,14 +85,14 @@ const STYL = `
 #tablica .tb-karta button { font: 700 16px 'Alegreya Sans', sans-serif; min-height: 44px; padding: 0 14px; border: 2px solid #1e1a24; border-radius: 3px;
   background: linear-gradient(180deg, #f5d98a, #c8962e); color: #2a1808; cursor: pointer; box-shadow: inset 0 -3px 0 #8a6020; }
 #tablica .tb-karta button.tb-cicho { background: linear-gradient(180deg, #8fb0a0, #5f8070); min-width: 44px; }
-/* The note pinned to the board (code-drawn until the artist's order 47 part C). */
-#tablica .tb-kartka { position: absolute; left: 22px; top: 58px; width: 104px; min-height: 76px; padding: 14px 8px 8px; cursor: pointer;
+/* The note nailed over the board's top-left corner (code-drawn until the artist's order 47 part C). */
+#tablica .tb-kartka { position: absolute; left: -14px; top: -12px; z-index: 2; width: 104px; min-height: 76px; padding: 14px 8px 8px; cursor: pointer;
   font: 600 12px 'Alegreya Sans', sans-serif; color: #3a2a1c; transform: rotate(-4deg); transition: transform .15s;
   box-shadow: 3px 4px 0 rgba(0,0,0,.35); background: #efe2c0; clip-path: polygon(0 3%, 12% 0, 30% 2%, 52% 0, 70% 3%, 88% 0, 100% 2%, 98% 30%, 100% 62%, 97% 100%, 74% 97%, 50% 100%, 26% 96%, 4% 100%, 2% 66%, 0 34%); }
 #tablica .tb-kartka:hover, #tablica .tb-kartka:focus-visible { transform: rotate(-1deg) translateY(-4px) scale(1.05); outline: none; }
 #tablica .tb-kartka b { display: block; font-size: 13px; line-height: 1.1; margin-bottom: 3px; }
 #tablica .tb-kartka small { display: block; font-size: 10px; opacity: .75; }
-#tablica .tb-kartka::before { content: ''; position: absolute; left: 50%; top: 4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+#tablica .tb-kartka::before { content: ''; position: absolute; left: 7px; top: 5px; width: 9px; height: 9px; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #f5d98a, #8a6020 70%); box-shadow: 0 0 0 1px #1e1a24; }
 #tablica .tb-kartka.gonczy, #tablica .tb-kartka-duza.gonczy .tb-papier { background: #e6c98a; }
 #tablica .tb-kartka.urzedowa, #tablica .tb-kartka-duza.urzedowa .tb-papier { background: #f6f1e4; }
