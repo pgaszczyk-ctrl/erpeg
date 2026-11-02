@@ -748,7 +748,7 @@ export function newsboyDelivery(city: CityMap, folk: { id: string; x: number; y:
 }
 
 /** A walkable spot inside the nearest forest within `maxR` px, if any. */
-function forestNear(city: CityMap, x: number, y: number, maxR: number, r: () => number) {
+export function forestNear(city: CityMap, x: number, y: number, maxR: number, r: () => number) {
   let best: { x: number; y: number } | null = null;
   let bd = maxR;
   for (const a of city.query({ x0: x - maxR, y0: y - maxR, x1: x + maxR, y1: y + maxR }).areas) {

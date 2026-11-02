@@ -65,7 +65,8 @@ import { WOZY, SLUPY_SZYLDOW, SNOP_SZYLDU, POSWIATA_SZYLDU } from '../content/sw
 import { BANK, LOKATY } from '../content/banki';
 import { GRANICA, MIEJSCE_HUD, MIEJSCOWOSC, MAPA_PODROZNIKA } from '../content/mapa';
 import { IKONA_HUBA, hubyBlisko, doZapisu, type Hub } from '../huby';
-import type { TablicaHost, PunktTablicy } from '../ui/tablicaMiasta';
+import type { TablicaHost, PunktTablicy, KartkaNaTablicy } from '../ui/tablicaMiasta';
+import { kartkaTablicy, kluczTablicy } from '../tablice/kartki';
 import { miastoPrzy, planMiasta, wolneMiejsce, blisko as tablicaBlisko, type MiastoTablic } from '../tablice/swiatowe';
 import { TABLICE_SWIAT } from '../content/tablice';
 import type { PlanMiasta } from '../map/CityMap';
@@ -4350,7 +4351,56 @@ export class GameScene extends Phaser.Scene {
       adres: (x, y) => this.city.nearestAddress(x, y, 150) ?? this.whereIs(x, y),
       prowadzi: blisko,
       prowadz: (p) => this.prowadzDo(p && p.rodzaj !== 'ty' ? { nazwa: p.nazwa, ...this.city.toLatLon(p.x, p.y), rodzaj: p.rodzaj, km: 0 } : null),
+      kartka: t ? this.kartkaNaTablicy(t) : undefined,
     };
+  }
+
+  /**
+   * Today's note on a city board (owner, 2 Nov 2026: one note per board per day, made when the board is opened):
+   * the generator (src/tablice/kartki.ts) runs here; taking it starts the job like a temple's random job and marks
+   * the board used until tomorrow (`session.daily['tablica:<board>']`).
+   */
+  private kartkaNaTablicy(t: { x: number; y: number }): KartkaNaTablicy | undefined {
+    if (demo.on || this.city.loch) return undefined;
+    const dzien = today();
+    const klucz = kluczTablicy(this.city, t);
+    const dk = `tablica:${klucz}`;
+    for (const k of Object.keys(session.daily)) if (k.startsWith('tablica:') && session.daily[k].d !== dzien) delete session.daily[k];
+    const k = kartkaTablicy(this.city, t, dzien);
+    if (!k) return undefined;
+    const m = session.gen[k.misja.id] ?? k.misja;
+    if (session.daily[dk]?.d === dzien) return { rodzaj: k.rodzaj, tytul: m.tytul, tresc: m.opis, zleca: k.zlecaNazwa, stan: 'wzieta', przyjmij: () => {} };
+    return {
+      rodzaj: k.rodzaj, tytul: m.tytul, tresc: m.opis, zleca: k.zlecaNazwa, stan: 'nowa',
+      przyjmij: () => {
+        if (session.daily[dk]?.d === dzien) return;
+        session.daily[dk] = { d: dzien, n: 1, a: 1 };
+        const door = { ...k.zleca.door, building: k.zleca.building ?? undefined };
+        const rm: ResolvedMission = { m, door, target: null };
+        setMissionState(m, 'active');
+        session.etap[m.id] = 0;
+        session.gen[m.id] = m;
+        rm.target = stageTarget(this.city, m, door);
+        this.addMission(rm, false); // active: also spawns its monsters
+        this.refreshMarkers();
+        this.emitHud();
+        void this.save();
+        this.etapy.begin(rm);
+        this.toast(tx(`📌 Przyjęto: ${m.tytul}`, `📌 Accepted: ${m.tytul}`), 2500);
+        this.odswiezTablice(t);
+      },
+    };
+  }
+
+  /** Boards' pictures by spot: a note pinned on them while it can still be taken today. */
+  private obrazyTablic = new Map<string, Phaser.GameObjects.Image>();
+  private odswiezTablice(t: { x: number; y: number }) {
+    const img = this.obrazyTablic.get(kluczTablicy(this.city, t));
+    if (img) img.setTexture(this.tablicaZKartka(t) ? TEX.tablicaMiastaKartka : TEX.tablicaMiasta);
+  }
+  /** Is there (probably) a note left on this board today – not taken yet? (Checked cheaply, without the generator.) */
+  private tablicaZKartka(t: { x: number; y: number }) {
+    return !demo.on && session.daily[`tablica:${kluczTablicy(this.city, t)}`]?.d !== today();
   }
 
   /** Opens a city board's map (ui/tablicaMiasta.ts) – the world sleeps meanwhile, like the map screen. */
@@ -4361,7 +4411,8 @@ export class GameScene extends Phaser.Scene {
 
   /** A city board on the map: its picture with the soft golden halo (far objects: hidden off screen). */
   private postawTablice(t: { x: number; y: number }) {
-    const img = this.add.image(t.x, t.y, TEX.tablicaMiasta).setOrigin(0.5, 1).setScale(artScale(TEX.tablicaMiasta)).setDepth(t.y);
+    const img = this.add.image(t.x, t.y, this.tablicaZKartka(t) ? TEX.tablicaMiastaKartka : TEX.tablicaMiasta).setOrigin(0.5, 1).setScale(artScale(TEX.tablicaMiasta)).setDepth(t.y);
+    this.obrazyTablic.set(kluczTablicy(this.city, t), img);
     const glow = this.signGlow(img);
     glow.setPosition(t.x, t.y - 14);
     this.farObjects.push(img, glow);

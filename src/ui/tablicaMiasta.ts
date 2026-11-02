@@ -19,6 +19,18 @@ export interface TablicaHost {
   /** Is the arrow guiding to this spot now? */
   prowadzi: (x: number, y: number) => boolean;
   prowadz: (p: PunktTablicy | null) => void;
+  /** Today's note pinned to this board (src/tablice/kartki.ts); none when nothing fits here. */
+  kartka?: KartkaNaTablicy;
+}
+
+/** The note as the board shows it. `stan`: 'nowa' = can be taken, 'wzieta' = taken from this board today. */
+export interface KartkaNaTablicy {
+  rodzaj: 'zwykla' | 'gonczy' | 'urzedowa' | 'stara';
+  tytul: string;
+  tresc: string;
+  zleca: string;
+  stan: 'nowa' | 'wzieta';
+  przyjmij: () => void;
 }
 
 let otwarta: HTMLDivElement | null = null;
@@ -45,7 +57,7 @@ function klawisz(e: KeyboardEvent) {
   e.stopPropagation();
   if (e.key !== 'Escape') return;
   e.preventDefault();
-  const karta = otwarta.querySelector('.tb-karta');
+  const karta = otwarta.querySelector('.tb-karta, .tb-kartka-duza');
   if (karta) karta.remove();
   else zamknijTablice();
 }
@@ -73,6 +85,35 @@ const STYL = `
 #tablica .tb-karta button { font: 700 16px 'Alegreya Sans', sans-serif; min-height: 44px; padding: 0 14px; border: 2px solid #1e1a24; border-radius: 3px;
   background: linear-gradient(180deg, #f5d98a, #c8962e); color: #2a1808; cursor: pointer; box-shadow: inset 0 -3px 0 #8a6020; }
 #tablica .tb-karta button.tb-cicho { background: linear-gradient(180deg, #8fb0a0, #5f8070); min-width: 44px; }
+/* The note pinned to the board (code-drawn until the artist's order 47 part C). */
+#tablica .tb-kartka { position: absolute; left: 22px; top: 58px; width: 104px; min-height: 76px; padding: 14px 8px 8px; cursor: pointer;
+  font: 600 12px 'Alegreya Sans', sans-serif; color: #3a2a1c; transform: rotate(-4deg); transition: transform .15s;
+  box-shadow: 3px 4px 0 rgba(0,0,0,.35); background: #efe2c0; clip-path: polygon(0 3%, 12% 0, 30% 2%, 52% 0, 70% 3%, 88% 0, 100% 2%, 98% 30%, 100% 62%, 97% 100%, 74% 97%, 50% 100%, 26% 96%, 4% 100%, 2% 66%, 0 34%); }
+#tablica .tb-kartka:hover, #tablica .tb-kartka:focus-visible { transform: rotate(-1deg) translateY(-4px) scale(1.05); outline: none; }
+#tablica .tb-kartka b { display: block; font-size: 13px; line-height: 1.1; margin-bottom: 3px; }
+#tablica .tb-kartka small { display: block; font-size: 10px; opacity: .75; }
+#tablica .tb-kartka::before { content: ''; position: absolute; left: 50%; top: 4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f5d98a, #8a6020 70%); box-shadow: 0 0 0 1px #1e1a24; }
+#tablica .tb-kartka.gonczy, #tablica .tb-kartka-duza.gonczy .tb-papier { background: #e6c98a; }
+#tablica .tb-kartka.urzedowa, #tablica .tb-kartka-duza.urzedowa .tb-papier { background: #f6f1e4; }
+#tablica .tb-kartka.stara, #tablica .tb-kartka-duza.stara .tb-papier { background: #dcc48e; }
+#tablica .tb-kartka.wzieta { filter: saturate(.6) brightness(.85); }
+#tablica .tb-pieczec { position: absolute; right: 6px; bottom: 6px; font: 700 11px 'Pixelify Sans', sans-serif; color: #b0262c;
+  border: 2px solid #b0262c; padding: 1px 4px; transform: rotate(-12deg); opacity: .85; letter-spacing: 1px; }
+#tablica .tb-kartka-duza { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,8,14,.45); }
+#tablica .tb-papier { position: relative; width: min(88%, 380px); max-height: 86%; overflow: auto; padding: 26px 20px 16px; background: #efe2c0; color: #3a2a1c;
+  font: 16px 'Alegreya Sans', sans-serif; box-shadow: 6px 7px 0 rgba(0,0,0,.4); transform: rotate(-1.5deg);
+  clip-path: polygon(0 2%, 12% 0, 30% 1.5%, 52% 0, 70% 2%, 88% 0, 100% 1.5%, 99% 30%, 100% 62%, 98.5% 100%, 74% 98%, 50% 100%, 26% 97.5%, 3% 100%, 1% 66%, 0 34%); }
+#tablica .tb-papier::before { content: ''; position: absolute; left: 50%; top: 8px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f5d98a, #8a6020 70%); box-shadow: 0 0 0 1px #1e1a24; }
+#tablica .tb-papier h3 { margin: 0 0 8px; font: 700 20px 'Playfair Display', 'Alegreya Sans', serif; text-align: center; }
+#tablica .tb-papier .tb-gonczy-naglowek { text-align: center; font: 700 13px 'Pixelify Sans', sans-serif; letter-spacing: 3px; color: #7a1a1e; margin-bottom: 4px; }
+#tablica .tb-papier p { margin: 0 0 10px; line-height: 1.35; }
+#tablica .tb-papier .tb-zleca { font-size: 14px; opacity: .8; }
+#tablica .tb-papier div { display: flex; gap: 8px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+#tablica .tb-papier button { font: 700 16px 'Alegreya Sans', sans-serif; min-height: 44px; padding: 0 16px; border: 2px solid #1e1a24; border-radius: 3px;
+  background: linear-gradient(180deg, #f5d98a, #c8962e); color: #2a1808; cursor: pointer; box-shadow: inset 0 -3px 0 #8a6020; }
+#tablica .tb-papier button.tb-cicho { background: linear-gradient(180deg, #8fb0a0, #5f8070); }
 `;
 
 export function otworzTablice(h: TablicaHost, onClose?: () => void) {
@@ -109,6 +150,7 @@ export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   canvas.style.width = `${W}px`;
   canvas.style.height = `${H}px`;
   ramka.append(gora, canvas);
+  if (h.kartka) przybijKartke(ramka, h.kartka);
   root.append(ramka);
   root.onclick = (e) => { if (e.target === root) zamknijTablice(); };
   document.body.append(root);
@@ -187,6 +229,72 @@ function karta(h: TablicaHost, ramka: HTMLDivElement, p: PunktTablicy) {
   btn('✕', () => box.remove(), true);
   box.append(row);
   ramka.append(box);
+}
+
+/** The note on the board: small and pinned; a tap/click opens it big with „Przyjmuję” / „Odejdź”. */
+function przybijKartke(ramka: HTMLDivElement, k: KartkaNaTablicy) {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = `tb-kartka ${k.rodzaj}${k.stan === 'wzieta' ? ' wzieta' : ''}`;
+  el.setAttribute('aria-label', tx(`Ogłoszenie: ${k.tytul}`, `Notice: ${k.tytul}`));
+  const b = document.createElement('b');
+  b.textContent = k.tytul;
+  const s = document.createElement('small');
+  s.textContent = k.stan === 'wzieta' ? tx('Przyjęte – wróć jutro po nowe', 'Taken – come back tomorrow') : tx('Stuknij, by przeczytać', 'Tap to read');
+  el.append(b, s);
+  if (k.stan === 'wzieta') el.append(pieczec());
+  el.onclick = (e) => { e.stopPropagation(); otworzKartke(ramka, k); };
+  ramka.append(el);
+}
+
+function pieczec() {
+  const p = document.createElement('span');
+  p.className = 'tb-pieczec';
+  p.textContent = tx('PRZYJĘTE', 'TAKEN');
+  return p;
+}
+
+function otworzKartke(ramka: HTMLDivElement, k: KartkaNaTablicy) {
+  ramka.querySelector('.tb-karta, .tb-kartka-duza')?.remove();
+  const tlo = document.createElement('div');
+  tlo.className = `tb-kartka-duza ${k.rodzaj}`;
+  tlo.onclick = (e) => { if (e.target === tlo) tlo.remove(); };
+  const papier = document.createElement('div');
+  papier.className = 'tb-papier';
+  papier.setAttribute('role', 'dialog');
+  if (k.rodzaj === 'gonczy') {
+    const g = document.createElement('div');
+    g.className = 'tb-gonczy-naglowek';
+    g.textContent = tx('POSZUKIWANY', 'WANTED');
+    papier.append(g);
+  }
+  const h = document.createElement('h3');
+  h.textContent = k.tytul;
+  const p = document.createElement('p');
+  p.textContent = k.tresc;
+  const z = document.createElement('p');
+  z.className = 'tb-zleca';
+  z.textContent = tx(`Zgłoś się po zapłatę: ${k.zleca}`, `Collect your pay at: ${k.zleca}`);
+  papier.append(h, p, z);
+  const row = document.createElement('div');
+  const btn = (t: string, fn: () => void, cicho = false) => {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = t;
+    if (cicho) x.className = 'tb-cicho';
+    x.onclick = (e) => { e.stopPropagation(); fn(); };
+    row.append(x);
+  };
+  if (k.stan === 'nowa') {
+    btn(tx('✅ Przyjmuję', '✅ Accept'), () => { k.przyjmij(); zamknijTablice(); });
+    btn(tx('Odejdź', 'Walk away'), zamknijTablice, true);
+  } else {
+    papier.append(pieczec());
+    btn(tx('Wróć do mapki', 'Back to the map'), () => tlo.remove(), true);
+  }
+  papier.append(row);
+  tlo.append(papier);
+  ramka.append(tlo);
 }
 
 const nazwa = (pl: string | 0, en: string | 0) => String((lang === 'en' ? en : pl) || pl || '');

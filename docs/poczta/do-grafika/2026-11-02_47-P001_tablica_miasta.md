@@ -61,6 +61,23 @@ Okno z mapką dziś ma ramkę z kodu (drewno + mosiądz). Ramka w stylu regionu:
 krawędzi 16×48 / 48×16 px (gra rozciąga krawędzie), dla każdego regionu, plus narożniki świąteczne (dynia,
 śnieg, gałązka) jako osobne nakładki.
 
+### C. Kartki z ogłoszeniami (zadania z tablicy)
+Na mapce w oknie tablicy wisi kartka z ogłoszeniem przybita gwoździem; gra wpisuje w nią treść (jak w gazecie),
+po stuknięciu kartka się powiększa z przyciskami „Przyjmuję” / „Odejdź”. Dziś jest rysowana kodem (CSS).
+Potrzebujemy **4 kartek** (każda w 2 rozmiarach: mała 104×76 px na mapce i duża 380×300 px po powiększeniu,
+z pustym miejscem na tekst – **bez napisów**, poza nagłówkiem listu gończego):
+| plik | kiedy | wygląd |
+|---|---|---|
+| `kartka_zwykla_{mala,duza}.png` | zwykłe zlecenia (dostawy) | kremowy papier, poszarpany brzeg |
+| `kartka_gonczy_{mala,duza}.png` | polowania na potwory | list gończy: żółtawy, czerwona ramka, nagłówek „POSZUKIWANY” (i wersja z „WANTED”) |
+| `kartka_urzedowa_{mala,duza}.png` | zlecenia urzędów/policji | biała, czerwona lakowa pieczęć w rogu |
+| `kartka_stara_{mala,duza}.png` | skupy (grzyby, drewno) | pożółkła, plamy, zagięty róg |
+
+Do tego **2–3 gwoździe/pinezki** 12×12 px (`gwozdz_mosiezny.png`, `gwozdz_zelazny.png`, `pinezka_czerwona.png`) i
+pieczątka **„PRZYJĘTE”** (oraz „TAKEN”) 80×28 px, czerwona, przekrzywiona – gra kładzie ją na kartkę wziętą tego dnia.
+W świecie: tablica z dostępnym ogłoszeniem ma przypiętą małą białą kartkę – narysuj ją jako warstwę
+`ozdoba_kartka.png` 48×56 px (jak ozdoby świąteczne), żeby pasowała na każdą tablicę regionalną.
+
 ## Styl
 Paleta świata (jak szyldy miejsc i armata), obrys 1 px #1e1a24 jak postacie, światło z północnego zachodu, twarda
 alfa (0/255), bez wygładzania, płaskie plamy koloru, **bez napisów** (napisy są tylko w oknie mapki), bez
@@ -69,7 +86,8 @@ gradientów „z AI”.
 ## Kolejność
 1. **Próbka:** `tablica_europa.png` + `ozdoba_zima.png` – do akceptacji właściciela.
 2. Po akceptacji: reszta części A.
-3. Na końcu część B.
+3. Część C (kartki) – może iść równolegle z resztą A.
+4. Na końcu część B.
 
 ## Jak oddać
 Pliki do `docs/poczta/od-grafika/47_tablica/` + wiadomość `RRRR-MM-DD_47-G001_…md` (ID, wersja plików, współrzędne

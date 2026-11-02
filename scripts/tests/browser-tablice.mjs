@@ -41,6 +41,54 @@ try {
   await page.waitForSelector('#tablica', { timeout: 5000 });
   await page.waitForTimeout(400);
   await page.screenshot({ path: `work/tablica-mapa${mobile ? '-tel' : ''}.png` });
+  // Today's note pinned to the board: open it big, accept it.
+  await page.waitForSelector('#tablica .tb-kartka', { timeout: 5000 });
+  const tytul = await page.evaluate(() => document.querySelector('#tablica .tb-kartka b').textContent);
+  console.log('kartka', tytul);
+  await page.click('#tablica .tb-kartka');
+  await page.waitForSelector('#tablica .tb-kartka-duza .tb-papier');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `work/tablica-kartka${mobile ? '-tel' : ''}.png` });
+  console.log('treść', await page.evaluate(() => document.querySelector('#tablica .tb-papier').innerText.replace(/\n+/g, ' / ')));
+  await page.evaluate(() => [...document.querySelectorAll('#tablica .tb-papier button')].find((b) => b.textContent.includes('Przyjmuję')).click());
+  await page.waitForSelector('#tablica', { state: 'detached' });
+  await page.waitForTimeout(600);
+  const przyjete = await page.evaluate(() => {
+    const s = window.__session;
+    const m = Object.values(s.gen).find((m) => m.id.startsWith('gen-tablica-'));
+    return { m: m && { id: m.id, typ: m.zadanie.typ, cel: m.zadanie.cel, adres: m.adres }, stan: m && s.missions[m.id], daily: Object.keys(s.daily).filter((k) => k.startsWith('tablica:')) };
+  });
+  console.log('przyjęte', JSON.stringify(przyjete));
+  assert(przyjete.m && przyjete.daily.length === 1, 'the note became a job and the board is used today');
+  // The whole job: walk to the goal, then to the giver's door for the pay.
+  if (przyjete.m.typ === 'idz') {
+    const coins0 = await page.evaluate(() => window.__session.coins);
+    const cel = await page.evaluate((id) => { const s = window.__game.scene.getScene('game'); const rm = s.missions.find((r) => r.m.id === id); return { t: rm.target, d: rm.door }; }, przyjete.m.id);
+    await page.evaluate(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); s.cameras.main.centerOn(x, y); }, [cel.t.x, cel.t.y]);
+    await page.waitForTimeout(2500);
+    await page.keyboard.press('e'); // live mode: quest spots go off on AKCJA
+    await page.waitForFunction((id) => window.__session.missions[id] === 'goal' || window.__game.scene.getScene('ui').hasDialog, przyjete.m.id, { timeout: 30000 });
+    await page.waitForTimeout(800);
+    for (let i = 0; i < 4 && await page.evaluate(() => window.__game.scene.getScene('ui').hasDialog); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
+    console.log('pod adresem, stan', await page.evaluate((id) => window.__session.missions[id], przyjete.m.id));
+    await page.evaluate(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 6); s.cameras.main.centerOn(x, y); }, [cel.d.x, cel.d.y]);
+    await page.waitForTimeout(1500);
+    await page.keyboard.press('e');
+    await page.waitForTimeout(1500);
+    for (let i = 0; i < 6 && await page.evaluate(() => window.__game.scene.getScene('ui').hasDialog); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
+    const po = await page.evaluate((id) => ({ stan: window.__session.missions[id], coins: window.__session.coins }), przyjete.m.id);
+    console.log('u zleceniodawcy', JSON.stringify(po), 'było', coins0);
+    assert(po.stan === 'done' && po.coins > coins0, 'paid at the giver');
+    await page.evaluate(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y); s.cameras.main.centerOn(x, y); }, [bx, by + 14]);
+    await page.waitForTimeout(1500);
+  }
+  // The board again: the same note, now stamped as taken, no Accept.
+  await page.keyboard.press('e');
+  await page.waitForSelector('#tablica .tb-kartka.wzieta', { timeout: 5000 });
+  await page.click('#tablica .tb-kartka');
+  await page.waitForSelector('#tablica .tb-papier');
+  assert(!(await page.evaluate(() => [...document.querySelectorAll('#tablica .tb-papier button')].some((b) => b.textContent.includes('Przyjmuję')))), 'no second accept today');
+  await page.evaluate(() => [...document.querySelectorAll('#tablica .tb-papier button')].at(-1).click());
   const cele = await page.evaluate(() => window.__tablica);
   console.log('cele', cele.length, cele.filter((c) => c.rodzaj === 'wylot').map((c) => c.nazwa).join(' | '));
   assert(cele.filter((c) => c.rodzaj === 'wylot').length >= 5);
