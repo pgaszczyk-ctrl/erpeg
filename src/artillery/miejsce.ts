@@ -171,3 +171,34 @@ function mapaBudynkow(
     return S(c + 1, d + 1) - S(a, d + 1) - S(c + 1, b) + S(a, b) > 0;
   };
 }
+
+/** Underground pinball hatches (owner, 2 Nov 2026: metro cities ride a pinball instead of cannons): a hatch is small,
+ *  so it needs no square – the nearest free spot that isn't a big car road, with a way out, within this radius. */
+export const WLAZ = { promienM: 300, krokM: 4 };
+const wlazy = new Map<string, { x: number; y: number } | null>();
+export function miejsceWlazu(city: CityMap, id: string, lat: number, lon: number) {
+  const key = city.id + "|" + id;
+  if (wlazy.has(key)) return wlazy.get(key);
+  if (!city.hasLatLon(lat, lon)) return null;
+  const p = city.fromLatLon(lat, lon), R = WLAZ.promienM * PX_PER_M, krok = WLAZ.krokM * PX_PER_M;
+  if (!city.ready({ x0: p.x - R, y0: p.y - R, x1: p.x + R, y1: p.y + R })) return undefined;
+  let found: { x: number; y: number } | null = null, drogie = 0;
+  // Rings outwards on a world-aligned grid: everyone gets the same spot.
+  szukanie: for (let r = 0; r <= R; r += krok) {
+    const n = r === 0 ? 1 : Math.ceil((2 * Math.PI * r) / krok);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 2 * Math.PI;
+      const x = Math.round((p.x + r * Math.sin(a)) / krok) * krok, y = Math.round((p.y - r * Math.cos(a)) / krok) * krok;
+      if (!city.isFree(x, y, 10, 10)) continue;
+      const road = city.roadAt(x, y);
+      if (road && (road.kind === "major" || road.kind === "medium")) continue;
+      if (++drogie > 12) break szukanie;
+      if (city.reachesFar(x, y, 100)) {
+        found = { x, y };
+        break szukanie;
+      }
+    }
+  }
+  wlazy.set(key, found);
+  return found;
+}

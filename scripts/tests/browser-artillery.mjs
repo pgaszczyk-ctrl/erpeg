@@ -35,11 +35,15 @@ const map = {
 // nominally at map px (2880, 2910) and (4992, 2910). The other stations fall outside this small fixture map.
 const CITY = 9565,
   centre = { lat: 51.3 - 1515.625 / mLat, lon: 22.4 + 2050 / mLon },
-  swiat = { wersja: 1, miasta: [[CITY, "Testowo", "PL", centre.lat, centre.lon, 523725]], lotniska: [] },
+  // PINBALL=1: the same city named like a metro city (src/content/metro.ts) rides the underground pinball instead.
+  PINBALL = !!process.env.PINBALL,
+  swiat = { wersja: 1, miasta: [[CITY, PINBALL ? "Warsaw" : "Testowo", "PL", centre.lat, centre.lon, 523725]], lotniska: [] },
   WEST = `c${CITY}:1`,
   EAST = `c${CITY}:0`,
   PRICE = 14; // 1.1 km × 13 coins, rounded
 await mkdir("work/artillery", { recursive: true });
+const DIR = PINBALL ? "pinball" : "artillery";
+await mkdir(`work/${DIR}`, { recursive: true });
 const results = [];
 try {
   for (const [tag, width, height, mobile] of [
@@ -229,7 +233,7 @@ try {
     if (mobile) await page.locator(".hs-akcja").click();
     else await page.keyboard.press("KeyE");
     await page.locator("#artillery-panel").waitFor();
-    await page.screenshot({ path: `work/artillery/${tag}-panel.png` });
+    await page.screenshot({ path: `work/${DIR}/${tag}-panel.png` });
     const launch = page.locator("#artillery-panel button").first();
     assert(await launch.isEnabled());
     // Price by distance (13 coins/km, owner 1 Nov 2026): the two central cannons are 1.1 km apart.
@@ -238,20 +242,20 @@ try {
     await launch.click();
     for (let i = 0; i < 12; i++) {
       await page.waitForTimeout(300);
-      await page.screenshot({ path: `work/artillery/${tag}-start-${String(i).padStart(2, "0")}.png` });
+      await page.screenshot({ path: `work/${DIR}/${tag}-start-${String(i).padStart(2, "0")}.png` });
     }
     await page
       .getByRole("button", { name: "Ponów tę samą podróż" })
       .waitFor({ timeout: 30000 });
     assert.equal(chargeCount, 1);
-    await page.screenshot({ path: `work/artillery/${tag}-lost-response.png` });
+    await page.screenshot({ path: `work/${DIR}/${tag}-lost-response.png` });
     await page.getByRole("button", { name: "Ponów tę samą podróż" }).click();
     const destAt = [...receipts.values()][0].destination_at;
     // Frames of the flight (take-off, clouds, landing) for a look.
     for (let i = 0; i < 30; i++) {
       await page.waitForTimeout(350);
       if (!(await page.evaluate(() => !!document.getElementById("artillery-flight") || window.__game.scene.getScene("game").travelling))) break;
-      await page.screenshot({ path: `work/artillery/${tag}-lot-${String(i).padStart(2, "0")}.png` });
+      await page.screenshot({ path: `work/${DIR}/${tag}-lot-${String(i).padStart(2, "0")}.png` });
     }
     await page.waitForFunction(
       (x) =>
@@ -292,7 +296,7 @@ try {
       false,
     );
     assert(await page.locator(".hs-akcja").isVisible());
-    await page.screenshot({ path: `work/artillery/${tag}-arrived.png` });
+    await page.screenshot({ path: `work/${DIR}/${tag}-arrived.png` });
     // A refresh after a committed start is recovered without another begin request or another charge.
     const nonce = "00000000-0000-4000-8000-000000000001";
     receipts.set(nonce, {
@@ -357,8 +361,8 @@ try {
     if (mobile) await page.locator(".hs-akcja").click();
     else await page.keyboard.press("KeyE");
     await page.locator("#artillery-panel button").first().click();
-    await page.getByRole("button", { name: "Wróć do armaty" }).waitFor();
-    await page.getByRole("button", { name: "Wróć do armaty" }).click();
+    await page.getByRole("button", { name: PINBALL ? "Wróć do włazu" : "Wróć do armaty" }).waitFor();
+    await page.getByRole("button", { name: PINBALL ? "Wróć do włazu" : "Wróć do armaty" }).click();
     await page.waitForFunction(
       () => !document.getElementById("artillery-flight"),
     );
