@@ -5,7 +5,7 @@ Do: grafik
 Status: nowe
 Akceptacja: czeka na właściciela
 Wykonanie: –
-Dotyczy: komiksowe napisy (WHOOP przy wystrzale kulociągu + reszta „dymków” walki) i straganiarz w hali kulociągu
+Dotyczy: komiksowe napisy (WHOOP przy wystrzale + „dymki” walki) i hala kulociągu do chodzenia (mapa przejść, warstwy przednie, punkty, gazeciarz i straganiarz w skali hali, mrugająca lampa)
 
 # Zamówienie 48-P003
 
@@ -21,10 +21,30 @@ Pikselowy komiks w naszej palecie, obrys #1e1a24, twarde krawędzie, przezroczys
 - Dymek „PUDŁO” i „MISS” (ok. 64×32).
 - Opcjonalnie: „BUM!” (strzał armaty), „PSSST!” (para), „CHLUP!” (woda).
 
-## 2. Straganiarz w hali kulociągu
-W hali na wolnej posadzce przy schodach (ok. x 230–430, y 520–700 na płótnie 1672×941) program stawia teraz
-zastępczy stragan z generatora świata i mieszkańca. Prosimy o straganiarza w stylu hali: wózek/stolik z daszkiem
-i towarem (owoce, gazety, bilety), sprzedawca za nim, w skali mebli hali (ławka ~255 px), 2 klatki (sprzedawca
-macha / poprawia towar). Osobna warstwa, podstawa = środek dołu.
+## 2. Hala do chodzenia (zmiana właściciela, 2 XI 2026)
+Właściciel: „zejście do podziemi z metrem to normalne zejście. Wchodzisz i na hali możesz chodzić, gadać z NPC
+i coś kupić. Dopiero kupujesz bilet przy podejściu do kuli.” Hala z 48-G001 przestaje więc być tylko tłem
+animacji: bohater schodzi schodami z ulicy i chodzi po niej jak po lochu albo arenie. Potrzebujemy do tej samej
+hali (płótno 1672×941, ta sama kamera):
 
-Kolejność: najpierw próbny „WHOOP!” (1 klatka) do akceptacji.
+- **Mapa chodzenia**: PNG 1672×941, biały = można chodzić, czarny = ściana/mebel/rura. Na posadzce, bez
+  ścian, ławek, beczek, skrzyń, lamp, schodów spiralnych (poza ich zejściem) i maszyn wyrzutni.
+- **Skala postaci**: podaj wysokość stojącej postaci w pikselach hali. Musi pasować i do mebli (ławka ~255 px),
+  i do kuli (pasażer w kuli ma dziś 42×44 px). Jeśli postać nie mieści się w kuli w tej skali – powiększ kulę
+  i podaj nową skalę albo zaproponuj inne rozwiązanie.
+- **Warstwy przednie** (osobne PNG + linia podstawy y każdej): rzeczy, za którymi postać może przejść – lampy na
+  słupkach, ławki, poręcz schodów, beczki/skrzynie, maszyny wyrzutni z obejmami. Program sortuje je z postaciami
+  po linii podstawy.
+- **Punkty**: wejście (dół schodów, tu staje bohater po zejściu i tu wychodzi na ulicę), przy każdej z 3 wyrzutni
+  punkt podejścia przy bocznych schodkach (tam gracz kupuje bilet i wsiada), oraz obszar pustej posadzki po lewej
+  (ok. x 120–880, y 300–700 – podaj dokładny wielokąt), gdzie program losowo stawia NPC.
+- **Gazeciarz i straganiarz w skali hali**: stoją w losowym miejscu tego obszaru, gracz z nimi rozmawia
+  (gazeta, zlecenia) i u straganiarza sprzedaje/kupuje. Gazeciarz: przód, bok, tył stojący + 2 klatki
+  wołania. Straganiarz: wózek/stolik z daszkiem i towarem (owoce, gazety, bilety) jako osobna warstwa
+  z linią podstawy, sprzedawca za nim, 2 klatki (macha / poprawia towar). Podstawa = środek dołu.
+- **Mrugająca lampa**: jedna z lamp hali w 3 klatkach (świeci / przygasa / gaśnie) – z zamówienia 48-P001.
+
+Postać gracza i mieszkańcy wejdą tam jako sprite'y z gry (ten sam bohater 3D/2D co na ulicy), więc ważna jest
+tylko podana skala.
+
+Kolejność: najpierw próbny „WHOOP!” (1 klatka) i mapa chodzenia + skala postaci, potem reszta.
