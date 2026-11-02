@@ -114,14 +114,14 @@ try {for(const phone of [false,true]) {
  // A longer trip away: the game and the music wait for „Gram dalej” (owner, 2 Nov 2026).
  const hide=()=>page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
  const show=()=>page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- // A short trip (under 10 s) doesn't stop the music nor ask anything.
- await hide();await page.waitForTimeout(3000);
+ // A short trip (under 3 s) doesn't stop the music nor ask anything.
+ await hide();await page.waitForTimeout(1500);
  assert((await state()).some(m=>!m.paused),'music keeps playing during a short trip away');
  await show();await page.waitForTimeout(500);
  assert.equal(await page.locator('#powrot').count(),0,'no window after a short trip');
  assert(await page.evaluate(()=>window.__game.loop.running),'game runs on after a short trip');
- await hide();await page.waitForTimeout(10600);
- assert((await state()).every(m=>m.paused),'music stops after 10 s away');
+ await hide();await page.waitForTimeout(3600);
+ assert((await state()).every(m=>m.paused),'music stops after 3 s away');
  await show();
  await page.locator('#powrot').waitFor();
  await page.waitForTimeout(800);
@@ -132,7 +132,7 @@ try {for(const phone of [false,true]) {
  await page.waitForFunction(()=>window.__music.some(m=>!m.paused)&&window.__game.loop.running);
  assert.equal(await page.locator('#powrot').count(),0);
  // „Wyłącz grę” leaves to the menu.
- await hide();await page.waitForTimeout(10600);await show();
+ await hide();await page.waitForTimeout(3600);await show();
  await page.locator('#powrot [data-a="wyjdz"]').click();
  await page.locator('#menu').waitFor({timeout:15000});
  await page.waitForFunction(()=>window.__music.every(m=>m.paused));

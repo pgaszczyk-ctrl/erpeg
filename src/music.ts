@@ -135,7 +135,7 @@ for (const event of ['pointerdown', 'keydown', 'touchend']) window.addEventListe
  * A short trip to another tab/app (owner, 2 Nov 2026: „krótkie wyjścia nawet na 10 sekund niech nie przerywają”)
  * keeps the music playing; only after this long away does it stop (and powrot.ts asks „Gram dalej?” on return).
  */
-export const KROTKIE_WYJSCIE_MS = 10_000;
+export const KROTKIE_WYJSCIE_MS = 3_000;
 let pauzaWTle: ReturnType<typeof setTimeout> | undefined;
 document.addEventListener('visibilitychange', () => {
   clearTimeout(pauzaWTle);
