@@ -111,15 +111,18 @@ try {for(const phone of [false,true]) {
  await page.evaluate(()=>{const s=window.__game.scene.getScene('game');s.scene.resume();s.wyjdzZLochu();});
  await page.waitForFunction(()=>!window.__game.scene.getScene('game').city?.loch&&window.__game.scene.isActive('game'),null,{timeout:30000});
  await page.waitForFunction(()=>window.__music.slice(0,2).some(m=>m.__gain.gain.value>.95)&&window.__music[2].paused,null,{timeout:15000});
- // Backgrounding pauses every stream; returning resumes only the desired one.
- await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
- assert((await state()).every(m=>m.paused));
- await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- await page.waitForFunction(()=>window.__music.some(m=>!m.paused));
  // A longer trip away: the game and the music wait for „Gram dalej” (owner, 2 Nov 2026).
  const hide=()=>page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
  const show=()=>page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- await hide();await page.waitForTimeout(1200);await show();
+ // A short trip (under 10 s) doesn't stop the music nor ask anything.
+ await hide();await page.waitForTimeout(3000);
+ assert((await state()).some(m=>!m.paused),'music keeps playing during a short trip away');
+ await show();await page.waitForTimeout(500);
+ assert.equal(await page.locator('#powrot').count(),0,'no window after a short trip');
+ assert(await page.evaluate(()=>window.__game.loop.running),'game runs on after a short trip');
+ await hide();await page.waitForTimeout(10600);
+ assert((await state()).every(m=>m.paused),'music stops after 10 s away');
+ await show();
  await page.locator('#powrot').waitFor();
  await page.waitForTimeout(800);
  assert((await state()).every(m=>m.paused),'music waits for the player after returning');
@@ -129,7 +132,7 @@ try {for(const phone of [false,true]) {
  await page.waitForFunction(()=>window.__music.some(m=>!m.paused)&&window.__game.loop.running);
  assert.equal(await page.locator('#powrot').count(),0);
  // „Wyłącz grę” leaves to the menu.
- await hide();await page.waitForTimeout(1200);await show();
+ await hide();await page.waitForTimeout(10600);await show();
  await page.locator('#powrot [data-a="wyjdz"]').click();
  await page.locator('#menu').waitFor({timeout:15000});
  await page.waitForFunction(()=>window.__music.every(m=>m.paused));

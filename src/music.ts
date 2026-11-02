@@ -131,5 +131,15 @@ export function updateMusic(next: MusicState, now = performance.now()) {
   });
 }
 for (const event of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(event, unlock, { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); else if (state) unlock(); });
+/**
+ * A short trip to another tab/app (owner, 2 Nov 2026: „krótkie wyjścia nawet na 10 sekund niech nie przerywają”)
+ * keeps the music playing; only after this long away does it stop (and powrot.ts asks „Gram dalej?” on return).
+ */
+export const KROTKIE_WYJSCIE_MS = 10_000;
+let pauzaWTle: ReturnType<typeof setTimeout> | undefined;
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(pauzaWTle);
+  if (document.hidden) pauzaWTle = setTimeout(() => { if (document.hidden) pause(); }, KROTKIE_WYJSCIE_MS);
+  else if (state) unlock();
+});
 window.addEventListener('pagehide', () => { state = null; stopped = true; pause(); });

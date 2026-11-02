@@ -1,15 +1,15 @@
 import type Phaser from 'phaser';
 import { tx } from './i18n';
 import { exploring } from './guard';
-import { wstrzymajMuzyke } from './music';
+import { wstrzymajMuzyke, KROTKIE_WYJSCIE_MS } from './music';
 import { resetTouch } from './controls';
 
 // Back from another tab or app (owner, 2 Nov 2026: „po powrocie do zakładki muzyka ani gra nie ruszała,
 // dopóki gracz nie potwierdzi”): while the page is hidden the game loop is put to sleep and the music held;
 // on return a dimmed window asks „Gram dalej” / „Wyłącz grę”, and only „Gram dalej” wakes both.
 
-/** Shorter trips away (a permission prompt, a flicker of the notification shade) don't ask. */
-const POWROT_OD_MS = 1000;
+/** Trips away shorter than this (owner, 2 Nov 2026: „nawet na 10 sekund”) don't ask and keep the music on. */
+const POWROT_OD_MS = KROTKIE_WYJSCIE_MS;
 
 type GraScena = Phaser.Scene & { inCombat?: () => boolean; leave?: () => Promise<void>; poPowrocie?: () => void };
 
@@ -18,6 +18,8 @@ export function pilnujPowrotu(game: Phaser.Game) {
   /** The loop was running when the page hid (the Kufer/map screen keep it asleep on their own). */
   let obudzic = false;
   let czeka = false;
+  /** The music is held only once the trip away gets long. */
+  let wstrzymanie: ReturnType<typeof setTimeout> | undefined;
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -25,12 +27,14 @@ export function pilnujPowrotu(game: Phaser.Game) {
       ukrytoO = performance.now();
       obudzic = game.loop.running;
       if (obudzic) game.loop.sleep();
-      wstrzymajMuzyke(true);
       czeka = true;
+      wstrzymanie = setTimeout(() => { if (document.hidden) wstrzymajMuzyke(true); }, POWROT_OD_MS);
       return;
     }
+    clearTimeout(wstrzymanie);
     if (!czeka || document.getElementById('powrot')) return;
     if (performance.now() - ukrytoO < POWROT_OD_MS) { graj(); return; }
+    wstrzymajMuzyke(true); // timers sleep in background tabs: hold it now, not only when the timer fires
     pokaz();
   });
 
@@ -89,6 +93,7 @@ export function pilnujPowrotu(game: Phaser.Game) {
 
   (window as unknown as { __powrot: { pokaz: () => void; czeka: () => boolean } }).__powrot = {
     pokaz: () => {
+      clearTimeout(wstrzymanie);
       ukrytoO = performance.now() - POWROT_OD_MS;
       obudzic = game.loop.running;
       if (obudzic) game.loop.sleep();
