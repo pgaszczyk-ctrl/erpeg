@@ -57,9 +57,8 @@ const STYL = `
   box-shadow: 0 0 0 2px #1e1a24, 0 0 0 6px #b8862b, inset 0 0 0 1px #f2d488, 0 0 0 8px #1e1a24, 9px 9px 0 8px rgba(0,0,0,.45); }
 #tablica .tb-gora { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 0 8px; position: relative; }
 #tablica .tb-gora span { padding: 3px 26px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 700 19px 'Playfair Display', 'Alegreya Sans', serif; letter-spacing: 2px; color: #3a2210; text-transform: uppercase;
-  background: linear-gradient(180deg, #f5d98a, #d9a441 45%, #a8742a); border-radius: 3px;
-  box-shadow: 0 0 0 2px #1e1a24, inset 0 1px 0 #fff3c4, inset 0 -2px 0 #7a5418; text-shadow: 0 1px 0 #f7e2a2; }
+  font: 700 19px 'Pixelify Sans', sans-serif; letter-spacing: 2px; color: #3a2210; text-transform: uppercase;
+  background: #d9a441; box-shadow: 0 0 0 2px #1e1a24, inset 0 2px 0 #f5d98a, inset 0 -2px 0 #9c6a22, 4px 4px 0 2px rgba(0,0,0,.35); }
 #tablica .tb-gora button { position: absolute; right: 0; top: -2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #1e1a24;
   background: radial-gradient(circle at 35% 30%, #f5d98a, #c8962e 60%, #8a6020); color: #2a1808;
   font: 700 20px sans-serif; cursor: pointer; box-shadow: inset 0 -2px 0 #6a4a18; }
@@ -116,16 +115,24 @@ export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   otwarta = root;
   window.addEventListener('keydown', klawisz, true);
 
-  const rys = rysujPlan(h, W, H, dpr);
+  let rys = rysujPlan(h, W, H, dpr);
+  // The game's pixel font may still be on its way: draw again once it's in.
+  if (document.fonts && !document.fonts.check("16px 'Pixelify Sans'"))
+    void Promise.all([document.fonts.load("700 16px 'Pixelify Sans'"), document.fonts.load("500 14px 'Pixelify Sans'")]).then(() => {
+      if (otwarta === root) { rys = rysujPlan(h, W, H, dpr); ustawCele(); }
+    }).catch(() => {});
   // For browser tests: what can be tapped (CSS px on the canvas).
-  (window as unknown as { __tablica: unknown }).__tablica = rys.cele.map((c) => ({ nazwa: c.p.nazwa, rodzaj: c.p.rodzaj, x: c.box ? (c.box[0] + c.box[2]) / 2 : c.sx, y: c.box ? (c.box[1] + c.box[3]) / 2 : c.sy }));
+  const ustawCele = () => { (window as unknown as { __tablica: unknown }).__tablica = rys.cele.map((c) => ({ nazwa: c.p.nazwa, rodzaj: c.p.rodzaj, x: c.box ? (c.box[0] + c.box[2]) / 2 : c.sx, y: c.box ? (c.box[1] + c.box[3]) / 2 : c.sy })); };
+  ustawCele();
   const ctx = canvas.getContext('2d')!;
   // The pulse of „you are here” (the game loop sleeps meanwhile).
   const t0 = performance.now();
   const klatka = () => {
     if (otwarta !== root) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(rys.tlo, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(rys.tlo, 0, 0, rys.tlo.width * PIKSEL * dpr, rys.tlo.height * PIKSEL * dpr);
+    ctx.drawImage(rys.nakladka, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const [hx, hy] = rys.naEkran(h.hero.x, h.hero.y);
     const f = ((performance.now() - t0) % 1400) / 1400;
@@ -214,11 +221,10 @@ function deski(c: CanvasRenderingContext2D, W: number, H: number) {
   for (let i = 0; i < n; i++) {
     const y = i * h;
     const t = 0.85 + r() * 0.3;
-    const g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, `rgb(${Math.round(120 * t)},${Math.round(78 * t)},${Math.round(44 * t)})`);
-    g.addColorStop(1, `rgb(${Math.round(98 * t)},${Math.round(62 * t)},${Math.round(34 * t)})`);
-    c.fillStyle = g;
+    c.fillStyle = `rgb(${Math.round(110 * t)},${Math.round(70 * t)},${Math.round(40 * t)})`;
     c.fillRect(0, y, W, h);
+    c.fillStyle = 'rgba(255,220,160,.08)';
+    c.fillRect(0, y + 2, W, 2);
     // Grain.
     for (let k = 0; k < 7; k++) {
       const gy = y + 4 + r() * (h - 8), amp = 1 + r() * 3, faza = r() * 6, dl = 60 + r() * 120;
@@ -267,66 +273,33 @@ function gladko(c: CanvasRenderingContext2D, pts: (readonly [number, number])[],
   c.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
 }
 
-/** A brass plate with a riveted edge (way-out signs, legend). */
-function mosiadz(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+/** A flat brass plate (pixel style: no gradients – a light top edge, a dark bottom edge, ink outline, rivets). */
+function mosiadz(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, nity = true) {
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+  c.fillStyle = 'rgba(0,0,0,.35)';
+  c.fillRect(x + 2, y + 2, w + 2, h + 2);
   c.fillStyle = '#1e1a24';
   c.fillRect(x - 2, y - 2, w + 4, h + 4);
-  const g = c.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, '#f5d98a');
-  g.addColorStop(0.45, '#d9a441');
-  g.addColorStop(1, '#9c6a22');
-  c.fillStyle = g;
+  c.fillStyle = '#d9a441';
   c.fillRect(x, y, w, h);
-  c.strokeStyle = 'rgba(255,243,196,.8)';
-  c.lineWidth = 1;
-  c.strokeRect(x + 2.5, y + 2.5, w - 5, h - 5);
-}
-
-/** A signpost arrow of brass pointing left or right (the way out's side), names engraved on it. */
-function strzalkaMosiezna(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, wPrawo: boolean) {
-  const czub = Math.min(14, h * 0.6);
-  const ksztalt = (o: number) => {
-    c.beginPath();
-    if (wPrawo) {
-      c.moveTo(x - o, y - o); c.lineTo(x + w - czub + o, y - o); c.lineTo(x + w + o, y + h / 2); c.lineTo(x + w - czub + o, y + h + o); c.lineTo(x - o, y + h + o);
-    } else {
-      c.moveTo(x + w + o, y - o); c.lineTo(x + czub - o, y - o); c.lineTo(x - o, y + h / 2); c.lineTo(x + czub - o, y + h + o); c.lineTo(x + w + o, y + h + o);
-    }
-    c.closePath();
-  };
-  c.fillStyle = 'rgba(0,0,0,.35)';
-  c.save(); c.translate(3, 3); ksztalt(2); c.fill(); c.restore();
-  c.fillStyle = '#1e1a24';
-  ksztalt(2); c.fill();
-  const g = c.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, '#f8e09a');
-  g.addColorStop(0.4, '#dcaa48');
-  g.addColorStop(1, '#a06c22');
-  c.fillStyle = g;
-  ksztalt(0); c.fill();
-  c.strokeStyle = 'rgba(255,243,196,.75)';
-  c.lineWidth = 1;
-  ksztalt(-2.5); c.stroke();
-  // Rivets on the flat end.
-  const rx = wPrawo ? x + 5 : x + w - 5;
-  for (const ry of [y + 5, y + h - 5]) {
-    c.fillStyle = '#7a5418'; c.beginPath(); c.arc(rx, ry, 2, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff1bf'; c.beginPath(); c.arc(rx - 0.5, ry - 0.5, 0.8, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#f5d98a';
+  c.fillRect(x, y, w, 2);
+  c.fillStyle = '#9c6a22';
+  c.fillRect(x, y + h - 2, w, 2);
+  if (!nity) return;
+  for (const nx of [x + 4, x + w - 6]) {
+    c.fillStyle = '#7a5418'; c.fillRect(nx, y + h / 2 - 1, 2, 2);
   }
 }
 
-/** A brass medallion with an icon (stations, cannons). */
+/** A flat brass medallion with an icon (stations, cannons). */
 function medalion(c: CanvasRenderingContext2D, x: number, y: number, ikona: string, zloty: boolean) {
   c.fillStyle = '#1e1a24';
   c.beginPath(); c.arc(x, y, 12, 0, Math.PI * 2); c.fill();
-  const g = c.createRadialGradient(x - 3, y - 4, 1, x, y, 11);
-  g.addColorStop(0, zloty ? '#fff1bf' : '#f5e7c8');
-  g.addColorStop(1, zloty ? '#c8962e' : '#b89a6a');
-  c.fillStyle = g;
-  c.beginPath(); c.arc(x, y, 10.5, 0, Math.PI * 2); c.fill();
-  c.strokeStyle = '#7a5418';
-  c.lineWidth = 1;
-  c.beginPath(); c.arc(x, y, 8.5, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = zloty ? '#d9a441' : '#e8d6a8';
+  c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.fill();
+  c.fillStyle = zloty ? '#f5d98a' : '#fff4d8';
+  c.fillRect(x - 6, y - 9, 8, 2);
   c.font = '12px sans-serif';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
@@ -334,7 +307,51 @@ function medalion(c: CanvasRenderingContext2D, x: number, y: number, ikona: stri
   c.fillText(ikona, x, y + 1);
 }
 
+/** A wobbly blob round an ellipse (lakes are burnt-in stains, not compass-drawn ovals), always the same per lake. */
+function plama(x: number, y: number, a: number, b: number, k: number): (readonly [number, number])[] {
+  const r = los(Math.round(x * 7 + y * 13));
+  const n = 14;
+  const out: (readonly [number, number])[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2, f = 0.78 + r() * 0.34;
+    const ex = Math.cos(t) * a * f, ey = Math.sin(t) * b * f;
+    out.push([x + ex * Math.cos(k) - ey * Math.sin(k), y + ex * Math.sin(k) + ey * Math.cos(k)] as const);
+  }
+  return out;
+}
+
+/** Water burnt into the plank: a darker stain with a charred rim and little wave marks. */
+function wodaWpalona(c: CanvasRenderingContext2D, pts: (readonly [number, number])[], seed: number) {
+  c.fillStyle = 'rgba(28,44,52,.55)';
+  gladko(c, pts, true); c.fill();
+  c.strokeStyle = 'rgba(20,10,4,.9)'; c.lineWidth = 2.5;
+  gladko(c, pts, true); c.stroke();
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const r = los(seed);
+  const ile = Math.min(40, Math.round(((x1 - x0) * (y1 - y0)) / 500));
+  const poly = [pts.flatMap((p) => [p[0], p[1]])];
+  c.strokeStyle = 'rgba(120,170,190,.55)'; c.lineWidth = 1.2;
+  for (let i = 0; i < ile; i++) {
+    const wx = x0 + r() * (x1 - x0), wy = y0 + r() * (y1 - y0);
+    if (!wewnatrz(poly, wx, wy) || !wewnatrz(poly, wx + 8, wy)) continue;
+    c.beginPath(); c.moveTo(wx, wy); c.quadraticCurveTo(wx + 2, wy - 2, wx + 4, wy); c.quadraticCurveTo(wx + 6, wy + 2, wx + 8, wy); c.stroke();
+  }
+}
+
+/** Even-odd point-in-polygon on flat rings. */
+function wewnatrz(rings: number[][], x: number, y: number) {
+  let w = false;
+  for (const r of rings)
+    for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2)
+      if (r[i + 1] > y !== r[j + 1] > y && x < ((r[j] - r[i]) * (y - r[i + 1])) / (r[j + 1] - r[i + 1]) + r[i]) w = !w;
+  return w;
+}
+
 /** The still part of the board (drawn once) and where its dots and signs landed. */
+/** CSS px per board pixel. */
+const PIKSEL = 2;
+
 function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   const P = h.plan;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -347,11 +364,14 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   const ox = (W - (x1 - x0) * s) / 2 - x0 * s, oy = (H - (y1 - y0) * s) / 2 - y0 * s;
   const naEkran = (x: number, y: number) => [x * s + ox, y * s + oy] as const;
   const punkty = (r: number[]) => { const out: (readonly [number, number])[] = []; for (let i = 0; i + 1 < r.length; i += 2) out.push(naEkran(r[i], r[i + 1])); return out; };
+  // A little pixelated, like the rest of the game (owner, 2 Nov 2026): drawn at PIKSEL CSS px per pixel, shown
+  // enlarged without smoothing.
   const tlo = document.createElement('canvas');
-  tlo.width = Math.floor(W * dpr);
-  tlo.height = Math.floor(H * dpr);
+  tlo.width = Math.ceil(W / PIKSEL);
+  tlo.height = Math.ceil(H / PIKSEL);
   const c = tlo.getContext('2d')!;
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.setTransform(1 / PIKSEL, 0, 0, 1 / PIKSEL, 0, 0);
+  c.imageSmoothingEnabled = false;
   deski(c, W, H);
   c.lineCap = 'round';
   c.lineJoin = 'round';
@@ -369,27 +389,13 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
     c.strokeStyle = 'rgba(214,160,92,.35)'; c.lineWidth = 1;
     c.save(); c.translate(1.5, 1.5); gladko(c, pts, true); c.stroke(); c.restore();
   }
-  // The sea (coastal towns): a big blue enamel patch, edges carved round.
-  for (const r of P.morza ?? []) {
-    const pts = punkty(r);
-    c.fillStyle = '#2f6a92';
-    gladko(c, pts, true); c.fill();
-    c.strokeStyle = '#1e1a24'; c.lineWidth = 2.5;
-    gladko(c, pts, true); c.stroke();
-  }
-  // Lakes: blue enamel patches inlaid in the wood.
-  for (const [x, y, a, b, k] of P.jeziora) {
+  // The sea, lakes and rivers: burnt into the plank like on an old map.
+  (P.morza ?? []).forEach((r, i) => wodaWpalona(c, punkty(r), 900 + i));
+  P.jeziora.forEach(([x, y, a, b, k], i) => {
     const [sx, sy] = naEkran(x, y);
-    const ra = Math.max(6, a * s), rb = Math.max(4, b * s);
-    c.fillStyle = '#1e1a24';
-    c.beginPath(); c.ellipse(sx, sy, ra + 2.5, rb + 2.5, k, 0, Math.PI * 2); c.fill();
-    const g = c.createRadialGradient(sx - ra * 0.3, sy - rb * 0.4, 1, sx, sy, Math.max(ra, rb));
-    g.addColorStop(0, '#8cc4de'); g.addColorStop(1, '#2f6a92');
-    c.fillStyle = g;
-    c.beginPath(); c.ellipse(sx, sy, ra, rb, k, 0, Math.PI * 2); c.fill();
-  }
-  // Rivers: an enamel ribbon in a groove.
-  for (const r of P.rzeki) { const pts = punkty(r); c.strokeStyle = '#1e1a24'; c.lineWidth = 5; gladko(c, pts); c.stroke(); c.strokeStyle = '#4f93bd'; c.lineWidth = 3; gladko(c, pts); c.stroke(); }
+    wodaWpalona(c, plama(sx, sy, Math.max(7, a * s), Math.max(5, b * s), k), 300 + i);
+  });
+  for (const r of P.rzeki) { const pts = punkty(r); c.strokeStyle = 'rgba(20,10,4,.85)'; c.lineWidth = 4.5; gladko(c, pts); c.stroke(); c.strokeStyle = 'rgba(70,110,128,.9)'; c.lineWidth = 2; gladko(c, pts); c.stroke(); }
   // Railways: a brass rail with sleepers.
   for (const t of P.tory) { const pts = punkty(t); c.strokeStyle = '#2a1608'; c.lineWidth = 4; gladko(c, pts); c.stroke(); }
   c.setLineDash([3, 4]);
@@ -399,10 +405,18 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   for (const d of P.drogi) { const pts = punkty(d); c.strokeStyle = 'rgba(20,10,4,.9)'; c.lineWidth = 5; gladko(c, pts); c.stroke(); }
   for (const d of P.drogi) { const pts = punkty(d); c.save(); c.translate(1, 1.2); c.strokeStyle = 'rgba(222,170,100,.45)'; c.lineWidth = 1.2; gladko(c, pts); c.stroke(); c.restore(); }
 
+  // Signs, dots and labels go on a sharp layer over the pixelated map (small pixel text turned to mush there).
+  const nakladka = document.createElement('canvas');
+  nakladka.width = Math.floor(W * dpr);
+  nakladka.height = Math.floor(H * dpr);
+  const n = nakladka.getContext('2d')!;
+  n.setTransform(dpr, 0, 0, dpr, 0, 0);
+  n.lineCap = 'round';
+  n.lineJoin = 'round';
   const cele: { p: PunktTablicy; sx: number; sy: number; box?: [number, number, number, number] }[] = [];
   // Low screens (phones sideways): smaller plates.
   const f = H < 420 ? 0.82 : 1;
-  const duza = `700 ${Math.round(14 * f)}px 'Playfair Display', 'Alegreya Sans', serif`, mala = `600 ${Math.round(13 * f)}px 'Alegreya Sans', sans-serif`;
+  const duza = `700 ${Math.round(16 * f)}px 'Pixelify Sans', sans-serif`, mala = `500 ${Math.round(14 * f)}px 'Pixelify Sans', sans-serif`;
   const wiersz = 17 * f;
   // Dots on the board (the city and a little around it): the plates keep clear of them.
   const kropki: { p: PunktTablicy; sx: number; sy: number }[] = [];
@@ -413,30 +427,19 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
     kropki.push({ p, sx, sy });
   }
   const przeszkody = [...kropki.map((k) => [k.sx - 13, k.sy - 13, k.sx + 13, k.sy + 13]), [hx - 36, hy - 26, hx + 36, hy + 10]];
-  // Ways out: a small gold arrow at the city's edge and a brass signpost arrow with the big city over the town.
-  const tabliczki: { x: number; y: number; w: number; h: number; ax: number; ay: number; linie: string[]; w0: (typeof P.wyloty)[number]; prawo: boolean }[] = [];
+  // Ways out: a rivet where the road leaves town and a plain brass info plate (the big city over the town).
+  const tabliczki: { x: number; y: number; w: number; h: number; ax: number; ay: number; linie: string[]; w0: (typeof P.wyloty)[number] }[] = [];
   for (const w of P.wyloty) {
     const [ex, ey] = naEkran(w[0], w[1]);
     const dx = Math.cos(w[2]), dy = Math.sin(w[2]);
-    const ax = ex + dx * 14, ay = ey + dy * 14;
-    c.fillStyle = '#f5d98a';
-    c.strokeStyle = '#1e1a24';
-    c.lineWidth = 2;
-    c.beginPath();
-    c.moveTo(ax + dx * 9, ay + dy * 9);
-    c.lineTo(ax - dy * 6 - dx * 4, ay + dx * 6 - dy * 4);
-    c.lineTo(ax + dy * 6 - dx * 4, ay - dx * 6 - dy * 4);
-    c.closePath();
-    c.fill();
-    c.stroke();
+    const ax = ex + dx * 6, ay = ey + dy * 6;
     const linie: string[] = [];
     if (w[5]) linie.push(nazwa(w[5], w[6]));
     if (w[3]) linie.push(nazwa(w[3], w[4]));
-    c.font = duza;
-    const tw = Math.max(...linie.map((l, i) => { c.font = i === 0 && w[5] ? duza : mala; return c.measureText(l).width; })) + 30;
+    const tw = Math.max(...linie.map((l, i) => { n.font = i === 0 && w[5] ? duza : mala; return n.measureText(l).width; })) + 22;
     const th = linie.length * wiersz + 8;
-    const cx = ax + dx * (14 + tw / 2 * Math.abs(dx)), cy = ay + dy * (12 + th / 2 * Math.abs(dy));
-    tabliczki.push({ x: cx - tw / 2, y: cy - th / 2, w: tw, h: th, ax, ay, linie, w0: w, prawo: dx >= 0 });
+    const cx = ax + dx * (26 + tw / 2 * Math.abs(dx)), cy = ay + dy * (22 + th / 2 * Math.abs(dy));
+    tabliczki.push({ x: cx - tw / 2, y: cy - th / 2, w: tw, h: th, ax, ay, linie, w0: w });
   }
   // Plates don't overlap each other or the dots, and stay on the board.
   for (let it = 0; it < 30; it++) {
@@ -463,26 +466,22 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
       }
   }
   for (const t of tabliczki) {
-    // A thin brass wire from the arrow to its sign when they were pushed apart.
+    // A brass wire from where the road leaves town to its plate.
     const px = Math.max(t.x, Math.min(t.x + t.w, t.ax)), py = Math.max(t.y, Math.min(t.y + t.h, t.ay));
-    if (Math.hypot(px - t.ax, py - t.ay) > 14) {
-      c.strokeStyle = '#1e1a24'; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(t.ax, t.ay); c.lineTo(px, py); c.stroke();
-      c.strokeStyle = '#d9a441'; c.lineWidth = 1.4;
-      c.beginPath(); c.moveTo(t.ax, t.ay); c.lineTo(px, py); c.stroke();
-    }
-    strzalkaMosiezna(c, t.x, t.y, t.w, t.h, t.prawo);
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    const srodekX = t.x + t.w / 2 + (t.prawo ? -4 : 4);
+    n.strokeStyle = '#1e1a24'; n.lineWidth = 3.5;
+    n.beginPath(); n.moveTo(t.ax, t.ay); n.lineTo(px, py); n.stroke();
+    n.strokeStyle = '#d9a441'; n.lineWidth = 1.6;
+    n.beginPath(); n.moveTo(t.ax, t.ay); n.lineTo(px, py); n.stroke();
+    n.fillStyle = '#1e1a24'; n.fillRect(Math.round(t.ax) - 4, Math.round(t.ay) - 4, 8, 8);
+    n.fillStyle = '#f5d98a'; n.fillRect(Math.round(t.ax) - 2, Math.round(t.ay) - 2, 4, 4);
+    mosiadz(n, t.x, t.y, t.w, t.h);
+    n.textAlign = 'center';
+    n.textBaseline = 'middle';
     t.linie.forEach((l, i) => {
-      c.font = i === 0 && t.w0[5] ? duza : mala;
+      n.font = i === 0 && t.w0[5] ? duza : mala;
       const ty = t.y + 4 + wiersz / 2 + i * wiersz;
-      // Engraved: a light line under the dark letters.
-      c.fillStyle = 'rgba(255,240,190,.75)';
-      c.fillText(l, srodekX, ty + 1);
-      c.fillStyle = '#3a2210';
-      c.fillText(l, srodekX, ty);
+      n.fillStyle = '#3a2210';
+      n.fillText(l, t.x + t.w / 2, ty);
     });
     const w = t.w0;
     const imiona = [w[5] && nazwa(w[5], w[6]), w[3] && nazwa(w[3], w[4])].filter(Boolean).join(', ');
@@ -490,35 +489,35 @@ function rysujPlan(h: TablicaHost, W: number, H: number, dpr: number) {
   }
   // Stations and cannons (the pinball „metro”).
   for (const { p, sx, sy } of kropki) {
-    medalion(c, sx, sy, p.rodzaj === 'ty' ? '' : IKONA_HUBA[p.rodzaj], p.rodzaj === 'armata');
+    medalion(n, sx, sy, p.rodzaj === 'ty' ? '' : IKONA_HUBA[p.rodzaj], p.rodzaj === 'armata');
     cele.push({ p, sx, sy });
   }
   // You are here: a red enamel pin.
-  c.fillStyle = '#1e1a24';
-  c.beginPath(); c.arc(hx, hy, 8, 0, Math.PI * 2); c.fill();
-  const pin = c.createRadialGradient(hx - 2, hy - 2, 1, hx, hy, 7);
-  pin.addColorStop(0, '#ff8a80'); pin.addColorStop(1, '#a8141e');
-  c.fillStyle = pin;
-  c.beginPath(); c.arc(hx, hy, 6.5, 0, Math.PI * 2); c.fill();
+  n.fillStyle = '#1e1a24';
+  n.beginPath(); n.arc(hx, hy, 8, 0, Math.PI * 2); n.fill();
+  n.fillStyle = '#c4202c';
+  n.beginPath(); n.arc(hx, hy, 6.5, 0, Math.PI * 2); n.fill();
+  n.fillStyle = '#ff8a80';
+  n.fillRect(hx - 3, hy - 4, 3, 2);
   const tu = tx('Tu jesteś', 'You are here');
-  c.font = "700 14px 'Alegreya Sans', sans-serif";
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  const tw = c.measureText(tu).width + 14;
-  mosiadz(c, hx - tw / 2, hy - 30, tw, 18);
-  c.fillStyle = '#7a1018';
-  c.fillText(tu, hx, hy - 21);
+  n.font = "700 15px 'Pixelify Sans', sans-serif";
+  n.textAlign = 'center';
+  n.textBaseline = 'middle';
+  const tw = n.measureText(tu).width + 14;
+  mosiadz(n, hx - tw / 2, hy - 31, tw, 18, false);
+  n.fillStyle = '#7a1018';
+  n.fillText(tu, hx, hy - 21);
   cele.push({ p: { nazwa: tu, x: h.hero.x, y: h.hero.y, rodzaj: 'ty' }, sx: hx, sy: hy });
   // Legend on a brass strip.
   const legenda = [`${IKONA_HUBA.kolej} ${tx('dworzec', 'station')}`];
   if (h.punkty.some((p) => p.rodzaj === 'armata')) legenda.push(`${IKONA_HUBA.armata} ${tx('metro armatnie', 'cannon metro')}`);
   legenda.push(tx('stuknij znak', 'tap a sign'));
-  c.font = "600 13px 'Alegreya Sans', sans-serif";
-  c.textAlign = 'left';
+  n.font = "500 14px 'Pixelify Sans', sans-serif";
+  n.textAlign = 'left';
   const lt = legenda.join('   ·   ');
-  const lw = c.measureText(lt).width + 18;
-  mosiadz(c, 8, H - 30, lw, 22);
-  c.fillStyle = '#3a2210';
-  c.fillText(lt, 17, H - 19);
-  return { tlo, naEkran, cele };
+  const lw = n.measureText(lt).width + 18;
+  mosiadz(n, 8, H - 30, lw, 22, false);
+  n.fillStyle = '#3a2210';
+  n.fillText(lt, 17, H - 19);
+  return { tlo, nakladka, naEkran, cele };
 }

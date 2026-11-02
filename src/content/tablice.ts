@@ -23,6 +23,9 @@ export const TABLICE_SWIAT = {
   jedenWylotM: 2_000,
   kat: 35,
   blisko: { minKm: 12, maxKm: 75, minLudzi: 1_500, maxLudzi: 70_000, srodekKm: 30 },
+  /** A big city is hidden behind another big one this much nearer (share of the distance) within this angle (owner:
+   *  from Kraków no sign to Lublin – Rzeszów/Kielce come first). */
+  oslona: { blizej: 0.7, kat: 30 },
   daleko: { minKm: 45, maxKm: 450, minLudzi: 100_000, zapasLudzi: 40_000, zapasKm: 200 },
   /** Lakes smaller than this (m across) aren't drawn. */
   jezioroMinM: 500,

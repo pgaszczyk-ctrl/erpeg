@@ -181,12 +181,16 @@ export async function planMiasta(city: CityMap, m: MiastoTablic): Promise<{ plan
 
   // ---- names: a town on the way (zoom 8) and the big city the road leads to (zoom 6), of this country
   const kraj = krajWPunkcie(m.lat, m.lon);
-  const [bliskie, dalekie] = await Promise.all([miejsca(8, m, T.blisko.maxKm * 1000), miejsca(6, m, T.daleko.maxKm * 1000)]);
+  const [bliskie, dalekieM] = await Promise.all([miejsca(8, m, T.blisko.maxKm * 1000), miejsca(6, m, T.daleko.maxKm * 1000)]);
   const swoje = (l: Miejsce[]) => l.filter((q) => metry(m, q) > m.r && (!kraj || krajWPunkcie(q.lat, q.lon) === kraj));
   const km = (q: Miejsce) => metry(m, q) / 1000;
   const blisko = swoje(bliskie).filter((q) => q.ludzi >= T.blisko.minLudzi && q.ludzi <= T.blisko.maxLudzi && km(q) >= T.blisko.minKm && km(q) <= T.blisko.maxKm);
-  const duze = swoje([...dalekie, ...bliskie]);
-  const daleko = duze.filter((q) => q.ludzi >= T.daleko.minLudzi && km(q) >= T.daleko.minKm && km(q) <= T.daleko.maxKm);
+  // The same city comes in both zoom levels: keep it once.
+  const duze = [...new Map(swoje([...dalekieM, ...bliskie]).map((q) => [`${q.en}:${Math.round(q.lat * 10)}:${Math.round(q.lon * 10)}`, q] as const)).values()];
+  // The first big city that way: one with another big city much nearer in nearly the same direction is hidden.
+  const wielkie = duze.filter((q) => q.ludzi >= T.daleko.minLudzi);
+  const zaslonieta = (q: Miejsce) => wielkie.some((o) => o !== q && km(o) < km(q) * T.oslona.blizej && roznica(namiar(m, o), namiar(m, q)) < T.oslona.kat);
+  const daleko = wielkie.filter((q) => km(q) >= T.daleko.minKm && km(q) <= T.daleko.maxKm && !zaslonieta(q));
   const zapas = duze.filter((q) => q.ludzi >= T.daleko.zapasLudzi && km(q) >= T.daleko.minKm && km(q) <= T.daleko.zapasKm);
   const uzyte = new Map<string, number>();
   const wybierz = (kier: number, lista: Miejsce[], ocena: (q: Miejsce, d: number, a: number) => number) => {
@@ -202,13 +206,29 @@ export async function planMiasta(city: CityMap, m: MiastoTablic): Promise<{ plan
   };
   const plWylot: PlanMiasta['wyloty'] = [];
   const zWylotami: typeof krzyz = [];
-  for (const wy of wyloty) {
+  const kierunki = wyloty.map((wy) => {
     const ll = city.toLatLon(wy.x, wy.y);
     const dalej = city.toLatLon(wy.x + wy.dx * 3000 * M, wy.y + wy.dy * 3000 * M);
     const r = Math.PI / 180, a1 = namiar(m, ll), a2 = namiar(ll, dalej);
-    const kier = (Math.atan2(0.6 * Math.sin(a1 * r) + 0.4 * Math.sin(a2 * r), 0.6 * Math.cos(a1 * r) + 0.4 * Math.cos(a2 * r)) / r + 360) % 360;
-    const far = wybierz(kier, daleko, (q, d, a) => (a / T.kat) ** 2 + d / 400 - 0.3 * Math.log10(q.ludzi / 1e5))
-      ?? wybierz(kier, zapas, (q, d, a) => (a / T.kat) ** 2 + d / 200 - 0.3 * Math.log10(q.ludzi / 4e4));
+    return (Math.atan2(0.6 * Math.sin(a1 * r) + 0.4 * Math.sin(a2 * r), 0.6 * Math.cos(a1 * r) + 0.4 * Math.cos(a2 * r)) / r + 360) % 360;
+  });
+  // Each big city on one sign only: the way out that points at it best gets it (pairs taken best first); the
+  // smaller fallback cities only for ways out that got no big one.
+  const dalekie = new Map<number, Miejsce>();
+  const zajete = new Set<Miejsce>();
+  const przydziel = (lista: Miejsce[], ocena: (q: Miejsce, d: number, a: number) => number) => {
+    const pary: { w: number; q: Miejsce; o: number }[] = [];
+    kierunki.forEach((kier, w) => {
+      if (dalekie.has(w)) return;
+      for (const q of lista) { const a = roznica(namiar(m, q), kier); if (a <= T.kat && !zajete.has(q)) pary.push({ w, q, o: ocena(q, km(q), a) }); }
+    });
+    for (const pr of pary.sort((a, b) => a.o - b.o)) if (!dalekie.has(pr.w) && !zajete.has(pr.q)) { dalekie.set(pr.w, pr.q); zajete.add(pr.q); }
+  };
+  przydziel(daleko, (q, d, a) => 2 * (a / T.kat) ** 2 + d / 200 - 0.25 * Math.log10(q.ludzi / 1e5));
+  przydziel(zapas, (q, d, a) => (a / T.kat) ** 2 + d / 200 - 0.3 * Math.log10(q.ludzi / 4e4));
+  for (const [w, wy] of wyloty.entries()) {
+    const kier = kierunki[w];
+    const far = dalekie.get(w) ?? null;
     const near = wybierz(kier, blisko.filter((q) => q !== far && (!far || km(q) < km(far) * 0.8)),
       (q, d, a) => 1.2 * (a / T.kat) ** 2 + Math.abs(d - T.blisko.srodekKm) / 60 - 0.15 * Math.log10(q.ludzi / 1500));
     if (!far && !near) continue;

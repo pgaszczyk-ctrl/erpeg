@@ -21,6 +21,8 @@ const NA_GRANICY_M = 250;
 /** Names: a town on the way (km from the city centre, people) and the big city the road leads to. */
 const BLISKO = { minKm: 12, maxKm: 75, minLudzi: 1500, maxLudzi: 70_000, srodekKm: 30 };
 const DALEKO = { minKm: 45, maxKm: 450, minLudzi: 100_000, zapas: { minLudzi: 40_000, maxKm: 200 } };
+/** A big city is hidden behind another big one this much nearer (share of the distance) within this angle. */
+const OSLONA = { blizej: 0.7, kat: 30 };
 /** How far off the road's direction a town may lie (degrees). */
 const KAT = 35;
 /** Boards: the board by a way out stands this far inside the city; boards closer than ODSTEP_M are merged. */
@@ -231,7 +233,12 @@ export function tablice(city, centre, opts) {
     return best;
   };
   const blisko = swoje.filter((m) => m.ludzi >= BLISKO.minLudzi && m.ludzi <= BLISKO.maxLudzi && km(centre, m) >= BLISKO.minKm && km(centre, m) <= BLISKO.maxKm);
-  const daleko = swoje.filter((m) => m.ludzi >= DALEKO.minLudzi && km(centre, m) >= DALEKO.minKm && km(centre, m) <= DALEKO.maxKm);
+  // The big city a road leads to is the first one that way (owner, 2 Nov 2026: „z Krakowa nie ma być drogowskazu
+  // do Lublina, wcześniej jest Rzeszów”): a city with another big one much nearer in nearly the same direction is
+  // hidden behind it.
+  const duze = swoje.filter((m) => m.ludzi >= DALEKO.minLudzi);
+  const zaslonieta = (m) => duze.some((o) => o !== m && km(centre, o) < km(centre, m) * OSLONA.blizej && roznica(namiar(centre, o), namiar(centre, m)) < OSLONA.kat);
+  const daleko = duze.filter((m) => km(centre, m) >= DALEKO.minKm && km(centre, m) <= DALEKO.maxKm && !zaslonieta(m));
   const zapasowe = swoje.filter((m) => m.ludzi >= DALEKO.zapas.minLudzi && km(centre, m) >= DALEKO.minKm && km(centre, m) <= DALEKO.zapas.maxKm);
   const plWylot = [];
   // Ways out sorted round the clock, so neighbouring roads share out the names fairly.
@@ -245,9 +252,21 @@ export function tablice(city, centre, opts) {
     w.kierunek = (Math.atan2(0.6 * Math.sin(naRadzie * r) + 0.4 * Math.sin(naDrodze * r), 0.6 * Math.cos(naRadzie * r) + 0.4 * Math.cos(naDrodze * r)) / r + 360) % 360;
   }
   wyloty.sort((a, b) => a.kierunek - b.kierunek);
+  // Each big city on one sign only: the way out that points at it best gets it (pairs taken best first); the
+  // smaller fallback cities only for ways out that got no big one.
+  const zajete = new Set();
+  const przydziel = (lista, ocena) => {
+    const pary = [];
+    for (const w of wyloty) {
+      if (w.far) continue;
+      for (const m of lista) { const a = roznica(namiar(centre, m), w.kierunek); if (a <= KAT && !zajete.has(m)) pary.push({ w, m, o: ocena(m, km(centre, m), a) }); }
+    }
+    for (const pr of pary.sort((a, b) => a.o - b.o)) if (!pr.w.far && !zajete.has(pr.m)) { pr.w.far = pr.m; zajete.add(pr.m); }
+  };
+  przydziel(daleko, (m, d, a) => 2 * (a / KAT) ** 2 + d / 200 - 0.25 * Math.log10(m.ludzi / 1e5));
+  przydziel(zapasowe, (m, d, a) => (a / KAT) ** 2 + d / 200 - 0.3 * Math.log10(m.ludzi / 4e4));
   for (const w of wyloty) {
-    const far = wybierz(w.kierunek, daleko, (m, d, a) => (a / KAT) ** 2 + d / 400 - 0.3 * Math.log10(m.ludzi / 1e5))
-      ?? wybierz(w.kierunek, zapasowe, (m, d, a) => (a / KAT) ** 2 + d / 200 - 0.3 * Math.log10(m.ludzi / 4e4));
+    const far = w.far ?? null;
     const near = wybierz(w.kierunek, blisko.filter((m) => m !== far && (!far || km(centre, m) < km(centre, far) * 0.8)),
       (m, d, a) => 1.2 * (a / KAT) ** 2 + Math.abs(d - BLISKO.srodekKm) / 60 - 0.15 * Math.log10(m.ludzi / 1500));
     if (!far && !near) continue;
