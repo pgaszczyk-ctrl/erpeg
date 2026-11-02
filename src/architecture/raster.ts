@@ -3,7 +3,7 @@ import { PALETTE } from './catalog';
 import { BUILDING_VERTEX, BUILDING_FRAGMENT, OUTLINE_VERTEX, OUTLINE_FRAGMENT } from './shaders';
 import type { BuildingMesh } from './types';
 
-export interface Raster { pixels: Uint8ClampedArray; width: number; height: number; x: number; y: number; projection: number; backend: string }
+export interface Raster { pixels: Uint8ClampedArray; depth: Float32Array; width: number; height: number; x: number; y: number; projection: number; backend: string }
 function bounds(mesh:BuildingMesh,projection:number,density:number){
   let x=Infinity,y=Infinity,x1=-Infinity,y1=-Infinity,minDepth=Infinity,maxDepth=-Infinity;
   for(let i=0;i<mesh.positions.length;i+=3){
@@ -69,9 +69,16 @@ export class BuildingRasterizer {
     this.renderer.setRenderTarget(this.ids);this.renderer.clear();this.renderer.render(this.scene,this.camera);
     this.renderer.setRenderTarget(this.output);this.renderer.clear();this.renderer.render(this.postScene,this.camera);
     const raw=new Uint8Array(b.width*b.height*4);this.renderer.readRenderTargetPixels(this.output,0,0,b.width,b.height,raw);
-    const pixels=new Uint8ClampedArray(raw.length);
-    for(let y=0;y<b.height;y++)pixels.set(raw.subarray((b.height-1-y)*b.width*4,(b.height-y)*b.width*4),y*b.width*4);
-    return {pixels,width:b.width,height:b.height,x:b.x,y:b.y,projection,backend:'WebGL2 / toon + ID/depth'};
+    const packed=new Uint8Array(raw.length);this.renderer.readRenderTargetPixels(this.ids,0,0,b.width,b.height,packed);
+    const pixels=new Uint8ClampedArray(raw.length),depth=new Float32Array(b.width*b.height).fill(-Infinity);
+    for(let y=0;y<b.height;y++){
+      pixels.set(raw.subarray((b.height-1-y)*b.width*4,(b.height-y)*b.width*4),y*b.width*4);
+      for(let x=0;x<b.width;x++){
+        const src=((b.height-1-y)*b.width+x)*4,dst=y*b.width+x;
+        if(packed[src+3])depth[dst]=b.minDepth-1+(packed[src+1]*256+packed[src+2])/65535*(b.maxDepth-b.minDepth+2);
+      }
+    }
+    return {pixels,depth,width:b.width,height:b.height,x:b.x,y:b.y,projection,backend:'WebGL2 / toon + ID/depth'};
   }
   dispose(){this.geometry.dispose();this.material.dispose();this.post.dispose();this.color.dispose();this.ids.dispose();this.output.dispose();this.renderer.dispose();}
 }
@@ -113,5 +120,5 @@ export function softwareRaster(mesh:BuildingMesh,density:number,projection:numbe
   if(outline){const copy=pixels.slice();for(let y=1;y<b.height-1;y++)for(let x=1;x<b.width-1;x++){
     const k=y*b.width+x;if(copy[k*4+3]&&[k-1,k+1,k-b.width,k+b.width].some(q=>!copy[q*4+3]&&depth[q]<depth[k]))pixels.set([...palette[0],255],k*4);
   }}
-  return {pixels,width:b.width,height:b.height,x:b.x,y:b.y,projection,backend:'software / toon + ID/depth'};
+  return {pixels,depth,width:b.width,height:b.height,x:b.x,y:b.y,projection,backend:'software / toon + ID/depth'};
 }

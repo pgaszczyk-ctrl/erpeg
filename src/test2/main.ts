@@ -222,7 +222,7 @@ class LabScene extends Phaser.Scene {
     }
     this.cameras.main.preRender();
     this.mapView.update(this.cameras.main);
-    this.architecture?.update(this.cameras.main,now);
+    this.architecture?.update(this.cameras.main,now,p);
     this.mapView.updateTrees(now, dt, this.cameras.main, [{ x: p.x, y: p.y }]);
     for (const station of this.city.places) {
       if (station.kind !== 'station' || this.shownStations.has(station.id) || Math.hypot(station.door.x - p.x, station.door.y - p.y) > this.radius()) continue;
@@ -240,7 +240,7 @@ class LabScene extends Phaser.Scene {
       const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
       const mib = r ? (r.chunkRgbaBytes + r.buildingRgbaBytes) / 1048576 : 0;
       const a=m.architecture;
-      $('metrics').innerHTML = `<div><strong>${m.fps.toFixed(0)} FPS</strong><small>Ostatnie klatki spaceru</small></div><div><strong>${m.frameP95.toFixed(0)} ms</strong><small>Czas klatki · 95 percentyl</small></div><div><strong>${median(r?.computeMs ?? []).toFixed(0)} ms</strong><small>Rysowanie fragmentu · mediana</small></div><div><strong>${median(r?.readyMs ?? [])} ms</strong><small>Fragment · z oczekiwaniem w kolejce</small></div><div><strong>${mib.toFixed(1)} MiB</strong><small>Piksele podłoża i wysokich budynków</small></div><div><strong>${r?.allocatedChunks ?? 0} / ${r?.maxChunks ?? 0}</strong><small>Obrazy fragmentów w pamięci</small></div><div><strong>${m.loaded?.buildings ?? 0}</strong><small>Wczytane obrysy budynków</small></div><div><strong>${(m.distanceM).toFixed(0)} m</strong><small>Przebyta droga</small></div>${a?`<div><strong>${a.visible} / ${a.buildings}</strong><small>Nowe budynki · widoczne / zaplanowane</small></div><div><strong>${a.workerMs.toFixed(0)} ms</strong><small>Planowanie w workerze</small></div><div><strong>${(a.textureBytes/1048576).toFixed(1)} MiB</strong><small>Tekstury nowej architektury</small></div><div><strong>${a.idFallbacks}</strong><small>Identyfikatory zastępcze</small></div>`:''}`;
+      $('metrics').innerHTML = `<div><strong>${m.fps.toFixed(0)} FPS</strong><small>Ostatnie klatki spaceru</small></div><div><strong>${m.frameP95.toFixed(0)} ms</strong><small>Czas klatki · 95 percentyl</small></div><div><strong>${median(r?.computeMs ?? []).toFixed(0)} ms</strong><small>Rysowanie fragmentu · mediana</small></div><div><strong>${median(r?.readyMs ?? [])} ms</strong><small>Fragment · z oczekiwaniem w kolejce</small></div><div><strong>${mib.toFixed(1)} MiB</strong><small>Piksele podłoża i wysokich budynków</small></div><div><strong>${r?.allocatedChunks ?? 0} / ${r?.maxChunks ?? 0}</strong><small>Obrazy fragmentów w pamięci</small></div><div><strong>${m.loaded?.buildings ?? 0}</strong><small>Wczytane obrysy budynków</small></div><div><strong>${(m.distanceM).toFixed(0)} m</strong><small>Przebyta droga</small></div>${a?`<div><strong>${a.visible} / ${a.buildings}</strong><small>Nowe budynki · widoczne / zaplanowane</small></div><div><strong>${a.workerMs.toFixed(0)} ms</strong><small>Planowanie w workerze</small></div><div><strong>${(a.textureBytes/1048576).toFixed(1)} MiB</strong><small>Obrazy i bufory budynków</small></div><div><strong>${a.idFallbacks}</strong><small>Identyfikatory zastępcze</small></div>`:''}`;
     }
   }
 }

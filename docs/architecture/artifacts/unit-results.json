@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T08:01:00.704Z",
+  "generatedAt": "2026-11-02T11:31:54.396Z",
   "tests": [
     {
       "name": "7 styles + 4 regional profiles; all material indices in master palette",
@@ -259,6 +259,22 @@
       ]
     },
     {
+      "name": "neighbour roof occlusion matches a merged 3D scene, including an L-shaped tall house",
+      "result": "PASS",
+      "details": {
+        "compared": 11480,
+        "conflictingPixels": 11480
+      }
+    },
+    {
+      "name": "three almost coplanar neighbours retain exactly one nearest surface",
+      "result": "PASS"
+    },
+    {
+      "name": "hero cut-away has binary alpha and leaves the composed surface intact for restoration",
+      "result": "PASS"
+    },
+    {
       "name": "architecture-free ground, tree positions and pipes stay byte-identical",
       "result": "PASS",
       "details": {
@@ -295,7 +311,7 @@
             68,
             135
           ],
-          "milliseconds": 659.2055410000003
+          "milliseconds": 619.8381989999998
         },
         {
           "name": "apartments",
@@ -320,7 +336,7 @@
             45,
             90
           ],
-          "milliseconds": 235.80215399999997
+          "milliseconds": 265.64222100000006
         },
         {
           "name": "homes",
@@ -345,7 +361,7 @@
             90,
             -22
           ],
-          "milliseconds": 506.1032559999994
+          "milliseconds": 547.802455
         },
         {
           "name": "industrial",
@@ -370,7 +386,7 @@
             68,
             -22
           ],
-          "milliseconds": 549.0781459999998
+          "milliseconds": 554.1048330000003
         }
       ]
     }
