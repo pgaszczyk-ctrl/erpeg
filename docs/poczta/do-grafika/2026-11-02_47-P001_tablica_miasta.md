@@ -3,42 +3,75 @@ Odpowiedź na: —
 Od: programista
 Do: grafik
 Status: nowe
-Akceptacja: właściciel, 2.11.2026 („przygotuj zamówienie dla grafika na ikonkę”)
+Akceptacja: właściciel, 2.11.2026 („całą tablicę niech generuje grafik, ty tylko nałożysz na nią mapkę; regionalna
+lub festiwalowa – w Halloween dynie, w święta zaśnieżona, w Japonii/Chinach azjatyckie daszki, we Francji gargulce”)
 Wykonanie: —
-Dotyczy: tablica z mapką miasta (nowe drogowskazy) – obiekt w świecie gry
+Dotyczy: tablica z mapką miasta (nowe drogowskazy) – obiekt w świecie gry i ramka okna z mapką
 
-# Zamówienie 47: tablica z mapką miasta
+# Zamówienie 47: tablica z mapką miasta – regionalna i świąteczna
 
 ## Co to jest w grze
-Zamiast starych drogowskazów w miastach stoją **tablice z mapką miasta**: przy wylotówkach, dworcach, dużych
-rondach, głównych skrzyżowaniach i przy każdej armacie miejskiej („metro” – armaty strzelające ludźmi jak
-w pinballu). Bohater podchodzi, naciska AKCJA i otwiera się mapka miasta wypalona w drewnie, z mosiężnymi
-tabliczkami wylotówek (duże miasto + miejscowość po drodze), dworcami, armatami i „Tu jesteś”.
+W miastach stoją **tablice z mapką miasta**: przy wylotówkach, dworcach, dużych rondach, głównych skrzyżowaniach,
+przy każdej armacie i przy każdym włazie podziemnego pinballa (metro). Bohater podchodzi, naciska AKCJA i otwiera
+się duża mapka miasta wypalona w drewnie, z mosiężnymi tabliczkami wylotówek.
 
-Teraz tablica w świecie jest rysowana kodem (tymczasowa): `src/art.ts`, funkcja `drawTablicaMiasta`,
-44×48 px pokazane w połowie (22×24 px mapy) – patrz `47_tablica/obecna_w_grze_x2.png`.
-Okno z mapką (dla porównania stylu): `47_tablica/okno_mapki_lublin.png`, `okno_mapki_krakow.png`.
+**Ty rysujesz całą tablicę, gra nakłada na nią mapkę.** Mapkę każdego miasta wylicza generator w chwili, gdy
+ktoś tam gra – Ty jej nie rysujesz. Zostawiasz w tablicy **puste okno** (deskę), w które gra wpisze mapkę.
+
+Dziś tablica jest rysowana kodem (tymczasowa, `src/art.ts` `drawTablicaMiasta`): `47_tablica/obecna_w_grze_x2.png`.
+Okno z mapką: `47_tablica/okno_mapki_lublin.png`, `okno_mapki_krakow.png`.
+
+## Jak to się składa (warstwy)
+1. **Tablica regionalna** – cała tablica: słupki, rama, daszek/zwieńczenie, puste okno na mapkę.
+   Gra wybiera ją po kraju, w którym stoi tablica.
+2. **Ozdoba świąteczna** – osobna przezroczysta warstwa na tym samym płótnie, kładziona na wierzch dowolnej
+   tablicy regionalnej. Gra włącza ją według daty, a śnieg także wtedy, gdy w grze naprawdę pada śnieg (gra ma
+   prawdziwą pogodę).
+
+Dzięki warstwom nie trzeba rysować każdej kombinacji: 4 regiony × 3 ozdoby = 7 obrazków, a nie 12.
 
 ## Co potrzebujemy
-1. **Tablica w świecie** – jeden obrazek PNG, przezroczyste tło, twarda alfa (0/255), bez wygładzania:
-   - **44×48 px** (gra pokazuje go w połowie, jak dziś), podstawa = środek dołu (tam, gdzie słupki stoją na ziemi);
-   - widok jak cała gra: z góry pod kątem, lekko od przodu; obrys 1 px #1e1a24 jak postacie, światło z północnego zachodu;
-   - wyraźnie wyższa niż postać (postać ma ~13 px mapy, tablica ~24 px mapy), żeby była widoczna z daleka;
-   - motyw: **drewniana deska z wypaloną mapką miasta** (ciemne drewno, wypalony placek miasta, ciemniejsza plama
-     jeziora, wyżłobione drogi, czerwona pinezka „tu jesteś”) w **mosiężnej ramie**, na dwóch mosiężnych lub
-     drewnianych słupkach, z małą **mosiężną zębatką** albo daszkiem na górze; mosiądz, złoto, drewno – lekki
-     steampunk jak reszta świata, nie realny znak drogowy;
-   - plik: `tablica_miasta.png`.
-2. **Wersja nocna** (opcjonalnie) – ta sama tablica z zapaloną małą lampką gazową nad mapką, 2 klatki migotania
-   obok siebie (88×48 px), plik `tablica_miasta_noc.png`. W nocy gra doda jej ciepłą poświatę.
-3. **Mała ikonka** (opcjonalnie) – ta sama tablica uproszczona do **16×16 px** (do legendy i mapy ekranu),
-   plik `tablica_miasta_ikona.png`.
+
+### A. Tablica w świecie (obiekt na mapie)
+Płótno **48×56 px** (gra pokazuje w połowie), podstawa = środek dołu (tam, gdzie słupki stoją na ziemi).
+Wyraźnie wyższa od postaci (postać ~13 px mapy, tablica ~28 px mapy).
+
+**Okno na mapkę:** prostokąt **32×20 px** w tym samym miejscu na każdej tablicy (np. lewy górny róg w x 8, y 14) –
+wypełnij go **czystym kolorem #FF00FF** (magenta). Gra wytnie magentę i wpisze tam miniaturę mapki danego miasta.
+Podaj w wiadomości dokładne współrzędne okna.
+
+Tablice regionalne (każda osobny plik):
+| plik | region | motyw |
+|---|---|---|
+| `tablica_europa.png` | domyślna (cały świat poza resztą) | mosiądz, złoto, ciemne drewno, mała zębatka na górze – lekki steampunk |
+| `tablica_azja.png` | Japonia, Chiny, Korea, Tajwan… | daszek z podwiniętymi rogami (pagoda), czerwona laka, złote okucia |
+| `tablica_francja.png` | Francja (później może Belgia) | kute żelazo, mały gargulec (albo dwa) na rogach, secesyjne zawijasy |
+| `tablica_arabska.png` (opcjonalnie) | Bliski Wschód, Afryka Północna | łuk podkowiasty, ornament geometryczny, mosiężne latarenki |
+
+Ozdoby świąteczne (warstwy 48×56, przezroczyste, pasujące na każdą tablicę – trzymaj się krawędzi i stóp, nie
+zasłaniaj okna):
+| plik | kiedy | motyw |
+|---|---|---|
+| `ozdoba_halloween.png` | ok. 20 X – 2 XI | 1–2 dynie przy słupkach, pajęczyna w rogu, nietoperz |
+| `ozdoba_zima.png` | grudzień – luty, oraz gdy w grze pada śnieg | czapa śniegu na zwieńczeniu i ramie, sopelki |
+| `ozdoba_swieta.png` | ok. 6 XII – 6 I | gałązka jedliny z czerwoną kokardą/lampkami (kładziona razem ze śniegiem) |
+
+### B. Ramka dużego okna z mapką (druga faza – po akceptacji A)
+Okno z mapką dziś ma ramkę z kodu (drewno + mosiądz). Ramka w stylu regionu: 4 narożniki 48×48 px + 4 kafle
+krawędzi 16×48 / 48×16 px (gra rozciąga krawędzie), dla każdego regionu, plus narożniki świąteczne (dynia,
+śnieg, gałązka) jako osobne nakładki.
 
 ## Styl
-Paleta świata (jak szyldy miejsc i armata), płaskie plamy koloru, bez gradientów „z AI”, bez napisów (napisy są
-tylko w oknie mapki). Najpierw **1 próbka** punktu 1 do akceptacji właściciela, potem reszta.
+Paleta świata (jak szyldy miejsc i armata), obrys 1 px #1e1a24 jak postacie, światło z północnego zachodu, twarda
+alfa (0/255), bez wygładzania, płaskie plamy koloru, **bez napisów** (napisy są tylko w oknie mapki), bez
+gradientów „z AI”.
+
+## Kolejność
+1. **Próbka:** `tablica_europa.png` + `ozdoba_zima.png` – do akceptacji właściciela.
+2. Po akceptacji: reszta części A.
+3. Na końcu część B.
 
 ## Jak oddać
-Pliki do `docs/poczta/od-grafika/47_tablica/` + krótka wiadomość `RRRR-MM-DD_47-G001_…md` (ID, wersja plików,
-co jest w środku). Ja podmienię rysunek z kodu na Twój (`useArtist` w art.ts) i odpowiem 47-P002 z tabelą,
-co gdzie trafiło.
+Pliki do `docs/poczta/od-grafika/47_tablica/` + wiadomość `RRRR-MM-DD_47-G001_…md` (ID, wersja plików, współrzędne
+okna na mapkę). Ja podepnę tablice (kraj → region, data/pogoda → ozdoba, miniatura mapki w oknie) i odpowiem
+47-P002 z tabelą, co gdzie trafiło.
