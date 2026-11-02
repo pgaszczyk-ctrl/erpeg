@@ -1,6 +1,10 @@
 // Cities with a real metro (owner, 2 Nov 2026: „w miastach, gdzie jest realnie metro – podziemny pinball zamiast
 // armat”). "CC:Name" as in public/artillery/swiat.json (GeoNames); a few metro cities are districts of a bigger one
 // there (Yokohama, Incheon, Noida…) and ride that city's network. Checked by scripts/tests/pinball.mjs.
+/** The underground pinball's brand on its columns, boards and tickets (owner, 2 Nov 2026: „logo np. pinball trans,
+ *  w steampunkowym stylu”). */
+export const MARKA = { pl: "Kulociąg Parowy", en: "Steam Ballway" };
+
 export const MIASTA_Z_METREM: readonly string[] = [
   "PL:Warsaw",
   "CZ:Prague",

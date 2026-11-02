@@ -37,6 +37,8 @@ export type Registry = Network & {
   arrivals?: Record<string, At>;
   /** A city with a real metro rides the underground pinball (hatches) instead of cannons. */
   metro?: boolean;
+  /** The city's country (ISO 2 letters): flag colours of the pinball stations' mosaics. */
+  kraj?: string;
 };
 type At = { m: string; x: number; y: number; s: number };
 type Receipt = {
@@ -101,6 +103,7 @@ function naRejestr(siec: Siec): Registry {
     version: 1,
     city: { name },
     metro: maMetro(siec.miasto[2], name, id),
+    kraj: siec.miasto[2],
     origin: { lat, lon },
     projection: { mLon, mLat },
     rules: RULES,
@@ -535,7 +538,7 @@ export class Artillery {
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
     const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = metro ? pinball(this.host.hero(), message, to.name) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, { z: from.name, cel: to.name, kraj: this.registry?.kraj }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,

@@ -3,13 +3,14 @@
 // Code-drawn pixel art at 2 canvas px per map px until the artist's picture. Same surface as Armata3D (client.ts).
 import Phaser from 'phaser';
 import { dymek } from './ladowanie';
+import { tr } from '../i18n';
+import { MARKA } from '../content/metro';
 
 export const WLAZ_RYS = {
   /** Lid half-width/half-height, map px (seen from above at a slant). */
   rx: 8,
   ry: 4.5,
-  /** The post next to the hatch, map px. */
-  slupek: 22,
+  /** The column next to the hatch: its foot this far right of the hatch's centre, map px. */
   slupekX: 13,
   /** Lid slide when opening, map px; times. */
   odsuw: 11,
@@ -17,6 +18,8 @@ export const WLAZ_RYS = {
   zamykanieMs: 300,
 };
 const D = 2; // canvas px per map px
+/** The column beside the hatch, map px (texture at SLUP.D canvas px per map px; origin at the column's foot). */
+const SLUP = { D: 4, w: 36, h: 44, cx: 24, plytaY: 15, plytaH: 9, plytaW: 23, whistleX: 31, whistleY: 23 };
 const INK = '#1e1a24';
 
 function twardo(c: HTMLCanvasElement) {
@@ -75,33 +78,100 @@ function tekstury(scene: Phaser.Scene) {
   twardo(pokrywa);
   scene.textures.addCanvas('wlaz-pokrywa', pokrywa)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-  const sw = 9 * D, sh = (R.slupek + 6) * D;
-  const slupek = document.createElement('canvas');
-  slupek.width = sw;
-  slupek.height = sh;
-  g = slupek.getContext('2d')!;
-  const sx = sw / 2;
-  // Foot, pole, collar.
+  // The column (owner, 2 Nov 2026: „musi być dobrze widoczny – słupek, dodatkowe rury i logo”): a brass pillar on an
+  // iron foot, an enamel plate with the brand, a glass ball on top, a pipe from the hatch's ring into its foot and a
+  // steam whistle on its side. Drawn at 4 canvas px per map px so the plate's letters stay readable.
+  const K = SLUP;
+  const S = K.D;
+  const kol = document.createElement("canvas");
+  kol.width = K.w * S;
+  kol.height = K.h * S;
+  g = kol.getContext("2d")!;
+  const X = (v: number) => Math.round(v * S);
+  const kx = K.cx;
+  const rurka = (pts: [number, number][], w: number) => {
+    g.lineJoin = "round";
+    g.lineCap = "butt";
+    for (const [kolor, ww] of [[INK, w + 1.2], ["#a08448", w], ["#e8d08c", w * 0.3]] as [string, number][]) {
+      g.strokeStyle = kolor;
+      g.lineWidth = ww * S;
+      g.beginPath();
+      pts.forEach(([x, y], i) => (i ? g.lineTo(X(x), X(y)) : g.moveTo(X(x), X(y))));
+      g.stroke();
+    }
+  };
+  // Pipe from the hatch ring (left edge, on the ground) up and into the column's foot, with flanges.
+  rurka([[1.5, K.h - 1], [1.5, K.h - 9], [kx - 3, K.h - 9]], 2.2);
   g.fillStyle = INK;
-  g.fillRect(sx - 3 * D, sh - 3 * D, 6 * D, 3 * D);
-  g.fillRect(sx - 1.5 * D, 6 * D, 3 * D, sh - 8 * D);
-  g.fillStyle = '#8a613f';
-  g.fillRect(sx - 2.5 * D, sh - 2.5 * D, 5 * D, 2 * D);
-  g.fillStyle = '#c8963e';
-  g.fillRect(sx - 1 * D, 6.5 * D, 2 * D, sh - 9 * D);
-  g.fillStyle = '#f2d888';
-  g.fillRect(sx - 1 * D, 6.5 * D, 1, sh - 9 * D);
+  g.fillRect(X(0.2), X(K.h - 5), X(2.6), X(1.4));
+  g.fillRect(X(kx - 5), X(K.h - 10.6), X(1.4), X(3.2));
+  g.fillStyle = "#c8963e";
+  g.fillRect(X(0.5), X(K.h - 4.8), X(2), X(1));
+  g.fillRect(X(kx - 4.8), X(K.h - 10.3), X(1), X(2.6));
+  // Whistle pipe on the right side.
+  rurka([[kx + 2.5, K.h - 14], [K.whistleX, K.h - 14], [K.whistleX, K.whistleY + 2]], 1.6);
   g.fillStyle = INK;
-  g.fillRect(sx - 2.5 * D, 7 * D, 5 * D, 2 * D);
-  g.fillStyle = '#c8963e';
-  g.fillRect(sx - 2 * D, 7.4 * D, 4 * D, 1.2 * D);
-  // Glass ball on top (the pinball), lit.
-  elipsa(g, sx, 4 * D, 3.6 * D, 3.6 * D, INK);
-  elipsa(g, sx, 4 * D, 3 * D, 3 * D, '#66a08c');
-  elipsa(g, sx, 4 * D, 2.2 * D, 2.2 * D, '#8cc0aa');
-  elipsa(g, sx - 1 * D, 3 * D, 0.9 * D, 0.9 * D, '#fff6c8');
-  twardo(slupek);
-  scene.textures.addCanvas('wlaz-slupek', slupek)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  g.fillRect(X(K.whistleX - 1.3), X(K.whistleY - 1), X(2.6), X(3.4));
+  g.fillStyle = "#e0b45a";
+  g.fillRect(X(K.whistleX - 0.9), X(K.whistleY - 0.6), X(1.8), X(2.6));
+  // Foot.
+  g.fillStyle = INK;
+  g.fillRect(X(kx - 6), X(K.h - 5), X(12), X(5));
+  g.fillStyle = "#3a3840";
+  g.fillRect(X(kx - 5.4), X(K.h - 4.4), X(10.8), X(4));
+  g.fillStyle = "#c8963e";
+  g.fillRect(X(kx - 5.4), X(K.h - 4.4), X(10.8), X(0.8));
+  g.fillStyle = "#f0c850";
+  for (const dx of [-4, -1.5, 1.5, 4]) g.fillRect(X(kx + dx - 0.3), X(K.h - 2.6), X(0.6), X(0.6));
+  // Shaft with fluting.
+  g.fillStyle = INK;
+  g.fillRect(X(kx - 2.6), X(7), X(5.2), X(K.h - 11.5));
+  g.fillStyle = "#b8893c";
+  g.fillRect(X(kx - 2), X(7), X(4), X(K.h - 11.5));
+  g.fillStyle = "#f2d888";
+  g.fillRect(X(kx - 1.4), X(7), X(0.7), X(K.h - 11.5));
+  g.fillStyle = "#8a613f";
+  g.fillRect(X(kx + 0.9), X(7), X(0.6), X(K.h - 11.5));
+  // Collars.
+  for (const y of [9.5, K.h - 7]) {
+    g.fillStyle = INK;
+    g.fillRect(X(kx - 3.4), X(y - 0.9), X(6.8), X(1.8));
+    g.fillStyle = "#e0b45a";
+    g.fillRect(X(kx - 3), X(y - 0.6), X(6), X(1.2));
+  }
+  // Enamel plate with the brand, two lines.
+  const py = K.plytaY, ph = K.plytaH, pw = K.plytaW;
+  g.fillStyle = INK;
+  g.fillRect(X(kx - pw / 2 - 0.8), X(py - 0.8), X(pw + 1.6), X(ph + 1.6));
+  g.fillStyle = "#c8963e";
+  g.fillRect(X(kx - pw / 2 - 0.4), X(py - 0.4), X(pw + 0.8), X(ph + 0.8));
+  g.fillStyle = "#1f4a3c";
+  g.fillRect(X(kx - pw / 2), X(py), X(pw), X(ph));
+  g.fillStyle = "#f0c850";
+  for (const [x, y] of [[kx - pw / 2 + 0.4, py + 0.4], [kx + pw / 2 - 1, py + 0.4], [kx - pw / 2 + 0.4, py + ph - 1], [kx + pw / 2 - 1, py + ph - 1]])
+    g.fillRect(X(x), X(y), X(0.6), X(0.6));
+  const slowa = tr(MARKA).toUpperCase().split(/\s+/);
+  const linie = slowa.length > 1 ? [slowa[0], slowa.slice(1).join(" ")] : slowa;
+  g.fillStyle = "#f6e7c6";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  linie.forEach((l, i) => {
+    let fs = X(ph / linie.length - 0.9);
+    g.font = `800 ${fs}px 'Alegreya Sans',system-ui,sans-serif`;
+    while (fs > 6 && g.measureText(l).width > X(pw - 1.6)) g.font = `800 ${--fs}px 'Alegreya Sans',system-ui,sans-serif`;
+    g.fillText(l, X(kx), X(py + (ph / linie.length) * (i + 0.5) + 0.2));
+  });
+  // Glass ball on top in a brass cup.
+  elipsa(g, X(kx), X(4.4), X(4.2), X(4.2), INK);
+  elipsa(g, X(kx), X(4.4), X(3.6), X(3.6), "#66a08c");
+  elipsa(g, X(kx), X(4.4), X(2.6), X(2.6), "#9fd2bc");
+  elipsa(g, X(kx - 1.2), X(3.2), X(1), X(1), "#fff6c8");
+  g.fillStyle = INK;
+  g.fillRect(X(kx - 3.2), X(6.6), X(6.4), X(1.8));
+  g.fillStyle = "#e0b45a";
+  g.fillRect(X(kx - 2.8), X(6.9), X(5.6), X(1.2));
+  twardo(kol);
+  scene.textures.addCanvas("wlaz-slupek", kol)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
 
   // A soft glow behind the ball (additive).
   const blask = document.createElement('canvas');
@@ -128,10 +198,10 @@ export class Wlaz {
     const s = 1 / D;
     this.otwor = scene.add.image(x, y, 'wlaz-otwor').setScale(s).setDepth(-1e7 + 2);
     this.pokrywa = scene.add.image(x, y, 'wlaz-pokrywa').setScale(s).setDepth(-1e7 + 3);
-    this.slupek = scene.add.image(x + WLAZ_RYS.slupekX, y, 'wlaz-slupek').setOrigin(0.5, 1).setScale(s).setDepth(y);
+    this.slupek = scene.add.image(x + WLAZ_RYS.slupekX, y, 'wlaz-slupek').setOrigin(SLUP.cx / SLUP.w, 1).setScale(1 / SLUP.D).setDepth(y);
     this.blask = scene.add
-      .image(x + WLAZ_RYS.slupekX, y - (WLAZ_RYS.slupek + 6) + 4, 'wlaz-blask')
-      .setScale(0.7)
+      .image(x + WLAZ_RYS.slupekX, y - SLUP.h + 4.4, 'wlaz-blask')
+      .setScale(0.9)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(y + 0.1);
   }
@@ -169,9 +239,15 @@ export class Wlaz {
   zamknij() {
     return this.przesun(0, WLAZ_RYS.zamykanieMs, false);
   }
+  private dalejPara = 1 + Math.random() * 3;
   update(dt: number) {
     this.t += dt;
     this.blask.setAlpha(0.55 + 0.25 * Math.sin(this.t * 2.2));
+    // The whistle lets off a puff now and then, so the column is spotted from afar.
+    if (this.slupek.visible && (this.dalejPara -= dt) <= 0) {
+      this.dalejPara = 2.5 + Math.random() * 3;
+      dymek(this.scene, this.x + WLAZ_RYS.slupekX + SLUP.whistleX - SLUP.cx, this.y - SLUP.h + SLUP.whistleY - 2, this.y + 1);
+    }
   }
   destroy() {
     for (const o of [this.otwor, this.pokrywa, this.slupek, this.blask]) o.destroy();
