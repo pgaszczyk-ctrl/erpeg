@@ -117,13 +117,18 @@ export function klatkaPary(z: ZrodloPary, tSek: number): number {
 }
 /** `pierscien` = [x0, y0, x1, y1, …] w px obrazu (świat). Zwraca obraz budynku i jego lewy-górny róg w świecie. */
 /** Zwraca też `para`: źródła pary (patrz `ZrodloPary`, `klatkaPary`) – gra stawia tam animowane obłoczki `para()` tylko w chwili wyrzutu. */
+/** Tolerancja prostowania obrysu budynku w px obrazu (3,84 px = 1 m). */
+export const PROSTUJ = 8;
+
 export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; x0: number; y0: number; para: ZrodloPary[] } {
   const H = op.wysokosc, sk = op.skos ?? 0.35;
   const PLASKI = op.plaski ?? Math.round(H / Math.max(10, op.poziom ?? H)) >= 3; // dach płaski tylko na najwyższych (3 poziomy gry)
   // Obrys z podwórkami (dziury): maska ścian i dachu bierze wszystkie pierścienie (parzysto-nieparzyście).
   // Drobne „zęby” z zaokrąglonych narożników (pogrubianie i łączenie budynków w build-map) wygładzone,
   // żeby krawędzie szły równymi schodkami pikseli (właściciel 5.10.2026: domy wyglądały na poszarpane).
-  const pierscienie = [pierscien, ...(op.dziury ?? [])].map((r) => (r.length > 8 ? uprosc(r, 1.6) : r));
+  // Mocniej (właściciel 2.11.2026: „jedna ciągła linia, a nie schodki”): załamania do PROSTUJ px (~2 m) znikają,
+  // ściana idzie jedną prostą krawędzią zamiast łamanej z wielu krótkich odcinków OSM.
+  const pierscienie = [pierscien, ...(op.dziury ?? [])].map((r, k) => (r.length > 8 ? uprosc(r, k ? PROSTUJ * 0.75 : PROSTUJ) : r));
   const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
@@ -308,8 +313,15 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const L = Math.max(10, op.poziom), NP = Math.max(1, Math.round(H / L));
       const f = Math.min(NP - 1, Math.floor(hh / L)), hl = hh - f * L;
       const ww = Math.max(4, Math.round(L * 0.4)), wh = Math.max(5, Math.round(L * 0.55)), wb = Math.round(L * 0.24) + (f === 0 ? 1 : 0);
-      const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt, al = Math.floor(along);
-      const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), u = m - wx, v = hl - wb, nr = Math.floor((al + off) / pt);
+      const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt;
+      // Miejsce wzdłuż ściany liczone tam, gdzie PROSTY pion ekranu przez ten piksel dotyka podstawy ściany: okna,
+      // drzwi i okiennice są prostokątami na ekranie, jak u grafika (wzdłuż skosu i przechyłu ścian łamały się w schodki).
+      const alF = Math.abs(e.nx) < 0.6 ? (x + 0.5 - e.ax - H * sk) / e.ux : along, al = Math.floor(alF);
+      const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), nr = Math.floor((al + off) / pt);
+      const u = m - wx;
+      // Wysokość w oknie liczona od podstawy ściany pod środkiem okna: okno ma równą górę i dół (bez ząbka na skosie).
+      const ac = nr * pt - off + wx + ww / 2;
+      const v = Math.abs(e.nx) < 0.6 ? Math.floor(e.ay + e.uy * ac + H - (y + 0.5)) - f * L - wb : hl - wb;
       // Ściany wschodnia/zachodnia widać jako wąski skośny pasek: okna wyglądały tam jak białe kreski (szum).
       const okCale = al - u > 2 && al - u + ww < e.L - 2 && Math.abs(e.nx) < 0.6;
       const ciemnaSciana = S.wzor === 'cegla' || S.wzor === 'kamien' || S.wzor === 'deski';
@@ -321,7 +333,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let przyDrzwiach = false;
       if (op.drzwi && f === 0 && drzwiI1 === q.i1) {
         const [dx, dy] = op.drzwi;
-        const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy, dw = Math.max(5, Math.round(L * 0.5)) | 1, dh = Math.round(L * 0.8), du = along - (da - dw / 2);
+        const da = (dx - e.ax) * e.ux + (dy - e.ay) * e.uy, dw = Math.max(5, Math.round(L * 0.5)) | 1, dh = Math.round(L * 0.8), du = alF - (da - dw / 2);
         if (Math.abs(al - u + ww / 2 - da) < (ww + dw) / 2 + 3) przyDrzwiach = true;
         const lukY = dh - dw / 2, wDrzwiach = (pd: number) => du >= -pd && du < dw + pd && (hh < lukY || Math.hypot(du - (dw - 1) / 2, hh - lukY) <= dw / 2 + pd);
         if (wDrzwiach(1)) { okno = true; c = wDrzwiach(0) ? (Math.floor(du) % 3 === 0 ? BELKA[0] : hex('#6a4426')) : S.tony[4];
