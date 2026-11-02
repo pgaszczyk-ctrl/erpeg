@@ -11,7 +11,7 @@ import type { DebugSettings } from './debug';
 import { characterReference, type CharacterReference } from './proportions';
 import type { BuildingPlan, PlanInput, PlanResult, Point } from './types';
 
-interface SpriteEntry { image:Phaser.GameObjects.Image; baseX:number; baseY:number; key:string; bytes:number; lod:number; label?:Phaser.GameObjects.Text; decorations:Phaser.GameObjects.Image[]; shadow?:Phaser.GameObjects.Image; shadowKey?:string; signature:string }
+interface SpriteEntry { image:Phaser.GameObjects.Image; key:string; bytes:number; lod:number; label?:Phaser.GameObjects.Text; decorations:Phaser.GameObjects.Image[]; shadow?:Phaser.GameObjects.Image; shadowKey?:string; signature:string }
 interface Pending { resolve:(value:any)=>void; reject:(error:Error)=>void }
 const ART_DENSITY=2,MAX_TEXTURE_BYTES=32*1024*1024;
 let serial=0;
@@ -84,10 +84,9 @@ export class ArchitectureLayer {
       return Math.max(...xs)+(b.wallHeight+b.roofHeight)*.25*PX_PER_M>v.left-40&&Math.min(...xs)<v.right+40&&Math.max(...ys)>v.top-40&&Math.min(...ys)-(b.wallHeight+b.roofHeight+20)*PX_PER_M<v.bottom+40;
     });
     const visible=new Set(this.visiblePlans.map(b=>b.id));
-    // Quantize only this layer's camera translation, in native art texels. Terrain camera is untouched.
-    const snapX=camera.scrollX-Math.round(camera.scrollX*ART_DENSITY)/ART_DENSITY;
-    const snapY=camera.scrollY-Math.round(camera.scrollY*ART_DENSITY*this.projection)/(ART_DENSITY*this.projection);
-    for(const [id,s]of this.sprites){s.image.setPosition(s.baseX+snapX,s.baseY+snapY).setVisible(visible.has(id));s.label?.setVisible(visible.has(id)&&this.settings.overlay);for(const d of s.decorations)d.setVisible(visible.has(id));s.shadow?.setVisible(visible.has(id));}
+    // Keep the same world anchor as terrain, tree trunks, shadows and decorations.
+    // A second camera snap on this layer makes houses jump relative to the ground.
+    for(const [id,s]of this.sprites){s.image.setVisible(visible.has(id));s.label?.setVisible(visible.has(id)&&this.settings.overlay);for(const d of s.decorations)d.setVisible(visible.has(id));s.shadow?.setVisible(visible.has(id));}
     const wanted=[...this.visiblePlans].sort((a,b)=>distance(a.center,[cx/PX_PER_M,cy/PX_PER_M])-distance(b.center,[cx/PX_PER_M,cy/PX_PER_M]));
     for(const b of wanted){
       const entry=this.sprites.get(b.id);
@@ -130,7 +129,7 @@ export class ArchitectureLayer {
         // Billboards keep the painted north-west light; mirroring would reverse their shading.
         decorations.push(d);
       }
-      const entry:SpriteEntry={image,baseX:x,baseY:y,key,bytes:r.pixels.byteLength,lod,label,decorations,signature};
+      const entry:SpriteEntry={image,key,bytes:r.pixels.byteLength,lod,label,decorations,signature};
       this.sprites.set(b.id,entry);this.textureBytes+=entry.bytes;
     }catch(error){this.failed.set(b.id,signature);this.failures.push(`${b.id}: ${error instanceof Error?error.message:String(error)}`);}
     finally{this.jobs.delete(b.id);}
