@@ -96,7 +96,7 @@ export function odsun(r: number[], o: number, dziura = false): number[] {
   return out;
 }
 
-/** Azja: okrągłe drewniane tarcze na końcach kalenicy i okrągłe końce krokwi pod okapem (po obwódce, żeby jej nie przykryła). */
+/** Azja: okrągłe drewniane tarcze na końcach kalenicy (po obwódce, żeby jej nie przykryła). */
 function laczenaAzja(o: Obraz, kind: Uint8Array, W: number, Hh: number, sciany: Uint8Array, kalenica: number[]) {
   const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < W && j < Hh) o.px[j * W + i] = c; };
   const tarcza = (cx: number, cy: number, R: number) => {
@@ -120,13 +120,7 @@ function laczenaAzja(o: Obraz, kind: Uint8Array, W: number, Hh: number, sciany: 
     const kat = 0.5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(kat), uy = Math.sin(kat);
     let lo = 1e9, hi = -1e9, pl = start, ph = start;
     for (const p of czesc) { const t = ((p % W) - mx) * ux + (((p / W) | 0) - my) * uy; if (t < lo) { lo = t; pl = p; } if (t > hi) { hi = t; ph = p; } }
-    tarcza(pl % W, (pl / W) | 0, 3); if (ph !== pl) tarcza(ph % W, (ph / W) | 0, 3);
-  }
-  // Końce krokwi: pod dolną krawędzią okapu (dach nad ścianą albo nad ziemią, poza obrysem ścian) co 3 px.
-  for (let j = 1; j < Hh - 1; j++) for (let i = 0; i < W; i++) {
-    const k = j * W + i;
-    if (kind[k] !== 1 || sciany[k] || kind[k + W] === 1 || i % 3) continue;
-    put(i, j - 1, DREWNO_AZJA[4]); put(i, j - 2, DREWNO_AZJA[2]);
+    tarcza(pl % W, (pl / W) | 0, 4); if (ph !== pl) tarcza(ph % W, (ph / W) | 0, 4);
   }
 }
 
@@ -196,7 +190,7 @@ export interface OpcjeBudynku {
   dachPlaski?: string;
   /** Okap: dach wystaje poza obrys ścian o tyle px obrazu (Azja). */
   okap?: number;
-  /** Azja: kalenica jako drewniana belka z okrągłymi tarczami, okrągłe końce krokwi pod okapem. */
+  /** Azja: kalenica i naroża jako okrągła drewniana belka, okrągłe tarcze na końcach kalenicy. */
   azja?: boolean;
   /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
   poziom?: number;
@@ -422,7 +416,17 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       } else {
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
       if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
-      if (op.azja && Math.abs(q.d1 - q.d2) < 1.25 && d > 1 && dot < -0.5) { c = DREWNO_AZJA[1]; kalenica.push(i, j); } // kalenica = drewniana belka
+      // Azja: kalenica i naroża jako gruba, okrągła drewniana belka łącząca połacie (cieniowana jak walec, jasna strona od światła).
+      const wklesly = (ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0; // kosz (wklęsły narożnik) – bez belki
+      const wSrodku = (e: Kraw) => { const t = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy; return t > 0.5 && t < e.L - 0.5; };
+      if (op.azja && d > 2.5 && dot < LAGODNIE && !wklesly && (wSrodku(ea) || wSrodku(eb))) {
+        const roz = Math.abs(q.d1 - q.d2), pol = dot < -0.5 ? 3.2 : 2.4;
+        if (roz < pol) {
+          const tt = roz / pol, jasna = -(ea.nx * 0.6 + ea.ny * 0.8) > -(eb.nx * 0.6 + eb.ny * 0.8);
+          c = tt > 0.78 ? DREWNO_AZJA[0] : tt < 0.22 ? DREWNO_AZJA[3] : jasna ? DREWNO_AZJA[2] : DREWNO_AZJA[1];
+          if (dot < -0.5) kalenica.push(i, j);
+        }
+      }
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
       }
       // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
