@@ -211,7 +211,7 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
+    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
     gotowy = budynek(b.r, op);
     zapamietaj(klucz, gotowy);
   }

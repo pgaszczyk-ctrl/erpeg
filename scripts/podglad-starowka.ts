@@ -17,7 +17,7 @@ for (const { b, i, r } of items) {
   const ring = r[0].slice(0, -2), pts = ring; let cx = 0, cy = 0, best = -1e9; for (let j = 0; j < pts.length; j += 2) if (pts[j + 1] > best) { best = pts[j + 1]; cx = pts[j]; cy = pts[j + 1]; }
   const R = stylPoId(process.env.REGION), pick = (l: [string, number][], u: number) => { let t = u * l.reduce((a, [, w]) => a + w, 0); for (const [k, w] of l) if ((t -= w) < 0) return k; return l[0][0]; };
   const plaski = hash(i * 7 + 1, 11, 7) < R.plaskie ? true : undefined;
-  const img = budynek(ring, { wysokosc: k.poziomy * poziom, poziom, dach: process.env.REGION ? pick(R.dachy, hash(i, 3, 91)) : DACH[i % 5], sciana: process.env.REGION ? pick(R.sciany, hash(i, 5, 17)) : SCI[(i * 3) % 5], plaski, dachPlaski: plaski ? R.dachPlaski : undefined, seed: i * 7 + 1, drzwi: [cx, cy], dziury: r.slice(1).map((h) => h.slice(0, -2)), komin: i % 3 === 0 });
+  const img = budynek(ring, { wysokosc: k.poziomy * poziom, poziom, dach: process.env.REGION ? pick(R.dachy, hash(i, 3, 91)) : DACH[i % 5], sciana: process.env.REGION ? pick(R.sciany, hash(i, 5, 17)) : SCI[(i * 3) % 5], plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, seed: i * 7 + 1, drzwi: [cx, cy], dziury: r.slice(1).map((h) => h.slice(0, -2)), komin: i % 3 === 0 });
   for (let j = 0; j < img.obraz.h; j++) for (let x = 0; x < img.obraz.w; x++) { const c = img.obraz.px[j * img.obraz.w + x]; if (c >>> 24) { const X = Math.round(img.x0 + x - X0), Y = Math.round(img.y0 + j - Y0 - k.poziomy * poziom); if (X >= 0 && Y >= 0 && X < W && Y < H) px[Y * W + X] = blend(px[Y * W + X], c); } }
 }
 const S = 2, w = W * S, h = H * S, raw = Buffer.alloc((w * 4 + 1) * h);

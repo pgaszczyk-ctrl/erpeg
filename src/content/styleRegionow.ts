@@ -16,6 +16,10 @@ export interface StylRegionu {
   plaskie: number;
   /** Materiał płaskiego dachu (domyślnie żwir/papa). */
   dachPlaski?: string;
+  /** Okap: dach wystaje poza ściany o tyle px obrazu generatora (3,84 px = 1 m). */
+  okap?: number;
+  /** Kalenica jako drewniana belka z okrągłymi tarczami na końcach, okrągłe końce krokwi pod okapem. */
+  drewnianeLaczniki?: boolean;
 }
 
 /** Polska i Europa Środkowa: dotychczasowy wygląd (domyślny). */
@@ -37,7 +41,8 @@ export const STYLE_REGIONOW: StylRegionu[] = [
     dachy: [['dachowka_terakota', 1]], sciany: [['tynk_piaskowy', 50], ['tynk_bialy', 25], ['tynk_ochra', 25]], plaskie: 0.9, dachPlaski: 'tynk_piaskowy' },
   { id: 'azja', kraje: ['JP', 'KR', 'CN', 'TW'], obszary: [[100, 18, 147, 46]],
     dachy: [['dachowka_glazura', 55], ['dachowka_glazura_zielona', 20], ['dachowka_brazowa', 15], ['papa', 10]],
-    sciany: [['tynk_bialy', 35], ['drewno', 30], ['tynk_szary', 20], ['drewno_czerwone', 15]], plaskie: 0.1 },
+    // Owner 2.11.2026: „bardziej drewniana, dachy wystające poza obrys, drewniane okrągłe łączniki na dachu”.
+    sciany: [['drewno', 45], ['drewno_czerwone', 25], ['tynk_bialy', 20], ['tynk_szary', 10]], plaskie: 0.05, okap: 5, drewnianeLaczniki: true },
   { id: 'afryka', kraje: [], obszary: [[-18, -35, 52, 15]],
     dachy: [['blacha_falista', 40], ['blacha_rdzawa', 30], ['strzecha', 20], ['dachowka_terakota', 10]],
     sciany: [['tynk_terakota', 35], ['tynk_ochra', 25], ['tynk_bialy', 20], ['tynk_piaskowy', 20]], plaskie: 0.15, dachPlaski: 'tynk_piaskowy' },

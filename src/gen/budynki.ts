@@ -22,15 +22,19 @@ export function tonyZKoloru(kolor: number): { tony: number[]; krawedz: number } 
 export const OBWODKA = { zewn: 1.0, wewn: 0.85 };
 
 /** Zob. budynek(): wygładzona obwódka sylwetki i krawędzi dach–ściana z odcinków geometrii (antyaliasing). */
-function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: number, y0: number, pierscienie: number[][], H: number, sk: number) {
+function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: number, y0: number, pierscienie: number[][], H: number, sk: number, dach = pierscienie) {
   // Odcinki: [ax, ay, bx, by, czyDach] w px obrazu.
   const seg: number[] = [], ox = H * sk, oy = H;
   for (const r of pierscienie) {
     const m = r.length / 2;
     for (let k = 0; k < m; k++) {
       const ax = r[2 * k] - x0, ay = r[2 * k + 1] - y0, bx = r[(2 * k + 2) % r.length] - x0, by = r[(2 * k + 3) % r.length] - y0;
-      seg.push(ax, ay, bx, by, 1, ax + ox, ay + oy, bx + ox, by + oy, 0, ax, ay, ax + ox, ay + oy, 0);
+      seg.push(ax + ox, ay + oy, bx + ox, by + oy, 0, ax, ay, ax + ox, ay + oy, 0);
     }
+  }
+  for (const r of dach) { // krawędź dachu (z okapem: odsunięta)
+    const m = r.length / 2;
+    for (let k = 0; k < m; k++) seg.push(r[2 * k] - x0, r[2 * k + 1] - y0, r[(2 * k + 2) % r.length] - x0, r[(2 * k + 3) % r.length] - y0, 1);
   }
   const C = 8, GW = Math.ceil(W / C) + 1, GH = Math.ceil(Hh / C) + 1, siatka: number[][] = Array.from({ length: GW * GH }, () => []);
   for (let s = 0; s < seg.length; s += 5) {
@@ -70,6 +74,60 @@ function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: nu
     wynik[j * W + i] = ((Math.round(na * 255) << 24) | (Math.round(bb + (ib - bb) * al) << 16) | (Math.round(g + (ig - g) * al) << 8) | Math.round(r + (ir - r) * al)) >>> 0;
   }
   o.px.set(wynik);
+}
+
+/** Drewno azjatyckich dachów: belka kalenicy, tarcze, końce krokwi (ciemne → jasne). */
+const DREWNO_AZJA = ['#3a2414', '#5a3820', '#7e5430', '#a87a48', '#cfa46c'].map(hex);
+
+/** Pierścień odsunięty na zewnątrz bryły o r px (wierzchołki ze skosem, ostre rogi przycięte). Dla podwórek – w stronę podwórka. */
+export function odsun(r: number[], o: number, dziura = false): number[] {
+  const n = r.length / 2;
+  if (n < 3) return r;
+  let a = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n; a += r[2 * i] * r[2 * j + 1] - r[2 * j] * r[2 * i + 1]; }
+  // Odsunięcie w lewo od kierunku krawędzi przy a < 0 (y w dół): poprawny znak sprawdzamy polem – obrys ma urosnąć,
+  // podwórko zmaleć; obie rzeczy daje „na zewnątrz materiału”, czyli przeciwnie do wnętrza pierścienia.
+  const z = (a > 0 ? -1 : 1) * (dziura ? -1 : 1), out: number[] = [];
+  const nrm = (i: number) => { const j = (i + 1) % n, dx = r[2 * j] - r[2 * i], dy = r[2 * j + 1] - r[2 * i + 1], L = Math.hypot(dx, dy) || 1; return [(dy / L) * -z, (-dx / L) * -z]; };
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = nrm((i + n - 1) % n), [bx, by] = nrm(i), dot = ax * bx + ay * by;
+    const k = Math.min(3, 1 / Math.max(0.33, (1 + dot) / 2) ) * 0.5;
+    out.push(r[2 * i] + (ax + bx) * o * k, r[2 * i + 1] + (ay + by) * o * k);
+  }
+  return out;
+}
+
+/** Azja: okrągłe drewniane tarcze na końcach kalenicy i okrągłe końce krokwi pod okapem (po obwódce, żeby jej nie przykryła). */
+function laczenaAzja(o: Obraz, kind: Uint8Array, W: number, Hh: number, sciany: Uint8Array, kalenica: number[]) {
+  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < W && j < Hh) o.px[j * W + i] = c; };
+  const tarcza = (cx: number, cy: number, R: number) => {
+    for (let j = -R - 1; j <= R + 1; j++) for (let i = -R - 1; i <= R + 1; i++) {
+      const d = Math.hypot(i, j);
+      if (d > R + 0.6) continue;
+      put(cx + i, cy + j, d > R - 0.4 ? OBRYS : d < R * 0.35 ? DREWNO_AZJA[0] : i + j < 0 ? DREWNO_AZJA[4] : DREWNO_AZJA[3]);
+    }
+  };
+  // Końce każdej kalenicy: skrajne piksele wzdłuż jej kierunku (spójne kawałki ≥ 10 px).
+  const zb = new Map<number, number>(); for (let k = 0; k < kalenica.length; k += 2) zb.set(kalenica[k + 1] * W + kalenica[k], 1);
+  const byl = new Set<number>();
+  for (const [start] of zb) {
+    if (byl.has(start)) continue;
+    const czesc: number[] = [], kol = [start]; byl.add(start);
+    while (kol.length) { const p = kol.pop()!; czesc.push(p); const i = p % W, j = (p / W) | 0;
+      for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const q = (j + b) * W + i + a; if (zb.has(q) && !byl.has(q)) { byl.add(q); kol.push(q); } } }
+    if (czesc.length < 10) continue;
+    let mx = 0, my = 0; for (const p of czesc) { mx += p % W; my += (p / W) | 0; } mx /= czesc.length; my /= czesc.length;
+    let xx = 0, xy = 0, yy = 0; for (const p of czesc) { const dx = (p % W) - mx, dy = ((p / W) | 0) - my; xx += dx * dx; xy += dx * dy; yy += dy * dy; }
+    const kat = 0.5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(kat), uy = Math.sin(kat);
+    let lo = 1e9, hi = -1e9, pl = start, ph = start;
+    for (const p of czesc) { const t = ((p % W) - mx) * ux + (((p / W) | 0) - my) * uy; if (t < lo) { lo = t; pl = p; } if (t > hi) { hi = t; ph = p; } }
+    tarcza(pl % W, (pl / W) | 0, 3); if (ph !== pl) tarcza(ph % W, (ph / W) | 0, 3);
+  }
+  // Końce krokwi: pod dolną krawędzią okapu (dach nad ścianą albo nad ziemią, poza obrysem ścian) co 3 px.
+  for (let j = 1; j < Hh - 1; j++) for (let i = 0; i < W; i++) {
+    const k = j * W + i;
+    if (kind[k] !== 1 || sciany[k] || kind[k + W] === 1 || i % 3) continue;
+    put(i, j - 1, DREWNO_AZJA[4]); put(i, j - 2, DREWNO_AZJA[2]);
+  }
 }
 
 /** Cień: ten sam kolor ciemniej, bez zmiany odcienia (piksel ABGR). */
@@ -136,6 +194,10 @@ export interface OpcjeBudynku {
   plaski?: boolean;
   /** Materiał (klucz MATERIALY) płaskiego dachu zamiast palety DACHY_PLASKIE – np. glina w krajach suchych. */
   dachPlaski?: string;
+  /** Okap: dach wystaje poza obrys ścian o tyle px obrazu (Azja). */
+  okap?: number;
+  /** Azja: kalenica jako drewniana belka z okrągłymi tarczami, okrągłe końce krokwi pod okapem. */
+  azja?: boolean;
   /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
   poziom?: number;
 }
@@ -198,7 +260,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
-  const ST = (op.steampunk ?? 0) > 0 || !!op.ozdoby, mL = ST ? 10 : 2, mT = ST ? 20 : 2, mB = ST ? 12 : 3; // zapas na ozdoby wystające za obrys
+  const OK = Math.max(0, op.okap ?? 0); // okap: dach wystaje poza obrys o tyle px (Azja)
+  const ST = (op.steampunk ?? 0) > 0 || !!op.ozdoby, zO = OK ? OK + 1 : 0, mL = (ST ? 10 : 2) + zO, mT = (ST ? 20 : 2) + zO, mB = (ST ? 12 : 3) + zO; // zapas na ozdoby i okap
   const x0 = Math.floor(minX) - mL, y0 = Math.floor(minY) - mT, W = Math.ceil(maxX + H * sk) - x0 + mB, Hh = Math.ceil(maxY + H) - y0 + mB;
   // maska obrysu (scanline)
   const mask = new Uint8Array(W * Hh);
@@ -207,6 +270,18 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     for (const r of pierscienie) { const m = r.length / 2; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); } }
     xs.sort((a, b) => a - b);
     for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k] - 0.5); x < xs[k + 1] - 0.5; x++) { const i = x - x0; if (i >= 0 && i < W) mask[j * W + i] = 1; }
+  }
+  // Dach z okapem: obrys odsunięty na zewnątrz o OK px (ściany zostają na obrysie, dach nad nimi wystaje).
+  const dachPierscienie = OK ? pierscienie.map((r, k) => odsun(r, OK, k > 0)) : pierscienie;
+  let dachMaska = mask;
+  if (OK) {
+    dachMaska = new Uint8Array(W * Hh);
+    for (let j = 0; j < Hh; j++) {
+      const py = y0 + j + 0.5, xs: number[] = [];
+      for (const r of dachPierscienie) { const m = r.length / 2; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); } }
+      xs.sort((a, b) => a - b);
+      for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k] - 0.5); x < xs[k + 1] - 0.5; x++) { const i = x - x0; if (i >= 0 && i < W) dachMaska[j * W + i] = 1; }
+    }
   }
   const inFP = (x: number, y: number) => { const i = x - x0, j = y - y0; return i >= 0 && j >= 0 && i < W && j < Hh && mask[j * W + i] === 1; };
   // Krawędzie z normalnymi na zewnątrz bryły (przy podwórku: w stronę podwórka). Dach liczy się z bryły
@@ -303,10 +378,11 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const sOf = new Int16Array(W * Hh);
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
     const x = x0 + i, y = y0 + j;
-    if (mask[j * W + i]) { kind[j * W + i] = 1; continue; }
+    if (dachMaska[j * W + i]) { kind[j * W + i] = 1; continue; }
     for (let s = 1; s <= H; s++) if (inFP(Math.round(x - s * sk), y - s)) { kind[j * W + i] = 2; sOf[j * W + i] = s; break; }
   }
   const K = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= Hh ? 0 : kind[j * W + i]);
+  const kalenica: number[] = [];
   let maxD = 0; const dd = new Float32Array(W * Hh);
   const qI1 = new Int32Array(W * Hh), qI2 = new Int32Array(W * Hh), qD1 = new Float64Array(W * Hh), qD2 = new Float64Array(W * Hh);
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1) { najblizsze(x0 + i + 0.5, y0 + j + 0.5); const k = j * W + i; qI1[k] = i1; qI2[k] = i2; qD1[k] = d1; qD2[k] = d2; const d = d1; dd[j * W + i] = d; maxD = Math.max(maxD, d); }
@@ -346,6 +422,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       } else {
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
       if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
+      if (op.azja && Math.abs(q.d1 - q.d2) < 1.25 && d > 1 && dot < -0.5) { c = DREWNO_AZJA[1]; kalenica.push(i, j); } // kalenica = drewniana belka
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
       }
       // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
@@ -431,7 +508,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   // z prawdziwych odcinków obrysu (dach), podstawy ścian (obrys przesunięty o wysokość) i pionów w narożnikach.
   // Każdy piksel przy krawędzi dostaje tyle tuszu, ile wynika z jego odległości od linii – brzeg jest gładki,
   // kształt budynku bez zmian. Krawędź dach–ściana tak samo, cieńsza.
-  obwodkaGladka(o, kind, W, Hh, x0, y0, pierscienie, H, sk);
+  obwodkaGladka(o, kind, W, Hh, x0, y0, pierscienie, H, sk, dachPierscienie);
+  if (op.azja) laczenaAzja(o, kind, W, Hh, mask, kalenica);
   if (op.komin && maxD > 6) { // komin ceglany w ok. 1/3 od lewej-góry
     let best = -1, bx = 0, by = 0;
     for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }
