@@ -8,7 +8,8 @@ import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
 import { malujGroby } from './groby09';
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, jasniej, budynek, cienBudynku, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
+import { stylPoId } from '../content/styleRegionow';
+import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, budynek, cienBudynku, tonyZKoloru, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -34,6 +35,8 @@ export interface Budynek09 {
   drzwi?: [number, number];
   /** Kolory miejsc wyróżnionych w grze (sklep, szkoła, misja): dach i ściana. */
   hl?: [string, string];
+  /** Styl regionu świata (src/content/styleRegionow.ts), np. 'srodziemnomorski'; brak = Polska. */
+  region?: string;
   /** Wysokość jednego poziomu gry (px generatora, `ksztaltBudynku`): duże okna, drzwi, mur pruski. */
   poziom?: number;
   /** Wysoki budynek (od POZIOMY.osobnoOd): w kawałku tylko jego cień, sam budynek gra stawia jako osobny obrazek z prześwitem. */
@@ -85,8 +88,6 @@ export function ustawRysunkiUpraw(r: Record<string, Sprite>) {
   RYSUNKI = r;
 }
 
-const DACHY: [string, number][] = [['dachowka_czerwona', 34], ['dachowka_brazowa', 24], ['lupek', 16], ['gont', 9], ['blacha_zielona', 7], ['papa', 10]];
-const SCIANY: [string, number][] = [['tynk_kremowy', 30], ['tynk_zolty', 18], ['tynk_szary', 15], ['cegla', 27], ['kamien', 6], ['drewno', 4]];
 const losuj = (lista: [string, number][], u: number) => {
   const suma = lista.reduce((s, [, w]) => s + w, 0);
   let t = u * suma;
@@ -98,8 +99,7 @@ const losuj = (lista: [string, number][], u: number) => {
 function materialZKoloru(kolor: string, wzor: 'dachowka' | 'gladki') {
   const klucz = `hl_${wzor}_${kolor}`;
   if (!MATERIALY[klucz]) {
-    const c = hex(kolor);
-    MATERIALY[klucz] = { tony: [ciemniej(ciemniej(c)), ciemniej(c), c, jasniej(c), jasniej(jasniej(c))], krawedz: jasniej(jasniej(c)), wzor };
+    MATERIALY[klucz] = { ...tonyZKoloru(hex(kolor)), wzor };
   }
   return klucz;
 }
@@ -170,16 +170,22 @@ function cienDrzewa(t: Drzewo09, cien: Uint8Array, w: number, h: number, X0: num
   }
 }
 
-/** Nakłada obraz (pomijając przezroczyste piksele). */
+/** Nakłada obraz (pomijając przezroczyste piksele, półprzezroczyste mieszając). */
 function naloz(o: Obraz, src: Obraz, x: number, y: number) {
   for (let j = 0; j < src.h; j++) {
     const yy = y + j;
     if (yy < 0 || yy >= o.h) continue;
     for (let i = 0; i < src.w; i++) {
       const c = src.px[j * src.w + i];
-      if (!(c >>> 24)) continue;
+      const a = c >>> 24;
+      if (!a) continue;
       const xx = x + i;
-      if (xx >= 0 && xx < o.w) o.px[yy * o.w + xx] = c;
+      if (xx < 0 || xx >= o.w) continue;
+      if (a === 255) { o.px[yy * o.w + xx] = c; continue; }
+      // Gładki brzeg obwódki budynku: mieszamy z tym, co pod spodem.
+      const d = o.px[yy * o.w + xx], t = a / 255;
+      const r = (d & 255) + ((c & 255) - (d & 255)) * t, g = ((d >>> 8) & 255) + (((c >>> 8) & 255) - ((d >>> 8) & 255)) * t, b = ((d >>> 16) & 255) + (((c >>> 16) & 255) - ((d >>> 16) & 255)) * t;
+      o.px[yy * o.w + xx] = ((Math.max(d >>> 24, a) << 24) | (Math.round(b) << 16) | (Math.round(g) << 8) | Math.round(r)) >>> 0;
     }
   }
 }
@@ -194,15 +200,18 @@ function malujBudynek(o: Obraz, X0: number, Y0: number, b: Budynek09, noc: boole
 /** Obraz jednego budynku (z pamięci, jeśli już był liczony): też dla wysokich budynków stawianych przez grę osobno. */
 export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta) {
   const u = hash(b.seed, 3, 91), v = hash(b.seed, 5, 17);
-  const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(DACHY, u);
-  const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(SCIANY, v);
+  // Dach i ściana z listy regionu (Polska, północ, Śródziemnomorze, kraje suche, Azja, Afryka, Ameryka Łacińska).
+  const R = stylPoId(b.region);
+  const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(R.dachy, u);
+  const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(R.sciany, v);
+  const plaski = !b.hl && hash(b.seed, 11, 7) < R.plaskie ? true : undefined;
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: hash(b.seed, 7, 3) < 0.4, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
+    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
     gotowy = budynek(b.r, op);
     zapamietaj(klucz, gotowy);
   }

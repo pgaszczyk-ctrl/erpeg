@@ -1,3 +1,4 @@
+import { stylRegionu } from '../content/styleRegionow';
 import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
@@ -391,7 +392,7 @@ export function ksztalt09(b: Building) {
   const m2 = Math.abs(a) / 2 / (PX_PER_M * PX_PER_M);
   const f = (56 * 0.36 * SKALA_POSTACI * GEN_DOTS) / POZIOMY.wzorBohatera;
   const { poziomy, poziom } = ksztaltBudynku(b.levels || 1, m2);
-  const p = Math.max(10, Math.round(poziom * f));
+  const p = Math.max(Math.round(10 * POZIOMY.wyzej), Math.round(poziom * f * POZIOMY.wyzej));
   k = { poziomy, poziom: p, h: (poziomy * p) / GEN_DOTS };
   if (r.length) ksztalty.set(b, k);
   return k;
@@ -480,6 +481,18 @@ export class MapRenderer {
   private patterns?: Patterns;
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
+  /** Styl regionu świata dla budynku (kraj z jego położenia), pamiętany na mapie. Mapy bez położenia: Polska. */
+  private regiony = new WeakMap<Building, string>();
+  private regionBudynku(b: Building): string {
+    let r = this.regiony.get(b);
+    if (r === undefined) {
+      const m = this.map, x = b.rings[0]?.[0] ?? 0, y = b.rings[0]?.[1] ?? 0;
+      const ll = m.loch ? null : m.toLatLon(x, y);
+      r = ll && Number.isFinite(ll.lat) ? stylRegionu(ll.lat, ll.lon).id : 'umiarkowany';
+      this.regiony.set(b, r);
+    }
+    return r;
+  }
 
   /** The view's middle last frame, and which way it last moved (−1/0/1 on each axis). */
   private lastMid = { x: NaN, y: NaN };
@@ -857,6 +870,7 @@ export class MapRenderer {
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
+        region: this.regionBudynku(b),
       };
     });
     const G2 = GEN_DOTS;
