@@ -14,7 +14,8 @@ export async function landingPanorama(
 ): Promise<Pick<Kadr, 'shot' | 'panorama'>> {
   const cam = scene.cameras.main;
   cam.preRender();
-  const view = cam.worldView.clone();
+  const current = cam.worldView;
+  const view = { x: current.x, y: current.y, width: current.width, height: current.height };
   const original = { x: cam.scrollX, y: cam.scrollY, bounds: cam.useBounds };
   // More terrain behind the traveller, where the visible approach starts.
   const left = view.x - view.width * (.5 + .3 * Math.cos(angle));
