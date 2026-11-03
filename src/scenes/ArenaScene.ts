@@ -13,6 +13,7 @@ import { OSTROSC } from '../screen';
 import { mapaWalki, resetTouch, resetKeys } from '../controls';
 import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
+import { Ludzik3D, ludzik3d } from '../ludzik3d';
 import type { DuchAreny } from '../api';
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
 import { choragiewKraju } from '../arenaChoragiew';
@@ -84,6 +85,15 @@ export class ArenaScene extends Phaser.Scene {
     } else this.player = new Player(this, 0, start, PLAYER_TEX, 'me');
     this.player.hp = PLAYER.maxHp;
     this.player.setDepth(start);
+    // The same 3D model as on the street and in dungeons (its own texture: the street's hero still exists).
+    if (ludzik3d()) {
+      const l = new Ludzik3D(this, { klucz: 'ludzik3d-arena' });
+      this.ludzik = l;
+      l.ukryjNaStart(this.player);
+      const krok = (_t: number, d: number) => l.update(this.player, Math.min(0.05, d / 1000));
+      this.events.on('postupdate', krok);
+      this.events.once('shutdown', () => { this.events.off('postupdate', krok); l.destroy(); if (this.ludzik === l) this.ludzik = undefined; });
+    }
 
     // The rival: the ghost in its owner's look with the enemies' red glow; the Gladiator as a bronze knight.
     const r = d.rywal;
@@ -183,7 +193,11 @@ export class ArenaScene extends Phaser.Scene {
     this.tweens.add({ targets: tx, y: y - 10, alpha: 0, duration: ms, onComplete: () => tx.destroy() });
   }
 
+  /** The hero as the 3D model (src/ludzik3d.ts); none = his drawn sheet. */
+  ludzik?: Ludzik3D;
+
   private zamach(aim: number) {
+    this.ludzik?.atakuj(aim);
     const g = this.add.graphics().setDepth(this.player.depth + 1);
     const r = (PLAYER.attackReach + PLAYER.attackRadius) * 0.9;
     g.lineStyle(1.5, 0xffffff, 0.8).beginPath().arc(this.player.x, this.player.y - 2, r, aim - 0.9, aim + 0.9).strokePath();

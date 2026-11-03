@@ -20,6 +20,13 @@ try {
   const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 860 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
   const errors = [];
   const calls = [];
+  // MAPA=1: a small stand-in map (sandboxes without the real Lublin data).
+  if (process.env.MAPA) {
+    const ring = [0, 0, 5760, 0, 0, 5760, -5760, 0];
+    const map = { unitsPerM: 1.92, w: 6000, h: 6000, bounds: { minLat: 51.2, maxLat: 51.3, minLon: 22.4, maxLon: 22.5 }, boundary: [ring], areas: [['paved', ring]], lines: [['minor', 0, [0, 3000, 5760, 0], 'Test']], buildings: [], pois: [], towns: [['Lublin', 2880, 2880]] };
+    await context.route('**/map/lublin.json', (r) => r.fulfill({ json: map }));
+    await context.route('**/map/world.json', (r) => r.fulfill({ json: { lublin: [], towns: [], edges: [] } }));
+  }
   await context.route('**/*.supabase.co/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     let body = null;
@@ -43,7 +50,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text()));
   page.on('dialog', (d) => d.accept());
-  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1#postac=Jam&kod=ANGELIKA');
+  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=0&tury=1#postac=Jam&kod=ANGELIKA');
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 180000 });
   await page.waitForFunction(() => !document.querySelector('#loading-map:not([hidden])') && !document.querySelector('.lm-on'), null, { timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(4000);
@@ -51,7 +58,7 @@ try {
     const s = window.__game.scene.getScene('game');
     window.__dialogi = [];
     const orig = s.dialog.bind(s);
-    s.dialog = (req) => { window.__dialogi.push({ title: req.title, text: req.text, buttons: req.buttons }); return orig(req); };
+    s.dialog = (req) => { window.__dialogi.push({ title: req.title, text: req.text, buttons: req.buttons }); window.__ostatni = req; return orig(req); };
     // No fresh-start protection blinking in the pictures; the hero on free ground.
     s.protectUntil = 0;
     // Away from home (enemies vanish within 40 m of it).
@@ -74,9 +81,8 @@ try {
     const index = d.buttons.findIndex((b) => b.includes(label));
     assert(index >= 0, `button ${label} in ${JSON.stringify(d.buttons)}`);
     await page.waitForTimeout(300);
-    const at = await g((i) => { const r = window.__game.scene.getScene('ui').dialogButtons.find((b) => b.index === i).rect; return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, index);
-    if (mobile) await page.touchscreen.tap(at.x, at.y);
-    else await page.mouse.click(at.x, at.y);
+    // Straight to the dialog's answer (the paged, typed dialog ignores a click while it is still typing).
+    await g((i) => { const d = window.__ostatni; window.__game.scene.getScene('ui').closeDialog?.(); d.onChoose(i); }, index);
     await page.waitForTimeout(300);
   }
   /** A world point → a tap on the screen (CSS px). */
@@ -123,6 +129,30 @@ try {
   assert.match(offer.text, process.env.GLADIATOR ? /Gladiator/ : /Zbyszko/);
   await press(offer, 'Walcz');
   await page.waitForFunction(() => window.__game.scene.isActive('arena') && window.__game.scene.getScene('arena').walka?.faza === 'gracz', null, { timeout: 20000 });
+  // The hero is the same 3D model as on the street (not his flat sheet).
+  await page.waitForFunction(() => { const l = window.__game.scene.getScene('arena').ludzik; return !l || l.widoczny; }, null, { timeout: 20000 });
+  const m3 = await g(() => { const s = window.__game.scene.getScene('arena'), l = s.ludzik; return l ? { on: true, img: !!l.image?.visible, flat: s.player.visible } : { on: false }; });
+  console.log('arena 3D', JSON.stringify(m3));
+  if (m3.on) assert(m3.img && !m3.flat, '3D hero shown in the arena');
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `work/arena-3d-${tag}.png` });
+  if (m3.on) {
+    // A blow plays the model's attack; a tweened step (how turn fights move the hero) plays its walk.
+    const ruch = await page.evaluate(async () => {
+      const a = window.__game.scene.getScene('arena'), l = a.ludzik, p = a.player;
+      a.zamach(0);
+      const atak = l.g.atak.isRunning() || l.g.atakGora.isRunning();
+      const x0 = p.x;
+      a.tweens.add({ targets: p, x: x0 + 20, duration: 600 });
+      await new Promise((r) => setTimeout(r, 300));
+      const chod = l.g.chodNogi.isRunning();
+      await new Promise((r) => setTimeout(r, 500));
+      p.x = x0;
+      return { atak, chod };
+    });
+    console.log('arena 3D ruch', JSON.stringify(ruch));
+    assert(ruch.atak && ruch.chod, '3D hero strikes and walks in the arena');
+  }
   assert.equal(await coins(), c0 - 100, 'entry fee paid');
   await page.waitForTimeout(800);
   if (process.env.DEBUG) console.log(JSON.stringify(await g(() => { const gs = window.__game.scene.getScene('game'); const a = window.__game.scene.getScene('arena'); return { zoom: a.cameras.main.zoom, ch: a.cameras.main.height, cw: a.cameras.main.width, vis: gs.sys.settings.visible, st: gs.sys.settings.status, camVis: gs.cameras.main.visible, alpha: gs.cameras.main.alpha, tr: a.cameras.main.transparent, bg: a.cameras.main.backgroundColor.rgba, order: window.__game.scene.scenes.map((s) => s.sys.settings.key) }; })));

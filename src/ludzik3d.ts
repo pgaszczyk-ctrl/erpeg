@@ -136,6 +136,9 @@ export class Ludzik3D {
   private image?: Phaser.GameObjects.Image;
   private kat = 0;
   private klucz = 'ludzik3d';
+  private skala = 1;
+  /** Where the hero stood last frame: scenes that move him by tweens (turn fights, arena) leave vel at 0. */
+  private ostatnio?: { x: number; y: number };
   private pokazany = false;
   /** What the last picture showed, and the time since it was drawn (s). */
   private podpis = '';
@@ -147,7 +150,11 @@ export class Ludzik3D {
 
   /** Loading starts at once, under the loading cover (owner, 28 Oct 2026: on phones the old drawn hero showed first
    * and the 3D one replaced him a moment later). */
-  constructor(private scene: Phaser.Scene) {
+  /** `klucz`: own texture key (a second scene – hall, arena – while the street's hero still exists);
+   * `skala`: size multiplier (the hall draws everything 4× bigger: 1 hall px = 1 sheet px). */
+  constructor(private scene: Phaser.Scene, opcje: { klucz?: string; skala?: number } = {}) {
+    if (opcje.klucz) this.klucz = opcje.klucz;
+    this.skala = opcje.skala ?? 1;
     void this.zaladuj();
   }
 
@@ -339,14 +346,23 @@ export class Ludzik3D {
     const g = this.g;
     void this.equipment();
     const s = dt;
+    // Moved without vel (tweened): walk and face that way anyway.
+    let vx = player.vel.x, vy = player.vel.y, fx = player.facing.x, fy = player.facing.y;
+    const o = this.ostatnio;
+    this.ostatnio = { x: player.x, y: player.y };
+    if (vx * vx + vy * vy <= 1 && o && s > 0) {
+      const mx = (player.x - o.x) / this.skala / s, my = (player.y - o.y) / this.skala / s;
+      if (mx * mx + my * my > 4 && mx * mx + my * my < 1e6) { vx = mx; vy = my; fx = mx; fy = my; }
+    }
+    const v2 = vx * vx + vy * vy;
     // Turn towards the walking direction (screen down = towards the camera = model's +Z).
-    const cel = Math.atan2(player.facing.x, player.facing.y);
+    const cel = Math.atan2(fx, fy);
     let d = cel - this.kat;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     this.kat += d * (1 - Math.exp(-s * LUDZIK_3D.obrot));
     this.kat = Math.atan2(Math.sin(this.kat), Math.cos(this.kat));
     g.model.rotation.y = this.kat;
-    const idzie = player.vel.lengthSq() > 1;
+    const idzie = v2 > 1;
     // A whole-body blow that starts walking goes on with the upper body only, at the same moment.
     if (idzie && g.atak.isRunning()) {
       const t = g.atak.time;
@@ -357,7 +373,7 @@ export class Ludzik3D {
     const atakuje = g.atak.isRunning() || g.atakGora.isRunning();
     if (idzie) {
       if (!g.chodNogi.isRunning()) g.chodNogi.reset().play();
-      g.chodNogi.timeScale = Math.min(4, player.vel.length() * LUDZIK_3D.cyklNaPx * g.chodNogi.getClip().duration);
+      g.chodNogi.timeScale = Math.min(4, Math.sqrt(v2) * LUDZIK_3D.cyklNaPx * g.chodNogi.getClip().duration);
     } else if (g.chodNogi.isRunning()) g.chodNogi.stop();
     // Arms swing with the legs while walking, unless they are striking.
     if (idzie && !atakuje) {
@@ -382,9 +398,9 @@ export class Ludzik3D {
       this.scene.textures.get(this.klucz).source[0].update();
     }
 
-    const sc = 0.36 * SKALA_POSTACI;
+    const sc = 0.36 * SKALA_POSTACI * this.skala;
     const F = LUDZIK_3D.ramka;
-    const oy = (STOPY_PX - (8 * SKALA_POSTACI) / sc) / F;
+    const oy = (STOPY_PX - (8 * SKALA_POSTACI * this.skala) / sc) / F;
     if (!this.image) this.image = this.scene.add.image(player.x, player.y, this.klucz);
     this.ustawObrys(sc, oy, player, true);
     this.image

@@ -57,6 +57,10 @@ async function przezHale(page, mobile, tag, sprawdz) {
   });
   assert.equal(h.gameVisible, false, "street hidden under the hall");
   assert(h.heroScale > 0.9 && h.heroScale < 1.1, "hero at the hall's scale: " + h.heroScale);
+  // The hero is the same 3D model as on the street (not his flat sheet).
+  await page.waitForFunction(() => { const l = window.__game.scene.getScene("hala").ludzik; return !l || l.widoczny; }, null, { timeout: 20000 });
+  const m3 = await page.evaluate(() => { const s = window.__game.scene.getScene("hala"), l = s.ludzik; return l ? { on: true, img: !!l.image?.visible, sc: l.image?.scaleX, flat: s.player.visible } : { on: false }; });
+  if (m3.on) { assert(m3.img && !m3.flat, "3D hero shown in the hall: " + JSON.stringify(m3)); assert(m3.sc > 0.4, "3D hero at the hall's scale: " + m3.sc); }
   if (sprawdz) {
     await page.screenshot({ path: `work/${DIR}/${tag}-hala.png` });
     assert(h.newsboy && h.trader, "newsboy and trader stand in the hall");
