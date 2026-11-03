@@ -1,15 +1,13 @@
 import { api } from './api';
+import { WOZNICA } from './content/pociagi';
 
-// Rides take time: a coach or a train goes PODROZ_KMH along a straight line
+// Rides take time: a coach (WOZNICA.kmh) or a train (POCIAG.kmh) goes along a straight line
 // (so hopping station to station is never faster than riding straight). The
 // ride runs by the server's clock, also with the game closed; meanwhile the
 // screen shows a bar with the cart moving from one sign to the other. The
 // arrival station is the load point at once (a bench on the platform, no
 // healing), so logging out on the way neither loses the trip nor takes the
 // hero home for free. Test characters (immortal) ride at once.
-
-/** Speed of every ride, km/h. */
-export const PODROZ_KMH = 80;
 
 export interface Journey {
   /** Where from and where to (names for the signs). */
@@ -26,7 +24,7 @@ export interface Journey {
 }
 
 /** `times`: a diamond ride goes this many times faster. */
-export function rideMs(km: number, times = 1, kmh = PODROZ_KMH) {
+export function rideMs(km: number, times = 1, kmh = WOZNICA.kmh) {
   return Math.round((km / kmh / times) * 3_600_000);
 }
 
@@ -66,7 +64,7 @@ function fmtClock(t: number) {
 }
 
 /** Ride time for the coachman's list, e.g. "ok. 19 min". */
-export function rideText(km: number, times = 1, kmh = PODROZ_KMH) {
+export function rideText(km: number, times = 1, kmh = WOZNICA.kmh) {
   const ms = rideMs(km, times, kmh);
   const min = Math.round(ms / 60_000);
   if (min >= 48 * 60) return `ok. ${Math.round(min / 60 / 24)} dni`;
