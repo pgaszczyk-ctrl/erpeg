@@ -1,4 +1,5 @@
 import './shop.css';
+import { itemAssetUrl } from './itemIcon';
 import { session } from '../quests';
 import { gear, goodsN, ownedAmmo } from '../inventory';
 import { PLECAK } from '../content/przedmioty';
@@ -33,7 +34,7 @@ function fallback(entry: ShopEntry) {
     svg.innerHTML = '<path d="M3 27 16 5 29 27Z" fill="#bc8750" stroke="#251b16" stroke-width="2"/><path d="M16 5 16 27 24 27Z" fill="#67402b"/><path d="M9 27 16 15 21 27Z" fill="#30221c"/><path d="M1 28H31M16 3V6" stroke="#d7b66b" stroke-width="2"/>';
     return svg;
   }
-  return image(`items/${entry.category === 'magic' ? 'ksiega' : 'ogniwo'}.png`);
+  return image(itemAssetUrl(entry.category === 'magic' ? 'ksiega' : 'ogniwo'));
 }
 
 export interface ShopHandle {
@@ -82,7 +83,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     });
     const money = el('div', 's26-money');
     const gold = el('span'); gold.append(image('hud/zloto_16.png'), el('span', 's26-digits', number(session.coins)));
-    const diamonds = el('span'); diamonds.append(image('items/diament.png'), el('span', 's26-digits', number(session.diamenty)));
+    const diamonds = el('span'); diamonds.append(image(itemAssetUrl('diament')), el('span', 's26-digits', number(session.diamenty)));
     money.append(gold, diamonds); money.setAttribute('aria-label', `${session.coins} monet, ${session.diamenty} diamentów`);
     bar.append(tabs, money);
     const subtitle = el('p', 's26-subtitle', data.subtitle);
@@ -105,7 +106,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     available.forEach(([id, name, pic]) => {
       const b = button('', `s26-category${category === id ? ' on' : ''}`, () => { category = id; viewingBag = null; render(); });
       b.dataset.focus = `category:${id}`; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', String(category === id)); b.title = name;
-      b.append(image(`items/${pic}.png`), el('span', '', name)); filters.append(b);
+      b.append(image(itemAssetUrl(pic)), el('span', '', name)); filters.append(b);
     });
     const card = el('div', 's26-stock-card');
     const categoryName = available.find(([id]) => id === category)![1];
@@ -118,7 +119,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       ammunition.forEach(k => {
         const full = gear.ammo[k] >= STRZALY.kolczan;
         const supply = el('div', `s26-quiver${full ? ' full' : ''}`);
-        supply.append(image(`items/${k}.png`), el('span', '', AMUNICJA[k].nazwa),
+        supply.append(image(itemAssetUrl(k)), el('span', '', AMUNICJA[k].nazwa),
           el('strong', '', `${gear.ammo[k]} / ${STRZALY.kolczan}`));
         if (full) supply.append(el('span', 's26-quiver-full', 'PEŁNY'));
         quivers.append(supply);
@@ -178,7 +179,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       action.append(el('strong', '', entry.action ?? (selling ? 'SPRZEDAJ' : 'KUP')), el('span', '', pay));
       detail.append(action);
     } else if (!selling && category === 'ammo' && ammunition.length) {
-      const hero = el('div', 's26-hero-image'); hero.append(image(`items/${ammunition[0]}.png`));
+      const hero = el('div', 's26-hero-image'); hero.append(image(itemAssetUrl(ammunition[0])));
       detail.append(hero, el('h3', '', 'Zapas pełny'), el('p', 's26-description',
         `Masz po ${STRZALY.kolczan} sztuk posiadanej amunicji. Kolejne zakupy będą dostępne po jej zużyciu.`));
     } else {

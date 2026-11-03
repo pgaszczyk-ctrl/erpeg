@@ -1,0 +1,176 @@
+[
+  {
+    "id": "strzaly",
+    "name": "Strzały",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-06145e53-7f34-4b14-9962-0f2d6fb01a4a.png",
+    "prompt_subject": "A tied bundle of THREE long wooden arrows, feather fletching lower left, steel pointed arrowheads upper right. Brown shafts, cream feathers, simple leather tie. Clearly long bow arrows."
+  },
+  {
+    "id": "belty",
+    "name": "Bełty",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-72f3de5d-d1b2-484a-b93e-16dfb3ca96f0.png",
+    "prompt_subject": "THREE short thick crossbow bolts bound together, broad steel pyramidal heads upper right, stout walnut shafts and small burgundy fletchings lower left. Clearly shorter and sturdier than arrows."
+  },
+  {
+    "id": "naboje",
+    "name": "Naboje",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-9129138f-5c07-48df-8d89-ce0d9abbcdb2.png",
+    "prompt_subject": "THREE chunky brass ammunition cartridges in a compact cluster, rounded copper tips, warm golden casings and visible circular base on one tilted cartridge. No gun."
+  },
+  {
+    "id": "ladunek_magii",
+    "name": "Ładunek magii",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-a1a0665a-1354-466b-8d1d-0f630865e252.png",
+    "prompt_subject": "ONE compact magical charge capsule, faceted violet crystal energy core enclosed between two warm brass end caps, a couple of dark iron retaining ribs. Fantasy magical ammunition, not a potion. Internal highlights only."
+  },
+  {
+    "id": "drewno",
+    "name": "Drewno",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-03a92d68-57ea-476e-91bf-de1e4d6562ab.png",
+    "prompt_subject": "A compact stack of THREE freshly cut short oak logs, round pale end grain facing front left, warm brown bark. No axe."
+  },
+  {
+    "id": "chrust",
+    "name": "Chrust",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-3a0fe48a-c435-47d9-9e9c-175ed759f409.png",
+    "prompt_subject": "A tied bundle of thin dry crooked twigs and forked branches, brown bark and visible broken pale ends. Distinct delicate branch silhouette, no logs."
+  },
+  {
+    "id": "kij",
+    "name": "Kij",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-20c55c38-6a2d-4fc2-aa99-8a14004f0a53.png",
+    "prompt_subject": "ONE straight plain unworked wooden stave angled lower left to upper right, natural bark and cut ends, small side twig stub. Raw bow-making material. NO leather grip, metal, bindings or weapon club head."
+  },
+  {
+    "id": "wegiel",
+    "name": "Węgiel",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-6c7ecfa1-def0-4927-ad49-e2c3af2759ff.png",
+    "prompt_subject": "THREE chunky angular pieces of black coal, deep charcoal planes and restrained blue-grey highlights. Compact pile, no flames."
+  },
+  {
+    "id": "ruda_zelaza",
+    "name": "Ruda żelaza",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-85e293a7-0871-49e3-bf4b-17b87b01c618.png",
+    "prompt_subject": "ONE rugged dark grey rock with broad rusty red-brown iron-rich mineral veins and a couple metallic grey facets. Chunky mineral sample."
+  },
+  {
+    "id": "miedz",
+    "name": "Miedź",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-04429751-c785-425c-b924-f691c36e61ee.png",
+    "prompt_subject": "ONE raw copper nugget, irregular lobed metallic form, rich reddish orange copper surfaces, tiny restrained dark teal oxidation in crevices. Not an ingot, not gold."
+  },
+  {
+    "id": "piasek",
+    "name": "Piasek",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-6539d449-55c9-4401-91b6-267d70dd9fed.png",
+    "prompt_subject": "A small rounded mound of golden sand with a few larger tan angular grains near base, clear dark outline and broad golden shaded planes. No container or shovel."
+  },
+  {
+    "id": "odlamek_komety",
+    "name": "Odłamek komety",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-da22d55b-3eef-4151-ae2d-c66edb9213ba.png",
+    "prompt_subject": "ONE jagged midnight blue meteorite fragment with turquoise mineral seams INSIDE the rock, pale cyan crystalline facets, dark stony crust. No flames, trail, external glow or stars."
+  },
+  {
+    "id": "sztaba_zelaza",
+    "name": "Sztaba żelaza",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-5aeda7fb-d9df-4849-a948-e0d4c9ea86b9.png",
+    "prompt_subject": "ONE hefty cast iron ingot, simple trapezoidal rectangular bar in three quarter view, dull warm grey pitted faces with a small round casting indentation. Distinct from polished steel."
+  },
+  {
+    "id": "sztaba_stali",
+    "name": "Sztaba stali",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-40c4bd42-7074-4259-80b8-d72e7cce180a.png",
+    "prompt_subject": "ONE precision steel ingot, long bevelled rectangular bar three quarter view, cool blue-grey faces and crisp silver highlight bands. Clean polished smooth planes, no letters or stamps."
+  },
+  {
+    "id": "sztaba_mosiadzu",
+    "name": "Sztaba mosiądzu",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-9070da66-6536-4c1a-8768-f3081d5e1e77.png",
+    "prompt_subject": "ONE warm golden brass ingot, trapezoidal rectangular bar in three quarter view, amber shaded sides and cream upper-left highlight. Match sword brass guard, no lettering."
+  },
+  {
+    "id": "szklo",
+    "name": "Szkło",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-7791977b-b695-444a-9014-d9eaf222be94.png",
+    "prompt_subject": "A compact overlapping group of THREE thick aqua transparent glass shards with sharp facets and clear creamy reflections. Solid readable outlined edges, no bottle, no outside sparkles."
+  },
+  {
+    "id": "ogniwo",
+    "name": "Ogniwo pełne",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-7122632c-7e93-4907-87be-7f4656a965e2.png",
+    "prompt_subject": "ONE steampunk energy cell, stout upright glass cylinder with brass cap and base, two iron ribs, clearly FULL of brilliant cyan blue energy behind glass. Warm brass, saturated cyan. No text, gauge letters or cables."
+  },
+  {
+    "id": "ogniwo_puste",
+    "name": "Ogniwo puste",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-88fa0093-2bda-4b17-b511-2bbd152101d4.png",
+    "prompt_subject": "ONE EMPTY steampunk energy cell, stout upright glass cylinder with brass cap and base, two iron ribs, transparent desaturated grey glass chamber with dark inactive interior. NO glowing liquid or energy. Match same family as full cyan energy cell."
+  },
+  {
+    "id": "kilof",
+    "name": "Kilof",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-25168473-f6ba-476b-ac3e-bb684e82b5db.png",
+    "prompt_subject": "ONE sturdy mining pickaxe diagonally placed with wooden handle lower left, dark iron curved double-ended pick head upper right. One pointed end and one broad short chisel end, reinforced socket. Not a battle axe."
+  },
+  {
+    "id": "diament",
+    "name": "Diament",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-82db5308-4531-4558-ae0d-7b72a51dcc1c.png",
+    "prompt_subject": "ONE large cut brilliant diamond, classic broad faceted crown and pointed pavilion, pale ice-blue grey facets with creamy white highlights, dark plum outline. No external sparkles or gold setting."
+  },
+  {
+    "id": "rower",
+    "name": "Welocyped parowy",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-bd02a4f2-a207-4173-a4b7-d40d31f46f64.png",
+    "prompt_subject": "ONE complete compact fantasy steampunk bicycle in three-quarter side view, TWO equal size wheels, warm brass and iron frame, brown saddle, visible pedals and chain, small integrated brass steam boiler behind saddle. All spokes simplified and strong, no smoke, no rider, no stand."
+  },
+  {
+    "id": "hulajnoga_parowa",
+    "name": "Hulajnoga parowa",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-4513f183-12a5-4d34-9d14-28b79628a55b.png",
+    "prompt_subject": "ONE complete fantasy steampunk kick scooter in three-quarter side view, two small iron wheels, low walnut deck, tall curved brass handlebar stem, compact brass pressure cylinder mounted on deck at rear. No saddle, pedals, rider or smoke. Clearly a scooter, not a bicycle."
+  },
+  {
+    "id": "grupa_owoce",
+    "name": "Grupa: owoce",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-85f83223-647f-4b14-bcb6-0127d862e435.png",
+    "prompt_subject": "A compact group of THREE types of fruit: one red apple with green leaf, two purple plums and a small bunch of purple grapes, composed as ONE inventory category icon. No basket."
+  },
+  {
+    "id": "grupa_warzywa",
+    "name": "Grupa: warzywa",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-96592ace-09ba-4685-9cf2-80db42986575.png",
+    "prompt_subject": "A compact group of THREE vegetables: one orange carrot with green tops, one broccoli floret and one small green cabbage. ONE inventory category icon, no basket."
+  },
+  {
+    "id": "grupa_grzyby",
+    "name": "Grupa: grzyby",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-ab011884-a46e-425d-8adc-ddda65a1e043.png",
+    "prompt_subject": "A compact group of THREE edible boletus mushrooms in different sizes, chestnut brown broad caps, chunky ivory stems, grouped as ONE inventory category icon. No grass or ground."
+  },
+  {
+    "id": "ziemniak",
+    "name": "Ziemniak",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-e8e70e13-92d9-4f4c-8e8e-bf65c308a187.png",
+    "prompt_subject": "ONE plump irregular golden-brown potato, three quarter view, a few large shallow eyes, warm ochre skin with sculpted shaded planes, no dirt mound, leaves, sprouts or slice."
+  },
+  {
+    "id": "kapusta",
+    "name": "Kapusta",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-13d28619-d571-445c-8c08-a394b894d530.png",
+    "prompt_subject": "ONE round green cabbage head with tightly overlapping broad veined leaves, pale green centre and deep green outer folded leaves. Different from loose lettuce. No slice or ground."
+  },
+  {
+    "id": "burak",
+    "name": "Burak",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-c16a681a-b643-4a4b-8181-5555dae92591.png",
+    "prompt_subject": "ONE dark burgundy beetroot with rounded tapered root, thin curved root tip and THREE short red stems bearing broad green leaves. Rich wine red skin, upper-left highlight."
+  },
+  {
+    "id": "dynia",
+    "name": "Dynia",
+    "source": "/workspace/scratch/c2240fcb8c2d/generated_images/exec-beb3912c-0d07-45bb-98ad-5c2f1fb9f967.png",
+    "prompt_subject": "ONE squat ribbed orange pumpkin with a short crooked dark brown stem and ONE small green leaf, broad sculpted warm orange planes and deep burnt orange furrows. Whole pumpkin, no face, no carving."
+  }
+]

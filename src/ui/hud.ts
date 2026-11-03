@@ -1,3 +1,4 @@
+import { itemAssetUrl } from './itemIcon';
 import { session } from '../quests';
 import { demo } from '../demo';
 import { obracajMonete, zatrzymajMonete } from './monetaPortretu';
@@ -366,7 +367,7 @@ export function mountHud(on: HudHandlers) {
   };
   const vehicles = {
     rower: vehicleButton('rower', 'hud/welocyped_128.png'),
-    hulajnoga: vehicleButton('hulajnoga', 'items/hulajnoga_parowa.png'),
+    hulajnoga: vehicleButton('hulajnoga', itemAssetUrl('hulajnoga_parowa')),
   };
   m.append(canvas, avPic, heal, hp, xp, count, wpn, wcount,
     vehicles.rower, vehicles.hulajnoga,
@@ -591,7 +592,7 @@ export function setHud(v: HudView) {
     lastMoney = money;
     const n = (x: number) => x.toLocaleString('pl-PL');
     parts.coins.innerHTML = `${teleskop() ? SAKIEWKA_GLADKA : SAKIEWKA_SVG}${n(v.coins)}`;
-    parts.diamonds.innerHTML = teleskop() ? `${DIAMENT_GLADKI}${n(v.diamonds)}` : `<img src="${BASE_URL}items/diament.png" alt="">${n(v.diamonds)}`;
+    parts.diamonds.innerHTML = teleskop() ? `${DIAMENT_GLADKI}${n(v.diamonds)}` : `<img src="${BASE_URL}${itemAssetUrl('diament')}" alt="">${n(v.diamonds)}`;
     parts.coins.title = `Sakiewka: ${n(v.coins)} monet`;
     parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
   }
