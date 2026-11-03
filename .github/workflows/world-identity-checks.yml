@@ -9,6 +9,7 @@ on:
       - 'src/quests.ts'
       - 'src/artillery/client.ts'
       - 'src/scenes/GameScene.ts'
+      - 'src/scenes/BootScene.ts'
       - 'src/scenes/PrologRekruta.ts'
       - 'src/content/fabula.ts'
       - 'scripts/build-maps.mjs'

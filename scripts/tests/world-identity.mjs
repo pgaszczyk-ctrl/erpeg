@@ -89,7 +89,17 @@ for (const [lat, lon, expected] of [[-33.94, -70.64, 'w:-33.9000,-70.6000'], [-0
   assert.equal(ctx.worldMapId(lat, lon), expected);
 assert.notEqual(ctx.worldMapId(52.249999, 21), ctx.worldMapId(52.250001, 21), 'sector boundary explicit');
 assert(ctx.surfaceBindingMatches(city.id, 'w:52.3000,21.0000', [{ lat: 52.26, lon: 21 }]), 'quest crosses sector edge');
+assert(ctx.surfaceBindingMatches(city.id, 'lublin', [{ lat: 51.23471, lon: 22.56526 }]), 'quest can cross into an authored region');
+assert(ctx.surfaceBindingMatches('lublin', city.id, [target]), 'quest can cross from prepared source into world sectors');
 assert.throws(() => ctx.worldMapId(NaN, 21));
+// Duplicate world fragments must not reassign a building's address to another house.
+const rect = [0, 0, 40, 0, 0, 40, -40, 0];
+const repeated = vm.runInContext(`CityMap.world('w:1.0000,1.0000', {lat:1,lon:1}, () => async box => ({
+  a:[],l:[],b:box.x0===0 ? [[8,[${JSON.stringify(rect)}],'Shared 1',0,1],[10,[[100,0,40,0,0,40,-40,0]],'Other 2',0,1]] : [[8,[${JSON.stringify(rect)}],'Shared 1',0,1]]
+}))`, ctx);
+await repeated.ensure(400, 400, 10);
+await repeated.ensure(2300, 400, 10);
+assert.equal(repeated.findBuilding('Shared 1').id, 8, 'duplicate does not point at last unrelated house');
 rejectIndex = true;
 await assert.rejects(ctx.loadWorld(), /zasad mapy/, 'an unavailable source cannot silently create another map');
 console.log('PASS: transport-independent Warsaw, Lublin/region ownership, independent players, overlapping chunks, legacy positions and quest continuity');

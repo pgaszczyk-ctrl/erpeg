@@ -5,7 +5,7 @@ import { PIES, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
-import { worldMapId, surfaceBindingMatches } from './map/worldRules';
+import { worldMapId, surfaceBindingMatches, registerSurfaceRegion } from './map/worldRules';
 import { DUZE_MIASTA, POWROT, WOZNICA, POCIAG } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
@@ -65,6 +65,7 @@ export function worldInfo() {
 }
 
 export function rememberMap(city: CityMap) {
+  if (!worldOrigin(city.id) && !city.loch) registerSurfaceRegion(city.id, (lat, lon) => city.hasLatLon(lat, lon));
   // The same station twice (a bus station is both a building and its outline in OSM): keep one.
   const keep = city.places.filter((p, i, all) => p.kind !== 'station' || !all.some((q, j) => j < i && q.kind === 'station' && q.name === p.name && Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 300 * PX_PER_M));
   if (keep.length !== city.places.length) city.places.splice(0, city.places.length, ...keep);

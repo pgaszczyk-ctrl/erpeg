@@ -5,7 +5,7 @@ import { createHeroAnims } from '../objects/Player';
 import { createSlimeAnims } from '../objects/Slime';
 import { CityMap } from '../map/CityMap';
 import { showMenu } from '../ui/menu';
-import { enterWorld, loadWorld, rememberMap } from '../travel';
+import { enterWorld, getMap, loadWorld, rememberMap } from '../travel';
 import { ITEM_PICTURES, ITEM_VARIANTS, phaserItemUrl } from '../ui/itemIcon';
 import { WARZYWA_RYSUNKI, WYGLAD_09, przygotujRysunkiUpraw } from '../map/Podloze09';
 import { demoFromLink, startDemo } from '../demo';
@@ -46,7 +46,7 @@ export class BootScene extends Phaser.Scene {
       Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
       new Promise((ok) => setTimeout(ok, 3000)),
     ]);
-    this.worldReady = Promise.all([CityMap.load('map/lublin.json'), loadWorld(), font]).then(([city]) => city);
+    this.worldReady = Promise.all([getMap('lublin'), loadWorld(), font]).then(([city]) => city);
     // The loading error is shown in create(); avoid an unhandled rejection during preload.
     void this.worldReady.catch(() => {});
     this.load.image('szlam-szczegolowy', 'proby31/szlam_wodny.png');

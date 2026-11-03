@@ -37,7 +37,7 @@ async function run(mobile, native = false) {
     if (['save_game', 'heartbeat', 'logout', 'log_error'].includes(fn)) body = true;
     return route.fulfill({ json: body });
   });
-  await context.route('**/sample.pmtiles', route => {
+  await context.route(url => url.pathname.endsWith('/sample.pmtiles'), route => {
     const match = /bytes=(\d+)-(\d+)/.exec(route.request().headers().range ?? '');
     if (!match) return route.fulfill({ body: sample, contentType: 'application/octet-stream' });
     const a = +match[1], b = Math.min(+match[2], sample.length - 1);
@@ -72,8 +72,10 @@ async function run(mobile, native = false) {
     window.__identityMark = s.city.toLatLon(s.player.x + 300, s.player.y + 300);
     window.__identityCity = s.city;
     window.__identityRenderer = s.mapView;
-    const ll = native ? s.city.toLatLon(s.player.x, s.player.y) : target;
-    s.travel({ to: { ...ll, name: native ? 'Targi Lublin' : 'Kraków', key: 'isolated', mapId: 'w:50.0550,19.9350', mapName: 'Kraków' }, km: 0, price: 0, via: null, train: true });
+    const ll = s.city.toLatLon(s.player.x, s.player.y);
+    const name = 'Powrót w to samo miejsce';
+    s.city.places.push({ kind: 'station', id: 'identity-return', name, building: null, door: { x: s.player.x, y: s.player.y } });
+    s.travel({ to: { ...ll, name, key: 'isolated', mapId: 'w:50.0550,19.9350', mapName: 'Kraków' }, km: 0, price: 0, via: null, train: true });
   }, { native, target });
   await page.waitForFunction(() => {
     const s = window.__game.scene.getScene('game');
@@ -91,6 +93,22 @@ async function run(mobile, native = false) {
   assert.equal(state.saved, after.id); assert.equal(state.coins, 100000);
   if (native) assert(after.landmarks.includes('targi_lublin'), 'authored Targi survives restart');
   if (!native) {
+    // Real station choice may move arrival into the adjacent sector. The durable
+    // position must belong to that final point before the first walking update.
+    await page.evaluate(target => {
+      const s = window.__game.scene.getScene('game');
+      window.__identityRenderer = s.mapView;
+      s.travel({ to: { ...target, name: 'Kraków', key: 'actual-station', mapId: 'w:50.0550,19.9350', mapName: 'Kraków' }, km: 0, price: 0, via: null, train: true });
+    }, target);
+    await page.waitForFunction(() => {
+      const s = window.__game.scene.getScene('game');
+      return s.mapView !== window.__identityRenderer && !s.travelling && s.firstViewReady();
+    }, null, { timeout: 180000 });
+    assert(await page.evaluate(() => {
+      const s = window.__game.scene.getScene('game'), ll = s.city.toLatLon(s.player.x, s.player.y);
+      const expected = `w:${(Math.floor(ll.lat * 10 + .5) / 10).toFixed(4)},${(Math.floor(ll.lon * 10 + .5) / 10).toFixed(4)}`;
+      return s.city.id === expected && window.__session.tu.m === expected;
+    }), 'final station arrival is saved in its canonical map');
     // Walking changes sector at a fixed geographic line, then returns to the same old map/fog.
     for (const ll of [{ lat: 50.049, lon: 19.935 }, target]) {
       await page.evaluate(async ll => {

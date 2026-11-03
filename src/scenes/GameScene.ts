@@ -6046,12 +6046,19 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.fadeOut(900, 0, 0, 0);
     Promise.all([getSurfaceMap(t.to.lat, t.to.lon), new Promise((ok) => this.time.delayedCall(1000, ok))])
-      .then(async ([city]) => {
+      .then(async ([initial]) => {
+        let city = initial;
         const st = t.statek ? undefined : city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
         // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
         session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
+        // The actual platform/free landing can be across a sector or prepared-map
+        // boundary. Save and start in its owner, not in the nominal city's sector.
+        const landing = await surfacePosition({ m: city.id, ...session.arrive });
+        city = landing.city;
+        session.arrive = { x: landing.at.x, y: landing.at.y };
+        await city.ensure(session.arrive.x, session.arrive.y, LOAD_RADIUS);
         // The ride takes time (WOZNICA/POCIAG km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
         session.tu = { ...session.at };

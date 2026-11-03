@@ -13,8 +13,14 @@ export function worldMapId(lat: number, lon: number) {
   return `w:${y.toFixed(4)},${x.toFixed(4)}`;
 }
 
-/** A persistent geographic quest can straddle sector edges without losing its objectives. */
+const preparedRegions = new Map<string, (lat: number, lon: number) => boolean>();
+export function registerSurfaceRegion(id: string, contains: (lat: number, lon: number) => boolean) {
+  preparedRegions.set(id, contains);
+}
+
+/** A geographic quest can cross both sector edges and prepared/world source boundaries. */
 export function surfaceBindingMatches(owner: string, current: string, anchors: readonly { lat: number; lon: number }[]) {
-  return owner === current || (owner.startsWith('w:') && current.startsWith('w:') &&
-    anchors.some(p => worldMapId(p.lat, p.lon) === current));
+  if (owner === current) return true;
+  const contains = preparedRegions.get(current);
+  return anchors.some(p => current.startsWith('w:') ? worldMapId(p.lat, p.lon) === current : !!contains?.(p.lat, p.lon));
 }
