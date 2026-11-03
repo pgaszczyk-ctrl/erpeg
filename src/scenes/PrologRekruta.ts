@@ -6,6 +6,7 @@ import { zasoby, maxMany } from '../content/zasoby';
 import { poziomPostaci } from '../content/historia';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { loadingMapVisible } from '../ui/loadingMap';
+import { surfaceBindingMatches } from '../map/worldRules';
 import { tx } from '../i18n';
 import { ensureModul, fitHd } from '../sprites';
 import { TEX, artScale } from '../art';
@@ -50,7 +51,10 @@ export class PrologRekruta {
   busy = false;
   constructor(private h: PrologHost) {}
   get state() { return session.story.prolog; }
-  private get local() { return this.state?.originMapId === this.h.city.id; }
+  private get local() {
+    const p = this.state;
+    return !!p && surfaceBindingMatches(p.originMapId, this.h.city.id, Object.values(p.anchors));
+  }
   private get underground() { return !!this.state?.dungeon && this.state.dungeon.id === this.h.city.id; }
   get protectingStart() { return !!this.state && this.state.status === 'active' && this.state.stage === 'intro'; }
   private point(k: AnchorKind) { const a = this.state?.anchors[k]; return a && this.h.city.fromLatLon(a.lat, a.lon); }

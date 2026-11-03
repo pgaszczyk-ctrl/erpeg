@@ -142,6 +142,8 @@ export interface Misja {
   id: string;
   /** Once per character, independent of city. Coordinates stay bound to the accepted map. */
   scenariusz?: import('./questy/scenarios').CityBinding;
+  /** Geographic fallback for an accepted job whose old map origin/place id changed. */
+  dawca?: { lat: number; lon: number; mapId: string };
   /** Zleceniodawca stojący przy drzwiach misji (właściciel 7.10.2026: „w queście musi być ktoś”). */
   postac?: Postac;
   /** Budynek, w którym misję się dostaje (jego wejście świeci na złoto). */

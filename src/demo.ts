@@ -9,8 +9,9 @@ import { loadGear, pointsForLevel, type Gear } from './inventory';
 import { MAKS_POZIOM } from './content/przedmioty';
 import type { Look } from './look';
 import { codeLink } from './ui/codeCard';
-import { getMap, prepareMap } from './travel';
+import { getMap, getSurfaceMap, prepareMap } from './travel';
 import { PX_PER_M, type CityMap } from './map/CityMap';
+import { worldMapId } from './map/worldRules';
 import { turyWDemo } from './walka/tryb';
 
 // The QR demo: `?d=<code>` (content/demo.ts) – since 18 Oct 2026 the way new players start. The name form
@@ -41,7 +42,7 @@ export function demoFromLink(): Pobudka | null {
   return code ? DEMO_KODY[code] ?? null : null;
 }
 
-const mapId = (p: { lat: number; lon: number }) => `w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+const mapId = (p: { lat: number; lon: number }) => worldMapId(p.lat, p.lon);
 
 /** The dream's map: Lublin (the castle), or a world map when `?sen=` moves it elsewhere for tests. */
 export function dreamMap() {
@@ -93,7 +94,7 @@ export async function startDemo(game: Phaser.Game, p: Pobudka, r: LoginResult, l
   // Test server (turn fights): 3/4 of life – the apples picked in the dream heal in the fight (owner, 18 Oct 2026).
   session.hp = turyWDemo() ? Math.round(PLAYER.maxHp * SEN.tury.zycie) : PLAYER.maxHp - 2;
   const { start } = dreamPlaces();
-  const city = await getMap(dreamMap());
+  const city = await getSurfaceMap(start.lat, start.lon);
   await arriveAt(game, city, city.fromLatLon(start.lat, start.lon));
   game.scene.start('game');
 }

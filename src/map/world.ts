@@ -4,17 +4,18 @@
 // is made while the hero walks: each 1 km tile of the game is made from the
 // zoom-15 world tiles under it (see CityMap.world).
 //
-// Where the world map lives: WORLD_BASE (Cloudflare R2, world.json names the
-// current file). `?world=<url of a .pmtiles file>` overrides it for tests.
+// Where the world map lives: WORLD_BASE (Cloudflare R2), pinned by WORLD_ARCHIVE
+// in worldRules.ts. `?world=<url of a .pmtiles file>` overrides it for tests.
 
 import { PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { Terrain } from './terrain';
+import { WORLD_ARCHIVE } from './worldRules';
 import { SZOPY } from '../content/budynki';
 import { CityMap, PX_PER_M, type Building, type Place, type RawTile, type WorldLoader } from './CityMap';
 
-/** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
+/** The bucket holding the immutable world map archives (not stored in the repository). */
 export const WORLD_BASE = 'https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev';
 const Z = 15;
 // Same open structures omitted by build-map.mjs for Lublin. A canopy's outline is not a wall,
@@ -29,10 +30,7 @@ function worldFile(): Promise<PMTiles> {
     const override = new URLSearchParams(location.search).get('world');
     if (override) return new PMTiles(override);
     if (!WORLD_BASE) throw new Error('Mapa świata nie jest jeszcze gotowa');
-    const res = await fetch(`${WORLD_BASE}/world.json`, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`Nie udało się wczytać mapy świata (${res.status})`);
-    const { file } = (await res.json()) as { file: string };
-    return new PMTiles(`${WORLD_BASE}/${file}`);
+    return new PMTiles(`${WORLD_BASE}/${WORLD_ARCHIVE}`);
   })();
   pm.catch(() => (pm = null));
   return pm;
@@ -44,7 +42,7 @@ export function useWorldSource(src: Source) {
 }
 export type { Source, RangeResponse };
 
-/** A world map around (lat, lon). Its id carries the place, so saves can find it again. */
+/** Low-level projection, also used to read old saves. New arrivals use travel.getSurfaceMap. */
 export function worldMap(lat: number, lon: number) {
   const id = `w:${lat.toFixed(4)},${lon.toFixed(4)}`;
   return CityMap.world(id, { lat, lon }, (map) => {

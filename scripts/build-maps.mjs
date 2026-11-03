@@ -56,6 +56,6 @@ console.log(`towns: ${towns.length} town maps (${built} rebuilt)`);
 const rail = existsSync('data/rail.json') ? JSON.parse(readFileSync('data/rail.json', 'utf8')) : { edges: [] };
 writeFileSync('public/map/world.json', JSON.stringify({
   lublin: plan.lublin,
-  towns: towns.map(({ id, name, stations }) => ({ id, name, stations })),
+  towns: towns.map(({ id, name, stations, bbox }) => ({ id, name, stations, bbox })),
   edges: rail.edges,
 }));
