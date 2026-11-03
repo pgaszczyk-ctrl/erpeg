@@ -18,6 +18,26 @@ export const WLAZ_RYS = {
   zamykanieMs: 300,
 };
 const D = 2; // canvas px per map px
+
+/** The artist's round hatch with a lid split into two sliding halves (49-G002; owner, 3 Nov 2026: „okrągły właz jest do
+ * metra, kulociągu”): 3 aligned 128×96 layers, pivot 64,48, halves slide ±56 source px when open. Shown at `skala`
+ * map px per source px, NEAREST; the code drawing stays until the files load (or if they fail). */
+const WLAZ_ART = { plik: 'swiat/lochy/wlaz_dwudzielny/', skala: 0.2, odsuw: 56, slupekX: 17 };
+let wlazArt: Promise<boolean> | null = null;
+function wczytajWlaz(scene: Phaser.Scene): Promise<boolean> {
+  const tex = scene.textures, pliki = ['podstawa', 'pokrywa_lewa', 'pokrywa_prawa'];
+  if (pliki.every((f) => tex.exists(`wlaz-art-${f}`))) return Promise.resolve(true);
+  wlazArt ??= Promise.all(pliki.map((f) => new Promise<boolean>((ok) => {
+    const img = new Image();
+    img.onload = () => {
+      if (!tex.exists(`wlaz-art-${f}`)) tex.addImage(`wlaz-art-${f}`, img)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      ok(true);
+    };
+    img.onerror = () => ok(false);
+    img.src = `${import.meta.env.BASE_URL || '/'}${WLAZ_ART.plik}${f}.png`;
+  }))).then((r) => r.every(Boolean));
+  return wlazArt.then((ok) => { if (!ok) wlazArt = null; return ok; });
+}
 const INK = '#1e1a24';
 
 function twardo(c: HTMLCanvasElement) {
@@ -123,6 +143,11 @@ export class Wlaz {
   private pokrywa: Phaser.GameObjects.Image;
   private slupek: Phaser.GameObjects.Image;
   private blask: Phaser.GameObjects.Image;
+  /** The artist's second lid half (the first one reuses `pokrywa`), once the pictures are in. */
+  private prawa?: Phaser.GameObjects.Image;
+  /** Current slide of the lid (0 closed), map px – kept so the art can take over mid-way. */
+  private odsuniecie = 0;
+  private ruch?: Phaser.Tweens.Tween;
   private t = Math.random() * 10;
   constructor(private scene: Phaser.Scene, readonly x: number, readonly y: number) {
     tekstury(scene);
@@ -138,26 +163,53 @@ export class Wlaz {
       .setScale(0.7)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(y + 0.1);
+    void wczytajWlaz(scene).then((ok) => ok && this.naObrazki());
+  }
+  /** Swaps the code drawing for the artist's layers. */
+  private naObrazki() {
+    if (!this.otwor.active || this.prawa) return;
+    const k = WLAZ_ART.skala;
+    this.otwor.setTexture('wlaz-art-podstawa').setScale(k);
+    this.pokrywa.setTexture('wlaz-art-pokrywa_lewa').setScale(k);
+    this.prawa = this.scene.add.image(this.x, this.y, 'wlaz-art-pokrywa_prawa').setScale(k).setDepth(-1e7 + 3).setVisible(this.otwor.visible);
+    this.slupek.x = this.blask.x = this.x + WLAZ_ART.slupekX;
+    this.ustaw(this.odsuniecie);
+  }
+  /** Places the lid for a slide of `d` (0 = closed, 1 = open). */
+  private ustaw(d: number) {
+    this.odsuniecie = d;
+    if (this.prawa) {
+      const o = WLAZ_ART.odsuw * WLAZ_ART.skala * d;
+      this.pokrywa.x = this.x - o;
+      this.prawa.x = this.x + o;
+    } else this.pokrywa.x = this.x - WLAZ_RYS.odsuw * d;
+  }
+  private get warstwy() {
+    return [this.otwor, this.pokrywa, this.slupek, this.blask, ...(this.prawa ? [this.prawa] : [])];
   }
   setVisible(v: boolean) {
-    for (const o of [this.otwor, this.pokrywa, this.slupek, this.blask]) o.setVisible(v);
+    for (const o of this.warstwy) o.setVisible(v);
   }
   /** A hatch lies on the ground: it is not cut out of the fog like the tall cannons. */
   get wyciecie() {
     return null;
   }
-  private przesun(dx: number, ms: number, still: boolean) {
+  /** Slides the lid to `d` (0 closed, 1 open). */
+  private przesun(d: number, ms: number, still: boolean) {
+    this.ruch?.stop();
+    this.ruch = undefined;
     if (still) {
-      this.pokrywa.x = this.x + dx;
+      this.ustaw(d);
       return Promise.resolve();
     }
-    return new Promise<void>((resolve) =>
-      this.scene.tweens.add({ targets: this.pokrywa, x: this.x + dx, duration: ms, ease: 'Sine.easeInOut', onComplete: () => resolve() }),
-    );
+    const stan = { d: this.odsuniecie };
+    return new Promise<void>((resolve) => {
+      this.ruch = this.scene.tweens.add({ targets: stan, d, duration: ms, ease: 'Sine.easeInOut', onUpdate: () => this.ustaw(stan.d), onComplete: () => resolve(), onStop: () => resolve() });
+    });
   }
   /** Opens the lid (the hero then climbs in). Direction is ignored – a hatch has none. */
   celuj(_dx: number, _dy: number, natychmiast = false): Promise<void> {
-    return this.przesun(-WLAZ_RYS.odsuw, WLAZ_RYS.otwieranieMs, natychmiast);
+    return this.przesun(1, WLAZ_RYS.otwieranieMs, natychmiast);
   }
   /** The hero is in: a puff of steam and the lid closes. */
   async strzel(): Promise<void> {
@@ -166,7 +218,7 @@ export class Wlaz {
   }
   /** Arrival: the lid flies open with steam. */
   lap() {
-    void this.przesun(-WLAZ_RYS.odsuw, 160, false);
+    void this.przesun(1, 160, false);
     dymek(this.scene, this.x, this.y - 2, this.y + 1);
   }
   /** Closes after the hero is out. */
@@ -178,6 +230,6 @@ export class Wlaz {
     this.blask.setAlpha(0.55 + 0.25 * Math.sin(this.t * 2.2));
   }
   destroy() {
-    for (const o of [this.otwor, this.pokrywa, this.slupek, this.blask]) o.destroy();
+    for (const o of this.warstwy) o.destroy();
   }
 }

@@ -13,6 +13,23 @@ const M = PX_PER_M;
 /** Rysunek lochu: tyle pikseli płótna na piksel mapy (jak postacie – piksel świata to pół piksela mapy). */
 const D = 2;
 
+/** The artist's stone cellar with two wooden doors (49-G004; owner, 3 Nov 2026: „kwadratowy do lochów”) – every dungeon
+ * entrance on the surface. Game-size copies made by scripts/lochy/piwniczka-gra.py (origin = front threshold). Closed,
+ * opens when the hero stands next to it. Until the files load the old code drawing is shown. */
+const PIWNICZKA = { plik: 'swiat/lochy/piwniczka_drewniana/', origin: [0.5051, 0.9244] as const, skala: 0.25, nizej: 3, otwartaM: 3.5 };
+let piwniczka: Promise<boolean> | null = null;
+function wczytajPiwniczke(scene: Phaser.Scene): Promise<boolean> {
+  const tex = scene.textures;
+  if (tex.exists('loch-piwnica-z') && tex.exists('loch-piwnica-o')) return Promise.resolve(true);
+  piwniczka ??= Promise.all((['z', 'o'] as const).map((k) => new Promise<boolean>((ok) => {
+    const img = new Image();
+    img.onload = () => { if (!tex.exists(`loch-piwnica-${k}`)) tex.addImage(`loch-piwnica-${k}`, img); ok(true); };
+    img.onerror = () => ok(false);
+    img.src = `${import.meta.env.BASE_URL || '/'}${PIWNICZKA.plik}${k === 'z' ? 'zamkniete' : 'otwarte'}_gra.png`;
+  }))).then((r) => r.every(Boolean));
+  return piwniczka.then((ok) => { if (!ok) piwniczka = null; return ok; });
+}
+
 // ============================================================================ powierzchnia
 
 export interface WejscieLochu {
@@ -148,6 +165,7 @@ export class LochyWejscia {
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {
     tekstury(scene);
+    void wczytajPiwniczke(scene);
   }
 
   private cmentarz(a: { id: number; rings: number[][]; x0: number; y0: number; x1: number; y1: number }): WejscieLochu | null {
@@ -204,6 +222,14 @@ export class LochyWejscia {
   }
 
   update(px: number, py: number, now: number) {
+    // The cellar's doors open while the hero stands next to one (cheap: only entrances that are shown).
+    const blisko = PIWNICZKA.otwartaM * M;
+    for (const w of this.lista) {
+      const img = this.obrazki.get(w.id)?.[0] as Phaser.GameObjects.Image | undefined;
+      if (!img?.texture.key.startsWith('loch-piwnica')) continue;
+      const k = Math.hypot(w.x - px, w.y - py) < blisko ? 'loch-piwnica-o' : 'loch-piwnica-z';
+      if (img.texture.key !== k) img.setTexture(k);
+    }
     if (now < this.nastepne) return;
     this.nastepne = now + 1200;
     const R = LOCH.szukajM * M;
@@ -271,6 +297,13 @@ export class LochyWejscia {
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
     const img = s.add.image(w.x, w.y, `loch-wej-${w.rodzaj}`).setScale(1 / D).setOrigin(0.5, 0.75).setDepth(w.y - 6);
+    const piwnica = () => {
+      if (!img.active) return;
+      img.setTexture('loch-piwnica-z').setOrigin(PIWNICZKA.origin[0], PIWNICZKA.origin[1]).setScale(PIWNICZKA.skala)
+        .setPosition(w.x, w.y + PIWNICZKA.nizej).setDepth(w.y - 2);
+    };
+    if (s.textures.exists('loch-piwnica-z')) piwnica();
+    else void wczytajPiwniczke(s).then((ok) => ok && piwnica());
     // Zimna poświata – żeby zejście było widać z daleka (ADD, powolny oddech).
     const blask = s.add.image(w.x, w.y - 1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0x8ab8ff).setDisplaySize(40, 30).setDepth(w.y - 7).setAlpha(0.25);
     s.tweens.add({ targets: blask, alpha: { from: 0.12, to: 0.32 }, duration: 1800 + (w.seed % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
