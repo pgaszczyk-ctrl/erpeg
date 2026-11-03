@@ -117,7 +117,7 @@ function wzmocnij(three: typeof THREE, clip: THREE.AnimationClip, k: number) {
 
 export class Ludzik3D {
   /** Rotate the whole equipped hero around his centre; restore the live rig even if an export fails. */
-  flightPortrait(): string[] | undefined {
+  flightPortrait(spin = false): string[] | undefined {
     const g = this.g;
     if (!g) return undefined;
     const joints = ['upperL', 'foreL', 'upperR', 'foreR'].map(name => g.model.getObjectByName(name));
@@ -130,14 +130,15 @@ export class Ludzik3D {
     g.scene.add(pivot);
     pivot.attach(g.model);
     try {
-      for (let i = 0; i < 24; i++) {
-        const phase = i * Math.PI / 12;
+      const count = spin ? 24 : 6;
+      for (let i = 0; i < count; i++) {
+        const phase = i * Math.PI * 2 / count;
         joints.forEach((joint, n) => {
           if (!joint || !saved[n]) return;
           joint.quaternion.copy(saved[n]!);
           joint.rotation.z += (n < 2 ? 1 : -1) * (.65 + .3 * Math.sin(phase + n % 2));
         });
-        pivot.rotation.set(.16 * Math.sin(phase), phase, .08 * Math.cos(phase));
+        if (spin) pivot.rotation.set(.16 * Math.sin(phase), phase, .08 * Math.cos(phase));
         this.narysuj(g);
         frames.push(g.renderer.domElement.toDataURL('image/png'));
       }

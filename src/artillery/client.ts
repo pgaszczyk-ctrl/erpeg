@@ -61,7 +61,7 @@ type Host = {
   busy: () => boolean;
   hold: (v: boolean) => void;
   checkpoint: () => Promise<unknown>;
-  hero: () => string | string[] | undefined;
+  hero: (spin?: boolean) => string | string[] | undefined;
   restart: (city: CityMap) => Promise<void>;
   toast: (s: string) => void;
   /** Where a map point is on screen (share of the view) and CSS px per map px. */
@@ -571,7 +571,7 @@ export class Artillery {
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
     const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to), tor }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to), tor }) : flight(this.host.hero(true), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,
