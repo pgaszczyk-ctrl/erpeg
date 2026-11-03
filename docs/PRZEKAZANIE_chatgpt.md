@@ -797,3 +797,11 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 - Pierwsza próba przeglądarkowa wykryła, że rzeczywisty najbliższy dworzec leży w innym sektorze niż zadany punkt miasta; poprawka końcowego rozstrzygnięcia mapy i odpowiedni test są dodane. Test powrotu dokładnie w to samo miejsce używa jawnego przystanku, aby nie mylić tego z legalnym wyborem innego dworca.
 - Zmiany scalone z nowszą poprawką wyboru interakcji z gałęzi TEST. Fixture drugiego miasta w browser-prolog zarejestrowany w katalogu regionów zgodnie z nową regułą.
 - Brak zmian PRODUKCJA, src/version.ts, produkcja/ i bazy. Brak zbiorczego kasowania mgły, postaci lub zapisów. Nie scalać do TEST przed pozytywną weryfikacją.
+
+
+### Wspólny świat — weryfikacja zakończona, publikacja TEST
+
+- PASS: pełne `VITE_TEST=1 npm run build`, a następnie ponowny Vite build i komplet browser-world-identity na komputerze oraz telefonie 390×844. Zrzuty w work/world-identity. Mapy Lublina (pełna i indeks) po ponownym wygenerowaniu są identyczne bajtowo z użytymi w pierwszej serii prób.
+- PASS: browser-artillery na komputerze, telefonie poziomo i pionowo, wraz z odświeżeniem w trakcie podróży, odzyskaniem lotu i kontrolą pojedynczego obciążenia. Wszystkie bez błędów strony. Prolog PL/EN × komputer/telefon PASS w Actions; dodatkowo lokalnie plan/trwałość prologu, world-identity (Warszawa, stare pozycje, questy, duplikaty adresów), world-platform, interaction-selection, building-cutout, fps-pauses i typecheck PASS.
+- Właściciel polecił „Wrzucaj na testa”. PR „Jeden świat niezależnie od sposobu podróży” został scalony zwykłym merge do TEST jako f6014d3. Uruchomiona publikacja Pages: 41686100111. Wynik publikacji i weryfikacji publicznej wersji będzie dopisany do opisu PR.
+- Produkcja pozostaje przypięta do dotychczasowego kodu. Brak zbiorczego resetu mgły i zmian bazy. Reguły w docs/ZASADY_SWIATA.md. Ten wpis zmienia tylko dokumentację; nie wymaga ponownego budowania tych samych map.
