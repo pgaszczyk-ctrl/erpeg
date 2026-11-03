@@ -1,0 +1,26 @@
+{
+  "id": "49-G004",
+  "version": 1,
+  "type": "two-static-states",
+  "frame": {
+    "width": 1536,
+    "height": 1024
+  },
+  "anchor": {
+    "x": 768,
+    "y": 750,
+    "description": "środek przedniego kamiennego progu; wspólny punkt mapy"
+  },
+  "states": {
+    "closed": "zamkniete.png",
+    "open": "otwarte.png"
+  },
+  "suggestedDisplayFrameWidth": 240,
+  "suggestedDisplayFrameHeight": 160,
+  "notes": [
+    "Oba PNG RGBA mają wspólny kadr. Nie przycinać każdego osobno: zmieni to położenie progu.",
+    "To dwa końcowe stany, bez animacji i bez wydzielonych skrzydeł.",
+    "Rozmiar widocznego obiektu dobrać na mapie: około dwóch szerokości postaci.",
+    "Oryginały imagegen; miękka alfa i cień. Drobne różnice obrysu pomiędzy stanami wymagają oceny w docelowej skali."
+  ]
+}

@@ -742,3 +742,9 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 - Na polecenie właściciela wykonano właz w stylu zatwierdzonego zejścia Kulociągu: mosiężny pierścień, żelazna pokrywa rozdzielona pionowo na dwie odsuwane połówki, spiralne schody w ceglanej cembrowinie. Trzy warstwy RGBA 128×96, stany złożone 256×128, manifest. Nowe assety: public/swiat/lochy/wlaz_dwudzielny/.
 - Wiadomość dla programisty: docs/poczta/od-grafika/2026-11-03_49-G002_wlaz_do_lochow.md. Samodzielny podgląd HTML/GIF, prompty i kontrola formatów w 49_wlaz_lochy/. Weryfikacja: alfa 0/255; złożenie połówek odtwarza wieko; obejrzane stany zamknięty/otwarty. Próba Playwright nie wystartowała: Chromium nie jest zainstalowany. Build całej gry i kontrola mapy nie wykonane; brak zmian runtime, wejść/kolizji/zapisów. Podłączenie do sceny Lochy pozostaje dla programisty. Publikacja zgodnie z dyspozycją na chatgpt/praca, bez wydania produkcyjnego.
+
+
+## 2026-11-03 — 49-G004, drewniana piwniczka: otwarta i zamknięta
+
+- Na polecenie właściciela przygotowano dwa PNG RGBA 1536×1024, wspólny kadr i punkt przedniego progu 768,750. Pliki public/swiat/lochy/piwniczka_drewniana/ oraz manifest. Referencja: przesłany zrzut mapy z Kulociągiem. Instrukcja: docs/poczta/od-grafika/2026-11-03_49-G004_piwniczka_drewniana.md.
+- Obejrzano oba stany, sprawdzono format, rozmiary i alfę 0–254. Są to oryginały imagegen z miękkim cieniem; małe różnice obrysu pozostają do kontroli na mapie. Bez animacji, integracji runtime, builda i testów na telefonie. Zakres tego przekazania: grafika na gałęzi chatgpt/praca, bez wdrożenia test/produkcja.
