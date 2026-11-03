@@ -42,7 +42,7 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  assert(await img.evaluate(e=>e.complete && e.naturalWidth>0));
  assert((await img.boundingBox()).width>=76);
  await page.evaluate(()=>document.fonts.ready);
- assert(await page.locator('.c-card-name').evaluate(e=>getComputedStyle(e).fontFamily.includes('Comic Neue')));
+ assert(await page.locator('.c-card-name').evaluate(e=>getComputedStyle(e).fontFamily.includes('Alegreya Sans')));
  assert(await page.locator('.sl-cell > .weapon-quality').evaluateAll(nodes=>nodes.every(e=>{const s=e.parentElement.getBoundingClientRect();return [...e.children].every(i=>{const r=i.getBoundingClientRect();return r.left>=s.left+2&&r.right<=s.right-2&&r.bottom<=s.bottom-2;});})));
  assert((await page.locator('.weapon-card').innerText()).includes('Wymaga krzepy'));
  assert(await page.locator('.c-actions button').last().evaluate(e=>{const r=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom;}),'action button fits the card without scrolling');
@@ -58,13 +58,14 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  await g(()=>{window.__gear.skills.miecz=0;window.__session.exp=1000000;});
  await slot.dispatchEvent('pointerdown',{pointerId:2,clientX:1,clientY:1});
  await slot.dispatchEvent('pointerup',{pointerId:2,clientX:1,clientY:1,bubbles:true});
- assert((await page.locator('.weapon-card').innerText()).includes('Za niski poziom umiejętności'));
+ assert((await page.locator('.weapon-card .c-stat.brak').innerText()).includes('Wymaga krzepy'));
+ assert(!(await page.locator('.weapon-card').innerText()).includes('Za niski poziom umiejętności'));
  assert.equal(await page.locator('.c-actions button').filter({hasText:/^Załóż$/}).count(),0);
  await page.screenshot({path:`work/comic-hud/${name}-locked.png`});
  await g(()=>{window.__gear.bag[0]={item:'luk_rekruta'};});
  await slot.dispatchEvent('pointerdown',{pointerId:3,clientX:1,clientY:1});
  await slot.dispatchEvent('pointerup',{pointerId:3,clientX:1,clientY:1,bubbles:true});
- assert((await page.locator('.weapon-card .c-card-icon img').getAttribute('src')).endsWith('items/luk.png'));
+ assert((await page.locator('.weapon-card .c-card-icon img').getAttribute('src')).endsWith('items_hd/luk_rekruta.png'));
  assert((await page.locator('.weapon-card').innerText()).includes('Wymaga celności'));
  await page.screenshot({path:`work/comic-hud/${name}-bow.png`});
  assert.deepEqual(errors,[]);
