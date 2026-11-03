@@ -255,7 +255,7 @@ try {
     }, WEST);
     assert(Math.hypot(P1.x - 2880, P1.y - 2910) < 900 * 1.92, "cannon within 900 m of its generated point");
     await page.waitForFunction(()=>window.__game.scene.getScene('game').ludzik3d?.widoczny,null,{timeout:30000});
-    const rig=await page.evaluate(()=>{const l=window.__game.scene.getScene('game').ludzik3d,j=l.g.model.getObjectByName('upperL'),before=j.quaternion.toArray(),frames=l.flightPortrait();return{frames:frames.length,different:new Set(frames).size,before,after:j.quaternion.toArray()};});assert.equal(rig.frames,6);assert(rig.different>1);assert.deepEqual(rig.before,rig.after,'preview wave poses restore the live rig');
+    const rig=await page.evaluate(()=>{const l=window.__game.scene.getScene('game').ludzik3d,j=l.g.model.getObjectByName('upperL'),before=j.quaternion.toArray(),frames=l.flightPortrait();return{frames:frames.length,different:new Set(frames).size,before,after:j.quaternion.toArray()};});assert.equal(rig.frames,24);assert(rig.different>1);assert.deepEqual(rig.before,rig.after,'preview wave poses restore the live rig');
     const identity = await page.evaluate(() => ({
       look: JSON.stringify(window.__session.look),
       equip: JSON.stringify(window.__gear.equip),

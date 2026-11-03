@@ -7,7 +7,7 @@ import { rpc, offline } from "../api";
 import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
-import { flight } from "./flight";
+import { flight, type Kadr } from "./flight";
 import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
 import { miejsceStacji, miejsceWlazu, MIEJSCE_MAKS_M, type Wysun } from "./miejsce";
 import { Wlaz } from "./wlaz";
@@ -68,6 +68,7 @@ type Host = {
   kadr: (x: number, y: number) => { fx: number; fy: number; px: number };
   /** A picture of the map without the HUD. */
   zdjecie: () => Promise<HTMLCanvasElement | null>;
+  panorama: (net: { x: number; y: number }, angle: number) => Promise<Pick<Kadr, "shot" | "panorama">>;
   /** The scene's current hero and cannons (they are new after a restart). */
   obecna: () => { player: Player; artillery?: Artillery };
 };
@@ -672,8 +673,8 @@ export class Artillery {
       let exit = cel ? { x: cel.x + off.wyjscie.dx, y: cel.y + off.wyjscie.dy } : { x: hero.x, y: hero.y };
       if (!city.isFree(exit.x, exit.y, 10, 10)) exit = { x: hero.x, y: hero.y };
       hero.setAlpha(0);
-      const view = await this.host.zdjecie();
-      await overlay.land({ shot: view, ...this.host.kadr(net.x, net.y), cel: to.name });
+      const view = still ? { shot: await this.host.zdjecie() } : await this.host.panorama(net, kat);
+      await overlay.land({ ...view, ...this.host.kadr(net.x, net.y), cel: to.name });
       overlay.close();
       await wSiatke(this.scene, hero, net, exit, cel?.model && cel.armata instanceof Armata3D ? cel.armata : undefined, still);
       this.host.toast(tx(`Złapany w siatkę! Witaj: ${to.name}`, `Caught in the net! Welcome to ${to.name}`));

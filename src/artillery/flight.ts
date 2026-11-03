@@ -10,6 +10,8 @@ import { audio } from "../sfx";
 
 /** Where a map picture sits on screen: the point (fx, fy as a share of the view) and CSS px per map px. */
 export type Kadr = {
+  /** A panorama spans two view widths/heights; fx/fy below still describe the live landing camera. */
+  panorama?: { fx: number; fy: number; span: number };
   shot: HTMLCanvasElement | null;
   /** The point the animation is about (start: the cannon's muzzle; landing: the net), share of the view. */
   fx: number;
@@ -31,7 +33,7 @@ export const LOT = {
   /** Landing can start only after this (from the start), so the take-off always finishes. */
   minLotMs: 2600,
   /** Zoom-in and fall into the net. */
-  ladowanieMs: 1700,
+  ladowanieMs: 3000,
   /** The hero's height in map px (56 × 0.36 × 2/3). */
   bohaterPx: 13.4,
   /** The hero's size in flight relative to his map size. */
@@ -43,43 +45,34 @@ export const LOT = {
 
 type Chmura = { x: number; y: number; s: number; v: number; obraz: HTMLCanvasElement; a: number };
 
-/** Small pixel clouds drawn once, shown enlarged without smoothing (the world's pixel look). */
+/** Illustrated cloud silhouettes, shaded from the NW; large source pictures avoid enlarged black pixel blobs. */
 function rysunkiChmur(): HTMLCanvasElement[] {
-  const wyniki: HTMLCanvasElement[] = [];
-  for (let n = 0; n < 6; n++) {
-    const w = 46 + n * 6, h = 22 + (n % 3) * 4;
+  return Array.from({ length: 6 }, (_, n) => {
     const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
+    c.width = 240 + n * 12; c.height = 132;
     const g = c.getContext("2d")!;
-    let s = 1234 + n * 977;
-    const los = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-    const kule: [number, number, number][] = [];
-    const ile = 5 + (n % 3);
-    for (let i = 0; i < ile; i++) {
-      const t = (i + 0.5) / ile;
-      const r = h * (0.22 + 0.2 * Math.sin(t * Math.PI) + los() * 0.08);
-      kule.push([w * (0.12 + 0.76 * t), h - r - 2 - los() * 3, r]);
-    }
-    const warstwa = (kolor: string, dy: number, dr: number) => {
-      g.fillStyle = kolor;
-      for (const [x, y, r] of kule) {
-        g.beginPath();
-        g.arc(Math.round(x), Math.round(y + dy), Math.max(1, r + dr), 0, Math.PI * 2);
-        g.fill();
-      }
+    const lobes = Array.from({ length: 7 }, (_, i) => {
+      const t = i / 6;
+      return { x: 36 + t * (c.width - 72), y: 86 - Math.sin(t * Math.PI) * (24 + n * 2),
+        r: 24 + Math.sin(t * Math.PI) * 17 + Math.sin(i * 2.4 + n) * 4 };
+    });
+    const shape = () => {
+      g.beginPath();
+      for (const p of lobes) { g.moveTo(p.x + p.r, p.y); g.arc(p.x, p.y, p.r, 0, Math.PI * 2); }
     };
-    warstwa("#1e1a24", 0, 1); // outline like the characters'
-    warstwa("#b9c9d6", 0, 0); // shaded underside
-    warstwa("#eef3f7", -1.5, -1); // lit body
-    warstwa("#ffffff", -3, -3.5); // highlight from the NW
-    // Hard pixels: alpha to 0/255.
-    const d = g.getImageData(0, 0, w, h);
-    for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 100 ? 255 : 0;
-    g.putImageData(d, 0, 0);
-    wyniki.push(c);
-  }
-  return wyniki;
+    shape();
+    g.fillStyle = "#8b9caa"; g.fill();
+    g.save(); shape(); g.clip();
+    const shade = g.createLinearGradient(0, 25, 0, 123);
+    shade.addColorStop(0, "#fffdf2"); shade.addColorStop(.52, "#f3f2e9"); shade.addColorStop(1, "#b7c9d5");
+    g.translate(-1, -3); shape(); g.fillStyle = shade; g.fill(); g.translate(1, 3);
+    for (const p of lobes.slice(1, -1)) {
+      g.beginPath(); g.ellipse(p.x - 5, p.y - p.r * .42, p.r * .66, p.r * .35, -.2, 0, Math.PI * 2);
+      g.fillStyle = "rgba(255,255,248,.22)"; g.fill();
+    }
+    g.restore();
+    return c;
+  });
 }
 
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -160,7 +153,7 @@ export function flight(
 
   /** A cloud enters from the side the hero flies towards and rushes past backwards. */
   const nowaChmura = (gdziekolwiek: boolean) => {
-    const s = 2.5 + Math.random() * 4.5; // pixel scale
+    const s = 0.65 + Math.random() * 1.15; // near clouds are larger and faster
     const obraz = chmuryObrazy[(Math.random() * chmuryObrazy.length) | 0];
     const diag = Math.hypot(W, H) / 2 + obraz.width * s;
     // A point on a line across the view, pushed ahead along the flight direction.
@@ -170,7 +163,7 @@ export function flight(
       x: W / 2 + dir.x * naprzod - dir.y * bok,
       y: H / 2 + dir.y * naprzod + dir.x * bok,
       s,
-      v: 260 + s * 70,
+      v: 120 + s * 210,
       obraz,
       a: 1,
     });
@@ -179,8 +172,10 @@ export function flight(
   /** A map picture drawn so its point (fx, fy) lands at screen (sx, sy), scaled by k. */
   const mapa = (k: Kadr, sx: number, sy: number, skala: number) => {
     if (!k.shot) return;
-    const w = W * skala, h = H * skala;
-    ctx.drawImage(k.shot, sx - k.fx * w, sy - k.fy * h, w, h);
+    const span = k.panorama?.span ?? 1;
+    const w = W * skala * span, h = H * skala * span;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(k.shot, sx - (k.panorama?.fx ?? k.fx) * w, sy - (k.panorama?.fy ?? k.fy) * h, w, h);
   };
 
   const niebo = (alfa = 1) => {
@@ -202,24 +197,21 @@ export function flight(
     g.addColorStop(1, "#c6d7e3");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    // Faint streaks moving backwards so the cover itself feels like speed.
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 3;
-    const krok = 90, przes = ((t * 0.5) % krok);
-    for (let i = -Math.ceil(Math.hypot(W, H) / krok); i <= Math.ceil(Math.hypot(W, H) / krok); i++) {
-      const o = i * krok - przes;
-      const cx = W / 2 - dir.x * o, cy = H / 2 - dir.y * o;
-      const dl = 40 + ((i * 37) % 50);
-      ctx.beginPath();
-      ctx.moveTo(cx - dir.y * ((i * 53) % 300) - dir.x * dl, cy + dir.x * ((i * 53) % 300) - dir.y * dl);
-      ctx.lineTo(cx - dir.y * ((i * 53) % 300), cy + dir.x * ((i * 53) % 300));
-      ctx.stroke();
+    // Overlapping, low-contrast cloud banks hide loading without a flat slab or speed stripes.
+    ctx.imageSmoothingEnabled = true;
+    const drift = still ? 0 : t * .025;
+    for (let row = -1; row <= Math.ceil(H / 140); row++) {
+      for (let col = -1; col <= Math.ceil(W / 240) + 1; col++) {
+        const cloud = chmuryObrazy[((row + col) % 6 + 6) % 6];
+        ctx.globalAlpha = alfa * .28;
+        ctx.drawImage(cloud, col * 240 - drift % 240 + (row % 2) * 100, row * 140, 380, 210);
+      }
     }
     ctx.globalAlpha = 1;
   };
 
   const rysujChmury = (dt: number, gestosc: number, rozstep: number) => {
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
     // Keep enough clouds for the density.
     const chce = Math.round(gestosc * 26);
     let zywych = 0;
@@ -256,7 +248,7 @@ export function flight(
   };
 
   const bohater = (x: number, y: number, wys: number, obrot: number, t: number) => {
-    const img = klatki.length ? klatki[Math.floor(t / 120) % klatki.length] : null;
+    const img = klatki.length ? klatki[Math.floor(t / 60) % klatki.length] : null;
     if (!img || !img.complete || !img.naturalWidth) return;
     // The figure fills ~54 of the frame's 64 px (ludzik3d / sheets).
     const s = (wys * 64) / 54 / img.naturalHeight;
@@ -351,10 +343,17 @@ export function flight(
     const L = now - lad.t;
     const u = still ? 1 : clamp(L / LOT.ladowanieMs);
     const z = ease(clamp(L / (LOT.ladowanieMs * 0.92)));
-    const skala = LOT.mapaMin + (1 - LOT.mapaMin) * z;
+    const skalaNalotu = lad.panorama ? 0.72 : 1;
+    let skala = skalaNalotu + (1 - skalaNalotu) * z;
     const nx = lad.fx * W, ny = lad.fy * H;
     // The map arrives from the flight direction and settles with the net under the hero's landing point.
-    const sx = nx + dir.x * diag * 0.25 * (1 - z), sy = ny + dir.y * diag * 0.25 * (1 - z);
+    const sx = nx + dir.x * W * 0.14 * (1 - z), sy = ny + dir.y * H * 0.14 * (1 - z);
+    if (lad.panorama) {
+      const p = lad.panorama;
+      // Never reveal a picture edge, including unusual aspect ratios and a net away from the centre.
+      skala = Math.max(skala, sx / (p.fx * W * p.span), (W - sx) / ((1 - p.fx) * W * p.span),
+        sy / (p.fy * H * p.span), (H - sy) / ((1 - p.fy) * H * p.span));
+    }
     niebo();
     mapa(lad, sx, sy, skala);
     ctx.fillStyle = `rgba(207,230,238,${0.45 * (1 - z)})`;
@@ -363,13 +362,14 @@ export function flight(
     rysujChmury(still ? 0 : dt, 0, clamp(L / 650) + 0.01);
     // The hero: from the middle, big, down an arc into the net, shrinking to his map size, turning feet-first.
     const bohLad = LOT.bohaterPx * lad.px;
-    const k = easeOut(u);
+    // A visible fly-over first; the final part descends into the net.
+    const k = easeOut(clamp((u - 0.3) / 0.7));
     const ax = W / 2, ay = H * 0.38, bx = nx, by = ny - bohLad * 0.5;
     const hx = ax + (bx - ax) * k, hy = ay + (by - ay) * k - Math.sin(Math.PI * u) * H * 0.08;
     const wys = bohLad * (LOT.wLocie + (1 - LOT.wLocie) * k);
-    const obrot = (start.kat + Math.PI / 2) * (1 - ease(clamp(u * 1.3)));
+    const obrot = (start.kat + Math.PI / 2) * (1 - ease(clamp((u - .3) / .7)));
     cien(nx, ny + bohLad * 0.1, bohLad * 0.35 * skala * (0.3 + 0.7 * k), 0.4 * k);
-    bohater(hx, hy, wys, obrot, t);
+    bohater(hx, hy, wys, obrot, t * (1 - k));
     if (u >= 1) {
       const done = lad.done;
       lad = { ...lad, done: () => {} };

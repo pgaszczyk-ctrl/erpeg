@@ -1,3 +1,4 @@
+import { landingPanorama } from '../artillery/panorama';
 import { gameShot } from '../ui/snapshot';
 import { restoreHero } from '../artillery/state';
 import { Artillery,artilleryTransit } from '../artillery/client';
@@ -1036,6 +1037,7 @@ export class GameScene extends Phaser.Scene {
       toast:s=>this.toast(s),
       kadr:(x,y)=>{const v=this.cameras.main.worldView;return{fx:(x-v.x)/v.width,fy:(y-v.y)/v.height,px:window.innerWidth/v.width};},
       zdjecie:async()=>{await new Promise<void>(resolve=>this.game.events.once('postrender',resolve));return gameShot(this.game,{withHud:false,maxW:this.game.canvas.width});},
+      panorama:(net,kat)=>landingPanorama(this,net,kat,(x,y,r)=>this.city.ensure(x,y,r),()=>this.firstViewReady(),()=>this.cameras.main.startFollow(this.player,true,.15,.15),v=>this.fogView.setVisible(v)),
       obecna:()=>({player:this.player,artillery:this.artillery}),
     });
     const artillery=this.artillery;this.events.once('shutdown',()=>artillery?.destroy());

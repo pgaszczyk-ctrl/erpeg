@@ -748,3 +748,11 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 - Na polecenie właściciela przygotowano dwa PNG RGBA 1536×1024, wspólny kadr i punkt przedniego progu 768,750. Pliki public/swiat/lochy/piwniczka_drewniana/ oraz manifest. Referencja: przesłany zrzut mapy z Kulociągiem. Instrukcja: docs/poczta/od-grafika/2026-11-03_49-G004_piwniczka_drewniana.md.
 - Obejrzano oba stany, sprawdzono format, rozmiary i alfę 0–254. Są to oryginały imagegen z miękkim cieniem; małe różnice obrysu pozostają do kontroli na mapie. Bez animacji, integracji runtime, builda i testów na telefonie. Zakres tego przekazania: grafika na gałęzi chatgpt/praca, bez wdrożenia test/produkcja.
+
+
+## 2026-11-03 — nalot armatą: większa mapa, obrót całej postaci, chmury
+
+- Właściciel: po wyjściu z chmur gotowa mapa bez pustych obrzeży, chwilę lotu nad ulicami; obrót całego ludzika i lepsze chmury.
+- Kod: src/artillery/panorama.ts (4 zwykłe kadry, zapas od przylotu, limit atlasu 2048 px, kamera/przygotowany teren przywracane w finally), client.ts, scenes/GameScene.ts, map/Fog.ts (tylko ukrycie mgły na zdjęciach; bez zmian odkrycia mapy), flight.ts (nalot 3 s, pełne pokrycie kadru, nowe cieniowane chmury), ludzik3d.ts (24 klatki pełnego obrotu modelu, odtworzenie stanu po eksporcie).
+- Sprawdzone lokalnie: Node 24 stripTypeScriptTypes parsuje zmienione TS; scripts/tests/artillery-panorama.mjs: cztery zdjęcia, przywracanie kamery i mgły po błędzie, 752 klatki po odsłonięciu chmur na PC/telefonie w 8 kierunkach — PASS.
+- Ograniczenie: zwykły Git nie pobrał plików projektu (Proxy CONNECT aborted), lokalnie brak zależności i Chromium. Nie uznajemy samej składni/mocków za pełny test gry. Pełny npm run build i browser-artillery.mjs (PC/telefon, rig 24 klatki) uruchamia PR przez artillery-checks.yml. Dopiero po pozytywnych wynikach merge do TEST, bez zmiany PRODUKCJA ani src/version.ts.

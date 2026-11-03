@@ -26,6 +26,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: node scripts/tests/artillery-panorama.mjs
       - run: node scripts/tests/artillery.mjs
       - run: |
           npm install --no-save --package-lock=false @electric-sql/pglite@0.5.13 playwright@1.62.1
