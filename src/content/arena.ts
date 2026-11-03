@@ -29,6 +29,32 @@ export const ARENA = {
   gladiator: { atak: (lvl: number) => 2.5 + lvl * 0.9, trafienie: (lvl: number) => Math.min(0.9, 0.6 + lvl * 0.015), blok: 0.05 },
 };
 
+/** Walka na żywo na arenie (właściciel 3.11.2026: „nie turowe, tylko normalne”, scenes/ArenaWalka.ts).
+ *  Odległości w W (wysokość bohatera), czasy w ms, prędkości w px/s. */
+export const ARENA_ZYWA = {
+  /** Chwila na rozejrzenie się przed pierwszym atakiem rywala. */
+  startMs: 1200,
+  /** Rywal chodzi tyle razy szybko co bohater. */
+  predkosc: 0.85,
+  /** Zasięg ciosu rywala poza stykiem i połowa kąta ostrzeżenia (radiany). */
+  zasiegCiosuW: 0.45,
+  katCiosu: 0.75,
+  /** Czerwone ostrzeżenie przed ciosem / mocnym ciosem / strzałem, odpoczynek po ciosie, odstęp strzałów. */
+  zapowiedzMs: 520,
+  zapowiedzMocnyMs: 850,
+  zapowiedzStrzalMs: 600,
+  odpoczynekMs: 750,
+  odstepStrzalMs: 1300,
+  /** Strzelec trzyma się między tymi odległościami. */
+  strzelaZW: 6,
+  trzymaW: 3,
+  zasiegStrzaluW: 8,
+  pociskPx: 200,
+  pociskDuchaPx: 130,
+  /** Mocny atak bohatera: raz na tyle ms. */
+  mocnyCoMs: 2500,
+};
+
 /** Looks of the Arena Cechu, one fixed per town (code-drawn until the artist draws arenas): background, stands, floor, railing. */
 export const ARENY_WYGLADY = [
   { nazwa: 'mosiężna', tlo: '#2a1d14', trybuny: [0x3d2a1c, 0x4a3424], piasek: [0xc9a46a, 0xb8925a, 0xdab880], barierka: [0x7a5a26, 0xd6a84c] },

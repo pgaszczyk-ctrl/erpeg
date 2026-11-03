@@ -128,9 +128,9 @@ try {
   const offer = await dialogNext(/Arena Cechu/);
   assert.match(offer.text, process.env.GLADIATOR ? /Gladiator/ : /Zbyszko/);
   await press(offer, 'Walcz');
-  await page.waitForFunction(() => window.__game.scene.isActive('arena') && window.__game.scene.getScene('arena').walka?.faza === 'gracz', null, { timeout: 20000 });
+  await page.waitForFunction(() => window.__game.scene.isActive('arena') && !!window.__game.scene.getScene('arena').walka, null, { timeout: 20000 });
   // The hero is the same 3D model as on the street (not his flat sheet).
-  await page.waitForFunction(() => { const l = window.__game.scene.getScene('arena').ludzik; return !l || l.widoczny; }, null, { timeout: 20000 });
+  await page.waitForFunction(() => { const l = window.__game.scene.getScene('arena').ludzik; return !l || !!l.image?.visible; }, null, { timeout: 20000 });
   const m3 = await g(() => { const s = window.__game.scene.getScene('arena'), l = s.ludzik; return l ? { on: true, img: !!l.image?.visible, flat: s.player.visible } : { on: false }; });
   console.log('arena 3D', JSON.stringify(m3));
   if (m3.on) assert(m3.img && !m3.flat, '3D hero shown in the arena');
@@ -157,45 +157,37 @@ try {
   await page.waitForTimeout(800);
   if (process.env.DEBUG) console.log(JSON.stringify(await g(() => { const gs = window.__game.scene.getScene('game'); const a = window.__game.scene.getScene('arena'); return { zoom: a.cameras.main.zoom, ch: a.cameras.main.height, cw: a.cameras.main.width, vis: gs.sys.settings.visible, st: gs.sys.settings.status, camVis: gs.cameras.main.visible, alpha: gs.cameras.main.alpha, tr: a.cameras.main.transparent, bg: a.cameras.main.backgroundColor.rgba, order: window.__game.scene.scenes.map((s) => s.sys.settings.key) }; })));
   await page.screenshot({ path: `work/arena-${tag}-1-start.png` });
-  const af = () => g(() => {
+  // A live fight (owner, 3 Nov 2026: not in turns): the hero walks up with the keys and strikes with Space.
+  const stan = () => g(() => {
     const a = window.__game.scene.getScene('arena');
-    const w = a?.walka;
-    if (!w) return null;
-    return { faza: w.faza, ruchy: w.ruchy, busy: w.busy, zywi: w.zywi.map((q) => ({ x: q.e.x, y: q.e.y, hp: q.e.hp })), hp: a.player.hp };
+    const e = a?.walka && a.children.list.find((o) => o.kindId === 'wojownik');
+    return a?.walka ? { px: a.player.x, py: a.player.y, hp: a.player.hp, ex: e?.x, ey: e?.y, ehp: e?.hp, cel: e ? e.active : false } : null;
   });
-  const aTap = async (x, y) => {
-    const at = await g(([x, y]) => {
-      const s = window.__game.scene.getScene('arena');
-      const cam = s.cameras.main, r = s.game.canvas.getBoundingClientRect();
-      const css = cam.zoom / (s.scale.width / r.width);
-      return { x: r.left + (x - cam.worldView.x) * css, y: r.top + (y - cam.worldView.y) * css };
-    }, [x, y]);
-    if (mobile) await page.touchscreen.tap(at.x, at.y); else await page.mouse.click(at.x, at.y);
-    await page.waitForTimeout(250);
-  };
-  const waitA = () => page.waitForFunction(() => { const w = window.__game.scene.getScene('arena')?.walka; return !w || (w.faza === 'gracz' && !w.busy); }, null, { timeout: 30000 });
-  let shot = false;
-  for (let t = 0; t < 40; t++) {
-    // The test keeps the hero alive.
-    await g(() => { const a = window.__game.scene.getScene('arena'); if (a?.player) a.player.hp = Math.max(a.player.hp, 40); });
-    const f = await af();
-    if (!f) break;
-    if (f.faza !== 'gracz' || f.busy) { await waitA(); continue; }
-    const e = f.zywi[0];
-    if (!e) break;
-    await aTap(e.x, e.y - 4);
-    const plan = await g(() => { const w = window.__game.scene.getScene('arena')?.walka; return w?.cel ? w.planCiosu(w.cel, false) : null; });
-    if (plan?.ok) { await aTap(e.x, e.y - 4); if (!shot) { shot = true; } }
-    else if (plan && /Podejdź/.test(plan.tekst)) {
-      // Drag the hero towards the ghost.
-      const spot = await g(([ex, ey]) => { const w = window.__game.scene.getScene('arena').walka; let b = null, bd = 1e9; for (const c of w.zas.values()) { const d = Math.hypot(c.x - ex, c.y - ey); if (d > 12 && d < bd) [b, bd] = [c, d]; } return b; }, [e.x, e.y]);
-      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.ruch')?.click());
-      if (spot) { await aTap(spot.x, spot.y); await aTap(spot.x, spot.y); }
-    } else await page.evaluate(() => document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)')?.click());
-    if (t === 3) await page.screenshot({ path: `work/arena-${tag}-2-walka.png` });
-    await page.waitForTimeout(200);
-    await waitA();
+  const s0 = await stan();
+  assert(s0 && s0.cel, 'rival on the floor');
+  let trafiony = false, ranny = false, ostatnieHp = s0.hp;
+  const ehp0 = s0.ehp;
+  for (let t = 0; t < 200; t++) {
+    const s = await stan();
+    if (!s || !s.cel) break;
+    if (s.ehp < ehp0) trafiony = true;
+    if (s.hp < ostatnieHp) ranny = true;
+    // Keep the hero alive (the test checks the controls, not the balance).
+    ostatnieHp = await g((h0) => { const a = window.__game.scene.getScene('arena'); if (a?.player) a.player.hp = Math.max(a.player.hp, Math.ceil(h0 / 2)); return a?.player?.hp ?? 0; }, s0.hp);
+    const dx = s.ex - s.px, dy = s.ey - s.py;
+    const keys = [];
+    if (Math.hypot(dx, dy) > 12) {
+      if (dx > 4) keys.push('ArrowRight'); else if (dx < -4) keys.push('ArrowLeft');
+      if (dy > 4) keys.push('ArrowDown'); else if (dy < -4) keys.push('ArrowUp');
+    }
+    for (const k of keys) await page.keyboard.down(k);
+    await page.waitForTimeout(120);
+    for (const k of keys) await page.keyboard.up(k);
+    await page.keyboard.press('Space');
+    if (t === 6) await page.screenshot({ path: `work/arena-${tag}-2-walka.png` });
   }
+  assert(trafiony, 'the hero hit the rival live');
+  console.log('arena live: rival hurt the hero', ranny);
   const res = await dialogNext(/Arena Cechu/);
   await page.screenshot({ path: `work/arena-${tag}-3-wynik.png` });
   assert.match(res.text, /Zwycięstwo/);

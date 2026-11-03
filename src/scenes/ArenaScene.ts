@@ -1,16 +1,14 @@
 // Arena Cechu (asynchronous PvP, content/arena.ts): a round sand floor outside the map, the same for everyone,
 // with a brass railing, wooden stands full of spectators and steam vents. The hero fights another player's
-// ghost (or the Mechanical Gladiator) in turns (walka/TuryWalki.ts); the GameScene waits paused under it.
+// ghost (or the Mechanical Gladiator) live, like on the street (scenes/ArenaWalka.ts); the GameScene waits paused under it.
 
 import Phaser from 'phaser';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
-import { TuryWalki, type WrogWalki, type DuchWalki } from '../walka/TuryWalki';
+import { ArenaWalka } from './ArenaWalka';
 import { W } from '../walka/tryb';
-import { WALKA_TUROWA as WT } from '../content/walkaTurowa';
 import { ARENA, ARENA_TEKSTY } from '../content/arena';
-import { OSTROSC } from '../screen';
-import { mapaWalki, resetTouch, resetKeys } from '../controls';
+import { resetTouch, resetKeys } from '../controls';
 import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
 import { Ludzik3D, ludzik3d } from '../ludzik3d';
@@ -36,10 +34,9 @@ export interface ArenaDane {
 }
 
 export class ArenaScene extends Phaser.Scene {
-  private walka: TuryWalki | null = null;
+  private walka: ArenaWalka | null = null;
   private dane!: ArenaDane;
   private player!: Player;
-  private leczenie = true;
   private R = 0;
   /** Drawn from the artist's pictures (else the old code-drawn arena). */
   private rysunek = false;
@@ -51,7 +48,6 @@ export class ArenaScene extends Phaser.Scene {
   init(d: ArenaDane) {
     this.dane = d;
     this.widzowie = null;
-    this.leczenie = true;
   }
 
   preload() {
@@ -97,7 +93,7 @@ export class ArenaScene extends Phaser.Scene {
 
     // The rival: the ghost in its owner's look with the enemies' red glow; the Gladiator as a bronze knight.
     const r = d.rywal;
-    const e = new Slime(this, 0, -start, 'wojownik') as WrogWalki;
+    const e = new Slime(this, 0, -start, 'wojownik');
     if (hdOn) {
       const key = ensureRed(this, d.gladiator ? 'hd-gladiator' : `hd-${heroSkin(r.postac, r.name).id}`);
       e.setTexture(key, 'down-0');
@@ -106,10 +102,6 @@ export class ArenaScene extends Phaser.Scene {
     }
     if (d.gladiator && !hdOn) e.setTint(0xd8a860);
     e.hp = Math.max(4, Math.round(r.maxHp * ARENA.jednostka));
-    let akcje = 0;
-    for (const [od, ile] of WT.ruchy) if (r.poziom >= od) akcje = ile;
-    const duch: DuchWalki = { atak: r.atak, trafienie: r.trafienie, blok: r.blok, pancerz: r.pancerz, magicznyAtak: r.magicznyAtak, mocny: r.mocny, akcje, leczenie: true, strzal: r.strzal };
-    e.pvp = duch;
     e.setDepth(-start);
     // The name over the ghost.
     const napis = this.add.text(0, -start - 16, `${r.name} · poz. ${r.poziom}`, { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '7px', color: '#ffd9a0', stroke: '#1e1a24', strokeThickness: 2.5, resolution: 6 })
@@ -122,68 +114,47 @@ export class ArenaScene extends Phaser.Scene {
 
     resetTouch();
     resetKeys();
-    const naSwiat = (x: number, y: number) => ({ x: (x * OSTROSC) / cam.zoom + cam.worldView.x, y: (y * OSTROSC) / cam.zoom + cam.worldView.y, r: (22 * OSTROSC) / cam.zoom });
-    mapaWalki.fn = (x, y) => {
-      const w = naSwiat(x, y);
-      this.walka?.tap(w.x, w.y, w.r);
-    };
-    mapaWalki.drag = (x0, y0, x, y, koniec) => {
-      const a = naSwiat(x0, y0), b = naSwiat(x, y);
-      this.walka?.przeciagnij(a.x, a.y, b.x, b.y, koniec, a.r);
-    };
-
     const R = this.R;
-    this.walka = new TuryWalki({
+    // The whole floor in view (the artist's arena: floor across, the gate and its plaque on top).
+    const box = this.rysunek
+      ? { x0: -R * ARENA_RYSUNEK.kadrX, x1: R * ARENA_RYSUNEK.kadrX, y0: -R * ARENA_RYSUNEK.kadrGora, y1: R * ARENA_RYSUNEK.kadrDol }
+      : { x0: -R - 10, x1: R + 10, y0: -R - 20, y1: R + 10 };
+    const dopasuj = () => {
+      const z = Math.min(d.zoom, cam.width / (box.x1 - box.x0), cam.height / (box.y1 - box.y0));
+      cam.setZoom(z);
+      cam.centerOn((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2);
+    };
+    dopasuj();
+    this.scale.on('resize', dopasuj);
+    this.events.once('shutdown', () => this.scale.off('resize', dopasuj));
+    // A live fight, like on the street (owner, 3 Nov 2026: not in turns).
+    this.walka = new ArenaWalka({
       scene: this,
       player: this.player,
+      rywal: e,
+      dane: r,
       // The artist's floor is an ellipse (height = spłaszczenie × width); the code-drawn one was a circle.
       wolne: (x, y) => {
         const ry = (this.rysunek ? R * ARENA_RYSUNEK.spłaszczenie : R) - 6;
         return (x / (R - 6)) ** 2 + ((y + (this.rysunek ? 0 : 5)) / ry) ** 2 < 1;
       },
-      widac: () => true,
-      zabity: () => {},
       cwiczenie: (s, p) => d.cwiczenie(s, p),
-      zuzyj: () => {},
-      hud: () => {},
-      toast: (t, ms) => d.toast(t, ms),
-      // The shared kit: one heal per fight, whatever is in the backpack.
-      lecz: () => {
-        if (!this.leczenie || this.player.hp >= PLAYER.maxHp) return false;
-        this.leczenie = false;
-        this.player.heal(Math.ceil(PLAYER.maxHp * ARENA.leczenie));
-        this.napis(this.player.x, this.player.y - 18, '✚', '#9dff9a', 900);
-        return true;
-      },
-      ranBohatera: (_e, dmg) => {
-        this.player.drain(dmg);
-        return this.player.hp <= 0;
-      },
-      koniec: (wynik) => this.koniec(wynik === 'wygrana'),
-      pudlo: (x, y) => this.napis(x, y, 'pudło!', '#e8e4f0', 650),
-      napis: (x, y, t, c, ms) => { if (/^[−-]\d|Krytyk/.test(t)) this.wiwat(); this.napis(x, y, t, c, ms); },
+      napis: (x, y, t, c, ms) => { if (/^[−-]\d|Blok|Mocny/.test(t)) this.wiwat(); this.napis(x, y, t, c, ms); },
       zamach: (aim) => this.zamach(aim),
-      wzmocnienie: () => 1,
-      nasycenie: () => {},
-      zoomZwykly: () => d.zoom,
-      wrocKamere: () => {},
-      poziom: () => d.poziom,
-      wyspany: () => false,
-      // The artist's arena: the whole floor across, the gate and its plaque on top.
-      kadr: () => this.rysunek ? { x0: -R * ARENA_RYSUNEK.kadrX, x1: R * ARENA_RYSUNEK.kadrX, y0: -R * ARENA_RYSUNEK.kadrGora, y1: R * ARENA_RYSUNEK.kadrDol } : null,
-    }, [e], { pvp: true });
+      koniec: (wygrana) => this.koniec(wygrana),
+    });
+    this.events.once('shutdown', () => { this.walka?.destroy(); this.walka = null; });
     d.toast(d.gladiator ? `⚙ ${ARENA_TEKSTY.gladiator} wchodzi na arenę!` : `⚔ Duch ${r.name} wchodzi na arenę!`, 2500);
   }
 
-  update() {
-    this.walka?.update();
+  update(now: number, delta: number) {
+    this.walka?.update(now, delta);
     if (this.player) this.player.setDepth(this.player.y + 200_000);
   }
 
   private koniec(wygrana: boolean) {
+    this.walka?.destroy();
     this.walka = null;
-    mapaWalki.fn = null;
-    mapaWalki.drag = null;
     // A short moment to see the end, then back to the map.
     this.time.delayedCall(700, () => this.dane.koniec(wygrana));
   }
