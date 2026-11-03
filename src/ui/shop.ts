@@ -164,7 +164,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       const hero = el('div', 's26-hero-image'); hero.append(slotIcon(bagSlot)); detail.append(hero, el('h3', '', slotLabel(bagSlot).split(' – ')[0]), el('p', 's26-description', slotLabel(bagSlot)), el('p', '', 'Przedmiot z twojego plecaka.'));
       const returnButton = button('WRÓĆ DO TOWARU', 's26-action', () => { viewingBag = null; render(); }); returnButton.dataset.focus = 'return'; detail.append(returnButton);
     } else if (entry) {
-      const hero = el('div', 's26-hero-image'); hero.append(entry.picture ? image(entry.picture) : fallback(entry));
+      const hero = el('div', 's26-hero-image'); const big = entry.pictureLarge && entry.pictureLarge !== entry.picture; hero.append(entry.picture ? image(big ? entry.pictureLarge! : entry.picture, big ? 'item-hd' : '') : fallback(entry));
       detail.append(hero, el('h3', '', entry.name));
       const stats = el('dl', 's26-stats');
       for (const [label, value] of entry.stats ?? []) stats.append(el('dt', '', label), el('dd', '', value));

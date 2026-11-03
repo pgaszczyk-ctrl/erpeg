@@ -1,0 +1,12 @@
+EXP-LORE — Zamówienie 45, Próba 1. Oryginały i eksporty.
+
+oryginaly/: niezmienione duże PNG z generatora. Miecz zaakceptowany przez właściciela. Korona, kijek i hełm: poprawione wersje z mieczem jako referencją stylu.
+eksporty_64/: dotychczasowe techniczne eksporty 64x64, osobne od źródeł. Nie traktować ich jako równoważnych wizualnie oryginałom.
+powiekszenia_64_x16/: dokładne powiększenia eksportów, nie obrazy źródłowe.
+porownanie.png: u góry podgląd oryginałów, w środku eksporty powiększone x4, na dole eksporty 32 px. Aplikacja może przeskalować całą planszę, więc dolny rząd ma 32 px wyłącznie w samym pliku.
+
+Ważna korekta prezentacji: oryginały zachowują drobniejsze detale; zmniejszenie do 64x64 traci część z nich, a późniejsze powiększenie uwidacznia duże kwadraty. Wzorem dalszych ilustracji jest zaakceptowany obraz źródłowy miecza.
+
+Propozycja dla programisty (niezaimplementowana): duże podglądy karty/sklepu powinny używać obrazu o większej rozdzielczości zamiast powiększać eksport 64x64. Docelowe warianty wielkości i sposób filtrowania wymagają porównania w interfejsie gry. Wymóg wyłącznie 64x64 z pierwotnego zamówienia ogranicza zachowanie jakości zaakceptowanego źródła.
+
+Nie wdrożono do gry. Źródła pozostawiono bez zmian.
