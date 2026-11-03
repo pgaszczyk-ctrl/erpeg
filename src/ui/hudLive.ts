@@ -261,7 +261,8 @@ export function ustawZasobyHud(z: LiveZasoby) {
 }
 
 
-/** Availability is a hint only: E and ACT always use the same interaction chain. */
-export function ustawInterakcjeHud(ready: boolean) {
+/** The label and availability describe the one selected world object used by E and ACT. */
+export function ustawInterakcjeHud(ready: boolean, label?: string) {
   el?.akcja.classList.toggle('gotowa', ready);
+  if(el) el.akcja.title=el.akcja.ariaLabel=label??tx('Podejdź do celu interakcji','Approach an interaction target');
 }
