@@ -29,9 +29,10 @@ for (const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',84
   await page.evaluate(()=>{const s=window.__game.scene.getScene('game');s.noHurtUntil=Infinity;s.protectUntil=Infinity;for(const e of s.enemies)e.destroy();s.enemies=[];window.__game.scene.getScene('ui').openCharacter('eq');});
   await page.waitForSelector('.sl-cell[data-zone="eq"][data-key="bron"] img');
   const srcs=await page.$$eval('.sl-cell img',a=>a.map(i=>i.getAttribute('src')));
-  for (const id of ['rycerski','zelazny_helm','kijek','korona']) assert(srcs.some(s=>s?.endsWith(`items/${id}.png`)),`${id} icon in the Kufer`);
-  const sizes=await page.$$eval('.sl-cell img',a=>a.filter(i=>/rycerski|korona|kijek|zelazny_helm/.test(i.src)).map(i=>[i.naturalWidth,i.complete]));
-  assert(sizes.every(([w,c])=>w===64&&c),'all four icons are the 64 px files');
+  for (const id of ['rycerski','zelazny_helm','kijek','korona']) assert(srcs.some(s=>s?.endsWith(`items/${id}.png`)||s?.endsWith(`items_hd/${id}.png`)),`${id} icon in the Kufer`);
+  // Smooth HD pictures (items_hd, order 45 C1) are 256 px; trial-1 icons stay 64 px.
+  const sizes=await page.$$eval('.sl-cell img',a=>a.filter(i=>/rycerski|korona|kijek|zelazny_helm/.test(i.src)).map(i=>[i.naturalWidth,i.complete,i.src.includes('items_hd/')]));
+  assert(sizes.every(([w,c,hd])=>w===(hd?256:64)&&c),'icons loaded at their size');
   await page.screenshot({path:`work/ikony45/${name}-kufer.png`});
   // Big item card of the sword: the 256 px picture.
   const cell=page.locator('.sl-cell[data-zone="eq"][data-key="bron"]');
