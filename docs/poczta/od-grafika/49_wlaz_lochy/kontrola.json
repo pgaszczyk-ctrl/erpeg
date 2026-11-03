@@ -1,0 +1,58 @@
+[
+  {
+    "file": "otwarty.png",
+    "size": [
+      256,
+      128
+    ],
+    "alpha": "binary"
+  },
+  {
+    "file": "zamkniety.png",
+    "size": [
+      256,
+      128
+    ],
+    "alpha": "binary"
+  },
+  {
+    "file": "podstawa.png",
+    "size": [
+      128,
+      96
+    ],
+    "alpha": "binary"
+  },
+  {
+    "file": "pokrywa_prawa.png",
+    "size": [
+      128,
+      96
+    ],
+    "alpha": "binary"
+  },
+  {
+    "file": "pokrywa_lewa.png",
+    "size": [
+      128,
+      96
+    ],
+    "alpha": "binary"
+  },
+  {
+    "file": "polotwarty.png",
+    "size": [
+      256,
+      128
+    ],
+    "alpha": "binary"
+  },
+  {
+    "splitReconstructsLid": true,
+    "openingOffsets": [
+      -56,
+      56
+    ],
+    "runtimeSourceChanged": false
+  }
+]
