@@ -53,7 +53,7 @@ export function installFpsLog(game: Gra) {
 
   game.events.on('prestep', () => (poczatekKroku = performance.now()));
   game.events.on('postrender', () => {
-    if (poczatekKroku) cpu.push(performance.now() - poczatekKroku);
+    if (poczatekKroku && gra()) cpu.push(performance.now() - poczatekKroku);
   });
 
   const reset = () => {
@@ -67,7 +67,7 @@ export function installFpsLog(game: Gra) {
     if (!gra()) {
       // Paused, hidden or loading: the next delta would be the whole pause – start over.
       poprzednia = 0;
-      if (delty.length) reset();
+      if (delty.length || cpu.length) reset();
       return;
     }
     if (poprzednia) {
@@ -131,6 +131,7 @@ function kontekst(game: Gra, pomiar: Record<string, number>) {
     player?: { x: number; y: number };
     cameras?: { main: { zoom: number } };
     children?: { list: { visible?: boolean }[] };
+    mapView?: { diagnostics(): unknown };
   };
   const ui = game.scene.getScene('ui') as unknown as { children?: { list: unknown[] } } | undefined;
   const lista = s?.children?.list ?? [];
@@ -159,6 +160,7 @@ function kontekst(game: Gra, pomiar: Record<string, number>) {
     tekstury: game.textures.getTextureKeys().length,
     kawalki_ms: (w.__czasyKawalkow ?? []).slice(-6),
     kawalki_calosc_ms: (w.__czasyCalosci ?? []).slice(-6),
+    mapa: s?.mapView?.diagnostics(),
     ostrosc: OSTROSC,
     dpr: window.devicePixelRatio || 1,
     canvas: `${game.canvas.width}x${game.canvas.height}`,

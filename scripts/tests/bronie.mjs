@@ -42,7 +42,8 @@ console.log('PASS: 15 variants, saved IDs, ranges, additive 2%/6%, validation/re
 
 const inv=await import(path.join(root,'inventory.js'));
 const {itemPictureUrl,itemTexture}=await import(path.join(root,'ui/itemIcon.js'));
-assert.equal(itemPictureUrl('luk_rekruta'),'items/luk.png');assert.equal(itemTexture('luk_rekruta'),'item-luk');
+// Order 45 gave recruit weapons their own HD icons; they no longer alias the training bow.
+assert.equal(itemPictureUrl('luk_rekruta'),'items_hd/luk_rekruta.png');assert.equal(itemTexture('luk_rekruta'),'item-luk_rekruta');
 const {gear,freshGear,pointsForLevel,equipFromBag,moveThing,addItem,weaponRequirement,meleeDamage,shotDamage,rangedWeapon}=inv;
 Object.assign(gear,freshGear());
 gear.bag=[{item:'stalowy_jakosc4'}];
