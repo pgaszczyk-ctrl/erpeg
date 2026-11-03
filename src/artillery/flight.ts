@@ -272,7 +272,7 @@ export function flight(
 
   /** A muzzle puff on the shrinking map: white circles growing and fading. */
   const dym = (x: number, y: number, t: number, skala: number) => {
-    if (t > 900) return;
+    if (t > 900 || t < 0) return;
     const u = t / 900;
     ctx.fillStyle = "#ffffff";
     for (let i = 0; i < 6; i++) {
