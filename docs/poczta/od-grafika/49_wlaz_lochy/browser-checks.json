@@ -1,0 +1,6 @@
+{
+  "status": "unavailable",
+  "reason": "Playwright Chromium executable is not installed",
+  "attempted": true,
+  "gameRuntimeChanged": false
+}
