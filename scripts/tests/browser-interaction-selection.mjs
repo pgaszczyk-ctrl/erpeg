@@ -48,6 +48,7 @@ try {
   assert.equal(setup.length,2,'two separate quest givers');
   assert(Math.hypot((setup[0].x-setup[1].x)/30,(setup[0].y-setup[1].y)*.8/40)>=1,'bodies separated on screen');
   const focus=async(id)=>{
+   await page.waitForTimeout(350);
    // Move into reach without changing any interaction callback; click/touch the actual canvas.
    const xy=await page.evaluate(id=>{
     const s=window.__game.scene.getScene('game');let t=s.interactionCandidates().find(t=>t.id===id);
@@ -62,7 +63,10 @@ try {
    if(phone)await page.touchscreen.tap(...xy);else await page.mouse.click(...xy);
    await page.waitForTimeout(120);
    const state=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return{id:s.interactionSelection.id,label:s.interactionLabel.text,opened:window.__focusOpened.slice()};});
-   if(state.id!==id)await page.screenshot({path:'work/interactions/failed.png'});
+   if(state.id!==id){
+    console.log('pick mismatch',id,xy,state,await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return {active:s.scene.isActive(),blocked:s.interactionBlocked(),view:s.cameras.main.worldView,zoom:[s.cameras.main.zoomX,s.cameras.main.zoomY],rect:document.querySelector('#game canvas').getBoundingClientRect().toJSON()};}));
+    await page.screenshot({path:'work/interactions/failed.png'});
+   }
    assert.equal(state.id,id,'pointer selected exact object');
    assert(state.label.includes(id==='place:focus-door'?'Piwnica':id.endsWith('a')?'Strażnik':'Kronikarz'),'label matches object');
    return state;
