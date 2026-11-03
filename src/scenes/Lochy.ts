@@ -16,7 +16,7 @@ const D = 2;
 /** The artist's stone cellar with two wooden doors (49-G004; owner, 3 Nov 2026: „kwadratowy do lochów”) – every dungeon
  * entrance on the surface. Game-size copies made by scripts/lochy/piwniczka-gra.py (origin = front threshold). Closed,
  * opens when the hero stands next to it. Until the files load the old code drawing is shown. */
-const PIWNICZKA = { plik: 'swiat/lochy/piwniczka_drewniana/', origin: [0.5051, 0.9244] as const, skala: 0.25, nizej: 3, otwartaM: 3.5 };
+const PIWNICZKA = { plik: 'swiat/lochy/piwniczka_drewniana/', origin: [0.5051, 0.9244] as const, skala: 0.25, nizej: 3, otwartaM: 6 };
 let piwniczka: Promise<boolean> | null = null;
 function wczytajPiwniczke(scene: Phaser.Scene): Promise<boolean> {
   const tex = scene.textures;
