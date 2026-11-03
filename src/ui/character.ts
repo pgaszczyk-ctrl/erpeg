@@ -681,10 +681,10 @@ function pokazKodRaz(render: () => void) {
 }
 
 /** A label/value list, one stat per row (the shop's item card uses the same pattern: `dl.s26-stats`). */
-function rows(list: [string, string][]) {
+function rows(list: ([string, string] | [string, string, string])[]) {
   const out = el('div', 'c-statlist');
-  for (const [k, v] of list) {
-    const row = el('div', 'c-stat');
+  for (const [k, v, cls] of list) {
+    const row = el('div', cls ? `c-stat ${cls}` : 'c-stat');
     row.append(el('span', 'c-stat-k', k), el('span', 'c-stat-v', v));
     out.append(row);
   }
@@ -747,10 +747,11 @@ function itemCard(id: string) {
   if (it?.jakosc !== undefined) { const dots = qualityDots(id); if (dots) icon.append(dots); }
   head.append(icon, el('div', 'c-card-name', it?.nazwa ?? id));
   card.append(head);
-  const list = statRows(id);
+  const list: ([string, string] | [string, string, string])[] = statRows(id);
   const k = skillOfItem(id);
   if (k && it?.miejsce === 'bron') {
-    list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(it.wymaganySkill ?? 1)]);
+    // Unmet requirement = the row itself in red (owner, 3 Nov 2026: no "za niski poziom" sentence).
+    list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(it.wymaganySkill ?? 1), ...(weaponRequirement(id) ? ['brak'] : [])] as [string, string] | [string, string, string]);
   }
   if (it?.miejsce === 'bron' && k && gear.equip.bron === id && !weaponRequirement(id)) {
     const special = ATAKI.find(u => u.id === session.umiej[k] && u.bron === k && u.poziom <= skillLevel(k)) ?? domyslnaUmiejetnosc(k);
@@ -761,7 +762,6 @@ function itemCard(id: string) {
   const imb = imbueOf(id);
   if (imb) list.push([`${imb.e.ikona} ${imb.e.nazwa}`, `jeszcze ${imb.minutes} min`]);
   if (list.length) card.append(rows(list));
-  if (weaponRequirement(id)) card.append(el('div', 'c-requirement', 'Za niski poziom umiejętności — nie możesz używać tej broni.'));
   if (it?.opis) card.append(el('div', 'c-card-desc', it.opis));
   if (it?.leczenie) card.append(el('div', 'c-card-desc', `Leczy: +${it.leczenie} ${it.leczenie === 1 ? 'serce' : it.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.`));
   return card;
