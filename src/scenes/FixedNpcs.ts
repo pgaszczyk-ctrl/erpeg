@@ -405,7 +405,7 @@ export class FixedNpcs {
   interactionPeople() {
     const names: Record<string,string>={pies:tr(PIES.imie),margo:tr(MARGO.imie),grazynka:tr(GRAZYNKA.imie),
       luigi:tr(LUIGI.imie),martin:tr(MARTIN.imie),dziadkowie:tr(DZIADKOWIE.osoby[this.grandIndex].imie)};
-    return this.list.filter(w=>!w.gone&&w.sprite.visible&&w.sprite.alpha>0).map(w=>({...w,name:names[w.id]??tx('Mieszkaniec','Townsperson')}));
+    return this.list.filter(w=>!w.gone&&w.sprite.visible&&w.sprite.alpha>0).map(w=>Object.assign(w,{name:names[w.id]??tx('Mieszkaniec','Townsperson')}));
   }
 
   /** Where the characters are (for the map screen and tests). */

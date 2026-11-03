@@ -1830,7 +1830,7 @@ export class GameScene extends Phaser.Scene {
       add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
       if(!out.some(t=>t.id==='prolog:chest'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
     }
-    for(const p of this.city.places) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
+    for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
     for(const r of this.missions) if(!r.m.postac&&missionAvailable(r.m))add(`mission:${r.m.id}`,r.door,'use',r.m.tytul,()=>this.openMissionDialog(r));
     for(const r of this.missions)if(missionState(r.m)==='active'&&r.target&&!zadanieOf(r.m).postac) {
       const z=zadanieOf(r.m);
@@ -1855,7 +1855,9 @@ export class GameScene extends Phaser.Scene {
     if(this.interactionBlocked()||performance.now()<this.talkReadyAt||Math.hypot(t.x-this.player.x,t.y-this.player.y)>(t.range??36))return;
     this.clickWorld={x:t.x,y:t.y};this.rozmowca=null;
     this.player.face(t.x-this.player.x,t.y-this.player.y);
-    this.learnPlace();this.zapamietajRozmowce(t.x,t.y);t.run();
+    this.learnPlace();
+    if(t.kind==='talk')this.zapamietajRozmowce(t.x,t.y,true);
+    t.run();
   }
   private updateInteractionTarget() {
     if(!this.interactionMark?.active)this.interactionMark=this.add.graphics().setDepth(1_149_999);
@@ -7838,13 +7840,14 @@ export class GameScene extends Phaser.Scene {
   private rozmowca: { kto: Rozmowca; x: number; y: number } | null = null;
 
   /** The person at a talk spot: the nearest character sprite (an artist sheet with a front frame) by it. */
-  private zapamietajRozmowce(x: number, y: number) {
+  private zapamietajRozmowce(x: number, y: number, exact = false) {
     let best: Phaser.GameObjects.Sprite | null = null, bd = 30;
     for (const o of this.children.list) {
       if (!(o instanceof Phaser.GameObjects.Sprite) || o === this.player || !o.visible) continue;
       const key = o.texture.key;
       if (!key.startsWith('hd-') || !o.texture.has('down-1')) continue;
-      const d = Math.min(Math.hypot(o.x - x, o.y - y), Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
+      const at = Math.hypot(o.x - x, o.y - y);
+      const d = exact ? at : Math.min(at, Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
       if (d < bd) [best, bd] = [o, d];
     }
     this.rozmowca = best ? { kto: { tex: best.texture.key.replace(/-red$/, '') }, x: this.player.x, y: this.player.y } : null;
