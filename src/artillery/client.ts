@@ -364,6 +364,13 @@ export class Artillery {
     }
     return out;
   }
+  /** Already drawn objects only: avoid recomputing station placement every gameplay frame. */
+  interactionStops() {
+    return [...this.art].flatMap(([id,a])=>{
+      const stop=a.visible&&this.registry?.stops.find(s=>s.id===id);
+      return stop?[{stop,x:a.x,y:a.y,metro:!!this.registry?.metro}]:[];
+    });
+  }
   at(x: number, y: number, r = 26) {
     for (const [id, a] of this.art)
       if (a.visible && Math.hypot(x - a.x, y - a.y) < r)

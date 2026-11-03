@@ -347,6 +347,8 @@ export class Townsfolk {
     }
   }
 
+  interactionPeople() { return [...this.active].filter(f=>!f.away&&!f.gone&&!f.route&&f.sprite?.visible); }
+
   /** Someone to talk to near (x, y). */
   at(x: number, y: number, r: number): Folk | null {
     for (const f of this.active) if (!f.away && !f.gone && !f.route && f.sprite?.visible && Math.abs(f.x - x) < r && Math.abs(f.y - y) < r + 4) return f;

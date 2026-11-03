@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { InteractionTarget } from '../interaction';
 import { session } from '../quests';
 import { gear, item, addItem, equipFromBag, meleeDamage } from '../inventory';
 import { PLECAK } from '../content/przedmioty';
@@ -229,6 +230,22 @@ export class PrologRekruta {
     return p.dungeon.id;
   }
 
+  interactionTargets(): InteractionTarget[] {
+    const out: InteractionTarget[]=[];
+    for(const k of ['mentor','outpost','ambush','library'] as AnchorKind[]) {
+      const at=this.point(k); if(!at||!this.interactionAt(at.x,at.y))continue;
+      const name=k==='mentor'?tx('Starszy strażnik','Senior guard'):k==='outpost'?tx('Dyżurny straży','Duty officer'):k==='ambush'?tx('Uratowany łucznik','Rescued archer'):tx('Bibliotekarz','Librarian');
+      out.push({id:`prolog:${k}`, ...at, kind:'talk', label:tx('Porozmawiaj: ','Talk: ')+name, range:14*PX_PER_M,run:()=>this.interact(at)});
+    }
+    const practice=this.state?.stage==='bow_trial'&&this.local&&this.point('bowPractice');
+    if(practice)out.push({id:'prolog:practice',...practice,kind:'use',range:14*PX_PER_M,label:tx('Użyj: Cel treningowy','Use: Practice target'),run:()=>this.interact(practice)});
+    const d=this.underground&&this.h.dungeon();
+    if(d) for(const [id,at] of [['magic',d.magicSpot],['chest',d.skrzynia]] as const) {
+      if(at&&this.interactionAt(at.x,at.y))out.push({id:`prolog:${id}`,...at,kind:'use',range:14*PX_PER_M,label:tx('Sprawdź: ','Inspect: ')+(id==='magic'?tx('Różdżka','Wand'):tx('Skrzynia','Chest')),run:()=>this.interact(at)});
+    }
+    return out;
+  }
+
   /** Read-only hit test for the prologue's own characters and story objects. */
   interactionAt(x: number, y: number): 'talk' | 'use' | null {
     const p = this.state;
@@ -250,25 +267,26 @@ export class PrologRekruta {
     return null;
   }
 
-  interact(): boolean {
+  interact(at?: {x:number;y:number}): boolean {
+    const near=(q:{x:number;y:number})=>this.near(q)&&(!at||Math.hypot(q.x-at.x,q.y-at.y)<1);
     const p=this.state; if(!p || this.busy || !p.anchors.mentor)return false;
-    if(p.status==='completed'&&this.local&&this.near(this.point('mentor')!)) {
+    if(p.status==='completed'&&this.local&&near(this.point('mentor')!)) {
       this.h.dialog({title:tx('Starszy strażnik','Senior guard'),text:tx(`${session.name}, dobra robota. Pierwszą służbę masz już za sobą. Następne zlecenie będzie inne.`,`${session.name}, good work. Your first duty is complete. Your next assignment will be different.`),buttons:[tx('Do zobaczenia','See you')],onChoose:()=>{}});return true;
     }
     if(p.status!=='active')return false;
     if(this.local) {
-      if(['intro','letter_return','bow_trial','rescue_return','dungeon_return'].includes(p.stage)&&this.near(this.point('mentor')!)){this.mentor();return true;}
-      if(p.stage==='letter_deliver' && this.near(this.point('outpost')!)) {
+      if(['intro','letter_return','bow_trial','rescue_return','dungeon_return'].includes(p.stage)&&near(this.point('mentor')!)){this.mentor();return true;}
+      if(p.stage==='letter_deliver' && near(this.point('outpost')!)) {
         this.h.dialog({title:tx('Dyżurny straży','Duty officer'),text:tx('Od patrolowego? Daj tutaj. A to potwierdzenie zabierz z powrotem, bo będzie mnie ścigał, że list zaginął między biurkiem a szufladą.','From the patrol officer? Hand it over. Take this receipt back, or he will insist the letter vanished between my desk and the drawer.'),localHumor:true,buttons:[tx('Odbierz potwierdzenie','Take receipt')],onChoose:()=>void this.change(()=>{p.storyItems=['receipt'];advance(p,'letter_deliver','letter_return');})});return true;
       }
-      if(['rescue_reward','bow_trial'].includes(p.stage) && this.near(this.point('ambush')!)) {this.archer();return true;}
-      if(p.stage==='bow_trial' && this.near(this.point('bowPractice')!)){this.h.toast(tx('Wyceluj łukiem i strzel. Możesz też wrócić do strażnika i spróbować później.','Aim your bow and shoot. You can also return to the guard and try later.'),5000);return true;}
-      if(p.stage==='library_visit' && this.near(this.point('library')!)){this.library();return true;}
+      if(['rescue_reward','bow_trial'].includes(p.stage) && near(this.point('ambush')!)) {this.archer();return true;}
+      if(p.stage==='bow_trial' && near(this.point('bowPractice')!)){this.h.toast(tx('Wyceluj łukiem i strzel. Możesz też wrócić do strażnika i spróbować później.','Aim your bow and shoot. You can also return to the guard and try later.'),5000);return true;}
+      if(p.stage==='library_visit' && near(this.point('library')!)){this.library();return true;}
     }
     if(this.underground){
       const d=this.h.dungeon()!;
-      if(p.stage==='magic_pickup' && this.near(d.magicSpot)) {this.magicPickup();return true;}
-      if(['magic_trial','dungeon_recover'].includes(p.stage) && this.near(d.skrzynia)) {
+      if(p.stage==='magic_pickup' && near(d.magicSpot)) {this.magicPickup();return true;}
+      if(['magic_trial','dungeon_recover'].includes(p.stage) && near(d.skrzynia)) {
         if(d.zostalo){this.h.toast(tx('Najpierw oczyść kryjówkę chochlików.','Clear the imps\' hideout first.'));return true;}
         this.h.dialog({title:tx('Zguba pod ziemią','Lost underground'),text:tx('Miś jest tutaj. Zabierz go właścicielowi.','The teddy is here. Take it back to its owner.'),buttons:[tx('Zabierz misia','Take teddy')],onChoose:()=>void this.change(()=>{p.storyItems=['bear'];p.dungeon!.chest=true;d.otworzSkrzynie();advance(p,p.stage,'dungeon_return');})});return true;
       }
