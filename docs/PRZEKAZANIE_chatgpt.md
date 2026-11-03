@@ -805,3 +805,10 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 - PASS: browser-artillery na komputerze, telefonie poziomo i pionowo, wraz z odświeżeniem w trakcie podróży, odzyskaniem lotu i kontrolą pojedynczego obciążenia. Wszystkie bez błędów strony. Prolog PL/EN × komputer/telefon PASS w Actions; dodatkowo lokalnie plan/trwałość prologu, world-identity (Warszawa, stare pozycje, questy, duplikaty adresów), world-platform, interaction-selection, building-cutout, fps-pauses i typecheck PASS.
 - Właściciel polecił „Wrzucaj na testa”. PR „Jeden świat niezależnie od sposobu podróży” został scalony zwykłym merge do TEST jako f6014d3. Uruchomiona publikacja Pages: 41686100111. Wynik publikacji i weryfikacji publicznej wersji będzie dopisany do opisu PR.
 - Produkcja pozostaje przypięta do dotychczasowego kodu. Brak zbiorczego resetu mgły i zmian bazy. Reguły w docs/ZASADY_SWIATA.md. Ten wpis zmienia tylko dokumentację; nie wymaga ponownego budowania tych samych map.
+
+
+### Publikacja TEST — ponowne użycie sprawdzonych pakietów
+
+- Gotowy pakiet testowy czekał na niezmienioną produkcję, którą dotychczasowy deploy budował od nowa przy każdej zmianie testu. Dodano .github/scripts/reuse-deploy-artifact.cjs i warunkowe użycie artifacts w deploy.yml. Produkcja może użyć tylko wcześniejszego udanego wdrożenia przy identycznym PRODUKCJA i produkcja/; test — tylko udanego joba test przy niezmienionych wejściach gry. Oba pochodzą z tego samego repo i workflow.
+- Zmiana konfiguracji workflow unieważnia ponowne użycie, poza jawnie zapisanym i sprawdzonym przejściem ze starego workflow na tę wersję (sam build, Node i VITE_TEST pozostają takie same). Niepełne porównanie plików, zmiany źródeł, wygaśnięcie artefaktu lub nieudany job wymuszają normalny build. Awaria pobrania też wraca do budowania.
+- PASS: testy .github/scripts/reuse-deploy-artifact.test.cjs (pochodzenie, fingerprint receptury, źródła/assets/pin/poprawki/rename, limit diff, wygaśnięcie i błędy) oraz odczyt YAML. Pliki gry, dane, PRODUKCJA i produkcja/ są identyczne z przetestowaną poprawką świata. To zmiana tylko sposobu publikowania już sprawdzonych pakietów.
