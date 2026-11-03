@@ -12,6 +12,12 @@ try {
   const context = await browser.newContext(TEL
     ? { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: 'pl-PL' }
     : { viewport: { width: 1280, height: 720 }, locale: 'pl-PL' });
+  if (process.env.MAPA === '1') {
+    const ring = [0, 0, 5760, 0, 0, 5760, -5760, 0];
+    const map = { unitsPerM: 1.92, w: 6000, h: 6000, bounds: { minLat: 51.2, maxLat: 51.3, minLon: 22.4, maxLon: 22.5 }, boundary: [ring], areas: [['paved', ring]], lines: [['minor', 0, [0, 3000, 5760, 0], 'Test']], buildings: [], pois: [], towns: [['Lublin', 2880, 2880]] };
+    await context.route('**/map/lublin.json', r => r.fulfill({ json: map }));
+    await context.route('**/map/world.json', r => r.fulfill({ json: { lublin: [], towns: [], edges: [] } }));
+  }
   await context.route('**/*.supabase.co/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     let body = true;
@@ -34,7 +40,7 @@ try {
     const btns = ui.dialogButtons.filter((b) => b.index >= 0);
     const linie = ui.scrollRows.filter((r) => !r.btns).flatMap((r) => r.texts).map((t) => t.text).join('\n');
     const box = ui.dialogBox?.getBounds();
-    return { otwarte: ui.hasDialog, pisze: !!ui.pisanie, strona: ui.strony ? [ui.strony.i, ui.strony.strony.length] : null, przyciski: btns.map((b) => b.rect.visible), etykiety: ui.scrollRows.filter((r) => r.btns).flatMap((r) => r.texts).map((t) => t.text), linie, scrollMax: ui.scrollMax, gora: box?.y, dol: box ? box.y + box.height : 0, h: ui.view.height };
+    return { otwarte: ui.hasDialog, pisze: !!ui.pisanie, pelnyTekst: ui.strony?.strony[ui.strony.i]?.trim().length ?? 0, strona: ui.strony ? [ui.strony.i, ui.strony.strony.length] : null, przyciski: btns.map((b) => b.rect.visible), etykiety: ui.scrollRows.filter((r) => r.btns).flatMap((r) => r.texts).map((t) => t.text), linie, scrollMax: ui.scrollMax, gora: box?.y, dol: box ? box.y + box.height : 0, h: ui.view.height };
   });
   const wybrano = [];
   await page.evaluate((t) => {
@@ -45,10 +51,12 @@ try {
   await page.waitForTimeout(500);
   let s = await stan();
   console.log('pisanie', s);
-  assert(s.pisze, 'letters are written one by one');
+  assert(s.pisze || (s.pelnyTekst <= 140 && s.przyciski.every(Boolean)), 'long portions type; short portions appear at once');
   assert(s.strona && s.strona[1] >= 2, 'long talk is paged');
-  assert(s.przyciski.every((v) => !v), 'buttons wait for the text');
-  assert(s.linie.length < 60, 'only part of the text written');
+  if (s.pisze) {
+    assert(s.przyciski.every((v) => !v), 'buttons wait for long text');
+    assert(s.linie.length < 60, 'only part of the long text written');
+  }
   await page.screenshot({ path: `work/dialog-strony-pisze${TEL ? '-tel' : ''}.png` });
   const tap = async () => { const c = await page.$('canvas'); const b = await c.boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + 40); await page.waitForTimeout(350); };
   await tap();
@@ -90,5 +98,15 @@ try {
   await page.waitForTimeout(300);
   s = await stan();
   assert(!s.pisze && !s.strona, 'short system text at once');
+  // Short NPC speech must also be immediate, despite having a speaker portrait.
+  await page.evaluate(() => window.__game.scene.getScene('ui').showDialog({ title: 'Pani Zosia', text: 'Dzień dobry! Uważaj na chochliki.', buttons: ['Dzień dobry!'], kto: { tex: 'hd-babcia' }, onChoose: () => {} }));
+  s = await stan();
+  assert(!s.pisze && !s.strona && s.przyciski.every(Boolean), 'short NPC speech and answers at once');
+  // Menu text length must never enable typing or page the controls away.
+  await page.evaluate(() => window.__game.scene.getScene('ui').showDialog({ title: 'Menu', text: 'Ustawienia i informacje o grze. '.repeat(20), buttons: ['Graj dalej', 'Ustawienia', 'Wstecz'], onChoose: () => {} }));
+  s = await stan();
+  assert(!s.pisze && !s.strona, 'long system menu is immediate and unpaged');
+  assert.deepEqual(s.etykiety, ['Graj dalej', 'Ustawienia', 'Wstecz'], 'menu controls remain in the same window');
+  await page.screenshot({ path: `work/arceus-menu${TEL ? '-tel' : ''}.png` });
   console.log('OK');
 } finally { await browser.close(); }

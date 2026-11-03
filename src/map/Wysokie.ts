@@ -221,7 +221,12 @@ export class Wysokie {
     if (stare) this.wstaw(w, stare, w.orig!);
     w.wyciete = nowe;
     const o = w.orig!, W = w.w;
-    const px = o.slice();
+    // Only this small window changes. Copying the whole skyscraper on every step allocated
+    // megabytes per frame on phones, even though wstaw then kept only the window anyway.
+    const ww = nowe[2] - nowe[0], hh = nowe[3] - nowe[1];
+    if (ww <= 0 || hh <= 0) return;
+    const px = new Uint32Array(ww * hh);
+    for (let j = 0; j < hh; j++) px.set(o.subarray((nowe[1] + j) * W + nowe[0], (nowe[1] + j) * W + nowe[2]), j * ww);
     const pelny = (i: number, j: number) => i >= 0 && j >= 0 && i < W && j < w.h && (o[j * W + i] >>> 24) !== 0;
     for (let j = nowe[1]; j < nowe[3]; j++) for (let i = nowe[0]; i < nowe[2]; i++) {
       const k = j * W + i, c = o[k];
@@ -231,9 +236,9 @@ export class Wysokie {
       if (!(d < R || (d < R + B && BAYER[((Y & 3) << 2) | (X & 3)] < (R + B - d) / B))) continue;
       const ob = (c & 0xffffff) === OBRYS;
       const kontur = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !pelny(i + a, j + b) || ((o[(j + b) * W + i + a] & 0xffffff) === OBRYS) !== ob);
-      px[k] = ((c & 0x00ffffff) | ((kontur ? P.alfaKonturu : P.alfaWnetrza) << 24)) >>> 0;
+      px[(j - nowe[1]) * ww + i - nowe[0]] = ((c & 0x00ffffff) | ((kontur ? P.alfaKonturu : P.alfaWnetrza) << 24)) >>> 0;
     }
-    this.wstaw(w, nowe, px);
+    w.tex!.getContext().putImageData(new ImageData(new Uint8ClampedArray(px.buffer), ww, hh), nowe[0], nowe[1]);
     w.tex!.refresh();
   }
 }

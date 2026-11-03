@@ -694,8 +694,8 @@ export class UIScene extends Phaser.Scene {
     }
     // Long talks come in portions with „Dalej ▶” (owner, 1 Nov 2026: „inaczej wypracowania nikt nie będzie
     // czytał”); the real buttons only on the last portion. Letters appear one by one (`pisz`).
-    const strony = this.podzielNaStrony(d);
-    const pisz = !d.natychmiast && (!!d.kto || d.text.length > 140);
+    const strony = d.kto ? this.podzielNaStrony(d) : [d.text];
+    const pisz = !d.natychmiast && !!d.kto && d.text.trim().length > 140;
     if (strony.length < 2) { this.rysujDialog(d, pisz); return; }
     this.pokazStrone({ d, strony, i: 0, pisz });
   }
@@ -711,7 +711,7 @@ export class UIScene extends Phaser.Scene {
           odpowiedzi: false, zamknij: 0, grozny: undefined,
           onChoose: () => { p.i++; this.pokazStrone(p); },
         };
-    this.rysujDialog(strona, p.pisz);
+    this.rysujDialog(strona, p.pisz && tekst.trim().length > 140);
     this.strony = p;
   }
 

@@ -17,6 +17,9 @@ import { CityMap, PX_PER_M, type Building, type Place, type RawTile, type WorldL
 /** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
 export const WORLD_BASE = 'https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev';
 const Z = 15;
+// Same open structures omitted by build-map.mjs for Lublin. A canopy's outline is not a wall,
+// regardless of its area (the small-shed exception alone blocked large station roofs).
+const OPEN_ROOFS = new Set(['roof', 'carport', 'shelter', 'bicycle_parking', 'canopy']);
 
 let pm: Promise<PMTiles> | null = null;
 
@@ -211,7 +214,7 @@ const ROAD: Record<string, string | null> = {
   service: 'service', driveway: 'service', track: 'track', pedestrian: 'pedestrian',
   footway: 'path', path: 'path', cycleway: 'path', bridleway: 'path', steps: 'steps',
   // Drawn along the roads already (build-map drops them too).
-  sidewalk: null, crossing: null, corridor: null, platform: null,
+  sidewalk: null, crossing: null, corridor: null, platform: 'platform',
 };
 
 const LANDUSE: Record<string, string> = {
@@ -219,7 +222,7 @@ const LANDUSE: Record<string, string> = {
   recreation_ground: 'grass', village_green: 'grass', heath: 'grass', park: 'park', garden: 'park',
   cemetery: 'cemetery', allotments: 'allotments', farmland: 'farmland', orchard: 'farmland', vineyard: 'farmland',
   pitch: 'pitch', stadium: 'pitch', track: 'pitch', playground: 'playground', parking: 'parking',
-  pedestrian: 'plaza', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
+  pedestrian: 'plaza', platform: 'platform', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
   bare_rock: 'rock', scree: 'rock', shingle: 'rock', glacier: 'glacier', sand: 'sand', beach: 'sand', dune: 'sand',
 };
 
@@ -430,6 +433,8 @@ function worldLoader(map: CityMap): WorldLoader {
         const [x, y] = pr(f.loadGeometry()[0][0]);
         nums.push({ x, y, n: String(f.properties.addr_housenumber) });
       } else if (f.type === 3) {
+        if ([f.properties.building, f.properties['building:part'], f.properties.kind_detail].some(k => OPEN_ROOFS.has(String(k ?? '')))
+          || Number(f.properties.min_height) >= 2.5) return;
         const h = Number(f.properties.height) || 0;
         polygons(f).forEach((poly, j) => {
           const rings = poly.map((r) => r.map(pr));
