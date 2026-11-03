@@ -278,6 +278,9 @@ export class FogView {
     });
   }
 
+  /** Fly-over pictures show terrain without altering the player's explored cells. */
+  setVisible(visible: boolean) { this.img.setVisible(visible); }
+
   update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = [],
     /** Tall things seen from afar (artillery cannons): their exact silhouette is cut out of the fog, no soft edge. */
     odkryte: Iterable<{ canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number }> = []) {

@@ -116,17 +116,40 @@ function wzmocnij(three: typeof THREE, clip: THREE.AnimationClip, k: number) {
 }
 
 export class Ludzik3D {
-  /** Freeze the actual current model/equipment for the separate artillery cloud scene. */
-  flightPortrait(): string[] | undefined {
-    const g=this.g;if(!g)return undefined;
-    const joints=['upperL','foreL','upperR','foreR'].map(name=>g.model.getObjectByName(name));
-    const saved=joints.map(j=>j?.quaternion.clone()),frames:string[]=[];
+  /** Rotate the whole equipped hero around his centre; restore the live rig even if an export fails. */
+  flightPortrait(spin = false): string[] | undefined {
+    const g = this.g;
+    if (!g) return undefined;
+    const joints = ['upperL', 'foreL', 'upperR', 'foreR'].map(name => g.model.getObjectByName(name));
+    const saved = joints.map(j => j?.quaternion.clone());
+    const frames: string[] = [];
+    const parent = g.model.parent!;
+    const position = g.model.position.clone(), rotation = g.model.quaternion.clone(), scale = g.model.scale.clone();
+    const pivot = new g.three.Group();
+    pivot.position.copy(new g.three.Box3().setFromObject(g.model).getCenter(new g.three.Vector3()));
+    g.scene.add(pivot);
+    pivot.attach(g.model);
     try {
-      for(let i=0;i<6;i++){
-        joints.forEach((j,n)=>{if(j&&saved[n]){j.quaternion.copy(saved[n]!);j.rotation.z+=(n<2?1:-1)*(.65+.4*Math.sin(i*Math.PI/3+(n%2)*Math.PI/2));j.rotation.x+=.25*Math.cos(i*Math.PI/3);}});
-        this.narysuj(g);frames.push(g.renderer.domElement.toDataURL('image/png'));
+      const count = spin ? 24 : 6;
+      for (let i = 0; i < count; i++) {
+        const phase = i * Math.PI * 2 / count;
+        joints.forEach((joint, n) => {
+          if (!joint || !saved[n]) return;
+          joint.quaternion.copy(saved[n]!);
+          joint.rotation.z += (n < 2 ? 1 : -1) * (.65 + .3 * Math.sin(phase + n % 2));
+        });
+        if (spin) pivot.rotation.set(.16 * Math.sin(phase), phase, .08 * Math.cos(phase));
+        this.narysuj(g);
+        frames.push(g.renderer.domElement.toDataURL('image/png'));
       }
-    } finally {joints.forEach((j,n)=>{if(j&&saved[n])j.quaternion.copy(saved[n]!);});this.narysuj(g);this.scene.textures.get(this.klucz).source[0].update();}
+    } finally {
+      parent.add(g.model);
+      g.model.position.copy(position); g.model.quaternion.copy(rotation); g.model.scale.copy(scale);
+      pivot.removeFromParent();
+      joints.forEach((joint, n) => { if (joint && saved[n]) joint.quaternion.copy(saved[n]!); });
+      this.narysuj(g);
+      this.scene.textures.get(this.klucz).source[0].update();
+    }
     return frames;
   }
 

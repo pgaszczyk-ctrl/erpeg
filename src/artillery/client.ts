@@ -7,7 +7,7 @@ import { rpc, offline } from "../api";
 import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
-import { flight } from "./flight";
+import { flight, type Kadr } from "./flight";
 import { Armata3D, ARMATA_3D, punktySiatki } from "./armata3d";
 import { miejsceStacji, miejsceWlazu, MIEJSCE_MAKS_M, type Wysun } from "./miejsce";
 import { Wlaz } from "./wlaz";
@@ -61,13 +61,14 @@ type Host = {
   busy: () => boolean;
   hold: (v: boolean) => void;
   checkpoint: () => Promise<unknown>;
-  hero: () => string | string[] | undefined;
+  hero: (spin?: boolean) => string | string[] | undefined;
   restart: (city: CityMap) => Promise<void>;
   toast: (s: string) => void;
   /** Where a map point is on screen (share of the view) and CSS px per map px. */
   kadr: (x: number, y: number) => { fx: number; fy: number; px: number };
   /** A picture of the map without the HUD. */
   zdjecie: () => Promise<HTMLCanvasElement | null>;
+  panorama: (net: { x: number; y: number }, angle: number) => Promise<Pick<Kadr, "shot" | "panorama">>;
   /** The scene's current hero and cannons (they are new after a restart). */
   obecna: () => { player: Player; artillery?: Artillery };
 };
@@ -570,7 +571,7 @@ export class Artillery {
     // The map at the shot (hero already in the barrel) – the flight scene shrinks it under him.
     const shot = metro ? null : await this.host.zdjecie();
     const muzzle = station ? this.host.kadr(station.x + Math.cos(kat) * 12, station.y - 30 + Math.sin(kat) * 12) : this.host.kadr(this.player.x, this.player.y);
-    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to), tor }) : flight(this.host.hero(), message, { shot, ...muzzle, kat, cel: to.name });
+    const overlay = metro ? pinball(this.host.hero(), message, to.name, { z: from.name, krajZ: this.krajStacji(from), krajDo: this.krajStacji(to), tor }) : flight(this.host.hero(true), message, { shot, ...muzzle, kat, cel: to.name });
     // The flight scene covers the map now; the hero is visible again if the trip is called off.
     this.player.setAlpha(1);
     let receipt: Receipt | undefined,
@@ -672,8 +673,8 @@ export class Artillery {
       let exit = cel ? { x: cel.x + off.wyjscie.dx, y: cel.y + off.wyjscie.dy } : { x: hero.x, y: hero.y };
       if (!city.isFree(exit.x, exit.y, 10, 10)) exit = { x: hero.x, y: hero.y };
       hero.setAlpha(0);
-      const view = await this.host.zdjecie();
-      await overlay.land({ shot: view, ...this.host.kadr(net.x, net.y), cel: to.name });
+      const view = still ? { shot: await this.host.zdjecie() } : await this.host.panorama(net, kat);
+      await overlay.land({ ...view, ...this.host.kadr(net.x, net.y), cel: to.name });
       overlay.close();
       await wSiatke(this.scene, hero, net, exit, cel?.model && cel.armata instanceof Armata3D ? cel.armata : undefined, still);
       this.host.toast(tx(`Złapany w siatkę! Witaj: ${to.name}`, `Caught in the net! Welcome to ${to.name}`));
