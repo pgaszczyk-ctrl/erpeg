@@ -35,6 +35,8 @@ export class Pociagi {
     return this.pojazdy.some((v) => v.p.id === p.id);
   }
 
+  interactionVehicles() { return this.pojazdy.filter(v=>v.img.active&&v.img.visible); }
+
   stacjaPrzy(x: number, y: number, margin = 4): Place | null {
     const tex = this.scene.textures;
     for (const { p, img } of this.pojazdy) {

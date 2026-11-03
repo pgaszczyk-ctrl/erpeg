@@ -13,6 +13,7 @@ import { legacyText, dialogueMetadata } from '../content/questy/text';
 import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
+import { InteractionSelection, type InteractionTarget } from '../interaction';
 import { itemPictureUrl, goodsPicture, itemTexture, itemAssetUrl } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
@@ -541,6 +542,8 @@ export class GameScene extends Phaser.Scene {
     // every GPU frame. travel.ts renders the prepared scene before revealing it.
     this.scene.setVisible(!loadingGame());
     this.stalls = [];
+    this.interactionSelection.clear();
+    this.interactionMark?.destroy();this.interactionLabel?.destroy();
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
     this.porty = new Map();
     this.portyAt = 0;
@@ -633,6 +636,7 @@ export class GameScene extends Phaser.Scene {
       scene: this,
       city: this.city,
       player: this.player,
+      interactionObstacles: () => [...(this.fixed?.positions() ?? []), ...(this.npcs?.list ?? []), ...(this.prolog?.interactionTargets() ?? []), ...(this.folk?.interactionPeople() ?? []), ...(this.training?.visibleNpcs() ?? [])],
       dialog: (r) => this.dialog(r),
       toast: (t, ms) => this.toast(t, ms),
       stageDone: (rm, said) => this.completeStage(rm, said),
@@ -648,7 +652,7 @@ export class GameScene extends Phaser.Scene {
         this.emitHud();
         return true;
       },
-      talkMission: (rm) => this.openMissionDialog(rm),
+      talkMission: (rm) => this.openMissionDialog(rm, undefined, true),
       lochy: () => this.lochy,
     });
     this.orchards = new Orchards(this, this.city);
@@ -1090,9 +1094,19 @@ export class GameScene extends Phaser.Scene {
     if (live()) {
       const targetAt = (x: number, y: number) => this.worldTargetAt(x, y);
       worldInteraction.at = targetAt;
+      const current = () => {
+        const id = this.interactionSelection.id;
+        const t = !this.interactionBlocked() && this.interactionCandidates().find(t=>t.id===id);
+        return t ? {kind:t.kind,run:()=>{
+          const exact=this.interactionCandidates().find(q=>q.id===id);
+          if(exact)this.runInteractionTarget(exact);
+        }} : null;
+      };
+      worldInteraction.current = current;
       mountGameCursor(this.game.canvas);
       this.events.once('shutdown', () => {
         if (worldInteraction.at === targetAt) worldInteraction.at = null;
+        if (worldInteraction.current === current) worldInteraction.current = null;
         updateGameCursor(this.game.canvas, null);
       });
     }
@@ -1304,17 +1318,13 @@ export class GameScene extends Phaser.Scene {
     }
     if (consumeHeal()) this.healButton();
     if (live()) {
+      this.updateInteractionTarget();
       const it = consumeInteraction();
-      if (it) this.interact(it.x, it.y);
+      if (it) { if ('target' in it) it.target?.run(); else this.interact(it.x, it.y); }
       if (now >= this.cursorAt) {
         this.cursorAt = now + 100;
         if (window.matchMedia('(hover:hover) and (pointer:fine)').matches)
           updateGameCursor(this.game.canvas, worldInteraction.at?.(mouse.x, mouse.y)?.kind ?? null);
-        const p = this.player, h = p.hitPoint();
-        ustawInterakcjeHud(!!(this.artillery?.at(p.x,p.y)||this.tablicaPrzy()||this.prolog?.interactionAt(p.x, p.y) || this.prolog?.interactionAt(h.x, h.y) ||
-          this.lochy?.przy(p.x, p.y) || this.loch?.przy(p.x, p.y) || this.talkableAt(p.x, p.y, NPC_RADIUS + 4) ||
-          this.hitsHome(p.x, p.y) || this.stallAt(p.x, p.y, 13) || this.cartAt(p.x, p.y, 6) || this.pociagi?.stacjaPrzy(p.x, p.y, 8) ||
-          this.city.places.some(q => Math.hypot(q.door.x - p.x, q.door.y - (p.y + FEET.dy)) < DOOR_RADIUS)));
       }
       if (consumeStrong()) this.specjalny(now);
       this.updateZasoby(dt, bx, by);
@@ -1764,6 +1774,14 @@ export class GameScene extends Phaser.Scene {
    * starts what is there: a talk, home, a stall, a train/cart, a door, or the quest spot the hero stands at.
    */
   private interact(sx: number, sy: number) {
+    if (live()) {
+      if (sx >= 0) { this.worldTargetAt(sx,sy)?.run(); return; }
+      // Revalidate this exact identity. Never replace a vanished target during an action.
+      const selected=this.interactionSelection.id;
+      const t=this.interactionCandidates().find(t=>t.id===selected);
+      if(t) this.runInteractionTarget(t);
+      return;
+    }
     if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.time.now < this.lingerUntil) return;
     const cam = this.cameras.main;
     const near = sx < 0;
@@ -1789,47 +1807,85 @@ export class GameScene extends Phaser.Scene {
     if (this.talkableAt(w.x, w.y, 14) || this.city.places.some((q) => Math.hypot(q.door.x - w.x, q.door.y - (w.y + FEET.dy)) < DOOR_RADIUS) || this.cartAt(w.x, w.y) || this.pociagi?.stacjaPrzy(w.x, w.y)) this.toast('👣 Podejdź bliżej.', 1200);
   }
 
-  /** Exact hovered object: no near-hero fallback and no side effects until run(). */
-  private worldTargetAt(sx: number, sy: number): WorldInteraction | null {
-    if (!this.player || this.player.isDead || !this.scene.isActive() || this.travelling ||
-        this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy ||
-        this.time.now < this.lingerUntil || loadingGame()) return null;
-    const cam = this.cameras.main;
-    const x = sx * OSTROSC / cam.zoomX + cam.worldView.x;
-    const y = sy * OSTROSC / cam.zoomY + cam.worldView.y;
-    if (!pointInPolygon(this.vision, x, y)) return null;
-    const hit = new Phaser.Math.Vector2(x, y);
-    const make = (kind: WorldInteraction['kind'], action: () => void): WorldInteraction => ({ kind, run: () => {
-      if (!this.scene.isActive() || this.player.isDead || performance.now() < this.talkReadyAt) return;
-      if (Math.hypot(x - this.player.x, y - this.player.y) > INTERAKCJA_PX) {
-        this.toast(tx('👣 Podejdź bliżej.', '👣 Come closer.'), 1200); return;
-      }
-      this.clickWorld = { x, y };
-      this.player.face(x - this.player.x, y - (this.player.y + 2));
-      action();
-    }});
-    const cannon=this.artillery?.at(x,y);if(cannon)return make(this.artillery?.metro?'enter':'use',()=>this.otworzStacje(cannon));
-    const tablica = this.tablicaAt(x, y);
-    if (tablica) return make('use', () => this.otworzTablice(tablica));
-    const prologKind = this.prolog?.interactionAt(x, y);
-    if (prologKind) return make(prologKind, () => { this.prolog?.interact(); });
-    if (this.lochy?.przy(x, y + FEET.dy) || this.loch?.przy(x, y))
-      return make(this.loch?.przy(x, y) === 'skrzynia' ? 'use' : 'enter', () => { this.lochDotyk(hit); });
-    // A character's body extends above its feet; prefer its own hit test over a nearby door.
-    const talk = this.talkableAt(x, y, 14) ?? this.talkableAt(x, y + 14, 10);
-    if (talk) return make('talk', () => { this.learnPlace(); this.zapamietajRozmowce(x, y); talk(); });
-    if (this.hitsHome(x, y)) return make('enter', () => {
-      if (this.inCombat()) return;
-      session.at = null; this.save(); this.openHome();
-    });
-    const stall = this.stallAt(x, y, 10);
-    if (stall) return make('use', () => { this.learnPlace(); this.openShop(stall, stall.id.startsWith('wlaz:') ? 1 : 0); });
-    const station = this.pociagi?.stacjaPrzy(x, y) ?? this.cartAt(x, y);
-    if (station) return make('use', () => { this.learnPlace(); this.openCoach(station); });
-    const door = (q: { x: number; y: number }) => Math.hypot(q.x - x, q.y - (y + FEET.dy)) < DOOR_RADIUS;
-    if (this.city.places.some(p => door(p.door)) || this.missions.some(r => missionAvailable(r.m) && door(r.door)))
-      return make('enter', () => { this.openDoorAt(x, y + FEET.dy); });
-    return null;
+  private interactionSelection = new InteractionSelection();
+  private interactionMark?: Phaser.GameObjects.Graphics;
+  private interactionLabel?: Phaser.GameObjects.Text;
+
+  private interactionCandidates(): InteractionTarget[] {
+    const out: InteractionTarget[]=[];
+    const add=(id:string, p:{x:number;y:number}, kind:InteractionTarget['kind'], name:string, run:()=>void, range=36)=>{
+      if(Math.hypot(p.x-this.player.x,p.y-this.player.y)>INTERAKCJA_PX+4)return;
+      out.push({id,x:p.x,y:p.y,kind,label:(kind==='talk'?tx('Porozmawiaj: ','Talk: '):kind==='enter'?tx('Wejdź: ','Enter: '):tx('Użyj: ','Use: '))+name,run,range});
+    };
+    out.push(...this.etapy.interactionTargets(), ...(this.prolog?.interactionTargets()??[]));
+    for(const n of this.npcs.list) add(`riddle:${n.id}`,n,'talk',n.name,()=>this.openRiddle(n));
+    for(const n of this.fixed.interactionPeople())add(`fixed:${n.id}`,n,'talk',n.name,()=>this.fixed.talk(n));
+    if(this.duelHp===null)for(const n of this.folk.interactionPeople())add(`folk:${n.id}`,n,'talk',n.name,()=>this.talkToFolk(n));
+    if(!this.challenge)for(const n of this.training.visibleNpcs())add(`sport:${n.x}:${n.y}`,n,'talk',tx('Trener','Coach'),()=>this.talkSport(n));
+    const robot=this.elzet?.interactionTarget();if(robot)out.push(robot);
+    const wizard=this.story.wizardSpot();if(wizard)add('wizard',wizard,'talk',tx('Mag','Wizard'),()=>this.story.talkToWizard());
+    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??tx('Piwnica','Cellar'),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
+    if(this.loch) {
+      const l=this.loch;
+      add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
+      if(!out.some(t=>t.id==='prolog:chest'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
+    }
+    for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
+    for(const r of this.missions) if(!r.m.postac&&missionAvailable(r.m))add(`mission:${r.m.id}`,r.door,'use',r.m.tytul,()=>this.openMissionDialog(r));
+    for(const r of this.missions)if(missionState(r.m)==='active'&&r.target&&!zadanieOf(r.m).postac) {
+      const z=zadanieOf(r.m);
+      if(z.typ==='idz')add(`goal:${r.m.id}`,r.target,'use',z.cel,()=>this.arriveGoal(r),GOAL_RADIUS*1.3);
+
+    }
+    if(this.home)add('home',this.homeAt,'enter',tx('Dom','Home'),()=>{if(!this.inCombat()){session.at=null;this.save();this.openHome();}});
+    for(const st of this.stalls)add(`stall:${st.p.id}:${st.x}`,st,'use',st.p.name,()=>this.openShop(st.p,st.p.id.startsWith('wlaz:')?1:0));
+    for(const v of this.pociagi?.interactionVehicles()??[])add(`train:${v.p.id}:${v.img.x}`,v.img,'use',v.p.name,()=>this.openCoach(v.p));
+    const drill=this.training.hitAt(this.player.x,this.player.y,this.swingReach()*2.5,'miecz')??this.training.hitAt(this.player.x,this.player.y,this.swingReach()*2.5,'luk');
+    if(drill)add(`training:${drill.x}:${drill.y}`,drill,'use',tx('Ośrodek treningowy','Training ground'),()=>this.wyborUmiejetnosci(['miecz','luk'],'🎯 '+tx('Ośrodek treningowy','Training ground')));
+    for(const w of this.wozy)add(`coach:${w.p.id}`,w.img,'use',w.p.name,()=>this.openCoach(w.p));
+    for(const a of this.artillery?.interactionStops()??[])add(`artillery:${a.stop.id}`,a,a.metro?'enter':'use',a.stop.name,()=>this.otworzStacje(a.stop));
+    for(const b of this.city.tablice)add(`board:${b.x}:${b.y}`,b,'use',tx('Tablica','Noticeboard'),()=>this.otworzTablice(b));
+    return out.filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<INTERAKCJA_PX+4&&pointInPolygon(this.vision,t.x,t.y));
+  }
+
+  private interactionBlocked() {
+    return !this.player||this.player.isDead||!this.scene.isActive()||this.travelling||this.wHali||this.story.busy||this.demoRun?.busy||this.witam||this.anomalia?.busy||this.time.now<this.lingerUntil||loadingGame();
+  }
+  private runInteractionTarget(t:InteractionTarget) {
+    if(this.interactionBlocked()||performance.now()<this.talkReadyAt||Math.hypot(t.x-this.player.x,t.y-this.player.y)>(t.range??36))return;
+    this.clickWorld={x:t.x,y:t.y};this.rozmowca=null;
+    this.player.face(t.x-this.player.x,t.y-this.player.y);
+    this.learnPlace();
+    if(t.kind==='talk')this.zapamietajRozmowce(t.x,t.y,true);
+    t.run();
+  }
+  private updateInteractionTarget() {
+    if(!this.interactionMark?.active)this.interactionMark=this.add.graphics().setDepth(1_149_999);
+    if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'8px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
+    const g=this.interactionMark;g.clear();this.interactionLabel.setVisible(false);
+    const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
+    if(!t){this.interactionSelection.clear();ustawInterakcjeHud(false);return;}
+    const k=skrotKamery(), a=.5+.16*Math.sin(this.time.now/420);
+    // One subtle golden frame, with ground Y compensated for the oblique camera.
+    const h=t.kind==='talk'?30/k:18/k, w=t.kind==='talk'?23:30;
+    g.lineStyle(1.5,0xffd36a,a).strokeRoundedRect(t.x-w/2,t.y-h,w,h+4,4);
+    g.lineStyle(3,0xffd36a,a*.15).strokeRoundedRect(t.x-w/2-1,t.y-h-1,w+2,h+6,5);
+    this.interactionLabel.setText(t.label).setPosition(t.x,t.y-h-3).setVisible(true);
+    ustawInterakcjeHud(true,t.label);
+  }
+  private worldTargetAt(sx:number,sy:number):WorldInteraction|null {
+    if(this.interactionBlocked())return null;
+    const cam=this.cameras.main,x=sx*OSTROSC/cam.zoomX+cam.worldView.x,y=sy*OSTROSC/cam.zoomY+cam.worldView.y,k=skrotKamery();
+    const targets=this.interactionCandidates().filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<=(t.range??36));
+    const score=(t:InteractionTarget)=>Math.hypot((t.x-x)/15,((t.y-(t.kind==='talk'?12/k:3))-y)*k/(t.kind==='talk'?20:14));
+    const t=targets.filter(t=>score(t)<1).sort((a,b)=>score(a)-score(b)||b.y-a.y)[0];
+    if(!t)return null;
+    return {kind:t.kind,run:()=>{
+      // First click selects visibly; clicking the already highlighted object executes it.
+      const same=this.interactionSelection.id===t.id;
+      this.interactionSelection.pick(t);this.updateInteractionTarget();
+      if(same)this.runInteractionTarget(t);
+    }};
   }
 
   private cursorAt = 0;
@@ -3939,10 +3995,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** A swing / double tap by a dungeon's entrance, its stairs up or its chest. */
-  private lochDotyk(hit: Phaser.Math.Vector2): boolean {
+  private lochDotyk(hit: Phaser.Math.Vector2, exact?: WejscieLochu): boolean {
     if (performance.now() < this.talkReadyAt) return false;
     if (this.lochy) {
-      const w = this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
+      const w = exact ?? this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
       if (!w) return false;
       if (this.inCombat()) {
         this.toast(LOCH_TEKSTY.wWalce, 1800);
@@ -7154,7 +7210,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** `onAccept` is for random missions: they join the game only when taken. */
-  private openMissionDialog(rm: ResolvedMission, onAccept?: () => void) {
+  private openMissionDialog(rm: ResolvedMission, onAccept?: () => void, giverOnly = false) {
     const m = rm.m;
     const st = missionState(m);
     // The giver speaks (Misja.postac): their name over the mission's.
@@ -7198,7 +7254,7 @@ export class GameScene extends Phaser.Scene {
       });
     } else if (st === 'active') {
       // A talk, riddle, choice… happening right at this door: start it (again) instead of „not yet”.
-      if (this.etapy.poke(rm)) return;
+      if (!giverOnly && this.etapy.poke(rm)) return;
       const z = zadanieOf(m);
       const count = z.typ === 'zbierz' && z.towar ? ` (masz ${fruitCount(z.towar)} z ${z.ile})` : '';
       const part = stageCount(m) > 1 ? tx(` (etap ${stageIndex(m) + 1} z ${stageCount(m)})`, ` (stage ${stageIndex(m) + 1} of ${stageCount(m)})`) : '';
@@ -7784,13 +7840,14 @@ export class GameScene extends Phaser.Scene {
   private rozmowca: { kto: Rozmowca; x: number; y: number } | null = null;
 
   /** The person at a talk spot: the nearest character sprite (an artist sheet with a front frame) by it. */
-  private zapamietajRozmowce(x: number, y: number) {
+  private zapamietajRozmowce(x: number, y: number, exact = false) {
     let best: Phaser.GameObjects.Sprite | null = null, bd = 30;
     for (const o of this.children.list) {
       if (!(o instanceof Phaser.GameObjects.Sprite) || o === this.player || !o.visible) continue;
       const key = o.texture.key;
       if (!key.startsWith('hd-') || !o.texture.has('down-1')) continue;
-      const d = Math.min(Math.hypot(o.x - x, o.y - y), Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
+      const at = Math.hypot(o.x - x, o.y - y);
+      const d = exact ? at : Math.min(at, Math.hypot(o.x - this.player.x, o.y - this.player.y) - 8);
       if (d < bd) [best, bd] = [o, d];
     }
     this.rozmowca = best ? { kto: { tex: best.texture.key.replace(/-red$/, '') }, x: this.player.x, y: this.player.y } : null;

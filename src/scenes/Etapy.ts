@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { interactionSpot, type InteractionTarget } from '../interaction';
+import { skrotKamery } from '../walka/live';
 import { tx } from '../i18n';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
@@ -43,6 +45,7 @@ export interface StageHost {
   talkMission(rm: ResolvedMission): void;
   /** The surface's dungeon entrances (none underground / without the new fight). */
   lochy(): LochyWejscia | undefined;
+  interactionObstacles?(): {x:number;y:number}[];
 }
 
 /** Stage 'loch': the key (in the mission's saved choices) set when its dungeon chest was opened. */
@@ -132,20 +135,60 @@ export class Etapy {
     for (const rm of missions) {
       const g = rm.m.postac;
       if (!g || !(missionAvailable(rm.m) || levelLock(rm.m) !== null)) continue;
-      const x = rm.door.x + 10, y = rm.door.y + 2;
-      const twin = [...this.live.values()].some((l) => l.at && l.at.imie === g.imie && Math.hypot(l.at.x - x, l.at.y - y) < 40) ||
-        [...this.givers.values()].some((o) => o.rm.m.id !== rm.m.id && o.imie === g.imie && Math.hypot(o.x - x, o.y - y) < 40);
+      const x = rm.door.x, y = rm.door.y;
+      const stagePerson = this.live.get(rm.m.id)?.at;
+      const twin = stagePerson?.imie === g.imie && Math.hypot(stagePerson.x-x,stagePerson.y-y)<160;
       if (twin) continue;
       want.add(rm.m.id);
       const had = this.givers.get(rm.m.id);
       if (had) { had.rm = rm; continue; }
-      this.givers.set(rm.m.id, { who: this.person(g, x, y), x, y, imie: g.imie, rm });
+      const at = this.placePerson({x,y});
+      if (at) this.givers.set(rm.m.id, { who: this.person(g, at.x, at.y), ...at, imie: g.imie, rm });
     }
     for (const [id, g] of this.givers) {
       if (want.has(id)) continue;
       for (const w of g.who) w.destroy();
       this.givers.delete(id);
     }
+  }
+
+  private placePerson(origin: {x:number;y:number}) {
+    const people = [...this.givers.values(), ...[...this.live.values()].flatMap(l => l.at ? [l.at] : []),
+      ...(this.host.interactionObstacles?.() ?? [])];
+    const doors = [...this.rms.map(r => r.door), ...this.host.city.places.map(p => p.door), ...(this.host.lochy()?.lista ?? [])];
+    return interactionSpot(origin, people, doors, (x,y) => this.host.city.isFree(x,y,5,5), skrotKamery(), (x,y)=>this.host.city.reachesFar(x,y,50));
+  }
+
+  /** Concrete callbacks: a neighbouring mission can never intercept a selected person's dialogue. */
+  interactionTargets(): InteractionTarget[] {
+    const out: InteractionTarget[] = [];
+    for (const [id,g] of this.givers) out.push({id:`giver:${id}`, x:g.x, y:g.y, kind:'talk',
+      label:tx('Porozmawiaj: ','Talk: ')+g.imie, run:()=>this.host.talkMission(g.rm)});
+    for (const [id,l] of this.live) {
+      if (!l.at) continue;
+      const rm = this.rms.find(r=>r.m.id===id);
+      if (!rm) continue;
+      const z = zadanieOf(rm.m);
+      out.push({id:`stage:${l.key}`, x:l.at.x, y:l.at.y, kind:'talk', label:tx('Porozmawiaj: ','Talk: ')+l.at.imie,
+        run:()=>{ if(SPOT.has(z.typ)){l.armed=false;this.fire(rm,z,l);} else this.host.dialog({ ...z.dialogueMeta,title:z.postac?.imie??rm.m.tytul,text:z.tekst||z.cel,buttons:[tx('Dobrze','All right')],onChoose:()=>{} }); }});
+    }
+    for (const rm of this.rms) {
+      if(missionState(rm.m)!=='active')continue;
+      const l=this.live.get(rm.m.id),z=zadanieOf(rm.m);
+      if(!l)continue;
+      if(SPOT.has(z.typ)&&!z.postac&&rm.target)out.push({id:`spot:${l.key}`,...rm.target,kind:'use',label:tx('Sprawdź: ','Inspect: ')+rm.m.tytul,
+        run:()=>{l.armed=false;this.fire(rm,z,l);}});
+      if(z.typ==='badanie') {
+        const found=readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy??[]).map(c=>c.id));
+        for(const c of z.tropy??[]) {
+          if(found.includes(c.id))continue;
+          const at=resolvePlace(this.host.city,c.miejsce);if(!at)continue;
+          out.push({id:`clue:${l.key}:${c.id}`,...at,kind:'use',label:tx('Zbadaj: ','Inspect: ')+rm.m.tytul,
+            run:()=>{l.clueArmed.delete(c.id);this.inspectClue(rm,z,c);}});
+        }
+      }
+    }
+    return out;
   }
 
   /** A mission person (giver or stage person) within `r` of (x, y): what talking to them does, or null. */
@@ -179,6 +222,7 @@ export class Etapy {
     const p = this.host.player;
     const near = <T extends { x: number; y: number }>(list: T[]) => list.reduce<T | null>((a, b) => (!a || Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a), null);
     if (l.wejscie) return l.wejscie;
+    if (l.at) return l.at;
     if (l.items.length) return near(l.items);
     const left = l.points.filter((q) => !q.done);
     return left.length ? near(left) : null;
@@ -309,9 +353,11 @@ export class Etapy {
       l.until = now + Math.max(60, s) * 1000;
     }
     if (z.postac) {
-      const x = rm.target!.x + 10, y = rm.target!.y + 2;
-      l.who.push(...this.person(z.postac, x, y));
-      l.at = { x, y, imie: z.postac.imie };
+      const at = this.placePerson(rm.target!);
+      if (at) {
+        l.who.push(...this.person(z.postac, at.x, at.y));
+        l.at = { ...at, imie: z.postac.imie };
+      }
     }
     return l;
   }
@@ -403,6 +449,10 @@ export class Etapy {
   private tick(rm: ResolvedMission, z: Etap, l: Live, now: number, dt: number) {
     const p = this.host.player;
     const t = rm.target!;
+    if (z.postac && !l.at) {
+      const at = this.placePerson(t);
+      if (at) { l.who.push(...this.person(z.postac,at.x,at.y)); l.at={...at,imie:z.postac.imie}; }
+    }
     if (z.typ === 'loch') {
       const idx = stageIndex(rm.m);
       // The chest down there was opened (it records this and saves): the stage is done on the way back up.

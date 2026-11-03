@@ -17,12 +17,12 @@ import { naEkranie } from './obrot';
 export const JOY_RADIUS = 56;
 
 /** Explicit interaction input, shared by E, the HUD and object clicks. */
-let interakcja: { x: number; y: number } | null = null;
+let interakcja: { x: number; y: number; target?: WorldInteraction | null } | null = null;
 export type InteractionKind = 'talk' | 'enter' | 'use';
 export interface WorldInteraction { kind: InteractionKind; run: () => void }
 /** Installed by the active game scene; querying never performs an action. */
-export const worldInteraction = { at: null as ((x: number, y: number) => WorldInteraction | null) | null };
-export function requestInteraction() { interakcja = { x: -1, y: -1 }; }
+export const worldInteraction = { at: null as ((x: number, y: number) => WorldInteraction | null) | null, current: null as (() => WorldInteraction | null) | null };
+export function requestInteraction() { interakcja = { x: -1, y: -1, target: worldInteraction.current?.() }; }
 /** A double tap/click since the last call: where (CSS px on the game), or (-1, -1) = near the hero (E key). */
 export function consumeInteraction() {
   const i = interakcja;
@@ -402,7 +402,10 @@ export function installTouchControls(el: HTMLElement) {
       if (tap) {
         tapStarts.delete(t.identifier);
         const p = local(t);
-        if (e.type === 'touchend' && Math.hypot(p.x - tap.x, p.y - tap.y) < 14 && performance.now() - tap.t < 450) tapped(p.x, p.y);
+        if (e.type === 'touchend' && Math.hypot(p.x - tap.x, p.y - tap.y) < 14 && performance.now() - tap.t < 450) {
+          const target=live()?worldInteraction.at?.(p.x,p.y):null;
+          if(target)target.run();else tapped(p.x,p.y);
+        }
       }
       const s = pickStarts.get(t.identifier);
       if (!s) continue;

@@ -62,9 +62,9 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  if(!mobile){
   await g(()=>{
    const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;
-   window.__talks=0;window.__blows=0;window.__hoverNpc={x:s.player.x-24,y:s.player.y};
-   window.__oldFixedAt=s.fixed.at;window.__oldFixedTalk=s.fixed.talk;
-   s.fixed.at=(x,y,r)=>Math.hypot(x-window.__hoverNpc.x,y-window.__hoverNpc.y)<r?window.__hoverNpc:window.__oldFixedAt.call(s.fixed,x,y,r);
+   window.__talks=0;window.__blows=0;window.__hoverNpc={id:'hover-fixture',name:'Strażnik',x:s.player.x-24,y:s.player.y};
+   window.__oldFixedPeople=s.fixed.interactionPeople;window.__oldFixedTalk=s.fixed.talk;
+   s.fixed.interactionPeople=()=>[window.__hoverNpc];
    s.fixed.talk=n=>{if(n===window.__hoverNpc)window.__talks++;else window.__oldFixedTalk.call(s.fixed,n)};
   });
   const pos=await g(()=>{const s=window.__game.scene.getScene('game'),c=s.cameras.main;return[(window.__hoverNpc.x-c.worldView.x)*c.zoomX,(window.__hoverNpc.y-c.worldView.y)*c.zoomY]});
@@ -72,11 +72,14 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
   assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'talk');
   assert.equal(await g(()=>window.__talks),0,'hover never opens a conversation');
   await page.mouse.click(...pos);await page.waitForTimeout(200);
-  assert.equal(await g(()=>window.__talks),1,'single click talks to the selected person');
+  assert.equal(await g(()=>window.__game.scene.getScene('game').interactionSelection.id),'fixed:hover-fixture','click selects the exact person');
+  assert.equal(await g(()=>window.__talks),0,'first click previews a different target');
+  await page.keyboard.press('KeyE');await page.waitForTimeout(200);
+  assert.equal(await g(()=>window.__talks),1,'E talks to the selected person');
   assert.equal(await g(()=>window.__blows),0,'talking never attacks');
   await page.mouse.move(620,50);await page.waitForTimeout(250);
   assert.equal(await g(()=>document.querySelector('#game canvas').dataset.cursor),'normal','empty terrain restores base cursor');
-  await g(()=>{const s=window.__game.scene.getScene('game');s.fixed.at=window.__oldFixedAt;s.fixed.talk=window.__oldFixedTalk;});
+  await g(()=>{const s=window.__game.scene.getScene('game');s.fixed.interactionPeople=window.__oldFixedPeople;s.fixed.talk=window.__oldFixedTalk;});
  }
  // Repeated attacks (HUD and keyboard) must never open an entrance.
  await g(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.talkReadyAt=0;s.lingerUntil=0;window.__dialogs=[];});

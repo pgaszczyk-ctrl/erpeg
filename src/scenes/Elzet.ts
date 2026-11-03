@@ -480,6 +480,11 @@ export class Elzet {
 
   // ------------------------------------------------------------------ talking
 
+  interactionTarget() {
+    const s=this.npc; if(!s||!this.talkAt(s.x,s.y,1))return null;
+    return {id:'elzet',x:s.x,y:s.y,kind:'talk' as const,label:'Porozmawiaj: Robot',run:()=>this.rozmowa()};
+  }
+
   /** A talk with the robot when it stands within `r` of (x, y). */
   talkAt(x: number, y: number, r: number): (() => void) | null {
     const s = this.npc;
