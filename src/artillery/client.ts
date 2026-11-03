@@ -28,7 +28,7 @@ import {
   type Swiat,
 } from "./generator";
 import { lang } from "../i18n";
-import { getMap, prepareMap, nameWorldMap } from "../travel";
+import { getSurfaceMap, surfacePosition, prepareMap, nameWorldMap } from "../travel";
 import { resetKeys, resetTouch } from "../controls";
 export type Registry = Network & {
   city?: { name: string };
@@ -588,14 +588,7 @@ export class Artillery {
     let dest: At | undefined;
     const cel = async (): Promise<At> => {
       const ll = this.ll(to);
-      let id = this.city.id;
-      if (!this.city.hasLatLon(ll.lat, ll.lon)) {
-        const lub = await getMap("lublin").catch(() => null);
-        id = lub?.hasLatLon(ll.lat, ll.lon)
-          ? "lublin"
-          : `w:${(Math.round(ll.lat * 10) / 10).toFixed(4)},${(Math.round(ll.lon * 10) / 10).toFixed(4)}`;
-      }
-      const city = await getMap(id),
+      const city = await getSurfaceMap(ll.lat, ll.lon),
         g = city.fromLatLon(ll.lat, ll.lon);
       await city.ensure(g.x, g.y, (MIEJSCE_MAKS_M + 200) * PX_PER_M);
       const p = miejsceNa(city, to, ll, this.registry?.metro);
@@ -606,7 +599,8 @@ export class Artillery {
             "There is no safe square to land by that cannon. Nothing was charged.",
           ),
         );
-      return { m: city.id, x: p.x, y: p.y, s: PX_PER_M };
+      const resolved = await surfacePosition({ m: city.id, x: p.x, y: p.y });
+      return { ...resolved.at, s: PX_PER_M };
     };
     const begin = async () => {
       dest ??= await cel();
@@ -634,8 +628,9 @@ export class Artillery {
         x: (receipt.destination_at.x * PX_PER_M) / receipt.destination_at.s,
         y: (receipt.destination_at.y * PX_PER_M) / receipt.destination_at.s,
       };
-      const city = await getMap(receipt.destination_at.m),
-        at = session.tu;
+      const resolved = await surfacePosition(session.tu);
+      const city = resolved.city, at = resolved.at;
+      session.tu = at;
       if (city.id.startsWith("w:") && this.registry?.city?.name)
         nameWorldMap(city.id, this.registry.city.name);
       await city.ensure(at.x, at.y, 1000 * PX_PER_M);
@@ -744,8 +739,10 @@ export class Artillery {
                 x: (result.origin_at.x * PX_PER_M) / result.origin_at.s,
                 y: (result.origin_at.y * PX_PER_M) / result.origin_at.s,
               };
+              const resolved = await surfacePosition(session.tu);
+              session.tu = resolved.at;
               session.arrive = { x: session.tu.x, y: session.tu.y };
-              const origin = await getMap(result.origin_at.m);
+              const origin = resolved.city;
               await prepareMap(origin);
               await this.host.restart(origin);
               artilleryTransit.active = false;

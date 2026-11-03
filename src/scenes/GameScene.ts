@@ -82,7 +82,8 @@ const PLANY_TABLIC = new Map<string, { gotowy: Awaited<ReturnType<typeof planMia
 /** Cannons (map id | station id) that already got their board this page load. */
 const ARMATY_Z_TABLICA = new Set<string>();
 import { worldOrigin, nearestLocality } from '../map/world';
-import { cachedMap, coachOffers, coachSide, rideKmh, STRONY, enterWorld, getMap, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
+import { cachedMap, coachOffers, coachSide, rideKmh, STRONY, enterWorld, getMap, getSurfaceMap, surfacePosition, LOAD_RADIUS, mapName, prepareMap, type Offer, type Trip, type Stop } from '../travel';
+import { surfaceBindingMatches } from '../map/worldRules';
 import { GRAZYNKA, type ZagadkaPL } from '../content/postacie';
 import { SZKOLA_QUIZ } from '../content/quizy';
 import { schoolQuiz, quizAnswered } from '../quizzes';
@@ -785,7 +786,7 @@ export class GameScene extends Phaser.Scene {
     for (const m of Object.values(session.gen)) {
       if (isWithdrawnCityQuest(m.id)) continue;
       if (m.scenariusz) {
-        if (m.scenariusz.mapId !== this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
+        if (!surfaceBindingMatches(m.scenariusz.mapId, this.city.id, m.scenariusz.anchors) || !['active', 'goal'].includes(missionState(m))) continue;
         const door = resolvePlace(this.city, m.scenariusz.anchors[0]);
         if (door) this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
         continue;
@@ -803,6 +804,9 @@ export class GameScene extends Phaser.Scene {
       if (place) {
         const door = { ...place.door, building: place.building ?? undefined };
         this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
+      } else if (m.dawca && surfaceBindingMatches(m.dawca.mapId, this.city.id, [m.dawca])) {
+        const door = resolvePlace(this.city, m.dawca);
+        if (door) this.addMission({ m, door, target: stageTarget(this.city, m, door) }, false);
       }
     }
     this.refreshMarkers();
@@ -3892,8 +3896,8 @@ export class GameScene extends Phaser.Scene {
       session.hp = PLAYER.maxHp;
       this.travelling = true;
       this.keepFog();
-      void getMap(at.m).then(async (city) => {
-        session.arrive = { x: at.x, y: at.y };
+      void surfacePosition(at).then(async ({ city, at: destination }) => {
+        session.arrive = { x: destination.x, y: destination.y };
         await prepareMap(city);
         this.game.registry.set('city', city);
         saveNow(PLAYER.maxHp).catch(() => {});
@@ -4083,10 +4087,10 @@ export class GameScene extends Phaser.Scene {
     const p = lochSesja.powrot ?? { ...(session.at ?? { m: 'lublin', x: session.startX, y: session.startY }), nazwa: '' };
     const cam = this.cameras.main;
     if (!porazka) cam.fadeOut(500, 0, 0, 0);
-    getMap(p.m)
-      .then(async (city) => {
-        await city.ensure(p.x, p.y, LOAD_RADIUS);
-        session.arrive = city.isBlocked(p.x, p.y) ? city.reachableNear(p.x, p.y) : { x: p.x, y: p.y };
+    surfacePosition(p)
+      .then(async ({ city, at }) => {
+        await city.ensure(at.x, at.y, LOAD_RADIUS);
+        session.arrive = city.isBlocked(at.x, at.y) ? city.reachableNear(at.x, at.y) : { x: at.x, y: at.y };
         await prepareMap(city);
         session.hp = porazka ? PLAYER.maxHp : this.player.hp;
         lochSesja.powrot = null;
@@ -6041,15 +6045,23 @@ export class GameScene extends Phaser.Scene {
     this.toast(t.statek ? `⛴ Płyniemy do: ${t.to.name}…` : `🐴 Jedziemy do: ${t.to.name}…`, 3000);
     const cam = this.cameras.main;
     cam.fadeOut(900, 0, 0, 0);
-    Promise.all([getMap(t.to.mapId), new Promise((ok) => this.time.delayedCall(1000, ok))])
-      .then(async ([city]) => {
+    Promise.all([getSurfaceMap(t.to.lat, t.to.lon), new Promise((ok) => this.time.delayedCall(1000, ok))])
+      .then(async ([initial]) => {
+        let city = initial;
         const st = t.statek ? undefined : city.places.find((q) => q.kind === 'station' && q.name === t.to.name);
         const to = st ? st.door : city.fromLatLon(t.to.lat, t.to.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
         // A spot on the platform/street/quay the hero can walk away from (not an island between the tracks).
         session.arrive = st || t.statek ? city.reachableNear(to.x, to.y) : city.arrivalNear(to.x, to.y);
+        // The actual platform/free landing can be across a sector or prepared-map
+        // boundary. Save and start in its owner, not in the nominal city's sector.
+        const landing = await surfacePosition({ m: city.id, ...session.arrive });
+        city = landing.city;
+        session.arrive = { x: landing.at.x, y: landing.at.y };
+        await city.ensure(session.arrive.x, session.arrive.y, LOAD_RADIUS);
         // The ride takes time (WOZNICA/POCIAG km/h in a straight line, journey.ts); its station is the load point at once.
         session.at = { m: city.id, x: session.arrive.x, y: session.arrive.y };
+        session.tu = { ...session.at };
         if (!session.immortal) {
           await syncClock();
           const start = serverNow();
@@ -6082,55 +6094,51 @@ export class GameScene extends Phaser.Scene {
       });
   }
 
-  /**
-   * On foot between the Lublin map and the world map (content/mapa.ts GRANICA): coming from another town
-   * the hero steps onto the real Lublin map (its cobbles, missions and fixed characters), and pushing out
-   * through Lublin's edge takes him onto the world map there.
-   */
+  private checkingBorder = false;
+  /** Walking uses exactly the same geographic owner as every form of transport. */
   private crossBorder(now: number) {
-    if (this.travelling || demo.on || now < this.crossAt || this.player.isDead) return;
+    if (this.travelling || this.checkingBorder || demo.on || this.city.loch || now < this.crossAt || this.player.isDead) return;
     this.crossAt = now + 500;
     this.checkDroga();
-    const lublin = cachedMap('lublin');
-    if (!lublin) return;
     const { x, y } = this.player;
-    if (worldOrigin(this.city.id)) {
-      const ll = this.city.toLatLon(x, y);
-      const p = lublin.fromLatLon(ll.lat, ll.lon);
-      const m = GRANICA.wejscieM * PX_PER_M;
-      if ([[0, 0], [m, 0], [-m, 0], [0, m], [0, -m]].every(([dx, dy]) => lublin.insideCity(p.x + dx, p.y + dy))) {
-        this.walkOnto('lublin', ll, '🏰 Wchodzisz do Lublina.');
+    let ll = this.city.toLatLon(x, y);
+    const source = this.city;
+    if (!worldOrigin(source.id)) {
+      const f = this.player.facing;
+      const d = GRANICA.wyjscieM * PX_PER_M;
+      if (this.player.vel.lengthSq() !== 0 && !source.insideCity(x + f.x * d, y + f.y * d)) {
+        this.pushOut += 0.5;
+        if (this.pushOut < GRANICA.wyjscieS) return;
+        ll = source.toLatLon(x + f.x * d * 3, y + f.y * d * 3);
+      } else {
+        this.pushOut = 0;
       }
-      return;
     }
-    if (this.city.id !== 'lublin' || this.player.vel.lengthSq() === 0) {
-      this.pushOut = 0;
-      return;
-    }
-    const f = this.player.facing;
-    const d = GRANICA.wyjscieM * PX_PER_M;
-    if (this.city.insideCity(x + f.x * d, y + f.y * d)) {
-      this.pushOut = 0;
-      return;
-    }
-    this.pushOut += 0.5;
-    if (this.pushOut < GRANICA.wyjscieS) return;
-    // Just past the edge, on a world map whose origin is the nearest 0.1° (the same squares come back, so does their fog).
-    const ll = this.city.toLatLon(x + f.x * d * 3, y + f.y * d * 3);
-    this.walkOnto(`w:${(Math.round(ll.lat * 10) / 10).toFixed(4)},${(Math.round(ll.lon * 10) / 10).toFixed(4)}`, ll, '🌍 Wychodzisz poza Lublin.');
+    this.checkingBorder = true;
+    void getSurfaceMap(ll.lat, ll.lon).then(async target => {
+      if (!this.sys.isActive() || this.city !== source || this.travelling || this.player.isDead || target.id === source.id) return;
+      // A cold regional index may have arrived after the player moved. Never rewind the walk.
+      if (worldOrigin(source.id)) {
+        ll = source.toLatLon(this.player.x, this.player.y);
+        if ((await getSurfaceMap(ll.lat, ll.lon)).id !== target.id) return;
+      }
+      this.walkOnto(ll, target.id === 'lublin' ? '🏰 Wchodzisz do Lublina.' : '🌍 Idziesz dalej.');
+    }).catch(() => { this.crossAt = this.time.now + 10_000; })
+      .finally(() => { this.checkingBorder = false; });
   }
 
   /** Restarts the scene on another map with the hero at (lat, lon) – no coach, no fee. */
-  private walkOnto(mapId: string, ll: { lat: number; lon: number }, word: string) {
+  private walkOnto(ll: { lat: number; lon: number }, word: string) {
     this.travelling = true;
     this.keepFog();
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
-    getMap(mapId)
+    getSurfaceMap(ll.lat, ll.lon)
       .then(async (city) => {
         const to = city.fromLatLon(ll.lat, ll.lon);
         await city.ensure(to.x, to.y, LOAD_RADIUS);
-        session.arrive = city.reachableNear(to.x, to.y);
+        session.arrive = city.isFree(to.x, to.y, FEET.hw, FEET.hh) ? to : city.reachableNear(to.x, to.y);
+        session.tu = { m: city.id, ...session.arrive };
         await prepareMap(city);
         session.hp = this.player.hp;
         this.walkedIn = word;
@@ -7826,7 +7834,7 @@ export class GameScene extends Phaser.Scene {
     // Accepted elsewhere stays in the journal, with no arrow on this map.
     for (const m of Object.values(session.gen)) {
       if (isWithdrawnCityQuest(m.id)) continue;
-      if (!m.scenariusz || m.scenariusz.mapId === this.city.id || !['active', 'goal'].includes(missionState(m))) continue;
+      if (!m.scenariusz || surfaceBindingMatches(m.scenariusz.mapId, this.city.id, m.scenariusz.anchors) || !['active', 'goal'].includes(missionState(m))) continue;
       out.push({ id:m.id, title:m.tytul, start:m.adres,
         text:`${tx('Kontynuuj w', 'Continue in')} ${m.scenariusz.mapName}: ${zadanieOf(m).cel}`, pos:null });
     }

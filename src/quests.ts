@@ -10,6 +10,7 @@ import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
 import { api, rpc, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
+import { surfaceBindingMatches } from './map/worldRules';
 import { gear, loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
 import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
@@ -405,7 +406,7 @@ export function setMissionState(m: Misja, s: MissionState) {
  */
 export function missionAvailable(m: Misja) {
   if (isWithdrawnCityQuest(m.id)) return false;
-  if (m.scenariusz && (m.scenariusz.mapId !== session.mapId || missionState(m) === 'done')) return false;
+  if (m.scenariusz && (!surfaceBindingMatches(m.scenariusz.mapId, session.mapId, m.scenariusz.anchors) || missionState(m) === 'done')) return false;
   if (missionState(m) !== 'new') return true;
   const w = m.wymaga;
   if (!w) return true;

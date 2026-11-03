@@ -519,6 +519,7 @@ export class CityMap {
   private haveArea = new Set<number>();
   private haveLine = new Set<number>();
   private haveBuilding = new Set<number>();
+  private builtById = new Map<number, Building>();
   private streets = new Map<string, { x: number; y: number }>();
   /** Post offices, post boxes and parcel lockers (decorations: the pneumatic post pillar). */
   readonly posts: { x: number; y: number }[] = [];
@@ -668,7 +669,7 @@ export class CityMap {
   }
 
   private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1, architecture?: Building['architecture']) {
-    if (this.haveBuilding.has(id)) return;
+    if (this.haveBuilding.has(id)) return this.builtById.get(id)!;
     this.haveBuilding.add(id);
     const abs = rings.map((r) => decode(r, this.k));
     // Pad the box downwards: walls are drawn below the footprint.
@@ -679,10 +680,12 @@ export class CityMap {
     if (open) b.open = true;
     if (architecture) b.architecture = architecture;
     this.buildings.push(b);
+    this.builtById.set(id, b);
     this.buildingGrid.add(b);
     if (abs.length > 1) this.newHoled.push(b);
     // Every building is checked once for closed yards (holes or narrow-mouthed pockets).
     if (!open) this.podworka.add(b);
+    return b;
   }
 
   private newPitches: Area[] = [];
@@ -837,10 +840,12 @@ export class CityMap {
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
     for (const [bid, rings, addr, name, levels, open, architecture] of t.b) {
-      this.addBuilding(bid, rings, addr, name, levels, open, architecture);
+      const b = this.addBuilding(bid, rings, addr, name, levels, open, architecture);
       if (this.world && addr) {
-        const b = this.buildings[this.buildings.length - 1];
-        for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
+        for (const a of b.addresses) {
+          const key = normAddress(a), previous = this.byAddress.get(key);
+          if (!previous || b.id < previous.id) this.byAddress.set(key, b);
+        }
       }
     }
     this.cutStadiums();
@@ -1215,9 +1220,9 @@ export class CityMap {
 
   query(box: Box) {
     return {
-      areas: [...this.areaGrid.query(box)],
-      lines: [...this.lineGrid.query(box)],
-      buildings: [...this.buildingGrid.query(box)],
+      areas: [...this.areaGrid.query(box)].sort((a, b) => a.id - b.id),
+      lines: [...this.lineGrid.query(box)].sort((a, b) => a.id - b.id),
+      buildings: [...this.buildingGrid.query(box)].sort((a, b) => a.id - b.id),
     };
   }
 
@@ -1242,11 +1247,12 @@ export class CityMap {
   }
 
   buildingAt(x: number, y: number): Building | undefined {
+    let found: Building | undefined;
     for (const b of this.buildingGrid.at(x, y)) {
       if (b.open) continue;
-      if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) return b;
+      if ((!found || b.id < found.id) && x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) found = b;
     }
-    return undefined;
+    return found;
   }
 
   insideCity(x: number, y: number) {

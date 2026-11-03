@@ -17,7 +17,7 @@ const saves=[],errors=[];let failNext=false,failOrigin=2,originAttempts=0;
 const context=await browser.newContext({viewport:mobile?{width:844,height:390}:{width:1280,height:800},isMobile:mobile,hasTouch:mobile,locale:lang==='pl'?'pl-PL':'en-US'});
 await context.route('**/map/lublin.json',r=>r.fulfill({json:map}));
 await context.route('**/map/towns/city-b.json',r=>r.fulfill({json:{...map,bounds:{...map.bounds,minLon:29,maxLon:29.1},towns:[['City B',2880,2880]]}}));
-await context.route('**/map/world.json',r=>r.fulfill({json:{lublin:[],towns:[],edges:[]}}));
+await context.route('**/map/world.json',r=>r.fulfill({json:{lublin:[],towns:[{id:'city-b',name:'City B',stations:[],bbox:[29,51.2,29.1,51.3]}],edges:[]}}));
 await context.route('**/*.supabase.co/**',route=>{
  const name=new URL(route.request().url()).pathname.split('/').pop(),req=route.request().postDataJSON()??{};
  let body=null;

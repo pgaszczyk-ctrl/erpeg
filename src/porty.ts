@@ -5,6 +5,7 @@ import { nameWorldMap } from './travel';
 import { rpc } from './api';
 import { TEST } from './version';
 import { PORTY_Z_MAPY } from './map/world';
+import { worldMapId } from './map/worldRules';
 
 // Stage 1 is on the test server only: ferry landings of the world map get captains there.
 PORTY_Z_MAPY.on = !(window as unknown as { __demoKod?: string }).__demoKod && !new URLSearchParams(location.search).has('d'); // not in the QR demo
@@ -247,7 +248,7 @@ export function trasaDo(od: Port, tekst: string): { hops: Port[]; km: number; kr
 export const portPoId = (id: number) => porty[id];
 
 /** The world map a ferry lands on (its origin at the port, like far cities' maps). */
-export const portMapId = (p: Port) => `w:${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+export const portMapId = (p: Port) => worldMapId(p.lat, p.lon);
 
 /** Ticket price. */
 export const cenaRejsu = (km: number) => Math.ceil((PROM.oplata + km * PROM.zaKm) / PROM.zaokraglenie) * PROM.zaokraglenie;

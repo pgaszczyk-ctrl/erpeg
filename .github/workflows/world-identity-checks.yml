@@ -1,0 +1,50 @@
+name: Shared world identity checks
+on:
+  pull_request:
+    paths:
+      - 'src/map/**'
+      - 'src/travel.ts'
+      - 'src/demo.ts'
+      - 'src/porty.ts'
+      - 'src/quests.ts'
+      - 'src/artillery/client.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'src/scenes/BootScene.ts'
+      - 'src/scenes/PrologRekruta.ts'
+      - 'src/content/fabula.ts'
+      - 'scripts/build-maps.mjs'
+      - 'scripts/tests/*world-identity*'
+      - 'scripts/tests/fixtures/warsaw-roads.json'
+      - '.github/workflows/world-identity-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          node scripts/tests/world-identity.mjs
+          node scripts/tests/world-platform.mjs
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - run: |
+          node scripts/tests/browser-world-identity.mjs
+          node scripts/tests/browser-artillery.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-world-browser-checks
+          path: work/world-identity/*.png
+          retention-days: 7
