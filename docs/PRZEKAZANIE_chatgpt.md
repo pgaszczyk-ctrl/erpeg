@@ -6,7 +6,7 @@
 - `src/gen/budynki.ts`: szerokość obrysu zewnętrznego i dach–ściana zmniejszona o 50% (.5/.425). Geometria i wygładzanie pozostają.
 - `src/interactionOutline.ts`, `src/scenes/GameScene.ts`: złoty obrys biegnie po widocznych pikselach aktualnej klatki postaci, również atlasu 3D; próbkowanie do 24 fps, bez przezroczystego marginesu obrazu. Znika prostokąt i szeroka poświata. Wejścia: ten sam zaokrąglony kształt, ale 10 px szerokości i 8/skrot+1 wysokości. Podpis znajduje się nad sylwetką. Bez zmian wyboru celu, zasięgu, kolizji i akcji.
 - Sprawdzono TypeScript, Vite build + preview, deterministyczny generator (`scripts/test-gen.mjs`) i `interaction-selection.mjs`. Rozszerzony `browser-interaction-selection.mjs` przechodzi na PC 1280×720 i telefonie 390×844: krawędzie sylwetki zamiast prostokąta, wymiary wejść, klik/dotyk, E/AKCJA, dokładnie jedna właściwa rozmowa, stabilność i wyjście z zasięgu. Test czeka na wynik akcji zamiast sztywnego 180 ms (wolne klatki Chromium). Zrzuty w `work/interactions/`; podgląd budynków `work/budynki-cienki-obrys.png`, obejrzane.
-- Pełne `npm run build` regeneruje lokalne dane mapy; wynik i stan publikacji zostaną dopisane po zakończeniu. Produkcja i baza bez zmian.
+- Pełne `npm run build` przeszło (regeneracja Lublina i map regionu, TypeScript, Vite). Przed scaleniem włączono najnowszy TEST 3604e16 (mobilny sklep); konflikt wyłącznie dwóch nowych wpisów na początku CLAUDE.md rozwiązano przez zachowanie obu. Produkcja i baza bez zmian.
 
 ## 2026-10-08 — przygotowanie środowiska i przejęcie projektu
 
