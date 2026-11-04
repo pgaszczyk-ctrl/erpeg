@@ -83,7 +83,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
   // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.
   { id: 'kilof', nazwa: 'Kilof', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'kilof',
-    opis: 'Wydobywa grudki rudy ze złóż – wystarczy mieć go w plecaku. Pięć uderzeń daje jedną grudkę; złoże odnawia się codziennie.' },
+    opis: 'Do wydobywania rudy. Działa także z plecaka.' },
   { id: 'siekiera', nazwa: 'Siekiera', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'siekiera',
     opis: 'Ścięte drzewo daje drewno zamiast chrustu – wystarczy mieć ją w plecaku. Można też nią walczyć.' },
   { id: 'zelazny', nazwa: 'Miecz treningowy', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
