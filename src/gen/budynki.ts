@@ -19,7 +19,7 @@ export function tonyZKoloru(kolor: number): { tony: number[]; krawedz: number } 
   return { tony: [mieszaj(c, cien, 0.55), mieszaj(c, cien, 0.28), c, mieszaj(c, bial, 0.16), mieszaj(c, bial, 0.3)], krawedz: mieszaj(c, bial, 0.42) };
 }
 /** Grubość tuszu (połowa szerokości linii, px obrazu): obrys sylwetki i krawędź dach–ściana. */
-export const OBWODKA = { zewn: 1.0, wewn: 0.85 };
+export const OBWODKA = { zewn: 0.5, wewn: 0.425 };
 
 /** Zob. budynek(): wygładzona obwódka sylwetki i krawędzi dach–ściana z odcinków geometrii (antyaliasing). */
 function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: number, y0: number, pierscienie: number[][], H: number, sk: number, dach = pierscienie) {

@@ -74,10 +74,26 @@ try {
   // First inspect each person through the same hit test used by native controls.
   for(const id of ['giver:focus-a','giver:focus-b','place:focus-door']) {
    await focus(id);
+   const mark=await page.evaluate(()=>{
+    const s=window.__game.scene.getScene('game'),g=s.interactionMark;
+    let edges=0;const boxes=[];
+    const line=g.lineTo,box=g.strokeRoundedRect;
+    g.lineTo=function(...args){edges++;return line.apply(this,args);};
+    g.strokeRoundedRect=function(...args){boxes.push(args.slice(2,4));return box.apply(this,args);};
+    try{s.updateInteractionTarget();}finally{g.lineTo=line;g.strokeRoundedRect=box;}
+    return {edges,boxes};
+   });
+   if(id.startsWith('giver:')){
+    assert(mark.edges>10,'person highlight follows visible sprite edges');
+    assert.equal(mark.boxes.length,0,'person has no rectangular frame');
+   }else{
+    assert.equal(mark.boxes.length,1,'entrance keeps a single rounded frame');
+    assert(mark.boxes[0][0]<=12&&mark.boxes[0][1]<=12,'entrance marker fits doorway');
+   }
    await page.screenshot({path:`work/interactions/${phone?'phone':'desktop'}-${id.replaceAll(':','-')}.png`});
    const before=await page.evaluate(()=>window.__focusOpened.length);
    if(phone)await page.locator('.hs-akcja').click({force:true});else await page.keyboard.press('e');
-   await page.waitForTimeout(180);
+   await page.waitForFunction(expected=>window.__focusOpened.at(-1)===expected,id.replace('giver:','').replace('place:',''),{timeout:10000});
    assert.equal(await page.evaluate(()=>window.__focusOpened.at(-1)),id.replace('giver:','').replace('place:',''),'Action/E exact highlighted callback');
    assert.equal(await page.evaluate(()=>window.__focusOpened.length),before+1,'exactly one callback');
    if(id.startsWith('giver:')) {

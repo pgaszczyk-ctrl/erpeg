@@ -14,6 +14,7 @@ import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../u
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { InteractionSelection, type InteractionTarget } from '../interaction';
+import { InteractionOutline } from '../interactionOutline';
 import { itemPictureUrl, goodsPicture, itemTexture, itemAssetUrl } from '../ui/itemIcon';
 import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
@@ -1812,6 +1813,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private interactionSelection = new InteractionSelection();
+  private interactionOutline = new InteractionOutline();
   private interactionMark?: Phaser.GameObjects.Graphics;
   private interactionLabel?: Phaser.GameObjects.Text;
 
@@ -1870,11 +1872,11 @@ export class GameScene extends Phaser.Scene {
     const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
     if(!t){this.interactionSelection.clear();ustawInterakcjeHud(false);return;}
     const k=skrotKamery(), a=.5+.16*Math.sin(this.time.now/420);
-    // One subtle golden frame, with ground Y compensated for the oblique camera.
-    const h=t.kind==='talk'?30/k:18/k, w=t.kind==='talk'?23:30;
-    g.lineStyle(1.5,0xffd36a,a).strokeRoundedRect(t.x-w/2,t.y-h,w,h+4,4);
-    g.lineStyle(3,0xffd36a,a*.15).strokeRoundedRect(t.x-w/2-1,t.y-h-1,w+2,h+6,5);
-    this.interactionLabel.setText(t.label).setPosition(t.x,t.y-h-3).setVisible(true);
+    // A person's visible silhouette; entrances remain small rounded markers at their feet.
+    const head=t.kind==='talk'?this.interactionOutline.draw(this,g,t.x,t.y,a):null;
+    const h=8/k, w=10;
+    if(head===null)g.lineStyle(.7,0xffd36a,a).strokeRoundedRect(t.x-w/2,t.y-h,w,h+1,2);
+    this.interactionLabel.setText(t.label).setPosition(t.x,(head??t.y-h)-3).setVisible(true);
     ustawInterakcjeHud(true,t.label);
   }
   private worldTargetAt(sx:number,sy:number):WorldInteraction|null {
