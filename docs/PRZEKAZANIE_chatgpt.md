@@ -879,3 +879,5 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 - Doprecyzowanie głosowe właściciela: obie kartki po prawej, jedna pod drugą, na osobnym marginesie (quest z gry + własne pomysły). Zmieniono układ tablicaMiasta/pomysly: oddzielna kolumna obok mapy, przywrócona wysokość mapy, modale ponad kartkami.
 - Prawy margines: ponowne npm run build PASS; Playwright komputer i telefon 390×844 PASS (wspólny rodzic kartek, kolumna po prawej od mapy, kartki jedna pod drugą oraz pełny przebieg wysyłania/limitu). Zrzuty sprawdzone wizualnie w work/ideas/.
+
+- 2026-11-04 — Potwierdzenie publikacji kartek z pomysłami: finalny układ 62e5db4 (obie kartki w prawym marginesie, jedna pod drugą; PL „mam pomysła!”, EN „i have an idea!”) wszedł razem z nowszym a24459e. GitHub Actions 41871595148 zakończone SUCCESS, https://exp-lore.app/test/ odpowiada HTTP 200. Wcześniejsze przebiegi 41869383434 i 41870753762 zostały zastąpione nowszymi pushami. Testy lokalne i bazy opisane wyżej; produkcyjny pin bez zmian.
