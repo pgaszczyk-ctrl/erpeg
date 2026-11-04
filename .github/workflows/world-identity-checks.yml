@@ -14,6 +14,7 @@ on:
       - 'src/content/fabula.ts'
       - 'scripts/build-maps.mjs'
       - 'scripts/tests/*world-identity*'
+      - 'scripts/tests/*road-surfaces*'
       - 'scripts/tests/fixtures/warsaw-roads.json'
       - '.github/workflows/world-identity-checks.yml'
   workflow_dispatch:
@@ -33,14 +34,15 @@ jobs:
       - run: npm run build
         env:
           VITE_TEST: '1'
+      - run: npm install --no-save --package-lock=false @napi-rs/canvas@0.1.100 playwright@1.62.1
       - run: |
           node scripts/tests/world-identity.mjs
           node scripts/tests/world-platform.mjs
-      - run: |
-          npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          node scripts/tests/road-surfaces.mjs
+      - run: npx playwright install --with-deps chromium
       - run: |
           node scripts/tests/browser-world-identity.mjs
+          node scripts/tests/browser-road-surfaces.mjs
           node scripts/tests/browser-artillery.mjs
       - uses: actions/upload-artifact@v4
         if: always()
