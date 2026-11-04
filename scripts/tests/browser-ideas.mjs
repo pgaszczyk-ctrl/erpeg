@@ -13,7 +13,7 @@ const [bx, by] = index.tablice.miejsca[Number(process.env.TABLICA ?? 7)];
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE || '/usr/bin/chromium', args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 try {
   const mobile = process.env.TELEFON === '1';
-  const context = await browser.newContext({ viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 800 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
+  const context = await browser.newContext({ viewport: mobile ? (process.env.PORTRAIT === '1' ? { width:390, height:844 } : { width: 844, height: 390 }) : { width: 1280, height: 800 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
   const errors = []; let submissions = 0; let offline = false; const payloads = [];
   await context.route('**/*.supabase.co/**', (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -48,8 +48,9 @@ try {
   await page.screenshot({ path: `work/tablica-mapa${mobile ? '-tel' : ''}.png` });
 
   const button = page.locator('.tb-pomysl');
-  assert(await button.isVisible());
-  const rect = await button.boundingBox(); assert(rect.x >= 0 && rect.y >= 0 && rect.x+rect.width <= (mobile?844:1280));
+  assert(await button.isVisible()); assert.equal(await button.textContent(), 'mam pomysła!');
+  const rect = await button.boundingBox(); assert(rect.x >= 0 && rect.y >= 0 && rect.x+rect.width <= page.viewportSize().width);
+  await page.screenshot({path:`work/ideas/${mobile?(process.env.PORTRAIT === '1'?'portrait':'phone'):'desktop'}-board.png`});
   await button.click();
   const dialog = page.locator('.tb-pomysl-dialog');
   const input = dialog.locator('textarea'), send = dialog.getByRole('button', {name:'Wyślij pomysł'});
@@ -70,7 +71,7 @@ try {
   await input.fill('Trzeci pomysł'); await send.click();
   await page.waitForFunction(() => document.querySelector('.tb-pomysl-dialog [role=status]').textContent.includes('Pozostało dziś: 0'));
   assert(await send.isDisabled());
-  await page.screenshot({path:`work/ideas/${mobile?'phone':'desktop'}-saved.png`});
+  await page.screenshot({path:`work/ideas/${mobile?(process.env.PORTRAIT === '1'?'portrait':'phone'):'desktop'}-saved.png`});
   await dialog.getByRole('button',{name:'Zamknij',exact:true}).click(); await button.click();
   await input.fill('Czwarty pomysł'); await send.click();
   await page.waitForFunction(() => document.querySelector('.tb-pomysl-dialog [role=status]').textContent.includes('limit'));
