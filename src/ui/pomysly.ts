@@ -5,9 +5,59 @@ import { tx } from '../i18n';
 export function przybijPomysl(ramka: HTMLElement, miejsce: HTMLElement = ramka) {
   const styl = document.createElement('style');
   styl.textContent = `
-#tablica .tb-pomysl { position:relative; align-self:flex-start; flex:0 0 auto; box-sizing:border-box; width:104px; margin:0; padding:14px 28px 18px 14px; min-height:68px; background:#f6efda; color:#49331f; border:1px solid #ac926a; box-shadow:3px 4px #21160d88; transform:rotate(2deg); font:700 19px 'Alegreya Sans',sans-serif; cursor:pointer }
-#tablica .tb-pomysl::before { content:''; position:absolute; right:-14px; top:0; width:24px; height:32px; border:1px solid #bd9b68; border-left:0; border-bottom:0; border-radius:0 70% 0 0 }
-#tablica .tb-pomysl::after { content:'✎'; position:absolute; right:-29px; top:27px; color:#e1a63c; text-shadow:1px 1px #24190e; font-size:43px; transform:rotate(18deg) }
+#tablica .tb-pomysl {
+  position: relative;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 104px;
+  margin: 0;
+  padding: 54px 7px 20px;
+  border: 1px solid #a67c45;
+  border-radius: 3px 2px 12px 2px / 2px 3px 6px 3px;
+  background:
+    radial-gradient(ellipse at 18% 92%, #a36b352b, transparent 46%),
+    linear-gradient(142deg, #f8edce 10%, #ecdbab 67%, #d3ac6c);
+  box-shadow: 3px 5px 0 #21160d88, inset 0 0 0 3px #8e5e2624;
+  color: #483019;
+  transform: rotate(2deg);
+  font: 700 17px/1.05 'Alegreya Sans', sans-serif;
+  cursor: pointer;
+}
+#tablica .tb-pomysl::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 6px);
+  width: 12px;
+  height: 12px;
+  border: 1px solid #5f3a18;
+  border-radius: 50%;
+  background:
+    linear-gradient(138deg, transparent 42%, #63401f 44% 55%, transparent 57%),
+    radial-gradient(circle at 32% 25%, #fff1af, #bc8a39 57%, #72471d 90%);
+  box-shadow: 1px 2px 2px #34210e80;
+}
+#tablica .tb-pomysl::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 38'%3E%3Ccircle cx='24' cy='19' r='17' fill='%23e6cf9a' stroke='%23936b38' stroke-width='1.5' stroke-dasharray='3 2'/%3E%3Cpath d='M17 13c0-8 15-9 15-1 0 6-8 6-8 12' fill='none' stroke='%23543820' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='30' r='2.3' fill='%23543820'/%3E%3C/svg%3E") center 12px / 48px 38px no-repeat;
+}
+#tablica .tb-pomysl:focus-visible { outline: 2px solid #ffe198; outline-offset: 3px; }
+@media (hover: hover) {
+  #tablica .tb-pomysl:hover { filter: brightness(1.08); }
+}
+#tablica .tb-pomysl-hint {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 5px;
+  color: #66451e;
+  font-size: 11px;
+}
+#tablica .tb-pomysl-hint::before { content: attr(data-label); }
 #tablica .tb-pomysl-dialog { z-index:4; }
 #tablica .tb-pomysl-dialog .tb-papier { box-sizing:border-box; transform:none; clip-path:none; max-height:90%; }
 #tablica .tb-pomysl-dialog textarea { box-sizing:border-box; width:100%; min-height:100px; max-height:25vh; resize:vertical; font:16px 'Alegreya Sans',sans-serif; padding:8px; color:#302315; background:#fffaf0; }
@@ -16,6 +66,12 @@ export function przybijPomysl(ramka: HTMLElement, miejsce: HTMLElement = ramka) 
   ramka.append(styl);
   const kartka = document.createElement('button');
   kartka.type = 'button'; kartka.className = 'tb-pomysl'; kartka.textContent = tx('mam pomysła!', 'i have an idea!');
+  kartka.setAttribute('aria-description', tx('Otwiera formularz pomysłu', 'Opens the idea form'));
+  const podpowiedz = document.createElement('span');
+  podpowiedz.className = 'tb-pomysl-hint';
+  podpowiedz.setAttribute('aria-hidden', 'true');
+  podpowiedz.dataset.label = tx('Napisz pomysł', 'Write an idea');
+  kartka.append(podpowiedz);
   kartka.onclick = () => {
     ramka.querySelectorAll('.tb-karta, .tb-kartka-duza').forEach(e => e.remove());
     const overlay = document.createElement('div'); overlay.className = 'tb-kartka-duza tb-pomysl-dialog';
