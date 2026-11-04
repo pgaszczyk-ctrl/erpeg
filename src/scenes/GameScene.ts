@@ -1828,7 +1828,7 @@ export class GameScene extends Phaser.Scene {
       if(Math.hypot(p.x-this.player.x,p.y-this.player.y)>INTERAKCJA_PX+4)return;
       out.push({id,x:p.x,y:p.y,kind,label:(kind==='talk'?tx('Porozmawiaj: ','Talk: '):kind==='enter'?tx('Wejdź: ','Enter: '):tx('Użyj: ','Use: '))+name,run,range});
     };
-    if (!this.loch) for (const z of this.zloza?.lista ?? []) add(`ore:${z.id}`, z, 'use', 'Złoże żelaza', () => this.mine(z), 28);
+    if (!this.loch) for (const z of this.zloza?.lista ?? []) if (this.zloza.dostepne(z)) add(`ore:${z.id}`, z, 'use', 'Złoże żelaza', () => this.mine(z), 28);
     out.push(...this.etapy.interactionTargets(), ...(this.prolog?.interactionTargets()??[]));
     for(const n of this.npcs.list) add(`riddle:${n.id}`,n,'talk',n.name,()=>this.openRiddle(n));
     for(const n of this.fixed.interactionPeople())add(`fixed:${n.id}`,n,'talk',n.name,()=>this.fixed.talk(n));
@@ -2167,13 +2167,14 @@ export class GameScene extends Phaser.Scene {
     if (!this.zloza.lista.includes(z) || Math.hypot(z.x-this.player.x,z.y-this.player.y)>28) return;
     this.mineReady = this.time.now + GORNICTWO.odstepMs;
     const d = this.zloza.stan(z);
-    if (d.n >= GORNICTWO.dziennie) return this.toast('Złoże wyczerpane.', 1800);
+    if (!this.zloza.dostepne(z)) return;
     const tool = pickaxe();
     if (!tool) return this.toast('Potrzebujesz sprawnego kilofa.', 2600);
     if (d.a + 1 >= GORNICTWO.uderzen && !addFruit('ruda_zelaza')) return this.toast('Brak miejsca na rudę w plecaku.', 1800);
     d.a++;
     if (d.a >= GORNICTWO.uderzen) {
       d.a = 0; d.n++;
+      if (!this.zloza.dostepne(z)) { z.obraz.setVisible(false); this.updateInteractionTarget(); }
       const wear = useWeapon(tool, session.level.zuzycie);
       this.floatText(z.x, z.y-16, '+1 grudka żelaza', '#e8c56a');
       if (wear === 'broken' || wear === 'warn') this.toast('Kilof się zużywa – napraw go w warsztacie.', 2200);

@@ -44,7 +44,7 @@ try {
    s.city.areaKindsAt=()=>['forest'];s.city.places=[];
    s.zloza.next=0;s.zloza.update(s.player.x,s.player.y,s.time.now,()=>true);
    methods.forEach((k,i)=>s.city[k]=originals[i]);s.city.places=places;
-   const z=s.zloza.lista[0];if(!z)throw Error('no generated deposits');
+   let z=s.zloza.lista[0];if(!z)throw Error('no generated deposits');
    if(z.obraz.texture.key!=='item-ruda_zelaza')throw Error('missing artist ore sprite');
    window.__miningId=z.id;
    s.player.setPosition(z.x,z.y+6);s.cameras.main.centerOn(z.x,z.y);s.cameras.main.preRender();
@@ -60,9 +60,24 @@ try {
    const goods=()=>g.bag.filter(v=>'goods' in v);
    for(let i=0;i<45;i++)hit();
    if(s.zloza.stan(z).n!==10)throw Error('daily limit missing');
+   if(z.obraz.visible)throw Error('exhausted deposit still visible');
+   s.updateFog();
+   if(s.interactionCandidates().some(t=>t.id===`ore:${z.id}`))throw Error('exhausted deposit still selectable');
+   // Recreate the same geographic deposit as on a return/reload: daily stock stays depleted.
+   const id=z.id;
+   z.obraz.destroy();s.zloza.lista=s.zloza.lista.filter(v=>v.id!==id);
+   const terrain=s.city.areaKindsAt, shops=s.city.places;
+   s.city.areaKindsAt=()=>['forest'];s.city.places=[];s.zloza.next=0;
+   s.zloza.update(s.player.x,s.player.y,s.time.now,()=>true);
+   s.city.areaKindsAt=terrain;s.city.places=shops;
+   z=s.zloza.lista.find(v=>v.id===id);
+   if(!z||z.obraz.visible||s.zloza.dostepne(z))throw Error('depleted deposit returned on regeneration');
    const before=JSON.stringify(goods());hit();
    if(before!==JSON.stringify(goods()))throw Error('eleventh nugget');
-   s.zloza.stan(z).d='2000-01-01';hit();
+   s.zloza.stan(z).d='2000-01-01';
+   s.zloza.update(s.player.x,s.player.y,s.time.now,()=>true);
+   if(!z.obraz.visible||!s.zloza.dostepne(z))throw Error('deposit did not return on new day');
+   hit();
    if(s.zloza.stan(z).n!==0||s.zloza.stan(z).a!==1)throw Error('new day failed');
    g.wear.kilof=200;hit();
    if(s.zloza.stan(z).a!==1)throw Error('broken pickaxe works');
@@ -90,6 +105,12 @@ try {
   if(phone)await page.locator('.hs-akcja').click({force:true});else await page.keyboard.press('e');
   await page.waitForFunction(n=>{const s=window.__game.scene.getScene('game'),z=s.zloza.lista.find(z=>z.id===window.__miningId);return s.zloza.stan(z).n===n;},native+1,{timeout:30000});
   await page.screenshot({path:`work/interactions/mining-${phone?'phone':'desktop'}.png`});
+  await page.evaluate(()=>{
+   const s=window.__game.scene.getScene('game'),z=s.zloza.lista.find(z=>z.id===window.__miningId);
+   const d=s.zloza.stan(z);d.n=9;d.a=4;s.mineReady=0;s.mine(z);
+   if(z.obraz.visible||s.interactionCandidates().some(t=>t.id===`ore:${z.id}`))throw Error('final nugget did not remove rock and action');
+  });
+  await page.screenshot({path:`work/interactions/mining-empty-${phone?'phone':'desktop'}.png`});
   assert.deepEqual(errors,[]);
   console.log('PASS',phone?'phone':'desktop',result);
   await context.close();
