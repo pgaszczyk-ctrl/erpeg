@@ -12,6 +12,8 @@ Zakres: stara gra `pgaszczyk-ctrl/erpeg`, źródła i aktualne definicje/uprawni
 
 Poprawki scalono do TEST w PR #60 (merge 77261cf). Produkcja pozostaje przy dotychczasowym pinie i patchach do jawnej zgody na wydanie. Draft hotfixu: `docs/poprawki/2026-11-04-bezpieczenstwo-logowania.patch`; obejmuje auth, hasło admina, lockfile oraz klienta portów wymagającego nowego RPC. Stosować po zgodzie na migrację i wydanie, z zachowaniem obecnych patchy 1.042 i 1.043.
 
+Publikacja TEST potwierdzona: [run 41837843832](https://github.com/pgaszczyk-ctrl/erpeg/actions/runs/41837843832), wszystkie zadania zakończone powodzeniem, w tym weryfikacja dotychczasowego produkcyjnego JS. Publiczne `/test/version.json` wskazuje `77261cf 2026-11-04 13:36` (czas buildu UTC). Sprawdzono sześć opublikowanych modułów JS: bezpieczny callback i brak utrwalania hasła admina są rzeczywiście dostępne na TEST.
+
 ## Konkretna migracja bazy do zatwierdzenia
 
 `docs/sql/security-hardening.sql` oraz `docs/sql/security-hardening-test.sql`:

@@ -2,6 +2,8 @@
 
 ## 2026-11-04 — audyt i zabezpieczenia, bez wydania produkcyjnego
 
+- TEST wdrożony z merge 77261cf (PR #60), run 41837843832 zakończony success, wraz z weryfikacją zachowania produkcyjnego JS. Publiczne version.json i sześć modułów JS potwierdzają nowy callback i brak utrwalania hasła admina. Dalsze commity tej partii aktualizują wyłącznie dokumentację, testy i niewdrożone drafty. Jawna zgoda na produkcję/migrację nadal oczekiwana.
+
 - Właściciel zlecił audyt starego erpeg i samodzielne zabezpieczenie możliwego zakresu. Usunięto XSS w callbacku logowania, czyszczone są adresy z tokenami/linkami potwierdzenia; logout unieważnia bieżącą sesję konta, gdy serwer jest dostępny. Hasło admina tylko w pamięci karty, stary sessionStorage usuwany.
 - Zaktualizowano lockfile do Vite 8.3.5 i source-map-js 1.2.2; npm audit nie zgłasza podatności. Dodano ignore plików środowiskowych i kluczy.
 - Kontrole: npm run build i osobny Vite build+preview, źródłowe oraz rzeczywiste zbudowane strony PC/390×844, odzyskiwanie hasła i panel admina. Wszystko przeszło. Przed integracją uwzględniono aktualny TEST ab5a1d5. Gitleaks: 833 commity, pięć wskazań potwierdzonych jako publiczne publishable keys, bez potwierdzonego sekretu.
