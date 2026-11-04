@@ -888,3 +888,5 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 ## 2026-11-04 — wyczerpane złoże znika
 - Złoże po ostatniej grudce natychmiast znika wraz z interakcją. Zapisany dzienny stan utrzymuje ukrycie po odejściu/powrocie i wczytaniu; następnego dnia wraca w tym samym miejscu. Zamiast przygaszania skały wspólny warunek dostępności w Zloza i GameScene. Regresja browser-mining obejmuje znikanie, brak interakcji, odtworzenie z dziennym stanem i powrót następnego dnia. PASS: npm run build, ponowny vite build, Playwright/preview PC i 390×844; obejrzano zrzuty po zniknięciu skały i etykiety.
+
+- 2026-11-04 — `src/ui/pomysly.ts`: podmieniono ołówek na pożółkłą kartkę z mosiężną pinezką, stemplem z pytajnikiem i dopiskiem „Napisz pomysł” (PL/EN). Kliknięcie otwiera dotychczasowy formularz. TypeScript i Vite build poprawne. Komponent sprawdzono w Chromium na komputerze, łącznie z otwarciem formularza. PR #61 scalony do TEST.
