@@ -7,6 +7,9 @@
 
 // Broń, zbroje i umiejętności są teraz w przedmioty.ts.
 
+/** Odkup zwykłego sprzętu; zużycie pomniejsza cenę, zepsuty przedmiot wart jest co najmniej 1 monetę. */
+export const SKUP_SPRZETU = { czescCeny: 0.4 };
+
 // ----------------------------------------------------------------------------
 //  OWOCE – rosną na działkach, trawnikach i w parkach. Drzewo strąca się
 //  mieczem: każde uderzenie zrzuca jeden owoc (2–5 na drzewo). Owoce

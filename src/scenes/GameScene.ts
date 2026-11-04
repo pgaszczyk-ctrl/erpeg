@@ -10,7 +10,8 @@ import { planCityQuests } from '../content/questy/planner';
 import { CITY_SCENARIOS, isWithdrawnCityQuest } from '../content/questy/scenarios';
 import { lang } from '../i18n';
 import { legacyText, dialogueMetadata } from '../content/questy/text';
-import { shopItem, shopGoods, type ShopEntry, type ShopPresentation } from '../ui/shopData';
+import { shopItem, shopGoods, shopBagItem, type ShopEntry, type ShopPresentation } from '../ui/shopData';
+import { sellBagItem } from '../shopSales';
 import { SKALA_POSTACI } from '../skala';
 import Phaser from 'phaser';
 import { InteractionSelection, type InteractionTarget } from '../interaction';
@@ -6821,22 +6822,26 @@ export class GameScene extends Phaser.Scene {
     const tabs = { labels: ['🛒 Kupuj', '💰 Sprzedaj'], active: tab, colors: [0x2f6f9f, 0x3fa34d] };
     const switchTab = (i: number) => i < 0 && this.openShop(p, -1 - i);
     if (tab === 1) {
-      // Selling: each kind of goods in the backpack separately, and everything at once.
+      // All backpack contents live under Sell; the bulk action sells harvests only.
       const groups = (Object.keys(GRUPY) as Grupa[]).filter((g) => groupCount(g) > 0);
       const total = fruitValue();
       const lines = groups.map((g) => `${GRUPY[g].ikona} ${GRUPY[g].nazwa} ×${groupCount(g)} – ${groupValue(g)} monet`);
-      const all = groups.length > 1 ? [`💰 Sprzedaj wszystko – ${total} monet`] : [];
+      const all = groups.length > 1 ? [`💰 Sprzedaj wszystkie zbiory – ${total} monet`] : [];
+      const bagItems = gear.bag.flatMap((slot, bagIndex) => 'goods' in slot ? [] : [{ slot, bagIndex }]);
+      const bagEntries = bagItems.map(({ slot, bagIndex }, i) => shopBagItem(slot, all.length + groups.length + i, bagIndex));
       const przyWlazie = p.id.startsWith('wlaz:') ? tx('Straganiarz skupuje towar – na bilet się przyda. ', 'The trader buys goods – handy for a ticket. ') : '';
-      const text = groups.length ? `${przyWlazie}Co sprzedajesz? Masz ${session.coins} monet.` : 'Nie masz nic na sprzedaż. Zbieraj owoce, warzywa, grzyby i drewno – tu je skupimy.';
+      const text = groups.length || bagItems.length ? `${przyWlazie}Co sprzedajesz? Masz ${session.coins} monet.` : 'Plecak jest pusty. Kupiec skupuje zbiory i zwykły sprzęt.';
       this.shopDialog(p, {
         title, text, tabs,
-        buttons: [...all, ...lines, 'Wyjdź'],
+        buttons: [...all, ...lines, ...bagEntries.map(e => e.name), 'Wyjdź'],
         onChoose: (i) => {
           if (i < 0) return switchTab(i);
           let v = 0;
           if (all.length && i === 0) v = sellAllFruit();
           else if (groups[i - all.length]) v = sellGroup(groups[i - all.length]);
+          else if (bagItems[i - all.length - groups.length]) v = sellBagItem(bagItems[i - all.length - groups.length].slot);
           else return;
+          if (v <= 0) { this.openShop(p, 1); return; }
           earn(v);
           this.emitHud();
           this.toast(`Sprzedane za ${v} monet!`);
@@ -6845,9 +6850,10 @@ export class GameScene extends Phaser.Scene {
         },
       }, [
         ...(all.length ? [{ id: 'sell:all', index: 0, name: 'Wszystkie zbiory', category: 'supplies' as const,
-          picture: goodsPicture('owoce'), description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka.', price: total, action: 'SPRZEDAJ WSZYSTKO' }] : []),
+          picture: goodsPicture('owoce'), description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka. Sprzęt i pamiątki zostają.', price: total, action: 'SPRZEDAJ ZBIORY' }] : []),
         ...groups.map((g, i) => shopGoods(g, i + all.length, GRUPY[g].nazwa, groupCount(g), groupValue(g))),
-      ], () => this.openShop(p, 1), 'Kupiec odkupi twoje zbiory.');
+        ...bagEntries,
+      ], () => this.openShop(p, 1), 'Sprzedaj zbiory i sprzęt ze swojego plecaka.');
       return;
     }
     // Grandma Grażynka's garden tools wait at the shop nearest her village.
