@@ -51,6 +51,12 @@ try {
   assert(await button.isVisible()); assert.equal(await button.textContent(), 'mam pomysła!');
   const rect = await button.boundingBox(); assert(rect.x >= 0 && rect.y >= 0 && rect.x+rect.width <= page.viewportSize().width);
   await page.screenshot({path:`work/ideas/${mobile?(process.env.PORTRAIT === '1'?'portrait':'phone'):'desktop'}-board.png`});
+  assert(await page.evaluate(() => {
+    const canvas = document.querySelector('#tablica canvas');
+    const col = document.querySelector('.tb-ogloszenia');
+    const idea = col.querySelector('.tb-pomysl'), quest = col.querySelector('.tb-kartka');
+    return col.offsetLeft > canvas.offsetLeft && idea.parentElement === col && (!quest || (quest.parentElement === col && idea.offsetTop > quest.offsetTop + quest.offsetHeight));
+  }), 'both notes share the right margin and are stacked');
   await button.click();
   const dialog = page.locator('.tb-pomysl-dialog');
   const input = dialog.locator('textarea'), send = dialog.getByRole('button', {name:'Wyślij pomysł'});

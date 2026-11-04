@@ -75,6 +75,9 @@ const STYL = `
 #tablica .tb-gora button { position: absolute; right: 0; top: -2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #1e1a24;
   background: radial-gradient(circle at 35% 30%, #f5d98a, #c8962e 60%, #8a6020); color: #2a1808;
   font: 700 20px sans-serif; cursor: pointer; box-shadow: inset 0 -2px 0 #6a4a18; }
+#tablica .tb-srodek { display:flex; gap:12px; }
+#tablica .tb-ogloszenia { box-sizing:border-box; width:142px; flex:0 0 142px; display:flex; flex-direction:column; align-items:flex-start; gap:22px; padding:12px 28px 12px 8px; }
+#tablica .tb-ogloszenia .tb-kartka { position:relative; left:auto; top:auto; flex:0 0 auto; width:104px; }
 #tablica canvas { display: block; touch-action: none; cursor: pointer; box-shadow: 0 0 0 2px #1e1a24, inset 0 0 0 1px #000; }
 #tablica .tb-karta { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(92%, 360px);
   background: linear-gradient(180deg, #5a3a1e, #3e2412); color: #f6e6c2; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;
@@ -101,7 +104,7 @@ const STYL = `
 #tablica .tb-kartka.wzieta { filter: saturate(.6) brightness(.85); }
 #tablica .tb-pieczec { position: absolute; right: 6px; bottom: 6px; font: 700 11px 'Pixelify Sans', sans-serif; color: #b0262c;
   border: 2px solid #b0262c; padding: 1px 4px; transform: rotate(-12deg); opacity: .85; letter-spacing: 1px; }
-#tablica .tb-kartka-duza { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,8,14,.45); }
+#tablica .tb-kartka-duza { z-index:3; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,8,14,.45); }
 #tablica .tb-papier { position: relative; width: min(88%, 380px); max-height: 86%; overflow: auto; padding: 26px 20px 16px; background: #efe2c0; color: #3a2a1c;
   font: 16px 'Alegreya Sans', sans-serif; box-shadow: 6px 7px 0 rgba(0,0,0,.4); transform: rotate(-1.5deg);
   clip-path: polygon(0 2%, 12% 0, 30% 1.5%, 52% 0, 70% 2%, 88% 0, 100% 1.5%, 99% 30%, 100% 62%, 98.5% 100%, 74% 98%, 50% 100%, 26% 97.5%, 3% 100%, 1% 66%, 0 34%); }
@@ -142,17 +145,20 @@ export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   x.setAttribute('aria-label', tx('Zamknij', 'Close'));
   x.onclick = zamknijTablice;
   gora.append(tytul, x);
-  const W = Math.floor(Math.min(window.innerWidth - 30, 960));
-  const H = Math.floor(Math.min(window.innerHeight - 178, 680));
+  const W = Math.floor(Math.min(window.innerWidth - 184, 960));
+  const H = Math.floor(Math.min(window.innerHeight - 76, 680));
   const canvas = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.floor(W * dpr);
   canvas.height = Math.floor(H * dpr);
   canvas.style.width = `${W}px`;
   canvas.style.height = `${H}px`;
-  ramka.append(gora, canvas);
-  przybijPomysl(ramka);
-  if (h.kartka) przybijKartke(ramka, h.kartka);
+  const srodek = document.createElement('div'); srodek.className = 'tb-srodek';
+  const ogloszenia = document.createElement('aside'); ogloszenia.className = 'tb-ogloszenia';
+  ogloszenia.setAttribute('aria-label', tx('Ogłoszenia i pomysły', 'Notices and ideas'));
+  srodek.append(canvas, ogloszenia); ramka.append(gora, srodek);
+  if (h.kartka) przybijKartke(ramka, h.kartka, ogloszenia);
+  przybijPomysl(ramka, ogloszenia);
   root.append(ramka);
   root.onclick = (e) => { if (e.target === root) zamknijTablice(); };
   document.body.append(root);
@@ -234,7 +240,7 @@ function karta(h: TablicaHost, ramka: HTMLDivElement, p: PunktTablicy) {
 }
 
 /** The note on the board: small and pinned; a tap/click opens it big with „Przyjmuję” / „Odejdź”. */
-function przybijKartke(ramka: HTMLDivElement, k: KartkaNaTablicy) {
+function przybijKartke(ramka: HTMLDivElement, k: KartkaNaTablicy, miejsce: HTMLElement = ramka) {
   const el = document.createElement('button');
   el.type = 'button';
   el.className = `tb-kartka ${k.rodzaj}${k.stan === 'wzieta' ? ' wzieta' : ''}`;
@@ -246,7 +252,7 @@ function przybijKartke(ramka: HTMLDivElement, k: KartkaNaTablicy) {
   el.append(b, s);
   if (k.stan === 'wzieta') el.append(pieczec());
   el.onclick = (e) => { e.stopPropagation(); otworzKartke(ramka, k); };
-  ramka.append(el);
+  miejsce.append(el);
 }
 
 function pieczec() {

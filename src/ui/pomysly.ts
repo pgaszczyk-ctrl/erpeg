@@ -2,10 +2,10 @@ import { rpc } from '../api';
 import { session } from '../quests';
 import { tx } from '../i18n';
 
-export function przybijPomysl(ramka: HTMLElement) {
+export function przybijPomysl(ramka: HTMLElement, miejsce: HTMLElement = ramka) {
   const styl = document.createElement('style');
   styl.textContent = `
-#tablica .tb-pomysl { position:relative; align-self:flex-end; margin:12px 28px 4px 0; padding:14px 28px 18px 14px; min-height:68px; background:#f6efda; color:#49331f; border:1px solid #ac926a; box-shadow:3px 4px #21160d88; transform:rotate(2deg); font:700 19px 'Alegreya Sans',sans-serif; cursor:pointer }
+#tablica .tb-pomysl { position:relative; align-self:flex-start; flex:0 0 auto; box-sizing:border-box; width:104px; margin:0; padding:14px 28px 18px 14px; min-height:68px; background:#f6efda; color:#49331f; border:1px solid #ac926a; box-shadow:3px 4px #21160d88; transform:rotate(2deg); font:700 19px 'Alegreya Sans',sans-serif; cursor:pointer }
 #tablica .tb-pomysl::before { content:''; position:absolute; right:-14px; top:0; width:24px; height:32px; border:1px solid #bd9b68; border-left:0; border-bottom:0; border-radius:0 70% 0 0 }
 #tablica .tb-pomysl::after { content:'✎'; position:absolute; right:-29px; top:27px; color:#e1a63c; text-shadow:1px 1px #24190e; font-size:43px; transform:rotate(18deg) }
 #tablica .tb-pomysl-dialog { z-index:4; }
@@ -56,5 +56,5 @@ export function przybijPomysl(ramka: HTMLElement) {
       } finally { busy = false; select.disabled = false; text.disabled = false; }
     };
   };
-  ramka.append(kartka);
+  miejsce.append(kartka);
 }
