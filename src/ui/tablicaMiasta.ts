@@ -3,6 +3,7 @@
 // hero is, the stations and the municipal cannons. A tap on a dot (or a way out) shows its name, address and
 // „🧭 Prowadź”, which sets the guiding arrow (GameScene.prowadzDo). Data: CityMap.plan (scripts/tablice/tablice.mjs).
 // The world sleeps while it is open (UIScene.openTablica), so the pulsing „you are here” runs on its own frames.
+import { przybijPomysl } from './pomysly';
 import type { PlanMiasta } from '../map/CityMap';
 import { PX_PER_M } from '../map/CityMap';
 import { lang, tx } from '../i18n';
@@ -142,7 +143,7 @@ export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   x.onclick = zamknijTablice;
   gora.append(tytul, x);
   const W = Math.floor(Math.min(window.innerWidth - 30, 960));
-  const H = Math.floor(Math.min(window.innerHeight - 76, 680));
+  const H = Math.floor(Math.min(window.innerHeight - 178, 680));
   const canvas = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.floor(W * dpr);
@@ -150,6 +151,7 @@ export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   canvas.style.width = `${W}px`;
   canvas.style.height = `${H}px`;
   ramka.append(gora, canvas);
+  przybijPomysl(ramka);
   if (h.kartka) przybijKartke(ramka, h.kartka);
   root.append(ramka);
   root.onclick = (e) => { if (e.target === root) zamknijTablice(); };

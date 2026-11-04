@@ -11,7 +11,7 @@ export const RPC = { url: URL, headers: { apikey: KEY, Authorization: `Bearer ${
 
 /** The QR demo (src/demo.ts) plays without a character: nothing is written on the server. */
 export const offline = { demo: false };
-const WRITES = new Set(['create_character', 'save_game', 'heartbeat', 'logout', 'die', 'redeem_code', 'link_google', 'quiz_answered']);
+const WRITES = new Set(['create_character', 'save_game', 'heartbeat', 'logout', 'die', 'redeem_code', 'link_google', 'quiz_answered', 'submit_player_idea']);
 
 /** `bearer`: a signed-in Google user's access token (for account functions). */
 export async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false, bearer?: string): Promise<T> {
