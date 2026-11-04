@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
+import { nawierzchniaDrogi } from './nawierzchnia';
 import { GORY } from '../content/gory';
 import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
 import { DZIELENIE, POZIOMY } from '../content/budynki';
@@ -76,7 +77,7 @@ const OUTLINE = '#1e1a24';
 /** Outline widths in map px (a character's outline pixel is ~0.36 map px). */
 const EDGE = { dach: 0.7, podstawa: 1, sciany: 0.6, droga: 0.8, obszar: 0.7 };
 
-// One earthen track for roads, pavements and paths alike.
+// Fallback colours for unpaved access tracks and paths.
 const TRACK_FILL = '#d9ab72';
 const TRACK_EDGE = '#8f6034';
 /** Drawn width: a bit wider than the real road so near-parallel paths merge. */
@@ -998,9 +999,7 @@ export class MapRenderer {
       ctx.lineWidth = l.width;
       ctx.stroke();
     }
-    // Roads, pavements and paths are all one kind of track: every outline
-    // first, then every fill in the same colour, so parallel and crossing
-    // pieces melt into one shape with a single outline.
+    // Both renderers use the same road materials, regardless of map source.
     const roads = lines.filter((l) => ROAD_FILL[l.kind]);
     for (const l of roads) {
       linePath(ctx, l.pts);
@@ -1008,9 +1007,11 @@ export class MapRenderer {
       ctx.lineWidth = trackWidth(l) + (l.bridge ? 5 : EDGE.droga);
       ctx.stroke();
     }
-    for (const l of roads) {
+    for (const bruk of [false, true]) for (const l of roads) {
+      const nawierzchnia = nawierzchniaDrogi(l.kind);
+      if ((nawierzchnia === 'bruk') !== bruk) continue;
       linePath(ctx, l.pts);
-      ctx.strokeStyle = this.trackArt ?? TRACK_FILL;
+      ctx.strokeStyle = nawierzchnia === 'bruk' ? P.paved : nawierzchnia === 'chodnik' ? P.plaza : this.trackArt ?? TRACK_FILL;
       ctx.lineWidth = trackWidth(l);
       ctx.stroke();
     }

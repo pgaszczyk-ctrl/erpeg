@@ -1,6 +1,7 @@
 import type { Rodzaj } from '../gen';
 import { arenaOn } from '../walka/tryb';
 import type { Area, Line } from './CityMap';
+import { nawierzchniaDrogi } from './nawierzchnia';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, obrazBudynku, type Zlecenie, type Rodzaj09, type Budynek09 } from './ziemia09';
 import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
 
@@ -129,16 +130,19 @@ export function mapaRodzajow(
     g.fillStyle = kolor(rodzajObszaru(a));
     g.fill('evenodd');
   }
-  for (const l of lines) {
+  // Hard streets go over dirt paths at crossings, independently of tile/feature order.
+  // Prepared paving polygons may still join parallel streets; world lines use the
+  // very same cobble material without needing a prebuilt city-wide polygon layer.
+  for (const bruk of [false, true]) for (const l of lines) {
+    const nawierzchnia = nawierzchniaDrogi(l.kind);
+    if ((nawierzchnia === 'bruk') !== bruk) continue;
     const woda = l.kind === 'river' || l.kind === 'stream' || l.kind === 'ditch';
     // Tram tracks are only grooves in the road (owner, 7 Oct 2026): the ground under them is road, not ballast.
     const tor = l.kind === 'rail';
     let r: Rodzaj | null = null;
     if (woda) r = 'woda';
     else if (tor) r = 'tory';
-    else if (l.kind === 'tram') r = 'droga';
-    else if (l.kind === 'pedestrian') r = 'chodnik';
-    else if (DROGI.has(l.kind)) r = 'droga';
+    else r = nawierzchnia;
     if (!r) continue;
     g.beginPath();
     g.moveTo(l.pts[0], l.pts[1]);
@@ -366,5 +370,3 @@ export function rysujZiemie(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement,
   ctx.drawImage(c, x0, y0, rozmiar, rozmiar);
   ctx.restore();
 }
-
-const DROGI = new Set(['major', 'medium', 'minor', 'service', 'track', 'path', 'steps']);
