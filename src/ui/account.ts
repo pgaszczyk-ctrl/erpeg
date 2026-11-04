@@ -1,3 +1,4 @@
+import { sciezkaGry } from '../sciezka';
 import { emailReset, emailSignIn, emailSignUp, googleEnabled, googleSignIn, googleToken, googleUser, type GoogleSession } from '../google';
 
 // The player account window (HTML, above the menu or the game): sign in with
@@ -18,14 +19,16 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
     const box = el('form', { className: 'm-box' });
     const email = el('input', { type: 'email', name: 'email', autocomplete: 'email', placeholder: 'e-mail', className: 'm-input', required: true });
     const pass = el('input', { type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'hasło (co najmniej 8 znaków)', className: 'm-input', minLength: 8 });
-    const msg = el('p', { className: 'm-error' });
+    const msg = el('p', { className: 'm-error', role: 'alert' });
     const info = el('p', {});
     const signIn = el('button', { type: 'submit', className: 'm-btn m-primary' }, ['Zaloguj']);
     const signUp = el('button', { type: 'button', className: 'm-btn' }, ['Załóż konto']);
     const forgot = el('button', { type: 'button', className: 'm-btn' }, ['Nie pamiętam hasła']);
     const google = el('button', { type: 'button', className: 'm-btn m-google' }, ['🔵 Zaloguj przez Google']);
+    const termsUrl = new URL('regulamin.html', `${location.origin}${sciezkaGry()}`).href;
+    const termsLink = () => el('a', { href: termsUrl, target: '_blank', rel: 'noopener noreferrer' }, ['regulamin gry']);
     const cancel = el('button', { type: 'button', className: 'm-btn' }, ['Anuluj']);
-    box.append(el('h2', {}, ['👤 Konto gry']), el('p', {}, [why]), email, pass, msg, info, signIn, signUp, forgot, google, cancel);
+    box.append(el('h2', {}, ['👤 Konto gry']), el('p', {}, [why]), email, pass, msg, info, signIn, signUp, forgot, google, el('p', { className: 'account-terms' }, ['Zakładając konto, akceptujesz ', termsLink(), '.']), cancel);
     root.append(box);
     document.body.append(root);
     email.focus();
@@ -41,6 +44,7 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
         await fn();
       } catch (e) {
         msg.textContent = (e as Error).message;
+        msg.scrollIntoView({ block: 'nearest' });
       } finally {
         btn.disabled = false;
       }
