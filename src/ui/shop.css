@@ -24,7 +24,6 @@
 #shop .s26-left{min-width:0;display:flex;flex-direction:column;gap:9px}
 #shop .s26-banner{display:block;overflow:hidden;border:5px ridge #98784b;border-radius:5px;background:#17120c}
 #shop .s26-banner img{display:block;width:100%;height:80px;object-fit:cover}
-#shop .s26-backpack{border:4px ridge #6d5030;border-radius:5px;background:#1f160f;box-shadow:inset 0 0 20px #0005}
 #shop h3{margin:7px 5px;font-size:19px;font-weight:500;text-align:center}
 #shop .s26-stock-row{min-width:0}
 #shop .s26-categories{display:flex;gap:3px;padding:3px 3px 0;overflow-x:auto;scrollbar-color:#bd934d #302218;scrollbar-width:thin}
@@ -40,7 +39,7 @@
 #shop .s26-quiver strong{font-family:'Pixelify Sans',monospace;font-size:20px;white-space:nowrap;color:#ffe2a0}
 #shop .s26-quiver-full{font-size:13px;color:#b6d58b;font-weight:700}
 #shop .s26-stock{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-content:start;max-height:284px;overflow:auto;padding:3px;scrollbar-color:#c29b59 #1f160f}
-#shop .s26-cell,#shop .s26-bag-cell{display:flex;position:relative;align-items:center;justify-content:center;aspect-ratio:1;padding:4px;min-width:0;border:4px ridge #92734c;border-radius:5px;color:#e5caa0;background:radial-gradient(ellipse at center,#403025,#251a12);box-shadow:inset 0 0 4px #000,0 2px #100c08}
+#shop .s26-cell{display:flex;position:relative;align-items:center;justify-content:center;aspect-ratio:1;padding:4px;min-width:0;border:4px ridge #92734c;border-radius:5px;color:#e5caa0;background:radial-gradient(ellipse at center,#403025,#251a12);box-shadow:inset 0 0 4px #000,0 2px #100c08}
 #shop .s26-cell img,#shop .s26-cell svg{width:100%;height:100%}
 #shop .s26-cell .s26-food-icon{font-size:32px;line-height:1}
 #shop .s26-hero-image .s26-food-icon{font-size:84px;line-height:1}
@@ -48,14 +47,6 @@
 #shop .empty{opacity:.65}
 #shop .s26-badge{position:absolute;bottom:1px;right:3px;font:bold 13px 'Pixelify Sans',monospace;color:#ffda89;background:#24170dcf;padding:0 2px;pointer-events:none}
 #shop .s26-empty{margin:4px 12px}
-#shop .s26-backpack{padding:0 12px 10px}
-#shop .s26-backpack summary{text-align:center;padding:8px;list-style:none;font-size:17px;font-weight:700}
-#shop .s26-backpack summary:after{content:' ▾';font-size:12px;color:#b5945c}
-#shop .s26-backpack[open] summary:after{content:' ▴'}
-#shop .s26-bag-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
-#shop .s26-bag-cell{padding:3px;border-width:2px;border-radius:3px;font-size:20px}
-#shop .s26-bag-cell img,#shop .s26-bag-cell svg{width:100%;height:100%;max-height:100%}
-#shop .s26-bag-cell:disabled{opacity:.7}
 #shop .s26-right{display:flex;flex-direction:column;position:relative;min-width:0;padding:15px 16px 0 20px;border:4px ridge #765330;background:#23180f;border-radius:4px}
 #shop .s26-right:before{content:'';position:absolute;inset:12px auto 16px 5px;width:9px;border:3px ridge #bc9248;border-radius:14px;background:#62421e;pointer-events:none}
 #shop .s26-detail{position:relative;display:flex;flex-direction:column;flex:1;min-height:375px;padding:16px 18px 18px;border:5px ridge #aa834b;color:#302116;background:linear-gradient(100deg,#e5c990,#f2dfaf 50%,#d3b477);box-shadow:inset 0 0 20px #a8762845,0 0 0 2px #151008}
@@ -75,8 +66,7 @@
 #shop .s26-message{margin:5px 0;min-height:22px;color:#ffe3a3;font-size:16px}
 #shop .s26-info{min-width:0}
 #shop .s26-categories{position:relative}
-#shop .s26-bag-tab{display:none}
-@media(max-width:1000px) and (min-width:701px) and (min-height:601px){#shop .s26-stock{grid-template-columns:repeat(4,minmax(0,1fr))}#shop .s26-tab{min-width:130px;padding:3px 12px}#shop .s26-money{gap:6px}#shop .s26-bag-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:1000px) and (min-width:701px) and (min-height:601px){#shop .s26-stock{grid-template-columns:repeat(4,minmax(0,1fr))}#shop .s26-tab{min-width:130px;padding:3px 12px}#shop .s26-money{gap:6px}}
 /* One screen in both phone orientations: only goods and item information scroll. */
 @media(max-width:700px),(max-height:600px){
  #shop.s26-screen{padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));font-size:16px;overflow:hidden}
@@ -91,7 +81,6 @@
  #shop .s26-bar{flex-shrink:0;padding:0;display:block}
  #shop .s26-tabs{gap:5px}
  #shop .s26-tab{flex:1;min-width:0;min-height:44px;font-size:17px;padding:4px;border-width:3px}
- #shop .s26-bag-tab{display:block}
  #shop .s26-subtitle,#shop .s26-banner,#shop .s26-assortment>h3,#shop .s26-category-title,#shop .s26-exit{display:none}
  #shop .s26-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px}
  #shop .s26-left{min-height:0;gap:0}
@@ -108,12 +97,6 @@
  #shop .s26-quiver img{width:20px;height:20px}
  #shop .s26-quiver strong{font-size:16px}
  #shop .s26-empty{margin:5px;font-size:16px}
- #shop .s26-backpack{display:none}
- #shop .s26-bag-view .s26-assortment{display:none}
- #shop .s26-bag-view .s26-backpack{display:flex;flex:1;flex-direction:column;min-height:0;padding:5px;border-width:3px}
- #shop .s26-backpack .s26-bag-title{flex-shrink:0;font-size:16px;font-weight:700;margin:0;padding:3px 0 6px}
- #shop .s26-bag-grid{min-height:0;overflow:auto;overscroll-behavior:contain;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;padding:3px}
- #shop .s26-bag-cell{border-width:3px}
  #shop .s26-right{min-height:0;padding:0;border:0;background:none}
  #shop .s26-right:before{display:none}
  #shop .s26-detail{flex:1;min-height:0;padding:8px;border-width:3px;overflow:hidden;gap:6px}

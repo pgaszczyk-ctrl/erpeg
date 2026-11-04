@@ -26,7 +26,7 @@ try {
       let body = true;
       if (fn === 'login') body = { token: 'fixture', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000,
         map_scale: 1.92, exp: 400, age: 12, dead: false, save: { coins: 90000, diamenty: 99, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 },
-          equip: { bron: 'kijek' }, bag: [{ goods: 'owoce', counts: { jablko: 10 } }, { goods: 'warzywa', counts: { marchewka: 5 } }, { item: 'korona' }] } } };
+          equip: { bron: 'kijek' }, bag: [{ goods: 'owoce', counts: { jablko: 10 } }, { goods: 'warzywa', counts: { marchewka: 5 } }, { item: 'korona' }, { item: 'zelazny' }, { item: 'zelazny' }, { item: 'zelazny_helm' }, { item: 'miecz_rekruta' }] } } };
       if (fn === 'game_settings') body = {};
       if (['game_content', 'school_quizzes', 'game_ports', 'game_stwory', 'kurier_wiesci'].includes(fn)) body = [];
       if (fn === 'server_now') body = new Date().toISOString();
@@ -75,25 +75,53 @@ try {
     await page.waitForFunction(n => window.__session.coins < n, before);
     assert(await page.locator('#shop').count(), 'shop remains open after purchase');
     assert(!(await page.locator('#shop .s26-action').getAttribute('data-action') === buyId), 'purchased offer refreshed');
-    if (compact) {
-      await fits();
-      await page.locator('#shop .s26-bag-tab').click();
-      assert(await page.locator('#shop .s26-bag-view').count());
-      await page.locator('#shop .s26-bag-cell:not(:disabled)').last().click();
-      assert.equal(await page.locator('#shop [data-focus="return"]').count(), 1);
-      await fits();
-      await page.screenshot({ path: `work/shop-mobile/${name}-bag.png` });
-    }
+    if (compact) await fits();
+    assert.equal(await page.locator('#shop .s26-tab').count(), 2, 'only Buy/Sell remain');
+    assert.equal(await page.locator('#shop .s26-backpack, #shop .s26-bag-tab').count(), 0);
     await page.locator('#shop [data-focus="tab:1"]').click();
-    await page.locator('#shop [data-action="sell:all"]').waitFor();
+    const equipment = await page.evaluate(() => JSON.stringify(window.__gear.equip));
+    assert.equal(await page.locator('#shop .s26-cell img[src$="/zelazny.png"]').count(), 2, 'both spare swords are offered');
+    for (let i = 0; i < 2; i++) {
+      await page.locator('#shop .s26-cell').filter({ has: page.locator('img[src$="/zelazny.png"]') }).first().click();
+      const coins = await page.evaluate(() => window.__session.coins);
+      assert((await page.locator('#shop .s26-action').innerText()).includes('600'));
+      await page.waitForTimeout(380);
+      const saved = page.waitForRequest(r => r.url().endsWith('/save_game') && r.postDataJSON()?.p_save?.coins === coins + 600);
+      await page.locator('#shop .s26-action').click();
+      await page.waitForFunction(n => window.__session.coins === n + 600, coins);
+      const snapshot = (await saved).postDataJSON().p_save;
+      assert.equal(snapshot.bag.filter(s => s.item === 'zelazny').length, 1 - i, 'sale is persisted with the remaining copies');
+      assert.equal(await page.locator('#shop .s26-cell img[src$="/zelazny.png"]').count(), 1 - i);
+      assert.equal(await page.evaluate(() => JSON.stringify(window.__gear.equip)), equipment);
+      if (compact) await fits();
+    }
+    await page.locator('#shop .s26-cell').filter({ has: page.locator('img[src$="/zelazny_helm.png"]') }).click();
+    const helmetCoins = await page.evaluate(() => window.__session.coins);
+    const helmetPrice = Number((await page.locator('#shop .s26-action span').innerText()).replace(/\D/g, ''));
+    await page.screenshot({ path: `work/shop-mobile/${name}-sell-equipment.png` });
+    await page.waitForTimeout(380);
+    await page.locator('#shop .s26-action').click();
+    await page.waitForFunction(({ before, price }) => window.__session.coins === before + price && !window.__gear.bag.some(s => s.item === 'zelazny_helm'), { before: helmetCoins, price: helmetPrice });
+    await page.locator('#shop .s26-cell').filter({ has: page.locator('img[src$="/korona.png"]') }).click();
+    assert(await page.locator('#shop .s26-action').isDisabled(), 'unpriced rewards explain why they cannot be sold');
+    assert((await page.locator('#shop .s26-info').innerText()).includes('kupiec go nie skupuje'));
+    const itemsBeforeBulk = await page.evaluate(() => JSON.stringify(window.__gear.bag.filter(s => !('goods' in s))));
+    await page.locator('#shop [data-entry="sell:all"]').click();
     if (compact) await fits();
     await page.screenshot({ path: `work/shop-mobile/${name}-sell.png` });
     const sellBefore = await page.evaluate(() => window.__session.coins);
+    await page.waitForTimeout(380);
     await page.locator('#shop [data-action="sell:all"]').click();
     await page.waitForFunction(n => window.__session.coins > n && !window.__gear.bag.some(s => 'goods' in s), sellBefore);
-    assert.equal(await page.locator('#shop .s26-action').count(), 0, 'empty stock has no transaction button');
+    assert.equal(await page.evaluate(() => JSON.stringify(window.__gear.bag)), itemsBeforeBulk, 'bulk harvest sale keeps all equipment/rewards');
+    await page.evaluate(() => {
+      window.__gear.bag = [];
+      const s = window.__game.scene.getScene('game');
+      s.openShop({ id: 'shop:fixture', kind: 'shop', name: 'Żabka', door: { x: s.player.x, y: s.player.y } }, 1);
+    });
+    assert.equal(await page.locator('#shop .s26-action').count(), 0, 'empty backpack has no transaction button');
     if (compact) await fits();
-    // Back closes a shop once, without a duplicate history entry for the backpack tab.
+    // Back closes the same shop after sales and refreshes.
     await page.goBack();
     await page.waitForFunction(() => !document.getElementById('shop'));
     if (compact) {
@@ -118,14 +146,14 @@ try {
     if (name === 'landscape') {
       await open();
       await page.setViewportSize({ width: 1280, height: 800 });
-      assert.equal(await page.locator('#shop .s26-bag-tab').isVisible(), false);
+      assert.equal(await page.locator('#shop .s26-tab').count(), 2);
       await page.setViewportSize({ width: 844, height: 390 });
       await fits();
       await page.locator('#shop .s26-close').click();
       await page.waitForFunction(() => !document.getElementById('shop'));
     }
     assert.deepEqual(errors, [], 'no page errors');
-    console.log(`PASS ${name}: layout, purchase, sale, backpack, empty stock, history`);
+    console.log(`PASS ${name}: layout, purchase, individual swords/helmet, protected rewards, bulk harvests, empty stock, history`);
     await context.close();
   }
 } finally { await browser.close(); await server.httpServer.close(); }

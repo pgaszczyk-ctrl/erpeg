@@ -1,10 +1,8 @@
 import './shop.css';
 import { itemAssetUrl } from './itemIcon';
 import { session } from '../quests';
-import { gear, goodsN, ownedAmmo } from '../inventory';
-import { PLECAK } from '../content/przedmioty';
+import { gear, ownedAmmo } from '../inventory';
 import { AMUNICJA, STRZALY } from '../content/zuzycie';
-import { slotIcon, slotLabel } from './slots';
 import type { DialogRequest } from '../scenes/GameScene';
 import type { ShopCategory, ShopEntry } from './shopData';
 
@@ -49,8 +47,6 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
   let request = initial;
   let selected = request.shop!.entries[0]?.id;
   let category: ShopCategory = 'all';
-  let viewingBag: number | null = null;
-  let bagView = false;
   const compact = window.matchMedia('(max-width: 700px), (max-height: 600px)');
   let message = '';
   let historyEntry = true;
@@ -67,11 +63,8 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const data = request.shop!;
     const focusKey = (document.activeElement as HTMLElement)?.dataset.focus;
     const scroll = box.querySelector('.s26-stock')?.scrollTop ?? 0;
-    const bagScroll = box.querySelector('.s26-bag-grid')?.scrollTop ?? 0;
     const categoryScroll = box.querySelector('.s26-categories')?.scrollLeft ?? 0;
-    const bagOpen = box.querySelector<HTMLDetailsElement>('.s26-backpack')?.open;
     box.replaceChildren();
-    box.classList.toggle('s26-bag-view', compact.matches && bagView);
     const head = el('header', 's26-head');
     const title = el('h2', '', request.title.replace(/^[^\p{L}\p{N}]+/u, '')); title.id = 's26-title';
     const close = button('×', 's26-close', () => choose(handle.lastIndex)); close.setAttribute('aria-label', 'Zamknij sklep'); close.dataset.focus = 'close';
@@ -80,23 +73,14 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const tabs = el('div', 's26-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Kupowanie i sprzedaż');
     const selling = request.tabs?.active === 1;
     (request.tabs?.labels.map(label => label.replace(/^[^\p{L}\p{N}]+/u, '').toUpperCase()) ?? [request.shop?.entries.some(e => e.id.startsWith('make:')) ? 'WYTWÓRZ' : 'KUPUJ', 'SPRZEDAJ']).forEach((name, i) => {
-      const active = Number(selling) === i && !(compact.matches && bagView);
+      const active = Number(selling) === i;
       const b = button(name, `s26-tab${active ? ' on' : ''}`, () => {
-        bagView = false; viewingBag = null;
         if (Number(selling) !== i) choose(-1 - i); else render();
       });
       b.dataset.focus = `tab:${i}`; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(active));
       b.disabled = i === 1 && !request.tabs; if (b.disabled) b.title = 'To miejsce nie prowadzi skupu';
       tabs.append(b);
     });
-    const bagTab = button(`PLECAK ${gear.bag.length}/${PLECAK.miejsc}`, `s26-tab s26-bag-tab${bagView ? ' on' : ''}`, () => {
-      bagView = true;
-      viewingBag = gear.bag.findIndex(Boolean);
-      if (viewingBag < 0) viewingBag = null;
-      render();
-    });
-    bagTab.dataset.focus = 'tab:bag'; bagTab.setAttribute('role', 'tab'); bagTab.setAttribute('aria-selected', String(bagView));
-    tabs.append(bagTab);
     const money = el('div', 's26-money');
     const gold = el('span'); gold.append(image('hud/zloto_16.png'), el('span', 's26-digits', number(session.coins)));
     const diamonds = el('span'); diamonds.append(image(itemAssetUrl('diament')), el('span', 's26-digits', number(session.diamenty)));
@@ -121,7 +105,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const entries = data.entries.filter(e => category === 'all' || e.category === category);
     if (!entries.some(e => e.id === selected)) selected = entries[0]?.id;
     available.forEach(([id, name, pic]) => {
-      const b = button('', `s26-category${category === id ? ' on' : ''}`, () => { category = id; viewingBag = null; render(); });
+      const b = button('', `s26-category${category === id ? ' on' : ''}`, () => { category = id; render(); });
       b.dataset.focus = `category:${id}`; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', String(category === id)); b.title = name;
       b.append(image(itemAssetUrl(pic)), el('span', '', name)); filters.append(b);
     });
@@ -145,10 +129,10 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     }
     const stock = el('div', 's26-stock');
     entries.forEach(entry => {
-      const b = button('', `s26-cell${entry.id === selected && viewingBag === null ? ' selected' : ''}`, () => {
-        selected = entry.id; viewingBag = null; render();
+      const b = button('', `s26-cell${entry.id === selected ? ' selected' : ''}`, () => {
+        selected = entry.id; render();
       });
-      b.dataset.entry = entry.id; b.dataset.focus = entry.id; b.setAttribute('aria-label', entry.name); b.setAttribute('aria-pressed', String(entry.id === selected && viewingBag === null)); b.title = entry.name;
+      b.dataset.entry = entry.id; b.dataset.focus = entry.id; b.setAttribute('aria-label', entry.name); b.setAttribute('aria-pressed', String(entry.id === selected)); b.title = entry.name;
       b.append(entry.picture ? image(entry.picture) : fallback(entry));
       if (entry.badge) b.append(el('span', 's26-badge', entry.badge));
       stock.append(b);
@@ -157,34 +141,13 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     for (let i = entries.length; i < Math.max(12, Math.ceil(entries.length / 6) * 6); i++) {
       const empty = el('span', 's26-cell empty'); empty.setAttribute('aria-hidden', 'true'); stock.append(empty);
     }
-    if (!entries.length) card.append(el('p', 's26-empty', data.emptyText ?? (selling ? 'Nie masz zbiorów na sprzedaż.'
+    if (!entries.length) card.append(el('p', 's26-empty', data.emptyText ?? (selling ? 'Plecak jest pusty.'
       : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.')));
     card.append(stock); row.append(filters, card); assortment.append(row); left.append(assortment);
-    const bag = el(compact.matches ? 'section' : 'details', 's26-backpack');
-    if (bag instanceof HTMLDetailsElement) bag.open = bagOpen ?? true;
-    const summary = el(compact.matches ? 'h3' : 'summary', 's26-bag-title', `PLECAK ${gear.bag.length}/${PLECAK.miejsc}`); bag.append(summary);
-    const bagGrid = el('div', 's26-bag-grid');
-    for (let i = 0; i < PLECAK.miejsc; i++) {
-      const slot = gear.bag[i];
-      const b = button('', `s26-bag-cell${viewingBag === i ? ' selected' : ''}`, () => { viewingBag = i; render(); });
-      b.disabled = !slot; b.dataset.focus = `bag:${i}`;
-      if (slot) {
-        b.setAttribute('aria-label', slotLabel(slot)); b.append(slotIcon(slot));
-        if ('goods' in slot) b.append(el('span', 's26-badge', String(goodsN(slot))));
-      } else b.setAttribute('aria-label', 'Puste miejsce');
-      bagGrid.append(b);
-    }
-    bag.append(bagGrid); left.append(bag);
     const right = el('div', 's26-right');
     const detail = el('section', 's26-detail'); detail.setAttribute('aria-label', 'Szczegóły przedmiotu');
     const entry = entries.find(e => e.id === selected);
-    const bagSlot = viewingBag === null ? undefined : gear.bag[viewingBag];
-    if (bagSlot) {
-      const hero = el('div', 's26-hero-image'); hero.append(slotIcon(bagSlot)); detail.append(hero, el('h3', '', slotLabel(bagSlot).split(' – ')[0]), el('p', 's26-description', slotLabel(bagSlot)), el('p', '', 'Przedmiot z twojego plecaka.'));
-      const returnButton = button('WRÓĆ DO TOWARU', 's26-action', () => { viewingBag = null; bagView = false; render(); }); returnButton.dataset.focus = 'return'; detail.append(returnButton);
-    } else if (compact.matches && bagView) {
-      detail.append(el('h3', '', 'Pusty plecak'), el('p', 's26-description', 'Tutaj zobaczysz rzeczy, które zabierasz ze sobą.'));
-    } else if (entry) {
+    if (entry) {
       const hero = el('div', 's26-hero-image'); const big = entry.pictureLarge && entry.pictureLarge !== entry.picture; hero.append(entry.picture ? image(big ? entry.pictureLarge! : entry.picture, big ? 'item-hd' : '') : fallback(entry));
       detail.append(hero, el('h3', '', entry.name));
       const stats = el('dl', 's26-stats');
@@ -197,13 +160,15 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
         lastAction = performance.now(); choose(entry.index);
       }); action.dataset.focus = 'action'; action.dataset.action = entry.id;
       action.append(el('strong', '', entry.action ?? (selling ? 'SPRZEDAJ' : 'KUP')), el('span', '', pay));
+      action.disabled = !!entry.disabledReason;
+      if (entry.disabledReason) detail.append(el('p', 's26-description', entry.disabledReason));
       detail.append(action);
     } else if (!selling && category === 'ammo' && ammunition.length) {
       const hero = el('div', 's26-hero-image'); hero.append(image(itemAssetUrl(ammunition[0])));
       detail.append(hero, el('h3', '', 'Zapas pełny'), el('p', 's26-description',
         `Masz po ${STRZALY.kolczan} sztuk posiadanej amunicji. Kolejne zakupy będą dostępne po jej zużyciu.`));
     } else {
-      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', data.emptyText ?? (selling ? 'Zbieraj owoce, warzywa, grzyby i drewno. Kupiec je odkupi.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.')));
+      detail.append(el('h3', '', selling ? 'Pusty plecak' : 'Brak towaru'), el('p', '', data.emptyText ?? (selling ? 'W zakładce Sprzedaj pojawią się zbiory i sprzęt z twojego plecaka.' : 'Masz już najlepsze rzeczy dostępne w tym sklepie.')));
     }
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';
@@ -214,7 +179,6 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     right.append(detail, notice, exit); body.append(left, right);
     box.append(head, bar, subtitle, body);
     stock.scrollTop = scroll;
-    bagGrid.scrollTop = bagScroll;
     filters.scrollLeft = categoryScroll;
     // Reveal the chosen folder without scrolling the entire shop on a phone.
     const activeCategory = filters.querySelector<HTMLElement>('.on');
@@ -241,7 +205,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     revision: 0, lastIndex: request.buttons.length - 1,
     update(d) {
       const oldTab = request.tabs?.active; request = d; handle.lastIndex = d.buttons.length - 1; handle.revision++;
-      if (oldTab !== d.tabs?.active) { category = 'all'; selected = d.shop!.entries[0]?.id; viewingBag = null; }
+      if (oldTab !== d.tabs?.active) { category = 'all'; selected = d.shop!.entries[0]?.id; message = ''; }
       render();
     },
     message(text) { message = text; const p = box.querySelector('.s26-message'); if (p) p.textContent = text; },
