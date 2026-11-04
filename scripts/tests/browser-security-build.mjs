@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.BASE_URL || 'http://127.0.0.1:4173/';
+const tag = process.env.SECURITY_TAG || 'built';
 mkdirSync('work/security', { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox','--enable-unsafe-swiftshader'] });
 try {
@@ -22,7 +23,7 @@ try {
     assert.equal(await page.evaluate(()=>window.injected),undefined);
     assert.equal(await page.locator('img[onerror]').count(),0);
     assert.equal(new URL(page.url()).hash,'');
-    await page.screenshot({path:`work/security/built-auth-${phone?'phone':'desktop'}.png`});
+    await page.screenshot({path:`work/security/${tag}-auth-${phone?'phone':'desktop'}.png`});
     await page.goto(base+'?google=1#access_token=DUMMY&refresh_token=DUMMY&type=recovery');
     await page.waitForSelector('input[autocomplete="new-password"]');
     assert.equal(new URL(page.url()).hash,'');
@@ -32,7 +33,7 @@ try {
     assert.equal(await page.evaluate(()=>sessionStorage.getItem('erpeg-admin')),null);
     await page.goto(base+'?lang=pl');
     await page.waitForSelector('#menu',{timeout:60000});
-    await page.screenshot({path:`work/security/built-menu-${phone?'phone':'desktop'}.png`});
+    await page.screenshot({path:`work/security/${tag}-menu-${phone?'phone':'desktop'}.png`});
     console.log(`PASS built ${phone?'phone':'desktop'}: XSS, recovery, admin storage, game menu`);
     await ctx.close();
   }

@@ -10,7 +10,7 @@ Zakres: stara gra `pgaszczyk-ctrl/erpeg`, źródła i aktualne definicje/uprawni
 - Vite 8.3.1 → 8.3.5, source-map-js 1.2.1 → 1.2.2, aktualizacja lockfile. Końcowy npm audit: zero znanych podatności.
 - `.gitignore` blokuje typowe pliki środowiskowe oraz klucze prywatne. To nie usuwa plików już wcześniej śledzonych przez Git.
 
-Poprawki mogą być opublikowane na TEST zgodnie z AGENTS.md. Produkcja pozostaje przy dotychczasowym pinie i patchach do jawnej zgody na wydanie. Draft hotfixu: `docs/poprawki/2026-11-04-bezpieczenstwo-logowania.patch`.
+Poprawki scalono do TEST w PR #60 (merge 77261cf). Produkcja pozostaje przy dotychczasowym pinie i patchach do jawnej zgody na wydanie. Draft hotfixu: `docs/poprawki/2026-11-04-bezpieczenstwo-logowania.patch`; obejmuje auth, hasło admina, lockfile oraz klienta portów wymagającego nowego RPC. Stosować po zgodzie na migrację i wydanie, z zachowaniem obecnych patchy 1.042 i 1.043.
 
 ## Konkretna migracja bazy do zatwierdzenia
 
@@ -34,7 +34,7 @@ Migracja przeszła lokalny PostgreSQL/WASM (PGlite), z prawdziwym rozszerzeniem 
 - `scripts/tests/browser-security.mjs`: rzeczywiste funkcje auth na izolowanej stronie, PC i telefon 390×844; XSS, czyszczenie URL, odzyskiwanie hasła, unieważnianie sesji — poprawnie.
 - `scripts/tests/browser-security-build.mjs`: rzeczywiste zbudowane strony, PC i telefon; XSS, formularz odzyskiwania, usunięcie dawnego hasła admina i menu gry — poprawnie. Zewnętrzne usługi są zastąpione sztucznymi odpowiedziami. Zrzuty lokalnie w work/security.
 - `scripts/tests/security-database.cjs`: lokalna migracja SQL, rola anon, izolacja zgłoszeń, siedmiodniowy termin i odnowienie — poprawnie, również po powtórnym wykonaniu migracji.
-- Draft hotfixu logowania przechodzi próbę zastosowania do plików przypiętej produkcji. Pełna publikacja wymaga osobnej zgody i zachowania istniejących patchy.
+- Draft hotfixu sprawdzono też w osobnym worktree przypiętej produkcji z oboma istniejącymi patchami: TypeScript i Vite build z poprawionym lockfile oraz przygotowanymi plikami map. Zbudowane strony przeszły ten sam test PC/telefon. Nie przebudowywano tam danych OSM; nie jest to publikacja ani test na fizycznym telefonie.
 - Gitleaks 8.30.1: 833 commity we wszystkich lokalnie dostępnych refs, około 30 MB tekstu historii. Pięć wskazań; każde sprawdzono i każde dotyczy klucza `sb_publishable_`, przeznaczonego do klienta. Brak potwierdzonego prywatnego sekretu w tym skanie. Wartości nie trafiły do raportu. To nie dowodzi braku sekretów we wszystkich binariach, załącznikach i systemach zewnętrznych.
 - Pozostaje istniejące ostrzeżenie builda o nierozwiązanej ścieżce ComicNeue-Bold.ttf; nie blokuje kompilacji.
 
