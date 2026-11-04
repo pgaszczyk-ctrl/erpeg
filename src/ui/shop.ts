@@ -50,6 +50,8 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
   let selected = request.shop!.entries[0]?.id;
   let category: ShopCategory = 'all';
   let viewingBag: number | null = null;
+  let bagView = false;
+  const compact = window.matchMedia('(max-width: 700px), (max-height: 600px)');
   let message = '';
   let historyEntry = true;
   let lastAction = 0;
@@ -65,9 +67,11 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const data = request.shop!;
     const focusKey = (document.activeElement as HTMLElement)?.dataset.focus;
     const scroll = box.querySelector('.s26-stock')?.scrollTop ?? 0;
+    const bagScroll = box.querySelector('.s26-bag-grid')?.scrollTop ?? 0;
     const categoryScroll = box.querySelector('.s26-categories')?.scrollLeft ?? 0;
     const bagOpen = box.querySelector<HTMLDetailsElement>('.s26-backpack')?.open;
     box.replaceChildren();
+    box.classList.toggle('s26-bag-view', compact.matches && bagView);
     const head = el('header', 's26-head');
     const title = el('h2', '', request.title.replace(/^[^\p{L}\p{N}]+/u, '')); title.id = 's26-title';
     const close = button('×', 's26-close', () => choose(handle.lastIndex)); close.setAttribute('aria-label', 'Zamknij sklep'); close.dataset.focus = 'close';
@@ -76,16 +80,29 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const tabs = el('div', 's26-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Kupowanie i sprzedaż');
     const selling = request.tabs?.active === 1;
     (request.tabs?.labels.map(label => label.replace(/^[^\p{L}\p{N}]+/u, '').toUpperCase()) ?? [request.shop?.entries.some(e => e.id.startsWith('make:')) ? 'WYTWÓRZ' : 'KUPUJ', 'SPRZEDAJ']).forEach((name, i) => {
-      const b = button(name, `s26-tab${Number(selling) === i ? ' on' : ''}`, () => { if (Number(selling) !== i) choose(-1 - i); });
-      b.dataset.focus = `tab:${i}`; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(Number(selling) === i));
+      const active = Number(selling) === i && !(compact.matches && bagView);
+      const b = button(name, `s26-tab${active ? ' on' : ''}`, () => {
+        bagView = false; viewingBag = null;
+        if (Number(selling) !== i) choose(-1 - i); else render();
+      });
+      b.dataset.focus = `tab:${i}`; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(active));
       b.disabled = i === 1 && !request.tabs; if (b.disabled) b.title = 'To miejsce nie prowadzi skupu';
       tabs.append(b);
     });
+    const bagTab = button(`PLECAK ${gear.bag.length}/${PLECAK.miejsc}`, `s26-tab s26-bag-tab${bagView ? ' on' : ''}`, () => {
+      bagView = true;
+      viewingBag = gear.bag.findIndex(Boolean);
+      if (viewingBag < 0) viewingBag = null;
+      render();
+    });
+    bagTab.dataset.focus = 'tab:bag'; bagTab.setAttribute('role', 'tab'); bagTab.setAttribute('aria-selected', String(bagView));
+    tabs.append(bagTab);
     const money = el('div', 's26-money');
     const gold = el('span'); gold.append(image('hud/zloto_16.png'), el('span', 's26-digits', number(session.coins)));
     const diamonds = el('span'); diamonds.append(image(itemAssetUrl('diament')), el('span', 's26-digits', number(session.diamenty)));
     money.append(gold, diamonds); money.setAttribute('aria-label', `${session.coins} monet, ${session.diamenty} diamentów`);
-    bar.append(tabs, money);
+    bar.append(tabs);
+    if (compact.matches) head.append(money); else bar.append(money);
     const subtitle = el('p', 's26-subtitle', data.subtitle);
     const body = el('div', 's26-body');
     const left = el('div', 's26-left');
@@ -143,8 +160,9 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     if (!entries.length) card.append(el('p', 's26-empty', data.emptyText ?? (selling ? 'Nie masz zbiorów na sprzedaż.'
       : category === 'ammo' ? 'Zapas amunicji jest pełny. Nie musisz dokupować więcej.' : 'Brak towarów w tej kategorii.')));
     card.append(stock); row.append(filters, card); assortment.append(row); left.append(assortment);
-    const bag = el('details', 's26-backpack'); bag.open = bagOpen ?? window.matchMedia('(min-width: 701px)').matches;
-    const summary = el('summary', '', `PLECAK ${gear.bag.length}/${PLECAK.miejsc}`); bag.append(summary);
+    const bag = el(compact.matches ? 'section' : 'details', 's26-backpack');
+    if (bag instanceof HTMLDetailsElement) bag.open = bagOpen ?? true;
+    const summary = el(compact.matches ? 'h3' : 'summary', 's26-bag-title', `PLECAK ${gear.bag.length}/${PLECAK.miejsc}`); bag.append(summary);
     const bagGrid = el('div', 's26-bag-grid');
     for (let i = 0; i < PLECAK.miejsc; i++) {
       const slot = gear.bag[i];
@@ -163,7 +181,9 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     const bagSlot = viewingBag === null ? undefined : gear.bag[viewingBag];
     if (bagSlot) {
       const hero = el('div', 's26-hero-image'); hero.append(slotIcon(bagSlot)); detail.append(hero, el('h3', '', slotLabel(bagSlot).split(' – ')[0]), el('p', 's26-description', slotLabel(bagSlot)), el('p', '', 'Przedmiot z twojego plecaka.'));
-      const returnButton = button('WRÓĆ DO TOWARU', 's26-action', () => { viewingBag = null; render(); }); returnButton.dataset.focus = 'return'; detail.append(returnButton);
+      const returnButton = button('WRÓĆ DO TOWARU', 's26-action', () => { viewingBag = null; bagView = false; render(); }); returnButton.dataset.focus = 'return'; detail.append(returnButton);
+    } else if (compact.matches && bagView) {
+      detail.append(el('h3', '', 'Pusty plecak'), el('p', 's26-description', 'Tutaj zobaczysz rzeczy, które zabierasz ze sobą.'));
     } else if (entry) {
       const hero = el('div', 's26-hero-image'); const big = entry.pictureLarge && entry.pictureLarge !== entry.picture; hero.append(entry.picture ? image(big ? entry.pictureLarge! : entry.picture, big ? 'item-hd' : '') : fallback(entry));
       detail.append(hero, el('h3', '', entry.name));
@@ -187,36 +207,31 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     }
     const notice = el('p', 's26-message', message); notice.setAttribute('role', 'status');
     const exit = button('WYJDŹ', 's26-exit', () => choose(handle.lastIndex)); exit.dataset.focus = 'exit';
-    if (window.matchMedia('(max-width: 700px)').matches) {
-      // Phones (owner, 12 Oct 2026: the shop didn't fit and had to be scrolled): the seller presents the chosen
-      // thing at the top, in a speech bubble next to his face; the goods grid and the backpack follow, × closes.
-      const pitch = el('div', 's26-pitch');
-      banner.remove();
-      const face = el('div', 's26-face'); face.append(banner);
-      detail.classList.add('s26-bubble');
-      pitch.append(face, detail);
-      left.prepend(pitch, notice);
-      body.append(left);
-    } else {
-      right.append(detail, notice, exit); body.append(left, right);
-    }
+    // Keep the action outside the scrollable description, including on short landscape screens.
+    const info = el('div', 's26-info');
+    [...detail.children].filter(e => !e.classList.contains('s26-action')).forEach(e => info.append(e));
+    detail.prepend(info);
+    right.append(detail, notice, exit); body.append(left, right);
     box.append(head, bar, subtitle, body);
     stock.scrollTop = scroll;
+    bagGrid.scrollTop = bagScroll;
     filters.scrollLeft = categoryScroll;
     // Reveal the chosen folder without scrolling the entire shop on a phone.
     const activeCategory = filters.querySelector<HTMLElement>('.on');
     if (activeCategory) {
-      const tabRect = activeCategory.getBoundingClientRect(), navRect = filters.getBoundingClientRect();
-      if (tabRect.left < navRect.left) filters.scrollLeft -= navRect.left - tabRect.left;
-      else if (tabRect.right > navRect.right) filters.scrollLeft += tabRect.right - navRect.right;
+      if (activeCategory.offsetLeft < filters.scrollLeft) filters.scrollLeft = activeCategory.offsetLeft;
+      else if (activeCategory.offsetLeft + activeCategory.offsetWidth > filters.scrollLeft + filters.clientWidth)
+        filters.scrollLeft = activeCategory.offsetLeft + activeCategory.offsetWidth - filters.clientWidth;
     }
     const focused = [...box.querySelectorAll<HTMLElement>('[data-focus]')].find(e => e.dataset.focus === focusKey);
     focused?.focus({ preventScroll: true });
   };
+  const resize = () => render();
+  compact.addEventListener('change', resize);
   // Keep keyboard focus in this window; normal arrow/Tab/Enter button navigation stays native.
   const key = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;
-    const focusable = [...box.querySelectorAll<HTMLElement>('button:not(:disabled), summary')];
+    const focusable = [...box.querySelectorAll<HTMLElement>('button:not(:disabled), summary')].filter(e => e.getClientRects().length);
     const first = focusable[0], last = focusable.at(-1);
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
@@ -231,6 +246,7 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
     },
     message(text) { message = text; const p = box.querySelector('.s26-message'); if (p) p.textContent = text; },
     destroy() {
+      compact.removeEventListener('change', resize);
       window.removeEventListener('popstate', back); root.remove();
       if (historyEntry) { historyEntry = false; history.back(); }
       previouslyFocused?.focus({ preventScroll: true });
