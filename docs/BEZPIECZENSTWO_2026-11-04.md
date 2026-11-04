@@ -2,6 +2,12 @@
 
 Zakres: stara gra `pgaszczyk-ctrl/erpeg`, źródła i aktualne definicje/uprawnienia Supabase. Nowe repo `exp-lore` jest odrębnym projektem. Nie zmieniano zapisów rzeczywistych graczy.
 
+## Aktualizacja po zgodzie właściciela
+
+Właściciel zatwierdził hotfix i migrację po wyjaśnieniu, że nie usuwa się postaci, zapisów ani zgłoszeń. Migracja `approved_security_sessions_and_port_identity` została wdrożona. Regresja wykonana także w działającej bazie na sztucznych danych i wycofana transakcją: PASS. Przed i po kontroli pozostało 99 postaci i 1 istniejące zgłoszenie portowe. RLS pozostało włączone, wewnętrzna funkcja tokenu nie jest dostępna dla anon. Dawne zgłoszenie zachowane bez zgadywania właściciela. Poniższe opisy wcześniejszego przygotowania/odmowy są historią audytu.
+
+Wydanie 1.044: `produkcja/1.044-bezpieczenstwo.patch`, pozostawiające pin i patche 1.042/1.043. Obejmuje poprawki auth/admina, lockfile oraz bezpieczny klient portów. Aktualny TEST otrzymuje ten sam klient i numer bazowy 1.044. Żadne inne funkcje z TEST nie są włączane na produkcji przy tej operacji.
+
 ## Gotowe poprawki kodu
 
 - `src/google.ts`: błąd z adresu jest tekstem, nie HTML. Usunięto potwierdzony XSS. Fragment adresu z tokenami oraz link weryfikacyjny są usuwane z bieżącej historii. Odzyskiwanie hasła nadal działa.
