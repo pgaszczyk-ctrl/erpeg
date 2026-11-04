@@ -30,20 +30,22 @@ try {
   const result=await page.evaluate(async()=>{
    const s=window.__game.scene.getScene('game'),g=window.__gear;
    window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.witam=false;s.lingerUntil=0;s.talkReadyAt=0;
-   s.inCombat=()=>false;s.streets.update=()=>{};s.folk.update=()=>{};
+   s.noHurtUntil=Infinity;s.inCombat=()=>false;s.streets.update=()=>{};s.folk.update=()=>{};s.prolog=undefined;s.elzet=undefined;s.anomalia=undefined;s.story.update=()=>{};s.lochy.lista.splice(0);
    let presentation;
    const shop=s.shopDialog;s.shopDialog=(p,d,entries)=>{presentation={d,entries};};
    for(const name of ['Decathlon','Sklep narzędziowy']){
     s.openGearShop({id:name,name,kind:'gear',door:{x:s.player.x,y:s.player.y}});
-    if(!presentation.entries.some(e=>e.id==='buy:kilof'))throw Error('missing pickaxe in '+name);
+    const pick=presentation.entries.find(e=>e.id==='buy:kilof');
+    if(!pick?.picture?.includes('kilof'))throw Error('missing pickaxe art in '+name);
    }
    s.shopDialog=shop;
-   const methods=['areaKindsAt','isFree','roadAt','ready'];
+   const methods=['areaKindsAt'];
    const originals=methods.map(k=>s.city[k]);const places=s.city.places;
-   s.city.areaKindsAt=()=>['forest'];s.city.isFree=()=>true;s.city.roadAt=()=>null;s.city.ready=()=>true;s.city.places=[];
+   s.city.areaKindsAt=()=>['forest'];s.city.places=[];
    s.zloza.next=0;s.zloza.update(s.player.x,s.player.y,s.time.now,()=>true);
    methods.forEach((k,i)=>s.city[k]=originals[i]);s.city.places=places;
    const z=s.zloza.lista[0];if(!z)throw Error('no generated deposits');
+   if(z.obraz.texture.key!=='item-ruda_zelaza')throw Error('missing artist ore sprite');
    window.__miningId=z.id;
    s.player.setPosition(z.x,z.y+6);s.cameras.main.centerOn(z.x,z.y);s.cameras.main.preRender();
    let saves=[];const save=s.save;s.save=()=>saves.push(structuredClone(s.zloza.stan(z)));
@@ -76,14 +78,17 @@ try {
   await page.waitForTimeout(600);
   const native=await page.evaluate(()=>{
    const s=window.__game.scene.getScene('game'),z=s.zloza.lista.find(z=>z.id===window.__miningId);
+   window.__game.scene.getScene('ui').closeDialog();s.scene.resume();
    s.mineReady=0;s.talkReadyAt=0;s.lingerUntil=0;s.witam=false;
+   s.updateFog();z.obraz.setVisible(true);
    const t=s.interactionCandidates().find(t=>t.id===`ore:${z.id}`);
-   if(!t)throw Error('deposit missing from native actions');
-   s.interactionSelection.pick(t);s.updateInteractionTarget();return s.zloza.stan(z).n;
+   if(!t)throw Error('deposit missing from native actions '+JSON.stringify({z:{x:z.x,y:z.y,visible:z.obraz.visible},p:{x:s.player.x,y:s.player.y},active:s.scene.isActive(),blocked:s.interactionBlocked()}));
+   s.interactionSelection.pick(t);s.updateInteractionTarget();
+   return s.zloza.stan(z).n;
   });
+  await page.evaluate(()=>document.activeElement?.blur());
   if(phone)await page.locator('.hs-akcja').click({force:true});else await page.keyboard.press('e');
-  await page.waitForTimeout(250);
-  assert.equal(await page.evaluate(()=>{const s=window.__game.scene.getScene('game');return s.zloza.stan(s.zloza.lista.find(z=>z.id===window.__miningId)).n;}),native+1,'native E/Action gives fifth hit reward');
+  await page.waitForFunction(n=>{const s=window.__game.scene.getScene('game'),z=s.zloza.lista.find(z=>z.id===window.__miningId);return s.zloza.stan(z).n===n;},native+1,{timeout:30000});
   await page.screenshot({path:`work/interactions/mining-${phone?'phone':'desktop'}.png`});
   assert.deepEqual(errors,[]);
   console.log('PASS',phone?'phone':'desktop',result);

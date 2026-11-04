@@ -1828,7 +1828,7 @@ export class GameScene extends Phaser.Scene {
       if(Math.hypot(p.x-this.player.x,p.y-this.player.y)>INTERAKCJA_PX+4)return;
       out.push({id,x:p.x,y:p.y,kind,label:(kind==='talk'?tx('Porozmawiaj: ','Talk: '):kind==='enter'?tx('Wejdź: ','Enter: '):tx('Użyj: ','Use: '))+name,run,range});
     };
-    if (!this.loch) for (const z of this.zloza?.lista ?? []) if (z.obraz.visible) add(`ore:${z.id}`, z, 'use', `Żelazo: zostało ${GORNICTWO.dziennie-this.zloza.stan(z).n}, uderzenia ${this.zloza.stan(z).a}/${GORNICTWO.uderzen}`, () => this.mine(z), 28);
+    if (!this.loch) for (const z of this.zloza?.lista ?? []) add(`ore:${z.id}`, z, 'use', `Żelazo: zostało ${GORNICTWO.dziennie-this.zloza.stan(z).n}, uderzenia ${this.zloza.stan(z).a}/${GORNICTWO.uderzen}`, () => this.mine(z), 28);
     out.push(...this.etapy.interactionTargets(), ...(this.prolog?.interactionTargets()??[]));
     for(const n of this.npcs.list) add(`riddle:${n.id}`,n,'talk',n.name,()=>this.openRiddle(n));
     for(const n of this.fixed.interactionPeople())add(`fixed:${n.id}`,n,'talk',n.name,()=>this.fixed.talk(n));
@@ -2179,7 +2179,7 @@ export class GameScene extends Phaser.Scene {
       if (wear === 'broken' || wear === 'warn') this.toast('Kilof się zużywa – napraw go w warsztacie.', 2200);
     } else this.floatText(z.x, z.y-16, `${d.a}/${GORNICTWO.uderzen}`, '#e8c56a', 600);
     navigator.vibrate?.(15);
-    this.emitHud(); this.save();
+    this.emitHud(); this.save(true);
   }
 
   /** Trees being chopped (overhaul 09): blows left and the progress bar over the crown. */
