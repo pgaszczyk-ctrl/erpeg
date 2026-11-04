@@ -672,3 +672,9 @@ export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): stri
   put(from, b);
   return done();
 }
+
+/** A usable pickaxe works from the backpack as well as the weapon slot. */
+export function pickaxe(): string | null {
+  return [gear.equip.bron, ...gear.bag.map(s => 'item' in s ? s.item : null)]
+    .find(id => item(id)?.narzedzie === 'kilof' && !isBroken(id)) ?? null;
+}

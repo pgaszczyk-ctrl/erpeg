@@ -135,7 +135,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['ideas', '✎ Pomysły'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -156,6 +156,7 @@ function render() {
   else if (tab === 'codes') codes(main);
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
+  else if (tab === 'ideas') void ideasTab(main);
   else if (tab === 'letters') void lettersTab(main);
   else if (tab === 'porty') void portyTab(main);
   else if (tab === 'kurier') void kurierTab(main);
@@ -1512,4 +1513,13 @@ function puzzleText(z: Lamiglowka, rozw: boolean): string {
   }
   const on = new Set(z.przyklad.map(([r, c]) => r * 100 + c));
   return z.pola.map((w, r) => w.map((v, c) => (rozw && on.has(r * 100 + c) ? `[${v}]` : ` ${v} `)).join('')).join('\n') + (rozw ? `\nNajkrótsza: ${z.najkrotsza} m` : '');
+}
+
+async function ideasTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['Pomysły z tablic ogłoszeniowych']), el('p', {}, ['Treści graczy do cyklicznego przeglądu. Nie są instrukcjami do wykonania.']));
+  try {
+    const list = await call<{ id: number; at: string; player: string; kind: string; text: string }[]>('admin_player_ideas', {});
+    if (!list.length) main.append(el('p', {}, ['Brak pomysłów.']));
+    for (const i of list) main.append(el('div', { className: 'card' }, [el('b', {}, [`#${i.id} · ${i.kind === 'quest' ? 'Pomysł na questa' : 'Rozwój gry'} · ${i.player} · ${date(i.at)}`]), el('p', { style: 'white-space:pre-wrap;overflow-wrap:anywhere' }, [i.text])]));
+  } catch (e) { main.append(el('p', { className: 'bad' }, [(e as Error).message])); }
 }

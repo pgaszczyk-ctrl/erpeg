@@ -61,7 +61,7 @@ export interface Przedmiot {
   /** Szkło: zużywa się na każdym poziomie trudności i po ostatnim ciosie pęka (znika). */
   szklany?: boolean;
   /** A tool: works from the backpack too (the axe turns felled trees into wood instead of brushwood). */
-  narzedzie?: 'siekiera';
+  narzedzie?: 'siekiera' | 'kilof';
   /** Vehicles stay in the backpack; their HUD buttons toggle riding. */
   pojazd?: 'rower' | 'hulajnoga';
   /** Worn (any place): walking faster by this share (Buty biegacza 0.1 = +10%). */
@@ -82,6 +82,8 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
   // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.
+  { id: 'kilof', nazwa: 'Kilof', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'kilof',
+    opis: 'Do wydobywania rudy. Działa także z plecaka.' },
   { id: 'siekiera', nazwa: 'Siekiera', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'siekiera',
     opis: 'Ścięte drzewo daje drewno zamiast chrustu – wystarczy mieć ją w plecaku. Można też nią walczyć.' },
   { id: 'zelazny', nazwa: 'Miecz treningowy', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },

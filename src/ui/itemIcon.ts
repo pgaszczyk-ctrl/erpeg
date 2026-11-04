@@ -22,7 +22,7 @@ export const ITEM_PICTURES = [
 // (Order 45 D gave the recruit kit its own pictures; no stand-ins left.)
 const QUEST_PICTURES: Record<string, string> = {};
 const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
-const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa']);
+const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa', 'kilof']);
 
 /**
  * Order 45 (A+B): the artist's 64 px exports are machine reductions of smooth 1254 px drawings, so their diagonal

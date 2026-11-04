@@ -1,3 +1,5 @@
+import { Zloza, type Zloze } from './Zloza';
+import { GORNICTWO } from '../content/sklepy';
 import { landingPanorama } from '../artillery/panorama';
 import { gameShot } from '../ui/snapshot';
 import { restoreHero } from '../artillery/state';
@@ -100,7 +102,7 @@ import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PI
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
   weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
-  condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe,
+  condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe, pickaxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
 import { updateGameCursor, mountGameCursor } from '../ui/gameCursor';
@@ -659,6 +661,7 @@ export class GameScene extends Phaser.Scene {
       lochy: () => this.lochy,
     });
     this.orchards = new Orchards(this, this.city);
+    this.zloza = new Zloza(this, this.city);
     this.forest = new Forest(
       this,
       this.city,
@@ -1372,6 +1375,7 @@ export class GameScene extends Phaser.Scene {
     this.orchards.update(this.player.x, this.player.y, now);
     if (this.chopping.size) this.updateChopping(now);
     this.forest.update(this.player.x, this.player.y, now);
+    this.zloza.update(this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y));
     this.landmarks.update(this.player.x, this.player.y);
     this.updateHarvests(now);
     // The QR demo's dragon: nobody strolls near it (owner, 19 Oct 2026: a granny walked right into it).
@@ -1824,6 +1828,7 @@ export class GameScene extends Phaser.Scene {
       if(Math.hypot(p.x-this.player.x,p.y-this.player.y)>INTERAKCJA_PX+4)return;
       out.push({id,x:p.x,y:p.y,kind,label:(kind==='talk'?tx('Porozmawiaj: ','Talk: '):kind==='enter'?tx('Wejdź: ','Enter: '):tx('Użyj: ','Use: '))+name,run,range});
     };
+    if (!this.loch) for (const z of this.zloza?.lista ?? []) if (this.zloza.dostepne(z)) add(`ore:${z.id}`, z, 'use', 'Złoże żelaza', () => this.mine(z), 28);
     out.push(...this.etapy.interactionTargets(), ...(this.prolog?.interactionTargets()??[]));
     for(const n of this.npcs.list) add(`riddle:${n.id}`,n,'talk',n.name,()=>this.openRiddle(n));
     for(const n of this.fixed.interactionPeople())add(`fixed:${n.id}`,n,'talk',n.name,()=>this.fixed.talk(n));
@@ -2052,7 +2057,7 @@ export class GameScene extends Phaser.Scene {
     const fighting = !!this.nearestFoe(this.swingReach(strong ? WALKA.zasiegMiecz : 1) * 1.5);
     const drill = !!this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 1.5, ranged ? (ranged.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz');
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !fighting && !!(this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    const gathering = !!ranged && !fighting && !!(this.zloza?.lista.some(z => z.obraz.visible && Math.hypot(z.x-hit.x,z.y-hit.y)<16) || this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
     // An interaction is not a blow (and must not play its sound).
     const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
     if (!live() && this.interactChain(hit, strong, foeNear)) return;
@@ -2127,6 +2132,8 @@ export class GameScene extends Phaser.Scene {
       if (hits) this.practiced('miecz');
       return;
     }
+    const ore = this.zloza?.lista.find(z => z.obraz.visible && Math.hypot(z.x-hit.x,z.y-hit.y)<16);
+    if (ore) { this.mine(ore); return; }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
@@ -2151,6 +2158,29 @@ export class GameScene extends Phaser.Scene {
       this.dummyHit(dummy);
     }
     if (hits) this.practiced('miecz');
+  }
+
+  private zloza!: Zloza;
+  private mineReady = 0;
+  private mine(z: Zloze) {
+    if (this.loch || this.inCombat() || this.time.now < this.mineReady) return;
+    if (!this.zloza.lista.includes(z) || Math.hypot(z.x-this.player.x,z.y-this.player.y)>28) return;
+    this.mineReady = this.time.now + GORNICTWO.odstepMs;
+    const d = this.zloza.stan(z);
+    if (!this.zloza.dostepne(z)) return;
+    const tool = pickaxe();
+    if (!tool) return this.toast('Potrzebujesz sprawnego kilofa.', 2600);
+    if (d.a + 1 >= GORNICTWO.uderzen && !addFruit('ruda_zelaza')) return this.toast('Brak miejsca na rudę w plecaku.', 1800);
+    d.a++;
+    if (d.a >= GORNICTWO.uderzen) {
+      d.a = 0; d.n++;
+      if (!this.zloza.dostepne(z)) { z.obraz.setVisible(false); this.updateInteractionTarget(); }
+      const wear = useWeapon(tool, session.level.zuzycie);
+      this.floatText(z.x, z.y-16, '+1 grudka żelaza', '#e8c56a');
+      if (wear === 'broken' || wear === 'warn') this.toast('Kilof się zużywa – napraw go w warsztacie.', 2200);
+    }
+    navigator.vibrate?.(15);
+    this.emitHud(); this.save(true);
   }
 
   /** Trees being chopped (overhaul 09): blows left and the progress bar over the crown. */
@@ -5874,10 +5904,9 @@ export class GameScene extends Phaser.Scene {
     const kinds = NAMIOT.rodzaje;
     const have = session.namioty.length ? `\n\nTwoje namioty: ${this.tentsText()}.` : '';
     // The axe: buy one, or sharpen a blunt one.
-    const ax = item('siekiera')!;
-    const owned = [gear.equip.bron, ...gear.bag.map((s) => ('item' in s ? s.item : null))].find((id) => id === ax.id);
-    const fixes = this.sellsAxe(p) ? repairable().filter(id => item(id)?.miejsce === 'bron') : [];
-    const tools: [string, () => void][] = !this.sellsAxe(p) || owned ? [] : [[this.label(ax), () => this.buy(ax)]];
+    const toolItems = [ ...(this.sellsAxe(p) ? [item('siekiera')!] : []), item('kilof')! ].filter(it => !owns(it.id));
+    const fixes = repairable().filter(id => item(id)?.miejsce === 'bron');
+    const tools: [string, () => void][] = toolItems.map(it => [this.label(it), () => this.buy(it)]);
     const vehicles = SIEKIERA.sportowy.test(p.name)
       ? PRZEDMIOTY.filter((it) => it.pojazd && !this.ownsVehicle(it.id)) : [];
     const entries: ShopEntry[] = [
@@ -5886,17 +5915,17 @@ export class GameScene extends Phaser.Scene {
         name: `Napraw: ${item(id)!.nazwa}`, category: 'services', picture: itemPictureUrl(id),
         description: 'Warsztat budowlany naprawi twoją broń i narzędzia.',
         stats: [['Wytrzymałość', `${condition(id)!.left}/${condition(id)!.max}`]], price: repairCost(id), action: 'NAPRAW', refresh: true })),
-      ...tools.map((_, i) => shopItem(ax, vehicles.length + i, this.cenaDla(ax))),
+      ...tools.map((_, i) => shopItem(toolItems[i], vehicles.length + i, this.cenaDla(toolItems[i]))),
       ...kinds.map((k, i): ShopEntry => ({ id: `tent:${i}`, index: vehicles.length + tools.length + i, name: k.nazwa,
         category: 'supplies', description: 'Rozłożysz go w lesie albo na polu z karty postaci. Nocleg zapisuje grę i miejsce startu.',
         stats: [['Noclegi', String(k.noclegow)]], price: k.cena, action: 'KUP', refresh: true })),
     ];
     this.shopDialog(p, {
       title: `🏕 ${p.name}`,
-      text: `Na półkach leżą namioty${tools.length && !owned ? ' i siekiery' : ''}${vehicles.length ? ' oraz pojazdy' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot.${tools.length ? ' Z siekierą ścięte drzewo daje drewno, a nie chrust.' : ''}${vehicles.length ? ' Pojazd trzymaj w plecaku; wsiądziesz obrazkiem w panelu gry.' : ''} Masz ${session.coins} monet${vehicles.length ? ` i ${session.diamenty} 💎` : ''}.${have}`,
+      text: `Na półkach leżą namioty${tools.length ? ' i narzędzia' : ''}${vehicles.length ? ' oraz pojazdy' : ''}. Namiot rozłożysz w lesie albo na polu (karta postaci 👤) i prześpisz się tam – zapis gry i miejsce startu. Każdy nocleg trochę zużywa namiot. Kilofem wydobędziesz żelazo ze złóż w terenie.${vehicles.length ? ' Pojazd trzymaj w plecaku; wsiądziesz obrazkiem w panelu gry.' : ''} Masz ${session.coins} monet${vehicles.length ? ` i ${session.diamenty} 💎` : ''}.${have}`,
       buttons: [...vehicles.map((v) => this.label(v)), ...tools.map(([l]) => l), ...kinds.map((k) => `⛺ ${k.nazwa}: ${k.noclegow} noclegów – ${k.cena} 💰`),
         ...fixes.map(id => `Napraw: ${item(id)!.nazwa} – ${repairCost(id)} monet`), 'Wyjdź'],
-      icons: [...vehicles.map((v) => itemTexture(v.id)), ...tools.map(() => itemTexture('siekiera')), ...kinds.map(() => null), ...fixes.map(id => itemTexture(id)), null],
+      icons: [...vehicles.map((v) => itemTexture(v.id)), ...toolItems.map(it => itemTexture(it.id)), ...kinds.map(() => null), ...fixes.map(id => itemTexture(id)), null],
       onChoose: (i) => {
         if (vehicles[i]) return this.buy(vehicles[i]);
         i -= vehicles.length;
@@ -5912,7 +5941,7 @@ export class GameScene extends Phaser.Scene {
         this.save();
         this.toast(`⛺ Kupiony: ${k.nazwa} (${k.noclegow} noclegów). Rozłożysz go w lesie albo na polu z karty postaci.`, 3000);
       },
-    }, entries, () => this.openGearShop(p), 'Namioty i wyposażenie na kolejną wyprawę.');
+    }, entries, () => this.openGearShop(p), 'Narzędzia i wyposażenie na wyprawę.');
   }
 
   /** Mechanics buy iron ore/wood and repair owned equipment. */

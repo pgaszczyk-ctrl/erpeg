@@ -395,7 +395,7 @@ function show(host: CharacterHost) {
         const i = at.i;
         const sl = gear.bag[i];
         if (!sl) return;
-        if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
+        if ('goods' in sl) return ask(`${goodsLabel(sl)} – sprzedasz w sklepie${sl.goods === 'drewno' || sl.goods === 'surowce' ? '' : ', zjesz przyciskiem leczenia'}.`, [['Wyrzuć', () => dropFromBag(i)]]);
         if ('esencja' in sl) return ask(slotLabel(sl), [['Wyrzuć', () => dropFromBag(i)]]);
         ask(itemCard(sl.item), item(sl.item)?.pojazd || item(sl.item)?.leczenie
           ? [['Wyrzuć', () => dropFromBag(i)]]
