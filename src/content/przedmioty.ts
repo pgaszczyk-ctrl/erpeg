@@ -1,3 +1,4 @@
+import { tx } from '../i18n';
 // ============================================================================
 //  PRZEDMIOTY I UMIEJĘTNOŚCI
 //  Gracz zaczyna jako wojownik z kijkiem. W bibliotece może nauczyć się
@@ -11,6 +12,8 @@ export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet'
 /** Trzy miejsca na talizmany (przedmioty z miejsce: 'talizman' idą do pierwszego wolnego). */
 export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
 import type { Amunicja } from './zuzycie';
+import { POJAZDY } from './sklepy';
+import { WYTWORCY } from './wytworcy';
 
 export type Umiejetnosc = 'miecz' | 'luk' | 'magia';
 
@@ -21,8 +24,16 @@ export interface Przedmiot {
   miejsce: Miejsce;
   /** Obrażenia (broń; kijek na 10. poziomie ≈ stalowy miecz 7 na 1.) albo obrona (zbroja, hełm, buty). */
   moc: number;
+  /** Shared artwork / weapon family. Existing IDs remain valid in saves and loot. */
+  baza?: string;
+  jakosc?: number;
+  obrazenia?: [number, number];
+  /** Minimum weapon skill (never character level). Quality variants share the family threshold. */
+  wymaganySkill?: number;
   /** Cena w sklepie (0 = nie do kupienia). */
   cena: number;
+  /** Premium price; charged instead of coins. */
+  cenaDiamenty?: number;
   /** Łuk albo magia (różdżka w ręce; kula/księga w drugiej ręce wzmacniają czary). */
   rodzaj?: 'luk' | 'magia';
   /** What a ranged weapon shoots (default arrows). */
@@ -41,6 +52,8 @@ export interface Przedmiot {
   efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie' | 'celnosc' | 'obrona';
   /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
   fabularny?: boolean;
+  /** Prepared food: heals this many hearts, after potions and edible harvests. */
+  leczenie?: number;
   /** Krótki opis pokazywany w karcie postaci. */
   opis?: string;
   /** Ile ciosów/strzałów wytrzyma, zanim się zepsuje (content/zuzycie.ts); brak = nie zużywa się. */
@@ -48,19 +61,32 @@ export interface Przedmiot {
   /** Szkło: zużywa się na każdym poziomie trudności i po ostatnim ciosie pęka (znika). */
   szklany?: boolean;
   /** A tool: works from the backpack too (the axe turns felled trees into wood instead of brushwood). */
-  narzedzie?: 'siekiera';
+  narzedzie?: 'siekiera' | 'kilof';
+  /** Vehicles stay in the backpack; their HUD buttons toggle riding. */
+  pojazd?: 'rower' | 'hulajnoga';
+  /** Worn (any place): walking faster by this share (Buty biegacza 0.1 = +10%). */
+  bieg?: number;
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze
 // ok. 50×, żeby na dobry sprzęt trzeba było popracować (owoce, zlecenia).
 export const PRZEDMIOTY: Przedmiot[] = [
+  { id: 'rower', nazwa: 'Welocyped parowy', miejsce: 'talizman', moc: 0, cena: POJAZDY.rower.monet, pojazd: 'rower', opis: 'Jazda o 25% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
+  { id: 'hulajnoga_parowa', nazwa: 'Hulajnoga parowa', miejsce: 'talizman', moc: 0, cena: 0, cenaDiamenty: POJAZDY.hulajnoga.diamenty, pojazd: 'hulajnoga', opis: 'Jazda o 40% szybciej. Trzymaj w plecaku. Obrazek na mapie pozwala wsiąść lub zejść.' },
   // Broń do ręki (klik)
+  // Quest equipment has no resale value; one global reward per character.
+  { id: 'miecz_rekruta', nazwa: 'Miecz ćwiczebny straży', miejsce: 'bron', moc: 2, cena: 0 },
+  { id: 'luk_rekruta', nazwa: 'Stary łuk ćwiczebny', miejsce: 'bron', rodzaj: 'luk', moc: 2, cena: 0 },
+  { id: 'rozdzka_szkolna', nazwa: 'Różdżka szkoleniowa', miejsce: 'bron', rodzaj: 'magia', moc: 2, cena: 0 },
+  { id: 'kapelusz_szkolny', nazwa: 'Kapelusz szkoleniowy', miejsce: 'helm', moc: 1, cena: 0 },
   { id: 'kijek', nazwa: 'Kijek', miejsce: 'bron', moc: 1, cena: 0 },
   // Owner, 5 Oct 2026 (docs/ekonomia.md: „Bez narzędzia: chrust. Siekiera → drewno”): sold in DIY shops and in
   // every 3rd ordinary shop (SIEKIERA). Wears one point per felled tree; a blunt one gives brushwood again.
+  { id: 'kilof', nazwa: 'Kilof', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'kilof',
+    opis: 'Wydobywa grudki rudy ze złóż – wystarczy mieć go w plecaku. Pięć uderzeń daje jedną grudkę; złoże odnawia się codziennie.' },
   { id: 'siekiera', nazwa: 'Siekiera', miejsce: 'bron', moc: 3, cena: 1500, wytrzymalosc: 200, narzedzie: 'siekiera',
     opis: 'Ścięte drzewo daje drewno zamiast chrustu – wystarczy mieć ją w plecaku. Można też nią walczyć.' },
-  { id: 'zelazny', nazwa: 'Żelazny miecz', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
+  { id: 'zelazny', nazwa: 'Miecz treningowy', miejsce: 'bron', moc: 4, cena: 1500, wytrzymalosc: 600 },
   // Drabinka z docs/ekonomia.md (kij → żelazo → mosiądz → stal → stal hartowana → damasceńska); ikony z paczki ikony12 B1.
   // Liczby tymczasowe, wpasowane między stare szczeble – do przeliczenia z nową gospodarką.
   { id: 'miecz_mosiezny', nazwa: 'Mosiężny miecz', miejsce: 'bron', moc: 5, cena: 3000, wytrzymalosc: 750, opis: 'Złocisty, z nitami i trybikiem przy jelcu.' },
@@ -79,7 +105,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
-  // Ochrona: każdy punkt obrony to 6% szans, że cios nie zrani (najwyżej 60%)
+  // Pancerz sumuje się i zmniejsza obrażenia fizyczne (content/pancerz.ts).
   // Tarcze (paczka ikony12 B2): w drugiej ręce, dodają obronę jak zbroja. Liczby tymczasowe.
   { id: 'tarcza_drewniana', nazwa: 'Tarcza drewniana', miejsce: 'dystans', moc: 1, cena: 700, opis: 'Okrągła, z desek. W drugiej ręce: +1 do obrony.' },
   { id: 'tarcza_okuta', nazwa: 'Tarcza okuta', miejsce: 'dystans', moc: 3, cena: 4500, opis: 'Z żelaznym obrzeżem i mosiężnym umbem. W drugiej ręce: +3 do obrony.' },
@@ -105,13 +131,64 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kieszonkowy_chronometr', nazwa: 'Kieszonkowy Chronometr', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Tyka równo jak serce Zębatka. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'cukierniczy_cylinder', nazwa: 'Cukierniczy Cylinder', miejsce: 'helm', moc: 1, cena: 0, efekt: 'zycie', opis: 'Pachnie lukrem. Daje jedno serce życia więcej.' },
   // „Przebudzenie Starego Grodu” (owner's spec, 6 Oct 2026): rewards of its chain; numbers as in the spec.
+  // „Czarci Wyrok” (owner, 1 Nov 2026): the name and description in both languages (getters: read in the player's language).
+  { id: 'pioro_trybunalu', get nazwa() { return tx('Pióro Trybunału', 'Tribunal Quill'); }, miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', get opis() { return tx('Pióro, którym zapisano sprawiedliwy wyrok. Z nim trafiasz, w co celujesz (+10% trafień).', 'The quill that wrote a just verdict. With it you hit what you aim at (+10% hits).'); } },
   { id: 'zegarek_czeladnika', nazwa: 'Zegarek czeladnika', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', opis: 'Tyka równo jak serce. Z nim trafiasz, w co celujesz (+10% trafień).' },
   { id: 'filtr_aetherowy', nazwa: 'Filtr aetherowy', miejsce: 'talizman', moc: 1, cena: 0, efekt: 'obrona', opis: 'Od Pustelnika ze Starego Gaju. Dziki aether omija cię bokiem (obrona +1).' },
   { id: 'klasztorny_pochlaniacz', nazwa: 'Klasztorny pochłaniacz', miejsce: 'zbroja', moc: 5, cena: 0, opis: 'Nosili go dominikanie w czasach Wielkiej Wojny o Tryby.' },
   { id: 'plaszcz_cechmistrza', nazwa: 'Płaszcz Cechmistrza', miejsce: 'zbroja', moc: 6, cena: 0, opis: 'Dla Strażnika Serca Miasta.' },
   { id: 'karabin_trybunal', nazwa: 'Karabin „Trybunał”', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 16, cena: 0, wytrzymalosc: 1600, opis: 'Parowy karabin wyborowy. Wyrok zapada z daleka.' },
-  { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true, opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
+  // Elzet 10 (owner's quest, 30 Oct 2026; content/elzet.ts): the robot's gifts. Numbers temporary.
+  { id: 'zlota_pilka', nazwa: 'Złota piłka na łańcuszku', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'celnosc', opis: 'Została po Elzecie 10. Noszona jako talizman: trafiasz pewniej (+10% trafień).' },
+  { id: 'buty_biegacza', nazwa: 'Buty biegacza', miejsce: 'buty', moc: 2, cena: 0, bieg: 0.1, opis: 'Magiczne buty od Elzeta 10 („Prosto z butiku”). Chodzisz o 10% szybciej.' },
+  { id: 'paczek', nazwa: 'Pączek', miejsce: 'talizman', moc: 0, cena: 0, fabularny: true,
+    leczenie: WYTWORCY.paczkarnia.hearts,
+    opis: 'Pączek z Dobrej Cukierni. Ktoś łasy na słodycze na pewno go zechce.' },
+  {
+    id: 'hamburger', nazwa: 'Burger warzywny', miejsce: 'talizman', moc: 0, cena: 0,
+    leczenie: WYTWORCY.mcdonalds.hearts,
+    opis: 'Przygotowany wyłącznie z warzyw. Leczenie zużywa go po miksturach i jadalnych zbiorach.',
+  },
 ];
+
+// Training/prologue equipment remains usable at skill 1. Thresholds follow weapon families.
+const WYMAGANIA_BRONI: Record<string, number> = {
+  kijek: 1, miecz_rekruta: 1, luk_rekruta: 1, rozdzka_szkolna: 1,
+  zelazny: 3, miecz_mosiezny: 4, stalowy: 5, szabla_hartowana: 8, rycerski: 10,
+  karabela_damascenska: 12, szklany_miecz: 10, siekiera: 1,
+  luk: 1, luk_refleksyjny: 5, dlugi_luk: 7, kusza: 10, pistolet_parowy: 12,
+  rozdzka: 1, swietlisty: 8, gromowladny: 8, karabin_trybunal: 12,
+};
+for (const p of PRZEDMIOTY) if (p.miejsce === 'bron') p.wymaganySkill = WYMAGANIA_BRONI[p.id] ?? 1;
+
+/** Five qualities for the three families whose ranges the owner approved (29 Oct 2026).
+ * Existing IDs are the ordinary quality; never rename save/quest identifiers. */
+export const JAKOSCI_BRONI = ['Kiepski', 'Zwykły', 'Solidny', 'Doskonały', 'Mistrzowski'];
+const RODZINY_BRONI: [string, number, number][] = [['kijek', 3, 5], ['zelazny', 5, 7], ['stalowy', 7, 10]];
+for (const [id, min, max] of RODZINY_BRONI) {
+  const p = PRZEDMIOTY.find(p => p.id === id)!;
+  const nazwa = p.nazwa;
+  p.baza = id; p.jakosc = 1; p.obrazenia = [min + 1, max + 1];
+  p.nazwa = `${nazwa} — ${JAKOSCI_BRONI[1].toLowerCase()}`;
+  for (const q of [0, 2, 3, 4]) PRZEDMIOTY.push({ ...p, id: `${id}_jakosc${q}`, jakosc: q,
+    nazwa: `${nazwa} — ${JAKOSCI_BRONI[q].toLowerCase()}`, obrazenia: [min + q, max + q] });
+}
+
+/** Armour qualities share save IDs and artwork with their ordinary variant. */
+export const JAKOSCI_PANCERZA = ['Kiepska', 'Zwykła', 'Dobra', 'Świetna', 'Doskonała'];
+const RODZINY_PANCERZA: [string, number[]][] = [
+  ['skorzana_zbroja', [5, 6, 7, 8, 10]], ['kolczuga', [9, 10, 11, 12, 14]],
+  ['skorzany_helm', [2, 3, 4, 5, 6]], ['zelazny_helm', [4, 5, 6, 7, 8]],
+  ['skorzane_buty', [1, 2, 3, 4, 5]], ['zelazne_buty', [3, 4, 5, 6, 7]],
+];
+for (const [id, wartosci] of RODZINY_PANCERZA) {
+  const p = PRZEDMIOTY.find(p => p.id === id)!;
+  const nazwa = p.nazwa;
+  p.baza = id; p.jakosc = 1; p.moc = wartosci[1];
+  p.nazwa = `${nazwa} — jakość: ${JAKOSCI_PANCERZA[1].toLowerCase()}`;
+  for (const q of [0, 2, 3, 4]) PRZEDMIOTY.push({ ...p, id: `${id}_jakosc${q}`, jakosc: q,
+    nazwa: `${nazwa} — jakość: ${JAKOSCI_PANCERZA[q].toLowerCase()}`, moc: wartosci[q] });
+}
 
 /** Talizman szybkości (efekt 'szybkosc'): o tyle szybciej chodzisz za każdy noszony. */
 export const SZYBKOSC_TALIZMANU = 0.04;
@@ -139,8 +216,6 @@ export const MIEJSCA: Record<Miejsce, string> = {
   talizman3: 'Talizman',
 };
 
-export const OBRONA_ZA_PUNKT = 0.06;
-export const OBRONA_MAKS = 0.6;
 
 /** Plecak: ile miejsc i ile owoców mieści się w jednym miejscu. */
 /** Plecak: tyle miejsc; jedna grupa (owoce, warzywa…) mieści tyle sztuk na miejsce. */
@@ -154,10 +229,10 @@ export const PLECAK = { miejsc: 20, owocowNaMiejsce: 200 };
 //  Najwyżej poziom 20. Przerwy, celność i obrażenia: content/walka.ts
 //  (magia na razie po staremu: `przerwa` − poziom × `szybciejNaPoziom`).
 // ----------------------------------------------------------------------------
-export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; przerwa: number; szybciejNaPoziom: number }> = {
-  miecz: { nazwa: 'Walka wręcz', przerwa: 320, szybciejNaPoziom: 18 },
-  luk: { nazwa: 'Łucznictwo', przerwa: 650, szybciejNaPoziom: 35 },
-  magia: { nazwa: 'Magia', przerwa: 750, szybciejNaPoziom: 40 },
+export const UMIEJETNOSCI: Record<Umiejetnosc, { nazwa: string; dopelniacz: string; przerwa: number; szybciejNaPoziom: number }> = {
+  miecz: { nazwa: 'Krzepa', dopelniacz: 'krzepy', przerwa: 320, szybciejNaPoziom: 18 },
+  luk: { nazwa: 'Celność', dopelniacz: 'celności', przerwa: 650, szybciejNaPoziom: 35 },
+  magia: { nazwa: 'Skupienie', dopelniacz: 'skupienia', przerwa: 750, szybciejNaPoziom: 40 },
 };
 export const PIERWSZY_POZIOM = 100;
 export const MNOZNIK_POZIOMU = 1.5;

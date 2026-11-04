@@ -11,7 +11,75 @@
 // handled, or that share a timestamp with the previous one, which left keys
 // "held" forever. Here any keyup releases the key, whatever happened to it.
 
+import { live } from './walka/live';
+import { naEkranie } from './obrot';
+
 export const JOY_RADIUS = 56;
+
+/** Explicit interaction input, shared by E, the HUD and object clicks. */
+let interakcja: { x: number; y: number; target?: WorldInteraction | null } | null = null;
+export type InteractionKind = 'talk' | 'enter' | 'use';
+export interface WorldInteraction { kind: InteractionKind; run: () => void }
+/** Installed by the active game scene; querying never performs an action. */
+export const worldInteraction = { at: null as ((x: number, y: number) => WorldInteraction | null) | null, current: null as (() => WorldInteraction | null) | null };
+export function requestInteraction() { interakcja = { x: -1, y: -1, target: worldInteraction.current?.() }; }
+/** A double tap/click since the last call: where (CSS px on the game), or (-1, -1) = near the hero (E key). */
+export function consumeInteraction() {
+  const i = interakcja;
+  interakcja = null;
+  return i;
+}
+let strongRequest = false;
+/** The strong attack / skill button or Q since the last call. */
+export function consumeStrong() {
+  const s = strongRequest;
+  strongRequest = false;
+  return s;
+}
+export function requestStrong() {
+  strongRequest = true;
+}
+export function requestHeal() {
+  healRequest = true;
+}
+/** The HTML attack button (ui/sterowanie.ts): pressed (a swing; holding aims a bow/wand) and let go. */
+export function pressAttack() {
+  // The attack stick decides on release (exp-lore): a quick tap attacks, a drag aims, a long hold is the strong blow.
+  touchInput.attackHeld = true;
+  startHold('touch', -9);
+  holdOrigin.x = 0;
+  holdOrigin.y = 0;
+}
+export function dragAttack(dx: number, dy: number) {
+  if (!hold.active || hold.id !== -9) return;
+  hold.dx = dx;
+  hold.dy = dy;
+  if (Math.hypot(dx, dy) > 14) hold.dragged = true;
+}
+export function releaseAttack() {
+  touchInput.attackHeld = false;
+  if (!hold.active || hold.id !== -9) return;
+  if (!hold.dragged && performance.now() - hold.start < TAP_ATAK_MS) {
+    touchInput.attack = true;
+  }
+  endHold();
+}
+/** Shorter than this (and no drag) on the attack stick is a plain tap = attack (the game's AIM_DELAY). */
+const TAP_ATAK_MS = 250;
+const DBL_MS = 380;
+const DBL_PX = 36;
+let lastTap: { x: number; y: number; t: number } | null = null;
+/** A short tap (or click) at (x, y): a second one soon after near the first is an interaction. */
+function tapped(x: number, y: number, nativeDouble = false) {
+  const now = performance.now();
+  if (nativeDouble || (lastTap && now - lastTap.t < DBL_MS && Math.hypot(x - lastTap.x, y - lastTap.y) < DBL_PX)) {
+    interakcja = { x, y };
+    lastTap = null;
+    return;
+  }
+  lastTap = { x, y, t: now };
+}
+const tapStarts = new Map<number, { x: number; y: number; t: number }>();
 /** Where the joystick is shown while idle (a hint; set by UIScene's layout). */
 export const joyHome = { x: 0, y: 0 };
 /** The attack button (set by UIScene's layout): only a touch on it attacks. */
@@ -57,6 +125,33 @@ export const hold = {
   id: -1,
 };
 export const mouse = { x: 0, y: 0 };
+
+/**
+ * The turn fight (walka/TuryWalki.ts): while set, a short tap or click on the map is a pick (target or spot)
+ * – no joystick, no swing. A drag doesn't count (it isn't a tap).
+ */
+export const mapaWalki: {
+  fn: ((x: number, y: number) => void) | null;
+  /** A drag on the map (from where it began to where the finger is; `koniec` on release). */
+  drag: ((x0: number, y0: number, x: number, y: number, koniec: boolean) => void) | null;
+} = { fn: null, drag: null };
+const pickDragged = new Set<number>();
+const pickStarts = new Map<number, { x: number; y: number; t: number }>();
+const PICK_DRAG = 12;
+const PICK_MS = 700;
+
+/**
+ * A dialog too tall for the screen (UIScene.showDialog): its brass rail can be dragged or tapped to scroll,
+ * like the Kufer's own rail (ui/character.ts). Set only while such a dialog is open; a mouse wheel over the
+ * game scrolls it too. Touches/clicks the rail swallows never reach the joystick or a dialog button.
+ */
+export const dialogRail: {
+  hit: ((x: number, y: number) => boolean) | null;
+  set: ((y: number) => void) | null;
+  wheel: ((dy: number) => void) | null;
+} = { hit: null, set: null, wheel: null };
+let railTouchId: number | null = null;
+let railMouseDown = false;
 /** Set when a hold ends; the game reads and clears it. */
 export let release: { mode: 'touch' | 'mouse' | 'key'; dx: number; dy: number; dragged: boolean; held: number } | null = null;
 
@@ -85,7 +180,10 @@ const tapListeners = new Set<TapListener>();
 /** A key pressed while typing in a text field (bug report, codes…) is the player's text, never a game key (report 58). */
 export function typingInField(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null;
-  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  // Range navigation stays native, but E/WASD/Space must still work after selecting a skill.
+  if (t?.tagName === 'INPUT' && (t as HTMLInputElement).type === 'range')
+    return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key);
+  return !!t && ((t.tagName === 'INPUT' && (t as HTMLInputElement).type !== 'range') || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
 }
 
 /** The ☰ menu button's corner of the screen (CSS px; UIScene opens the menu on a tap there). */
@@ -141,15 +239,31 @@ export function consumeAttack() {
   return a;
 }
 
+/**
+ * A press that belonged to a dialog (choosing an answer) is not an attack: no swing, no hold, no strong blow
+ * after the dialog closes (owner, 12 Oct 2026). The joystick, if any, stays.
+ */
+export function cancelPress() {
+  hold.active = false;
+  release = null;
+  pendingAim = null;
+  touchInput.attack = false;
+}
+
 export function resetKeys() {
   heldKeys.clear();
 }
 
 export function resetTouch() {
+  interakcja = null;
+  lastTap = null;
+  tapStarts.clear();
   hold.active = false;
   release = null;
   joyId = null;
   attackIds = new Set();
+  railTouchId = null;
+  railMouseDown = false;
   touchInput.x = touchInput.y = 0;
   touchInput.attack = false;
   touchInput.attackHeld = false;
@@ -158,8 +272,8 @@ export function resetTouch() {
 
 export function installTouchControls(el: HTMLElement) {
   const local = (t: Touch) => {
-    const r = el.getBoundingClientRect();
-    return { x: t.clientX - r.left, y: t.clientY - r.top };
+    const p = naEkranie(t.clientX, t.clientY);
+    return { x: p.x - el.offsetLeft, y: p.y - el.offsetTop };
   };
 
   /** The knob follows the thumb (up to the rim); further out = faster. */
@@ -181,11 +295,12 @@ export function installTouchControls(el: HTMLElement) {
 
   const sync = (e: TouchEvent) => {
     const alive = new Set(Array.from(e.touches, (t) => t.identifier));
+    if (railTouchId !== null && !alive.has(railTouchId)) railTouchId = null;
     if (joyId !== null && !alive.has(joyId)) {
       joyId = null;
       touchInput.x = touchInput.y = 0;
       // A quick tap on the joystick (no steering) is a sword swing: one-handed play.
-      if (performance.now() - joyTap.start < JOY_TAP_MS && joyTap.maxDrag < JOY_TAP_DRAG) touchInput.attack = true;
+      if (!live() && performance.now() - joyTap.start < JOY_TAP_MS && joyTap.maxDrag < JOY_TAP_DRAG) touchInput.attack = true;
     }
     for (const id of attackIds) if (!alive.has(id)) attackIds.delete(id);
     if (hold.active && hold.mode === 'touch' && !alive.has(hold.id)) endHold();
@@ -199,6 +314,30 @@ export function installTouchControls(el: HTMLElement) {
     sync(e);
     for (const t of Array.from(e.changedTouches)) {
       const p = local(t);
+      if (dialogRail.hit?.(p.x, p.y)) {
+        railTouchId = t.identifier;
+        dialogRail.set?.(p.y);
+        continue;
+      }
+      if (mapaWalki.fn) {
+        // Turn fight: remember the touch, it becomes a pick on release.
+        if (!onMenuButton(p.x, p.y)) pickStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
+        tapListeners.forEach((fn) => fn(p.x, p.y));
+        continue;
+      }
+      if (live()) {
+        // Fixed joystick bottom-left: a thumb anywhere near it steers from its centre.
+        if (joyId === null && p.y > 70 && Math.hypot(p.x - joyHome.x, p.y - joyHome.y) < JOY_RADIUS * 2.4) {
+          joyId = t.identifier;
+          touchInput.joyOriginX = joyHome.x;
+          touchInput.joyOriginY = joyHome.y;
+          joyTap.start = performance.now();
+          joyTap.maxDrag = 0;
+          steer(p);
+        } else if (!onMenuButton(p.x, p.y)) tapStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
+        tapListeners.forEach((fn) => fn(p.x, p.y));
+        continue;
+      }
       if (onHeal(p.x, p.y)) {
         healRequest = true;
       } else if (joyId !== null && p.y > 70) {
@@ -230,7 +369,21 @@ export function installTouchControls(el: HTMLElement) {
   const move = (e: TouchEvent) => {
     e.preventDefault();
     sync(e);
+    // Turn fight: dragging (the hero onto a spot) previews a move.
+    for (const t of Array.from(e.changedTouches)) {
+      const s = pickStarts.get(t.identifier);
+      if (!s || !mapaWalki.drag) continue;
+      const p = local(t);
+      if (pickDragged.has(t.identifier) || Math.hypot(p.x - s.x, p.y - s.y) >= PICK_DRAG) {
+        pickDragged.add(t.identifier);
+        mapaWalki.drag(s.x, s.y, p.x, p.y, false);
+      }
+    }
     for (const t of Array.from(e.touches)) {
+      if (t.identifier === railTouchId) {
+        dialogRail.set?.(local(t).y);
+        continue;
+      }
       if (hold.active && hold.mode === 'touch' && t.identifier === hold.id) {
         const p = local(t);
         hold.dx = p.x - holdOrigin.x;
@@ -244,6 +397,26 @@ export function installTouchControls(el: HTMLElement) {
   const end = (e: TouchEvent) => {
     // Only swallow touches on the game itself, so taps on HTML menus still click.
     if (e.cancelable && el.contains(e.target as Node)) e.preventDefault();
+    for (const t of Array.from(e.changedTouches)) {
+      const tap = tapStarts.get(t.identifier);
+      if (tap) {
+        tapStarts.delete(t.identifier);
+        const p = local(t);
+        if (e.type === 'touchend' && Math.hypot(p.x - tap.x, p.y - tap.y) < 14 && performance.now() - tap.t < 450) {
+          const target=live()?worldInteraction.at?.(p.x,p.y):null;
+          if(target)target.run();else tapped(p.x,p.y);
+        }
+      }
+      const s = pickStarts.get(t.identifier);
+      if (!s) continue;
+      pickStarts.delete(t.identifier);
+      const p = local(t);
+      if (pickDragged.delete(t.identifier)) {
+        if (e.type === 'touchend') mapaWalki.drag?.(s.x, s.y, p.x, p.y, true);
+        continue;
+      }
+      if (e.type === 'touchend' && mapaWalki.fn && Math.hypot(p.x - s.x, p.y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(p.x, p.y);
+    }
     sync(e);
   };
 
@@ -263,7 +436,7 @@ export function installTouchControls(el: HTMLElement) {
   // Capture phase on window so we see keys before anything else can
   // swallow them; defaultPrevented is deliberately ignored.
   // While an HTML screen (start menu) is open, keys belong to it.
-  const menuOpen = () => !!document.querySelector('#menu, .m-screen');
+  const menuOpen = () => !!document.querySelector('#menu, .m-screen, #loading-map:not([hidden])');
   window.addEventListener(
     'keydown',
     (e) => {
@@ -275,6 +448,10 @@ export function installTouchControls(el: HTMLElement) {
         e.preventDefault();
       } else if (code === 'KeyH') {
         if (!e.repeat) healRequest = true;
+      } else if (live() && code === 'KeyE') {
+        if (!e.repeat) requestInteraction();
+      } else if (live() && code === 'KeyQ') {
+        if (!e.repeat) strongRequest = true;
       } else if (ATTACK_KEYS.has(code)) {
         if (!e.repeat) {
           touchInput.attack = true;
@@ -302,17 +479,50 @@ export function installTouchControls(el: HTMLElement) {
   el.addEventListener('mousemove', (e) => {
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (railMouseDown) {
+      dialogRail.set?.(e.offsetY);
+      return;
+    }
+    const s = pickStarts.get(-2);
+    if (s && mapaWalki.drag && (pickDragged.has(-2) || Math.hypot(e.offsetX - s.x, e.offsetY - s.y) >= PICK_DRAG)) {
+      pickDragged.add(-2);
+      mapaWalki.drag(s.x, s.y, e.offsetX, e.offsetY, false);
+    }
   });
   window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) railMouseDown = false;
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
+    const s = pickStarts.get(-2);
+    if (e.button === 0 && s) {
+      pickStarts.delete(-2);
+      const p = naEkranie(e.clientX, e.clientY);
+      const x = p.x - el.offsetLeft, y = p.y - el.offsetTop;
+      if (pickDragged.delete(-2)) mapaWalki.drag?.(s.x, s.y, x, y, true);
+      else if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
+    }
   });
   el.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     mouse.x = e.offsetX;
     mouse.y = e.offsetY;
+    if (dialogRail.hit?.(e.offsetX, e.offsetY)) {
+      railMouseDown = true;
+      dialogRail.set?.(e.offsetY);
+      return;
+    }
+    if (mapaWalki.fn) {
+      if (!onMenuButton(e.offsetX, e.offsetY)) pickStarts.set(-2, { x: e.offsetX, y: e.offsetY, t: performance.now() });
+      tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
+      return;
+    }
     if (onHeal(e.offsetX, e.offsetY)) {
       healRequest = true;
       return;
+    }
+    // Resolve again on click: the hero, camera or object may have moved since hover.
+    if (live() && !onMenuButton(e.offsetX, e.offsetY)) {
+      const target = worldInteraction.at?.(e.offsetX, e.offsetY);
+      if (target) { cancelPress(); target.run(); return; }
     }
     // A click on the ☰ menu button only opens the menu: no swing, so no talk with someone standing near.
     if (!onMenuButton(e.offsetX, e.offsetY)) {
@@ -322,5 +532,12 @@ export function installTouchControls(el: HTMLElement) {
     }
     tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
   });
+  // A computer's wheel scrolls an open dialog too tall for the screen (no need to find its rail).
+  el.addEventListener('wheel', (e) => {
+    if (!dialogRail.wheel) return;
+    e.preventDefault();
+    dialogRail.wheel(e.deltaY);
+  }, { passive: false });
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 }
+

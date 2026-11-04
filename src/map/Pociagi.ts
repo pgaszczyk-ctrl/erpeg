@@ -35,6 +35,8 @@ export class Pociagi {
     return this.pojazdy.some((v) => v.p.id === p.id);
   }
 
+  interactionVehicles() { return this.pojazdy.filter(v=>v.img.active&&v.img.visible); }
+
   stacjaPrzy(x: number, y: number, margin = 4): Place | null {
     const tex = this.scene.textures;
     for (const { p, img } of this.pojazdy) {
@@ -120,7 +122,9 @@ export class Pociagi {
 
 
   private pokaz(p: Place, typ: string, kat: number, x: number, y: number) {
-    if (!this.scene.sys.isActive()) return;
+    // A dialog pauses the scene; a train ready meanwhile must still appear (same as Wysokie).
+    const sys = this.scene.sys;
+    if (!sys.isActive() && !sys.isPaused() && !sys.isSleeping()) return;
     const key = `poj-${typ}-${kat}`;
     this.scene.add.image(x, y, `${key}-c`).setOrigin(0.5, 0.58).setScale(1 / GEN_DOTS).setAlpha(0.3).setDepth(GROUND_DEPTH + 5);
     const img = this.scene.add.image(x, y, key).setOrigin(0.5, 0.58).setScale(1 / GEN_DOTS).setDepth(y + 2);

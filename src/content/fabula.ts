@@ -13,8 +13,9 @@ export type Miejsce = string | { lat: number; lon: number };
  * glut = chochlik (3 życia), wielki_glut = wielki chochlik (18 życia, mocno bije),
  * bandyta (6 życia, szybki), driada (w lasach), zombie (przy wodzie),
  * szkielet (przy cmentarzach), smok (tylko w historii), wojownik (mieszkaniec w pojedynku).
+ * wilk / warg – test pilota „łowiska” (content/lowiska.ts, scenes/Lowiska.ts, tylko gdy lowiska() włączone).
  */
-export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol';
+export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada' | 'zombie' | 'szkielet' | 'wojownik' | 'herszt' | 'wielki_herszt' | 'blob' | 'wodnik' | 'koziol' | 'wilk' | 'warg' | 'upior' | 'elzet';
 
 /**
  * Rodzaj zadania (albo etapu misji wieloetapowej):
@@ -22,9 +23,10 @@ export type RodzajWroga = 'glut' | 'wielki_glut' | 'bandyta' | 'smok' | 'driada'
  * 'brak' – samo miejsce, 'zagadka' – jedno pytanie, 'zagadki' – kilka pytań po kolei,
  * 'rozmowa' – ktoś coś mówi (po dojściu na miejsce), 'podnies' – podnieś rzeczy leżące na ziemi,
  * 'napraw' – postój przy miejscu, aż pasek się napełni, 'wybor' – przekonaj zagadką albo zapłać,
- * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce.
+ * 'paragraf' – strony z wyborem drogi (zły wybór kosztuje serce), 'melodia' – zagraj na fujarce,
+ * 'loch' – zejście w miejscu etapu do lochu misji (zawsze ten sam układ); etap kończy otwarcie skrzyni po strażniku.
  */
-export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia';
+export type TypEtapu = 'pokonaj' | 'idz' | 'brak' | 'zbierz' | 'zagadka' | 'zagadki' | 'rozmowa' | 'podnies' | 'napraw' | 'wybor' | 'paragraf' | 'melodia' | 'decyzja' | 'badanie' | 'uklad' | 'loch';
 
 /** Pytanie z trzema (lub więcej) odpowiedziami; `dobra` = numer dobrej (0 = pierwsza). */
 export interface Pytanie {
@@ -40,6 +42,8 @@ export interface Strona {
 }
 
 export interface Zadanie {
+  /** Source-language and humour tag edited with a dialogue; older missions may omit it. */
+  dialogueMeta?: { language: 'pl' | 'en'; localHumor: boolean };
   /**
    * 'pokonaj' = pokonaj wrogów w danym miejscu, 'idz' = dojdź do miejsca,
    * 'brak' = samo miejsce bez zadania (np. partner z tajnym hasłem na ulotce),
@@ -84,6 +88,16 @@ export interface Postac {
 export interface Etap extends Zadanie {
   /** Okienko, gdy etap się zaczyna (dla 'rozmowa': to, co mówi postać). */
   tekst?: string;
+  /** A choice without a penalty; its stable ID is saved with the city scenario. */
+  wyborKlucz?: string;
+  opcje?: { id: string; tekst: string; wynik: string }[];
+  /** Visit any `ile` different clues, in any order; coordinates belong to the accepted city. */
+  tropy?: { id: string; miejsce: Miejsce; tytul: string; tekst: string; /** Button label instead of „Zapisz trop” (e.g. delivering a paper). */ przycisk?: string }[];
+  /** Arrange cards using stable IDs. Wrong arrangements have no health penalty. */
+  karty?: { id: string; tekst: string }[];
+  kolejnosc?: string[];
+  /** A saved decision can change the next activity without changing its stage index. */
+  warianty?: { klucz: string; wartosc: string; etap: Partial<Etap> }[];
   /** Przedmioty fabularne (nazwy) dane po wykonaniu etapu. */
   daje?: string[];
   /** Przedmioty fabularne zabrane po wykonaniu etapu. */
@@ -102,6 +116,11 @@ export interface Etap extends Zadanie {
   strony?: Strona[];
   /** 'idz': trzeba zdążyć (czas jak w wyzwaniach sportowych); po czasie etap cofa się o jeden. */
   naCzas?: boolean;
+  /**
+   * 'loch': jaki loch czeka pod wejściem (rysunek i potwory jak krypta albo katakumby), jego nazwa i strażnik
+   * skrzyni (domyślnie strażnik danego rodzaju). Układ zależy od misji i numeru etapu – zawsze ten sam.
+   */
+  loch?: { rodzaj: import('./lochy').RodzajLochu; nazwa?: string; straznik?: RodzajWroga };
 }
 
 /**
@@ -121,6 +140,10 @@ export interface Wymagania {
 
 export interface Misja {
   id: string;
+  /** Once per character, independent of city. Coordinates stay bound to the accepted map. */
+  scenariusz?: import('./questy/scenarios').CityBinding;
+  /** Geographic fallback for an accepted job whose old map origin/place id changed. */
+  dawca?: { lat: number; lon: number; mapId: string };
   /** Zleceniodawca stojący przy drzwiach misji (właściciel 7.10.2026: „w queście musi być ktoś”). */
   postac?: Postac;
   /** Budynek, w którym misję się dostaje (jego wejście świeci na złoto). */
@@ -176,12 +199,13 @@ export interface Wrogowie {
 // ----------------------------------------------------------------------------
 /**
  * Ile zadań naraz: główne (historia) + poboczne (misje, zlecenia, wyścigi,
- * trening). Nowego nie da się wziąć, gdy tyle jest aktywnych. Każde ma swój
- * kolor strzałki: główne złote, poboczne z listy KOLORY_ZADAN.
+ * trening). Bez limitu (właściciel, 13.10.2026: „jeśli user chce mieć 10, to
+ * niech ma; jeśli 100, to 100”) – wpisz liczbę, by go przywrócić. Każde ma swój
+ * kolor strzałki: główne złote, poboczne z listy KOLORY_ZADAN (po kolei, potem od nowa).
  */
-export const ZADAN_NARAZ = 3;
+export const ZADAN_NARAZ = Infinity;
 export const KOLOR_GLOWNEGO = '#f7c531';
-export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b'];
+export const KOLORY_ZADAN = ['#4fc3f7', '#ff6fb5', '#7be07b', '#ff9f43', '#c792ea', '#5ee6d0', '#ff6b6b', '#d4e157', '#f8a5c2', '#90caf9'];
 
 /** Jak daleko jest cel zadania – słownie (karta postaci → Zadania). Progi w kilometrach. */
 export const ODLEGLOSCI: [number, string][] = [

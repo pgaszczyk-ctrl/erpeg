@@ -1,7 +1,9 @@
+import { openMusic } from '../ui/music';
+import { tx } from '../i18n';
+import { showShop, type ShopHandle } from '../ui/shop';
 import { trzesienieWlaczone, ustawTrzesienie, efektGorWlaczony, ustawEfektGor } from '../ustawieniaGracza';
 import { GATUNKI_SMOKOW, type GatunekId } from '../content/smoki';
 import Phaser from 'phaser';
-import { WSKRZESZENIE, LECZENIE_OWOCAMI } from '../content/sklepy';
 import { askBug } from '../ui/bug';
 import { gameShotJpeg } from '../ui/snapshot';
 import { showPhoto } from '../ui/brag';
@@ -11,23 +13,40 @@ import { STRZALY, AMUNICJA } from '../content/zuzycie';
 import { report } from '../errlog';
 import { TEX, GOODS_TEX, arrowTexture } from '../art';
 import { wersjaNapis, TEST } from '../version';
+import { comicHud, paintBrassPad } from '../ui/comicHud';
 
 /** Quest arrows for goals off screen sit on a ring around the hero: radius = this share of the screen's shorter side. */
 const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
-import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, hudZoom } from '../ui/hud';
+import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudPortrait, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
+import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
 import { heroPortrait } from '../sprites';
-import { touchInput, resetTouch, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, activity, keyboardDir } from '../controls';
-import type { HudState, DialogRequest, GameScene } from './GameScene';
+import { PORTRETY_POSTACI } from '../content/portrety';
+import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
+/** Sheet id (`hd-<id>`) → its file name, so a portrait may be named after either. */
+const WYGLAD_PLIK: Record<string, string> = Object.fromEntries(
+  [...MIESZKANCY_HD, ...Object.values(STALE_HD)].map((p) => [p.id, p.plik]),
+);
+import { live } from '../walka/live';
+import { ODSTEP_OD_KRAWEDZI } from '../ui/hudLive';
+import { zainstaluj, jakoAplikacja } from '../instalacja';
+import { touchInput, resetTouch, cancelPress, onTap, typingInField, onMenuButton, JOY_RADIUS, joyHome, attackHome, healHome, dialogRail } from '../controls';
+import type { HudState, DialogRequest, GameScene, Rozmowca } from './GameScene';
 import { toggleMinimap, closeMinimap, isMinimapOpen } from '../ui/minimap';
+import { otworzTablice, tablicaOtwarta } from '../ui/tablicaMiasta';
 import { PLAYER } from '../objects/Player';
 import { toggleCharacter, closeCharacter, isCharacterOpen } from '../ui/character';
 import { showCodeOverlay } from '../ui/codeCard';
-import { OSTROSC, przyblizenie } from '../screen';
+import { OSTROSC, poziomPrzyblizenia } from '../screen';
+import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
+import { offline } from '../api';
+import { modulGracza, modulPortret, modulKlucz, PORTRET_PX } from '../ui/modulPostac';
+
+/** The telescopic HUD's first menu line: the character sheet. */
 
 // HUD (hearts, coins, street, mission goal + arrow), mission dialogs,
 // on-screen touch controls and the game-over screen.
@@ -47,15 +66,13 @@ export class UIScene extends Phaser.Scene {
   private overlay?: Phaser.GameObjects.Container;
   private ui = 3; // pixel scale for HUD art
 
-  private joyBase!: Phaser.GameObjects.Arc;
+  private joyBase!: Phaser.GameObjects.Arc | Phaser.GameObjects.Image;
   private joyKnob!: Phaser.GameObjects.Arc;
   private attackBtn!: Phaser.GameObjects.Arc;
   private attackLabel!: Phaser.GameObjects.Text;
   private touch = false;
   private joyHome = new Phaser.Math.Vector2();
   private joyArrows!: Phaser.GameObjects.Graphics;
-  private hintAt = 0;
-  private hintUntil = 0;
 
   private skillBar!: Phaser.GameObjects.Container;
   private skillFill!: Phaser.GameObjects.Rectangle;
@@ -66,8 +83,30 @@ export class UIScene extends Phaser.Scene {
   private toastText!: Phaser.GameObjects.Text;
   private hud?: HudState;
   private dialogBox?: Phaser.GameObjects.Container;
-  private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number }[] = [];
+  private shop?: ShopHandle;
+  private get hasDialog() { return !!this.dialogBox || !!this.shop; }
+  private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number; scrollable: boolean }[] = [];
   private dialogChoose?: (i: number) => void;
+  /** The open dialog's safe way out for Escape/Space (DialogRequest.zamknij), else its last button. */
+  private dialogZamknij?: number;
+  // A dialog too tall for the screen (openGameMenu, long quest/riddle text…): its text + buttons scroll below
+  // the fixed title, with a brass rail on the right (owner, 26 Oct 2026 – it didn't fit and couldn't be moved
+  // in landscape). Drag the rail, tap it, or use the mouse wheel; see controls.dialogRail. Phaser 4's
+  // GeometryMask only clips under the Canvas renderer, not this game's WebGL one, so instead of masking
+  // pixels, content is split into rows (one per line/button, `scrollRows`) and a row scrolled past the
+  // window is hidden whole rather than sliced – see `redrawScrollVisibility`.
+  /** The open paged talk (see showDialog), and the letter-by-letter writing of the current window. */
+  private strony?: Stronicowanie;
+  private pisanie?: { linie: { t: Phaser.GameObjects.Text; full: string }[]; ukryte: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[]; start: number; razem: number };
+  private dialogScroll?: Phaser.GameObjects.Container;
+  private scrollRows: ScrollRow[] = [];
+  // The row cut by the window's bottom edge peeks out (owner, 27 Oct 2026: „utnij fragment guzika, żeby
+  // zasugerować, że coś jest niżej”): its top part is drawn here and its text cropped.
+  private peekG?: Phaser.GameObjects.Graphics;
+  private dialogRailG?: Phaser.GameObjects.Graphics;
+  private scrollY = 0;
+  private scrollMax = 0;
+  private railGeom?: { x: number; y0: number; w: number; viewportH: number; contentH: number };
 
   constructor() {
     super('ui');
@@ -79,6 +118,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    this.scene.setVisible(!loadingGame());
     // Lay everything out in CSS pixels; the camera enlarges it to the sharper canvas.
     // (centred, not with origin 0: Graphics were drawn off their place that way)
     const fitCam = () => this.cameras.main.setZoom(OSTROSC).centerOn(this.view.width / 2, this.view.height / 2);
@@ -94,6 +134,16 @@ export class UIScene extends Phaser.Scene {
     }
     this.duelHearts = [];
     this.dialogButtons = [];
+    this.dialogScroll = undefined;
+    this.scrollRows = [];
+    this.peekG = undefined;
+    this.dialogRailG = undefined;
+    this.scrollY = 0;
+    this.scrollMax = 0;
+    this.railGeom = undefined;
+    dialogRail.hit = null;
+    dialogRail.set = null;
+    dialogRail.wheel = null;
     this.overlay = undefined;
     this.lastGoods = null;
     this.lastCoins = null;
@@ -106,7 +156,7 @@ export class UIScene extends Phaser.Scene {
     const label = (size: number, color = '#ffffff') =>
       this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: `${size}px`, color, stroke: '#1e1a24', strokeThickness: 4, align: 'center' });
     this.goalText = label(14, '#fff2a8').setOrigin(0.5, 0);
-    this.arrows = [0, 1, 2].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
+    this.arrows = [0, 1, 2, 3].map(() => this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     this.toastText = label(18, '#ffffff').setOrigin(0.5).setAlpha(0).setDepth(10);
     // Skill progress while training (shown for a moment after each practice hit):
     // an icon and a clear bar with a light frame (the soft blurred one was too faint on the map).
@@ -126,9 +176,14 @@ export class UIScene extends Phaser.Scene {
       quests: () => this.openCharacter('quests'),
       map: () => this.openMap(),
       zoom: () => (this.scene.get('game') as GameScene).toggleZoom(),
-      zoomOn: przyblizenie(),
+      zoomOn: poziomPrzyblizenia() === 2,
       camera: () => this.takePhoto(),
+      vehicle: (vehicle) => setTestVehicle(testVehicle === vehicle ? 'pieszo' : vehicle),
+      menu: () => this.openGameMenu(),
+      brakPojazdu: () => this.toast('🚲 Nie masz pojazdu. Rower i hulajnogę kupisz w sklepie sportowym.', 3000),
     });
+    // The telescopic HUD's portrait takes the ☰ corner; its first button opens the same menu.
+    this.menuBtn.setVisible(!teleskop());
     this.layout();
     this.heroAvatar();
     const onLook = () => this.heroAvatar();
@@ -139,30 +194,42 @@ export class UIScene extends Phaser.Scene {
     const onHud = (s: HudState) => this.updateHud(s);
     this.game.events.on('hud', onHud);
     const onDialog = (d: DialogRequest) => this.showDialog(d);
-    const onToast = (t: string, ms?: number) => this.toast(t, ms);
+    const onToast = (t: string, ms?: number) => { if (t !== 'Gra zapisana') this.shop?.message(t); this.toast(t, ms); };
     this.game.events.on('dialog', onDialog);
     this.game.events.on('toast', onToast);
     const onPractice = (p: { skill: string; into: number; need: number; max: boolean; gain?: number }) => this.showPractice(p);
     this.game.events.on('practice', onPractice);
     const offTap = onTap((x, y) => this.onDialogTap(x, y));
     const onKey = (e: KeyboardEvent) => {
+      if (loadingGame()) return;
       if (typingInField(e)) return;
-      if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.dialogBox) {
+      if (this.shop) {
+        if (e.key === 'Escape') { e.preventDefault(); this.chooseShop(this.shop.lastIndex); }
+        return;
+      }
+      if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.hasDialog) {
         this.openMap();
       }
-      if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.dialogBox) {
+      if ((e.key === 'z' || e.key === 'Z') && !document.getElementById('menu') && !this.hasDialog) {
         hudZoom((this.scene.get('game') as GameScene).toggleZoom());
       }
-      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.dialogBox) {
+      if ((e.key === 'c' || e.key === 'C' || e.key === 'i' || e.key === 'I') && !document.getElementById('menu') && !this.hasDialog) {
         this.openCharacter();
       }
       if (e.key === 'Escape' && !document.getElementById('menu')) {
         if (isCharacterOpen()) closeCharacter();
         else if (isMinimapOpen()) closeMinimap();
-        else if (this.dialogBox) {
+        else if (this.pisanie) this.dopiszDoKonca();
+        else if (this.dialogBox && this.strony && this.strony.i < this.strony.strony.length - 1) {
+          // A paged talk: Escape skips to the last portion with the real buttons.
+          const p = this.strony;
+          p.i = p.strony.length - 1;
+          p.pisz = false;
+          this.pokazStrone(p);
+        } else if (this.dialogBox) {
           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
           const choose = this.dialogChoose;
-          const last = this.dialogButtons.filter((b) => b.index >= 0).length - 1;
+          const last = this.dialogZamknij ?? this.dialogButtons.filter((b) => b.index >= 0).length - 1;
           this.closeDialog();
           choose?.(Math.max(0, last));
         } else this.openGameMenu();
@@ -182,6 +249,7 @@ export class UIScene extends Phaser.Scene {
       window.removeEventListener('keydown', onKey);
       closeMinimap();
       closeCharacter();
+      this.closeDialog();
       this.scale.off('resize', this.layout, this);
       resetTouch();
     });
@@ -221,7 +289,7 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: [big, sub], alpha: 0, delay: 2600, duration: 600, onComplete: () => { big.destroy(); sub.destroy(); } });
   }
 
-  /** "Walka wręcz – poziom 2" with a bar filling up to the next level. */
+  /** "Krzepa – poziom 2" with a bar filling up to the next level. */
   private showPractice(p: { skill: string; into: number; need: number; max: boolean; gain?: number }) {
     this.skillLabel.setText(p.skill === 'luk' ? '🏹' : p.skill === 'magia' ? '✨' : '⚔');
     const full = 70 * this.ui;
@@ -256,7 +324,8 @@ export class UIScene extends Phaser.Scene {
     this.skillBar.setPosition(width / 2, height * 0.6);
 
     const r = JOY_RADIUS;
-    this.joyHome.set(pad + r + 16, height - pad - r - 16);
+    // Live mode (fixed joystick): further in from the screen's edge, where the thumb rests (owner, 26 Oct 2026).
+    this.joyHome.set(pad + r + (live() ? 16 + ODSTEP_OD_KRAWEDZI : 16), height - pad - r - (live() ? 30 : 16));
     joyHome.x = this.joyHome.x;
     joyHome.y = this.joyHome.y;
     this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
@@ -287,13 +356,18 @@ export class UIScene extends Phaser.Scene {
     const q = s.lingering === null ? s.quests[0] : undefined;
     setHud({
       hp: s.hp, maxHp: s.maxHp, extra: s.extra, zatruty: !!s.zatruty, expShare: s.expShare, potions: s.potions, fruit: s.fruit,
-      noHeal: s.potions <= 0 && s.fruit < LECZENIE_OWOCAMI.owocow,
+      fruitPerHeal: s.fruitPerHeal,
+      noHeal: s.potions <= 0 && s.fruit < s.fruitPerHeal && !s.heal,
+      preparedFood: s.heal && s.heal.icon !== '🧪' && s.heal.icon !== '🍎' ? s.heal : undefined,
       town: s.town, weather: s.pogoda ?? '', detail: s.detail,
       quest: q ? { text: q.text, color: q.color, more: s.quests.length - 1 } : null,
       coins: s.coins, diamonds: session.diamenty,
       bron: this.weaponWindow(),
+      poziom: s.level,
     });
     this.goalText.setText(s.lingering !== null ? `⏳ Bezbronny na ulicy jeszcze ${s.lingering} s…` : '');
+    // One arrow per quest (no limit since 13 Oct 2026): more are made when needed.
+    while (this.arrows.length < s.quests.length) this.arrows.push(this.add.image(0, 0, TEX.arrow).setScale(this.ui).setVisible(false));
     s.quests.forEach((q, i) => this.arrows[i]?.setTexture(arrowTexture(this, q.color)));
     this.layout();
     if (s.dead && !this.overlay) this.showGameOver();
@@ -326,16 +400,29 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
+    // A modular hero (owner, 20 Oct 2026): the portrait is its head; older characters keep their hero's.
+    if (session.look.modul) {
+      const ml = modulGracza(session.look, session.name);
+      void modulPortret(ml).then((c) => {
+        if (modulKlucz(modulGracza(session.look, session.name)) !== modulKlucz(ml)) return;
+        setHudPortrait(c.toDataURL());
+        setHudAvatar(c, 0, 0, PORTRET_PX, PORTRET_PX);
+      });
+      return;
+    }
     const hd = heroPortrait();
     const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
     const fr = tex?.has('down-1') ? tex.get('down-1') : null;
+    // The 25 heroes' painted portraits (public/portrety/bohater_NN.webp, also used in dialogs).
+    const m = hd && /lista([a-y])$/.exec(hd.key);
+    setHudPortrait(m ? `${import.meta.env.BASE_URL || '/'}portrety/bohater_${String(m[1].charCodeAt(0) - 96).padStart(2, '0')}.webp` : null);
     if (!tex || !fr) return setHudAvatar(null);
     setHudAvatar(tex.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36);
   }
 
   /** "+1 marchewka", "+12 złota" by the HUD when something new is in the backpack or the purse. */
   private pickups(s: HudState) {
-    const busy = !!document.getElementById('chest') || !!document.getElementById('character') || !!this.dialogBox;
+    const busy = !!document.getElementById('chest') || !!document.getElementById('character') || !!this.hasDialog;
     if (this.lastGoods && !busy) {
       for (const [f, n] of Object.entries(s.goods) as [Owoc, number][]) {
         const d = n - (this.lastGoods[f] ?? 0);
@@ -369,7 +456,7 @@ export class UIScene extends Phaser.Scene {
   /** The camera button: a picture of the game to send to friends (the "Pochwal się" card). */
   private takePhoto() {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay || this.dialogBox) return;
+    if (!game.player || this.overlay || this.hasDialog) return;
     game.scene.pause();
     void showPhoto(this.game, session.name).then(() => {
       game.scene.resume();
@@ -380,13 +467,20 @@ export class UIScene extends Phaser.Scene {
   private createTouchControls() {
     // Phones/tablets show the controls right away; touch laptops once touched.
     this.touch = window.matchMedia('(pointer: coarse)').matches || touchInput.used;
-    this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
+    if (comicHud && live()) {
+      if (!this.textures.exists('comic-joystick')) {
+        const tex = this.textures.createCanvas('comic-joystick', 240, 250)!;
+        paintBrassPad(tex.getContext());tex.refresh();
+      }
+      this.joyBase = this.add.image(0, 0, 'comic-joystick').setDisplaySize(JOY_RADIUS * 2, JOY_RADIUS * 2.08);
+    } else this.joyBase = this.add.circle(0, 0, JOY_RADIUS, 0xffffff, 0.12).setStrokeStyle(3, 0xffffff, 0.35);
     this.joyKnob = this.add.circle(0, 0, JOY_RADIUS * 0.45, 0xffffff, 0.35);
+    if (comicHud && live()) this.joyKnob.setFillStyle(0x514d49, 1).setStrokeStyle(3, 0x19171b);
     // Four arrows on the rim, so it reads as a joystick.
     const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.55);
-    const a = JOY_RADIUS * 0.78;
-    const w = 9;
+    g.fillStyle(comicHud && live() ? 0xd5ab60 : 0xffffff, comicHud && live() ? 1 : 0.55);
+    const a = JOY_RADIUS * (comicHud && live() ? 0.57 : 0.78);
+    const w = comicHud && live() ? 5 : 9;
     for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
       const tx = dx * a;
       const ty = dy * a;
@@ -394,7 +488,6 @@ export class UIScene extends Phaser.Scene {
       g.fillTriangle(tx + dx * w, ty + dy * w, tx - dy * w - dx * 2, ty + dx * w - dy * 2, tx + dy * w - dx * 2, ty - dx * w - dy * 2);
     }
     this.joyArrows = g; // (a Graphics moved directly: inside a Container it stayed put)
-    this.hintAt = 0;
     // Half size: a tap on the joystick attacks too (one hand), the button is for two hands.
     this.attackBtn = this.add.circle(0, 0, 19, 0xe43b44, 0.45).setStrokeStyle(2, 0xffffff, 0.5);
     this.attackLabel = this.add
@@ -418,23 +511,6 @@ export class UIScene extends Phaser.Scene {
     this.vignette = this.add.image(0, 0, 'lowhp-vignette').setDepth(-1).setVisible(false);
   }
 
-  private joyLearned = false;
-  /** Blinks the joystick at the start and after a while without moving – until the player has used it once. */
-  private joyHint() {
-    const now = this.time.now;
-    // A thumb held still on the joystick (or a key held down) is walking too: no touchmove comes, but it isn't idle.
-    const k = keyboardDir();
-    if (touchInput.joyActive || touchInput.x || touchInput.y || k.x || k.y) activity.last = performance.now();
-    // Once the player has walked with it, it never blinks again (bug report 24: it kept blinking in the corner while fighting).
-    if (touchInput.joyActive) this.joyLearned = true;
-    if (this.joyLearned || now < this.hintAt) return;
-    const idle = performance.now() - activity.last;
-    if (this.hintAt !== 0 && idle < 9000) return;
-    this.hintAt = now + 9000;
-    this.hintUntil = now + 1700;
-    this.tweens.add({ targets: [this.joyBase, this.joyArrows], alpha: { from: 1, to: 0.25 }, scale: { from: 1, to: 1.12 }, duration: 260, yoyo: true, repeat: 2 });
-  }
-
   private vignette!: Phaser.GameObjects.Image;
   private lowWarned = false;
 
@@ -442,7 +518,7 @@ export class UIScene extends Phaser.Scene {
   private lowLife(time: number) {
     const s = this.hud;
     // From half life down (owner, 5 Oct 2026): the red edge is what tells the player he's hurt.
-    const low = !!s && !s.dead && !this.dialogBox && s.hp * 2 <= s.maxHp;
+    const low = !!s && !s.dead && !this.hasDialog && s.hp * 2 <= s.maxHp;
     const { width, height } = this.view;
     this.vignette.setDisplaySize(width, height).setPosition(width / 2, height / 2).setVisible(low);
     if (low) {
@@ -452,14 +528,16 @@ export class UIScene extends Phaser.Scene {
     }
     if (low && !this.lowWarned) {
       this.lowWarned = true;
-      this.toast(s!.potions > 0 || s!.heal ? '❤ Mało życia! Dotknij okrągłego przycisku w prawym dolnym rogu, żeby się uleczyć – albo uciekaj!' : '❤ Mało życia! Uciekaj od potworów!', 3500);
+      this.toast(live() ? '❤ Mało życia! Wyjdź z czerwonej mgły – tam życie wraca – albo naciśnij zielony przycisk Lecz (H).' : s!.potions > 0 || s!.heal ? (teleskop() ? '❤ Mało życia! Uciekaj od potworów!' : '❤ Mało życia! Dotknij okrągłego przycisku u dołu ekranu, żeby się uleczyć – albo uciekaj!') : '❤ Mało życia! Uciekaj od potworów!', 3500);
     } else if (!low) this.lowWarned = false;
   }
 
   update(time: number) {
+    setHudVehicles(hasTestVehicle('rower'), hasTestVehicle('hulajnoga'), testVehicle);
     this.lowLife(time);
+    if (this.pisanie) this.piszDalej(time);
     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
-    showHud(this.overlay ? 'off' : this.dialogBox ? 'dim' : 'on');
+    showHud(this.overlay || this.hasDialog ? 'off' : 'on');
     this.updateArrow();
     this.updateTouch();
     this.unstick(time);
@@ -474,7 +552,7 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = !!this.dialogBox || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || isCharacterOpen();
+    const waiting = (this.scene.isActive('arena') || this.scene.isActive('hala')) || loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || !!document.getElementById('gazeta') || isCharacterOpen();
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
@@ -494,13 +572,13 @@ export class UIScene extends Phaser.Scene {
     const quests = this.hud?.quests ?? [];
     this.arrows.forEach((arrow, i) => {
       const pos = quests[i]?.pos;
-      if (!pos || !game.player || this.dialogBox) {
+      if (!pos || !game.player || this.hasDialog || (this.scene.isActive('arena') || this.scene.isActive('hala'))) {
         arrow.setVisible(false);
         return;
       }
       const cam = game.cameras.main;
-      const sx = ((pos.x - cam.worldView.x) * cam.zoom) / OSTROSC;
-      const sy = ((pos.y - cam.worldView.y) * cam.zoom) / OSTROSC;
+      const sx = ((pos.x - cam.worldView.x) * cam.zoomX) / OSTROSC;
+      const sy = ((pos.y - cam.worldView.y) * cam.zoomY) / OSTROSC;
       const { width, height } = this.view;
       const m = 40;
       arrow.setVisible(true);
@@ -510,8 +588,8 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       // Off screen: on a ring around the hero (owner, 6 Oct 2026: at the screen edge they hid under the HUD).
-      const cx = ((game.player.x - cam.worldView.x) * cam.zoom) / OSTROSC;
-      const cy = ((game.player.y - 10 - cam.worldView.y) * cam.zoom) / OSTROSC;
+      const cx = ((game.player.x - cam.worldView.x) * cam.zoomX) / OSTROSC;
+      const cy = ((game.player.y - 10 - cam.worldView.y) * cam.zoomY) / OSTROSC;
       const ang = Math.atan2(sy - cy, sx - cx);
       const t = Math.max(60, Math.min(width, height) * STRZALKI_ZADAN.promien);
       arrow.setPosition(cx + Math.cos(ang) * t, cy + Math.sin(ang) * t).setRotation(ang);
@@ -526,79 +604,467 @@ export class UIScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- dialogs
 
+  /** A brass frame with a portrait (or a placeholder silhouette while the artist's portrait is missing). */
+  private medalion(mx: number, my: number, P: number, key: string | null): Phaser.GameObjects.GameObject[] {
+    const g = this.add.graphics();
+    g.fillStyle(0x2a2016, 1).fillRoundedRect(mx, my, P, P, 8);
+    g.lineStyle(3, 0xd8a84a, 1).strokeRoundedRect(mx, my, P, P, 8);
+    g.lineStyle(1, 0x6d4a1e, 1).strokeRoundedRect(mx + 4, my + 4, P - 8, P - 8, 5);
+    const out: Phaser.GameObjects.GameObject[] = [g];
+    if (key && this.textures.exists(key)) out.push(this.add.image(mx + P / 2, my + P / 2, key).setDisplaySize(P - 10, P - 10));
+    else {
+      // Placeholder: a head-and-shoulders silhouette.
+      g.fillStyle(0x6d5a3e, 1).fillCircle(mx + P / 2, my + P * 0.4, P * 0.17);
+      g.fillRoundedRect(mx + P * 0.24, my + P * 0.6, P * 0.52, P * 0.3, { tl: P * 0.2, tr: P * 0.2, bl: 2, br: 2 });
+    }
+    return out;
+  }
+
+  private portretLaduje = new Set<string>();
+
+  /** The hero's dialog portrait (public/portrety/bohater_NN.webp for the 25 heroes); loads it on first use. */
+  private portretBohatera(gotowy?: () => void): string | null {
+    if (session.look.modul) {
+      const ml = modulGracza(session.look, session.name);
+      const key = `portret-modul-${modulKlucz(ml)}`;
+      if (this.textures.exists(key)) return key;
+      if (!this.portretLaduje.has(key)) {
+        this.portretLaduje.add(key);
+        void modulPortret(ml).then((c) => {
+          if (!this.textures.exists(key)) this.textures.addCanvas(key, c);
+          gotowy?.();
+        });
+      }
+      return null;
+    }
+    const hp = heroPortrait();
+    const m = hp && /lista([a-y])$/.exec(hp.key);
+    if (!m) return null;
+    const n = m[1].charCodeAt(0) - 96;
+    const key = `portret-bohater-${n}`;
+    if (this.textures.exists(key)) return key;
+    if (!this.portretLaduje.has(key)) {
+      this.portretLaduje.add(key);
+      this.load.image(key, `portrety/bohater_${String(n).padStart(2, '0')}.webp`);
+      if (gotowy) this.load.once(`filecomplete-image-${key}`, gotowy);
+      this.load.start();
+    }
+    return null;
+  }
+
+  /** The speaker's portrait: a picture (a place's sign) or the head of their walking sheet, enlarged crisp. */
+  private portretRozmowcy(k: Rozmowca, gotowy?: () => void): string | null {
+    if (k.obraz && this.textures.exists(k.obraz)) return k.obraz;
+    // The artist's portrait for this sheet (content/portrety.ts), loaded on first use.
+    const id = k.tex?.replace(/^hd-/, '').replace(/-s\d+$/, '').replace(/-red$/, '');
+    const plik = id && PORTRETY_POSTACI.find((p) => p === id || p === WYGLAD_PLIK[id]);
+    if (plik) {
+      const key = `portret-${plik}`;
+      if (this.textures.exists(key)) return key;
+      if (!this.portretLaduje.has(key)) {
+        this.portretLaduje.add(key);
+        this.load.image(key, `portrety/${plik}.webp`);
+        if (gotowy) this.load.once(`filecomplete-image-${key}`, gotowy);
+        this.load.start();
+      }
+    }
+    if (!k.tex || !this.textures.exists(k.tex)) return null;
+    const key = `portret-${k.tex}`;
+    if (this.textures.exists(key)) return key;
+    const t = this.textures.get(k.tex);
+    if (!t.has('down-1')) return null;
+    const fr = t.get('down-1');
+    const c = document.createElement('canvas');
+    c.width = c.height = 72;
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(t.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36, 0, 0, 72, 72);
+    this.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return key;
+  }
+
   private showDialog(d: DialogRequest) {
+    if (d.shop) {
+      if (this.shop) { this.dialogChoose = d.onChoose; this.shop.update(d); return; }
+      this.closeDialog();
+      resetTouch();
+      this.dialogChoose = d.onChoose;
+      this.shop = showShop(d, i => this.chooseShop(i));
+      return;
+    }
+    // Long talks come in portions with „Dalej ▶” (owner, 1 Nov 2026: „inaczej wypracowania nikt nie będzie
+    // czytał”); the real buttons only on the last portion. Letters appear one by one (`pisz`).
+    const strony = d.kto ? this.podzielNaStrony(d) : [d.text];
+    const pisz = !d.natychmiast && !!d.kto && d.text.trim().length > 140;
+    if (strony.length < 2) { this.rysujDialog(d, pisz); return; }
+    this.pokazStrone({ d, strony, i: 0, pisz });
+  }
+
+  /** One portion of a paged dialog: „Dalej ▶ (1/3)” until the last, which has the request's own buttons. */
+  private pokazStrone(p: Stronicowanie) {
+    const ostatnia = p.i >= p.strony.length - 1;
+    const tekst = p.strony[p.i];
+    const strona: DialogRequest = ostatnia
+      ? { ...p.d, text: tekst }
+      : {
+          ...p.d, text: tekst, buttons: [`${tx('Dalej ▶', 'Next ▶')}  ${p.i + 1}/${p.strony.length}`], icons: undefined, tabs: undefined,
+          odpowiedzi: false, zamknij: 0, grozny: undefined,
+          onChoose: () => { p.i++; this.pokazStrone(p); },
+        };
+    this.rysujDialog(strona, p.pisz && tekst.trim().length > 140);
+    this.strony = p;
+  }
+
+  /** Lines of body text a dialog window has room for, given how tall its buttons are. */
+  private miejsceNaLinie(d: DialogRequest, przyciski: number, krok: number) {
+    const { width, height } = this.view;
+    const w = Math.min(width - 24, 620);
+    const P = d.kto ? (this.touch ? 60 : 78) : 0;
+    const side = P ? P + 10 : 0;
+    const t = this.add.text(0, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', wordWrap: { width: w - 32 - 2 * side } });
+    const headH = Math.max(t.height, P);
+    t.destroy();
+    const stacked = przyciski > 2;
+    const rows = stacked ? przyciski : przyciski ? 1 : 0;
+    const btnsH = rows ? rows * 44 + (rows - 1) * 8 : 0;
+    const tabH = d.tabs ? 48 : 0;
+    const wolne = height - 24 - (16 + headH + 10 + tabH) - (18 + btnsH + 16);
+    return Math.floor((wolne + 5) / krok);
+  }
+
+  /** Splits a long text into portions that fit the window (at most STRONA_MAKS_LINII lines), at paragraph/sentence ends. */
+  private podzielNaStrony(d: DialogRequest): string[] {
+    const { width } = this.view;
+    const w = Math.min(width - 24, 620);
+    const m = this.add.text(0, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', wordWrap: { width: w - 32 }, lineSpacing: 5 });
+    const L = m.getWrappedText(d.text);
+    const krok = L.length ? (m.height + 5) / L.length : 24;
+    m.destroy();
+    const capDalej = Math.max(2, Math.min(STRONA_MAKS_LINII, this.miejsceNaLinie(d, 1, krok)));
+    // The last portion keeps its own buttons; with many of them (quiz answers) the text there may be short.
+    const capOst = Math.max(2, Math.min(STRONA_MAKS_LINII, this.miejsceNaLinie(d, d.buttons.length, krok)));
+    const pusta = (k: number) => !L[k]?.trim();
+    if (L.length <= capOst) return [d.text];
+    // Where to end a portion that may hold lines [od, od + ile): a blank line (paragraph), else a sentence end, else full.
+    const koniec = (od: number, ile: number, minimum: number) => {
+      const max = Math.min(L.length, od + ile);
+      for (let k = max; k >= od + minimum; k--) if (k < L.length && pusta(k)) return k;
+      for (let k = max; k >= od + minimum; k--) if (/[.!?…:”"»)]\s*$/.test(L[k - 1])) return k;
+      return max;
+    };
+    const strony: string[][] = [];
+    let i = 0;
+    while (i < L.length) {
+      while (i < L.length && pusta(i)) i++;
+      if (i >= L.length) break;
+      if (L.length - i <= capOst) { strony.push(L.slice(i)); break; }
+      const k = koniec(i, capDalej, Math.ceil(capDalej / 2));
+      strony.push(L.slice(i, k));
+      i = k;
+    }
+    // The last portion must fit together with the real buttons: move its tail into a portion of its own.
+    let ost = strony[strony.length - 1];
+    while (ost && ost.length > capOst) {
+      const k = koniec(0, ost.length - 1, Math.max(1, ost.length - capOst));
+      strony.splice(strony.length - 1, 1, ost.slice(0, k), ost.slice(k));
+      ost = strony[strony.length - 1];
+    }
+    const tekst = strony.map((s) => {
+      while (s.length && !s[0].trim()) s = s.slice(1);
+      while (s.length && !s[s.length - 1].trim()) s = s.slice(0, -1);
+      return s.join('\n');
+    }).filter((s) => s);
+    return tekst.length ? tekst : [d.text];
+  }
+
+  private rysujDialog(d: DialogRequest, pisz = false) {
     this.closeDialog();
     const { width, height } = this.view;
     const w = Math.min(width - 24, 620);
     const x = (width - w) / 2;
+    // Portraits (owner 12 Oct 2026; every server since 1.032): who speaks on the left, the hero on the right.
+    const P = d.kto ? (this.touch ? 60 : 78) : 0;
+    const side = P ? P + 10 : 0;
     // A book-like readable font (owner 7.10.2026: the monospace dialogs were „zbyt nieczytelne”).
-    const title = this.add.text(x + 16, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 } });
-    const body = this.add.text(x + 16, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb', wordWrap: { width: w - 32 }, lineSpacing: 5 });
+    const title = this.add.text(x + 16 + side, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', color: '#f7c531', wordWrap: { width: w - 32 - 2 * side } });
     const btnH = 44;
     // Up to two buttons side by side; longer lists (a shop) one under another.
     const stacked = d.buttons.length > 2;
-    const rows = stacked ? d.buttons.length : 1;
-    const btnsH = rows * btnH + (rows - 1) * 8;
+    const btnRows = stacked ? d.buttons.length : 1;
+    const btnsH = btnRows * btnH + (btnRows - 1) * 8;
     const tabH = d.tabs ? 38 : 0;
-    const h = 16 + title.height + 10 + (tabH ? tabH + 10 : 0) + body.height + 18 + btnsH + 16;
-    const y = Math.max(12, height - h - (this.touch ? 150 : 40));
-    title.setY(y + 16);
-    body.setY(title.y + title.height + 10 + (tabH ? tabH + 10 : 0));
+    const headH = Math.max(title.height, P);
+    // Body text, measured line by line (Phaser 4's GeometryMask doesn't clip under WebGL – see below, the
+    // body/buttons scroll as whole rows instead, so each line is its own object rather than one big block).
+    const measure = this.add.text(0, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', wordWrap: { width: w - 32 }, lineSpacing: 5 });
+    const wrappedLines = measure.getWrappedText(d.text);
+    const bodyBlockH = measure.height;
+    measure.destroy();
+    const h = 16 + headH + 10 + (tabH ? tabH + 10 : 0) + bodyBlockH + 18 + btnsH + 16;
+    // The bottom margin keeps the joystick corner free, but only while the whole window still fits; otherwise
+    // the window uses the whole height (owner, 27 Oct 2026: a phone held sideways scrolled a short dialog by
+    // one pixel and hid its buttons). Scrolling is only for windows taller than the screen itself.
+    const bottomMargin = this.touch ? 150 : 40;
+    const y = height - h - bottomMargin >= 12 ? height - h - bottomMargin : Math.max(12, (height - h) / 2);
+    title.setY(y + 16 + (headH - title.height) / 2);
+    const ty = y + 16 + headH + 10;
+    const y0 = ty + (tabH ? tabH + 10 : 0); // where the scrollable body/buttons begin
 
-    const panel = this.add.rectangle(x, y, w, h, 0x1e1a24, 0.94).setOrigin(0).setStrokeStyle(3, 0xf7c531);
-    const items: Phaser.GameObjects.GameObject[] = [panel, title, body];
+    // A dialog with more inside it than the screen has room for (the game menu with every toggle, a long
+    // riddle…) gets a shorter panel and scrolls instead of running off the bottom (owner, 26 Oct 2026).
+    const maxH = Math.max(140, height - y - 12);
+    const needsScroll = h > maxH + 0.5;
+    let viewportH = Math.max(20, y + Math.min(h, maxH) - 16 - y0);
+    if (needsScroll) {
+      // Row tops as laid out below (text lines, a gap, buttons); when the window's edge falls between rows,
+      // shorten it so the last row is cut through its middle – a sliced button says „there's more below”.
+      const lineH0 = wrappedLines.length ? (bodyBlockH - (wrappedLines.length - 1) * 5) / wrappedLines.length : 0;
+      const rows: { y: number; h: number }[] = [];
+      let cy = y0;
+      wrappedLines.forEach((_, i) => { rows.push({ y: cy, h: lineH0 }); cy += lineH0 + (i < wrappedLines.length - 1 ? 5 : 0); });
+      cy += 18;
+      if (stacked) d.buttons.forEach(() => { rows.push({ y: cy, h: btnH }); cy += btnH + 8; });
+      else if (d.buttons.length) rows.push({ y: cy, h: btnH });
+      const cut = y0 + viewportH + PEEK_PAD;
+      const cutRow = rows.find((r) => r.y < cut - 8 && r.y + r.h > cut);
+      if (!cutRow) {
+        const last = [...rows].reverse().find((r) => r.y + r.h <= cut);
+        if (last) viewportH = Math.max(20, last.y + last.h * 0.55 - PEEK_PAD - y0);
+      }
+    }
+    const panelH = needsScroll ? y0 - y + viewportH + 16 : h;
+
+    const panel = ramkaKomiks(this, x, y, w, panelH, 0x241a12, { alfa: 0.96, gruba: 3, cien: 6 });
+    const items: Phaser.GameObjects.GameObject[] = [panel, title];
+    if (P && d.kto) {
+      const kto = d.kto;
+      items.push(...this.medalion(x + 14, y + 14, P, this.portretRozmowcy(kto, () => {
+        if (this.dialogBox && this.dialogChoose === d.onChoose) this.dialogBox.add(this.medalion(x + 14, y + 14, P, this.portretRozmowcy(kto)));
+      })));
+      const hero = this.portretBohatera(() => {
+        // The hero's picture arrived while this window is open: put it in.
+        if (this.dialogBox && this.dialogChoose === d.onChoose) this.dialogBox.add(this.medalion(x + w - 14 - P, y + 14, P, this.portretBohatera()));
+      });
+      items.push(...this.medalion(x + w - 14 - P, y + 14, P, hero));
+    }
     this.dialogButtons = [];
     // Tabs (shop: buy / sell): the active one filled, the others only outlined; a tap gives onChoose(-1 - tab).
+    // Tabs stay fixed under the title (never scroll – there are only ever a couple of them).
     if (d.tabs) {
       const n = d.tabs.labels.length;
       const tw = (w - 32 - (n - 1) * 10) / n;
-      const ty = title.y + title.height + 10;
       d.tabs.labels.forEach((label, t) => {
         const c = d.tabs!.colors?.[t] ?? 0x2f6f9f;
         const on = t === d.tabs!.active;
-        const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, on ? c : 0x2a2632).setOrigin(0).setStrokeStyle(on ? 3 : 2, on ? 0xffffff : c, on ? 0.9 : 1);
-        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: DIALOG_FONT, fontSize: '18px', color: on ? '#ffffff' : '#c8c8d0', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
-        items.push(rect, text);
-        if (!on) this.dialogButtons.push({ rect, index: -1 - t });
+        const rect = this.add.rectangle(x + 16 + t * (tw + 10), ty, tw, tabH, 0, 0).setOrigin(0);
+        const g = ramkaKomiks(this, rect.x, ty, tw, tabH, on ? c : 0x2c2118, { gruba: 2, cien: on ? 3 : 2 });
+        const text = this.add.text(rect.x + tw / 2, ty + tabH / 2, label, { fontFamily: DIALOG_FONT, fontSize: '18px', color: on ? '#ffffff' : '#c8b896', fontStyle: on ? 'bold' : '' }).setOrigin(0.5);
+        items.push(g, rect, text);
+        if (!on) this.dialogButtons.push({ rect, index: -1 - t, scrollable: false });
       });
     }
+    // Body text and every button scroll together below the (fixed) title/tabs, each line/button its own row
+    // (see `redrawScrollVisibility`): a row scrolled past the window is hidden whole, never sliced in half.
+    const scrollRows: ScrollRow[] = [];
+    const scrollItems: Phaser.GameObjects.GameObject[] = [];
+    let cursorY = y0;
+    const lineH = wrappedLines.length ? (bodyBlockH - (wrappedLines.length - 1) * 5) / wrappedLines.length : 0;
+    for (let i = 0; i < wrappedLines.length; i++) {
+      const t = this.add.text(x + 16, cursorY, wrappedLines[i], { fontFamily: DIALOG_FONT, fontSize: '19px', color: '#f6eedb' });
+      scrollRows.push({ y: cursorY, h: lineH, objs: [t], texts: [t] });
+      scrollItems.push(t);
+      cursorY += lineH;
+      if (i < wrappedLines.length - 1) cursorY += 5; // between lines only; the body→buttons gap below is its own 18
+    }
+    cursorY += 18;
     const bw = stacked ? w - 32 : (w - 32 - (d.buttons.length - 1) * 12) / d.buttons.length;
     const last = d.buttons.length - 1;
+    const sideBySide: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] = [];
+    const sideTexts: Phaser.GameObjects.Text[] = [];
+    const sideBtns: NonNullable<ScrollRow['btns']> = [];
     d.buttons.forEach((label, i) => {
       const bx = stacked ? x + 16 : x + 16 + i * (bw + 12);
-      const by = stacked ? y + h - 16 - btnsH + i * (btnH + 8) : y + h - 16 - btnH;
-      const color = stacked ? (i === last ? 0x4a4a55 : 0x2f6f9f) : i === 0 ? 0x3fa34d : 0x4a4a55;
-      const rect = this.add.rectangle(bx, by, bw, btnH, color).setOrigin(0).setStrokeStyle(2, 0xffffff, 0.6);
+      const by = cursorY;
+      // Brass for the main choices, verdigris-patinated metal for the way out (owner, 26 Oct 2026: no greens/blues).
+      const grozny = d.grozny === i;
+      const cicho = grozny || (d.odpowiedzi || d.zamknij !== undefined ? false : stacked ? i === last : i !== 0);
+      const color = grozny ? 0x8e3324 : cicho ? 0x4f7f72 : 0xc9953f;
+      const rect = this.add.rectangle(bx, by, bw, btnH, 0, 0).setOrigin(0);
+      const g = ramkaKomiks(this, bx, by, bw, btnH, color, { gruba: 2, cien: 3 });
       // A picture on the left (an item on sale), 2× its 16 px, crisp.
       const key = d.icons?.[i];
       const pic = key && this.textures.exists(key) ? this.add.image(bx + 8 + 16, by + btnH / 2, key).setDisplaySize(32, 32) : null;
       const pad = pic ? 40 : 0;
       const text = this.add
-        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: bw - 12 - pad } })
+        .text(bx + pad + (bw - pad) / 2, by + btnH / 2, label, { fontFamily: DIALOG_FONT, fontSize: stacked ? '17px' : '19px', fontStyle: 'bold', color: cicho ? '#e8f4ee' : '#2a1608', align: 'center', wordWrap: { width: bw - 12 - pad } })
         .setOrigin(0.5);
-      items.push(rect, text);
-      if (pic) items.push(pic);
-      this.dialogButtons.push({ rect, index: i });
+      const objs = pic ? [g, rect, text, pic] : [g, rect, text];
+      scrollItems.push(...objs);
+      this.dialogButtons.push({ rect, index: i, scrollable: true });
+      const peek = { x: bx, w: bw, kolor: color };
+      if (stacked) { scrollRows.push({ y: by, h: btnH, objs, texts: [text], btns: [peek] }); cursorY += btnH + 8; }
+      else { sideBySide.push(...objs); sideTexts.push(text); sideBtns.push(peek); }
     });
+    if (!stacked && d.buttons.length) { scrollRows.push({ y: cursorY, h: btnH, objs: sideBySide, texts: sideTexts, btns: sideBtns }); cursorY += btnH; }
+    const contentH = cursorY - y0;
+
+    this.peekG = this.add.graphics();
+    items.push(this.peekG);
+    const scrollBox = this.add.container(0, 0, scrollItems);
+    items.push(scrollBox);
+    this.dialogScroll = scrollBox;
+    this.scrollRows = scrollRows;
+    this.scrollY = 0;
+    this.scrollMax = needsScroll ? Math.max(0, contentH - viewportH) : 0;
+    this.railGeom = needsScroll ? { x, y0, w, viewportH, contentH } : undefined;
+    this.redrawScrollVisibility();
+    if (needsScroll) {
+      this.dialogRailG = this.add.graphics();
+      items.push(this.dialogRailG);
+      const geom = this.railGeom!;
+      dialogRail.hit = (px, py) => px >= geom.x + geom.w - 18 && px <= geom.x + geom.w - 2 && py >= geom.y0 - 10 && py <= geom.y0 + geom.viewportH + 10;
+      dialogRail.set = (py) => {
+        const knobH = Math.max(28, geom.viewportH * (geom.viewportH / geom.contentH));
+        const frac = (py - geom.y0 - knobH / 2) / Math.max(1, geom.viewportH - knobH);
+        this.setDialogScroll(Phaser.Math.Clamp(frac, 0, 1) * this.scrollMax);
+      };
+      dialogRail.wheel = (dy) => this.setDialogScroll(this.scrollY + dy);
+      this.redrawDialogRail();
+    }
     this.dialogBox = this.add.container(0, 0, items).setDepth(20);
     this.dialogChoose = d.onChoose;
+    this.dialogZamknij = d.zamknij;
     this.dialogOpenedAt = this.time.now;
+    // Letters one by one; the buttons come once the text is written. A tap/Space first finishes the text.
+    if (pisz && !needsScroll) {
+      const linie = scrollRows.filter((r) => !r.btns).flatMap((r) => r.texts ?? []).map((t) => ({ t, full: t.text }));
+      const ukryte = scrollRows.filter((r) => r.btns).flatMap((r) => r.objs);
+      const razem = linie.reduce((n, l) => n + l.full.length, 0);
+      if (razem > 0) {
+        for (const l of linie) l.t.setText('');
+        for (const o of ukryte) o.setVisible(false);
+        this.pisanie = { linie, ukryte, start: this.time.now, razem };
+      }
+    }
+  }
+
+  /** Writes the dialog text letter by letter; returns false once everything is written. */
+  private piszDalej(time: number) {
+    const p = this.pisanie;
+    if (!p) return false;
+    let n = Math.floor(((time - p.start) / 1000) * PISANIE_ZNAKOW_NA_S);
+    if (n >= p.razem) { this.dopiszDoKonca(); return false; }
+    for (const l of p.linie) {
+      const k = Math.max(0, Math.min(l.full.length, n));
+      if (l.t.text.length !== k) l.t.setText(l.full.slice(0, k));
+      n -= l.full.length;
+    }
+    return true;
+  }
+
+  private dopiszDoKonca() {
+    const p = this.pisanie;
+    if (!p) return;
+    this.pisanie = undefined;
+    for (const l of p.linie) l.t.setText(l.full);
+    for (const o of p.ukryte) o.setVisible(true);
+    this.dialogOpenedAt = this.time.now - 150; // a quick double tap doesn't press the button that just appeared
+  }
+
+  /** Scrolls an overflowing dialog's body/buttons (0 = top); called from the brass rail and the mouse wheel. */
+  private setDialogScroll(y: number) {
+    if (!this.dialogScroll) return;
+    this.scrollY = Phaser.Math.Clamp(y, 0, this.scrollMax);
+    this.dialogScroll.y = -this.scrollY;
+    this.redrawScrollVisibility();
+    this.redrawDialogRail();
+  }
+
+  /**
+   * Phaser 4's GeometryMask only works under the Canvas renderer, not WebGL (this game's renderer) – so instead
+   * of clipping pixels, a scrolled row is hidden whole once it no longer fully fits the visible window, and
+   * shown again once it does; a half-cut line/button never appears. Runs once at open and on every scroll.
+   */
+  private redrawScrollVisibility() {
+    const r = this.railGeom;
+    this.peekG?.clear();
+    if (!r) { for (const row of this.scrollRows) for (const o of row.objs) o.setVisible(true); return; }
+    const top = r.y0 - 0.5;
+    const bottom = r.y0 + r.viewportH + 0.5;
+    const cut = r.y0 + r.viewportH + PEEK_PAD;
+    for (const row of this.scrollRows) {
+      const onScreenTop = row.y - this.scrollY;
+      const visible = onScreenTop >= top && onScreenTop + row.h <= bottom;
+      for (const t of row.texts ?? []) t.setCrop();
+      for (const o of row.objs) o.setVisible(visible);
+      if (visible || onScreenTop < top || onScreenTop >= cut - 4) continue;
+      // Cut by the bottom edge: only its top part shows (a button can't be tapped like this).
+      for (const b of row.btns ?? []) this.drawPeek(b.x, onScreenTop, b.w, cut - onScreenTop, b.kolor);
+      for (const t of row.texts ?? []) {
+        const tTop = t.y - this.scrollY - t.displayHeight * t.originY;
+        const vis = cut - tTop;
+        if (vis <= 2) continue;
+        t.setVisible(true);
+        if (vis < t.displayHeight) t.setCrop(0, 0, t.width, vis * (t.height / t.displayHeight));
+      }
+    }
+  }
+
+  /** The top of a button sliced by the window's bottom edge: ink sides and top, its colour, no bottom edge. */
+  private drawPeek(x: number, y: number, w: number, h: number, kolor: number) {
+    const g = this.peekG;
+    if (!g || h <= 0) return;
+    const b = 2, ink = 0x1e1a24;
+    const c = Phaser.Display.Color.IntegerToColor(kolor);
+    const jasny = Phaser.Display.Color.GetColor(Math.min(255, c.red + 45), Math.min(255, c.green + 40), Math.min(255, c.blue + 30));
+    const ciemny = Phaser.Display.Color.GetColor(c.red * 0.62, c.green * 0.62, c.blue * 0.62);
+    g.fillStyle(0x000000, 0.45).fillRect(x + w, y + 3 + b, 3, h - 3 - b);
+    g.fillStyle(ink, 1).fillRect(x + b, y, w - 2 * b, h).fillRect(x, y + b, w, h - b);
+    g.fillStyle(kolor, 1).fillRect(x + b, y + b, w - 2 * b, h - b);
+    g.fillStyle(jasny, 0.9).fillRect(x + b, y + b, w - 2 * b, 2).fillRect(x + b, y + b, 2, h - b);
+    g.fillStyle(ciemny, 0.9).fillRect(x + w - b - 2, y + b, 2, h - b);
+  }
+
+  private redrawDialogRail() {
+    const g = this.dialogRailG;
+    const r = this.railGeom;
+    if (!g || !r) return;
+    g.clear();
+    if (this.scrollMax <= 0) return;
+    const trackX = r.x + r.w - 12;
+    const trackW = 5;
+    g.fillStyle(0x1e1a24, 0.8).fillRoundedRect(trackX, r.y0, trackW, r.viewportH, 2);
+    const knobH = Math.max(28, r.viewportH * (r.viewportH / r.contentH));
+    const knobY = r.y0 + (r.viewportH - knobH) * (this.scrollY / this.scrollMax);
+    g.fillStyle(0xc9953f, 1).fillRoundedRect(trackX, knobY, trackW, knobH, 2);
+    g.lineStyle(1, 0x1e1a24, 0.9).strokeRoundedRect(trackX, knobY, trackW, knobH, 2);
   }
 
   private dialogOpenedAt = 0;
 
   private onDialogTap(x: number, y: number) {
-    if (!this.dialogBox && !this.overlay && onMenuButton(x, y)) {
+    if (loadingGame()) return;
+    if (this.shop) return;
+    if (!this.hasDialog && !this.overlay && !teleskop() && onMenuButton(x, y)) {
       this.openGameMenu();
       return;
     }
-    if (!this.dialogBox || this.time.now - this.dialogOpenedAt < 250) return;
+    if (!this.hasDialog) return;
+    // Any press while a dialog is open belongs to the dialog, never to the weapon.
+    cancelPress();
+    if (this.time.now - this.dialogOpenedAt < 250) return;
+    // Text still being written: the tap writes it all (and shows the buttons).
+    if (this.pisanie) { this.dopiszDoKonca(); return; }
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
     let choice: number | null = null;
     const real = this.dialogButtons.filter((b) => b.index >= 0);
     // Keyboard: Space/Enter picks the first button, or "Wyjdź" in a long list.
-    if (x < 0) choice = real.length > 2 ? real.length - 1 : 0;
-    for (const b of this.dialogButtons) if (b.rect.getBounds().contains(x, y)) choice = b.index;
+    if (x < 0) choice = this.dialogZamknij ?? (real.length > 2 ? real.length - 1 : 0);
+    for (const b of this.dialogButtons) {
+      // A scrolled-away button isn't drawn (see redrawScrollVisibility) – a tap at its old screen spot doesn't pick it.
+      if (b.scrollable && !b.rect.visible) continue;
+      if (b.rect.getBounds().contains(x, y)) choice = b.index;
+    }
     if (choice === null) return;
     const choose = this.dialogChoose;
     this.closeDialog();
@@ -608,7 +1074,7 @@ export class UIScene extends Phaser.Scene {
   /** The Kufer (ui/character.ts): the world stands still while it is open (owner, 5 Oct 2026). */
   private openCharacter(page?: 'eq' | 'gold' | 'quests') {
     const game = this.scene.get('game') as GameScene;
-    if (!game.player || this.overlay || this.dialogBox) return;
+    if (!game.player || this.overlay || this.hasDialog) return;
     touchInput.attack = false;
     if (isCharacterOpen()) return closeCharacter();
     if (isMinimapOpen()) closeMinimap();
@@ -620,7 +1086,7 @@ export class UIScene extends Phaser.Scene {
         this.wakeWorld();
         game.gearChanged();
       },
-      hp: game.player.hp, maxHp: PLAYER.maxHp, onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
+      hp: game.player.hp, maxHp: PLAYER.maxHp, fruitPerHeal: game.fruitPerHeart(), onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
@@ -633,6 +1099,17 @@ export class UIScene extends Phaser.Scene {
     if (isMinimapOpen()) return closeMinimap();
     this.sleepWorld();
     toggleMinimap(game, () => this.wakeWorld());
+  }
+
+  /** A city board's map (GameScene.otworzTablice): the world sleeps meanwhile, like the map screen. */
+  openTablica(t: { x: number; y: number }) {
+    const game = this.scene.get('game') as GameScene;
+    if (!game.player || this.overlay || this.hasDialog || isCharacterOpen() || isMinimapOpen() || tablicaOtwarta()) return;
+    const h = game.tablicaHost(t);
+    if (!h) return;
+    touchInput.attack = false;
+    this.sleepWorld();
+    otworzTablice(h, () => this.wakeWorld());
   }
 
   /**
@@ -649,39 +1126,26 @@ export class UIScene extends Phaser.Scene {
     if (!this.game.loop.running) this.game.loop.wake();
   }
 
-  /** Top-left menu: leave the game properly. */
+  /**
+   * Top-left menu: leave the game properly. Kept short (owner, 26 Oct 2026: with every toggle piled in here
+   * it no longer fit a phone turned sideways) – the toggles live in a separate "⚙ Ustawienia" submenu, which
+   * also means a long submenu list can scroll (see showDialog) instead of having to fit in one go.
+   */
   private openGameMenu() {
+    if (loadingGame()) return;
     const game = this.scene.get('game') as GameScene;
-    if (this.dialogBox || this.overlay || !game.player || game.player.isDead) return;
+    if (this.hasDialog || this.overlay || !game.player || game.player.isDead) return;
+    // „Wyjdź z gry” at the bottom, in red (owner, 28 Oct 2026: as the top button it was taken for closing the window).
+    // Escape/Space pick „Graj dalej”, never the way out of the game.
+    const guziki = ['▶ Graj dalej', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', '🚪 Wyjdź z gry'];
     this.showDialog({
       title: 'Menu',
-      text: `Wyjście zapisuje zakończenie sesji. Następnym razem zaczniesz w punkcie startowym.\n\nPostęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
-      buttons: ['Wyjdź', 'Mój kod postaci', '🐞 Znalazłem buga', `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`, `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`, ...(TEST ? ['🐉 Smok (test)'] : []), 'Graj dalej'],
+      text: `Wyjście z gry: postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      buttons: guziki,
+      zamknij: 0,
+      grozny: 4,
       onChoose: (i) => {
-        if (i === 3) {
-          ustawTrzesienie(!trzesienieWlaczone());
-          this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
-          return;
-        }
-        if (i === 4) {
-          ustawEfektGor(!efektGorWlaczony());
-          this.toast(efektGorWlaczony() ? '⛰ Efekt gór włączony' : '⛰ Efekt gór wyłączony – bez rozmycia i mgły w dole', 2000);
-          return;
-        }
-        if (i === 5 && TEST) {
-          // Test server only: call a dragon of any kind next to the hero (all its attacks), for checks and tuning.
-          const ids = Object.keys(GATUNKI_SMOKOW) as GatunekId[];
-          this.showDialog({
-            title: '🐉 Przywołaj smoka',
-            text: 'Smok stanie obok i zaatakuje, gdy podejdziesz.',
-            buttons: [...ids.map((g) => GATUNKI_SMOKOW[g].nazwa), 'Anuluj'],
-            onChoose: (k) => {
-              if (k < ids.length) (window as unknown as { __smok?: (g: GatunekId) => void }).__smok?.(ids[k]);
-            },
-          });
-          return;
-        }
-        if (i === 1) showCodeOverlay(session.name, session.idik);
+        if (i === 1) { showCodeOverlay(session.name, session.idik); return; }
         if (i === 2) {
           game.scene.pause();
           // The picture first (the menu is already gone from it), then the window.
@@ -689,8 +1153,10 @@ export class UIScene extends Phaser.Scene {
             game.scene.resume();
             if (sent) this.toast('Dzięki! Zgłoszenie wysłane – przejrzymy je rano.');
           });
+          return;
         }
-        if (i !== 0) return;
+        if (i === 3) { this.openSettingsMenu(); return; }
+        if (i !== 4) return; // "Graj dalej": nothing to do, the dialog already closed
         if (game.inCombat()) {
           this.toast('Nie możesz wyjść w trakcie walki!');
           return;
@@ -700,11 +1166,104 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  /** The menu's toggles and test tools, split out of the main menu so it stays short (see openGameMenu). */
+  private openSettingsMenu() {
+    const game = this.scene.get('game') as GameScene;
+    // „📲 Zainstaluj grę” (an app icon on the phone/computer) – not when it already runs as the installed app.
+    const INSTALUJ = '📲 Zainstaluj grę';
+    const MUZYKA = tx('♫ Muzyka', '♫ Music');
+    const SMOK = '🐉 Smok (test)';
+    const WSTECZ = '⬅ Wstecz';
+    const guziki = [
+      `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`,
+      `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`,
+      `⚖ Poziom trudności: ${session.level.nazwa}`,
+      MUZYKA,
+      ...(TEST ? [SMOK] : []),
+      ...(jakoAplikacja() || offline.demo ? [] : [INSTALUJ]),
+      WSTECZ,
+    ];
+    this.showDialog({
+      title: '⚙ Ustawienia',
+      text: '',
+      buttons: guziki,
+      onChoose: (k) => {
+        const label = guziki[k];
+        if (label === MUZYKA) {
+          game.scene.pause();
+          void openMusic().finally(() => { game.scene.resume(); this.openSettingsMenu(); });
+          return;
+        }
+        if (label === WSTECZ) { this.openGameMenu(); return; }
+        if (label === INSTALUJ) {
+          void zainstaluj().then((r) => {
+            if (r.ok) this.toast('📲 Gra zainstalowana – szukaj ikony Exp-lore na pulpicie.', 3500);
+            else if (r.jak) this.showDialog({ title: '📲 Gra jako aplikacja', text: r.jak, buttons: ['OK'], onChoose: () => {} });
+          });
+          return;
+        }
+        if (label === SMOK) {
+          // Test server only: call a dragon of any kind next to the hero (all its attacks), for checks and tuning.
+          const ids = Object.keys(GATUNKI_SMOKOW) as GatunekId[];
+          this.showDialog({
+            title: '🐉 Przywołaj smoka',
+            text: 'Smok stanie obok i zaatakuje, gdy podejdziesz.',
+            buttons: [...ids.map((g) => GATUNKI_SMOKOW[g].nazwa), 'Anuluj'],
+            onChoose: (k2) => {
+              if (k2 < ids.length) (window as unknown as { __smok?: (g: GatunekId) => void }).__smok?.(ids[k2]);
+            },
+          });
+          return;
+        }
+        if (k === 0) {
+          ustawTrzesienie(!trzesienieWlaczone());
+          this.toast(trzesienieWlaczone() ? '📳 Trzęsienie ekranu włączone' : 'Trzęsienie ekranu wyłączone – zamiast niego błysk', 2000);
+          return;
+        }
+        if (k === 1) {
+          ustawEfektGor(!efektGorWlaczony());
+          this.toast(efektGorWlaczony() ? '⛰ Efekt gór włączony' : '⛰ Efekt gór wyłączony – bez rozmycia i mgły w dole', 2000);
+          return;
+        }
+        if (k === 2) {
+          // Once a day (owner, 19 Oct 2026); the QR demo's dream has no real character yet.
+          if (offline.demo) this.toast('Poziom wybierzesz po przebudzeniu.', 2500);
+          else game.wyborTrudnosci(false);
+        }
+      },
+    });
+  }
+
+  private chooseShop(index: number) {
+    const shop = this.shop;
+    if (!shop) return;
+    const revision = shop.revision;
+    this.dialogChoose?.(index);
+    // Stock refresh updates the same window. A quest/service may replace it with a dialog.
+    if (this.shop === shop && shop.revision === revision) this.closeDialog();
+    resetTouch();
+  }
+
   private closeDialog() {
-    this.dialogBox?.destroy();
+    this.shop?.destroy();
+    this.shop = undefined;
+    this.dialogBox?.destroy(); // also destroys the scrollBox/rail graphics nested inside it
     this.dialogBox = undefined;
+    this.strony = undefined;
+    this.pisanie = undefined;
     this.dialogButtons = [];
     this.dialogChoose = undefined;
+    this.dialogZamknij = undefined;
+    this.dialogScroll = undefined;
+    this.scrollRows = [];
+    this.peekG = undefined;
+    this.dialogRailG = undefined;
+    this.scrollY = 0;
+    this.scrollMax = 0;
+    this.railGeom = undefined;
+    dialogRail.hit = null;
+    dialogRail.set = null;
+    dialogRail.wheel = null;
   }
 
   // The touch state lives in controls.ts; here we only draw it.
@@ -714,11 +1273,19 @@ export class UIScene extends Phaser.Scene {
       this.touch = true;
       for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(true);
     }
-    this.joyHint();
     const t = touchInput;
-    // The joystick shows only while a thumb holds it (and as a blinking hint).
-    const hinting = this.time.now < this.hintUntil;
-    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive || hinting);
+    if (live()) {
+      // New controls test: the joystick always stands bottom-left; the knob follows the thumb.
+      for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(!this.hasDialog && !this.overlay);
+      this.joyBase.setPosition(this.joyHome.x, this.joyHome.y).setAlpha(comicHud ? 1 : t.joyActive ? 1 : 0.75);
+      this.joyArrows.setPosition(this.joyHome.x, this.joyHome.y);
+      if (t.joyActive) this.joyKnob.setPosition(t.joyX, t.joyY);
+      else this.joyKnob.setPosition(this.joyHome.x, this.joyHome.y);
+      return;
+    }
+    // The joystick shows only while a thumb holds it. The blinking hint at its old corner is gone (owner, 12 Oct 2026:
+    // it blinked under the HUD, also while walking; players find the joystick by themselves).
+    for (const o of [this.joyBase, this.joyKnob, this.joyArrows]) o.setVisible(t.joyActive);
     if (t.joyActive) {
       this.joyBase.setPosition(t.joyOriginX, t.joyOriginY);
       this.joyArrows.setPosition(t.joyOriginX, t.joyOriginY);
@@ -739,7 +1306,7 @@ export class UIScene extends Phaser.Scene {
       .text(width / 2, 0, 'Zginąłeś!', { fontFamily: 'monospace', fontSize: '42px', color: '#e43b44', stroke: '#000', strokeThickness: 6 })
       .setOrigin(0.5, 0);
     const info = this.add
-      .text(width / 2, 0, `Śmierć jest ostateczna.\nTwoje imię trafia na Tablicę Pamięci.\n\nZdobyte doświadczenie: ${s?.exp ?? 0} EXP\n\nPierwsze wskrzeszenie jest za darmo, każde kolejne kosztuje ${WSKRZESZENIE.diamentow} 💎.`, {
+      .text(width / 2, 0, `Zdobyte doświadczenie: ${s?.exp ?? 0} EXP`, {
         fontFamily: 'monospace', fontSize: '17px', color: '#ffffff', align: 'center', wordWrap: { width: width - 40 }, lineSpacing: 4,
       })
       .setOrigin(0.5, 0);
@@ -772,3 +1339,43 @@ export class UIScene extends Phaser.Scene {
     });
   }
 }
+
+/**
+ * A comic frame with a pixel touch (owner, 26 Oct 2026; the same look as the HTML windows' CSS in index.html): a
+ * hard drop shadow, an ink outline whose corners step like pixel art, the fill, a light top/left edge and a dark
+ * bottom/right edge. No rounded corners, no blur.
+ */
+/** Space between a scrolling dialog's window and its frame, through which a cut row still peeks. */
+const PEEK_PAD = 12;
+/** Letters per second in a talk; a tap writes the rest at once. */
+const PISANIE_ZNAKOW_NA_S = 55;
+/** At most this many lines in one portion of a talk, even on a big screen. */
+const STRONA_MAKS_LINII = 6;
+interface Stronicowanie { d: DialogRequest; strony: string[]; i: number; pisz: boolean }
+
+type ScrollRow = {
+  y: number;
+  h: number;
+  objs: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[];
+  texts?: Phaser.GameObjects.Text[];
+  btns?: { x: number; w: number; kolor: number }[];
+};
+
+export function ramkaKomiks(scene: Phaser.Scene, x: number, y: number, w: number, h: number, kolor: number,
+  o: { alfa?: number; gruba?: number; cien?: number } = {}) {
+  const g = scene.add.graphics();
+  const b = o.gruba ?? 2;
+  const cien = o.cien ?? 3;
+  const ink = 0x1e1a24;
+  const c = Phaser.Display.Color.IntegerToColor(kolor);
+  const jasny = Phaser.Display.Color.GetColor(Math.min(255, c.red + 45), Math.min(255, c.green + 40), Math.min(255, c.blue + 30));
+  const ciemny = Phaser.Display.Color.GetColor(c.red * 0.62, c.green * 0.62, c.blue * 0.62);
+  if (cien) g.fillStyle(0x000000, 0.45).fillRect(x + cien, y + cien + b, w, h - b).fillRect(x + cien + b, y + cien, w - 2 * b, h);
+  g.fillStyle(ink, 1).fillRect(x, y + b, w, h - 2 * b).fillRect(x + b, y, w - 2 * b, h);
+  g.fillStyle(kolor, o.alfa ?? 1).fillRect(x + b, y + b, w - 2 * b, h - 2 * b);
+  const e = Math.max(2, b);
+  g.fillStyle(jasny, (o.alfa ?? 1) * 0.9).fillRect(x + b, y + b, w - 2 * b, e).fillRect(x + b, y + b, e, h - 2 * b);
+  g.fillStyle(ciemny, (o.alfa ?? 1) * 0.9).fillRect(x + b, y + h - b - e - 1, w - 2 * b, e + 1).fillRect(x + w - b - e, y + b, e, h - 2 * b);
+  return g;
+}
+

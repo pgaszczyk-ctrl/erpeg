@@ -1,0 +1,149 @@
+{
+  "version": "2.0",
+  "sourceBranch": "ccr-ab439b8c-sydso4",
+  "actorCameraPitchDegrees": 22,
+  "propsCameraPitchDegrees": 50,
+  "nativeFrame": [
+    64,
+    64
+  ],
+  "feetPixel": [
+    32,
+    62
+  ],
+  "footBoundary": [
+    32,
+    63
+  ],
+  "nominalCharacterModelHeightPx": 54,
+  "supersedesCharacterHeight72": true,
+  "worldPixelMapPx": 0.5,
+  "nativeBlockPx": 2,
+  "blockOriginBoundary": [
+    32,
+    63
+  ],
+  "characterMapScaleFormula": "0.36 * SKALA_POSTACI (default 2/3); use existing actor renderer",
+  "noAdditionalPerActorHeightFit": true,
+  "hallToActorTransform": "One common scene transform for player/NPC/props. Never separately fit people to the hall illustration.",
+  "actors": {
+    "gazeciarz": {
+      "sheet": "assets/npc/gazeciarz.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    },
+    "straganiarz": {
+      "sheet": "assets/npc/straganiarz.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    },
+    "straznik_referencja": {
+      "sheet": "assets/npc/straznik_referencja.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    }
+  },
+  "props": {
+    "cart": {
+      "file": "assets/npc/stragan.png",
+      "size": [
+        128,
+        128
+      ],
+      "anchor": [
+        64,
+        103
+      ],
+      "pixelUnitsPerModelUnit": 43.2,
+      "baselineY": "world feet y"
+    },
+    "lamp": {
+      "files": [
+        "assets/lamp/lampa_0.png",
+        "assets/lamp/lampa_1.png",
+        "assets/lamp/lampa_2.png"
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "anchor": [
+        32,
+        53
+      ],
+      "pixelUnitsPerModelUnit": 43.2
+    }
+  },
+  "models": {
+    "newspaper": "models/gazeciarz.glb",
+    "trader": "models/straganiarz.glb",
+    "cart": "models/stragan.glb"
+  },
+  "renderNote": "Orthographic geometry projection and source vertex colours; offline raster, not a screenshot from Phaser/three.js. Native GLB supplied for production lighting."
+}

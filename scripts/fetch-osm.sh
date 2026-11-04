@@ -19,6 +19,8 @@ osmium tags-filter "$WORK/lublin.pbf" \
   wr/building \
   w/highway \
   w/railway=rail,tram,light_rail \
+  nwr/aeroway=aerodrome,terminal,runway,taxiway,apron,gate \
+  nw/barrier \
   wr/railway=platform \
   n/railway=station,halt \
   w/waterway=river,stream,canal,ditch,drain \
@@ -33,12 +35,17 @@ osmium tags-filter "$WORK/lublin.pbf" \
   nwr/office=government \
   -o "$WORK/filtered.pbf"
 
-osmium export "$WORK/filtered.pbf" -f geojsonseq -o "$WORK/lublin.geojsonseq"
+osmium export "$WORK/filtered.pbf" --add-unique-id=type_id --attributes=type,id -f geojsonseq -o "$WORK/lublin.geojsonseq"
 ls -lh "$WORK/lublin.geojsonseq"
 
 mkdir -p data
 gzip -9 -c "$WORK/lublin.geojsonseq" > data/lublin-osm.geojsonseq.gz
 ls -lh data/lublin-osm.geojsonseq.gz
+
+# Context for architecture is a separate extract, so it never paints new grass over the old ground.
+osmium tags-filter "$WORK/lublin.pbf" wr/landuse=residential,industrial,farmyard,commercial,retail -o "$WORK/architecture-context.pbf"
+osmium export "$WORK/architecture-context.pbf" --add-unique-id=type_id --attributes=type,id -f geojsonseq -o "$WORK/architecture-context.geojsonseq"
+gzip -9 -c "$WORK/architecture-context.geojsonseq" > data/architecture-context.geojsonseq.gz
 
 # Towns by the railway stations of the region, and the train timetables.
 scripts/fetch-towns.sh "$WORK/lubelskie.pbf"

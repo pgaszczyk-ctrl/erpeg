@@ -4,6 +4,7 @@ import { wallHeight, WALL_SKEW, WALLS_UP } from './MapRenderer';
 import { PX_PER_M } from './CityMap';
 import { MGLA } from '../content/mgla';
 import { SKALA_PLIKOW } from '../content/swiat';
+import { kodujKawalek, dekodujKawalek } from './mglaZapis';
 
 // Fog of war:
 // - clear: what the hero sees right now (a cone where they look, a small
@@ -23,19 +24,6 @@ const RAY_STEP_DEG = 2;
 const MARCH = 4; // px per ray step
 const FOG_RES = 2; // world px per fog-canvas pixel
 
-const b64 = {
-  enc(bytes: Uint8Array) {
-    let s = '';
-    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-    return btoa(s);
-  },
-  dec(str: string) {
-    const s = atob(str);
-    const out = new Uint8Array(s.length);
-    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
-    return out;
-  },
-};
 
 /** Marks a whole building (roof and walls) as seen. */
 export function markBuilding(explored: Explored, city: CityMap, b: Building) {
@@ -82,13 +70,18 @@ export class Explored {
     return c[(gy - cy * CHUNK_CELLS) * CHUNK_CELLS + (gx - cx * CHUNK_CELLS)] === 1;
   }
 
-  /** Bit-packed, base64 per chunk; positions depend on the map scale. */
+  /** One string per chunk (map/mgla.ts: run lengths or packed bits); positions depend on the map scale. */
+  /** Which chunks hold something explored (the map screen's rough "known land"), without encoding them. */
+  chunkKeys(): { s: number; chunks: Record<string, string> } {
+    return { s: PX_PER_M, chunks: Object.fromEntries([...this.chunks.keys()].map((k) => [k, ''])) };
+  }
+
   serialize(): { s: number; chunks: Record<string, string> } {
     const chunks: Record<string, string> = {};
     for (const [k, c] of this.chunks) {
       const bits = new Uint8Array(c.length / 8);
       for (let i = 0; i < c.length; i++) if (c[i]) bits[i >> 3] |= 1 << (i & 7);
-      chunks[k] = b64.enc(bits);
+      chunks[k] = kodujKawalek(bits);
     }
     return { s: PX_PER_M, chunks };
   }
@@ -98,7 +91,7 @@ export class Explored {
     if (!data) return;
     const k = PX_PER_M / (data.s || PX_PER_M);
     for (const [key, v] of Object.entries(data.chunks)) {
-      const bits = b64.dec(v);
+      const bits = dekodujKawalek(v);
       const c = new Uint8Array(CHUNK_CELLS * CHUNK_CELLS);
       for (let i = 0; i < c.length; i++) c[i] = (bits[i >> 3] >> (i & 7)) & 1;
       if (Math.abs(k - 1) < 1e-6) {
@@ -268,6 +261,10 @@ export class FogView {
   private where = { lat: 51.25, lon: 22.57 };
   private lightAt = 0;
   private light = 1;
+  /** Daylight 0 (night) … 1 (day) here, refreshed once a minute (the hero's lamp uses it). */
+  get daylight() { return this.podZiemia ? 0 : this.light; }
+  /** Underground (src/loch/): unknown ground is plain black, known-but-unseen a dark veil, no parchment, no skew. */
+  podZiemia = false;
 
   constructor(private scene: Phaser.Scene, private explored: Explored, where?: { lat: number; lon: number }) {
     if (where) this.where = where;
@@ -281,7 +278,12 @@ export class FogView {
     });
   }
 
-  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = []) {
+  /** Fly-over pictures show terrain without altering the player's explored cells. */
+  setVisible(visible: boolean) { this.img.setVisible(visible); }
+
+  update(cam: Phaser.Cameras.Scene2D.Camera, vision: number[], buildings: Iterable<Building> = [],
+    /** Tall things seen from afar (artillery cannons): their exact silhouette is cut out of the fog, no soft edge. */
+    odkryte: Iterable<{ canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number }> = []) {
     const v = cam.worldView;
     // Cell-aligned area a bit larger than the view.
     // Generous margin: the camera eases after the hero, so the view can be
@@ -301,7 +303,8 @@ export class FogView {
     const data = this.cellCtx.createImageData(gw, gh);
     const hz = this.hazeCtx.createImageData(gw, gh);
     const d = data.data, e = hz.data;
-    const [hr, hg, hb] = MGLA.mgielka;
+    const [hr, hg, hb] = this.podZiemia ? [6, 5, 10] : MGLA.mgielka;
+    const krycie = this.podZiemia ? 150 : MGLA.poznaneKrycie;
     for (let j = 0; j < gh; j++) {
       for (let i = 0; i < gw; i++) {
         const o = (j * gw + i) * 4;
@@ -309,7 +312,7 @@ export class FogView {
         d[o] = d[o + 1] = d[o + 2] = 0;
         d[o + 3] = seen ? 0 : 255;
         e[o] = hr; e[o + 1] = hg; e[o + 2] = hb;
-        e[o + 3] = seen ? MGLA.poznaneKrycie : 0;
+        e[o + 3] = seen ? krycie : 0;
       }
     }
     this.cellCtx.putImageData(data, 0, 0);
@@ -334,7 +337,7 @@ export class FogView {
       this.light = daylight(this.where.lat, this.where.lon);
     }
     ctx.globalCompositeOperation = 'source-atop';
-    if (this.paper) {
+    if (this.paper && !this.podZiemia) {
       // Pinned to the map, but drifting along with the hero at MGLA.paralaksa of his walk (a layer above the land).
       const drift = MGLA.paralaksa;
       this.paper.setTransform(new DOMMatrix([1, 0, 0, 1, (-gx0 * FOG_CELL + cam.midPoint.x * drift) / FOG_RES, (-gy0 * FOG_CELL + cam.midPoint.y * drift) / FOG_RES]));
@@ -345,7 +348,7 @@ export class FogView {
     ctx.globalCompositeOperation = 'destination-over';
     ctx.drawImage(this.haze, 0, 0, W, H);
     ctx.globalCompositeOperation = 'source-atop';
-    const dark = MGLA.nocCiemnosc * (1 - this.light);
+    const dark = this.podZiemia ? 0 : MGLA.nocCiemnosc * (1 - this.light);
     if (dark > 0.01) {
       ctx.fillStyle = `rgba(14,10,8,${dark.toFixed(3)})`;
       ctx.fillRect(0, 0, W, H);
@@ -379,7 +382,7 @@ export class FogView {
     mc.lineJoin = 'round';
     mc.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
-      const h = wallHeight(b) * (WALLS_UP ? -1 : 1);
+      const h = this.podZiemia ? 0 : wallHeight(b) * (WALLS_UP ? -1 : 1);
       for (const dy of [0, h / 2, h]) {
         const dx = dy * WALL_SKEW;
         mc.beginPath();
@@ -403,6 +406,7 @@ export class FogView {
       ctx.drawImage(this.mask, -(W + 50), 0);
       ctx.restore();
     } else ctx.drawImage(this.mask, 0, 0);
+    for (const o of odkryte) ctx.drawImage(o.canvas, (o.x - ox) / FOG_RES, (o.y - oy) / FOG_RES, o.w / FOG_RES, o.h / FOG_RES);
     ctx.globalCompositeOperation = 'source-over';
     this.tex.refresh();
     this.img.setPosition(ox, oy);

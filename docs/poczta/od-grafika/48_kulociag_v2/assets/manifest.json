@@ -1,0 +1,493 @@
+{
+  "version": "2.0",
+  "request": "48-P003",
+  "delivery": "48-G002",
+  "supersedes": "48-G002 v1: arbitrary camera, scale72 and imported illustration characters rejected",
+  "worldGrid": "assets/grid_v2.json",
+  "station": {
+    "file": "assets/station/hala_grid.png",
+    "size": [
+      1672,
+      941
+    ],
+    "gridPx": 2,
+    "gridOrigin": [
+      0,
+      0
+    ]
+  },
+  "comic": {
+    "whoop_pl": {
+      "frames": [
+        "assets/comic/whoop_pl_0.png",
+        "assets/comic/whoop_pl_1.png",
+        "assets/comic/whoop_pl_2.png"
+      ],
+      "frameSize": [
+        320,
+        200
+      ],
+      "anchor": [
+        160,
+        100
+      ],
+      "frameDurationMs": [
+        80,
+        160,
+        80
+      ],
+      "holdFrame": 1,
+      "totalDisplayMs": 2000,
+      "animation": "0,1,2,1 then hold 1; do not loop pop indefinitely"
+    },
+    "whoosh_en": {
+      "frames": [
+        "assets/comic/whoosh_en_0.png",
+        "assets/comic/whoosh_en_1.png",
+        "assets/comic/whoosh_en_2.png"
+      ],
+      "frameSize": [
+        320,
+        200
+      ],
+      "anchor": [
+        160,
+        100
+      ],
+      "frameDurationMs": [
+        80,
+        160,
+        80
+      ],
+      "holdFrame": 1,
+      "totalDisplayMs": 2000,
+      "animation": "0,1,2,1 then hold 1; do not loop pop indefinitely"
+    },
+    "pudlo_pl": {
+      "file": "assets/comic/pudlo_pl.png",
+      "width": 64,
+      "height": 32,
+      "anchor": [
+        32,
+        30
+      ],
+      "sourceCrop": {
+        "left": 69,
+        "top": 106,
+        "width": 1637,
+        "height": 741
+      }
+    },
+    "miss_en": {
+      "file": "assets/comic/miss_en.png",
+      "width": 64,
+      "height": 32,
+      "anchor": [
+        32,
+        30
+      ],
+      "sourceCrop": {
+        "left": 112,
+        "top": 46,
+        "width": 1532,
+        "height": 825
+      }
+    },
+    "damage": [
+      {
+        "file": "assets/comic/damage_0.png",
+        "width": 44,
+        "height": 42,
+        "anchor": [
+          22,
+          40
+        ],
+        "sourceCrop": {
+          "left": 94,
+          "top": 182,
+          "width": 449,
+          "height": 434
+        },
+        "numberCentre": [
+          22,
+          21
+        ],
+        "numberSafeRect": [
+          11,
+          12,
+          22,
+          17
+        ]
+      },
+      {
+        "file": "assets/comic/damage_1.png",
+        "width": 54,
+        "height": 50,
+        "anchor": [
+          27,
+          48
+        ],
+        "sourceCrop": {
+          "left": 712,
+          "top": 111,
+          "width": 590,
+          "height": 549
+        },
+        "numberCentre": [
+          27,
+          25
+        ],
+        "numberSafeRect": [
+          14,
+          14,
+          27,
+          20
+        ]
+      },
+      {
+        "file": "assets/comic/damage_2.png",
+        "width": 64,
+        "height": 58,
+        "anchor": [
+          32,
+          56
+        ],
+        "sourceCrop": {
+          "left": 1424,
+          "top": 41,
+          "width": 720,
+          "height": 657
+        },
+        "numberCentre": [
+          32,
+          29
+        ],
+        "numberSafeRect": [
+          16,
+          16,
+          32,
+          23
+        ]
+      }
+    ]
+  },
+  "foreground": [
+    {
+      "id": "bench_north",
+      "file": "assets/foreground/bench_north.png",
+      "x": 439,
+      "y": 216,
+      "width": 264,
+      "height": 75,
+      "baselineY": 290,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "bench_west",
+      "file": "assets/foreground/bench_west.png",
+      "x": 111,
+      "y": 385,
+      "width": 56,
+      "height": 187,
+      "baselineY": 571,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "bench_south",
+      "file": "assets/foreground/bench_south.png",
+      "x": 437,
+      "y": 677,
+      "width": 268,
+      "height": 78,
+      "baselineY": 754,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "crates_southwest",
+      "file": "assets/foreground/crates_southwest.png",
+      "x": 59,
+      "y": 674,
+      "width": 192,
+      "height": 159,
+      "baselineY": 833,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "barrel_north",
+      "file": "assets/foreground/barrel_north.png",
+      "x": 341,
+      "y": 173,
+      "width": 57,
+      "height": 73,
+      "baselineY": 246,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "chest_stairs",
+      "file": "assets/foreground/chest_stairs.png",
+      "x": 65,
+      "y": 270,
+      "width": 66,
+      "height": 73,
+      "baselineY": 344,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "railing_left",
+      "file": "assets/foreground/railing_left.png",
+      "x": 78,
+      "y": 95,
+      "width": 100,
+      "height": 122,
+      "baselineY": 307,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "railing_right",
+      "file": "assets/foreground/railing_right.png",
+      "x": 283,
+      "y": 194,
+      "width": 19,
+      "height": 80,
+      "baselineY": 307,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_0",
+      "file": "assets/foreground/lamp_0.png",
+      "x": 71,
+      "y": 568,
+      "width": 31,
+      "height": 82,
+      "baselineY": 650,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_1",
+      "file": "assets/foreground/lamp_1.png",
+      "x": 281,
+      "y": 730,
+      "width": 41,
+      "height": 82,
+      "baselineY": 812,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_2",
+      "file": "assets/foreground/lamp_2.png",
+      "x": 782,
+      "y": 194,
+      "width": 35,
+      "height": 82,
+      "baselineY": 276,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_3",
+      "file": "assets/foreground/lamp_3.png",
+      "x": 930,
+      "y": 525,
+      "width": 29,
+      "height": 82,
+      "baselineY": 607,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_4",
+      "file": "assets/foreground/lamp_4.png",
+      "x": 1134,
+      "y": 525,
+      "width": 29,
+      "height": 82,
+      "baselineY": 607,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_5",
+      "file": "assets/foreground/lamp_5.png",
+      "x": 1350,
+      "y": 525,
+      "width": 29,
+      "height": 82,
+      "baselineY": 607,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "lamp_6",
+      "file": "assets/foreground/lamp_6.png",
+      "x": 1583,
+      "y": 525,
+      "width": 29,
+      "height": 82,
+      "baselineY": 607,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "launcher_0",
+      "file": "assets/foreground/launcher_0.png",
+      "x": 934,
+      "y": 0,
+      "width": 206,
+      "height": 814,
+      "baselineY": 817,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "launcher_1",
+      "file": "assets/foreground/launcher_1.png",
+      "x": 1157,
+      "y": 0,
+      "width": 206,
+      "height": 814,
+      "baselineY": 817,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    },
+    {
+      "id": "launcher_2",
+      "file": "assets/foreground/launcher_2.png",
+      "x": 1380,
+      "y": 0,
+      "width": 206,
+      "height": 814,
+      "baselineY": 817,
+      "source": "pixel excerpt from original hall; manually traced silhouette"
+    }
+  ],
+  "hallLayout": "assets/hall_layout.json",
+  "npc": {
+    "gazeciarz": {
+      "sheet": "assets/npc/gazeciarz.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    },
+    "straganiarz": {
+      "sheet": "assets/npc/straganiarz.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    },
+    "straznik_referencja": {
+      "sheet": "assets/npc/straznik_referencja.png",
+      "frame": [
+        64,
+        64
+      ],
+      "feet": [
+        32,
+        62
+      ],
+      "anchorBoundary": [
+        32,
+        63
+      ],
+      "pitch": 22,
+      "nominalModelHeight": 54,
+      "columns": [
+        "walk_A",
+        "idle",
+        "walk_B"
+      ],
+      "rows": [
+        "front",
+        "left",
+        "back"
+      ]
+    }
+  },
+  "extras": {
+    "newspaperCall": [
+      "assets/npc/gazeciarz_wola_0.png",
+      "assets/npc/gazeciarz_wola_1.png"
+    ],
+    "trader": [
+      "assets/npc/straganiarz_macha.png",
+      "assets/npc/straganiarz_towar.png"
+    ]
+  },
+  "props": {
+    "cart": {
+      "file": "assets/npc/stragan.png",
+      "size": [
+        128,
+        128
+      ],
+      "anchor": [
+        64,
+        103
+      ],
+      "pixelUnitsPerModelUnit": 43.2,
+      "baselineY": "world feet y"
+    },
+    "lamp": {
+      "files": [
+        "assets/lamp/lampa_0.png",
+        "assets/lamp/lampa_1.png",
+        "assets/lamp/lampa_2.png"
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "anchor": [
+        32,
+        53
+      ],
+      "pixelUnitsPerModelUnit": 43.2
+    }
+  },
+  "models": {
+    "newspaper": "models/gazeciarz.glb",
+    "trader": "models/straganiarz.glb",
+    "cart": "models/stragan.glb"
+  },
+  "deployment": "not deployed; verify production renderer and seated player pose",
+  "pipeBands": {
+    "file": "assets/foreground/pipe_bands_48-G001.png",
+    "x": 0,
+    "y": 0,
+    "draw": "after animated ball, before fx; same as 48-G001"
+  }
+}

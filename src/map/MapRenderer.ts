@@ -1,7 +1,9 @@
+import { stylRegionu } from '../content/styleRegionow';
 import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
 import { AREA_FILL, ROAD_FILL } from './drawCity';
+import { nawierzchniaDrogi } from './nawierzchnia';
 import { GORY } from '../content/gory';
 import { PODLOZE_PLIKI, DACHY_PLIKI, SKALA_PLIKOW, SCIANY, LATARNIE, KOMINY, ZIELEN, DEKORACJE } from '../content/swiat';
 import { DZIELENIE, POZIOMY } from '../content/budynki';
@@ -12,7 +14,8 @@ import { plazaLandmark } from './landmarks';
 import { OSTROSC } from '../screen';
 import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
-import { GEN_DOTS, type Budynek09, type Pole09 } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, type Budynek09, type Pole09, type Rodzaj09 } from './ziemia09';
+import type { Terrain } from './terrain';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
 import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
@@ -21,6 +24,8 @@ import { peronyWOkolicy } from './perony';
 import { MOZAIKI } from '../content/mozaiki';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
+import { ruryPrzyUlicy, type Rura09 } from './rury09';
+import { srodowiskoTest2 } from '../test2/mode';
 
 export { AREA_FILL, ROAD_FILL };
 
@@ -72,7 +77,7 @@ const OUTLINE = '#1e1a24';
 /** Outline widths in map px (a character's outline pixel is ~0.36 map px). */
 const EDGE = { dach: 0.7, podstawa: 1, sciany: 0.6, droga: 0.8, obszar: 0.7 };
 
-// One earthen track for roads, pavements and paths alike.
+// Fallback colours for unpaved access tracks and paths.
 const TRACK_FILL = '#d9ab72';
 const TRACK_EDGE = '#8f6034';
 /** Drawn width: a bit wider than the real road so near-parallel paths merge. */
@@ -388,7 +393,7 @@ export function ksztalt09(b: Building) {
   const m2 = Math.abs(a) / 2 / (PX_PER_M * PX_PER_M);
   const f = (56 * 0.36 * SKALA_POSTACI * GEN_DOTS) / POZIOMY.wzorBohatera;
   const { poziomy, poziom } = ksztaltBudynku(b.levels || 1, m2);
-  const p = Math.max(10, Math.round(poziom * f));
+  const p = Math.max(Math.round(10 * POZIOMY.wyzej), Math.round(poziom * f * POZIOMY.wyzej));
   k = { poziomy, poziom: p, h: (poziomy * p) / GEN_DOTS };
   if (r.length) ksztalty.set(b, k);
   return k;
@@ -410,6 +415,7 @@ let textureCounter = 0;
 const czasyKawalkow: number[] = [];
 /** Overhaul 09: from asking for a chunk to seeing it (ms), background ground included. */
 const czasyCalosci: number[] = [];
+const czasyWorker: number[] = [];
 Object.assign(window, { __czasyKawalkow: czasyKawalkow, __czasyCalosci: czasyCalosci });
 
 interface Chunk {
@@ -418,6 +424,9 @@ interface Chunk {
   img: Phaser.GameObjects.Image;
   /** Which request for its ground (overhaul 09) the chunk waits for; older answers are dropped. */
   ver?: number;
+  /** Latest request whose pixels have reached the canvas texture. */
+  paintedVer?: number;
+  error?: Error;
   /** Overhaul 09: the tree crowns standing in this chunk (sprites, sorted by depth with the characters). */
   crowns?: Korona[];
   /** Overhaul 09: steam puffs from the platform pipes and gauges. */
@@ -436,11 +445,60 @@ export interface Uprawa09 { id: string; x: number; y: number; veg: string; /** T
 
 
 export class MapRenderer {
+  /** Read-only ground crop for architecture shadow colours. No terrain pixels are rewritten. */
+  groundSample(x:number,y:number,width:number,height:number):Uint8ClampedArray|null {
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d')!;ctx.imageSmoothingEnabled=false;let any=false;
+    for(const [key,c]of this.chunks){
+      const [cx,cy]=key.split(',').map(Number),px=cx*CHUNK,py=cy*CHUNK;
+      if(px+CHUNK<x||py+CHUNK<y||px>x+width||py>y+height||c.paintedVer!==c.ver)continue;
+      ctx.drawImage(c.tex.canvas,px-x,py-y,CHUNK,CHUNK);any=true;
+    }
+    return any?ctx.getImageData(0,0,width,height).data:null;
+  }
   private chunks = new Map<string, Chunk>();
   private free: Chunk[] = [];
+  /** Test2 reports allocated pixel storage; this is not total browser/GPU memory. */
+  diagnostics() {
+    const chunks = [...this.chunks.values(), ...this.free];
+    const high = this.wysokie.diagnostics();
+    return {
+      chunks: this.chunks.size,
+      allocatedChunks: chunks.length,
+      maxChunks: MAX_CHUNKS,
+      pendingChunks: [...this.chunks.values()].filter(c => c.paintedVer !== c.ver).length,
+      chunkRgbaBytes: chunks.reduce((sum, c) => sum + c.tex.width * c.tex.height * 4, 0),
+      crowns: chunks.reduce((sum, c) => sum + (c.crowns?.length ?? 0), 0),
+      steam: chunks.reduce((sum, c) => sum + (c.steam?.length ?? 0), 0),
+      buildings: high.count,
+      pendingBuildings: high.pending,
+      buildingRgbaBytes: high.rgbaBytes,
+      workerBuildingCacheMaxBytes: 12_000_000 * Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1)),
+      paintMs: [...czasyKawalkow],
+      readyMs: [...czasyCalosci],
+      computeMs: [...czasyWorker],
+    };
+  }
   private patterns?: Patterns;
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
+  /** Styl regionu świata dla budynku (kraj z jego położenia), pamiętany na mapie. Mapy bez położenia: Polska. */
+  private regiony = new WeakMap<Building, string>();
+  private regionBudynku(b: Building): string {
+    let r = this.regiony.get(b);
+    if (r === undefined) {
+      const m = this.map, x = b.rings[0]?.[0] ?? 0, y = b.rings[0]?.[1] ?? 0;
+      const ll = m.loch ? null : m.toLatLon(x, y);
+      r = ll && Number.isFinite(ll.lat) ? stylRegionu(ll.lat, ll.lon).id : 'umiarkowany';
+      this.regiony.set(b, r);
+    }
+    return r;
+  }
+
+  /** The view's middle last frame, and which way it last moved (−1/0/1 on each axis). */
+  private lastMid = { x: NaN, y: NaN };
+  private ruchX = 0;
+  private ruchY = 0;
 
   /** Chunks drawn before a map tile arrived: redrawn in place (kept visible meanwhile). */
   private stale = new Set<string>();
@@ -452,7 +510,7 @@ export class MapRenderer {
     return this.map.places.length > 150 ? 'srednie' : 'wies';
   }
 
-  constructor(private scene: Phaser.Scene, private map: CityMap) {
+  constructor(private scene: Phaser.Scene, private map: CityMap, private architectureOnly = false) {
     this.korony = new Korony(scene);
     this.wysokie = new Wysokie(scene, this.korony);
     const off = map.onTile((b) => {
@@ -481,14 +539,38 @@ export class MapRenderer {
 
   /** Draws the chunks around the camera; call every frame. */
   update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2) {
+    if (this.map.loch) return; // underground: scenes/Lochy.ts paints the maze
     const v = cam.worldView;
     const want: [number, number, number][] = [];
     const M = CHUNK / 4;
-    const cx0 = Math.floor((v.x - M) / CHUNK), cx1 = Math.floor((v.right + M) / CHUNK);
-    const cy0 = Math.floor((v.y - M) / CHUNK), cy1 = Math.floor((v.bottom + M) / CHUNK);
+    // More room ahead in the direction the view moves (owner, 27 Oct 2026: on a phone a chunk takes ~3 s in the
+    // background, about as long as walking a quarter chunk – the ground popped in at the screen's edge).
+    const sx = v.centerX - this.lastMid.x, sy = v.centerY - this.lastMid.y;
+    if (Math.abs(sx) + Math.abs(sy) > 0.05 && Math.abs(sx) + Math.abs(sy) < 50) {
+      this.ruchX = sx > 0.05 ? 1 : sx < -0.05 ? -1 : 0;
+      this.ruchY = sy > 0.05 ? 1 : sy < -0.05 ? -1 : 0;
+    }
+    this.lastMid = { x: v.centerX, y: v.centerY };
+    const A = CHUNK / 2;
+    const cx0 = Math.floor((v.x - (this.ruchX < 0 ? A : M)) / CHUNK), cx1 = Math.floor((v.right + (this.ruchX > 0 ? A : M)) / CHUNK);
+    const cy0 = Math.floor((v.y - (this.ruchY < 0 ? A : M)) / CHUNK), cy1 = Math.floor((v.bottom + (this.ruchY > 0 ? A : M)) / CHUNK);
     const mx = v.centerX / CHUNK - 0.5, my = v.centerY / CHUNK - 0.5;
-    for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2]);
-    want.sort((a, b) => a[2] - b[2]);
+    const vx0 = Math.floor(v.x / CHUNK), vx1 = Math.floor(v.right / CHUNK), vy0 = Math.floor(v.y / CHUNK), vy1 = Math.floor(v.bottom / CHUNK);
+    for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) {
+      // Visible chunks first, then the nearest; never more than the cap (the extra room ahead mustn't push the
+      // chunk count over it, or chunks would be dropped and painted again in turn).
+      const widac = cx >= vx0 && cx <= vx1 && cy >= vy0 && cy <= vy1;
+      want.push([cx, cy, (cx - mx) ** 2 + (cy - my) ** 2 + (widac ? 0 : 1000)]);
+    }
+    if (srodowiskoTest2()) {
+      // Prioritize the visible terrain; prefetch must fit the existing pixel budget.
+      const visible = ([x, y]: [number, number, number]) => x >= Math.floor(v.x / CHUNK) && x <= Math.floor(v.right / CHUNK) && y >= Math.floor(v.y / CHUNK) && y <= Math.floor(v.bottom / CHUNK);
+      want.sort((a, b) => Number(visible(b)) - Number(visible(a)) || a[2] - b[2]);
+      want.length = Math.min(want.length, MAX_CHUNKS);
+    } else {
+      want.sort((a, b) => a[2] - b[2]);
+      want.length = Math.min(want.length, MAX_CHUNKS);
+    }
     const keep = new Set(want.map(([x, y]) => `${x},${y}`));
 
     // Recycle chunks far from the view.
@@ -542,6 +624,21 @@ export class MapRenderer {
     }
   }
 
+  /** The visible terrain has both its map data and its finished picture. */
+  firstViewReady(cam: Phaser.Cameras.Scene2D.Camera) {
+    if (this.map.loch) return true;
+    const v = cam.worldView;
+    if (!this.map.ready({ x0: v.x, y0: v.y, x1: v.right, y1: v.bottom })) return false;
+    for (let x = Math.floor(v.x / CHUNK); x <= Math.floor(v.right / CHUNK); x++) {
+      for (let y = Math.floor(v.y / CHUNK); y <= Math.floor(v.bottom / CHUNK); y++) {
+        const key = `${x},${y}`, c = this.chunks.get(key);
+        if (c?.error) throw c.error;
+        if (!c || !c.img.visible || this.stale.has(key) || (WYGLAD_09 && c.paintedVer !== c.ver)) return false;
+      }
+    }
+    return this.wysokie.firstViewReady(v);
+  }
+
   /** Forces a redraw of every chunk (e.g. after mission highlights change). */
   invalidate() {
     for (const [, c] of this.chunks) {
@@ -565,6 +662,7 @@ export class MapRenderer {
     }
     const fresh = chunk.key !== k;
     chunk.key = k;
+    chunk.error = undefined;
     const x0 = cx * CHUNK;
     const y0 = cy * CHUNK;
     const ctx = chunk.tex.getContext();
@@ -581,11 +679,23 @@ export class MapRenderer {
       przygotujRysunkiUpraw().then(() => ziemiaWTle().policz(order)).then((ready) => {
         if (c.key !== k || c.ver !== ver || !this.scene.textures.exists(c.tex.key)) return;
         const t1 = performance.now();
+        if (ready.computeMs !== undefined) {
+          czasyWorker.push(Math.round(ready.computeMs));
+          if (czasyWorker.length > 20) czasyWorker.shift();
+        }
         this.paint(ctx, x0, y0, ready.ziemia);
-        this.dropCrowns(c);
-        c.crowns = ready.drzewa.map((t) => this.korony.make(t));
+        // Tall buildings: take the new list before letting go of the old one, so a building this chunk keeps
+        // isn't destroyed and drawn again in the background (it blinked out for a moment on every repaint).
+        const stareWysokie = c.wysokie ?? [];
         c.wysokie = order.budynki.filter((b) => b.osobno);
         this.wysokie.trzymaj(c, c.wysokie, order.noc, order.miasto);
+        const noweId = new Set(c.wysokie.map((b) => b.id ?? b.seed));
+        this.wysokie.pusc(c, stareWysokie.filter((b) => !noweId.has(b.id ?? b.seed)));
+        const wysokieNowe = c.wysokie;
+        c.wysokie = undefined;
+        this.dropCrowns(c);
+        c.wysokie = wysokieNowe;
+        c.crowns = ready.drzewa.map((t) => this.korony.make(t));
         c.steam = [...ready.para.map(([px, py]) => this.korony.steam(px, py)), ...ready.fale.map(([px, py]) => this.korony.fala(px, py)), ...ready.wyrzuty.map((z) => this.korony.wyrzut(z))];
         c.zbior = ready.zbior.map((q) => ({ id: idRosliny(q.x, q.y), x: q.x / GEN_DOTS, y: q.y / GEN_DOTS, veg: q.przedmiot, k: q.k }));
         c.ripe = this.onRipe ? c.zbior.filter((q) => !STAN.zebrane.has(q.id)).map((q) => this.onRipe!(q)).filter((im): im is Phaser.GameObjects.Image => !!im) : undefined;
@@ -593,6 +703,9 @@ export class MapRenderer {
         (czasyCalosci.push(Math.round(performance.now() - t0)), czasyCalosci.length > 20 && czasyCalosci.shift());
         c.tex.refresh();
         c.img.setPosition(x0, y0).setVisible(true);
+        c.paintedVer = ver;
+      }).catch((error: unknown) => {
+        if (c.key === k && c.ver === ver) c.error = error instanceof Error ? error : new Error(String(error));
       });
       return;
     }
@@ -658,11 +771,16 @@ export class MapRenderer {
         if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
   }
 
-  /** Wind and see-through of the crowns in view; call every frame (overhaul 09). */
-  updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, hx: number, hy: number) {
+  /**
+   * Wind and see-through of the crowns in view; call every frame (overhaul 09). `punkty[0]` is the hero
+   * (also used for the tall-building cut-out); any further points (łowiska: nearby wolves) also open a
+   * hole in a crown standing over them, so an enemy under the canopy isn't invisible.
+   */
+  updateTrees(now: number, dt: number, cam: Phaser.Cameras.Scene2D.Camera, punkty: { x: number; y: number }[]) {
+    if (this.map.loch) return;
     if (WYGLAD_09) {
-      this.korony.update(now, dt, cam.worldView, hx, hy);
-      this.wysokie.update(cam.worldView, hx, hy);
+      this.korony.update(now, dt, cam.worldView, punkty);
+      this.wysokie.update(cam.worldView, punkty[0].x, punkty[0].y);
     }
   }
 
@@ -727,6 +845,8 @@ export class MapRenderer {
       }
       g.fill('evenodd');
     } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
+    const strefy = m.terrain ? strefyGor(m.terrain, kinds, x0, y0) : undefined;
+    const szlaki = m.terrain ? this.szlakiGor(wide.lines, x0, y0) : undefined;
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
     const tory: number[][] = [];
     const tramwaje: number[][] = [];
@@ -746,14 +866,38 @@ export class MapRenderer {
         dziury: b.rings.slice(1).map((r) => r.map((v) => v * G)),
         h: k.poziomy * k.poziom,
         poziom: k.poziom,
-        osobno: !zabytek && k.poziomy >= POZIOMY.osobnoOd,
+        osobno: !this.architectureOnly && !zabytek && k.poziomy >= POZIOMY.osobnoOd,
         id: b.id,
         seed: b.seed,
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
+        region: this.regionBudynku(b),
       };
     });
     const G2 = GEN_DOTS;
+    const rury: Rura09[] = [];
+    const pipeRoads = new Map<string, Line[]>();
+    for (const l of m.query({x0:x0-80,y0:y0-80,x1:x0+CHUNK+80,y1:y0+CHUNK+80}).lines) {
+      if (!['minor', 'medium', 'service'].includes(l.kind) || l.bridge) continue;
+      const paths = ruryPrzyUlicy(l.pts, l.id, trackWidth(l), (x, y, radius = 4) => {
+        if (!m.isFree(x, y, radius, radius)) return false;
+        // Leave roads, sidewalks, rails and their crossings open. Query includes adjacent tiles.
+        const cx=Math.floor(x/32)*32, cy=Math.floor(y/32)*32, key=`${cx},${cy}`;
+        let nearby=pipeRoads.get(key);
+        if (!nearby) {
+          nearby=m.query({x0:cx-40,y0:cy-40,x1:cx+72,y1:cy+72}).lines.filter(q =>
+            ['major','medium','minor','service','pedestrian','steps','platform','path','rail','tram'].includes(q.kind));
+          pipeRoads.set(key, nearby);
+        }
+        return !nearby.some(q =>
+          distToPolyline(q.pts, x, y) < (q.kind === 'rail' || q.kind === 'tram' ? 7 : trackWidth(q) / 2) + radius);
+      }, 500 * PX_PER_M, { x0: x0 - 200, y0: y0 - 200, x1: x0 + CHUNK + 200, y1: y0 + CHUNK + 200 });
+      for (const p of paths) {
+        const xs=p.pts.filter((_,i)=>i%2===0), ys=p.pts.filter((_,i)=>i%2===1);
+        if (Math.max(...xs)<x0-80 || Math.min(...xs)>x0+CHUNK+80 || Math.max(...ys)<y0-80 || Math.min(...ys)>y0+CHUNK+80) continue;
+        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed, kotly:p.kotly?.map(k=>({x:k.x*G2,y:k.y*G2,pipeX:k.pipeX*G2,pipeY:k.pipeY*G2}))});
+      }
+    }
     const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
     // Fields and allotments reaching the chunk: whole outlines (the strips must be the same in every chunk).
     const pola: Pole09[] = wide.areas
@@ -768,7 +912,45 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje };
+    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
+  }
+
+  /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */
+  private rzezba(x: number, y: number) {
+    const t = this.map.terrain!, R = GORY.poziomiceRzezbaM * PX_PER_M;
+    let lo = Infinity, hi = -Infinity;
+    for (let ring = 0; ring <= 2; ring++) for (let k = 0; k < (ring ? 12 : 1); k++) {
+      const a = (k * Math.PI) / 6, r = (R * ring) / 2;
+      const v = t.heightAt(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (Number.isNaN(v)) continue;
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    return hi - lo;
+  }
+
+  /** Is this trail in the mountains? Measured once per line at its middle point, so every chunk agrees. */
+  private gorskie = new Map<number, boolean>();
+  private szlakiGor(lines: Line[], x0: number, y0: number) {
+    const G = GEN_DOTS;
+    const linie: { p: number[]; pol: number }[] = [];
+    for (const l of lines) {
+      if (!SZLAKI_LESNE.has(l.kind) || l.bridge || l.pts.length < 4) continue;
+      let g = this.gorskie.get(l.id);
+      if (g === undefined) {
+        const i = Math.floor(l.pts.length / 4) * 2;
+        const r = this.rzezba(l.pts[i], l.pts[i + 1]);
+        if (Number.isNaN(r) || r === -Infinity) continue; // heights not loaded: ask again next time
+        g = r >= GORY.poziomiceOdM;
+        if (this.gorskie.size > 20000) this.gorskie.clear();
+        this.gorskie.set(l.id, g);
+      }
+      if (!g) continue;
+      for (const p of clipLine(l.pts, x0 - 40, y0 - 30, x0 + CHUNK + 40, y0 + CHUNK + 70)) linie.push({ p: p.map((v) => v * G), pol: (trackWidth(l) / 2) * G });
+    }
+    if (!linie.length) return undefined;
+    const m = PX_PER_M * G;
+    return { linie, wolne: GORY.szlakBezDrzewM * m, rzadziej: GORY.szlakRzadziejM * m, zostaje: GORY.szlakRzadziejZostaje };
   }
 
   private paint(ctx: CanvasRenderingContext2D, x0: number, y0: number, ground?: HTMLCanvasElement) {
@@ -817,9 +999,7 @@ export class MapRenderer {
       ctx.lineWidth = l.width;
       ctx.stroke();
     }
-    // Roads, pavements and paths are all one kind of track: every outline
-    // first, then every fill in the same colour, so parallel and crossing
-    // pieces melt into one shape with a single outline.
+    // Both renderers use the same road materials, regardless of map source.
     const roads = lines.filter((l) => ROAD_FILL[l.kind]);
     for (const l of roads) {
       linePath(ctx, l.pts);
@@ -827,9 +1007,11 @@ export class MapRenderer {
       ctx.lineWidth = trackWidth(l) + (l.bridge ? 5 : EDGE.droga);
       ctx.stroke();
     }
-    for (const l of roads) {
+    for (const bruk of [false, true]) for (const l of roads) {
+      const nawierzchnia = nawierzchniaDrogi(l.kind);
+      if ((nawierzchnia === 'bruk') !== bruk) continue;
       linePath(ctx, l.pts);
-      ctx.strokeStyle = this.trackArt ?? TRACK_FILL;
+      ctx.strokeStyle = nawierzchnia === 'bruk' ? P.paved : nawierzchnia === 'chodnik' ? P.plaza : this.trackArt ?? TRACK_FILL;
       ctx.lineWidth = trackWidth(l);
       ctx.stroke();
     }
@@ -1382,7 +1564,11 @@ export class MapRenderer {
       if (L < 0.01) continue;
       let t = carry;
       while (t < L) {
-        f(ax + (dx * t) / L, ay + (dy * t) / L, dx / L, dy / L, side, n++);
+        const x = ax + (dx * t) / L, y = ay + (dy * t) / L;
+        // Only spots near the chunk being painted are checked (a street crossing it can be kilometres long;
+        // checking all of it for every chunk took ~250 ms on phones). Side and count go on, so every chunk agrees.
+        if (!clip || (x > clip.x0 && x < clip.x1 && y > clip.y0 && y < clip.y1)) f(x, y, dx / L, dy / L, side, n);
+        n++;
         side = -side;
         t += step;
       }
@@ -1407,6 +1593,7 @@ export class MapRenderer {
         this.along(l, D.lawka.coM * PX_PER_M, (x, y, ux, uy, side, n) => {
           const bx = x - uy * off * side, by = y + ux * off * side;
           if (!free(bx, by) || m.surfaceAt(bx, by) !== 'trawa' || !m.areaKindsAt(bx, by).includes('park')) return;
+          if (m.terrain && m.terrain.zoneAt(bx, by)) return; // no benches above the treeline (a national park, not a city one)
           this.stand(ctx, 'lawka', bx, by);
           if (n % 2 === 0) this.stand(ctx, 'kosz', bx + 11, by);
         });
@@ -1489,6 +1676,11 @@ export class MapRenderer {
           const off = l.width / 2 + 2 * PX_PER_M;
           const x = ax + (dx * t) / L + (-dy / L) * off * side;
           const y = ay + (dy * t) / L + (dx / L) * off * side;
+          if (clip && (x < clip.x0 || x > clip.x1 || y < clip.y0 || y > clip.y1)) {
+            side = -side;
+            t += step;
+            continue;
+          }
           // At the road's edge: a little further out there is no more road (a dual carriageway's middle or a wide junction).
           const ox = x + (-dy / L) * 3 * PX_PER_M * side, oy = y + (dx / L) * 3 * PX_PER_M * side;
           const edge = m.buildingAt(ox, oy) || m.surfaceAt(ox, oy) !== 'asfalt';
@@ -1500,4 +1692,50 @@ export class MapRenderer {
       }
     }
   }
+}
+
+/** Ways along which mountain forest is cleared (owner, 11 Oct 2026). */
+const SZLAKI_LESNE = new Set(['path', 'steps', 'track', 'service', 'minor']);
+
+/** Generator px per cell of the mountain zone grid (8 map px ≈ 4 m); heights in between are interpolated. */
+const STREFA_KRATKA = 16;
+/** Above the treeline these grounds turn into an alpine meadow… */
+const NAD_LASEM = new Set<Rodzaj09>(['las_lisciasty', 'las_iglasty', 'park', 'zarosla', 'laka']);
+/** …and above the rock line these into bare rock (roads, water, squares, rails and fields stay). */
+const NAD_SKALAMI = new Set<Rodzaj09>(['trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'zarosla', 'mokradlo']);
+
+/**
+ * Treeline and rock line on a chunk's kind map (heights over the treeline, Terrain.zoneHeight) (owner, 11 Oct 2026: Triglav's summit was a park with trees and benches –
+ * the world map has only the national park there, no rock). Zone heights (Terrain.zoneHeight: real height + a soft
+ * wander) on a STREFA_KRATKA grid, interpolated per pixel so the lines curve. Returns the grid for the worker, which
+ * plants no trees above the treeline; undefined when the chunk is all below it.
+ */
+function strefyGor(t: Terrain, k: { ids: Uint8Array; S: number }, x0: number, y0: number) {
+  const { ids, S } = k;
+  const B = STREFA_KRATKA;
+  const w = Math.ceil(S / B) + 1;
+  const h = new Float32Array(w * w);
+  let top = -Infinity;
+  for (let j = 0; j < w; j++)
+    for (let i = 0; i < w; i++) {
+      const v = t.zoneHeight(x0 + (i * B - MARGINES) / GEN_DOTS, y0 + (j * B - MARGINES) / GEN_DOTS);
+      h[j * w + i] = Number.isNaN(v) ? -1e4 : v;
+      if (v > top) top = v;
+    }
+  if (!(top >= 0)) return undefined;
+  const LAS = RODZAJE.map((r) => NAD_LASEM.has(r));
+  const SKALA = RODZAJE.map((r) => NAD_SKALAMI.has(r));
+  const TRAWA = RODZAJE.indexOf('trawa'), SKALA_ID = RODZAJE.indexOf('skala');
+  for (let y = 0; y < S; y++) {
+    const fy = y / B, j = Math.floor(fy), ay = fy - j;
+    for (let x = 0; x < S; x++) {
+      const fx = x / B, i = Math.floor(fx), ax = fx - i, q = j * w + i;
+      const v = (h[q] * (1 - ax) + h[q + 1] * ax) * (1 - ay) + (h[q + w] * (1 - ax) + h[q + w + 1] * ax) * ay;
+      if (v < 0) continue;
+      const p = y * S + x, r = ids[p];
+      if (v >= GORY.skalyNadLasem && SKALA[r]) ids[p] = SKALA_ID;
+      else if (LAS[r]) ids[p] = TRAWA;
+    }
+  }
+  return { b: B, w, h, las: 0 };
 }

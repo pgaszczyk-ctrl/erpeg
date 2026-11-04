@@ -1,5 +1,7 @@
 import type { Rodzaj } from '../gen';
+import { arenaOn } from '../walka/tryb';
 import type { Area, Line } from './CityMap';
+import { nawierzchniaDrogi } from './nawierzchnia';
 import { GEN_DOTS, MARGINES, RODZAJE, ziemia, ustawRysunkiUpraw, obrazBudynku, type Zlecenie, type Rodzaj09, type Budynek09 } from './ziemia09';
 import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
 
@@ -51,7 +53,7 @@ function rodzajObszaru(a: Area): Rodzaj09 {
     case 'farmland': return a.id % 2 ? 'pole_orka' : 'pole_zboze';
     case 'cemetery': return 'cmentarz';
     case 'allotments': return 'laka'; // działki: łąka z drzewami owocowymi (drzewa09.ts)
-    case 'pitch': return 'trawa';
+    case 'pitch': return a.arena && arenaOn() ? 'piasek' : 'trawa'; // a stadium's bowl = the Arena's sand (no trees)
     case 'playground': return 'plac';
     case 'parking': return 'targ'; // parkingi jako plac targowy ze straganami (targ09.ts)
     case 'plaza': return 'plac';
@@ -128,16 +130,19 @@ export function mapaRodzajow(
     g.fillStyle = kolor(rodzajObszaru(a));
     g.fill('evenodd');
   }
-  for (const l of lines) {
+  // Hard streets go over dirt paths at crossings, independently of tile/feature order.
+  // Prepared paving polygons may still join parallel streets; world lines use the
+  // very same cobble material without needing a prebuilt city-wide polygon layer.
+  for (const bruk of [false, true]) for (const l of lines) {
+    const nawierzchnia = nawierzchniaDrogi(l.kind);
+    if ((nawierzchnia === 'bruk') !== bruk) continue;
     const woda = l.kind === 'river' || l.kind === 'stream' || l.kind === 'ditch';
     // Tram tracks are only grooves in the road (owner, 7 Oct 2026): the ground under them is road, not ballast.
     const tor = l.kind === 'rail';
     let r: Rodzaj | null = null;
     if (woda) r = 'woda';
     else if (tor) r = 'tory';
-    else if (l.kind === 'tram') r = 'droga';
-    else if (l.kind === 'pedestrian') r = 'chodnik';
-    else if (DROGI.has(l.kind)) r = 'droga';
+    else r = nawierzchnia;
     if (!r) continue;
     g.beginPath();
     g.moveTo(l.pts[0], l.pts[1]);
@@ -204,7 +209,7 @@ function naPlotno(px: Uint32Array, N: number, H = px.length / N) {
  * Ziemia liczona w tle: dwa Web Workery (po kolei zlecenia), a gdy przeglądarka ich nie da – od razu w grze.
  */
 /** Gotowy kawałek: ziemia z budynkami i pniami oraz drzewa, którym gra stawia korony. */
-export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[] }
+export interface Gotowe { ziemia: HTMLCanvasElement; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; computeMs?: number }
 
 /** Warzywa z rysunkami od grafika (zamówienie 12, public/uprawy/uprawa_<warzywo>_<faza>.png). */
 export const WARZYWA_RYSUNKI = ['marchewka', 'dynia', 'kapusta', 'brokul', 'salata', 'ziemniak', 'burak'];
@@ -213,7 +218,7 @@ const FAZY_RYSUNKOW = ['mloda', 'dorosla_1', 'dorosla_2', 'dorosla_3', 'dojrzala
 /** Wczytuje rysunki roślin (podstawa: środek dolnej krawędzi). Brakujące pomija – wtedy roślinę rysuje kod. */
 export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
   const out: Record<string, Sprite> = {};
-  const base = import.meta.env.BASE_URL || '/';
+  const { rysunki } = await import('./rysunki09');
   await Promise.all(WARZYWA_RYSUNKI.flatMap((u) => FAZY_RYSUNKOW.map((f) => new Promise<void>((ok) => {
     const img = new Image();
     img.onload = () => {
@@ -227,7 +232,7 @@ export async function wczytajRysunkiUpraw(): Promise<Record<string, Sprite>> {
       ok();
     };
     img.onerror = () => ok();
-    img.src = `${base}uprawy/uprawa_${u}_${f}.png`;
+    img.src = rysunki[`uprawa_${u}_${f}`];
   }))));
   return out;
 }
@@ -240,7 +245,7 @@ export const OZDOBY_PLIKI: Record<string, number> = { manometr: 1, zawor: 1, lam
 /** Wczytuje ozdoby: jedna klatka → `nazwa`, kilka → `nazwa#0`, `nazwa#1`…; podstawa = środek dolnej krawędzi klatki. */
 export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {
   const out: Record<string, Sprite> = {};
-  const base = import.meta.env.BASE_URL || '/';
+  const { rysunki } = await import('./rysunki09');
   await Promise.all(Object.entries(OZDOBY_PLIKI).map(([n, k]) => new Promise<void>((ok) => {
     const img = new Image();
     img.onload = () => {
@@ -257,7 +262,7 @@ export async function wczytajOzdoby(): Promise<Record<string, Sprite>> {
       ok();
     };
     img.onerror = () => ok();
-    img.src = `${base}swiat/ozdoby/${n}.png`;
+    img.src = rysunki[n];
   })));
   return out;
 }
@@ -274,7 +279,7 @@ class ZiemiaWTle {
       const ile = Math.max(1, Math.min(2, (navigator.hardwareConcurrency || 2) - 1));
       for (let i = 0; i < ile; i++) {
         const w = new Worker(new URL('./ziemia09.worker.ts', import.meta.url), { type: 'module' });
-        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number; bud?: boolean; x0?: number; y0?: number }>) => {
+        w.onmessage = (e: MessageEvent<{ nr: number; px: Uint32Array; drzewa: Drzewo09[]; para: [number, number][]; fale: [number, number][]; zbior: DoZebrania[]; wyrzuty: ZrodloPary[]; cien?: Uint32Array; S?: number; bud?: boolean; x0?: number; y0?: number; computeMs?: number }>) => {
           if (e.data.bud) {
             const ok = this.budynki.get(e.data.nr);
             this.budynki.delete(e.data.nr);
@@ -291,7 +296,7 @@ class ZiemiaWTle {
           const N = this.wymiar.get(e.data.nr)!;
           this.czeka.delete(e.data.nr);
           this.wymiar.delete(e.data.nr);
-          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior, wyrzuty: e.data.wyrzuty });
+          gotowe?.({ ziemia: naPlotno(e.data.px, N), drzewa: e.data.drzewa, para: e.data.para, fale: e.data.fale, zbior: e.data.zbior, wyrzuty: e.data.wyrzuty, computeMs: e.data.computeMs });
         };
         this.workery.push(w);
       }
@@ -337,8 +342,9 @@ class ZiemiaWTle {
 
   policz(z: Zlecenie): Promise<Gotowe> {
     if (!this.workery.length) {
+      const start = performance.now();
       const { px, drzewa, para, fale, zbior, wyrzuty } = ziemia(z);
-      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior, wyrzuty });
+      return Promise.resolve({ ziemia: naPlotno(px, z.N), drzewa, para, fale, zbior, wyrzuty, computeMs: performance.now() - start });
     }
     const nr = ++this.nr;
     const w = this.workery[this.kolej++ % this.workery.length];
@@ -364,5 +370,3 @@ export function rysujZiemie(ctx: CanvasRenderingContext2D, c: HTMLCanvasElement,
   ctx.drawImage(c, x0, y0, rozmiar, rozmiar);
   ctx.restore();
 }
-
-const DROGI = new Set(['major', 'medium', 'minor', 'service', 'track', 'path', 'steps']);

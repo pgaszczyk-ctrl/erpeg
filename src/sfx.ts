@@ -2,7 +2,7 @@
 
 let ctx: AudioContext | null = null;
 
-function audio() {
+export function audio() {
   try {
     ctx ??= new AudioContext();
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});

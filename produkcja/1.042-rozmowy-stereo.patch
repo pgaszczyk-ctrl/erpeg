@@ -1,0 +1,264 @@
+diff --git a/src/music.ts b/src/music.ts
+index cd06c83..9ba5cc9 100644
+--- a/src/music.ts
++++ b/src/music.ts
+@@ -41,13 +41,30 @@ function play(i: number, prime = false) {
+     if (!state || stopped || document.hidden || !enabled || !volume || (i !== desired && !t.mix)) t.media.pause();
+   }).catch(() => { t.pending = false; t.retryAt = performance.now() + 1000; });
+ }
++/**
++ * The recordings pan instruments hard left/right and back within half a second (skirmish ±9 dB,
++ * caravan-trails-2 ±6 dB; owner 1 Nov 2026: „muzyka skacze z prawego na lewy głośnik”). Mix each side
++ * partly into the other: L' = a·L + b·R, R' = b·L + a·R, a = (1 + SZEROKOSC) / 2, b = (1 − SZEROKOSC) / 2.
++ * 1 = untouched, 0 = mono. Swings become ~3 dB, the music still sounds stereo.
++ */
++const SZEROKOSC_STEREO = .4;
++function zwezStereo(ctx: AudioContext, input: AudioNode): AudioNode {
++  const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
++  const a = (1 + SZEROKOSC_STEREO) / 2, b = (1 - SZEROKOSC_STEREO) / 2;
++  const g = (v: number) => { const n = ctx.createGain(); n.gain.value = v; return n; };
++  input.connect(split);
++  split.connect(g(a), 0).connect(merge, 0, 0); split.connect(g(b), 1).connect(merge, 0, 0);
++  split.connect(g(b), 0).connect(merge, 0, 1); split.connect(g(a), 1).connect(merge, 0, 1);
++  return merge;
++}
+ /** Also called in the login gesture, BEFORE asynchronous login/map loading (Safari). */
+ function unlock() {
+   if (document.hidden || !enabled || !volume) return;
+   try {
+     if (!context) {
+       context = new AudioContext();
+-      master = context.createGain(); master.gain.value = volume; master.connect(context.destination);
++      master = context.createGain(); master.gain.value = volume;
++      zwezStereo(context, master).connect(context.destination);
+       tracks = FILES.map((name, i) => {
+         const media = new Audio(`${import.meta.env.BASE_URL}audio/${name}.mp3`);
+         media.preload = 'none'; media.loop = i >= 2;
+diff --git a/src/scenes/GameScene.ts b/src/scenes/GameScene.ts
+index e91e252..1841d6e 100644
+--- a/src/scenes/GameScene.ts
++++ b/src/scenes/GameScene.ts
+@@ -313,6 +313,8 @@ export interface DialogRequest {
+   zamknij?: number;
+   /** A button painted dark red as a warning (e.g. „Wyjdź z gry” at the bottom of the menu). */
+   grozny?: number;
++  /** Show the text at once (menus), not letter by letter. */
++  natychmiast?: boolean;
+   onChoose: (index: number) => void;
+ }
+ 
+diff --git a/src/scenes/UIScene.ts b/src/scenes/UIScene.ts
+index 298824b..bff0411 100644
+--- a/src/scenes/UIScene.ts
++++ b/src/scenes/UIScene.ts
+@@ -94,6 +94,9 @@ export class UIScene extends Phaser.Scene {
+   // GeometryMask only clips under the Canvas renderer, not this game's WebGL one, so instead of masking
+   // pixels, content is split into rows (one per line/button, `scrollRows`) and a row scrolled past the
+   // window is hidden whole rather than sliced – see `redrawScrollVisibility`.
++  /** The open paged talk (see showDialog), and the letter-by-letter writing of the current window. */
++  private strony?: Stronicowanie;
++  private pisanie?: { linie: { t: Phaser.GameObjects.Text; full: string }[]; ukryte: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[]; start: number; razem: number };
+   private dialogScroll?: Phaser.GameObjects.Container;
+   private scrollRows: ScrollRow[] = [];
+   // The row cut by the window's bottom edge peeks out (owner, 27 Oct 2026: „utnij fragment guzika, żeby
+@@ -215,7 +218,14 @@ export class UIScene extends Phaser.Scene {
+       if (e.key === 'Escape' && !document.getElementById('menu')) {
+         if (isCharacterOpen()) closeCharacter();
+         else if (isMinimapOpen()) closeMinimap();
+-        else if (this.dialogBox) {
++        else if (this.pisanie) this.dopiszDoKonca();
++        else if (this.dialogBox && this.strony && this.strony.i < this.strony.strony.length - 1) {
++          // A paged talk: Escape skips to the last portion with the real buttons.
++          const p = this.strony;
++          p.i = p.strony.length - 1;
++          p.pisz = false;
++          this.pokazStrone(p);
++        } else if (this.dialogBox) {
+           // As if the last button (Wyjdź / Anuluj) was picked, so the game goes on.
+           const choose = this.dialogChoose;
+           const last = this.dialogZamknij ?? this.dialogButtons.filter((b) => b.index >= 0).length - 1;
+@@ -524,6 +534,7 @@ export class UIScene extends Phaser.Scene {
+   update(time: number) {
+     setHudVehicles(hasTestVehicle('rower'), hasTestVehicle('hulajnoga'), testVehicle);
+     this.lowLife(time);
++    if (this.pisanie) this.piszDalej(time);
+     // The HTML HUD steps aside for dialogs and the game-over screen (they sit where it is).
+     showHud(this.overlay || this.hasDialog ? 'off' : 'on');
+     this.updateArrow();
+@@ -680,6 +691,92 @@ export class UIScene extends Phaser.Scene {
+       this.shop = showShop(d, i => this.chooseShop(i));
+       return;
+     }
++    // Long talks come in portions with „Dalej ▶” (owner, 1 Nov 2026: „inaczej wypracowania nikt nie będzie
++    // czytał”); the real buttons only on the last portion. Letters appear one by one (`pisz`).
++    const strony = this.podzielNaStrony(d);
++    const pisz = !d.natychmiast && (!!d.kto || d.text.length > 140);
++    if (strony.length < 2) { this.rysujDialog(d, pisz); return; }
++    this.pokazStrone({ d, strony, i: 0, pisz });
++  }
++
++  /** One portion of a paged dialog: „Dalej ▶ (1/3)” until the last, which has the request's own buttons. */
++  private pokazStrone(p: Stronicowanie) {
++    const ostatnia = p.i >= p.strony.length - 1;
++    const tekst = p.strony[p.i];
++    const strona: DialogRequest = ostatnia
++      ? { ...p.d, text: tekst }
++      : {
++          ...p.d, text: tekst, buttons: [`${tx('Dalej ▶', 'Next ▶')}  ${p.i + 1}/${p.strony.length}`], icons: undefined, tabs: undefined,
++          odpowiedzi: false, zamknij: 0, grozny: undefined,
++          onChoose: () => { p.i++; this.pokazStrone(p); },
++        };
++    this.rysujDialog(strona, p.pisz);
++    this.strony = p;
++  }
++
++  /** Lines of body text a dialog window has room for, given how tall its buttons are. */
++  private miejsceNaLinie(d: DialogRequest, przyciski: number, krok: number) {
++    const { width, height } = this.view;
++    const w = Math.min(width - 24, 620);
++    const P = d.kto ? (this.touch ? 60 : 78) : 0;
++    const side = P ? P + 10 : 0;
++    const t = this.add.text(0, 0, d.title, { fontFamily: DIALOG_FONT, fontSize: '23px', fontStyle: 'bold', wordWrap: { width: w - 32 - 2 * side } });
++    const headH = Math.max(t.height, P);
++    t.destroy();
++    const stacked = przyciski > 2;
++    const rows = stacked ? przyciski : przyciski ? 1 : 0;
++    const btnsH = rows ? rows * 44 + (rows - 1) * 8 : 0;
++    const tabH = d.tabs ? 48 : 0;
++    const wolne = height - 24 - (16 + headH + 10 + tabH) - (18 + btnsH + 16);
++    return Math.floor((wolne + 5) / krok);
++  }
++
++  /** Splits a long text into portions that fit the window (at most STRONA_MAKS_LINII lines), at paragraph/sentence ends. */
++  private podzielNaStrony(d: DialogRequest): string[] {
++    const { width } = this.view;
++    const w = Math.min(width - 24, 620);
++    const m = this.add.text(0, 0, d.text, { fontFamily: DIALOG_FONT, fontSize: '19px', wordWrap: { width: w - 32 }, lineSpacing: 5 });
++    const L = m.getWrappedText(d.text);
++    const krok = L.length ? (m.height + 5) / L.length : 24;
++    m.destroy();
++    const capDalej = Math.max(2, Math.min(STRONA_MAKS_LINII, this.miejsceNaLinie(d, 1, krok)));
++    // The last portion keeps its own buttons; with many of them (quiz answers) the text there may be short.
++    const capOst = Math.max(2, Math.min(STRONA_MAKS_LINII, this.miejsceNaLinie(d, d.buttons.length, krok)));
++    const pusta = (k: number) => !L[k]?.trim();
++    if (L.length <= capOst) return [d.text];
++    // Where to end a portion that may hold lines [od, od + ile): a blank line (paragraph), else a sentence end, else full.
++    const koniec = (od: number, ile: number, minimum: number) => {
++      const max = Math.min(L.length, od + ile);
++      for (let k = max; k >= od + minimum; k--) if (k < L.length && pusta(k)) return k;
++      for (let k = max; k >= od + minimum; k--) if (/[.!?…:”"»)]\s*$/.test(L[k - 1])) return k;
++      return max;
++    };
++    const strony: string[][] = [];
++    let i = 0;
++    while (i < L.length) {
++      while (i < L.length && pusta(i)) i++;
++      if (i >= L.length) break;
++      if (L.length - i <= capOst) { strony.push(L.slice(i)); break; }
++      const k = koniec(i, capDalej, Math.ceil(capDalej / 2));
++      strony.push(L.slice(i, k));
++      i = k;
++    }
++    // The last portion must fit together with the real buttons: move its tail into a portion of its own.
++    let ost = strony[strony.length - 1];
++    while (ost && ost.length > capOst) {
++      const k = koniec(0, ost.length - 1, Math.max(1, ost.length - capOst));
++      strony.splice(strony.length - 1, 1, ost.slice(0, k), ost.slice(k));
++      ost = strony[strony.length - 1];
++    }
++    const tekst = strony.map((s) => {
++      while (s.length && !s[0].trim()) s = s.slice(1);
++      while (s.length && !s[s.length - 1].trim()) s = s.slice(0, -1);
++      return s.join('\n');
++    }).filter((s) => s);
++    return tekst.length ? tekst : [d.text];
++  }
++
++  private rysujDialog(d: DialogRequest, pisz = false) {
+     this.closeDialog();
+     const { width, height } = this.view;
+     const w = Math.min(width - 24, 620);
+@@ -837,6 +934,40 @@ export class UIScene extends Phaser.Scene {
+     this.dialogChoose = d.onChoose;
+     this.dialogZamknij = d.zamknij;
+     this.dialogOpenedAt = this.time.now;
++    // Letters one by one; the buttons come once the text is written. A tap/Space first finishes the text.
++    if (pisz && !needsScroll) {
++      const linie = scrollRows.filter((r) => !r.btns).flatMap((r) => r.texts ?? []).map((t) => ({ t, full: t.text }));
++      const ukryte = scrollRows.filter((r) => r.btns).flatMap((r) => r.objs);
++      const razem = linie.reduce((n, l) => n + l.full.length, 0);
++      if (razem > 0) {
++        for (const l of linie) l.t.setText('');
++        for (const o of ukryte) o.setVisible(false);
++        this.pisanie = { linie, ukryte, start: this.time.now, razem };
++      }
++    }
++  }
++
++  /** Writes the dialog text letter by letter; returns false once everything is written. */
++  private piszDalej(time: number) {
++    const p = this.pisanie;
++    if (!p) return false;
++    let n = Math.floor(((time - p.start) / 1000) * PISANIE_ZNAKOW_NA_S);
++    if (n >= p.razem) { this.dopiszDoKonca(); return false; }
++    for (const l of p.linie) {
++      const k = Math.max(0, Math.min(l.full.length, n));
++      if (l.t.text.length !== k) l.t.setText(l.full.slice(0, k));
++      n -= l.full.length;
++    }
++    return true;
++  }
++
++  private dopiszDoKonca() {
++    const p = this.pisanie;
++    if (!p) return;
++    this.pisanie = undefined;
++    for (const l of p.linie) l.t.setText(l.full);
++    for (const o of p.ukryte) o.setVisible(true);
++    this.dialogOpenedAt = this.time.now - 150; // a quick double tap doesn't press the button that just appeared
+   }
+ 
+   /** Scrolls an overflowing dialog's body/buttons (0 = top); called from the brass rail and the mouse wheel. */
+@@ -921,6 +1052,8 @@ export class UIScene extends Phaser.Scene {
+     // Any press while a dialog is open belongs to the dialog, never to the weapon.
+     cancelPress();
+     if (this.time.now - this.dialogOpenedAt < 250) return;
++    // Text still being written: the tap writes it all (and shows the buttons).
++    if (this.pisanie) { this.dopiszDoKonca(); return; }
+     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
+     let choice: number | null = null;
+     const real = this.dialogButtons.filter((b) => b.index >= 0);
+@@ -1104,6 +1237,8 @@ export class UIScene extends Phaser.Scene {
+     this.shop = undefined;
+     this.dialogBox?.destroy(); // also destroys the scrollBox/rail graphics nested inside it
+     this.dialogBox = undefined;
++    this.strony = undefined;
++    this.pisanie = undefined;
+     this.dialogButtons = [];
+     this.dialogChoose = undefined;
+     this.dialogZamknij = undefined;
+@@ -1200,6 +1335,11 @@ export class UIScene extends Phaser.Scene {
+  */
+ /** Space between a scrolling dialog's window and its frame, through which a cut row still peeks. */
+ const PEEK_PAD = 12;
++/** Letters per second in a talk; a tap writes the rest at once. */
++const PISANIE_ZNAKOW_NA_S = 55;
++/** At most this many lines in one portion of a talk, even on a big screen. */
++const STRONA_MAKS_LINII = 6;
++interface Stronicowanie { d: DialogRequest; strony: string[]; i: number; pisz: boolean }
+ 
+ type ScrollRow = {
+   y: number;
+diff --git a/src/version.ts b/src/version.ts
+index f5b9044..a6efbff 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -4,7 +4,7 @@
+ // adds 0.001. The test server (exp-lore.app/test/) is built from the newest
+ // code with VITE_TEST=1 and says so on screen.
+ 
+-export const WERSJA = '1.041';
++export const WERSJA = '1.042';
+ 
+ /** Built for the test server? */
+ export const TEST = import.meta.env.VITE_TEST === '1';

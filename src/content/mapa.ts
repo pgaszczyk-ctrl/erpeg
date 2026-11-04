@@ -6,16 +6,20 @@
 export const SKALE_MAPY: ({ rodzaj: 'miasto'; r: number; nazwa?: string } | { rodzaj: 'wojewodztwo' | 'kraj' })[] = [
   { rodzaj: 'miasto', r: 600 },
   { rodzaj: 'miasto', r: 1500 },
-  // Lublin ma ok. 12–14 km średnicy.
-  { rodzaj: 'miasto', r: 7000, nazwa: 'Lublin' },
+  // Całe miasto (Lublin ma ok. 12–14 km średnicy); podpis = nazwa mapy, na której jesteśmy.
+  { rodzaj: 'miasto', r: 7000, nazwa: 'miasto' },
   { rodzaj: 'wojewodztwo' },
   { rodzaj: 'kraj' },
 ];
 
-/** Środek i promień (km) widoku województwa lubelskiego. */
-export const WOJEWODZTWO = { lat: 51.25, lon: 22.9, km: 135 };
-/** Środek i promień (km) widoku Polski. */
-export const KRAJ = { lat: 52.05, lon: 19.4, km: 400 };
+/**
+ * Widoki „Okolica” i „Kraj / świat” (właściciel, 13.10.2026: „ma się centrować na fragment mapy, w którym
+ * jesteśmy i który znamy”): okolica = koło `km` wokół bohatera; kraj = tyle, by zmieścić wszystko, co
+ * znamy (najmniej `minKm`, najwyżej `maksKm`), ze środkiem pośrodku poznanych miejsc.
+ * Poznany teren pokazujemy orientacyjnie – plamami w kratkach `kratkaKm`, nie dokładną trasą.
+ */
+export const OKOLICA = { km: 135, kratkaKm: 2 };
+export const KRAJ_WIDOK = { minKm: 400, maksKm: 6000, zapas: 1.25, kratkaKm: 8 };
 
 /** Miasta wojewódzkie (widok kraju: kropka, gdy bohater tam był – w promieniu `odwiedzoneKm`). */
 export const MIASTA_WOJEWODZKIE: { nazwa: string; lat: number; lon: number }[] = [
@@ -54,8 +58,34 @@ export const GRANICA = { wejscieM: 80, wyjscieM: 15, wyjscieS: 1 };
  * inaczej „w mieście / za miastem · gdzieś na północy” od środka miejscowości.
  * Promienie „w mieście” (metry): Lublin, wsie i miasteczka z mapy Lublina, duże miasta z mapy świata, mapy stacji.
  */
+/**
+ * Mapy świata (zgłoszenie 67): nazwę miejscowości gra sprawdza dopiero, gdy bohater zagada przechodnia.
+ * Pamięta ją, dopóki jest w jej granicach albo `pamietajM` od miejsca pytania; na odpowiedź czeka najwyżej `czekajMs`.
+ */
+export const MIEJSCOWOSC = { pamietajM: 2500, czekajMs: 3000 };
+
 export const MIEJSCE_HUD = {
   wiedzaM: 300, lublinM: 5500, wsM: 900, miastoM: 4000, miasteczkoM: 1000, centrum: 0.15,
   /** Miejscowości z mapy Lublina, które są miastami (reszta to wsie: „we wsi / za wsią”). */
   miasta: ['Nałęczów'],
+};
+
+/**
+ * MAPA PODRÓŻNIKA (właściciel, 13.10.2026): to nie przedmiot – u woźnicy/konduktora, kapitana portu albo
+ * w bibliotece płacisz `cena` („No tak, nowe miejsce. Przepisz sobie z mojej mapy, co gdzie jest”) i na twojej
+ * mapie zostają na zawsze ikonki najwyżej `maksIkon` dworców kolejowych, autobusowych i portów do `promienKm`
+ * od tego miejsca (najbliższy każdego rodzaju, reszta rozrzucona). W innych stronach przepisuje się od nowa.
+ * Dotknięcie ikonki → „Prowadź” = strzałka do tego miejsca (nie liczy się do limitu zadań).
+ * Dane dworców doczytywane tylko dla posiadaczy mapy (src/huby.ts).
+ */
+export const MAPA_PODROZNIKA = {
+  cena: 300,
+  promienKm: 50,
+  /** Znowu przepisać można, gdy bohater jest dalej niż ta część promienia od miejsca każdego przepisania. */
+  nowaOd: 0.6,
+  /** Ile miejsc z jednej mapy (właściciel: „max 6, najlepiej oddalonych od siebie, przynajmniej 1 z każdego rodzaju”). */
+  maksIkon: 6,
+  /** Doszedłeś do celu, gdy jesteś tyle metrów od niego. */
+  doszedlM: 60,
+  kolor: '#ffffff',
 };

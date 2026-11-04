@@ -1,0 +1,262 @@
+import './style.css';
+import Phaser from 'phaser';
+import { CityMap, PX_PER_M } from '../map/CityMap';
+import { MapRenderer } from '../map/MapRenderer';
+import { przygotujRysunkiUpraw } from '../map/Podloze09';
+import { LUBLIN_PLACES } from './locations';
+import { LublinLocator } from './locator';
+import { Pociagi } from '../map/Pociagi';
+import { torStacji } from '../map/perony';
+import { OSTROSC } from '../screen';
+import { SKALA_POSTACI } from '../skala';
+import { ArchitectureLayer } from '../architecture/layer';
+import { debugSettings } from '../architecture/debug';
+import { characterReference, labHeroScale } from '../architecture/proportions';
+const architectureSettings = debugSettings();
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const query = new URLSearchParams(location.search);
+const locations = LUBLIN_PLACES;
+const initial = locations.oldtown;
+const validNumber = (s: string | null, fallback: number, limit: number) => s !== null && s.trim() !== '' && Number.isFinite(+s) && Math.abs(+s) <= limit ? +s : fallback;
+const lat = validNumber(query.get('lat'), initial.lat, 85);
+const lon = validNumber(query.get('lon'), initial.lon, 180);
+// Public laboratory focuses on the real Lublin map before worldwide generation.
+const mapa = 'lublin';
+let zoom = Math.min(5, Math.max(1, validNumber(query.get('zoom'), 3, 10)));
+const LOWER_VIEW = 0.72;
+let lowerView = query.get('view') !== 'normal';
+const verticalRatio = () => lowerView ? LOWER_VIEW : 1;
+const keys = new Set<string>();
+let stick = { x: 0, y: 0 };
+let drag: { id: number; x: number; y: number } | null = null;
+let scene: LabScene | undefined;
+function setArchitectureParameter(key:string,value:string){
+  const url=new URL(location.href),p=scene?.city&&scene.player?scene.city.toLatLon(scene.player.x,scene.player.y):{lat,lon};
+  for(const [k,v]of Object.entries({[key]:value,lat:p.lat,lon:p.lon,mapa,zoom}))url.searchParams.set(k,String(v));
+  location.href=url.href;
+}
+const status = (message: string | null) => { $('lab-status').hidden = message === null; if (message !== null) $('lab-status').textContent = message; };
+const navigate = (point: { lat: number; lon: number; mapa: string }) => {
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries({ lat:point.lat,lon:point.lon,mapa:'lublin',view: lowerView ? 'lower' : 'normal', zoom })) url.searchParams.set(key, String(value));
+  location.href = url.href;
+};
+const refreshLinks = () => {
+  const p = scene?.city && scene.player ? scene.city.toLatLon(scene.player.x, scene.player.y) : { lat, lon };
+  for (const [id, view] of [['iso-view', 'lower'], ['normal-view', 'normal']]) {
+    const a = $<HTMLAnchorElement>(id), url = new URL(location.href);
+    for (const [key, value] of Object.entries({ ...p, mapa, view, zoom })) url.searchParams.set(key, String(value));
+    a.href = url.href;
+    a.classList.toggle('active', lowerView === (view === 'lower'));
+    a.setAttribute('aria-current', lowerView === (view === 'lower') ? 'true' : 'false');
+  }
+};
+refreshLinks();
+for (const [id, lower] of [['iso-view', true], ['normal-view', false]] as const) {
+  $<HTMLAnchorElement>(id).onclick = e => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    lowerView = lower;
+    scene?.fit();
+    if (scene) scene.frames.length = 0;
+    const url = new URL(location.href);
+    url.searchParams.set('view', lower ? 'lower' : 'normal');
+    url.searchParams.set('zoom', String(zoom));
+    history.replaceState(null, '', url);
+    refreshLinks();
+  };
+}
+for(const [id,enabled]of [['compare-before',false],['compare-after',true]] as const){
+  const button=$(id);button.classList.toggle('active',architectureSettings.enabled===enabled);button.setAttribute('aria-pressed',String(architectureSettings.enabled===enabled));
+  button.onclick=()=>{if(architectureSettings.enabled!==enabled)setArchitectureParameter('arch',enabled?'1':'0');};
+}
+$('lat').setAttribute('value', String(lat)); $('lon').setAttribute('value', String(lon));
+$('panel-toggle').onclick = () => {
+  const open = $('lab-panel').hidden;
+  $('lab-panel').hidden = !open;
+  $('panel-toggle').setAttribute('aria-expanded', String(open));
+};
+document.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(b => { b.onclick = () => navigate(locations[b.dataset.location as keyof typeof locations]); });
+$('coordinates').onsubmit = e => {
+  e.preventDefault();
+  const lat=Number($<HTMLInputElement>('lat').value),lon=Number($<HTMLInputElement>('lon').value);
+  if(scene?.city){const p=scene.city.fromLatLon(lat,lon);if(!scene.city.insideCity(p.x,p.y)){status('Ten punkt leży poza mapą Lublina. Wybierz jeden ze skrótów.');return;}}
+  navigate({lat,lon,mapa:'lublin'});
+};
+for (const [id, d] of [['zoom-out', -1], ['zoom-in', 1]] as const) $(''+id).onclick = () => { zoom = Math.max(1, Math.min(5, zoom + d)); scene?.fit(); refreshLinks(); };
+window.addEventListener('keydown', e => {
+  if ((e.target as HTMLElement)?.matches('input')) return;
+  if (/^(Arrow|Key[WASD])/.test(e.code)) { keys.add(e.code); e.preventDefault(); }
+});
+window.addEventListener('keyup', e => keys.delete(e.code));
+window.addEventListener('blur', () => { keys.clear(); stick = { x: 0, y: 0 }; });
+
+class LabScene extends Phaser.Scene {
+  architecture?: ArchitectureLayer;
+  city?: CityMap;
+  mapView?: MapRenderer;
+  player?: Phaser.GameObjects.Sprite;
+  ready = false;
+  frames: number[] = [];
+  distanceM = 0;
+  private lastFrame = 0;
+  private lastEnsure = 0;
+  private lastUi = 0;
+  private busy = false;
+  private loading = true;
+  private direction = 'down';
+  private trains?: Pociagi;
+  private shownStations = new Set<string>();
+  private locator=new LublinLocator($<HTMLCanvasElement>('lublin-map'),$('where-label'),$<HTMLAnchorElement>('osm-location'),$<HTMLButtonElement>('map-extent'));
+  private readonly heroScale = labHeroScale(SKALA_POSTACI);
+  constructor() { super('test2'); }
+  preload() {
+    this.load.spritesheet('lab-hero', 'postacie/lista25_01.png', { frameWidth: 64, frameHeight: 64 });
+    if(architectureSettings.enabled)this.load.spritesheet('architecture-decorations','architecture/decorations.png',{frameWidth:48,frameHeight:64});
+  }
+  create() {
+    scene = this;
+    for (const [i, dir] of ['down', 'up', 'side'].entries()) this.anims.create({ key: `lab-${dir}`, frames: [{ key: 'lab-hero', frame: i * 3 + 1 }, { key: 'lab-hero', frame: i * 3 + 2 }], frameRate: 7, repeat: -1 });
+    this.fit();
+    this.scale.on('resize', () => this.fit());
+    const canvas = this.game.canvas;
+    canvas.addEventListener('pointerdown', e => {
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId);
+      $('stick').hidden = false; $('stick').style.left = `${e.clientX}px`; $('stick').style.top = `${e.clientY}px`;
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!drag || drag.id !== e.pointerId) return;
+      const x = e.clientX - drag.x, y = e.clientY - drag.y, length = Math.hypot(x, y);
+      const k = length > 35 ? 35 / length : 1;
+      stick = { x: x * k / 35, y: y * k / 35 };
+      $('stick').querySelector('i')!.style.transform = `translate(${x * k}px,${y * k}px)`;
+    });
+    const endDrag = () => { drag = null; stick = { x: 0, y: 0 }; $('stick').hidden = true; };
+    canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+    void this.loadMap();
+  }
+  fit() {
+    // Both views share a zoom budget, so switching changes only the projection.
+    // Either a 2×3 or 3×2 chunk rectangle fits the six-chunk phone budget.
+    const w = this.scale.width / OSTROSC, h = this.scale.height / OSTROSC / LOWER_VIEW;
+    const minZoom = Math.max(1, Math.min(Math.max(Math.ceil(w / 490), Math.ceil(h / 980)), Math.max(Math.ceil(w / 980), Math.ceil(h / 490))));
+    zoom = Math.max(minZoom, zoom);
+    if(zoom*OSTROSC%2)zoom=Math.min(6,zoom+1);
+    this.cameras.main.setZoom(zoom * OSTROSC, zoom * OSTROSC * verticalRatio());
+    // The hero is a standing sprite; keep its proportions and foot anchor.
+    this.player?.setScale(this.heroScale, this.heroScale / verticalRatio());
+    this.architecture?.setProjection(verticalRatio());
+    if (this.mapView) {
+      this.cameras.main.preRender();
+      this.ready = false;
+      status('Przygotowuję kadr…');
+    }
+  }
+  private async loadMap() {
+    try {
+      const city = await CityMap.load('map/lublin.json');
+      let start = city.fromLatLon(lat, lon);
+      if(!city.insideCity(start.x,start.y))start=city.fromLatLon(initial.lat,initial.lon);
+      const r = this.radius();
+      await Promise.all([city.ensure(start.x, start.y, r), przygotujRysunkiUpraw()]);
+      this.city = city;
+      const p = city.freeNear(start.x, start.y);
+      const actual=city.toLatLon(p.x,p.y),url=new URL(location.href);
+      for(const [key,value]of Object.entries({...actual,mapa:'lublin'}))url.searchParams.set(key,String(value));
+      history.replaceState(null,'',url.href);
+      $<HTMLInputElement>('lat').value=String(actual.lat);$<HTMLInputElement>('lon').value=String(actual.lon);
+      this.player = this.add.sprite(p.x, p.y, 'lab-hero', 0).setOrigin(0.5, 56 / 64).setDepth(p.y);
+      this.fit();
+      this.mapView = new MapRenderer(this, city, architectureSettings.enabled);
+      if(architectureSettings.enabled){this.architecture=new ArchitectureLayer(this,city,this.mapView,architectureSettings,characterReference(this.heroScale,PX_PER_M));this.architecture.setProjection(verticalRatio());}
+      this.trains = new Pociagi(this, this.mapView);
+      this.cameras.main.startFollow(this.player, true, 1, 1);
+      this.cameras.main.centerOn(p.x, p.y);
+      this.loading = false;
+      Object.assign(window, { __test2: { scene: this, city, renderer: this.mapView, architecture: this.architecture, player: this.player, metrics: () => this.metrics(), ready: () => this.ready } });
+    } catch (error) { status(`Nie udało się wczytać mapy: ${error instanceof Error ? error.message : error}. Odśwież stronę, aby spróbować ponownie.`); }
+  }
+  private radius() { return Math.max(400, Math.hypot(this.scale.width / (zoom * OSTROSC), this.scale.height / (zoom * OSTROSC * verticalRatio())) / 2 + 150); }
+  metrics() {
+    const frames = [...this.frames].sort((a, b) => a - b);
+    const duration = this.frames.reduce((a, b) => a + b, 0);
+    return {
+      mapId:this.city?.id,mapMode:architectureSettings.enabled?'generator':'reference',
+      variant: lowerView ? 'lower' : 'current', projection: { x: 1, y: verticalRatio() }, ready: this.ready,
+      fps: duration ? 1000 * this.frames.length / duration : 0,
+      frameP95: frames[Math.floor(frames.length * 0.95)] ?? 0,
+      renderer: this.mapView?.diagnostics(),
+      architecture: this.architecture?.diagnostics(),
+      loaded: this.city ? { buildings: this.city.buildings.length, lines: this.city.lines.length, areas: this.city.areas.length } : null,
+      distanceM: this.distanceM, textures: this.game.textures.getTextureKeys().length,
+    };
+  }
+  update(now: number, delta: number) {
+    if (this.loading || !this.city || !this.player || !this.mapView) return;
+    const frame = performance.now();
+    if (this.lastFrame && this.ready) { this.frames.push(frame - this.lastFrame); if (this.frames.length > 300) this.frames.shift(); }
+    this.lastFrame = frame;
+    const dt = Math.min(delta / 1000, 0.05);
+    let dx = Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA')) + stick.x;
+    let dy = Number(keys.has('ArrowDown') || keys.has('KeyS')) - Number(keys.has('ArrowUp') || keys.has('KeyW')) + stick.y;
+    // Inverse projection keeps the joystick direction consistent with the screen.
+    dy /= verticalRatio();
+    const length = Math.hypot(dx, dy);
+    if (length > 1) { dx /= length; dy /= length; }
+    const p = this.player, oldX = p.x, oldY = p.y;
+    if(this.architecture?.hasPlan()&&!this.architecture.isFree(p.x,p.y)){
+      const free=this.architecture.freeNear(p.x,p.y);if(free)p.setPosition(free[0],free[1]);
+    }
+    const speed = 90 * dt;
+    const free=(x:number,y:number)=>this.architecture?this.architecture.isFree(x,y):this.city!.isFree(x,y,2,2);
+    if (free(p.x + dx * speed, p.y)) p.x += dx * speed;
+    if (free(p.x, p.y + dy * speed)) p.y += dy * speed;
+    this.distanceM += Math.hypot(p.x - oldX, p.y - oldY) / PX_PER_M;
+    if (length > 0.1) {
+      this.direction = Math.abs(dx) > Math.abs(dy) ? 'side' : dy < 0 ? 'up' : 'down';
+      p.setFlipX(this.direction === 'side' && dx < 0); p.play(`lab-${this.direction}`, true);
+    } else { p.stop(); p.setFrame(({ down: 0, up: 3, side: 6 })[this.direction as 'down' | 'up' | 'side']); }
+    p.setDepth(p.y);
+    if (now - this.lastEnsure > 350 && !this.busy) {
+      this.lastEnsure = now; this.busy = true;
+      void this.city.ensure(p.x, p.y, this.radius()).catch(() => status('Trwa ponawianie pobierania mapy…')).finally(() => { this.busy = false; });
+    }
+    this.cameras.main.preRender();
+    this.mapView.update(this.cameras.main);
+    this.architecture?.update(this.cameras.main,now,p);
+    this.mapView.updateTrees(now, dt, this.cameras.main, [{ x: p.x, y: p.y }]);
+    for (const station of this.city.places) {
+      if (station.kind !== 'station' || this.shownStations.has(station.id) || Math.hypot(station.door.x - p.x, station.door.y - p.y) > this.radius()) continue;
+      const rail = torStacji(this.city, station);
+      if (rail !== undefined) { this.shownStations.add(station.id); if (rail) this.trains?.postaw(station, rail); }
+    }
+    try {
+      if (!this.ready && this.mapView.firstViewReady(this.cameras.main) && (!this.architecture||this.architecture.ready())) { this.ready = true; status(null); }
+      const error=this.architecture?.diagnostics().failures.at(-1);
+      if(error)status(`Architektura: ${error}`);
+    } catch (error) { status(error instanceof Error ? error.message : String(error)); }
+    this.locator.update(this.city,p.x,p.y,this.cameras.main,this.architecture?.inspect().plan?.buildings??[],now);
+    if (now - this.lastUi > 1000) {
+      this.lastUi = now; refreshLinks();
+      const m = this.metrics(), r = m.renderer;
+      const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
+      const mib = r ? (r.chunkRgbaBytes + r.buildingRgbaBytes) / 1048576 : 0;
+      const a=m.architecture;
+      $('metrics').innerHTML = `<div><strong>${m.fps.toFixed(0)} FPS</strong><small>Ostatnie klatki spaceru</small></div><div><strong>${m.frameP95.toFixed(0)} ms</strong><small>Czas klatki · 95 percentyl</small></div><div><strong>${median(r?.computeMs ?? []).toFixed(0)} ms</strong><small>Rysowanie fragmentu · mediana</small></div><div><strong>${median(r?.readyMs ?? [])} ms</strong><small>Fragment · z oczekiwaniem w kolejce</small></div><div><strong>${mib.toFixed(1)} MiB</strong><small>Piksele podłoża i wysokich budynków</small></div><div><strong>${r?.allocatedChunks ?? 0} / ${r?.maxChunks ?? 0}</strong><small>Obrazy fragmentów w pamięci</small></div><div><strong>${m.loaded?.buildings ?? 0}</strong><small>Wczytane obrysy budynków</small></div><div><strong>${(m.distanceM).toFixed(0)} m</strong><small>Przebyta droga</small></div>${a?`<div><strong>${a.visible} / ${a.buildings}</strong><small>Nowe budynki · widoczne / zaplanowane</small></div><div><strong>${a.workerMs.toFixed(0)} ms</strong><small>Planowanie w workerze</small></div><div><strong>${(a.textureBytes/1048576).toFixed(1)} MiB</strong><small>Obrazy i bufory budynków</small></div><div><strong>${a.idFallbacks}</strong><small>Identyfikatory zastępcze</small></div>`:''}`;
+    }
+  }
+}
+
+const container = $('lab-game');
+const game = new Phaser.Game({
+  type: Phaser.AUTO, parent: 'lab-game', backgroundColor: '#203722', pixelArt: true,
+  scale: { mode: Phaser.Scale.NONE, width: container.clientWidth * OSTROSC, height: container.clientHeight * OSTROSC, zoom: 1 / OSTROSC },
+  input: { touch: false, keyboard: false }, audio: { noAudio: true }, scene: [LabScene],
+});
+window.addEventListener('resize', () => game.scale.resize(container.clientWidth * OSTROSC, container.clientHeight * OSTROSC));
+Object.assign(window, { __game: game });
+for(const [id,value,key]of [
+  ['arch-mode',architectureSettings.enabled?'1':'0','arch'],['building-scale',String(architectureSettings.scale),'BUILDING_SCALE'],
+  ['angle-snap',String(architectureSettings.angleSnap),'ANGLE_SNAP'],['outline-mode',architectureSettings.outline?'1':'0','OUTLINE'],['style-overlay',architectureSettings.overlay?'1':'0','styles'],
+] as const){const select=$<HTMLSelectElement>(id);select.value=value;select.onchange=()=>setArchitectureParameter(key,select.value);}

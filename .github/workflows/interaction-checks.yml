@@ -1,0 +1,42 @@
+name: Interaction target checks
+on:
+  pull_request:
+    paths:
+      - 'src/interaction.ts'
+      - 'src/controls.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'src/scenes/Etapy.ts'
+      - 'src/scenes/PrologRekruta.ts'
+      - 'scripts/tests/*interaction-selection.mjs'
+      - '.github/workflows/interaction-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/tests/interaction-selection.mjs
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          node scripts/tests/browser-interaction-selection.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interaction-browser-checks
+          path: work/interactions/*.png
+          retention-days: 7

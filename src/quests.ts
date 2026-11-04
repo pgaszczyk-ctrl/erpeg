@@ -1,19 +1,39 @@
+import { ustawPoziomBroni } from './inventory';
+import { zapamietajPostac } from './pamiecPostaci';
+import { effectiveStage } from './content/questy/progress';
+import { sesjaWygasla, toWygasla } from './sesja';
+import { translateMission, legacyText } from './content/questy/text';
+import { restoreScenario, isWithdrawnCityQuest } from './content/questy/scenarios';
+import { lang, setLanguage, tx, tr, wybierzJezyk, type Txt } from './i18n';
 import { setServerQuizzes } from './quizzes';
 import type { CityMap, Building } from './map/CityMap';
 import { MISJE, type Miejsce, type Misja, type Etap } from './content/fabula';
-import { api, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
+import { api, rpc, type LoginResult, type SaveData, type Snapshot, type Stats } from './api';
 import { PX_PER_M } from './map/CityMap';
-import { loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
+import { surfaceBindingMatches } from './map/worldRules';
+import { gear, loadGear, saveGear, normalizeSlot, addEssence, owns } from './inventory';
 import { KOSCIOL, URZAD, POLICJA, NAGRODA, ZBIERANIE, BIBLIOTEKA_MAPA } from './content/zlecenia';
+import { REPORTAZ, ROZNOSZENIE } from './content/gazeta';
 import type { Place as CityPlace } from './map/CityMap';
 import { rng } from './rng';
 import { DEFAULT_LOOK, cleanLook, type Look } from './look';
 import { TRUDNOSCI, trudnoscZWieku } from './content/trudnosc';
 import { PLAYER } from './objects/Player';
 import { zyciePostaci, poziomPostaci } from './content/historia';
+import type { StanDoOsiagniec } from './content/osiagniecia';
 import { loadSettings } from './settings';
+import { ustawStwory, type WierszLupu } from './content/stwory';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
+import { TEST } from './version';
+import { testLook } from './testAppearance';
+import { setTestVehicle } from './testTransport';
+import { odswiezSlownictwoMisji } from './content/slownictwo';
+import type { Proba } from './content/probyMaga';
+import { live } from './walka/live';
+import { freshProlog } from './prolog/state';
+import { zapiszZasoby, wczytajZasoby } from './content/zasoby';
+import { scisnijMgle } from './map/mglaZapis';
 
 // The logged-in character: progress lives here during play and is sent to the
 // server only at save points (entering a mission building, finishing a
@@ -25,6 +45,8 @@ export const MAX_HP = 6;
 
 /** The main story (content/historia.ts, scenes/Story.ts); positions carry their scale `s`. */
 export interface Story {
+  /** Global one-time recruit origin, never keyed by the current city. */
+  prolog?: import('./prolog/state').PrologState;
   st: 'start' | 'cien' | 'uczelnia' | 'smok' | 'koniec';
   /** Seconds walked before the dragon's shadow. */
   walked: number;
@@ -33,12 +55,34 @@ export interface Story {
   choice?: 'zabij' | 'zbadaj';
   /** Shown under the name, e.g. "Pogromca smoka". */
   title?: string;
+  /** The scale that fell from the shadow (content/probyMaga.ts). */
+  luska?: { m: string; x: number; y: number; s: number; done?: boolean };
+  /** The wizard's trials before the required level. */
+  proby?: {
+    k?: Proba;
+    done: Proba[];
+    /** EXP of skipped trials, added to the next one. */
+    carry: number;
+    /** Gangs broken up when the gang trial began. */
+    g0?: number;
+    /** The gang made for the trial (where it lies, on which map). */
+    gang?: { m: string; x: number; y: number; s: number };
+    /** The burnt circle (x, y) and where the arrow points (fx, fy). */
+    spot?: { m: string; x: number; y: number; fx: number; fy: number; s: number };
+    /** The wizard's "you are ready" note was delivered. */
+    gotowy?: boolean;
+  };
 }
 
 export const session = {
   token: '',
   name: '',
   idik: '',
+  /** The character is assigned to a player account (Kufer then doesn't offer it). */
+  konto: false,
+  /** The difficulty was chosen (after the demo the game asks once); changed today = no more changes until tomorrow. */
+  trudnoscWybrana: true,
+  trudnoscDzis: false,
   startX: 0,
   startY: 0,
   coins: 0,
@@ -48,6 +92,8 @@ export const session = {
   fog: undefined as SaveData['fog'],
   /** Explored parts of the town maps (by town id). */
   fogs: {} as NonNullable<SaveData['fogs']>,
+  /** Maps whose fog changed since the last save (only these are sent; the server keeps the rest). */
+  fogsZmienione: new Set<string>(),
   /** The map the hero is on: 'lublin' or a town id (a coachman takes them there). */
   mapId: 'lublin',
   /** Where the hero appears after a coach ride (the station on the new map). */
@@ -67,6 +113,8 @@ export const session = {
   mikstury: 0,
   /** Quests whose guiding arrow the player switched off (character sheet → Zadania). */
   bezStrzalki: [] as string[],
+  /** Hubs copied onto the hero's map (content/mapa.ts MAPA_PODROZNIKA): where it was done and what was copied. */
+  mapyPodroznika: [] as { lat: number; lon: number; h: [string, number, number, string][] }[],
   /** Multi-stage missions: the current stage number per mission id (saved as `etap`). */
   etap: {} as Record<string, number>,
   /** Story items (names) from mission stages – not in the backpack, can't be sold (saved as `fabula`). */
@@ -75,10 +123,16 @@ export const session = {
   namioty: [] as { max: number; left: number }[],
   /** Load point: the last hotel (map and position); null = home. */
   at: null as { m: string; x: number; y: number } | null,
+  /** New controls test: where the hero stood at the last save (walka/live.ts, point 7). */
+  tu: null as { m: string; x: number; y: number } | null,
+  /** Skill chosen per weapon kind (content/umiejetnosci.ts). */
+  umiej: {} as Record<string, string>,
   /** A ride under way (journey.ts), shown until it arrives. */
+  artilleryHero: null as import('./artillery/state').HeroState | null,
   jazda: null as import('./journey').Journey | null,
   /** Random missions taken in this or earlier sessions and not finished. */
   gen: {} as Record<string, Misja>,
+  questResults: {} as NonNullable<SaveData['questResults']>,
   /** Library riddles answered this session (max BIBLIOTEKA_ZAGADKI.naSesje). */
   libRiddles: 0,
   /** Changes every login, so each place offers a new random mission. */
@@ -105,6 +159,8 @@ export const session = {
   daily: {} as Record<string, { d: string; n: number; a: number }>,
   /** How the hero looks (chosen at character creation). */
   look: { ...DEFAULT_LOOK } as Look,
+  /** Preserve the shared production appearance while test uses its separate local choice. */
+  productionLook: { ...DEFAULT_LOOK } as Look,
 };
 
 export const CHEST_SLOTS = 100;
@@ -129,34 +185,77 @@ export function spend(n: number) {
   session.stats.spent += n;
 }
 
+/**
+ * The server's missions (admin panel, stories), fetched once per page and retried: a phone that is busy with
+ * map tiles (the QR demo) could miss loadContent's 5 s wait, and then Hela Trybik never showed (owner, 19 Oct 2026).
+ */
+let tresc: Promise<Awaited<ReturnType<typeof api.content>>> | null = null;
+export function trescSerwera() {
+  tresc ??= (async () => {
+    for (let i = 0; ; i++) {
+      try {
+        return await api.content();
+      } catch (e) {
+        if (i >= 2) throw e;
+        await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+      }
+    }
+  })().catch((e) => {
+    tresc = null;
+    throw e;
+  });
+  return tresc;
+}
+
+/** The server's list as it came (texts may be { pl, en }); put in the player's language again after login. */
+let surowaTresc: Awaited<ReturnType<typeof api.content>> = [];
+function ustawTresc(list: Awaited<ReturnType<typeof api.content>>) {
+  surowaTresc = list;
+  session.extra = list.map(({ sekret, ...m }) => odswiezSlownictwoMisji(wybierzJezyk(m)));
+  session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
+}
+
 /** Loads the missions made in the admin panel; the game works without them too. */
 export async function loadContent() {
   // The admin panel's knobs (prices, speed…), in parallel with the missions.
   const settings = loadSettings();
+  // Creatures' loot/EXP from the admin panel (tab „🐺 Stworki”): only the new-fight test uses them; no waiting.
+  Promise.race([rpc<Record<string, { exp?: number | null; lup?: WierszLupu[] }>>('game_stwory', {}), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
+    .then(ustawStwory)
+    .catch(() => {});
   // Today's school quizzes (no waiting for them: the built-in ones fill in).
   Promise.race([api.quizzes(), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
     .then(setServerQuizzes)
     .catch(() => {});
+  const p = trescSerwera();
   try {
     // Never hold up the start for long.
-    const list = await Promise.race([
-      api.content(),
-      new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000)),
-    ]);
-    session.extra = list.map(({ sekret, ...m }) => m);
-    session.secrets = new Set(list.filter((m) => m.sekret).map((m) => m.id));
+    ustawTresc(await Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 5000))]));
   } catch {
     session.extra = [];
     session.secrets = new Set();
+    // Late missions still join the game when they come (GameScene listens for 'exp-tresc').
+    p.then((list) => {
+      ustawTresc(list);
+      window.dispatchEvent(new Event('exp-tresc'));
+    }).catch(() => {});
   }
   await settings;
 }
 
 export function startSession(r: LoginResult) {
+  ustawPoziomBroni(() => poziomPostaci(session.exp));
   const p = r.player;
+  setLanguage(p.save.language);
+  // The profile's language may differ from the device's one the missions were read in.
+  if (surowaTresc.length) session.extra = surowaTresc.map(({ sekret, ...m }) => odswiezSlownictwoMisji(wybierzJezyk(m)));
   session.token = r.token ?? '';
   session.name = p.name;
   session.idik = p.idik;
+  session.konto = !!p.konto;
+  zapamietajPostac(p.name, p.idik);
+  session.trudnoscWybrana = p.trudnosc_wybrana !== false;
+  session.trudnoscDzis = !!p.trudnosc_dzis;
   session.age = p.age ?? 7;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
   // Hearts by difficulty, plus the level bonus (half-hearts count, like hp).
@@ -170,15 +269,27 @@ export function startSession(r: LoginResult) {
   session.riddles = { ...(p.save.riddles ?? {}) };
   session.seen = { ...(p.save.seen ?? {}) };
   session.daily = { ...(p.save.daily ?? {}) };
-  session.look = cleanLook(p.save.look);
+  session.productionLook = cleanLook(p.save.look);
+  session.look = testLook(session.productionLook, p.name);
+  setTestVehicle('pieszo');
   // Convert from the map scale the start was stored in.
   const k = PX_PER_M / (p.map_scale ?? 4);
   session.startX = p.start_x * k;
   session.startY = p.start_y * k;
-  session.fog = p.save.fog;
+  // Fog in the short format (map/mglaZapis.ts); maps still in the old long one go with the next save.
+  session.fog = scisnijMgle(p.save.fog) ?? p.save.fog;
   session.fogs = { ...(p.save.fogs ?? {}) };
+  session.fogsZmienione = new Set();
+  for (const [id, m] of Object.entries(session.fogs)) {
+    const krotsza = scisnijMgle(m);
+    if (krotsza) {
+      session.fogs[id] = krotsza;
+      session.fogsZmienione.add(id);
+    }
+  }
   session.lokaty = [...(p.save.lokaty ?? [])];
   session.story = { st: 'start', walked: 0, ...(p.save.story ?? {}) };
+  if (r.newCharacter && live() && !session.story.prolog) session.story.prolog = freshProlog();
   // Power stones are gone (4 Oct 2026): each old one is worth one diamond resurrection.
   session.diamenty = Math.max(0, p.save.diamenty ?? 0) + Math.max(0, p.save.kamienie ?? 0) * WSKRZESZENIE.diamentow;
   session.flagi = { ...(p.save.flagi ?? {}) };
@@ -186,6 +297,7 @@ export function startSession(r: LoginResult) {
   session.immortal = !!p.immortal;
   session.mikstury = Math.max(0, p.save.mikstury ?? 0);
   session.bezStrzalki = Array.isArray(p.save.bezStrzalki) ? p.save.bezStrzalki.slice(0, 20) : [];
+  session.mapyPodroznika = Array.isArray(p.save.mapyPodroznika) ? p.save.mapyPodroznika.filter((m) => typeof m?.lat === 'number' && typeof m?.lon === 'number' && Array.isArray(m.h)).slice(-200) : [];
   session.etap = p.save.etap && typeof p.save.etap === 'object' ? { ...p.save.etap } : {};
   session.fabula = Array.isArray(p.save.fabula) ? p.save.fabula.filter((x) => typeof x === 'string').slice(0, 60) : [];
   session.namioty = (p.save.namioty ?? (p.save.namiot ? [{ max: 20, left: 20 }] : [])).filter((t) => t.left > 0);
@@ -193,18 +305,25 @@ export function startSession(r: LoginResult) {
   session.arrive = null;
   const at = p.save.at;
   session.at = at ? { m: at.m, x: (at.x * PX_PER_M) / (at.s || PX_PER_M), y: (at.y * PX_PER_M) / (at.s || PX_PER_M) } : null;
+  const tu = p.save.tu;
+  session.tu = tu ? { m: tu.m, x: (tu.x * PX_PER_M) / (tu.s || PX_PER_M), y: (tu.y * PX_PER_M) / (tu.s || PX_PER_M) } : null;
+  session.umiej = p.save.umiej && typeof p.save.umiej === 'object' ? { ...p.save.umiej } : {};
   session.jazda = p.save.jazda ?? null;
+  session.artilleryHero=p.save.artilleryHero??null;
   session.coins = p.save.coins ?? 0;
   loadGear(p.save);
+  if (r.newCharacter && !gear.equip.zbroja) gear.equip.zbroja = 'skorzana_zbroja_jakosc0';
   // The test server's first essences were a count and a blow counter: now flasks in the backpack.
   for (let i = 0; i < Math.min(20, p.save.esencje ?? 0); i++) addEssence('dab');
   session.exp = p.exp;
+  wczytajZasoby(p.save.zasoby, poziomPostaci(p.exp));
   session.hp = Math.max(1, Math.min(PLAYER.maxHp, p.save.hp ?? PLAYER.maxHp));
   session.missions = { ...(p.save.missions ?? {}) };
   session.stats = { ...freshStats(), ...(p.save.stats ?? {}) };
   session.gen = {};
+  session.questResults = { ...(p.save.questResults ?? {}) };
   session.libRiddles = 0;
-  for (const m of p.save.gen ?? []) session.gen[m.id] = m;
+  for (const m of p.save.gen ?? []) session.gen[m.id] = translateMission(restoreScenario(odswiezSlownictwoMisji(m)));
   session.nonce = Math.floor(Math.random() * 1e9);
   odrostDrzew(); // ścięte drzewa i strząśnięte owoce wracają przy każdym logowaniu
   const a = r.abandoned ?? null;
@@ -220,7 +339,24 @@ export function startSession(r: LoginResult) {
   session.abandoned = a;
 }
 
+/** What the Księga osiągnięć counts, from the session (also the newspaper's daily badges). */
+export function stanOsiagniec(): StanDoOsiagniec {
+  const st = session.stats;
+  return {
+    km: st.m / 1000, zabite: Object.values(st.kills).reduce((a, b) => a + b, 0), gangi: st.gangs ?? 0, pojedynki: st.duels ?? 0,
+    misje: st.missions, owoce: st.fruit, zarobione: st.earned, poziom: poziomPostaci(session.exp), tytul: session.story.title ?? null, hasla: st.codes,
+  };
+}
+
+/** The fog of the maps explored since the last save (the server keeps the others, save_game). */
+function zmienioneMgly(): NonNullable<SaveData['fogs']> {
+  const out: NonNullable<SaveData['fogs']> = {};
+  for (const id of session.fogsZmienione) if (session.fogs[id]) out[id] = session.fogs[id];
+  return out;
+}
+
 /** Sends the current progress to the server. */
+let saveChain: Promise<unknown> = Promise.resolve();
 export function saveNow(hp: number) {
   session.hp = hp;
   // Keep states of story missions and of random ones still in progress.
@@ -230,11 +366,25 @@ export function saveNow(hp: number) {
     if (!id.startsWith('gen-') || gen.some((m) => m.id === id)) missions[id] = st;
   }
   const data: SaveData = {
-    coins: session.coins, hp, missions, fog: session.fog, fogs: session.fogs, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
+    language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: zmienioneMgly(), fogsCzesc: true, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
-    jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: session.look,
+    tu: session.tu && { m: session.tu.m, x: Math.round(session.tu.x), y: Math.round(session.tu.y), s: PX_PER_M },
+    zasoby: zapiszZasoby(), umiej: session.umiej,
+    artilleryHero:session.artilleryHero, jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
-  return api.save(session.token, data, session.exp);
+  // Card/clue checkpoints can happen close together. An older request must never overwrite
+  // a newer completion; snapshot before queuing so later choices cannot mutate a pending save.
+  const snapshot=structuredClone(data), token=session.token, exp=session.exp;
+  const wyslane=Object.keys(data.fogs ?? {});
+  session.fogsZmienione.clear();
+  const next=saveChain.catch(()=>{}).then(()=>api.save(token,snapshot,exp));
+  saveChain=next;
+  next.catch((e) => {
+    // Not saved: those maps' fog has to go with the next save.
+    for (const id of wyslane) session.fogsZmienione.add(id);
+    if (toWygasla(e)) sesjaWygasla(token);
+  });
+  return next;
 }
 
 export function missionState(m: Misja): MissionState {
@@ -243,6 +393,11 @@ export function missionState(m: Misja): MissionState {
 
 export function setMissionState(m: Misja, s: MissionState) {
   session.missions[m.id] = s;
+  if (s === 'done' && m.scenariusz) {
+    session.questResults[m.id] = { originMap:m.scenariusz.mapId, choices:{...m.scenariusz.choices}, routeM:m.scenariusz.routeM,
+      ...(m.id === 'quest.tea_map' ? {reading:1} : {}) };
+    delete session.gen[m.id];
+  }
 }
 
 /**
@@ -250,6 +405,8 @@ export function setMissionState(m: Misja, s: MissionState) {
  * requirements are met (level, earlier missions done, an item in hand) – mission chains.
  */
 export function missionAvailable(m: Misja) {
+  if (isWithdrawnCityQuest(m.id)) return false;
+  if (m.scenariusz && (!surfaceBindingMatches(m.scenariusz.mapId, session.mapId, m.scenariusz.anchors) || missionState(m) === 'done')) return false;
   if (missionState(m) !== 'new') return true;
   const w = m.wymaga;
   if (!w) return true;
@@ -271,7 +428,7 @@ export function stageIndex(m: Misja) {
 
 /** The task of the current stage (multi-stage missions) or the mission's only task. */
 export function zadanieOf(m: Misja): Etap {
-  return m.etapy?.length ? m.etapy[stageIndex(m)] : m.zadanie;
+  return effectiveStage(m, stageIndex(m), m.scenariusz?.choices ?? session.questResults[m.id]?.choices);
 }
 
 /** Only the character level is missing (the rest is met): the giver says „come back at level N”. */
@@ -350,7 +507,7 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
   const door = city.entranceOf(target);
   const ulica = city.streetNear(door.x, door.y, 200) ?? adres.replace(/\s+\S+$/, '');
   const id = `gen-${place.id}-${session.nonce}`;
-  const fill = (t: string, zl = '') => t.replace('{adres}', adres).replace('{ulica}', ulica).replace('{zloczynca}', zl);
+  const fill = (t: string, zl = '') => legacyText(t).replace('{adres}', adres).replace('{ulica}', ulica).replace('{zloczynca}', zl);
 
   if (police) {
     const bandit = r() < 0.5;
@@ -358,12 +515,12 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
     const nagroda = bandit ? POLICJA.nagrodaBandyta : POLICJA.nagrodaPotwor;
     const przedmiot = r() < POLICJA.szansaNaPrzedmiot ? pick(POLICJA.przedmioty) : undefined;
     return {
-      id, placeId: place.id, adres: place.name, tytul: pick(POLICJA.tytuly), nagroda, przedmiot,
+      id, placeId: place.id, adres: place.name, tytul: legacyText(pick(POLICJA.tytuly)), nagroda, przedmiot,
       opis: fill(pick(bandit ? POLICJA.bandyta : POLICJA.potwor), zl),
       zadanie: bandit
-        ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: `Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})` }
-        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: `Zabij wielkiego chochlika przy ul. ${ulica}` },
-      zakonczenie: 'Dobra robota, łowco nagród! Oto obiecana nagroda.',
+        ? { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'bandyta', szukaj: true, cel: tx(`Znajdź i pokonaj: ${zl} (okolice ul. ${ulica})`, `Find and defeat: ${zl} (near ${ulica})`) }
+        : { typ: 'pokonaj', miejsce: adres, ile: 1, wrog: 'wielki_glut', cel: tx(`Zabij wielkiego chochlika przy ul. ${ulica}`, `Defeat the giant imp near ${ulica}`) },
+      zakonczenie: legacyText('Dobra robota, łowco nagród! Oto obiecana nagroda.'),
     };
   }
   const roll = r();
@@ -375,13 +532,14 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
       const towar = place.kind === 'church' ? 'grzyb' : 'drewno';
       const z = ZBIERANIE[towar];
       const ile = z.ile[0] + Math.floor(r() * (z.ile[1] - z.ile[0] + 1));
-      const ilu = `${ile} ${ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? z.formy[0] : z.formy[1]}`;
+      const iluPL = `${ile} ${ile % 10 >= 2 && ile % 10 <= 4 && (ile % 100 < 12 || ile % 100 > 14) ? z.formy[0] : z.formy[1]}`;
+      const ilu = tx(iluPL, `${ile} ${towar === 'grzyb' ? 'mushrooms' : 'pieces of wood'}`);
       const at = city.toLatLon(forest.x, forest.y);
       return {
-        id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
-        opis: pick(tpl.zbierz).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? ' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)' : ''),
-        zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: `Przynieś ${ilu} z lasu` },
-        zakonczenie: towar === 'grzyb' ? 'Jakie piękne grzyby! Bóg zapłać.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!',
+        id, placeId: place.id, adres: place.name, tytul: legacyText(pick(tpl.tytuly)),
+        opis: legacyText(pick(tpl.zbierz)).replace('{ile} {towar}', ilu) + (towar === 'drewno' ? legacyText(' (Drewno da tylko drzewo ścięte siekierą – bez niej leci chrust.)') : ''),
+        zadanie: { typ: 'zbierz', towar, ile, miejsce: { lat: at.lat, lon: at.lon }, cel: tx(`Przynieś ${ilu} z lasu`, `Bring ${ilu} from the forest`) },
+        zakonczenie: legacyText(towar === 'grzyb' ? 'Jakie piękne grzyby! Dziękujemy za pomoc.' : 'Świetne drewno, ławki będą jak nowe. Dziękujemy!'),
         nagroda: ZBIERANIE.premia + ile * z.zaSztuke,
       };
     }
@@ -389,14 +547,14 @@ export function missionForPlace(city: CityMap, place: CityPlace): Misja | null {
   const fight = roll < 0.67;
   const extra = Math.round(distM / 100) * NAGRODA.zaKazde100m;
   return {
-    id, placeId: place.id, adres: place.name, tytul: pick(tpl.tytuly),
+    id, placeId: place.id, adres: place.name, tytul: legacyText(pick(tpl.tytuly)),
     opis: fill(pick(fight ? tpl.pokonaj : tpl.idz)),
     zadanie: fight
-      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: `Przegoń chochliki spod ${adres}` }
-      : { typ: 'idz', miejsce: adres, cel: `Idź pod ${adres}` },
-    zakonczenie: place.kind === 'church'
-      ? 'Bóg zapłać! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
-      : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.',
+      ? { typ: 'pokonaj', miejsce: adres, ile: 3 + Math.floor(r() * 3), wrog: 'glut', cel: tx(`Przegoń chochliki spod ${adres}`, `Drive the imps away from ${adres}`) }
+      : { typ: 'idz', miejsce: adres, cel: tx(`Idź pod ${adres}`, `Go to ${adres}`) },
+    zakonczenie: legacyText(place.kind === 'church'
+      ? 'Dziękujemy za pomoc! Zajrzyj tu znowu następnym razem – zawsze znajdzie się jakaś prośba.'
+      : 'Sprawa załatwiona. Urząd dziękuje – kolejne sprawy następnym razem.'),
     nagroda: (fight ? NAGRODA.pokonaj : NAGRODA.idz) + extra,
   };
 }
@@ -417,24 +575,181 @@ export function mapMissionForLibrary(city: CityMap, place: CityPlace): Misja | n
   const cel = far[Math.floor(r() * far.length)];
   const d = Math.max(B.odKm, Math.round(km(cel)));
   const at = city.toLatLon(cel.x, cel.y);
-  const fill = (t: string) => t.replace('{cel}', cel.name).replace('{km}', String(d));
+  const fill = (t: string) => legacyText(t).replace('{cel}', cel.name).replace('{km}', String(d));
   return {
     id, placeId: place.id, adres: place.name,
     tytul: fill(B.tytuly[Math.floor(r() * B.tytuly.length)]),
     opis: fill(B.opisy[Math.floor(r() * B.opisy.length)]),
     zadanie: {
-      typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: `Zbadaj drogę do miejscowości ${cel.name}`,
-      komunikat: `Droga do miejscowości ${cel.name} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: ${place.name}).`,
+      typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: tx(`Zbadaj drogę do miejscowości ${cel.name}`, `Survey the route to ${cel.name}`),
+      komunikat: tx(`Droga do miejscowości ${cel.name} zbadana! Zadanie wykonano – wróć do najbliższej biblioteki (albo do: ${place.name}).`, `Route to ${cel.name} surveyed! Quest complete — return to the nearest library (or to ${place.name}).`),
     },
     dowolnaBiblioteka: true,
-    zakonczenie: B.zakonczenie,
+    zakonczenie: legacyText(B.zakonczenie),
     nagroda: d * B.monetZaKm,
     doswiadczenie: d * B.expZaKm,
   };
 }
 
+/**
+ * The newsboy's reporter errand (owner, 11 Oct 2026): go to a place in town (a shop, office, temple…,
+ * else an addressed house) and write a note there – it finishes on the spot. One per newsboy per login.
+ * `placeId` = 'gazeta:<map>:<x>:<y>' keeps where it was given (newsboys walk around).
+ */
+/**
+ * A school's/library's short name for the paper: up to and with its number, without patrons and the town
+ * („Szkoła Podstawowa nr 50 im. … w Lublinie” → „Szkoła Podstawowa nr 50”); null when it has no number.
+ */
+export function krotkaNazwa(name: string): string | null {
+  const m = /^(.*?\bnr\.?\s*\d+[a-z]?)\b/i.exec(name);
+  if (!m) return null;
+  return m[1].replace(/\s+im\..*?(?=\s+(?:filia|nr)\b|$)/i, '').replace(/\s+w\s+[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]*/u, '').replace(/\s+/g, ' ').trim();
+}
+
+export function newsboyMission(city: CityMap, folk: { id: string; x: number; y: number; name: string }): Misja | null {
+  const id = `gen-gazeta-${folk.id}-${session.nonce}`;
+  const taken = session.gen[id];
+  if (taken) return taken;
+  const R = REPORTAZ;
+  const r = rng(hash(`${folk.id}:${session.nonce}:gazeta`));
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
+  const inRange = (p: { x: number; y: number }) => { const d = dist(p); return d >= R.odM && d <= R.doM; };
+  // Only public places (libraries, schools…) or a plain address – no businesses (REPORTAZ.miejsca); a place goes by
+  // its short name with its number („Szkoła Podstawowa nr 50”, owner 12 Oct 2026), places without a number by address.
+  const places = city.places.filter((p) => p.name && R.miejsca.includes(p.kind) && inRange(p.door) && (krotkaNazwa(p.name) || p.building?.addresses[0]));
+  const houses = () => city.addressed().filter((b) => b.door && b.addresses[0] && inRange(b.door));
+  let cel = null as { name: string; x: number; y: number } | null;
+  const pickPlace = () => {
+    const p = places[Math.floor(r() * places.length)];
+    cel = { name: krotkaNazwa(p.name) ?? p.building!.addresses[0]!, x: p.door.x, y: p.door.y };
+  };
+  const pickHouse = () => {
+    const hs = houses();
+    if (!hs.length) return;
+    const b = hs[Math.floor(r() * hs.length)];
+    cel = { name: b.addresses[0]!, x: b.door!.x, y: b.door!.y };
+  };
+  if (places.length && r() >= R.adres) pickPlace();
+  else pickHouse();
+  if (!cel && places.length) pickPlace();
+  if (!cel) return null;
+  const km = dist(cel) / 1000;
+  const at = city.toLatLon(cel.x, cel.y);
+  const fill = (t: Txt) => tr(t).replaceAll('{cel}', cel!.name);
+  return {
+    id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name,
+    tytul: fill(R.tytuly[Math.floor(r() * R.tytuly.length)]),
+    opis: fill(R.opisy[Math.floor(r() * R.opisy.length)]),
+    zadanie: { typ: 'idz', miejsce: { lat: at.lat, lon: at.lon }, cel: fill(R.cel), komunikat: tr(R.komunikat) },
+    naMiejscu: true,
+    zakonczenie: tr(R.komunikat),
+    nagroda: Math.max(R.minMonet, Math.round(km * R.monetNaKm)),
+    doswiadczenie: Math.max(R.minExp, Math.round(km * R.expNaKm)),
+  };
+}
+
+/** Does this newsboy ask for help delivering papers? One in ROZNOSZENIE.co, fixed by his id. */
+export function newsboyDelivers(folk: { id: string }) {
+  return rng(hash(`${folk.id}:roznos`))() < 1 / ROZNOSZENIE.co;
+}
+
+/**
+ * Delivering papers (owner, 11 Oct 2026): N addressed houses of one street near the newsboy, visited in
+ * any order (stage 'badanie' with clue = house, button „Doręcz gazetę”); paid at the last house.
+ * One per newsboy per login, like his reporter's errand.
+ */
+export function newsboyDelivery(city: CityMap, folk: { id: string; x: number; y: number; name: string }): Misja | null {
+  const id = `gen-roznos-${folk.id}-${session.nonce}`;
+  const taken = session.gen[id];
+  if (taken) return taken;
+  const R = ROZNOSZENIE;
+  const W = R.warianty;
+  const r = rng(hash(`${folk.id}:${session.nonce}:roznos`));
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - folk.x, p.y - folk.y) / PX_PER_M;
+  const ll = (p: { x: number; y: number }) => { const q = city.toLatLon(p.x, p.y); return { lat: q.lat, lon: q.lon }; };
+  const kmTxt = (m: number) => (Math.round(m / 100) / 10).toLocaleString(lang === 'pl' ? 'pl-PL' : 'en-GB');
+  const base = { id, placeId: `gazeta:${city.id}:${Math.round(folk.x)}:${Math.round(folk.y)}`, adres: folk.name, naMiejscu: true };
+  // Houses by street (the street = the address without its number).
+  const houses = (odM: number, doM: number) => {
+    const streets = new Map<string, { addr: string; x: number; y: number; d: number }[]>();
+    for (const b of city.addressed()) {
+      if (!b.door) continue;
+      const d = dist(b.door);
+      if (d > doM + 400) continue;
+      const addr = b.addresses[0];
+      const m = addr?.match(/^(.*\D)\s+\d+\S*$/);
+      if (!m) continue;
+      const list = streets.get(m[1]) ?? [];
+      if (!list.some((h) => h.addr === addr)) list.push({ addr, x: b.door.x, y: b.door.y, d });
+      streets.set(m[1], list);
+    }
+    return streets;
+  };
+  const round = (v: typeof W.blisko): Misja | null => {
+    const good = [...houses(v.odM, v.doM).entries()].filter(([, l]) => {
+      const near = Math.min(...l.map((h) => h.d));
+      return l.length >= v.min && near >= v.odM && near <= v.doM;
+    });
+    if (!good.length) return null;
+    const [nazwa, all] = good[Math.floor(r() * good.length)];
+    // Polish: „ul. Magnoliowa”, but „Aleja Kraśnicka”, „Plac Zamkowy”… keep their own word.
+    const ulica = lang === 'pl' && !/^(aleja|al\.|plac|pl\.|rondo|osiedle|os\.|skwer|bulwar|rynek|park|droga|trakt|ulica)\b/i.test(nazwa) ? `ul. ${nazwa}` : nazwa;
+    // Houses spread along the street: sorted by distance from the nearest one, then every k-th.
+    const start = all.reduce((a, b) => (b.d < a.d ? b : a));
+    all.sort((a, b) => Math.hypot(a.x - start.x, a.y - start.y) - Math.hypot(b.x - start.x, b.y - start.y));
+    const ile = Math.min(v.max, all.length);
+    const step = all.length / ile;
+    const domy = Array.from({ length: ile }, (_, i) => all[Math.floor(i * step)]);
+    const far = v === W.daleko;
+    const km = start.d / 1000;
+    const fill = (t: Txt) => tr(t).replaceAll('{ulica}', ulica).replaceAll('{ile}', String(ile)).replaceAll('{km}', kmTxt(start.d));
+    return {
+      ...base,
+      tytul: fill(far ? R.tytulDaleko : R.tytul),
+      opis: fill(far ? R.opisDaleko : R.opis),
+      zadanie: { typ: 'idz', miejsce: ll(domy[0]), cel: fill(R.cel) },
+      etapy: [{
+        typ: 'badanie', miejsce: ll(domy[0]), ile, cel: fill(R.cel),
+        tropy: domy.map((d, i) => ({ id: `dom${i}`, miejsce: ll(d), tytul: d.addr, tekst: tr(R.dom), przycisk: tr(R.przycisk) })),
+      }],
+      zakonczenie: tr(R.koniec),
+      nagroda: Math.round(ile * R.monetNaDom * (far ? 2 : 1) + km * R.monetNaKm),
+      doswiadczenie: Math.round(ile * R.expNaDom + km * R.expNaKm),
+    };
+  };
+  const client = (): Misja | null => {
+    const v = W.klient;
+    const list = city.addressed().filter((b) => b.door && b.addresses[0] && dist(b.door) >= v.odM && dist(b.door) <= v.doM);
+    if (!list.length) return null;
+    const b = list[Math.floor(r() * list.length)];
+    const d = dist(b.door!);
+    const kto = R.klienci[Math.floor(r() * R.klienci.length)];
+    const ktoDuzy = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+    // {kto} starts a sentence in the offer and the ending: capitalised there.
+    const fill = (t: Txt) => tr(t).replaceAll('! {kto}', `! ${ktoDuzy(tr(kto))}`).replaceAll('{kto}', tr(kto)).replaceAll('{adres}', b.addresses[0]).replaceAll('{km}', kmTxt(d));
+    return {
+      ...base,
+      tytul: fill(R.tytulKlient),
+      opis: fill(R.opisKlient),
+      zadanie: { typ: 'idz', miejsce: ll(b.door!), cel: fill(R.celKlient), komunikat: ktoDuzy(fill(R.koniecKlient)) },
+      zakonczenie: ktoDuzy(fill(R.koniecKlient)),
+      nagroda: Math.round(20 + (d / 1000) * R.monetNaKm * 1.5),
+      doswiadczenie: Math.round(30 + (d / 1000) * R.expNaKm * 1.5),
+    };
+  };
+  // Pick a kind by weight; when the map has nothing for it (no such street / too far), try the others.
+  const kinds: [number, () => Misja | null][] = [[W.blisko.waga, () => round(W.blisko)], [W.daleko.waga, () => round(W.daleko)], [W.klient.waga, client]];
+  let pick = r() * kinds.reduce((a, k) => a + k[0], 0);
+  const first = kinds.findIndex((k) => (pick -= k[0]) < 0);
+  for (const k of [kinds[first], ...kinds.filter((_, i) => i !== first)]) {
+    const m = k[1]();
+    if (m) return m;
+  }
+  return null;
+}
+
 /** A walkable spot inside the nearest forest within `maxR` px, if any. */
-function forestNear(city: CityMap, x: number, y: number, maxR: number, r: () => number) {
+export function forestNear(city: CityMap, x: number, y: number, maxR: number, r: () => number) {
   let best: { x: number; y: number } | null = null;
   let bd = maxR;
   for (const a of city.query({ x0: x - maxR, y0: y - maxR, x1: x + maxR, y1: y + maxR }).areas) {
@@ -496,7 +811,8 @@ export function stageTarget(city: CityMap, m: Misja, door: Place): Place | null 
 export function resolveMissions(city: CityMap) {
   const ok: ResolvedMission[] = [];
   const missing: string[] = [];
-  for (const m of [...MISJE, ...session.extra]) {
+  for (const raw of [...MISJE, ...session.extra]) {
+    const m = translateMission(raw);
     const door = resolvePlace(city, m.adres);
     const target = door ? stageTarget(city, m, door) : null;
     const z = zadanieOf(m);

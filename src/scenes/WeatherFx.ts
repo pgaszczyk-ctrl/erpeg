@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EFEKTY_POGODY } from '../content/pogoda';
+import { EFEKTY_POGODY, POSWIATA_BOHATERA as LAMPA, CIENIE_CHMUR as CHMURY } from '../content/pogoda';
 import { weather } from '../weather';
 import { teksturaChmur } from '../gen';
 import { WYGLAD_09 } from '../map/Podloze09';
@@ -14,7 +14,9 @@ import { night } from '../map/MapRenderer';
  * so its two shadow tones become a cool dark blue at alpha 60 / 105 over a transparent background (fainter vanished on screen).
  */
 function cloudCanvas(amount: number) {
-  const o = teksturaChmur(amount, 3);
+  // Owner (11 Oct 2026): clouds cover fragments of the view, never the whole screen – even a full overcast is
+  // ~35 % shadow in separate patches (the generator's own scale reached ~70 %, a dark veil over everything).
+  const o = teksturaChmur(CHMURY.odPokrycia + CHMURY.zaPokrycie * amount, 3);
   const c = document.createElement('canvas');
   c.width = o.w;
   c.height = o.h;
@@ -26,7 +28,7 @@ function cloudCanvas(amount: number) {
     img.data[k * 4] = 24;
     img.data[k * 4 + 1] = 34;
     img.data[k * 4 + 2] = 64;
-    img.data[k * 4 + 3] = r > 200 ? 60 : 105;
+    img.data[k * 4 + 3] = r > 200 ? CHMURY.alfaLekka : CHMURY.alfaPelna;
   }
   ctx.putImageData(img, 0, 0);
   return c;
@@ -39,6 +41,10 @@ export class WeatherFx {
   private dark: Phaser.GameObjects.Rectangle;
   private flash: Phaser.GameObjects.Rectangle;
   private mist: Phaser.GameObjects.Image;
+  /** The hero's warm lamp light (POSWIATA_BOHATERA), added over the world and the darker sky. */
+  private lamp: Phaser.GameObjects.Image;
+  private flick = 1;
+  private lampAngle = Math.PI / 2;
   private drops: Drop[] = [];
   private flakes: Drop[] = [];
   private nextBolt = 0;
@@ -46,6 +52,9 @@ export class WeatherFx {
   private clouds?: Phaser.GameObjects.TileSprite;
   private cloudAmount = -1;
   private drift = 0;
+
+  /** In a dungeon (src/loch/): the lamp burns, the weather stays outside. */
+  podZiemia = false;
 
   constructor(private scene: Phaser.Scene) {
     this.g = scene.add.graphics().setDepth(1_050_000);
@@ -65,6 +74,58 @@ export class WeatherFx {
       scene.textures.addCanvas('weather-mist', c);
     }
     this.mist = scene.add.image(0, 0, 'weather-mist').setDepth(1_045_000).setAlpha(0).setVisible(false);
+    if (!scene.textures.exists('hero-lamp')) {
+      // Drawn pixel by pixel: a soft ring around the centre with a hole in the middle, and a cone along +x.
+      const S = 256, h = S / 2;
+      const c = document.createElement('canvas');
+      c.width = c.height = S;
+      const x = c.getContext('2d')!;
+      const img = x.createImageData(S, S);
+      const [cr, cg, cb] = LAMPA.kolor;
+      const half = (LAMPA.stozekStopni * Math.PI) / 180, soft = (40 * Math.PI) / 180;
+      const st = (a: number, b: number, v: number) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+      for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+        const dx = px + 0.5 - h, dy = py + 0.5 - h;
+        const r = Math.hypot(dx, dy) / h;
+        if (r >= 1) continue;
+        const ring = LAMPA.wokolMoc * (1 - st(0, LAMPA.wokol, r));
+        const ang = Math.abs(Math.atan2(dy, dx));
+        const cone = (1 - st(half, half + soft, ang)) * (1 - st(0.3, 1, r)) * LAMPA.stozekMoc;
+        // A lamp, not a torch: the glow and the light ahead add up softly; only the very middle stays dim over the hero.
+        const v = Math.min(1, ring + cone * (1 - ring)) * (0.25 + 0.75 * st(LAMPA.dziura, LAMPA.dziura * 3, r));
+        const k = (py * S + px) * 4;
+        img.data[k] = cr; img.data[k + 1] = cg; img.data[k + 2] = cb;
+        img.data[k + 3] = Math.round(255 * v);
+      }
+      x.putImageData(img, 0, 0);
+      scene.textures.addCanvas('hero-lamp', c);
+    }
+    this.lamp = scene.add.image(0, 0, 'hero-lamp').setDepth(1_041_000).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.lamp.setDisplaySize(LAMPA.zasieg * 2, LAMPA.zasieg * 2);
+  }
+
+  /** The lamp: off in daylight, on at dusk/night and while it rains or snows; the cone follows where the hero faces. */
+  private updateLamp(dt: number, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light: number) {
+    // Owner (11 Oct 2026): only after sunset or while it rains/snows – not for clouds or a grey day.
+    const pada = LAMPA.gdyPada.includes(weather.kind) ? LAMPA.zaOpady : 0;
+    const dark = Math.min(1, pada + (1 - light) * LAMPA.zaNoc);
+    const t0 = Math.max(0, Math.min(1, (dark - LAMPA.odCiemnosci) / (LAMPA.pelnaPrzy - LAMPA.odCiemnosci)));
+    const want = LAMPA.moc * t0 * t0 * (3 - 2 * t0);
+    if (want <= 0.005) { this.lamp.setVisible(false); return; }
+    // A flame: two slow waves plus a small random gust now and then.
+    const t = now / 1000;
+    if (Math.random() < dt * 3) this.flick = 1 - Math.random() * 0.7;
+    else this.flick += (1 - this.flick) * Math.min(1, dt * 6);
+    const m = LAMPA.migotanie * (0.5 * Math.sin(t * 5.3) + 0.3 * Math.sin(t * 11.7 + 1) + (this.flick - 1) * 0.6);
+    const f = hero.facing;
+    if (f && (f.x || f.y)) {
+      const target = Math.atan2(f.y, f.x);
+      const d = Phaser.Math.Angle.Wrap(target - this.lampAngle);
+      this.lampAngle += d * Math.min(1, dt * 8);
+    }
+    this.lamp.setVisible(true).setPosition(hero.x, hero.y - 4).setRotation(this.lampAngle).setAlpha(Math.max(0, want * (1 + m)));
+    const k = 1 + m * 0.1;
+    this.lamp.setDisplaySize(LAMPA.zasieg * 2 * k, LAMPA.zasieg * 2 * k);
   }
 
   private fill(list: Drop[], n: number) {
@@ -96,7 +157,16 @@ export class WeatherFx {
     c.tilePositionY = v.y - 2 - this.drift * 0.33;
   }
 
-  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number }, now: number) {
+  update(dt: number, cam: Phaser.Cameras.Scene2D.Camera, hero: { x: number; y: number; facing?: { x: number; y: number } }, now: number, light = 1) {
+    this.updateLamp(dt, hero, now, light);
+    if (this.podZiemia) {
+      // Underground (src/loch/): only the lamp – no rain, snow, mist, storm or cloud shadows.
+      this.g.clear();
+      this.dark.setFillStyle(0x0c1020, 0);
+      this.mist.setVisible(false);
+      this.clouds?.setVisible(false);
+      return;
+    }
     if (WYGLAD_09) this.updateClouds(dt, cam.worldView);
     const E = EFEKTY_POGODY[weather.kind];
     const v = cam.worldView;

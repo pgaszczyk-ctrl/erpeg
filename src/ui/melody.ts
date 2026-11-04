@@ -3,6 +3,7 @@
 // coloured keys. A wrong note: the dragon shakes its head and hums again.
 // Resolves when the melody is played right.
 
+import { legacyText } from '../content/questy/text';
 import { pipe } from '../sfx';
 import { MELODIA } from '../content/historia';
 
@@ -70,16 +71,16 @@ export function playMelody(length: number, opts: MelodyOptions = {}): Promise<vo
     const box = document.createElement('div');
     box.className = 'm-box';
     const h = document.createElement('h2');
-    h.textContent = opts.title ?? MELODIA.tytul;
+    h.textContent = opts.title ?? legacyText(MELODIA.tytul);
     const p = document.createElement('p');
-    p.textContent = opts.intro ?? MELODIA.wstep;
+    p.textContent = opts.intro ?? legacyText(MELODIA.wstep);
     const song = document.createElement('div');
     const mine = document.createElement('div');
     const note = document.createElement('p');
     note.style.cssText = 'min-height:1.3em;margin:4px 0;color:#fff2a8';
     const keys = document.createElement('div');
     keys.style.cssText = 'display:flex;gap:6px;justify-content:center;margin:8px 0';
-    const again = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: MELODIA.jeszczeRaz });
+    const again = Object.assign(document.createElement('button'), { type: 'button', className: 'm-btn', textContent: legacyText(MELODIA.jeszczeRaz) });
     const draw = () => {
       song.innerHTML = staff(notes);
       mine.innerHTML = staff(notes.map((n, i) => typed[i] ?? n), typed.length, false).replace(/<g opacity="0.35">[\s\S]*?<\/g>/g, '');
@@ -105,7 +106,7 @@ export function playMelody(length: number, opts: MelodyOptions = {}): Promise<vo
         typed.push(i);
         draw();
         if (typed[typed.length - 1] !== notes[typed.length - 1]) {
-          note.textContent = MELODIA.zle;
+          note.textContent = legacyText(MELODIA.zle);
           busy = true;
           // A few wrong tries in a row: the dragon hums a new one.
           setTimeout(() => {
@@ -117,7 +118,7 @@ export function playMelody(length: number, opts: MelodyOptions = {}): Promise<vo
         }
         note.textContent = '';
         if (typed.length === notes.length) {
-          note.textContent = MELODIA.dobrze;
+          note.textContent = legacyText(MELODIA.dobrze);
           busy = true;
           setTimeout(() => {
             root.remove();
@@ -134,7 +135,7 @@ export function playMelody(length: number, opts: MelodyOptions = {}): Promise<vo
       hum();
     };
     const label = (t: string) => Object.assign(document.createElement('div'), { textContent: t, style: 'font-size:12px;color:#9aa39a;margin-top:4px' });
-    box.append(h, p, label(opts.hums ?? MELODIA.smokNuci), song, label(MELODIA.twojaFujarka), mine, note, keys, again);
+    box.append(h, p, label(opts.hums ?? legacyText(MELODIA.smokNuci)), song, label(legacyText(MELODIA.twojaFujarka)), mine, note, keys, again);
     root.append(box);
     document.body.append(root);
     draw();

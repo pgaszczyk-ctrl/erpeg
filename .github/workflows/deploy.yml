@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
-# Two games on one site:
+# Two games and a map laboratory on one site:
 #   https://exp-lore.app/       production – built from the commit named in PRODUKCJA
 #   https://exp-lore.app/test/  the test server – the newest code (VITE_TEST=1)
+#   https://exp-lore.app/test2/ the map laboratory – shares /test/ assets
 # A release to production = bump WERSJA in src/version.ts (+0.001) and point PRODUKCJA at that commit
 # (and empty produkcja/). A single small fix can go live alone as produkcja/<version>-<name>.patch.
 
@@ -13,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -27,7 +29,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Find checked production with the same pin and patches
+        id: reuse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await require('./.github/scripts/reuse-deploy-artifact.cjs')({github, context, core, kind:'production'});
+      - name: Reuse checked production
+        id: reused
+        continue-on-error: true
+        if: steps.reuse.outputs.run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: production
+          path: dist
+          run-id: ${{ steps.reuse.outputs.run_id }}
+          github-token: ${{ github.token }}
       - name: Switch to the production commit
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
         run: |
           set -euo pipefail
           SHA=$(tr -d ' \n\r' < PRODUKCJA)
@@ -37,11 +56,14 @@ jobs:
           git checkout --quiet "$SHA"
           for p in $(ls /tmp/patches/*.patch 2>/dev/null | sort); do echo "Applying $p"; git apply "$p"; done
       - uses: actions/setup-node@v4
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
       - run: npm run build
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
       - uses: actions/upload-artifact@v4
         with:
           name: production
@@ -52,12 +74,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Find checked test with the same game files
+        id: reuse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await require('./.github/scripts/reuse-deploy-artifact.cjs')({github, context, core, kind:'test'});
+      - name: Reuse checked test
+        id: reused
+        continue-on-error: true
+        if: steps.reuse.outputs.run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: test
+          path: dist
+          run-id: ${{ steps.reuse.outputs.run_id }}
+          github-token: ${{ github.token }}
       - uses: actions/setup-node@v4
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
       - run: npm run build
+        if: steps.reuse.outputs.run_id == '' || steps.reused.outcome == 'failure'
         env:
           VITE_TEST: '1'
       - uses: actions/upload-artifact@v4
@@ -81,9 +122,54 @@ jobs:
         with:
           name: test
           path: site/test
+      - uses: actions/checkout@v4
+        with:
+          path: source
+          sparse-checkout: public/news
+      - name: Publish the current static newspaper
+        run: |
+          mkdir -p site/news
+          cp -a source/public/news/. site/news/
+      - name: Publish the test2 laboratory using shared test assets
+        run: |
+          mkdir -p site/test2
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path('site/test/test2.html').read_text()
+          if '<base href="./">' not in html:
+              raise SystemExit('test2 HTML is missing its expected asset base')
+          html = html.replace('<base href="./">', '<base href="/test/">')
+          Path('site/test2/index.html').write_text(html)
+          PY
       - run: du -sh site site/test
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify the published production code
+        run: |
+          node --input-type=module - <<'JS'
+          import {readFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const html = readFileSync('site/index.html','utf8');
+          const entry = /<script[^>]+src="([^"]+\.js)"/.exec(html)[1];
+          const path = entry.replace(/^\.\//,'').replace(/^\//,'');
+          const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+          const expected = hash(readFileSync('site/'+path));
+          const headers = {'Cache-Control':'no-cache','User-Agent':'Mozilla/5.0 HelaReleaseCheck'};
+          for(let attempt=0;attempt<6;attempt++) {
+            try {
+              const r = await fetch('https://exp-lore.app/?release-check='+Date.now(),{headers,signal:AbortSignal.timeout(20000)});
+              if(!r.ok || !(await r.text()).includes(path)) throw new Error('Public HTML has not reached this release');
+              const code = await fetch('https://exp-lore.app/'+path,{headers,signal:AbortSignal.timeout(20000)});
+              if(!code.ok || hash(Buffer.from(await code.arrayBuffer()))!==expected) throw new Error('Public JavaScript differs from the production artifact');
+              console.log('PASS: exact production JavaScript published:',path,expected);
+              break;
+            } catch(e) {
+              console.log('Public verification attempt',attempt+1,e.message);
+              if(attempt===5) throw e;
+              await new Promise(resolve=>setTimeout(resolve,5000));
+            }
+          }
+          JS

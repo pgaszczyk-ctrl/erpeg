@@ -1,0 +1,2031 @@
+import { poPancerzu } from '../content/pancerz';
+// The turn fight on the map (MVP 1, test server; content/walkaTurowa.ts).
+// Walking stays live; once the hero chooses to fight a group, the game stops
+// the live loop and runs turns here: the group spreads out like in HoMM
+// (melee in a shallow arc in front, ranged behind, the boss in the middle at
+// the back), the hero spends moves (Cios / Ruch / Specjalne), targets are
+// picked by tapping them on the map, then the enemies answer one action each.
+// Damage, loot, EXP, practice and wear go through GameScene's usual code.
+
+import Phaser from 'phaser';
+import type { CombatAudio } from '../audio/CombatAudio';
+import { shotSound, enemyMeleeSound } from '../audio/combatCatalog';
+import { WALKA_TUROWA as WT, ROLA_WROGA, SPOTKANIA, type RolaWWalce } from '../content/walkaTurowa';
+import { ARENA } from '../content/arena';
+import { W, nowyPanel } from './tryb';
+import { demo } from '../demo';
+import { mouse } from '../controls';
+import { zasieg, droga, najblizsza, uprosc, type Zasieg } from './siatka';
+import { PLAYER, type Player } from '../objects/Player';
+import type { Slime } from '../objects/Slime';
+import { TEX } from '../art';
+import { OSTROSC } from '../screen';
+import { session } from '../quests';
+import {
+  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, gearAimBonus, defense, rangedWeapon, gear, skillLevel,
+  ammoOf, takeAmmo,
+} from '../inventory';
+import { AMUNICJA } from '../content/zuzycie';
+import { WALKA } from '../content/walka';
+import { WalkaPanel, type StanPanelu } from '../ui/walkaPanel';
+import { WalkaKolo, type StanKola, type PrzyciskAtaku } from '../ui/walkaKolo';
+import { TEST } from '../version';
+import { ATAKI, brakujeDoAtaku, type RodzajAtaku, type BronAtaku } from '../content/atakiTurowe';
+import { SmokWTurach } from './smokTury';
+import { SMOK_W_TURACH, DYM_ZASIEGU } from '../content/walkaTurowa';
+import { TRUDNOSC_SMOKOW } from '../content/smoki';
+import { TRUDNOSCI } from '../content/trudnosc';
+
+/** An Arena Cechu ghost (another player's fighter, content/arena.ts): its own blows, aim, armour and moves. */
+export interface DuchWalki {
+  /** Blow (weapon units: skill + 1.5 × weapon power), its hit chance, armour block chance, strong-blow factor. */
+  atak: number;
+  trafienie: number;
+  blok: number;
+  pancerz?: number;
+  magicznyAtak?: boolean;
+  mocny: number;
+  /** Actions per turn = the owner's moves by level. */
+  akcje: number;
+  /** One shared heal left. */
+  leczenie: boolean;
+  /** A shot instead of a blow (bow/wand in hand). */
+  strzal?: number;
+}
+export type WrogWalki = Slime & { power?: number; duel?: unknown; peaceful?: boolean; pvp?: DuchWalki };
+
+/** Options: an arena fight (fair rules: no difficulty bonuses, no hotel, a single shared heal) starts without the group's spread. */
+export interface OpcjeWalki { pvp?: boolean }
+
+export interface Uczestnik {
+  e: WrogWalki;
+  rola: RolaWWalce;
+  /** Ground radius (px): no two living figures overlap. */
+  r: number;
+  /** Stunned by a strong blow: skips its next action. */
+  oglusz: boolean;
+  /** Life at the start of the fight (bars, and the rest after the hero runs away). */
+  hp0: number;
+}
+
+export type WynikWalki = 'wygrana' | 'ucieczka' | 'smierc' | 'przerwana';
+
+export interface WalkaHost {
+  scene: Phaser.Scene;
+  player: Player;
+  /** Can a figure stand here (sprite position; map, trees, stations, landmarks)? */
+  wolne(x: number, y: number): boolean;
+  /** Nothing built between the two points. */
+  widac(ax: number, ay: number, bx: number, by: number): boolean;
+  /** An enemy fell (loot, EXP, gangs, quests). */
+  zabity(e: WrogWalki): void;
+  cwiczenie(skill: 'miecz' | 'luk' | 'magia', pkt: number): void;
+  zuzyj(id: string | null | undefined): void;
+  hud(): void;
+  toast(t: string, ms?: number): void;
+  /** Heals with what the hero has (potion, fruit, food); false when nothing to heal with. */
+  lecz(): boolean;
+  /** Damage to the hero (half-hearts); true if the fight must end (death, lost duel). */
+  ranBohatera(e: WrogWalki, dmg: number): boolean;
+  /** The fight is over (UI already gone). */
+  koniec(wynik: WynikWalki, uczestnicy: WrogWalki[]): void;
+  pudlo(x: number, y: number): void;
+  napis(x: number, y: number, text: string, color: string, ms?: number): void;
+  zamach(aim: number, strong: boolean): void;
+  sounds?: CombatAudio;
+  wzmocnienie(e: WrogWalki): number;
+  nasycenie(e: WrogWalki, now: number): void;
+  /** The usual camera zoom (fitZoom). */
+  zoomZwykly(): number;
+  /** Back to following the hero at the usual zoom. */
+  wrocKamere(): void;
+  poziom(): number;
+  /** Hotel bonus active (more luck, one more move). */
+  wyspany(): boolean;
+  /** A fixed stage to frame whole instead of following the fighters (the Arena). */
+  kadr?(): { x0: number; x1: number; y0: number; y1: number } | null;
+  /** An enemy took a blow and lived; true = it leaves the fight at once (the QR demo's dragon flies off), 'koniecTury'
+   * = the hero's turn ends now (the QR demo: after the 3rd hit the dragon strikes back). */
+  trafiony?(e: WrogWalki, hp0: number): boolean | 'koniecTury';
+  /** This enemy's attacks never miss (no dodge, no block) and a dragon only bites: the QR demo's dragon must be seen to strike. */
+  pewnyAtak?(e: WrogWalki): boolean;
+  /** What just happened, for a tutorial (the QR demo): the hero's turn began, a blow, the special row opened/closed, a heal. */
+  krok?(co: KrokWalki): void;
+}
+
+export type KrokWalki = 'tura' | 'cios' | 'specjalne' | 'wroc' | 'lecz';
+
+type Tryb = 'cios' | 'mocny' | 'ruch' | null;
+
+/** How the hero would attack a target: from where, for how many moves, and what it says. */
+interface PlanCiosu {
+  ok: boolean;
+  z?: { x: number; y: number; k: string } | null;
+  tekst: string;
+  /** Moves it costs in all (a walk up included). */
+  koszt: number;
+  /** A full walk up before the blow (new controls): the hero stays there, no hop back. */
+  dojscie?: boolean;
+  /** Only a walk closer: not enough moves left for the blow, or the target is beyond one walk. */
+  tylko?: boolean;
+  /** New controls: moves of the walk up (boots in the amber preview) – the rest of `koszt` is the blow itself. */
+  podejscie?: number;
+  /** New controls: the target is beyond the walks this turn could ever reach (no blow this go; `koszt` is an estimate). */
+  daleko?: boolean;
+  /** `z.k` is a cell of the multi-move grid (zasDalej), not of the one-move one. */
+  dal?: boolean;
+}
+
+/** The multi-move grid looks this many moves ahead at most (a preview of what is missing, not balance). */
+const DROGA_MAKS_RUCHOW = 7;
+
+/** First-fights tips (new controls): each shown in at most this many fights, counted on the device. */
+const RADY_RAZY = 2;
+const RADY_KLUCZ = 'exp-walka-rady';
+const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(pointer: coarse)').matches;
+
+const HERO_R = 0.3 * W;
+if (TEST && typeof window !== 'undefined') (window as unknown as { __ataki: typeof ATAKI }).__ataki = ATAKI;
+/** Most buttons on the enemy's ring at once; more attacks → pages of NA_KOLE − 1 + „Więcej”. */
+const NA_KOLE = 4;
+const GLEB_ZIEMI = -1e8 + 3;
+const GLEB_GORA = 1_050_000;
+/** Fighters' depth bonus: above tree crowns and tall buildings while the fight lasts. */
+export const NAD_KORONAMI = 200_000;
+
+export class TuryWalki {
+  aktywna = true;
+  /** The hero's life when the fight began (a closed tab mid-fight comes back with it). */
+  readonly hpPrzed: number;
+  private u: Uczestnik[] = [];
+  private ruchy = 0;
+  private maxRuchy = 0;
+  private faza: 'rozstaw' | 'gracz' | 'wrogowie' | 'koniec' = 'rozstaw';
+  private tryb: Tryb = null;
+  private cel: Uczestnik | null = null;
+  private punkt: { k: string; x: number; y: number } | null = null;
+  private zas: Zasieg | null = null;
+  /** New controls: the ground reachable in several moves (computed only when a walk up needs it, dropped by przelicz). */
+  private zasD: Zasieg | null = null;
+  /** Numbered markers of a previewed walk and the cost plaques over enemies (stage 2 of the fight readability). */
+  private numerki: Phaser.GameObjects.Text[] = [];
+  private plakietki = new Map<Uczestnik, Phaser.GameObjects.Text>();
+  private busy = false;
+  private carry = 0;
+  private gfx: Phaser.GameObjects.Graphics;
+  private gfxTop: Phaser.GameObjects.Graphics;
+  private etykieta: Phaser.GameObjects.Text;
+  private panel: WalkaPanel | WalkaKolo;
+  /** New controls (walka/tryb.ts nowyPanel): tap enemy = approach + strike, ground = walk, hero = the ring (podmenu). */
+  private nowy = nowyPanel();
+  private podmenu = false;
+  /** Ucieczka tapped once: the next tap runs. */
+  private ucieczkaPytanie = false;
+  /** New controls: the enemy whose ring of blows (Cios / Mocny cios) is open. */
+  private koloWroga: Uczestnik | null = null;
+  private koloStrona = 0;
+  /** New controls: the attack picked in the enemy's ring – a preview; „Uderz” carries it out (owner, 19 Oct 2026). */
+  private wybranyAtak: string | null = null;
+  /** Moves this turn beyond the level's own (hotel, luck; later items): drawn with a bright rim. */
+  private bonusRuchy = 0;
+  /** New controls' Unik: each enemy attack may miss until their turn ends (WT.unik). */
+  private unik = false;
+  /** The hint line is a first-fights tip. */
+  private radaTekst = '';
+  private radyTeraz = new Set<string>();
+  private plany = new Map<string, PlanCiosu>();
+  private myszBylo = '';
+  private podpowiedz = '';
+  private wszyscy: WrogWalki[];
+  /** A dragon in the fight: its announced attacks and lasting areas (walka/smokTury.ts). */
+  private smok: SmokWTurach | null = null;
+  /** Osłona: the enemies' blows hurt less until the end of their turn. */
+  private oslona = false;
+
+  constructor(private h: WalkaHost, wrogowie: WrogWalki[], private opcje: OpcjeWalki = {}) {
+    const s = h.scene;
+    this.hpPrzed = h.player.hp;
+    this.wszyscy = [...wrogowie];
+    for (const e of wrogowie) {
+      const rola = ROLA_WROGA[e.kindId] ?? 'wrecz';
+      // Turn fights are shorter: less life (once per creature; a duel sets its own).
+      const t = e as WrogWalki & { turyZycie?: boolean };
+      if (!t.turyZycie && !e.duel && !e.pvp) e.hp = Math.max(1, Math.round(e.hp * WT.wrog.zycie));
+      t.turyZycie = true;
+      this.u.push({ e, rola, r: Math.max(3, e.size * 0.7), oglusz: false, hp0: e.hp });
+    }
+    if (wrogowie.some((e) => e.kindId === 'smok')) this.smok = new SmokWTurach({
+      scene: s,
+      player: h.player,
+      miejsce: (x, y, r, bez) => this.miejsce(x, y, r, bez),
+      napis: (x, y, t, c, ms) => h.napis(x, y, t, c, ms),
+      czekaj: (ms) => this.czekaj(ms),
+      ran: (e, czesc) => this.ranSmokiem(e, czesc),
+      wZasiegu: (q) => this.dist(q.e.x, q.e.y, h.player.x, h.player.y) <= q.e.size + HERO_R + 0.35 * W && h.widac(q.e.x, q.e.y, h.player.x, h.player.y),
+      ugryz: (q, czesc) => this.ugryzSmoka(q, czesc),
+      podejdz: (q, ruchW) => this.podejdzWrog(q, 'natarcie', ruchW),
+      tylkoGryzie: (e) => !!h.pewnyAtak?.(e),
+    });
+    this.gfx = s.add.graphics().setDepth(GLEB_ZIEMI);
+    this.gfxTop = s.add.graphics().setDepth(GLEB_GORA);
+    this.etykieta = s.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '7px', color: '#fff4d0', stroke: '#1e1a24', strokeThickness: 2.5, resolution: 6 })
+      .setOrigin(0.5, 1).setDepth(GLEB_GORA + 1).setVisible(false);
+    h.player.move(0, 0, s.time.now);
+    const obsluga = {
+      cios: () => this.przycisk('cios'),
+      ruch: () => this.przycisk('ruch'),
+      specjalne: () => this.ustawPodmenu(true),
+      mocny: () => this.przycisk('mocny'),
+      lecz: () => this.lecz(),
+      ucieczka: () => this.uciekaj(),
+      oslona: () => this.oslon(),
+      wroc: () => this.anuluj(),
+      koniecTury: () => this.koniecTury(),
+    };
+    this.panel = this.nowy
+      ? new WalkaKolo({
+        ...obsluga,
+        cios: () => this.atakZKola(this.atakiDostepne()[0]?.id ?? 'cios'),
+        mocny: () => this.atakZKola('mocny'),
+        atak: (id: string) => this.atakZKola(id),
+        ucieczka: () => this.uciekajPytaj(),
+        unik: () => this.unikaj(),
+        potwierdz: () => this.potwierdz(),
+        nastepny: () => this.nastepnyCel(),
+        kolo: () => this.ustawPodmenu(!this.podmenu),
+      })
+      : new WalkaPanel(obsluga);
+    document.body.classList.add('walka-tur');
+    if (opcje.pvp) {
+      // The arena: both already stand facing each other.
+      h.player.face(wrogowie[0].x - h.player.x, wrogowie[0].y - h.player.y);
+      for (const q of this.u) this.patrz(q.e, h.player.x - q.e.x, h.player.y - q.e.y);
+      this.kadruj(true);
+      h.scene.time.delayedCall(400, () => this.nowaTuraGracza());
+    } else void this.rozstaw();
+  }
+
+  // ------------------------------------------------------------------ helpers
+
+  private get zywi() {
+    return this.u.filter((q) => !q.e.isDead && q.e.active);
+  }
+
+  private dist(ax: number, ay: number, bx: number, by: number) {
+    return Math.hypot(ax - bx, ay - by);
+  }
+
+  /** Free for a figure of radius r at (x, y), not overlapping any living figure except `bez`. */
+  private miejsce(x: number, y: number, r: number, bez: WrogWalki | 'hero' | null) {
+    if (!this.h.wolne(x, y)) return false;
+    const p = this.h.player;
+    if (bez !== 'hero' && this.dist(x, y, p.x, p.y) < r + HERO_R + WT.odstepPx) return false;
+    for (const q of this.zywi) {
+      if (q.e === bez || q.e.inAir) continue;
+      if (this.dist(x, y, q.e.x, q.e.y) < r + q.r + WT.odstepPx) return false;
+    }
+    return true;
+  }
+
+  private tween(targets: object, props: Record<string, unknown>, ms: number) {
+    return new Promise<void>((done) => {
+      this.h.scene.tweens.add({ targets, ...props, duration: ms, onComplete: () => done() });
+    });
+  }
+
+  private czekaj(ms: number) {
+    return new Promise<void>((done) => this.h.scene.time.delayedCall(ms, () => done()));
+  }
+
+  /** Turns an enemy figure towards a point (the artist's sheets: rows down/side/up, side looks left). */
+  private patrz(e: WrogWalki, dx: number, dy: number, idzie = false) {
+    if (e.ownLook) return;
+    const dir = Math.abs(dx) > Math.abs(dy) ? 'side' : dy < 0 ? 'up' : 'down';
+    const person = e.hd || e.kindId === 'bandyta' || e.kindId === 'wojownik';
+    if (!person) return;
+    e.setFlipX(dir === 'side' && dx > 0);
+    if (idzie) e.anims.play(`${e.walkAnim}-${dir}`, true);
+    else {
+      e.anims.stop();
+      e.setFrame(`${dir}-0`);
+    }
+  }
+
+  /** Walks a figure along a way (points), with its walk animation. */
+  private async idz(kto: WrogWalki | Player, pts: { x: number; y: number }[]) {
+    const p = this.h.player;
+    const now = this.h.scene.time.now;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const len = this.dist(a.x, a.y, b.x, b.y);
+      if (len < 0.5) continue;
+      if (kto === p) p.move((b.x - a.x) / len, (b.y - a.y) / len, now);
+      else this.patrz(kto as WrogWalki, b.x - a.x, b.y - a.y, true);
+      await this.tween(kto, { x: b.x, y: b.y }, Math.max(80, (len / W) * 170));
+
+    }
+    if (kto === p) p.move(0, 0, this.h.scene.time.now);
+  }
+
+  private prosto(r: number, bez: WrogWalki | 'hero') {
+    return (a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const d = this.dist(a.x, a.y, b.x, b.y);
+      for (let s = 0; s <= d; s += 2) if (!this.miejsce(a.x + ((b.x - a.x) * s) / Math.max(d, 1e-6), a.y + ((b.y - a.y) * s) / Math.max(d, 1e-6), r, bez)) return false;
+      return true;
+    };
+  }
+
+  // ------------------------------------------------------------------ set-up
+
+  private async rozstaw() {
+    const p = this.h.player;
+    const zywi = this.zywi;
+    const cx = zywi.reduce((s, q) => s + q.e.x, 0) / zywi.length;
+    const cy = zywi.reduce((s, q) => s + q.e.y, 0) / zywi.length;
+    let dx = cx - p.x, dy = cy - p.y;
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl;
+    dy /= dl;
+    if (dl < 1) [dx, dy] = [0, -1];
+    const px = -dy, py = dx;
+    const R = WT.rozstaw;
+    const grupy: Record<RolaWWalce, Uczestnik[]> = { wrecz: [], dystans: [], szef: [] };
+    for (const q of zywi) grupy[q.rola].push(q);
+    // Who stands where: melee in a shallow arc, ranged further back on the sides, the boss in the middle at the back.
+    const chcialby = new Map<Uczestnik, { x: number; y: number }>();
+    const linia = (lista: Uczestnik[], odl: number, przesun = 0) => {
+      const n = lista.length;
+      lista.forEach((q, i) => {
+        const o = (i - (n - 1) / 2) * R.bokW * W + przesun;
+        const lift = Math.abs(o) * 0.18; // the arc bends back at its ends
+        chcialby.set(q, { x: p.x + dx * (odl - lift) + px * o, y: p.y + dy * (odl - lift) + py * o });
+      });
+    };
+    linia(grupy.wrecz, R.wreczW * W);
+    linia(grupy.szef, R.szefW * W);
+    if (grupy.szef.length && grupy.dystans.length) {
+      // Ranged on both sides of the boss.
+      grupy.dystans.forEach((q, i) => {
+        const side = i % 2 ? -1 : 1;
+        const o = side * (Math.floor(i / 2) + 1) * R.bokW * W * 1.1;
+        chcialby.set(q, { x: p.x + dx * R.dystansW * W + px * o, y: p.y + dy * R.dystansW * W + py * o });
+      });
+    } else linia(grupy.dystans, R.dystansW * W);
+
+    // Reserve every spot first (reachable along the map from where each one stands), then walk there.
+    const zajete: { x: number; y: number; r: number }[] = [];
+    const krok = WT.kratkaPx;
+    const ruchy: Promise<void>[] = [];
+    const wolneDla = (q: Uczestnik) => (x: number, y: number) => {
+      if (!this.h.wolne(x, y)) return false;
+      if (this.dist(x, y, p.x, p.y) < q.r + HERO_R + WT.odstepPx) return false;
+      return true;
+    };
+    for (const q of [...grupy.wrecz, ...grupy.szef, ...grupy.dystans]) {
+      const want = chcialby.get(q)!;
+      const z = zasieg(q.e.x, q.e.y, 9 * W, krok, wolneDla(q));
+      let best: string | null = null;
+      let bd = Infinity;
+      for (const [k, c] of z) {
+        if (zajete.some((o) => this.dist(c.x, c.y, o.x, o.y) < q.r + o.r + WT.odstepPx * 2)) continue;
+        // Not standing right on the hero's doorstep: the line keeps a little room.
+        if (this.dist(c.x, c.y, p.x, p.y) < q.r + HERO_R + 0.9 * W) continue;
+        const d = this.dist(c.x, c.y, want.x, want.y) + c.d * 0.05;
+        if (d < bd) [best, bd] = [k, d];
+      }
+      const cel = best ? z.get(best)! : { x: q.e.x, y: q.e.y };
+      zajete.push({ x: cel.x, y: cel.y, r: q.r });
+      if (best) ruchy.push(this.idz(q.e, uprosc(droga(z, best), (a, b) => {
+        const d = this.dist(a.x, a.y, b.x, b.y);
+        for (let s = 0; s <= d; s += 2) if (!this.h.wolne(a.x + ((b.x - a.x) * s) / Math.max(d, 1e-6), a.y + ((b.y - a.y) * s) / Math.max(d, 1e-6))) return false;
+        return true;
+      })).then(() => this.patrz(q.e, p.x - q.e.x, p.y - q.e.y)));
+    }
+    for (const q of zywi) {
+      q.e.vel.set(0, 0);
+      q.e.chasing = false;
+    }
+    p.face(dx, dy);
+    this.kadruj(true);
+    await Promise.all(ruchy);
+    this.nowaTuraGracza();
+  }
+
+  /** Frames the fight: everyone in view above the panel, one zoom step closer when they fit. */
+  private kadruj(zoom = false) {
+    const cam = this.h.scene.cameras.main;
+    const p = this.h.player;
+    const pts = [{ x: p.x, y: p.y }, ...this.zywi.map((q) => ({ x: q.e.x, y: q.e.y }))];
+    const x0 = Math.min(...pts.map((q) => q.x)) - W, x1 = Math.max(...pts.map((q) => q.x)) + W;
+    const y0 = Math.min(...pts.map((q) => q.y)) - 1.6 * W, y1 = Math.max(...pts.map((q) => q.y)) + W;
+    const zw = this.h.zoomZwykly();
+    cam.stopFollow();
+    let z = cam.zoom;
+    const kadr = this.h.kadr?.();
+    if (kadr) {
+      // A fixed stage (the Arena): the biggest whole zoom that shows it above the panel, framed once.
+      if (!zoom) return;
+      const fit = (zz: number) => (kadr.x1 - kadr.x0) * zz / OSTROSC <= cam.width / OSTROSC - 8 && (kadr.y1 - kadr.y0) * zz / OSTROSC <= cam.height / OSTROSC - this.panelPx() - 40;
+      z = 1;
+      while (z < 12 && fit(z + 1)) z++;
+      cam.setZoom(z);
+      const sh = (this.nowy ? -this.panelPx() / 2 : WT.panelPx / 2 - 10) * OSTROSC / z;
+      cam.centerOn((kadr.x0 + kadr.x1) / 2, (kadr.y0 + kadr.y1) / 2 + sh);
+      return;
+    }
+    if (zoom) {
+      // CSS px of the view; the panel covers the bottom.
+      const fit = (zz: number) => (x1 - x0) * zz / OSTROSC < cam.width / OSTROSC - 24 && (y1 - y0) * zz / OSTROSC < cam.height / OSTROSC - this.panelPx() - 90;
+      z = fit(zw + OSTROSC) ? zw + OSTROSC : zw;
+      cam.zoomTo(z, 350);
+    }
+    // The panel takes the bottom (new controls: a bar at the top): centre the fight in the part left free.
+    const shift = (this.nowy ? -this.panelPx() / 2 : WT.panelPx / 2 - 30) * OSTROSC / z;
+    cam.pan((x0 + x1) / 2, (y0 + y1) / 2 + shift, 350, 'Sine.easeInOut');
+  }
+
+  /** Screen height the panel covers (CSS px): the old one at the bottom, the new bar at the top. */
+  private panelPx() {
+    return this.nowy ? WT.panelNowyPx : WT.panelPx;
+  }
+
+  // ------------------------------------------------------------------ turns
+
+  private tura = 0;
+
+  private nowaTuraGracza() {
+    if (!this.aktywna) return;
+    if (this.tura++ > 0) this.kadruj();
+    const lvl = this.h.poziom();
+    let n = 0;
+    for (const [od, ile] of WT.ruchy) if (lvl >= od) n = ile;
+    let bonus = 0;
+    if (this.h.wyspany() && !this.opcje.pvp) (n += WT.hotel.ruchow), (bonus += WT.hotel.ruchow);
+    this.oslona = false;
+    this.unik = false;
+    this.koloWroga = null;
+    this.wybranyAtak = null;
+    this.ucieczkaPytanie = false;
+    // A dragon's poison cloud: fewer moves this turn.
+    if (this.smok?.zatrucie) {
+      n = Math.max(1, n - this.smok.zatrucie);
+      bonus = Math.min(bonus, n);
+      this.smok.zatrucie = 0;
+      this.h.napis(this.h.player.x, this.h.player.y - 1.3 * W, '☠ −1 ruch', '#d0a8ff', 1100);
+    }
+    this.maxRuchy = n;
+    this.ruchy = n;
+    this.faza = 'gracz';
+    if (Math.random() < WT.szczescie.dodatkowyRuch * this.szczescie()) {
+      this.ruchy++;
+      this.maxRuchy++;
+      bonus++;
+      this.koniczynka('+1 ruch');
+    }
+    this.bonusRuchy = bonus;
+    this.tryb = null;
+    this.punkt = null;
+    this.ustawPodmenu(false);
+    if (this.cel && (this.cel.e.isDead || !this.cel.e.active || !this.cel.e.visible)) this.cel = null;
+    const zap = this.smok?.tekst() ?? '';
+    if (this.nowy) {
+      this.plany.clear();
+      this.podpowiedz = this.rada(zap) || zap || (komputer ? 'Kliknij wroga' : 'Dotknij wroga');
+    } else this.podpowiedz = zap || (this.cel ? '' : 'Dotknij przeciwnika na mapie, żeby go wybrać.');
+    this.przelicz();
+    this.h.krok?.('tura');
+  }
+
+  /** A first-fights tip for this turn (new controls, not in the QR demo – it has its own tutorial), or ''. */
+  private rada(zap: string) {
+    if (demo.on || this.opcje.pvp) return (this.radaTekst = '');
+    let licz: Record<string, number> = {};
+    try {
+      licz = JSON.parse(localStorage.getItem(RADY_KLUCZ) || '{}');
+    } catch { /* private window */ }
+    const p = this.h.player;
+    const dotknij = komputer ? 'Kliknij' : 'Dotknij';
+    const lista: [string, boolean, string][] = [
+      ['smok', !!zap, `${zap} Wyjdź z czerwonego pola albo ${dotknij.toLowerCase()} bohatera → Unik.`],
+      ['lecz', p.hp <= PLAYER.maxHp / 3, `Mało życia! ${dotknij} swojego bohatera i wybierz Leczenie.`],
+      ['wrog', this.tura === 1, `${dotknij} wroga, potem dwa razy w atak – bohater sam podejdzie. Bursztynki pod bohaterem to ruchy.`],
+      ['bohater', this.tura === 2, `${dotknij} swojego bohatera – leczenie i unik.`],
+      ['pole', this.tura === 3, `${dotknij} pole w niebieskim zasięgu, żeby tam pójść. Gdy ruchy się skończą, tura przechodzi sama.`],
+    ];
+    for (const [k, warunek, tekst] of lista) {
+      if (!warunek || this.radyTeraz.has(k) || (licz[k] ?? 0) >= RADY_RAZY) continue;
+      this.radyTeraz.add(k);
+      licz[k] = (licz[k] ?? 0) + 1;
+      try {
+        localStorage.setItem(RADY_KLUCZ, JSON.stringify(licz));
+      } catch { /* private window */ }
+      return (this.radaTekst = tekst);
+    }
+    return (this.radaTekst = '');
+  }
+
+  private szczescie() {
+    return this.h.wyspany() && !this.opcje.pvp ? WT.hotel.szczescieRazy : 1;
+  }
+
+  private koniczynka(co: string) {
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.2 * W, `☘ ${co}`, '#7dffa0', 1100);
+  }
+
+  /** The hero's reachable cells for the current moves (one Ruch). */
+  private przelicz() {
+    const p = this.h.player;
+    this.zas = zasieg(p.x, p.y, WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
+    this.zasD = null;
+    this.budujDym();
+    this.plany.clear();
+    this.odswiez();
+  }
+
+  /** The ground reachable in up to a few more moves than are left (walks up over several moves, previews of what is missing). */
+  private zasDalej() {
+    if (!this.zasD) {
+      const p = this.h.player;
+      const ruchow = Math.min(DROGA_MAKS_RUCHOW, Math.max(this.ruchy, 1) + 2);
+      this.zasD = zasieg(p.x, p.y, ruchow * WT.ruchW * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, HERO_R, 'hero'));
+    }
+    return this.zasD;
+  }
+
+  private koniecTury() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    void this.turaWrogow();
+  }
+
+  private async turaWrogow() {
+    this.faza = 'wrogowie';
+    this.tryb = null;
+    this.punkt = null;
+    this.ustawPodmenu(false);
+    this.podpowiedz = '';
+    this.odswiez();
+    const p = this.h.player;
+    await this.czekaj(250);
+    // The hero ended his turn in burning ground, acid or the poison cloud.
+    const smokE = this.zywi.find((q) => q.e.kindId === 'smok')?.e;
+    if (this.smok && smokE && await this.smok.tik(smokE)) return;
+    const kolej = [...this.zywi].sort((a, b) => this.dist(a.e.x, a.e.y, p.x, p.y) - this.dist(b.e.x, b.e.y, p.x, p.y));
+    // At most two melee attackers (those already in reach first), and a limited volley of shots.
+    const wZasiegu = (q: Uczestnik) => this.dist(q.e.x, q.e.y, p.x, p.y) <= q.e.size + HERO_R + 0.35 * W && this.h.widac(q.e.x, q.e.y, p.x, p.y);
+    const wrecz = kolej.filter((q) => q.rola === 'wrecz');
+    const natarcie = new Set([...wrecz.filter(wZasiegu), ...wrecz.filter((q) => !wZasiegu(q))].slice(0, WT.wrog.natarcieWrecz));
+    let salwa = WT.wrog.salwa;
+    // The boss and a berserker act twice.
+    const tura = kolej.flatMap((q) => Array<Uczestnik>(q.e.pvp || q.e.kindId === 'smok' ? 1 : q.rola === 'szef' ? WT.akcjeSzefa : q.e.berserk ? WT.akcjeBerserkera : 1).fill(q));
+    for (const q of tura) {
+      if (!this.aktywna) return;
+      if (q.e.isDead || !q.e.active) continue;
+      if (this.smok && q.e.kindId === 'smok') {
+        if (await this.smok.tura(q)) return;
+        continue;
+      }
+      if (q.oglusz) {
+        q.oglusz = false;
+        this.h.napis(q.e.x, q.e.y - 1.1 * W, '💫', '#ffe08a', 700);
+        await this.czekaj(300);
+        continue;
+      }
+      if (q.e.pvp) {
+        if (await this.turaDucha(q)) return;
+        continue;
+      }
+      if (q.rola === 'dystans') {
+        const d = this.dist(q.e.x, q.e.y, p.x, p.y);
+        if (salwa > 0 && d <= WT.wrog.strzalW * W && this.h.widac(q.e.x, q.e.y, p.x, p.y)) {
+          salwa--;
+          if (await this.strzalWroga(q)) return;
+        } else await this.podejdzWrog(q, 'dystans');
+        continue;
+      }
+      if (natarcie.has(q) || q.rola === 'szef') {
+        if (wZasiegu(q)) {
+          if (await this.ciosWroga(q)) return;
+        } else await this.podejdzWrog(q, 'natarcie');
+      } else await this.podejdzWrog(q, 'czeka');
+    }
+    await this.czekaj(150);
+    if (this.aktywna) this.nowaTuraGracza();
+  }
+
+  /**
+   * An arena ghost's turn: as many actions as its owner has moves. Heals once when low, shoots when it holds a bow
+   * or wand, strikes (sometimes strongly, 2 actions) in reach, else walks up. True if the fight ended.
+   */
+  private async turaDucha(q: Uczestnik) {
+    const d = q.e.pvp!;
+    const p = this.h.player;
+    let akcje = d.akcje;
+    const reach = q.e.size + HERO_R + 0.35 * W;
+    while (akcje > 0 && this.aktywna && !q.e.isDead && q.e.active) {
+      if (d.leczenie && q.e.hp < q.hp0 * ARENA.duchLeczyPonizej) {
+        d.leczenie = false;
+        q.e.hp = Math.min(q.hp0, q.e.hp + q.hp0 * ARENA.leczenie);
+        this.h.napis(q.e.x, q.e.y - 1.2 * W, '✚ leczy się', '#9dff9a', 900);
+        akcje--;
+        await this.czekaj(380);
+        continue;
+      }
+      const dist = this.dist(q.e.x, q.e.y, p.x, p.y);
+      const widac = this.h.widac(q.e.x, q.e.y, p.x, p.y);
+      if (d.strzal && dist <= WT.strzalW * W && widac) {
+        akcje--;
+        if (await this.strzalWroga(q)) return true;
+        continue;
+      }
+      if (!d.strzal && dist <= reach && widac) {
+        const mocny = akcje >= 2 && Math.random() < ARENA.duchMocny;
+        akcje -= mocny ? 2 : 1;
+        if (mocny) this.h.napis(q.e.x, q.e.y - 1.3 * W, this.nowy ? 'Mocny atak!' : 'Mocny cios!', '#ffd34a', 700);
+        if (await this.ciosWroga(q, mocny ? d.mocny : 1)) return true;
+        continue;
+      }
+      akcje--;
+      await this.podejdzWrog(q, d.strzal ? 'dystans' : 'natarcie');
+    }
+    return false;
+  }
+
+  /** One enemy walks: up to the hero (natarcie), to a waiting ring (czeka), or into shooting range (dystans). */
+  private async podejdzWrog(q: Uczestnik, cel: 'natarcie' | 'czeka' | 'dystans', ruchW?: number) {
+    const p = this.h.player;
+    const z = zasieg(q.e.x, q.e.y, (ruchW ?? (q.e.pvp ? WT.ruchW : WT.wrog.ruchW)) * W, WT.kratkaPx, (x, y) => this.miejsce(x, y, q.r, q.e));
+    const reach = q.e.size + HERO_R + 0.35 * W;
+    let best: string | null = null;
+    let bd = Infinity;
+    for (const [k, c] of z) {
+      const d = this.dist(c.x, c.y, p.x, p.y);
+      let score: number;
+      if (cel === 'natarcie') score = d <= reach && this.h.widac(c.x, c.y, p.x, p.y) ? c.d * 0.01 : d;
+      else if (cel === 'czeka') score = Math.abs(d - 2.3 * W) + c.d * 0.02;
+      else {
+        const lepiej = d <= (WT.wrog.strzalW - 1) * W && this.h.widac(c.x, c.y, p.x, p.y);
+        score = (lepiej ? 0 : 1000) + Math.abs(d - 4.5 * W) + c.d * 0.02;
+      }
+      if (score < bd) [best, bd] = [k, score];
+    }
+    if (!best || best === '0,0') {
+      this.patrz(q.e, p.x - q.e.x, p.y - q.e.y);
+      return;
+    }
+    await this.idz(q.e, uprosc(droga(z, best), this.prosto(q.r, q.e)));
+    this.patrz(q.e, p.x - q.e.x, p.y - q.e.y);
+  }
+
+  /** A melee blow at the hero; true if the fight ended. */
+  private async ciosWroga(q: Uczestnik, mnoznik = 1) {
+    const p = this.h.player;
+    const e = q.e;
+    const wolf = e.kindId === 'wilk' || e.kindId === 'warg';
+    const sound = wolf ? 'wolf-bite' : enemyMeleeSound(e.kindId);
+    if (sound) this.h.sounds?.at(sound, 120, () => this.aktywna && e.active && !e.isDead);
+    this.patrz(e, p.x - e.x, p.y - e.y);
+    const sx = e.x, sy = e.y;
+    const k = 0.35;
+    await this.tween(e, { x: sx + (p.x - sx) * k, y: sy + (p.y - sy) * k }, 120);
+    const koniec = this.trafBohatera(q, mnoznik);
+    await this.tween(e, { x: sx, y: sy }, 160);
+    await this.czekaj(140);
+    return koniec;
+  }
+
+  private async strzalWroga(q: Uczestnik) {
+    const p = this.h.player;
+    const e = q.e;
+    if (e.kindId === 'glut' || e.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-throw');
+    this.patrz(e, p.x - e.x, p.y - e.y);
+    const s = this.h.scene;
+    const tex = e.kindId === 'wodnik' ? TEX.magicShot : TEX.arrowShot;
+    const pocisk = s.add.image(e.x, e.y - 0.4 * W, tex).setDepth(GLEB_GORA).setRotation(Math.atan2(p.y - e.y, p.x - e.x));
+    if (e.kindId === 'wodnik') pocisk.setTint(0x7fd4ff);
+    await this.tween(pocisk, { x: p.x, y: p.y - 0.4 * W }, Math.max(160, this.dist(e.x, e.y, p.x, p.y) * 4));
+    pocisk.destroy();
+    if (e.kindId === 'glut' || e.kindId === 'wielki_glut') this.h.sounds?.at('chestnut-hit');
+    const koniec = this.trafBohatera(q);
+    await this.czekaj(220);
+    return koniec;
+  }
+
+  /** Does an enemy's attack land? Luck, armour, then damage (fractions add up). True if the fight ended. */
+  private trafBohatera(q: Uczestnik, mnoznik = 1) {
+    const p = this.h.player;
+    if (Math.random() < WT.szczescie.unik * this.szczescie()) {
+      this.koniczynka('Unik!');
+      return false;
+    }
+    if (this.uniknal(q.e)) return false;
+    if (Math.random() >= (q.e.pvp ? (mnoznik > 1 ? 1 : q.e.pvp.trafienie) : WT.wrog.trafienie)) {
+      this.h.pudlo(p.x, p.y - 0.3 * W);
+      return false;
+    }
+    if (q.e.duel) {
+      // A duel's purple hearts are counted by the game (GameScene).
+      this.h.napis(p.x, p.y - 1.1 * W, '−💜', '#d9a0ff', 800);
+      const end = this.h.ranBohatera(q.e, 0);
+      this.odswiez();
+      if (end) this.zakoncz('przerwana');
+      return end;
+    }
+    // A ghost hits like a hero: its blow in weapon units, ARENA.jednostka of them to a half-heart (same rules both ways).
+    const pending = this.carry + poPancerzu((q.e.pvp
+      ? ((q.e.pvp.strzal ?? q.e.pvp.atak) * mnoznik * (Math.random() < WT.szczescie.krytyk ? WT.szczescie.krytykMnoznik : 1)) / ARENA.jednostka
+      : q.e.kind.damage * (q.e.power ?? 1) * session.level.obrazenia * WT.wrog.obrazenia) * (this.oslona && !q.e.pvp ? SMOK_W_TURACH.oslona : 1), defense(), q.e.kindId !== 'wodnik' && !q.e.pvp?.magicznyAtak);
+    return this.zadaj(q.e, pending);
+  }
+
+  /** Damage (half-hearts, fractions carried over) to the hero; true if the fight ended. */
+  private zadaj(e: WrogWalki, pending: number) {
+    const p = this.h.player;
+    const dmg = Math.floor(pending);
+    this.carry = pending - dmg;
+    if (dmg <= 0) {
+      this.h.napis(p.x, p.y - 1.1 * W, 'draśnięcie', '#ffd0c0', 700);
+      return false;
+    }
+    this.h.scene.cameras.main.shake(110, 0.003);
+    p.setTint(0xff6a6a);
+    this.h.scene.time.delayedCall(140, () => p.clearTint());
+    this.h.napis(p.x, p.y - 1.1 * W, `−${dmg % 2 ? (dmg / 2).toFixed(1) : dmg / 2} ♥`, '#ff8a8a', 900);
+    const end = this.h.ranBohatera(e, dmg);
+    this.odswiez();
+    if (end) {
+      this.zakoncz(p.hp <= 0 ? 'smierc' : 'przerwana');
+      return true;
+    }
+    return false;
+  }
+
+  /** A dragon's attack: a share of the hero's full life (difficulty, luck, Osłona). True if the fight ended. */
+  private ranSmokiem(e: WrogWalki, czesc: number) {
+    if (!this.h.pewnyAtak?.(e) && Math.random() < WT.szczescie.unik * this.szczescie()) {
+      this.koniczynka('Unik!');
+      return false;
+    }
+    if (this.uniknal(e)) return false;
+    const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    const pending = this.carry + czesc * PLAYER.maxHp * (TRUDNOSC_SMOKOW.obrazenia[lvl] ?? 1) * (this.oslona ? SMOK_W_TURACH.oslona : 1);
+    if (this.oslona) this.h.napis(this.h.player.x + 0.6 * W, this.h.player.y - 0.6 * W, '🛡', '#cfe6ff', 600);
+    return this.zadaj(e, pending);
+  }
+
+  /** A dragon's bite: a lunge at the hero, armour may block it. */
+  private async ugryzSmoka(q: Uczestnik, czesc: number) {
+    const p = this.h.player;
+    const e = q.e;
+    const sx = e.x, sy = e.y;
+    await this.tween(e, { x: sx + (p.x - sx) * 0.25, y: sy + (p.y - sy) * 0.25 }, 140);
+    let koniec = false;
+    koniec = this.ranSmokiem(e, poPancerzu(czesc, defense()));
+    if (this.aktywna) await this.tween(e, { x: sx, y: sy }, 180);
+    await this.czekaj(160);
+    return koniec;
+  }
+
+  // ------------------------------------------------------------------ the hero's actions
+
+  private przycisk(t: Exclude<Tryb, null>) {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (t === 'ruch') {
+      if (this.tryb === 'ruch' && this.punkt) return void this.wykonajRuch();
+      this.tryb = 'ruch';
+      this.punkt = null;
+      this.podpowiedz = this.ruchy < WT.koszt.ruch ? 'Brak ruchów – zakończ turę.' : 'Wskaż miejsce w podświetlonym zasięgu.';
+      this.odswiez();
+      return;
+    }
+    if (this.nowy && t === 'mocny') {
+      // From the ring: the next enemy tapped gets a strong blow.
+      if (this.ruchy < WT.koszt.mocny) {
+        this.podpowiedz = `Za mało ruchów na mocny cios (${WT.koszt.mocny}).`;
+        return this.odswiez();
+      }
+      this.tryb = this.tryb === 'mocny' ? null : 'mocny';
+      this.punkt = null;
+      this.ustawPodmenu(false);
+      this.plany.clear();
+      const dotknij = komputer ? 'Kliknij' : 'Dotknij';
+      this.podpowiedz = this.tryb === 'mocny'
+        ? (this.cel ? `${this.planCiosu(this.cel, true).tekst} – ${dotknij.toLowerCase()} wroga.` : `Mocny cios: ${dotknij.toLowerCase()} wroga.`)
+        : 'Zwykły cios.';
+      return this.odswiez();
+    }
+    if (this.tryb === t && this.cel) return void this.wykonajCios(t === 'mocny');
+    this.tryb = t;
+    this.punkt = null;
+    if (t === 'mocny') this.ustawPodmenu(false);
+    if (this.cel) {
+      this.podpowiedz = this.opisCiosu(this.cel, t === 'mocny').tekst + ' – dotknij jeszcze raz, żeby zatwierdzić.';
+      this.odswiez();
+      return;
+    }
+    this.podpowiedz = 'Wskaż postać na mapie.';
+    this.odswiez();
+  }
+
+  private anuluj() {
+    if (this.nowy) {
+      // Escape / Backspace: close a ring, else drop the strong blow and the previews.
+      if (this.koloWroga && this.wybranyAtak) this.wybranyAtak = null;
+      else if (this.koloWroga) this.koloWroga = null;
+      else if (this.podmenu) this.ustawPodmenu(false);
+      else {
+        if (this.tryb === 'mocny') this.tryb = null;
+        this.cel = null;
+        this.punkt = null;
+      }
+      this.ucieczkaPytanie = false;
+      this.podpowiedz = '';
+      return this.odswiez();
+    }
+    if (this.podmenu) {
+      this.ustawPodmenu(false);
+      if (this.tryb === 'mocny') this.tryb = null;
+    } else {
+      this.tryb = null;
+      this.punkt = null;
+    }
+    this.podpowiedz = '';
+    this.odswiez();
+  }
+
+  private ustawPodmenu(on: boolean) {
+    if (on && (this.faza !== 'gracz' || this.busy)) return;
+    const bylo = this.podmenu;
+    this.podmenu = on;
+    if (on) (this.koloWroga = null), (this.wybranyAtak = null);
+    if (on) this.podpowiedz = this.nowy ? 'Leczenie albo unik' : 'Mocny cios, leczenie, osłona albo ucieczka.';
+    // The tutorial first (it may point at a ring button), then the ring is drawn.
+    if (on !== bylo) this.h.krok?.(on ? 'specjalne' : 'wroc');
+    this.odswiez();
+  }
+
+  /** Weapon in hand decides the attack: sword (melee with a short hop) or a shot (bow/wand). */
+  private broni() {
+    return rangedWeapon();
+  }
+
+  /** Where the hero would strike from (a cell within the short hop, or a whole walk up with the new controls) and the cost, or why not. */
+  private planCiosu(q: Uczestnik, mocny: boolean, atak?: RodzajAtaku): PlanCiosu {
+    if (!this.nowy) return this.planCiosuOblicz(q, mocny);
+    const k = `${this.u.indexOf(q)}|${atak?.id ?? mocny}|${this.ruchy}`;
+    let plan = this.plany.get(k);
+    if (!plan) this.plany.set(k, (plan = this.planCiosuOblicz(q, mocny, atak)));
+    return plan;
+  }
+
+  private planCiosuOblicz(q: Uczestnik, mocny: boolean, atak?: RodzajAtaku): PlanCiosu {
+    const p = this.h.player;
+    const koszt = atak ? atak.koszt : mocny ? WT.koszt.mocny : WT.koszt.cios;
+    const requirement = weaponRequirement(gear.equip.bron);
+    if (requirement) return { ok: false, koszt, tekst: requirement };
+    const ruchyTxt = (n: number) => `${n} ${n === 1 ? 'ruch' : 'ruchy'}`;
+    const bron = this.broni();
+    const nazwa = atak ? atak.nazwa : bron ? `${bron.rodzaj === 'magia' ? 'Czar' : 'Strzał'}${mocny ? ' mocny' : ''}` : mocny ? (this.nowy ? 'Mocny atak' : 'Mocny cios') : (this.nowy ? 'Atak' : 'Cios');
+    // From where could it be done? (a shot: range and a clear line; melee: reach and no wall between)
+    // New controls (owner, 19 Oct 2026: „wciąż mogę doskoczyć z daleka – zmniejsz radius do kilku metrów”):
+    // a blow reaches only WT.zasiegWreczW beyond touching; farther takes a walk-up move.
+    const blisko = q.r + HERO_R + WT.odstepPx + 1.5;
+    const reach = this.nowy ? blisko + WT.zasiegWreczW * W : PLAYER.attackReach + PLAYER.attackRadius + q.e.size;
+    const stad = (x: number, y: number) => bron
+      ? this.dist(x, y, q.e.x, q.e.y) <= WT.strzalW * W && this.h.widac(x, y, q.e.x, q.e.y)
+      : this.dist(x, y, q.e.x, q.e.y) <= reach - (x === p.x && y === p.y ? 0 : 2) && this.h.widac(x, y, q.e.x, q.e.y);
+    if (bron) {
+      const ammo = ammoOf(bron);
+      if (ammo && (gear.ammo[ammo] ?? 0) <= 0) return { ok: false, koszt, tekst: `Brak: ${AMUNICJA[ammo].nazwa.toLowerCase()}` };
+    }
+    const tutaj = (): PlanCiosu => ({ ok: this.ruchy >= koszt, z: null, koszt, podejscie: 0, tekst: this.nowy ? nazwa : `${nazwa} · ${ruchyTxt(koszt)}` });
+    // New controls (owner, 19 Oct 2026: „cios można oddać z bliższej odległości”): melee goes right up to the target.
+    const przyNim = (x: number, y: number) => bron || !this.nowy || this.dist(x, y, q.e.x, q.e.y) <= blisko * 1.25;
+    if (stad(p.x, p.y) && przyNim(p.x, p.y)) return tutaj();
+    const z = this.zas;
+    if (!bron && z) {
+      // A short hop: a cell within WT.doskokW from which the target is in reach (no blows through walls).
+      let best: string | null = null;
+      let bd = Infinity;
+      // New controls: when the target is already within a blow's reach, the hop goes all the way up to it.
+      // Otherwise a hop that wouldn't end right next to it doesn't count – a walk up (one move more) does it.
+      const skok = this.nowy ? (stad(p.x, p.y) ? Infinity : -1) : WT.doskokW * W;
+      for (const [k, c] of z) {
+        if (c.d > skok || !stad(c.x, c.y) || !przyNim(c.x, c.y)) continue;
+        // As close to the target as the hop allows (owner: „powinienem być trochę bliżej”).
+        const d = this.dist(c.x, c.y, q.e.x, q.e.y);
+        const score = this.nowy ? Math.abs(d - blisko) + c.d * 0.1 : d + c.d * 0.25;
+        if (score < bd) [best, bd] = [k, score];
+      }
+      if (best) {
+        const c = z.get(best)!;
+        return { ok: this.ruchy >= koszt, z: { x: c.x, y: c.y, k: best }, koszt, podejscie: 0, tekst: this.nowy ? nazwa : `${nazwa} · ${ruchyTxt(koszt)}` };
+      }
+    }
+    // In reach from here (no closer spot within the hop): strike from here.
+    if (stad(p.x, p.y)) return tutaj();
+    if (!this.nowy) return { ok: false, koszt, tekst: bron ? (this.dist(p.x, p.y, q.e.x, q.e.y) > WT.strzalW * W ? 'Za daleko na strzał – podejdź bliżej' : 'Coś zasłania cel') : 'Podejdź bliżej (Ruch)' };
+    // New controls: walk up – over as many moves as it takes – and strike in the same go (stage 2, owner 19 Oct 2026).
+    // The cheapest number of moves wins, then the spot closest to touching; short of moves it is shown, never done.
+    const ruch = WT.koszt.ruch;
+    const krok = WT.ruchW * W;
+    const zd = this.zasDalej();
+    let best: string | null = null;
+    let bn = Infinity, bs = Infinity;
+    for (const [k, c] of zd) {
+      if (k === '0,0' || !stad(c.x, c.y)) continue;
+      const n = Math.max(1, Math.ceil(c.d / krok - 1e-6));
+      const s = (bron ? 0 : Math.abs(this.dist(c.x, c.y, q.e.x, q.e.y) - blisko)) + c.d * 0.05;
+      if (n < bn || (n === bn && s < bs)) [best, bn, bs] = [k, n, s];
+    }
+    if (best) {
+      const c = zd.get(best)!;
+      const pod = bn * ruch;
+      return { ok: this.ruchy >= pod + koszt, z: { x: c.x, y: c.y, k: best }, dal: true, koszt: pod + koszt, podejscie: pod, dojscie: true, tekst: nazwa };
+    }
+    // Beyond every walk this turn could reach: a rough count of the walks it would take (the player walks first).
+    const zostaje = this.dist(p.x, p.y, q.e.x, q.e.y) - (bron ? WT.strzalW * W : reach);
+    const ile = Math.max(2, Math.ceil(zostaje / krok)) * ruch;
+    return { ok: false, koszt: ile + koszt, podejscie: ile, dojscie: true, daleko: true, tekst: bron ? 'Za daleko na strzał' : 'Za daleko' };
+  }
+
+  private opisCiosu(q: Uczestnik, mocny: boolean) {
+    return this.planCiosu(q, mocny);
+  }
+
+  private async wykonajCios(mocny: boolean, atak?: RodzajAtaku) {
+    const q = this.cel;
+    if (!q || this.busy) return;
+    const plan = this.planCiosu(q, mocny, atak);
+    if (!plan.ok) {
+      this.podpowiedz = this.ruchy < plan.koszt ? 'Za mało ruchów.' : plan.tekst;
+      this.odswiez();
+      return;
+    }
+    this.busy = true;
+    this.ruchy -= plan.koszt;
+    this.koloWroga = null;
+    this.ustawPodmenu(false);
+    this.odswiez();
+    const p = this.h.player;
+    const bron = this.broni();
+    const siec = plan.dal ? this.zasDalej() : this.zas;
+    if (plan.dojscie && plan.z && siec) {
+      // New controls: the walk up first (the hero stays where it ends).
+      await this.idz(p, uprosc(droga(siec, plan.z.k), this.prosto(HERO_R, 'hero')));
+      if (plan.tylko) {
+        this.busy = false;
+        this.podpowiedz = '';
+        return void this.po();
+      }
+    }
+    const mnoz = atak?.mnoznik ?? 1;
+    if (bron) {
+      if (atak?.obszar === 'stozek') await this.wachlarz(q, bron, atak);
+      else if (atak?.obszar === 'salwa') {
+        // One shot at the target and one at each of its nearest neighbours, a moment apart.
+        const cele = this.celeObszaru(q, atak, p);
+        await Promise.all(cele.map((c, i) => this.czekaj(i * 90).then(() => this.strzal(c, bron, false, mnoz))));
+      } else await this.strzal(q, bron, mocny, mnoz);
+      this.h.krok?.('cios');
+    }
+    else {
+      const start = { x: p.x, y: p.y };
+      const doskok = !!plan.z && !plan.dojscie;
+      if (doskok && plan.z && this.zas) await this.idz(p, uprosc(droga(this.zas, plan.z.k), this.prosto(HERO_R, 'hero')));
+      p.face(q.e.x - p.x, q.e.y - (p.y + 2));
+      const aim = Math.atan2(q.e.y - (p.y + 2), q.e.x - p.x);
+      this.h.zamach(aim, mocny || atak?.obszar === 'zamach');
+      // A small lunge with the blow.
+      const sx = p.x, sy = p.y;
+      await this.tween(p, { x: sx + Math.cos(aim) * 3, y: sy + Math.sin(aim) * 3 }, 90);
+      if (atak?.obszar === 'zamach') {
+        // A wide swing: the target and every enemy in reach on the same side.
+        this.zamachLuk(aim, ((atak.katStopnie ?? 140) / 2) * (Math.PI / 180));
+        for (const o of this.celeObszaru(q, atak, p)) this.rozstrzygnijCios(o, false, mnoz);
+      } else this.rozstrzygnijCios(q, mocny, mnoz);
+      this.h.krok?.('cios');
+      await this.tween(p, { x: sx, y: sy }, 90);
+      // Back only part of the hop: a beginner stays close, a veteran springs back further.
+      if (doskok) {
+        const P = WT.powrot;
+        const f = P.od + (P.do - P.od) * Math.min(1, Math.max(0, (this.h.poziom() - 1) / (P.pelnyOd - 1)));
+        const cel = { x: p.x + (start.x - p.x) * f, y: p.y + (start.y - p.y) * f };
+        if (f > 0.02 && this.prosto(HERO_R, 'hero')({ x: p.x, y: p.y }, cel)) await this.idz(p, [{ x: p.x, y: p.y }, cel]);
+      }
+    }
+    this.busy = false;
+    if (this.nowy) {
+      // A strong blow is one blow; a target down leaves no preview behind.
+      if (this.tryb === 'mocny') this.tryb = null;
+      this.podpowiedz = '';
+    }
+    this.po();
+  }
+
+  /**
+   * Who an attack reaches when struck at `q` from the spot `s`: the target alone, or for a sweep every enemy in reach on
+   * the same side, for a fan everyone in the cone, for a volley the target and its nearest neighbours. Shared by the
+   * preview (red rings, from where the walk up ends) and the attack itself, so they always agree.
+   */
+  private celeObszaru(q: Uczestnik, atak: RodzajAtaku | undefined, s: { x: number; y: number }): Uczestnik[] {
+    const obszar = atak?.obszar ?? 'jeden';
+    if (obszar === 'jeden' || !atak) return [q];
+    const zywi = this.zywi.filter((o) => o === q || (o.e.visible && !o.e.inAir));
+    if (obszar === 'salwa') {
+      return [q, ...zywi.filter((o) => o !== q && this.dist(o.e.x, o.e.y, q.e.x, q.e.y) <= (atak.zasiegW ?? 2.5) * W)
+        .sort((a, b) => this.dist(a.e.x, a.e.y, q.e.x, q.e.y) - this.dist(b.e.x, b.e.y, q.e.x, q.e.y))].slice(0, atak.ileCelow ?? 3);
+    }
+    const zamach = obszar === 'zamach';
+    const aim = Math.atan2(q.e.y - (s.y + (zamach ? 2 : 0)), q.e.x - s.x);
+    const pol = ((atak.katStopnie ?? (zamach ? 140 : 60)) / 2) * (Math.PI / 180);
+    const stozek = Math.max((atak.zasiegW ?? 4) * W, this.dist(s.x, s.y, q.e.x, q.e.y) + q.r);
+    return zywi.filter((o) => {
+      if (o === q) return true;
+      const d = this.dist(s.x, s.y, o.e.x, o.e.y);
+      const kat = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(o.e.y - s.y, o.e.x - s.x) - aim));
+      const sieg = zamach ? o.r + HERO_R + WT.odstepPx + 1.5 + WT.zasiegWreczW * W + 2 : stozek + o.r;
+      return d <= sieg && kat <= pol && this.h.widac(s.x, s.y, o.e.x, o.e.y);
+    });
+  }
+
+  /** A wide golden arc for the sweep (code-drawn until the artist's effect). */
+  private zamachLuk(aim: number, pol: number) {
+    const p = this.h.player;
+    const g = this.h.scene.add.graphics().setDepth(GLEB_GORA);
+    const r = HERO_R + WT.zasiegWreczW * W + 6;
+    g.lineStyle(2.5, 0xffe08a, 0.9).beginPath().arc(p.x, p.y - 2, r, aim - pol, aim + pol).strokePath();
+    g.lineStyle(1, 0xffffff, 0.8).beginPath().arc(p.x, p.y - 2, r - 2, aim - pol * 0.8, aim + pol * 0.8).strokePath();
+    this.h.scene.tweens.add({ targets: g, alpha: 0, duration: 380, onComplete: () => g.destroy() });
+  }
+
+  /** Wachlarz ognia: flames fan out from the hero; everyone in the cone may get burnt. */
+  private async wachlarz(q: Uczestnik, bron: NonNullable<ReturnType<typeof rangedWeapon>>, atak: RodzajAtaku) {
+    const p = this.h.player;
+    const aim = Math.atan2(q.e.y - p.y, q.e.x - p.x);
+    const pol = ((atak.katStopnie ?? 60) / 2) * (Math.PI / 180);
+    const zasieg = Math.max((atak.zasiegW ?? 4) * W, this.dist(p.x, p.y, q.e.x, q.e.y) + q.r);
+    p.face(q.e.x - p.x, q.e.y - p.y);
+    const g = this.h.scene.add.graphics().setDepth(GLEB_GORA);
+    const kolory = [0xff4a1a, 0xff8a2a, 0xffd34a];
+    kolory.forEach((k, i) => {
+      const r = zasieg * (1 - i * 0.22);
+      g.fillStyle(k, 0.55).slice(p.x, p.y - 2, r, aim - pol * (1 - i * 0.15), aim + pol * (1 - i * 0.15), false).fillPath();
+    });
+    g.setScale(0.2);
+    g.setPosition(p.x * 0.8, (p.y - 2) * 0.8);
+    await this.tween(g, { scale: 1, x: 0, y: 0 }, 220);
+    this.h.cwiczenie('magia', WT.cwiczenie);
+    const now = this.h.scene.time.now;
+    for (const o of this.celeObszaru(q, atak, p)) {
+      if (Math.random() >= hitChance('magia', false, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
+        this.h.pudlo(o.e.x, o.e.y - 4 * o.e.kind.scale);
+        continue;
+      }
+      this.trafWroga(o, shotDamage(bron, Math.random) * atak.mnoznik * this.h.wzmocnienie(o.e), new Phaser.Math.Vector2(p.x, p.y), now, false);
+    }
+    this.h.scene.tweens.add({ targets: g, alpha: 0, duration: 320, onComplete: () => g.destroy() });
+    await this.czekaj(200);
+  }
+
+  private rozstrzygnijCios(q: Uczestnik, mocny: boolean, mnoz = 1) {
+    const p = this.h.player;
+    const e = q.e;
+    const now = this.h.scene.time.now;
+    this.h.cwiczenie('miecz', WT.cwiczenie);
+    if (Math.random() >= hitChance('miecz', mocny, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
+      this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
+      return;
+    }
+    let dmg = meleeDamage(Math.random) * (mocny ? strongFactor('miecz') : 1) * mnoz * this.h.wzmocnienie(e);
+    if (Math.random() < WT.szczescie.krytyk * this.szczescie()) {
+      dmg *= WT.szczescie.krytykMnoznik;
+      this.koniczynka('Krytyk!');
+    }
+    this.h.zuzyj(gear.equip.bron);
+    this.trafWroga(q, dmg, new Phaser.Math.Vector2(p.x, p.y), now, mocny);
+  }
+
+  private async strzal(q: Uczestnik, bron: NonNullable<ReturnType<typeof rangedWeapon>>, mocny: boolean, mnoz = 1) {
+    const p = this.h.player;
+    const e = q.e;
+    const skill = bron.rodzaj === 'magia' ? 'magia' : 'luk';
+    const ammo = ammoOf(bron);
+    if (ammo && !takeAmmo(ammo)) return;
+    if (ammo) this.h.zuzyj(bron.id);
+    this.h.sounds?.at(shotSound(skill, mocny));
+    p.face(e.x - p.x, e.y - p.y);
+    const pocisk = this.h.scene.add.image(p.x, p.y, skill === 'magia' ? TEX.magicShot : TEX.arrowShot)
+      .setRotation(Math.atan2(e.y - p.y, e.x - p.x)).setDepth(GLEB_GORA);
+    if (mocny) pocisk.setScale(1.5).setTint(0xffd84a);
+    await this.tween(pocisk, { x: e.x, y: e.y }, Math.max(140, this.dist(p.x, p.y, e.x, e.y) * 3));
+    pocisk.destroy();
+    this.h.cwiczenie(skill, WT.cwiczenie);
+    if (Math.random() >= hitChance(skill, mocny, (this.opcje.pvp ? 0 : session.level.celnosc) + gearAimBonus())) {
+      this.h.pudlo(e.x, e.y - 4 * e.kind.scale);
+      return;
+    }
+    const now = this.h.scene.time.now;
+    const natychmiast = skill === 'luk' && !WALKA.bezNatychmiast.includes(e.kindId) && !e.duel && Math.random() < instaKillChance();
+    let dmg = natychmiast ? e.hp : shotDamage(bron, Math.random) * (mocny ? strongFactor(skill) : 1) * mnoz * this.h.wzmocnienie(e);
+    if (!natychmiast && Math.random() < WT.szczescie.krytyk * this.szczescie()) {
+      dmg *= WT.szczescie.krytykMnoznik;
+      this.koniczynka('Krytyk!');
+    }
+    this.trafWroga(q, dmg, new Phaser.Math.Vector2(p.x, p.y), now, mocny);
+  }
+
+  private trafWroga(q: Uczestnik, dmg: number, from: Phaser.Math.Vector2, now: number, mocny: boolean) {
+    const e = q.e;
+    const x = e.x, y = e.y;
+    // A ghost's armour blocks like the hero's.
+    if (e.pvp && !mocny && Math.random() < e.pvp.blok) {
+      this.h.napis(x, y - 1.1 * W, '🛡 Blok', '#cfe6ff', 800);
+      return;
+    }
+    if (e.pvp?.pancerz) dmg = poPancerzu(dmg, e.pvp.pancerz, this.broni()?.rodzaj !== 'magia');
+    const zabity = e.hit(from, now, dmg);
+    // No knock-back in turns: everyone keeps their spot.
+    e.vel.set(0, 0);
+    e.setPosition(x, y);
+    this.h.napis(x, y - 1.2 * W * e.kind.scale, `−${Math.round(dmg * 10) / 10}`, '#ffe3a0', 800);
+    if (zabity) {
+      if (this.cel === q) this.cel = null;
+      this.h.zabity(e);
+      return;
+    }
+    const wynik = this.h.trafiony?.(e, q.hp0);
+    if (wynik === 'koniecTury') this.ruchy = 0;
+    else if (wynik) {
+      // It leaves the fight (flies off): no longer one of the fighters.
+      if (this.cel === q) this.cel = null;
+      this.u = this.u.filter((x) => x !== q);
+      return;
+    }
+    this.h.nasycenie(e, now);
+    if (mocny && e.kindId !== 'smok') q.oglusz = true;
+  }
+
+  private async wykonajRuch() {
+    const pt = this.punkt;
+    if (!pt || !this.zas || this.busy) return;
+    if (this.ruchy < WT.koszt.ruch) {
+      this.podpowiedz = 'Za mało ruchów.';
+      this.odswiez();
+      return;
+    }
+    this.busy = true;
+    this.ruchy -= WT.koszt.ruch;
+    this.punkt = null;
+    this.odswiez();
+    await this.idz(this.h.player, uprosc(droga(this.zas, pt.k), this.prosto(HERO_R, 'hero')));
+    this.busy = false;
+    this.tryb = this.nowy && this.tryb === 'mocny' ? 'mocny' : this.cel ? 'cios' : null;
+    if (this.nowy) this.podpowiedz = '';
+    this.po();
+  }
+
+  private lecz() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (this.ruchy < WT.koszt.lecz) {
+      this.podpowiedz = 'Za mało ruchów.';
+      return this.odswiez();
+    }
+    if (this.h.player.hp >= PLAYER.maxHp) {
+      this.podpowiedz = 'Masz pełne życie.';
+      return this.odswiez();
+    }
+    if (!this.h.lecz()) {
+      this.podpowiedz = 'Nie masz czym się leczyć (mikstura, owoce, jedzenie).';
+      return this.odswiez();
+    }
+    this.ruchy -= WT.koszt.lecz;
+    this.ustawPodmenu(false);
+    this.podpowiedz = '';
+    this.h.krok?.('lecz');
+    this.po();
+  }
+
+  private oslon() {
+    if (this.faza !== 'gracz' || this.busy || this.oslona) return;
+    if (this.ruchy < WT.koszt.oslona) {
+      this.podpowiedz = 'Za mało ruchów.';
+      return this.odswiez();
+    }
+    this.ruchy -= WT.koszt.oslona;
+    this.oslona = true;
+    this.ustawPodmenu(false);
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.2 * W, '🛡 Osłona', '#cfe6ff', 1000);
+    this.podpowiedz = 'Osłona: ciosy przeciwników do końca ich tury bolą mniej.';
+    this.po();
+  }
+
+  /** New controls: the ring's Ucieczka asks once („Na pewno?”), the second tap runs. */
+  private uciekajPytaj() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (this.ucieczkaPytanie) return this.uciekaj();
+    this.ucieczkaPytanie = true;
+    this.podpowiedz = this.opcje.pvp ? 'Poddać walkę na arenie? Dotknij „Na pewno?” u góry.' : 'Ucieczka kosztuje 1 ♥ – dotknij „Na pewno?” u góry, żeby uciec.';
+    this.odswiez();
+  }
+
+  /** Which hand is fighting: melee, bow (crossbow, gun) or magic. */
+  private rodzajBroni(): BronAtaku {
+    const b = this.broni();
+    return !b ? 'wrecz' : b.rodzaj === 'magia' ? 'magia' : 'luk';
+  }
+
+  /** The attacks of the weapon in hand (content/atakiTurowe.ts), unlocked or not. */
+  private atakiBroni() {
+    const r = this.rodzajBroni();
+    return ATAKI.filter((a) => a.bron === r);
+  }
+
+  /** Only the attacks already unlocked, in catalogue order (the plain one first). */
+  private atakiDostepne() {
+    return this.atakiBroni().filter((a) => !this.brakuje(a));
+  }
+
+  /** What an attack still needs, or null when it's unlocked. */
+  private brakuje(a: RodzajAtaku) {
+    return brakujeDoAtaku(a.wymaga, { poziomPostaci: this.h.poziom(), magia: gear.magic, umiejetnosc: (u) => skillLevel(u) });
+  }
+
+  /** New controls: an attack from the enemy's ring (or keys on the chosen enemy). */
+  private atakZKola(id: string) {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const q = this.koloWroga ?? this.cel;
+    if (!q) {
+      this.podpowiedz = komputer ? 'Najpierw kliknij wroga.' : 'Najpierw dotknij wroga.';
+      return this.odswiez();
+    }
+    if (id === 'wiecej') {
+      this.koloStrona++;
+      return this.odswiez();
+    }
+    const atak = this.atakiDostepne().find((a) => a.id === id);
+    if (!atak) return;
+    // The second tap on the picked attack carries it out (owner, 20 Oct 2026: no separate „Uderz” button).
+    if (this.wybranyAtak === atak.id && this.koloWroga === q) return this.uderz();
+    // The first tap only previews it: the ambers that would go pulse, the button pulses faster.
+    this.cel = q;
+    this.koloWroga = q;
+    this.tryb = atak.mocny ? 'mocny' : 'cios';
+    this.wybranyAtak = atak.id;
+    this.podpowiedz = this.opisPlanu(this.planCiosu(q, !!atak.mocny, atak));
+    this.odswiez();
+  }
+
+  /** The one short hint for a previewed attack. */
+  private opisPlanu(plan: PlanCiosu) {
+    if (plan.ok) return komputer ? 'Kliknij jeszcze raz, żeby zaatakować' : 'Dotknij jeszcze raz, żeby zaatakować';
+    if (plan.daleko) return komputer ? 'Za daleko – najpierw podejdź (kliknij pole)' : 'Za daleko – najpierw podejdź (dotknij pole)';
+    const brak = plan.koszt - this.ruchy;
+    if (brak > 0) return `Brakuje ${brak} ${brak === 1 ? 'ruchu' : 'ruchów'} – wybierz tańszy atak albo zakończ turę`;
+    return plan.tekst;
+  }
+
+  /** The previewed attack, if any: its plan for the open ring's enemy. */
+  private podgladAtaku() {
+    const q = this.koloWroga;
+    const atak = q && this.wybranyAtak ? this.atakiDostepne().find((a) => a.id === this.wybranyAtak) : null;
+    return q && atak ? { q, atak, plan: this.planCiosu(q, !!atak.mocny, atak) } : null;
+  }
+
+  /** The second tap on the picked attack (or Enter): carries it out – only when there are moves enough. */
+  private uderz() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const w = this.podgladAtaku();
+    if (!w) return;
+    if (!w.plan.ok) {
+      this.podpowiedz = this.opisPlanu(w.plan);
+      return this.odswiez();
+    }
+    this.cel = w.q;
+    this.koloWroga = null;
+    this.wybranyAtak = null;
+    void this.wykonajCios(!!w.atak.mocny, w.atak);
+  }
+
+  /** New controls' Unik (owner, 19 Oct 2026, in place of Osłona): each attack until the enemies' turn ends may miss. */
+  private unikaj() {
+    if (this.faza !== 'gracz' || this.busy || this.unik) return;
+    if (this.ruchy < WT.koszt.oslona) {
+      this.podpowiedz = 'Za mało ruchów.';
+      return this.odswiez();
+    }
+    this.ruchy -= WT.koszt.oslona;
+    this.unik = true;
+    this.ustawPodmenu(false);
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.2 * W, '💨 Unik', '#cfe6ff', 1000);
+    this.podpowiedz = 'Unik: do końca tury przeciwników ich ataki często chybią.';
+    this.po();
+  }
+
+  /** Did Unik make this attack miss? (never against an attack that must land – the QR demo's dragon) */
+  private uniknal(e: WrogWalki) {
+    if (!this.unik || this.h.pewnyAtak?.(e) || Math.random() >= WT.unik) return false;
+    const p = this.h.player;
+    this.h.napis(p.x, p.y - 1.1 * W, '💨 Unik!', '#cfe6ff', 800);
+    return true;
+  }
+
+  /** Enter / Space (new controls): carries out what is previewed. */
+  private potwierdz() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    if (this.nowy && this.koloWroga) return this.uderz();
+    if (this.nowy && this.cel) {
+      // Enter on a hovered / chosen enemy: its ring with the plain attack previewed.
+      this.koloWroga = this.cel;
+      return this.atakZKola(this.atakiDostepne()[0]?.id ?? 'cios');
+    }
+    if (this.cel) return void this.wykonajCios(this.tryb === 'mocny');
+    if (this.punkt) return void this.wykonajRuch();
+  }
+
+  /** Tab (new controls): the next enemy, nearest first. */
+  private nastepnyCel() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const p = this.h.player;
+    const lista = this.zywi.filter((q) => q.e.visible).sort((a, b) => this.dist(a.e.x, a.e.y, p.x, p.y) - this.dist(b.e.x, b.e.y, p.x, p.y));
+    if (!lista.length) return;
+    const i = this.cel ? lista.indexOf(this.cel) : -1;
+    this.wybierz(lista[(i + 1) % lista.length]);
+  }
+
+  /** New controls: an enemy chosen (preview of the walk, cost and damage). */
+  private wybierz(q: Uczestnik) {
+    if (this.nowy) {
+      this.cel = q;
+      this.punkt = null;
+      this.tryb = 'cios';
+      this.koloWroga = q;
+      this.koloStrona = 0;
+      this.wybranyAtak = null;
+      this.podpowiedz = 'Wybierz atak';
+      return this.odswiez();
+    }
+    this.cel = q;
+    this.punkt = null;
+    if (this.tryb !== 'mocny') this.tryb = 'cios';
+    const plan = this.planCiosu(q, this.tryb === 'mocny');
+    this.podpowiedz = plan.ok ? `${plan.tekst} – ${komputer ? 'kliknij' : 'dotknij jeszcze raz'}` : plan.tekst;
+    this.odswiez();
+  }
+
+  private uciekaj() {
+    if (this.faza !== 'gracz' || this.busy) return;
+    const p = this.h.player;
+    if (this.opcje.pvp) return this.zakoncz('ucieczka'); // giving up an arena fight = a loss, nothing else
+    p.hp = Math.max(1, p.hp - WT.ucieczkaPolowek);
+    this.h.toast(`🏃 ${SPOTKANIA.ucieczka}`, 2500);
+    // They rest: back to full life.
+    for (const q of this.zywi) q.e.hp = Math.max(q.e.hp, q.hp0);
+    this.zakoncz('ucieczka');
+  }
+
+  /** After an action: won? out of moves? */
+  private po() {
+    if (!this.aktywna) return;
+    if (!this.zywi.length) return this.zakoncz('wygrana');
+    this.przelicz();
+    if (this.ruchy <= 0) {
+      this.podpowiedz = this.nowy ? 'Koniec ruchów – teraz przeciwnicy.' : '';
+      this.odswiez();
+      this.h.scene.time.delayedCall(350, () => {
+        if (this.aktywna && this.faza === 'gracz' && !this.busy) void this.turaWrogow();
+      });
+    }
+  }
+
+  // ------------------------------------------------------------------ taps on the map
+
+  /** A tap on the map (world px); `promien` = the finger's area in world px. */
+  tap(x: number, y: number, promien: number) {
+    if (!this.aktywna || this.faza !== 'gracz' || this.busy) return;
+    if (this.nowy) return this.tapNowy(x, y, promien);
+    // The nearest figure whose tap area holds the point (one point = at most one candidate).
+    let kto: Uczestnik | null = null;
+    let bd = Infinity;
+    for (const q of this.zywi) {
+      if (!q.e.visible) continue;
+      // Body centre is above the feet.
+      const d = Math.min(this.dist(x, y, q.e.x, q.e.y - 0.4 * W * q.e.kind.scale), this.dist(x, y, q.e.x, q.e.y));
+      if (d < Math.max(promien, q.r + 4) && d < bd) [kto, bd] = [q, d];
+    }
+    if (kto) {
+      const again = this.cel === kto && (this.tryb === 'cios' || this.tryb === 'mocny');
+      this.cel = kto;
+      this.punkt = null;
+      if (again) return void this.wykonajCios(this.tryb === 'mocny');
+      if (this.tryb !== 'mocny') this.tryb = 'cios';
+      const plan = this.planCiosu(kto, this.tryb === 'mocny');
+      this.podpowiedz = plan.ok ? `${plan.tekst} – dotknij celu jeszcze raz albo „${this.tryb === 'mocny' ? 'Mocny' : this.broni() ? (this.broni()!.rodzaj === 'magia' ? 'Czar' : 'Strzał') : 'Cios'}”.` : plan.tekst;
+      this.odswiez();
+      return;
+    }
+    if (this.tryb === 'ruch' && this.zas) {
+      const k = najblizsza(this.zas, x, y, Math.max(6, promien * 0.5));
+      if (!k || k === '0,0') {
+        this.podpowiedz = 'Brak przejścia albo za daleko.';
+        this.h.napis(x, y, '✕', '#ff9a9a', 600);
+        this.odswiez();
+        return;
+      }
+      const c = this.zas.get(k)!;
+      if (this.punkt && this.dist(this.punkt.x, this.punkt.y, c.x, c.y) < Math.max(6, promien * 0.5)) return void this.wykonajRuch();
+      this.punkt = { k, x: c.x, y: c.y };
+      this.podpowiedz = 'Ruch · 1 ruch – dotknij jeszcze raz albo „Ruch”.';
+      this.odswiez();
+      return;
+    }
+    // A tap on empty ground clears the preview, never spends anything.
+    if (this.cel || this.punkt) {
+      this.cel = null;
+      this.punkt = null;
+      this.podpowiedz = '';
+      this.odswiez();
+    }
+  }
+
+  /** The enemy under a point (body or feet), if any, and how far. */
+  private ktoTu(x: number, y: number, promien: number): [Uczestnik | null, number] {
+    let kto: Uczestnik | null = null;
+    let bd = Infinity;
+    for (const q of this.zywi) {
+      if (!q.e.visible) continue;
+      const d = Math.min(this.dist(x, y, q.e.x, q.e.y - 0.4 * W * q.e.kind.scale), this.dist(x, y, q.e.x, q.e.y));
+      if (d < Math.max(promien, q.r + 4) && d < bd) [kto, bd] = [q, d];
+    }
+    return [kto, bd];
+  }
+
+  /**
+   * New controls: a tap on an enemy previews the walk up, cost and damage, a second tap (or a click under the mouse's
+   * preview) carries it out; on the ground the same for a walk; on the hero it opens the ring. With the ring open any
+   * tap only closes it.
+   */
+  private tapNowy(x: number, y: number, promien: number) {
+    const p = this.h.player;
+    this.ucieczkaPytanie = false;
+    if (this.podmenu || this.koloWroga) {
+      this.koloWroga = null;
+      this.wybranyAtak = null;
+      this.ustawPodmenu(false);
+      this.podpowiedz = '';
+      return this.odswiez();
+    }
+    const [kto, dk] = this.ktoTu(x, y, promien);
+    const dh = Math.min(this.dist(x, y, p.x, p.y), this.dist(x, y, p.x, p.y - 0.4 * W));
+    if (dh < Math.max(promien * 0.8, HERO_R + 6) && (!kto || dh < dk)) {
+      this.ustawPodmenu(true);
+      return;
+    }
+    if (kto) {
+      // A ring of attacks around the enemy (owner, 19 Oct 2026): Cios / Mocny cios and the ones unlocked later.
+      this.cel = kto;
+      this.punkt = null;
+      this.tryb = 'cios';
+      this.koloWroga = kto;
+      this.koloStrona = 0;
+      this.wybranyAtak = null;
+      this.podpowiedz = 'Wybierz atak';
+      return this.odswiez();
+    }
+    if (kto) {
+      // A shot (or a strong blow chosen with a key): the hover / first tap was the preview, the next carries it out.
+      if ((this.cel === kto && !this.punkt) || komputer) {
+        this.cel = kto;
+        this.punkt = null;
+        if (this.tryb !== 'mocny') this.tryb = 'cios';
+        return void this.wykonajCios(this.tryb === 'mocny');
+      }
+      return this.wybierz(kto);
+    }
+    if (this.ruchy < WT.koszt.ruch) {
+      this.podpowiedz = 'Brak ruchów – tura zaraz przejdzie.';
+      return this.odswiez();
+    }
+    const k = this.zas ? najblizsza(this.zas, x, y, Math.max(6, promien * 0.5)) : null;
+    if (!k || k === '0,0') {
+      this.h.napis(x, y, '✕', '#ff9a9a', 600);
+      this.cel = null;
+      this.punkt = null;
+      this.podpowiedz = 'Tam nie dojdziesz w jednym ruchu – wybierz pole w niebieskim zasięgu.';
+      return this.odswiez();
+    }
+    const c = this.zas!.get(k)!;
+    if (this.punkt && this.dist(this.punkt.x, this.punkt.y, c.x, c.y) < Math.max(6, promien * 0.5)) return void this.wykonajRuch();
+    this.cel = null;
+    this.punkt = { k, x: c.x, y: c.y };
+    if (komputer) return void this.wykonajRuch();
+    this.podpowiedz = 'Dotknij jeszcze raz, żeby tam pójść';
+    this.odswiez();
+  }
+
+  /** New controls on a computer: the mouse's hover is the first tap (preview), a click carries it out. */
+  private najazd() {
+    if (!this.nowy || !komputer || this.faza !== 'gracz' || this.busy || this.podmenu || this.koloWroga || this.ciagnie) return;
+    const klucz = `${mouse.x},${mouse.y}`;
+    if (klucz === this.myszBylo) return;
+    this.myszBylo = klucz;
+    const cam = this.h.scene.cameras.main;
+    const x = (mouse.x * OSTROSC) / cam.zoom + cam.worldView.x, y = (mouse.y * OSTROSC) / cam.zoom + cam.worldView.y;
+    const r = (12 * OSTROSC) / cam.zoom;
+    const [kto] = this.ktoTu(x, y, r);
+    if (kto) {
+      if (this.cel !== kto || this.punkt) {
+        this.cel = kto;
+        this.punkt = null;
+        if (this.tryb !== 'mocny') this.tryb = 'cios';
+        this.odswiez();
+      }
+      return;
+    }
+    const k = this.zas && this.ruchy >= WT.koszt.ruch ? najblizsza(this.zas, x, y, 4) : null;
+    const c = k && k !== '0,0' ? this.zas!.get(k)! : null;
+    if (c) {
+      if (!this.punkt || this.punkt.k !== k) {
+        this.cel = null;
+        this.punkt = { k: k!, x: c.x, y: c.y };
+        this.odswiez();
+      }
+    } else if (this.cel || this.punkt) {
+      this.cel = null;
+      this.punkt = null;
+      this.odswiez();
+    }
+  }
+
+  /** Keeps the ring on the hero (CSS px of the viewport). */
+  private koloNaBohaterze() {
+    if (!(this.panel instanceof WalkaKolo)) return;
+    const s = this.h.scene;
+    const cam = s.cameras.main;
+    const rect = s.game.canvas.getBoundingClientRect();
+    const k = rect.width / Math.max(1, s.scale.width);
+    const q = this.koloWroga;
+    const x = q ? q.e.x : this.h.player.x;
+    const y = q ? q.e.y - 0.3 * W * q.e.kind.scale : this.h.player.y - 0.3 * W;
+    const scr = (wx: number, wy: number) => [rect.left + (wx - cam.worldView.x) * cam.zoom * k, rect.top + (wy - cam.worldView.y) * cam.zoom * k] as const;
+    const pkt = (wx: number, wy: number) => { const [sx, sy] = scr(wx, wy); return { x: sx, y: sy }; };
+    // What the ring's fan should keep clear of: every figure's body and head (plaque), the hero and his ambers.
+    const p = this.h.player;
+    // (The hero's own body doesn't count for his own ring – it sits in its middle.)
+    const przeszkody = q ? [pkt(p.x, p.y - 3), pkt(p.x, p.y - 12), pkt(p.x, p.y + 12)] : [pkt(p.x, p.y + 12)];
+    for (const o of this.zywi) {
+      if (!o.e.visible || o === q) continue;
+      const sk = o.e.kind.scale;
+      przeszkody.push(pkt(o.e.x, o.e.y - 3 * sk), pkt(o.e.x, o.e.y - 13 * sk), pkt(o.e.x, o.e.y - 13 * sk - 7));
+    }
+    this.panel.pozycja(...scr(x, y), przeszkody);
+    // The moves' ambers just under the hero's feet (his ground ring is at y + 5).
+    this.panel.bursztyny(...scr(p.x, p.y + 5 + (HERO_R + 3) / 2));
+  }
+
+  /** Is a drag of the hero on (it began on him)? */
+  private ciagnie = false;
+
+  /**
+   * A drag on the map: begun on the hero, it picks the reachable spot nearest the finger (shown as the move's
+   * preview) and walks there on release – no need to press „Ruch” first (owner, 18 Oct 2026).
+   */
+  przeciagnij(x0: number, y0: number, x: number, y: number, koniec: boolean, promien: number) {
+    if (!this.aktywna || this.faza !== 'gracz' || this.busy) return;
+    const p = this.h.player;
+    if (!this.ciagnie) {
+      const naBohaterze = Math.min(this.dist(x0, y0, p.x, p.y), this.dist(x0, y0, p.x, p.y - 0.4 * W)) < Math.max(promien, HERO_R + 6);
+      if (!naBohaterze || this.ruchy < WT.koszt.ruch) return;
+      this.ciagnie = true;
+      if (!this.nowy || this.tryb !== 'mocny') this.tryb = 'ruch';
+      this.cel = this.nowy ? null : this.cel;
+      this.ustawPodmenu(false);
+    }
+    const k = this.zas ? najblizsza(this.zas, x, y) : null;
+    if (k && k !== '0,0') {
+      const c = this.zas!.get(k)!;
+      this.punkt = { k, x: c.x, y: c.y };
+      this.podpowiedz = this.nowy ? 'Puść, żeby tam pójść' : 'Puść, żeby tam pójść (1 ruch).';
+    } else {
+      this.punkt = null;
+      this.podpowiedz = 'Brak przejścia.';
+    }
+    if (!koniec) return this.odswiez();
+    this.ciagnie = false;
+    if (this.punkt) void this.wykonajRuch();
+    else {
+      this.tryb = this.nowy && this.tryb === 'mocny' ? 'mocny' : null;
+      this.odswiez();
+    }
+  }
+
+  // ------------------------------------------------------------------ drawing
+
+  /** Called every frame while the fight is on. */
+  update() {
+    if (!this.aktywna) return;
+    this.najazd();
+    this.koloNaBohaterze();
+    this.rysuj();
+  }
+
+  private odswiez() {
+    if (!this.aktywna) return;
+    const p = this.h.player;
+    const st: StanPanelu = {
+      hp: p.hp,
+      maxHp: PLAYER.maxHp,
+      extra: p.extra,
+      ruchy: this.ruchy,
+      maxRuchy: this.maxRuchy,
+      tura: this.faza === 'gracz' ? 'gracz' : this.faza === 'wrogowie' ? 'wrogowie' : 'rozstaw',
+      tryb: this.tryb,
+      podmenu: this.podmenu,
+      podpowiedz: this.podpowiedz,
+      bron: this.broni()?.rodzaj ?? null,
+      bronId: gear.equip.bron ?? null,
+      celOk: !!this.cel && this.planCiosu(this.cel, this.tryb === 'mocny').ok,
+      punkt: !!this.punkt,
+      busy: this.busy,
+      koszt: WT.koszt,
+      oslona: this.oslona,
+    };
+    if (this.panel instanceof WalkaKolo) {
+      const qw = this.koloWroga && !this.koloWroga.e.isDead && this.koloWroga.e.active ? this.koloWroga : null;
+      if (!qw) (this.koloWroga = null), (this.wybranyAtak = null);
+      // Only what the hero can do (owner, 19 Oct 2026: „szarych nie może być”); many attacks → pages of 3 + „Więcej”.
+      let ataki: PrzyciskAtaku[] | null = null;
+      if (qw) {
+        // Costs as small ambers (owner, 19 Oct 2026): the blow's own plus boots for a walk up; greyed when not affordable.
+        const wszystkie: PrzyciskAtaku[] = this.atakiDostepne().map((a) => {
+          const plan = this.planCiosu(qw, !!a.mocny, a);
+          return { id: a.id, tekst: a.nazwa, koszt: a.koszt, podejscie: plan.podejscie ?? 0, off: !plan.ok, wybrany: a.id === this.wybranyAtak };
+        });
+        if (wszystkie.length <= NA_KOLE) ataki = wszystkie;
+        else {
+          const stron = Math.ceil(wszystkie.length / (NA_KOLE - 1));
+          this.koloStrona %= stron;
+          ataki = [...wszystkie.slice(this.koloStrona * (NA_KOLE - 1), (this.koloStrona + 1) * (NA_KOLE - 1)),
+            { id: 'wiecej', tekst: 'Więcej', koszt: 0, podejscie: 0, strona: `${this.koloStrona + 1}/${stron}`, off: false, wybrany: false }];
+        }
+      }
+      // The ambers that would go: an attack previewed in the ring, a hovered enemy (computer) or a spot to walk to.
+      let podglad: StanKola['podglad'] = null;
+      const w = this.podgladAtaku();
+      const nasz = this.faza === 'gracz' && !this.busy;
+      if (nasz && w) podglad = { but: w.plan.podejscie ?? 0, cios: w.plan.koszt - (w.plan.podejscie ?? 0) };
+      else if (nasz && !qw && !this.podmenu && this.cel && komputer) {
+        const a = this.atakiDostepne()[0];
+        const plan = this.planCiosu(this.cel, !!a?.mocny, a);
+        podglad = { but: plan.podejscie ?? 0, cios: plan.koszt - (plan.podejscie ?? 0) };
+      } else if (nasz && this.punkt) podglad = { but: WT.koszt.ruch, cios: 0 };
+      const nk: StanKola = {
+        ...st,
+        bonus: this.bonusRuchy,
+        podglad,
+        kolo: this.podmenu ? 'bohater' : qw ? 'wrog' : null,
+        ataki,
+        ucieczkaPytanie: this.ucieczkaPytanie,
+        zapowiedz: !!this.smok?.tekst(),
+        unik: this.unik,
+        rada: !!this.radaTekst && this.podpowiedz === this.radaTekst,
+      };
+      // Where the ring will stand (and what's around it) before it is built, so its fan turns the right way.
+      this.koloNaBohaterze();
+      this.panel.ustaw(nk);
+    } else this.panel.ustaw(st);
+    this.rysuj();
+  }
+
+  private rysuj() {
+    const g = this.gfx, t = this.gfxTop;
+    g.clear();
+    t.clear();
+    for (const n of this.numerki) n.setVisible(false);
+    for (const n of this.plakietki.values()) n.setVisible(false);
+    this.numerkow = 0;
+    this.miejscaPlakietek.length = 0;
+    const p = this.h.player;
+    const feet = (y: number) => y + 5;
+    // The hero's ring.
+    g.lineStyle(1.2, 0x7fe0ff, 0.95).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 4, HERO_R + 3);
+    const now = this.h.scene.time.now;
+    const wskaz = this.panel instanceof WalkaKolo ? this.panel.wskaz() : null;
+    const puls = 0.5 + 0.5 * Math.sin(now / 160);
+    // New controls: the hero's ring pulses when the tutorial points at it (the ring of actions).
+    if (wskaz === 'spec' && this.faza === 'gracz' && !this.podmenu) {
+      g.lineStyle(1.6, 0xffd34a, 0.5 + 0.5 * puls).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 8 + 4 * puls, HERO_R + 6 + 2 * puls);
+    }
+    // Reachable ground for a move (new controls: the whole turn, while moves are left).
+    const pokazZasieg = this.nowy ? this.faza === 'gracz' && !this.busy && !this.podmenu : this.faza === 'gracz' && this.tryb === 'ruch';
+    this.oddychajDym(pokazZasieg && !!this.zas && this.ruchy >= WT.koszt.ruch, now);
+    if (pokazZasieg && this.zas && this.ruchy >= WT.koszt.ruch) {
+      if (!this.nowy) {
+        g.fillStyle(0x59c8ff, 0.18);
+        const k = WT.kratkaPx;
+        for (const c of this.zas.values()) g.fillRect(c.x - k / 2, feet(c.y) - k / 2, k, k);
+      }
+      if (this.punkt) {
+        if (this.nowy) this.sciezka(g, t, this.zas, this.punkt.k, feet, WT.koszt.ruch);
+        else {
+          const pts = droga(this.zas, this.punkt.k);
+          g.fillStyle(0xbfeaff, 0.9);
+          pts.forEach((q, i) => i % 2 === 0 && g.fillCircle(q.x, feet(q.y), 0.9));
+        }
+        g.lineStyle(1.2, 0xbfeaff, 1).strokeEllipse(this.punkt.x, feet(this.punkt.y), HERO_R * 2 + 4, HERO_R + 3);
+      }
+    }
+    this.smok?.rysuj(now);
+    // New controls, nothing open: by turns the enemies the cheapest attack reaches now and the hero pulse – what can be tapped.
+    const zacheta = this.nowy && this.faza === 'gracz' && !this.busy && !this.podmenu && !this.koloWroga && !this.punkt && !wskaz
+      ? (Math.floor(now / 900) % 2 === 0 ? 'wrog' : 'bohater') : null;
+    const fala = 0.5 - 0.5 * Math.cos(((now % 900) / 900) * Math.PI * 2);
+    if (zacheta === 'bohater') {
+      g.lineStyle(2, 0x9fe8ff, 0.4 + 0.6 * fala).strokeEllipse(p.x, feet(p.y), HERO_R * 2 + 6 + 5 * fala, HERO_R + 4 + 2.5 * fala);
+    }
+    const najtanszy = zacheta === 'wrog' ? this.atakiDostepne().slice().sort((a, b) => a.koszt - b.koszt)[0] : undefined;
+    for (const q of this.zywi) {
+      if (najtanszy && q.e.visible) {
+        const pl = this.planCiosu(q, !!najtanszy.mocny, najtanszy);
+        if (pl.ok) g.lineStyle(2, 0xffd34a, 0.4 + 0.6 * fala).strokeEllipse(q.e.x, feet(q.e.y), q.r * 2 + 8 + 5 * fala, q.r + 5 + 2.5 * fala);
+      }
+    }
+    // Stage 2: over every enemy the total cost of the cheapest attack (walk up included), grey when not affordable.
+    const tani = this.nowy && this.faza === 'gracz' && !this.busy ? this.atakiDostepne().slice().sort((a, b) => a.koszt - b.koszt)[0] : undefined;
+    for (const q of this.zywi) {
+      const e = q.e;
+      if (!e.visible) continue;
+      const sel = q === this.cel;
+      g.lineStyle(sel ? 1.6 : 1, sel ? 0xffd34a : 0xff6a5a, sel ? 1 : 0.7).strokeEllipse(e.x, feet(e.y), q.r * 2 + 4, q.r + 3);
+      if (this.nowy && this.faza === 'gracz' && !this.busy) {
+        // A crosshair on everyone the hero can strike this turn (walk up included); gold and pulsing when the tutorial points.
+        const plan = this.planCiosu(q, this.tryb === 'mocny');
+        const naCel = wskaz === 'cios';
+        if ((plan.ok && !plan.tylko) || naCel) {
+          const rx = q.r + 4 + (naCel ? 2 * puls : 0), ry = (q.r + 3) / 2 + (naCel ? puls : 0);
+          const cy = feet(e.y);
+          g.lineStyle(naCel ? 1.6 : 1.2, naCel ? 0xffd34a : 0xff4a3a, naCel ? 0.6 + 0.4 * puls : 0.95);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            g.lineBetween(e.x + dx * (rx + 1), cy + dy * (ry + 1), e.x + dx * (rx + 4), cy + dy * (ry + 3));
+          }
+        }
+      }
+      // A small life bar over each, bigger over the chosen one.
+      const w = sel ? 14 : 9;
+      // Fighters stand out over tree crowns and roofs for the whole fight.
+      e.setDepth(e.y + NAD_KORONAMI);
+      const top = e.y - (e.hd ? 12 : 9) * e.kind.scale;
+      const part = Math.max(0, e.hp) / Math.max(e.hp, q.hp0, 1);
+      t.fillStyle(0x1e1a24, 0.9).fillRect(e.x - w / 2 - 0.5, top - 0.5, w + 1, sel ? 2.6 : 2);
+      t.fillStyle(sel ? 0xff5a4a : 0xc23a30, 1).fillRect(e.x - w / 2, top, w * Math.min(1, part), sel ? 1.6 : 1);
+      if (q.oglusz) t.fillStyle(0xffe08a, 1).fillCircle(e.x + w / 2 + 2, top + 0.5, 1);
+      if (tani && q !== this.koloWroga) this.plakietka(t, q, this.planCiosu(q, !!tani.mocny, tani), top);
+    }
+    // The chosen target: the short way of the hop and the label with the cost.
+    const c = this.cel;
+    // New controls: no cost texts on the map – the ambers under the hero show it (owner, 19 Oct 2026).
+    if (this.nowy) {
+      const plan = c && this.faza === 'gracz' && !this.busy ? (this.podgladAtaku()?.plan ?? (komputer && !this.koloWroga ? this.planCiosu(c, false, this.atakiDostepne()[0]) : null)) : null;
+      const siec = plan?.dal ? this.zasDalej() : this.zas;
+      if (plan?.z && siec && !plan.daleko) this.sciezka(g, t, siec, plan.z.k, feet, plan.podejscie ?? 0);
+      // An area attack previewed: a red ring round everyone it would reach (from where the walk up ends).
+      const w = this.podgladAtaku();
+      if (w && w.atak.obszar !== 'jeden' && !w.plan.daleko) {
+        for (const o of this.celeObszaru(w.q, w.atak, w.plan.z ?? p)) {
+          g.lineStyle(2, 0xff3a2a, 0.55 + 0.45 * puls).strokeEllipse(o.e.x, feet(o.e.y), o.r * 2 + 9 + 2 * puls, o.r + 6 + puls);
+          g.lineStyle(1, 0xffd0c0, 0.6).strokeEllipse(o.e.x, feet(o.e.y), o.r * 2 + 5, o.r + 3.5);
+        }
+      }
+      this.etykieta.setVisible(false);
+    } else if (c && this.faza === 'gracz' && !this.koloWroga) {
+      const plan = this.planCiosu(c, this.tryb === 'mocny');
+      if (plan.z && this.zas) {
+        g.fillStyle(0xffe08a, 0.95);
+        for (const q of droga(this.zas, plan.z.k)) g.fillCircle(q.x, feet(q.y), 0.8);
+      }
+      this.etykieta.setText(plan.tekst).setPosition(c.e.x, c.e.y - (c.e.hd ? 12 : 9) * c.e.kind.scale - 3).setVisible(true).setColor(plan.ok ? '#fff4d0' : '#ffb0a0');
+    } else this.etykieta.setVisible(false);
+  }
+
+  private numerkow = 0;
+  /** Plaques drawn this frame (x0, y0, w, h): the next one moves up instead of covering them. */
+  private miejscaPlakietek: [number, number, number, number][] = [];
+
+  /** A small number on the map (pooled Text objects, hidden at the start of every frame). */
+  private numerek(tekst: string, x: number, y: number, kolor: string) {
+    let tx = this.numerki[this.numerkow];
+    if (!tx) {
+      tx = this.h.scene.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '5px', fontStyle: 'bold', color: '#1e1a24', resolution: 8 })
+        .setOrigin(0.5, 0.55).setDepth(GLEB_GORA + 2);
+      this.numerki.push(tx);
+    }
+    this.numerkow++;
+    return tx.setText(tekst).setColor(kolor).setPosition(x, y).setVisible(true);
+  }
+
+  /**
+   * A previewed walk (stage 2): a dashed line along the real way and a numbered marker where each move ends,
+   * amber while the moves left cover it, red past them. `ruchow` = moves of the walk (the last marker's number).
+   */
+  private sciezka(g: Phaser.GameObjects.Graphics, t: Phaser.GameObjects.Graphics, siec: Zasieg, k: string, feet: (y: number) => number, ruchow: number) {
+    const pts = droga(siec, k);
+    if (pts.length < 2) return;
+    const krok = WT.ruchW * W;
+    const kreska = 3, przerwa = 2;
+    const stac = (m: number) => m <= this.ruchy;
+    const kolor = (d: number) => (stac(Math.max(1, Math.ceil(d / krok - 1e-6))) ? 0xffe08a : 0xff5a4a);
+    let calosc = 0;
+    for (let i = 1; i < pts.length; i++) calosc += this.dist(pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y);
+    const znaki: { x: number; y: number; n: number }[] = [];
+    let s = 0;
+    let nast = krok;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const len = this.dist(a.x, a.y, b.x, b.y);
+      if (len < 1e-6) continue;
+      const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+      let pos = 0;
+      while (pos < len) {
+        const faza = (s + pos) % (kreska + przerwa);
+        if (faza < kreska) {
+          const end = Math.min(len, pos + kreska - faza);
+          g.lineStyle(1.3, kolor(s + pos + 0.01), 0.95)
+            .lineBetween(a.x + ux * pos, feet(a.y + uy * pos), a.x + ux * end, feet(a.y + uy * end));
+          pos = end;
+        } else pos += kreska + przerwa - faza;
+      }
+      while (nast <= s + len && nast < calosc - krok * 0.15) {
+        const o = nast - s;
+        znaki.push({ x: a.x + ux * o, y: a.y + uy * o, n: Math.round(nast / krok) });
+        nast += krok;
+      }
+      s += len;
+    }
+    const koniec = pts[pts.length - 1];
+    // A short step into reach costs nothing extra (it's part of the blow): a dashed line without numbers.
+    if (ruchow <= 0) return;
+    znaki.push({ x: koniec.x, y: koniec.y, n: Math.max(1, Math.round(ruchow / WT.koszt.ruch)) });
+    for (const z of znaki) {
+      const ok = stac(z.n);
+      t.fillStyle(ok ? 0xffd25a : 0xff5a4a, 1).fillCircle(z.x, feet(z.y), 2.9);
+      t.lineStyle(0.8, 0x1e1a24, 1).strokeCircle(z.x, feet(z.y), 2.9);
+      this.numerek(String(z.n), z.x, feet(z.y), ok ? '#1e1a24' : '#fff1e8');
+    }
+  }
+
+  /** The cost plaque over an enemy (stage 2): an amber dot and the total moves, grey when there aren't enough. */
+  private plakietka(t: Phaser.GameObjects.Graphics, q: Uczestnik, plan: PlanCiosu, top: number) {
+    let tx = this.plakietki.get(q);
+    if (!tx) {
+      tx = this.h.scene.add.text(0, 0, '', { fontFamily: '"Alegreya Sans", sans-serif', fontSize: '5px', fontStyle: 'bold', color: '#ffe7a8', resolution: 8 })
+        .setOrigin(0, 0.55).setDepth(GLEB_GORA + 2);
+      this.plakietki.set(q, tx);
+    }
+    const ok = plan.ok;
+    tx.setText(`${plan.koszt}${plan.daleko ? '+' : ''}`).setColor(ok ? '#ffe7a8' : '#b4b4b4').setVisible(true);
+    const w = tx.displayWidth + 7.5, h = 6.4;
+    const x0 = q.e.x - w / 2;
+    let y0 = top - 3.2 - h;
+    for (let i = 0; i < 6; i++) {
+      const kolizja = this.miejscaPlakietek.find(([x, y, ww, hh]) => x0 < x + ww && x < x0 + w && y0 < y + hh && y < y0 + h);
+      if (!kolizja) break;
+      y0 = kolizja[1] - h - 0.8;
+    }
+    this.miejscaPlakietek.push([x0, y0, w, h]);
+    t.fillStyle(0x1e1a24, 0.86).fillRoundedRect(x0, y0, w, h, 2);
+    t.lineStyle(0.7, ok ? 0xd9a032 : 0x7a7a7a, 1).strokeRoundedRect(x0, y0, w, h, 2);
+    t.fillStyle(ok ? 0xffc64a : 0x8a8a8a, 1).fillCircle(x0 + 3, y0 + h / 2, 1.5);
+    tx.setPosition(x0 + 5.3, y0 + h / 2);
+  }
+
+  /** The move range as blue smoke (new controls): a soft inside and breathing puffs along its edge. */
+  private dym: { wnetrze: Phaser.GameObjects.Image; kleby: Phaser.GameObjects.Image[]; klucz: string } | null = null;
+  private dymNr = 0;
+
+  /**
+   * Builds the range's smoke from the one-move grid (owner, 20 Oct 2026: „mniej pikselowe – dymek jak na terenie
+   * gangu, tylko niebieski”): the cells go 1 px each into a small canvas, blurred twice by a 3×3 box and shown
+   * smoothly enlarged, so the inside fades softly at the edge; puffs (like the gang's border) sit on the edge cells.
+   */
+  private budujDym() {
+    this.usunDym();
+    const z = this.zas;
+    if (!this.nowy || !z || !z.size) return;
+    const s = this.h.scene;
+    const D = DYM_ZASIEGU;
+    const k = WT.kratkaPx;
+    const o = z.get('0,0')!;
+    let i0 = Infinity, i1 = -Infinity, j0 = Infinity, j1 = -Infinity;
+    const komorki: [number, number][] = [];
+    for (const key of z.keys()) {
+      const [i, j] = key.split(',').map(Number);
+      komorki.push([i, j]);
+      i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j);
+    }
+    const pad = 3;
+    const w = i1 - i0 + 1 + pad * 2, h = j1 - j0 + 1 + pad * 2;
+    let a = new Float32Array(w * h);
+    for (const [i, j] of komorki) a[(j - j0 + pad) * w + (i - i0 + pad)] = 1;
+    for (let r = 0; r < 2; r++) {
+      const b = new Float32Array(w * h);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        let sum = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sum += a[(y + dy) * w + x + dx];
+        b[y * w + x] = sum / 9;
+      }
+      a = b;
+    }
+    const klucz = `walka-dym-${this.dymNr++}`;
+    const tex = s.textures.createCanvas(klucz, w, h)!;
+    const ctx = tex.getContext();
+    const img = ctx.createImageData(w, h);
+    for (let n = 0; n < w * h; n++) {
+      img.data[n * 4] = img.data[n * 4 + 1] = img.data[n * 4 + 2] = 255;
+      img.data[n * 4 + 3] = Math.round(255 * Math.min(1, a[n] * 1.15));
+    }
+    ctx.putImageData(img, 0, 0);
+    tex.refresh();
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    // Pixel (x, y) of the canvas = cell (i0 − pad + x, j0 − pad + y); cells are centred on o + (i, j)·k, feet 5 px lower.
+    const wnetrze = s.add.image(o.x + (i0 - pad) * k - k / 2, o.y + 5 + (j0 - pad) * k - k / 2, klucz)
+      .setOrigin(0, 0).setScale(k).setTint(D.kolor).setAlpha(D.alfa).setDepth(GLEB_ZIEMI);
+    if (!s.textures.exists('walka-klab')) {
+      const n = 48;
+      const c = s.textures.createCanvas('walka-klab', n, n)!;
+      const cx = c.getContext();
+      const im = cx.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+        const q = (y * n + x) * 4;
+        im.data[q] = im.data[q + 1] = im.data[q + 2] = 255;
+        im.data[q + 3] = Math.round(255 * (r >= 1 ? 0 : (1 - r * r) ** 1.6));
+      }
+      cx.putImageData(im, 0, 0);
+      c.refresh();
+      c.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+    // Puffs on the edge cells, at least klebyCoPx apart.
+    const kleby: Phaser.GameObjects.Image[] = [];
+    const stoja: { x: number; y: number }[] = [];
+    for (const [key, c] of z) {
+      const [i, j] = key.split(',').map(Number);
+      if (z.has(`${i - 1},${j}`) && z.has(`${i + 1},${j}`) && z.has(`${i},${j - 1}`) && z.has(`${i},${j + 1}`)) continue;
+      if (stoja.some((p) => Math.abs(p.x - c.x) < D.klebyCoPx && Math.abs(p.y - c.y) < D.klebyCoPx)) continue;
+      stoja.push({ x: c.x, y: c.y });
+      const r = Math.random;
+      const size = D.klebyPx[0] + r() * (D.klebyPx[1] - D.klebyPx[0]);
+      const alfa = D.klebyAlfa[0] + r() * (D.klebyAlfa[1] - D.klebyAlfa[0]);
+      const p = s.add.image(c.x + (r() - 0.5) * 3, c.y + 5 + (r() - 0.5) * 3, 'walka-klab')
+        .setDisplaySize(size, size * (0.75 + r() * 0.3)).setTint(r() < 0.35 ? D.kolorJasny : D.kolor).setAlpha(alfa).setDepth(GLEB_ZIEMI + 0.5);
+      p.setData('a', alfa).setData('s', p.scaleX).setData('f', r() * Math.PI * 2).setData('t', D.oddechS[0] + r() * (D.oddechS[1] - D.oddechS[0]));
+      kleby.push(p);
+    }
+    this.dym = { wnetrze, kleby, klucz };
+  }
+
+  private usunDym() {
+    if (!this.dym) return;
+    this.dym.wnetrze.destroy();
+    for (const p of this.dym.kleby) p.destroy();
+    this.h.scene.textures.remove(this.dym.klucz);
+    this.dym = null;
+  }
+
+  /** Shows/hides the range's smoke and lets its puffs breathe slowly (like the gang's border). */
+  private oddychajDym(widac: boolean, now: number) {
+    const d = this.dym;
+    if (!d) return;
+    d.wnetrze.setVisible(widac);
+    const t = now / 1000;
+    for (const p of d.kleby) {
+      p.setVisible(widac);
+      if (!widac) continue;
+      const fala = Math.sin((t * Math.PI * 2) / (p.getData('t') as number) + (p.getData('f') as number));
+      p.setAlpha((p.getData('a') as number) * (0.8 + 0.2 * fala));
+      const sk = (p.getData('s') as number) * (1 + 0.08 * fala);
+      p.setScale(sk, sk * (p.scaleY / p.scaleX));
+    }
+  }
+
+  // ------------------------------------------------------------------ the end
+
+  zakoncz(wynik: WynikWalki) {
+    if (!this.aktywna) return;
+    this.aktywna = false;
+    this.faza = 'koniec';
+    this.gfx.destroy();
+    this.gfxTop.destroy();
+    this.etykieta.destroy();
+    this.usunDym();
+    for (const n of this.numerki) n.destroy();
+    for (const n of this.plakietki.values()) n.destroy();
+    this.smok?.zakoncz();
+    this.panel.zamknij();
+    document.body.classList.remove('walka-tur');
+    this.h.player.move(0, 0, this.h.scene.time.now);
+    this.h.wrocKamere();
+    this.h.koniec(wynik, this.wszyscy);
+  }
+}

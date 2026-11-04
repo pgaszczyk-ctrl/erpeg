@@ -1,6 +1,6 @@
-import { itemIcon, goodsPicture } from './itemIcon';
+import { itemIcon, goodsPicture, rzeczUrl } from './itemIcon';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
-import { MIEJSCA, type Miejsce } from '../content/przedmioty';
+import { JAKOSCI_BRONI, JAKOSCI_PANCERZA, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
 import { esencja } from '../content/esencje';
 
@@ -10,7 +10,7 @@ import { esencja } from '../content/esencje';
 // dragging is a tap.
 
 /** Items without a picture yet (the „Serce Zębatka” rewards) – until the artist draws them. */
-const ITEM_EMOJI: Record<string, string> = { gwizdek_maszynisty: '🚂', kluczyk_nakrecacz: '🗝', kieszonkowy_chronometr: '⏱', cukierniczy_cylinder: '🎩', paczek: '🍩' };
+const ITEM_EMOJI: Record<string, string> = { gwizdek_maszynisty: '🚂', kluczyk_nakrecacz: '🗝', kieszonkowy_chronometr: '⏱', cukierniczy_cylinder: '🎩', paczek: '🍩', hamburger: '🍔' };
 export const SLOT_ICON: Record<Miejsce, string> = { bron: '🗡', dystans: '🛡', zbroja: '🦺', helm: '⛑', buty: '🥾', amulet: '📿', talizman: '🧿', talizman2: '🧿', talizman3: '🧿' };
 /** Greyed pictures in empty equipment places (what goes there). */
 const EMPTY_PIC: Partial<Record<Miejsce, string>> = { bron: 'zelazny', dystans: 'tarcza_drewniana', zbroja: 'skorzana_zbroja', helm: 'skorzany_helm', buty: 'skorzane_buty', talizman: 'podkowa_szczescia', talizman2: 'podkowa_szczescia', talizman3: 'podkowa_szczescia' };
@@ -20,6 +20,19 @@ function el(tag: string, cls = '', text = '') {
   if (cls) e.className = cls;
   if (text) e.textContent = text;
   return e;
+}
+
+/** Five pixel squares; the filled count is the quality rank, also accessible as text. */
+export function qualityDots(id: string) {
+  const p = item(id);
+  const q = p?.jakosc;
+  const nazwy = p?.miejsce === 'bron' ? JAKOSCI_BRONI : JAKOSCI_PANCERZA;
+  if (q === undefined) return null;
+  const dots = el('span', 'weapon-quality');
+  dots.setAttribute('role', 'img'); dots.setAttribute('aria-label', `Jakość: ${nazwy[q]}, ${q + 1} z 5`);
+  dots.title = nazwy[q];
+  for (let i = 0; i < 5; i++) dots.append(el('i', i <= q ? 'filled' : ''));
+  return dots;
 }
 
 export function slotIcon(s: Slot): Node | string {
@@ -33,7 +46,16 @@ export function slotIcon(s: Slot): Node | string {
     img.draggable = false;
     return img;
   }
-  if ('esencja' in s) return esencja(s.esencja)?.ikona ?? '🧪';
+  if ('esencja' in s) {
+    const url = rzeczUrl(`esencja_${s.esencja}`);
+    if (!url) return esencja(s.esencja)?.ikona ?? '🧪';
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'item-ico sl-ico';
+    img.alt = '';
+    img.draggable = false;
+    return img;
+  }
   const p = item(s.item);
   if (!p) return '?';
   return itemIcon(p.id, 'item-ico sl-ico') ?? ITEM_EMOJI[p.id] ?? (p.efekt ? '✨' : p.rodzaj === 'magia' ? '🪄' : SLOT_ICON[p.miejsce]);
@@ -47,7 +69,7 @@ export function slotLabel(s: Slot) {
   }
   const p = item(s.item);
   const imb = imbueOf(s.item);
-  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
+  return p ? `${p.nazwa}${p.opis ? ` – ${p.opis}` : ''}${p.leczenie ? ` Leczy: +${p.leczenie} ${p.leczenie === 1 ? 'serce' : p.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.` : ''}${imb ? ` ${imb.e.ikona} ${imb.e.nazwa}: jeszcze ${imb.minutes} min.` : ''}` : s.item;
 }
 
 const key = (p: Place) => (p.zone === 'eq' ? p.m : String(p.i));
@@ -63,8 +85,9 @@ export function slotCell(s: Slot | null, place: Place, extra = '') {
     pic.append(slotIcon(s));
     c.append(pic);
     if ('goods' in s) c.append(el('span', 'sl-n', String(goodsN(s))));
-    if ('esencja' in s) c.append(el('span', 'sl-flask', '🧪'));
+    if ('esencja' in s && !rzeczUrl(`esencja_${s.esencja}`)) c.append(el('span', 'sl-flask', '🧪'));
     if ('item' in s) {
+      const dots = qualityDots(s.item); if (dots) c.append(dots);
       const imb = imbueOf(s.item);
       if (imb) {
         const b = el('span', 'sl-imb', `${imb.e.ikona}${imb.minutes}′`);

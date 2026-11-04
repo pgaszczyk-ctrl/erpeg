@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "walkMps": 19.444444444444443,
+  "walkSeconds": 90,
+  "sampleM": 220,
+  "minSpacingM": 600,
+  "attachM": 140,
+  "clearM": 7,
+  "maxDegree": 4,
+  "airportDegree": 2,
+  "airportMaxM": 22000,
+  "price": 5,
+  "minCityPopulation": 100000,
+  "cityStops": 0,
+  "maxStops": 0,
+  "maxCityStops": 40,
+  "centralStops": 2,
+  "centralRadiusM": 1800,
+  "candidateGridM": 400
+}

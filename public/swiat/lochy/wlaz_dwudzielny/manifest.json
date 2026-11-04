@@ -1,0 +1,61 @@
+{
+  "id": "loch-wlaz-dwudzielny",
+  "version": 1,
+  "units": "source PNG pixels",
+  "canvas": [
+    128,
+    96
+  ],
+  "pivot": [
+    64,
+    48
+  ],
+  "suggestedMapScale": 0.25,
+  "filter": "NEAREST",
+  "alpha": "0/255",
+  "layers": [
+    {
+      "file": "podstawa.png",
+      "depth": 0
+    },
+    {
+      "file": "pokrywa_lewa.png",
+      "depth": 1,
+      "closedOffset": [
+        0,
+        0
+      ],
+      "openOffset": [
+        -56,
+        0
+      ]
+    },
+    {
+      "file": "pokrywa_prawa.png",
+      "depth": 1,
+      "closedOffset": [
+        0,
+        0
+      ],
+      "openOffset": [
+        56,
+        0
+      ]
+    }
+  ],
+  "animation": {
+    "openMs": 420,
+    "holdOpenMs": 600,
+    "closeMs": 340,
+    "ease": "Sine.easeInOut"
+  },
+  "previewCanvas": [
+    256,
+    128
+  ],
+  "previewPivot": [
+    128,
+    64
+  ],
+  "integratedInGame": false
+}

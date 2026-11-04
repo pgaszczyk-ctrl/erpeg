@@ -6,6 +6,7 @@ import { drawLookSheet, LOOK_W, LOOK_H, type Look, type Worn } from './look';
 import { nowy, rgb, doCanvas, OBRYS, skladowe } from './gen';
 import { PALETA_SWIATA } from './content/paleta';
 import { WYGLAD_09 } from './map/Podloze09';
+import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from './content/flagi';
 
 // Placeholder art drawn in code, so the game runs without downloaded assets.
 // Every texture is registered under a key (see TEX); to switch to a real
@@ -69,6 +70,8 @@ export const TEX = {
   /** The campsite's sign (artist's picture only; else the drawn tent). */
   signCamp: 'sign-camp',
   signpost: 'signpost',
+  tablicaMiasta: 'tablica-miasta',
+  tablicaMiastaKartka: 'tablica-miasta-kartka',
   peak: 'peak',
   mapIcon: 'map-icon',
   heartBonus: 'heart-bonus',
@@ -631,17 +634,74 @@ function drawSignpost(scene: Phaser.Scene) {
   tex.refresh();
 }
 
-/** A mountain top: a small cairn with a red-and-white flag (world map peaks). */
-function drawPeak(scene: Phaser.Scene) {
-  const { tex, ctx } = canvasTexture(scene, TEX.peak, 12, 12);
+/**
+ * A city board (tablica z mapką miasta, owner 2 Nov 2026): a brass-framed wooden map of the town (burnt-in city,
+ * carved roads, blue lake) on two brass posts under a cog crest, drawn at 2 picture px per map px (shown at 0.5) and clearly taller than a person, so it is
+ * seen from afar. Placeholder until the artist draws one.
+ */
+function drawTablicaMiasta(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, TEX.tablicaMiasta, 44, 48);
+  const BR = '#d9a441', BRJ = '#f5d98a', BRC = '#8a5e1e', DR = '#5a3418', DRJ = '#7a4a24', DRC = '#3a2010';
+  // Brass posts with a gold cap.
+  for (const x of [7, 33]) { px(ctx, x, 26, 4, 22, OUTLINE); px(ctx, x + 1, 27, 2, 21, BR); px(ctx, x + 1, 27, 1, 21, BRJ); px(ctx, x, 44, 4, 1, BRC); }
+  // A cog on top (the city's crest).
+  px(ctx, 17, 0, 10, 8, OUTLINE);
+  px(ctx, 15, 2, 14, 4, OUTLINE);
+  px(ctx, 18, 1, 8, 6, BR); px(ctx, 16, 3, 12, 2, BR);
+  px(ctx, 19, 2, 2, 1, BRJ); px(ctx, 21, 3, 2, 2, DRC);
+  // Board: a brass frame round a dark wooden plank map.
+  px(ctx, 1, 7, 42, 22, OUTLINE);
+  px(ctx, 2, 8, 40, 20, BR);
+  px(ctx, 2, 8, 40, 1, BRJ); px(ctx, 2, 8, 1, 20, BRJ);
+  px(ctx, 2, 27, 40, 1, BRC); px(ctx, 41, 8, 1, 20, BRC);
+  px(ctx, 4, 10, 36, 16, DR);
+  for (const y of [14, 19, 23]) px(ctx, 4, y, 36, 1, DRC);
+  px(ctx, 6, 11, 9, 1, DRJ); px(ctx, 24, 16, 12, 1, DRJ); px(ctx, 9, 21, 14, 1, DRJ);
+  // The city burnt in, a blue lake, carved roads and a red pin.
+  px(ctx, 12, 12, 18, 11, '#4a2810'); px(ctx, 10, 14, 22, 7, '#4a2810');
+  px(ctx, 6, 21, 6, 3, '#4f93bd'); px(ctx, 7, 20, 4, 1, '#8cc4de');
+  px(ctx, 4, 17, 36, 1, DRC); px(ctx, 4, 18, 36, 1, '#c8904e');
+  px(ctx, 21, 10, 1, 16, DRC); px(ctx, 22, 10, 1, 16, '#c8904e');
+  for (let k = 0; k < 6; k++) px(ctx, 27 + k, 11 + k, 1, 1, '#c8904e');
+  px(ctx, 16, 13, 4, 4, OUTLINE); px(ctx, 17, 14, 2, 2, '#e43b44');
+  // Gold signpost arrows at the edges.
+  px(ctx, 36, 15, 3, 1, BRJ); px(ctx, 38, 14, 1, 3, BRJ);
+  px(ctx, 5, 15, 3, 1, BRJ); px(ctx, 5, 14, 1, 3, BRJ);
+  // Rivets.
+  for (const [x, y] of [[3, 9], [40, 9], [3, 26], [40, 26]]) px(ctx, x, y, 1, 1, '#fff1bf');
+  tex.refresh();
+  ART_SCALE.set(TEX.tablicaMiasta, 0.5);
+  // The same board with a note nailed over its top-left corner (a job to take today).
+  const k = canvasTexture(scene, TEX.tablicaMiastaKartka, 44, 48);
+  k.ctx.drawImage(tex.getSourceImage() as HTMLCanvasElement, 0, 0);
+  px(k.ctx, 0, 5, 13, 14, OUTLINE);
+  px(k.ctx, 1, 6, 11, 12, '#efe2c0');
+  px(k.ctx, 3, 10, 7, 1, '#8a7a5a'); px(k.ctx, 3, 12, 6, 1, '#8a7a5a'); px(k.ctx, 3, 14, 7, 1, '#8a7a5a');
+  px(k.ctx, 2, 7, 2, 2, '#c8962e');
+  k.tex.refresh();
+  ART_SCALE.set(TEX.tablicaMiastaKartka, 0.5);
+}
+
+/** A mountain top: a small cairn with a flag (world map peaks); `flaga` = 4 rows of 6 colour letters (content/flagi.ts). */
+function drawPeak(scene: Phaser.Scene, key: string, flaga: string[]) {
+  const { tex, ctx } = canvasTexture(scene, key, 12, 12);
   px(ctx, 1, 8, 10, 4, OUTLINE);
   px(ctx, 3, 6, 6, 3, OUTLINE);
   px(ctx, 2, 9, 8, 2, '#9a968c');
   px(ctx, 4, 7, 4, 2, '#b8b3a6');
-  px(ctx, 6, 0, 1, 7, OUTLINE);
-  px(ctx, 7, 0, 4, 2, '#ffffff');
-  px(ctx, 7, 2, 4, 2, '#d8323c');
+  px(ctx, 5, 0, 1, 7, OUTLINE);
+  flaga.forEach((row, y) => [...row].forEach((c, x) => {
+    if (KOLORY_FLAG[c]) px(ctx, 6 + x, y, 1, 1, KOLORY_FLAG[c]);
+  }));
   tex.refresh();
+}
+
+/** The peak marker with the flag of a country (ISO code from kraj.ts), made the first time it is needed. */
+export function peakTexture(scene: Phaser.Scene, kraj: string | null): string {
+  const flaga = (kraj && FLAGI[kraj]) || FLAGA_NIEZNANA;
+  const key = flaga === FLAGA_NIEZNANA ? TEX.peak : `${TEX.peak}-${kraj}`;
+  if (!scene.textures.exists(key)) drawPeak(scene, key, flaga);
+  return key;
 }
 
 /** The map button: a folded paper map with a red route and a cross. */
@@ -974,8 +1034,24 @@ export const GOODS_TEX = {
   // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
   chrust: 'item-chrust',
   // From dragons (content/smoki.ts): a code-drawn scale until the artist's icon.
-  luska: 'goods-luska',
+  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza', kiel: 'goods-kiel',
 } as const;
+
+/** A wolf fang (placeholder): a curved ivory tooth with the outline. */
+function drawFang(scene: Phaser.Scene) {
+  const { tex, ctx } = canvasTexture(scene, 'goods-kiel', 8, 8);
+  ctx.fillStyle = OUTLINE;
+  ctx.beginPath();
+  ctx.moveTo(1, 1); ctx.quadraticCurveTo(7, 1, 6, 8); ctx.quadraticCurveTo(4, 4, 1, 3.5);
+  ctx.fill();
+  ctx.fillStyle = '#efe4c4';
+  ctx.beginPath();
+  ctx.moveTo(1.8, 1.9); ctx.quadraticCurveTo(6, 2, 5.5, 6.3); ctx.quadraticCurveTo(3.8, 3.8, 1.8, 2.8);
+  ctx.fill();
+  px(ctx, 2, 2, 2, 1, '#fffaf0');
+  px(ctx, 5, 4, 1, 1, '#b8a678');
+  tex.refresh();
+}
 
 /** A dragon scale (placeholder): a green-gold teardrop with a light edge. */
 function drawScale(scene: Phaser.Scene) {
@@ -1274,7 +1350,7 @@ function drawCombatExtras(scene: Phaser.Scene) {
   drawTent(scene);
   drawQuestItem(scene);
   drawSignpost(scene);
-  drawPeak(scene);
+  drawPeak(scene, TEX.peak, FLAGA_NIEZNANA);
   drawMapIcon(scene);
   drawSign(scene, TEX.signLibrary, '#2f8a6a', '#5fc09a', (p) => {
     p(3, 3, 2, 7, '#fff6e0');
@@ -1454,10 +1530,12 @@ export function createArt(scene: Phaser.Scene) {
   drawForestItems(scene);
   drawDragon(scene);
   drawScale(scene);
+  drawFang(scene);
   drawFruitItem(scene, TEX.fruitPlum, '#5b3a9a', '#a88be0');
   drawFruitItem(scene, TEX.fruitGrape, '#6a3f9a', '#b48be0', true);
   drawVeg(scene);
   drawSigns(scene);
+  drawTablicaMiasta(scene);
   drawHome(scene);
   drawDog(scene);
   drawCart(scene);

@@ -2,6 +2,7 @@ import { api } from '../api';
 import { googleToken } from '../google';
 import { askAccount } from './account';
 import { pixelLogo } from './logo';
+import { sciezkaGry } from '../sciezka';
 
 // The character's code: shown big as text, as a picture to save, and shared
 // to any app (WhatsApp, SMS…) with the phone's share menu (with a link that
@@ -9,7 +10,7 @@ import { pixelLogo } from './logo';
 
 /** Link that opens the game and loads this character. */
 export function codeLink(name: string, code: string) {
-  return `${location.origin}${location.pathname}#postac=${encodeURIComponent(name)}&kod=${code}`;
+  return `${location.origin}${sciezkaGry()}#postac=${encodeURIComponent(name)}&kod=${code}`;
 }
 
 /** Reads a character from a link like the one above (and clears it from the address bar). */
@@ -18,7 +19,7 @@ export function codeFromLink(): { name: string; code: string } | null {
   const name = h.get('postac');
   const code = h.get('kod');
   if (!name || !code) return null;
-  history.replaceState(null, '', location.pathname + location.search);
+  history.replaceState(null, '', sciezkaGry() + location.search);
   return { name, code };
 }
 
@@ -42,6 +43,18 @@ function googleLink(name: string, code: string) {
     }
   };
   return el('div', { className: 'm-card' }, [btn, msg]);
+}
+
+/**
+ * Links the character to a player account (e-mail or Google). Resolves with the account's e-mail (or '')
+ * once linked, null when the player gave up.
+ */
+export async function linkToAccount(name: string, code: string): Promise<string | null> {
+  const u = await askAccount('Zaloguj się albo załóż konto – postać przypisana do konta wczytasz z listy, bez kodu.');
+  const token = u ? await googleToken() : null;
+  if (!token) return null;
+  await api.linkGoogle(name, code, token);
+  return u?.email || '';
 }
 
 /** The code with a space in the middle, easier to read and copy by hand. */
@@ -77,7 +90,7 @@ export function codeCard(name: string, code: string): HTMLElement {
  * e-mail…), with the code picture where the phone allows files; without a
  * share menu (most computers) it opens WhatsApp with the message ready.
  */
-async function shareCode(name: string, code: string, link: string) {
+export async function shareCode(name: string, code: string, link = codeLink(name, code)) {
   const text = `Exp-lore – moja postać\nImię: ${name}\nKod: ${prettyCode(code)}\nGraj: ${link}`;
   try {
     if (navigator.share) {

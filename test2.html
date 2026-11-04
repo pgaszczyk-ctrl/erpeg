@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8">
+    <base href="./">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#1b2822">
+    <link rel="icon" href="data:,">
+    <title>Exp-lore · Test2 · Lublin z OSM</title>
+  </head>
+  <body>
+    <div id="lab-game"></div>
+    <div id="lab-ui">
+      <header>
+        <div class="brand"><strong>EXP-LORE <span>TEST2</span></strong><small>Lublin · rzeczywista mapa OSM</small></div>
+        <nav aria-label="Rzut mapy"><a id="normal-view">Obecny</a><a id="iso-view">Niższy kąt</a></nav>
+        <button id="panel-toggle" aria-expanded="false" aria-controls="lab-panel">Pomiary</button>
+      </header>
+      <div id="location-bar">
+        <div><strong id="where-label">Lublin · Stare Miasto</strong><a id="osm-location" target="_blank" rel="noopener">Sprawdź to miejsce w OSM ↗</a></div>
+        <div class="compare" role="group" aria-label="Porównanie budynków w Lublinie"><button id="compare-before">Przed</button><button id="compare-after">Po · generator</button></div>
+      </div>
+      <section id="lab-panel" hidden>
+        <p>Rzeczywista mapa Lublina: ulice, adresy i źródłowe obrysy OSM. „Przed” pokazuje dotychczasowe budynki, „Po” podgląd generatora w tej samej okolicy. Laboratorium bez logowania i zapisu postaci.</p>
+        <div class="architecture-controls">
+          <label>Budynki<select id="arch-mode"><option value="0">Przed · mapa Lublina</option><option value="1">Po · generator</option></select></label>
+          <label>Skala<select id="building-scale"><option value="1">Obrys z mapy</option><option value="2">2,0×</option><option value="1.5">1,5×</option></select></label>
+          <label>Kąty<select id="angle-snap"><option value="22.5">Co 22,5°</option><option value="0">Wzdłuż ulicy</option></select></label>
+          <label>Kontur<select id="outline-mode"><option value="1">Włączony</option><option value="0">Wyłączony</option></select></label>
+          <label>Style i źródła<select id="style-overlay"><option value="0">Ukryte</option><option value="1">Pokaż</option></select></label>
+        </div>
+        <div class="locations"><button data-location="oldtown">Rynek · Stare Miasto</button><button data-location="kul">KUL · Aleje Racławickie</button><button data-location="dziewanny">Dziewanny</button><button data-location="szczytowa">Szczytowa</button><button data-location="station">Dworzec Lublin</button><button data-location="homes">UMCS · przykład budynków</button><button data-location="apartments">Osiedle Rury</button><button data-location="industrial">Przemysł · Bronowice</button></div>
+        <form id="coordinates"><label>Szerokość geogr.<input id="lat" type="number" step="any" min="-85" max="85" required></label><label>Długość geogr.<input id="lon" type="number" step="any" min="-180" max="180" required></label><button>Przejdź w Lublinie</button></form>
+        <div id="metrics" aria-live="off"></div>
+        <p class="fine">Pamięć pikseli to część zużycia: przeglądarka, grafika i procesy w tle przechowują dodatkowe dane. Obrysy mapy nadal gromadzą się podczas długiego spaceru. FPS tutaj nie obejmuje walki ani pełnej obsady gry.</p>
+      </section>
+    </div>
+    <aside id="reference-map" aria-label="Plan Lublina z pozycją gracza">
+      <div class="map-heading"><strong>Plan Lublina</strong><button id="map-extent">Okolica</button></div>
+      <canvas id="lublin-map" role="img" aria-label="Rzeczywiste drogi i obrysy OSM; czerwony punkt to twoja pozycja"></canvas>
+      <div class="map-legend"><span>● Ty</span> · szare: OSM · złote: generator</div>
+      <div class="map-presets"><button data-location="oldtown">Rynek</button><button data-location="kul">KUL</button><button data-location="dziewanny">Dziewanny</button></div>
+    </aside>
+    <div id="lab-status" role="status">Przygotowuję mapę…</div>
+    <div id="walk-hint">Przeciągnij, aby iść · na komputerze WASD / strzałki</div>
+    <div id="zoom-controls"><button id="zoom-out" aria-label="Oddal widok">−</button><button id="zoom-in" aria-label="Przybliż widok">+</button></div>
+    <div id="stick" hidden><i></i></div>
+    <a id="osm-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a>
+    <script type="module" src="/src/test2/main.ts"></script>
+  </body>
+</html>

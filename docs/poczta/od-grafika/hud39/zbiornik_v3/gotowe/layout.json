@@ -1,0 +1,342 @@
+{
+  "id": "39-G005",
+  "version": "zbiornik-v3.1-plecak",
+  "textureScale": 3,
+  "colorMode": "RGBA/sRGB",
+  "alpha": "straight, antialiased; premultiply only in renderer",
+  "display": {
+    "portrait": [
+      56,
+      56
+    ],
+    "buttonArt": [
+      36,
+      36
+    ],
+    "icon": [
+      20,
+      20
+    ],
+    "level": [
+      24,
+      12
+    ],
+    "joint": [
+      8,
+      16
+    ]
+  },
+  "tankNative": {
+    "canvas": [
+      168,
+      168
+    ],
+    "center": [
+      84,
+      84
+    ],
+    "innerRadius": 56,
+    "outerRadius": 74,
+    "portraitRadius": 47
+  },
+  "layoutCss": {
+    "header": [
+      0,
+      0,
+      56,
+      64
+    ],
+    "portrait": [
+      0,
+      0,
+      56,
+      56
+    ],
+    "level": [
+      16,
+      52,
+      24,
+      12
+    ],
+    "buttons": [
+      {
+        "action": "menu",
+        "hit": [
+          6,
+          72,
+          44,
+          44
+        ],
+        "art": [
+          10,
+          76,
+          36,
+          36
+        ],
+        "iconInset": [
+          8,
+          8
+        ]
+      },
+      {
+        "action": "inventory",
+        "hit": [
+          6,
+          124,
+          44,
+          44
+        ],
+        "art": [
+          10,
+          128,
+          36,
+          36
+        ],
+        "iconInset": [
+          8,
+          8
+        ]
+      },
+      {
+        "action": "camera",
+        "hit": [
+          6,
+          176,
+          44,
+          44
+        ],
+        "art": [
+          10,
+          180,
+          36,
+          36
+        ],
+        "iconInset": [
+          8,
+          8
+        ]
+      },
+      {
+        "action": "vehicle",
+        "hit": [
+          6,
+          228,
+          44,
+          44
+        ],
+        "art": [
+          10,
+          232,
+          36,
+          36
+        ],
+        "iconInset": [
+          8,
+          8
+        ]
+      }
+    ],
+    "bounds": [
+      56,
+      272
+    ],
+    "safeArea": "add in game"
+  },
+  "animation": {
+    "staggerMs": 55,
+    "eachMs": 120,
+    "closeReverseOrder": true,
+    "autoCloseMs": 4000
+  },
+  "validation": {
+    "volumeTolerance": 0.006,
+    "coverage": [
+      {
+        "exp": 0,
+        "minimum": 2.37915097477975e-05,
+        "maximum": 2.898448316250583e-05
+      },
+      {
+        "exp": 0.05,
+        "minimum": 0.05005429493926458,
+        "maximum": 0.05047305100282277
+      },
+      {
+        "exp": 0.25,
+        "minimum": 0.2497022585614884,
+        "maximum": 0.25000681646914685
+      },
+      {
+        "exp": 0.5,
+        "minimum": 0.49999999991562655,
+        "maximum": 0.4999999999408283
+      },
+      {
+        "exp": 0.65,
+        "minimum": 0.6499563307648775,
+        "maximum": 0.6503501976310929
+      },
+      {
+        "exp": 0.75,
+        "minimum": 0.7499931835308531,
+        "maximum": 0.7502977414385116
+      },
+      {
+        "exp": 0.95,
+        "minimum": 0.9495269489971772,
+        "maximum": 0.9499457050607354
+      },
+      {
+        "exp": 1,
+        "minimum": 0.9999710155168375,
+        "maximum": 0.9999762084902521
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "png_3x/ikona_aparat.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "sha256": "5090713e1fc322f0452ab29e4e423c88892b3e88403f6932416f6250dfcba57c"
+    },
+    {
+      "path": "png_3x/ikona_hulajnoga.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "sha256": "5b2803a05d3f5c83c449f4b67924a6956fa7c23bc37da76f87daff9b0a34995e"
+    },
+    {
+      "path": "png_3x/ikona_menu.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "sha256": "d96907de5de216f8c6b63d70a25c9732624763907695560ae0f460957ae32ae8"
+    },
+    {
+      "path": "png_3x/ikona_plecak.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "sha256": "cc6ab3f944256be11c25dbd0c4b320179d4c09021f7a25f9f88ca95549ee3129"
+    },
+    {
+      "path": "png_3x/ikona_welocyped.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "sha256": "a693535881e63db330723463fc1f6d48a7f4cf339e31a696bbd0ff6eeaa7ff5f"
+    },
+    {
+      "path": "png_3x/lacznik.png",
+      "pixels": [
+        24,
+        48
+      ],
+      "sha256": "c33564e9165c9a264f3ae0ae293659dc04aa9ffb1309cec5a8c533bf2745e890"
+    },
+    {
+      "path": "png_3x/portret_maska.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "1cdfb1577a6a2e5750f41531f2d399d78fd19b2bc68b0a85739d4a81b82e5212"
+    },
+    {
+      "path": "png_3x/portret_oprawa.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "832f4490caf97b178038a2cba2634ce701f90cde0de36f4e312c1e597e837713"
+    },
+    {
+      "path": "png_3x/poziom_pusty.png",
+      "pixels": [
+        72,
+        36
+      ],
+      "sha256": "b9d362b744ea1360e0c73a611bb3bae4b5125b454254d916a1edfcc06cf99998"
+    },
+    {
+      "path": "png_3x/przycisk_aktywny.png",
+      "pixels": [
+        108,
+        108
+      ],
+      "sha256": "b715609b4702401280948fb373239a6ee32be5ddd22aace6236a582dab337cd7"
+    },
+    {
+      "path": "png_3x/przycisk_niedostepny.png",
+      "pixels": [
+        108,
+        108
+      ],
+      "sha256": "ee85e13e5f666c82e9ffb6433c7e8a79e78621ef4aa9ad92c9ca72dc935bb546"
+    },
+    {
+      "path": "png_3x/przycisk_normalny.png",
+      "pixels": [
+        108,
+        108
+      ],
+      "sha256": "fa0131cb18f959de2044251215064e2b77230b75c5b450a5e83da42fbe413ba3"
+    },
+    {
+      "path": "png_3x/przycisk_wcisniety.png",
+      "pixels": [
+        108,
+        108
+      ],
+      "sha256": "1eb4107e0e425cee5c314925743a6ac6a88144dda660bf5b0805a3bc3395f0bd"
+    },
+    {
+      "path": "png_3x/zbiornik_maska.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "726b61ad91a0c7fc4e801d8b46036e23c5ad13a96a6a5ffb1c64c13903aaca13"
+    },
+    {
+      "path": "png_3x/zbiornik_plyn.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "d6990cbc1055fe5783bba10dea9c3b5591ac506ad518c4d64b3fbfd5271c9637"
+    },
+    {
+      "path": "png_3x/zbiornik_szklo.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "32cec16b419a170eaaf34b2caa6e668f14182d483d1a4efcf8289f81179685a2"
+    },
+    {
+      "path": "png_3x/zbiornik_tafla.png",
+      "pixels": [
+        168,
+        9
+      ],
+      "sha256": "225b1bf82cfe5cd450d9fa79fbfa27bcb43f512a86e4cafa81eea28fea74ad1e"
+    },
+    {
+      "path": "png_3x/zbiornik_tlo.png",
+      "pixels": [
+        168,
+        168
+      ],
+      "sha256": "211f54e826f2d7edffb582642ac03b95bb3def722a4c7fc96f32bc673c87c4e5"
+    }
+  ]
+}

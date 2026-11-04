@@ -23,6 +23,7 @@ interface Wysoki {
   refs: Set<object>;
   /** Liczy się (pierwszy raz albo po zmianie dnia i nocy). */
   czeka: boolean;
+  error?: Error;
   im?: Phaser.GameObjects.Image;
   tex?: Phaser.Textures.CanvasTexture;
   /** Piksele bez prześwitu (ABGR). */
@@ -37,12 +38,25 @@ interface Wysoki {
   wyciete?: [number, number, number, number];
   znak?: string;
   para: Phaser.GameObjects.Image[];
+  miasto: WielkoscMiasta;
 }
 
 let licznik = 0;
 
 export class Wysokie {
   private wszystkie = new Map<number, Wysoki>();
+  diagnostics() {
+    let count = 0, pending = 0, rgbaBytes = 0;
+    for (const w of this.wszystkie.values()) {
+      if (w.czeka) pending++;
+      if (w.tex) {
+        count++;
+        // Canvas plus the retained original pixel array; GPU copy is additional.
+        rgbaBytes += w.tex.width * w.tex.height * 4 + (w.orig?.byteLength ?? 0);
+      }
+    }
+    return { count, pending, rgbaBytes };
+  }
 
   constructor(private scene: Phaser.Scene, private korony: Korony) {}
 
@@ -54,7 +68,7 @@ export class Wysokie {
       if (!w) {
         let dol = -Infinity;
         for (let i = 1; i < b.r.length; i += 2) dol = Math.max(dol, b.r[i]);
-        w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [] };
+        w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [], miasto };
         this.wszystkie.set(id, w);
         this.licz(id, w, miasto);
       } else if (w.noc !== noc && !w.czeka) {
@@ -80,6 +94,23 @@ export class Wysokie {
     for (const [id, w] of this.wszystkie) this.usun(id, w);
   }
 
+  /** Only buildings reaching the first view need to be ready before it is revealed. */
+  firstViewReady(view: Phaser.Geom.Rectangle) {
+    const G = GEN_DOTS;
+    for (const w of this.wszystkie.values()) {
+      const xs = w.b.r.filter((_, i) => i % 2 === 0), ys = w.b.r.filter((_, i) => i % 2 === 1);
+      // While its image is being drawn, use the footprint plus walls and roof decorations.
+      const x0 = w.im ? w.x0 / G : (Math.min(...xs) - w.b.h * 0.35 - 40) / G;
+      const y0 = w.im ? w.y0 / G : (Math.min(...ys) - w.b.h - 80) / G;
+      const x1 = w.im ? (w.x0 + w.w) / G : (Math.max(...xs) + 40) / G;
+      const y1 = w.im ? (w.y0 + w.h) / G : (Math.max(...ys) + 40) / G;
+      if (x1 <= view.x || x0 >= view.right || y1 <= view.y || y0 >= view.bottom) continue;
+      if (w.error) throw w.error;
+      if (w.czeka || !w.im) return false;
+    }
+    return true;
+  }
+
   private usun(id: number, w: Wysoki) {
     this.wszystkie.delete(id);
     w.refs.clear();
@@ -97,15 +128,18 @@ export class Wysokie {
 
   private licz(id: number, w: Wysoki, miasto: WielkoscMiasta) {
     w.czeka = true;
+    w.error = undefined;
     const noc = w.noc;
     void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(w.b, noc, miasto)).then((g) => {
       w.czeka = false;
-      if (this.wszystkie.get(id) !== w || !this.scene.sys.isActive()) return;
+      // A paused scene (a dialog is open) still takes the picture: dropping it left an invisible building whose
+      // shadow and walls stayed on the map (owner, 11 Oct 2026, demo). Only a scene that is gone skips it.
+      if (this.wszystkie.get(id) !== w || !this.zyje()) return;
       if (w.noc !== noc) return this.licz(id, w, miasto);
       this.zdejmij(w);
       const key = `bud09-${licznik++}`;
       const tex = this.scene.textures.addCanvas(key, g.obraz);
-      if (!tex) return;
+      if (!tex) throw new Error('Nie udało się narysować budynku');
       tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
       const ctx = tex.getContext();
       const dane = ctx.getImageData(0, 0, g.obraz.width, g.obraz.height);
@@ -116,6 +150,10 @@ export class Wysokie {
       w.im = this.scene.add.image(g.x0 / GEN_DOTS, g.y0 / GEN_DOTS, key).setOrigin(0).setScale(1 / GEN_DOTS).setDepth(w.dol / GEN_DOTS);
       w.para = g.wyrzuty.map((z) => this.korony.wyrzut(z));
       for (const p of w.para) p.setDepth(Math.max(p.depth, w.dol / GEN_DOTS + 0.5));
+    }).catch((error: unknown) => {
+      if (this.wszystkie.get(id) !== w) return;
+      w.czeka = false;
+      w.error = error instanceof Error ? error : new Error(String(error));
     });
   }
 
@@ -124,8 +162,10 @@ export class Wysokie {
     const G = GEN_DOTS, m = 20;
     const P = PRZESWIT_BUDYNKU;
     const sx = hx * G, sy = hy * G - P.srodekNadStopami * K;
-    for (const w of this.wszystkie.values()) {
+    for (const [id, w] of this.wszystkie) {
       const im = w.im;
+      // Safety net: a building with no picture, not being drawn and no error gets drawn again.
+      if (!im && !w.czeka && !w.error) this.licz(id, w, w.miasto);
       if (!im || !w.orig) continue;
       const x = w.x0 / G, y = w.y0 / G;
       const widac = x + w.w / G > cam.x - m && x < cam.right + m && y + w.h / G > cam.y - m && y < cam.bottom + m;
@@ -136,6 +176,11 @@ export class Wysokie {
       if (za) this.wytnij(w, sx, sy);
       else if (w.wyciete) this.przywroc(w);
     }
+  }
+
+  private zyje() {
+    const sys = this.scene.sys;
+    return sys.isActive() || sys.isPaused() || sys.isSleeping();
   }
 
   private pelny(w: Wysoki, i: number, j: number) {
@@ -176,7 +221,12 @@ export class Wysokie {
     if (stare) this.wstaw(w, stare, w.orig!);
     w.wyciete = nowe;
     const o = w.orig!, W = w.w;
-    const px = o.slice();
+    // Only this small window changes. Copying the whole skyscraper on every step allocated
+    // megabytes per frame on phones, even though wstaw then kept only the window anyway.
+    const ww = nowe[2] - nowe[0], hh = nowe[3] - nowe[1];
+    if (ww <= 0 || hh <= 0) return;
+    const px = new Uint32Array(ww * hh);
+    for (let j = 0; j < hh; j++) px.set(o.subarray((nowe[1] + j) * W + nowe[0], (nowe[1] + j) * W + nowe[2]), j * ww);
     const pelny = (i: number, j: number) => i >= 0 && j >= 0 && i < W && j < w.h && (o[j * W + i] >>> 24) !== 0;
     for (let j = nowe[1]; j < nowe[3]; j++) for (let i = nowe[0]; i < nowe[2]; i++) {
       const k = j * W + i, c = o[k];
@@ -186,9 +236,9 @@ export class Wysokie {
       if (!(d < R || (d < R + B && BAYER[((Y & 3) << 2) | (X & 3)] < (R + B - d) / B))) continue;
       const ob = (c & 0xffffff) === OBRYS;
       const kontur = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => !pelny(i + a, j + b) || ((o[(j + b) * W + i + a] & 0xffffff) === OBRYS) !== ob);
-      px[k] = ((c & 0x00ffffff) | ((kontur ? P.alfaKonturu : P.alfaWnetrza) << 24)) >>> 0;
+      px[(j - nowe[1]) * ww + i - nowe[0]] = ((c & 0x00ffffff) | ((kontur ? P.alfaKonturu : P.alfaWnetrza) << 24)) >>> 0;
     }
-    this.wstaw(w, nowe, px);
+    w.tex!.getContext().putImageData(new ImageData(new Uint8ClampedArray(px.buffer), ww, hh), nowe[0], nowe[1]);
     w.tex!.refresh();
   }
 }

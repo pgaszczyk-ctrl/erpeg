@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "runtime": "Canvas2D/Skia via @napi-rs/canvas",
+  "assetCount": 18,
+  "renderedCases": 9,
+  "checks": [
+    "18 PNG decode",
+    "renderer JS syntax",
+    "actual Canvas2D compositing",
+    "EXP monotonic and 50% center",
+    "gravity vector sign",
+    "0/50/100% with -45/0/45 degree tilt"
+  ],
+  "heights": [
+    75,
+    65.90250419313088,
+    45.80753126507625,
+    1.7229467630386353e-8,
+    -29.484264507424086,
+    -45.80753126507625,
+    -65.90250419313088,
+    -75
+  ],
+  "limitations": [
+    "No browser test: Chromium unavailable, download failed.",
+    "No integration into game.",
+    "No physical phone sensor test."
+  ]
+}

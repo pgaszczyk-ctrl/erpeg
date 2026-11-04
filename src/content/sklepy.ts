@@ -7,6 +7,9 @@
 
 // Broń, zbroje i umiejętności są teraz w przedmioty.ts.
 
+/** Odkup zwykłego sprzętu; zużycie pomniejsza cenę, zepsuty przedmiot wart jest co najmniej 1 monetę. */
+export const SKUP_SPRZETU = { czescCeny: 0.4 };
+
 // ----------------------------------------------------------------------------
 //  OWOCE – rosną na działkach, trawnikach i w parkach. Drzewo strąca się
 //  mieczem: każde uderzenie zrzuca jeden owoc (2–5 na drzewo). Owoce
@@ -16,7 +19,7 @@
 // w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
 // grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
 // (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust' | 'luska';
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust' | 'luska' | 'ruda_zelaza' | 'kiel';
 export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno' | 'surowce';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
@@ -38,7 +41,10 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
   // Z drzewa ściętego bez siekiery (właściciel, 5 X 2026); leży w plecaku razem z drewnem.
   chrust: { nazwa: 'chrust', mnoga: 'chrust', wielu: 'chrustu', cena: 3, jadalne: false, grupa: 'drewno' },
   // Łup ze smoków (content/smoki.ts), na przyszłe wytwarzanie u kowala (właściciel 7.10.2026); na razie do sprzedania.
+  ruda_zelaza: { nazwa: 'ruda żelaza', mnoga: 'rudy żelaza', wielu: 'rudy żelaza', cena: 30, jadalne: false, grupa: 'surowce' },
   luska: { nazwa: 'łuska smocza', mnoga: 'łuski smocze', wielu: 'łusek smoczych', cena: 40, jadalne: false, grupa: 'surowce' },
+  // Łup z wilków/wargów (właściciel 26.10.2026, admin „🐺 Stworki”); na razie tylko do sprzedania.
+  kiel: { nazwa: 'kieł', mnoga: 'kły', wielu: 'kłów', cena: 15, jadalne: false, grupa: 'surowce' },
 };
 
 /** Siekiera (przedmioty.ts `siekiera`): w każdym sklepie budowlanym i w co `coKtorySklep`-tym zwykłym (wg id sklepu, czyli stale te same). */
@@ -46,6 +52,12 @@ export const SIEKIERA = {
   coKtorySklep: 3,
   /** Sklepy sportowe (w danych mapy razem z budowlanymi) poznajemy po nazwie – one siekier nie mają. */
   sportowy: /sport|decathlon|outdoor|martes|go ?sport|\b4f\b|rower|bike|ski|turyst|wędk|wedk|swim/i,
+};
+
+/** Pojazdy w sklepach sportowych: ceny właściciela i prędkości z docs/ekonomia.md. */
+export const POJAZDY = {
+  rower: { monet: 10_000, szybkosc: 1.25 },
+  hulajnoga: { diamenty: 1, szybkosc: 1.4 },
 };
 
 /** Grupy w plecaku: nazwa i ikonka (kilka owoców naraz). */
@@ -98,6 +110,8 @@ export const WSKRZESZENIE = { diamentow: 10 };
  * `razySzybciej` razy szybciej (`szybciej`).
  */
 export const DIAMENT = { monet: 1_000_000, euro: 2, dowolneMiasto: 1, szybciej: 1, razySzybciej: 2 };
+/** Said instead of a price in euro (owner, 11 Oct 2026: no „albo 2 €” – the Kurier will explain supporters' rewards in a few days). */
+export const DIAMENT_WSPIERAJACY = 'Diamenty są też nagrodą dla wspierających grę – szczegóły wkrótce w Kurierze Parowym.';
 
 /**
  * ALCHEMIK – na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw
@@ -109,3 +123,6 @@ export const ALCHEMIK = { owocow: 50, premiaSerc: 1, premiaMinut: 10 };
 
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
 export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };
+
+/** Żelazo: limit i liczba uderzeń na jedną grudkę. */
+export const GORNICTWO = { uderzen: 5, dziennie: 10, odstepMs: 400 };

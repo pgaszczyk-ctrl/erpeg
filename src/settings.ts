@@ -1,3 +1,5 @@
+import { ustawPancerze } from './content/pancerz';
+import { ustawBronie } from './content/bron';
 import { PLAYER } from './objects/Player';
 import { PX_PER_M } from './map/CityMap';
 import { PRZEDMIOTY } from './content/przedmioty';
@@ -7,6 +9,9 @@ import { ZUZYCIE, STRZALY, AMUNICJA } from './content/zuzycie';
 import { POKRETLA } from './content/ustawienia';
 import { POLA } from './content/pola';
 import { GORY } from './content/gory';
+import { WOZNICA, POCIAG } from './content/pociagi';
+import { PROM } from './content/porty';
+import { GENERATOR } from './artillery/generator';
 import { rpc } from './api';
 
 // Wpisuje pokrętła z panelu admina (content/ustawienia.ts) w stałe gry.
@@ -18,9 +23,19 @@ const CENY_ZBIOROW = new Map(Object.entries(OWOCE).map(([k, o]) => [k, o.cena]))
 
 const USTAW: Record<string, (v: number) => void> = {
   predkosc_kmh: (v) => (PLAYER.speed = (v / 3.6) * PX_PER_M),
+  woznica_oplata: (v) => (WOZNICA.oplata = Math.round(v)),
+  woznica_za_km: (v) => (WOZNICA.zaKm = v),
+  woznica_kmh: (v) => (WOZNICA.kmh = v),
+  pociag_oplata: (v) => (POCIAG.oplata = Math.round(v)),
+  pociag_za_km: (v) => (POCIAG.zaKm = v),
+  pociag_kmh: (v) => (POCIAG.kmh = v),
+  prom_oplata: (v) => (PROM.oplata = Math.round(v)),
+  prom_za_km: (v) => (PROM.zaKm = v),
+  prom_kmh: (v) => (PROM.kmh = v),
+  armata_za_km: (v) => (GENERATOR.zaKm = v),
   wskrzeszenie_diamenty: (v) => (WSKRZESZENIE.diamentow = Math.round(v)),
   diament_monet: (v) => (DIAMENT.monet = Math.round(v)),
-  ceny_przedmiotow: (v) => PRZEDMIOTY.forEach((p) => (p.cena = Math.round((CENY_PRZEDMIOTOW.get(p.id) ?? p.cena) * v))),
+  ceny_przedmiotow: (v) => PRZEDMIOTY.forEach((p) => { if (!p.pojazd) p.cena = Math.round((CENY_PRZEDMIOTOW.get(p.id) ?? p.cena) * v); }),
   ceny_zbiorow: (v) => Object.entries(OWOCE).forEach(([k, o]) => (o.cena = Math.max(1, Math.round((CENY_ZBIOROW.get(k) ?? o.cena) * v)))),
   namiot_pole: (v) => (NAMIOT.cenaPola = Math.round(v)),
   alchemik_owocow: (v) => (ALCHEMIK.owocow = Math.round(v)),
@@ -36,6 +51,9 @@ const USTAW: Record<string, (v: number) => void> = {
   strzala_cena: (v) => (AMUNICJA.strzaly.cena = Math.round(v)),
   kolczan: (v) => (STRZALY.kolczan = Math.round(v)),
   gory_paralaksa: (v) => (GORY.paralaksa = v),
+  gory_granica_lasu: (v) => (GORY.granicaLasu = v),
+  gory_granica_lasu_stopien: (v) => (GORY.granicaLasuNaStopien = v),
+  gory_skaly_nad_lasem: (v) => (GORY.skalyNadLasem = v),
   gory_rozmycie: (v) => (GORY.rozmycie = v),
   gory_paralaksa_od: (v) => (GORY.paralaksaOdM = v),
   gory_paralaksa_pelna: (v) => (GORY.paralaksaPelnaM = v),
@@ -55,6 +73,8 @@ export function applySettings(values: Record<string, number>) {
     const v = Number(values[p.k]);
     USTAW[p.k]?.(Number.isFinite(v) ? Math.min(p.max, Math.max(p.min, v)) : p.domyslnie);
   }
+  ustawBronie(values);
+  ustawPancerze(values);
 }
 
 let loading: Promise<void> | null = null;

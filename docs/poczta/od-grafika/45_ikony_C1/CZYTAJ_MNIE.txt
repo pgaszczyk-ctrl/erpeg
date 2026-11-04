@@ -1,0 +1,31 @@
+EXP-LORE / Zamówienie 45 / C1 + broń i tarcze C2.
+16 nowych pozycji: 15 statycznych ikon oraz animacja pękania szklanego miecza.
+Dodatkowo: brakujący eksport rycerski.png 64x64 wskazany w P003, nie liczony ponownie jako nowa ikona.
+
+UWAGI P003
+Dokument odnaleziono w pgaszczyk-ctrl/erpeg, gałąź ccr-c8cd59a2-csrphb, pod podaną przez właściciela ścieżką. P003 potwierdza wdrożenie 15 ikon A/B na TEST; jedyną prośbą do następnej partii jest eksport rycerski 64x64. Nie zawiera żądania przerysowania A/B. Oryginalna treść: P003_uwagi.md.
+Eksport rycerski skopiowano z wcześniejszej paczki Próby 1, bez zmian w oryginalnym zaakceptowanym mieczu. Znajduje się bezpośrednio w eksporty_64/rycerski.png.
+
+ZAWARTOŚĆ
+oryginaly/ — pełne źródła nowych ikon. Nie są obrazami na ścisłej siatce 64x64.
+eksporty_64/ — 15 nowych PNG RGBA 64x64, rycerski.png 64x64 oraz szklany_miecz_peka.png 256x64.
+powiekszenia_64_x16/ — eksporty powiększone dokładnie x16, bez wygładzania. Pasek animacji ma tu 4096x1024.
+wzor/ — niezmieniony miecz rycerski jako wzór jakości i stylu.
+zrodlo_animacji/ — oryginalny atlas 2x2 i cztery wycięte bez skalowania klatki.
+klatki_animacji/ — cztery gotowe klatki 64x64.
+plansza_oryginalow_1.png i _2.png — duże podglądy źródeł, osobno od małych eksportów.
+plansza_miniatur_1.png i _2.png — eksporty w 64 i 32 px; aplikacja może przeskalować całą planszę.
+plansza_animacji.png oraz podglad_pekania.gif — kontrola przebiegu pękania.
+kontrola.json — rozmiary, kolory, alfa, marginesy, sumy kontrolne źródeł i sprawdzenie rejestracji rękojeści.
+prompty.json — pełne prompty i opis korekty cylindra.
+
+ANIMACJA
+Kolejność w pasku od lewej: miecz cały, pierwsze pęknięcie, rozgałęzione pęknięcie, głęboko popękany miecz z drobnym wyszczerbieniem. Cała sekwencja ma wspólne wycięcie źródła, skalę i paletę; klatki nie były osobno dopasowywane do własnych obwiedni. Sprawdzenie obszaru rękojeści wskazuje najlepsze dopasowanie bez przesunięcia dla wszystkich klatek. Brak rozsypujących się odłamków.
+Statyczne eksporty szklany_miecz.png i szklany_miecz_pekniety.png są identyczne odpowiednio z pierwszą i ostatnią klatką paska, aby przełączenie stanu nie zmieniało pozycji. Źródło pękniętego miecza pochodzi z ostatniej klatki atlasu. Źródło całego miecza zachowano w pełnej rozdzielczości pierwszej generacji.
+Przy zmniejszaniu animacji użyto próbkowania bez wygładzania, żeby nie zgubić cienkich pęknięć. Pozostałe eksporty stosują uśrednianie przy zmniejszaniu i twardą alfę końcową. W każdym eksporcie dodano zewnętrzny obrys #1e1a24.
+GIF to podgląd w pętli (300 ms na klatkę), nie narzuca czasu odtwarzania w grze.
+
+STAN
+Nowa dostawa przygotowana, bez wdrożenia do repozytorium i gry. P003 opisuje wcześniejsze wdrożenie A/B wykonane przez programistę.
+Łącznie przygotowano: 4 Próba 1 + 15 A/B + 29 D + 16 C1/broń i tarcze = 64 z 93 pozycji. Pozostało 29: amunicja 4, materiały 16, pojazdy 2, zbiory i grupy 7.
+Wykonanie: wbudowany imagegen z zaakceptowanym mieczem jako referencją; eksporty i składanie atlasu ImageMagick.

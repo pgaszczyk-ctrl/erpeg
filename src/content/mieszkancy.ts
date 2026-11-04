@@ -31,7 +31,7 @@ export const MIESZKANCY = {
   sprawa: {
     bank: ['Idę do banku {nazwa}, mam sprawę do załatwienia.', 'Muszę zajrzeć do banku – {nazwa}. Lokata sama się nie założy!'],
     sklep: ['No tak, mamy {dzien}, więc idę do sklepu. {nazwa} jest niedaleko.', 'Mamy {dzien}, trzeba zrobić zakupy. Idę do sklepu {nazwa}.'],
-    kosciol: ['Dziś niedziela, idę do kościoła – {nazwa}.'],
+    kosciol: ['Dziś niedziela, idę do świątyni – {nazwa}.'],
     boisko: ['W każdy piątek idę oglądać wyczyny sportowców. Byłeś na boisku przy ul. {ulica}?'],
   },
   /** Ile fioletowych serduszek ma gracz w pojedynku. */

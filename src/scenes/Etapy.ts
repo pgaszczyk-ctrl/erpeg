@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { interactionSpot, type InteractionTarget } from '../interaction';
+import { skrotKamery } from '../walka/live';
+import { tx } from '../i18n';
 import { TEX } from '../art';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { session, missionState, missionAvailable, levelLock, stageIndex, zadanieOf, type ResolvedMission } from '../quests';
@@ -13,6 +16,10 @@ import { hdOn, hdFolkLooks, personOf, ensureHd, fitHd } from '../sprites';
 import { SKALA_POSTACI } from '../skala';
 import { consumeAttack } from '../controls';
 import type { DialogRequest } from './GameScene';
+import { saveNow, resolvePlace } from '../quests';
+import { progressKey, readProgress, addClue, arrangeCard, missionNotes } from '../content/questy/progress';
+import { live } from '../walka/live';
+import type { LochyWejscia } from './Lochy';
 
 // Mission stages beyond the old four tasks (owner, 6–7 Oct 2026: „Serce Zębatka”, „Przebudzenie Starego
 // Grodu”): talks, riddle lists, choices, paragraph pages, melodies on the spot; things to pick up; spots to
@@ -23,7 +30,7 @@ import type { DialogRequest } from './GameScene';
 export interface StageHost {
   scene: Phaser.Scene;
   city: CityMap;
-  player: Phaser.GameObjects.Sprite & { speed: number };
+  player: Phaser.GameObjects.Sprite & { speed: number; hp: number };
   dialog(req: DialogRequest): void;
   toast(text: string, ms?: number): void;
   /** The current stage of this mission is done: give/take story items, move on (or finish). */
@@ -36,7 +43,13 @@ export interface StageHost {
   pay(n: number): boolean;
   /** A swing at a mission's giver: the mission's dialog, as at its door. */
   talkMission(rm: ResolvedMission): void;
+  /** The surface's dungeon entrances (none underground / without the new fight). */
+  lochy(): LochyWejscia | undefined;
+  interactionObstacles?(): {x:number;y:number}[];
 }
+
+/** Stage 'loch': the key (in the mission's saved choices) set when its dungeon chest was opened. */
+export const lochKlucz = (etap: number) => `loch:${etap}`;
 
 /** How near the stage's place the hero must come (map px), and how far away it re-arms. */
 const BLISKO = 40;
@@ -58,6 +71,9 @@ interface Live {
   who: Phaser.GameObjects.GameObject[];
   /** Where the stage's person stands (null: none). */
   at: { x: number; y: number; imie: string } | null;
+  clueArmed: Set<string>;
+  /** Stage 'loch': its entrance (placed once the ground around the stage's place is loaded). */
+  wejscie?: { id: string; x: number; y: number };
 }
 
 /** A mission's giver standing at its door. */
@@ -69,7 +85,7 @@ interface Giver {
   rm: ResolvedMission;
 }
 
-const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia']);
+const SPOT = new Set(['rozmowa', 'zagadka', 'zagadki', 'wybor', 'paragraf', 'melodia', 'decyzja', 'uklad']);
 
 function hash(s: string) {
   let h = 2166136261;
@@ -119,20 +135,60 @@ export class Etapy {
     for (const rm of missions) {
       const g = rm.m.postac;
       if (!g || !(missionAvailable(rm.m) || levelLock(rm.m) !== null)) continue;
-      const x = rm.door.x + 10, y = rm.door.y + 2;
-      const twin = [...this.live.values()].some((l) => l.at && l.at.imie === g.imie && Math.hypot(l.at.x - x, l.at.y - y) < 40) ||
-        [...this.givers.values()].some((o) => o.rm.m.id !== rm.m.id && o.imie === g.imie && Math.hypot(o.x - x, o.y - y) < 40);
+      const x = rm.door.x, y = rm.door.y;
+      const stagePerson = this.live.get(rm.m.id)?.at;
+      const twin = stagePerson?.imie === g.imie && Math.hypot(stagePerson.x-x,stagePerson.y-y)<160;
       if (twin) continue;
       want.add(rm.m.id);
       const had = this.givers.get(rm.m.id);
       if (had) { had.rm = rm; continue; }
-      this.givers.set(rm.m.id, { who: this.person(g, x, y), x, y, imie: g.imie, rm });
+      const at = this.placePerson({x,y});
+      if (at) this.givers.set(rm.m.id, { who: this.person(g, at.x, at.y), ...at, imie: g.imie, rm });
     }
     for (const [id, g] of this.givers) {
       if (want.has(id)) continue;
       for (const w of g.who) w.destroy();
       this.givers.delete(id);
     }
+  }
+
+  private placePerson(origin: {x:number;y:number}) {
+    const people = [...this.givers.values(), ...[...this.live.values()].flatMap(l => l.at ? [l.at] : []),
+      ...(this.host.interactionObstacles?.() ?? [])];
+    const doors = [...this.rms.map(r => r.door), ...this.host.city.places.map(p => p.door), ...(this.host.lochy()?.lista ?? [])];
+    return interactionSpot(origin, people, doors, (x,y) => this.host.city.isFree(x,y,5,5), skrotKamery(), (x,y)=>this.host.city.reachesFar(x,y,50));
+  }
+
+  /** Concrete callbacks: a neighbouring mission can never intercept a selected person's dialogue. */
+  interactionTargets(): InteractionTarget[] {
+    const out: InteractionTarget[] = [];
+    for (const [id,g] of this.givers) out.push({id:`giver:${id}`, x:g.x, y:g.y, kind:'talk',
+      label:tx('Porozmawiaj: ','Talk: ')+g.imie, run:()=>this.host.talkMission(g.rm)});
+    for (const [id,l] of this.live) {
+      if (!l.at) continue;
+      const rm = this.rms.find(r=>r.m.id===id);
+      if (!rm) continue;
+      const z = zadanieOf(rm.m);
+      out.push({id:`stage:${l.key}`, x:l.at.x, y:l.at.y, kind:'talk', label:tx('Porozmawiaj: ','Talk: ')+l.at.imie,
+        run:()=>{ if(SPOT.has(z.typ)){l.armed=false;this.fire(rm,z,l);} else this.host.dialog({ ...z.dialogueMeta,title:z.postac?.imie??rm.m.tytul,text:z.tekst||z.cel,buttons:[tx('Dobrze','All right')],onChoose:()=>{} }); }});
+    }
+    for (const rm of this.rms) {
+      if(missionState(rm.m)!=='active')continue;
+      const l=this.live.get(rm.m.id),z=zadanieOf(rm.m);
+      if(!l)continue;
+      if(SPOT.has(z.typ)&&!z.postac&&rm.target)out.push({id:`spot:${l.key}`,...rm.target,kind:'use',label:tx('Sprawdź: ','Inspect: ')+rm.m.tytul,
+        run:()=>{l.armed=false;this.fire(rm,z,l);}});
+      if(z.typ==='badanie') {
+        const found=readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy??[]).map(c=>c.id));
+        for(const c of z.tropy??[]) {
+          if(found.includes(c.id))continue;
+          const at=resolvePlace(this.host.city,c.miejsce);if(!at)continue;
+          out.push({id:`clue:${l.key}:${c.id}`,...at,kind:'use',label:tx('Zbadaj: ','Inspect: ')+rm.m.tytul,
+            run:()=>{l.clueArmed.delete(c.id);this.inspectClue(rm,z,c);}});
+        }
+      }
+    }
+    return out;
   }
 
   /** A mission person (giver or stage person) within `r` of (x, y): what talking to them does, or null. */
@@ -147,7 +203,7 @@ export class Etapy {
         if (SPOT.has(z.typ)) {
           l.armed = false;
           this.fire(rm, z, l);
-        } else this.host.dialog({ title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: ['Dobrze'], onChoose: () => {} });
+        } else this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: z.postac?.imie ?? rm.m.tytul, text: z.tekst || z.cel, buttons: [tx('Dobrze', 'All right')], onChoose: () => {} });
       };
     }
     return null;
@@ -165,6 +221,8 @@ export class Etapy {
     if (!l) return null;
     const p = this.host.player;
     const near = <T extends { x: number; y: number }>(list: T[]) => list.reduce<T | null>((a, b) => (!a || Math.hypot(b.x - p.x, b.y - p.y) < Math.hypot(a.x - p.x, a.y - p.y) ? b : a), null);
+    if (l.wejscie) return l.wejscie;
+    if (l.at) return l.at;
     if (l.items.length) return near(l.items);
     const left = l.points.filter((q) => !q.done);
     return left.length ? near(left) : null;
@@ -174,6 +232,12 @@ export class Etapy {
   progress(id: string): string {
     const l = this.live.get(id);
     if (!l) return '';
+    const rm = this.rms.find(r => r.m.id === id);
+    if (rm && zadanieOf(rm.m).typ === 'badanie') {
+      const z = zadanieOf(rm.m);
+      const found = readProgress(this.choices(rm), progressKey(stageIndex(rm.m),'clues'), (z.tropy ?? []).map(t => t.id));
+      return ` (${found.length}/${z.ile ?? 2})`;
+    }
     if (l.points.length > 1) return ` (${l.points.filter((q) => q.done).length}/${l.points.length})`;
     return '';
   }
@@ -183,6 +247,10 @@ export class Etapy {
     const z = zadanieOf(rm.m);
     const l = this.live.get(rm.m.id);
     const t = rm.target;
+    if (l && z.typ === 'badanie') {
+      const near = (z.tropy ?? []).find(c => { const at = resolvePlace(this.host.city,c.miejsce); return at && Math.hypot(at.x-this.host.player.x,at.y-this.host.player.y)<BLISKO; });
+      if (near) { this.inspectClue(rm,z,near); return true; }
+    }
     if (!l || !t || !SPOT.has(z.typ)) return false;
     if (Math.hypot(t.x - this.host.player.x, t.y - this.host.player.y) > BLISKO * 1.5) return false;
     l.armed = false;
@@ -190,11 +258,50 @@ export class Etapy {
     return true;
   }
 
+  private podpowiedziane = new Set<string>();
+
+  /** New controls: once per spot, how to start what is here. */
+  private podpowiedz(key: string) {
+    if (this.podpowiedziane.has(key)) return;
+    this.podpowiedziane.add(key);
+    this.host.toast(tx('👆 Tu coś jest – naciśnij AKCJA lub E, żeby zacząć.', '👆 Something is here – press ACT or E to start.'), 3000);
+  }
+
+  /** New controls: a double tap by the hero – the quest stage or clue right here, if any (true = started). */
+  dotknij(): boolean {
+    const p = this.host.player;
+    for (const rm of this.rms) {
+      if (missionState(rm.m) !== 'active' || !rm.target) continue;
+      const l = this.live.get(rm.m.id);
+      if (!l) continue;
+      const z = zadanieOf(rm.m);
+      if (z.typ === 'badanie') {
+        const found = readProgress(this.choices(rm), progressKey(stageIndex(rm.m), 'clues'), (z.tropy ?? []).map((t) => t.id));
+        const clue = (z.tropy ?? []).find((c) => {
+          const at = resolvePlace(this.host.city, c.miejsce);
+          return at && !found.includes(c.id) && Math.hypot(at.x - p.x, at.y - p.y) < BLISKO * 1.3;
+        });
+        if (clue) {
+          l.clueArmed.delete(clue.id);
+          this.inspectClue(rm, z, clue);
+          return true;
+        }
+        continue;
+      }
+      if (SPOT.has(z.typ) && Math.hypot(rm.target.x - p.x, rm.target.y - p.y) < BLISKO * 1.3) {
+        l.armed = false;
+        this.fire(rm, z, l);
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** A stage just began (accepted, or the previous one done): its opening words. */
   begin(rm: ResolvedMission) {
     const z = zadanieOf(rm.m);
     // A talk says its words on arrival; other stages may open with a few words right away.
-    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ title: rm.m.tytul, text: z.tekst, buttons: ['Ruszam!'], onChoose: () => {} });
+    if (z.tekst && !SPOT.has(z.typ)) this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: rm.m.tytul, text: z.tekst, buttons: [tx('Ruszam!', 'Let’s go!')], onChoose: () => {} });
   }
 
   destroy() {
@@ -207,9 +314,20 @@ export class Etapy {
   // ------------------------------------------------------------------ setup
 
   private setup(rm: ResolvedMission, z: Etap, key: string, now: number): Live {
-    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [], at: null };
+    const l: Live = { key, armed: true, items: [], points: [], until: 0, step: 0, who: [], at: null, clueArmed:new Set((z.tropy ?? []).map(c => c.id)) };
     const t = rm.target!;
     const r = rng(hash(key));
+    if (z.typ === 'badanie') {
+      const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
+      for (const clue of z.tropy ?? []) {
+        const q = resolvePlace(this.host.city,clue.miejsce);
+        if (!q) continue;
+        const done = found.includes(clue.id);
+        const icon = this.host.scene.add.image(q.x,q.y,TEX.questItem).setTint(done ? 0x7fd35a : 0xd9a640).setAlpha(done ? 0.5 : 1).setDepth(q.y-4);
+        if (!done) icon.setData('glow',this.glow(q.x,q.y));
+        l.points.push({...q,done,t:0,icon,bar:this.host.scene.add.graphics()});
+      }
+    }
     if (z.typ === 'podnies') {
       for (const q of this.spots(t, z.ile ?? 1, (z.promien ?? 40) * PX_PER_M, r)) {
         const it = this.host.scene.add.image(q.x, q.y, TEX.questItem).setDepth(q.y - 4);
@@ -235,9 +353,11 @@ export class Etapy {
       l.until = now + Math.max(60, s) * 1000;
     }
     if (z.postac) {
-      const x = rm.target!.x + 10, y = rm.target!.y + 2;
-      l.who.push(...this.person(z.postac, x, y));
-      l.at = { x, y, imie: z.postac.imie };
+      const at = this.placePerson(rm.target!);
+      if (at) {
+        l.who.push(...this.person(z.postac, at.x, at.y));
+        l.at = { ...at, imie: z.postac.imie };
+      }
     }
     return l;
   }
@@ -321,6 +441,7 @@ export class Etapy {
       q.bar.destroy();
     }
     for (const w of l.who) w.destroy();
+    if (l.wejscie) this.host.lochy()?.usun(l.wejscie.id);
   }
 
   // ------------------------------------------------------------------ every frame
@@ -328,10 +449,56 @@ export class Etapy {
   private tick(rm: ResolvedMission, z: Etap, l: Live, now: number, dt: number) {
     const p = this.host.player;
     const t = rm.target!;
+    if (z.postac && !l.at) {
+      const at = this.placePerson(t);
+      if (at) { l.who.push(...this.person(z.postac,at.x,at.y)); l.at={...at,imie:z.postac.imie}; }
+    }
+    if (z.typ === 'loch') {
+      const idx = stageIndex(rm.m);
+      // The chest down there was opened (it records this and saves): the stage is done on the way back up.
+      if (this.choices(rm)[lochKlucz(idx)]) {
+        this.host.stageDone(rm, tx('Loch przeszukany! ', 'Dungeon searched! '));
+        return;
+      }
+      const L = this.host.lochy();
+      if (!L || l.wejscie) return;
+      const R = 50 * PX_PER_M;
+      if (!this.host.city.ready({ x0: t.x - R, y0: t.y - R, x1: t.x + R, y1: t.y + R })) return;
+      const at = L.wolneMiejsce(t.x, t.y) ?? t;
+      const id = `misja:${rm.m.id}:${idx}`;
+      const o = z.loch;
+      L.dodajMisyjne({ id, rodzaj: o?.rodzaj ?? 'krypta', x: at.x, y: at.y, seed: hash(`${rm.m.id}:${idx}`), przy: o?.nazwa, misja: { id: rm.m.id, etap: idx, nazwa: o?.nazwa, straznik: o?.straznik } });
+      l.wejscie = { id, x: at.x, y: at.y };
+      return;
+    }
+    if (z.typ === 'badanie') {
+      const found = readProgress(this.choices(rm),progressKey(stageIndex(rm.m),'clues'),(z.tropy ?? []).map(c=>c.id));
+      if (found.length >= (z.ile ?? 2)) {this.host.stageDone(rm);return;}
+      for (let i=0;i<(z.tropy ?? []).length;i++) {
+        const clue = z.tropy![i], at = resolvePlace(this.host.city,clue.miejsce);
+        if (!at) continue;
+        const d = Math.hypot(at.x-p.x,at.y-p.y);
+        if (d > BLISKO*2) l.clueArmed.add(clue.id);
+        const point = l.points.find(q=>q.x===at.x&&q.y===at.y);
+        if (point && found.includes(clue.id) && !point.done) {
+          point.done=true; (point.icon.getData('glow') as Phaser.GameObjects.GameObject | undefined)?.destroy(); point.icon.setTint(0x7fd35a).setAlpha(0.5);
+        }
+        if (!found.includes(clue.id) && d<BLISKO && l.clueArmed.has(clue.id)) {
+          if (live()) { this.podpowiedz(`${rm.m.id}:${clue.id}`); continue; }
+          l.clueArmed.delete(clue.id); this.inspectClue(rm,z,clue); return;
+        }
+      }
+      return;
+    }
     if (SPOT.has(z.typ)) {
       const d = Math.hypot(t.x - p.x, t.y - p.y);
       if (d > BLISKO * 2) l.armed = true;
       else if (d < BLISKO && l.armed) {
+        // New controls (walka/live.ts): arriving doesn't start it – a double tap does (dotknij).
+        if (live()) {
+          this.podpowiedz(l.key);
+          return;
+        }
         l.armed = false;
         this.fire(rm, z, l);
       }
@@ -344,8 +511,8 @@ export class Etapy {
         it.destroy();
         l.items = l.items.filter((x) => x !== it);
         const left = l.items.length;
-        if (left) this.host.toast(`Masz! Zostało jeszcze: ${left}`, 1400);
-        else this.host.stageDone(rm, 'Znalezione! ');
+        if (left) this.host.toast(tx(`Masz! Zostało jeszcze: ${left}`,`Got it! Still to find: ${left}`), 1400);
+        else this.host.stageDone(rm, tx('Znalezione! ', 'Found! '));
       }
       return;
     }
@@ -364,8 +531,8 @@ export class Etapy {
         q.bar.clear();
         q.icon.setTint(0x7fd35a).setAlpha(0.6);
         const left = l.points.filter((x) => !x.done).length;
-        if (left) this.host.toast(`Gotowe! Zostało jeszcze: ${left}`, 1400);
-        else this.host.stageDone(rm, 'Naprawione! ');
+        if (left) this.host.toast(tx(`Gotowe! Zostało jeszcze: ${left}`,`Done! Still to fix: ${left}`), 1400);
+        else this.host.stageDone(rm, tx('Naprawione! ', 'Fixed! '));
       }
       return;
     }
@@ -380,22 +547,42 @@ export class Etapy {
   private fire(rm: ResolvedMission, z: Etap, l: Live) {
     const title = z.postac?.imie ?? rm.m.tytul;
     switch (z.typ) {
+      case 'uklad':
+        this.arrange(rm,z,title);
+        return;
       case 'rozmowa':
-        this.host.dialog({ title, text: z.tekst || z.cel, buttons: ['Dalej'], onChoose: () => this.host.stageDone(rm) });
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title, text: z.tekst || z.cel, buttons: [tx('Dalej', 'Next')], onChoose: () => this.host.stageDone(rm) });
         return;
       case 'zagadka':
-        this.ask(rm, title, { pytanie: z.pytanie ?? '', odpowiedzi: z.odpowiedzi ?? [], dobra: z.dobra ?? 0 }, z.podpowiedz, () => this.host.stageDone(rm, 'Dobrze! '), z.tekst);
+        this.ask(rm, title, { pytanie: z.pytanie ?? '', odpowiedzi: z.odpowiedzi ?? [], dobra: z.dobra ?? 0 }, z.podpowiedz, () => this.host.stageDone(rm, tx('Dobrze! ', 'Correct! ')), z.tekst);
         return;
       case 'zagadki': {
         const list = z.pytania ?? [];
         const next = () => {
-          if (l.step >= list.length) return this.host.stageDone(rm, 'Wszystko dobrze! ');
+          if (l.step >= list.length) return this.host.stageDone(rm, tx('Wszystko dobrze! ', 'All correct! '));
           this.ask(rm, `${title} (${l.step + 1}/${list.length})`, list[l.step], undefined, () => {
             l.step++;
             next();
           }, l.step === 0 ? z.tekst : undefined);
         };
         next();
+        return;
+      }
+      case 'decyzja': {
+        const options = z.opcje ?? [];
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title, text: z.tekst || z.cel,
+          buttons: [...options.map(o => o.tekst), tx('Później', 'Later')],
+          onChoose: i => {
+            const option = options[i];
+            if (!option || missionState(rm.m) !== 'active') return;
+            if (z.wyborKlucz) {
+              const choices = rm.m.scenariusz?.choices ?? (session.questResults[rm.m.id] ??= { originMap:session.mapId, routeM:0, choices:{} }).choices;
+              choices[z.wyborKlucz] = option.id;
+              void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
+            }
+            this.host.stageDone(rm, option.wynik);
+          },
+        });
         return;
       }
       case 'wybor':
@@ -410,26 +597,62 @@ export class Etapy {
     }
   }
 
+  private choices(rm: ResolvedMission) {
+    return rm.m.scenariusz?.choices ?? (session.questResults[rm.m.id] ??= {originMap:session.mapId,routeM:0,choices:{}}).choices;
+  }
+
+  private inspectClue(rm: ResolvedMission,z: Etap,clue: NonNullable<Etap['tropy']>[number]) {
+    const index = stageIndex(rm.m), key = progressKey(index,'clues'), allowed = (z.tropy ?? []).map(c=>c.id);
+    this.host.dialog({...z.dialogueMeta,title:clue.tytul,text:clue.tekst,
+      buttons:[clue.przycisk ?? tx('Zapisz trop','Record clue'),tx('Później','Later')],onChoose:i=>{
+        if(i!==0 || missionState(rm.m)!=='active' || stageIndex(rm.m)!==index)return;
+        const found=addClue(this.choices(rm),key,allowed,clue.id);
+        void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
+        if(found.length >= (z.ile ?? 2)) this.host.stageDone(rm);
+        else this.host.toast(clue.przycisk ? `${z.cel} ${found.length}/${z.ile ?? 2}` : tx(`Tropy: ${found.length}/${z.ile ?? 2}. Wybierz kolejny punkt.`,`Clues: ${found.length}/${z.ile ?? 2}. Choose another point.`),2200);
+      }});
+  }
+
+  private arrange(rm: ResolvedMission,z: Etap,title: string) {
+    const index=stageIndex(rm.m),key=progressKey(index,'cards'),choices=this.choices(rm),order=z.kolejnosc ?? [],cards=z.karty ?? [];
+    const prefix=readProgress(choices,key,order);
+    if(!order.length || cards.length!==order.length)return;
+    // A reload may occur after the final checkpoint reached the server but before stage advancement.
+    if(prefix.length===order.length && prefix.every((id,i)=>id===order[i]))return this.host.stageDone(rm);
+    const available=cards.filter(c=>!prefix.includes(c.id));
+    const placed=prefix.map(id=>cards.find(c=>c.id===id)?.tekst).join(' → ');
+    this.host.dialog({...z.dialogueMeta,title,text:`${z.tekst || z.cel}${placed ? `\n\n${tx('Ułożone','Placed')}: ${placed}` : ''}`,
+      buttons:[...available.map(c=>c.tekst),tx('Później','Later')],onChoose:i=>{
+        if(!available[i] || missionState(rm.m)!=='active' || stageIndex(rm.m)!==index)return;
+        const result=arrangeCard(choices,key,order,available[i].id);
+        void saveNow(this.host.player.hp).catch(() => this.host.toast(tx('Nie zapisano postępu. Spróbuj zapisać ponownie.','Progress was not saved. Try saving again.')));
+        if(result.complete)return this.host.stageDone(rm);
+        if(result.correct)return this.arrange(rm,z,title);
+        this.host.dialog({...z.dialogueMeta,title:tx('Sprawdź połączenia','Check the connections'),text:z.podpowiedz || tx('Te karty nie pasują do wskazówek. Spróbuj od początku.','These cards do not fit the clues. Try from the start.'),buttons:[tx('Spróbuję jeszcze raz','Try again'),tx('Później','Later')],onChoose:j=>{if(j===0)this.arrange(rm,z,title);}});
+      }});
+  }
+
   /** One question; a wrong answer shows the hint (or „try again”) and asks the same again. */
   private ask(rm: ResolvedMission, title: string, q: { pytanie: string; odpowiedzi: string[]; dobra: number }, hint: string | undefined, ok: () => void, intro?: string) {
     const answers = q.odpowiedzi.filter((a) => a && a.trim());
     if (!q.pytanie || !answers.length) return ok();
-    this.host.dialog({
+    const notes=missionNotes(rm.m);
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `🧩 ${title}`,
-      text: intro ? `${intro}\n\n${q.pytanie}` : q.pytanie,
-      buttons: [...answers, 'Muszę pomyśleć'],
+      text: `${intro ? `${intro}\n\n` : ''}${q.pytanie}${notes ? `\n\n${tx('Notes','Notebook')}:\n${notes}` : ''}`,
+      buttons: [...answers, tx('Muszę pomyśleć', 'Let me think')],
       onChoose: (i) => {
         if (i >= answers.length) return;
         if (i === q.dobra) {
           session.stats.riddles = (session.stats.riddles ?? 0) + 1;
           return ok();
         }
-        this.host.dialog({
-          title: '🤔 Nie tym razem',
-          text: hint ? `Podpowiedź: ${hint}` : 'To nie to. Pomyśl jeszcze.',
-          buttons: ['Spróbuję jeszcze raz', 'Później'],
+        this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
+          title: tx('🤔 Nie tym razem', '🤔 Not this time'),
+          text: hint ? `${tx('Podpowiedź', 'Hint')}: ${hint}` : tx('To nie to. Pomyśl jeszcze.', 'Not quite. Think it over.'),
+          buttons: [tx('Spróbuję jeszcze raz', 'Try again'), tx('Później', 'Later')],
           onChoose: (j) => {
-            if (j === 0) this.ask(rm, title, q, hint, ok);
+            if (j === 0) this.ask(rm, title, q, hint, ok, intro);
           },
         });
       },
@@ -439,8 +662,8 @@ export class Etapy {
   /** „Przekonaj” (one quiz question by the player's age) or pay. */
   private choose(rm: ResolvedMission, z: Etap, title: string, l: Live) {
     const pay = z.zaplac ?? 0;
-    const buttons = ['🧠 Przekonaj', ...(pay ? [`💰 Zapłać ${pay} monet`] : []), 'Później'];
-    this.host.dialog({
+    const buttons = [tx('🧠 Przekonaj', '🧠 Persuade'), ...(pay ? [tx(`💰 Zapłać ${pay} monet`, `💰 Pay ${pay} coins`)] : []), tx('Później', 'Later')];
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title,
       text: z.tekst || z.cel,
       buttons,
@@ -450,10 +673,10 @@ export class Etapy {
           const q = schoolQuiz(`etap:${rm.m.id}`, today(), l.step++, session.age, ll ? krajMapy(session.mapId, ll.lat, ll.lon) : 'PL');
           const r = rng(hash(`${rm.m.id}:${l.step}`));
           const order = q.odpowiedzi.map((_, k) => k).sort(() => r() - 0.5);
-          this.ask(rm, title, { pytanie: q.pytanie, odpowiedzi: order.map((k) => q.odpowiedzi[k]), dobra: order.indexOf(0) }, undefined, () => this.host.stageDone(rm, 'Przekonany! '));
+          this.ask(rm, title, { pytanie: q.pytanie, odpowiedzi: order.map((k) => q.odpowiedzi[k]), dobra: order.indexOf(0) }, undefined, () => this.host.stageDone(rm, tx('Przekonany! ', 'Convinced! ')));
         } else if (pay && i === 1) {
           if (this.host.pay(pay)) this.host.stageDone(rm);
-          else this.host.toast(`Za mało monet – potrzeba ${pay}.`, 2000);
+          else this.host.toast(tx(`Za mało monet – potrzeba ${pay}.`, `Not enough coins – you need ${pay}.`), 2000);
         }
       },
     });
@@ -465,14 +688,14 @@ export class Etapy {
     if (l.step >= pages.length) return this.host.stageDone(rm);
     const pg = pages[l.step];
     const ways = pg.wybory?.filter((w) => w.tekst) ?? [];
-    this.host.dialog({
+    this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta,
       title: `📖 ${rm.m.tytul}`,
       text: pg.tekst,
-      buttons: ways.length ? ways.map((w) => w.tekst) : [l.step === pages.length - 1 ? 'Koniec' : 'Dalej'],
+      buttons: ways.length ? ways.map((w) => w.tekst) : [l.step === pages.length - 1 ? tx('Koniec', 'The end') : tx('Dalej', 'Next')],
       onChoose: (i) => {
         if (ways.length && ways[i] && ways[i].dobry === false) {
           this.host.hurtStory();
-          this.host.dialog({ title: '💥 Auć!', text: 'To nie była dobra droga. Tracisz serce – spróbuj inaczej.', buttons: ['Jeszcze raz'], onChoose: () => this.page(rm, z, l) });
+          this.host.dialog({ ...zadanieOf(rm.m).dialogueMeta, title: tx('💥 Auć!', '💥 Ouch!'), text: tx('To nie była dobra droga. Tracisz serce – spróbuj inaczej.', 'That was not the right way. You lose a heart – try another.'), buttons: [tx('Jeszcze raz', 'Again')], onChoose: () => this.page(rm, z, l) });
           return;
         }
         l.step++;
@@ -484,10 +707,10 @@ export class Etapy {
   private async melody(rm: ResolvedMission, z: Etap, title: string) {
     const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
     this.host.scene.scene.pause();
-    await playMelody(MELODIA.nut[lvl] ?? 4, { notes: z.nuty, title: `🎵 ${title}`, intro: z.tekst || z.cel, hums: 'Melodia:' });
+    await playMelody(MELODIA.nut[lvl] ?? 4, { notes: z.nuty, title: `🎵 ${title}`, intro: z.tekst || z.cel, hums: tx('Melodia:', 'Tune:') });
     this.host.scene.scene.resume();
     consumeAttack();
-    this.host.stageDone(rm, 'Pięknie zagrane! ');
+    this.host.stageDone(rm, tx('Pięknie zagrane! ', 'Nicely played! '));
   }
 }
 

@@ -6,7 +6,13 @@ import { RYSUNKI_SMOKOW, EFEKTY_SMOKOW, EFEKTY_ATAKOW, type GatunekId } from '..
 
 export const SKALA_RYSUNKU = 0.5;
 
-const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4, ziej: 6, pluj: 6 };
+/** Skala rysunku tego gatunku (arkusz 40-G002 może być mniejszy niż reszta: `skala` w RYSUNKI_SMOKOW). */
+export const skalaSmoka = (g: GatunekId) => SKALA_RYSUNKU * (RYSUNKI_SMOKOW[g]?.skala ?? 1);
+
+/** Ciało smoka do kolizji: szerokość klatki 220 z zamówień 15–40 (komórki arkuszy są szersze o zapas na ogon i skrzydła). */
+export const rozmiarCiala = (g: GatunekId) => Math.round(220 * skalaSmoka(g) * 0.24);
+
+const KLATKI_NA_S: Record<string, number> = { stoi: 2, idzie: 6, ugryzienie: 7, start: 6, ladowanie: 6, smierc: 5, lot: 4, ziej: 6, pluj: 6, dmuch: 6, szpony: 7 };
 
 const ladowanie = new Map<string, Promise<boolean>>();
 
@@ -71,6 +77,30 @@ export function maAnimacje(scene: Phaser.Scene, g: GatunekId, akcja: string, kie
   return scene.anims.exists(`${kluczSmoka(g)}-${akcja}_${kier}`);
 }
 
+/** Visible takeoff; the actor stays at its ground position for combat/collisions. */
+export function pokazOdlot(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite, g: GatunekId, startMs = 600) {
+  const im = scene.add.sprite(d.x, d.y, d.texture.key, d.frame.name)
+    .setName('smok-odlot').setOrigin(d.originX, d.originY).setScale(d.scaleX, d.scaleY).setFlipX(d.flipX).setDepth(1_200_000);
+  const shadow = scene.add.ellipse(d.x, d.y + d.displayHeight * 0.3, d.displayWidth * 0.6, 10, 0x1e1a24, 0.3)
+    .setDepth(-1e7 + 3);
+  const k = maAnimacje(scene, g, 'start', 'bok') ? 'bok' : 'przod';
+  if (maAnimacje(scene, g, 'start', k)) im.anims.play(`${kluczSmoka(g)}-start_${k}`);
+  scene.time.delayedCall(startMs, () => {
+    if (!im.active) return;
+    const frame = klatkaSmoka(g, 'lot_gora_1');
+    if (frame >= 0 && im.texture.key === kluczSmoka(g)) {
+      im.anims.stop();
+      im.setFlipX(false).setFrame(frame);
+      if (maAnimacje(scene, g, 'lot', 'gora')) im.anims.play(`${kluczSmoka(g)}-lot_gora`);
+    }
+    scene.tweens.add({ targets: im, y: im.y - 180, scaleX: im.scaleX * 0.15, scaleY: im.scaleY * 0.15,
+      alpha: 0, duration: 900, ease: 'Cubic.In', onComplete: () => im.destroy() });
+  });
+  scene.tweens.add({ targets: shadow, scaleX: 0.25, scaleY: 0.25, alpha: 0, delay: startMs,
+    duration: 900, onComplete: () => shadow.destroy() });
+  return im;
+}
+
 export type EfektAtaku = keyof typeof EFEKTY_ATAKOW;
 export const kluczAtaku = (n: EfektAtaku) => `smok-atak-${n}`;
 let efektyAtakow: Promise<boolean> | undefined;
@@ -101,4 +131,28 @@ export function zaladujEfektyAtakow(scene: Phaser.Scene): Promise<boolean> {
     scene.load.start();
   });
   return efektyAtakow;
+}
+
+/**
+ * A dragon waiting on the map for a turn fight (no live SmokAI): the artist's sheet and stance once it has loaded,
+ * else the code-drawn dragon tinted by its species (content/smoki.ts).
+ */
+export function ubierzSmoka(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite & { ownLook?: boolean; sizeOverride?: number; depthOff?: number }, g: GatunekId, kolor: number, skala: number) {
+  if (skala !== 1) d.setScale(d.scaleX * skala);
+  if (kolor !== 0xffffff) d.setTint(kolor);
+  const r = RYSUNKI_SMOKOW[g];
+  if (!r) return;
+  void zaladujSmoka(scene, g).then((ok) => {
+    if (!ok || !d.active) return;
+    d.anims.stop();
+    d.clearTint();
+    d.setTexture(kluczSmoka(g), klatkaSmoka(g, r.tylkoBok ? 'stoi_bok_1' : 'stoi_przod_1'));
+    d.setScale(skalaSmoka(g));
+    d.setOrigin(r.srodek[0] / r.komorka[0], r.srodek[1] / r.komorka[1]);
+    d.ownLook = true;
+    d.sizeOverride = rozmiarCiala(g);
+    d.depthOff = r.stopy ? (r.stopy - r.srodek[1]) * skalaSmoka(g) : 0;
+    const k = r.tylkoBok ? 'bok' : 'przod';
+    if (maAnimacje(scene, g, 'stoi', k)) d.anims.play(`${kluczSmoka(g)}-stoi_${k}`, true);
+  });
 }

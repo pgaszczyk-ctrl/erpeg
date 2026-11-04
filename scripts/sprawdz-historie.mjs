@@ -24,6 +24,8 @@ for (const file of process.argv.slice(2)) {
       const p = spot(e.miejsce);
       if (!p) { bad++; console.log(`✗ ${m.id} etap ${i + 1}: „${e.miejsce}”`); }
       else if (door) console.log(`  ${m.id} etap ${i + 1} ${e.typ}: ${Math.round(Math.hypot(p.x - door.x, p.y - door.y) / PX_PER_M)} m od drzwi`);
+      // 'badanie': every clue must be on free ground too.
+      for (const c of e.tropy ?? []) if (!spot(c.miejsce)) { bad++; console.log(`✗ ${m.id} etap ${i + 1} trop ${c.id}: „${c.miejsce}”`); }
     });
   }
 }

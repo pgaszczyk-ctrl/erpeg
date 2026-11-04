@@ -1,0 +1,74 @@
+name: Test2 building motion
+on:
+  pull_request:
+    paths:
+      - 'src/architecture/**'
+      - 'src/test2/**'
+      - 'test2.html'
+      - 'scripts/architecture/lublin.mjs'
+      - 'scripts/architecture/build-locator.mjs'
+      - 'scripts/architecture/occlusion.mjs'
+      - 'scripts/architecture/motion.mjs'
+      - '.github/workflows/architecture-motion.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Find the currently published test build
+        id: baseline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const {data} = await github.rest.actions.listWorkflowRuns({owner, repo, workflow_id:'deploy.yml', status:'success', event:'push', per_page:1});
+            const run = data.workflow_runs[0];
+            if (!run) throw new Error('No published test build');
+            core.setOutput('run', run.id);
+            core.setOutput('sha', run.head_sha);
+      - uses: actions/download-artifact@v4
+        with:
+          name: test
+          path: .cache/motion-before
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.baseline.outputs.run }}
+      - name: Reuse the published map data for the movement-only regression
+        run: |
+          mkdir -p public/map public/architecture/lublin
+          cp -a .cache/motion-before/map/. public/map/
+          cp -a .cache/motion-before/architecture/lublin/. public/architecture/lublin/
+      - run: node --experimental-strip-types --no-warnings scripts/architecture/build-locator.mjs
+      - run: npx tsc --noEmit
+      - run: npx vite build
+        env:
+          VITE_TEST: '1'
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/architecture/motion.mjs
+        env:
+          MOTION_BASELINE_DIST: .cache/motion-before
+          MOTION_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
+      - run: node scripts/architecture/occlusion.mjs
+        env:
+          MOTION_BASELINE_DIST: .cache/motion-before
+          MOTION_BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
+      - run: node scripts/architecture/lublin.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test2-building-motion
+          path: |
+            work/architecture-motion/
+            work/architecture-occlusion/
+            work/lublin-reference/
+          retention-days: 7

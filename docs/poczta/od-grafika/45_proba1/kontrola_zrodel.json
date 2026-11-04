@@ -1,0 +1,46 @@
+{
+  "rycerski": {
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "7a0907a379b8ff15dff2a7f58116f3ff772dd9c2feee0b77a86a240703966c0e",
+    "export_size": [
+      64,
+      64
+    ]
+  },
+  "korona": {
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "27d126c5366bf1bf0f5d81cca60dc91949bb627c8b7090b2ce0455340d5f51a6",
+    "export_size": [
+      64,
+      64
+    ]
+  },
+  "kijek": {
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "6d85361860f670067399f0f667c42b361d611897b531c0a1fe18ff0a53646ab8",
+    "export_size": [
+      64,
+      64
+    ]
+  },
+  "zelazny_helm": {
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "a665c8f21cd8f626e4f32276d4f6b7021c8669ac743435abb90759fcc018525d",
+    "export_size": [
+      64,
+      64
+    ]
+  }
+}
