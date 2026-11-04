@@ -1,5 +1,13 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-04 — audyt i zabezpieczenia, bez wydania produkcyjnego
+
+- Właściciel zlecił audyt starego erpeg i samodzielne zabezpieczenie możliwego zakresu. Usunięto XSS w callbacku logowania, czyszczone są adresy z tokenami/linkami potwierdzenia; logout unieważnia bieżącą sesję konta, gdy serwer jest dostępny. Hasło admina tylko w pamięci karty, stary sessionStorage usuwany.
+- Zaktualizowano lockfile do Vite 8.3.5 i source-map-js 1.2.2; npm audit nie zgłasza podatności. Dodano ignore plików środowiskowych i kluczy.
+- Kontrole: npm run build i osobny Vite build+preview, źródłowe oraz rzeczywiste zbudowane strony PC/390×844, odzyskiwanie hasła i panel admina. Wszystko przeszło. Przed integracją uwzględniono aktualny TEST ab5a1d5. Gitleaks: 833 commity, pięć wskazań potwierdzonych jako publiczne publishable keys, bez potwierdzonego sekretu.
+- Migracja bazy NIE WDROŻONA: automatyczny przegląd odrzucił szerszą wersję. Zawężono ją do terminu sesji 7 dni, triggera odnowienia i autoryzowanych odpowiedzi portowych; bez masowego search_path. Lokalny PostgreSQL/WASM+pgcrypto z rolą anon przechodzi regresję i idempotencję. docs/sql/security-hardening*.sql i scripts/tests/security-database.cjs. Patch klienta portów osobno w docs/poprawki; nie zmieniono działającego klienta przed wdrożeniem RPC.
+- PRODUKCJA, WERSJA i produkcja/ bez zmian: potrzebna jawna zgoda na release według AGENTS.md. Gotowy draft poprawki auth/admina przechodzi próbę zastosowania do przypiętej produkcji. Opis ustawień właściciela i nadal otwartych ryzyk (ekonomia, Arena, limity API, PKCE, izolacja TEST) w docs/BEZPIECZENSTWO_2026-11-04.md. Nie traktować tej partii jako kompletnego zabezpieczenia gry.
+
 ## 2026-11-04 — cieńsze obrysy budynków i zaznaczenie interakcji
 
 - Właściciel wskazał zbyt ciężkie obrysy budynków i za duże ramki postaci/wejść na zrzucie gry.

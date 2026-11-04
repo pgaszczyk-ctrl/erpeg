@@ -18,3 +18,8 @@ work/smok-*
 work/teleskop-*
 work/
 __pycache__/
+.env
+.env.*
+!.env.example
+*.pem
+*.key

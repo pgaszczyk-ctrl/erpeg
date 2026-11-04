@@ -1,0 +1,86 @@
+diff --git a/src/admin/admin.ts b/src/admin/admin.ts
+index fc7a337..89b45f9 100644
+--- a/src/admin/admin.ts
++++ b/src/admin/admin.ts
+@@ -40,7 +40,8 @@ const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Z
+ 
+ let key = '';
+ try {
+-  key = sessionStorage.getItem('erpeg-admin') ?? '';
++  // Do not leave the administrator's master password in script-readable storage.
++  sessionStorage.removeItem('erpeg-admin');
+ } catch {
+   // private mode
+ }
+@@ -124,11 +125,6 @@ function loginScreen(error = '') {
+     msg.textContent = 'Sprawdzam…';
+     try {
+       await reload();
+-      try {
+-        sessionStorage.setItem('erpeg-admin', key);
+-      } catch {
+-        // private mode
+-      }
+       render();
+     } catch (err) {
+       msg.textContent = (err as Error).message;
+@@ -1208,11 +1204,6 @@ function settings(main: HTMLElement) {
+       try {
+         await call('admin_set_key', { p_new: a.value });
+         key = a.value;
+-        try {
+-          sessionStorage.setItem('erpeg-admin', key);
+-        } catch {
+-          // private mode
+-        }
+         msg.className = 'msg ok';
+         msg.textContent = 'Hasło zmienione.';
+       } catch (e) {
+diff --git a/src/google.ts b/src/google.ts
+index 7beee11..6bd53fd 100644
+--- a/src/google.ts
++++ b/src/google.ts
+@@ -64,6 +64,8 @@ export function catchGoogleReturn(): boolean {
+   const h = new URLSearchParams(location.hash.slice(1));
+   const token = h.get('access_token');
+   const error = h.get('error_description') ?? h.get('error');
++  // Tokens and verification errors must not remain in browser history.
++  history.replaceState(null, '', `${location.origin}${sciezkaGry()}`);
+   if (token) {
+     store({ access_token: token, refresh_token: h.get('refresh_token') ?? '', expires_at: Math.floor(Date.now() / 1000) + Number(h.get('expires_in') ?? 3600), email: emailOf(token) });
+     // The "forgot password" link: set a new one here.
+@@ -78,7 +80,10 @@ export function catchGoogleReturn(): boolean {
+       // nothing to report back
+     }
+   }
+-  document.body.innerHTML = `<div style="font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center">${token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`}</div>`;
++  const message = document.createElement('div');
++  message.style.cssText = 'font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center';
++  message.textContent = token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`;
++  document.body.replaceChildren(message);
+   setTimeout(() => window.close(), 600);
+   return true;
+ }
+@@ -87,6 +92,7 @@ const PAGE = 'font:18px/1.5 Georgia,serif;color:#f3e6c4;background:#1b140e;min-h
+ const gameUrl = () => `${location.origin}${sciezkaGry()}`;
+ 
+ async function verifyEmailLink(tokenHash: string, type: string) {
++  history.replaceState(null, '', gameUrl());
+   document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1><p>${tx('Sprawdzam link…', 'Checking the link…')}</p></div>`;
+   try {
+     const r = await fetch(`${AUTH}/verify`, {
+@@ -114,7 +120,14 @@ export function googleUser(): GoogleSession | null {
+ }
+ 
+ export function googleSignOut() {
++  const session = read();
+   store(null);
++  // Capture the token before clearing local state. Revoke the account session
++  // too; removing browser storage alone leaves a stolen refresh token usable.
++  if (session) void fetch(`${AUTH}/logout?scope=local`, {
++    method: 'POST',
++    headers: { apikey: RPC.headers.apikey, Authorization: `Bearer ${session.access_token}` },
++  }).catch(() => { /* Local logout must still work without a connection. */ });
+ }
+ 
+ /** Is Google sign-in switched on in the server settings? */
