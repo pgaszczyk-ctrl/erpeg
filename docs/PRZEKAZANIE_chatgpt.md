@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-04 — zatwierdzone wdrożenie zabezpieczeń 1.044
+
+- Po pytaniu o usuwanie właściciel wyraził zgodę na hotfix produkcyjny i migrację. Niczego z danych graczy nie usuwano.
+- Supabase: wdrożono approved_security_sessions_and_port_identity z docs/sql/security-hardening.sql. Regresja docs/sql/security-hardening-test.sql wykonana w bazie, wiersze syntetyczne wycofane; PASS (także takie same imiona, role anon, limity, zły/wygasły token). Liczby rzeczywistych wierszy przed/po: players 99, port_requests 1. Doradca sprawdzony; nadal zgłasza wcześniej opisane ryzyka Auth/search_path i celowe RPC SECURITY DEFINER.
+- Zaktualizowano src/porty.ts na zweryfikowany klient; produkcja/1.044-bezpieczenstwo.patch obejmuje tylko auth/admina/porty/lockfile/version. PRODUKCJA i poprzednie patche pozostawione. Nowsze zmiany TEST pobrano przed pracą; nie są wydawane tym hotfixem. Kompilacja aktualnej gry oraz oddzielnego worktree produkcji przeszła; testy PC/telefon i wynik publikacji zapisane poniżej po zakończeniu kontroli.
+
 ## 2026-11-04 — audyt i zabezpieczenia, bez wydania produkcyjnego
 
 - TEST wdrożony z merge 77261cf (PR #60), run 41837843832 zakończony success, wraz z weryfikacją zachowania produkcyjnego JS. Publiczne version.json i sześć modułów JS potwierdzają nowy callback i brak utrwalania hasła admina. Dalsze commity tej partii aktualizują wyłącznie dokumentację, testy i niewdrożone drafty. Jawna zgoda na produkcję/migrację nadal oczekiwana.

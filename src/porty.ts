@@ -6,6 +6,7 @@ import { rpc } from './api';
 import { TEST } from './version';
 import { PORTY_Z_MAPY } from './map/world';
 import { worldMapId } from './map/worldRules';
+import { session } from './quests';
 
 // Stage 1 is on the test server only: ferry landings of the world map get captains there.
 PORTY_Z_MAPY.on = !(window as unknown as { __demoKod?: string }).__demoKod && !new URLSearchParams(location.search).has('d'); // not in the QR demo
@@ -263,15 +264,21 @@ export function portPrzy(at: { lat: number; lon: number }): Port | null {
 
 export interface Prosba { id: number; at: string; port: string | null; lat: number | null; lon: number | null; text: string; status: 'nowe' | 'dodana' | 'odrzucona'; odpowiedz: string | null }
 let prosby: Promise<Prosba[]> | null = null;
+let prosbyToken = '';
 /** This character's destination requests and their answers (once per login; `odswiez` after a new one). */
 export function mojeProsby(player: string, odswiez = false): Promise<Prosba[]> {
-  if (!prosby || odswiez) prosby = rpc<Prosba[] | null>('port_answers', { p_player: player }).then((r) => (Array.isArray(r) ? r : [])).catch(() => []);
+  if (!session.token || player !== session.name) return Promise.resolve([]);
+  if (!prosby || odswiez || prosbyToken !== session.token) {
+    prosbyToken = session.token;
+    prosby = rpc<Prosba[] | null>('port_answers_secure', { p_token: session.token }).then((r) => (Array.isArray(r) ? r : [])).catch(() => []);
+  }
   return prosby;
 }
 
 /** Asks for a destination the port has no line to; false when the daily limit is reached. */
 export function poprosOLinie(player: string, port: string, at: { lat: number; lon: number }, text: string) {
-  return rpc<boolean>('port_request', { p_player: player, p_port: port, p_lat: at.lat, p_lon: at.lon, p_text: text }).catch(() => false);
+  if (!session.token || player !== session.name) return Promise.resolve(false);
+  return rpc<boolean>('port_request_secure', { p_token: session.token, p_port: port, p_lat: at.lat, p_lon: at.lon, p_text: text }).catch(() => false);
 }
 
 /** For tests. */
