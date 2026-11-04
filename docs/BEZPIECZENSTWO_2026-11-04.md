@@ -17,7 +17,7 @@ Poprawki scalono do TEST w PR #60 (merge 77261cf). Produkcja pozostaje przy doty
 `docs/sql/security-hardening.sql` oraz `docs/sql/security-hardening-test.sql`:
 
 1. Nowa kolumna określa ważność tokenu postaci: siedem dni od utworzenia/wymiany tokenu. Obecne sesje dostają siedem dni od migracji; nie ma masowego natychmiastowego wylogowania. Logowanie/odrodzenie wystawiające nowy token odnawia termin. Zamknięta sesja nie jest akceptowana.
-2. Nowa funkcja `port_answers_secure(p_token)` odczytuje odpowiedzi wyłącznie postaci należącej do tokenu.
+2. Nowa kolumna `port_requests.player_id` oraz funkcje `port_request_secure(p_token,...)` i `port_answers_secure(p_token)` zapisują i odczytują zgłoszenia według identyfikatora postaci, nie imienia. Imiona nie są unikalne. Dawnych wierszy bez zweryfikowanego autora nie przypisuje się automatycznie; pozostają w panelu administratora, ale nie w prywatnej historii gracza. Niczego się nie usuwa.
 3. Dawna funkcja `port_answers(p_player)` zwraca pustą listę zamiast ujawniać zgłoszenia po imieniu. Nie usuwa zgłoszeń. Stary klient nie pokaże historii odpowiedzi do czasu aktualizacji klienta.
 4. Wewnętrzny trigger i funkcja odczytu tokenu nie są wywoływalne przez anon/authenticated. RLS tabeli players pozostaje włączone bez polityk.
 
@@ -25,7 +25,7 @@ Dostosowanie klienta jest przygotowane osobno w `docs/poprawki/2026-11-04-porty-
 
 Pierwsza próba wdrożenia szerszej migracji została odrzucona przez automatyczny przegląd: działająca baza, zmiany funkcji sesji i uprawnień oraz zbyt szeroka zmiana search_path. Ta operacja niczego nie wdrożyła. Usunięto zbiorczą zmianę search_path. Zawężony plik oczekuje zgody; nie próbowano obejść odmowy.
 
-Migracja przeszła lokalny PostgreSQL/WASM (PGlite), z prawdziwym rozszerzeniem pgcrypto i rolą anon, na pustym schemacie odwzorowującym istotne kolumny. Testuje odczyt własny/cudzy, błędny/wygasły/zamknięty token, odnowienie tokenu i idempotencję migracji. Wszystkie sztuczne wiersze są wycofywane. Nie jest to test wydajności ani kopia produkcyjnej bazy.
+Migracja przeszła lokalny PostgreSQL/WASM (PGlite), z prawdziwym rozszerzeniem pgcrypto i rolą anon, na pustym schemacie odwzorowującym istotne kolumny. Testuje odczyt własny/cudzy również przy identycznych imionach, zweryfikowany zapis, limit dzienny, błędne współrzędne, błędny/wygasły/zamknięty token, odnowienie tokenu i idempotencję migracji. Wszystkie sztuczne wiersze są wycofywane. Nie jest to test wydajności ani kopia produkcyjnej bazy.
 
 ## Weryfikacja
 
