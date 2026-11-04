@@ -1,4 +1,20 @@
 node_modules
 dist
 public/map
+public/architecture/lublin
+public/architecture/lublin-reference.svg
 .cache
+
+# Screenshots written by scripts/tests/browser-demo.mjs
+work/demo-*.png
+work/porty-*.png
+work/szyldy-*.png
+scripts/tests/_phone-demo.mjs
+data/ne/
+work/walka-*
+work/arena-*
+work/stadion-*
+work/smok-*
+work/teleskop-*
+work/
+__pycache__/

@@ -1,0 +1,362 @@
+{
+  "swietlisty": {
+    "name": "Świetlisty miecz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "979122cfd1bbfd314a308b34a9f40fc483100d77c47580299e338de5a914d517",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 37,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "gromowladny": {
+    "name": "Gromowładny miecz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "0f540eef03866befa257dee4669bce747160804190b9e7a05540589c3d1833da",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 41,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      6,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kolczuga": {
+    "name": "Kolczuga",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "30384fbaf75f02e9f9f198746227a2d657fef96543e855c15d754971041702cf",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 38,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      56
+    ],
+    "enlargement_x16": "OK"
+  },
+  "ksiega": {
+    "name": "Księga zaklęć",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "3f2c01745594789bf9b6bbba07d84db98d05db1babe41e2f7475de45076bb605",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 42,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      6,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "czapka_maga": {
+    "name": "Magiczna czapka",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "5bd224b1af8b026f19a51f298ce04454b546331232ee1996ba97a0f93673fe29",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 41,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      58
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kapelusz": {
+    "name": "Kapelusz Robin Hooda",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "e602eb39d09d8dbc523d93ca2fb3abed241b4ae546ea6590e17652745bd41369",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 39,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "zelazny": {
+    "name": "Miecz treningowy",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "ac493431a871e8e2502309953b9b5ac4753bcdc6faf27806599b4e88e608f4e4",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 35,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      6,
+      59,
+      58
+    ],
+    "enlargement_x16": "OK"
+  },
+  "stalowy": {
+    "name": "Stalowy miecz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "53e7df308b1c170ca4162d2fd576c458ff4a4bfb2ef77c8197ed970ab0026160",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 37,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "luk": {
+    "name": "Łuk",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "b621e64dd014b152c548bb0f609ba5f7d9d060ea810c78c1b741ab819ac5a585",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 39,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      14,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "luk_refleksyjny": {
+    "name": "Łuk refleksyjny",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "5a5df04b4d94103a088deefd128788e9b5e72288fc70afabbacbf04b8feafd25",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 41,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      58,
+      58
+    ],
+    "enlargement_x16": "OK"
+  },
+  "dlugi_luk": {
+    "name": "Długi łuk",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "481d12a6e957a9770857a2f438d1c0051dca6ab803e23c0c45307a4ff66177aa",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 38,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "rozdzka": {
+    "name": "Różdżka",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "5fd5be7b9d548142011a23d33a9ce6a3c35520869e3a17f9bfb7bf4bea6e5c2a",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 41,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      6,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kula": {
+    "name": "Szklana kula",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "bd007c8b0bfdfbd5b51374802565ff4d904f8ed6b47f1adf9ae879df42f2eb57",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 42,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      11,
+      5,
+      52,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "zlom": {
+    "name": "Złom",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "11028d9d6041bd460a263c30b7032b086c0761f75e1e3150ccf557bea45d4377",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 42,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "zlom_miedziany": {
+    "name": "Złom miedziany",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "1455da01996e97d7fdb24b16f8687bcad54a085d65d74c770e8affbf0bf5ab17",
+    "export_size": [
+      64,
+      64
+    ],
+    "export_colors": 40,
+    "export_alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      58
+    ],
+    "enlargement_x16": "OK"
+  }
+}

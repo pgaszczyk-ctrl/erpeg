@@ -1,0 +1,28 @@
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import {CannonController} from './cannon-controller.mjs';
+const scene=new THREE.Scene();scene.background=new THREE.Color('#e4e8dc');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setSize(innerWidth,innerHeight);document.querySelector('#view').append(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x758265,2.5));const sun=new THREE.DirectionalLight(0xffedc5,2.3);sun.position.set(-6,12,8);scene.add(sun);
+const cam=new THREE.OrthographicCamera(-6,6,5,-5,.1,100);cam.position.set(8.1,22,9.1);
+const controls=new OrbitControls(cam,renderer.domElement);controls.target.set(1.1,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minZoom=.6;controls.maxZoom=4;controls.update();
+const grid=new THREE.GridHelper(24,24,0xabb5a0,0xcbd1c2);grid.position.y=-.015;scene.add(grid);
+const loader=new GLTFLoader();
+const bytes=key=>Uint8Array.from(atob(window.ASSETS[key]),x=>x.charCodeAt(0)).buffer;
+const load=key=>new Promise((res,rej)=>loader.parse(bytes(key),'',res,rej));
+const gltf=await load('cannon');scene.add(gltf.scene);const cannon=new CannonController(gltf,{onLaunch:()=>{document.querySelector('#status').textContent='Huk! • moment startu postaci: 0,12 s';window.previewStats.launches++;}});
+const guard=await load('guard');guard.scene.position.set(-2.3,0,1.3);scene.add(guard.scene);
+let guardMixer;if(guard.animations[0]){guardMixer=new THREE.AnimationMixer(guard.scene);const idle=guard.animations.find(x=>/idle/i.test(x.name))??guard.animations[0];guardMixer.clipAction(idle).play();}
+const marker=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.03,16),new THREE.MeshBasicMaterial({color:0x8f322a}));scene.add(marker);marker.position.set(0,.025,5);
+window.previewStats={ready:true,launches:0,triangles:0,meshes:0,clips:gltf.animations.map(c=>c.name)};gltf.scene.traverse(o=>{if(o.isMesh){window.previewStats.meshes++;window.previewStats.triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;}});
+window.cannon=cannon;window.scene=scene;
+document.querySelector('#angle').oninput=e=>{const deg=+e.target.value,a=deg*Math.PI/180;cannon.aimTo(Math.sin(a),Math.cos(a));marker.position.set(Math.sin(a)*5,.025,Math.cos(a)*5);document.querySelector('#heading').textContent=deg+'°';document.querySelector('#status').textContent='Wieża obraca się najkrótszą drogą';};
+document.querySelector('#fire').onclick=()=>{if(!cannon.fire())document.querySelector('#status').textContent='Poczekaj na zakończenie obrotu lub wystrzału';};
+document.querySelector('#catch').onclick=()=>cannon.catch();
+document.querySelector('#home').onclick=()=>{cannon.home();document.querySelector('#angle').value=0;document.querySelector('#heading').textContent='0°';};
+const views={game:[8.1,22,9.1],front:[1.1,3,18],side:[18,3,0],top:[1.1,20,.01]};
+document.querySelectorAll('[data-camera]').forEach(b=>b.onclick=()=>{cam.position.fromArray(views[b.dataset.camera]);controls.target.set(1.1,2,0);controls.update();});
+let last=performance.now();function resize(){const container=document.querySelector('#view'),w=container.clientWidth,h=container.clientHeight,aspect=w/h,half=Math.max(5.2,4.5/aspect);cam.left=-half*aspect;cam.right=half*aspect;cam.top=half;cam.bottom=-half;cam.updateProjectionMatrix();renderer.setSize(w,h);}addEventListener('resize',resize);resize();
+function tick(t){const dt=Math.min((t-last)/1000,.1);last=t;cannon.update(dt);guardMixer?.update(dt);controls.update();renderer.render(scene,cam);window.previewStats.drawCalls=renderer.info.render.calls;requestAnimationFrame(tick);}requestAnimationFrame(tick);
+document.querySelector('#status').textContent='Gotowe • strażnik to oryginalny GLB z gry (wysokość 1,25)';

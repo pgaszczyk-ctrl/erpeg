@@ -1,0 +1,54 @@
+name: Recruit prologue checks
+on:
+  pull_request:
+    paths:
+      - 'src/prolog/**'
+      - 'src/scenes/PrologRekruta.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'src/scenes/Lochy.ts'
+      - 'src/loch/**'
+      - 'src/ludzik3d.ts'
+      - 'src/quests.ts'
+      - 'src/ui/character.ts'
+      - 'src/ui/menu.ts'
+      - 'scripts/tests/*prolog*'
+      - '.github/workflows/prolog-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prologue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [pl, en]
+        phone: ['0', '1']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run test:prolog
+      - run: node scripts/tests/lochy-plan.mjs
+      - run: npx vite build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - run: node scripts/tests/browser-prolog.mjs
+        env:
+          JEZYK: '${{ matrix.language }}'
+          TELEFON: '${{ matrix.phone }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prologue-${{ matrix.language }}-${{ matrix.phone }}
+          path: work/prolog/
+          if-no-files-found: ignore
+          retention-days: 7

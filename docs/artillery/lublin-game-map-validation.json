@@ -1,0 +1,92 @@
+[
+  {
+    "id": "lublin:rway/40052049:4:0:-1",
+    "name": "Plac Zamkowy",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.250743047553804,
+    "lon": 22.57054026670682
+  },
+  {
+    "id": "lublin:rway/40050974:1:0:1",
+    "name": "3 Maja",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.24795410997325,
+    "lon": 22.558384408123683
+  },
+  {
+    "id": "lublin:rway/40050349:3:0:1",
+    "name": "Morwowa",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.24722151551916,
+    "lon": 22.514222191141013
+  },
+  {
+    "id": "lublin:rway/40051830:1:0:1",
+    "name": "Bieszczadzka",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.22806488314321,
+    "lon": 22.49264669427976
+  },
+  {
+    "id": "lublin:rway/176221805:10:0:-1",
+    "name": "Józefa Śliwińskiego",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.273057420611224,
+    "lon": 22.55420262700879
+  },
+  {
+    "id": "lublin:rway/40049570:4:0:1",
+    "name": "Władysława Grabskiego",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.229627468871435,
+    "lon": 22.596548552843927
+  },
+  {
+    "id": "lublin:rway/85851330:1:0:-1",
+    "name": "Aleksandra Świętochowskiego",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.207079431927234,
+    "lon": 22.574688691853385
+  },
+  {
+    "id": "lublin:airport:way/71386702",
+    "name": "Port Lotniczy Lublin",
+    "map": "w:51.2400,22.5500",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.23549735754554,
+    "lon": 22.71348269569687
+  },
+  {
+    "id": "lublin:airport:way/62382411",
+    "name": "Lotnisko Radawiec",
+    "map": "lublin",
+    "free": true,
+    "road": null,
+    "reachable": true,
+    "lat": 51.223308534179026,
+    "lon": 22.402667221921575
+  }
+]

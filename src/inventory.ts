@@ -1,6 +1,7 @@
+import { obrazeniaBroni } from './content/bron';
 import { WALKA, zTabeli } from './content/walka';
 import {
-  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM, OBRONA_ZA_PUNKT, OBRONA_MAKS,
+  PRZEDMIOTY, PLECAK, UMIEJETNOSCI, kosztPoziomu, MAKS_POZIOM,
   PODKOWA, TALIZMANY, SZYBKOSC_TALIZMANU, ZYCIE_PRZEDMIOTU, CELNOSC_PRZEDMIOTU, type Miejsce, type Przedmiot, type Umiejetnosc,
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
@@ -139,6 +140,15 @@ export function skillLevel(skill: Umiejetnosc) {
   return l;
 }
 
+/** A weapon's own skill requirement, shared by click, drag, loot and combat. */
+export function weaponRequirement(id: string | null | undefined): string | null {
+  const p = item(id);
+  if (!p || p.miejsce !== 'bron') return null;
+  const skill: Umiejetnosc = p.rodzaj === 'magia' ? 'magia' : p.rodzaj === 'luk' ? 'luk' : 'miecz';
+  const required = p.wymaganySkill ?? 1;
+  return skillLevel(skill) < required ? `Wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${required}` : null;
+}
+
 /** Progress inside the current level, for the character sheet. */
 export function skillProgress(skill: Umiejetnosc) {
   const level = skillLevel(skill);
@@ -175,6 +185,7 @@ export function hitChance(skill: Umiejetnosc, strong: boolean, bonus = 0) {
 
 /** How many times harder a strong attack of that kind hits. */
 export function strongFactor(skill: Umiejetnosc) {
+  if (item(gear.equip.bron)?.obrazenia) return 1.5;
   if (skill === 'miecz') return zTabeli(WALKA.miecz.mocnyMnoznik, skillLevel('miecz'));
   if (skill === 'luk') return WALKA.luk.mocnyMnoznik;
   return WALKA.mnoznikCzaru;
@@ -209,7 +220,8 @@ export function luckyCoins(n: number) {
 
 /** Walking bonus from worn speed talismans (+SZYBKOSC_TALIZMANU each). */
 export function gearSpeedBonus() {
-  return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU;
+  return TALIZMANY.filter((m) => item(gear.equip[m])?.efekt === 'szybkosc').length * SZYBKOSC_TALIZMANU
+    + Object.values(gear.equip).reduce((n, id) => n + (item(id)?.bieg ?? 0), 0);
 }
 
 /** Extra hit chance (percentage points) from worn items with the 'celnosc' effect. */
@@ -224,20 +236,34 @@ export function gearLifeBonus() {
 
 /** Special power of the weapon in hand (mythic items). */
 export function weaponEffect() {
-  return item(gear.equip.bron)?.efekt;
+  return weaponRequirement(gear.equip.bron) ? undefined : item(gear.equip.bron)?.efekt;
 }
 
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */
-export function meleeDamage() {
+let poziomBroni = () => 1;
+export function ustawPoziomBroni(provider: () => number) { poziomBroni = provider; }
+
+/** Without a random source return the stable mean for HUD, enemy scaling and previews. */
+export function meleeDamage(los?: () => number) {
+  if (weaponRequirement(gear.equip.bron)) return 0;
   const p = item(gear.equip.bron);
   // A bow or wand used as a club, or a broken sword, is no better than a stick.
+  if (p && !p.rodzaj && !isBroken(p.id)) {
+    const damage = obrazeniaBroni(p, poziomBroni(), skillLevel('miecz') - 1, los);
+    if (damage !== null) return damage;
+  }
   const moc = p && !p.rodzaj && !isBroken(p.id) ? p.moc : 1;
   return skillLevel('miecz') + WALKA.zaMoc * moc;
 }
 
 /** A shot of the bow / a spell of the wand in hand (a magic item in the other hand adds its power to spells). */
-export function shotDamage(weapon: Przedmiot) {
+export function shotDamage(weapon: Przedmiot, los?: () => number) {
+  if (weaponRequirement(weapon.id)) return 0;
   const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
+  if (!isBroken(weapon.id)) {
+    const damage = obrazeniaBroni(weapon, poziomBroni(), skillLevel(skill) - 1, los);
+    if (damage !== null) return damage;
+  }
   const off = item(gear.equip.dystans);
   const extra = skill === 'magia' && off?.rodzaj === 'magia' ? off.moc : 0;
   return skillLevel(skill) + WALKA.zaMoc * ((isBroken(weapon.id) ? 1 : weapon.moc) + extra);
@@ -341,7 +367,7 @@ export function ownedAmmo(): Amunicja[] {
 /** The equipped ranged weapon, if it can be used (magic needs the skill). */
 export function rangedWeapon(): Przedmiot | null {
   const r = item(gear.equip.bron);
-  if (!r?.rodzaj || r.miejsce !== 'bron') return null;
+  if (!r?.rodzaj || r.miejsce !== 'bron' || weaponRequirement(r.id)) return null;
   if (r.rodzaj === 'magia' && !gear.magic) return null;
   return r;
 }
@@ -355,10 +381,8 @@ export function defense() {
   return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield + charms);
 }
 
-/** Chance that a hit does no harm, from armour. */
-export function blockChance() {
-  return Math.min(OBRONA_MAKS, defense() * OBRONA_ZA_PUNKT);
-}
+/** Legacy arena snapshots keep their field; armour now mitigates damage instead. */
+export function blockChance() { return 0; }
 
 export function owns(id: string) {
   return Object.values(gear.equip).includes(id) || gear.bag.some((s) => 'item' in s && s.item === id);
@@ -368,13 +392,18 @@ export function owns(id: string) {
 export function addItem(id: string): 'equipped' | 'bag' | false {
   const p = item(id);
   if (!p) return false;
+  if (p.pojazd || p.leczenie) {
+    if (gear.bag.length >= PLECAK.miejsc) return false;
+    gear.bag.push({ item: id });
+    return 'bag';
+  }
   // Talismans always go into the backpack first: they work once dragged onto a talisman place.
   if (TALIZMANY.includes(p.miejsce) && gear.bag.length < PLECAK.miejsc) {
     gear.bag.push({ item: id });
     return 'bag';
   }
   const m = slotFor(p.miejsce);
-  if (!gear.equip[m] || gear.equip[m] === 'kijek') {
+  if (!weaponRequirement(id) && (!gear.equip[m] || gear.equip[m] === 'kijek')) {
     // A stick is not worth keeping when a real sword comes along (with a bow or wand it goes to the backpack).
     if (gear.equip[m] === 'kijek' && (p.rodzaj || p.narzedzie) && gear.bag.length < PLECAK.miejsc) gear.bag.push({ item: 'kijek' });
     gear.equip[m] = id;
@@ -396,6 +425,7 @@ export function equipFromBag(index: number) {
   const s = gear.bag[index];
   if (!s || !('item' in s)) return;
   const p = item(s.item)!;
+  if (p.pojazd || p.leczenie || weaponRequirement(p.id)) return;
   const m = slotFor(p.miejsce);
   const worn = gear.equip[m];
   gear.equip[m] = s.item;
@@ -427,6 +457,17 @@ export function takeItem(id: string): boolean {
   if (!m) return false;
   gear.equip[m] = m === 'bron' ? 'kijek' : null;
   return true;
+}
+
+/** Prepared food stays an ordinary saved item, also usable by item-based quests. */
+export function foodCount(id: string) {
+  return gear.bag.filter(s => 'item' in s && s.item === id).length
+    + Object.values(gear.equip).filter(v => v === id).length;
+}
+
+export function nextFood() {
+  return [...gear.bag.map(s => 'item' in s ? s.item : null), ...Object.values(gear.equip)]
+    .map(id => item(id)).find(p => (p?.leczenie ?? 0) > 0);
 }
 
 // ---------------------------------------------------------------- fruit
@@ -560,7 +601,7 @@ export function canImbue(id: string | null | undefined) {
 /** Can this item be worn in that place? */
 export function fits(id: string, m: Miejsce) {
   const p = item(id);
-  if (!p) return false;
+  if (!p || p.pojazd || p.leczenie) return false;
   return TALIZMANY.includes(p.miejsce) ? TALIZMANY.includes(m) : p.miejsce === m;
 }
 
@@ -603,6 +644,7 @@ export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): stri
   }
   const b = get(to);
   if (to.zone === 'eq') {
+    if ('item' in a) { const why = weaponRequirement(a.item); if (why) return why; }
     if (!('item' in a) || !fits(a.item, to.m)) return 'To tu nie pasuje.';
     if (from.zone === 'eq') {
       put(to, a);
@@ -615,6 +657,7 @@ export function moveThing(from: Place, to: Place, chest?: (Slot | null)[]): stri
   }
   if (from.zone === 'eq') {
     // Taking something off: onto an empty cell, or swapping with a thing that fits there.
+    if (b && 'item' in b) { const why = weaponRequirement(b.item); if (why) return why; }
     if (b && !('item' in b && fits(b.item, from.m))) return 'Połóż to na wolnym miejscu.';
     put(to, a);
     put(from, b);

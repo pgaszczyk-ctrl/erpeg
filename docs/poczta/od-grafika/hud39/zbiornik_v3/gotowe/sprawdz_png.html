@@ -1,0 +1,19 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUD39 — kontrola gotowych PNG</title><style>
+body{margin:24px;background:#292e33;color:#eadcc4;font:16px system-ui}canvas{background:repeating-conic-gradient(#353c43 0% 25%,#3e454b 0% 50%) 0 0/20px 20px;border:1px solid #8f7441;display:block;margin:20px 0;max-width:100%;height:auto}label{display:inline-flex;gap:10px;margin-right:24px;align-items:center}input{width:150px}button{padding:9px 16px;background:#a47b3d;color:#fff;border:1px solid #e4c68c;border-radius:6px}p{max-width:780px;color:#c0bbb3}
+</style><h1>Gotowe warstwy HUD39</h1><label>EXP <input id="exp" type="range" min="0" max="100" value="65"><output id="ep">65%</output></label>
+<label>Tafla <input id="angle" type="range" min="-60" max="60" value="0"><output id="ap">0°</output></label><button id="toggle">Zwiń menu</button>
+<canvas id="view" width="960" height="840" aria-label="Rzeczywiste PNG w skali telefonu i powiększenie warstw"></canvas>
+<p>Po lewej rzeczywisty rozmiar telefonu (portret 56 px, kółka 36 px). Po prawej powiększenie ×3. Suwak kąta sprawdza grafikę i maskowanie; podłączenie czujników telefonu wykonuje programista w grze. Twarz w tym teście jest neutralnym wypełnieniem, nie gotowym portretem bohatera.</p>
+<script src="renderer.js"></script><script>
+(async()=>{
+ const a=await ExpLoreHudGraphics.loadAssets();const tank=ExpLoreHudGraphics.createTankRenderer(a);
+ const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');let opened=true;
+ const portrait=document.createElement('canvas');portrait.width=96;portrait.height=96;
+ const pc=portrait.getContext('2d');pc.fillStyle='#596751';pc.fillRect(0,0,96,96);pc.fillStyle='#eee1c0';pc.font='bold 25px sans-serif';pc.textAlign='center';pc.fillText('TWARZ',48,55);
+ function one(x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s,s);tank.draw(ctx,{progress:Number(exp.value)/100,angleDegrees:Number(angle.value),portrait});ctx.drawImage(a.poziom_pusty,16,52,24,12);ctx.font='bold 7px sans-serif';ctx.fillStyle='#302a26';ctx.textAlign='center';ctx.fillText('12',28,60.5);
+ if(opened){['menu','plecak','aparat','welocyped'].forEach((n,i)=>{ctx.drawImage(a.lacznik,24,i?112+(i-1)*52:62,8,16);ctx.drawImage(a.przycisk_normalny,10,76+52*i,36,36);ctx.drawImage(a['ikona_'+n],18,84+52*i,20,20);});}ctx.restore();}
+ function render(){ctx.clearRect(0,0,960,840);one(24,35,1);one(260,15,3);ep.value=exp.value+'%';ap.value=angle.value+'°';document.body.dataset.ready='true';}
+ exp.oninput=angle.oninput=render;toggle.onclick=()=>{opened=!opened;toggle.textContent=opened?'Zwiń menu':'Rozwiń menu';render();};render();
+})().catch(e=>{document.body.dataset.error=e.message;document.body.append(String(e));});
+</script></html>

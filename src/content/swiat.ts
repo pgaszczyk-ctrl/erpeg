@@ -72,7 +72,7 @@ export const DEKORACJE = {
   zegar: { plik: 'zegar_uliczny', odM2: 1500 },     // na placach (większych niż odM2)
   donica: { plik: 'donica_kwiaty', klatki: 2 },     // przy drzwiach sklepów, szkół, kościołów, bibliotek, hoteli, urzędów
   skrzynie: { plik: 'skrzynie_beczki' },      // przy sklepach i wozach kupców
-  welocyped: { plik: 'welocyped' },           // przy szkołach i bibliotekach
+  welocyped: { plik: 'welocyped_test25' }, // przy szkołach i bibliotekach
   poczta: { plik: 'automat_pneumatyczny' },   // przy pocztach, skrzynkach pocztowych i paczkomatach
 };
 
@@ -100,7 +100,8 @@ export const MIEJSCA = {
 export const WOZY = {
   ladunki: ['pusty', 'beczki', 'worki'],
   masci: ['brazowy', 'czarny', 'szary'],
-  wysokosc: 50,
+  /** Owner 11 Oct 2026: „zbyt duże” – 50 → 34 until the artist's redraw (order 34). */
+  wysokosc: 34,
   klatkaMs: [1400, 2600] as [number, number],
 };
 
@@ -138,6 +139,41 @@ export const SLUPY_SZYLDOW = {
 };
 
 /**
+ * Snop światła pod szyldem (właściciel, 12 Oct 2026: szyldy słabo widać, a złota poświata wyglądała nienaturalnie):
+ * miękki stożek z lampy w dół na chodnik, jak latarnia – w dzień delikatny (`dzien`), nocą mocniejszy (`noc`).
+ * Co `mrugCoMs` (losowo w tym zakresie, każdy szyld swój rytm) krótko mruga przez `mrugMs` jak przy zwarciu
+ * albo przeciążeniu sieci, żeby spacerowicz zauważył, że coś tu jest. Wymiary w punktach mapy.
+ */
+export const SNOP_SZYLDU = {
+  szer: 24,
+  dlug: 22,
+  dzien: 0.45,
+  noc: 0.85,
+  kolor: [255, 214, 140] as [number, number, number],
+  mrugCoMs: [7000, 18000] as [number, number],
+  mrugMs: 650,
+  /**
+   * Za dnia (grafik 36-G002, właściciel: „w dzień musi mrugać częściej, w nocy super”): co `coMs` (każde miejsce
+   * swój rytm) podwójny błysk – `blysk` przez `blyskMs`, `przygas` przez `przygasMs`, znów `blysk` – potem `baza`.
+   * Alfa warstwy ADD (snop, lampa). Noc bez zmian: `noc` i mruganie co `mrugCoMs`.
+   */
+  dzienRytm: { coMs: [2000, 3000] as [number, number], baza: 0.35, blysk: 0.85, przygas: 0.15, blyskMs: 100, przygasMs: 120 },
+  /** Grafika snopu (snop.png 64×64): gdzie lampa i gdzie plama na ziemi (piksele obrazka). */
+  plik: { lampaY: 8.4, ziemiaY: 55.5, rozmiar: 64 },
+  /**
+   * Bujanie tablicy w przód i w tył (36-G002): kolejność klatek i czasy (ms). Tablica sklepu ma 3 klatki od grafika
+   * (32×32, zaczep 16, 8.5, widoczna ~24 px szerokości), pozostałe wychylają się kodem (`przod`/`tyl`: skala i cień).
+   */
+  bujanie: {
+    kroki: [[1, 400], [0, 220], [1, 400], [2, 220]] as [number, number][],
+    zaczepY: 8.5,
+    szerRysunku: 24,
+    przod: { sx: 1.04, sy: 1.0, kolor: 0xffffff },
+    tyl: { sx: 1.0, sy: 0.88, kolor: 0xcfc6bc },
+  },
+};
+
+/**
  * Złota poświata pod szyldami (żeby było widać, gdzie sklep itp.): delikatniejsza
  * niż czerwona pod wrogami. `promien` w punktach mapy, `mocno` 0–1, `kolor`,
  * `pulsMs` – powolne falowanie (0 = stała).
@@ -150,4 +186,4 @@ export const SKALA_PLIKOW = 3;
 /** Files already in public/swiat/ (add the name when the artist's file arrives). */
 import { MGLA } from './mgla';
 
-export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'automat_pneumatyczny', 'fontanna_smok', 'kociol_publiczny', 'wieza_zegarowa', 'drogowskaz', 'kukla_treningowa', 'kukla_treningowa_druga', 'tarcza_strzelnicza', 'krysztal_magii', 'swinka', ...['sklep', 'szkola', 'kosciol', 'urzad', 'szpital', 'policja', 'biblioteka', 'hotel', 'bank', 'alchemik', 'sklep_sportowy', 'kemping'].map((n) => `szyld_${n}`)];
+export const MAMY: string[] = ['podloze_trawa', 'podloze_bruk', 'dach_dachowka_czerwona_jasna', 'dach_dachowka_brazowa_jasna', 'dach_lupek_jasna', 'podloze_droga', 'podloze_plac', 'podloze_park', 'podloze_las', 'podloze_woda', 'podloze_pole', 'podloze_zarosla', 'sciana_tynk_kremowy_gladka', 'sciana_tynk_kremowy_okno', 'sciana_tynk_kremowy_drzwi', 'sciana_cegla_gladka', 'sciana_cegla_okno', 'sciana_cegla_drzwi', 'latarnia_gazowa', 'komin_para', MGLA.plik, 'drzewo_jablon', 'drzewo_sliwa', 'winorosl', 'sosna', 'grzyb', 'kloda', 'drzewo_lisciaste', 'krzak', 'lawka', 'kosz_mosiezny', 'hydrant_parowy', 'slup_ogloszeniowy', 'studzienka_para', 'zegar_uliczny', 'donica_kwiaty', 'skrzynie_beczki', 'welocyped', 'welocyped_test25', 'automat_pneumatyczny', 'fontanna_smok', 'kociol_publiczny', 'wieza_zegarowa', 'drogowskaz', 'kukla_treningowa', 'kukla_treningowa_druga', 'tarcza_strzelnicza', 'krysztal_magii', 'swinka', ...['sklep', 'szkola', 'kosciol', 'urzad', 'szpital', 'policja', 'biblioteka', 'hotel', 'bank', 'alchemik', 'sklep_sportowy', 'kemping'].map((n) => `szyld_${n}`)];

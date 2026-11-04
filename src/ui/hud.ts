@@ -1,3 +1,23 @@
+import { itemAssetUrl } from './itemIcon';
+import { session } from '../quests';
+import { demo } from '../demo';
+import { obracajMonete, zatrzymajMonete } from './monetaPortretu';
+import { createMachineV5 } from './hudMachineV5';
+import { createReservoirHud } from './hudReservoir';
+import { MAPA_GLADKA, lupaGladka, SAKIEWKA_GLADKA, DIAMENT_GLADKI, zamontujTeleskop, odmontujTeleskop, twarzTeleskopu, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, teleskopRurki, type AkcjaTeleskopu } from './hudTeleskop';
+import { turyNaSerwerze } from '../walka/tryb';
+import { live } from '../walka/live';
+import { zamontujHudLive, odmontujHudLive, hudLiveWidoczny, ustawHudLive } from './hudLive';
+const hudStyle = new URLSearchParams(location.search).get('hud');
+/**
+ * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): on the turn-fight server (the QR demo too) it replaces the
+ * boiler at the bottom (life shows only while hurt); `?hud=kociol` brings the boiler back for comparison.
+ */
+export const teleskop = () => (turyNaSerwerze() || live()) && !hudStyle;
+/** The steampunk boiler HUD everywhere – test, demo and the ordinary game (owner, 11 Oct 2026: „nie chcę starego huda”); `?hud=old` / `?hud=v5` stay only for comparison. */
+const newMachine = hudStyle !== 'old';
+const reservoir = newMachine && hudStyle !== 'v5';
+
 // The HUD over the world (owner's spec "nowy HUD", 5 Oct 2026; mock-up from the 🎨 Grafika chat):
 // - bottom right: one pixel-art "machine" (70×60 picture pixels shown ×4, NEAREST): two glass
 //   tubes (life red, experience amber), a round heal button (potion, else fruit), a brass pipe
@@ -22,8 +42,12 @@ export interface HudView {
   expShare: number;
   potions: number;
   fruit: number;
+  /** Fruit needed for one use of the healing button (including the demo's rule). */
+  fruitPerHeal: number;
   /** Nothing left to heal with (the button is dimmed). */
   noHeal: boolean;
+  /** Prepared food selected after potions and edible harvests. */
+  preparedFood?: { icon: string; n: number };
   town: string;
   weather: string;
   detail: string;
@@ -33,6 +57,8 @@ export interface HudView {
   diamonds: number;
   /** The weapon in hand for the window left of the heal button: picture, worn % or shots left, red when it needs care. */
   bron: { pic: string | null; label: string; warn: boolean; title: string };
+  /** Character level (the telescopic HUD's plate). */
+  poziom?: number;
 }
 
 export interface HudHandlers {
@@ -45,6 +71,11 @@ export interface HudHandlers {
   zoom: () => boolean;
   /** Whether the bigger picture is on (the button's look at start). */
   zoomOn: boolean;
+  vehicle?: (vehicle: 'rower' | 'hulajnoga') => void;
+  /** The telescopic HUD's first button: the game menu (with the Kufer). */
+  menu?: () => void;
+  /** The transport button with nothing to ride. */
+  brakPojazdu?: () => void;
 }
 
 /** Picture pixels: the machine's grid (from the mock-up). */
@@ -62,6 +93,10 @@ const DNO = 53 + E;
 const CX = 11 + L;
 const HY = 36;
 const BY = 70;
+/** Bottom buttons share the original 20 px frame and 8 px brass connector. */
+const BUTTON = 20;
+const STEP = BUTTON + 8;
+const CAMERA_X = CX + 3 - STEP;
 
 const CSS = `
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; font-family: 'Pixelify Sans', monospace; }
@@ -75,6 +110,8 @@ const CSS = `
 #hud .hud-m canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 #hud .hud-count { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none; }
 #hud .hud-wpn img { position: absolute; image-rendering: pixelated; pointer-events: none; }
+#hud .hud-vehicle[hidden] { display: none; }
+#hud .hud-vehicle img { position: absolute; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
 #hud .hud-wcount { position: absolute; box-sizing: border-box; background: #1a110b; color: #f1e3c2; text-align: center; font-weight: 700; pointer-events: none;
   border: 1px solid #b8893b; font: 700 11px/12px 'Pixelify Sans', monospace; height: 14px; min-width: 16px; padding: 0 3px; white-space: nowrap; }
 #hud .hud-wcount.warn { background: #7a1e14; color: #ffe0d8; }
@@ -104,10 +141,47 @@ const CSS = `
 #hud .hud-money img, #hud .hud-money svg { width: 30px; height: 30px; image-rendering: pixelated; flex-shrink: 0; }
 /* On a computer: top edge, centred over the hero (owner, 6 Oct 2026). */
 #hud .hud-money.top { position: absolute; left: 50%; transform: translateX(-50%); }
+/* Steampunk plates (owner, 10 Oct 2026): a riveted brass frame on dark iron, pipes joining the plaque and the purse. */
+#hud .hud-plate, #hud .hud-money, #hud .hud-quest {
+  --rv: #f4dc9c 0 1.2px, #b28443 1.6px 2.2px, #3a2618 2.6px 3.1px, transparent 3.4px;
+  background: radial-gradient(circle at 6px 6px, var(--rv)), radial-gradient(circle at calc(100% - 6px) 6px, var(--rv)),
+    radial-gradient(circle at 6px calc(100% - 6px), var(--rv)), radial-gradient(circle at calc(100% - 6px) calc(100% - 6px), var(--rv)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(64,48,40,0.94), rgba(30,24,22,0.94)) !important;
+  border: 3px solid #b8893b !important; border-radius: 5px !important;
+  box-shadow: 0 0 0 2px #1a110b, inset 0 1px 0 #f0d088, inset 0 0 0 1px #6b4a26, 0 3px 0 1px rgba(0,0,0,0.35) !important; }
+#hud .hud-plate { padding-left: 8px; padding-right: 13px; }
+#hud .hud-quest { border-width: 2px !important; padding-left: 8px !important; padding-right: 12px !important; }
+#hud .hud-money:not(.top), #hud .hud-quest { position: relative; }
+#hud .hud-money:not(.top)::before, #hud .hud-quest::before { content: ''; position: absolute; right: 22px; top: -11px; width: 8px; height: 8px;
+  background: linear-gradient(90deg, #1a110b 0 1px, #f0d088 1px 2px, #b28443 2px 6px, #644226 6px 7px, #1a110b 7px); pointer-events: none; }
+#hud .hud-money:not(.top)::after, #hud .hud-quest::after { content: ''; position: absolute; right: 19px; top: -6px; width: 14px; height: 3px;
+  background: #b28443; border: 1px solid #1a110b; border-top-color: #f0d088; pointer-events: none; }
+#hud .hud-compass { border: 2px solid #d9b56f !important; border-radius: 6px !important;
+  box-shadow: 0 0 0 2px #1a110b, inset 0 0 0 2px #644226, inset 0 3px 6px rgba(0,0,0,0.45); }
+/* Phones: a smaller place/weather plaque (owner, 11 Oct 2026: „zajmuje za dużo ekranu telefonu”). */
+@media (pointer: coarse) {
+  #hud .hud-plate { gap: 6px; padding: 3px 9px 3px 5px; }
+  #hud .hud-compass { width: 34px; height: 34px; }
+  #hud .hud-compass svg { width: 24px; height: 20px; }
+  #hud .hud-zoom svg { width: 20px; height: 20px; }
+  #hud .hud-town { font-size: 13px; }
+  #hud .hud-weather { font-size: 11px; }
+  #hud .hud-l1 { gap: 6px; }
+  #hud .hud-l2 { font-size: 10px; }
+  #hud .hud-quest { font-size: 12px; padding-top: 2px !important; padding-bottom: 2px !important; }
+  #hud .hud-quest .dot { width: 16px; height: 16px; font-size: 11px; }
+}
 #hud .hud-picks { position: absolute; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 #hud .hud-pick { display: flex; align-items: center; gap: 7px; padding: 5px 11px; background: rgba(28,20,14,0.85); border-radius: 8px; color: #ffe9a8; font-size: 15px;
   transition: opacity 0.5s; white-space: nowrap; }
 #hud .hud-pick img { width: 18px; height: 18px; image-rendering: pixelated; object-fit: contain; }
+#hud .hud-reservoir button:hover { background: transparent; }
+#hud .hud-reservoir button[disabled] { cursor: default; }
+#hud .hud-reservoir .hud-heal.low { animation: none; }
+#hud .hud-reservoir .hud-heal.low::after { content: ''; position: absolute; inset: 26% 12% 10%; border-radius: 50%; animation: hud-pulse 0.9s ease-in-out infinite; pointer-events: none; }
+#hud .hud-reservoir .hud-avpic { image-rendering: pixelated; }
+#hud .hud-reservoir .hud-vehicle:disabled img { opacity: 0.32; filter: grayscale(1); }
 `;
 
 const img = (name: string) => {
@@ -128,8 +202,17 @@ let parts: {
   p: HTMLDivElement; town: HTMLSpanElement; weather: HTMLSpanElement; detail: HTMLDivElement; quest: HTMLButtonElement;
   picks: HTMLDivElement; coins: HTMLSpanElement; diamonds: HTMLSpanElement;
   wpn: HTMLButtonElement; wpnImg: HTMLImageElement; wcount: HTMLDivElement; money: HTMLDivElement; avPic: HTMLCanvasElement;
+  vehicles: Record<'rower' | 'hulajnoga', HTMLButtonElement>;
 } | null = null;
+let machineV5: ReturnType<typeof createMachineV5> | ReturnType<typeof createReservoirHud> | null = null;
+let lastVehicles = '';
 let scale = 4;
+/** Room to the left for the longer bottom rail; the upper machine stays anchored on the right. */
+let railExtra = 0;
+
+function visibleVehicles() {
+  return parts ? Object.values(parts.vehicles).filter((b) => !b.hidden) : [];
+}
 
 /** How big the machine is: ×2 on phones, ×3 on a computer (owner, 5 Oct 2026: ×4 from the spec was far too big). */
 function pickScale() {
@@ -224,6 +307,8 @@ const margin = () => (window.matchMedia('(pointer: coarse)').matches ? 10 : 20);
 
 export function mountHud(on: HudHandlers) {
   unmountHud();
+  // New elements: the purse must be written again even if the sum is the same (empty after the demo's wake-up).
+  lastMoney = '';
   if (!document.getElementById('hud-css')) {
     const st = document.createElement('style');
     st.id = 'hud-css';
@@ -271,7 +356,21 @@ export function mountHud(on: HudHandlers) {
   const avPic = document.createElement('canvas');
   avPic.className = 'hud-avpic';
   avPic.style.cssText = 'position:absolute;pointer-events:none';
+  const vehicleButton = (vehicle: 'rower' | 'hulajnoga', pic: string) => {
+    const b = btn(`hud-vehicle hud-${vehicle}`, '', () => on.vehicle?.(vehicle));
+    b.hidden = true;
+    const image = document.createElement('img');
+    image.alt = '';
+    if (on.vehicle && !reservoir) image.src = BASE_URL + pic;
+    b.append(image);
+    return b;
+  };
+  const vehicles = {
+    rower: vehicleButton('rower', 'hud/welocyped_128.png'),
+    hulajnoga: vehicleButton('hulajnoga', itemAssetUrl('hulajnoga_parowa')),
+  };
   m.append(canvas, avPic, heal, hp, xp, count, wpn, wcount,
+    vehicles.rower, vehicles.hulajnoga,
     btn('hud-av', 'Twoja postać – kufer', on.character), btn('hud-b1', 'Aparat – zrób zdjęcie', on.camera), btn('hud-b2', 'Dziennik zadań', on.quests));
 
   const p = document.createElement('div');
@@ -279,11 +378,11 @@ export function mountHud(on: HudHandlers) {
   const plate = document.createElement('div');
   plate.className = 'hud-plate';
   const compass = btn('hud-compass', 'Mapa', on.map);
-  compass.innerHTML = MAPA_SVG;
+  compass.innerHTML = teleskop() ? MAPA_GLADKA : MAPA_SVG;
   // Bigger picture for children (owner, 6 Oct 2026: kids can't make out the details).
   const lupa = btn('hud-compass hud-zoom', '', () => setZoomBtn(on.zoom()));
   const setZoomBtn = (zoomBtn = (z: boolean) => {
-    lupa.innerHTML = lupaSvg(z);
+    lupa.innerHTML = teleskop() ? lupaGladka(z) : lupaSvg(z);
     const label = z ? 'Pomniejsz widok' : 'Powiększ widok';
     lupa.setAttribute('aria-label', label);
     lupa.title = `${label} (Z)`;
@@ -317,7 +416,44 @@ export function mountHud(on: HudHandlers) {
   picks.className = 'hud-picks';
   root.append(m, p, picks);
   document.body.append(root);
-  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic };
+  parts = { m, count, heal, hp, xp, p, town, weather, detail, quest, picks, coins: coinsEl, diamonds: diamondsEl, wpn, wpnImg, wcount, money, avPic, vehicles };
+  if (newMachine) machineV5 = reservoir ? createReservoirHud(parts) : createMachineV5(parts);
+  // New controls test (walka/live.ts): attack stick, skill and heal bottom right (ui/hudLive.ts); life and stamina are
+  // two tubes beside the telescope's portrait (owner, 26 Oct 2026: the production HUD + 2 tubes, no life flask).
+  if (live()) {
+    m.style.display = 'none';
+    zamontujHudLive();
+  }
+  if (teleskop()) {
+    // No machine at the bottom: the column at the top left does its work.
+    m.style.display = 'none';
+    zamontujTeleskop({
+      akcja: (a: AkcjaTeleskopu) => {
+        if (a === 'menu') on.menu?.();
+        else if (a === 'plecak') on.character();
+        else if (a === 'aparat') on.camera();
+        else if (telPojazd) on.vehicle?.(telPojazd);
+        else on.brakPojazdu?.();
+      },
+    });
+    if (avatar) teleskopAwatar(avatar.src, avatar.sx, avatar.sy, avatar.sw, avatar.sh);
+    if (live()) teleskopRurki(true);
+  }
+  // The coin over the portrait while the character has no account (owner, 26 Oct 2026; ui/monetaPortretu.ts).
+  obracajMonete({
+    pokazuj: () => !!session.idik && !session.konto && !demo.on && !document.body.classList.contains('walka-tur'),
+    twarz: () => {
+      if (teleskop()) return twarzTeleskopu();
+      const r = avPic.getBoundingClientRect();
+      if (!r.width || avPic.closest('#hud')?.classList.contains('dim')) return null;
+      const k = r.width / 42;
+      const copy = document.createElement('canvas');
+      copy.width = copy.height = 32;
+      copy.getContext('2d')!.drawImage(avPic, 5, 5, 32, 32, 0, 0, 32, 32);
+      return { rect: new DOMRect(r.left + 5 * k, r.top + 5 * k, 32 * k, 32 * k), twarz: copy };
+    },
+    otworz: () => on.character(),
+  });
   layout();
   window.addEventListener('resize', layout);
   // A slow bubble in each tube.
@@ -325,16 +461,53 @@ export function mountHud(on: HudHandlers) {
 }
 
 export function unmountHud() {
+  zatrzymajMonete();
+  odmontujTeleskop();
+  odmontujHudLive();
   window.removeEventListener('resize', layout);
   window.clearInterval(timer);
+  machineV5?.destroy();
+  machineV5 = null;
   root?.remove();
   root = null;
   parts = null;
   ctx = null;
+  lastVehicles = '';
+}
+
+/** Room the telescopic HUD takes at the top left (margin + portrait + EXP tube + a gap), phone CSS px. */
+const L_TELESKOPU = 12 + 56 + 8;
+
+/** The telescopic HUD's transport button: what it rides, and whether riding now. */
+let telPojazd: 'rower' | 'hulajnoga' | null = null;
+let telJedzie = false;
+
+/** Compact HUD has one socket: available scooter, bicycle, or an inactive bicycle. */
+export function setHudVehicles(rower: boolean, hulajnoga: boolean, active: 'pieszo' | 'rower' | 'hulajnoga', hulajnogaGotowa = hulajnoga) {
+  telPojazd = hulajnoga && hulajnogaGotowa ? 'hulajnoga' : rower ? 'rower' : null;
+  telJedzie = active !== 'pieszo';
+  if (!parts) return;
+  const key = `${rower}:${hulajnoga}:${active}:${hulajnogaGotowa}`;
+  if (key === lastVehicles) return;
+  lastVehicles = key;
+  const selected = hulajnoga && hulajnogaGotowa ? 'hulajnoga' : 'rower';
+  for (const vehicle of ['rower', 'hulajnoga'] as const) {
+    const b = parts.vehicles[vehicle];
+    b.hidden = reservoir ? vehicle !== selected : !(vehicle === 'rower' ? rower : hulajnoga);
+    b.disabled = reservoir && vehicle === 'rower' && !rower;
+    const mounted = !b.disabled && active === vehicle;
+    const label = b.disabled ? 'Brak dostępnego pojazdu' : vehicle === 'rower' ? (mounted ? 'Zejdź z roweru' : 'Wsiądź na rower') : (mounted ? 'Zejdź z hulajnogi' : 'Wsiądź na hulajnogę');
+    b.setAttribute('aria-pressed', String(mounted));
+    b.setAttribute('aria-label', label);
+    b.title = label;
+  }
+  layout();
 }
 
 /** Dimmed (still visible, taps go through) while a dialog is open; hidden behind the game-over screen (owner, 6 Oct 2026). */
 export function showHud(mode: 'on' | 'dim' | 'off') {
+  teleskopWidoczny(mode);
+  hudLiveWidoczny(mode);
   root?.classList.toggle('off', mode === 'off');
   root?.classList.toggle('dim', mode === 'dim');
 }
@@ -344,72 +517,102 @@ function layout() {
   scale = pickScale();
   const s = scale;
   const M = margin();
+  const vehicles = visibleVehicles();
+  railExtra = vehicles.length * STEP;
+  const width = W + railExtra;
+  if (ctx && ctx.canvas.width !== width) ctx.canvas.width = width;
   const at = (el: HTMLElement, x: number, y: number, w: number, h: number) => {
     const gw = Math.max(0, MIN_HIT - w * s) / 2;
     const gh = Math.max(0, MIN_HIT - h * s) / 2;
     Object.assign(el.style, { left: `${x * s - gw}px`, top: `${y * s - gh}px`, width: `${w * s + 2 * gw}px`, height: `${h * s + 2 * gh}px` });
   };
-  Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${W * s}px`, height: `${H * s}px` });
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX, 2, 26, 26);
-  Object.assign(parts.avPic.style, { left: `${(CX + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
+  Object.assign(parts.m.style, { right: `${M}px`, bottom: `${M}px`, width: `${width * s}px`, height: `${H * s}px` });
+  const g = Math.max(0, MIN_HIT - BUTTON * s) / 2;
+  const insetIcon = (image: HTMLImageElement) => Object.assign(image.style, {
+    left: `${g + 2 * s}px`, top: `${g + 2 * s}px`, width: `${16 * s}px`, height: `${16 * s}px`,
+  });
+  vehicles.forEach((b, i) => {
+    at(b, CAMERA_X + (i + 2) * STEP, BY, BUTTON, BUTTON);
+    insetIcon(b.querySelector<HTMLImageElement>('img')!);
+  });
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-av')!, CX + railExtra, 2, 26, 26);
+  Object.assign(parts.avPic.style, { left: `${(CX + railExtra + 4) * s}px`, top: `${6 * s}px`, width: `${18 * s}px`, height: `${18 * s}px` });
   drawAvatar();
-  at(parts.heal, CX, HY, 26, 26);
+  at(parts.heal, CX + railExtra, HY, 26, 26);
   parts.heal.style.borderRadius = '50%';
-  at(parts.hp, 49 + L, 1, 10, H - 2);
-  at(parts.xp, 59 + L, 1, 10, H - 2);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CX + 3 - 8 - 20, BY, 20, 20);
-  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CX + 3, BY, 20, 20);
+  at(parts.hp, 49 + L + railExtra, 1, 10, H - 2);
+  at(parts.xp, 59 + L + railExtra, 1, 10, H - 2);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b1')!, CAMERA_X, BY, BUTTON, BUTTON);
+  at(parts.m.querySelector<HTMLButtonElement>('.hud-b2')!, CAMERA_X + STEP, BY, BUTTON, BUTTON);
   // The weapon window: frame drawn in the machine picture (20×20 left of the heal button), the picture inside 16×16.
-  const wx = CX + 3 - 8 - 20, wy = HY + 3;
+  const wx = CAMERA_X + railExtra, wy = HY + 3;
   at(parts.wpn, wx, wy, 20, 20);
-  const g = Math.max(0, MIN_HIT - 20 * s) / 2;
-  Object.assign(parts.wpnImg.style, { left: `${g + 2 * s}px`, top: `${g + 2 * s}px`, width: `${16 * s}px`, height: `${16 * s}px` });
+  insetIcon(parts.wpnImg);
   Object.assign(parts.wcount.style, { left: `${wx * s}px`, top: `${(wy + 17) * s}px` });
   // The count stays readable however small the machine is.
   Object.assign(parts.count.style, {
-    left: `${(CX + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
+    left: `${(CX + railExtra + 21) * s}px`, top: `${(HY + 18) * s}px`, minWidth: '16px', height: '14px', padding: '0 3px',
     border: '1px solid #b8893b', font: "700 11px/12px 'Pixelify Sans', monospace",
   });
+  if (machineV5) machineV5.layout();
   // The purse and diamonds: on a phone under the plaque; on a computer alone at the top edge, centred over the hero.
   const top = !window.matchMedia('(pointer: coarse)').matches;
   if (top && parts.money.parentElement !== root) root?.append(parts.money);
   if (!top && parts.money.parentElement !== parts.p) parts.p.insertBefore(parts.money, parts.quest);
   parts.money.classList.toggle('top', top);
   parts.money.style.top = top ? `${M}px` : '';
-  const menuW = 64; // the ☰ button top left
-  Object.assign(parts.p.style, { right: `${M}px`, top: `${M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * 0.6), window.innerWidth - M - menuW)}px` });
+  // The ☰ button top left, or the telescopic HUD's portrait + EXP tube there.
+  // On a narrow phone (320 px) the plaque doesn't fit beside the tubes: it goes under them, right of the button column.
+  const ciasno = teleskop() && window.innerWidth - M - L_TELESKOPU < 190;
+  const menuW = ciasno ? 76 : teleskop() ? L_TELESKOPU : 64;
+  const share = ciasno ? 1 : window.matchMedia('(pointer: coarse)').matches ? 0.52 : 0.6;
+  Object.assign(parts.p.style, { right: `${M}px`, top: `${ciasno ? M + 74 : M}px`, maxWidth: `${Math.min(320, Math.floor(window.innerWidth * share), window.innerWidth - M - menuW)}px` });
   // Pickups: left of the machine on a wide screen, above it on a narrow one.
-  const wide = window.innerWidth - W * s - 2 * M > 170;
+  const wide = window.innerWidth - width * s - 2 * M > 170;
   Object.assign(parts.picks.style, wide
-    ? { right: `${M + W * s + 10}px`, bottom: `${M + 20 * s}px` }
+    ? { right: `${M + width * s + 10}px`, bottom: `${M + 20 * s}px` }
     : { right: `${M}px`, bottom: `${M + H * s + 8}px` });
+  if (machineV5) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(16px + env(safe-area-inset-bottom) + ${parts.m.style.height})` });
+  if (teleskop()) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(${M}px + env(safe-area-inset-bottom))` });
+  if (live()) Object.assign(parts.picks.style, { right: `${M}px`, bottom: `calc(210px + env(safe-area-inset-bottom))` });
+  draw();
 }
 
 let lastMoney = '';
 export function setHud(v: HudView) {
   view = v;
   if (!parts) return;
+  if (live()) ustawHudLive({ hp: v.hp, maxHp: v.maxHp, extra: v.extra, zatruty: v.zatruty, potions: v.potions, fruit: v.fruit, noHeal: v.noHeal, bron: v.bron });
+  if (teleskop()) ustawTeleskop({
+    expShare: v.expShare, poziom: v.poziom ?? 1,
+    pojazd: { ikona: telPojazd === 'hulajnoga' ? 'hulajnoga' : 'welocyped', jedzie: telJedzie, brak: !telPojazd },
+  });
   const money = `${v.coins}|${v.diamonds}`;
   if (money !== lastMoney) {
     lastMoney = money;
     const n = (x: number) => x.toLocaleString('pl-PL');
-    parts.coins.innerHTML = `${SAKIEWKA_SVG}${n(v.coins)}`;
-    parts.diamonds.innerHTML = `<img src="${BASE_URL}items/diament.png" alt="">${n(v.diamonds)}`;
+    parts.coins.innerHTML = `${teleskop() ? SAKIEWKA_GLADKA : SAKIEWKA_SVG}${n(v.coins)}`;
+    parts.diamonds.innerHTML = teleskop() ? `${DIAMENT_GLADKI}${n(v.diamonds)}` : `<img src="${BASE_URL}${itemAssetUrl('diament')}" alt="">${n(v.diamonds)}`;
     parts.coins.title = `Sakiewka: ${n(v.coins)} monet`;
     parts.diamonds.title = `Diamenty: ${n(v.diamonds)}`;
   }
-  parts.count.textContent = String(v.potions > 0 ? v.potions : v.fruit);
+  const food = v.potions <= 0 && v.fruit < v.fruitPerHeal ? v.preparedFood : undefined;
+  parts.count.textContent = String(v.potions > 0 ? v.potions : food ? food.n : reservoir ? Math.floor(v.fruit / v.fruitPerHeal) : v.fruit);
   if (v.bron.pic && !parts.wpnImg.src.endsWith(v.bron.pic)) parts.wpnImg.src = v.bron.pic;
   parts.wpnImg.style.visibility = v.bron.pic ? 'visible' : 'hidden';
   parts.wcount.textContent = v.bron.label;
   parts.wcount.classList.toggle('warn', v.bron.warn);
   parts.wpn.setAttribute('aria-label', v.bron.title);
   parts.wpn.title = v.bron.title;
-  const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})` : `Zjedz owoce, żeby się wyleczyć (masz ${v.fruit})`;
-  parts.heal.setAttribute('aria-label', label);
-  parts.heal.title = label;
-  parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
+  const label = v.potions > 0 ? `Wypij miksturę leczniczą (masz ${v.potions})`
+    : food ? `Zjedz przygotowane jedzenie ${food.icon} (masz ${food.n})`
+    : `Zjedz ${v.fruitPerHeal} owoców, żeby się wyleczyć (masz ${v.fruit})`;
   const hpPct = Math.round((100 * v.hp) / v.maxHp);
+  const healLabel = reservoir ? `Zdrowie ${hpPct}%. ${label}` : label;
+  parts.heal.setAttribute('aria-label', healLabel);
+  parts.heal.title = healLabel;
+  if (machineV5) parts.heal.disabled = v.noHeal;
+  parts.heal.classList.toggle('low', v.hp * 2 <= v.maxHp && !v.noHeal);
   parts.hp.setAttribute('aria-label', `Zdrowie ${hpPct}%`);
   parts.hp.title = `Zdrowie ${hpPct}%`;
   parts.xp.setAttribute('aria-label', `Doświadczenie ${Math.round(100 * v.expShare)}% do następnego poziomu`);
@@ -445,15 +648,21 @@ export function setHud(v: HudView) {
 const level = (share: number) => Math.round(Math.max(0, Math.min(1, share)) * TUBA);
 
 function draw() {
+  if (machineV5) { if (view) machineV5.draw(view); return; }
   if (!ctx || !pics || !view) return;
   const v = view;
   const c = ctx;
-  c.clearRect(0, 0, W, H);
+  c.clearRect(0, 0, c.canvas.width, H);
   const ok = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0;
+  c.save();
+  c.translate(railExtra, 0);
   if (ok(pics.baza)) c.drawImage(pics.baza, 0, 0);
   const icon = v.potions > 0 ? pics.mikstura : pics.owoc;
   c.globalAlpha = v.noHeal ? 0.4 : 1;
-  if (ok(icon)) c.drawImage(icon, 0, 0);
+  if (v.preparedFood && v.potions <= 0) {
+    c.font = '16px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(v.preparedFood.icon, CX + 13, HY + 13);
+  } else if (ok(icon)) c.drawImage(icon, 0, 0);
   c.globalAlpha = 1;
   const t = performance.now();
   const tube = (x: number, h: number, body: string, top: string, phase: number) => {
@@ -492,10 +701,56 @@ function draw() {
     c.fillRect(55 + L, y, 2, 1);
     c.fillRect(65 + L, y, 2, 1);
   }
+  c.restore();
+  if (railExtra > 0) drawBottomRail(c, ok(pics.baza));
+}
+
+/** Extend the original pipe and reuse its camera/quest frames, followed by the owned vehicles. */
+function drawBottomRail(c: CanvasRenderingContext2D, baseLoaded: boolean) {
+  const y = BY + BUTTON / 2 - 2;
+  const pipe = ['#1a110b', '#e2b25a', '#b8893b', '#6b4a1f', '#1a110b'];
+  pipe.forEach((color, k) => {
+    c.fillStyle = color;
+    c.fillRect(CAMERA_X + 2, y + k, railExtra, 1);
+  });
+  const vehicles = visibleVehicles();
+  // Same collars as scripts/hud-maszynka.py, centred in each 8 px gap.
+  for (let i = 0; i < vehicles.length + 1; i++) {
+    const x = CAMERA_X + i * STEP + BUTTON + 3;
+    c.fillStyle = pipe[0];
+    c.fillRect(x, y - 1, 3, 7);
+    c.fillStyle = pipe[1];
+    c.fillRect(x + 1, y, 1, 5);
+  }
+  if (baseLoaded && pics) {
+    for (let i = 0; i < 2; i++) {
+      const x = CAMERA_X + i * STEP;
+      c.drawImage(pics.baza, x, BY, BUTTON, BUTTON, x, BY, BUTTON, BUTTON);
+    }
+  }
+  vehicles.forEach((b, n) => {
+    const x = CAMERA_X + (n + 2) * STEP;
+    const active = b.getAttribute('aria-pressed') === 'true';
+    // The original pixel frame, including its clipped corners and lighter top/left edges.
+    for (let j = 0; j < BUTTON; j++) for (let i = 0; i < BUTTON; i++) {
+      const edge = Math.min(i, j, BUTTON - 1 - i, BUTTON - 1 - j);
+      if (edge === 0 && (i === 0 || i === BUTTON - 1) && (j === 0 || j === BUTTON - 1)) continue;
+      c.fillStyle = edge === 0 ? pipe[0]
+        : edge === 1 ? (active ? '#ffe9a8' : (i === 1 || j === 1) && i < BUTTON - 2 && j < BUTTON - 2 ? pipe[1] : pipe[2])
+        : active ? '#705021' : '#3d2e22';
+      c.fillRect(x + i, BY + j, 1, 1);
+    }
+  });
+}
+
+/** The hero's illustrated portrait for the telescopic HUD's medallion (null = the sheet's head instead). */
+export function setHudPortrait(url: string | null) {
+  teleskopPortret(url);
 }
 
 /** The hero's picture for the avatar frame: a sprite sheet frame and the part to show (head and shoulders). */
 export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw = 0, sh = 0) {
+  if (teleskop()) teleskopAwatar(src, sx, sy, sw, sh);
   avatar = src ? { src, sx, sy, sw, sh } : null;
   drawAvatar();
 }
@@ -503,6 +758,7 @@ export function setHudAvatar(src: CanvasImageSource | null, sx = 0, sy = 0, sw =
 /** Paints the avatar into its own canvas at device pixels, enlarged blocky (never smoothed). */
 function drawAvatar() {
   if (!parts) return;
+  if (machineV5) { machineV5.avatar(avatar); return; }
   const cv = parts.avPic;
   const n = Math.max(1, Math.round(18 * scale * (window.devicePixelRatio || 1)));
   if (cv.width !== n) cv.width = cv.height = n;

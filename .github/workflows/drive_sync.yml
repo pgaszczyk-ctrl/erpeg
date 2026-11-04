@@ -1,0 +1,30 @@
+name: EXP-LORE Drive Sync
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Pozwala odpalić akcję ręcznie z panelu GitHuba
+
+jobs:
+  sync_to_drive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie repozytorium (Checkout)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Pobiera pełną historię, aby 'git log' zadziałał poprawnie
+
+      - name: Konfiguracja środowiska Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalacja zależności Google API
+        run: |
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+      - name: Generowanie i wysyłka statusu na Dysk
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+        run: python sync_to_drive.py

@@ -1,4 +1,5 @@
 import type { CityMap } from './CityMap';
+import { nawierzchniaDrogi } from './nawierzchnia';
 
 // Colours of the map and a plain drawing of the city, shared by the game
 // (map screen, ghost map) and the admin panel. No Phaser here.
@@ -8,11 +9,11 @@ export const AREA_FILL: Record<string, string> = {
   farmland: '#c8d77a', cemetery: '#6aa84f', allotments: '#8bc34a', pitch: '#4fb34f', playground: '#e0c070',
   parking: '#d2ad7c', plaza: '#dccfb2', paved: '#c3b79f', rock: '#a39e92', glacier: '#e6eef2', sand: '#e8d59a', platform: '#c9c0ae',
 };
-// Plain earthen roads (no asphalt): wider = more trodden and darker.
-export const ROAD_FILL: Record<string, string> = {
+// The overview follows the same cobbled-street / earthen-path policy as the game.
+export const ROAD_FILL: Record<string, string> = Object.fromEntries(Object.entries({
   major: '#c28a52', medium: '#c9935c', minor: '#d09d66', service: '#d6a771', track: '#d6a771',
   pedestrian: '#dccfb2', path: '#e3bd86', steps: '#c9a47a', platform: '#c9c0ae',
-};
+}).map(([kind, color]) => [kind, nawierzchniaDrogi(kind) === 'bruk' ? AREA_FILL.paved : color]));
 /** Draws the city (green, water, roads, buildings) inside `box` onto the whole canvas. */
 export function drawCity(canvas: HTMLCanvasElement, city: CityMap, box: { x0: number; y0: number; x1: number; y1: number }) {
   const ctx = canvas.getContext('2d')!;

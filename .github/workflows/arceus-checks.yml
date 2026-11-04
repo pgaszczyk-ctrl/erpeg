@@ -1,0 +1,50 @@
+name: Arceus report 77 checks
+on:
+  pull_request:
+    paths:
+      - 'src/scenes/UIScene.ts'
+      - 'src/map/world.ts'
+      - 'src/map/Wysokie.ts'
+      - 'src/fpslog.ts'
+      - 'scripts/tests/*cutout*'
+      - 'scripts/tests/*platform*'
+      - 'scripts/tests/*pauses*'
+      - 'scripts/tests/browser-dialog-strony.mjs'
+      - 'scripts/tests/fixtures/warsaw-platform.json'
+      - '.github/workflows/arceus-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: |
+          node scripts/tests/building-cutout.mjs
+          node scripts/tests/world-platform.mjs
+          node scripts/tests/fps-pauses.mjs
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          node scripts/tests/browser-dialog-strony.mjs
+          TELEFON=1 node scripts/tests/browser-dialog-strony.mjs
+          node scripts/tests/browser-fps.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arceus-77-browser-checks
+          path: work/*.png
+          retention-days: 7

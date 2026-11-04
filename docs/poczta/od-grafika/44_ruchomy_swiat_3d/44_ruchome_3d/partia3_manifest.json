@@ -1,0 +1,108 @@
+{
+  "wodnik": {
+    "file": "modele/wodnik.glb",
+    "triangles": 1342,
+    "nodes": 22,
+    "clips": {
+      "idle": 2.8,
+      "walk": 1.1,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25,
+      "cast": 1.5
+    },
+    "bytes": 173888,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "wodny_blob": {
+    "file": "modele/wodny_blob.glb",
+    "triangles": 180,
+    "nodes": 3,
+    "clips": {
+      "idle": 2.2,
+      "walk": 0.72,
+      "wobble": 0.72,
+      "attack": 1.1,
+      "hit": 0.3,
+      "death": 1.0
+    },
+    "bytes": 27984,
+    "grips": []
+  },
+  "driada": {
+    "file": "modele/driada.glb",
+    "triangles": 1470,
+    "nodes": 23,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.05,
+      "attack": 1.2,
+      "hit": 0.3,
+      "death": 1.25,
+      "cast": 1.6
+    },
+    "bytes": 185020,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "herszt": {
+    "file": "modele/herszt.glb",
+    "triangles": 1426,
+    "nodes": 20,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.1,
+      "attack": 1.4,
+      "hit": 0.3,
+      "death": 1.25,
+      "slam": 1.65
+    },
+    "bytes": 193624,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  },
+  "warg": {
+    "file": "modele/warg.glb",
+    "triangles": 760,
+    "nodes": 24,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.05,
+      "attack": 1.05,
+      "lunge": 1.25,
+      "hit": 0.26,
+      "death": 1.25,
+      "bite": 1.05,
+      "pounce": 1.25
+    },
+    "bytes": 185468,
+    "grips": []
+  },
+  "mosiezny_koziol": {
+    "file": "modele/mosiezny_koziol.glb",
+    "triangles": 1442,
+    "nodes": 21,
+    "clips": {
+      "idle": 2.4,
+      "walk": 1.15,
+      "attack": 1.4,
+      "hit": 0.3,
+      "death": 1.25,
+      "horns": 1.4,
+      "charge": 1.5,
+      "stomp": 1.35
+    },
+    "bytes": 205248,
+    "grips": [
+      "L_at_hand_grip",
+      "R_at_hand_grip"
+    ]
+  }
+}

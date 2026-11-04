@@ -31,7 +31,7 @@ export interface Postac {
 }
 
 /** Heroes to choose from (and the townsfolk, recoloured). */
-export const BOHATEROWIE: Postac[] = [
+export const DOTYCHCZASOWI_BOHATEROWIE: Postac[] = [
   { id: 'wedrowiec', nazwa: 'Wędrowiec', plik: 'traveler', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'rycerz', nazwa: 'Rycerz', plik: 'knight', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dorosly' },
   { id: 'luczniczka', nazwa: 'Łuczniczka', plik: 'ranger', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
@@ -43,19 +43,28 @@ export const BOHATEROWIE: Postac[] = [
   { id: 'wojowniczka', nazwa: 'Wojowniczka z kucykiem', plik: 'bohater_08', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
   { id: 'zwiadowca', nazwa: 'Chłopiec w pelerynie', plik: 'bohater_09', bokWPrawo: false, skala: 0.36, plec: 'm', wiek: 'dziecko' },
   { id: 'srebrna', nazwa: 'Srebrnowłosa', plik: 'bohater_10', bokWPrawo: false, skala: 0.36, plec: 'k', wiek: 'dorosly' },
-  // Bohaterowie z klocków, próba zamówienia 22 (scripts/awatary-sklad.py: głowa + tułów + kolory z masek, punkty broda/szyja z metadata.json).
-  // Tylko serwer testowy: na końcu listy, więc numery dotychczasowych bohaterów się nie zmieniają.
-  ...(import.meta.env?.VITE_TEST === '1' ? ([
-  { id: 'skladababa', nazwa: 'Rozczochrany wędrowiec (próba)', plik: 'sklad_01_01_0', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladababe', nazwa: 'Siwy wędrowiec (próba)', plik: 'sklad_01_01_4', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladabaeb', nazwa: 'Rozczochrany w fartuchu (próba)', plik: 'sklad_01_04_1', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladabaec', nazwa: 'Złotowłosy w fartuchu (próba)', plik: 'sklad_01_04_2', bokWPrawo: false, skala: 0.36, maska: false, plec: 'm', wiek: 'dorosly' },
-  { id: 'skladacabb', nazwa: 'Kucyk w kamizelce (próba)', plik: 'sklad_02_01_1', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacabc', nazwa: 'Ruda z kucykiem (próba)', plik: 'sklad_02_01_2', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacaea', nazwa: 'Kucyk w fartuchu (próba)', plik: 'sklad_02_04_0', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  { id: 'skladacaed', nazwa: 'Siwy kucyk w fartuchu (próba)', plik: 'sklad_02_04_3', bokWPrawo: false, skala: 0.36, maska: false, plec: 'k', wiek: 'dorosly' },
-  ] as Postac[]) : []),
+
 ];
+
+/** Complete, fixed looks from the owner's new pack, released in 1.015. */
+const NAZWY_BOHATEROW = [
+  'Czarodziej', 'Chłopak w kamizelce', 'Podróżnik w cylindrze', 'Siwy wędrowiec', 'Starsza pani',
+  'Strażnik', 'Rudy drwal', 'Dziewczyna z łukiem', 'Mechanik w kaszkiecie', 'Marynarz',
+  'Dziewczyna z warkoczami', 'Kowal', 'Pilotka w goglach', 'Profesor', 'Kucharz',
+  'Ogrodnik', 'Kominiarz', 'Kupiec w turbanie', 'Wynalazca', 'Brodaty kupiec',
+  'Rudowłosa podróżniczka', 'Kapitan', 'Dziewczyna z fioletowymi włosami', 'Górnik', 'Listonoszka',
+];
+export const BOHATEROWIE_25: Postac[] = Array.from({ length: 25 }, (_, i) => ({
+  id: `lista${String.fromCharCode(97 + i)}`,
+  nazwa: NAZWY_BOHATEROW[i],
+  plik: `lista25_${String(i + 1).padStart(2, '0')}`,
+  bokWPrawo: false,
+  skala: 0.36,
+  maska: false,
+  przebarwiaj: false,
+  ostry: true,
+}));
+export const BOHATEROWIE = BOHATEROWIE_25;
 
 /** Characters made before the pack 04–10 got one of the first three by their name: they keep it. */
 export const PIERWSI_BOHATEROWIE = 3;
@@ -84,7 +93,7 @@ export const MIESZKANCY_HD: Postac[] = [
 export const CHOCHLIK: Postac = { id: 'chochlik', nazwa: 'Chochlik', plik: 'chochlik', bokWPrawo: false, skala: 0.32, maska: false };
 
 /** Fixed characters (pack „postacie stałe 01”): each has one look (no recolouring). Key = who in FixedNpcs/Story. */
-export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies', Postac> = {
+export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' | 'luigi' | 'martin' | 'woznica' | 'pies' | 'gazeciarz' | 'sedzia' | 'gladiator', Postac> = {
   mag: { id: 'mag', nazwa: 'Mag Albrecht', plik: 'mag', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
   margo: { id: 'margo', nazwa: 'Siostra Margo', plik: 'siostra_margo', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'k', wiek: 'dorosly' },
   marek: { id: 'marek', nazwa: 'Dziadek Marek', plik: 'dziadek_marek', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'starszy' },
@@ -96,13 +105,20 @@ export const STALE_HD: Record<'mag' | 'margo' | 'marek' | 'iwonka' | 'grazynka' 
   woznica: { id: 'woznica', nazwa: 'Woźnica', plik: 'woznica', bokWPrawo: false, skala: 0.36, przebarwiaj: false, plec: 'm', wiek: 'dorosly' },
   // The dog on Guliwera/Cyda (6 Oct 2026, from the 🎨 Grafika chat): about 0.6 of a person, no mask.
   pies: { id: 'pies', nazwa: 'Biało-czarny pies', plik: 'pies', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
+  // The newsboy, artist's trial v2 (order 32, 32-G003): only standing front + side frames, so newsboys stand still
+  // (gazeciarz_proba.png = those two frames copied into a 3×3 sheet; up uses the front until a back frame arrives). Standing vs walking: the owner's decision is pending (32-G004).
+  // Arena Cechu (38-G001): the judge and the Mechanical Gladiator, trial front + side standing poses only
+  // (scripts/arena-grafiki.py puts them into 3×3 sheets like the newsboy's; they stand, no walk yet).
+  sedzia: { id: 'sedzia', nazwa: 'Sędzia Areny', plik: 'sedzia_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dorosly' },
+  gladiator: { id: 'gladiator', nazwa: 'Mechaniczny Gladiator', plik: 'gladiator_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false },
+  gazeciarz: { id: 'gazeciarz', nazwa: 'Gazeciarz', plik: 'gazeciarz_proba', bokWPrawo: false, skala: 0.36, przebarwiaj: false, maska: false, plec: 'm', wiek: 'dziecko' },
 };
 
 /** The other enemies (pack „wrogowie v1”; no masks, the game adds the red glow). Key = enemy kind(s) in fabula.ts. */
 export const WROGOWIE_HD: { postac: Postac; rodzaje: string[] }[] = [
   { postac: { id: 'driada', nazwa: 'Driada', plik: 'driada', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['driada'] },
   { postac: { id: 'zombie', nazwa: 'Zombiak', plik: 'zombie', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['zombie', 'wodnik'] },
-  { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet'] },
+  { postac: { id: 'szkielet', nazwa: 'Szkielet', plik: 'szkielet', bokWPrawo: false, skala: 0.32, maska: false }, rodzaje: ['szkielet', 'upior'] },
   { postac: { id: 'bandyta', nazwa: 'Bandyta', plik: 'bandyta', bokWPrawo: false, skala: 0.36, maska: false }, rodzaje: ['bandyta'] },
   // The boss: a bigger goblin with a helmet and a club; the game makes him 1.8× / 2.5× bigger (ENEMY_KINDS scale).
   { postac: { id: 'herszt', nazwa: 'Herszt', plik: 'herszt', bokWPrawo: false, skala: 0.28, maska: false }, rodzaje: ['herszt', 'wielki_herszt'] },

@@ -1,0 +1,21 @@
+EXP-LORE / Zamówienie 45 / Etapy A i B — 15 nowych ikon.
+
+Wzorzec: zaakceptowany źródłowy miecz rycerski z Próby 1. Nie rysowano go ponownie.
+
+oryginaly/ — pełne źródłowe PNG z przezroczystym tłem. To te pliki wyznaczają wygląd ilustracji. Nie są obrazami narysowanymi na ścisłej siatce 64x64.
+eksporty_64/ — osobne techniczne wersje 64x64, maks. 48 widocznych kolorów, twarda alfa, margines co najmniej 4 px, obrys sylwetki #1e1a24. Eksport do 64x64 traci część szczegółów oryginału.
+powiekszenia_64_x16/ — eksporty powiększone dokładnie 16 razy bez wygładzania; do kontroli siatki, nie jako oryginały.
+wzor/rycerski.png — niezmieniony zaakceptowany wzorzec, nieuwzględniany w liczbie nowych ikon.
+plansza_oryginalow.png — podglądy dużych źródeł, z podpisami.
+plansza_miniatur.png — eksporty 32/64 px pokazane osobno od źródeł. Rozmiary dotyczą samych pikseli pliku planszy; aplikacja może przeskalować cały obraz.
+kontrola.json — parametry techniczne i sumy kontrolne źródeł.
+prompty.json — pełne instrukcje generowania dla każdej ikony.
+
+Lista nowych ikon:
+A: swietlisty, gromowladny, kolczuga, ksiega, czapka_maga, kapelusz.
+B: zelazny, stalowy, luk, luk_refleksyjny, dlugi_luk, rozdzka, kula, zlom, zlom_miedziany.
+Uwaga: zelazny.png odpowiada nazwie Miecz treningowy; zachowano istniejący identyfikator.
+
+Wykonanie: wbudowany imagegen, jedna generacja na przedmiot; osobny eksport techniczny przy użyciu ImageMagick.
+Status: przygotowane do oceny, bez wdrożenia do repozytorium i gry.
+Łącznie z wcześniejszą Próbą 1: 19 z 93 pozycji. Pozostaje 74.

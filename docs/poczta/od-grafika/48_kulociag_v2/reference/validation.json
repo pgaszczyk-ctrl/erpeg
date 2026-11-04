@@ -1,0 +1,38 @@
+{
+  "sourceSize": [
+    1672,
+    941
+  ],
+  "maskValues": [
+    0,
+    255
+  ],
+  "footRadiusPx": 8,
+  "mainComponentPixels": 460097,
+  "approaches": [
+    {
+      "point": [
+        907,
+        607
+      ],
+      "reachableFromEntrance": true
+    },
+    {
+      "point": [
+        1147,
+        637
+      ],
+      "reachableFromEntrance": true
+    },
+    {
+      "point": [
+        1370,
+        637
+      ],
+      "reachableFromEntrance": true
+    }
+  ],
+  "npcPolygonAllWalkable": true,
+  "npcPolygonAllReachable": true,
+  "gameEngineTested": false
+}

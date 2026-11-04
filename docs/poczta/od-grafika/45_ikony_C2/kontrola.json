@@ -1,0 +1,698 @@
+[
+  {
+    "id": "strzaly",
+    "name": "Strzały",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "84ef79409fc46c487af2ca7089bd2190489b34ad8fd4527c780a7f1883572c21",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      58
+    ]
+  },
+  {
+    "id": "belty",
+    "name": "Bełty",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "8b1f4e3cc3395a52e66814deb0fdc11baeef1c3068513623a559f80139fd7387",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      58,
+      59
+    ]
+  },
+  {
+    "id": "naboje",
+    "name": "Naboje",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "9be316c24b673f0fc1ac5c69bf2a36b7eb681477b2c96e942594cf85b5fced18",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      59
+    ]
+  },
+  {
+    "id": "ladunek_magii",
+    "name": "Ładunek magii",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "d235e5783aeae3cfbaf101dbce0f4680235190a84b1c94b3228d541436d677de",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      6,
+      59,
+      58
+    ]
+  },
+  {
+    "id": "drewno",
+    "name": "Drewno",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "c95e3cdce4041418fcfde222c3177401e1a4c1cffd11a7b94ade6c98a397dd02",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      7,
+      59,
+      56
+    ]
+  },
+  {
+    "id": "chrust",
+    "name": "Chrust",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "858adcb077e42ccbdc2f79e9029a15cc400469b25b42b9d357fc31d81da41363",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      59
+    ]
+  },
+  {
+    "id": "kij",
+    "name": "Kij",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "7695365219b8b0d80844c5b7f16887279cce366d4fcc201aba6f7555e8dfe8d7",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      59
+    ]
+  },
+  {
+    "id": "wegiel",
+    "name": "Węgiel",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "a9c11833fbb52e7a9f7a4305c4f6a1818641127562cd2dba9b6f903cacb61767",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      7,
+      59,
+      57
+    ]
+  },
+  {
+    "id": "ruda_zelaza",
+    "name": "Ruda żelaza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "14d838475a54376c49f15f34221ce9014d12fb3c9d8d25187b07f3b24a10fa3a",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      58
+    ]
+  },
+  {
+    "id": "miedz",
+    "name": "Miedź",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "d34fe87648f3381037f6fc478391d3d89601a3c5d018a0360dd3cd93b8186a3c",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      7,
+      59,
+      56
+    ]
+  },
+  {
+    "id": "piasek",
+    "name": "Piasek",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "7eb70fabf85eeb9b21e0ae73291abb0e6922ce9c377302e19201d64d75797b53",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      14,
+      59,
+      49
+    ]
+  },
+  {
+    "id": "odlamek_komety",
+    "name": "Odłamek komety",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "8e1d976fe0ef0e57608d33a07e915457143d1f33de8a3b560e8c13d181d7f2f7",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      7,
+      5,
+      57,
+      59
+    ]
+  },
+  {
+    "id": "sztaba_zelaza",
+    "name": "Sztaba żelaza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "987b79191f33022f36f8c2d645339bbda4b653313665b12b1861b1d16db690c4",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      10,
+      59,
+      54
+    ]
+  },
+  {
+    "id": "sztaba_stali",
+    "name": "Sztaba stali",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "2d4be422702a9766e0b902d5fb2043a43f8ce99f22605c89dea7e5a4d3fc9a42",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      10,
+      59,
+      54
+    ]
+  },
+  {
+    "id": "sztaba_mosiadzu",
+    "name": "Sztaba mosiądzu",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "9d21a961459b43fee652d184cc9eaa76dd27cb39eadc5003f24480ab109b3cb2",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      11,
+      59,
+      52
+    ]
+  },
+  {
+    "id": "szklo",
+    "name": "Szkło",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "11ba8fff9c670c2a2e5db54d379f8570418e48508d90fa8d19130a39485d9bee",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      7,
+      5,
+      56,
+      59
+    ]
+  },
+  {
+    "id": "ogniwo",
+    "name": "Ogniwo pełne",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "229b055815d62e9097e2022508320e97beb601f78e9e4e105b0c0efc4e949d7c",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      17,
+      5,
+      46,
+      59
+    ]
+  },
+  {
+    "id": "ogniwo_puste",
+    "name": "Ogniwo puste",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "d875e7dbd53278e8dfe01b5459af1c10d41bd8d9c66bbd43d0f75a1aec086de4",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      18,
+      5,
+      45,
+      59
+    ]
+  },
+  {
+    "id": "kilof",
+    "name": "Kilof",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "145ac0f7eccf7ca711bfa2ff01f469f33e9461eaad071d6fc26e5e5fb47a0e43",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      5,
+      59,
+      58
+    ]
+  },
+  {
+    "id": "diament",
+    "name": "Diament",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "c825bcbebb5390b824ecd397df29c409bd936595f2cea22c08111b6175e30e90",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      10,
+      59,
+      54
+    ]
+  },
+  {
+    "id": "rower",
+    "name": "Welocyped parowy",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "cf47d84a8fd70be7fdf1461ebbfb8ba58e47dde1de7bfa94aa334c6c9021a071",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      9,
+      59,
+      54
+    ]
+  },
+  {
+    "id": "hulajnoga_parowa",
+    "name": "Hulajnoga parowa",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "718f3b616a17d7c876669d08d8988688075e99f4324bc130e79df97f82c1e02c",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      7,
+      5,
+      56,
+      59
+    ]
+  },
+  {
+    "id": "grupa_owoce",
+    "name": "Grupa: owoce",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "3dabd458376a0caa7ecca3b9a35f0435334e3372f936b8236f27c488ae666e39",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      7,
+      59,
+      57
+    ]
+  },
+  {
+    "id": "grupa_warzywa",
+    "name": "Grupa: warzywa",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "ece560257242bf1dbcfb789d219588b0ee35493a6d238f1546f93df2ba4fcea8",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      9,
+      59,
+      55
+    ]
+  },
+  {
+    "id": "grupa_grzyby",
+    "name": "Grupa: grzyby",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "9516fcaa8090bd78cf67c18bf5fefb874c9846fb79fd575ffc5eaf109858964f",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      6,
+      59,
+      58
+    ]
+  },
+  {
+    "id": "ziemniak",
+    "name": "Ziemniak",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "afc8a5d0a8577365da755453fe4901728c1902bab46576d6c3e109cc58e76dee",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 46,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      7,
+      59,
+      56
+    ]
+  },
+  {
+    "id": "kapusta",
+    "name": "Kapusta",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "959f909b1da6933955abd21a5bec766be35493dc362181cbeff4d3254ee5e324",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      6,
+      59,
+      57
+    ]
+  },
+  {
+    "id": "burak",
+    "name": "Burak",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "807626a2ee545b2671715603053730ab500c48e207cb4ef3f140be52e044c17b",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      6,
+      5,
+      58,
+      59
+    ]
+  },
+  {
+    "id": "dynia",
+    "name": "Dynia",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "4dd913040dc65bd49f4123180f6d44a3a43ffcd33412ef73d3a912314053899f",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 45,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox": [
+      5,
+      6,
+      59,
+      58
+    ]
+  }
+]

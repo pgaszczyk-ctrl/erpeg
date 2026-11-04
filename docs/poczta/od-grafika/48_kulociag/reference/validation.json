@@ -1,0 +1,14 @@
+{
+  "pngFiles": 33,
+  "canvas": {
+    "width": 1672,
+    "height": 941
+  },
+  "validation": [
+    "all PNG files decoded",
+    "transparent moving layers checked",
+    "runtime draw from exported assets",
+    "departure and arrival reconstructed at 24 fps"
+  ],
+  "engineIntegration": false
+}

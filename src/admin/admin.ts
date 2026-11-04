@@ -1,3 +1,6 @@
+import { itemIcon } from '../ui/itemIcon';
+import { pancerze, kluczPancerza, ustawPancerze } from '../content/pancerz';
+import { bronie, kluczBroni, kluczTrwalosci, kodujZakres, ustawBronie } from '../content/bron';
 import { rpc } from '../api';
 import { CityMap } from '../map/CityMap';
 import { drawCity } from '../map/drawCity';
@@ -9,6 +12,9 @@ import { PX_PER_M } from '../map/CityMap';
 import { POLECENIE_GEMINI, SCHEMAT_QUIZOW, sprawdzQuizy, krajPytania } from '../content/quizyGemini';
 import { POKRETLA } from '../content/ustawienia';
 import { etapyEditor } from './etapyEditor';
+import { lamiglowkaDnia, rodzajDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, type Lamiglowka } from '../lamiglowki';
+import { LAMIGLOWKA } from '../content/gazeta';
+import { STWORY, lupOpcje, type WierszLupu } from '../content/stwory';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -29,7 +35,7 @@ interface Code {
 }
 interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; deaths: number }
 
-const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)', koziol: 'Mosiężny Kozioł – boss (240 życia)' };
+const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)', koziol: 'Mosiężny Kozioł – boss (240 życia)', wilk: 'Wilk (10 życia, test łowisk)', warg: 'Warg (32 życia, test łowisk)', upior: 'Upiór krypty – boss lochu (90 życia)', elzet: 'Elzet 10 (robot z questa, życie wg bohatera)' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Zagadka (pytanie na miejscu)', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
 let key = '';
@@ -47,6 +53,7 @@ const app = document.getElementById('app')!;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, children: (Node | string | null | false)[] = []) {
   const e = Object.assign(document.createElement(tag), props);
+  for (const [k, v] of Object.entries(props)) if (k.startsWith('aria-') || k.startsWith('data-')) e.setAttribute(k, String(v));
   for (const c of children) if (c) e.append(c);
   return e;
 }
@@ -64,9 +71,20 @@ function spotOf(addr: unknown): { x: number; y: number } | null {
   return b ? city.entranceOf(b) : null;
 }
 
+/** Missions with texts as { pl, en } (two-language stories, docs/historie/*.json): the panel shows the Polish ones. */
+const para = (v: unknown): v is { pl: string; en: string } =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 2 && typeof (v as { pl?: unknown }).pl === 'string' && typeof (v as { en?: unknown }).en === 'string';
+function poPolsku<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(poPolsku) as T;
+  if (para(v)) return v.pl as T;
+  if (!v || typeof v !== 'object') return v;
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, poPolsku(x)])) as T;
+}
+const dwujezyczna = (v: unknown): boolean => para(v) || (!!v && typeof v === 'object' && Object.values(v).some(dwujezyczna));
+
 const allMissions = (): { id: string; m: Misja; fromCode: boolean; active: boolean }[] => [
   ...MISJE.map((m) => ({ id: m.id, m, fromCode: true, active: true })),
-  ...(data?.missions ?? []).map((d) => ({ id: d.id, m: { ...d.data, id: d.id }, fromCode: false, active: d.active })),
+  ...(data?.missions ?? []).map((d) => ({ id: d.id, m: { ...poPolsku(d.data), id: d.id }, fromCode: false, active: d.active })),
 ];
 
 function skillLevel(points: number) {
@@ -121,7 +139,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -142,7 +160,14 @@ function render() {
   else if (tab === 'codes') codes(main);
   else if (tab === 'errors') void errorsTab(main);
   else if (tab === 'bugs') void bugsTab(main);
+  else if (tab === 'letters') void lettersTab(main);
+  else if (tab === 'porty') void portyTab(main);
+  else if (tab === 'kurier') void kurierTab(main);
   else if (tab === 'quizzes') quizzesTab(main);
+  else if (tab === 'puzzles') void puzzlesTab(main);
+  else if (tab === 'bron') void bronTab(main);
+  else if (tab === 'pancerze') void pancerzTab(main);
+  else if (tab === 'stwory') void stworyTab(main);
   else settings(main);
 }
 
@@ -292,7 +317,7 @@ function missions(main: HTMLElement) {
 
 function missionEditor(id: string | null, kreator = false) {
   const existing = id ? data!.missions.find((d) => d.id === id) : undefined;
-  const m: Misja = existing ? { ...existing.data } : {
+  const m: Misja = existing ? { ...poPolsku(existing.data) } : {
     id: '', adres: '', tytul: '', opis: '', zakonczenie: '', nagroda: 50,
     zadanie: { typ: 'pokonaj', miejsce: '', ile: 3, wrog: 'glut', cel: '' },
   };
@@ -468,6 +493,12 @@ function missionEditor(id: string | null, kreator = false) {
   refresh = update;
 
   const save = btn('💾 Zapisz', async () => {
+    // Saving from the form would drop the English texts: two-language stories are edited in docs/historie and SQL.
+    if (existing && dwujezyczna(existing.data)) {
+      msg.className = 'msg bad';
+      msg.textContent = 'Ta misja ma teksty po polsku i angielsku – zapis z panelu skasowałby wersję angielską. Zmiany wprowadza programista (docs/historie).';
+      return;
+    }
     const mm = read();
     if (!mm.tytul || !mm.adres) {
       msg.className = 'msg bad';
@@ -715,7 +746,7 @@ async function errorsTab(main: HTMLElement) {
     } }, [
       el('td', {}, [new Date(e.at).toLocaleString('pl-PL')]),
       el('td', {}, [e.player ?? '—']),
-      el('td', {}, [el('span', { className: e.kind === 'freeze' ? 'badge bad' : 'badge' }, [e.kind])]),
+      el('td', {}, [el('span', { className: e.kind === 'freeze' ? 'badge bad' : e.kind === 'fps' ? 'badge warn' : 'badge' }, [e.kind])]),
       el('td', {}, [e.message.slice(0, 120)]),
       el('td', {}, [`${c.map ?? ''} ${c.x ?? ''},${c.y ?? ''}`]),
     ]);
@@ -782,6 +813,382 @@ async function bugsTab(main: HTMLElement) {
   });
   const table = el('table', {}, [el('thead', {}, [el('tr', {}, ['', 'Decyzja', 'Kiedy', 'Postać', 'Opis', 'Gdzie'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)]);
   main.append(detail, el('div', { className: 'scroll' }, [table]));
+}
+
+/** Letters to the editors from the newsboys (gazeciarze): players' quest ideas – read as ideas only. */
+/**
+ * „Kurier Parowy” front page (owner, 11 Oct 2026): news the newsboys sell – new quests, special
+ * tasks, other news – in Polish and English (table kurier_wiesci). Nothing is ever deleted: „Ukryj” hides.
+ */
+async function kurierTab(main: HTMLElement) {
+  type W = { id?: number; rodzaj: string; tytul: { pl?: string; en?: string }; tresc: { pl?: string; en?: string }; miejsce: string | null;
+    od: string; do: string | null; kraj: string | null; miasto: string | null; test: boolean; aktywna: boolean };
+  main.append(el('h2', {}, ['Gazeta – pierwsza strona']), el('p', { className: 'muted' }, [
+    'Wieści, które gracze czytają u gazeciarzy: nowe zadania, zadania specjalne i inne ogłoszenia. Najnowsza jest na górze strony, dużymi literami. ',
+    'Pusty angielski tekst = gracze z angielskim widzą polski. „Tylko test” = widać tylko na serwerze testowym. Kraj/miasto puste = wszędzie.',
+  ]));
+  let list: W[];
+  try {
+    list = await call<W[]>('admin_kurier_wiesci', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const RODZAJE: [string, string][] = [['zadanie', '📜 Nowe zadanie'], ['specjalne', '★ Zadanie specjalne'], ['wiesc', '📰 Wieści']];
+  const form = (w: W) => {
+    const inp = (v: string | null, ph = '', type = 'text') => el('input', { type, value: v ?? '', placeholder: ph, style: 'width:100%' }) as HTMLInputElement;
+    const area = (v: string | undefined, ph: string) => el('textarea', { value: v ?? '', placeholder: ph, rows: 5, style: 'width:100%' }) as HTMLTextAreaElement;
+    const rodzaj = el('select', {}, RODZAJE.map(([v, t]) => el('option', { value: v, selected: w.rodzaj === v }, [t]))) as HTMLSelectElement;
+    const tPl = inp(w.tytul.pl ?? '', 'Tytuł po polsku'), tEn = inp(w.tytul.en ?? '', 'Title in English');
+    const bPl = area(w.tresc.pl, 'Treść po polsku (pusta linia = nowy akapit)'), bEn = area(w.tresc.en, 'Text in English');
+    const miejsce = inp(w.miejsce, 'Gdzie (np. Brama Krakowska) – pokazuje się pod tytułem');
+    const od = inp(w.od ?? today, '', 'date'), doo = inp(w.do, '', 'date');
+    const kraj = inp(w.kraj, 'np. PL'), miasto = inp(w.miasto, 'np. Lublin');
+    const test = el('input', { type: 'checkbox', checked: w.test }) as HTMLInputElement;
+    const aktywna = el('input', { type: 'checkbox', checked: w.aktywna }) as HTMLInputElement;
+    const msg = el('span', { className: 'muted' });
+    const save = btn(w.id ? '💾 Zapisz zmiany' : '➕ Opublikuj', async () => {
+      if (!tPl.value.trim() || !bPl.value.trim()) { msg.textContent = 'Wpisz przynajmniej polski tytuł i treść.'; return; }
+      msg.textContent = 'Zapisuję…';
+      try {
+        await call('admin_kurier_zapisz', { p_w: { id: w.id ?? null, rodzaj: rodzaj.value, tytul: { pl: tPl.value.trim(), en: tEn.value.trim() },
+          tresc: { pl: bPl.value.trim(), en: bEn.value.trim() }, miejsce: miejsce.value.trim(), od: od.value, do: doo.value,
+          kraj: kraj.value.trim(), miasto: miasto.value.trim(), test: test.checked, aktywna: aktywna.checked } });
+        main.replaceChildren();
+        void kurierTab(main);
+      } catch (e) { msg.textContent = (e as Error).message; }
+    });
+    const row = (label: string, ...c: Node[]) => el('label', { style: 'display:block;margin:6px 0' }, [el('b', {}, [label]), el('br'), ...c]);
+    return el('div', { className: 'card', style: 'max-width:760px' }, [
+      row('Rodzaj', rodzaj),
+      el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px' }, [row('🇵🇱 Tytuł', tPl), row('🇬🇧 Title', tEn), row('🇵🇱 Treść', bPl), row('🇬🇧 Text', bEn)]),
+      row('Gdzie', miejsce),
+      el('div', { style: 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px' }, [row('Od dnia', od), row('Do dnia (puste = bez końca)', doo), row('Kraj', kraj), row('Miasto', miasto)]),
+      el('label', {}, [test, ' Tylko test ']), ' ', el('label', {}, [aktywna, ' Widoczna']), el('br'), save, ' ', msg,
+    ]);
+  };
+  main.append(el('h3', {}, ['Nowa wieść']), form({ rodzaj: 'zadanie', tytul: {}, tresc: {}, miejsce: null, od: today, do: null, kraj: null, miasto: null, test: false, aktywna: true }));
+  if (!list.length) return;
+  main.append(el('h3', {}, ['Opublikowane']));
+  for (const w of list) {
+    const box = el('div');
+    const show = () => box.replaceChildren(el('div', { className: 'card', style: `max-width:760px;opacity:${w.aktywna ? 1 : 0.5}` }, [
+      el('b', {}, [`${RODZAJE.find((r) => r[0] === w.rodzaj)?.[1] ?? w.rodzaj}: ${w.tytul.pl ?? ''}`]),
+      el('div', { className: 'muted' }, [`${w.od}${w.do ? ' → ' + w.do : ''}${w.miasto ? ' · ' + w.miasto : ''}${w.kraj ? ' · ' + w.kraj : ''}${w.test ? ' · tylko test' : ''}${w.aktywna ? '' : ' · ukryta'}${w.tytul.en ? '' : ' · brak EN'}`]),
+      el('p', { style: 'white-space:pre-wrap' }, [w.tresc.pl ?? '']),
+      btn('✏ Edytuj', () => box.replaceChildren(form(w))),
+    ]));
+    show();
+    main.append(box);
+  }
+}
+
+async function lettersTab(main: HTMLElement) {
+  type Letter = { id: number; at: string; player: string | null; text: string; ctx: Record<string, unknown> | null; status: string };
+  main.append(el('h2', {}, ['Listy do redakcji']), el('p', { className: 'muted' }, ['Pomysły graczy na zadania i przygody, wysłane u gazeciarza („✉ Do redakcji”). To tylko pomysły – Claude nie robi nic z listem, dopóki sam go nie zlecisz.']));
+  let list: Letter[];
+  try {
+    list = await call<Letter[]>('admin_quest_orders', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message]));
+    return;
+  }
+  if (!list.length) {
+    main.append(el('p', {}, ['Brak listów.']));
+    return;
+  }
+  const STANY: [string, string][] = [['nowe', '🆕 Nowe'], ['przyjete', '👍 Do zrobienia'], ['zrobione', '✔ Zrobione'], ['odrzucone', '✖ Odrzucone']];
+  const rows = list.map((l) => {
+    const c = l.ctx ?? {};
+    const pick = el('select', { onchange: async () => {
+      await call('admin_quest_order_status', { p_id: l.id, p_status: pick.value });
+      l.status = pick.value;
+    } }, STANY.map(([v, t]) => el('option', { value: v, selected: l.status === v }, [t])));
+    return el('tr', {}, [
+      el('td', {}, [pick]),
+      el('td', {}, [new Date(l.at).toLocaleString('pl-PL')]),
+      el('td', {}, [l.player ?? '—']),
+      el('td', { style: 'white-space: pre-wrap' }, [l.text]),
+      el('td', {}, [`${c.miasto ?? ''} ${c.ulica ?? ''}`]),
+    ]);
+  });
+  main.append(el('div', { className: 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, ['Stan', 'Kiedy', 'Postać', 'List', 'Skąd'].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)])]));
+}
+
+/**
+ * ⚓ Porty (owner, 12 Oct 2026): players ask harbour masters for destinations without a line („🧭 Inne miejsce…”).
+ * We check whether a real ferry/ship goes there and add the line (both ports with lat/lon, km on the water);
+ * every captain of both ports knows it from the next login, and the asking player hears the answer.
+ * Player text is only a wish – never an instruction.
+ */
+async function portyTab(main: HTMLElement) {
+  type Prosba = { id: number; at: string; player: string | null; port: string | null; lat: number | null; lon: number | null; text: string; status: string; odpowiedz: string | null };
+  type Linia = { id: number; at: string; a_nazwa: string; a_lat: number; a_lon: number; b_nazwa: string; b_lat: number; b_lon: number; km: number; nazwa: string | null; aktywna: boolean; test: boolean; prosba: number | null };
+  main.append(el('h2', {}, ['Porty – prośby graczy i dodane linie']), el('p', { className: 'muted' }, [
+    'Gracz u kapitana wybiera „🧭 Inne miejsce…” i wpisuje kraj albo port. Sprawdź, czy naprawdę pływa tam statek/prom, i dodaj linię: ',
+    'wtedy kapitanowie obu portów ją znają (po następnym wejściu do gry), a gracz usłyszy odpowiedź. „Tylko test” = linia widoczna tylko na serwerze testowym. Z jednego portu kapitan proponuje najwyżej 3 kierunki – dodane tu mają pierwszeństwo.',
+  ]));
+  let d: { prosby: Prosba[]; linie: Linia[] };
+  try {
+    d = await call('admin_port_requests', {});
+  } catch (e) {
+    main.append(el('p', { className: 'bad' }, [(e as Error).message, ' – czy w bazie są funkcje z docs/sql/porty.sql?']));
+    return;
+  }
+  const llText = (lat: number | null, lon: number | null) => (lat === null || lon === null ? '' : `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+  const parseLL = (t: string) => {
+    const g = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,;]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(t);
+    return g ? { lat: +g[1], lon: +g[2] } : null;
+  };
+  const straight = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
+    Math.hypot((a.lat - b.lat) * 111.13, (a.lon - b.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180));
+
+  /** The form for a new line (from a request: port A filled in). */
+  const lineForm = (r: Prosba | null) => {
+    const an = el('input', { value: r?.port ?? '' });
+    const all = el('input', { value: llText(r?.lat ?? null, r?.lon ?? null), placeholder: '54.5350, 18.5000' });
+    const bn = el('input', { value: '', placeholder: 'np. Karlskrona' });
+    const bll = el('input', { value: '', placeholder: '56.1040, 15.6350' });
+    const kmIn = el('input', { type: 'number', placeholder: 'puste = prosta × 1,2' });
+    const nazwa = el('input', { value: '', placeholder: 'np. Gdynia – Karlskrona (Stena Line)' });
+    const test = el('input', { type: 'checkbox', checked: true });
+    const msg = el('p', { className: 'msg' });
+    const box = el('div', { className: 'card', style: 'max-width: 560px' }, [
+      el('h3', {}, [r ? `Nowa linia z prośby #${r.id} („${r.text}”)` : 'Nowa linia']),
+      el('label', { className: 'f' }, [el('span', {}, ['Port A – nazwa']), an]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port A – szer., dł. (przystań, na lądzie)']), all]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port B – nazwa']), bn]),
+      el('label', { className: 'f' }, [el('span', {}, ['Port B – szer., dł.']), bll]),
+      el('label', { className: 'f' }, [el('span', {}, ['km po wodzie']), kmIn]),
+      el('label', { className: 'f' }, [el('span', {}, ['Nazwa linii (opcjonalnie)']), nazwa]),
+      el('label', {}, [test, ' Tylko test']),
+      msg,
+      btn('➕ Dodaj linię', async () => {
+        msg.className = 'msg bad';
+        const a = parseLL(all.value), b = parseLL(bll.value);
+        if (!an.value.trim() || !bn.value.trim() || !a || !b) return void (msg.textContent = 'Podaj nazwy i współrzędne obu portów (szer., dł.).');
+        const k = kmIn.value ? Math.round(+kmIn.value) : Math.round(straight(a, b) * 1.2);
+        try {
+          await call('admin_port_line', { p_id: null, p_line: { a_nazwa: an.value.trim(), a_lat: a.lat, a_lon: a.lon, b_nazwa: bn.value.trim(), b_lat: b.lat, b_lon: b.lon, km: k, nazwa: nazwa.value.trim(), test: test.checked, prosba: r?.id ?? null } });
+          msg.className = 'msg ok';
+          msg.textContent = `Dodana (${k} km).`;
+          setTimeout(() => render(), 600);
+        } catch (e) {
+          msg.textContent = (e as Error).message;
+        }
+      }, 'b p'),
+    ]);
+    return box;
+  };
+
+  const formSlot = el('div');
+  const STANY: [string, string][] = [['nowe', '🆕 Nowa'], ['dodana', '✔ Linia dodana'], ['odrzucona', '✖ Nikt tam nie pływa']];
+  const rows = d.prosby.map((r) => {
+    const pick = el('select', {}, STANY.map(([v, t]) => el('option', { value: v, selected: r.status === v }, [t])));
+    const odp = el('input', { value: r.odpowiedz ?? '', placeholder: 'co kapitan powie graczowi (opcjonalnie)', style: 'width: 18em' });
+    const save = btn('💾', async () => {
+      await call('admin_port_request', { p_id: r.id, p_status: pick.value, p_odpowiedz: odp.value });
+      save.textContent = '✔';
+    });
+    return el('tr', {}, [
+      el('td', {}, [pick, ' ', odp, ' ', save]),
+      el('td', {}, [date(r.at)]),
+      el('td', {}, [r.player ?? '—']),
+      el('td', {}, [`${r.port ?? ''} `, el('small', { className: 'muted' }, [llText(r.lat, r.lon)])]),
+      el('td', { style: 'white-space: pre-wrap' }, [r.text]),
+      el('td', {}, [btn('➕ Linia', () => formSlot.replaceChildren(lineForm(r)))]),
+    ]);
+  });
+  main.append(el('h3', {}, [`Prośby graczy (${d.prosby.filter((r) => r.status === 'nowe').length} nowych)`]),
+    d.prosby.length
+      ? el('div', { className: 'scroll' }, [el('table', {}, [el('thead', {}, [el('tr', {}, ['Stan i odpowiedź', 'Kiedy', 'Postać', 'Port', 'Dokąd', ''].map((h) => el('th', {}, [h])))]), el('tbody', {}, rows)])])
+      : el('p', {}, ['Brak próśb.']),
+    btn('➕ Nowa linia bez prośby', () => formSlot.replaceChildren(lineForm(null))),
+    formSlot,
+    el('h3', {}, ['Dodane linie']),
+  );
+  if (!d.linie.length) return void main.append(el('p', {}, ['Jeszcze żadnej.']));
+  main.append(el('div', { className: 'scroll' }, [el('table', {}, [
+    el('thead', {}, [el('tr', {}, ['Widoczna', 'Tylko test', 'Linia', 'km', 'Porty'].map((h) => el('th', {}, [h])))]),
+    el('tbody', {}, d.linie.map((l) => {
+      const on = el('input', { type: 'checkbox', checked: l.aktywna, onchange: () => void call('admin_port_line', { p_id: l.id, p_line: { aktywna: on.checked } }) });
+      const t = el('input', { type: 'checkbox', checked: l.test, onchange: () => void call('admin_port_line', { p_id: l.id, p_line: { test: t.checked } }) });
+      return el('tr', {}, [el('td', {}, [on]), el('td', {}, [t]), el('td', {}, [l.nazwa ?? `${l.a_nazwa} – ${l.b_nazwa}`]), el('td', {}, [String(l.km)]),
+        el('td', {}, [el('small', {}, [`${l.a_nazwa} (${llText(l.a_lat, l.a_lon)}) ↔ ${l.b_nazwa} (${llText(l.b_lat, l.b_lon)})`])])]);
+    })),
+  ])]));
+}
+
+/**
+ * Creatures: EXP and loot per kind (owner, 26 Oct 2026). Every loot row is rolled on its own: item, amount, chance %.
+ * Table `stwory_lup` (docs/sql/stwory-lup.sql); the game reads it at the start (content/stwory.ts), new-fight test only.
+ */
+async function stworyTab(main: HTMLElement) {
+  type U = { exp: number | null; lup: WierszLupu[] };
+  main.append(el('h2', {}, ['🐺 Stworki – łup i EXP']), el('p', { className: 'muted' }, [
+    'Każdy wiersz łupu losowany osobno: „Złoto 2 – 50 %” i „Złoto 1 – 30 %” razem dają 0, 1, 2 albo 3 złota. Szansa w procentach, można ułamki (0,05 = raz na 2000). ',
+    'Puste EXP = domyślne z gry. Bez wierszy łupu stworek daje to, co dawał dotąd. Działa w nowej walce (serwer testowy) od następnego wejścia gracza do gry.',
+  ]));
+  const box = el('div');
+  main.append(box);
+  let dane: Record<string, U>;
+  try {
+    dane = (await call<{ stwory: Record<string, U> }>('admin_stwory', {})).stwory ?? {};
+  } catch (e) {
+    box.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`]));
+    return;
+  }
+  try { const v = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawBronie(v); ustawPancerze(v); }
+  catch { box.append(el('p', { className: 'msg bad' }, ['Nie udało się odświeżyć zakresów broni; lista pokazuje wartości domyślne.'])); }
+  const opcje = lupOpcje();
+  const grupy = [...new Set(opcje.map((o) => o.grupa))];
+  const wybor = (co: string) => {
+    const sel = el('select', { style: 'min-width: 0; max-width: 100%; width: 300px', 'aria-label': 'Przedmiot łupu' });
+    if (!opcje.some(o => o.id === co)) sel.append(el('option', { value: co, selected: true }, [`Nieznany przedmiot (${co})`]));
+    for (const g of grupy) {
+      const og = el('optgroup', { label: g });
+      for (const o of opcje.filter((q) => q.grupa === g)) og.append(el('option', { value: o.id, selected: o.id === co }, [o.nazwa]));
+      sel.append(og);
+    }
+    return sel;
+  };
+  for (const st of STWORY) {
+    const u: U = dane[st.id] ?? { exp: null, lup: [] };
+    const exp = el('input', { type: 'number', min: '0', max: '100000', step: '1', value: u.exp === null ? '' : String(u.exp), placeholder: String(st.exp), style: 'width: 90px' });
+    const wiersze = el('div');
+    const msg = el('small', { className: 'muted' }, [u.lup.length || u.exp !== null ? 'ustawione' : 'domyślne z gry']);
+    const dodaj = (w: WierszLupu) => {
+      const sel = wybor(w.co);
+      const ile = el('input', { type: 'number', min: '1', max: '100000', step: '1', value: String(w.ile), style: 'width: 70px', title: 'Ilość' });
+      const szansa = el('input', { type: 'number', min: '0', max: '100', step: 'any', value: String(w.szansa), style: 'width: 80px', title: 'Szansa %' });
+      const row = el('div', { className: 'lup-wiersz', style: 'display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 3px 0' }, [
+        sel, el('span', {}, ['×']), ile, el('span', {}, ['szansa']), szansa, el('span', {}, ['%']),
+      ]);
+      row.append(btn('🗑', () => row.remove()));
+      (row as HTMLElement & { odczyt?: () => WierszLupu }).odczyt = () => ({ co: sel.value, ile: Number(ile.value), szansa: Number(String(szansa.value).replace(',', '.')) });
+      wiersze.append(row);
+    };
+    u.lup.forEach(dodaj);
+    const zapisz = async () => {
+      const lup = [...wiersze.children].map((r) => (r as HTMLElement & { odczyt: () => WierszLupu }).odczyt());
+      const zle = lup.find((w) => !(w.ile >= 1 && w.ile <= 100000) || !(w.szansa >= 0 && w.szansa <= 100));
+      if (zle) return void ((msg.className = 'msg bad'), (msg.textContent = 'Ilość od 1, szansa od 0 do 100 %.'));
+      const e = exp.value.trim() === '' ? null : Math.round(Number(exp.value));
+      try {
+        await call('admin_stwory_zapisz', { p_rodzaj: st.id, p_exp: e, p_lup: lup });
+        msg.className = 'msg ok';
+        msg.textContent = 'Zapisane.';
+      } catch (err) {
+        msg.className = 'msg bad';
+        msg.textContent = (err as Error).message;
+      }
+    };
+    box.append(el('div', { className: 'card', style: 'max-width: 720px' }, [
+      el('h3', { style: 'margin: 0 0 4px' }, [st.nazwa, el('small', { className: 'muted' }, [`  (${st.id})`])]),
+      el('p', { className: 'muted', style: 'margin: 0 0 8px' }, [st.gdzie]),
+      el('label', { style: 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px' }, [el('span', {}, ['EXP za pokonanie']), exp, el('small', { className: 'muted' }, [`domyślnie ${st.exp}`])]),
+      el('b', {}, ['Łup']),
+      wiersze,
+      el('div', { style: 'display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap' }, [
+        btn('＋ Dodaj przedmiot', () => dodaj({ co: 'zloto', ile: 1, szansa: 50 })),
+        btn('Zapisz', () => void zapisz(), 'b p'),
+        msg,
+      ]),
+    ]));
+  }
+}
+
+async function bronTab(main: HTMLElement) {
+  const field = (label: string, input: HTMLElement) => el('label', { className: 'f' }, [el('span', {}, [label]), input]);
+  main.append(el('h2', {}, ['⚔ Repozytorium broni']), el('p', { className: 'muted' }, [
+    'Wspólny katalog broni do łupów i nagród. Kijek, miecz treningowy i stalowy mają po pięć jakości ze wspólną grafiką. ',
+    'Pozostałe bronie zachowują dotychczasową moc, dopóki nie nadasz im zakresu. Bonus: +2% za poziom postaci ponad pierwszy i +6% za poziom wyszkolenia ponad początkowy. Zmiany od następnego wejścia do gry.',
+  ]));
+  let values: Record<string, number>;
+  try { values = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawBronie(values); }
+  catch (e) { main.append(el('p', { className: 'msg bad' }, [`Nie udało się wczytać: ${(e as Error).message}`])); return; }
+  const search = el('input', { type: 'search', placeholder: 'Szukaj broni lub jakości', 'aria-label': 'Szukaj broni', style: 'width: 100%; max-width: 500px' });
+  const list = el('div'); main.append(search, list);
+  for (const p of bronie()) {
+    const range = p.obrazenia;
+    const min = el('input', { type: 'number', min: '1', max: '10000', step: '1', value: range ? String(range[0]) : '', 'aria-label': 'Minimum obrażeń', style: 'width: 90px' });
+    const max = el('input', { type: 'number', min: '1', max: '10000', step: '1', value: range ? String(range[1]) : '', 'aria-label': 'Maksimum obrażeń', style: 'width: 90px' });
+    const msg = el('small', { className: 'muted' }, [range ? `Obrażenia ${range.join('–')}` : `Dotychczasowa moc: ${p.moc}`]);
+    const save = btn('Zapisz zakres', async () => {
+      try {
+        const n = kodujZakres(Number(min.value), Number(max.value)); save.disabled = true;
+        await call('admin_set_setting', { p_k: kluczBroni(p.id), p_v: n });
+        values[kluczBroni(p.id)] = n; ustawBronie(values); msg.className = 'msg ok'; msg.textContent = `Zapisane: ${min.value}–${max.value}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { save.disabled = false; }
+    }, 'b p');
+    const reset = btn('Przywróć domyślne', async () => {
+      reset.disabled = true;
+      try { await call('admin_set_setting', { p_k: kluczBroni(p.id), p_v: null }); delete values[kluczBroni(p.id)]; ustawBronie(values);
+        min.value = p.obrazenia ? String(p.obrazenia[0]) : ''; max.value = p.obrazenia ? String(p.obrazenia[1]) : '';
+        msg.className = 'msg ok'; msg.textContent = 'Przywrócono domyślne.';
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { reset.disabled = false; }
+    });
+    const life = el('input', { type: 'number', min: '1', max: '1000000', step: '1', value: p.wytrzymalosc ? String(p.wytrzymalosc) : '', 'aria-label': 'Wytrzymałość broni', style: 'width: 110px', placeholder: 'bez zużycia' });
+    const saveLife = btn('Zapisz wytrzymałość', async () => {
+      try {
+        const n = life.value.trim() === '' ? null : Number(life.value);
+        if (n !== null && (!Number.isInteger(n) || n < 1 || n > 1000000)) throw new Error('Wytrzymałość: od 1 do 1000000.');
+        saveLife.disabled = true;
+        await call('admin_set_setting', { p_k: kluczTrwalosci(p.id), p_v: n });
+        if (n === null) delete values[kluczTrwalosci(p.id)]; else values[kluczTrwalosci(p.id)] = n;
+        ustawBronie(values); life.value = p.wytrzymalosc ? String(p.wytrzymalosc) : '';
+        msg.className = 'msg ok'; msg.textContent = `Wytrzymałość zapisana: ${p.wytrzymalosc ?? 'bez zużycia'}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { saveLife.disabled = false; }
+    });
+    const icon = itemIcon(p.id);
+    if (icon) { icon.width = 40; icon.height = 40; icon.style.imageRendering = 'pixelated'; }
+    const card = el('div', { className: 'card', 'data-weapon': p.id }, [el('h3', { className: 'row' }, [icon, p.nazwa]),
+      el('p', { className: 'muted' }, [`${UMIEJETNOSCI[p.rodzaj === 'magia' ? 'magia' : p.rodzaj === 'luk' ? 'luk' : 'miecz'].nazwa} · Wytrzymałość: ${p.wytrzymalosc ?? 'nie zużywa się'} · ID: ${p.id}`]),
+      el('div', { className: 'row' }, [field('Minimum obrażeń', min), field('Maksimum obrażeń', max), save, reset]),
+      el('div', { className: 'row' }, [field('Wytrzymałość (puste = domyślna)', life), saveLife]), msg,
+    ]);
+    list.append(card);
+  }
+  search.oninput = () => { const q = search.value.toLocaleLowerCase('pl'); for (const card of list.children) (card as HTMLElement).hidden = !card.textContent?.toLocaleLowerCase('pl').includes(q); };
+}
+
+async function pancerzTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['🛡 Repozytorium pancerzy']), el('p', { className: 'muted' }, [
+    'Zbroje, hełmy i buty. Pancerz założonych elementów sumuje się i osłabia ciosy fizyczne. Magia i trucizny go pomijają. ',
+    'Pięć jakości dzieli grafikę. Łup i losową jakość ustawisz w zakładce Stworki. Zmiany od następnego wejścia do gry.',
+  ]));
+  let values: Record<string, number>;
+  try { values = (await call<{ values: Record<string, number> }>('admin_settings', {})).values; ustawPancerze(values); }
+  catch (e) { main.append(el('p', { className: 'msg bad' }, [(e as Error).message])); return; }
+  const search = el('input', { type: 'search', placeholder: 'Szukaj pancerza lub jakości', 'aria-label': 'Szukaj pancerza' });
+  const list = el('div'); main.append(search, list);
+  for (const p of pancerze()) {
+    const value = el('input', { type: 'number', min: '0', max: '10000', step: '1', value: String(p.moc), 'aria-label': 'Pancerz', style: 'width: 110px' });
+    const msg = el('small', { className: 'muted' });
+    const set = async (n: number | null) => {
+      try {
+        if (n !== null && (!Number.isInteger(n) || n < 0 || n > 10000)) throw new Error('Pancerz: liczba całkowita od 0 do 10000.');
+        save.disabled = reset.disabled = true;
+        await call('admin_set_setting', { p_k: kluczPancerza(p.id), p_v: n });
+        if (n === null) delete values[kluczPancerza(p.id)]; else values[kluczPancerza(p.id)] = n;
+        ustawPancerze(values); value.value = String(p.moc);
+        msg.className = 'msg ok'; msg.textContent = `Zapisane. Pancerz: ${p.moc}.`;
+      } catch (e) { msg.className = 'msg bad'; msg.textContent = (e as Error).message; }
+      finally { save.disabled = reset.disabled = false; }
+    };
+    const save = btn('Zapisz pancerz', () => { if (value.value.trim() === '') { msg.textContent = 'Wpisz wartość pancerza.'; return; } void set(Number(value.value)); }, 'b p');
+    const reset = btn('Przywróć domyślne', () => void set(null));
+    const icon = itemIcon(p.id); if (icon) { icon.width = 64; icon.height = 64; }
+    list.append(el('div', { className: 'card', 'data-armour': p.id }, [
+      el('h3', { className: 'row' }, [icon, p.nazwa]), el('p', { className: 'muted' }, [`ID: ${p.id}`]),
+      el('div', { className: 'row' }, [el('label', { className: 'f' }, [el('span', {}, ['Pancerz']), value]), save, reset]), msg,
+    ]));
+  }
+  search.oninput = () => { const q = search.value.toLocaleLowerCase('pl'); for (const card of list.children) (card as HTMLElement).hidden = !card.textContent?.toLocaleLowerCase('pl').includes(q); };
 }
 
 function settings(main: HTMLElement) {
@@ -1048,3 +1455,70 @@ CityMap.load('map/lublin.json').then((c) => {
 if (key) {
   reload().then(render).catch((e: Error) => loginScreen(e.message));
 } else loginScreen();
+
+/**
+ * 🧩 Łamigłówki (owner, 12 Oct 2026): the newspaper's puzzle of the day. The game makes the puzzles itself from
+ * the date (the same for everyone on one difficulty level), so this tab shows any day's five puzzles with their
+ * solutions, and how many players solved them (RPC admin_lamiglowki; test characters counted apart).
+ */
+async function puzzlesTab(main: HTMLElement) {
+  main.append(el('h2', {}, ['Łamigłówka dnia (Kurier Parowy)']), el('p', { className: 'muted' }, [
+    `Codziennie jeden rodzaj dla wszystkich (sudoku 6×6, kakuro, matematyczna krzyżówka, najkrótsza trasa, królowe – od 15.10.2026), a łamigłówka według poziomu trudności postaci. Za rozwiązanie ${LAMIGLOWKA.nagrodaExp} EXP raz dziennie. Losowanie nagród jeszcze nie działa.`,
+  ]));
+  const stats = el('div');
+  main.append(stats);
+  try {
+    type Dzien = { dzien: string; rodzaj: string; ile: number; graczy: number; poziomy: number[]; mediana: number | null };
+    type Ost = { name: string; dzien: string; poziom: number; sekundy: number | null; at: string; test: boolean };
+    const r = await call<{ dni: Dzien[]; ostatni: Ost[] }>('admin_lamiglowki', {});
+    const czas = (s: number | null) => (s == null ? '—' : s < 120 ? `${Math.round(s)} s` : `${Math.round(s / 60)} min`);
+    stats.append(el('h3', {}, ['Rozwiązania (30 dni)']), r.dni.length ? el('div', { className: 'scroll' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, ['Dzień', 'Rodzaj', 'Graczy', 'Razem z testowymi', ...TRUDNOSCI.map((t) => t.nazwa), 'Mediana czasu'].map((h) => el('th', {}, [h])))]),
+      el('tbody', {}, r.dni.map((d) => el('tr', {}, [d.dzien, LAMIGLOWKA.nazwy[d.rodzaj]?.pl ?? d.rodzaj, String(d.graczy), String(d.ile), ...d.poziomy.map(String), czas(d.mediana)].map((t) => el('td', {}, [t]))))),
+    ])]) : el('p', {}, ['Nikt jeszcze nie rozwiązał łamigłówki.']));
+    if (r.ostatni.length) stats.append(el('h3', {}, ['Ostatnio rozwiązali']), el('div', { className: 'scroll' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, ['Kiedy', 'Postać', 'Poziom', 'Czas'].map((h) => el('th', {}, [h])))]),
+      el('tbody', {}, r.ostatni.map((o) => el('tr', {}, [date(o.at), `${o.name ?? '—'}${o.test ? ' (testowa)' : ''}`, TRUDNOSCI[o.poziom]?.nazwa ?? String(o.poziom), czas(o.sekundy)].map((t) => el('td', {}, [t]))))),
+    ])]));
+  } catch (e) {
+    stats.append(el('p', { className: 'bad' }, [(e as Error).message]));
+  }
+  const pick = el('input', { type: 'date', value: dzienLamiglowki() });
+  const out = el('div');
+  const show = () => {
+    const d = pick.value;
+    out.replaceChildren(el('p', {}, [`${d}: ${LAMIGLOWKA.nazwy[rodzajDnia(d)].pl}`]));
+    for (let p = 0; p < 5; p++) {
+      out.append(el('h3', {}, [`${TRUDNOSCI[p].nazwa} – ${POZIOMY_LAMIGLOWEK[p].pl}`]), el('div', { style: 'display:flex;gap:24px;flex-wrap:wrap' }, [
+        el('div', {}, [el('p', { className: 'muted' }, ['Łamigłówka']), el('pre', { className: 'dialog' }, [puzzleText(lamiglowkaDnia(d, p), false)])]),
+        el('div', {}, [el('p', { className: 'muted' }, ['Rozwiązanie']), el('pre', { className: 'dialog' }, [puzzleText(lamiglowkaDnia(d, p), true)])]),
+      ]));
+    }
+  };
+  pick.onchange = show;
+  main.append(el('h3', {}, ['Podgląd łamigłówek']), el('p', {}, ['Dzień: ', pick]), out);
+  show();
+}
+
+/** A puzzle as monospaced text (· = empty, ▓ = black, kakuro clues as down\right). */
+function puzzleText(z: Lamiglowka, rozw: boolean): string {
+  const pad = (s: string, n: number) => s.padStart(n);
+  if (z.rodzaj === 'sudoku') return (rozw ? z.rozw : z.dane).map((w, r) => w.map((v, c) => `${v || '·'}${c === 2 ? ' |' : ''}`).join(' ') + (r % 2 === 1 && r < 5 ? '\n------+------' : '')).join('\n');
+  if (z.rodzaj === 'kakuro') return z.siatka.map((w, r) => w.map((k, c) => pad(k === 'b' ? String(rozw || z.dane[r][c] ? z.rozw[r][c] : '·') : k ? `${k.d || ''}\\${k.p || ''}` : '▓', 6)).join('')).join('\n');
+  if (z.rodzaj === 'krzyzowka') {
+    const L = rozw ? z.rozw.liczby : z.liczby, W = rozw ? z.rozw.wiersze : z.wiersze, K = rozw ? z.rozw.kolumny : z.kolumny;
+    const lines: string[] = [];
+    for (let r = 0; r < z.n; r++) {
+      lines.push(L[r].map((v, c) => pad(v == null ? '·' : String(v), 4) + (c < z.n - 1 ? ` ${W[r][c] ?? '·'}` : '')).join('') + ` = ${z.wynikiW[r]}`);
+      if (r < z.n - 1) lines.push(K[r].map((o) => pad(o ?? '·', 4) + '  ').join(''));
+    }
+    lines.push(z.wynikiK.map(() => pad('=', 4) + '  ').join(''), z.wynikiK.map((v) => pad(String(v), 4) + '  ').join(''));
+    return lines.join('\n');
+  }
+  if (z.rodzaj === 'krolowe') {
+    // Areas as letters; the solution's queens as ♛.
+    return z.obszary.map((w, r) => w.map((o, c) => (rozw && z.rozw[r] === c ? '♛' : String.fromCharCode(65 + o))).join(' ')).join('\n');
+  }
+  const on = new Set(z.przyklad.map(([r, c]) => r * 100 + c));
+  return z.pola.map((w, r) => w.map((v, c) => (rozw && on.has(r * 100 + c) ? `[${v}]` : ` ${v} `)).join('')).join('\n') + (rozw ? `\nNajkrótsza: ${z.najkrotsza} m` : '');
+}

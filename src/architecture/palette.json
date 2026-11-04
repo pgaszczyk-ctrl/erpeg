@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "algorithm": "weighted-kmeans-source-medoid",
+  "seed": 0,
+  "outline": 0,
+  "colors": [
+    "#1e1a24",
+    "#4a3216",
+    "#3a3540",
+    "#6b4a22",
+    "#b2453a",
+    "#67615b",
+    "#9a6420",
+    "#4c7c3e",
+    "#847d74",
+    "#61924a",
+    "#948d80",
+    "#c8963e",
+    "#93b75a",
+    "#bab3a2",
+    "#bcd884",
+    "#ece6d6"
+  ],
+  "source_groups": [
+    "trees",
+    "grass",
+    "paving",
+    "pipes"
+  ],
+  "source_hash": "57effc524191d09255a70fa9e82f90891a807efba47e4eb819e91e5c618e6b7c",
+  "provenance": {
+    "#1e1a24": {
+      "trees": 9253,
+      "pipes": 4
+    },
+    "#4a3216": {
+      "pipes": 192
+    },
+    "#3a3540": {
+      "paving": 26176
+    },
+    "#6b4a22": {
+      "pipes": 24
+    },
+    "#b2453a": {
+      "pipes": 40
+    },
+    "#67615b": {
+      "trees": 946
+    },
+    "#9a6420": {
+      "pipes": 24
+    },
+    "#4c7c3e": {
+      "trees": 227
+    },
+    "#847d74": {
+      "trees": 368
+    },
+    "#61924a": {
+      "trees": 1216
+    },
+    "#948d80": {
+      "paving": 17953
+    },
+    "#c8963e": {
+      "pipes": 24
+    },
+    "#93b75a": {
+      "grass": 417
+    },
+    "#bab3a2": {
+      "paving": 7010
+    },
+    "#bcd884": {
+      "trees": 636
+    },
+    "#ece6d6": {
+      "pipes": 12
+    }
+  }
+}

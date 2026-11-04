@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { comicHud } from '../ui/comicHud';
+import { comicBurst } from '../ui/comicBurst';
+import { live } from '../walka/live';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
@@ -43,6 +46,15 @@ export const ENEMY_KINDS: Record<RodzajWroga, EnemyKind> = {
   wodnik: { name: 'Wodnik', hp: 30, wanderSpeed: 12, chaseSpeed: 30, sightRange: 120, loseRange: 220, scale: 1.05, damage: 1, exp: 25, tint: 0x9fe8ff },
   // The story's dragon (its reward comes from content/historia.ts).
   smok: { name: 'Smok', hp: 200, wanderSpeed: 8, chaseSpeed: 34, sightRange: 140, loseRange: 400, scale: 1, damage: 2, exp: 0 },
+  // Łowiska test pilot (content/lowiska.ts, scenes/Lowiska.ts): real-time only, never scaled by level.
+  // chaseSpeed/sightRange/loseRange here are unused once a StworAI brain is attached (it drives vel itself);
+  // kept sane in case generic Slime code (fleeing a dragon's shadow, etc.) ever reads them.
+  wilk: { name: 'Wilk', hp: 10, wanderSpeed: 14, chaseSpeed: 44, sightRange: 160, loseRange: 260, scale: 1, damage: 2, exp: 12, tint: 0x7a6a58 },
+  // The crypt's guardian (lochy, owner 27 Oct 2026): the skeleton's sheet, big and pale; fights like a boss (StworAI).
+  // Elzet 10 (content/elzet.ts): life and damage are set from the hero at the fight's start (scenes/Elzet.ts).
+  elzet: { name: 'Elzet 10', hp: 100, wanderSpeed: 0, chaseSpeed: 40, sightRange: 0, loseRange: 9999, scale: 1.25, damage: 1, exp: 0 },
+  upior: { name: 'Upiór krypty', hp: 90, wanderSpeed: 10, chaseSpeed: 34, sightRange: 150, loseRange: 320, scale: 1.9, damage: 2, exp: 90, tint: 0xb8e8ff },
+  warg: { name: 'Warg', hp: 32, wanderSpeed: 11, chaseSpeed: 40, sightRange: 190, loseRange: 300, scale: 1.3, damage: 4, exp: 45, tint: 0x5a3a2a },
 };
 
 /** How hard a blow throws an enemy back (px/s for 300 ms, divided by its size); was 200, the owner wants them to stay close. */
@@ -56,7 +68,7 @@ export const PREDKOSC_WROGOW = PLAYER.speed / 60;
 
 
 /** Pictures of the little creatures (all but the bandit). */
-const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, koziol: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
+const CRITTER_TEX: Partial<Record<RodzajWroga, string>> = { glut: TEX.slime, wielki_glut: TEX.slime, herszt: TEX.slime, wielki_herszt: TEX.slime, koziol: TEX.slime, driada: TEX.dryad, zombie: TEX.zombie, szkielet: TEX.skeleton, upior: TEX.skeleton, smok: TEX.dragon, blob: TEX.blob, wodnik: TEX.zombie };
 
 export function createSlimeAnims(scene: Phaser.Scene) {
   for (const key of [TEX.slime, TEX.dryad, TEX.zombie, TEX.skeleton, TEX.blob]) {
@@ -90,8 +102,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
   leash: { x: number; y: number; r: number } | null = null;
   /** Not pushed back by blows (the demo's Wawel dragon). */
   heavy = false;
+  /** Turn fight (test server): never chases, never hurts by touch – it waits in its group to be met (walka/Spotkania.ts). */
+  spokojny = false;
   /** In the air (a mountain dragon's flight): unseen and can't be hit. */
   inAir = false;
+  /** Can't be hit now (Elzet 10 walking away after giving up). */
+  nietykalny = false;
+  /** Elzet 10: life never drops below `hp`; reaching it calls `fn` once (the fight stops there). */
+  prog?: { hp: number; fn: () => void };
   /** Its own way of moving, called instead of think() (the demo's Wawel dragon). */
   brain?: (now: number) => void;
   private nextThink = 0;
@@ -106,20 +124,32 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Its own speed factor (a berserker runs faster). */
   pace = 1;
   private aura?: Phaser.GameObjects.Sprite;
+  /** The shared GLB renderer replaces only this actor's picture. */
+  model3d = false;
+  modelDeathMs = 1250;
+  modelHitAt = -Infinity;
+  modelDeathAt = -Infinity;
+  modelAttack?: { clip: string; start: number; contact: number; end: number; aim: number };
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
     const k = ENEMY_KINDS[kind];
-    const person = kind === 'bandyta' || kind === 'wojownik';
+    // Wilk/warg have no art yet (łowiska test pilot): placeholder on the bandit's humanoid sheet, tinted –
+    // same idiom the game already used for koziol/the grey dragon before their own art arrived.
+    const person = kind === 'bandyta' || kind === 'wojownik' || kind === 'wilk' || kind === 'warg';
     // The artist's detailed enemies (content/wyglad.ts), with a red glow; townsfolk in duels bring their own picture.
     const hdTex = hdOn && kind !== 'wojownik' ? enemyTexture(scene, kind) : null;
     const hd = !!hdTex && scene.textures.exists(hdTex);
-    super(scene, x, y, hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, person || hd ? 'down-0' : 'f0');
+    const detailedBlob = kind === 'blob' && scene.textures.exists('szlam-szczegolowy');
+    super(scene, x, y, detailedBlob ? 'szlam-szczegolowy' : hd ? hdTex! : person ? TEX.bandit : CRITTER_TEX[kind] ?? TEX.slime, detailedBlob ? 'body' : person || hd ? 'down-0' : 'f0');
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
     this.hp = k.hp;
     this.hd = hd;
-    if (hd) {
+    if (detailedBlob) {
+      // Keep the previous body's world width and feet/collision anchor. Static art supplied.
+      this.setScale(12.8 / 514).setOrigin(0.5, 1);
+    } else if (hd) {
       fitHd(this, k.scale);
       this.walkAnim = `${hdTex}-walk`;
     } else {
@@ -130,7 +160,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.home = new Phaser.Math.Vector2(x, y);
     if (hd) this.setFrame('down-0');
     else if (kind === 'smok') this.anims.play('dragon-flap');
-    else if (kind !== 'bandyta' && kind !== 'wojownik') this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
+    else if (!detailedBlob && !person) this.anims.play({ key: `${CRITTER_TEX[kind] ?? TEX.slime}-hop`, startFrame: Phaser.Math.Between(0, 1) });
   }
 
   /** How far from its centre a sword swing or a touch reaches it. */
@@ -150,7 +180,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
       if (Math.abs(this.vel.x) > 1) this.setFlipX(this.vel.x > 0);
       return;
     }
-    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik' && !this.hd) return;
+    if (this.kindId !== 'bandyta' && this.kindId !== 'wojownik' && this.kindId !== 'wilk' && this.kindId !== 'warg' && !this.hd) return;
     const v = this.vel;
     if (v.lengthSq() < 1) {
       this.anims.stop();
@@ -199,6 +229,11 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
   }
 
+  /** Still thrown back by a blow (the knock-back owns `vel` meanwhile). */
+  ogluszony(now: number) {
+    return now < this.knockUntil;
+  }
+
   isDazed(now: number) {
     return now < this.dazedUntil;
   }
@@ -213,8 +248,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
     const sh = this.shadow;
     // Width from the drawn body: the artist's sheets leave a lot of empty frame around the figure.
-    const w = Math.max(8, this.displayWidth * (this.depthOff ? 0.6 : this.hd ? 0.95 : 1));
-    const feet = this.y + (this.depthOff || (this.hd ? 8 * SKALA_POSTACI : 0));
+    const w = Math.max(8, this.displayWidth * (this.model3d ? 0.45 : this.depthOff ? 0.6 : this.hd ? 0.95 : 1));
+    const feet = this.y + (this.depthOff || (this.model3d || this.hd ? 8 * SKALA_POSTACI : 0));
     const h = Math.max(3, Math.round(w * 0.36));
     // Light from the north-west like the trees and buildings: the shadow falls a little right and down from the feet.
     sh.setPosition(Math.round(this.x + w * 0.12), Math.round(feet + (this.depthOff ? -h * 0.2 : h * 0.1))).setDisplaySize(Math.round(w), h);
@@ -226,7 +261,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.updateShadow();
     const a = this.aura;
     if (a) {
-      a.setPosition(this.x, this.y).setFrame(this.frame.name).setFlipX(this.flipX).setDepth(this.depth - 0.01);
+      a.setPosition(this.x, this.y).setTexture(this.texture.key, this.frame.name).setOrigin(this.originX, this.originY).setFlipX(this.flipX).setDepth(this.depth - 0.01);
       a.setScale(this.scaleX * 1.14, this.scaleY * 1.1).setVisible(this.visible && this.alpha > 0.5);
     }
     const m = this.dazeMark;
@@ -246,10 +281,11 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
 
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-    if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
-    if (this.chasing && dist > this.kind.loseRange) this.chasing = false;
+    if (this.spokojny) this.chasing = false;
+    else if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
+    if (this.chasing && now >= this.pursuitUntil && dist > this.kind.loseRange) this.chasing = false;
     const l = this.leash;
-    if (this.chasing && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
+    if (this.chasing && now >= this.pursuitUntil && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {
       // Past the border of its gang's land: back home.
       this.chasing = false;
       this.nextThink = 0;
@@ -285,7 +321,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Call after think(); keeps the sprite facing its movement. */
   updateLook() {
-    if (!this.ownLook) this.face();
+    if (!this.ownLook && !this.model3d) this.face();
   }
 
   /** Its look is driven from outside (a dragon with the artist's sheet: SmokAI picks the animation by direction). */
@@ -295,10 +331,29 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Depth below the position (map px): a big drawn dragon's point is its body centre, its feet are lower – trees in front of the feet must cover it, not its middle. */
   depthOff = 0;
 
+  /** Actual hits wake distant live enemies; each hit refreshes pursuit, never a miss. */
+  lastProvokedAt = -Infinity;
+  pursuitUntil = -Infinity;
+
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
-    if (this.isDead) return false;
+    if (this.isDead || this.inAir || this.nietykalny) return false;
+    const prog = this.prog;
+    if (prog) damage = Math.min(damage, Math.max(0, this.hp - prog.hp));
+    const applied = Math.min(Math.max(0, damage), this.hp);
+    if (live() && applied > 0) {
+      this.lastProvokedAt = now;
+      this.pursuitUntil = Math.max(this.pursuitUntil, now + 15000);
+    }
     this.hp -= damage;
+    if (prog && this.hp <= prog.hp) {
+      this.hp = prog.hp;
+      this.prog = undefined;
+      this.nietykalny = true;
+      prog.fn();
+    }
+    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied);
+    this.modelHitAt = now;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
     this.knockUntil = now + 300;
@@ -312,13 +367,14 @@ export class Slime extends Phaser.GameObjects.Sprite {
     });
 
     if (this.isDead) {
+      this.modelDeathAt = now;
       this.vel.set(0, 0);
       this.scene.tweens.add({
         targets: this,
-        scaleX: this.scaleX * 1.6,
-        scaleY: this.scaleY * 0.3,
+        scaleX: this.scaleX * (this.model3d ? 1 : 1.6),
+        scaleY: this.scaleY * (this.model3d ? 1 : 0.3),
         alpha: 0,
-        delay: 120,
+        delay: this.model3d ? Math.max(120, this.modelDeathMs - 220) : 120,
         duration: 220,
         onComplete: () => this.destroy(),
       });

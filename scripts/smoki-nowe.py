@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# UWAGA (19.10.2026): arkusze smoków robi teraz scripts/smoki-40.py (paczka 40-G002). Ten skrypt nadpisze je starymi
+# klatkami – po nim zawsze uruchom ponownie scripts/smoki-40.py (efekty ognia/kwasu/uderzenia nadal stąd).
 """Smoki ognisty i kwasowy (paczka „smoki_swinka_dekoracje”, 7.10.2026): klatki 220×200 już w skali gry, wspólny punkt
 odniesienia [110,170] (stopy). Skleja je w arkusze public/swiat/smoki/smok_<gatunek>.png (+ .json) i efekty ognia/kwasu
 w paski efekt_<nazwa>.png. Magenta #FF00FF → przezroczystość; bez zmniejszania i wygładzania.

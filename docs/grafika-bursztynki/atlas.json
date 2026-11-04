@@ -1,0 +1,41 @@
+{
+  "image": "amber_atlas_source.png",
+  "frames": {
+    "amber_full": {
+      "x": 0,
+      "y": 0,
+      "w": 512,
+      "h": 512
+    },
+    "amber_spent": {
+      "x": 512,
+      "y": 0,
+      "w": 512,
+      "h": 512
+    },
+    "amber_item": {
+      "x": 1024,
+      "y": 0,
+      "w": 512,
+      "h": 512
+    },
+    "amber_cost_move": {
+      "x": 0,
+      "y": 512,
+      "w": 512,
+      "h": 512
+    },
+    "amber_cost_strike": {
+      "x": 512,
+      "y": 512,
+      "w": 512,
+      "h": 512
+    },
+    "amber_missing": {
+      "x": 1024,
+      "y": 512,
+      "w": 512,
+      "h": 512
+    }
+  }
+}

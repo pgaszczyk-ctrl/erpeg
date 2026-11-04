@@ -1,0 +1,505 @@
+{
+  "skorzany_helm": {
+    "name": "Skórzany hełm",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "e2c39b116538ad8e24cae990aeaee149f15ff50d1b66cad9989fbc23bb7ae76c",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 40,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        8,
+        5,
+        56,
+        59
+      ]
+    }
+  },
+  "zelazne_buty": {
+    "name": "Żelazne buty",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "6c3d65dd1fa2bf043d5458880248364b4d23a85910a12bc09f7ff1c474a0f3db",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 40,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        6,
+        59,
+        57
+      ]
+    }
+  },
+  "skorzane_buty": {
+    "name": "Skórzane buty",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "3fa84bbedc999827a2b2fce8e20acffb9953216eed2e9078a97e7676e5cdd645",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 40,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        8,
+        59,
+        55
+      ]
+    }
+  },
+  "podkowa_szczescia": {
+    "name": "Podkowa Szczęścia",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "f05a28f2c1383e23f4cac96a978976f935aa355d8621895b3e7b649038a0841d",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 40,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        6,
+        5,
+        58,
+        59
+      ]
+    }
+  },
+  "cukierniczy_cylinder": {
+    "name": "Cukierniczy Cylinder",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "a2338cdb426dab372372ec47a332a1f4272e8ac5b049ca965625a90f32b3bb2d",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 44,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        6,
+        5,
+        58,
+        59
+      ]
+    }
+  },
+  "miecz_mosiezny": {
+    "name": "Mosiężny miecz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "9b1e952145c1386589032b0d3af135e544401ffcabfa4d046190fe9a1921428e",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 43,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        5,
+        58,
+        59
+      ]
+    }
+  },
+  "szabla_hartowana": {
+    "name": "Szabla hartowana",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "148220a3fc44bd469d8795de7a6e33e8035a2c6b3ef92d73f9f54fa7938eb5f9",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 38,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        5,
+        58,
+        59
+      ]
+    }
+  },
+  "karabela_damascenska": {
+    "name": "Karabela damasceńska",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "be23b05734e5acd2845a11a0bd1a5540a1a6ca27f4a0d5a095a7473a6394f2c3",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 39,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        5,
+        59,
+        59
+      ]
+    }
+  },
+  "szklany_miecz": {
+    "name": "Szklany miecz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "e6c37a44eb03a72b56a2547e74f6bbcc3093fea0d4a49f56e1da0cca89f1e25d",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 41,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        6,
+        5,
+        58,
+        59
+      ]
+    },
+    "export_note": "Klatka z atlasu wspólnego dla obu stanów i animacji, zachowana rejestracja."
+  },
+  "szklany_miecz_pekniety": {
+    "name": "Szklany miecz — pęknięty",
+    "source_size": [
+      627,
+      627
+    ],
+    "source_sha256": "6497fbf681975bb305ce5f0c36ac6e7333a8c081a052fbf085439ae61f1dda7a",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 41,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        6,
+        5,
+        58,
+        59
+      ]
+    },
+    "export_note": "Klatka z atlasu wspólnego dla obu stanów i animacji, zachowana rejestracja."
+  },
+  "siekiera": {
+    "name": "Siekiera",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "f4ec7667dacbcaec9a73dad117ae15398ebcd99d4789113b03b570b393348951",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 40,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        8,
+        5,
+        55,
+        59
+      ]
+    }
+  },
+  "tarcza_drewniana": {
+    "name": "Tarcza drewniana",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "9349b88cf4c16daa97fd7fe87ec67b829a640f32c1702899027e9fac7e0d7b08",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 39,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        7,
+        5,
+        56,
+        59
+      ]
+    }
+  },
+  "tarcza_okuta": {
+    "name": "Tarcza okuta",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "37949847c40f84f9490d53b1cd164493d1725bbf2e07ca6bbd1ef3a5e5c6bc2c",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 41,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        11,
+        5,
+        53,
+        59
+      ]
+    }
+  },
+  "kusza": {
+    "name": "Kusza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "3978860a9336cd34943ea2a26e8d0874722036262f726502dc9d8b01b7385564",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 44,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        6,
+        59,
+        57
+      ]
+    }
+  },
+  "pistolet_parowy": {
+    "name": "Pistolet parowy",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "b322452b06e010858f946c75ddc9a333bd7c90fb8260d0761686b5216df50a28",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 44,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        5,
+        6,
+        59,
+        57
+      ]
+    }
+  },
+  "szklany_miecz_peka": {
+    "size": [
+      256,
+      64
+    ],
+    "frames": 4,
+    "shared_source_crop": [
+      23,
+      25,
+      595,
+      618
+    ],
+    "handle_best_match_shifts": [
+      [
+        0.0,
+        0,
+        0
+      ],
+      [
+        1.9200680272108843,
+        0,
+        0
+      ],
+      [
+        1.9109977324263039,
+        0,
+        0
+      ],
+      [
+        2.3979591836734695,
+        0,
+        0
+      ]
+    ],
+    "frame_exports": [
+      {
+        "size": [
+          64,
+          64
+        ],
+        "colors": 41,
+        "alpha": [
+          0,
+          255
+        ],
+        "bbox_exclusive": [
+          6,
+          5,
+          58,
+          59
+        ]
+      },
+      {
+        "size": [
+          64,
+          64
+        ],
+        "colors": 42,
+        "alpha": [
+          0,
+          255
+        ],
+        "bbox_exclusive": [
+          6,
+          5,
+          58,
+          59
+        ]
+      },
+      {
+        "size": [
+          64,
+          64
+        ],
+        "colors": 40,
+        "alpha": [
+          0,
+          255
+        ],
+        "bbox_exclusive": [
+          6,
+          5,
+          58,
+          59
+        ]
+      },
+      {
+        "size": [
+          64,
+          64
+        ],
+        "colors": 41,
+        "alpha": [
+          0,
+          255
+        ],
+        "bbox_exclusive": [
+          6,
+          5,
+          58,
+          59
+        ]
+      }
+    ],
+    "colors": 42
+  },
+  "rycerski_P003": {
+    "action": "Dodany istniejący eksport 64x64, bez zmiany źródła.",
+    "export": {
+      "size": [
+        64,
+        64
+      ],
+      "colors": 37,
+      "alpha": [
+        0,
+        255
+      ],
+      "bbox_exclusive": [
+        6,
+        5,
+        58,
+        59
+      ]
+    }
+  }
+}

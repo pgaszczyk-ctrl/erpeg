@@ -5,12 +5,23 @@ import { GROUND_DEPTH } from '../map/MapRenderer';
 import { WYGLAD_09 } from '../map/Podloze09';
 import { TEX, HERO_DIRS, makeLookTexture, artScale } from '../art';
 import { TRENING } from '../content/swiat';
-import { PX_PER_M, pointInRings, type CityMap, type Area } from '../map/CityMap';
+import { PX_PER_M, pointInRings, type CityMap, type Area, type Building } from '../map/CityMap';
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
-import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, stanGangu, type RodzajGangu } from '../content/gangi';
+import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, GRUPKA_SLABA, stanGangu, type RodzajGangu } from '../content/gangi';
+
+/** Green land where the weakest groups are wolves instead of imps (new controls test). */
+const ZIELONE = new Set(['forest', 'park', 'grass', 'meadow', 'farmland', 'scrub', 'heath', 'orchard', 'allotments']);
 import { rng } from '../rng';
+import { arenaOn } from '../walka/tryb';
+import { hdOn, ensureHd, fitHd } from '../sprites';
+import { GRUPKI_GANGU, GRUPKA } from '../content/walkaTurowa';
+import { choragiewKraju, wczytajChoragiew } from '../arenaChoragiew';
+import { krajMapy } from '../kraj';
+
+/** The hero's height on the map (px): turn-fight groups are sized by it. */
+const W_BOH = 56 * 0.36 * SKALA_POSTACI;
 import { drzewoZ } from '../map/drzewa09';
 import { GEN_DOTS } from '../map/ziemia09';
 import { doCanvas, nowy, type Obraz } from '../gen';
@@ -401,9 +412,12 @@ export interface Gang {
   bossObj?: unknown;
   /** When it was broken up (scene time), 0 while active. */
   clearedAt: number;
-  fog?: Phaser.GameObjects.Graphics;
+  /** The red mist: a soft inside and puffs of smoke along the border. */
+  fog?: { inside: Phaser.GameObjects.Image; puffs: Phaser.GameObjects.Image[] };
   /** The last descriptive counter shown (content/gangi.ts stanGangu). */
   said?: string;
+  /** Turn fight: broken up by paying the members off (no reward). */
+  paid?: boolean;
 }
 
 function hashStr2(s: string) {
@@ -418,7 +432,38 @@ function hashStr2(s: string) {
  * their spots and come out when they see the hero. The last one falling
  * brings out the boss; beating him breaks the gang up.
  */
+/** The red mist's two soft textures (a puff, an even inside): shared by gangs and hunting grounds (Lowiska.ts). */
+export function mgielkaTekstury(scene: Phaser.Scene) {
+    const tex = scene.textures;
+    const soft = (key: string, n: number, alpha: (r: number) => number) => {
+      if (tex.exists(key)) return;
+      const c = tex.createCanvas(key, n, n)!;
+      const ctx = c.getContext();
+      const img = ctx.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+        const i = (y * n + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+        img.data[i + 3] = Math.round(255 * Math.max(0, Math.min(1, alpha(r))));
+      }
+      ctx.putImageData(img, 0, 0);
+      c.refresh();
+    };
+    // A puff: dense in the middle, fading out smoothly.
+    soft('gang-klab', 64, (r) => (r >= 1 ? 0 : (1 - r * r) ** 1.6));
+    // The inside: even, then fading in the outer fifth (the puffs cover the border).
+    soft('gang-wnetrze', 256, (r) => (r < 0.8 ? 1 : r >= 1 ? 0 : 1 - (r - 0.8) / 0.2));
+  }
+
+
 export class StreetEnemies {
+  /** Turn fight (test server): members sit in tight groups, the boss with the last one, nobody comes out later. */
+  tury = false;
+  /**
+   * New controls test (walka/live.ts, owner 26 Oct 2026): only the WEAKEST small groups (GRUPKA_SLABA: 3 imps or 3
+   * wolves) at random spots, in red-mist areas 3× smaller; no boss, no berserker, no night/rain swaps.
+   */
+  slabe = false;
   private gangs: Gang[] = [];
   private planned = new Set<string>();
   private next = 0;
@@ -452,8 +497,8 @@ export class StreetEnemies {
     const box = { x0: cx * KM, y0: cy * KM, x1: (cx + 1) * KM, y1: (cy + 1) * KM };
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
     const extra = places < GANG_WIES.miejscMniejNiz ? GANG_WIES.mnoznik : 1;
-    GANGI.forEach((kind, ki) => {
-      const want = kind.naKm2 * this.density * extra;
+    (this.slabe ? [GRUPKA_SLABA] : GANGI).forEach((kind, ki) => {
+      const want = kind.naKm2 * this.density * extra * (this.tury ? GRUPKA.gestosc : 1);
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         for (let t = 0; t < 12; t++) {
@@ -477,6 +522,29 @@ export class StreetEnemies {
 
   /** Where the members stand, once the territory is loaded. */
   private makeSpots(g: Gang) {
+    if (this.tury) return this.makeGroups(g);
+    if (this.slabe) {
+      const r = rng(hashStr2(`${g.id}:${this.seed}:slabe`));
+      const [lo, hi] = g.kind.czlonkow;
+      const want = lo + Math.floor(r() * (hi - lo + 1));
+      // One kind per group: wolves out in the green, imps elsewhere.
+      const zielono = this.city.areaKindsAt(g.x, g.y).some((k) => ZIELONE.has(k));
+      const kind: RodzajWroga = zielono ? 'wilk' : 'glut';
+      const spots: StreetSpawn[] = [];
+      for (let t = 0; spots.length < want && t < want * 40; t++) {
+        const a = r() * Math.PI * 2;
+        const d = (0.2 + 0.65 * Math.sqrt(r())) * g.r;
+        const x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
+        if (!this.city.isFree(x, y, 4, 4) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+        // Spread out (owner 26 Oct 2026: „bardziej rozproszone”), not in one heap.
+        if (t < want * 30 && spots.some((q) => Math.hypot(q.x - x, q.y - y) < 10)) continue;
+        spots.push({ x, y, kind });
+      }
+      g.spots = spots;
+      g.boss = 'out'; // no boss comes out: the last member down breaks the group up
+      spots.forEach((_, i) => g.alive.add(i));
+      return;
+    }
     const r = rng(hashStr2(`${g.id}:${this.seed}:spots`));
     const [lo, hi] = g.kind.czlonkow;
     const want = lo + Math.floor(r() * (hi - lo + 1));
@@ -495,6 +563,46 @@ export class StreetEnemies {
     spots.forEach((_, i) => g.alive.add(i));
   }
 
+  /** Turn fight: one to three tight groups in small spots of the territory (content/walkaTurowa.ts GRUPKI_GANGU). */
+  private makeGroups(g: Gang) {
+    const r = rng(hashStr2(`${g.id}:${this.seed}:grupki`));
+    const plan = GRUPKI_GANGU[g.kind.nazwa] ?? { grupek: 1, czlonkow: [3, 4] as [number, number], herszt: false };
+    const spots: StreetSpawn[] = [];
+    const centra: { x: number; y: number }[] = [];
+    const zbita = GRUPKA.zbitaW * W_BOH;
+    for (let k = 0; k < plan.grupek; k++) {
+      let c: { x: number; y: number } | null = null;
+      for (let t = 0; t < 80 && !c; t++) {
+        const a = r() * Math.PI * 2;
+        const d = Math.sqrt(r()) * g.r * (k === 0 ? 0.3 : GRUPKA.odSrodka);
+        const x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
+        if (!this.city.isFree(x, y, 6, 6) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
+        if (centra.some((o) => Math.hypot(o.x - x, o.y - y) < GRUPKA.odstepW * W_BOH)) continue;
+        c = { x, y };
+      }
+      if (!c) continue;
+      centra.push(c);
+      const [lo, hi] = plan.czlonkow;
+      const n = lo + Math.floor(r() * (hi - lo + 1));
+      const boss = plan.herszt && k === plan.grupek - 1;
+      if (boss) spots.push({ x: c.x, y: c.y, kind: g.kind.herszt });
+      for (let i = 0, t = 0; i < n && t < n * 30; t++) {
+        const a = r() * Math.PI * 2, d = (0.45 + r() * 0.55) * zbita;
+        const x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d * 0.8;
+        if (!this.city.isFree(x, y, 4, 4) || spots.some((s) => Math.hypot(s.x - x, s.y - y) < 0.45 * W_BOH)) continue;
+        spots.push({ x, y, kind: this.kindAt(x, y) });
+        i++;
+      }
+    }
+    if (spots.length && r() < BERSERKER.szansa) {
+      const zwykli = spots.map((s, i) => (s.kind === g.kind.herszt ? -1 : i)).filter((i) => i >= 0);
+      if (zwykli.length) spots[zwykli[Math.floor(r() * zwykli.length)]].berserk = true;
+    }
+    g.spots = spots;
+    g.boss = 'out'; // the boss (if any) sits with his group from the start
+    spots.forEach((_, i) => g.alive.add(i));
+  }
+
   /** Who lives here: dryads in forests, skeletons by cemeteries, zombies by water, else imps (and a few bandits). */
   private kindAt(x: number, y: number): RodzajWroga {
     if (this.city.areaKindsAt(x, y).includes('forest')) return 'driada';
@@ -508,7 +616,7 @@ export class StreetEnemies {
    * in the rain water blobs, and every few of them their master, a wodnik. Fixed per spot (no reshuffling on every respawn).
    */
   private forNow(s: StreetSpawn, i: number, g: Gang): StreetSpawn {
-    if (s.kind !== 'glut') return s;
+    if (s.kind !== 'glut' || this.slabe) return s;
     const pora = this.events.pora?.() ?? { noc: false, mokro: false };
     const h = hashStr2(`${g.id}:${i}:kto`) / 4294967296;
     const S = SKLAD_GANGOW;
@@ -527,9 +635,51 @@ export class StreetEnemies {
     return false;
   }
 
+  /** The nearest active gang within `maxPx` (big gangs count 3× farther: a beginner should meet a small one). */
+  nearestGang(x: number, y: number, maxPx: number) {
+    let best: Gang | null = null;
+    let bd = Infinity;
+    for (const g of this.gangs) {
+      if (g.clearedAt) continue;
+      const d = Math.hypot(g.x - x, g.y - y);
+      if (d > maxPx) continue;
+      const w = d * (g.kind.herszt === 'wielki_herszt' ? 3 : 1);
+      if (w < bd) {
+        bd = w;
+        best = g;
+      }
+    }
+    return best ? { x: best.x, y: best.y, r: best.r } : null;
+  }
+
+  /** Inside any active red mist (new controls test: outside it life and stamina come back). */
+  wMgle(x: number, y: number) {
+    return this.gangs.some((g) => !g.clearedAt && Math.abs(g.x - x) < g.r && Math.abs(g.y - y) < g.r && Math.hypot(g.x - x, g.y - y) < g.r);
+  }
+
   /** The active gang whose territory the point is in, if any. */
   gangAt(x: number, y: number) {
     return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
+  }
+
+  /** Turn fight: members paid off and gone (no loot, no reward); the last ones leaving break the gang up quietly. */
+  paidOff(list: unknown[]) {
+    for (const g of this.gangs) {
+      let hit = false;
+      for (const [i, m] of g.members) {
+        if (!list.includes(m)) continue;
+        g.members.delete(i);
+        g.alive.delete(i);
+        hit = true;
+      }
+      if (hit && !g.alive.size && !g.clearedAt) {
+        g.boss = 'dead';
+        g.clearedAt = this.scene.time.now;
+        g.paid = true;
+        this.dropMist(g);
+        this.events.cleared(g);
+      }
+    }
   }
 
   /** A gang member or boss was killed. */
@@ -539,8 +689,7 @@ export class StreetEnemies {
         g.boss = 'dead';
         g.bossObj = undefined;
         g.clearedAt = this.scene.time.now;
-        g.fog?.destroy();
-        g.fog = undefined;
+        this.dropMist(g);
         this.events.cleared(g);
         return;
       }
@@ -548,6 +697,16 @@ export class StreetEnemies {
         if (m !== e) continue;
         g.members.delete(i);
         g.alive.delete(i);
+        if (this.tury || this.slabe) {
+          // Every group (the boss's too) beaten: the gang is broken up.
+          if (!g.alive.size) {
+            g.boss = 'dead';
+            g.clearedAt = this.scene.time.now;
+            this.dropMist(g);
+            this.events.cleared(g);
+          }
+          return;
+        }
         this.tell(g);
         if (!g.alive.size && g.boss === 'none') {
           g.boss = 'out';
@@ -585,6 +744,7 @@ export class StreetEnemies {
 
   update(px: number, py: number, now: number) {
     this.drawFlies(now);
+    this.breatheMist(now);
     if (now < this.next) return;
     this.next = now + 700;
     const pcx = Math.floor(px / KM);
@@ -596,15 +756,8 @@ export class StreetEnemies {
       const d = Math.hypot(g.x - px, g.y - py);
       // The red mist over an active territory near the hero.
       if (!g.clearedAt && d < g.r + 1500 * PX_PER_M) {
-        if (!g.fog) {
-          g.fog = this.scene.add.graphics().setDepth(GROUND_DEPTH + 1);
-          g.fog.fillStyle(GANG_MGLA.kolor, GANG_MGLA.alfa).fillCircle(g.x, g.y, g.r);
-          g.fog.lineStyle(4, GANG_MGLA.kolor, Math.min(1, GANG_MGLA.alfa * 2.5)).strokeCircle(g.x, g.y, g.r);
-        }
-      } else if (g.fog) {
-        g.fog.destroy();
-        g.fog = undefined;
-      }
+        if (!g.fog) this.makeMist(g);
+      } else if (g.fog) this.dropMist(g);
       if (g.clearedAt) continue;
       // Walking into a territory: say how many are there.
       if (d < g.r && g.spots && !g.said) this.tell(g);
@@ -623,6 +776,86 @@ export class StreetEnemies {
         for (const [i, m] of g.members) if (this.despawn(m)) g.members.delete(i);
       }
     }
+  }
+
+  /** Soft round textures for the gang mist: a puff of smoke and an inside that fades towards its edge. */
+  private mistTextures() {
+    mgielkaTekstury(this.scene);
+  }
+
+  private makeMist(g: Gang) {
+    this.mistTextures();
+    const M = GANG_MGLA;
+    const d = GROUND_DEPTH + 1;
+    const inside = this.scene.add.image(g.x, g.y, 'gang-wnetrze').setDisplaySize(g.r * 2, g.r * 2).setTint(M.kolor).setAlpha(M.alfa).setDepth(d);
+    const r = rng(hashStr2(`${g.id}:mgla`));
+    const n = Math.max(16, Math.round((Math.PI * 2 * g.r) / M.klebyCoPx));
+    const puffs: Phaser.GameObjects.Image[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = ((i + r() * 0.8) / n) * Math.PI * 2;
+      const rr = g.r + (r() * 2 - 1) * M.klebyRozrzut;
+      const size = M.klebyPx[0] + r() * (M.klebyPx[1] - M.klebyPx[0]);
+      const alpha = M.klebyAlfa[0] + r() * (M.klebyAlfa[1] - M.klebyAlfa[0]);
+      const p = this.scene.add.image(g.x + Math.cos(a) * rr, g.y + Math.sin(a) * rr, 'gang-klab')
+        .setDisplaySize(size, size * (0.75 + r() * 0.3)).setTint(r() < 0.35 ? 0xff7a7a : M.kolor).setAlpha(alpha).setDepth(d + 0.5);
+      p.setData('a', alpha).setData('s', p.scaleX).setData('f', r() * Math.PI * 2).setData('t', M.oddechS[0] + r() * (M.oddechS[1] - M.oddechS[0]));
+      puffs.push(p);
+    }
+    g.fog = { inside, puffs };
+  }
+
+  private dropMist(g: Gang) {
+    if (!g.fog) return;
+    g.fog.inside.destroy();
+    for (const p of g.fog.puffs) p.destroy();
+    g.fog = undefined;
+  }
+
+  /** The border's puffs breathe slowly; those off screen are hidden (hundreds per gang). */
+  private breatheMist(now: number) {
+    const v = this.scene.cameras.main.worldView;
+    const t = now / 1000;
+    for (const g of this.gangs) {
+      if (!g.fog) continue;
+      const near = g.x + g.r + 40 > v.x && g.x - g.r - 40 < v.right && g.y + g.r + 40 > v.y && g.y - g.r - 40 < v.bottom;
+      g.fog.inside.setVisible(near);
+      for (const p of g.fog.puffs) {
+        const on = near && p.x > v.x - 30 && p.x < v.right + 30 && p.y > v.y - 30 && p.y < v.bottom + 30;
+        p.setVisible(on);
+        if (!on) continue;
+        const w = Math.sin((t * Math.PI * 2) / (p.getData('t') as number) + (p.getData('f') as number));
+        p.setAlpha((p.getData('a') as number) * (0.8 + 0.2 * w));
+        const s = (p.getData('s') as number) * (1 + 0.08 * w);
+        p.setScale(s, s * (p.scaleY / p.scaleX));
+      }
+    }
+  }
+
+  /** A spot for a gang about `m` metres from (x, y): free, loaded, away from places and other gangs, by a road. */
+  gangSpot(x: number, y: number, m: number, kindName: string) {
+    const kind = GANGI.find((k) => k.nazwa === kindName) ?? GANGI[0];
+    const rad = kind.promienM * PX_PER_M;
+    for (let t = 0; t < 120; t++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = (m * (0.88 + Math.random() * 0.24)) * PX_PER_M;
+      const gx = x + Math.cos(a) * d;
+      const gy = y + Math.sin(a) * d;
+      if (!this.city.ready({ x0: gx - rad, y0: gy - rad, x1: gx + rad, y1: gy + rad })) continue;
+      if (this.city.isBlocked(gx, gy) || this.nearAvoid(gx, gy, GANG_OD_MIEJSC_M)) continue;
+      if (t < 90 && !this.nearRoad(gx, gy, GANG_WIES.odDrogiM * PX_PER_M)) continue;
+      if (this.gangs.some((g) => !g.clearedAt && Math.hypot(g.x - gx, g.y - gy) < (g.r + rad) * 0.6)) continue;
+      return { x: Math.round(gx), y: Math.round(gy) };
+    }
+    return null;
+  }
+
+  /** Puts a gang of that kind exactly there (a quest's gang); nothing when one with this id is already there. */
+  placeGang(id: string, x: number, y: number, kindName: string) {
+    if (this.gangs.some((g) => g.id === id)) return;
+    const kind = GANGI.find((k) => k.nazwa === kindName) ?? GANGI[0];
+    // Gangs planned on top of it step aside.
+    this.gangs = this.gangs.filter((g) => g.members.size || g.clearedAt || Math.hypot(g.x - x, g.y - y) >= (g.r + kind.promienM * PX_PER_M) * 0.6 || (this.dropMist(g), false));
+    this.gangs.push({ id, kind, x, y, r: kind.promienM * PX_PER_M, spots: null, alive: new Set(), members: new Map(), boss: 'none', clearedAt: 0 });
   }
 
   private flies?: Phaser.GameObjects.Graphics;
@@ -671,14 +904,46 @@ export interface Station {
 /** The sporty people: a coach by the dummies of big pitches, a runner on small ones. */
 export interface SportNpc {
   id: string;
-  role: 'trener' | 'biegacz';
+  role: 'trener' | 'biegacz' | 'sedzia';
   x: number;
   y: number;
   area: Area;
   sprite?: Phaser.GameObjects.Sprite;
+  /** The Arena's banners on poles by the pitch / the stadium's gate (judges only). */
+  flagi?: Phaser.GameObjects.GameObject[];
+  flagSpots?: Set<string>;
 }
 
 export const SPORTY_TEX = 'sporty';
+
+/** The Arena banners' iron pole: map px tall (drawn at 2 picture px per map px). */
+const MASZT_H = 26;
+/** The notice board in front of an arena (loaded with the banners). */
+const TABLICA = 'arena-tablica';
+function maszt(scene: Phaser.Scene) {
+  const key = 'arena-maszt';
+  if (scene.textures.exists(key)) return key;
+  const w = 5, h = MASZT_H * 2;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#1e1a24';
+  g.fillRect(1, 2, 3, h - 2);
+  g.fillStyle = '#5b5568';
+  g.fillRect(2, 3, 1, h - 5);
+  // A brass knob on top and a stone foot.
+  g.fillStyle = '#1e1a24';
+  g.fillRect(0, 0, 5, 4);
+  g.fillStyle = '#d8b25a';
+  g.fillRect(1, 1, 3, 2);
+  g.fillStyle = '#1e1a24';
+  g.fillRect(0, h - 3, 5, 3);
+  g.fillStyle = '#8a8478';
+  g.fillRect(1, h - 2, 3, 1);
+  scene.textures.addCanvas(key, c);
+  scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return key;
+}
 
 /**
  * Big pitches (content/sport.ts): a dummy (sword), a target (bow), a crystal
@@ -707,6 +972,8 @@ export class Training {
 
   /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
   private hasStations(a: Area) {
+    // A stadium's bowl is the Arena's sand (owner 18 Oct 2026; arenaOn() – kept even with real-time combat).
+    if (a.arena && arenaOn()) return false;
     const m2 = Training.sizeM2(a);
     if (m2 < SPORT.kuklyOdM2) return false;
     const r = SPORT.sasiedziM * PX_PER_M;
@@ -787,7 +1054,7 @@ export class Training {
   }
 
   private personOf(a: Area): SportNpc | null {
-    if (!SPORT.ludzie) return null;
+    if (!SPORT.ludzie) return this.judgeOf(a);
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
     const m2 = Training.sizeM2(a);
@@ -810,6 +1077,49 @@ export class Training {
     }
     this.people.set(a, npc);
     return npc;
+  }
+
+  /** Arena Cechu (its own turn fight, independent of exploration combat): the judge by the dummies of every big pitch / stadium. */
+  private judgeOf(a: Area): SportNpc | null {
+    if (!arenaOn()) return null;
+    if (this.people.has(a)) return this.people.get(a)!;
+    let npc: SportNpc | null = null;
+    const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
+    // A stadium (its stands cut open from the south): the judge waits in front of the gate, by the
+    // notice board; one judge per stadium even when OSM has the stadium and its pitch as two areas.
+    const sb = this.stadiumOf(a);
+    if (sb?.brama) {
+      const kto = this.gateJudge.get(sb);
+      if (!kto || kto === a) {
+        this.gateJudge.set(sb, a);
+        const gx = (sb.brama.x0 + sb.brama.x1) / 2, gy = Math.max(sb.brama.y0, sb.brama.y1);
+        const p = this.city.isFree(gx + 13, gy + 21, 3, 2) ? { x: gx + 13, y: gy + 21 } : this.city.freeNear(gx + 13, gy + 21);
+        npc = { id, role: 'sedzia', x: p.x, y: p.y - 5, area: a };
+      }
+    } else if (Training.sizeM2(a) >= SPORT.duzeBoiskoM2) {
+      const st = this.stationsOf(a).find((s) => s.kind === 'miecz' && !s.far);
+      if (st) for (const [dx, dy] of [[-18, 14], [18, 14], [0, -18], [0, 18]]) {
+        if (this.city.isFree(st.x + dx, st.y + dy + 5, 3, 2)) {
+          npc = { id, role: 'sedzia', x: st.x + dx, y: st.y + dy, area: a };
+          break;
+        }
+      }
+      // A stadium closed by its stands with no gate: the judge waits outside, on the nearest spot reachable from the streets.
+      if (npc && !this.city.reachesFar(npc.x, npc.y + 5)) {
+        const p = this.city.reachableNear(npc.x, npc.y + 5);
+        npc.x = p.x;
+        npc.y = p.y - 5;
+      }
+    }
+    this.people.set(a, npc);
+    return npc;
+  }
+
+  private gateJudge = new Map<Building, Area>();
+  /** The stadium building whose bowl holds this pitch (gated by CityMap.stadiumGate), if any. */
+  private stadiumOf(a: Area): Building | null {
+    const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+    return this.city.query({ x0: cx - 1, y0: cy - 1, x1: cx + 1, y1: cy + 1 }).buildings.find((b) => b.misa && pointInRings([b.misa], cx, cy)) ?? null;
   }
 
   /** The two dummies of a coach's pitch. */
@@ -848,7 +1158,10 @@ export class Training {
   update(px: number, py: number, now: number, hide: (x: number, y: number) => boolean = () => false) {
     if (now < this.next) return;
     this.next = now + 600;
-    for (const n of this.activeNpcs) n.sprite?.setVisible(!hide(n.x, n.y));
+    for (const n of this.activeNpcs) {
+      n.sprite?.setVisible(!hide(n.x, n.y));
+      for (const f of n.flagi ?? []) { const im = f as Phaser.GameObjects.Image; im.setVisible(!hide(im.x, im.y)); }
+    }
     for (const s of [...this.active]) {
       if (Math.hypot(s.x - px, s.y - py) > FAR) {
         s.sprite?.destroy();
@@ -860,11 +1173,15 @@ export class Training {
       if (Math.hypot(n.x - px, n.y - py) <= FAR) continue;
       n.sprite?.destroy();
       n.sprite = undefined;
+      for (const f of n.flagi ?? []) f.destroy();
+      n.flagi = undefined;
+      n.flagSpots = undefined;
       this.activeNpcs.delete(n);
     }
     const { areas } = this.city.query({ x0: px - NEAR, y0: py - NEAR, x1: px + NEAR, y1: py + NEAR });
     for (const a of areas) {
-      if (a.kind !== 'pitch') continue;
+      // Not before the pitch's tiles are in: unloaded ground is blocked, and an empty list would stay cached.
+      if (a.kind !== 'pitch' || !this.city.ready(a)) continue;
       for (const s of this.stationsOf(a)) {
         if (s.sprite || Math.hypot(s.x - px, s.y - py) > NEAR) continue;
         const key = s.far && this.scene.textures.exists(TEX.dummyFar) ? TEX.dummyFar : STATION_TEX[s.kind];
@@ -873,13 +1190,53 @@ export class Training {
         this.active.add(s);
       }
       const n = this.personOf(a);
-      if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
+      if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR && n.role === 'sedzia') {
+        // The Arena's judge (the artist's trial 38-G001, standing poses only).
+        const key = hdOn ? ensureHd(this.scene, 'hd-sedzia') : SPORTY_TEX;
+        n.sprite = this.scene.add.sprite(n.x, n.y, key, 'down-1').setDepth(n.y);
+        if (hdOn) fitHd(n.sprite);
+        else n.sprite.setOrigin(0.5, 0.6);
+        n.sprite.setVisible(!hide(n.x, n.y));
+        this.activeNpcs.add(n);
+      } else if (n && !n.sprite && Math.hypot(n.x - px, n.y - py) <= NEAR) {
         n.sprite = this.scene.add.sprite(n.x, n.y, SPORTY_TEX, 'down-0').setOrigin(0.5, 0.6).setDepth(n.y);
         // A little jog on the spot, so they look sporty.
         this.scene.tweens.add({ targets: n.sprite, y: n.y - 1.5, duration: 260, yoyo: true, repeat: -1 });
         n.sprite.setVisible(!hide(n.x, n.y));
         this.activeNpcs.add(n);
       }
+    }
+    for (const n of this.activeNpcs) if (n.role === 'sedzia') this.flagsOf(n);
+  }
+
+  /** Banners in the country's colours on iron poles: at a stadium's gate, else at the pitch's corners. */
+  private flagsOf(n: SportNpc) {
+    if (n.flagi || !wczytajChoragiew(this.scene)) return;
+    const a = n.area;
+    const { lat, lon } = this.city.toLatLon((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2);
+    const key = choragiewKraju(this.scene, krajMapy(this.city.id, lat, lon));
+    if (!key) return;
+    const st = this.stadiumOf(a);
+    const spots: [number, number][] = st?.brama
+      ? [[st.brama.x0 - 4, st.brama.y0 + 5], [st.brama.x1 + 4, st.brama.y1 + 5]]
+      : [[a.x0 + 4, a.y0 + 4], [a.x1 - 4, a.y0 + 4], [a.x0 + 4, a.y1 - 2], [a.x1 - 4, a.y1 - 2]];
+    const pole = maszt(this.scene);
+    n.flagi = [];
+    spots.forEach(([x, y], i) => {
+      const k = `${Math.round(x)},${Math.round(y)}`;
+      if (this.city.isBlocked(x, y) || [...this.activeNpcs].some((m) => m !== n && m.flagSpots?.has(k))) return;
+      (n.flagSpots ??= new Set()).add(k);
+      const p = this.scene.add.image(x, y, pole).setOrigin(0.5, 1).setScale(0.5).setDepth(y);
+      const b = this.scene.add.image(x + 0.6, y - MASZT_H + 1.5, key).setOrigin(0, 0).setScale(0.45).setDepth(y + 0.01);
+      // The cloth flutters a little, each one in its own rhythm.
+      this.scene.tweens.add({ targets: b, scaleX: 0.4, duration: 700 + i * 90, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      n.flagi!.push(p, b);
+    });
+    // The notice board by the judge (the artist's plaza notice case): the Arena's posters.
+    if (this.scene.textures.exists(TABLICA)) {
+      const [tx, ty] = st?.brama ? [(st.brama.x0 + st.brama.x1) / 2 - 16, Math.max(st.brama.y0, st.brama.y1) + 26] : [n.x - 13, n.y + 6];
+      const t = this.scene.add.image(tx, ty, TABLICA).setOrigin(0.5, 1).setScale(0.5).setDepth(ty);
+      n.flagi.push(t);
     }
   }
 

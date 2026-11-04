@@ -8,7 +8,8 @@
 //   3. jedno z DUZYCH_MIAST od `dalekoOdKm` do `maksKm` km – pociąg
 //      dalekobieżny (od `odPoziomu`); mapa na miejscu powstaje z mapy świata
 //      w trakcie chodzenia (src/map/world.ts).
-//  Każdy kurs kosztuje tyle samo za kilometr (opłata + stawka za km).
+//  Kurs woźnicy i pociąg mają osobne ceny (opłata + stawka za km) i prędkości
+//  (WOZNICA / POCIAG niżej; pokrętła w panelu admina, content/ustawienia.ts).
 //  Na dużych stacjach (z „Główny/Główna” w nazwie albo z 3+ kierunkami) stoi
 //  3 woźniców, każdy jedzie tylko w swoją stronę świata.
 //  Z dalekiego miasta woźnica wozi do najbliższych miast w zasięgu (Lublin jest
@@ -23,7 +24,11 @@ export const WOZNICA = {
   dalekoOdKm: 100,
   /** Najdalej, dokąd woźnica/pociąg jedzie (km w linii prostej). */
   maksKm: 400,
-  /** Cena każdego kursu: opłata + za każdy km (travel.ts COACH_FEE / COACH_PER_KM), zaokrąglona w górę do tylu monet. */
+  /** Kurs woźnicy (koniem): opłata + za każdy km, zaokrąglone w górę do `zaokraglenie` monet. */
+  oplata: 100,
+  zaKm: 30,
+  /** Prędkość woźnicy, km/h (w linii prostej, w prawdziwym czasie). */
+  kmh: 80,
   zaokraglenie: 10,
   odPoziomu: 7,
   /** Zniżka u woźniców na zawsze (flaga `znizka_woznica` z misji „Tajemnica stacji”): tyle taniej. */
@@ -84,3 +89,14 @@ export const DUZE_MIASTA: Miasto[] = [
 
 /** Nazwa Lublina jako celu pociągu z dalekiego miasta. */
 export const POWROT = { nazwa: 'Lublin' };
+
+/**
+ * Pociąg dalekobieżny (kursy do DUZYCH_MIAST i między dalekimi miastami):
+ * własna cena i prędkość (właściciel, 1.11.2026: 100 + 15/km, 120 km/h).
+ * Zaokrąglenie jak u woźnicy (WOZNICA.zaokraglenie).
+ */
+export const POCIAG = {
+  oplata: 100,
+  zaKm: 15,
+  kmh: 120,
+};

@@ -1,0 +1,67 @@
+{
+  "id": "north",
+  "countries": [
+    "NOR",
+    "SWE",
+    "FIN",
+    "ISL",
+    "DNK"
+  ],
+  "bounds": [[-25,55,45,85],[-170,58,-50,85]],
+  "default_style": "wooden",
+  "roofs": [
+    {
+      "type": "steep",
+      "weight": 5
+    },
+    {
+      "type": "gable",
+      "weight": 4
+    },
+    {
+      "type": "hip",
+      "weight": 1
+    }
+  ],
+  "pitch_multiplier": 1.3,
+  "overhang": 0.38,
+  "subpalette": {
+    "roof": [
+      [
+        1,
+        3,
+        6
+      ],
+      [
+        2,
+        5,
+        8
+      ]
+    ],
+    "wall": [
+      [
+        1,
+        3,
+        8
+      ],
+      [
+        8,
+        13,
+        15
+      ]
+    ],
+    "trim": [
+      [
+        0,
+        1,
+        3
+      ],
+      [
+        1,
+        3,
+        6
+      ]
+    ]
+  },
+  "sparse_windows": false
+}

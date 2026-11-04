@@ -1,0 +1,220 @@
+{
+  "revision": "44-G008",
+  "bases": {
+    "adult_m": {
+      "height": 1.25,
+      "head": 0.255,
+      "hip": 0.24,
+      "leg": 0.092,
+      "arm": 0.123,
+      "width": 0.185
+    },
+    "adult_f": {
+      "height": 1.25,
+      "head": 0.255,
+      "hip": 0.24,
+      "leg": 0.092,
+      "arm": 0.123,
+      "width": 0.175
+    },
+    "child_m": {
+      "height": 1.04,
+      "head": 0.252,
+      "hip": 0.202,
+      "leg": 0.073,
+      "arm": 0.102,
+      "width": 0.156
+    },
+    "child_f": {
+      "height": 1.04,
+      "head": 0.252,
+      "hip": 0.202,
+      "leg": 0.073,
+      "arm": 0.102,
+      "width": 0.156
+    },
+    "elder_m": {
+      "height": 1.21,
+      "head": 0.255,
+      "hip": 0.226,
+      "leg": 0.085,
+      "arm": 0.12,
+      "width": 0.186
+    },
+    "elder_f": {
+      "height": 1.21,
+      "head": 0.255,
+      "hip": 0.226,
+      "leg": 0.085,
+      "arm": 0.12,
+      "width": 0.18
+    }
+  },
+  "looks": [
+    {
+      "id": "mloda_kobieta",
+      "title": "Młoda kobieta",
+      "bodyFamily": "adult_f",
+      "hair": "79513e",
+      "clothes_1": "658f91",
+      "clothes_2": "584a41",
+      "haircut": "bob",
+      "accessory": "apron",
+      "file": "modele/mloda_kobieta.glb"
+    },
+    {
+      "id": "chlopiec",
+      "title": "Chłopiec",
+      "bodyFamily": "child_m",
+      "hair": "a66b40",
+      "clothes_1": "ae8a4c",
+      "clothes_2": "55473d",
+      "haircut": "crop",
+      "accessory": "belt",
+      "file": "modele/chlopiec.glb"
+    },
+    {
+      "id": "pan_z_wasem",
+      "title": "Pan z wąsem",
+      "bodyFamily": "adult_m",
+      "hair": "634a39",
+      "clothes_1": "79505b",
+      "clothes_2": "4b4442",
+      "haircut": "crop",
+      "accessory": "cap",
+      "file": "modele/pan_z_wasem.glb"
+    },
+    {
+      "id": "babcia",
+      "title": "Babcia",
+      "bodyFamily": "elder_f",
+      "hair": "c2c1b5",
+      "clothes_1": "88667b",
+      "clothes_2": "594551",
+      "haircut": "bun",
+      "accessory": "apron",
+      "file": "modele/babcia.glb"
+    },
+    {
+      "id": "mlody_mezczyzna",
+      "title": "Młody mężczyzna",
+      "bodyFamily": "adult_m",
+      "hair": "3e3a40",
+      "clothes_1": "60786b",
+      "clothes_2": "4b4442",
+      "haircut": "crop",
+      "accessory": "vest",
+      "file": "modele/mlody_mezczyzna.glb"
+    },
+    {
+      "id": "dziewczynka_warkocze",
+      "title": "Dziewczynka z warkoczykami",
+      "bodyFamily": "child_f",
+      "hair": "77513e",
+      "clothes_1": "ab7167",
+      "clothes_2": "5b4c45",
+      "haircut": "braids",
+      "accessory": "belt",
+      "file": "modele/dziewczynka_warkocze.glb"
+    },
+    {
+      "id": "chlopiec_2",
+      "title": "Chłopiec II",
+      "bodyFamily": "child_m",
+      "hair": "79503d",
+      "clothes_1": "ad8a4c",
+      "clothes_2": "536879",
+      "haircut": "messy",
+      "accessory": "belt",
+      "file": "modele/chlopiec_2.glb"
+    },
+    {
+      "id": "kobieta",
+      "title": "Kobieta",
+      "bodyFamily": "adult_f",
+      "hair": "75503d",
+      "clothes_1": "64888a",
+      "clothes_2": "795c48",
+      "haircut": "pony",
+      "accessory": "belt",
+      "file": "modele/kobieta.glb"
+    },
+    {
+      "id": "mezczyzna",
+      "title": "Mężczyzna",
+      "bodyFamily": "adult_m",
+      "hair": "a27b4b",
+      "clothes_1": "80515a",
+      "clothes_2": "4b4d54",
+      "haircut": "messy",
+      "accessory": "vest",
+      "file": "modele/mezczyzna.glb"
+    },
+    {
+      "id": "starszy_pan",
+      "title": "Starszy pan",
+      "bodyFamily": "elder_m",
+      "hair": "b9b9ae",
+      "clothes_1": "718064",
+      "clothes_2": "635344",
+      "haircut": "sides",
+      "accessory": "moustache",
+      "file": "modele/starszy_pan.glb"
+    },
+    {
+      "id": "dziewczynka",
+      "title": "Dziewczynka",
+      "bodyFamily": "child_f",
+      "hair": "77513e",
+      "clothes_1": "ad7466",
+      "clothes_2": "7c684b",
+      "haircut": "pigtails",
+      "accessory": "belt",
+      "file": "modele/dziewczynka.glb"
+    },
+    {
+      "id": "urwis",
+      "title": "Urwis",
+      "bodyFamily": "child_m",
+      "hair": "654a3c",
+      "clothes_1": "6b8799",
+      "clothes_2": "675640",
+      "haircut": "messy",
+      "accessory": "strap",
+      "file": "modele/urwis.glb"
+    },
+    {
+      "id": "starsza_pani",
+      "title": "Starsza pani",
+      "bodyFamily": "elder_f",
+      "hair": "c6c3b6",
+      "clothes_1": "896b7d",
+      "clothes_2": "65545a",
+      "haircut": "bun",
+      "accessory": "shawl",
+      "file": "modele/starsza_pani.glb"
+    },
+    {
+      "id": "starszy_pan_kapelusz",
+      "title": "Starszy pan w kapeluszu",
+      "bodyFamily": "elder_m",
+      "hair": "b9b9ae",
+      "clothes_1": "75634d",
+      "clothes_2": "4b4442",
+      "haircut": "sides",
+      "accessory": "hat",
+      "file": "modele/starszy_pan_kapelusz.glb"
+    },
+    {
+      "id": "mieszczka",
+      "title": "Mieszczka",
+      "bodyFamily": "adult_f",
+      "hair": "79513e",
+      "clothes_1": "b6a184",
+      "clothes_2": "85515b",
+      "haircut": "bob",
+      "accessory": "vest",
+      "file": "modele/mieszczka.glb"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+document.querySelectorAll('.language a').forEach(a=>a.addEventListener('click',()=>{try{localStorage.setItem('exp-language',a.lang);}catch{}}));

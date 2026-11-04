@@ -4,19 +4,23 @@
 // is made while the hero walks: each 1 km tile of the game is made from the
 // zoom-15 world tiles under it (see CityMap.world).
 //
-// Where the world map lives: WORLD_BASE (Cloudflare R2, world.json names the
-// current file). `?world=<url of a .pmtiles file>` overrides it for tests.
+// Where the world map lives: WORLD_BASE (Cloudflare R2), pinned by WORLD_ARCHIVE
+// in worldRules.ts. `?world=<url of a .pmtiles file>` overrides it for tests.
 
 import { PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
 import { Terrain } from './terrain';
+import { WORLD_ARCHIVE } from './worldRules';
 import { SZOPY } from '../content/budynki';
-import { CityMap, PX_PER_M, type Place, type RawTile, type WorldLoader } from './CityMap';
+import { CityMap, PX_PER_M, type Building, type Place, type RawTile, type WorldLoader } from './CityMap';
 
-/** The bucket with world.json and the world map file (set once the owner's Cloudflare R2 is ready). */
+/** The bucket holding the immutable world map archives (not stored in the repository). */
 export const WORLD_BASE = 'https://pub-e885d1b5314941a1bc22df18bed8e25d.r2.dev';
 const Z = 15;
+// Same open structures omitted by build-map.mjs for Lublin. A canopy's outline is not a wall,
+// regardless of its area (the small-shed exception alone blocked large station roofs).
+const OPEN_ROOFS = new Set(['roof', 'carport', 'shelter', 'bicycle_parking', 'canopy']);
 
 let pm: Promise<PMTiles> | null = null;
 
@@ -26,10 +30,7 @@ function worldFile(): Promise<PMTiles> {
     const override = new URLSearchParams(location.search).get('world');
     if (override) return new PMTiles(override);
     if (!WORLD_BASE) throw new Error('Mapa świata nie jest jeszcze gotowa');
-    const res = await fetch(`${WORLD_BASE}/world.json`, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`Nie udało się wczytać mapy świata (${res.status})`);
-    const { file } = (await res.json()) as { file: string };
-    return new PMTiles(`${WORLD_BASE}/${file}`);
+    return new PMTiles(`${WORLD_BASE}/${WORLD_ARCHIVE}`);
   })();
   pm.catch(() => (pm = null));
   return pm;
@@ -41,7 +42,7 @@ export function useWorldSource(src: Source) {
 }
 export type { Source, RangeResponse };
 
-/** A world map around (lat, lon). Its id carries the place, so saves can find it again. */
+/** Low-level projection, also used to read old saves. New arrivals use travel.getSurfaceMap. */
 export function worldMap(lat: number, lon: number) {
   const id = `w:${lat.toFixed(4)},${lon.toFixed(4)}`;
   return CityMap.world(id, { lat, lon }, (map) => {
@@ -54,6 +55,146 @@ export function worldMap(lat: number, lon: number) {
 export function worldOrigin(id: string) {
   const m = id.match(/^w:(-?[\d.]+),(-?[\d.]+)$/);
   return m ? { lat: Number(m[1]), lon: Number(m[2]) } : null;
+}
+
+// ---------------------------------------------------------------- towns (asked of passers-by)
+
+/** A named town or village near a point: its centre, how far it reaches (m) and how big it is. */
+export type Miejscowosc = { name: string; lat: number; lon: number; r: number; size: 'city' | 'town' | 'village' };
+const ZASIEG_MIEJSCOWOSCI = { city: 6000, town: 2500, village: 1000 };
+const WAGA_MIEJSCOWOSCI = { city: 3, town: 2, village: 1 };
+const ZL = 11;
+const placesCache = new Map<string, Promise<Miejscowosc[]>>();
+
+/** The towns and villages of one zoom-11 world tile (~12 km), read once. */
+function placesOfTile(tx: number, ty: number, lang: 'pl' | 'en') {
+  const key = `${tx},${ty},${lang}`;
+  let p = placesCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const file = await worldFile();
+      const t = await file.getZxy(ZL, tx, ty);
+      if (!t) return [];
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.places;
+      const out: Miejscowosc[] = [];
+      const nn = 2 ** ZL;
+      for (let i = 0; l && i < l.length; i++) {
+        const f = l.feature(i);
+        const pr = f.properties;
+        const size = pr.kind === 'locality' && (pr.kind_detail === 'city' || pr.kind_detail === 'town' || pr.kind_detail === 'village') ? pr.kind_detail : null;
+        if (!size || !pr.name) continue;
+        const q = f.loadGeometry()[0]?.[0];
+        if (!q) continue;
+        const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+        const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+        const name = String((lang === 'pl' ? pr['name:pl'] : pr['name:en']) ?? pr.name);
+        out.push({ name, lat, lon: (x / nn) * 360 - 180, r: ZASIEG_MIEJSCOWOSCI[size], size });
+      }
+      return out;
+    })();
+    p.catch(() => placesCache.delete(key));
+    placesCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * Which town or village (lat, lon) belongs to (bug report 67: 50 km north of Toruń people still said „Toruń”):
+ * read only when a passer-by is asked. Inside a town's reach the biggest such town wins; else the nearest,
+ * a city counting as 3× nearer and a town 2× (the suburbs of a city belong to it).
+ */
+export async function nearestLocality(lat: number, lon: number, lang: 'pl' | 'en'): Promise<Miejscowosc | null> {
+  const nn = 2 ** ZL;
+  const tx = Math.floor(((lon + 180) / 360) * nn);
+  const ty = Math.floor(((1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const lists = await Promise.all([-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => placesOfTile(tx + dx, ty + dy, lang).catch(() => []))));
+  const all = lists.flat();
+  const m = (p: Miejscowosc) => Math.hypot((p.lat - lat) * 111_320, (p.lon - lon) * 111_320 * Math.cos((lat * Math.PI) / 180));
+  const inside = all.filter((p) => m(p) <= p.r).sort((a, b) => WAGA_MIEJSCOWOSCI[b.size] - WAGA_MIEJSCOWOSCI[a.size] || m(a) - m(b));
+  if (inside.length) return inside[0];
+  return all.sort((a, b) => m(a) / WAGA_MIEJSCOWOSCI[a.size] - m(b) / WAGA_MIEJSCOWOSCI[b.size])[0] ?? null;
+}
+
+// ---------------------------------------------------------------- low-zoom tiles (city boards)
+
+const kafleCache = new Map<string, Promise<VectorTile | null>>();
+
+/** Any world tile, read once (city boards read zoom 6/8/9 tiles: main roads, built-up land, water, towns). */
+export function kafelSwiata(z: number, tx: number, ty: number): Promise<VectorTile | null> {
+  const nn = 2 ** z;
+  tx = ((tx % nn) + nn) % nn;
+  const key = `${z}/${tx}/${ty}`;
+  let p = kafleCache.get(key);
+  if (!p) {
+    p = (async () => {
+      if (ty < 0 || ty >= nn) return null;
+      const t = await (await worldFile()).getZxy(z, tx, ty);
+      return t ? new VectorTile(new PbfReader(new Uint8Array(t.data))) : null;
+    })();
+    p.catch(() => kafleCache.delete(key));
+    kafleCache.set(key, p);
+  }
+  return p;
+}
+
+// ---------------------------------------------------------------- continents (map screen)
+
+/** A land outline: [lat, lon, onTileEdge (1/0)] per point – edges along the tile's border are not coastline. */
+export type Lad = Float64Array[];
+const landCache = new Map<string, Promise<Lad[] | null>>();
+
+/** The land (Protomaps `earth`) of one low-zoom world tile, for the map screen's continent outlines. */
+export function landOfTile(z: number, tx: number, ty: number): Promise<Lad[] | null> {
+  const nn = 2 ** z;
+  tx = ((tx % nn) + nn) % nn;
+  const key = `${z}/${tx}/${ty}`;
+  let p = landCache.get(key);
+  if (!p) {
+    p = (async () => {
+      if (ty < 0 || ty >= nn) return null;
+      const file = await worldFile();
+      const t = await file.getZxy(z, tx, ty);
+      if (!t) return null; // not in this world file (test samples): leave it unknown
+      const vt = new VectorTile(new PbfReader(new Uint8Array(t.data)));
+      const l = vt.layers.earth;
+      const out: Lad[] = [];
+      for (let i = 0; l && i < l.length; i++) {
+        const rings: Lad = [];
+        for (const ring of l.feature(i).loadGeometry()) {
+          const a = new Float64Array(ring.length * 3);
+          ring.forEach((q, j) => {
+            const x = tx + q.x / l.extent, y = ty + q.y / l.extent;
+            a[j * 3] = (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / nn))) * 180) / Math.PI;
+            a[j * 3 + 1] = (x / nn) * 360 - 180;
+            a[j * 3 + 2] = q.x <= 0 || q.y <= 0 || q.x >= l.extent || q.y >= l.extent ? 1 : 0;
+          });
+          rings.push(a);
+        }
+        out.push(rings);
+      }
+      return out;
+    })();
+    p.catch(() => landCache.delete(key));
+    landCache.set(key, p);
+  }
+  return p;
+}
+
+/** The tiles of zoom `z` covering a lat/lon box (at most 25). */
+export function tilesOver(z: number, s: number, w: number, n: number, e: number) {
+  const nn = 2 ** z;
+  const tx = (lon: number) => Math.floor(((lon + 180) / 360) * nn);
+  const ty = (lat: number) => Math.floor(((1 - Math.asinh(Math.tan((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180)) / Math.PI) / 2) * nn);
+  const out: [number, number][] = [];
+  for (let x = tx(w); x <= tx(e); x++) for (let y = ty(n); y <= ty(s); y++) if (out.length < 25) out.push([x, y]);
+  return out;
+}
+
+/** Already read (for drawing without waiting). */
+export function landReady(z: number, tx: number, ty: number) {
+  const nn = 2 ** z;
+  return landCache.get(`${z}/${((tx % nn) + nn) % nn}/${ty}`);
 }
 
 // ---------------------------------------------------------------- tiles
@@ -71,7 +212,7 @@ const ROAD: Record<string, string | null> = {
   service: 'service', driveway: 'service', track: 'track', pedestrian: 'pedestrian',
   footway: 'path', path: 'path', cycleway: 'path', bridleway: 'path', steps: 'steps',
   // Drawn along the roads already (build-map drops them too).
-  sidewalk: null, crossing: null, corridor: null, platform: null,
+  sidewalk: null, crossing: null, corridor: null, platform: 'platform',
 };
 
 const LANDUSE: Record<string, string> = {
@@ -79,16 +220,37 @@ const LANDUSE: Record<string, string> = {
   recreation_ground: 'grass', village_green: 'grass', heath: 'grass', park: 'park', garden: 'park',
   cemetery: 'cemetery', allotments: 'allotments', farmland: 'farmland', orchard: 'farmland', vineyard: 'farmland',
   pitch: 'pitch', stadium: 'pitch', track: 'pitch', playground: 'playground', parking: 'parking',
-  pedestrian: 'plaza', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
+  pedestrian: 'plaza', platform: 'platform', wetland: 'wetland', marsh: 'wetland', swamp: 'wetland',
   bare_rock: 'rock', scree: 'rock', shingle: 'rock', glacier: 'glacier', sand: 'sand', beach: 'sand', dune: 'sand',
 };
 
 const WATER_LINE: Record<string, string> = { river: 'river', stream: 'stream', canal: 'stream', ditch: 'ditch', drain: 'ditch' };
 
+/** Ferry landings of the world map become ports with a captain (porty.ts sets it on the test server). */
+export const PORTY_Z_MAPY = { on: false };
+
+/** World map point of interest → an odd place for the boards' scouting notes (as scripts/tablice/osobliwosci.mjs). */
+function rodzajOsobliwosci(p: Record<string, unknown>): string | null {
+  switch (String(p.kind ?? '')) {
+    case 'ruins': return 'ruiny';
+    case 'archaeological_site': return 'stanowisko';
+    case 'fortification': case 'fort': case 'bunker': return 'fort';
+    case 'technical_monument': return 'zabytek';
+    case 'water_tower': return 'wieza';
+    case 'windmill': return 'wiatrak';
+    case 'watermill': return 'mlyn';
+    case 'wayside_shrine': case 'wayside_cross': return 'kapliczka';
+    case 'viewpoint': return 'widok';
+    default: return null;
+  }
+}
+
 /** World map point of interest → the game's place. */
 function placeKind(p: Record<string, unknown>): Place['kind'] | null {
+  if (/\bmc ?donald['’]?s\b/i.test(String(p.name ?? ''))) return 'maker';
   const kind = String(p.kind ?? '');
   const detail = String(p.kind_detail ?? '');
+  if (kind === 'car_repair' || detail === 'car_repair') return 'workshop';
   const named = !!p.name;
   switch (kind) {
     case 'supermarket': return 'shop';
@@ -106,13 +268,14 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'hotel': case 'hostel': case 'guest_house': case 'motel': return 'hotel';
     case 'camp_site': case 'caravan_site': return 'camp';
     case 'station': case 'bus_station': return named ? 'station' : null;
+    case 'ferry_terminal': return PORTY_Z_MAPY.on ? 'port' : null;
     default: return null;
   }
 }
 
 const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   shop: 'Sklep', police: 'Komenda Policji', library: 'Biblioteka', bank: 'Bank', alchemist: 'Stacja paliw',
-  gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
+  workshop: 'Warsztat samochodowy', port: 'Przystań promowa', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
 };
 
 /**
@@ -200,7 +363,7 @@ function worldLoader(map: CityMap): WorldLoader {
   const done = new Map<number, Promise<RawTile>>();
 
   const convert = async (tx: number, ty: number): Promise<RawTile> => {
-    const out: RawTile = { a: [], l: [], b: [], p: [], k: [], q: [] };
+    const out: RawTile = { a: [], l: [], b: [], p: [], k: [], q: [], o: [] };
     const file = await worldFile();
     const t = await file.getZxy(Z, tx, ty);
     if (!t) return out;
@@ -261,18 +424,24 @@ function worldLoader(map: CityMap): WorldLoader {
       });
     });
     // Buildings, then their house numbers (with the nearest named street).
-    const blds: { rings: number[][][]; box: number[]; addr: string[]; levels: number; id: number }[] = [];
+    const blds: { rings: number[][][]; box: number[]; addr: string[]; levels: number; id: number; architecture: Building['architecture'] }[] = [];
     const nums: { x: number; y: number; n: string }[] = [];
     each('buildings', (f, i, pr) => {
       if (f.type === 1 && f.properties.addr_housenumber) {
         const [x, y] = pr(f.loadGeometry()[0][0]);
         nums.push({ x, y, n: String(f.properties.addr_housenumber) });
       } else if (f.type === 3) {
+        if ([f.properties.building, f.properties['building:part'], f.properties.kind_detail].some(k => OPEN_ROOFS.has(String(k ?? '')))
+          || Number(f.properties.min_height) >= 2.5) return;
         const h = Number(f.properties.height) || 0;
         polygons(f).forEach((poly, j) => {
           const rings = poly.map((r) => r.map(pr));
           const xs = rings[0].map((q) => q[0]), ys = rings[0].map((q) => q[1]);
-          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: h ? Math.max(1, Math.round(h / 3)) : SZOPY.domyslniePieter, id: idOf(3, i * 8 + (j & 7)) });
+          const tags: Record<string,string> = {};
+          for (const key of ['building','building:architecture','building:material','building:levels','roof:shape','roof:material','start_date','historic','amenity']) if (f.properties[key] != null) tags[key] = String(f.properties[key]);
+          if (!tags.building && f.properties.kind_detail) tags.building = String(f.properties.kind_detail);
+          const sourceId = f.id != null ? `feature:${f.id}${j ? `:part:${j}` : ''}` : `tile:${tx}:${ty}:${i}:${j}`;
+          blds.push({ rings, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], addr: [], levels: h ? Math.max(1, Math.round(h / 3)) : SZOPY.domyslniePieter, id: idOf(3, i * 8 + (j & 7)), architecture: { sourceId, idSource:'feature', tags } });
         });
       }
     });
@@ -312,6 +481,11 @@ function worldLoader(map: CityMap): WorldLoader {
         out.q!.push([qx * k, qy * k]);
         return;
       }
+      const odd = rodzajOsobliwosci(f.properties);
+      if (odd) {
+        const [ox, oy] = pr(f.loadGeometry()[0][0]);
+        out.o!.push([odd, nm ?? '', ox * k, oy * k]);
+      }
       // Castles and palaces: their building keeps its name (drawn whole, never cut into parts).
       if (['castle', 'fort', 'palace'].includes(String(f.properties.kind)) && nm) {
         const [cx, cy] = pr(f.loadGeometry()[0][0]);
@@ -345,7 +519,8 @@ function worldLoader(map: CityMap): WorldLoader {
       if (!b.addr.length && m2 < SZOPY.usunM2) continue;
       const open = !b.addr.length && m2 < SZOPY.przejscieM2 ? 1 : 0;
       const castle = castles.find((c) => c.x >= b.box[0] && c.x <= b.box[2] && c.y >= b.box[1] && c.y <= b.box[3] && inside(b.rings[0], c.x, c.y));
-      out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, castle?.name || 0, b.levels, open]);
+      if (castle && b.architecture) b.architecture.tags.historic = 'castle';
+      out.b.push([b.id, b.rings.map(flat), b.addr.join(' | ') || 0, castle?.name || 0, b.levels, open, b.architecture]);
     }
     return out;
   };

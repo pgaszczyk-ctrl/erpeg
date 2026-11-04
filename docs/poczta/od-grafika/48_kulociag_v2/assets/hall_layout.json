@@ -1,0 +1,625 @@
+{
+  "request": "48-P003",
+  "delivery": "48-G002",
+  "stage": "full delivery",
+  "canvas": {
+    "width": 1672,
+    "height": 941
+  },
+  "source": {
+    "file": "reference/hala_48-G001.png",
+    "sha256": "765cdba357d3a460000742b38369d393620a15b2041c6bc67d7ad1d036f23e2c"
+  },
+  "coordinates": "origin top left; pixels of source canvas; positions refer to centre of feet",
+  "mask": {
+    "raw": "assets/walkmask_1672x941.png",
+    "safe": "assets/walkmask_feet_r8.png",
+    "white": 255,
+    "black": 0,
+    "footRadiusPx": 8,
+    "safeMaskAlreadyEroded": true,
+    "navGridRecommendationPx": 4
+  },
+  "character": {
+    "sourceFrame": [
+      64,
+      64
+    ],
+    "nominalModelHeightPx": 54,
+    "feetPixel": [
+      32,
+      62
+    ],
+    "anchorBoundary": [
+      32,
+      63
+    ],
+    "pitchDegrees": 22,
+    "scale": "existing game renderer, 0.36 * SKALA_POSTACI; never fit each person separately",
+    "insideBall": {
+      "pose": "seated",
+      "maxWidthPx": 42,
+      "maxHeightPx": 44,
+      "preserveHeadSize": true,
+      "ballCanvasPx": 80
+    }
+  },
+  "entrance": {
+    "spawn": [
+      251,
+      324
+    ],
+    "exitCentre": [
+      251,
+      324
+    ],
+    "exitTriggerRadiusPx": 22,
+    "autoExitOnlyAfterLeavingAndReentering": true
+  },
+  "launchers": [
+    {
+      "id": 0,
+      "approachFeet": [
+        907,
+        607
+      ],
+      "stairsTarget": [
+        960,
+        560
+      ],
+      "interactionRadiusPx": 96,
+      "note": "Ticket interaction from approachFeet; then scripted boarding into capsule, not free walk over machine."
+    },
+    {
+      "id": 1,
+      "approachFeet": [
+        1147,
+        637
+      ],
+      "stairsTarget": [
+        1183,
+        560
+      ],
+      "interactionRadiusPx": 96,
+      "note": "Ticket interaction from approachFeet; then scripted boarding into capsule, not free walk over machine."
+    },
+    {
+      "id": 2,
+      "approachFeet": [
+        1370,
+        637
+      ],
+      "stairsTarget": [
+        1406,
+        560
+      ],
+      "interactionRadiusPx": 96,
+      "note": "Ticket interaction from approachFeet; then scripted boarding into capsule, not free walk over machine."
+    }
+  ],
+  "npcSpawn": {
+    "polygon": [
+      [
+        190,
+        338
+      ],
+      [
+        850,
+        338
+      ],
+      [
+        850,
+        655
+      ],
+      [
+        275,
+        655
+      ],
+      [
+        190,
+        594
+      ]
+    ],
+    "feetMustPassSafeMask": true,
+    "minDistanceFromOtherNpcPx": 76,
+    "avoidEntranceRadiusPx": 85,
+    "dynamicStallCollisionRequired": true
+  },
+  "obstacles": [
+    {
+      "id": "stairs",
+      "polygon": [
+        [
+          56,
+          182
+        ],
+        [
+          343,
+          182
+        ],
+        [
+          336,
+          263
+        ],
+        [
+          302,
+          300
+        ],
+        [
+          166,
+          309
+        ],
+        [
+          159,
+          271
+        ],
+        [
+          56,
+          270
+        ]
+      ]
+    },
+    {
+      "id": "barrel_north",
+      "polygon": [
+        [
+          341,
+          174
+        ],
+        [
+          391,
+          174
+        ],
+        [
+          398,
+          239
+        ],
+        [
+          342,
+          248
+        ]
+      ]
+    },
+    {
+      "id": "chest_stairs",
+      "polygon": [
+        [
+          63,
+          273
+        ],
+        [
+          127,
+          273
+        ],
+        [
+          131,
+          342
+        ],
+        [
+          64,
+          344
+        ]
+      ]
+    },
+    {
+      "id": "bench_north",
+      "polygon": [
+        [
+          438,
+          215
+        ],
+        [
+          701,
+          215
+        ],
+        [
+          702,
+          288
+        ],
+        [
+          438,
+          288
+        ]
+      ]
+    },
+    {
+      "id": "bench_west",
+      "polygon": [
+        [
+          110,
+          384
+        ],
+        [
+          166,
+          384
+        ],
+        [
+          167,
+          569
+        ],
+        [
+          110,
+          569
+        ]
+      ]
+    },
+    {
+      "id": "bench_south",
+      "polygon": [
+        [
+          435,
+          676
+        ],
+        [
+          704,
+          676
+        ],
+        [
+          704,
+          754
+        ],
+        [
+          435,
+          754
+        ]
+      ]
+    },
+    {
+      "id": "crates_west",
+      "polygon": [
+        [
+          57,
+          674
+        ],
+        [
+          118,
+          673
+        ],
+        [
+          140,
+          726
+        ],
+        [
+          180,
+          733
+        ],
+        [
+          180,
+          829
+        ],
+        [
+          58,
+          830
+        ]
+      ]
+    },
+    {
+      "id": "crates_southwest",
+      "polygon": [
+        [
+          164,
+          741
+        ],
+        [
+          249,
+          741
+        ],
+        [
+          251,
+          833
+        ],
+        [
+          164,
+          833
+        ]
+      ]
+    },
+    {
+      "id": "wall_pipe_east",
+      "polygon": [
+        [
+          1582,
+          352
+        ],
+        [
+          1619,
+          345
+        ],
+        [
+          1619,
+          542
+        ],
+        [
+          1581,
+          540
+        ]
+      ]
+    },
+    {
+      "id": "tube_0",
+      "polygon": [
+        [
+          967,
+          175
+        ],
+        [
+          1088,
+          175
+        ],
+        [
+          1088,
+          614
+        ],
+        [
+          967,
+          614
+        ]
+      ]
+    },
+    {
+      "id": "machine_0",
+      "polygon": [
+        [
+          935,
+          614
+        ],
+        [
+          1133,
+          614
+        ],
+        [
+          1139,
+          814
+        ],
+        [
+          935,
+          814
+        ]
+      ]
+    },
+    {
+      "id": "steps_0",
+      "polygon": [
+        [
+          930,
+          531
+        ],
+        [
+          1000,
+          531
+        ],
+        [
+          1000,
+          585
+        ],
+        [
+          930,
+          585
+        ]
+      ]
+    },
+    {
+      "id": "tube_1",
+      "polygon": [
+        [
+          1190,
+          175
+        ],
+        [
+          1311,
+          175
+        ],
+        [
+          1311,
+          614
+        ],
+        [
+          1190,
+          614
+        ]
+      ]
+    },
+    {
+      "id": "machine_1",
+      "polygon": [
+        [
+          1158,
+          614
+        ],
+        [
+          1356,
+          614
+        ],
+        [
+          1362,
+          814
+        ],
+        [
+          1158,
+          814
+        ]
+      ]
+    },
+    {
+      "id": "steps_1",
+      "polygon": [
+        [
+          1153,
+          531
+        ],
+        [
+          1223,
+          531
+        ],
+        [
+          1223,
+          585
+        ],
+        [
+          1153,
+          585
+        ]
+      ]
+    },
+    {
+      "id": "tube_2",
+      "polygon": [
+        [
+          1413,
+          175
+        ],
+        [
+          1534,
+          175
+        ],
+        [
+          1534,
+          614
+        ],
+        [
+          1413,
+          614
+        ]
+      ]
+    },
+    {
+      "id": "machine_2",
+      "polygon": [
+        [
+          1381,
+          614
+        ],
+        [
+          1579,
+          614
+        ],
+        [
+          1585,
+          814
+        ],
+        [
+          1381,
+          814
+        ]
+      ]
+    },
+    {
+      "id": "steps_2",
+      "polygon": [
+        [
+          1376,
+          531
+        ],
+        [
+          1446,
+          531
+        ],
+        [
+          1446,
+          585
+        ],
+        [
+          1376,
+          585
+        ]
+      ]
+    }
+  ],
+  "lampFootprints": [
+    {
+      "centre": [
+        86,
+        638
+      ],
+      "radius": [
+        15,
+        12
+      ]
+    },
+    {
+      "centre": [
+        301,
+        797
+      ],
+      "radius": [
+        20,
+        15
+      ]
+    },
+    {
+      "centre": [
+        792,
+        755
+      ],
+      "radius": [
+        17,
+        13
+      ]
+    },
+    {
+      "centre": [
+        799,
+        264
+      ],
+      "radius": [
+        17,
+        12
+      ]
+    },
+    {
+      "centre": [
+        944,
+        597
+      ],
+      "radius": [
+        14,
+        10
+      ]
+    },
+    {
+      "centre": [
+        1148,
+        597
+      ],
+      "radius": [
+        14,
+        10
+      ]
+    },
+    {
+      "centre": [
+        1364,
+        597
+      ],
+      "radius": [
+        14,
+        10
+      ]
+    },
+    {
+      "centre": [
+        1597,
+        597
+      ],
+      "radius": [
+        14,
+        10
+      ]
+    }
+  ],
+  "limitations": [
+    "Geometry and camera of new NPC derive from game GLBs. Offline raster lighting differs from the live three.js shader.",
+    "Full scene integration and seated player pose must be checked in the game.",
+    "Old hall lamps are baked into the original background: do not overlay a second smaller lamp without removing the old one in the renderer/background pass."
+  ],
+  "artGrid": {
+    "sizePx": 2,
+    "origin": [
+      0,
+      0
+    ],
+    "feetPositions": "even source-canvas coordinates; translate by anchorBoundary",
+    "maskResolutionPx": 1,
+    "maskIsCollisionDataNotPaintedArt": true
+  }
+}

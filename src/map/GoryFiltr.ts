@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { NA_BATERII } from '../screen';
 import type { CityMap } from './CityMap';
 import { PX_PER_M } from './CityMap';
 import { GORY } from '../content/gory';
@@ -273,7 +274,8 @@ export class GoryFiltr {
     const pOd = GORY.paralaksaOdM, pPelna = Math.max(pOd + 1, GORY.paralaksaPelnaM);
     this.parCel = wlaczony ? Math.max(0, Math.min(1, (rzezba - pOd) / (pPelna - pOd))) * tlumienie : 0;
     // The faint dark haze needs only a little relief (hills, Wawel), whatever the buildings.
-    this.ciemno = wlaczony && rzezba >= GORY.przyciemnienieOdM;
+    // On battery a full-screen pass just for the faint haze isn't worth it (owner, 12 Oct 2026: stutter unplugged).
+    this.ciemno = wlaczony && !NA_BATERII && rzezba >= GORY.przyciemnienieOdM;
     this.info = { rzezba: Math.round(rzezba), zabudowa: Math.round(zabudowa * 1000) / 1000, cel, moc: this.moc };
     return cel;
   }

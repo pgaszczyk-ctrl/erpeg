@@ -1,0 +1,18 @@
+EXP-LORE / Zamówienie 45 / Etap D — 29 nowych ikon.
+
+WZÓR: zaakceptowany źródłowy miecz rycerski. Wszystkie 29 generacji otrzymało ten sam obraz jako bezpośrednią referencję stylu. Miecza nie zmieniono ani nie liczono ponownie jako nowej ikony.
+
+oryginaly/ — 29 pełnych źródłowych PNG z przezroczystym tłem. Są wzorcem wyglądu. Nie są rysunkami na ścisłej siatce 64x64.
+eksporty_64/ — 29 osobnych technicznych eksportów PNG RGBA 64x64; margines co najmniej 4 px, twarda alfa 0/255, najwyżej 48 widocznych kolorów, zewnętrzny obrys #1e1a24. Przy zmniejszaniu tracą część szczegółów źródeł. Nie używać ich powiększeń jako prezentacji jakości oryginału.
+powiekszenia_64_x16/ — dokładne powiększenia eksportów x16 (1024x1024), bez wygładzania.
+wzor/ — niezmieniony miecz referencyjny.
+plansza_oryginalow_1.png ... _3.png — trzy plansze z podglądami dużych źródeł. Pierwsza zawiera dodatkowo wzorzec miecza.
+plansza_miniatur_1.png ... _3.png — osobne plansze eksportów 64 i 32 px. Aplikacja może przeskalować całą planszę; wielkości są zgodne w samym pliku.
+kontrola.json — rozmiary, palety, alfa, marginesy, kontrola powiększeń i sumy kontrolne źródeł.
+prompty.json — pełne prompty dla każdej z 29 ikon.
+
+Etap obejmuje wyposażenie rekruta, nagrody i talizmany, łupy, mikstury, zwinięty namiot, owoce, warzywa i grzyb — identyfikatory zgodne z zamówieniem D, pozycje 20–48.
+Wykonanie: wbudowany imagegen, jedna generacja na przedmiot, następnie osobne eksporty techniczne ImageMagick. Oryginały zachowane bajt w bajt.
+Status: przygotowane do oceny; nie wdrożono do repozytorium ani gry.
+
+Łączny stan zamówienia: Próba 1 (4) + A/B (15) + D (29) = 48 z 93 pozycji. Pozostaje 45 pozycji z etapów C1 i C2.

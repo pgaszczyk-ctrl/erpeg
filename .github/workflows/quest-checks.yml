@@ -1,0 +1,48 @@
+name: City quest checks
+on:
+  pull_request:
+    paths:
+      - 'src/content/questy/**'
+      - 'src/content/fabula.ts'
+      - 'src/content/zlecenia.ts'
+      - 'src/quests.ts'
+      - 'src/scenes/**'
+      - 'src/admin/etapyEditor.ts'
+      - 'scripts/tests/**'
+      - '.github/workflows/quest-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quest-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_TEST: '1'
+      - run: npm run test:quests
+      - run: npm run test:quest-maps
+      - name: Install browser test runner
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Mobile and desktop quests with mocked RPCs
+        run: node scripts/tests/browser-city-quests.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quest-screenshots
+          path: .cache/quest-*.png
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

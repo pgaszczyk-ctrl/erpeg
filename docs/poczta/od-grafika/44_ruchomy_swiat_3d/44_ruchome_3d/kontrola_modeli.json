@@ -1,0 +1,1609 @@
+{
+  "method": "Internal structural and geometric checks; not the Khronos validator",
+  "results": {
+    "szkielet": {
+      "triangles": 2634,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.003000000694394045,
+          "highest_y": 1.2035400226145982,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.8500000238418579,
+          "sampled_poses": 80,
+          "lowest_y": 0.0022846987110932138,
+          "highest_y": 1.2187134299931726,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "attack": {
+          "duration": 1.2999999523162842,
+          "sampled_poses": 80,
+          "lowest_y": 0.003000000694394045,
+          "highest_y": 1.2011277415703192,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.2800000011920929,
+          "sampled_poses": 80,
+          "lowest_y": 0.003000000694394045,
+          "highest_y": 1.2035400226145982,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.002470043579647356,
+          "highest_y": 1.2100543102794736,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "wilk": {
+      "triangles": 696,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.003000002410262853,
+          "highest_y": 0.9322639092493079,
+          "loop_max_delta": 9.145818352459043e-18
+        },
+        "walk": {
+          "duration": 0.949999988079071,
+          "sampled_poses": 80,
+          "lowest_y": 0.0025734052426358844,
+          "highest_y": 0.9396616921470312,
+          "loop_max_delta": 5.204170427930421e-18
+        },
+        "attack": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": -0.001827214377479458,
+          "highest_y": 1.137592172186549,
+          "loop_max_delta": null
+        },
+        "lunge": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": -0.001827214377479458,
+          "highest_y": 1.137592172186549,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.25999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028606787374543113,
+          "highest_y": 0.9462934270629054,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.002433319635781084,
+          "highest_y": 0.9916325359286603,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "chochlik": {
+      "triangles": 1202,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000015571713112,
+          "highest_y": 1.0830159864462614,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 0.800000011920929,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028207086442432958,
+          "highest_y": 1.0886941163232038,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "attack": {
+          "duration": 1.149999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000015571713112,
+          "highest_y": 1.0845765597643175,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000015571713112,
+          "highest_y": 1.0854004489157743,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.002715672258736479,
+          "highest_y": 1.0985466211952424,
+          "loop_max_delta": null
+        },
+        "throw": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000015571713112,
+          "highest_y": 1.0827390404447765,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "bandyta": {
+      "triangles": 1294,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.2367673862311235,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 0.8999999761581421,
+          "sampled_poses": 80,
+          "lowest_y": 0.002924432248940255,
+          "highest_y": 1.2397539152978068,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "attack": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.239181136804437,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.2410823972558487,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0027130772373562817,
+          "highest_y": 1.2612649495295183,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "zombiak": {
+      "triangles": 1134,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.1570436966904518,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.002857875999279204,
+          "highest_y": 1.1649888700506104,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "attack": {
+          "duration": 1.5,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.1595206934991769,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.1556823869064923,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0027130772373562817,
+          "highest_y": 1.1629768881253844,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "upior_krypty": {
+      "triangles": 978,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.799999952316284,
+          "sampled_poses": 80,
+          "lowest_y": 0.08000645253391345,
+          "highest_y": 1.5142176654221249,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 1.399999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0800767910676981,
+          "highest_y": 1.516261366185054,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "attack": {
+          "duration": 1.350000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.08002804560904392,
+          "highest_y": 1.5057407435134087,
+          "loop_max_delta": null
+        },
+        "scream": {
+          "duration": 1.600000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.09800000816583632,
+          "highest_y": 1.5461763617608808,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.3499999940395355,
+          "sampled_poses": 80,
+          "lowest_y": 0.08010729198485161,
+          "highest_y": 1.5172829456630934,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.7000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000141312651885,
+          "highest_y": 1.4925533029437066,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "wodnik": {
+      "triangles": 1342,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.799999952316284,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.388351738208646,
+          "loop_max_delta": 7.228317496858451e-18
+        },
+        "walk": {
+          "duration": 1.100000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.002924432237150963,
+          "highest_y": 1.3944231586555613,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "attack": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.3908831268911834,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.3876488948751242,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0027130772373562817,
+          "highest_y": 1.3876488949466497,
+          "loop_max_delta": null
+        },
+        "cast": {
+          "duration": 1.5,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.3887896091823118,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "wodny_blob": {
+      "triangles": 180,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999877985724954,
+          "highest_y": 0.540996549957605,
+          "loop_max_delta": 0.0
+        },
+        "walk": {
+          "duration": 0.7200000286102295,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999999284744287,
+          "highest_y": 0.6241094464787185,
+          "loop_max_delta": 3.469446951953614e-18
+        },
+        "wobble": {
+          "duration": 0.7200000286102295,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999999284744287,
+          "highest_y": 0.6241094464787185,
+          "loop_max_delta": null
+        },
+        "attack": {
+          "duration": 1.100000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.002998923185138863,
+          "highest_y": 0.6934745316005033,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999994043064308,
+          "highest_y": 0.5130000016838312,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.0,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999989303616779,
+          "highest_y": 0.5130000016838312,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "driada": {
+      "triangles": 1470,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.2790155215905759,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 1.0499999523162842,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029244322513566554,
+          "highest_y": 1.2841828396582766,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "attack": {
+          "duration": 1.2000000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.2837052105153317,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.2756104017186911,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0027130772373562817,
+          "highest_y": 1.2756104017902166,
+          "loop_max_delta": null
+        },
+        "cast": {
+          "duration": 1.600000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000013340264475,
+          "highest_y": 1.279657961144688,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "herszt": {
+      "triangles": 1426,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999989895522633,
+          "highest_y": 1.2759074215568962,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 1.100000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.0027920223935823246,
+          "highest_y": 1.2839389601056723,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "attack": {
+          "duration": 1.399999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999989895522633,
+          "highest_y": 1.2762128008657627,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999989895522633,
+          "highest_y": 1.327511046468711,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0026990594215429153,
+          "highest_y": 1.2880491188035115,
+          "loop_max_delta": null
+        },
+        "slam": {
+          "duration": 1.649999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999989895522633,
+          "highest_y": 1.28548259459862,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "warg": {
+      "triangles": 760,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998071044674,
+          "highest_y": 1.1323271622764823,
+          "loop_max_delta": 1.0792065641302744e-17
+        },
+        "walk": {
+          "duration": 1.0499999523162842,
+          "sampled_poses": 80,
+          "lowest_y": 0.0024965946406400874,
+          "highest_y": 1.1411119760213806,
+          "loop_max_delta": 5.935636066269316e-18
+        },
+        "attack": {
+          "duration": 1.0499999523162842,
+          "sampled_poses": 80,
+          "lowest_y": 0.002991176444093649,
+          "highest_y": 1.1437546223006232,
+          "loop_max_delta": null
+        },
+        "lunge": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": -0.0026961165612214427,
+          "highest_y": 1.3746658631029662,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.25999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002835596027433454,
+          "highest_y": 1.1505883920910611,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0023313169871843897,
+          "highest_y": 1.2110068994765815,
+          "loop_max_delta": null
+        },
+        "bite": {
+          "duration": 1.0499999523162842,
+          "sampled_poses": 80,
+          "lowest_y": 0.002991176444093649,
+          "highest_y": 1.1437546223006232,
+          "loop_max_delta": null
+        },
+        "pounce": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": -0.0026961165612214427,
+          "highest_y": 1.3746658631029662,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "mosiezny_koziol": {
+      "triangles": 1442,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018445402454,
+          "highest_y": 1.3998272162651821,
+          "loop_max_delta": 1.3877787807814457e-17
+        },
+        "walk": {
+          "duration": 1.149999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.002913072546054482,
+          "highest_y": 1.4071058786212283,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "attack": {
+          "duration": 1.399999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018445402454,
+          "highest_y": 1.4024425506498062,
+          "loop_max_delta": null
+        },
+        "hit": {
+          "duration": 0.30000001192092896,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018445402454,
+          "highest_y": 1.4037962649947646,
+          "loop_max_delta": null
+        },
+        "death": {
+          "duration": 1.25,
+          "sampled_poses": 80,
+          "lowest_y": 0.0025749259139924985,
+          "highest_y": 1.6395679041252826,
+          "loop_max_delta": null
+        },
+        "horns": {
+          "duration": 1.399999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018445402454,
+          "highest_y": 1.4024425506498062,
+          "loop_max_delta": null
+        },
+        "charge": {
+          "duration": 1.5,
+          "sampled_poses": 80,
+          "lowest_y": 0.001398788406268378,
+          "highest_y": 1.4023877237468971,
+          "loop_max_delta": null
+        },
+        "stomp": {
+          "duration": 1.350000023841858,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018445402316,
+          "highest_y": 1.4024453275967659,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "mloda_kobieta": {
+      "triangles": 1468,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2197952849091638,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.2217009063499127,
+          "loop_max_delta": 2.220446049250313e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2210663802377684,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2255922913057655,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.3123705960763974,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "chlopiec": {
+      "triangles": 1168,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0403398193400166,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.04237651828179,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0414583833006472,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0454411852234964,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.1430629729907815,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "pan_z_wasem": {
+      "triangles": 1344,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.260863983395712,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.262031344592598,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2608747897931203,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.260858990587417,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.312447845121947,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "babcia": {
+      "triangles": 1540,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.2825726750935451,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "walk": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2846726476318586,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.284283290500448,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.282499557930244,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2951985387858846,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "mlody_mezczyzna": {
+      "triangles": 1192,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2197952849091638,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.2217009063499127,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2210663802377684,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2255922913057655,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.312447845121947,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "dziewczynka_warkocze": {
+      "triangles": 1540,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0403398193400166,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.04237651828179,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0414583833006472,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0454411852234964,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.1430629729907815,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "chlopiec_2": {
+      "triangles": 1192,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0923537151222593,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.0946471317140618,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0942107586400431,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0920961105617857,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.1430629729907815,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "kobieta": {
+      "triangles": 1504,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2197952849091638,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.2217009063499127,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2210663802377684,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2255922913057655,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.3123705960763974,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "mezczyzna": {
+      "triangles": 1216,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.278901914268483,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.281108621278292,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.281012190975078,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2786091818246392,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.312447845121947,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "starszy_pan": {
+      "triangles": 1356,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.1669730922535269,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "walk": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.1673153352003744,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.1670270001993064,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.1668226394775423,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2952456698378834,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "dziewczynka": {
+      "triangles": 1540,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0403398193400166,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "walk": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.04237651828179,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0414583833006472,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0454411852234964,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.1430629729907815,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "urwis": {
+      "triangles": 1204,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0923537151222593,
+          "loop_max_delta": 2.7755575615628914e-17
+        },
+        "walk": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.0946471317140618,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0942107586400431,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0030000018191337907,
+          "highest_y": 1.0920961105617857,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.7799999713897705,
+          "sampled_poses": 80,
+          "lowest_y": 0.0028187765588811517,
+          "highest_y": 1.1430629729907815,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "starsza_pani": {
+      "triangles": 1570,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.2825726750935451,
+          "loop_max_delta": 5.551115123125783e-17
+        },
+        "walk": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2846726476318586,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.284283290500448,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.282499557930244,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2951985387858846,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "starszy_pan_kapelusz": {
+      "triangles": 1528,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.2625717168513462,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "walk": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2650853204940546,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.2656751258275754,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511691,
+          "highest_y": 1.2699521831073417,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 1.0800000429153442,
+          "sampled_poses": 80,
+          "lowest_y": 0.002890932986945066,
+          "highest_y": 1.2952456698378834,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "mieszczka": {
+      "triangles": 1480,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.5999999046325684,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2197952849091638,
+          "loop_max_delta": 1.1102230246251565e-16
+        },
+        "walk": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.2217009063499127,
+          "loop_max_delta": 2.220446049250313e-16
+        },
+        "talk": {
+          "duration": 2.200000047683716,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2210663802377684,
+          "loop_max_delta": null
+        },
+        "wave": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.002999998867511733,
+          "highest_y": 1.2255922913057655,
+          "loop_max_delta": null
+        },
+        "rain": {
+          "duration": 0.9200000166893005,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029414860919771135,
+          "highest_y": 1.3123705960763974,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    },
+    "pies": {
+      "triangles": 1156,
+      "normal_winding_errors": 0,
+      "clips": {
+        "idle": {
+          "duration": 2.4000000953674316,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999999903142366,
+          "highest_y": 0.7283741183629687,
+          "loop_max_delta": 6.938893903907228e-18
+        },
+        "walk": {
+          "duration": 0.949999988079071,
+          "sampled_poses": 80,
+          "lowest_y": 0.002633118104138271,
+          "highest_y": 0.7337090794108684,
+          "loop_max_delta": 3.469446951953614e-18
+        },
+        "sit": {
+          "duration": 1.4500000476837158,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029804258914493675,
+          "highest_y": 0.7369046224392177,
+          "loop_max_delta": null
+        },
+        "wag": {
+          "duration": 1.399999976158142,
+          "sampled_poses": 80,
+          "lowest_y": 0.0029999999903142366,
+          "highest_y": 0.7266190105906916,
+          "loop_max_delta": null
+        }
+      },
+      "status": "PASS"
+    }
+  },
+  "not_tested": [
+    "Real browser WebGL: browser binary unavailable and download failed",
+    "Mobile GPU performance",
+    "Integration with game logic",
+    "Multi-character animation batching in game"
+  ],
+  "batch2": {
+    "accepted_models_unchanged": {
+      "szkielet": "27bbd95a556e9278432b1c9e0c300e757ed88cd33da0eeabcb2a83df2bb0e74c",
+      "wilk": "02c154e43a2f997a736820781e96fac0440f7935320f6e05bcaf1c7cadf3a49a"
+    },
+    "chochlik": {
+      "release_seconds": 0.58,
+      "held_prop_visible_before_release": true,
+      "held_prop_hidden_after_release": true,
+      "release_origin_world": [
+        0.2947554774498118,
+        0.4251755505529174,
+        0.14008655515370627
+      ],
+      "projectile_not_baked": true
+    },
+    "bandyta": {
+      "sampled_attack_poses": 70,
+      "dagger_grip_matrix_error": 0,
+      "hand_motion_extent": 0.22267636994188567
+    },
+    "zombiak": {
+      "left_foot_recovery_range": 0.02801066361107271,
+      "dragging_right_foot_recovery_range": 0.012010059459695945
+    },
+    "upior_krypty": {
+      "minimum_hover_gap": 0.0800175644097812,
+      "death_heap_height": 0.27127440288007254,
+      "scream_hand_raise": 0.3235828235541093
+    }
+  },
+  "batch3": {
+    "baseline_hashes_before_G008": {
+      "szkielet": "27bbd95a556e9278432b1c9e0c300e757ed88cd33da0eeabcb2a83df2bb0e74c",
+      "wilk": "02c154e43a2f997a736820781e96fac0440f7935320f6e05bcaf1c7cadf3a49a",
+      "chochlik": "a2176354cdca8a0d6a65b50cb479efdef8163be5e17a9d62d4b269e7987a7bf2",
+      "bandyta": "9d3c70e717d408ff277053988632354b85005e69b6dde08e64e29e356fc6c12c",
+      "zombiak": "c43f41444dde9b1c140d3102b08152d7725833fcb6bc498bfdecabf300fe29df",
+      "upior_krypty": "a9e59c449ca8ef15e7216335261bad5201ebf720b97838fddb47c1c90f57f255"
+    },
+    "wodnik": {
+      "cast_release": 0.76,
+      "origin": "WaterOrigin",
+      "origin_world": [
+        0.2137752103256768,
+        0.6200560080877012,
+        0.2651314050640387
+      ],
+      "focus_hidden_outside_cast": true
+    },
+    "driada": {
+      "cast_release": 0.76,
+      "origin": "VineOrigin",
+      "origin_world": [
+        -0.21216996203062438,
+        0.39652713124631345,
+        0.23302628959471863
+      ],
+      "focus_hidden_outside_cast": true
+    },
+    "blob": {
+      "no_leg_rig": true,
+      "walk_wobble_alias": true,
+      "puddle_height": 0.04590000230669977
+    },
+    "herszt": {
+      "club_attached_to_grip": true,
+      "slam_origin_y_at_impact": 0.0643084243809009
+    },
+    "warg": {
+      "grounded_bite_and_jump_distinct": true,
+      "pounce_forward_distance": 0.5192000269889832,
+      "midflight_ground_gap": 0.2736922731567857
+    },
+    "koziol": {
+      "charge_forward_distance": 0.7200000286102295,
+      "charge_monotonic": true,
+      "stomp_raised_foot_difference": 0.10400051508072197,
+      "stomp_landed_foot_difference": 0.0007950138291783065
+    }
+  },
+  "batch4": {
+    "baseline": "G008 explicitly corrects seven humanoids; others unchanged",
+    "six_body_families": [
+      "adult_f",
+      "adult_m",
+      "child_f",
+      "child_m",
+      "elder_f",
+      "elder_m"
+    ],
+    "looks": {
+      "mloda_kobieta": {
+        "family": "adult_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      },
+      "chlopiec": {
+        "family": "child_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.07286828562521463
+      },
+      "pan_z_wasem": {
+        "family": "adult_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      },
+      "babcia": {
+        "family": "elder_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09423440634227209
+      },
+      "mlody_mezczyzna": {
+        "family": "adult_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      },
+      "dziewczynka_warkocze": {
+        "family": "child_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.07286828562521463
+      },
+      "chlopiec_2": {
+        "family": "child_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.07286828562521463
+      },
+      "kobieta": {
+        "family": "adult_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      },
+      "mezczyzna": {
+        "family": "adult_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      },
+      "starszy_pan": {
+        "family": "elder_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09423440634227209
+      },
+      "dziewczynka": {
+        "family": "child_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.07286828562521463
+      },
+      "urwis": {
+        "family": "child_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.07286828562521463
+      },
+      "starsza_pani": {
+        "family": "elder_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09423440634227209
+      },
+      "starszy_pan_kapelusz": {
+        "family": "elder_m",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09423440634227209
+      },
+      "mieszczka": {
+        "family": "adult_f",
+        "loop_clips_closed": true,
+        "umbrella_hidden_and_hand_attached": true,
+        "wave_hand_above_shoulder": 0.09985293150514041
+      }
+    },
+    "dog": {
+      "sit_rump_drop_relative_to_shoulders": -0.24826560925166236,
+      "tail_wags": true,
+      "wag_loop_closed": true
+    }
+  },
+  "chibi_G008": {
+    "reference": {
+      "height": 1.25,
+      "head_fraction": 0.5833333459480725,
+      "hip_height_fraction": 0.20751840856284462,
+      "foot_width_fraction": 0.19047618843474273
+    },
+    "models": {
+      "zombiak": {
+        "height": 1.1492734033485146,
+        "head_fraction": 0.5915802471435591,
+        "hip_height_fraction": 0.20117058133014554,
+        "foot_width_fraction": 0.16140632455811882
+      },
+      "bandyta": {
+        "height": 1.229260001844168,
+        "head_fraction": 0.6184269421388147,
+        "hip_height_fraction": 0.18808063250414334,
+        "foot_width_fraction": 0.15090379225598508
+      },
+      "chochlik": {
+        "height": 1.0764649920403957,
+        "head_fraction": 0.6456131847321145,
+        "hip_height_fraction": 0.17613206194426853,
+        "foot_width_fraction": 0.1723232964550723
+      },
+      "wodnik": {
+        "height": 1.3846488935410979,
+        "head_fraction": 0.6903998521134062,
+        "hip_height_fraction": 0.1669737358960546,
+        "foot_width_fraction": 0.1339689771263868
+      },
+      "driada": {
+        "height": 1.2726104003846648,
+        "head_fraction": 0.6314249061076763,
+        "hip_height_fraction": 0.18167382459628806,
+        "foot_width_fraction": 0.14576338201449093
+      },
+      "herszt": {
+        "height": 1.271093196896553,
+        "head_fraction": 0.6518566843853486,
+        "hip_height_fraction": 0.17302901275414148,
+        "foot_width_fraction": 0.16928734669315632
+      },
+      "mosiezny_koziol": {
+        "height": 1.3960914375567437,
+        "head_fraction": 0.613628191338598,
+        "hip_height_fraction": 0.19044597733281254,
+        "foot_width_fraction": 0.14703549754659231
+      },
+      "mloda_kobieta": {
+        "height": 1.215685206865698,
+        "head_fraction": 0.5524171315896496,
+        "hip_height_fraction": 0.21633890104412926,
+        "foot_width_fraction": 0.16945176191584296
+      },
+      "chlopiec": {
+        "height": 1.0363629477945344,
+        "head_fraction": 0.5702417905321643,
+        "hip_height_fraction": 0.1910527567699745,
+        "foot_width_fraction": 0.1749194163914548
+      },
+      "pan_z_wasem": {
+        "height": 1.2578442125427123,
+        "head_fraction": 0.5674187100856873,
+        "hip_height_fraction": 0.20908789740923456,
+        "foot_width_fraction": 0.16377226860390987
+      },
+      "babcia": {
+        "height": 1.2787628533760014,
+        "head_fraction": 0.5859442312222322,
+        "hip_height_fraction": 0.19471945170408803,
+        "foot_width_fraction": 0.16109320011491396
+      },
+      "mlody_mezczyzna": {
+        "height": 1.215685206865698,
+        "head_fraction": 0.5524171315896496,
+        "hip_height_fraction": 0.21633890104412926,
+        "foot_width_fraction": 0.16945176191584296
+      },
+      "dziewczynka_warkocze": {
+        "height": 1.0363629477945344,
+        "head_fraction": 0.5702417905321643,
+        "hip_height_fraction": 0.1910527567699745,
+        "foot_width_fraction": 0.1749194163914548
+      },
+      "chlopiec_2": {
+        "height": 1.0881934018077883,
+        "head_fraction": 0.5907110959659565,
+        "hip_height_fraction": 0.18195294867757011,
+        "foot_width_fraction": 0.166588036369998
+      },
+      "kobieta": {
+        "height": 1.215685206865698,
+        "head_fraction": 0.5524171315896496,
+        "hip_height_fraction": 0.21633890104412926,
+        "foot_width_fraction": 0.16945176191584296
+      },
+      "mezczyzna": {
+        "height": 1.2745833796310198,
+        "head_fraction": 0.5730998217390084,
+        "hip_height_fraction": 0.20634193562532266,
+        "foot_width_fraction": 0.16162143923299369
+      },
+      "starszy_pan": {
+        "height": 1.163593658159008,
+        "head_fraction": 0.5449621673112474,
+        "hip_height_fraction": 0.21399222995327086,
+        "foot_width_fraction": 0.17703774749369436
+      },
+      "dziewczynka": {
+        "height": 1.0363629477945344,
+        "head_fraction": 0.5702417905321643,
+        "hip_height_fraction": 0.1910527567699745,
+        "foot_width_fraction": 0.1749194163914548
+      },
+      "urwis": {
+        "height": 1.0881934018077883,
+        "head_fraction": 0.5907110959659565,
+        "hip_height_fraction": 0.18195294867757011,
+        "foot_width_fraction": 0.166588036369998
+      },
+      "starsza_pani": {
+        "height": 1.2787628533760014,
+        "head_fraction": 0.5859442312222322,
+        "hip_height_fraction": 0.19471945170408803,
+        "foot_width_fraction": 0.16109320011491396
+      },
+      "starszy_pan_kapelusz": {
+        "height": 1.2572257531393052,
+        "head_fraction": 0.5788511848274364,
+        "hip_height_fraction": 0.198055123391463,
+        "foot_width_fraction": 0.16385283209800192
+      },
+      "mieszczka": {
+        "height": 1.215685206865698,
+        "head_fraction": 0.5524171315896496,
+        "hip_height_fraction": 0.21633890104412926,
+        "foot_width_fraction": 0.16945176191584296
+      }
+    }
+  },
+  "javascript": {
+    "parser_and_sampling": "PASS",
+    "pose_parity_matrices": 18190,
+    "maximum_matrix_delta": 5.25602826966648e-07,
+    "event_wiring_mock_GL": "PASS",
+    "real_browser_or_GPU_test": false
+  }
+}

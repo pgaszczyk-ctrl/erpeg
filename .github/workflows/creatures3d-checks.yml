@@ -1,0 +1,46 @@
+name: Creature GLB integration checks
+on:
+  pull_request:
+    paths:
+      - 'src/stwory3d.ts'
+      - 'src/objects/Slime.ts'
+      - 'src/objects/StworAI.ts'
+      - 'src/scenes/GameScene.ts'
+      - 'public/modele/swiat44/**'
+      - 'scripts/tests/browser-creatures3d.mjs'
+      - '.github/workflows/creatures3d-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  creatures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        phone: ['0', '1']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vite build
+        env:
+          VITE_TEST: '1'
+      - run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - run: npm run test:creatures3d
+        env:
+          TELEFON: '${{ matrix.phone }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creatures-${{ matrix.phone }}
+          path: work/creatures3d/
+          if-no-files-found: ignore
+          retention-days: 7

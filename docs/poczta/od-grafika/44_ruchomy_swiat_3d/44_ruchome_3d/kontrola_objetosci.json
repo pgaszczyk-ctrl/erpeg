@@ -1,0 +1,54 @@
+{
+  "chochlik": {
+    "head": {
+      "depth_before": 0.44288089871406555,
+      "depth_after": 0.5536011457443237,
+      "factor": 1.25
+    },
+    "torso": {
+      "depth_before": 0.18070073425769806,
+      "depth_after": 0.28008612990379333,
+      "factor": 1.5499999523162842
+    },
+    "rotation_tracks_and_timing_unchanged": true
+  },
+  "bandyta": {
+    "head": {
+      "depth_before": 0.522798478603363,
+      "depth_after": 0.6534980535507202,
+      "factor": 1.2499998807907104
+    },
+    "torso": {
+      "depth_before": 0.1883503645658493,
+      "depth_after": 0.2919430732727051,
+      "factor": 1.5500000715255737
+    },
+    "rotation_tracks_and_timing_unchanged": true
+  },
+  "zombiak": {
+    "head": {
+      "depth_before": 0.46461379528045654,
+      "depth_after": 0.5807672739028931,
+      "factor": 1.2500001192092896
+    },
+    "torso": {
+      "depth_before": 0.19435036182403564,
+      "depth_after": 0.3012430667877197,
+      "factor": 1.5500000715255737
+    },
+    "rotation_tracks_and_timing_unchanged": true
+  },
+  "upior_krypty": {
+    "head": {
+      "depth_before": 0.46161526441574097,
+      "depth_after": 0.5770190954208374,
+      "factor": 1.25
+    },
+    "torso": {
+      "depth_before": 0.30000001192092896,
+      "depth_after": 0.4650000035762787,
+      "factor": 1.5499999523162842
+    },
+    "rotation_tracks_and_timing_unchanged": true
+  }
+}

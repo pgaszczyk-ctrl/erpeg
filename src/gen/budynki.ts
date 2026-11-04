@@ -3,6 +3,127 @@
 // Wszystkie miary w px obrazu (0,5 px mapy): ściany 8 / 12 / 16 px.
 import { Obraz, nowy, hex, hash, rng, OBRYS, mieszaj } from './wspolne';
 
+/**
+ * Kolor wyróżnienia miejsca (sklep, policja…) przygaszony do palety świata: połowa nasycenia mniej i odrobina
+ * ciepłej szarości. Jaskrawe niebieskie/fioletowe dachy biły po oczach i zlewały się w „mozaikę” (właściciel 2.11.2026).
+ */
+export function stonuj(c: number): number {
+  const r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255, l = 0.3 * r + 0.59 * g + 0.11 * b;
+  const s = 0.55, m = 0.12, w = [138, 122, 102];
+  const f = (v: number, k: number) => Math.round((l + (v - l) * s) * (1 - m) + w[k] * m);
+  return mieszaj(c, ((255 << 24) | (f(b, 2) << 16) | (f(g, 1) << 8) | f(r, 0)) >>> 0, 1);
+}
+/** Pięć tonów materiału z jednego koloru wyróżnienia: ciemniej do cienia, jaśniej ku bieli (odcień zostaje). */
+export function tonyZKoloru(kolor: number): { tony: number[]; krawedz: number } {
+  const c = stonuj(kolor), bial = 0xffeef4f6, cien = 0xff2a1a1e;
+  return { tony: [mieszaj(c, cien, 0.55), mieszaj(c, cien, 0.28), c, mieszaj(c, bial, 0.16), mieszaj(c, bial, 0.3)], krawedz: mieszaj(c, bial, 0.42) };
+}
+/** Grubość tuszu (połowa szerokości linii, px obrazu): obrys sylwetki i krawędź dach–ściana. */
+export const OBWODKA = { zewn: 0.5, wewn: 0.425 };
+
+/** Zob. budynek(): wygładzona obwódka sylwetki i krawędzi dach–ściana z odcinków geometrii (antyaliasing). */
+function obwodkaGladka(o: Obraz, kind: Uint8Array, W: number, Hh: number, x0: number, y0: number, pierscienie: number[][], H: number, sk: number, dach = pierscienie) {
+  // Odcinki: [ax, ay, bx, by, czyDach] w px obrazu.
+  const seg: number[] = [], ox = H * sk, oy = H;
+  for (const r of pierscienie) {
+    const m = r.length / 2;
+    for (let k = 0; k < m; k++) {
+      const ax = r[2 * k] - x0, ay = r[2 * k + 1] - y0, bx = r[(2 * k + 2) % r.length] - x0, by = r[(2 * k + 3) % r.length] - y0;
+      seg.push(ax + ox, ay + oy, bx + ox, by + oy, 0, ax, ay, ax + ox, ay + oy, 0);
+    }
+  }
+  for (const r of dach) { // krawędź dachu (z okapem: odsunięta)
+    const m = r.length / 2;
+    for (let k = 0; k < m; k++) seg.push(r[2 * k] - x0, r[2 * k + 1] - y0, r[(2 * k + 2) % r.length] - x0, r[(2 * k + 3) % r.length] - y0, 1);
+  }
+  const C = 8, GW = Math.ceil(W / C) + 1, GH = Math.ceil(Hh / C) + 1, siatka: number[][] = Array.from({ length: GW * GH }, () => []);
+  for (let s = 0; s < seg.length; s += 5) {
+    const ax = seg[s], ay = seg[s + 1], bx = seg[s + 2], by = seg[s + 3];
+    const c0 = Math.max(0, Math.floor((Math.min(ax, bx) - 3) / C)), c1 = Math.min(GW - 1, Math.floor((Math.max(ax, bx) + 3) / C));
+    const r0 = Math.max(0, Math.floor((Math.min(ay, by) - 3) / C)), r1 = Math.min(GH - 1, Math.floor((Math.max(ay, by) + 3) / C));
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) siatka[r * GW + c].push(s);
+  }
+  const odl = (px: number, py: number, tylkoDach: boolean) => {
+    let best = 9;
+    for (const s of siatka[Math.floor(py / C) * GW + Math.floor(px / C)] ?? []) {
+      if (tylkoDach && !seg[s + 4]) continue;
+      const ax = seg[s], ay = seg[s + 1], dx = seg[s + 2] - ax, dy = seg[s + 3] - ay, L2 = dx * dx + dy * dy;
+      const t = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
+      const d = Math.hypot(ax + dx * t - px, ay + dy * t - py);
+      if (d < best) best = d;
+    }
+    return best;
+  };
+  const Kd = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= Hh ? 0 : kind[j * W + i]);
+  const [ir, ig, ib] = [OBRYS & 255, (OBRYS >>> 8) & 255, (OBRYS >>> 16) & 255];
+  const wynik = new Uint32Array(o.px);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+    const k = Kd(i, j);
+    let pusto = false, inny = false;
+    for (let b = -2; b <= 2; b++) for (let a = -2; a <= 2; a++) { const q = Kd(i + a, j + b); if (k ? !q : q) pusto = true; else if (k && q && q !== k) inny = true; }
+    if (!pusto && !inny) continue;
+    const px = i + 0.5, py = j + 0.5;
+    let al = 0;
+    if (pusto) al = Math.max(al, Math.min(1, OBWODKA.zewn + 0.5 - odl(px, py, false)));
+    if (inny) al = Math.max(al, Math.min(1, OBWODKA.wewn + 0.5 - odl(px, py, true)));
+    if (al <= 0) continue;
+    const c = o.px[j * W + i], ca = (c >>> 24) / 255;
+    if (ca <= 0) { wynik[j * W + i] = ((Math.round(al * 255) << 24) | (ib << 16) | (ig << 8) | ir) >>> 0; continue; }
+    // Tusz na kolorze (piksel budynku albo już częściowo zakryty brzeg).
+    const r = c & 255, g = (c >>> 8) & 255, bb = (c >>> 16) & 255, na = Math.max(ca, al);
+    wynik[j * W + i] = ((Math.round(na * 255) << 24) | (Math.round(bb + (ib - bb) * al) << 16) | (Math.round(g + (ig - g) * al) << 8) | Math.round(r + (ir - r) * al)) >>> 0;
+  }
+  o.px.set(wynik);
+}
+
+/** Drewno azjatyckich dachów: belka kalenicy, tarcze, końce krokwi (ciemne → jasne). */
+const DREWNO_AZJA = ['#3a2414', '#5a3820', '#7e5430', '#a87a48', '#cfa46c'].map(hex);
+
+/** Pierścień odsunięty na zewnątrz bryły o r px (wierzchołki ze skosem, ostre rogi przycięte). Dla podwórek – w stronę podwórka. */
+export function odsun(r: number[], o: number, dziura = false): number[] {
+  const n = r.length / 2;
+  if (n < 3) return r;
+  let a = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n; a += r[2 * i] * r[2 * j + 1] - r[2 * j] * r[2 * i + 1]; }
+  // Odsunięcie w lewo od kierunku krawędzi przy a < 0 (y w dół): poprawny znak sprawdzamy polem – obrys ma urosnąć,
+  // podwórko zmaleć; obie rzeczy daje „na zewnątrz materiału”, czyli przeciwnie do wnętrza pierścienia.
+  const z = (a > 0 ? -1 : 1) * (dziura ? -1 : 1), out: number[] = [];
+  const nrm = (i: number) => { const j = (i + 1) % n, dx = r[2 * j] - r[2 * i], dy = r[2 * j + 1] - r[2 * i + 1], L = Math.hypot(dx, dy) || 1; return [(dy / L) * -z, (-dx / L) * -z]; };
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = nrm((i + n - 1) % n), [bx, by] = nrm(i), dot = ax * bx + ay * by;
+    const k = Math.min(3, 1 / Math.max(0.33, (1 + dot) / 2) ) * 0.5;
+    out.push(r[2 * i] + (ax + bx) * o * k, r[2 * i + 1] + (ay + by) * o * k);
+  }
+  return out;
+}
+
+/** Azja: okrągłe drewniane tarcze na końcach kalenicy (po obwódce, żeby jej nie przykryła). */
+function laczenaAzja(o: Obraz, kind: Uint8Array, W: number, Hh: number, sciany: Uint8Array, kalenica: number[]) {
+  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < W && j < Hh) o.px[j * W + i] = c; };
+  const tarcza = (cx: number, cy: number, R: number) => {
+    for (let j = -R - 1; j <= R + 1; j++) for (let i = -R - 1; i <= R + 1; i++) {
+      const d = Math.hypot(i, j);
+      if (d > R + 0.6) continue;
+      put(cx + i, cy + j, d > R - 0.4 ? OBRYS : d < R * 0.35 ? DREWNO_AZJA[0] : i + j < 0 ? DREWNO_AZJA[4] : DREWNO_AZJA[3]);
+    }
+  };
+  // Końce każdej kalenicy: skrajne piksele wzdłuż jej kierunku (spójne kawałki ≥ 10 px).
+  const zb = new Map<number, number>(); for (let k = 0; k < kalenica.length; k += 2) zb.set(kalenica[k + 1] * W + kalenica[k], 1);
+  const byl = new Set<number>();
+  for (const [start] of zb) {
+    if (byl.has(start)) continue;
+    const czesc: number[] = [], kol = [start]; byl.add(start);
+    while (kol.length) { const p = kol.pop()!; czesc.push(p); const i = p % W, j = (p / W) | 0;
+      for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) { const q = (j + b) * W + i + a; if (zb.has(q) && !byl.has(q)) { byl.add(q); kol.push(q); } } }
+    if (czesc.length < 10) continue;
+    let mx = 0, my = 0; for (const p of czesc) { mx += p % W; my += (p / W) | 0; } mx /= czesc.length; my /= czesc.length;
+    let xx = 0, xy = 0, yy = 0; for (const p of czesc) { const dx = (p % W) - mx, dy = ((p / W) | 0) - my; xx += dx * dx; xy += dx * dy; yy += dy * dy; }
+    const kat = 0.5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(kat), uy = Math.sin(kat);
+    let lo = 1e9, hi = -1e9, pl = start, ph = start;
+    for (const p of czesc) { const t = ((p % W) - mx) * ux + (((p / W) | 0) - my) * uy; if (t < lo) { lo = t; pl = p; } if (t > hi) { hi = t; ph = p; } }
+    tarcza(pl % W, (pl / W) | 0, 4); if (ph !== pl) tarcza(ph % W, (ph / W) | 0, 4);
+  }
+}
+
 /** Cień: ten sam kolor ciemniej, bez zmiany odcienia (piksel ABGR). */
 const przyciemnij = (c: number, f: number) => ((c & 0xff000000) | (Math.round(((c >> 16) & 255) * f) << 16) | (Math.round(((c >> 8) & 255) * f) << 8) | Math.round((c & 255) * f)) >>> 0;
 
@@ -30,6 +151,21 @@ export const MATERIALY: Record<string, Material> = {
   cegla: M(['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c'], '#3a1e1a', 'cegla'),
   drewno: M(['#3e2a1c', '#5a3e28', '#765436', '#926c46', '#ae8858'], '#2e2016', 'deski'),
   kamien: M(['#4c4848', '#666060', '#807a78', '#9a9490', '#b4aea8'], '#3a3636', 'kamien'),
+  // ——— style regionalne (src/content/styleRegionow.ts) ———
+  dachowka_terakota: M(['#6e341c', '#944626', '#b65c34', '#cc7648', '#de9462'], '#eab07c', 'dachowka'),
+  dachowka_glazura: M(['#1c2430', '#283444', '#36465a', '#4a5e74', '#64788e'], '#a8b8c8', 'dachowka'),
+  dachowka_glazura_zielona: M(['#1e3a2c', '#2a5038', '#3a6a48', '#4e865c', '#6aa274'], '#c8a040', 'dachowka'),
+  strzecha: M(['#5a4220', '#7a5a2c', '#9a7638', '#b89448', '#d0ae60'], '#e0c478', 'gont'),
+  blacha_falista: M(['#4a4c50', '#62656a', '#7c8086', '#989ca2', '#b4b8bc'], '#d0d4d8', 'blacha'),
+  blacha_rdzawa: M(['#4e2a1a', '#6e3c22', '#8c5030', '#a86840', '#c08458'], '#d49a70', 'blacha'),
+  tynk_bialy: M(['#8a8680', '#b4b0a8', '#d4d0c6', '#e6e2d8', '#f4f0e6'], '#6a665e', 'gladki'),
+  tynk_ochra: M(['#7a4e24', '#a0682e', '#c4843c', '#d89c52', '#e8b46c'], '#5a3818', 'gladki'),
+  tynk_piaskowy: M(['#7a6040', '#a08058', '#c0a070', '#d4b886', '#e4cc9c'], '#5a4630', 'gladki'),
+  tynk_terakota: M(['#6a3020', '#8c4028', '#ac5436', '#c46c48', '#d6865e'], '#4a2016', 'gladki'),
+  tynk_blekitny: M(['#3a5068', '#4e6a88', '#6888a6', '#86a4c0', '#a6c0d6'], '#2a3a4c', 'gladki'),
+  tynk_rozowy: M(['#7a4a50', '#a0626a', '#c07e84', '#d49a9e', '#e4b6b8'], '#5a3438', 'gladki'),
+  drewno_czerwone: M(['#4a1814', '#6a221a', '#8a2e22', '#a43c2c', '#bc5038'], '#e8e0d0', 'deski'),
+  drewno_zolte: M(['#6e5420', '#94722c', '#b8903a', '#ccaa52', '#dcc06c'], '#e8e0d0', 'deski'),
 };
 const MOSIADZ = ['#6b4a22', '#9a6420', '#c8963e', '#e9c56a'].map(hex);
 const SZYBA = ['#2a3450', '#56709a'].map(hex), SWIATLO = ['#d9a84a', '#f2d888'].map(hex);
@@ -50,6 +186,12 @@ export interface OpcjeBudynku {
   ozdoby?: string[];
   /** Dach płaski z attyką (domyślnie tylko przy 3 poziomach gry). */
   plaski?: boolean;
+  /** Materiał (klucz MATERIALY) płaskiego dachu zamiast palety DACHY_PLASKIE – np. glina w krajach suchych. */
+  dachPlaski?: string;
+  /** Okap: dach wystaje poza obrys ścian o tyle px obrazu (Azja). */
+  okap?: number;
+  /** Azja: kalenica i naroża jako okrągła drewniana belka, okrągłe tarcze na końcach kalenicy. */
+  azja?: boolean;
   /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
   poziom?: number;
 }
@@ -112,7 +254,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const P: [number, number][] = []; for (let i = 0; i < pierscien.length / 2; i++) P.push([pierscien[2 * i], pierscien[2 * i + 1]]);
   let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
   for (const [x, y] of P) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
-  const ST = (op.steampunk ?? 0) > 0 || !!op.ozdoby, mL = ST ? 10 : 2, mT = ST ? 20 : 2, mB = ST ? 12 : 3; // zapas na ozdoby wystające za obrys
+  const OK = Math.max(0, op.okap ?? 0); // okap: dach wystaje poza obrys o tyle px (Azja)
+  const ST = (op.steampunk ?? 0) > 0 || !!op.ozdoby, zO = OK ? OK + 1 : 0, mL = (ST ? 10 : 2) + zO, mT = (ST ? 20 : 2) + zO, mB = (ST ? 12 : 3) + zO; // zapas na ozdoby i okap
   const x0 = Math.floor(minX) - mL, y0 = Math.floor(minY) - mT, W = Math.ceil(maxX + H * sk) - x0 + mB, Hh = Math.ceil(maxY + H) - y0 + mB;
   // maska obrysu (scanline)
   const mask = new Uint8Array(W * Hh);
@@ -121,6 +264,18 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     for (const r of pierscienie) { const m = r.length / 2; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); } }
     xs.sort((a, b) => a - b);
     for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k] - 0.5); x < xs[k + 1] - 0.5; x++) { const i = x - x0; if (i >= 0 && i < W) mask[j * W + i] = 1; }
+  }
+  // Dach z okapem: obrys odsunięty na zewnątrz o OK px (ściany zostają na obrysie, dach nad nimi wystaje).
+  const dachPierscienie = OK ? pierscienie.map((r, k) => odsun(r, OK, k > 0)) : pierscienie;
+  let dachMaska = mask;
+  if (OK) {
+    dachMaska = new Uint8Array(W * Hh);
+    for (let j = 0; j < Hh; j++) {
+      const py = y0 + j + 0.5, xs: number[] = [];
+      for (const r of dachPierscienie) { const m = r.length / 2; for (let i = 0; i < m; i++) { const ax = r[2 * i], ay = r[2 * i + 1], bx = r[(2 * i + 2) % r.length], by = r[(2 * i + 3) % r.length]; if ((ay > py) !== (by > py)) xs.push(ax + ((py - ay) * (bx - ax)) / (by - ay)); } }
+      xs.sort((a, b) => a - b);
+      for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.ceil(xs[k] - 0.5); x < xs[k + 1] - 0.5; x++) { const i = x - x0; if (i >= 0 && i < W) dachMaska[j * W + i] = 1; }
+    }
   }
   const inFP = (x: number, y: number) => { const i = x - x0, j = y - y0; return i >= 0 && j >= 0 && i < W && j < Hh && mask[j * W + i] === 1; };
   // Krawędzie z normalnymi na zewnątrz bryły (przy podwórku: w stronę podwórka). Dach liczy się z bryły
@@ -217,10 +372,11 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   const sOf = new Int16Array(W * Hh);
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
     const x = x0 + i, y = y0 + j;
-    if (mask[j * W + i]) { kind[j * W + i] = 1; continue; }
+    if (dachMaska[j * W + i]) { kind[j * W + i] = 1; continue; }
     for (let s = 1; s <= H; s++) if (inFP(Math.round(x - s * sk), y - s)) { kind[j * W + i] = 2; sOf[j * W + i] = s; break; }
   }
   const K = (i: number, j: number) => (i < 0 || j < 0 || i >= W || j >= Hh ? 0 : kind[j * W + i]);
+  const kalenica: number[] = [];
   let maxD = 0; const dd = new Float32Array(W * Hh);
   const qI1 = new Int32Array(W * Hh), qI2 = new Int32Array(W * Hh), qD1 = new Float64Array(W * Hh), qD2 = new Float64Array(W * Hh);
   for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1) { najblizsze(x0 + i + 0.5, y0 + j + 0.5); const k = j * W + i; qI1[k] = i1; qI2[k] = i2; qD1[k] = d1; qD2[k] = d2; const d = d1; dd[j * W + i] = d; maxD = Math.max(maxD, d); }
@@ -234,12 +390,11 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       // Rzędy dachówek w kręgach, spoiny wzdłuż obwodu co ~4 px (gęściej przy okapie, rzadziej przy szczycie).
       const kat = Math.atan2(dy, dx), along = kat * stozek.r;
-      if (D.wzor === 'dachowka' || D.wzor === 'gont') { if (Math.floor(d) % 3 === 2 || (Math.floor(along + Math.floor(d / 3) * 2) % 4 === 0 && d > 1)) t = Math.max(0, t - 1); }
+      if (D.wzor === 'dachowka' || D.wzor === 'gont') { if (Math.floor(d) % 4 === 3 || (Math.floor(along + Math.floor(d / 4) * 3) % 6 === 0 && Math.floor(d) % 4 === 1 && d > 1)) t = Math.max(0, t - 1); }
       else if (D.wzor === 'lupek') { if (Math.floor(d) % 2 === 1) t = Math.max(0, t - 1); }
       else if (D.wzor === 'blacha') { if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); }
       c = D.tony[t];
       if (r < 1.2) c = D.krawedz; // szpic
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else if (k === 1) {
       const k = j * W + i, q = { i1: qI1[k], i2: qI2[k], d1: qD1[k], d2: qD2[k] }, e = E[q.i1], d = q.d1;
       const [gnx, gny] = gladkaNormalna(e, x + 0.5, y + 0.5);
@@ -247,23 +402,34 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       let t = lum > 0.45 ? 4 : lum > 0.05 ? 3 : lum > -0.45 ? 2 : 1;
       const along = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy;
       switch (D.wzor) {
-        case 'dachowka': if (Math.floor(d) % 3 === 2) t = Math.max(0, t - 1); else if (Math.floor(along + Math.floor(d / 3) * 2) % 4 === 0 && d > 1) t = Math.max(0, t - 1); break;
-        case 'lupek': if (Math.floor(d) % 2 === 1 || Math.floor(along + (Math.floor(d / 2) % 2) * 2 + 400) % 4 === 0) t = Math.max(0, t - 1); break;
-        case 'gont': if (Math.floor(d) % 2 === 1 || Math.floor(along + (Math.floor(d / 2) % 3)) % 3 === 0) t = Math.max(0, t - 1); break;
+        // Spokojne rzędy (co 4 px) i rzadkie spoiny tylko w środku rzędu: duże płaskie plamy, czytelne z daleka.
+        case 'dachowka': if (Math.floor(d) % 4 === 3) t = Math.max(0, t - 1); else if (Math.floor(d) % 4 === 1 && Math.floor(along + Math.floor(d / 4) * 3) % 6 === 0 && d > 1) t = Math.max(0, t - 1); break;
+        case 'lupek': if (Math.floor(d) % 3 === 2 || (Math.floor(d) % 3 === 0 && Math.floor(along + (Math.floor(d / 3) % 2) * 3 + 400) % 6 === 0)) t = Math.max(0, t - 1); break;
+        case 'gont': if (Math.floor(d) % 3 === 2 || (Math.floor(d) % 3 === 0 && Math.floor(along + (Math.floor(d / 3) % 3) * 2) % 5 === 0)) t = Math.max(0, t - 1); break;
         case 'blacha': if (Math.floor(along) % 4 === 0) t = Math.min(4, t + 1); break;
       }
       c = D.tony[t];
       if (PLASKI) { // dach płaski (wysokie budynki): attyka – jasny brzeg, ciemny pas cienia pod nią, papa z lekką fakturą, świetliki
-        const P = DACHY_PLASKIE[op.seed % DACHY_PLASKIE.length];
-        c = d < 1.5 ? P[4] : d < 2.5 ? (lum > 0.05 ? P[3] : P[0]) : d < 3.5 && lum > 0.05 ? P[1] : (hash(x >> 1, y >> 1, op.seed) < 0.08 ? P[3] : P[2]);
-        if (d > 6 && Math.floor(x / 9) % 3 === 0 && Math.floor(y / 6) % 4 === 1 && (x % 9) < 4 && (y % 6) < 3) c = (y % 6) === 0 ? P[4] : SZYBA[1];
+        const P = op.dachPlaski && MATERIALY[op.dachPlaski] ? MATERIALY[op.dachPlaski].tony : DACHY_PLASKIE[op.seed % DACHY_PLASKIE.length];
+        c = d < 1.5 ? P[4] : d < 2.5 ? (lum > 0.05 ? P[3] : P[0]) : d < 3.5 && lum > 0.05 ? P[1] : (!op.dachPlaski && hash(x >> 1, y >> 1, op.seed) < 0.08 ? P[3] : P[2]);
+        if (!op.dachPlaski && d > 6 && Math.floor(x / 9) % 3 === 0 && Math.floor(y / 6) % 4 === 1 && (x % 9) < 4 && (y % 6) < 3) c = (y % 6) === 0 ? P[4] : SZYBA[1];
       } else {
       const ea = E[q.i1], eb = E[q.i2], dot = ea.nx * eb.nx + ea.ny * eb.ny;
       if (Math.abs(q.d1 - q.d2) < 0.75 && d > 1 && dot < LAGODNIE) c = dot < -0.5 ? D.krawedz : D.tony[Math.min(4, t + 1)]; // kalenica / naroże (na łuku bez linii)
+      // Azja: kalenica i naroża jako gruba, okrągła drewniana belka łącząca połacie (cieniowana jak walec, jasna strona od światła).
+      const wklesly = (ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0; // kosz (wklęsły narożnik) – bez belki
+      const wSrodku = (e: Kraw) => { const t = (x + 0.5 - e.ax) * e.ux + (y + 0.5 - e.ay) * e.uy; return t > 0.5 && t < e.L - 0.5; };
+      if (op.azja && d > 2.5 && dot < LAGODNIE && !wklesly && (wSrodku(ea) || wSrodku(eb))) {
+        const roz = Math.abs(q.d1 - q.d2), pol = dot < -0.5 ? 3.2 : 2.4;
+        if (roz < pol) {
+          const tt = roz / pol, jasna = -(ea.nx * 0.6 + ea.ny * 0.8) > -(eb.nx * 0.6 + eb.ny * 0.8);
+          c = tt > 0.78 ? DREWNO_AZJA[0] : tt < 0.22 ? DREWNO_AZJA[3] : jasna ? DREWNO_AZJA[2] : DREWNO_AZJA[1];
+          if (dot < -0.5) kalenica.push(i, j);
+        }
+      }
       if (dot > -0.5 && dot < 0.5 && Math.abs(q.d1 - q.d2) < 0.75 && ((ea.nx * (eb.ax - ea.ax) + ea.ny * (eb.ay - ea.ay)) > 0)) c = D.tony[0]; // kosz (wklęsły narożnik L/U)
       }
       // Obrys domknięty także po skosie (na ukośnych krawędziach nie wychodzi przerywany).
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j - 1) === 0 || K(i - 1, j - 1) === 0 || K(i + 1, j - 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0 || K(i, j + 1) === 2) c = OBRYS;
     } else {
       const s = sOf[j * W + i], hh = H - s, px = x - s * sk, py = y - s;
       najblizsze(px + 0.5, py + 0.5); const q = { i1 }, e = E[q.i1];
@@ -272,7 +438,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       if (S.wzor === 'cegla') { if (hh % 3 === 0 || (Math.floor(along + (Math.floor(hh / 3) % 2) * 2) % 4 === 0 && hash(Math.floor(along), hh, 7) < 0.6)) t = Math.max(0, t - 1); }
       else if (S.wzor === 'deski') { if (Math.floor(along) % 3 === 0) t = Math.max(0, t - 1); }
       else if (S.wzor === 'kamien') { if ((hh % 4 === 0) || Math.floor(along + (Math.floor(hh / 4) % 2) * 3) % 6 === 0) t = Math.max(0, t - 1); }
-      else if (hash(x, y, op.seed) < 0.1) t = Math.min(4, t + 1);
+      // gładki tynk bez losowych jasnych kropek (z daleka migotały jak szum)
       c = S.tony[t];
       let okno = false;
       if (op.poziom === undefined) { // stary układ: rzędy małych okien co 7 px wysokości, co 7 px wzdłuż ściany, z dala od narożników
@@ -294,7 +460,8 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const ww = Math.max(4, Math.round(L * 0.4)), wh = Math.max(5, Math.round(L * 0.55)), wb = Math.round(L * 0.24) + (f === 0 ? 1 : 0);
       const pt = Math.max(ww + 6, Math.round(L * 1.15)), off = op.seed % pt, al = Math.floor(along);
       const m = (((al + off) % pt) + pt) % pt, wx = Math.floor((pt - ww) / 2), u = m - wx, v = hl - wb, nr = Math.floor((al + off) / pt);
-      const okCale = al - u > 2 && al - u + ww < e.L - 2;
+      // Ściany wschodnia/zachodnia widać jako wąski skośny pasek: okna wyglądały tam jak białe kreski (szum).
+      const okCale = al - u > 2 && al - u + ww < e.L - 2 && Math.abs(e.nx) < 0.6;
       const ciemnaSciana = S.wzor === 'cegla' || S.wzor === 'kamien' || S.wzor === 'deski';
       const RAMA = ciemnaSciana ? hex('#e6dcc6') : hex('#4e3424'), BELKA = [hex('#3a2618'), hex('#5a3c26')];
       const szach = !PLASKI && S.wzor === 'gladki' && hash(op.seed, 3, 11) < 0.45; // mur pruski (karczma)
@@ -338,10 +505,15 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
         if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && hash(Math.floor((along + (op.seed % 5)) / 7), f, op.seed + 5) < 0.3) { const cx = 3, cy = lo + 1.5, d = Math.hypot(m - cx, hh - cy); c = d > 1.2 ? MOSIADZ[2] : (op.noc ? SWIATLO[0] : SZYBA[1]); } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
-      if (K(i - 1, j) === 0 || K(i + 1, j) === 0 || K(i, j + 1) === 0 || K(i - 1, j + 1) === 0 || K(i + 1, j + 1) === 0) c = OBRYS;
     }
     o.px[j * W + i] = c;
   }
+  // Obwódka jako ciągła linia (właściciel 2.11.2026: „jedna ciągła wektorowa linia, a nie schodki”): tusz liczony
+  // z prawdziwych odcinków obrysu (dach), podstawy ścian (obrys przesunięty o wysokość) i pionów w narożnikach.
+  // Każdy piksel przy krawędzi dostaje tyle tuszu, ile wynika z jego odległości od linii – brzeg jest gładki,
+  // kształt budynku bez zmian. Krawędź dach–ściana tak samo, cieńsza.
+  obwodkaGladka(o, kind, W, Hh, x0, y0, pierscienie, H, sk, dachPierscienie);
+  if (op.azja) laczenaAzja(o, kind, W, Hh, mask, kalenica);
   if (op.komin && maxD > 6) { // komin ceglany w ok. 1/3 od lewej-góry
     let best = -1, bx = 0, by = 0;
     for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (kind[j * W + i] === 1 && dd[j * W + i] > 3 && dd[j * W + i] < maxD - 1.5) { const sc = -Math.abs(i - W * 0.4) - Math.abs(j - Hh * 0.3) + hash(i, j, op.seed) * 6; if (sc > best) { best = sc; bx = i; by = j; } }

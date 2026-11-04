@@ -35,6 +35,8 @@ export const DZIELENIE = {
 export const POZIOMY = {
   /** Wzrost bohaterki w makiecie (px obrazu generatora). */
   wzorBohatera: 48,
+  /** O ile wyższe są poziomy niż w makiecie (właściciel 2.11.2026: „troszeczkę wyższe, żeby wyglądały jak domek”). */
+  wyzej: 1.3,
   /** Od ilu poziomów budynek jest osobnym obrazkiem (sortowanym z postaciami, z prześwitem), a nie częścią kawałka mapy. */
   osobnoOd: 2,
 };

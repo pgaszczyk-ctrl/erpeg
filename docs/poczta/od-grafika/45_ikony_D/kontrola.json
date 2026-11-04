@@ -1,0 +1,698 @@
+{
+  "miecz_rekruta": {
+    "name": "Miecz ćwiczebny straży",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "f87c9499c45ceee9655f3672e410fc4347e3bff312b418a242db8b09213750d6",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 34,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "luk_rekruta": {
+    "name": "Stary łuk ćwiczebny",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "a9507e4107bd811975eedf54fe119c197d5783281506040b53c5e8fc041a41fa",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 38,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "rozdzka_szkolna": {
+    "name": "Różdżka szkoleniowa",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "694df1e63b56a667e24778cf4007e6c40291dd7dc7a045d9e0b5ae5d49664f9a",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 40,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      6,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kapelusz_szkolny": {
+    "name": "Kapelusz szkoleniowy",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "510b103e6ea4a6f9ad26a213be2ec24895eda7dd7bac23dc38606ce6bee306ce",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 41,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      6,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "karabin_trybunal": {
+    "name": "Karabin „Trybunał”",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "6145ca32d657eb71ad9a1cb4d4852f7711cf9b665ba1a4da434cec29d234ad9c",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 41,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      58
+    ],
+    "enlargement_x16": "OK"
+  },
+  "klasztorny_pochlaniacz": {
+    "name": "Klasztorny pochłaniacz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "7f6dc0f6e05aab0a1a5277f73380f8af5a74b6567c01f398c19ae69de81e51ff",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      9,
+      5,
+      54,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "plaszcz_cechmistrza": {
+    "name": "Płaszcz Cechmistrza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "7d435a1647d3742e6ba44575c415159f94674be2b53b23351e292b1956628834",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "buty_biegacza": {
+    "name": "Buty biegacza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "fcd14a3060bbd1c06771ffbbca22c1045cd67567532323dd029d9ead559b0e18",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 37,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      56
+    ],
+    "enlargement_x16": "OK"
+  },
+  "gwizdek_maszynisty": {
+    "name": "Gwizdek Maszynisty",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "ea7d2a68a1c04854593f19cc961291fb6f4d8339ebd89b73b6c60829e08f5cad",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 41,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      7,
+      5,
+      56,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kluczyk_nakrecacz": {
+    "name": "Kluczyk Nakręcacz",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "f2702d676000d0f9dd34ef47c8f856a362ee3f688db8e2d7dc8400137863b022",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 40,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      6,
+      59,
+      58
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kieszonkowy_chronometr": {
+    "name": "Kieszonkowy Chronometr",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "d977e04dc0e5da88a53eff4e63f17ff0b361749dea98a5b91cb9acb78fbf2081",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      8,
+      5,
+      55,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "zegarek_czeladnika": {
+    "name": "Zegarek czeladnika",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "afed5f93be02f68aa07845ff531147a36ea591669b3fc16a5a17d65920150475",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 40,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      8,
+      5,
+      56,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "filtr_aetherowy": {
+    "name": "Filtr aetherowy",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "e23d23fb426f4bf3da8ebe78155da7b9a0044e9fe13ef0c3dc78880cafbb3ead",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      18,
+      5,
+      46,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "zlota_pilka": {
+    "name": "Złota piłka na łańcuszku",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "3f4c0a58e5c286eb4d7544a72b4e85419388b69265a626f7b3b590509ca7b8a2",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 39,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      9,
+      5,
+      55,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "paczek": {
+    "name": "Pączek",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "5d887aa82cb6c6f66fe442e35986ce909c5f5729b5947e816d1bccfc782b0fa3",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      6,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "hamburger": {
+    "name": "Burger warzywny",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "baa9ff4ca03fd65f71b8193228b999d55d6684f0abe7b1809b39667a70c419d0",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "luska": {
+    "name": "Łuska smocza",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "242b2189103b525d20566f7979a7ef2b64e9f9ddba692cdc82f88cf582bcd5df",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 42,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      7,
+      5,
+      57,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "kiel": {
+    "name": "Kieł wilka",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "41524e97633710010694320c107f6543ccfdf8c107f8be3adf7071cdc4a26d91",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 42,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "mikstura": {
+    "name": "Mikstura leczenia",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "184b1b6c1347f2074b89ef3ec000312f7270e08e1d033dc1a5337be94bee6511",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      10,
+      5,
+      53,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "esencja_dab": {
+    "name": "Esencja dębu",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "15e2ff5445f895388201537094e95f9ffeeff8488e108b5195e0f94bf9ea513d",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      12,
+      5,
+      52,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "esencja_mroz": {
+    "name": "Esencja mrozu",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "cc190fe5620ef4f51dad175abf4454099da32699c57d8ddf7361faf14ef75239",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      11,
+      5,
+      53,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "namiot": {
+    "name": "Namiot",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "988d11fbf78aade06b0810e81588c97714428d4db933e79aeebdd7f464c7ee11",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "jablko": {
+    "name": "Jabłko",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "98ce100dadb2387c6dbd8101bf9ea1504d4d4f867d6b686e3b7286d8d517e438",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      7,
+      5,
+      57,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "sliwka": {
+    "name": "Śliwka",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "03c4771d602a030938460d1c4e1fc06101ecc42bbea4c83b46d231112199463f",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 42,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      7,
+      5,
+      56,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "winogrono": {
+    "name": "Winogrono",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "087a0be0be9a5df7583d303bc251fe6ebd0fa480f8e42c12c53c41dd1c850b17",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 40,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      8,
+      5,
+      55,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "marchewka": {
+    "name": "Marchewka",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "82181ea61853d6bff32d45680babb4d51113fcb2662a66de4f63548d473833d5",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 44,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "brokul": {
+    "name": "Brokuł",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "6afc690cc0e7dedd87d7e6cba88af19a0483e0fe2169590b4daef7f3b068764e",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 42,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      59,
+      59
+    ],
+    "enlargement_x16": "OK"
+  },
+  "salata": {
+    "name": "Sałata",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "fb6e08d12b19c1a441374967dd14cd46e8de9d0b5beb5f889dbb61d54540733d",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      7,
+      59,
+      57
+    ],
+    "enlargement_x16": "OK"
+  },
+  "grzyb": {
+    "name": "Grzyb",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_sha256": "cadbe86962d907c1996f5244446aaf4aa8a76a892e74201c1ff43711a65848e4",
+    "export_size": [
+      64,
+      64
+    ],
+    "colors": 43,
+    "alpha": [
+      0,
+      255
+    ],
+    "bbox_exclusive": [
+      5,
+      5,
+      58,
+      59
+    ],
+    "enlargement_x16": "OK"
+  }
+}

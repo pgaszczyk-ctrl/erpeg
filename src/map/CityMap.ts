@@ -4,6 +4,7 @@
 // collision tests, address search and spawn-point picking.
 
 import type { Terrain } from './terrain';
+import type { PlanLochu } from '../loch/plan';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
@@ -44,12 +45,20 @@ const ROUGH_AREAS = new Set(['rock', 'glacier']);
 interface Box { x0: number; y0: number; x1: number; y1: number }
 
 /** `id`: the feature's index in the whole map (stable across tiles; seeds use it). */
-export interface Area extends Box { kind: string; rings: number[][]; id: number }
+export interface Area extends Box {
+  kind: string;
+  rings: number[][];
+  id: number;
+  /** A pitch inside a stadium's bowl (stadiumGate): the Arena's sand on the test server. */
+  arena?: boolean;
+}
 /** Smallest width of a passage through a building (m). */
 const PRZEJSCIE_M = 4;
 
 export interface Line extends Box { kind: string; pts: number[]; width: number; bridge: boolean; pass: boolean; name: string | null; id: number }
 export interface Building extends Box {
+  /** Additive metadata for test2, separate from the existing gameplay ID. */
+  architecture?: { sourceId: string; osmId?: string; idSource: 'osm' | 'feature' | 'geometry'; tags: Record<string,string> };
   rings: number[][];
   addresses: string[];
   name: string | null;
@@ -60,6 +69,10 @@ export interface Building extends Box {
   door?: { x: number; y: number };
   /** A small shed or garage (world maps): drawn, but doesn't stop the hero or shots. */
   open?: boolean;
+  /** A stadium's gate cut through its stands from the south: its two outer corners. */
+  brama?: { x0: number; x1: number; y0: number; y1: number };
+  /** The stadium's bowl (its hole before the gate was cut). */
+  misa?: number[];
 }
 
 type RawMap = {
@@ -94,21 +107,53 @@ type RawMap = {
   streets?: [string, number, number][];
   /** Named towns on the map (split-map: Lublin's centre and lublin-area places): name, x, y. */
   towns?: [string, number, number][];
-  /** Road signs (split-map): x, y, then 'Name|km' (the first is the way back to Lublin). */
-  signs?: (number | string)[][];
+  /** City boards with the city's map (split-map, scripts/tablice/tablice.mjs). */
+  tablice?: { plan: PlanMiasta; miejsca: [number, number][] };
+  /** Odd places for the boards' scouting notes: [x, y, kind, name] (split-map, scripts/tablice/osobliwosci.mjs). */
+  osobliwe?: [number, number, string, string][];
 };
+
+/**
+ * What a city board's map draws (file px), carved-in-wood style: the city outline, main roads, railways and rivers
+ * (smoothed polylines), lakes as ellipses [x, y, rx, ry, angle], and the ways out: x, y, arrow angle (rad), then the
+ * town on the way and the big city, each [name PL, name EN] (0 when none). No kilometres – directions only.
+ */
+export interface PlanMiasta {
+  granica: number[][];
+  drogi: number[][];
+  tory: number[][];
+  rzeki: number[][];
+  jeziora: number[][];
+  /** Big water (the sea at a coastal town): rough patches. */
+  morza?: number[][];
+  wyloty: [number, number, number, string | 0, string | 0, string | 0, string | 0][];
+  srodek: [number, number];
+}
+function skalujPlan(p: PlanMiasta, sp: number): PlanMiasta {
+  if (sp === 1) return p;
+  const xy = (r: number[]) => r.map((v) => v * sp);
+  return {
+    granica: p.granica.map(xy), drogi: p.drogi.map(xy), tory: p.tory.map(xy), rzeki: p.rzeki.map(xy),
+    jeziora: p.jeziora.map(([x, y, a, b, k]) => [x * sp, y * sp, a * sp, b * sp, k]),
+    morza: p.morza?.map(xy),
+    wyloty: p.wyloty.map((w) => [w[0] * sp, w[1] * sp, ...w.slice(2)] as PlanMiasta['wyloty'][number]),
+    srodek: [p.srodek[0] * sp, p.srodek[1] * sp],
+  };
+}
 
 export type RawTile = {
   a: [number, string, ...number[][]][];
   l: [number, string, number, number[], string | 0][];
   /** [id, rings, addresses, name, levels, open (world maps: a shed you walk through)] */
-  b: [number, number[][], string | 0, string | 0, number, (0 | 1)?][];
+  b: [number, number[][], string | 0, string | 0, number, (0 | 1)?, Building['architecture']?][];
   /** World map tiles only: places found there [kind, name, x, y] (px). */
   p?: [Place['kind'], string, number, number][];
   /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
   k?: [string, number, number, number][];
   /** World maps: post offices, post boxes, parcel lockers (px). */
   q?: [number, number][];
+  /** World maps: odd places (ruins, towers, shrines…) [kind, name, x, y] (px). */
+  o?: [string, string, number, number][];
 };
 
 /** Loads the features of one tile of a world map (see map/world.ts). */
@@ -116,7 +161,7 @@ export type WorldLoader = (box: Box) => Promise<RawTile>;
 
 /** A shop or school on the map, with the building it is in and its door. */
 export interface Place {
-  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp';
+  kind: 'shop' | 'school' | 'church' | 'office' | 'hospital' | 'police' | 'library' | 'merchant' | 'station' | 'hotel' | 'bank' | 'university' | 'alchemist' | 'gear' | 'camp' | 'maker' | 'workshop' | 'port';
   name: string;
   id: string;
   building: Building | null;
@@ -150,6 +195,222 @@ function bbox(pts: number[], pad = 0): Box {
     if (pts[i + 1] > y1) y1 = pts[i + 1];
   }
   return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+}
+
+/** Smallest stadium bowl (a building's hole with a pitch in it) that gets a gate (m²). */
+const STADION_MISA_M2 = 3000;
+/** Width of the gate cut through a stadium's stands, from the south (m). */
+const STADION_BRAMA_M = 12;
+
+function ringArea(r: number[]) {
+  let s = 0;
+  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) s += (r[j] - r[i]) * (r[j + 1] + r[i + 1]);
+  return Math.abs(s / 2);
+}
+
+type Cut = { seg: number; t: number; x: number; y: number };
+/** Where the vertical line x = X crosses the ring (every crossing). */
+function crossings(r: number[], X: number): Cut[] {
+  const out: Cut[] = [];
+  const n = r.length / 2;
+  for (let i = 0; i < n; i++) {
+    const ax = r[i * 2], ay = r[i * 2 + 1], bx = r[((i + 1) % n) * 2], by = r[((i + 1) % n) * 2 + 1];
+    if ((ax <= X) === (bx <= X)) continue;
+    const t = (X - ax) / (bx - ax);
+    out.push({ seg: i, t, x: X, y: ay + t * (by - ay) });
+  }
+  return out;
+}
+/** The ring's points from cut P forward to cut Q (both included). */
+function arc(r: number[], P: Cut, Q: Cut): number[] {
+  const n = r.length / 2;
+  const out = [P.x, P.y];
+  if (!(P.seg === Q.seg && P.t <= Q.t)) {
+    let i = (P.seg + 1) % n;
+    for (let k = 0; k < n; k++) {
+      out.push(r[i * 2], r[i * 2 + 1]);
+      if (i === Q.seg) break;
+      i = (i + 1) % n;
+    }
+  }
+  out.push(Q.x, Q.y);
+  return out;
+}
+const inStrip = (pts: number[], a: number, b: number) => {
+  for (let i = 2; i < pts.length - 2; i += 2) if (pts[i] < a - 0.5 || pts[i] > b + 0.5) return false;
+  return true;
+};
+const reversed = (pts: number[]) => {
+  const out: number[] = [];
+  for (let i = pts.length - 2; i >= 0; i -= 2) out.push(pts[i], pts[i + 1]);
+  return out;
+};
+/**
+ * A stadium closed by its stands (a ring-shaped building, the pitch in its hole): cut a gate of
+ * `w` px through the stands south of the hole, so the outer ring and the hole become one
+ * C-shaped outline. Null when the shape doesn't allow a clean cut.
+ */
+export function stadiumGate(outer: number[], hole: number[], w: number, srodek?: number): { ring: number[]; a: Cut; b: Cut; ha: Cut; hb: Cut } | null {
+  const hb = bbox(hole);
+  const cx = srodek ?? (hb.x0 + hb.x1) / 2;
+  w = Math.min(w, (hb.x1 - hb.x0) * 0.4);
+  const a = cx - w / 2, b = cx + w / 2;
+  const south = (cs: Cut[]) => cs.reduce<Cut | null>((m, c) => (!m || c.y > m.y ? c : m), null);
+  const Ha = south(crossings(hole, a)), Hb = south(crossings(hole, b));
+  if (!Ha || !Hb) return null;
+  const below = (cs: Cut[], y: number) => cs.filter((c) => c.y > y).reduce<Cut | null>((m, c) => (!m || c.y < m.y ? c : m), null);
+  const Oa = below(crossings(outer, a), Ha.y), Ob = below(crossings(outer, b), Hb.y);
+  if (!Oa || !Ob) return null;
+  // The short arcs (inside the gate's strip) go; the long ones stay.
+  let oLong: number[];
+  const oF = arc(outer, Oa, Ob);
+  if (inStrip(oF, a, b)) oLong = arc(outer, Ob, Oa);
+  else if (inStrip(arc(outer, Ob, Oa), a, b)) oLong = reversed(oF);
+  else return null;
+  let hLong: number[];
+  const hF = arc(hole, Ha, Hb);
+  if (inStrip(hF, a, b)) hLong = reversed(arc(hole, Hb, Ha));
+  else if (inStrip(arc(hole, Hb, Ha), a, b)) hLong = hF;
+  else return null;
+  // Ob → (around the outside) → Oa → up the gate's west wall → Ha → (around the bowl) → Hb → down to Ob.
+  return { ring: [...oLong, ...hLong], a: Oa, b: Ob, ha: Ha, hb: Hb };
+}
+
+/** Smallest courtyard (a building's hole) that gets a way out (m²; owner: „większy niż 50 m² plus minus”). */
+const PODWORKO_M2 = 50;
+/** Width of the hole cut through a courtyard's thinnest wall (m). */
+const PODWORKO_PRZEJSCIE_M = 6;
+
+const obroc = (r: number[], c: number, s: number) => {
+  const out: number[] = [];
+  for (let i = 0; i < r.length; i += 2) out.push(r[i] * c - r[i + 1] * s, r[i] * s + r[i + 1] * c);
+  return out;
+};
+/**
+ * A closed courtyard (owner, 18 Oct 2026: „unikaj zamkniętych budynków… zrób dziurę w ścianie”): find the
+ * thinnest wall between the hole and the outside (the hole's point nearest to the outer ring), turn both
+ * rings so that way points down, cut a gate there with stadiumGate and turn the C-shaped outline back.
+ */
+export function courtyardGate(outer: number[], hole: number[], w: number): number[] | null {
+  // Every few px along the hole's edge: the nearest outer point (wall thickness) and the edge's own normal.
+  const kandydaci: { d: number; px: number; py: number; kier: [number, number][] }[] = [];
+  const n = hole.length / 2;
+  for (let i = 0; i < n; i++) {
+    const ax = hole[i * 2], ay = hole[i * 2 + 1], bx = hole[((i + 1) % n) * 2], by = hole[((i + 1) % n) * 2 + 1];
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 0.5) continue;
+    const kroki = Math.max(1, Math.ceil(len / 4));
+    for (let k = 0; k < kroki; k++) {
+      const x = ax + ((bx - ax) * (k + 0.5)) / kroki, y = ay + ((by - ay) * (k + 0.5)) / kroki;
+      let best = Infinity, qx = 0, qy = 0;
+      for (let j = 0, m = outer.length / 2; j < m; j++) {
+        const cx = outer[j * 2], cy = outer[j * 2 + 1], dx = outer[((j + 1) % m) * 2] - cx, dy = outer[((j + 1) % m) * 2 + 1] - cy;
+        const l2 = dx * dx + dy * dy;
+        let t = l2 ? ((x - cx) * dx + (y - cy) * dy) / l2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d = Math.hypot(cx + t * dx - x, cy + t * dy - y);
+        if (d < best) { best = d; qx = cx + t * dx; qy = cy + t * dy; }
+      }
+      if (best < 0.01) continue;
+      // Two ways through the wall: straight to the nearest outer point, and square to the courtyard's edge.
+      const nx = -(by - ay) / len, ny = (bx - ax) / len;
+      const sNorm: [number, number] = (qx - x) * nx + (qy - y) * ny >= 0 ? [nx, ny] : [-nx, -ny];
+      kandydaci.push({ d: best, px: x, py: y, kier: [[(qx - x) / best, (qy - y) / best], sNorm] });
+    }
+  }
+  kandydaci.sort((p, q) => p.d - q.d);
+  for (const k of kandydaci.slice(0, 16)) {
+    for (const [dx, dy] of k.kier) {
+      const ring = gateAlong(outer, hole, w, k.px, k.py, dx, dy);
+      if (ring) return ring;
+    }
+  }
+  return null;
+}
+
+/** A yard counts as closed when its mouth is narrower than this (m): build-map's merging leaves cracks. */
+const PODWORKO_GARDLO_M = 6;
+/**
+ * A yard closed but for a narrow crack (owner, 18 Oct 2026: a U-shaped school whose wings almost touch):
+ * find two corners of the outline closer than PODWORKO_GARDLO_M but far apart along it, with the yard
+ * (≥ minArea) behind them; close the crack and cut a proper gate with courtyardGate. Null when there is none.
+ */
+export function openNarrowYard(ring: number[], minArea: number, w: number): number[] | null {
+  const n = ring.length / 2;
+  if (n < 6 || n > 600) return null;
+  const gardlo = PODWORKO_GARDLO_M * PX_PER_M;
+  // Arc length to every vertex (to skip neighbours along the outline).
+  const cum = [0];
+  for (let i = 1; i <= n; i++) cum.push(cum[i - 1] + Math.hypot(ring[(i % n) * 2] - ring[(i - 1) * 2], ring[(i % n) * 2 + 1] - ring[(i - 1) * 2 + 1]));
+  const total = cum[n];
+  const odcinek = (i: number, j: number) => { const out: number[] = []; for (let k = i; ; k = (k + 1) % n) { out.push(ring[k * 2], ring[k * 2 + 1]); if (k === j) break; } return out; };
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      const d = Math.hypot(ring[i * 2] - ring[j * 2], ring[i * 2 + 1] - ring[j * 2 + 1]);
+      if (d > gardlo) continue;
+      const luk = cum[j] - cum[i];
+      if (luk < 20 * PX_PER_M || total - luk < 20 * PX_PER_M) continue;
+      // The crack's middle is outside the building, and one side of it encloses a yard.
+      if (pointInRings([ring], (ring[i * 2] + ring[j * 2]) / 2, (ring[i * 2 + 1] + ring[j * 2 + 1]) / 2)) continue;
+      const a = odcinek(i, j), b = odcinek(j, i);
+      const [kieszen, reszta] = ringArea(a) < ringArea(b) ? [a, b] : [b, a];
+      if (ringArea(kieszen) < minArea) continue;
+      const g = courtyardGate(reszta, kieszen, w);
+      if (g) return g;
+    }
+  }
+  return null;
+}
+
+/** One try: a gate of width w from the courtyard's edge point (px, py) in the direction (dx, dy). */
+function gateAlong(outer: number[], hole: number[], w: number, px: number, py: number, dx: number, dy: number): number[] | null {
+  // Turn so that (dx, dy) points along +y, cut there along two lines x = a, x = b, turn back.
+  const f = Math.atan2(dx, dy), c = Math.cos(f), sn = Math.sin(f);
+  const o2 = obroc(outer, c, sn), h2 = obroc(hole, c, sn);
+  const X = px * c - py * sn, Y = px * sn + py * c;
+  const hb = bbox(h2);
+  w = Math.min(w, (hb.x1 - hb.x0) * 0.6, (hb.y1 - hb.y0) * 0.6);
+  // Keep both lines inside the courtyard.
+  const Xc = Math.min(Math.max(X, hb.x0 + w / 2 + 0.5), hb.x1 - w / 2 - 0.5);
+  const g = cutGate(o2, h2, Xc - w / 2, Xc + w / 2, Y);
+  if (!g) return null;
+  // A sane result: the old wall area minus about the gate's own area (a cut through the wrong place removes much more).
+  const przed = ringArea(o2) - ringArea(h2), po = ringArea(g.ring);
+  if (!(po < przed + 1 && po > przed - 2 * w * g.glebokosc - 4)) return null;
+  return obroc(g.ring, c, -sn);
+}
+
+const dlugosc = (pts: number[]) => {
+  let l = 0;
+  for (let i = 2; i < pts.length; i += 2) l += Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]);
+  return l;
+};
+/**
+ * Joins a hole to its outer ring through a gate between the lines x = a and x = b, starting at the hole's edge
+ * near y0 and going +y to the outside. The cut-out arcs are the short ones between the cut points.
+ */
+function cutGate(outer: number[], hole: number[], a: number, b: number, y0: number): { ring: number[]; glebokosc: number } | null {
+  const naj = (cs: Cut[]) => cs.reduce<Cut | null>((m, q) => (!m || Math.abs(q.y - y0) < Math.abs(m.y - y0) ? q : m), null);
+  const Ha = naj(crossings(hole, a)), Hb = naj(crossings(hole, b));
+  if (!Ha || !Hb) return null;
+  const ponizej = (cs: Cut[], y: number) => cs.filter((q) => q.y > y).reduce<Cut | null>((m, q) => (!m || q.y < m.y ? q : m), null);
+  const Oa = ponizej(crossings(outer, a), Ha.y), Ob = ponizej(crossings(outer, b), Hb.y);
+  if (!Oa || !Ob) return null;
+  // Both sides of the gate go through the same wall (similar depth), else the cut would slice the building.
+  const da = Oa.y - Ha.y, db = Ob.y - Hb.y;
+  if (Math.abs(da - db) > Math.max(1.5 * PX_PER_M, 0.25 * Math.min(da, db))) return null;
+  const oF = arc(outer, Oa, Ob), oB = arc(outer, Ob, Oa);
+  const oLong = dlugosc(oF) < dlugosc(oB) ? oB : reversed(oF);
+  const hF = arc(hole, Ha, Hb), hB = arc(hole, Hb, Ha);
+  const hLong = dlugosc(hF) < dlugosc(hB) ? reversed(hB) : hF;
+  const ring = [...oLong, ...hLong];
+  // The gate must be open across its whole width, from the courtyard to the outside.
+  for (let u = 0.15; u <= 0.86; u += 0.175) {
+    const x = a + (b - a) * u;
+    const y0g = Math.max(Ha.y, Hb.y), y1g = Math.min(Oa.y, Ob.y);
+    for (const t of [0.25, 0.5, 0.75]) if (pointInRings([ring], x, y0g + (y1g - y0g) * t)) return null;
+  }
+  return { ring, glebokosc: (da + db) / 2 };
 }
 
 export function pointInRings(rings: number[][], x: number, y: number) {
@@ -258,11 +519,15 @@ export class CityMap {
   private haveArea = new Set<number>();
   private haveLine = new Set<number>();
   private haveBuilding = new Set<number>();
+  private builtById = new Map<number, Building>();
   private streets = new Map<string, { x: number; y: number }>();
   /** Post offices, post boxes and parcel lockers (decorations: the pneumatic post pillar). */
   readonly posts: { x: number; y: number }[] = [];
-  /** Road signs on the roads out of town: where to and how many km along the roads. */
-  readonly signs: { x: number; y: number; to: { name: string; km: number }[] }[] = [];
+  /** City boards (tablice z mapką miasta): where they stand, and what their map shows (map px, already scaled). */
+  readonly tablice: { x: number; y: number; plan?: PlanMiasta; miasto?: string }[] = [];
+  /** Odd places (ruins, water towers, mills, shrines…) for the boards' scouting notes (map px). */
+  readonly osobliwe: { x: number; y: number; rodzaj: string; nazwa: string }[] = [];
+  plan: PlanMiasta | null = null;
   /** World maps: named mountain peaks with their height (they come with the tiles). */
   readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];
   private namedTowns: { name: string; x: number; y: number }[] = [];
@@ -276,8 +541,11 @@ export class CityMap {
     // Pixel values in the map files are at PLIK_PX_PER_M.
     const sp = PX_PER_M / PLIK_PX_PER_M;
     for (const [name, x, y] of raw.towns ?? []) this.namedTowns.push({ name, x: x * sp, y: y * sp });
-    for (const [x, y, ...to] of raw.signs ?? [])
-      this.signs.push({ x: (x as number) * sp, y: (y as number) * sp, to: (to as string[]).map((t) => ({ name: t.split('|')[0], km: Number(t.split('|')[1]) })) });
+    for (const [x, y, rodzaj, nazwa] of raw.osobliwe ?? []) this.osobliwe.push({ x: x * sp, y: y * sp, rodzaj, nazwa });
+    if (raw.tablice) {
+      for (const [x, y] of raw.tablice.miejsca) this.tablice.push({ x: x * sp, y: y * sp });
+      this.plan = skalujPlan(raw.tablice.plan, sp);
+    }
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
     this.width = raw.w * PX_PER_M;
@@ -302,6 +570,8 @@ export class CityMap {
     raw.areas.forEach(([kind, ...rings], i) => this.addArea(i, kind, rings));
     raw.lines.forEach(([kind, flags, pts, name], i) => this.addLine(i, kind, flags, pts, name));
     raw.buildings.forEach(([rings, addr, name, levels], i) => this.addBuilding(i, rings, addr, name, levels));
+    this.cutStadiums();
+    this.cutCourtyards();
     for (const b of this.buildings) {
       for (const a of b.addresses) {
         const key = normAddress(a);
@@ -314,6 +584,9 @@ export class CityMap {
     for (const [kind, name, ux, uy, addr] of raw.pois ?? []) this.addPlace(kind as Place['kind'], name, ux * k, uy * k, addr, `${kind}:${Math.round(ux)}:${Math.round(uy)}`);
   }
 
+  /** An underground map (src/loch/mapa.ts): its maze plan; MapRenderer paints nothing, scenes/Lochy.ts does. */
+  loch?: PlanLochu;
+
   private placeBuildings = new Set<Building>();
   /** A place at (x, y) px: in the building there, or the nearest one close by. */
   private addPlace(kind: Place['kind'], name: string, x: number, y: number, addr: string | 0 | undefined, key: string) {
@@ -322,7 +595,9 @@ export class CityMap {
     // One station once (OSM often has it as a node, an area and a building).
     if (kind === 'station' && this.places.some((q) => q.kind === 'station' && q.name === name && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
     // Travelling merchants and coachmen stand in the street, not in a building.
-    const street = kind === 'merchant' || kind === 'station';
+    // Two landings of one ferry port (a node and an area in OSM): one captain.
+    if (kind === 'port' && this.places.some((q) => q.kind === 'port' && Math.hypot(q.door.x - x, q.door.y - y) < 300 * PX_PER_M)) return null;
+    const street = kind === 'merchant' || kind === 'station' || kind === 'port';
     let b = street ? null : this.buildingAt(x, y) ?? (addr ? this.findBuilding(addr) : undefined) ?? null;
     if (!b && !street) {
       let best = 40 * PX_PER_M;
@@ -334,14 +609,38 @@ export class CityMap {
         }
       }
     }
-    if (b && this.placeBuildings.has(b)) return null;
+    // A maker may share an entrance; loading it first must not hide an existing shop.
+    if (b && this.placeBuildings.has(b) && kind !== 'maker' && kind !== 'workshop'
+      && this.places.some(p => p.building === b && p.kind !== 'maker' && p.kind !== 'workshop')) return null;
     if (b) this.placeBuildings.add(b);
     this.placeIds.add(id);
-    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' ? this.freeNear(x, y) : { x, y } };
+    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' || kind === 'port' ? this.freeNear(x, y) : { x, y } };
     this.places.push(place);
     return place;
   }
   private placeIds = new Set<string>();
+
+  /** Curated real businesses can be added without rebuilding the terrain/map extract. */
+  addProducer(name: string, address: string, lat: number, lon: number, kind: 'maker' | 'workshop' = 'maker') {
+    if (!this.hasLatLon(lat, lon)) return null;
+    const p = this.fromLatLon(lat, lon);
+    return this.addPlace(kind, name, p.x, p.y, address,
+      `${kind}:${lat.toFixed(7)}:${lon.toFixed(7)}${kind === 'workshop' ? `:${name}` : ''}`);
+  }
+
+  /**
+   * A ferry port from the world list (porty.ts): the captain stands on the nearest spot one can walk away
+   * from (the terminal may be on the quay). Call once its tile is loaded.
+   */
+  addPort(key: string, name: string, lat: number, lon: number) {
+    const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
+    if (this.placeIds.has(id)) return null;
+    const p = this.fromLatLon(lat, lon);
+    this.placeIds.add(id);
+    const place: Place = { kind: 'port', name, id, building: null, door: this.reachableNear(p.x, p.y) };
+    this.places.push(place);
+    return place;
+  }
 
   /** World maps: called with the places each new tile brings. */
   onPlaces(f: (p: Place[]) => void) {
@@ -356,6 +655,7 @@ export class CityMap {
     const a: Area = { kind, rings: abs, id, ...bbox(abs[0]) };
     this.areas.push(a);
     this.areaGrid.add(a);
+    if (kind === 'pitch') this.newPitches.push(a);
   }
 
   private addLine(id: number, kind: string, flags: number, pts: number[], name: string | 0) {
@@ -368,8 +668,8 @@ export class CityMap {
     this.lineGrid.add(l);
   }
 
-  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1) {
-    if (this.haveBuilding.has(id)) return;
+  private addBuilding(id: number, rings: number[][], addr: string | 0, name: string | 0, levels: number, open?: 0 | 1, architecture?: Building['architecture']) {
+    if (this.haveBuilding.has(id)) return this.builtById.get(id)!;
     this.haveBuilding.add(id);
     const abs = rings.map((r) => decode(r, this.k));
     // Pad the box downwards: walls are drawn below the footprint.
@@ -378,8 +678,89 @@ export class CityMap {
     const b: Building = stub ?? { rings: abs, addresses: addr ? addr.split(' | ') : [], name: name || null, levels, seed: seedOf(id), id, ...bb, y1: bb.y1 + 20 };
     if (stub) Object.assign(stub, { rings: abs, levels, ...bb, y1: bb.y1 + 20 });
     if (open) b.open = true;
+    if (architecture) b.architecture = architecture;
     this.buildings.push(b);
+    this.builtById.set(id, b);
     this.buildingGrid.add(b);
+    if (abs.length > 1) this.newHoled.push(b);
+    // Every building is checked once for closed yards (holes or narrow-mouthed pockets).
+    if (!open) this.podworka.add(b);
+    return b;
+  }
+
+  private newPitches: Area[] = [];
+  private newHoled: Building[] = [];
+  /** Buildings whose courtyards still wait for a way out (cutCourtyards). */
+  private podworka = new Set<Building>();
+  private gated = new Set<Building>();
+  /**
+   * Stadiums closed by their stands (owner: „zrób wyrwę, zawsze od południa”): a ring-shaped
+   * building whose hole holds a pitch gets a gate through its stands from the south.
+   */
+  private cutStadiums() {
+    const pairs = new Set<[Building, Area]>();
+    const tryPair = (b: Building, a: Area) => {
+      if (this.gated.has(b)) {
+        if (b.misa && pointInRings([b.misa], (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2)) a.arena = true;
+      } else if (b.rings.length > 1) pairs.add([b, a]);
+    };
+    for (const a of this.newPitches) for (const b of this.buildingGrid.at((a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2)) tryPair(b, a);
+    for (const b of this.newHoled) for (const a of this.areaGrid.query(b)) if (a.kind === 'pitch') tryPair(b, a);
+    for (const b of this.newHoled) this.podworka.add(b);
+    this.newPitches = [];
+    this.newHoled = [];
+    for (const [b, a] of pairs) {
+      if (this.gated.has(b)) continue;
+      const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
+      const hi = b.rings.findIndex((r, i) => i > 0 && ringArea(r) >= STADION_MISA_M2 * PX_PER_M * PX_PER_M && pointInRings([r], cx, cy));
+      if (hi < 0) continue;
+      const g = stadiumGate(b.rings[0], b.rings[hi], STADION_BRAMA_M * PX_PER_M);
+      if (!g) continue;
+      this.gated.add(b);
+      b.misa = b.rings[hi];
+      b.rings = [g.ring, ...b.rings.filter((_, i) => i > 0 && i !== hi)];
+      b.brama = { x0: g.a.x, y0: g.a.y, x1: g.b.x, y1: g.b.y };
+      for (const q of this.areaGrid.query(b)) if (q.kind === 'pitch' && pointInRings([b.misa], (q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2)) q.arena = true;
+      // A paved way through the gate (no tree grows in it, and it shows the way in).
+      const gx = (g.a.x + g.b.x) / 2, gy = Math.max(g.a.y, g.b.y);
+      const top = Math.min(g.ha.y, g.hb.y);
+      const y0 = gy + 18 * PX_PER_M, y1 = top - 6 * PX_PER_M;
+      this.addLine(-1 - b.id, 'pedestrian', 0, [gx / this.k, y0 / this.k, 0, (y1 - y0) / this.k], 0);
+    }
+  }
+
+  /**
+   * Courtyards (holes ≥ PODWORKO_M2) get a way out through their thinnest wall, so no closed yard traps the hero.
+   * A hole big enough to be a stadium bowl waits until its tiles are in and no pitch lies in it (cutStadiums
+   * gives those their southern gate).
+   */
+  private cutCourtyards() {
+    const min = PODWORKO_M2 * PX_PER_M * PX_PER_M, misa = STADION_MISA_M2 * PX_PER_M * PX_PER_M;
+    for (const b of [...this.podworka]) {
+      let czeka = false;
+      const pominiete = new Set<number[]>();
+      for (let guard = 0; guard < 8; guard++) {
+        const hi = b.rings.findIndex((r, i) => {
+          if (i === 0 || pominiete.has(r) || ringArea(r) < min) return false;
+          if (ringArea(r) < misa) return true;
+          const bb = bbox(r);
+          if (!this.ready(bb)) { czeka = true; return false; }
+          return ![...this.areaGrid.query(bb)].some((a) => a.kind === 'pitch' && pointInRings([r], (a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2));
+        });
+        if (hi < 0) break;
+        const ring = courtyardGate(b.rings[0], b.rings[hi], PODWORKO_PRZEJSCIE_M * PX_PER_M);
+        // Not cuttable cleanly: this hole stays as it is.
+        if (!ring) { pominiete.add(b.rings[hi]); continue; }
+        b.rings = [ring, ...b.rings.filter((_, i) => i > 0 && i !== hi)];
+      }
+      // Yards whose mouth is only a crack (merged wings almost touching).
+      for (let guard = 0; guard < 4; guard++) {
+        const r = openNarrowYard(b.rings[0], min, PODWORKO_PRZEJSCIE_M * PX_PER_M);
+        if (!r) break;
+        b.rings = [r, ...b.rings.slice(1)];
+      }
+      if (!czeka) this.podworka.delete(b);
+    }
   }
 
   /** A tiled map: the index (boundary, big areas, addresses, places, streets). */
@@ -458,14 +839,21 @@ export class CityMap {
   private addTile(cx: number, cy: number, t: RawTile) {
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
-    for (const [bid, rings, addr, name, levels, open] of t.b) {
-      this.addBuilding(bid, rings, addr, name, levels, open);
+    for (const [bid, rings, addr, name, levels, open, architecture] of t.b) {
+      const b = this.addBuilding(bid, rings, addr, name, levels, open, architecture);
       if (this.world && addr) {
-        const b = this.buildings[this.buildings.length - 1];
-        for (const a of b.addresses) if (!this.byAddress.has(normAddress(a))) this.byAddress.set(normAddress(a), b);
+        for (const a of b.addresses) {
+          const key = normAddress(a), previous = this.byAddress.get(key);
+          if (!previous || b.id < previous.id) this.byAddress.set(key, b);
+        }
       }
     }
+    this.cutStadiums();
+    this.cutCourtyards();
     for (const [x, y] of t.q ?? []) this.posts.push({ x, y });
+    for (const [rodzaj, nazwa, x, y] of t.o ?? []) {
+      if (!this.osobliwe.some((q) => Math.abs(q.x - x) < 40 && Math.abs(q.y - y) < 40)) this.osobliwe.push({ x, y, rodzaj, nazwa });
+    }
     for (const [name, ele, x, y] of t.k ?? []) {
       if (!this.peaks.some((q) => q.name === name && Math.abs(q.x - x) < 200 && Math.abs(q.y - y) < 200)) this.peaks.push({ name, ele, x, y });
     }
@@ -832,9 +1220,9 @@ export class CityMap {
 
   query(box: Box) {
     return {
-      areas: [...this.areaGrid.query(box)],
-      lines: [...this.lineGrid.query(box)],
-      buildings: [...this.buildingGrid.query(box)],
+      areas: [...this.areaGrid.query(box)].sort((a, b) => a.id - b.id),
+      lines: [...this.lineGrid.query(box)].sort((a, b) => a.id - b.id),
+      buildings: [...this.buildingGrid.query(box)].sort((a, b) => a.id - b.id),
     };
   }
 
@@ -859,11 +1247,12 @@ export class CityMap {
   }
 
   buildingAt(x: number, y: number): Building | undefined {
+    let found: Building | undefined;
     for (const b of this.buildingGrid.at(x, y)) {
       if (b.open) continue;
-      if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) return b;
+      if ((!found || b.id < found.id) && x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) found = b;
     }
-    return undefined;
+    return found;
   }
 
   insideCity(x: number, y: number) {
@@ -899,7 +1288,7 @@ export class CityMap {
     return undefined;
   }
 
-  isBlocked(x: number, y: number): boolean {
+  isBlocked(x: number, y: number, ignoreBuildings = false): boolean {
     if (x < this.minX || y < this.minY || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
     // Not loaded yet: nobody walks there until it is.
     if (this.tileSet && !this.loadedTiles.has(this.tileKey(x, y)) && this.tileSet.has(this.tileKey(x, y))) return true;
@@ -914,7 +1303,7 @@ export class CityMap {
       // fits (a footway's 2.5 m left a strip of under a pixel – the owner saw the arch but couldn't get through).
       if (l.pass && d <= Math.max(l.width / 2, (PRZEJSCIE_M / 2) * PX_PER_M)) onPassage = true;
     }
-    if (!onPassage && this.buildingAt(x, y)) return true;
+    if (!ignoreBuildings && !onPassage && this.buildingAt(x, y)) return true;
     if (onBridge) return false;
     if (this.terrain && this.roughOffPath(x, y)) return true;
     // Water blocks, but a road or path over it always wins: many bridges,
@@ -931,7 +1320,10 @@ export class CityMap {
 
   /** Is (x, y) on a road or path (one of `lines`)? */
   private onRoad(lines: Line[], x: number, y: number) {
-    for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + PX_PER_M) return true;
+    // 2 m beyond the drawn edge: a narrow footbridge left the hero's feet a 3 px wide strip over a river (report 64).
+    for (const l of lines) if (ROAD_KINDS.has(l.kind) && distToPolyline(l.pts, x, y) <= l.width / 2 + 2 * PX_PER_M) return true;
+    // Railway bridges too (bug report 65): the tracks over water can be walked along, a little wider than the track bed.
+    for (const l of lines) if ((l.kind === 'rail' || l.kind === 'tram') && distToPolyline(l.pts, x, y) <= l.width / 2 + 1.5 * PX_PER_M) return true;
     return false;
   }
 
@@ -970,11 +1362,36 @@ export class CityMap {
     return !this.nearPath(x, y);
   }
 
+  /** Is any building (walkable sheds too) closer than r px to (x, y), or is the point inside one? */
+  buildingWithin(x: number, y: number, r: number) {
+    for (const b of this.buildingGrid.query({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })) {
+      if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1 && pointInRings(b.rings, x, y)) return true;
+      for (const ring of b.rings) {
+        if (ring.length < 4) continue;
+        if (distToPolyline(ring, x, y) < r) return true;
+        // Closing edge (rings are not repeated at the end).
+        const n = ring.length;
+        if (distToPolyline([ring[n - 2], ring[n - 1], ring[0], ring[1]], x, y) < r) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Buildings whose bounding box touches the box. */
+  buildingsIn(b: Box): Building[] {
+    return [...this.buildingGrid.query(b)];
+  }
+
+  /** Areas whose bounding box touches the box. */
+  areasIn(b: Box): Area[] {
+    return [...this.areaGrid.query(b)];
+  }
+
   /** Is a feet box of the given half size free at (x, y)? */
-  isFree(x: number, y: number, hw: number, hh: number) {
+  isFree(x: number, y: number, hw: number, hh: number, ignoreBuildings = false) {
     return !(
-      this.isBlocked(x - hw, y - hh) || this.isBlocked(x + hw, y - hh) ||
-      this.isBlocked(x - hw, y + hh) || this.isBlocked(x + hw, y + hh)
+      this.isBlocked(x - hw, y - hh, ignoreBuildings) || this.isBlocked(x + hw, y - hh, ignoreBuildings) ||
+      this.isBlocked(x - hw, y + hh, ignoreBuildings) || this.isBlocked(x + hw, y + hh, ignoreBuildings)
     );
   }
 

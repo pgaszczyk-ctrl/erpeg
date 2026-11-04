@@ -1,0 +1,13 @@
+{
+  "revision": "6.3",
+  "sprite_and_mask_files_byte_identical_to_v6_2": 1600,
+  "head_mounts_unchanged": true,
+  "x_axes_unchanged": true,
+  "body_neck_y_delta": 1,
+  "directions_updated": 60,
+  "body_frame_anchors_updated": 180,
+  "pair_frame_checks": 3600,
+  "neck_gaps_on_axis": 0,
+  "feet_bottom_edge_y": 61,
+  "visual_review": "front joins of 6 representative pairings and all 20 own characters; numeric coverage of all directions and frames"
+}

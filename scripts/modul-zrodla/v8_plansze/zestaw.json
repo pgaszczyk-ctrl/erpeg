@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-21",
+  "purpose": "Plansze źródłowe: korekta zbyt długich nóg; nie atlas animacji.",
+  "target": {
+    "crotch_to_sole_ratio": 0.65,
+    "head": "pełna, bez przycinania szczęki, wielkość zachowana",
+    "torso": "wysokość zachowana",
+    "directions": [
+      "front",
+      "left",
+      "back"
+    ],
+    "layout": [
+      "assembled",
+      "head",
+      "body"
+    ],
+    "gender_filename": {
+      "f": "female",
+      "m": "male"
+    }
+  },
+  "assets": [
+    {
+      "id": "01_warkocze_f",
+      "source": "Red-Braided Pixel Character Sheet.png",
+      "file": "plansze/01_warkocze_f.png"
+    },
+    {
+      "id": "02_kowal_m",
+      "source": "Chibi blacksmith character turnaround sheet.png",
+      "file": "plansze/02_kowal_m.png"
+    },
+    {
+      "id": "03_pilotka_f",
+      "source": "Modular chibi aviator character sheet.png",
+      "file": "plansze/03_pilotka_f.png"
+    },
+    {
+      "id": "04_profesor_m",
+      "source": "Chibi Professor Character Sheet.png",
+      "file": "plansze/04_profesor_m.png"
+    },
+    {
+      "id": "05_kucharka_f",
+      "source": "Chibi chef three-view character sheet.png",
+      "file": "plansze/05_kucharka_f.png"
+    },
+    {
+      "id": "06_ogrodniczka_f",
+      "source": "Last Gardener with Long Braids.png",
+      "file": "plansze/06_ogrodniczka_f.png"
+    },
+    {
+      "id": "07_maszynista_m",
+      "source": "Chibi Steam Train Driver Turnaround Sheet.png",
+      "file": "plansze/07_maszynista_m.png"
+    },
+    {
+      "id": "08_kurierka_f",
+      "source": "Orange-kerchief courier character board.png",
+      "file": "plansze/08_kurierka_f.png"
+    },
+    {
+      "id": "09_wynalazca_m",
+      "source": "Chibi Teal Inventor Turnaround Sheet.png",
+      "file": "plansze/09_wynalazca_m.png"
+    },
+    {
+      "id": "10_karczmarz_m",
+      "source": "Chibi innkeeper turnaround sheet.png",
+      "file": "plansze/10_karczmarz_m.png"
+    },
+    {
+      "id": "11_czarodziej_m",
+      "source": "Modular chibi wizard turnaround sheet.png",
+      "file": "plansze/11_czarodziej_m.png"
+    },
+    {
+      "id": "12_zwiadowca_m",
+      "source": "Modular chibi scout character sheet.png",
+      "file": "plansze/12_zwiadowca_m.png"
+    },
+    {
+      "id": "13_dzentelmen_m",
+      "source": "Steampunk gentleman three-view character sheet.png",
+      "file": "plansze/13_dzentelmen_m.png"
+    },
+    {
+      "id": "14_podroznik_senior_m",
+      "source": "Silver-Haired Traveller Character Sheet.png",
+      "file": "plansze/14_podroznik_senior_m.png"
+    },
+    {
+      "id": "15_gospodyni_f",
+      "source": "Chibi Housekeeper Three-View Sheet.png",
+      "file": "plansze/15_gospodyni_f.png"
+    },
+    {
+      "id": "16_straznik_m",
+      "source": "Three-View Chibi Town Guard.png",
+      "file": "plansze/16_straznik_m.png"
+    },
+    {
+      "id": "17_rudobrody_m",
+      "source": "Chibi red-bearded adventurer turnaround sheet.png",
+      "file": "plansze/17_rudobrody_m.png"
+    },
+    {
+      "id": "18_luczniczka_f",
+      "source": "Three-view chibi blonde archer.png; screenshot user 2026-10-21",
+      "file": "plansze/18_luczniczka_f.png"
+    },
+    {
+      "id": "19_listonosz_m",
+      "source": "Chibi postman turnaround character sheet.png",
+      "file": "plansze/19_listonosz_m.png"
+    },
+    {
+      "id": "20_mechanik_m",
+      "source": "Chibi mechanic three-view sheet.png",
+      "file": "plansze/20_mechanik_m.png"
+    }
+  ]
+}

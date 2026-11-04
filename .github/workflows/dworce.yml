@@ -1,0 +1,30 @@
+name: World stations
+
+# Railway and bus stations of the whole world from OpenStreetMap (Overpass) → public/dworce/
+# (scripts/dworce-osm.mjs), for the traveller's map. Runs by hand or when the script changes; commits the result.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/cool-feynman-w5ohu9]
+    paths: [scripts/dworce-osm.mjs, .github/workflows/dworce.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/dworce-osm.mjs --save /tmp/dworce-overpass.json
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
+          git add -A public/dworce
+          git commit -m "Dworce świata z OpenStreetMap (public/dworce)" || echo "No changes"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push

@@ -1,0 +1,527 @@
+{
+  "files": [
+    {
+      "file": "assets/walkmask_feet_r8.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "assets/walkmask_1672x941.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "reference/hala_48-G001.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "reference/siatka_i_katy_v2.png",
+      "size": [
+        1050,
+        620
+      ]
+    },
+    {
+      "file": "reference/hala_grid_postacie_v2.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "assets/lamp/lampa_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/lamp/lampa_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/lamp/lampa_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/foreground/crates_southwest.png",
+      "size": [
+        192,
+        159
+      ]
+    },
+    {
+      "file": "assets/foreground/pipe_bands_48-G001.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "assets/foreground/bench_west.png",
+      "size": [
+        56,
+        187
+      ]
+    },
+    {
+      "file": "assets/foreground/bench_north.png",
+      "size": [
+        264,
+        75
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_6.png",
+      "size": [
+        29,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/chest_stairs.png",
+      "size": [
+        66,
+        73
+      ]
+    },
+    {
+      "file": "assets/foreground/railing_left.png",
+      "size": [
+        100,
+        122
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_5.png",
+      "size": [
+        29,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/launcher_2.png",
+      "size": [
+        206,
+        814
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_0.png",
+      "size": [
+        31,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_1.png",
+      "size": [
+        41,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/launcher_0.png",
+      "size": [
+        206,
+        814
+      ]
+    },
+    {
+      "file": "assets/foreground/launcher_1.png",
+      "size": [
+        206,
+        814
+      ]
+    },
+    {
+      "file": "assets/foreground/bench_south.png",
+      "size": [
+        268,
+        78
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_4.png",
+      "size": [
+        29,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/barrel_north.png",
+      "size": [
+        57,
+        73
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_3.png",
+      "size": [
+        29,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/lamp_2.png",
+      "size": [
+        35,
+        82
+      ]
+    },
+    {
+      "file": "assets/foreground/railing_right.png",
+      "size": [
+        19,
+        80
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_1_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_2_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_1_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_2_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/stragan.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_1_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_1_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_0_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_2_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_2_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_2_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz.png",
+      "size": [
+        192,
+        192
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_0_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_1_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_1_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_0_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_0_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_1_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz.png",
+      "size": [
+        192,
+        192
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_0_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_1_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_2_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_0_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_2_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_1_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_wola_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja_0_0.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_0_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_towar.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_0_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_2_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straznik_referencja.png",
+      "size": [
+        192,
+        192
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_wola_1.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/straganiarz_macha.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/npc/gazeciarz_2_2.png",
+      "size": [
+        64,
+        64
+      ]
+    },
+    {
+      "file": "assets/station/hala_grid.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    {
+      "file": "assets/comic/whoop_pl_0.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/whoosh_en_0.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/whoosh_en_1.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/miss_en.png",
+      "size": [
+        64,
+        32
+      ]
+    },
+    {
+      "file": "assets/comic/damage_1.png",
+      "size": [
+        54,
+        50
+      ]
+    },
+    {
+      "file": "assets/comic/whoosh_en_2.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/whoop_pl_1.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/pudlo_pl.png",
+      "size": [
+        64,
+        32
+      ]
+    },
+    {
+      "file": "assets/comic/damage_2.png",
+      "size": [
+        64,
+        58
+      ]
+    },
+    {
+      "file": "assets/comic/whoop_pl_2.png",
+      "size": [
+        320,
+        200
+      ]
+    },
+    {
+      "file": "assets/comic/damage_0.png",
+      "size": [
+        44,
+        42
+      ]
+    }
+  ],
+  "actorAndLampGrid2x2": true,
+  "actorPitch": 22,
+  "propPitch": 50,
+  "glbSource": "same game models as 44-G008",
+  "engineTested": false
+}

@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "bytes": 1204456,
+  "triangles": 12232,
+  "meshes": 28,
+  "guardHeight": 1.25,
+  "bounds": {
+    "min": [
+      -1.7699999809265137,
+      5.9604643443123e-10,
+      -1.7699999809265137
+    ],
+    "max": [
+      4.809999966621399,
+      5.119228068948551,
+      2.23854398727417
+    ]
+  },
+  "clips": [
+    {
+      "name": "idle",
+      "duration": 1
+    },
+    {
+      "name": "fire",
+      "duration": 0.9
+    },
+    {
+      "name": "catch",
+      "duration": 1.2
+    },
+    {
+      "name": "turn_demo_360",
+      "duration": 4
+    }
+  ],
+  "camera": {
+    "elevationFromHorizontalDegrees": 60,
+    "projection": "orthographic"
+  },
+  "shotEventSeconds": 0.12
+}

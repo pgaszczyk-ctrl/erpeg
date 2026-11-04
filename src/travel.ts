@@ -1,13 +1,20 @@
+import { recoverArtillery,finishArtilleryRecovery,rollbackArtilleryRecovery,artilleryTransit } from './artillery/client';
 import type Phaser from 'phaser';
 import { CityMap, PX_PER_M } from './map/CityMap';
-import { PIES, MARGO, DZIADKOWIE, MARTIN } from './content/postacie';
+import { PIES, MARTIN } from './content/postacie';
 import { addVillageCamps, pickHotels } from './hotels';
 import { session } from './quests';
 import { worldMap, worldOrigin } from './map/world';
-import { DUZE_MIASTA, POWROT, WOZNICA } from './content/pociagi';
+import { worldMapId, surfaceBindingMatches, registerSurfaceRegion } from './map/worldRules';
+import { DUZE_MIASTA, POWROT, WOZNICA, POCIAG } from './content/pociagi';
 import { rng } from './rng';
 import { showJourney, serverNow, syncClock } from './journey';
 import { takeResume } from './update';
+import { live } from './walka/live';
+import { flyToGameLocation, loadingGame, revealLoadedGame } from './ui/loadingMap';
+import type { GameScene } from './scenes/GameScene';
+import { jestLochem, mapaLochu, czytajIdLochu, nazwyLochow } from './loch/mapa';
+import { LOCHY } from './content/lochy';
 
 // Coachmen at railway stations take the hero to other maps: Lublin and the
 // small town maps by the region's stations (public/map/world.json, made by
@@ -17,7 +24,7 @@ import { takeResume } from './update';
 export interface Station { name: string; lon: number; lat: number }
 interface World {
   lublin: Station[];
-  towns: { id: string; name: string; stations: Station[] }[];
+  towns: { id: string; name: string; stations: Station[]; bbox?: [number, number, number, number] }[];
   /** Neighbouring stations along a railway line: "<map>|<station>" pairs. */
   edges: { from: string; to: string }[];
 }
@@ -31,23 +38,22 @@ export interface Trip {
   price: number;
 }
 
-/** Coins for a ride: a fixed fee plus a bit per kilometre. */
-export const COACH_FEE = 100;
-export const COACH_PER_KM = 30;
 /** How many destinations a coachman offers. */
 const MAX_TRIPS = 5;
 
 let world: World = { lublin: [], towns: [], edges: [] };
 const stops = new Map<string, Stop>();
 const maps = new Map<string, CityMap>();
+const loadingMaps = new Map<string, Promise<CityMap>>();
 
 export async function loadWorld() {
-  try {
-    const res = await fetch('map/world.json');
-    if (res.ok) world = await res.json();
-  } catch {
-    // No towns: coachmen have nowhere to go.
-  }
+  const res = await fetch('map/world.json', { cache: 'no-cache' });
+  if (!res.ok) throw new Error('Nie udało się wczytać zasad mapy świata');
+  const next: World = await res.json();
+  if (!Array.isArray(next.lublin) || !Array.isArray(next.towns) || !Array.isArray(next.edges) ||
+    next.towns.some(t => !t.bbox || t.bbox.length !== 4 || !t.bbox.every(Number.isFinite)))
+    throw new Error('Nieaktualne zasady mapy świata. Odśwież grę.');
+  world = next;
   stops.clear();
   for (const s of world.lublin) stops.set(`lublin|${s.name}`, { ...s, key: `lublin|${s.name}`, mapId: 'lublin', mapName: 'Lublin' });
   for (const t of world.towns) for (const s of t.stations) stops.set(`${t.id}|${s.name}`, { ...s, key: `${t.id}|${s.name}`, mapId: t.id, mapName: t.name });
@@ -59,6 +65,7 @@ export function worldInfo() {
 }
 
 export function rememberMap(city: CityMap) {
+  if (!worldOrigin(city.id) && !city.loch) registerSurfaceRegion(city.id, (lat, lon) => city.hasLatLon(lat, lon));
   // The same station twice (a bus station is both a building and its outline in OSM): keep one.
   const keep = city.places.filter((p, i, all) => p.kind !== 'station' || !all.some((q, j) => j < i && q.kind === 'station' && q.name === p.name && Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 300 * PX_PER_M));
   if (keep.length !== city.places.length) city.places.splice(0, city.places.length, ...keep);
@@ -82,6 +89,8 @@ export function cachedMap(id: string) {
 export async function getMap(id: string) {
   const known = maps.get(id);
   if (known) return known;
+  // A dungeon (src/loch/): made from its id, never kept (small and quick to make again).
+  if (jestLochem(id)) return mapaLochu(id);
   const w = worldOrigin(id);
   if (w) {
     // Made from the world map as the hero walks (places come with the tiles).
@@ -89,9 +98,99 @@ export async function getMap(id: string) {
     maps.set(id, city);
     return city;
   }
-  const city = await CityMap.load(id === 'lublin' ? 'map/lublin.json' : `map/towns/${id}.json`, id);
-  rememberMap(city);
-  return city;
+  let pending = loadingMaps.get(id);
+  if (!pending) {
+    pending = CityMap.load(id === 'lublin' ? 'map/lublin.json' : `map/towns/${id}.json`, id)
+      .then(city => { rememberMap(city); return city; }).finally(() => loadingMaps.delete(id));
+    loadingMaps.set(id, pending);
+  }
+  return pending;
+}
+
+/**
+ * The one entry point for surface arrivals (including walking and loading a save).
+ * Prepared geographic extracts have fixed ownership, independent of station/visitor.
+ * Lublin first, then regional extracts in id order, then the fixed world grid.
+ * Never fall back to another source after a load error: that would create another world.
+ */
+export async function getSurfaceMap(lat: number, lon: number): Promise<CityMap> {
+  const id = worldMapId(lat, lon); // validate even when the point belongs to a prepared map
+  const lublin = await getMap('lublin');
+  if (lublin.hasLatLon(lat, lon)) return lublin;
+  const candidates = world.towns.filter(t => t.bbox && lon >= t.bbox[0] && lat >= t.bbox[1] && lon <= t.bbox[2] && lat <= t.bbox[3])
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  for (const t of candidates) {
+    const city = await getMap(t.id);
+    if (city.hasLatLon(lat, lon)) return city;
+  }
+  return getMap(id);
+}
+
+/** Reproject a saved position through geography; never reinterpret old pixels at a new origin. */
+export async function surfacePosition(at: { m: string; x: number; y: number }) {
+  if (jestLochem(at.m)) return { city: await getMap(at.m), at: { ...at } };
+  const old = await getMap(at.m);
+  const ll = old.toLatLon(at.x, at.y);
+  const city = await getSurfaceMap(ll.lat, ll.lon);
+  const name = mapName(at.m);
+  if (worldOrigin(city.id) && name !== 'Daleko' && !name.startsWith('w:')) nameWorldMap(city.id, name);
+  return { city, at: { m: city.id, ...city.fromLatLon(ll.lat, ll.lon) } };
+}
+
+/** Keep money, progress, quest anchors and actual geographic positions during unification. */
+async function normalizeSurfaceState() {
+  for (const key of ['at', 'tu'] as const) {
+    const old = session[key];
+    if (old) session[key] = (await surfacePosition(old)).at;
+  }
+  const a = session.abandoned;
+  if (a && !jestLochem(a.m ?? 'lublin')) {
+    const old = await getMap(a.m ?? 'lublin');
+    const { city, at } = await surfacePosition({ m: old.id, x: a.x, y: a.y });
+    for (const e of a.enemies ?? []) {
+      const ll = old.toLatLon(e.x, e.y);
+      Object.assign(e, city.fromLatLon(ll.lat, ll.lon));
+    }
+    Object.assign(a, at, { s: PX_PER_M });
+  }
+  // Scenarios and the recruit prologue store geographic anchors already. Preserve
+  // their instances, choices, rewards and dungeon IDs; only update their surface owner.
+  for (const m of Object.values(session.gen)) {
+    const b = m.scenariusz;
+    if (b?.anchors[0]) b.mapId = (await getSurfaceMap(b.anchors[0].lat, b.anchors[0].lon)).id;
+    // A taken ordinary job can retain its issuer's identity after an origin change.
+    if (m.placeId) {
+      const match = m.placeId.match(/^(w:[^/]+)\/([^:]+):(-?\d+):(-?\d+)(.*)$/);
+      if (match && !m.dawca) {
+        const old = await getMap(match[1]);
+        const ll = old.toLatLon(Number(match[3]) * old.unitPx, Number(match[4]) * old.unitPx);
+        m.dawca = { ...ll, mapId: (await getSurfaceMap(ll.lat, ll.lon)).id };
+      }
+      m.placeId = await normalizePlaceId(m.placeId, m.adres);
+    }
+  }
+  const p = session.story.prolog;
+  const anchor = p?.anchors.mentor;
+  if (p && anchor) p.originMapId = (await getSurfaceMap(anchor.lat, anchor.lon)).id;
+  for (const s of session.byl) s.mapId = (await getSurfaceMap(s.lat, s.lon)).id;
+}
+
+async function normalizePlaceId(id: string, name: string) {
+  const paper = id.match(/^gazeta:(w:[^:]+):(-?[\d.]+):(-?[\d.]+)$/);
+  if (paper) {
+    const { at } = await surfacePosition({ m: paper[1], x: Number(paper[2]), y: Number(paper[3]) });
+    return `gazeta:${at.m}:${at.x}:${at.y}`;
+  }
+  const m = id.match(/^(w:[^/]+)\/([^:]+):(-?\d+):(-?\d+)(.*)$/);
+  if (!m) return id;
+  const old = await getMap(m[1]);
+  const { at, city } = await surfacePosition({ m: old.id, x: Number(m[3]) * old.unitPx, y: Number(m[4]) * old.unitPx });
+  if (city.id === old.id) return id;
+  await city.ensure(at.x, at.y, 200 * PX_PER_M);
+  const nearby = city.places.filter(p => p.kind === m[2] && p.name === name && Math.hypot(p.door.x - at.x, p.door.y - at.y) < 100 * PX_PER_M)
+    .sort((a, b) => Math.hypot(a.door.x - at.x, a.door.y - at.y) - Math.hypot(b.door.x - at.x, b.door.y - at.y));
+  if (nearby[0]) return nearby[0].id;
+  return `${city.id === 'lublin' ? '' : `${city.id}/`}${m[2]}:${Math.round(at.x / city.unitPx)}:${Math.round(at.y / city.unitPx)}${m[5]}`;
 }
 
 /** How far around the hero the map is loaded (tiled maps). */
@@ -109,10 +208,20 @@ export async function prepareMap(city: CityMap) {
   if (session.arrive) pts.push({ ...session.arrive, r: near });
   if (city.id === 'lublin') {
     pts.push({ x: session.startX, y: session.startY, r: near });
-    for (const street of [...PIES.ulice, MARGO.ulica, DZIADKOWIE.ulica, MARTIN.ulica]) {
+    // Do not wait for remote neighbourhoods merely to create their walking NPCs.
+    // Active return/collection quests still need their exact target at login.
+    const fixedStreets = [
+      ...(['active', 'goal'].includes(session.missions['npc-pies']) ? PIES.ulice : []),
+      ...(session.missions[MARTIN.zadanie.id] === 'active' ? [MARTIN.ulica] : []),
+    ];
+    for (const street of fixedStreets) {
       const p = city.findStart(street);
       if (p) pts.push({ ...p, r: 400 * PX_PER_M });
     }
+  }
+  for (const m of Object.values(session.gen)) {
+    if (!m.scenariusz || !surfaceBindingMatches(m.scenariusz.mapId, city.id, m.scenariusz.anchors) || !['active', 'goal'].includes(session.missions[m.id])) continue;
+    for (const ll of m.scenariusz.anchors) pts.push({ ...city.fromLatLon(ll.lat,ll.lon), r:100 * PX_PER_M });
   }
   const a = session.abandoned;
   if (a && (a.m ?? 'lublin') === city.id) pts.push({ x: a.x, y: a.y, r: near });
@@ -124,7 +233,12 @@ export async function prepareMap(city: CityMap) {
  * its map), or home. There are no teleports.
  */
 export async function enterWorld(game: Phaser.Game) {
+  await recoverArtillery();
+  try {
+  await normalizeSurfaceState();
   // Still on the way: the ride screen until the cart arrives (the load point is its station already).
+  // New controls test (walka/live.ts): a finished ride makes the arrival station the start, not the last spot.
+  if (session.jazda) session.tu = null;
   if (session.jazda) {
     await syncClock();
     if (serverNow() < session.jazda.end) await showJourney(session.jazda);
@@ -132,31 +246,77 @@ export async function enterWorld(game: Phaser.Game) {
   }
   let city = maps.get('lublin')!;
   // Reloaded for a new version (update.ts): back where the hero stood, once.
-  const back = takeResume(session.name);
-  let at = back ?? session.at;
+  const back = artilleryTransit.active ? null : takeResume(session.name);
+  // New controls test: the spot of the last save (walka/live.ts, point 7) wins over the hotel/home.
+  let at = back ?? ((live() && session.tu) || session.at);
+  // Saved in a dungeon (shouldn't happen – saves keep its entrance): the hotel or home instead.
+  if (at && jestLochem(at.m)) at = session.at && !jestLochem(session.at.m) ? session.at : null;
   if (at) {
     try {
-      city = await getMap(at.m);
+      const resolved = await surfacePosition(at);
+      city = resolved.city;
+      at = resolved.at;
     } catch {
+      if(artilleryTransit.active)throw new Error('Artillery destination map unavailable');
       at = null; // that map is gone: home
     }
   }
   session.arrive = at ? { x: at.x, y: at.y } : null;
+  const intro = loadingGame();
+  const a = session.abandoned;
+  const start = a?.enemies?.length && (a.m ?? 'lublin') === city.id && !session.immortal
+    ? a : session.arrive ?? { x: session.startX, y: session.startY };
+  const ll = city.toLatLon(start.x, start.y);
+  // Fade/zoom and the real terrain preparation run at the same time.
+  let markMapReady: () => void = () => {};
+  const mapReady = new Promise<void>((resolve) => { markMapReady = resolve; });
+  const flight = intro ? flyToGameLocation(ll.lat, ll.lon, mapReady) : Promise.resolve();
   await prepareMap(city);
   // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
   if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);
   game.registry.set('city', city);
+  const scene = game.scene.getScene('game') as GameScene;
+  const created = intro || artilleryTransit.active ? new Promise<void>((resolve) => scene.events.once('create', resolve)) : Promise.resolve();
   game.scene.start('game');
+  if (!intro && !artilleryTransit.active) return;
+  await created;
+  const deadline = performance.now() + 60_000;
+  const ready = async () => {
+    // Query the current camera on every check, including after a phone rotation.
+    while (!scene.firstViewReady()) {
+      if (performance.now() > deadline) throw new Error('Wczytywanie trwa zbyt długo. Spróbuj ponownie.');
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    }
+  };
+  await Promise.all([flight, ready().then(markMapReady)]);
+  // Tiles/landmarks arriving during the zoom may have asked for another drawing.
+  await ready();
+  scene.scene.setVisible(true);
+  scene.scene.setVisible(true, 'ui');
+  // Allow the completed textures to pass through a rendered frame before fading the cover.
+  await new Promise<void>((resolve) => game.events.once('postrender', resolve));
+  await finishArtilleryRecovery();
+  await revealLoadedGame();
+  } catch(e){
+    if(artilleryTransit.active&&await rollbackArtilleryRecovery()){game.scene.stop('ui');game.scene.stop('game');await enterWorld(game);return;}
+    throw e;
+  }
 }
 
 export function mapName(id: string) {
+  const loch = czytajIdLochu(id);
+  if (loch) return nazwyLochow.get(id) ?? LOCHY[loch.rodzaj].nazwa;
   if (worldOrigin(id)) return worldNames.get(id) ?? 'Daleko';
   return id === 'lublin' ? 'Lublin' : world.towns.find((t) => t.id === id)?.name ?? id;
 }
-const cityMapId = (c: { lat: number; lon: number }) => `w:${c.lat.toFixed(4)},${c.lon.toFixed(4)}`;
+const cityMapId = (c: { lat: number; lon: number }) => worldMapId(c.lat, c.lon);
 const worldNames = new Map<string, string>(DUZE_MIASTA.map((c) => [cityMapId(c), c.nazwa]));
+/** A world map's name for the HUD (ports: porty.ts names the map a ferry lands on). */
+export function nameWorldMap(id: string, name: string) {
+  if (!worldNames.has(id)) worldNames.set(id, name);
+}
 
-export type Offer = Trip & { level?: number };
+export type Offer = Trip & { level?: number; statek?: boolean; train?: boolean };
 
 function hashStr(s: string) {
   let h = 2166136261;
@@ -168,8 +328,14 @@ function hashStr(s: string) {
 export type Strona = 'N' | 'S' | 'E' | 'W';
 export const STRONY: Record<Strona, string> = { N: 'na północ', S: 'na południe', E: 'na wschód', W: 'na zachód' };
 
-/** Price of a ride: the fee + per km, rounded up (content/pociagi.ts). */
-export const ridePrice = (d: number) => Math.ceil((COACH_FEE + d * COACH_PER_KM) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie;
+/** Price of a ride: the fee + per km, rounded up (content/pociagi.ts WOZNICA / POCIAG). */
+export const ridePrice = (d: number, train = false) => {
+  const t = train ? POCIAG : WOZNICA;
+  return Math.ceil((t.oplata + d * t.zaKm) / WOZNICA.zaokraglenie) * WOZNICA.zaokraglenie;
+};
+
+/** Speed of a ride, km/h: a long-distance train or a coach. */
+export const rideKmh = (train?: boolean) => (train ? POCIAG.kmh : WOZNICA.kmh);
 
 const slotNow = () => Math.floor(Date.now() / (WOZNICA.zmianaCoMin * 60_000));
 
@@ -222,7 +388,7 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
     if (!c) return;
     const to: Stop = { name: c.nazwa, lat: c.lat, lon: c.lon, key: `w|${c.nazwa}`, mapId: cityMapId(c), mapName: c.nazwa };
     const d = km(here, to);
-    out.push({ to, km: d, via: null, price: ridePrice(d), level: WOZNICA.odPoziomu });
+    out.push({ to, km: d, via: null, price: ridePrice(d, true), level: WOZNICA.odPoziomu, train: true });
   };
   if (worldOrigin(mapId)) {
     // A far city: rides to other cities within reach (Lublin is just one of them); no forced way home.
@@ -238,7 +404,8 @@ export function coachOffers(mapId: string, at: { lat: number; lon: number }, sta
     for (const to of [nearest, other]) {
       if (!to) continue;
       const d = km(here, to);
-      out.push({ to, km: d, via: null, price: ridePrice(d), level: to.mapId === 'lublin' ? undefined : WOZNICA.odPoziomu });
+      // Between far cities (Lublin included) it's always a long-distance train.
+      out.push({ to, km: d, via: null, price: ridePrice(d, true), level: to.mapId === 'lublin' ? undefined : WOZNICA.odPoziomu, train: true });
     }
     return out;
   }
@@ -291,7 +458,7 @@ export function stopFor(mapId: string, name: string, lat?: number, lon?: number)
  * without timetable data, the nearest stations.
  */
 export function tripsFrom(from: Stop): Trip[] {
-  const price = ridePrice;
+  const price = (d: number) => ridePrice(d);
   const out = new Map<string, Trip>();
   const add = (to: Stop | undefined, via: string | null) => {
     if (!to || to.key === from.key) return;

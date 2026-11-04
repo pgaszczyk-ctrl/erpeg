@@ -84,3 +84,44 @@ export const WODNIK = {
 
 /** Mieszkańcy w deszczu: mniej ich na ulicach, część z parasolem. */
 export const LUDZIE_W_DESZCZU = { ilu: 0.5, parasol: 0.45, kolory: [0x2b4f7a, 0x7a2b3b, 0x2f6b46, 0x3a3a44, 0xb08a2e] };
+
+/** Cloud shadows drifting over the map (WeatherFx): cover = generator amount odPokrycia + zaPokrycie × forecast cloud
+ * (0.2 → ~10 % of the view in shadow, 0.65 → ~35 %), so even a full overcast leaves most of the ground in the sun. */
+export const CIENIE_CHMUR = {
+  odPokrycia: 0.2,
+  zaPokrycie: 0.45,
+  /** Alpha of the shadow's soft rim and of its core (0..255). */
+  alfaLekka: 38,
+  alfaPelna: 68,
+};
+
+/**
+ * The hero's lamp (owner, 11 Oct 2026): a warm light AROUND the hero (a hole over him, so he isn't
+ * blinded) and a cone lighting the way ahead in the direction he faces, like the old cone of sight.
+ * Off by day (clouds and mist don't light it); it comes on after sunset and while it rains or snows.
+ * Darkness = `zaOpady` while it rains/snows (`gdyPada`) + night (1 − daylight) × `zaNoc`;
+ * the light fades in between `odCiemnosci` and `pelnaPrzy` of it, up to `moc`.
+ */
+export const POSWIATA_BOHATERA = {
+  /** Reach of the cone ahead in map px (the hero is ~13 map px tall). */
+  zasieg: 70,
+  /** Radius of the glow around the hero, as a share of `zasieg` (owner: „to nie latarka tylko lampa” – a soft glow all around). */
+  wokol: 0.6,
+  /** Strength of the glow around vs the light ahead (0..1 of the texture). */
+  wokolMoc: 0.85,
+  stozekMoc: 0.4,
+  /** The dark hole over the hero, as a share of `zasieg` (fully lit from `dziura` × 2). */
+  dziura: 0.07,
+  /** Half-angle of the cone in degrees (soft edge 15° more). */
+  stozekStopni: 45,
+  kolor: [255, 214, 150] as [number, number, number],
+  moc: 0.42,
+  /** Weather kinds in which the lamp is lit by day too (owner: „po zachodzie słońca lub pada”), and how strongly (0..1 of darkness). */
+  gdyPada: ['deszcz', 'ulewa', 'burza', 'snieg'] as string[],
+  zaOpady: 0.5,
+  zaNoc: 1,
+  odCiemnosci: 0.12,
+  pelnaPrzy: 0.45,
+  /** Flicker like a flame: ± this share of the light. */
+  migotanie: 0.07,
+};

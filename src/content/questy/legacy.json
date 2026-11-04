@@ -1,0 +1,1522 @@
+[
+  {
+    "id": "legacy.story.shadow",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Co to za cień? Trochę to było straszne… i ten pisk? Muszę się dowiedzieć więcej."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "What was that shadow? That was a little scary… and that screech? I need to find out more."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.ask",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🐉 Zapytaj o cienie"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🐉 Ask about the shadows"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.unaware0",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Cienie? Nic nie widziałem. Może ci się przywidziało?"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Shadows? I did not see anything. Perhaps you imagined it?"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.unaware1",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Nie mam pojęcia, o czym mówisz. Zapytaj gdzie indziej."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I have no idea what you mean. Try asking somewhere else."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.unaware2",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Słyszałem jakiś pisk, ale myślałem, że to tramwaj. Nic więcej nie wiem."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I heard a screech, but thought it was a tram. That is all I know."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.unaware3",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Nie, nie, ja się takimi bajkami nie zajmuję."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "No, no. I do not get involved in such tales."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.clue0",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Też go widziałem! Ogromny, skrzydlaty… Uczeni z miejsca „{cel}” na pewno coś wiedzą. Idź tam!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "I saw it too! Huge, with wings… The scholars at “{cel}” must know something. Go there!"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.clue1",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Ciii… Mówią, że przy „{cel}” kręci się dziwny człowiek w spiczastej czapce. On wie więcej."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Shh… They say a strange person in a pointed hat has been seen near “{cel}”. He knows more."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.clue2",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Stare księgi mówiły, że kiedyś wrócą… Zapytaj w „{cel}”, tam mają najmądrzejsze głowy."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The old books said they would return one day… Ask at “{cel}”; the wisest minds are there."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.wizardName",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mag Albrecht"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wizard Albrecht"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.oldLevelGate",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Hmm… Czuję, że widziałeś cień. Ale jesteś jeszcze za słaby na tę opowieść. Wróć, gdy osiągniesz {poziom}. poziom."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Hmm… I sense that you saw the shadow. But you are not strong enough for this story yet. Return when you reach level {poziom}."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.wizardStory",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smoki wróciły! Kometa, która niedawno przecięła niebo, obudziła je z wiekowego snu. Kiedyś żyliśmy w zgodzie, ale ludzka chciwość w dawnej Wojnie o Tryby wygnała je w mrok. Teraz wracają, lecz uważaj – od tak długiego snu niektóre z nich zapadły na Rdzę Umysłu i postradały zmysły. Znalazłem leże za miastem. Musisz tam iść, zanim bestia zrobi krzywdę sobie lub komuś z nas."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragons have returned! The comet that recently crossed the sky woke them from their age-long sleep. We once lived in harmony, but human greed during the old War of Gears drove them into darkness. Now they are returning, but beware: after such a long sleep, some have fallen victim to the Rust of the Mind and lost their senses. I found a lair outside town. You must go there before the beast hurts itself or one of us."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.meeting",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przed tobą, na polanie, leży prawdziwy smok! Jego łuski lśnią, a z nozdrzy unosi się dym. Patrzy prosto na ciebie."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "A real dragon lies in the clearing before you! Its scales gleam and smoke rises from its nostrils. It looks straight at you."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.fightChoice",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "⚔ Zabij bestię"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "⚔ Kill the beast"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.investigateChoice",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🔍 Zbadaj to cudo"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🔍 Investigate this wonder"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.investigate",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok przekrzywia głowę i nie atakuje. Podejdź bliżej, może da się z nim porozmawiać."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon tilts its head without attacking. Come closer; perhaps you can talk to it."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.dragon0",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok odzywa się głębokim głosem: „Blask komety wyrwał mnie z ziemi… Wasz świat się zmienił. Pełno tu gryzącego dymu i ryczących maszyn parowych.”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon speaks in a deep voice: “The comet light drew me from the earth… Your world has changed. It is full of choking smoke and roaring steam engines.”"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.dragon1",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "„Gdzie podziały się spokojne lasy, których strzegliśmy? Gdzie jabłka, które przynosili nam wasi przodkowie?”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "“Where are the peaceful forests we guarded? Where are the apples your ancestors brought us?”"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.dragon2",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "„Jeśli naprawdę pamiętasz dawny pakt, udowodnij to. Zagraj naszą melodię, a znów staniemy się waszymi strażnikami…”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "“If you truly remember the old pact, prove it. Play our melody, and we will be your guardians again…”"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.peaceEnding",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok przymyka ślepia i mruczy z zadowoleniem: „Tak… to nasza pieśń. Pamiętasz pakt. Od dziś znów będziemy strzec waszych lasów i rzek – a ty, Bracie smoków, nie zapomnij o jabłkach.”"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon half-closes its eyes and purrs happily: “Yes… that is our song. You remember the pact. From today, we will guard your forests and rivers again. And you, Dragon Brother, must not forget the apples.”"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.oldFightEnding",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok pada z hukiem. Ziemia drży, a nad lasem unosi się dym. W jego oczach gaśnie mętny blask Rdzy Umysłu – już nikogo nie skrzywdzi. Pokonałeś smoka!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon falls with a crash. The ground shakes and smoke rises over the forest. The hazy glow of the Rust of the Mind fades from its eyes; it will hurt no one else. You defeated the dragon!"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.slayerTitle",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pogromca smoka"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Dragon Slayer"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.brotherTitle",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Brat smoków"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Dragon Brother"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.melodyTitle",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🎵 Smocza melodia"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🎵 Dragon Melody"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.melodyIntro",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok nuci cichą, starą melodię. Zagraj ją na fujarce – te same nutki po kolei."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon hums a quiet, ancient melody. Play it on your flute, repeating the notes in order."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.dragonHums",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok nuci:"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon hums:"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.yourFlute",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Twoja fujarka:"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Your flute:"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.repeatMelody",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "🔁 Posłuchaj jeszcze raz"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "🔁 Listen again"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.wrongMelody",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Smok kręci łbem… Posłuchaj jeszcze raz."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The dragon shakes its head… Listen again."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.story.rightMelody",
+    "source": {
+      "file": "src/content/historia.ts",
+      "sha": "d8c41913db092f7e9340434b7cc55e20ec91818d"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "✨ Pięknie! Smok nuci razem z tobą."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "✨ Lovely! The dragon hums along with you."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance0",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "blisko"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "nearby"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance1",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "nie tak blisko"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "not so close"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance2",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "dość daleko"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "quite far"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance3",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "daleko"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "far"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance4",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "bardzo daleko"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "very far"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.distance5",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "hen za morzem"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "far beyond the sea"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.castle.title",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Kłopoty na Starym Mieście"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Trouble in the Old Town"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.castle.offer",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Witaj, wędrowcze! Pod Bramą Krakowską zalęgły się psotne chochliki i straszą turystów. Przegoń je, a zamek sowicie cię wynagrodzi."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Greetings, traveller! Mischievous imps have gathered by Brama Krakowska and are frightening visitors. Drive them away, and the castle will reward you generously."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.castle.goal",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pokonaj chochliki przy Bramie Krakowskiej"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Defeat the imps by Brama Krakowska"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.castle.finish",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Brawo! Turyści znów mogą spokojnie robić zdjęcia. Oto twoja nagroda."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Well done! Visitors can take their photos in peace again. Here is your reward."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.pipes.title",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Rury na ratuszu"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Town Hall Pipes"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.pipes.offer",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Słuchaj no, wędrowcze! Chochliki dorwały się do naszych nowych, mosiężnych rur na tyłach ratusza i spuszczają całą parę! Zegary na mieście zaraz staną. Przegoń je, tylko szybko!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Listen, traveller! Imps have got into our new brass pipes behind the town hall and are letting all the steam out! The town clocks will stop. Drive them away, quickly!"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.pipes.goal",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przegoń chochliki od rur za ratuszem"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Drive the imps away from the pipes behind the town hall"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.pipes.finish",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Uff, zawory dokręcone. Masz tu parę monet, tylko nie mów nikomu, że to z miejskiego skarbca!"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Phew, the valves are tight again. Here are a few coins. Just do not tell anyone they came from the town treasury!"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.station.title",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Tajemnica stacji"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The Station Mystery"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.station.offer",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Woźnica rwie włosy z głowy! Ktoś porwał jego najlepszego konia, a obok wozu znaleźliśmy ślady wielkich, rogatych stóp. Idź za dworzec i odzyskaj zgubę."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The coachman is tearing his hair out! Someone took his best horse, and we found huge horned footprints beside the carriage. Go behind the station and bring the horse back."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.station.goal",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Odbij konia z rąk wielkiego chochlika za dworcem"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Rescue the horse from the giant imp behind the station"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.mission.station.finish",
+    "source": {
+      "file": "src/content/fabula.ts",
+      "sha": "ea131d51f908eaec91d43301231fa624459c465b"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Koń cały i zdrowy, a ty masz krzepę! Jak będziesz chciał ruszyć w daleki świat, u mnie masz jeden przejazd gratis."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "The horse is safe and sound, and you are strong! When you want to travel farther afield, your first ride with me is free."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.first.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pierwsze kroki"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "First Steps"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.first.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przejdź 1 km."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Walk 1 km."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.wanderer.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wędrowiec"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Wanderer"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.wanderer.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przejdź 25 km."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Walk 25 km."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.traveller.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Podróżnik"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Traveller"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.traveller.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Przejdź 100 km."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Walk 100 km."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.firstMonster.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pierwsza krew"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "First Blood"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.firstMonster.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pokonaj pierwszego potwora."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Defeat your first monster."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.impSlayer.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pogromca chochlików"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Imp Slayer"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.impSlayer.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Pokonaj 100 potworów."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Defeat 100 monsters."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.gangs.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Postrach gangów"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Gang Buster"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.gangs.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Rozbij 5 gangów."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Break up 5 gangs."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.duels.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mistrz pojedynków"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Duel Master"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.duels.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wygraj 10 pojedynków z mieszkańcami."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Win 10 duels with residents."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.trusted.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zaufany"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Trusted"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.trusted.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wykonaj 10 zleceń."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Complete 10 jobs."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.orchard.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Sadownik"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Orchard Keeper"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.orchard.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zbierz 500 owoców i warzyw."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Collect 500 fruits and vegetables."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.merchant.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Kupiec"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Merchant"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.merchant.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zarób łącznie 10 000 złota."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Earn a total of 10,000 gold."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.experienced.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Doświadczony"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Experienced"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.experienced.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Osiągnij 10. poziom."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Reach level 10."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.master.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Mistrz"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Master"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.master.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Osiągnij 20. poziom."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Reach level 20."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.dragon.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Cień smoka"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Dragon Shadow"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.dragon.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zakończ historię smoka (dowolnym tytułem)."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Complete the dragon story with either title."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.secret.name",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Wtajemniczony"
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "In the Know"
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  },
+  {
+    "id": "legacy.achievement.secret.description",
+    "source": {
+      "file": "src/content/osiagniecia.ts",
+      "sha": "da716036d78eea85f89e2c1ff195a7642c383b85"
+    },
+    "variants": [
+      {
+        "language": "pl",
+        "localHumor": false,
+        "text": "Zdradź komuś tajemne hasło."
+      },
+      {
+        "language": "en",
+        "localHumor": false,
+        "text": "Share a secret password with someone."
+      }
+    ],
+    "status": "translated_draft_not_applied"
+  }
+]

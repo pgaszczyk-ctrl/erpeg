@@ -1,0 +1,47 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><title>Zamówienie 45 – podgląd prób</title>
+<style>
+body{background:#2b2733;color:#eee;font:15px/1.4 system-ui,sans-serif;margin:20px}
+h1{font-size:20px;margin:0 0 6px}.drop{border:3px dashed #c9a24a;padding:18px;border-radius:8px;text-align:center;margin:12px 0;background:#3a3443}
+table{border-collapse:collapse;margin-top:10px}td,th{padding:6px 10px;text-align:center;vertical-align:middle}
+th{color:#f7c531;font-size:13px}th small{display:block;color:#bbb;font-weight:400}
+.slot{display:inline-grid;place-items:center;background:#0f0d13;border:2px solid #7a6038;border-radius:5px;padding:4px}
+.k32 .slot{border-color:#f7c531}
+img.u{image-rendering:pixelated}img.d{image-rendering:auto}
+.name{text-align:left;font-weight:700;max-width:220px}.ok{color:#8f8}.zle{color:#f88}.ch{font-size:12px;text-align:left;font-weight:400}
+</style>
+<h1>Zamówienie 45 – podgląd prób w rozmiarach z gry</h1>
+<p>Przeciągnij tutaj swoje PNG (64×64) albo wybierz je przyciskiem. Pliki zostają w przeglądarce, nic nie jest wysyłane.
+Wiersz <b>32 px</b> jest najważniejszy. Pod nazwą sprawdzam format.</p>
+<div class="drop" id="drop">Upuść pliki PNG tutaj <input type="file" id="f" multiple accept="image/png"></div>
+<label><input type="checkbox" id="tel"> Udawaj telefon (ekran ×2: każdy rozmiar rysowany 2× większą liczbą pikseli)</label>
+<table id="t"></table>
+<script>
+const R=[[20,'HUD kocioł'],[24,'Kufer tel.'],[32,'kluczowy'],[38,'koło walki'],[48,'Kufer'],[64,'tel. ×2'],[112,'karta broni'],[160,'sklep']];
+const rows=[{n:'WZÓR – skórzana zbroja (64×64)',src:'wzor/skorzana_zbroja_DOCELOWY_FORMAT_64.png',w:64,ch:''}];
+const t=document.getElementById('t');
+function draw(){
+  const tel=document.getElementById('tel').checked?2:1;
+  t.innerHTML='<tr><th></th>'+R.map(([s,l])=>`<th>${s} px<small>${l}</small></th>`).join('')+'</tr>'+
+  rows.map(r=>'<tr><td class="name">'+r.n+'<div class="ch">'+r.ch+'</div></td>'+R.map(([s])=>{
+     const dev=s*tel, cls=dev>=r.w?'u':'d';
+     return `<td class="${s===32?'k32':''}"><span class="slot"><img class="${cls}" src="${r.src}" style="width:${s}px;height:${s}px"></span></td>`}).join('')+'</tr>').join('');
+}
+function check(img){
+  const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+  const x=c.getContext('2d');x.drawImage(img,0,0);const d=x.getImageData(0,0,c.width,c.height).data;
+  let semi=0,cols=new Set(),x0=1e9,y0=1e9,x1=-1,y1=-1;
+  for(let i=0;i<d.length;i+=4){const a=d[i+3];if(a>0&&a<255)semi++;if(a===255){cols.add((d[i]<<16)|(d[i+1]<<8)|d[i+2]);const p=i/4,px=p%c.width,py=(p/c.width)|0;x0=Math.min(x0,px);y0=Math.min(y0,py);x1=Math.max(x1,px);y1=Math.max(y1,py);}}
+  const w=c.width,h=c.height,out=[];
+  const f=(ok,txt)=>out.push(`<span class="${ok?'ok':'zle'}">${ok?'✔':'✘'} ${txt}</span>`);
+  f(w===64&&h===64,`rozmiar ${w}×${h} (ma być 64×64)`);
+  f(semi===0,`półprzezroczyste piksele: ${semi} (ma być 0)`);
+  f(x0>=4&&y0>=4&&x1<=59&&y1<=59,`zajęte pole x ${x0}–${x1}, y ${y0}–${y1} (ma być w 4–59)`);
+  f((x1-x0>=50)||(y1-y0>=50),`wypełnienie: ${x1-x0+1}×${y1-y0+1} px (min. 51 w jedną stronę)`);
+  f(cols.size<=48,`kolorów: ${cols.size} (najwyżej 48)`);
+  return out.join('<br>');
+}
+function add(files){for(const file of files){const u=URL.createObjectURL(file);const im=new Image();im.onload=()=>{rows.push({n:file.name,src:u,w:im.naturalWidth,ch:check(im)});draw()};im.src=u;}}
+document.getElementById('f').onchange=e=>add(e.target.files);
+const dr=document.getElementById('drop');dr.ondragover=e=>{e.preventDefault()};dr.ondrop=e=>{e.preventDefault();add(e.dataTransfer.files)};
+document.getElementById('tel').onchange=draw;draw();
+</script></html>
