@@ -884,3 +884,7 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 ## 2026-11-04 — krótkie napisy przy wydobywaniu
 - Na prośbę właściciela usunięto liczby zapasu i uderzeń z etykiety złoża, liczniki nad skałą oraz objaśnienia liczbowe w opisie kilofa i sklepu. Pozostają nazwa złoża, krótki komunikat o braku kilofa/wyczerpaniu i otrzymanym surowcu. Mechanika bez zmian. Pliki: GameScene, przedmioty. PASS: pełny npm run build i Playwright/preview komputer + 390×844; obejrzano krótką etykietę i brak liczników.
 - 2026-11-04 — Potwierdzenie publikacji kartek z pomysłami: finalny układ 62e5db4 (obie kartki w prawym marginesie, jedna pod drugą; PL „mam pomysła!”, EN „i have an idea!”) wszedł razem z nowszym a24459e. GitHub Actions 41871595148 zakończone SUCCESS, https://exp-lore.app/test/ odpowiada HTTP 200. Wcześniejsze przebiegi 41869383434 i 41870753762 zostały zastąpione nowszymi pushami. Testy lokalne i bazy opisane wyżej; produkcyjny pin bez zmian.
+
+
+## 2026-11-04 — wyczerpane złoże znika
+- Złoże po ostatniej grudce natychmiast znika wraz z interakcją. Zapisany dzienny stan utrzymuje ukrycie po odejściu/powrocie i wczytaniu; następnego dnia wraca w tym samym miejscu. Zamiast przygaszania skały wspólny warunek dostępności w Zloza i GameScene. Regresja browser-mining obejmuje znikanie, brak interakcji, odtworzenie z dziennym stanem i powrót następnego dnia. PASS: npm run build, ponowny vite build, Playwright/preview PC i 390×844; obejrzano zrzuty po zniknięciu skały i etykiety.

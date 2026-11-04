@@ -21,8 +21,12 @@ export class Zloza {
     return session.daily[key];
   }
 
+  dostepne(z: Pick<Zloze, 'id'>) {
+    return this.stan(z).n < GORNICTWO.dziennie;
+  }
+
   update(x: number, y: number, now: number, visible: (x: number, y: number) => boolean) {
-    for (const z of this.lista) z.obraz.setVisible(visible(z.x,z.y));
+    for (const z of this.lista) z.obraz.setVisible(this.dostepne(z) && visible(z.x,z.y));
     if (now < this.next) return;
     this.next = now + 600;
     for (const z of this.lista.filter(z => Math.hypot(z.x-x,z.y-y)>700)) z.obraz.destroy();
@@ -39,12 +43,11 @@ export class Zloza {
       if (!this.city.areaKindsAt(p.x,p.y).some(k=>TEREN.has(k)) || this.city.roadAt(p.x,p.y) || !this.city.isFree(p.x,p.y,12,12)) continue;
       if (this.city.places.some(t=>Math.hypot(t.door.x-p.x,t.door.y-p.y)<40)) continue;
       // Artist's iron rock, pack 45 C2; use the delivered sprite rather than a new drawing.
-      const obraz=this.scene.add.image(p.x,p.y,'item-ruda_zelaza').setDisplaySize(30,30).setOrigin(.5,.85).setDepth(p.y).setVisible(visible(p.x,p.y));
+      const obraz=this.scene.add.image(p.x,p.y,'item-ruda_zelaza').setDisplaySize(30,30).setOrigin(.5,.85).setDepth(p.y).setVisible(this.dostepne({id}) && visible(p.x,p.y));
       this.lista.push({id,...p,obraz});
     }
     // Old days do not occupy the save forever. Current-day counts survive despawning.
     const day=today();
     for (const key of Object.keys(session.daily)) if(key.startsWith('zloze:')&&session.daily[key].d!==day) delete session.daily[key];
-    for (const z of this.lista) z.obraz.setAlpha(this.stan(z).n>=GORNICTWO.dziennie?.45:1);
   }
 }
