@@ -123,3 +123,6 @@ export const ALCHEMIK = { owocow: 50, premiaSerc: 1, premiaMinut: 10 };
 
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */
 export const LECZENIE_OWOCAMI = { owocow: 20, serduszek: 1 };
+
+/** Żelazo: limit i liczba uderzeń na jedną grudkę. */
+export const GORNICTWO = { uderzen: 5, dziennie: 10, odstepMs: 400 };
