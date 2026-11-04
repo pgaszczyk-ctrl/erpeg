@@ -879,3 +879,7 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 - Doprecyzowanie głosowe właściciela: obie kartki po prawej, jedna pod drugą, na osobnym marginesie (quest z gry + własne pomysły). Zmieniono układ tablicaMiasta/pomysly: oddzielna kolumna obok mapy, przywrócona wysokość mapy, modale ponad kartkami.
 - Prawy margines: ponowne npm run build PASS; Playwright komputer i telefon 390×844 PASS (wspólny rodzic kartek, kolumna po prawej od mapy, kartki jedna pod drugą oraz pełny przebieg wysyłania/limitu). Zrzuty sprawdzone wizualnie w work/ideas/.
+
+
+## 2026-11-04 — krótkie napisy przy wydobywaniu
+- Na prośbę właściciela usunięto liczby zapasu i uderzeń z etykiety złoża, liczniki nad skałą oraz objaśnienia liczbowe w opisie kilofa i sklepu. Pozostają nazwa złoża, krótki komunikat o braku kilofa/wyczerpaniu i otrzymanym surowcu. Mechanika bez zmian. Pliki: GameScene, przedmioty.
