@@ -64,6 +64,8 @@ export function catchGoogleReturn(): boolean {
   const h = new URLSearchParams(location.hash.slice(1));
   const token = h.get('access_token');
   const error = h.get('error_description') ?? h.get('error');
+  // Tokens and verification errors must not remain in browser history.
+  history.replaceState(null, '', `${location.origin}${sciezkaGry()}`);
   if (token) {
     store({ access_token: token, refresh_token: h.get('refresh_token') ?? '', expires_at: Math.floor(Date.now() / 1000) + Number(h.get('expires_in') ?? 3600), email: emailOf(token) });
     // The "forgot password" link: set a new one here.
@@ -78,7 +80,10 @@ export function catchGoogleReturn(): boolean {
       // nothing to report back
     }
   }
-  document.body.innerHTML = `<div style="font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center">${token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`}</div>`;
+  const message = document.createElement('div');
+  message.style.cssText = 'font:18px monospace;color:#fff;background:#1b2a1b;padding:40px;text-align:center';
+  message.textContent = token ? '✅ Zalogowano. Wróć do gry.' : `❌ ${error ?? 'Nie udało się zalogować.'}`;
+  document.body.replaceChildren(message);
   setTimeout(() => window.close(), 600);
   return true;
 }
@@ -87,6 +92,7 @@ const PAGE = 'font:18px/1.5 Georgia,serif;color:#f3e6c4;background:#1b140e;min-h
 const gameUrl = () => `${location.origin}${sciezkaGry()}`;
 
 async function verifyEmailLink(tokenHash: string, type: string) {
+  history.replaceState(null, '', gameUrl());
   document.body.innerHTML = `<div style="${PAGE}"><h1 style="font-size:32px">Exp-lore</h1><p>${tx('Sprawdzam link…', 'Checking the link…')}</p></div>`;
   try {
     const r = await fetch(`${AUTH}/verify`, {
@@ -114,7 +120,14 @@ export function googleUser(): GoogleSession | null {
 }
 
 export function googleSignOut() {
+  const session = read();
   store(null);
+  // Capture the token before clearing local state. Revoke the account session
+  // too; removing browser storage alone leaves a stolen refresh token usable.
+  if (session) void fetch(`${AUTH}/logout?scope=local`, {
+    method: 'POST',
+    headers: { apikey: RPC.headers.apikey, Authorization: `Bearer ${session.access_token}` },
+  }).catch(() => { /* Local logout must still work without a connection. */ });
 }
 
 /** Is Google sign-in switched on in the server settings? */

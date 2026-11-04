@@ -40,7 +40,8 @@ const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Z
 
 let key = '';
 try {
-  key = sessionStorage.getItem('erpeg-admin') ?? '';
+  // Do not leave the administrator's master password in script-readable storage.
+  sessionStorage.removeItem('erpeg-admin');
 } catch {
   // private mode
 }
@@ -124,11 +125,6 @@ function loginScreen(error = '') {
     msg.textContent = 'Sprawdzam…';
     try {
       await reload();
-      try {
-        sessionStorage.setItem('erpeg-admin', key);
-      } catch {
-        // private mode
-      }
       render();
     } catch (err) {
       msg.textContent = (err as Error).message;
@@ -1208,11 +1204,6 @@ function settings(main: HTMLElement) {
       try {
         await call('admin_set_key', { p_new: a.value });
         key = a.value;
-        try {
-          sessionStorage.setItem('erpeg-admin', key);
-        } catch {
-          // private mode
-        }
         msg.className = 'msg ok';
         msg.textContent = 'Hasło zmienione.';
       } catch (e) {
