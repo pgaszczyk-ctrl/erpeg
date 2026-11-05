@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '05.11.2026', tytul: { pl: 'Armaty, Kulociąg i nowe przygody', en: 'Cannons, Ballway and new adventures' },
+    tresc: { pl: 'Podróżuj armatami i Kulociągiem, odkrywaj spójny świat i podejmij Czarci Wyrok w Lublinie. Na miejskich tablicach czekają zlecenia oraz kartka na Twoje pomysły. Kilofem wydobędziesz rudę żelaza. Poprawiliśmy też sklepy na telefonach, sprzedaż ekwipunku, wybór rozmówcy, budynki, ulice i arenę.', en: 'Travel by cannon and Ballway, explore a consistent world and take on The Devil’s Verdict in Lublin. City boards offer jobs and a note for your ideas. Mine iron ore with a pickaxe. Mobile shops, equipment sales, interaction selection, buildings, streets and the arena have also been improved.' },
+  },
+  {
     data: '27.10.2026', tytul: { pl: 'Płynniej i czytelniej', en: 'Smoother and easier to read' },
     tresc: { pl: 'Gra działa płynniej na telefonach: mapa, mgła i bohater rysują się znacznie lżej, budynki i bruk nie migoczą już przy chodzeniu, a nowy kawałek miasta przygotowuje się wcześniej w stronę, w którą idziesz. Kurier Parowy na telefonie trzymanym poziomo otwiera się jak prawdziwa gazeta – po lewej tytuł i działy, po prawej artykuł.', en: 'The game runs more smoothly on phones: the map, the fog and the hero are much lighter to draw, buildings and cobbles no longer flicker while walking, and the next piece of the city is prepared earlier in the direction you walk. On a phone held sideways the Steam Courier opens like a real paper – the masthead and sections on the left, the article on the right.' },
   },

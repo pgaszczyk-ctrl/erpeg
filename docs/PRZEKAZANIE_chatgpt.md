@@ -1,5 +1,12 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-05 — pełne wydanie produkcyjne 1.045
+
+- Właściciel po przeglądzie TEST polecił: „Wszystko wrzuć, najwyżej będziemy poprawiać po feedbacku z produkcji”. Baza źródłowa: d23823c54f5ae1b820b5f798a2ab1205c64e4e92.
+- Włączono transport w produkcyjnym kliencie (inicjalizacja i recovery), dodano Czarci Wyrok do jawnej listy opublikowanych historii; pozostałe nieopublikowane historie zachowują dotychczasowe zasady. Wersja 1.045 i aktualności gazety PL/EN.
+- LIVE: migracja release_1_045_transport_for_all_players (dokładny SQL w docs/sql/produkcja-1.045-transport.sql). Zdjęta blokada imion tylko z ma_stan/ma_lot/ma_settle; ma_pending_guard obejmuje wszystkich. Zachowane sprawdzanie tokenu, odległości, połączenia, opłaty i idempotencji. Nie usuwano ani resetowano danych graczy. Po migracji sprawdzono definicje funkcji i triggera.
+- PASS: TypeScript i Vite; regresja PGlite PROD=1 (328 miast, zwykła postać, nieważny token, opłata, ponowienie, spóźniony zapis i zakończenie podróży); interakcje, panorama, nawierzchnie Warszawy i sprzedaż ekwipunku. PASS przeglądarka na produkcyjnym buildzie: armaty na zwykłej postaci PC + telefon poziomy/pionowy (podróż, utracona odpowiedź, pojedyncza opłata, recovery po odświeżeniu, brak błędów JS), wydobycie PC/telefon. Zrzuty obejrzane. TypeScript/Vite ponowione po przywróceniu dokładnych zależności z npm ci (Vite 8.3.5). Pełna regeneracja mapy lokalnie w toku; workflow przed publikacją wymaga własnego npm run build. Kontrola menu/auth wymaga gotowych map; pierwszy przebieg doszedł do menu i zatrzymał się na brakujących jeszcze danych.
+
 ## 2026-11-04 — zatwierdzone wdrożenie zabezpieczeń 1.044
 
 - Po pytaniu o usuwanie właściciel wyraził zgodę na hotfix produkcyjny i migrację. Niczego z danych graczy nie usuwano.

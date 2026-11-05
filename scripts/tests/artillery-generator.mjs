@@ -7,14 +7,20 @@ const { PGlite } = await import(process.env.PGLITE_MODULE || "@electric-sql/pgli
 const G = await import("../../src/artillery/generator.ts");
 const swiat = JSON.parse(fs.readFileSync("public/artillery/swiat.json"));
 const db = new PGlite();
+const production = process.env.PROD === '1';
 await db.exec(`
 create table players(id uuid primary key,name text,save jsonb,snapshot jsonb,dead boolean default false,token text);
 create function _player_by_token(p text) returns table(id uuid) language sql as $$ select id from players where token=p $$;
 create table ma_trips(player uuid references players(id),nonce uuid,origin text,destination text,state text not null,price int not null,coins_after int not null,origin_at jsonb not null,destination_at jsonb not null,hero jsonb not null default '{}'::jsonb,created timestamptz default now(),primary key(player,nonce));
 do $$ begin create role anon; create role authenticated; exception when others then null; end $$;
 `);
+if (production) {
+  await db.exec('create schema extensions');
+  await db.exec(fs.readFileSync('docs/sql/artillery.sql', 'utf8'));
+}
 await db.exec(fs.readFileSync("docs/sql/artillery-generator.sql", "utf8"));
 await db.exec(fs.readFileSync("docs/sql/artillery-swiat-dane.sql", "utf8"));
+if (production) await db.exec(fs.readFileSync('docs/sql/produkcja-1.045-transport.sql', 'utf8'));
 
 // 1) Parity on a spread of cities (every 15th + chosen ones).
 const chosen = new Set(["Lublin", "Warsaw", "Istanbul", "Chicago", "Copenhagen", "Gdańsk", "Radom", "Tokyo", "Lagos", "Reykjavík", "Quito", "Auckland"]);
@@ -78,6 +84,11 @@ const [a, b] = L.krawedzie[0];
 await db.query(`insert into players values('00000000-0000-0000-0000-000000000001','Arceus',$1,null,false,'tok')`, [
   JSON.stringify({ coins: 1000, tu: at(sq[a], 100) }),
 ]);
+if (production) {
+  await db.exec("update players set name='ZwyklyGracz'");
+  assert.equal((await db.query("select ma_stan('tok') r")).rows[0].r.enabled, true);
+  await assert.rejects(db.query("select ma_stan('invalid')"), /Session expired/);
+}
 const lot = (from, to, dest, nonce = crypto.randomUUID()) =>
   db.query(`select ma_lot('tok',$1,$2,$3,$4) r`, [nonce, `c${lublin[0]}:${from}`, `c${lublin[0]}:${to}`, JSON.stringify(dest)]);
 const nonLinked = L.stacje.map((s) => s.k).find((k) => k !== a && !L.krawedzie.some(([x, y]) => (x === a && y === k) || (y === a && x === k)));
@@ -87,8 +98,19 @@ const r = (await lot(a, b, at(sq[b], 150))).rows[0].r;
 const price = G.cenaZaMetry(G.metry(L.stacje[a], L.stacje[b]));
 assert.equal(r.price, price, "server price = game price");
 assert.equal(r.coins_after, 1000 - price);
+if (production) {
+  const before = (await db.query("select save from players")).rows[0].save;
+  await db.query("update players set save=jsonb_set(jsonb_set(save,'{coins}','1000'),'{tu}',$1)", [JSON.stringify(at(sq[a]))]);
+  assert.deepEqual((await db.query("select save from players")).rows[0].save, before, 'late save cannot overwrite pending arrival/wallet');
+  const replay = (await lot(a, b, at(sq[b], 150), r.nonce)).rows[0].r;
+  assert.deepEqual(replay, r, 'retry charges once');
+  const settled = (await db.query("select ma_settle('tok',$1,false) r", [r.nonce])).rows[0].r;
+  assert.equal(settled.state, 'done', 'ordinary player can complete the trip');
+  assert.deepEqual((await db.query("select ma_settle('tok',$1,false) r", [r.nonce])).rows[0].r, settled);
+}
 console.log(`ma_lot OK: ${G.metry(L.stacje[a], L.stacje[b]).toFixed(0)} m → ${price} coins`);
 const far = (await db.query(`update players set save=jsonb_set(save,'{tu}',$1) returning 1`, [JSON.stringify(at(sq[a], 1700))]));
 await db.query(`update ma_trips set state='done'`);
 await assert.rejects(lot(a, b, at(sq[b])), /Come closer/);
 console.log("PASS artillery generator");
+await db.close();

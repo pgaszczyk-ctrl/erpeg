@@ -244,11 +244,11 @@ export const api = {
   szpitalPowrot: (name: string, code: string) => rpc<LoginResult>('szpital_powrot', { p_name: name, p_idik: code }),
   /** Missions made in the admin panel. */
   quizzes: () => rpc<[number, number, string, string, string[], string | null][]>('school_quizzes', { p_all: true }),
-  // Owner, 17 Oct 2026: release Hela Trybik's entire chain, including Bruno's shop.
+  // Released stories: Hela Trybik and Bruno (17 Oct); Czarci Wyrok (5 Nov 2026).
   // Other test-only stories remain hidden on production, even though we fetch the full catalogue.
   content: async () => {
     const list = await rpc<(import('./content/fabula').Misja & { sekret?: boolean })[]>('game_content', { p_all: true });
-    const released = new Set(['sz_jarmark', 'sz_para', 'sz_chochliki', 'sz_czarcia_lapa', 'sz_slodki_trop', 'sz_herszt', 'sz_zegarmistrz', 'sz_serce', 'sz_cukiernia']);
+    const released = new Set(['sz_jarmark', 'sz_para', 'sz_chochliki', 'sz_czarcia_lapa', 'sz_slodki_trop', 'sz_herszt', 'sz_zegarmistrz', 'sz_serce', 'sz_cukiernia', 'cw_czarci_wyrok']);
     return TEST ? list : list.filter((m) => !m.tylkoTest || released.has(m.id));
   },
   redeem: (token: string, missionId: string, code: string) =>

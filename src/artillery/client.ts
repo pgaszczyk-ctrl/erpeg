@@ -4,7 +4,6 @@ import Phaser from "phaser";
 import { CityMap, PX_PER_M } from "../map/CityMap";
 import { session } from "../quests";
 import { rpc, offline } from "../api";
-import { TEST } from "../version";
 import { tx } from "../i18n";
 import type { Player } from "../objects/Player";
 import { flight, type Kadr } from "./flight";
@@ -206,7 +205,7 @@ export class Artillery {
     private player: Player,
     private host: Host,
   ) {
-    if (TEST && !offline.demo && !city.loch) this.loaded = this.load();
+    if (!offline.demo && !city.loch) this.loaded = this.load();
   }
   private async load() {
     this.registry = await siecPrzy(
@@ -766,7 +765,7 @@ export class Artillery {
 }
 /** Recovery uses the durable receipt; refresh never replays a charge or depends on an animation. */
 export async function recoverArtillery() {
-  if (!TEST || offline.demo) return;
+  if (offline.demo) return;
   let state: State;
   try {
     state = await rpc<State>("ma_stan", { p_token: session.token });

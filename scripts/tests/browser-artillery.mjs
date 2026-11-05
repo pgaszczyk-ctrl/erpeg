@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { preview } from "vite";
 const require = createRequire(import.meta.url),
   { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const playerName = process.env.PROD === '1' ? 'ZwyklyGracz' : 'Jam';
 const server = await preview({
   preview: { host: "127.0.0.1", port: 4189, strictPort: true },
 });
@@ -127,7 +128,7 @@ try {
         body = {
           token: "fixture",
           player: {
-            name: "Jam",
+            name: playerName,
             idik: "ANGELIKA",
             start_place: "Lublin",
             start_x: 2880,
@@ -215,7 +216,7 @@ try {
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("dialog", (d) => d.accept());
     const start =
-      "http://127.0.0.1:4189/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=Jam&kod=ANGELIKA";
+      `http://127.0.0.1:4189/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=${playerName}&kod=ANGELIKA`;
     console.log(tag, "starting");
     await page.goto(start);
     await page.waitForFunction(
