@@ -10,9 +10,10 @@ const OUT = process.env.OUT ?? 'work/itch';
 await mkdir(OUT, { recursive: true });
 
 const MIEJSCA = {
-  giewont: { probka: 'zakopane', ll: [49.2508, 19.9335] },
-  wisla: { probka: 'krakow', ll: [50.0530, 19.9320] },
-  zamek: { probka: null, ll: [51.2496, 22.5715] },
+  giewont: { probka: 'zakopane', ll: [49.2508, 19.9335], teren: true, idz: ['d', 'w'] },
+  triglav: { probka: 'triglav', ll: [46.3785, 13.8365], idz: ['d', 'w'] },
+  wisla: { probka: 'krakow', ll: [50.0530, 19.9320], idz: ['s', 'd'] },
+  zamek: { probka: null, ll: [51.2496, 22.5715], idz: ['a'] },
 };
 const wybrane = process.env.MIEJSCE ? process.env.MIEJSCE.split(',') : Object.keys(MIEJSCA);
 const mobile = process.env.TELEFON === '1';
@@ -58,15 +59,16 @@ try {
       });
     }
     // Nothing of the outside world (R2, elevation server) in this sandbox.
-    await context.route(/r2\.dev|amazonaws\.com/, (route) => route.fulfill({ status: 404, body: '' }));
+    await context.route(/r2\.dev/, (route) => route.fulfill({ status: 404, body: '' }));
     const page = await context.newPage();
     page.on('pageerror', (e) => console.log('pageerror', e.message));
+    page.on('console', (m) => { if (/Ludzik|WebGL|three/i.test(m.text())) console.log('console', m.type(), m.text().slice(0, 300)); });
     page.on('dialog', (d) => d.accept());
     const q = new URLSearchParams({ lang: JEZYK, pogoda: 'czysto', miesiac: '7' });
     if (process.env.GORY === '0') q.set('gory', '0');
     if (process.env.DX) q.set('dx', process.env.DX);
     if (process.env.DY) q.set('dy', process.env.DY);
-    if (sample) { q.set('world', `http://127.0.0.1:${PORT}/sample.pmtiles`); q.set('terrain', `http://127.0.0.1:${PORT}/teren`); }
+    if (sample) { q.set('world', `http://127.0.0.1:${PORT}/sample.pmtiles`); if (m.teren) q.set('terrain', `http://127.0.0.1:${PORT}/teren`); }
     await page.goto(`http://127.0.0.1:${PORT}/?${q}#postac=Jam&kod=ANGELIKA`);
     await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 240000 });
     if (!sample) {
@@ -79,7 +81,7 @@ try {
         s.player.setPosition(p.x, p.y);
       }, [lat, lon]);
     }
-    if (nazwa === 'giewont') {
+    if (nazwa === 'giewont' || nazwa === 'triglav') {
       await page.waitForFunction(() => (window.__game.scene.getScene('game').city.peaks ?? []).length > 0, null, { timeout: 120000 });
       await page.evaluate(() => {
         const s = window.__game.scene.getScene('game');
@@ -92,9 +94,17 @@ try {
     await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 240000 });
     await page.waitForTimeout(Number(process.env.CZEKAJ ?? 12000));
     await page.evaluate(() => document.querySelectorAll('.m-screen, #samouczek-krok, .toast, #toast').forEach((e) => e.remove()));
-    const info = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { map: s.city.id, x: Math.round(s.player.x), y: Math.round(s.player.y), fps: Math.round(window.__game.loop.actualFps) }; });
+    const info = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); const l = s.ludzik3d; return { l3d: l ? { g: !!l.g, blad: !!l.blad, vis: l.image?.visible, a: l.image?.alpha } : null, map: s.city.id, x: Math.round(s.player.x), y: Math.round(s.player.y), fps: Math.round(window.__game.loop.actualFps) }; });
     console.log(nazwa, JSON.stringify(info));
+    // Mid-step and turned, so the 3D hero reads as a model (standing still facing the camera it looks like a sprite).
+    const klawisze = process.env.IDZ ? process.env.IDZ.split('') : (m.idz ?? []);
+    if (klawisze.length) {
+      await page.mouse.click(5, 360).catch(() => {});
+      for (const k of klawisze) await page.keyboard.down(k);
+      await page.waitForTimeout(Number(process.env.KROK_MS ?? 650));
+    }
     await page.screenshot({ path: `${OUT}/${nazwa}${JEZYK === 'en' ? '-en' : ''}${mobile ? '-tel' : ''}.png` });
+    for (const k of klawisze) await page.keyboard.up(k);
     await context.close();
   }
 } finally {
