@@ -1,4 +1,6 @@
 import { itemIcon, goodsPicture, rzeczUrl } from './itemIcon';
+import { palecPrzewija, ustawTrzymanie } from './przewijanie';
+import { naEkranie } from '../obrot';
 import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inventory';
 import { JAKOSCI_BRONI, JAKOSCI_PANCERZA, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
@@ -118,17 +120,34 @@ function placeOf(c: HTMLElement): Place | null {
  * tap without dragging. Returns a function that removes the listeners.
  */
 export function slotDrag(root: HTMLElement, h: { drop: (from: Place, to: Place) => void; tap: (at: Place) => void }) {
-  let drag: { from: Place; cell: HTMLElement; ghost: HTMLElement | null; x: number; y: number; id: number } | null = null;
+  // A finger must rest on a thing for TRZYMAJ_MS before it lifts (owner, 8 Nov 2026: sliding the trunk scrolled
+  // nothing and tapped whatever it started on); moving sooner is a scroll (ui/przewijanie.ts), never a tap.
+  const TRZYMAJ_MS = 220;
+  const PROG = 9;
+  let drag: { from: Place; cell: HTMLElement; ghost: HTMLElement | null; x: number; y: number; id: number; t: number; dotyk: boolean; zly: boolean } | null = null;
   const down = (e: PointerEvent) => {
     const c = (e.target as HTMLElement).closest<HTMLElement>('.sl-cell');
     const from = c && placeOf(c);
     if (!c || !from) return;
-    e.preventDefault();
-    drag = { from, cell: c, ghost: null, x: e.clientX, y: e.clientY, id: e.pointerId };
+    const dotyk = e.pointerType !== 'mouse';
+    if (!dotyk) e.preventDefault();
+    drag = { from, cell: c, ghost: null, x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now(), dotyk, zly: false };
+  };
+  ustawTrzymanie(() => !!drag && (drag.ghost !== null || (!drag.zly && !!drag.cell.dataset.full && performance.now() - drag.t >= TRZYMAJ_MS)));
+  const place = (g: HTMLElement, e: PointerEvent) => {
+    const q = naEkranie(e.clientX, e.clientY);
+    g.style.left = `${q.x}px`;
+    g.style.top = `${q.y}px`;
   };
   const move = (e: PointerEvent) => {
     if (!drag || e.pointerId !== drag.id) return;
-    if (!drag.ghost && drag.cell.dataset.full && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
+    const dist = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
+    if (!drag.ghost && drag.dotyk && (palecPrzewija() || (dist > PROG && performance.now() - drag.t < TRZYMAJ_MS))) {
+      drag.zly = true; // a scroll, not a drag or a tap
+      return;
+    }
+    if (drag.zly) return;
+    if (!drag.ghost && drag.cell.dataset.full && dist > 6) {
       const g = el('div', 'sl-drag');
       const pic = drag.cell.querySelector('.sl-pic');
       if (pic) g.append(pic.cloneNode(true));
@@ -136,10 +155,7 @@ export function slotDrag(root: HTMLElement, h: { drop: (from: Place, to: Place) 
       drag.ghost = g;
       drag.cell.classList.add('sl-lifted');
     }
-    if (drag.ghost) {
-      drag.ghost.style.left = `${e.clientX}px`;
-      drag.ghost.style.top = `${e.clientY}px`;
-    }
+    if (drag.ghost) place(drag.ghost, e);
   };
   const up = (e: PointerEvent) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -151,7 +167,7 @@ export function slotDrag(root: HTMLElement, h: { drop: (from: Place, to: Place) 
       const t = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('.sl-cell');
       const to = t && root.contains(t) ? placeOf(t) : null;
       if (to) h.drop(d.from, to);
-    } else if (e.type === 'pointerup') h.tap(d.from);
+    } else if (e.type === 'pointerup' && !d.zly && !palecPrzewija() && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= PROG) h.tap(d.from);
   };
   root.addEventListener('pointerdown', down);
   window.addEventListener('pointermove', move);

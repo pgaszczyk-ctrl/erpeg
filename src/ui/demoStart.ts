@@ -1,4 +1,5 @@
 import { api, type LoginResult } from '../api';
+import { losoweImie } from '../content/imiona';
 import { googleToken, googleUser } from '../google';
 import { askAccount } from './account';
 import { logoImage } from './logo';
@@ -30,6 +31,8 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
     root.append(box);
     document.body.append(root);
     const name = el('input', { maxLength: 20, placeholder: 'np. Zbyszko', autocomplete: 'nickname', spellcheck: false, className: 'm-input', enterKeyHint: 'go' }) as HTMLInputElement;
+    name.value = losoweImie();
+    name.addEventListener('focus', () => name.select(), { once: true });
     const err = el('p', { className: 'm-error' });
     const go = el('button', { type: 'submit', className: 'm-btn m-primary' }, [DEMO_TEKSTY.formularzStart]) as HTMLButtonElement;
     // Optional: the account the character will belong to.

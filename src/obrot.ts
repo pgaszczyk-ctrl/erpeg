@@ -50,11 +50,19 @@ export function ustawObrot(tak: boolean) {
     document.head.append(s);
   }
   const root = document.documentElement;
+  let zmiana = false;
   if (tak) {
-    root.style.setProperty('--obr-w', `${prawdziweH()}px`);
-    root.style.setProperty('--obr-h', `${prawdziweW()}px`);
+    const w = `${prawdziweH()}px`, h = `${prawdziweW()}px`;
+    zmiana = root.style.getPropertyValue('--obr-w') !== w || root.style.getPropertyValue('--obr-h') !== h;
+    root.style.setProperty('--obr-w', w);
+    root.style.setProperty('--obr-h', h);
   }
-  if (tak === obrocone) return;
+  // iPhone: the size often settles only after the resize event; a late re-check (poziomo.ts) changes it then,
+  // and the game must lay itself out again (owner, 8 Nov 2026: the joystick vanished off the screen's edge).
+  if (tak === obrocone) {
+    if (zmiana && tak) window.dispatchEvent(new Event('resize'));
+    return;
+  }
   obrocone = tak;
   root.classList.toggle('exp-obrot', tak);
   window.dispatchEvent(new Event('resize'));

@@ -89,17 +89,17 @@ const fit = () => {
   const { w, h } = cssSize(document.getElementById('game')!);
   if (game.scale.width !== w * OSTROSC || game.scale.height !== h * OSTROSC) game.scale.resize(w * OSTROSC, h * OSTROSC);
 };
-window.addEventListener('resize', fit);
-window.visualViewport?.addEventListener('resize', fit);
-// iPhones report the new size late after turning (owner, 8 Nov 2026: the canvas kept the old height and a dialog's
-// buttons fell below the screen): look again a few times after every turn/resize.
-let poObrocie: ReturnType<typeof setTimeout>[] = [];
-const sprawdzPozniej = () => {
-  poObrocie.forEach(clearTimeout);
-  poObrocie = [150, 400, 900, 1800].map((ms) => setTimeout(fit, ms));
+// iPhone: after turning the phone the final size can arrive after the last resize event (owner, 8 Nov 2026: the
+// joystick at the bottom edge vanished until the phone was turned a few times) – fit again a little later.
+let pozneDopasowania: number[] = [];
+const fitWkrotce = () => {
+  fit();
+  pozneDopasowania.forEach(clearTimeout);
+  pozneDopasowania = [120, 350, 800, 1500].map((t) => window.setTimeout(fit, t));
 };
-window.addEventListener('orientationchange', sprawdzPozniej);
-window.addEventListener('resize', sprawdzPozniej);
+window.addEventListener('resize', fitWkrotce);
+window.addEventListener('orientationchange', fitWkrotce);
+window.visualViewport?.addEventListener('resize', fitWkrotce);
 watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
 // Under 40 frames a second (or many hitches) while playing: a report to the error log.
 installFpsLog(game);
