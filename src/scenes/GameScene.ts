@@ -5304,7 +5304,10 @@ export class GameScene extends Phaser.Scene {
     const o = worldOrigin(this.city.id);
     if (!o) return null;
     const c = this.city.fromLatLon(o.lat, o.lon);
-    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? mapName(this.city.id) : null;
+    // A world sector without a city of its own (mapName falls back to 'Daleko') has no town to name.
+    const nazwa = mapName(this.city.id);
+    if (nazwa === 'Daleko') return null;
+    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? nazwa : null;
   }
 
   /** Asks the world map which town this is (once per spot); then `then` runs (a passer-by's answer). */
