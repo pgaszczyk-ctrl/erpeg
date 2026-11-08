@@ -97,6 +97,9 @@ export class UIScene extends Phaser.Scene {
   // window is hidden whole rather than sliced – see `redrawScrollVisibility`.
   /** The open paged talk (see showDialog), and the letter-by-letter writing of the current window. */
   private strony?: Stronicowanie;
+  /** The request drawn in the open Phaser dialog, so a resize (phone turned) can lay it out again. */
+  private dialogAktualny?: DialogRequest;
+  private dialogPrzerys?: Phaser.Time.TimerEvent;
   private pisanie?: { linie: { t: Phaser.GameObjects.Text; full: string }[]; ukryte: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[]; start: number; razem: number };
   private dialogScroll?: Phaser.GameObjects.Container;
   private scrollRows: ScrollRow[] = [];
@@ -190,6 +193,7 @@ export class UIScene extends Phaser.Scene {
     this.game.events.on('hero-look', onLook);
     this.events.once('shutdown', () => this.game.events.off('hero-look', onLook));
     this.scale.on('resize', this.layout, this);
+    this.scale.on('resize', this.przerysujDialog, this);
 
     const onHud = (s: HudState) => this.updateHud(s);
     this.game.events.on('hud', onHud);
@@ -251,6 +255,7 @@ export class UIScene extends Phaser.Scene {
       closeCharacter();
       this.closeDialog();
       this.scale.off('resize', this.layout, this);
+      this.scale.off('resize', this.przerysujDialog, this);
       resetTouch();
     });
 
@@ -932,6 +937,7 @@ export class UIScene extends Phaser.Scene {
       this.redrawDialogRail();
     }
     this.dialogBox = this.add.container(0, 0, items).setDepth(20);
+    this.dialogAktualny = d;
     this.dialogChoose = d.onChoose;
     this.dialogZamknij = d.zamknij;
     this.dialogOpenedAt = this.time.now;
@@ -946,6 +952,25 @@ export class UIScene extends Phaser.Scene {
         this.pisanie = { linie, ukryte, start: this.time.now, razem };
       }
     }
+  }
+
+  /**
+   * The screen changed size while a dialog was open (owner, 8 Nov 2026, iPhone held sideways: the window stayed
+   * where it was laid out for the old size, its buttons below the screen's edge, and the game waited for a choice
+   * that couldn't be made). Lay it out again for the new size, text written in full; a paged talk keeps its page.
+   */
+  private przerysujDialog() {
+    this.dialogPrzerys?.remove();
+    this.dialogPrzerys = this.time.delayedCall(60, () => {
+      this.dialogPrzerys = undefined;
+      const d = this.dialogAktualny;
+      if (!d || !this.dialogBox || this.shop) return;
+      const strony = this.strony;
+      const otwarty = this.dialogOpenedAt;
+      this.rysujDialog(d, false);
+      this.strony = strony;
+      this.dialogOpenedAt = otwarty;
+    });
   }
 
   /** Writes the dialog text letter by letter; returns false once everything is written. */
@@ -1249,6 +1274,7 @@ export class UIScene extends Phaser.Scene {
     this.shop = undefined;
     this.dialogBox?.destroy(); // also destroys the scrollBox/rail graphics nested inside it
     this.dialogBox = undefined;
+    this.dialogAktualny = undefined;
     this.strony = undefined;
     this.pisanie = undefined;
     this.dialogButtons = [];

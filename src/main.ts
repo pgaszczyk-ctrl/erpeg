@@ -91,6 +91,15 @@ const fit = () => {
 };
 window.addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);
+// iPhones report the new size late after turning (owner, 8 Nov 2026: the canvas kept the old height and a dialog's
+// buttons fell below the screen): look again a few times after every turn/resize.
+let poObrocie: ReturnType<typeof setTimeout>[] = [];
+const sprawdzPozniej = () => {
+  poObrocie.forEach(clearTimeout);
+  poObrocie = [150, 400, 900, 1800].map((ms) => setTimeout(fit, ms));
+};
+window.addEventListener('orientationchange', sprawdzPozniej);
+window.addEventListener('resize', sprawdzPozniej);
 watchSpeed(() => game.loop.actualFps, () => game.scene.isActive('game'));
 // Under 40 frames a second (or many hitches) while playing: a report to the error log.
 installFpsLog(game);
