@@ -28,7 +28,7 @@ try {
       viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 720 },
       isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dsf, locale: 'pl-PL', timezoneId: 'Europe/Warsaw',
     });
-    await context.addInitScript(() => { try { localStorage.setItem('exp-przyblizenie', '1'); } catch {} });
+    await context.addInitScript((PRZYBL) => { try { localStorage.setItem('exp-przyblizenie', PRZYBL); if (location.search.includes('gory=0')) localStorage.setItem('exp-efekt-gor', '0'); } catch {} }, process.env.PRZYBL ?? (nazwa === 'zamek' ? '0' : '1'));
     const at = m.probka ? { m: `w:${lat.toFixed(4)},${lon.toFixed(4)}`, x: 0, y: 0, s: 1.92 } : undefined;
     const save = { coins: 1240, diamenty: 2, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1, 'prolog.recruit.v1': 1 }, missions: { 'prolog.recruit.v1': 'done' }, ...(at ? { at } : {}) };
     await context.route('**/*.supabase.co/**', (route) => {
@@ -62,19 +62,34 @@ try {
     page.on('pageerror', (e) => console.log('pageerror', e.message));
     page.on('dialog', (d) => d.accept());
     const q = new URLSearchParams({ lang: 'pl', pogoda: 'czysto', miesiac: '7' });
+    if (process.env.GORY === '0') q.set('gory', '0');
+    if (process.env.DX) q.set('dx', process.env.DX);
+    if (process.env.DY) q.set('dy', process.env.DY);
     if (sample) { q.set('world', `http://127.0.0.1:${PORT}/sample.pmtiles`); q.set('terrain', `http://127.0.0.1:${PORT}/teren`); }
     await page.goto(`http://127.0.0.1:${PORT}/?${q}#postac=Jam&kod=ANGELIKA`);
     await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 240000 });
     if (!sample) {
       await page.evaluate(([la, lo]) => {
         const s = window.__game.scene.getScene('game');
-        const p = s.city.fromLatLon(la, lo);
+        let p = s.city.fromLatLon(la, lo);
+        const b = s.city.findBuilding('Zamek w Lublinie');
+        if (b) { p = { x: (b.x0 + b.x1) / 2 + Number(new URLSearchParams(location.search).get('dx') ?? 0), y: b.y1 + Number(new URLSearchParams(location.search).get('dy') ?? 70) }; }
+        p = s.city.freeNear(p.x, p.y) ?? p;
         s.player.setPosition(p.x, p.y);
       }, [lat, lon]);
     }
+    if (nazwa === 'giewont') {
+      await page.waitForFunction(() => (window.__game.scene.getScene('game').city.peaks ?? []).length > 0, null, { timeout: 120000 });
+      await page.evaluate(() => {
+        const s = window.__game.scene.getScene('game');
+        const pk = [...s.city.peaks].sort((a, b) => Math.hypot(a.x - s.player.x, a.y - s.player.y) - Math.hypot(b.x - s.player.x, b.y - s.player.y))[0];
+        const p = s.city.freeNear(pk.x - 25, pk.y + 55) ?? { x: pk.x - 25, y: pk.y + 55 };
+        s.player.setPosition(p.x, p.y);
+      });
+    }
     await page.waitForTimeout(3000);
     await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 240000 });
-    await page.waitForTimeout(Number(process.env.CZEKAJ ?? 9000));
+    await page.waitForTimeout(Number(process.env.CZEKAJ ?? 12000));
     await page.evaluate(() => document.querySelectorAll('.m-screen, #samouczek-krok, .toast, #toast').forEach((e) => e.remove()));
     const info = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { map: s.city.id, x: Math.round(s.player.x), y: Math.round(s.player.y), fps: Math.round(window.__game.loop.actualFps) }; });
     console.log(nazwa, JSON.stringify(info));
