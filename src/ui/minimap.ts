@@ -55,6 +55,24 @@ export function closeMinimap() {
   c?.();
 }
 
+/**
+ * The screen changed size while the map is open (owner, 8 Nov 2026: an iPhone turned sideways kept the map's
+ * old size – its top cut off, the buttons under the bottom edge): lay the map screen out again for the new size.
+ * The zoom is kept (module state); the world stays asleep, onClose isn't called.
+ */
+let graMapy: GameScene | null = null;
+let przeloz: ReturnType<typeof setTimeout> | undefined;
+window.addEventListener('resize', () => {
+  if (!open) return;
+  clearTimeout(przeloz);
+  przeloz = setTimeout(() => {
+    if (!open || !graMapy) return;
+    open.remove();
+    open = null;
+    showMinimap(graMapy);
+  }, 200);
+});
+
 export function toggleMinimap(game: GameScene, onClose?: () => void) {
   if (open) closeMinimap();
   else {
@@ -64,6 +82,7 @@ export function toggleMinimap(game: GameScene, onClose?: () => void) {
 }
 
 function showMinimap(game: GameScene) {
+  graMapy = game;
   knownCache.clear();
   huby = null;
   ikony = [];

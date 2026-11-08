@@ -120,9 +120,28 @@ const STYL = `
 #tablica .tb-papier button.tb-cicho { background: linear-gradient(180deg, #8fb0a0, #5f8070); }
 `;
 
+/**
+ * The screen changed size while the board is open (owner, 8 Nov 2026: a turned iPhone kept the old layout, the ✕
+ * could end up above the screen): build the window again for the new size, keeping the same close callback.
+ */
+let otwartyHost: TablicaHost | null = null;
+let przeloz: ReturnType<typeof setTimeout> | undefined;
+window.addEventListener('resize', () => {
+  if (!otwarta) return;
+  clearTimeout(przeloz);
+  przeloz = setTimeout(() => {
+    if (!otwarta || !otwartyHost) return;
+    const f = poZamknieciu;
+    poZamknieciu = null;
+    zamknijTablice();
+    otworzTablice(otwartyHost, f ?? undefined);
+  }, 200);
+});
+
 export function otworzTablice(h: TablicaHost, onClose?: () => void) {
   if (otwarta) zamknijTablice();
   poZamknieciu = onClose ?? null;
+  otwartyHost = h;
   if (!document.getElementById('tablica-styl')) {
     const st = document.createElement('style');
     st.id = 'tablica-styl';
