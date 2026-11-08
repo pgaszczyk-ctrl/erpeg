@@ -25,8 +25,7 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
     const signUp = el('button', { type: 'button', className: 'm-btn' }, ['Załóż konto']);
     const forgot = el('button', { type: 'button', className: 'm-btn' }, ['Nie pamiętam hasła']);
     const google = el('button', { type: 'button', className: 'm-btn m-google' }, ['🔵 Zaloguj przez Google']);
-    const termsUrl = new URL('regulamin.html', `${location.origin}${sciezkaGry()}`).href;
-    const termsLink = () => el('a', { href: termsUrl, target: '_blank', rel: 'noopener noreferrer' }, ['regulamin gry']);
+    const termsLink = linkRegulaminu;
     const cancel = el('button', { type: 'button', className: 'm-btn' }, ['Anuluj']);
     box.append(el('h2', {}, ['👤 Konto gry']), el('p', {}, [why]), email, pass, msg, info, signIn, signUp, forgot, google, el('p', { className: 'account-terms' }, ['Zakładając konto, akceptujesz ', termsLink(), '.']), cancel);
     root.append(box);
@@ -80,4 +79,15 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
       });
     cancel.onclick = () => done(null);
   });
+}
+
+/** A link to the game's terms (public/regulamin.html), opening in a new tab. */
+export function linkRegulaminu(): HTMLAnchorElement {
+  const url = new URL('regulamin.html', `${location.origin}${sciezkaGry()}`).href;
+  return el('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, ['regulamin gry']) as HTMLAnchorElement;
+}
+
+/** The small line under a new-character button: making a character accepts the terms. */
+export function liniaRegulaminu(): HTMLElement {
+  return el('p', { className: 'm-terms' }, ['Tworząc postać, akceptujesz ', linkRegulaminu(), '.']);
 }

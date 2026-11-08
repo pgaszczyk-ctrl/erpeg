@@ -1,7 +1,7 @@
 import { api, type LoginResult } from '../api';
 import { losoweImie } from '../content/imiona';
 import { googleToken, googleUser } from '../google';
-import { askAccount } from './account';
+import { askAccount, liniaRegulaminu } from './account';
 import { logoImage } from './logo';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { PO_DEMO_START, DEMO_TEKSTY } from '../content/demo';
@@ -59,7 +59,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
       el('label', { className: 'm-field' }, [el('span', {}, ['Imię']), name, el('small', {}, ['Imienia nie można później zmienić.'])]),
-      err, go, konto, mam,
+      err, go, liniaRegulaminu(), konto, mam,
     );
     if (!document.getElementById('demo-start-css')) {
       const st = el('style', { id: 'demo-start-css' });
