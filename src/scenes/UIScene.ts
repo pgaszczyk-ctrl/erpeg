@@ -211,6 +211,16 @@ export class UIScene extends Phaser.Scene {
         if (e.key === 'Escape') { e.preventDefault(); this.chooseShop(this.shop.lastIndex); }
         return;
       }
+      // An HTML window on top (code card, chest, bug report, prompt…): game keys don't reach the world under it
+      // (8 Nov 2026 scan: Escape over the code card opened the game menu behind it); Escape presses its way out.
+      const okno = [...document.querySelectorAll<HTMLElement>('.m-screen')].filter((o) => o.id !== 'loading-map' && o.id !== 'menu' && o.getClientRects().length > 0 && getComputedStyle(o).visibility !== 'hidden').pop();
+      if (okno) {
+        if (e.key === 'Escape') {
+          const wyjscie = [...okno.querySelectorAll<HTMLButtonElement>('button')].filter((b) => /^\s*(✕|×|(zamknij|anuluj|close|cancel|ok)\b)/i.test(b.getAttribute('aria-label') || b.textContent || '')).pop();
+          if (wyjscie) { e.preventDefault(); wyjscie.click(); }
+        }
+        return;
+      }
       if ((e.key === 'm' || e.key === 'M') && !document.getElementById('menu') && !this.hasDialog) {
         this.openMap();
       }
@@ -557,7 +567,8 @@ export class UIScene extends Phaser.Scene {
    */
   private unstick(time: number) {
     const game = this.scene.get('game');
-    const waiting = (this.scene.isActive('arena') || this.scene.isActive('hala')) || loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || !!document.getElementById('gazeta') || isCharacterOpen();
+    const waiting = (this.scene.isActive('arena') || this.scene.isActive('hala')) || loadingMapVisible() || this.hasDialog || !!this.overlay || !!document.getElementById('prompt') || !!document.getElementById('chest') || !!document.getElementById('gazeta') || isCharacterOpen()
+      || [...document.querySelectorAll<HTMLElement>('.m-screen')].some((o) => o.id !== 'loading-map' && o.id !== 'menu' && o.getClientRects().length > 0);
     if (!game.scene.isPaused() || waiting) {
       this.pausedAlone = 0;
       return;
