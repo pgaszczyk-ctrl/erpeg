@@ -42,8 +42,8 @@ try {
     await terms.waitForLoadState();
     assert.match(terms.url(), /\/regulamin.html$/);
     await terms.getByRole('heading', { name: 'Regulamin gry Exp-lore', exact: true }).waitFor();
-    assert.match(await terms.locator('main').innerText(), /Magicownia Lublin/);
-    assert.match(await terms.locator('main').innerText(), /Gra zawiera płatności/);
+    assert.match(await terms.locator('main').innerText(), /Paweł Gąszczyk/);
+    assert.match(await terms.locator('main').innerText(), /Gra jest bezpłatna/);
     assert(await terms.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await terms.screenshot({ path: `work/account-terms/${name}-terms.png`, fullPage: true });
     await terms.close();

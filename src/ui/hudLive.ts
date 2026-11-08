@@ -123,7 +123,7 @@ export function zamontujHudLive() {
   atakTxt.textContent = '⚔';
   nub.append(atakImg, atakTxt);
   const atakSmall = document.createElement('small');
-  atakSmall.textContent = 'ATAK';
+  atakSmall.textContent = tx('ATAK', 'ATTACK');
   atak.append(nub, atakSmall);
   let start: { x: number; y: number; id: number } | null = null;
   atak.addEventListener('pointerdown', (e) => {
@@ -169,7 +169,7 @@ export function zamontujHudLive() {
   const leczN = document.createElement('span');
   leczN.className = 'hs-n';
   const leczSmall = document.createElement('small');
-  leczSmall.textContent = 'LECZ';
+  leczSmall.textContent = tx('LECZ', 'HEAL');
   lecz.append(leczIk, leczN, leczSmall);
   lecz.addEventListener('pointerdown', (e) => {
     e.preventDefault();
@@ -254,7 +254,7 @@ export function ustawZasobyHud(z: LiveZasoby) {
   el.slider.max = String(Math.max(0, choices.length - 1));
   el.slider.value = String(Math.max(0, choices.findIndex(u => u.id === z.aktywna)));
   el.slider.setAttribute('aria-valuetext', z.umiej.nazwa);
-  el.slider.title = `Przesuń, żeby zmienić umiejętność: ${choices.map(u => u.nazwa).join(' / ')}`;
+  el.slider.title = `${tx('Przesuń, żeby zmienić umiejętność', 'Slide to change the skill')}: ${choices.map(u => u.nazwa).join(' / ')}`;
   el.spec.setAttribute('aria-disabled', String(!z.stac || !z.gotowy));
   el.spec.classList.toggle('nie', !z.stac);
   el.specCd.style.setProperty('--cd', `${Math.round(Math.max(0, Math.min(1, z.cooldown ?? (z.gotowy ? 0 : 1))) * 100)}%`);

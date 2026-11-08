@@ -1,5 +1,7 @@
 # Polityka prywatności Exp-lore – SZKIC (fakty o grze, stan na 11.10.2026)
 
+> **8.11.2026:** opublikowana wersja jest w `public/news/prywatnosc.html` (PL) i `public/news/privacy.html` (EN); administrator: Paweł Gąszczyk (Magicownia.pl), kontakt contact-exploreapp@gmail.com. Okresy: rankingi i łamigłówki 12 mies., listy/pomysły/prośby o trasy 24 mies. (automatyczne usuwanie jeszcze nie ustawione). Ten plik zostaje jako notatka z faktami.
+
 > Szkic przygotował programista na podstawie tego, co gra naprawdę zapisuje. To nie jest porada prawna – przed publikacją warto, żeby przejrzała go osoba znająca RODO. Pola w [nawiasach] uzupełnia właściciel. Gdy gra zacznie zbierać coś nowego, ten plik trzeba zaktualizować.
 
 ## 1. Kto odpowiada za dane

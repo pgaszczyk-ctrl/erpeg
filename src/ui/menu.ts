@@ -6,7 +6,7 @@ import { codeCard, codeFromLink } from './codeCard';
 import { lang, tx } from '../i18n';
 import { LADOWANIE } from '../content/ladowanie';
 import { googleSignOut, googleToken, googleUser } from '../google';
-import { askAccount } from './account';
+import { askAccount, liniaRegulaminu } from './account';
 import { logoTekst } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
 import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
@@ -281,6 +281,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         linkBox,
         err,
         go,
+        liniaRegulaminu(),
         button('Wstecz', main),
       );
     };

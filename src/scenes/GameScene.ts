@@ -430,7 +430,7 @@ export class GameScene extends Phaser.Scene {
   private protect(now: number) {
     this.protectUntil = now + OCHRONA_MS;
     this.noHurtUntil = Math.max(this.noHurtUntil, this.protectUntil);
-    this.toast(`🛡 Ochrona na ${OCHRONA_MS / 1000} sekund – rozejrzyj się spokojnie.`, 2500);
+    this.toast(tx(`🛡 Ochrona na ${OCHRONA_MS / 1000} sekund – rozejrzyj się spokojnie.`, `🛡 Protected for ${OCHRONA_MS / 1000} seconds – take a calm look around.`), 2500);
   }
   /** Right after a dialog closes, a swing doesn't start another talk. */
   private talkReadyAt = 0;
@@ -5304,7 +5304,10 @@ export class GameScene extends Phaser.Scene {
     const o = worldOrigin(this.city.id);
     if (!o) return null;
     const c = this.city.fromLatLon(o.lat, o.lon);
-    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? mapName(this.city.id) : null;
+    // A world sector without a city of its own (mapName falls back to 'Daleko') has no town to name.
+    const nazwa = mapName(this.city.id);
+    if (nazwa === 'Daleko') return null;
+    return Math.hypot(c.x - x, c.y - y) <= MIEJSCE_HUD.miastoM * 1.5 * PX_PER_M ? nazwa : null;
   }
 
   /** Asks the world map which town this is (once per spot); then `then` runs (a passer-by's answer). */
@@ -7761,11 +7764,13 @@ export class GameScene extends Phaser.Scene {
     const dy = y - t.y;
     const dist = Math.hypot(dx, dy);
     const inTown = dist < t.r;
-    if (inTown && dist < t.r * MIEJSCE_HUD.centrum) return { town: t.name, detail: 'w centrum' };
-    const strony = ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
+    if (inTown && dist < t.r * MIEJSCE_HUD.centrum) return { town: t.name, detail: tx('w centrum', 'in the centre') };
+    const strony = lang === 'en'
+      ? ['to the east', 'to the south-east', 'to the south', 'to the south-west', 'to the west', 'to the north-west', 'to the north', 'to the north-east']
+      : ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
     const k = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
-    const where = t.wies ? (inTown ? 'we wsi' : 'za wsią') : inTown ? 'w mieście' : 'za miastem';
-    return { town: t.name, detail: `${where} · gdzieś ${strony[k]}` };
+    const where = t.wies ? (inTown ? tx('we wsi', 'in the village') : tx('za wsią', 'outside the village')) : inTown ? tx('w mieście', 'in town') : tx('za miastem', 'outside town');
+    return { town: t.name, detail: lang === 'en' ? `${where} · somewhere ${strony[k]}` : `${where} · gdzieś ${strony[k]}` };
   }
 
   /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
