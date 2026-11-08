@@ -154,7 +154,6 @@ import { rideMs, rideText, serverNow, showJourney, syncClock } from '../journey'
 import { SEN, JAWA, DEMO_TEKSTY } from '../content/demo';
 import { weather, loadWeather, tickWeather, weatherLabel, isWet } from '../weather';
 import { WPLYW_NA_POTWORY, WODNIK, POGODA } from '../content/pogoda';
-import { Anomalia } from './Anomalia';
 import { WeatherFx } from './WeatherFx';
 import { TuryWalki, NAD_KORONAMI, type WynikWalki } from '../walka/TuryWalki';
 import { Spotkania } from '../walka/Spotkania';
@@ -735,8 +734,6 @@ export class GameScene extends Phaser.Scene {
     this.duelHp = null;
     this.duelCarry = 0;
     this.storyPlace = null;
-    this.anomalia = new Anomalia(this, this.city, { player: this.player, dialog: (r) => this.dialog(r), save: () => this.save() });
-    (window as unknown as { __anomalia?: Anomalia }).__anomalia = this.anomalia;
     this.story = new Story(this, this.city, {
       player: this.player,
       dialog: (req) => this.dialog(req),
@@ -1042,7 +1039,7 @@ export class GameScene extends Phaser.Scene {
 
     if(session.artilleryHero){restoreHero(this.player,session.artilleryHero);session.artilleryHero=null;}
     this.artillery = new Artillery(this,this.city,this.player,{
-      visible:(x,y)=>pointInPolygon(this.vision,x,y),combat:()=>this.inCombat(), busy:()=>this.travelling||this.witam||this.player.isDead||this.leaving||this.story.busy||!!this.anomalia?.busy||this.time.now<this.lingerUntil,
+      visible:(x,y)=>pointInPolygon(this.vision,x,y),combat:()=>this.inCombat(), busy:()=>this.travelling||this.witam||this.player.isDead||this.leaving||this.story.busy||this.time.now<this.lingerUntil,
       hold:v=>{this.travelling=v;this.player.vel.set(0,0);},
       checkpoint:async()=>{this.keepFog();session.tu=this.miejsceZapisu();await api.heartbeat(session.token,this.snapshot());await saveNow(this.player.hp);},
       hero:(spin=false)=>{const model=this.ludzik3d?.flightPortrait(spin);if(model)return model;const f=this.player.frame,c=document.createElement('canvas');c.width=f.cutWidth;c.height=f.cutHeight;c.getContext('2d')?.drawImage(f.source.image as CanvasImageSource,f.cutX,f.cutY,f.cutWidth,f.cutHeight,0,0,c.width,c.height);return c.toDataURL();},
@@ -1260,7 +1257,7 @@ export class GameScene extends Phaser.Scene {
     if (this.lingerUntil && !lingering) this.endLinger();
     const kd = keyboardDir();
     const moving = kd.x !== 0 || kd.y !== 0;
-    if (lingering || this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy) this.player.move(0, 0, now);
+    if (lingering || this.story.busy || this.demoRun?.busy || this.witam) this.player.move(0, 0, now);
     else {
       // Screen directions → map directions: on the tilted camera (walka/live.ts) a push "up the screen" covers
       // more map ground vertically; the push's strength (joystick distance) stays.
@@ -1312,7 +1309,6 @@ export class GameScene extends Phaser.Scene {
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
     const podZiemia = !!this.loch;
     if (!podZiemia) this.story.update(dt, this.player.x !== bx || this.player.y !== by);
-    if (!demo.on && !podZiemia) this.anomalia?.update(now, this.player.x !== bx || this.player.y !== by);
     // Hiding in the bushes: see-through under trees.
     const hidden = this.city.areaKindsAt(this.player.x, this.player.y + FEET.dy).some((k) => HIDE_IN.has(k));
     // Protected after a fresh start: the hero blinks.
@@ -1344,7 +1340,7 @@ export class GameScene extends Phaser.Scene {
       this.toast('Dodatkowe serduszko z mikstury znikło.', 2000);
       this.emitHud();
     }
-    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy && !this.witam && !this.anomalia?.busy) {
+    if (consumeAttack() && !lingering && !this.story.busy && !this.demoRun?.busy && !this.witam) {
       // A mouse click swings towards where it clicked (the hero turns there).
       this.clickWorld = null;
       if (attackAim) {
@@ -1405,7 +1401,7 @@ export class GameScene extends Phaser.Scene {
       this.lowiskaCzasS += dt;
       this.lowiska.update(this.player.x, this.player.y);
     }
-    if (!lingering && !this.story.busy && !this.anomalia?.busy) this.spotkania?.update(now);
+    if (!lingering && !this.story.busy) this.spotkania?.update(now);
     }
     if (!this.loch) this.clearHomeArea(); // underground the arrival spot is no safe home
     const chasers = this.enemies.filter((e) => e.chasing && !e.isDead);
@@ -1792,7 +1788,7 @@ export class GameScene extends Phaser.Scene {
       if(t) this.runInteractionTarget(t);
       return;
     }
-    if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.time.now < this.lingerUntil) return;
+    if (this.story.busy || this.demoRun?.busy || this.witam || this.time.now < this.lingerUntil) return;
     const cam = this.cameras.main;
     const near = sx < 0;
     const w = near
@@ -1861,7 +1857,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private interactionBlocked() {
-    return !this.player||this.player.isDead||!this.scene.isActive()||this.travelling||this.wHali||this.story.busy||this.demoRun?.busy||this.witam||this.anomalia?.busy||this.time.now<this.lingerUntil||loadingGame();
+    return !this.player||this.player.isDead||!this.scene.isActive()||this.travelling||this.wHali||this.story.busy||this.demoRun?.busy||this.witam||this.time.now<this.lingerUntil||loadingGame();
   }
   private runInteractionTarget(t:InteractionTarget) {
     if(this.interactionBlocked()||performance.now()<this.talkReadyAt||Math.hypot(t.x-this.player.x,t.y-this.player.y)>(t.range??36))return;
@@ -2859,7 +2855,7 @@ export class GameScene extends Phaser.Scene {
       },
       wolne: (x, y) => this.freeFeet(x, y + FEET.dy),
       dialog: (req) => this.dialog(req),
-      zajety: () => !!this.walka?.aktywna || this.player.isDead || this.scene.isPaused() || this.time.now < this.lingerUntil || this.story.busy || !!this.anomalia?.busy || this.travelling || this.leaving,
+      zajety: () => !!this.walka?.aktywna || this.player.isDead || this.scene.isPaused() || this.time.now < this.lingerUntil || this.story.busy || this.travelling || this.leaving,
       walcz: (kto) => this.startWalka(kto as Enemy[]),
       odchodza: (kto) => {
         for (const e of kto as Enemy[]) {
@@ -3537,7 +3533,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pociagi?: Pociagi;
-  private anomalia?: Anomalia;
   /** Where the last mouse click landed in the world (null for taps and keys). */
   private clickWorld: { x: number; y: number } | null = null;
 
@@ -6493,7 +6488,7 @@ export class GameScene extends Phaser.Scene {
   /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
   private specjalny(now: number) {
     if (weaponRequirement(gear.equip.bron)) { this.toast(weaponRequirement(gear.equip.bron)!, 1500); return; }
-    if (this.story.busy || this.demoRun?.busy || this.witam || this.anomalia?.busy || this.player.isDead || now < this.lingerUntil) return;
+    if (this.story.busy || this.demoRun?.busy || this.witam || this.player.isDead || now < this.lingerUntil) return;
     const u = this.umiejetnosc();
     if (!this.zaplacMocny(u.bron)) return;
     const weapon = rangedWeapon();

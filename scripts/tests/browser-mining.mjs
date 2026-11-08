@@ -30,7 +30,7 @@ try {
   const result=await page.evaluate(async()=>{
    const s=window.__game.scene.getScene('game'),g=window.__gear;
    window.__game.scene.getScene('ui').closeDialog();s.scene.resume();s.witam=false;s.lingerUntil=0;s.talkReadyAt=0;
-   s.noHurtUntil=Infinity;s.inCombat=()=>false;s.streets.update=()=>{};s.folk.update=()=>{};s.prolog=undefined;s.elzet=undefined;s.anomalia=undefined;s.story.update=()=>{};s.lochy.lista.splice(0);
+   s.noHurtUntil=Infinity;s.inCombat=()=>false;s.streets.update=()=>{};s.folk.update=()=>{};s.prolog=undefined;s.elzet=undefined;s.story.update=()=>{};s.lochy.lista.splice(0);
    let presentation;
    const shop=s.shopDialog;s.shopDialog=(p,d,entries)=>{presentation={d,entries};};
    for(const name of ['Decathlon','Sklep narzędziowy']){
