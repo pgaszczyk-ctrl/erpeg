@@ -52,8 +52,15 @@ async function zablokuj() {
 function sluchaj() {
   if (sluchacze) return;
   sluchacze = true;
-  window.addEventListener('resize', sprawdz);
-  window.addEventListener('orientationchange', () => setTimeout(sprawdz, 150));
+  // iOS reports the new size late after a turn (sometimes after the last resize event): check again a few times.
+  let pozne: number[] = [];
+  const jeszczeRaz = () => {
+    pozne.forEach(clearTimeout);
+    pozne = [150, 400, 800, 1500].map((t) => window.setTimeout(sprawdz, t));
+  };
+  window.addEventListener('resize', () => { sprawdz(); jeszczeRaz(); });
+  window.addEventListener('orientationchange', jeszczeRaz);
+  window.visualViewport?.addEventListener('resize', jeszczeRaz);
   window.addEventListener('touchend', () => { if (gra) void zablokuj(); }, { passive: true });
 }
 

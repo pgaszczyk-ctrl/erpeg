@@ -1,4 +1,6 @@
 import { UMIEJETNOSCI as ATAKI, domyslnaUmiejetnosc } from '../content/umiejetnosci';
+import { przewijanieDotykiem } from './przewijanie';
+import { naEkranie } from '../obrot';
 import { collectStoryItems } from '../prolog/rewards';
 import { tx } from '../i18n';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce, type Umiejetnosc } from '../content/przedmioty';
@@ -107,6 +109,8 @@ const pages = (): [Page, string, string][] =>
 const fitPage = (p: Page): Page => (narrow() ? (p === 'kufer' ? 'postac' : p === 'zasoby' ? 'stan' : p) : p === 'postac' || p === 'stan' || p === 'zasoby' ? 'kufer' : p);
 /** Removes the drag listeners of the equipment. */
 let dispose: (() => void) | null = null;
+/** Removes the finger scrolling of the trunk's page (ui/przewijanie.ts). */
+let odepnijPrzewijanie: (() => void) | null = null;
 /** The page shown last (the trunk opens there again). */
 let page: Page = 'kufer';
 /** Called once when the trunk closes (the world goes on). */
@@ -132,6 +136,8 @@ export function closeCharacter() {
   zamknijPokaz = null;
   dispose?.();
   dispose = null;
+  odepnijPrzewijanie?.();
+  odepnijPrzewijanie = null;
   open.remove();
   open = null;
   window.removeEventListener('popstate', onBack);
@@ -254,6 +260,8 @@ function show(host: CharacterHost) {
   top.append(tabs, valve);
   const body = el('div', 'k-body');
   box.append(top, el('div', 'k-pipe'), body);
+  odepnijPrzewijanie?.();
+  odepnijPrzewijanie = przewijanieDotykiem(body);
   root.append(box);
   document.body.append(root);
   open = root;
@@ -787,17 +795,20 @@ function brassScroll(box: HTMLElement, body: HTMLElement) {
     const free = rail.clientHeight - knob.offsetHeight;
     knob.style.transform = `translateY(${(free * body.scrollTop) / max}px) rotate(${body.scrollTop / 2}deg)`;
   };
-  const scrollToY = (clientY: number) => {
-    const rr = rail.getBoundingClientRect();
-    const t = (clientY - rr.top - knob.offsetHeight / 2) / Math.max(1, rr.height - knob.offsetHeight);
+  // In the page's own coordinates (obrot.ts: an upright phone shows the page turned, screen Y isn't the rail's axis).
+  const scrollToY = (y: number) => {
+    const free = Math.max(1, rail.clientHeight - knob.offsetHeight);
+    let top = 0;
+    for (let n: HTMLElement | null = rail; n; n = n.offsetParent as HTMLElement | null) top += n.offsetTop;
+    const t = (y - top - knob.offsetHeight / 2) / free;
     body.scrollTop = Math.max(0, Math.min(1, t)) * (body.scrollHeight - body.clientHeight);
   };
   rail.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     e.stopPropagation();
     rail.setPointerCapture(e.pointerId);
-    scrollToY(e.clientY);
-    const move = (ev: PointerEvent) => scrollToY(ev.clientY);
+    scrollToY(naEkranie(e.clientX, e.clientY).y);
+    const move = (ev: PointerEvent) => scrollToY(naEkranie(ev.clientX, ev.clientY).y);
     const up = () => {
       rail.removeEventListener('pointermove', move);
       rail.removeEventListener('pointerup', up);

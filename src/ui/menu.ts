@@ -20,6 +20,10 @@ import { showLoginMap, beginMapIntro } from './loadingMap';
 import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
+import { losoweImie } from '../content/imiona';
+import { przygotujMiasta, znajdzMiejsceStartu, type MiejsceStartu } from '../miastaStartu';
+import { getMap, nameWorldMap } from '../travel';
+import { worldMapId } from '../map/worldRules';
 
 // The start screen (an HTML overlay above the game): new character, load
 // character. Resolves once a character is ready to play.
@@ -97,12 +101,20 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         if (waiting) btn.replaceChildren(...label);
       }
     };
-    const play = async (r: LoginResult) => {
+    const play = async (r: LoginResult, gdzie?: MiejsceStartu | null) => {
       przedWejsciem(); // a code link logs in without a tap: the page still turns before the loading cover
       if (root) beginMapIntro(root);
       // Show the response before session/scene preparation can occupy the thread.
       await Promise.all([contentReady, new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))]);
       startSession(r);
+      // A start outside the Lublin map (owner, 8 Nov 2026): the load point is that spot on its world map
+      // (home stays in Lublin, like for every hotel guest); enterWorld finds a walkable spot near it.
+      if (r.newCharacter && gdzie) {
+        const id = worldMapId(gdzie.lat, gdzie.lon);
+        nameWorldMap(id, gdzie.nazwa);
+        const m = await getMap(id);
+        session.at = { m: id, ...m.fromLatLon(gdzie.lat, gdzie.lon) };
+      }
       if (r.newCharacter) await saveNow(session.hp);
       root = null;
       resolve();
@@ -148,12 +160,18 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       let poDemo = false;
       try { poDemo = localStorage.getItem(PO_DEMO_KLUCZ) === '1'; } catch { /* no storage: the normal form */ }
       const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
-      const start = input({ placeholder: 'np. Krakowskie Przedmieście albo Zamkowa 9' });
+      // A ready name (owner, 8 Nov 2026): the player may keep it or type their own.
+      name.value = losoweImie();
+      name.addEventListener('focus', () => name.select(), { once: true });
+      const start = input({ placeholder: tx('np. Zamkowa 9, Lublin albo Paryż', 'e.g. Zamkowa 9, Lublin or Paris') });
+      przygotujMiasta();
       // "📍": the phone's location as the start, if the game has a map of it.
       let geoStart: { x: number; y: number } | null = null;
+      let geoSwiat: MiejsceStartu | null = null;
       const geoInfo = el('small', { className: 'm-geo' });
       start.addEventListener('input', () => {
         geoStart = null;
+        geoSwiat = null;
         geoInfo.textContent = '';
       });
       const geoBtn = el('button', { type: 'button', className: 'm-eye', title: 'Użyj mojej lokalizacji' }, ['📍']) as HTMLButtonElement;
@@ -169,9 +187,11 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
             geoBtn.disabled = false;
             const { latitude: lat, longitude: lon } = pos.coords;
             if (!city.hasLatLon(lat, lon)) {
+              // Anywhere on Earth: the world map there.
               geoStart = null;
-              start.value = '';
-              geoInfo.textContent = `Niestety nie znamy jeszcze tej lokalizacji. Zaczniesz na placu Zamkowym w Lublinie.`;
+              geoSwiat = { nazwa: tx('Twoja okolica', 'Your area'), lat, lon };
+              start.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+              geoInfo.textContent = tx('✅ Zaczniesz tutaj, tam gdzie jesteś.', '✅ You will start right here, where you are.');
               return;
             }
             const p = city.fromLatLon(lat, lon);
@@ -215,8 +235,21 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
           const place = poDemo ? PO_DEMO_START.nazwa : start.value.trim() || DEFAULT_START;
-          const p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? city.findAnyStart(place, DEFAULT_START);
-          if (!p) throw new Error(`Nie znalazłem na mapie: „${place}”. Podaj ulicę, ulicę i numer albo miejscowość, np. „Kościelna 5, Garbów”.`);
+          let p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? (geoSwiat ? null : city.findAnyStart(place, DEFAULT_START));
+          let gdzie: MiejsceStartu | null = poDemo ? null : geoSwiat;
+          if (!p && !gdzie) {
+            // Not an address on the Lublin map: a town (or address) anywhere in the world.
+            const ll = place.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+            gdzie = ll ? { nazwa: place, lat: Number(ll[1]), lon: Number(ll[2]) } : await znajdzMiejsceStartu(place, lang);
+            if (!gdzie) throw new Error(tx(`Nie znalazłem miejsca: „${place}”. Wpisz miasto (np. „Paryż”, „Garbów”) albo ulicę z numerem.`, `Couldn't find „${place}”. Type a town (e.g. „Paris”) or a street with a number.`));
+            if (city.hasLatLon(gdzie.lat, gdzie.lon)) {
+              const q = city.fromLatLon(gdzie.lat, gdzie.lon);
+              p = city.freeNear(q.x, q.y);
+              gdzie = null;
+            }
+          }
+          // Home is always on the Lublin map (only Lublin has one): a world start keeps the default home.
+          if (!p) p = city.findStart(DEFAULT_START)!;
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
           const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (!poDemo) r.newCharacter = true;
@@ -224,7 +257,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
           // Straight into the game (owner, 26 Oct 2026: no code screen first – the code waits in the Kufer,
           // the HUD portrait reminds about it, the device remembers the character).
-          await play(r);
+          await play(r, gdzie);
         }), 'm-primary');
       // Every hero starts as a young guard (owner, 27 Oct 2026: „usuń wybór ludzików, obecnie jest tylko strażnik”;
       // the story of the hero's growth comes later): the look is drawn at random, nothing to choose here.
@@ -237,7 +270,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         poDemo
           ? el('div', { className: 'm-field' }, [el('span', {}, ['Start przygody']), el('small', {}, [`🏛 ${PO_DEMO_START.nazwa}`])])
           : el('label', { className: 'm-field' }, [
-              el('span', {}, ['Adres startowy']),
+              el('span', {}, [tx('Miejsce startu', 'Start place')]),
               el('div', { className: 'm-pass' }, [start, geoBtn]),
               geoInfo,
             ]),
