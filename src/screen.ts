@@ -25,7 +25,9 @@ const komputer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)
 /** A laptop running on battery (index.html asks the Battery API before the game loads; Chrome/Edge only). */
 export const NA_BATERII = (globalThis as { __naBaterii?: boolean }).__naBaterii === true;
 export const OSTROSC = forced >= 1 && forced <= 3 ? Math.floor(forced) : slow ? 1
-  : komputer && !NA_BATERII ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
+  // Not at exactly 1 device px per CSS px (owner, 8 Nov 2026: Janusz's laptop 1920×953 at 12–16 fps): there one canvas px
+  // is one screen px already – the 2× canvas only cost 4× the pixels and was shrunk back smoothly (3× fewer frames).
+  : komputer && !NA_BATERII && (window.devicePixelRatio || 1) !== 1 ? Math.max(2, Math.min(3, Math.ceil(window.devicePixelRatio || 1)))
   : Math.max(1, Math.min(2, Math.floor(window.devicePixelRatio || 1)));
 
 /** Below this many frames a second the sharper picture is too much for the phone. Was 35 (owner, 28 Oct 2026: still
