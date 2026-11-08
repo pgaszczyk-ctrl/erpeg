@@ -17,6 +17,7 @@ const MIEJSCA = {
 const wybrane = process.env.MIEJSCE ? process.env.MIEJSCE.split(',') : Object.keys(MIEJSCA);
 const mobile = process.env.TELEFON === '1';
 const dsf = Number(process.env.DSF ?? 2);
+const JEZYK = process.env.JEZYK ?? 'pl';
 
 const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'] });
 try {
@@ -26,7 +27,7 @@ try {
     const sample = m.probka ? await readFile(`data/world-sample/${m.probka}.pmtiles`) : null;
     const context = await browser.newContext({
       viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 720 },
-      isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dsf, locale: 'pl-PL', timezoneId: 'Europe/Warsaw',
+      isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dsf, locale: JEZYK === 'en' ? 'en-GB' : 'pl-PL', timezoneId: 'Europe/Warsaw',
     });
     await context.addInitScript((PRZYBL) => { try { localStorage.setItem('exp-przyblizenie', PRZYBL); if (location.search.includes('gory=0')) localStorage.setItem('exp-efekt-gor', '0'); } catch {} }, process.env.PRZYBL ?? (nazwa === 'zamek' ? '0' : '1'));
     const at = m.probka ? { m: `w:${lat.toFixed(4)},${lon.toFixed(4)}`, x: 0, y: 0, s: 1.92 } : undefined;
@@ -61,7 +62,7 @@ try {
     const page = await context.newPage();
     page.on('pageerror', (e) => console.log('pageerror', e.message));
     page.on('dialog', (d) => d.accept());
-    const q = new URLSearchParams({ lang: 'pl', pogoda: 'czysto', miesiac: '7' });
+    const q = new URLSearchParams({ lang: JEZYK, pogoda: 'czysto', miesiac: '7' });
     if (process.env.GORY === '0') q.set('gory', '0');
     if (process.env.DX) q.set('dx', process.env.DX);
     if (process.env.DY) q.set('dy', process.env.DY);
@@ -93,7 +94,7 @@ try {
     await page.evaluate(() => document.querySelectorAll('.m-screen, #samouczek-krok, .toast, #toast').forEach((e) => e.remove()));
     const info = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { map: s.city.id, x: Math.round(s.player.x), y: Math.round(s.player.y), fps: Math.round(window.__game.loop.actualFps) }; });
     console.log(nazwa, JSON.stringify(info));
-    await page.screenshot({ path: `${OUT}/${nazwa}${mobile ? '-tel' : ''}.png` });
+    await page.screenshot({ path: `${OUT}/${nazwa}${JEZYK === 'en' ? '-en' : ''}${mobile ? '-tel' : ''}.png` });
     await context.close();
   }
 } finally {

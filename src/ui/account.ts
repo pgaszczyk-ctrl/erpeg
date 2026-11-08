@@ -1,4 +1,5 @@
 import { sciezkaGry } from '../sciezka';
+import { tx } from '../i18n';
 import { emailReset, emailSignIn, emailSignUp, googleEnabled, googleSignIn, googleToken, googleUser, type GoogleSession } from '../google';
 
 // The player account window (HTML, above the menu or the game): sign in with
@@ -27,7 +28,7 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
     const google = el('button', { type: 'button', className: 'm-btn m-google' }, ['🔵 Zaloguj przez Google']);
     const termsLink = linkRegulaminu;
     const cancel = el('button', { type: 'button', className: 'm-btn' }, ['Anuluj']);
-    box.append(el('h2', {}, ['👤 Konto gry']), el('p', {}, [why]), email, pass, msg, info, signIn, signUp, forgot, google, el('p', { className: 'account-terms' }, ['Zakładając konto, akceptujesz ', termsLink(), '.']), cancel);
+    box.append(el('h2', {}, ['👤 Konto gry']), el('p', {}, [why]), email, pass, msg, info, signIn, signUp, forgot, google, el('p', { className: 'account-terms' }, [tx('Zakładając konto, akceptujesz ', 'By creating an account, you accept '), termsLink(), '.']), cancel);
     root.append(box);
     document.body.append(root);
     email.focus();
@@ -83,11 +84,11 @@ export async function askAccount(why = 'Zaloguj się na konto gry – postacie p
 
 /** A link to the game's terms (public/regulamin.html), opening in a new tab. */
 export function linkRegulaminu(): HTMLAnchorElement {
-  const url = new URL('regulamin.html', `${location.origin}${sciezkaGry()}`).href;
-  return el('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, ['regulamin gry']) as HTMLAnchorElement;
+  const url = new URL(tx('regulamin.html', 'terms.html'), `${location.origin}${sciezkaGry()}`).href;
+  return el('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, [tx('regulamin gry', 'the game terms')]) as HTMLAnchorElement;
 }
 
 /** The small line under a new-character button: making a character accepts the terms. */
 export function liniaRegulaminu(): HTMLElement {
-  return el('p', { className: 'm-terms' }, ['Tworząc postać, akceptujesz ', linkRegulaminu(), '.']);
+  return el('p', { className: 'm-terms' }, [tx('Tworząc postać, akceptujesz ', 'By creating a character, you accept '), linkRegulaminu(), '.']);
 }
