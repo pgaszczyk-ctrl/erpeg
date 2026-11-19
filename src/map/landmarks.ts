@@ -4,7 +4,7 @@
 // (the sprites, standing with depth and a small solid base).
 
 import { PX_PER_M, pointInRings, distToPolyline, type Area, type CityMap } from './CityMap';
-import { DEKORACJE, MIEJSCA } from '../content/swiat';
+import { MIEJSCA } from '../content/swiat';
 
 export type Landmark = 'fontanna' | 'kociol' | 'wieza';
 
@@ -40,14 +40,10 @@ export function plazaFurniture(city: CityMap, a: Area) {
     return other > size || (other === size && b.id < a.id);
   })) return [];
 
-  const items: { kind: 'zegar' | 'lawka' | 'donica'; x: number; y: number }[] = [];
+  const items: { kind: 'lawka' | 'donica'; x: number; y: number }[] = [];
   const clear = (px: number, py: number) => [[-7, 0], [7, 0], [0, -5], [0, 4], [0, 0]]
     .every(([dx, dy]) => pointInRings(a.rings, px + dx, py + dy) &&
       !city.roadAt(px + dx, py + dy) && !city.isBlocked(px + dx, py + dy));
-  if (size >= DEKORACJE.zegar.odM2 * PX_PER_M ** 2 &&
-      !neighbours.some(b => plazaLandmark(city, b)) && clear(x, y)) {
-    items.push({ kind: 'zegar', x, y });
-  }
   // Keep the centre open. A bench and a planter make a small resting corner at the edge.
   for (const side of a.id % 2 ? [-1, 1] : [1, -1]) {
     const by = y + side * (a.y1 - a.y0) * .32;
@@ -66,7 +62,8 @@ export function plazaLandmark(city: CityMap, a: Area): { kind: Landmark; x: numb
   const x = (a.x0 + a.x1) / 2;
   const y = (a.y0 + a.y1) / 2 + 4;
   if (!pointInRings(a.rings, x, y)) return null;
-  const hall = city.places.some((p) => p.kind === 'office' && TOWN_HALL.test(p.name) && Math.hypot(p.door.x - x, p.door.y - y) < MIEJSCA.wieza.przyRatuszuM * PX_PER_M);
+  const atStation = city.places.some(p => p.kind === 'station' && Math.hypot(p.door.x - x, p.door.y - y) < 100 * PX_PER_M);
+  const hall = !atStation && city.places.some((p) => p.kind === 'office' && TOWN_HALL.test(p.name) && Math.hypot(p.door.x - x, p.door.y - y) < MIEJSCA.wieza.przyRatuszuM * PX_PER_M);
   const kind: Landmark | null =
     hall && m2 >= MIEJSCA.wieza.odM2 ? 'wieza'
     : m2 >= MIEJSCA.fontanna.odM2 ? 'fontanna'

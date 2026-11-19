@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — dworzec pod zamkiem
+
+- Zegary widoczne na ujęciu pochodziły z osobnej warstwy ozdób na dawnych parkingach OSM (`src/map/targ09.ts`). Z tej warstwy zostały ławki, donice i gabloty. Zwykłe place również przestały losować zegary uliczne. Wieże przy ratuszu zachowano z dala od stacji.
+- Wozy z `GameScene.ts` ponownie obsługują konkretne trasy. Woźnicy wykonują krótkie przejścia przy wozach po sprawdzonym, wolnym od przeszkód odcinku.
+
 ## 2026-11-19 — wyposażenie placów, postoje wozów i sprzedaż
 
 - Duże place wybierają wspólne wyposażenie w promieniu 55 m. Zwykły zegar trafia na wybrany plac z wolnym miejscem, a część placów dostaje ławki z donicą przy krawędzi. Na obecnej mapie Lublina wybór zmniejszył liczbę zwykłych zegarów ze 103 do 29 i dodał 47 zestawów wypoczynkowych.

@@ -1590,7 +1590,7 @@ export class MapRenderer {
   /**
    * The artist's street decorations (DEKORACJE): benches and bins along park
    * paths, steam hydrants and poster columns by streets, steam grates in the
-   * cobbles, clocks on squares, flower pots / crates / penny-farthings by
+   * cobbles, seating on squares, flower pots / crates / penny-farthings by
    * doors, the pneumatic post pillar at post offices, boxes and lockers.
    */
   private paintDecorations(ctx: CanvasRenderingContext2D, lines: Line[], areas: Area[], x0: number, y0: number) {

@@ -10,9 +10,9 @@ export const TARG = {
   co: [30, 28] as [number, number],
   /** Dawne stragany: dziś nie stawiamy (paczka „smoki_swinka_dekoracje”, 7.10.2026: dekoracje zamiast straganów). */
   szansa: 0,
-  /** Dekoracje od grafika w części miejsc (≈ 30 %), z ich udziałami. */
-  dekoracje: 0.3,
-  mieszanka: [['donica_miedziana', 30], ['lawka_trybiki', 25], ['zegar_uliczny', 15], ['gablota_ogloszen', 15], ['pompa_parowa', 10], ['teleskop', 5]] as [string, number][],
+  /** Dekoracje od grafika w części miejsc (≈ 15 %), z ich udziałami. */
+  dekoracje: 0.15,
+  mieszanka: [['donica_miedziana', 45], ['lawka_trybiki', 40], ['gablota_ogloszen', 15]] as [string, number][],
 };
 
 /** Stragany albo dekoracje na pikselach rodzaju `targ`: `jestTarg(x, y)` w px generatora (współrzędne świata). */
