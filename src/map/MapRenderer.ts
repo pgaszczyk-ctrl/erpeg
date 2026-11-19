@@ -538,11 +538,11 @@ export class MapRenderer {
   }
 
   /** Draws the chunks around the camera; call every frame. */
-  update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2) {
+  update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2, prefetch = true) {
     if (this.map.loch) return; // underground: scenes/Lochy.ts paints the maze
     const v = cam.worldView;
     const want: [number, number, number][] = [];
-    const M = CHUNK / 4;
+    const M = prefetch ? CHUNK / 4 : 0;
     // More room ahead in the direction the view moves (owner, 27 Oct 2026: on a phone a chunk takes ~3 s in the
     // background, about as long as walking a quarter chunk – the ground popped in at the screen's edge).
     const sx = v.centerX - this.lastMid.x, sy = v.centerY - this.lastMid.y;
@@ -551,7 +551,7 @@ export class MapRenderer {
       this.ruchY = sy > 0.05 ? 1 : sy < -0.05 ? -1 : 0;
     }
     this.lastMid = { x: v.centerX, y: v.centerY };
-    const A = CHUNK / 2;
+    const A = prefetch ? CHUNK / 2 : 0;
     const cx0 = Math.floor((v.x - (this.ruchX < 0 ? A : M)) / CHUNK), cx1 = Math.floor((v.right + (this.ruchX > 0 ? A : M)) / CHUNK);
     const cy0 = Math.floor((v.y - (this.ruchY < 0 ? A : M)) / CHUNK), cy1 = Math.floor((v.bottom + (this.ruchY > 0 ? A : M)) / CHUNK);
     const mx = v.centerX / CHUNK - 0.5, my = v.centerY / CHUNK - 0.5;
