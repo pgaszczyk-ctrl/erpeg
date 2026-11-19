@@ -10,6 +10,7 @@
 //  9. talks, doors, rides and quest spots start only on a double tap.
 // On every server since 1.034 (owner, 27 Oct 2026: „wydaję wszystko na prod”), never in the QR demo (it has its own tutorial). `?live=0|1` switches it for comparison,
 // remembered on the device (localStorage `exp-live`).
+import { makieta } from '../ui/makieta';
 import { demo } from '../demo';
 
 const wymuszone = (() => {
@@ -24,6 +25,7 @@ const wymuszone = (() => {
 
 /** The whole package (see above) is on. */
 export function live() {
+  if (makieta) return true;
   if (demo.on) return false;
   if (wymuszone === '0') return false;
   if (wymuszone === '1') return true;

@@ -243,7 +243,7 @@ export async function loadContent() {
   await settings;
 }
 
-export function startSession(r: LoginResult) {
+export function startSession(r: LoginResult, remember = true) {
   ustawPoziomBroni(() => poziomPostaci(session.exp));
   const p = r.player;
   setLanguage(p.save.language);
@@ -253,7 +253,7 @@ export function startSession(r: LoginResult) {
   session.name = p.name;
   session.idik = p.idik;
   session.konto = !!p.konto;
-  zapamietajPostac(p.name, p.idik);
+  if (remember) zapamietajPostac(p.name, p.idik);
   session.trudnoscWybrana = p.trudnosc_wybrana !== false;
   session.trudnoscDzis = !!p.trudnosc_dzis;
   session.age = p.age ?? 7;

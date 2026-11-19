@@ -1,3 +1,4 @@
+import { makieta, PUNKT_MAKIETY, rysowanaMakieta, tablicaMakiety } from '../ui/makieta';
 import { stylRegionu } from '../content/styleRegionow';
 import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
@@ -276,6 +277,7 @@ function pointIn(r: number[], x: number, y: number) {
 }
 
 export function night() {
+  if (makieta) return false;
   const h = new Date().getHours();
   const n = MIESZKANCY.noc;
   return n.od > n.do ? h >= n.od || h < n.do : h >= n.od && h < n.do;
@@ -818,6 +820,7 @@ export class MapRenderer {
       const c = artSheet(this.scene, d.plik, 'klatki' in d ? (d as { klatki: number }).klatki : 1);
       if (c) this.deco[k as keyof typeof DEKORACJE] = c;
     }
+    if (rysowanaMakieta) this.deco.slup = tablicaMakiety();
     this.bushArt = artSheet(this.scene, ZIELEN.krzak, ZIELEN.klatki);
     this.roofArt = DACHY_PLIKI.map((f) => {
       if (!made.has(f)) made.set(f, artPattern(this.scene, ctx, f));
@@ -895,8 +898,16 @@ export class MapRenderer {
       for (const p of paths) {
         const xs=p.pts.filter((_,i)=>i%2===0), ys=p.pts.filter((_,i)=>i%2===1);
         if (Math.max(...xs)<x0-80 || Math.min(...xs)>x0+CHUNK+80 || Math.max(...ys)<y0-80 || Math.min(...ys)>y0+CHUNK+80) continue;
-        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed, kotly:p.kotly?.map(k=>({x:k.x*G2,y:k.y*G2,pipeX:k.pipeX*G2,pipeY:k.pipeY*G2}))});
+        rury.push({pts:p.pts.map(v=>v*G2),seed:p.seed,matowa:rysowanaMakieta, kotly:p.kotly?.map(k=>({x:k.x*G2,y:k.y*G2,pipeX:k.pipeX*G2,pipeY:k.pipeY*G2}))});
       }
+    }
+    if (makieta && m.id === 'lublin') {
+      const point = m.fromLatLon(PUNKT_MAKIETY.lat, PUNKT_MAKIETY.lon);
+      const dy = rysowanaMakieta ? -30 : -26;
+      // A short comparison segment in the grass verge just north of the castle path.
+      const offsets = [-48, dy - 3, -40, dy, 15, dy, 39, dy + 2, 48, dy + 5];
+      const pts = offsets.map((v, i) => (v + (i % 2 ? point.y : point.x)) * G2);
+      rury.push({ pts, seed: 44, matowa: rysowanaMakieta });
     }
     const peronyGen: Peron09[] = perony.map((p) => ({ os: p.os.map((v) => v * G2), tor: p.tor, szer: p.szer * G2, seed: (Math.round(p.os[0]) * 7919 + Math.round(p.os[1]) * 104729) >>> 0 }));
     // Fields and allotments reaching the chunk: whole outlines (the strips must be the same in every chunk).
@@ -1612,11 +1623,17 @@ export class MapRenderer {
         }
         if (this.deco.slup && l.kind !== 'minor') {
           this.along(l, D.slup.coM * PX_PER_M, (x, y, ux, uy, side) => {
-            const px = x + uy * (off + 2 * PX_PER_M) * side, py = y - ux * (off + 2 * PX_PER_M) * side;
-            if (free(px, py) && !onOtherRoad(m, l, px, py)) this.stand(ctx, 'slup', px, py);
+            const offset = off + (rysowanaMakieta ? 4 : 2) * PX_PER_M;
+            const px = x + uy * offset * side, py = y - ux * offset * side;
+            if (free(px, py) && !onOtherRoad(m, l, px, py) && (!rysowanaMakieta || !m.roadAt(px, py))) this.stand(ctx, 'slup', px, py);
           });
         }
       }
+    }
+    if (makieta && m.id === 'lublin') {
+      const point = m.fromLatLon(PUNKT_MAKIETY.lat, PUNKT_MAKIETY.lon);
+      // Use the same corner in both variants and move the board off the walking line.
+      this.stand(ctx, 'slup', point.x - 25, point.y - (rysowanaMakieta ? 23 : 14));
     }
     // A street clock in the middle of bigger squares.
     if (this.deco.zegar) {

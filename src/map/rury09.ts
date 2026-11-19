@@ -1,7 +1,7 @@
 import { dlugosc, hash, trasaPrzyDrodze } from '../gen';
 
 export interface Kociol09 { x: number; y: number; pipeX: number; pipeY: number }
-export interface Rura09 { pts: number[]; seed: number; kotly?: Kociol09[] }
+export interface Rura09 { pts: number[]; seed: number; matowa?: boolean; kotly?: Kociol09[] }
 
 /** Whole selected streets, with underground breaks only where clearance is lost.
  * Station cadence follows the original route, never resets at obstacles/chunk edges.

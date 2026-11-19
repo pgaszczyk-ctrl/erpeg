@@ -72,19 +72,19 @@ function preparePoster(r: HTMLElement) {
 }
 
 /** Called after successful login/creation, before the real map is loaded. */
-export function beginMapIntro(login: HTMLElement) {
+export function beginMapIntro(login?: HTMLElement) {
   const r = root();
-  if (!r) { login.remove(); return; }
+  if (!r) { login?.remove(); return; }
   finished = false;
-  menu = login;
-  login.inert = true;
+  menu = login ?? null;
+  if (login) login.inert = true;
   (document.activeElement as HTMLElement | null)?.blur();
   resetTouch();
   resetKeys();
   r.dataset.phase = 'fading';
   const ms = reduced() ? 100 : 180;
   r.querySelector<HTMLElement>('.lm-plate')!.style.opacity = '1';
-  void login.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'linear', fill: 'forwards' }).finished
+  void login?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'linear', fill: 'forwards' }).finished
     .catch(() => {})
     .then(() => { login.remove(); if (menu === login) menu = null; });
 }

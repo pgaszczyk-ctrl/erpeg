@@ -133,6 +133,7 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo, powitanie, blackout } from '../demo';
+import { makieta } from '../ui/makieta';
 import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
@@ -432,7 +433,7 @@ export class GameScene extends Phaser.Scene {
   private protect(now: number) {
     this.protectUntil = now + OCHRONA_MS;
     this.noHurtUntil = Math.max(this.noHurtUntil, this.protectUntil);
-    this.toast(tx(`🛡 Ochrona na ${OCHRONA_MS / 1000} sekund – rozejrzyj się spokojnie.`, `🛡 Protected for ${OCHRONA_MS / 1000} seconds – take a calm look around.`), 2500);
+    if (!makieta) this.toast(tx(`🛡 Ochrona na ${OCHRONA_MS / 1000} sekund – rozejrzyj się spokojnie.`, `🛡 Protected for ${OCHRONA_MS / 1000} seconds – take a calm look around.`), 2500);
   }
   /** Right after a dialog closes, a swing doesn't start another talk. */
   private talkReadyAt = 0;
@@ -614,7 +615,7 @@ export class GameScene extends Phaser.Scene {
     // Home: the nearest real house to the start point (hit it to go in).
     this.home = null;
     this.homeAt = { x: -1e6, y: -1e6 };
-    if (inLublin) this.setUpHome();
+    if (inLublin && !makieta) this.setUpHome();
     makePlayerTexture(this, session.look, this.worn());
     this.wornKey = JSON.stringify(this.worn());
     // After a coach ride: at the station of the new map.
@@ -4401,7 +4402,7 @@ export class GameScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     // The QR demo: out to the ordinary start screen (without the demo link).
-    if (demo.on) {
+    if (demo.on || makieta) {
       location.href = location.origin + sciezkaGry();
       return;
     }

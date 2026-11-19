@@ -1,4 +1,4 @@
-import { trescSerwera } from '../quests';
+import { startSession, trescSerwera } from '../quests';
 import Phaser from 'phaser';
 import { createArt, useArtistArt, useCropIcons, CROP_ICONS } from '../art';
 import { createHeroAnims } from '../objects/Player';
@@ -14,12 +14,17 @@ import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
 import { bootImageUrl } from '../bootImages';
-import { loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
+import { beginMapIntro, showLoginMap, loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
 import { dreamPlaces, dreamMap, wczytajTargi } from '../demo';
 import { demoStartForm } from '../ui/demoStart';
 import { PX_PER_M } from '../map/CityMap';
 import type { GameScene } from './GameScene';
 import { letGo } from '../guard';
+import { offline } from '../api';
+import { DEFAULT_LOOK } from '../look';
+import { freshGear } from '../inventory';
+import { makieta, PUNKT_MAKIETY, pokazPorownanie } from '../ui/makieta';
+import { przedWejsciem } from '../ui/poziomo';
 
 // Builds textures and animations, loads the map of Lublin, then starts the game.
 export class BootScene extends Phaser.Scene {
@@ -45,7 +50,7 @@ export class BootScene extends Phaser.Scene {
     // Fetch the map/font while Phaser downloads the artwork, not afterwards.
     void Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => {});
     this.worldReady = Promise.all([getMap('lublin'), loadWorld()]).then(([city]) => city);
-    if (!qrDemo) {
+    if (!qrDemo && !makieta) {
       // The form can open as soon as the map indices are ready, while artwork is still loading.
       this.menuReady = this.worldReady.then(city => showMenu(city));
       void this.menuReady.catch(() => {});
@@ -108,6 +113,7 @@ export class BootScene extends Phaser.Scene {
           return this.playDemo(qr, city);
         }
         text.setText('');
+        if (makieta) return this.playMakieta(city);
         return this.menuReady!.then(() => enterWorld(this.game));
       })
       .catch((err: Error) => {
@@ -115,6 +121,25 @@ export class BootScene extends Phaser.Scene {
         text.setText('');
         loadingMapError(err.message, () => { letGo(); location.reload(); });
       });
+  }
+
+  private async playMakieta(city: CityMap) {
+    offline.demo = true;
+    showLoginMap();
+    przedWejsciem();
+    beginMapIntro();
+    const at = city.fromLatLon(PUNKT_MAKIETY.lat, PUNKT_MAKIETY.lon);
+    await city.ensure(at.x, at.y, 250 * PX_PER_M);
+    const start = city.reachableNear(at.x, at.y);
+    startSession({ player: {
+      name: 'Makieta', idik: '', start_place: 'Lublin', start_x: start.x, start_y: start.y,
+      map_scale: PX_PER_M, exp: 0, dead: false, died_at: null, age: 12, immortal: true, konto: true,
+      save: { story: { st: 'koniec', walked: 0 }, flagi: { samouczek: 1 },
+        missions: { 'prolog.recruit.v1': 'done' }, equip: { ...freshGear().equip, bron: 'miecz_rekruta' },
+        look: { ...DEFAULT_LOOK, guard3d: 'm', modul: { g: '16', c: '16', p: 'm', s: 0, w: 2, u: 2, u2: 1 } } },
+    } }, false);
+    await enterWorld(this.game);
+    pokazPorownanie();
   }
 
   /** The QR demo: the logo opening over the world map runs while the dream's map is prepared, then the game shows. */

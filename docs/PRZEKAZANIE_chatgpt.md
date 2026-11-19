@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — grywalna makieta oprawy pod Zamkiem Lubelskim
+
+- Dwa warianty na TEST (`?makieta=oryginal` i `?makieta=rysowana`) otwierają tę samą scenę bez logowania. Ustawiono próbki złoża, tablicy i rury na rzeczywistej mapie Lublina. Scena korzysta z normalnego sterowania i istniejącego strażnika GLB.
+- Próba używa osobnego rysunku złoża, drewnianej tablicy z daszkiem odsuniętej od przejścia i matowej palety rury o końcach w studzienkach. Punkty porównania i rysunki są w `src/ui/makieta.ts`. Tryb nie tworzy postaci ani nie zapisuje postępu na serwerze. Zmiana próbki ładuje ponownie ten sam fragment.
+- Sprawdzono kompilację i lokalny podgląd obu wariantów. Zrzuty wykonano na komputerze i w emulacji telefonu 390×844. Środowisko przeglądarkowe sprawdza pozycję złoża, załadowanie GLB, ruch i brak wywołań zapisu.
+
 ## 2026-11-19 — szybsze wejście do gry
 
 - Formularz startowy pojawia się po wczytaniu indeksów map, podczas pobierania grafik i czcionek. Zwykły start używa plakatu bez osobnego filmu, a najazd nie opóźnia odsłonięcia wyrenderowanej mapy. Przed odsłonięciem terenu kamera ma pierwszeństwo przy pobieraniu kafli i rysowaniu.

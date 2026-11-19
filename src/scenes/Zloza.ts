@@ -3,6 +3,7 @@ import { CityMap } from '../map/CityMap';
 import { rng } from '../rng';
 import { session } from '../quests';
 import { today } from './Npcs';
+import { makieta, rudaMakiety, rysowanaMakieta } from '../ui/makieta';
 import { GORNICTWO } from '../content/sklepy';
 
 export interface Zloze { id: string; x: number; y: number; obraz: Phaser.GameObjects.Image }
@@ -12,6 +13,19 @@ const TEREN = new Set(['forest', 'scrub', 'heath', 'grass', 'meadow', 'rock', 'b
 export class Zloza {
   lista: Zloze[] = [];
   private next = 0;
+  private probka?: { x: number; y: number };
+
+  private dodaj(id: string, p: { x: number; y: number }, visible: (x: number, y: number) => boolean) {
+    const key = rysowanaMakieta ? 'makieta-ruda' : 'item-ruda_zelaza';
+    if (rysowanaMakieta && !this.scene.textures.exists(key)) {
+      this.scene.textures.addCanvas(key, rudaMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const obraz = this.scene.add.image(p.x, p.y, key)
+      .setDisplaySize(rysowanaMakieta ? 19 : 30, rysowanaMakieta ? 12.67 : 30)
+      .setOrigin(.5, .85).setDepth(p.y).setVisible(this.dostepne({ id }) && visible(p.x, p.y));
+    this.lista.push({ id, ...p, obraz });
+  }
+
   constructor(private scene: Phaser.Scene, private city: CityMap) {}
 
   stan(z: Pick<Zloze, 'id'>) {
@@ -31,6 +45,20 @@ export class Zloza {
     this.next = now + 600;
     for (const z of this.lista.filter(z => Math.hypot(z.x-x,z.y-y)>700)) z.obraz.destroy();
     this.lista = this.lista.filter(z => z.obraz.active);
+    if (makieta && !this.lista.some(z => z.id === 'makieta')) {
+      if (!this.probka) {
+        for (const d of [20, 30, 42, 58, 76]) {
+          const candidates = Array.from({ length: 16 }, (_, i) => {
+            const a = i * Math.PI / 8;
+            return { x: session.startX + Math.cos(a) * d, y: session.startY + Math.sin(a) * d };
+          });
+          this.probka = candidates.find(p => visible(p.x, p.y) && this.city.surfaceAt(p.x, p.y) === 'trawa'
+            && !this.city.roadAt(p.x, p.y) && this.city.isFree(p.x, p.y, 10, 6));
+          if (this.probka) break;
+        }
+      }
+      if (this.probka && Math.hypot(x - this.probka.x, y - this.probka.y) <= 600) this.dodaj('makieta', this.probka, visible);
+    }
     const geo = this.city.toLatLon(x,y);
     const cx = Math.floor(geo.lon*1000), cy = Math.floor(geo.lat*1000);
     for (let dx=-3;dx<=3;dx++) for (let dy=-3;dy<=3;dy++) {
@@ -42,9 +70,7 @@ export class Zloza {
       if (Math.hypot(p.x-x,p.y-y)>600 || !this.city.ready({x0:p.x-20,y0:p.y-20,x1:p.x+20,y1:p.y+20})) continue;
       if (!this.city.areaKindsAt(p.x,p.y).some(k=>TEREN.has(k)) || this.city.roadAt(p.x,p.y) || !this.city.isFree(p.x,p.y,12,12)) continue;
       if (this.city.places.some(t=>Math.hypot(t.door.x-p.x,t.door.y-p.y)<40)) continue;
-      // Artist's iron rock, pack 45 C2; use the delivered sprite rather than a new drawing.
-      const obraz=this.scene.add.image(p.x,p.y,'item-ruda_zelaza').setDisplaySize(30,30).setOrigin(.5,.85).setDepth(p.y).setVisible(this.dostepne({id}) && visible(p.x,p.y));
-      this.lista.push({id,...p,obraz});
+      this.dodaj(id, p, visible);
     }
     // Old days do not occupy the save forever. Current-day counts survive despawning.
     const day=today();
