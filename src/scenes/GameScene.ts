@@ -1212,7 +1212,7 @@ export class GameScene extends Phaser.Scene {
     const intro = loadingGame() || artilleryTransit.active;
     // A hidden scene does not run the render pass that normally updates worldView.
     if (intro) this.cameras.main.preRender();
-    this.mapView.update(this.cameras.main, intro ? 1 : 2);
+    this.mapView.update(this.cameras.main, 2, !intro);
     if (this.player) {
       // Łowiska (owner, 25 Oct 2026): a nearby wolf/warg also opens a hole in the crown over it, so it
       // doesn't vanish under dense canopy mid-fight – same mechanism as the hero's own see-through.
@@ -1224,7 +1224,12 @@ export class GameScene extends Phaser.Scene {
     // Tiled maps: keep the map loaded around the hero.
     if (now >= this.nextTiles && this.player) {
       this.nextTiles = now + 700;
-      this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS).catch((e: Error) => report('tiles', e.message));
+      const v = this.cameras.main.worldView;
+      // While covered, prioritize the camera. Farther tiles can invalidate freshly painted chunks.
+      const load = intro
+        ? this.city.ensure(v.centerX, v.centerY, Math.max(v.width, v.height) / 2 + 100 * PX_PER_M)
+        : this.city.ensure(this.player.x, this.player.y, LOAD_RADIUS);
+      load.catch((e: Error) => report('tiles', e.message));
     }
     if (intro) {
       if(artilleryTransit.active)this.ludzik3d?.update(this.player,dt);

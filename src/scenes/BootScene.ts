@@ -28,6 +28,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   private worldReady!: Promise<CityMap>;
+  private menuReady?: Promise<void>;
   private loadingText!: Phaser.GameObjects.Text;
 
   preload() {
@@ -42,11 +43,13 @@ export class BootScene extends Phaser.Scene {
       demoMapAtOnce();
     } else this.load.on('progress', (p: number) => this.loadingText.setText(`${LADOWANIE[0]}\n${Math.round(p * 100)}%`));
     // Fetch the map/font while Phaser downloads the artwork, not afterwards.
-    const font = Promise.race([
-      Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => null),
-      new Promise((ok) => setTimeout(ok, 3000)),
-    ]);
-    this.worldReady = Promise.all([getMap('lublin'), loadWorld(), font]).then(([city]) => city);
+    void Promise.all([document.fonts?.load('19px "Alegreya Sans"'), document.fonts?.load('bold 19px "Alegreya Sans"')]).catch(() => {});
+    this.worldReady = Promise.all([getMap('lublin'), loadWorld()]).then(([city]) => city);
+    if (!qrDemo) {
+      // The form can open as soon as the map indices are ready, while artwork is still loading.
+      this.menuReady = this.worldReady.then(city => showMenu(city));
+      void this.menuReady.catch(() => {});
+    }
     // The loading error is shown in create(); avoid an unhandled rejection during preload.
     void this.worldReady.catch(() => {});
     this.load.image('szlam-szczegolowy', 'proby31/szlam_wodny.png');
@@ -105,7 +108,7 @@ export class BootScene extends Phaser.Scene {
           return this.playDemo(qr, city);
         }
         text.setText('');
-        return showMenu(city).then(() => enterWorld(this.game));
+        return this.menuReady!.then(() => enterWorld(this.game));
       })
       .catch((err: Error) => {
         timer.remove();

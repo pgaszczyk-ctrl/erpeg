@@ -4,15 +4,12 @@ import { resetTouch, resetKeys } from '../controls';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
-let fade: Promise<void> = Promise.resolve();
 let flight: Animation | null = null;
 let point: { x: number; y: number } | null = null;
 let finished = false;
 let menu: HTMLElement | null = null;
-let video: HTMLVideoElement | null = null;
 let poster: HTMLImageElement | null = null;
 let resize: (() => void) | null = null;
-let overviewOffset = 0.08;
 const EUROPE = { x: 655 / 1280, y: 211 / 720 };
 
 const root = () => document.getElementById('loading-map');
@@ -37,9 +34,6 @@ function stopMedia() {
   flight = null;
   drift?.anim.cancel();
   drift = null;
-  video?.pause();
-  if (video) { video.removeAttribute('src'); video.load(); video.remove(); }
-  video = null;
   poster?.remove();
   poster = null;
 }
@@ -53,7 +47,6 @@ export function showLoginMap() {
   menu = null;
   point = null;
   finished = false;
-  fade = Promise.resolve();
   r.hidden = false;
   r.setAttribute('aria-busy', 'true');
   r.style.opacity = '';
@@ -78,24 +71,6 @@ function preparePoster(r: HTMLElement) {
   r.querySelector('.lm-plate')!.append(poster);
 }
 
-function startMedia(r: HTMLElement) {
-  const plate = r.querySelector<HTMLElement>('.lm-plate')!;
-  // Decode the still map while the player fills in the form. It also covers
-  // the first video frame on slow connections and stays steady during zoom.
-  preparePoster(r);
-  if (reduced()) return;
-  video = document.createElement('video');
-  video.muted = true;
-  video.loop = true;
-  video.playsInline = true;
-  video.preload = 'auto';
-  video.setAttribute('aria-hidden', 'true');
-  video.addEventListener('error', () => preparePoster(r), { once: true });
-  video.src = asset('map-animation.mp4');
-  plate.append(video);
-  void video.play().catch(() => preparePoster(r));
-}
-
 /** Called after successful login/creation, before the real map is loaded. */
 export function beginMapIntro(login: HTMLElement) {
   const r = root();
@@ -107,10 +82,9 @@ export function beginMapIntro(login: HTMLElement) {
   resetTouch();
   resetKeys();
   r.dataset.phase = 'fading';
-  startMedia(r);
-  const ms = reduced() ? 150 : 650;
+  const ms = reduced() ? 100 : 180;
   r.querySelector<HTMLElement>('.lm-plate')!.style.opacity = '1';
-  fade = login.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'linear', fill: 'forwards' }).finished
+  void login.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: 'linear', fill: 'forwards' }).finished
     .catch(() => {})
     .then(() => { login.remove(); if (menu === login) menu = null; });
 }
@@ -137,17 +111,15 @@ function initialFrame(r: HTMLElement) {
   return frame(r, portrait(r) ? EUROPE : { x: 0.5, y: 0.5 }, initialScale(r), true);
 }
 /**
- * One movement (owner, 11 Oct 2026: „nie centruj najpierw, tylko centruj zoomując”): after a short
- * look at the whole map the zoom starts from its middle and the destination glides to the centre while
+ * One movement (owner, 11 Oct 2026: „nie centruj najpierw, tylko centruj zoomując”): the
+ * zoom starts from the middle of the map and the destination glides to the centre while
  * the picture grows – no separate pan. Geometric zoom; the target's distance from the screen centre
  * shrinks as (1 − u)², so it moves steadily inwards and never swings out.
  */
 function flightFrames(r: HTMLElement) {
   const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
   const s0 = initialScale(r), s1 = finalScale(r);
-  const frames: Keyframe[] = [
-    { offset: 0, transform: initialFrame(r), easing: 'linear' },
-  ];
+  const frames: Keyframe[] = [];
   const N = 40;
   for (let k = 0; k <= N; k++) {
     const t = k / N;
@@ -155,60 +127,31 @@ function flightFrames(r: HTMLElement) {
     const scale = s0 * (s1 / s0) ** u;
     const f = 1 - (1 - u) ** 2 * (s0 / scale);
     const p = { x: from.x + (point!.x - from.x) * f, y: from.y + (point!.y - from.y) * f };
-    frames.push({ offset: overviewOffset + (1 - overviewOffset) * t, transform: frame(r, p, scale, true), easing: 'linear' });
+    frames.push({ offset: t, transform: frame(r, p, scale, true), easing: 'linear' });
   }
   return frames;
 }
 
 /** The destination is resolved by travel.ts from this character's real save. */
-export async function flyToGameLocation(lat: number, lon: number, mapReady: Promise<void>) {
+export function flyToGameLocation(lat: number, lon: number) {
   const r = root();
-  if (!r || r.hidden || !loadingGame()) return;
+  if (!r || r.hidden || finished || r.dataset.phase === 'error' || !loadingGame()) return;
   point = punktNaMapieWczytywania(lat, lon);
   r.style.setProperty('--target-x', String(point.x));
   r.style.setProperty('--target-y', String(point.y));
-  if (r.hidden || finished || r.dataset.phase === 'error') return;
-  r.dataset.phase = 'pan';
-  // The supplied movie runs at 9 fps. During movement use its still frame,
-  // then resume the lamp animation if terrain preparation takes longer.
-  video?.pause();
-  await fade;
-  if (r.hidden || finished || r.dataset.phase === 'error') return;
-  if (!reduced()) {
-    // A short look at the whole map, then one zoom that also brings the destination to the centre.
-    const overviewMs = 700, zoomMs = 10_000, zoomStart = overviewMs;
-    const duration = zoomStart + zoomMs;
-    overviewOffset = overviewMs / duration;
-    flight = r.querySelector<HTMLElement>('.lm-plate')!.animate(flightFrames(r), { duration, easing: 'linear', fill: 'forwards' });
-    const current = flight, done = current.finished.catch(() => {});
-    let terrainReady = false, finishing = false;
-    void mapReady.then(() => { terrainReady = true; });
-    const began = performance.now();
-    while (flight === current && current.playState !== 'finished' && current.playState !== 'idle' && !finished && r.dataset.phase !== 'error') {
-      const time = Number(current.currentTime ?? 0);
-      if (time >= zoomStart && !finishing) {
-        const progress = Math.max(0, Math.min(1, (time - zoomStart) / zoomMs));
-        if (terrainReady) {
-          // A gentle tail towards the destination once the actual first view is painted.
-          const remaining = Math.max(1800, (1-progress)*3600, zoomStart+3600-(performance.now()-began));
-          current.updatePlaybackRate((duration-time)/remaining);
-          finishing = true;
-        } else if (progress > 0.6) {
-          // Keep approaching instead of parking at maximum zoom while workers are busy.
-          current.updatePlaybackRate(Math.max(0.001, (1-progress)*0.8));
-        }
-      }
-      await new Promise<void>((resolve) => setTimeout(resolve, 100));
-    }
-    await done;
-  } else {
-    r.querySelector<HTMLElement>('.lm-plate')!.style.transform = frame(r, point, finalScale(r), true);
-  }
-  await fade;
-  if (!r.hidden && !finished && r.dataset.phase === 'pan') {
+  const plate = r.querySelector<HTMLElement>('.lm-plate')!;
+  if (reduced()) {
+    plate.style.transform = frame(r, point, finalScale(r), true);
     r.dataset.phase = 'waiting';
-    void video?.play().catch(() => {});
+    return;
   }
+  r.dataset.phase = 'pan';
+  // Let the map move while the real world is being prepared. Reveal never waits for the zoom.
+  const current = plate.animate(flightFrames(r), { duration: 1600, easing: 'linear', fill: 'forwards' });
+  flight = current;
+  void current.finished.then(() => {
+    if (flight === current && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
+  }, () => {});
 }
 
 /**
@@ -342,7 +285,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   }
 }
 
-/** Reveal only after both the flight and actual terrain rendering are ready. */
+/** Reveal after the actual terrain has rendered, even if the flight is still moving. */
 export async function revealLoadedGame() {
   const r = root();
   if (!r || r.hidden || finished || r.dataset.phase === 'error') return;

@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — szybsze wejście do gry
+
+- Formularz startowy pojawia się po wczytaniu indeksów map, podczas pobierania grafik i czcionek. Zwykły start używa plakatu bez osobnego filmu, a najazd nie opóźnia odsłonięcia wyrenderowanej mapy. Przed odsłonięciem terenu kamera ma pierwszeństwo przy pobieraniu kafli i rysowaniu.
+- Zmiany są w `src/scenes/BootScene.ts`, `src/ui/loadingMap.ts`, `src/travel.ts`, `src/scenes/GameScene.ts`, `src/map/MapRenderer.ts` oraz `index.html`.
+- Kompilacja przeszła. Chromium 1363×936 i emulacja 390×844 przeszły start nowego gościa na realnej mapie Lublina z odizolowanym zapisem i przyjęciem listu. Sprawdzono zrzuty po odsłonięciu gry.
+
 ## 2026-11-19 — wydanie 1.049
 
 - Właściciel zlecił bezpośrednią publikację poprawek prologu na produkcji. Wydanie bazuje na sprawdzonej kompilacji TEST `1f6f9aa`.
