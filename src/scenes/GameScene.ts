@@ -3683,7 +3683,7 @@ export class GameScene extends Phaser.Scene {
         const img = this.add.image(at.x, at.y, key, 'f0').setOrigin(0.5, 0.92);
         img.setScale(W.wysokosc / img.height).setDepth(at.y);
         this.wozy = this.wozy.filter((w) => w.img.active);
-        const driver = this.coachmanAt(at.x + 12, at.y + 7, true);
+        const driver = this.coachmanAt(at.x + 12, at.y + 2, true);
         this.wozy.push({ img, driver, p });
         const swap = () => {
           if (!img.active) return;
