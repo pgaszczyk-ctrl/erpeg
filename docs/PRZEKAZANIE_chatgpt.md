@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — wyposażenie placów, postoje wozów i sprzedaż
+
+- Duże place wybierają wspólne wyposażenie w promieniu 55 m. Zwykły zegar trafia na wybrany plac z wolnym miejscem, a część placów dostaje ławki z donicą przy krawędzi. Na obecnej mapie Lublina wybór zmniejszył liczbę zwykłych zegarów ze 103 do 29 i dodał 47 zestawów wypoczynkowych.
+- Wspólny przystanek ma jeden wóz i zachowuje wszystkie kursy. Ustawienie wozu sprawdza teren pod całą bryłą, wejścia, przejazdy i sąsiednie wozy. Przy braku wolnego miejsca woźnicy mają znak przystanku. W dzień przechodnie mogą na chwilę przystanąć na placu.
+- Kafelek sprzedaży wszystkich zbiorów ma oznaczenie „RAZEM”. Test Chromium obejmuje też przejście między sklepem i Kufrem oraz zakładanie i zdejmowanie broni. Na mapie sprawdzono trzy kursy z jednego stanowiska z jednym zaprzęgiem bez kolizji.
+
 ## 2026-11-19 — wspólna siatka pikseli i czytelny szyld
 
 - Na podstawie uwagi właściciela wspólną gęstość powiązano z `GEN_DOTS`. Jeden piksel tekstury to pół jednostki mapy. Wypełnienie kształtów jest wyrównane do pikseli, a rysunki używają próbkowania NEAREST.

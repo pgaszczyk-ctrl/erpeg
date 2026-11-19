@@ -11,7 +11,7 @@ import { DZIELENIE, POZIOMY } from '../content/budynki';
 import { SKALA_POSTACI } from '../skala';
 import { Wysokie } from './Wysokie';
 import { MIESZKANCY } from '../content/mieszkancy';
-import { plazaLandmark } from './landmarks';
+import { plazaFurniture } from './landmarks';
 import { OSTROSC } from '../screen';
 import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
@@ -1635,13 +1635,8 @@ export class MapRenderer {
       // Use the same corner in both variants and move the board off the walking line.
       this.stand(ctx, 'slup', point.x - 25, point.y - (rysowanaMakieta ? 23 : 14));
     }
-    // A street clock in the middle of bigger squares.
-    if (this.deco.zegar) {
-      for (const a of areas) {
-        if (a.kind !== 'plaza' || (a.x1 - a.x0) * (a.y1 - a.y0) < D.zegar.odM2 * PX_PER_M * PX_PER_M || plazaLandmark(m, a)) continue;
-        const cx = (a.x0 + a.x1) / 2, cy = (a.y0 + a.y1) / 2;
-        if (pointIn(a.rings[0], cx, cy) && free(cx, cy)) this.stand(ctx, 'zegar', cx, cy);
-      }
+    for (const a of areas) if (a.kind === 'plaza') {
+      for (const f of plazaFurniture(m, a)) this.stand(ctx, f.kind, f.x, f.y);
     }
     // By the doors of places.
     const pad = 40;

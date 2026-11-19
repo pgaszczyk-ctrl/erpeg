@@ -38,6 +38,8 @@ export interface Folk {
   gone?: boolean;
   /** Waiting for the hero to bring back what imps stole (stands still). */
   waiting?: boolean;
+  pauseCheckAt?: number;
+  restingUntil?: number;
   /** An umbrella over the head in the rain (drawn by code until the artist's one). */
   umbrella?: Phaser.GameObjects.Graphics;
   /** A newsboy's rolled-paper sign over the head. */
@@ -324,9 +326,15 @@ export class Townsfolk {
         f.sign?.setPosition(Math.round(f.x), Math.round(f.y - s.displayHeight * s.originY - 3 + Math.sin(now / 260) * 0.8)).setDepth(1_150_000).setVisible(s.visible);
         continue;
       } else if (!f.waiting) {
-        f.walker.step(dt);
-        f.x = f.walker.x;
-        f.y = f.walker.y;
+        if (f.role === 'wita' && now >= (f.pauseCheckAt ?? 0)) {
+          f.pauseCheckAt = now + 12_000 + hash(f.id) % 7000;
+          if (!isNight() && this.city.areaKindsAt(f.x, f.y).includes('plaza')) f.restingUntil = now + 2400;
+        }
+        if (now >= (f.restingUntil ?? 0)) {
+          f.walker.step(dt);
+          f.x = f.walker.x;
+          f.y = f.walker.y;
+        }
       }
       const scared = !!this.fear && Math.hypot(f.x - this.fear.x, f.y - this.fear.y) < fearR;
       const dx = f.x - ox, dy = f.y - oy;
