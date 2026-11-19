@@ -23,7 +23,7 @@ import { report } from '../errlog';
 import { BIBLIOTEKA_ZAGADKI } from '../content/zagadki';
 import { TEX, PLAYER_TEX, makePlayerTexture, GOODS_TEX, artScale, peakTexture } from '../art';
 import { OSTROSC, zoomZPrzyblizeniem, nastepnePrzyblizenie } from '../screen';
-import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey } from '../sprites';
+import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey, walkHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
 import { Ludzik3D, ludzik3d } from '../ludzik3d';
@@ -3158,12 +3158,12 @@ export class GameScene extends Phaser.Scene {
       for (const dx of [-24, -12, 0, 12, 24]) for (const dy of [-32, -20, -8, 0]) {
         if (!this.city.isFree(x + dx, y + dy, 2, 2)) return false;
         const road = this.city.roadAt(x + dx, y + dy);
-        if (road && road.kind !== 'service') return false;
+        if (road && !['service', 'path', 'pedestrian'].includes(road.kind)) return false;
       }
       return true;
     };
-    for (let r = 24; r <= 72; r += 8) {
-      for (const [dx, dy] of [[1, 0], [-1, 0], [1, 1], [-1, 1], [0, 1], [1, -1], [-1, -1], [0, -1]]) {
+    for (let r = 24; r <= 64; r += 8) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [1, 0.5], [-1, 0.5], [0, 1], [1, -0.5], [-1, -0.5], [0, -1]]) {
         const x = p.door.x + dx * r, y = p.door.y + dy * r;
         if (clear(x, y)) return { x, y };
       }
@@ -3615,33 +3615,49 @@ export class GameScene extends Phaser.Scene {
       this.events.once('shutdown', off);
       return;
     }
-    if (hdOn) {
-      const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
-      if (this.textures.exists(key)) {
-        const at = this.city.freeNear(p.door.x, p.door.y);
-        fitHd(this.add.sprite(at.x, at.y, key, 'down-0')).setDepth(at.y);
-      }
-    }
     if (!tor) return this.placeCarts([p]);
+    const at = this.city.freeNear(p.door.x, p.door.y);
+    this.coachmanAt(at.x, at.y, false);
     (this.pociagi ??= new Pociagi(this, this.mapView)).postaw(p, tor);
   }
 
   /** Horse carts at bus stations: a swing/click on one (or standing by it) opens its coachman, like trains. */
-  private wozy: { img: Phaser.GameObjects.Image; p: CityPlace }[] = [];
+  private wozy: { img: Phaser.GameObjects.Image; driver?: Phaser.GameObjects.Sprite; p: CityPlace }[] = [];
 
   private cartAt(x: number, y: number, pad = 0): CityPlace | null {
     for (const w of this.wozy) {
       if (!w.img.active) continue;
-      const b = w.img.getBounds();
-      if (x >= b.x - pad && x <= b.right + pad && y >= b.y - pad && y <= b.bottom + pad) return w.p;
+      const bounds = [w.img.getBounds()];
+      if (w.driver?.active) bounds.push(w.driver.getBounds());
+      if (bounds.some(b => x >= b.x - pad && x <= b.right + pad && y >= b.y - pad && y <= b.bottom + pad)) return w.p;
     }
     return null;
   }
 
+  private coachmanAt(x: number, y: number, working: boolean) {
+    if (!hdOn || !this.city.isFree(x, y, 3, 3)) return;
+    const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
+    if (!this.textures.exists(key)) return;
+    const driver = fitHd(this.add.sprite(x, y, key, 'down-0')).setDepth(y);
+    if (!working) return driver;
+    // A short walk between the horse and the load, in front of the cart.
+    const direction = [-1, 1].find(dir => [4, 8, 12, 16].every(dx => {
+      const px = x + dx * dir;
+      const road = this.city.roadAt(px, y);
+      return this.city.isFree(px, y, 3, 3) && (!road || road.kind === 'service' || road.kind === 'path');
+    }));
+    if (!direction) return driver;
+    this.tweens.add({
+      targets: driver, x: x + direction * 16, duration: 1500, yoyo: true,
+      delay: 500 + Math.abs(Math.round(x * 53 + y * 17)) % 2300, hold: 1900, repeat: -1, repeatDelay: 2200,
+      onUpdate: (_tween, _target, _key, current, previous) => walkHd(driver, current - previous, 0),
+      onYoyo: () => walkHd(driver, 0, 0),
+      onRepeat: () => walkHd(driver, 0, 0),
+    });
+    return driver;
+  }
+
   private placeCarts(stations: CityPlace[]) {
-    // Extra drivers still offer their own routes, with a single team for the named stop.
-    stations = stations.filter(p => !/#\d+$/.test(p.id));
-    if (!stations.length) return;
     const W = WOZY;
     const file = (p: CityPlace) => {
       let h = 0;
@@ -3667,7 +3683,8 @@ export class GameScene extends Phaser.Scene {
         const img = this.add.image(at.x, at.y, key, 'f0').setOrigin(0.5, 0.92);
         img.setScale(W.wysokosc / img.height).setDepth(at.y);
         this.wozy = this.wozy.filter((w) => w.img.active);
-        this.wozy.push({ img, p });
+        const driver = this.coachmanAt(at.x + 12, at.y + 7, true);
+        this.wozy.push({ img, driver, p });
         const swap = () => {
           if (!img.active) return;
           img.setFrame(img.frame.name === 'f0' ? 'f1' : 'f0');
