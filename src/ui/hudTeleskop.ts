@@ -427,7 +427,7 @@ export function zamontujTeleskop(on: TeleskopObsluga) {
   root.append(p, poz);
   document.body.append(root);
   root.addEventListener('pointerdown', () => { if (rozwiniety()) odliczZwiniecie(); });
-  for (const n of WARSTWY) obraz(n);
+  if (!komiksowyPortret()) for (const n of WARSTWY) obraz(n);
   for (const n of ['przycisk_wcisniety', 'przycisk_aktywny', 'przycisk_niedostepny', 'ikona_hulajnoga']) obraz(n);
   t = 0;
   kierunek = 0;
@@ -550,6 +550,7 @@ export function teleskopWidoczny(tryb: 'on' | 'dim' | 'off') {
 
 // ------------------------------------------------------------------ the reservoir (artist's renderer.js, in TypeScript)
 
+const komiksowyPortret = () => comicHud && document.body.classList.contains('hud-comic-a');
 const WARSTWY = ['portret_oprawa', 'portret_maska', 'zbiornik_tlo', 'zbiornik_maska', 'zbiornik_plyn', 'zbiornik_szklo', 'zbiornik_tafla'];
 
 function kolkoPod(r: number, h: number) {
@@ -580,24 +581,62 @@ const plotno = () => {
 };
 let warstwy: { out: HTMLCanvasElement; ciecz: HTMLCanvasElement; twarz: HTMLCanvasElement } | null = null;
 
-/** Portrait under its mask, the empty chamber, the liquid cut by the chamber and the tilted surface, glass, frame. */
+function osmiokat(ctx: CanvasRenderingContext2D, radius: number) {
+  const corner = radius * (Math.SQRT2 - 1);
+  ctx.beginPath();
+  ctx.moveTo(C - corner, C - radius);
+  ctx.lineTo(C + corner, C - radius);
+  ctx.lineTo(C + radius, C - corner);
+  ctx.lineTo(C + radius, C + corner);
+  ctx.lineTo(C + corner, C + radius);
+  ctx.lineTo(C - corner, C + radius);
+  ctx.lineTo(C - radius, C + corner);
+  ctx.lineTo(C - radius, C - corner);
+  ctx.closePath();
+}
+
+function komiksowaOprawa(ctx: CanvasRenderingContext2D, twarz: HTMLCanvasElement, exp: number) {
+  osmiokat(ctx, 77);
+  ctx.fillStyle = '#302b28';
+  ctx.fill();
+  ctx.strokeStyle = '#19171b';
+  ctx.lineWidth = 10;
+  ctx.stroke();
+  ctx.strokeStyle = '#d5a446';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  osmiokat(ctx, RP + 3);
+  ctx.fillStyle = '#19171b';
+  ctx.fill();
+  ctx.drawImage(twarz, 0, 0);
+  ctx.fillStyle = '#19171b';
+  ctx.fillRect(C - 29, C + 56, 58, 8);
+  ctx.fillStyle = '#e8ae2c';
+  ctx.fillRect(C - 27, C + 58, Math.round(54 * exp), 4);
+}
+
+/** Draws the portrait and level progress for the active HUD. */
 function rysujZbiornik() {
   const c = el.zbiornik;
   if (!c || !stan) return;
-  if (!WARSTWY.every(gotowy)) return;
+  const komiks = komiksowyPortret();
+  if (!komiks && !WARSTWY.every(gotowy)) return;
   warstwy ??= { out: plotno(), ciecz: plotno(), twarz: plotno() };
   const { out, ciecz, twarz } = warstwy;
   const oc = out.getContext('2d')!;
   const lc = ciecz.getContext('2d')!;
   const fc = twarz.getContext('2d')!;
   const p = Math.min(1, Math.max(0, stan.expShare || 0));
-  const h = wysokoscTafli(p);
-  const a = (kat * Math.PI) / 180;
   narysowanyKat = kat;
   oc.clearRect(0, 0, N, N);
   // The face.
   fc.globalCompositeOperation = 'source-over';
   fc.clearRect(0, 0, N, N);
+  fc.save();
+  if (komiks) {
+    osmiokat(fc, RP);
+    fc.clip();
+  }
   fc.fillStyle = '#3a2c22';
   fc.fillRect(C - RP, C - RP, RP * 2, RP * 2);
   if (portretObraz) {
@@ -608,45 +647,44 @@ function rysujZbiornik() {
     fc.imageSmoothingEnabled = false;
     fc.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], C - RP, C - RP, RP * 2, RP * 2);
   }
-  fc.globalCompositeOperation = 'destination-in';
-  fc.drawImage(obraz('portret_maska'), 0, 0);
-  fc.globalCompositeOperation = 'source-over';
-  oc.drawImage(twarz, 0, 0);
-  oc.drawImage(obraz('zbiornik_tlo'), 0, 0);
-  // The liquid.
-  if (p > 0) {
-    lc.globalCompositeOperation = 'source-over';
-    lc.clearRect(0, 0, N, N);
-    lc.save();
-    lc.translate(C, C);
-    lc.rotate(a);
-    lc.beginPath();
-    lc.rect(-N * 2, h, N * 4, N * 4);
-    lc.clip();
-    lc.setTransform(1, 0, 0, 1, 0, 0);
-    lc.drawImage(obraz('zbiornik_plyn'), 0, 0);
-    lc.restore();
-    if (p < 1) {
+  if (!komiks) {
+    fc.globalCompositeOperation = 'destination-in';
+    fc.drawImage(obraz('portret_maska'), 0, 0);
+  }
+  fc.restore();
+  if (komiks) komiksowaOprawa(oc, twarz, p);
+  else {
+    oc.drawImage(twarz, 0, 0);
+    oc.drawImage(obraz('zbiornik_tlo'), 0, 0);
+    // The liquid.
+    if (p > 0) {
+      const h = wysokoscTafli(p);
+      const a = (kat * Math.PI) / 180;
+      lc.globalCompositeOperation = 'source-over';
+      lc.clearRect(0, 0, N, N);
       lc.save();
       lc.translate(C, C);
       lc.rotate(a);
-      lc.drawImage(obraz('zbiornik_tafla'), -N / 2, h - 4.5);
+      lc.beginPath();
+      lc.rect(-N * 2, h, N * 4, N * 4);
+      lc.clip();
+      lc.setTransform(1, 0, 0, 1, 0, 0);
+      lc.drawImage(obraz('zbiornik_plyn'), 0, 0);
       lc.restore();
+      if (p < 1) {
+        lc.save();
+        lc.translate(C, C);
+        lc.rotate(a);
+        lc.drawImage(obraz('zbiornik_tafla'), -N / 2, h - 4.5);
+        lc.restore();
+      }
+      lc.globalCompositeOperation = 'destination-in';
+      lc.drawImage(obraz('zbiornik_maska'), 0, 0);
+      lc.globalCompositeOperation = 'source-over';
+      oc.drawImage(ciecz, 0, 0);
     }
-    lc.globalCompositeOperation = 'destination-in';
-    lc.drawImage(obraz('zbiornik_maska'), 0, 0);
-    lc.globalCompositeOperation = 'source-over';
-    oc.drawImage(ciecz, 0, 0);
-  }
-  oc.drawImage(obraz('zbiornik_szklo'), 0, 0);
-  oc.drawImage(obraz('portret_oprawa'), 0, 0);
-  if (comicHud && document.body.classList.contains('hud-comic-a')) {
-    // Keep the EXP chamber and current face; forge a broad comic rim over the old fine edge.
-    oc.beginPath();
-    for(let i=0;i<8;i++) { const a=(i+.5)*Math.PI/4, x=C+79*Math.cos(a), y=C+79*Math.sin(a);if(i)oc.lineTo(x,y);else oc.moveTo(x,y); }
-    oc.closePath();oc.strokeStyle='#19171b';oc.lineWidth=10;oc.stroke();
-    oc.strokeStyle='#d5a446';oc.lineWidth=6;oc.stroke();
-    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4;oc.beginPath();oc.arc(C+78*Math.cos(a),C+78*Math.sin(a),3,0,Math.PI*2);oc.fillStyle='#514235';oc.fill();}
+    oc.drawImage(obraz('zbiornik_szklo'), 0, 0);
+    oc.drawImage(obraz('portret_oprawa'), 0, 0);
   }
   // Onto the screen at device pixels.
   const d = Math.max(1, Math.min(3, Math.round((window.devicePixelRatio || 1) * skala)));

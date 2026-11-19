@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — oprawa awatara
+
+- W komiksowym HUD usunięto spod ośmiokąta okrągłą oprawę i zbiornik ze starszego wariantu. Postęp do następnego poziomu jest widoczny na pasku pod awatarem. Menu postaci korzysta z tego samego przycisku.
+- Woźnica chodzi tuż przy wozie, w miejscu czytelnym na tle dachów.
+
 ## 2026-11-19 — dworzec pod zamkiem
 
 - Zegary widoczne na ujęciu pochodziły z osobnej warstwy ozdób na dawnych parkingach OSM (`src/map/targ09.ts`). Z tej warstwy zostały ławki, donice i gabloty. Zwykłe place również przestały losować zegary uliczne. Wieże przy ratuszu zachowano z dala od stacji.

@@ -1,5 +1,7 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (19 Nov 2026, comic portrait) The octagonal portrait draws its own background, frame and slim EXP bar. The old round frame and liquid artwork are reserved for the legacy HUD.
+
 - (19 Nov 2026, castle coach stop) Converted OSM parking courts use a sparse mix of seats, planters and noticeboards. Street clocks no longer spawn as plaza furniture. Bus routes get their own horse teams where bays fit, with short coachman walks beside the carts.
 
 - (19 Nov 2026, plaza furniture and coach stops) Large plaza polygons share furniture across 55 m, with clocks spaced out and some seating at edges. Shared coach stops keep each route with one wagon placed in a clear bay. The shop marks bulk harvest sales as „RAZEM”, and the browser test covers equipping and unequipping a sword in the trunk.
