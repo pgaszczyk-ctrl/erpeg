@@ -1,3 +1,4 @@
+import { czytelnaNazwa } from '../transliteracja';
 import { stanGry } from '../stanGry';
 import { pipe } from '../sfx';
 import { Zloza, type Zloze } from './Zloza';
@@ -7111,7 +7112,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.shopDialog(p, {
       title, tabs,
-      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz w hali kulociągu.`, `The trader in the Ballway hall.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz w hali kulociągu.`, `The trader in the Ballway hall.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `${this.sprzedawca(p)} Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
@@ -7129,7 +7130,7 @@ export class GameScene extends Phaser.Scene {
         const o = offers[i - tools.length - extra.length];
         if (o) this.buy(o);
       },
-    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : 'Kowal za ladą poleca swój towar.');
+    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : this.sprzedawca(p));
   }
 
   /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
@@ -7851,6 +7852,14 @@ export class GameScene extends Phaser.Scene {
     return droga;
   }
 
+  /** Who stands behind the counter depends on the shop (report #9: „Kowal za ladą” in a supermarket). */
+  private sprzedawca(p: CityPlace) {
+    const n = (p.name ?? '').toLowerCase();
+    if (p.kind === 'gear' || /budow|narzędz|hardware|diy|obi|castorama|leroy|bricomarch|praktiker|hornbach/.test(n)) return tx('Majster za ladą poleca swój towar.', 'The craftsman behind the counter recommends his goods.');
+    if (/sport|decathlon|intersport/.test(n)) return tx('Sprzedawca w sportowej bluzie poleca swój towar.', 'A shop assistant in a sports top recommends the goods.');
+    return tx('Kasjerka uśmiecha się zza lady.', 'The cashier smiles from behind the counter.');
+  }
+
   /** After the first duty: the nearest newsboy, city board and hunting ground (report #7). */
   private krokiPoProlog(): { label: string; nazwa: string; x: number; y: number }[] {
     const hx = this.player.x, hy = this.player.y;
@@ -7971,7 +7980,7 @@ export class GameScene extends Phaser.Scene {
     const y = this.player.y;
     const t = this.townAt(x, y);
     const told = this.toldPlace;
-    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: czytelnaNazwa(t.name), detail: czytelnaNazwa(told.name) };
     if (t.nieznana) return { town: t.name, detail: tx('zapytaj przechodnia', 'ask a passer-by') };
     const dx = x - t.x;
     const dy = y - t.y;
@@ -7983,14 +7992,14 @@ export class GameScene extends Phaser.Scene {
       : ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
     const k = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
     const where = t.wies ? (inTown ? tx('we wsi', 'in the village') : tx('za wsią', 'outside the village')) : inTown ? tx('w mieście', 'in town') : tx('za miastem', 'outside town');
-    return { town: t.name, detail: lang === 'en' ? `${where} · somewhere ${strony[k]}` : `${where} · gdzieś ${strony[k]}` };
+    return { town: czytelnaNazwa(t.name), detail: lang === 'en' ? `${where} · somewhere ${strony[k]}` : `${where} · gdzieś ${strony[k]}` };
   }
 
   /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
   private whereIs(x: number, y: number) {
     // A street line if that part of the map is loaded, else the nearest known address without its number.
     const addr = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '') ?? null;
-    if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
+    if (addr?.includes(',')) return czytelnaNazwa(addr); // already "Kościelna, Garbów"
     const street = addr;
     let town = mapName(this.city.id);
     if (worldOrigin(this.city.id)) town = this.worldTown(x, y) ?? 'Daleko';
@@ -8003,7 +8012,7 @@ export class GameScene extends Phaser.Scene {
       if (near && d(near) < 1500 * PX_PER_M && (!lub || d(near) < d(lub))) town = near.name;
       else if (!lub || d(lub) > 12_000 * PX_PER_M) town = near?.name ?? town;
     }
-    return street ? `${street}, ${town}` : town;
+    return street ? `${czytelnaNazwa(street)}, ${czytelnaNazwa(town)}` : czytelnaNazwa(town);
   }
 
   /** Switches a quest's guiding arrow on or off (character sheet). */
