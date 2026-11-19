@@ -4,6 +4,7 @@
 // like the sheets in sprites.ts), outlined in the characters' ink colour and shown as a Phaser image in place
 // of the hero's sprite. Unlike the sheets it turns smoothly to any angle. On by default on the test server, elsewhere with
 // `?ludzik3d=1`; `?ludzik3d=0` switches it off (remembered in localStorage `exp-ludzik3d`). three.js is loaded only when it is on.
+import { makieta } from './ui/makieta';
 import Phaser from 'phaser';
 import type * as THREE from 'three';
 import type { Player } from './objects/Player';
@@ -50,6 +51,7 @@ const KLUCZ = 'exp-ludzik3d';
 (window as unknown as { __ludzik3d: typeof LUDZIK_3D }).__ludzik3d = LUDZIK_3D;
 /** On by default on every server since 1.034; `?ludzik3d=0` switches it off on this device. */
 export function ludzik3d(): boolean {
+  if (makieta) return true;
   try {
     const q = new URLSearchParams(location.search).get('ludzik3d');
     if (q === '0' || q === '1') localStorage.setItem(KLUCZ, q);

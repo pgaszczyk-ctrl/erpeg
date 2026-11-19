@@ -1,5 +1,7 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (19 Nov 2026, art mock-up) TEST supports `?makieta=oryginal` and `?makieta=rysowana` for a no-login, local session at the same spot below Lublin Castle. A rock, noticeboard and pipe segment are staged in the real world for comparison, using the normal game camera, controls and GLB guard. The drawn option trials quieter materials and scaled scenery.
+
 - (19 Nov 2026, startup) The normal login form opens once map indices are available, overlapping art and font loading. Its map zoom is decorative and never delays the first painted view. While covered, the scene requests tiles near the camera and prioritizes visible chunks.
 
 - (19 Nov 2026, owner approved production) 1.049 releases the verified First duty onboarding changes from TEST, including the letter handoff, navigation, archer encounter and accessible dialogs.

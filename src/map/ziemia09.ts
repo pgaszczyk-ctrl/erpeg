@@ -290,7 +290,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID && !(z.mozaiki ?? []).some((m) => naMozaice(m, x, y, 30)); });
   const para: [number, number][] = [];
   for (const r of z.rury ?? []) {
-    const steam = rurociagWzdluz(obraz, r.pts, X0, Y0, r.seed, 'ziemia', 'ziemia', true);
+    const steam = rurociagWzdluz(obraz, r.pts, X0, Y0, r.seed, 'ziemia', 'ziemia', true, r.matowa);
     for (const k of r.kotly ?? []) steam.push(malujKociol(obraz, X0, Y0, k));
     for (const q of steam)
       if (q[0]>=X0 && q[1]>=Y0 && q[0]<X0+N && q[1]<Y0+N) para.push(q);

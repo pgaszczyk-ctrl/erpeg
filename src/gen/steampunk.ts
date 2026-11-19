@@ -2,6 +2,7 @@
 import { Obraz, nowy, hex, hash, ustaw, OBRYS, rgb } from './wspolne';
 
 const MOS = ['#4a3216', '#6b4a22', '#9a6420', '#c8963e', '#e9c56a'].map(hex);
+const MOS_MAT = ['#4a4433', '#625236', '#826849', '#a48a57', '#c1a873'].map(hex);
 const ZEL = ['#2a2630', '#3a3440', '#55505c'].map(hex);
 const CZERW = hex('#b2453a'), BIEL = hex('#ece6d6');
 
@@ -214,7 +215,8 @@ export type KoniecRury = 'ziemia' | 'dom' | 'nic';
  *  - 'nic': koniec ucięty kołnierzem (gdy rura biegnie dalej w sąsiednim kawałku – wtedy ta sama trasa jest liczona w obu kawałkach).
  * Zwraca punkty, z których może iść para (przecieki przy kołnierzach i studzienkach) – sprite'y w widoku.
  */
-export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, seed: number, poczatek: KoniecRury = 'ziemia', koniec: KoniecRury = 'dom', tylkoWidoczne = false): [number, number][] {
+export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, seed: number, poczatek: KoniecRury = 'ziemia', koniec: KoniecRury = 'dom', tylkoWidoczne = false, matowa = false): [number, number][] {
+  const mos = matowa ? MOS_MAT : MOS;
   const para: [number, number][] = [];
   const put = (x: number, y: number, c: number) => ustaw(o, Math.round(x - ox), Math.round(y - oy), c);
   const juz = new Set<number>();
@@ -243,8 +245,8 @@ export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, 
             const a = Math.abs(k);
             if (a > 2 && !kol) continue;
             let c: number;
-            if (a >= 2) c = MOS[0];
-            else { const v = 0.45 + 0.3 * (k / 1.5) + 0.25 * (1 - a / 1.5); c = MOS[v > 0.82 ? 4 : v > 0.58 ? 3 : v > 0.36 ? 2 : 1]; if (kol) c = a < 0.9 ? MOS[4] : MOS[0]; }
+            if (a >= 2) c = mos[0];
+            else { const v = 0.45 + 0.3 * (k / 1.5) + 0.25 * (1 - a / 1.5); c = mos[v > 0.82 ? 4 : v > 0.58 ? 3 : v > 0.36 ? 2 : 1]; if (kol) c = a < 0.9 ? mos[4] : mos[0]; }
             put(x + nx * k, y + ny * k, c);
           }
           continue;
@@ -255,7 +257,7 @@ export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, 
         if (kraw && Math.abs((s % 48) - 30) < 0.2) {
           const h = hash(Math.floor(s / 48), seed, 61);
           if (h < 0.35) { for (let i = -2; i <= 2; i++) { put(x + nx * 4 + g.ux * i, y + ny * 4 + g.uy * i, CZERW); } put(x + nx * 3, y + ny * 3, ZEL[1]); put(x + nx * 5, y + ny * 5, CZERW); }
-          else if (h < 0.6) { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) put(x + nx * (4 + j) + g.ux * i, y + ny * (4 + j) + g.uy * i, (i === 0 && j === 0) ? OBRYS : BIEL); put(x + nx * 2.5, y + ny * 2.5, MOS[1]); }
+          else if (h < 0.6) { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) put(x + nx * (4 + j) + g.ux * i, y + ny * (4 + j) + g.uy * i, (i === 0 && j === 0) ? OBRYS : BIEL); put(x + nx * 2.5, y + ny * 2.5, mos[1]); }
           else if (h < 0.75) para.push([Math.round(x), Math.round(y)]);
         }
       }
@@ -265,7 +267,7 @@ export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, 
   // końce
   const koniecRury = (rodz: KoniecRury, x: number, y: number, ux: number, uy: number) => {
     let nx = -uy, ny = ux; if (nx * Lx + ny * Ly < 0) { nx = -nx; ny = -ny; }
-    for (let k = -3; k <= 3; k += 0.5) for (let t = 0; t <= 1; t += 0.5) put(x - ux * t + nx * k, y - uy * t + ny * k, Math.abs(k) > 2.4 ? MOS[0] : t === 0 ? MOS[1] : MOS[3]);
+    for (let k = -3; k <= 3; k += 0.5) for (let t = 0; t <= 1; t += 0.5) put(x - ux * t + nx * k, y - uy * t + ny * k, Math.abs(k) > 2.4 ? mos[0] : t === 0 ? mos[1] : mos[3]);
     if (rodz === 'ziemia') { // studzienka: żeliwny pierścień 11×7, ciemny środek, rura wchodzi w nią
       const cx = x + ux * 4, cy = y + uy * 4;
       for (let j = -4; j <= 4; j++) for (let i = -6; i <= 6; i++) { const d = (i / 6) ** 2 + (j / 4) ** 2; if (d > 1) continue; put(cx + i, cy + j, d > 0.62 ? (j < 0 ? ZEL[2] : ZEL[0]) : d > 0.35 ? ZEL[1] : hex('#14121a')); }
@@ -273,7 +275,7 @@ export function rurociagWzdluz(o: Obraz, pts: number[], ox: number, oy: number, 
       para.push([Math.round(cx), Math.round(cy - 2)]);
     }
     if (rodz === 'dom') { // obejma przy ścianie + rura wchodzi 3 px w obrys (przykryje ją budynek)
-      for (let t = 1; t <= 4; t += 0.35) for (let k = -1.5; k <= 1.5; k += 0.5) put(x + ux * t + nx * k, y + uy * t + ny * k, MOS[Math.abs(k) > 1 ? 1 : 3]);
+      for (let t = 1; t <= 4; t += 0.35) for (let k = -1.5; k <= 1.5; k += 0.5) put(x + ux * t + nx * k, y + uy * t + ny * k, mos[Math.abs(k) > 1 ? 1 : 3]);
       for (let k = -3.5; k <= 3.5; k += 0.5) put(x + ux * 1 + nx * k, y + uy * 1 + ny * k, ZEL[1]);
     }
   };
