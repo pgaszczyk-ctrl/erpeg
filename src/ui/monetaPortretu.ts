@@ -1,3 +1,5 @@
+import { tx } from '../i18n';
+
 // The coin (owner, 26 Oct 2026): while the character has no account, every few minutes the HUD portrait turns like a
 // coin with three sides – the game's logo, then „nie zalogowano – uważaj, żeby nie zgubić kodu”, the logo again, and
 // back to the hero. Drawn as an overlay over whichever portrait is on screen (the telescope's or the boiler's), with
@@ -84,7 +86,7 @@ export function obrocMonete() {
   const napis = document.createElement('button');
   napis.type = 'button';
   napis.className = 'moneta-napis';
-  napis.textContent = 'Nie zalogowano – uważaj, żeby nie zgubić kodu!';
+  napis.textContent = tx('Grasz jako gość. Otwórz Kufer i zachowaj kod powrotu.', 'Playing as a guest. Open your chest and keep your return code.');
   napis.addEventListener('pointerdown', (e) => e.stopPropagation());
   napis.addEventListener('click', (e) => { e.stopPropagation(); obsl?.otworz(); });
   document.body.append(m, napis);

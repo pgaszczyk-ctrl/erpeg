@@ -2,7 +2,7 @@
 export const PROLOG_ID = 'prolog.recruit.v1';
 /** A signpost before enrollment, separate from the quest and its saved completion marker. */
 export const PROLOG_LEAD_ID = `${PROLOG_ID}:lead`;
-export const STAGES = ['intro', 'letter_deliver', 'letter_return', 'rescue_fight', 'rescue_reward', 'bow_trial', 'rescue_return', 'dungeon_enter', 'dungeon_first_group', 'magic_pickup', 'magic_trial', 'dungeon_recover', 'dungeon_return', 'library_visit', 'completed'] as const;
+export const STAGES = ['intro', 'letter_deliver', 'letter_return', 'rescue_find', 'rescue_fight', 'rescue_reward', 'bow_trial', 'rescue_return', 'dungeon_enter', 'dungeon_first_group', 'magic_pickup', 'magic_trial', 'dungeon_recover', 'dungeon_return', 'library_visit', 'completed'] as const;
 export type PrologStage = typeof STAGES[number];
 export type AnchorKind = 'mentor' | 'outpost' | 'ambush' | 'bowPractice' | 'dungeonEntrance' | 'library';
 export interface Anchor { id: string; lat: number; lon: number; name: string; fallback: boolean }

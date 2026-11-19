@@ -300,6 +300,7 @@ export interface QuestInfo {
   text: string;
   pos: { x: number; y: number } | null;
   color: string;
+  waypoint?: { x: number; y: number };
   /** Where the quest was taken (for the quest log). */
   start?: string;
 }
@@ -314,6 +315,7 @@ let droga: Hub | null = null;
 export interface Rozmowca { tex?: string; obraz?: string; imie?: string }
 
 export interface DialogRequest {
+  accessible?: boolean;
   language?: import('../i18n').Lang;
   localHumor?: boolean;
   textId?: string;
@@ -1024,7 +1026,7 @@ export class GameScene extends Phaser.Scene {
     this.prolog = live() && !demo.on ? new PrologRekruta({
       scene: this, city: this.city, player: this.player, mapName: mapName(this.city.id),
       entrances: () => this.lochy, dungeon: () => this.loch,
-      dialog: d => this.dialog(d), toast: (t,ms) => this.toast(t,ms),
+      dialog: d => this.dialog({ ...d, accessible: true }), toast: (t,ms) => this.toast(t,ms),
       hud: () => this.emitHud(), refresh: () => this.refreshLook(),
       ready: () => !this.witam && !this.travelling && !this.scene.isPaused() && this.firstViewReady(),
       save: () => { this.keepFog(); session.tu = this.miejsceZapisu(); return saveNow(this.player.hp); },
@@ -1098,7 +1100,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.fitZoom, this);
     this.events.once('shutdown', () => this.scale.off('resize', this.fitZoom, this));
     if (live()) {
-      const targetAt = (x: number, y: number) => this.worldTargetAt(x, y);
+      const targetAt = (x: number, y: number) => this.worldTargetAt(x, y) ?? this.worldTargetAt(x, y, true);
       worldInteraction.at = targetAt;
       const current = () => {
         const id = this.interactionSelection.id;
@@ -1781,7 +1783,7 @@ export class GameScene extends Phaser.Scene {
    */
   private interact(sx: number, sy: number) {
     if (live()) {
-      if (sx >= 0) { this.worldTargetAt(sx,sy)?.run(); return; }
+      if (sx >= 0) { worldInteraction.at?.(sx, sy)?.run(); return; }
       // Revalidate this exact identity. Never replace a vanished target during an action.
       const selected=this.interactionSelection.id;
       const t=this.interactionCandidates().find(t=>t.id===selected);
@@ -1810,7 +1812,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     // Too far: say so if there is something to talk to or go into there.
-    if (this.talkableAt(w.x, w.y, 14) || this.city.places.some((q) => Math.hypot(q.door.x - w.x, q.door.y - (w.y + FEET.dy)) < DOOR_RADIUS) || this.cartAt(w.x, w.y) || this.pociagi?.stacjaPrzy(w.x, w.y)) this.toast('👣 Podejdź bliżej.', 1200);
+    if (this.prolog?.interactionAt(w.x, w.y) || this.talkableAt(w.x, w.y, 14) || this.city.places.some((q) => Math.hypot(q.door.x - w.x, q.door.y - (w.y + FEET.dy)) < DOOR_RADIUS) || this.cartAt(w.x, w.y) || this.pociagi?.stacjaPrzy(w.x, w.y)) this.toast('👣 Podejdź bliżej.', 1200);
   }
 
   private interactionSelection = new InteractionSelection();
@@ -1872,6 +1874,7 @@ export class GameScene extends Phaser.Scene {
     if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'8px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
     const g=this.interactionMark;g.clear();this.interactionLabel.setVisible(false);
     const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
+    this.prolog?.updateNameplates(t);
     if(!t){this.interactionSelection.clear();ustawInterakcjeHud(false);return;}
     const k=skrotKamery(), a=.5+.16*Math.sin(this.time.now/420);
     // A person's visible silhouette; entrances remain small rounded markers at their feet.
@@ -1881,13 +1884,16 @@ export class GameScene extends Phaser.Scene {
     this.interactionLabel.setText(t.label).setPosition(t.x,(head??t.y-h)-3).setVisible(true);
     ustawInterakcjeHud(true,t.label);
   }
-  private worldTargetAt(sx:number,sy:number):WorldInteraction|null {
+  private worldTargetAt(sx:number,sy:number, outOfReach = false):WorldInteraction|null {
     if(this.interactionBlocked())return null;
     const cam=this.cameras.main,x=sx*OSTROSC/cam.zoomX+cam.worldView.x,y=sy*OSTROSC/cam.zoomY+cam.worldView.y,k=skrotKamery();
-    const targets=this.interactionCandidates().filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<=(t.range??36));
+    const targets = outOfReach
+      ? (this.prolog?.interactionTargets() ?? []).filter(t => Math.hypot(t.x-this.player.x,t.y-this.player.y) > (t.range ?? 36) && pointInPolygon(this.vision,t.x,t.y))
+      : this.interactionCandidates().filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<=(t.range??36));
     const score=(t:InteractionTarget)=>Math.hypot((t.x-x)/15,((t.y-(t.kind==='talk'?12/k:3))-y)*k/(t.kind==='talk'?20:14));
     const t=targets.filter(t=>score(t)<1).sort((a,b)=>score(a)-score(b)||b.y-a.y)[0];
     if(!t)return null;
+    if (outOfReach) return { kind: t.kind, run: () => this.toast(tx('Podejdź bliżej.', 'Move closer.'), 1200) };
     return {kind:t.kind,run:()=>{
       // First click selects visibly; clicking the already highlighted object executes it.
       const same=this.interactionSelection.id===t.id;
@@ -1976,6 +1982,8 @@ export class GameScene extends Phaser.Scene {
         if (!this.inCombat()) this.save(true);
       } : undefined,
       cooldown: 1 - (zasoby.czas - zasoby.mocnyAt) / ZASOBY.mocnyCooldownS,
+      cooldownLeft: Math.max(0, Math.ceil(ZASOBY.mocnyCooldownS - (zasoby.czas - zasoby.mocnyAt))),
+      cost: u.bron === 'magia' ? ZASOBY.koszt.mocnyCzar : ZASOBY.koszt.mocny,
       gotowy: zasoby.czas - zasoby.mocnyAt >= ZASOBY.mocnyCooldownS,
       stac: u.bron === 'magia' ? zasoby.m >= ZASOBY.koszt.mocnyCzar : zasoby.s >= ZASOBY.koszt.mocny,
     });
@@ -7706,7 +7714,8 @@ export class GameScene extends Phaser.Scene {
     const items = session.fabula.length ? `\n📜 Masz: ${session.fabula.join(', ')}` : '';
     return this.activeQuests().map((q, i) => {
       const mission=session.gen[q.id] ?? this.missions.find(r=>r.m.id===q.id)?.m;
-      const notes=mission ? missionNotes(mission) : '';
+      const notes = mission ? missionNotes(mission) : q.id === PROLOG_ID && this.prolog?.state?.rewardsClaimed.includes('letter_done')
+        ? tx('✓ Dostarczono list i oddano potwierdzenie (+20 PD).', '✓ Letter delivered and receipt returned (+20 XP).') : '';
       return {
       id: q.id, title: q.title, text: `${q.text}${notes ? `\n${notes}` : ''}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
       far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
@@ -8016,7 +8025,7 @@ export class GameScene extends Phaser.Scene {
       lingering: this.lingerUntil ? Math.max(0, Math.ceil((this.lingerUntil - this.time.now) / 1000)) : null,
       street: this.city.streetNear(this.player.x, this.player.y),
       pogoda: weatherLabel(isNight()),
-      quests: quests.map(({ id, text, pos, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : pos, color, main })),
+      quests: quests.map(({ id, text, pos, waypoint, color, main }) => ({ text, pos: session.bezStrzalki.includes(id) ? null : waypoint ?? pos, color, main })),
       potions: session.mikstury,
       fruit: totalFruit(),
       fruitPerHeal: this.fruitPerHeart(),

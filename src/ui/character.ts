@@ -180,6 +180,7 @@ export interface CharacterHost {
   fruitPerHeal?: number;
   quests: () => QuestLine[];
   toggleArrow: (id: string) => void;
+  showQuestOnMap?: (id: string) => void;
   tent?: TentAction;
   /** Open here (HUD: the character button, gold → Zasoby, the quest line → the quest log). */
   page?: 'eq' | 'gold' | 'quests';
@@ -552,6 +553,11 @@ function show(host: CharacterHost) {
           render();
         };
         txt.append(b);
+        if (host.showQuestOnMap) {
+          const mapButton = el('button', 'c-btn', tx('Pokaż na mapie', 'Show on map'));
+          mapButton.onclick = () => host.showQuestOnMap?.(q.id);
+          txt.append(mapButton);
+        }
       }
       row.append(dot, txt);
       log.append(row);

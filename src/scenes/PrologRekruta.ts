@@ -13,7 +13,7 @@ import { ensureModul, fitHd } from '../sprites';
 import { TEX, artScale } from '../art';
 import { PROLOG_ID, PROLOG_LEAD_ID, freshProlog, mayStart, advance, claimOnce, recordKill, type AnchorKind, type PrologState } from '../prolog/state';
 import { equipStoryItem } from '../prolog/rewards';
-import { planAnchors } from '../prolog/planner';
+import { clearWalk, localRoutes, planAnchors } from '../prolog/planner';
 import { idLochu } from '../loch/mapa';
 import { hashLochu } from '../loch/plan';
 import type { DialogRequest, QuestInfo } from './GameScene';
@@ -41,6 +41,7 @@ export interface PrologHost {
 /** Existing combat, map, inventory and dungeon; this class owns only the origin story. */
 export class PrologRekruta {
   private objects: Phaser.GameObjects.GameObject[] = [];
+  private nameplates = new Map<string, Phaser.GameObjects.Text>();
   private enemies = new Map<RecruitEnemy, number>();
   private rendered = '';
   private planning = false;
@@ -183,13 +184,21 @@ export class PrologRekruta {
     this.objects.push(sprite);
     const text = this.h.scene.add.text(at.x,at.y-17,name,{fontFamily:'Alegreya Sans, sans-serif',fontSize:'6px',resolution:4,color:'#fff2d0',backgroundColor:'#241d29',padding:{x:2,y:1}}).setOrigin(.5,1).setDepth(at.y+100);
     this.objects.push(text);
+    this.nameplates.set(`prolog:${k}`, text);
   }
+
+  updateNameplates(target: InteractionTarget | null) {
+    for (const [id, text] of this.nameplates) {
+      text.setVisible(!target || (target.id !== id && Math.hypot(target.x - text.x, target.y - (text.y + 17)) >= 36));
+    }
+  }
+
   private draw() {
     const p = this.state!;
     if (this.local) {
       this.label('mentor',tx('! Starszy strażnik','! Senior guard'));
       if (p.stage === 'letter_deliver') this.label('outpost',tx('Dyżurny straży','Duty officer'));
-      if (['rescue_fight','rescue_reward','bow_trial'].includes(p.stage)) this.label('ambush',tx('Łucznik','Archer'));
+      if (['rescue_find','rescue_fight','rescue_reward','bow_trial'].includes(p.stage)) this.label('ambush',tx('Łucznik','Archer'));
       if (p.stage === 'rescue_fight') this.spawnRescue();
       if (p.stage === 'bow_trial') this.label('bowPractice',tx('◎ Cel treningowy','◎ Practice target'));
       if (p.stage === 'library_visit') this.label('library',p.anchors.library!.fallback ? tx('Dyżur bibliotekarza','Visiting librarian') : tx('Bibliotekarz','Librarian'));
@@ -225,7 +234,7 @@ export class PrologRekruta {
   prepareDungeon(w: WejscieLochu): string | null {
     const p=this.state;
     if(!p || p.status!=='active' || !this.local || w.id!==p.anchors.dungeonEntrance?.id || !p.dungeon) return null;
-    if(['intro','letter_deliver','letter_return','rescue_fight','rescue_reward','bow_trial','rescue_return'].includes(p.stage))return null;
+    if(['intro','letter_deliver','letter_return','rescue_find','rescue_fight','rescue_reward','bow_trial','rescue_return'].includes(p.stage))return null;
     if(p.stage==='dungeon_enter')advance(p,'dungeon_enter','dungeon_first_group');
     return p.dungeon.id;
   }
@@ -234,8 +243,8 @@ export class PrologRekruta {
     const out: InteractionTarget[]=[];
     for(const k of ['mentor','outpost','ambush','library'] as AnchorKind[]) {
       const at=this.point(k); if(!at||!this.interactionAt(at.x,at.y))continue;
-      const name=k==='mentor'?tx('Starszy strażnik','Senior guard'):k==='outpost'?tx('Dyżurny straży','Duty officer'):k==='ambush'?tx('Uratowany łucznik','Rescued archer'):tx('Bibliotekarz','Librarian');
-      out.push({id:`prolog:${k}`, ...at, kind:'talk', label:tx('Porozmawiaj: ','Talk: ')+name, range:14*PX_PER_M,run:()=>this.interact(at)});
+      const name=k==='mentor'?tx('Starszy strażnik','Senior guard'):k==='outpost'?tx('Dyżurny straży','Duty officer'):k==='ambush'?tx('Łucznik','Archer'):tx('Bibliotekarz','Librarian');
+      out.push({id:`prolog:${k}`, ...at, kind:'talk', label:tx('Porozmawiaj: ','Talk: ')+name, range:14*PX_PER_M,priority:(k==='outpost' && this.state?.stage==='letter_deliver') || (k==='mentor' && this.state?.stage==='letter_return'),run:()=>this.interact(at)});
     }
     const practice=this.state?.stage==='bow_trial'&&this.local&&this.point('bowPractice');
     if(practice)out.push({id:'prolog:practice',...practice,kind:'use',range:14*PX_PER_M,label:tx('Użyj: Cel treningowy','Use: Practice target'),run:()=>this.interact(practice)});
@@ -256,7 +265,7 @@ export class PrologRekruta {
       if (p.status === 'completed' || ['intro','letter_return','bow_trial','rescue_return','dungeon_return'].includes(p.stage)) keys.push('mentor');
       if (p.status === 'active') {
         if (p.stage === 'letter_deliver') keys.push('outpost');
-        if (['rescue_reward','bow_trial'].includes(p.stage)) keys.push('ambush');
+        if (['rescue_find','rescue_reward','bow_trial'].includes(p.stage)) keys.push('ambush');
         if (p.stage === 'library_visit') keys.push('library');
       }
       if (keys.some(k => at(this.point(k)))) return 'talk';
@@ -277,7 +286,13 @@ export class PrologRekruta {
     if(this.local) {
       if(['intro','letter_return','bow_trial','rescue_return','dungeon_return'].includes(p.stage)&&near(this.point('mentor')!)){this.mentor();return true;}
       if(p.stage==='letter_deliver' && near(this.point('outpost')!)) {
-        this.h.dialog({title:tx('Dyżurny straży','Duty officer'),text:tx('Od patrolowego? Daj tutaj. A to potwierdzenie zabierz z powrotem, bo będzie mnie ścigał, że list zaginął między biurkiem a szufladą.','From the patrol officer? Hand it over. Take this receipt back, or he will insist the letter vanished between my desk and the drawer.'),localHumor:true,buttons:[tx('Odbierz potwierdzenie','Take receipt')],onChoose:()=>void this.change(()=>{p.storyItems=['receipt'];advance(p,'letter_deliver','letter_return');})});return true;
+        this.h.dialog({title:tx('Dyżurny straży','Duty officer'),text:tx('Od starszego strażnika? Daj tutaj. A to potwierdzenie zabierz z powrotem, bo będzie mnie ścigał, że list zaginął między biurkiem a szufladą.','From the senior guard? Hand it over. Take this receipt back, or he will insist the letter vanished between my desk and the drawer.'),localHumor:true,buttons:[tx('Odbierz potwierdzenie','Take receipt')],onChoose:()=>void this.change(()=>{p.storyItems=['receipt'];advance(p,'letter_deliver','letter_return');})});return true;
+      }
+      if(p.stage==='rescue_find' && near(this.point('ambush')!)) {
+        this.h.dialog({title:tx('Łucznik','Archer'),
+          text:tx('Za mną idą dwa chochliki. Nie mam miejsca, żeby napiąć łuk. Pomożesz mi?','Two imps are following me. I have no room to draw my bow. Will you help me?'),
+          buttons:[tx('Pomogę','I will help')],onChoose:()=>void this.change(()=>advance(p,'rescue_find','rescue_fight'))});
+        return true;
       }
       if(['rescue_reward','bow_trial'].includes(p.stage) && near(this.point('ambush')!)) {this.archer();return true;}
       if(p.stage==='bow_trial' && near(this.point('bowPractice')!)){this.h.toast(tx('Wyceluj łukiem i strzel. Możesz też wrócić do strażnika i spróbować później.','Aim your bow and shoot. You can also return to the guard and try later.'),5000);return true;}
@@ -297,10 +312,10 @@ export class PrologRekruta {
   private mentor() {
     const p=this.state!;
     const title=tx('Starszy strażnik','Senior guard');
-    const talk=(text:string,button:string,f:()=>void,humor=false)=>this.h.dialog({title,text,buttons:[button],localHumor:humor,onChoose:()=>void this.change(f)});
+    const talk=(text:string,button:string,f:()=>void,humor=false,then?:()=>void)=>this.h.dialog({title,text,buttons:[button],localHumor:humor,onChoose:()=>void this.change(f,then)});
     switch(p.stage){
       case 'intro': return talk(tx('To ciebie przysłali? Dobrze. Tylko trzymaj się drogi. Mam dziś dość papierów bez raportu o zgubionym rekrucie.\n\nZaniesiesz list na posterunek. Tam potwierdzą odbiór i wracasz do mnie. Zacznijmy od tego, żeby trafić pod właściwe drzwi.','They sent you? Fine. Stick to the road. I have enough paperwork without a report about a lost recruit.\n\nTake this letter to the guard post. Get a receipt and return here.'),tx('Pokaż drogę','Show the way'),()=>{claimOnce(p,'starter_sword',()=>this.equipSafely('miecz_rekruta'));p.storyItems=['letter'];advance(p,'intro','letter_deliver');},true);
-      case 'letter_return': return talk(tx('Jest potwierdzenie. I jesteś ty. Dobry początek.\n\nTeraz druga strona okolicy. Ktoś zgłosił chochliki zaczepiające przechodniów. Sprawdź trakt. Jeśli ktoś potrzebuje pomocy, reaguj.','The receipt is here. And so are you. A good start.\n\nNow the other side of the neighbourhood. Imps are harassing passers-by. Check the road and help anyone in trouble.'),tx('Sprawdzę','I will check'),()=>{claimOnce(p,'letter_done',()=>{session.exp+=20;});p.storyItems=[];advance(p,'letter_return','rescue_fight');},true);
+      case 'letter_return': return talk(tx('Jest potwierdzenie. I jesteś ty. Dobry początek.\n\nTeraz druga strona okolicy. Ktoś zgłosił chochliki zaczepiające przechodniów. Odszukaj łucznika na trakcie i sprawdź, czy potrzebuje pomocy.','The receipt is here. And so are you. A good start.\n\nNow the other side of the neighbourhood. Imps are harassing passers-by. Find the archer on the road and see if he needs help.'),tx('Sprawdzę','I will check'),()=>{claimOnce(p,'letter_done',()=>{session.exp+=20;});p.storyItems=[];advance(p,'letter_return','rescue_find');},true,()=>this.h.toast(tx('List dostarczony. +20 PD','Letter delivered. +20 XP'),5000));
       case 'bow_trial': return talk(tx('Człowiek cały? To najważniejsze. Łuk możesz wypróbować później.\n\nChochliki znoszą kradzione rzeczy do pobliskiego lochu. Zginął między innymi pluszowy miś. Przynieś zgubę. To czyjaś własność — wielkość właściciela nic tu nie zmienia.','Is the traveller safe? That matters most. You can try the bow later.\n\nImps take stolen belongings to a nearby dungeon. A teddy bear is missing. Bring it back. Its owner\'s size does not change our duty.'),tx('Sprawdzę kryjówkę','Search the hideout'),()=>{advance(p,'bow_trial','rescue_return');this.assignDungeon(p);});
       case 'rescue_return': return talk(tx('Człowiek cały? To najważniejsze. Dobra robota. Widzę, że potrafisz coś więcej niż nosić korespondencję.\n\nChochliki znoszą kradzione rzeczy do pobliskiego lochu. Zginął między innymi pluszowy miś. Sprawdź kryjówkę i przynieś zgubę.','Is the traveller safe? That matters most. Good work. You can do more than carry letters.\n\nImps are storing stolen belongings in a nearby dungeon. A teddy bear is missing. Search the hideout and bring it back.'),tx('Sprawdzę kryjówkę','Search the hideout'),()=>this.assignDungeon(p));
       case 'dungeon_return': return talk(tx('Miś wróci do właściciela. A z różdżką… dobra, bez żartów. Na tym się nie znam. Idź do biblioteki. Tam powinni wiedzieć, co trzymasz.\n\nI nie sprawdzaj tego na moim biurku.','The teddy will return to its owner. About that wand… I know little about magic. Visit the librarian; they should know what you found.\n\nAnd do not test it on my desk.'),tx('Odwiedź bibliotekarza','Visit the librarian'),()=>{claimOnce(p,'bear_returned',()=>{session.exp+=50;});p.storyItems=[];advance(p,'dungeon_return','library_visit');},true);
@@ -312,7 +327,7 @@ export class PrologRekruta {
   private equipSafely(id:string){equipStoryItem(this.state!,gear,id,item(id)!.miejsce,PLECAK.miejsc);}
   private archer(){
     const p=this.state!;
-    this.h.dialog({title:tx('Uratowany łucznik','Rescued archer'),text:tx('Dzięki. Jeden od przodu, drugi od tyłu — nie miałem nawet gdzie napiąć cięciwy.\n\nMam zapasowy łuk. Stary, ale sprawny. Weź go, razem ze strzałami. Pokażę ci, jak celować.','Thanks. One in front, one behind — I had no room to draw.\n\nI have an old spare bow. It still works. Take it and these arrows. I will show you how to aim.'),buttons:[tx('Wypróbuj łuk','Try the bow'),tx('Później','Later')],onChoose:i=>void this.change(()=>{
+    this.h.dialog({title:tx('Łucznik','Archer'),text:tx('Dzięki. Jeden od przodu, drugi od tyłu — nie miałem nawet gdzie napiąć cięciwy.\n\nMam zapasowy łuk. Stary, ale sprawny. Weź go, razem ze strzałami. Pokażę ci, jak celować.','Thanks. One in front, one behind — I had no room to draw.\n\nI have an old spare bow. It still works. Take it and these arrows. I will show you how to aim.'),buttons:[tx('Wypróbuj łuk','Try the bow'),tx('Później','Later')],onChoose:i=>void this.change(()=>{
       claimOnce(p,'bow_received',()=>{this.receive('luk_rekruta');gear.ammo.strzaly=Math.min(200,gear.ammo.strzaly+20);});
       advance(p,'rescue_reward','bow_trial');
       if(i===0){const at=gear.bag.findIndex(s=>'item'in s&&s.item==='luk_rekruta');if(at>=0)equipFromBag(at);else if(p.pendingRewards.includes('luk_rekruta')){p.pendingRewards.splice(p.pendingRewards.indexOf('luk_rekruta'),1);this.equipSafely('luk_rekruta');}}
@@ -338,6 +353,23 @@ export class PrologRekruta {
     },()=>this.h.toast(tx('Pierwsza służba ukończona. Nadal służysz w mundurze; dalsze zlecenia straży pojawią się osobno.','First duty complete. You still serve in uniform; further guard assignments will follow separately.'),6000))});
   }
 
+  private guide?: { stage: string; from: {x:number;y:number}; next: {x:number;y:number}; at: number };
+  private nextWaypoint(pos: {x:number;y:number}) {
+    const { x, y } = this.h.player;
+    const stage = this.state!.stage;
+    const previous = this.guide;
+    const now = performance.now();
+    if (previous?.stage === stage && (now - previous.at < 600 ||
+      (Math.hypot(x - previous.from.x, y - previous.from.y) < 5 * PX_PER_M && now - previous.at < 2000))) return previous.next;
+    const from = { x, y };
+    const distance = Math.hypot(x - pos.x, y - pos.y);
+    const next = distance < 240 * PX_PER_M && !clearWalk(this.h.city, from, pos)
+      ? localRoutes(this.h.city, from, Math.min(250 * PX_PER_M, distance + 45 * PX_PER_M)).route(pos)?.next() ?? pos
+      : pos;
+    this.guide = { stage, from, next, at: now };
+    return next;
+  }
+
   goal():QuestInfo|null{
     const p=this.state;
     if (mayStart(p, session.missions[PROLOG_ID]) && !this.h.city.loch) {
@@ -354,13 +386,13 @@ export class PrologRekruta {
     }
     if(!p || p.status!=='active')return null;
     const titles:Record<string,[string,string,AnchorKind]>={
-      intro:['Porozmawiaj ze starszym strażnikiem','Talk to the senior guard','mentor'],letter_deliver:['Dostarcz list do punktu straży','Deliver the letter to the guard post','outpost'],letter_return:['Oddaj potwierdzenie instruktorowi','Return the receipt to the instructor','mentor'],rescue_fight:['Obroń łucznika przed chochlikami','Defend the archer from imps','ambush'],rescue_reward:['Porozmawiaj z uratowanym łucznikiem','Talk to the rescued archer','ambush'],bow_trial:['Wypróbuj łuk lub wróć do instruktora','Try the bow or return to the instructor','bowPractice'],rescue_return:['Zdaj raport instruktorowi','Report to the instructor','mentor'],dungeon_enter:['Wejdź do kryjówki po misia','Enter the hideout and find the teddy','dungeonEntrance'],dungeon_first_group:['Oczyść pierwszą komnatę','Clear the first chamber','dungeonEntrance'],magic_pickup:['Dotknij różdżki i kapelusza','Touch the wand and hat','dungeonEntrance'],magic_trial:['Wypróbuj magię i odzyskaj misia','Try magic and recover the teddy','dungeonEntrance'],dungeon_recover:['Odzyskaj misia z kryjówki','Recover the teddy from the hideout','dungeonEntrance'],dungeon_return:['Oddaj misia instruktorowi','Return the teddy to the instructor','mentor'],library_visit:['Odwiedź bibliotekarza','Visit the librarian','library']};
+      intro:['Porozmawiaj ze starszym strażnikiem','Talk to the senior guard','mentor'],letter_deliver:['Dostarcz list dyżurnemu straży','Deliver the letter to the duty officer','outpost'],letter_return:['Oddaj potwierdzenie starszemu strażnikowi','Return the receipt to the senior guard','mentor'],rescue_find:['Odszukaj łucznika','Find the archer','ambush'],rescue_fight:['Obroń łucznika przed chochlikami','Defend the archer from imps','ambush'],rescue_reward:['Porozmawiaj z uratowanym łucznikiem','Talk to the rescued archer','ambush'],bow_trial:['Wypróbuj łuk lub wróć do starszego strażnika','Try the bow or return to the senior guard','bowPractice'],rescue_return:['Zdaj raport starszemu strażnikowi','Report to the senior guard','mentor'],dungeon_enter:['Wejdź do kryjówki po misia','Enter the hideout and find the teddy','dungeonEntrance'],dungeon_first_group:['Oczyść pierwszą komnatę','Clear the first chamber','dungeonEntrance'],magic_pickup:['Dotknij różdżki i kapelusza','Touch the wand and hat','dungeonEntrance'],magic_trial:['Wypróbuj magię i odzyskaj misia','Try magic and recover the teddy','dungeonEntrance'],dungeon_recover:['Odzyskaj misia z kryjówki','Recover the teddy from the hideout','dungeonEntrance'],dungeon_return:['Oddaj misia starszemu strażnikowi','Return the teddy to the senior guard','mentor'],library_visit:['Odwiedź bibliotekarza','Visit the librarian','library']};
     const t=titles[p.stage];if(!t)return null;
     let pos=this.local?this.point(t[2])??null:null;
     if(this.underground){const d=this.h.dungeon();pos=d?(p.stage==='dungeon_return'?d.schody:['dungeon_first_group','magic_pickup'].includes(p.stage)?d.magicSpot:d.skrzynia):null;}
     const elsewhere=!this.local&&!this.underground;
-    return {id:PROLOG_ID,main:true,title:tx('Pierwsza służba','First duty'),text:tx(t[0],t[1])+(elsewhere?` — ${tx('kontynuuj w','continue in')} ${p.originName}`:''),pos,color:'#ffd76a'};
+    return {id:PROLOG_ID,main:true,title:tx('Pierwsza służba','First duty'),text:tx(t[0],t[1])+(elsewhere?` — ${tx('kontynuuj w','continue in')} ${p.originName}`:''),pos, waypoint: pos && this.local && ['letter_deliver','letter_return','rescue_find','rescue_fight'].includes(p.stage) ? this.nextWaypoint(pos) : undefined, color:'#ffd76a'};
   }
-  private clearObjects(){for(const o of this.objects)o.destroy();this.objects=[];}
+  private clearObjects(){for(const o of this.objects)o.destroy();this.objects=[];this.nameplates.clear();}
   destroy(){this.destroyed=true;this.clearObjects();}
 }

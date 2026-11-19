@@ -84,7 +84,8 @@ export class UIScene extends Phaser.Scene {
   private hud?: HudState;
   private dialogBox?: Phaser.GameObjects.Container;
   private shop?: ShopHandle;
-  private get hasDialog() { return !!this.dialogBox || !!this.shop; }
+  private accessibleDialog?: HTMLElement;
+  private get hasDialog() { return !!this.dialogBox || !!this.shop || !!this.accessibleDialog; }
   private dialogButtons: { rect: Phaser.GameObjects.Rectangle; index: number; scrollable: boolean }[] = [];
   private dialogChoose?: (i: number) => void;
   /** The open dialog's safe way out for Escape/Space (DialogRequest.zamknij), else its last button. */
@@ -708,12 +709,68 @@ export class UIScene extends Phaser.Scene {
       this.shop = showShop(d, i => this.chooseShop(i));
       return;
     }
+    if (d.accessible) { this.showAccessibleDialog(d); return; }
     // Long talks come in portions with „Dalej ▶” (owner, 1 Nov 2026: „inaczej wypracowania nikt nie będzie
     // czytał”); the real buttons only on the last portion. Letters appear one by one (`pisz`).
     const strony = d.kto ? this.podzielNaStrony(d) : [d.text];
     const pisz = !d.natychmiast && !!d.kto && d.text.trim().length > 140;
     if (strony.length < 2) { this.rysujDialog(d, pisz); return; }
     this.pokazStrone({ d, strony, i: 0, pisz });
+  }
+
+  private showAccessibleDialog(d: DialogRequest) {
+    this.closeDialog();
+    resetTouch();
+    const overlay = document.createElement('div');
+    overlay.className = 'm-screen';
+    const panel = document.createElement('div');
+    panel.className = 'm-box';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-labelledby', 'accessible-dialog-title');
+    panel.setAttribute('aria-describedby', 'accessible-dialog-text');
+    panel.tabIndex = -1;
+    const title = document.createElement('h2');
+    title.id = 'accessible-dialog-title';
+    title.textContent = d.title;
+    const text = document.createElement('p');
+    text.id = 'accessible-dialog-text';
+    text.style.whiteSpace = 'pre-line';
+    text.textContent = d.text;
+    const choose = (i: number) => {
+      if (this.accessibleDialog !== overlay) return;
+      this.closeDialog();
+      d.onChoose(i);
+    };
+    const buttons = d.buttons.map((label, i) => {
+      const button = document.createElement('button');
+      button.className = i === 0 ? 'm-btn m-primary' : 'm-btn';
+      button.type = 'button';
+      button.textContent = label;
+      button.onclick = () => choose(i);
+      return button;
+    });
+    overlay.onkeydown = e => {
+      e.stopPropagation();
+      if (e.key === 'Escape' && buttons.length) {
+        e.preventDefault();
+        choose(d.zamknij ?? buttons.length - 1);
+      }
+      if (e.key !== 'Tab' || !buttons.length) return;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === buttons[0] || active === panel)) {
+        e.preventDefault();
+        buttons.at(-1)?.focus();
+      } else if (!e.shiftKey && active === buttons.at(-1)) {
+        e.preventDefault();
+        buttons[0].focus();
+      }
+    };
+    panel.append(title, text, ...buttons);
+    overlay.append(panel);
+    this.accessibleDialog = overlay;
+    document.body.append(overlay);
+    panel.focus();
   }
 
   /** One portion of a paged dialog: „Dalej ▶ (1/3)” until the last, which has the request's own buttons. */
@@ -1085,7 +1142,7 @@ export class UIScene extends Phaser.Scene {
       this.openGameMenu();
       return;
     }
-    if (!this.hasDialog) return;
+    if (!this.hasDialog || this.accessibleDialog) return;
     // Any press while a dialog is open belongs to the dialog, never to the weapon.
     cancelPress();
     if (this.time.now - this.dialogOpenedAt < 250) return;
@@ -1124,17 +1181,18 @@ export class UIScene extends Phaser.Scene {
       },
       hp: game.player.hp, maxHp: PLAYER.maxHp, fruitPerHeal: game.fruitPerHeart(), onChange: () => game.gearChanged(), eat: () => game.eatFruit(),
       quests: () => game.questLog(), toggleArrow: (id) => game.toggleArrow(id),
+      showQuestOnMap: id => { closeCharacter(); this.openMap(id); },
       tent: { ...game.tentSpot(), pitch: () => game.pitchTent() },
     });
   }
 
-  private openMap() {
+  private openMap(questId?: string) {
     const game = this.scene.get('game') as GameScene;
     if (!game.player || this.overlay || isCharacterOpen()) return;
     touchInput.attack = false; // the tap on the button isn't a sword swing
     if (isMinimapOpen()) return closeMinimap();
     this.sleepWorld();
-    toggleMinimap(game, () => this.wakeWorld());
+    toggleMinimap(game, () => this.wakeWorld(), questId);
   }
 
   /** A city board's map (GameScene.otworzTablice): the world sleeps meanwhile, like the map screen. */
@@ -1281,6 +1339,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private closeDialog() {
+    this.accessibleDialog?.remove();
+    this.accessibleDialog = undefined;
     this.shop?.destroy();
     this.shop = undefined;
     this.dialogBox?.destroy(); // also destroys the scrollBox/rail graphics nested inside it

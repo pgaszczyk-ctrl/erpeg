@@ -3,7 +3,8 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { preview } from 'vite';
-const server=await preview({preview:{host:'127.0.0.1',port:4173,strictPort:true}});
+const port=Number(process.env.PORT || 4173);
+const server=await preview({build:{outDir:process.env.BUILD_DIR || 'dist'},preview:{host:'127.0.0.1',port,strictPort:true}});
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const mobile=process.env.TELEFON==='1',lang=process.env.JEZYK||'pl',tag=`${mobile?'phone':'desktop'}-${lang}`;
@@ -47,14 +48,14 @@ const waitStage=stage=>page.waitForFunction(st=>{const s=window.__game?.scene.ge
 const choose=i=>evalGame(i=>{const d=window.__dialogi.at(-1);window.__game.scene.getScene('ui').closeDialog();d.onChoose(i);},i);
 const go=async()=>{
  await page.goto('about:blank');
- await page.goto(`http://127.0.0.1:4173/?lang=${lang}&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=Jam&kod=ANGELIKA`);
+ await page.goto(`http://127.0.0.1:${port}/?lang=${lang}&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1#postac=Jam&kod=ANGELIKA`);
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&window.__game.scene.getScene('game').firstViewReady?.(),null,{timeout:120000});
  await page.waitForFunction(()=>document.getElementById('loading-map')?.hidden !== false,null,{timeout:60000});
  console.log('loaded',saved.tu?.m,await page.evaluate(()=>window.__game.scene.getScene('game').city.id));
 };
 const at=async key=>evalGame(key=>{const s=window.__game.scene.getScene('game'),a=s.prolog.state.anchors[key],p=s.city.fromLatLon(a.lat,a.lon);s.player.setPosition(p.x,p.y);s.talkReadyAt=0;return p;},key);
 const interact=async()=>{await evalGame(()=>{const s=window.__game.scene.getScene('game');s.talkReadyAt=0;s.interactChain(s.player.hitPoint(),false,false);});};
-const kill=async mode=>evalGame(mode=>{const s=window.__game.scene.getScene('game');const es=mode==='rescue'?[...s.prolog.enemies.keys()]:s.enemies.filter(e=>s.loch.contains(e));for(const e of es){if(e.hit(s.player.getCenter(),s.time.now,10000))s.onEnemyKilled(e);}},mode);
+const clearDungeon=async()=>evalGame(()=>{const s=window.__game.scene.getScene('game');for(const e of s.enemies.filter(e=>s.loch.contains(e))){if(e.hit(s.player.getCenter(),s.time.now,10000))s.onEnemyKilled(e);}});
 try{
  await go();
  // An actual server timeout during origin saving is a save error, held until explicit retry.
@@ -71,21 +72,64 @@ try{
  await page.waitForFunction(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)),null,{timeout:30000});
  const anchors=await evalGame(()=>window.__game.scene.getScene('game').prolog.state.anchors);
  await page.screenshot({path:`work/prolog/${tag}-intro.png`});
- failNext=true;await choose(0);
+ const intro=page.getByRole('dialog',{name:lang==='pl'?'Starszy strażnik':'Senior guard'});
+ assert.match(await intro.locator('p').textContent(),lang==='pl'?/Zaniesiesz list/:/Take this letter/);
+ failNext=true;
+ await page.keyboard.press('Tab');
+ await page.keyboard.press('Enter');
  await page.waitForFunction(()=>/Zapis prologu|Prologue checkpoint/.test(window.__dialogi.at(-1)?.title),null,{timeout:10000});
  await choose(0);await waitStage('letter_deliver');
  assert.equal(saved.story.prolog.pendingRewards.length,1,'full bag stores the previous sword');
  assert(saved.equip.bron==='miecz_rekruta');
  await go();await waitStage('letter_deliver');assert.deepEqual(saved.story.prolog.anchors,anchors);
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').scene.isActive());
+ const walkStart=await evalGame(()=>{
+  const game=window.__game,s=game.scene.getScene('game');
+  return {x:s.player.x,y:s.player.y,frame:game.loop.frame,time:performance.now()};
+ });
+ await page.keyboard.down('ArrowRight');await page.waitForTimeout(1200);await page.keyboard.up('ArrowRight');
+ const walk=await evalGame(start=>{
+  const game=window.__game,s=game.scene.getScene('game');
+  return {pixels:Math.round(Math.hypot(s.player.x-start.x,s.player.y-start.y)),frames:game.loop.frame-start.frame,ms:Math.round(performance.now()-start.time)};
+ },walkStart);
+ assert(walk.pixels>0,'the hero moves with keyboard input');
+ console.log('walk on open ground',walk);
+ await page.keyboard.press('c');
+ await page.getByRole('button',{name:/Dziennik/}).first().click();
+ await page.getByRole('button',{name:lang==='pl'?'Pokaż na mapie':'Show on map'}).first().click();
+ await page.locator('#minimap').waitFor();
+ await page.screenshot({path:`work/prolog/${tag}-quest-map.png`});
+ await page.keyboard.press('Escape');
+ await page.locator('#minimap').waitFor({state:'detached'});
  await at('outpost');await interact();await choose(0);await waitStage('letter_return');
  // A second city during the active quest: no second prologue and no moving the saved instructor.
  saved.tu={m:'city-b',x:2880,y:2880,s:1.92};await go();await waitStage('letter_return');
  assert.match(await evalGame(()=>window.__game.scene.getScene('game').activeQuests()[0].text),/Lublin/);
  assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.offerChief(()=>{})),false);
  saved.tu={m:'lublin',x:2880,y:2880,s:1.92};await go();await waitStage('letter_return');
- await at('mentor');await interact();await choose(0);await waitStage('rescue_fight');
+ await at('mentor');await interact();await choose(0);await waitStage('rescue_find');
+ assert.equal(exp,20);
+ assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.enemies.size),0);
+ await at('ambush');await interact();await choose(0);await waitStage('rescue_fight');
+ await go();await waitStage('rescue_fight');
  await page.waitForFunction(()=>window.__game.scene.getScene('game').prolog.enemies.size===2);
- await kill('rescue');await waitStage('rescue_reward');
+ // Run the same sword resolver as a player swing. Position and face the hero to keep
+ // this check independent of pathing and reaction time in the browser fixture.
+ for(let i=0;i<18 && await evalGame(()=>window.__game.scene.getScene('game').prolog.state.stage==='rescue_fight');i++){
+  await evalGame(()=>{
+   const s=window.__game.scene.getScene('game');
+   if(s.prolog.busy)return;
+   const enemy=[...s.prolog.enemies.keys()].find(e=>e.visible&&!e.isDead&&!e.inAir);
+   if(!enemy)return;
+   s.player.setPosition(enemy.x-12,enemy.y-2);
+   const hit=s.player.getCenter();
+   hit.set(enemy.x,enemy.y);
+   s.resolveAttack(hit,s.time.now);
+  });
+  await page.waitForTimeout(400);
+ }
+ await waitStage('rescue_reward');
+ assert.deepEqual(saved.story.prolog.rescueKilled.slice().sort(),[0,1]);
  await go();await waitStage('rescue_reward');assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.enemies.size),0);
  await at('ambush');await interact();await choose(0);await waitStage('bow_trial');
  await at('bowPractice');
@@ -110,7 +154,7 @@ try{
  assert.equal(await evalGame(()=>window.__game.scene.getScene('game').ludzik3d.g.model.getObjectByName('core').geometry.uuid),uniform,'magic preserves the guard uniform');
  await evalGame(()=>{const s=window.__game.scene.getScene('game');s.fireShot({id:'rozdzka_szkolna',rodzaj:'magia',miejsce:'bron',moc:2},{x:1,y:0},false,s.time.now);});
  await waitStage('dungeon_recover');await page.screenshot({path:`work/prolog/${tag}-magic.png`});
- await kill('dungeon');
+ await clearDungeon();
  await page.waitForFunction(()=>!window.__game.scene.getScene('game').prolog.busy);
  const killed=saved.story.prolog.dungeon.killed.length;assert.equal(killed,3);
  // Reload returns to the entrance; the same tutorial instance has no duplicate monsters or equipment.

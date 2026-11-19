@@ -36,6 +36,8 @@ export interface LiveZasoby {
   wybierz?: (id: string) => void;
   aktywna?: string;
   cooldown?: number;
+  cooldownLeft?: number;
+  cost?: number;
   gotowy: boolean;
   stac: boolean;
 }
@@ -237,6 +239,9 @@ export function ustawHudLive(v: LiveHudView) {
   } else el.leczIk.textContent = v.potions > 0 ? '🧪' : '🍎';
   el.leczN.textContent = `${v.potions > 0 ? v.potions : v.fruit}`;
   el.lecz.classList.toggle('nie', v.noHeal || v.hp >= v.maxHp);
+  el.lecz.title = el.lecz.ariaLabel = v.hp >= v.maxHp ? tx('Leczenie: pełne życie', 'Heal: full health')
+    : v.noHeal ? tx('Leczenie: za mało owoców i brak mikstur', 'Heal: not enough fruit and no potions')
+    : tx('Leczenie', 'Heal');
 }
 
 let ostatnieZasoby: LiveZasoby | null = null;
@@ -248,7 +253,11 @@ export function ustawZasobyHud(z: LiveZasoby) {
     if (el.specIk.dataset.icon !== z.aktywna) { el.specIk.innerHTML = comicIcon(z.aktywna ?? 'mocny'); el.specIk.dataset.icon = z.aktywna; }
   } else el.specIk.textContent = z.umiej.ikona;
   el.specSmall.textContent = z.umiej.nazwa.toUpperCase();
-  el.spec.title = el.spec.ariaLabel = `${z.umiej.nazwa} (Q)`;
+  const resource = z.magia ? tx('mana', 'mana') : tx('siły', 'stamina');
+  const cost = z.cost === undefined ? '' : ` · ${tx('Koszt', 'Cost')} ${z.cost} (${resource})`;
+  const reason = !z.stac ? ` · ${z.magia ? tx('Za mało many', 'Not enough mana') : tx('Za mało sił', 'Not enough stamina')}` : '';
+  const wait = !z.gotowy && z.cooldownLeft ? ` · ${tx('Odnowienie', 'Ready in')} ${z.cooldownLeft} s` : '';
+  el.spec.title = el.spec.ariaLabel = `${z.umiej.nazwa} (Q)${cost}${reason}${wait}`;
   const choices = z.wybor ?? [];
   el.picker.hidden = !comicHud || choices.length < 2;
   el.slider.max = String(Math.max(0, choices.length - 1));
