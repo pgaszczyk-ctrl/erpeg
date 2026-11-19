@@ -2,6 +2,13 @@
 
 Właściciel o zrzucie z serwera testowego (`zrzuty/gestosc_dzis_z_gry.png`): „gigantyczny dysonans między postaciami a budynkami”.
 
+## Wzorzec dla nowych dekoracji
+
+- Jeden piksel pliku odpowiada **0,5 jednostki mapy**. Wymiary płótna są dwukrotnością zamierzonego rozmiaru na mapie. Złoże 44 × 30 pikseli zajmuje 22 × 15 jednostek. Szyld 28 × 25 zajmuje 14 × 12,5.
+- Teksturę wyświetlamy z filtrem NEAREST. Podstawa dekoracji trafia na siatkę co pół jednostki mapy. Zbliżenie kamery i rozdzielczość ekranu wpływają na liczbę pikseli ekranu, jaką zajmuje jeden piksel rysunku.
+- Kontur i plamy koloru wypełniają całe piksele. Błysk rudy zmienia jasność pojedynczych pikseli na osobnej warstwie o tej samej gęstości.
+- Porównujemy wygląd w silniku na tle trawy, bruku i drzewa przy zwykłym przybliżeniu. Sprawdzamy, czy obiekt i jego punkt interakcji są widoczne przy obrzeżach koron oraz przy wejściach.
+
 ## Co jest nie tak (pomiar ze zrzutu)
 - **Postać:** bohater ma ok. 110 px ekranu wysokości (≈ 23 px mapy), więc 1 px mapy ≈ 4,8 px ekranu. Piksel arkusza postaci to ≈ 1,9 px ekranu. Postać jest rysowana gładko (filtr LINEAR).
 - **Świat:** piksel dachu ma ok. **8 px ekranu ≈ 1,67 px mapy**. Specyfikacja i makiety mówią **1 px obrazu generatora = 0,5 px mapy** (bohater ≈ 46–48 px obrazu wysokości). Świat jest więc malowany **ok. 3,3× grubiej**, niż powinien. Do tego jest lekko rozmyty przy powiększaniu, więc schodki krawędzi są wielkie i miękkie.

@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — wspólna siatka pikseli i czytelny szyld
+
+- Na podstawie uwagi właściciela wspólną gęstość powiązano z `GEN_DOTS`. Jeden piksel tekstury to pół jednostki mapy. Wypełnienie kształtów jest wyrównane do pikseli, a rysunki używają próbkowania NEAREST.
+- Rozmytą poświatę zastąpiły pojedyncze jasne piksele na żyle i odłamkach. Szyld demonstracyjny przesunięto na wolne miejsce z lewej strony drzewa. Rysowany szyld sklepu używa stałej skali i jasności.
+- Wzorzec zapisano w `docs/paczka-dla-programisty/GESTOSC_PIKSELI.md`. Kod makiety znajduje się w `src/ui/makieta.ts`, `src/scenes/Zloza.ts` i `src/scenes/GameScene.ts`.
+
 ## 2026-11-19 — czytelniejsze złoże i szyldy w makiecie
 
 - Wariant rysowany ma jasną żyłę, odłamki i ciepły blask złoża. Blask pozostaje stały przy ograniczeniu ruchu.

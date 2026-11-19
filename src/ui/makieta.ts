@@ -1,4 +1,5 @@
 import { TEST } from '../version';
+import { GEN_DOTS } from '../map/ziemia09';
 
 const search = new URLSearchParams(location.search);
 export const makieta = TEST && ['oryginal', 'rysowana'].includes(search.get('makieta') ?? '');
@@ -32,14 +33,30 @@ function drawSprite(w: number, h: number, facets: Facet[]) {
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
   for (const [color, ...pts] of facets) {
+    const path = new Path2D();
+    path.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) path.lineTo(pts[i], pts[i + 1]);
+    path.closePath();
     ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(pts[0], pts[1]);
-    for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
-    ctx.closePath();
-    ctx.fill();
+    // Rasterise at texel centres so adjacent painted surfaces never blend at the edges.
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (ctx.isPointInPath(path, x + .5, y + .5)) ctx.fillRect(x, y, 1, 1);
+    }
   }
   return canvas;
+}
+
+// Like GEN_DOTS in the terrain generator: two source texels per map unit.
+export const MAKIETA_TEXEL = 1 / GEN_DOTS;
+export const snapMakieta = (mapPosition: number) => Math.round(mapPosition / MAKIETA_TEXEL) * MAKIETA_TEXEL;
+
+export function blyskRudyMakiety() {
+  return drawSprite(44, 30, [
+    ['#fff0b1', 19,8, 20,8, 20,10, 19,10],
+    ['#ffdd91', 21,12, 23,12, 23,13, 21,13],
+    ['#ffe5a6', 39,16, 41,16, 41,17, 39,17],
+    ['#edbe83', 33,24, 35,24, 35,25, 33,25],
+  ]);
 }
 
 /** Three low stones, with a shared contact shadow and a muted vein across the broad central face. */
@@ -59,10 +76,10 @@ export function rudaMakiety() {
     ['#838577', 24,15, 26,11, 29,10, 32,12, 33,14, 29,16],
     ['#5b6252', 24,15, 29,16, 33,14, 34,16, 31,19, 26,19],
     ['#353831', 9,13, 12,7, 17,4, 23,4, 28,8, 30,14, 27,19, 20,21, 13,19],
-    ['#8e8c75', 10,13, 14,8, 18,5, 22,5, 26,7, 28,11, 22,13, 17,16, 12,16],
+    ['#a4a590', 10,13, 14,8, 18,5, 22,5, 26,7, 28,11, 22,13, 17,16, 12,16],
     ['#676f5d', 12,15, 17,15, 22,12, 28,10, 29,14, 26,18, 20,20, 14,18],
     ['#625347', 18,7, 20,8, 20,10, 23,12, 22,15, 24,17, 21,19, 20,16, 20,13, 17,10],
-    ['#ebbb79', 18,7, 20,8, 20,11, 23,12, 22,14, 23,16, 21,17, 20,14, 20,12, 18,11],
+    ['#d5a766', 18,7, 20,8, 20,11, 23,12, 22,14, 23,16, 21,17, 20,14, 20,12, 18,11],
     ['#9da087', 12,12, 16,8, 17,8, 16,10, 13,13],
     ['#66864c', 3,21, 3,17, 5,20, 7,17, 7,21, 14,20, 12,22, 6,23],
     ['#65804e', 25,22, 28,19, 29,22, 31,18, 32,21, 35,20, 33,23],

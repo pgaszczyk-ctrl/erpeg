@@ -133,7 +133,7 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo, powitanie, blackout } from '../demo';
-import { makieta, rysowanaMakieta, szyldSklepuMakiety } from '../ui/makieta';
+import { makieta, MAKIETA_TEXEL, rysowanaMakieta, snapMakieta, szyldSklepuMakiety } from '../ui/makieta';
 import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
@@ -3405,12 +3405,19 @@ export class GameScene extends Phaser.Scene {
     const S = SLUPY_SZYLDOW;
     const t = S.tablice[p.kind] ?? (p.kind === 'maker' || p.kind === 'workshop' ? 'sklep' : undefined);
     if (!WYGLAD_09 || !t || !this.textures.exists(`tablica-${t}`) || !this.textures.exists('szyld-slup-ramie')) return null;
-    const at = this.postSpot(p);
+    const previewShop = rysowanaMakieta && (p.kind === 'shop' || p.kind === 'gear');
+    // Place the demonstration board by the façade, left of the crown in this actual map scene.
+    const at = rysowanaMakieta && p.id === 'makieta-sklep'
+      ? { x: p.door.x - 35, y: p.door.y - 8 } : this.postSpot(p);
+    if (previewShop) {
+      at.x = snapMakieta(at.x);
+      at.y = snapMakieta(at.y);
+    }
     let h = 0;
     for (let i = 0; i < p.id.length; i++) h = (h * 31 + p.id.charCodeAt(i)) | 0;
     const arm = (h & 1) === 1;
     // Frames are in picture px (2 per map px): the post's foot is row 38, its axis column 5.5 (board post) / 6 (arm post).
-    const K = 0.5;
+    const K = MAKIETA_TEXEL;
     const flip = arm && at.x < p.door.x; // the arm points away from the door
     const post = this.add.image(at.x, at.y, arm ? 'szyld-slup-ramie' : 'szyld-slup-tablica', 0)
       .setOrigin(arm ? (flip ? 22 / 28 : 6 / 28) : 5.5 / 12, 39 / 40).setScale(K).setFlipX(flip).setDepth(at.y);
@@ -3418,7 +3425,6 @@ export class GameScene extends Phaser.Scene {
     const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
     // The shop's board has the artist's three swing frames (36-G002); the others swing by code (updatePosts).
     const B = SNOP_SZYLDU.bujanie;
-    const previewShop = rysowanaMakieta && (p.kind === 'shop' || p.kind === 'gear');
     const previewKey = 'makieta-szyld-sklepu';
     if (previewShop && !this.textures.exists(previewKey)) {
       this.textures.addCanvas(previewKey, szyldSklepuMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -3442,6 +3448,7 @@ export class GameScene extends Phaser.Scene {
       c.refresh();
     }
     const shadow = this.add.image(at.x + 2, at.y - 0.5, 'cien-slupa').setDepth(at.y - 1);
+    if (previewShop) return [post, board, shadow];
     const lampX = at.x + (arm ? (flip ? -0.5 : 0.5) : 0) * K, lampY = top + 5 * K;
     const lamp = this.add.image(lampX, lampY, 'sign-glow-lamp').setBlendMode(Phaser.BlendModes.ADD).setDepth(at.y + 1).setVisible(false);
     // The light: a cone from the lamp down to the pavement (SNOP_SZYLDU), day and night, with the odd flicker.
