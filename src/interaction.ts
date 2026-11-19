@@ -3,6 +3,7 @@ export interface InteractionTarget {
   id: string; x: number; y: number; label: string; kind: 'talk' | 'enter' | 'use';
   run(): void;
   range?: number;
+  priority?: boolean;
 }
 export class InteractionSelection {
   id: string | null = null;
@@ -13,9 +14,10 @@ export class InteractionSelection {
     const distance = (t: InteractionTarget) => Math.hypot(t.x - x, t.y - y);
     const available = targets.filter(t => distance(t) <= (t.range ?? range));
     const current = available.find(t => t.id === this.id);
-    const nearest = available.reduce<InteractionTarget | null>((a, b) => !a || distance(b) < distance(a) ? b : a, null);
+    const preferred = available.filter(t => t.priority);
+    const nearest = (preferred.length ? preferred : available).reduce<InteractionTarget | null>((a, b) => !a || distance(b) < distance(a) ? b : a, null);
     // A deliberate selection persists until it leaves reach; automatic selection has hysteresis.
-    if (current && (this.pinned || !nearest || distance(nearest) + 8 >= distance(current) * .72)) return current;
+    if (current && (this.pinned || !nearest || (!!current.priority === !!nearest.priority && distance(nearest) + 8 >= distance(current) * .72))) return current;
     this.pinned = false;
     this.id = nearest?.id ?? null;
     return nearest;

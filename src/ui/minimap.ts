@@ -1,3 +1,4 @@
+import { tx } from '../i18n';
 import type { GameScene } from '../scenes/GameScene';
 import { PX_PER_M } from '../map/CityMap';
 import { FOG_CELL } from '../map/Fog';
@@ -73,22 +74,22 @@ window.addEventListener('resize', () => {
   }, 200);
 });
 
-export function toggleMinimap(game: GameScene, onClose?: () => void) {
+export function toggleMinimap(game: GameScene, onClose?: () => void, questId?: string) {
   if (open) closeMinimap();
   else {
     closed = onClose ?? null;
-    showMinimap(game);
+    showMinimap(game, questId);
   }
 }
 
-function showMinimap(game: GameScene) {
+function showMinimap(game: GameScene, questId?: string) {
   graMapy = game;
   knownCache.clear();
   huby = null;
   ikony = [];
   const root = document.createElement('div');
   root.id = 'minimap';
-  const size = Math.floor(Math.min(window.innerWidth, window.innerHeight - 70) - 24);
+  const size = Math.floor(Math.min(window.innerWidth, window.innerHeight - 94) - 24);
   const canvas = document.createElement('canvas');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = canvas.height = Math.floor(size * dpr);
@@ -110,6 +111,15 @@ function showMinimap(game: GameScene) {
   // Dragging moves the view: an offset from the hero (map px) for the city scales, degrees for the others.
   let off = { x: 0, y: 0 };
   let geoOff = { lat: 0, lon: 0 };
+  const goal = game.activeQuests().find(q => q.id === questId && q.pos);
+  if (goal?.pos) {
+    zoom = 0;
+    off = { x: goal.pos.x - game.player.x, y: goal.pos.y - game.player.y };
+  }
+  const legend = document.createElement('span');
+  legend.textContent = tx('○ Cel zadania · ▲ Gracz', '○ Quest objective · ▲ Player');
+  legend.style.cssText = 'color:#fff1ce;font-size:12px';
+  legend.style.pointerEvents = 'none';
   const setZoom = (z: number) => {
     zoom = Math.max(0, Math.min(SKALE_MAPY.length - 1, z));
     off = { x: 0, y: 0 };
@@ -120,7 +130,7 @@ function showMinimap(game: GameScene) {
   bar.append(label);
   btn('+', () => setZoom(zoom - 1));
   btn('✕', closeMinimap);
-  root.append(canvas, bar);
+  root.append(canvas, bar, legend);
   root.onclick = (e) => {
     if (e.target === root) closeMinimap();
   };
@@ -684,6 +694,17 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number, c: { x: n
     ctx.beginPath();
     ctx.arc(x, y, Math.max(11 * u, q.main ? 0 : game.goalRadius() * s), 0, Math.PI * 2);
     ctx.stroke();
+    if (q.main) {
+      ctx.save();
+      ctx.font = `bold ${Math.round(12 * u)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#241d29';
+      ctx.lineWidth = 3 * u;
+      ctx.strokeText(q.text, x, y + 24 * u, S * .75);
+      ctx.fillStyle = q.color;
+      ctx.fillText(q.text, x, y + 24 * u, S * .75);
+      ctx.restore();
+    }
   }
   drawHubs(ctx, S, u, game, (lat, lon) => {
     const p = game.city.fromLatLon(lat, lon);

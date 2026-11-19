@@ -1,5 +1,14 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — poprawki startu „Pierwszej służby” po audycie tessol
+
+- Priorytet dyżurnego i starszego strażnika podczas przekazania listu, spójne nazwy, komunikat przy kliknięciu zbyt daleko. Dziennik i komunikat po zapisie pokazują istniejącą nagrodę 20 PD.
+- Krótsze trasy dla nowo planowanych punktów, strzałka wskazuje przechodni punkt pośredni, mapa centruje cel z dziennika. Wprowadzenie łucznika poprzedza obronę. Istniejące zapisy na etapie obrony wznawiają się bez dodatkowej rozmowy.
+- Klawiatura i semantyka dialogów prologu. Uzupełniono opisy trudności, powrotu do postaci gościa, kosztu zdolności, odnowienia i leczenia.
+- Główne pliki to `src/scenes/PrologRekruta.ts`, `src/prolog/`, `src/scenes/GameScene.ts`, `src/scenes/UIScene.ts` i `src/ui/`. Scenariusze regresji są w `scripts/tests/prolog.ts` i `scripts/tests/browser-prolog.mjs`.
+- Kompilacja TypeScript/Vite i test jednostkowy prologu przeszły. Chromium 1280×800 i emulacja 844×390 przeszły cały prolog z odizolowanymi zapisami. Sprawdzono klawiaturę w dialogu, mapę z dziennika, walkę z dwoma chochlikami przez mechanizm miecza, nagrody, ponowienie zapisu i starszą postać. Przejścia między punktami były w znacznej części skracane przez ustawienie pozycji w scenariuszu testowym.
+- Próba planowania na mapach Lublina i Puław potwierdziła przechodniość punktów. Ruch korzysta z kroku ograniczonego do 50 ms na klatkę, co może spowalniać go poniżej 20 FPS. Fizyczny telefon, test z nowymi graczami i pomiar czasu do pierwszego zadania wymagają jeszcze weryfikacji.
+
 ## 2026-11-05 — pełne wydanie produkcyjne 1.045
 
 - Wydanie wskazuje PRODUKCJA na 15b2177feb88d78072ad4b75cea244f108b6151a; trzy stare patche 1.042–1.044 są zawarte w źródle i usunięte z produkcja/, aby nie nakładać ich drugi raz. Publikacja uruchamiana na gałęzi claude/bold-gauss-peehzd.

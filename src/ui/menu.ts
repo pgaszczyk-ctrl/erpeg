@@ -211,9 +211,17 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       let level = DOMYSLNA_TRUDNOSC;
       const levelRange = el('input', { type: 'range', min: 0, max: TRUDNOSCI.length - 1, step: 1, value: String(level), className: 'm-range' });
       const levelName = el('span', { className: 'm-val' });
+      const levelDetails = el('small', { id: 'new-character-difficulty-details' });
+      levelRange.setAttribute('aria-describedby', levelDetails.id);
       const showLevel = () => {
         const t = TRUDNOSCI[level];
         levelName.textContent = tx(t.nazwa, t.en);
+        levelRange.setAttribute('aria-valuetext', levelName.textContent);
+        const damage = Math.round(t.obrazenia * 100);
+        levelDetails.textContent = tx(
+          `Obrażenia od potworów: ${damage}% podstawowych. ${t.zuzycie ? 'Broń się tępi i wymaga naprawy.' : 'Zwykła broń się nie tępi.'}`,
+          `Monster damage: ${damage}% of base. ${t.zuzycie ? 'Weapons wear out and need repairs.' : 'Ordinary weapons do not wear out.'}`,
+        );
       };
       levelRange.oninput = () => {
         level = Number(levelRange.value);
@@ -277,6 +285,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         el('div', { className: 'm-field' }, [
           el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
           el('label', { className: 'm-slide m-level' }, [levelRange, levelName]),
+          levelDetails,
         ]),
         linkBox,
         err,
