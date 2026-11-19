@@ -6,7 +6,8 @@ import { today } from './Npcs';
 import { makieta, rudaMakiety, rysowanaMakieta } from '../ui/makieta';
 import { GORNICTWO } from '../content/sklepy';
 
-export interface Zloze { id: string; x: number; y: number; obraz: Phaser.GameObjects.Image }
+export interface Zloze { id: string; x: number; y: number; obraz: Phaser.GameObjects.Image; blask?: Phaser.GameObjects.Image }
+const PULS = typeof matchMedia === 'function' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TEREN = new Set(['forest', 'scrub', 'heath', 'grass', 'meadow', 'rock', 'bare_rock', 'quarry']);
 
 /** Geographic cells keep deposits stable across reloads, streamed maps and scale changes. */
@@ -21,9 +22,26 @@ export class Zloza {
       this.scene.textures.addCanvas(key, rudaMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     const obraz = this.scene.add.image(p.x, p.y, key)
-      .setDisplaySize(rysowanaMakieta ? 19 : 30, rysowanaMakieta ? 12.67 : 30)
-      .setOrigin(.5, .85).setDepth(p.y).setVisible(this.dostepne({ id }) && visible(p.x, p.y));
-    this.lista.push({ id, ...p, obraz });
+      .setDisplaySize(rysowanaMakieta ? 25 : 30, rysowanaMakieta ? 17 : 30)
+      .setOrigin(rysowanaMakieta ? 18 / 44 : .5, .85).setDepth(p.y).setVisible(this.dostepne({ id }) && visible(p.x, p.y));
+    let blask: Phaser.GameObjects.Image | undefined;
+    if (rysowanaMakieta) {
+      const glow = 'makieta-ruda-blask';
+      if (!this.scene.textures.exists(glow)) {
+        const canvas = this.scene.textures.createCanvas(glow, 24, 24)!;
+        const ctx = canvas.getContext();
+        const falloff = ctx.createRadialGradient(12, 12, 0, 12, 12, 12);
+        falloff.addColorStop(0, '#ffc676');
+        falloff.addColorStop(.5, '#d9914580');
+        falloff.addColorStop(1, '#cc802400');
+        ctx.fillStyle = falloff;
+        ctx.fillRect(0, 0, 24, 24);
+        canvas.refresh();
+      }
+      blask = this.scene.add.image(p.x + 1, p.y - 7, glow).setDisplaySize(23, 19)
+        .setBlendMode(Phaser.BlendModes.ADD).setDepth(p.y + .1).setAlpha(.36).setVisible(obraz.visible);
+    }
+    this.lista.push({ id, ...p, obraz, blask });
   }
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {}
@@ -40,10 +58,17 @@ export class Zloza {
   }
 
   update(x: number, y: number, now: number, visible: (x: number, y: number) => boolean) {
-    for (const z of this.lista) z.obraz.setVisible(this.dostepne(z) && visible(z.x,z.y));
+    for (const z of this.lista) {
+      const shown = this.dostepne(z) && visible(z.x, z.y);
+      z.obraz.setVisible(shown);
+      z.blask?.setVisible(shown).setAlpha(PULS ? .36 + .20 * Math.sin(now / 430) : .38);
+    }
     if (now < this.next) return;
     this.next = now + 600;
-    for (const z of this.lista.filter(z => Math.hypot(z.x-x,z.y-y)>700)) z.obraz.destroy();
+    for (const z of this.lista.filter(z => Math.hypot(z.x-x,z.y-y)>700)) {
+      z.obraz.destroy();
+      z.blask?.destroy();
+    }
     this.lista = this.lista.filter(z => z.obraz.active);
     if (makieta && !this.lista.some(z => z.id === 'makieta')) {
       if (!this.probka) {

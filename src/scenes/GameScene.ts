@@ -133,7 +133,7 @@ import { zdobyteOdznaki } from '../content/osiagniecia';
 import { TEST, WERSJA, WERSJA_TEST } from '../version';
 import { showMenu } from '../ui/menu';
 import { demo, powitanie, blackout } from '../demo';
-import { makieta } from '../ui/makieta';
+import { makieta, rysowanaMakieta, szyldSklepuMakiety } from '../ui/makieta';
 import { teleskop } from '../ui/hud';
 import { pokazGdzieKliknac } from '../ui/samouczek';
 import { PROM } from '../content/porty';
@@ -574,6 +574,7 @@ export class GameScene extends Phaser.Scene {
     this.farObjects = [];
     this.signGlows = new Set();
     this.posts = [];
+    this.placeSigns.clear();
     this.postsNight = null;
     this.markers = new Map();
     this.leaving = false;
@@ -1823,6 +1824,7 @@ export class GameScene extends Phaser.Scene {
 
   private interactionSelection = new InteractionSelection();
   private interactionOutline = new InteractionOutline();
+  private readonly placeSigns = new Map<string, { place: CityPlace; board: Phaser.GameObjects.Image }>();
   private interactionMark?: Phaser.GameObjects.Graphics;
   private interactionLabel?: Phaser.GameObjects.Text;
 
@@ -1881,18 +1883,48 @@ export class GameScene extends Phaser.Scene {
     const g=this.interactionMark;g.clear();this.interactionLabel.setVisible(false);
     const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
     this.prolog?.updateNameplates(t);
+    if (rysowanaMakieta) {
+      for (const { place, board } of this.placeSigns.values()) {
+        if (!board.active || !board.visible || Phaser.Math.Distance.Between(this.player.x, this.player.y, place.door.x, place.door.y) > 74 ||
+            !pointInPolygon(this.vision, place.door.x, place.door.y)) continue;
+        const bounds = board.getBounds();
+        const selected = t?.id === `place:${place.id}`;
+        if (selected) g.lineStyle(.7, 0xffd36a, .9).strokeRoundedRect(bounds.x - 1, bounds.y - 1, bounds.width + 2, bounds.height + 2, 2);
+        else {
+          const cx = bounds.centerX, cy = bounds.y - 3;
+          g.fillStyle(0x282820, .91).fillCircle(cx, cy, 3);
+          g.lineStyle(.75, 0xffda83, 1).strokeCircle(cx, cy, 3);
+          g.fillStyle(0xffda83, 1).fillCircle(cx, cy, .8);
+        }
+      }
+    }
     if(!t){this.interactionSelection.clear();ustawInterakcjeHud(false);return;}
     const k=skrotKamery(), a=.5+.16*Math.sin(this.time.now/420);
     // A person's visible silhouette; entrances remain small rounded markers at their feet.
     const head=t.kind==='talk'?this.interactionOutline.draw(this,g,t.x,t.y,a):null;
     const h=8/k, w=10;
     if(head===null)g.lineStyle(.7,0xffd36a,a).strokeRoundedRect(t.x-w/2,t.y-h,w,h+1,2);
-    this.interactionLabel.setText(t.label).setPosition(t.x,(head??t.y-h)-3).setVisible(true);
-    ustawInterakcjeHud(true,t.label);
+    const sign = this.placeSigns.get(t.id);
+    const bounds = sign?.board.getBounds();
+    const label = sign?.place.kind === 'shop' || sign?.place.kind === 'gear' ? tx('Otwórz sklep', 'Open shop') : t.label;
+    this.interactionLabel.setText(label)
+      .setPosition(bounds?.centerX ?? t.x, (bounds?.top ?? head ?? t.y-h)-3).setVisible(true);
+    ustawInterakcjeHud(true, label);
   }
   private worldTargetAt(sx:number,sy:number, outOfReach = false):WorldInteraction|null {
     if(this.interactionBlocked())return null;
     const cam=this.cameras.main,x=sx*OSTROSC/cam.zoomX+cam.worldView.x,y=sy*OSTROSC/cam.zoomY+cam.worldView.y,k=skrotKamery();
+    if (rysowanaMakieta && !outOfReach) {
+      for (const { place, board } of this.placeSigns.values()) {
+        if (!board.active || !board.visible || !board.getBounds().contains(x, y) ||
+            !pointInPolygon(this.vision, place.door.x, place.door.y)) continue;
+        const target = this.interactionCandidates().find(t => t.id === `place:${place.id}`);
+        if (!target || Math.hypot(target.x - this.player.x, target.y - this.player.y) > (target.range ?? 36)) {
+          return { kind: 'enter', run: () => this.toast(tx('Podejdź do wejścia.', 'Move closer to the entrance.'), 1200) };
+        }
+        return { kind: 'enter', run: () => this.runInteractionTarget(target) };
+      }
+    }
     const targets = outOfReach
       ? (this.prolog?.interactionTargets() ?? []).filter(t => Math.hypot(t.x-this.player.x,t.y-this.player.y) > (t.range ?? 36) && pointInPolygon(this.vision,t.x,t.y))
       : this.interactionCandidates().filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<=(t.range??36));
@@ -2184,7 +2216,7 @@ export class GameScene extends Phaser.Scene {
     d.a++;
     if (d.a >= GORNICTWO.uderzen) {
       d.a = 0; d.n++;
-      if (!this.zloza.dostepne(z)) { z.obraz.setVisible(false); this.updateInteractionTarget(); }
+      if (!this.zloza.dostepne(z)) { z.blask?.setVisible(false); z.obraz.setVisible(false); this.updateInteractionTarget(); }
       const wear = useWeapon(tool, session.level.zuzycie);
       this.floatText(z.x, z.y-16, '+1 grudka żelaza', '#e8c56a');
       if (wear === 'broken' || wear === 'warn') this.toast('Kilof się zużywa – napraw go w warsztacie.', 2200);
@@ -3386,11 +3418,17 @@ export class GameScene extends Phaser.Scene {
     const bx = arm ? at.x + (flip ? -1 : 1) * 12 * K : at.x;
     // The shop's board has the artist's three swing frames (36-G002); the others swing by code (updatePosts).
     const B = SNOP_SZYLDU.bujanie;
-    const frames = SNOP && t === 'sklep' && this.textures.exists('tablica-sklep-bujanie');
+    const previewShop = rysowanaMakieta && (p.kind === 'shop' || p.kind === 'gear');
+    const previewKey = 'makieta-szyld-sklepu';
+    if (previewShop && !this.textures.exists(previewKey)) {
+      this.textures.addCanvas(previewKey, szyldSklepuMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const frames = !previewShop && SNOP && t === 'sklep' && this.textures.exists('tablica-sklep-bujanie');
     const by = top + (arm ? 16 : 12) * K;
     const board = frames
       ? this.add.image(Math.round(bx * 2) / 2, by, 'tablica-sklep-bujanie', 1).setOrigin(0.5, B.zaczepY / 32).setScale((K * 22) / B.szerRysunku).setDepth(at.y + 0.5)
-      : this.add.image(Math.round(bx * 2) / 2, by, `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+      : this.add.image(Math.round(bx * 2) / 2, by, previewShop ? previewKey : `tablica-${t}`).setOrigin(0.5, 0).setScale(K).setDepth(at.y + 0.5);
+    if (rysowanaMakieta) this.placeSigns.set(`place:${p.id}`, { place: p, board });
     if (frames) this.textures.get('tablica-sklep-bujanie').setFilter(Phaser.Textures.FilterMode.NEAREST);
     for (const k of ['szyld-slup-ramie', 'szyld-slup-tablica', `tablica-${t}`]) this.textures.get(k).setFilter(Phaser.Textures.FilterMode.NEAREST);
     // A small shadow at the foot, to the bottom right.

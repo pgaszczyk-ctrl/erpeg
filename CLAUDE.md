@@ -1,5 +1,7 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (19 Nov 2026, mock-up affordances) In the drawn TEST variant, ore has scattered fragments and a warm pulse with a static reduced-motion alternative. Interactive place signs mark their availability within sight. The prototype shop uses a drawn awning and bag; clicking the sign follows the regular entrance reach check and opens the existing shop window.
+
 - (19 Nov 2026, art mock-up) TEST supports `?makieta=oryginal` and `?makieta=rysowana` for a no-login, local session at the same spot below Lublin Castle. A rock, noticeboard and pipe segment are staged in the real world for comparison, using the normal game camera, controls and GLB guard. The drawn option trials quieter materials and scaled scenery.
 
 - (19 Nov 2026, startup) The normal login form opens once map indices are available, overlapping art and font loading. Its map zoom is decorative and never delays the first painted view. While covered, the scene requests tiles near the camera and prioritizes visible chunks.
