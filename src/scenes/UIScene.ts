@@ -1008,6 +1008,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogAktualny = d;
     this.dialogChoose = d.onChoose;
     this.dialogZamknij = d.zamknij;
+    this.dialogWazne = !!d.wazne;
     this.dialogOpenedAt = this.time.now;
     // Letters one by one; the buttons come once the text is written. A tap/Space first finishes the text.
     if (pisz && !needsScroll) {
@@ -1134,6 +1135,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private dialogOpenedAt = 0;
+  /** DialogRequest.wazne: keys need a longer pause before they may answer it. */
+  private dialogWazne = false;
 
   private onDialogTap(x: number, y: number) {
     if (loadingGame()) return;
@@ -1146,6 +1149,9 @@ export class UIScene extends Phaser.Scene {
     // Any press while a dialog is open belongs to the dialog, never to the weapon.
     cancelPress();
     if (this.time.now - this.dialogOpenedAt < 250) return;
+    // Keyboard (Space/Enter: x < 0) right after a window opens is most likely an attack still being mashed: wait
+    // KLAWISZ_PO_MS (longer for important windows – defeat, rewards; report #5) before a key may pick a button.
+    if (x < 0 && this.time.now - this.dialogOpenedAt < (this.dialogWazne ? 900 : 550)) return;
     // Text still being written: the tap writes it all (and shows the buttons).
     if (this.pisanie) { this.dopiszDoKonca(); return; }
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.

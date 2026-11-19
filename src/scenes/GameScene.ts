@@ -63,7 +63,7 @@ import { note } from '../log';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
-import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
+import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI, KARA_OD_POZIOMU } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI, trudnoscZWieku, WYBOR_TRUDNOSCI } from '../content/trudnosc';
 import { DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
@@ -316,6 +316,8 @@ let droga: Hub | null = null;
 export interface Rozmowca { tex?: string; obraz?: string; imie?: string }
 
 export interface DialogRequest {
+  /** An important window (defeat, reward): keys answer it only after a longer pause (report #5). */
+  wazne?: boolean;
   accessible?: boolean;
   language?: import('../i18n').Lang;
   localHumor?: boolean;
@@ -1021,11 +1023,14 @@ export class GameScene extends Phaser.Scene {
     this.prolog = live() && !demo.on ? new PrologRekruta({
       scene: this, city: this.city, player: this.player, mapName: mapName(this.city.id),
       entrances: () => this.lochy, dungeon: () => this.loch,
-      dialog: d => this.dialog({ ...d, accessible: true }), toast: (t,ms) => this.toast(t,ms),
+      dialog: d => this.dialog(d), /* one dialog style for every talk (report #19) */ toast: (t,ms) => this.toast(t,ms),
       hud: () => this.emitHud(), refresh: () => this.refreshLook(),
       ready: () => !this.witam && !this.travelling && !this.scene.isPaused() && this.firstViewReady(),
       save: () => { this.keepFog(); session.tu = this.miejsceZapisu(); return saveNow(this.player.hp); },
       spawn: (x,y) => this.spawnEnemy(x,y,PROLOG_ID,'glut'),
+      earn: (n) => { earn(n); this.emitHud(); },
+      nextSteps: () => this.krokiPoProlog(),
+      guide: (to) => this.prowadzDo(to ? { nazwa: to.nazwa, ...this.city.toLatLon(to.x, to.y), rodzaj: 'cel', km: 0 } : null),
     }) : undefined;
     if (this.city.loch?.tutorial && this.loch) for (const e of this.enemies) {
       if (this.loch.contains(e)) { e.hp = Math.max(2, meleeDamage()*2); e.power = .5; e.temp = true; }
@@ -1367,6 +1372,8 @@ export class GameScene extends Phaser.Scene {
     this.loch?.update(now, this.cameras.main, this.player, (x, y) => this.explored.hasCell(Math.floor(x / FOG_CELL), Math.floor(y / FOG_CELL)));
     this.lochy?.update(this.player.x, this.player.y, now);
     this.prolog?.update();
+    // A tutorial never kills: while the first duty runs, life stops at 1.
+    this.player.minHp = this.prolog?.state?.status === 'active' ? 1 : 0;
     if (this.prolog?.protectingStart) this.noHurtUntil = Math.max(this.noHurtUntil, now + 1000);
     // Underground: none of the surface's life (people, gangs, trees, hunting grounds, training).
     if (!podZiemia) {
@@ -3991,15 +3998,20 @@ export class GameScene extends Phaser.Scene {
     this.player.anims.stop();
     this.player.setFrame('down-0');
     this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
-    const zloto = session.coins;
-    session.coins = 0;
+    // Newcomers (below KARA_OD_POZIOMU) lose nothing – like Tibia's protection of fresh characters (report: risk belongs
+    // to hunting grounds, not to the first steps). From then on: the backpack's gold and half the level's progress.
     const lvl = poziomPostaci(session.exp);
+    const chroniony = lvl < KARA_OD_POZIOMU;
+    const zloto = chroniony ? 0 : session.coins;
+    session.coins -= zloto;
     const od = expNaPoziom(lvl);
-    const strata = Math.floor((session.exp - od) / 2);
+    const strata = chroniony ? 0 : Math.floor((session.exp - od) / 2);
     session.exp -= strata;
     this.emitHud();
     // The EXP lost isn't spelled out (owner, 26 Oct 2026): only a hint that experience must be earned again.
-    const kara = `${zloto > 0 ? `Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.` : 'W plecaku nie było złota – nic nie przepadło.'}${strata > 0 ? ' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.' : ''}`;
+    const kara = chroniony
+      ? tx(`Do ${KARA_OD_POZIOMU}. poziomu nic nie tracisz po porażce. Później przepada złoto z plecaka i część doświadczenia – złoto trzymaj w kufrze albo w banku.`, `Until level ${KARA_OD_POZIOMU} you lose nothing when defeated. Later the gold in your backpack and some experience are lost – keep gold in your chest or a bank.`)
+      : `${zloto > 0 ? tx(`Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.`, `The gold in your backpack (${zloto}) is lost.`) : tx('W plecaku nie było złota – nic nie przepadło.', 'There was no gold in your backpack – nothing lost.')}${strata > 0 ? tx(' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.', ' Everything feels less familiar… You must gain more experience now.') : ''}`;
     const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     this.cameras.main.fadeOut(700, 0, 0, 0);
@@ -4009,7 +4021,7 @@ export class GameScene extends Phaser.Scene {
       if (szpital) {
         void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
           const at = this.city.reachableNear(szpital.door.x, szpital.door.y);
-          this.wstanWSzpitalu(at, `🏥 ${szpital.name}`, kara);
+          this.wstanWSzpitalu(at, tx('🏥 Szpital', '🏥 Hospital'), kara);
         });
         return;
       }
@@ -4047,10 +4059,11 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(650, () => this.dialog({
       title,
       text: (bezSzpitala
-        ? 'Ktoś znalazł cię nieprzytomnego i zaniósł tam, gdzie ostatnio spałeś. Rany się zagoiły.'
-        : 'Ktoś znalazł cię nieprzytomnego i przyniósł do szpitala. Lekarz opatrzył rany – zdrowie w pełni.')
+        ? tx('Ktoś znalazł cię nieprzytomnego i zaniósł tam, gdzie ostatnio spałeś. Rany się zagoiły.', 'Someone found you unconscious and carried you to where you last slept. Your wounds have healed.')
+        : tx('Ktoś znalazł cię nieprzytomnego i przyniósł do szpitala. Lekarz opatrzył rany – zdrowie w pełni.', 'Someone found you unconscious and brought you to a hospital. A doctor dressed your wounds – full health.'))
         + `\n\n${kara}`,
-      buttons: ['Wstaję'],
+      buttons: [tx('Wstaję', 'Get up')],
+      wazne: true,
       onChoose: () => {},
     }));
   }
@@ -4236,7 +4249,7 @@ export class GameScene extends Phaser.Scene {
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     if (!szpital) return this.wstanWSzpitalu({ x: this.player.x, y: this.player.y }, '🛏 Ocknąłeś się', kara, true);
     void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
-      this.wstanWSzpitalu(this.city.reachableNear(szpital.door.x, szpital.door.y), `🏥 ${szpital.name}`, kara);
+      this.wstanWSzpitalu(this.city.reachableNear(szpital.door.x, szpital.door.y), tx('🏥 Szpital', '🏥 Hospital'), kara);
     });
   }
 
@@ -7685,8 +7698,9 @@ export class GameScene extends Phaser.Scene {
     // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
     // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
     const recruit = this.prolog?.goal();
-    if (recruit && session.story.prolog) return [recruit];
-    const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
+    // During the first duty its goal leads; quests taken meanwhile stay visible under it (report #6).
+    const inProlog = !!(recruit && session.story.prolog);
+    const main = inProlog ? null : this.demoRun ? this.demoRun.goal() : this.story.goal();
     if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
     const ids = new Set(list.map((q) => q.id));
@@ -7746,6 +7760,20 @@ export class GameScene extends Phaser.Scene {
   /** The hub the traveller's map guides to (map screen). */
   drogaDo() {
     return droga;
+  }
+
+  /** After the first duty: the nearest newsboy, city board and hunting ground (report #7). */
+  private krokiPoProlog(): { label: string; nazwa: string; x: number; y: number }[] {
+    const hx = this.player.x, hy = this.player.y;
+    const nearest = <T extends { x: number; y: number }>(l: T[]) => l.reduce<T | null>((b, q) => !b || Math.hypot(q.x - hx, q.y - hy) < Math.hypot(b.x - hx, b.y - hy) ? q : b, null);
+    const out: { label: string; nazwa: string; x: number; y: number }[] = [];
+    const g = nearest(this.folk?.newsboys() ?? []);
+    if (g) out.push({ label: tx('🗞 Gazeciarz – zlecenia i wieści', '🗞 Newsboy – jobs and news'), nazwa: tx('Gazeciarz', 'Newsboy'), x: g.x, y: g.y });
+    const t = nearest((this.city.tablice ?? []).map((q) => ({ x: q.x, y: q.y })));
+    if (t) out.push({ label: tx('📋 Tablica miasta – kartka z zadaniem', '📋 City board – a job notice'), nazwa: tx('Tablica miasta', 'City board'), x: t.x, y: t.y });
+    const l = nearest(this.lowiska?.lowiska ?? []);
+    if (l) out.push({ label: tx('🐺 Łowisko – walka i łup', '🐺 Hunting ground – fights and loot'), nazwa: tx('Łowisko', 'Hunting ground'), x: l.x, y: l.y });
+    return out;
   }
 
   /** Map screen „🧭 Prowadź”: the arrow points to this hub (null = stop guiding). */
