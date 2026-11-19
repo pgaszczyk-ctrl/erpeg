@@ -1,3 +1,4 @@
+import { stanGry } from '../stanGry';
 import { pipe } from '../sfx';
 import { Zloza, type Zloze } from './Zloza';
 import { GORNICTWO } from '../content/sklepy';
@@ -1380,6 +1381,7 @@ export class GameScene extends Phaser.Scene {
     const walczy = this.inCombat();
     if (walczy && !this.walczylWczesniej) this.beatNow();
     this.walczylWczesniej = walczy;
+    stanGry.walka = walczy;
     this.cichyZapis(now, walczy);
     this.updateShots(dt);
 
@@ -1894,7 +1896,7 @@ export class GameScene extends Phaser.Scene {
   }
   private updateInteractionTarget() {
     if(!this.interactionMark?.active)this.interactionMark=this.add.graphics().setDepth(1_149_999);
-    if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'8px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
+    if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'6px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
     const g=this.interactionMark;g.clear();this.interactionLabel.setVisible(false);
     const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
     this.prolog?.updateNameplates(t);
@@ -1922,7 +1924,8 @@ export class GameScene extends Phaser.Scene {
     const sign = this.placeSigns.get(t.id);
     const bounds = sign?.board.getBounds();
     const label = sign?.place.kind === 'shop' || sign?.place.kind === 'gear' ? tx('Otwórz sklep', 'Open shop') : t.label;
-    this.interactionLabel.setText(label)
+    // Short and small: a long church name used to cover the hero (report #14).
+    this.interactionLabel.setText(label.length > 26 ? `${label.slice(0, 25).trimEnd()}…` : label)
       .setPosition(bounds?.centerX ?? t.x, (bounds?.top ?? head ?? t.y-h)-3).setVisible(true);
     ustawInterakcjeHud(true, label);
   }
@@ -7916,7 +7919,7 @@ export class GameScene extends Phaser.Scene {
     return this.activeQuests().map((q, i) => {
       const mission=session.gen[q.id] ?? this.missions.find(r=>r.m.id===q.id)?.m;
       const notes = mission ? missionNotes(mission) : q.id === PROLOG_ID && this.prolog?.state?.rewardsClaimed.includes('letter_done')
-        ? tx('✓ Dostarczono list i oddano potwierdzenie (+20 PD).', '✓ Letter delivered and receipt returned (+20 XP).') : '';
+        ? tx('✓ Dostarczono list i oddano potwierdzenie (+20 EXP).', '✓ Letter delivered and receipt returned (+20 EXP).') : '';
       return {
       id: q.id, title: q.title, text: `${q.text}${notes ? `\n${notes}` : ''}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
       far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,

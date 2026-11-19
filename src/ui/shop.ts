@@ -46,6 +46,8 @@ export interface ShopHandle {
 export function showShop(initial: DialogRequest, choose: (i: number) => void): ShopHandle {
   let request = initial;
   let selected = request.shop!.entries[0]?.id;
+  let selectedCategory: string | undefined;
+  let selectedPos = 0;
   let category: ShopCategory = 'all';
   const compact = window.matchMedia('(max-width: 700px), (max-height: 600px)');
   let message = '';
@@ -103,7 +105,13 @@ export function showShop(initial: DialogRequest, choose: (i: number) => void): S
       || (!selling && c === 'ammo' && ammunition.length > 0));
     if (!available.some(([c]) => c === category)) category = 'all';
     const entries = data.entries.filter(e => category === 'all' || e.category === category);
-    if (!entries.some(e => e.id === selected)) selected = entries[0]?.id;
+    // The bought thing left the offer: stay on the next thing of its kind at the same place, not on the first cell
+    // (report #23: a second „KUP” bought arrows).
+    if (!entries.some(e => e.id === selected)) {
+      const sameKind = entries.filter(e => e.category === selectedCategory);
+      selected = (sameKind[Math.min(selectedPos, sameKind.length - 1)] ?? entries[Math.min(selectedPos, entries.length - 1)] ?? entries[0])?.id;
+    }
+    { const cur = entries.find(e => e.id === selected); if (cur) { selectedCategory = cur.category; selectedPos = entries.filter(e => e.category === cur.category).indexOf(cur); } }
     available.forEach(([id, name, pic]) => {
       const b = button('', `s26-category${category === id ? ' on' : ''}`, () => { category = id; render(); });
       b.dataset.focus = `category:${id}`; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', String(category === id)); b.title = name;
