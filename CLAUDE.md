@@ -1,5 +1,7 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (19 Nov 2026, owner approved production) 1.049 releases the verified First duty onboarding changes from TEST, including the letter handoff, navigation, archer encounter and accessible dialogs.
+
 - (19 Nov 2026, First duty UX) The duty officer and senior guard have automatic interaction priority during the letter hand-offs. The journal records the existing +20 XP after returning the receipt and can center the map on an objective. The opening arrow can use a reachable waypoint. New prologues introduce the archer before combat, and saved fights still resume directly. Prologue dialogs use focusable HTML controls.
 
 - (8 Nov 2026, owner: „wszystko na prod”) Full release 1.048 = 1.047 (window scan fixes) + Terms PL/EN with operator Paweł Gąszczyk and contact-exploreapp@gmail.com, rewritten privacy policy PL/EN, /news terms redirected to the one terms document, „Tworząc postać, akceptujesz regulamin gry” on the new-character and QR demo forms, English HUD labels, „Nieznana okolica” instead of „Daleko · w mieście” on unnamed world sectors. Automatic deletion of old rankings/letters (promised in the privacy policy) is NOT set up yet – awaiting the owner. PRODUKCJA points at the release commit.

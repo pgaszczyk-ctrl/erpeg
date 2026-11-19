@@ -1,5 +1,9 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — wydanie 1.049
+
+- Właściciel zlecił bezpośrednią publikację poprawek prologu na produkcji. Wydanie bazuje na sprawdzonej kompilacji TEST `1f6f9aa`.
+
 ## 2026-11-19 — poprawki startu „Pierwszej służby” po audycie tessol
 
 - Priorytet dyżurnego i starszego strażnika podczas przekazania listu, spójne nazwy, komunikat przy kliknięciu zbyt daleko. Dziennik i komunikat po zapisie pokazują istniejącą nagrodę 20 PD.
