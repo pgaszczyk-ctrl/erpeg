@@ -2112,7 +2112,16 @@ export class GameScene extends Phaser.Scene {
     // Old controls: a swing also talks, opens doors and stalls, calls a coachman. New controls (walka/live.ts):
     // only a double tap does (interact()), a swing is only a swing.
     if (ranged && !gathering) {
-      if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
+      if (now - this.lastShot >= cooldown(this.handSkill())) {
+        // A click on an enemy shoots at it; an ATTACK without aiming (key, button tap) at the nearest visible enemy in
+        // range, whichever way the hero faces (report #3, like Tibia's target).
+        let dir = { x: Math.cos(swingAim), y: Math.sin(swingAim) };
+        const c = this.clickWorld;
+        const naKlik = c && this.enemies.filter((e) => !e.isDead && !e.peaceful && e.visible && Math.hypot(e.x - c.x, e.y - c.y) < 18 + e.size)
+          .sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y))[0];
+        if (naKlik) { const d = Math.hypot(naKlik.x - this.player.x, naKlik.y - this.player.y) || 1; dir = { x: (naKlik.x - this.player.x) / d, y: (naKlik.y - this.player.y) / d }; }
+        this.fireShot(ranged, dir, false, now, true, !naKlik, c ? WALKA.celowanieStopnie : WALKA.celAutoStopnie);
+      }
       return;
     }
     let hits = 0;
@@ -6524,7 +6533,8 @@ export class GameScene extends Phaser.Scene {
     const aim = weapon && !lingering ? this.aimDirection() : null;
     this.aimLine.clear();
     // Holding: a golden ring fills around the hero; full = the strong attack is ready.
-    if (hold.active && !lingering) {
+    // New controls: holding only aims – the strong attack is the Q / STRONG button alone (report #10).
+    if (hold.active && !lingering && !live()) {
       const held = performance.now() - hold.start;
       if (held > AIM_DELAY) {
         const t = Math.min(1, held / WALKA.mocnyPoMs);
@@ -6538,14 +6548,14 @@ export class GameScene extends Phaser.Scene {
     }
     if (aim) {
       // Dotted aim line.
-      const range = this.shotRange(weapon!.rodzaj === 'magia' ? 'magia' : 'luk', performance.now() - hold.start >= WALKA.mocnyPoMs);
+      const range = this.shotRange(weapon!.rodzaj === 'magia' ? 'magia' : 'luk', !live() && performance.now() - hold.start >= WALKA.mocnyPoMs);
       this.aimLine.fillStyle(weapon!.rodzaj === 'magia' ? 0x9be7ff : 0xffffff, 0.85);
       for (let d = 10; d < range; d += 7) this.aimLine.fillRect(this.player.x + aim.x * d - 1, this.player.y + aim.y * d - 1, 2, 2);
       this.player.facing.set(aim.x, aim.y);
     }
     const r = consumeRelease();
     if (!r || lingering) return;
-    const strong = r.held >= WALKA.mocnyPoMs;
+    const strong = !live() && r.held >= WALKA.mocnyPoMs;
     // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
     if (!weapon) {
       if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead && this.zaplacMocny('miecz')) {
@@ -6603,11 +6613,7 @@ export class GameScene extends Phaser.Scene {
     const u = this.umiejetnosc();
     if (!this.zaplacMocny(u.bron)) return;
     const weapon = rangedWeapon();
-    if (u.id === 'mocny') {
-      this.faceFoe(WALKA.zasiegMiecz);
-      this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
-      return;
-    }
+    if (u.id === 'mocny') return this.mocnyLuk(now);
     if (u.id === 'zamach') return this.zamach(now);
     if (!weapon) return;
     const foe = this.nearestFoe(this.shotRange(u.bron === 'magia' ? 'magia' : 'luk', u.id !== 'salwa' && u.id !== 'wachlarz'));
@@ -6652,6 +6658,35 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Mocny atak (report #10): a short, visible swing in a wide arc before the hero – everyone in it takes ×MOCNY.mnoznik,
+   * a knock-back and a short stun. It lands because it is wide, not because it never misses.
+   */
+  private mocnyLuk(now: number) {
+    this.faceFoe(WALKA.zasiegMiecz);
+    const aim = Math.atan2(this.player.facing.y, this.player.facing.x);
+    const reach = this.swingReach(WALKA.zasiegMiecz);
+    const arc = (WALKA.mocnyLukStopnie * Math.PI) / 180;
+    this.drawSweep(aim, arc, reach);
+    this.animateMelee(aim, true);
+    this.swingWeapon(aim, true);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      const dx = e.x - this.player.x, dy = e.y - (this.player.y + 2);
+      if (Math.hypot(dx, dy) > reach + e.size) continue;
+      const da = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim));
+      if (da > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive)) this.onEnemyKilled(e);
+      else if (!e.heavy) e.daze(now, WALKA.miecz.ogluszenieMs);
+    }
+    if (landed) {
+      this.wearWeapon(gear.equip.bron);
+      this.practiced('miecz');
+    }
+  }
+
   /** Zamach (sword skill): a full turn with the weapon, every enemy around takes a blow (×0.8). */
   private zamach(now: number) {
     const reach = this.swingReach(1.3);
@@ -6675,9 +6710,9 @@ export class GameScene extends Phaser.Scene {
    * Aim help: the nearest target (a visible monster, or a training target/crystal for this skill) within the range
    * and within WALKA.celowanieStopnie of `dir`, with nothing built in between – the shot flies straight at it.
    */
-  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false): { x: number; y: number } {
+  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false, stopnie = WALKA.celowanieStopnie): { x: number; y: number } {
     const range = this.shotRange(skill, strong);
-    const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
+    const maxCos = Math.cos((stopnie * Math.PI) / 180);
     const px = this.player.x, py = this.player.y;
     const points: { x: number; y: number }[] = [];
     for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
@@ -6704,10 +6739,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
-  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true, assist = true) {
+  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true, assist = true, stopnie = WALKA.celowanieStopnie) {
     if (weaponRequirement(weapon.id)) return;
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
-    if (assist) dir = this.aimAssist(dir, skill, strong);
+    if (assist) dir = this.aimAssist(dir, skill, strong, stopnie);
     this.lastShot = now;
     // A bow needs arrows (a crossbow bolts, the steam pistol bullets), and every shot wears it.
     const ammo = ammoOf(weapon);

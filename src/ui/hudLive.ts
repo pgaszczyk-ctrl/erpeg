@@ -252,7 +252,8 @@ export function ustawZasobyHud(z: LiveZasoby) {
   if (comicHud) {
     if (el.specIk.dataset.icon !== z.aktywna) { el.specIk.innerHTML = comicIcon(z.aktywna ?? 'mocny'); el.specIk.dataset.icon = z.aktywna; }
   } else el.specIk.textContent = z.umiej.ikona;
-  el.specSmall.textContent = z.umiej.nazwa.toUpperCase();
+  // The seconds left show on the button itself; no stamina = „BRAK SIŁ” (report #10).
+  el.specSmall.textContent = !z.gotowy && z.cooldownLeft ? `${z.cooldownLeft} s` : !z.stac ? (z.magia ? tx('BRAK MANY', 'NO MANA') : tx('BRAK SIŁ', 'NO STAMINA')) : `${z.umiej.nazwa.toUpperCase()} · ${z.cost ?? ''}`;
   const resource = z.magia ? tx('mana', 'mana') : tx('siły', 'stamina');
   const cost = z.cost === undefined ? '' : ` · ${tx('Koszt', 'Cost')} ${z.cost} (${resource})`;
   const reason = !z.stac ? ` · ${z.magia ? tx('Za mało many', 'Not enough mana') : tx('Za mało sił', 'Not enough stamina')}` : '';

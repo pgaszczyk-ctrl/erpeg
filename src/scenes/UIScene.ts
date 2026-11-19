@@ -1,3 +1,4 @@
+import { rangedWeapon } from '../inventory';
 import { openMusic } from '../ui/music';
 import { tx } from '../i18n';
 import { showShop, type ShopHandle } from '../ui/shop';
@@ -272,7 +273,7 @@ export class UIScene extends Phaser.Scene {
 
     if (!window.matchMedia('(pointer: coarse)').matches) {
       const hint = this.add
-        .text(this.view.width / 2, this.view.height - 12, tx('WASD / strzałki – ruch    SPACJA lub klik – miecz', 'WASD / arrows – move    SPACE or click – sword'), {
+        .text(this.view.width / 2, this.view.height - 12, (() => { const r = rangedWeapon(); const pl = r ? (r.rodzaj === 'magia' ? 'czar' : 'strzał') : 'miecz', en = r ? (r.rodzaj === 'magia' ? 'spell' : 'shot') : 'sword'; return tx(`WASD / strzałki – ruch    SPACJA lub klik – ${pl}    Q – mocny atak    E – akcja`, `WASD / arrows – move    SPACE or click – ${en}    Q – strong attack    E – action`); })(), {
           fontFamily: 'monospace', fontSize: '14px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 4,
         })
         .setOrigin(0.5, 1);

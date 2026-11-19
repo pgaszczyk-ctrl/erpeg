@@ -129,6 +129,8 @@ export class StworAI {
       s.pursuitUntil = Math.max(s.pursuitUntil, now + dist / Math.max(1, P.predkosc * M) * 1000 + 15000);
     }
     const provoked = now < s.pursuitUntil;
+    // In a fight (attacking, about to strike, close and coming): its name and life bar show (report #13).
+    if (this.stan === 'zapowiedz' || this.stan === 'atak' || (this.stan === 'podejscie' && dist < 60 * M)) s.walkaDo = Math.max(s.walkaDo, this.h.scene.time.now + 4000);
     if (provoked && (this.stan === 'patrol' || this.stan === 'powrot')) this.stan = 'podejscie';
     s.chasing = this.inCombat;
 

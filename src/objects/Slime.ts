@@ -241,6 +241,31 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Shadow on the ground under the creature (owner, 7 Oct 2026: „dodaj cień pod stworami”). */
   private shadow?: Phaser.GameObjects.Image;
 
+  /** Name and life bar over the creature, only in a fight (report #13): from the first blow either way, gone a few
+   *  seconds after the fight. Life max = its life until the first blow (spawners adjust hp after the constructor). */
+  private hpMax = 0;
+  private trafiony = false;
+  walkaDo = 0;
+  private pasek?: Phaser.GameObjects.Graphics;
+  private napis?: Phaser.GameObjects.Text;
+  private updatePasek(time: number) {
+    if (!this.trafiony) this.hpMax = Math.max(1, this.hp);
+    const show = time < this.walkaDo && !this.isDead && this.visible && !this.inAir && this.alpha > 0.3;
+    if (!show) { this.pasek?.setVisible(false); this.napis?.setVisible(false); return; }
+    if (!this.pasek) {
+      this.pasek = this.scene.add.graphics();
+      this.napis = this.scene.add.text(0, 0, this.kind.name, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
+      this.once(Phaser.GameObjects.Events.DESTROY, () => { this.pasek?.destroy(); this.napis?.destroy(); });
+    }
+    const top = this.y - Math.max(10, this.displayHeight * (this.hd || this.model3d ? 0.62 : 0.7));
+    const w = Math.max(14, Math.min(40, this.displayWidth * 0.8)), h = 2;
+    const share = Math.max(0, Math.min(1, this.hp / this.hpMax));
+    const g = this.pasek.setVisible(true).setDepth(1_000_100).clear(); // over tree crowns and roofs: a fight is never hidden
+    g.fillStyle(0x1e1a24, 0.85).fillRect(Math.round(this.x - w / 2) - 1, Math.round(top) - 1, w + 2, h + 2);
+    g.fillStyle(share > 0.5 ? 0x6fd36b : share > 0.25 ? 0xf0c040 : 0xe0483e, 1).fillRect(Math.round(this.x - w / 2), Math.round(top), Math.max(1, Math.round(w * share)), h);
+    this.napis!.setVisible(true).setPosition(Math.round(this.x), Math.round(top) - 1).setDepth(1_000_100);
+  }
+
   private updateShadow() {
     if (!this.shadow) {
       this.shadow = this.scene.add.image(this.x, this.y, cienStwora(this.scene)).setDepth(CIEN_GLEBIA);
@@ -259,6 +284,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     this.updateShadow();
+    this.updatePasek(this.scene.time.now);
     const a = this.aura;
     if (a) {
       a.setPosition(this.x, this.y).setTexture(this.texture.key, this.frame.name).setOrigin(this.originX, this.originY).setFlipX(this.flipX).setDepth(this.depth - 0.01);
@@ -338,6 +364,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   /** Returns true if this hit killed the slime. */
   hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
     if (this.isDead || this.inAir || this.nietykalny) return false;
+    this.trafiony = true;
+    this.walkaDo = now + 5000;
     const prog = this.prog;
     if (prog) damage = Math.min(damage, Math.max(0, this.hp - prog.hp));
     const applied = Math.min(Math.max(0, damage), this.hp);
