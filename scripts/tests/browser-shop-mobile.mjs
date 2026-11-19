@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { preview } from 'vite';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const server = await preview({ preview: { host: '127.0.0.1', port: 4186, strictPort: true } });
+const server = await preview({ build: { outDir: process.env.BUILD_DIR || 'dist' }, preview: { host: '127.0.0.1', port: 4186, strictPort: true } });
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 await mkdir('work/shop-mobile', { recursive: true });
 const ring = [0, 0, 6000, 0, 0, 6000, -6000, 0];
@@ -25,7 +25,7 @@ try {
       const fn = new URL(r.request().url()).pathname.split('/').pop();
       let body = true;
       if (fn === 'login') body = { token: 'fixture', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000,
-        map_scale: 1.92, exp: 400, age: 12, dead: false, save: { coins: 90000, diamenty: 99, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 },
+        map_scale: 1.92, exp: 400, age: 12, dead: false, konto: true, save: { coins: 90000, diamenty: 99, story: { st: 'koniec', walked: 99 }, flagi: { samouczek: 1 },
           equip: { bron: 'kijek' }, bag: [{ goods: 'owoce', counts: { jablko: 10 } }, { goods: 'warzywa', counts: { marchewka: 5 } }, { item: 'korona' }, { item: 'zelazny' }, { item: 'zelazny' }, { item: 'zelazny_helm' }, { item: 'miecz_rekruta' }] } } };
       if (fn === 'game_settings') body = {};
       if (['game_content', 'school_quizzes', 'game_ports', 'game_stwory', 'kurier_wiesci'].includes(fn)) body = [];
@@ -106,7 +106,9 @@ try {
     assert(await page.locator('#shop .s26-action').isDisabled(), 'unpriced rewards explain why they cannot be sold');
     assert((await page.locator('#shop .s26-info').innerText()).includes('kupiec go nie skupuje'));
     const itemsBeforeBulk = await page.evaluate(() => JSON.stringify(window.__gear.bag.filter(s => !('goods' in s))));
-    await page.locator('#shop [data-entry="sell:all"]').click();
+    const bulkSale = page.locator('#shop [data-entry="sell:all"]');
+    assert.equal(await bulkSale.locator('.s26-badge').innerText(), 'RAZEM');
+    await bulkSale.click();
     if (compact) await fits();
     await page.screenshot({ path: `work/shop-mobile/${name}-sell.png` });
     const sellBefore = await page.evaluate(() => window.__session.coins);
@@ -114,6 +116,24 @@ try {
     await page.locator('#shop [data-action="sell:all"]').click();
     await page.waitForFunction(n => window.__session.coins > n && !window.__gear.bag.some(s => 'goods' in s), sellBefore);
     assert.equal(await page.evaluate(() => JSON.stringify(window.__gear.bag)), itemsBeforeBulk, 'bulk harvest sale keeps all equipment/rewards');
+    await page.locator('#shop .s26-close').click();
+    await page.locator('#shop').waitFor({ state: 'detached' });
+    await page.evaluate(() => window.__game.scene.getScene('ui').openCharacter('eq'));
+    const trunk = page.getByRole('dialog', { name: 'Kufer' });
+    await trunk.waitFor();
+    const weapon = trunk.locator('[data-zone="eq"][data-key="bron"]');
+    const sword = trunk.locator('[data-zone="bag"]').filter({ has: page.locator('img[src$="/miecz_rekruta.png"]') });
+    await sword.click();
+    await trunk.getByRole('button', { name: 'Załóż', exact: true }).click();
+    await page.waitForFunction(() => window.__gear.equip.bron === 'miecz_rekruta');
+    await weapon.click();
+    await trunk.getByRole('button', { name: 'Zdejmij do plecaka' }).click();
+    await page.waitForFunction(() => window.__gear.equip.bron !== 'miecz_rekruta' &&
+      window.__gear.bag.some(s => s.item === 'miecz_rekruta'));
+    await page.screenshot({ path: `work/shop-mobile/${name}-kufer.png` });
+    await trunk.getByRole('button', { name: 'Zamknij kufer' }).click();
+    await trunk.waitFor({ state: 'detached' });
+    await open();
     await page.evaluate(() => {
       window.__gear.bag = [];
       const s = window.__game.scene.getScene('game');

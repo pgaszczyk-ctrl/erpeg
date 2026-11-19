@@ -549,6 +549,7 @@ export class GameScene extends Phaser.Scene {
     // every GPU frame. travel.ts renders the prepared scene before revealing it.
     this.scene.setVisible(!loadingGame());
     this.stalls = [];
+    this.wozy = [];
     this.interactionSelection.clear();
     this.interactionMark?.destroy();this.interactionLabel?.destroy();
     this.pociagi = undefined; // scenes are reused: the trains belong to the new map view
@@ -842,15 +843,7 @@ export class GameScene extends Phaser.Scene {
           this.farObjects.push(img, this.signGlow(img));
         }
       }
-      // The coachman himself stands by his cart (pack „postacie stałe 02”).
-      if (p.kind === 'station' && hdOn) {
-        const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
-        if (this.textures.exists(key)) {
-          // Right by the cart sign (the door itself can be on the tracks, where freeNear went far away).
-          const at = this.cartSpot(p);
-          fitHd(this.add.sprite(at.x + 28, at.y + 1, key, 'down-0')).setDepth(at.y + 3);
-        }
-      }
+
     };
     for (const p of this.city.places) showPlace(p);
     // City boards with the city's map (split-map, scripts/tablice): opened like a door (AKCJA/E/click/a swing).
@@ -3156,14 +3149,26 @@ export class GameScene extends Phaser.Scene {
    * with no building under the cart and coachman. Rails don't count, carts stand by the platforms.
    */
   private cartSpot(p: CityPlace) {
-    const clear = (x: number, y: number) => [[-44, 0], [-12, -9], [21, 0], [28, 1], [-12, 4]].every(([dx, dy]) => !this.city.buildingAt(x + dx, y + dy));
-    for (let r = 0; r <= 80; r += 4) {
-      for (const [dx, dy] of [[0, 1], [1, 1], [-1, 1], [1, 0], [-1, 0], [0, -1], [1, -1], [-1, -1]]) {
-        if (clear(p.door.x + dx * r, p.door.y + dy * r)) return { x: p.door.x + dx * r, y: p.door.y + dy * r };
-        if (!r) break;
+    const clear = (x: number, y: number) => {
+      // The cart faces left. Give the full horizontal silhouette room, and keep the stop's walking space open.
+      if (this.wozy.some(w => w.img.active && Math.abs(w.img.x - x) < 48 && Math.abs(w.img.y - y) < 30)) return false;
+      if (this.city.places.some(q => Math.abs(q.door.x - x) < 26 && Math.abs(q.door.y - y) < 20)) return false;
+      const span = { x0: x - 24, y0: y - 32, x1: x + 24, y1: y + 4 };
+      if (this.city.buildingsIn(span).some(b => b.x0 < span.x1 && b.x1 > span.x0 && b.y0 < span.y1 && b.y1 > span.y0)) return false;
+      for (const dx of [-24, -12, 0, 12, 24]) for (const dy of [-32, -20, -8, 0]) {
+        if (!this.city.isFree(x + dx, y + dy, 2, 2)) return false;
+        const road = this.city.roadAt(x + dx, y + dy);
+        if (road && road.kind !== 'service') return false;
+      }
+      return true;
+    };
+    for (let r = 24; r <= 72; r += 8) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [1, 1], [-1, 1], [0, 1], [1, -1], [-1, -1], [0, -1]]) {
+        const x = p.door.x + dx * r, y = p.door.y + dy * r;
+        if (clear(x, y)) return { x, y };
       }
     }
-    return p.door;
+    return null;
   }
 
   /** Merchant stalls by the roundabout: where each stands and whose shop it opens (a swing on any of them). */
@@ -3599,13 +3604,23 @@ export class GameScene extends Phaser.Scene {
    * Overhaul 09: a steam train on the track at railway stations, the horse cart only at bus stations
    * (SPEC_09 point 7). Waits until the tiles around the station are in to tell which it is.
    */
-  private stationVehicles(p: CityPlace, tries = 0) {
-    if (!WYGLAD_09) return this.placeCarts([p]);
-    const tor = torStacji(this.city, p);
+  private stationVehicles(p: CityPlace) {
+    const tor = WYGLAD_09 ? torStacji(this.city, p) : null;
     if (tor === undefined) {
-      if (tries < 40) this.time.delayedCall(800, () => this.stationVehicles(p, tries + 1));
-      else this.placeCarts([p]);
+      const off = this.city.onTile(() => {
+        if (torStacji(this.city, p) === undefined) return;
+        off();
+        this.stationVehicles(p);
+      });
+      this.events.once('shutdown', off);
       return;
+    }
+    if (hdOn) {
+      const key = ensureHd(this, `hd-${STALE_HD.woznica.id}`);
+      if (this.textures.exists(key)) {
+        const at = this.city.freeNear(p.door.x, p.door.y);
+        fitHd(this.add.sprite(at.x, at.y, key, 'down-0')).setDepth(at.y);
+      }
     }
     if (!tor) return this.placeCarts([p]);
     (this.pociagi ??= new Pociagi(this, this.mapView)).postaw(p, tor);
@@ -3624,6 +3639,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private placeCarts(stations: CityPlace[]) {
+    // Extra drivers still offer their own routes, with a single team for the named stop.
+    stations = stations.filter(p => !/#\d+$/.test(p.id));
+    if (!stations.length) return;
     const W = WOZY;
     const file = (p: CityPlace) => {
       let h = 0;
@@ -3635,6 +3653,8 @@ export class GameScene extends Phaser.Scene {
       stations.forEach((p, i) => {
         const key = `swiat-${file(p)}`;
         if (!this.textures.exists(key)) return;
+        const at = this.cartSpot(p);
+        if (!at) return;
         signs[i].destroy();
         const tex = this.textures.get(key);
         if (!tex.has('f0')) {
@@ -3644,9 +3664,8 @@ export class GameScene extends Phaser.Scene {
           // Lined up with the world (scripts/wyrownaj-wozy.py): sharp pixels, no smoothing.
           tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
-        const at = this.cartSpot(p);
-        const img = this.add.image(at.x - 10, at.y + 2, key, 'f0').setOrigin(0.5, 0.92);
-        img.setScale(W.wysokosc / img.height).setDepth(at.y + 2);
+        const img = this.add.image(at.x, at.y, key, 'f0').setOrigin(0.5, 0.92);
+        img.setScale(W.wysokosc / img.height).setDepth(at.y);
         this.wozy = this.wozy.filter((w) => w.img.active);
         this.wozy.push({ img, p });
         const swap = () => {
@@ -6936,7 +6955,7 @@ export class GameScene extends Phaser.Scene {
         },
       }, [
         ...(all.length ? [{ id: 'sell:all', index: 0, name: 'Wszystkie zbiory', category: 'supplies' as const,
-          picture: goodsPicture('owoce'), description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka. Sprzęt i pamiątki zostają.', price: total, action: 'SPRZEDAJ ZBIORY' }] : []),
+          picture: goodsPicture('owoce'), badge: 'RAZEM', description: 'Sprzedaj wszystkie owoce, warzywa, grzyby, drewno i surowce z plecaka. Sprzęt i pamiątki zostają.', price: total, action: 'SPRZEDAJ ZBIORY' }] : []),
         ...groups.map((g, i) => shopGoods(g, i + all.length, GRUPY[g].nazwa, groupCount(g), groupValue(g))),
         ...bagEntries,
       ], () => this.openShop(p, 1), 'Sprzedaj zbiory i sprzęt ze swojego plecaka.');

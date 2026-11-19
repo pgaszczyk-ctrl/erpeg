@@ -4,7 +4,7 @@
 // (the sprites, standing with depth and a small solid base).
 
 import { PX_PER_M, pointInRings, distToPolyline, type Area, type CityMap } from './CityMap';
-import { MIEJSCA } from '../content/swiat';
+import { DEKORACJE, MIEJSCA } from '../content/swiat';
 
 export type Landmark = 'fontanna' | 'kociol' | 'wieza';
 
@@ -24,6 +24,38 @@ function ringArea(r: number[]) {
   let s = 0;
   for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) s += (r[j] + r[i]) * (r[j + 1] - r[i + 1]);
   return Math.abs(s / 2);
+}
+
+/** A furnishing group belongs to the largest paved polygon in this part of the square. */
+export function plazaFurniture(city: CityMap, a: Area) {
+  if (a.kind !== 'plaza') return [];
+  const size = ringArea(a.rings[0]);
+  if (size < 300 * PX_PER_M ** 2) return [];
+  const x = (a.x0 + a.x1) / 2, y = (a.y0 + a.y1) / 2;
+  const radius = 55 * PX_PER_M;
+  const neighbours = city.areasIn({ x0: x - radius, y0: y - radius, x1: x + radius, y1: y + radius })
+    .filter(b => b.kind === 'plaza' && Math.hypot((b.x0 + b.x1) / 2 - x, (b.y0 + b.y1) / 2 - y) <= radius);
+  if (neighbours.some(b => {
+    const other = ringArea(b.rings[0]);
+    return other > size || (other === size && b.id < a.id);
+  })) return [];
+
+  const items: { kind: 'zegar' | 'lawka' | 'donica'; x: number; y: number }[] = [];
+  const clear = (px: number, py: number) => [[-7, 0], [7, 0], [0, -5], [0, 4], [0, 0]]
+    .every(([dx, dy]) => pointInRings(a.rings, px + dx, py + dy) &&
+      !city.roadAt(px + dx, py + dy) && !city.isBlocked(px + dx, py + dy));
+  if (size >= DEKORACJE.zegar.odM2 * PX_PER_M ** 2 &&
+      !neighbours.some(b => plazaLandmark(city, b)) && clear(x, y)) {
+    items.push({ kind: 'zegar', x, y });
+  }
+  // Keep the centre open. A bench and a planter make a small resting corner at the edge.
+  for (const side of a.id % 2 ? [-1, 1] : [1, -1]) {
+    const by = y + side * (a.y1 - a.y0) * .32;
+    if (!clear(x - 9, by) || !clear(x + 10, by)) continue;
+    items.push({ kind: 'lawka', x: x - 9, y: by }, { kind: 'donica', x: x + 10, y: by + 1 });
+    break;
+  }
+  return items;
 }
 
 /** What stands on this square, and where (bottom centre), or null. */

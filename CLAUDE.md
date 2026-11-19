@@ -1,5 +1,7 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (19 Nov 2026, plaza furniture and coach stops) Large plaza polygons share furniture across 55 m, with clocks spaced out and some seating at edges. Shared coach stops keep each route with one wagon placed in a clear bay. The shop marks bulk harvest sales as „RAZEM”, and the browser test covers equipping and unequipping a sword in the trunk.
+
 - (19 Nov 2026, mock-up pixel grid) New scenery uses GEN_DOTS, so one texture texel spans 0.5 map units. The prototype rasterizes whole texels, draws the spark as a registered pixel layer and anchors the sample shop sign in a clear spot by the façade.
 
 - (19 Nov 2026, mock-up affordances) In the drawn TEST variant, ore has scattered fragments and a warm pulse with a static reduced-motion alternative. Interactive place signs mark their availability within sight. The prototype shop uses a drawn awning and bag; clicking the sign follows the regular entrance reach check and opens the existing shop window.
