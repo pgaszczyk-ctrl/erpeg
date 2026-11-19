@@ -180,7 +180,7 @@ Uczciwie o koszcie: to ok. 8× więcej klatek ciała niż w stylu Tibii (70 zami
 
 **Kolejność**
 
-1. Pilotaż: strój strażnika startowego w 8 kierunkach (postój, chód, atak), 1 głowa, 2 hełmy, 2 bronie (miecz, łuk), z danymi punktów zaczepienia. W grze obok dzisiejszej postaci; zrzuty i nagranie chodu na telefonie w Lublinie i Burgas.
+1. Pilotaż: strój strażnika startowego w 8 kierunkach (postój, chód, atak), 1 głowa, 2 hełmy, 2 bronie (miecz, łuk), z danymi punktów zaczepienia – w dwóch wariantach obok siebie: A rysowany ręcznie, B wyrenderowany z obecnego modelu 3D strażnika i przerobiony na piksele. Oba w grze obok dzisiejszej postaci; zrzuty i nagranie chodu na telefonie w Lublinie i Burgas. Jeśli B wygląda dobrze, kolejne przedmioty modeluje się raz, a kierunki i klatki wychodzą same. Zamówienie: `docs/poczta/do-grafika/2026-11-19_50-P001_postacie_chibi_pilotaz.md`, prompt dla ChatGPT obok w `50_postacie_chibi/PROMPT_GPT.md`.
 2. Stroje profesji (rycerz, łowca, mag), reszta hełmów i broni.
 3. Mieszkańcy w lżejszym zestawie, 6–8 strojów różnych wiekiem i płcią.
 4. Potwory w tym samym stylu (dziś są modelami 3D).
@@ -355,7 +355,7 @@ Proponuję cztery etapy: najpierw to, co blokuje nowych graczy, na końcu duże 
 **Decyzje dla właściciela**
 
 - [ ] Mocny cios: tylko przycisk (rekomendacja) czy przytrzymanie zostaje na komputerze?
-- [ ] Postacie: zgoda na pilotaż u grafika (strój strażnika w 8 kierunkach, 1 głowa, 2 hełmy, 2 bronie)?
+- [x] Postacie: pilotaż u grafika zaakceptowany 19.11.2026 – porównanie wariantu rysowanego z wyrenderowanym z modelu 3D (zamówienie 50-P001)
 - [x] Ekwipunek na postaci: hełm i broń w ręce widoczne; ruch jak w Diablo; nazwa i pasek życia tylko w walce; styl rysowane chibi fantasy/steampunk (zdecydowane 19.11.2026)
 - [ ] Imiona: w polskim interfejsie po polsku (Iwan) czy w zapisie łacińskim (Ivan)?
 - [ ] Kara za śmierć: zostać przy złocie i EXP, czy dodać część plecaka w zamian za częstszy zapis?
