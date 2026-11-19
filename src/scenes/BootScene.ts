@@ -131,6 +131,9 @@ export class BootScene extends Phaser.Scene {
     const at = city.fromLatLon(PUNKT_MAKIETY.lat, PUNKT_MAKIETY.lon);
     await city.ensure(at.x, at.y, 250 * PX_PER_M);
     const start = city.reachableNear(at.x, at.y);
+    const building = city.buildingAt(at.x - 43, at.y + 2);
+    city.places.push({ id: 'makieta-sklep', kind: 'shop', name: 'Sklep pod Zamkiem',
+      building: building ?? null, door: { x: at.x - 12, y: at.y - 5 } });
     startSession({ player: {
       name: 'Makieta', idik: '', start_place: 'Lublin', start_x: start.x, start_y: start.y,
       map_scale: PX_PER_M, exp: 0, dead: false, died_at: null, age: 12, immortal: true, konto: true,

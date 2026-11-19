@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-19 — czytelniejsze złoże i szyldy w makiecie
+
+- Wariant rysowany ma jasną żyłę, odłamki i ciepły blask złoża. Blask pozostaje stały przy ograniczeniu ruchu.
+- Dodano demonstracyjny sklep pod zamkiem z rysowanym daszkiem i symbolem torby. Szyldy lokali dostają subtelny znacznik, a wybrany szyld pokazuje nazwę akcji. Kliknięcie szyldu z zasięgu otwiera zwykłe okno miejsca. Poza zasięgiem pojawia się prośba o podejście.
+- Zmiany dotyczą `src/ui/makieta.ts`, `src/scenes/Zloza.ts`, `src/scenes/BootScene.ts` i `src/scenes/GameScene.ts`. Wariant rysowany jest dostępny w trybie makiety na TEST.
+
 ## 2026-11-19 — grywalna makieta oprawy pod Zamkiem Lubelskim
 
 - Dwa warianty na TEST (`?makieta=oryginal` i `?makieta=rysowana`) otwierają tę samą scenę bez logowania. Ustawiono próbki złoża, tablicy i rury na rzeczywistej mapie Lublina. Scena korzysta z normalnego sterowania i istniejącego strażnika GLB.
