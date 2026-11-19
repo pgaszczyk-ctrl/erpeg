@@ -1,3 +1,4 @@
+import { profesja } from './content/profesje';
 import { ustawPoziomBroni } from './inventory';
 import { zapamietajPostac } from './pamiecPostaci';
 import { effectiveStage } from './content/questy/progress';
@@ -308,6 +309,7 @@ export function startSession(r: LoginResult, remember = true) {
   const tu = p.save.tu;
   session.tu = tu ? { m: tu.m, x: (tu.x * PX_PER_M) / (tu.s || PX_PER_M), y: (tu.y * PX_PER_M) / (tu.s || PX_PER_M) } : null;
   session.umiej = p.save.umiej && typeof p.save.umiej === 'object' ? { ...p.save.umiej } : {};
+  profesja.id = p.save.profesja === 'rycerz' || p.save.profesja === 'lowca' || p.save.profesja === 'mag' ? p.save.profesja : null;
   session.jazda = p.save.jazda ?? null;
   session.artilleryHero=p.save.artilleryHero??null;
   session.coins = p.save.coins ?? 0;
@@ -369,7 +371,7 @@ export function saveNow(hp: number) {
     language: lang, questResults:session.questResults, coins: session.coins, hp, missions, fog: session.fog, fogs: zmienioneMgly(), fogsCzesc: true, lokaty: session.lokaty, story: session.story, diamenty: session.diamenty, flagi: session.flagi, byl: session.byl, mikstury: session.mikstury, bezStrzalki: session.bezStrzalki, mapyPodroznika: session.mapyPodroznika, namioty: session.namioty, etap: session.etap, fabula: session.fabula,
     at: session.at && { m: session.at.m, x: Math.round(session.at.x), y: Math.round(session.at.y), s: PX_PER_M },
     tu: session.tu && { m: session.tu.m, x: Math.round(session.tu.x), y: Math.round(session.tu.y), s: PX_PER_M },
-    zasoby: zapiszZasoby(), umiej: session.umiej,
+    zasoby: zapiszZasoby(), umiej: session.umiej, profesja: profesja.id,
     artilleryHero:session.artilleryHero, jazda: session.jazda, gen, ...saveGear(), stats: session.stats, chest: session.chest, riddles: session.riddles, seen: session.seen, daily: session.daily, look: TEST ? session.productionLook : session.look,
   };
   // Card/clue checkpoints can happen close together. An older request must never overwrite

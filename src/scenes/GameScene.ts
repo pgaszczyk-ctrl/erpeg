@@ -1,3 +1,4 @@
+import { PROFESJE, PROFESJA, profesja, type ProfesjaId } from '../content/profesje';
 import { czytelnaNazwa } from '../transliteracja';
 import { stanGry } from '../stanGry';
 import { pipe } from '../sfx';
@@ -4974,6 +4975,7 @@ export class GameScene extends Phaser.Scene {
 
   private openPlace(p: CityPlace, venueChosen = false, skipProlog = false) {
     if (!skipProlog && p.kind === 'police' && this.prolog?.offerChief(() => this.openPlace(p, venueChosen, true))) return;
+    if (!skipProlog && p.kind === 'police' && this.wyborProfesji(() => this.openPlace(p, venueChosen, true))) return;
     if (!venueChosen) {
       const shared = this.city.places.filter(q => Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 1);
       if (shared.length > 1 && shared.some(q => q.kind === 'maker' || q.kind === 'workshop')) {
@@ -7851,6 +7853,41 @@ export class GameScene extends Phaser.Scene {
   drogaDo() {
     return droga;
   }
+
+  /**
+   * The guard chief offers a profession from PROFESJA.odPoziomu on (report #25); a later visit can change it for
+   * diamonds. Returns false when there is nothing to offer (the police station opens as usual).
+   */
+  private wyborProfesji(dalej: () => void): boolean {
+    if (demo.on || this.loch || poziomPostaci(session.exp) < PROFESJA.odPoziomu) return false;
+    const ids = Object.keys(PROFESJE) as ProfesjaId[];
+    const teraz = profesja.id;
+    if (teraz && this.time.now < this.profesjaOdmowa) return false;
+    const opis = ids.map((id) => `${PROFESJE[id].ikona} ${tr(PROFESJE[id].nazwa)}: ${tr(PROFESJE[id].opis)}`).join('\n\n');
+    const tekst = teraz
+      ? tx(`Służysz jako ${tr(PROFESJE[teraz].nazwa).toLowerCase()}. Zmiana profesji kosztuje ${PROFESJA.zmianaDiamenty} 💎 – umiejętności zostają, zmienia się tylko tempo nauki.\n\n${opis}`, `You serve as a ${tr(PROFESJE[teraz].nazwa).toLowerCase()}. Changing profession costs ${PROFESJA.zmianaDiamenty} 💎 – your skills stay, only the learning pace changes.\n\n${opis}`)
+      : tx(`Masz już doświadczenie. Czas wybrać drogę – nie zamyka ci żadnej broni, ale w swojej uczysz się półtora raza szybciej, w innych wolniej.\n\n${opis}`, `You have some experience now. Time to choose a path – no weapon is closed to you, but you learn your own one and a half times faster, others slower.\n\n${opis}`);
+    const wybory = ids.filter((id) => id !== teraz);
+    this.dialog({
+      title: tx('Szef straży – profesja', 'Guard chief – profession'), text: tekst, wazne: true,
+      buttons: [...wybory.map((id) => `${PROFESJE[id].ikona} ${tr(PROFESJE[id].nazwa)}${teraz ? ` (${PROFESJA.zmianaDiamenty} 💎)` : ''}`), teraz ? tx('Zostaję przy swojej', 'I keep mine') : tx('Jeszcze nie teraz', 'Not yet')],
+      zamknij: wybory.length,
+      onChoose: (i) => {
+        const id = wybory[i];
+        if (!id) { this.profesjaOdmowa = this.time.now + 10 * 60_000; dalej(); return; }
+        if (teraz) {
+          if (session.diamenty < PROFESJA.zmianaDiamenty) { this.toast(tx('Za mało diamentów na zmianę profesji.', 'Not enough diamonds to change profession.'), 2500); dalej(); return; }
+          session.diamenty -= PROFESJA.zmianaDiamenty;
+        }
+        profesja.id = id;
+        this.save();
+        this.emitHud();
+        this.toast(tx(`${PROFESJE[id].ikona} Jesteś teraz: ${tr(PROFESJE[id].nazwa)}!`, `${PROFESJE[id].ikona} You are now a ${tr(PROFESJE[id].nazwa)}!`), 3500);
+      },
+    });
+    return true;
+  }
+  private profesjaOdmowa = 0;
 
   /** Who stands behind the counter depends on the shop (report #9: „Kowal za ladą” in a supermarket). */
   private sprzedawca(p: CityPlace) {

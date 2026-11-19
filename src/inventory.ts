@@ -1,3 +1,4 @@
+import { mnoznikProfesji } from './content/profesje';
 import { obrazeniaBroni } from './content/bron';
 import { WALKA, zTabeli } from './content/walka';
 import {
@@ -160,7 +161,7 @@ export function skillProgress(skill: Umiejetnosc) {
 /** Adds practice; returns the new level if it went up. */
 export function practice(skill: Umiejetnosc, points = 1): number | null {
   const before = skillLevel(skill);
-  gear.skills[skill] += points;
+  gear.skills[skill] += points * mnoznikProfesji(skill);
   const after = skillLevel(skill);
   return after > before ? after : null;
 }

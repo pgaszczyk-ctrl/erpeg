@@ -1,8 +1,9 @@
+import { PROFESJE, PROFESJA, profesja } from '../content/profesje';
 import { UMIEJETNOSCI as ATAKI, domyslnaUmiejetnosc } from '../content/umiejetnosci';
 import { przewijanieDotykiem } from './przewijanie';
 import { naEkranie } from '../obrot';
 import { collectStoryItems } from '../prolog/rewards';
-import { tx } from '../i18n';
+import { tx, tr } from '../i18n';
 import { MIEJSCA, PLECAK, UMIEJETNOSCI, MAKS_POZIOM, TALIZMANY, type Miejsce, type Umiejetnosc } from '../content/przedmioty';
 import { LECZENIE_OWOCAMI, OWOCE, GRUPY, type Owoc, type Grupa } from '../content/sklepy';
 
@@ -430,6 +431,8 @@ function show(host: CharacterHost) {
     lvInfo.append(el('span', 'k-big', 'Poziom'));
     if (max) lvInfo.append(el('span', 'k-plate k-small', 'Maksymalny'));
     if (session.story.title) lvInfo.append(el('span', 'k-titleline', `🏅 ${session.story.title}`));
+    // Profession (report #25): chosen at the guard chief from level PROFESJA.odPoziomu.
+    lvInfo.append(el('span', 'k-titleline', profesja.id ? `${PROFESJE[profesja.id].ikona} ${tr(PROFESJE[profesja.id].nazwa)}` : lvl >= PROFESJA.odPoziomu ? tx('🛡 Profesja: wybierz u szefa straży', '🛡 Profession: choose at the guard chief') : tx(`🛡 Profesja od ${PROFESJA.odPoziomu}. poziomu`, `🛡 Profession from level ${PROFESJA.odPoziomu}`)));
     lv.append(nix, lvInfo);
     s.append(lv);
     const from = expNaPoziom(lvl);
