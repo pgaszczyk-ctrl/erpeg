@@ -1,0 +1,33 @@
+name: World map sample (Burgas)
+
+# One-off: cuts central Burgas (Bulgaria) out of the Protomaps world map into
+# data/world-sample/burgas.pmtiles, for an offline play-test of a world-map start.
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/world-sample-burgas.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/install-pmtiles.sh
+      - name: Extract Burgas
+        run: |
+          set -euo pipefail
+          B=$(scripts/world-latest.sh)
+          mkdir -p data/world-sample
+          pmtiles extract "https://build.protomaps.com/$B" data/world-sample/burgas.pmtiles --bbox=27.43,42.47,27.51,42.53 --maxzoom=15
+          ls -l data/world-sample/burgas.pmtiles
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
+          git add data/world-sample/burgas.pmtiles
+          git commit -m "World map sample: Burgas (Protomaps)" || echo "No changes"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push
