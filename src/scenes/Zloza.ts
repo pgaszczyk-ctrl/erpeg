@@ -3,7 +3,7 @@ import { CityMap } from '../map/CityMap';
 import { rng } from '../rng';
 import { session } from '../quests';
 import { today } from './Npcs';
-import { makieta, rudaMakiety, rysowanaMakieta } from '../ui/makieta';
+import { blyskRudyMakiety, makieta, MAKIETA_TEXEL, rudaMakiety, rysowanaMakieta, snapMakieta } from '../ui/makieta';
 import { GORNICTWO } from '../content/sklepy';
 
 export interface Zloze { id: string; x: number; y: number; obraz: Phaser.GameObjects.Image; blask?: Phaser.GameObjects.Image }
@@ -21,26 +21,20 @@ export class Zloza {
     if (rysowanaMakieta && !this.scene.textures.exists(key)) {
       this.scene.textures.addCanvas(key, rudaMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
-    const obraz = this.scene.add.image(p.x, p.y, key)
-      .setDisplaySize(rysowanaMakieta ? 25 : 30, rysowanaMakieta ? 17 : 30)
-      .setOrigin(rysowanaMakieta ? 18 / 44 : .5, .85).setDepth(p.y).setVisible(this.dostepne({ id }) && visible(p.x, p.y));
+    const x = rysowanaMakieta ? snapMakieta(p.x) : p.x;
+    const y = rysowanaMakieta ? snapMakieta(p.y) : p.y;
+    const obraz = this.scene.add.image(x, y, key).setDepth(p.y)
+      .setVisible(this.dostepne({ id }) && visible(p.x, p.y));
     let blask: Phaser.GameObjects.Image | undefined;
     if (rysowanaMakieta) {
-      const glow = 'makieta-ruda-blask';
-      if (!this.scene.textures.exists(glow)) {
-        const canvas = this.scene.textures.createCanvas(glow, 24, 24)!;
-        const ctx = canvas.getContext();
-        const falloff = ctx.createRadialGradient(12, 12, 0, 12, 12, 12);
-        falloff.addColorStop(0, '#ffc676');
-        falloff.addColorStop(.5, '#d9914580');
-        falloff.addColorStop(1, '#cc802400');
-        ctx.fillStyle = falloff;
-        ctx.fillRect(0, 0, 24, 24);
-        canvas.refresh();
+      obraz.setScale(MAKIETA_TEXEL).setOrigin(18 / 44, 26 / 30);
+      const keyBlask = 'makieta-ruda-blysk';
+      if (!this.scene.textures.exists(keyBlask)) {
+        this.scene.textures.addCanvas(keyBlask, blyskRudyMakiety())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
       }
-      blask = this.scene.add.image(p.x + 1, p.y - 7, glow).setDisplaySize(23, 19)
-        .setBlendMode(Phaser.BlendModes.ADD).setDepth(p.y + .1).setAlpha(.36).setVisible(obraz.visible);
-    }
+      blask = this.scene.add.image(x, y, keyBlask).setScale(MAKIETA_TEXEL).setOrigin(18 / 44, 26 / 30)
+        .setDepth(p.y + .1).setAlpha(.65).setVisible(obraz.visible);
+    } else obraz.setDisplaySize(30, 30).setOrigin(.5, .85);
     this.lista.push({ id, ...p, obraz, blask });
   }
 
@@ -61,7 +55,7 @@ export class Zloza {
     for (const z of this.lista) {
       const shown = this.dostepne(z) && visible(z.x, z.y);
       z.obraz.setVisible(shown);
-      z.blask?.setVisible(shown).setAlpha(PULS ? .36 + .20 * Math.sin(now / 430) : .38);
+      z.blask?.setVisible(shown).setAlpha(PULS ? .65 + .30 * Math.sin(now / 430) : .65);
     }
     if (now < this.next) return;
     this.next = now + 600;
