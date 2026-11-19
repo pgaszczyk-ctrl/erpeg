@@ -70,12 +70,33 @@ export function ustawStwory(v: Record<string, { exp?: number | null; lup?: Wiers
   }
 }
 
-/** Co wypadło z jednego stworka (każdy wiersz losowany osobno); null = brak ustawień w panelu. */
+/**
+ * Łup domyślny (raport 19.11.2026: tabela na produkcji była pusta – za walkę nie było nic). Wzór Tibii/Diablo:
+ * złoto prawie zawsze, surowiec do sprzedania często, mikstura rzadko, przedmiot z losową jakością bardzo rzadko,
+ * więcej i lepiej im głębiej (warg, boss). Rachunek: ok. 13 monet na wilka (złoto + kieł 15) – pierwszy zakup
+ * za 600 po ok. 20 minutach polowania albo od razu z nagrody za prolog (700). Wiersz w panelu admina wygrywa.
+ */
+export const DOMYSLNY_LUP: Record<string, WierszLupu[]> = {
+  wilk: [{ co: 'zloto', ile: 4, szansa: 85 }, { co: 'zloto', ile: 4, szansa: 40 }, { co: 'kiel', ile: 1, szansa: 45 }, { co: 'serce', ile: 1, szansa: 15 }, { co: 'los_skorzane_buty', ile: 1, szansa: 2 }, { co: 'los_skorzana_zbroja', ile: 1, szansa: 1.5 }],
+  warg: [{ co: 'zloto', ile: 12, szansa: 90 }, { co: 'zloto', ile: 12, szansa: 50 }, { co: 'kiel', ile: 2, szansa: 60 }, { co: 'mikstura', ile: 1, szansa: 4 }, { co: 'los_skorzany_helm', ile: 1, szansa: 3 }, { co: 'los_zelazny', ile: 1, szansa: 2.5 }, { co: 'los_kolczuga', ile: 1, szansa: 0.8 }, { co: 'diament', ile: 1, szansa: 0.1 }],
+  glut: [{ co: 'zloto', ile: 3, szansa: 70 }, { co: 'zloto', ile: 3, szansa: 30 }, { co: 'serce', ile: 1, szansa: 15 }, { co: 'jablko', ile: 1, szansa: 20 }, { co: 'strzaly', ile: 5, szansa: 10 }, { co: 'los_kijek', ile: 1, szansa: 2 }],
+  koziol: [{ co: 'zloto', ile: 80, szansa: 100 }, { co: 'zloto', ile: 60, szansa: 60 }, { co: 'kiel', ile: 4, szansa: 100 }, { co: 'mikstura', ile: 1, szansa: 40 }, { co: 'los_stalowy', ile: 1, szansa: 12 }, { co: 'los_kolczuga', ile: 1, szansa: 10 }, { co: 'los_zelazny_helm', ile: 1, szansa: 10 }, { co: 'los_zelazne_buty', ile: 1, szansa: 10 }, { co: 'diament', ile: 1, szansa: 3 }],
+  bandyta: [{ co: 'zloto', ile: 10, szansa: 90 }, { co: 'zloto', ile: 8, szansa: 40 }, { co: 'strzaly', ile: 10, szansa: 25 }, { co: 'mikstura', ile: 1, szansa: 4 }, { co: 'los_zelazny', ile: 1, szansa: 3 }, { co: 'los_skorzany_helm', ile: 1, szansa: 3 }],
+  wielki_glut: [{ co: 'zloto', ile: 25, szansa: 100 }, { co: 'zloto', ile: 20, szansa: 50 }, { co: 'mikstura', ile: 1, szansa: 15 }, { co: 'los_zelazny', ile: 1, szansa: 6 }, { co: 'los_skorzana_zbroja', ile: 1, szansa: 6 }],
+  driada: [{ co: 'jablko', ile: 3, szansa: 60 }, { co: 'sliwka', ile: 2, szansa: 40 }, { co: 'serce', ile: 1, szansa: 40 }, { co: 'drewno', ile: 1, szansa: 30 }, { co: 'zloto', ile: 3, szansa: 40 }],
+  zombie: [{ co: 'zloto', ile: 5, szansa: 80 }, { co: 'serce', ile: 1, szansa: 15 }, { co: 'los_skorzane_buty', ile: 1, szansa: 2 }],
+  szkielet: [{ co: 'zloto', ile: 6, szansa: 85 }, { co: 'zloto', ile: 4, szansa: 40 }, { co: 'strzaly', ile: 6, szansa: 20 }, { co: 'los_zelazny_helm', ile: 1, szansa: 1.5 }, { co: 'los_kijek', ile: 1, szansa: 3 }],
+  herszt: [{ co: 'zloto', ile: 40, szansa: 100 }, { co: 'zloto', ile: 30, szansa: 60 }, { co: 'mikstura', ile: 1, szansa: 30 }, { co: 'los_zelazny', ile: 1, szansa: 10 }, { co: 'los_kolczuga', ile: 1, szansa: 5 }, { co: 'diament', ile: 1, szansa: 1 }],
+  upior: [{ co: 'zloto', ile: 60, szansa: 100 }, { co: 'zloto', ile: 40, szansa: 70 }, { co: 'mikstura', ile: 1, szansa: 50 }, { co: 'los_stalowy', ile: 1, szansa: 10 }, { co: 'los_zelazny_helm', ile: 1, szansa: 10 }, { co: 'los_kolczuga', ile: 1, szansa: 8 }, { co: 'diament', ile: 1, szansa: 2 }],
+};
+
+/** Co wypadło z jednego stworka (każdy wiersz losowany osobno); null = ani panelu, ani łupu domyślnego. */
 export function losujLup(rodzaj: string, los: () => number = Math.random): { co: string; ile: number }[] | null {
   const s = stwory[rodzaj];
-  if (!s || !s.lup.length) return null;
+  const lista = s && s.lup.length ? s.lup : DOMYSLNY_LUP[rodzaj];
+  if (!lista?.length) return null;
   const out: { co: string; ile: number }[] = [];
-  for (const w of s.lup) if (los() * 100 < w.szansa) {
+  for (const w of lista) if (los() * 100 < w.szansa) {
     const rodzina = w.co.startsWith('los_') ? PRZEDMIOTY.filter(p => p.baza === w.co.slice(4)) : [];
     if (!rodzina.length) { out.push({ co: w.co, ile: Math.round(w.ile) }); continue; }
     // Roll each copy independently, then group identical variants for the existing pickup path.

@@ -1241,7 +1241,7 @@ export class UIScene extends Phaser.Scene {
     const guziki = ['▶ Graj dalej', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', '🚪 Wyjdź z gry'];
     this.showDialog({
       title: 'Menu',
-      text: `Wyjście z gry: postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      text: `${tx("Gra zapisuje się sama co kilka minut, przy budynkach i po misjach.", "The game saves itself every few minutes, at buildings and after missions.")}\n\nGra: ${wersjaNapis()}`,
       buttons: guziki,
       zamknij: 0,
       grozny: 4,

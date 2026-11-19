@@ -1,3 +1,4 @@
+import { pipe } from '../sfx';
 import { Zloza, type Zloze } from './Zloza';
 import { GORNICTWO } from '../content/sklepy';
 import { landingPanorama } from '../artillery/panorama';
@@ -200,7 +201,12 @@ const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 /** New controls: how near the hero a double tap must land to start something there (map px). */
 const INTERAKCJA_PX = 70;
-const HEARTBEAT_MS = 3000;
+/** Report #16: was 3 s (and doubled after a scene restart): 12 s plus a beat on entering a fight and on pagehide. */
+const HEARTBEAT_MS = 12000;
+/** The scene instance whose heartbeat is current: an older timer that survived a restart stays silent. */
+let beatOwner = 0;
+/** Quiet save outside a fight (report #17). */
+const ZAPIS_CO_MS = 3 * 60_000;
 /** How often the heartbeat carries the newspaper's daily numbers (kurier_dni). */
 const KURIER_CO_MS = 60_000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
@@ -457,6 +463,9 @@ export class GameScene extends Phaser.Scene {
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
   private damageCarry = 0;
+  /** Heartbeat at once (entering a fight: closing the tab then mustn't dodge it). */
+  private beatNow = () => {};
+  private walczylWczesniej = false;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   /** The hero said no to the diamonds' rescue: now it's the game-over screen. */
@@ -1060,8 +1069,9 @@ export class GameScene extends Phaser.Scene {
     this.justRode = false;
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
+    const owner = ++beatOwner;
     const beat = (e?: Event) => {
-      if (this.leaving || this.player.isDead || artilleryTransit.active) return;
+      if (owner !== beatOwner || this.leaving || this.player.isDead || artilleryTransit.active) return;
       const snap = this.snapshot();
       // About once a minute (and when the page goes away) also the newspaper's daily numbers.
       if (e || Date.now() - this.kurAt >= KURIER_CO_MS) {
@@ -1075,6 +1085,7 @@ export class GameScene extends Phaser.Scene {
       api.heartbeat(token, snap).then((ok) => { if (ok === false && !this.leaving) sesjaWygasla(token); }).catch(() => {});
     };
     this.time.addEvent({ delay: HEARTBEAT_MS, loop: true, callback: beat });
+    this.beatNow = () => beat();
     window.addEventListener('pagehide', beat);
     this.events.once('shutdown', () => window.removeEventListener('pagehide', beat));
     beat();
@@ -1366,6 +1377,10 @@ export class GameScene extends Phaser.Scene {
       if (hit) this.resolveAttack(hit, now);
     }
     this.updateRanged(now, lingering);
+    const walczy = this.inCombat();
+    if (walczy && !this.walczylWczesniej) this.beatNow();
+    this.walczylWczesniej = walczy;
+    this.cichyZapis(now, walczy);
     this.updateShots(dt);
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
@@ -3132,7 +3147,12 @@ export class GameScene extends Phaser.Scene {
             notki.push(`${it.nazwa} (plecak pełny!)`);
             break;
           }
-          if (i === 0) notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
+          if (i === 0) {
+            notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
+            // A rare find is seen and heard (report: the helmet dropped silently).
+            this.floatText(x, y - 18, `✨ ${it.nazwa.split(' — ')[0]}`, it.jakosc && it.jakosc >= 3 ? '#ffb347' : '#ffd76a', 2400);
+            pipe(880, 160); setTimeout(() => pipe(1320, 220), 120);
+          }
         }
       }
     }
@@ -4309,6 +4329,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Is any enemy close enough to be fighting us? */
+  /**
+   * Quiet save every ZAPIS_CO_MS outside a fight (report #17: only buildings saved, the menu warned the rest is lost).
+   * Not underground, not during a ride or a dialog.
+   */
+  private zapisAt = 0;
+  private cichyZapis(now: number, walczy: boolean) {
+    if (!this.zapisAt) { this.zapisAt = now + ZAPIS_CO_MS; return; }
+    if (now < this.zapisAt || walczy || this.loch || this.travelling || this.player.isDead || demo.on || this.scene.isPaused()) return;
+    this.zapisAt = now + ZAPIS_CO_MS;
+    this.keepFog();
+    session.tu = this.miejsceZapisu();
+    saveNow(this.player.hp).catch(() => {});
+  }
+
   inCombat() {
     if (this.scene.isActive('arena')) return true;
     if (tury()) return !!this.walka?.aktywna;
@@ -6473,17 +6507,34 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Hospital: free healing for newcomers; from KARA_OD_POZIOMU on it costs by the missing life and the level (report:
+   * a free full heal made potions and fruit pointless). A defeat's own wake-up in a hospital stays free.
+   */
   private openHospital(p: CityPlace) {
-    const hurt = this.player.hp < PLAYER.maxHp;
-    this.player.heal(PLAYER.maxHp);
-    this.emitHud();
-    this.dialog({
-      title: `🏥 ${p.name}`,
-      text: hurt ? 'Lekarz opatrzył twoje rany. Zdrowie w pełni – i to za darmo!' : 'Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.',
-      buttons: ['Dziękuję'],
-      onChoose: () => {},
-    });
-    if (hurt) this.save();
+    const brak = Math.max(0, PLAYER.maxHp - this.player.hp);
+    const lvl = poziomPostaci(session.exp);
+    const title = tx('🏥 Szpital', '🏥 Hospital');
+    if (!brak) {
+      this.dialog({ title, text: tx('Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.', 'The doctor examined you: fit as a fiddle. Come back when something hurts.'), buttons: [tx('Dziękuję', 'Thank you')], onChoose: () => {} });
+      return;
+    }
+    const cena = lvl < KARA_OD_POZIOMU ? 0 : Math.max(10, Math.ceil((brak / PLAYER.maxHp) * lvl * 15 / 5) * 5);
+    const lecz = () => {
+      if (cena && session.coins < cena) { this.toast(tx('Za mało złota na leczenie.', 'Not enough gold for treatment.'), 2000); return; }
+      if (cena) spend(cena);
+      this.player.heal(PLAYER.maxHp);
+      this.emitHud();
+      this.save();
+      this.toast(tx('❤ Zdrowie w pełni.', '❤ Full health.'), 1800);
+    };
+    if (!cena) {
+      lecz();
+      this.dialog({ title, text: tx(`Lekarz opatrzył twoje rany. Zdrowie w pełni – do ${KARA_OD_POZIOMU}. poziomu leczymy za darmo.`, `The doctor dressed your wounds. Full health – free until level ${KARA_OD_POZIOMU}.`), buttons: [tx('Dziękuję', 'Thank you')], onChoose: () => {} });
+      return;
+    }
+    this.dialog({ title, text: tx(`Lekarz może opatrzyć twoje rany. Leczenie do pełna: ${cena} złota.\n\nTaniej wychodzą mikstury u alchemika i owoce z plecaka.`, `The doctor can dress your wounds. Full treatment: ${cena} gold.\n\nPotions from an alchemist and fruit from your backpack are cheaper.`),
+      buttons: [tx(`Lecz (${cena} 💰)`, `Heal (${cena} 💰)`), tx('Nie, dziękuję', 'No, thanks')], zamknij: 1, onChoose: (i) => { if (i === 0) lecz(); } });
   }
 
   /** Swing speed and reach from the sword-fighting level. */
