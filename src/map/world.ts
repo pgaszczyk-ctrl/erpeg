@@ -257,7 +257,8 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'supermarket': return 'shop';
     case 'convenience': return named ? 'shop' : null;
     case 'school': return named ? 'school' : null;
-    case 'place_of_worship': return named && (!detail || detail === 'christian') ? 'church' : null;
+    // Mosques are temples too (report 19 Nov 2026: temples by faith); other faiths stay out until they have a look.
+    case 'place_of_worship': return named && (!detail || detail === 'christian' || detail === 'muslim') ? 'church' : null;
     case 'townhall': return named ? 'office' : null;
     case 'hospital': return named ? 'hospital' : null;
     case 'police': return 'police';
@@ -501,7 +502,7 @@ function worldLoader(map: CityMap): WorldLoader {
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
       const name = (f.properties[lang === 'pl' ? 'name:pl' : 'name:en'] as string) || (f.properties.name as string) || (lang === 'pl' ? DEFAULT_NAME[kind] : DEFAULT_NAME_EN[kind]) || kind;
-      out.p!.push([kind, name, x * k, y * k]);
+      out.p!.push(kind === 'church' && f.properties.kind_detail ? [kind, name, x * k, y * k, String(f.properties.kind_detail)] : [kind, name, x * k, y * k]);
     });
     // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under
     // SZOPY.usunM2 dropped, under SZOPY.przejscieM2 drawn but walked through (last field 1).

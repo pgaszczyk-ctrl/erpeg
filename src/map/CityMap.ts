@@ -147,7 +147,7 @@ export type RawTile = {
   /** [id, rings, addresses, name, levels, open (world maps: a shed you walk through)] */
   b: [number, number[][], string | 0, string | 0, number, (0 | 1)?, Building['architecture']?][];
   /** World map tiles only: places found there [kind, name, x, y] (px). */
-  p?: [Place['kind'], string, number, number][];
+  p?: [Place['kind'], string, number, number, string?][];
   /** World map tiles only: mountain peaks [name, height m, x, y] (px). */
   k?: [string, number, number, number][];
   /** World maps: post offices, post boxes, parcel lockers (px). */
@@ -166,6 +166,8 @@ export interface Place {
   id: string;
   building: Building | null;
   door: { x: number; y: number };
+  /** Places of worship: the faith when the map says it (world tiles' kind_detail), e.g. 'muslim', 'christian'. */
+  religia?: string;
 }
 
 const CELL = 256; // px
@@ -861,7 +863,7 @@ export class CityMap {
     // unloaded tile counts as blocked – so every door fell back into the middle of its roof.
     this.loadedTiles.add(cx * 100000 + cy);
     if (t.p?.length) {
-      const added = t.p.map(([kind, name, x, y]) => this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`)).filter((p): p is Place => !!p);
+      const added = t.p.map(([kind, name, x, y, rel]) => { const pl = this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`); if (pl && rel) pl.religia = rel; return pl; }).filter((p): p is Place => !!p);
       if (added.length) for (const f of this.placeListeners) f(added);
     }
     this.surfaces.clear();

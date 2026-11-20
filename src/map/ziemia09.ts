@@ -1,3 +1,4 @@
+import { swiatyniaNaDachu, type Swiatynia } from '../gen/swiatynie';
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza , koleiny } from '../gen';
 import { rurociagWzdluz } from '../gen';
@@ -45,6 +46,8 @@ export interface Budynek09 {
   zabytek?: boolean;
   /** Id budynku z mapy (wysokie budynki gra trzyma pod nim). */
   id?: number;
+  /** Świątynia innego wyznania: cebulaste kopuły (cerkiew) albo kopuła z minaretem (meczet). */
+  swiatynia?: Swiatynia;
 }
 
 export interface Zlecenie {
@@ -209,12 +212,18 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   const plaski = !b.hl && hash(b.seed, 11, 7) < R.plaskie ? true : undefined;
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${b.swiatynia ?? ''}|${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
     const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
     gotowy = budynek(b.r, op);
+    if (b.swiatynia) {
+      const g0 = gotowy;
+      const wlasny = b.r.map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
+      const t = swiatyniaNaDachu(g0.obraz, wlasny, b.swiatynia, b.seed);
+      gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora };
+    }
     zapamietaj(klucz, gotowy);
   }
   // Ściany stoją na obrysie (wygląd 09 z poziomami): obraz w górę o wysokość ściany i w lewo o jej przechył,

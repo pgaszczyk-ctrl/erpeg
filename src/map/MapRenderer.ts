@@ -1,5 +1,8 @@
 import { makieta, PUNKT_MAKIETY, rysowanaMakieta, tablicaMakiety } from '../ui/makieta';
 import { stylRegionu } from '../content/styleRegionow';
+import { krajWPunkcie } from '../kraj';
+/** Countries whose churches are Orthodox (onion domes). */
+const KRAJE_PRAWOSLAWNE = new Set(['BG', 'RO', 'RS', 'MK', 'ME', 'GR', 'CY', 'UA', 'BY', 'RU', 'MD', 'GE']);
 import Phaser from 'phaser';
 import { SKALA_SWIATA } from '../skala';
 import { CityMap, PX_PER_M, distToPolyline, type Area, type Line, type Building } from './CityMap';
@@ -484,6 +487,28 @@ export class MapRenderer {
   private patterns?: Patterns;
   /** Buildings with special roof/wall colours (missions, shops, schools). */
   highlight = new Map<Building, { roof: string; wall: string }>();
+  /**
+   * Temples by faith (report 19 Nov 2026): a church place in an Orthodox country, or named like one, gets onion
+   * domes; a mosque a dome and a minaret. Rebuilt when the map's places change.
+   */
+  private koscioly: { p: { name: string; door: { x: number; y: number }; religia?: string; building: Building | null }; rodzaj: 'cerkiew' | 'meczet' | null }[] = [];
+  private swiatyniMiejsc = -1;
+  private swiatyniaBudynku(b: Building): 'cerkiew' | 'meczet' | undefined {
+    const m = this.map;
+    // The faith of each church place is worked out once; its building is matched every time (stubs get their
+    // building only when the tile arrives, after the list was made).
+    if (m.places.length !== this.swiatyniMiejsc) {
+      this.swiatyniMiejsc = m.places.length;
+      this.koscioly = m.places.filter((p) => p.kind === 'church').map((p) => {
+        if (p.religia === 'muslim') return { p, rodzaj: 'meczet' as const };
+        const ll = m.loch ? null : m.toLatLon(p.door.x, p.door.y);
+        const kraj = ll && Number.isFinite(ll.lat) ? krajWPunkcie(ll.lat, ll.lon) : null;
+        return { p, rodzaj: /cerk|церк|храм|црква|ναός|biseric|manastir|prawosł|orthodox/i.test(p.name) || (kraj && KRAJE_PRAWOSLAWNE.has(kraj)) ? 'cerkiew' as const : null };
+      }).filter((k) => k.rodzaj);
+    }
+    return this.koscioly.find((k) => k.p.building === b)?.rodzaj ?? undefined;
+  }
+
   /** Styl regionu świata dla budynku (kraj z jego położenia), pamiętany na mapie. Mapy bez położenia: Polska. */
   private regiony = new WeakMap<Building, string>();
   private regionBudynku(b: Building): string {
@@ -875,6 +900,7 @@ export class MapRenderer {
         drzwi: b.door ? [b.door.x * G, b.door.y * G] as [number, number] : undefined,
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
         region: this.regionBudynku(b),
+        swiatynia: this.swiatyniaBudynku(b),
       };
     });
     const G2 = GEN_DOTS;
