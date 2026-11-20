@@ -221,20 +221,26 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
+    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk,
+      // Ivy on old walls (owner, 20 Nov 2026: „może bluszcz”): some houses in temperate regions, most libraries/town halls.
+      bluszcz: (b.forma === 'biblioteka' || b.forma === 'ratusz' || b.forma === 'obserwatorium') ? 0.55 : (R.id === 'umiarkowany' || R.id === 'polnoc' || R.id === 'balkany') && hash(b.seed, 21, 5) < 0.13 ? 0.45 : 0 };
     const obrot = b.forma && OBROTOWE.has(b.forma) ? b.forma as FormaObrotowa : undefined;
     const ksztalt = b.forma && !obrot ? b.forma as FormaKsztaltu : undefined;
     // An irregular or big building keeps its ordinary roof; the form stands only on its most regular part.
-    const czesc = obrot && obrot !== 'antena' && (prostokatnosc(b.r) < 0.85 || (b.dziury?.length ?? 0) > 0 || wymiaryDachu(b.r, obrot).rKolo >= rMaksFormy(obrot) * 1.25)
+    // Belfries and little turrets always stand on a part of an ordinary roof.
+    const naCzesci = obrot === 'dzwonnica' || obrot === 'wiezyczka';
+    const czesc = obrot && obrot !== 'antena' && (naCzesci || prostokatnosc(b.r) < 0.85 || (b.dziury?.length ?? 0) > 0 || wymiaryDachu(b.r, obrot).rKolo >= rMaksFormy(obrot) * 1.25)
       ? czescRegularna(b.r, rMaksFormy(obrot)) : null;
+    if (naCzesci && !czesc) b = { ...b, forma: undefined };
     gotowy = budynek(b.r, b.swiatynia ? opcjeSwiatyni(op, b.swiatynia) : czesc ? { ...op, komin: false, steampunk: 0 } : obrot ? opcjeObrotowe(op, obrot) : ksztalt ? opcjeKsztaltu(op, ksztalt) : op);
     if (!b.swiatynia && (obrot || ksztalt)) {
       const g0 = gotowy;
       const wlasny = (czesc ?? b.r).map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
-      const t = obrot ? brylaNaDachu(g0.obraz, wlasny, obrot, b.seed, czesc ? MATERIALY[dach]?.tony : undefined) : ksztaltNaDachu(g0.obraz, wlasny, ksztalt!, b.seed, op);
+      // Towers lean like the walls (skos) and take the building's own wall colour for their drums.
+      const t = obrot ? brylaNaDachu(g0.obraz, wlasny, obrot, b.seed, czesc ? MATERIALY[dach]?.tony : undefined, { skos: SKOS, sciana: MATERIALY[sciana]?.tony }) : { ...ksztaltNaDachu(g0.obraz, wlasny, ksztalt!, b.seed, op), lewo: 0 };
       // Steam from the form's vents, stacks and chimneys (always working, each on its own rhythm).
-      const nowaPara = t.para.map(([x, y, r], i) => ({ x: g0.x0 + x, y: g0.y0 - t.gora + y, rozmiar: r, okres: 4 + hash(b.seed, i, 77) * 6, faza: hash(b.seed, i, 78) * 10, czas: 0.9 + hash(b.seed, i, 79) * 0.6 }));
-      gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora, para: [...g0.para, ...nowaPara] };
+      const nowaPara = t.para.map(([x, y, r], i) => ({ x: g0.x0 - t.lewo + x, y: g0.y0 - t.gora + y, rozmiar: r, okres: 4 + hash(b.seed, i, 77) * 6, faza: hash(b.seed, i, 78) * 10, czas: 0.9 + hash(b.seed, i, 79) * 0.6 }));
+      gotowy = { ...g0, obraz: t.obraz, x0: g0.x0 - t.lewo, y0: g0.y0 - t.gora, para: [...g0.para, ...nowaPara] };
     }
     if (b.swiatynia) {
       const g0 = gotowy;
@@ -250,7 +256,7 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   return { obraz: gotowy.obraz, x0: gotowy.x0 + dx, y0: gotowy.y0 + dy, para: gotowy.para.map((z) => ({ ...z, x: z.x + dx, y: z.y + dy })) };
 }
 
-const OBROTOWE = new Set(['biblioteka', 'obserwatorium', 'ratusz', 'antena']);
+const OBROTOWE = new Set(['biblioteka', 'obserwatorium', 'ratusz', 'antena', 'dzwonnica', 'wiezyczka']);
 
 /** Przechył ścian w generatorze (domyślny `skos` budynku, WALL_SKEW). */
 const SKOS = 0.35;

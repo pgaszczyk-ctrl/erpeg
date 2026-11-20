@@ -168,6 +168,7 @@ export const MATERIALY: Record<string, Material> = {
   drewno_zolte: M(['#6e5420', '#94722c', '#b8903a', '#ccaa52', '#dcc06c'], '#e8e0d0', 'deski'),
 };
 const MOSIADZ = ['#6b4a22', '#9a6420', '#c8963e', '#e9c56a'].map(hex);
+const BLUSZCZ = ['#1c3a1e', '#2a5228', '#3a6c32', '#548a40'].map(hex);
 const SZYBA = ['#2a3450', '#56709a'].map(hex), SWIATLO = ['#d9a84a', '#f2d888'].map(hex);
 
 export interface OpcjeBudynku {
@@ -192,6 +193,8 @@ export interface OpcjeBudynku {
   okap?: number;
   /** Azja: kalenica i naroża jako okrągła drewniana belka, okrągłe tarcze na końcach kalenicy. */
   azja?: boolean;
+  /** Bluszcz na ścianach: udział ściany (0–1) porośniętej od ziemi w górę (właściciel 20.11.2026: „może bluszcz”). */
+  bluszcz?: number;
   /** Wysokość jednego poziomu gry w px (z `ksztaltBudynku`); ściana = poziomy × poziom. Bez niej stary układ małych okienek. */
   poziom?: number;
 }
@@ -505,6 +508,15 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
         if (hh >= lo && hh <= lo + 3 && m >= 2 && m <= 4 && hash(Math.floor((along + (op.seed % 5)) / 7), f, op.seed + 5) < 0.3) { const cx = 3, cy = lo + 1.5, d = Math.hypot(m - cx, hh - cy); c = d > 1.2 ? MOSIADZ[2] : (op.noc ? SWIATLO[0] : SZYBA[1]); } }
       if (!okno && K(i, j - 1) === 1) c = S.tony[0];
       if (hh === 0) c = S.tony[0];
+      // Ivy climbing from the ground in patches along the wall (in the wall's own coordinates, so it leans with it).
+      if (op.bluszcz && hh > 0) {
+        const pas = Math.floor((along + q.i1 * 31) / 6), plama = hash(pas, q.i1, op.seed + 41);
+        if (plama < op.bluszcz) {
+          const gora = H * (0.3 + 0.7 * hash(pas, 2, op.seed + 43)) + (hash(Math.floor(along), 3, op.seed) - 0.5) * 4;
+          const lisc = hash(Math.floor(along), hh, op.seed + 47);
+          if (hh < gora && lisc > (okno ? 0.82 : 0.22) + (hh / gora) * 0.25) c = BLUSZCZ[Math.floor(hash(Math.floor(along / 2), Math.floor(hh / 2), op.seed + 53) * 4) % 4];
+        }
+      }
     }
     o.px[j * W + i] = c;
   }

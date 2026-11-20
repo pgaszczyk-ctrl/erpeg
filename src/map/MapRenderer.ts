@@ -521,7 +521,7 @@ export class MapRenderer {
    * big halls without an address a saw-tooth roof. Fixed per building (seed), worked out once per building.
    */
   private formy = new WeakMap<Building, Budynek09['forma'] | 0>();
-  private wazne: { p: { building: Building | null }; k: 'biblioteka' | 'obserwatorium' | 'ratusz' | 'dworzec' }[] = [];
+  private wazne: { p: { building: Building | null }; k: 'biblioteka' | 'obserwatorium' | 'ratusz' | 'dworzec' | 'dzwonnica' }[] = [];
   private wazneIle = -1;
   private formaBudynku(b: Building, poziomy: number): Budynek09['forma'] {
     const m = this.map;
@@ -530,7 +530,7 @@ export class MapRenderer {
       this.wazneIle = m.places.length;
       this.wazne = [];
       for (const p of m.places) {
-        const k = p.kind === 'library' ? 'biblioteka' : p.kind === 'university' ? 'obserwatorium' : p.kind === 'station' && !/autobus|bus/i.test(p.name) ? 'dworzec'
+        const k = p.kind === 'library' ? 'biblioteka' : p.kind === 'university' ? 'obserwatorium' : p.kind === 'school' ? 'dzwonnica' : p.kind === 'station' && !/autobus|bus/i.test(p.name) ? 'dworzec'
           : p.kind === 'office' && /ratusz|urz[aą]d miasta|town ?hall|rathaus|h[oô]tel de ville|municipio|ayuntamiento|radnice|ratu[šs]/i.test(p.name) ? 'ratusz' : null;
         if (k) this.wazne.push({ p, k });
       }
@@ -566,6 +566,11 @@ export class MapRenderer {
     }
     if (swojski && poziomy <= 2 && m2 >= 200 && m2 <= 1500 && this.miasto === 'duze' && los < 0.28) return 'mansarda';
     if (poziomy === 1 && m2 >= 40 && m2 <= 260 && prost > 0.82 && region !== 'azja' && los < 0.45) return 'dwuspadowy';
+    // Now and then a little round turret or a belfry on an ordinary roof (owner: „może dzwonnicę albo wieżyczki czasem”).
+    if (swojski && poziomy <= 2 && m2 >= 150 && m2 <= 1200) {
+      if (los >= 0.72 && los < 0.8) return 'wiezyczka';
+      if (los >= 0.8 && los < 0.83) return 'dzwonnica';
+    }
     return undefined;
   }
 

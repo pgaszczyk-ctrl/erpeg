@@ -20,7 +20,7 @@ const KAMIEN_K = ['#4c4848', '#666060', '#807a78', '#9a9490', '#b4aea8'].map(hex
 const CEGLA_K = ['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c'].map(hex);
 
 /** A round corner turret (slate cone) on a mansard tenement, at its south-east corner, when it fits inside. */
-function wiezyczka(o: Obraz, r: number[], gora: number, seed: number, R: number) {
+function wiezyczka(o: Obraz, r: number[], gora: number, seed: number, R: number, sciana: number[], dach: number[]) {
   let best = -Infinity, ki = 0;
   for (let i = 0; i < r.length; i += 2) { const sc = r[i] + r[i + 1] * 0.7; if (sc > best) { best = sc; ki = i; } }
   // Inside the corner along its bisector, far enough to touch neither wall.
@@ -35,7 +35,7 @@ function wiezyczka(o: Obraz, r: number[], gora: number, seed: number, R: number)
   const ring: number[] = [];
   for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; ring.push(cx + Math.cos(a) * R, cy + Math.sin(a) * R); }
   for (let i = 0; i < ring.length; i += 2) if (!wnetrze(r, ring[i], ring[i + 1])) return;
-  const { cx: tx, szczyt } = dachSwiatyni(o, ring, 'wiezyczka', seed, gora);
+  const { cx: tx, szczyt } = dachSwiatyni(o, ring, 'wiezyczka', seed, gora, dach, { skos: SK, sciana });
   zwienczenie(o, tx, szczyt, 'wiezyczka', R);
 }
 
@@ -291,7 +291,7 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
   const para: [number, number, number][] = [];
   const pkt = (u: number, v: number) => { const x = u * ux - v * uy, y = u * uy + v * ux; return { x, y, z: wys(x, y) }; };
   const naEkranie = (p: { x: number; y: number; z: number }) => [Math.round(p.x - p.z * SK), Math.round(p.y - p.z) + gora] as const;
-  if (forma === 'mansarda' && polW >= 12 && hash(seed, 31, 7) < 0.7) wiezyczka(out, r, gora, seed, Math.min(9, polW * 0.45));
+  if (forma === 'mansarda' && polW >= 12 && hash(seed, 31, 7) < 0.7) wiezyczka(out, r, gora, seed, Math.min(9, polW * 0.45), S.tony, D.tony);
   if (forma === 'szed') { const [X, Y] = komin(out, r, gora, hSzed); para.push([X, Y - 2, 32]); }
   if (forma === 'dworzec') {
     // Brass steam vents along the vault's ridge.

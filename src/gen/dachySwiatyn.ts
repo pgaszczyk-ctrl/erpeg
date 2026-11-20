@@ -8,7 +8,7 @@
 // z hełmem), antena (maszt z cewką na płaskim dachu wieżowca). Bez DOM-u.
 import { type Obraz, ustaw, hex, OBRYS, hash } from './wspolne';
 
-export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'wiezyczka';
+export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'wiezyczka' | 'dzwonnica';
 
 const P = (a: string[]) => a.map(hex);
 const BLACHY: Record<string, number[]> = {
@@ -21,13 +21,16 @@ const BLACHY: Record<string, number[]> = {
   dachowka: P(['#4e1f1c', '#6e2c24', '#8f3a2c', '#ad5036', '#c86a44']),
   mosiadz: P(['#4a3410', '#7a5a1c', '#a8822c', '#d0a848', '#f0d27e']),
   zelazo: P(['#1c1c22', '#2a2a32', '#3c3c46', '#54545e', '#70707c']),
+  miedz: P(['#4a2414', '#73381e', '#9c5230', '#c4703e', '#e09a62']),
+  gont: P(['#3a2a1e', '#523c2a', '#6c5038', '#866648', '#a08058']),
+  drewno: P(['#3e2a1c', '#5a3e28', '#765436', '#926c46', '#ae8858']),
 };
 const TYNK = P(['#7e7868', '#a49c88', '#c6bea8', '#ddd6c2', '#f1ecdc']);
 const CEGLA = P(['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c']);
 const OKNO = hex('#2c2c3a');
 const TARCZA = hex('#f4efe0');
 
-type Strefa = 'polac' | 'beben' | 'kopula' | 'spirala' | 'zegar' | 'helm' | 'maszt' | 'kula';
+type Strefa = 'polac' | 'beben' | 'kopula' | 'spirala' | 'zegar' | 'helm' | 'maszt' | 'kula' | 'dzwon';
 interface Przekroj { s: number; k: number; z: Strefa }
 interface Forma {
   /** Height of the whole roof in radii of the roof's equal-area circle. */
@@ -42,7 +45,10 @@ interface Forma {
   szczyt?: 'krzyz' | 'polksiezyc' | 'iglica' | 'kula' | null;
   /** A dark slit along the southern meridian (observatory). */
   szczelina?: boolean;
+  /** Where the sloping skirt ends (t): a brass ridge ring there and dormers half-way up it. */
+  polacDo?: number;
 }
+
 
 const lerp = (a: number, b: number, u: number) => a + (b - a) * Math.max(0, Math.min(1, u));
 const kul = (u: number) => Math.sqrt(Math.max(0, 1 - u * u));
@@ -73,8 +79,8 @@ const FORMY: Record<RodzajDachu, Forma> = {
   },
   // Library: a slate roof rising into a round tower wound with a brass spiral, ending in a patinated spire.
   biblioteka: {
-    wys: 2.5, rMaks: 30, szczyt: 'kula',
-    polac: () => BLACHY.lupek,
+    wys: 2.5, rMaks: 30, szczyt: 'kula', polacDo: 0.1,
+    polac: (s) => [BLACHY.lupek, BLACHY.miedz, BLACHY.patyna][Math.floor(hash(s, 61, 3) * 3)],
     kopula: () => BLACHY.patyna,
     profil: (t) => {
       if (t < 0.1) return { s: lerp(1, 0.4, t / 0.1), k: lerp(0, 1, t / 0.1), z: 'polac' };
@@ -86,7 +92,8 @@ const FORMY: Record<RodzajDachu, Forma> = {
   // University: an observatory dome of patinated copper on a low drum, the telescope's slit facing south.
   obserwatorium: {
     wys: 0.8, rMaks: 34, szczyt: 'kula', okna: [10, 0.12, 0.3], szczelina: true,
-    polac: () => BLACHY.lupek,
+    polacDo: 0.12,
+    polac: (s) => [BLACHY.lupek, BLACHY.mosiadz, BLACHY.miedz][Math.floor(hash(s, 62, 3) * 3)],
     kopula: () => BLACHY.patyna,
     profil: (t) => {
       if (t < 0.12) return { s: lerp(1, 0.7, t / 0.12), k: lerp(0, 1, t / 0.12), z: 'polac' };
@@ -96,8 +103,8 @@ const FORMY: Record<RodzajDachu, Forma> = {
   },
   // Town hall: a tiled hip roof rising into a brick clock tower with a copper bulb helmet and an iron spire.
   ratusz: {
-    wys: 2.5, rMaks: 34, szczyt: 'iglica',
-    polac: (s) => (hash(s, 8, 3) < 0.5 ? BLACHY.dachowka : BLACHY.lupek),
+    wys: 2.5, rMaks: 34, szczyt: 'iglica', polacDo: 0.22,
+    polac: (s) => [BLACHY.dachowka, BLACHY.lupek, BLACHY.mosiadz, BLACHY.miedz][Math.floor(hash(s, 8, 3) * 4)],
     kopula: () => BLACHY.patyna,
     profil: (t) => {
       if (t < 0.22) return { s: lerp(1, 0.3, t / 0.22), k: 0, z: 'polac' };
@@ -116,6 +123,17 @@ const FORMY: Record<RodzajDachu, Forma> = {
       if (t < 0.42) return { s: 1, k: 1, z: 'beben' };
       if (t < 0.45) return { s: lerp(1, 1.15, (t - 0.42) / 0.03), k: 1, z: 'helm' };
       return { s: 1.15 * (1 - (t - 0.45) / 0.55), k: 1, z: 'helm' };
+    },
+  },
+  // Belfry (schools, some houses): an open wooden frame with a brass bell, under a shingled pyramid with a ball.
+  dzwonnica: {
+    wys: 3.4, rMaks: 7, szczyt: 'kula',
+    polac: () => BLACHY.gont,
+    kopula: (s) => (hash(s, 63, 3) < 0.5 ? BLACHY.gont : BLACHY.patyna),
+    profil: (t) => {
+      if (t < 0.46) return { s: 0.48, k: 0, z: 'dzwon' };
+      if (t < 0.5) return { s: lerp(0.48, 0.62, (t - 0.46) / 0.04), k: 0, z: 'helm' };
+      return { s: 0.62 * (1 - (t - 0.5) / 0.5), k: 0.15, z: 'helm' };
     },
   },
   // Tower block: on its flat roof an iron mast wound with a brass coil, a brass ball on top.
@@ -158,7 +176,14 @@ export function wymiaryDachu(pierscien: number[], rodzaj: RodzajDachu) {
  * Builds the roof over the outline on the building's picture. `pierscien` = the outline in the picture's
  * coordinates; `gora` = rows of room the caller added above. Returns where the finial goes.
  */
-export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu, seed: number, gora: number, polac?: number[]): { cx: number; szczyt: number } {
+export interface OpcjeDachu {
+  /** The walls' lean (0.35): going up moves left, so towers stand like the building's walls. Temples stay upright. */
+  skos?: number;
+  /** Tones of the building's wall (drums, turrets) instead of white plaster. */
+  sciana?: number[];
+}
+export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu, seed: number, gora: number, polac?: number[], opt: OpcjeDachu = {}): { cx: number; szczyt: number } {
+  const SK = opt.skos ?? 0, TYNKS = opt.sciana ?? TYNK;
   const F = FORMY[rodzaj];
   // Middle of the outline's area (not of its corners: a corner-heavy side would pull the roof towards it).
   let sx = 0, sy = 0, a2 = 0;
@@ -173,7 +198,7 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
   const rMax = Math.max(...rho);
   const rKolo = Math.min(wymiaryDachu(pierscien, rodzaj).rKolo, rMax);
   const H = Math.round(rKolo * F.wys);
-  const tonyKopuly = F.kopula(seed), tonyPolaci = polac ?? F.polac(seed);
+  const tonyPolaci = polac ?? F.polac(seed), tonyKopuly = rodzaj === 'wiezyczka' && polac ? polac : F.kopula(seed);
   const glebia = new Float32Array(o.w * o.h).fill(-Infinity);
   const zrodlo = new Int8Array(o.w * o.h).fill(-1);
   const kolor = new Uint32Array(o.w * o.h);
@@ -209,7 +234,7 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
       } else { nx /= dl; ny /= dl; nz /= dl; }
       if (nx * (x - cx) + ny * (y - cy) < 0 && nz < 0.99) { nx = -nx; ny = -ny; nz = -nz; }
       if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
-      const X = Math.round(x), Y = Math.round(y - z) + gora;
+      const X = Math.round(x - z * SK), Y = Math.round(y - z) + gora;
       if (X < 0 || Y < 0 || X >= o.w || Y >= o.h) continue;
       const d = y + z * 0.01, id = Y * o.w + X;
       if (d <= glebia[id]) continue;
@@ -221,7 +246,7 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
         case 'beben': {
           const [ile, od, doo] = F.okna ?? [12, 0, 1], fa = kat * ile;
           const okno = Math.abs(fa - Math.round(fa)) < 0.12 && t > od + 0.03 && t < doo - 0.04;
-          kolor[id] = okno ? OKNO : t > doo - 0.015 ? TYNK[4] : ton(TYNK, jas * 0.9 + 0.1);
+          kolor[id] = okno ? OKNO : t > doo - 0.015 ? (opt.sciana ? BLACHY.mosiadz[3] : TYNK[4]) : ton(TYNKS, jas * 0.9 + 0.1);
           break;
         }
         case 'spirala': {
@@ -244,11 +269,33 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
           break;
         }
         case 'kula': kolor[id] = ton(BLACHY.mosiadz, jas + 0.3); break;
+        case 'dzwon': {
+          // Open belfry: corner posts and a rail of planks, arched openings on four sides, a brass bell inside.
+          const fa = (kat * 4 + 0.5) % 1, wOtworze = Math.abs(fa - 0.5) < 0.3 && t > 0.1 && t < 0.4 - Math.abs(fa - 0.5) * 0.25;
+          const dzwon = Math.abs(fa - 0.5) < 0.12 && t > 0.16 && t < 0.32 - Math.abs(fa - 0.5) * 0.4;
+          kolor[id] = dzwon ? ton(BLACHY.mosiadz, jas + 0.2) : wOtworze ? OKNO : t > 0.42 ? ton(BLACHY.drewno, jas - 0.1) : ton(BLACHY.drewno, jas + (Math.floor(kat * 40) % 3 === 0 ? -0.2 : 0));
+          break;
+        }
         default: {
           // Sheet metal / tiles: seams along the meridians on domes and helmets, a darker eave on the skirt.
           const krok = KATY / 24, zebro = Math.round(kf / krok) * krok;
+          void krok;
           if ((strefa === 'kopula' || strefa === 'helm') && Math.abs(kf - zebro) < 0.5 && t < 0.88) jas -= 0.2;
           if (strefa === 'polac' && t < 0.02) jas -= 0.3;
+          if (strefa === 'polac') {
+            const pd = F.polacDo ?? 0.2, metal = tonyPolaci === BLACHY.mosiadz || tonyPolaci === BLACHY.miedz || tonyPolaci === BLACHY.patyna || tonyPolaci === BLACHY.olow || tonyPolaci === BLACHY.zielen;
+            // Texture: standing seams on metal, rows of tiles/slates otherwise; a brass ridge ring where the skirt ends.
+            if (metal) { const rz = Math.floor(t * H * 0.8); if (rz % 4 === 3) jas -= 0.18; else if (rz % 4 === 0) jas += 0.1; }
+            else if (Math.floor(t * H * 0.9) % 3 === 2) jas -= 0.16;
+            else if (Math.floor(t * H * 0.9) % 3 === 0 && Math.floor(kf * 1.3 + Math.floor(t * H * 0.3) * 3) % 7 === 0) jas -= 0.12;
+            if (t > pd - 0.012 && t <= pd) { kolor[id] = ton(BLACHY.mosiadz, jas + 0.2); break; }
+            // Dormers half-way up the skirt, on the sides that can be seen.
+            const lk = (kat * 8 + 0.5) % 1, srodek = pd * 0.45;
+            if (kat > 0.06 && kat < 0.44 && Math.abs(lk - 0.5) < 0.22 && Math.abs(t - srodek) < pd * 0.24) {
+              const brzeg = Math.abs(lk - 0.5) > 0.15 || t > srodek + pd * 0.16 || t < srodek - pd * 0.2;
+              kolor[id] = brzeg ? ton(BLACHY.mosiadz, jas) : t > srodek + pd * 0.05 && Math.abs(lk - 0.5) < 0.07 ? hex('#86a6c4') : hex('#3a4a66'); break;
+            }
+          }
           if (F.szczelina && strefa === 'kopula' && Math.abs(kat - 0.25) < 0.016 && t > 0.33) { kolor[id] = OKNO; break; }
           kolor[id] = ton(strefa === 'polac' ? tonyPolaci : tonyKopuly);
         }
@@ -265,7 +312,7 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
     if ((x > 0 && zrodlo[i - 1] > 0) || (x < o.w - 1 && zrodlo[i + 1] > 0) || (y > 0 && zrodlo[i - o.w] > 0) || (y < o.h - 1 && zrodlo[i + o.w] > 0)) dodaj.push(i);
   }
   for (const i of dodaj) o.px[i] = OBRYS;
-  return { cx: Math.round(cx), szczyt };
+  return { cx: Math.round(cx - H * SK), szczyt };
 }
 
 /** The finial: a gold cross, a crescent-topped spike, an iron spire or a brass ball. */
@@ -323,7 +370,11 @@ export function czescRegularna(r: number[], rMaks: number): number[] | null {
   // Biggest rectangle of inside cells (histogram method), sides clipped to 1.5:1 and to the form's size.
   const maxBok = Math.max(4, (rMaks * 2.4) / C);
   const wys = new Int32Array(NU);
-  let pole = 0, R: [number, number, number, number] | null = null;
+  let pole = 0, R: [number, number, number, number] | null = null, najOd = Infinity;
+  // Of equally big rectangles, the one nearest the middle of the outline wins.
+  let su = 0, sv = 0;
+  for (let i = 0; i < q.length; i += 2) { su += q[i]; sv += q[i + 1]; }
+  const srU = (su / (q.length / 2) - u0) / C, srV = (sv / (q.length / 2) - v0) / C;
   for (let j = 0; j < NV; j++) {
     for (let i = 0; i < NU; i++) wys[i] = wew[j * NU + i] ? wys[i] + 1 : 0;
     for (let i = 0; i < NU; i++) {
@@ -332,8 +383,9 @@ export function czescRegularna(r: number[], rMaks: number): number[] | null {
         h = Math.min(h, wys[k]);
         let w = i - k + 1, hh = h;
         w = Math.min(w, hh * 1.5, maxBok); hh = Math.min(hh, w * 1.5, maxBok);
-        if (w * hh > pole) {
-          pole = w * hh;
+        const cu0 = (k + i + 1) / 2, cv0 = j + 1 - h / 2, odSr = Math.hypot(cu0 - srU, cv0 - srV);
+        if (w * hh > pole + 0.5 || (w * hh > pole - 0.5 && odSr < najOd)) {
+          pole = Math.max(pole, w * hh); najOd = odSr;
           // Centre the clipped rectangle inside the free one.
           const cu = (k + i + 1) / 2, cv = j + 1 - h / 2;
           R = [cu - w / 2, cv - hh / 2, cu + w / 2, cv + hh / 2];

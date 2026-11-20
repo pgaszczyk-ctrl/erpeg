@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.11.2026', tytul: { pl: 'Mosiądz, dzwonnice i bluszcz', en: 'Brass, belfries and ivy' },
+    tresc: { pl: 'Dachy ratuszy, bibliotek i uczelni bywają mosiężne, miedziane albo patynowane, z lukarnami i mosiężną listwą. Szkoły mają drewniane dzwonnice z dzwonem, niektóre domy okrągłe wieżyczki, stare mury porasta bluszcz, a na dachach bloków stoją drewniane zbiorniki na wodę, świetliki i kominki. Wieże przechylają się teraz tak jak ściany.', en: 'Town hall, library and university roofs are brass, copper or green with patina, with dormers and a brass ridge. Schools have wooden belfries with a bell, some houses round turrets, ivy climbs old walls, and tower-block roofs carry wooden water tanks, skylights and stacks. Towers now lean like the walls.' },
+  },
+  {
     data: '20.11.2026', tytul: { pl: 'Para i mosiądz na dachach', en: 'Steam and brass on the roofs' },
     tresc: { pl: 'Nowe dachy dostały steampunkowe detale: hale dworców mają mosiężne żebra i dymiące wyloty, fabryczne kominy buchają parą, mansardy mają okrągłe lukarny w mosiężnych ramach, obserwatoria wysuwają lunety, ratusze mają parowe gwizdki, maszty iskrzą cewką, a w ogródkach na dachach stoją parowe fontanny.', en: 'The new roofs got steampunk details: station halls have brass ribs and steaming vents, factory chimneys puff steam, mansards have round brass-framed dormers, observatories poke out telescopes, town halls have steam whistles, masts crackle with their coil and roof gardens have steam fountains.' },
   },

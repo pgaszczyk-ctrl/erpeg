@@ -4,7 +4,7 @@ import { deflateSync } from 'node:zlib';
 import { obrazBudynku, type Budynek09 } from '../src/map/ziemia09';
 import { hex } from '../src/gen/wspolne';
 const out = process.argv[2];
-const W = 1000, H = 470, px = new Uint32Array(W * H).fill(hex('#5f8a3a'));
+const W = 1000, H = 640, px = new Uint32Array(W * H).fill(hex('#5f8a3a'));
 for (let i = 0; i < px.length; i++) if ((Math.floor(i / W) >> 3) % 9 === 0) px[i] = hex('#9a7b52');
 const blend = (d: number, c: number) => { const t = (c >>> 24) / 255, m = (s: number) => Math.round(((d >>> s) & 255) + (((c >>> s) & 255) - ((d >>> s) & 255)) * t); return ((255 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)) >>> 0; };
 const prost = (x: number, y: number, w: number, h: number, kat = 0) => {
@@ -33,6 +33,10 @@ put(prost(340, 330, 140, 70), 'mansarda', 2);
 put(prost(520, 320, 180, 110), 'szed');
 put([730, 300, 830, 300, 830, 340, 770, 340, 770, 440, 730, 440], 'obserwatorium');
 put(prost(860, 320, 100, 90), 'ogrod', 2);
+put(prost(60, 540, 90, 60), 'dzwonnica');
+put(prost(220, 540, 100, 66), 'wiezyczka');
+put(prost(400, 520, 120, 80), 'antena', 3);
+put(prost(600, 530, 150, 70), 'mansarda', 2);
 const S = 2, w = W * S, h = H * S, raw = Buffer.alloc((w * 4 + 1) * h);
 for (let y = 0; y < h; y++) { raw[y * (w * 4 + 1)] = 0; for (let x = 0; x < w; x++) { const c = px[Math.floor(y / S) * W + Math.floor(x / S)], o = y * (w * 4 + 1) + 1 + x * 4; raw[o] = c & 255; raw[o + 1] = (c >>> 8) & 255; raw[o + 2] = (c >>> 16) & 255; raw[o + 3] = 255; } }
 const crc = (b: Buffer) => { let c = ~0; for (const x of b) { c ^= x; for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1; } return ~c >>> 0; };
