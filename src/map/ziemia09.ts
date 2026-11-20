@@ -325,7 +325,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
     return i >= 0 && j >= 0 && i < S && j < S && RODZAJE[ids[j * S + i]] === 'woda';
   };
-  for (const sd of z.siedliska ?? []) malujSiedlisko(obraz, X0, Y0, sd);
+  for (const sd of z.siedliska ?? []) malujSiedlisko(obraz, X0, Y0, sd, rodzajW);
   for (const mz of z.mozaiki ?? []) malujMozaike(obraz, X0, Y0, N, mz);
   for (const t of z.tramwaje ?? []) koleiny(obraz, t, X0, Y0);
   for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);

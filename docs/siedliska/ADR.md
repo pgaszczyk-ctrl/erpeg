@@ -73,6 +73,13 @@ Spawn tylko przy 220 m (poza ekranem), nigdy w odległości < 260 m przy odnowie
 - `src/siedliska/rejestr.ts`, `wlacznik.ts`.
 - Zmiany: `CityMap` (rejestr + `przeszkoda`), `Podloze09.mapaRodzajow`, `ziemia09` (rodzaj `klepisko`, drzewa), `gen/podloze.ts` (kolory klepiska), `MapRenderer` (przekazanie i przemalowanie), `Lowiska` (planowanie, stałe grupy, zapis szefa), `StworAI` (`przejscie`), `GameScene` (podpięcie).
 
+## Wyniki sprawdzenia (20.11.2026)
+
+- `node scripts/tests/siedliska.mjs`: 300 ziaren na sztucznej mapie → 245 obozów (średnie 136, duże 90, małe 19), każdy zaplanowany 2× identycznie, bramy przechodnie z obu stron, palisada bez dziur (72 promienie), namioty i spawny w środku, nic na drodze ani w budynku/wodzie, obejście prowadzi do bramy, 4 kawałki = całość (0 różnych pikseli).
+- `scripts/tests/browser-siedliska.mjs` (prawdziwa mapa Lublina, komputer i telefon w poziomie): obóz `lublin:oboz:4,13` w lesie na południu miasta (średni, 4 namioty, wieża, 2 bramy, 148 pali), 9 bandytów + herszt z istniejącego bestiariusza, marsz klawiszami w palisadę zatrzymuje bohatera na zewnątrz, ruch gry (`moveActor`) przechodzi przez bramę, po ponownym wczytaniu i przy podejściu z innej strony plan identyczny, `?siedliska=0` → ten sam las bez obozu i bez kolizji. Zrzuty: `docs/siedliska/zrzuty/`.
+- Wydajność: obóz to ~40–60 dodatkowych obrazów (odcinki palisady, namioty, rekwizyty), ukrywanych poza ekranem; planowanie raz na komórkę 1,1 km. Pomiaru FPS na prawdziwym telefonie nie robiłem (headless Chromium nie jest miarodajny).
+- Poprawki po pierwszych zrzutach: obóz trafił na pole uprawne przy domu (pasy pola przykryły klepisko) i w mgłę gangu → pola wykluczone (`TEREN_SIEDLISK`), klepisko i ścieżki malowane ponownie po polach, gangi omijają siedliska (także te zaplanowane wcześniej w sesji), grzyby nie rosną na klepisku, brama poszerzona do 8,5 m (stopy bohatera przy skośnej bramie).
+
 ## Czego jeszcze nie ma (kolejne etapy, po akceptacji obozu)
 
 - Rumowisko, bagno (nawierzchnie z mnożnikiem prędkości: `CityMap.surfaceAt` + nowy rodzaj podłoża), leśne legowisko, ruiny – ten sam rejestr i ten sam pipeline, nowe `TypSiedliska`.

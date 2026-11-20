@@ -3,6 +3,7 @@
 // na klepisku. Klepisko i ścieżki są już w mapie rodzajów (Podloze09) – tu tylko szczegóły. Współrzędne świata,
 // więc sąsiednie kawałki łączą się bez szwów. Wysokości w px generatora = jak w rysunki.ts.
 import { hash, hex, ciemniej, mieszaj, OBRYS, type Obraz } from '../gen/wspolne';
+import { kolorPodloza, rodzajPostrzepiony, type Rodzaj } from '../gen/podloze';
 import type { Siedlisko } from './typy';
 import { WYS } from './rysunki';
 
@@ -30,9 +31,19 @@ export function doGeneratora(s: Siedlisko, G: number): Siedlisko {
 }
 
 /** Maluje szczegóły siedliska (już w px generatora) na obraz kawałka o lewym-górnym rogu (X0, Y0). */
-export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko) {
+export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, rodzajW?: (x: number, y: number) => Rodzaj | null) {
   const N = o.w;
   if (s.ramka.x1 < X0 || s.ramka.x0 > X0 + N || s.ramka.y1 < Y0 - 60 || s.ramka.y0 > Y0 + N + 40) return;
+  // Klepisko i wydeptane ścieżki z mapy rodzajów jeszcze raz na wierzchu: pasy pól i inne warstwy malowane po
+  // podłożu (pola.ts maluje całe obrysy pól) nie mogą przykryć terenu siedliska.
+  if (rodzajW) {
+    const R0 = s.ramka;
+    for (let j = Math.max(0, Math.floor(R0.y0 - Y0)); j < Math.min(N, Math.ceil(R0.y1 - Y0)); j++)
+      for (let i = Math.max(0, Math.floor(R0.x0 - X0)); i < Math.min(N, Math.ceil(R0.x1 - X0)); i++) {
+        const r = rodzajPostrzepiony(rodzajW, X0 + i, Y0 + j);
+        if (r === 'klepisko' || r === 'droga') o.px[j * N + i] = kolorPodloza(r, X0 + i, Y0 + j);
+      }
+  }
   const cien = new Uint8Array(N * N);
   const plamka = (x: number, y: number) => {
     const i = Math.round(x) - X0, j = Math.round(y) - Y0;

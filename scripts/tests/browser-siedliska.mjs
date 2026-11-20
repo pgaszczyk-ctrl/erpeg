@@ -51,6 +51,8 @@ async function idzDo(g, page, x, y) {
     if (ok) break;
   }
   await page.waitForTimeout(1200);
+  await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(800);
 }
 
 const plan = (g) => g(() => {
@@ -120,20 +122,35 @@ try {
   console.log('po marszu w ścianę: w obozie?', poScianie.w);
   assert(!poScianie.w, 'bohater nie przeszedł przez palisadę');
 
-  // 4. Przez bramę: z zewnątrz do środka.
-  await g(([x, y]) => window.__game.scene.getScene('game').player.setPosition(x, y), [b.x + b.nx * 10 * M, b.y + b.ny * 10 * M]);
-  const k2 = [];
-  if (b.nx > 0.38) k2.push('ArrowLeft'); else if (b.nx < -0.38) k2.push('ArrowRight');
-  if (b.ny > 0.38) k2.push('ArrowUp'); else if (b.ny < -0.38) k2.push('ArrowDown');
-  for (const k of k2) await page.keyboard.down(k);
-  await page.waitForTimeout(1300);
-  for (const k of k2) await page.keyboard.up(k);
+  // 4. Przez bramę: z zewnątrz do środka – prawdziwy ruch gry (moveActor z kolizjami), krok po kroku wzdłuż normalnej bramy.
   const poBramie = await g((id) => {
     const s = window.__game.scene.getScene('game');
     const sd = s.lowiska.siedliska.find((q) => q.id === id);
-    return Math.hypot(s.player.x - sd.x, s.player.y - sd.y) < Math.hypot(sd.bramy[0].x - sd.x, sd.bramy[0].y - sd.y) - 4;
+    const b = sd.bramy[0];
+    s.player.setPosition(b.x + b.nx * 14, b.y + b.ny * 14);
+    const v = 60;
+    const r = sd.obrys;
+    const wSrodku = (x, y) => { let w = false; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) if ((r[i + 1] > y) !== (r[j + 1] > y) && x < ((r[j] - r[i]) * (y - r[i + 1])) / (r[j + 1] - r[i + 1]) + r[i]) w = !w; return w; };
+    for (let i = 0; i < 40; i++) {
+      s.player.vel.set(-b.nx * v, -b.ny * v);
+      s.moveActor(s.player, 1 / 30);
+      if (wSrodku(s.player.x, s.player.y) && Math.hypot(s.player.x - b.x, s.player.y - b.y) > 12) break;
+    }
+    s.player.vel.set(0, 0);
+    return wSrodku(s.player.x, s.player.y) && Math.hypot(s.player.x - b.x, s.player.y - b.y) > 12;
   }, o.id);
   console.log('przez bramę do środka:', poBramie);
+  if (!poBramie) console.log('diagnoza bramy', JSON.stringify(await g((id) => {
+    const s = window.__game.scene.getScene('game');
+    const sd = s.lowiska.siedliska.find((q) => q.id === id);
+    const b = sd.bramy[0];
+    const out = [];
+    for (let t = 14; t >= -14; t -= 2) {
+      const x = b.x + b.nx * t, y = b.y + b.ny * t + 5;
+      out.push([t, s.city.isFree(x, y, 2, 1.5), s.city.isBlocked(x, y), s.mapView.korony.blocked(x, y), s.forest.blocked(x, y), s.landmarks.blocked(x, y), s.city.przeszkoda?.(x, y)]);
+    }
+    return { b, gracz: [s.player.x, s.player.y], out };
+  }, o.id)));
   assert(poBramie, 'brama przepuszcza bohatera');
   await page.waitForTimeout(800);
   await page.screenshot({ path: `work/siedliska/${tag}-srodek.png` });

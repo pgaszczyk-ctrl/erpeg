@@ -997,6 +997,13 @@ export class GameScene extends Phaser.Scene {
     // Siedliska (obozy z palisadą) planuje to samo co łowiska – na tej samej siatce komórek, ale jako część mapy.
     if (this.lowiska) this.lowiska.obozy = siedliska() && !this.city.loch && !demo.on;
     this.widokSiedlisk = this.lowiska?.obozy ? new WidokSiedlisk(this, this.city) : null;
+    if (this.widokSiedlisk) {
+      const naSiedlisko = (sd: { x: number; y: number; ramka: { x0: number; x1: number } }) => this.streets.usunPrzySiedlisku(sd.x, sd.y, (sd.ramka.x1 - sd.ramka.x0) / 2 + 60 * PX_PER_M);
+      this.city.siedliskaSluchacze.add(naSiedlisko);
+      this.events.once('shutdown', () => this.city.siedliskaSluchacze.delete(naSiedlisko));
+      // Settlements already on this (cached) map from an earlier scene.
+      for (const sd of this.city.siedliska) naSiedlisko(sd);
+    }
 
     this.listyAreny = [];
     if (arenaOn() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
@@ -1430,13 +1437,14 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
-    this.streets.update(this.player.x, this.player.y, now);
     if (this.lowiska) {
       // Active-simulation clock for łowiska respawns: only advances here, i.e. never while paused/hidden/in
       // a dialog (this line isn't reached then – same guards as the rest of this method).
+      // Before the gangs: a settlement planned this frame keeps them off its spot.
       this.lowiskaCzasS += dt;
       this.lowiska.update(this.player.x, this.player.y);
     }
+    this.streets.update(this.player.x, this.player.y, now);
     this.widokSiedlisk?.update(this.player.x, this.player.y, now, this.cameras.main.worldView);
     if (!lingering && !this.story.busy) this.spotkania?.update(now);
     }

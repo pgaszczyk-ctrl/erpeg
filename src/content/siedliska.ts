@@ -25,9 +25,10 @@ export const WERSJA_SIEDLISK = 1;
 /** Teren, na którym obóz może stać, i czego musi unikać (obszary OSM w całym obrysie z marginesem). */
 export const TEREN_SIEDLISK = {
   /** Środek: otwarty teren (brak obszaru = trawa). */
-  dozwolone: ['forest', 'grass', 'scrub', 'farmland', ''],
+  // Dzicz, nie gospodarstwo: pole uprawne obok domu to nie miejsce na obóz (brief: lasy, polany, nieużytki).
+  dozwolone: ['forest', 'grass', 'scrub', ''],
   /** Żadna próbka obrysu z marginesem nie może leżeć na tych obszarach (rzeczywiste jeziora, parki, cmentarze…). */
-  zakazane: ['water', 'wetland', 'park', 'cemetery', 'allotments', 'pitch', 'plaza', 'parking', 'playground', 'paved', 'platform', 'sand', 'rock', 'glacier'],
+  zakazane: ['farmland', 'water', 'wetland', 'park', 'cemetery', 'allotments', 'pitch', 'plaza', 'parking', 'playground', 'paved', 'platform', 'sand', 'rock', 'glacier'],
   /** Margines (m) od palisady do najbliższego budynku i do każdej linii (droga, ścieżka, tor, rzeka). */
   odBudynkuM: 25,
   odLiniiM: 9,
@@ -64,7 +65,7 @@ export const OBOZ = {
   /** Najmniejszy dopuszczalny promień kierunku (udział promienia) – mniej = za ciasno, mniejszy rozmiar. */
   minUdzial: 0.72,
   /** Szerokość bramy (m) i odstęp pali (m). Pal w px mapy liczy się względem bohatera (rysunki.ts). */
-  bramaM: 6,
+  bramaM: 8.5,
   palCoM: 1.05,
   /** Ścieżka od bramy do najbliższej drogi, jeśli jest bliżej niż tyle (m). */
   sciezkaDoDrogiM: 90,
