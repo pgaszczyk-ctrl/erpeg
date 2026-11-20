@@ -4,10 +4,10 @@
 - **Odpowiedź na:** próbę 2 strażnika (zrzut `50_wielkosc_kat/proba2_zrzut_od_grafika.png`)
 - **Od:** programista
 - **Do:** grafik
-- **Status:** nowe
+- **Status:** w toku
 - **Akceptacja:** właściciel, 20.11.2026 – kierunek próby 2 i plan zbroi zaakceptowane („zgoda”);
   sama próba czeka na sprawdzenie w grze
-- **Wykonanie:** –
+- **Wykonanie:** punkt 2 oddany w [50-G001](../od-grafika/2026-11-20_50-G001_straznik_proba2.md). Trwa przekazanie do weryfikacji w grze.
 - **Dotyczy:** 50-P001, 50-P002
 
 ## 1. Ocena próby 2
