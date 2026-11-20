@@ -80,6 +80,10 @@ Spawn tylko przy 220 m (poza ekranem), nigdy w odległości < 260 m przy odnowie
 - Wydajność: obóz to ~40–60 dodatkowych obrazów (odcinki palisady, namioty, rekwizyty), ukrywanych poza ekranem; planowanie raz na komórkę 1,1 km. Pomiaru FPS na prawdziwym telefonie nie robiłem (headless Chromium nie jest miarodajny).
 - Poprawki po pierwszych zrzutach: obóz trafił na pole uprawne przy domu (pasy pola przykryły klepisko) i w mgłę gangu → pola wykluczone (`TEREN_SIEDLISK`), klepisko i ścieżki malowane ponownie po polach, gangi omijają siedliska (także te zaplanowane wcześniej w sesji), grzyby nie rosną na klepisku, brama poszerzona do 8,5 m (stopy bohatera przy skośnej bramie).
 
+## Rozmiary (właściciel 20.11.2026: „w grze muszą mieć różne wielkości”)
+
+Pięć rozmiarów (`OBOZ.rozmiary`, wersja generatora 2): czujka 13 m (1 namiot, czasem wieża, szef = bandyta), mały 19 m, średni 28 m, duży 41 m (2 bramy, 6–8 namiotów, wieża), warownia 58 m (2 bramy, 9–12 namiotów, 2–3 wieże, szef = wielki herszt z 3 ochroniarzami). Losowany z wag; gdy brakuje miejsca – kolejny mniejszy. Pole obrysu na makiecie: 500 → 1 100 → 2 400 → 5 100 → 10 300 m². W lasach Lublina (10 obozów w teście) wyszły czujka, małe, średnie i duże; warownia potrzebuje ~85 m dziczy bez ścieżek i budynków, więc w Lublinie się nie zmieściła – pojawi się w większych lasach na mapach świata. Zrzuty: `zrzuty/rozmiary-makieta.png`, `zrzuty/rozmiary-w-grze.png`.
+
 ## Czego jeszcze nie ma (kolejne etapy, po akceptacji obozu)
 
 - Rumowisko, bagno (nawierzchnie z mnożnikiem prędkości: `CityMap.surfaceAt` + nowy rodzaj podłoża), leśne legowisko, ruiny – ten sam rejestr i ten sam pipeline, nowe `TypSiedliska`.

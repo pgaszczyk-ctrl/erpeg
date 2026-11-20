@@ -59,12 +59,12 @@ export interface Siedlisko {
   sciany: number[];
   namioty: Namiot[];
   ognisko: { x: number; y: number };
-  wieza: { x: number; y: number } | null;
+  wieze: { x: number; y: number }[];
   rekwizyty: Rekwizyt[];
   /** Wydeptane ścieżki (linie łamane, szerokość px mapy): w środku i od bramy do najbliższej drogi. */
   sciezki: { pts: number[]; w: number }[];
   spawny: Spawn[];
-  stwory: { czlonkowie: RodzajWroga[]; szef: RodzajWroga; obstawa: RodzajWroga };
+  stwory: { czlonkowie: RodzajWroga[]; szef: RodzajWroga; obstawa: RodzajWroga; ileObstawy: number };
   trudnosc: number;
 }
 

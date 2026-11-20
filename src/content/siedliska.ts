@@ -14,13 +14,13 @@
 import type { RodzajWroga } from './fabula';
 
 export type TypSiedliska = 'oboz';
-export type RozmiarSiedliska = 'maly' | 'sredni' | 'duzy';
+export type RozmiarSiedliska = 'czujka' | 'maly' | 'sredni' | 'duzy' | 'warownia';
 
 /**
  * Wersja generatora siedlisk: wchodzi do ziarna i do id, więc zmiana reguł daje nowe (ale znowu stałe) układy,
  * a stare zapisy (np. pokonany szef) po prostu przestają pasować – nic się nie psuje.
  */
-export const WERSJA_SIEDLISK = 1;
+export const WERSJA_SIEDLISK = 2;
 
 /** Teren, na którym obóz może stać, i czego musi unikać (obszary OSM w całym obrysie z marginesem). */
 export const TEREN_SIEDLISK = {
@@ -43,24 +43,35 @@ export interface ParametryRozmiaru {
   promienM: number;
   namioty: [number, number];
   bramy: [number, number];
-  wieza: number;
+  /** Oczekiwana liczba wież strażniczych (część ułamkowa = szansa na jeszcze jedną). */
+  wieze: number;
   rekwizyty: [number, number];
   /** Zwykli mieszkańcy obozu (oprócz szefa i obstawy). */
   czlonkowie: [number, number];
+  /** Szef i ilu ma obstawy (istniejący bestiariusz). */
+  szef: RodzajWroga;
+  obstawa: number;
+  /** Wierzchołki obrysu (więcej przy dużych, żeby palisada była gładka). */
+  wierzcholki: number;
 }
 
 export const OBOZ = {
   /** Szansa, że komórka łowisk (LOWISKA_EPI.komorkaKm) dostanie obóz zamiast łowiska (gdy znajdzie się miejsce). */
   szansa: 0.3,
   /** Kolejność prób rozmiarów: najpierw wylosowany, potem coraz mniejsze. */
+  // Właściciel 20.11.2026: „w grze muszą mieć różne wielkości” – od czujki z jednym namiotem po warownię
+  // z kilkoma wieżami (promień ×4,5). Wylosowany rozmiar, a gdy brakuje miejsca – kolejne mniejsze.
   rozmiary: {
-    duzy: { promienM: 34, namioty: [5, 6], bramy: [1, 2], wieza: 0.7, rekwizyty: [6, 9], czlonkowie: [7, 9] },
-    sredni: { promienM: 27, namioty: [3, 5], bramy: [1, 2], wieza: 0.35, rekwizyty: [4, 6], czlonkowie: [5, 7] },
-    maly: { promienM: 20, namioty: [2, 3], bramy: [1, 1], wieza: 0, rekwizyty: [3, 4], czlonkowie: [3, 4] },
+    warownia: { promienM: 58, namioty: [9, 12], bramy: [2, 2], wieze: 2.6, rekwizyty: [12, 16], czlonkowie: [11, 14], szef: 'wielki_herszt', obstawa: 3, wierzcholki: 34 },
+    duzy: { promienM: 41, namioty: [6, 8], bramy: [2, 2], wieze: 1.3, rekwizyty: [8, 11], czlonkowie: [8, 10], szef: 'herszt', obstawa: 2, wierzcholki: 26 },
+    sredni: { promienM: 28, namioty: [3, 5], bramy: [1, 2], wieze: 0.4, rekwizyty: [4, 6], czlonkowie: [5, 7], szef: 'herszt', obstawa: 2, wierzcholki: 20 },
+    maly: { promienM: 19, namioty: [2, 3], bramy: [1, 1], wieze: 0, rekwizyty: [2, 4], czlonkowie: [3, 4], szef: 'herszt', obstawa: 1, wierzcholki: 16 },
+    czujka: { promienM: 13, namioty: [1, 1], bramy: [1, 1], wieze: 0.5, rekwizyty: [1, 2], czlonkowie: [2, 2], szef: 'bandyta', obstawa: 0, wierzcholki: 14 },
   } as Record<RozmiarSiedliska, ParametryRozmiaru>,
-  wagiRozmiaru: [['duzy', 0.3], ['sredni', 0.45], ['maly', 0.25]] as [RozmiarSiedliska, number][],
-  /** Wierzchołki obrysu i rozrzut promienia (udział). */
-  wierzcholki: 20,
+  /** Od największego do najmniejszego (kolejność prób przy braku miejsca). */
+  kolejnosc: ['warownia', 'duzy', 'sredni', 'maly', 'czujka'] as RozmiarSiedliska[],
+  wagiRozmiaru: [['warownia', 0.12], ['duzy', 0.23], ['sredni', 0.3], ['maly', 0.2], ['czujka', 0.15]] as [RozmiarSiedliska, number][],
+  /** Rozrzut promienia (udział). */
   rozrzut: 0.18,
   /** Najmniejszy dopuszczalny promień kierunku (udział promienia) – mniej = za ciasno, mniejszy rozmiar. */
   minUdzial: 0.72,

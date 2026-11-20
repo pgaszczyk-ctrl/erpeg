@@ -60,9 +60,7 @@ export class WidokSiedlisk {
       const r = rysujNamiot({ ...n, x: 0, y: 0, w: n.w * G, d: n.d * G });
       wlasna(`siedl:${s.id}:n${i}`, r, n.x, n.y, n.y + n.d / 2);
     }
-    if (s.wieza) {
-      obrazy.push(this.obraz('siedl:wieza', rysujWiezeRaz(), s.wieza.x, s.wieza.y, s.wieza.y + 1.9 * PX_PER_M));
-    }
+    for (const w of s.wieze) obrazy.push(this.obraz('siedl:wieza', rysujWiezeRaz(), w.x, w.y, w.y + 1.9 * PX_PER_M));
     for (const q of s.rekwizyty) {
       const k = `siedl:rek:${q.rodzaj}:${q.seed % 3}`;
       obrazy.push(this.obraz(k, rysujRekwizyt(q.rodzaj, q.seed % 3), q.x, q.y, q.y));

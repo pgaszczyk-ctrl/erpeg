@@ -23,7 +23,7 @@ export function doGeneratora(s: Siedlisko, G: number): Siedlisko {
     sciany: sk(s.sciany),
     namioty: s.namioty.map((n) => ({ ...n, x: n.x * G, y: n.y * G, w: n.w * G, d: n.d * G })),
     ognisko: { x: s.ognisko.x * G, y: s.ognisko.y * G },
-    wieza: s.wieza ? { x: s.wieza.x * G, y: s.wieza.y * G } : null,
+    wieze: s.wieze.map((w) => ({ x: w.x * G, y: w.y * G })),
     rekwizyty: s.rekwizyty.map((q) => ({ ...q, x: q.x * G, y: q.y * G })),
     sciezki: s.sciezki.map((q) => ({ pts: sk(q.pts), w: q.w * G })),
     spawny: [],
@@ -72,7 +72,7 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
       for (let yy = -n.d / 2; yy <= n.d / 2; yy++) for (let xx = -hw; xx <= hw; xx++) plamka(n.x + xx + k, n.y + yy + k * 0.5);
     }
   }
-  if (s.wieza) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cienSlupa(s.wieza.x + dx * 10, s.wieza.y + dy * 7, WYS.wieza, 1);
+  for (const w of s.wieze) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cienSlupa(w.x + dx * 10, w.y + dy * 7, WYS.wieza, 1);
   for (const q of s.rekwizyty) cienSlupa(q.x, q.y, 6, 3);
   // Cień nie pada na samą podstawę konstrukcji (ona przykrywa ziemię).
   for (const n of s.namioty) for (let yy = -n.d / 2; yy <= n.d / 2; yy++) for (let xx = -n.w / 2; xx <= n.w / 2; xx++) {

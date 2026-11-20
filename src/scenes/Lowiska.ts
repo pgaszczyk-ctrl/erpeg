@@ -224,7 +224,7 @@ export class Lowiska {
     const szef = s.spawny.find((q) => q.rola === 'szef')!;
     const obst = s.spawny.filter((q) => q.rola === 'obstawa');
     const grupaSzefa: LowiskoSpawn[] = [{ x: szef.x, y: szef.y, kind: s.stwory.szef }];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < s.stwory.ileObstawy; i++) {
       const o = obst[i] ?? { x: szef.x + (i ? 3 : -3) * M, y: szef.y + 2 * M };
       grupaSzefa.push({ x: o.x, y: o.y, kind: s.stwory.obstawa });
     }

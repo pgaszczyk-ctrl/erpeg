@@ -33,8 +33,8 @@ export function pudelka(s: Siedlisko, M: number) {
   p = [];
   // Namiot: cała podstawa (płachta do ziemi), lekko węższa, żeby dało się podejść do wejścia.
   for (const n of s.namioty) p.push(n.x - n.w / 2 + 0.5, n.y - n.d / 2 + 0.5, n.x + n.w / 2 - 0.5, n.y + n.d / 2 - 0.5);
-  if (s.wieza) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const lx = s.wieza.x + dx * 2.6 * M, ly = s.wieza.y + dy * 1.8 * M;
+  for (const w of s.wieze) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const lx = w.x + dx * 2.6 * M, ly = w.y + dy * 1.8 * M;
     p.push(lx - 0.8, ly - 0.8, lx + 0.8, ly + 0.8);
   }
   for (const q of s.rekwizyty) p.push(q.x - 1.4 * M, q.y - 0.9 * M, q.x + 1.4 * M, q.y + 0.9 * M);

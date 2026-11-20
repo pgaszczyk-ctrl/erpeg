@@ -57,7 +57,7 @@ async function idzDo(g, page, x, y) {
 
 const plan = (g) => g(() => {
   const s = window.__game.scene.getScene('game');
-  return (s.lowiska?.siedliska ?? []).map((q) => ({ id: q.id, x: q.x, y: q.y, rozmiar: q.rozmiar, obrys: q.obrys, bramy: q.bramy, namioty: q.namioty.length, pale: q.pale.length, wieza: !!q.wieza, spawny: q.spawny.length }));
+  return (s.lowiska?.siedliska ?? []).map((q) => ({ id: q.id, x: q.x, y: q.y, rozmiar: q.rozmiar, obrys: q.obrys, bramy: q.bramy, namioty: q.namioty.length, pale: q.pale.length, wieze: q.wieze.length, spawny: q.spawny.length }));
 });
 
 try {
@@ -69,12 +69,25 @@ try {
     const p = await g(([lat, lon]) => window.__game.scene.getScene('game').city.fromLatLon(lat, lon), [lat, lon]);
     await idzDo(g, page, p.x, p.y);
     obozy = await plan(g);
-    console.log('szukam', lat, lon, '→ obozów', obozy.length);
-    if (obozy.length) break;
+    console.log('szukam', lat, lon, '→ obozów', obozy.length, obozy.map((q) => q.rozmiar).join(','));
+    if (obozy.length && !process.env.WSZYSTKIE) break;
+  }
+  // Zrzut każdego znalezionego rozmiaru z góry nad środkiem obozu (WSZYSTKIE=1).
+  if (process.env.WSZYSTKIE) {
+    const byly = new Set();
+    for (const q of obozy) {
+      if (byly.has(q.rozmiar)) continue;
+      byly.add(q.rozmiar);
+      await idzDo(g, page, q.x, q.y + 8);
+      await g(() => { const s = window.__game.scene.getScene('game'); for (const e of s.enemies) e.spokojny = true; s.player.protectUntil = 1e15; });
+      await page.waitForTimeout(2500);
+      await page.screenshot({ path: `work/siedliska/${tag}-rozmiar-${q.rozmiar}.png` });
+      console.log('zrzut', q.rozmiar, q.id, 'namioty', q.namioty, 'wieże', q.wieze);
+    }
   }
   assert(obozy.length, 'żaden obóz się nie zaplanował');
   const o = obozy[0];
-  console.log('obóz', o.id, o.rozmiar, 'namioty', o.namioty, 'pale', o.pale, 'wieża', o.wieza, 'spawny', o.spawny);
+  console.log('obóz', o.id, o.rozmiar, 'namioty', o.namioty, 'pale', o.pale, 'wieże', o.wieze, 'spawny', o.spawny);
   const b = o.bramy[0];
   const M = 1.92;
 

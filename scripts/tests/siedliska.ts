@@ -31,6 +31,7 @@ const teren: TerenSiedliska = {
 let zbudowane = 0;
 const rozmiary: Record<string, number> = {};
 let pierwszy: Siedlisko | null = null;
+const wzory: Record<string, Siedlisko> = {};
 for (let k = 0; k < 300; k++) {
   const id = `test:oboz:${k}`;
   const a = planujOboz(id, 60, 60, teren, M), b = planujOboz(id, 60, 60, teren, M);
@@ -39,6 +40,7 @@ for (let k = 0; k < 300; k++) {
   zbudowane++;
   if (process.env.PODGLAD_K ? k === Number(process.env.PODGLAD_K) : !pierwszy) pierwszy = a;
   rozmiary[a.rozmiar] = (rozmiary[a.rozmiar] ?? 0) + 1;
+  wzory[a.rozmiar] ??= a;
   // Bramy przechodnie: środek bramy i punkty po obu stronach wolne.
   for (const g of a.bramy) for (const t of [-4, 0, 4]) {
     const x = g.x + g.nx * t * M, y = g.y + g.ny * t * M;
@@ -74,6 +76,12 @@ for (let k = 0; k < 300; k++) {
 }
 sprawdz(zbudowane > 100, `za mało obozów (${zbudowane}/300)`);
 console.log('obozy:', zbudowane, rozmiary);
+for (const r of ['czujka', 'maly', 'sredni', 'duzy', 'warownia']) sprawdz(!!wzory[r], `brak obozu rozmiaru ${r}`);
+// Rozmiary naprawdę różne: pole obrysu rośnie z rozmiarem.
+const pole = (o: number[]) => { let a = 0; for (let i = 0, j = o.length - 2; i < o.length; j = i, i += 2) a += (o[j] - o[i]) * (o[j + 1] + o[i + 1]); return Math.abs(a / 2) / (M * M); };
+const pola = ['czujka', 'maly', 'sredni', 'duzy', 'warownia'].map((r) => (wzory[r] ? Math.round(pole(wzory[r].obrys)) : 0));
+console.log('pole obrysu (m²):', pola.join(' < '));
+for (let i = 1; i < pola.length; i++) sprawdz(pola[i] > pola[i - 1] * 1.5, `rozmiar ${i} niewiele większy od poprzedniego`);
 
 // 2. Szwy: podłoże obozu malowane w 4 kawałkach = jeden duży obraz.
 const s = doGeneratora(pierwszy!, 2);
@@ -98,20 +106,28 @@ for (const [dx, dy] of [[0, 0], [H, 0], [0, H], [H, H]]) {
   sprawdz(rozne === 0, `szew kawałka (${dx},${dy}): ${rozne} różnych pikseli`);
 }
 
-// 3. Podgląd: ziemia + konstrukcje ułożone wg podstawy (jak w grze, głębia = y).
-if (process.env.PODGLAD) {
+// 3. Podgląd: każdy rozmiar osobno – ziemia + konstrukcje ułożone wg podstawy (jak w grze, głębia = y).
+if (process.env.PODGLAD) for (const [nazwa, wz] of Object.entries(wzory)) {
+  const q0 = doGeneratora(wz, 2);
+  const W = Math.ceil(Math.max(q0.ramka.x1 - q0.ramka.x0, q0.ramka.y1 - q0.ramka.y0) / 2) * 2;
+  const R = Math.max(...q0.obrys.map((v, i) => Math.abs(v - (i % 2 ? q0.y : q0.x)))) + 70;
+  const ox = Math.round(q0.x - R), oy = Math.round(q0.y - R - 30), S = Math.round(2 * R + 40);
+  const obraz = nowy(S, S);
+  for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) obraz.px[j * S + i] = kolorPodloza(wWielokacie(q0.obrys, ox + i, oy + j) ? 'klepisko' : 'las_lisciasty', ox + i, oy + j);
+  malujSiedlisko(obraz, ox, oy, q0);
   const obr: { y: number; r: Rysunek; x: number; yy: number }[] = [];
-  const odc = new Map<number, typeof s.pale>();
-  for (const p of s.pale) { const l = odc.get(p.odc) ?? []; l.push(p); odc.set(p.odc, l); }
+  const odc = new Map<number, typeof q0.pale>();
+  for (const p of q0.pale) { const l = odc.get(p.odc) ?? []; l.push(p); odc.set(p.odc, l); }
   for (const l of odc.values()) obr.push({ y: Math.max(...l.map((p) => p.y)), r: rysujOdcinek(l), x: 0, yy: 0 });
-  for (const n of s.namioty) obr.push({ y: n.y + n.d / 2, r: rysujNamiot(n), x: n.x, yy: n.y });
-  if (s.wieza) obr.push({ y: s.wieza.y + 7, r: rysujWieze(), x: s.wieza.x, yy: s.wieza.y });
-  for (const q of s.rekwizyty) obr.push({ y: q.y, r: rysujRekwizyt(q.rodzaj, q.seed), x: q.x, yy: q.y });
-  obr.push({ y: s.ognisko.y, r: rysujOgien(1), x: s.ognisko.x, yy: s.ognisko.y });
+  for (const n of q0.namioty) obr.push({ y: n.y + n.d / 2, r: rysujNamiot(n), x: n.x, yy: n.y });
+  for (const w of q0.wieze) obr.push({ y: w.y + 7, r: rysujWieze(), x: w.x, yy: w.y });
+  for (const q of q0.rekwizyty) obr.push({ y: q.y, r: rysujRekwizyt(q.rodzaj, q.seed), x: q.x, yy: q.y });
+  obr.push({ y: q0.ognisko.y, r: rysujOgien(1), x: q0.ognisko.x, yy: q0.ognisko.y });
   obr.sort((a, b) => a.y - b.y);
-  for (const q of obr) naloz(caly, q.r.o, Math.round(q.x - q.r.kx - X0), Math.round(q.yy - q.r.ky - Y0));
-  writeFileSync(process.env.PODGLAD, Buffer.from(caly.px.buffer));
-  writeFileSync(process.env.PODGLAD + '.json', JSON.stringify({ w: DUZY, h: DUZY }));
+  for (const q of obr) naloz(obraz, q.r.o, Math.round(q.x - q.r.kx - ox), Math.round(q.yy - q.r.ky - oy));
+  void W;
+  writeFileSync(`${process.env.PODGLAD}-${nazwa}.rgba`, Buffer.from(obraz.px.buffer));
+  writeFileSync(`${process.env.PODGLAD}-${nazwa}.json`, JSON.stringify({ w: S, h: S }));
 }
 
 if (bledy) { console.error(`siedliska: ${bledy} błędów`); process.exit(1); }

@@ -47,11 +47,11 @@ export function planujOboz(id: string, x: number, y: number, t: TerenSiedliska, 
   if (t.glowna(x, y, T.odGlownejM * M)) return null;
 
   const wylosowany = losujWage(OBOZ.wagiRozmiaru, r());
-  const kolejnosc: RozmiarSiedliska[] = (['duzy', 'sredni', 'maly'] as RozmiarSiedliska[]).filter((k, _, a) => a.indexOf(k) >= a.indexOf(wylosowany));
-  const N = OBOZ.wierzcholki;
+  const kolejnosc = OBOZ.kolejnosc.slice(OBOZ.kolejnosc.indexOf(wylosowany));
   const fazy = [r() * TAU, r() * TAU, r() * TAU];
   for (const rozmiar of kolejnosc) {
     const P = OBOZ.rozmiary[rozmiar];
+    const N = P.wierzcholki;
     const R = P.promienM * M;
     // Promień każdego kierunku: nieregularny (dwie fale + szum), skurczony tam, gdzie brakuje miejsca.
     const rho: number[] = [];
@@ -165,33 +165,41 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
   const kolizja = (x0: number, y0: number, x1: number, y1: number) => zajete.some((q) => x0 < q.x1 && x1 > q.x0 && y0 < q.y1 && y1 > q.y0);
   const ileN = ile(P.namioty);
   const katGl = Math.atan2(bramy[0].y - y, bramy[0].x - x);
-  for (let i = 0, proby = 0; i < ileN && proby < 80; proby++) {
+  // Małe obozy: namioty bliżej ogniska, ciaśniej (inaczej nie mieszczą się w palisadzie).
+  const ciasny = P.promienM < 25;
+  const pierscien = ciasny ? [0.22, 0.42] : P.promienM >= 40 ? [0.28, 0.8] : [0.5, 0.68];
+  const luz = (ciasny ? 1.2 : 2.5) * M;
+  for (let i = 0, proby = 0; i < ileN && proby < 60 + ileN * 30; proby++) {
     const szef = i === 0;
     const a = szef ? katGl + Math.PI + (r() - 0.5) * 0.4 : r() * TAU;
     if (!szef && bramy.some((b) => katRoznica(a, Math.atan2(b.y - y, b.x - x)) < 0.45)) continue;
-    const pr = naObrysie(x, y, gl, a).p * (0.5 + r() * 0.18);
+    const pr = naObrysie(x, y, gl, a).p * (pierscien[0] + r() * (pierscien[1] - pierscien[0]));
     // Kalenica północ–południe, wejście od południa: wolny przedsionek pod spodem.
-    const w = (szef ? 7.4 : 5.4 + r() * 0.8) * M, d = (szef ? 6.4 : 4.6 + r() * 0.8) * M;
+    const duzySzef = szef && !ciasny;
+    const w = (duzySzef ? 7.4 : 5.4 + r() * 0.8) * M, d = (duzySzef ? 6.4 : 4.6 + r() * 0.8) * M;
     const cx = x + Math.cos(a) * pr, cy = y + Math.sin(a) * pr;
-    const x0 = cx - w / 2 - 2.5 * M, y0 = cy - d / 2 - 1.5 * M, x1 = cx + w / 2 + 2.5 * M, y1 = cy + d / 2 + 3 * M;
-    if (![[x0, y0], [x1, y0], [x0, y1], [x1, y1]].every(([px, py]) => wSrodku(px, py, 2.5 * M))) continue;
-    if (Math.hypot(cx - ognisko.x, cy - ognisko.y) < 6 * M + w / 2) continue;
+    const x0 = cx - w / 2 - luz, y0 = cy - d / 2 - 1.5 * M, x1 = cx + w / 2 + luz, y1 = cy + d / 2 + (ciasny ? 2 : 3) * M;
+    if (![[x0, y0], [x1, y0], [x0, y1], [x1, y1]].every(([px, py]) => wSrodku(px, py, luz))) continue;
+    if (Math.hypot(cx - ognisko.x, cy - ognisko.y) < (ciasny ? 3.5 : 6) * M + Math.min(w, d) / 2) continue;
     if (kolizja(x0, y0, x1, y1)) continue;
     zajete.push({ x0, y0, x1, y1 });
     namioty.push({ x: cx, y: cy, w, d, szef, wariant: Math.floor(r() * 3) });
     i++;
   }
-  if (namioty.length < Math.min(2, ileN)) return null;
+  if (namioty.length < Math.min(2, ileN) || namioty.length < ileN * 0.6) return null;
   zajete.push({ x0: ognisko.x - 3 * M, y0: ognisko.y - 3 * M, x1: ognisko.x + 3 * M, y1: ognisko.y + 3 * M });
 
   // Wieża strażnicza: przy palisadzie, z boku od głównej bramy.
-  let wieza: { x: number; y: number } | null = null;
-  if (r() < P.wieza) for (const s of [1, -1]) {
-    const a = katGl + s * (Math.PI / 2 + (r() - 0.5) * 0.5);
+  // Wieże strażnicze przy palisadzie, rozłożone wokół (pierwsza z boku od głównej bramy).
+  const wieze: { x: number; y: number }[] = [];
+  const ileW = Math.floor(P.wieze) + (r() < P.wieze % 1 ? 1 : 0);
+  for (let k = 0; k < ileW; k++) for (let proba = 0; proba < 8; proba++) {
+    const a = katGl + Math.PI / 2 + (k / Math.max(1, ileW)) * TAU + (proba ? (r() - 0.5) * 1.4 : (r() - 0.5) * 0.4);
+    if (bramy.some((b) => katRoznica(a, Math.atan2(b.y - y, b.x - x)) < 0.4)) continue;
     const p = naObrysie(x, y, gl, a);
     const wx = x + Math.cos(a) * (p.p - 5 * M), wy = y + Math.sin(a) * (p.p - 5 * M);
     if (!wSrodku(wx, wy, 3 * M) || kolizja(wx - 3 * M, wy - 3 * M, wx + 3 * M, wy + 3 * M)) continue;
-    wieza = { x: wx, y: wy };
+    wieze.push({ x: wx, y: wy });
     zajete.push({ x0: wx - 3.5 * M, y0: wy - 3.5 * M, x1: wx + 3.5 * M, y1: wy + 3.5 * M });
     break;
   }
@@ -208,6 +216,15 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
     zajete.push({ x0: rx - 2 * M, y0: ry - 2 * M, x1: rx + 2 * M, y1: ry + 2 * M });
     rekwizyty.push({ x: rx, y: ry, rodzaj: RODZ[Math.floor(r() * 3)], seed: (seed + i * 31337) >>> 0 });
     i++;
+  }
+
+  // Duże obozy: skrzynie, beczki i drewno także przy namiotach (inaczej środek warowni jest pusty).
+  if (P.promienM >= 40) for (const nm of namioty) for (let k = 0; k < 2; k++) {
+    const sx = r() < 0.5 ? -1 : 1;
+    const rx = nm.x + sx * (nm.w / 2 + 2.2 * M), ry = nm.y + (r() - 0.5) * nm.d * 0.6;
+    if (!wSrodku(rx, ry, 2 * M) || kolizja(rx - 1.6 * M, ry - 1.2 * M, rx + 1.6 * M, ry + 1.2 * M)) continue;
+    zajete.push({ x0: rx - 1.6 * M, y0: ry - 1.2 * M, x1: rx + 1.6 * M, y1: ry + 1.2 * M });
+    rekwizyty.push({ x: rx, y: ry, rodzaj: RODZ[Math.floor(r() * 3)], seed: (seed + rekwizyty.length * 31337) >>> 0 });
   }
 
   // Ścieżki: od każdej bramy do ogniska (lekki łuk) i od głównej bramy do najbliższej drogi.
@@ -245,7 +262,7 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
     spawny.push({ x: ognisko.x + Math.cos(a) * 4.5 * M, y: ognisko.y + Math.sin(a) * 4.5 * M, rola: 'czlonek' });
   }
   for (const b of bramy) spawny.push({ x: b.x - b.nx * 4 * M, y: b.y - b.ny * 4 * M, rola: 'czlonek' });
-  if (wieza) spawny.push({ x: wieza.x, y: wieza.y + 4 * M, rola: 'czlonek' });
+  for (const w of wieze) spawny.push({ x: w.x, y: w.y + 4 * M, rola: 'czlonek' });
   const szefN = namioty[0];
   for (const s of [-1, 1]) spawny.push({ x: szefN.x + s * 3.5 * M, y: szefN.y + szefN.d / 2 + 5 * M, rola: 'obstawa' });
   const spawnyOk = spawny.filter((q) => wSrodku(q.x, q.y, 1.5 * M) && !kolizjaPunktu(zajete, q.x, q.y));
@@ -257,7 +274,7 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
   }
   if (!spawnyOk.some((q) => q.rola === 'szef')) return null;
 
-  const MZ = MIESZKANCY_SIEDLISK.oboz;
+  const MZ = { ...MIESZKANCY_SIEDLISK.oboz, szef: P.szef };
   const czlonkowie: RodzajWroga[] = [];
   for (let i = ile(P.czlonkowie); i > 0; i--) czlonkowie.push(losujWage(MZ.czlonkowie, r()));
 
@@ -268,8 +285,8 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
   return {
     id, typ: 'oboz', wersja: WERSJA_SIEDLISK, seed, rozmiar, x, y, obrys,
     ramka: { x0: x0 - zapas, y0: y0 - zapas * 2, x1: x1 + zapas, y1: y1 + zapas },
-    bramy, pale, sciany, namioty, ognisko, wieza, rekwizyty, sciezki, spawny: spawnyOk,
-    stwory: { czlonkowie, szef: MZ.szef, obstawa: MZ.obstawa }, trudnosc: MZ.trudnosc,
+    bramy, pale, sciany, namioty, ognisko, wieze, rekwizyty, sciezki, spawny: spawnyOk,
+    stwory: { czlonkowie, szef: MZ.szef, obstawa: MZ.obstawa, ileObstawy: P.obstawa }, trudnosc: MZ.trudnosc + (rozmiar === 'warownia' ? 2 : rozmiar === 'duzy' ? 1 : rozmiar === 'czujka' ? -1 : 0),
   };
 }
 
