@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.11.2026', tytul: { pl: 'Łuk trafia, potwory płacą, profesje', en: 'Bows hit, monsters pay, professions' },
+    tresc: { pl: 'Pierwsza służba nie może już zabić, a kończy się nagrodą 700 monet i wskazówką, dokąd iść. Łuk sam celuje w najbliższego wroga, strzela dalej i celniej. Mocny atak spod przycisku Q zamiata szerokim łukiem. Wrogowie w walce mają nazwę i pasek życia, a z potworów wypada złoto, kły, mikstury i rzadkie przedmioty. Od 5. poziomu wybierzesz u szefa straży profesję: rycerza, łowcę albo maga. Gra zapisuje się sama co kilka minut, do 5. poziomu porażka nic nie kosztuje. Za granicą ludzie mają lokalne imiona, a ulice zapis łaciński.', en: 'First duty can no longer kill you and ends with 700 coins and a hint where to go. The bow aims at the nearest enemy by itself and shoots further and more accurately. The strong attack on Q sweeps a wide arc. Enemies in a fight show their name and a life bar, and monsters drop gold, fangs, potions and rare items. From level 5 the guard chief lets you choose a profession: knight, hunter or mage. The game saves itself every few minutes and until level 5 a defeat costs nothing. Abroad people have local names and streets are shown in Latin letters.' },
+  },
+  {
     data: '05.11.2026', tytul: { pl: 'Armaty, Kulociąg i nowe przygody', en: 'Cannons, Ballway and new adventures' },
     tresc: { pl: 'Podróżuj armatami i Kulociągiem, odkrywaj spójny świat i podejmij Czarci Wyrok w Lublinie. Na miejskich tablicach czekają zlecenia oraz kartka na Twoje pomysły. Kilofem wydobędziesz rudę żelaza. Poprawiliśmy też sklepy na telefonach, sprzedaż ekwipunku, wybór rozmówcy, budynki, ulice i arenę.', en: 'Travel by cannon and Ballway, explore a consistent world and take on The Devil’s Verdict in Lublin. City boards offer jobs and a note for your ideas. Mine iron ore with a pickaxe. Mobile shops, equipment sales, interaction selection, buildings, streets and the arena have also been improved.' },
   },

@@ -43,14 +43,14 @@ try{for(const mobile of [false,true]){
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);
  const q=s.shots[0];if(!q)throw Error('no projectile');
  if(Math.abs(q.left-expected)>1e-7)throw Error('projectile range differs');
- if(level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<100))throw Error('missing slow arc');
+ if(level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<=expected/0.55+1e-6))throw Error('missing slow arc');
  s.updateShots(100);if(s.shots.length)throw Error('projectile did not expire');
  if(Math.hypot(q.x-q.originX,q.y-q.originY)>expected+1e-6)throw Error('projectile overshot');
  ranges.push({skill,level,range:expected});
  }
  // Boundaries, including oversized frames and a visible fall: outside is always harmless.
  for(const skill of ['luk','magia'])for(const offset of [-.1,0,.1]){
- reset();gear.skills[skill]=0;gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';const e=spawn(40+offset);
+ reset();gear.skills[skill]=0;gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';const e=spawn(80+offset);
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);s.updateShots(5);
  if((e.hp<10000)!==(offset<=0))throw Error('range edge '+skill+' '+offset);
  if(offset>0&&e.pursuitUntil!==-Infinity)throw Error('out-of-range shot provoked');
