@@ -232,7 +232,9 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
       const g0 = gotowy;
       const wlasny = (czesc ?? b.r).map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
       const t = obrot ? brylaNaDachu(g0.obraz, wlasny, obrot, b.seed, czesc ? MATERIALY[dach]?.tony : undefined) : ksztaltNaDachu(g0.obraz, wlasny, ksztalt!, b.seed, op);
-      gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora };
+      // Steam from the form's vents, stacks and chimneys (always working, each on its own rhythm).
+      const nowaPara = t.para.map(([x, y, r], i) => ({ x: g0.x0 + x, y: g0.y0 - t.gora + y, rozmiar: r, okres: 4 + hash(b.seed, i, 77) * 6, faza: hash(b.seed, i, 78) * 10, czas: 0.9 + hash(b.seed, i, 79) * 0.6 }));
+      gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora, para: [...g0.para, ...nowaPara] };
     }
     if (b.swiatynia) {
       const g0 = gotowy;

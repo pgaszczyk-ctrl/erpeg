@@ -110,17 +110,44 @@ export function opcjeObrotowe(op: OpcjeBudynku, forma: FormaObrotowa): OpcjeBudy
 }
 
 /** The roof form on its building picture; returns the picture with room added above. */
-export function brylaNaDachu(obraz: Obraz, pierscien: number[], forma: RodzajDachu, seed: number, polac?: number[]): { obraz: Obraz; gora: number } {
+export function brylaNaDachu(obraz: Obraz, pierscien: number[], forma: RodzajDachu, seed: number, polac?: number[]): { obraz: Obraz; gora: number; para: [number, number, number][] } {
   const { rKolo, H } = wymiaryDachu(pierscien, forma);
-  if (!(rKolo > 0)) return { obraz, gora: 0 };
-  let y0 = Infinity;
-  for (let i = 1; i < pierscien.length; i += 2) y0 = Math.min(y0, pierscien[i]);
-  // Room above: the roof's height minus what the outline already leaves above its centre, plus the finial.
-  const gora = Math.max(0, Math.round(H + rKolo * 0.6 + 10));
+  if (!(rKolo > 0)) return { obraz, gora: 0, para: [] };
+  const gora = Math.max(0, Math.round(H + rKolo * 0.6 + 12));
   const out = nowy(obraz.w, obraz.h + gora);
   for (let y = 0; y < obraz.h; y++) out.px.set(obraz.px.subarray(y * obraz.w, (y + 1) * obraz.w), (y + gora) * out.w);
   const { cx, szczyt } = dachSwiatyni(out, pierscien, forma, seed, gora, polac);
   zwienczenie(out, cx, szczyt, forma, Math.max(6, rKolo * 0.5));
-  void y0;
-  return { obraz: out, gora };
+  // ——— steampunk details (owner, 20 Nov 2026: „pamiętaj o steampunku”) ———
+  const para: [number, number, number][] = [];
+  const przed = out.px.slice();
+  const MOS = ['#4a3410', '#7a5a1c', '#a8822c', '#d0a848', '#f0d27e'].map(hex);
+  const put = (i: number, j: number, c: number) => { i = Math.round(i); j = Math.round(j); if (i >= 0 && j >= 0 && i < out.w && j < out.h) out.px[j * out.w + i] = c; };
+  if (forma === 'obserwatorium') {
+    // A brass telescope poking out of the slit towards the sky (south-west, up).
+    const y0 = szczyt + Math.round(H * 0.32), n = Math.round(rKolo * 0.55);
+    for (let k = 0; k < n; k++) { const x = cx + 1 - k * 0.6, y = y0 - k; put(x, y, MOS[3]); put(x + 1, y, MOS[1]); put(x - 1, y, MOS[4]); }
+    const ex = cx + 1 - n * 0.6, ey = y0 - n;
+    for (let i = -2; i <= 2; i++) put(ex + i, ey, MOS[i < 0 ? 4 : 2]);
+    obrysujNowe(out, przed);
+  } else if (forma === 'ratusz') {
+    // Twin steam whistles on the helmet's shoulder.
+    const y0 = szczyt + Math.round(H * 0.24);
+    for (const dx of [-3, 3]) { for (let k = 0; k < 4; k++) { put(cx + dx, y0 - k, MOS[k === 3 ? 4 : 2]); put(cx + dx + 1, y0 - k, MOS[1]); } para.push([cx + dx, y0 - 5, 16]); }
+    obrysujNowe(out, przed);
+  } else if (forma === 'antena') {
+    // The coil's crackle: three short pale-blue arcs off the brass ball.
+    const ISKRA = hex('#cfefff'), ISKRA2 = hex('#7ec8f0');
+    for (const [kx, ky] of [[1, -1], [-1, -1], [1, 0.4]] as const) {
+      let x = cx, y = szczyt + 3;
+      for (let k = 0; k < 5; k++) { x += kx * (1 + (hash(seed, k, kx) > 0.5 ? 1 : 0)); y += ky + (hash(seed, k, ky) > 0.5 ? -1 : 0); put(x, y, k % 2 ? ISKRA2 : ISKRA); }
+    }
+  } else if (forma === 'biblioteka') {
+    // The spiral tower breathes a little steam from a brass pipe under its cone.
+    const y0 = szczyt + Math.round(H * 0.38), x0 = cx + Math.round(rKolo * 0.38);
+    for (let k = 0; k < 5; k++) { put(x0, y0 - k, MOS[k === 4 ? 4 : 2]); put(x0 + 1, y0 - k, MOS[1]); }
+    para.push([x0, y0 - 6, 16]);
+    obrysujNowe(out, przed);
+  }
+  return { obraz: out, gora, para };
 }

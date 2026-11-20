@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.11.2026', tytul: { pl: 'Para i mosiądz na dachach', en: 'Steam and brass on the roofs' },
+    tresc: { pl: 'Nowe dachy dostały steampunkowe detale: hale dworców mają mosiężne żebra i dymiące wyloty, fabryczne kominy buchają parą, mansardy mają okrągłe lukarny w mosiężnych ramach, obserwatoria wysuwają lunety, ratusze mają parowe gwizdki, maszty iskrzą cewką, a w ogródkach na dachach stoją parowe fontanny.', en: 'The new roofs got steampunk details: station halls have brass ribs and steaming vents, factory chimneys puff steam, mansards have round brass-framed dormers, observatories poke out telescopes, town halls have steam whistles, masts crackle with their coil and roof gardens have steam fountains.' },
+  },
+  {
     data: '20.11.2026', tytul: { pl: 'Szklane hale i zielone dachy', en: 'Glass halls and green roofs' },
     tresc: { pl: 'Dworce kolejowe dostały szklane, łukowe hale na żelaznych żebrach, część bloków ma na dachu ogródek z krzewami i ścieżkami, kamienice z mansardą okrągłą wieżyczkę na narożniku, a fabryczne hale ceglany komin. Ozdoby na ścianach są teraz przechylone razem ze ścianą.', en: 'Railway stations got arched glass halls on iron ribs, some blocks have a roof garden with bushes and paths, mansard tenements a round corner turret, and factory halls a brick chimney. Wall ornaments now lean with their wall.' },
   },

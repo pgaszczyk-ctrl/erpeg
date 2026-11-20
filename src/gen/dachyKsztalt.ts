@@ -15,6 +15,8 @@ const SZKLO = ['#24324a', '#3a5070', '#5a7a9c', '#86a6c4'].map(hex);
 const TRAWA = ['#2a4a24', '#36602c', '#467636', '#5a8c42', '#76a656'].map(hex);
 const ZIELEN_KRZAK = ['#1a3420', '#24482a', '#305e34', '#3e7640', '#56904e'].map(hex);
 const ZWIR = ['#6a645a', '#847c70', '#9c9486', '#b4ac9c', '#ccc4b2'].map(hex);
+const MOSIADZ_K = ['#4a3410', '#7a5a1c', '#a8822c', '#d0a848', '#f0d27e'].map(hex);
+const KAMIEN_K = ['#4c4848', '#666060', '#807a78', '#9a9490', '#b4aea8'].map(hex);
 const CEGLA_K = ['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c'].map(hex);
 
 /** A round corner turret (slate cone) on a mansard tenement, at its south-east corner, when it fits inside. */
@@ -37,7 +39,20 @@ function wiezyczka(o: Obraz, r: number[], gora: number, seed: number, R: number)
   zwienczenie(o, tx, szczyt, 'wiezyczka', R);
 }
 
-/** A brick factory chimney at the hall's north-east corner (drawn last, it stands in front of its roof). */
+/** A vertical column standing on screen point (x, y) with the walls' lean: w = half-width, tones 5 dark→light. */
+function kolumna(o: Obraz, x: number, y: number, H: number, w: number, t: number[]) {
+  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < o.w && j < o.h) o.px[j * o.w + i] = c; };
+  for (let z = 0; z < H; z++) {
+    const X = Math.round(x - z * SK), Y = y - z;
+    for (let i = -w - 1; i <= w + 1; i++) put(X + i, Y, i === -w - 1 || i === w + 1 ? OBRYS : t[i < 0 ? 3 : i === 0 ? 2 : 1]);
+  }
+  const X = Math.round(x - H * SK), Y = y - H;
+  for (let i = -w - 2; i <= w + 2; i++) { put(X + i, Y + 1, t[4]); put(X + i, Y, OBRYS); }
+  put(X - w - 2, Y + 1, OBRYS); put(X + w + 2, Y + 1, OBRYS);
+  return [X, Y] as const;
+}
+
+/** A brick factory chimney at the hall's north-east corner with a brass band; returns its top (for the steam). */
 function komin(o: Obraz, r: number[], gora: number, hSzed: number) {
   let best = -Infinity, kx = 0, ky = 0, sx = 0, sy = 0, n = 0;
   for (let i = 0; i < r.length; i += 2) {
@@ -47,15 +62,14 @@ function komin(o: Obraz, r: number[], gora: number, hSzed: number) {
   }
   const dx = sx / n - kx, dy = sy / n - ky, dl = Math.hypot(dx, dy) || 1;
   const x = Math.round(kx + (dx / dl) * 6), y = Math.round(ky + (dy / dl) * 6) + gora;
-  const H = Math.round(hSzed + 22), w = 3;
-  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < o.w && j < o.h) o.px[j * o.w + i] = c; };
-  for (let z = 0; z < H; z++) {
+  const H = Math.round(hSzed + 22);
+  const top = kolumna(o, x, y, H, 2, CEGLA_K);
+  // Brass bands two thirds up and under the cap.
+  for (const z of [Math.round(H * 0.62), H - 3]) {
     const X = Math.round(x - z * SK), Y = y - z;
-    for (let i = -w; i <= w; i++) put(X + i, Y, i === -w || i === w ? OBRYS : CEGLA_K[i < -1 ? 3 : i < 1 ? 2 : 1]);
-    if (z % 4 === 0) for (let i = -w + 1; i < w; i++) put(X + i, Y, CEGLA_K[0]);
+    for (let i = -2; i <= 2; i++) if (X + i >= 0 && Y >= 0 && X + i < o.w && Y < o.h) o.px[Y * o.w + X + i] = MOSIADZ_K[i < 0 ? 4 : 2];
   }
-  const X = Math.round(x - H * SK), Y = y - H;
-  for (let i = -w - 1; i <= w + 1; i++) { put(X + i, Y, OBRYS); put(X + i, Y + 1, CEGLA_K[4]); put(X + i, Y - 1, OBRYS); }
+  return top;
 }
 
 /** Body under the roof: a flat plate (it is covered), no chimneys/pipes/ornaments poking through. */
@@ -96,9 +110,9 @@ function osie(r: number[]) {
 }
 
 /** Roof of the given form over the outline, on the building's picture (from `opcjeKsztaltu`). */
-export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKsztaltu, seed: number, op: OpcjeBudynku): { obraz: Obraz; gora: number } {
+export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKsztaltu, seed: number, op: OpcjeBudynku): { obraz: Obraz; gora: number; para: [number, number, number][] } {
   const r = pierscien, n = r.length / 2;
-  if (n < 3) return { obraz, gora: 0 };
+  if (n < 3) return { obraz, gora: 0, para: [] };
   const A = osie(r);
   const ux = A.ux, uy = A.uy, vc = (A.v0 + A.v1) / 2, polW = (A.v1 - A.v0) / 2;
   const U = (x: number, y: number) => x * ux + y * uy, V = (x: number, y: number) => -x * uy + y * ux;
@@ -186,7 +200,11 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
           c = ton(D.tony, lum);
           // Dormer windows in the steep slate, one every 11 px along the wall.
           const m = wz % 11;
-          if (d > mansA * 0.25 && d < mansA * 0.8 && m > 4 && m < 8) c = (m < 4.7 || m > 7.3 || d < mansA * 0.33) ? RAMA : OKNO;
+          if (Math.floor(wz / 11) % 2 === 1) {
+            // Steampunk bull's-eye dormer: a brass ring round a dark round pane.
+            const rr = Math.hypot(m - 6, (d - mansA * 0.55) * 1.4);
+            if (rr < 2.6) c = rr > 1.7 ? MOSIADZ_K[rr > 2.2 ? 1 : 3] : OKNO;
+          } else if (d > mansA * 0.25 && d < mansA * 0.8 && m > 4 && m < 8) c = (m < 4.7 || m > 7.3 || d < mansA * 0.33) ? RAMA : OKNO;
           if (d < 0.6) c = D.krawedz;
         } else { sc = 2; c = ton(GORA_M.tony, lum * 1.2 + 0.25); }
       } else if (forma === 'dworzec') {
@@ -194,7 +212,8 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
         const u = U(x, y), v = V(x, y) - vc;
         const luk = Math.asin(Math.max(-1, Math.min(1, v / polW))) * polW;
         const zebro = Math.floor(u + 400) % 6 === 0, platew = Math.floor(luk + 400) % 4 === 0;
-        c = zebro || platew ? (lum > 0.3 ? hex('#4a4e58') : hex('#2c2e36')) : SZKLO[Math.max(0, Math.min(3, Math.round(1.2 + lum * 2.2 + (hash(Math.floor(u / 6), Math.floor(luk / 4), seed) < 0.15 ? 1 : 0))))];
+        const mos = zebro && Math.floor((u + 400) / 6) % 3 === 0;
+        c = mos ? MOSIADZ_K[lum > 0.3 ? 3 : lum > 0 ? 2 : 1] : zebro || platew ? (lum > 0.3 ? hex('#4a4e58') : hex('#2c2e36')) : SZKLO[Math.max(0, Math.min(3, Math.round(1.2 + lum * 2.2 + (hash(Math.floor(u / 6), Math.floor(luk / 4), seed) < 0.15 ? 1 : 0))))];
         if (Math.abs(v) > polW - 0.6) c = hex('#2c2e36');
       } else if (forma === 'ogrod') {
         const d = odl(x, y)[0];
@@ -248,7 +267,7 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
       }
       xs.sort((a, b) => a - b);
       for (let k = 0; k + 1 < xs.length; k += 2) for (let x = xs[k] + K; x < xs[k + 1]; x += K) for (let z = 0; z <= hSzed; z += K * 2) {
-        const sl = Math.floor(x) % 5 === 0 || z < 0.8 ? MATERIALY.blacha_falista.tony[1] : SZKLO[Math.min(3, Math.floor((z / hSzed) * 4))];
+        const sl = z < 0.8 ? MOSIADZ_K[z < 0.4 ? 1 : 3] : Math.floor(x) % 5 === 0 ? MATERIALY.blacha_falista.tony[1] : SZKLO[Math.min(3, Math.floor((z / hSzed) * 4))];
         postaw(x, yb - 0.01, z, yb + SK * x * 0.5 + 0.001, sl, 8);
       }
     }
@@ -268,7 +287,38 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
   }
   for (const i of ink) out.px[i] = OBRYS;
   for (const i of kraw) out.px[i] = forma === 'ogrod' ? ZIELEN_KRZAK[0] : D.krawedz;
+  // ——— steampunk (owner, 20 Nov 2026: „pamiętaj o steampunku”): brass pipes, vents and steam on every form ———
+  const para: [number, number, number][] = [];
+  const pkt = (u: number, v: number) => { const x = u * ux - v * uy, y = u * uy + v * ux; return { x, y, z: wys(x, y) }; };
+  const naEkranie = (p: { x: number; y: number; z: number }) => [Math.round(p.x - p.z * SK), Math.round(p.y - p.z) + gora] as const;
   if (forma === 'mansarda' && polW >= 12 && hash(seed, 31, 7) < 0.7) wiezyczka(out, r, gora, seed, Math.min(9, polW * 0.45));
-  if (forma === 'szed') komin(out, r, gora, hSzed);
-  return { obraz: out, gora };
+  if (forma === 'szed') { const [X, Y] = komin(out, r, gora, hSzed); para.push([X, Y - 2, 32]); }
+  if (forma === 'dworzec') {
+    // Brass steam vents along the vault's ridge.
+    for (let u = A.u0 + 14; u < A.u1 - 10; u += 26) {
+      const [X, Y] = naEkranie(pkt(u, vc));
+      kolumna(out, X, Y, 5, 1, MOSIADZ_K);
+      para.push([X, Y - 6, 16]);
+    }
+  }
+  if (forma === 'stromy' || forma === 'dwuspadowy') {
+    // A chimney on the ridge: stone with smoke in the mountains, a brass steam stack in towns.
+    if (hash(seed, 41, 3) < (forma === 'stromy' ? 0.9 : 0.6)) {
+      const [X, Y] = naEkranie(pkt(A.u0 + (A.u1 - A.u0) * (0.22 + hash(seed, 42, 3) * 0.2), vc));
+      if (forma === 'stromy') kolumna(out, X, Y + 2, 6, 2, KAMIEN_K); else { kolumna(out, X, Y + 1, 6, 1, MOSIADZ_K); }
+      para.push([X, Y - 6, forma === 'stromy' ? 24 : 16]);
+    }
+  }
+  if (forma === 'ogrod') {
+    // A brass steam fountain where the garden's paths cross.
+    const p0 = pkt((A.u0 + A.u1) / 2, vc), [X, Y] = naEkranie(p0);
+    for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) {
+      const d = Math.hypot(i, j * 1.3);
+      if (d > 3.2) continue;
+      const k = (Y + j) * out.w + X + i;
+      if (k >= 0 && k < out.px.length) out.px[k] = d > 2.4 ? OBRYS : d > 1.5 ? MOSIADZ_K[i + j < 0 ? 3 : 1] : SZKLO[2];
+    }
+    para.push([X, Y - 2, 16]);
+  }
+  return { obraz: out, gora, para };
 }
