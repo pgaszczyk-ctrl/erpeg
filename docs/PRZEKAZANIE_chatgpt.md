@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-20 — próba 2 strażnika, 50-G001
+
+- Oddano dwie klatki postoju (przód i lewo), maskę części, maskę materiałów, punkty mocowania i podglądy w `docs/poczta/od-grafika/50_straznik_proba2/`. Odpowiedź dla programisty jest w `docs/poczta/od-grafika/2026-11-20_50-G001_straznik_proba2.md`.
+- Sprawdzono PNG 96 × 96, wysokość 32 px, stopy (48,90), alfa 0/255, paletę do 24 kolorów, wyrównanie masek i podgląd ×8. Do wykonania pozostało podpięcie klatek i porównanie w działającej grze na telefonie i komputerze.
+
 ## 2026-11-19 — oprawa awatara
 
 - W komiksowym HUD usunięto spod ośmiokąta okrągłą oprawę i zbiornik ze starszego wariantu. Postęp do następnego poziomu jest widoczny na pasku pod awatarem. Menu postaci korzysta z tego samego przycisku.
