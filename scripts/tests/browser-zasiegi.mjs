@@ -6,7 +6,7 @@ import {preview} from 'vite';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const source=stripTypeScriptTypes(await readFile('src/content/walka.ts','utf8'),{mode:'transform',disableExperimentalWarning:true});
 const {zasiegDystansu}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
-for(const level of [1,2,3,4,10,20]) assert(Math.abs(zasiegDystansu(level,20)-40*1.2**Math.max(0,level-3))<1e-7);
+for(const level of [1,2,3,4,10,20]) assert(Math.abs(zasiegDystansu(level,20)-80*1.06**Math.max(0,level-1))<1e-7);
 const levels={};let points=0;for(let l=1;l<=20;l++){if(l>1)points+=Math.round(100*1.5**(Math.min(l,10)-2)*1.25**Math.max(0,l-10));levels[l]=points;}
 await mkdir('work/zasiegi',{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:4177,strictPort:true}});
@@ -37,7 +37,7 @@ try{for(const mobile of [false,true]){
  const build=s.city.buildingAt;s.city.buildingAt=()=>undefined;
  gear.magic=true;gear.ammo.strzaly=1000;const ranges=[];
  for(const skill of ['luk','magia'])for(const level of [1,2,3,4,10,20]){
- gear.skills[skill]=levels[level];const expected=40*1.2**Math.max(0,level-3);
+ gear.skills[skill]=levels[level];const expected=80*1.06**Math.max(0,level-1);
  if(Math.abs(s.shotRange(skill)-expected)>1e-7)throw Error('wrong skill range '+skill+' '+level);
  reset();gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);

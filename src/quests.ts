@@ -244,9 +244,13 @@ export async function loadContent() {
   await settings;
 }
 
+/** Where this play session started: the hunt analyser in the Kufer counts from here (report: „analizator huntu”). */
+export const poczatekSesji = { t: 0, exp: 0, earned: 0, kills: 0 };
+
 export function startSession(r: LoginResult, remember = true) {
   ustawPoziomBroni(() => poziomPostaci(session.exp));
   const p = r.player;
+  queueMicrotask(() => Object.assign(poczatekSesji, { t: Date.now(), exp: session.exp, earned: session.stats.earned, kills: Object.values(session.stats.kills).reduce((a, b) => a + b, 0) }));
   setLanguage(p.save.language);
   // The profile's language may differ from the device's one the missions were read in.
   if (surowaTresc.length) session.extra = surowaTresc.map(({ sekret, ...m }) => odswiezSlownictwoMisji(wybierzJezyk(m)));

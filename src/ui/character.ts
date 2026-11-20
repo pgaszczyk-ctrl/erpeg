@@ -15,7 +15,7 @@ import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_P
 import {
   gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
-import { session, stanOsiagniec, saveNow } from '../quests';
+import { session, stanOsiagniec, saveNow, poczatekSesji } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
 import { NOWE_POSTACIE } from '../content/wyglad';
 import { heroSkin, BOHATER_MODUL } from '../sprites';
@@ -448,6 +448,18 @@ function show(host: CharacterHost) {
       ['📈 Premia za poziom', `+${Math.round(czescPremii(lvl) * PREMIA_POZIOMU.zycie * 100)}% życia, +${Math.round((szybkoscPostaci(session.exp) - 1) * 100)}% szybkości`],
       ['🛡 Pancerz', String(defense())],
     ]));
+    // Hunt analyser: this play session's gains (EXP per hour, gold earned, creatures beaten).
+    if (poczatekSesji.t) {
+      const h = Math.max(1 / 60, (Date.now() - poczatekSesji.t) / 3_600_000);
+      const e = session.exp - poczatekSesji.exp, g = session.stats.earned - poczatekSesji.earned;
+      const k = Object.values(session.stats.kills).reduce((a, b) => a + b, 0) - poczatekSesji.kills;
+      s.append(el('div', 'k-sub', tx('Ta sesja', 'This session')), rows([
+        [tx('⏱ Czas gry', '⏱ Play time'), `${Math.floor(h)} h ${Math.round((h % 1) * 60)} min`],
+        [tx('✨ Doświadczenie', '✨ Experience'), `+${e} EXP (${Math.round(e / h)}/h)`],
+        [tx('💰 Zarobione złoto', '💰 Gold earned'), `+${g} (${Math.round(g / h)}/h)`],
+        [tx('⚔ Pokonane stwory', '⚔ Creatures beaten'), String(k)],
+      ]));
+    }
     const n = host.fruitPerHeal ?? LECZENIE_OWOCAMI.owocow;
     const canEat = totalFruit() >= n && hp < maxHp;
     const eatBtn = el('button', `c-btn${canEat ? '' : ' c-muted'}`, `🍎 Zjedz ${n} owoców → +1 ❤`) as HTMLButtonElement;
