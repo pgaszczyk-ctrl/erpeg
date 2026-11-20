@@ -19,6 +19,11 @@ import { OSTROSC } from '../screen';
 import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
 import { GEN_DOTS, MARGINES, RODZAJE, type Budynek09, type Pole09, type Rodzaj09 } from './ziemia09';
+import { prostokatnosc } from '../gen/dachyKsztalt';
+
+const poleObrysu = (r: number[]) => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += (r[j] - r[i]) * (r[j + 1] + r[i + 1]) / 2; return Math.abs(a); };
+const hashSeed = (s: number, k: number) => { let h = Math.imul(s ^ (k * 2654435761), 2246822519) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489917) >>> 0; h ^= h >>> 16; return h / 4294967296; };
+const m09Zabronione = (b: Building) => !!b.open;
 import type { Terrain } from './terrain';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
@@ -509,6 +514,55 @@ export class MapRenderer {
     return this.koscioly.find((k) => k.p.building === b)?.rodzaj ?? undefined;
   }
 
+  /**
+   * Roof forms (owner, 20 Nov 2026: „od-nudź wygląd budynków”): libraries get a tower wound with a brass spiral,
+   * universities an observatory dome, town halls a clock tower, tower blocks a mast with a coil; in the mountains small
+   * houses are wooden with a steep shingle roof; some small houses get a gable roof, big-city tenements a mansard,
+   * big halls without an address a saw-tooth roof. Fixed per building (seed), worked out once per building.
+   */
+  private formy = new WeakMap<Building, Budynek09['forma'] | 0>();
+  private wazne: { p: { building: Building | null }; k: 'biblioteka' | 'obserwatorium' | 'ratusz' }[] = [];
+  private wazneIle = -1;
+  private formaBudynku(b: Building, poziomy: number): Budynek09['forma'] {
+    const m = this.map;
+    // Special places are listed once; their building is matched every time (stubs get it only when the tile arrives).
+    if (m.places.length !== this.wazneIle) {
+      this.wazneIle = m.places.length;
+      this.wazne = [];
+      for (const p of m.places) {
+        const k = p.kind === 'library' ? 'biblioteka' : p.kind === 'university' ? 'obserwatorium'
+          : p.kind === 'office' && /ratusz|urz[aą]d miasta|town ?hall|rathaus|h[oô]tel de ville|municipio|ayuntamiento|radnice|ratu[šs]/i.test(p.name) ? 'ratusz' : null;
+        if (k) this.wazne.push({ p, k });
+      }
+    }
+    if (!b.open) { const w = this.wazne.find((x) => x.p.building === b); if (w) return w.k; }
+    const zap = this.formy.get(b);
+    if (zap !== undefined) return zap || undefined;
+    const f = this.wybierzForme(b, poziomy);
+    this.formy.set(b, f ?? 0);
+    return f;
+  }
+  private wybierzForme(b: Building, poziomy: number): Budynek09['forma'] {
+    if (m09Zabronione(b) || this.highlight.has(b)) return undefined;
+    const r = b.rings[0];
+    if (!r || r.length < 6) return undefined;
+    const m2 = poleObrysu(r) / (PX_PER_M * PX_PER_M), los = hashSeed(b.seed, 41), region = this.regionBudynku(b);
+    const swojski = region === 'umiarkowany' || region === 'polnoc' || region === 'balkany';
+    if (poziomy >= 3 && los < 0.45) return 'antena';
+    if (poziomy >= 2 && m2 > 900 && los < 0.12) return 'antena';
+    if (b.rings.length > 1) return undefined; // courtyards: keep the ordinary roof that slopes towards them
+    const prost = prostokatnosc(r);
+    if (m2 > 1500 && !b.addresses.length && !b.name && prost > 0.8 && los < 0.6) return 'szed';
+    const t = this.map.terrain;
+    if (t && poziomy === 1 && m2 < 300 && swojski) {
+      const ll = r ? t.heightAt(r[0], r[1]) : 0;
+      if (ll > 550 && prost > 0.7) return 'stromy';
+    }
+    if (swojski && poziomy <= 2 && m2 >= 200 && m2 <= 1500 && this.miasto === 'duze' && los < 0.28) return 'mansarda';
+    if (poziomy === 1 && m2 >= 40 && m2 <= 260 && prost > 0.82 && region !== 'azja' && los < 0.45) return 'dwuspadowy';
+    return undefined;
+  }
+
   /** Styl regionu świata dla budynku (kraj z jego położenia), pamiętany na mapie. Mapy bez położenia: Polska. */
   private regiony = new WeakMap<Building, string>();
   private regionBudynku(b: Building): string {
@@ -901,6 +955,7 @@ export class MapRenderer {
         hl: hl ? [hl.roof, hl.wall] as [string, string] : undefined,
         region: this.regionBudynku(b),
         swiatynia: this.swiatyniaBudynku(b),
+        forma: this.formaBudynku(b, k.poziomy),
       };
     });
     const G2 = GEN_DOTS;

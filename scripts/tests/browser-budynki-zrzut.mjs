@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 await mkdir('work', { recursive: true });
-const MIEJSCA = [['rynek', 51.24795, 22.56765], ['grodzka', 51.24905, 22.56900], ['bramakrak', 51.24735, 22.56530]];
+const MIEJSCA = process.env.MIEJSCA ? JSON.parse(process.env.MIEJSCA) : [['rynek', 51.24795, 22.56765], ['grodzka', 51.24905, 22.56900], ['bramakrak', 51.24735, 22.56530]];
 const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 const mobile = process.env.TELEFON === '1';
 const context = await browser.newContext({ viewport: mobile ? { width: 844, height: 390 } : { width: 1280, height: 800 }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1, locale: 'pl-PL' });
@@ -25,6 +25,14 @@ page.on('pageerror', (e) => console.log('ERR', e.message));
 await page.goto(`http://127.0.0.1:${process.env.PORT ?? 4173}/?lang=pl&pogoda=czysto&wiatr=0#postac=Jam&kod=ANGELIKA`);
 await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 300000 });
 await page.evaluate(() => document.querySelectorAll('.m-screen, #samouczek-krok').forEach((e) => e.remove()));
+// NAZWY='Łopacińskiego|Filia nr 2': places by name (their door) instead of coordinates.
+if (process.env.NAZWY) {
+  MIEJSCA.length = 0;
+  for (const n of process.env.NAZWY.split('|')) {
+    const ll = await page.evaluate((n) => { const s = window.__game.scene.getScene('game'); const p = s.city.places.find((q) => q.name.includes(n)); const b = p?.building; return p ? (b ? s.city.toLatLon((b.x0 + b.x1) / 2, b.y1 + 60) : s.city.toLatLon(p.door.x, p.door.y + 40)) : null; }, n);
+    if (ll) MIEJSCA.push([n.replace(/\W+/g, '_'), ll.lat, ll.lon]); else console.log('brak', n);
+  }
+}
 for (const [n, lat, lon] of MIEJSCA) {
   await page.evaluate(([lat, lon]) => { const s = window.__game.scene.getScene('game'); const p = s.city.fromLatLon(lat, lon); const f = s.city.freeNear ? s.city.freeNear(p.x, p.y) : p; s.player.setPosition(f.x, f.y); s.cameras.main.centerOn(f.x, f.y); }, [lat, lon]);
   await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 300000 }).catch(() => {});

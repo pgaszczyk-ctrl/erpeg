@@ -1,4 +1,7 @@
-import { swiatyniaNaDachu, opcjeSwiatyni, type Swiatynia } from '../gen/swiatynie';
+import { swiatyniaNaDachu, opcjeSwiatyni, type Swiatynia, brylaNaDachu, opcjeObrotowe, type FormaObrotowa } from '../gen/swiatynie';
+import { czescRegularna, rMaksFormy, wymiaryDachu } from '../gen/dachySwiatyn';
+import { prostokatnosc } from '../gen/dachyKsztalt';
+import { ksztaltNaDachu, opcjeKsztaltu, type FormaKsztaltu } from '../gen/dachyKsztalt';
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza , koleiny } from '../gen';
 import { rurociagWzdluz } from '../gen';
@@ -48,6 +51,8 @@ export interface Budynek09 {
   id?: number;
   /** Świątynia innego wyznania: cebulaste kopuły (cerkiew) albo kopuła z minaretem (meczet). */
   swiatynia?: Swiatynia;
+  /** Roof form instead of the ordinary hip roof (src/gen/dachySwiatyn.ts / dachyKsztalt.ts). */
+  forma?: FormaObrotowa | FormaKsztaltu;
 }
 
 export interface Zlecenie {
@@ -212,12 +217,23 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   const plaski = !b.hl && hash(b.seed, 11, 7) < R.plaskie ? true : undefined;
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${b.swiatynia ?? ''}|${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${b.swiatynia ?? ''}${b.forma ?? ''}|${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
     const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
-    gotowy = budynek(b.r, b.swiatynia ? opcjeSwiatyni(op, b.swiatynia) : op);
+    const obrot = b.forma && OBROTOWE.has(b.forma) ? b.forma as FormaObrotowa : undefined;
+    const ksztalt = b.forma && !obrot ? b.forma as FormaKsztaltu : undefined;
+    // An irregular or big building keeps its ordinary roof; the form stands only on its most regular part.
+    const czesc = obrot && obrot !== 'antena' && (prostokatnosc(b.r) < 0.85 || (b.dziury?.length ?? 0) > 0 || wymiaryDachu(b.r, obrot).rKolo >= rMaksFormy(obrot) * 1.25)
+      ? czescRegularna(b.r, rMaksFormy(obrot)) : null;
+    gotowy = budynek(b.r, b.swiatynia ? opcjeSwiatyni(op, b.swiatynia) : czesc ? { ...op, komin: false, steampunk: 0 } : obrot ? opcjeObrotowe(op, obrot) : ksztalt ? opcjeKsztaltu(op, ksztalt) : op);
+    if (!b.swiatynia && (obrot || ksztalt)) {
+      const g0 = gotowy;
+      const wlasny = (czesc ?? b.r).map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
+      const t = obrot ? brylaNaDachu(g0.obraz, wlasny, obrot, b.seed, czesc ? MATERIALY[dach]?.tony : undefined) : ksztaltNaDachu(g0.obraz, wlasny, ksztalt!, b.seed, op);
+      gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora };
+    }
     if (b.swiatynia) {
       const g0 = gotowy;
       const wlasny = b.r.map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
@@ -231,6 +247,8 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   const dx = -Math.round(b.h * SKOS), dy = -b.h;
   return { obraz: gotowy.obraz, x0: gotowy.x0 + dx, y0: gotowy.y0 + dy, para: gotowy.para.map((z) => ({ ...z, x: z.x + dx, y: z.y + dy })) };
 }
+
+const OBROTOWE = new Set(['biblioteka', 'obserwatorium', 'ratusz', 'antena']);
 
 /** Przechył ścian w generatorze (domyślny `skos` budynku, WALL_SKEW). */
 const SKOS = 0.35;

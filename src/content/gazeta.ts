@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.11.2026', tytul: { pl: 'Dachy z charakterem', en: 'Roofs with character' },
+    tresc: { pl: 'Biblioteki poznasz po wieży owiniętej mosiężną spiralą, uczelnie po kopule obserwatorium, ratusze po wieży z zegarem, a wieżowce po maszcie z cewką. W górach chaty są drewniane, ze stromym gontem, małe domy mają czasem dwuspadowe dachy, kamienice w dużych miastach mansardy z lukarnami, a fabryczne hale zębate szedy ze szkłem.', en: 'You will know a library by its tower wound with a brass spiral, a university by its observatory dome, a town hall by its clock tower and a tower block by its mast with a coil. Mountain cottages are wooden with steep shingle roofs, small houses sometimes have gable roofs, big-city tenements mansards with dormers and factory halls saw-tooth roofs with glass.' },
+  },
+  {
     data: '20.11.2026', tytul: { pl: 'Każdy strażnik inny, cerkwie i palmy', en: 'Every guard different, onion domes and palms' },
     tresc: { pl: 'Twój strażnik nosi teraz własne kolory munduru, spodni i włosów, a postacie są większe i czytelniejsze. Pierwsza służba prowadzi przez kawałek prawdziwego miasta. Cerkwie mają cebulaste kopuły, meczety minarety, na południu rosną palmy i cyprysy, na północy brzozy i świerki. Przed wyborem profesji szef straży poprosi o dwa zlecenia z posterunku.', en: 'Your guard now wears their own colours of uniform, trousers and hair, and characters are bigger and easier to read. First duty leads through a piece of the real town. Orthodox churches have onion domes, mosques have minarets, palms and cypresses grow in the south, birches and spruces in the north. Before you choose a profession the guard chief asks for two assignments from the post.' },
   },

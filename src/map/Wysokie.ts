@@ -71,6 +71,10 @@ export class Wysokie {
         w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [], miasto };
         this.wszystkie.set(id, w);
         this.licz(id, w, miasto);
+      } else if (w.b.forma !== b.forma || w.b.swiatynia !== b.swiatynia) {
+        // Its roof form became known later (its place's building arrives with the tile): drawn again.
+        w.b = b;
+        if (!w.czeka) this.licz(id, w, miasto);
       } else if (w.noc !== noc && !w.czeka) {
         w.noc = noc;
         this.licz(id, w, miasto);
@@ -129,13 +133,13 @@ export class Wysokie {
   private licz(id: number, w: Wysoki, miasto: WielkoscMiasta) {
     w.czeka = true;
     w.error = undefined;
-    const noc = w.noc;
-    void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(w.b, noc, miasto)).then((g) => {
+    const noc = w.noc, b0 = w.b;
+    void przygotujRysunkiUpraw().then(() => ziemiaWTle().budynek(b0, noc, miasto)).then((g) => {
       w.czeka = false;
       // A paused scene (a dialog is open) still takes the picture: dropping it left an invisible building whose
       // shadow and walls stayed on the map (owner, 11 Oct 2026, demo). Only a scene that is gone skips it.
       if (this.wszystkie.get(id) !== w || !this.zyje()) return;
-      if (w.noc !== noc) return this.licz(id, w, miasto);
+      if (w.noc !== noc || w.b !== b0) return this.licz(id, w, miasto);
       this.zdejmij(w);
       const key = `bud09-${licznik++}`;
       const tex = this.scene.textures.addCanvas(key, g.obraz);

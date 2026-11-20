@@ -5,7 +5,7 @@
 // przy narożniku. Rysowane kodem w palecie świata (obrys #1e1a24, światło z północnego zachodu). Bez DOM-u.
 import { type Obraz, nowy, ustaw, hex, OBRYS, hash } from './wspolne';
 import type { OpcjeBudynku } from './budynki';
-import { dachSwiatyni, zwienczenie } from './dachySwiatyn';
+import { dachSwiatyni, zwienczenie, wymiaryDachu, type RodzajDachu } from './dachySwiatyn';
 
 export type Swiatynia = 'cerkiew' | 'meczet';
 
@@ -98,5 +98,29 @@ export function swiatyniaNaDachu(obraz: Obraz, pierscien: number[], rodzaj: Swia
     ustaw(out, x, baza - minaret - czapka - 1, ZLOTO[3]);
     obrysujNowe(out, przed);
   }
+  return { obraz: out, gora };
+}
+
+/** Roof-forms of the same generator for other buildings (library spiral tower, observatory, town-hall clock, antenna). */
+export type FormaObrotowa = 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena';
+
+/** Body for those: its own walls, a flat plate under the roof form, nothing poking through it. */
+export function opcjeObrotowe(op: OpcjeBudynku, forma: FormaObrotowa): OpcjeBudynku {
+  return { ...op, plaski: true, dachPlaski: forma === 'antena' ? (op.dachPlaski ?? 'papa') : 'papa', komin: false, rura: forma === 'antena' ? op.rura : false, steampunk: forma === 'antena' ? op.steampunk : 0, okap: 0, azja: false, ozdoby: forma === 'antena' ? op.ozdoby : [] };
+}
+
+/** The roof form on its building picture; returns the picture with room added above. */
+export function brylaNaDachu(obraz: Obraz, pierscien: number[], forma: RodzajDachu, seed: number, polac?: number[]): { obraz: Obraz; gora: number } {
+  const { rKolo, H } = wymiaryDachu(pierscien, forma);
+  if (!(rKolo > 0)) return { obraz, gora: 0 };
+  let y0 = Infinity;
+  for (let i = 1; i < pierscien.length; i += 2) y0 = Math.min(y0, pierscien[i]);
+  // Room above: the roof's height minus what the outline already leaves above its centre, plus the finial.
+  const gora = Math.max(0, Math.round(H + rKolo * 0.6 + 10));
+  const out = nowy(obraz.w, obraz.h + gora);
+  for (let y = 0; y < obraz.h; y++) out.px.set(obraz.px.subarray(y * obraz.w, (y + 1) * obraz.w), (y + gora) * out.w);
+  const { cx, szczyt } = dachSwiatyni(out, pierscien, forma, seed, gora, polac);
+  zwienczenie(out, cx, szczyt, forma, Math.max(6, rKolo * 0.5));
+  void y0;
   return { obraz: out, gora };
 }
