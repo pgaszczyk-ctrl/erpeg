@@ -8,7 +8,7 @@
 // z hełmem), antena (maszt z cewką na płaskim dachu wieżowca). Bez DOM-u.
 import { type Obraz, ustaw, hex, OBRYS, hash } from './wspolne';
 
-export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena';
+export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'wiezyczka';
 
 const P = (a: string[]) => a.map(hex);
 const BLACHY: Record<string, number[]> = {
@@ -105,6 +105,17 @@ const FORMY: Record<RodzajDachu, Forma> = {
       if (t < 0.64) return { s: lerp(0.3, 0.34, (t - 0.6) / 0.04), k: 0.6, z: 'helm' };
       if (t < 0.84) { const u = (t - 0.64) / 0.2; return { s: 0.22 + 0.14 * Math.sin(Math.PI * Math.min(1, u * 0.85 + 0.1)), k: 1, z: 'helm' }; }
       return { s: 0.1 * Math.pow(1 - (t - 0.84) / 0.16, 1.2), k: 1, z: 'helm' };
+    },
+  },
+  // Corner turret of a mansard tenement: a plastered cylinder with windows under a slate cone (dachyKsztalt.ts).
+  wiezyczka: {
+    wys: 4.2, rMaks: 10, szczyt: 'kula', okna: [6, 0, 0.42],
+    polac: () => BLACHY.lupek,
+    kopula: () => BLACHY.lupek,
+    profil: (t) => {
+      if (t < 0.42) return { s: 1, k: 1, z: 'beben' };
+      if (t < 0.45) return { s: lerp(1, 1.15, (t - 0.42) / 0.03), k: 1, z: 'helm' };
+      return { s: 1.15 * (1 - (t - 0.45) / 0.55), k: 1, z: 'helm' };
     },
   },
   // Tower block: on its flat roof an iron mast wound with a brass coil, a brass ball on top.

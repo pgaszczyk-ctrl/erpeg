@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '20.11.2026', tytul: { pl: 'Szklane hale i zielone dachy', en: 'Glass halls and green roofs' },
+    tresc: { pl: 'Dworce kolejowe dostały szklane, łukowe hale na żelaznych żebrach, część bloków ma na dachu ogródek z krzewami i ścieżkami, kamienice z mansardą okrągłą wieżyczkę na narożniku, a fabryczne hale ceglany komin. Ozdoby na ścianach są teraz przechylone razem ze ścianą.', en: 'Railway stations got arched glass halls on iron ribs, some blocks have a roof garden with bushes and paths, mansard tenements a round corner turret, and factory halls a brick chimney. Wall ornaments now lean with their wall.' },
+  },
+  {
     data: '20.11.2026', tytul: { pl: 'Dachy z charakterem', en: 'Roofs with character' },
     tresc: { pl: 'Biblioteki poznasz po wieży owiniętej mosiężną spiralą, uczelnie po kopule obserwatorium, ratusze po wieży z zegarem, a wieżowce po maszcie z cewką. W górach chaty są drewniane, ze stromym gontem, małe domy mają czasem dwuspadowe dachy, kamienice w dużych miastach mansardy z lukarnami, a fabryczne hale zębate szedy ze szkłem.', en: 'You will know a library by its tower wound with a brass spiral, a university by its observatory dome, a town hall by its clock tower and a tower block by its mast with a coil. Mountain cottages are wooden with steep shingle roofs, small houses sometimes have gable roofs, big-city tenements mansards with dormers and factory halls saw-tooth roofs with glass.' },
   },

@@ -5,12 +5,58 @@
 // pionowe ściany z materiału budynku (z okienkiem na strychu), szedy mają przeszklone pionowe pasy. Bez DOM-u.
 import { type Obraz, nowy, hex, OBRYS, hash } from './wspolne';
 import { MATERIALY, type OpcjeBudynku } from './budynki';
+import { dachSwiatyni, zwienczenie } from './dachySwiatyn';
 
-export type FormaKsztaltu = 'stromy' | 'dwuspadowy' | 'mansarda' | 'szed';
+export type FormaKsztaltu = 'stromy' | 'dwuspadowy' | 'mansarda' | 'szed' | 'dworzec' | 'ogrod';
 
 const SK = 0.35;
 const OKNO = hex('#2c2c3a'), RAMA = hex('#e8dfc8');
 const SZKLO = ['#24324a', '#3a5070', '#5a7a9c', '#86a6c4'].map(hex);
+const TRAWA = ['#2a4a24', '#36602c', '#467636', '#5a8c42', '#76a656'].map(hex);
+const ZIELEN_KRZAK = ['#1a3420', '#24482a', '#305e34', '#3e7640', '#56904e'].map(hex);
+const ZWIR = ['#6a645a', '#847c70', '#9c9486', '#b4ac9c', '#ccc4b2'].map(hex);
+const CEGLA_K = ['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c'].map(hex);
+
+/** A round corner turret (slate cone) on a mansard tenement, at its south-east corner, when it fits inside. */
+function wiezyczka(o: Obraz, r: number[], gora: number, seed: number, R: number) {
+  let best = -Infinity, ki = 0;
+  for (let i = 0; i < r.length; i += 2) { const sc = r[i] + r[i + 1] * 0.7; if (sc > best) { best = sc; ki = i; } }
+  // Inside the corner along its bisector, far enough to touch neither wall.
+  const n = r.length, kx = r[ki], ky = r[ki + 1];
+  const px = r[(ki - 2 + n) % n], py = r[(ki - 1 + n) % n], qx = r[(ki + 2) % n], qy = r[(ki + 3) % n];
+  const l1 = Math.hypot(px - kx, py - ky) || 1, l2 = Math.hypot(qx - kx, qy - ky) || 1;
+  const u1x = (px - kx) / l1, u1y = (py - ky) / l1, u2x = (qx - kx) / l2, u2y = (qy - ky) / l2;
+  let bx = u1x + u2x, by = u1y + u2y; const bl = Math.hypot(bx, by) || 1; bx /= bl; by /= bl;
+  const sin = Math.abs(u1x * by - u1y * bx), d = (R + 1.5) / Math.max(0.3, sin);
+  const cx = kx + bx * d, cy = ky + by * d;
+  if (!wnetrze(r, cx, cy)) return;
+  const ring: number[] = [];
+  for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; ring.push(cx + Math.cos(a) * R, cy + Math.sin(a) * R); }
+  for (let i = 0; i < ring.length; i += 2) if (!wnetrze(r, ring[i], ring[i + 1])) return;
+  const { cx: tx, szczyt } = dachSwiatyni(o, ring, 'wiezyczka', seed, gora);
+  zwienczenie(o, tx, szczyt, 'wiezyczka', R);
+}
+
+/** A brick factory chimney at the hall's north-east corner (drawn last, it stands in front of its roof). */
+function komin(o: Obraz, r: number[], gora: number, hSzed: number) {
+  let best = -Infinity, kx = 0, ky = 0, sx = 0, sy = 0, n = 0;
+  for (let i = 0; i < r.length; i += 2) {
+    sx += r[i]; sy += r[i + 1]; n++;
+    const sc = r[i] - r[i + 1];
+    if (sc > best) { best = sc; kx = r[i]; ky = r[i + 1]; }
+  }
+  const dx = sx / n - kx, dy = sy / n - ky, dl = Math.hypot(dx, dy) || 1;
+  const x = Math.round(kx + (dx / dl) * 6), y = Math.round(ky + (dy / dl) * 6) + gora;
+  const H = Math.round(hSzed + 22), w = 3;
+  const put = (i: number, j: number, c: number) => { if (i >= 0 && j >= 0 && i < o.w && j < o.h) o.px[j * o.w + i] = c; };
+  for (let z = 0; z < H; z++) {
+    const X = Math.round(x - z * SK), Y = y - z;
+    for (let i = -w; i <= w; i++) put(X + i, Y, i === -w || i === w ? OBRYS : CEGLA_K[i < -1 ? 3 : i < 1 ? 2 : 1]);
+    if (z % 4 === 0) for (let i = -w + 1; i < w; i++) put(X + i, Y, CEGLA_K[0]);
+  }
+  const X = Math.round(x - H * SK), Y = y - H;
+  for (let i = -w - 1; i <= w + 1; i++) { put(X + i, Y, OBRYS); put(X + i, Y + 1, CEGLA_K[4]); put(X + i, Y - 1, OBRYS); }
+}
 
 /** Body under the roof: a flat plate (it is covered), no chimneys/pipes/ornaments poking through. */
 export function opcjeKsztaltu(op: OpcjeBudynku, forma: FormaKsztaltu): OpcjeBudynku {
@@ -72,15 +118,32 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
   const spadek = forma === 'stromy' ? 1.35 : 0.72;
   const mansA = Math.min(polW * 0.4, 8), mansMax = mansA * 2.1 + Math.max(0, polW - mansA) * 0.3;
   const okres = 16, hSzed = Math.min(12, okres * 0.7);
+  const hHali = polW * 0.75;
+  // Green roof: low bushes on a world grid, none on the parapet (2 px from the edge).
+  const krzak = (x: number, y: number) => {
+    const cx = Math.floor(x / 7), cy = Math.floor(y / 7);
+    let best = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const gx = cx + i, gy = cy + j;
+      if (hash(gx, gy, seed) > 0.42) continue;
+      const px = gx * 7 + 1.5 + hash(gx, gy, seed + 1) * 4, py = gy * 7 + 1.5 + hash(gx, gy, seed + 2) * 4, rr = 1.6 + hash(gx, gy, seed + 3) * 1.4;
+      const d = Math.hypot(x - px, y - py);
+      if (d < rr) best = Math.max(best, 2.6 * (1 - (d / rr) ** 2));
+    }
+    return best;
+  };
   const wys = (x: number, y: number): number => {
     switch (forma) {
+      case 'dworzec': { const v = (V(x, y) - vc) / polW; return hHali * Math.sqrt(Math.max(0, 1 - v * v)); }
+      case 'ogrod': return odl(x, y)[0] < 2.2 ? 0 : krzak(x, y);
       case 'mansarda': { const d = odl(x, y)[0]; return d < mansA ? d * 2.1 : mansA * 2.1 + (d - mansA) * 0.3; }
       case 'szed': { const f = ((y - ymin) / okres) % 1; return hSzed * f; }
       default: return Math.max(0, spadek * (polW - Math.abs(V(x, y) - vc)));
     }
   };
-  const hMax = forma === 'mansarda' ? mansMax : forma === 'szed' ? hSzed : spadek * polW;
-  const gora = Math.ceil(hMax) + 3;
+  const hMax = forma === 'mansarda' ? mansMax : forma === 'szed' ? hSzed : forma === 'dworzec' ? hHali : forma === 'ogrod' ? 3 : spadek * polW;
+  // Room above: the roof, plus a corner turret on mansards and a factory chimney on saw-tooth halls.
+  const gora = Math.ceil(Math.max(hMax, forma === 'mansarda' ? 34 : forma === 'szed' ? hSzed + 28 : 0)) + 3;
   const out = nowy(obraz.w, obraz.h + gora);
   for (let y = 0; y < obraz.h; y++) out.px.set(obraz.px.subarray(y * obraz.w, (y + 1) * obraz.w), (y + gora) * out.w);
   const W = out.w, Hh = out.h;
@@ -126,6 +189,19 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
           if (d > mansA * 0.25 && d < mansA * 0.8 && m > 4 && m < 8) c = (m < 4.7 || m > 7.3 || d < mansA * 0.33) ? RAMA : OKNO;
           if (d < 0.6) c = D.krawedz;
         } else { sc = 2; c = ton(GORA_M.tony, lum * 1.2 + 0.25); }
+      } else if (forma === 'dworzec') {
+        // Glass barrel vault on iron ribs (across every 6 px) and purlins (along, every few px of arc).
+        const u = U(x, y), v = V(x, y) - vc;
+        const luk = Math.asin(Math.max(-1, Math.min(1, v / polW))) * polW;
+        const zebro = Math.floor(u + 400) % 6 === 0, platew = Math.floor(luk + 400) % 4 === 0;
+        c = zebro || platew ? (lum > 0.3 ? hex('#4a4e58') : hex('#2c2e36')) : SZKLO[Math.max(0, Math.min(3, Math.round(1.2 + lum * 2.2 + (hash(Math.floor(u / 6), Math.floor(luk / 4), seed) < 0.15 ? 1 : 0))))];
+        if (Math.abs(v) > polW - 0.6) c = hex('#2c2e36');
+      } else if (forma === 'ogrod') {
+        const d = odl(x, y)[0];
+        if (d < 2.2) { sc = 2; c = ton(MATERIALY.kamien.tony, d < 0.8 ? 0.6 : 0.1); }
+        else if (h > 0.05) c = ton(ZIELEN_KRZAK, lum);
+        else if (Math.abs(U(x, y) - (A.u0 + A.u1) / 2) < 1.2 || Math.abs(V(x, y) - vc) < 1.2) c = ton(ZWIR, 0.2 + (hash(Math.floor(x), Math.floor(y), seed) - 0.5) * 0.4);
+        else c = ton(TRAWA, 0.15 + (hash(Math.floor(x / 2), Math.floor(y / 2), seed + 9) - 0.5) * 0.5);
       } else if (forma === 'szed') {
         const u = U(x, y);
         if (Math.floor(u) % 3 === 0) lum += 0.1;
@@ -154,9 +230,11 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
       const h = wys(x - nx * 0.3, y - ny * 0.3);
       if (h < 0.6) continue;
       for (let z = 0; z <= h; z += K * 2) {
-        let c = ton(S.tony, lum0 + (S.wzor === 'deski' && Math.floor(s) % 3 === 0 ? -0.15 : 0));
+        let c = forma === 'dworzec'
+          ? (Math.floor(s + 400) % 4 === 0 || z < 0.8 ? hex('#2c2e36') : SZKLO[z > h * 0.6 ? 2 : 1])
+          : ton(S.tony, lum0 + (S.wzor === 'deski' && Math.floor(s) % 3 === 0 ? -0.15 : 0));
         // An attic window in the middle of a gable.
-        if (forma !== 'szed' && Math.abs(V(x, y) - vc) < 1.6 && z > h * 0.3 && z < h * 0.3 + 3) c = Math.abs(V(x, y) - vc) > 1.1 || z < h * 0.3 + 0.6 ? RAMA : OKNO;
+        if (forma !== 'szed' && forma !== 'dworzec' && Math.abs(V(x, y) - vc) < 1.6 && z > h * 0.3 && z < h * 0.3 + 3) c = Math.abs(V(x, y) - vc) > 1.1 || z < h * 0.3 + 0.6 ? RAMA : OKNO;
         postaw(x, y, z, y + SK * x * 0.5 + 0.002, c, 9);
       }
     }
@@ -189,7 +267,8 @@ export function ksztaltNaDachu(obraz: Obraz, pierscien: number[], forma: FormaKs
     else if ((a && a !== s && a < 8 && s < 8) || (b && b !== s && b < 8 && s < 8)) kraw.push(i);
   }
   for (const i of ink) out.px[i] = OBRYS;
-  for (const i of kraw) out.px[i] = D.krawedz;
-  void hash; void seed;
+  for (const i of kraw) out.px[i] = forma === 'ogrod' ? ZIELEN_KRZAK[0] : D.krawedz;
+  if (forma === 'mansarda' && polW >= 12 && hash(seed, 31, 7) < 0.7) wiezyczka(out, r, gora, seed, Math.min(9, polW * 0.45));
+  if (forma === 'szed') komin(out, r, gora, hSzed);
   return { obraz: out, gora };
 }

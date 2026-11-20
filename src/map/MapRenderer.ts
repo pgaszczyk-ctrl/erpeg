@@ -521,7 +521,7 @@ export class MapRenderer {
    * big halls without an address a saw-tooth roof. Fixed per building (seed), worked out once per building.
    */
   private formy = new WeakMap<Building, Budynek09['forma'] | 0>();
-  private wazne: { p: { building: Building | null }; k: 'biblioteka' | 'obserwatorium' | 'ratusz' }[] = [];
+  private wazne: { p: { building: Building | null }; k: 'biblioteka' | 'obserwatorium' | 'ratusz' | 'dworzec' }[] = [];
   private wazneIle = -1;
   private formaBudynku(b: Building, poziomy: number): Budynek09['forma'] {
     const m = this.map;
@@ -530,12 +530,16 @@ export class MapRenderer {
       this.wazneIle = m.places.length;
       this.wazne = [];
       for (const p of m.places) {
-        const k = p.kind === 'library' ? 'biblioteka' : p.kind === 'university' ? 'obserwatorium'
+        const k = p.kind === 'library' ? 'biblioteka' : p.kind === 'university' ? 'obserwatorium' : p.kind === 'station' && !/autobus|bus/i.test(p.name) ? 'dworzec'
           : p.kind === 'office' && /ratusz|urz[aą]d miasta|town ?hall|rathaus|h[oô]tel de ville|municipio|ayuntamiento|radnice|ratu[šs]/i.test(p.name) ? 'ratusz' : null;
         if (k) this.wazne.push({ p, k });
       }
     }
-    if (!b.open) { const w = this.wazne.find((x) => x.p.building === b); if (w) return w.k; }
+    if (!b.open) {
+      const w = this.wazne.find((x) => x.p.building === b);
+      // A railway station's glass hall only on a roughly rectangular building (the vault follows its long side).
+      if (w && (w.k !== 'dworzec' || (b.rings.length === 1 && prostokatnosc(b.rings[0]) > 0.75))) return w.k;
+    }
     const zap = this.formy.get(b);
     if (zap !== undefined) return zap || undefined;
     const f = this.wybierzForme(b, poziomy);
@@ -550,6 +554,8 @@ export class MapRenderer {
     const swojski = region === 'umiarkowany' || region === 'polnoc' || region === 'balkany';
     if (poziomy >= 3 && los < 0.45) return 'antena';
     if (poziomy >= 2 && m2 > 900 && los < 0.12) return 'antena';
+    // Green roofs with a little garden on a share of the flat-roofed blocks.
+    if (poziomy >= 2 && m2 > 250 && los >= 0.5 && los < 0.72 && b.rings.length === 1) return 'ogrod';
     if (b.rings.length > 1) return undefined; // courtyards: keep the ordinary roof that slopes towards them
     const prost = prostokatnosc(r);
     if (m2 > 1500 && !b.addresses.length && !b.name && prost > 0.8 && los < 0.6) return 'szed';
