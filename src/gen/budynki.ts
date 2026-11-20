@@ -564,9 +564,33 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
     const naScianie = (): [typeof E[number], number] | null => { if (!sciany.length) return null; for (let k = 0; k < 6; k++) { const { e } = sciany[Math.floor(R() * sciany.length)]; const al = 3 + R() * (e.L - 6); const [i, j] = wpt(e, al, H / 2); if (wolne(i, j, 6)) { zajete.push([i, j]); return [e, al]; } } return null; };
     const naDachu = (r: number): [number, number] | null => { for (let k = 0; k < 10 && dach.length; k++) { const [i, j] = dach[Math.floor(R() * dach.length)]; if (wolne(i, j, r)) { zajete.push([i, j]); return [i, j]; } } return null; };
     /** Rysunek grafika: podstawa (środek dolnej krawędzi) w (ci, cj), pod nim cień w prawo-dół (na ścianie 1 px, na dachu 3 px i ciemniej). */
-    const stempel = (nazwa: string, ci: number, cj: number, naDach: boolean): boolean => {
+    const stempel = (nazwa: string, ci: number, cj: number, naDach: boolean, sciana?: typeof E[number]): boolean => {
       const r = OZDOBY_RYS[nazwa];
       if (!r) return false;
+      // On a wall the picture lies in the wall's plane (owner, 20 Nov 2026: „dekoracje muszą się zgrywać z kątem
+      // ściany”): its across axis runs along the wall's edge, its up axis follows the walls' lean (−skos, −1).
+      let ux = 1, uy = 0;
+      if (sciana && !naDach) { ux = sciana.ux; uy = sciana.uy; if (ux < 0 || (Math.abs(ux) < 1e-6 && uy < 0)) { ux = -ux; uy = -uy; } }
+      if (sciana && !naDach && ux >= 0.5) {
+        // Pixel-art shear (like the windows): each column steps down along the wall, each row steps sideways with
+        // the walls' lean; whole picture pixels move, none is resampled, so a 12 px clock stays a clock.
+        const nachyl = uy / ux, wynik: [number, number, number][] = [], zajety = new Set<number>();
+        for (let b = 0; b < r.o.h; b++) for (let a = 0; a < r.o.w; a++) {
+          const c = r.o.px[b * r.o.w + a];
+          if (!(c >>> 24)) continue;
+          const al = a - r.bx, up = r.by - b;
+          const i = ci + al - Math.round(up * sk), j = cj + Math.round(al * nachyl) - up;
+          wynik.push([i, j, c]); zajety.add(j * W + i);
+        }
+        for (const [i, j] of wynik) {
+          const k = (j + 1) * W + i + 1;
+          if (zajety.has(k) || i + 1 >= W || j + 1 >= Hh) continue;
+          const c = o.px[k];
+          if (c >>> 24) o.px[k] = przyciemnij(c, 0.75);
+        }
+        for (const [i, j, c] of wynik) put(i, j, c);
+        return true;
+      }
       const ox = ci - r.bx, oy = cj - r.by, d = naDach ? 3 : 1, pel = (a: number, b: number) => a >= 0 && b >= 0 && a < r.o.w && b < r.o.h && (r.o.px[b * r.o.w + a] >>> 24) > 0;
       for (let b = 0; b < r.o.h + d; b++) for (let a = 0; a < r.o.w + d; a++) {
         if (pel(a, b) || !pel(a - d, b - d)) continue;
@@ -583,7 +607,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const r = OZDOBY_RYS[nazwa];
       if (!r || H < r.o.h + 3) return false;
       const [i, j] = wpt(w[0], w[1], Math.max(1, Math.min(hh, H - r.o.h - 1)));
-      return stempel(nazwa, i, j, false);
+      return stempel(nazwa, i, j, false, w[0]);
     };
     const kolo = (ci: number, cj: number, r: number, f: (d: number, i: number, j: number) => number | 0) => { for (let j = -Math.ceil(r); j <= r; j++) for (let i = -Math.ceil(r); i <= r; i++) { const d = Math.hypot(i, j); if (d > r + 0.3) continue; const c = f(d, i, j); if (c) put(ci + i, cj + j, c); } };
 
@@ -597,12 +621,15 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
       const rz = OZDOBY_RYS.zegar;
       if (rz && H >= rz.o.h + 3) { // tarcza od grafika, wskazówki dorysowane (po zmniejszeniu znikały)
         const hb = Math.max(1, H - rz.o.h - 1), [i, j] = wpt(w[0], w[1], hb);
-        stempel('zegar', i, j, false);
+        stempel('zegar', i, j, false, w[0]);
         let t = rz.o.h, l = rz.o.w, rr = 0, bb = 0; // środek tarczy z nieprzezroczystych pikseli rysunku
         for (let y = 0; y < rz.o.h; y++) for (let x = 0; x < rz.o.w; x++) if (rz.o.px[y * rz.o.w + x] >>> 24) { t = Math.min(t, y); bb = Math.max(bb, y); l = Math.min(l, x); rr = Math.max(rr, x); }
-        const ci = i - rz.bx + Math.round((l + rr) / 2), cj = j - rz.by + Math.round((t + bb) / 2);
-        for (let k = 0; k <= 2; k++) put(ci, cj - k, OBRYS);
-        put(ci + 1, cj, OBRYS);
+        // Hands in the wall's plane too (the face is sheared along the wall by `stempel`).
+        const e = w[0], skos = e.ux >= 0.5 || e.ux <= -0.5, n = skos ? (e.ux < 0 ? -e.uy / -e.ux : e.uy / e.ux) : 0, s2 = skos ? sk : 0;
+        const pt = (al: number, up: number): [number, number] => [i + al - Math.round(up * s2), j + Math.round(al * n) - up];
+        const [ci, cj] = pt(Math.round((l + rr) / 2) - rz.bx, rz.by - Math.round((t + bb) / 2));
+        for (let k = 0; k <= 2; k++) put(ci - Math.round(k * s2), cj - k, OBRYS);
+        put(ci + 1, cj + Math.round(n), OBRYS);
         return;
       } const [i, j] = wpt(w[0], w[1], H - 5);
       kolo(i, j, 4.4, (d, a, b) => d > 4 ? OBRYS : d > 3 ? (a + b < 0 ? MOSIADZ[3] : MOSIADZ[1]) : (a === 0 && b <= 0 && b >= -3) || (b === 0 && a >= 0 && a <= 2) ? OBRYS : hex('#f2ead2')); };
