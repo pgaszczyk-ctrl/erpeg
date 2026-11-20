@@ -1,4 +1,4 @@
-import { swiatyniaNaDachu, type Swiatynia } from '../gen/swiatynie';
+import { swiatyniaNaDachu, opcjeSwiatyni, type Swiatynia } from '../gen/swiatynie';
 import { rozstawDrzewa, drzewoZ, idDrzewa, type Drzewo09 } from './drzewa09';
 import { tor, kolorPodloza , koleiny } from '../gen';
 import { rurociagWzdluz } from '../gen';
@@ -217,11 +217,11 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
     const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk };
-    gotowy = budynek(b.r, op);
+    gotowy = budynek(b.r, b.swiatynia ? opcjeSwiatyni(op, b.swiatynia) : op);
     if (b.swiatynia) {
       const g0 = gotowy;
       const wlasny = b.r.map((v, i) => v - (i % 2 ? g0.y0 : g0.x0));
-      const t = swiatyniaNaDachu(g0.obraz, wlasny, b.swiatynia, b.seed);
+      const t = swiatyniaNaDachu(g0.obraz, wlasny, b.swiatynia, b.seed, b.h);
       gotowy = { ...g0, obraz: t.obraz, y0: g0.y0 - t.gora };
     }
     zapamietaj(klucz, gotowy);
