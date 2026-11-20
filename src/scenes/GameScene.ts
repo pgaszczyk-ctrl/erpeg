@@ -113,6 +113,9 @@ import { updateGameCursor, mountGameCursor } from '../ui/gameCursor';
 import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong, worldInteraction, type WorldInteraction } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
+import { siedliska } from '../siedliska/wlacznik';
+import { WidokSiedlisk } from '../siedliska/Widok';
+import { przejscieSiedlisk } from '../siedliska/rejestr';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
@@ -531,6 +534,8 @@ export class GameScene extends Phaser.Scene {
   private spotkania: Spotkania | null = null;
   /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
   private lowiska: Lowiska | null = null;
+  /** Siedliska (src/siedliska): palisady, namioty, wieże i ogniska jako obiekty świata. */
+  private widokSiedlisk: WidokSiedlisk | null = null;
   /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
   private prolog?: PrologRekruta;
   /** Elzet 10, the owner's robot quest (Lublin, live fight only). */
@@ -989,6 +994,9 @@ export class GameScene extends Phaser.Scene {
           (t) => this.toast(t, 2600),
         )
       : null;
+    // Siedliska (obozy z palisadą) planuje to samo co łowiska – na tej samej siatce komórek, ale jako część mapy.
+    if (this.lowiska) this.lowiska.obozy = siedliska() && !this.city.loch && !demo.on;
+    this.widokSiedlisk = this.lowiska?.obozy ? new WidokSiedlisk(this, this.city) : null;
 
     this.listyAreny = [];
     if (arenaOn() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
@@ -1429,6 +1437,7 @@ export class GameScene extends Phaser.Scene {
       this.lowiskaCzasS += dt;
       this.lowiska.update(this.player.x, this.player.y);
     }
+    this.widokSiedlisk?.update(this.player.x, this.player.y, now, this.cameras.main.worldView);
     if (!lingering && !this.story.busy) this.spotkania?.update(now);
     }
     if (!this.loch) this.clearHomeArea(); // underground the arrival spot is no safe home
@@ -2598,6 +2607,7 @@ export class GameScene extends Phaser.Scene {
       origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
       sounds: this.combatAudio,
       attackMarker: (s) => this.stwory3d?.attackMarkerMs(s, 'impact'),
+      przejscie: (ax, ay, bx, by) => przejscieSiedlisk(this.city, ax, ay, bx, by),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
         const pending = this.wilkCarry + poPancerzu(obrazenie * session.level.obrazenia, defense(), fizyczne);

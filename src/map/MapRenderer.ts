@@ -31,6 +31,7 @@ import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
 import { MOZAIKI } from '../content/mozaiki';
+import { doGeneratora } from '../siedliska/ziemia';
 import type { Mozaika09 } from './mozaika09';
 import type { Peron09 } from './dworzec09';
 import { ruryPrzyUlicy, type Rura09 } from './rury09';
@@ -611,7 +612,16 @@ export class MapRenderer {
         for (let cy = Math.floor(b.y0 / CHUNK) - 1; cy <= Math.floor(b.y1 / CHUNK) + 1; cy++)
           if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
     });
+    // Nowe siedlisko (src/siedliska): kawałki pod nim (z zapasem na cienie) przemalowane z klepiskiem i bez drzew.
+    const naSiedlisko = (sd: { ramka: { x0: number; y0: number; x1: number; y1: number } }) => {
+      const b = sd.ramka;
+      for (let cx = Math.floor(b.x0 / CHUNK) - 1; cx <= Math.floor(b.x1 / CHUNK) + 1; cx++)
+        for (let cy = Math.floor(b.y0 / CHUNK) - 1; cy <= Math.floor(b.y1 / CHUNK) + 1; cy++)
+          if (this.chunks.has(`${cx},${cy}`)) this.stale.add(`${cx},${cy}`);
+    };
+    map.siedliskaSluchacze.add(naSiedlisko);
     scene.events.once('shutdown', () => {
+      map.siedliskaSluchacze.delete(naSiedlisko);
       off();
       this.destroy();
     });
@@ -928,6 +938,8 @@ export class MapRenderer {
     // Platforms around the chunk (OSM and made-up ones, perony.ts): their slabs go into the kind map,
     // their steampunk fittings (pipes, lens lamps, a telescope, a steam gauge) are painted by the worker.
     const perony = peronyWOkolicy(m, { x0: x0 - 60, y0: y0 - 60, x1: x0 + CHUNK + 60, y1: y0 + CHUNK + 60 });
+    // Siedliska (obóz z palisadą…) sięgające kawałka – z zapasem na korony drzew i cienie (te same w każdym kawałku).
+    const siedl = m.siedliska.filter((sd) => sd.ramka.x1 > x0 - 40 && sd.ramka.x0 < x0 + CHUNK + 40 && sd.ramka.y1 > y0 - 20 && sd.ramka.y0 < y0 + CHUNK + 60);
     const kinds = mapaRodzajow(wide.areas, wide.lines, trackWidth, outside ? (g) => {
       g.beginPath();
       g.rect(x0 - 30, y0 - 30, CHUNK + 60, CHUNK + 60);
@@ -937,7 +949,7 @@ export class MapRenderer {
         g.closePath();
       }
       g.fill('evenodd');
-    } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring));
+    } : null, x0, y0, CHUNK, perony.filter((p) => p.ring.length).map((p) => p.ring), siedl);
     const strefy = m.terrain ? strefyGor(m.terrain, kinds, x0, y0) : undefined;
     const szlaki = m.terrain ? this.szlakiGor(wide.lines, x0, y0) : undefined;
     // Tracks (rail and tram) cut to the chunk with a margin, in generator pixels.
@@ -1018,7 +1030,7 @@ export class MapRenderer {
     // Trees follow the climate of the chunk's place (report: Burgas had Lublin's trees).
     const llKlimat = this.map.loch ? null : this.map.toLatLon(x0 + CHUNK / 2, y0 + CHUNK / 2);
     const klimat = llKlimat && Number.isFinite(llKlimat.lat) ? stylRegionu(llKlimat.lat, llKlimat.lon).id : 'umiarkowany';
-    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, klimat, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
+    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, klimat, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki, siedliska: siedl.map((sd) => doGeneratora(sd, GEN_DOTS)) };
   }
 
   /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */

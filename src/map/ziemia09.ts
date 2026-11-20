@@ -12,6 +12,9 @@ import { stragany } from './targ09';
 import { pasyPola, uprawaPasa, malujPas, type Sprite, type DoZebrania } from '../gen';
 import { malujMozaike, naMozaice, type Mozaika09 } from './mozaika09';
 import { malujGroby } from './groby09';
+import { malujSiedlisko } from '../siedliska/ziemia';
+import { wWielokacie, odlegloscOdObrysu } from '../siedliska/kolizje';
+import type { Siedlisko } from '../siedliska/typy';
 import { stylPoId } from '../content/styleRegionow';
 import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, budynek, cienBudynku, tonyZKoloru, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
@@ -26,7 +29,7 @@ export const MARGINES = 40;
 export type Rodzaj09 = Rodzaj | 'peron' | 'targ';
 export const RODZAJE: Rodzaj09[] = [
   'trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'bruk', 'chodnik', 'plac', 'droga', 'piasek', 'woda',
-  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron', 'targ',
+  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron', 'targ', 'klepisko',
 ];
 const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory'), TARG_ID = RODZAJE.indexOf('targ');
 
@@ -87,6 +90,8 @@ export interface Zlecenie {
   strefy?: { b: number; w: number; h: Float32Array; las: number };
   /** Mountain trails near the chunk (gen px polylines + half width) and their tree-free / thinner bands (gen px from the edge). */
   szlaki?: { linie: { p: number[]; pol: number }[]; wolne: number; rzadziej: number; zostaje: number };
+  /** Siedliska sięgające kawałka (px generatora, siedliska/ziemia.ts doGeneratora): cienie, palenisko, bez drzew w obrysie. */
+  siedliska?: Siedlisko[];
 }
 
 /** Pole (farmland) albo działki (allotments) do obsiania pasami (src/gen/pola.ts, zadanie G11). */
@@ -320,6 +325,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     const i = x - X0 + MARGINES, j = y - Y0 + MARGINES;
     return i >= 0 && j >= 0 && i < S && j < S && RODZAJE[ids[j * S + i]] === 'woda';
   };
+  for (const sd of z.siedliska ?? []) malujSiedlisko(obraz, X0, Y0, sd);
   for (const mz of z.mozaiki ?? []) malujMozaike(obraz, X0, Y0, N, mz);
   for (const t of z.tramwaje ?? []) koleiny(obraz, t, X0, Y0);
   for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);
@@ -365,8 +371,11 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     }
     return r;
   } : rodzajW;
+  // Siedliska: żadnego drzewa w obrysie ani tuż za palisadą (konstrukcje stoją na wykarczowanym terenie).
+  const sdl = (z.siedliska ?? []).filter((q) => q.ramka.x1 > X0 - 60 && q.ramka.x0 < X0 + N + 60 && q.ramka.y1 > Y0 - 20 && q.ramka.y0 < Y0 + N + 110);
+  const wSiedlisku = (x: number, y: number) => sdl.some((q) => x > q.ramka.x0 - 20 && x < q.ramka.x1 + 20 && y > q.ramka.y0 - 20 && y < q.ramka.y1 + 20 && (wWielokacie(q.obrys, x, y) || odlegloscOdObrysu(q.obrys, x, y) < 16));
   const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, z.klimat ?? 'umiarkowany', (x, y) =>
-    !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
+    !wObrysie(x, y) && !(sdl.length && wSiedlisku(x, y)) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
   const wyrzuty: ZrodloPary[] = [];
   if (z.budynki.length || drzewa.length) malujBudynki(obraz, X0, Y0, z.budynki, drzewa, z.noc, sciete, z.miasto ?? 'srednie', wyrzuty, z.hideArchitecture);

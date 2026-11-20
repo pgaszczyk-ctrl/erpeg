@@ -108,6 +108,8 @@ export function mapaRodzajow(
   y0: number,
   rozmiar: number,
   perony: number[][] = [],
+  /** Siedliska (src/siedliska) sięgające kawałka: wnętrze obrysu = klepisko, ścieżki = ziemna droga. */
+  siedliska: { obrys: number[]; sciezki: { pts: number[]; w: number }[] }[] = [],
 ): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony' | 'pola' | 'miesiac' | 'zebrane' | 'dojrzale' | 'miasto'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
@@ -129,6 +131,25 @@ export function mapaRodzajow(
     sciezkaObszaru(g, a.rings, bx0, by0, bx1, by1);
     g.fillStyle = kolor(rodzajObszaru(a));
     g.fill('evenodd');
+  }
+  // Siedliska zmieniają teren (nie są nakładką): klepisko w obrysie (z zapasem pod pale) i wydeptane ścieżki.
+  for (const sd of siedliska) {
+    g.beginPath();
+    g.moveTo(sd.obrys[0], sd.obrys[1]);
+    for (let i = 2; i < sd.obrys.length; i += 2) g.lineTo(sd.obrys[i], sd.obrys[i + 1]);
+    g.closePath();
+    g.fillStyle = g.strokeStyle = kolor('klepisko');
+    g.lineWidth = 3;
+    g.fill();
+    g.stroke();
+    g.strokeStyle = kolor('droga');
+    for (const sc of sd.sciezki) {
+      g.beginPath();
+      g.moveTo(sc.pts[0], sc.pts[1]);
+      for (let i = 2; i < sc.pts.length; i += 2) g.lineTo(sc.pts[i], sc.pts[i + 1]);
+      g.lineWidth = sc.w;
+      g.stroke();
+    }
   }
   // Hard streets go over dirt paths at crossings, independently of tile/feature order.
   // Prepared paving polygons may still join parallel streets; world lines use the
