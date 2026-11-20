@@ -1,9 +1,9 @@
-"""Plansze do zamówienia 50-P001: szablon klatki 32x32 i porównanie wielkości w pikselach świata.
+"""Plansze do zamówienia 50-P002: szablon wielkości w klatce 96x96 (jak 50-P001) i porównanie wielkości w pikselach świata.
 1 piksel świata = 0,5 jednostki mapy; bohater ma 0,25 jednostki na piksel arkusza, więc arkusz 64 px / 2 = świat."""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = 'docs/poczta/do-grafika/50_postac_32/'
+OUT = 'docs/poczta/do-grafika/50_wielkosc_kat/'
 SRC = sys.argv[1] if len(sys.argv) > 1 else None  # obrazek właściciela z propozycją 48 px
 FONT = ImageFont.load_default()
 try:
@@ -27,44 +27,34 @@ def polowa(fr):
 def napis(d, xy, t, c=(30, 26, 36)):
     d.text(xy, t, fill=c, font=FONT)
 
-# 1. Szablon 1:1: arkusz 96x96 = 3x3 klatki 32x32 (wiersze: przód / bok w lewo / tył; kolumny: krok A / stoi / krok B)
-sz = Image.new('RGBA', (96, 96), (0, 0, 0, 0))
-d = ImageDraw.Draw(sz)
-for r in range(3):
-    for c in range(3):
-        x0, y0 = c * 32, r * 32
-        d.line([(x0, y0 + 31), (x0 + 31, y0 + 31)], fill=(255, 0, 255, 255))      # stopy
-        d.line([(x0, y0 + 4), (x0 + 31, y0 + 4)], fill=(0, 200, 255, 160))         # czubek głowy
-        d.line([(x0 + 16, y0), (x0 + 16, y0 + 31)], fill=(255, 200, 0, 90))        # środek
-sz.save(OUT + 'szablon_96x96_1do1.png')
-
-# 2. Szablon x8 z siatką i obecnym bohaterem jako półprzezroczystym wzorem
-Z = 8
+# 1-2. Szablon x6: jedna klatka 96x96 z 50-P001 (stopy w wierszu 90, środek w kolumnie 48),
+# obecny Strażnik w pikselach świata jako wzór i linie wysokości: dziś 27 px, górna granica 34 px (1,25x).
+Z = 6
 bh = Image.open('public/postacie/lista25_06.png').convert('RGBA')
-duzy = Image.new('RGBA', (96 * Z + 260, 96 * Z + 40), (238, 230, 210, 255))
+kl = Image.new('RGBA', (96, 96), (0, 0, 0, 0))
+d = ImageDraw.Draw(kl)
+d.line([(0, 90), (95, 90)], fill=(255, 0, 255, 255))
+d.line([(0, 90 - 27), (95, 90 - 27)], fill=(0, 200, 255, 200))
+d.line([(0, 90 - 34), (95, 90 - 34)], fill=(255, 140, 0, 220))
+d.line([(48, 0), (48, 95)], fill=(255, 200, 0, 90))
+kl.save(OUT + 'szablon_klatka_96_1do1.png')
+duzy = Image.new('RGBA', (96 * Z + 300, 96 * Z + 30), (238, 230, 210, 255))
+fr = polowa(bh.crop((64, 0, 128, 64)))  # stopy w wierszu 31 -> 90
+fr.putalpha(fr.split()[3].point(lambda v: v * 0.45))
+duzy.alpha_composite(fr.resize((32 * Z, 32 * Z), Image.NEAREST), ((48 - 16) * Z, 30 + (90 - 31) * Z))
 d = ImageDraw.Draw(duzy)
-for r in range(3):
-    for c in range(3):
-        fr = polowa(bh.crop((c * 64, r * 64, c * 64 + 64, r * 64 + 64)))
-        a = fr.split()[3].point(lambda v: v * 0.35)
-        fr.putalpha(a)
-        duzy.alpha_composite(fr.resize((32 * Z, 32 * Z), Image.NEAREST), (c * 32 * Z, 20 + r * 32 * Z))
 for i in range(97):
-    col = (30, 26, 36) if i % 32 == 0 else (200, 190, 170)
-    d.line([(i * Z, 20), (i * Z, 20 + 96 * Z)], fill=col)
-    d.line([(0, 20 + i * Z), (96 * Z, 20 + i * Z)], fill=col)
-for r in range(3):
-    for c in range(3):
-        x0, y0 = c * 32 * Z, 20 + r * 32 * Z
-        d.rectangle([x0, y0 + 31 * Z, x0 + 32 * Z, y0 + 32 * Z], outline=(255, 0, 255), width=2)
-        d.line([(x0, y0 + 4 * Z), (x0 + 32 * Z, y0 + 4 * Z)], fill=(0, 160, 220), width=2)
-napis(d, (4, 2), 'Szablon 3x3 klatek 32x32 (x8). Półprzezroczysty wzór = obecny bohater w pikselach świata.')
+    col = (200, 190, 170)
+    d.line([(i * Z, 30), (i * Z, 30 + 96 * Z)], fill=col)
+    d.line([(0, 30 + i * Z), (96 * Z, 30 + i * Z)], fill=col)
+for y, c in [(90, (255, 0, 255)), (90 - 27, (0, 160, 220)), (90 - 34, (230, 120, 0))]:
+    d.line([(0, 30 + y * Z), (96 * Z, 30 + y * Z)], fill=c, width=3)
+napis(d, (4, 6), 'Klatka 96x96 (x6). Wzór = obecny Strażnik w pikselach świata.')
 lx = 96 * Z + 12
-for i, t in enumerate(['wiersz 1: przód', 'wiersz 2: bok (patrzy w lewo)', 'wiersz 3: tył', '',
-                       'kolumny: krok A / stoi / krok B', '', 'różowy = rząd stóp (31)',
-                       'niebieski = czubek głowy (~4)', 'wysokość postaci 26-28 px']):
-    napis(d, (lx, 40 + i * 24), t)
-duzy.save(OUT + 'szablon_x8.png')
+for i, t in enumerate(['różowy: stopy (wiersz 90)', 'niebieski: dziś 27 px', 'pomarańczowy: najwyżej 34 px',
+                       '(1,25x obecnego bohatera)', '', 'propozycja 48 px sięgałaby', 'do wiersza 42 - za wysoko']):
+    napis(d, (lx, 60 + i * 26), t)
+duzy.save(OUT + 'szablon_klatka_x6.png')
 
 # 3. Porównanie wielkości w pikselach świata (x6): obecny bohater vs propozycja 48 px
 Z = 6
