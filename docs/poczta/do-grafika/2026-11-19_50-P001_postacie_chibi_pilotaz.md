@@ -4,7 +4,7 @@
 - **Odpowiedź na:** – (nowe zamówienie)
 - **Od:** programista
 - **Do:** grafik
-- **Status:** nowe
+- **Status:** wstrzymane (właściciel, 20.11.2026: zostajemy przy modelach 3D, tylko je dopracowujemy)
 - **Akceptacja:** właściciel, 19.11.2026 („rób wszystko”; decyzje w raporcie z testu)
 - **Wykonanie:** –
 - **Dotyczy:** wszystkie postacie gry (bohater, mieszkańcy, potem potwory)

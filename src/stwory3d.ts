@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 import type * as THREE from 'three';
 import type { Slime } from './objects/Slime';
 import type { RodzajWroga } from './content/fabula';
-import { SKALA_POSTACI } from './skala';
+import { SKALA_POSTACI, POWIEKSZENIE_3D } from './skala';
 import { KOLOR_3D_GLSL } from './wyrazistosc3d';
 import { manageResident, mieszkancy3d, residentsFor, dialogueActor, releaseResidentBridge, type ResidentVisual, type ResidentSprite } from './mieszkancy3d';
 
@@ -14,7 +14,7 @@ export const MODELE_STWOROW: Partial<Record<RodzajWroga, string>> = {
 };
 function enemiesEnabled(){return new URLSearchParams(location.search).get('stwory3d')!=='0';}
 export function stwory3d(){return enemiesEnabled()||mieszkancy3d();}
-const TILE=128, COLS=8, ROWS=4, LIMIT=32, FPS=15, VIEW=2.2, FEET=.82, SCALE=.27*SKALA_POSTACI;
+const TILE=128, COLS=8, ROWS=4, LIMIT=32, FPS=15, VIEW=2.2, FEET=.82, SCALE=.27*SKALA_POSTACI*POWIEKSZENIE_3D;
 type Model={root:THREE.Object3D; mixer:THREE.AnimationMixer; clips:Map<string,THREE.AnimationClip>;
   events:Record<string,Record<string,number>>; current?:THREE.AnimationAction};
 type Slot={actor:Slime; index:number; angle:number; clip:string; time:number;

@@ -6,7 +6,7 @@ import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
 import { hdOn, fitHd, enemyTexture } from '../sprites';
 import { PLAYER } from './Player';
-import { SKALA_POSTACI } from '../skala';
+import { SKALA_POSTACI, POWIEKSZENIE_3D } from '../skala';
 
 // Enemy kinds. `glut` is the basic slime; `wielki_glut` a boss-sized one;
 // `bandyta` a masked villain (police bounties).
@@ -257,7 +257,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
       this.napis = this.scene.add.text(0, 0, this.kind.name, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
       this.once(Phaser.GameObjects.Events.DESTROY, () => { this.pasek?.destroy(); this.napis?.destroy(); });
     }
-    const top = this.y - Math.max(10, this.displayHeight * (this.hd || this.model3d ? 0.62 : 0.7));
+    const top = this.y - Math.max(10, this.displayHeight * (this.model3d ? 0.62 * POWIEKSZENIE_3D : this.hd ? 0.62 : 0.7));
     const w = Math.max(14, Math.min(40, this.displayWidth * 0.8)), h = 2;
     const share = Math.max(0, Math.min(1, this.hp / this.hpMax));
     const g = this.pasek.setVisible(true).setDepth(1_000_100).clear(); // over tree crowns and roofs: a fight is never hidden

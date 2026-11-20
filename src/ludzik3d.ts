@@ -8,7 +8,8 @@ import { makieta } from './ui/makieta';
 import Phaser from 'phaser';
 import type * as THREE from 'three';
 import type { Player } from './objects/Player';
-import { SKALA_POSTACI } from './skala';
+import { SKALA_POSTACI, POWIEKSZENIE_3D } from './skala';
+import { przebarwModel, przebarwGeometrie, koloryZWygladu, type KoloryPostaci } from './przebarwienie3d';
 import { STOPY_PX } from './content/wyglad';
 import { session } from './quests';
 import { gear, item } from './inventory';
@@ -205,6 +206,7 @@ export class Ludzik3D {
   private pendingSound?: { fn: (remainingMs: number) => void; leadMs: number };
   private attackSound?: { fn: (remainingMs: number) => void; leadMs: number };
   private baseHead?: THREE.BufferGeometry;
+  private kolory?: KoloryPostaci;
   private donors = new Map<string, Promise<import('three/examples/jsm/loaders/GLTFLoader.js').GLTF>>();
 
   /** Keep the guard's body and identity; only weapon, attack pose and the matching headwear change. */
@@ -238,7 +240,8 @@ export class Ludzik3D {
       weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=wyrazistyMaterial(new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true}));});
       const head=g.model.getObjectByName('head') as THREE.Mesh;
       this.baseHead ??= head.geometry;
-      head.geometry=headDonor ? (headDonor.scene.getObjectByName('head') as THREE.Mesh).geometry : this.baseHead;
+      if(headDonor){const geo=(headDonor.scene.getObjectByName('head') as THREE.Mesh).geometry.clone();if(this.kolory)przebarwGeometrie(geo,'head',this.kolory);head.geometry=geo;}
+      else head.geometry=this.baseHead;
       const c=donor.animations.find(c=>c.name==='attack')!.clone();
       const legs=(t:THREE.KeyframeTrack)=>/^(thigh|shin|foot)/.test(t.name);
       g.atak=g.mixer.clipAction(c);
@@ -276,6 +279,9 @@ export class Ludzik3D {
         if (!m.isMesh) return;
         m.material = wyrazistyMaterial(o.name === 'head' ? new three.MeshBasicMaterial({vertexColors:true}) : new three.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
       });
+      // Own colours of this character (uniform, trousers, hair, skin) – everyone used to look the same.
+      this.kolory = koloryZWygladu(session.look.modul, session.name);
+      przebarwModel(model, this.kolory);
       scene.add(model);
       const amb = new three.AmbientLight(0xffffff, LUDZIK_3D.otoczenie);
       scene.add(amb);
@@ -423,7 +429,7 @@ export class Ludzik3D {
       this.scene.textures.get(this.klucz).source[0].update();
     }
 
-    const sc = 0.36 * SKALA_POSTACI * this.skala;
+    const sc = 0.36 * SKALA_POSTACI * this.skala * POWIEKSZENIE_3D;
     const F = LUDZIK_3D.ramka;
     const oy = (STOPY_PX - (8 * SKALA_POSTACI * this.skala) / sc) / F;
     if (!this.image) this.image = this.scene.add.image(player.x, player.y, this.klucz);
