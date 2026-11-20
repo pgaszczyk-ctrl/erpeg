@@ -48,6 +48,8 @@ export interface Budynek09 {
 }
 
 export interface Zlecenie {
+  /** Climate style id of the chunk's place (content/styleRegionow.ts): trees by climate. */
+  klimat?: string;
   /** Keep old footprints for nature placement; omit only old building artwork/shadows. */
   hideArchitecture?: boolean;
   ids: Uint8Array; S: number; X0: number; Y0: number; N: number; budynki: Budynek09[]; noc: boolean;
@@ -328,7 +330,7 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
     }
     return r;
   } : rodzajW;
-  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, (x, y) =>
+  const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, z.klimat ?? 'umiarkowany', (x, y) =>
     !wObrysie(x, y) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);
   const wyrzuty: ZrodloPary[] = [];

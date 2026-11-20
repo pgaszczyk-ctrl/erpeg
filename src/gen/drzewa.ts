@@ -2,7 +2,7 @@
 // Port `buildCrown` z makiety, przeskalowany do docelowej wielkości (duży dąb ok. 96×112 px).
 import { Obraz, nowy, hex, rng, hash, ustaw, wez, OBRYS, obrysuj, mieszaj } from './wspolne';
 
-export type Ksztalt = 'kepy' | 'pietra' | 'zwisajaca' | 'kolumna' | 'plaska';
+export type Ksztalt = 'kepy' | 'pietra' | 'zwisajaca' | 'kolumna' | 'plaska' | 'palma';
 export type Kora = 'braz' | 'szary' | 'brzoza' | 'rudy' | 'ciemny';
 
 export interface Gatunek {
@@ -32,6 +32,8 @@ const L = {
   sosna: ['#1a3433', '#264a43', '#376452', '#4f7e62', '#6c9a74'],
   swierk: ['#122826', '#1c3b35', '#294f43', '#3a6753', '#54826a'],
   jodla: ['#16302d', '#22443c', '#305a4b', '#43735d', '#5f8f74'],
+  palma: ['#2c4a1e', '#3f6a26', '#5a8f30', '#7cb240', '#a6cf5a'],
+  cyprys: ['#142a20', '#1e3b2b', '#2a4f37', '#3a6646', '#4f7e58'],
   krzak: ['#25412a', '#365e34', '#4c7c3e', '#69994d', '#8db766'],
 };
 
@@ -50,6 +52,9 @@ export const GATUNKI: Record<string, Gatunek> = {
   jodla:   { plotno: [60, 116], r: 28, fy: 1, kepy: 8, ksztalt: 'pietra', pienH: 9, pienW: 5, kora: 'szary', paleta: L.jodla, sztywnosc: 0.8, sciecie: true },
   kosodrzewina: { plotno: [64, 40], r: 28, fy: 0.42, kepy: 9, ksztalt: 'plaska', pienH: 0, pienW: 0, kora: null, paleta: L.swierk, sztywnosc: 0.9, sciecie: false },
   jalowiec:{ plotno: [28, 48],  r: 11, fy: 2.0, kepy: 0,  ksztalt: 'kolumna', pienH: 0, pienW: 0, kora: null, paleta: L.sosna, sztywnosc: 0.7, sciecie: false },
+  // Klimat ciepły (raport 19.11.2026): palma = wysoki pień ze zwisającymi liśćmi, cyprys = wąska ciemna kolumna.
+  palma:   { plotno: [80, 124], r: 30, fy: 0.5, kepy: 8, ksztalt: 'palma', pienH: 54, pienW: 5, kora: 'rudy', paleta: L.palma, sztywnosc: 1.8, sciecie: false },
+  cyprys:  { plotno: [36, 104], r: 12, fy: 3, kepy: 0, ksztalt: 'kolumna', pienH: 4, pienW: 4, kora: 'braz', paleta: L.cyprys, sztywnosc: 0.6, sciecie: false },
   krzak:   { plotno: [40, 32],  r: 16, fy: 0.75, kepy: 7, ksztalt: 'kepy', pienH: 0, pienW: 0, kora: null, paleta: L.krzak, sztywnosc: 1.7, sciecie: false },
   krzak_kwitnacy: { plotno: [40, 32], r: 15, fy: 0.75, kepy: 7, ksztalt: 'kepy', pienH: 0, pienW: 0, kora: null, paleta: L.krzak, sztywnosc: 1.7, kwiaty: '#e8a0c0', sciecie: false },
 };
@@ -82,6 +87,18 @@ function korona(g: Gatunek, w: number, h: number, cx: number, cy: number, r: num
   if (g.ksztalt === 'pietra') {
     const n = g.kepy, ry = Math.max(4, r * 0.32), krok = (r * 2.6) / n;
     for (let i = n - 1; i >= 0; i--) ks.push({ x: cx, y: cy + r * 0.9 - i * krok, rx: Math.max(3, r * (1 - i / (n + 0.4))), ry, tier: i });
+  } else if (g.ksztalt === 'palma') {
+    // Liście palmy: łuki od czubka pnia na boki, opadające końcami, każdy z drobnych elips.
+    const n = g.kepy;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + R() * 0.4, dlug = r * (0.85 + R() * 0.3);
+      for (let t = 0.12; t <= 1; t += 0.09) {
+        const rr = Math.max(2, r * 0.25 * (1 - t * 0.6));
+        ks.push({ x: cx + Math.cos(a) * dlug * t, y: cy + Math.sin(a) * dlug * t * 0.45 + t * t * r * 0.55 - r * 0.15, rx: rr, ry: rr * 0.7 });
+      }
+    }
+    ks.push({ x: cx, y: cy - r * 0.12, rx: r * 0.22, ry: r * 0.18 });
+    ks.sort((a, b) => a.y - b.y);
   } else if (g.ksztalt === 'kolumna') {
     for (let i = 0; i < 5; i++) ks.push({ x: cx + (R() - 0.5) * 2, y: cy - r * 1.4 + i * r * 0.7, rx: r * (0.75 + 0.15 * Math.sin(i)), ry: r * 0.75 });
   } else {

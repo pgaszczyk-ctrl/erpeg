@@ -42,7 +42,7 @@ export const idDrzewa = (t: { x: number; y: number }) => `${t.x},${t.y}`;
 export const OWOCOWE = new Set(['jablon', 'grusza', 'sliwa']);
 
 /** Drzewa, których podstawa leży w prostokącie świata (px generatora). `wolne` = czy nie stoi w budynku. */
-export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodzajW: (x: number, y: number) => Rodzaj | null, wolne: (x: number, y: number) => boolean): Drzewo09[] {
+export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodzajW: (x: number, y: number) => Rodzaj | null, klimat: string, wolne: (x: number, y: number) => boolean): Drzewo09[] {
   const out: Drzewo09[] = [];
   const kx0 = Math.floor(x0 / KRATKA), ky0 = Math.floor(y0 / KRATKA), kx1 = Math.floor((x0 + w - 1) / KRATKA), ky1 = Math.floor((y0 + h - 1) / KRATKA);
   for (let ky = ky0; ky <= ky1; ky++) for (let kx = kx0; kx <= kx1; kx++) {
@@ -65,6 +65,7 @@ export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodz
     let g = losuj(reg.wagi, hash(kx, ky, 504));
     // Skraj lasu: częściej krzaki.
     if (reg.skraj && g !== 'krzak' && [[32, 0], [-32, 0], [0, 32], [0, -32]].some(([dx, dy]) => rodzajW(x + dx, y + dy) !== r) && hash(kx, ky, 505) < 0.4) g = 'krzak';
+    g = wedlugKlimatu(g, klimat, r!, hash(kx, ky, 508));
     // Przy wodzie olchy i wierzby.
     if (PRZY_WODZIE[g] && [[40, 0], [-40, 0], [0, 40], [0, -40], [28, 28], [-28, -28], [28, -28], [-28, 28]].some(([dx, dy]) => rodzajW(x + dx, y + dy) === 'woda')) g = PRZY_WODZIE[g];
     const t: Drzewo09 = { x, y, g, w: Math.floor(hash(kx, ky, 506) * WARIANTY) };
@@ -77,6 +78,34 @@ export function rozstawDrzewa(x0: number, y0: number, w: number, h: number, rodz
     out.push(t);
   }
   return out;
+}
+
+/**
+ * Gatunki według klimatu (raport 19.11.2026: w Burgas te same lipy co w Lublinie). Zamiana po wylosowaniu, więc
+ * rozstaw drzew zostaje ten sam, zmienia się tylko, co rośnie. `u` = 0..1 stałe dla miejsca.
+ */
+function wedlugKlimatu(g: string, klimat: string, r: Rodzaj, u: number): string {
+  const lisciaste = g === 'lipa' || g === 'dab' || g === 'buk' || g === 'brzoza';
+  const miejskie = r === 'park' || r === 'trawa' || r === 'cmentarz';
+  switch (klimat) {
+    case 'srodziemnomorski':
+      if (g === 'swierk') return 'sosna';
+      if (lisciaste && miejskie) return u < 0.35 ? 'cyprys' : u < 0.6 ? 'palma' : u < 0.8 ? g : 'krzak_kwitnacy';
+      if (lisciaste) return u < 0.3 ? 'cyprys' : g;
+      return g;
+    case 'balkany':
+      if (lisciaste && miejskie) return u < 0.25 ? 'cyprys' : u < 0.33 ? 'palma' : g;
+      return g;
+    case 'suchy': case 'afryka': case 'ameryka_lacinska':
+      if (g === 'swierk' || g === 'sosna') return u < 0.5 ? 'palma' : 'jalowiec';
+      if (lisciaste) return u < 0.55 ? 'palma' : u < 0.75 ? 'krzak_kwitnacy' : g;
+      return g;
+    case 'polnoc':
+      if (g === 'dab' || g === 'buk' || g === 'lipa') return u < 0.5 ? 'brzoza' : 'swierk';
+      return g;
+    default:
+      return g;
+  }
 }
 
 function losuj(wagi: [string, number][], u: number) {

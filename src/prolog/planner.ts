@@ -60,21 +60,23 @@ export function planAnchors(city: CityMap, home: Pt, entrances: WejscieLochu[], 
   const choose = (kinds: string[], max: number, min = 0) => city.places.filter(p => kinds.includes(p.kind))
     .map(p => ({ p, r: routes.route(p.door) })).filter(q => q.r && q.r.distance >= min && q.r.distance <= max)
     .sort((a, b) => a.r!.distance - b.r!.distance)[0]?.p;
-  const points = routes.nodes.filter(p => p.distance > 55 * PX_PER_M && p.distance < 160 * PX_PER_M);
+  // Report 19 Nov 2026: the whole duty used to happen within ~100 m – now it shows a piece of the real town (300–600 m).
+  const points = routes.nodes.filter(p => p.distance > 120 * PX_PER_M && p.distance < 220 * PX_PER_M);
   const first = points[0] ?? routes.nodes.at(-1)!;
-  const post = choose(['police'], 120 * PX_PER_M, 55 * PX_PER_M) ?? choose(['office'], 100 * PX_PER_M, 55 * PX_PER_M);
+  const post = choose(['police'], 260 * PX_PER_M, 100 * PX_PER_M) ?? choose(['police'], 120 * PX_PER_M, 55 * PX_PER_M) ?? choose(['office'], 220 * PX_PER_M, 100 * PX_PER_M) ?? choose(['office'], 100 * PX_PER_M, 55 * PX_PER_M);
   const out = post?.door ?? first;
   const v = { x: out.x - home.x, y: out.y - home.y };
-  const candidates = routes.nodes.filter(p => p.distance > 55 * PX_PER_M && p.distance < 110 * PX_PER_M);
+  const wide = routes.nodes.filter(p => p.distance > 140 * PX_PER_M && p.distance < 240 * PX_PER_M);
+  const candidates = wide.length ? wide : routes.nodes.filter(p => p.distance > 55 * PX_PER_M && p.distance < 110 * PX_PER_M);
   const score = (p: Pt) => ((p.x - home.x) * v.x + (p.y - home.y) * v.y) / Math.max(1, Math.hypot(p.x - home.x, p.y - home.y) * Math.hypot(v.x, v.y));
   const ambush = candidates.sort((a,b) => score(a) - score(b) || a.distance - b.distance)[0] ?? routes.nodes.at(-1)!;
   const near = (p: Pt) => routes.nodes.filter(q => Math.hypot(q.x-p.x,q.y-p.y) > 12 * PX_PER_M && Math.hypot(q.x-p.x,q.y-p.y) < 25 * PX_PER_M)[0] ?? p;
-  const library = choose(['library'], 220 * PX_PER_M);
+  const library = choose(['library'], 400 * PX_PER_M);
   const librarianPoint = routes.nodes.find(p => p.distance > 35*PX_PER_M && p.distance < 50*PX_PER_M) ?? first;
-  const office = library ?? choose(['office', 'school'], 160 * PX_PER_M);
-  const entrance = entrances.map(w => ({ w, r: routes.route(w) })).filter(q => q.r && q.r.distance < 350 * PX_PER_M)
+  const office = library ?? choose(['office', 'school'], 300 * PX_PER_M);
+  const entrance = entrances.map(w => ({ w, r: routes.route(w) })).filter(q => q.r && q.r.distance < 420 * PX_PER_M)
     .sort((a,b) => a.r!.distance - b.r!.distance)[0]?.w;
-  const cellarPoint = routes.nodes.filter(p => p.distance > 100*PX_PER_M && p.distance < 150*PX_PER_M).at(-1) ?? first;
+  const cellarPoint = routes.nodes.filter(p => p.distance > 150*PX_PER_M && p.distance < 250*PX_PER_M).at(-1) ?? routes.nodes.filter(p => p.distance > 100*PX_PER_M && p.distance < 150*PX_PER_M).at(-1) ?? first;
   const dungeon: WejscieLochu = entrance ?? { id: `prolog:${city.id}:cellar`, rodzaj: 'podziemia', ...cellarPoint, seed: 1, przy: 'Punkt patrolowy / Patrol post' };
   const anchors: Record<AnchorKind, Anchor> = {
     mentor: anchor(near(home), 'prolog:mentor', 'Starszy strażnik', true),

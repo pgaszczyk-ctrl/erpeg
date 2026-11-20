@@ -923,7 +923,10 @@ export class MapRenderer {
       if (c.x + half < x0 || c.x - half > x0 + CHUNK || c.y + half < y0 || c.y - half > y0 + CHUNK) continue;
       mozaiki.push({ cx: c.x * G2, cy: c.y * G2, kat: (mz.katDeg * Math.PI) / 180, skala: (mz.szerM * PX_PER_M * G2) / mz.obraz[0].length, kostka: mz.kostkaM * PX_PER_M * G2, obraz: mz.obraz });
     }
-    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
+    // Trees follow the climate of the chunk's place (report: Burgas had Lublin's trees).
+    const llKlimat = this.map.loch ? null : this.map.toLatLon(x0 + CHUNK / 2, y0 + CHUNK / 2);
+    const klimat = llKlimat && Number.isFinite(llKlimat.lat) ? stylRegionu(llKlimat.lat, llKlimat.lon).id : 'umiarkowany';
+    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, klimat, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki };
   }
 
   /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */
