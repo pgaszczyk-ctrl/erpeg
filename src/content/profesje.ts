@@ -16,6 +16,8 @@ export const PROFESJE: Record<ProfesjaId, { nazwa: { pl: string; en: string }; i
 
 export const PROFESJA = {
   odPoziomu: 5,
+  /** „Druga służba”: tyle zleceń straży (listów gończych z posterunku) przed wyborem profesji. */
+  sluzb: 2,
   glowna: 1.5,
   inne: 0.7,
   /** Zmiana profesji kosztuje tyle diamentów (nigdy „wcale” – kto źle wybrał, odszedłby z gry). */

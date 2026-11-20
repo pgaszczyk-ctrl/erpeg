@@ -7554,6 +7554,8 @@ export class GameScene extends Phaser.Scene {
         earn(m.nagroda);
         session.stats.missions++;
         session.exp += missionExp(m);
+        // „Druga służba”: guard assignments (police bounties) done – the profession needs PROFESJA.sluzb of them.
+        if (this.city.places.find((q) => q.id === m.placeId)?.kind === 'police') session.flagi.sluzby = (session.flagi.sluzby ?? 0) + 1;
         if (m.diamenty) {
           session.diamenty += m.diamenty;
           this.time.delayedCall(400, () => this.toast(`💎 +${m.diamenty} ${tx(m.diamenty === 1 ? 'diament' : 'diamenty', m.diamenty === 1 ? 'diamond' : 'diamonds')}!`, 2500));
@@ -7862,6 +7864,15 @@ export class GameScene extends Phaser.Scene {
     if (demo.on || this.loch || poziomPostaci(session.exp) < PROFESJA.odPoziomu) return false;
     const ids = Object.keys(PROFESJE) as ProfesjaId[];
     const teraz = profesja.id;
+    const sluzby = session.flagi.sluzby ?? 0;
+    if (!teraz && sluzby < PROFESJA.sluzb) {
+      // The second duty first: guard assignments from this post (they are the bounties offered here).
+      if (this.time.now >= this.profesjaOdmowa) {
+        this.profesjaOdmowa = this.time.now + 5 * 60_000;
+        this.toast(tx(`🛡 Szef straży: „Zanim wybierzesz drogę, odsłuż jeszcze ${PROFESJA.sluzb - sluzby} ${PROFESJA.sluzb - sluzby === 1 ? 'zlecenie' : 'zlecenia'} straży – listy gończe są tutaj.”`, `🛡 Guard chief: “Before you choose your path, serve ${PROFESJA.sluzb - sluzby} more guard ${PROFESJA.sluzb - sluzby === 1 ? 'assignment' : 'assignments'} – the bounties are here.”`), 6000);
+      }
+      return false;
+    }
     if (teraz && this.time.now < this.profesjaOdmowa) return false;
     const opis = ids.map((id) => `${PROFESJE[id].ikona} ${tr(PROFESJE[id].nazwa)}: ${tr(PROFESJE[id].opis)}`).join('\n\n');
     const tekst = teraz

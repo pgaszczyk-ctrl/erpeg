@@ -432,7 +432,7 @@ function show(host: CharacterHost) {
     if (max) lvInfo.append(el('span', 'k-plate k-small', 'Maksymalny'));
     if (session.story.title) lvInfo.append(el('span', 'k-titleline', `🏅 ${session.story.title}`));
     // Profession (report #25): chosen at the guard chief from level PROFESJA.odPoziomu.
-    lvInfo.append(el('span', 'k-titleline', profesja.id ? `${PROFESJE[profesja.id].ikona} ${tr(PROFESJE[profesja.id].nazwa)}` : lvl >= PROFESJA.odPoziomu ? tx('🛡 Profesja: wybierz u szefa straży', '🛡 Profession: choose at the guard chief') : tx(`🛡 Profesja od ${PROFESJA.odPoziomu}. poziomu`, `🛡 Profession from level ${PROFESJA.odPoziomu}`)));
+    lvInfo.append(el('span', 'k-titleline', profesja.id ? `${PROFESJE[profesja.id].ikona} ${tr(PROFESJE[profesja.id].nazwa)}` : lvl >= PROFESJA.odPoziomu ? ((session.flagi.sluzby ?? 0) >= PROFESJA.sluzb ? tx('🛡 Profesja: wybierz u szefa straży', '🛡 Profession: choose at the guard chief') : tx(`🛡 Profesja: najpierw ${PROFESJA.sluzb - (session.flagi.sluzby ?? 0)} zlecenia straży (posterunek)`, `🛡 Profession: first ${PROFESJA.sluzb - (session.flagi.sluzby ?? 0)} guard assignments (guard post)`)) : tx(`🛡 Profesja od ${PROFESJA.odPoziomu}. poziomu`, `🛡 Profession from level ${PROFESJA.odPoziomu}`)));
     lv.append(nix, lvInfo);
     s.append(lv);
     const from = expNaPoziom(lvl);
