@@ -72,11 +72,10 @@ try{
  await page.waitForFunction(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)),null,{timeout:30000});
  const anchors=await evalGame(()=>window.__game.scene.getScene('game').prolog.state.anchors);
  await page.screenshot({path:`work/prolog/${tag}-intro.png`});
- const intro=page.getByRole('dialog',{name:lang==='pl'?'Starszy strażnik':'Senior guard'});
- assert.match(await intro.locator('p').textContent(),lang==='pl'?/Zaniesiesz list/:/Take this letter/);
+ // One dialog style for every talk (19 Nov 2026): the intro is an ordinary game dialog now.
+ assert.match(await evalGame(()=>window.__dialogi.at(-1).text),lang==='pl'?/Zaniesiesz list/:/Take this letter/);
  failNext=true;
- await page.keyboard.press('Tab');
- await page.keyboard.press('Enter');
+ await choose(0);
  await page.waitForFunction(()=>/Zapis prologu|Prologue checkpoint/.test(window.__dialogi.at(-1)?.title),null,{timeout:10000});
  await choose(0);await waitStage('letter_deliver');
  assert.equal(saved.story.prolog.pendingRewards.length,1,'full bag stores the previous sword');
@@ -167,7 +166,11 @@ try{
  await evalGame(()=>window.__game.scene.getScene('game').wyjdzZLochu());
  await page.waitForFunction(()=>!window.__game.scene.getScene('game').city.loch);
  await at('mentor');await interact();await choose(0);await waitStage('library_visit');
- await at('library');await interact();await page.screenshot({path:`work/prolog/${tag}-library.png`});await choose(0);await waitStage('completed');
+ await at('library');await interact();await page.screenshot({path:`work/prolog/${tag}-library.png`});await choose(0);await choose(0);await waitStage('completed');
+ // The end: a reward and a choice of directions (19 Nov 2026).
+ await page.waitForFunction(()=>/Pierwsza służba|First duty/.test(window.__dialogi.at(-1)?.title));
+ assert.match(await evalGame(()=>window.__dialogi.at(-1).text),/700/);
+ await choose(99);
  assert.equal(saved.missions['prolog.recruit.v1'],'done');
  const rewards=structuredClone(saved.story.prolog.rewardsClaimed),pending=structuredClone(saved.story.prolog.pendingRewards),doneExp=exp;
  saved.tu={m:'city-b',x:2880,y:2880,s:1.92};await go();await waitStage('completed');

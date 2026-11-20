@@ -4,6 +4,8 @@ import { hdOn, isHd, fitHd, hdFolkLooks, personOf, ensureHd } from '../sprites';
 import { HERO_DIRS, makeLookTexture, redOutline } from '../art';
 import { PX_PER_M, distToPolyline, type CityMap, type Line } from '../map/CityMap';
 import { MIESZKANCY } from '../content/mieszkancy';
+import { imieLokalne } from '../content/imionaLokalne';
+import { krajMapy } from '../kraj';
 import { GAZETA } from '../content/gazeta';
 import { LUDZIE_W_DESZCZU } from '../content/pogoda';
 import { rng } from '../rng';
@@ -117,6 +119,9 @@ export class Townsfolk {
     // Not loaded yet: nobody now, and don't remember it.
     if (!this.city.ready(box)) return [];
     const r = rng(hash(`${this.city.id}:folk:${key}`));
+    // Names follow the country of this square (report #9).
+    const srodek = this.city.toLatLon((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2);
+    const kraj = krajMapy(this.city.id, srodek.lat, srodek.lon);
     // Busy centre or quiet housing estate: by how many places (shops, offices,
     // churches…) the square has. At night even fewer.
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
@@ -145,9 +150,10 @@ export class Townsfolk {
         // A name that fits the look (a woman isn't "Pan Rysiek", a boy isn't "Pani Ewa").
         const who = personOf(tex);
         const names = who?.plec ? MIESZKANCY.imionaWg[who.plec][who.wiek ?? 'dorosly'] : MIESZKANCY.imiona;
+        const los = r();
         list.push({
           id: `${key}:${list.length}`, role, walker, x: walker.x, y: walker.y,
-          name: names[Math.floor(r() * names.length)],
+          name: imieLokalne(kraj, who?.plec ?? (los < 0.5 ? 'k' : 'm'), who?.wiek ?? 'dorosly', los) ?? names[Math.floor(los * names.length)],
           tex,
         });
       }

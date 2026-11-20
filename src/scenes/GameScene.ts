@@ -1,3 +1,7 @@
+import { PROFESJE, PROFESJA, profesja, type ProfesjaId } from '../content/profesje';
+import { czytelnaNazwa } from '../transliteracja';
+import { stanGry } from '../stanGry';
+import { pipe } from '../sfx';
 import { Zloza, type Zloze } from './Zloza';
 import { GORNICTWO } from '../content/sklepy';
 import { landingPanorama } from '../artillery/panorama';
@@ -63,7 +67,7 @@ import { note } from '../log';
 import { Townsfolk, isNight, type Folk } from './Townsfolk';
 import { PROSBY, MIESZKANCY } from '../content/mieszkancy';
 import { PODLOZE } from '../content/podloze';
-import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI } from '../content/historia';
+import { poziomPostaci, zyciePostaci, szybkoscPostaci, ADMIN_SZYBKOSC, expNaPoziom, MAKS_POZIOM_POSTACI, KARA_OD_POZIOMU } from '../content/historia';
 import { HOTEL_CENA, HOTEL_PREMIA, NAMIOT } from '../content/hotele';
 import { WIDOK, TRUDNOSCI, trudnoscZWieku, WYBOR_TRUDNOSCI } from '../content/trudnosc';
 import { DIAMENT, DIAMENT_WSPIERAJACY, GRUPY, POJAZDY, type Grupa } from '../content/sklepy';
@@ -200,7 +204,12 @@ const TALK_PAUSE_MS = 700;
 const GOAL_RADIUS = 40;
 /** New controls: how near the hero a double tap must land to start something there (map px). */
 const INTERAKCJA_PX = 70;
-const HEARTBEAT_MS = 3000;
+/** Report #16: was 3 s (and doubled after a scene restart): 12 s plus a beat on entering a fight and on pagehide. */
+const HEARTBEAT_MS = 12000;
+/** The scene instance whose heartbeat is current: an older timer that survived a restart stays silent. */
+let beatOwner = 0;
+/** Quiet save outside a fight (report #17). */
+const ZAPIS_CO_MS = 3 * 60_000;
 /** How often the heartbeat carries the newspaper's daily numbers (kurier_dni). */
 const KURIER_CO_MS = 60_000;
 /** How long a character stays on the street after the game was closed without "Wyjdź". */
@@ -316,6 +325,8 @@ let droga: Hub | null = null;
 export interface Rozmowca { tex?: string; obraz?: string; imie?: string }
 
 export interface DialogRequest {
+  /** An important window (defeat, reward): keys answer it only after a longer pause (report #5). */
+  wazne?: boolean;
   accessible?: boolean;
   language?: import('../i18n').Lang;
   localHumor?: boolean;
@@ -455,6 +466,9 @@ export class GameScene extends Phaser.Scene {
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
   private damageCarry = 0;
+  /** Heartbeat at once (entering a fight: closing the tab then mustn't dodge it). */
+  private beatNow = () => {};
+  private walczylWczesniej = false;
   /** Resolves once the server knows about the death. */
   deathSaved: Promise<void> = Promise.resolve();
   /** The hero said no to the diamonds' rescue: now it's the game-over screen. */
@@ -1021,11 +1035,14 @@ export class GameScene extends Phaser.Scene {
     this.prolog = live() && !demo.on ? new PrologRekruta({
       scene: this, city: this.city, player: this.player, mapName: mapName(this.city.id),
       entrances: () => this.lochy, dungeon: () => this.loch,
-      dialog: d => this.dialog({ ...d, accessible: true }), toast: (t,ms) => this.toast(t,ms),
+      dialog: d => this.dialog(d), /* one dialog style for every talk (report #19) */ toast: (t,ms) => this.toast(t,ms),
       hud: () => this.emitHud(), refresh: () => this.refreshLook(),
       ready: () => !this.witam && !this.travelling && !this.scene.isPaused() && this.firstViewReady(),
       save: () => { this.keepFog(); session.tu = this.miejsceZapisu(); return saveNow(this.player.hp); },
       spawn: (x,y) => this.spawnEnemy(x,y,PROLOG_ID,'glut'),
+      earn: (n) => { earn(n); this.emitHud(); },
+      nextSteps: () => this.krokiPoProlog(),
+      guide: (to) => this.prowadzDo(to ? { nazwa: to.nazwa, ...this.city.toLatLon(to.x, to.y), rodzaj: 'cel', km: 0 } : null),
     }) : undefined;
     if (this.city.loch?.tutorial && this.loch) for (const e of this.enemies) {
       if (this.loch.contains(e)) { e.hp = Math.max(2, meleeDamage()*2); e.power = .5; e.temp = true; }
@@ -1055,8 +1072,9 @@ export class GameScene extends Phaser.Scene {
     this.justRode = false;
 
     // Tell the server where we are, so closing the tab can't dodge a fight.
+    const owner = ++beatOwner;
     const beat = (e?: Event) => {
-      if (this.leaving || this.player.isDead || artilleryTransit.active) return;
+      if (owner !== beatOwner || this.leaving || this.player.isDead || artilleryTransit.active) return;
       const snap = this.snapshot();
       // About once a minute (and when the page goes away) also the newspaper's daily numbers.
       if (e || Date.now() - this.kurAt >= KURIER_CO_MS) {
@@ -1070,6 +1088,7 @@ export class GameScene extends Phaser.Scene {
       api.heartbeat(token, snap).then((ok) => { if (ok === false && !this.leaving) sesjaWygasla(token); }).catch(() => {});
     };
     this.time.addEvent({ delay: HEARTBEAT_MS, loop: true, callback: beat });
+    this.beatNow = () => beat();
     window.addEventListener('pagehide', beat);
     this.events.once('shutdown', () => window.removeEventListener('pagehide', beat));
     beat();
@@ -1361,12 +1380,19 @@ export class GameScene extends Phaser.Scene {
       if (hit) this.resolveAttack(hit, now);
     }
     this.updateRanged(now, lingering);
+    const walczy = this.inCombat();
+    if (walczy && !this.walczylWczesniej) this.beatNow();
+    this.walczylWczesniej = walczy;
+    stanGry.walka = walczy;
+    this.cichyZapis(now, walczy);
     this.updateShots(dt);
 
     const target = new Phaser.Math.Vector2(this.player.x, this.player.y);
     this.loch?.update(now, this.cameras.main, this.player, (x, y) => this.explored.hasCell(Math.floor(x / FOG_CELL), Math.floor(y / FOG_CELL)));
     this.lochy?.update(this.player.x, this.player.y, now);
     this.prolog?.update();
+    // A tutorial never kills: while the first duty runs, life stops at 1.
+    this.player.minHp = this.prolog?.state?.status === 'active' ? 1 : 0;
     if (this.prolog?.protectingStart) this.noHurtUntil = Math.max(this.noHurtUntil, now + 1000);
     // Underground: none of the surface's life (people, gangs, trees, hunting grounds, training).
     if (!podZiemia) {
@@ -1872,7 +1898,7 @@ export class GameScene extends Phaser.Scene {
   }
   private updateInteractionTarget() {
     if(!this.interactionMark?.active)this.interactionMark=this.add.graphics().setDepth(1_149_999);
-    if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'8px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
+    if(!this.interactionLabel?.active)this.interactionLabel=this.add.text(0,0,'',{fontFamily:'Alegreya Sans, sans-serif',fontSize:'6px',color:'#fff0b5',stroke:'#29202a',strokeThickness:3,resolution:4}).setOrigin(.5,1).setDepth(1_150_001);
     const g=this.interactionMark;g.clear();this.interactionLabel.setVisible(false);
     const t=this.interactionBlocked()?null:this.interactionSelection.update(this.interactionCandidates(),this.player.x,this.player.y,36);
     this.prolog?.updateNameplates(t);
@@ -1900,7 +1926,8 @@ export class GameScene extends Phaser.Scene {
     const sign = this.placeSigns.get(t.id);
     const bounds = sign?.board.getBounds();
     const label = sign?.place.kind === 'shop' || sign?.place.kind === 'gear' ? tx('Otwórz sklep', 'Open shop') : t.label;
-    this.interactionLabel.setText(label)
+    // Short and small: a long church name used to cover the hero (report #14).
+    this.interactionLabel.setText(label.length > 26 ? `${label.slice(0, 25).trimEnd()}…` : label)
       .setPosition(bounds?.centerX ?? t.x, (bounds?.top ?? head ?? t.y-h)-3).setVisible(true);
     ustawInterakcjeHud(true, label);
   }
@@ -2105,7 +2132,16 @@ export class GameScene extends Phaser.Scene {
     // Old controls: a swing also talks, opens doors and stalls, calls a coachman. New controls (walka/live.ts):
     // only a double tap does (interact()), a swing is only a swing.
     if (ranged && !gathering) {
-      if (now - this.lastShot >= cooldown(this.handSkill())) this.fireShot(ranged, { x: Math.cos(swingAim), y: Math.sin(swingAim) }, false, now);
+      if (now - this.lastShot >= cooldown(this.handSkill())) {
+        // A click on an enemy shoots at it; an ATTACK without aiming (key, button tap) at the nearest visible enemy in
+        // range, whichever way the hero faces (report #3, like Tibia's target).
+        let dir = { x: Math.cos(swingAim), y: Math.sin(swingAim) };
+        const c = this.clickWorld;
+        const naKlik = c && this.enemies.filter((e) => !e.isDead && !e.peaceful && e.visible && Math.hypot(e.x - c.x, e.y - c.y) < 18 + e.size)
+          .sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y))[0];
+        if (naKlik) { const d = Math.hypot(naKlik.x - this.player.x, naKlik.y - this.player.y) || 1; dir = { x: (naKlik.x - this.player.x) / d, y: (naKlik.y - this.player.y) / d }; }
+        this.fireShot(ranged, dir, false, now, true, !naKlik, c ? WALKA.celowanieStopnie : WALKA.celAutoStopnie);
+      }
       return;
     }
     let hits = 0;
@@ -3116,7 +3152,12 @@ export class GameScene extends Phaser.Scene {
             notki.push(`${it.nazwa} (plecak pełny!)`);
             break;
           }
-          if (i === 0) notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
+          if (i === 0) {
+            notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
+            // A rare find is seen and heard (report: the helmet dropped silently).
+            this.floatText(x, y - 18, `✨ ${it.nazwa.split(' — ')[0]}`, it.jakosc && it.jakosc >= 3 ? '#ffb347' : '#ffd76a', 2400);
+            pipe(880, 160); setTimeout(() => pipe(1320, 220), 120);
+          }
         }
       }
     }
@@ -3991,15 +4032,20 @@ export class GameScene extends Phaser.Scene {
     this.player.anims.stop();
     this.player.setFrame('down-0');
     this.tweens.add({ targets: this.player, angle: 90, duration: 300 });
-    const zloto = session.coins;
-    session.coins = 0;
+    // Newcomers (below KARA_OD_POZIOMU) lose nothing – like Tibia's protection of fresh characters (report: risk belongs
+    // to hunting grounds, not to the first steps). From then on: the backpack's gold and half the level's progress.
     const lvl = poziomPostaci(session.exp);
+    const chroniony = lvl < KARA_OD_POZIOMU;
+    const zloto = chroniony ? 0 : session.coins;
+    session.coins -= zloto;
     const od = expNaPoziom(lvl);
-    const strata = Math.floor((session.exp - od) / 2);
+    const strata = chroniony ? 0 : Math.floor((session.exp - od) / 2);
     session.exp -= strata;
     this.emitHud();
     // The EXP lost isn't spelled out (owner, 26 Oct 2026): only a hint that experience must be earned again.
-    const kara = `${zloto > 0 ? `Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.` : 'W plecaku nie było złota – nic nie przepadło.'}${strata > 0 ? ' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.' : ''}`;
+    const kara = chroniony
+      ? tx(`Do ${KARA_OD_POZIOMU}. poziomu nic nie tracisz po porażce. Później przepada złoto z plecaka i część doświadczenia – złoto trzymaj w kufrze albo w banku.`, `Until level ${KARA_OD_POZIOMU} you lose nothing when defeated. Later the gold in your backpack and some experience are lost – keep gold in your chest or a bank.`)
+      : `${zloto > 0 ? tx(`Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.`, `The gold in your backpack (${zloto}) is lost.`) : tx('W plecaku nie było złota – nic nie przepadło.', 'There was no gold in your backpack – nothing lost.')}${strata > 0 ? tx(' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.', ' Everything feels less familiar… You must gain more experience now.') : ''}`;
     const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     this.cameras.main.fadeOut(700, 0, 0, 0);
@@ -4009,7 +4055,7 @@ export class GameScene extends Phaser.Scene {
       if (szpital) {
         void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
           const at = this.city.reachableNear(szpital.door.x, szpital.door.y);
-          this.wstanWSzpitalu(at, `🏥 ${szpital.name}`, kara);
+          this.wstanWSzpitalu(at, tx('🏥 Szpital', '🏥 Hospital'), kara);
         });
         return;
       }
@@ -4047,10 +4093,11 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(650, () => this.dialog({
       title,
       text: (bezSzpitala
-        ? 'Ktoś znalazł cię nieprzytomnego i zaniósł tam, gdzie ostatnio spałeś. Rany się zagoiły.'
-        : 'Ktoś znalazł cię nieprzytomnego i przyniósł do szpitala. Lekarz opatrzył rany – zdrowie w pełni.')
+        ? tx('Ktoś znalazł cię nieprzytomnego i zaniósł tam, gdzie ostatnio spałeś. Rany się zagoiły.', 'Someone found you unconscious and carried you to where you last slept. Your wounds have healed.')
+        : tx('Ktoś znalazł cię nieprzytomnego i przyniósł do szpitala. Lekarz opatrzył rany – zdrowie w pełni.', 'Someone found you unconscious and brought you to a hospital. A doctor dressed your wounds – full health.'))
         + `\n\n${kara}`,
-      buttons: ['Wstaję'],
+      buttons: [tx('Wstaję', 'Get up')],
+      wazne: true,
       onChoose: () => {},
     }));
   }
@@ -4236,7 +4283,7 @@ export class GameScene extends Phaser.Scene {
     const szpital = this.city.places.filter((q) => q.kind === 'hospital').reduce<CityPlace | null>((m, q) => (!m || dist(q) < dist(m) ? q : m), null);
     if (!szpital) return this.wstanWSzpitalu({ x: this.player.x, y: this.player.y }, '🛏 Ocknąłeś się', kara, true);
     void this.city.ensure(szpital.door.x, szpital.door.y, 200 * PX_PER_M).catch(() => {}).then(() => {
-      this.wstanWSzpitalu(this.city.reachableNear(szpital.door.x, szpital.door.y), `🏥 ${szpital.name}`, kara);
+      this.wstanWSzpitalu(this.city.reachableNear(szpital.door.x, szpital.door.y), tx('🏥 Szpital', '🏥 Hospital'), kara);
     });
   }
 
@@ -4287,6 +4334,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Is any enemy close enough to be fighting us? */
+  /**
+   * Quiet save every ZAPIS_CO_MS outside a fight (report #17: only buildings saved, the menu warned the rest is lost).
+   * Not underground, not during a ride or a dialog.
+   */
+  private zapisAt = 0;
+  private cichyZapis(now: number, walczy: boolean) {
+    if (!this.zapisAt) { this.zapisAt = now + ZAPIS_CO_MS; return; }
+    if (now < this.zapisAt || walczy || this.loch || this.travelling || this.player.isDead || demo.on || this.scene.isPaused()) return;
+    this.zapisAt = now + ZAPIS_CO_MS;
+    this.keepFog();
+    session.tu = this.miejsceZapisu();
+    saveNow(this.player.hp).catch(() => {});
+  }
+
   inCombat() {
     if (this.scene.isActive('arena')) return true;
     if (tury()) return !!this.walka?.aktywna;
@@ -4914,6 +4975,7 @@ export class GameScene extends Phaser.Scene {
 
   private openPlace(p: CityPlace, venueChosen = false, skipProlog = false) {
     if (!skipProlog && p.kind === 'police' && this.prolog?.offerChief(() => this.openPlace(p, venueChosen, true))) return;
+    if (!skipProlog && p.kind === 'police' && this.wyborProfesji(() => this.openPlace(p, venueChosen, true))) return;
     if (!venueChosen) {
       const shared = this.city.places.filter(q => Math.hypot(q.door.x - p.door.x, q.door.y - p.door.y) < 1);
       if (shared.length > 1 && shared.some(q => q.kind === 'maker' || q.kind === 'workshop')) {
@@ -6451,17 +6513,34 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Hospital: free healing for newcomers; from KARA_OD_POZIOMU on it costs by the missing life and the level (report:
+   * a free full heal made potions and fruit pointless). A defeat's own wake-up in a hospital stays free.
+   */
   private openHospital(p: CityPlace) {
-    const hurt = this.player.hp < PLAYER.maxHp;
-    this.player.heal(PLAYER.maxHp);
-    this.emitHud();
-    this.dialog({
-      title: `🏥 ${p.name}`,
-      text: hurt ? 'Lekarz opatrzył twoje rany. Zdrowie w pełni – i to za darmo!' : 'Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.',
-      buttons: ['Dziękuję'],
-      onChoose: () => {},
-    });
-    if (hurt) this.save();
+    const brak = Math.max(0, PLAYER.maxHp - this.player.hp);
+    const lvl = poziomPostaci(session.exp);
+    const title = tx('🏥 Szpital', '🏥 Hospital');
+    if (!brak) {
+      this.dialog({ title, text: tx('Lekarz cię obejrzał: jesteś zdrowy jak ryba. Wróć, gdy coś cię boli.', 'The doctor examined you: fit as a fiddle. Come back when something hurts.'), buttons: [tx('Dziękuję', 'Thank you')], onChoose: () => {} });
+      return;
+    }
+    const cena = lvl < KARA_OD_POZIOMU ? 0 : Math.max(10, Math.ceil((brak / PLAYER.maxHp) * lvl * 15 / 5) * 5);
+    const lecz = () => {
+      if (cena && session.coins < cena) { this.toast(tx('Za mało złota na leczenie.', 'Not enough gold for treatment.'), 2000); return; }
+      if (cena) spend(cena);
+      this.player.heal(PLAYER.maxHp);
+      this.emitHud();
+      this.save();
+      this.toast(tx('❤ Zdrowie w pełni.', '❤ Full health.'), 1800);
+    };
+    if (!cena) {
+      lecz();
+      this.dialog({ title, text: tx(`Lekarz opatrzył twoje rany. Zdrowie w pełni – do ${KARA_OD_POZIOMU}. poziomu leczymy za darmo.`, `The doctor dressed your wounds. Full health – free until level ${KARA_OD_POZIOMU}.`), buttons: [tx('Dziękuję', 'Thank you')], onChoose: () => {} });
+      return;
+    }
+    this.dialog({ title, text: tx(`Lekarz może opatrzyć twoje rany. Leczenie do pełna: ${cena} złota.\n\nTaniej wychodzą mikstury u alchemika i owoce z plecaka.`, `The doctor can dress your wounds. Full treatment: ${cena} gold.\n\nPotions from an alchemist and fruit from your backpack are cheaper.`),
+      buttons: [tx(`Lecz (${cena} 💰)`, `Heal (${cena} 💰)`), tx('Nie, dziękuję', 'No, thanks')], zamknij: 1, onChoose: (i) => { if (i === 0) lecz(); } });
   }
 
   /** Swing speed and reach from the sword-fighting level. */
@@ -6511,7 +6590,8 @@ export class GameScene extends Phaser.Scene {
     const aim = weapon && !lingering ? this.aimDirection() : null;
     this.aimLine.clear();
     // Holding: a golden ring fills around the hero; full = the strong attack is ready.
-    if (hold.active && !lingering) {
+    // New controls: holding only aims – the strong attack is the Q / STRONG button alone (report #10).
+    if (hold.active && !lingering && !live()) {
       const held = performance.now() - hold.start;
       if (held > AIM_DELAY) {
         const t = Math.min(1, held / WALKA.mocnyPoMs);
@@ -6525,14 +6605,14 @@ export class GameScene extends Phaser.Scene {
     }
     if (aim) {
       // Dotted aim line.
-      const range = this.shotRange(weapon!.rodzaj === 'magia' ? 'magia' : 'luk', performance.now() - hold.start >= WALKA.mocnyPoMs);
+      const range = this.shotRange(weapon!.rodzaj === 'magia' ? 'magia' : 'luk', !live() && performance.now() - hold.start >= WALKA.mocnyPoMs);
       this.aimLine.fillStyle(weapon!.rodzaj === 'magia' ? 0x9be7ff : 0xffffff, 0.85);
       for (let d = 10; d < range; d += 7) this.aimLine.fillRect(this.player.x + aim.x * d - 1, this.player.y + aim.y * d - 1, 2, 2);
       this.player.facing.set(aim.x, aim.y);
     }
     const r = consumeRelease();
     if (!r || lingering) return;
-    const strong = r.held >= WALKA.mocnyPoMs;
+    const strong = !live() && r.held >= WALKA.mocnyPoMs;
     // No bow or magic item: holding long and letting go is a strong blow of the weapon in hand.
     if (!weapon) {
       if (strong && !this.story.busy && !this.demoRun?.busy && !this.player.isDead && this.zaplacMocny('miecz')) {
@@ -6590,11 +6670,7 @@ export class GameScene extends Phaser.Scene {
     const u = this.umiejetnosc();
     if (!this.zaplacMocny(u.bron)) return;
     const weapon = rangedWeapon();
-    if (u.id === 'mocny') {
-      this.faceFoe(WALKA.zasiegMiecz);
-      this.resolveAttack(this.player.hitPoint(WALKA.zasiegMiecz), now, true);
-      return;
-    }
+    if (u.id === 'mocny') return this.mocnyLuk(now);
     if (u.id === 'zamach') return this.zamach(now);
     if (!weapon) return;
     const foe = this.nearestFoe(this.shotRange(u.bron === 'magia' ? 'magia' : 'luk', u.id !== 'salwa' && u.id !== 'wachlarz'));
@@ -6639,6 +6715,35 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Mocny atak (report #10): a short, visible swing in a wide arc before the hero – everyone in it takes ×MOCNY.mnoznik,
+   * a knock-back and a short stun. It lands because it is wide, not because it never misses.
+   */
+  private mocnyLuk(now: number) {
+    this.faceFoe(WALKA.zasiegMiecz);
+    const aim = Math.atan2(this.player.facing.y, this.player.facing.x);
+    const reach = this.swingReach(WALKA.zasiegMiecz);
+    const arc = (WALKA.mocnyLukStopnie * Math.PI) / 180;
+    this.drawSweep(aim, arc, reach);
+    this.animateMelee(aim, true);
+    this.swingWeapon(aim, true);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      const dx = e.x - this.player.x, dy = e.y - (this.player.y + 2);
+      if (Math.hypot(dx, dy) > reach + e.size) continue;
+      const da = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim));
+      if (da > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive)) this.onEnemyKilled(e);
+      else if (!e.heavy) e.daze(now, WALKA.miecz.ogluszenieMs);
+    }
+    if (landed) {
+      this.wearWeapon(gear.equip.bron);
+      this.practiced('miecz');
+    }
+  }
+
   /** Zamach (sword skill): a full turn with the weapon, every enemy around takes a blow (×0.8). */
   private zamach(now: number) {
     const reach = this.swingReach(1.3);
@@ -6662,9 +6767,9 @@ export class GameScene extends Phaser.Scene {
    * Aim help: the nearest target (a visible monster, or a training target/crystal for this skill) within the range
    * and within WALKA.celowanieStopnie of `dir`, with nothing built in between – the shot flies straight at it.
    */
-  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false): { x: number; y: number } {
+  private aimAssist(dir: { x: number; y: number }, skill: 'luk' | 'magia', strong = false, stopnie = WALKA.celowanieStopnie): { x: number; y: number } {
     const range = this.shotRange(skill, strong);
-    const maxCos = Math.cos((WALKA.celowanieStopnie * Math.PI) / 180);
+    const maxCos = Math.cos((stopnie * Math.PI) / 180);
     const px = this.player.x, py = this.player.y;
     const points: { x: number; y: number }[] = [];
     for (const e of this.enemies) if (!e.isDead && !e.peaceful && e.visible) points.push({ x: e.x, y: e.y });
@@ -6691,10 +6796,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** An arrow or a spell from the weapon in hand, flying in `dir` (or straight at a target near that way, aimAssist). */
-  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true, assist = true) {
+  private fireShot(weapon: Przedmiot, dir: { x: number; y: number }, strong: boolean, now: number, sound = true, assist = true, stopnie = WALKA.celowanieStopnie) {
     if (weaponRequirement(weapon.id)) return;
     const skill = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
-    if (assist) dir = this.aimAssist(dir, skill, strong);
+    if (assist) dir = this.aimAssist(dir, skill, strong, stopnie);
     this.lastShot = now;
     // A bow needs arrows (a crossbow bolts, the steam pistol bullets), and every shot wears it.
     const ammo = ammoOf(weapon);
@@ -7009,7 +7114,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.shopDialog(p, {
       title, tabs,
-      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz w hali kulociągu.`, `The trader in the Ballway hall.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `Kowal za ladą poleca swój towar. Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
+      text: (p.id.startsWith('wlaz:') ? tx(`Straganiarz w hali kulociągu.`, `The trader in the Ballway hall.`) + ` Masz ${session.coins} monet.` : p.kind === 'merchant' ? `Kupcy rozstawili stragany przy rondzie. Masz ${session.coins} monet.` : `${this.sprzedawca(p)} Masz ${session.coins} monet.`) + quiver + (offers.length ? '' : '\n\nMasz już najlepsze rzeczy, jakie tu mają!'),
       buttons: [...tools, ...extra.map(([l]) => l), ...offers.map((o) => this.label(o)), 'Wyjdź'],
       icons: [...tools.map(() => null), ...fixes.map((id) => itemTexture(id)), ...packs.map(({ k }) => `item-${k}`), ...offers.map((o) => itemTexture(o.id)), null],
       onChoose: (i) => {
@@ -7027,7 +7132,7 @@ export class GameScene extends Phaser.Scene {
         const o = offers[i - tools.length - extra.length];
         if (o) this.buy(o);
       },
-    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : 'Kowal za ladą poleca swój towar.');
+    }, entries, () => this.openShop(p, 0), p.kind === 'merchant' ? 'Kupcy rozstawili stragany przy rondzie.' : this.sprzedawca(p));
   }
 
   /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
@@ -7685,8 +7790,9 @@ export class GameScene extends Phaser.Scene {
     // The demo's own goal takes the story's place; quests taken in the demo (a newsboy's errand) still get their
     // arrows (owner, 12 Oct 2026: after taking the newsboy's quest no arrow showed).
     const recruit = this.prolog?.goal();
-    if (recruit && session.story.prolog) return [recruit];
-    const main = this.demoRun ? this.demoRun.goal() : this.story.goal();
+    // During the first duty its goal leads; quests taken meanwhile stay visible under it (report #6).
+    const inProlog = !!(recruit && session.story.prolog);
+    const main = inProlog ? null : this.demoRun ? this.demoRun.goal() : this.story.goal();
     if (main) list.push({ id: this.demoRun ? 'demo' : 'main', main: true, title: this.demoRun ? 'Demo' : 'Cień smoka', ...main });
     for (const q of this.sideQuests()) list.push({ ...q, main: false });
     const ids = new Set(list.map((q) => q.id));
@@ -7748,6 +7854,63 @@ export class GameScene extends Phaser.Scene {
     return droga;
   }
 
+  /**
+   * The guard chief offers a profession from PROFESJA.odPoziomu on (report #25); a later visit can change it for
+   * diamonds. Returns false when there is nothing to offer (the police station opens as usual).
+   */
+  private wyborProfesji(dalej: () => void): boolean {
+    if (demo.on || this.loch || poziomPostaci(session.exp) < PROFESJA.odPoziomu) return false;
+    const ids = Object.keys(PROFESJE) as ProfesjaId[];
+    const teraz = profesja.id;
+    if (teraz && this.time.now < this.profesjaOdmowa) return false;
+    const opis = ids.map((id) => `${PROFESJE[id].ikona} ${tr(PROFESJE[id].nazwa)}: ${tr(PROFESJE[id].opis)}`).join('\n\n');
+    const tekst = teraz
+      ? tx(`Służysz jako ${tr(PROFESJE[teraz].nazwa).toLowerCase()}. Zmiana profesji kosztuje ${PROFESJA.zmianaDiamenty} 💎 – umiejętności zostają, zmienia się tylko tempo nauki.\n\n${opis}`, `You serve as a ${tr(PROFESJE[teraz].nazwa).toLowerCase()}. Changing profession costs ${PROFESJA.zmianaDiamenty} 💎 – your skills stay, only the learning pace changes.\n\n${opis}`)
+      : tx(`Masz już doświadczenie. Czas wybrać drogę – nie zamyka ci żadnej broni, ale w swojej uczysz się półtora raza szybciej, w innych wolniej.\n\n${opis}`, `You have some experience now. Time to choose a path – no weapon is closed to you, but you learn your own one and a half times faster, others slower.\n\n${opis}`);
+    const wybory = ids.filter((id) => id !== teraz);
+    this.dialog({
+      title: tx('Szef straży – profesja', 'Guard chief – profession'), text: tekst, wazne: true,
+      buttons: [...wybory.map((id) => `${PROFESJE[id].ikona} ${tr(PROFESJE[id].nazwa)}${teraz ? ` (${PROFESJA.zmianaDiamenty} 💎)` : ''}`), teraz ? tx('Zostaję przy swojej', 'I keep mine') : tx('Jeszcze nie teraz', 'Not yet')],
+      zamknij: wybory.length,
+      onChoose: (i) => {
+        const id = wybory[i];
+        if (!id) { this.profesjaOdmowa = this.time.now + 10 * 60_000; dalej(); return; }
+        if (teraz) {
+          if (session.diamenty < PROFESJA.zmianaDiamenty) { this.toast(tx('Za mało diamentów na zmianę profesji.', 'Not enough diamonds to change profession.'), 2500); dalej(); return; }
+          session.diamenty -= PROFESJA.zmianaDiamenty;
+        }
+        profesja.id = id;
+        this.save();
+        this.emitHud();
+        this.toast(tx(`${PROFESJE[id].ikona} Jesteś teraz: ${tr(PROFESJE[id].nazwa)}!`, `${PROFESJE[id].ikona} You are now a ${tr(PROFESJE[id].nazwa)}!`), 3500);
+      },
+    });
+    return true;
+  }
+  private profesjaOdmowa = 0;
+
+  /** Who stands behind the counter depends on the shop (report #9: „Kowal za ladą” in a supermarket). */
+  private sprzedawca(p: CityPlace) {
+    const n = (p.name ?? '').toLowerCase();
+    if (p.kind === 'gear' || /budow|narzędz|hardware|diy|obi|castorama|leroy|bricomarch|praktiker|hornbach/.test(n)) return tx('Majster za ladą poleca swój towar.', 'The craftsman behind the counter recommends his goods.');
+    if (/sport|decathlon|intersport/.test(n)) return tx('Sprzedawca w sportowej bluzie poleca swój towar.', 'A shop assistant in a sports top recommends the goods.');
+    return tx('Kasjerka uśmiecha się zza lady.', 'The cashier smiles from behind the counter.');
+  }
+
+  /** After the first duty: the nearest newsboy, city board and hunting ground (report #7). */
+  private krokiPoProlog(): { label: string; nazwa: string; x: number; y: number }[] {
+    const hx = this.player.x, hy = this.player.y;
+    const nearest = <T extends { x: number; y: number }>(l: T[]) => l.reduce<T | null>((b, q) => !b || Math.hypot(q.x - hx, q.y - hy) < Math.hypot(b.x - hx, b.y - hy) ? q : b, null);
+    const out: { label: string; nazwa: string; x: number; y: number }[] = [];
+    const g = nearest(this.folk?.newsboys() ?? []);
+    if (g) out.push({ label: tx('🗞 Gazeciarz – zlecenia i wieści', '🗞 Newsboy – jobs and news'), nazwa: tx('Gazeciarz', 'Newsboy'), x: g.x, y: g.y });
+    const t = nearest((this.city.tablice ?? []).map((q) => ({ x: q.x, y: q.y })));
+    if (t) out.push({ label: tx('📋 Tablica miasta – kartka z zadaniem', '📋 City board – a job notice'), nazwa: tx('Tablica miasta', 'City board'), x: t.x, y: t.y });
+    const l = nearest(this.lowiska?.lowiska ?? []);
+    if (l) out.push({ label: tx('🐺 Łowisko – walka i łup', '🐺 Hunting ground – fights and loot'), nazwa: tx('Łowisko', 'Hunting ground'), x: l.x, y: l.y });
+    return out;
+  }
+
   /** Map screen „🧭 Prowadź”: the arrow points to this hub (null = stop guiding). */
   prowadzDo(h: Hub | null) {
     droga = h;
@@ -7802,7 +7965,7 @@ export class GameScene extends Phaser.Scene {
     return this.activeQuests().map((q, i) => {
       const mission=session.gen[q.id] ?? this.missions.find(r=>r.m.id===q.id)?.m;
       const notes = mission ? missionNotes(mission) : q.id === PROLOG_ID && this.prolog?.state?.rewardsClaimed.includes('letter_done')
-        ? tx('✓ Dostarczono list i oddano potwierdzenie (+20 PD).', '✓ Letter delivered and receipt returned (+20 XP).') : '';
+        ? tx('✓ Dostarczono list i oddano potwierdzenie (+20 EXP).', '✓ Letter delivered and receipt returned (+20 EXP).') : '';
       return {
       id: q.id, title: q.title, text: `${q.text}${notes ? `\n${notes}` : ''}${i === 0 ? items : ''}`, color: q.color, main: q.main, start: q.start,
       far: q.pos ? `${this.whereIs(q.pos.x, q.pos.y)} (${jakDaleko(Phaser.Math.Distance.Between(q.pos.x, q.pos.y, this.player.x, this.player.y) / PX_PER_M)})` : null,
@@ -7854,7 +8017,7 @@ export class GameScene extends Phaser.Scene {
     const y = this.player.y;
     const t = this.townAt(x, y);
     const told = this.toldPlace;
-    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: t.name, detail: told.name };
+    if (told && told.map === this.city.id && Math.hypot(told.x - x, told.y - y) < MIEJSCE_HUD.wiedzaM * PX_PER_M) return { town: czytelnaNazwa(t.name), detail: czytelnaNazwa(told.name) };
     if (t.nieznana) return { town: t.name, detail: tx('zapytaj przechodnia', 'ask a passer-by') };
     const dx = x - t.x;
     const dy = y - t.y;
@@ -7866,14 +8029,14 @@ export class GameScene extends Phaser.Scene {
       : ['na wschodzie', 'na południowym wschodzie', 'na południu', 'na południowym zachodzie', 'na zachodzie', 'na północnym zachodzie', 'na północy', 'na północnym wschodzie'];
     const k = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
     const where = t.wies ? (inTown ? tx('we wsi', 'in the village') : tx('za wsią', 'outside the village')) : inTown ? tx('w mieście', 'in town') : tx('za miastem', 'outside town');
-    return { town: t.name, detail: lang === 'en' ? `${where} · somewhere ${strony[k]}` : `${where} · gdzieś ${strony[k]}` };
+    return { town: czytelnaNazwa(t.name), detail: lang === 'en' ? `${where} · somewhere ${strony[k]}` : `${where} · gdzieś ${strony[k]}` };
   }
 
   /** "Jana Pawła II, Lublin": the street nearest a spot and its town (quest log). */
   private whereIs(x: number, y: number) {
     // A street line if that part of the map is loaded, else the nearest known address without its number.
     const addr = this.city.streetNear(x, y, 150) ?? this.city.nearestAddress(x, y, 600)?.replace(/\s+\d+[a-zA-Z]?(\/\d+[a-zA-Z]?)?(?=,|$)/, '') ?? null;
-    if (addr?.includes(',')) return addr; // already "Kościelna, Garbów"
+    if (addr?.includes(',')) return czytelnaNazwa(addr); // already "Kościelna, Garbów"
     const street = addr;
     let town = mapName(this.city.id);
     if (worldOrigin(this.city.id)) town = this.worldTown(x, y) ?? 'Daleko';
@@ -7886,7 +8049,7 @@ export class GameScene extends Phaser.Scene {
       if (near && d(near) < 1500 * PX_PER_M && (!lub || d(near) < d(lub))) town = near.name;
       else if (!lub || d(lub) > 12_000 * PX_PER_M) town = near?.name ?? town;
     }
-    return street ? `${street}, ${town}` : town;
+    return street ? `${czytelnaNazwa(street)}, ${czytelnaNazwa(town)}` : czytelnaNazwa(town);
   }
 
   /** Switches a quest's guiding arrow on or off (character sheet). */

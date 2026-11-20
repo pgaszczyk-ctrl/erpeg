@@ -37,6 +37,11 @@ export const STYLE_REGIONOW: StylRegionu[] = [
   { id: 'srodziemnomorski', kraje: ['ES', 'PT', 'IT', 'GR', 'MT', 'CY', 'HR'], obszary: [[-10, 34, 36, 44]],
     dachy: [['dachowka_terakota', 70], ['dachowka_czerwona', 20], ['dachowka_brazowa', 10]],
     sciany: [['tynk_bialy', 40], ['tynk_ochra', 25], ['tynk_kremowy', 15], ['tynk_zolty', 10], ['kamien', 10]], plaskie: 0.3, dachPlaski: 'tynk_bialy' },
+  // Bałkany i Morze Czarne (raport 19.11.2026: Burgas wyglądał jak Lublin): terakota, bielone i ochrowe tynki,
+  // kamień i drewniane piętra jak w starych domach Płowdiwu czy Ochrydy.
+  { id: 'balkany', kraje: ['BG', 'RO', 'RS', 'MK', 'AL', 'TR', 'BA', 'ME', 'XK', 'MD'], obszary: [[13, 39, 45, 45.3]],
+    dachy: [['dachowka_terakota', 55], ['dachowka_czerwona', 25], ['blacha_falista', 10], ['dachowka_brazowa', 10]],
+    sciany: [['tynk_bialy', 30], ['tynk_ochra', 20], ['tynk_kremowy', 15], ['kamien', 15], ['drewno', 10], ['tynk_zolty', 10]], plaskie: 0.12, dachPlaski: 'tynk_bialy' },
   { id: 'suchy', kraje: ['EG', 'IL', 'SA', 'AE', 'QA', 'OM', 'JO', 'IQ', 'IR', 'MA', 'DZ', 'TN', 'LY'], obszary: [[-17, 15, 62, 34]],
     dachy: [['dachowka_terakota', 1]], sciany: [['tynk_piaskowy', 50], ['tynk_bialy', 25], ['tynk_ochra', 25]], plaskie: 0.9, dachPlaski: 'tynk_piaskowy' },
   { id: 'azja', kraje: ['JP', 'KR', 'CN', 'TW'], obszary: [[100, 18, 147, 46]],
@@ -54,7 +59,11 @@ export const STYLE_REGIONOW: StylRegionu[] = [
 /** Styl budynków w danym miejscu: najpierw kraj, potem obszar, inaczej domyślny (Polska). */
 export function stylRegionu(lat: number, lon: number): StylRegionu {
   const kraj = krajWPunkcie(lat, lon);
-  if (kraj) return STYLE_REGIONOW.find((r) => r.kraje.includes(kraj)) ?? STYL_DOMYSLNY;
+  // A known country with no style of its own looks at the areas too, before falling back to the Polish style
+  // (report #8: Bulgaria got the Polish look although Burgas lies in the Mediterranean box).
+  const zKraju = kraj ? STYLE_REGIONOW.find((r) => r.kraje.includes(kraj)) : undefined;
+  if (zKraju) return zKraju;
+  if (kraj === 'PL') return STYL_DOMYSLNY;
   return STYLE_REGIONOW.find((r) => r.obszary.some(([w, s, e, n]) => lon >= w && lon <= e && lat >= s && lat <= n)) ?? STYL_DOMYSLNY;
 }
 

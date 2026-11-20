@@ -1,3 +1,4 @@
+import { rangedWeapon } from '../inventory';
 import { openMusic } from '../ui/music';
 import { tx } from '../i18n';
 import { showShop, type ShopHandle } from '../ui/shop';
@@ -272,7 +273,7 @@ export class UIScene extends Phaser.Scene {
 
     if (!window.matchMedia('(pointer: coarse)').matches) {
       const hint = this.add
-        .text(this.view.width / 2, this.view.height - 12, tx('WASD / strzałki – ruch    SPACJA lub klik – miecz', 'WASD / arrows – move    SPACE or click – sword'), {
+        .text(this.view.width / 2, this.view.height - 12, (() => { const r = rangedWeapon(); const pl = r ? (r.rodzaj === 'magia' ? 'czar' : 'strzał') : 'miecz', en = r ? (r.rodzaj === 'magia' ? 'spell' : 'shot') : 'sword'; return tx(`WASD / strzałki – ruch    SPACJA lub klik – ${pl}    Q – mocny atak    E – akcja`, `WASD / arrows – move    SPACE or click – ${en}    Q – strong attack    E – action`); })(), {
           fontFamily: 'monospace', fontSize: '14px', color: '#ffffff', stroke: '#1e1a24', strokeThickness: 4,
         })
         .setOrigin(0.5, 1);
@@ -1008,6 +1009,7 @@ export class UIScene extends Phaser.Scene {
     this.dialogAktualny = d;
     this.dialogChoose = d.onChoose;
     this.dialogZamknij = d.zamknij;
+    this.dialogWazne = !!d.wazne;
     this.dialogOpenedAt = this.time.now;
     // Letters one by one; the buttons come once the text is written. A tap/Space first finishes the text.
     if (pisz && !needsScroll) {
@@ -1134,6 +1136,8 @@ export class UIScene extends Phaser.Scene {
   }
 
   private dialogOpenedAt = 0;
+  /** DialogRequest.wazne: keys need a longer pause before they may answer it. */
+  private dialogWazne = false;
 
   private onDialogTap(x: number, y: number) {
     if (loadingGame()) return;
@@ -1146,6 +1150,9 @@ export class UIScene extends Phaser.Scene {
     // Any press while a dialog is open belongs to the dialog, never to the weapon.
     cancelPress();
     if (this.time.now - this.dialogOpenedAt < 250) return;
+    // Keyboard (Space/Enter: x < 0) right after a window opens is most likely an attack still being mashed: wait
+    // KLAWISZ_PO_MS (longer for important windows – defeat, rewards; report #5) before a key may pick a button.
+    if (x < 0 && this.time.now - this.dialogOpenedAt < (this.dialogWazne ? 900 : 550)) return;
     // Text still being written: the tap writes it all (and shows the buttons).
     if (this.pisanie) { this.dopiszDoKonca(); return; }
     // Tabs have negative indexes (-1 - tab), so "nothing hit" is null.
@@ -1234,7 +1241,7 @@ export class UIScene extends Phaser.Scene {
     const guziki = ['▶ Graj dalej', 'Mój kod postaci', '🐞 Znalazłem buga', '⚙ Ustawienia', '🚪 Wyjdź z gry'];
     this.showDialog({
       title: 'Menu',
-      text: `Wyjście z gry: postęp od ostatniego zapisu (wejście do budynku, koniec misji) przepadnie.\n\nGra: ${wersjaNapis()}`,
+      text: `${tx("Gra zapisuje się sama co kilka minut, przy budynkach i po misjach.", "The game saves itself every few minutes, at buildings and after missions.")}\n\nGra: ${wersjaNapis()}`,
       buttons: guziki,
       zamknij: 0,
       grozny: 4,

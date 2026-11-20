@@ -328,7 +328,18 @@ export class FogView {
     const ctx = this.tex.getContext();
     ctx.globalCompositeOperation = 'copy';
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(this.cells, 0, 0, W, H);
+    // Explored cells blurred by about one cell (report #22: the fog had square, stepped edges); the shadow trick works
+    // on every browser, canvas filters don't.
+    const [mr, mg, mb] = this.podZiemia ? [6, 5, 10] : MGLA.mgielka;
+    const miekko = (img: HTMLCanvasElement, kolor = '#000') => {
+      ctx.save();
+      ctx.shadowColor = kolor;
+      ctx.shadowBlur = (FOG_CELL / FOG_RES) * 0.9;
+      ctx.shadowOffsetX = W + 50;
+      ctx.drawImage(img, -(W + 50), 0, W, H);
+      ctx.restore();
+    };
+    miekko(this.cells);
     // The fog's shape painted as old parchment, darker at night (daylight checked once a minute).
     this.paper ??= ctx.createPattern(parchment(this.scene), 'repeat');
     const now = Date.now();
@@ -346,7 +357,7 @@ export class FogView {
     }
     // Known places: under the parchment, only a light haze (you see the map, not who's there).
     ctx.globalCompositeOperation = 'destination-over';
-    ctx.drawImage(this.haze, 0, 0, W, H);
+    miekko(this.haze, `rgb(${mr},${mg},${mb})`);
     ctx.globalCompositeOperation = 'source-atop';
     const dark = this.podZiemia ? 0 : MGLA.nocCiemnosc * (1 - this.light);
     if (dark > 0.01) {

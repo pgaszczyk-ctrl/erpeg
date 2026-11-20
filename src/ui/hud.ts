@@ -1,3 +1,4 @@
+import { stanGry } from '../stanGry';
 import { itemAssetUrl } from './itemIcon';
 import { session } from '../quests';
 import { demo } from '../demo';
@@ -441,7 +442,7 @@ export function mountHud(on: HudHandlers) {
   }
   // The coin over the portrait while the character has no account (owner, 26 Oct 2026; ui/monetaPortretu.ts).
   obracajMonete({
-    pokazuj: () => !!session.idik && !session.konto && !demo.on && !document.body.classList.contains('walka-tur'),
+    pokazuj: () => !!session.idik && !session.konto && !demo.on && !stanGry.walka && !document.querySelector('#hud.dim') && !document.body.classList.contains('walka-tur'),
     twarz: () => {
       if (teleskop()) return twarzTeleskopu();
       const r = avPic.getBoundingClientRect();

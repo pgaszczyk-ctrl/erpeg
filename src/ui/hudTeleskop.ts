@@ -97,6 +97,10 @@ body.walka-tur #hud-tel { display: none; }
 #hud-tel .tel-rura.st.mana i.p { background: linear-gradient(90deg, #1d3f8c, #3d8fe0 45%, #bfe6ff 60%, #1d4f9c); }
 #hud-tel .tel-rura.st.slabo i.p { background: linear-gradient(90deg, #8e2c10, #d2552a 45%, #ffb08a 60%, #8e2c10); }
 #hud-tel .tel-rura::after { content: ''; position: absolute; left: 2px; top: 3px; width: 2px; bottom: 3px; border-radius: 1px; background: rgba(255,255,255,0.28); }
+#hud-tel .tel-rura .ik { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: 7px; line-height: 8px; z-index: 2; filter: drop-shadow(0 0 1px #000); pointer-events: none; }
+#hud-tel .tel-rura.hp .ik::before { content: '❤'; color: #fff; }
+#hud-tel .tel-rura.st .ik::before { content: '⚡'; }
+#hud-tel .tel-rura.st.mana .ik::before { content: '💧'; }
 #hud-tel .tel-rura .kreski { position: absolute; inset: 0; background: repeating-linear-gradient(180deg, transparent 0 9px, rgba(255,226,160,0.35) 9px 10px); }
 #hud-tel .tel-czapka { position: absolute; width: 14px; height: 5px; border-radius: 2px; background: linear-gradient(180deg, #f2cf7c, #a8722a 60%, #6a4416);
   box-shadow: 0 0 0 0.5px #2a1a0c; }
@@ -458,7 +462,10 @@ function zbudujRurki() {
     b.className = 'b';
     const k = document.createElement('span');
     k.className = 'kreski';
-    r.append(p, b, k);
+    // What the tube is (report #15: two unlabelled tubes, the second one yellow or blue): a small icon on the glass.
+    const ik = document.createElement('span');
+    ik.className = 'ik';
+    r.append(p, b, k, ik);
     const czapka = (top: number) => {
       const c = document.createElement('div');
       c.className = 'tel-czapka';

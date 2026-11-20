@@ -40,7 +40,7 @@ export const ZASOBY = {
   zycieNaS: 0.5,
   zyciePoS: 4,
   /** Strong attack / skill cooldown (s), on top of its cost. */
-  mocnyCooldownS: 2.5,
+  mocnyCooldownS: 4,
 };
 
 /** Maximum stamina / mana at a character level. */

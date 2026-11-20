@@ -30,6 +30,8 @@ export class Player extends Phaser.GameObjects.Sprite {
   /** Velocity in px/s; GameScene moves the player with map collisions. */
   vel = new Phaser.Math.Vector2();
   hp = PLAYER.maxHp;
+  /** Life never drops below this (1 during the recruit prologue: a tutorial must not kill). */
+  minHp = 0;
   facing = new Phaser.Math.Vector2(0, 1);
   private lastAttack = -Infinity;
   /** Set from the sword-fighting skill (content/sklepy.ts). */
@@ -113,7 +115,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     // The potion's bonus heart goes first.
     const fromExtra = Math.min(this.extra, damage);
     this.extra -= fromExtra;
-    this.hp = Math.max(0, this.hp - (damage - fromExtra));
+    this.hp = Math.max(Math.min(this.minHp, this.hp), this.hp - (damage - fromExtra));
     this.invulnerableUntil = now + PLAYER.hurtInvulnerable;
     this.stunnedUntil = now + 180;
 
@@ -136,7 +138,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     if (this.isDead || n <= 0) return;
     const fromExtra = Math.min(this.extra, n);
     this.extra -= fromExtra;
-    this.hp = Math.max(0, this.hp - (n - fromExtra));
+    this.hp = Math.max(Math.min(this.minHp, this.hp), this.hp - (n - fromExtra));
   }
 
   heal(amount: number) {

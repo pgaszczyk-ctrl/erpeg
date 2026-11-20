@@ -7,6 +7,7 @@
 // Where the world map lives: WORLD_BASE (Cloudflare R2), pinned by WORLD_ARCHIVE
 // in worldRules.ts. `?world=<url of a .pmtiles file>` overrides it for tests.
 
+import { lang } from '../i18n';
 import { PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { VectorTile, type VectorTileFeature } from '@mapbox/vector-tile';
 import { PbfReader } from 'pbf';
@@ -273,6 +274,11 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   }
 }
 
+/** Unnamed places in the player's language (report #9: „Sklep” in Burgas for an English player too). */
+const DEFAULT_NAME_EN: Partial<Record<Place['kind'], string>> = {
+  shop: 'Shop', police: 'Police station', library: 'Library', bank: 'Bank', alchemist: 'Petrol station',
+  workshop: 'Car workshop', port: 'Ferry pier', gear: 'DIY store', hotel: 'Hotel', camp: 'Campsite',
+};
 const DEFAULT_NAME: Partial<Record<Place['kind'], string>> = {
   shop: 'Sklep', police: 'Komenda Policji', library: 'Biblioteka', bank: 'Bank', alchemist: 'Stacja paliw',
   workshop: 'Warsztat samochodowy', port: 'Przystań promowa', gear: 'Market budowlany', hotel: 'Hotel', camp: 'Pole namiotowe',
@@ -494,7 +500,7 @@ function worldLoader(map: CityMap): WorldLoader {
       const kind = placeKind(f.properties);
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
-      const name = (f.properties['name:pl'] as string) || (f.properties.name as string) || DEFAULT_NAME[kind] || kind;
+      const name = (f.properties[lang === 'pl' ? 'name:pl' : 'name:en'] as string) || (f.properties.name as string) || (lang === 'pl' ? DEFAULT_NAME[kind] : DEFAULT_NAME_EN[kind]) || kind;
       out.p!.push([kind, name, x * k, y * k]);
     });
     // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under

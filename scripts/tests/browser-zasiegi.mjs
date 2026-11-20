@@ -6,7 +6,7 @@ import {preview} from 'vite';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const source=stripTypeScriptTypes(await readFile('src/content/walka.ts','utf8'),{mode:'transform',disableExperimentalWarning:true});
 const {zasiegDystansu}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
-for(const level of [1,2,3,4,10,20]) assert(Math.abs(zasiegDystansu(level,20)-40*1.2**Math.max(0,level-3))<1e-7);
+for(const level of [1,2,3,4,10,20]) assert(Math.abs(zasiegDystansu(level,20)-80*1.06**Math.max(0,level-1))<1e-7);
 const levels={};let points=0;for(let l=1;l<=20;l++){if(l>1)points+=Math.round(100*1.5**(Math.min(l,10)-2)*1.25**Math.max(0,l-10));levels[l]=points;}
 await mkdir('work/zasiegi',{recursive:true});
 const server=await preview({preview:{host:'127.0.0.1',port:4177,strictPort:true}});
@@ -37,20 +37,20 @@ try{for(const mobile of [false,true]){
  const build=s.city.buildingAt;s.city.buildingAt=()=>undefined;
  gear.magic=true;gear.ammo.strzaly=1000;const ranges=[];
  for(const skill of ['luk','magia'])for(const level of [1,2,3,4,10,20]){
- gear.skills[skill]=levels[level];const expected=40*1.2**Math.max(0,level-3);
+ gear.skills[skill]=levels[level];const expected=80*1.06**Math.max(0,level-1);
  if(Math.abs(s.shotRange(skill)-expected)>1e-7)throw Error('wrong skill range '+skill+' '+level);
  reset();gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);
  const q=s.shots[0];if(!q)throw Error('no projectile');
  if(Math.abs(q.left-expected)>1e-7)throw Error('projectile range differs');
- if(level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<100))throw Error('missing slow arc');
+ if(level<=3&&!(q.arc>0&&Math.hypot(q.vx,q.vy)<=expected/0.55+1e-6))throw Error('missing slow arc');
  s.updateShots(100);if(s.shots.length)throw Error('projectile did not expire');
  if(Math.hypot(q.x-q.originX,q.y-q.originY)>expected+1e-6)throw Error('projectile overshot');
  ranges.push({skill,level,range:expected});
  }
  // Boundaries, including oversized frames and a visible fall: outside is always harmless.
  for(const skill of ['luk','magia'])for(const offset of [-.1,0,.1]){
- reset();gear.skills[skill]=0;gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';const e=spawn(40+offset);
+ reset();gear.skills[skill]=0;gear.equip.bron=skill==='luk'?'luk_rekruta':'rozdzka_szkolna';const e=spawn(80+offset);
  s.fireShot({id:gear.equip.bron,miejsce:'bron',rodzaj:skill,moc:2},{x:1,y:0},false,s.time.now,false,false);s.updateShots(5);
  if((e.hp<10000)!==(offset<=0))throw Error('range edge '+skill+' '+offset);
  if(offset>0&&e.pursuitUntil!==-Infinity)throw Error('out-of-range shot provoked');

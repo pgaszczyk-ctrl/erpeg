@@ -30,10 +30,14 @@ export const WALKA = {
   zaMoc: 1.5,
   mocnyPoMs: 1000,
   zasiegMiecz: 1.3,
-  /** 30.10.2026: Celność / Skupienie 1–3 = 2× miecz, potem +20% poprzedniego zasięgu. */
-  dystans: { start: 2, odPoziomu: 4, naPoziom: 1.2, mocny: 1.3, mocnyOd: 4, lotStartS: 0.55, lukLotuPx: 6 },
+  /** 19.11.2026 (raport): od 1. poziomu 4× miecz (ok. 1/3 ekranu), potem +6% na poziom (20. poziom ≈ 12× miecz;
+   *  dawne 1.2/poziom dawało 44× – przesada w drugą stronę). */
+  dystans: { start: 4, odPoziomu: 2, naPoziom: 1.06, mocny: 1.3, mocnyOd: 4, lotStartS: 0.55, lukLotuPx: 6 },
   /** Zwykły cios wybiera jednego przeciwnika w tym kącie przed bohaterem. */
   ciosStopnie: 70,
+  /** Mocny atak (przycisk Q): szeroki łuk przed bohaterem, ×2 obrażeń, odrzut i krótkie ogłuszenie (raport 19.11.2026). */
+  mocnyLukStopnie: 140,
+  mocnyMnoznikLive: 2,
   miecz: {
     przerwa: [[1, 320], [2, 310], [3, 300], [5, 280], [10, 230], [15, 180], [20, 130]] as Tabela,
     trafienie: [[1, 85], [2, 90], [3, 93], [5, 96], [10, 99], [15, 100], [20, 100]] as Tabela,
@@ -44,7 +48,7 @@ export const WALKA = {
     przerwa: [[1, 650], [2, 630], [3, 610], [5, 570], [10, 470], [15, 370], [20, 270]] as Tabela,
     /** Łuk nie strzela częściej niż co tyle ms, choćby tabela mówiła mniej. */
     najkrotszaPrzerwa: 400,
-    trafienie: [[1, 40], [2, 52], [3, 61], [5, 74], [10, 81], [15, 86], [20, 90]] as Tabela,
+    trafienie: [[1, 70], [2, 72], [3, 74], [5, 78], [10, 85], [15, 90], [20, 95]] as Tabela,
     mocnyTrafienie: [[1, 80], [2, 83], [3, 86], [5, 92], [10, 97], [15, 99], [20, 100]] as Tabela,
     mocnyMnoznik: 1.8,
     natychmiast: [[1, 5], [20, 15]] as Tabela,
@@ -59,7 +63,9 @@ export const WALKA = {
    * strzał leci prosto w najbliższy cel (potwór, tarcza albo kryształ treningowy) w tym stożku wokół kierunku,
    * jeśli nic go nie zasłania. Pudło dalej się zdarza (i pokazuje „pudło!”), ale lot jest w stronę celu.
    */
-  celowanieStopnie: 35,
+  celowanieStopnie: 60,
+  /** ATAK bez celowania (klawisz, stuknięcie przycisku): najbliższy widoczny wróg w zasięgu, w dowolną stronę. */
+  celAutoStopnie: 180,
   ciosMs: 150,
   /** Wielkość obrazka broni w punktach mapy (mocny cios trochę większy). */
   wielkoscBroni: 13,

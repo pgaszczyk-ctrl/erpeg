@@ -117,8 +117,10 @@ function showMinimap(game: GameScene, questId?: string) {
     off = { x: goal.pos.x - game.player.x, y: goal.pos.y - game.player.y };
   }
   const legend = document.createElement('span');
-  legend.textContent = tx('○ Cel zadania · ▲ Gracz', '○ Quest objective · ▲ Player');
-  legend.style.cssText = 'color:#fff1ce;font-size:12px';
+  // Every icon explained (report #20: no legend).
+  legend.textContent = tx('○ Cel zadania · ▲ Ty · ⚔ sklep · ✚ szpital · ★ straż · ¶ biblioteka · ✝ świątynia · ✎ szkoła · § urząd · $ targ · ♨ wytwórca · ⚒ warsztat · ⚓ port',
+    '○ Quest objective · ▲ You · ⚔ shop · ✚ hospital · ★ guard · ¶ library · ✝ temple · ✎ school · § office · $ market · ♨ maker · ⚒ workshop · ⚓ port');
+  legend.style.cssText = 'color:#fff1ce;font-size:12px;max-width:min(96vw,720px);text-align:center;line-height:1.4';
   legend.style.pointerEvents = 'none';
   const setZoom = (z: number) => {
     zoom = Math.max(0, Math.min(SKALE_MAPY.length - 1, z));
@@ -224,7 +226,7 @@ function hubPopup(game: GameScene, root: HTMLDivElement, h: Hub, redraw: () => v
   const box = document.createElement('div');
   box.className = 'mm-hub';
   const prowadzi = game.drogaDo()?.nazwa === h.nazwa && game.drogaDo()?.lat === h.lat;
-  const nazwa = { kolej: 'Dworzec kolejowy', autobus: 'Dworzec autobusowy', port: 'Port promowy', armata: 'Armata miejska', metro: 'Właz metra (pinball)', wylot: 'Wylot z miasta' }[h.rodzaj];
+  const nazwa = { kolej: 'Dworzec kolejowy', autobus: 'Dworzec autobusowy', port: 'Port promowy', armata: 'Armata miejska', metro: 'Właz metra (pinball)', wylot: 'Wylot z miasta', cel: 'Cel' }[h.rodzaj];
   box.innerHTML = `<b>${IKONA_HUBA[h.rodzaj]} ${h.nazwa.replace(/</g, '&lt;')}</b><span>${nazwa} · ${h.km < 1 ? `${Math.round(h.km * 1000)} m` : `${h.km.toFixed(h.km < 10 ? 1 : 0)} km`} stąd</span>`;
   const row = document.createElement('div');
   const b = (text: string, fn: () => void) => {
@@ -700,9 +702,11 @@ function render(game: GameScene, canvas: HTMLCanvasElement, R: number, c: { x: n
       ctx.textAlign = 'center';
       ctx.strokeStyle = '#241d29';
       ctx.lineWidth = 3 * u;
-      ctx.strokeText(q.text, x, y + 24 * u, S * .75);
+      // Kept inside the map (report #20: labels cut at the edge).
+      const tw = Math.min(S * .75, ctx.measureText(q.text).width), lx = Math.max(tw / 2 + 4 * u, Math.min(S - tw / 2 - 4 * u, x)), ly = Math.min(S - 6 * u, y + 24 * u);
+      ctx.strokeText(q.text, lx, ly, S * .75);
       ctx.fillStyle = q.color;
-      ctx.fillText(q.text, x, y + 24 * u, S * .75);
+      ctx.fillText(q.text, lx, ly, S * .75);
       ctx.restore();
     }
   }

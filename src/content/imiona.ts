@@ -1,3 +1,4 @@
+import { lang } from '../i18n';
 /**
  * Names offered by default in the new-character form (owner, 8 Nov 2026: „100 losowych imion,
  * 20 polskich, 40 anglojęzycznych, 40 fantasy”). The player can type over it. Max 20 characters.
@@ -20,6 +21,9 @@ export const IMIONA_FANTASY = [
 ];
 export const IMIONA = [...IMIONA_POLSKIE, ...IMIONA_ANGIELSKIE, ...IMIONA_FANTASY];
 
+/** Default name in the player's language (report #24: a Polish player got „Ivy”): Polish + fantasy for Polish, English + fantasy otherwise. */
 export function losoweImie(): string {
-  return IMIONA[Math.floor(Math.random() * IMIONA.length)];
+  const pl = lang === 'pl';
+  const lista = pl ? [...IMIONA_POLSKIE, ...IMIONA_POLSKIE, ...IMIONA_FANTASY] : [...IMIONA_ANGIELSKIE, ...IMIONA_FANTASY];
+  return lista[Math.floor(Math.random() * lista.length)];
 }

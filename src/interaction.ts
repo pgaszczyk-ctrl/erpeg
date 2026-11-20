@@ -15,9 +15,11 @@ export class InteractionSelection {
     const available = targets.filter(t => distance(t) <= (t.range ?? range));
     const current = available.find(t => t.id === this.id);
     const preferred = available.filter(t => t.priority);
-    const nearest = (preferred.length ? preferred : available).reduce<InteractionTarget | null>((a, b) => !a || distance(b) < distance(a) ? b : a, null);
+    // A person standing by a door wins over the door (report #14: E opened the church instead of the guard in it).
+    const score = (t: InteractionTarget) => distance(t) - (t.kind === 'talk' ? 16 : 0);
+    const nearest = (preferred.length ? preferred : available).reduce<InteractionTarget | null>((a, b) => !a || score(b) < score(a) ? b : a, null);
     // A deliberate selection persists until it leaves reach; automatic selection has hysteresis.
-    if (current && (this.pinned || !nearest || (!!current.priority === !!nearest.priority && distance(nearest) + 8 >= distance(current) * .72))) return current;
+    if (current && (this.pinned || !nearest || (!!current.priority === !!nearest.priority && score(nearest) + 8 >= score(current) * .72))) return current;
     this.pinned = false;
     this.id = nearest?.id ?? null;
     return nearest;

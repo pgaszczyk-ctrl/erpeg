@@ -146,3 +146,6 @@ export function zyciePostaci(serca: number, exp: number) {
 export function szybkoscPostaci(exp: number) {
   return 1 + PREMIA_POZIOMU.szybkosc * czescPremii(poziomPostaci(exp));
 }
+
+/** Below this character level a defeat costs nothing (Tibia-like protection of newcomers; report 19 Nov 2026). */
+export const KARA_OD_POZIOMU = 5;

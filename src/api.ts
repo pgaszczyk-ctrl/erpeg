@@ -81,6 +81,8 @@ export interface SaveData {
   zasoby?: { s: number; m: number };
   /** The skill chosen per weapon kind at a training place (content/umiejetnosci.ts). */
   umiej?: Record<string, string>;
+  /** Profession (content/profesje.ts), chosen from level 5. */
+  profesja?: 'rycerz' | 'lowca' | 'mag' | null;
   /** A ride under way (journey.ts): the load point `at` is already its arrival station. */
   jazda?: import('./journey').Journey | null;
   /** Old saves only: the sword in use and the school level. */
