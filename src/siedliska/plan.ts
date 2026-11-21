@@ -28,7 +28,8 @@ function dobryPunkt(t: TerenSiedliska, x: number, y: number, M: number, margBud:
   const r = t.rodzaje(x, y);
   if (r.some((k) => TEREN_SIEDLISK.zakazane.includes(k))) return false;
   if (t.budynek(x, y, margBud * M)) return false;
-  if (t.linia(x, y, margLin * M)) return false;
+  // Wąskie ścieżki i polne drogi (OBOZ.przechodnie) mogą przecinać obóz – dostaną bramy; drogi dla aut, tory i rzeki nie.
+  if (t.liniaTwarda(x, y, margLin * M)) return false;
   return true;
 }
 
@@ -146,7 +147,7 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
   const szer = OBOZ.bramaM * M;
   const bramy: Brama[] = [];
   // Wielkie obozy: każda ścieżka/polna droga przecinająca palisadę przechodzi przez bramę (nic nie zostaje odcięte).
-  if (P.zBudynkami) for (const c of t.przeciecia(obrys)) {
+  for (const c of t.przeciecia(obrys)) {
     const a = Math.atan2(c.y - y, c.x - x);
     const w = Math.max(szer, c.szer + 3 * M);
     const blisko = bramy.find((b) => Math.hypot(b.x - c.x, b.y - c.y) < (b.szer + w) / 2 + 4 * M);
@@ -200,10 +201,15 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
 
   const wSrodku = (px: number, py: number, marg: number) => wWielokacie(obrys, px, py) && odlegloscOdObrysu(obrys, px, py) > marg;
   let ognisko = { x: x + (r() - 0.5) * 3 * M, y: y + (r() - 0.5) * 3 * M };
-  // Nie na ścieżce biegnącej przez wielki obóz (ognisko blokuje przejście).
-  if (P.zBudynkami) for (let k = 0; k < 24 && t.linia(ognisko.x, ognisko.y, 4 * M); k++) {
-    const a = (k / 24) * TAU * 3, d = (4 + k * 1.5) * M;
-    ognisko = { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d };
+  // Nie na ścieżce biegnącej przez obóz (ognisko blokuje przejście).
+  if (t.linia(ognisko.x, ognisko.y, 2.5 * M)) {
+    let znalezione = false;
+    for (let k = 0; k < 48 && !znalezione; k++) {
+      const a = (k / 24) * TAU * 3, d = (2 + k * 0.8) * M;
+      const c = { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d };
+      if (wSrodku(c.x, c.y, 3 * M) && !t.linia(c.x, c.y, 2.5 * M) && !t.zablokowane(c.x, c.y)) { ognisko = c; znalezione = true; }
+    }
+    if (!znalezione) return null;
   }
 
   // Namioty na pierścieniu wokół ogniska, nie na drodze od bram, z odstępem od palisady i od siebie.
@@ -217,7 +223,7 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
     const a = (k / ileOgnisk) * TAU + faza + (r() - 0.5) * 0.7;
     const p = naObrysie(x, y, gl, a).p * (0.42 + r() * 0.22);
     const fx = x + Math.cos(a) * p, fy = y + Math.sin(a) * p;
-    if (!wSrodku(fx, fy, 10 * M) || t.zablokowane(fx, fy) || (P.zBudynkami && t.linia(fx, fy, 6 * M))) continue;
+    if (!wSrodku(fx, fy, 10 * M) || t.zablokowane(fx, fy) || t.linia(fx, fy, 6 * M)) continue;
     if (ogniska.some((o) => Math.hypot(o.x - fx, o.y - fy) < 22 * M)) continue;
     if (P.zBudynkami && t.budynki(fx - 9 * M, fy - 9 * M, fx + 9 * M, fy + 9 * M).length) continue;
     ogniska.push({ x: fx, y: fy });
@@ -226,16 +232,19 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
   const doOgniska = (px: number, py: number) => Math.min(...ogniska.map((o) => Math.hypot(o.x - px, o.y - py)));
   // Budynki w obozie i ścieżki przez obóz: nic na nich nie stawiamy.
   if (P.zBudynkami) for (const b of t.budynki(x - Rsr * 1.3, y - Rsr * 1.3, x + Rsr * 1.3, y + Rsr * 1.3)) zajete.push({ x0: b.x0 - 3 * M, y0: b.y0 - 3 * M, x1: b.x1 + 3 * M, y1: b.y1 + 4 * M });
-  const naLinii = (x0: number, y0: number, x1: number, y1: number) => !!P.zBudynkami && t.linia((x0 + x1) / 2, (y0 + y1) / 2, Math.max(x1 - x0, y1 - y0) / 2 + 1 * M);
+  const naLinii = (x0: number, y0: number, x1: number, y1: number) => t.linia((x0 + x1) / 2, (y0 + y1) / 2, Math.max(x1 - x0, y1 - y0) / 2 + 1 * M);
   const ileN = ile(P.namioty);
   const katGl = Math.atan2(bramy[0].y - y, bramy[0].x - x);
+  // Namiot szefa naprzeciw głównej bramy – chyba że tam też jest brama (ścieżka na wylot): wtedy z boku.
+  const katSzefa = [Math.PI, Math.PI / 2, -Math.PI / 2, Math.PI * 0.75, -Math.PI * 0.75].map((d) => katGl + d)
+    .find((a) => !bramy.some((b) => katRoznica(a, Math.atan2(b.y - y, b.x - x)) < 0.7)) ?? katGl + Math.PI;
   // Małe obozy: namioty bliżej ogniska, ciaśniej (inaczej nie mieszczą się w palisadzie).
   const ciasny = P.promienM < 25;
   const pierscien = ciasny ? [0.22, 0.42] : P.promienM >= 40 ? [0.28, 0.8] : [0.5, 0.68];
   const luz = (ciasny ? 1.2 : 2.5) * M;
   for (let i = 0, proby = 0; i < ileN && proby < 60 + ileN * 30; proby++) {
     const szef = i === 0;
-    const a = szef ? katGl + Math.PI + (r() - 0.5) * 0.4 : r() * TAU;
+    const a = szef ? katSzefa + (r() - 0.5) * 0.4 : r() * TAU;
     const wOsiedlu = !szef && ogniska.length > 1;
     if (!szef && !wOsiedlu && bramy.some((b) => katRoznica(a, Math.atan2(b.y - y, b.x - x)) < 0.45)) continue;
     // Szef wielkiego obozu: tuż przy głównym ognisku, po stronie przeciwnej głównej bramie.

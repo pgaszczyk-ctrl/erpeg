@@ -116,6 +116,19 @@ for (let k = 0; k < 120; k++) {
   for (let i = 0; i < a.sciany.length; i += 2) sprawdz(!wDomu(a.sciany[i], a.sciany[i + 1], 4), `test:wielki:${k}: palisada w budynku`);
 }
 console.log('wielkie obozy (las ze ścieżką i domem):', wielkie);
+// 1c. Każda wielkość: wąska ścieżka przez środek lasu (bez domu) – obóz stoi na niej z bramami, ścieżka wolna.
+const teren3: TerenSiedliska = { ...teren2, zablokowane: () => false, budynek: () => false, budynki: () => [] };
+const zeSciezka: Record<string, number> = {};
+for (let k = 0; k < 160; k++) {
+  const a = planujOboz(`test:sciezka:${k}`, 0, 0, teren3, M);
+  if (!a) continue;
+  zeSciezka[a.rozmiar] = (zeSciezka[a.rozmiar] ?? 0) + 1;
+  sprawdz(a.bramy.filter((g) => g.sciezka).length >= 2, `test:sciezka:${k} (${a.rozmiar}): brak bram na ścieżce`);
+  for (let x = -400; x <= 400; x += 1) sprawdz(!zablokowaneW(a, x, 0, M), `test:sciezka:${k} (${a.rozmiar}): ścieżka zablokowana przy x=${x}`);
+  for (const o of a.ogniska) sprawdz(Math.abs(o.y) > SC + 2 * M, `test:sciezka:${k}: ognisko na ścieżce`);
+}
+console.log('obozy na wąskiej ścieżce:', zeSciezka);
+sprawdz(['czujka', 'maly', 'sredni'].some((r) => (zeSciezka[r] ?? 0) > 0), 'małe obozy nie stają na ścieżce');
 sprawdz((wielkie.twierdza ?? 0) > 3 && (wielkie.wielki ?? 0) > 3, 'za mało wielkich obozów');
 sprawdz(!!wzory.twierdza?.jaskinia, 'twierdza bez jaskini');
 

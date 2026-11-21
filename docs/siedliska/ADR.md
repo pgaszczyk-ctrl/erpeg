@@ -108,3 +108,7 @@ Pięć rozmiarów (`OBOZ.rozmiary`, wersja generatora 2): czujka 13 m (1 namiot,
 - Wejście do podziemi z obozu (`LochyWejscia.dodajMisyjne` ma już mechanizm wejść dodawanych z kodu).
 - Nocna poświata latarni i ogniska, dym z ogniska.
 - Pathfinding potworów jest prosty: z wnętrza wychodzą bramą (`obejscie`), ale nie omijają namiotów inteligentnie.
+
+## Wąskie ścieżki przez obozy (21.11.2026, WERSJA_SIEDLISK 5)
+
+Właściciel: „Obozy mogą być przecinane wąskimi ścieżkami, to nie problem”. Każda wielkość obozu omija teraz tylko twarde linie (`liniaTwarda`: drogi dla aut, tory, rzeki); ścieżki, polne i dojazdowe drogi (`OBOZ.przechodnie`) mogą przez niego biec – każde przecięcie z palisadą dostaje bramę. Ognisko, namioty i rekwizyty nie stają na ścieżce; namiot szefa odsuwa się w bok, gdy naprzeciw głównej bramy też jest brama. Czujki i małe obozy zwykle i tak się na ścieżce nie mieszczą (za ciasno). Test: `siedliska.mjs` – część „obozy na wąskiej ścieżce”. Wydane na produkcji w 1.059.

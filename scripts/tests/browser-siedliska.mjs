@@ -135,7 +135,9 @@ try {
   const sciana = await g((id) => {
     const s = window.__game.scene.getScene('game');
     const sd = s.lowiska.siedliska.find((q) => q.id === id);
-    const pal = sd.pale.filter((p) => !p.brama).sort((a, b) => Math.hypot(a.x - sd.bramy[0].x, a.y - sd.bramy[0].y) - Math.hypot(b.x - sd.bramy[0].x, b.y - sd.bramy[0].y))[8];
+    // Pal najdalej od wszystkich bram (ścieżki mogą przecinać obóz – bram bywa kilka).
+    const odBram = (p) => Math.min(...sd.bramy.map((g) => Math.hypot(p.x - g.x, p.y - g.y) - g.szer / 2));
+    const pal = sd.pale.filter((p) => !p.brama).sort((a, b) => odBram(b) - odBram(a))[0];
     const nx = (pal.x - sd.x) / Math.hypot(pal.x - sd.x, pal.y - sd.y), ny = (pal.y - sd.y) / Math.hypot(pal.x - sd.x, pal.y - sd.y);
     s.player.setPosition(pal.x + nx * 14, pal.y + ny * 14);
     return { x: pal.x, y: pal.y, nx, ny };

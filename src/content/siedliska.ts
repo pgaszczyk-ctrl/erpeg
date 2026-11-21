@@ -20,7 +20,7 @@ export type RozmiarSiedliska = 'czujka' | 'maly' | 'sredni' | 'duzy' | 'warownia
  * Wersja generatora siedlisk: wchodzi do ziarna i do id, więc zmiana reguł daje nowe (ale znowu stałe) układy,
  * a stare zapisy (np. pokonany szef) po prostu przestają pasować – nic się nie psuje.
  */
-export const WERSJA_SIEDLISK = 4;
+export const WERSJA_SIEDLISK = 5;
 
 /** Teren, na którym obóz może stać, i czego musi unikać (obszary OSM w całym obrysie z marginesem). */
 export const TEREN_SIEDLISK = {
