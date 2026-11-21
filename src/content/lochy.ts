@@ -100,6 +100,20 @@ export const LOCH = {
   ciemnosc: 0.5,
 };
 
+/** Zejście woła bohatera (właściciel, 21 Nov 2026: „upewnić się, że gracz je będzie widział – drgały co kilka sekund
+ * lub pukały dźwiękowo”): klapa podskakuje, w szczelinie błyska, unosi się kurz, a z bliska słychać „puk-puk”. */
+export const PUKANIE = {
+  /** Co ile sekund puka jedno zejście (losowo z przedziału, każde ma swój rytm). */
+  coOdS: 5,
+  coDoS: 8.5,
+  /** Z jakiej odległości słychać pukanie (m); obraz drga, gdy zejście jest na ekranie. */
+  slychacM: 35,
+  /** Głośność przy samym wejściu (0..1). */
+  glosnosc: 0.8,
+  /** Klapy otwierają się, gdy bohater stoi bliżej niż tyle metrów (wtedy już nie puka). */
+  otwartaM: 6,
+};
+
 export const LOCH_TEKSTY = {
   get schodze() { return tx('🕯 Schodzę', '🕯 Go down'); },
   get nieTeraz() { return tx('Nie teraz', 'Not now'); },

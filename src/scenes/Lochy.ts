@@ -4,7 +4,9 @@
 import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { LOCH, LOCHY, LOCH_TEKSTY, type RodzajLochu } from '../content/lochy';
+import { LOCH, LOCHY, LOCH_TEKSTY, PUKANIE, type RodzajLochu } from '../content/lochy';
+import { ZEJSCIE, plotnoZejscia, plotnoKurzu, plotnoPoswiaty } from '../loch/zejscieObraz';
+import { pukanie } from '../sfx';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
 import { pasekWyjsciaZLochu } from '../ui/lochWyjscie';
@@ -13,22 +15,8 @@ const M = PX_PER_M;
 /** Rysunek lochu: tyle pikseli płótna na piksel mapy (jak postacie – piksel świata to pół piksela mapy). */
 const D = 2;
 
-/** The artist's stone cellar with two wooden doors (49-G004; owner, 3 Nov 2026: „kwadratowy do lochów”) – every dungeon
- * entrance on the surface. Game-size copies made by scripts/lochy/piwniczka-gra.py (origin = front threshold). Closed,
- * opens when the hero stands next to it. Until the files load the old code drawing is shown. */
-const PIWNICZKA = { plik: 'swiat/lochy/piwniczka_drewniana/', origin: [0.5051, 0.9244] as const, skala: 0.25, nizej: 3, otwartaM: 6 };
-let piwniczka: Promise<boolean> | null = null;
-function wczytajPiwniczke(scene: Phaser.Scene): Promise<boolean> {
-  const tex = scene.textures;
-  if (tex.exists('loch-piwnica-z') && tex.exists('loch-piwnica-o')) return Promise.resolve(true);
-  piwniczka ??= Promise.all((['z', 'o'] as const).map((k) => new Promise<boolean>((ok) => {
-    const img = new Image();
-    img.onload = () => { if (!tex.exists(`loch-piwnica-${k}`)) tex.addImage(`loch-piwnica-${k}`, img); ok(true); };
-    img.onerror = () => ok(false);
-    img.src = `${import.meta.env.BASE_URL || '/'}${PIWNICZKA.plik}${k === 'z' ? 'zamkniete' : 'otwarte'}_gra.png`;
-  }))).then((r) => r.every(Boolean));
-  return piwniczka.then((ok) => { if (!ok) piwniczka = null; return ok; });
-}
+/** Zejścia rysowane kodem w pikselach świata (src/loch/zejscieObraz.ts): skala 1/2, zaczepione na progu. */
+const SKALA_ZEJSCIA = 1 / D;
 
 // ============================================================================ powierzchnia
 
@@ -68,6 +56,20 @@ function tekstury(scene: Phaser.Scene) {
     tex.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
   };
   const ink = '#1e1a24';
+  // Zejścia na powierzchni: pas 4 klatek (zamknięte, błysk przy pukaniu, uchylone, otwarte).
+  for (const r of ['krypta', 'podziemia'] as RodzajLochu[]) {
+    const key = `loch-zejscie-${r}`;
+    if (tex.exists(key)) continue;
+    const t = tex.addCanvas(key, plotnoZejscia(r));
+    t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    for (let k = 0; k < ZEJSCIE.klatek; k++) t?.add(k, 0, k * ZEJSCIE.w, 0, ZEJSCIE.w, ZEJSCIE.h);
+  }
+  if (!tex.exists('loch-kurz')) {
+    const t = tex.addCanvas('loch-kurz', plotnoKurzu());
+    t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    t?.add(0, 0, 0, 0, 10, 8); t?.add(1, 0, 10, 0, 10, 8);
+  }
+  if (!tex.exists('loch-poswiata')) tex.addCanvas('loch-poswiata', plotnoPoswiaty())?.setFilter(Phaser.Textures.FilterMode.NEAREST);
   // Krypta: kamienna obudowa schodów w dół (od góry), z małym krzyżem na nadprożu.
   plotno('loch-wej-krypta', 36, 30, (c) => {
     c.fillStyle = ink; c.fillRect(2, 4, 32, 25);
@@ -161,11 +163,12 @@ export class LochyWejscia {
   private znane = new Map<string, WejscieLochu | null>();
   private obrazki = new Map<string, Phaser.GameObjects.GameObject[]>();
   private nastepne = 0;
+  /** Per shown entrance: next knock, last knock, doors open (1) and when they last changed. */
+  private stan = new Map<string, { nast: number; puk: number; otw: number; zmiana: number }>();
   readonly lista: WejscieLochu[] = [];
 
   constructor(private scene: Phaser.Scene, private city: CityMap) {
     tekstury(scene);
-    void wczytajPiwniczke(scene);
   }
 
   private cmentarz(a: { id: number; rings: number[][]; x0: number; y0: number; x1: number; y1: number }): WejscieLochu | null {
@@ -222,14 +225,7 @@ export class LochyWejscia {
   }
 
   update(px: number, py: number, now: number) {
-    // The cellar's doors open while the hero stands next to one (cheap: only entrances that are shown).
-    const blisko = PIWNICZKA.otwartaM * M;
-    for (const w of this.lista) {
-      const img = this.obrazki.get(w.id)?.[0] as Phaser.GameObjects.Image | undefined;
-      if (!img?.texture.key.startsWith('loch-piwnica')) continue;
-      const k = Math.hypot(w.x - px, w.y - py) < blisko ? 'loch-piwnica-o' : 'loch-piwnica-z';
-      if (img.texture.key !== k) img.setTexture(k);
-    }
+    this.zywe(px, py, now);
     if (now < this.nastepne) return;
     this.nastepne = now + 1200;
     const R = LOCH.szukajM * M;
@@ -255,6 +251,7 @@ export class LochyWejscia {
       else if (!blisko && ma) {
         for (const o of this.obrazki.get(w.id)!) o.destroy();
         this.obrazki.delete(w.id);
+        this.stan.delete(w.id);
       }
     }
   }
@@ -281,6 +278,7 @@ export class LochyWejscia {
     if (i >= 0) this.lista.splice(i, 1);
     for (const o of this.obrazki.get(id) ?? []) o.destroy();
     this.obrazki.delete(id);
+    this.stan.delete(id);
   }
 
   /** The nearest spot within ~40 m of (x, y) with room for an entrance and the hero by it (null: none). */
@@ -296,18 +294,73 @@ export class LochyWejscia {
 
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
-    const img = s.add.image(w.x, w.y, `loch-wej-${w.rodzaj}`).setScale(1 / D).setOrigin(0.5, 0.75).setDepth(w.y - 6);
-    const piwnica = () => {
-      if (!img.active) return;
-      img.setTexture('loch-piwnica-z').setOrigin(PIWNICZKA.origin[0], PIWNICZKA.origin[1]).setScale(PIWNICZKA.skala)
-        .setPosition(w.x, w.y + PIWNICZKA.nizej).setDepth(w.y - 2);
-    };
-    if (s.textures.exists('loch-piwnica-z')) piwnica();
-    else void wczytajPiwniczke(s).then((ok) => ok && piwnica());
-    // Zimna poświata – żeby zejście było widać z daleka (ADD, powolny oddech).
-    const blask = s.add.image(w.x, w.y - 1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0x8ab8ff).setDisplaySize(40, 30).setDepth(w.y - 7).setAlpha(0.25);
-    s.tweens.add({ targets: blask, alpha: { from: 0.12, to: 0.32 }, duration: 1800 + (w.seed % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const y0 = w.y + 2;
+    const img = s.add.image(w.x, y0, `loch-zejscie-${w.rodzaj}`, 0)
+      .setOrigin(ZEJSCIE.progX / ZEJSCIE.w, ZEJSCIE.progY / ZEJSCIE.h).setScale(SKALA_ZEJSCIA).setDepth(w.y - 2);
+    // Zimna poświata w pikselach (twarde pasma) nad szczeliną klapy – oddycha powoli.
+    const [sx, sy] = this.szczelina(w);
+    const blask = s.add.image(sx, sy, 'loch-poswiata').setScale(SKALA_ZEJSCIA).setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0x8ab8ff).setDepth(w.y - 1).setAlpha(0.25);
+    s.tweens.add({ targets: blask, alpha: { from: 0.14, to: 0.36 }, duration: 1800 + (w.seed % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.obrazki.set(w.id, [img, blask]);
+    // Pierwsze pukanie wkrótce po pojawieniu się, potem każde zejście w swoim rytmie.
+    this.stan.set(w.id, { nast: s.time.now + 1500 + (w.seed % 2500), puk: -1e9, otw: 0, zmiana: 0 });
+  }
+
+  /** Środek szczeliny między skrzydłami klapy (piksele mapy). */
+  private szczelina(w: WejscieLochu): [number, number] {
+    return [w.x, w.y + 2 + (28 - ZEJSCIE.progY) * SKALA_ZEJSCIA];
+  }
+
+  /** Klapy otwierają się przy bohaterze; z dala zejście co kilka sekund puka (drgnięcie, błysk, kurz, dźwięk). */
+  private zywe(px: number, py: number, now: number) {
+    const cam = this.scene.cameras.main.worldView;
+    const blisko = PUKANIE.otwartaM * M;
+    for (const w of this.lista) {
+      const ob = this.obrazki.get(w.id);
+      const st = this.stan.get(w.id);
+      if (!ob || !st) continue;
+      const img = ob[0] as Phaser.GameObjects.Image;
+      const d = Math.hypot(w.x - px, w.y - py);
+      // Otwieranie/zamykanie przez klatkę „uchylone”.
+      const cel = d < blisko ? 1 : 0;
+      if (cel !== st.otw) { st.otw = cel; st.zmiana = now; }
+      const przejscie = now - st.zmiana < 130;
+      let klatka = st.otw ? (przejscie ? 2 : 3) : (przejscie && st.zmiana ? 2 : 0);
+      let dy = 0;
+      const t = now - st.puk;
+      if (!st.otw && t >= 0 && t < 320) {
+        klatka = 1;
+        if (t < 70 || (t >= 170 && t < 240)) dy = -SKALA_ZEJSCIA;
+      }
+      if (String(img.frame.name) !== String(klatka)) img.setFrame(klatka);
+      img.y = w.y + 2 + dy;
+      if (st.otw || now < st.nast) continue;
+      st.nast = now + (PUKANIE.coOdS + Math.random() * (PUKANIE.coDoS - PUKANIE.coOdS)) * 1000;
+      const naEkranie = w.x > cam.x - 20 && w.x < cam.right + 20 && w.y > cam.y - 20 && w.y < cam.bottom + 30;
+      const slychac = d < PUKANIE.slychacM * M && !document.hidden;
+      if (!naEkranie && !slychac) continue;
+      st.puk = now;
+      if (slychac) {
+        const glos = PUKANIE.glosnosc * Math.pow(1 - d / (PUKANIE.slychacM * M), 1.5);
+        pukanie(glos, (w.x - px) / (15 * M));
+      }
+      if (naEkranie) this.kurz(w);
+    }
+  }
+
+  /** Dwa obłoczki kurzu ze szczeliny, unoszą się i znikają. */
+  private kurz(w: WejscieLochu) {
+    const s = this.scene;
+    const [sx, sy] = this.szczelina(w);
+    for (const [ox, op] of [[-4, 0], [3, 170]] as const) {
+      const c = s.add.image(sx + ox, sy, 'loch-kurz', 0).setScale(SKALA_ZEJSCIA).setDepth(w.y + 1).setAlpha(0);
+      s.tweens.add({
+        targets: c, delay: op, y: sy - 7, x: sx + ox * 1.6, alpha: { from: 0.85, to: 0 }, duration: 750, ease: 'Sine.easeOut',
+        onUpdate: (tw) => { if (tw.progress > 0.5 && String(c.frame.name) !== '1') c.setFrame(1); },
+        onComplete: () => c.destroy(),
+      });
+    }
   }
 
   /** Zejście w zasięgu ręki (punkt ciosu albo stopy bohatera). */
@@ -324,6 +377,7 @@ export class LochyWejscia {
   destroy() {
     for (const l of this.obrazki.values()) for (const o of l) o.destroy();
     this.obrazki.clear();
+    this.stan.clear();
   }
 }
 

@@ -87,3 +87,49 @@ export function grzmot() {
   src.start(t);
   src.stop(t + len);
 }
+
+/** Two dull knocks from below (a dungeon entrance calling the hero). `glos` 0..1, `pan` −1 (left) … 1 (right). */
+export function pukanie(glos: number, pan = 0) {
+  const a = audio();
+  if (!a || glos <= 0.01) return;
+  const t0 = a.currentTime + 0.02;
+  const out = a.createGain();
+  out.gain.value = Math.min(1, glos) * 0.32;
+  let wy: AudioNode = out;
+  if (typeof a.createStereoPanner === 'function') {
+    const sp = a.createStereoPanner();
+    sp.pan.value = Math.max(-1, Math.min(1, pan));
+    out.connect(sp);
+    wy = sp;
+  }
+  wy.connect(a.destination);
+  const szum = a.createBuffer(1, Math.floor(a.sampleRate * 0.05), a.sampleRate);
+  const d = szum.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  for (const [dt, sila] of [[0, 1], [0.17, 0.8]] as const) {
+    const t = t0 + dt;
+    // Body of the knock: a short falling low tone (wood on stone).
+    const o = a.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(170, t);
+    o.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(sila, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.2);
+    // The click of the contact: a filtered noise tick.
+    const s = a.createBufferSource();
+    s.buffer = szum;
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 900;
+    bp.Q.value = 1.2;
+    const gs = a.createGain();
+    gs.gain.value = 0.5 * sila;
+    s.connect(bp).connect(gs).connect(out);
+    s.start(t);
+  }
+}
