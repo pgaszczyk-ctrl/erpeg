@@ -33,8 +33,8 @@ if (PROBKA) {
 await context.route('**/*.supabase.co/**', async (route) => {
   const path = new URL(route.request().url()).pathname;
   let body = null;
-  const at = PROBKA ? { m: `w:${LAT.toFixed(4)},${LON.toFixed(4)}`, lat: LAT, lon: LON } : null;
-  if (path.endsWith('/login')) body = { token: 't', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000, map_scale: 1.92, save: { coins: 500, story: { st: 'koniec', walked: 0 }, daily: {}, flagi: { samouczek: 1 }, ...(at ? { tu: at } : {}) }, exp: 4000, dead: false, died_at: null, age: 12, immortal: true } };
+  const at = PROBKA ? { m: `w:${LAT.toFixed(4)},${LON.toFixed(4)}`, x: 0, y: 0, s: 1.92 } : null;
+  if (path.endsWith('/login')) body = { token: 't', player: { name: 'Jam', idik: 'ANGELIKA', start_place: 'Lublin', start_x: 3000, start_y: 3000, map_scale: 1.92, save: { coins: 500, story: { st: 'koniec', walked: 0 }, daily: {}, flagi: { samouczek: 1 }, ...(at ? { at } : {}) }, exp: 4000, dead: false, died_at: null, age: 12, immortal: true } };
   if (path.endsWith('/game_settings') || path.endsWith('/game_stwory')) body = {};
   if (path.endsWith('/game_content') || path.endsWith('/school_quizzes') || path.endsWith('/game_ports') || path.endsWith('/kurier_wiesci')) body = [];
   if (path.endsWith('/server_now')) body = new Date().toISOString();
