@@ -254,7 +254,7 @@ try {
   await page.waitForTimeout(800);
   if (mobile) await page.locator('.hs-akcja').click();
   else await page.keyboard.press('KeyE');
-  const drzwi = await g(() => { const s = window.__game.scene.getScene('game'); const w = s.lochy.lista.find((q) => /Archikatedra/.test(q.przy ?? '')); return s.children.list.some((o) => o.texture?.key === 'loch-zejscie-podziemia' && String(o.frame?.name) === '3' && Math.abs(o.x - w.x) < 1); });
+  const drzwi = await g(() => { const s = window.__game.scene.getScene('game'); const w = s.lochy.lista.find((q) => /Archikatedra/.test(q.przy ?? '')); return s.children.list.some((o) => o.texture?.key?.startsWith('loch-zejscie-podziemia') && String(o.frame?.name) === '3' && Math.abs(o.x - w.x) < 1); });
   assert(drzwi, 'the cellar doors are open with the hero next to it');
   await page.waitForFunction(() => window.__dialogi.some((d) => /Katakumby/.test(d.title)), null, { timeout: 10000 }).catch(async () => {
     console.log('diagnoza', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const h = s.player.hitPoint(); return { toasty: window.__toasty, dialogi: window.__dialogi.map((d) => d.title), przy: s.lochy.przy(s.player.x, s.player.y), gracz: [s.player.x, s.player.y], ui: window.__game.scene.getScene('ui').hasDialog, aktywna: window.__game.scene.isActive('game'), walka: s.inCombat(), siatka: (() => { const w = s.lochy.lista.find((q) => /Archikatedra/.test(q.przy ?? '')); const rows = []; for (let dy = -15; dy <= 21; dy += 3) { let r = ''; for (let dx = -15; dx <= 15; dx += 3) r += s.city.isBlocked(w.x + dx, w.y + dy) ? '#' : (dx === 0 && dy === 0 ? 'o' : '.'); rows.push(r); } return rows; })() }; })));

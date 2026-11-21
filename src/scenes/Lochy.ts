@@ -5,7 +5,8 @@ import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
 import { LOCH, LOCHY, LOCH_TEKSTY, PUKANIE, type RodzajLochu } from '../content/lochy';
-import { ZEJSCIE, plotnoZejscia, plotnoKurzu, plotnoPoswiaty } from '../loch/zejscieObraz';
+import { KLATEK_ZEJSCIA, obrazZejscia, plotnoKurzu, plotnoPoswiaty, type ObrazZejscia } from '../loch/zejscieObraz';
+import { KATY_PIKSELOWE } from '../gen/budynki';
 import { pukanie } from '../sfx';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
@@ -17,6 +18,22 @@ const D = 2;
 
 /** Zejścia rysowane kodem w pikselach świata (src/loch/zejscieObraz.ts): skala 1/2, zaczepione na progu. */
 const SKALA_ZEJSCIA = 1 / D;
+const OBRAZY_ZEJSC = new Map<string, ObrazZejscia>();
+/** Texture of one entrance look (kind × one of the 8 pixel angles × which side is the front), made once per page. */
+function teksturaZejscia(scene: Phaser.Scene, rodzaj: RodzajLochu, kat: number, przod: 1 | -1): { key: string; o: ObrazZejscia } {
+  const key = `loch-zejscie-${rodzaj}-${kat}-${przod > 0 ? 'p' : 'l'}`;
+  let o = OBRAZY_ZEJSC.get(key);
+  if (!o) { o = obrazZejscia(rodzaj, kat, przod); OBRAZY_ZEJSC.set(key, o); }
+  if (!scene.textures.exists(key)) {
+    const t = scene.textures.addCanvas(key, o.canvas);
+    t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    for (let k = 0; k < KLATEK_ZEJSCIA; k++) t?.add(k, 0, k * o.w, 0, o.w, o.h);
+  }
+  return { key, o };
+}
+
+/** Lines that set an entrance's angle (roads and paths; not water, rails or boundaries). */
+const LINIE_KIERUNKU = /^(major|medium|minor|service|pedestrian|path|footway|track|steps|cycleway|residential|living_street)$/;
 
 // ============================================================================ powierzchnia
 
@@ -29,6 +46,9 @@ export interface WejscieLochu {
   seed: number;
   /** Nazwa miejsca (świątynia) – do podpisu. */
   przy?: string;
+  /** Turned like the nearest wall or road: index in KATY_PIKSELOWE and the side the front faces (set when first shown). */
+  kat?: number;
+  przod?: 1 | -1;
   /** A mission stage's own entrance (Etap typ 'loch'): which mission and stage, the dungeon's name and guardian. */
   misja?: { id: string; etap: number; nazwa?: string; straznik?: RodzajWroga };
 }
@@ -56,14 +76,6 @@ function tekstury(scene: Phaser.Scene) {
     tex.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
   };
   const ink = '#1e1a24';
-  // Zejścia na powierzchni: pas 4 klatek (zamknięte, błysk przy pukaniu, uchylone, otwarte).
-  for (const r of ['krypta', 'podziemia'] as RodzajLochu[]) {
-    const key = `loch-zejscie-${r}`;
-    if (tex.exists(key)) continue;
-    const t = tex.addCanvas(key, plotnoZejscia(r));
-    t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    for (let k = 0; k < ZEJSCIE.klatek; k++) t?.add(k, 0, k * ZEJSCIE.w, 0, ZEJSCIE.w, ZEJSCIE.h);
-  }
   if (!tex.exists('loch-kurz')) {
     const t = tex.addCanvas('loch-kurz', plotnoKurzu());
     t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -220,7 +232,7 @@ export class LochyWejscia {
    * neighbour left no room for him – the game pushed him back onto the street). */
   private miejsce(x: number, y: number) {
     const c = this.city;
-    for (let dy = -10; dy <= 26; dy += 4) for (let dx = -14; dx <= 14; dx += 4) if (c.isBlocked(x + dx, y + dy)) return false;
+    for (let dy = -18; dy <= 22; dy += 4) for (let dx = -16; dx <= 16; dx += 4) if (c.isBlocked(x + dx, y + dy)) return false;
     return true;
   }
 
@@ -294,22 +306,61 @@ export class LochyWejscia {
 
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
-    const y0 = w.y + 2;
-    const img = s.add.image(w.x, y0, `loch-zejscie-${w.rodzaj}`, 0)
-      .setOrigin(ZEJSCIE.progX / ZEJSCIE.w, ZEJSCIE.progY / ZEJSCIE.h).setScale(SKALA_ZEJSCIA).setDepth(w.y - 2);
+    if (w.kat === undefined) this.ustaw(w);
+    const { key, o } = teksturaZejscia(s, w.rodzaj, w.kat!, w.przod!);
+    const img = s.add.image(w.x, w.y, key, 0).setOrigin(o.srX / o.w, o.srY / o.h).setScale(SKALA_ZEJSCIA).setDepth(w.y);
     // Zimna poświata w pikselach (twarde pasma) nad szczeliną klapy – oddycha powoli.
     const [sx, sy] = this.szczelina(w);
     const blask = s.add.image(sx, sy, 'loch-poswiata').setScale(SKALA_ZEJSCIA).setBlendMode(Phaser.BlendModes.ADD)
-      .setTint(0x8ab8ff).setDepth(w.y - 1).setAlpha(0.25);
+      .setTint(0x8ab8ff).setDepth(w.y + 0.5).setAlpha(0.25);
     s.tweens.add({ targets: blask, alpha: { from: 0.14, to: 0.36 }, duration: 1800 + (w.seed % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.obrazki.set(w.id, [img, blask]);
     // Pierwsze pukanie wkrótce po pojawieniu się, potem każde zejście w swoim rytmie.
     this.stan.set(w.id, { nast: s.time.now + 1500 + (w.seed % 2500), puk: -1e9, otw: 0, zmiana: 0 });
   }
 
+  /**
+   * Turns the entrance like the world around it (owner, 21 Nov 2026: „pochyl do kąta świata/drogi/budynku”): the nearest
+   * building wall or road within 30 m gives the axis, snapped to the 8 pixel angles of buildings. Next to a wall the
+   * front faces away from it, next to a road towards it; never straight north (the back wall would hide the hatch).
+   */
+  private ustaw(w: WejscieLochu) {
+    const R = 30 * M;
+    const q = this.city.query({ x0: w.x - R, y0: w.y - R, x1: w.x + R, y1: w.y + R });
+    let best = R, ang = 0, nx = 0, ny = 1, odSciany = true;
+    const odcinek = (ax: number, ay: number, bx: number, by: number, sciana: boolean) => {
+      const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+      if (L < 1) return;
+      const t = Math.max(0, Math.min(1, ((w.x - ax) * dx + (w.y - ay) * dy) / L));
+      const cx = ax + t * dx, cy = ay + t * dy, d = Math.hypot(w.x - cx, w.y - cy);
+      // A wall counts a bit nearer than a road: the entrance belongs to its building.
+      const dd = sciana ? d * 0.8 : d;
+      if (dd >= best) return;
+      best = dd; ang = Math.atan2(dy, dx); nx = w.x - cx; ny = w.y - cy; odSciany = sciana;
+    };
+    for (const b of q.buildings) for (const r of b.rings) for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      odcinek(r[i], r[i + 1], r[j], r[j + 1], true);
+    }
+    for (const l of q.lines) {
+      if (!LINIE_KIERUNKU.test(l.kind)) continue;
+      for (let i = 0; i + 3 < l.pts.length; i += 2) odcinek(l.pts[i], l.pts[i + 1], l.pts[i + 2], l.pts[i + 3], false);
+    }
+    let deg = ((ang * 180) / Math.PI % 180 + 180) % 180, kat = 0, bd = 999;
+    KATY_PIKSELOWE.forEach((k, i) => { for (const kk of [k, k + 180]) { const d = Math.abs(deg - kk); if (d < bd) { bd = d; kat = i; } } });
+    const a = (KATY_PIKSELOWE[kat] * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a);
+    // Front normal for przod = 1 is (−uy, ux); which way do we want it?
+    const chce = best < R ? (odSciany ? 1 : -1) * Math.sign(-uy * nx + ux * ny || 1) : 1;
+    let przod = (chce >= 0 ? 1 : -1) as 1 | -1;
+    if (ux * przod < -0.2) przod = (-przod) as 1 | -1;
+    w.kat = kat;
+    w.przod = przod;
+  }
+
   /** Środek szczeliny między skrzydłami klapy (piksele mapy). */
   private szczelina(w: WejscieLochu): [number, number] {
-    return [w.x, w.y + 2 + (28 - ZEJSCIE.progY) * SKALA_ZEJSCIA];
+    const { o } = teksturaZejscia(this.scene, w.rodzaj, w.kat ?? 0, w.przod ?? 1);
+    return [w.x + (o.szczX - o.srX) * SKALA_ZEJSCIA, w.y + (o.szczY - o.srY) * SKALA_ZEJSCIA];
   }
 
   /** Klapy otwierają się przy bohaterze; z dala zejście co kilka sekund puka (drgnięcie, błysk, kurz, dźwięk). */
@@ -334,7 +385,7 @@ export class LochyWejscia {
         if (t < 70 || (t >= 170 && t < 240)) dy = -SKALA_ZEJSCIA;
       }
       if (String(img.frame.name) !== String(klatka)) img.setFrame(klatka);
-      img.y = w.y + 2 + dy;
+      img.y = w.y + dy;
       if (st.otw || now < st.nast) continue;
       st.nast = now + (PUKANIE.coOdS + Math.random() * (PUKANIE.coDoS - PUKANIE.coOdS)) * 1000;
       const naEkranie = w.x > cam.x - 20 && w.x < cam.right + 20 && w.y > cam.y - 20 && w.y < cam.bottom + 30;
