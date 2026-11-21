@@ -146,6 +146,7 @@ export class Stwory3D {
     return at;
   }
   private pose(actor:Slime,model:Model,now:number){
+    now=actor.czasModelu(now); // hit stop: the picture holds still for a moment
     if(actor.isDead)return {clip:'death',time:Math.max(0,now-actor.modelDeathAt)/1000};
     const hit=model.clips.get('hit');
     if(hit&&now-actor.modelHitAt<hit.duration*1000)return {clip:'hit',time:Math.max(0,now-actor.modelHitAt)/1000};

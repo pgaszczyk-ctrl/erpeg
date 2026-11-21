@@ -55,7 +55,14 @@ interface Pocisk {
 }
 
 const M = PX_PER_M;
-const CZERWONY = 0xff3b1f;
+// Telegraphs (owner, 20 Nov 2026: red areas looked technical): an ordinary creature's blow is a dark shadow on the
+// ground with a dusty edge that darkens as it comes and flashes a warm rim just before it lands; a boss's special
+// is cracked ground glowing amber. Same shapes and timing as before – they still show where the blow will land.
+const CIEN = 0x1e1a24;
+const PYL = 0xd8c39a;
+const BLYSK = 0xffe2a0;
+const BURSZTYN = 0xffa53a;
+const ZAR = 0x7a2e0a;
 
 export class StworAI {
   private stan: Stan = 'patrol';
@@ -335,34 +342,61 @@ export class StworAI {
     const caly = this.zapowiedzMs();
     const u = Phaser.Math.Clamp(1 - (this.until - now) / caly, 0, 1); // 0 → 1 w trakcie zapowiedzi
     const puls = 0.55 + 0.35 * Math.sin(now / 90);
+    const boss = P.rodzaj === 'boss';
+    // Tuż przed uderzeniem krawędź się rozjaśnia (zwykłe) – albo żarzy mocniej (boss).
+    const tuz = Phaser.Math.Clamp((u - 0.78) / 0.22, 0, 1);
+    const krawedz = boss ? BURSZTYN : tuz > 0 ? BLYSK : PYL;
+    const krawedzA = boss ? 0.5 + 0.35 * puls : 0.28 + 0.5 * tuz;
+    const tlo = (a: number) => g.fillStyle(CIEN, (boss ? 0.14 : 0.1) * a);
+    const postep = () => g.fillStyle(boss ? ZAR : CIEN, boss ? 0.3 : 0.12 + 0.14 * u);
     const a = this.kat;
+    // Pęknięcia ziemi bossa: poszarpane linie od stworka, rosnące z zapowiedzią (stałe dla danego ataku).
+    const pekniecia = (dl: number, od: number, doK: number) => {
+      if (!boss) return;
+      const n = 7;
+      g.lineStyle(1.2, BURSZTYN, 0.45 + 0.35 * puls);
+      for (let i = 0; i < n; i++) {
+        const k0 = od + ((doK - od) * (i + 0.5)) / n;
+        let x = s.x, y = s.y, k = k0;
+        const kroki = 5, L = dl * (0.55 + 0.4 * ((i * 37) % 10) / 10) * u;
+        g.beginPath(); g.moveTo(x, y);
+        for (let j = 1; j <= kroki; j++) {
+          k = k0 + Math.sin(i * 3.1 + j * 1.7) * 0.22;
+          x = s.x + Math.cos(k) * L * j / kroki; y = s.y + Math.sin(k) * L * j / kroki;
+          g.lineTo(x, y);
+        }
+        g.strokePath();
+      }
+    };
     const klin = (dl: number, pol: number) => {
-      g.fillStyle(CZERWONY, 0.12 + 0.12 * puls);
+      tlo(1);
       g.beginPath();
       g.moveTo(s.x, s.y);
       g.arc(s.x, s.y, dl, a - pol, a + pol, false);
       g.closePath();
       g.fillPath();
-      g.lineStyle(1, CZERWONY, 0.55 + 0.3 * puls);
+      g.lineStyle(1, krawedz, krawedzA);
       g.strokePath();
       // Wypełnianie od środka – widać, kiedy uderzy.
-      g.fillStyle(CZERWONY, 0.28);
+      postep();
       g.beginPath();
       g.moveTo(s.x, s.y);
       g.arc(s.x, s.y, dl * u, a - pol, a + pol, false);
       g.closePath();
       g.fillPath();
+      pekniecia(dl, a - pol, a + pol);
     };
     const pas = (dl: number, szer: number) => {
       const cx = Math.cos(a), cy = Math.sin(a), nx = -cy * szer, ny = cx * szer;
       const pts = [s.x + nx, s.y + ny, s.x + cx * dl + nx, s.y + cy * dl + ny, s.x + cx * dl - nx, s.y + cy * dl - ny, s.x - nx, s.y - ny];
-      g.fillStyle(CZERWONY, 0.12 + 0.12 * puls);
+      tlo(1);
       g.fillPoints([0, 2, 4, 6].map((i) => new Phaser.Math.Vector2(pts[i], pts[i + 1])), true);
-      g.lineStyle(1, CZERWONY, 0.55 + 0.3 * puls);
+      g.lineStyle(1, krawedz, krawedzA);
       g.strokePoints([0, 2, 4, 6].map((i) => new Phaser.Math.Vector2(pts[i], pts[i + 1])), true);
       const dl2 = dl * u;
-      g.fillStyle(CZERWONY, 0.28);
+      postep();
       g.fillPoints([[s.x + nx, s.y + ny], [s.x + cx * dl2 + nx, s.y + cy * dl2 + ny], [s.x + cx * dl2 - nx, s.y + cy * dl2 - ny], [s.x - nx, s.y - ny]].map(([x, y]) => new Phaser.Math.Vector2(x, y)), true);
+      if (boss) pekniecia(dl, a - 0.12, a + 0.12);
     };
     switch (this.atak) {
       case 'doskok':
@@ -376,11 +410,12 @@ export class StworAI {
         break;
       case 'rzut':
         if (P.rodzaj === 'dystans') {
+          // Rzut: przerywana smuga pyłu po ziemi tam, gdzie poleci pocisk.
           const dl = P.rzut.zasiegM * M, r = P.rzut.promienM * M + 3;
-          g.lineStyle(2 * r, CZERWONY, 0.1 + 0.1 * puls);
+          g.lineStyle(2 * r, CIEN, 0.07 + 0.05 * puls);
           g.lineBetween(s.x, s.y, s.x + Math.cos(a) * dl, s.y + Math.sin(a) * dl);
-          g.lineStyle(1, CZERWONY, 0.5 + 0.3 * puls);
-          g.lineBetween(s.x, s.y, s.x + Math.cos(a) * dl * u, s.y + Math.sin(a) * dl * u);
+          g.fillStyle(krawedz, krawedzA);
+          for (let d = 4; d < dl * u; d += 5) g.fillCircle(s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, 0.8);
         }
         break;
       case 'taran':
@@ -389,12 +424,13 @@ export class StworAI {
       case 'tupniecie':
         if (P.rodzaj === 'boss') {
           const R = P.tupniecie.promienM * M;
-          g.fillStyle(CZERWONY, 0.1 + 0.1 * puls);
+          tlo(1);
           g.fillCircle(s.x, s.y, R);
-          g.lineStyle(1.5, CZERWONY, 0.55 + 0.3 * puls);
+          g.lineStyle(1.5, krawedz, krawedzA);
           g.strokeCircle(s.x, s.y, R);
-          g.fillStyle(CZERWONY, 0.25);
+          postep();
           g.fillCircle(s.x, s.y, R * u);
+          pekniecia(R, 0, Math.PI * 2);
         }
         break;
       case 'rogi':

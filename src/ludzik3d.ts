@@ -44,6 +44,20 @@ export const LUDZIK_3D = {
   /** At most this many new pictures a second (owner, 27 Oct 2026: the game stuttered on phones; every picture is a
    * render, a read-back from the graphics card and an upload). The drawn heroes walk at 5–8 frames a second. */
   klatekNaS: 20,
+  /** During a blow more pictures a second, so the swing reads as a swing (owner, 20 Nov 2026). */
+  klatekNaSWAtaku: 30,
+  /** Blows within this long count as one series: A → B → C, then again; after a pause the series starts anew. */
+  seriaMs: 1100,
+  /** The visual step into the blow (sheet px) – the hero's position in the world never moves. */
+  wykrokPx: 1.2,
+  wykrokMocnyPx: 2.4,
+  /** Where in the donor clips the arrow leaves the string / the spell leaves the hand (share of the clip; measured from
+   * the files: bowstring snaps back at 0.70–0.74 s of 1.19 s, the mage's hand thrusts at ~0.45 s of 1.51 s).
+   * A shot starts its clip just before that moment, so the release shows as the projectile appears. */
+  lukWypuszczenie: 0.6,
+  lukStart: 0.53,
+  magiaWypuszczenie: 0.31,
+  magiaStart: 0.2,
   /** While the model loads the hero is hidden at most this long; then the drawn hero shows until it's in. */
   czekajMs: 12000,
 };
@@ -78,7 +92,36 @@ type Gotowy = {
   miecz?: THREE.Object3D;
   /** Canvas px per model unit. */
   jednostkaPx: number;
+  /** The rigid parts' rest pose (every frame starts from it, so the procedural turns never pile up). */
+  reszta: { o: THREE.Object3D; p: THREE.Vector3; q: THREE.Quaternion }[];
+  /** The weapon's grip and blade tip (its own space), for the blade trail. */
+  ostrze?: { mesh: THREE.Object3D; czubek: THREE.Vector3; srodek: THREE.Vector3 };
 };
+
+/** One blow being played (the clip is driven by hand: `p` 0 → 1 over `D` seconds). */
+type Cios = { rodzaj: 'miecz' | 'luk' | 'magia'; wariant: 0 | 1 | 2; p: number; D: number; gora: boolean };
+/** A point of the blade trail: blade tip and the blade's middle in map px, when, in front of the body or behind. */
+export type PunktSmugi = { x: number; y: number; ix: number; iy: number; t: number; przod: boolean };
+
+const gladko = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** 0 before a, up to 1 at b, back to 0 at c. */
+const dzwon = (a: number, b: number, c: number, x: number) => x < b ? gladko(a, b, x) : 1 - gladko(b, c, x);
+/** The moment of contact in every blow (the sound and the game's own timing have always used 40 %). */
+const KONTAKT = 0.4;
+
+/**
+ * Clip time (share of the authored blow) for progress p of a blow. A = the artist's cut as drawn (right to left);
+ * B = the same curve walked the other way: up along the recovery to the swing's end, across the swing backwards
+ * (left to right) and home along the wind-up – every pose is the artist's, so nothing jumps; C = as drawn, with the
+ * arm raised over the head and brought down by turns added in update().
+ */
+function czasKlipu(c: Cios): number {
+  if (c.rodzaj !== 'miecz' || c.wariant !== 1) return c.p;
+  const p = c.p;
+  if (p < 0.22) return 0.7 - (0.7 - 0.36) * gladko(0, 0.22, p);
+  if (p < 0.46) return 0.36 - (0.36 - 0.15) * gladko(0.22, 0.46, p);
+  return 0.15 * (1 - gladko(0.46, 1, p));
+}
 
 /**
  * Makes a clip's moves k times bigger: every key of a part is a rigid move (turn q + shift t) from the rest pose;
@@ -196,7 +239,21 @@ export class Ludzik3D {
 
   /** The authored swing crosses its forward arc around 40% of the attack clip. */
   get attackEventMs(): number | undefined {
-    return this.g && this.pokazany ? this.g.atak.getClip().duration * .40 / this.g.atak.timeScale * 1000 : undefined;
+    return this.g && this.pokazany ? this.g.atak.getClip().duration * KONTAKT / this.g.atak.timeScale * 1000 : undefined;
+  }
+
+  private cios?: Cios;
+  private ostatniCios = -Infinity;
+  private wariant: 0 | 1 | 2 = 2;
+  private zamrozDo = -Infinity;
+  /** The blade's way through the air while it cuts (map px), read by walka/oprawa.ts for the trail. */
+  readonly smuga: PunktSmugi[] = [];
+  /** Is a blow being played now (for the trail's and the effects' timing). */
+  get atakuje() { return !!this.cios; }
+  /** Hit stop: the blow holds its pose for ms (never stacks). */
+  zamroz(ms: number) {
+    const now = this.scene.time.now;
+    if (ms > 0 && now >= this.zamrozDo) this.zamrozDo = now + ms;
   }
 
   private equipmentKey = '';
@@ -204,6 +261,22 @@ export class Ludzik3D {
   private disposed = false;
   private pendingAim: number | null = null;
   private pendingSound?: { fn: (remainingMs: number) => void; leadMs: number };
+  private pendingOpcje: { mocny?: boolean; strzal?: 'luk' | 'magia' } = {};
+
+  /** The weapon's grip (its origin) and blade tip: the bounding box corner farthest from the grip. */
+  private ostrzeZ(three: typeof THREE, bron: THREE.Object3D): Gotowy['ostrze'] {
+    let mesh: THREE.Mesh | undefined;
+    bron.traverse((o) => { const m = o as THREE.Mesh; if (!mesh && m.isMesh) mesh = m; });
+    if (!mesh) return undefined;
+    mesh.geometry.computeBoundingBox();
+    const b = mesh.geometry.boundingBox!;
+    let czubek = new three.Vector3(), d = -1;
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
+      const v = new three.Vector3(x, y, z);
+      if (v.lengthSq() > d) { d = v.lengthSq(); czubek = v; }
+    }
+    return { mesh, czubek, srodek: czubek.clone().multiplyScalar(0.4) };
+  }
   private attackSound?: { fn: (remainingMs: number) => void; leadMs: number };
   private baseHead?: THREE.BufferGeometry;
   private kolory?: KoloryPostaci;
@@ -212,7 +285,8 @@ export class Ludzik3D {
   /** Keep the guard's body and identity; only weapon, attack pose and the matching headwear change. */
   private async equipment() {
     const g=this.g;
-    if(!g || !session.story.prolog || this.changing || this.disposed)return;
+    // Every character gets the bow / wand poses (they used to come only with the recruit prologue's weapons).
+    if(!g || this.changing || this.disposed)return;
     const female=session.look.guard3d==='k';
     const kind=item(gear.equip.bron)?.rodzaj ?? 'miecz';
     const hat=gear.equip.helm==='kapelusz_szkolny';
@@ -229,6 +303,7 @@ export class Ludzik3D {
       const headDonor=hat ? await load(female?'mage_f':'11') : null;
       if(this.disposed || this.g!==g)return;
       g.mixer.stopAllAction();
+      this.cios=undefined;
       const walkLegs=g.chodNogi.getClip(), walkUpper=g.chodGora.getClip();
       g.mixer.uncacheRoot(g.model);
       g.mixer=new g.three.AnimationMixer(g.model);
@@ -237,6 +312,9 @@ export class Ludzik3D {
       const weapon=donor.scene.getObjectByName('Weapon')!.clone(true);
       g.model.children[0].add(weapon);
       g.miecz=weapon;
+      g.reszta=g.reszta.filter(r=>r.o.parent&&!/^(WeaponMesh|BowString)/.test(r.o.name));
+      weapon.traverse(o=>{if(o!==weapon)g.reszta.push({o,p:o.position.clone(),q:o.quaternion.clone()});});
+      g.ostrze=this.ostrzeZ(g.three,weapon);
       weapon.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh)m.material=wyrazistyMaterial(new g.three.MeshLambertMaterial({vertexColors:true,flatShading:true}));});
       const head=g.model.getObjectByName('head') as THREE.Mesh;
       this.baseHead ??= head.geometry;
@@ -249,7 +327,7 @@ export class Ludzik3D {
       for(const a of [g.atak,g.atakGora]){a.setLoop(g.three.LoopOnce,1);a.clampWhenFinished=false;a.timeScale=LUDZIK_3D.tempoAtaku;}
       this.equipmentKey=key;
     } catch(e) { console.warn('Ludzik 3D: wyposażenie',e); }
-    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim,sound=this.pendingSound;this.pendingAim=null;this.pendingSound=undefined;this.atakuj(aim,sound?.fn,sound?.leadMs);}}
+    finally {this.changing=false;if(this.pendingAim!==null){const aim=this.pendingAim,sound=this.pendingSound,o=this.pendingOpcje;this.pendingAim=null;this.pendingSound=undefined;this.atakuj(aim,sound?.fn,sound?.leadMs,o);}}
   }
 
   private async zaladuj() {
@@ -316,7 +394,10 @@ export class Ludzik3D {
       }
       const miecz = model.getObjectByName('Weapon') ?? model.getObjectByName('Sword_at_hand_grip') ?? undefined;
       renderer.autoClear = false;
-      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k };
+      const reszta: Gotowy['reszta'] = [];
+      model.traverse((o) => { if (o !== model && o.parent !== model) reszta.push({ o, p: o.position.clone(), q: o.quaternion.clone() }); });
+      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k, reszta,
+        ostrze: miecz ? this.ostrzeZ(three, miecz) : undefined };
       this.swiatla = { amb, sun };
       this.podpis = '';
       // The game's texture reads the 3D canvas straight away (no copy through the processor, see narysuj).
@@ -328,32 +409,117 @@ export class Ludzik3D {
     }
   }
 
-  /** A melee swing: the model plays its blow, turned towards the aim (radians, screen axes). */
-  atakuj(aim: number, sound?: (remainingMs: number) => void, leadMs = 0): boolean {
+  /**
+   * A blow: the model plays it turned towards the aim (radians, screen axes). Melee swings go in series of three
+   * different cuts (A right→left, B left→right, C over the head and down; a strong blow is always C); a shot
+   * (`strzal`) plays the bow's draw and release or the mage's gesture, started so the release shows at once.
+   */
+  atakuj(aim: number, sound?: (remainingMs: number) => void, leadMs = 0, opcje: { mocny?: boolean; strzal?: 'luk' | 'magia' } = {}): boolean {
     const g = this.g;
     if (!g) return false;
-    if(this.changing){this.pendingAim=aim;this.pendingSound=sound?{fn:sound,leadMs}:undefined;return true;}
+    if(this.changing){this.pendingAim=aim;this.pendingSound=sound?{fn:sound,leadMs}:undefined;this.pendingOpcje=opcje;return true;}
     this.kat = Math.atan2(Math.cos(aim), Math.sin(aim));
     g.atak.stop();
     g.atakGora.stop();
+    const dur = g.atak.getClip().duration;
     // A fast weapon must reach the audible part before the next legal attack restarts its clip.
     const pace = (this.scene as Phaser.Scene & { player?: Player }).player?.attackCooldown ?? 320;
-    const speed = sound ? Math.max(LUDZIK_3D.tempoAtaku, g.atak.getClip().duration * .40 / (Math.max(80, pace) * .85 / 1000)) : LUDZIK_3D.tempoAtaku;
+    const speed = sound ? Math.max(LUDZIK_3D.tempoAtaku, dur * KONTAKT / (Math.max(80, pace) * .85 / 1000)) : LUDZIK_3D.tempoAtaku;
     g.atak.timeScale = g.atakGora.timeScale = speed;
-    (g.chodNogi.isRunning() ? g.atakGora : g.atak).reset().play();
+    const now = this.scene.time.now;
+    const rodzaj = opcje.strzal ?? 'miecz';
+    let wariant: 0 | 1 | 2 = 0;
+    if (rodzaj === 'miecz') {
+      wariant = opcje.mocny ? 2 : now - this.ostatniCios > LUDZIK_3D.seriaMs ? 0 : ((this.wariant + 1) % 3) as 0 | 1 | 2;
+      this.wariant = wariant;
+      this.ostatniCios = now;
+    }
+    const p0 = rodzaj === 'luk' ? LUDZIK_3D.lukStart : rodzaj === 'magia' ? LUDZIK_3D.magiaStart : 0;
+    const gora = g.chodNogi.isRunning();
+    this.cios = { rodzaj, wariant, p: p0, D: dur / speed, gora };
+    this.smuga.length = 0;
+    const a = gora ? g.atakGora : g.atak;
+    a.reset().play();
+    a.paused = true; // the blow's clock is ours (update): hit stop, variant B, a shot started mid-clip
+    a.time = czasKlipu(this.cios) * dur;
     this.attackSound = sound ? { fn: sound, leadMs } : undefined;
     this.emitAttackSound();
     return true;
   }
 
   private emitAttackSound() {
-    const g = this.g, sound = this.attackSound;
-    if (!g || !sound) return;
-    const a = g.atakGora.isRunning() ? g.atakGora : g.atak;
-    const remaining = Math.max(0, (a.getClip().duration * .40 - a.time) / a.timeScale * 1000);
+    const c = this.cios, sound = this.attackSound;
+    if (!c || !sound) return;
+    const remaining = Math.max(0, (KONTAKT - c.p) * c.D * 1000);
     if (remaining > sound.leadMs) return;
     this.attackSound = undefined;
     sound.fn(remaining);
+  }
+
+  /** Turns rigid parts about a point (model space): the parts stay joined. */
+  private obroc(g: Gotowy, nazwy: string[], os: THREE.Vector3, kat: number, srodek: THREE.Vector3) {
+    if (Math.abs(kat) < 1e-4) return;
+    const q = new g.three.Quaternion().setFromAxisAngle(os, kat);
+    for (const n of nazwy) {
+      const o = g.model.getObjectByName(n);
+      if (!o) continue;
+      o.position.sub(srodek).applyQuaternion(q).add(srodek);
+      o.quaternion.premultiply(q);
+    }
+  }
+
+  /** The procedural part of a blow, on top of the clip's pose: chest turned with the cut, the arm over the head (C),
+   * a small lean for the bow's recoil and the mage's push, and the visual step forward. */
+  private ruchCiosu(g: Gotowy, c: Cios) {
+    const three = g.three, p = c.p;
+    const pos = (n: string) => g.model.getObjectByName(n)?.position.clone() ?? new three.Vector3();
+    const biodra = pos('thighL').add(pos('thighR')).multiplyScalar(0.5);
+    const gora = ['core', 'head', 'upperL', 'foreL', 'handL', 'upperR', 'foreR', 'handR', 'WeaponMesh', 'BowStringTop', 'BowStringBottom'];
+    const ramie = ['upperR', 'foreR', 'handR', 'WeaponMesh'];
+    const Y = new three.Vector3(0, 1, 0), X = new three.Vector3(1, 0, 0);
+    let skret = 0, sklon = 0, krok = 0;
+    if (c.rodzaj === 'miecz') {
+      if (c.wariant === 2) {
+        // Over the head: the arm goes up and back, then comes down hard; the chest leans into it.
+        const bark = pos('upperR');
+        this.obroc(g, ramie, X, -1.15 * dzwon(0, 0.24, 0.4, p) + 0.55 * dzwon(0.3, 0.44, 0.8, p), bark);
+        sklon = -0.14 * dzwon(0, 0.24, 0.38, p) + 0.3 * dzwon(0.3, 0.44, 0.85, p);
+        skret = 0.2 * dzwon(0, 0.22, 0.4, p) - 0.25 * dzwon(0.3, 0.45, 0.85, p);
+        krok = LUDZIK_3D.wykrokMocnyPx * dzwon(0.22, 0.44, 0.85, p);
+      } else {
+        // The chest winds up towards where the blade starts and turns through with it.
+        const s = c.wariant === 0 ? 1 : -1;
+        skret = s * (0.4 * dzwon(0, 0.2, 0.36, p) - 0.5 * dzwon(0.24, 0.43, 0.85, p));
+        sklon = 0.08 * dzwon(0.25, 0.42, 0.8, p);
+        krok = LUDZIK_3D.wykrokPx * dzwon(0.22, 0.42, 0.85, p);
+      }
+    } else if (c.rodzaj === 'luk') {
+      sklon = -0.14 * dzwon(LUDZIK_3D.lukWypuszczenie - 0.02, LUDZIK_3D.lukWypuszczenie + 0.06, 0.95, p);
+    } else {
+      sklon = 0.18 * dzwon(LUDZIK_3D.magiaStart, LUDZIK_3D.magiaWypuszczenie + 0.04, 0.8, p);
+      krok = 0.8 * dzwon(LUDZIK_3D.magiaStart, LUDZIK_3D.magiaWypuszczenie + 0.04, 0.8, p);
+    }
+    this.obroc(g, gora, X, sklon, biodra);
+    this.obroc(g, gora, Y, skret, biodra);
+    const u = (krok * LUDZIK_3D.gestosc) / g.jednostkaPx;
+    g.model.position.x += Math.sin(this.kat) * u;
+    g.model.position.z += Math.cos(this.kat) * u;
+  }
+
+  /** Blade tip and middle where they are now, in map px (the picture's own transform), front or behind the body. */
+  private punktOstrza(g: Gotowy, player: Player, sc: number, oy: number): PunktSmugi | undefined {
+    const o = g.ostrze;
+    if (!o || !o.mesh.visible || !g.miecz?.visible) return undefined;
+    g.model.updateMatrixWorld(true);
+    const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc, u = sc / LUDZIK_3D.gestosc;
+    const rzut = (v: THREE.Vector3) => {
+      const w = v.clone().applyMatrix4(o.mesh.matrixWorld).project(g.camera);
+      return { x: player.x + ((w.x + 1) / 2 * n - n / 2) * u, y: player.y + ((1 - w.y) / 2 * n - oy * n) * u, z: w.z };
+    };
+    const t = rzut(o.czubek), m = rzut(o.srodek);
+    const core = g.model.getObjectByName('core');
+    const zc = core ? core.getWorldPosition(new g.three.Vector3()).project(g.camera).z : t.z;
+    return { x: t.x, y: t.y, ix: m.x, iy: m.y, t: this.scene.time.now, przod: t.z <= zc };
   }
 
   /** dt in seconds (GameScene.update's capped delta). */
@@ -394,14 +560,24 @@ export class Ludzik3D {
     this.kat = Math.atan2(Math.sin(this.kat), Math.cos(this.kat));
     g.model.rotation.y = this.kat;
     const idzie = v2 > 1;
+    const c = this.cios, dur = g.atak.getClip().duration;
     // A whole-body blow that starts walking goes on with the upper body only, at the same moment.
-    if (idzie && g.atak.isRunning()) {
-      const t = g.atak.time;
+    if (idzie && c && !c.gora) {
       g.atak.stop();
       g.atakGora.reset().play();
-      g.atakGora.time = t;
+      g.atakGora.paused = true;
+      c.gora = true;
     }
-    const atakuje = g.atak.isRunning() || g.atakGora.isRunning();
+    // The blow's own clock: held during a hit stop, ended at its last pose.
+    if (c) {
+      if (this.scene.time.now >= this.zamrozDo) c.p += s / c.D;
+      if (c.p >= 1) {
+        g.atak.stop();
+        g.atakGora.stop();
+        this.cios = undefined;
+      } else (c.gora ? g.atakGora : g.atak).time = czasKlipu(c) * dur;
+    }
+    const atakuje = !!this.cios;
     if (idzie) {
       if (!g.chodNogi.isRunning()) g.chodNogi.reset().play();
       g.chodNogi.timeScale = Math.min(4, Math.sqrt(v2) * LUDZIK_3D.cyklNaPx * g.chodNogi.getClip().duration);
@@ -413,16 +589,20 @@ export class Ludzik3D {
     } else if (g.chodGora.isRunning()) g.chodGora.stop();
     if (g.miecz) g.miecz.visible = atakuje;
     if (this.swiatla) { this.swiatla.amb.intensity = LUDZIK_3D.otoczenie; this.swiatla.sun.intensity = LUDZIK_3D.swiatlo; }
+    // Every frame starts from the rest pose: the clips set what they animate, the blow's turns go on top.
+    for (const r of g.reszta) { r.o.position.copy(r.p); r.o.quaternion.copy(r.q); }
     g.mixer.update(s);
     this.emitAttackSound();
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
-    g.model.position.y = (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx;
+    g.model.position.set(0, (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx, 0);
+    if (this.cios) this.ruchCiosu(g, this.cios);
     // A new picture only when it would look different (turned, a step further, a blow), at most klatekNaS a second;
     // standing still nothing is drawn at all.
-    const podpis = `${this.equipmentKey}|${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${g.atak.isRunning() ? Math.round(g.atak.time * 30) : '-'}|${g.atakGora.isRunning() ? Math.round(g.atakGora.time * 30) : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
+    const podpis = `${this.equipmentKey}|${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${this.cios ? `${this.cios.wariant}:${Math.round(this.cios.p * 60)}` : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
     this.odKlatki += s;
-    if (podpis !== this.podpis && (this.odKlatki >= 1 / LUDZIK_3D.klatekNaS || !this.pokazany)) {
+    const naS = atakuje ? LUDZIK_3D.klatekNaSWAtaku : LUDZIK_3D.klatekNaS;
+    if (podpis !== this.podpis && (this.odKlatki >= 1 / naS || !this.pokazany)) {
       this.podpis = podpis;
       this.odKlatki = 0;
       this.narysuj(g);
@@ -434,6 +614,11 @@ export class Ludzik3D {
     const oy = (STOPY_PX - (8 * SKALA_POSTACI * this.skala) / sc) / F;
     if (!this.image) this.image = this.scene.add.image(player.x, player.y, this.klucz);
     this.ustawObrys(sc, oy, player, true);
+    // The blade trail: only while it cuts (the swing's active part), not in the wind-up or the way home.
+    const cc = this.cios;
+    const tnie = cc?.rodzaj === 'miecz' && cc.p > (cc.wariant === 1 ? 0.2 : 0.17) && cc.p < 0.5;
+    const pt = tnie ? this.punktOstrza(g, player, sc, oy) : undefined;
+    if (pt) { this.smuga.push(pt); if (this.smuga.length > 24) this.smuga.shift(); }
     this.image
       .setScale(sc / LUDZIK_3D.gestosc)
       .setOrigin(0.5, oy)

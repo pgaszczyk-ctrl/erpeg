@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { TEX, HERO_DIRS, type Dir } from '../art';
 import { SKALA_SWIATA } from '../skala';
+import { comicBurst } from '../ui/comicBurst';
+import { comicHud } from '../ui/comicHud';
+import { live } from '../walka/live';
+import { trzesienieWlaczone } from '../ustawieniaGracza';
 
 export const PLAYER = {
   // 70 km/h at 1.92 px per metre (70 / 3.6 × 1.92 ≈ 37.3; owner, 5 Oct 2026, after a try at 80); was 60 px/s ≈ 110 km/h, then 32 ≈ 60, 37.3 ≈ 70, 32 again.
@@ -113,16 +117,20 @@ export class Player extends Phaser.GameObjects.Sprite {
   hurt(from: Phaser.Math.Vector2, now: number, damage = 1, pace = 1): boolean {
     if (now < this.invulnerableUntil - PLAYER.hurtInvulnerable * (1 - pace) || this.isDead) return false;
     // The potion's bonus heart goes first.
+    const przed = this.hp + this.extra;
     const fromExtra = Math.min(this.extra, damage);
     this.extra -= fromExtra;
     this.hp = Math.max(Math.min(this.minHp, this.hp), this.hp - (damage - fromExtra));
+    // The hero's wounds: red numbers sinking from him, never the star of his own blows (ui/comicBurst.ts).
+    const rana = przed - this.hp - this.extra;
+    if (comicHud && live() && rana > 0) comicBurst(this.scene, this.x, this.y - 18, 'rana', rana);
     this.invulnerableUntil = now + PLAYER.hurtInvulnerable;
     this.stunnedUntil = now + 180;
 
     const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(PLAYER.odrzut);
     this.vel.set(push.x, push.y);
 
-    this.scene.cameras.main.shake(120, 0.004);
+    if (trzesienieWlaczone()) this.scene.cameras.main.shake(120, 0.004);
     // Blink by hiding (alpha is used for hiding in bushes).
     this.scene.time.addEvent({
       delay: 90,
