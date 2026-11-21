@@ -91,7 +91,7 @@ export function nazwaCelu(s: Siedlisko, kind: RodzajWroga) {
 }
 
 /** Pikselowy obrazek znaku: deska na słupku, niedbały stwór farbą i strzałka węglem w jednym z 8 kierunków. */
-function obrazZnaku(rys: RysunekZnaku, k: number) {
+function obrazProsty(rys: RysunekZnaku, k: number) {
   const W = 58, H = 50;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
@@ -144,6 +144,35 @@ function obrazZnaku(rys: RysunekZnaku, k: number) {
     const grot = u > 1 && u <= 10 && Math.abs(v) <= (10 - u) * 0.85 + 0.5;
     if ((trzon || grot) && los() > 0.05) px(x, y, los() < 0.15 ? wegielJ : wegiel);
   }
+  return c;
+}
+
+
+/**
+ * Krzywo wbity znak (właściciel, 21.11.2026: „pod lekko zagiętymi kątami, może być krzywo wbity”): całe pikselowe
+ * przesunięcia, nic nie jest przeskalowane – deska przekrzywiona o `pochyl` (piksele na brzeg), słupek pochylony o `wbicie`
+ * (piksele na całą wysokość). Stopa słupka zostaje w środku dolnego rzędu, więc punkt na mapie się nie zmienia.
+ */
+function obrazZnaku(rys: RysunekZnaku, k: number, pochyl: number, wbicie: number) {
+  const src = obrazProsty(rys, k);
+  const W = src.width, H = src.height, PAD = 5, GORA = 5;
+  const dane = src.getContext('2d')!.getImageData(0, 0, W, H).data;
+  const c = document.createElement('canvas');
+  c.width = W + PAD * 2; c.height = H + GORA;
+  const g = c.getContext('2d')!;
+  const out = g.createImageData(c.width, c.height);
+  const DESKA = 31, srodek = W / 2;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4;
+    if (!dane[i + 3]) continue;
+    const dy = y <= DESKA ? Math.round(((x - srodek) / (W / 2)) * pochyl) : 0;
+    const ny = y + dy + GORA;
+    const nx = x + PAD + Math.round(((H - 1 - ny + GORA) / (H - 1)) * wbicie);
+    if (nx < 0 || ny < 0 || nx >= c.width || ny >= c.height) continue;
+    const o = (ny * c.width + nx) * 4;
+    out.data[o] = dane[i]; out.data[o + 1] = dane[i + 1]; out.data[o + 2] = dane[i + 2]; out.data[o + 3] = dane[i + 3];
+  }
+  g.putImageData(out, 0, 0);
   return c;
 }
 
@@ -238,8 +267,12 @@ export class Drogowskazy {
     const c = z.cel!;
     const rys = (STWORY_ZNAKU[c.kind] ?? STWOR_DOMYSLNY).rys;
     const k = osemka(c.s.x - z.x, c.s.y - z.y);
-    const klucz = `drogowskaz-${rys}-${k}`;
-    if (!this.scene.textures.exists(klucz)) this.scene.textures.addCanvas(klucz, obrazZnaku(rys, k))?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    // Każdy znak przekrzywiony po swojemu (stałe z id): deska ±1–3 px, słupek ±0–3 px.
+    let h = 0;
+    for (const ch of z.id) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    const pochyl = [-3, -2, -1, 1, 2, 3][Math.abs(h) % 6], wbicie = [-3, -2, -1, 0, 1, 2, 3][Math.abs(h >> 4) % 7];
+    const klucz = `drogowskaz-${rys}-${k}-${pochyl}-${wbicie}`;
+    if (!this.scene.textures.exists(klucz)) this.scene.textures.addCanvas(klucz, obrazZnaku(rys, k, pochyl, wbicie))?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     if (!this.scene.textures.exists('drogowskaz-cien')) {
       const cc = document.createElement('canvas'); cc.width = 24; cc.height = 6;
       const g = cc.getContext('2d')!; g.fillStyle = 'rgba(30,26,36,0.35)';
