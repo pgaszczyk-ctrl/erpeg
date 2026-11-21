@@ -4,7 +4,11 @@ import { Obraz, hex, hash, szum, bayer, ciemniej } from './wspolne';
 
 export type Rodzaj =
   | 'trawa' | 'laka' | 'park' | 'las_lisciasty' | 'las_iglasty' | 'bruk' | 'chodnik' | 'plac' | 'droga'
-  | 'piasek' | 'woda' | 'pole_orka' | 'pole_zboze' | 'zarosla' | 'parking' | 'cmentarz' | 'mokradlo' | 'skala' | 'tory';
+  | 'piasek' | 'woda' | 'pole_orka' | 'pole_zboze' | 'zarosla' | 'parking' | 'cmentarz' | 'mokradlo' | 'skala' | 'tory'
+  /** Wydeptana ziemia siedlisk (obóz z palisadą, src/siedliska). */
+  | 'klepisko'
+  /** Bagno siedlisk: błoto (spowalnia) i płycizna (brodzenie). */
+  | 'bloto' | 'plycizna';
 
 const P = (a: string[]) => a.map(hex);
 const T = {
@@ -26,6 +30,9 @@ const T = {
   parking: P(['#55525a', '#605d65', '#6b6870', '#d8d4c8']),
   skala: P(['#6c6870', '#7f7a80', '#948f92', '#55515a']),
   mokradlo: P(['#3d5a34', '#4a6a3a', '#3a6070', '#566f40']),
+  klepisko: P(['#5f4a34', '#6e563c', '#7d6344', '#8c7050', '#4c3b2a', '#596d36']),
+  bloto: P(['#3e3426', '#4a3d2b', '#564732', '#33402a', '#8a9a7a']),
+  plycizna: P(['#3d5848', '#466452', '#50705a', '#2f4a3c', '#8fb0a0']),
 };
 
 const pick = (t: number[], v: number) => t[Math.max(0, Math.min(t.length - 1, Math.floor(v * t.length)))];
@@ -98,6 +105,22 @@ export function kolorPodloza(r: Rodzaj, x: number, y: number): number {
     case 'cmentarz': return pick(T.park, mix * 0.8);
     case 'mokradlo': return n1 > 0.62 ? T.mokradlo[2] : pick([T.mokradlo[0], T.mokradlo[1], T.mokradlo[3]], mix);
     case 'skala': return pick(T.skala, n1 * 0.6 + n2 * 0.6 - 0.1);
+    case 'klepisko': { // wydeptana ziemia: ciemniejsze placki, rzadkie kępki trawy przy brzegach deptania
+      const plama = szum(x / 14 + 3, y / 14 + 8);
+      if (h < 0.01 && plama > 0.55) return T.klepisko[5];
+      if (h > 0.99) return T.klepisko[4];
+      return pick(T.klepisko.slice(0, 4), plama * 0.7 + n2 * 0.4 - 0.1);
+    }
+    case 'bloto': { // mokre błoto: ciemne placki, zielonkawe zastoiny i rzadkie błyski wody
+      const pl = szum(x / 11 + 4, y / 11 + 2);
+      if (h < 0.012) return T.bloto[4];
+      return pl > 0.64 ? T.bloto[3] : pick(T.bloto.slice(0, 3), pl * 0.8 + n2 * 0.3 - 0.1);
+    }
+    case 'plycizna': { // mętna płycizna: poziome zmarszczki, przebłyski
+      const t = n1 * 0.6 + szum(x / 24, y / 24) * 0.5 - 0.15;
+      if ((y + Math.floor(n1 * 5)) % 5 === 0 && h < 0.35) return T.plycizna[4];
+      return t > 0.62 ? T.plycizna[3] : pick(T.plycizna.slice(0, 3), t);
+    }
     case 'tory': return pick([hex('#6c6660'), hex('#7c756d'), hex('#8c847a'), hex('#5a544e')], h * 0.7 + n2 * 0.3);
   }
 }

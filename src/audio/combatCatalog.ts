@@ -15,6 +15,22 @@ export const COMBAT_SOUNDS = {
   'wolf-growl': { variants: 3, cue: 0, gain: .65 },
   'wolf-leap': { variants: 3, cue: .025, gain: .65 },
   'wolf-bite': { variants: 3, cue: .025, gain: .65 },
+  // Made by the game itself (audio/syntezaWalki.ts; owner, 20 Nov 2026), until recorded ones replace them.
+  'hit-blade': { variants: 3, cue: 0, gain: .55, synth: true },
+  'hit-blunt': { variants: 3, cue: 0, gain: .6, synth: true },
+  'hit-arrow': { variants: 3, cue: 0, gain: .55, synth: true },
+  'hit-magic': { variants: 3, cue: 0, gain: .45, synth: true },
+  'hit-heavy': { variants: 2, cue: 0, gain: .6, synth: true },
+  'hit-wall': { variants: 2, cue: 0, gain: .4, synth: true },
+  'death-zwierze': { variants: 2, cue: 0, gain: .5, synth: true },
+  'death-czlowiek': { variants: 2, cue: 0, gain: .5, synth: true },
+  'death-kosci': { variants: 2, cue: 0, gain: .5, synth: true },
+  'death-magia': { variants: 2, cue: 0, gain: .45, synth: true },
+  'death-metal': { variants: 2, cue: 0, gain: .45, synth: true },
+  'krok-twardy': { variants: 3, cue: 0, gain: .16, synth: true },
+  'krok-miekki': { variants: 3, cue: 0, gain: .18, synth: true },
+  'krok-piasek': { variants: 3, cue: 0, gain: .16, synth: true },
+  'krok-bloto': { variants: 3, cue: 0, gain: .18, synth: true },
 } as const;
 export type CombatSound = keyof typeof COMBAT_SOUNDS;
 export const meleeSound = (weapon: string | null | undefined, strong: boolean): CombatSound =>

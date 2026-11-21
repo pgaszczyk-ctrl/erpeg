@@ -66,7 +66,7 @@ export function obrazZejscia(rodzaj: RodzajLochu, kat: number, przod: 1 | -1): O
   const W = (x: number, y: number, z: number): V => [x * u[0] + y * n[0], x * u[1] + y * n[1], z];
   const neg = (v: V): V => [-v[0], -v[1], -v[2]];
   const krypta = rodzaj === 'krypta';
-  const K = KAMIEN[rodzaj];
+  const K = KAMIEN[krypta ? 'krypta' : 'podziemia'];
 
   // Wymiary (piksele świata).
   const SZ = 20, GL = 12, HK = 4;       // obudowa: pół szerokości, pół głębokości, wysokość krawężnika

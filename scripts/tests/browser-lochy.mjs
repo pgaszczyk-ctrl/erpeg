@@ -133,6 +133,22 @@ try {
   assert.equal((ostatni?.p_save ?? ostatni)?.fogsCzesc, true, 'only changed fog maps are sent (fogsCzesc)');
   console.log('zapis tu', JSON.stringify(ostatni?.p_save?.tu ?? ostatni?.tu ?? null));
   await page.screenshot({ path: `work/lochy-${tag}-start.png` });
+  // Underground the camera keeps the hero in the middle, also right by the dungeon's edge (owner, 20 Nov 2026).
+  for (const rog of ['minX', 'maxX']) {
+    const srodek = await g(async (rog) => {
+      const s = window.__game.scene.getScene('game'), c = s.cameras.main, p = s.player;
+      const was = { x: p.x, y: p.y };
+      p.x = rog === 'minX' ? s.city.minX + 6 : s.city.width - 6;
+      p.y = s.city.minY + 6;
+      await new Promise((r) => setTimeout(r, 1500));
+      const d = { dx: c.midPoint.x - p.x, dy: c.midPoint.y - p.y, bounds: c.useBounds };
+      p.x = was.x; p.y = was.y;
+      await new Promise((r) => setTimeout(r, 1200));
+      return d;
+    }, rog);
+    console.log('kamera przy krawędzi', rog, JSON.stringify(srodek));
+    assert(!srodek.bounds && Math.abs(srodek.dx) < 6 && Math.abs(srodek.dy) < 6, `hero stays centred by the dungeon edge (${rog})`);
+  }
 
   assert(!(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible()), 'no shortcut before clearing the floor');
 

@@ -3,6 +3,8 @@ import { audio } from '../sfx';
 // On every server since 1.041 (owner, 31 Oct 2026); `?dzwieki=0` switches combat sounds off.
 const TEST = typeof location === 'undefined' || new URLSearchParams(location.search).get('dzwieki') !== '0';
 import { COMBAT_SOUNDS, soundTiming, type CombatSound } from './combatCatalog';
+import { syntezuj } from './syntezaWalki';
+const synth = (d: object) => 'synth' in d;
 
 const buffers = new Map<string, AudioBuffer>();
 const downloads = new Map<string, Promise<ArrayBuffer | null>>();
@@ -20,7 +22,7 @@ let visible = true;
 
 function preloadBytes() {
   if (!TEST) return;
-  for (const [id, d] of Object.entries(COMBAT_SOUNDS)) for (let v = 1; v <= d.variants; v++) {
+  for (const [id, d] of Object.entries(COMBAT_SOUNDS)) if (!synth(d)) for (let v = 1; v <= d.variants; v++) {
     const url = path(id as CombatSound, v);
     if (!downloads.has(url)) downloads.set(url, fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null));
   }
@@ -30,7 +32,12 @@ async function unlock() {
   const a = audio(); // Called synchronously from the native gesture, including iOS.
   if (!a) return;
   preloadBytes();
-  if (buffers.size === downloads.size) return;
+  // The game's own sounds are computed here once (a few ms), straight into the same store.
+  for (const [id, d] of Object.entries(COMBAT_SOUNDS)) if (synth(d)) for (let v = 1; v <= d.variants; v++) {
+    const url = path(id as CombatSound, v);
+    if (!buffers.has(url)) { const b = syntezuj(a, id, v); if (b) buffers.set(url, b); }
+  }
+  if ([...downloads.keys()].every(u => buffers.has(u))) return;
   if (loading) return loading;
   loading = Promise.all([...downloads].map(async ([url, bytes]) => {
     if (buffers.has(url)) return;
@@ -82,7 +89,8 @@ export class CombatAudio {
   private play(id: CombatSound, offset: number, volume: number) {
     const d = COMBAT_SOUNDS[id];
     // Avoid a chorus of identical attacks; drop extra voices, never delay them.
-    if (this.voices.size >= 8 || [...this.voices.values()].filter(v => v.id === id).length >= (id === 'wolf-growl' ? 2 : 3)) return;
+    // Group fights: at most 12 voices, and contacts / falls of one kind no more than 3 at once (or 2 heavy layers).
+    if (this.voices.size >= 12 || [...this.voices.values()].filter(v => v.id === id).length >= (id === 'wolf-growl' || id === 'hit-heavy' ? 2 : 3)) return;
     const prev = this.last.get(id) ?? 0;
     const variant = d.variants === 1 ? 1 : 1 + ((prev + Math.floor(Math.random() * (d.variants - 1))) % d.variants);
     const buffer = buffers.get(path(id, variant));

@@ -14,4 +14,7 @@ export const PODLOZE = {
   las: 0.7,
   /** Piasek i plaże. */
   piasek: 0.8,
+  /** Siedliska – bagno (content/siedliska.ts BAGNO): błoto i brodzenie w płyciźnie. */
+  bloto: 0.55,
+  brod: 0.4,
 };

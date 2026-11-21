@@ -5,6 +5,7 @@
 
 import type { Terrain } from './terrain';
 import type { PlanLochu } from '../loch/plan';
+import type { Siedlisko } from '../siedliska/typy';
 
 // World pixels per metre. Characters store the scale their start point was
 // saved in (map_scale on the server), so changing this is safe.
@@ -33,7 +34,7 @@ const LINE_WIDTH_M: Record<string, number> = {
   major: 14, medium: 11, minor: 7, service: 4, track: 3, pedestrian: 6, path: 2.5, steps: 2.5,
   rail: 3, tram: 2.5, river: 14, stream: 3, ditch: 1.5, platform: 4,
 };
-export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek';
+export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek' | 'bloto' | 'brod';
 export const ROAD_KINDS = new Set(['major', 'medium', 'minor', 'service', 'track', 'pedestrian', 'path', 'steps']);
 /** Roads walked at full speed (the rest are paths and dirt tracks). */
 const PAVED_ROADS = new Set(['major', 'medium', 'minor', 'service', 'pedestrian']);
@@ -588,6 +589,17 @@ export class CityMap {
 
   /** An underground map (src/loch/mapa.ts): its maze plan; MapRenderer paints nothing, scenes/Lochy.ts does. */
   loch?: PlanLochu;
+  /**
+   * Siedliska (src/siedliska: obóz z palisadą…) zaplanowane na tej mapie – część generowanego świata: zmieniają
+   * podłoże kawałków (MapRenderer), a ich konstrukcje blokują przez `przeszkoda` (ustawia src/siedliska/rejestr.ts;
+   * CityMap ma tylko importy typów, bo split-map uruchamia go w Node).
+   */
+  siedliska: Siedlisko[] = [];
+  przeszkoda: ((x: number, y: number) => boolean) | null = null;
+  /** Podłoże siedliska w punkcie (bagno: błoto/bród), null = zwykłe – ustawia src/siedliska/rejestr.ts. */
+  podlozeSiedliska: ((x: number, y: number) => Surface | null) | null = null;
+  /** Słuchacze nowych siedlisk (MapRenderer odświeża kawałki pod nimi). */
+  readonly siedliskaSluchacze = new Set<(s: Siedlisko) => void>();
 
   private placeBuildings = new Set<Building>();
   /** A place at (x, y) px: in the building there, or the nearest one close by. */
@@ -1199,8 +1211,14 @@ export class CityMap {
     return v;
   }
   private surfaces = new Map<number, Surface>();
+  /** Nowe siedlisko na mapie: zapamiętane podłoże pod nim mogło się zmienić. */
+  zapomnijPodloze() {
+    this.surfaces.clear();
+  }
 
   private surfaceNow(x: number, y: number): Surface {
+    const sd = this.podlozeSiedliska?.(x, y);
+    if (sd) return sd;
     let path = false;
     for (const l of this.lineGrid.at(x, y)) {
       if (!ROAD_KINDS.has(l.kind) || distToPolyline(l.pts, x, y) > l.width / 2) continue;
@@ -1294,6 +1312,7 @@ export class CityMap {
     if (x < this.minX || y < this.minY || x > this.width || y > this.height || !this.insideCity(x, y)) return true;
     // Not loaded yet: nobody walks there until it is.
     if (this.tileSet && !this.loadedTiles.has(this.tileKey(x, y)) && this.tileSet.has(this.tileKey(x, y))) return true;
+    if (this.przeszkoda && this.przeszkoda(x, y)) return true;
     const lines = this.lineGrid.at(x, y);
     let onBridge = false;
     let onPassage = false;

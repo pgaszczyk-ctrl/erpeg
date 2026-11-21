@@ -1,6 +1,17 @@
 import Phaser from 'phaser';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
+
+/** How a hit looks and sounds (never its damage). */
+export interface TrafienieFx {
+  rodzaj?: 'ostrze' | 'tepe' | 'strzala' | 'magia' | 'inne';
+  mocny?: boolean;
+  /** The arrow's instant kill (WALKA instaKill) – the game's only critical. */
+  krytyk?: boolean;
+  /** The hero's own blow or projectile (only those stop the picture and nudge the camera). */
+  bohater?: boolean;
+}
+export interface Trafienie { cel: Slime; x: number; y: number; zX: number; zY: number; ile: number; zabity: boolean; fx: TrafienieFx }
 import { live } from '../walka/live';
 import { TEX, HERO_DIRS } from '../art';
 import type { RodzajWroga } from '../content/fabula';
@@ -361,8 +372,34 @@ export class Slime extends Phaser.GameObjects.Sprite {
   lastProvokedAt = -Infinity;
   pursuitUntil = -Infinity;
 
-  /** Returns true if this hit killed the slime. */
-  hit(from: Phaser.Math.Vector2, now: number, damage = 1): boolean {
+  /** Hit stop (owner, 20 Nov 2026): only the picture holds its pose for a moment; AI, cooldowns and the clock go on. */
+  zamrozOd = 0;
+  zamrozDo = -Infinity;
+  /** The clock the 3D pose is sampled at (stwory3d.ts): held still during a hit stop. */
+  czasModelu(now: number) { return now < this.zamrozDo ? this.zamrozOd : now; }
+  /** Holds the picture for ms (never stacks: a hit during a stop doesn't lengthen it). */
+  zamroz(now: number, ms: number) {
+    if (ms <= 0 || now < this.zamrozDo || !this.active) return;
+    this.zamrozOd = now;
+    this.zamrozDo = now + ms;
+    if (!this.model3d && this.anims.isPlaying) {
+      this.anims.pause();
+      this.scene.time.delayedCall(ms, () => { if (this.active) this.anims.resume(); });
+    }
+  }
+  private odchylenie?: Phaser.Tweens.Tween;
+  /** Leans away from the blow for a moment (the body, pivoting at the feet; a strong blow further). */
+  private odchyl(from: Phaser.Math.Vector2, mocny: boolean) {
+    if (this.heavy || this.kindId === 'smok' || this.ownLook) return;
+    const strona = this.x >= from.x ? 1 : -1;
+    this.odchylenie?.remove();
+    this.setRotation(0);
+    this.odchylenie = this.scene.tweens.add({ targets: this, rotation: strona * (mocny ? 0.26 : 0.12), duration: mocny ? 70 : 55, yoyo: true,
+      ease: 'Quad.Out', onComplete: () => { if (this.active) this.setRotation(0); } });
+  }
+
+  /** Returns true if this hit killed the slime. `fx` only says how it looks and sounds (weapon, strong, critical). */
+  hit(from: Phaser.Math.Vector2, now: number, damage = 1, fx: TrafienieFx = {}): boolean {
     if (this.isDead || this.inAir || this.nietykalny) return false;
     this.trafiony = true;
     this.walkaDo = now + 5000;
@@ -380,7 +417,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
       this.nietykalny = true;
       prog.fn();
     }
-    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied);
+    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied, { mocny: fx.mocny, krytyk: fx.krytyk });
     this.modelHitAt = now;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
@@ -388,6 +425,9 @@ export class Slime extends Phaser.GameObjects.Sprite {
     const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
     this.vel.set(push.x, push.y);
 
+    // One event for the presentation (walka/oprawa.ts: sparks, sound, hit stop, shake); the damage is already done.
+    if (applied > 0) this.scene.events.emit('trafienie', { cel: this, x: this.x, y: this.y, zX: from.x, zY: from.y, ile: applied, zabity: this.isDead, fx } satisfies Trafienie);
+    if (applied > 0 && !this.isDead) this.odchyl(from, !!(fx.mocny || fx.krytyk));
     this.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.scene.time.delayedCall(90, () => {
       this.setTintMode(Phaser.TintModes.MULTIPLY).clearTint();

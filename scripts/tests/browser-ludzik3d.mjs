@@ -41,6 +41,9 @@ try {
   const s0 = await stan();
   assert.equal(s0.hero, false, 'the sheet hero is hidden under the 3D one');
   await page.screenshot({ path: `work/ludzik3d-stoi${sfx}.png` });
+  // Warm-up: right after loading the very first key can land while the loading cover still swallows keys.
+  await page.waitForTimeout(1000);
+  await page.keyboard.down('ArrowDown'); await page.waitForTimeout(300); await page.keyboard.up('ArrowDown'); await page.waitForTimeout(300);
   const katy = {};
   for (const [k, n] of [['ArrowRight', 'prawo'], ['ArrowUp', 'gora'], ['ArrowLeft', 'lewo'], ['ArrowDown', 'dol']]) {
     await page.keyboard.down(k); await page.waitForTimeout(900);
@@ -51,18 +54,22 @@ try {
   console.log('angles', katy);
   const blisko = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 0.35;
   assert(blisko(katy.prawo, Math.PI / 2) && blisko(katy.lewo, -Math.PI / 2) && blisko(katy.gora, Math.PI) && blisko(katy.dol, 0), 'turns to the walking direction');
+  // Both checks record every frame (a blow lasts well under a second; a slow container may look before or after it).
+  await page.evaluate(() => { const s = window.__game.scene.getScene('game'); window.__cios = false; window.__marsz = { nogi: false, gora: false, tempo: 0 };
+    s.events.on('postupdate', () => { const l = s.ludzik3d, g = l.g; if (!l.atakuje) return; window.__cios = true;
+      if (l.cios?.gora && g.chodNogi.isRunning()) window.__marsz = { nogi: true, gora: true, tempo: g.chodNogi.timeScale }; }); });
   await page.keyboard.press('Space');
-  await page.waitForTimeout(250);
+  await page.waitForFunction(() => window.__cios, null, { timeout: 5000 }).catch(() => {});
   await page.screenshot({ path: `work/ludzik3d-cios${sfx}.png` });
-  const cios = await page.evaluate(() => window.__game.scene.getScene('game').ludzik3d.g.atak.isRunning());
+  const cios = await page.evaluate(() => window.__cios);
   assert(cios, 'a swing plays the blow');
   // A swing while walking: the legs keep walking, the upper body strikes (owner, 27 Oct 2026).
   await page.waitForTimeout(1200);
   await page.keyboard.down('ArrowLeft');
   await page.waitForTimeout(500);
   await page.keyboard.press('Space');
-  await page.waitForTimeout(200);
-  const wMarszu = await page.evaluate(() => { const g = window.__game.scene.getScene('game').ludzik3d.g; return { nogi: g.chodNogi.isRunning(), gora: g.atakGora.isRunning(), tempo: g.chodNogi.timeScale }; });
+  await page.waitForFunction(() => window.__marsz.gora, null, { timeout: 5000 }).catch(() => {});
+  const wMarszu = await page.evaluate(() => window.__marsz);
   await page.screenshot({ path: `work/ludzik3d-cios-w-marszu${sfx}.png` });
   await page.keyboard.up('ArrowLeft');
   console.log('swing while walking', wMarszu);
